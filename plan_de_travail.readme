@@ -1,0 +1,41 @@
+
+# Framework :
+- possibilité d'executer une requête de création toute simple
+- possibilité de sauvegarder des données en base, simplement, rapidement et de manière substituable
+- possibilité de s'authentifier
+- possibilité de vérifier les droits d'accès à une ressource applicative
+
+# application :
+- Contexte de création d'une équipe :
+    - création d'une équipe brouillon
+        - icone
+        - nom
+        - id du coach
+    - choix de la compétition
+        - vérification de l'état de la compétition
+    - choix du roster
+        - vérification de la possibilité de choisir ce roster pour cette compétition
+    - choix des joueurs
+        - vérification des limites de joueurs
+        - vérification des limites croisées de joueurs
+        - vérification du budget
+    - choix du staff
+        - vérification du budget
+        - vérification des limites de staff en création
+    - validation finale
+
+- Contexte de l'onboarding :
+    - création d'un compte
+        - email
+        - mot de passe
+        - pseudo
+    - rejoindre un serveur existant
+    - création d'un serveur
+        - nom
+        - description
+        - accès privé ou public
+
+- contexte de création d'une compétition :
+    - une compétition est liée à un serveur
+
+

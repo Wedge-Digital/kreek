@@ -1,25 +1,65 @@
-use app::team_creation;
+extern crate core;
 
-mod framework;
 mod app;
+mod services;
 
-fn afficher_nom_team(team: &team_creation::create_team::Team) {
-    println!("nom: {}", team.nom);
+use axum::{
+    routing::{get, post},
+    http::StatusCode,
+    Json, Router,
+};
+use serde::{Deserialize, Serialize};
+use tower_http::{trace::TraceLayer};
+
+#[tokio::main]
+async fn main() {
+    // initialize tracing
+    tracing_subscriber::fmt::init();
+
+    // build our application with a route
+    let app = Router::new()
+        .layer(TraceLayer::new_for_http())
+        // `GET /` goes to `root`
+        .route("/", get(root))
+        // `POST /users` goes to `create_user`
+        .route("/users", post(create_user));
+
+    // run our app with hyper, listening globally on port 3000
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3210").await.unwrap();
+    axum::serve(listener, app).await.unwrap();
 }
 
-fn main() {
-    println!("Hello, world!");
-    let team = team_creation::create_team::Team::nouvelle_team("Les Bleus".to_string(), ulid::Ulid::new());
-    team.afficher();
-    afficher_nom_team(&team);
-    team.afficher();
+// basic handler that responds with a static string
+async fn root() -> &'static str {
+    println!("changeme-dev-only");
+    "Hello, World!"
 }
 
+async fn create_user(
+    // this argument tells axum to parse the request body
+    // as JSON into a `CreateUser` type
+    Json(payload): Json<CreateUser>,
+) -> (StatusCode, Json<User>) {
+    // insert your application logic here
+    let user = User {
+        id: 1337,
+        username: payload.username,
+    };
 
-#[test]
-fn it_works() {
-    let result = team_creation::create_team::add(2, 2);
-    assert_eq!(result, 4);
+    // this will be converted into a JSON response
+    // with a status code of `201 Created`
+    (StatusCode::CREATED, Json(user))
 }
 
+// the input to our `create_user` handler
+#[derive(Deserialize)]
+struct CreateUser {
+    username: String,
+}
 
+// the output to our `create_user` handler
+#[derive(Serialize)]
+struct User {
+    id: u64,
+    username: String,
+}
