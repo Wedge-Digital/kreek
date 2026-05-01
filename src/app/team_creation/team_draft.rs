@@ -1,11 +1,13 @@
 use serde::{Deserialize, Serialize};
-use crate::app::global_types::global_type::{Entity};
+use crate::app::global_types::global_type::Entity;
 use crate::app::team_creation::common_types::{BaseTeamInfo, TeamId, UserId};
+use crate::app::team_creation::error::DomainError;
+use crate::app::team_creation::ruleset::Ruleset;
+use crate::app::team_creation::team_ruleset_selected::RulesetSelectedTeam;
 use crate::services::id_service::IdService;
-use crate::User;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct DraftTeam{
+pub struct DraftTeam {
     entity_id: TeamId,
     created_by: UserId,
     base_infos: BaseTeamInfo,
@@ -18,6 +20,14 @@ impl DraftTeam {
             created_by: created_by.clone(),
             base_infos: base_team_infos,
         }
+    }
+
+    pub fn base_infos(&self) -> &BaseTeamInfo {
+        &self.base_infos
+    }
+
+    pub fn select_ruleset(self, ruleset: Ruleset) -> Result<RulesetSelectedTeam, DomainError> {
+        Ok(RulesetSelectedTeam::new(self, ruleset))
     }
 }
 

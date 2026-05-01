@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n    id,\n    source,\n    \"type\"              AS event_type,\n    spec_version,\n    time,\n    data_schema,\n    data_content_type,\n    subject,\n    data\nFROM event_log\nWHERE subject = $1\nORDER BY time ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "source",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "event_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "spec_version",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "time",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "data_schema",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "data_content_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "subject",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "data",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "2ba38659808ddf05323a8a5bd9b501e3c9c8111c60b7f70d83aaea994b9f1304"
+}

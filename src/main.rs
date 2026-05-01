@@ -1,7 +1,11 @@
 extern crate core;
 
 mod app;
+mod lib;
 mod services;
+mod config;
+
+use config::AppConfig;
 
 use axum::{
     routing::{get, post},
@@ -15,6 +19,8 @@ use tower_http::{trace::TraceLayer};
 async fn main() {
     // initialize tracing
     tracing_subscriber::fmt::init();
+    let cfg = AppConfig::load()
+        .expect("Configuration invalide — vérifiez vos variables d'environnement");
 
     // build our application with a route
     let app = Router::new()
@@ -25,7 +31,8 @@ async fn main() {
         .route("/users", post(create_user));
 
     // run our app with hyper, listening globally on port 3000
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3210").await.unwrap();
+    let server_address = cfg.server_addr();
+    let listener = tokio::net::TcpListener::bind(&server_address).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
 
