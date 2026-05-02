@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ligue de Condate — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .detail-layout { display: flex; gap: var(--p1); height: 100%; }
+    .detail-left { flex: 1; }
+    .detail-right { flex: 4; overflow-y: auto; }
+
+    /* Left panel */
+    .left-panel { background: var(--white); border-radius: 10px; padding: var(--p2); display: flex; flex-direction: column; gap: var(--p2); position: sticky; top: 0; }
+    .league-banner {
+      border-radius: 8px; height: 120px;
+      background: linear-gradient(135deg, #003049 0%, #555770 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-size: 36px; font-weight: 900; color: var(--white);
+    }
+    .league-meta { display: flex; flex-direction: column; gap: 8px; }
+    .league-meta-item { display: flex; justify-content: space-between; font-size: var(--text-tiny); }
+    .league-meta-label { color: var(--dark-3); }
+    .league-meta-value { color: var(--dark-1); font-weight: 500; }
+    .filter-section { display: flex; flex-direction: column; gap: var(--p1); }
+    .filter-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-2); }
+
+    /* Right panel content */
+    .comp-header { background: var(--white); border-radius: 10px; padding: var(--p2); margin-bottom: var(--p1); display: flex; align-items: center; gap: var(--p2); }
+    .comp-title-block { flex: 1; }
+    .standings-table { background: var(--white); border-radius: 10px; overflow: hidden; margin-bottom: var(--p1); }
+    .standings-header { display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px; padding: 12px 16px; background: var(--dark-0); color: var(--white); font-size: var(--text-tiny); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; gap: 8px; align-items: center; }
+    .standings-row { display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px; padding: 12px 16px; gap: 8px; align-items: center; border-bottom: 1px solid var(--dark-6); font-size: var(--text-small); }
+    .standings-row:last-child { border-bottom: none; }
+    .standings-row:nth-child(even) { background: var(--dark-7); }
+    .standings-row:hover { background: var(--dark-6); }
+    .standings-rank { color: var(--dark-3); font-weight: 700; text-align: center; }
+    .standings-team { font-weight: 500; color: var(--dark-1); }
+    .standings-num { text-align: center; color: var(--dark-2); }
+    .standings-pts { text-align: center; font-weight: 700; color: var(--dark-0); }
+    .standings-row.top3 { background: rgba(0,48,73,0.04); }
+
+    .matches-list { background: var(--white); border-radius: 10px; overflow: hidden; }
+    .matches-list-header { padding: var(--p2); border-bottom: 2px solid var(--dark-5); display: flex; align-items: center; justify-content: space-between; }
+    .match-row { padding: var(--p1) var(--p2); border-bottom: 1px solid var(--dark-6); display: flex; align-items: center; justify-content: space-between; }
+    .match-row:last-child { border-bottom: none; }
+    .match-row:hover { background: var(--dark-7); cursor: pointer; }
+    .match-teams-cell { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    .match-team-line { display: flex; align-items: center; gap: 8px; font-size: var(--text-small); }
+    .match-team-logo-sm { width: 24px; height: 24px; border-radius: 4px; background: var(--dark-4); flex-shrink: 0; }
+    .match-score-cell { display: flex; gap: 8px; align-items: center; padding: 0 var(--p2); }
+    .match-score-num { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-0); min-width: 20px; text-align: center; }
+    .match-score-sep { color: var(--dark-4); }
+    .match-date-cell { font-size: var(--text-tiny); color: var(--dark-3); min-width: 90px; text-align: right; }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active" href="app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content-wide">
+        <div class="detail-layout">
+          <!-- Left panel -->
+          <div class="detail-left">
+            <div class="left-panel">
+              <div class="league-banner">LC</div>
+              <div>
+                <div class="h5-gras">Ligue de Condate</div>
+                <div class="text-tiny text-dark-2" style="margin-top:4px;">Saison 2024 · BB 2020</div>
+              </div>
+              <div class="league-meta">
+                <div class="league-meta-item">
+                  <span class="league-meta-label">Type</span>
+                  <span class="league-meta-value">Ligue</span>
+                </div>
+                <div class="league-meta-item">
+                  <span class="league-meta-label">Équipes</span>
+                  <span class="league-meta-value">12</span>
+                </div>
+                <div class="league-meta-item">
+                  <span class="league-meta-label">Journées</span>
+                  <span class="league-meta-value">11/22</span>
+                </div>
+                <div class="league-meta-item">
+                  <span class="league-meta-label">Ville</span>
+                  <span class="league-meta-value">Rennes</span>
+                </div>
+              </div>
+              <div class="separator"></div>
+              <div class="filter-section">
+                <div class="filter-title">Saison</div>
+                <select class="picker">
+                  <option>Saison 2024</option>
+                  <option>Saison 2023</option>
+                  <option>Saison 2022</option>
+                </select>
+                <div class="filter-title">Journée</div>
+                <select class="picker">
+                  <option>Toutes les journées</option>
+                  <option>Journée 1</option>
+                  <option>Journée 2</option>
+                </select>
+              </div>
+              <button class="btn btn-primary-blue btn-sm" onclick="window.location.href='app-match-report-1.html'">
+                + Saisir un match
+              </button>
+            </div>
+          </div>
+
+          <!-- Right panel -->
+          <div class="detail-right">
+            <div class="tabs" style="margin-bottom: var(--p1);">
+              <div class="tab active">Classement</div>
+              <div class="tab">Matchs</div>
+              <div class="tab">Équipes</div>
+              <div class="tab">Statistiques</div>
+            </div>
+
+            <div class="standings-table card-shadow">
+              <div class="standings-header">
+                <div>#</div>
+                <div>Équipe</div>
+                <div style="text-align:center;">MJ</div>
+                <div style="text-align:center;">V</div>
+                <div style="text-align:center;">N</div>
+                <div style="text-align:center;">D</div>
+                <div style="text-align:center;">Pts</div>
+              </div>
+              <div class="standings-row top3">
+                <div class="standings-rank">1</div>
+                <div class="standings-team">🏆 Les Korrigans FC</div>
+                <div class="standings-num">11</div>
+                <div class="standings-num">8</div>
+                <div class="standings-num">2</div>
+                <div class="standings-num">1</div>
+                <div class="standings-pts">26</div>
+              </div>
+              <div class="standings-row top3">
+                <div class="standings-rank">2</div>
+                <div class="standings-team">Orc Boyz United</div>
+                <div class="standings-num">11</div>
+                <div class="standings-num">7</div>
+                <div class="standings-num">2</div>
+                <div class="standings-num">2</div>
+                <div class="standings-pts">23</div>
+              </div>
+              <div class="standings-row top3">
+                <div class="standings-rank">3</div>
+                <div class="standings-team">Skaven Speedsters</div>
+                <div class="standings-num">11</div>
+                <div class="standings-num">7</div>
+                <div class="standings-num">1</div>
+                <div class="standings-num">3</div>
+                <div class="standings-pts">22</div>
+              </div>
+              <div class="standings-row">
+                <div class="standings-rank">4</div>
+                <div class="standings-team">Dwarf Ironbreakers</div>
+                <div class="standings-num">11</div>
+                <div class="standings-num">6</div>
+                <div class="standings-num">1</div>
+                <div class="standings-num">4</div>
+                <div class="standings-pts">19</div>
+              </div>
+              <div class="standings-row">
+                <div class="standings-rank">5</div>
+                <div class="standings-team">Chaos Warriors</div>
+                <div class="standings-num">11</div>
+                <div class="standings-num">5</div>
+                <div class="standings-num">3</div>
+                <div class="standings-num">3</div>
+                <div class="standings-pts">18</div>
+              </div>
+              <div class="standings-row">
+                <div class="standings-rank">6</div>
+                <div class="standings-team">Dark Elves Ravens</div>
+                <div class="standings-num">11</div>
+                <div class="standings-num">5</div>
+                <div class="standings-num">2</div>
+                <div class="standings-num">4</div>
+                <div class="standings-pts">17</div>
+              </div>
+              <div class="standings-row">
+                <div class="standings-rank">7</div>
+                <div class="standings-team">High Elf Nobles</div>
+                <div class="standings-num">11</div>
+                <div class="standings-num">4</div>
+                <div class="standings-num">2</div>
+                <div class="standings-num">5</div>
+                <div class="standings-pts">14</div>
+              </div>
+              <div class="standings-row">
+                <div class="standings-rank">8</div>
+                <div class="standings-team">Nantes Undead</div>
+                <div class="standings-num">11</div>
+                <div class="standings-num">3</div>
+                <div class="standings-num">2</div>
+                <div class="standings-num">6</div>
+                <div class="standings-pts">11</div>
+              </div>
+              <div class="standings-row">
+                <div class="standings-rank">9</div>
+                <div class="standings-team">Lizardmen FC</div>
+                <div class="standings-num">11</div>
+                <div class="standings-num">2</div>
+                <div class="standings-num">3</div>
+                <div class="standings-num">6</div>
+                <div class="standings-pts">9</div>
+              </div>
+              <div class="standings-row">
+                <div class="standings-rank">10</div>
+                <div class="standings-team">Human Mercenaries</div>
+                <div class="standings-num">11</div>
+                <div class="standings-num">1</div>
+                <div class="standings-num">2</div>
+                <div class="standings-num">8</div>
+                <div class="standings-pts">5</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

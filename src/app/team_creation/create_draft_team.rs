@@ -1,6 +1,7 @@
-use crate::app::team_creation::common_types::{BaseTeamInfo, CloudinaryImage, CoachId, TeamName, UserId};
-use crate::app::team_creation::team_draft::DraftTeam;
-use crate::services::id_service::IdService;
+use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, UserId};
+use crate::app::shared_kernel::id_service::IdService;
+use crate::app::shared_kernel::team::{BaseTeamInfo, TeamName};
+use crate::app::team_creation::domain::team_draft::DraftTeam;
 
 pub fn create_draft_team<T: IdService>(
     id_service: &T,

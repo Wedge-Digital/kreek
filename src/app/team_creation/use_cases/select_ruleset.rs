@@ -1,8 +1,3 @@
-use std::sync::Arc;
-use crate::app::team_creation::commands::SelectRulesetCommand;
-use crate::app::team_creation::error::DomainError;
-use crate::app::team_creation::ports::{RepositoryError, TeamRepository};
-
 // #[derive(Debug)]
 // pub enum SelectRulesetError {
 //     TeamNotFound,

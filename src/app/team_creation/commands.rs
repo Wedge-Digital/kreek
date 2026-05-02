@@ -1,6 +1,7 @@
-use crate::app::team_creation::common_types::{CloudinaryImage, CoachId, TeamId, TeamName, UserId};
-use crate::app::team_creation::roster::Roster;
-use crate::app::team_creation::ruleset::Ruleset;
+use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, UserId};
+use crate::app::shared_kernel::team::{TeamId, TeamName};
+use crate::app::team_creation::domain::roster::Roster;
+use crate::app::team_creation::domain::ruleset::Ruleset;
 
 pub struct RegisterNewTeamCommand {
     pub team_name: TeamName,

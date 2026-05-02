@@ -1,9 +1,3 @@
-use std::sync::Arc;
-use crate::app::team_creation::commands::RegisterNewTeamCommand;
-use crate::app::team_creation::create_draft_team::create_draft_team;
-use crate::app::team_creation::ports::{RepositoryError, TeamRepository};
-use crate::services::id_service::IdService;
-
 // #[derive(Debug)]
 // pub enum RegisterNewTeamError {
 //     RepositoryError(RepositoryError),

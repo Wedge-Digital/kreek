@@ -2,7 +2,6 @@ extern crate core;
 
 mod app;
 mod lib;
-mod services;
 mod config;
 
 use config::AppConfig;

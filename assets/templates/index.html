@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blood Bowl Club — Navigation</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    body { background: var(--dark-0); min-height: 100vh; padding: var(--p4); }
+    .index-title {
+      font-family: var(--font-title); font-size: var(--h2); font-weight: 800;
+      color: var(--white); margin-bottom: var(--p3); letter-spacing: -0.5px;
+    }
+    .index-subtitle { font-size: var(--text-small); color: var(--dark-4); margin-bottom: var(--p4); }
+    .section-title {
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+      letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: var(--p1);
+    }
+    .nav-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--p1);
+      margin-bottom: var(--p3);
+    }
+    .nav-link {
+      background: var(--dark-1); border-radius: 8px; padding: var(--p1) var(--p2);
+      color: var(--white); font-size: var(--text-small); font-weight: 500;
+      transition: background 0.15s, transform 0.15s; display: block;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .nav-link:hover { background: var(--main-blue); transform: translateY(-2px); }
+    .nav-link small { display: block; font-size: var(--text-tiny); color: var(--dark-4); margin-top: 2px; font-weight: 300; }
+    .logo-mark {
+      display: inline-flex; align-items: center; gap: 10px; margin-bottom: var(--p2);
+    }
+    .logo-icon {
+      width: 44px; height: 44px; border-radius: 10px; background: var(--orange);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: 20px; color: var(--white);
+    }
+  </style>
+</head>
+<body>
+  <div class="logo-mark">
+    <div class="logo-icon">BBC</div>
+  </div>
+  <div class="index-title">Blood Bowl Club</div>
+  <div class="index-subtitle">Prototype HTML/CSS — toutes les pages de l'application</div>
+
+  <div class="section-title">Authentification</div>
+  <div class="nav-grid">
+    <a class="nav-link" href="auth-login.html">Connexion<small>Page principale d'auth</small></a>
+    <a class="nav-link" href="auth-register.html">Créer un compte<small>Formulaire d'inscription</small></a>
+    <a class="nav-link" href="auth-register-success.html">Compte créé !<small>Confirmation d'inscription</small></a>
+    <a class="nav-link" href="auth-welcome-back.html">Bienvenue !<small>Message de retour</small></a>
+    <a class="nav-link" href="auth-forgot-password.html">Mot de passe oublié<small>Démarrer la récupération</small></a>
+    <a class="nav-link" href="auth-forgot-password-sent.html">Email envoyé<small>Confirmation d'envoi</small></a>
+    <a class="nav-link" href="auth-reset-password.html">Réinitialiser MDP<small>Nouveau mot de passe</small></a>
+    <a class="nav-link" href="auth-checking.html">Vérification auth<small>Écran de chargement</small></a>
+  </div>
+
+  <div class="section-title">Application principale</div>
+  <div class="nav-grid">
+    <a class="nav-link" href="app-home.html">Accueil<small>Fil d'actualité + derniers matchs</small></a>
+    <a class="nav-link" href="app-news-feed.html">Actualités<small>Liste des news</small></a>
+    <a class="nav-link" href="app-create-article.html">Créer un article<small>Éditeur d'article</small></a>
+    <a class="nav-link" href="app-competition-list.html">Compétitions<small>Grille des clubs/compétitions</small></a>
+    <a class="nav-link" href="app-competition-detail.html">Détail compétition<small>Vue d'une compétition</small></a>
+    <a class="nav-link" href="app-my-teams.html">Mes équipes<small>Liste filtrée des équipes</small></a>
+    <a class="nav-link" href="app-team-detail.html">Détail équipe<small>Fiche d'une équipe</small></a>
+    <a class="nav-link" href="app-roster-list.html">Rosters<small>Liste des rosters disponibles</small></a>
+    <a class="nav-link" href="app-league-create.html">Créer une ligue<small>Étape 1 — informations</small></a>
+    <a class="nav-link" href="app-league-rules.html">Règles de ligue<small>Étape 2 — variante &amp; règles</small></a>
+    <a class="nav-link" href="app-new-team.html">Nouvelle équipe<small>Créer une équipe</small></a>
+    <a class="nav-link" href="app-match-report-1.html">Match report (1/2)<small>Sélection compétition/match</small></a>
+    <a class="nav-link" href="app-match-report-2.html">Match report (2/2)<small>Informations générales</small></a>
+  </div>
+</body>
+</html>

@@ -1,5 +1,6 @@
 use sqlx::PgPool;
-use crate::lib::persistance::event_log_repository::EventLogRepository;
+use time::OffsetDateTime;
+use crate::lib::persistance::event_log_repository::{EventLogRepository, IEventLogRepository, StoredEvent};
 
 #[sqlx::test(fixtures("events"))]
 async fn find_by_subject_returns_only_matching_events(pool: PgPool) {
@@ -40,6 +41,50 @@ async fn find_by_subject_returns_empty_for_unknown_subject(pool: PgPool) {
 
     // Then
     assert!(events.is_empty());
+}
+
+#[sqlx::test]
+async fn save_persists_event(pool: PgPool) {
+    let repo = EventLogRepository::new(pool);
+    let event = StoredEvent {
+        id:                "evt-save-01".to_string(),
+        source:            "/team-creation".to_string(),
+        event_type:        "TeamDraftCreated".to_string(),
+        spec_version:      "1.0".to_string(),
+        time:              OffsetDateTime::now_utc(),
+        data_schema:       "/schemas/team".to_string(),
+        data_content_type: Some("application/json".to_string()),
+        subject:           Some("team-save".to_string()),
+        data:              Some(r#"{"name":"Les Bleus"}"#.to_string()),
+    };
+
+    repo.save(&event).await.unwrap();
+
+    let found = repo.find_by_subject("team-save").await.unwrap();
+    assert_eq!(found.len(), 1);
+    assert_eq!(found[0].id, "evt-save-01");
+    assert_eq!(found[0].event_type, "TeamDraftCreated");
+    assert_eq!(found[0].data.as_deref(), Some(r#"{"name":"Les Bleus"}"#));
+}
+
+#[sqlx::test]
+async fn save_returns_error_on_duplicate_id(pool: PgPool) {
+    let repo = EventLogRepository::new(pool);
+    let event = StoredEvent {
+        id:                "evt-dup".to_string(),
+        source:            "/team-creation".to_string(),
+        event_type:        "TeamDraftCreated".to_string(),
+        spec_version:      "1.0".to_string(),
+        time:              OffsetDateTime::now_utc(),
+        data_schema:       "/schemas/team".to_string(),
+        data_content_type: None,
+        subject:           Some("team-dup".to_string()),
+        data:              None,
+    };
+
+    repo.save(&event).await.unwrap();
+    let result = repo.save(&event).await;
+    assert!(result.is_err());
 }
 
 #[sqlx::test(fixtures("events"))]

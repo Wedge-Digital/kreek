@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Les Korrigans FC — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .team-page { max-width: 1100px; margin: 0 auto; }
+
+    /* Team header */
+    .team-header {
+      background: var(--white); border-radius: 10px 10px 0 0; padding: var(--p2);
+      display: flex; align-items: flex-start; gap: var(--p3);
+      border-bottom: 2px solid var(--dark-5);
+    }
+    .team-header-logo {
+      width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, #003049, #555770);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: 36px; color: var(--white);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .team-header-info { flex: 1; display: flex; flex-direction: column; gap: var(--p1); }
+    .team-header-name { font-family: var(--font-title); font-size: var(--h2); font-weight: 800; color: var(--dark-0); }
+    .team-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
+    .meta-item { display: flex; flex-direction: column; gap: 2px; }
+    .meta-label { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-value { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+    .team-header-stats { display: flex; gap: var(--p3); }
+    .stat-block { text-align: center; }
+    .stat-val { font-family: var(--font-title); font-size: var(--h3); font-weight: 800; }
+    .stat-val.win { color: var(--green); }
+    .stat-val.draw { color: var(--dark-2); }
+    .stat-val.loss { color: var(--red); }
+    .stat-label { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; }
+
+    /* Players table */
+    .players-panel { background: var(--white); border-radius: 0 0 10px 10px; padding: var(--p2); }
+    .player-table { width: 100%; border-collapse: collapse; }
+    .player-table th {
+      text-align: left; padding: 10px 12px;
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      border-bottom: 2px solid var(--dark-5); background: var(--dark-6);
+    }
+    .player-table td { padding: 12px; border-bottom: 1px solid var(--dark-6); font-size: var(--text-small); }
+    .player-table tr:hover td { background: var(--dark-7); cursor: pointer; }
+    .player-table tr:last-child td { border-bottom: none; }
+    .player-pos {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: var(--text-tiny); font-weight: 700;
+    }
+    .pos-lineman { background: rgba(0,48,73,0.1); color: var(--main-blue); }
+    .pos-blitzer { background: rgba(224,32,32,0.1); color: var(--red); }
+    .pos-thrower { background: rgba(98,149,132,0.1); color: var(--green); }
+    .pos-catcher { background: rgba(255,215,0,0.15); color: #9A7800; }
+    .player-skill { background: var(--dark-5); color: var(--dark-1); border-radius: 4px; padding: 2px 6px; font-size: 11px; margin-right: 4px; display: inline-block; }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div style="margin-bottom: var(--p1);">
+          <a href="app-my-teams.html" style="color: var(--dark-3); font-size: var(--text-tiny);">← Mes équipes</a>
+        </div>
+
+        <div class="team-page">
+          <div class="team-header">
+            <div class="team-header-logo">KF</div>
+            <div class="team-header-info">
+              <div class="team-header-name">Les Korrigans FC</div>
+              <div class="team-header-meta">
+                <div class="meta-item">
+                  <div class="meta-label">Roster</div>
+                  <div class="meta-value">Elfes Sylvestres</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Coach</div>
+                  <div class="meta-value">Colonel Castor</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Ligue</div>
+                  <div class="meta-value">Ligue de Condate</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Saison</div>
+                  <div class="meta-value">2024</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Valeur d'équipe</div>
+                  <div class="meta-value">1 250 000 pièces</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Classement</div>
+                  <div class="meta-value">🏆 1er</div>
+                </div>
+              </div>
+              <div class="team-header-stats">
+                <div class="stat-block">
+                  <div class="stat-val win">8</div>
+                  <div class="stat-label">Victoires</div>
+                </div>
+                <div class="stat-block">
+                  <div class="stat-val draw">2</div>
+                  <div class="stat-label">Nuls</div>
+                </div>
+                <div class="stat-block">
+                  <div class="stat-val loss">1</div>
+                  <div class="stat-label">Défaites</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tabs" style="background: var(--white); border-radius: 0; padding: 0 var(--p2); border-bottom: none;">
+            <div class="tab active">Joueurs</div>
+            <div class="tab">Matchs</div>
+            <div class="tab">Actualités</div>
+            <div class="tab">Trésorerie</div>
+          </div>
+
+          <div class="players-panel">
+            <table class="player-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Nom</th>
+                  <th>Poste</th>
+                  <th>MA</th>
+                  <th>ST</th>
+                  <th>AG</th>
+                  <th>PA</th>
+                  <th>AV</th>
+                  <th>Compétences</th>
+                  <th>Valeur</th>
+                  <th>SPP</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td><td><strong>Aerindel</strong></td>
+                  <td><span class="player-pos pos-thrower">Lanceur</span></td>
+                  <td>7</td><td>3</td><td>4+</td><td>2+</td><td>8+</td>
+                  <td><span class="player-skill">Passe</span><span class="player-skill">Sûr</span></td>
+                  <td>95 000</td><td>18</td>
+                </tr>
+                <tr>
+                  <td>2</td><td><strong>Sylvara</strong></td>
+                  <td><span class="player-pos pos-catcher">Receveur</span></td>
+                  <td>8</td><td>2</td><td>3+</td><td>4+</td><td>8+</td>
+                  <td><span class="player-skill">Attraper</span><span class="player-skill">Esquiver</span></td>
+                  <td>65 000</td><td>24</td>
+                </tr>
+                <tr>
+                  <td>3</td><td><strong>Maerindel</strong></td>
+                  <td><span class="player-pos pos-catcher">Receveur</span></td>
+                  <td>8</td><td>2</td><td>3+</td><td>4+</td><td>8+</td>
+                  <td><span class="player-skill">Attraper</span><span class="player-skill">Esquiver</span></td>
+                  <td>65 000</td><td>11</td>
+                </tr>
+                <tr>
+                  <td>4</td><td><strong>Tyrandel</strong></td>
+                  <td><span class="player-pos pos-blitzer">Frappeur</span></td>
+                  <td>7</td><td>3</td><td>3+</td><td>5+</td><td>8+</td>
+                  <td><span class="player-skill">Esquiver</span><span class="player-skill">Bloc</span></td>
+                  <td>110 000</td><td>30</td>
+                </tr>
+                <tr>
+                  <td>5</td><td><strong>Corandel</strong></td>
+                  <td><span class="player-pos pos-blitzer">Frappeur</span></td>
+                  <td>7</td><td>3</td><td>3+</td><td>5+</td><td>8+</td>
+                  <td><span class="player-skill">Esquiver</span></td>
+                  <td>110 000</td><td>6</td>
+                </tr>
+                <tr>
+                  <td>6</td><td><strong>Findas</strong></td>
+                  <td><span class="player-pos pos-lineman">Défenseur</span></td>
+                  <td>7</td><td>3</td><td>3+</td><td>5+</td><td>8+</td>
+                  <td><span class="player-skill">Esquiver</span></td>
+                  <td>70 000</td><td>9</td>
+                </tr>
+                <tr>
+                  <td>7</td><td><strong>Galadras</strong></td>
+                  <td><span class="player-pos pos-lineman">Défenseur</span></td>
+                  <td>7</td><td>3</td><td>3+</td><td>5+</td><td>8+</td>
+                  <td></td>
+                  <td>70 000</td><td>3</td>
+                </tr>
+                <tr>
+                  <td>8</td><td><strong>Mirindel</strong></td>
+                  <td><span class="player-pos pos-lineman">Défenseur</span></td>
+                  <td>7</td><td>3</td><td>3+</td><td>5+</td><td>8+</td>
+                  <td></td>
+                  <td>70 000</td><td>0</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

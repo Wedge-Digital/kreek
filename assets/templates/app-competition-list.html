@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compétitions — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .club-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--p1); }
+    .club-card {
+      background: var(--white); border-radius: var(--card-radius); padding: var(--p2);
+      display: flex; flex-direction: column; align-items: center; gap: var(--p1);
+      border: 1px solid var(--dark-5); cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+    }
+    .club-card:hover {
+      border-color: var(--dark-3); box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      transform: translateY(-2px);
+    }
+    .club-logo {
+      width: 80px; height: 80px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: 24px; color: var(--white);
+    }
+    .club-name { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-0); text-align: center; }
+    .club-info { font-size: var(--text-tiny); color: var(--dark-3); text-align: center; line-height: 1.6; }
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--p2);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-active">
+          <a class="sub-menu-btn">Toutes les compétitions</a>
+          <a class="sub-menu-btn">Mes ligues</a>
+          <a class="sub-menu-btn" href="app-league-create.html" style="color: var(--orange);">+ Créer une ligue</a>
+          <a class="sub-menu-btn" href="app-match-report-1.html">Saisir un match</a>
+        </div>
+      </div>
+
+      <div class="page-content">
+        <div class="section-header">
+          <div class="h3-gras">Toutes les compétitions</div>
+          <button class="btn btn-primary-blue btn-sm" onclick="window.location.href='app-league-create.html'">
+            + Créer une ligue
+          </button>
+        </div>
+
+        <div class="flex-col gap-1">
+          <div class="club-grid">
+            <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
+              <div class="club-logo" style="background: linear-gradient(135deg, #003049, #555770);">LC</div>
+              <div class="club-name">Ligue de Condate</div>
+              <div class="club-info">12 équipes<br>Rennes</div>
+            </div>
+            <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
+              <div class="club-logo" style="background: linear-gradient(135deg, #E02020, #1C1C29);">KK</div>
+              <div class="club-name">Korrigane Cup</div>
+              <div class="club-info">8 équipes<br>Bretagne</div>
+            </div>
+            <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
+              <div class="club-logo" style="background: linear-gradient(135deg, #629584, #003049);">LM</div>
+              <div class="club-name">Ligue du Midi</div>
+              <div class="club-info">16 équipes<br>Toulouse</div>
+            </div>
+            <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
+              <div class="club-logo" style="background: linear-gradient(135deg, #FFD700, #003049);">CB</div>
+              <div class="club-name">Chaos Bowl</div>
+              <div class="club-info">6 équipes<br>Lyon</div>
+            </div>
+            <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
+              <div class="club-logo" style="background: linear-gradient(135deg, #6F35A5, #1C1C29);">DB</div>
+              <div class="club-name">Dungeon Bowl IDF</div>
+              <div class="club-info">10 équipes<br>Paris</div>
+            </div>
+          </div>
+
+          <div class="club-grid">
+            <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
+              <div class="club-logo" style="background: linear-gradient(135deg, #FF6B35, #1C1C29);">NO</div>
+              <div class="club-name">Nantes Open</div>
+              <div class="club-info">24 équipes<br>Nantes</div>
+            </div>
+            <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
+              <div class="club-logo" style="background: linear-gradient(135deg, #555770, #003049);">LN</div>
+              <div class="club-name">Ligue du Nord</div>
+              <div class="club-info">14 équipes<br>Lille</div>
+            </div>
+            <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
+              <div class="club-logo" style="background: linear-gradient(135deg, #1C1C29, #629584);">BB7</div>
+              <div class="club-name">BB7 Sevens Tour</div>
+              <div class="club-info">20 équipes<br>National</div>
+            </div>
+            <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
+              <div class="club-logo" style="background: linear-gradient(135deg, #003049, #E02020);">FC</div>
+              <div class="club-name">Fédération Classic</div>
+              <div class="club-info">32 équipes<br>National</div>
+            </div>
+            <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
+              <div class="club-logo" style="background: linear-gradient(135deg, #8F90A6, #26263D);">AP</div>
+              <div class="club-name">Alsace Pro</div>
+              <div class="club-info">8 équipes<br>Strasbourg</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
