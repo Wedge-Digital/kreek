@@ -11,12 +11,13 @@ pub struct FakeUserRepository { pub find_result: FindResult }
 #[async_trait]
 impl IUserRepository for FakeUserRepository {
     async fn create(&self, _: &User) -> Result<(), RepositoryError> { unimplemented!() }
+    async fn update_password_hash(&self, _: &str, _: &str) -> Result<(), RepositoryError> { Ok(()) }
     async fn find_by_coach_name(&self, _: &str) -> Result<Option<User>, RepositoryError> {
         match &self.find_result {
             FindResult::Found { password_hash } => Ok(Some(User::new(
                 UserId::new(),
-                CoachName::new("Bagouze").unwrap(),
-                Email::new("coach@example.com").unwrap(),
+                CoachName::try_new("Bagouze").unwrap(),
+                Email::try_new("coach@example.com").unwrap(),
                 password_hash.clone(),
             ))),
             FindResult::NotFound     => Ok(None),

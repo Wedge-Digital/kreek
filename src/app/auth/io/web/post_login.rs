@@ -1,11 +1,11 @@
 use crate::app::auth::io::web::get_login::LoginTemplate;
-use crate::app::auth::use_cases::commands::PerformLoginCommand;
+use crate::app::auth::routes::path;
 use crate::app::auth::use_cases::perform_login;
-use crate::app::auth::use_cases::perform_login::LoginError;
+use crate::app::auth::use_cases::perform_login::{LoginError, PerformLoginCommand};
 use crate::state::AppState;
 use axum::extract::State;
 use axum::http::header;
-use axum::response::{Html, IntoResponse, Response};
+use axum::response::{IntoResponse, Response};
 use axum::Form;
 use tracing::debug;
 
@@ -20,7 +20,7 @@ pub async fn login_submit(
             let mut response = Response::new(axum::body::Body::empty());
             response.headers_mut().insert(
                 header::HeaderName::from_static("hx-redirect"),
-                header::HeaderValue::from_static("/auth/login/success"),
+                header::HeaderValue::from_static(path::LOGIN_SUCCESS),
             );
             response
         }
@@ -48,10 +48,13 @@ mod tests {
     use axum::extract::State;
     use axum::Form;
     use axum::response::IntoResponse;
-    use crate::app::auth::use_cases::commands::PerformLoginCommand;
     use crate::state::AppState;
     use super::login_submit;
     use crate::app::auth::io::repository::tests::fake_user_repository::{FakeUserRepository, FindResult};
+    use crate::app::auth::io::repository::tests::fake_reset_token_repository::FakeResetTokenRepository;
+    use crate::app::auth::routes::path;
+    use crate::app::auth::use_cases::perform_login::PerformLoginCommand;
+    use crate::lib::services::email::fakes::console_email_service::ConsoleEmailService;
 
     fn hash_password(password: &str) -> String {
         let salt = SaltString::generate(&mut OsRng);
@@ -59,7 +62,12 @@ mod tests {
     }
 
     fn state(mock: FakeUserRepository) -> State<AppState> {
-        State(AppState { user_repository: Arc::new(mock) })
+        State(AppState {
+            user_repository: Arc::new(mock),
+            email_service: Arc::new(ConsoleEmailService),
+            reset_token_repository: Arc::new(FakeResetTokenRepository { find_result: crate::app::auth::io::repository::tests::fake_reset_token_repository::FindResult::NotFound }),
+            host_domain: "localhost:8080".into(),
+        })
     }
 
     fn form(coach_name: &str, password: &str) -> Form<PerformLoginCommand> {
@@ -80,7 +88,7 @@ mod tests {
 
         assert_eq!(
             response.headers().get("hx-redirect").and_then(|v| v.to_str().ok()),
-            Some("/auth/login/success"),
+            Some(path::LOGIN_SUCCESS),
         );
     }
 

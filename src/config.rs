@@ -6,6 +6,8 @@ pub struct AppConfig {
     pub server:   ServerConfig,
     pub database: DatabaseConfig,
     pub auth:     AuthConfig,
+    pub email: EmailConfig,
+    pub host_domain: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -27,6 +29,13 @@ pub struct DatabaseConfig {
 #[derive(Debug, Deserialize, Clone)]
 pub struct AuthConfig {
     pub token_ttl_seconds:  u64,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct EmailConfig {
+    pub api_key:               String,
+    pub from:                  String,
+    pub from_name:             String,
 }
 
 

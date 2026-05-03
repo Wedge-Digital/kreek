@@ -1,14 +1,20 @@
 use super::super::ports::{IUserRepository, RepositoryError};
-use crate::app::auth::use_cases::commands::PerformLoginCommand;
 use crate::app::shared_kernel::user::User;
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use std::fmt;
+use serde::Deserialize;
 
 #[derive(Debug)]
 pub enum LoginError {
     CoachNameNotFound,
     InvalidPassword,
     Database(String),
+}
+
+#[derive(Deserialize, Debug)]
+pub struct PerformLoginCommand {
+    pub coach_name: String,
+    pub password:   String,
 }
 
 impl fmt::Display for LoginError {
@@ -53,8 +59,7 @@ pub async fn execute(
 
 #[cfg(test)]
 mod tests {
-    use super::{execute, LoginError};
-    use crate::app::auth::use_cases::commands::PerformLoginCommand;
+    use super::{execute, LoginError, PerformLoginCommand};
     use argon2::password_hash::{rand_core::OsRng, SaltString};
     use argon2::{Argon2, PasswordHasher};
     use crate::app::auth::io::repository::tests::fake_user_repository::{FakeUserRepository, FindResult};

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Demande de Réinitialisation de Mot de Passe - ESPNFAN</title>
+    <title>Demande de Réinitialisation de Mot de Passe </title>
     <style>
         /* CSS Inline pour la compatibilité Email */
         body { font-family: Arial, sans-serif; background-color: #f0f0f0; margin: 0; padding: 0; }
@@ -31,14 +31,14 @@
     <div class="content">
         <h1>Réinitialisation de votre mot de passe</h1>
 
-        <p>Cher(ère) {{username}},</p>
+        <p>Cher(ère) {{ coach_name }},</p>
 
         <p>Nous avons reçu une demande de réinitialisation de mot de passe pour votre compte Bloodbowl Club.</p>
 
         <p>Si vous êtes à l'origine de cette demande, veuillez cliquer sur le bouton rouge ci-dessous pour créer un nouveau mot de passe sécurisé :</p>
 
         <div class="button-container">
-            <a href="{{reset_pwd_url}}" class="button">
+            <a href="{{ reset_url }}" class="button">
                 RÉINITIALISER MON MOT DE PASSE
             </a>
         </div>

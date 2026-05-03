@@ -7,7 +7,7 @@
 
 <div style="height: var(--p1);"></div>
 
-<button hx-get="/auth/login/success"
+<button hx-get="{{ routes.login_success() }}"
         hx-target="#content"
         hx-swap="innerHTML"
         class="btn btn-outline"

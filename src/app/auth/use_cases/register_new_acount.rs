@@ -4,7 +4,6 @@ use super::super::domain::{
     error::AuthDomainError,
 };
 use super::super::ports::{IUserRepository, RepositoryError};
-use crate::app::auth::use_cases::commands::RegisterCommand;
 use crate::app::shared_kernel::common_types::UserId;
 use crate::app::shared_kernel::user::User;
 use argon2::{
@@ -24,6 +23,14 @@ pub enum RegisterError {
     PasswordHashError,
     Database(String),
 }
+
+pub struct RegisterCommand {
+    pub coach_name:       String,
+    pub email:            String,
+    pub password:         String,
+    pub password_confirm: String,
+}
+
 
 impl fmt::Display for RegisterError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -65,13 +72,13 @@ pub async fn execute(
         errors.push(RegisterError::PasswordTooShort);
     }
 
-    let coach_name = match CoachName::new(&cmd.coach_name) {
+    let coach_name = match CoachName::try_new(&cmd.coach_name) {
         Ok(v)  => Some(v),
-        Err(e) => { errors.push(RegisterError::InvalidCoachName(e)); None }
+        Err(e) => { errors.push(RegisterError::InvalidCoachName(e.into())); None }
     };
-    let email = match Email::new(&cmd.email) {
+    let email = match Email::try_new(&cmd.email) {
         Ok(v)  => Some(v),
-        Err(e) => { errors.push(RegisterError::InvalidEmail(e)); None }
+        Err(e) => { errors.push(RegisterError::InvalidEmail(e.into())); None }
     };
 
     if !errors.is_empty() {

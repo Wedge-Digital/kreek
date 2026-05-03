@@ -2,6 +2,7 @@ extern crate core;
 
 mod app;
 mod config;
+mod lib;
 mod state;
 
 use std::time::Duration;
@@ -18,6 +19,8 @@ use tower_http::{services::ServeDir, trace::TraceLayer};
 use tower_livereload::LiveReloadLayer;
 use std::sync::Arc;
 use crate::app::auth::io::repository::user_repository::UserRepository;
+use crate::app::auth::io::repository::reset_token_repository::ResetTokenRepository;
+use crate::lib::services::email::ResendMailService;
 
 #[tokio::main]
 async fn main() {
@@ -40,8 +43,13 @@ async fn main() {
         .await
         .expect("Impossible de se connecter à la base de données");
 
+    let server_address = cfg.server_addr();
+
     let state = AppState {
-        user_repository: Arc::new(UserRepository::new(pool.clone())),
+        user_repository:        Arc::new(UserRepository::new(pool.clone())),
+        reset_token_repository: Arc::new(ResetTokenRepository::new(pool.clone())),
+        email_service:          Arc::new(ResendMailService::new(cfg.email.api_key, cfg.email.from, cfg.email.from_name)),
+        host_domain:            cfg.host_domain,
     };
 
     let app = Router::new()
@@ -55,7 +63,6 @@ async fn main() {
         .nest_service("/ui", ServeDir::new("assets/templates"))
         .layer(LiveReloadLayer::new());
 
-    let server_address = cfg.server_addr();
     let listener = tokio::net::TcpListener::bind(&server_address).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }

@@ -1,0 +1,1 @@
+DELETE FROM lost_login_token WHERE token = $1

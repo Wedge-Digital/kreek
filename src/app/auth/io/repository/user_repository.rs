@@ -4,7 +4,32 @@ use crate::app::auth::ports::{IUserRepository, RepositoryError};
 use crate::app::shared_kernel::common_types::UserId;
 use crate::app::shared_kernel::user::User;
 use async_trait::async_trait;
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
+
+fn db_err(e: impl std::fmt::Display) -> RepositoryError {
+    RepositoryError::Database(e.to_string())
+}
+
+#[derive(sqlx::FromRow)]
+struct UserRow {
+    id:            String,
+    coach_name:    String,
+    email:         String,
+    password_hash: String,
+}
+
+impl TryFrom<UserRow> for User {
+    type Error = RepositoryError;
+
+    fn try_from(row: UserRow) -> Result<Self, Self::Error> {
+        Ok(User::new(
+            UserId::from_string(&row.id).map_err(db_err)?,
+            CoachName::try_new(row.coach_name).map_err(db_err)?,
+            Email::try_new(row.email).map_err(db_err)?,
+            row.password_hash,
+        ))
+    }
+}
 
 #[derive(Clone)]
 pub struct UserRepository {
@@ -20,11 +45,9 @@ impl UserRepository {
 #[async_trait]
 impl IUserRepository for UserRepository {
     async fn create(&self, user: &User) -> Result<(), RepositoryError> {
-        sqlx::query(
-            "INSERT INTO users (id, coach_name, email, password_hash) VALUES ($1, $2, $3, $4)",
-        )
+        sqlx::query(include_str!("sql/insert_user.sql"))
         .bind(user.id.to_string())
-        .bind(user.coach_name.value())
+        .bind(user.coach_name.clone().into_inner())
         .bind(user.email.value())
         .bind(&user.password_hash)
         .execute(&self.pool)
@@ -47,30 +70,22 @@ impl IUserRepository for UserRepository {
     }
 
     async fn find_by_coach_name(&self, coach_name: &str) -> Result<Option<User>, RepositoryError> {
-        let row = sqlx::query(
-            "SELECT id, coach_name, email, password_hash FROM users WHERE coach_name = $1",
-        )
-        .bind(coach_name)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| RepositoryError::Database(e.to_string()))?;
+        let row = sqlx::query_as::<_, UserRow>(include_str!("sql/find_user_by_coach_name.sql"))
+            .bind(coach_name)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(db_err)?;
 
-        let Some(row) = row else {
-            return Ok(None);
-        };
+        Ok(row.map(User::try_from).transpose()?)
+    }
 
-        let id_str: String         = row.try_get("id")            .map_err(|e| RepositoryError::Database(e.to_string()))?;
-        let coach_name_str: String = row.try_get("coach_name")    .map_err(|e| RepositoryError::Database(e.to_string()))?;
-        let email_str: String      = row.try_get("email")         .map_err(|e| RepositoryError::Database(e.to_string()))?;
-        let password_hash: String  = row.try_get("password_hash") .map_err(|e| RepositoryError::Database(e.to_string()))?;
-
-        let id = UserId::from_string(&id_str)
-            .map_err(|e| RepositoryError::Database(e.to_string()))?;
-        let coach_name = CoachName::new(coach_name_str)
-            .map_err(|e| RepositoryError::Database(e.to_string()))?;
-        let email = Email::new(email_str)
-            .map_err(|e| RepositoryError::Database(e.to_string()))?;
-
-        Ok(Some(User::new(id, coach_name, email, password_hash)))
+    async fn update_password_hash(&self, coach_name: &str, new_hash: &str) -> Result<(), RepositoryError> {
+        sqlx::query(include_str!("sql/update_user_password.sql"))
+            .bind(new_hash)
+            .bind(coach_name)
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
+        Ok(())
     }
 }

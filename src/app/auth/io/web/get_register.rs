@@ -2,7 +2,7 @@ use askama::Template;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 use crate::app::auth::io::web::auth_layout::AuthLayout;
-use crate::app::auth::io::web::get_login::LoginTemplate;
+use crate::app::auth::routes::Routes;
 
 #[derive(Template, Default)]
 #[template(path = "auth/auth-register.html")]
@@ -13,6 +13,7 @@ pub struct RegisterTemplate {
     pub email_error:            Option<String>,
     pub password_error:         Option<String>,
     pub password_confirm_error: Option<String>,
+    pub routes:                 Routes,
 }
 
 impl IntoResponse for RegisterTemplate {

@@ -9,8 +9,8 @@ use crate::app::shared_kernel::user::User;
 fn make_user(coach_name: &str, email: &str) -> User {
     User::new(
         UserId::new(),
-        CoachName::new(coach_name).unwrap(),
-        Email::new(email).unwrap(),
+        CoachName::try_new(coach_name).unwrap(),
+        Email::try_new(email).unwrap(),
         "hash_fictif".into(),
     )
 }
@@ -65,7 +65,7 @@ async fn find_by_coach_name_renvoie_le_bon_utilisateur(pool: PgPool) {
 
     let found = repo.find_by_coach_name("Bagouze").await.unwrap().unwrap();
 
-    assert_eq!(found.coach_name.value(), "Bagouze");
+    assert_eq!(found.coach_name.into_inner(), "Bagouze");
     assert_eq!(found.email.value(), "bagouze@example.com");
     assert_eq!(found.password_hash, "hash_fictif");
 }

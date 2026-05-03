@@ -2,10 +2,13 @@ use askama::Template;
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
+use crate::app::auth::routes::Routes;
 
-#[derive(Template)]
+#[derive(Template, Default)]
 #[template(path = "auth/auth-register-success.html")]
-pub struct RegisterSuccessTemplate;
+pub struct RegisterSuccessTemplate {
+    pub routes: Routes,
+}
 
 impl IntoResponse for RegisterSuccessTemplate {
     fn into_response(self) -> Response {
@@ -24,7 +27,6 @@ pub struct RegisterFormPayload {
     pub password_confirm: String,
 }
 
-
 pub async fn register_success() -> impl IntoResponse {
-    RegisterSuccessTemplate
+    RegisterSuccessTemplate::default()
 }

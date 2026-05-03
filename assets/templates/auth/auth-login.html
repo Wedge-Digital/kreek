@@ -7,7 +7,7 @@
 
 <div style="height: var(--p2);"></div>
 
-<form hx-post="/auth/login" hx-target="#content" hx-swap="innerHTML">
+<form hx-post="{{ routes.login() }}" hx-target="#content" hx-swap="innerHTML">
 <div class="form-group">
     <label class="form-label">Nom du coach</label>
     <label>
@@ -24,19 +24,23 @@
 
   {% if let Some(err) = login_error %}<div class="form-error text-center p-1">{{ err }}</div>
   {%else%}
-  <div class="p-2"></div>
+  <div class="p-1"></div>
   {% endif %}
   <button type="submit" class="btn btn-primary">Se connecter</button>
 </form>
 
-<button class="btn btn-text" onclick="window.location.href='auth-forgot-password.html'">
+<button class="btn btn-text"
+        hx-get="{{ routes.forgot_password() }}"
+        hx-target="#content"
+        hx-swap="innerHTML"
+        hx-push-url="true"
+  >
   Mot de passe oublié ?
 </button>
 
 <div class="separator"></div>
 
-<div class="text-center text-small text-dark-2">Nouvel utilisateur ?</div>
-<button hx-get="/auth/register"
+<button hx-get="{{ routes.register() }}"
         hx-target="#content"
         hx-swap="innerHTML"
         class="btn btn-outline"

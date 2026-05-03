@@ -1,46 +1,14 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Compte créé — Blood Bowl Club</title>
-  <link rel="stylesheet" href="/static/css/common.css">
-  <link rel="stylesheet" href="/static/css/layout-auth.css">
-  <link rel="stylesheet" href="/static/css/pages/auth-register-success.css">
-</head>
-<body>
-  <div class="auth-layout">
-    <div class="auth-left">
-      <div class="auth-card flex-col gap-1 text-center">
-        <div class="success-icon">✓</div>
 
-        <div class="pt-2">
-          <div class="h2-gras" style="color: var(--green);">Compte créé !</div>
-          <div class="text-small text-dark-2" style="margin-top:8px;">Bienvenue parmi nous !</div>
-        </div>
+  <div class="success-icon">✓</div>
 
-        <div style="height: var(--p1);"></div>
-
-        <button class="btn btn-primary" onclick="window.location.href='/auth/login'">
-          Je me connecte
-        </button>
-      </div>
-    </div>
-
-    <div class="auth-right">
-      <div class="fancy-logo">
-        <div class="fancy-logo-emblem">
-          <div class="fancy-logo-emblem-inner">BBC</div>
-        </div>
-        <div class="fancy-logo-title">Blood Bowl<br>Club</div>
-        <div class="fancy-logo-subtitle">La plateforme de gestion<br>de vos ligues de Blood Bowl</div>
-        <div class="fancy-logo-dots">
-          <div class="fancy-logo-dot"></div>
-          <div class="fancy-logo-dot"></div>
-          <div class="fancy-logo-dot"></div>
-        </div>
-      </div>
-    </div>
+  <div class="pt-2">
+    <div class="h2-gras" style="color: var(--green);">Compte créé !</div>
+    <div class="text-small text-dark-2" style="margin-top:8px;">Bienvenue parmi nous !</div>
   </div>
-</body>
-</html>
+
+  <div style="height: var(--p1);"></div>
+
+  <button class="btn btn-primary" onclick="window.location.href='{{ routes.login() }}'">
+    Je me connecte
+  </button>
+

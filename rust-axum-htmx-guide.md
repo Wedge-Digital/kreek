@@ -350,7 +350,7 @@ pub async fn csrf_middleware(request: Request, next: Next) -> Result<Response, A
 ### User + AuthBackend
 
 ```rust
-// src/io/auth.rs
+// src/services/auth.rs
 use axum_login::{AuthUser, AuthnBackend, UserId};
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 
