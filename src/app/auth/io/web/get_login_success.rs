@@ -1,6 +1,8 @@
 use askama::Template;
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
+use crate::app::auth::io::web::auth_layout::AuthLayout;
+use crate::app::auth::io::web::get_login::LoginTemplate;
 
 #[derive(Template, Default)]
 #[template(path = "auth/auth-login-success.html")]
@@ -16,6 +18,11 @@ impl IntoResponse for LoginSuccessTemplate {
     }
 }
 
-pub async fn login_success() -> impl IntoResponse {
-    LoginSuccessTemplate::default()
+pub async fn login_success(headers: HeaderMap) -> impl IntoResponse {
+    if headers.contains_key("hx-request") {
+        LoginSuccessTemplate::default().into_response()
+    } else {
+        let content = LoginSuccessTemplate::default().render().unwrap_or_default();
+        AuthLayout { content }.into_response()
+    }
 }

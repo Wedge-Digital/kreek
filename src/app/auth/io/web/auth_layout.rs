@@ -5,7 +5,7 @@ use axum::response::{Html, IntoResponse, Response};
 #[derive(Template)]
 #[template(path = "auth/auth-layout.html")]
 pub struct AuthLayout {
-    pub content: String,
+    pub content: String
 }
 
 impl IntoResponse for AuthLayout {

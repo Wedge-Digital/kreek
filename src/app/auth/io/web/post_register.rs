@@ -26,21 +26,23 @@ pub async fn post_register(
             .body(Body::empty())
             .unwrap(),
 
-        Err(e) => {
+        Err(errors) => {
             let mut tmpl = RegisterTemplate {
                 coach_name_value: payload.coach_name,
                 email_value:      payload.email,
                 ..Default::default()
             };
-            match e {
-                RegisterError::PasswordMismatch      => tmpl.password_confirm_error = Some("Les mots de passe ne correspondent pas".into()),
-                RegisterError::PasswordTooShort      => tmpl.password_error         = Some("Le mot de passe doit contenir au moins 8 caractères".into()),
-                RegisterError::InvalidCoachName(err) => tmpl.coach_name_error       = Some(err.to_string()),
-                RegisterError::InvalidEmail(err)     => tmpl.email_error            = Some(err.to_string()),
-                RegisterError::CoachNameAlreadyTaken => tmpl.coach_name_error       = Some("Ce nom de coach est déjà utilisé".into()),
-                RegisterError::EmailAlreadyTaken     => tmpl.email_error            = Some("Cette adresse email est déjà utilisée".into()),
-                RegisterError::PasswordHashError
-                | RegisterError::Database(_)         => tmpl.password_error         = Some("Erreur interne, veuillez réessayer.".into()),
+            for e in errors {
+                match e {
+                    RegisterError::PasswordMismatch      => tmpl.password_confirm_error = Some("Les mots de passe ne correspondent pas".into()),
+                    RegisterError::PasswordTooShort      => tmpl.password_error         = Some("Le mot de passe doit contenir au moins 8 caractères".into()),
+                    RegisterError::InvalidCoachName(err) => tmpl.coach_name_error       = Some(err.to_string()),
+                    RegisterError::InvalidEmail(err)     => tmpl.email_error            = Some(err.to_string()),
+                    RegisterError::CoachNameAlreadyTaken => tmpl.coach_name_error       = Some("Ce nom de coach est déjà utilisé".into()),
+                    RegisterError::EmailAlreadyTaken     => tmpl.email_error            = Some("Cette adresse email est déjà utilisée".into()),
+                    RegisterError::PasswordHashError
+                    | RegisterError::Database(_)         => tmpl.password_error         = Some("Erreur interne, veuillez réessayer.".into()),
+                }
             }
             tmpl.into_response()
         }
