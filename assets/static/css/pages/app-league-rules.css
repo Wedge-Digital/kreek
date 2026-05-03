@@ -1,0 +1,5 @@
+.create-header { background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%); }
+
+.rules-section       { margin-bottom: var(--p3); }
+.rules-section-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); margin-bottom: var(--p1); }
+.two-col-row         { display: flex; gap: var(--p2); align-items: flex-end; }

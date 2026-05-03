@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demande de Réinitialisation de Mot de Passe - ESPNFAN</title>
+    <style>
+        /* CSS Inline pour la compatibilité Email */
+        body { font-family: Arial, sans-serif; background-color: #f0f0f0; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+        .header { background-color: #6B0000; padding: 20px; text-align: center; }
+        .logo-text { color: #FFFFFF; font-size: 28px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+        .logo-text span { background-color: #000000; padding: 2px 5px; border-radius: 3px; margin-right: 3px; }
+        .content { padding: 30px; color: #333333; line-height: 1.6; }
+        h1 { color: #6B0000; font-size: 24px; margin-top: 0; }
+        .button-container { text-align: center; margin: 30px 0; }
+        .button { background-color: #6B0000; color: #FFFFFF !important; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px; border: 1px solid #CC0000; transition: background-color 0.3s; }
+        .button:hover { background-color: #990000; border-color: #990000; }
+        .disclaimer { margin-top: 40px; font-size: 12px; color: #777777; border-top: 1px solid #eee; padding-top: 15px; }
+        .footer { background-color: #1a1a1a; color: #aaaaaa; text-align: center; padding: 15px; font-size: 11px; }
+        a { color: #6B0000; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <p class="logo-text">Bloodbowl Club</p>
+    </div>
+
+    <div class="content">
+        <h1>Password Reset</h1>
+
+        <p>Dear {{username}},</p>
+
+        <p>We have received a password reset request for your Bloodbowl Club account.</p>
+
+
+        <p>If you made this request, please click the red button below to create a new secure password:</p>
+
+        <div class="button-container">
+            <a href="{{reset_pwd_url}}" class="button">
+                RESET MY PASSWORD
+            </a>
+        </div>
+
+        <p>This reset link will expire in 24 hours for security reasons. If you do not reset your password before then, you will need to submit a new request.</p>
+
+        <p class="disclaimer">
+            **Didn’t request this reset?**<br>
+            You can safely ignore this email. Your current password will remain unchanged. However, if you suspect unauthorized access to your account, please contact us immediately at<a href="mailto:support@example.com">support@example.com</a>.
+        </p>
+    </div>
+
+    <div class="footer">
+        <p>&copy; 2025 BloodbowlClub. All rights reseerved<br>
+    </div>
+</div>
+
+</body>
+</html>

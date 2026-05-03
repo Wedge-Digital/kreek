@@ -1,0 +1,31 @@
+/* Surcharge couleur steps : active = rouge */
+.step-num.active   { background: var(--red); }
+.step-label.active { color: var(--red); }
+
+.section-title { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-2); margin-bottom: var(--p1); }
+
+/* Sélecteur d'adversaires */
+.vs-layout  { display: flex; align-items: center; gap: var(--p2); }
+.vs-team    { flex: 1; }
+.vs-divider {
+  width: 50px; height: 50px; border-radius: 50%;
+  background: var(--dark-6); display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-weight: 900; font-size: var(--h5); color: var(--dark-3);
+  flex-shrink: 0;
+}
+.team-picker-card {
+  border: 2px solid var(--dark-5); border-radius: 10px; padding: var(--p2);
+  display: flex; flex-direction: column; gap: var(--p1); cursor: pointer;
+  transition: border-color 0.2s;
+}
+.team-picker-card:hover    { border-color: var(--dark-3); }
+.team-picker-card.selected { border-color: var(--main-blue); background: rgba(0,48,73,0.03); }
+.team-picker-placeholder   { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: var(--p2); color: var(--dark-3); }
+.team-picker-logo {
+  width: 64px; height: 64px; border-radius: 50%; margin: 0 auto;
+  background: linear-gradient(135deg, #003049, #555770);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-weight: 900; font-size: 20px; color: var(--white);
+}
+.team-picker-name { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-0); text-align: center; }
+.team-picker-sub  { font-size: var(--text-tiny); color: var(--dark-3); text-align: center; }

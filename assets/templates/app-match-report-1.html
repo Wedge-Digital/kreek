@@ -4,60 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Saisie de match (1/2) — Blood Bowl Club</title>
-  <link rel="stylesheet" href="shared.css">
-  <style>
-    .report-card { background: var(--white); border-radius: 12px; padding: var(--p4); max-width: 860px; margin: 0 auto; }
-    .report-header {
-      background: linear-gradient(135deg, #E02020 0%, var(--dark-0) 100%);
-      border-radius: 10px; padding: var(--p2); margin-bottom: var(--p3);
-      display: flex; align-items: center; gap: var(--p1);
-    }
-    .report-header-icon { width: 48px; height: 48px; border-radius: 10px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 24px; }
-    .report-header-text .title { color: var(--white); font-family: var(--font-title); font-size: 24px; font-weight: 700; }
-    .report-header-text .sub { color: rgba(255,255,255,0.7); font-size: var(--text-tiny); margin-top: 2px; }
-
-    .steps { display: flex; align-items: center; gap: 0; margin-bottom: var(--p3); }
-    .step { display: flex; align-items: center; gap: 8px; }
-    .step-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: var(--text-tiny); font-weight: 700; }
-    .step-num.active { background: var(--red); color: var(--white); }
-    .step-num.pending { background: var(--dark-5); color: var(--dark-3); }
-    .step-label { font-size: var(--text-tiny); font-weight: 500; }
-    .step-label.active { color: var(--red); }
-    .step-label.pending { color: var(--dark-3); }
-    .step-line { flex: 1; height: 2px; background: var(--dark-5); margin: 0 8px; }
-
-    .section-title { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-2); margin-bottom: var(--p1); }
-    .sub-section-title { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-2); margin-bottom: var(--p1); }
-
-    /* Opponent pickers */
-    .vs-layout { display: flex; align-items: center; gap: var(--p2); }
-    .vs-team { flex: 1; }
-    .vs-divider {
-      width: 50px; height: 50px; border-radius: 50%;
-      background: var(--dark-6); display: flex; align-items: center; justify-content: center;
-      font-family: var(--font-title); font-weight: 900; font-size: var(--h5); color: var(--dark-3);
-      flex-shrink: 0;
-    }
-    .team-picker-card {
-      border: 2px solid var(--dark-5); border-radius: 10px; padding: var(--p2);
-      display: flex; flex-direction: column; gap: var(--p1); cursor: pointer;
-      transition: border-color 0.2s;
-    }
-    .team-picker-card:hover { border-color: var(--dark-3); }
-    .team-picker-card.selected { border-color: var(--main-blue); background: rgba(0,48,73,0.03); }
-    .team-picker-placeholder {
-      display: flex; flex-direction: column; align-items: center; gap: 8px;
-      padding: var(--p2); color: var(--dark-3);
-    }
-    .team-picker-logo {
-      width: 64px; height: 64px; border-radius: 50%; margin: 0 auto;
-      background: linear-gradient(135deg, #003049, #555770);
-      display: flex; align-items: center; justify-content: center;
-      font-family: var(--font-title); font-weight: 900; font-size: 20px; color: var(--white);
-    }
-    .team-picker-name { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-0); text-align: center; }
-    .team-picker-sub { font-size: var(--text-tiny); color: var(--dark-3); text-align: center; }
-  </style>
+  <link rel="stylesheet" href="/static/css/common.css">
+  <link rel="stylesheet" href="/static/css/layout-app.css">
+  <link rel="stylesheet" href="/static/css/pages/app-match-report-1.css">
 </head>
 <body>
   <div class="app-layout">

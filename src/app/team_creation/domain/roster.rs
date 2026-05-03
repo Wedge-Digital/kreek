@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::app::team_creation::domain::team_staff::TeamStaff;
+use serde::{Deserialize, Serialize};
 
 pub const MAX_PLAYER_COUNT: u8 = 16;
 

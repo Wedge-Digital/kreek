@@ -1,0 +1,9 @@
+.create-header { background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%); }
+
+.upload-preview {
+  aspect-ratio: 1; border: 2px dashed var(--dark-4); border-radius: 10px;
+  background: var(--dark-6); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: var(--p1); cursor: pointer;
+  transition: border-color 0.15s;
+}
+.upload-preview:hover { border-color: var(--main-blue); }

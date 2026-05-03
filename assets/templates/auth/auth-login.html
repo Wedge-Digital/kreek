@@ -1,0 +1,46 @@
+<div class="logo-img">BBC</div>
+
+<div class="text-center">
+  <div class="h2-gras">Bienvenue !</div>
+  <div class="text-small text-dark-2" style="margin-top:6px;">Connectez-vous à votre espace</div>
+</div>
+
+<div style="height: var(--p2);"></div>
+
+<form hx-post="/auth/login" hx-target="#content" hx-swap="innerHTML">
+<div class="form-group">
+    <label class="form-label">Nom du coach</label>
+    <label>
+      <input type="text" name="coach_name" class="form-input" placeholder="Votre nom de coach">
+    </label>
+  </div>
+  <div style="height: 4px;"></div>
+  <div class="form-group">
+    <label class="form-label">Mot de passe</label>
+    <label>
+      <input type="password" name="password" class="form-input" placeholder="••••••••">
+    </label>
+  </div>
+
+  {% if let Some(err) = login_error %}<div class="form-error text-center p-1">{{ err }}</div>
+  {%else%}
+  <div class="p-2"></div>
+  {% endif %}
+  <button type="submit" class="btn btn-primary">Se connecter</button>
+</form>
+
+<button class="btn btn-text" onclick="window.location.href='auth-forgot-password.html'">
+  Mot de passe oublié ?
+</button>
+
+<div class="separator"></div>
+
+<div class="text-center text-small text-dark-2">Nouvel utilisateur ?</div>
+<button hx-get="/auth/register"
+        hx-target="#content"
+        hx-swap="innerHTML"
+        class="btn btn-outline"
+        hx-push-url="true"
+>
+  Créer un compte
+</button>

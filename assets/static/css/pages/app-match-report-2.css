@@ -1,0 +1,37 @@
+/* Surcharge couleur steps : active = rouge */
+.step-num.active   { background: var(--red); }
+.step-label.active { color: var(--red); }
+
+.section-title { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-2); margin-bottom: var(--p1); }
+
+/* Résumé du match */
+.match-summary {
+  background: var(--dark-7); border-radius: 10px; padding: var(--p2); margin-bottom: var(--p3);
+  display: flex; align-items: center; justify-content: center; gap: var(--p3);
+}
+.match-team-sm   { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.match-logo-sm   {
+  width: 48px; height: 48px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-weight: 900; font-size: 16px; color: var(--white);
+}
+.match-name-sm { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); text-align: center; }
+.match-vs-sm   { font-family: var(--font-title); font-size: var(--h3); font-weight: 900; color: var(--dark-4); }
+
+/* Saisie résultats */
+.radio-group { display: flex; gap: var(--p1); flex-wrap: wrap; }
+.radio-btn {
+  padding: 8px 16px; border: 2px solid var(--dark-5); border-radius: 8px;
+  cursor: pointer; font-size: var(--text-tiny); font-weight: 600; color: var(--dark-2);
+  transition: border-color 0.15s, background 0.15s;
+}
+.radio-btn.selected { border-color: var(--main-blue); color: var(--main-blue); background: rgba(0,48,73,0.05); }
+
+.number-input { display: flex; align-items: center; gap: 12px; }
+.number-input input { width: 80px; text-align: center; padding: 10px; border: 1px solid var(--dark-4); border-radius: 8px; font-size: var(--text-medium); font-weight: 700; color: var(--dark-0); }
+.number-btn {
+  width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--dark-4);
+  background: var(--white); font-size: 20px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; color: var(--dark-1);
+}
+.number-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }

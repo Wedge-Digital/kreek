@@ -1,5 +1,5 @@
-use nutype::nutype;
 use crate::app::shared_kernel::sulid::SUlid;
+use nutype::nutype;
 
 pub type CoachId = EntityId;
 

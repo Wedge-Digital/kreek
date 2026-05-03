@@ -1,0 +1,51 @@
+<div>
+  <div class="h2-gras">Créer votre compte</div>
+  <div class="text-small text-dark-2" style="margin-top:6px;">Quelques informations pour démarrer</div>
+</div>
+
+<div style="height: var(--p1);"></div>
+
+<form hx-post="/auth/register" hx-target="#content" hx-swap="innerHTML">
+  <div class="form-group">
+    <label class="form-label">Nom du coach</label>
+    <input type="text" name="coach_name"
+           class="form-input{% if let Some(_) = coach_name_error %} error{% endif %}"
+           placeholder="Votre nom de coach"
+           value="{{ coach_name_value }}">
+    <div class="form-error">{% if let Some(err) = coach_name_error %}{{ err }}{% endif %}</div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Adresse email</label>
+    <input type="email" name="email"
+           class="form-input{% if let Some(_) = email_error %} error{% endif %}"
+           placeholder="exemple@mail.com"
+           value="{{ email_value }}">
+    <div class="form-error">{% if let Some(err) = email_error %}{{ err }}{% endif %}</div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Mot de passe</label>
+    <input type="password" name="password"
+           class="form-input{% if let Some(_) = password_error %} error{% endif %}"
+           placeholder="••••••••">
+    <div class="form-error">{% if let Some(err) = password_error %}{{ err }}{% endif %}</div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Confirmer le mot de passe</label>
+    <input type="password" name="password_confirm"
+           class="form-input{% if let Some(_) = password_confirm_error %} error{% endif %}"
+           placeholder="••••••••">
+    <div class="form-error">{% if let Some(err) = password_confirm_error %}{{ err }}{% endif %}</div>
+  </div>
+
+  <div style="height: var(--p05);"></div>
+  <button type="submit" class="btn btn-primary">Créer mon compte</button>
+</form>
+
+<div style="height: var(--p1);"></div>
+<button hx-get="/auth/login"
+        hx-target="#content"
+        hx-push-url="true"
+        hx-swap="innerHTML"
+        class="btn btn-outline">
+  Retour
+</button>

@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 use crate::app::team_creation::domain::error::DomainError;
 use crate::app::team_creation::domain::roster::RosterId;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct RulesetId(pub String);

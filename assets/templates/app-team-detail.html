@@ -4,59 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Les Korrigans FC — Blood Bowl Club</title>
-  <link rel="stylesheet" href="shared.css">
-  <style>
-    .team-page { max-width: 1100px; margin: 0 auto; }
-
-    /* Team header */
-    .team-header {
-      background: var(--white); border-radius: 10px 10px 0 0; padding: var(--p2);
-      display: flex; align-items: flex-start; gap: var(--p3);
-      border-bottom: 2px solid var(--dark-5);
-    }
-    .team-header-logo {
-      width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0;
-      background: linear-gradient(135deg, #003049, #555770);
-      display: flex; align-items: center; justify-content: center;
-      font-family: var(--font-title); font-weight: 900; font-size: 36px; color: var(--white);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    }
-    .team-header-info { flex: 1; display: flex; flex-direction: column; gap: var(--p1); }
-    .team-header-name { font-family: var(--font-title); font-size: var(--h2); font-weight: 800; color: var(--dark-0); }
-    .team-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
-    .meta-item { display: flex; flex-direction: column; gap: 2px; }
-    .meta-label { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
-    .meta-value { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
-    .team-header-stats { display: flex; gap: var(--p3); }
-    .stat-block { text-align: center; }
-    .stat-val { font-family: var(--font-title); font-size: var(--h3); font-weight: 800; }
-    .stat-val.win { color: var(--green); }
-    .stat-val.draw { color: var(--dark-2); }
-    .stat-val.loss { color: var(--red); }
-    .stat-label { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; }
-
-    /* Players table */
-    .players-panel { background: var(--white); border-radius: 0 0 10px 10px; padding: var(--p2); }
-    .player-table { width: 100%; border-collapse: collapse; }
-    .player-table th {
-      text-align: left; padding: 10px 12px;
-      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
-      text-transform: uppercase; letter-spacing: 0.5px;
-      border-bottom: 2px solid var(--dark-5); background: var(--dark-6);
-    }
-    .player-table td { padding: 12px; border-bottom: 1px solid var(--dark-6); font-size: var(--text-small); }
-    .player-table tr:hover td { background: var(--dark-7); cursor: pointer; }
-    .player-table tr:last-child td { border-bottom: none; }
-    .player-pos {
-      display: inline-block; padding: 2px 8px; border-radius: 4px;
-      font-size: var(--text-tiny); font-weight: 700;
-    }
-    .pos-lineman { background: rgba(0,48,73,0.1); color: var(--main-blue); }
-    .pos-blitzer { background: rgba(224,32,32,0.1); color: var(--red); }
-    .pos-thrower { background: rgba(98,149,132,0.1); color: var(--green); }
-    .pos-catcher { background: rgba(255,215,0,0.15); color: #9A7800; }
-    .player-skill { background: var(--dark-5); color: var(--dark-1); border-radius: 4px; padding: 2px 6px; font-size: 11px; margin-right: 4px; display: inline-block; }
-  </style>
+  <link rel="stylesheet" href="/static/css/common.css">
+  <link rel="stylesheet" href="/static/css/layout-app.css">
+  <link rel="stylesheet" href="/static/css/pages/app-team-detail.css">
 </head>
 <body>
   <div class="app-layout">

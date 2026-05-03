@@ -4,39 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Blood Bowl Club — Navigation</title>
-  <link rel="stylesheet" href="shared.css">
-  <style>
-    body { background: var(--dark-0); min-height: 100vh; padding: var(--p4); }
-    .index-title {
-      font-family: var(--font-title); font-size: var(--h2); font-weight: 800;
-      color: var(--white); margin-bottom: var(--p3); letter-spacing: -0.5px;
-    }
-    .index-subtitle { font-size: var(--text-small); color: var(--dark-4); margin-bottom: var(--p4); }
-    .section-title {
-      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
-      letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: var(--p1);
-    }
-    .nav-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--p1);
-      margin-bottom: var(--p3);
-    }
-    .nav-link {
-      background: var(--dark-1); border-radius: 8px; padding: var(--p1) var(--p2);
-      color: var(--white); font-size: var(--text-small); font-weight: 500;
-      transition: background 0.15s, transform 0.15s; display: block;
-      border: 1px solid rgba(255,255,255,0.06);
-    }
-    .nav-link:hover { background: var(--main-blue); transform: translateY(-2px); }
-    .nav-link small { display: block; font-size: var(--text-tiny); color: var(--dark-4); margin-top: 2px; font-weight: 300; }
-    .logo-mark {
-      display: inline-flex; align-items: center; gap: 10px; margin-bottom: var(--p2);
-    }
-    .logo-icon {
-      width: 44px; height: 44px; border-radius: 10px; background: var(--orange);
-      display: flex; align-items: center; justify-content: center;
-      font-family: var(--font-title); font-weight: 900; font-size: 20px; color: var(--white);
-    }
-  </style>
+  <link rel="stylesheet" href="/static/css/common.css">
+  <link rel="stylesheet" href="/static/css/pages/index.css">
 </head>
 <body>
   <div class="logo-mark">
@@ -47,14 +16,14 @@
 
   <div class="section-title">Authentification</div>
   <div class="nav-grid">
-    <a class="nav-link" href="auth-login.html">Connexion<small>Page principale d'auth</small></a>
-    <a class="nav-link" href="auth-register.html">Créer un compte<small>Formulaire d'inscription</small></a>
-    <a class="nav-link" href="auth-register-success.html">Compte créé !<small>Confirmation d'inscription</small></a>
-    <a class="nav-link" href="auth-welcome-back.html">Bienvenue !<small>Message de retour</small></a>
-    <a class="nav-link" href="auth-forgot-password.html">Mot de passe oublié<small>Démarrer la récupération</small></a>
-    <a class="nav-link" href="auth-forgot-password-sent.html">Email envoyé<small>Confirmation d'envoi</small></a>
-    <a class="nav-link" href="auth-reset-password.html">Réinitialiser MDP<small>Nouveau mot de passe</small></a>
-    <a class="nav-link" href="auth-checking.html">Vérification auth<small>Écran de chargement</small></a>
+    <a class="nav-link" href="auth/auth-login.html">Connexion<small>Page principale d'auth</small></a>
+    <a class="nav-link" href="auth/auth-register.html">Créer un compte<small>Formulaire d'inscription</small></a>
+    <a class="nav-link" href="auth/auth-register-success.html">Compte créé !<small>Confirmation d'inscription</small></a>
+    <a class="nav-link" href="auth/auth-login-success.html">Bienvenue !<small>Message de retour</small></a>
+    <a class="nav-link" href="auth/auth-forgot-password.html">Mot de passe oublié<small>Démarrer la récupération</small></a>
+    <a class="nav-link" href="auth/auth-forgot-password-sent.html">Email envoyé<small>Confirmation d'envoi</small></a>
+    <a class="nav-link" href="auth/auth-reset-password.html">Réinitialiser MDP<small>Nouveau mot de passe</small></a>
+    <a class="nav-link" href="auth/auth-checking.html">Vérification auth<small>Écran de chargement</small></a>
   </div>
 
   <div class="section-title">Application principale</div>

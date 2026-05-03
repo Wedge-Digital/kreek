@@ -1,0 +1,13 @@
+.create-card   { max-width: 860px; }
+.create-header { background: linear-gradient(135deg, #629584 0%, var(--main-blue) 100%); }
+
+.col-label { font-size: var(--text-small); font-weight: 500; color: var(--dark-1); margin-bottom: var(--p1); }
+
+.upload-preview {
+  width: 100%; aspect-ratio: 1; max-height: 160px;
+  border: 2px dashed var(--dark-4); border-radius: 10px;
+  background: var(--dark-6); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px; cursor: pointer;
+  transition: border-color 0.15s;
+}
+.upload-preview:hover { border-color: var(--main-blue); }

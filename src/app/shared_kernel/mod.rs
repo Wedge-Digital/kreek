@@ -5,3 +5,4 @@ pub mod team;
 pub mod staff;
 pub mod id_service;
 mod tests;
+pub mod user;

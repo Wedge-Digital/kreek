@@ -1,10 +1,10 @@
-use serde::{Deserialize, Serialize};
 use crate::app::shared_kernel::common_types::{Entity, UserId};
 use crate::app::shared_kernel::id_service::IdService;
 use crate::app::shared_kernel::team::{BaseTeamInfo, TeamId};
 use crate::app::team_creation::domain::error::DomainError;
 use crate::app::team_creation::domain::ruleset::Ruleset;
 use crate::app::team_creation::domain::team_ruleset_selected::RulesetSelectedTeam;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DraftTeam {

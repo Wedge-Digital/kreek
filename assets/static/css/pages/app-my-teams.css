@@ -1,0 +1,36 @@
+.teams-layout { display: flex; gap: var(--p2); }
+.filters-col  { flex: 2; }
+.teams-col    { flex: 8; display: flex; flex-direction: column; gap: var(--p1); }
+
+.filters-panel { background: var(--white); border-radius: 10px; padding: var(--p2); display: flex; flex-direction: column; gap: var(--p2); position: sticky; top: 0; }
+.filter-group  { display: flex; flex-direction: column; gap: var(--p1); }
+.filter-label  { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+.filter-label-text { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-2); }
+.filter-arrow  { color: var(--dark-4); font-size: 12px; }
+
+.teams-row { display: flex; gap: var(--p1); }
+.team-card {
+  background: var(--white); border-radius: 10px; border: 1px solid var(--dark-5);
+  padding: var(--p2); display: flex; flex-direction: column; align-items: center; gap: var(--p1);
+  height: 360px; cursor: pointer; flex: 1;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+.team-card:hover { border-color: var(--dark-3); box-shadow: 0 8px 24px rgba(0,0,0,0.1); transform: translateY(-3px); }
+.team-logo {
+  width: 100px; height: 100px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-weight: 900; font-size: 30px; color: var(--white);
+}
+.team-name       { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-0); text-align: center; }
+.team-roster-tag { background: var(--dark-6); border-radius: 20px; padding: 4px 12px; font-size: var(--text-tiny); color: var(--dark-2); font-weight: 500; }
+.team-value      { font-size: var(--text-small); color: var(--dark-2); font-weight: 500; }
+.team-coach      { font-size: var(--text-tiny); color: var(--dark-3); margin-top: auto; }
+.team-coach span { color: var(--main-blue); font-weight: 500; }
+
+.team-record  { display: flex; gap: var(--p1); margin-top: var(--p05); }
+.record-item  { text-align: center; }
+.record-val   { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; }
+.record-val.win  { color: var(--green); }
+.record-val.draw { color: var(--dark-2); }
+.record-val.loss { color: var(--red); }
+.record-label { font-size: 10px; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }

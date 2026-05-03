@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
-use nutype::nutype;
 use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, EntityId};
+use nutype::nutype;
+use serde::{Deserialize, Serialize};
 
 #[nutype(
     sanitize(trim),

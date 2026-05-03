@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demande de Réinitialisation de Mot de Passe - ESPNFAN</title>
+    <style>
+        /* CSS Inline pour la compatibilité Email */
+        body { font-family: Arial, sans-serif; background-color: #f0f0f0; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+        .header { background-color: #6B0000; padding: 20px; text-align: center; }
+        .logo-text { color: #FFFFFF; font-size: 28px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+        .logo-text span { background-color: #000000; padding: 2px 5px; border-radius: 3px; margin-right: 3px; }
+        .content { padding: 30px; color: #333333; line-height: 1.6; }
+        h1 { color: #6B0000; font-size: 24px; margin-top: 0; }
+        .button-container { text-align: center; margin: 30px 0; }
+        .button { background-color: #6B0000; color: #FFFFFF !important; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px; border: 1px solid #CC0000; transition: background-color 0.3s; }
+        .button:hover { background-color: #990000; border-color: #990000; }
+        .disclaimer { margin-top: 40px; font-size: 12px; color: #777777; border-top: 1px solid #eee; padding-top: 15px; }
+        .footer { background-color: #1a1a1a; color: #aaaaaa; text-align: center; padding: 15px; font-size: 11px; }
+        a { color: #6B0000; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <p class="logo-text">Bloodbowl Club</p>
+    </div>
+
+    <div class="content">
+        <h1>Réinitialisation de votre mot de passe</h1>
+
+        <p>Cher(ère) {{username}},</p>
+
+        <p>Nous avons reçu une demande de réinitialisation de mot de passe pour votre compte Bloodbowl Club.</p>
+
+        <p>Si vous êtes à l'origine de cette demande, veuillez cliquer sur le bouton rouge ci-dessous pour créer un nouveau mot de passe sécurisé :</p>
+
+        <div class="button-container">
+            <a href="{{reset_pwd_url}}" class="button">
+                RÉINITIALISER MON MOT DE PASSE
+            </a>
+        </div>
+
+        <p>Ce lien de réinitialisation expirera dans 24 heures par mesure de sécurité. Si vous ne réinitialisez pas votre mot de passe avant cela, vous devrez soumettre une nouvelle demande.</p>
+
+        <p class="disclaimer">
+            **Vous n'avez pas demandé cette réinitialisation ?**<br>
+            Vous pouvez ignorer cet e-mail en toute sécurité. Votre mot de passe actuel restera inchangé. Cependant, si vous craignez qu'une personne non autorisée ait accès à votre compte, veuillez nous contacter immédiatement à <a href="mailto:support@example.com">support@example.com</a>.
+        </p>
+    </div>
+
+    <div class="footer">
+        <p>&copy; 2025 BloodbowlClub. Tous droits réservés.<br>
+    </div>
+</div>
+
+</body>
+</html>

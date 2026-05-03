@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion — Blood Bowl Club</title>
+  <link rel="stylesheet" href="/static/css/common.css">
+  <link rel="stylesheet" href="/static/css/layout-auth.css">
+  <link rel="stylesheet" href="/static/css/pages/auth-login.css">
+  <script src="/static/js/htmx.min.js"></script>
+</head>
+<body>
+  <div class="auth-layout">
+    <!-- Left: Form -->
+    <div class="auth-left">
+      <div id="content" class="auth-card flex-col gap-1">
+        {{ content|safe }}
+      </div>
+    </div>
+
+    <!-- Right: Decorative -->
+    <div class="auth-right">
+      <img class="right-auth-img" src="/static/img/home.png" alt="Logo Blood Bowl Club">
+    </div>
+  </div>
+</body>
+</html>

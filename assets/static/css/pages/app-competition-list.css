@@ -1,0 +1,17 @@
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--p2); }
+
+.club-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--p1); }
+.club-card {
+  background: var(--white); border-radius: var(--card-radius); padding: var(--p2);
+  display: flex; flex-direction: column; align-items: center; gap: var(--p1);
+  border: 1px solid var(--dark-5); cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+.club-card:hover { border-color: var(--dark-3); box-shadow: 0 4px 16px rgba(0,0,0,0.08); transform: translateY(-2px); }
+.club-logo {
+  width: 80px; height: 80px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-weight: 900; font-size: 24px; color: var(--white);
+}
+.club-name { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-0); text-align: center; }
+.club-info { font-size: var(--text-tiny); color: var(--dark-3); text-align: center; line-height: 1.6; }

@@ -1,1 +1,0 @@
-EXEC_PROFILE=dev DATABASE_URL=$(grep -E '^DATABASE__URL=' .env.${EXEC_PROFILE} | cut -d= -f2-) sqlx database reset

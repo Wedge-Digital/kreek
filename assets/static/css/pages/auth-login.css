@@ -1,0 +1,6 @@
+.logo-img {
+  width: 60px; height: 60px; border-radius: 14px;
+  background: var(--dark-0); display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-weight: 900; font-size: 20px; color: var(--white);
+  margin: 0 auto var(--p2);
+}

@@ -1,10 +1,12 @@
 extern crate core;
 
 mod app;
-mod lib;
 mod config;
+mod state;
 
+use std::time::Duration;
 use config::AppConfig;
+use state::AppState;
 
 use axum::{
     routing::{get, post},
@@ -12,60 +14,48 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use tower_http::{trace::TraceLayer};
+use tower_http::{services::ServeDir, trace::TraceLayer};
+use tower_livereload::LiveReloadLayer;
+use std::sync::Arc;
+use crate::app::auth::io::repository::user_repository::UserRepository;
 
 #[tokio::main]
 async fn main() {
-    // initialize tracing
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "kreek=debug".into()),
+        )
+        .init();
+
     let cfg = AppConfig::load()
         .expect("Configuration invalide — vérifiez vos variables d'environnement");
 
-    // build our application with a route
-    let app = Router::new()
-        .layer(TraceLayer::new_for_http())
-        // `GET /` goes to `root`
-        .route("/", get(root))
-        // `POST /users` goes to `create_user`
-        .route("/users", post(create_user));
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(cfg.database.max_connections)
+        .min_connections(cfg.database.min_connections)
+        .acquire_timeout(Duration::from_secs(cfg.database.acquire_timeout_seconds))
+        .idle_timeout(Duration::from_secs(cfg.database.idle_timeout_seconds))
+        .connect(&cfg.database.url)
+        .await
+        .expect("Impossible de se connecter à la base de données");
 
-    // run our app with hyper, listening globally on port 3000
+    let state = AppState {
+        user_repository: Arc::new(UserRepository::new(pool.clone())),
+    };
+
+    let app = Router::new()
+        .merge(app::auth::auth_router::router())
+        .nest_service("/static", ServeDir::new("assets/static"))
+        .layer(TraceLayer::new_for_http())
+        .with_state(state);
+
+    #[cfg(debug_assertions)]
+    let app = app
+        .nest_service("/ui", ServeDir::new("assets/templates"))
+        .layer(LiveReloadLayer::new());
+
     let server_address = cfg.server_addr();
     let listener = tokio::net::TcpListener::bind(&server_address).await.unwrap();
     axum::serve(listener, app).await.unwrap();
-}
-
-// basic handler that responds with a static string
-async fn root() -> &'static str {
-    println!("changeme-dev-only");
-    "Hello, World!"
-}
-
-async fn create_user(
-    // this argument tells axum to parse the request body
-    // as JSON into a `CreateUser` type
-    Json(payload): Json<CreateUser>,
-) -> (StatusCode, Json<User>) {
-    // insert your application logic here
-    let user = User {
-        id: 1337,
-        username: payload.username,
-    };
-
-    // this will be converted into a JSON response
-    // with a status code of `201 Created`
-    (StatusCode::CREATED, Json(user))
-}
-
-// the input to our `create_user` handler
-#[derive(Deserialize)]
-struct CreateUser {
-    username: String,
-}
-
-// the output to our `create_user` handler
-#[derive(Serialize)]
-struct User {
-    id: u64,
-    username: String,
 }

@@ -1,0 +1,17 @@
+<div class="wave-icon">👋</div>
+
+<div class="pt-1">
+  <div class="h2-gras">Bienvenue !</div>
+  <div class="text-small text-dark-2" style="margin-top:8px;">Nous sommes ravis de vous revoir !</div>
+</div>
+
+<div style="height: var(--p1);"></div>
+
+<button hx-get="/auth/login/success"
+        hx-target="#content"
+        hx-swap="innerHTML"
+        class="btn btn-outline"
+        hx-push-url="true"
+>
+  J'accède à l'application
+</button>

@@ -1,4 +1,3 @@
-use serde::{Deserialize, Serialize};
 use crate::app::shared_kernel::common_types::Entity;
 use crate::app::shared_kernel::staff::StaffKind;
 use crate::app::shared_kernel::team::TeamId;
@@ -6,6 +5,7 @@ use crate::app::team_creation::domain::error::DomainError;
 use crate::app::team_creation::domain::roster::{PlayerDefinition, Roster, MAX_PLAYER_COUNT};
 use crate::app::team_creation::domain::team_ruleset_selected::RulesetSelectedTeam;
 use crate::app::team_creation::domain::team_staff::TeamStaff;
+use serde::{Deserialize, Serialize};
 
 pub const MAX_REROLL_COUNT: u8 = 8;
 
