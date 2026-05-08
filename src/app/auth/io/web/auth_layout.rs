@@ -1,9 +1,10 @@
 use askama::Template;
 use axum::http::StatusCode;
-use axum::response::{Html, IntoResponse, Response};
+use axum::response::{Html, IntoResponse, Redirect, Response};
+use crate::app::auth::routes::path;
 
 #[derive(Template)]
-#[template(path = "auth/auth-layout.html")]
+#[template(path = "auth-layout.html")]
 pub struct AuthLayout {
     pub content: String
 }
@@ -15,4 +16,8 @@ impl IntoResponse for AuthLayout {
             Err(_)   => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
     }
+}
+
+pub async fn auth_layout() -> impl IntoResponse {
+    Redirect::to(path::LOGIN)
 }

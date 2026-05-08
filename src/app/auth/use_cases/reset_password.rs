@@ -84,7 +84,7 @@ mod tests {
     use std::sync::Mutex;
     use async_trait::async_trait;
     use crate::app::auth::domain::coach_name::CoachName;
-    use crate::app::auth::domain::ResetToken::{ResetToken, Token};
+    use crate::app::auth::domain::reset_token::{ResetToken, Token};
     use crate::app::auth::io::repository::reset_token_repository::IResetTokenRepository;
     use crate::app::auth::io::repository::tests::fake_user_repository::{FakeUserRepository, FindResult};
     use crate::app::auth::ports::RepositoryError;

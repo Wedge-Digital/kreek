@@ -5,7 +5,7 @@ use serde::Deserialize;
 use crate::app::auth::routes::Routes;
 
 #[derive(Template, Default)]
-#[template(path = "auth/auth-register-success.html")]
+#[template(path = "auth-register-success.html")]
 pub struct RegisterSuccessTemplate {
     pub routes: Routes,
 }

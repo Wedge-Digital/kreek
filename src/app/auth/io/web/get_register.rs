@@ -5,7 +5,7 @@ use crate::app::auth::io::web::auth_layout::AuthLayout;
 use crate::app::auth::routes::Routes;
 
 #[derive(Template, Default)]
-#[template(path = "auth/auth-register.html")]
+#[template(path = "auth-register.html")]
 pub struct RegisterTemplate {
     pub coach_name_value:       String,
     pub email_value:            String,

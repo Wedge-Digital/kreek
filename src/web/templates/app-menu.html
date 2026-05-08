@@ -1,0 +1,32 @@
+
+<div class="menu-bar">
+  <div class="menu-bar-inner">
+    <div class="menu-left">
+      <div class="menu-logo"
+           hx-trigger="click"
+           hx-get="/app/home"
+           hx-target="#app-content"
+           hx-swap="innerHTML"
+           hx-push-url="true"
+      >
+        <img src="/static/img/logo-simple-small.png" alt="Logo">
+        <span class="menu-logo-text"> Bloob bowl Club Namur </span>
+      </div>
+    </div>
+    <div class="menu-right">
+      <a class="menu-item">Déconnexion</a>
+      <div class="menu-account" title="Mon compte">👤</div>
+    </div>
+  </div>
+  <div class="sub-menu-placeholder">
+      <div class="sub-menu-btn active">Les Compétitions</div>
+      <div class="sub-menu-btn">Saisir un Match</div>
+      <div class="sub-menu-btn"
+           hx-get="/app/team/create"
+           hx-target="#app-content"
+           hx-swap="innerHTML"
+           hx-push-url="true"
+      >Créer une équipe</div>
+      <div class="sub-menu-btn">Toutes les équipes</div>
+  </div>
+</div>

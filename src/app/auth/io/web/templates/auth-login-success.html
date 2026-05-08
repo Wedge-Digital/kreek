@@ -7,11 +7,6 @@
 
 <div style="height: var(--p1);"></div>
 
-<button hx-get="{{ routes.login_success() }}"
-        hx-target="#content"
-        hx-swap="innerHTML"
-        class="btn btn-outline"
-        hx-push-url="true"
->
+<a href="{{ routes.app_layout() }}" class="btn btn-outline">
   J'accède à l'application
-</button>
+</a>

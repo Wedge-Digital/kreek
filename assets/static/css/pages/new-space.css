@@ -1,0 +1,23 @@
+.create-card .new-space {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--p2);
+    padding: var(--p4);
+    height: 100%;
+}
+
+.new-space .form-label { color: var(--dark-1); font-weight: 500; margin-bottom: 8px; }
+.new-space .form-group  { margin-bottom: var(--p2); }
+.new-space .two-col     { margin-bottom: var(--p1); }
+
+.new-space .spacer-p1 { height: var(--p1); }
+.new-space .spacer-p2 { height: var(--p2); }
+.new-space .spacer-p4 { height: var(--p4); }
+
+.new-space .form-actions { display: flex; justify-content: space-between; width:100%; }
+.new-space .btn           { width: auto; }
+.new-space .btn-outline   { padding: var(--p1) var(--p3); }
+.new-space .btn-primary   { padding: var(--p1) var(--p4); }
+
+.new-space .form-label { font-size: var(--text-medium); font-weight: 500; color: var(--dark-1); margin-bottom: var(--p1); }

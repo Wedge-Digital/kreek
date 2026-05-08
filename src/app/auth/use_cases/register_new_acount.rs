@@ -11,6 +11,7 @@ use argon2::{
     Argon2,
 };
 use std::fmt;
+use crate::app::shared_kernel::authorization::Authorization::SimpleUser;
 
 #[derive(Debug)]
 pub enum RegisterError {

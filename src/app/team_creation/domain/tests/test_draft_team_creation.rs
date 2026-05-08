@@ -1,7 +1,7 @@
 use crate::app::shared_kernel::common_types::{CoachId, Entity, EntityId};
 use crate::app::shared_kernel::id_service::{FakeIdService, IdService};
 use crate::app::shared_kernel::team::{BaseTeamInfo, TeamName};
-use crate::app::team_creation::create_draft_team::create_draft_team;
+use crate::app::team_creation::use_cases::create_draft_team::create_draft_team;
 use crate::app::team_creation::domain::team_draft::DraftTeam;
 
 #[test]

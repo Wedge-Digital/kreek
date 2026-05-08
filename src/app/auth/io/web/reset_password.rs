@@ -11,7 +11,7 @@ use crate::app::auth::use_cases::reset_password::{ResetPasswordCommand, ResetPas
 use crate::state::AppState;
 
 #[derive(Template, Default)]
-#[template(path = "auth/auth-update-password.html")]
+#[template(path = "auth-update-password.html")]
 pub struct UpdatePasswordTemplate {
     pub reset_token:            String,
     pub token_error:            Option<String>,

@@ -8,9 +8,9 @@ help:
 	@echo "  dev         Lance le serveur en mode watch (cargo-watch)"
 	@echo "  test        Lance les tests (utilise .env.test)"
 	@echo "  migrate              Applique les migrations SQLx"
-	@echo "  new_migration        Crée une migration  (ex: make new_migration desc=create_teams)"
-	@echo "  db-prepare           Régénère le cache sqlx (cargo sqlx prepare)"
-	@echo "  db-reset             Remet la base à zéro (sqlx database reset)"
+	@echo "  migration        Crée une migration  (ex: make new_migration desc=create_teams)"
+	@echo "  prepare_db           Régénère le cache sqlx (cargo sqlx prepare)"
+	@echo "  reset_db             Remet la base à zéro (sqlx database reset)"
 	@echo ""
 	@echo "Variable : EXEC_PROFILE (défaut : dev)"
 
@@ -23,12 +23,12 @@ test:
 migrate:
 	DATABASE_URL=$(DATABASE_URL) sqlx migrate run
 
-new_migration:
-	@test -n "$(desc)" || (echo "Usage : make new_migration desc=<description>"; exit 1)
+migration:
+	@test -n "$(desc)" || (echo "Usage : make migration desc=<description>"; exit 1)
 	DATABASE_URL=$(DATABASE_URL) sqlx migrate add $(desc)
 
-db-prepare:
+prepare_db:
 	DATABASE_URL=$(DATABASE_URL) cargo sqlx prepare
 
-db-reset:
+reset_db:
 	DATABASE_URL=$(DATABASE_URL) sqlx database reset

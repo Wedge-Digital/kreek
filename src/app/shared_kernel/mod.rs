@@ -7,3 +7,4 @@ pub mod id_service;
 mod tests;
 pub mod user;
 mod ports;
+pub mod authorization;

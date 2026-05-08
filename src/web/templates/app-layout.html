@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accueil — Blood Bowl Club</title>
+  <link rel="stylesheet" href="/static/css/common.css">
+  <link rel="stylesheet" href="/static/css/layout-app.css">
+  <link rel="stylesheet" href="/static/css/pages/app-home.css">
+  <link rel="stylesheet" href="/static/css/pages/app-news-feed.css">
+  <link rel="stylesheet" href="/static/css/pages/app-new-team.css">
+  <link rel="stylesheet" href="/static/css/pages/new-space.css">
+  <link rel="stylesheet" href="/static/css/components/create-card.css">
+  <link rel="stylesheet" href="/static/css/components/upload.css">
+  <script src="/static/js/htmx.min.js"></script>
+  <script src="https://widget.cloudinary.com/v2.0/global/all.js" type="text/javascript"></script>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar"
+       hx-get="{{ routes.spaces() }}"
+         hx-trigger="load"
+       hx-swap="innerHTML">
+    </div>
+
+    <div class="main-area">
+      <!-- Menu bar -->
+      <div class="menu-bar"
+           hx-trigger="load"
+           hx-get="{{ routes.menu() }}"
+           hx-swap="innerHTML">
+      </div>
+
+      <!-- Content -->
+      <div class="page-content">
+        <div class="home-grid"  id="app-content">
+        {{ content|safe }}
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

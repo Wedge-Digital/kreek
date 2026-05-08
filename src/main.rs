@@ -4,17 +4,14 @@ mod app;
 mod config;
 mod lib;
 mod state;
+pub mod web;
 
 use std::time::Duration;
 use config::AppConfig;
 use state::AppState;
 
-use axum::{
-    routing::{get, post},
-    http::StatusCode,
-    Json, Router,
-};
-use serde::{Deserialize, Serialize};
+use axum::{response::Redirect, routing::get, Router};
+use crate::app::auth::routes::path;
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tower_livereload::LiveReloadLayer;
 use std::sync::Arc;
@@ -53,7 +50,12 @@ async fn main() {
     };
 
     let app = Router::new()
-        .merge(app::auth::auth_router::router())
+        .route("/", get(|| async { Redirect::to(path::AUTH_LAYOUT) }))
+        .merge(app::auth::router::router())
+        .merge(app::news::router::router())
+        .merge(app::team_creation::router::router())
+        .merge(app::spaces::router::router())
+        .merge(web::router::router())
         .nest_service("/static", ServeDir::new("assets/static"))
         .layer(TraceLayer::new_for_http())
         .with_state(state);

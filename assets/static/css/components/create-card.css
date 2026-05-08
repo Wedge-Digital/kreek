@@ -1,0 +1,34 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,800;1,400&family=Roboto+Slab:wght@200;300;400;500;700;800;900&family=Montserrat:ital,wght@0,400;0,700;0,800;1,700&display=swap');
+
+.create-card {
+  background: var(--white);
+  border-radius: 12px;
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex; flex-direction: column; gap: var(--p2);
+  scrollbar-width: none;
+  height: fit-content;
+}
+
+.create-header {
+  width: 100%;
+  padding: var(--p2);
+  display: flex;
+  align-items: center;
+  gap: var(--p1);
+}
+
+.create-body {
+  width: 100%;
+  padding: var(--p2)
+}
+
+.create-header-icon {
+  width: 48px; height: 48px; border-radius: 10px;
+  background: rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; color: var(--white);
+}
+.create-header-text .title { color: var(--white); font-family: var(--font-title); font-size: 24px; font-weight: 700; }
+.create-header-text .sub   { color: rgba(255,255,255,0.7); font-size: var(--text-tiny); margin-top: 2px; }
+

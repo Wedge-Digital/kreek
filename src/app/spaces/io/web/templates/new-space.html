@@ -1,0 +1,62 @@
+<div class="create-card new-space">
+    <div class="create-header">
+        <div class="create-header-icon">🏈</div>
+        <div class="create-header-text">
+            <div class="title">Créer un nouvel espace</div>
+            <div class="sub">Un espace est le lieu ou vous crééerez vos compétition, vos équipes etc....</div>
+        </div>
+    </div>
+
+    <div class="create-body new-space">
+        <div class="form-label">Logo de votre espace</div>
+        <div>
+            <input type="hidden" id="logo_url" name="logo_url">
+            <div class="upload-preview" id="upload-zone">
+                <img id="logo-preview" src="" alt="Logo de votre équipe">
+                <div id="upload-placeholder">
+                    <div style="font-size: 36px; color: var(--dark-3);">🖼️</div>
+                    <div class="text-small text-dark-2">Uploader un logo</div>
+                </div>
+            </div>
+            <script>
+                (function () {
+                    const widget = cloudinary.createUploadWidget({
+                        cloudName: 'bloodbowlclub-com',
+                        uploadPreset: 'fvqrusn5',
+                        sources: ['local', 'url'],
+                        multiple: false,
+                        maxFileSize: 2000000,
+                        clientAllowedFormats: ['jpg', 'png', 'webp'],
+                        folder: 'spaces/logos'
+                    }, function (error, result) {
+                        if (!error && result && result.event === 'success') {
+                            const url = result.info.secure_url;
+                            document.getElementById('logo_url').value = url;
+                            const preview = document.getElementById('logo-preview');
+                            preview.src = url;
+                            preview.style.display = 'block';
+                            document.getElementById('upload-placeholder').style.display = 'none';
+                        }
+                    });
+                    document.getElementById('upload-zone').addEventListener('click', function () {
+                        widget.open();
+                    });
+                })();
+            </script>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Nom de votre espace</label>
+            <input type="text" class="form-input" placeholder="ex : Bloodbowl Club des Zazous">
+        </div>
+
+        <div class="form-actions">
+            <button class="btn btn-outline" onclick="window.location.href='app-my-teams.html'">
+                Annuler
+            </button>
+            <button class="btn btn-primary" onclick="window.location.href='app-roster-list.html'">
+                Suivant →
+            </button>
+        </div>
+    </div>
+</div>

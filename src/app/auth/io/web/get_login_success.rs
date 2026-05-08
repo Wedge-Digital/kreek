@@ -5,7 +5,7 @@ use crate::app::auth::io::web::auth_layout::AuthLayout;
 use crate::app::auth::routes::Routes;
 
 #[derive(Template, Default)]
-#[template(path = "auth/auth-login-success.html")]
+#[template(path = "auth-login-success.html")]
 pub struct LoginSuccessTemplate {
     pub routes: Routes,
 }

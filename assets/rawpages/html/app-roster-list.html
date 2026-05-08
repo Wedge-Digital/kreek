@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rosters — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .roster-grid { display: flex; flex-wrap: wrap; gap: var(--p1); }
+    .roster-card {
+      border: 1px solid var(--dark-4); border-radius: 5px;
+      background: var(--white-1); display: flex; flex-direction: column; align-items: center;
+      gap: var(--p1); padding: var(--p2); width: 200px; cursor: pointer;
+      transition: box-shadow 0.2s, border-color 0.2s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .roster-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); border-color: var(--dark-3); }
+    .roster-img {
+      width: 90px; height: 90px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 40px;
+    }
+    .roster-name { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-1); text-align: center; }
+    .roster-type { font-size: var(--text-tiny); color: var(--dark-3); }
+    .page-header { margin-bottom: var(--p3); }
+    .search-bar { display: flex; gap: var(--p1); margin-bottom: var(--p2); }
+    .search-input { flex: 1; padding: 12px 16px; border: 1px solid var(--dark-4); border-radius: 8px; font-size: var(--text-small); outline: none; }
+    .search-input:focus { border-color: var(--main-blue); }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="page-header">
+          <div class="h3-gras" style="margin-bottom: 8px;">Rosters disponibles</div>
+          <div class="text-small text-dark-2">Sélectionnez le roster pour créer votre équipe</div>
+        </div>
+
+        <div class="search-bar">
+          <input class="search-input" type="text" placeholder="Rechercher un roster...">
+          <select class="form-select" style="width: 200px;">
+            <option>Toutes les éditions</option>
+            <option>BB 2020</option>
+            <option>BB7</option>
+            <option>Dungeon Bowl</option>
+          </select>
+        </div>
+
+        <div class="roster-grid">
+          <div class="roster-card">
+            <div class="roster-img" style="background: linear-gradient(135deg,#e8f0f8,#c9dde8);">🧝</div>
+            <div class="roster-name">Hauts Elfes</div>
+            <div class="roster-type">BB 2020</div>
+          </div>
+          <div class="roster-card">
+            <div class="roster-img" style="background: linear-gradient(135deg,#1a2a1a,#2d4a2d);">🌲</div>
+            <div class="roster-name">Elfes Sylvestres</div>
+            <div class="roster-type">BB 2020</div>
+          </div>
+          <div class="roster-card">
+            <div class="roster-img" style="background: linear-gradient(135deg,#1C1C29,#26263D);">🧟</div>
+            <div class="roster-name">Morts-vivants</div>
+            <div class="roster-type">BB 2020</div>
+          </div>
+          <div class="roster-card">
+            <div class="roster-img" style="background: linear-gradient(135deg,#3a1a1a,#5a2a2a);">🐀</div>
+            <div class="roster-name">Skavens</div>
+            <div class="roster-type">BB 2020</div>
+          </div>
+          <div class="roster-card">
+            <div class="roster-img" style="background: linear-gradient(135deg,#2a1a3a,#4a2a5a);">👹</div>
+            <div class="roster-name">Chaos Rénégats</div>
+            <div class="roster-type">BB 2020</div>
+          </div>
+          <div class="roster-card">
+            <div class="roster-img" style="background: linear-gradient(135deg,#2d1a00,#5c3500);">🍄</div>
+            <div class="roster-name">Orques</div>
+            <div class="roster-type">BB 2020</div>
+          </div>
+          <div class="roster-card">
+            <div class="roster-img" style="background: linear-gradient(135deg,#1a1a2e,#2a2a5e);">🧙</div>
+            <div class="roster-name">Elfes Noirs</div>
+            <div class="roster-type">BB 2020</div>
+          </div>
+          <div class="roster-card">
+            <div class="roster-img" style="background: linear-gradient(135deg,#2e2e2e,#4e4e4e);">⚒️</div>
+            <div class="roster-name">Nains</div>
+            <div class="roster-type">BB 2020</div>
+          </div>
+          <div class="roster-card">
+            <div class="roster-img" style="background: linear-gradient(135deg,#f0e6d0,#d4c4a0);">🏰</div>
+            <div class="roster-name">Humains</div>
+            <div class="roster-type">BB 2020</div>
+          </div>
+          <div class="roster-card">
+            <div class="roster-img" style="background: linear-gradient(135deg,#1e3a1e,#3a6a3a);">🦎</div>
+            <div class="roster-name">Hommes-lézards</div>
+            <div class="roster-type">BB 2020</div>
+          </div>
+          <div class="roster-card">
+            <div class="roster-img" style="background: linear-gradient(135deg,#3a0a0a,#6a1a1a);">🧛</div>
+            <div class="roster-name">Nécromanciens</div>
+            <div class="roster-type">BB 2020</div>
+          </div>
+          <div class="roster-card">
+            <div class="roster-img" style="background: linear-gradient(135deg,#FFD700,#B8860B);">⭐</div>
+            <div class="roster-name">Halflings</div>
+            <div class="roster-type">BB 2020</div>
+          </div>
+          <div class="roster-card">
+            <div class="roster-img" style="background: linear-gradient(135deg,#4a2a00,#8a5a00);">🐗</div>
+            <div class="roster-name">Nains du Chaos</div>
+            <div class="roster-type">BB 2020</div>
+          </div>
+          <div class="roster-card">
+            <div class="roster-img" style="background: linear-gradient(135deg,#003049,#005080);">🌊</div>
+            <div class="roster-name">Amazones</div>
+            <div class="roster-type">BB 2020</div>
+          </div>
+          <div class="roster-card">
+            <div class="roster-img" style="background: linear-gradient(135deg,#1a2a1a,#3a6a4a);">🌿</div>
+            <div class="roster-name">Gobelins</div>
+            <div class="roster-type">BB 2020</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

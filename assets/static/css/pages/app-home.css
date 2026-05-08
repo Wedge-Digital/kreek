@@ -1,5 +1,8 @@
-.home-grid { display: flex; gap: var(--p2); height: 100%; }
-.home-main { flex: 3; display: flex; flex-direction: column; gap: var(--p1); overflow-y: auto; }
+.home-grid { display: flex; gap: var(--p2); height: 100%; align-items: stretch;}
+.home-main { flex: 3; display: flex; flex-direction: column; gap: var(--p1); overflow-y: auto; scrollbar-width: none; }
+.home-main::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
 .home-side  { flex: 1; }
 
 /* News Card — featured */
@@ -98,9 +101,10 @@
   padding-bottom: var(--p1); border-bottom: 2px solid var(--dark-5);
 }
 .match-result {
-  display: flex; flex-direction: column; gap: 8px; padding: var(--p1) 0;
+  display: flex; flex-direction: column; gap: 8px; padding: var(--p2) 0;
   border-bottom: 1px solid var(--dark-6);
 }
+.match-result:hover { background: var(--dark-6); }
 .match-result:last-child { border-bottom: none; }
 .match-league { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
 .match-teams  { display: flex; flex-direction: column; gap: 4px; }

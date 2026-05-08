@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Règles de ligue — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .create-card { background: var(--white); border-radius: 12px; padding: var(--p4); max-width: 900px; margin: 0 auto; }
+    .create-header {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 10px; padding: var(--p2); margin-bottom: var(--p3);
+      display: flex; align-items: center; gap: var(--p1);
+    }
+    .create-header-icon { width: 48px; height: 48px; border-radius: 10px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+    .create-header-text .title { color: var(--white); font-family: var(--font-title); font-size: 24px; font-weight: 700; }
+    .create-header-text .sub { color: rgba(255,255,255,0.7); font-size: var(--text-tiny); margin-top: 2px; }
+
+    .steps { display: flex; align-items: center; gap: 0; margin-bottom: var(--p3); }
+    .step { display: flex; align-items: center; gap: 8px; }
+    .step-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: var(--text-tiny); font-weight: 700; }
+    .step-num.done { background: var(--green); color: var(--white); }
+    .step-num.active { background: var(--main-blue); color: var(--white); }
+    .step-num.pending { background: var(--dark-5); color: var(--dark-3); }
+    .step-label { font-size: var(--text-tiny); font-weight: 500; }
+    .step-label.done { color: var(--green); }
+    .step-label.active { color: var(--main-blue); }
+    .step-label.pending { color: var(--dark-3); }
+    .step-line { flex: 1; height: 2px; background: var(--dark-5); margin: 0 8px; }
+    .step-line.done { background: var(--green); }
+
+    .rules-section { margin-bottom: var(--p3); }
+    .rules-section-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); margin-bottom: var(--p1); }
+    .two-col-row { display: flex; gap: var(--p2); align-items: flex-end; }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active" href="app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="create-card">
+          <div class="create-header">
+            <div class="create-header-icon">📋</div>
+            <div class="create-header-text">
+              <div class="title">Règles de la compétition</div>
+              <div class="sub">Ligue de la Ville de Rennes — Saison 5</div>
+            </div>
+          </div>
+
+          <div class="steps">
+            <div class="step">
+              <div class="step-num done">✓</div>
+              <div class="step-label done">Informations</div>
+            </div>
+            <div class="step-line done"></div>
+            <div class="step">
+              <div class="step-num active">2</div>
+              <div class="step-label active">Règles</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step">
+              <div class="step-num pending">3</div>
+              <div class="step-label pending">Équipes</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step">
+              <div class="step-num pending">4</div>
+              <div class="step-label pending">Validation</div>
+            </div>
+          </div>
+
+          <!-- Section 1: Variant -->
+          <div class="rules-section">
+            <div class="rules-section-title">1 — Choisissez votre variante :</div>
+            <div class="choice-group">
+              <div class="choice-btn selected">BB 2020</div>
+              <div class="choice-btn">BB7</div>
+              <div class="choice-btn">Dungeon Bowl</div>
+            </div>
+          </div>
+
+          <div class="separator"></div>
+
+          <!-- Section 2: Type -->
+          <div class="rules-section">
+            <div class="rules-section-title">2 — Choisissez le type de compétition :</div>
+            <div class="choice-group">
+              <div class="choice-btn selected">Ligue (avec progression des équipes)</div>
+              <div class="choice-btn">Tournoi (Résurrection)</div>
+            </div>
+          </div>
+
+          <div class="separator"></div>
+
+          <!-- Section 3: Creation rules -->
+          <div class="rules-section">
+            <div class="rules-section-title">3 — Choisissez les règles de création d'équipe :</div>
+            <div class="two-col-row">
+              <div style="flex: 3;">
+                <select class="picker">
+                  <option>Règles standard BB 2020 (1 000 000 pièces)</option>
+                  <option>Règles débutants (1 200 000 pièces)</option>
+                  <option>Règles expérimentées (800 000 pièces)</option>
+                </select>
+              </div>
+              <div style="flex: 1;">
+                <button class="btn btn-primary-blue btn-sm" style="white-space: nowrap;">+ Nouvelles règles</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="separator"></div>
+
+          <!-- Section 4: Schedule -->
+          <div class="rules-section">
+            <div class="rules-section-title">4 — Planning de la compétition :</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--p2);">
+              <div class="form-group">
+                <label class="form-label">Nombre de journées</label>
+                <input type="number" class="form-input" value="22" min="1">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Nombre d'équipes</label>
+                <input type="number" class="form-input" value="12" min="2">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Date de début</label>
+                <input type="date" class="form-input" value="2024-09-01">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Date de fin prévue</label>
+                <input type="date" class="form-input" value="2025-06-30">
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; margin-top: var(--p2);">
+            <button class="btn btn-outline" style="width: auto; padding: var(--p1) var(--p3);" onclick="window.location.href='app-league-create.html'">
+              ← Retour
+            </button>
+            <button class="btn btn-primary" style="width: auto; padding: var(--p1) var(--p4);">
+              Suivant →
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

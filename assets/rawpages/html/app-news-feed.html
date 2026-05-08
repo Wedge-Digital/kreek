@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Actualités — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .news-feed { display: flex; flex-direction: column; gap: var(--p1); max-width: 900px; }
+
+    .latest-news-card {
+      background: var(--white); border-radius: 8px; overflow: hidden; cursor: pointer;
+      border: 1px solid var(--dark-5); transition: box-shadow 0.2s;
+      display: flex; width: 100%;
+    }
+    .latest-news-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    .latest-news-img {
+      width: 260px; min-width: 260px; height: 180px;
+    }
+    .latest-news-content { padding: var(--p2); flex: 1; display: flex; flex-direction: column; }
+    .latest-news-cat { font-family: var(--font-accent); font-size: var(--text-tiny); font-weight: 700; color: var(--orange); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .latest-news-title { font-family: var(--font-accent); font-size: 20px; font-weight: 700; font-style: italic; color: var(--dark-0); margin-bottom: 8px; line-height: 1.3; }
+    .latest-news-desc { font-size: var(--text-small); color: var(--dark-2); line-height: 1.5; flex: 1; }
+    .latest-news-footer { display: flex; align-items: center; justify-content: space-between; margin-top: var(--p1); }
+    .latest-news-meta { display: flex; gap: var(--p2); }
+    .latest-news-date { display: flex; align-items: center; gap: 6px; font-size: var(--text-tiny); color: var(--dark-3); font-style: italic; }
+    .latest-news-author { display: flex; align-items: center; gap: 6px; font-size: var(--text-tiny); color: var(--dark-3); font-style: italic; }
+
+    .feed-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--p2); }
+    .filter-tabs { display: flex; gap: 8px; }
+    .filter-tab { padding: 8px 16px; border-radius: 20px; font-size: var(--text-tiny); font-weight: 600; cursor: pointer; border: 2px solid var(--dark-5); color: var(--dark-2); transition: all 0.15s; }
+    .filter-tab.active { border-color: var(--main-blue); color: var(--main-blue); background: rgba(0,48,73,0.05); }
+    .filter-tab:hover { border-color: var(--dark-4); }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item active" href="app-home.html">Accueil</a>
+            <a class="menu-item" href="app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="feed-header">
+          <div class="h3-gras">Actualités</div>
+          <div style="display: flex; align-items: center; gap: var(--p1);">
+            <div class="filter-tabs">
+              <div class="filter-tab active">Tout</div>
+              <div class="filter-tab">Match Report</div>
+              <div class="filter-tab">Actualité</div>
+              <div class="filter-tab">Analyse</div>
+              <div class="filter-tab">Interview</div>
+            </div>
+            <button class="btn btn-primary-blue btn-sm" onclick="window.location.href='app-create-article.html'">
+              + Rédiger un article
+            </button>
+          </div>
+        </div>
+
+        <div class="news-feed">
+          <div class="latest-news-card" onclick="window.location.href='app-create-article.html'">
+            <div class="latest-news-img" style="background: linear-gradient(135deg, #003049 0%, #555770 100%);"></div>
+            <div class="latest-news-content">
+              <div class="latest-news-cat">Match Report</div>
+              <div class="latest-news-title">Une finale 100% korrigane en ligue de Condate !</div>
+              <div class="latest-news-desc">Football is a family — cette expression prend tout son sens quand deux équipes de la même presqu'île s'affrontent dans un match de légende pour le titre de champion de la saison 2024.</div>
+              <div class="latest-news-footer">
+                <div class="latest-news-meta">
+                  <div class="latest-news-date">📅 le 1er Septembre 2024</div>
+                  <div class="latest-news-author">👤 par Colonel Castor</div>
+                </div>
+                <span class="badge badge-red">À LA UNE</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="latest-news-card">
+            <div class="latest-news-img" style="background: linear-gradient(135deg, #26263D 0%, #629584 100%);"></div>
+            <div class="latest-news-content">
+              <div class="latest-news-cat">Actualité</div>
+              <div class="latest-news-title">Les transferts de l'inter-saison : qui va où ?</div>
+              <div class="latest-news-desc">Avec la fin de la saison régulière, les coaches s'activent pour recruter les meilleurs joueurs disponibles. Tour d'horizon des rumeurs et transferts confirmés.</div>
+              <div class="latest-news-footer">
+                <div class="latest-news-meta">
+                  <div class="latest-news-date">📅 le 28 août 2024</div>
+                  <div class="latest-news-author">👤 par Colonel Castor</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="latest-news-card">
+            <div class="latest-news-img" style="background: linear-gradient(135deg, #1C1C29 0%, #FF6B35 100%);"></div>
+            <div class="latest-news-content">
+              <div class="latest-news-cat">Analyse</div>
+              <div class="latest-news-title">Les nouvelles règles BB 2020 : quel impact sur le méta ?</div>
+              <div class="latest-news-desc">Depuis la mise à jour des règles en début de saison, le méta a significativement évolué. Les équipes de cages ont-elles toujours leur place face aux nouvelles formations de passing game ?</div>
+              <div class="latest-news-footer">
+                <div class="latest-news-meta">
+                  <div class="latest-news-date">📅 le 15 août 2024</div>
+                  <div class="latest-news-author">👤 par Le Tacticien</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="latest-news-card">
+            <div class="latest-news-img" style="background: linear-gradient(135deg, #555770 0%, #003049 100%);"></div>
+            <div class="latest-news-content">
+              <div class="latest-news-cat">Interview</div>
+              <div class="latest-news-title">Interview exclusive : Grognash parle de sa saison avec les Orc Boyz</div>
+              <div class="latest-news-desc">Rencontre avec le coach de l'une des équipes les plus redoutables de la ligue. Grognash revient sur ses choix tactiques et ses ambitions pour le prochain championnat.</div>
+              <div class="latest-news-footer">
+                <div class="latest-news-meta">
+                  <div class="latest-news-date">📅 le 10 août 2024</div>
+                  <div class="latest-news-author">👤 par Le Tacticien</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="latest-news-card">
+            <div class="latest-news-img" style="background: linear-gradient(135deg, #629584 0%, #1C1C29 100%);"></div>
+            <div class="latest-news-content">
+              <div class="latest-news-cat">Tutoriel</div>
+              <div class="latest-news-title">Guide du débutant : comprendre la gestion d'équipe</div>
+              <div class="latest-news-desc">Vous débutez dans Blood Bowl ? Ce guide vous explique les bases de la gestion de trésorerie, le recrutement de joueurs et les choix stratégiques pour commencer votre saison du bon pied.</div>
+              <div class="latest-news-footer">
+                <div class="latest-news-meta">
+                  <div class="latest-news-date">📅 le 5 août 2024</div>
+                  <div class="latest-news-author">👤 par L'Administrateur</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

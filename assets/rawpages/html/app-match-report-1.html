@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saisie de match (1/2) — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .report-card { background: var(--white); border-radius: 12px; padding: var(--p4); max-width: 860px; margin: 0 auto; }
+    .report-header {
+      background: linear-gradient(135deg, #E02020 0%, var(--dark-0) 100%);
+      border-radius: 10px; padding: var(--p2); margin-bottom: var(--p3);
+      display: flex; align-items: center; gap: var(--p1);
+    }
+    .report-header-icon { width: 48px; height: 48px; border-radius: 10px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+    .report-header-text .title { color: var(--white); font-family: var(--font-title); font-size: 24px; font-weight: 700; }
+    .report-header-text .sub { color: rgba(255,255,255,0.7); font-size: var(--text-tiny); margin-top: 2px; }
+
+    .steps { display: flex; align-items: center; gap: 0; margin-bottom: var(--p3); }
+    .step { display: flex; align-items: center; gap: 8px; }
+    .step-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: var(--text-tiny); font-weight: 700; }
+    .step-num.active { background: var(--red); color: var(--white); }
+    .step-num.pending { background: var(--dark-5); color: var(--dark-3); }
+    .step-label { font-size: var(--text-tiny); font-weight: 500; }
+    .step-label.active { color: var(--red); }
+    .step-label.pending { color: var(--dark-3); }
+    .step-line { flex: 1; height: 2px; background: var(--dark-5); margin: 0 8px; }
+
+    .section-title { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-2); margin-bottom: var(--p1); }
+    .sub-section-title { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-2); margin-bottom: var(--p1); }
+
+    /* Opponent pickers */
+    .vs-layout { display: flex; align-items: center; gap: var(--p2); }
+    .vs-team { flex: 1; }
+    .vs-divider {
+      width: 50px; height: 50px; border-radius: 50%;
+      background: var(--dark-6); display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: var(--h5); color: var(--dark-3);
+      flex-shrink: 0;
+    }
+    .team-picker-card {
+      border: 2px solid var(--dark-5); border-radius: 10px; padding: var(--p2);
+      display: flex; flex-direction: column; gap: var(--p1); cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .team-picker-card:hover { border-color: var(--dark-3); }
+    .team-picker-card.selected { border-color: var(--main-blue); background: rgba(0,48,73,0.03); }
+    .team-picker-placeholder {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: var(--p2); color: var(--dark-3);
+    }
+    .team-picker-logo {
+      width: 64px; height: 64px; border-radius: 50%; margin: 0 auto;
+      background: linear-gradient(135deg, #003049, #555770);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: 20px; color: var(--white);
+    }
+    .team-picker-name { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-0); text-align: center; }
+    .team-picker-sub { font-size: var(--text-tiny); color: var(--dark-3); text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active" href="app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="report-card">
+          <div class="report-header">
+            <div class="report-header-icon">🏈</div>
+            <div class="report-header-text">
+              <div class="title">Saisie d'un match</div>
+              <div class="sub">Renseignez les informations du match joué</div>
+            </div>
+          </div>
+
+          <div class="steps">
+            <div class="step">
+              <div class="step-num active">1</div>
+              <div class="step-label active">Sélection</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step">
+              <div class="step-num pending">2</div>
+              <div class="step-label pending">Infos générales</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step">
+              <div class="step-num pending">3</div>
+              <div class="step-label pending">Résultat</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step">
+              <div class="step-num pending">4</div>
+              <div class="step-label pending">Statistiques</div>
+            </div>
+          </div>
+
+          <!-- 1. Sélection compétition -->
+          <div style="margin-bottom: var(--p3);">
+            <div class="section-title">1 — Sélectionnez une compétition</div>
+            <select class="form-select">
+              <option>Choisissez une compétition...</option>
+              <option selected>Ligue de Condate — Saison 2024</option>
+              <option>Korrigane Cup 2024</option>
+              <option>Ligue du Midi — Saison 7</option>
+            </select>
+          </div>
+
+          <!-- 1.1 Journée -->
+          <div style="margin-bottom: var(--p3);">
+            <div class="sub-section-title">1.1 — Sélectionnez une journée</div>
+            <select class="picker">
+              <option>Choisissez une journée...</option>
+              <option>Journée 1</option>
+              <option>Journée 2</option>
+              <option selected>Journée 12</option>
+              <option>Journée 13</option>
+            </select>
+          </div>
+
+          <!-- 1.2 Match -->
+          <div style="margin-bottom: var(--p3);">
+            <div class="sub-section-title">1.2 — Sélectionnez un match</div>
+            <select class="picker">
+              <option>Choisissez un match...</option>
+              <option selected>Korrigans FC vs Orc Boyz United</option>
+              <option>Skaven Speedsters vs Dark Elves Ravens</option>
+              <option>Dwarf Ironbreakers vs High Elf Nobles</option>
+            </select>
+          </div>
+
+          <!-- Opponents -->
+          <div style="margin-bottom: var(--p4);">
+            <div class="sub-section-title">Équipes participantes</div>
+            <div class="vs-layout">
+              <div class="vs-team">
+                <div class="team-picker-card selected">
+                  <div class="team-picker-logo">KF</div>
+                  <div class="team-picker-name">Les Korrigans FC</div>
+                  <div class="team-picker-sub">Elfes Sylvestres · Coach: Colonel Castor</div>
+                </div>
+              </div>
+              <div class="vs-divider">VS</div>
+              <div class="vs-team">
+                <div class="team-picker-card selected" style="border-color: var(--red);">
+                  <div class="team-picker-logo" style="background: linear-gradient(135deg, #FFD700, #003049);">OB</div>
+                  <div class="team-picker-name">Orc Boyz United</div>
+                  <div class="team-picker-sub">Orques · Coach: Grognash</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between;">
+            <button class="btn btn-outline" style="width: auto; padding: var(--p1) var(--p3);" onclick="window.location.href='app-competition-detail.html'">
+              Annuler
+            </button>
+            <button class="btn btn-primary" style="width: auto; padding: var(--p1) var(--p4);" onclick="window.location.href='app-match-report-2.html'">
+              Démarrer la saisie →
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

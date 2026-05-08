@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nouvelle Équipe — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .create-card { background: var(--white); border-radius: 12px; padding: var(--p4); max-width: 860px; margin: 0 auto; }
+    .create-header {
+      background: linear-gradient(135deg, #629584 0%, var(--main-blue) 100%);
+      border-radius: 10px; padding: var(--p2); margin-bottom: var(--p3);
+      display: flex; align-items: center; gap: var(--p1);
+    }
+    .create-header-icon { width: 48px; height: 48px; border-radius: 10px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+    .create-header-text .title { color: var(--white); font-family: var(--font-title); font-size: 24px; font-weight: 700; }
+    .create-header-text .sub { color: rgba(255,255,255,0.7); font-size: var(--text-tiny); margin-top: 2px; }
+    .two-col { display: flex; gap: var(--p2); }
+    .two-col > * { flex: 1; }
+    .col-label { font-size: var(--text-small); font-weight: 500; color: var(--dark-1); margin-bottom: var(--p1); }
+    .upload-preview {
+      width: 100%; aspect-ratio: 1; max-height: 160px;
+      border: 2px dashed var(--dark-4); border-radius: 10px;
+      background: var(--dark-6); display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 8px; cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .upload-preview:hover { border-color: var(--main-blue); }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="create-card">
+          <div class="create-header">
+            <div class="create-header-icon">🏈</div>
+            <div class="create-header-text">
+              <div class="title">Créer une nouvelle équipe</div>
+              <div class="sub">Configurez votre équipe pour la rejoindre</div>
+            </div>
+          </div>
+
+          <div style="height: var(--p1);"></div>
+
+          <div class="form-group" style="margin-bottom: var(--p2);">
+            <label class="form-label" style="font-size: var(--text-small); color: var(--dark-1); font-weight: 500; margin-bottom: 8px;">Nom de votre équipe</label>
+            <input type="text" class="form-input" placeholder="ex : Les Korrigans FC">
+          </div>
+
+          <div class="two-col" style="margin-bottom: var(--p1);">
+            <div>
+              <div class="col-label">Qui sera le coach de cette équipe ?</div>
+              <select class="form-select">
+                <option>Sélectionnez un coach...</option>
+                <option selected>Colonel Castor (moi)</option>
+                <option>Le Tacticien</option>
+                <option>Whiskers</option>
+              </select>
+            </div>
+            <div>
+              <div class="col-label">Logo de votre équipe</div>
+              <div class="upload-preview">
+                <div style="font-size: 36px; color: var(--dark-3);">🖼️</div>
+                <div class="text-small text-dark-2">Uploader un logo</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height: var(--p2);"></div>
+
+          <div class="form-group">
+            <label class="form-label" style="font-size: var(--text-small); color: var(--dark-1); font-weight: 500; margin-bottom: 8px;">Roster (liste de joueurs disponibles)</label>
+            <select class="form-select">
+              <option>Choisissez un roster...</option>
+              <option>Elfes Sylvestres</option>
+              <option>Hauts Elfes</option>
+              <option>Elfes Noirs</option>
+              <option>Orques</option>
+              <option>Nains</option>
+              <option>Skavens</option>
+              <option>Morts-vivants</option>
+              <option>Chaos Rénégats</option>
+              <option>Humains</option>
+              <option>Hommes-lézards</option>
+            </select>
+          </div>
+
+          <div style="height: var(--p4);"></div>
+
+          <div style="display: flex; justify-content: space-between;">
+            <button class="btn btn-outline" style="width: auto; padding: var(--p1) var(--p3);" onclick="window.location.href='app-my-teams.html'">
+              Annuler
+            </button>
+            <button class="btn btn-primary" style="width: auto; padding: var(--p1) var(--p4);" onclick="window.location.href='app-roster-list.html'">
+              Suivant →
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

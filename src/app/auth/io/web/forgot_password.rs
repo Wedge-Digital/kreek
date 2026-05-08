@@ -14,7 +14,7 @@ use crate::app::auth::use_cases::send_reset_password_email::{
 use crate::state::AppState;
 
 #[derive(Template, Default)]
-#[template(path = "auth/auth-forgot-password.html")]
+#[template(path = "auth-forgot-password.html")]
 pub struct AuthForgotPassword {
     pub error:  Option<String>,
     pub routes: Routes,
@@ -30,7 +30,7 @@ impl IntoResponse for AuthForgotPassword {
 }
 
 #[derive(Template, Default)]
-#[template(path = "auth/auth-forgot-password-sent.html")]
+#[template(path = "auth-forgot-password-sent.html")]
 pub struct AuthForgotPasswordSent {
     pub routes: Routes,
 }

@@ -1,4 +1,3 @@
-use crate::app::auth::io::web::get_auth_layout::auth_layout;
 use crate::app::auth::io::web::get_login::login_form;
 use crate::app::auth::io::web::get_login_success::login_success;
 use crate::app::auth::io::web::get_register::get_register;
@@ -8,6 +7,7 @@ use crate::app::auth::io::web::post_register::post_register;
 use crate::app::auth::routes::path;
 use crate::state::AppState;
 use axum::{routing::get, Router};
+use crate::app::auth::io::web::auth_layout::auth_layout;
 use crate::app::auth::io::web::forgot_password::{
     display_forgot_password, display_forgot_password_sent, post_forgot_password,
 };
