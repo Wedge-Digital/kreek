@@ -5,6 +5,8 @@ pub type CoachId = EntityId;
 
 pub type UserId = EntityId;
 
+pub type SpaceId = EntityId;
+
 pub type EntityId = SUlid;
 
 pub trait Entity:PartialEq<Self> {
@@ -20,6 +22,6 @@ pub trait Entity:PartialEq<Self> {
 #[nutype(
     sanitize(trim),
     validate(regex = r"^https://res\.cloudinary\.com/[a-zA-Z0-9_-]+/.+$"),
-    derive(Debug, Clone, Serialize, Deserialize, PartialEq)
+    derive(Debug, Clone, Serialize, Deserialize, PartialEq, AsRef)
 )]
 pub struct CloudinaryImage(String);

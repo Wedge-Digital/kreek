@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::app::auth::domain::coach_name::CoachName;
+use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::auth::domain::email::Email;
 use crate::app::auth::ports::{IUserRepository, RepositoryError};
 use crate::app::shared_kernel::common_types::UserId;
@@ -17,6 +17,7 @@ impl IUserRepository for FakeUserRepository {
             FindResult::Found { password_hash } => Ok(Some(User::new(
                 UserId::new(),
                 CoachName::try_new("Bagouze").unwrap(),
+                None,
                 Email::try_new("coach@example.com").unwrap(),
                 password_hash.clone(),
             ))),

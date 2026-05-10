@@ -1,4 +1,4 @@
-<div class="create-card new-space">
+<div id="new-space-card" class="create-card new-space">
     <div class="create-header">
         <div class="create-header-icon">🏈</div>
         <div class="create-header-text">
@@ -7,17 +7,23 @@
         </div>
     </div>
 
-    <div class="create-body new-space">
+    <form class="create-body new-space"
+          hx-post="/app/space/create"
+          hx-target="#new-space-card"
+          hx-swap="outerHTML">
+
         <div class="form-label">Logo de votre espace</div>
-        <div>
-            <input type="hidden" id="logo_url" name="logo_url">
+            <input type="hidden" id="logo_url" name="logo_url" value="{{ logo_url_value }}">
             <div class="upload-preview" id="upload-zone">
-                <img id="logo-preview" src="" alt="Logo de votre équipe">
-                <div id="upload-placeholder">
+                <img id="logo-preview" src="{{ logo_url_value }}" alt="Logo de votre équipe"
+                     {% if logo_url_value.is_empty() %}style="display:none"{% endif %}>
+                <div id="upload-placeholder" {% if !logo_url_value.is_empty() %}style="display:none"{% endif %}>
                     <div style="font-size: 36px; color: var(--dark-3);">🖼️</div>
                     <div class="text-small text-dark-2">Uploader un logo</div>
                 </div>
-            </div>
+            {% if let Some(err) = logo_error %}
+            <div class="form-error">{{ err }}</div>
+            {% endif %}
             <script>
                 (function () {
                     const widget = cloudinary.createUploadWidget({
@@ -47,16 +53,23 @@
 
         <div class="form-group">
             <label class="form-label">Nom de votre espace</label>
-            <input type="text" class="form-input" placeholder="ex : Bloodbowl Club des Zazous">
+            <input type="text" class="form-input {% if space_name_error.is_some() %}form-input--error{% endif %}"
+                   name="space_name"
+                   placeholder="ex : LigueDesZazous"
+                   value="{{ space_name_value }}">
+            {% if let Some(err) = space_name_error %}
+            <div class="form-error">{{ err }}</div>
+            {% endif %}
         </div>
 
         <div class="form-actions">
-            <button class="btn btn-outline" onclick="window.location.href='app-my-teams.html'">
+            <button type="button" class="btn btn-outline"
+                    hx-get="/app/space/create" hx-target="body" hx-push-url="true">
                 Annuler
             </button>
-            <button class="btn btn-primary" onclick="window.location.href='app-roster-list.html'">
-                Suivant →
+            <button type="submit" class="btn btn-primary">
+                Créer →
             </button>
         </div>
-    </div>
+    </form>
 </div>

@@ -63,11 +63,21 @@ mod tests {
 
     fn state(mock: FakeUserRepository) -> State<AppState> {
         State(AppState {
-            user_repository: Arc::new(mock),
-            email_service: Arc::new(ConsoleEmailService),
+            user_repository:        Arc::new(mock),
+            email_service:          Arc::new(ConsoleEmailService),
             reset_token_repository: Arc::new(FakeResetTokenRepository { find_result: crate::app::auth::io::repository::tests::fake_reset_token_repository::FindResult::NotFound }),
-            host_domain: "localhost:8080".into(),
+            space_repository:       Arc::new(FakeSpaceRepository),
+            host_domain:            "localhost:8080".into(),
         })
+    }
+
+    struct FakeSpaceRepository;
+
+    #[async_trait::async_trait]
+    impl crate::app::spaces::domain::ports::ISpaceRepository for FakeSpaceRepository {
+        async fn save(&self, _: &crate::app::spaces::domain::Space::Space) -> Result<(), crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(()) }
+        async fn add_member(&self, _: &crate::app::shared_kernel::common_types::SpaceId, _: &crate::app::shared_kernel::common_types::CoachId, _: &crate::app::shared_kernel::authorization::SpaceAuthorization) -> Result<(), crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(()) }
+        async fn find_by_id(&self, _: &crate::app::shared_kernel::common_types::SpaceId) -> Result<Option<crate::app::spaces::domain::Space::Space>, crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(None) }
     }
 
     fn form(coach_name: &str, password: &str) -> Form<PerformLoginCommand> {

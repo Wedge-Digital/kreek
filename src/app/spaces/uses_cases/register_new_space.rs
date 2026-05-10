@@ -1,45 +1,104 @@
+use crate::app::shared_kernel::authorization::SpaceAuthorization;
+use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, SpaceId};
+use crate::app::shared_kernel::space_name::SpaceName;
+use crate::app::spaces::domain::Space::Space;
+use crate::app::spaces::domain::ports::{ISpaceRepository, SpaceRepositoryError};
+
+pub struct RegisterNewSpaceCommand {
+    pub coach_id:   CoachId,
+    pub space_name: SpaceName,
+    pub space_logo: CloudinaryImage,
+}
+
+#[derive(Debug)]
+pub enum RegisterSpaceError {
+    SpaceNameAlreadyTaken,
+    Database(String),
+}
+
+impl From<SpaceRepositoryError> for RegisterSpaceError {
+    fn from(e: SpaceRepositoryError) -> Self {
+        match e {
+            SpaceRepositoryError::SpaceNameAlreadyTaken => RegisterSpaceError::SpaceNameAlreadyTaken,
+            SpaceRepositoryError::CoachAlreadyMember    => RegisterSpaceError::Database("coach already member on brand new space".into()),
+            SpaceRepositoryError::Database(msg)         => RegisterSpaceError::Database(msg),
+        }
+    }
+}
+
 pub async fn execute(
     cmd: RegisterNewSpaceCommand,
-    repo: &dyn IUserRepository,
-) -> Result<(), Vec<RegisterError>> {
-    let mut errors: Vec<RegisterError> = Vec::new();
+    repo: &dyn ISpaceRepository,
+) -> Result<(), RegisterSpaceError> {
+    let space = Space::new(SpaceId::new(), cmd.space_name, cmd.space_logo, vec![]);
 
-    // --- validation : tous les champs sont vérifiés sans court-circuit ---
+    repo.save(&space)
+        .await
+        .map_err(RegisterSpaceError::from)?;
 
-    if cmd.password != cmd.password_confirm {
-        errors.push(RegisterError::PasswordMismatch);
+    repo.add_member(&space.id, &cmd.coach_id, &SpaceAuthorization::SpaceAdmin)
+        .await
+        .map_err(RegisterSpaceError::from)?;
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::spaces::domain::ports::SpaceRepositoryError;
+    use crate::app::spaces::domain::Space::Space;
+    use async_trait::async_trait;
+
+    struct SpaceRepoOk;
+
+    #[async_trait]
+    impl ISpaceRepository for SpaceRepoOk {
+        async fn save(&self, _space: &Space) -> Result<(), SpaceRepositoryError> {
+            Ok(())
+        }
+        async fn add_member(&self, _space_id: &SpaceId, _coach_id: &CoachId, _profile: &SpaceAuthorization) -> Result<(), SpaceRepositoryError> {
+            Ok(())
+        }
+        async fn find_by_id(&self, _id: &SpaceId) -> Result<Option<Space>, SpaceRepositoryError> {
+            Ok(None)
+        }
     }
-    if cmd.password.len() < 8 {
-        errors.push(RegisterError::PasswordTooShort);
+
+    struct SpaceRepoNameTaken;
+
+    #[async_trait]
+    impl ISpaceRepository for SpaceRepoNameTaken {
+        async fn save(&self, _space: &Space) -> Result<(), SpaceRepositoryError> {
+            Err(SpaceRepositoryError::SpaceNameAlreadyTaken)
+        }
+        async fn add_member(&self, _space_id: &SpaceId, _coach_id: &CoachId, _profile: &SpaceAuthorization) -> Result<(), SpaceRepositoryError> {
+            Ok(())
+        }
+        async fn find_by_id(&self, _id: &SpaceId) -> Result<Option<Space>, SpaceRepositoryError> {
+            Ok(None)
+        }
     }
 
-    let coach_name = match CoachName::try_new(&cmd.coach_name) {
-        Ok(v)  => Some(v),
-        Err(e) => { errors.push(RegisterError::InvalidCoachName(e.into())); None }
-    };
-    let email = match Email::try_new(&cmd.email) {
-        Ok(v)  => Some(v),
-        Err(e) => { errors.push(RegisterError::InvalidEmail(e.into())); None }
-    };
-
-    if !errors.is_empty() {
-        return Err(errors);
+    fn make_cmd() -> RegisterNewSpaceCommand {
+        RegisterNewSpaceCommand {
+            coach_id:   CoachId::new(),
+            space_name: SpaceName::try_new("LigueAlpha").unwrap(),
+            space_logo: CloudinaryImage::try_new(
+                "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+            ).unwrap(),
+        }
     }
 
-    // --- à partir d'ici les valeurs sont garanties valides ---
+    #[tokio::test]
+    async fn execute_cree_espace_et_ajoute_fondateur_admin() {
+        let result = execute(make_cmd(), &SpaceRepoOk).await;
+        assert!(result.is_ok());
+    }
 
-    let salt = SaltString::generate(&mut OsRng);
-    let password_hash = Argon2::default()
-        .hash_password(cmd.password.as_bytes(), &salt)
-        .map_err(|_| vec![RegisterError::PasswordHashError])?
-        .to_string();
-
-    let user = User::new(
-        UserId::new(),
-        coach_name.unwrap(),
-        email.unwrap(),
-        password_hash,
-    );
-
-    repo.create(&user).await.map_err(|e| vec![RegisterError::from(e)])
+    #[tokio::test]
+    async fn execute_renvoie_space_name_already_taken() {
+        let result = execute(make_cmd(), &SpaceRepoNameTaken).await;
+        assert!(matches!(result, Err(RegisterSpaceError::SpaceNameAlreadyTaken)));
+    }
 }

@@ -15,8 +15,9 @@ use crate::app::auth::routes::path;
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tower_livereload::LiveReloadLayer;
 use std::sync::Arc;
-use crate::app::auth::io::repository::user_repository::UserRepository;
 use crate::app::auth::io::repository::reset_token_repository::ResetTokenRepository;
+use crate::app::auth::io::repository::user_repository::UserRepository;
+use crate::app::spaces::io::repository::space_repository::SpaceRepository;
 use crate::lib::services::email::ResendMailService;
 
 #[tokio::main]
@@ -45,6 +46,7 @@ async fn main() {
     let state = AppState {
         user_repository:        Arc::new(UserRepository::new(pool.clone())),
         reset_token_repository: Arc::new(ResetTokenRepository::new(pool.clone())),
+        space_repository:       Arc::new(SpaceRepository::new(pool.clone())),
         email_service:          Arc::new(ResendMailService::new(cfg.email.api_key, cfg.email.from, cfg.email.from_name)),
         host_domain:            cfg.host_domain,
     };

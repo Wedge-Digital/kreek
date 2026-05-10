@@ -1,8 +1,9 @@
 use sqlx::PgPool;
-use crate::app::auth::domain::coach_name::CoachName;
+use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::auth::domain::email::Email;
 use crate::app::auth::io::repository::user_repository::UserRepository;
 use crate::app::auth::ports::{IUserRepository, RepositoryError};
+use crate::app::shared_kernel::coach_icon::CoachIcon;
 use crate::app::shared_kernel::common_types::UserId;
 use crate::app::shared_kernel::user::User;
 
@@ -10,6 +11,8 @@ fn make_user(coach_name: &str, email: &str) -> User {
     User::new(
         UserId::new(),
         CoachName::try_new(coach_name).unwrap(),
+        // Option::from(CoachIcon::try_new("https://res.cloudinary.com/bloodbowlclub-com/image/upload/v1650731881/avatars/dxhokrr5hets7ncggrrk.png").unwrap()),
+        Option::from(None),
         Email::try_new(email).unwrap(),
         "hash_fictif".into(),
     )

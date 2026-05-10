@@ -1,5 +1,4 @@
 use super::super::domain::{
-    coach_name::CoachName,
     email::Email,
     error::AuthDomainError,
 };
@@ -11,7 +10,7 @@ use argon2::{
     Argon2,
 };
 use std::fmt;
-use crate::app::shared_kernel::authorization::Authorization::SimpleUser;
+use crate::app::shared_kernel::coach_name::CoachName;
 
 #[derive(Debug)]
 pub enum RegisterError {
@@ -53,7 +52,7 @@ impl From<RepositoryError> for RegisterError {
         match e {
             RepositoryError::CoachNameAlreadyTaken => RegisterError::CoachNameAlreadyTaken,
             RepositoryError::EmailAlreadyTaken     => RegisterError::EmailAlreadyTaken,
-            RepositoryError::Database(msg)         => RegisterError::Database(msg),
+            RepositoryError::Database(msg)  => RegisterError::Database(msg),
         }
     }
 }
@@ -97,6 +96,7 @@ pub async fn execute(
     let user = User::new(
         UserId::new(),
         coach_name.unwrap(),
+        None,
         email.unwrap(),
         password_hash,
     );

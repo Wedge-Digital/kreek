@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
-use crate::app::auth::domain::coach_name::CoachName;
+use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::auth::domain::reset_token::{ResetToken, Token};
 use crate::app::auth::ports::RepositoryError;
 

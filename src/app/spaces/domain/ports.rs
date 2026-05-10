@@ -1,0 +1,31 @@
+use crate::app::shared_kernel::authorization::SpaceAuthorization;
+use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
+use crate::app::spaces::domain::Space::Space;
+use async_trait::async_trait;
+use std::fmt;
+
+#[derive(Debug)]
+pub enum SpaceRepositoryError {
+    SpaceNameAlreadyTaken,
+    CoachAlreadyMember,
+    Database(String),
+}
+
+impl fmt::Display for SpaceRepositoryError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SpaceRepositoryError::SpaceNameAlreadyTaken => write!(f, "Ce nom d'espace est déjà utilisé"),
+            SpaceRepositoryError::CoachAlreadyMember    => write!(f, "Ce coach est déjà membre de cet espace"),
+            SpaceRepositoryError::Database(msg)         => write!(f, "Erreur base de données : {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for SpaceRepositoryError {}
+
+#[async_trait]
+pub trait ISpaceRepository: Send + Sync {
+    async fn save(&self, space: &Space) -> Result<(), SpaceRepositoryError>;
+    async fn add_member(&self, space_id: &SpaceId, coach_id: &CoachId, profile: &SpaceAuthorization) -> Result<(), SpaceRepositoryError>;
+    async fn find_by_id(&self, id: &SpaceId) -> Result<Option<Space>, SpaceRepositoryError>;
+}

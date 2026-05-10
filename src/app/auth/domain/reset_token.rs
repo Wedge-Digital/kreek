@@ -1,4 +1,4 @@
-use crate::app::auth::domain::coach_name::CoachName;
+use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::shared_kernel::sulid::SUlid;
 
 pub type Token = SUlid;

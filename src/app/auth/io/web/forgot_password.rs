@@ -5,7 +5,7 @@ use axum::http::{header, HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 use axum::Form;
 use serde::Deserialize;
-use crate::app::auth::domain::coach_name::CoachName;
+use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::auth::io::web::auth_layout::AuthLayout;
 use crate::app::auth::routes::{path, Routes};
 use crate::app::auth::use_cases::send_reset_password_email::{
