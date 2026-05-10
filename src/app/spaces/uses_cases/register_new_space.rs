@@ -46,7 +46,7 @@ pub async fn execute(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::spaces::domain::ports::SpaceRepositoryError;
+    use crate::app::spaces::domain::ports::{SpaceRepositoryError, SpaceSummary};
     use crate::app::spaces::domain::Space::Space;
     use async_trait::async_trait;
 
@@ -63,6 +63,14 @@ mod tests {
         async fn find_by_id(&self, _id: &SpaceId) -> Result<Option<Space>, SpaceRepositoryError> {
             Ok(None)
         }
+
+        async fn find_by_coach_id(&self, coach_id: &CoachId) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
+            Ok(vec![])
+        }
+
+        async fn find_all(&self) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
+            Ok(vec![])
+        }
     }
 
     struct SpaceRepoNameTaken;
@@ -77,6 +85,14 @@ mod tests {
         }
         async fn find_by_id(&self, _id: &SpaceId) -> Result<Option<Space>, SpaceRepositoryError> {
             Ok(None)
+        }
+
+        async fn find_by_coach_id(&self, coach_id: &CoachId) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
+            Ok(vec![])
+        }
+
+        async fn find_all(&self) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
+            Ok(vec![])
         }
     }
 

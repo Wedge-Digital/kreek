@@ -15,6 +15,12 @@ use crate::app::auth::routes::path;
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tower_livereload::LiveReloadLayer;
 use std::sync::Arc;
+use axum::middleware::from_fn;
+use axum_login::AuthManagerLayerBuilder;
+use tower_sessions::MemoryStore;
+use tower_sessions::SessionManagerLayer;
+use crate::app::auth::auth_backend::AuthBackend;
+use crate::web::middleware::require_auth::require_auth;
 use crate::app::auth::io::repository::reset_token_repository::ResetTokenRepository;
 use crate::app::auth::io::repository::user_repository::UserRepository;
 use crate::app::spaces::io::repository::space_repository::SpaceRepository;
@@ -51,14 +57,25 @@ async fn main() {
         host_domain:            cfg.host_domain,
     };
 
-    let app = Router::new()
-        .route("/", get(|| async { Redirect::to(path::AUTH_LAYOUT) }))
-        .merge(app::auth::router::router())
+    let session_layer = SessionManagerLayer::new(MemoryStore::default());
+    let auth_layer = AuthManagerLayerBuilder::new(
+        AuthBackend::new(state.user_repository.clone()),
+        session_layer,
+    ).build();
+
+    let protected = Router::new()
         .merge(app::news::router::router())
         .merge(app::team_creation::router::router())
         .merge(app::spaces::router::router())
         .merge(web::router::router())
+        .route_layer(from_fn(require_auth));
+
+    let app = Router::new()
+        .route("/", get(|| async { Redirect::to(path::AUTH_LAYOUT) }))
+        .merge(app::auth::router::router())
+        .merge(protected)
         .nest_service("/static", ServeDir::new("assets/static"))
+        .layer(auth_layer)
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 

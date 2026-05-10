@@ -5,7 +5,7 @@ use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, SpaceId}
 use crate::app::shared_kernel::space_name::SpaceName;
 use crate::app::spaces::domain::coach::Coach;
 use crate::app::spaces::domain::Space::Space;
-use crate::app::spaces::domain::ports::{ISpaceRepository, SpaceRepositoryError};
+use crate::app::spaces::domain::ports::{ISpaceRepository, SpaceRepositoryError, SpaceSummary};
 use async_trait::async_trait;
 use sqlx::PgPool;
 
@@ -78,6 +78,45 @@ impl ISpaceRepository for SpaceRepository {
             })?;
 
         Ok(())
+    }
+
+    async fn find_all(&self) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            id:              String,
+            space_name:      String,
+            space_icon_path: String,
+        }
+
+        let rows = sqlx::query_as::<_, Row>(include_str!("sql/find_all_spaces.sql"))
+            .fetch_all(&self.pool)
+            .await
+            .map_err(db_err)?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| SpaceSummary { id: r.id, name: r.space_name, logo: r.space_icon_path })
+            .collect())
+    }
+
+    async fn find_by_coach_id(&self, coach_id: &CoachId) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            id:              String,
+            space_name:      String,
+            space_icon_path: String,
+        }
+
+        let rows = sqlx::query_as::<_, Row>(include_str!("sql/find_spaces_by_coach_id.sql"))
+            .bind(coach_id.to_string())
+            .fetch_all(&self.pool)
+            .await
+            .map_err(db_err)?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| SpaceSummary { id: r.id, name: r.space_name, logo: r.space_icon_path })
+            .collect())
     }
 
     async fn find_by_id(&self, id: &SpaceId) -> Result<Option<Space>, SpaceRepositoryError> {

@@ -1,7 +1,8 @@
 use askama::Template;
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
+use crate::app::auth::io::web::auth_layout::AuthLayout;
 use crate::app::auth::routes::Routes;
 
 #[derive(Template, Default)]
@@ -27,6 +28,11 @@ pub struct RegisterFormPayload {
     pub password_confirm: String,
 }
 
-pub async fn register_success() -> impl IntoResponse {
-    RegisterSuccessTemplate::default()
+pub async fn register_success(headers: HeaderMap) -> impl IntoResponse {
+    if headers.contains_key("hx-request") {
+        RegisterSuccessTemplate::default().into_response()
+    } else {
+        let content = RegisterSuccessTemplate::default().render().unwrap_or_default();
+        AuthLayout { content }.into_response()
+    }
 }

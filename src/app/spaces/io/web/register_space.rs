@@ -5,7 +5,9 @@ use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use axum::Form;
 use serde::Deserialize;
-use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId};
+use crate::app::auth::auth_backend::AuthSession;
+use crate::app::auth::routes::path as auth_path;
+use crate::app::shared_kernel::common_types::CloudinaryImage;
 use crate::app::shared_kernel::space_name::SpaceName;
 use crate::app::spaces::routes::path;
 use crate::app::spaces::uses_cases::register_new_space::{execute, RegisterNewSpaceCommand, RegisterSpaceError};
@@ -49,6 +51,7 @@ pub struct RegisterSpaceFormPayload {
 }
 
 pub async fn register_space_submit(
+    auth_session: AuthSession,
     State(state): State<AppState>,
     Form(payload): Form<RegisterSpaceFormPayload>,
 ) -> impl IntoResponse {
@@ -82,9 +85,13 @@ pub async fn register_space_submit(
         return tmpl.into_response();
     };
 
-    // TODO: récupérer le CoachId depuis AuthSession (axum-login) — pas encore câblé.
-    // À remplacer par : auth_session.user.map(|u| u.id).ok_or(401) une fois le middleware en place.
-    let coach_id = CoachId::new();
+    let Some(user) = auth_session.user else {
+        return Response::builder()
+            .header("HX-Redirect", auth_path::AUTH_LAYOUT)
+            .body(Body::empty())
+            .unwrap();
+    };
+    let coach_id = user.id;
 
     let cmd = RegisterNewSpaceCommand { coach_id, space_name, space_logo };
 

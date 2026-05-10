@@ -1,7 +1,11 @@
 use askama::Template;
+use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Redirect, Response};
-use crate::app::news::routes::path;
+use crate::app::auth::auth_backend::AuthSession;
+use crate::app::news::routes::Routes as NewsRoutes;
+use crate::app::spaces::routes::path as spaces_path;
+use crate::state::AppState;
 use crate::web::routes::Routes;
 
 #[derive(Template, Default)]
@@ -20,6 +24,25 @@ impl IntoResponse for AppLayout {
     }
 }
 
-pub async fn app_layout() -> impl IntoResponse {
-    Redirect::to(path::APP_HOME)
+pub async fn app_layout(
+    auth_session: AuthSession,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    let Some(user) = auth_session.user else {
+        return Redirect::to(crate::app::auth::routes::path::LOGIN).into_response();
+    };
+
+    let spaces = state
+        .space_repository
+        .find_by_coach_id(&user.id)
+        .await
+        .unwrap_or_default();
+
+    let target = if let Some(first) = spaces.first() {
+        NewsRoutes::default().space_home(&first.id)
+    } else {
+        spaces_path::SPACE_ALL.to_string()
+    };
+
+    Redirect::to(&target).into_response()
 }

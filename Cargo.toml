@@ -23,6 +23,8 @@ regex = "1.12.3"
 tower-livereload = "0.10.3"
 argon2 = "0.5"
 async-trait = "0.1.89"
+axum-login = "0.18"
+tower-sessions = "0.14"
 reqwest = { version = "0.12", features = ["json"] }
 chrono = "0.4.44"
 

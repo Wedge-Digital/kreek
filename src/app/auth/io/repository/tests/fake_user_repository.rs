@@ -11,6 +11,9 @@ pub struct FakeUserRepository { pub find_result: FindResult }
 #[async_trait]
 impl IUserRepository for FakeUserRepository {
     async fn create(&self, _: &User) -> Result<(), RepositoryError> { unimplemented!() }
+    async fn find_by_id(&self, _: &str) -> Result<Option<User>, RepositoryError> {
+        self.find_by_coach_name("").await
+    }
     async fn update_password_hash(&self, _: &str, _: &str) -> Result<(), RepositoryError> { Ok(()) }
     async fn find_by_coach_name(&self, _: &str) -> Result<Option<User>, RepositoryError> {
         match &self.find_result {

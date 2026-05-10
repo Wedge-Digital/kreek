@@ -1,0 +1,49 @@
+<div class="allspace-home-grid">
+
+<div class="spaces-header">
+  <div class="h3-gras">Tous les espaces</div>
+</div>
+
+<p>Si vous souhaitez rejoindre une ligue, un club une compétition, cliquez sur les icones ci-dessous</p>
+
+<form id="join-spaces-form">
+  <div class="spaces-grid">
+    {% if spaces.is_empty() %}
+    <div class="spaces-empty">Aucun espace disponible pour le moment.</div>
+    {% else %}
+    {% for space in spaces %}
+    <label class="space-card{% if space.is_member %} space-card--member{% endif %}">
+      {% if !space.is_member %}
+      <input type="checkbox" name="space_ids" value="{{ space.id }}" hidden>
+      {% endif %}
+      <div class="space-card-logo">
+        <img src="{{ space.logo }}" alt="{{ space.name }}">
+      </div>
+      <div class="space-card-name">{{ space.name }}</div>
+      <span class="space-card-badge{% if space.is_member %} space-card-badge--member{% endif %}">
+        {% if space.is_member %}Membre{% else %}Rejoindre{% endif %}
+      </span>
+    </label>
+    {% endfor %}
+    {% endif %}
+  </div>
+
+  <div class="spaces-actions">
+    <button class="btn btn-outline join-btn"
+            hx-post="/app/space/join-many"
+            hx-include="[name='space_ids']:checked"
+            hx-target="#app-content"
+            hx-swap="innerHTML"
+            hx-push-url="true">
+      Rejoindre les espaces sélectionnés
+    </button>
+  </div>
+</form>
+
+<p>Si vous souhaitez créer une compétition, une ligue....</p>
+<a class="btn btn-primary" href="/app/space/create"
+   hx-get="/app/space/create"
+   hx-target="#app-content"
+   hx-swap="innerHTML"
+   hx-push-url="true">Je crée un nouvel espace</a>
+</div>

@@ -1,0 +1,125 @@
+.allspace-home-grid {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: var(--p2);
+}
+
+.spaces-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--p2);
+}
+
+.spaces-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--p1);
+}
+
+.space-card {
+  background: var(--white);
+  border-radius: var(--card-radius);
+  padding: var(--p2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--p1);
+  border: 2px solid var(--dark-5);
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+  user-select: none;
+}
+.space-card:hover {
+  border-color: var(--dark-3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+/* Sélectionné (checkbox coché) */
+.space-card:has(input:checked) {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--orange) 6%, var(--white));
+}
+.space-card:has(input:checked):hover {
+  border-color: var(--gold);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+.space-card:has(input:checked) .space-card-badge {
+  background: color-mix(in srgb, var(--orange) 15%, var(--white));
+  color: var(--gold);
+}
+
+/* Déjà membre */
+.space-card--member {
+  border-color: var(--blue);
+  background: color-mix(in srgb, var(--blue) 6%, var(--white));
+  cursor: default;
+}
+.space-card--member:hover {
+  border-color: var(--blue);
+  box-shadow: none;
+  transform: none;
+}
+
+.space-card-logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--dark-5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.space-card-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.space-card-name {
+  font-family: var(--font-title);
+  font-size: var(--h5);
+  font-weight: 700;
+  color: var(--dark-0);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.space-card-badge {
+  font-size: var(--text-tiny);
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--dark-6);
+  color: var(--dark-2);
+  transition: background 0.2s, color 0.2s;
+}
+.space-card-badge--member {
+  background: color-mix(in srgb, var(--blue) 15%, var(--white));
+  color: var(--blue);
+}
+
+.spaces-empty {
+  grid-column: 1 / -1;
+  padding: var(--p4);
+  text-align: center;
+  color: var(--dark-3);
+  font-size: var(--text-sm);
+}
+
+.spaces-actions {
+  margin-top: var(--p2);
+  display: flex;
+  gap: var(--p1);
+  align-items: center;
+}
+
+/* Bouton désactivé quand rien n'est sélectionné */
+#join-spaces-form:not(:has(input:checked)) .join-btn {
+  opacity: 0.4;
+  pointer-events: none;
+}

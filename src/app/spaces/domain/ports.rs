@@ -4,6 +4,12 @@ use crate::app::spaces::domain::Space::Space;
 use async_trait::async_trait;
 use std::fmt;
 
+pub struct SpaceSummary {
+    pub id:   String,
+    pub name: String,
+    pub logo: String,
+}
+
 #[derive(Debug)]
 pub enum SpaceRepositoryError {
     SpaceNameAlreadyTaken,
@@ -28,4 +34,6 @@ pub trait ISpaceRepository: Send + Sync {
     async fn save(&self, space: &Space) -> Result<(), SpaceRepositoryError>;
     async fn add_member(&self, space_id: &SpaceId, coach_id: &CoachId, profile: &SpaceAuthorization) -> Result<(), SpaceRepositoryError>;
     async fn find_by_id(&self, id: &SpaceId) -> Result<Option<Space>, SpaceRepositoryError>;
+    async fn find_by_coach_id(&self, coach_id: &CoachId) -> Result<Vec<SpaceSummary>, SpaceRepositoryError>;
+    async fn find_all(&self) -> Result<Vec<SpaceSummary>, SpaceRepositoryError>;
 }

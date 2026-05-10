@@ -12,15 +12,16 @@
   <link rel="stylesheet" href="/static/css/pages/new-space.css">
   <link rel="stylesheet" href="/static/css/components/create-card.css">
   <link rel="stylesheet" href="/static/css/components/upload.css">
+  <link rel="stylesheet" href="/static/css/pages/all-spaces.css">
   <script src="/static/js/htmx.min.js"></script>
   <script src="https://widget.cloudinary.com/v2.0/global/all.js" type="text/javascript"></script>
 </head>
 <body>
   <div class="app-layout">
     <div class="sidebar"
-       hx-get="{{ routes.spaces() }}"
-         hx-trigger="load"
-       hx-swap="innerHTML">
+         hx-get="{{ routes.spaces() }}"
+         hx-trigger="load, space:changed from:body"
+         hx-swap="innerHTML">
     </div>
 
     <div class="main-area">

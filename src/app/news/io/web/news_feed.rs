@@ -1,4 +1,5 @@
 use askama::Template;
+use axum::extract::Path;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 use crate::app::news::routes::Routes as NewsRoutes;
@@ -7,7 +8,8 @@ use crate::web::app_layout::AppLayout;
 #[derive(Template, Default)]
 #[template(path = "news-feed.html")]
 pub struct NewsFeedTemplate {
-    pub routes:         NewsRoutes,
+    pub routes:   NewsRoutes,
+    pub space_id: String,
 }
 
 impl IntoResponse for NewsFeedTemplate {
@@ -19,12 +21,12 @@ impl IntoResponse for NewsFeedTemplate {
     }
 }
 
-
-pub async fn get_news_feed(headers: HeaderMap) -> impl IntoResponse {
+pub async fn get_news_feed(Path(space_id): Path<String>, headers: HeaderMap) -> impl IntoResponse {
+    let tmpl = NewsFeedTemplate { space_id, ..Default::default() };
     if headers.contains_key("hx-request") {
-        NewsFeedTemplate::default().into_response()
+        tmpl.into_response()
     } else {
-        let content = NewsFeedTemplate::default().render().unwrap_or_default();
+        let content = tmpl.render().unwrap_or_default();
         AppLayout { content, routes: Default::default() }.into_response()
     }
 }

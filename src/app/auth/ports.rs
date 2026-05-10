@@ -24,6 +24,7 @@ impl std::error::Error for RepositoryError {}
 #[async_trait]
 pub trait IUserRepository: Send + Sync {
     async fn create(&self, user: &User) -> Result<(), RepositoryError>;
+    async fn find_by_id(&self, id: &str) -> Result<Option<User>, RepositoryError>;
     async fn find_by_coach_name(&self, coach_name: &str) -> Result<Option<User>, RepositoryError>;
     async fn update_password_hash(&self, coach_name: &str, new_hash: &str) -> Result<(), RepositoryError>;
 }

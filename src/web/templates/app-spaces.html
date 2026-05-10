@@ -1,11 +1,16 @@
 <div class="sidebar-top"></div>
-<div class="league-btn league-btn-active" title="Ligue de Condate">
-  <img src="https://res.cloudinary.com/bloodbowlclub-com/image/upload/c_scale,w_64/v1662411087/leagues/BB-Namur.png" alt="Ligue de Condate" width="128" height="128">
+{% for space in spaces %}
+<div class="league-btn{% if active_space_id.as_deref() == Some(space.id.as_str()) %} league-btn-activera{% endif %}"
+     hx-trigger="click"
+     hx-get="{{ news_routes.space_home(space.id) }}"
+     hx-target="#app-content"
+     hx-swap="innerHTML"
+     hx-push-url="true"
+     hx-on::after-request="htmx.trigger(document.body, 'space:changed')"
+     title="{{ space.name }}">
+  <img src="{{ space.logo }}" alt="{{ space.name }}" width="128" height="128">
 </div>
-<div class="league-btn" title="Korrigane Cup">
-    <img src="https://res.cloudinary.com/bloodbowlclub-com/image/upload/c_scale,w_64/v1662411087/leagues/BB-Namur.png" alt="Ligue de Condate" width="128" height="128">
-</div>
-<div class="league-btn" title="Ligue du Midi">LM</div>
+{% endfor %}
 <div class="league-btn"
      hx-trigger="click"
      hx-get="/app/space/create"

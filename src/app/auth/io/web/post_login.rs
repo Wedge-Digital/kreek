@@ -1,3 +1,4 @@
+use crate::app::auth::auth_backend::AuthSession;
 use crate::app::auth::io::web::get_login::LoginTemplate;
 use crate::app::auth::routes::path;
 use crate::app::auth::use_cases::perform_login;
@@ -7,16 +8,20 @@ use axum::extract::State;
 use axum::http::header;
 use axum::response::{IntoResponse, Response};
 use axum::Form;
-use tracing::debug;
 
 pub async fn login_submit(
+    mut auth_session: AuthSession,
     State(state): State<AppState>,
-    Form(payload): Form<PerformLoginCommand>) ->impl IntoResponse {
-    debug!(coach_name = %payload.coach_name, "login form received");
-
+    Form(payload): Form<PerformLoginCommand>,
+) -> impl IntoResponse {
     match perform_login::execute(payload, state.user_repository.as_ref()).await {
         Ok(user) => {
-            //connexion réussie → redirect HTMX
+            if auth_session.login(&user).await.is_err() {
+                return LoginTemplate {
+                    login_error: Some("Erreur de session, réessaie.".into()),
+                    ..Default::default()
+                }.into_response();
+            }
             let mut response = Response::new(axum::body::Body::empty());
             response.headers_mut().insert(
                 header::HeaderName::from_static("hx-redirect"),
@@ -45,43 +50,62 @@ mod tests {
     use argon2::{Argon2, PasswordHasher};
     use argon2::password_hash::{SaltString, rand_core::OsRng};
     use axum::body::to_bytes;
-    use axum::extract::State;
-    use axum::Form;
-    use axum::response::IntoResponse;
+    use axum::routing::post;
+    use axum::Router;
+    use tower::ServiceExt;
+    use crate::app::auth::auth_backend::AuthBackend;
+    use crate::app::auth::io::repository::tests::fake_reset_token_repository::FakeResetTokenRepository;
+    use crate::app::auth::io::repository::tests::fake_user_repository::{FakeUserRepository, FindResult};
+    use crate::app::auth::routes::path;
+    use crate::lib::services::email::fakes::console_email_service::ConsoleEmailService;
+    use crate::app::spaces::domain::ports::ISpaceRepository;
     use crate::state::AppState;
     use super::login_submit;
-    use crate::app::auth::io::repository::tests::fake_user_repository::{FakeUserRepository, FindResult};
-    use crate::app::auth::io::repository::tests::fake_reset_token_repository::FakeResetTokenRepository;
-    use crate::app::auth::routes::path;
-    use crate::app::auth::use_cases::perform_login::PerformLoginCommand;
-    use crate::lib::services::email::fakes::console_email_service::ConsoleEmailService;
 
     fn hash_password(password: &str) -> String {
         let salt = SaltString::generate(&mut OsRng);
         Argon2::default().hash_password(password.as_bytes(), &salt).unwrap().to_string()
     }
 
-    fn state(mock: FakeUserRepository) -> State<AppState> {
-        State(AppState {
-            user_repository:        Arc::new(mock),
+    fn build_app(find_result: FindResult) -> Router {
+        use axum_login::AuthManagerLayerBuilder;
+        use tower_sessions::{MemoryStore, SessionManagerLayer};
+
+        let mock = Arc::new(FakeUserRepository { find_result });
+        let session_layer = SessionManagerLayer::new(MemoryStore::default());
+        let auth_layer = AuthManagerLayerBuilder::new(
+            AuthBackend::new(mock.clone() as Arc<dyn crate::app::auth::ports::IUserRepository>),
+            session_layer,
+        ).build();
+
+        let state = AppState {
+            user_repository:        mock.clone() as Arc<dyn crate::app::auth::ports::IUserRepository>,
             email_service:          Arc::new(ConsoleEmailService),
-            reset_token_repository: Arc::new(FakeResetTokenRepository { find_result: crate::app::auth::io::repository::tests::fake_reset_token_repository::FindResult::NotFound }),
-            space_repository:       Arc::new(FakeSpaceRepository),
-            host_domain:            "localhost:8080".into(),
-        })
+            reset_token_repository: Arc::new(FakeResetTokenRepository {
+                find_result: crate::app::auth::io::repository::tests::fake_reset_token_repository::FindResult::NotFound,
+            }),
+            space_repository: Arc::new(FakeSpaceRepository),
+            host_domain: "localhost:8080".into(),
+        };
+
+        Router::new()
+            .route(path::LOGIN, post(login_submit))
+            .with_state(state)
+            .layer(auth_layer)
     }
 
-    struct FakeSpaceRepository;
-
-    #[async_trait::async_trait]
-    impl crate::app::spaces::domain::ports::ISpaceRepository for FakeSpaceRepository {
-        async fn save(&self, _: &crate::app::spaces::domain::Space::Space) -> Result<(), crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(()) }
-        async fn add_member(&self, _: &crate::app::shared_kernel::common_types::SpaceId, _: &crate::app::shared_kernel::common_types::CoachId, _: &crate::app::shared_kernel::authorization::SpaceAuthorization) -> Result<(), crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(()) }
-        async fn find_by_id(&self, _: &crate::app::shared_kernel::common_types::SpaceId) -> Result<Option<crate::app::spaces::domain::Space::Space>, crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(None) }
-    }
-
-    fn form(coach_name: &str, password: &str) -> Form<PerformLoginCommand> {
-        Form(PerformLoginCommand { coach_name: coach_name.into(), password: password.into() })
+    async fn post_login(app: Router, body: &str) -> axum::response::Response {
+        use axum::http::Request;
+        app.oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(path::LOGIN)
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(axum::body::Body::from(body.to_owned()))
+                .unwrap(),
+        )
+        .await
+        .unwrap()
     }
 
     async fn body_string(response: axum::response::Response) -> String {
@@ -89,12 +113,22 @@ mod tests {
         String::from_utf8(bytes.to_vec()).unwrap()
     }
 
+    struct FakeSpaceRepository;
+    #[async_trait::async_trait]
+    impl ISpaceRepository for FakeSpaceRepository {
+        async fn save(&self, _: &crate::app::spaces::domain::Space::Space) -> Result<(), crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(()) }
+        async fn add_member(&self, _: &crate::app::shared_kernel::common_types::SpaceId, _: &crate::app::shared_kernel::common_types::CoachId, _: &crate::app::shared_kernel::authorization::SpaceAuthorization) -> Result<(), crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(()) }
+        async fn find_by_id(&self, _: &crate::app::shared_kernel::common_types::SpaceId) -> Result<Option<crate::app::spaces::domain::Space::Space>, crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(None) }
+        async fn find_by_coach_id(&self, _: &crate::app::shared_kernel::common_types::CoachId) -> Result<Vec<crate::app::spaces::domain::ports::SpaceSummary>, crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(vec![]) }
+        async fn find_all(&self) -> Result<Vec<crate::app::spaces::domain::ports::SpaceSummary>, crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(vec![]) }
+    }
+
     #[tokio::test]
     async fn success_sets_hx_redirect() {
-        let response = login_submit(
-            state(FakeUserRepository { find_result: FindResult::Found { password_hash: hash_password("secret") } }),
-            form("Bagouze", "secret"),
-        ).await.into_response();
+        let response = post_login(
+            build_app(FindResult::Found { password_hash: hash_password("secret") }),
+            "coach_name=Bagouze&password=secret",
+        ).await;
 
         assert_eq!(
             response.headers().get("hx-redirect").and_then(|v| v.to_str().ok()),
@@ -104,10 +138,10 @@ mod tests {
 
     #[tokio::test]
     async fn invalid_password_returns_error_fragment() {
-        let response = login_submit(
-            state(FakeUserRepository { find_result: FindResult::Found { password_hash: hash_password("correct") } }),
-            form("Bagouze", "wrong"),
-        ).await.into_response();
+        let response = post_login(
+            build_app(FindResult::Found { password_hash: hash_password("correct") }),
+            "coach_name=Bagouze&password=wrong",
+        ).await;
 
         assert!(response.headers().get("hx-redirect").is_none());
         assert!(body_string(response).await.contains("incorrect"));
@@ -115,10 +149,10 @@ mod tests {
 
     #[tokio::test]
     async fn unknown_coach_returns_error_fragment() {
-        let response = login_submit(
-            state(FakeUserRepository { find_result: FindResult::NotFound }),
-            form("Inconnu", "secret"),
-        ).await.into_response();
+        let response = post_login(
+            build_app(FindResult::NotFound),
+            "coach_name=Inconnu&password=secret",
+        ).await;
 
         assert!(response.headers().get("hx-redirect").is_none());
         assert!(body_string(response).await.contains("incorrect"));
@@ -126,10 +160,10 @@ mod tests {
 
     #[tokio::test]
     async fn database_error_returns_error_fragment() {
-        let response = login_submit(
-            state(FakeUserRepository { find_result: FindResult::DbError("connexion refusée".into()) }),
-            form("Bagouze", "secret"),
-        ).await.into_response();
+        let response = post_login(
+            build_app(FindResult::DbError("connexion refusée".into())),
+            "coach_name=Bagouze&password=secret",
+        ).await;
 
         assert!(response.headers().get("hx-redirect").is_none());
         assert!(body_string(response).await.contains("Erreur interne"));
