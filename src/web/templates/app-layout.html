@@ -27,7 +27,7 @@
     <div class="main-area">
       <!-- Menu bar -->
       <div class="menu-bar"
-           hx-trigger="load"
+           hx-trigger="load, space:changed from:body"
            hx-get="{{ routes.menu() }}"
            hx-swap="innerHTML">
       </div>

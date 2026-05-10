@@ -1,6 +1,6 @@
 <div class="sidebar-top"></div>
 {% for space in spaces %}
-<div class="league-btn{% if active_space_id.as_deref() == Some(space.id.as_str()) %} league-btn-activera{% endif %}"
+<div class="league-btn{% if active_space_id.as_deref() == Some(space.id.as_str()) %} league-btn-active{% endif %}"
      hx-trigger="click"
      hx-get="{{ news_routes.space_home(space.id) }}"
      hx-target="#app-content"
