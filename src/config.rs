@@ -3,11 +3,12 @@ use std::env;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct AppConfig {
-    pub server:   ServerConfig,
-    pub database: DatabaseConfig,
-    pub auth:     AuthConfig,
-    pub email: EmailConfig,
+    pub server:      ServerConfig,
+    pub database:    DatabaseConfig,
+    pub auth:        AuthConfig,
+    pub email:       EmailConfig,
     pub host_domain: String,
+    pub bypass_auth: bool,
 }
 
 #[derive(Debug, Deserialize, Clone)]

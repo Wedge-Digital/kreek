@@ -8,7 +8,9 @@ use crate::web::routes::Routes as WebRoutes;
 #[derive(Template, Default)]
 #[template(path = "draft-team.html")]
 pub struct DraftTeamTemplate {
-    pub routes: Routes,
+    pub routes:          Routes,
+    pub logo_url_value:  String,
+    pub logo_error:      Option<String>,
 }
 
 impl IntoResponse for DraftTeamTemplate {

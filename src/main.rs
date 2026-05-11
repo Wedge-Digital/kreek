@@ -15,11 +15,12 @@ use crate::app::auth::routes::path;
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tower_livereload::LiveReloadLayer;
 use std::sync::Arc;
-use axum::middleware::from_fn;
+use axum::middleware::{from_fn, from_fn_with_state};
 use axum_login::AuthManagerLayerBuilder;
 use tower_sessions::MemoryStore;
 use tower_sessions::SessionManagerLayer;
 use crate::app::auth::auth_backend::AuthBackend;
+use crate::web::middleware::bypass_auth::bypass_auth_middleware;
 use crate::web::middleware::require_auth::require_auth;
 use crate::app::auth::io::repository::reset_token_repository::ResetTokenRepository;
 use crate::app::auth::io::repository::user_repository::UserRepository;
@@ -55,11 +56,12 @@ async fn main() {
         space_repository:       Arc::new(SpaceRepository::new(pool.clone())),
         email_service:          Arc::new(ResendMailService::new(cfg.email.api_key, cfg.email.from, cfg.email.from_name)),
         host_domain:            cfg.host_domain,
+        bypass_auth:            cfg.bypass_auth,
     };
 
     let session_layer = SessionManagerLayer::new(MemoryStore::default());
     let auth_layer = AuthManagerLayerBuilder::new(
-        AuthBackend::new(state.user_repository.clone()),
+        AuthBackend::new(state.user_repository.clone(), cfg.bypass_auth),
         session_layer,
     ).build();
 
@@ -68,7 +70,8 @@ async fn main() {
         .merge(app::team_creation::router::router())
         .merge(app::spaces::router::router())
         .merge(web::router::router())
-        .route_layer(from_fn(require_auth));
+        .route_layer(from_fn(require_auth))
+        .route_layer(from_fn_with_state(state.clone(), bypass_auth_middleware));
 
     let app = Router::new()
         .route("/", get(|| async { Redirect::to(path::AUTH_LAYOUT) }))

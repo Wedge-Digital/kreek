@@ -12,44 +12,8 @@
           hx-target="#new-space-card"
           hx-swap="outerHTML">
 
-        <div class="form-label">Logo de votre espace</div>
-            <input type="hidden" id="logo_url" name="logo_url" value="{{ logo_url_value }}">
-            <div class="upload-preview" id="upload-zone">
-                <img id="logo-preview" src="{{ logo_url_value }}" alt="Logo de votre équipe"
-                     {% if logo_url_value.is_empty() %}style="display:none"{% endif %}>
-                <div id="upload-placeholder" {% if !logo_url_value.is_empty() %}style="display:none"{% endif %}>
-                    <div style="font-size: 36px; color: var(--dark-3);">🖼️</div>
-                    <div class="text-small text-dark-2">Uploader un logo</div>
-                </div>
-            {% if let Some(err) = logo_error %}
-            <div class="form-error">{{ err }}</div>
-            {% endif %}
-            <script>
-                (function () {
-                    const widget = cloudinary.createUploadWidget({
-                        cloudName: 'bloodbowlclub-com',
-                        uploadPreset: 'fvqrusn5',
-                        sources: ['local', 'url'],
-                        multiple: false,
-                        maxFileSize: 2000000,
-                        clientAllowedFormats: ['jpg', 'png', 'webp'],
-                        folder: 'spaces/logos'
-                    }, function (error, result) {
-                        if (!error && result && result.event === 'success') {
-                            const url = result.info.secure_url;
-                            document.getElementById('logo_url').value = url;
-                            const preview = document.getElementById('logo-preview');
-                            preview.src = url;
-                            preview.style.display = 'block';
-                            document.getElementById('upload-placeholder').style.display = 'none';
-                        }
-                    });
-                    document.getElementById('upload-zone').addEventListener('click', function () {
-                        widget.open();
-                    });
-                })();
-            </script>
-        </div>
+        {% import "components/upload_widget.html" as cmp %}
+        {% call cmp::cloudinary_upload("logo_url", logo_url_value, "spaces/logos", "Logo de votre espace", logo_error) %}
 
         <div class="form-group">
             <label class="form-label">Nom de votre espace</label>

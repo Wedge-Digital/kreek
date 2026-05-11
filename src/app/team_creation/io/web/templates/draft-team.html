@@ -7,14 +7,12 @@
         </div>
     </div>
 
-    <div style="height: var(--p1);"></div>
-
-    <div class="form-group" style="margin-bottom: var(--p2);">
-        <label class="form-label" style="font-size: var(--text-small); color: var(--dark-1); font-weight: 500; margin-bottom: 8px;">Nom de votre équipe</label>
+    <div class="form-group create-team">
+        <label class="form-label">Nom de votre équipe</label>
         <input type="text" class="form-input" placeholder="ex : Les Korrigans FC">
     </div>
 
-    <div class="two-col" style="margin-bottom: var(--p1);">
+    <div class="two-col create-team">
         <div>
             <div class="col-label">Qui sera le coach de cette équipe ?</div>
             <select class="form-select">
@@ -24,19 +22,12 @@
                 <option>Whiskers</option>
             </select>
         </div>
-        <div>
-            <div class="col-label">Logo de votre équipe</div>
-            <div class="upload-preview">
-                <div style="font-size: 36px; color: var(--dark-3);">🖼️</div>
-                <div class="text-small text-dark-2">Uploader un logo</div>
-            </div>
-        </div>
+        {% import "components/upload_widget.html" as cmp %}
+        {% call cmp::cloudinary_upload("logo_url", logo_url_value, "teams/logos", "Logo de votre équipe", logo_error) %}
     </div>
 
-    <div style="height: var(--p2);"></div>
-
-    <div class="form-group">
-        <label class="form-label" style="font-size: var(--text-small); color: var(--dark-1); font-weight: 500; margin-bottom: 8px;">Compétition</label>
+    <div class="form-group create-team">
+        <label class="form-label" style="font-size: var(--text-small); color: var(--dark-1); font-weight: 500;">Compétition</label>
         <select class="form-select">
             <option>Choisissez une competition...</option>
             <option>Ligue Open</option>
@@ -44,9 +35,7 @@
         </select>
     </div>
 
-    <div style="height: var(--p4);"></div>
-
-    <div style="display: flex; justify-content: space-between;">
+    <div class="create-team buttons">
         <button class="btn btn-outline" style="width: auto; padding: var(--p1) var(--p3);" onclick="window.location.href='app-my-teams.html'">
             Annuler
         </button>
@@ -54,7 +43,4 @@
             Suivant →
         </button>
     </div>
-</div>
-</div>
-</div>
 </div>

@@ -1,8 +1,21 @@
-.create-card   {
-  width : 100%;
-  overflow: scroll;
-  max-height: 800px;
+.create-team {
+  padding: var(--p2);
+  display: flex;
+  justify-content: center;
 }
-.create-header { background: linear-gradient(135deg, #629584 0%, var(--main-blue) 100%); }
+.create-team.buttons {
+  justify-content: space-between;
+}
+
+.create-team .col-label {
+  font-weight: 500;
+  font-size: var(--text-small);
+}
+
+.create-team .form-label {
+  font-weight: 500;
+  font-size: var(--text-small);
+  color: var(--dark-1);
+}
 
 .col-label { font-size: var(--text-small); font-weight: 500; color: var(--dark-1); margin-bottom: var(--p1); }

@@ -74,7 +74,7 @@ mod tests {
         let mock = Arc::new(FakeUserRepository { find_result });
         let session_layer = SessionManagerLayer::new(MemoryStore::default());
         let auth_layer = AuthManagerLayerBuilder::new(
-            AuthBackend::new(mock.clone() as Arc<dyn crate::app::auth::ports::IUserRepository>),
+            AuthBackend::new(mock.clone() as Arc<dyn crate::app::auth::ports::IUserRepository>, false),
             session_layer,
         ).build();
 
@@ -86,6 +86,7 @@ mod tests {
             }),
             space_repository: Arc::new(FakeSpaceRepository),
             host_domain: "localhost:8080".into(),
+            bypass_auth: false,
         };
 
         Router::new()

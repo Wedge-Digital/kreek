@@ -1,0 +1,42 @@
+{% macro cloudinary_upload(field_id, initial_value, folder, label, error) %}
+<div class="upload-widget">
+<div class="upload-title">{{ label }}</div>
+<input type="hidden" id="{{ field_id }}" name="{{ field_id }}" value="{{ initial_value }}">
+<div class="upload-preview" id="zone-{{ field_id }}">
+    <img id="preview-{{ field_id }}" src="{{ initial_value }}" alt="{{ label }}"
+         {% if initial_value.is_empty() %}style="display:none"{% endif %}>
+    <div id="placeholder-{{ field_id }}" {% if !initial_value.is_empty() %}style="display:none"{% endif %}>
+        <div style="font-size: 36px; color: var(--dark-3);">🖼️</div>
+        <div class="text-small text-dark-2">Uploader un logo</div>
+    </div>
+    {% if let Some(err) = error %}
+    <div class="form-error">{{ err }}</div>
+    {% endif %}
+    <script>
+        (function () {
+            const widget = cloudinary.createUploadWidget({
+                cloudName: 'bloodbowlclub-com',
+                uploadPreset: 'fvqrusn5',
+                sources: ['local', 'url'],
+                multiple: false,
+                maxFileSize: 2000000,
+                clientAllowedFormats: ['jpg', 'png', 'webp'],
+                folder: '{{ folder }}'
+            }, function (error, result) {
+                if (!error && result && result.event === 'success') {
+                    const url = result.info.secure_url;
+                    document.getElementById('{{ field_id }}').value = url;
+                    const preview = document.getElementById('preview-{{ field_id }}');
+                    preview.src = url;
+                    preview.style.display = 'block';
+                    document.getElementById('placeholder-{{ field_id }}').style.display = 'none';
+                }
+            });
+            document.getElementById('zone-{{ field_id }}').addEventListener('click', function () {
+                widget.open();
+            });
+        })();
+    </script>
+</div>
+</div>
+{% endmacro %}

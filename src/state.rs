@@ -11,4 +11,5 @@ pub struct AppState {
     pub space_repository:       Arc<dyn ISpaceRepository>,
     pub email_service:          Arc<dyn IEmailService>,
     pub host_domain:            String,
+    pub bypass_auth:            bool,
 }

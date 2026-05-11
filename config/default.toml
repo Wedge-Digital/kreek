@@ -11,3 +11,5 @@ idle_timeout_seconds = 600
 
 [auth]
 token_ttl_seconds = 3600
+
+bypass_auth = false
