@@ -2,7 +2,7 @@ use axum::routing::{get, post};
 use axum::Router;
 use crate::app::spaces::io::web::join_many_spaces::join_many_spaces;
 use crate::app::spaces::io::web::register_space::{register_space, register_space_submit};
-use crate::app::spaces::io::web::space_all::space_all;
+use crate::app::spaces::io::web::all_spaces::space_all;
 use crate::app::spaces::routes::path;
 use crate::state::AppState;
 

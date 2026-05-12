@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Article — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ─── Article layout ─── */
+    .article-container {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+      padding-bottom: var(--p4);
+    }
+
+    /* Breadcrumb */
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+      padding: var(--p1) 0;
+    }
+    .breadcrumb a { color: var(--dark-3); transition: color 0.15s; }
+    .breadcrumb a:hover { color: var(--main-blue); }
+    .breadcrumb-sep { color: var(--dark-4); }
+
+    /* Hero image */
+    .article-hero {
+      width: 100%;
+      height: 380px;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+      background: linear-gradient(135deg, #003049 0%, #555770 60%, #FF6B35 100%);
+    }
+    .article-hero-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.55) 100%);
+    }
+    .article-hero-badge {
+      position: absolute;
+      top: var(--p2);
+      left: var(--p2);
+    }
+
+    /* Article header */
+    .article-header { display: flex; flex-direction: column; gap: 12px; }
+    .article-category {
+      font-family: var(--font-accent);
+      font-size: var(--text-tiny);
+      font-weight: 700;
+      color: var(--orange);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .article-title {
+      font-family: var(--font-title);
+      font-size: 34px;
+      font-weight: 800;
+      color: var(--dark-0);
+      line-height: 1.2;
+      letter-spacing: -0.5px;
+    }
+    .article-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--p2);
+      padding: var(--p1) 0;
+      border-top: 1px solid var(--dark-5);
+      border-bottom: 1px solid var(--dark-5);
+    }
+    .article-author-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-title);
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--white);
+      flex-shrink: 0;
+    }
+    .article-author-info { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+    .article-author-name { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+    .article-author-date { font-size: var(--text-tiny); color: var(--dark-3); font-style: italic; }
+    .article-read-time {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+      background: var(--dark-6);
+      padding: 6px 12px;
+      border-radius: 20px;
+    }
+
+    /* Article body */
+    .article-body {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p3);
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+    }
+    .article-lead {
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--dark-1);
+      line-height: 1.7;
+      border-left: 4px solid var(--orange);
+      padding-left: var(--p2);
+      font-style: italic;
+    }
+    .article-section-title {
+      font-family: var(--font-title);
+      font-size: var(--h4);
+      font-weight: 700;
+      color: var(--dark-0);
+      margin-top: var(--p1);
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--dark-5);
+    }
+    .article-paragraph {
+      font-size: var(--text-small);
+      color: var(--dark-2);
+      line-height: 1.8;
+    }
+    .article-quote {
+      background: var(--dark-6);
+      border-left: 4px solid var(--main-blue);
+      border-radius: 0 8px 8px 0;
+      padding: var(--p2);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .article-quote-text {
+      font-family: var(--font-title);
+      font-size: 18px;
+      font-weight: 500;
+      font-style: italic;
+      color: var(--dark-1);
+      line-height: 1.6;
+    }
+    .article-quote-author {
+      font-size: var(--text-tiny);
+      font-weight: 600;
+      color: var(--dark-3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Inline image */
+    .article-inline-img {
+      width: 100%;
+      height: 240px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #26263D 0%, #629584 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--dark-4);
+      font-size: var(--text-tiny);
+      font-style: italic;
+    }
+    .article-inline-caption {
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+      text-align: center;
+      font-style: italic;
+    }
+
+    /* Tags */
+    .article-tags {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding-top: var(--p1);
+      border-top: 1px solid var(--dark-5);
+    }
+    .article-tags-label { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 500; }
+    .article-tag {
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--dark-4);
+      font-size: var(--text-tiny);
+      color: var(--dark-2);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .article-tag:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    /* ─── Like & Share widget ─── */
+    .engagement-bar {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--p1);
+    }
+    .engagement-left { display: flex; align-items: center; gap: var(--p1); }
+
+    .like-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 30px;
+      border: 2px solid var(--dark-5);
+      background: var(--white);
+      font-size: var(--text-small);
+      font-weight: 600;
+      color: var(--dark-2);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .like-btn:hover { border-color: var(--red-badge); color: var(--red-badge); background: rgba(230,57,70,0.05); }
+    .like-btn.liked { border-color: var(--red-badge); color: var(--red-badge); background: rgba(230,57,70,0.08); }
+    .like-btn .like-icon { font-size: 18px; transition: transform 0.2s; }
+    .like-btn:hover .like-icon { transform: scale(1.2); }
+    .like-btn.liked .like-icon { transform: scale(1.1); }
+
+    .like-count-text {
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+      white-space: nowrap;
+    }
+
+    .share-group { display: flex; align-items: center; gap: 8px; }
+    .share-label { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 500; margin-right: 4px; }
+    .share-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      border: 1px solid var(--dark-5);
+      background: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .share-btn:hover { background: var(--dark-6); border-color: var(--dark-4); }
+    .share-btn-copy {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--dark-5);
+      background: var(--white);
+      font-size: var(--text-tiny);
+      font-weight: 500;
+      color: var(--dark-2);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .share-btn-copy:hover { background: var(--dark-6); border-color: var(--dark-4); }
+    .share-btn-copy.copied { border-color: var(--green); color: var(--green); background: rgba(98,149,132,0.08); }
+
+    /* ─── Comments widget ─── */
+    .comments-section {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p3);
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+    }
+    .comments-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .comments-title {
+      font-family: var(--font-title);
+      font-size: var(--h4);
+      font-weight: 700;
+      color: var(--dark-0);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .comments-count-badge {
+      background: var(--dark-6);
+      color: var(--dark-2);
+      font-family: var(--font-body);
+      font-size: var(--text-tiny);
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 20px;
+    }
+
+    /* Comment compose */
+    .comment-compose {
+      display: flex;
+      gap: var(--p1);
+      align-items: flex-start;
+      padding: var(--p2);
+      background: var(--dark-6);
+      border-radius: 10px;
+      border: 1px solid var(--dark-5);
+    }
+    .compose-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--orange), var(--main-blue));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-title);
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--white);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .compose-right { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+    .compose-textarea {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--dark-4);
+      border-radius: 8px;
+      font-size: var(--text-small);
+      font-family: var(--font-body);
+      color: var(--dark-1);
+      background: var(--white);
+      outline: none;
+      resize: none;
+      min-height: 80px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .compose-textarea:focus {
+      border-color: var(--main-blue);
+      box-shadow: 0 0 0 3px rgba(0,48,73,0.08);
+    }
+    .compose-textarea::placeholder { color: var(--dark-4); }
+    .compose-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    /* Comment list */
+    .comments-list { display: flex; flex-direction: column; gap: 0; }
+
+    .comment {
+      display: flex;
+      gap: var(--p1);
+      padding: var(--p2) 0;
+      border-bottom: 1px solid var(--dark-6);
+    }
+    .comment:last-child { border-bottom: none; }
+    .comment-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-title);
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--white);
+      flex-shrink: 0;
+    }
+    .comment-body { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .comment-meta { display: flex; align-items: center; gap: 8px; }
+    .comment-author { font-size: var(--text-small); font-weight: 700; color: var(--dark-1); }
+    .comment-date { font-size: var(--text-tiny); color: var(--dark-3); font-style: italic; }
+    .comment-text { font-size: var(--text-small); color: var(--dark-2); line-height: 1.6; }
+    .comment-actions { display: flex; align-items: center; gap: var(--p1); margin-top: 4px; }
+    .comment-action {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+      cursor: pointer;
+      transition: color 0.15s;
+      background: none;
+      border: none;
+      font-family: inherit;
+      padding: 0;
+    }
+    .comment-action:hover { color: var(--main-blue); }
+    .comment-action.liked { color: var(--red-badge); }
+
+    /* Nested reply */
+    .comment-replies {
+      margin-left: 48px;
+      border-left: 2px solid var(--dark-5);
+      padding-left: var(--p1);
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .comment.reply { padding: var(--p1) 0; }
+    .comment.reply:last-child { border-bottom: none; }
+
+    /* ─── Author card ─── */
+    .author-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p2);
+      display: flex;
+      align-items: center;
+      gap: var(--p2);
+      border: 1px solid var(--dark-5);
+    }
+    .author-card-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-title);
+      font-weight: 700;
+      font-size: 28px;
+      color: var(--white);
+      flex-shrink: 0;
+    }
+    .author-card-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .author-card-label { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+    .author-card-name { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-0); }
+    .author-card-bio { font-size: var(--text-tiny); color: var(--dark-2); line-height: 1.5; }
+    .author-card-stats { display: flex; gap: var(--p2); margin-top: 4px; }
+    .author-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .author-stat-value { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--main-blue); }
+    .author-stat-label { font-size: var(--text-tiny); color: var(--dark-3); }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item" href="app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="article-container">
+
+          <!-- Breadcrumb -->
+          <div class="breadcrumb">
+            <a href="app-news-feed.html">Actualités</a>
+            <span class="breadcrumb-sep">›</span>
+            <span style="color: var(--orange); font-weight: 600;">Match Report</span>
+            <span class="breadcrumb-sep">›</span>
+            <span style="color: var(--dark-2);">Une finale 100 % korrigane en ligue de Condate</span>
+          </div>
+
+          <!-- Hero image -->
+          <div class="article-hero">
+            <div class="article-hero-overlay"></div>
+            <div class="article-hero-badge">
+              <span class="badge badge-red">À LA UNE</span>
+            </div>
+          </div>
+
+          <!-- Header -->
+          <div class="article-header">
+            <div class="article-category">Match Report</div>
+            <div class="article-title">Une finale 100 % korrigane en ligue de Condate !</div>
+            <div class="article-meta">
+              <div class="article-author-avatar">CC</div>
+              <div class="article-author-info">
+                <div class="article-author-name">Colonel Castor</div>
+                <div class="article-author-date">Publié le 1er septembre 2024</div>
+              </div>
+              <div class="article-read-time">
+                <span>📖</span>
+                <span>6 min de lecture</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Body -->
+          <div class="article-body">
+
+            <p class="article-lead">
+              Football is a family — cette expression prend tout son sens quand deux équipes de la même presqu'île
+              s'affrontent dans un match de légende pour le titre de champion de la saison 2024.
+              Les <strong>Breiz Butchers</strong> contre les <strong>Korrig'All Stars</strong> :
+              un duel fratricide, une finale mémorable.
+            </p>
+
+            <div>
+              <div class="article-section-title">Une saison de tous les records</div>
+              <p class="article-paragraph">
+                Jamais dans l'histoire de la ligue de Condate deux équipes issues du même bassin géographique
+                ne s'étaient retrouvées en finale. Les Breiz Butchers, emmenés par leur coach légendaire
+                Gweltaz « Le Boucher » Ar Moal, ont terminé la phase régulière avec un bilan de 7 victoires,
+                2 matchs nuls et une seule défaite — un exploit au vu du niveau exceptionnel de la concurrence
+                cette saison.
+              </p>
+              <p class="article-paragraph" style="margin-top: var(--p1);">
+                En face, les Korrig'All Stars de Yannick « Kroc » Le Roux ont montré une forme
+                ascendante impressionnante : éliminés en quarts de finale l'an passé, ils ont cette
+                fois dominé leur demie avec une maîtrise tactique remarquable, s'imposant 2-0 face
+                aux Nantais du Marais Poitevin.
+              </p>
+            </div>
+
+            <div class="article-inline-img">
+              Image : Vue aérienne du terrain de la finale — Stade de Kerguillec
+            </div>
+            <div class="article-inline-caption">Le Stade de Kerguillec, antre des grandes joutes korriganes — 12 000 spectateurs ce soir-là.</div>
+
+            <div>
+              <div class="article-section-title">Le match : une épopée en deux actes</div>
+              <p class="article-paragraph">
+                Le coup d'envoi donné, les Butchers prennent l'initiative. Leur cage traditionnelle
+                prend forme en quelques secondes, le bloqueur lourd Skullcrash IX en anchor. Les premières
+                trois actions tournent en leur faveur : deux Blocks réussis, un GFI sans encombre.
+                Mais c'est alors que Kroc sort sa nouveauté tactique de l'inter-saison : le <em>split-flank</em>,
+                deux receveurs en aile, forçant les Butchers à écarter leur couverture.
+              </p>
+              <p class="article-paragraph" style="margin-top: var(--p1);">
+                Mi-temps : 1-0 pour les Butchers. La tension est palpable dans les gradins. Les familles
+                des joueurs, venues des deux côtés de la Vilaine, retiennent leur souffle. Qui des cousins
+                ou des oncles racontera cette victoire autour du feu ce soir ?
+              </p>
+            </div>
+
+            <div class="article-quote">
+              <div class="article-quote-text">
+                « On savait qu'ils allaient s'adapter à la pause. Kroc ne laisse jamais une mi-temps
+                se terminer sans avoir analysé chaque block raté. On devait rester disciplinés. »
+              </div>
+              <div class="article-quote-author">— Gweltaz « Le Boucher » Ar Moal, coach des Breiz Butchers</div>
+            </div>
+
+            <div>
+              <p class="article-paragraph">
+                La seconde période confirme les craintes : les Korrig'All Stars reviennent sur le score
+                dès le tour 2 de la deuxième mi-temps, grâce à un slalomeur hors pair, Fañch Gwenola,
+                qui inscrit le 1-1 après un rush de 6 cases. La foule explose. Le score reste à égalité
+                jusqu'au tour 7, quand une faute décisive de la ligne des Korrig's offre un avantage
+                numérique aux Butchers. Exploit de Skullcrash IX qui marque le 2-1 à la dernière action du match.
+              </p>
+            </div>
+
+            <div>
+              <div class="article-section-title">Les lauréats de la finale</div>
+              <p class="article-paragraph">
+                <strong>MVP du match :</strong> Skullcrash IX (Breiz Butchers) — 2 touchdowns, 4 blocs réussis,
+                1 blessure causée. Un monstre de régularité qui aura porté son équipe tout au long de la saison.
+              </p>
+              <p class="article-paragraph" style="margin-top: var(--p1);">
+                <strong>Meilleur jeune :</strong> Fañch Gwenola (Korrig'All Stars) — sa vitesse et sa technique
+                de slalom en font déjà l'une des promesses les plus excitantes de la région. À suivre la saison
+                prochaine.
+              </p>
+            </div>
+
+            <!-- Tags -->
+            <div class="article-tags">
+              <span class="article-tags-label">Tags :</span>
+              <span class="article-tag">Finale</span>
+              <span class="article-tag">Breiz Butchers</span>
+              <span class="article-tag">Korrig'All Stars</span>
+              <span class="article-tag">Ligue de Condate</span>
+              <span class="article-tag">Saison 2024</span>
+            </div>
+
+          </div>
+
+          <!-- Author card -->
+          <div class="author-card">
+            <div class="author-card-avatar">CC</div>
+            <div class="author-card-info">
+              <div class="author-card-label">À propos de l'auteur</div>
+              <div class="author-card-name">Colonel Castor</div>
+              <div class="author-card-bio">
+                Commentateur historique de la ligue de Condate depuis 2018. Spécialiste des tactiques
+                de cage et des analyses d'après-match. Également coach des Castors du Blavet (ligue B).
+              </div>
+            </div>
+            <div class="author-card-stats">
+              <div class="author-stat">
+                <div class="author-stat-value">34</div>
+                <div class="author-stat-label">Articles</div>
+              </div>
+              <div class="author-stat">
+                <div class="author-stat-value">2.1k</div>
+                <div class="author-stat-label">Likes</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Like & Share bar -->
+          <div class="engagement-bar">
+            <div class="engagement-left">
+              <button class="like-btn" id="like-btn" onclick="toggleLike()">
+                <span class="like-icon">🏈</span>
+                <span id="like-label">J'aime !</span>
+              </button>
+              <span class="like-count-text" id="like-count">247 personnes ont aimé cet article</span>
+            </div>
+
+            <div class="share-group">
+              <span class="share-label">Partager :</span>
+              <button class="share-btn" title="Partager sur Twitter/X">𝕏</button>
+              <button class="share-btn" title="Partager sur Facebook" style="font-size: 18px;">f</button>
+              <button class="share-btn" title="Partager par email">✉</button>
+              <button class="share-btn-copy" id="copy-btn" onclick="copyLink()">
+                <span>🔗</span>
+                <span id="copy-label">Copier le lien</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Comments -->
+          <div class="comments-section">
+            <div class="comments-header">
+              <div class="comments-title">
+                Commentaires
+                <span class="comments-count-badge">8</span>
+              </div>
+              <div class="filter-tabs" style="display:flex; gap: 6px;">
+                <div class="filter-tab active" style="padding: 6px 14px; border-radius: 20px; font-size: var(--text-tiny); font-weight: 600; cursor: pointer; border: 2px solid var(--main-blue); color: var(--main-blue); background: rgba(0,48,73,0.05);">Les plus récents</div>
+                <div class="filter-tab" style="padding: 6px 14px; border-radius: 20px; font-size: var(--text-tiny); font-weight: 600; cursor: pointer; border: 2px solid var(--dark-5); color: var(--dark-2);">Les plus aimés</div>
+              </div>
+            </div>
+
+            <!-- Compose -->
+            <div class="comment-compose">
+              <div class="compose-avatar">TC</div>
+              <div class="compose-right">
+                <textarea
+                  class="compose-textarea"
+                  placeholder="Réagissez à cet article… Partagez votre analyse, félicitez les équipes !"
+                  rows="3"
+                ></textarea>
+                <div class="compose-actions">
+                  <button class="btn btn-primary-blue btn-sm" style="width: auto; padding: 8px 20px;">
+                    Publier
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Comments list -->
+            <div class="comments-list">
+
+              <div class="comment">
+                <div class="comment-avatar" style="background: linear-gradient(135deg, #629584, #003049);">YK</div>
+                <div class="comment-body">
+                  <div class="comment-meta">
+                    <span class="comment-author">Yannick Kroc</span>
+                    <span class="comment-date">il y a 2 heures</span>
+                  </div>
+                  <div class="comment-text">
+                    Félicitations aux Butchers, ça s'est joué à pas grand-chose ! Ce Skullcrash IX est
+                    vraiment un monstre. On reviendra l'an prochain avec un effectif renforcé 💪
+                  </div>
+                  <div class="comment-actions">
+                    <button class="comment-action liked">❤ 14</button>
+                    <button class="comment-action">💬 Répondre</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="comment-replies">
+                <div class="comment reply">
+                  <div class="comment-avatar" style="background: linear-gradient(135deg, #FF6B35, #1C1C29); width:30px; height:30px; font-size:12px;">GA</div>
+                  <div class="comment-body">
+                    <div class="comment-meta">
+                      <span class="comment-author">Gweltaz Ar Moal</span>
+                      <span class="comment-date">il y a 1 heure</span>
+                    </div>
+                    <div class="comment-text">
+                      On t'attend ! La revanche sera belle. GG à toute ta team, Fañch Gwenola c'est un joueur d'avenir.
+                    </div>
+                    <div class="comment-actions">
+                      <button class="comment-action">❤ 9</button>
+                      <button class="comment-action">💬 Répondre</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="comment">
+                <div class="comment-avatar" style="background: linear-gradient(135deg, #E02020, #555770);">LT</div>
+                <div class="comment-body">
+                  <div class="comment-meta">
+                    <span class="comment-author">Le Tacticien</span>
+                    <span class="comment-date">il y a 3 heures</span>
+                  </div>
+                  <div class="comment-text">
+                    Excellent compte-rendu Colonel ! Le split-flank des Korrig's était audacieux, mais
+                    la discipline défensive des Butchers a tout fait. Le vrai tournant c'était le GFI raté
+                    de Gwenola en début de T2/2, à mon sens — ça a changé le momentum.
+                  </div>
+                  <div class="comment-actions">
+                    <button class="comment-action">❤ 7</button>
+                    <button class="comment-action">💬 Répondre</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="comment">
+                <div class="comment-avatar" style="background: linear-gradient(135deg, #26263D, #629584);">MR</div>
+                <div class="comment-body">
+                  <div class="comment-meta">
+                    <span class="comment-author">MaraisRouge</span>
+                    <span class="comment-date">il y a 5 heures</span>
+                  </div>
+                  <div class="comment-text">
+                    J'étais dans les gradins, l'ambiance était incroyable. Deux équipes du coin, tout le
+                    monde se connaissait, ça criait dans les deux sens 😂 Magnifique soirée.
+                  </div>
+                  <div class="comment-actions">
+                    <button class="comment-action">❤ 22</button>
+                    <button class="comment-action">💬 Répondre</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="comment">
+                <div class="comment-avatar" style="background: linear-gradient(135deg, #003049, #FF6B35);">BL</div>
+                <div class="comment-body">
+                  <div class="comment-meta">
+                    <span class="comment-author">BowlLover44</span>
+                    <span class="comment-date">il y a 6 heures</span>
+                  </div>
+                  <div class="comment-text">
+                    Article au top comme d'hab ! Une question : est-ce que tu as des stats sur le nombre
+                    de blocks par joueur sur toute la finale ? Ça m'intéresserait pour ma propre analyse.
+                  </div>
+                  <div class="comment-actions">
+                    <button class="comment-action">❤ 3</button>
+                    <button class="comment-action">💬 Répondre</button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let liked = false;
+    let likeCount = 247;
+
+    function toggleLike() {
+      const btn = document.getElementById('like-btn');
+      const label = document.getElementById('like-label');
+      const count = document.getElementById('like-count');
+
+      liked = !liked;
+      if (liked) {
+        likeCount++;
+        btn.classList.add('liked');
+        label.textContent = 'Aimé !';
+      } else {
+        likeCount--;
+        btn.classList.remove('liked');
+        label.textContent = "J'aime !";
+      }
+      count.textContent = likeCount + ' personnes ont aimé cet article';
+    }
+
+    function copyLink() {
+      const btn = document.getElementById('copy-btn');
+      const label = document.getElementById('copy-label');
+      label.textContent = 'Lien copié !';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        label.textContent = 'Copier le lien';
+        btn.classList.remove('copied');
+      }, 2000);
+    }
+
+    // Filter tabs toggle
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        this.closest('.comments-header').querySelectorAll('.filter-tab').forEach(t => {
+          t.classList.remove('active');
+          t.style.borderColor = 'var(--dark-5)';
+          t.style.color = 'var(--dark-2)';
+          t.style.background = 'transparent';
+        });
+        this.classList.add('active');
+        this.style.borderColor = 'var(--main-blue)';
+        this.style.color = 'var(--main-blue)';
+        this.style.background = 'rgba(0,48,73,0.05)';
+      });
+    });
+
+    // Comment like toggle
+    document.querySelectorAll('.comment-action').forEach(btn => {
+      if (btn.textContent.startsWith('❤')) {
+        btn.addEventListener('click', function() {
+          this.classList.toggle('liked');
+        });
+      }
+    });
+  </script>
+</body>
+</html>

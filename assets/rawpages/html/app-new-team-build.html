@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Construire l'équipe — Blood Bowl Club</title>
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    .create-card { background: var(--white); border-radius: 12px; padding: var(--p4); max-width: 1100px; margin: 0 auto; }
+    .create-card-title { font-family: var(--font-title); font-size: var(--h2); font-weight: 700; color: var(--dark-1); margin-bottom: var(--p05); text-align: center; }
+    .create-card-sub { font-size: var(--text-small); color: var(--dark-3); text-align: center; margin-bottom: var(--p2); }
+
+    .section-label { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-2); margin-bottom: var(--p1); }
+
+    /* Player table */
+    .player-table { width: 100%; border-collapse: collapse; }
+    .player-table th {
+      background: var(--dark-6); border: 1px solid var(--dark-5);
+      padding: 10px 8px; font-size: var(--text-tiny); font-weight: 600;
+      color: var(--dark-2); text-align: center;
+    }
+    .player-table td {
+      border: 1px solid var(--dark-5); padding: 10px 8px;
+      font-size: var(--text-tiny); color: var(--dark-1); text-align: center;
+    }
+    .player-table tr:nth-child(odd) td { background: var(--dark-7); }
+    .player-table tr:nth-child(even) td { background: var(--white); }
+    .player-table td.player-name { text-align: left; font-weight: 500; }
+    .player-table td.player-skills { text-align: left; }
+    .player-table tfoot td { background: var(--dark-6); font-weight: 600; color: var(--dark-1); border-top: 2px solid var(--dark-4); }
+
+    .tbl-btn {
+      width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--dark-4);
+      background: var(--white); font-size: 16px; cursor: pointer; color: var(--dark-2);
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .tbl-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="../app-home.html">Accueil</a>
+            <a class="menu-item active">Équipes</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content-wide">
+        <div class="create-card">
+
+          <!-- Card header -->
+          <div class="create-card-title">Création d'une nouvelle équipe</div>
+          <div class="create-card-sub">Vous êtes sur le point de créer une nouvelle équipe. C'est très simple. Suivez le guide</div>
+          <div class="separator" style="margin-bottom: var(--p3);"></div>
+
+          <!-- Step 2: Roster -->
+          <div class="section-label">2 — Sélectionnez votre roster</div>
+          <div style="margin-bottom: var(--p2);">
+            <select class="form-select" style="max-width: 400px;">
+              <option>Choisissez un roster...</option>
+              <option selected>Chaos Rénégats</option>
+              <option>Elfes Sylvestres</option>
+              <option>Hauts Elfes</option>
+              <option>Elfes Noirs</option>
+              <option>Orques</option>
+              <option>Nains</option>
+              <option>Skavens</option>
+              <option>Morts-vivants</option>
+              <option>Humains</option>
+              <option>Hommes-lézards</option>
+            </select>
+          </div>
+
+          <!-- Step 3: Players -->
+          <div class="section-label">3 — Sélectionnez vos joueurs</div>
+          <div style="overflow-x: auto; margin-bottom: var(--p2);">
+            <table class="player-table">
+              <thead>
+                <tr>
+                  <th>Qté max</th>
+                  <th style="text-align: left; min-width: 200px;">Nom</th>
+                  <th>Prix</th>
+                  <th>M</th><th>F</th><th>Ag</th><th>Cp</th><th>Av</th>
+                  <th style="text-align: left; min-width: 220px;">Compétences</th>
+                  <th>Qté</th>
+                  <th>Coût total</th>
+                  <th></th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>0-16</td>
+                  <td class="player-name">Bloodborn Marauder Linemen</td>
+                  <td>60 kpO</td>
+                  <td>6</td><td>3</td><td>3+</td><td>4+</td><td>8+</td>
+                  <td class="player-skills">Frénésie, Châtaigne +1, Griffes, Fureur débridée, Solitaire 4+</td>
+                  <td>6</td><td>360 kpO</td>
+                  <td><button class="tbl-btn">+</button></td>
+                  <td><button class="tbl-btn">−</button></td>
+                </tr>
+                <tr>
+                  <td>0-4</td>
+                  <td class="player-name">Chaos Warrior</td>
+                  <td>90 kpO</td>
+                  <td>5</td><td>4</td><td>3+</td><td>—</td><td>9+</td>
+                  <td class="player-skills">Monstrueux, Tenant le mur</td>
+                  <td>2</td><td>180 kpO</td>
+                  <td><button class="tbl-btn">+</button></td>
+                  <td><button class="tbl-btn">−</button></td>
+                </tr>
+                <tr>
+                  <td>0-1</td>
+                  <td class="player-name">Minotaure</td>
+                  <td>150 kpO</td>
+                  <td>5</td><td>5</td><td>4+</td><td>—</td><td>9+</td>
+                  <td class="player-skills">Monstrueux, Frénésie, Tête de boeuf, Faible d'esprit</td>
+                  <td>1</td><td>150 kpO</td>
+                  <td><button class="tbl-btn">+</button></td>
+                  <td><button class="tbl-btn">−</button></td>
+                </tr>
+                <tr>
+                  <td>0-2</td>
+                  <td class="player-name">Beastman Runner</td>
+                  <td>80 kpO</td>
+                  <td>6</td><td>3</td><td>3+</td><td>4+</td><td>8+</td>
+                  <td class="player-skills">Frénésie, Corne, Solitaire 4+</td>
+                  <td>2</td><td>160 kpO</td>
+                  <td><button class="tbl-btn">+</button></td>
+                  <td><button class="tbl-btn">−</button></td>
+                </tr>
+                <tr>
+                  <td>0-4</td>
+                  <td class="player-name">Chosen Blocker</td>
+                  <td>100 kpO</td>
+                  <td>5</td><td>4</td><td>3+</td><td>—</td><td>9+</td>
+                  <td class="player-skills">Monstrueux, Marquage</td>
+                  <td>0</td><td>0 kpO</td>
+                  <td><button class="tbl-btn">+</button></td>
+                  <td><button class="tbl-btn">−</button></td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="9"></td>
+                  <td colspan="2">Total : 11 Joueurs, 850 kpO</td>
+                  <td></td><td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- Hire players button -->
+          <div style="display: flex; justify-content: center; margin-bottom: var(--p4);">
+            <button class="btn btn-primary" style="width: 300px;">Engager les joueurs</button>
+          </div>
+
+          <!-- Step 4: Staff -->
+          <div class="section-label">4 — Sélectionnez votre staff</div>
+          <div style="overflow-x: auto; margin-bottom: var(--p4);">
+            <table class="player-table" style="max-width: 600px;">
+              <thead>
+                <tr>
+                  <th>Qté max</th>
+                  <th style="text-align: left;">Poste</th>
+                  <th>Prix</th>
+                  <th>Qté</th>
+                  <th>Prix total</th>
+                  <th></th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>0-8</td>
+                  <td style="text-align: left; font-weight: 500;">Relances</td>
+                  <td>60 kpO</td>
+                  <td>3</td>
+                  <td>180 kpO</td>
+                  <td><button class="tbl-btn">+</button></td>
+                  <td><button class="tbl-btn">−</button></td>
+                </tr>
+                <tr>
+                  <td>0-6</td>
+                  <td style="text-align: left; font-weight: 500;">Cheerleaders</td>
+                  <td>10 kpO</td>
+                  <td>0</td>
+                  <td>0 kpO</td>
+                  <td><button class="tbl-btn">+</button></td>
+                  <td><button class="tbl-btn">−</button></td>
+                </tr>
+                <tr>
+                  <td>0-6</td>
+                  <td style="text-align: left; font-weight: 500;">Assistants d'entraînement</td>
+                  <td>10 kpO</td>
+                  <td>0</td>
+                  <td>0 kpO</td>
+                  <td><button class="tbl-btn">+</button></td>
+                  <td><button class="tbl-btn">−</button></td>
+                </tr>
+                <tr>
+                  <td>0-1</td>
+                  <td style="text-align: left; font-weight: 500;">Apothicaire</td>
+                  <td>50 kpO</td>
+                  <td>1</td>
+                  <td>50 kpO</td>
+                  <td><button class="tbl-btn">+</button></td>
+                  <td><button class="tbl-btn">−</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Navigation buttons -->
+          <div style="display: flex; flex-direction: column; align-items: center; gap: var(--p2); max-width: 200px; margin: 0 auto;">
+            <button class="btn btn-primary" style="width: 100%;">
+              Suivant →
+            </button>
+            <button class="btn btn-outline" style="width: 100%;"
+              onclick="window.location.href='../app-new-team.html'">
+              ← Retour
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

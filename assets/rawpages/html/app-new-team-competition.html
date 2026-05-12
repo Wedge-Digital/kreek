@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Choisir la compétition — Blood Bowl Club</title>
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    .create-card { background: var(--white); border-radius: 12px; padding: var(--p4); max-width: 900px; margin: 0 auto; }
+    .create-card-title { font-family: var(--font-title); font-size: var(--h2); font-weight: 700; color: var(--dark-1); margin-bottom: var(--p05); text-align: center; }
+    .create-card-sub { font-size: var(--text-small); color: var(--dark-3); text-align: center; margin-bottom: var(--p2); }
+    .section-label { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-2); margin-bottom: var(--p1); }
+    .pickers-row { display: flex; gap: var(--p1); }
+    .pickers-row > * { flex: 1; }
+    .picker-label { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 500; margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="../app-home.html">Accueil</a>
+            <a class="menu-item active">Équipes</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="create-card">
+
+          <!-- Card header -->
+          <div class="create-card-title">Création d'une nouvelle équipe</div>
+          <div class="create-card-sub">Vous êtes sur le point de créer une nouvelle équipe. C'est très simple. Suivez le guide</div>
+          <div class="separator" style="margin-bottom: var(--p3);"></div>
+
+          <!-- Step 1: Competition -->
+          <div class="section-label">1 — Sélectionnez la compétition dans laquelle vous allez jouer</div>
+
+          <div class="pickers-row" style="margin-bottom: var(--p4);">
+            <div>
+              <div class="picker-label">Ligue</div>
+              <select class="form-select">
+                <option value="">Choisissez une ligue...</option>
+                <option selected>Ligue de Condate</option>
+                <option>Ligue des Korrigans</option>
+                <option>Ligue des Marches</option>
+              </select>
+            </div>
+            <div>
+              <div class="picker-label">Saison</div>
+              <select class="form-select">
+                <option value="">Choisissez une saison...</option>
+                <option selected>Saison 2024–2025</option>
+                <option>Saison 2023–2024</option>
+                <option>Saison 2022–2023</option>
+              </select>
+            </div>
+            <div>
+              <div class="picker-label">Division</div>
+              <select class="form-select">
+                <option value="">Choisissez une division...</option>
+                <option selected>Division 1</option>
+                <option>Division 2</option>
+                <option>Division Honneur</option>
+              </select>
+            </div>
+            <div>
+              <div class="picker-label">Groupe</div>
+              <select class="form-select">
+                <option value="">Choisissez un groupe...</option>
+                <option selected>Groupe A</option>
+                <option>Groupe B</option>
+                <option>Groupe C</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Selected competition recap -->
+          <div style="background: var(--dark-7); border-radius: 10px; padding: var(--p2); margin-bottom: var(--p4); border-left: 4px solid var(--main-blue);">
+            <div style="font-size: var(--text-tiny); color: var(--dark-3); margin-bottom: 4px;">Compétition sélectionnée</div>
+            <div style="font-weight: 600; color: var(--dark-1); font-size: var(--text-small);">
+              Ligue de Condate · Saison 2024–2025 · Division 1 · Groupe A
+            </div>
+          </div>
+
+          <!-- Navigation buttons -->
+          <div style="display: flex; flex-direction: column; align-items: center; gap: var(--p2); max-width: 200px; margin: 0 auto;">
+            <button class="btn btn-primary" style="width: 100%;"
+              onclick="window.location.href='app-new-team-build.html'">
+              Suivant →
+            </button>
+            <button class="btn btn-outline" style="width: 100%;"
+              onclick="window.location.href='../app-new-team.html'">
+              ← Retour
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saisie de match (3/7) — Blood Bowl Club</title>
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    .report-card {
+      background: var(--white); border-radius: 12px; padding: var(--p4);
+      max-width: 900px; margin: 0 auto;
+    }
+    .report-title { font-family: var(--font-title); font-size: var(--h2); font-weight: 700; color: var(--dark-1); margin-bottom: var(--p05); }
+    .report-step-label { font-size: var(--text-small); color: var(--dark-3); margin-bottom: var(--p1); }
+
+    /* Data table */
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th {
+      background: var(--dark-6); border: 1px solid var(--dark-5);
+      padding: 10px 12px; font-size: var(--text-tiny); font-weight: 600;
+      color: var(--dark-2); text-align: center;
+    }
+    .data-table td {
+      border: 1px solid var(--dark-5); padding: 10px 12px;
+      font-size: var(--text-tiny); color: var(--dark-1); text-align: center;
+      background: var(--white);
+    }
+    .data-table tr:nth-child(odd) td { background: var(--dark-7); }
+    .data-table td.team-name { text-align: left; font-weight: 500; }
+    .data-table td input[type="text"] {
+      width: 90px; padding: 6px 8px; border: 1px solid var(--dark-4);
+      border-radius: 4px; font-size: var(--text-tiny); text-align: center;
+      color: var(--dark-1); background: var(--white);
+    }
+
+    .section-header {
+      font-family: var(--font-title); font-size: var(--h4); font-weight: 700;
+      color: var(--dark-2); padding: var(--p1) 0; margin-bottom: var(--p1);
+      border-bottom: 2px solid var(--dark-5);
+    }
+    .note-text {
+      font-size: var(--text-tiny); color: var(--dark-3); font-style: italic;
+      padding: var(--p1) 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="../app-home.html">Accueil</a>
+            <a class="menu-item active" href="../app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="report-card">
+
+          <!-- Header -->
+          <div class="report-title">Nouveau Rapport de match</div>
+          <div class="report-step-label">Étape 3/7 — Trésorerie &amp; coups de pouce</div>
+          <div class="separator" style="margin-bottom: var(--p3);"></div>
+
+          <!-- Section 1 : Petite monnaie -->
+          <div class="section-header">Calcul de la petite monnaie</div>
+          <table class="data-table" style="margin-bottom: var(--p2);">
+            <thead>
+              <tr>
+                <th>Nom d'équipe</th>
+                <th>VEA</th>
+                <th>Petite Monnaie</th>
+                <th>VEA pour le match</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="team-name">Les Seigneurs de Ravenloft</td>
+                <td>1 160 kpO</td>
+                <td>0 kpO</td>
+                <td>1 160 kpO</td>
+              </tr>
+              <tr>
+                <td class="team-name">Les Sepuruku Kerabu</td>
+                <td>1 100 kpO</td>
+                <td>60 kpO</td>
+                <td>1 160 kpO</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Section 2 : Dépenses trésorerie -->
+          <div class="section-header">Dépense de trésorerie pour les coups de pouces</div>
+          <table class="data-table" style="margin-bottom: var(--p2);">
+            <thead>
+              <tr>
+                <th style="text-align: left;">Nom d'équipe</th>
+                <th>Trésorerie disponible</th>
+                <th>Trésorerie dépensée</th>
+                <th>Petite monnaie</th>
+                <th>Budget inducement Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="team-name">Les Seigneurs de Ravenloft</td>
+                <td>160 kpO</td>
+                <td><input type="text" placeholder="0 kpO"></td>
+                <td>0 kpO</td>
+                <td>0 kpO</td>
+              </tr>
+              <tr>
+                <td class="team-name">Les Sepuruku Kerabu</td>
+                <td>1 100 kpO</td>
+                <td><input type="text" placeholder="0 kpO"></td>
+                <td>60 kpO</td>
+                <td>60 kpO</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Buttons -->
+          <div style="display: flex; flex-direction: column; align-items: center; gap: var(--p1); max-width: 400px; margin: 0 auto;">
+            <button class="btn btn-primary" style="width: 100%;" onclick="window.location.href='app-match-report-4.html'">
+              Choisir les coups de pouces
+            </button>
+            <button class="btn btn-outline" style="width: 100%;">
+              Ne pas acheter de coup de pouce
+            </button>
+          </div>
+
+          <div class="note-text" style="max-width: 600px; margin: var(--p05) auto 0 auto; text-align: center;">
+            * si vous passez l'étape d'achat de coup de pouce, mais que vous avez saisi un montant
+            à dépenser en trésorerie, le montant sera déduit malgré tout.
+          </div>
+
+          <div style="margin-top: var(--p3); text-align: center;">
+            <button class="btn btn-text" style="width: auto; padding: var(--p1) var(--p3);"
+              onclick="window.location.href='../app-match-report-2.html'">
+              ← Retour
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

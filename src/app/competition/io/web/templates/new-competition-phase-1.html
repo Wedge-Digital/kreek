@@ -1,0 +1,71 @@
+<div class="create-card ">
+  <!-- Header banner -->
+  <div class="create-header">
+    <div class="create-header-icon">🏟️</div>
+    <div class="create-header-text">
+      <div class="title">Créer une nouvelle compétition</div>
+      <div class="sub">Configurez votre ligue ou tournoi Blood Bowl</div>
+    </div>
+  </div>
+
+  <div class="create-body">
+    <!-- Steps indicator -->
+    <div class="steps">
+      <div class="step">
+        <div class="step-num active">1</div>
+        <div class="step-label active">Informations</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step">
+        <div class="step-num pending">2</div>
+        <div class="step-label pending">Règles</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step">
+        <div class="step-num pending">3</div>
+        <div class="step-label pending">Équipes</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step">
+        <div class="step-num pending">4</div>
+        <div class="step-label pending">Validation</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nom de votre compétition</label>
+      <input type="text" class="form-input" placeholder="ex : Ligue de la Ville de Rennes — Saison 5">
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="text-small" style="font-weight:500; color: var(--dark-1); margin-bottom: var(--p1);">Administrateurs</div>
+        <select id="admins-select" name="admin_ids" multiple placeholder="Sélectionnez des coachs...">
+          <option value="colonel-castor">Colonel Castor</option>
+          <option value="le-tacticien">Le Tacticien</option>
+          <option value="whiskers">Whiskers</option>
+        </select>
+      </div>
+      {% import "components/upload_widget.html" as cmp %}
+      {% call cmp::cloudinary_upload("logo_url", logo_url_value, "teams/logos", "Logo de votre équipe", logo_error) %}
+    </div>
+
+    <div style="text-align: right;">
+      <button class="btn btn-primary" style="width: auto; padding: var(--p1) var(--p4);" onclick="window.location.href='app-league-rules.html'">
+        Suivant →
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const el = document.getElementById('admins-select');
+    if (el && !el.tomselect) {
+      new TomSelect(el, {
+        plugins: ['remove_button'],
+        maxItems: null,
+        placeholder: 'Sélectionnez des coachs...',
+      });
+    }
+  })();
+</script>

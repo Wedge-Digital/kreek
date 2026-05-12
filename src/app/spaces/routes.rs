@@ -1,6 +1,5 @@
 pub mod path {
     pub const NEW_SPACE:        &str = "/app/space/create";
-    pub const NEW_SPACE_SUBMIT: &str = "/app/space/create";
     pub const SPACE_ALL:        &str = "/app/space/all";
     pub const SPACE_JOIN_MANY:  &str = "/app/space/join-many";
 }

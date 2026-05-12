@@ -2,9 +2,12 @@
 
 <div class="section-header competitions">
     <div class="h3-gras">Toutes les compétitions</div>
-    <button class="btn btn-primary btn-fit" onclick="window.location.href='app-league-create.html'">
-        Créer une compétition
-    </button>
+        <button class="btn btn-primary btn-fit"
+             hx-get="{{ competition_routes.new_competition(space_id) }}"
+             hx-target="#app-content"
+             hx-swap="innerHTML"
+             hx-trigger="click"
+             hx-push-url="true">Créer une compétition</button>
 </div>
 
 <div class="flex-col gap-1">

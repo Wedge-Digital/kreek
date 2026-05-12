@@ -184,7 +184,7 @@ ul { list-style: none; }
 
 /* ─── Form Inputs ─── */
 .form-group { display: flex; flex-direction: column; gap: var(--p1); width: 100%; }
-.form-label { font-size: var(--text-small); color: var(--dark-3); font-weight: 300; }
+.form-label { font-size: var(--text-small); color: var(--dark-1); font-weight: 500; }
 .form-input {
   width: 100%;
   padding: 14px 16px;
@@ -384,7 +384,7 @@ textarea.form-input-article { resize: vertical; min-height: 80px; }
 .report-header-text .sub   { color: rgba(255,255,255,0.7); font-size: var(--text-tiny); margin-top: 2px; }
 
 /* ─── Two-column layout ─── */
-.two-col { display: flex; gap: var(--p2); }
+.two-col { display: flex; gap: var(--p2); justify-content: center}
 .two-col > * { flex: 1; }
 
 /* ─── Utility ─── */

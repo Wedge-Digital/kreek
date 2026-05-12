@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saisie de match (4/7) — Blood Bowl Club</title>
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    .two-panel { display: flex; gap: var(--p1); align-items: flex-start; }
+    .panel-main { flex: 3; background: var(--white); border-radius: 12px; padding: var(--p3); }
+    .panel-side { flex: 2; background: var(--white); border-radius: 12px; padding: var(--p3); min-height: 400px; }
+
+    .report-title { font-family: var(--font-title); font-size: var(--h2); font-weight: 700; color: var(--dark-1); margin-bottom: var(--p05); }
+    .report-step-label { font-size: var(--text-small); color: var(--dark-3); margin-bottom: var(--p1); }
+
+    /* Data table */
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th {
+      background: var(--dark-6); border: 1px solid var(--dark-5);
+      padding: 10px 12px; font-size: var(--text-tiny); font-weight: 600;
+      color: var(--dark-2); text-align: center;
+    }
+    .data-table td {
+      border: 1px solid var(--dark-5); padding: 10px 12px;
+      font-size: var(--text-tiny); color: var(--dark-1); text-align: center;
+      background: var(--white);
+    }
+    .data-table tr:nth-child(odd) td { background: var(--dark-7); }
+    .data-table td.left { text-align: left; }
+
+    /* Star player card */
+    .star-card { margin-bottom: var(--p2); }
+    .star-name { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); margin-bottom: 4px; }
+    .star-desc { font-size: var(--text-tiny); color: var(--dark-3); margin-bottom: var(--p1); }
+
+    /* Side summary */
+    .side-title { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-2); margin-bottom: var(--p2); }
+    .side-team { margin-bottom: var(--p2); }
+    .side-team-name { font-weight: 600; color: var(--dark-1); font-size: var(--text-small); margin-bottom: 8px; }
+    .side-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--dark-6); font-size: var(--text-tiny); color: var(--dark-2); }
+    .side-row span:last-child { font-weight: 600; color: var(--dark-1); }
+    .side-total { display: flex; justify-content: space-between; padding: var(--p1) 0; font-size: var(--text-small); font-weight: 700; color: var(--main-blue); border-top: 2px solid var(--dark-4); margin-top: var(--p1); }
+
+    /* Tab row button */
+    .tbl-btn {
+      width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--dark-4);
+      background: var(--white); font-size: 16px; cursor: pointer; color: var(--dark-2);
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .tbl-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="../app-home.html">Accueil</a>
+            <a class="menu-item active" href="../app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content-wide">
+        <div class="two-panel">
+
+          <!-- Main panel -->
+          <div class="panel-main">
+            <div class="report-title">Nouveau Rapport de match</div>
+            <div class="report-step-label">Étape 4/7 — Actions de l'équipe à domicile</div>
+            <div class="separator" style="margin-bottom: var(--p2);"></div>
+
+            <!-- Tabs -->
+            <div class="tabs" style="margin-bottom: var(--p2);">
+              <div class="tab active">Champions</div>
+              <div class="tab">Sorciers</div>
+              <div class="tab">Encadrement supplémentaire</div>
+            </div>
+
+            <!-- Star players list -->
+            <div style="max-height: 420px; overflow-y: auto; padding-right: 4px;">
+
+              <div class="star-card">
+                <div class="star-name">Roxana Darknail</div>
+                <div class="star-desc">1× par match peut Foncer 3× au lieu de 2.</div>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>M</th><th>F</th><th>Ag</th><th>Cp</th><th>Av</th>
+                      <th style="text-align: left;">Compétences</th>
+                      <th>Prix</th><th></th><th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>6</td><td>3</td><td>3+</td><td>4+</td><td>8+</td>
+                      <td class="left">Frénésie, Châtaigne +1, Griffes, Fureur débridée, Solitaire 4+</td>
+                      <td>60 kpO</td>
+                      <td><button class="tbl-btn">+</button></td>
+                      <td><button class="tbl-btn">−</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="star-card">
+                <div class="star-name">Valen Swift</div>
+                <div class="star-desc">1× par match peut relancer un dé de blocage.</div>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>M</th><th>F</th><th>Ag</th><th>Cp</th><th>Av</th>
+                      <th style="text-align: left;">Compétences</th>
+                      <th>Prix</th><th></th><th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>7</td><td>2</td><td>2+</td><td>3+</td><td>7+</td>
+                      <td class="left">Esquive, Sprint, Sûr de soi</td>
+                      <td>80 kpO</td>
+                      <td><button class="tbl-btn">+</button></td>
+                      <td><button class="tbl-btn">−</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="star-card">
+                <div class="star-name">Grak & Crumblehorn</div>
+                <div class="star-desc">Duo inséparable — doit jouer ensemble.</div>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>M</th><th>F</th><th>Ag</th><th>Cp</th><th>Av</th>
+                      <th style="text-align: left;">Compétences</th>
+                      <th>Prix</th><th></th><th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>5</td><td>5</td><td>4+</td><td>—</td><td>9+</td>
+                      <td class="left">Monstrueux, Tenant le mur, Prise en main</td>
+                      <td>250 kpO</td>
+                      <td><button class="tbl-btn">+</button></td>
+                      <td><button class="tbl-btn">−</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="star-card">
+                <div class="star-name">Helmut Wulf</div>
+                <div class="star-desc">Tronçonneuse — peut causer des blessures mortelles supplémentaires.</div>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>M</th><th>F</th><th>Ag</th><th>Cp</th><th>Av</th>
+                      <th style="text-align: left;">Compétences</th>
+                      <th>Prix</th><th></th><th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>6</td><td>4</td><td>3+</td><td>—</td><td>8+</td>
+                      <td class="left">Tronçonneuse, Frénésie, Faible d'esprit</td>
+                      <td>130 kpO</td>
+                      <td><button class="tbl-btn">+</button></td>
+                      <td><button class="tbl-btn">−</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+
+            <div class="separator" style="margin: var(--p3) 0 var(--p2) 0;"></div>
+
+            <div style="display: flex; flex-direction: column; align-items: center; gap: var(--p2); max-width: 320px; margin: 0 auto;">
+              <button class="btn btn-primary" style="width: 100%;">
+                Étape suivante →
+              </button>
+              <button class="btn btn-text" style="width: auto; padding: var(--p1) var(--p3);"
+                onclick="window.location.href='app-match-report-3.html'">
+                ← Retour
+              </button>
+            </div>
+          </div>
+
+          <!-- Side panel -->
+          <div class="panel-side">
+            <div class="side-title">Récapitulatif des coups de pouce</div>
+
+            <div class="side-team">
+              <div class="side-team-name">🏠 Les Seigneurs de Ravenloft</div>
+              <div class="side-row"><span>Budget disponible</span><span>160 kpO</span></div>
+              <div class="side-row"><span>Roxana Darknail</span><span>60 kpO</span></div>
+              <div class="side-row"><span>Helmut Wulf</span><span>130 kpO</span></div>
+              <div class="side-total"><span>Total dépensé</span><span>190 kpO</span></div>
+              <div style="font-size: var(--text-tiny); color: var(--red); margin-top: 4px;">⚠ Budget dépassé de 30 kpO</div>
+            </div>
+
+            <div class="separator"></div>
+
+            <div class="side-team" style="margin-top: var(--p2);">
+              <div class="side-team-name">✈ Les Sepuruku Kerabu</div>
+              <div class="side-row"><span>Budget disponible</span><span>60 kpO</span></div>
+              <div class="side-row"><span>Aucun coup de pouce</span><span>0 kpO</span></div>
+              <div class="side-total"><span>Total dépensé</span><span>0 kpO</span></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
