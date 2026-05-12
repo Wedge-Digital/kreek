@@ -57,8 +57,10 @@ mod tests {
     use crate::app::auth::io::repository::tests::fake_reset_token_repository::FakeResetTokenRepository;
     use crate::app::auth::io::repository::tests::fake_user_repository::{FakeUserRepository, FindResult};
     use crate::app::auth::routes::path;
+    use crate::app::shared_kernel::authorization::SpaceAuthorization;
+    use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
     use crate::lib::services::email::fakes::console_email_service::ConsoleEmailService;
-    use crate::app::spaces::domain::ports::ISpaceRepository;
+    use crate::app::spaces::domain::ports::{ISpaceRepository, SpaceRepositoryError};
     use crate::state::AppState;
     use super::login_submit;
 
@@ -121,6 +123,11 @@ mod tests {
         async fn add_member(&self, _: &crate::app::shared_kernel::common_types::SpaceId, _: &crate::app::shared_kernel::common_types::CoachId, _: &crate::app::shared_kernel::authorization::SpaceAuthorization) -> Result<(), crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(()) }
         async fn find_by_id(&self, _: &crate::app::shared_kernel::common_types::SpaceId) -> Result<Option<crate::app::spaces::domain::Space::Space>, crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(None) }
         async fn find_by_coach_id(&self, _: &crate::app::shared_kernel::common_types::CoachId) -> Result<Vec<crate::app::spaces::domain::ports::SpaceSummary>, crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(vec![]) }
+
+        async fn find_member_profile(&self, coach_id: &CoachId, space_id: &SpaceId) -> Result<Option<SpaceAuthorization>, SpaceRepositoryError> {
+            Ok(Some(SpaceAuthorization::SimpleUser))
+        }
+
         async fn find_all(&self) -> Result<Vec<crate::app::spaces::domain::ports::SpaceSummary>, crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(vec![]) }
     }
 

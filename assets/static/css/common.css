@@ -157,6 +157,8 @@ ul { list-style: none; }
 
 .btn-sm { padding: var(--p05) var(--p2); font-size: var(--text-tiny); }
 
+.btn-fit { width: fit-content; }
+
 .btn-orange {
   background: var(--orange);
   color: var(--white);

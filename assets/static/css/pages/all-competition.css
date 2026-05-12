@@ -15,3 +15,5 @@
 }
 .club-name { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-0); text-align: center; }
 .club-info { font-size: var(--text-tiny); color: var(--dark-3); text-align: center; line-height: 1.6; }
+
+.section-header .competitions { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--p2); }

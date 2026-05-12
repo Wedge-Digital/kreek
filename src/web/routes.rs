@@ -14,6 +14,7 @@ pub struct Routes;
 
 impl Routes {
     pub fn app_layout(&self)    -> &'static str { path::APP_LAYOUT }
+    pub fn home(&self)          -> &'static str { path::APP_LAYOUT }
     pub fn spaces(&self)        -> &'static str { path::SPACES }
     pub fn menu(&self)          -> &'static str { path::MENU }
 }

@@ -35,5 +35,6 @@ pub trait ISpaceRepository: Send + Sync {
     async fn add_member(&self, space_id: &SpaceId, coach_id: &CoachId, profile: &SpaceAuthorization) -> Result<(), SpaceRepositoryError>;
     async fn find_by_id(&self, id: &SpaceId) -> Result<Option<Space>, SpaceRepositoryError>;
     async fn find_by_coach_id(&self, coach_id: &CoachId) -> Result<Vec<SpaceSummary>, SpaceRepositoryError>;
+    async fn find_member_profile(&self, coach_id: &CoachId, space_id: &SpaceId) -> Result<Option<SpaceAuthorization>, SpaceRepositoryError>;
     async fn find_all(&self) -> Result<Vec<SpaceSummary>, SpaceRepositoryError>;
 }

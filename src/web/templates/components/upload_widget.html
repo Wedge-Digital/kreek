@@ -6,7 +6,7 @@
     <img id="preview-{{ field_id }}" src="{{ initial_value }}" alt="{{ label }}"
          {% if initial_value.is_empty() %}style="display:none"{% endif %}>
     <div id="placeholder-{{ field_id }}" {% if !initial_value.is_empty() %}style="display:none"{% endif %}>
-        <div style="font-size: 36px; color: var(--dark-3);">🖼️</div>
+        <div style="font-size: 36px; color: var(--dark-3); text-align: center; margin-bottom: 6px">🖼️</div>
         <div class="text-small text-dark-2">Uploader un logo</div>
     </div>
     {% if let Some(err) = error %}

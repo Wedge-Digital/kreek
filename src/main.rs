@@ -68,6 +68,7 @@ async fn main() {
     let protected = Router::new()
         .merge(app::news::router::router())
         .merge(app::team_creation::router::router())
+        .merge(app::competition::router::router())
         .merge(app::spaces::router::router())
         .merge(web::router::router())
         .route_layer(from_fn(require_auth))

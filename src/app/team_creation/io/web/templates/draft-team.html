@@ -13,6 +13,7 @@
     </div>
 
     <div class="two-col create-team">
+        {% if is_admin %}
         <div>
             <div class="col-label">Qui sera le coach de cette équipe ?</div>
             <select class="form-select">
@@ -22,6 +23,7 @@
                 <option>Whiskers</option>
             </select>
         </div>
+        {% endif %}
         {% import "components/upload_widget.html" as cmp %}
         {% call cmp::cloudinary_upload("logo_url", logo_url_value, "teams/logos", "Logo de votre équipe", logo_error) %}
     </div>

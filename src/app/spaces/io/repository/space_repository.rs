@@ -80,6 +80,29 @@ impl ISpaceRepository for SpaceRepository {
         Ok(())
     }
 
+    async fn find_member_profile(
+        &self,
+        coach_id: &CoachId,
+        space_id: &SpaceId,
+    ) -> Result<Option<SpaceAuthorization>, SpaceRepositoryError> {
+        #[derive(sqlx::FromRow)]
+        struct Row { profile: String }
+
+        let row = sqlx::query_as::<_, Row>(include_str!("sql/find_user_profile_for_space.sql"))
+            .bind(coach_id.to_string())
+            .bind(space_id.to_string())
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(db_err)?;
+
+        match row {
+            None    => Ok(None),
+            Some(r) => SpaceAuthorization::try_from(r.profile.as_str())
+                .map(Some)
+                .map_err(SpaceRepositoryError::Database),
+        }
+    }
+
     async fn find_all(&self) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
         #[derive(sqlx::FromRow)]
         struct Row {

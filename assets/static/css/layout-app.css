@@ -101,9 +101,18 @@
   background: var(--dark-5);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 var(--p6);
   gap: var(--p2);
 }
+.left-menu {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--p2);
+  width: 100%;
+}
+
 .sub-menu-active {
   background: var(--dark-1);
 }

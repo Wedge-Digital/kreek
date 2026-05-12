@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="/static/css/components/create-card.css">
   <link rel="stylesheet" href="/static/css/components/upload.css">
   <link rel="stylesheet" href="/static/css/pages/all-spaces.css">
+  <link rel="stylesheet" href="/static/css/pages/all-competition.css">
   <script src="/static/js/htmx.min.js"></script>
   <script src="https://widget.cloudinary.com/v2.0/global/all.js" type="text/javascript"></script>
 </head>
@@ -27,7 +28,7 @@
     <div class="main-area">
       <!-- Menu bar -->
       <div class="menu-bar"
-           hx-trigger="load, space:changed from:body"
+           hx-trigger="load, space:changed from:body, htmx:pushedIntoHistory from:body"
            hx-get="{{ routes.menu() }}"
            hx-swap="innerHTML">
       </div>

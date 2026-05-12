@@ -68,6 +68,10 @@ mod tests {
             Ok(vec![])
         }
 
+        async fn find_member_profile(&self, coach_id: &CoachId, space_id: &SpaceId) -> Result<Option<SpaceAuthorization>, SpaceRepositoryError> {
+            Ok(Some(SpaceAuthorization::SimpleUser))
+        }
+
         async fn find_all(&self) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
             Ok(vec![])
         }
@@ -89,6 +93,10 @@ mod tests {
 
         async fn find_by_coach_id(&self, coach_id: &CoachId) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
             Ok(vec![])
+        }
+
+        async fn find_member_profile(&self, coach_id: &CoachId, space_id: &SpaceId) -> Result<Option<SpaceAuthorization>, SpaceRepositoryError> {
+            Ok(Some(SpaceAuthorization::SimpleUser))
         }
 
         async fn find_all(&self) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
