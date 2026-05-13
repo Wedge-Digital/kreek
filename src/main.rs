@@ -22,6 +22,7 @@ use crate::lib::session_store::DashMapStore;
 use crate::app::auth::auth_backend::AuthBackend;
 use crate::web::middleware::bypass_auth::bypass_auth_middleware;
 use crate::web::middleware::require_auth::require_auth;
+use crate::web::middleware::request_log::request_log;
 use crate::app::auth::io::repository::reset_token_repository::ResetTokenRepository;
 use crate::app::auth::io::repository::user_repository::UserRepository;
 use crate::app::spaces::io::repository::space_repository::SpaceRepository;
@@ -74,19 +75,27 @@ async fn main() {
         .route_layer(from_fn(require_auth))
         .route_layer(from_fn_with_state(state.clone(), bypass_auth_middleware));
 
-    let app = Router::new()
+    // Auth-protected routes — session + auth middleware applied only here.
+    let auth_app = Router::new()
         .route("/", get(|| async { Redirect::to(path::AUTH_LAYOUT) }))
         .merge(app::auth::router::router())
         .merge(protected)
-        .nest_service("/static", ServeDir::new("assets/static"))
         .layer(auth_layer)
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
+    // Static assets served without auth middleware to avoid unnecessary
+    // session overhead on every CSS/JS request.
+    let app = Router::new()
+        .nest_service("/static", ServeDir::new("assets/static"))
+        .merge(auth_app);
+
     #[cfg(debug_assertions)]
-    let app = app
+    let app = Router::new()
         .nest_service("/ui", ServeDir::new("assets/templates"))
-        .layer(LiveReloadLayer::new());
+        .merge(app)
+        .layer(LiveReloadLayer::new())
+        .layer(from_fn(request_log));
 
     let listener = tokio::net::TcpListener::bind(&server_address).await.unwrap();
     axum::serve(listener, app).await.unwrap();

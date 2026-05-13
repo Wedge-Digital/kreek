@@ -10,12 +10,15 @@ pub async fn require_auth(
     request: Request<Body>,
     next: Next,
 ) -> Response {
+    let path = request.uri().path().to_owned();
+
     if auth_session.user.is_some() {
+        tracing::debug!(%path, "require_auth: OK — utilisateur authentifié");
         return next.run(request).await;
     }
 
-    // Requête HTMX — le navigateur ne suit pas les redirections HTTP,
-    // il faut passer par l'en-tête HX-Redirect.
+    tracing::debug!(%path, "require_auth: non authentifié — redirection");
+
     if request.headers().contains_key("hx-request") {
         return Response::builder()
             .header("HX-Redirect", path::LOGIN)
