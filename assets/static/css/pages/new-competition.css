@@ -1,18 +1,1 @@
-.new-competition { display: flex; flex-direction: column; padding: var(--p4); gap: var(--p1);}
-
-
-
-.steps { display: flex; align-items: center; gap: 0; margin-bottom: var(--p3); padding:var(--p2) var(--p4) }
-.step { display: flex; align-items: center; gap: 8px; }
-.step-num {
-    width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    font-size: var(--text-tiny); font-weight: 700;
-}
-.step-num.active { background: var(--main-blue); color: var(--white); }
-.step-num.done { background: var(--green); color: var(--white); }
-.step-num.pending { background: var(--dark-5); color: var(--dark-3); }
-.step-label { font-size: var(--text-small); font-weight: 500; }
-.step-label.active { color: var(--main-blue); }
-.step-label.pending { color: var(--dark-3); }
-.step-line { flex: 1; height: 2px; background: var(--dark-5); margin: 0 8px; }
-.step-line.done { background: var(--green); }
+.new-competition { display: flex; flex-direction: column; padding: var(--p4); gap: var(--p1); }

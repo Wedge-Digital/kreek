@@ -17,8 +17,8 @@ use tower_livereload::LiveReloadLayer;
 use std::sync::Arc;
 use axum::middleware::{from_fn, from_fn_with_state};
 use axum_login::AuthManagerLayerBuilder;
-use tower_sessions::MemoryStore;
 use tower_sessions::SessionManagerLayer;
+use crate::lib::session_store::DashMapStore;
 use crate::app::auth::auth_backend::AuthBackend;
 use crate::web::middleware::bypass_auth::bypass_auth_middleware;
 use crate::web::middleware::require_auth::require_auth;
@@ -59,7 +59,7 @@ async fn main() {
         bypass_auth:            cfg.bypass_auth,
     };
 
-    let session_layer = SessionManagerLayer::new(MemoryStore::default());
+    let session_layer = SessionManagerLayer::new(DashMapStore::new());
     let auth_layer = AuthManagerLayerBuilder::new(
         AuthBackend::new(state.user_repository.clone(), cfg.bypass_auth),
         session_layer,

@@ -18,11 +18,9 @@
   --main-blue:   #003049;
   --dark-blue:   rgba(0,48,73,0.35);
   --link-blue:   #0063F7;
-  --light-1:     #6F35A5;
 
   --black:       #000000;
   --black-1:     #292929;
-  --grey-0:      #1E2022;
 
   --red:         #E02020;
   --green:       #629584;
@@ -39,7 +37,6 @@
   --p3:  36px;
   --p4:  60px;
   --p5:  80px;
-  --p6:  140px;
 
   /* Typography */
   --font-body:   'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -48,6 +45,7 @@
 
   /* Text sizes */
   --text-tiny:   12px;
+  --text-xs:     14px;
   --text-small:  16px;
   --text-medium: 22px;
   --text-large:  30px;
@@ -60,10 +58,16 @@
   --h4: 24px;
   --h5: 18px;
 
+  /* Border radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --card-radius: var(--radius-md);
+
   /* Layout */
-  --sidebar-width: 90px;
-  --menubar-height: 60px;
-  --card-radius: 10px;
+  --sidebar-width:   90px;
+  --menubar-height:  60px;
+  --layout-gutter:   140px;
 }
 
 /* ─── Reset ─── */
@@ -156,6 +160,7 @@ ul { list-style: none; }
 .btn-text:hover { background: rgba(0,99,247,0.06); }
 
 .btn-sm { padding: var(--p05) var(--p2); font-size: var(--text-tiny); }
+.btn-md { padding: var(--p1) var(--p2); font-size: var(--text-small); }
 
 .btn-fit { width: fit-content; }
 
@@ -366,22 +371,6 @@ textarea.form-input-article { resize: vertical; min-height: 80px; }
 .step-label.pending { color: var(--dark-3); }
 .step-line { flex: 1; height: 2px; background: var(--dark-5); margin: 0 8px; }
 .step-line.done { background: var(--green); }
-
-/* ─── Report Card ─── */
-.report-card { background: var(--white); border-radius: 12px; padding: var(--p4); max-width: 860px; margin: 0 auto; }
-.report-header {
-  background: linear-gradient(135deg, #E02020 0%, var(--dark-0) 100%);
-  border-radius: 10px; padding: var(--p2); margin-bottom: var(--p3);
-  display: flex; align-items: center; gap: var(--p1);
-}
-.report-header-icon {
-  width: 48px; height: 48px; border-radius: 10px;
-  background: rgba(255,255,255,0.15);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 24px;
-}
-.report-header-text .title { color: var(--white); font-family: var(--font-title); font-size: 24px; font-weight: 700; }
-.report-header-text .sub   { color: rgba(255,255,255,0.7); font-size: var(--text-tiny); margin-top: 2px; }
 
 /* ─── Two-column layout ─── */
 .two-col { display: flex; gap: var(--p2); justify-content: center}

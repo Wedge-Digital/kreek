@@ -56,7 +56,7 @@
   align-items: center;
   justify-content: space-between;
   height: var(--menubar-height);
-  padding: 0 var(--p6);
+  padding: 0 var(--layout-gutter);
 }
 .menu-logo { height: 30px; margin-right: 8px; display: flex; align-items: center; gap: var(--p3) }
 .menu-logo:hover { cursor: pointer;}
@@ -102,7 +102,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--p6);
+  padding: 0 var(--layout-gutter);
   gap: var(--p2);
 }
 .left-menu {
@@ -121,5 +121,5 @@
 .sub-menu-btn.active { background: rgba(255,255,255,0.55); }
 
 /* ─── Page Content ─── */
-.page-content { flex: 1; overflow-y: auto; padding: var(--p1) var(--p6); }
+.page-content { flex: 1; overflow-y: auto; padding: var(--p1) var(--layout-gutter); }
 .page-content-wide { flex: 1; overflow-y: auto; padding: var(--p1) var(--p2); }
