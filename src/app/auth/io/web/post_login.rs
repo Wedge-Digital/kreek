@@ -14,7 +14,7 @@ pub async fn login_submit(
     State(state): State<AppState>,
     Form(payload): Form<PerformLoginCommand>,
 ) -> impl IntoResponse {
-    match perform_login::execute(payload, state.user_repository.as_ref()).await {
+    match perform_login::execute(payload, state.user_repository.as_ref(), state.domain_event_bus.as_ref()).await {
         Ok(user) => {
             if auth_session.login(&user).await.is_err() {
                 return LoginTemplate {
@@ -91,7 +91,6 @@ mod tests {
             host_domain:            "localhost:8080".into(),
             bypass_auth:            false,
             domain_event_bus:       Arc::new(EventBus::new()),
-            app_event_bus:          Arc::new(EventBus::new()),
         };
 
         Router::new()

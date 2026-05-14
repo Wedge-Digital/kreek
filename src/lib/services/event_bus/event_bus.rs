@@ -1,44 +1,51 @@
 use std::collections::HashMap;
-use std::fmt::Display;
-use std::hash::Hash;
+use crate::lib::domain_event::DomainEvent;
 
-pub trait Event: Display {
-    type Kind: Hash + Eq + Clone + Display;
-    fn kind(&self) -> Self::Kind;
+type EventHandler = Box<dyn Fn(&DomainEvent) + Send + Sync>;
+
+pub struct EventBus {
+    subscribers:      HashMap<String, Vec<EventHandler>>,
+    omni_subscribers: Vec<EventHandler>,
 }
 
-type EventHandler<E> = Box<dyn Fn(&E) + Send + Sync>;
-
-pub struct EventBus<E: Event> {
-    suscribers: HashMap<E::Kind, Vec<EventHandler<E>>>,
-    pub omni_suscribers: Vec<EventHandler<E>>,
-}
-
-impl<E: Event> EventBus<E> {
+impl EventBus {
     pub fn new() -> Self {
         Self {
-            suscribers: HashMap::new(),
-            omni_suscribers: Vec::new(),
+            subscribers:      HashMap::new(),
+            omni_subscribers: Vec::new(),
         }
     }
 
-    pub fn suscribe_all(&mut self, listener: impl Fn(&E) + Send + Sync + 'static) {
-        self.omni_suscribers.push(Box::new(listener));
+    pub fn subscribe_all(&mut self, handler: impl Fn(&DomainEvent) + Send + Sync + 'static) {
+        self.omni_subscribers.push(Box::new(handler));
     }
 
-    pub fn suscribe(&mut self, listener: impl Fn(&E) + Send + Sync + 'static, event_type: E::Kind) {
-        self.suscribers.entry(event_type).or_insert_with(Vec::new).push(Box::new(listener));
+    pub fn subscribe(&mut self, event_type: impl Into<String>, handler: impl Fn(&DomainEvent) + Send + Sync + 'static) {
+        self.subscribers
+            .entry(event_type.into())
+            .or_default()
+            .push(Box::new(handler));
     }
 
-    pub fn publish(&self, event: &E) {
-        for listener in &self.omni_suscribers {
-            listener(event);
+    pub fn publish(&self, event: &DomainEvent) {
+        for handler in &self.omni_subscribers {
+            handler(event);
         }
-        if let Some(handlers) = self.suscribers.get(&event.kind()) {
-            for listener in handlers {
-                listener(event);
+        if let Some(handlers) = self.subscribers.get(&event.event_type) {
+            for handler in handlers {
+                handler(event);
             }
         }
+    }
+}
+
+pub trait IEventPublisher: Send + Sync {
+    fn publish(&self, event: DomainEvent);
+}
+
+impl IEventPublisher for EventBus {
+    fn publish(&self, event: DomainEvent) {
+        EventBus::publish(self, &event);
     }
 }
 
@@ -46,115 +53,89 @@ impl<E: Event> EventBus<E> {
 mod tests {
     use super::*;
     use std::sync::{Arc, Mutex};
-    use crate::app::shared_kernel::common_types::EventId;
+    use time::OffsetDateTime;
 
-    #[derive(Eq, Hash, PartialEq, Clone, Debug)]
-    enum TestEventKind {
-        Dummy,
-        AnotherDummy,
-    }
-
-    impl std::fmt::Display for TestEventKind {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            match self {
-                TestEventKind::Dummy       => write!(f, "Dummy"),
-                TestEventKind::AnotherDummy => write!(f, "AnotherDummy"),
-            }
+    fn make_event(event_type: &str) -> DomainEvent {
+        DomainEvent {
+            event_id:    "01JQQQQQQQQQQQQQQQQQQQQ001".into(),
+            emitter:     "01JQQQQQQQQQQQQQQQQQQQQ002".into(),
+            event_type:  event_type.into(),
+            tags:        serde_json::json!({}),
+            payload:     serde_json::json!({}),
+            occurred_at: OffsetDateTime::now_utc(),
         }
     }
 
-    #[derive(Debug)]
-    enum TestEvent {
-        Dummy { event_id: EventId, content: String },
-        AnotherDummy { event_id: EventId, content: String },
-    }
-
-    impl std::fmt::Display for TestEvent {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{}", self.kind())
-        }
-    }
-
-    impl Event for TestEvent {
-        type Kind = TestEventKind;
-        fn kind(&self) -> TestEventKind {
-            match self {
-                TestEvent::Dummy { .. } => TestEventKind::Dummy,
-                TestEvent::AnotherDummy { .. } => TestEventKind::AnotherDummy,
-            }
-        }
-    }
-
-    fn given_an_event_bus() -> EventBus<TestEvent> {
+    fn given_an_event_bus() -> EventBus {
         EventBus::new()
     }
 
-    fn when_a_listener_suscribes_all_events(bus: &mut EventBus<TestEvent>) {
-        bus.suscribe_all(|_event| {});
+    fn when_a_listener_subscribes_all_events(bus: &mut EventBus) {
+        bus.subscribe_all(|_| {});
     }
 
-    fn then_the_listener_shall_be_present_in_omnisuscribers_list(bus: &EventBus<TestEvent>) {
-        assert!(!bus.omni_suscribers.is_empty());
+    fn then_the_listener_shall_be_present_in_omni_subscribers(bus: &EventBus) {
+        assert!(!bus.omni_subscribers.is_empty());
     }
 
-    fn when_listener_suscribes_a_specific_event(bus: &mut EventBus<TestEvent>) {
-        bus.suscribe(|_event| {}, TestEventKind::Dummy);
+    fn when_a_listener_subscribes_to_specific_event(bus: &mut EventBus) {
+        bus.subscribe("UserRegistered", |_| {});
     }
 
-    fn then_the_listener_shall_be_present_in_specific_suscribers_list(bus: &EventBus<TestEvent>) {
-        assert!(!bus.suscribers.is_empty());
+    fn then_the_listener_shall_be_present_in_specific_subscribers(bus: &EventBus) {
+        assert!(!bus.subscribers.is_empty());
     }
 
-    fn when_an_omni_listener_suscribes_and_an_event_is_published(bus: &mut EventBus<TestEvent>) -> Arc<Mutex<Vec<String>>> {
+    fn when_omni_listener_subscribes_and_event_is_published(bus: &mut EventBus) -> Arc<Mutex<Vec<String>>> {
         let received = Arc::new(Mutex::new(Vec::<String>::new()));
         let received_clone = Arc::clone(&received);
-        bus.suscribe_all(move |event| {
-            received_clone.lock().unwrap().push(format!("{:?}", event));
+        bus.subscribe_all(move |event| {
+            received_clone.lock().unwrap().push(event.event_type.clone());
         });
-        bus.publish(&TestEvent::Dummy { event_id: EventId::new(), content: String::from("an event content") });
+        bus.publish(&make_event("UserRegistered"));
         received
     }
 
-    fn when_a_specific_listener_suscribes_and_both_event_kinds_are_published(bus: &mut EventBus<TestEvent>) -> Arc<Mutex<Vec<String>>> {
+    fn when_specific_listener_subscribes_and_two_events_are_published(bus: &mut EventBus) -> Arc<Mutex<Vec<String>>> {
         let received = Arc::new(Mutex::new(Vec::<String>::new()));
         let received_clone = Arc::clone(&received);
-        bus.suscribe(move |event| {
-            received_clone.lock().unwrap().push(format!("{:?}", event));
-        }, TestEventKind::Dummy);
-        bus.publish(&TestEvent::AnotherDummy { event_id: EventId::new(), content: String::from("ignored") });
-        bus.publish(&TestEvent::Dummy { event_id: EventId::new(), content: String::from("received") });
+        bus.subscribe("UserRegistered", move |event| {
+            received_clone.lock().unwrap().push(event.event_type.clone());
+        });
+        bus.publish(&make_event("UserBanned"));
+        bus.publish(&make_event("UserRegistered"));
         received
     }
 
-    fn then_the_listener_received_exactly_one_event(received: Arc<Mutex<Vec<String>>>) {
+    fn then_exactly_one_event_was_received(received: Arc<Mutex<Vec<String>>>) {
         assert_eq!(received.lock().unwrap().len(), 1);
     }
 
     #[test]
-    fn a_event_listener_shall_be_able_to_register_to_all_events() {
+    fn a_listener_can_subscribe_to_all_events() {
         let mut bus = given_an_event_bus();
-        when_a_listener_suscribes_all_events(&mut bus);
-        then_the_listener_shall_be_present_in_omnisuscribers_list(&bus);
+        when_a_listener_subscribes_all_events(&mut bus);
+        then_the_listener_shall_be_present_in_omni_subscribers(&bus);
     }
 
     #[test]
-    fn a_registered_listener_in_omnisuscribers_shall_receive_any_event() {
+    fn an_omni_listener_receives_any_published_event() {
         let mut bus = given_an_event_bus();
-        let received = when_an_omni_listener_suscribes_and_an_event_is_published(&mut bus);
-        then_the_listener_received_exactly_one_event(received);
+        let received = when_omni_listener_subscribes_and_event_is_published(&mut bus);
+        then_exactly_one_event_was_received(received);
     }
 
     #[test]
-    fn a_event_listener_shall_be_able_to_register_to_specific_events() {
+    fn a_listener_can_subscribe_to_a_specific_event_type() {
         let mut bus = given_an_event_bus();
-        when_listener_suscribes_a_specific_event(&mut bus);
-        then_the_listener_shall_be_present_in_specific_suscribers_list(&bus);
+        when_a_listener_subscribes_to_specific_event(&mut bus);
+        then_the_listener_shall_be_present_in_specific_subscribers(&bus);
     }
 
     #[test]
-    fn a_specific_listener_shall_only_receive_its_subscribed_event() {
+    fn a_specific_listener_only_receives_its_subscribed_event_type() {
         let mut bus = given_an_event_bus();
-        let received = when_a_specific_listener_suscribes_and_both_event_kinds_are_published(&mut bus);
-        then_the_listener_received_exactly_one_event(received);
+        let received = when_specific_listener_subscribes_and_two_events_are_published(&mut bus);
+        then_exactly_one_event_was_received(received);
     }
 }

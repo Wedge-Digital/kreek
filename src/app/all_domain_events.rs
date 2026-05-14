@@ -1,5 +1,5 @@
 use std::fmt::{Display, Formatter};
-use crate::app::auth::domain_event::{AuthDomainEvent, AuthDomainEventKind};
+use crate::app::auth::domain::domain_event::{AuthDomainEvent, AuthDomainEventKind};
 use crate::app::team_creation::domain_event::{TeamCreationEvent, TeamCreationEventKind};
 use crate::lib::services::event_bus::event_bus::Event;
 

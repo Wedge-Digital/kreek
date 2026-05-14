@@ -5,5 +5,3 @@ pub mod ports;
 pub mod router;
 pub mod use_cases;
 pub mod routes;
-pub mod domain_event;
-pub mod app_event;

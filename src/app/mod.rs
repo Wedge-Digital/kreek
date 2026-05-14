@@ -6,4 +6,3 @@ pub mod auth;
 pub mod competition;
 pub mod news;
 pub mod spaces;
-pub mod all_domain_events;

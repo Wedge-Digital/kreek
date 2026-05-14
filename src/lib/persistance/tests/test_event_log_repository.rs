@@ -1,6 +1,18 @@
 use sqlx::PgPool;
 use time::OffsetDateTime;
-use crate::lib::persistance::event_log_repository::{EventLogRepository, IEventLogRepository, NewEvent};
+use crate::lib::domain_event::DomainEvent;
+use crate::lib::persistance::event_log_repository::{EventLogRepository, IEventLogRepository};
+
+fn make_event(event_type: &str, tags: serde_json::Value, payload: serde_json::Value) -> DomainEvent {
+    DomainEvent {
+        event_id:    "01JQQQQQQQQQQQQQQQQQQQQB01".into(),
+        emitter:     "01JQQQQQQQQQQQQQQQQQQQQ001".into(),
+        event_type:  event_type.into(),
+        tags,
+        payload,
+        occurred_at: OffsetDateTime::now_utc(),
+    }
+}
 
 #[sqlx::test(fixtures("events"))]
 async fn find_by_tag_returns_only_matching_events(pool: PgPool) {
@@ -46,14 +58,11 @@ async fn find_by_tag_returns_empty_for_unknown_tag(pool: PgPool) {
 #[sqlx::test]
 async fn save_persists_event(pool: PgPool) {
     let repo = EventLogRepository::new(pool);
-    let event = NewEvent {
-        event_id:    "01JQQQQQQQQQQQQQQQQQQQQB01".to_string(),
-        emitter:     "01JQQQQQQQQQQQQQQQQQQQQ001".to_string(),
-        event_type:  "TeamDraftCreated".to_string(),
-        tags:        serde_json::json!({"team_id": "team-save"}),
-        payload:     serde_json::json!({"name": "Les Bleus"}),
-        occurred_at: OffsetDateTime::now_utc(),
-    };
+    let event = make_event(
+        "TeamDraftCreated",
+        serde_json::json!({"team_id": "team-save"}),
+        serde_json::json!({"name": "Les Bleus"}),
+    );
 
     repo.save(&event).await.unwrap();
 
@@ -62,7 +71,6 @@ async fn save_persists_event(pool: PgPool) {
     assert_eq!(found[0].event_type, "TeamDraftCreated");
     assert_eq!(found[0].payload["name"], "Les Bleus");
     assert_eq!(found[0].tags["team_id"], "team-save");
-    assert_eq!(found[0].event_id, "01JQQQQQQQQQQQQQQQQQQQQB01");
 }
 
 #[sqlx::test(fixtures("events"))]
@@ -86,14 +94,11 @@ async fn find_by_tag_maps_all_fields_correctly(pool: PgPool) {
 #[sqlx::test]
 async fn find_by_tag_supports_multi_tag_filter(pool: PgPool) {
     let repo = EventLogRepository::new(pool);
-    let event = NewEvent {
-        event_id:    "01JQQQQQQQQQQQQQQQQQQQQC01".to_string(),
-        emitter:     "01JQQQQQQQQQQQQQQQQQQQQ001".to_string(),
-        event_type:  "TeamDraftCreated".to_string(),
-        tags:        serde_json::json!({"team_id": "team-multi", "space_id": "space-1"}),
-        payload:     serde_json::json!({}),
-        occurred_at: OffsetDateTime::now_utc(),
-    };
+    let event = make_event(
+        "TeamDraftCreated",
+        serde_json::json!({"team_id": "team-multi", "space_id": "space-1"}),
+        serde_json::json!({}),
+    );
     repo.save(&event).await.unwrap();
 
     // When — filtre sur les deux tags

@@ -3,8 +3,10 @@ CREATE TABLE spaces__user_space
 (
     space_id        VARCHAR(26)  NOT NULL,
     coach_id        VARCHAR(26)  NOT NULL,
+    coach_name      VARCHAR(100) NOT NULL,
+    coach_icon      VARCHAR(255),
     profile         VARCHAR(255) NOT NULL,
-    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE spaces

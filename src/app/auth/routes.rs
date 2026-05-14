@@ -8,6 +8,7 @@ pub mod path {
     pub const FORGOT_PASSWORD: &str   = "/auth/forgot-password";
     pub const FORGOT_PASSWORD_SENT: &str = "/auth/forgot-password/sent";
     // Route pattern for Axum — parameter in braces
+    pub const LOGOUT: &str                   = "/auth/logout";
     pub const RESET_PASSWORD_PATTERN: &str = "/auth/password/update/{reset_token}";
     // Base used to build concrete URLs
     pub const RESET_PASSWORD_BASE: &str    = "/auth/password/update";

@@ -29,6 +29,7 @@ use crate::app::auth::io::repository::user_repository::UserRepository;
 use crate::app::spaces::io::repository::space_repository::SpaceRepository;
 use crate::lib::services::email::ResendMailService;
 use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::lib::event_listener::event_log_feeder;
 
 #[tokio::main]
 async fn main() {
@@ -53,6 +54,9 @@ async fn main() {
 
     let server_address = cfg.server_addr();
 
+    let mut event_bus = EventBus::new();
+    event_log_feeder::init(&mut event_bus, pool.clone());
+
     let state = AppState {
         user_repository:        Arc::new(UserRepository::new(pool.clone())),
         reset_token_repository: Arc::new(ResetTokenRepository::new(pool.clone())),
@@ -60,8 +64,7 @@ async fn main() {
         email_service:          Arc::new(ResendMailService::new(cfg.email.api_key, cfg.email.from, cfg.email.from_name)),
         host_domain:            cfg.host_domain,
         bypass_auth:            cfg.bypass_auth,
-        domain_event_bus:       Arc::new(EventBus::new()),
-        app_event_bus:          Arc::new(EventBus::new()),
+        domain_event_bus:       Arc::new(event_bus),
     };
 
     let session_layer = SessionManagerLayer::new(DashMapStore::new());

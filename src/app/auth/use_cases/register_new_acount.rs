@@ -5,12 +5,17 @@ use super::super::domain::{
 use super::super::ports::{IUserRepository, RepositoryError};
 use crate::app::shared_kernel::common_types::UserId;
 use crate::app::shared_kernel::user::User;
+use crate::lib::domain_event::DomainEvent;
+use crate::lib::services::event_bus::event_bus::IEventPublisher;
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
     Argon2,
 };
-use std::fmt;
 use crate::app::shared_kernel::coach_name::CoachName;
+use std::fmt;
+use time::OffsetDateTime;
+
+pub const USER_REGISTERED: &str = "UserRegistered";
 
 #[derive(Debug)]
 pub enum RegisterError {
@@ -30,7 +35,6 @@ pub struct RegisterCommand {
     pub password:         String,
     pub password_confirm: String,
 }
-
 
 impl fmt::Display for RegisterError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -52,7 +56,7 @@ impl From<RepositoryError> for RegisterError {
         match e {
             RepositoryError::CoachNameAlreadyTaken => RegisterError::CoachNameAlreadyTaken,
             RepositoryError::EmailAlreadyTaken     => RegisterError::EmailAlreadyTaken,
-            RepositoryError::Database(msg)  => RegisterError::Database(msg),
+            RepositoryError::Database(msg)         => RegisterError::Database(msg),
         }
     }
 }
@@ -60,10 +64,9 @@ impl From<RepositoryError> for RegisterError {
 pub async fn execute(
     cmd: RegisterCommand,
     repo: &dyn IUserRepository,
+    bus: &dyn IEventPublisher,
 ) -> Result<(), Vec<RegisterError>> {
     let mut errors: Vec<RegisterError> = Vec::new();
-
-    // --- validation : tous les champs sont vérifiés sans court-circuit ---
 
     if cmd.password != cmd.password_confirm {
         errors.push(RegisterError::PasswordMismatch);
@@ -85,8 +88,6 @@ pub async fn execute(
         return Err(errors);
     }
 
-    // --- à partir d'ici les valeurs sont garanties valides ---
-
     let salt = SaltString::generate(&mut OsRng);
     let password_hash = Argon2::default()
         .hash_password(cmd.password.as_bytes(), &salt)
@@ -101,5 +102,108 @@ pub async fn execute(
         password_hash,
     );
 
-    repo.create(&user).await.map_err(|e| vec![RegisterError::from(e)])
+    repo.create(&user).await.map_err(|e| vec![RegisterError::from(e)])?;
+
+    let user_id = user.id.to_string();
+    bus.publish(DomainEvent {
+        event_id:   UserId::new().to_string(),
+        emitter:    user_id.clone(),
+        event_type: USER_REGISTERED.into(),
+        tags:       serde_json::json!({ "user_id": user_id }),
+        payload:    serde_json::json!({
+            "user_id":   user_id,
+            "user_name": user.coach_name.into_inner(),
+            "email":     user.email.as_ref(),
+        }),
+        occurred_at: OffsetDateTime::now_utc(),
+    });
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+    use async_trait::async_trait;
+    use crate::app::auth::ports::RepositoryError;
+    use crate::app::shared_kernel::user::User;
+
+    struct FakeUserRepository { pub fail: bool }
+
+    #[async_trait]
+    impl IUserRepository for FakeUserRepository {
+        async fn create(&self, _: &User) -> Result<(), RepositoryError> {
+            if self.fail { Err(RepositoryError::Database("db error".into())) } else { Ok(()) }
+        }
+        async fn find_by_id(&self, _: &str) -> Result<Option<User>, RepositoryError> { Ok(None) }
+        async fn find_by_coach_name(&self, _: &str) -> Result<Option<User>, RepositoryError> { Ok(None) }
+        async fn update_password_hash(&self, _: &str, _: &str) -> Result<(), RepositoryError> { Ok(()) }
+    }
+
+    struct FakeEventPublisher { pub published: Mutex<Vec<String>> }
+
+    impl IEventPublisher for FakeEventPublisher {
+        fn publish(&self, event: DomainEvent) {
+            self.published.lock().unwrap().push(event.event_type);
+        }
+    }
+
+    fn valid_command() -> RegisterCommand {
+        RegisterCommand {
+            coach_name:       "Bagouze".into(),
+            email:            "coach@example.com".into(),
+            password:         "password123".into(),
+            password_confirm: "password123".into(),
+        }
+    }
+
+    #[tokio::test]
+    async fn user_registered_event_is_published_on_success() {
+        // Given
+        let repo      = FakeUserRepository { fail: false };
+        let publisher = FakeEventPublisher { published: Mutex::new(vec![]) };
+
+        // When
+        execute(valid_command(), &repo, &publisher).await.unwrap();
+
+        // Then
+        let events = publisher.published.lock().unwrap();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0], USER_REGISTERED);
+    }
+
+    #[tokio::test]
+    async fn no_event_is_published_when_repo_fails() {
+        // Given
+        let repo      = FakeUserRepository { fail: true };
+        let publisher = FakeEventPublisher { published: Mutex::new(vec![]) };
+
+        // When
+        let result = execute(valid_command(), &repo, &publisher).await;
+
+        // Then
+        assert!(result.is_err());
+        assert!(publisher.published.lock().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn validation_errors_are_returned_without_publishing() {
+        // Given — mot de passe trop court + mismatch
+        let repo      = FakeUserRepository { fail: false };
+        let publisher = FakeEventPublisher { published: Mutex::new(vec![]) };
+        let cmd = RegisterCommand {
+            coach_name:       "Bagouze".into(),
+            email:            "coach@example.com".into(),
+            password:         "court".into(),
+            password_confirm: "different".into(),
+        };
+
+        // When
+        let errors = execute(cmd, &repo, &publisher).await.unwrap_err();
+
+        // Then
+        assert!(errors.len() >= 2);
+        assert!(publisher.published.lock().unwrap().is_empty());
+    }
 }
