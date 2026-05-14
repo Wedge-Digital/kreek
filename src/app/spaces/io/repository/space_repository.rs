@@ -4,7 +4,7 @@ use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, SpaceId};
 use crate::app::shared_kernel::space_name::SpaceName;
 use crate::app::spaces::domain::coach::Coach;
-use crate::app::spaces::domain::Space::Space;
+use crate::app::spaces::domain::space::Space;
 use crate::app::spaces::domain::ports::{ISpaceRepository, SpaceRepositoryError, SpaceSummary};
 use async_trait::async_trait;
 use sqlx::PgPool;

@@ -1,6 +1,6 @@
 use crate::app::shared_kernel::authorization::SpaceAuthorization;
 use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
-use crate::app::spaces::domain::Space::Space;
+use crate::app::spaces::domain::space::Space;
 use async_trait::async_trait;
 use std::fmt;
 

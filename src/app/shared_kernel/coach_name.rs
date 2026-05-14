@@ -4,7 +4,7 @@ use crate::app::auth::domain::error::AuthDomainError;
 #[nutype(
     sanitize(trim),
     validate(not_empty, len_char_max = 50, regex = r"^[a-zA-Z0-9 ]+$"),
-    derive(Debug, Clone, Serialize, Deserialize)
+    derive(Eq, Hash, PartialEq, Debug, Clone, Serialize, Deserialize)
 )]
 pub struct CoachName(String);
 

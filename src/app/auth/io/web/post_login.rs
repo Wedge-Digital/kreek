@@ -61,6 +61,7 @@ mod tests {
     use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
     use crate::lib::services::email::fakes::console_email_service::ConsoleEmailService;
     use crate::app::spaces::domain::ports::{ISpaceRepository, SpaceRepositoryError};
+    use crate::lib::services::event_bus::event_bus::EventBus;
     use crate::state::AppState;
     use super::login_submit;
 
@@ -86,9 +87,11 @@ mod tests {
             reset_token_repository: Arc::new(FakeResetTokenRepository {
                 find_result: crate::app::auth::io::repository::tests::fake_reset_token_repository::FindResult::NotFound,
             }),
-            space_repository: Arc::new(FakeSpaceRepository),
-            host_domain: "localhost:8080".into(),
-            bypass_auth: false,
+            space_repository:       Arc::new(FakeSpaceRepository),
+            host_domain:            "localhost:8080".into(),
+            bypass_auth:            false,
+            domain_event_bus:       Arc::new(EventBus::new()),
+            app_event_bus:          Arc::new(EventBus::new()),
         };
 
         Router::new()
@@ -119,9 +122,9 @@ mod tests {
     struct FakeSpaceRepository;
     #[async_trait::async_trait]
     impl ISpaceRepository for FakeSpaceRepository {
-        async fn save(&self, _: &crate::app::spaces::domain::Space::Space) -> Result<(), crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(()) }
+        async fn save(&self, _: &crate::app::spaces::domain::space::Space) -> Result<(), crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(()) }
         async fn add_member(&self, _: &crate::app::shared_kernel::common_types::SpaceId, _: &crate::app::shared_kernel::common_types::CoachId, _: &crate::app::shared_kernel::authorization::SpaceAuthorization) -> Result<(), crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(()) }
-        async fn find_by_id(&self, _: &crate::app::shared_kernel::common_types::SpaceId) -> Result<Option<crate::app::spaces::domain::Space::Space>, crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(None) }
+        async fn find_by_id(&self, _: &crate::app::shared_kernel::common_types::SpaceId) -> Result<Option<crate::app::spaces::domain::space::Space>, crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(None) }
         async fn find_by_coach_id(&self, _: &crate::app::shared_kernel::common_types::CoachId) -> Result<Vec<crate::app::spaces::domain::ports::SpaceSummary>, crate::app::spaces::domain::ports::SpaceRepositoryError> { Ok(vec![]) }
 
         async fn find_member_profile(&self, coach_id: &CoachId, space_id: &SpaceId) -> Result<Option<SpaceAuthorization>, SpaceRepositoryError> {

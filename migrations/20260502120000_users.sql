@@ -1,4 +1,4 @@
-CREATE TABLE users
+CREATE TABLE auth__users
 (
     id                  VARCHAR(26)  NOT NULL,
     coach_name          VARCHAR(100) NOT NULL,

@@ -1,6 +1,6 @@
-INSERT INTO event_log (id, source, "type", spec_version, time, data_schema, data_content_type, subject, data)
+INSERT INTO event_log (event_id, emitter, event_type, tags, payload, occurred_at)
 VALUES
-    ('evt-001', '/team-creation', 'TeamDraftCreated', '1.0', '2026-01-01 10:00:00+00', '/schemas/team', 'application/json', 'team-abc', '{"name":"Les Bleus"}'),
-    ('evt-002', '/team-creation', 'RulesetSelected',  '1.0', '2026-01-01 11:00:00+00', '/schemas/team', 'application/json', 'team-abc', '{"ruleset":"BB2020"}'),
-    ('evt-003', '/team-creation', 'RosterSelected',   '1.0', '2026-01-01 12:00:00+00', '/schemas/team', 'application/json', 'team-abc', '{"roster":"Humains"}'),
-    ('evt-004', '/team-creation', 'TeamDraftCreated', '1.0', '2026-01-01 09:00:00+00', '/schemas/team', 'application/json', 'team-xyz', '{"name":"Les Rouges"}');
+    ('a0000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'TeamDraftCreated', '{"team_id": "team-abc"}', '{"name": "Les Bleus"}',  '2026-01-01 10:00:00+00'),
+    ('a0000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'RulesetSelected',  '{"team_id": "team-abc"}', '{"ruleset": "BB2020"}', '2026-01-01 11:00:00+00'),
+    ('a0000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', 'RosterSelected',   '{"team_id": "team-abc"}', '{"roster": "Humains"}',  '2026-01-01 12:00:00+00'),
+    ('a0000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000001', 'TeamDraftCreated', '{"team_id": "team-xyz"}', '{"name": "Les Rouges"}', '2026-01-01 09:00:00+00');

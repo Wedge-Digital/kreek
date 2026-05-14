@@ -2,9 +2,10 @@ extern crate core;
 
 mod app;
 mod config;
-mod lib;
 mod state;
 pub mod web;
+#[allow(special_module_name)]
+pub mod lib;
 
 use std::time::Duration;
 use config::AppConfig;
@@ -27,6 +28,7 @@ use crate::app::auth::io::repository::reset_token_repository::ResetTokenReposito
 use crate::app::auth::io::repository::user_repository::UserRepository;
 use crate::app::spaces::io::repository::space_repository::SpaceRepository;
 use crate::lib::services::email::ResendMailService;
+use crate::lib::services::event_bus::event_bus::EventBus;
 
 #[tokio::main]
 async fn main() {
@@ -58,6 +60,8 @@ async fn main() {
         email_service:          Arc::new(ResendMailService::new(cfg.email.api_key, cfg.email.from, cfg.email.from_name)),
         host_domain:            cfg.host_domain,
         bypass_auth:            cfg.bypass_auth,
+        domain_event_bus:       Arc::new(EventBus::new()),
+        app_event_bus:          Arc::new(EventBus::new()),
     };
 
     let session_layer = SessionManagerLayer::new(DashMapStore::new());

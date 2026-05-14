@@ -1,5 +1,5 @@
 -- Add migration script here
-CREATE TABLE user_space
+CREATE TABLE spaces__user_space
 (
     space_id        VARCHAR(26)  NOT NULL,
     coach_id        VARCHAR(26)  NOT NULL,
@@ -7,7 +7,7 @@ CREATE TABLE user_space
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE space
+CREATE TABLE spaces
 (
     id                          VARCHAR(26)  NOT NULL,
     space_name                  VARCHAR(100) NOT NULL,

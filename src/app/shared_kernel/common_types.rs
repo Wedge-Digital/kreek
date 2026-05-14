@@ -3,11 +3,14 @@ use nutype::nutype;
 
 pub type CoachId = EntityId;
 
+
 pub type UserId = EntityId;
 
 pub type SpaceId = EntityId;
 
 pub type EntityId = SUlid;
+
+pub type EventId = SUlid;
 
 pub trait Entity:PartialEq<Self> {
     fn get_id(&self) -> EntityId;

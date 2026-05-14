@@ -1,1 +1,1 @@
-DELETE FROM lost_login_token WHERE token = $1
+DELETE FROM auth__lost_login_token WHERE token = $1

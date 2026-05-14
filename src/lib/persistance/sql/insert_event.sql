@@ -1,2 +1,2 @@
-INSERT INTO event_log (id, source, "type", spec_version, time, data_schema, data_content_type, subject, data)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO event_log (event_id, emitter, event_type, tags, payload, occurred_at)
+VALUES ($1::text::uuid, $2::text::uuid, $3, $4, $5, $6)

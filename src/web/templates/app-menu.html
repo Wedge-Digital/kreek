@@ -10,7 +10,7 @@
            hx-push-url="true"
       >
         <img id="menu-logo" hx-preserve src="/static/img/logo-simple-small.png" alt="Logo">
-        <span class="menu-logo-text">{{ space_name.as_deref().unwrap_or("—") }}</span>
+        <span class="menu-logo-text">{{ space_name.as_deref().unwrap_or("") }}</span>
       </div>
     </div>
     <div class="menu-right">
@@ -19,31 +19,25 @@
     </div>
   </div>
   <div class="sub-menu-placeholder">
+      {% if let Some(sid) = space_id %}
       <div class="left-menu">
-          {% if let Some(sid) = space_id %}
           <div class="sub-menu-btn{% if self.competitions_active() %} active{% endif %}"
                hx-get="{{ competition_routes.all_competitions(sid) }}"
                hx-target="#app-content"
                hx-swap="innerHTML"
                hx-push-url="true">Les Compétitions</div>
-          {% else %}
-          <div class="sub-menu-btn">Les Compétitions</div>
-          {% endif %}
           <div class="sub-menu-btn">Saisir un Match</div>
-          {% if let Some(sid) = space_id %}
           <div class="sub-menu-btn{% if self.teams_active() %} active{% endif %}"
                hx-get="{{ team_routes.draft_team(sid) }}"
                hx-target="#app-content"
                hx-swap="innerHTML"
                hx-push-url="true">Créer une équipe</div>
-          {% else %}
-          <div class="sub-menu-btn">Créer une équipe</div>
-          {% endif %}
           <div class="sub-menu-btn">Toutes les équipes</div>
       </div>
       <div class="right-menu">
           <div class="sub-menu-btn">Administration</div>
       </div>
       </div>
+    {% endif %}
   </div>
 </div>

@@ -1,3 +1,3 @@
 SELECT id, coach_name, coach_icon, email, password_hash
-FROM users
+FROM auth__users
 WHERE coach_name = $1

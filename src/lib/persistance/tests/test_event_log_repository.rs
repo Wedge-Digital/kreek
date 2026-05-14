@@ -1,43 +1,43 @@
 use sqlx::PgPool;
 use time::OffsetDateTime;
-use crate::lib::persistance::event_log_repository::{EventLogRepository, IEventLogRepository, StoredEvent};
+use crate::lib::persistance::event_log_repository::{EventLogRepository, IEventLogRepository, NewEvent};
 
 #[sqlx::test(fixtures("events"))]
-async fn find_by_subject_returns_only_matching_events(pool: PgPool) {
-    // Given — fixture : 3 events pour "team-abc", 1 pour "team-xyz"
+async fn find_by_tag_returns_only_matching_events(pool: PgPool) {
+    // Given — fixture : 3 events pour team-abc, 1 pour team-xyz
     let repo = EventLogRepository::new(pool);
 
     // When
-    let events = repo.find_by_subject("team-abc").await.unwrap();
+    let events = repo.find_by_tag(serde_json::json!({"team_id": "team-abc"})).await.unwrap();
 
     // Then
     assert_eq!(events.len(), 3);
-    assert!(events.iter().all(|e| e.subject.as_deref() == Some("team-abc")));
+    assert!(events.iter().all(|e| e.tags["team_id"] == "team-abc"));
 }
 
 #[sqlx::test(fixtures("events"))]
-async fn find_by_subject_returns_events_ordered_oldest_to_newest(pool: PgPool) {
-    // Given — fixture : 3 events pour "team-abc" avec timestamps différents
+async fn find_by_tag_returns_events_ordered_by_global_position(pool: PgPool) {
+    // Given — fixture : 3 events pour team-abc insérés dans l'ordre
     let repo = EventLogRepository::new(pool);
 
     // When
-    let events = repo.find_by_subject("team-abc").await.unwrap();
+    let events = repo.find_by_tag(serde_json::json!({"team_id": "team-abc"})).await.unwrap();
 
     // Then
-    assert_eq!(events[0].id, "evt-001"); // 10h00
-    assert_eq!(events[1].id, "evt-002"); // 11h00
-    assert_eq!(events[2].id, "evt-003"); // 12h00
-    assert!(events[0].time < events[1].time);
-    assert!(events[1].time < events[2].time);
+    assert_eq!(events.len(), 3);
+    assert!(events[0].global_position < events[1].global_position);
+    assert!(events[1].global_position < events[2].global_position);
+    assert!(events[0].occurred_at < events[1].occurred_at);
+    assert!(events[1].occurred_at < events[2].occurred_at);
 }
 
 #[sqlx::test(fixtures("events"))]
-async fn find_by_subject_returns_empty_for_unknown_subject(pool: PgPool) {
-    // Given — fixture chargée, aucun event pour "team-inconnu"
+async fn find_by_tag_returns_empty_for_unknown_tag(pool: PgPool) {
+    // Given — fixture chargée, aucun event pour team-inconnu
     let repo = EventLogRepository::new(pool);
 
     // When
-    let events = repo.find_by_subject("team-inconnu").await.unwrap();
+    let events = repo.find_by_tag(serde_json::json!({"team_id": "team-inconnu"})).await.unwrap();
 
     // Then
     assert!(events.is_empty());
@@ -46,63 +46,65 @@ async fn find_by_subject_returns_empty_for_unknown_subject(pool: PgPool) {
 #[sqlx::test]
 async fn save_persists_event(pool: PgPool) {
     let repo = EventLogRepository::new(pool);
-    let event = StoredEvent {
-        id:                "evt-save-01".to_string(),
-        source:            "/team-creation".to_string(),
-        event_type:        "TeamDraftCreated".to_string(),
-        spec_version:      "1.0".to_string(),
-        time:              OffsetDateTime::now_utc(),
-        data_schema:       "/schemas/team".to_string(),
-        data_content_type: Some("application/json".to_string()),
-        subject:           Some("team-save".to_string()),
-        data:              Some(r#"{"name":"Les Bleus"}"#.to_string()),
+    let event = NewEvent {
+        event_id:    "b0000000-0000-0000-0000-000000000001".to_string(),
+        emitter:     "00000000-0000-0000-0000-000000000001".to_string(),
+        event_type:  "TeamDraftCreated".to_string(),
+        tags:        serde_json::json!({"team_id": "team-save"}),
+        payload:     serde_json::json!({"name": "Les Bleus"}),
+        occurred_at: OffsetDateTime::now_utc(),
     };
 
     repo.save(&event).await.unwrap();
 
-    let found = repo.find_by_subject("team-save").await.unwrap();
+    let found = repo.find_by_tag(serde_json::json!({"team_id": "team-save"})).await.unwrap();
     assert_eq!(found.len(), 1);
-    assert_eq!(found[0].id, "evt-save-01");
     assert_eq!(found[0].event_type, "TeamDraftCreated");
-    assert_eq!(found[0].data.as_deref(), Some(r#"{"name":"Les Bleus"}"#));
-}
-
-#[sqlx::test]
-async fn save_returns_error_on_duplicate_id(pool: PgPool) {
-    let repo = EventLogRepository::new(pool);
-    let event = StoredEvent {
-        id:                "evt-dup".to_string(),
-        source:            "/team-creation".to_string(),
-        event_type:        "TeamDraftCreated".to_string(),
-        spec_version:      "1.0".to_string(),
-        time:              OffsetDateTime::now_utc(),
-        data_schema:       "/schemas/team".to_string(),
-        data_content_type: None,
-        subject:           Some("team-dup".to_string()),
-        data:              None,
-    };
-
-    repo.save(&event).await.unwrap();
-    let result = repo.save(&event).await;
-    assert!(result.is_err());
+    assert_eq!(found[0].payload["name"], "Les Bleus");
+    assert_eq!(found[0].tags["team_id"], "team-save");
+    assert!(found[0].event_id.is_some());
 }
 
 #[sqlx::test(fixtures("events"))]
-async fn find_by_subject_maps_all_fields_correctly(pool: PgPool) {
-    // Given — fixture : evt-001 avec tous les champs renseignés
+async fn find_by_tag_maps_all_fields_correctly(pool: PgPool) {
+    // Given — fixture : premier event de team-abc (position la plus basse)
     let repo = EventLogRepository::new(pool);
 
     // When
-    let events = repo.find_by_subject("team-abc").await.unwrap();
+    let events = repo.find_by_tag(serde_json::json!({"team_id": "team-abc"})).await.unwrap();
     let first = &events[0];
 
     // Then
-    assert_eq!(first.id, "evt-001");
-    assert_eq!(first.source, "/team-creation");
     assert_eq!(first.event_type, "TeamDraftCreated");
-    assert_eq!(first.spec_version, "1.0");
-    assert_eq!(first.data_schema, "/schemas/team");
-    assert_eq!(first.data_content_type.as_deref(), Some("application/json"));
-    assert_eq!(first.subject.as_deref(), Some("team-abc"));
-    assert!(first.data.is_some());
+    assert_eq!(first.emitter.as_deref(), Some("00000000-0000-0000-0000-000000000001"));
+    assert_eq!(first.tags["team_id"], "team-abc");
+    assert_eq!(first.payload["name"], "Les Bleus");
+    assert!(first.global_position > 0);
+    assert!(first.recorded_at >= first.occurred_at);
+}
+
+#[sqlx::test]
+async fn find_by_tag_supports_multi_tag_filter(pool: PgPool) {
+    let repo = EventLogRepository::new(pool);
+    let event = NewEvent {
+        event_id:    "c0000000-0000-0000-0000-000000000001".to_string(),
+        emitter:     "00000000-0000-0000-0000-000000000001".to_string(),
+        event_type:  "TeamDraftCreated".to_string(),
+        tags:        serde_json::json!({"team_id": "team-multi", "space_id": "space-1"}),
+        payload:     serde_json::json!({}),
+        occurred_at: OffsetDateTime::now_utc(),
+    };
+    repo.save(&event).await.unwrap();
+
+    // When — filtre sur les deux tags
+    let found = repo.find_by_tag(serde_json::json!({"team_id": "team-multi", "space_id": "space-1"})).await.unwrap();
+    assert_eq!(found.len(), 1);
+
+    // When — filtre partiel : doit aussi matcher
+    let found_partial = repo.find_by_tag(serde_json::json!({"team_id": "team-multi"})).await.unwrap();
+    assert_eq!(found_partial.len(), 1);
+
+    // When — mauvais space_id : ne doit pas matcher
+    let not_found = repo.find_by_tag(serde_json::json!({"team_id": "team-multi", "space_id": "space-99"})).await.unwrap();
+    assert!(not_found.is_empty());
 }

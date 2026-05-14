@@ -1,9 +1,7 @@
 use sqlx::PgPool;
-use crate::app::shared_kernel::authorization::SpaceAuthorization;
 use crate::app::shared_kernel::common_types::{CloudinaryImage, SpaceId};
 use crate::app::shared_kernel::space_name::SpaceName;
-use crate::app::spaces::domain::Space::Space;
-use crate::app::spaces::domain::ports::ISpaceRepository;
+use crate::app::spaces::domain::space::Space;
 use crate::app::spaces::io::repository::space_repository::SpaceRepository;
 
 fn make_space(name: &str) -> Space {

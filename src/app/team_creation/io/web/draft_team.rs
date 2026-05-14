@@ -1,10 +1,7 @@
 use askama::Template;
-use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
-use crate::app::auth::auth_backend::AuthSession;
 use crate::app::team_creation::routes::Routes;
-use crate::state::AppState;
 use crate::web::app_layout::AppLayout;
 use crate::web::extractors::space_permissions::SpacePermissions;
 use crate::web::routes::Routes as WebRoutes;

@@ -1,44 +1,31 @@
 use sqlx::PgPool;
 use time::OffsetDateTime;
-use crate::app::shared_kernel::domain_event::DomainEvent;
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct StoredEvent {
-    pub id:                 String,
-    pub source:             String,
-    pub event_type:         String,
-    pub spec_version:       String,
-    pub time:               OffsetDateTime,
-    pub data_schema:        String,
-    pub data_content_type:  Option<String>,
-    pub subject:            Option<String>,
-    pub data:               Option<String>,
+    pub global_position: i64,
+    pub event_id:        Option<String>,
+    pub emitter:         Option<String>,
+    pub event_type:      String,
+    pub tags:            serde_json::Value,
+    pub payload:         serde_json::Value,
+    pub occurred_at:     OffsetDateTime,
+    pub recorded_at:     OffsetDateTime,
+}
+
+#[derive(Debug)]
+pub struct NewEvent {
+    pub event_id:    String,
+    pub emitter:     String,
+    pub event_type:  String,
+    pub tags:        serde_json::Value,
+    pub payload:     serde_json::Value,
+    pub occurred_at: OffsetDateTime,
 }
 
 pub trait IEventLogRepository: Send + Sync {
-    async fn find_by_subject(&self, subject: &str) -> Result<Vec<StoredEvent>, sqlx::Error>;
-    async fn save(&self, event: &StoredEvent) -> Result<(), sqlx::Error>;
-
-    async fn save_event<E: DomainEvent>(
-        &self,
-        id: String,
-        user_id: Option<String>,
-        subject: Option<String>,
-        event: &E,
-    ) -> Result<(), sqlx::Error> {
-        let stored = StoredEvent {
-            id,
-            source:            user_id.unwrap_or_else(|| "/".to_string()),
-            event_type:        E::event_type().to_string(),
-            spec_version:      E::version().to_string(),
-            time:              OffsetDateTime::now_utc(),
-            data_schema:       E::schema().to_string(),
-            data_content_type: Some("application/json".to_string()),
-            subject,
-            data:              event.serialize_data(),
-        };
-        self.save(&stored).await
-    }
+    fn find_by_tag(&self, tag_filter: serde_json::Value) -> impl std::future::Future<Output = Result<Vec<StoredEvent>, sqlx::Error>> + Send;
+    fn save(&self, event: &NewEvent) -> impl std::future::Future<Output = Result<(), sqlx::Error>> + Send;
 }
 
 pub struct EventLogRepository {
@@ -52,29 +39,27 @@ impl EventLogRepository {
 }
 
 impl IEventLogRepository for EventLogRepository {
-    async fn find_by_subject(&self, subject: &str) -> Result<Vec<StoredEvent>, sqlx::Error> {
+    async fn find_by_tag(&self, tag_filter: serde_json::Value) -> Result<Vec<StoredEvent>, sqlx::Error> {
         sqlx::query_file_as!(
             StoredEvent,
-            "src/lib/persistance/sql/find_by_subject.sql",
-            subject
+            "src/lib/persistance/sql/find_by_tag.sql",
+            tag_filter,
         )
         .fetch_all(&self.pool)
         .await
     }
 
-    async fn save(&self, event: &StoredEvent) -> Result<(), sqlx::Error> {
-        sqlx::query_file!(
-            "src/lib/persistance/sql/insert_event.sql",
-            event.id,
-            event.source,
-            event.event_type,
-            event.spec_version,
-            event.time,
-            event.data_schema,
-            event.data_content_type,
-            event.subject,
-            event.data,
+    async fn save(&self, event: &NewEvent) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"INSERT INTO event_log (event_id, emitter, event_type, tags, payload, occurred_at)
+VALUES ($1::text::uuid, $2::text::uuid, $3, $4, $5, $6)"#,
         )
+        .bind(&event.event_id)
+        .bind(&event.emitter)
+        .bind(&event.event_type)
+        .bind(&event.tags)
+        .bind(&event.payload)
+        .bind(event.occurred_at)
         .execute(&self.pool)
         .await?;
         Ok(())

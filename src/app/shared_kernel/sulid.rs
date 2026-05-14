@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display};
 use ulid::{DecodeError, Ulid};
 
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, Hash)]
 pub struct SUlid(Ulid);
 
 #[derive(Debug)]
