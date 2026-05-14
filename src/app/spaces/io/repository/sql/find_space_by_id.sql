@@ -6,7 +6,7 @@ SELECT
     u.coach_name,
     u.coach_icon,
     us.profile
-FROM space s
-LEFT JOIN user_space us ON us.space_id = s.id
-LEFT JOIN users u ON u.id = us.coach_id
+FROM spaces s
+LEFT JOIN spaces__user_space us ON us.space_id = s.id
+LEFT JOIN auth__users u ON u.id = us.coach_id
 WHERE s.id = $1

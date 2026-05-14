@@ -1,7 +1,7 @@
 SELECT
     global_position,
-    event_id::text AS event_id,
-    emitter::text  AS emitter,
+    event_id,
+    emitter,
     event_type,
     tags,
     payload,

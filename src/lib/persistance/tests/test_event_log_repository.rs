@@ -47,8 +47,8 @@ async fn find_by_tag_returns_empty_for_unknown_tag(pool: PgPool) {
 async fn save_persists_event(pool: PgPool) {
     let repo = EventLogRepository::new(pool);
     let event = NewEvent {
-        event_id:    "b0000000-0000-0000-0000-000000000001".to_string(),
-        emitter:     "00000000-0000-0000-0000-000000000001".to_string(),
+        event_id:    "01JQQQQQQQQQQQQQQQQQQQQB01".to_string(),
+        emitter:     "01JQQQQQQQQQQQQQQQQQQQQ001".to_string(),
         event_type:  "TeamDraftCreated".to_string(),
         tags:        serde_json::json!({"team_id": "team-save"}),
         payload:     serde_json::json!({"name": "Les Bleus"}),
@@ -62,7 +62,7 @@ async fn save_persists_event(pool: PgPool) {
     assert_eq!(found[0].event_type, "TeamDraftCreated");
     assert_eq!(found[0].payload["name"], "Les Bleus");
     assert_eq!(found[0].tags["team_id"], "team-save");
-    assert!(found[0].event_id.is_some());
+    assert_eq!(found[0].event_id, "01JQQQQQQQQQQQQQQQQQQQQB01");
 }
 
 #[sqlx::test(fixtures("events"))]
@@ -76,7 +76,7 @@ async fn find_by_tag_maps_all_fields_correctly(pool: PgPool) {
 
     // Then
     assert_eq!(first.event_type, "TeamDraftCreated");
-    assert_eq!(first.emitter.as_deref(), Some("00000000-0000-0000-0000-000000000001"));
+    assert_eq!(first.emitter, "01JQQQQQQQQQQQQQQQQQQQQ001");
     assert_eq!(first.tags["team_id"], "team-abc");
     assert_eq!(first.payload["name"], "Les Bleus");
     assert!(first.global_position > 0);
@@ -87,8 +87,8 @@ async fn find_by_tag_maps_all_fields_correctly(pool: PgPool) {
 async fn find_by_tag_supports_multi_tag_filter(pool: PgPool) {
     let repo = EventLogRepository::new(pool);
     let event = NewEvent {
-        event_id:    "c0000000-0000-0000-0000-000000000001".to_string(),
-        emitter:     "00000000-0000-0000-0000-000000000001".to_string(),
+        event_id:    "01JQQQQQQQQQQQQQQQQQQQQC01".to_string(),
+        emitter:     "01JQQQQQQQQQQQQQQQQQQQQ001".to_string(),
         event_type:  "TeamDraftCreated".to_string(),
         tags:        serde_json::json!({"team_id": "team-multi", "space_id": "space-1"}),
         payload:     serde_json::json!({}),

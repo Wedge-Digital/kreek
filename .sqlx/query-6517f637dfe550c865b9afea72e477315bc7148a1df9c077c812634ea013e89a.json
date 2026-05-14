@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT\n    global_position,\n    event_id::text AS event_id,\n    emitter::text  AS emitter,\n    event_type,\n    tags,\n    payload,\n    occurred_at,\n    recorded_at\nFROM event_log\nWHERE tags @> $1\nORDER BY global_position ASC",
+  "query": "SELECT\n    global_position,\n    event_id,\n    emitter,\n    event_type,\n    tags,\n    payload,\n    occurred_at,\n    recorded_at\nFROM event_log\nWHERE tags @> $1\nORDER BY global_position ASC",
   "describe": {
     "columns": [
       {
@@ -11,12 +11,12 @@
       {
         "ordinal": 1,
         "name": "event_id",
-        "type_info": "Text"
+        "type_info": "Varchar"
       },
       {
         "ordinal": 2,
         "name": "emitter",
-        "type_info": "Text"
+        "type_info": "Varchar"
       },
       {
         "ordinal": 3,
@@ -51,8 +51,8 @@
     },
     "nullable": [
       false,
-      null,
-      null,
+      false,
+      false,
       false,
       false,
       false,
@@ -60,5 +60,5 @@
       false
     ]
   },
-  "hash": "092b209601d225d123fa3819c6c75af741235bf022ddffbaf092e9b791e6b50a"
+  "hash": "6517f637dfe550c865b9afea72e477315bc7148a1df9c077c812634ea013e89a"
 }

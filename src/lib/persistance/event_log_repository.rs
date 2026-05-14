@@ -4,8 +4,8 @@ use time::OffsetDateTime;
 #[derive(Debug, sqlx::FromRow)]
 pub struct StoredEvent {
     pub global_position: i64,
-    pub event_id:        Option<String>,
-    pub emitter:         Option<String>,
+    pub event_id:        String,
+    pub emitter:         String,
     pub event_type:      String,
     pub tags:            serde_json::Value,
     pub payload:         serde_json::Value,
@@ -51,8 +51,7 @@ impl IEventLogRepository for EventLogRepository {
 
     async fn save(&self, event: &NewEvent) -> Result<(), sqlx::Error> {
         sqlx::query(
-            r#"INSERT INTO event_log (event_id, emitter, event_type, tags, payload, occurred_at)
-VALUES ($1::text::uuid, $2::text::uuid, $3, $4, $5, $6)"#,
+            "INSERT INTO event_log (event_id, emitter, event_type, tags, payload, occurred_at) VALUES ($1, $2, $3, $4, $5, $6)",
         )
         .bind(&event.event_id)
         .bind(&event.emitter)

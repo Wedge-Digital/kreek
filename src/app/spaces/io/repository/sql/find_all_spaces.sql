@@ -1,3 +1,3 @@
 SELECT id, space_name, space_icon_path
-FROM space
+FROM spaces
 ORDER BY space_name
