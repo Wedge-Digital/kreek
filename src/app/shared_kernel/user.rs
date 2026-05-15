@@ -1,4 +1,4 @@
-use crate::app::auth::domain::email::Email;
+use crate::app::shared_kernel::email::Email;
 use crate::app::shared_kernel::coach_icon::CoachIcon;
 use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::shared_kernel::common_types::UserId;

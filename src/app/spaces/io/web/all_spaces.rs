@@ -39,8 +39,8 @@ pub async fn space_all(
     };
 
     let (all, member_of) = tokio::try_join!(
-        state.space_repository.find_all(),
-        state.space_repository.find_by_coach_id(&user.id),
+        state.spaces.space_repository.find_all(),
+        state.spaces.space_repository.find_by_coach_id(&user.id),
     ).unwrap_or_default();
 
     let member_ids: HashSet<String> = member_of.into_iter().map(|s| s.id).collect();

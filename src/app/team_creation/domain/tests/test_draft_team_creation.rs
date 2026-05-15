@@ -46,14 +46,14 @@ pub fn assert_new_team_is_given_a_new_id() {
     let creator_id = id_service.generate_id();
     let team = DraftTeam::new(&id_service, creator_id, base);
     let id = team.get_id();
-    let expected_id = EntityId::from_string("01D39ZY06FGSCTVN4T2V9PKHFZ").unwrap();
+    let expected_id = EntityId::try_new("01D39ZY06FGSCTVN4T2V9PKHFZ").unwrap();
     assert_eq!(id, expected_id);
 }
 
 #[test]
 pub fn assert_factory_method_is_ok() {
     let id_service = FakeIdService::new();
-    let coach_id = CoachId::from_string("01F8Z3ZQZQZQZQZQZQZQZQZQZQ").unwrap();
+    let coach_id = CoachId::try_new("01F8Z3ZQZQZQZQZQZQZQZQZQZQ").unwrap();
     let creator_id = id_service.generate_id();
     let team = create_draft_team(&id_service,
                                             creator_id,
@@ -61,7 +61,7 @@ pub fn assert_factory_method_is_ok() {
                                             coach_id,
                                             None);
     let id = team.get_id();
-    let expected_id = EntityId::from_string("01D39ZY06FGSCTVN4T2V9PKHFZ").unwrap();
+    let expected_id = EntityId::try_new("01D39ZY06FGSCTVN4T2V9PKHFZ").unwrap();
     let expected_team_str = r#"{
     "entity_id": "01D39ZY06FGSCTVN4T2V9PKHFZ",
     "created_by": "01D39ZY06FGSCTVN4T2V9PKHFZ",
@@ -81,7 +81,7 @@ pub fn assert_factory_method_is_ok() {
 #[test]
 pub fn assert_deserialize_team_to_hash_map() {
     let id_service = FakeIdService::new();
-    let coach_id = CoachId::from_string("01F8Z3ZQZQZQZQZQZQZQZQZQZQ").unwrap();
+    let coach_id = CoachId::try_new("01F8Z3ZQZQZQZQZQZQZQZQZQZQ").unwrap();
     let creator_id = id_service.generate_id();
     let team = create_draft_team(&id_service,
                                             creator_id,

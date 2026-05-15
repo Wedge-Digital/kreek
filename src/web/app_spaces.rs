@@ -4,7 +4,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::news::routes::Routes as NewsRoutes;
-use crate::app::spaces::domain::ports::SpaceSummary;
+use crate::app::spaces::domain::space_repository_port::space_repository_port::SpaceSummary;
 use crate::app::spaces::routes::Routes;
 use crate::state::AppState;
 
@@ -53,7 +53,7 @@ pub async fn app_spaces(
     };
 
     let spaces = state
-        .space_repository
+        .spaces.space_repository
         .find_by_coach_id(&user.id)
         .await
         .unwrap_or_default();

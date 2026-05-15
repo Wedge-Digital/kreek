@@ -5,9 +5,9 @@ use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, SpaceId}
 use crate::app::shared_kernel::space_name::SpaceName;
 use crate::app::spaces::domain::coach::Coach;
 use crate::app::spaces::domain::space::Space;
-use crate::app::spaces::domain::ports::{ISpaceRepository, SpaceRepositoryError, SpaceSummary};
 use async_trait::async_trait;
 use sqlx::PgPool;
+use crate::app::spaces::domain::space_repository_port::space_repository_port::{ISpaceRepository, SpaceRepositoryError, SpaceSummary};
 
 fn db_err(e: impl std::fmt::Display) -> SpaceRepositoryError {
     SpaceRepositoryError::Database(e.to_string())
@@ -38,7 +38,7 @@ impl SpaceRepository {
 #[async_trait]
 impl ISpaceRepository for SpaceRepository {
     async fn save(&self, space: &Space) -> Result<(), SpaceRepositoryError> {
-        sqlx::query(include_str!("sql/insert_space.sql"))
+        sqlx::query(include_str!("sql/space/insert_space.sql"))
             .bind(space.id.to_string())
             .bind(space.name.as_ref())
             .bind(space.logo.as_ref())
@@ -62,7 +62,7 @@ impl ISpaceRepository for SpaceRepository {
         coach_id: &CoachId,
         profile: &SpaceAuthorization,
     ) -> Result<(), SpaceRepositoryError> {
-        sqlx::query(include_str!("sql/add_space_member.sql"))
+        sqlx::query(include_str!("sql/space/add_space_member.sql"))
             .bind(space_id.to_string())
             .bind(coach_id.to_string())
             .bind(profile.as_str())
@@ -88,7 +88,7 @@ impl ISpaceRepository for SpaceRepository {
         #[derive(sqlx::FromRow)]
         struct Row { profile: String }
 
-        let row = sqlx::query_as::<_, Row>(include_str!("sql/find_user_profile_for_space.sql"))
+        let row = sqlx::query_as::<_, Row>(include_str!("sql/space/find_user_for_space.sql"))
             .bind(coach_id.to_string())
             .bind(space_id.to_string())
             .fetch_optional(&self.pool)
@@ -111,7 +111,7 @@ impl ISpaceRepository for SpaceRepository {
             space_icon_path: String,
         }
 
-        let rows = sqlx::query_as::<_, Row>(include_str!("sql/find_all_spaces.sql"))
+        let rows = sqlx::query_as::<_, Row>(include_str!("sql/space/find_all_spaces.sql"))
             .fetch_all(&self.pool)
             .await
             .map_err(db_err)?;
@@ -130,7 +130,7 @@ impl ISpaceRepository for SpaceRepository {
             space_icon_path: String,
         }
 
-        let rows = sqlx::query_as::<_, Row>(include_str!("sql/find_spaces_by_coach_id.sql"))
+        let rows = sqlx::query_as::<_, Row>(include_str!("sql/space/find_spaces_by_coach_id.sql"))
             .bind(coach_id.to_string())
             .fetch_all(&self.pool)
             .await
@@ -143,7 +143,7 @@ impl ISpaceRepository for SpaceRepository {
     }
 
     async fn find_by_id(&self, id: &SpaceId) -> Result<Option<Space>, SpaceRepositoryError> {
-        let rows = sqlx::query_as::<_, SpaceCoachRow>(include_str!("sql/find_space_by_id.sql"))
+        let rows = sqlx::query_as::<_, SpaceCoachRow>(include_str!("sql/space/find_space_by_id.sql"))
             .bind(id.to_string())
             .fetch_all(&self.pool)
             .await
@@ -155,7 +155,7 @@ impl ISpaceRepository for SpaceRepository {
 
         let first = &rows[0];
 
-        let space_id = SpaceId::from_string(&first.space_id).map_err(db_err)?;
+        let space_id = SpaceId::try_new(&first.space_id).map_err(db_err)?;
         let space_name = SpaceName::try_new(&first.space_name).map_err(db_err)?;
         let logo = CloudinaryImage::try_new(
             first.space_icon_path.clone(),
@@ -170,7 +170,7 @@ impl ISpaceRepository for SpaceRepository {
                 continue;
             };
 
-            let coach_id = CoachId::from_string(raw_id).map_err(db_err)?;
+            let coach_id = CoachId::try_new(raw_id).map_err(db_err)?;
             let coach_name = CoachName::try_new(raw_name.clone()).map_err(db_err)?;
             let coach_icon = CoachIcon::try_new(raw_icon.clone()).map_err(db_err)?;
             let profile = SpaceAuthorization::try_from(raw_profile.as_str())

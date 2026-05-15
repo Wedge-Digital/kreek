@@ -87,7 +87,7 @@ pub async fn app_menu(
             let current_url = headers.get("hx-current-url").and_then(|v| v.to_str().ok())?;
             let sid = extract_space_id(current_url)?;
             let section = extract_active_section(current_url);
-            let spaces = state.space_repository.find_by_coach_id(&user.id).await.ok()?;
+            let spaces = state.spaces.space_repository.find_by_coach_id(&user.id).await.ok()?;
             let space = spaces.into_iter().find(|s| s.id == sid)?;
             Some((space.name, sid, section))
         }.await;

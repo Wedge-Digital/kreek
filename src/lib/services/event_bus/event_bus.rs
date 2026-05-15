@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-use crate::lib::domain_event::DomainEvent;
+use crate::lib::domain_event::DomainEventEnvelope;
 
-type EventHandler = Box<dyn Fn(&DomainEvent) + Send + Sync>;
+type EventHandler = Box<dyn Fn(&DomainEventEnvelope) + Send + Sync>;
 
 pub struct EventBus {
     subscribers:      HashMap<String, Vec<EventHandler>>,
@@ -16,18 +16,18 @@ impl EventBus {
         }
     }
 
-    pub fn subscribe_all(&mut self, handler: impl Fn(&DomainEvent) + Send + Sync + 'static) {
+    pub fn subscribe_all(&mut self, handler: impl Fn(&DomainEventEnvelope) + Send + Sync + 'static) {
         self.omni_subscribers.push(Box::new(handler));
     }
 
-    pub fn subscribe(&mut self, event_type: impl Into<String>, handler: impl Fn(&DomainEvent) + Send + Sync + 'static) {
+    pub fn subscribe(&mut self, event_type: impl Into<String>, handler: impl Fn(&DomainEventEnvelope) + Send + Sync + 'static) {
         self.subscribers
             .entry(event_type.into())
             .or_default()
             .push(Box::new(handler));
     }
 
-    pub fn publish(&self, event: &DomainEvent) {
+    pub fn publish(&self, event: &DomainEventEnvelope) {
         for handler in &self.omni_subscribers {
             handler(event);
         }
@@ -40,11 +40,11 @@ impl EventBus {
 }
 
 pub trait IEventPublisher: Send + Sync {
-    fn publish(&self, event: DomainEvent);
+    fn publish(&self, event: DomainEventEnvelope);
 }
 
 impl IEventPublisher for EventBus {
-    fn publish(&self, event: DomainEvent) {
+    fn publish(&self, event: DomainEventEnvelope) {
         EventBus::publish(self, &event);
     }
 }
@@ -55,8 +55,8 @@ mod tests {
     use std::sync::{Arc, Mutex};
     use time::OffsetDateTime;
 
-    fn make_event(event_type: &str) -> DomainEvent {
-        DomainEvent {
+    fn make_event(event_type: &str) -> DomainEventEnvelope {
+        DomainEventEnvelope {
             event_id:    "01JQQQQQQQQQQQQQQQQQQQQ001".into(),
             emitter:     "01JQQQQQQQQQQQQQQQQQQQQ002".into(),
             event_type:  event_type.into(),

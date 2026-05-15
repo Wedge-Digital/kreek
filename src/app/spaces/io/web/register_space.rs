@@ -95,7 +95,7 @@ pub async fn register_space_submit(
 
     let cmd = RegisterNewSpaceCommand { coach_id, space_name, space_logo };
 
-    match execute(cmd, state.space_repository.as_ref()).await {
+    match execute(cmd, state.spaces.space_repository.as_ref(), state.spaces.user_cache_repository.as_ref(), state.domain_event_bus.as_ref()).await {
         Ok(()) => Response::builder()
             .header("HX-Redirect", path::NEW_SPACE)
             .body(Body::empty())
@@ -106,7 +106,7 @@ pub async fn register_space_submit(
             tmpl.into_response()
         }
 
-        Err(RegisterSpaceError::Database(_)) => {
+        Err(RegisterSpaceError::CoachNotFound) | Err(RegisterSpaceError::Database(_)) => {
             tmpl.space_name_error = Some("Erreur interne, veuillez réessayer.".into());
             tmpl.into_response()
         }

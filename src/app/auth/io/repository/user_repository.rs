@@ -1,6 +1,6 @@
 use crate::app::shared_kernel::coach_icon::CoachIcon;
 use crate::app::shared_kernel::coach_name::CoachName;
-use crate::app::auth::domain::email::Email;
+use crate::app::shared_kernel::email::Email;
 use crate::app::auth::ports::{IUserRepository, RepositoryError};
 use crate::app::shared_kernel::common_types::UserId;
 use crate::app::shared_kernel::user::User;
@@ -25,7 +25,7 @@ impl TryFrom<UserRow> for User {
 
     fn try_from(row: UserRow) -> Result<Self, Self::Error> {
         Ok(User::new(
-            UserId::from_string(&row.id).map_err(db_err)?,
+            UserId::try_new(&row.id).map_err(db_err)?,
             CoachName::try_new(row.coach_name).map_err(db_err)?,
             row.coach_icon.map(CoachIcon::try_new).transpose().map_err(db_err)?,
             Email::try_new(row.email).map_err(db_err)?,

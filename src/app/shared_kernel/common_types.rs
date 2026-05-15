@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use crate::app::shared_kernel::sulid::SUlid;
 use nutype::nutype;
 
@@ -28,3 +29,9 @@ pub trait Entity:PartialEq<Self> {
     derive(Debug, Clone, Serialize, Deserialize, PartialEq, AsRef)
 )]
 pub struct CloudinaryImage(String);
+
+impl Display for CloudinaryImage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_ref())
+    }   
+}

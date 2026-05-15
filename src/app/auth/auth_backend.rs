@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
-use crate::app::auth::domain::email::Email;
+use crate::app::shared_kernel::email::Email;
 use crate::app::auth::ports::{IUserRepository, RepositoryError};
 use crate::app::auth::use_cases::perform_login::PerformLoginCommand;
 use crate::app::shared_kernel::coach_name::CoachName;
@@ -11,7 +11,7 @@ const BYPASS_USER_ID: &str = "00000000000000000000000000";
 
 pub fn bypass_user() -> User {
     User::new(
-        UserId::from_string(BYPASS_USER_ID).expect("BYPASS_USER_ID invalide"),
+        UserId::try_new(BYPASS_USER_ID).expect("BYPASS_USER_ID invalide"),
         CoachName::try_new("Dev User").expect("bypass coach_name invalide"),
         None,
         Email::try_new("dev@bypass.local").expect("bypass email invalide"),

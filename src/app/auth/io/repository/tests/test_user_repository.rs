@@ -1,6 +1,6 @@
 use sqlx::PgPool;
 use crate::app::shared_kernel::coach_name::CoachName;
-use crate::app::auth::domain::email::Email;
+use crate::app::shared_kernel::email::Email;
 use crate::app::auth::io::repository::user_repository::UserRepository;
 use crate::app::auth::ports::{IUserRepository, RepositoryError};
 use crate::app::shared_kernel::coach_icon::CoachIcon;

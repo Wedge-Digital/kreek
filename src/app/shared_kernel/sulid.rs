@@ -30,7 +30,7 @@ impl SUlid {
         SUlid(Ulid::new())
     }
 
-    pub fn from_string(s: &str) ->  Result<SUlid, SUlidDecodeError>{
+    pub fn try_new(s: &str) ->  Result<SUlid, SUlidDecodeError>{
         let ulid = Ulid::from_string(s);
         match ulid {
             Ok(ulid) => Ok(SUlid(ulid)),
@@ -70,7 +70,7 @@ impl<'de> serde::Deserialize<'de> for SUlid {
     {
         let s = String::deserialize(deserializer);
         match s {
-            Ok(s) => SUlid::from_string(&s).map_err(serde::de::Error::custom),
+            Ok(s) => SUlid::try_new(&s).map_err(serde::de::Error::custom),
             Err(err) => Err(err),
         }
     }

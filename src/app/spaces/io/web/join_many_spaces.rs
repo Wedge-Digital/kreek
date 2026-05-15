@@ -6,7 +6,7 @@ use serde::Deserialize;
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::shared_kernel::authorization::SpaceAuthorization;
 use crate::app::shared_kernel::common_types::SpaceId;
-use crate::app::spaces::domain::ports::SpaceRepositoryError;
+use crate::app::spaces::domain::space_repository_port::space_repository_port::SpaceRepositoryError;
 use crate::state::AppState;
 
 fn string_or_vec<'de, D>(de: D) -> Result<Vec<String>, D::Error>
@@ -51,12 +51,12 @@ pub async fn join_many_spaces(
     let mut first_joined: Option<String> = None;
 
     for raw_id in &payload.space_ids {
-        let space_id = match SpaceId::from_string(raw_id) {
+        let space_id = match SpaceId::try_new(raw_id) {
             Ok(id) => id,
             Err(_) => continue,
         };
 
-        match state.space_repository.add_member(&space_id, &user.id, &SpaceAuthorization::SimpleUser).await {
+        match state.spaces.space_repository.add_member(&space_id, &user.id, &SpaceAuthorization::SimpleUser).await {
             Ok(()) => {
                 if first_joined.is_none() {
                     first_joined = Some(raw_id.clone());

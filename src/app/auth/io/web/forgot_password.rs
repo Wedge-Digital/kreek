@@ -81,8 +81,8 @@ pub async fn post_forgot_password(
 
     match execute(
         SendResetPasswordEmailCommand { coach_name, host_domain: state.host_domain.clone()},
-        state.user_repository.as_ref(),
-        state.reset_token_repository.as_ref(),
+        state.auth.user_repository.as_ref(),
+        state.auth.reset_token_repository.as_ref(),
         state.email_service.as_ref(),
     ).await {
         Ok(()) | Err(SendResetPasswordEmailError::CoachNameNotFound) => {

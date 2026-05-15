@@ -45,10 +45,10 @@ where
             .await
             .map_err(|_| StatusCode::BAD_REQUEST)?;
         let raw_id = params.get("space_id").ok_or(StatusCode::BAD_REQUEST)?;
-        let space_id = SpaceId::from_string(raw_id).map_err(|_| StatusCode::BAD_REQUEST)?;
+        let space_id = SpaceId::try_new(raw_id).map_err(|_| StatusCode::BAD_REQUEST)?;
 
         let role = app_state
-            .space_repository
+            .spaces.space_repository
             .find_member_profile(&user.id, &space_id)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?

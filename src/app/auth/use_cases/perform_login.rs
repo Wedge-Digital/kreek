@@ -4,9 +4,10 @@ use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use std::fmt;
 use serde::Deserialize;
 use time::OffsetDateTime;
-pub const USER_LOGGED_IN: &str = "UserLoggedIn";
+use crate::app::auth::domain::domain_event::AuthDomainEvent::UserLoggedIn;
+use crate::app::auth::domain::domain_event::USER_LOGGED_IN;
 use crate::app::shared_kernel::common_types::UserId;
-use crate::lib::domain_event::DomainEvent;
+use crate::lib::domain_event::DomainEventEnvelope;
 use crate::lib::services::event_bus::event_bus::IEventPublisher;
 
 #[derive(Debug)]
@@ -64,8 +65,12 @@ pub async fn execute(
     let user_id   = user.id.to_string();
     let user_name = user.coach_name.clone().into_inner();
     let email     = user.email.as_ref().to_string();
+    let event_payload = UserLoggedIn {
+        event_id:   UserId::new().to_string(),
+        user_id:    user_id.clone(),
+    };
 
-    bus.publish(DomainEvent {
+    bus.publish(DomainEventEnvelope {
         event_id:   UserId::new().to_string(),
         emitter:    user_id.clone(),
         event_type: USER_LOGGED_IN.into(),
@@ -73,7 +78,6 @@ pub async fn execute(
         payload:    serde_json::json!({
             "user_id":   user_id,
             "user_name": user_name,
-            "email":     email,
         }),
         occurred_at: OffsetDateTime::now_utc(),
     });
@@ -88,13 +92,13 @@ mod tests {
     use argon2::password_hash::{rand_core::OsRng, SaltString};
     use argon2::{Argon2, PasswordHasher};
     use crate::app::auth::io::repository::tests::fake_user_repository::{FakeUserRepository, FindResult};
-    use crate::lib::domain_event::DomainEvent;
+    use crate::lib::domain_event::DomainEventEnvelope;
     use crate::lib::services::event_bus::event_bus::IEventPublisher;
 
     struct FakeEventPublisher { published: Mutex<Vec<String>> }
 
     impl IEventPublisher for FakeEventPublisher {
-        fn publish(&self, event: DomainEvent) {
+        fn publish(&self, event: DomainEventEnvelope) {
             self.published.lock().unwrap().push(event.event_type);
         }
     }

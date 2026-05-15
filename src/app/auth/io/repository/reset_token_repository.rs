@@ -27,7 +27,7 @@ impl TryFrom<TokenRow> for ResetToken {
 
     fn try_from(row: TokenRow) -> Result<Self, Self::Error> {
         Ok(ResetToken {
-            token:      Token::from_string(&row.token).map_err(db_err)?,
+            token:      Token::try_new(&row.token).map_err(db_err)?,
             coach_name: CoachName::try_new(row.coach_name).map_err(db_err)?,
             created_at: row.created_at,
         })

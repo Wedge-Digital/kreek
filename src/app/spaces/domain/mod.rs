@@ -1,3 +1,6 @@
 pub mod space;
 pub mod coach;
-pub mod ports;
+pub mod space_repository_port;
+
+pub mod domain_event;
+pub mod user;

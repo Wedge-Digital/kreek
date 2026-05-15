@@ -1,4 +1,5 @@
 pub mod auth_backend;
+pub mod context;
 pub mod domain;
 pub mod io;
 pub mod ports;

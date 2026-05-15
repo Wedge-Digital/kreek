@@ -21,7 +21,7 @@ pub struct FakeIdService {
 impl FakeIdService {
     pub fn new() -> Self {
         FakeIdService{
-            id:SUlid::from_string("01D39ZY06FGSCTVN4T2V9PKHFZ").unwrap()
+            id:SUlid::try_new("01D39ZY06FGSCTVN4T2V9PKHFZ").unwrap()
         }
     }
 

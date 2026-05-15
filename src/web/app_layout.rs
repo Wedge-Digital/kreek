@@ -33,7 +33,7 @@ pub async fn app_layout(
     };
 
     let spaces = state
-        .space_repository
+        .spaces.space_repository
         .find_by_coach_id(&user.id)
         .await
         .unwrap_or_default();

@@ -59,7 +59,7 @@ pub async fn post_reset_password(
         password_confirm: payload.password_confirm,
     };
 
-    match execute(cmd, state.user_repository.as_ref(), state.reset_token_repository.as_ref()).await {
+    match execute(cmd, state.auth.user_repository.as_ref(), state.auth.reset_token_repository.as_ref()).await {
         Ok(()) => {
             let mut response = Response::new(Body::empty());
             response.headers_mut().insert(
