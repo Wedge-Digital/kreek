@@ -1,4 +1,4 @@
-use crate::app::shared_kernel::authorization::SpaceAuthorization;
+use crate::app::shared_kernel::authorization::SpaceProfile;
 use crate::app::shared_kernel::coach_icon::CoachIcon;
 use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, SpaceId};
@@ -60,7 +60,7 @@ impl ISpaceRepository for SpaceRepository {
         &self,
         space_id: &SpaceId,
         coach_id: &CoachId,
-        profile: &SpaceAuthorization,
+        profile: &SpaceProfile,
     ) -> Result<(), SpaceRepositoryError> {
         sqlx::query(include_str!("sql/space/add_space_member.sql"))
             .bind(space_id.to_string())
@@ -84,7 +84,7 @@ impl ISpaceRepository for SpaceRepository {
         &self,
         coach_id: &CoachId,
         space_id: &SpaceId,
-    ) -> Result<Option<SpaceAuthorization>, SpaceRepositoryError> {
+    ) -> Result<Option<SpaceProfile>, SpaceRepositoryError> {
         #[derive(sqlx::FromRow)]
         struct Row { profile: String }
 
@@ -97,7 +97,7 @@ impl ISpaceRepository for SpaceRepository {
 
         match row {
             None    => Ok(None),
-            Some(r) => SpaceAuthorization::try_from(r.profile.as_str())
+            Some(r) => SpaceProfile::try_from(r.profile.as_str())
                 .map(Some)
                 .map_err(SpaceRepositoryError::Database),
         }
@@ -173,7 +173,7 @@ impl ISpaceRepository for SpaceRepository {
             let coach_id = CoachId::try_new(raw_id).map_err(db_err)?;
             let coach_name = CoachName::try_new(raw_name.clone()).map_err(db_err)?;
             let coach_icon = CoachIcon::try_new(raw_icon.clone()).map_err(db_err)?;
-            let profile = SpaceAuthorization::try_from(raw_profile.as_str())
+            let profile = SpaceProfile::try_from(raw_profile.as_str())
                 .map_err(SpaceRepositoryError::Database)?;
 
             coaches.push(Coach::new(coach_id, coach_name, profile, coach_icon));

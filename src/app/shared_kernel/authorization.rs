@@ -1,29 +1,30 @@
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum SpaceAuthorization {
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub enum SpaceProfile {
     SpaceAdmin,
     MatchReporter,
     SimpleUser,
 }
 
-impl SpaceAuthorization {
+impl SpaceProfile {
     pub fn as_str(&self) -> &str {
         match self {
-            SpaceAuthorization::SpaceAdmin    => "SpaceAdmin",
-            SpaceAuthorization::MatchReporter => "MatchReporter",
-            SpaceAuthorization::SimpleUser    => "SimpleUser",
+            SpaceProfile::SpaceAdmin    => "SpaceAdmin",
+            SpaceProfile::MatchReporter => "MatchReporter",
+            SpaceProfile::SimpleUser    => "SimpleUser",
         }
     }
 }
 
-impl TryFrom<&str> for SpaceAuthorization {
+impl TryFrom<&str> for SpaceProfile {
     type Error = String;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         match s {
-            "SpaceAdmin"    => Ok(SpaceAuthorization::SpaceAdmin),
-            "MatchReporter" => Ok(SpaceAuthorization::MatchReporter),
-            "SimpleUser"    => Ok(SpaceAuthorization::SimpleUser),
+            "SpaceAdmin"    => Ok(SpaceProfile::SpaceAdmin),
+            "MatchReporter" => Ok(SpaceProfile::MatchReporter),
+            "SimpleUser"    => Ok(SpaceProfile::SimpleUser),
             other           => Err(format!("profil inconnu : {}", other)),
         }
     }
@@ -31,32 +32,32 @@ impl TryFrom<&str> for SpaceAuthorization {
 
 #[cfg(test)]
 mod tests {
-    use super::SpaceAuthorization;
+    use super::SpaceProfile;
 
     #[test]
     fn as_str_round_trips_for_all_variants() {
-        for variant in [SpaceAuthorization::SpaceAdmin, SpaceAuthorization::MatchReporter, SpaceAuthorization::SimpleUser] {
+        for variant in [SpaceProfile::SpaceAdmin, SpaceProfile::MatchReporter, SpaceProfile::SimpleUser] {
             let s = variant.as_str();
-            assert_eq!(SpaceAuthorization::try_from(s).unwrap(), variant);
+            assert_eq!(SpaceProfile::try_from(s).unwrap(), variant);
         }
     }
 
     #[test]
     fn try_from_valid_strings() {
-        assert_eq!(SpaceAuthorization::try_from("SpaceAdmin").unwrap(),    SpaceAuthorization::SpaceAdmin);
-        assert_eq!(SpaceAuthorization::try_from("MatchReporter").unwrap(), SpaceAuthorization::MatchReporter);
-        assert_eq!(SpaceAuthorization::try_from("SimpleUser").unwrap(),    SpaceAuthorization::SimpleUser);
+        assert_eq!(SpaceProfile::try_from("SpaceAdmin").unwrap(), SpaceProfile::SpaceAdmin);
+        assert_eq!(SpaceProfile::try_from("MatchReporter").unwrap(), SpaceProfile::MatchReporter);
+        assert_eq!(SpaceProfile::try_from("SimpleUser").unwrap(), SpaceProfile::SimpleUser);
     }
 
     #[test]
     fn try_from_unknown_string_returns_err() {
-        let result = SpaceAuthorization::try_from("SuperAdmin");
+        let result = SpaceProfile::try_from("SuperAdmin");
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("profil inconnu"));
     }
 
     #[test]
     fn try_from_empty_string_returns_err() {
-        assert!(SpaceAuthorization::try_from("").is_err());
+        assert!(SpaceProfile::try_from("").is_err());
     }
 }

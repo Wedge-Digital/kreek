@@ -35,3 +35,9 @@ impl Display for CloudinaryImage {
         write!(f, "{}", self.as_ref())
     }   
 }
+
+impl Display for SUlid {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
+}

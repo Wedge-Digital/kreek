@@ -1,10 +1,10 @@
 use sqlx::PgPool;
 use time::OffsetDateTime;
-use crate::lib::domain_event::DomainEventEnvelope;
+use crate::lib::event_envelope::EventEnvelope;
 use crate::lib::persistance::event_log_repository::{EventLogRepository, IEventLogRepository};
 
-fn make_event(event_type: &str, tags: serde_json::Value, payload: serde_json::Value) -> DomainEventEnvelope {
-    DomainEventEnvelope {
+fn make_event(event_type: &str, tags: serde_json::Value, payload: serde_json::Value) -> EventEnvelope {
+    EventEnvelope {
         event_id:    "01JQQQQQQQQQQQQQQQQQQQQB01".into(),
         emitter:     "01JQQQQQQQQQQQQQQQQQQQQ001".into(),
         event_type:  event_type.into(),

@@ -1,11 +1,19 @@
 use std::collections::HashMap;
-use crate::lib::domain_event::DomainEventEnvelope;
+use serde::{Deserialize, Serialize};
+use crate::lib::event_envelope::EventEnvelope;
+use crate::lib::services::event_bus::event_tags::EventTagName;
 
-type EventHandler = Box<dyn Fn(&DomainEventEnvelope) + Send + Sync>;
+type EventHandler = Box<dyn Fn(&EventEnvelope) + Send + Sync>;
 
 pub struct EventBus {
     subscribers:      HashMap<String, Vec<EventHandler>>,
     omni_subscribers: Vec<EventHandler>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EventTag {
+    pub name: EventTagName,
+    pub value: String,
 }
 
 impl EventBus {
@@ -16,18 +24,18 @@ impl EventBus {
         }
     }
 
-    pub fn subscribe_all(&mut self, handler: impl Fn(&DomainEventEnvelope) + Send + Sync + 'static) {
+    pub fn subscribe_all(&mut self, handler: impl Fn(&EventEnvelope) + Send + Sync + 'static) {
         self.omni_subscribers.push(Box::new(handler));
     }
 
-    pub fn subscribe(&mut self, event_type: impl Into<String>, handler: impl Fn(&DomainEventEnvelope) + Send + Sync + 'static) {
+    pub fn subscribe(&mut self, event_type: impl Into<String>, handler: impl Fn(&EventEnvelope) + Send + Sync + 'static) {
         self.subscribers
             .entry(event_type.into())
             .or_default()
             .push(Box::new(handler));
     }
 
-    pub fn publish(&self, event: &DomainEventEnvelope) {
+    pub fn publish(&self, event: &EventEnvelope) {
         for handler in &self.omni_subscribers {
             handler(event);
         }
@@ -40,12 +48,18 @@ impl EventBus {
 }
 
 pub trait IEventPublisher: Send + Sync {
-    fn publish(&self, event: DomainEventEnvelope);
+    fn publish(&self, event: EventEnvelope);
 }
 
 impl IEventPublisher for EventBus {
-    fn publish(&self, event: DomainEventEnvelope) {
+    fn publish(&self, event: EventEnvelope) {
         EventBus::publish(self, &event);
+    }
+}
+
+impl IEventPublisher for std::sync::Mutex<EventBus> {
+    fn publish(&self, event: EventEnvelope) {
+        self.lock().unwrap().publish(&event);
     }
 }
 
@@ -55,8 +69,8 @@ mod tests {
     use std::sync::{Arc, Mutex};
     use time::OffsetDateTime;
 
-    fn make_event(event_type: &str) -> DomainEventEnvelope {
-        DomainEventEnvelope {
+    fn make_event(event_type: &str) -> EventEnvelope {
+        EventEnvelope {
             event_id:    "01JQQQQQQQQQQQQQQQQQQQQ001".into(),
             emitter:     "01JQQQQQQQQQQQQQQQQQQQQ002".into(),
             event_type:  event_type.into(),

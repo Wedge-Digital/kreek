@@ -6,12 +6,12 @@ use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId};
 pub(crate) struct User {
     pub id:     CoachId,
     pub name:   CoachName,
-    pub icon:   CloudinaryImage,
+    pub icon:   Option<CloudinaryImage>,
     pub email:  Email,
 }
 
 impl User {
-    pub fn new(id: CoachId, name: CoachName, logo: CloudinaryImage, email: Email) -> Self {
+    pub fn new(id: CoachId, name: CoachName, logo: Option<CloudinaryImage>, email: Email) -> Self {
         Self { id, name, icon: logo, email }
     }
 }

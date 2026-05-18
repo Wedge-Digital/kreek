@@ -1,5 +1,5 @@
 -- Add migration script here
-CREATE TABLE space__user_cache
+CREATE TABLE spaces__user_cache
 (
     id                  VARCHAR(26)  NOT NULL,
     coach_name          VARCHAR(100) NOT NULL,

@@ -1,7 +1,8 @@
+use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
-#[derive(Debug, Clone)]
-pub struct DomainEventEnvelope {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EventEnvelope {
     pub event_id:    String,
     pub emitter:     String,
     pub event_type:  String,

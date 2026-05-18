@@ -1,4 +1,4 @@
-pub mod domain_event;
+pub mod event_envelope;
 pub mod persistance;
 pub mod services;
 pub mod layout;

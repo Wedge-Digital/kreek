@@ -3,7 +3,7 @@ use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::competition::routes::Routes as CompetitionRoutes;
+use crate::app::competitions::routes::Routes as CompetitionRoutes;
 use crate::app::team_creation::routes::Routes as TeamRoutes;
 use crate::state::AppState;
 use crate::web::routes::Routes;
@@ -67,7 +67,7 @@ fn extract_active_section(current_url: &str) -> Option<ActiveSection> {
     let parts = path_parts(current_url)?;
     if parts.len() >= 3 && parts[0] == "app" && parts[1].len() == 26 {
         match parts[2] {
-            "competition" => Some(ActiveSection::Competitions),
+            "competitions" => Some(ActiveSection::Competitions),
             "team"        => Some(ActiveSection::Teams),
             _             => None,
         }
@@ -122,7 +122,7 @@ mod tests {
 
     #[test]
     fn extrait_space_id_sur_toute_page_espace() {
-        let id = extract_space_id(&format!("/app/{ULID}/competition"));
+        let id = extract_space_id(&format!("/app/{ULID}/competitions"));
         assert_eq!(id, Some(ULID.into()));
     }
 
@@ -160,7 +160,7 @@ mod tests {
 
     #[test]
     fn section_competitions_sur_competition() {
-        let s = extract_active_section(&format!("/app/{ULID}/competition"));
+        let s = extract_active_section(&format!("/app/{ULID}/competitions"));
         assert_eq!(s, Some(ActiveSection::Competitions));
     }
 

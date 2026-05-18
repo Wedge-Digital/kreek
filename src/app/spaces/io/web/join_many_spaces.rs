@@ -4,38 +4,14 @@ use axum::Form;
 use axum::http::StatusCode;
 use serde::Deserialize;
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::shared_kernel::authorization::SpaceAuthorization;
+use crate::app::shared_kernel::authorization::SpaceProfile;
 use crate::app::shared_kernel::common_types::SpaceId;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::SpaceRepositoryError;
 use crate::state::AppState;
 
-fn string_or_vec<'de, D>(de: D) -> Result<Vec<String>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    use serde::de::{SeqAccess, Visitor};
-
-    struct V;
-    impl<'de> Visitor<'de> for V {
-        type Value = Vec<String>;
-        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-            f.write_str("string or sequence of strings")
-        }
-        fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Vec<String>, E> {
-            Ok(vec![v.to_owned()])
-        }
-        fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Vec<String>, A::Error> {
-            let mut out = Vec::new();
-            while let Some(v) = seq.next_element()? { out.push(v); }
-            Ok(out)
-        }
-    }
-    de.deserialize_any(V)
-}
-
 #[derive(Deserialize)]
 pub struct JoinSpacesForm {
-    #[serde(default, deserialize_with = "string_or_vec")]
+    #[serde(default)]
     pub space_ids: Vec<String>,
 }
 
@@ -56,7 +32,7 @@ pub async fn join_many_spaces(
             Err(_) => continue,
         };
 
-        match state.spaces.space_repository.add_member(&space_id, &user.id, &SpaceAuthorization::SimpleUser).await {
+        match state.spaces.space_repository.add_member(&space_id, &user.id, &SpaceProfile::SimpleUser).await {
             Ok(()) => {
                 if first_joined.is_none() {
                     first_joined = Some(raw_id.clone());

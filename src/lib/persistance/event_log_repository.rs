@@ -1,5 +1,5 @@
 use sqlx::PgPool;
-use crate::lib::domain_event::DomainEventEnvelope;
+use crate::lib::event_envelope::EventEnvelope;
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct StoredEvent {
@@ -15,7 +15,7 @@ pub struct StoredEvent {
 
 pub trait IEventLogRepository: Send + Sync {
     fn find_by_tag(&self, tag_filter: serde_json::Value) -> impl std::future::Future<Output = Result<Vec<StoredEvent>, sqlx::Error>> + Send;
-    fn save(&self, event: &DomainEventEnvelope) -> impl std::future::Future<Output = Result<(), sqlx::Error>> + Send;
+    fn save(&self, event: &EventEnvelope) -> impl std::future::Future<Output = Result<(), sqlx::Error>> + Send;
 }
 
 pub struct EventLogRepository {
@@ -39,7 +39,7 @@ impl IEventLogRepository for EventLogRepository {
         .await
     }
 
-    async fn save(&self, event: &DomainEventEnvelope) -> Result<(), sqlx::Error> {
+    async fn save(&self, event: &EventEnvelope) -> Result<(), sqlx::Error> {
         sqlx::query(
             "INSERT INTO event_log (event_id, emitter, event_type, tags, payload, occurred_at) VALUES ($1, $2, $3, $4, $5, $6)",
         )

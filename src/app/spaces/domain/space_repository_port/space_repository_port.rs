@@ -1,4 +1,4 @@
-use crate::app::shared_kernel::authorization::SpaceAuthorization;
+use crate::app::shared_kernel::authorization::SpaceProfile;
 use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
 use crate::app::spaces::domain::space::Space;
 use async_trait::async_trait;
@@ -32,9 +32,9 @@ impl std::error::Error for SpaceRepositoryError {}
 #[async_trait]
 pub trait ISpaceRepository: Send + Sync {
     async fn save(&self, space: &Space) -> Result<(), SpaceRepositoryError>;
-    async fn add_member(&self, space_id: &SpaceId, coach_id: &CoachId, profile: &SpaceAuthorization) -> Result<(), SpaceRepositoryError>;
+    async fn add_member(&self, space_id: &SpaceId, coach_id: &CoachId, profile: &SpaceProfile) -> Result<(), SpaceRepositoryError>;
     async fn find_by_id(&self, id: &SpaceId) -> Result<Option<Space>, SpaceRepositoryError>;
     async fn find_by_coach_id(&self, coach_id: &CoachId) -> Result<Vec<SpaceSummary>, SpaceRepositoryError>;
-    async fn find_member_profile(&self, coach_id: &CoachId, space_id: &SpaceId) -> Result<Option<SpaceAuthorization>, SpaceRepositoryError>;
+    async fn find_member_profile(&self, coach_id: &CoachId, space_id: &SpaceId) -> Result<Option<SpaceProfile>, SpaceRepositoryError>;
     async fn find_all(&self) -> Result<Vec<SpaceSummary>, SpaceRepositoryError>;
 }

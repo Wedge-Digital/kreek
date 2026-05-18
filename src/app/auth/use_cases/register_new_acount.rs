@@ -1,8 +1,8 @@
 use super::super::domain::error::AuthDomainError;
 use super::super::ports::{IUserRepository, RepositoryError};
-use crate::app::shared_kernel::common_types::UserId;
+use crate::app::shared_kernel::common_types::{EventId, UserId};
 use crate::app::shared_kernel::user::User;
-use crate::lib::domain_event::DomainEventEnvelope;
+use crate::lib::event_envelope::EventEnvelope;
 use crate::lib::services::event_bus::event_bus::IEventPublisher;
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
@@ -10,8 +10,9 @@ use argon2::{
 };
 use crate::app::shared_kernel::coach_name::CoachName;
 use std::fmt;
+use std::sync::{Arc, Mutex};
 use time::OffsetDateTime;
-use crate::app::auth::domain::domain_event::USER_REGISTERED;
+use crate::app::auth::domain::domain_event::AuthDomainEvent::AccountCreated;
 use crate::app::shared_kernel::email::Email;
 
 #[derive(Debug)]
@@ -61,7 +62,7 @@ impl From<RepositoryError> for RegisterError {
 pub async fn execute(
     cmd: RegisterCommand,
     repo: &dyn IUserRepository,
-    bus: &dyn IEventPublisher,
+    bus: Arc<Mutex<dyn IEventPublisher>>,
 ) -> Result<(), Vec<RegisterError>> {
     let mut errors: Vec<RegisterError> = Vec::new();
 
@@ -101,19 +102,14 @@ pub async fn execute(
 
     repo.create(&user).await.map_err(|e| vec![RegisterError::from(e)])?;
 
-    let user_id = user.id.to_string();
-    bus.publish(DomainEventEnvelope {
-        event_id:   UserId::new().to_string(),
-        emitter:    user_id.clone(),
-        event_type: USER_REGISTERED.into(),
-        tags:       serde_json::json!({ "user_id": user_id }),
-        payload:    serde_json::json!({
-            "user_id":   user_id,
-            "user_name": user.coach_name.into_inner(),
-            "email":     user.email.as_ref(),
-        }),
-        occurred_at: OffsetDateTime::now_utc(),
-    });
+    let event = AccountCreated {
+        event_id:   EventId::new(),
+        user_id:    user.id.clone(),
+        user_name:  user.coach_name.clone(),
+        email:      user.email.clone(),
+    };
+
+    bus.lock().unwrap().publish(event.to_enveloppe());
 
     Ok(())
 }
@@ -141,7 +137,7 @@ mod tests {
     struct FakeEventPublisher { pub published: Mutex<Vec<String>> }
 
     impl IEventPublisher for FakeEventPublisher {
-        fn publish(&self, event: DomainEventEnvelope) {
+        fn publish(&self, event: EventEnvelope) {
             self.published.lock().unwrap().push(event.event_type);
         }
     }
@@ -159,36 +155,38 @@ mod tests {
     async fn user_registered_event_is_published_on_success() {
         // Given
         let repo      = FakeUserRepository { fail: false };
-        let publisher = FakeEventPublisher { published: Mutex::new(vec![]) };
+        let publisher = Arc::new(Mutex::new(FakeEventPublisher { published: Mutex::new(vec![]) }));
 
         // When
-        execute(valid_command(), &repo, &publisher).await.unwrap();
+        execute(valid_command(), &repo, publisher.clone()).await.unwrap();
 
         // Then
-        let events = publisher.published.lock().unwrap();
+        let publisher = publisher.lock().unwrap();
+        let events    = publisher.published.lock().unwrap();
         assert_eq!(events.len(), 1);
-        assert_eq!(events[0], USER_REGISTERED);
+        assert_eq!(events[0].as_str(), "AccountCreated");
     }
 
     #[tokio::test]
     async fn no_event_is_published_when_repo_fails() {
         // Given
         let repo      = FakeUserRepository { fail: true };
-        let publisher = FakeEventPublisher { published: Mutex::new(vec![]) };
+        let publisher = Arc::new(Mutex::new(FakeEventPublisher { published: Mutex::new(vec![]) }));
 
         // When
-        let result = execute(valid_command(), &repo, &publisher).await;
+        let result = execute(valid_command(), &repo, publisher.clone()).await;
 
         // Then
         assert!(result.is_err());
-        assert!(publisher.published.lock().unwrap().is_empty());
+        assert!(publisher.lock().unwrap().published.lock().unwrap().is_empty());
     }
 
     #[tokio::test]
     async fn validation_errors_are_returned_without_publishing() {
         // Given — mot de passe trop court + mismatch
         let repo      = FakeUserRepository { fail: false };
-        let publisher = FakeEventPublisher { published: Mutex::new(vec![]) };
+        let publisher = Arc::new(Mutex::new(FakeEventPublisher { published: Mutex::new(vec![]) }));
+
         let cmd = RegisterCommand {
             coach_name:       "Bagouze".into(),
             email:            "coach@example.com".into(),
@@ -197,10 +195,10 @@ mod tests {
         };
 
         // When
-        let errors = execute(cmd, &repo, &publisher).await.unwrap_err();
+        let errors = execute(cmd, &repo, publisher.clone()).await.unwrap_err();
 
         // Then
         assert!(errors.len() >= 2);
-        assert!(publisher.published.lock().unwrap().is_empty());
+        assert!(publisher.lock().unwrap().published.lock().unwrap().is_empty());
     }
 }

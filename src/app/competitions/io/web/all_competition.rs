@@ -2,11 +2,11 @@ use askama::Template;
 use axum::extract::Path;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
-use crate::app::competition::routes::Routes;
+use crate::app::competitions::routes::Routes;
 use crate::web::app_layout::AppLayout;
 
 #[derive(Template, Default)]
-#[template(path = "all-competition.html")]
+#[template(path = "all-competitions.html")]
 pub struct AllCompetitionTemplate {
     pub competition_routes: Routes,
     pub space_id: String,

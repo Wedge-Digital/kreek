@@ -15,7 +15,7 @@ use axum::{response::Redirect, routing::get, Router};
 use crate::app::auth::routes::path;
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tower_livereload::LiveReloadLayer;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use axum::middleware::{from_fn, from_fn_with_state};
 use axum_login::AuthManagerLayerBuilder;
 use tower_sessions::SessionManagerLayer;
@@ -25,6 +25,8 @@ use crate::web::middleware::bypass_auth::bypass_auth_middleware;
 use crate::web::middleware::require_auth::require_auth;
 use crate::web::middleware::request_log::request_log;
 use crate::app::auth::context::AuthContext;
+use crate::app::{auth, competitions, spaces};
+use crate::app::competitions::context::CompetitionsContext;
 use crate::app::spaces::context::SpacesContext;
 use crate::lib::services::email::ResendMailService;
 use crate::lib::services::event_bus::event_bus::EventBus;
@@ -53,16 +55,26 @@ async fn main() {
 
     let server_address = cfg.server_addr();
 
-    let mut event_bus = EventBus::new();
-    event_log_feeder::init(&mut event_bus, pool.clone());
+    let app_event_bus = Arc::new(Mutex::new(EventBus::new()));
+    let event_bus     = Arc::new(Mutex::new(EventBus::new()));
+
+    event_log_feeder::init(event_bus.clone(), pool.clone());
+    auth::context::init_app_event_publisher(app_event_bus.clone(), event_bus.clone());
+
+    spaces::context::init_app_event_listeners(app_event_bus.clone(), pool.clone());
+    spaces::context::init_app_event_publisher(app_event_bus.clone(), event_bus.clone());
+
+    competitions::context::init_app_event_listeners(app_event_bus.clone(), pool.clone());
 
     let state = AppState {
-        auth:             AuthContext::new(&pool),
-        spaces:           SpacesContext::new(&pool),
+        auth:             AuthContext::new(&pool, event_bus.clone()),
+        spaces:           SpacesContext::new(&pool, event_bus.clone()),
+        competitions:     CompetitionsContext::new(&pool, event_bus.clone()),
         email_service:    Arc::new(ResendMailService::new(cfg.email.api_key, cfg.email.from, cfg.email.from_name)),
         host_domain:      cfg.host_domain,
         bypass_auth:      cfg.bypass_auth,
-        domain_event_bus: Arc::new(event_bus),
+        event_bus: event_bus.clone(),
+        app_event_bus:    app_event_bus.clone(),
     };
 
     let session_layer = SessionManagerLayer::new(DashMapStore::new());
@@ -74,7 +86,7 @@ async fn main() {
     let protected = Router::new()
         .merge(app::news::router::router())
         .merge(app::team_creation::router::router())
-        .merge(app::competition::router::router())
+        .merge(app::competitions::router::router())
         .merge(app::spaces::router::router())
         .merge(web::router::router())
         .route_layer(from_fn(require_auth))

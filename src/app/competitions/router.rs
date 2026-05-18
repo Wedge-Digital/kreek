@@ -1,9 +1,9 @@
 use crate::state::AppState;
 use axum::Router;
 use axum::routing::get;
-use crate::app::competition::io::web::all_competition::get_all_competition;
-use crate::app::competition::io::web::new_competition::get_new_competition_phase_1;
-use crate::app::competition::routes::path;
+use crate::app::competitions::io::web::all_competition::get_all_competition;
+use crate::app::competitions::io::web::new_competition::get_new_competition_phase_1;
+use crate::app::competitions::routes::path;
 
 pub fn router() -> Router<AppState> {
     Router::new()

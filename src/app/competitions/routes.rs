@@ -1,6 +1,6 @@
 pub mod path {
-    pub const COMPETITION_LIST: &str = "/app/{space_id}/competition";
-    pub const COMPETITION_NEW: &str = "/app/{space_id}/competition/create";
+    pub const COMPETITION_LIST: &str = "/app/{space_id}/competitions";
+    pub const COMPETITION_NEW: &str = "/app/{space_id}/competitions/create";
 }
 
 #[derive(Debug, Clone, Copy, Default)]

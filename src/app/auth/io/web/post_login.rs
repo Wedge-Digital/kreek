@@ -14,7 +14,7 @@ pub async fn login_submit(
     State(state): State<AppState>,
     Form(payload): Form<PerformLoginCommand>,
 ) -> impl IntoResponse {
-    match perform_login::execute(payload, state.auth.user_repository.as_ref(), state.domain_event_bus.as_ref()).await {
+    match perform_login::execute(payload, state.auth.user_repository.as_ref(), state.event_bus).await {
         Ok(user) => {
             if auth_session.login(&user).await.is_err() {
                 return LoginTemplate {
@@ -46,7 +46,7 @@ pub async fn login_submit(
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    use std::sync::{Arc, Mutex};
     use argon2::{Argon2, PasswordHasher};
     use argon2::password_hash::{SaltString, rand_core::OsRng};
     use axum::body::to_bytes;
@@ -59,7 +59,9 @@ mod tests {
     use crate::app::auth::io::repository::tests::fake_user_repository::{FakeUserRepository, FindResult};
     use crate::app::auth::io::web::post_login::login_submit;
     use crate::app::auth::routes::path;
-    use crate::app::shared_kernel::authorization::SpaceAuthorization;
+    use crate::app::competitions::context::CompetitionsContext;
+    use crate::app::competitions::io::repository::tests::fake_cache_repository::FakeCompetitionsCacheRepository;
+    use crate::app::shared_kernel::authorization::SpaceProfile;
     use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
     use crate::app::spaces::context::SpacesContext;
     use crate::app::spaces::domain::space::Space;
@@ -86,21 +88,31 @@ mod tests {
             session_layer,
         ).build();
 
+        let event_bus = Arc::new(Mutex::new(EventBus::new()));
+        let app_event_bus = Arc::new(Mutex::new(EventBus::new()));
+
         let state = AppState {
             auth: AuthContext {
                 user_repository:        mock.clone() as Arc<dyn crate::app::auth::ports::IUserRepository>,
                 reset_token_repository: Arc::new(FakeResetTokenRepository {
                     find_result: crate::app::auth::io::repository::tests::fake_reset_token_repository::FindResult::NotFound,
                 }),
+                event_bus:             event_bus.clone(),
             },
             spaces: SpacesContext {
                 space_repository:      Arc::new(FakeSpaceRepository),
                 user_cache_repository: Arc::new(FakeUserCacheRepository),
+                event_bus:             event_bus.clone(),
+            },
+            competitions: CompetitionsContext {
+                competitions_cache_repository: Arc::new(FakeCompetitionsCacheRepository),
+                event_bus:                     event_bus.clone(),
             },
             email_service:    Arc::new(ConsoleEmailService),
             host_domain:      "localhost:8080".into(),
             bypass_auth:      false,
-            domain_event_bus: Arc::new(EventBus::new()),
+            event_bus: event_bus.clone(),
+            app_event_bus: app_event_bus.clone()
         };
 
         Router::new()
@@ -131,21 +143,21 @@ mod tests {
     struct FakeUserCacheRepository;
     #[async_trait::async_trait]
     impl ISpaceUserCacheRepository for FakeUserCacheRepository {
-        async fn save(&self, _: &SpaceUser) -> Result<(), SpaceUserCacheRepositoryError> { Ok(()) }
-        async fn find_by_id(&self, _: &CoachId) -> Result<Option<SpaceUser>, SpaceUserCacheRepositoryError> { Ok(None) }
-        async fn find_all(&self) -> Result<Vec<SpaceUser>, SpaceUserCacheRepositoryError> { Ok(vec![]) }
+        async fn add_user(&self, _: &SpaceUser) -> Result<(), SpaceUserCacheRepositoryError> { Ok(()) }
+        async fn find_user_by_id(&self, _: &CoachId) -> Result<SpaceUser, SpaceUserCacheRepositoryError> { Err(SpaceUserCacheRepositoryError::UserNotFoundInCache) }
+        async fn find_all_users(&self) -> Result<Vec<SpaceUser>, SpaceUserCacheRepositoryError> { Ok(vec![]) }
     }
 
     struct FakeSpaceRepository;
     #[async_trait::async_trait]
     impl ISpaceRepository for FakeSpaceRepository {
         async fn save(&self, _: &Space) -> Result<(), SpaceRepositoryError> { Ok(()) }
-        async fn add_member(&self, _: &SpaceId, _: &CoachId, _: &SpaceAuthorization) -> Result<(),SpaceRepositoryError> { Ok(()) }
+        async fn add_member(&self, _: &SpaceId, _: &CoachId, _: &SpaceProfile) -> Result<(),SpaceRepositoryError> { Ok(()) }
         async fn find_by_id(&self, _: &SpaceId) -> Result<Option<Space>,SpaceRepositoryError> { Ok(None) }
         async fn find_by_coach_id(&self, _: &CoachId) -> Result<Vec<SpaceSummary>,SpaceRepositoryError> { Ok(vec![]) }
 
-        async fn find_member_profile(&self, coach_id: &CoachId, space_id: &SpaceId) -> Result<Option<SpaceAuthorization>, SpaceRepositoryError> {
-            Ok(Some(SpaceAuthorization::SimpleUser))
+        async fn find_member_profile(&self, coach_id: &CoachId, space_id: &SpaceId) -> Result<Option<SpaceProfile>, SpaceRepositoryError> {
+            Ok(Some(SpaceProfile::SimpleUser))
         }
 
         async fn find_all(&self) -> Result<Vec<SpaceSummary>,SpaceRepositoryError> { Ok(vec![]) }

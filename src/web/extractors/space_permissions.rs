@@ -3,7 +3,7 @@ use axum::extract::{FromRef, FromRequestParts, Path};
 use axum::http::request::Parts;
 use axum::http::StatusCode;
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::shared_kernel::authorization::SpaceAuthorization;
+use crate::app::shared_kernel::authorization::SpaceProfile;
 use crate::app::shared_kernel::common_types::SpaceId;
 use crate::state::AppState;
 
@@ -13,16 +13,16 @@ use crate::state::AppState;
 /// Retourne 403 si l'utilisateur n'est pas membre de l'espace.
 pub struct SpacePermissions {
     pub space_id: SpaceId,
-    pub role:     SpaceAuthorization,
+    pub role: SpaceProfile,
 }
 
 impl SpacePermissions {
     pub fn is_admin(&self) -> bool {
-        self.role == SpaceAuthorization::SpaceAdmin
+        self.role == SpaceProfile::SpaceAdmin
     }
 
     pub fn can_report_match(&self) -> bool {
-        matches!(self.role, SpaceAuthorization::SpaceAdmin | SpaceAuthorization::MatchReporter)
+        matches!(self.role, SpaceProfile::SpaceAdmin | SpaceProfile::MatchReporter)
     }
 }
 
@@ -63,37 +63,37 @@ mod tests {
     use super::*;
     use crate::app::shared_kernel::common_types::SpaceId;
 
-    fn perms(role: SpaceAuthorization) -> SpacePermissions {
+    fn perms(role: SpaceProfile) -> SpacePermissions {
         SpacePermissions { space_id: SpaceId::new(), role }
     }
 
     #[test]
     fn admin_is_admin() {
-        assert!(perms(SpaceAuthorization::SpaceAdmin).is_admin());
+        assert!(perms(SpaceProfile::SpaceAdmin).is_admin());
     }
 
     #[test]
     fn match_reporter_is_not_admin() {
-        assert!(!perms(SpaceAuthorization::MatchReporter).is_admin());
+        assert!(!perms(SpaceProfile::MatchReporter).is_admin());
     }
 
     #[test]
     fn simple_user_is_not_admin() {
-        assert!(!perms(SpaceAuthorization::SimpleUser).is_admin());
+        assert!(!perms(SpaceProfile::SimpleUser).is_admin());
     }
 
     #[test]
     fn admin_can_report_match() {
-        assert!(perms(SpaceAuthorization::SpaceAdmin).can_report_match());
+        assert!(perms(SpaceProfile::SpaceAdmin).can_report_match());
     }
 
     #[test]
     fn match_reporter_can_report_match() {
-        assert!(perms(SpaceAuthorization::MatchReporter).can_report_match());
+        assert!(perms(SpaceProfile::MatchReporter).can_report_match());
     }
 
     #[test]
     fn simple_user_cannot_report_match() {
-        assert!(!perms(SpaceAuthorization::SimpleUser).can_report_match());
+        assert!(!perms(SpaceProfile::SimpleUser).can_report_match());
     }
 }
