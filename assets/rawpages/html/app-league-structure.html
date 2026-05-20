@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Structure de la compétition — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .create-card { background: var(--white); border-radius: 12px; padding: var(--p4); max-width: 900px; margin: 0 auto; }
+    .create-header {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 10px; padding: var(--p2); margin-bottom: var(--p3);
+      display: flex; align-items: center; gap: var(--p1);
+    }
+    .create-header-icon { width: 48px; height: 48px; border-radius: 10px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+    .create-header-text .title { color: var(--white); font-family: var(--font-title); font-size: 24px; font-weight: 700; }
+    .create-header-text .sub { color: rgba(255,255,255,0.7); font-size: var(--text-tiny); margin-top: 2px; }
+
+    .steps { display: flex; align-items: center; margin-bottom: var(--p3); }
+    .step { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .step-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: var(--text-tiny); font-weight: 700; flex-shrink: 0; }
+    .step-num.done  { background: var(--green); color: var(--white); }
+    .step-num.active { background: var(--main-blue); color: var(--white); }
+    .step-num.pending { background: var(--dark-5); color: var(--dark-3); }
+    .step-label { font-size: 11px; font-weight: 500; white-space: nowrap; }
+    .step-label.done   { color: var(--green); }
+    .step-label.active { color: var(--main-blue); }
+    .step-label.pending { color: var(--dark-3); }
+    .step-line { flex: 1; height: 2px; background: var(--dark-5); margin: 0 6px; min-width: 16px; }
+    .step-line.done { background: var(--green); }
+
+    .section { margin-bottom: var(--p3); }
+    .section-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); margin-bottom: var(--p1); }
+
+    .sub-section { background: var(--dark-6); border: 1px solid var(--dark-5); border-radius: 8px; padding: var(--p2); margin-top: var(--p1); }
+    .sub-section-title { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: var(--p1); }
+
+    .two-col-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--p2); }
+    .info-note { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 8px; display: flex; align-items: center; gap: 6px; }
+
+    .bracket-preview {
+      display: flex; align-items: flex-start; gap: var(--p2); padding: var(--p1);
+      background: var(--white); border-radius: 6px; margin-top: var(--p1);
+      font-size: var(--text-tiny); color: var(--dark-2);
+    }
+    .bracket-col { display: flex; flex-direction: column; gap: 8px; }
+    .bracket-label { font-weight: 700; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; font-size: 10px; }
+    .bracket-match { background: var(--dark-6); border: 1px solid var(--dark-5); border-radius: 4px; padding: 4px 10px; white-space: nowrap; }
+    .bracket-arrow { color: var(--dark-4); font-size: 18px; display: flex; align-items: center; align-self: center; }
+
+    .poule-grid { display: flex; gap: var(--p2); margin-top: var(--p1); }
+    .poule-block {
+      flex: 1; border: 1px solid var(--dark-5); border-radius: 8px; overflow: hidden;
+    }
+    .poule-head { background: var(--main-blue); color: var(--white); padding: 6px 14px; font-family: var(--font-title); font-weight: 700; font-size: var(--text-tiny); }
+    .poule-body { padding: var(--p1); display: flex; flex-direction: column; gap: 4px; }
+    .poule-row { font-size: var(--text-tiny); color: var(--dark-3); padding: 3px 0; border-bottom: 1px dashed var(--dark-5); display: flex; align-items: center; gap: 8px; }
+    .poule-row:last-child { border-bottom: none; }
+    .poule-num { width: 18px; height: 18px; border-radius: 50%; background: var(--dark-5); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--dark-3); flex-shrink: 0; }
+    .poule-row-empty { color: var(--dark-4); font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active" href="app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="create-card">
+
+          <div class="create-header">
+            <div class="create-header-icon">🏗️</div>
+            <div class="create-header-text">
+              <div class="title">Structure de la compétition</div>
+              <div class="sub">Ligue de la Ville de Rennes — Saison 5</div>
+            </div>
+          </div>
+
+          <div class="steps">
+            <div class="step">
+              <div class="step-num done">✓</div>
+              <div class="step-label done">Informations</div>
+            </div>
+            <div class="step-line done"></div>
+            <div class="step">
+              <div class="step-num done">✓</div>
+              <div class="step-label done">Règles</div>
+            </div>
+            <div class="step-line done"></div>
+            <div class="step">
+              <div class="step-num active">3</div>
+              <div class="step-label active">Structure</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step">
+              <div class="step-num pending">4</div>
+              <div class="step-label pending">Invitations</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step">
+              <div class="step-num pending">5</div>
+              <div class="step-label pending">Validation</div>
+            </div>
+          </div>
+
+          <!-- Section 1: Poules -->
+          <div class="section">
+            <div class="section-title">1 — Organisation de la phase de groupes :</div>
+            <div class="choice-group">
+              <div class="choice-btn selected">Compétition en poules</div>
+              <div class="choice-btn">Round-robin direct (une seule poule)</div>
+              <div class="choice-btn">Pas de phase de groupes</div>
+            </div>
+
+            <div class="sub-section">
+              <div class="sub-section-title">Configuration des poules</div>
+              <div class="two-col-grid">
+                <div class="form-group">
+                  <label class="form-label">Nombre de poules</label>
+                  <input type="number" class="form-input" value="2" min="2" max="8">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Équipes par poule</label>
+                  <input type="number" class="form-input" value="6" min="2" readonly
+                    style="background: var(--dark-6); color: var(--dark-3);">
+                </div>
+              </div>
+              <div class="info-note">📌 Avec 12 équipes réparties en 2 poules de 6</div>
+
+              <div style="margin-top: var(--p2);">
+                <div class="sub-section-title">Aperçu des poules</div>
+                <div class="poule-grid">
+                  <div class="poule-block">
+                    <div class="poule-head">Poule A</div>
+                    <div class="poule-body">
+                      <div class="poule-row"><div class="poule-num">1</div><span class="poule-row-empty">Équipe non assignée</span></div>
+                      <div class="poule-row"><div class="poule-num">2</div><span class="poule-row-empty">Équipe non assignée</span></div>
+                      <div class="poule-row"><div class="poule-num">3</div><span class="poule-row-empty">Équipe non assignée</span></div>
+                      <div class="poule-row"><div class="poule-num">4</div><span class="poule-row-empty">Équipe non assignée</span></div>
+                      <div class="poule-row"><div class="poule-num">5</div><span class="poule-row-empty">Équipe non assignée</span></div>
+                      <div class="poule-row"><div class="poule-num">6</div><span class="poule-row-empty">Équipe non assignée</span></div>
+                    </div>
+                  </div>
+                  <div class="poule-block">
+                    <div class="poule-head">Poule B</div>
+                    <div class="poule-body">
+                      <div class="poule-row"><div class="poule-num">1</div><span class="poule-row-empty">Équipe non assignée</span></div>
+                      <div class="poule-row"><div class="poule-num">2</div><span class="poule-row-empty">Équipe non assignée</span></div>
+                      <div class="poule-row"><div class="poule-num">3</div><span class="poule-row-empty">Équipe non assignée</span></div>
+                      <div class="poule-row"><div class="poule-num">4</div><span class="poule-row-empty">Équipe non assignée</span></div>
+                      <div class="poule-row"><div class="poule-num">5</div><span class="poule-row-empty">Équipe non assignée</span></div>
+                      <div class="poule-row"><div class="poule-num">6</div><span class="poule-row-empty">Équipe non assignée</span></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="info-note">Les équipes seront réparties après la clôture des inscriptions (manuellement ou automatiquement).</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="separator"></div>
+
+          <!-- Section 2: Phase finale -->
+          <div class="section">
+            <div class="section-title">2 — Phase finale (play-offs) :</div>
+            <div class="choice-group">
+              <div class="choice-btn selected">Avec phase finale</div>
+              <div class="choice-btn">Sans phase finale (classement direct)</div>
+            </div>
+
+            <div class="sub-section">
+              <div class="sub-section-title">Configuration de la phase finale</div>
+              <div class="two-col-grid">
+                <div class="form-group">
+                  <label class="form-label">Équipes qualifiées par poule</label>
+                  <select class="picker">
+                    <option>1er uniquement</option>
+                    <option selected>Top 2 (1er et 2e)</option>
+                    <option>Top 3</option>
+                    <option>Top 4</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Format des play-offs</label>
+                  <select class="picker">
+                    <option>Finale directe</option>
+                    <option>Demi-finales + Finale</option>
+                    <option selected>Quarts + Demis + Finale</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="margin-top: var(--p2);">
+                <div class="sub-section-title">Aperçu du tableau</div>
+                <div class="bracket-preview">
+                  <div class="bracket-col">
+                    <div class="bracket-label">Quarts (4 matchs)</div>
+                    <div class="bracket-match">1A vs 2B</div>
+                    <div class="bracket-match">1B vs 2A</div>
+                    <div class="bracket-match" style="opacity:.4">— vs —</div>
+                    <div class="bracket-match" style="opacity:.4">— vs —</div>
+                  </div>
+                  <div class="bracket-arrow">→</div>
+                  <div class="bracket-col">
+                    <div class="bracket-label">Demis (2 matchs)</div>
+                    <div style="height:8px"></div>
+                    <div class="bracket-match">Vainqueur Q1 vs Q2</div>
+                    <div style="height:8px"></div>
+                    <div class="bracket-match">Vainqueur Q3 vs Q4</div>
+                  </div>
+                  <div class="bracket-arrow">→</div>
+                  <div class="bracket-col">
+                    <div class="bracket-label">Finale</div>
+                    <div style="height:24px"></div>
+                    <div class="bracket-match" style="border-color: var(--gold); color: var(--dark-1); font-weight:700;">🏆 Grand Final</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-top: var(--p2);">
+                <label class="form-label">Match pour la 3e place</label>
+                <div class="choice-group" style="margin-top: 4px;">
+                  <div class="choice-btn selected">Oui</div>
+                  <div class="choice-btn">Non</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="separator"></div>
+
+          <!-- Section 3: Calendrier -->
+          <div class="section">
+            <div class="section-title">3 — Gestion du calendrier :</div>
+            <div class="choice-group">
+              <div class="choice-btn selected">Automatique (généré par le système)</div>
+              <div class="choice-btn">Manuel (défini par l'administrateur)</div>
+              <div class="choice-btn">Libre (les coachs s'arrangent)</div>
+            </div>
+
+            <div class="sub-section">
+              <div class="sub-section-title">Paramètres du calendrier automatique</div>
+              <div class="two-col-grid">
+                <div class="form-group">
+                  <label class="form-label">Durée d'une journée (jours)</label>
+                  <input type="number" class="form-input" value="14" min="7">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Délai avant la 1re journée (jours)</label>
+                  <input type="number" class="form-input" value="7" min="1">
+                </div>
+              </div>
+              <div class="info-note">📌 Première journée prévue vers le 8 sept. 2024 — dernière journée vers le 30 juin 2025</div>
+            </div>
+          </div>
+
+          <div class="separator"></div>
+
+          <!-- Section 4: Format des matchs -->
+          <div class="section">
+            <div class="section-title">4 — Format des rencontres :</div>
+            <div class="choice-group">
+              <div class="choice-btn selected">Aller-retour (chaque équipe reçoit une fois)</div>
+              <div class="choice-btn">Aller simple</div>
+            </div>
+            <div class="info-note" style="margin-top: var(--p1);">📌 Avec 6 équipes par poule en aller-retour : 10 journées de phase de groupes par poule</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; margin-top: var(--p2);">
+            <button class="btn btn-outline" style="width: auto; padding: var(--p1) var(--p3);" onclick="window.location.href='app-league-rules.html'">
+              ← Retour
+            </button>
+            <button class="btn btn-primary" style="width: auto; padding: var(--p1) var(--p4);" onclick="window.location.href='app-league-invite.html'">
+              Suivant →
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

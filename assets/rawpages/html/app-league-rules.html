@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Règles de ligue — Blood Bowl Club</title>
+  <title>Règles de la compétition — Blood Bowl Club</title>
   <link rel="stylesheet" href="shared.css">
   <style>
     .create-card { background: var(--white); border-radius: 12px; padding: var(--p4); max-width: 900px; margin: 0 auto; }
@@ -16,22 +16,100 @@
     .create-header-text .title { color: var(--white); font-family: var(--font-title); font-size: 24px; font-weight: 700; }
     .create-header-text .sub { color: rgba(255,255,255,0.7); font-size: var(--text-tiny); margin-top: 2px; }
 
-    .steps { display: flex; align-items: center; gap: 0; margin-bottom: var(--p3); }
-    .step { display: flex; align-items: center; gap: 8px; }
-    .step-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: var(--text-tiny); font-weight: 700; }
-    .step-num.done { background: var(--green); color: var(--white); }
+    .steps { display: flex; align-items: center; margin-bottom: var(--p3); }
+    .step { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .step-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: var(--text-tiny); font-weight: 700; flex-shrink: 0; }
+    .step-num.done  { background: var(--green); color: var(--white); }
     .step-num.active { background: var(--main-blue); color: var(--white); }
     .step-num.pending { background: var(--dark-5); color: var(--dark-3); }
-    .step-label { font-size: var(--text-tiny); font-weight: 500; }
-    .step-label.done { color: var(--green); }
+    .step-label { font-size: 11px; font-weight: 500; white-space: nowrap; }
+    .step-label.done   { color: var(--green); }
     .step-label.active { color: var(--main-blue); }
     .step-label.pending { color: var(--dark-3); }
-    .step-line { flex: 1; height: 2px; background: var(--dark-5); margin: 0 8px; }
+    .step-line { flex: 1; height: 2px; background: var(--dark-5); margin: 0 6px; min-width: 16px; }
     .step-line.done { background: var(--green); }
 
     .rules-section { margin-bottom: var(--p3); }
     .rules-section-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); margin-bottom: var(--p1); }
     .two-col-row { display: flex; gap: var(--p2); align-items: flex-end; }
+
+    .sub-section { background: var(--dark-6); border: 1px solid var(--dark-5); border-radius: 8px; padding: var(--p2); margin-top: var(--p1); }
+    .sub-section-title { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: var(--p1); }
+
+    /* Tiers */
+    .tier-block { border: 1px solid var(--dark-5); border-radius: 8px; overflow: hidden; margin-bottom: var(--p1); }
+    .tier-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; border-bottom: 1px solid var(--dark-5);
+    }
+    .tier-1 .tier-head { background: rgba(230,57,70,0.08); }
+    .tier-2 .tier-head { background: rgba(255,107,53,0.08); }
+    .tier-3 .tier-head { background: rgba(98,149,132,0.08); }
+    .tier-title { font-family: var(--font-title); font-weight: 700; font-size: var(--text-small); color: var(--dark-1); }
+    .tier-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.5px; }
+    .tier-1 .tier-badge { background: var(--red-badge); color: var(--white); }
+    .tier-2 .tier-badge { background: var(--orange); color: var(--white); }
+    .tier-3 .tier-badge { background: var(--green); color: var(--white); }
+    .tier-body { padding: var(--p1) var(--p2); display: flex; flex-wrap: wrap; gap: 6px; min-height: 44px; background: var(--white); }
+    .tier-chip {
+      padding: 4px 12px; border-radius: 16px; font-size: var(--text-tiny); font-weight: 500;
+      background: var(--dark-5); color: var(--dark-2); cursor: grab;
+      border: 1px solid var(--dark-4); user-select: none;
+    }
+    .tier-chip:hover { background: var(--dark-4); color: var(--dark-1); }
+    .tier-add { padding: 4px 10px; border-radius: 16px; font-size: var(--text-tiny); color: var(--main-blue); border: 1px dashed var(--main-blue); cursor: pointer; background: none; }
+    .tier-add:hover { background: rgba(0,48,73,0.06); }
+
+    /* VND table */
+    .vnd-table { display: flex; flex-direction: column; gap: 8px; }
+    .vnd-row { display: flex; align-items: center; gap: var(--p2); padding: 10px 16px; background: var(--dark-6); border-radius: 8px; border: 1px solid var(--dark-5); }
+    .vnd-result { flex: 1; font-size: var(--text-small); font-weight: 500; color: var(--dark-1); }
+    .vnd-badge { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: var(--text-tiny); flex-shrink: 0; }
+    .vnd-v { background: var(--green); color: var(--white); }
+    .vnd-n { background: var(--orange); color: var(--white); }
+    .vnd-d { background: var(--dark-3); color: var(--white); }
+    .vnd-input { width: 64px; padding: 8px 12px; border: 1px solid var(--dark-4); border-radius: 6px; text-align: center; font-size: var(--text-small); font-weight: 700; color: var(--dark-1); background: var(--white); outline: none; }
+    .vnd-input:focus { border-color: var(--main-blue); }
+    .vnd-unit { font-size: var(--text-tiny); color: var(--dark-3); }
+
+    /* Bonus points */
+    .bonus-row { display: flex; align-items: center; gap: var(--p1); padding: 10px 16px; background: var(--dark-6); border-radius: 8px; border: 1px solid var(--dark-5); margin-bottom: 8px; }
+    .bonus-check { width: 18px; height: 18px; cursor: pointer; accent-color: var(--main-blue); flex-shrink: 0; }
+    .bonus-label { flex: 1; font-size: var(--text-small); color: var(--dark-1); }
+    .bonus-inline { display: flex; align-items: center; gap: 6px; }
+    .bonus-num { width: 48px; padding: 4px 8px; border: 1px solid var(--dark-4); border-radius: 4px; text-align: center; font-size: var(--text-small); font-weight: 700; background: var(--white); outline: none; }
+    .bonus-num:focus { border-color: var(--main-blue); }
+
+    /* Tiebreaker */
+    .tiebreak-list { display: flex; flex-direction: column; gap: 6px; }
+    .tiebreak-row { display: flex; align-items: center; gap: var(--p1); padding: 10px 16px; background: var(--dark-6); border: 1px solid var(--dark-5); border-radius: 8px; }
+    .tiebreak-rank { width: 24px; height: 24px; border-radius: 50%; background: var(--main-blue); color: var(--white); display: flex; align-items: center; justify-content: center; font-size: var(--text-tiny); font-weight: 700; flex-shrink: 0; }
+    .tiebreak-drag { color: var(--dark-4); font-size: 18px; cursor: grab; flex-shrink: 0; }
+    .tiebreak-label { flex: 1; font-size: var(--text-small); color: var(--dark-1); }
+    .tiebreak-remove { color: var(--dark-4); cursor: pointer; font-size: 16px; background: none; border: none; }
+    .tiebreak-remove:hover { color: var(--red); }
+
+    /* Rosters grid */
+    .roster-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+    .roster-chip {
+      padding: 6px 14px; border: 2px solid var(--dark-5); border-radius: 20px;
+      font-size: var(--text-tiny); font-weight: 500; cursor: pointer;
+      background: var(--white); color: var(--dark-2); transition: all 0.12s;
+    }
+    .roster-chip:hover { border-color: var(--dark-4); color: var(--dark-1); }
+    .roster-chip.on { border-color: var(--green); color: var(--green); background: rgba(98,149,132,0.08); }
+
+    /* Inducements */
+    .inducement-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+    .inducement-chip {
+      padding: 6px 14px; border: 2px solid var(--dark-5); border-radius: 20px;
+      font-size: var(--text-tiny); cursor: pointer; background: var(--white); color: var(--dark-2);
+      display: flex; align-items: center; gap: 6px; transition: all 0.12s;
+    }
+    .inducement-chip.on { border-color: var(--main-blue); color: var(--main-blue); background: rgba(0,48,73,0.05); }
+    .inducement-chip:hover { border-color: var(--dark-4); color: var(--dark-1); }
+
+    .info-note { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 8px; display: flex; align-items: center; gap: 6px; }
   </style>
 </head>
 <body>
@@ -87,16 +165,21 @@
             <div class="step-line"></div>
             <div class="step">
               <div class="step-num pending">3</div>
-              <div class="step-label pending">Équipes</div>
+              <div class="step-label pending">Structure</div>
             </div>
             <div class="step-line"></div>
             <div class="step">
               <div class="step-num pending">4</div>
+              <div class="step-label pending">Invitations</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step">
+              <div class="step-num pending">5</div>
               <div class="step-label pending">Validation</div>
             </div>
           </div>
 
-          <!-- Section 1: Variant -->
+          <!-- Section 1: Variante -->
           <div class="rules-section">
             <div class="rules-section-title">1 — Choisissez votre variante :</div>
             <div class="choice-group">
@@ -113,38 +196,63 @@
             <div class="rules-section-title">2 — Choisissez le type de compétition :</div>
             <div class="choice-group">
               <div class="choice-btn selected">Ligue (avec progression des équipes)</div>
-              <div class="choice-btn">Tournoi (Résurrection)</div>
+              <div class="choice-btn">Tournoi (Résurrection — sans progression)</div>
             </div>
           </div>
 
           <div class="separator"></div>
 
-          <!-- Section 3: Creation rules -->
+          <!-- Section 3: Création + Budget -->
           <div class="rules-section">
-            <div class="rules-section-title">3 — Choisissez les règles de création d'équipe :</div>
+            <div class="rules-section-title">3 — Règles de création d'équipe :</div>
             <div class="two-col-row">
               <div style="flex: 3;">
                 <select class="picker">
                   <option>Règles standard BB 2020 (1 000 000 pièces)</option>
                   <option>Règles débutants (1 200 000 pièces)</option>
                   <option>Règles expérimentées (800 000 pièces)</option>
+                  <option>Personnalisé</option>
                 </select>
               </div>
               <div style="flex: 1;">
-                <button class="btn btn-primary-blue btn-sm" style="white-space: nowrap;">+ Nouvelles règles</button>
+                <button class="btn btn-primary-blue btn-sm" style="white-space: nowrap; width: 100%;">+ Nouvelles règles</button>
+              </div>
+            </div>
+
+            <div class="sub-section">
+              <div class="sub-section-title">Budget de départ</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--p2);">
+                <div class="form-group">
+                  <label class="form-label">Budget initial</label>
+                  <input type="number" class="form-input" value="1000000" step="50000">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Trésorerie de départ</label>
+                  <input type="number" class="form-input" value="0" step="10000">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Valeur max d'équipe</label>
+                  <input type="number" class="form-input" placeholder="Illimitée">
+                </div>
+              </div>
+              <div style="margin-top: var(--p1);">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: var(--text-small); color: var(--dark-2);">
+                  <input type="checkbox" checked style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--main-blue);">
+                  Autoriser l'achat d'entraîneurs et de cheerleaders à la création
+                </label>
               </div>
             </div>
           </div>
 
           <div class="separator"></div>
 
-          <!-- Section 4: Schedule -->
+          <!-- Section 4: Planning -->
           <div class="rules-section">
             <div class="rules-section-title">4 — Planning de la compétition :</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--p2);">
               <div class="form-group">
-                <label class="form-label">Nombre de journées</label>
-                <input type="number" class="form-input" value="22" min="1">
+                <label class="form-label">Nombre de journées (phase de groupes)</label>
+                <input type="number" class="form-input" value="10" min="1">
               </div>
               <div class="form-group">
                 <label class="form-label">Nombre d'équipes</label>
@@ -161,11 +269,313 @@
             </div>
           </div>
 
+          <div class="separator"></div>
+
+          <!-- Section 5: Tiers -->
+          <div class="rules-section">
+            <div class="rules-section-title">5 — Composition des tiers :</div>
+            <div class="info-note" style="margin-bottom: var(--p1);">
+              📌 Les tiers sont utilisés pour équilibrer les matchs via les inducements. Faites glisser les rosters pour les réassigner.
+            </div>
+
+            <div class="tier-block tier-1">
+              <div class="tier-head">
+                <span class="tier-title">Tier 1 — Forces de l'élite</span>
+                <span class="tier-badge">TIER 1</span>
+              </div>
+              <div class="tier-body">
+                <span class="tier-chip">Dark Elves</span>
+                <span class="tier-chip">Lizardmen</span>
+                <span class="tier-chip">Skaven</span>
+                <span class="tier-chip">Underworld</span>
+                <span class="tier-chip">Wood Elves</span>
+                <button class="tier-add">+ Ajouter</button>
+              </div>
+            </div>
+
+            <div class="tier-block tier-2">
+              <div class="tier-head">
+                <span class="tier-title">Tier 2 — Compétitifs</span>
+                <span class="tier-badge">TIER 2</span>
+              </div>
+              <div class="tier-body">
+                <span class="tier-chip">Chaos</span>
+                <span class="tier-chip">Dwarfs</span>
+                <span class="tier-chip">Elven Union</span>
+                <span class="tier-chip">Humans</span>
+                <span class="tier-chip">Imperial Nobility</span>
+                <span class="tier-chip">Necromantic</span>
+                <span class="tier-chip">Norse</span>
+                <span class="tier-chip">Nurgle</span>
+                <span class="tier-chip">Old World Alliance</span>
+                <span class="tier-chip">Orcs</span>
+                <span class="tier-chip">Undead</span>
+                <span class="tier-chip">Vampires</span>
+                <button class="tier-add">+ Ajouter</button>
+              </div>
+            </div>
+
+            <div class="tier-block tier-3">
+              <div class="tier-head">
+                <span class="tier-title">Tier 3 — Amateurs</span>
+                <span class="tier-badge">TIER 3</span>
+              </div>
+              <div class="tier-body">
+                <span class="tier-chip">Amazones</span>
+                <span class="tier-chip">Chaos Renegades</span>
+                <span class="tier-chip">Goblins</span>
+                <span class="tier-chip">Halflings</span>
+                <span class="tier-chip">Khorne</span>
+                <span class="tier-chip">Ogres</span>
+                <span class="tier-chip">Snotlings</span>
+                <span class="tier-chip">Tomb Kings</span>
+                <button class="tier-add">+ Ajouter</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="separator"></div>
+
+          <!-- Section 6: Classement -->
+          <div class="rules-section">
+            <div class="rules-section-title">6 — Règles de classement :</div>
+
+            <div class="sub-section" style="margin-bottom: var(--p2);">
+              <div class="sub-section-title">Points par résultat (VND)</div>
+              <div class="vnd-table">
+                <div class="vnd-row">
+                  <span class="vnd-result">Victoire</span>
+                  <span class="vnd-badge vnd-v">V</span>
+                  <input type="number" class="vnd-input" value="3" min="0">
+                  <span class="vnd-unit">points</span>
+                </div>
+                <div class="vnd-row">
+                  <span class="vnd-result">Nul</span>
+                  <span class="vnd-badge vnd-n">N</span>
+                  <input type="number" class="vnd-input" value="1" min="0">
+                  <span class="vnd-unit">point</span>
+                </div>
+                <div class="vnd-row">
+                  <span class="vnd-result">Défaite</span>
+                  <span class="vnd-badge vnd-d">D</span>
+                  <input type="number" class="vnd-input" value="0" min="0">
+                  <span class="vnd-unit">points</span>
+                </div>
+                <div class="vnd-row" style="background: rgba(224,32,32,0.05); border-color: rgba(224,32,32,0.2);">
+                  <span class="vnd-result">Forfait</span>
+                  <span class="vnd-badge" style="background: var(--red); color: var(--white); font-size: 10px; width: auto; padding: 0 6px;">FF</span>
+                  <span style="font-size: var(--text-small); color: var(--dark-2);">Score imposé</span>
+                  <input type="number" class="vnd-input" value="2" min="0" style="width:48px" title="TDs marqués par le vainqueur">
+                  <span class="vnd-unit">—</span>
+                  <input type="number" class="vnd-input" value="0" min="0" style="width:48px" title="TDs encaissés par le forfait">
+                  <span class="vnd-unit">pour le forfait</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="sub-section" style="margin-bottom: var(--p2);">
+              <div class="sub-section-title">Points bonus</div>
+              <div class="bonus-row">
+                <input type="checkbox" class="bonus-check" checked>
+                <span class="bonus-label">Bonus offensif : +1 point si vous marquez</span>
+                <div class="bonus-inline">
+                  <span style="font-size: var(--text-tiny); color: var(--dark-3);">≥</span>
+                  <input type="number" class="bonus-num" value="3" min="1">
+                  <span style="font-size: var(--text-tiny); color: var(--dark-3);">TDs</span>
+                </div>
+              </div>
+              <div class="bonus-row">
+                <input type="checkbox" class="bonus-check" checked>
+                <span class="bonus-label">Bonus défensif : +1 point si vous encaissez</span>
+                <div class="bonus-inline">
+                  <span style="font-size: var(--text-tiny); color: var(--dark-3);">≤</span>
+                  <input type="number" class="bonus-num" value="1" min="0">
+                  <span style="font-size: var(--text-tiny); color: var(--dark-3);">TD(s)</span>
+                </div>
+              </div>
+              <div class="bonus-row" style="margin-bottom: 0;">
+                <input type="checkbox" class="bonus-check">
+                <span class="bonus-label">Bonus de carnage : +1 point si vous infligez</span>
+                <div class="bonus-inline">
+                  <span style="font-size: var(--text-tiny); color: var(--dark-3);">≥</span>
+                  <input type="number" class="bonus-num" value="3" min="1">
+                  <span style="font-size: var(--text-tiny); color: var(--dark-3);">blessures</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="sub-section">
+              <div class="sub-section-title">Ordre des départages (en cas d'égalité de points)</div>
+              <div class="tiebreak-list">
+                <div class="tiebreak-row">
+                  <div class="tiebreak-rank">1</div>
+                  <span class="tiebreak-drag">⠿</span>
+                  <span class="tiebreak-label">Différence de touchdowns (marqués − encaissés)</span>
+                  <button class="tiebreak-remove">✕</button>
+                </div>
+                <div class="tiebreak-row">
+                  <div class="tiebreak-rank">2</div>
+                  <span class="tiebreak-drag">⠿</span>
+                  <span class="tiebreak-label">Nombre de touchdowns marqués</span>
+                  <button class="tiebreak-remove">✕</button>
+                </div>
+                <div class="tiebreak-row">
+                  <div class="tiebreak-rank">3</div>
+                  <span class="tiebreak-drag">⠿</span>
+                  <span class="tiebreak-label">Nombre de blessures infligées</span>
+                  <button class="tiebreak-remove">✕</button>
+                </div>
+                <div class="tiebreak-row">
+                  <div class="tiebreak-rank">4</div>
+                  <span class="tiebreak-drag">⠿</span>
+                  <span class="tiebreak-label">Tirage au sort</span>
+                  <button class="tiebreak-remove">✕</button>
+                </div>
+              </div>
+              <button class="btn btn-outline" style="width: auto; padding: var(--p05) var(--p2); font-size: var(--text-tiny); margin-top: var(--p1);">+ Ajouter un critère</button>
+            </div>
+          </div>
+
+          <div class="separator"></div>
+
+          <!-- Section 7: Progression -->
+          <div class="rules-section">
+            <div class="rules-section-title">7 — Règles de progression :</div>
+
+            <div class="sub-section" style="margin-bottom: var(--p2);">
+              <div class="sub-section-title">Système de progression des joueurs</div>
+              <div class="choice-group">
+                <div class="choice-btn selected">Standard BB 2020 (SPP)</div>
+                <div class="choice-btn">Simplifié (niveaux flat)</div>
+                <div class="choice-btn">Personnalisé</div>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--p1); margin-top: var(--p2);">
+                <div class="form-group">
+                  <label class="form-label">SPP par TD</label>
+                  <input type="number" class="form-input" value="3">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">SPP par passe TD</label>
+                  <input type="number" class="form-input" value="1">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">SPP par interception</label>
+                  <input type="number" class="form-input" value="2">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">SPP par MVP</label>
+                  <input type="number" class="form-input" value="4">
+                </div>
+              </div>
+            </div>
+
+            <div class="sub-section">
+              <div class="sub-section-title">Gestion entre les saisons</div>
+              <div style="display: flex; flex-direction: column; gap: var(--p1);">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: var(--text-small); color: var(--dark-2);">
+                  <input type="checkbox" checked style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--main-blue);">
+                  Vieillissement des joueurs actif (règle optionnelle BB 2020)
+                </label>
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: var(--text-small); color: var(--dark-2);">
+                  <input type="checkbox" checked style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--main-blue);">
+                  Conservation des blessures permanentes entre les matchs
+                </label>
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: var(--text-small); color: var(--dark-2);">
+                  <input type="checkbox" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--main-blue);">
+                  Réinitialisation des équipes en fin de saison (Resurrection)
+                </label>
+              </div>
+              <div class="form-group" style="margin-top: var(--p2); max-width: 320px;">
+                <label class="form-label">Nombre max de joueurs conservés d'une saison à l'autre</label>
+                <input type="number" class="form-input" placeholder="Illimité (laisser vide)">
+              </div>
+            </div>
+          </div>
+
+          <div class="separator"></div>
+
+          <!-- Section 8: Références -->
+          <div class="rules-section">
+            <div class="rules-section-title">8 — Règles de référence :</div>
+
+            <div class="sub-section" style="margin-bottom: var(--p2);">
+              <div class="sub-section-title">Rosters autorisés</div>
+              <div style="margin-bottom: var(--p1);">
+                <div class="choice-group">
+                  <div class="choice-btn selected">Tous les rosters officiels</div>
+                  <div class="choice-btn">Sélection personnalisée</div>
+                </div>
+              </div>
+              <div class="roster-grid">
+                <span class="roster-chip on">Amazones</span>
+                <span class="roster-chip on">Chaos</span>
+                <span class="roster-chip on">Chaos Renegades</span>
+                <span class="roster-chip on">Dark Elves</span>
+                <span class="roster-chip on">Dwarfs</span>
+                <span class="roster-chip on">Elven Union</span>
+                <span class="roster-chip on">Goblins</span>
+                <span class="roster-chip on">Halflings</span>
+                <span class="roster-chip on">High Elves</span>
+                <span class="roster-chip on">Humans</span>
+                <span class="roster-chip on">Imperial Nobility</span>
+                <span class="roster-chip on">Khorne</span>
+                <span class="roster-chip on">Lizardmen</span>
+                <span class="roster-chip on">Necromantic</span>
+                <span class="roster-chip on">Norse</span>
+                <span class="roster-chip on">Nurgle</span>
+                <span class="roster-chip on">Ogres</span>
+                <span class="roster-chip on">Old World Alliance</span>
+                <span class="roster-chip on">Orcs</span>
+                <span class="roster-chip on">Skaven</span>
+                <span class="roster-chip on">Snotlings</span>
+                <span class="roster-chip on">Tomb Kings</span>
+                <span class="roster-chip on">Underworld</span>
+                <span class="roster-chip on">Undead (Shambling)</span>
+                <span class="roster-chip on">Vampires</span>
+                <span class="roster-chip on">Wood Elves</span>
+              </div>
+            </div>
+
+            <div class="sub-section" style="margin-bottom: var(--p2);">
+              <div class="sub-section-title">Inducements autorisés</div>
+              <div class="inducement-grid">
+                <span class="inducement-chip on">🔮 Sorcier</span>
+                <span class="inducement-chip on">⭐ Star Players</span>
+                <span class="inducement-chip on">🧑‍⚕️ Apothicaire itinérant</span>
+                <span class="inducement-chip on">🍺 Tonnelets de Bloodweiser</span>
+                <span class="inducement-chip on">🪙 Mercenaires</span>
+                <span class="inducement-chip on">🃏 Bribes (Gobelins)</span>
+                <span class="inducement-chip on">🧟 Igor (Mort-Vivants)</span>
+                <span class="inducement-chip on">📰 Journaliste sportif</span>
+                <span class="inducement-chip on">🦅 Faucon de Séraphon</span>
+                <span class="inducement-chip">🎩 Chef des tribunes</span>
+                <span class="inducement-chip">🩹 Chirurgien renforcé</span>
+              </div>
+            </div>
+
+            <div class="sub-section">
+              <div class="sub-section-title">Rosters non officiels (communautaires)</div>
+              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: var(--text-small); color: var(--dark-2); margin-bottom: var(--p1);">
+                <input type="checkbox" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--main-blue);">
+                Autoriser les rosters non officiels dans cette compétition
+              </label>
+              <div class="roster-grid" style="opacity: 0.45; pointer-events: none;">
+                <span class="roster-chip">Amazones (v2 community)</span>
+                <span class="roster-chip">Kislev Circus</span>
+                <span class="roster-chip">Lustrian Superleague</span>
+                <span class="roster-chip">Slann</span>
+                <span class="roster-chip">Bretonnians</span>
+                <span class="roster-chip">Daemons of Chaos</span>
+              </div>
+              <div class="info-note" style="margin-top: 8px;">Ces rosters ne sont pas validés officiellement. Leur équilibre peut varier.</div>
+            </div>
+          </div>
+
           <div style="display: flex; justify-content: space-between; margin-top: var(--p2);">
             <button class="btn btn-outline" style="width: auto; padding: var(--p1) var(--p3);" onclick="window.location.href='app-league-create.html'">
               ← Retour
             </button>
-            <button class="btn btn-primary" style="width: auto; padding: var(--p1) var(--p4);">
+            <button class="btn btn-primary" style="width: auto; padding: var(--p1) var(--p4);" onclick="window.location.href='app-league-structure.html'">
               Suivant →
             </button>
           </div>

@@ -1,4 +1,3 @@
-use time::OffsetDateTime;
 use crate::app::shared_kernel::authorization::SpaceProfile;
 use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, EventId, SpaceId, UserId};
 use crate::app::shared_kernel::space_name::SpaceName;
@@ -6,8 +5,7 @@ use crate::app::spaces::domain::domain_event::{SpacesDomainEvent, SPACE_CREATED,
 use crate::app::spaces::domain::space::Space;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::{ISpaceRepository, SpaceRepositoryError};
 use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::{ISpaceUserCacheRepository, SpaceUserCacheRepositoryError};
-use crate::lib::event_envelope::EventEnvelope;
-use crate::lib::services::event_bus::event_bus::IEventPublisher;
+use crate::lib::services::event_bus::event_bus::EventBus;
 
 pub struct RegisterNewSpaceCommand {
     pub coach_id:   CoachId,
@@ -46,7 +44,7 @@ pub async fn execute(
     cmd: RegisterNewSpaceCommand,
     repo: &dyn ISpaceRepository,
     user_cache: &dyn ISpaceUserCacheRepository,
-    bus: &dyn IEventPublisher,
+    bus: &EventBus,
 ) -> Result<(), RegisterSpaceError> {
     let space = Space::new(SpaceId::new(), cmd.space_name, cmd.space_logo, vec![]);
 
@@ -68,7 +66,7 @@ pub async fn execute(
         space_logo: space.logo.clone(),
     };
 
-    bus.publish(space_created_payload.to_enveloppe());
+    let _ = bus.send(space_created_payload.to_enveloppe());
 
     Ok(())
 }
@@ -81,8 +79,7 @@ mod tests {
     use crate::app::spaces::domain::space_repository_port::space_repository_port::{ISpaceRepository, SpaceRepositoryError, SpaceSummary};
     use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::{ISpaceUserCacheRepository, SpaceUserCacheRepositoryError};
     use crate::app::spaces::domain::user::User as SpaceUser;
-    use crate::lib::event_envelope::EventEnvelope;
-    use crate::lib::services::event_bus::event_bus::IEventPublisher;
+    use crate::lib::services::event_bus::event_bus::new_bus;
 
     struct FakeUserCache { pub user: Option<SpaceUser> }
     #[async_trait]
@@ -92,11 +89,6 @@ mod tests {
             self.user.clone().ok_or(SpaceUserCacheRepositoryError::UserNotFoundInCache)
         }
         async fn find_all_users(&self) -> Result<Vec<SpaceUser>, SpaceUserCacheRepositoryError> { Ok(vec![]) }
-    }
-
-    struct FakeBus;
-    impl IEventPublisher for FakeBus {
-        fn publish(&self, _: EventEnvelope) {}
     }
 
     fn fake_user(coach_id: &CoachId) -> SpaceUser {
@@ -180,7 +172,7 @@ mod tests {
         let cmd    = make_cmd();
         let user   = fake_user(&cmd.coach_id);
         let cache  = FakeUserCache { user: Some(user) };
-        let result = execute(cmd, &SpaceRepoOk, &cache, &FakeBus).await;
+        let result = execute(cmd, &SpaceRepoOk, &cache, &new_bus()).await;
         assert!(result.is_ok());
     }
 
@@ -189,7 +181,7 @@ mod tests {
         let cmd   = make_cmd();
         let user  = fake_user(&cmd.coach_id);
         let cache = FakeUserCache { user: Some(user) };
-        let result = execute(cmd, &SpaceRepoNameTaken, &cache, &FakeBus).await;
+        let result = execute(cmd, &SpaceRepoNameTaken, &cache, &new_bus()).await;
         assert!(matches!(result, Err(RegisterSpaceError::SpaceNameAlreadyTaken)));
     }
 }

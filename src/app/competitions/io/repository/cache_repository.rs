@@ -1,10 +1,32 @@
 use async_trait::async_trait;
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use crate::app::competitions::domain::cache_repository_port::{
     CachedSpace, CachedUser, CompetitionsCacheError, ICompetitionsCacheRepository,
 };
 use crate::app::shared_kernel::authorization::SpaceProfile;
+use crate::app::shared_kernel::coach_icon::CoachIcon;
+use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
+use crate::app::shared_kernel::email::Email;
+
+#[derive(sqlx::FromRow)]
+struct UserRow {
+    id:         String,
+    coach_name: String,
+    coach_icon: Option<String>,
+    email:      String,
+}
+
+impl UserRow {
+    fn into_cached_user(self) -> CachedUser {
+        CachedUser {
+            id:         CoachId::try_new(&self.id).unwrap(),
+            coach_name: CoachName::try_new(self.coach_name).unwrap(),
+            coach_icon: self.coach_icon.map(|s| CoachIcon::try_new(s).unwrap()),
+            email:      Email::try_new(self.email).unwrap(),
+        }
+    }
+}
 
 fn db_err(e: impl std::fmt::Display) -> CompetitionsCacheError {
     CompetitionsCacheError::Database(e.to_string())
@@ -83,5 +105,15 @@ impl ICompetitionsCacheRepository for CompetitionsCacheRepository {
             .await
             .map_err(db_err)?;
         Ok(())
+    }
+
+    async fn list_members_for_space(&self, space_id: &SpaceId) -> Result<Vec<CachedUser>, CompetitionsCacheError> {
+        let rows = sqlx::query_as::<_, UserRow>(include_str!("sql/cache/list_members_for_space.sql"))
+            .bind(space_id.to_string())
+            .fetch_all(&self.pool)
+            .await
+            .map_err(db_err)?;
+
+        Ok(rows.into_iter().map(UserRow::into_cached_user).collect())
     }
 }

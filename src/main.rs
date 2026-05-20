@@ -15,7 +15,7 @@ use axum::{response::Redirect, routing::get, Router};
 use crate::app::auth::routes::path;
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tower_livereload::LiveReloadLayer;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use axum::middleware::{from_fn, from_fn_with_state};
 use axum_login::AuthManagerLayerBuilder;
 use tower_sessions::SessionManagerLayer;
@@ -29,7 +29,7 @@ use crate::app::{auth, competitions, spaces};
 use crate::app::competitions::context::CompetitionsContext;
 use crate::app::spaces::context::SpacesContext;
 use crate::lib::services::email::ResendMailService;
-use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::lib::services::event_bus::event_bus::new_bus;
 use crate::lib::event_listener::event_log_feeder;
 
 #[tokio::main]
@@ -55,26 +55,26 @@ async fn main() {
 
     let server_address = cfg.server_addr();
 
-    let app_event_bus = Arc::new(Mutex::new(EventBus::new()));
-    let event_bus     = Arc::new(Mutex::new(EventBus::new()));
+    let event_bus     = new_bus();
+    let app_event_bus = new_bus();
 
-    event_log_feeder::init(event_bus.clone(), pool.clone());
-    auth::context::init_app_event_publisher(app_event_bus.clone(), event_bus.clone());
+    event_log_feeder::init(&event_bus, pool.clone());
+    auth::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
 
-    spaces::context::init_app_event_listeners(app_event_bus.clone(), pool.clone());
-    spaces::context::init_app_event_publisher(app_event_bus.clone(), event_bus.clone());
+    spaces::context::init_app_event_listeners(&app_event_bus, pool.clone());
+    spaces::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
 
-    competitions::context::init_app_event_listeners(app_event_bus.clone(), pool.clone());
+    competitions::context::init_app_event_listeners(&app_event_bus, pool.clone());
 
     let state = AppState {
-        auth:             AuthContext::new(&pool, event_bus.clone()),
-        spaces:           SpacesContext::new(&pool, event_bus.clone()),
-        competitions:     CompetitionsContext::new(&pool, event_bus.clone()),
-        email_service:    Arc::new(ResendMailService::new(cfg.email.api_key, cfg.email.from, cfg.email.from_name)),
-        host_domain:      cfg.host_domain,
-        bypass_auth:      cfg.bypass_auth,
-        event_bus: event_bus.clone(),
-        app_event_bus:    app_event_bus.clone(),
+        auth:          AuthContext::new(&pool, event_bus.clone()),
+        spaces:        SpacesContext::new(&pool, event_bus.clone()),
+        competitions:  CompetitionsContext::new(&pool, event_bus.clone()),
+        email_service: Arc::new(ResendMailService::new(cfg.email.api_key, cfg.email.from, cfg.email.from_name)),
+        host_domain:   cfg.host_domain,
+        bypass_auth:   cfg.bypass_auth,
+        event_bus:     event_bus.clone(),
+        app_event_bus: app_event_bus.clone(),
     };
 
     let session_layer = SessionManagerLayer::new(DashMapStore::new());
@@ -92,7 +92,6 @@ async fn main() {
         .route_layer(from_fn(require_auth))
         .route_layer(from_fn_with_state(state.clone(), bypass_auth_middleware));
 
-    // Auth-protected routes — session + auth middleware applied only here.
     let auth_app = Router::new()
         .route("/", get(|| async { Redirect::to(path::AUTH_LAYOUT) }))
         .merge(app::auth::router::router())
@@ -101,8 +100,6 @@ async fn main() {
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
-    // Static assets served without auth middleware to avoid unnecessary
-    // session overhead on every CSS/JS request.
     let app = Router::new()
         .nest_service("/static", ServeDir::new("assets/static"))
         .merge(auth_app);

@@ -85,7 +85,7 @@ pub async fn execute(
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Mutex;
+    use tokio::sync::Mutex;
     use async_trait::async_trait;
     use crate::app::shared_kernel::coach_name::CoachName;
     use crate::app::auth::domain::reset_token::{ResetToken, Token};
@@ -101,7 +101,7 @@ mod tests {
     impl IResetTokenRepository for FakeTokenRepo {
         async fn find_by_token(&self, _: &str) -> Result<Option<ResetToken>, RepositoryError> { unimplemented!() }
         async fn create(&self, token: &Token, _: &CoachName) -> Result<(), RepositoryError> {
-            self.created.lock().unwrap().push(token.to_string());
+            self.created.lock().await.push(token.to_string());
             Ok(())
         }
         async fn delete_by_token(&self, _: &str) -> Result<(), RepositoryError> { Ok(()) }
@@ -123,7 +123,7 @@ mod tests {
         let result = execute(cmd("Bagouze"), &user_repo, &token_repo, &ConsoleEmailService).await;
 
         assert!(result.is_ok());
-        assert_eq!(token_repo.created.lock().unwrap().len(), 1);
+        assert_eq!(token_repo.created.lock().await.len(), 1);
     }
 
     #[tokio::test]
@@ -134,7 +134,7 @@ mod tests {
         let result = execute(cmd("Inconnu"), &user_repo, &token_repo, &ConsoleEmailService).await;
 
         assert!(matches!(result, Err(SendResetPasswordEmailError::CoachNameNotFound)));
-        assert!(token_repo.created.lock().unwrap().is_empty());
+        assert!(token_repo.created.lock().await.is_empty());
     }
 
     #[tokio::test]
@@ -145,6 +145,6 @@ mod tests {
         let result = execute(cmd("Bagouze"), &user_repo, &token_repo, &ConsoleEmailService).await;
 
         assert!(matches!(result, Err(SendResetPasswordEmailError::Database(_))));
-        assert!(token_repo.created.lock().unwrap().is_empty());
+        assert!(token_repo.created.lock().await.is_empty());
     }
 }

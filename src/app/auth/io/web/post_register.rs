@@ -20,7 +20,7 @@ pub async fn post_register(
         password_confirm: payload.password_confirm.clone(),
     };
 
-    match register_new_acount::execute(cmd, state.auth.user_repository.as_ref(), state.event_bus.clone()).await {
+    match register_new_acount::execute(cmd, state.auth.user_repository.as_ref(), &state.event_bus).await {
         Ok(()) => Response::builder()
             .header("HX-Redirect", path::REGISTER_SUCCESS)
             .body(Body::empty())

@@ -355,7 +355,7 @@ textarea.form-input-article { resize: vertical; min-height: 80px; }
 .upload-text { font-size: var(--text-small); color: var(--dark-2); }
 
 /* ─── Wizard Steps ─── */
-.steps { display: flex; align-items: center; gap: 0; margin-bottom: var(--p3); }
+.steps { display: flex; align-items: center; gap: 0; margin-bottom: var(--p3); padding: 0px var(--p3)}
 .step { display: flex; align-items: center; gap: 8px; }
 .step-num {
   width: 28px; height: 28px; border-radius: 50%;

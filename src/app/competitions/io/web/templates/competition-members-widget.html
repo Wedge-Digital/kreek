@@ -1,0 +1,18 @@
+<select id="admins-select" name="admin_ids" multiple placeholder="Sélectionnez des coachs...">
+  {% for member in members %}
+  <option value="{{ member.id }}">{{ member.name }}</option>
+  {% endfor %}
+</select>
+
+<script>
+  (function () {
+    const el = document.getElementById('admins-select');
+    if (el && !el.tomselect) {
+      new TomSelect(el, {
+        plugins: ['remove_button'],
+        maxItems: null,
+        placeholder: 'Sélectionnez des coachs...',
+      });
+    }
+  })();
+</script>

@@ -1,5 +1,11 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EventTag {
+    pub name:  EventTagName,
+    pub value: String,
+}
+
 #[derive(Clone, Deserialize, Debug, PartialEq, Serialize)]
 pub enum EventTagName {
     User,

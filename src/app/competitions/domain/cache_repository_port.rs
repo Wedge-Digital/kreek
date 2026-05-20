@@ -53,4 +53,5 @@ pub trait ICompetitionsCacheRepository: Send + Sync {
     async fn remove_space(&self, space_id: &SpaceId)         -> Result<(), CompetitionsCacheError>;
     async fn subscribe(&self, coach_id: &CoachId, space_id: &SpaceId, profile: &SpaceProfile) -> Result<(), CompetitionsCacheError>;
     async fn unsubscribe(&self, coach_id: &CoachId, space_id: &SpaceId)              -> Result<(), CompetitionsCacheError>;
+    async fn list_members_for_space(&self, space_id: &SpaceId) -> Result<Vec<CachedUser>, CompetitionsCacheError>;
 }

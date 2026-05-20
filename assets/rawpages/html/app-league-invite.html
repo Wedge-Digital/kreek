@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invitations — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .create-card { background: var(--white); border-radius: 12px; padding: var(--p4); max-width: 900px; margin: 0 auto; }
+    .create-header {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 10px; padding: var(--p2); margin-bottom: var(--p3);
+      display: flex; align-items: center; gap: var(--p1);
+    }
+    .create-header-icon { width: 48px; height: 48px; border-radius: 10px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+    .create-header-text .title { color: var(--white); font-family: var(--font-title); font-size: 24px; font-weight: 700; }
+    .create-header-text .sub { color: rgba(255,255,255,0.7); font-size: var(--text-tiny); margin-top: 2px; }
+
+    .steps { display: flex; align-items: center; margin-bottom: var(--p3); }
+    .step { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .step-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: var(--text-tiny); font-weight: 700; flex-shrink: 0; }
+    .step-num.done  { background: var(--green); color: var(--white); }
+    .step-num.active { background: var(--main-blue); color: var(--white); }
+    .step-num.pending { background: var(--dark-5); color: var(--dark-3); }
+    .step-label { font-size: 11px; font-weight: 500; white-space: nowrap; }
+    .step-label.done   { color: var(--green); }
+    .step-label.active { color: var(--main-blue); }
+    .step-label.pending { color: var(--dark-3); }
+    .step-line { flex: 1; height: 2px; background: var(--dark-5); margin: 0 6px; min-width: 16px; }
+    .step-line.done { background: var(--green); }
+
+    .section { margin-bottom: var(--p3); }
+    .section-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); margin-bottom: var(--p1); }
+
+    .sub-section { background: var(--dark-6); border: 1px solid var(--dark-5); border-radius: 8px; padding: var(--p2); margin-top: var(--p1); }
+    .sub-section-title { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: var(--p1); }
+
+    .link-box {
+      display: flex; align-items: center; gap: var(--p1);
+      background: var(--white); border: 1px solid var(--dark-5); border-radius: 8px;
+      padding: var(--p1) var(--p2); margin-top: var(--p1);
+    }
+    .link-url { flex: 1; font-size: var(--text-tiny); color: var(--dark-2); font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .search-row { display: flex; gap: var(--p1); margin-bottom: var(--p1); align-items: center; }
+    .search-row .form-input { margin: 0; }
+
+    .invited-list { display: flex; flex-direction: column; gap: 8px; }
+    .invited-row {
+      display: flex; align-items: center; gap: var(--p1);
+      padding: 10px 16px; background: var(--white);
+      border: 1px solid var(--dark-5); border-radius: 8px;
+    }
+    .invited-avatar {
+      width: 36px; height: 36px; border-radius: 50%; background: var(--dark-2);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--white); font-weight: 700; font-size: var(--text-tiny); flex-shrink: 0;
+    }
+    .invited-info { flex: 1; }
+    .invited-name { font-size: var(--text-small); font-weight: 500; color: var(--dark-1); }
+    .invited-meta { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; }
+    .invited-status-badge {
+      font-size: var(--text-tiny); font-weight: 700; padding: 3px 10px; border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .status-pending  { background: rgba(255,107,53,0.12); color: var(--orange); }
+    .status-accepted { background: rgba(98,149,132,0.12); color: var(--green); }
+    .status-declined { background: rgba(224,32,32,0.12); color: var(--red); }
+    .invited-remove { background: none; border: none; color: var(--dark-4); font-size: 18px; cursor: pointer; padding: 4px; border-radius: 4px; }
+    .invited-remove:hover { color: var(--red); background: rgba(224,32,32,0.08); }
+
+    .count-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: var(--p1) var(--p2); background: var(--dark-6); border-radius: 8px; margin-bottom: var(--p1);
+    }
+    .count-bar-label { font-size: var(--text-tiny); color: var(--dark-2); font-weight: 500; }
+    .count-bar-value { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--main-blue); }
+
+    .progress-fill { height: 6px; background: var(--dark-5); border-radius: 3px; margin-top: 4px; }
+    .progress-inner { height: 100%; border-radius: 3px; background: var(--main-blue); width: 67%; }
+
+    .empty-list { text-align: center; padding: var(--p3); color: var(--dark-3); font-size: var(--text-small); }
+    .empty-icon { font-size: 40px; display: block; margin-bottom: var(--p1); }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active" href="app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="create-card">
+
+          <div class="create-header">
+            <div class="create-header-icon">📩</div>
+            <div class="create-header-text">
+              <div class="title">Invitations</div>
+              <div class="sub">Ligue de la Ville de Rennes — Saison 5</div>
+            </div>
+          </div>
+
+          <div class="steps">
+            <div class="step">
+              <div class="step-num done">✓</div>
+              <div class="step-label done">Informations</div>
+            </div>
+            <div class="step-line done"></div>
+            <div class="step">
+              <div class="step-num done">✓</div>
+              <div class="step-label done">Règles</div>
+            </div>
+            <div class="step-line done"></div>
+            <div class="step">
+              <div class="step-num done">✓</div>
+              <div class="step-label done">Structure</div>
+            </div>
+            <div class="step-line done"></div>
+            <div class="step">
+              <div class="step-num active">4</div>
+              <div class="step-label active">Invitations</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step">
+              <div class="step-num pending">5</div>
+              <div class="step-label pending">Validation</div>
+            </div>
+          </div>
+
+          <!-- Section 1: Mode d'accès -->
+          <div class="section">
+            <div class="section-title">1 — Mode d'accès à la compétition :</div>
+            <div class="choice-group">
+              <div class="choice-btn selected">Sur invitation (liste fermée)</div>
+              <div class="choice-btn">Lien public (quiconque avec le lien peut s'inscrire)</div>
+              <div class="choice-btn">Inscription libre (tout le monde)</div>
+            </div>
+          </div>
+
+          <div class="separator"></div>
+
+          <!-- Section 2: Inviter des coachs -->
+          <div class="section">
+            <div class="section-title">2 — Inviter des coachs :</div>
+
+            <div class="count-bar">
+              <div>
+                <div class="count-bar-label">Inscriptions</div>
+                <div class="progress-fill"><div class="progress-inner"></div></div>
+              </div>
+              <div style="text-align: right;">
+                <div class="count-bar-value">8 / 12</div>
+                <div style="font-size: 10px; color: var(--dark-3);">coachs invités</div>
+              </div>
+            </div>
+
+            <div class="search-row">
+              <input type="text" class="form-input" placeholder="Rechercher un coach par pseudo..." style="flex:1">
+              <button class="btn btn-primary-blue btn-sm" style="white-space: nowrap; padding: 12px 20px;">+ Inviter</button>
+            </div>
+
+            <div class="invited-list">
+              <div class="invited-row">
+                <div class="invited-avatar" style="background: #7B3F9E;">CC</div>
+                <div class="invited-info">
+                  <div class="invited-name">Colonel Castor</div>
+                  <div class="invited-meta">Équipe: Les Castors Impériaux · Humains</div>
+                </div>
+                <span class="invited-status-badge status-accepted">Accepté</span>
+                <button class="invited-remove">✕</button>
+              </div>
+
+              <div class="invited-row">
+                <div class="invited-avatar" style="background: #2A7A4F;">LT</div>
+                <div class="invited-info">
+                  <div class="invited-name">Le Tacticien</div>
+                  <div class="invited-meta">Équipe: Shadow Blades · Dark Elves</div>
+                </div>
+                <span class="invited-status-badge status-accepted">Accepté</span>
+                <button class="invited-remove">✕</button>
+              </div>
+
+              <div class="invited-row">
+                <div class="invited-avatar" style="background: #1A6090;">WH</div>
+                <div class="invited-info">
+                  <div class="invited-name">Whiskers</div>
+                  <div class="invited-meta">Invitation envoyée le 14 juil. 2024</div>
+                </div>
+                <span class="invited-status-badge status-pending">En attente</span>
+                <button class="invited-remove">✕</button>
+              </div>
+
+              <div class="invited-row">
+                <div class="invited-avatar" style="background: #8B4513;">GR</div>
+                <div class="invited-info">
+                  <div class="invited-name">GrimFang</div>
+                  <div class="invited-meta">Invitation envoyée le 12 juil. 2024</div>
+                </div>
+                <span class="invited-status-badge status-pending">En attente</span>
+                <button class="invited-remove">✕</button>
+              </div>
+
+              <div class="invited-row">
+                <div class="invited-avatar" style="background: var(--red);">MR</div>
+                <div class="invited-info">
+                  <div class="invited-name">MrChaotica</div>
+                  <div class="invited-meta">Invitation envoyée le 10 juil. 2024</div>
+                </div>
+                <span class="invited-status-badge status-declined">Refusé</span>
+                <button class="invited-remove">✕</button>
+              </div>
+
+              <div class="invited-row">
+                <div class="invited-avatar" style="background: #4B7B3B;">OG</div>
+                <div class="invited-info">
+                  <div class="invited-name">OrkGaruk</div>
+                  <div class="invited-meta">Équipe: Da Waaaagh Boyz · Orcs</div>
+                </div>
+                <span class="invited-status-badge status-accepted">Accepté</span>
+                <button class="invited-remove">✕</button>
+              </div>
+
+              <div class="invited-row">
+                <div class="invited-avatar" style="background: #5A4A8B;">NX</div>
+                <div class="invited-info">
+                  <div class="invited-name">NecroXtreme</div>
+                  <div class="invited-meta">Invitation envoyée le 15 juil. 2024</div>
+                </div>
+                <span class="invited-status-badge status-pending">En attente</span>
+                <button class="invited-remove">✕</button>
+              </div>
+
+              <div class="invited-row">
+                <div class="invited-avatar" style="background: #2B5E8A;">RP</div>
+                <div class="invited-info">
+                  <div class="invited-name">RatPoisoner</div>
+                  <div class="invited-meta">Équipe: Les Tunneliers · Skaven</div>
+                </div>
+                <span class="invited-status-badge status-accepted">Accepté</span>
+                <button class="invited-remove">✕</button>
+              </div>
+            </div>
+
+            <div style="margin-top: var(--p2);">
+              <button class="btn btn-outline" style="width: auto; padding: var(--p05) var(--p2); font-size: var(--text-tiny);">
+                + Renvoyer toutes les invitations en attente
+              </button>
+            </div>
+          </div>
+
+          <div class="separator"></div>
+
+          <!-- Section 3: Limites -->
+          <div class="section">
+            <div class="section-title">3 — Limites d'inscription :</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--p2);">
+              <div class="form-group">
+                <label class="form-label">Nombre maximum de participants</label>
+                <input type="number" class="form-input" value="12" min="2">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Date limite d'inscription</label>
+                <input type="date" class="form-input" value="2024-08-25">
+              </div>
+            </div>
+            <div style="margin-top: var(--p1);">
+              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: var(--text-small); color: var(--dark-2);">
+                <input type="checkbox" checked style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--main-blue);">
+                Notifier les coachs par email quand la compétition est ouverte
+              </label>
+            </div>
+          </div>
+
+          <div class="separator"></div>
+
+          <!-- Section 4: Créer les équipes -->
+          <div class="section">
+            <div class="section-title">4 — Création des équipes :</div>
+            <div class="choice-group">
+              <div class="choice-btn selected">Les coachs créent leur équipe après acceptation</div>
+              <div class="choice-btn">Les coachs choisissent une équipe existante</div>
+              <div class="choice-btn">L'admin assigne les équipes manuellement</div>
+            </div>
+            <div style="font-size: var(--text-tiny); color: var(--dark-3); margin-top: 8px; display: flex; align-items: center; gap: 6px;">
+              📌 Chaque coach invité recevra un lien pour créer son équipe selon les règles définies à l'étape 2
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; margin-top: var(--p2);">
+            <button class="btn btn-outline" style="width: auto; padding: var(--p1) var(--p3);" onclick="window.location.href='app-league-structure.html'">
+              ← Retour
+            </button>
+            <button class="btn btn-primary" style="width: auto; padding: var(--p1) var(--p4);" onclick="window.location.href='app-league-validation.html'">
+              Suivant →
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

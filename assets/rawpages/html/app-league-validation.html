@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Validation — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .create-card { background: var(--white); border-radius: 12px; padding: var(--p4); max-width: 900px; margin: 0 auto; }
+    .create-header {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 10px; padding: var(--p2); margin-bottom: var(--p3);
+      display: flex; align-items: center; gap: var(--p1);
+    }
+    .create-header-icon { width: 48px; height: 48px; border-radius: 10px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+    .create-header-text .title { color: var(--white); font-family: var(--font-title); font-size: 24px; font-weight: 700; }
+    .create-header-text .sub { color: rgba(255,255,255,0.7); font-size: var(--text-tiny); margin-top: 2px; }
+
+    .steps { display: flex; align-items: center; margin-bottom: var(--p3); }
+    .step { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .step-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: var(--text-tiny); font-weight: 700; flex-shrink: 0; }
+    .step-num.done  { background: var(--green); color: var(--white); }
+    .step-num.active { background: var(--main-blue); color: var(--white); }
+    .step-num.pending { background: var(--dark-5); color: var(--dark-3); }
+    .step-label { font-size: 11px; font-weight: 500; white-space: nowrap; }
+    .step-label.done   { color: var(--green); }
+    .step-label.active { color: var(--main-blue); }
+    .step-label.pending { color: var(--dark-3); }
+    .step-line { flex: 1; height: 2px; background: var(--dark-5); margin: 0 6px; min-width: 16px; }
+    .step-line.done { background: var(--green); }
+
+    /* Recap cards */
+    .recap-card {
+      border: 1px solid var(--dark-5); border-radius: 10px; overflow: hidden;
+      margin-bottom: var(--p2);
+    }
+    .recap-card-header {
+      background: var(--dark-6); padding: 12px 20px;
+      display: flex; align-items: center; gap: 10px;
+      border-bottom: 1px solid var(--dark-5);
+    }
+    .recap-card-icon { font-size: 18px; }
+    .recap-card-title { flex: 1; font-family: var(--font-title); font-weight: 700; font-size: var(--text-small); color: var(--dark-1); }
+    .recap-card-edit {
+      font-size: var(--text-tiny); color: var(--main-blue); cursor: pointer;
+      text-decoration: none; font-weight: 500;
+      padding: 4px 10px; border: 1px solid var(--main-blue); border-radius: 4px;
+    }
+    .recap-card-edit:hover { background: rgba(0,48,73,0.06); }
+    .recap-card-body { padding: var(--p2); }
+    .recap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 0; }
+    .recap-row { display: flex; align-items: baseline; gap: var(--p1); padding: 5px 0; border-bottom: 1px solid var(--dark-6); }
+    .recap-row:last-child { border-bottom: none; }
+    .recap-key { min-width: 140px; font-size: var(--text-tiny); color: var(--dark-3); font-weight: 500; flex-shrink: 0; }
+    .recap-val { font-size: var(--text-tiny); color: var(--dark-1); }
+    .recap-val.highlight { color: var(--main-blue); font-weight: 600; }
+    .recap-val.ok { color: var(--green); font-weight: 600; }
+    .recap-val.warn { color: var(--orange); font-weight: 600; }
+
+    /* Logo preview */
+    .recap-logo { width: 48px; height: 48px; border-radius: 8px; background: var(--dark-5); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+
+    /* Admins chips */
+    .admin-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .admin-chip { font-size: var(--text-tiny); padding: 3px 10px; background: var(--dark-6); border: 1px solid var(--dark-5); border-radius: 12px; color: var(--dark-2); }
+
+    /* Warnings */
+    .warn-box {
+      background: rgba(255,107,53,0.08); border: 1px solid rgba(255,107,53,0.3);
+      border-radius: 8px; padding: var(--p1) var(--p2); margin-bottom: var(--p2);
+      display: flex; align-items: flex-start; gap: var(--p1);
+    }
+    .warn-icon { font-size: 20px; flex-shrink: 0; }
+    .warn-text { font-size: var(--text-tiny); color: var(--dark-1); }
+    .warn-title { font-weight: 700; color: var(--orange); margin-bottom: 4px; }
+
+    /* CTA block */
+    .cta-block {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 12px; padding: var(--p3); text-align: center; margin-top: var(--p2);
+    }
+    .cta-title { color: var(--white); font-family: var(--font-title); font-size: var(--h4); font-weight: 700; margin-bottom: 8px; }
+    .cta-sub { color: rgba(255,255,255,0.6); font-size: var(--text-tiny); margin-bottom: var(--p2); }
+    .btn-cta {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--orange); color: var(--white);
+      border: none; border-radius: 10px;
+      padding: 16px 48px; font-size: var(--text-small); font-weight: 700;
+      font-family: var(--font-accent); letter-spacing: 0.5px;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn-cta:hover { opacity: 0.9; }
+
+    /* Roster pill list */
+    .pill-list { display: flex; flex-wrap: wrap; gap: 4px; }
+    .pill { font-size: 10px; padding: 2px 8px; background: var(--dark-5); border-radius: 10px; color: var(--dark-2); }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active" href="app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="create-card">
+
+          <div class="create-header">
+            <div class="create-header-icon">✅</div>
+            <div class="create-header-text">
+              <div class="title">Récapitulatif & Validation</div>
+              <div class="sub">Vérifiez les paramètres avant de créer la compétition</div>
+            </div>
+          </div>
+
+          <div class="steps">
+            <div class="step">
+              <div class="step-num done">✓</div>
+              <div class="step-label done">Informations</div>
+            </div>
+            <div class="step-line done"></div>
+            <div class="step">
+              <div class="step-num done">✓</div>
+              <div class="step-label done">Règles</div>
+            </div>
+            <div class="step-line done"></div>
+            <div class="step">
+              <div class="step-num done">✓</div>
+              <div class="step-label done">Structure</div>
+            </div>
+            <div class="step-line done"></div>
+            <div class="step">
+              <div class="step-num done">✓</div>
+              <div class="step-label done">Invitations</div>
+            </div>
+            <div class="step-line done"></div>
+            <div class="step">
+              <div class="step-num active">5</div>
+              <div class="step-label active">Validation</div>
+            </div>
+          </div>
+
+          <!-- Warning: places restantes -->
+          <div class="warn-box">
+            <div class="warn-icon">⚠️</div>
+            <div class="warn-text">
+              <div class="warn-title">Inscriptions incomplètes</div>
+              4 places restantes sur 12. Vous pouvez créer la compétition maintenant ou attendre que toutes les places soient pourvues. Les invitations déjà envoyées resteront valides.
+            </div>
+          </div>
+
+          <!-- Recap 1: Informations -->
+          <div class="recap-card">
+            <div class="recap-card-header">
+              <div class="recap-card-icon">🏟️</div>
+              <div class="recap-card-title">Informations générales</div>
+              <a class="recap-card-edit" href="app-league-create.html">Modifier</a>
+            </div>
+            <div class="recap-card-body">
+              <div style="display: flex; gap: var(--p2); align-items: flex-start;">
+                <div class="recap-logo">🏆</div>
+                <div style="flex: 1;">
+                  <div class="recap-row">
+                    <span class="recap-key">Nom</span>
+                    <span class="recap-val highlight">Ligue de la Ville de Rennes — Saison 5</span>
+                  </div>
+                  <div class="recap-row">
+                    <span class="recap-key">Administrateurs</span>
+                    <span class="recap-val">
+                      <div class="admin-chips">
+                        <span class="admin-chip">Colonel Castor</span>
+                        <span class="admin-chip">Le Tacticien</span>
+                      </div>
+                    </span>
+                  </div>
+                  <div class="recap-row">
+                    <span class="recap-key">Logo</span>
+                    <span class="recap-val ok">✓ logo_rennes_s5.png</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recap 2: Règles -->
+          <div class="recap-card">
+            <div class="recap-card-header">
+              <div class="recap-card-icon">📋</div>
+              <div class="recap-card-title">Règles de la compétition</div>
+              <a class="recap-card-edit" href="app-league-rules.html">Modifier</a>
+            </div>
+            <div class="recap-card-body">
+              <div class="recap-row">
+                <span class="recap-key">Variante</span>
+                <span class="recap-val">Blood Bowl 2020</span>
+              </div>
+              <div class="recap-row">
+                <span class="recap-key">Type</span>
+                <span class="recap-val">Ligue (avec progression des équipes)</span>
+              </div>
+              <div class="recap-row">
+                <span class="recap-key">Création d'équipe</span>
+                <span class="recap-val">Règles standard BB 2020</span>
+              </div>
+              <div class="recap-row">
+                <span class="recap-key">Budget de départ</span>
+                <span class="recap-val">1 000 000 pièces</span>
+              </div>
+              <div class="recap-row">
+                <span class="recap-key">Points VND</span>
+                <span class="recap-val">Victoire = 3 pts · Nul = 1 pt · Défaite = 0 pt</span>
+              </div>
+              <div class="recap-row">
+                <span class="recap-key">Points bonus</span>
+                <span class="recap-val">Offensif (+1 si ≥ 3 TDs) · Défensif (+1 si ≤ 1 TD encaissé)</span>
+              </div>
+              <div class="recap-row">
+                <span class="recap-key">Départages</span>
+                <span class="recap-val">Diff. TDs → TDs marqués → Blessures infligées → Tirage</span>
+              </div>
+              <div class="recap-row">
+                <span class="recap-key">Progression</span>
+                <span class="recap-val">Standard BB 2020 · Vieillissement actif</span>
+              </div>
+              <div class="recap-row">
+                <span class="recap-key">Tiers</span>
+                <span class="recap-val">3 tiers · Tier 1 : Dark Elves, Lizards, Skaven… · Tier 3 : Halflings, Goblins…</span>
+              </div>
+              <div class="recap-row" style="border-bottom: none; align-items: flex-start;">
+                <span class="recap-key">Rosters autorisés</span>
+                <span class="recap-val">
+                  <div class="pill-list">
+                    <span class="pill">Amazones</span><span class="pill">Chaos</span>
+                    <span class="pill">Dark Elves</span><span class="pill">Dwarfs</span>
+                    <span class="pill">Elven Union</span><span class="pill">Halflings</span>
+                    <span class="pill">Humans</span><span class="pill">Lizardmen</span>
+                    <span class="pill">Nurgle</span><span class="pill">Orcs</span>
+                    <span class="pill">Skaven</span><span class="pill">Undead</span>
+                    <span class="pill" style="background:rgba(0,48,73,0.1); color: var(--main-blue);">+10 autres</span>
+                  </div>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recap 3: Structure -->
+          <div class="recap-card">
+            <div class="recap-card-header">
+              <div class="recap-card-icon">🏗️</div>
+              <div class="recap-card-title">Structure de la compétition</div>
+              <a class="recap-card-edit" href="app-league-structure.html">Modifier</a>
+            </div>
+            <div class="recap-card-body">
+              <div class="recap-row">
+                <span class="recap-key">Phase de groupes</span>
+                <span class="recap-val">2 poules de 6 équipes</span>
+              </div>
+              <div class="recap-row">
+                <span class="recap-key">Phase finale</span>
+                <span class="recap-val">Top 2 par poule → Quarts + Demis + Finale + Match 3e place</span>
+              </div>
+              <div class="recap-row">
+                <span class="recap-key">Calendrier</span>
+                <span class="recap-val">Automatique · 14 jours par journée</span>
+              </div>
+              <div class="recap-row">
+                <span class="recap-key">Format</span>
+                <span class="recap-val">Aller-retour · 10 journées de groupes</span>
+              </div>
+              <div class="recap-row">
+                <span class="recap-key">Dates</span>
+                <span class="recap-val">1er sept. 2024 → 30 juin 2025</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recap 4: Invitations -->
+          <div class="recap-card">
+            <div class="recap-card-header">
+              <div class="recap-card-icon">📩</div>
+              <div class="recap-card-title">Invitations</div>
+              <a class="recap-card-edit" href="app-league-invite.html">Modifier</a>
+            </div>
+            <div class="recap-card-body">
+              <div class="recap-row">
+                <span class="recap-key">Mode d'accès</span>
+                <span class="recap-val">Sur invitation (liste fermée)</span>
+              </div>
+              <div class="recap-row">
+                <span class="recap-key">Invitations envoyées</span>
+                <span class="recap-val">8 coachs · 4 acceptées · 3 en attente · 1 refusée</span>
+              </div>
+              <div class="recap-row">
+                <span class="recap-key">Places disponibles</span>
+                <span class="recap-val warn">4 places restantes sur 12</span>
+              </div>
+              <div class="recap-row">
+                <span class="recap-key">Date limite</span>
+                <span class="recap-val">25 août 2024</span>
+              </div>
+              <div class="recap-row">
+                <span class="recap-key">Création des équipes</span>
+                <span class="recap-val">Par les coachs après acceptation</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- CTA -->
+          <div class="cta-block">
+            <div class="cta-title">Tout est prêt !</div>
+            <div class="cta-sub">
+              La compétition sera créée et les invitations confirmées seront notifiées.<br>
+              Vous pourrez modifier les paramètres depuis le panneau d'administration.
+            </div>
+            <button class="btn-cta">
+              🏆 Créer la compétition
+            </button>
+            <div style="margin-top: var(--p1); font-size: var(--text-tiny); color: rgba(255,255,255,0.4);">
+              Vous pourrez toujours modifier les paramètres après la création
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-start; margin-top: var(--p2);">
+            <button class="btn btn-outline" style="width: auto; padding: var(--p1) var(--p3);" onclick="window.location.href='app-league-invite.html'">
+              ← Retour
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

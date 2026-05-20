@@ -81,7 +81,7 @@ pub async fn execute(
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Mutex;
+    use tokio::sync::Mutex;
     use async_trait::async_trait;
     use crate::app::shared_kernel::coach_name::CoachName;
     use crate::app::auth::domain::reset_token::{ResetToken, Token};
@@ -106,7 +106,7 @@ mod tests {
         }
         async fn create(&self, _: &Token, _: &CoachName) -> Result<(), RepositoryError> { unimplemented!() }
         async fn delete_by_token(&self, token: &str) -> Result<(), RepositoryError> {
-            self.deleted.lock().unwrap().push(token.to_string());
+            self.deleted.lock().await.push(token.to_string());
             Ok(())
         }
     }
@@ -150,7 +150,7 @@ mod tests {
         let result = execute(cmd("nouveaumdp", "nouveaumdp"), &user_repo(), &token_repo).await;
 
         assert!(result.is_ok());
-        assert_eq!(token_repo.deleted.lock().unwrap().len(), 1);
+        assert_eq!(token_repo.deleted.lock().await.len(), 1);
     }
 
     #[tokio::test]

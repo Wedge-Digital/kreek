@@ -5,7 +5,7 @@ use crate::app::shared_kernel::email::Email;
 use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::shared_kernel::common_types::{CoachId, EventId};
 use crate::lib::event_envelope::EventEnvelope;
-use crate::lib::services::event_bus::event_bus::EventTag;
+use crate::lib::services::event_bus::event_tags::EventTag;
 use crate::lib::services::event_bus::event_tags::EventTagName;
 
 #[derive(Debug, Deserialize, Serialize)]

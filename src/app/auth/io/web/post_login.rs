@@ -14,7 +14,7 @@ pub async fn login_submit(
     State(state): State<AppState>,
     Form(payload): Form<PerformLoginCommand>,
 ) -> impl IntoResponse {
-    match perform_login::execute(payload, state.auth.user_repository.as_ref(), state.event_bus).await {
+    match perform_login::execute(payload, state.auth.user_repository.as_ref(), &state.event_bus).await {
         Ok(user) => {
             if auth_session.login(&user).await.is_err() {
                 return LoginTemplate {
@@ -46,7 +46,7 @@ pub async fn login_submit(
 
 #[cfg(test)]
 mod tests {
-    use std::sync::{Arc, Mutex};
+    use std::sync::Arc;
     use argon2::{Argon2, PasswordHasher};
     use argon2::password_hash::{SaltString, rand_core::OsRng};
     use axum::body::to_bytes;
@@ -69,7 +69,7 @@ mod tests {
     use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::{ISpaceUserCacheRepository, SpaceUserCacheRepositoryError};
     use crate::app::spaces::domain::user::User as SpaceUser;
     use crate::lib::services::email::fakes::console_email_service::ConsoleEmailService;
-    use crate::lib::services::event_bus::event_bus::EventBus;
+    use crate::lib::services::event_bus::event_bus::new_bus;
     use crate::state::AppState;
 
     fn hash_password(password: &str) -> String {
@@ -88,8 +88,8 @@ mod tests {
             session_layer,
         ).build();
 
-        let event_bus = Arc::new(Mutex::new(EventBus::new()));
-        let app_event_bus = Arc::new(Mutex::new(EventBus::new()));
+        let event_bus     = new_bus();
+        let app_event_bus = new_bus();
 
         let state = AppState {
             auth: AuthContext {
@@ -97,7 +97,7 @@ mod tests {
                 reset_token_repository: Arc::new(FakeResetTokenRepository {
                     find_result: crate::app::auth::io::repository::tests::fake_reset_token_repository::FindResult::NotFound,
                 }),
-                event_bus:             event_bus.clone(),
+                event_bus: event_bus.clone(),
             },
             spaces: SpacesContext {
                 space_repository:      Arc::new(FakeSpaceRepository),
@@ -108,11 +108,11 @@ mod tests {
                 competitions_cache_repository: Arc::new(FakeCompetitionsCacheRepository),
                 event_bus:                     event_bus.clone(),
             },
-            email_service:    Arc::new(ConsoleEmailService),
-            host_domain:      "localhost:8080".into(),
-            bypass_auth:      false,
-            event_bus: event_bus.clone(),
-            app_event_bus: app_event_bus.clone()
+            email_service: Arc::new(ConsoleEmailService),
+            host_domain:   "localhost:8080".into(),
+            bypass_auth:   false,
+            event_bus:     event_bus.clone(),
+            app_event_bus: app_event_bus.clone(),
         };
 
         Router::new()

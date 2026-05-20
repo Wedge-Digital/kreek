@@ -15,4 +15,5 @@ impl ICompetitionsCacheRepository for FakeCompetitionsCacheRepository {
     async fn remove_space(&self, _: &SpaceId)                             -> Result<(), CompetitionsCacheError> { Ok(()) }
     async fn subscribe(&self, _: &CoachId, _: &SpaceId, _: &SpaceProfile)         -> Result<(), CompetitionsCacheError> { Ok(()) }
     async fn unsubscribe(&self, _: &CoachId, _: &SpaceId)                 -> Result<(), CompetitionsCacheError> { Ok(()) }
+    async fn list_members_for_space(&self, _: &SpaceId)                   -> Result<Vec<CachedUser>, CompetitionsCacheError> { Ok(vec![]) }
 }
