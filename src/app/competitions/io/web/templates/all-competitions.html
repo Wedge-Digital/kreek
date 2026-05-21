@@ -1,70 +1,51 @@
-<div class="all-competition">
+<div class="create-card">
 
-<div class="section-header competitions">
+  {% if competitions.is_empty() %}
+
+  <div class="empty-state">
+    <div class="empty-state-icon">🏆</div>
+    <p class="h4-gras">Aucune compétition pour le moment</p>
+    <p class="empty-state-body">
+      Cet espace n'a pas encore de compétition.<br>
+      Créez la première pour inviter des équipes et gérer vos ligues.
+    </p>
+    <button class="btn btn-primary"
+            hx-get="{{ competition_routes.new_competition(space_id) }}"
+            hx-target="#app-content"
+            hx-swap="innerHTML"
+            hx-trigger="click"
+            hx-push-url="true">
+      Créer une compétition
+    </button>
+  </div>
+
+  {% else %}
+
+  <div class="section-header competitions">
     <div class="h3-gras">Toutes les compétitions</div>
-        <button class="btn btn-primary btn-fit"
-             hx-get="{{ competition_routes.new_competition(space_id) }}"
-             hx-target="#app-content"
-             hx-swap="innerHTML"
-             hx-trigger="click"
-             hx-push-url="true">Créer une compétition</button>
-</div>
+    <button class="btn btn-primary btn-fit"
+            hx-get="{{ competition_routes.new_competition(space_id) }}"
+            hx-target="#app-content"
+            hx-swap="innerHTML"
+            hx-trigger="click"
+            hx-push-url="true">
+      Créer une compétition
+    </button>
+  </div>
 
-<div class="flex-col gap-1">
-    <div class="club-grid">
-        <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
-            <div class="club-logo" style="background: linear-gradient(135deg, #003049, #555770);">LC</div>
-            <div class="club-name">Ligue de Condate</div>
-            <div class="club-info">12 équipes<br>Rennes</div>
-        </div>
-        <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
-            <div class="club-logo" style="background: linear-gradient(135deg, #E02020, #1C1C29);">KK</div>
-            <div class="club-name">Korrigane Cup</div>
-            <div class="club-info">8 équipes<br>Bretagne</div>
-        </div>
-        <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
-            <div class="club-logo" style="background: linear-gradient(135deg, #629584, #003049);">LM</div>
-            <div class="club-name">Ligue du Midi</div>
-            <div class="club-info">16 équipes<br>Toulouse</div>
-        </div>
-        <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
-            <div class="club-logo" style="background: linear-gradient(135deg, #FFD700, #003049);">CB</div>
-            <div class="club-name">Chaos Bowl</div>
-            <div class="club-info">6 équipes<br>Lyon</div>
-        </div>
-        <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
-            <div class="club-logo" style="background: linear-gradient(135deg, #6F35A5, #1C1C29);">DB</div>
-            <div class="club-name">Dungeon Bowl IDF</div>
-            <div class="club-info">10 équipes<br>Paris</div>
-        </div>
+  <div class="club-grid">
+    {% for c in competitions %}
+    <div class="club-card"
+         hx-get="{{ competition_routes.all_competitions(c.id) }}"
+         hx-target="#app-content"
+         hx-swap="innerHTML"
+         hx-push-url="true">
+      <div class="club-logo">{{ c.name|truncate(2) }}</div>
+      <div class="club-name">{{ c.name }}</div>
     </div>
+    {% endfor %}
+  </div>
 
-    <div class="club-grid">
-        <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
-            <div class="club-logo" style="background: linear-gradient(135deg, #FF6B35, #1C1C29);">NO</div>
-            <div class="club-name">Nantes Open</div>
-            <div class="club-info">24 équipes<br>Nantes</div>
-        </div>
-        <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
-            <div class="club-logo" style="background: linear-gradient(135deg, #555770, #003049);">LN</div>
-            <div class="club-name">Ligue du Nord</div>
-            <div class="club-info">14 équipes<br>Lille</div>
-        </div>
-        <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
-            <div class="club-logo" style="background: linear-gradient(135deg, #1C1C29, #629584);">BB7</div>
-            <div class="club-name">BB7 Sevens Tour</div>
-            <div class="club-info">20 équipes<br>National</div>
-        </div>
-        <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
-            <div class="club-logo" style="background: linear-gradient(135deg, #003049, #E02020);">FC</div>
-            <div class="club-name">Fédération Classic</div>
-            <div class="club-info">32 équipes<br>National</div>
-        </div>
-        <div class="club-card" onclick="window.location.href='app-competition-detail.html'">
-            <div class="club-logo" style="background: linear-gradient(135deg, #8F90A6, #26263D);">AP</div>
-            <div class="club-name">Alsace Pro</div>
-            <div class="club-info">8 équipes<br>Strasbourg</div>
-        </div>
-    </div>
-</div>
+  {% endif %}
+
 </div>

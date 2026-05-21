@@ -8,6 +8,7 @@ pub mod user;
 mod ports;
 pub mod authorization;
 pub mod space_name;
+pub mod competition_name;
 pub mod coach_name;
 pub mod coach_icon;
 pub mod email;

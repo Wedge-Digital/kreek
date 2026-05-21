@@ -17,3 +17,26 @@
 .club-info { font-size: var(--text-tiny); color: var(--dark-3); text-align: center; line-height: 1.6; }
 
 .section-header .competitions { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--p2); }
+.all-competition {
+  display: flex;
+  align-items: center;
+  gap: var(--p1);
+}
+
+.empty-state {
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   justify-content: center;
+   gap: var(--p2);
+   padding: var(--p5) var(--p3);
+   text-align: center;
+}
+
+.empty-state-icon { font-size: 48px; line-height: 1; }
+.empty-state-body {
+  font-size: var(--text-small);
+  color: var(--dark-3);
+  line-height: 1.7;
+  max-width: 380px;
+}

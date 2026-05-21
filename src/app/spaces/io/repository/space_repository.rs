@@ -80,6 +80,21 @@ impl ISpaceRepository for SpaceRepository {
         Ok(())
     }
 
+    async fn join_spaces(
+        &self,
+        space_ids: &[SpaceId],
+        coach_id: &CoachId,
+    ) -> Result<(), SpaceRepositoryError> {
+        let ids: Vec<String> = space_ids.iter().map(|id| id.to_string()).collect();
+        sqlx::query(include_str!("sql/space/join_spaces.sql"))
+            .bind(&ids)
+            .bind(coach_id.to_string())
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
+        Ok(())
+    }
+
     async fn find_member_profile(
         &self,
         coach_id: &CoachId,

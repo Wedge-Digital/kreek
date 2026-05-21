@@ -61,6 +61,7 @@ mod tests {
     use crate::app::auth::routes::path;
     use crate::app::competitions::context::CompetitionsContext;
     use crate::app::competitions::io::repository::tests::fake_cache_repository::FakeCompetitionsCacheRepository;
+    use crate::app::competitions::io::repository::tests::fake_competition_repository::FakeCompetitionRepository;
     use crate::app::shared_kernel::authorization::SpaceProfile;
     use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
     use crate::app::spaces::context::SpacesContext;
@@ -106,6 +107,7 @@ mod tests {
             },
             competitions: CompetitionsContext {
                 competitions_cache_repository: Arc::new(FakeCompetitionsCacheRepository),
+                competition_repository:        Arc::new(FakeCompetitionRepository),
                 event_bus:                     event_bus.clone(),
             },
             email_service: Arc::new(ConsoleEmailService),
@@ -153,11 +155,16 @@ mod tests {
     impl ISpaceRepository for FakeSpaceRepository {
         async fn save(&self, _: &Space) -> Result<(), SpaceRepositoryError> { Ok(()) }
         async fn add_member(&self, _: &SpaceId, _: &CoachId, _: &SpaceProfile) -> Result<(),SpaceRepositoryError> { Ok(()) }
+
+        async fn join_spaces(&self, space_ids: &[SpaceId], coach_id: &CoachId) -> Result<(), SpaceRepositoryError> {
+            todo!()
+        }
+
         async fn find_by_id(&self, _: &SpaceId) -> Result<Option<Space>,SpaceRepositoryError> { Ok(None) }
         async fn find_by_coach_id(&self, _: &CoachId) -> Result<Vec<SpaceSummary>,SpaceRepositoryError> { Ok(vec![]) }
 
         async fn find_member_profile(&self, coach_id: &CoachId, space_id: &SpaceId) -> Result<Option<SpaceProfile>, SpaceRepositoryError> {
-            Ok(Some(SpaceProfile::SimpleUser))
+            Ok(Some(SpaceProfile::SpaceUser))
         }
 
         async fn find_all(&self) -> Result<Vec<SpaceSummary>,SpaceRepositoryError> { Ok(vec![]) }

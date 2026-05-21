@@ -22,7 +22,7 @@ impl SpacePermissions {
     }
 
     pub fn can_report_match(&self) -> bool {
-        matches!(self.role, SpaceProfile::SpaceAdmin | SpaceProfile::MatchReporter)
+        matches!(self.role, SpaceProfile::SpaceAdmin)
     }
 }
 
@@ -73,13 +73,8 @@ mod tests {
     }
 
     #[test]
-    fn match_reporter_is_not_admin() {
-        assert!(!perms(SpaceProfile::MatchReporter).is_admin());
-    }
-
-    #[test]
     fn simple_user_is_not_admin() {
-        assert!(!perms(SpaceProfile::SimpleUser).is_admin());
+        assert!(!perms(SpaceProfile::SpaceUser).is_admin());
     }
 
     #[test]
@@ -88,12 +83,7 @@ mod tests {
     }
 
     #[test]
-    fn match_reporter_can_report_match() {
-        assert!(perms(SpaceProfile::MatchReporter).can_report_match());
-    }
-
-    #[test]
     fn simple_user_cannot_report_match() {
-        assert!(!perms(SpaceProfile::SimpleUser).can_report_match());
+        assert!(!perms(SpaceProfile::SpaceUser).can_report_match());
     }
 }

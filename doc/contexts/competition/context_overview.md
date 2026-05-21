@@ -1,6 +1,6 @@
 
 
-### Contexte compétition :
+# Contexte compétition :
 
 ## Objectif :
 Prendre en charge la gestion des compétitions dans l'espace, y compris la création, la modification, la démarrage et l'archivage des compétitions, ainsi que la gestion des utilisateurs et des administrateurs.

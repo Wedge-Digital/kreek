@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use sqlx::PgPool;
-use crate::app::auth::io::app_event_publisher::auth_app_event_publisher;
+use crate::app::auth::io::app_events::app_event_publisher::auth_app_event_publisher;
 use crate::app::auth::io::repository::reset_token_repository::{IResetTokenRepository, ResetTokenRepository};
 use crate::app::auth::io::repository::user_repository::UserRepository;
 use crate::app::auth::ports::IUserRepository;

@@ -1,10 +1,10 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use sqlx::PgPool;
-use crate::app::spaces::io::app_event_publisher::spaces_app_event_publisher;
+use crate::app::spaces::io::app_events::app_event_publisher::spaces_app_event_publisher;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::ISpaceRepository;
 use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::ISpaceUserCacheRepository;
-use crate::app::spaces::io::app_event_listeners::user_created_listener::user_created_listener;
+use crate::app::spaces::io::app_events::user_created_listener::user_created_listener;
 use crate::app::spaces::io::repository::space_repository::SpaceRepository;
 use crate::app::spaces::io::repository::user_cache_repository::SpaceUserCacheRepository;
 use crate::lib::services::event_bus::event_bus::EventBus;

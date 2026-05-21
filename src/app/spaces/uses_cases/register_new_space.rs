@@ -113,6 +113,11 @@ mod tests {
         async fn add_member(&self, _space_id: &SpaceId, _coach_id: &CoachId, _profile: &SpaceProfile) -> Result<(), SpaceRepositoryError> {
             Ok(())
         }
+
+        async fn join_spaces(&self, space_ids: &[SpaceId], coach_id: &CoachId) -> Result<(), SpaceRepositoryError> {
+            Ok(())
+        }
+
         async fn find_by_id(&self, _id: &SpaceId) -> Result<Option<Space>, SpaceRepositoryError> {
             Ok(None)
         }
@@ -122,7 +127,7 @@ mod tests {
         }
 
         async fn find_member_profile(&self, coach_id: &CoachId, space_id: &SpaceId) -> Result<Option<SpaceProfile>, SpaceRepositoryError> {
-            Ok(Some(SpaceProfile::SimpleUser))
+            Ok(Some(SpaceProfile::SpaceUser))
         }
 
         async fn find_all(&self) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
@@ -140,6 +145,11 @@ mod tests {
         async fn add_member(&self, _space_id: &SpaceId, _coach_id: &CoachId, _profile: &SpaceProfile) -> Result<(), SpaceRepositoryError> {
             Ok(())
         }
+
+        async fn join_spaces(&self, space_ids: &[SpaceId], coach_id: &CoachId) -> Result<(), SpaceRepositoryError> {
+            Ok(())
+        }
+
         async fn find_by_id(&self, _id: &SpaceId) -> Result<Option<Space>, SpaceRepositoryError> {
             Ok(None)
         }
@@ -149,7 +159,7 @@ mod tests {
         }
 
         async fn find_member_profile(&self, coach_id: &CoachId, space_id: &SpaceId) -> Result<Option<SpaceProfile>, SpaceRepositoryError> {
-            Ok(Some(SpaceProfile::SimpleUser))
+            Ok(Some(SpaceProfile::SpaceUser))
         }
 
         async fn find_all(&self) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {

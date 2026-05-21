@@ -3,16 +3,14 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum SpaceProfile {
     SpaceAdmin,
-    MatchReporter,
-    SimpleUser,
+    SpaceUser,
 }
 
 impl SpaceProfile {
     pub fn as_str(&self) -> &str {
         match self {
             SpaceProfile::SpaceAdmin    => "SpaceAdmin",
-            SpaceProfile::MatchReporter => "MatchReporter",
-            SpaceProfile::SimpleUser    => "SimpleUser",
+            SpaceProfile::SpaceUser => "SpaceUser",
         }
     }
 }
@@ -23,8 +21,7 @@ impl TryFrom<&str> for SpaceProfile {
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         match s {
             "SpaceAdmin"    => Ok(SpaceProfile::SpaceAdmin),
-            "MatchReporter" => Ok(SpaceProfile::MatchReporter),
-            "SimpleUser"    => Ok(SpaceProfile::SimpleUser),
+            "SpaceUser"    => Ok(SpaceProfile::SpaceUser),
             other           => Err(format!("profil inconnu : {}", other)),
         }
     }
@@ -36,7 +33,7 @@ mod tests {
 
     #[test]
     fn as_str_round_trips_for_all_variants() {
-        for variant in [SpaceProfile::SpaceAdmin, SpaceProfile::MatchReporter, SpaceProfile::SimpleUser] {
+        for variant in [SpaceProfile::SpaceAdmin,SpaceProfile::SpaceUser] {
             let s = variant.as_str();
             assert_eq!(SpaceProfile::try_from(s).unwrap(), variant);
         }
@@ -45,8 +42,7 @@ mod tests {
     #[test]
     fn try_from_valid_strings() {
         assert_eq!(SpaceProfile::try_from("SpaceAdmin").unwrap(), SpaceProfile::SpaceAdmin);
-        assert_eq!(SpaceProfile::try_from("MatchReporter").unwrap(), SpaceProfile::MatchReporter);
-        assert_eq!(SpaceProfile::try_from("SimpleUser").unwrap(), SpaceProfile::SimpleUser);
+        assert_eq!(SpaceProfile::try_from("SpaceUser").unwrap(), SpaceProfile::SpaceUser);
     }
 
     #[test]

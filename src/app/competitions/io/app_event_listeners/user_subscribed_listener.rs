@@ -72,7 +72,7 @@ mod tests {
             event_id:      EventId::new(),
             user_id:       coach_id,
             space_id,
-            space_profile: SpaceProfile::SimpleUser,
+            space_profile: SpaceProfile::SpaceUser,
         };
         let _ = bus.send(EventEnvelope {
             event_id:    EventId::new().to_string(),
@@ -90,6 +90,6 @@ mod tests {
         assert_eq!(subs.len(), 1);
         assert_eq!(subs[0].0, coach_id);
         assert_eq!(subs[0].1, space_id);
-        assert_eq!(subs[0].2, SpaceProfile::SimpleUser);
+        assert_eq!(subs[0].2, SpaceProfile::SpaceUser);
     }
 }

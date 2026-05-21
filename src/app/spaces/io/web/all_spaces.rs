@@ -4,6 +4,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 use std::collections::HashSet;
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::spaces::routes::Routes;
 use crate::state::AppState;
 use crate::web::app_layout::AppLayout;
 
@@ -18,6 +19,7 @@ pub struct SpaceCard {
 #[template(path = "space-all.html")]
 pub struct SpaceAllTemplate {
     pub spaces: Vec<SpaceCard>,
+    pub routes: Routes,
 }
 
 impl IntoResponse for SpaceAllTemplate {
@@ -55,7 +57,7 @@ pub async fn space_all(
         })
         .collect();
 
-    let tmpl = SpaceAllTemplate { spaces };
+    let tmpl = SpaceAllTemplate { spaces, routes: Routes::default() };
 
     if headers.contains_key("hx-request") {
         tmpl.into_response()

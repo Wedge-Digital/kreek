@@ -4,10 +4,11 @@ use nutype::nutype;
 
 pub type CoachId = EntityId;
 
-
 pub type UserId = EntityId;
 
 pub type SpaceId = EntityId;
+
+pub type CompetitionId = EntityId;
 
 pub type EntityId = SUlid;
 

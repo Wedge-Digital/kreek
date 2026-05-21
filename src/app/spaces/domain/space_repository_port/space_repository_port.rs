@@ -33,6 +33,7 @@ impl std::error::Error for SpaceRepositoryError {}
 pub trait ISpaceRepository: Send + Sync {
     async fn save(&self, space: &Space) -> Result<(), SpaceRepositoryError>;
     async fn add_member(&self, space_id: &SpaceId, coach_id: &CoachId, profile: &SpaceProfile) -> Result<(), SpaceRepositoryError>;
+    async fn join_spaces(&self, space_ids: &[SpaceId], coach_id: &CoachId) -> Result<(), SpaceRepositoryError>;
     async fn find_by_id(&self, id: &SpaceId) -> Result<Option<Space>, SpaceRepositoryError>;
     async fn find_by_coach_id(&self, coach_id: &CoachId) -> Result<Vec<SpaceSummary>, SpaceRepositoryError>;
     async fn find_member_profile(&self, coach_id: &CoachId, space_id: &SpaceId) -> Result<Option<SpaceProfile>, SpaceRepositoryError>;

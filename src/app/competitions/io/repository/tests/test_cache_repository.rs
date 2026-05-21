@@ -109,7 +109,7 @@ async fn subscribe_inserts_user_space_link(pool: PgPool) {
     repo.add_user(&make_user(user_id, "Bagouze", "bagouze@example.com")).await.unwrap();
     repo.add_space(&make_space(space_id, "LigueAlpha")).await.unwrap();
 
-    let result = repo.subscribe(&user_id, &space_id, &SpaceProfile::SimpleUser).await;
+    let result = repo.subscribe(&user_id, &space_id, &SpaceProfile::SpaceUser).await;
 
     assert!(result.is_ok());
 }
@@ -122,7 +122,7 @@ async fn subscribe_upserts_profile_on_conflict(pool: PgPool) {
 
     repo.add_user(&make_user(user_id, "Bagouze", "bagouze@example.com")).await.unwrap();
     repo.add_space(&make_space(space_id, "LigueAlpha")).await.unwrap();
-    repo.subscribe(&user_id, &space_id, &SpaceProfile::SimpleUser).await.unwrap();
+    repo.subscribe(&user_id, &space_id, &SpaceProfile::SpaceUser).await.unwrap();
 
     // ON CONFLICT DO UPDATE SET profile — doit réussir et mettre à jour le profil
     let result = repo.subscribe(&user_id, &space_id, &SpaceProfile::SpaceAdmin).await;
@@ -138,7 +138,7 @@ async fn unsubscribe_removes_link(pool: PgPool) {
 
     repo.add_user(&make_user(user_id, "Bagouze", "bagouze@example.com")).await.unwrap();
     repo.add_space(&make_space(space_id, "LigueAlpha")).await.unwrap();
-    repo.subscribe(&user_id, &space_id, &SpaceProfile::SimpleUser).await.unwrap();
+    repo.subscribe(&user_id, &space_id, &SpaceProfile::SpaceUser).await.unwrap();
 
     let result = repo.unsubscribe(&user_id, &space_id).await;
 

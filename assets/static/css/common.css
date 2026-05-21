@@ -188,7 +188,7 @@ ul { list-style: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ─── Form Inputs ─── */
-.form-group { display: flex; flex-direction: column; gap: var(--p1); width: 100%; }
+.form-group { display: flex; flex-direction: column; gap: var(--p1); width: 100%; margin-bottom: var(--p2);}
 .form-label { font-size: var(--text-small); color: var(--dark-1); font-weight: 500; }
 .form-input {
   width: 100%;
@@ -400,3 +400,5 @@ textarea.form-input-article { resize: vertical; min-height: 80px; }
 .italic    { font-style: italic; }
 .mt-auto   { margin-top: auto; }
 .inline-icon { vertical-align: middle; font-size: 18px; margin-right: 6px; }
+.spacer-p2 { height: var(--p2); }
+.spacer-p4 { height: var(--p4); }
