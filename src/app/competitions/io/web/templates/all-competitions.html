@@ -36,7 +36,7 @@
   <div class="competition-grid">
     {% for c in competitions %}
     <div class="competition-card"
-         hx-get="{{ competition_routes.all_competitions(c.id) }}"
+         hx-get="{% if c.status == "draft" %}{{ competition_routes.new_competition_rules(space_id, c.id) }}{% else %}{{ competition_routes.all_competitions(c.id) }}{% endif %}"
          hx-target="#app-content"
          hx-swap="innerHTML"
          hx-push-url="true">

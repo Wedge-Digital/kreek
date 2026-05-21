@@ -13,6 +13,36 @@ use crate::app::shared_kernel::competition_name::CompetitionName;
 use crate::state::AppState;
 use crate::web::app_layout::AppLayout;
 
+#[derive(Template)]
+#[template(path = "new-competition-phase-2.html")]
+pub struct NewCompetitionPhase2Template {
+    pub competition_routes: Routes,
+    pub space_id:           String,
+    pub competition_id:     String,
+}
+
+impl IntoResponse for NewCompetitionPhase2Template {
+    fn into_response(self) -> Response {
+        match self.render() {
+            Ok(html) => Html(html).into_response(),
+            Err(_)   => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        }
+    }
+}
+
+pub async fn get_new_competition_phase_2(
+    Path((space_id, competition_id)): Path<(String, String)>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    let tmpl = NewCompetitionPhase2Template { competition_routes: Routes, space_id, competition_id };
+    if headers.contains_key("hx-request") {
+        tmpl.into_response()
+    } else {
+        let content = tmpl.render().unwrap_or_default();
+        AppLayout { content, routes: Default::default() }.into_response()
+    }
+}
+
 #[derive(Template, Default)]
 #[template(path = "new-competition-phase-1.html")]
 pub struct NewCompetitionTemplate {
@@ -175,8 +205,8 @@ pub async fn post_new_competition(
         state.competitions.competitions_cache_repository.as_ref(),
         &state.competitions.event_bus,
     ).await {
-        Ok(_) => Response::builder()
-            .header("HX-Redirect", Routes.all_competitions(&space_id))
+        Ok(competition_id) => Response::builder()
+            .header("HX-Redirect", Routes.new_competition_rules(&space_id, &competition_id.to_string()))
             .body(Body::empty())
             .unwrap(),
 
