@@ -1,0 +1,83 @@
+{
+  "id": "EURO_2026",
+  "name": "Euro 2026 ruleset v1.1",
+  "skillGroups": [
+    {
+      "primaryCost": 20,
+      "secondaryCost": 40,
+      "skillSelector": "STANDARD"
+    },
+    {
+      "primaryCost": 30,
+      "secondaryCost": 50,
+      "skillSelector": "ELITE"
+    }
+  ],
+  "inducements": [
+    "DODGY_LEAGUE_REP", "BLITZERS_BEST_KEGS", "BRIBES",
+    "HALFLING_MASTER_CHEF", "MORTUARY_ASSISTANT", "PLAGUE_DOCTOR",
+    "RIOTOUS_ROOKIES", "TEAM_MASCOT", "WANDERING_APOTHECARY", "WEATHER_MAGE"
+  ],
+  "stackRules": {
+    "noStack":    { "canStack": false, "maxStackedSkills": 0, "maxStackedPlayers": 0 },
+    "threeStack": { "canStack": true,  "maxStackedSkills": 1, "maxStackedPlayers": 3 }
+  },
+  "tiers": [
+    {
+      "budget": 1060, "skillBudget": 120, "additionalBudget": 10,
+      "stackRules": "threeStack",
+      "allowedStarPlayers": null,
+      "rosters": ["AMAZON", "OLD_WORLD_ALLIANCE", "WOOD_ELF"]
+    },
+    {
+      "budget": 1070, "skillBudget": 140, "additionalBudget": 20,
+      "stackRules": "threeStack",
+      "allowedStarPlayers": null,
+      "rosters": ["NORSE", "ORC", "SHAMBLING_UNDEAD", "SKAVEN", "UNDERWORLD_DENIZENS"]
+    },
+    {
+      "budget": 1080, "skillBudget": 160, "additionalBudget": 30,
+      "stackRules": "threeStack",
+      "allowedStarPlayers": null,
+      "rosters": ["DARK_ELF", "DWARF", "HUMAN", "LIZARDMEN", "NECROMANTIC_HORROR", "VAMPIRE"]
+    },
+    {
+      "budget": 1100, "skillBudget": 190, "additionalBudget": 30,
+      "stackRules": "threeStack",
+      "allowedStarPlayers": null,
+      "rosters": [
+        "CHAOS_CHOSEN", "CHAOS_DWARF", "CHAOS_RENEGADE",
+        "ELVEN_UNION", "HIGH_ELF", "IMPERIAL_NOBILITY", "NURGLE", "TOMB_KINGS"
+      ]
+    },
+    {
+      "budget": 1120, "skillBudget": 220, "additionalBudget": 30,
+      "stackRules": "threeStack",
+      "allowedStarPlayers": [
+        {
+          "starPlayerIds": "$veterans",
+          "additionalCost": 50,
+          "maxStarPlayers": 2
+        },
+        {
+          "starPlayerIds": "$veterans",
+          "additionalCost": 100,
+          "maxStarPlayers": 2
+        }
+      ],
+      "rosters": ["BLACK_ORC", "BRETONNIAN", "GOBLIN", "KHORNE", "SNOTLING"]
+    },
+    {
+      "budget": 1140, "skillBudget": 240, "additionalBudget": 40,
+      "stackRules": "threeStack",
+      "allowedStarPlayers": [
+        {
+          "starPlayerIds": "$veterans_and_legends",
+          "additionalCost": 0,
+          "maxStarPlayers": null
+        }
+      ],
+      "rosters": ["GNOME", "HALFLING", "OGRE"]
+    }
+  ]
+}

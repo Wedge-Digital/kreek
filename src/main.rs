@@ -28,6 +28,7 @@ use crate::app::auth::context::AuthContext;
 use crate::app::{auth, competitions, spaces};
 use crate::app::competitions::context::CompetitionsContext;
 use crate::app::spaces::context::SpacesContext;
+use crate::app::references::context::ReferencesContext;
 use crate::lib::services::email::ResendMailService;
 use crate::lib::services::event_bus::event_bus::new_bus;
 use crate::lib::event_listener::event_log_feeder;
@@ -70,6 +71,7 @@ async fn main() {
         auth:          AuthContext::new(&pool, event_bus.clone()),
         spaces:        SpacesContext::new(&pool, event_bus.clone()),
         competitions:  CompetitionsContext::new(&pool, event_bus.clone()),
+        references:    ReferencesContext::new(),
         email_service: Arc::new(ResendMailService::new(cfg.email.api_key, cfg.email.from, cfg.email.from_name)),
         host_domain:   cfg.host_domain,
         bypass_auth:   cfg.bypass_auth,

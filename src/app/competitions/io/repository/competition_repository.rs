@@ -2,7 +2,8 @@ use async_trait::async_trait;
 use sqlx::PgPool;
 use crate::app::competitions::domain::competition::Competition;
 use crate::app::competitions::domain::competition_repository_port::{CompetitionRepositoryError, CompetitionSummary, ICompetitionRepository};
-use crate::app::shared_kernel::common_types::SpaceId;
+use crate::app::competitions::domain::competition_rules::CompetitionRules;
+use crate::app::shared_kernel::common_types::{CompetitionId, SpaceId};
 use crate::app::shared_kernel::competition_name::CompetitionName;
 use crate::app::shared_kernel::competition_profile::CompetitionProfile;
 
@@ -70,5 +71,40 @@ impl ICompetitionRepository for CompetitionRepository {
             .map_err(db_err)?;
 
         Ok(rows.into_iter().map(|r| CompetitionSummary { id: r.id, name: r.name, logo: r.logo, status: r.status }).collect())
+    }
+
+    async fn find_rules(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionRules>, CompetitionRepositoryError> {
+        #[derive(sqlx::FromRow)]
+        struct Row { rules: Option<String> }
+
+        let row: Option<Row> = sqlx::query_as::<_, Row>(include_str!("sql/competitions/select_rules.sql"))
+            .bind(competition_id.to_string())
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(db_err)?;
+
+        let Some(Some(json)) = row.map(|r| r.rules) else { return Ok(None) };
+
+        serde_json::from_str(&json)
+            .map(Some)
+            .map_err(|e| CompetitionRepositoryError::Database(e.to_string()))
+    }
+
+    async fn save_rules(&self, competition_id: &CompetitionId, rules: &CompetitionRules) -> Result<(), CompetitionRepositoryError> {
+        let json = serde_json::to_string(rules)
+            .map_err(|e| CompetitionRepositoryError::Database(e.to_string()))?;
+
+        let found: Option<String> = sqlx::query_scalar(include_str!("sql/competitions/update_rules.sql"))
+            .bind(json)
+            .bind(competition_id.to_string())
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(db_err)?;
+
+        if found.is_none() {
+            return Err(CompetitionRepositoryError::CompetitionNotFound);
+        }
+
+        Ok(())
     }
 }

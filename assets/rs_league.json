@@ -1,0 +1,99 @@
+{
+  "id": "EURO_2026",
+  "name": "Euro 2026 ruleset v1.1",
+  "ranking_rules": {
+    "win_points": 3,
+    "draw_points": 1,
+    "lose_points": 0,
+    "offensive_bonus": {
+      "activated": true,
+      "diff_td": 3,
+      "points": 1
+    },
+    "defensive_bonus": {
+      "activated": true,
+      "points": 1
+    },
+    "additionnal_ranking_points": {
+      "diff_td": 1,
+      "nb_td": 2,
+      "nb_cas": 3,
+      "nb_fouls": 4,
+      "nb_reu": 5,
+      "nb_red_cards": 6,
+      "nb_wins": 7
+    }
+  },
+  "tiers": [
+    {
+      "name": "Tier 1",
+      "budget": 1060,
+      "starting_xp": 0,
+      "rosters": [
+        "AMAZON",
+        "OLD_WORLD_ALLIANCE",
+        "WOOD_ELF"
+      ],
+      "inducements": {
+        "DODGY_LEAGUE_REP": true,
+        "BLITZERS_BEST_KEGS": true,
+        "BRIBES": true,
+        "HALFLING_MASTER_CHEF": true,
+        "MORTUARY_ASSISTANT": true,
+        "PLAGUE_DOCTOR": true,
+        "RIOTOUS_ROOKIES": true,
+        "TEAM_MASCOT": true,
+        "WANDERING_APOTHECARY": true,
+        "WEATHER_MAGE": true,
+        "allowedStarPlayers": [
+          "AKHORNE_THE_SQUIRREL",
+          "ANQI_PANQI",
+          "BARIK_FARBLAST",
+          "BILEROT_VOMITFLESH",
+          "BOA_KONSSSTRIKTR",
+          "BOMBER_DRIBBLESNOT",
+          "CAPTAIN_KARINA_VON_RIESZ",
+          "CINDY_PIEWHISTLE",
+          "COUNT_LUTHOR_VON_DRAKENBORG",
+          "DEEPROOT_STRONGBRANCH",
+          "DRIBL_AND_DRULL"
+        ]
+      }
+    },
+    {
+      "name": "Tier 2",
+      "budget": 1060,
+      "starting_xp": 0,
+      "rosters": [
+        "AMAZON",
+        "OLD_WORLD_ALLIANCE",
+        "WOOD_ELF"
+      ],
+      "inducements": {
+        "DODGY_LEAGUE_REP": true,
+        "BLITZERS_BEST_KEGS": true,
+        "BRIBES": true,
+        "HALFLING_MASTER_CHEF": true,
+        "MORTUARY_ASSISTANT": true,
+        "PLAGUE_DOCTOR": true,
+        "RIOTOUS_ROOKIES": true,
+        "TEAM_MASCOT": true,
+        "WANDERING_APOTHECARY": true,
+        "WEATHER_MAGE": true,
+        "allowedStarPlayers": [
+          "AKHORNE_THE_SQUIRREL",
+          "ANQI_PANQI",
+          "BARIK_FARBLAST",
+          "BILEROT_VOMITFLESH",
+          "BOA_KONSSSTRIKTR",
+          "BOMBER_DRIBBLESNOT",
+          "CAPTAIN_KARINA_VON_RIESZ",
+          "CINDY_PIEWHISTLE",
+          "COUNT_LUTHOR_VON_DRAKENBORG",
+          "DEEPROOT_STRONGBRANCH",
+          "DRIBL_AND_DRULL"
+        ]
+      }
+    }
+  ]
+}

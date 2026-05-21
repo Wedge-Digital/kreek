@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use crate::app::competitions::domain::competition::Competition;
-use crate::app::shared_kernel::common_types::SpaceId;
+use crate::app::competitions::domain::competition_rules::CompetitionRules;
+use crate::app::shared_kernel::common_types::{CompetitionId, SpaceId};
 use crate::app::shared_kernel::competition_name::CompetitionName;
 
 pub struct CompetitionSummary {
@@ -13,6 +14,7 @@ pub struct CompetitionSummary {
 #[derive(Debug)]
 pub enum CompetitionRepositoryError {
     CompetitionNameAlreadyTaken,
+    CompetitionNotFound,
     Database(String),
 }
 
@@ -20,6 +22,7 @@ impl std::fmt::Display for CompetitionRepositoryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             CompetitionRepositoryError::CompetitionNameAlreadyTaken => write!(f, "competition name already taken"),
+            CompetitionRepositoryError::CompetitionNotFound         => write!(f, "competition not found"),
             CompetitionRepositoryError::Database(e)                 => write!(f, "database error: {}", e),
         }
     }
@@ -30,4 +33,6 @@ pub trait ICompetitionRepository: Send + Sync {
     async fn name_exists_in_space(&self, name: &CompetitionName, space_id: &SpaceId) -> Result<bool, CompetitionRepositoryError>;
     async fn save(&self, competition: &Competition)                                    -> Result<(), CompetitionRepositoryError>;
     async fn find_by_space_id(&self, space_id: &SpaceId)                              -> Result<Vec<CompetitionSummary>, CompetitionRepositoryError>;
+    async fn save_rules(&self, competition_id: &CompetitionId, rules: &CompetitionRules) -> Result<(), CompetitionRepositoryError>;
+    async fn find_rules(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionRules>, CompetitionRepositoryError>;
 }

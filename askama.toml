@@ -5,5 +5,6 @@ dirs = [
     "src/app/news/io/web/templates",
     "src/app/team_creation/io/web/templates",
     "src/app/competitions/io/web/templates",
+    "src/app/references/io/web/templates",
     "src/app/spaces/io/web/templates",
     "src/web/templates"]

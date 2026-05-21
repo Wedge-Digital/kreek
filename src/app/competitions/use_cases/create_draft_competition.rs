@@ -26,6 +26,7 @@ impl From<CompetitionRepositoryError> for CreateDraftCompetitionError {
     fn from(e: CompetitionRepositoryError) -> Self {
         match e {
             CompetitionRepositoryError::CompetitionNameAlreadyTaken => CreateDraftCompetitionError::CompetitionNameAlreadyTaken,
+            CompetitionRepositoryError::CompetitionNotFound         => CreateDraftCompetitionError::Database("competition not found".into()),
             CompetitionRepositoryError::Database(msg)               => CreateDraftCompetitionError::Database(msg),
         }
     }
@@ -84,6 +85,7 @@ mod tests {
     use async_trait::async_trait;
     use crate::app::competitions::domain::cache_repository_port::{CachedSpace, CachedUser, CompetitionsCacheError, ICompetitionsCacheRepository};
     use crate::app::competitions::domain::competition_repository_port::{CompetitionRepositoryError, CompetitionSummary, ICompetitionRepository};
+    use crate::app::competitions::domain::competition_rules::CompetitionRules;
     use crate::app::shared_kernel::authorization::SpaceProfile;
     use crate::app::shared_kernel::coach_icon::CoachIcon;
     use crate::app::shared_kernel::coach_name::CoachName;
@@ -113,8 +115,14 @@ mod tests {
             Ok(())
         }
 
-        async fn find_by_space_id(&self, space_id: &SpaceId) -> Result<Vec<CompetitionSummary>, CompetitionRepositoryError> {
-            todo!()
+        async fn find_by_space_id(&self, _: &SpaceId) -> Result<Vec<CompetitionSummary>, CompetitionRepositoryError> {
+            Ok(vec![])
+        }
+        async fn save_rules(&self, _: &CompetitionId, _: &CompetitionRules) -> Result<(), CompetitionRepositoryError> {
+            Ok(())
+        }
+        async fn find_rules(&self, _: &CompetitionId) -> Result<Option<CompetitionRules>, CompetitionRepositoryError> {
+            Ok(None)
         }
     }
 

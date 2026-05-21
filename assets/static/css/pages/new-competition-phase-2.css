@@ -101,4 +101,7 @@
 .inducement-chip.on { border-color: var(--main-blue); color: var(--main-blue); background: rgba(0,48,73,0.05); }
 .inducement-chip:hover { border-color: var(--dark-4); color: var(--dark-1); }
 
+.picker-cost { font-size: 10px; color: var(--dark-3); }
+.inducement-chip.on .picker-cost { color: var(--main-blue); opacity: 0.7; }
+
 .info-note { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 8px; display: flex; align-items: center; gap: 6px; }

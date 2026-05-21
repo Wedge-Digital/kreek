@@ -110,6 +110,7 @@ mod tests {
                 competition_repository:        Arc::new(FakeCompetitionRepository),
                 event_bus:                     event_bus.clone(),
             },
+            references:   crate::app::references::context::ReferencesContext::new(),
             email_service: Arc::new(ConsoleEmailService),
             host_domain:   "localhost:8080".into(),
             bypass_auth:   false,

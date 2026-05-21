@@ -112,86 +112,14 @@
   </div>
 </div>
 
+<!-- ── Picker widgets (server-rendered, hidden, clonés par JS) ── -->
+{% include "roster-picker.html" %}
+{% include "inducement-picker.html" %}
+{% include "star-player-picker.html" %}
+
 <script>
 (function () {
-  const ROSTERS = [
-    { id: "AMAZON",              name: "Amazones" },
-    { id: "BLACK_ORC",           name: "Black Orcs" },
-    { id: "BRETONNIAN",          name: "Bretonnians" },
-    { id: "CHAOS_CHOSEN",        name: "Chaos Élus" },
-    { id: "CHAOS_DWARF",         name: "Chaos Nains" },
-    { id: "CHAOS_RENEGADE",      name: "Rénégats du Chaos" },
-    { id: "DARK_ELF",            name: "Elfes Noirs" },
-    { id: "DWARF",               name: "Nains" },
-    { id: "ELVEN_UNION",         name: "Union Elfique" },
-    { id: "GNOME",               name: "Gnomes" },
-    { id: "GOBLIN",              name: "Gobelins" },
-    { id: "HALFLING",            name: "Halflings" },
-    { id: "HIGH_ELF",            name: "Hauts Elfes" },
-    { id: "HUMAN",               name: "Humains" },
-    { id: "IMPERIAL_NOBILITY",   name: "Noblesse Impériale" },
-    { id: "KHORNE",              name: "Khorne" },
-    { id: "LIZARDMEN",           name: "Hommes-Lézards" },
-    { id: "NECROMANTIC_HORROR",  name: "Nécromantiques" },
-    { id: "NORSE",               name: "Nordiques" },
-    { id: "NURGLE",              name: "Nurgle" },
-    { id: "OGRE",                name: "Ogres" },
-    { id: "OLD_WORLD_ALLIANCE",  name: "Alliance du Vieux Monde" },
-    { id: "ORC",                 name: "Orcs" },
-    { id: "SHAMBLING_UNDEAD",    name: "Mort-Vivants" },
-    { id: "SKAVEN",              name: "Skavens" },
-    { id: "SNOTLING",            name: "Snotlings" },
-    { id: "TOMB_KINGS",          name: "Rois des Tombes" },
-    { id: "UNDERWORLD_DENIZENS", name: "Bas-Fonds" },
-    { id: "VAMPIRE",             name: "Vampires" },
-    { id: "WOOD_ELF",            name: "Elfes des Bois" },
-  ];
-
-  const INDUCEMENTS = [
-    { id: "DODGY_LEAGUE_REP",    name: "Réputation douteuse" },
-    { id: "BLITZERS_BEST_KEGS",  name: "Meilleurs tonnelets" },
-    { id: "BRIBES",              name: "Pots-de-vin" },
-    { id: "HALFLING_MASTER_CHEF",name: "Maître-cuisinier Halfling" },
-    { id: "MORTUARY_ASSISTANT",  name: "Assistant de morgue" },
-    { id: "PLAGUE_DOCTOR",       name: "Médecin de la Peste" },
-    { id: "RIOTOUS_ROOKIES",     name: "Recrues turbulentes" },
-    { id: "TEAM_MASCOT",         name: "Mascotte" },
-    { id: "WANDERING_APOTHECARY",name: "Apothicaire itinérant" },
-    { id: "WEATHER_MAGE",        name: "Mage météo" },
-  ];
-
-  const STAR_PLAYERS = [
-    { id: "AKHORNE_THE_SQUIRREL",      name: "Akhorne l'Écureuil" },
-    { id: "ANQI_PANQI",                name: "Anqi Panqi" },
-    { id: "BARIK_FARBLAST",            name: "Barik Farblast" },
-    { id: "BILEROT_VOMITFLESH",        name: "Bilerot Vomitflesh" },
-    { id: "BOA_KONSSSTRIKTR",          name: "Boa Konssstriktr" },
-    { id: "BOMBER_DRIBBLESNOT",        name: "Bomber Dribblesnot" },
-    { id: "CAPTAIN_KARINA_VON_RIESZ",  name: "Capitaine Karina von Riesz" },
-    { id: "CINDY_PIEWHISTLE",          name: "Cindy Piewhistle" },
-    { id: "COUNT_LUTHOR_VON_DRAKENBORG",name: "Comte Luthor von Drakenborg" },
-    { id: "DEEPROOT_STRONGBRANCH",     name: "Deeproot Strongbranch" },
-    { id: "DRIBL_AND_DRULL",           name: "Dribl & Drull" },
-    { id: "FRANK_N_STEIN",             name: "Frank N. Stein" },
-    { id: "GLART_SMASHRIP",            name: "Glart Smashrip" },
-    { id: "GRIFF_OBERWALD",            name: "Griff Oberwald" },
-    { id: "GRIM_IRONJAW",              name: "Grim Ironjaw" },
-    { id: "HAKFLEM_SKUTTLESPIKE",      name: "Hakflem Skuttlespike" },
-    { id: "HELMUT_WULF",               name: "Helmut Wulf" },
-    { id: "HORKON_HEARTRIPPER",        name: "Horkon Heartripper" },
-    { id: "IVAR_ERIKSSON",             name: "Ivar Eriksson" },
-    { id: "KARLA_VON_KILL",            name: "Karla von Kill" },
-    { id: "LEWDGRIP_WHIPARM",          name: "Lewdgrip Whiparm" },
-    { id: "LUCIEN_SWIFT",              name: "Lucien Swift" },
-    { id: "MORG_N_THORG",             name: "Morg N Thorg" },
-    { id: "NOBBLA_BLACKWART",          name: "Nobbla Blackwart" },
-    { id: "PIRRAH_PINCHPURSE",         name: "Pirrah Pinchpurse" },
-    { id: "PRINCE_MORANION",           name: "Prince Moranion" },
-    { id: "SETEKH_SHAMUHOTEP",         name: "Setekh Shamuhotep" },
-    { id: "SKITTER_STAB_STAB",         name: "Skitter Stab-Stab" },
-    { id: "THRUD_THE_BARBARIAN",       name: "Thrud le Barbare" },
-    { id: "ZOLTAN_THE_PIPER",          name: "Zoltan le Joueur de Flûte" },
-  ];
+  const INITIAL_RULES = {{ existing_rules_json|safe }};
 
   const TIER_COLORS = [
     { head: "rgba(230,57,70,0.08)",   badge: "var(--red-badge)" },
@@ -202,7 +130,6 @@
     { head: "rgba(255,215,0,0.12)",   badge: "var(--gold)" },
   ];
 
-  // ── Critères de départage ──
   const TIEBREAK_CRITERIA = [
     { id: 'diff_td',      label: 'Différence de touchdowns (marqués − encaissés)' },
     { id: 'nb_td',        label: 'Nombre de touchdowns marqués' },
@@ -219,8 +146,7 @@
   function renderTiebreaks() {
     const list = document.getElementById('tiebreak-list');
     list.innerHTML = criteriaOrder.map((c, idx) => `
-      <div class="tiebreak-row" draggable="true" data-id="${c.id}"
-           style="cursor:grab;">
+      <div class="tiebreak-row" draggable="true" data-id="${c.id}" style="cursor:grab;">
         <div class="tiebreak-rank">${idx + 1}</div>
         <span class="tiebreak-drag">⠿</span>
         <span class="tiebreak-label">${c.label}</span>
@@ -248,10 +174,8 @@
       row.addEventListener('drop', e => {
         e.preventDefault();
         if (!dragSrc || dragSrc === row) return;
-        const srcId  = dragSrc.dataset.id;
-        const dstId  = row.dataset.id;
-        const srcIdx = criteriaOrder.findIndex(c => c.id === srcId);
-        const dstIdx = criteriaOrder.findIndex(c => c.id === dstId);
+        const srcIdx = criteriaOrder.findIndex(c => c.id === dragSrc.dataset.id);
+        const dstIdx = criteriaOrder.findIndex(c => c.id === row.dataset.id);
         const [moved] = criteriaOrder.splice(srcIdx, 1);
         criteriaOrder.splice(dstIdx, 0, moved);
         renderTiebreaks();
@@ -259,20 +183,46 @@
     });
   }
 
-  // ── Tiers ──
-  let tiers = [];
+  // ── Pickers ──────────────────────────────────────────────────────────────────
+
+  function getAllUidsFromPicker(tplId) {
+    const tpl = document.getElementById(tplId);
+    return new Set([...tpl.content.querySelectorAll('[data-uid]')].map(c => c.dataset.uid));
+  }
+
+  function clonePicker(tplId, stateSet) {
+    const tpl    = document.getElementById(tplId);
+    const clone  = tpl.content.cloneNode(true);
+    const wrapper = document.createElement('div');
+    wrapper.appendChild(clone);
+
+    wrapper.querySelectorAll('[data-uid]').forEach(chip => {
+      const uid = chip.dataset.uid;
+      if (stateSet.has(uid)) chip.classList.add('on');
+      chip.addEventListener('click', function () {
+        this.classList.toggle('on');
+        stateSet.has(uid) ? stateSet.delete(uid) : stateSet.add(uid);
+      });
+    });
+
+    return wrapper;
+  }
+
+  // ── Tiers ─────────────────────────────────────────────────────────────────────
+
+  let tiers  = [];
   let nextId = 1;
 
   function addTier() {
     const id = nextId++;
     tiers.push({
       id,
-      name: `Tier ${tiers.length + 1}`,
-      budget: 1060,
+      name:        `Tier ${tiers.length + 1}`,
+      budget:      1060,
       starting_xp: 0,
-      rosters: new Set(),
-      inducements: new Set(INDUCEMENTS.map(i => i.id)),
-      starPlayers: new Set(),
+      rosters:     getAllUidsFromPicker('tpl-roster-picker'),
+      inducements: getAllUidsFromPicker('tpl-inducement-picker'),
+      starPlayers: getAllUidsFromPicker('tpl-star-player-picker'),
     });
     renderTiers();
   }
@@ -282,108 +232,78 @@
     renderTiers();
   }
 
-  function toggleSet(set, key) {
-    set.has(key) ? set.delete(key) : set.add(key);
+  function createTierElement(tier, idx) {
+    const color = TIER_COLORS[idx % TIER_COLORS.length];
+
+    const el = document.createElement('div');
+    el.className = 'tier-block';
+    el.style.marginBottom = 'var(--p2)';
+
+    el.innerHTML = `
+      <div class="tier-head" style="background:${color.head};">
+        <div style="display:flex;align-items:center;gap:var(--p1);flex:1;">
+          <input type="text" class="tier-name-input" value="${escHtml(tier.name)}"
+                 style="border:none;background:transparent;font-family:var(--font-title);
+                        font-weight:700;font-size:var(--text-small);color:var(--dark-1);
+                        width:120px;outline:none;">
+          <span style="display:flex;align-items:center;gap:var(--p1);">
+            <label style="font-size:var(--text-tiny);color:var(--dark-3);">Budget</label>
+            <input type="number" class="vnd-input tier-budget" value="${tier.budget}" min="0" step="10" style="width:80px;">
+            <label style="font-size:var(--text-tiny);color:var(--dark-3);">XP départ</label>
+            <input type="number" class="vnd-input tier-xp" value="${tier.starting_xp}" min="0" style="width:60px;">
+          </span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="tier-badge" style="background:${color.badge};color:#fff;">T${idx + 1}</span>
+          <button class="tier-remove-btn"
+                  style="background:none;border:none;cursor:pointer;color:var(--dark-4);font-size:18px;line-height:1;"
+                  title="Supprimer">✕</button>
+        </div>
+      </div>
+      <div style="padding:var(--p1) var(--p2);background:var(--white);">
+        <div class="sub-section" style="margin-bottom:var(--p1);">
+          <div class="sub-section-title">Rosters autorisés</div>
+          <div data-slot="roster"></div>
+        </div>
+        <div class="sub-section" style="margin-bottom:var(--p1);">
+          <div class="sub-section-title">Inducements</div>
+          <div data-slot="inducement"></div>
+        </div>
+        <div class="sub-section">
+          <div class="sub-section-title">Star Players autorisés</div>
+          <div data-slot="star"></div>
+        </div>
+      </div>`;
+
+    el.querySelector('.tier-name-input').addEventListener('change', e => {
+      tiers.find(t => t.id === tier.id).name = e.target.value;
+    });
+    el.querySelector('.tier-budget').addEventListener('change', e => {
+      tiers.find(t => t.id === tier.id).budget = +e.target.value;
+    });
+    el.querySelector('.tier-xp').addEventListener('change', e => {
+      tiers.find(t => t.id === tier.id).starting_xp = +e.target.value;
+    });
+    el.querySelector('.tier-remove-btn').addEventListener('click', () => removeTier(tier.id));
+
+    el.querySelector('[data-slot="roster"]').appendChild(clonePicker('tpl-roster-picker', tier.rosters));
+    el.querySelector('[data-slot="inducement"]').appendChild(clonePicker('tpl-inducement-picker', tier.inducements));
+    el.querySelector('[data-slot="star"]').appendChild(clonePicker('tpl-star-player-picker', tier.starPlayers));
+
+    return el;
   }
 
   function renderTiers() {
     const container = document.getElementById('tiers-container');
-    container.innerHTML = tiers.map((tier, idx) => {
-      const color = TIER_COLORS[idx % TIER_COLORS.length];
-      return `
-        <div class="tier-block" style="margin-bottom:var(--p2);">
-          <div class="tier-head" style="background:${color.head};">
-            <div style="display:flex;align-items:center;gap:var(--p1);flex:1;">
-              <input type="text"
-                     value="${escHtml(tier.name)}"
-                     onchange="updateTierName(${tier.id}, this.value)"
-                     style="border:none;background:transparent;font-family:var(--font-title);font-weight:700;font-size:var(--text-small);color:var(--dark-1);width:120px;outline:none;">
-              <span style="display:flex;align-items:center;gap:var(--p1);">
-                <label style="font-size:var(--text-tiny);color:var(--dark-3);">Budget</label>
-                <input type="number" value="${tier.budget}" min="0" step="10"
-                       onchange="updateTierField(${tier.id},'budget',+this.value)"
-                       class="vnd-input" style="width:80px;">
-                <label style="font-size:var(--text-tiny);color:var(--dark-3);">XP départ</label>
-                <input type="number" value="${tier.starting_xp}" min="0"
-                       onchange="updateTierField(${tier.id},'starting_xp',+this.value)"
-                       class="vnd-input" style="width:60px;">
-              </span>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="tier-badge" style="background:${color.badge};color:#fff;">T${idx+1}</span>
-              <button onclick="removeTier(${tier.id})" style="background:none;border:none;cursor:pointer;color:var(--dark-4);font-size:18px;line-height:1;" title="Supprimer">✕</button>
-            </div>
-          </div>
-
-          <div style="padding:var(--p1) var(--p2);background:var(--white);">
-
-            <div class="sub-section" style="margin-bottom:var(--p1);">
-              <div class="sub-section-title">Rosters autorisés</div>
-              <div class="roster-grid">
-                ${ROSTERS.map(r => `
-                  <span class="roster-chip ${tier.rosters.has(r.id) ? 'on' : ''}"
-                        onclick="toggleRoster(${tier.id},'${r.id}',this)">
-                    ${escHtml(r.name)}
-                  </span>`).join('')}
-              </div>
-            </div>
-
-            <div class="sub-section" style="margin-bottom:var(--p1);">
-              <div class="sub-section-title">Inducements</div>
-              <div class="inducement-grid">
-                ${INDUCEMENTS.map(i => `
-                  <span class="inducement-chip ${tier.inducements.has(i.id) ? 'on' : ''}"
-                        onclick="toggleInducement(${tier.id},'${i.id}',this)">
-                    ${escHtml(i.name)}
-                  </span>`).join('')}
-              </div>
-            </div>
-
-            <div class="sub-section">
-              <div class="sub-section-title">Star Players autorisés</div>
-              <div class="roster-grid">
-                ${STAR_PLAYERS.map(s => `
-                  <span class="roster-chip ${tier.starPlayers.has(s.id) ? 'on' : ''}"
-                        onclick="toggleStar(${tier.id},'${s.id}',this)">
-                    ${escHtml(s.name)}
-                  </span>`).join('')}
-              </div>
-            </div>
-
-          </div>
-        </div>`;
-    }).join('');
+    container.innerHTML = '';
+    tiers.forEach((tier, idx) => container.appendChild(createTierElement(tier, idx)));
   }
 
   function escHtml(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  function updateTierName(id, value) {
-    tiers.find(t => t.id === id).name = value;
-  }
-
-  function updateTierField(id, field, value) {
-    tiers.find(t => t.id === id)[field] = value;
-  }
-
-  function toggleRoster(id, rosterId, el) {
-    const tier = tiers.find(t => t.id === id);
-    toggleSet(tier.rosters, rosterId);
-    el.classList.toggle('on');
-  }
-
-  function toggleInducement(id, inducementId, el) {
-    const tier = tiers.find(t => t.id === id);
-    toggleSet(tier.inducements, inducementId);
-    el.classList.toggle('on');
-  }
-
-  function toggleStar(id, starId, el) {
-    const tier = tiers.find(t => t.id === id);
-    toggleSet(tier.starPlayers, starId);
-    el.classList.toggle('on');
-  }
+  // ── Sérialisation JSON ────────────────────────────────────────────────────────
 
   function buildJSON() {
     return {
@@ -405,43 +325,94 @@
         ),
       },
       tiers: tiers.map(tier => ({
-        name:         tier.name,
-        budget:       tier.budget,
-        starting_xp:  tier.starting_xp,
-        rosters:      [...tier.rosters],
-        inducements: {
-          ...Object.fromEntries(INDUCEMENTS.map(i => [i.id, tier.inducements.has(i.id)])),
-          allowedStarPlayers: [...tier.starPlayers],
-        },
+        name:        tier.name,
+        budget:      tier.budget,
+        starting_xp: tier.starting_xp,
+        rosters:     [...tier.rosters],
+        inducements: [...tier.inducements],
+        star_players: [...tier.starPlayers],
       })),
     };
   }
 
-  window.addTier      = addTier;
-  window.removeTier   = removeTier;
-  window.updateTierName  = updateTierName;
-  window.updateTierField = updateTierField;
-  window.toggleRoster    = toggleRoster;
-  window.toggleInducement = toggleInducement;
-  window.toggleStar      = toggleStar;
+  window.addTier = addTier;
 
   window.submitRules = function () {
+    const btn = document.querySelector('[onclick="submitRules()"]');
+    if (btn) { btn.disabled = true; btn.textContent = 'Enregistrement…'; }
+
     const payload = buildJSON();
-    const url = window.location.pathname;
-    fetch(url, {
-      method: 'POST',
+    fetch(window.location.pathname, {
+      method:  'POST',
       headers: { 'Content-Type': 'application/json', 'HX-Request': 'true' },
-      body: JSON.stringify(payload),
-    }).then(res => {
-      const redirect = res.headers.get('HX-Redirect');
-      if (redirect) {
-        htmx.ajax('GET', redirect, { target: '#app-content', swap: 'innerHTML', pushUrl: true });
+      body:    JSON.stringify(payload),
+    }).then(async res => {
+      if (res.ok) {
+        const redirect = res.headers.get('HX-Redirect');
+        if (redirect) {
+          htmx.ajax('GET', redirect, { target: '#app-content', swap: 'innerHTML', pushUrl: true });
+        }
+        return;
       }
+      const msg = await res.text();
+      let banner = document.getElementById('rules-error-banner');
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'rules-error-banner';
+        banner.style.cssText = 'background:var(--red-light,#fef2f2);border:1px solid var(--red-badge);color:var(--red-badge);border-radius:8px;padding:12px 16px;margin-bottom:var(--p2);font-size:var(--text-small);';
+        document.querySelector('.create-card').prepend(banner);
+      }
+      banner.textContent = msg;
+      if (btn) { btn.disabled = false; btn.textContent = 'Enregistrer & continuer →'; }
     });
   };
 
-  // Initialisation
+  // ── Initialisation ────────────────────────────────────────────────────────────
+
+  function initFromExistingRules(rules) {
+    const rr = rules.ranking_rules;
+
+    document.getElementById('win_points').value  = rr.win_points;
+    document.getElementById('draw_points').value = rr.draw_points;
+    document.getElementById('lose_points').value = rr.lose_points;
+
+    document.getElementById('off_activated').checked = rr.offensive_bonus.activated;
+    document.getElementById('off_points').value      = rr.offensive_bonus.points;
+    document.getElementById('off_diff_td').value     = rr.offensive_bonus.diff_td;
+
+    document.getElementById('def_activated').checked = rr.defensive_bonus.activated;
+    document.getElementById('def_points').value      = rr.defensive_bonus.points;
+
+    // Critères de départage : reconstruction depuis la map {id: priorité}
+    const pts = rr.additionnal_ranking_points;
+    criteriaOrder = Object.entries(pts)
+      .sort(([, a], [, b]) => a - b)
+      .map(([id]) => TIEBREAK_CRITERIA.find(c => c.id === id))
+      .filter(Boolean);
+    // Ajouter les critères absents de la sauvegarde (ajouts futurs)
+    TIEBREAK_CRITERIA.forEach(c => {
+      if (!criteriaOrder.find(x => x.id === c.id)) criteriaOrder.push(c);
+    });
+    renderTiebreaks();
+
+    // Tiers
+    tiers = rules.tiers.map(t => ({
+      id:          nextId++,
+      name:        t.name,
+      budget:      t.budget,
+      starting_xp: t.starting_xp,
+      rosters:     new Set(t.rosters),
+      inducements: new Set(t.inducements),
+      starPlayers: new Set(t.star_players),
+    }));
+    renderTiers();
+  }
+
   renderTiebreaks();
-  addTier();
+  if (INITIAL_RULES) {
+    initFromExistingRules(INITIAL_RULES);
+  } else {
+    addTier();
+  }
 })();
 </script>

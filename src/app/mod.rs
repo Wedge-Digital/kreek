@@ -5,4 +5,5 @@ pub mod shared_kernel;
 pub mod auth;
 pub mod competitions;
 pub mod news;
+pub mod references;
 pub mod spaces;
