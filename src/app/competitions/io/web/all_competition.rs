@@ -1,14 +1,12 @@
 use askama::Template;
-use axum::extract::Path;
+use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
+use crate::app::competitions::domain::competition_repository_port::CompetitionSummary;
 use crate::app::competitions::routes::Routes;
+use crate::app::shared_kernel::common_types::SpaceId;
+use crate::state::AppState;
 use crate::web::app_layout::AppLayout;
-
-pub struct CompetitionSummary {
-    pub id:   String,
-    pub name: String,
-}
 
 #[derive(Template)]
 #[template(path = "all-competitions.html")]
@@ -37,12 +35,21 @@ impl IntoResponse for AllCompetitionTemplate {
     }
 }
 
-pub async fn get_all_competition(Path(space_id): Path<String>, headers: HeaderMap) -> impl IntoResponse {
-    let tmpl = AllCompetitionTemplate {
-        space_id,
-        competitions: vec![],   // remplacer par un appel repository quand le modèle existera
-        ..Default::default()
+pub async fn get_all_competition(
+    Path(space_id): Path<String>,
+    State(state):   State<AppState>,
+    headers:        HeaderMap,
+) -> impl IntoResponse {
+    let competitions = match SpaceId::try_new(&space_id) {
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+        Ok(id) => match state.competitions.competition_repository.find_by_space_id(&id).await {
+            Ok(list) => list,
+            Err(_)   => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
     };
+
+    let tmpl = AllCompetitionTemplate { space_id, competitions, ..Default::default() };
+
     if headers.contains_key("hx-request") {
         tmpl.into_response()
     } else {

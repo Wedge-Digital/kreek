@@ -1,0 +1,37 @@
+.competition-container {
+  border-radius: 12px;
+  margin: 0 auto;
+  display: flex; flex-direction: column;
+  gap: var(--p1);
+  scrollbar-width: none;
+  height: fit-content;
+  width : 100%;
+}
+
+.competition-card .competition-header {
+  width: 100%;
+  padding: var(--p2);
+  display: flex;
+  align-items: center;
+  gap: var(--p1);
+  background: linear-gradient(135deg, #629584 0%, var(--main-blue) 100%);
+  border-radius: 10px 10px 0px 0px;
+}
+
+.competition-card .create-body {
+  width: 100%;
+  padding: var(--p2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--p4);
+}
+
+.competition-card .create-header-icon {
+  width: 48px; height: 48px; border-radius: 10px;
+  background: rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; color: var(--white);
+}
+.create-header-text .title { color: var(--white); font-family: var(--font-title); font-size: 24px; font-weight: 700; }
+.create-header-text .sub   { color: rgba(255,255,255,0.7); font-size: var(--text-tiny); margin-top: 2px; }
+

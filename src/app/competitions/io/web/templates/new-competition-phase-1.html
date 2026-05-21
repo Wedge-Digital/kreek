@@ -42,9 +42,6 @@
           hx-target="#app-content"
           hx-swap="innerHTML">
 
-      {% if let Some(err) = general_error %}
-      <div class="form-error-banner">{{ err }}</div>
-      {% endif %}
 
       <div class="form-group">
         <label class="form-label">Nom de votre compétition</label>
@@ -70,7 +67,13 @@
         {% import "components/upload_widget.html" as cmp %}
         {% call cmp::cloudinary_upload("logo_url", logo_url_value, "teams/logos", "Logo", logo_error) %}
 
+      {% if let Some(err) = general_error %}
+      <div class="spacer-p2"></div>
+      <div class="form-error-banner">{{ err }}</div>
+      <div class="spacer-p2"></div>
+      {% else %}
       <div class="spacer-p4"></div>
+      {% endif %}
 
       <div style="text-align: right;">
         <button type="submit" class="btn btn-primary" style="width: auto; padding: var(--p1) var(--p4);">

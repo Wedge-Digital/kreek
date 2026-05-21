@@ -1,4 +1,4 @@
-<div class="create-card">
+<div class="competition-container">
 
   {% if competitions.is_empty() %}
 
@@ -33,15 +33,20 @@
     </button>
   </div>
 
-  <div class="club-grid">
+  <div class="competition-grid">
     {% for c in competitions %}
-    <div class="club-card"
+    <div class="competition-card"
          hx-get="{{ competition_routes.all_competitions(c.id) }}"
          hx-target="#app-content"
          hx-swap="innerHTML"
          hx-push-url="true">
-      <div class="club-logo">{{ c.name|truncate(2) }}</div>
-      <div class="club-name">{{ c.name }}</div>
+      <div class="competition-card-logo">
+        <img src="{{ c.logo }}" alt="{{ c.name }}">
+      </div>
+      <div class="competition-card-name">{{ c.name }}</div>
+      <span class="competition-card-badge competition-card-badge--{{ c.status }}">
+        {% if c.status == "draft" %}Brouillon{% else %}En cours{% endif %}
+      </span>
     </div>
     {% endfor %}
   </div>

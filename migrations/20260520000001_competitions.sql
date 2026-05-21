@@ -16,6 +16,7 @@ CREATE TABLE competitions_members
     competition_id VARCHAR(26) NOT NULL,
     coach_id       VARCHAR(26) NOT NULL,
     competition_profile VARCHAR(255) NOT NULL,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT competitions_admins_pk             PRIMARY KEY (competition_id, coach_id),
     CONSTRAINT competitions_admins_competition_fk FOREIGN KEY (competition_id) REFERENCES competitions (id),
     CONSTRAINT competitions_admins_coach_fk       FOREIGN KEY (coach_id) REFERENCES competitions__user_cache (id)

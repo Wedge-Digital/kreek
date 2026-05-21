@@ -402,3 +402,5 @@ textarea.form-input-article { resize: vertical; min-height: 80px; }
 .inline-icon { vertical-align: middle; font-size: 18px; margin-right: 6px; }
 .spacer-p2 { height: var(--p2); }
 .spacer-p4 { height: var(--p4); }
+
+.form-error-banner { background: var(--red); color: var(--white); padding: var(--p1); border-radius: var(--p1); }

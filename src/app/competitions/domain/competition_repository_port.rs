@@ -3,6 +3,13 @@ use crate::app::competitions::domain::competition::Competition;
 use crate::app::shared_kernel::common_types::SpaceId;
 use crate::app::shared_kernel::competition_name::CompetitionName;
 
+pub struct CompetitionSummary {
+    pub id:     String,
+    pub name:   String,
+    pub logo:   String,
+    pub status: String,
+}
+
 #[derive(Debug)]
 pub enum CompetitionRepositoryError {
     CompetitionNameAlreadyTaken,
@@ -22,4 +29,5 @@ impl std::fmt::Display for CompetitionRepositoryError {
 pub trait ICompetitionRepository: Send + Sync {
     async fn name_exists_in_space(&self, name: &CompetitionName, space_id: &SpaceId) -> Result<bool, CompetitionRepositoryError>;
     async fn save(&self, competition: &Competition)                                    -> Result<(), CompetitionRepositoryError>;
+    async fn find_by_space_id(&self, space_id: &SpaceId)                              -> Result<Vec<CompetitionSummary>, CompetitionRepositoryError>;
 }

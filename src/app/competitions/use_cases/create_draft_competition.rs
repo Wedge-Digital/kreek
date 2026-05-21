@@ -83,7 +83,7 @@ mod tests {
     use super::*;
     use async_trait::async_trait;
     use crate::app::competitions::domain::cache_repository_port::{CachedSpace, CachedUser, CompetitionsCacheError, ICompetitionsCacheRepository};
-    use crate::app::competitions::domain::competition_repository_port::{CompetitionRepositoryError, ICompetitionRepository};
+    use crate::app::competitions::domain::competition_repository_port::{CompetitionRepositoryError, CompetitionSummary, ICompetitionRepository};
     use crate::app::shared_kernel::authorization::SpaceProfile;
     use crate::app::shared_kernel::coach_icon::CoachIcon;
     use crate::app::shared_kernel::coach_name::CoachName;
@@ -111,6 +111,10 @@ mod tests {
         }
         async fn save(&self, _: &Competition) -> Result<(), CompetitionRepositoryError> {
             Ok(())
+        }
+
+        async fn find_by_space_id(&self, space_id: &SpaceId) -> Result<Vec<CompetitionSummary>, CompetitionRepositoryError> {
+            todo!()
         }
     }
 

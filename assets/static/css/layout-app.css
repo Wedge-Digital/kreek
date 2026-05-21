@@ -24,6 +24,7 @@
   height: var(--menubar-height);
   background: var(--dark-0);
 }
+
 .league-btn {
   width: 54px; height: 54px;
   border-radius: 50%;
@@ -40,6 +41,23 @@
 .league-btn:hover { border-radius: 16px; }
 .league-btn img { width: 100%; height: 100%; object-fit: cover; }
 .league-btn-active { border-radius: 16px; background: var(--dark-5); }
+
+.find-space-btn {
+  width: 54px; height: 54px;
+  border-radius: 50%;
+  background: var(--dark-2);
+  margin-bottom: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-radius 0.2s;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--white);
+  font-family: var(--font-title);
+  font-weight: 700; font-size: 18px;
+}
+.find-space-btn:hover { border-radius: 16px; }
+.find-space-btn img { width: 100%; height: 100%; object-fit: cover; }
+.find-space-btn { border-radius: 16px; background: var(--dark-5); }
 
 /* ─── Main Area ─── */
 .main-area {

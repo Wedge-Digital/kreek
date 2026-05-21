@@ -13,3 +13,4 @@ pub mod coach_name;
 pub mod coach_icon;
 pub mod email;
 pub mod app_events;
+pub mod competition_profile;

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use crate::app::competitions::domain::competition::Competition;
-use crate::app::competitions::domain::competition_repository_port::{CompetitionRepositoryError, ICompetitionRepository};
+use crate::app::competitions::domain::competition_repository_port::{CompetitionRepositoryError, CompetitionSummary, ICompetitionRepository};
 use crate::app::shared_kernel::common_types::SpaceId;
 use crate::app::shared_kernel::competition_name::CompetitionName;
 
@@ -13,5 +13,8 @@ impl ICompetitionRepository for FakeCompetitionRepository {
     }
     async fn save(&self, _: &Competition) -> Result<(), CompetitionRepositoryError> {
         Ok(())
+    }
+    async fn find_by_space_id(&self, _: &SpaceId) -> Result<Vec<CompetitionSummary>, CompetitionRepositoryError> {
+        Ok(vec![])
     }
 }

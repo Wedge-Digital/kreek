@@ -8,7 +8,7 @@
 
 ## données de domaine
 - competitions : 
-    - DraftCompetition: event_sourcées en écriture, et utilisation de projection en lecture
+    - DraftCompetition: modèle tabulaire en lecture et écriture
     - StructuredCompetition: event_sourcées en écriture, et utilisation de projection en lecture
     - RulesetChosenCompetition: event_sourcées en écriture, et utilisation de projection en lecture
-    - Ready
+    - ReadyCompetition: event_sourcées en écriture, et utilisation de projection en lecture
