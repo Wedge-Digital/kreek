@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use crate::app::competitions::domain::competition::Competition;
 use crate::app::competitions::domain::competition_rules::CompetitionRules;
+use crate::app::competitions::domain::competition_structure::CompetitionStructure;
 use crate::app::shared_kernel::common_types::{CompetitionId, SpaceId};
 use crate::app::shared_kernel::competition_name::CompetitionName;
 
@@ -35,4 +36,6 @@ pub trait ICompetitionRepository: Send + Sync {
     async fn find_by_space_id(&self, space_id: &SpaceId)                              -> Result<Vec<CompetitionSummary>, CompetitionRepositoryError>;
     async fn save_rules(&self, competition_id: &CompetitionId, rules: &CompetitionRules) -> Result<(), CompetitionRepositoryError>;
     async fn find_rules(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionRules>, CompetitionRepositoryError>;
+    async fn save_structure(&self, competition_id: &CompetitionId, structure: &CompetitionStructure) -> Result<(), CompetitionRepositoryError>;
+    async fn find_structure(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionStructure>, CompetitionRepositoryError>;
 }

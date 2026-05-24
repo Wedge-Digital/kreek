@@ -1,4 +1,5 @@
 UPDATE competitions
-SET    rules = $1::jsonb
-WHERE  id    = $2
+SET    rules  = $1::jsonb,
+       status = 'rules_selected'
+WHERE  id     = $2
 RETURNING id

@@ -276,7 +276,7 @@ pub async fn post_competition_rules(
 
     match execute_save_rules(cmd, state.competitions.competition_repository.as_ref()).await {
         Ok(()) => Response::builder()
-            .header("HX-Redirect", Routes.all_competitions(&space_id))
+            .header("HX-Redirect", Routes.new_competition_structure(&space_id, &competition_id))
             .body(Body::empty())
             .unwrap(),
 

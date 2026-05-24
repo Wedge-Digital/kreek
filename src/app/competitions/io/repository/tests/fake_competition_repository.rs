@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use crate::app::competitions::domain::competition::Competition;
 use crate::app::competitions::domain::competition_repository_port::{CompetitionRepositoryError, CompetitionSummary, ICompetitionRepository};
 use crate::app::competitions::domain::competition_rules::CompetitionRules;
+use crate::app::competitions::domain::competition_structure::CompetitionStructure;
 use crate::app::shared_kernel::common_types::{CompetitionId, SpaceId};
 use crate::app::shared_kernel::competition_name::CompetitionName;
 
@@ -22,6 +23,12 @@ impl ICompetitionRepository for FakeCompetitionRepository {
         Ok(())
     }
     async fn find_rules(&self, _: &CompetitionId) -> Result<Option<CompetitionRules>, CompetitionRepositoryError> {
+        Ok(None)
+    }
+    async fn save_structure(&self, _: &CompetitionId, _: &CompetitionStructure) -> Result<(), CompetitionRepositoryError> {
+        Ok(())
+    }
+    async fn find_structure(&self, _: &CompetitionId) -> Result<Option<CompetitionStructure>, CompetitionRepositoryError> {
         Ok(None)
     }
 }

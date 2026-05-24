@@ -1,0 +1,51 @@
+{
+  "id": "01KS77T9QS7Z83GVFF8XV5R7XR",
+  "name": "Ligue open de condate",
+  "ranking_group": {
+    "use_ranking_groups:": true,
+    "team_dispatch": "automatic",
+    "ranking_groups": [
+      {
+        "id": "01KS77T9QS7Z83GVFF8XV5R7XR",
+        "name": "Poule 1"
+      },
+      {
+        "id": "01KS77T9QS7Z83GVFF8XV5R7XR",
+        "name": "Poule 2"
+      }
+    ]
+  },
+  "play_offs_phase": {
+    "use_playoffs_phase": true,
+    "qualified_team_per_pool": 1,
+    "final_phase_match_for_third_place": true,
+  },
+  "schedule": {
+    "use_schedule": true,
+    "schedule_type": "automatic",
+    "schedule_start_date": "",
+    "play_off_start_date": "",
+    "play_off_end_date": "",
+    "schedule_end_date": "",
+    "schedule_timezone": "Europe/Paris",
+    "use_mail_notification": true,
+    "scheduled_dates": [
+      {
+        "name":"J1",
+        "type":"fixed_date",
+        "multiplexe_date": "2023-07-01"
+      },
+      {
+        "name":"J2",
+        "type":"fixed_date",
+        "multiplexe_date": "2023-07-01"
+      },
+      {
+        "name":"J3",
+        "type":"time_frame",
+        "start_date": "2023-07-01",
+        "end_date": "2022-07-01"
+      }
+    ]
+  }
+}

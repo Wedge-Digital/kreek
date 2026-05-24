@@ -83,11 +83,16 @@ pub async fn execute(
         return Err(errors);
     }
 
-    let salt = SaltString::generate(&mut OsRng);
-    let password_hash = Argon2::default()
-        .hash_password(cmd.password.as_bytes(), &salt)
-        .map_err(|_| vec![RegisterError::PasswordHashError])?
-        .to_string();
+    let password = cmd.password.clone();
+    let password_hash = tokio::task::spawn_blocking(move || {
+        let salt = SaltString::generate(&mut OsRng);
+        Argon2::default()
+            .hash_password(password.as_bytes(), &salt)
+            .map(|h| h.to_string())
+    })
+    .await
+    .map_err(|_| vec![RegisterError::PasswordHashError])?
+    .map_err(|_| vec![RegisterError::PasswordHashError])?;
 
     let user = User::new(UserId::new(), coach_name.unwrap(), None, email.unwrap(), password_hash);
 

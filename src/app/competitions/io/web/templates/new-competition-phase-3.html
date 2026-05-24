@@ -1,0 +1,476 @@
+<div class="create-card">
+
+  <div class="create-header">
+    <div class="create-header-icon">🏗️</div>
+    <div class="create-header-text">
+      <div class="title">Structure de la compétition</div>
+      <div class="sub">Étape 3 sur 5 — Poules, play-offs &amp; calendrier</div>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num done">✓</div>
+      <div class="step-label done">Informations</div>
+    </div>
+    <div class="step-line done"></div>
+    <div class="step">
+      <div class="step-num done">✓</div>
+      <div class="step-label done">Règles</div>
+    </div>
+    <div class="step-line done"></div>
+    <div class="step">
+      <div class="step-num active">3</div>
+      <div class="step-label active">Structure</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step">
+      <div class="step-num pending">4</div>
+      <div class="step-label pending">Invitations</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step">
+      <div class="step-num pending">5</div>
+      <div class="step-label pending">Validation</div>
+    </div>
+  </div>
+
+  <!-- Section 1: Poules -->
+  <div class="section">
+    <div class="section-title">1 — Organisation de la phase de groupes</div>
+    <div class="choice-group" id="group-mode-btns">
+      <div class="choice-btn selected" data-val="true" onclick="setGroupMode(true)">Compétition en poules</div>
+      <div class="choice-btn" data-val="false" onclick="setGroupMode(false)">Round-robin direct (une seule poule)</div>
+    </div>
+
+    <div class="sub-section" id="groups-config">
+      <div class="sub-section-title">Configuration des poules</div>
+      <div class="two-col-grid">
+        <div class="form-group">
+          <label class="form-label">Nombre de poules</label>
+          <input type="number" id="nb-groups" class="form-input" value="2" min="2" max="8"
+                 oninput="onGroupCountChange(+this.value)">
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:var(--p2);">
+        <label class="form-label">Répartition des équipes</label>
+        <div class="choice-group" id="dispatch-type-btns" style="margin-top:4px;">
+          <div class="choice-btn selected" data-val="automatic" onclick="setDispatchType('automatic')">Automatique</div>
+          <div class="choice-btn" data-val="manual" onclick="setDispatchType('manual')">Manuelle</div>
+          <div class="info-note">📌 Automatique, le système tire au sort la répartition. Manuelle, les commissaires font la répartition. La répartition est modifiable à tout moment.</div>
+        </div>
+      </div>
+      <div style="margin-top:var(--p2);">
+        <div class="sub-section-title">Noms des poules</div>
+        <div id="groups-list" style="display:flex;flex-direction:column;gap:8px;margin-top:var(--p1);"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="separator"></div>
+
+  <!-- Section 2: Phase finale -->
+  <div class="section">
+    <div class="section-title">2 — Phase finale (play-offs)</div>
+    <div class="choice-group" id="playoff-mode-btns">
+      <div class="choice-btn selected" data-val="true" onclick="setPlayoffMode(true)">Avec phase finale</div>
+      <div class="choice-btn" data-val="false" onclick="setPlayoffMode(false)">Sans phase finale (classement direct)</div>
+    </div>
+
+    <div class="sub-section" id="playoff-config">
+      <div class="sub-section-title">Configuration de la phase finale</div>
+      <div class="two-col-grid">
+        <div class="form-group">
+          <label class="form-label">Équipes qualifiées par poule</label>
+          <select id="qualified-per-pool" class="picker" onchange="state.qualifiedTeamPerPool = +this.value">
+            <option value="1">1er uniquement</option>
+            <option value="2" selected>Top 2 (1er et 2e)</option>
+            <option value="3">Top 3</option>
+            <option value="4">Top 4</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:var(--p2);">
+        <label class="form-label">Match pour la 3e place</label>
+        <div class="choice-group" id="third-place-btns" style="margin-top:4px;">
+          <div class="choice-btn selected" data-val="true" onclick="setThirdPlace(true)">Oui</div>
+          <div class="choice-btn" data-val="false" onclick="setThirdPlace(false)">Non</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="separator"></div>
+
+  <!-- Section 3: Calendrier -->
+  <div class="section">
+    <div class="section-title">3 — Gestion du calendrier</div>
+    <div class="choice-group" id="schedule-mode-btns">
+      <div class="choice-btn selected" data-val="automatic" onclick="setScheduleMode('automatic')">Automatique (généré par le système)</div>
+      <div class="choice-btn" data-val="manual" onclick="setScheduleMode('manual')">Manuel (défini par l'administrateur)</div>
+      <div class="choice-btn" data-val="free" onclick="setScheduleMode('free')">Libre (les coachs s'arrangent)</div>
+    </div>
+
+    <div class="sub-section" id="schedule-config">
+      <div class="sub-section-title">Paramètres du calendrier</div>
+      <div class="two-col-grid" style="margin-bottom:var(--p2);">
+        <div class="form-group">
+          <label class="form-label">Début de la saison</label>
+          <input type="date" id="schedule-start-date" class="form-input"
+                 oninput="state.scheduleStartDate = this.value">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fin de la saison</label>
+          <input type="date" id="schedule-end-date" class="form-input"
+                 oninput="state.scheduleEndDate = this.value">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Début des play-offs</label>
+          <input type="date" id="playoff-start-date" class="form-input"
+                 oninput="state.playOffStartDate = this.value">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fin des play-offs</label>
+          <input type="date" id="playoff-end-date" class="form-input"
+                 oninput="state.playOffEndDate = this.value">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:var(--p2);">
+        <label class="form-label">Fuseau horaire</label>
+        <select id="schedule-timezone" class="picker" onchange="state.scheduleTimezone = this.value">
+          <option value="Europe/Paris" selected>Europe/Paris</option>
+          <option value="Europe/London">Europe/London</option>
+          <option value="America/New_York">America/New_York</option>
+          <option value="UTC">UTC</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:var(--p2);">
+        <label class="form-label">Notifications e-mail</label>
+        <div class="choice-group" id="mail-notif-btns" style="margin-top:4px;">
+          <div class="choice-btn selected" data-val="true" onclick="setMailNotif(true)">Activées</div>
+          <div class="choice-btn" data-val="false" onclick="setMailNotif(false)">Désactivées</div>
+        </div>
+        <div class="info-note">📌 Des rappels seront envoyés aux équipes à l'ouverture et à la fermeture de la phase, ou pour confirmer la participation au multiplexe.</div>
+      </div>
+
+      <div>
+        <div class="sub-section-title" style="margin-bottom:var(--p1);">Journées</div>
+        <div id="dates-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+        <div style="display:flex;gap:8px;margin-top:var(--p1);">
+          <button type="button" class="btn btn-outline" style="width:auto;padding:var(--p05) var(--p2);"
+                  onclick="addDate('fixed_date')">+ Journée (date fixe / multiplexe)</button>
+          <button type="button" class="btn btn-outline" style="width:auto;padding:var(--p05) var(--p2);"
+                  onclick="addDate('time_frame')">+ Journée (fenêtre temporelle)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="separator"></div>
+
+  <div style="display:flex;justify-content:space-between;margin-top:var(--p2);">
+    <button class="btn btn-outline" style="width:auto;padding:var(--p1) var(--p3);"
+            hx-get="{{ competition_routes.new_competition_rules(space_id, competition_id) }}"
+            hx-target="#app-content"
+            hx-swap="innerHTML"
+            hx-push-url="true">
+      ← Retour
+    </button>
+    <button class="btn btn-primary" style="width:auto;padding:var(--p1) var(--p4);"
+            onclick="submitStructure()">
+      Enregistrer &amp; continuer →
+    </button>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  const INITIAL_STRUCTURE = {{ existing_structure_json|safe }};
+
+  let state = {
+    useRankingGroups:     true,
+    dispatchType:         'automatic',
+    rankingGroups:        [],
+    usePlayoffs:          true,
+    qualifiedTeamPerPool: 2,
+    matchForThirdPlace:   true,
+    useSchedule:          true,
+    scheduleType:         'automatic',
+    scheduleStartDate:    '',
+    scheduleEndDate:      '',
+    playOffStartDate:     '',
+    playOffEndDate:       '',
+    scheduleTimezone:     'Europe/Paris',
+    useMailNotification:  true,
+    scheduledDates:       [],
+  };
+  window.state = state;
+
+  let nextId = 1;
+
+  function genId() {
+    return 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Toggle helpers ──────────────────────────────────────────────────────────
+
+  function activateBtn(groupId, val) {
+    document.querySelectorAll('#' + groupId + ' .choice-btn').forEach(btn => {
+      btn.classList.toggle('selected', btn.dataset.val === String(val));
+    });
+  }
+
+  // ── Section 1: Ranking groups ───────────────────────────────────────────────
+
+  window.setGroupMode = function (on) {
+    state.useRankingGroups = on;
+    activateBtn('group-mode-btns', on);
+    document.getElementById('groups-config').style.display = on ? '' : 'none';
+  };
+
+  window.setDispatchType = function (type) {
+    state.dispatchType = type;
+    activateBtn('dispatch-type-btns', type);
+  };
+
+  window.onGroupCountChange = function (n) {
+    if (isNaN(n) || n < 1) return;
+    const current = state.rankingGroups.length;
+    if (n > current) {
+      for (let i = current; i < n; i++) {
+        state.rankingGroups.push({ id: genId(), name: 'Poule ' + (i + 1) });
+      }
+    } else {
+      state.rankingGroups = state.rankingGroups.slice(0, n);
+    }
+    renderGroups();
+  };
+
+  function renderGroups() {
+    const list = document.getElementById('groups-list');
+    list.innerHTML = '';
+    state.rankingGroups.forEach((g, idx) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:var(--p1);';
+      row.innerHTML =
+        '<span style="width:24px;height:24px;border-radius:50%;background:var(--main-blue);color:var(--white);' +
+        'display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">' +
+        (idx + 1) + '</span>' +
+        '<input type="text" class="form-input" style="flex:1;" value="' + escHtml(g.name) + '"' +
+        ' oninput="state.rankingGroups[' + idx + '].name = this.value">';
+      list.appendChild(row);
+    });
+    document.getElementById('nb-groups').value = state.rankingGroups.length;
+  }
+
+  // ── Section 2: Play-offs ────────────────────────────────────────────────────
+
+  window.setPlayoffMode = function (on) {
+    state.usePlayoffs = on;
+    activateBtn('playoff-mode-btns', on);
+    document.getElementById('playoff-config').style.display = on ? '' : 'none';
+  };
+
+  window.setThirdPlace = function (on) {
+    state.matchForThirdPlace = on;
+    activateBtn('third-place-btns', on);
+  };
+
+  // ── Section 3: Schedule ─────────────────────────────────────────────────────
+
+  window.setScheduleMode = function (mode) {
+    state.scheduleType = mode;
+    activateBtn('schedule-mode-btns', mode);
+  };
+
+  window.setMailNotif = function (on) {
+    state.useMailNotification = on;
+    activateBtn('mail-notif-btns', on);
+  };
+
+  window.addDate = function (type) {
+    const id = nextId++;
+    const name = 'J' + (state.scheduledDates.length + 1);
+    if (type === 'fixed_date') {
+      state.scheduledDates.push({ _id: id, type: 'fixed_date', name: name, multiplexe_date: '' });
+    } else {
+      state.scheduledDates.push({ _id: id, type: 'time_frame', name: name, start_date: '', end_date: '' });
+    }
+    renderDates();
+  };
+
+  window.removeDate = function (id) {
+    state.scheduledDates = state.scheduledDates.filter(function (d) { return d._id !== id; });
+    renderDates();
+  };
+
+  function renderDates() {
+    const list = document.getElementById('dates-list');
+    list.innerHTML = '';
+    state.scheduledDates.forEach(function (d, idx) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:var(--p1);padding:8px 12px;' +
+        'background:var(--dark-6);border:1px solid var(--dark-5);border-radius:8px;flex-wrap:wrap;';
+
+      const nameInput = '<input type="text" class="form-input" style="width:64px;" value="' +
+        escHtml(d.name) + '" oninput="state.scheduledDates[' + idx + '].name = this.value" placeholder="J' + (idx + 1) + '">';
+
+      const removeBtn = '<button type="button" style="background:none;border:none;cursor:pointer;' +
+        'color:var(--dark-4);font-size:18px;line-height:1;flex-shrink:0;" onclick="removeDate(' + d._id + ')">✕</button>';
+
+      if (d.type === 'fixed_date') {
+        row.innerHTML = nameInput +
+          '<span style="font-size:var(--text-tiny);color:var(--dark-3);flex-shrink:0;">Date fixe :</span>' +
+          '<input type="date" class="form-input" style="flex:1;min-width:140px;" value="' + escHtml(d.multiplexe_date) + '"' +
+          ' oninput="state.scheduledDates[' + idx + '].multiplexe_date = this.value">' +
+          removeBtn;
+      } else {
+        row.innerHTML = nameInput +
+          '<span style="font-size:var(--text-tiny);color:var(--dark-3);flex-shrink:0;">Du</span>' +
+          '<input type="date" class="form-input" style="flex:1;min-width:140px;" value="' + escHtml(d.start_date) + '"' +
+          ' oninput="state.scheduledDates[' + idx + '].start_date = this.value">' +
+          '<span style="font-size:var(--text-tiny);color:var(--dark-3);flex-shrink:0;">au</span>' +
+          '<input type="date" class="form-input" style="flex:1;min-width:140px;" value="' + escHtml(d.end_date) + '"' +
+          ' oninput="state.scheduledDates[' + idx + '].end_date = this.value">' +
+          removeBtn;
+      }
+      list.appendChild(row);
+    });
+  }
+
+  // ── Sérialisation JSON ────────────────────────────────────────────────────────
+
+  function buildJSON() {
+    return {
+      ranking_group: {
+        use_ranking_groups: state.useRankingGroups,
+        dispatch_type:      state.dispatchType,
+        ranking_groups: state.rankingGroups.map(function (g) { return { id: g.id, name: g.name }; }),
+      },
+      play_offs_phase: {
+        use_playoffs_phase:                  state.usePlayoffs,
+        qualified_team_per_pool:             state.qualifiedTeamPerPool,
+        final_phase_match_for_third_place:   state.matchForThirdPlace,
+      },
+      schedule: {
+        use_schedule:          state.useSchedule,
+        schedule_type:         state.scheduleType,
+        schedule_start_date:   state.scheduleStartDate,
+        schedule_end_date:     state.scheduleEndDate,
+        play_off_start_date:   state.playOffStartDate,
+        play_off_end_date:     state.playOffEndDate,
+        schedule_timezone:     state.scheduleTimezone,
+        use_mail_notification: state.useMailNotification,
+        scheduled_dates: state.scheduledDates.map(function (d) {
+          if (d.type === 'fixed_date') {
+            return { name: d.name, type: 'fixed_date', multiplexe_date: d.multiplexe_date };
+          } else {
+            return { name: d.name, type: 'time_frame', start_date: d.start_date, end_date: d.end_date };
+          }
+        }),
+      },
+    };
+  }
+
+  // ── Submit ──────────────────────────────────────────────────────────────────
+
+  window.submitStructure = function () {
+    const btn = document.querySelector('[onclick="submitStructure()"]');
+    if (btn) { btn.disabled = true; btn.textContent = 'Enregistrement…'; }
+
+    fetch(window.location.pathname, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'HX-Request': 'true' },
+      body:    JSON.stringify(buildJSON()),
+    }).then(function (res) {
+      if (res.ok) {
+        const redirect = res.headers.get('HX-Redirect');
+        if (redirect) {
+          htmx.ajax('GET', redirect, { target: '#app-content', swap: 'innerHTML', pushUrl: true });
+        }
+        return;
+      }
+      return res.text().then(function (msg) {
+        let banner = document.getElementById('structure-error-banner');
+        if (!banner) {
+          banner = document.createElement('div');
+          banner.id = 'structure-error-banner';
+          banner.style.cssText = 'background:var(--red-light,#fef2f2);border:1px solid var(--red-badge);' +
+            'color:var(--red-badge);border-radius:8px;padding:12px 16px;margin-bottom:var(--p2);font-size:var(--text-small);';
+          document.querySelector('.create-card').prepend(banner);
+        }
+        banner.textContent = msg;
+        if (btn) { btn.disabled = false; btn.textContent = 'Enregistrer & continuer →'; }
+      });
+    });
+  };
+
+  // ── Initialisation ────────────────────────────────────────────────────────────
+
+  function applyState() {
+    activateBtn('group-mode-btns', state.useRankingGroups);
+    document.getElementById('groups-config').style.display = state.useRankingGroups ? '' : 'none';
+    activateBtn('dispatch-type-btns', state.dispatchType);
+    renderGroups();
+
+    activateBtn('playoff-mode-btns', state.usePlayoffs);
+    document.getElementById('playoff-config').style.display = state.usePlayoffs ? '' : 'none';
+    const qpp = document.getElementById('qualified-per-pool');
+    if (qpp) qpp.value = String(state.qualifiedTeamPerPool);
+    activateBtn('third-place-btns', state.matchForThirdPlace);
+
+    activateBtn('schedule-mode-btns', state.scheduleType);
+    document.getElementById('schedule-start-date').value = state.scheduleStartDate;
+    document.getElementById('schedule-end-date').value   = state.scheduleEndDate;
+    document.getElementById('playoff-start-date').value  = state.playOffStartDate;
+    document.getElementById('playoff-end-date').value    = state.playOffEndDate;
+    const tz = document.getElementById('schedule-timezone');
+    if (tz) tz.value = state.scheduleTimezone;
+    activateBtn('mail-notif-btns', state.useMailNotification);
+
+    renderDates();
+  }
+
+  function initFromExisting(s) {
+    const rg = s.ranking_group;
+    state.useRankingGroups = rg.use_ranking_groups;
+    state.dispatchType     = rg.dispatch_type;
+    state.rankingGroups    = rg.ranking_groups.slice();
+
+    const po = s.play_offs_phase;
+    state.usePlayoffs            = po.use_playoffs_phase;
+    state.qualifiedTeamPerPool   = po.qualified_team_per_pool;
+    state.matchForThirdPlace     = po.final_phase_match_for_third_place;
+
+    const sc = s.schedule;
+    state.useSchedule          = sc.use_schedule;
+    state.scheduleType         = sc.schedule_type;
+    state.scheduleStartDate    = sc.schedule_start_date;
+    state.scheduleEndDate      = sc.schedule_end_date;
+    state.playOffStartDate     = sc.play_off_start_date;
+    state.playOffEndDate       = sc.play_off_end_date;
+    state.scheduleTimezone     = sc.schedule_timezone;
+    state.useMailNotification  = sc.use_mail_notification;
+    state.scheduledDates     = sc.scheduled_dates.map(function (d) {
+      return Object.assign({ _id: nextId++ }, d);
+    });
+
+    applyState();
+  }
+
+  if (INITIAL_STRUCTURE) {
+    initFromExisting(INITIAL_STRUCTURE);
+  } else {
+    state.rankingGroups = [
+      { id: genId(), name: 'Poule 1' },
+      { id: genId(), name: 'Poule 2' },
+    ];
+    applyState();
+  }
+})();
+</script>

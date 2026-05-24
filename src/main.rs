@@ -107,11 +107,24 @@ async fn main() {
         .merge(auth_app);
 
     #[cfg(debug_assertions)]
-    let app = Router::new()
-        .nest_service("/ui", ServeDir::new("assets/templates"))
-        .merge(app)
-        .layer(from_fn(request_log))
-        .layer(LiveReloadLayer::new());
+    let app = {
+        // Exclude HTMX fragment requests from livereload script injection.
+        // Without this, every HTMX swap injects a new <script> that opens a
+        // persistent SSE connection, exhausting the browser's 6-connection-per-origin
+        // limit (HTTP/1.1) after just two open tabs.
+        #[derive(Clone, Copy)]
+        struct NotHtmxRequest;
+        impl tower_livereload::predicate::Predicate<axum::http::Request<axum::body::Body>> for NotHtmxRequest {
+            fn check(&mut self, req: &axum::http::Request<axum::body::Body>) -> bool {
+                !req.headers().contains_key("hx-request")
+            }
+        }
+        Router::new()
+            .nest_service("/ui", ServeDir::new("assets/templates"))
+            .merge(app)
+            .layer(from_fn(request_log))
+            .layer(LiveReloadLayer::new().request_predicate(NotHtmxRequest))
+    };
 
     let listener = tokio::net::TcpListener::bind(&server_address).await.unwrap();
     axum::serve(listener, app).await.unwrap();

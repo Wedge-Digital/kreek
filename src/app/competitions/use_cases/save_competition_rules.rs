@@ -53,6 +53,7 @@ mod tests {
     use crate::app::competitions::domain::competition::Competition;
     use crate::app::competitions::domain::competition_repository_port::{CompetitionRepositoryError, CompetitionSummary};
     use crate::app::competitions::domain::competition_rules::{DefensiveBonus, OffensiveBonus, RankingRules, TierRule};
+    use crate::app::competitions::domain::competition_structure::CompetitionStructure;
     use crate::app::shared_kernel::common_types::SpaceId;
     use crate::app::shared_kernel::competition_name::CompetitionName;
 
@@ -69,6 +70,8 @@ mod tests {
         async fn find_rules(&self, _: &CompetitionId) -> Result<Option<CompetitionRules>, CompetitionRepositoryError> {
             Ok(None)
         }
+        async fn save_structure(&self, _: &CompetitionId, _: &CompetitionStructure) -> Result<(), CompetitionRepositoryError> { Ok(()) }
+        async fn find_structure(&self, _: &CompetitionId) -> Result<Option<CompetitionStructure>, CompetitionRepositoryError> { Ok(None) }
     }
 
     fn base_rules(tiers: Vec<TierRule>) -> CompetitionRules {

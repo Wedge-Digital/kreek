@@ -3,6 +3,7 @@ use sqlx::PgPool;
 use crate::app::competitions::domain::competition::Competition;
 use crate::app::competitions::domain::competition_repository_port::{CompetitionRepositoryError, CompetitionSummary, ICompetitionRepository};
 use crate::app::competitions::domain::competition_rules::CompetitionRules;
+use crate::app::competitions::domain::competition_structure::CompetitionStructure;
 use crate::app::shared_kernel::common_types::{CompetitionId, SpaceId};
 use crate::app::shared_kernel::competition_name::CompetitionName;
 use crate::app::shared_kernel::competition_profile::CompetitionProfile;
@@ -95,6 +96,41 @@ impl ICompetitionRepository for CompetitionRepository {
             .map_err(|e| CompetitionRepositoryError::Database(e.to_string()))?;
 
         let found: Option<String> = sqlx::query_scalar(include_str!("sql/competitions/update_rules.sql"))
+            .bind(json)
+            .bind(competition_id.to_string())
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(db_err)?;
+
+        if found.is_none() {
+            return Err(CompetitionRepositoryError::CompetitionNotFound);
+        }
+
+        Ok(())
+    }
+
+    async fn find_structure(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionStructure>, CompetitionRepositoryError> {
+        #[derive(sqlx::FromRow)]
+        struct Row { structure: Option<String> }
+
+        let row: Option<Row> = sqlx::query_as::<_, Row>(include_str!("sql/competitions/select_structure.sql"))
+            .bind(competition_id.to_string())
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(db_err)?;
+
+        let Some(Some(json)) = row.map(|r| r.structure) else { return Ok(None) };
+
+        serde_json::from_str(&json)
+            .map(Some)
+            .map_err(|e| CompetitionRepositoryError::Database(e.to_string()))
+    }
+
+    async fn save_structure(&self, competition_id: &CompetitionId, structure: &CompetitionStructure) -> Result<(), CompetitionRepositoryError> {
+        let json = serde_json::to_string(structure)
+            .map_err(|e| CompetitionRepositoryError::Database(e.to_string()))?;
+
+        let found: Option<String> = sqlx::query_scalar(include_str!("sql/competitions/update_structure.sql"))
             .bind(json)
             .bind(competition_id.to_string())
             .fetch_optional(&self.pool)

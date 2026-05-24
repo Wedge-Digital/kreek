@@ -54,12 +54,19 @@ pub async fn execute(
         .map_err(LoginError::from)?
         .ok_or(LoginError::CoachNameNotFound)?;
 
-    let parsed_hash = PasswordHash::new(&user.password_hash)
-        .map_err(|_| LoginError::Database("hash corrompu".into()))?;
+    let password_hash = user.password_hash.clone();
+    let password      = cmd.password.clone();
+    let verified = tokio::task::spawn_blocking(move || {
+        let parsed = PasswordHash::new(&password_hash)
+            .map_err(|_| LoginError::Database("hash corrompu".into()))?;
+        Argon2::default()
+            .verify_password(password.as_bytes(), &parsed)
+            .map_err(|_| LoginError::InvalidPassword)
+    })
+    .await
+    .map_err(|_| LoginError::Database("spawn_blocking échoué".into()))?;
 
-    Argon2::default()
-        .verify_password(cmd.password.as_bytes(), &parsed_hash)
-        .map_err(|_| LoginError::InvalidPassword)?;
+    verified?;
 
     let user_id       = user.id;
     let event_payload = UserLoggedIn {

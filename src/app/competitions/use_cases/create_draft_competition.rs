@@ -86,6 +86,7 @@ mod tests {
     use crate::app::competitions::domain::cache_repository_port::{CachedSpace, CachedUser, CompetitionsCacheError, ICompetitionsCacheRepository};
     use crate::app::competitions::domain::competition_repository_port::{CompetitionRepositoryError, CompetitionSummary, ICompetitionRepository};
     use crate::app::competitions::domain::competition_rules::CompetitionRules;
+    use crate::app::competitions::domain::competition_structure::CompetitionStructure;
     use crate::app::shared_kernel::authorization::SpaceProfile;
     use crate::app::shared_kernel::coach_icon::CoachIcon;
     use crate::app::shared_kernel::coach_name::CoachName;
@@ -122,6 +123,12 @@ mod tests {
             Ok(())
         }
         async fn find_rules(&self, _: &CompetitionId) -> Result<Option<CompetitionRules>, CompetitionRepositoryError> {
+            Ok(None)
+        }
+        async fn save_structure(&self, _: &CompetitionId, _: &CompetitionStructure) -> Result<(), CompetitionRepositoryError> {
+            Ok(())
+        }
+        async fn find_structure(&self, _: &CompetitionId) -> Result<Option<CompetitionStructure>, CompetitionRepositoryError> {
             Ok(None)
         }
     }
