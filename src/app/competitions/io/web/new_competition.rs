@@ -15,7 +15,7 @@ use crate::app::references::io::web::pickers::{
     build_inducement_items, build_roster_items, build_star_player_items,
     InducementPickerItem, RosterPickerItem, StarPlayerPickerItem,
 };
-use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, CompetitionId, SpaceId};
+use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, CompetitionId, SeasonId, SpaceId};
 use crate::app::shared_kernel::competition_name::CompetitionName;
 use crate::state::AppState;
 use crate::web::app_layout::AppLayout;
@@ -28,6 +28,8 @@ pub struct NewCompetitionPhase2Template {
     pub competition_routes:    Routes,
     pub space_id:              String,
     pub competition_id:        String,
+    pub season_id:             String,
+    pub season_name_value:     String,
     pub rosters:               Vec<RosterPickerItem>,
     pub inducements:           Vec<InducementPickerItem>,
     pub star_players:          Vec<StarPlayerPickerItem>,
@@ -44,28 +46,41 @@ impl IntoResponse for NewCompetitionPhase2Template {
 }
 
 pub async fn get_new_competition_phase_2(
-    Path((space_id, competition_id)): Path<(String, String)>,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    let cid = match CompetitionId::try_new(&competition_id) {
+    let sid = match SeasonId::try_new(&season_id) {
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let existing_rules_json = state.competitions.competition_repository
-        .find_rules(&cid)
-        .await
+    let season_repo = state.competitions.season_repository.as_ref();
+
+    let (rules_result, base_result) = tokio::join!(
+        season_repo.find_rules(&sid),
+        season_repo.find_base_info(&sid),
+    );
+
+    let existing_rules_json = rules_result
         .ok()
         .flatten()
         .and_then(|r| serde_json::to_string(&r).ok())
         .unwrap_or_else(|| "null".to_string());
+
+    let season_name_value = base_result
+        .ok()
+        .flatten()
+        .map(|b| b.name)
+        .unwrap_or_else(|| "Saison 1".to_string());
 
     let refs = state.references.repository.as_ref();
     let tmpl = NewCompetitionPhase2Template {
         competition_routes: Routes,
         space_id,
         competition_id,
+        season_id,
+        season_name_value,
         rosters:             build_roster_items(refs),
         inducements:         build_inducement_items(refs),
         star_players:        build_star_player_items(refs),
@@ -86,6 +101,7 @@ pub async fn get_new_competition_phase_2(
 pub struct NewCompetitionTemplate {
     pub space_id:             String,
     pub competition_id:       Option<String>,
+    pub season_id:            Option<String>,
     pub members_widget_url:   String,
     pub name_value:           String,
     pub name_error:           Option<String>,
@@ -142,10 +158,18 @@ pub async fn get_new_competition_phase_1_edit(
         Err(_)      => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
 
+    let season_id = state.competitions.season_repository
+        .find_latest_season_id(&cid)
+        .await
+        .ok()
+        .flatten()
+        .map(|s| s.to_string());
+
     let url  = members_widget_url(&space_id, &base.admin_ids);
     let tmpl = NewCompetitionTemplate {
         members_widget_url: url,
         competition_id:     Some(competition_id),
+        season_id,
         name_value:         base.name,
         logo_url_value:     base.logo.unwrap_or_default(),
         space_id,
@@ -168,6 +192,7 @@ pub struct CreateCompetitionFormPayload {
     pub logo_url:  String,
     #[serde(default)]
     pub admin_ids: Vec<String>,
+    pub season_id: Option<String>,
 }
 
 pub async fn post_new_competition(
@@ -235,9 +260,14 @@ pub async fn post_new_competition(
         admin_ids,
     };
 
-    match execute(cmd, state.competitions.competition_repository.as_ref(), &state.competitions.event_bus).await {
-        Ok(competition_id) => Response::builder()
-            .header("HX-Redirect", Routes.new_competition_rules(&space_id, &competition_id.to_string()))
+    match execute(
+        cmd,
+        state.competitions.competition_repository.as_ref(),
+        state.competitions.season_repository.as_ref(),
+        &state.competitions.event_bus,
+    ).await {
+        Ok((competition_id, season_id)) => Response::builder()
+            .header("HX-Redirect", Routes.new_competition_rules(&space_id, &competition_id.to_string(), &season_id.to_string()))
             .body(Body::empty())
             .unwrap(),
 
@@ -265,6 +295,7 @@ pub async fn post_update_competition(
     let mut tmpl = NewCompetitionTemplate {
         space_id:           space_id.clone(),
         competition_id:     Some(competition_id.clone()),
+        season_id:          payload.season_id.clone(),
         members_widget_url: url,
         name_value:         payload.name.clone(),
         logo_url_value:     payload.logo_url.clone(),
@@ -283,6 +314,14 @@ pub async fn post_update_competition(
         Ok(id) => id,
         Err(_) => {
             tmpl.general_error = Some("Espace invalide.".into());
+            return tmpl.into_response();
+        }
+    };
+
+    let season_id = match payload.season_id.as_deref().and_then(|s| SeasonId::try_new(s).ok()) {
+        Some(id) => id,
+        None => {
+            tmpl.general_error = Some("Identifiant de saison manquant.".into());
             return tmpl.into_response();
         }
     };
@@ -325,7 +364,7 @@ pub async fn post_update_competition(
 
     match execute_update(cmd, state.competitions.competition_repository.as_ref()).await {
         Ok(()) => Response::builder()
-            .header("HX-Redirect", Routes.new_competition_rules(&space_id, &competition_id))
+            .header("HX-Redirect", Routes.new_competition_rules(&space_id, &competition_id, &season_id.to_string()))
             .body(Body::empty())
             .unwrap(),
 
@@ -348,21 +387,32 @@ pub async fn post_update_competition(
 
 // ── POST phase 2 : sauvegarde des règles ─────────────────────────────────────
 
+#[derive(Deserialize)]
+pub struct SaveRulesPayload {
+    pub season_name: String,
+    #[serde(flatten)]
+    pub rules: CompetitionRules,
+}
+
 pub async fn post_competition_rules(
-    Path((space_id, competition_id)): Path<(String, String)>,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
-    Json(rules): Json<CompetitionRules>,
+    Json(payload): Json<SaveRulesPayload>,
 ) -> impl IntoResponse {
-    let cid = match CompetitionId::try_new(&competition_id) {
+    let sid = match SeasonId::try_new(&season_id) {
         Ok(id) => id,
-        Err(_) => return (StatusCode::BAD_REQUEST, "Identifiant de compétition invalide.").into_response(),
+        Err(_) => return (StatusCode::BAD_REQUEST, "Identifiant de saison invalide.").into_response(),
     };
 
-    let cmd = SaveCompetitionRulesCommand { competition_id: cid, rules };
+    let cmd = SaveCompetitionRulesCommand {
+        season_id:   sid,
+        season_name: payload.season_name,
+        rules:       payload.rules,
+    };
 
-    match execute_save_rules(cmd, state.competitions.competition_repository.as_ref()).await {
+    match execute_save_rules(cmd, state.competitions.season_repository.as_ref()).await {
         Ok(()) => Response::builder()
-            .header("HX-Redirect", Routes.new_competition_structure(&space_id, &competition_id))
+            .header("HX-Redirect", Routes.new_competition_structure(&space_id, &competition_id, &season_id))
             .body(Body::empty())
             .unwrap(),
 
@@ -371,8 +421,8 @@ pub async fn post_competition_rules(
             (StatusCode::UNPROCESSABLE_ENTITY, msg).into_response()
         }
 
-        Err(SaveCompetitionRulesError::CompetitionNotFound) =>
-            (StatusCode::NOT_FOUND, "Compétition introuvable.").into_response(),
+        Err(SaveCompetitionRulesError::SeasonNotFound) =>
+            (StatusCode::NOT_FOUND, "Saison introuvable.").into_response(),
 
         Err(SaveCompetitionRulesError::Database(_)) =>
             (StatusCode::INTERNAL_SERVER_ERROR, "Erreur interne, veuillez réessayer.").into_response(),

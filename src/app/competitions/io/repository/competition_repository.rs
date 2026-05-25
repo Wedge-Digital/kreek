@@ -1,10 +1,7 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
 use crate::app::competitions::domain::competition::Competition;
-use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
 use crate::app::competitions::domain::competition_repository_port::{CompetitionBaseInfo, CompetitionRepositoryError, CompetitionSummary, ICompetitionRepository};
-use crate::app::competitions::domain::competition_rules::CompetitionRules;
-use crate::app::competitions::domain::competition_structure::CompetitionStructure;
 use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, CompetitionId, SpaceId};
 use crate::app::shared_kernel::competition_name::CompetitionName;
 use crate::app::shared_kernel::competition_profile::CompetitionProfile;
@@ -64,7 +61,7 @@ impl ICompetitionRepository for CompetitionRepository {
 
     async fn find_by_space_id(&self, space_id: &SpaceId) -> Result<Vec<CompetitionSummary>, CompetitionRepositoryError> {
         #[derive(sqlx::FromRow)]
-        struct Row { id: String, name: String, logo: String, status: String }
+        struct Row { id: String, name: String, logo: String, season_id: Option<String>, status: Option<String> }
 
         let rows = sqlx::query_as::<_, Row>(include_str!("sql/competitions/find_by_space_id.sql"))
             .bind(space_id.to_string())
@@ -72,107 +69,13 @@ impl ICompetitionRepository for CompetitionRepository {
             .await
             .map_err(db_err)?;
 
-        Ok(rows.into_iter().map(|r| CompetitionSummary { id: r.id, name: r.name, logo: r.logo, status: r.status }).collect())
-    }
-
-    async fn find_rules(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionRules>, CompetitionRepositoryError> {
-        #[derive(sqlx::FromRow)]
-        struct Row { rules: Option<String> }
-
-        let row: Option<Row> = sqlx::query_as::<_, Row>(include_str!("sql/competitions/select_rules.sql"))
-            .bind(competition_id.to_string())
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(db_err)?;
-
-        let Some(Some(json)) = row.map(|r| r.rules) else { return Ok(None) };
-
-        serde_json::from_str(&json)
-            .map(Some)
-            .map_err(|e| CompetitionRepositoryError::Database(e.to_string()))
-    }
-
-    async fn save_rules(&self, competition_id: &CompetitionId, rules: &CompetitionRules) -> Result<(), CompetitionRepositoryError> {
-        let json = serde_json::to_string(rules)
-            .map_err(|e| CompetitionRepositoryError::Database(e.to_string()))?;
-
-        let found: Option<String> = sqlx::query_scalar(include_str!("sql/competitions/update_rules.sql"))
-            .bind(json)
-            .bind(competition_id.to_string())
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(db_err)?;
-
-        if found.is_none() {
-            return Err(CompetitionRepositoryError::CompetitionNotFound);
-        }
-
-        Ok(())
-    }
-
-    async fn find_structure(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionStructure>, CompetitionRepositoryError> {
-        #[derive(sqlx::FromRow)]
-        struct Row { structure: Option<String> }
-
-        let row: Option<Row> = sqlx::query_as::<_, Row>(include_str!("sql/competitions/select_structure.sql"))
-            .bind(competition_id.to_string())
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(db_err)?;
-
-        let Some(Some(json)) = row.map(|r| r.structure) else { return Ok(None) };
-
-        serde_json::from_str(&json)
-            .map(Some)
-            .map_err(|e| CompetitionRepositoryError::Database(e.to_string()))
-    }
-
-    async fn save_structure(&self, competition_id: &CompetitionId, structure: &CompetitionStructure) -> Result<(), CompetitionRepositoryError> {
-        let json = serde_json::to_string(structure)
-            .map_err(|e| CompetitionRepositoryError::Database(e.to_string()))?;
-
-        let found: Option<String> = sqlx::query_scalar(include_str!("sql/competitions/update_structure.sql"))
-            .bind(json)
-            .bind(competition_id.to_string())
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(db_err)?;
-
-        if found.is_none() {
-            return Err(CompetitionRepositoryError::CompetitionNotFound);
-        }
-
-        Ok(())
-    }
-
-    async fn find_invitations(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionInvitations>, CompetitionRepositoryError> {
-        #[derive(sqlx::FromRow)]
-        struct Row { invitations: Option<String> }
-
-        let row: Option<Row> = sqlx::query_as::<_, Row>(include_str!("sql/competitions/select_invitations.sql"))
-            .bind(competition_id.to_string())
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(db_err)?;
-
-        let Some(Some(json)) = row.map(|r| r.invitations) else { return Ok(None) };
-
-        serde_json::from_str(&json)
-            .map(Some)
-            .map_err(|e| CompetitionRepositoryError::Database(e.to_string()))
-    }
-
-    async fn set_ready(&self, competition_id: &CompetitionId) -> Result<(), CompetitionRepositoryError> {
-        let found: Option<String> = sqlx::query_scalar(include_str!("sql/competitions/set_ready.sql"))
-            .bind(competition_id.to_string())
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(db_err)?;
-
-        if found.is_none() {
-            return Err(CompetitionRepositoryError::CompetitionNotFound);
-        }
-        Ok(())
+        Ok(rows.into_iter().map(|r| CompetitionSummary {
+            id:        r.id,
+            name:      r.name,
+            logo:      r.logo,
+            season_id: r.season_id,
+            status:    r.status,
+        }).collect())
     }
 
     async fn find_base_info(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionBaseInfo>, CompetitionRepositoryError> {
@@ -227,24 +130,6 @@ impl ICompetitionRepository for CompetitionRepository {
         }
 
         tx.commit().await.map_err(db_err)?;
-        Ok(())
-    }
-
-    async fn save_invitations(&self, competition_id: &CompetitionId, invitations: &CompetitionInvitations) -> Result<(), CompetitionRepositoryError> {
-        let json = serde_json::to_string(invitations)
-            .map_err(|e| CompetitionRepositoryError::Database(e.to_string()))?;
-
-        let found: Option<String> = sqlx::query_scalar(include_str!("sql/competitions/update_invitations.sql"))
-            .bind(json)
-            .bind(competition_id.to_string())
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(db_err)?;
-
-        if found.is_none() {
-            return Err(CompetitionRepositoryError::CompetitionNotFound);
-        }
-
         Ok(())
     }
 }

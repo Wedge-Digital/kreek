@@ -1,22 +1,22 @@
-use crate::app::competitions::domain::competition_repository_port::{CompetitionRepositoryError, ICompetitionRepository};
 use crate::app::competitions::domain::competition_structure::CompetitionStructure;
-use crate::app::shared_kernel::common_types::CompetitionId;
+use crate::app::competitions::domain::season_repository_port::{ISeasonRepository, SeasonRepositoryError};
+use crate::app::shared_kernel::common_types::SeasonId;
 
 pub struct SaveCompetitionStructureCommand {
-    pub competition_id: CompetitionId,
-    pub structure:      CompetitionStructure,
+    pub season_id: SeasonId,
+    pub structure: CompetitionStructure,
 }
 
 #[derive(Debug)]
 pub enum SaveCompetitionStructureError {
-    CompetitionNotFound,
+    SeasonNotFound,
     Database(String),
 }
 
-impl From<CompetitionRepositoryError> for SaveCompetitionStructureError {
-    fn from(e: CompetitionRepositoryError) -> Self {
+impl From<SeasonRepositoryError> for SaveCompetitionStructureError {
+    fn from(e: SeasonRepositoryError) -> Self {
         match e {
-            CompetitionRepositoryError::CompetitionNotFound => Self::CompetitionNotFound,
+            SeasonRepositoryError::SeasonNotFound => Self::SeasonNotFound,
             other => Self::Database(other.to_string()),
         }
     }
@@ -24,8 +24,8 @@ impl From<CompetitionRepositoryError> for SaveCompetitionStructureError {
 
 pub async fn execute(
     cmd:  SaveCompetitionStructureCommand,
-    repo: &dyn ICompetitionRepository,
+    repo: &dyn ISeasonRepository,
 ) -> Result<(), SaveCompetitionStructureError> {
-    repo.save_structure(&cmd.competition_id, &cmd.structure).await?;
+    repo.save_structure(&cmd.season_id, &cmd.structure).await?;
     Ok(())
 }

@@ -19,6 +19,15 @@
     <div class="step"><div class="step-num pending">5</div><div class="step-label pending">Validation</div></div>
   </div>
 
+  <!-- ── Nom de la saison ── -->
+  <div class="rules-section">
+    <div class="rules-section-title">Nom de la saison</div>
+    <input type="text" id="season_name" class="form-input" value="{{ season_name_value }}"
+           placeholder="ex : Saison 1, Printemps 2026…" style="max-width:360px;">
+  </div>
+
+  <div class="separator"></div>
+
   <!-- ── Points VND ── -->
   <div class="rules-section">
     <div class="rules-section-title">Points de classement (VND)</div>
@@ -105,6 +114,7 @@
             hx-push-url="true">
       ← Retour
     </button>
+    <span style="display:none" id="season-id-value">{{ season_id }}</span>
     <button class="btn btn-primary" style="width:auto;padding:var(--p1) var(--p4);"
             onclick="submitRules()">
       Enregistrer &amp; continuer →
@@ -307,6 +317,7 @@
 
   function buildJSON() {
     return {
+      season_name: document.getElementById('season_name').value || 'Saison 1',
       ranking_rules: {
         win_points:  +document.getElementById('win_points').value,
         draw_points: +document.getElementById('draw_points').value,

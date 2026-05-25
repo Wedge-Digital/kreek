@@ -6,21 +6,22 @@ use axum::response::{Html, IntoResponse, Response};
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::routes::Routes;
 use crate::app::competitions::use_cases::finalize_competition::{FinalizeCompetitionCommand, FinalizeCompetitionError, execute as execute_finalize};
-use crate::app::shared_kernel::common_types::{CompetitionId, SpaceId};
+use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId, SpaceId};
 use crate::state::AppState;
 use crate::web::app_layout::AppLayout;
 
-/// All display data is pre-formatted in the handler — the template uses no filters.
 #[derive(Template)]
 #[template(path = "new-competition-phase-5.html")]
 pub struct NewCompetitionPhase5Template {
     pub competition_routes:   Routes,
     pub space_id:             String,
     pub competition_id:       String,
+    pub season_id:            String,
     // General info
     pub competition_name:     String,
     pub competition_logo:     Option<String>,
     pub admin_names:          Vec<String>,
+    pub season_name:          String,
     // Unfilled spots warning
     pub has_unfilled_spots:   bool,
     pub remaining_spots:      u32,
@@ -56,7 +57,7 @@ impl IntoResponse for NewCompetitionPhase5Template {
 }
 
 pub async fn get_new_competition_phase_5(
-    Path((space_id, competition_id)): Path<(String, String)>,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
@@ -65,13 +66,20 @@ pub async fn get_new_competition_phase_5(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let repo = state.competitions.competition_repository.as_ref();
+    let sid = match SeasonId::try_new(&season_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
 
-    let (base_info, rules, structure, invitations) = tokio::join!(
-        repo.find_base_info(&cid),
-        repo.find_rules(&cid),
-        repo.find_structure(&cid),
-        repo.find_invitations(&cid),
+    let comp_repo   = state.competitions.competition_repository.as_ref();
+    let season_repo = state.competitions.season_repository.as_ref();
+
+    let (base_info, season_info, rules, structure, invitations) = tokio::join!(
+        comp_repo.find_base_info(&cid),
+        season_repo.find_base_info(&sid),
+        season_repo.find_rules(&sid),
+        season_repo.find_structure(&sid),
+        season_repo.find_invitations(&sid),
     );
 
     let base = match base_info {
@@ -83,6 +91,7 @@ pub async fn get_new_competition_phase_5(
         }
     };
 
+    let season_name = season_info.ok().flatten().map(|s| s.name).unwrap_or_default();
     let rules       = rules.unwrap_or(None);
     let structure   = structure.unwrap_or(None);
     let invitations = invitations.unwrap_or(None);
@@ -184,9 +193,11 @@ pub async fn get_new_competition_phase_5(
         competition_routes: Routes,
         space_id,
         competition_id,
+        season_id,
         competition_name: base.name,
         competition_logo: base.logo,
         admin_names: base.admin_names,
+        season_name,
         has_unfilled_spots,
         remaining_spots,
         total_spots,
@@ -216,11 +227,9 @@ pub async fn get_new_competition_phase_5(
     }
 }
 
-// ── POST: finalisation ────────────────────────────────────────────────────────
-
 pub async fn post_finalize_competition(
     auth_session: AuthSession,
-    Path((space_id, competition_id)): Path<(String, String)>,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let Some(user) = auth_session.user else {
@@ -232,25 +241,31 @@ pub async fn post_finalize_competition(
         Err(_) => return (StatusCode::BAD_REQUEST, "Identifiant de compétition invalide.").into_response(),
     };
 
-    let sid = match SpaceId::try_new(&space_id) {
+    let sid = match SeasonId::try_new(&season_id) {
+        Ok(id) => id,
+        Err(_) => return (StatusCode::BAD_REQUEST, "Identifiant de saison invalide.").into_response(),
+    };
+
+    let space = match SpaceId::try_new(&space_id) {
         Ok(id) => id,
         Err(_) => return (StatusCode::BAD_REQUEST, "Identifiant d'espace invalide.").into_response(),
     };
 
     let cmd = FinalizeCompetitionCommand {
         competition_id: cid,
-        space_id:       sid,
+        season_id:      sid,
+        space_id:       space,
         finalized_by:   user.id,
     };
 
-    match execute_finalize(cmd, state.competitions.competition_repository.as_ref(), &state.event_bus).await {
+    match execute_finalize(cmd, state.competitions.season_repository.as_ref(), &state.event_bus).await {
         Ok(()) => Response::builder()
             .header("HX-Redirect", Routes.all_competitions(&space_id))
             .body(Body::empty())
             .unwrap(),
 
-        Err(FinalizeCompetitionError::CompetitionNotFound) =>
-            (StatusCode::NOT_FOUND, "Compétition introuvable.").into_response(),
+        Err(FinalizeCompetitionError::SeasonNotFound) =>
+            (StatusCode::NOT_FOUND, "Saison introuvable.").into_response(),
 
         Err(FinalizeCompetitionError::Database(_)) =>
             (StatusCode::INTERNAL_SERVER_ERROR, "Erreur interne, veuillez réessayer.").into_response(),

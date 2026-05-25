@@ -42,6 +42,10 @@
           hx-target="#app-content"
           hx-swap="innerHTML">
 
+      {% if let Some(sid) = season_id %}
+      <input type="hidden" name="season_id" value="{{ sid }}">
+      {% endif %}
+
 
       <div class="form-group">
         <label class="form-label">Nom de votre compétition</label>

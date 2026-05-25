@@ -10,6 +10,8 @@ pub type SpaceId = EntityId;
 
 pub type CompetitionId = EntityId;
 
+pub type SeasonId = EntityId;
+
 pub type EntityId = SUlid;
 
 pub type EventId = SUlid;

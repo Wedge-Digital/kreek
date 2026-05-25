@@ -1,0 +1,1 @@
+SELECT name FROM competition_seasons WHERE id = $1

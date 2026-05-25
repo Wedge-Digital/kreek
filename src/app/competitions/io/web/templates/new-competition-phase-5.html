@@ -67,8 +67,12 @@
                 </div>
                 <div style="flex: 1;">
                     <div class="recap-row">
-                        <span class="recap-key">Nom</span>
+                        <span class="recap-key">Compétition</span>
                         <span class="recap-val highlight">{{ competition_name }}</span>
+                    </div>
+                    <div class="recap-row">
+                        <span class="recap-key">Saison</span>
+                        <span class="recap-val highlight">{{ season_name }}</span>
                     </div>
                     {% if !admin_names.is_empty() %}
                     <div class="recap-row">
@@ -94,7 +98,7 @@
             <div class="recap-card-icon">📋</div>
             <div class="recap-card-title">Règles de la compétition</div>
             <a class="recap-card-edit"
-               hx-get="{{ competition_routes.new_competition_rules(space_id, competition_id) }}"
+               hx-get="{{ competition_routes.new_competition_rules(space_id, competition_id, season_id) }}"
                hx-target="#app-content"
                hx-swap="innerHTML"
                hx-push-url="true">Modifier</a>
@@ -142,7 +146,7 @@
             <div class="recap-card-icon">🏗️</div>
             <div class="recap-card-title">Structure de la compétition</div>
             <a class="recap-card-edit"
-               hx-get="{{ competition_routes.new_competition_structure(space_id, competition_id) }}"
+               hx-get="{{ competition_routes.new_competition_structure(space_id, competition_id, season_id) }}"
                hx-target="#app-content"
                hx-swap="innerHTML"
                hx-push-url="true">Modifier</a>
@@ -177,7 +181,7 @@
             <div class="recap-card-icon">📩</div>
             <div class="recap-card-title">Invitations</div>
             <a class="recap-card-edit"
-               hx-get="{{ competition_routes.new_competition_invitations(space_id, competition_id) }}"
+               hx-get="{{ competition_routes.new_competition_invitations(space_id, competition_id, season_id) }}"
                hx-target="#app-content"
                hx-swap="innerHTML"
                hx-push-url="true">Modifier</a>
@@ -224,7 +228,7 @@
 
     <div style="display: flex; justify-content: flex-start; margin-top: var(--p2);">
         <button class="btn btn-outline" style="width: auto; padding: var(--p1) var(--p3);"
-                hx-get="{{ competition_routes.new_competition_invitations(space_id, competition_id) }}"
+                hx-get="{{ competition_routes.new_competition_invitations(space_id, competition_id, season_id) }}"
                 hx-target="#app-content"
                 hx-swap="innerHTML"
                 hx-push-url="true">

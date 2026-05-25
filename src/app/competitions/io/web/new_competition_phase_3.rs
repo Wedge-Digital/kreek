@@ -7,7 +7,7 @@ use axum::Json;
 use crate::app::competitions::domain::competition_structure::CompetitionStructure;
 use crate::app::competitions::routes::Routes;
 use crate::app::competitions::use_cases::save_competition_structure::{SaveCompetitionStructureCommand, SaveCompetitionStructureError, execute};
-use crate::app::shared_kernel::common_types::CompetitionId;
+use crate::app::shared_kernel::common_types::SeasonId;
 use crate::state::AppState;
 use crate::web::app_layout::AppLayout;
 
@@ -17,6 +17,7 @@ pub struct NewCompetitionPhase3Template {
     pub competition_routes:      Routes,
     pub space_id:                String,
     pub competition_id:          String,
+    pub season_id:               String,
     pub existing_structure_json: String,
 }
 
@@ -30,17 +31,17 @@ impl IntoResponse for NewCompetitionPhase3Template {
 }
 
 pub async fn get_new_competition_phase_3(
-    Path((space_id, competition_id)): Path<(String, String)>,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    let cid = match CompetitionId::try_new(&competition_id) {
+    let sid = match SeasonId::try_new(&season_id) {
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let existing_structure_json = state.competitions.competition_repository
-        .find_structure(&cid)
+    let existing_structure_json = state.competitions.season_repository
+        .find_structure(&sid)
         .await
         .ok()
         .flatten()
@@ -51,6 +52,7 @@ pub async fn get_new_competition_phase_3(
         competition_routes: Routes,
         space_id,
         competition_id,
+        season_id,
         existing_structure_json,
     };
     if headers.contains_key("hx-request") {
@@ -62,25 +64,25 @@ pub async fn get_new_competition_phase_3(
 }
 
 pub async fn post_competition_structure(
-    Path((space_id, competition_id)): Path<(String, String)>,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
     Json(structure): Json<CompetitionStructure>,
 ) -> impl IntoResponse {
-    let cid = match CompetitionId::try_new(&competition_id) {
+    let sid = match SeasonId::try_new(&season_id) {
         Ok(id) => id,
-        Err(_) => return (StatusCode::BAD_REQUEST, "Identifiant de compétition invalide.").into_response(),
+        Err(_) => return (StatusCode::BAD_REQUEST, "Identifiant de saison invalide.").into_response(),
     };
 
-    let cmd = SaveCompetitionStructureCommand { competition_id: cid, structure };
+    let cmd = SaveCompetitionStructureCommand { season_id: sid, structure };
 
-    match execute(cmd, state.competitions.competition_repository.as_ref()).await {
+    match execute(cmd, state.competitions.season_repository.as_ref()).await {
         Ok(()) => Response::builder()
-            .header("HX-Redirect", Routes.new_competition_invitations(&space_id, &competition_id))
+            .header("HX-Redirect", Routes.new_competition_invitations(&space_id, &competition_id, &season_id))
             .body(Body::empty())
             .unwrap(),
 
-        Err(SaveCompetitionStructureError::CompetitionNotFound) =>
-            (StatusCode::NOT_FOUND, "Compétition introuvable.").into_response(),
+        Err(SaveCompetitionStructureError::SeasonNotFound) =>
+            (StatusCode::NOT_FOUND, "Saison introuvable.").into_response(),
 
         Err(SaveCompetitionStructureError::Database(_)) =>
             (StatusCode::INTERNAL_SERVER_ERROR, "Erreur interne, veuillez réessayer.").into_response(),

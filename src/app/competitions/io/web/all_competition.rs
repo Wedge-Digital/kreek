@@ -8,12 +8,34 @@ use crate::app::shared_kernel::common_types::SpaceId;
 use crate::state::AppState;
 use crate::web::app_layout::AppLayout;
 
+pub struct CompetitionCardViewModel {
+    pub id:     String,
+    pub name:   String,
+    pub logo:   String,
+    pub status: String,
+    pub url:    String,
+}
+
+fn card_url(routes: &Routes, space_id: &str, c: &CompetitionSummary) -> String {
+    let status = c.status.as_deref().unwrap_or("draft");
+    match c.season_id.as_deref() {
+        Some(sid) => match status {
+            "draft"                  => routes.new_competition_rules(space_id, &c.id, sid),
+            "rules_selected"         => routes.new_competition_structure(space_id, &c.id, sid),
+            "structure_selected"     => routes.new_competition_invitations(space_id, &c.id, sid),
+            "invitations_configured" => routes.new_competition_validation(space_id, &c.id, sid),
+            _                        => routes.all_competitions(space_id),
+        },
+        None => routes.new_competition_info(space_id, &c.id),
+    }
+}
+
 #[derive(Template)]
 #[template(path = "all-competitions.html")]
 pub struct AllCompetitionTemplate {
     pub competition_routes: Routes,
     pub space_id:           String,
-    pub competitions:       Vec<CompetitionSummary>,
+    pub competitions:       Vec<CompetitionCardViewModel>,
 }
 
 impl Default for AllCompetitionTemplate {
@@ -40,13 +62,26 @@ pub async fn get_all_competition(
     State(state):   State<AppState>,
     headers:        HeaderMap,
 ) -> impl IntoResponse {
-    let competitions = match SpaceId::try_new(&space_id) {
+    let summaries = match SpaceId::try_new(&space_id) {
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
         Ok(id) => match state.competitions.competition_repository.find_by_space_id(&id).await {
             Ok(list) => list,
             Err(_)   => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         },
     };
+
+    let routes = Routes;
+    let competitions = summaries.iter().map(|c| {
+        let url    = card_url(&routes, &space_id, c);
+        let status = c.status.clone().unwrap_or_else(|| "draft".to_string());
+        CompetitionCardViewModel {
+            id:     c.id.clone(),
+            name:   c.name.clone(),
+            logo:   c.logo.clone(),
+            status,
+            url,
+        }
+    }).collect();
 
     let tmpl = AllCompetitionTemplate { space_id, competitions, ..Default::default() };
 

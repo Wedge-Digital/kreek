@@ -1,34 +1,34 @@
 use std::collections::HashMap;
-use crate::app::competitions::domain::competition_repository_port::{CompetitionRepositoryError, ICompetitionRepository};
 use crate::app::competitions::domain::competition_rules::CompetitionRules;
-use crate::app::shared_kernel::common_types::CompetitionId;
+use crate::app::competitions::domain::season_repository_port::{ISeasonRepository, SeasonRepositoryError};
+use crate::app::shared_kernel::common_types::SeasonId;
 
 pub struct SaveCompetitionRulesCommand {
-    pub competition_id: CompetitionId,
-    pub rules:          CompetitionRules,
+    pub season_id:   SeasonId,
+    pub season_name: String,
+    pub rules:       CompetitionRules,
 }
 
 #[derive(Debug)]
 pub enum SaveCompetitionRulesError {
     RosterInMultipleTiers { roster: String, tiers: (String, String) },
     Database(String),
-    CompetitionNotFound,
+    SeasonNotFound,
 }
 
-impl From<CompetitionRepositoryError> for SaveCompetitionRulesError {
-    fn from(e: CompetitionRepositoryError) -> Self {
+impl From<SeasonRepositoryError> for SaveCompetitionRulesError {
+    fn from(e: SeasonRepositoryError) -> Self {
         match e {
-            CompetitionRepositoryError::CompetitionNotFound => Self::CompetitionNotFound,
+            SeasonRepositoryError::SeasonNotFound => Self::SeasonNotFound,
             other => Self::Database(other.to_string()),
         }
     }
 }
 
 pub async fn execute(
-    cmd: SaveCompetitionRulesCommand,
-    repo: &dyn ICompetitionRepository,
+    cmd:  SaveCompetitionRulesCommand,
+    repo: &dyn ISeasonRepository,
 ) -> Result<(), SaveCompetitionRulesError> {
-    // Un roster ne peut pas apparaître dans deux tiers différents.
     let mut seen: HashMap<&str, &str> = HashMap::new();
     for tier in &cmd.rules.tiers {
         for roster in &tier.rosters {
@@ -41,7 +41,7 @@ pub async fn execute(
         }
     }
 
-    repo.save_rules(&cmd.competition_id, &cmd.rules).await?;
+    repo.save_rules(&cmd.season_id, &cmd.season_name, &cmd.rules).await?;
     Ok(())
 }
 
@@ -49,50 +49,29 @@ pub async fn execute(
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use std::collections::HashMap;
-    use crate::app::competitions::domain::competition::Competition;
     use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
-    use crate::app::competitions::domain::competition_repository_port::{CompetitionBaseInfo, CompetitionRepositoryError, CompetitionSummary};
     use crate::app::competitions::domain::competition_rules::{DefensiveBonus, OffensiveBonus, RankingRules, TierRule};
+    use crate::app::competitions::domain::competition_season::CompetitionSeason;
     use crate::app::competitions::domain::competition_structure::CompetitionStructure;
-    use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, SpaceId};
-    use crate::app::shared_kernel::competition_name::CompetitionName;
+    use crate::app::competitions::domain::season_repository_port::{SeasonBaseInfo, SeasonRepositoryError};
+    use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId};
 
     struct FakeRepo { fail: bool }
 
     #[async_trait]
-    impl ICompetitionRepository for FakeRepo {
-        async fn name_exists_in_space(&self, _: &CompetitionName, _: &SpaceId) -> Result<bool, CompetitionRepositoryError> { Ok(false) }
-        async fn save(&self, _: &Competition) -> Result<(), CompetitionRepositoryError> { Ok(()) }
-        async fn find_by_space_id(&self, _: &SpaceId) -> Result<Vec<CompetitionSummary>, CompetitionRepositoryError> { Ok(vec![]) }
-        async fn save_rules(&self, _: &CompetitionId, _: &CompetitionRules) -> Result<(), CompetitionRepositoryError> {
-            if self.fail { Err(CompetitionRepositoryError::Database("db error".into())) } else { Ok(()) }
+    impl ISeasonRepository for FakeRepo {
+        async fn save(&self, _: &CompetitionSeason) -> Result<(), SeasonRepositoryError> { Ok(()) }
+        async fn find_latest_season_id(&self, _: &CompetitionId) -> Result<Option<SeasonId>, SeasonRepositoryError> { Ok(None) }
+        async fn find_base_info(&self, _: &SeasonId) -> Result<Option<SeasonBaseInfo>, SeasonRepositoryError> { Ok(None) }
+        async fn find_rules(&self, _: &SeasonId) -> Result<Option<CompetitionRules>, SeasonRepositoryError> { Ok(None) }
+        async fn save_rules(&self, _: &SeasonId, _: &str, _: &CompetitionRules) -> Result<(), SeasonRepositoryError> {
+            if self.fail { Err(SeasonRepositoryError::Database("db error".into())) } else { Ok(()) }
         }
-        async fn find_rules(&self, _: &CompetitionId) -> Result<Option<CompetitionRules>, CompetitionRepositoryError> {
-            Ok(None)
-        }
-        async fn save_structure(&self, _: &CompetitionId, _: &CompetitionStructure) -> Result<(), CompetitionRepositoryError> { Ok(()) }
-        async fn find_structure(&self, _: &CompetitionId) -> Result<Option<CompetitionStructure>, CompetitionRepositoryError> { Ok(None) }
-
-        async fn save_invitations(&self, competition_id: &CompetitionId, invitations: &CompetitionInvitations) -> Result<(), CompetitionRepositoryError> {
-            todo!()
-        }
-
-        async fn find_invitations(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionInvitations>, CompetitionRepositoryError> {
-            todo!()
-        }
-
-        async fn find_base_info(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionBaseInfo>, CompetitionRepositoryError> {
-            todo!()
-        }
-
-        async fn update_base_info(&self, competition_id: &CompetitionId, name: &CompetitionName, logo: &CloudinaryImage, admin_ids: &[CoachId]) -> Result<(), CompetitionRepositoryError> {
-            todo!()
-        }
-
-        async fn set_ready(&self, competition_id: &CompetitionId) -> Result<(), CompetitionRepositoryError> {
-            todo!()
-        }
+        async fn find_structure(&self, _: &SeasonId) -> Result<Option<CompetitionStructure>, SeasonRepositoryError> { Ok(None) }
+        async fn save_structure(&self, _: &SeasonId, _: &CompetitionStructure) -> Result<(), SeasonRepositoryError> { Ok(()) }
+        async fn find_invitations(&self, _: &SeasonId) -> Result<Option<CompetitionInvitations>, SeasonRepositoryError> { Ok(None) }
+        async fn save_invitations(&self, _: &SeasonId, _: &CompetitionInvitations) -> Result<(), SeasonRepositoryError> { Ok(()) }
+        async fn set_ready(&self, _: &SeasonId) -> Result<(), SeasonRepositoryError> { Ok(()) }
     }
 
     fn base_rules(tiers: Vec<TierRule>) -> CompetitionRules {
@@ -127,7 +106,7 @@ mod tests {
             tier("Tier 2", vec!["DWARF", "ELF"]),
         ]);
         let result = execute(
-            SaveCompetitionRulesCommand { competition_id: CompetitionId::new(), rules },
+            SaveCompetitionRulesCommand { season_id: SeasonId::new(), season_name: "Saison 1".into(), rules },
             &FakeRepo { fail: false },
         ).await;
         assert!(result.is_ok());
@@ -140,7 +119,7 @@ mod tests {
             tier("Tier 2", vec!["DWARF", "HUMAN"]),
         ]);
         let result = execute(
-            SaveCompetitionRulesCommand { competition_id: CompetitionId::new(), rules },
+            SaveCompetitionRulesCommand { season_id: SeasonId::new(), season_name: "Saison 1".into(), rules },
             &FakeRepo { fail: false },
         ).await;
         assert!(matches!(
@@ -153,7 +132,7 @@ mod tests {
     async fn erreur_bdd_remontee() {
         let rules = base_rules(vec![tier("Tier 1", vec!["HUMAN"])]);
         let result = execute(
-            SaveCompetitionRulesCommand { competition_id: CompetitionId::new(), rules },
+            SaveCompetitionRulesCommand { season_id: SeasonId::new(), season_name: "Saison 1".into(), rules },
             &FakeRepo { fail: true },
         ).await;
         assert!(matches!(result, Err(SaveCompetitionRulesError::Database(_))));
