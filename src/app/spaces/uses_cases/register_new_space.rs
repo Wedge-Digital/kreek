@@ -89,6 +89,7 @@ mod tests {
             self.user.clone().ok_or(SpaceUserCacheRepositoryError::UserNotFoundInCache)
         }
         async fn find_all_users(&self) -> Result<Vec<SpaceUser>, SpaceUserCacheRepositoryError> { Ok(vec![]) }
+        async fn list_members_for_space(&self, _: &SpaceId) -> Result<Vec<SpaceUser>, SpaceUserCacheRepositoryError> { Ok(vec![]) }
     }
 
     fn fake_user(coach_id: &CoachId) -> SpaceUser {

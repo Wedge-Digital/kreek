@@ -35,4 +35,5 @@ pub trait ISpaceUserCacheRepository: Send + Sync {
     async fn add_user(&self, user: &User) -> Result<(), SpaceUserCacheRepositoryError>;
     async fn find_user_by_id(&self, id: &CoachId) -> Result<User, SpaceUserCacheRepositoryError>;
     async fn find_all_users(&self) -> Result<Vec<User>, SpaceUserCacheRepositoryError>;
+    async fn list_members_for_space(&self, space_id: &SpaceId) -> Result<Vec<User>, SpaceUserCacheRepositoryError>;
 }

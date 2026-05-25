@@ -51,6 +51,7 @@ mod tests {
     use async_trait::async_trait;
     use std::collections::HashMap;
     use crate::app::competitions::domain::competition::Competition;
+    use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
     use crate::app::competitions::domain::competition_repository_port::{CompetitionRepositoryError, CompetitionSummary};
     use crate::app::competitions::domain::competition_rules::{DefensiveBonus, OffensiveBonus, RankingRules, TierRule};
     use crate::app::competitions::domain::competition_structure::CompetitionStructure;
@@ -72,6 +73,14 @@ mod tests {
         }
         async fn save_structure(&self, _: &CompetitionId, _: &CompetitionStructure) -> Result<(), CompetitionRepositoryError> { Ok(()) }
         async fn find_structure(&self, _: &CompetitionId) -> Result<Option<CompetitionStructure>, CompetitionRepositoryError> { Ok(None) }
+
+        async fn save_invitations(&self, competition_id: &CompetitionId, invitations: &CompetitionInvitations) -> Result<(), CompetitionRepositoryError> {
+            todo!()
+        }
+
+        async fn find_invitations(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionInvitations>, CompetitionRepositoryError> {
+            todo!()
+        }
     }
 
     fn base_rules(tiers: Vec<TierRule>) -> CompetitionRules {

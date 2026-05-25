@@ -1,6 +1,6 @@
 use crate::app::shared_kernel::coach_icon::CoachIcon;
 use crate::app::shared_kernel::coach_name::CoachName;
-use crate::app::shared_kernel::common_types::CoachId;
+use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
 use async_trait::async_trait;
 use sqlx::PgPool;
 use crate::app::shared_kernel::email::Email;
@@ -90,6 +90,24 @@ impl ISpaceUserCacheRepository for SpaceUserCacheRepository {
                 email: Email::try_new(r.email).unwrap(),
             })
             .ok_or(SpaceUserCacheRepositoryError::UserNotFoundInCache)
+    }
+
+    async fn list_members_for_space(&self, space_id: &SpaceId) -> Result<Vec<User>, SpaceUserCacheRepositoryError> {
+        let rows = sqlx::query_as::<_, Row>(include_str!("sql/user_cache/list_members_for_space.sql"))
+            .bind(space_id.to_string())
+            .fetch_all(&self.pool)
+            .await
+            .map_err(db_err)?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| User {
+                id:    CoachId::try_new(&r.coach_id).unwrap(),
+                name:  CoachName::try_new(r.coach_name).unwrap(),
+                icon:  r.coach_icon.map(|s| CoachIcon::try_new(s).unwrap()),
+                email: Email::try_new(r.email).unwrap(),
+            })
+            .collect())
     }
 
 }

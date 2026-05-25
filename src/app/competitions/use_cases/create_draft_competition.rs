@@ -84,6 +84,7 @@ mod tests {
     use super::*;
     use async_trait::async_trait;
     use crate::app::competitions::domain::cache_repository_port::{CachedSpace, CachedUser, CompetitionsCacheError, ICompetitionsCacheRepository};
+    use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
     use crate::app::competitions::domain::competition_repository_port::{CompetitionRepositoryError, CompetitionSummary, ICompetitionRepository};
     use crate::app::competitions::domain::competition_rules::CompetitionRules;
     use crate::app::competitions::domain::competition_structure::CompetitionStructure;
@@ -130,6 +131,14 @@ mod tests {
         }
         async fn find_structure(&self, _: &CompetitionId) -> Result<Option<CompetitionStructure>, CompetitionRepositoryError> {
             Ok(None)
+        }
+
+        async fn save_invitations(&self, competition_id: &CompetitionId, invitations: &CompetitionInvitations) -> Result<(), CompetitionRepositoryError> {
+            todo!()
+        }
+
+        async fn find_invitations(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionInvitations>, CompetitionRepositoryError> {
+            todo!()
         }
     }
 

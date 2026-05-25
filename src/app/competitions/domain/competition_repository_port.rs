@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use crate::app::competitions::domain::competition::Competition;
+use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
 use crate::app::competitions::domain::competition_rules::CompetitionRules;
 use crate::app::competitions::domain::competition_structure::CompetitionStructure;
 use crate::app::shared_kernel::common_types::{CompetitionId, SpaceId};
@@ -38,4 +39,6 @@ pub trait ICompetitionRepository: Send + Sync {
     async fn find_rules(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionRules>, CompetitionRepositoryError>;
     async fn save_structure(&self, competition_id: &CompetitionId, structure: &CompetitionStructure) -> Result<(), CompetitionRepositoryError>;
     async fn find_structure(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionStructure>, CompetitionRepositoryError>;
+    async fn save_invitations(&self, competition_id: &CompetitionId, invitations: &CompetitionInvitations) -> Result<(), CompetitionRepositoryError>;
+    async fn find_invitations(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionInvitations>, CompetitionRepositoryError>;
 }

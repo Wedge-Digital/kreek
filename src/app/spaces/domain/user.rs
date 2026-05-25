@@ -3,7 +3,7 @@ use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId};
 
 #[derive(Debug, Clone)]
-pub(crate) struct User {
+pub struct User {
     pub id:     CoachId,
     pub name:   CoachName,
     pub icon:   Option<CloudinaryImage>,

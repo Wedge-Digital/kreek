@@ -1,0 +1,14 @@
+<div style="position:relative;">
+    <div class="search-row">
+        <input type="hidden" id="excluded-ids" name="excluded" value="">
+        <input type="text" id="coach-search" name="q" class="form-input"
+               placeholder="Rechercher un coach par pseudo..."
+               style="flex:1;margin:0;"
+               autocomplete="off"
+               hx-get="{{ search_url }}"
+               hx-trigger="input changed delay:300ms, focus"
+               hx-target="#coaches-search-results"
+               hx-include="#excluded-ids">
+    </div>
+    <div id="coaches-search-results" class="coaches-search-panel"></div>
+</div>

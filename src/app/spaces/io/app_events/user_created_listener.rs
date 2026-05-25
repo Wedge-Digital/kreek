@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use crate::app::shared_kernel::app_events::auth_app_events::AuthAppEvent;
+use crate::app::shared_kernel::common_types::SpaceId;
 use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::ISpaceUserCacheRepository;
 use crate::app::spaces::domain::user::User;
 use crate::lib::services::event_bus::event_bus::EventBus;
@@ -58,6 +59,7 @@ mod tests {
             Err(SpaceUserCacheRepositoryError::UserNotFoundInCache)
         }
         async fn find_all_users(&self) -> Result<Vec<User>, SpaceUserCacheRepositoryError> { Ok(vec![]) }
+        async fn list_members_for_space(&self, _: &SpaceId) -> Result<Vec<User>, SpaceUserCacheRepositoryError> { Ok(vec![]) }
     }
 
     #[tokio::test]
