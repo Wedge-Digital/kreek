@@ -57,15 +57,15 @@
                hx-push-url="true">Modifier</a>
         </div>
         <div class="recap-card-body">
-            <div style="display: flex; gap: var(--p2); align-items: flex-start;">
+            <div class="recap-header-layout">
                 <div class="recap-logo">
                     {% if let Some(logo) = competition_logo %}
-                    <img src="{{ logo }}" alt="{{ competition_name }}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">
+                    <img src="{{ logo }}" alt="{{ competition_name }}" class="recap-logo-img">
                     {% else %}
                     🏆
                     {% endif %}
                 </div>
-                <div style="flex: 1;">
+                <div class="flex-1">
                     <div class="recap-row">
                         <span class="recap-key">Compétition</span>
                         <span class="recap-val highlight">{{ competition_name }}</span>
@@ -121,7 +121,7 @@
             </div>
             {% endif %}
             {% if !rosters_preview.is_empty() %}
-            <div class="recap-row" style="border-bottom: none; align-items: flex-start;">
+            <div class="recap-row recap-row--last">
                 <span class="recap-key">Rosters autorisés</span>
                 <span class="recap-val">
                     <div class="pill-list">
@@ -129,7 +129,7 @@
                         <span class="pill">{{ roster }}</span>
                         {% endfor %}
                         {% if rosters_extra > 0 %}
-                        <span class="pill" style="background:rgba(0,48,73,0.1); color: var(--main-blue);">+{{ rosters_extra }} autres</span>
+                        <span class="pill pill--primary">+{{ rosters_extra }} autres</span>
                         {% endif %}
                     </div>
                 </span>
@@ -221,13 +221,13 @@
         <button class="btn-cta" onclick="submitFinalize()">
             🏆 Créer la compétition
         </button>
-        <div style="margin-top: var(--p1); font-size: var(--text-tiny); color: rgba(255,255,255,0.4);">
+        <div class="cta-disclaimer">
             Vous pourrez toujours modifier les paramètres après la création
         </div>
     </div>
 
-    <div style="display: flex; justify-content: flex-start; margin-top: var(--p2);">
-        <button class="btn btn-outline" style="width: auto; padding: var(--p1) var(--p3);"
+    <div class="form-actions--left">
+        <button class="btn btn-outline btn-action"
                 hx-get="{{ competition_routes.new_competition_invitations(space_id, competition_id, season_id) }}"
                 hx-target="#app-content"
                 hx-swap="innerHTML"
@@ -235,6 +235,7 @@
             ← Retour
         </button>
     </div>
+
 
 </div>
 

@@ -2,10 +2,10 @@
 
 <div class="text-center">
   <div class="h2-gras">Bienvenue !</div>
-  <div class="text-small text-dark-2" style="margin-top:6px;">Connectez-vous à votre espace</div>
+  <div class="text-small text-dark-2 auth-subtitle">Connectez-vous à votre espace</div>
 </div>
 
-<div style="height: var(--p2);"></div>
+<div class="spacer-p2"></div>
 
 <form hx-post="{{ routes.login() }}" hx-target="#content" hx-swap="innerHTML">
 <div class="form-group">
@@ -14,7 +14,7 @@
       <input type="text" name="coach_name" class="form-input" placeholder="Votre nom de coach">
     </label>
   </div>
-  <div style="height: 4px;"></div>
+  <div class="spacer-4px"></div>
   <div class="form-group">
     <label class="form-label">Mot de passe</label>
     <label>

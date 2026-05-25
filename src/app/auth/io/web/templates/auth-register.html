@@ -1,9 +1,9 @@
 <div>
   <div class="h2-gras">Créer votre compte</div>
-  <div class="text-small text-dark-2" style="margin-top:6px;">Quelques informations pour démarrer</div>
+  <div class="text-small text-dark-2 auth-subtitle">Quelques informations pour démarrer</div>
 </div>
 
-<div style="height: var(--p1);"></div>
+<div class="spacer-p1"></div>
 
 <form hx-post="{{ routes.register() }}" hx-target="#content" hx-swap="innerHTML">
   <div class="form-group">
@@ -37,11 +37,11 @@
     <div class="form-error">{% if let Some(err) = password_confirm_error %}{{ err }}{% endif %}</div>
   </div>
 
-  <div style="height: var(--p05);"></div>
+  <div class="spacer-p05"></div>
   <button type="submit" class="btn btn-primary">Créer mon compte</button>
 </form>
 
-<div style="height: var(--p1);"></div>
+<div class="spacer-p1"></div>
 <button hx-get="{{ routes.login() }}"
         hx-target="#content"
         hx-push-url="true"

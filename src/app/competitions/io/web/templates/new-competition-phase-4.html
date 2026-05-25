@@ -52,15 +52,15 @@
         <div class="section-title">2 — Inviter des coachs :</div>
 
         <div class="count-bar">
-            <div style="flex:1;">
+            <div class="flex-1">
                 <div class="count-bar-label">Inscriptions</div>
                 <div class="progress-fill">
-                    <div id="progress-inner" class="progress-inner" style="width:0%;transition:width 0.3s;"></div>
+                    <div id="progress-inner" class="progress-inner"></div>
                 </div>
             </div>
-            <div style="text-align:right;margin-left:var(--p2);">
+            <div class="count-bar-right">
                 <div class="count-bar-value" id="invited-count">0</div>
-                <div style="font-size:10px;color:var(--dark-3);">coachs invités</div>
+                <div class="count-bar-sub">coachs invités</div>
             </div>
         </div>
 
@@ -70,7 +70,7 @@
              hx-swap="innerHTML">
         </div>
 
-        <div id="invited-list" class="invited-list" style="margin-top:var(--p1);">
+        <div id="invited-list" class="invited-list mt-1">
             <div class="empty-list">
                 <span class="empty-icon">👥</span>
                 Aucun coach invité pour l'instant
@@ -83,7 +83,7 @@
     <!-- Section 3: Limites d'inscription -->
     <div class="section">
         <div class="section-title">3 — Limites d'inscription :</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--p2);">
+        <div class="two-col-grid">
             <div class="form-group">
                 <label class="form-label" for="max-participants">Nombre maximum de participants</label>
                 <input type="number" id="max-participants" class="form-input" value="" min="2"
@@ -95,10 +95,9 @@
                        oninput="state.registrationDeadline = this.value || null">
             </div>
         </div>
-        <div style="margin-top:var(--p1);">
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:var(--text-small);color:var(--dark-2);">
-                <input type="checkbox" id="notify-email" checked
-                       style="width:18px;height:18px;cursor:pointer;accent-color:var(--main-blue);"
+        <div class="mt-1">
+            <label class="checkbox-label">
+                <input type="checkbox" id="notify-email" class="checkbox-notify" checked
                        onchange="state.notifyByEmail = this.checked">
                 Notifier les coachs par email quand la compétition est ouverte
             </label>
@@ -107,15 +106,15 @@
 
     <div class="separator"></div>
 
-    <div style="display:flex;justify-content:space-between;margin-top:var(--p2);">
-        <button class="btn btn-outline" style="width:auto;padding:var(--p1) var(--p3);"
+    <div class="form-actions">
+        <button class="btn btn-outline btn-action"
                 hx-get="{{ competition_routes.new_competition_structure(space_id, competition_id, season_id) }}"
                 hx-target="#app-content"
                 hx-swap="innerHTML"
                 hx-push-url="true">
             ← Retour
         </button>
-        <button class="btn btn-primary" style="width:auto;padding:var(--p1) var(--p4);"
+        <button class="btn btn-primary btn-action-wide"
                 onclick="submitInvitations()">
             Enregistrer &amp; continuer →
         </button>

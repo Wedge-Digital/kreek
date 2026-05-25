@@ -29,7 +29,7 @@
 .sub-section-title { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: var(--p1); }
 
 /* Tiers */
-.tier-block { border: 1px solid var(--dark-5); border-radius: 8px; overflow: hidden; margin-bottom: var(--p1); }
+.tier-block { border: 1px solid var(--dark-5); border-radius: 8px; overflow: hidden; margin-bottom: var(--p2); }
 .tier-head {
     display: flex; align-items: center; justify-content: space-between;
     padding: 8px 16px; border-bottom: 1px solid var(--dark-5);
@@ -74,7 +74,7 @@
 
 /* Tiebreaker */
 .tiebreak-list { display: flex; flex-direction: column; gap: 6px; }
-.tiebreak-row { display: flex; align-items: center; gap: var(--p1); padding: 10px 16px; background: var(--dark-6); border: 1px solid var(--dark-5); border-radius: 8px; }
+.tiebreak-row { display: flex; align-items: center; gap: var(--p1); padding: 10px 16px; background: var(--dark-6); border: 1px solid var(--dark-5); border-radius: 8px; cursor: grab; }
 .tiebreak-rank { width: 24px; height: 24px; border-radius: 50%; background: var(--main-blue); color: var(--white); display: flex; align-items: center; justify-content: center; font-size: var(--text-tiny); font-weight: 700; flex-shrink: 0; }
 .tiebreak-drag { color: var(--dark-4); font-size: 18px; cursor: grab; flex-shrink: 0; }
 .tiebreak-label { flex: 1; font-size: var(--text-small); color: var(--dark-1); }
@@ -105,3 +105,17 @@
 .inducement-chip.on .picker-cost { color: var(--main-blue); opacity: 0.7; }
 
 .info-note { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 8px; display: flex; align-items: center; gap: 6px; }
+
+/* Season name input */
+.input-season-name { max-width: 360px; }
+
+/* Tier builder */
+.tier-name-input   { border: none; background: transparent; font-family: var(--font-title); font-weight: 700; font-size: var(--text-small); color: var(--dark-1); width: 120px; outline: none; }
+.tier-head-left    { display: flex; align-items: center; gap: var(--p1); flex: 1; }
+.tier-head-controls { display: flex; align-items: center; gap: var(--p1); }
+.tier-head-label   { font-size: var(--text-tiny); color: var(--dark-3); }
+.tier-budget       { width: 80px; }
+.tier-xp           { width: 60px; }
+.tier-head-right   { display: flex; align-items: center; gap: 8px; }
+.tier-remove-btn   { background: none; border: none; cursor: pointer; color: var(--dark-4); font-size: 18px; line-height: 1; }
+.tier-body-inner   { padding: var(--p1) var(--p2); background: var(--white); }

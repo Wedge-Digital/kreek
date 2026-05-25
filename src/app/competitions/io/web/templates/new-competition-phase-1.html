@@ -65,7 +65,7 @@
                hx-trigger="load"
                hx-target="this"
                hx-swap="outerHTML">
-            <div class="spinner" style="width:24px; height:24px; border-width:3px;"></div>
+            <div class="spinner spinner--sm"></div>
           </div>
         </div>
         {% import "components/upload_widget.html" as cmp %}
@@ -79,8 +79,8 @@
       <div class="spacer-p4"></div>
       {% endif %}
 
-      <div style="text-align: right;">
-        <button type="submit" class="btn btn-primary" style="width: auto; padding: var(--p1) var(--p4);">
+      <div class="text-right">
+        <button type="submit" class="btn btn-primary btn-action-wide">
           Créer &amp; continuer →
         </button>
       </div>

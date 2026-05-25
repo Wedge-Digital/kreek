@@ -4,15 +4,15 @@
         <div class="detail-left">
             <div class="left-panel">
                 {% if let Some(logo) = competition_logo %}
-                <div class="league-banner" style="background:none;padding:0;height:200px;">
-                    <img src="{{ logo }}" alt="{{ competition_name }}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">
+                <div class="league-banner league-banner--logo">
+                    <img class="league-banner-img" src="{{ logo }}" alt="{{ competition_name }}">
                 </div>
                 {% else %}
                 <div class="league-banner">{{ competition_initials }}</div>
                 {% endif %}
                 <div>
                     <div class="h5-gras">{{ competition_name }}</div>
-                    <div class="text-tiny text-dark-2" style="margin-top:4px;">{{ season_name }}</div>
+                    <div class="text-tiny text-dark-2 detail-season-name">{{ season_name }}</div>
                 </div>
                 <div class="league-meta">
                     <div class="league-meta-item">
@@ -35,7 +35,7 @@
 
         <!-- Right panel -->
         <div class="detail-right">
-            <div class="tabs" style="margin-bottom: var(--p1);">
+            <div class="tabs">
                 <div class="tab {% if active_tab == "standings" %}active{% endif %}"
                      hx-get="{{ competition_routes.competition_tab_standings(space_id, competition_id, season_id) }}"
                      hx-target="#tab-content"

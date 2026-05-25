@@ -74,3 +74,15 @@
 .fancy-logo-dots { display: flex; gap: 8px; }
 .fancy-logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dark-4); }
 .fancy-logo-dot:first-child { background: var(--orange); }
+
+/* ─── Auth Checking ─── */
+.auth-checking-body {
+  background: var(--dark-0); display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; flex-direction: column; gap: var(--p2);
+}
+.spinner--lg-dark { width: 56px; height: 56px; border-color: var(--dark-2); border-top-color: var(--white); }
+.auth-checking-msg { color: var(--dark-4); font-size: var(--text-small); }
+
+/* ─── Auth Card helpers ─── */
+.auth-subtitle { margin-top: 6px; }
+.auth-note { font-size: var(--text-tiny); color: var(--dark-2); margin: var(--p1) 0; }

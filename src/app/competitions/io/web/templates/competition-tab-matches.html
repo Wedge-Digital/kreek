@@ -1,5 +1,5 @@
 {% for journee in journees %}
-<div class="matches-list card-shadow" style="margin-bottom: var(--p1);">
+<div class="matches-list card-shadow">
     <div class="matches-list-header">
         <span class="h6-gras">{{ journee.label }}</span>
         <span class="text-tiny text-dark-3">{{ journee.matches.len() }} match{% if journee.matches.len() > 1 %}s{% endif %}</span>
@@ -40,7 +40,7 @@
 </div>
 {% endfor %}
 {% if journees.is_empty() %}
-<div class="card-shadow" style="background:var(--white);border-radius:10px;padding:var(--p2);color:var(--dark-3);font-size:var(--text-small);text-align:center;">
+<div class="tab-empty-state card-shadow">
     Aucun match saisi pour le moment.
 </div>
 {% endif %}

@@ -21,7 +21,7 @@
 .latest-news-date    { display: flex; align-items: center; gap: 6px; font-size: var(--text-tiny); color: var(--dark-3); font-style: italic; }
 .latest-news-author  { display: flex; align-items: center; gap: 6px; font-size: var(--text-tiny); color: var(--dark-3); font-style: italic; }
 
-.feed-header   { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--p2); max-width: 1400px; }
+.feed-header   { display: flex; align-items: center; justify-content: space-between; max-width: 1400px; }
 .filter-tabs   { display: flex; gap: 8px; }
 .filter-tab {
   padding: 8px 16px; border-radius: 20px; font-size: var(--text-tiny); font-weight: 600;
@@ -142,3 +142,12 @@
 }
 .match-score.winner { color: var(--green); }
 .match-date { font-size: var(--text-tiny); color: var(--dark-4); }
+
+.feed-header-actions { display: flex; align-items: center; gap: var(--p1); }
+
+/* Latest news per-article background gradients */
+.news-img--1 { background: linear-gradient(135deg, #003049 0%, #555770 100%); }
+.news-img--2 { background: linear-gradient(135deg, #629584 0%, #1C1C29 100%); }
+.news-img--3 { background: linear-gradient(135deg, #26263D 0%, #629584 100%); }
+.news-img--4 { background: linear-gradient(135deg, #1C1C29 0%, #FF6B35 100%); }
+.news-img--5 { background: linear-gradient(135deg, #555770 0%, #003049 100%); }

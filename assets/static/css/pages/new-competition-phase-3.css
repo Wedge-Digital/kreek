@@ -2,8 +2,6 @@
 .section-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); margin-bottom: var(--p1); }
 .choice-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: var(--p1); }
 
-.two-col-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--p2); }
-
 /* Poules */
 .poule-grid { display: flex; gap: var(--p2); flex-wrap: wrap; margin-top: var(--p1); }
 .poule-block { flex: 1; min-width: 200px; border: 1px solid var(--dark-5); border-radius: 8px; overflow: hidden; }
@@ -20,3 +18,15 @@
 .bracket-label { font-size: 10px; font-weight: 700; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
 .bracket-match { padding: 8px 12px; background: var(--dark-6); border: 1px solid var(--dark-5); border-radius: 6px; font-size: var(--text-tiny); color: var(--dark-2); text-align: center; }
 .bracket-arrow { font-size: 20px; color: var(--dark-4); padding-top: 28px; flex-shrink: 0; }
+
+/* Groups & dates (JS-rendered rows) */
+.group-row  { display: flex; align-items: center; gap: var(--p1); }
+.group-num  { width: 24px; height: 24px; border-radius: 50%; background: var(--main-blue); color: var(--white); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.groups-list { display: flex; flex-direction: column; gap: 8px; margin-top: var(--p1); }
+.dates-list  { display: flex; flex-direction: column; gap: 8px; }
+.dates-add-btns { display: flex; gap: 8px; margin-top: var(--p1); }
+.date-row    { display: flex; align-items: center; gap: var(--p1); padding: 8px 12px; background: var(--dark-6); border: 1px solid var(--dark-5); border-radius: 8px; flex-wrap: wrap; }
+.date-name-input { width: 64px; }
+.date-label  { font-size: var(--text-tiny); color: var(--dark-3); flex-shrink: 0; }
+.date-input  { flex: 1; min-width: 140px; }
+.btn-icon-remove { background: none; border: none; cursor: pointer; color: var(--dark-4); font-size: 18px; line-height: 1; flex-shrink: 0; }

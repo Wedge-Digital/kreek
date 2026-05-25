@@ -63,3 +63,9 @@
 /* Roster pill list */
 .pill-list { display: flex; flex-wrap: wrap; gap: 4px; }
 .pill { font-size: 10px; padding: 2px 8px; background: var(--dark-5); border-radius: 10px; color: var(--dark-2); }
+.pill--primary { background: rgba(0,48,73,0.1); color: var(--main-blue); }
+
+.recap-header-layout { display: flex; gap: var(--p2); align-items: flex-start; }
+.recap-logo-img      { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+.recap-row--last     { border-bottom: none; align-items: flex-start; }
+.cta-disclaimer      { margin-top: var(--p1); font-size: var(--text-tiny); color: rgba(255,255,255,0.4); }

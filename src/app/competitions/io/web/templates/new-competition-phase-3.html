@@ -52,17 +52,17 @@
                  oninput="onGroupCountChange(+this.value)">
         </div>
       </div>
-      <div class="form-group" style="margin-top:var(--p2);">
+      <div class="form-group mt-2">
         <label class="form-label">Répartition des équipes</label>
-        <div class="choice-group" id="dispatch-type-btns" style="margin-top:4px;">
+        <div class="choice-group mt-1" id="dispatch-type-btns">
           <div class="choice-btn selected" data-val="automatic" onclick="setDispatchType('automatic')">Automatique</div>
           <div class="choice-btn" data-val="manual" onclick="setDispatchType('manual')">Manuelle</div>
           <div class="info-note">📌 Automatique, le système tire au sort la répartition. Manuelle, les commissaires font la répartition. La répartition est modifiable à tout moment.</div>
         </div>
       </div>
-      <div style="margin-top:var(--p2);">
+      <div class="mt-2">
         <div class="sub-section-title">Noms des poules</div>
-        <div id="groups-list" style="display:flex;flex-direction:column;gap:8px;margin-top:var(--p1);"></div>
+        <div id="groups-list" class="groups-list"></div>
       </div>
     </div>
   </div>
@@ -90,9 +90,9 @@
           </select>
         </div>
       </div>
-      <div class="form-group" style="margin-top:var(--p2);">
+      <div class="form-group mt-2">
         <label class="form-label">Match pour la 3e place</label>
-        <div class="choice-group" id="third-place-btns" style="margin-top:4px;">
+        <div class="choice-group mt-1" id="third-place-btns">
           <div class="choice-btn selected" data-val="true" onclick="setThirdPlace(true)">Oui</div>
           <div class="choice-btn" data-val="false" onclick="setThirdPlace(false)">Non</div>
         </div>
@@ -113,7 +113,7 @@
 
     <div class="sub-section" id="schedule-config">
       <div class="sub-section-title">Paramètres du calendrier</div>
-      <div class="two-col-grid" style="margin-bottom:var(--p2);">
+      <div class="two-col-grid mb-2">
         <div class="form-group">
           <label class="form-label">Début de la saison</label>
           <input type="date" id="schedule-start-date" class="form-input"
@@ -135,7 +135,7 @@
                  oninput="state.playOffEndDate = this.value">
         </div>
       </div>
-      <div class="form-group" style="margin-bottom:var(--p2);">
+      <div class="form-group mb-2">
         <label class="form-label">Fuseau horaire</label>
         <select id="schedule-timezone" class="picker" onchange="state.scheduleTimezone = this.value">
           <option value="Europe/Paris" selected>Europe/Paris</option>
@@ -144,9 +144,9 @@
           <option value="UTC">UTC</option>
         </select>
       </div>
-      <div class="form-group" style="margin-bottom:var(--p2);">
+      <div class="form-group mb-2">
         <label class="form-label">Notifications e-mail</label>
-        <div class="choice-group" id="mail-notif-btns" style="margin-top:4px;">
+        <div class="choice-group mt-1" id="mail-notif-btns">
           <div class="choice-btn selected" data-val="true" onclick="setMailNotif(true)">Activées</div>
           <div class="choice-btn" data-val="false" onclick="setMailNotif(false)">Désactivées</div>
         </div>
@@ -154,12 +154,12 @@
       </div>
 
       <div>
-        <div class="sub-section-title" style="margin-bottom:var(--p1);">Journées</div>
-        <div id="dates-list" style="display:flex;flex-direction:column;gap:8px;"></div>
-        <div style="display:flex;gap:8px;margin-top:var(--p1);">
-          <button type="button" class="btn btn-outline" style="width:auto;padding:var(--p05) var(--p2);"
+        <div class="sub-section-title mb-1">Journées</div>
+        <div id="dates-list" class="dates-list"></div>
+        <div class="dates-add-btns">
+          <button type="button" class="btn btn-outline btn-sm btn-fit"
                   onclick="addDate('fixed_date')">+ Journée (date fixe / multiplexe)</button>
-          <button type="button" class="btn btn-outline" style="width:auto;padding:var(--p05) var(--p2);"
+          <button type="button" class="btn btn-outline btn-sm btn-fit"
                   onclick="addDate('time_frame')">+ Journée (fenêtre temporelle)</button>
         </div>
       </div>
@@ -168,15 +168,15 @@
 
   <div class="separator"></div>
 
-  <div style="display:flex;justify-content:space-between;margin-top:var(--p2);">
-    <button class="btn btn-outline" style="width:auto;padding:var(--p1) var(--p3);"
+  <div class="form-actions">
+    <button class="btn btn-outline btn-action"
             hx-get="{{ competition_routes.new_competition_rules(space_id, competition_id, season_id) }}"
             hx-target="#app-content"
             hx-swap="innerHTML"
             hx-push-url="true">
       ← Retour
     </button>
-    <button class="btn btn-primary" style="width:auto;padding:var(--p1) var(--p4);"
+    <button class="btn btn-primary btn-action-wide"
             onclick="submitStructure()">
       Enregistrer &amp; continuer →
     </button>
@@ -256,12 +256,10 @@
     list.innerHTML = '';
     state.rankingGroups.forEach((g, idx) => {
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:var(--p1);';
+      row.className = 'group-row';
       row.innerHTML =
-        '<span style="width:24px;height:24px;border-radius:50%;background:var(--main-blue);color:var(--white);' +
-        'display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">' +
-        (idx + 1) + '</span>' +
-        '<input type="text" class="form-input" style="flex:1;" value="' + escHtml(g.name) + '"' +
+        '<span class="group-num">' + (idx + 1) + '</span>' +
+        '<input type="text" class="form-input flex-1" value="' + escHtml(g.name) + '"' +
         ' oninput="state.rankingGroups[' + idx + '].name = this.value">';
       list.appendChild(row);
     });
@@ -314,28 +312,26 @@
     list.innerHTML = '';
     state.scheduledDates.forEach(function (d, idx) {
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:var(--p1);padding:8px 12px;' +
-        'background:var(--dark-6);border:1px solid var(--dark-5);border-radius:8px;flex-wrap:wrap;';
+      row.className = 'date-row';
 
-      const nameInput = '<input type="text" class="form-input" style="width:64px;" value="' +
+      const nameInput = '<input type="text" class="form-input date-name-input" value="' +
         escHtml(d.name) + '" oninput="state.scheduledDates[' + idx + '].name = this.value" placeholder="J' + (idx + 1) + '">';
 
-      const removeBtn = '<button type="button" style="background:none;border:none;cursor:pointer;' +
-        'color:var(--dark-4);font-size:18px;line-height:1;flex-shrink:0;" onclick="removeDate(' + d._id + ')">✕</button>';
+      const removeBtn = '<button type="button" class="btn-icon-remove" onclick="removeDate(' + d._id + ')">✕</button>';
 
       if (d.type === 'fixed_date') {
         row.innerHTML = nameInput +
-          '<span style="font-size:var(--text-tiny);color:var(--dark-3);flex-shrink:0;">Date fixe :</span>' +
-          '<input type="date" class="form-input" style="flex:1;min-width:140px;" value="' + escHtml(d.multiplexe_date) + '"' +
+          '<span class="date-label">Date fixe :</span>' +
+          '<input type="date" class="form-input date-input" value="' + escHtml(d.multiplexe_date) + '"' +
           ' oninput="state.scheduledDates[' + idx + '].multiplexe_date = this.value">' +
           removeBtn;
       } else {
         row.innerHTML = nameInput +
-          '<span style="font-size:var(--text-tiny);color:var(--dark-3);flex-shrink:0;">Du</span>' +
-          '<input type="date" class="form-input" style="flex:1;min-width:140px;" value="' + escHtml(d.start_date) + '"' +
+          '<span class="date-label">Du</span>' +
+          '<input type="date" class="form-input date-input" value="' + escHtml(d.start_date) + '"' +
           ' oninput="state.scheduledDates[' + idx + '].start_date = this.value">' +
-          '<span style="font-size:var(--text-tiny);color:var(--dark-3);flex-shrink:0;">au</span>' +
-          '<input type="date" class="form-input" style="flex:1;min-width:140px;" value="' + escHtml(d.end_date) + '"' +
+          '<span class="date-label">au</span>' +
+          '<input type="date" class="form-input date-input" value="' + escHtml(d.end_date) + '"' +
           ' oninput="state.scheduledDates[' + idx + '].end_date = this.value">' +
           removeBtn;
       }

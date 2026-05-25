@@ -45,8 +45,8 @@
 .count-bar-label { font-size: var(--text-tiny); color: var(--dark-2); font-weight: 500; }
 .count-bar-value { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--main-blue); }
 
-.progress-fill { height: 6px; background: var(--dark-5); border-radius: 3px; margin-top: 4px; }
-.progress-inner { height: 100%; border-radius: 3px; background: var(--main-blue); width: 67%; }
+.progress-fill  { height: 6px; background: var(--dark-5); border-radius: 3px; margin-top: 4px; }
+.progress-inner { height: 100%; border-radius: 3px; background: var(--main-blue); width: 0%; transition: width 0.3s; }
 
 .empty-list { text-align: center; padding: var(--p3); color: var(--dark-3); font-size: var(--text-small); }
 .empty-icon { font-size: 40px; display: block; margin-bottom: var(--p1); }
@@ -100,3 +100,12 @@
     color: var(--dark-3);
     font-size: var(--text-small);
 }
+
+.search-container { position: relative; }
+.search-row .form-input { flex: 1; margin: 0; }
+
+.count-bar-right { text-align: right; margin-left: var(--p2); }
+.count-bar-sub   { font-size: 10px; color: var(--dark-3); }
+
+.checkbox-label  { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: var(--text-small); color: var(--dark-2); }
+.checkbox-notify { width: 18px; height: 18px; cursor: pointer; accent-color: var(--main-blue); }

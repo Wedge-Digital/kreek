@@ -2,11 +2,11 @@
     <div class="standings-header">
         <div>#</div>
         <div>Équipe</div>
-        <div style="text-align:center;">MJ</div>
-        <div style="text-align:center;">V</div>
-        <div style="text-align:center;">N</div>
-        <div style="text-align:center;">D</div>
-        <div style="text-align:center;">Pts</div>
+        <div class="standings-header-num">MJ</div>
+        <div class="standings-header-num">V</div>
+        <div class="standings-header-num">N</div>
+        <div class="standings-header-num">D</div>
+        <div class="standings-header-num">Pts</div>
     </div>
     {% for row in standings %}
     <div class="standings-row {% if row.rank <= 3 %}top3{% endif %}">
@@ -20,7 +20,7 @@
     </div>
     {% endfor %}
     {% if standings.is_empty() %}
-    <div class="standings-row" style="padding:var(--p2);color:var(--dark-3);font-size:var(--text-small);grid-column:1/-1;justify-content:center;display:flex;">
+    <div class="standings-empty">
         Aucune équipe inscrite pour le moment.
     </div>
     {% endif %}

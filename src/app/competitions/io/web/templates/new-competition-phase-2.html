@@ -22,8 +22,8 @@
   <!-- ── Nom de la saison ── -->
   <div class="rules-section">
     <div class="rules-section-title">Nom de la saison</div>
-    <input type="text" id="season_name" class="form-input" value="{{ season_name_value }}"
-           placeholder="ex : Saison 1, Printemps 2026…" style="max-width:360px;">
+    <input type="text" id="season_name" class="form-input input-season-name" value="{{ season_name_value }}"
+           placeholder="ex : Saison 1, Printemps 2026…">
   </div>
 
   <div class="separator"></div>
@@ -64,18 +64,18 @@
       <span class="bonus-label">Bonus offensif : +</span>
       <div class="bonus-inline">
         <input type="number" id="off_points" class="bonus-num" value="1" min="0">
-        <span style="font-size:var(--text-tiny);color:var(--dark-3);">pt si ≥</span>
+        <span class="label-tiny">pt si ≥</span>
         <input type="number" id="off_diff_td" class="bonus-num" value="3" min="1">
-        <span style="font-size:var(--text-tiny);color:var(--dark-3);">TDs</span>
+        <span class="label-tiny">TDs</span>
       </div>
     </div>
 
-    <div class="bonus-row" style="margin-bottom:0;">
+    <div class="bonus-row mb-0">
       <input type="checkbox" id="def_activated" class="bonus-check" checked>
       <span class="bonus-label">Bonus défensif : +</span>
       <div class="bonus-inline">
         <input type="number" id="def_points" class="bonus-num" value="1" min="0">
-        <span style="font-size:var(--text-tiny);color:var(--dark-3);">pt si ≤ 1 TD encaissé</span>
+        <span class="label-tiny">pt si ≤ 1 TD encaissé</span>
       </div>
     </div>
   </div>
@@ -85,7 +85,7 @@
   <!-- ── Ordre des critères de départage ── -->
   <div class="rules-section">
     <div class="rules-section-title">Ordre des critères de départage</div>
-    <div class="info-note" style="margin-bottom:var(--p1);">
+    <div class="info-note mb-1">
       📌 Faites glisser les critères pour définir leur priorité. Le critère en tête est appliqué en premier en cas d'égalité de points.
     </div>
     <div class="tiebreak-list" id="tiebreak-list"></div>
@@ -96,26 +96,26 @@
   <!-- ── Tiers (dynamique) ── -->
   <div class="rules-section">
     <div class="rules-section-title">Tiers de création</div>
-    <div class="info-note" style="margin-bottom:var(--p2);">
+    <div class="info-note mb-2">
       📌 Chaque tier définit le budget de création, l'XP de départ, les rosters autorisés, les inducements et les star players disponibles.
     </div>
     <div id="tiers-container"></div>
-    <button type="button" class="btn btn-outline" style="width:auto;padding:var(--p05) var(--p2);margin-top:var(--p1);" onclick="addTier()">
+    <button type="button" class="btn btn-outline btn-sm btn-fit mt-1" onclick="addTier()">
       + Ajouter un tier
     </button>
   </div>
 
   <!-- ── Navigation ── -->
-  <div style="display:flex;justify-content:space-between;margin-top:var(--p2);">
-    <button class="btn btn-outline" style="width:auto;padding:var(--p1) var(--p3);"
+  <div class="form-actions">
+    <button class="btn btn-outline btn-action"
             hx-get="{{ competition_routes.new_competition_info(space_id, competition_id) }}"
             hx-target="#app-content"
             hx-swap="innerHTML"
             hx-push-url="true">
       ← Retour
     </button>
-    <span style="display:none" id="season-id-value">{{ season_id }}</span>
-    <button class="btn btn-primary" style="width:auto;padding:var(--p1) var(--p4);"
+    <span hidden id="season-id-value">{{ season_id }}</span>
+    <button class="btn btn-primary btn-action-wide"
             onclick="submitRules()">
       Enregistrer &amp; continuer →
     </button>
@@ -156,7 +156,7 @@
   function renderTiebreaks() {
     const list = document.getElementById('tiebreak-list');
     list.innerHTML = criteriaOrder.map((c, idx) => `
-      <div class="tiebreak-row" draggable="true" data-id="${c.id}" style="cursor:grab;">
+      <div class="tiebreak-row" draggable="true" data-id="${c.id}">
         <div class="tiebreak-rank">${idx + 1}</div>
         <span class="tiebreak-drag">⠿</span>
         <span class="tiebreak-label">${c.label}</span>
@@ -247,35 +247,29 @@
 
     const el = document.createElement('div');
     el.className = 'tier-block';
-    el.style.marginBottom = 'var(--p2)';
 
     el.innerHTML = `
       <div class="tier-head" style="background:${color.head};">
-        <div style="display:flex;align-items:center;gap:var(--p1);flex:1;">
-          <input type="text" class="tier-name-input" value="${escHtml(tier.name)}"
-                 style="border:none;background:transparent;font-family:var(--font-title);
-                        font-weight:700;font-size:var(--text-small);color:var(--dark-1);
-                        width:120px;outline:none;">
-          <span style="display:flex;align-items:center;gap:var(--p1);">
-            <label style="font-size:var(--text-tiny);color:var(--dark-3);">Budget</label>
-            <input type="number" class="vnd-input tier-budget" value="${tier.budget}" min="0" step="10" style="width:80px;">
-            <label style="font-size:var(--text-tiny);color:var(--dark-3);">XP départ</label>
-            <input type="number" class="vnd-input tier-xp" value="${tier.starting_xp}" min="0" style="width:60px;">
+        <div class="tier-head-left">
+          <input type="text" class="tier-name-input" value="${escHtml(tier.name)}">
+          <span class="tier-head-controls">
+            <label class="tier-head-label">Budget</label>
+            <input type="number" class="vnd-input tier-budget" value="${tier.budget}" min="0" step="10">
+            <label class="tier-head-label">XP départ</label>
+            <input type="number" class="vnd-input tier-xp" value="${tier.starting_xp}" min="0">
           </span>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
+        <div class="tier-head-right">
           <span class="tier-badge" style="background:${color.badge};color:#fff;">T${idx + 1}</span>
-          <button class="tier-remove-btn"
-                  style="background:none;border:none;cursor:pointer;color:var(--dark-4);font-size:18px;line-height:1;"
-                  title="Supprimer">✕</button>
+          <button class="tier-remove-btn" title="Supprimer">✕</button>
         </div>
       </div>
-      <div style="padding:var(--p1) var(--p2);background:var(--white);">
-        <div class="sub-section" style="margin-bottom:var(--p1);">
+      <div class="tier-body-inner">
+        <div class="sub-section mb-1">
           <div class="sub-section-title">Rosters autorisés</div>
           <div data-slot="roster"></div>
         </div>
-        <div class="sub-section" style="margin-bottom:var(--p1);">
+        <div class="sub-section mb-1">
           <div class="sub-section-title">Inducements</div>
           <div data-slot="inducement"></div>
         </div>
