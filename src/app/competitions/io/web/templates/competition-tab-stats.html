@@ -1,0 +1,85 @@
+<div class="stats-grid">
+    <div class="stats-table card-shadow">
+        <div class="stats-table-header">
+            <span class="h6-gras">Top Touchdowns</span>
+            <span class="text-tiny text-dark-3">marqués</span>
+        </div>
+        <div class="stats-row stats-row--head">
+            <div>#</div>
+            <div>Coach</div>
+            <div>Équipe</div>
+            <div style="text-align:center;">TDs</div>
+        </div>
+        {% for row in top_tds %}
+        <div class="stats-row">
+            <div class="stats-rank">{{ row.rank }}</div>
+            <div class="stats-coach">{{ row.coach }}</div>
+            <div class="stats-team text-dark-3">{{ row.team }}</div>
+            <div class="stats-val">{{ row.value }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="stats-table card-shadow">
+        <div class="stats-table-header">
+            <span class="h6-gras">Top Blessures</span>
+            <span class="text-tiny text-dark-3">infligées</span>
+        </div>
+        <div class="stats-row stats-row--head">
+            <div>#</div>
+            <div>Coach</div>
+            <div>Équipe</div>
+            <div style="text-align:center;">Cas</div>
+        </div>
+        {% for row in top_casualties %}
+        <div class="stats-row">
+            <div class="stats-rank">{{ row.rank }}</div>
+            <div class="stats-coach">{{ row.coach }}</div>
+            <div class="stats-team text-dark-3">{{ row.team }}</div>
+            <div class="stats-val">{{ row.value }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="stats-table card-shadow">
+        <div class="stats-table-header stats-table-header--flop">
+            <span class="h6-gras">Flop Touchdowns</span>
+            <span class="text-tiny text-dark-3">encaissés</span>
+        </div>
+        <div class="stats-row stats-row--head">
+            <div>#</div>
+            <div>Coach</div>
+            <div>Équipe</div>
+            <div style="text-align:center;">TDs</div>
+        </div>
+        {% for row in flop_tds %}
+        <div class="stats-row">
+            <div class="stats-rank">{{ row.rank }}</div>
+            <div class="stats-coach">{{ row.coach }}</div>
+            <div class="stats-team text-dark-3">{{ row.team }}</div>
+            <div class="stats-val stats-val--flop">{{ row.value }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="stats-table card-shadow">
+        <div class="stats-table-header stats-table-header--flop">
+            <span class="h6-gras">Flop Blessures</span>
+            <span class="text-tiny text-dark-3">encaissées</span>
+        </div>
+        <div class="stats-row stats-row--head">
+            <div>#</div>
+            <div>Coach</div>
+            <div>Équipe</div>
+            <div style="text-align:center;">Cas</div>
+        </div>
+        {% for row in flop_casualties %}
+        <div class="stats-row">
+            <div class="stats-rank">{{ row.rank }}</div>
+            <div class="stats-coach">{{ row.coach }}</div>
+            <div class="stats-team text-dark-3">{{ row.team }}</div>
+            <div class="stats-val stats-val--flop">{{ row.value }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>

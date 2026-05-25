@@ -260,7 +260,7 @@ pub async fn post_finalize_competition(
 
     match execute_finalize(cmd, state.competitions.season_repository.as_ref(), &state.event_bus).await {
         Ok(()) => Response::builder()
-            .header("HX-Redirect", Routes.all_competitions(&space_id))
+            .header("HX-Redirect", Routes.competition_detail(&space_id, &competition_id, &season_id))
             .body(Body::empty())
             .unwrap(),
 

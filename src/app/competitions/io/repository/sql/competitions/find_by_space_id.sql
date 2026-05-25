@@ -2,7 +2,8 @@ SELECT c.id,
        c.name,
        c.logo,
        s.id     AS season_id,
-       s.status AS status
+       s.status AS status,
+       (SELECT COUNT(*) FROM competition_seasons WHERE competition_id = c.id) AS season_count
 FROM   competitions c
 LEFT JOIN LATERAL (
     SELECT id, status

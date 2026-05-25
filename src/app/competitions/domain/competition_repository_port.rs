@@ -4,11 +4,12 @@ use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, Competit
 use crate::app::shared_kernel::competition_name::CompetitionName;
 
 pub struct CompetitionSummary {
-    pub id:        String,
-    pub name:      String,
-    pub logo:      String,
-    pub season_id: Option<String>,
-    pub status:    Option<String>,
+    pub id:           String,
+    pub name:         String,
+    pub logo:         String,
+    pub season_id:    Option<String>,
+    pub status:       Option<String>,
+    pub season_count: i64,
 }
 
 pub struct CompetitionBaseInfo {

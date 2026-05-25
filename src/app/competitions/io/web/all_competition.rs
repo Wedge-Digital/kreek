@@ -9,11 +9,12 @@ use crate::state::AppState;
 use crate::web::app_layout::AppLayout;
 
 pub struct CompetitionCardViewModel {
-    pub id:     String,
-    pub name:   String,
-    pub logo:   String,
-    pub status: String,
-    pub url:    String,
+    pub id:           String,
+    pub name:         String,
+    pub logo:         String,
+    pub status:       String,
+    pub season_count: i64,
+    pub url:          String,
 }
 
 fn card_url(routes: &Routes, space_id: &str, c: &CompetitionSummary) -> String {
@@ -24,7 +25,7 @@ fn card_url(routes: &Routes, space_id: &str, c: &CompetitionSummary) -> String {
             "rules_selected"         => routes.new_competition_structure(space_id, &c.id, sid),
             "structure_selected"     => routes.new_competition_invitations(space_id, &c.id, sid),
             "invitations_configured" => routes.new_competition_validation(space_id, &c.id, sid),
-            _                        => routes.all_competitions(space_id),
+            _                        => routes.competition_detail(space_id, &c.id, sid),
         },
         None => routes.new_competition_info(space_id, &c.id),
     }
@@ -75,10 +76,11 @@ pub async fn get_all_competition(
         let url    = card_url(&routes, &space_id, c);
         let status = c.status.clone().unwrap_or_else(|| "draft".to_string());
         CompetitionCardViewModel {
-            id:     c.id.clone(),
-            name:   c.name.clone(),
-            logo:   c.logo.clone(),
+            id:           c.id.clone(),
+            name:         c.name.clone(),
+            logo:         c.logo.clone(),
             status,
+            season_count: c.season_count,
             url,
         }
     }).collect();

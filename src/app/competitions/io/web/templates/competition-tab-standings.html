@@ -1,0 +1,27 @@
+<div class="standings-table card-shadow">
+    <div class="standings-header">
+        <div>#</div>
+        <div>Équipe</div>
+        <div style="text-align:center;">MJ</div>
+        <div style="text-align:center;">V</div>
+        <div style="text-align:center;">N</div>
+        <div style="text-align:center;">D</div>
+        <div style="text-align:center;">Pts</div>
+    </div>
+    {% for row in standings %}
+    <div class="standings-row {% if row.rank <= 3 %}top3{% endif %}">
+        <div class="standings-rank">{{ row.rank }}</div>
+        <div class="standings-team">{{ row.name }}</div>
+        <div class="standings-num">{{ row.played }}</div>
+        <div class="standings-num">{{ row.wins }}</div>
+        <div class="standings-num">{{ row.draws }}</div>
+        <div class="standings-num">{{ row.losses }}</div>
+        <div class="standings-pts">{{ row.points }}</div>
+    </div>
+    {% endfor %}
+    {% if standings.is_empty() %}
+    <div class="standings-row" style="padding:var(--p2);color:var(--dark-3);font-size:var(--text-small);grid-column:1/-1;justify-content:center;display:flex;">
+        Aucune équipe inscrite pour le moment.
+    </div>
+    {% endif %}
+</div>

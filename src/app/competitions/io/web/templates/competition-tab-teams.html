@@ -1,0 +1,16 @@
+<div class="teams-grid">
+    {% for team in teams %}
+    <div class="team-card card-shadow">
+        <div class="team-card-logo"></div>
+        <div class="team-card-name h6-gras">{{ team.name }}</div>
+        <div class="team-card-roster text-tiny text-dark-3">{{ team.roster }}</div>
+        <div class="team-card-coach text-tiny text-dark-2">{{ team.coach }}</div>
+        <div class="team-card-tv text-tiny">{{ team.tv }} kPo</div>
+    </div>
+    {% endfor %}
+    {% if teams.is_empty() %}
+    <div style="grid-column:1/-1;padding:var(--p2);color:var(--dark-3);font-size:var(--text-small);text-align:center;background:var(--white);border-radius:10px;">
+        Aucune équipe inscrite pour le moment.
+    </div>
+    {% endif %}
+</div>

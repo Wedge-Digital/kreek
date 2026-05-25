@@ -1,0 +1,85 @@
+<div class="page-content-wide">
+    <div class="detail-layout">
+        <!-- Left panel -->
+        <div class="detail-left">
+            <div class="left-panel">
+                {% if let Some(logo) = competition_logo %}
+                <div class="league-banner" style="background:none;padding:0;height:200px;">
+                    <img src="{{ logo }}" alt="{{ competition_name }}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">
+                </div>
+                {% else %}
+                <div class="league-banner">{{ competition_initials }}</div>
+                {% endif %}
+                <div>
+                    <div class="h5-gras">{{ competition_name }}</div>
+                    <div class="text-tiny text-dark-2" style="margin-top:4px;">{{ season_name }}</div>
+                </div>
+                <div class="league-meta">
+                    <div class="league-meta-item">
+                        <span class="league-meta-label">Administrateurs</span>
+                        <span class="league-meta-value">{{ admin_names.join(", ") }}</span>
+                    </div>
+                </div>
+                <div class="separator"></div>
+                <div class="filter-section">
+                    <div class="filter-title">Saison</div>
+                    <select class="picker">
+                        <option selected>{{ season_name }}</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary-blue btn-sm">
+                    + Saisir un match
+                </button>
+            </div>
+        </div>
+
+        <!-- Right panel -->
+        <div class="detail-right">
+            <div class="tabs" style="margin-bottom: var(--p1);">
+                <div class="tab {% if active_tab == "standings" %}active{% endif %}"
+                     hx-get="{{ competition_routes.competition_tab_standings(space_id, competition_id, season_id) }}"
+                     hx-target="#tab-content"
+                     hx-swap="innerHTML"
+                     hx-push-url="true"
+                     onclick="setActiveTab(this)">Classement</div>
+                <div class="tab {% if active_tab == "matches" %}active{% endif %}"
+                     hx-get="{{ competition_routes.competition_tab_matches(space_id, competition_id, season_id) }}"
+                     hx-target="#tab-content"
+                     hx-swap="innerHTML"
+                     hx-push-url="true"
+                     onclick="setActiveTab(this)">Matchs</div>
+                <div class="tab {% if active_tab == "teams" %}active{% endif %}"
+                     hx-get="{{ competition_routes.competition_tab_teams(space_id, competition_id, season_id) }}"
+                     hx-target="#tab-content"
+                     hx-swap="innerHTML"
+                     hx-push-url="true"
+                     onclick="setActiveTab(this)">Équipes</div>
+                <div class="tab {% if active_tab == "stats" %}active{% endif %}"
+                     hx-get="{{ competition_routes.competition_tab_stats(space_id, competition_id, season_id) }}"
+                     hx-target="#tab-content"
+                     hx-swap="innerHTML"
+                     hx-push-url="true"
+                     onclick="setActiveTab(this)">Statistiques</div>
+            </div>
+
+            <div id="tab-content">
+                {% if active_tab == "standings" %}
+                {% include "competition-tab-standings.html" %}
+                {% else if active_tab == "matches" %}
+                {% include "competition-tab-matches.html" %}
+                {% else if active_tab == "teams" %}
+                {% include "competition-tab-teams.html" %}
+                {% else %}
+                {% include "competition-tab-stats.html" %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function setActiveTab(el) {
+    document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+}
+</script>

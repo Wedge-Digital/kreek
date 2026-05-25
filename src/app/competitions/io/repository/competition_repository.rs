@@ -61,7 +61,7 @@ impl ICompetitionRepository for CompetitionRepository {
 
     async fn find_by_space_id(&self, space_id: &SpaceId) -> Result<Vec<CompetitionSummary>, CompetitionRepositoryError> {
         #[derive(sqlx::FromRow)]
-        struct Row { id: String, name: String, logo: String, season_id: Option<String>, status: Option<String> }
+        struct Row { id: String, name: String, logo: String, season_id: Option<String>, status: Option<String>, season_count: i64 }
 
         let rows = sqlx::query_as::<_, Row>(include_str!("sql/competitions/find_by_space_id.sql"))
             .bind(space_id.to_string())
@@ -70,11 +70,12 @@ impl ICompetitionRepository for CompetitionRepository {
             .map_err(db_err)?;
 
         Ok(rows.into_iter().map(|r| CompetitionSummary {
-            id:        r.id,
-            name:      r.name,
-            logo:      r.logo,
-            season_id: r.season_id,
-            status:    r.status,
+            id:           r.id,
+            name:         r.name,
+            logo:         r.logo,
+            season_id:    r.season_id,
+            status:       r.status,
+            season_count: r.season_count,
         }).collect())
     }
 
