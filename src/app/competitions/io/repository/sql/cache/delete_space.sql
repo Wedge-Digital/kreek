@@ -1,1 +1,0 @@
-DELETE FROM competitions__space_cache WHERE space_id = $1

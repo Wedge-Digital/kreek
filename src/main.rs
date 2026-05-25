@@ -66,7 +66,6 @@ async fn main() {
     spaces::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
 
     competitions::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
-    competitions::context::init_app_event_listeners(&app_event_bus, pool.clone());
 
     let state = AppState {
         auth:          AuthContext::new(&pool, event_bus.clone()),

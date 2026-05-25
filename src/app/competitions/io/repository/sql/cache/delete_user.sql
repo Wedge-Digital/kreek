@@ -1,1 +1,0 @@
-DELETE FROM competitions__user_cache WHERE id = $1

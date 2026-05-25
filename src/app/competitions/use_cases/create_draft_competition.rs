@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-use crate::app::competitions::domain::cache_repository_port::{CompetitionsCacheError, ICompetitionsCacheRepository};
 use crate::app::competitions::domain::competition::Competition;
 use crate::app::competitions::domain::competition_repository_port::{CompetitionRepositoryError, ICompetitionRepository};
 use crate::app::competitions::domain::domain_event::CompetitionsDomainEvent;
@@ -18,7 +16,6 @@ pub struct CreateDraftCompetitionCommand {
 #[derive(Debug)]
 pub enum CreateDraftCompetitionError {
     CompetitionNameAlreadyTaken,
-    InvalidAdminId(CoachId),
     Database(String),
 }
 
@@ -32,28 +29,13 @@ impl From<CompetitionRepositoryError> for CreateDraftCompetitionError {
     }
 }
 
-impl From<CompetitionsCacheError> for CreateDraftCompetitionError {
-    fn from(e: CompetitionsCacheError) -> Self {
-        CreateDraftCompetitionError::Database(e.to_string())
-    }
-}
-
 pub async fn execute(
-    cmd:   CreateDraftCompetitionCommand,
-    repo:  &dyn ICompetitionRepository,
-    cache: &dyn ICompetitionsCacheRepository,
-    bus:   &EventBus,
+    cmd:  CreateDraftCompetitionCommand,
+    repo: &dyn ICompetitionRepository,
+    bus:  &EventBus,
 ) -> Result<CompetitionId, CreateDraftCompetitionError> {
     if repo.name_exists_in_space(&cmd.name, &cmd.space_id).await? {
         return Err(CreateDraftCompetitionError::CompetitionNameAlreadyTaken);
-    }
-
-    let members = cache.list_members_for_space(&cmd.space_id).await?;
-    let member_ids: HashSet<String> = members.iter().map(|m| m.id.to_string()).collect();
-    for admin_id in &cmd.admin_ids {
-        if !member_ids.contains(&admin_id.to_string()) {
-            return Err(CreateDraftCompetitionError::InvalidAdminId(*admin_id));
-        }
     }
 
     let competition = Competition::new(
@@ -83,28 +65,14 @@ pub async fn execute(
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use crate::app::competitions::domain::cache_repository_port::{CachedSpace, CachedUser, CompetitionsCacheError, ICompetitionsCacheRepository};
     use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
     use crate::app::competitions::domain::competition_repository_port::{CompetitionBaseInfo, CompetitionRepositoryError, CompetitionSummary, ICompetitionRepository};
     use crate::app::competitions::domain::competition_rules::CompetitionRules;
     use crate::app::competitions::domain::competition_structure::CompetitionStructure;
-    use crate::app::shared_kernel::authorization::SpaceProfile;
-    use crate::app::shared_kernel::coach_icon::CoachIcon;
-    use crate::app::shared_kernel::coach_name::CoachName;
     use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, SpaceId};
-    use crate::app::shared_kernel::email::Email;
     use crate::lib::services::event_bus::event_bus::new_bus;
 
     const LOGO: &str = "https://res.cloudinary.com/demo/image/upload/sample.jpg";
-
-    fn make_user(coach_id: CoachId) -> CachedUser {
-        CachedUser {
-            id:         coach_id,
-            coach_name: CoachName::try_new("Coach Test").unwrap(),
-            coach_icon: None,
-            email:      Email::try_new("coach@test.com").unwrap(),
-        }
-    }
 
     struct FakeCompetitionRepo { pub name_taken: bool }
 
@@ -113,82 +81,34 @@ mod tests {
         async fn name_exists_in_space(&self, _: &CompetitionName, _: &SpaceId) -> Result<bool, CompetitionRepositoryError> {
             Ok(self.name_taken)
         }
-        async fn save(&self, _: &Competition) -> Result<(), CompetitionRepositoryError> {
-            Ok(())
-        }
-
-        async fn find_by_space_id(&self, _: &SpaceId) -> Result<Vec<CompetitionSummary>, CompetitionRepositoryError> {
-            Ok(vec![])
-        }
-        async fn save_rules(&self, _: &CompetitionId, _: &CompetitionRules) -> Result<(), CompetitionRepositoryError> {
-            Ok(())
-        }
-        async fn find_rules(&self, _: &CompetitionId) -> Result<Option<CompetitionRules>, CompetitionRepositoryError> {
-            Ok(None)
-        }
-        async fn save_structure(&self, _: &CompetitionId, _: &CompetitionStructure) -> Result<(), CompetitionRepositoryError> {
-            Ok(())
-        }
-        async fn find_structure(&self, _: &CompetitionId) -> Result<Option<CompetitionStructure>, CompetitionRepositoryError> {
-            Ok(None)
-        }
-
-        async fn save_invitations(&self, competition_id: &CompetitionId, invitations: &CompetitionInvitations) -> Result<(), CompetitionRepositoryError> {
-            todo!()
-        }
-
-        async fn find_invitations(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionInvitations>, CompetitionRepositoryError> {
-            todo!()
-        }
-
-        async fn find_base_info(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionBaseInfo>, CompetitionRepositoryError> {
-            todo!()
-        }
-
-        async fn update_base_info(&self, competition_id: &CompetitionId, name: &CompetitionName, logo: &CloudinaryImage, admin_ids: &[CoachId]) -> Result<(), CompetitionRepositoryError> {
-            todo!()
-        }
-
-        async fn set_ready(&self, competition_id: &CompetitionId) -> Result<(), CompetitionRepositoryError> {
-            todo!()
-        }
+        async fn save(&self, _: &Competition) -> Result<(), CompetitionRepositoryError> { Ok(()) }
+        async fn find_by_space_id(&self, _: &SpaceId) -> Result<Vec<CompetitionSummary>, CompetitionRepositoryError> { Ok(vec![]) }
+        async fn save_rules(&self, _: &CompetitionId, _: &CompetitionRules) -> Result<(), CompetitionRepositoryError> { Ok(()) }
+        async fn find_rules(&self, _: &CompetitionId) -> Result<Option<CompetitionRules>, CompetitionRepositoryError> { Ok(None) }
+        async fn save_structure(&self, _: &CompetitionId, _: &CompetitionStructure) -> Result<(), CompetitionRepositoryError> { Ok(()) }
+        async fn find_structure(&self, _: &CompetitionId) -> Result<Option<CompetitionStructure>, CompetitionRepositoryError> { Ok(None) }
+        async fn save_invitations(&self, _: &CompetitionId, _: &CompetitionInvitations) -> Result<(), CompetitionRepositoryError> { Ok(()) }
+        async fn find_invitations(&self, _: &CompetitionId) -> Result<Option<CompetitionInvitations>, CompetitionRepositoryError> { Ok(None) }
+        async fn find_base_info(&self, _: &CompetitionId) -> Result<Option<CompetitionBaseInfo>, CompetitionRepositoryError> { Ok(None) }
+        async fn update_base_info(&self, _: &CompetitionId, _: &CompetitionName, _: &CloudinaryImage, _: &[CoachId]) -> Result<(), CompetitionRepositoryError> { Ok(()) }
+        async fn set_ready(&self, _: &CompetitionId) -> Result<(), CompetitionRepositoryError> { Ok(()) }
     }
 
-    struct FakeCache { pub members: Vec<CachedUser> }
-
-    #[async_trait]
-    impl ICompetitionsCacheRepository for FakeCache {
-        async fn add_user(&self, _: &CachedUser)                                        -> Result<(), CompetitionsCacheError> { Ok(()) }
-        async fn remove_user(&self, _: &CoachId)                                        -> Result<(), CompetitionsCacheError> { Ok(()) }
-        async fn add_space(&self, _: &CachedSpace)                                      -> Result<(), CompetitionsCacheError> { Ok(()) }
-        async fn remove_space(&self, _: &SpaceId)                                       -> Result<(), CompetitionsCacheError> { Ok(()) }
-        async fn subscribe(&self, _: &CoachId, _: &SpaceId, _: &SpaceProfile)          -> Result<(), CompetitionsCacheError> { Ok(()) }
-        async fn unsubscribe(&self, _: &CoachId, _: &SpaceId)                          -> Result<(), CompetitionsCacheError> { Ok(()) }
-        async fn list_members_for_space(&self, _: &SpaceId)                            -> Result<Vec<CachedUser>, CompetitionsCacheError> {
-            Ok(self.members.clone())
-        }
-    }
-
-    fn make_cmd(admin_ids: Vec<CoachId>) -> CreateDraftCompetitionCommand {
+    fn make_cmd() -> CreateDraftCompetitionCommand {
         CreateDraftCompetitionCommand {
             space_id:   SpaceId::new(),
             created_by: CoachId::new(),
             name:       CompetitionName::try_new("Ligue Alpha").unwrap(),
             logo:       CloudinaryImage::try_new(LOGO).unwrap(),
-            admin_ids,
+            admin_ids:  vec![],
         }
     }
 
     #[tokio::test]
     async fn success_emits_competition_created_event() {
-        let coach_id = CoachId::new();
-        let cmd      = make_cmd(vec![coach_id]);
-        let cache    = FakeCache { members: vec![make_user(coach_id)] };
-        let bus      = new_bus();
-        let mut rx   = bus.subscribe();
-
-        let result = execute(cmd, &FakeCompetitionRepo { name_taken: false }, &cache, &bus).await;
-
+        let bus    = new_bus();
+        let mut rx = bus.subscribe();
+        let result = execute(make_cmd(), &FakeCompetitionRepo { name_taken: false }, &bus).await;
         assert!(result.is_ok());
         let envelope = rx.try_recv().unwrap();
         assert_eq!(envelope.event_type, "CompetitionCreated");
@@ -196,18 +116,7 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_duplicate_name() {
-        let cmd    = make_cmd(vec![]);
-        let cache  = FakeCache { members: vec![] };
-        let result = execute(cmd, &FakeCompetitionRepo { name_taken: true }, &cache, &new_bus()).await;
+        let result = execute(make_cmd(), &FakeCompetitionRepo { name_taken: true }, &new_bus()).await;
         assert!(matches!(result, Err(CreateDraftCompetitionError::CompetitionNameAlreadyTaken)));
-    }
-
-    #[tokio::test]
-    async fn rejects_unknown_admin_id() {
-        let unknown_id = CoachId::new();
-        let cmd        = make_cmd(vec![unknown_id]);
-        let cache      = FakeCache { members: vec![] };
-        let result = execute(cmd, &FakeCompetitionRepo { name_taken: false }, &cache, &new_bus()).await;
-        assert!(matches!(result, Err(CreateDraftCompetitionError::InvalidAdminId(_))));
     }
 }

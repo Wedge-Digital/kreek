@@ -1,1 +1,0 @@
-DELETE FROM competitions__user_space_cache WHERE coach_id = $1 AND space_id = $2

@@ -1,0 +1,3 @@
+DROP TABLE competitions__user_space_cache CASCADE;
+DROP TABLE competitions__space_cache CASCADE;
+DROP TABLE competitions__user_cache CASCADE;

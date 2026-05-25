@@ -57,7 +57,7 @@
 
         <div class="form-group">
           <label class="form-label">Administrateurs de la compétition</label>
-          <div hx-get="{% if let Some(cid) = competition_id %}{{ competition_routes.new_competition_members(space_id.as_str()) }}?competition_id={{ cid }}{% else %}{{ competition_routes.new_competition_members(space_id.as_str()) }}{% endif %}"
+          <div hx-get="{{ members_widget_url }}"
                hx-trigger="load"
                hx-target="this"
                hx-swap="outerHTML">

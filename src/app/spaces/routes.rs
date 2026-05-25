@@ -6,6 +6,7 @@ pub mod path {
     pub const SPACE_JOIN:             &str = "/app/space/join";
     pub const SPACE_COACH_SEARCH_WIDGET: &str = "/app/{space_id}/coaches/search-widget";
     pub const SPACE_COACH_SEARCH:        &str = "/app/{space_id}/coaches/search";
+    pub const SPACE_MEMBERS_WIDGET:      &str = "/app/{space_id}/members-widget";
 }
 
 #[derive(Debug, Clone, Copy, Default, Deserialize, Serialize)]

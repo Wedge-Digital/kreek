@@ -60,7 +60,6 @@ mod tests {
     use crate::app::auth::io::web::post_login::login_submit;
     use crate::app::auth::routes::path;
     use crate::app::competitions::context::CompetitionsContext;
-    use crate::app::competitions::io::repository::tests::fake_cache_repository::FakeCompetitionsCacheRepository;
     use crate::app::competitions::io::repository::tests::fake_competition_repository::FakeCompetitionRepository;
     use crate::app::shared_kernel::authorization::SpaceProfile;
     use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
@@ -106,7 +105,6 @@ mod tests {
                 event_bus:             event_bus.clone(),
             },
             competitions: CompetitionsContext {
-                competitions_cache_repository: Arc::new(FakeCompetitionsCacheRepository),
                 competition_repository:        Arc::new(FakeCompetitionRepository),
                 event_bus:                     event_bus.clone(),
             },
