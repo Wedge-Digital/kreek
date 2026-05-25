@@ -1,6 +1,6 @@
 <select id="admins-select" name="admin_ids[]" multiple placeholder="Sélectionnez des coachs...">
   {% for member in members %}
-  <option value="{{ member.id }}">{{ member.name }}</option>
+  <option value="{{ member.id }}"{% if member.selected %} selected{% endif %}>{{ member.name }}</option>
   {% endfor %}
 </select>
 

@@ -3,7 +3,7 @@ use crate::app::competitions::domain::competition::Competition;
 use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
 use crate::app::competitions::domain::competition_rules::CompetitionRules;
 use crate::app::competitions::domain::competition_structure::CompetitionStructure;
-use crate::app::shared_kernel::common_types::{CompetitionId, SpaceId};
+use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, CompetitionId, SpaceId};
 use crate::app::shared_kernel::competition_name::CompetitionName;
 
 pub struct CompetitionSummary {
@@ -11,6 +11,13 @@ pub struct CompetitionSummary {
     pub name:   String,
     pub logo:   String,
     pub status: String,
+}
+
+pub struct CompetitionBaseInfo {
+    pub name:        String,
+    pub logo:        Option<String>,
+    pub admin_ids:   Vec<String>,
+    pub admin_names: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -41,4 +48,7 @@ pub trait ICompetitionRepository: Send + Sync {
     async fn find_structure(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionStructure>, CompetitionRepositoryError>;
     async fn save_invitations(&self, competition_id: &CompetitionId, invitations: &CompetitionInvitations) -> Result<(), CompetitionRepositoryError>;
     async fn find_invitations(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionInvitations>, CompetitionRepositoryError>;
+    async fn find_base_info(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionBaseInfo>, CompetitionRepositoryError>;
+    async fn update_base_info(&self, competition_id: &CompetitionId, name: &CompetitionName, logo: &CloudinaryImage, admin_ids: &[CoachId]) -> Result<(), CompetitionRepositoryError>;
+    async fn set_ready(&self, competition_id: &CompetitionId) -> Result<(), CompetitionRepositoryError>;
 }

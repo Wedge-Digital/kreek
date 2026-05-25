@@ -257,7 +257,8 @@
             if (res.ok) {
                 const redirect = res.headers.get('HX-Redirect');
                 if (redirect) {
-                    htmx.ajax('GET', redirect, { target: '#app-content', swap: 'innerHTML', pushUrl: true });
+                    history.pushState({}, '', redirect);
+                    htmx.ajax('GET', redirect, { target: '#app-content', swap: 'innerHTML' });
                 }
                 return;
             }

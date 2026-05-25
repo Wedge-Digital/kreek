@@ -5,6 +5,7 @@ use crate::app::competitions::domain::competition_repository_port::ICompetitionR
 use crate::app::competitions::io::app_event_listeners::space_created_listener::space_created_listener;
 use crate::app::competitions::io::app_event_listeners::user_created_listener::user_created_listener;
 use crate::app::competitions::io::app_event_listeners::user_subscribed_listener::user_subscribed_listener;
+use crate::app::competitions::io::app_events::app_event_publisher::competitions_app_event_publisher;
 use crate::app::competitions::io::repository::cache_repository::CompetitionsCacheRepository;
 use crate::app::competitions::io::repository::competition_repository::CompetitionRepository;
 use crate::lib::services::event_bus::event_bus::EventBus;
@@ -14,6 +15,10 @@ pub struct CompetitionsContext {
     pub competitions_cache_repository: Arc<dyn ICompetitionsCacheRepository>,
     pub competition_repository:        Arc<dyn ICompetitionRepository>,
     pub event_bus:                     EventBus,
+}
+
+pub fn init_app_event_publisher(event_bus: &EventBus, app_event_bus: EventBus) {
+    competitions_app_event_publisher(event_bus, app_event_bus);
 }
 
 pub fn init_app_event_listeners(app_event_bus: &EventBus, pool: PgPool) {

@@ -1,6 +1,6 @@
 use askama::Template;
 use axum::body::Body;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 use axum::Json;
@@ -10,11 +10,12 @@ use crate::app::competitions::domain::competition_rules::CompetitionRules;
 use crate::app::competitions::routes::Routes;
 use crate::app::competitions::use_cases::create_draft_competition::{CreateDraftCompetitionCommand, CreateDraftCompetitionError, execute};
 use crate::app::competitions::use_cases::save_competition_rules::{SaveCompetitionRulesCommand, SaveCompetitionRulesError, execute as execute_save_rules};
+use crate::app::competitions::use_cases::update_draft_competition::{UpdateDraftCompetitionCommand, UpdateDraftCompetitionError, execute as execute_update};
 use crate::app::references::io::web::pickers::{
     build_inducement_items, build_roster_items, build_star_player_items,
     InducementPickerItem, RosterPickerItem, StarPlayerPickerItem,
 };
-use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, SpaceId};
+use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, CompetitionId, SpaceId};
 use crate::app::shared_kernel::competition_name::CompetitionName;
 use crate::state::AppState;
 use crate::web::app_layout::AppLayout;
@@ -79,13 +80,14 @@ pub async fn get_new_competition_phase_2(
 #[derive(Template, Default)]
 #[template(path = "new-competition-phase-1.html")]
 pub struct NewCompetitionTemplate {
-    pub space_id:          String,
-    pub name_value:        String,
-    pub name_error:        Option<String>,
-    pub logo_url_value:    String,
-    pub logo_error:        Option<String>,
-    pub general_error:     Option<String>,
-    pub competition_routes: Routes,
+    pub space_id:            String,
+    pub competition_id:      Option<String>,
+    pub name_value:          String,
+    pub name_error:          Option<String>,
+    pub logo_url_value:      String,
+    pub logo_error:          Option<String>,
+    pub general_error:       Option<String>,
+    pub competition_routes:  Routes,
 }
 
 impl IntoResponse for NewCompetitionTemplate {
@@ -110,11 +112,148 @@ pub async fn get_new_competition_phase_1(
     }
 }
 
+pub async fn get_new_competition_phase_1_edit(
+    Path((space_id, competition_id)): Path<(String, String)>,
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    let cid = match CompetitionId::try_new(&competition_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let base = match state.competitions.competition_repository.find_base_info(&cid).await {
+        Ok(Some(b)) => b,
+        Ok(None)    => return StatusCode::NOT_FOUND.into_response(),
+        Err(_)      => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+
+    let tmpl = NewCompetitionTemplate {
+        space_id,
+        competition_id:   Some(competition_id),
+        name_value:       base.name,
+        logo_url_value:   base.logo.unwrap_or_default(),
+        ..Default::default()
+    };
+
+    if headers.contains_key("hx-request") {
+        tmpl.into_response()
+    } else {
+        let content = tmpl.render().unwrap_or_default();
+        AppLayout { content, routes: Default::default() }.into_response()
+    }
+}
+
+pub async fn post_update_competition(
+    auth_session:                        AuthSession,
+    Path((space_id, competition_id)):    Path<(String, String)>,
+    State(state):                        State<AppState>,
+    Json(payload):                       Json<CreateCompetitionFormPayload>,
+) -> impl IntoResponse {
+    let mut tmpl = NewCompetitionTemplate {
+        space_id:         space_id.clone(),
+        competition_id:   Some(competition_id.clone()),
+        name_value:       payload.name.clone(),
+        logo_url_value:   payload.logo_url.clone(),
+        ..Default::default()
+    };
+
+    let cid = match CompetitionId::try_new(&competition_id) {
+        Ok(id) => id,
+        Err(_) => {
+            tmpl.general_error = Some("Identifiant de compétition invalide.".into());
+            return tmpl.into_response();
+        }
+    };
+
+    let sid = match SpaceId::try_new(&space_id) {
+        Ok(id) => id,
+        Err(_) => {
+            tmpl.general_error = Some("Espace invalide.".into());
+            return tmpl.into_response();
+        }
+    };
+
+    let name = match CompetitionName::try_new(&payload.name) {
+        Ok(v)  => Some(v),
+        Err(_) => {
+            tmpl.name_error = Some(
+                "Le nom peut contenir lettres, chiffres, espaces et ponctuation courante (100 caractères max).".into(),
+            );
+            None
+        }
+    };
+
+    let logo = match CloudinaryImage::try_new(payload.logo_url.clone()) {
+        Ok(v)  => Some(v),
+        Err(_) => {
+            tmpl.logo_error = Some("Veuillez uploader un logo pour votre compétition.".into());
+            None
+        }
+    };
+
+    let (Some(name), Some(logo)) = (name, logo) else {
+        return tmpl.into_response();
+    };
+
+    if auth_session.user.is_none() {
+        return Response::builder()
+            .header("HX-Redirect", crate::app::auth::routes::path::AUTH_LAYOUT)
+            .body(Body::empty())
+            .unwrap();
+    }
+
+    let admin_ids: Vec<CoachId> = payload.admin_ids
+        .iter()
+        .filter_map(|id| CoachId::try_new(id).ok())
+        .collect();
+
+    let cmd = UpdateDraftCompetitionCommand {
+        competition_id: cid,
+        space_id:       sid,
+        name,
+        logo,
+        admin_ids,
+    };
+
+    match execute_update(
+        cmd,
+        state.competitions.competition_repository.as_ref(),
+        state.competitions.competitions_cache_repository.as_ref(),
+    ).await {
+        Ok(()) => Response::builder()
+            .header("HX-Redirect", Routes.new_competition_rules(&space_id, &competition_id))
+            .body(Body::empty())
+            .unwrap(),
+
+        Err(UpdateDraftCompetitionError::CompetitionNameAlreadyTaken) => {
+            tmpl.name_error = Some("Une compétition avec ce nom existe déjà dans cet espace.".into());
+            tmpl.into_response()
+        }
+
+        Err(UpdateDraftCompetitionError::CompetitionNotFound) => {
+            tmpl.general_error = Some("Compétition introuvable.".into());
+            tmpl.into_response()
+        }
+
+        Err(UpdateDraftCompetitionError::InvalidAdminId(_)) => {
+            tmpl.general_error = Some("Un des administrateurs sélectionnés est invalide.".into());
+            tmpl.into_response()
+        }
+
+        Err(UpdateDraftCompetitionError::Database(_)) => {
+            tmpl.general_error = Some("Erreur interne, veuillez réessayer.".into());
+            tmpl.into_response()
+        }
+    }
+}
+
 // ── Fragment: liste des membres pour le widget admins ────────────────────────
 
 pub struct MemberItem {
-    pub id:   String,
-    pub name: String,
+    pub id:       String,
+    pub name:     String,
+    pub selected: bool,
 }
 
 #[derive(Template)]
@@ -132,13 +271,35 @@ impl IntoResponse for MembersWidgetTemplate {
     }
 }
 
+#[derive(Deserialize, Default)]
+pub struct MembersWidgetQuery {
+    pub competition_id: Option<String>,
+}
+
 pub async fn get_members_widget(
     Path(space_id): Path<String>,
-    State(state): State<AppState>,
+    Query(query):   Query<MembersWidgetQuery>,
+    State(state):   State<AppState>,
 ) -> impl IntoResponse {
     let sid = match SpaceId::try_new(&space_id) {
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let selected_ids: std::collections::HashSet<String> = if let Some(cid_str) = query.competition_id {
+        if let Ok(cid) = CompetitionId::try_new(&cid_str) {
+            state.competitions.competition_repository
+                .find_base_info(&cid)
+                .await
+                .ok()
+                .flatten()
+                .map(|b| b.admin_ids.into_iter().collect())
+                .unwrap_or_default()
+        } else {
+            Default::default()
+        }
+    } else {
+        Default::default()
     };
 
     let cached = state
@@ -150,9 +311,10 @@ pub async fn get_members_widget(
 
     let members = cached
         .into_iter()
-        .map(|u| MemberItem {
-            id:   u.id.to_string(),
-            name: u.coach_name.into_inner(),
+        .map(|u| {
+            let id = u.id.to_string();
+            let selected = selected_ids.contains(&id);
+            MemberItem { id, name: u.coach_name.into_inner(), selected }
         })
         .collect();
 

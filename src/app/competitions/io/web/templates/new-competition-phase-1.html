@@ -38,7 +38,7 @@
     </div>
 
     <form hx-ext="json-enc"
-          hx-post="{{ competition_routes.new_competition(space_id.as_str()) }}"
+          hx-post="{% if let Some(cid) = competition_id %}{{ competition_routes.new_competition_info(space_id.as_str(), cid.as_str()) }}{% else %}{{ competition_routes.new_competition(space_id.as_str()) }}{% endif %}"
           hx-target="#app-content"
           hx-swap="innerHTML">
 
@@ -57,7 +57,7 @@
 
         <div class="form-group">
           <label class="form-label">Administrateurs de la compétition</label>
-          <div hx-get="{{ competition_routes.new_competition_members(space_id.as_str()) }}"
+          <div hx-get="{% if let Some(cid) = competition_id %}{{ competition_routes.new_competition_members(space_id.as_str()) }}?competition_id={{ cid }}{% else %}{{ competition_routes.new_competition_members(space_id.as_str()) }}{% endif %}"
                hx-trigger="load"
                hx-target="this"
                hx-swap="outerHTML">

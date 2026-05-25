@@ -1,0 +1,65 @@
+/* Recap cards */
+.recap-card {
+    border: 1px solid var(--dark-5); border-radius: 10px; overflow: hidden;
+    margin-bottom: var(--p2);
+}
+.recap-card-header {
+    background: var(--dark-6); padding: 12px 20px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--dark-5);
+}
+.recap-card-icon { font-size: 18px; }
+.recap-card-title { flex: 1; font-family: var(--font-title); font-weight: 700; font-size: var(--text-small); color: var(--dark-1); }
+.recap-card-edit {
+    font-size: var(--text-tiny); color: var(--main-blue); cursor: pointer;
+    text-decoration: none; font-weight: 500;
+    padding: 4px 10px; border: 1px solid var(--main-blue); border-radius: 4px;
+}
+.recap-card-edit:hover { background: rgba(0,48,73,0.06); }
+.recap-card-body { padding: var(--p2); }
+.recap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 0; }
+.recap-row { display: flex; align-items: baseline; gap: var(--p1); padding: 5px 0; border-bottom: 1px solid var(--dark-6); }
+.recap-row:last-child { border-bottom: none; }
+.recap-key { min-width: 140px; font-size: var(--text-tiny); color: var(--dark-3); font-weight: 500; flex-shrink: 0; }
+.recap-val { font-size: var(--text-tiny); color: var(--dark-1); }
+.recap-val.highlight { color: var(--main-blue); font-weight: 600; }
+.recap-val.ok { color: var(--green); font-weight: 600; }
+.recap-val.warn { color: var(--orange); font-weight: 600; }
+
+/* Logo preview */
+.recap-logo { width: 48px; height: 48px; border-radius: 8px; background: var(--dark-5); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+
+/* Admins chips */
+.admin-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.admin-chip { font-size: var(--text-tiny); padding: 3px 10px; background: var(--dark-6); border: 1px solid var(--dark-5); border-radius: 12px; color: var(--dark-2); }
+
+/* Warnings */
+.warn-box {
+    background: rgba(255,107,53,0.08); border: 1px solid rgba(255,107,53,0.3);
+    border-radius: 8px; padding: var(--p1) var(--p2); margin-bottom: var(--p2);
+    display: flex; align-items: flex-start; gap: var(--p1);
+}
+.warn-icon { font-size: 20px; flex-shrink: 0; }
+.warn-text { font-size: var(--text-tiny); color: var(--dark-1); }
+.warn-title { font-weight: 700; color: var(--orange); margin-bottom: 4px; }
+
+/* CTA block */
+.cta-block {
+    background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+    border-radius: 12px; padding: var(--p3); text-align: center; margin-top: var(--p2);
+}
+.cta-title { color: var(--white); font-family: var(--font-title); font-size: var(--h4); font-weight: 700; margin-bottom: 8px; }
+.cta-sub { color: rgba(255,255,255,0.6); font-size: var(--text-tiny); margin-bottom: var(--p2); }
+.btn-cta {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--orange); color: var(--white);
+    border: none; border-radius: 10px;
+    padding: 16px 48px; font-size: var(--text-small); font-weight: 700;
+    font-family: var(--font-accent); letter-spacing: 0.5px;
+    cursor: pointer; transition: opacity 0.15s;
+}
+.btn-cta:hover { opacity: 0.9; }
+
+/* Roster pill list */
+.pill-list { display: flex; flex-wrap: wrap; gap: 4px; }
+.pill { font-size: 10px; padding: 2px 8px; background: var(--dark-5); border-radius: 10px; color: var(--dark-2); }

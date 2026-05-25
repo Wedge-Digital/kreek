@@ -85,7 +85,7 @@ mod tests {
     use async_trait::async_trait;
     use crate::app::competitions::domain::cache_repository_port::{CachedSpace, CachedUser, CompetitionsCacheError, ICompetitionsCacheRepository};
     use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
-    use crate::app::competitions::domain::competition_repository_port::{CompetitionRepositoryError, CompetitionSummary, ICompetitionRepository};
+    use crate::app::competitions::domain::competition_repository_port::{CompetitionBaseInfo, CompetitionRepositoryError, CompetitionSummary, ICompetitionRepository};
     use crate::app::competitions::domain::competition_rules::CompetitionRules;
     use crate::app::competitions::domain::competition_structure::CompetitionStructure;
     use crate::app::shared_kernel::authorization::SpaceProfile;
@@ -138,6 +138,18 @@ mod tests {
         }
 
         async fn find_invitations(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionInvitations>, CompetitionRepositoryError> {
+            todo!()
+        }
+
+        async fn find_base_info(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionBaseInfo>, CompetitionRepositoryError> {
+            todo!()
+        }
+
+        async fn update_base_info(&self, competition_id: &CompetitionId, name: &CompetitionName, logo: &CloudinaryImage, admin_ids: &[CoachId]) -> Result<(), CompetitionRepositoryError> {
+            todo!()
+        }
+
+        async fn set_ready(&self, competition_id: &CompetitionId) -> Result<(), CompetitionRepositoryError> {
             todo!()
         }
     }

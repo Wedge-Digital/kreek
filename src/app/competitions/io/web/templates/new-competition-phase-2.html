@@ -99,7 +99,7 @@
   <!-- ── Navigation ── -->
   <div style="display:flex;justify-content:space-between;margin-top:var(--p2);">
     <button class="btn btn-outline" style="width:auto;padding:var(--p1) var(--p3);"
-            hx-get="{{ competition_routes.new_competition(space_id) }}"
+            hx-get="{{ competition_routes.new_competition_info(space_id, competition_id) }}"
             hx-target="#app-content"
             hx-swap="innerHTML"
             hx-push-url="true">
@@ -350,7 +350,8 @@
       if (res.ok) {
         const redirect = res.headers.get('HX-Redirect');
         if (redirect) {
-          htmx.ajax('GET', redirect, { target: '#app-content', swap: 'innerHTML', pushUrl: true });
+          history.pushState({}, '', redirect);
+          htmx.ajax('GET', redirect, { target: '#app-content', swap: 'innerHTML' });
         }
         return;
       }

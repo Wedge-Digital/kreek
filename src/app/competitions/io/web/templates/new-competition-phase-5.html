@@ -1,0 +1,267 @@
+<div class="create-card">
+
+    <div class="create-header">
+        <div class="create-header-icon">✅</div>
+        <div class="create-header-text">
+            <div class="title">Récapitulatif &amp; Validation</div>
+            <div class="sub">Vérifiez les paramètres avant de créer la compétition</div>
+        </div>
+    </div>
+
+    <div class="steps">
+        <div class="step">
+            <div class="step-num done">✓</div>
+            <div class="step-label done">Informations</div>
+        </div>
+        <div class="step-line done"></div>
+        <div class="step">
+            <div class="step-num done">✓</div>
+            <div class="step-label done">Règles</div>
+        </div>
+        <div class="step-line done"></div>
+        <div class="step">
+            <div class="step-num done">✓</div>
+            <div class="step-label done">Structure</div>
+        </div>
+        <div class="step-line done"></div>
+        <div class="step">
+            <div class="step-num done">✓</div>
+            <div class="step-label done">Invitations</div>
+        </div>
+        <div class="step-line done"></div>
+        <div class="step">
+            <div class="step-num active">5</div>
+            <div class="step-label active">Validation</div>
+        </div>
+    </div>
+
+    {% if has_unfilled_spots %}
+    <div class="warn-box">
+        <div class="warn-icon">⚠️</div>
+        <div class="warn-text">
+            <div class="warn-title">Inscriptions incomplètes</div>
+            {{ remaining_spots }} places restantes sur {{ total_spots }}. Vous pouvez créer la compétition maintenant ou attendre que toutes les places soient pourvues.
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recap 1: Informations générales -->
+    <div class="recap-card">
+        <div class="recap-card-header">
+            <div class="recap-card-icon">🏟️</div>
+            <div class="recap-card-title">Informations générales</div>
+            <a class="recap-card-edit"
+               hx-get="{{ competition_routes.new_competition(space_id) }}"
+               hx-target="#app-content"
+               hx-swap="innerHTML"
+               hx-push-url="true">Modifier</a>
+        </div>
+        <div class="recap-card-body">
+            <div style="display: flex; gap: var(--p2); align-items: flex-start;">
+                <div class="recap-logo">
+                    {% if let Some(logo) = competition_logo %}
+                    <img src="{{ logo }}" alt="{{ competition_name }}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">
+                    {% else %}
+                    🏆
+                    {% endif %}
+                </div>
+                <div style="flex: 1;">
+                    <div class="recap-row">
+                        <span class="recap-key">Nom</span>
+                        <span class="recap-val highlight">{{ competition_name }}</span>
+                    </div>
+                    {% if !admin_names.is_empty() %}
+                    <div class="recap-row">
+                        <span class="recap-key">Administrateurs</span>
+                        <span class="recap-val">
+                            <div class="admin-chips">
+                                {% for name in admin_names %}
+                                <span class="admin-chip">{{ name }}</span>
+                                {% endfor %}
+                            </div>
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recap 2: Règles -->
+    {% if has_rules %}
+    <div class="recap-card">
+        <div class="recap-card-header">
+            <div class="recap-card-icon">📋</div>
+            <div class="recap-card-title">Règles de la compétition</div>
+            <a class="recap-card-edit"
+               hx-get="{{ competition_routes.new_competition_rules(space_id, competition_id) }}"
+               hx-target="#app-content"
+               hx-swap="innerHTML"
+               hx-push-url="true">Modifier</a>
+        </div>
+        <div class="recap-card-body">
+            <div class="recap-row">
+                <span class="recap-key">Points VND</span>
+                <span class="recap-val">{{ ranking_points_label }}</span>
+            </div>
+            {% if let Some(bonus) = bonus_label %}
+            <div class="recap-row">
+                <span class="recap-key">Points bonus</span>
+                <span class="recap-val">{{ bonus }}</span>
+            </div>
+            {% endif %}
+            {% if let Some(tiers) = tiers_label %}
+            <div class="recap-row">
+                <span class="recap-key">Tiers</span>
+                <span class="recap-val">{{ tiers }}</span>
+            </div>
+            {% endif %}
+            {% if !rosters_preview.is_empty() %}
+            <div class="recap-row" style="border-bottom: none; align-items: flex-start;">
+                <span class="recap-key">Rosters autorisés</span>
+                <span class="recap-val">
+                    <div class="pill-list">
+                        {% for roster in rosters_preview %}
+                        <span class="pill">{{ roster }}</span>
+                        {% endfor %}
+                        {% if rosters_extra > 0 %}
+                        <span class="pill" style="background:rgba(0,48,73,0.1); color: var(--main-blue);">+{{ rosters_extra }} autres</span>
+                        {% endif %}
+                    </div>
+                </span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recap 3: Structure -->
+    {% if has_structure %}
+    <div class="recap-card">
+        <div class="recap-card-header">
+            <div class="recap-card-icon">🏗️</div>
+            <div class="recap-card-title">Structure de la compétition</div>
+            <a class="recap-card-edit"
+               hx-get="{{ competition_routes.new_competition_structure(space_id, competition_id) }}"
+               hx-target="#app-content"
+               hx-swap="innerHTML"
+               hx-push-url="true">Modifier</a>
+        </div>
+        <div class="recap-card-body">
+            {% if let Some(groups) = groups_label %}
+            <div class="recap-row">
+                <span class="recap-key">Phase de groupes</span>
+                <span class="recap-val">{{ groups }}</span>
+            </div>
+            {% endif %}
+            {% if let Some(playoffs) = playoffs_label %}
+            <div class="recap-row">
+                <span class="recap-key">Phase finale</span>
+                <span class="recap-val">{{ playoffs }}</span>
+            </div>
+            {% endif %}
+            {% if let Some(dates) = dates_label %}
+            <div class="recap-row">
+                <span class="recap-key">Dates</span>
+                <span class="recap-val">{{ dates }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recap 4: Invitations -->
+    {% if has_invitations %}
+    <div class="recap-card">
+        <div class="recap-card-header">
+            <div class="recap-card-icon">📩</div>
+            <div class="recap-card-title">Invitations</div>
+            <a class="recap-card-edit"
+               hx-get="{{ competition_routes.new_competition_invitations(space_id, competition_id) }}"
+               hx-target="#app-content"
+               hx-swap="innerHTML"
+               hx-push-url="true">Modifier</a>
+        </div>
+        <div class="recap-card-body">
+            <div class="recap-row">
+                <span class="recap-key">Mode d'accès</span>
+                <span class="recap-val">{{ access_mode_label }}</span>
+            </div>
+            <div class="recap-row">
+                <span class="recap-key">Invitations envoyées</span>
+                <span class="recap-val">{{ invited_label }}</span>
+            </div>
+            {% if let Some(spots) = spots_label %}
+            <div class="recap-row">
+                <span class="recap-key">Places disponibles</span>
+                <span class="recap-val {% if spots_warn %}warn{% endif %}">{{ spots }}</span>
+            </div>
+            {% endif %}
+            {% if let Some(deadline) = deadline_label %}
+            <div class="recap-row">
+                <span class="recap-key">Date limite</span>
+                <span class="recap-val">{{ deadline }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- CTA -->
+    <div class="cta-block">
+        <div class="cta-title">Tout est prêt !</div>
+        <div class="cta-sub">
+            La compétition sera créée et les invitations confirmées seront notifiées.<br>
+            Vous pourrez modifier les paramètres depuis le panneau d'administration.
+        </div>
+        <button class="btn-cta" onclick="submitFinalize()">
+            🏆 Créer la compétition
+        </button>
+        <div style="margin-top: var(--p1); font-size: var(--text-tiny); color: rgba(255,255,255,0.4);">
+            Vous pourrez toujours modifier les paramètres après la création
+        </div>
+    </div>
+
+    <div style="display: flex; justify-content: flex-start; margin-top: var(--p2);">
+        <button class="btn btn-outline" style="width: auto; padding: var(--p1) var(--p3);"
+                hx-get="{{ competition_routes.new_competition_invitations(space_id, competition_id) }}"
+                hx-target="#app-content"
+                hx-swap="innerHTML"
+                hx-push-url="true">
+            ← Retour
+        </button>
+    </div>
+
+</div>
+
+<script>
+(function () {
+    window.submitFinalize = function () {
+        const btn = document.querySelector('[onclick="submitFinalize()"]');
+        if (btn) { btn.disabled = true; btn.textContent = 'Création en cours…'; }
+
+        fetch(window.location.pathname, {
+            method:  'POST',
+            headers: { 'HX-Request': 'true' },
+        }).then(function (res) {
+            if (res.ok) {
+                const redirect = res.headers.get('HX-Redirect');
+                if (redirect) { location.href = redirect; }
+                return;
+            }
+            return res.text().then(function (msg) {
+                let banner = document.getElementById('finalize-error-banner');
+                if (!banner) {
+                    banner = document.createElement('div');
+                    banner.id = 'finalize-error-banner';
+                    banner.style.cssText = 'background:var(--red-light,#fef2f2);border:1px solid var(--red-badge);' +
+                        'color:var(--red-badge);border-radius:8px;padding:12px 16px;margin-bottom:var(--p2);font-size:var(--text-small);';
+                    document.querySelector('.create-card').prepend(banner);
+                }
+                banner.textContent = msg;
+                if (btn) { btn.disabled = false; btn.textContent = '🏆 Créer la compétition'; }
+            });
+        });
+    };
+})();
+</script>
