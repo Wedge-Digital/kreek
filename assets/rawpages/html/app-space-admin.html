@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administration — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ── Layout ── */
+    .admin-container {
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+      padding-bottom: var(--p4);
+    }
+
+    /* ── Header banner ── */
+    .admin-banner {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 12px;
+      padding: var(--p2);
+      display: flex;
+      align-items: center;
+      gap: var(--p2);
+    }
+    .admin-banner-icon {
+      width: 56px; height: 56px; border-radius: 12px;
+      background: rgba(255,255,255,0.12);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; flex-shrink: 0;
+    }
+    .admin-banner-info { flex: 1; }
+    .admin-banner-title {
+      font-family: var(--font-title); font-size: var(--h4); font-weight: 700;
+      color: var(--white);
+    }
+    .admin-banner-sub { font-size: var(--text-tiny); color: rgba(255,255,255,0.65); margin-top: 4px; }
+    .admin-banner-badge {
+      background: rgba(255,107,53,0.25); color: var(--orange);
+      font-size: var(--text-tiny); font-weight: 700;
+      padding: 4px 12px; border-radius: 20px;
+      border: 1px solid rgba(255,107,53,0.4);
+    }
+
+    /* ── Tabs ── */
+    .admin-tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--white);
+      border-radius: 10px;
+      padding: 6px;
+      border: 1px solid var(--dark-5);
+    }
+    .admin-tab {
+      flex: 1; text-align: center;
+      padding: 8px var(--p1);
+      border-radius: 7px;
+      font-size: var(--text-tiny); font-weight: 600;
+      color: var(--dark-3); cursor: pointer;
+      transition: all 0.15s;
+    }
+    .admin-tab:hover  { background: var(--dark-6); color: var(--dark-1); }
+    .admin-tab.active { background: var(--main-blue); color: var(--white); }
+
+    /* ── Panel card ── */
+    .admin-panel {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p2);
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+    }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: flex;
+      gap: var(--p1);
+    }
+    .stat-chip {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--dark-6); border-radius: 8px;
+      padding: 10px var(--p2); flex: 1;
+    }
+    .stat-chip-icon { font-size: 18px; }
+    .stat-chip-value {
+      font-family: var(--font-title); font-size: var(--h5);
+      font-weight: 700; color: var(--main-blue);
+    }
+    .stat-chip-label { font-size: var(--text-tiny); color: var(--dark-3); }
+
+    /* ── Search row ── */
+    .search-row {
+      display: flex; gap: var(--p1); align-items: center;
+    }
+    .search-input {
+      flex: 1; padding: 10px 16px;
+      border: 1px solid var(--dark-4); border-radius: 8px;
+      font-size: var(--text-small); font-family: inherit;
+      color: var(--dark-1); outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .search-input:focus {
+      border-color: var(--main-blue);
+      box-shadow: 0 0 0 3px rgba(0,48,73,0.08);
+    }
+    .search-input::placeholder { color: var(--dark-4); }
+
+    /* ── Member list ── */
+    .member-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .member-row {
+      display: flex; align-items: center; gap: var(--p1);
+      padding: 12px var(--p2);
+      border: 1px solid var(--dark-5); border-radius: 10px;
+      background: var(--white);
+      transition: box-shadow 0.15s;
+    }
+    .member-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+
+    .member-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 16px;
+      color: var(--white); flex-shrink: 0;
+    }
+    .av--blue   { background: linear-gradient(135deg, var(--main-blue), var(--dark-2)); }
+    .av--green  { background: linear-gradient(135deg, #629584, #003049); }
+    .av--orange { background: linear-gradient(135deg, var(--orange), #1C1C29); }
+    .av--purple { background: linear-gradient(135deg, #6F35A5, #26263D); }
+    .av--red    { background: linear-gradient(135deg, #E02020, #555770); }
+
+    .member-info { flex: 1; min-width: 0; }
+    .member-name {
+      font-size: var(--text-small); font-weight: 600; color: var(--dark-1);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .member-email { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; }
+
+    .member-profile-select {
+      padding: 6px 10px;
+      border: 1px solid var(--dark-4); border-radius: 6px;
+      font-size: var(--text-tiny); font-weight: 600;
+      color: var(--dark-1); background: var(--white);
+      cursor: pointer; outline: none;
+      transition: border-color 0.15s;
+      flex-shrink: 0;
+    }
+    .member-profile-select:focus { border-color: var(--main-blue); }
+
+    .member-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    .action-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 12px;
+      border: 1px solid var(--dark-5); border-radius: 7px;
+      background: var(--white); font-size: var(--text-tiny); font-weight: 500;
+      color: var(--dark-2); cursor: pointer;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .action-btn:hover { background: var(--dark-6); border-color: var(--dark-4); }
+    .action-btn--danger:hover { background: rgba(224,32,32,0.06); border-color: var(--red); color: var(--red); }
+    .action-btn--primary:hover { background: rgba(0,48,73,0.06); border-color: var(--main-blue); color: var(--main-blue); }
+
+    .action-btn-icon { font-size: 14px; }
+
+    /* ── Section separator ── */
+    .section-sep {
+      height: 1px; background: var(--dark-5); margin: var(--p1) 0;
+    }
+    .section-label {
+      font-family: var(--font-title); font-size: var(--h5);
+      font-weight: 700; color: var(--dark-1);
+    }
+
+    /* ── Invite section ── */
+    .invite-section {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p2);
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+    }
+    .invite-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .invite-sub {
+      font-size: var(--text-tiny); color: var(--dark-3); margin-top: 4px;
+    }
+
+    .link-box {
+      display: flex; align-items: center; gap: var(--p1);
+      background: var(--dark-6); border: 1px solid var(--dark-5);
+      border-radius: 8px; padding: 12px 16px;
+    }
+    .link-url {
+      flex: 1; font-size: var(--text-tiny); color: var(--dark-2);
+      font-family: monospace; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    .search-invite-row { display: flex; gap: var(--p1); }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: var(--p3); left: 50%; transform: translateX(-50%);
+      background: var(--dark-0); color: var(--white);
+      font-size: var(--text-tiny); font-weight: 600;
+      padding: 10px 20px; border-radius: 8px;
+      display: flex; align-items: center; gap: 8px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+      z-index: 1000;
+    }
+    .toast.visible { opacity: 1; }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center; padding: var(--p3) var(--p2);
+      color: var(--dark-3);
+    }
+    .empty-state-icon { font-size: 40px; margin-bottom: var(--p1); }
+    .empty-state-text { font-size: var(--text-small); }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item" href="app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item active">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="admin-container">
+
+          <!-- Banner -->
+          <div class="admin-banner">
+            <div class="admin-banner-icon">🛡️</div>
+            <div class="admin-banner-info">
+              <div class="admin-banner-title">Administration — Tribu Celtique</div>
+              <div class="admin-banner-sub">Gestion des membres, invitations et paramètres de l'espace</div>
+            </div>
+            <div class="admin-banner-badge">Admin</div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="admin-tabs">
+            <div class="admin-tab active" onclick="showTab('members', this)">👥 Membres</div>
+            <div class="admin-tab" onclick="showTab('invitations', this)">📩 Invitations</div>
+            <div class="admin-tab" onclick="showTab('settings', this)">⚙️ Paramètres</div>
+          </div>
+
+          <!-- ══ TAB : MEMBRES ══════════════════════════════════════ -->
+          <div id="tab-members">
+
+            <div class="admin-panel">
+
+              <!-- Stats -->
+              <div class="stats-bar">
+                <div class="stat-chip">
+                  <div class="stat-chip-icon">👥</div>
+                  <div>
+                    <div class="stat-chip-value">8</div>
+                    <div class="stat-chip-label">Membres</div>
+                  </div>
+                </div>
+                <div class="stat-chip">
+                  <div class="stat-chip-icon">🛡️</div>
+                  <div>
+                    <div class="stat-chip-value">2</div>
+                    <div class="stat-chip-label">Administrateurs</div>
+                  </div>
+                </div>
+                <div class="stat-chip">
+                  <div class="stat-chip-icon">⏳</div>
+                  <div>
+                    <div class="stat-chip-value">3</div>
+                    <div class="stat-chip-label">Invitations en attente</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="section-sep"></div>
+
+              <!-- Search -->
+              <div class="search-row">
+                <input class="search-input" type="text" placeholder="Rechercher un membre par pseudo…" oninput="filterMembers(this.value)">
+              </div>
+
+              <!-- Member list -->
+              <div class="member-list" id="member-list">
+
+                <!-- Member : Admin (soi-même) -->
+                <div class="member-row" data-name="bagouze">
+                  <div class="member-avatar av--blue">B</div>
+                  <div class="member-info">
+                    <div class="member-name">Bagouze <span style="font-size:11px; color:var(--dark-4); font-weight:400;">(vous)</span></div>
+                    <div class="member-email">bertrand.begouin@wedge-digital.com</div>
+                  </div>
+                  <select class="member-profile-select" disabled>
+                    <option value="admin" selected>Admin</option>
+                    <option value="member">Membre</option>
+                  </select>
+                  <div class="member-actions">
+                    <button class="action-btn action-btn--primary" onclick="copyResetLink('Bagouze')" title="Envoyer un lien de réinitialisation de mot de passe">
+                      <span class="action-btn-icon">🔑</span> Réinit. mdp
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Member : Admin -->
+                <div class="member-row" data-name="colonelcastor">
+                  <div class="member-avatar av--orange">C</div>
+                  <div class="member-info">
+                    <div class="member-name">Colonelcastor</div>
+                    <div class="member-email">colonel@castors.fr</div>
+                  </div>
+                  <select class="member-profile-select" onchange="changeRole(this, 'Colonelcastor')">
+                    <option value="admin" selected>Admin</option>
+                    <option value="member">Membre</option>
+                  </select>
+                  <div class="member-actions">
+                    <button class="action-btn action-btn--primary" onclick="sendResetEmail('Colonelcastor')" title="Envoyer un email de réinitialisation de mot de passe">
+                      <span class="action-btn-icon">🔑</span> Réinit. mdp
+                    </button>
+                    <button class="action-btn action-btn--danger" onclick="confirmRemove('Colonelcastor')" title="Retirer du space">
+                      <span class="action-btn-icon">✕</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Member : User -->
+                <div class="member-row" data-name="letacticien">
+                  <div class="member-avatar av--green">L</div>
+                  <div class="member-info">
+                    <div class="member-name">LeTacticien</div>
+                    <div class="member-email">tacticien@bb.club</div>
+                  </div>
+                  <select class="member-profile-select" onchange="changeRole(this, 'LeTacticien')">
+                    <option value="admin">Admin</option>
+                    <option value="member" selected>Membre</option>
+                  </select>
+                  <div class="member-actions">
+                    <button class="action-btn action-btn--primary" onclick="sendResetEmail('LeTacticien')">
+                      <span class="action-btn-icon">🔑</span> Réinit. mdp
+                    </button>
+                    <button class="action-btn action-btn--danger" onclick="confirmRemove('LeTacticien')">
+                      <span class="action-btn-icon">✕</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="member-row" data-name="corregan">
+                  <div class="member-avatar av--purple">C</div>
+                  <div class="member-info">
+                    <div class="member-name">Corregan</div>
+                    <div class="member-email">corregan@korrigans.bzh</div>
+                  </div>
+                  <select class="member-profile-select" onchange="changeRole(this, 'Corregan')">
+                    <option value="admin">Admin</option>
+                    <option value="member" selected>Membre</option>
+                  </select>
+                  <div class="member-actions">
+                    <button class="action-btn action-btn--primary" onclick="sendResetEmail('Corregan')">
+                      <span class="action-btn-icon">🔑</span> Réinit. mdp
+                    </button>
+                    <button class="action-btn action-btn--danger" onclick="confirmRemove('Corregan')">
+                      <span class="action-btn-icon">✕</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="member-row" data-name="giom">
+                  <div class="member-avatar av--red">G</div>
+                  <div class="member-info">
+                    <div class="member-name">Giom</div>
+                    <div class="member-email">giom@bb.club</div>
+                  </div>
+                  <select class="member-profile-select" onchange="changeRole(this, 'Giom')">
+                    <option value="admin">Admin</option>
+                    <option value="member" selected>Membre</option>
+                  </select>
+                  <div class="member-actions">
+                    <button class="action-btn action-btn--primary" onclick="sendResetEmail('Giom')">
+                      <span class="action-btn-icon">🔑</span> Réinit. mdp
+                    </button>
+                    <button class="action-btn action-btn--danger" onclick="confirmRemove('Giom')">
+                      <span class="action-btn-icon">✕</span>
+                    </button>
+                  </div>
+                </div>
+
+              </div><!-- /member-list -->
+
+            </div><!-- /admin-panel -->
+
+          </div><!-- /tab-members -->
+
+          <!-- ══ TAB : INVITATIONS ═══════════════════════════════════ -->
+          <div id="tab-invitations" style="display:none;">
+
+            <!-- Lien d'invitation générique -->
+            <div class="invite-section">
+              <div class="invite-header">
+                <div>
+                  <div class="section-label">Lien d'invitation à l'espace</div>
+                  <div class="invite-sub">Toute personne possédant ce lien peut rejoindre l'espace comme membre.</div>
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="regenerateLink()" style="white-space:nowrap;">🔄 Régénérer</button>
+              </div>
+              <div class="link-box">
+                <span class="link-url" id="invite-link">https://app.bloodbowlclub.fr/join/TriBuCeltique?token=abc123xyz</span>
+                <button class="action-btn action-btn--primary" onclick="copyInviteLink()">
+                  <span>🔗</span> Copier
+                </button>
+              </div>
+              <div style="font-size:var(--text-tiny); color:var(--dark-3); display:flex; align-items:center; gap:6px;">
+                📌 Ce lien est valide 7 jours. Régénérer le lien révoque l'ancien.
+              </div>
+            </div>
+
+            <!-- Inviter un coach par pseudo -->
+            <div class="invite-section">
+              <div class="section-label">Inviter un coach par pseudo</div>
+              <div class="invite-sub" style="margin-top:4px;">Un email lui sera envoyé avec un lien d'invitation personnalisé.</div>
+              <div class="search-invite-row">
+                <input class="search-input" type="text" placeholder="Pseudo du coach…" id="invite-coach-input">
+                <button class="btn btn-primary-blue btn-sm" onclick="sendSpaceInvite()" style="white-space:nowrap; padding: 10px 20px;">
+                  ✉ Envoyer l'invitation
+                </button>
+              </div>
+            </div>
+
+            <!-- Invitations en attente -->
+            <div class="admin-panel">
+              <div class="section-label">Invitations en attente</div>
+              <div class="member-list">
+
+                <div class="member-row">
+                  <div class="member-avatar av--blue">W</div>
+                  <div class="member-info">
+                    <div class="member-name">Whiskers</div>
+                    <div class="member-email">Envoyée le 20 mai 2026</div>
+                  </div>
+                  <span class="invited-status-badge status-pending" style="background:rgba(255,107,53,0.12);color:var(--orange);font-size:var(--text-tiny);font-weight:700;padding:3px 10px;border-radius:4px;flex-shrink:0;">En attente</span>
+                  <div class="member-actions">
+                    <button class="action-btn action-btn--primary" onclick="resendInvite('Whiskers')">
+                      <span class="action-btn-icon">🔄</span> Renvoyer
+                    </button>
+                    <button class="action-btn action-btn--danger" onclick="cancelInvite('Whiskers')">
+                      <span class="action-btn-icon">✕</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="member-row">
+                  <div class="member-avatar av--green">G</div>
+                  <div class="member-info">
+                    <div class="member-name">GrimFang</div>
+                    <div class="member-email">Envoyée le 18 mai 2026</div>
+                  </div>
+                  <span style="background:rgba(255,107,53,0.12);color:var(--orange);font-size:var(--text-tiny);font-weight:700;padding:3px 10px;border-radius:4px;flex-shrink:0;">En attente</span>
+                  <div class="member-actions">
+                    <button class="action-btn action-btn--primary" onclick="resendInvite('GrimFang')">
+                      <span class="action-btn-icon">🔄</span> Renvoyer
+                    </button>
+                    <button class="action-btn action-btn--danger" onclick="cancelInvite('GrimFang')">
+                      <span class="action-btn-icon">✕</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="member-row">
+                  <div class="member-avatar av--red">N</div>
+                  <div class="member-info">
+                    <div class="member-name">NecroXtreme</div>
+                    <div class="member-email">Envoyée le 15 mai 2026</div>
+                  </div>
+                  <span style="background:rgba(224,32,32,0.12);color:var(--red);font-size:var(--text-tiny);font-weight:700;padding:3px 10px;border-radius:4px;flex-shrink:0;">Refusée</span>
+                  <div class="member-actions">
+                    <button class="action-btn action-btn--primary" onclick="resendInvite('NecroXtreme')">
+                      <span class="action-btn-icon">🔄</span> Renvoyer
+                    </button>
+                    <button class="action-btn action-btn--danger" onclick="cancelInvite('NecroXtreme')">
+                      <span class="action-btn-icon">✕</span>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div><!-- /tab-invitations -->
+
+          <!-- ══ TAB : PARAMÈTRES ════════════════════════════════════ -->
+          <div id="tab-settings" style="display:none;">
+            <div class="admin-panel">
+              <div class="section-label">Paramètres de l'espace</div>
+              <div style="color:var(--dark-3); font-size:var(--text-small); padding: var(--p2) 0;">
+                Les paramètres de l'espace seront disponibles ici (nom, logo, visibilité, etc.)
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /admin-container -->
+      </div><!-- /page-content -->
+    </div><!-- /main-area -->
+  </div><!-- /app-layout -->
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast">
+    <span id="toast-icon">✓</span>
+    <span id="toast-msg">Action effectuée</span>
+  </div>
+
+  <script>
+  // ── Tab switching ──────────────────────────────────────────────────────────
+  function showTab(name, el) {
+    ['members', 'invitations', 'settings'].forEach(t => {
+      document.getElementById('tab-' + t).style.display = 'none';
+    });
+    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + name).style.display = '';
+    el.classList.add('active');
+  }
+
+  // ── Toast ──────────────────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg, icon) {
+    var t = document.getElementById('toast');
+    document.getElementById('toast-msg').textContent  = msg;
+    document.getElementById('toast-icon').textContent = icon || '✓';
+    t.classList.add('visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('visible'), 3000);
+  }
+
+  // ── Member search ──────────────────────────────────────────────────────────
+  function filterMembers(query) {
+    var q = query.toLowerCase();
+    document.querySelectorAll('#member-list .member-row').forEach(row => {
+      row.style.display = row.dataset.name.includes(q) ? '' : 'none';
+    });
+  }
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+  function sendResetEmail(name) {
+    showToast('Email de réinitialisation envoyé à ' + name, '🔑');
+  }
+
+  function changeRole(select, name) {
+    var label = select.value === 'admin' ? 'administrateur' : 'membre';
+    showToast(name + ' est maintenant ' + label, '✓');
+  }
+
+  function confirmRemove(name) {
+    if (confirm('Retirer ' + name + ' de l\'espace ?')) {
+      showToast(name + ' a été retiré de l\'espace', '✓');
+    }
+  }
+
+  function copyInviteLink() {
+    var link = document.getElementById('invite-link').textContent;
+    navigator.clipboard.writeText(link).then(() => showToast('Lien d\'invitation copié !', '🔗'));
+  }
+
+  function regenerateLink() {
+    showToast('Nouveau lien généré — l\'ancien est révoqué', '🔄');
+  }
+
+  function sendSpaceInvite() {
+    var name = document.getElementById('invite-coach-input').value.trim();
+    if (!name) return;
+    document.getElementById('invite-coach-input').value = '';
+    showToast('Invitation envoyée à ' + name, '✉');
+  }
+
+  function resendInvite(name) {
+    showToast('Invitation renvoyée à ' + name, '🔄');
+  }
+
+  function cancelInvite(name) {
+    showToast('Invitation de ' + name + ' annulée', '✓');
+  }
+  </script>
+</body>
+</html>

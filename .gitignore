@@ -22,3 +22,4 @@ Thumbs.db
 scripts/*.sh
 /scripts/__pycache__
 /scripts/migrate_articles_images.sh
+/scripts/migrate_spaces_images.sh 
