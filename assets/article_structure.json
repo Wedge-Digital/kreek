@@ -1,0 +1,24 @@
+{
+  "author": "01KSHRJ0SFKRZP7YP4AVKAJV47",
+  "title": "Titre de l'article",
+  "abstract": "résumé de l'article en quelques mots",
+  "tags": ["NEWS", "MATCH_REPORT", "ITW"],
+  "image": "url de l'image principale",
+  "content": [
+    {
+      "type": "1_COLUMN",
+      "title": "Titre du paragraphe",
+      "content": "Contenu du paragraphe"
+    },
+    {
+      "type": "1_COLUMN",
+      "title": "Titre du paragraphe",
+      "content": "Contenu du paragraphe"
+    },
+    {
+      "type": "1_COLUMN",
+      "title": "Titre du paragraphe",
+      "content": "Contenu du paragraphe"
+    }
+  ]
+}

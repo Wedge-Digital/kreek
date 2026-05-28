@@ -12,6 +12,10 @@ pub type CompetitionId = EntityId;
 
 pub type SeasonId = EntityId;
 
+pub type ArticleId = EntityId;
+
+pub type CommentId = EntityId;
+
 pub type EntityId = SUlid;
 
 pub type EventId = SUlid;

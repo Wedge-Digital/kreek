@@ -1,0 +1,186 @@
+{% import "components/upload_widget.html" as cmp %}
+<div class="editor-container">
+
+    <!-- Header banner -->
+    <div class="article-header-banner">
+        <div class="article-header-icon">✏️</div>
+        <div class="article-header-title">Nouvel Article</div>
+        <div class="article-header-sub">Rédigez et publiez votre contenu</div>
+    </div>
+
+    <form id="article-form"
+          hx-post="{{ routes.post_article(space_id) }}"
+          hx-target="#app-content"
+          hx-swap="innerHTML">
+
+        <!-- Main info section -->
+        <div class="section-card">
+            <div class="section-card-header">
+                <div class="section-icon">ℹ️</div>
+                <div class="section-title">Informations principales</div>
+            </div>
+
+            <div class="form-group form-group--sm">
+                <label class="form-label">Titre de l'article</label>
+                <input type="text" name="title" class="form-input-article{% if title_error.is_some() %} input-error{% endif %}"
+                       placeholder="Donnez un titre à votre article..."
+                       value="{{ title_value }}">
+                {% if let Some(err) = title_error %}
+                <div class="form-error">{{ err }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group form-group--sm">
+                <label class="form-label">Catégorie</label>
+                <select name="tag" class="form-select">
+                    <option value="">Sélectionnez une catégorie...</option>
+                    <option value="NEWS"{% if tag_value == "NEWS" %} selected{% endif %}>Actualité</option>
+                    <option value="MATCH_REPORT"{% if tag_value == "MATCH_REPORT" %} selected{% endif %}>Match Report</option>
+                    <option value="ANALYSIS"{% if tag_value == "ANALYSIS" %} selected{% endif %}>Analyse</option>
+                    <option value="ITW"{% if tag_value == "ITW" %} selected{% endif %}>Interview</option>
+                    <option value="TUTORIAL"{% if tag_value == "TUTORIAL" %} selected{% endif %}>Tutoriel</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Résumé</label>
+                <textarea name="abstract" class="form-input-article" rows="3"
+                          placeholder="Un bref résumé de votre article (affiché dans les listes)...">{{ abstract_value }}</textarea>
+            </div>
+        </div>
+
+        <!-- Image section -->
+        <div class="section-card">
+            <div class="section-card-header">
+                <div class="section-icon">🖼️</div>
+                <div class="section-title">Image principale</div>
+            </div>
+            <div class="article-image-upload">
+                {% call cmp::cloudinary_upload("image_url", image_url_value, "news/images", "Image principale", image_error) %}
+            </div>
+        </div>
+
+        <!-- Paragraphs section -->
+        <div class="section-card">
+            <div class="section-card-header section-card-header--no-mb">
+                <div class="section-icon">📝</div>
+                <div class="section-title flex-1">Contenu de l'article</div>
+                <button type="button" class="btn btn-primary-blue btn-sm" onclick="addParagraph()">
+                    + Ajouter un paragraphe
+                </button>
+            </div>
+            <div class="spacer-p2"></div>
+
+            {% if let Some(err) = content_error %}
+            <div class="form-error">{{ err }}</div>
+            {% endif %}
+
+            <div id="empty-state" class="paragraph-empty">
+                <div class="paragraph-empty-icon">📄</div>
+                <div class="paragraph-empty-text">Aucun paragraphe pour le moment</div>
+                <div class="paragraph-empty-sub">Cliquez sur « Ajouter un paragraphe » pour commencer la rédaction</div>
+            </div>
+
+            <div id="paragraphs-container" hidden></div>
+
+            <input type="hidden" name="content_json" id="content_json" value="[]">
+        </div>
+
+        <!-- Actions bar -->
+        <div class="actions-bar">
+            <button type="button" class="btn-ghost" onclick="resetForm()">Réinitialiser</button>
+            <button type="submit" class="btn btn-action-wide btn-primary"
+                    onclick="serializeContent()">Publier l'article</button>
+        </div>
+
+    </form>
+</div>
+
+<script>
+(function () {
+    var paragraphs = [];
+    var nextId = 1;
+
+    function escHtml(str) {
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function render() {
+        var container = document.getElementById('paragraphs-container');
+        var emptyState = document.getElementById('empty-state');
+
+        if (paragraphs.length === 0) {
+            emptyState.style.display = '';
+            container.setAttribute('hidden', '');
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        container.removeAttribute('hidden');
+
+        container.innerHTML = paragraphs.map(function (p, index) {
+            var isFirst = index === 0;
+            var isLast = index === paragraphs.length - 1;
+            return '<div class="paragraph-editor" data-id="' + p.id + '">' +
+                '<div class="paragraph-editor-toolbar">' +
+                    '<span class="paragraph-num">Paragraphe ' + (index + 1) + '</span>' +
+                    '<div class="paragraph-actions">' +
+                        '<button type="button" class="para-btn" title="Monter" onclick="moveParagraph(' + p.id + ', -1)"' + (isFirst ? ' disabled' : '') + '>↑</button>' +
+                        '<button type="button" class="para-btn" title="Descendre" onclick="moveParagraph(' + p.id + ', 1)"' + (isLast ? ' disabled' : '') + '>↓</button>' +
+                        '<button type="button" class="para-btn danger" title="Supprimer" onclick="removeParagraph(' + p.id + ')">🗑</button>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="form-group form-group--sm">' +
+                    '<input type="text" class="form-input-article" placeholder="Titre du paragraphe (optionnel)"' +
+                    ' value="' + escHtml(p.title) + '" oninput="updateParagraph(' + p.id + ', \'title\', this.value)">' +
+                '</div>' +
+                '<div class="form-group">' +
+                    '<textarea class="form-input-article" rows="6" placeholder="Rédigez votre contenu ici..."' +
+                    ' oninput="updateParagraph(' + p.id + ', \'content\', this.value)">' + escHtml(p.content) + '</textarea>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    window.addParagraph = function () {
+        paragraphs.push({ id: nextId++, title: '', content: '' });
+        render();
+    };
+
+    window.removeParagraph = function (id) {
+        paragraphs = paragraphs.filter(function (p) { return p.id !== id; });
+        render();
+    };
+
+    window.moveParagraph = function (id, dir) {
+        var idx = paragraphs.findIndex(function (p) { return p.id === id; });
+        if (idx < 0) return;
+        var newIdx = idx + dir;
+        if (newIdx < 0 || newIdx >= paragraphs.length) return;
+        var tmp = paragraphs[idx];
+        paragraphs[idx] = paragraphs[newIdx];
+        paragraphs[newIdx] = tmp;
+        render();
+    };
+
+    window.updateParagraph = function (id, field, value) {
+        var p = paragraphs.find(function (p) { return p.id === id; });
+        if (p) p[field] = value;
+    };
+
+    window.serializeContent = function () {
+        var payload = paragraphs.map(function (p) {
+            return { type: '1_COLUMN', title: p.title, content: p.content };
+        });
+        document.getElementById('content_json').value = JSON.stringify(payload);
+    };
+
+    window.resetForm = function () {
+        paragraphs = [];
+        nextId = 1;
+        render();
+        document.getElementById('article-form').reset();
+        document.getElementById('content_json').value = '[]';
+    };
+})();
+</script>

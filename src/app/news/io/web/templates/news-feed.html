@@ -1,124 +1,128 @@
 <div class="home-main">
   <div class="feed-header">
-  <div class="h3-gras">Actualités</div>
-  <div class="feed-header-actions">
-    <div class="filter-tabs">
-      <div class="filter-tab active">Tout</div>
-      <div class="filter-tab">Match Report</div>
-      <div class="filter-tab">Actualité</div>
-      <div class="filter-tab">Analyse</div>
-      <div class="filter-tab">Interview</div>
+    <div class="h3-gras">Actualités</div>
+    <div class="feed-header-actions">
+      <div class="filter-tabs">
+        <div class="filter-tab active">Tout</div>
+        <div class="filter-tab">Match Report</div>
+        <div class="filter-tab">Actualité</div>
+        <div class="filter-tab">Analyse</div>
+        <div class="filter-tab">Interview</div>
+      </div>
+      <button class="btn btn-primary-blue btn-sm"
+              hx-get="{{ routes.new_article(space_id) }}"
+              hx-target="#app-content"
+              hx-swap="innerHTML"
+              hx-push-url="true">
+        + Rédiger un article
+      </button>
     </div>
-    <button class="btn btn-primary-blue btn-sm" onclick="window.location.href='app-create-article.html'">
-      + Rédiger un article
-    </button>
   </div>
-</div>
-  <div class="news-card-featured">
-    <div class="news-card-img"></div>
+
+  {% if let Some(f) = featured %}
+  <div class="news-card-featured"
+       hx-get="{{ routes.article(space_id, f.id) }}"
+       hx-target="#app-content"
+       hx-swap="innerHTML"
+       hx-push-url="true">
+    <div class="news-card-img" {% if let Some(img) = f.image %}style="background-image: url('{{ img }}'); background-size: cover; background-position: center;"{% endif %}></div>
     <div class="news-card-gradient"></div>
     <div class="news-badge-featured">🔥 À LA UNE</div>
+    {% if !f.tag.is_empty() %}
     <div class="news-badge-cat">
       <div class="news-badge-dot"></div>
-      Match Report
+      {{ f.tag }}
     </div>
+    {% endif %}
     <div class="news-card-bottom">
-      <div class="news-title">Une finale 100% korrigane en ligue de Condate !</div>
-      <div class="news-abstract">
-        Les deux équipes de la presqu'île s'affrontent dans un match épique pour le titre de champion de la saison 2024.
-        Football is a family — et cette finale ne fait pas exception.
-      </div>
+      <div class="news-title">{{ f.title }}</div>
+      <div class="news-abstract">{{ f.abstract_ }}</div>
       <div class="news-author-row">
         <div class="news-author">
-          <div class="news-avatar">CC</div>
+          <div class="news-avatar">{{ f.author_name.chars().next().unwrap_or('?').to_uppercase().next().unwrap_or('?') }}</div>
           <div class="news-author-info">
-            <div class="news-author-name">Colonel Castor</div>
-            <div class="news-author-date">le 1er Septembre 2024</div>
+            <div class="news-author-name">{{ f.author_name }}</div>
+            <div class="news-author-date">le {{ f.created_at }}</div>
           </div>
         </div>
         <button class="btn btn-orange">LIRE →</button>
       </div>
     </div>
   </div>
+  {% endif %}
 
-<div class="news-feed">
-  <div class="latest-news-card" onclick="window.location.href='app-create-article.html'">
-    <div class="latest-news-img news-img--1"></div>
-    <div class="latest-news-content">
-      <div class="latest-news-cat">Match Report</div>
-      <div class="latest-news-title">Une finale 100% korrigane en ligue de Condate !</div>
-      <div class="latest-news-desc">Football is a family — cette expression prend tout son sens quand deux équipes de la même presqu'île s'affrontent dans un match de légende pour le titre de champion de la saison 2024.</div>
-      <div class="latest-news-footer">
-        <div class="latest-news-meta">
-          <div class="latest-news-date">📅 le 1er Septembre 2024</div>
-          <div class="latest-news-author">👤 par Colonel Castor</div>
-        </div>
-        <span class="badge badge-red">À LA UNE</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="latest-news-card">
-    <div class="latest-news-img news-img--3"></div>
-    <div class="latest-news-content">
-      <div class="latest-news-cat">Actualité</div>
-      <div class="latest-news-title">Les transferts de l'inter-saison : qui va où ?</div>
-      <div class="latest-news-desc">Avec la fin de la saison régulière, les coaches s'activent pour recruter les meilleurs joueurs disponibles. Tour d'horizon des rumeurs et transferts confirmés.</div>
-      <div class="latest-news-footer">
-        <div class="latest-news-meta">
-          <div class="latest-news-date">📅 le 28 août 2024</div>
-          <div class="latest-news-author">👤 par Colonel Castor</div>
+  <div class="news-feed" id="news-feed">
+    {% for article in articles %}
+    <div class="latest-news-card"
+         hx-get="{{ routes.article(space_id, article.id) }}"
+         hx-target="#app-content"
+         hx-swap="innerHTML"
+         hx-push-url="true">
+      {% if let Some(img) = article.image %}
+      <div class="latest-news-img" style="background-image: url('{{ img }}'); background-size: cover; background-position: center;"></div>
+      {% else %}
+      <div class="latest-news-img"></div>
+      {% endif %}
+      <div class="latest-news-content">
+        {% if !article.tag.is_empty() %}
+        <div class="latest-news-cat">{{ article.tag }}</div>
+        {% endif %}
+        <div class="latest-news-title">{{ article.title }}</div>
+        <div class="latest-news-desc">{{ article.abstract_ }}</div>
+        <div class="latest-news-footer">
+          <div class="latest-news-meta">
+            <div class="latest-news-date">📅 le {{ article.created_at }}</div>
+            <div class="latest-news-author">👤 par {{ article.author_name }}</div>
+          </div>
         </div>
       </div>
     </div>
+    {% endfor %}
+
+    {% if articles.is_empty() && featured.is_none() %}
+    <div class="news-empty">Aucun article pour le moment.</div>
+    {% endif %}
   </div>
 
-  <div class="latest-news-card">
-    <div class="latest-news-img news-img--4"></div>
-    <div class="latest-news-content">
-      <div class="latest-news-cat">Analyse</div>
-      <div class="latest-news-title">Les nouvelles règles BB 2020 : quel impact sur le méta ?</div>
-      <div class="latest-news-desc">Depuis la mise à jour des règles en début de saison, le méta a significativement évolué. Les équipes de cages ont-elles toujours leur place face aux nouvelles formations de passing game ?</div>
-      <div class="latest-news-footer">
-        <div class="latest-news-meta">
-          <div class="latest-news-date">📅 le 15 août 2024</div>
-          <div class="latest-news-author">👤 par Le Tacticien</div>
-        </div>
-      </div>
-    </div>
-  </div>
+  {% if total_pages > 1 %}
+  <div class="pagination">
+    <button class="btn btn-ghost btn-sm pagination__prev {% if page <= 1 %}pagination__btn--disabled{% endif %}"
+            {% if page > 1 %}
+            hx-get="{{ routes.space_home(space_id) }}?page={{ page - 1 }}"
+            hx-target="#app-content"
+            hx-swap="innerHTML"
+            hx-push-url="true"
+            {% endif %}>
+      ←
+    </button>
 
-  <div class="latest-news-card">
-    <div class="latest-news-img news-img--5"></div>
-    <div class="latest-news-content">
-      <div class="latest-news-cat">Interview</div>
-      <div class="latest-news-title">Interview exclusive : Grognash parle de sa saison avec les Orc Boyz</div>
-      <div class="latest-news-desc">Rencontre avec le coach de l'une des équipes les plus redoutables de la ligue. Grognash revient sur ses choix tactiques et ses ambitions pour le prochain championnat.</div>
-      <div class="latest-news-footer">
-        <div class="latest-news-meta">
-          <div class="latest-news-date">📅 le 10 août 2024</div>
-          <div class="latest-news-author">👤 par Le Tacticien</div>
-        </div>
-      </div>
-    </div>
-  </div>
+    {% for item in pagination_items %}
+    {% if item.page.is_none() %}
+    <span class="pagination__ellipsis">…</span>
+    {% else %}
+    <button class="btn btn-sm {% if item.is_active %}pagination__btn--active{% else %}btn-ghost{% endif %}"
+            hx-get="{{ routes.space_home(space_id) }}?page={{ item.page.unwrap() }}"
+            hx-target="#app-content"
+            hx-swap="innerHTML"
+            hx-push-url="true">
+      {{ item.page.unwrap() }}
+    </button>
+    {% endif %}
+    {% endfor %}
 
-  <div class="latest-news-card">
-    <div class="latest-news-img news-img--2"></div>
-    <div class="latest-news-content">
-      <div class="latest-news-cat">Tutoriel</div>
-      <div class="latest-news-title">Guide du débutant : comprendre la gestion d'équipe</div>
-      <div class="latest-news-desc">Vous débutez dans Blood Bowl ? Ce guide vous explique les bases de la gestion de trésorerie, le recrutement de joueurs et les choix stratégiques pour commencer votre saison du bon pied.</div>
-      <div class="latest-news-footer">
-        <div class="latest-news-meta">
-          <div class="latest-news-date">📅 le 5 août 2024</div>
-          <div class="latest-news-author">👤 par L'Administrateur</div>
-        </div>
-      </div>
-    </div>
+    <button class="btn btn-ghost btn-sm pagination__next {% if page >= total_pages %}pagination__btn--disabled{% endif %}"
+            {% if page < total_pages %}
+            hx-get="{{ routes.space_home(space_id) }}?page={{ page + 1 }}"
+            hx-target="#app-content"
+            hx-swap="innerHTML"
+            hx-push-url="true"
+            {% endif %}>
+      →
+    </button>
   </div>
+  {% endif %}
 </div>
-</div>
+
 <div class="home-side">
   <div class="matches-panel">
     <div class="matches-panel-title">Derniers résultats</div>

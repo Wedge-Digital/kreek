@@ -1,0 +1,172 @@
+<div class="article-container">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <span class="breadcrumb-link"
+          hx-get="{{ routes.space_home(space_id) }}"
+          hx-target="#app-content"
+          hx-swap="innerHTML"
+          hx-push-url="true">Actualités</span>
+    {% if !tags.is_empty() %}
+    <span class="breadcrumb-sep">›</span>
+    <span class="breadcrumb-tag">{{ tags[0] }}</span>
+    {% endif %}
+    <span class="breadcrumb-sep">›</span>
+    <span class="breadcrumb-current">{{ title }}</span>
+  </div>
+
+  <!-- Hero image -->
+  <div class="article-hero">
+    {% if let Some(img) = image %}
+    <img src="{{ img }}" class="article-hero-img" alt="">
+    {% endif %}
+    <div class="article-hero-overlay"></div>
+  </div>
+
+  <!-- Header -->
+  <div class="article-header">
+    {% if !tags.is_empty() %}
+    <div class="article-category">{{ tags[0] }}</div>
+    {% endif %}
+    <div class="article-title">{{ title }}</div>
+    <div class="article-meta">
+      <div class="article-author-avatar">{{ author_initial }}</div>
+      <div class="article-author-info">
+        <div class="article-author-name">{{ author_name }}</div>
+        <div class="article-author-date">Publié le {{ created_at }}</div>
+      </div>
+      <div class="article-read-time">
+        <span>📖</span>
+        <span>{{ read_time }} min de lecture</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="article-body">
+
+    {% if !abstract_.is_empty() %}
+    <p class="article-lead">{{ abstract_ }}</p>
+    {% endif %}
+
+    {% for para in paragraphs %}
+    <div>
+      {% if !para.title.is_empty() %}
+      <div class="article-section-title">{{ para.title }}</div>
+      {% endif %}
+      <p class="article-paragraph">{{ para.content }}</p>
+    </div>
+    {% endfor %}
+
+    <!-- Tags -->
+    {% if !tags.is_empty() %}
+    <div class="article-tags">
+      <span class="article-tags-label">Tags :</span>
+      {% for tag in tags %}
+      <span class="article-tag">{{ tag }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Author card -->
+  <div class="author-card">
+    <div class="author-card-avatar">{{ author_initial }}</div>
+    <div class="author-card-info">
+      <div class="author-card-label">À propos de l'auteur</div>
+      <div class="author-card-name">{{ author_name }}</div>
+    </div>
+  </div>
+
+  <!-- Like & Share bar -->
+  <div class="engagement-bar">
+    <div class="engagement-left">
+      <button class="like-btn" id="like-btn" onclick="toggleLike()">
+        <span class="like-icon">🏈</span>
+        <span id="like-label">J'aime !</span>
+      </button>
+    </div>
+    <div class="share-group">
+      <span class="share-label">Partager :</span>
+      <button class="share-btn" title="Partager par email">✉</button>
+      <button class="share-btn-copy" id="copy-btn" onclick="copyArticleLink()">
+        <span>🔗</span>
+        <span id="copy-label">Copier le lien</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Comments -->
+  <div class="comments-section">
+    <div class="comments-header">
+      <div class="comments-title">
+        Commentaires
+        <span class="comments-count-badge">{{ comments.len() }}</span>
+      </div>
+    </div>
+
+    <!-- Compose -->
+    <form hx-post="{{ routes.post_comment(space_id, article_id) }}"
+          hx-target="#app-content"
+          hx-swap="innerHTML">
+      <div class="comment-compose">
+        <div class="compose-avatar">{{ current_user_initial }}</div>
+        <div class="compose-right">
+          <textarea name="content"
+                    class="compose-textarea"
+                    placeholder="Réagissez à cet article…"
+                    rows="3"></textarea>
+          <div class="compose-actions">
+            <button type="submit" class="btn btn-primary-blue btn-sm">Publier</button>
+          </div>
+        </div>
+      </div>
+    </form>
+
+    <!-- List -->
+    {% if !comments.is_empty() %}
+    <div class="comments-list">
+      {% for comment in comments %}
+      <div class="comment">
+        <div class="comment-avatar {{ comment.avatar_class }}">{{ comment.author_initial }}</div>
+        <div class="comment-body">
+          <div class="comment-meta">
+            <span class="comment-author">{{ comment.author_name }}</span>
+            <span class="comment-date">le {{ comment.created_at }}</span>
+          </div>
+          <div class="comment-text">{{ comment.content }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var liked = false;
+  window.toggleLike = function () {
+    liked = !liked;
+    var btn = document.getElementById('like-btn');
+    var label = document.getElementById('like-label');
+    btn.classList.toggle('liked', liked);
+    label.textContent = liked ? 'Aimé !' : "J'aime !";
+  };
+  window.copyArticleLink = function () {
+    var btn = document.getElementById('copy-btn');
+    var label = document.getElementById('copy-label');
+    navigator.clipboard.writeText(window.location.href).then(function () {
+      btn.classList.add('copied');
+      label.textContent = 'Lien copié !';
+      setTimeout(function () {
+        btn.classList.remove('copied');
+        label.textContent = 'Copier le lien';
+      }, 2000);
+    });
+  };
+})();
+</script>

@@ -10,6 +10,15 @@ pub struct SpaceSummary {
     pub logo: String,
 }
 
+impl SpaceSummary {
+    pub fn logo_thumb(&self, width: u32, height: u32) -> String {
+        self.logo.replace(
+            "image/upload/",
+            &format!("image/upload/w_{width},h_{height},c_fill/"),
+        )
+    }
+}
+
 #[derive(Debug)]
 pub enum SpaceRepositoryError {
     SpaceNameAlreadyTaken,

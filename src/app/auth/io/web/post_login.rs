@@ -62,6 +62,7 @@ mod tests {
     use crate::app::competitions::context::CompetitionsContext;
     use crate::app::competitions::io::repository::tests::fake_competition_repository::FakeCompetitionRepository;
     use crate::app::competitions::io::repository::tests::fake_season_repository::FakeSeasonRepository;
+    use crate::app::news::context::NewsContext;
     use crate::app::shared_kernel::authorization::SpaceProfile;
     use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
     use crate::app::spaces::context::SpacesContext;
@@ -109,6 +110,9 @@ mod tests {
                 competition_repository: Arc::new(FakeCompetitionRepository),
                 season_repository:      Arc::new(FakeSeasonRepository),
                 event_bus:              event_bus.clone(),
+            },
+            news: NewsContext {
+                article_repository: Arc::new(FakeNewsRepository),
             },
             references:   crate::app::references::context::ReferencesContext::new(),
             email_service: Arc::new(ConsoleEmailService),

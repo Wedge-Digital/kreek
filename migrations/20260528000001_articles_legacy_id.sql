@@ -1,0 +1,2 @@
+ALTER TABLE articles
+    ADD COLUMN legacy_id INTEGER UNIQUE;

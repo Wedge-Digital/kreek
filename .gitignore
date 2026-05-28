@@ -16,3 +16,9 @@
 # OS
 .DS_Store
 Thumbs.db
+
+# Local scripts (data extraction, one-off tools)
+/scripts/*.sh
+scripts/*.sh
+/scripts/__pycache__
+/scripts/migrate_articles_images.sh

@@ -25,8 +25,9 @@ use crate::web::middleware::bypass_auth::bypass_auth_middleware;
 use crate::web::middleware::require_auth::require_auth;
 use crate::web::middleware::request_log::request_log;
 use crate::app::auth::context::AuthContext;
-use crate::app::{auth, competitions, spaces};
+use crate::app::{auth, competitions, news, spaces};
 use crate::app::competitions::context::CompetitionsContext;
+use crate::app::news::context::NewsContext;
 use crate::app::spaces::context::SpacesContext;
 use crate::app::references::context::ReferencesContext;
 use crate::lib::services::email::ResendMailService;
@@ -71,6 +72,7 @@ async fn main() {
         auth:          AuthContext::new(&pool, event_bus.clone()),
         spaces:        SpacesContext::new(&pool, event_bus.clone()),
         competitions:  CompetitionsContext::new(&pool, event_bus.clone()),
+        news:          NewsContext::new(&pool),
         references:    ReferencesContext::new(),
         email_service: Arc::new(ResendMailService::new(cfg.email.api_key, cfg.email.from, cfg.email.from_name)),
         host_domain:   cfg.host_domain,

@@ -1,0 +1,2 @@
+ALTER TABLE spaces
+    ADD COLUMN legacy_id INTEGER UNIQUE;
