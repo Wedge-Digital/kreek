@@ -14,12 +14,6 @@ pub struct RulesetSelectedTeam {
 }
 
 impl RulesetSelectedTeam {
-    pub(crate) fn get_id(&self) -> TeamId {
-        todo!()
-    }
-}
-
-impl RulesetSelectedTeam {
     pub fn new(team: DraftTeam, ruleset: Ruleset) -> Self {
         RulesetSelectedTeam { team, ruleset }
     }

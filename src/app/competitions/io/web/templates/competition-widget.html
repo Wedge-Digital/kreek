@@ -30,9 +30,9 @@
     </div>
   </div>
 
-  {% if show_detail %}
-  <div id="competition-widget-detail" class="competition-widget-detail"></div>
-  {% endif %}
+  <div id="competition-widget-detail"
+       class="competition-widget-detail"
+       {% if !show_detail %}style="display:none"{% endif %}></div>
 
   {% endif %}
 </div>

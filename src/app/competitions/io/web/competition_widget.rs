@@ -2,7 +2,7 @@ use askama::Template;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use crate::app::competitions::routes::Routes as CompetitionRoutes;
 use crate::app::shared_kernel::common_types::{SeasonId, SpaceId};
 use crate::state::AppState;
@@ -168,16 +168,33 @@ pub struct StructureViewModel {
     pub end_date:     String,
 }
 
+/// Données de création copiées depuis la saison — sérialisées pour les contextes consommateurs.
+/// Chaque contexte borné qui utilise la widget est libre de piocher ce dont il a besoin
+/// dans ces champs cachés au moment de la soumission de son propre formulaire.
+#[derive(Serialize)]
+pub struct TierContext {
+    pub name:     String,
+    pub budget:   u32,
+    pub start_xp: u32,
+    pub rosters:  Vec<String>,
+}
+
+#[derive(Serialize)]
+pub struct CreationRulesContext {
+    pub tiers: Vec<TierContext>,
+}
+
 #[derive(Template)]
 #[template(path = "competition-widget-detail.html")]
 pub struct CompetitionWidgetDetailTemplate {
-    pub competition_id:   String,
-    pub competition_name: String,
-    pub season_id:        String,
-    pub season_name:      String,
-    pub status:           String,
-    pub rules:            Option<RulesViewModel>,
-    pub structure:        Option<StructureViewModel>,
+    pub competition_id:       String,
+    pub competition_name:     String,
+    pub season_id:            String,
+    pub season_name:          String,
+    pub status:               String,
+    pub rules:                Option<RulesViewModel>,
+    pub structure:            Option<StructureViewModel>,
+    pub creation_rules_json:  String,
 }
 
 impl IntoResponse for CompetitionWidgetDetailTemplate {
@@ -210,6 +227,18 @@ pub async fn get_competition_widget_detail(
         return Html(r#"<div class="comp-detail-empty">Données indisponibles pour cette saison.</div>"#).into_response();
     };
 
+    let creation_rules_json = full.rules.as_ref().map(|r| {
+        let ctx = CreationRulesContext {
+            tiers: r.tiers.iter().map(|t| TierContext {
+                name:     t.name.clone(),
+                budget:   t.budget,
+                start_xp: t.starting_xp,
+                rosters:  t.rosters.clone(),
+            }).collect(),
+        };
+        serde_json::to_string(&ctx).unwrap_or_default()
+    }).unwrap_or_default();
+
     let rules = full.rules.map(|r| RulesViewModel {
         win_pts:  r.ranking_rules.win_points,
         draw_pts: r.ranking_rules.draw_points,
@@ -232,12 +261,13 @@ pub async fn get_competition_widget_detail(
     });
 
     CompetitionWidgetDetailTemplate {
-        competition_id:   full.competition_id,
-        competition_name: full.competition_name,
-        season_id:        full.season_id,
-        season_name:      full.season_name,
-        status:           full.status,
+        competition_id:      full.competition_id,
+        competition_name:    full.competition_name,
+        season_id:           full.season_id,
+        season_name:         full.season_name,
+        status:              full.status,
         rules,
         structure,
+        creation_rules_json,
     }.into_response()
 }

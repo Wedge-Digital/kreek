@@ -16,7 +16,6 @@
     </option>
     {% endfor %}
   </select>
-  {% if show_detail %}
   <script>
   (function () {
     var sel    = document.getElementById('season-select');
@@ -26,13 +25,14 @@
     function loadDetail(seasonId) {
       if (!seasonId) { detail.innerHTML = ''; return; }
       var base = sel.dataset.detailBase.replace(/\/[^/]*$/, '');
-      htmx.ajax('GET', base + '/' + seasonId, { target: detail, swap: 'innerHTML' });
+      var showDetail = sel.dataset.showDetail === 'true';
+      var url = base + '/' + seasonId + (showDetail ? '?show_detail=true' : '');
+      htmx.ajax('GET', url, { target: detail, swap: 'innerHTML' });
     }
 
     sel.addEventListener('change', function () { loadDetail(sel.value); });
     loadDetail(sel.value);
   })();
   </script>
-  {% endif %}
   {% endif %}
 </div>

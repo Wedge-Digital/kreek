@@ -13,4 +13,3 @@
 # Les joueurs recrutés :
 # - doivent faire parti du roster cible
 # - doivent respecter les limites de joueurs par équipe
-# -

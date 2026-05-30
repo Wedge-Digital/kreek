@@ -30,6 +30,7 @@ use crate::app::competitions::context::CompetitionsContext;
 use crate::app::news::context::NewsContext;
 use crate::app::spaces::context::SpacesContext;
 use crate::app::references::context::ReferencesContext;
+use crate::app::team_creation::context::TeamCreationContext;
 use crate::lib::services::email::ResendMailService;
 use crate::lib::services::event_bus::event_bus::new_bus;
 use crate::lib::event_listener::event_log_feeder;
@@ -74,6 +75,7 @@ async fn main() {
         competitions:  CompetitionsContext::new(&pool, event_bus.clone()),
         news:          NewsContext::new(&pool),
         references:    ReferencesContext::new(),
+        team_creation: TeamCreationContext::new(&pool),
         email_service: Arc::new(ResendMailService::new(cfg.email.api_key, cfg.email.from, cfg.email.from_name)),
         host_domain:   cfg.host_domain,
         bypass_auth:   cfg.bypass_auth,

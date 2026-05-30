@@ -1,0 +1,97 @@
+use async_trait::async_trait;
+use sqlx::PgPool;
+use crate::app::shared_kernel::common_types::{CoachId, UserId};
+use crate::app::shared_kernel::team::{BaseTeamInfo, TeamId, TeamName};
+use crate::app::team_creation::domain::creation_rules::CreationRules;
+use crate::app::team_creation::domain::team_draft::DraftTeam;
+use crate::app::shared_kernel::common_types::Entity;
+use crate::app::team_creation::ports::{ITeamDraftRepository, RepositoryError};
+
+#[derive(Clone)]
+pub struct TeamDraftRepository {
+    pool: PgPool,
+}
+
+impl TeamDraftRepository {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+}
+
+fn db_err(e: impl std::fmt::Display) -> RepositoryError {
+    RepositoryError::PersistenceError(e.to_string())
+}
+
+#[async_trait]
+impl ITeamDraftRepository for TeamDraftRepository {
+    async fn save(&self, team: &DraftTeam, space_id: &str) -> Result<(), RepositoryError> {
+        let logo = team.base_infos().logo_url().map(|u| u.as_ref().to_string());
+        let creation_rules = serde_json::to_value(team.creation_rules())
+            .map_err(|e| RepositoryError::PersistenceError(e.to_string()))?;
+
+        sqlx::query(
+            "INSERT INTO team_drafts (id, space_id, competition_id, season_id, name, coach_id, logo, creation_rules)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             ON CONFLICT (id) DO UPDATE SET
+               name           = EXCLUDED.name,
+               coach_id       = EXCLUDED.coach_id,
+               logo           = EXCLUDED.logo,
+               creation_rules = EXCLUDED.creation_rules",
+        )
+        .bind(team.get_id().to_string())
+        .bind(space_id)
+        .bind(team.competition_id())
+        .bind(team.season_id())
+        .bind(team.base_infos().name().clone().into_inner())
+        .bind(team.base_infos().coach_id().to_string())
+        .bind(logo)
+        .bind(creation_rules)
+        .execute(&self.pool)
+        .await
+        .map_err(db_err)?;
+
+        Ok(())
+    }
+
+    async fn find_by_id(&self, id: &TeamId) -> Result<Option<DraftTeam>, RepositoryError> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            id:             String,
+            created_by:     String,
+            competition_id: String,
+            season_id:      String,
+            name:           String,
+            coach_id:       String,
+            logo:           Option<String>,
+            creation_rules: serde_json::Value,
+        }
+
+        let row: Option<Row> = sqlx::query_as(
+            "SELECT id, coach_id AS created_by, competition_id, season_id,
+                    name, coach_id, logo, creation_rules
+             FROM team_drafts WHERE id = $1",
+        )
+        .bind(id.to_string())
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(db_err)?;
+
+        let Some(r) = row else { return Ok(None) };
+
+        let entity_id = TeamId::try_new(&r.id).map_err(db_err)?;
+        let created_by = UserId::try_new(&r.created_by).map_err(db_err)?;
+        let coach_id = CoachId::try_new(&r.coach_id).map_err(db_err)?;
+        let team_name = TeamName::try_new(r.name).map_err(db_err)?;
+        let logo = r.logo
+            .as_deref()
+            .and_then(|u| crate::app::shared_kernel::common_types::CloudinaryImage::try_new(u).ok());
+        let creation_rules: CreationRules = serde_json::from_value(r.creation_rules)
+            .map_err(|e| RepositoryError::PersistenceError(e.to_string()))?;
+
+        let base_infos = BaseTeamInfo::new(team_name, coach_id, logo);
+        Ok(Some(DraftTeam::from_parts(
+            entity_id, created_by, base_infos,
+            r.competition_id, r.season_id, creation_rules,
+        )))
+    }
+}

@@ -1,24 +1,40 @@
 use crate::app::shared_kernel::common_types::{Entity, UserId};
 use crate::app::shared_kernel::id_service::IdService;
 use crate::app::shared_kernel::team::{BaseTeamInfo, TeamId};
-use crate::app::team_creation::domain::error::DomainError;
+use crate::app::team_creation::domain::creation_rules::CreationRules;
 use crate::app::team_creation::domain::ruleset::Ruleset;
 use crate::app::team_creation::domain::team_ruleset_selected::RulesetSelectedTeam;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DraftTeam {
-    entity_id: TeamId,
-    created_by: UserId,
-    base_infos: BaseTeamInfo,
+    entity_id:      TeamId,
+    created_by:     UserId,
+    base_infos:     BaseTeamInfo,
+    /// Référence opaque vers le contexte Compétition — jamais jointé.
+    competition_id: String,
+    /// Référence opaque vers le contexte Compétition — jamais jointé.
+    season_id:      String,
+    /// Copie dénormalisée des règles de création au moment de la sélection.
+    creation_rules: CreationRules,
 }
 
 impl DraftTeam {
-    pub fn new<T: IdService>(id_service: &T, created_by: UserId, base_team_infos: BaseTeamInfo) -> Self {
+    pub fn new<T: IdService>(
+        id_service:     &T,
+        created_by:     UserId,
+        base_team_infos: BaseTeamInfo,
+        competition_id: String,
+        season_id:      String,
+        creation_rules: CreationRules,
+    ) -> Self {
         DraftTeam {
             entity_id: id_service.generate_id(),
-            created_by: created_by.clone(),
+            created_by,
             base_infos: base_team_infos,
+            competition_id,
+            season_id,
+            creation_rules,
         }
     }
 
@@ -26,8 +42,37 @@ impl DraftTeam {
         &self.base_infos
     }
 
-    pub fn select_ruleset(self, ruleset: Ruleset) -> Result<RulesetSelectedTeam, DomainError> {
-        Ok(RulesetSelectedTeam::new(self, ruleset))
+    pub fn season_id(&self) -> &str {
+        &self.season_id
+    }
+
+    pub fn competition_id(&self) -> &str {
+        &self.competition_id
+    }
+
+    pub fn creation_rules(&self) -> &CreationRules {
+        &self.creation_rules
+    }
+
+    /// Dérive la `Ruleset` domaine depuis les règles dénormalisées embarquées.
+    pub fn derive_ruleset(&self) -> Ruleset {
+        self.creation_rules.to_ruleset(&self.season_id)
+    }
+
+    /// Reconstruit un `DraftTeam` depuis les données persistées (repository → domaine).
+    pub fn from_parts(
+        entity_id:      TeamId,
+        created_by:     UserId,
+        base_infos:     BaseTeamInfo,
+        competition_id: String,
+        season_id:      String,
+        creation_rules: CreationRules,
+    ) -> Self {
+        DraftTeam { entity_id, created_by, base_infos, competition_id, season_id, creation_rules }
+    }
+
+    pub fn select_ruleset(self, ruleset: Ruleset) -> RulesetSelectedTeam {
+        RulesetSelectedTeam::new(self, ruleset)
     }
 }
 
@@ -39,10 +84,10 @@ impl PartialEq<Self> for DraftTeam {
 
 impl Entity for DraftTeam {
     fn get_id(&self) -> TeamId {
-        return self.entity_id.clone();
+        self.entity_id.clone()
     }
 
     fn get_created_by(&self) -> TeamId {
-        return self.created_by.clone();
+        self.created_by.clone()
     }
 }

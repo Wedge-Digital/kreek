@@ -4,47 +4,56 @@
 {% block content %}
 <link rel="stylesheet" href="/static/css/pages/app-new-team.css">
 <link rel="stylesheet" href="/static/css/components/create-card.css">
-<link rel="stylesheet" href="/static/css/components/upload.css"><div class="create-card">
-    <div class="create-header">
-        <div class="create-header-icon">🏈</div>
-        <div class="create-header-text">
-            <div class="title">Créer une nouvelle équipe</div>
-            <div class="sub">Configurez votre équipe pour la rejoindre</div>
-        </div>
-    </div>
+<link rel="stylesheet" href="/static/css/components/upload.css">
 
-    <div class="form-group create-team">
-        <label class="form-label">Nom de votre équipe</label>
-        <input type="text" class="form-input" placeholder="ex : Les Korrigans FC">
-    </div>
+<form id="draft-team-form"
+      hx-ext="json-enc"
+      hx-post="{{ team_routes.draft_team(space_id) }}"
+      hx-target="#draft-team-error"
+      hx-swap="innerHTML">
 
-    <div class="two-col create-team">
-        {% if is_admin %}
-        <div>
-            <div class="col-label">Qui sera le coach de cette équipe ?</div>
-            <div hx-get="{{ space_routes.members_widget(space_id) }}?single=true"
-                 hx-trigger="load"
-                 hx-swap="innerHTML">
+    <div class="create-card">
+        <div class="create-header">
+            <div class="create-header-icon">🏈</div>
+            <div class="create-header-text">
+                <div class="title">Créer une nouvelle équipe</div>
+                <div class="sub">Configurez votre équipe pour la rejoindre</div>
             </div>
         </div>
-        {% endif %}
-        {% call cmp::cloudinary_upload("logo_url", logo_url_value, "teams/logos", "Logo de votre équipe", logo_error) %}
-    </div>
 
-    <div class="form-group create-team">
+        <div id="draft-team-error" style="color: var(--red); font-size: var(--text-small); min-height: 20px;"></div>
+
+        <div class="form-group create-team">
+            <label class="form-label" for="team_name">Nom de votre équipe</label>
+            <input id="team_name" type="text" name="team_name" class="form-input"
+                   placeholder="ex : Les Korrigans FC" required>
+
+        <div class="form-label">Qui sera le coach de cette équipe ?</div>
+        <div class="coach-select"
+             hx-get="{{ space_routes.members_widget(space_id) }}?single=true&field_name=coach_id"
+             hx-trigger="load"
+             hx-target="this"
+             hx-swap="innerHTML">
+        </div>
+        {% call cmp::cloudinary_upload("logo_url", logo_url_value, "teams/logos", "Logo de votre équipe", logo_error) %}
+
         <div hx-get="{{ comp_routes.competition_widget(space_id) }}"
              hx-trigger="load"
+             hx-target="this"
              hx-swap="innerHTML">
         </div>
     </div>
 
     <div class="create-team buttons">
-        <button class="btn btn-outline btn-action" onclick="window.location.href='app-my-teams.html'">
+        <button type="button" class="btn btn-outline btn-action"
+                onclick="history.back()">
             Annuler
         </button>
-        <button class="btn btn-primary btn-action-wide" onclick="window.location.href='app-roster-list.html'">
-            Suivant →
+        <button type="submit" class="btn btn-primary btn-action-wide">
+            Créer l'équipe →
         </button>
     </div>
-</div>
+    </div>
+
+</form>
 {% endblock %}

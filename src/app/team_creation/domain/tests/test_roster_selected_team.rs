@@ -58,10 +58,16 @@ mod tests {
     }
 
     fn make_roster_selected(roster: Roster, ruleset: Ruleset) -> RosterSelectedTeam {
+        use crate::app::shared_kernel::common_types::CoachId;
+        use crate::app::team_creation::domain::creation_rules::CreationRules;
         let id_service = FakeIdService::new();
         let creator_id = id_service.generate_id();
-        let base = BaseTeamInfo::new(TeamName::try_new("Les Bleus".to_string()).unwrap(), creator_id.clone(), None);
-        let draft = DraftTeam::new(&id_service, creator_id, base);
+        let coach_id = CoachId::try_new("01F8Z3ZQZQZQZQZQZQZQZQZQZQ").unwrap();
+        let base = BaseTeamInfo::new(TeamName::try_new("Les Bleus".to_string()).unwrap(), coach_id, None);
+        let draft = DraftTeam::new(
+            &id_service, creator_id, base,
+            "comp-1".to_string(), "season-1".to_string(), CreationRules::default(),
+        );
         let ruleset_team = RulesetSelectedTeam::new(draft, ruleset);
         RosterSelectedTeam::new(ruleset_team, roster)
     }
