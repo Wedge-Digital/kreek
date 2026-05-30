@@ -77,7 +77,7 @@ pub fn build_player_positions(team: &Team, repo: &dyn IReferenceRepository) -> V
             .join(", ");
         PlayerPositionVm {
             name:          p.position_name.clone(),
-            cost:          p.cost,
+            cost:          p.cost / 1000,
             max_qty_label: format!("0-{}", p.max_quantity),
             ma:            p.ma,
             st:            p.st,
