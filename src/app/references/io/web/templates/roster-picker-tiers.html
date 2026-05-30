@@ -1,0 +1,13 @@
+{% macro roster_picker(rosters) %}
+<div id="roster-select-wrap" style="margin-bottom: var(--p2);">
+  <select id="roster-select">
+    <option value="">Choisissez un roster…</option>
+    {% for item in rosters %}
+    <option value="{{ item.uid }}"
+            data-tier-index="{{ item.tier_index }}"
+            data-tier-name="{{ item.tier_name }}"
+            data-reroll-cost="{{ item.reroll_cost }}">{{ item.name }}</option>
+    {% endfor %}
+  </select>
+</div>
+{% endmacro roster_picker %}

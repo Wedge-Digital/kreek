@@ -1,4 +1,5 @@
 {% extends "app-layout.html" %}
+{% import "roster-picker-tiers.html" as roster_cmp %}
 
 {% block content %}
 <link rel="stylesheet" href="/static/css/pages/app-home.css">
@@ -23,21 +24,7 @@
 
       <!-- Étape 2 : Roster -->
       <div class="section-label">2 — Sélectionnez votre roster</div>
-      <div id="roster-select-wrap" style="margin-bottom: var(--p2);">
-        <select id="roster-select">
-          <option value="">Choisissez un roster…</option>
-          <option value="chaos"    data-tier="2" selected>Chaos Rénégats</option>
-          <option value="elfsy"    data-tier="1">Elfes Sylvestres</option>
-          <option value="hautelfs" data-tier="1">Hauts Elfes</option>
-          <option value="darkelfs" data-tier="1">Elfes Noirs</option>
-          <option value="orques"   data-tier="1">Orques</option>
-          <option value="nains"    data-tier="1">Nains</option>
-          <option value="skavens"  data-tier="1">Skavens</option>
-          <option value="undead"   data-tier="2">Morts-vivants</option>
-          <option value="humans"   data-tier="1">Humains</option>
-          <option value="lizards"  data-tier="1">Hommes-lézards</option>
-        </select>
-      </div>
+      {% call roster_cmp::roster_picker(rosters) %}
 
       <!-- Étape 3 : Joueurs -->
       <div class="section-label">3 — Sélectionnez vos joueurs</div>
@@ -281,11 +268,11 @@
 
 <script>
 (function () {
-  var TIERS   = { '1': 'Tier 1', '2': 'Tier 2', '3': 'Tier 3' };
-  var CLASSES = { '1': 'tier-1', '2': 'tier-2', '3': 'tier-3' };
-  function badge(tier) {
-    if (!tier) return '';
-    return '<span class="roster-tier-badge ' + (CLASSES[tier] || '') + '">' + (TIERS[tier] || '') + '</span>';
+  var CLASSES = ['', 'tier-1', 'tier-2', 'tier-3', 'tier-4'];
+  function badge(d) {
+    if (!d.tierName) return '';
+    var cls = CLASSES[d.tierIndex] || '';
+    return '<span class="roster-tier-badge ' + cls + '">' + d.tierName + '</span>';
   }
   var el = document.getElementById('roster-select');
   if (el && !el.tomselect) {
@@ -294,10 +281,10 @@
       maxItems: 1,
       render: {
         option: function (d) {
-          return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><span>' + d.text + '</span>' + badge(d.tier) + '</div>';
+          return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><span>' + d.text + '</span>' + badge(d) + '</div>';
         },
         item: function (d) {
-          return '<div style="display:flex;align-items:center;gap:8px;"><span>' + d.text + '</span>' + badge(d.tier) + '</div>';
+          return '<div style="display:flex;align-items:center;gap:8px;"><span>' + d.text + '</span>' + badge(d) + '</div>';
         },
       },
     });

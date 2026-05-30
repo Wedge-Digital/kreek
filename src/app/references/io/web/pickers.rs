@@ -1,8 +1,17 @@
 use crate::app::references::domain::port::IReferenceRepository;
+use crate::app::team_creation::domain::creation_rules::CreationRules;
 
 pub struct RosterPickerItem {
     pub uid:  String,
     pub name: String,
+}
+
+pub struct RosterPickerItemWithTier {
+    pub uid:         String,
+    pub name:        String,
+    pub tier_name:   String,  // nom du tier dans la compétition (ex. "Débutants")
+    pub tier_index:  usize,   // position 1-based du tier dans les règles (pour la classe CSS)
+    pub reroll_cost: u32,
 }
 
 pub struct InducementPickerItem {
@@ -14,6 +23,31 @@ pub struct InducementPickerItem {
 pub struct StarPlayerPickerItem {
     pub uid:  String,
     pub name: String,
+}
+
+pub fn build_roster_items_with_tiers(
+    repo:  &dyn IReferenceRepository,
+    rules: &CreationRules,
+) -> Vec<RosterPickerItemWithTier> {
+    let mut items: Vec<RosterPickerItemWithTier> = rules.tiers.iter()
+        .enumerate()
+        .flat_map(|(i, tier)| {
+            let tier_name  = tier.name.clone();
+            let tier_index = i + 1;
+            tier.rosters.iter().filter_map(move |uid| {
+                repo.find_team_by_uid(uid).map(|t| RosterPickerItemWithTier {
+                    uid:        t.uid.clone(),
+                    name:       t.name.clone(),
+                    tier_name:  tier_name.clone(),
+                    tier_index,
+                    reroll_cost: t.reroll_cost,
+                })
+            })
+        })
+        .collect();
+
+    items.sort_by(|a, b| a.name.cmp(&b.name));
+    items
 }
 
 pub fn build_roster_items(repo: &dyn IReferenceRepository) -> Vec<RosterPickerItem> {
