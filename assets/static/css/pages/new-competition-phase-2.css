@@ -1,7 +1,6 @@
-.create-card { background: var(--white); border-radius: 12px; padding: var(--p4); max-width: 900px; margin: 0 auto; }
 .create-header {
     background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
-    border-radius: 10px; padding: var(--p2); margin-bottom: var(--p3);
+    padding: var(--p2);
     display: flex; align-items: center; gap: var(--p1);
 }
 .create-header-icon { width: 48px; height: 48px; border-radius: 10px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 24px; }
