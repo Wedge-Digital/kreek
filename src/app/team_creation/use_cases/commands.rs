@@ -1,7 +1,7 @@
 use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, UserId};
 use crate::app::shared_kernel::team::{TeamId, TeamName};
 use crate::app::team_creation::domain::creation_rules::CreationRules;
-use crate::app::team_creation::domain::roster::Roster;
+use crate::app::team_creation::domain::roster::{PlayerId, Roster};
 use crate::app::team_creation::domain::ruleset::Ruleset;
 
 pub struct RegisterNewTeamCommand {
@@ -22,4 +22,10 @@ pub struct SelectRulesetCommand {
 pub struct ChooseRosterCommand {
     pub team_id: TeamId,
     pub roster:  Roster,
+}
+
+pub struct HirePlayerCommand {
+    pub team_id:   TeamId,
+    pub space_id:  String,
+    pub player_id: PlayerId,
 }

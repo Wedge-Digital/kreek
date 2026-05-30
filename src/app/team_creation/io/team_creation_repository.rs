@@ -5,7 +5,8 @@ use crate::app::shared_kernel::team::{BaseTeamInfo, TeamId, TeamName};
 use crate::app::team_creation::domain::creation_rules::CreationRules;
 use crate::app::team_creation::domain::team_draft::DraftTeam;
 use crate::app::shared_kernel::common_types::Entity;
-use crate::app::team_creation::ports::{ITeamDraftRepository, RepositoryError};
+use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
+use crate::app::team_creation::ports::{ITeamDraftRepository, ITeamRosterRepository, RepositoryError};
 
 #[derive(Clone)]
 pub struct TeamDraftRepository {
@@ -133,5 +134,62 @@ impl ITeamDraftRepository for TeamDraftRepository {
             let base_infos = BaseTeamInfo::new(team_name, coach_id_val, logo);
             Ok(DraftTeam::from_parts(entity_id, created_by, base_infos, r.competition_id, r.season_id, creation_rules))
         }).collect()
+    }
+}
+
+// ── TeamRosterRepository ──────────────────────────────────────────────────────
+
+#[derive(Clone)]
+pub struct TeamRosterRepository {
+    pool: PgPool,
+}
+
+impl TeamRosterRepository {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+}
+
+#[async_trait]
+impl ITeamRosterRepository for TeamRosterRepository {
+    async fn save(&self, team: &RosterSelectedTeam, space_id: &str) -> Result<(), RepositoryError> {
+        let state = serde_json::to_value(team)
+            .map_err(|e| RepositoryError::PersistenceError(e.to_string()))?;
+
+        sqlx::query(
+            "INSERT INTO team_roster_selections (id, space_id, state, updated_at)
+             VALUES ($1, $2, $3, now())
+             ON CONFLICT (id) DO UPDATE SET
+               state      = EXCLUDED.state,
+               updated_at = now()",
+        )
+        .bind(team.get_id().to_string())
+        .bind(space_id)
+        .bind(state)
+        .execute(&self.pool)
+        .await
+        .map_err(db_err)?;
+
+        Ok(())
+    }
+
+    async fn find_by_id(&self, id: &TeamId) -> Result<Option<RosterSelectedTeam>, RepositoryError> {
+        #[derive(sqlx::FromRow)]
+        struct Row { state: serde_json::Value }
+
+        let row: Option<Row> = sqlx::query_as(
+            "SELECT state FROM team_roster_selections WHERE id = $1",
+        )
+        .bind(id.to_string())
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(db_err)?;
+
+        let Some(r) = row else { return Ok(None) };
+
+        let team: RosterSelectedTeam = serde_json::from_value(r.state)
+            .map_err(|e| RepositoryError::PersistenceError(e.to_string()))?;
+
+        Ok(Some(team))
     }
 }

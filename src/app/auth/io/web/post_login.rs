@@ -121,7 +121,8 @@ mod tests {
             },
             references:    crate::app::references::context::ReferencesContext::new(),
             team_creation: crate::app::team_creation::context::TeamCreationContext {
-                team_repository: Arc::new(FakeTeamDraftRepository),
+                team_repository:   Arc::new(FakeTeamDraftRepository),
+                roster_repository: Arc::new(FakeTeamRosterRepository),
             },
             email_service: Arc::new(ConsoleEmailService),
             host_domain:   "localhost:8080".into(),
@@ -208,6 +209,15 @@ mod tests {
             -> Result<Option<crate::app::team_creation::domain::team_draft::DraftTeam>, crate::app::team_creation::ports::RepositoryError> { Ok(None) }
         async fn find_by_coach_and_space(&self, _: &str, _: &str)
             -> Result<Vec<crate::app::team_creation::domain::team_draft::DraftTeam>, crate::app::team_creation::ports::RepositoryError> { Ok(vec![]) }
+    }
+
+    struct FakeTeamRosterRepository;
+    #[async_trait::async_trait]
+    impl crate::app::team_creation::ports::ITeamRosterRepository for FakeTeamRosterRepository {
+        async fn save(&self, _: &crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam, _: &str)
+            -> Result<(), crate::app::team_creation::ports::RepositoryError> { Ok(()) }
+        async fn find_by_id(&self, _: &crate::app::shared_kernel::team::TeamId)
+            -> Result<Option<crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam>, crate::app::team_creation::ports::RepositoryError> { Ok(None) }
     }
 
     #[tokio::test]

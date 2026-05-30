@@ -1,5 +1,5 @@
 {% for pos in positions %}
-<tr>
+<tr id="player-row-{{ pos.uid }}">
   <td>{{ pos.max_qty_label }}</td>
   <td class="player-name">{{ pos.name }}</td>
   <td>{{ pos.cost }}</td>
@@ -7,8 +7,17 @@
   <td>{{ pos.ag }}</td><td>{{ pos.pa }}</td><td>{{ pos.av }}</td>
   <td class="player-skills">{{ pos.skills }}</td>
   <td>0</td><td>0 kPo</td>
-  <td><button class="tbl-btn" type="button">+</button></td>
-  <td><button class="tbl-btn" type="button">−</button></td>
+  <td>
+    <button class="tbl-btn" type="button"
+            hx-post="{{ team_routes.hire_player(space_id, team_id) }}"
+            hx-ext="json-enc"
+            hx-vals='{"player_id":"{{ pos.uid }}"}'
+            hx-target="closest tr"
+            hx-swap="outerHTML">+</button>
+  </td>
+  <td>
+    <button class="tbl-btn" type="button" disabled>−</button>
+  </td>
 </tr>
 {% endfor %}
 {% if positions.is_empty() %}

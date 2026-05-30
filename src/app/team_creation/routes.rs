@@ -1,8 +1,9 @@
 pub mod path {
-    pub const DRAFT_TEAM:      &str = "/app/{space_id}/team/create";
-    pub const TEAM_BUILD:      &str = "/app/{space_id}/team/{team_id}/build";
-    pub const MY_TEAMS:        &str = "/app/{space_id}/team/list";
-    pub const ROSTER_PLAYERS:  &str = "/app/{space_id}/team/{team_id}/roster/{roster_uid}/players";
+    pub const DRAFT_TEAM:     &str = "/app/{space_id}/team/create";
+    pub const TEAM_BUILD:     &str = "/app/{space_id}/team/{team_id}/build";
+    pub const MY_TEAMS:       &str = "/app/{space_id}/team/list";
+    pub const ROSTER_PLAYERS: &str = "/app/{space_id}/team/{team_id}/roster/{roster_uid}/players";
+    pub const HIRE_PLAYER:    &str = "/app/{space_id}/team/{team_id}/players/hire";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -23,5 +24,13 @@ impl Routes {
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
             .replace("{roster_uid}", roster_uid)
+    }
+    pub fn hire_player(&self, space_id: &str, team_id: &str) -> String {
+        path::HIRE_PLAYER
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+    pub fn fire_player(&self, space_id: &str, team_id: &str) -> String {
+        format!("/app/{space_id}/team/{team_id}/players/fire")
     }
 }

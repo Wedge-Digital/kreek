@@ -51,7 +51,24 @@ pub fn build_roster_items_with_tiers(
     items
 }
 
+pub struct HiredPlayerRowVm {
+    pub uid:           String,
+    pub name:          String,
+    pub cost_kpo:      u32,
+    pub max_qty_label: String,
+    pub ma:            u8,
+    pub st:            u8,
+    pub ag:            String,
+    pub pa:            String,
+    pub av:            String,
+    pub skills:        String,
+    pub quantity:      usize,
+    pub line_cost_kpo: u32,
+    pub is_max:        bool,
+}
+
 pub struct PlayerPositionVm {
+    pub uid:           String,
     pub name:          String,
     pub cost:          u32,
     pub max_qty_label: String,
@@ -76,6 +93,7 @@ pub fn build_player_positions(team: &Team, repo: &dyn IReferenceRepository) -> V
             .collect::<Vec<_>>()
             .join(", ");
         PlayerPositionVm {
+            uid:           p.uid.clone(),
             name:          p.position_name.clone(),
             cost:          p.cost / 1000,
             max_qty_label: format!("0-{}", p.max_quantity),
