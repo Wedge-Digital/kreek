@@ -206,6 +206,8 @@ mod tests {
             -> Result<(), crate::app::team_creation::ports::RepositoryError> { Ok(()) }
         async fn find_by_id(&self, _: &crate::app::shared_kernel::team::TeamId)
             -> Result<Option<crate::app::team_creation::domain::team_draft::DraftTeam>, crate::app::team_creation::ports::RepositoryError> { Ok(None) }
+        async fn find_by_coach_and_space(&self, _: &str, _: &str)
+            -> Result<Vec<crate::app::team_creation::domain::team_draft::DraftTeam>, crate::app::team_creation::ports::RepositoryError> { Ok(vec![]) }
     }
 
     #[tokio::test]
