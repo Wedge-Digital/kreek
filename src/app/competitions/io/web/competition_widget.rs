@@ -47,16 +47,22 @@ pub async fn get_competition_widget(
         return StatusCode::BAD_REQUEST.into_response();
     };
 
-    let competitions = state.competitions.competition_repository
+    let competitions = match state.competitions.competition_repository
         .find_with_seasons(&space_id)
         .await
-        .unwrap_or_default()
-        .into_iter()
-        .map(|c| CompetitionItem {
-            competition_id:   c.competition_id,
-            competition_name: c.competition_name,
-        })
-        .collect();
+    {
+        Ok(list) => list,
+        Err(e) => {
+            tracing::error!("competition_widget find_with_seasons space={space_id_raw}: {e}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    }
+    .into_iter()
+    .map(|c| CompetitionItem {
+        competition_id:   c.competition_id,
+        competition_name: c.competition_name,
+    })
+    .collect();
 
     CompetitionWidgetTemplate {
         routes:      Default::default(),
@@ -110,18 +116,24 @@ pub async fn get_competition_widget_seasons(
 
     let competition_id = query.competition_id.unwrap_or_default();
 
-    let seasons = state.competitions.competition_repository
+    let seasons = match state.competitions.competition_repository
         .find_with_seasons(&space_id)
         .await
-        .unwrap_or_default()
-        .into_iter()
-        .find(|c| c.competition_id == competition_id)
-        .map(|c| c.seasons.into_iter().map(|s| SeasonItem {
-            season_id:   s.season_id,
-            season_name: s.season_name,
-            status:      s.status,
-        }).collect())
-        .unwrap_or_default();
+    {
+        Ok(list) => list,
+        Err(e) => {
+            tracing::error!("competition_widget_seasons find_with_seasons space={space_id_raw}: {e}");
+            vec![]
+        }
+    }
+    .into_iter()
+    .find(|c| c.competition_id == competition_id)
+    .map(|c| c.seasons.into_iter().map(|s| SeasonItem {
+        season_id:   s.season_id,
+        season_name: s.season_name,
+        status:      s.status,
+    }).collect())
+    .unwrap_or_default();
 
     SeasonSelectorTemplate {
         routes:      Default::default(),
@@ -185,11 +197,16 @@ pub async fn get_competition_widget_detail(
         return StatusCode::BAD_REQUEST.into_response();
     };
 
-    let Some(full) = state.competitions.season_repository
+    let Some(full) = (match state.competitions.season_repository
         .find_full(&season_id)
         .await
-        .unwrap_or(None)
-    else {
+    {
+        Ok(opt) => opt,
+        Err(e) => {
+            tracing::error!("competition_widget_detail find_full season={season_id_raw}: {e}");
+            None
+        }
+    }) else {
         return Html(r#"<div class="comp-detail-empty">Données indisponibles pour cette saison.</div>"#).into_response();
     };
 

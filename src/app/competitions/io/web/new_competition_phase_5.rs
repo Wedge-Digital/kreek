@@ -91,10 +91,26 @@ pub async fn get_new_competition_phase_5(
         }
     };
 
-    let season_name = season_info.ok().flatten().map(|s| s.name).unwrap_or_default();
-    let rules       = rules.unwrap_or(None);
-    let structure   = structure.unwrap_or(None);
-    let invitations = invitations.unwrap_or(None);
+    let season_name = match season_info {
+        Ok(Some(s)) => s.name,
+        Ok(None)    => String::new(),
+        Err(e) => {
+            tracing::warn!("phase5 find_base_info season {season_id}: {e}");
+            String::new()
+        }
+    };
+    let rules = match rules {
+        Ok(v)   => v,
+        Err(e)  => { tracing::warn!("phase5 find_rules season {season_id}: {e}"); None }
+    };
+    let structure = match structure {
+        Ok(v)   => v,
+        Err(e)  => { tracing::warn!("phase5 find_structure season {season_id}: {e}"); None }
+    };
+    let invitations = match invitations {
+        Ok(v)   => v,
+        Err(e)  => { tracing::warn!("phase5 find_invitations season {season_id}: {e}"); None }
+    };
 
     // ── Rules ────────────────────────────────────────────────────────────────
     let (has_rules, ranking_points_label, bonus_label, tiers_label, rosters_preview, rosters_extra) =

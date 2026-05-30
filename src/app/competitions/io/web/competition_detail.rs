@@ -308,7 +308,14 @@ async fn load_page_base(
         }
     };
 
-    let season_name          = season_info.ok().flatten().map(|s| s.name).unwrap_or_default();
+    let season_name = match season_info {
+        Ok(Some(s)) => s.name,
+        Ok(None)    => String::new(),
+        Err(e) => {
+            tracing::warn!("competition_detail find_base_info season {sid}: {e}");
+            String::new()
+        }
+    };
     let competition_initials = initials(&base.name);
 
     let competition_logo = base.logo.map(|url| {
