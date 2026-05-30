@@ -9,6 +9,16 @@ pub struct SeasonBaseInfo {
     pub name: String,
 }
 
+pub struct SeasonFull {
+    pub season_id:        String,
+    pub season_name:      String,
+    pub status:           String,
+    pub competition_id:   String,
+    pub competition_name: String,
+    pub rules:            Option<CompetitionRules>,
+    pub structure:        Option<CompetitionStructure>,
+}
+
 #[derive(Debug)]
 pub enum SeasonRepositoryError {
     SeasonNotFound,
@@ -36,4 +46,5 @@ pub trait ISeasonRepository: Send + Sync {
     async fn find_invitations(&self, season_id: &SeasonId)                                     -> Result<Option<CompetitionInvitations>, SeasonRepositoryError>;
     async fn save_invitations(&self, season_id: &SeasonId, invitations: &CompetitionInvitations) -> Result<(), SeasonRepositoryError>;
     async fn set_ready(&self, season_id: &SeasonId)                                            -> Result<(), SeasonRepositoryError>;
+    async fn find_full(&self, season_id: &SeasonId)                                            -> Result<Option<SeasonFull>, SeasonRepositoryError>;
 }

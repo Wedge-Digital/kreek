@@ -1,3 +1,10 @@
+{% extends "app-layout.html" %}
+{% import "components/upload_widget.html" as cmp %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/app-new-team.css">
+<link rel="stylesheet" href="/static/css/components/create-card.css">
+<link rel="stylesheet" href="/static/css/components/upload.css">
 <div class="create-card">
     <div class="create-header">
         <div class="create-header-icon">🏈</div>
@@ -16,25 +23,21 @@
         {% if is_admin %}
         <div>
             <div class="col-label">Qui sera le coach de cette équipe ?</div>
-            <select class="form-select">
-                <option>Sélectionnez un coach...</option>
-                <option selected>Colonel Castor (moi)</option>
-                <option>Le Tacticien</option>
-                <option>Whiskers</option>
-            </select>
+            <div hx-get="{{ space_routes.members_widget(space_id) }}?single=true"
+                 hx-trigger="load"
+                 hx-swap="innerHTML">
+            </div>
         </div>
         {% endif %}
-        {% import "components/upload_widget.html" as cmp %}
         {% call cmp::cloudinary_upload("logo_url", logo_url_value, "teams/logos", "Logo de votre équipe", logo_error) %}
     </div>
 
     <div class="form-group create-team">
         <label class="form-label">Compétition</label>
-        <select class="form-select">
-            <option>Choisissez une competition...</option>
-            <option>Ligue Open</option>
-            <option>Ligue Hivernale</option>
-        </select>
+        <div hx-get="{{ comp_routes.competition_widget(space_id) }}"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+        </div>
     </div>
 
     <div class="create-team buttons">
@@ -46,3 +49,4 @@
         </button>
     </div>
 </div>
+{% endblock %}

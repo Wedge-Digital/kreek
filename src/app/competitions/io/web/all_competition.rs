@@ -1,12 +1,12 @@
 use askama::Template;
 use axum::extract::{Path, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use crate::app::competitions::domain::competition_repository_port::CompetitionSummary;
 use crate::app::competitions::routes::Routes;
 use crate::app::shared_kernel::common_types::SpaceId;
 use crate::state::AppState;
-use crate::web::app_layout::AppLayout;
+use crate::web::routes::Routes as WebRoutes;
 
 pub struct CompetitionCardViewModel {
     pub id:           String,
@@ -34,6 +34,7 @@ fn card_url(routes: &Routes, space_id: &str, c: &CompetitionSummary) -> String {
 #[derive(Template)]
 #[template(path = "all-competitions.html")]
 pub struct AllCompetitionTemplate {
+    pub web_routes:         WebRoutes,
     pub competition_routes: Routes,
     pub space_id:           String,
     pub competitions:       Vec<CompetitionCardViewModel>,
@@ -42,6 +43,7 @@ pub struct AllCompetitionTemplate {
 impl Default for AllCompetitionTemplate {
     fn default() -> Self {
         Self {
+            web_routes:         WebRoutes,
             competition_routes: Routes,
             space_id:           String::new(),
             competitions:       Vec::new(),
@@ -61,7 +63,6 @@ impl IntoResponse for AllCompetitionTemplate {
 pub async fn get_all_competition(
     Path(space_id): Path<String>,
     State(state):   State<AppState>,
-    headers:        HeaderMap,
 ) -> impl IntoResponse {
     let summaries = match SpaceId::try_new(&space_id) {
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
@@ -85,12 +86,5 @@ pub async fn get_all_competition(
         }
     }).collect();
 
-    let tmpl = AllCompetitionTemplate { space_id, competitions, ..Default::default() };
-
-    if headers.contains_key("hx-request") {
-        tmpl.into_response()
-    } else {
-        let content = tmpl.render().unwrap_or_default();
-        AppLayout { content, routes: Default::default() }.into_response()
-    }
+    AllCompetitionTemplate { space_id, competitions, ..Default::default() }.into_response()
 }

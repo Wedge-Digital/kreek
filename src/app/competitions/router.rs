@@ -7,6 +7,7 @@ use crate::app::competitions::io::web::new_competition::{get_new_competition_pha
 use crate::app::competitions::io::web::new_competition_phase_3::{get_new_competition_phase_3, post_competition_structure};
 use crate::app::competitions::io::web::new_competition_phase_4::{get_new_competition_phase_4, post_competition_invitations};
 use crate::app::competitions::io::web::new_competition_phase_5::{get_new_competition_phase_5, post_finalize_competition};
+use crate::app::competitions::io::web::competition_widget::{get_competition_widget, get_competition_widget_detail};
 use crate::app::competitions::routes::path;
 
 pub fn router() -> Router<AppState> {
@@ -23,4 +24,6 @@ pub fn router() -> Router<AppState> {
         .route(path::COMPETITION_TAB_MATCHES,     get(get_tab_matches))
         .route(path::COMPETITION_TAB_TEAMS,       get(get_tab_teams))
         .route(path::COMPETITION_TAB_STATS,       get(get_tab_stats))
+        .route(path::COMPETITION_WIDGET,          get(get_competition_widget))
+        .route(path::COMPETITION_WIDGET_DETAIL,   get(get_competition_widget_detail))
 }

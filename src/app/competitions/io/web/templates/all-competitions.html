@@ -1,3 +1,8 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/all-competition.css">
+<link rel="stylesheet" href="/static/css/components/competition-card.css">
 <div class="competition-container">
 
   {% if competitions.is_empty() %}
@@ -12,6 +17,7 @@
     <button class="btn btn-primary"
             hx-get="{{ competition_routes.new_competition(space_id) }}"
             hx-target="#app-content"
+            hx-select="#app-content"
             hx-swap="innerHTML"
             hx-trigger="click"
             hx-push-url="true">
@@ -26,6 +32,7 @@
     <button class="btn btn-primary btn-fit"
             hx-get="{{ competition_routes.new_competition(space_id) }}"
             hx-target="#app-content"
+            hx-select="#app-content"
             hx-swap="innerHTML"
             hx-trigger="click"
             hx-push-url="true">
@@ -38,6 +45,7 @@
     <div class="competition-card"
          hx-get="{{ c.url }}"
          hx-target="#app-content"
+         hx-select="#app-content"
          hx-swap="innerHTML"
          hx-push-url="true">
       <div class="competition-card-logo">
@@ -54,3 +62,4 @@
   {% endif %}
 
 </div>
+{% endblock %}

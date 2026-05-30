@@ -1,15 +1,18 @@
 use askama::Template;
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
-use crate::app::team_creation::routes::Routes;
-use crate::web::app_layout::AppLayout;
+use crate::app::competitions::routes::Routes as CompetitionRoutes;
+use crate::app::spaces::routes::Routes as SpaceRoutes;
 use crate::web::extractors::space_permissions::SpacePermissions;
 use crate::web::routes::Routes as WebRoutes;
 
-#[derive(Template, Default)]
+#[derive(Template)]
 #[template(path = "draft-team.html")]
 pub struct DraftTeamTemplate {
-    pub routes:          Routes,
+    pub web_routes:      WebRoutes,
+    pub comp_routes:     CompetitionRoutes,
+    pub space_routes:    SpaceRoutes,
+    pub space_id:        String,
     pub logo_url_value:  String,
     pub logo_error:      Option<String>,
     pub is_admin:        bool,
@@ -26,14 +29,14 @@ impl IntoResponse for DraftTeamTemplate {
 
 pub async fn draft_team(
     perms: SpacePermissions,
-    headers: HeaderMap,
 ) -> impl IntoResponse {
-    let tmpl = DraftTeamTemplate { is_admin: perms.is_admin(), ..Default::default() };
-
-    if headers.contains_key("hx-request") {
-        tmpl.into_response()
-    } else {
-        let content = tmpl.render().unwrap_or_default();
-        AppLayout { content, routes: WebRoutes }.into_response()
-    }
+    DraftTeamTemplate {
+        web_routes:     Default::default(),
+        comp_routes:    Default::default(),
+        space_routes:   Default::default(),
+        space_id:       perms.space_id.to_string(),
+        logo_url_value: String::new(),
+        logo_error:     None,
+        is_admin:       perms.is_admin(),
+    }.into_response()
 }

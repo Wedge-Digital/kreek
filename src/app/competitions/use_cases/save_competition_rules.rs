@@ -72,6 +72,7 @@ mod tests {
         async fn find_invitations(&self, _: &SeasonId) -> Result<Option<CompetitionInvitations>, SeasonRepositoryError> { Ok(None) }
         async fn save_invitations(&self, _: &SeasonId, _: &CompetitionInvitations) -> Result<(), SeasonRepositoryError> { Ok(()) }
         async fn set_ready(&self, _: &SeasonId) -> Result<(), SeasonRepositoryError> { Ok(()) }
+        async fn find_full(&self, _: &SeasonId) -> Result<Option<crate::app::competitions::domain::season_repository_port::SeasonFull>, SeasonRepositoryError> { Ok(None) }
     }
 
     fn base_rules(tiers: Vec<TierRule>) -> CompetitionRules {

@@ -1,12 +1,12 @@
 use askama::Template;
 use axum::extract::State;
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use std::collections::HashSet;
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::spaces::routes::Routes;
+use crate::app::spaces::routes::Routes as SpaceRoutes;
 use crate::state::AppState;
-use crate::web::app_layout::AppLayout;
+use crate::web::routes::Routes as WebRoutes;
 
 pub struct SpaceCard {
     pub id:        String,
@@ -18,8 +18,9 @@ pub struct SpaceCard {
 #[derive(Template)]
 #[template(path = "space-all.html")]
 pub struct SpaceAllTemplate {
-    pub spaces: Vec<SpaceCard>,
-    pub routes: Routes,
+    pub web_routes:    WebRoutes,
+    pub space_routes:  SpaceRoutes,
+    pub spaces:        Vec<SpaceCard>,
 }
 
 impl IntoResponse for SpaceAllTemplate {
@@ -34,7 +35,6 @@ impl IntoResponse for SpaceAllTemplate {
 pub async fn space_all(
     auth_session: AuthSession,
     State(state): State<AppState>,
-    headers: HeaderMap,
 ) -> impl IntoResponse {
     let Some(user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
@@ -57,12 +57,9 @@ pub async fn space_all(
         })
         .collect();
 
-    let tmpl = SpaceAllTemplate { spaces, routes: Routes::default() };
-
-    if headers.contains_key("hx-request") {
-        tmpl.into_response()
-    } else {
-        let content = tmpl.render().unwrap_or_default();
-        AppLayout { content, ..Default::default() }.into_response()
-    }
+    SpaceAllTemplate {
+        web_routes:   Default::default(),
+        space_routes: Default::default(),
+        spaces,
+    }.into_response()
 }

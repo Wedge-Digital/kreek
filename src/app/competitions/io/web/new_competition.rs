@@ -1,7 +1,7 @@
 use askama::Template;
 use axum::body::Body;
 use axum::extract::{Path, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use axum::Json;
 use serde::Deserialize;
@@ -18,13 +18,14 @@ use crate::app::references::io::web::pickers::{
 use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, CompetitionId, SeasonId, SpaceId};
 use crate::app::shared_kernel::competition_name::CompetitionName;
 use crate::state::AppState;
-use crate::web::app_layout::AppLayout;
+use crate::web::routes::Routes as WebRoutes;
 
 // ── Phase 2 ──────────────────────────────────────────────────────────────────
 
 #[derive(Template)]
 #[template(path = "new-competition-phase-2.html")]
 pub struct NewCompetitionPhase2Template {
+    pub web_routes:            WebRoutes,
     pub competition_routes:    Routes,
     pub space_id:              String,
     pub competition_id:        String,
@@ -48,7 +49,6 @@ impl IntoResponse for NewCompetitionPhase2Template {
 pub async fn get_new_competition_phase_2(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
-    headers: HeaderMap,
 ) -> impl IntoResponse {
     let sid = match SeasonId::try_new(&season_id) {
         Ok(id) => id,
@@ -75,8 +75,9 @@ pub async fn get_new_competition_phase_2(
         .unwrap_or_else(|| "Saison 1".to_string());
 
     let refs = state.references.repository.as_ref();
-    let tmpl = NewCompetitionPhase2Template {
-        competition_routes: Routes,
+    NewCompetitionPhase2Template {
+        web_routes:          WebRoutes,
+        competition_routes:  Routes,
         space_id,
         competition_id,
         season_id,
@@ -85,13 +86,7 @@ pub async fn get_new_competition_phase_2(
         inducements:         build_inducement_items(refs),
         star_players:        build_star_player_items(refs),
         existing_rules_json,
-    };
-    if headers.contains_key("hx-request") {
-        tmpl.into_response()
-    } else {
-        let content = tmpl.render().unwrap_or_default();
-        AppLayout { content, routes: Default::default() }.into_response()
-    }
+    }.into_response()
 }
 
 // ── Phase 1 ──────────────────────────────────────────────────────────────────
@@ -99,6 +94,7 @@ pub async fn get_new_competition_phase_2(
 #[derive(Template, Default)]
 #[template(path = "new-competition-phase-1.html")]
 pub struct NewCompetitionTemplate {
+    pub web_routes:           WebRoutes,
     pub space_id:             String,
     pub competition_id:       Option<String>,
     pub season_id:            Option<String>,
@@ -130,22 +126,14 @@ fn members_widget_url(space_id: &str, selected_ids: &[String]) -> String {
 
 pub async fn get_new_competition_phase_1(
     Path(space_id): Path<String>,
-    headers: HeaderMap,
 ) -> impl IntoResponse {
     let url = members_widget_url(&space_id, &[]);
-    let tmpl = NewCompetitionTemplate { space_id, members_widget_url: url, ..Default::default() };
-    if headers.contains_key("hx-request") {
-        tmpl.into_response()
-    } else {
-        let content = tmpl.render().unwrap_or_default();
-        AppLayout { content, routes: Default::default() }.into_response()
-    }
+    NewCompetitionTemplate { space_id, members_widget_url: url, ..Default::default() }.into_response()
 }
 
 pub async fn get_new_competition_phase_1_edit(
     Path((space_id, competition_id)): Path<(String, String)>,
     State(state): State<AppState>,
-    headers: HeaderMap,
 ) -> impl IntoResponse {
     let cid = match CompetitionId::try_new(&competition_id) {
         Ok(id) => id,
@@ -165,8 +153,8 @@ pub async fn get_new_competition_phase_1_edit(
         .flatten()
         .map(|s| s.to_string());
 
-    let url  = members_widget_url(&space_id, &base.admin_ids);
-    let tmpl = NewCompetitionTemplate {
+    let url = members_widget_url(&space_id, &base.admin_ids);
+    NewCompetitionTemplate {
         members_widget_url: url,
         competition_id:     Some(competition_id),
         season_id,
@@ -174,14 +162,7 @@ pub async fn get_new_competition_phase_1_edit(
         logo_url_value:     base.logo.unwrap_or_default(),
         space_id,
         ..Default::default()
-    };
-
-    if headers.contains_key("hx-request") {
-        tmpl.into_response()
-    } else {
-        let content = tmpl.render().unwrap_or_default();
-        AppLayout { content, routes: Default::default() }.into_response()
-    }
+    }.into_response()
 }
 
 // ── POST: création ───────────────────────────────────────────────────────────

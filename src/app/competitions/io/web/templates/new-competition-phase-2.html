@@ -1,3 +1,7 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/new-competition-phase-2.css">
 <div class="create-card">
   <div class="create-header">
     <div class="create-header-icon">📋</div>
@@ -110,6 +114,7 @@
     <button class="btn btn-outline btn-action"
             hx-get="{{ competition_routes.new_competition_info(space_id, competition_id) }}"
             hx-target="#app-content"
+            hx-select="#app-content"
             hx-swap="innerHTML"
             hx-push-url="true">
       ← Retour
@@ -422,3 +427,4 @@
   }
 })();
 </script>
+{% endblock %}

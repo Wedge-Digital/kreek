@@ -1,10 +1,15 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/app-article-detail.css">
 <div class="article-container">
 
   <!-- Breadcrumb -->
   <div class="breadcrumb">
     <span class="breadcrumb-link"
-          hx-get="{{ routes.space_home(space_id) }}"
+          hx-get="{{ news_routes.space_home(space_id) }}"
           hx-target="#app-content"
+          hx-select="#app-content"
           hx-swap="innerHTML"
           hx-push-url="true">Actualités</span>
     {% if !tags.is_empty() %}
@@ -107,7 +112,7 @@
     </div>
 
     <!-- Compose -->
-    <form hx-post="{{ routes.post_comment(space_id, article_id) }}"
+    <form hx-post="{{ news_routes.post_comment(space_id, article_id) }}"
           hx-target="#app-content"
           hx-swap="innerHTML">
       <div class="comment-compose">
@@ -170,3 +175,4 @@
   };
 })();
 </script>
+{% endblock %}

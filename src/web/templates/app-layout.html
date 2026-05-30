@@ -3,27 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Accueil — Blood Bowl Club</title>
+  <title>Kreek</title>
   <link rel="stylesheet" href="/static/css/common.css">
   <link rel="stylesheet" href="/static/css/layout-app.css">
-  <link rel="stylesheet" href="/static/css/pages/app-home.css">
-  <link rel="stylesheet" href="/static/css/pages/app-news-feed.css">
-  <link rel="stylesheet" href="/static/css/pages/app-create-article.css">
-  <link rel="stylesheet" href="/static/css/pages/app-article-detail.css">
-  <link rel="stylesheet" href="/static/css/pages/app-new-team.css">
-  <link rel="stylesheet" href="/static/css/pages/new-space.css">
-  <link rel="stylesheet" href="/static/css/components/create-card.css">
-  <link rel="stylesheet" href="/static/css/components/competition-card.css">
-  <link rel="stylesheet" href="/static/css/components/upload.css">
-  <link rel="stylesheet" href="/static/css/components/match-report.css">
-  <link rel="stylesheet" href="/static/css/pages/all-spaces.css">
-  <link rel="stylesheet" href="/static/css/pages/all-competition.css">
-  <link rel="stylesheet" href="/static/css/pages/new-competition.css">
-  <link rel="stylesheet" href="/static/css/pages/new-competition-phase-2.css">
-  <link rel="stylesheet" href="/static/css/pages/new-competition-phase-3.css">
-  <link rel="stylesheet" href="/static/css/pages/new-competition-phase-4.css">
-  <link rel="stylesheet" href="/static/css/pages/new-competition-phase-5.css">
-  <link rel="stylesheet" href="/static/css/pages/competition-detail.css">
   <link rel="stylesheet" href="/static/css/components/tom-select.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.4.1/dist/css/tom-select.min.css">
   <script src="/static/js/htmx.min.js"></script>
@@ -34,7 +16,7 @@
 <body>
   <div class="app-layout">
     <div class="sidebar"
-         hx-get="{{ routes.spaces() }}"
+         hx-get="{{ web_routes.spaces() }}"
          hx-trigger="load, space:changed from:body"
          hx-swap="innerHTML">
     </div>
@@ -43,14 +25,14 @@
       <!-- Menu bar -->
       <div class="menu-bar"
            hx-trigger="load, space:changed from:body, htmx:pushedIntoHistory from:body"
-           hx-get="{{ routes.menu() }}"
+           hx-get="{{ web_routes.menu() }}"
            hx-swap="innerHTML">
       </div>
 
       <!-- Content -->
       <div class="page-content">
-        <div class="home-grid"  id="app-content">
-        {{ content|safe }}
+        <div class="home-grid" id="app-content">
+          {% block content %}{% endblock %}
         </div>
       </div>
     </div>

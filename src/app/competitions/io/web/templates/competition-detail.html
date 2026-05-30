@@ -1,3 +1,7 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/competition-detail.css">
 <div class="page-content-wide">
     <div class="detail-layout">
         <!-- Left panel -->
@@ -83,3 +87,4 @@ function setActiveTab(el) {
     el.classList.add('active');
 }
 </script>
+{% endblock %}

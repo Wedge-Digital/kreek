@@ -1,0 +1,58 @@
+<div class="competition-widget">
+  {% if groups.is_empty() %}
+  <div class="competition-widget-empty">Pas de compétition disponible.</div>
+  {% else %}
+  <select id="competition-season-select"
+          name="season_id"
+          hx-get="{{ routes.competition_widget_detail(space_id, "") }}"
+          hx-trigger="change"
+          hx-target="#competition-widget-detail"
+          hx-swap="innerHTML"
+          hx-vals='js:{"season_id": document.getElementById("competition-season-select").value}'
+          placeholder="Sélectionnez une compétition…">
+    <option value="">Sélectionnez une compétition…</option>
+    {% for group in groups %}
+    <optgroup label="{{ group.competition_name }}">
+      {% for season in group.seasons %}
+      <option value="{{ season.season_id }}"{% if season.selected %} selected{% endif %}>
+        {{ season.season_name }}
+        {% if season.status == "ready" %} ✓{% endif %}
+      </option>
+      {% endfor %}
+    </optgroup>
+    {% endfor %}
+  </select>
+
+  <div id="competition-widget-detail" class="competition-widget-detail"></div>
+  {% endif %}
+</div>
+
+<script>
+(function () {
+  var el = document.getElementById('competition-season-select');
+  if (!el || el.tomselect) return;
+
+  new TomSelect(el, {
+    placeholder: 'Sélectionnez une compétition…',
+    allowEmptyOption: true,
+    maxItems: 1,
+    onInitialize: function () {
+      // Déclencher le chargement du détail si une valeur est présente au chargement
+      var val = this.getValue();
+      if (val) { htmx.trigger(el, 'change'); }
+    },
+  });
+
+  // Reconstruire l'URL avec le season_id sélectionné avant l'envoi HTMX
+  el.addEventListener('change', function () {
+    var val = el.tomselect ? el.tomselect.getValue() : el.value;
+    if (!val) {
+      document.getElementById('competition-widget-detail').innerHTML = '';
+      return;
+    }
+    var base = el.getAttribute('hx-get').replace(/\/[^/]*$/, '');
+    el.setAttribute('hx-get', base + '/' + val);
+    htmx.process(el);
+  });
+})();
+</script>

@@ -3,6 +3,18 @@ use crate::app::competitions::domain::competition::Competition;
 use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, CompetitionId, SpaceId};
 use crate::app::shared_kernel::competition_name::CompetitionName;
 
+pub struct SeasonOption {
+    pub season_id:   String,
+    pub season_name: String,
+    pub status:      String,
+}
+
+pub struct CompetitionWithSeasons {
+    pub competition_id:   String,
+    pub competition_name: String,
+    pub seasons:          Vec<SeasonOption>,
+}
+
 pub struct CompetitionSummary {
     pub id:           String,
     pub name:         String,
@@ -41,6 +53,7 @@ pub trait ICompetitionRepository: Send + Sync {
     async fn name_exists_in_space(&self, name: &CompetitionName, space_id: &SpaceId)                                                              -> Result<bool, CompetitionRepositoryError>;
     async fn save(&self, competition: &Competition)                                                                                                -> Result<(), CompetitionRepositoryError>;
     async fn find_by_space_id(&self, space_id: &SpaceId)                                                                                          -> Result<Vec<CompetitionSummary>, CompetitionRepositoryError>;
+    async fn find_with_seasons(&self, space_id: &SpaceId)                                                                                         -> Result<Vec<CompetitionWithSeasons>, CompetitionRepositoryError>;
     async fn find_base_info(&self, competition_id: &CompetitionId)                                                                                 -> Result<Option<CompetitionBaseInfo>, CompetitionRepositoryError>;
     async fn update_base_info(&self, competition_id: &CompetitionId, name: &CompetitionName, logo: &CloudinaryImage, admin_ids: &[CoachId])        -> Result<(), CompetitionRepositoryError>;
 }

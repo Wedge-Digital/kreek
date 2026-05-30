@@ -1,18 +1,19 @@
 use askama::Template;
 use axum::body::Body;
 use axum::extract::{Path, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::routes::Routes;
 use crate::app::competitions::use_cases::finalize_competition::{FinalizeCompetitionCommand, FinalizeCompetitionError, execute as execute_finalize};
 use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId, SpaceId};
 use crate::state::AppState;
-use crate::web::app_layout::AppLayout;
+use crate::web::routes::Routes as WebRoutes;
 
 #[derive(Template)]
 #[template(path = "new-competition-phase-5.html")]
 pub struct NewCompetitionPhase5Template {
+    pub web_routes:           WebRoutes,
     pub competition_routes:   Routes,
     pub space_id:             String,
     pub competition_id:       String,
@@ -59,7 +60,6 @@ impl IntoResponse for NewCompetitionPhase5Template {
 pub async fn get_new_competition_phase_5(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
-    headers: HeaderMap,
 ) -> impl IntoResponse {
     let cid = match CompetitionId::try_new(&competition_id) {
         Ok(id) => id,
@@ -189,7 +189,8 @@ pub async fn get_new_competition_phase_5(
             (false, String::new(), String::new(), None, false, None, false, 0, 0)
         };
 
-    let tmpl = NewCompetitionPhase5Template {
+    NewCompetitionPhase5Template {
+        web_routes:        WebRoutes,
         competition_routes: Routes,
         space_id,
         competition_id,
@@ -217,14 +218,7 @@ pub async fn get_new_competition_phase_5(
         spots_label,
         spots_warn,
         deadline_label,
-    };
-
-    if headers.contains_key("hx-request") {
-        tmpl.into_response()
-    } else {
-        let content = tmpl.render().unwrap_or_default();
-        AppLayout { content, routes: Default::default() }.into_response()
-    }
+    }.into_response()
 }
 
 pub async fn post_finalize_competition(

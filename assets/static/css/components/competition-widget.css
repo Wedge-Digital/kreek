@@ -1,0 +1,184 @@
+.competition-widget { display: flex; flex-direction: column; gap: var(--p1); }
+
+/* ── TomSelect — align sur les form-input existants ─────────────────────── */
+.competition-widget .ts-wrapper { width: 100%; }
+
+.competition-widget .ts-control {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--dark-4);
+  border-radius: 6px;
+  font-size: var(--text-small);
+  color: var(--dark-1);
+  background: var(--white);
+  outline: none;
+  box-shadow: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  cursor: pointer;
+}
+
+.competition-widget .ts-wrapper.focus .ts-control {
+  border-color: var(--main-blue);
+  box-shadow: 0 0 0 3px rgba(0,48,73,0.08);
+}
+
+.competition-widget .ts-control input {
+  font-size: var(--text-small);
+  color: var(--dark-1);
+  padding: 0;
+  line-height: 1.4;
+}
+
+.competition-widget .ts-control .item {
+  font-size: var(--text-small);
+  color: var(--dark-1);
+  padding: 0;
+}
+
+.competition-widget .ts-dropdown {
+  border: 1px solid var(--dark-4);
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  font-size: var(--text-small);
+  color: var(--dark-1);
+}
+
+.competition-widget .ts-dropdown .option {
+  padding: 10px 16px;
+  color: var(--dark-1);
+}
+
+.competition-widget .ts-dropdown .option.active,
+.competition-widget .ts-dropdown .option:hover {
+  background: rgba(0,48,73,0.06);
+  color: var(--main-blue);
+}
+
+.competition-widget .ts-dropdown .optgroup-header {
+  padding: 8px 16px 4px;
+  font-size: var(--text-tiny);
+  font-weight: 700;
+  color: var(--dark-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--dark-6);
+}
+
+/* ── Placeholder ─────────────────────────────────────────────────────────── */
+.competition-widget .ts-control .placeholder {
+  color: var(--dark-4);
+}
+
+/* ── Pas de compétition ──────────────────────────────────────────────────── */
+.competition-widget-empty {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--dark-4);
+  border-radius: 6px;
+  font-size: var(--text-small);
+  color: var(--dark-4);
+  background: var(--dark-6);
+  font-style: italic;
+}
+
+/* ── Detail card ─────────────────────────────────────────────────────────── */
+.comp-detail-card {
+  background: var(--dark-6);
+  border: 1px solid var(--dark-5);
+  border-radius: 10px;
+  padding: var(--p2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--p2);
+}
+
+.comp-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.comp-detail-title {
+  font-family: var(--font-title);
+  font-size: var(--h5);
+  font-weight: 700;
+  color: var(--dark-0);
+  flex: 1;
+}
+.comp-detail-season {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  font-style: italic;
+}
+.comp-detail-badge {
+  font-size: var(--text-tiny);
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.comp-badge--ready { background: rgba(98,149,132,0.15); color: var(--green); }
+.comp-badge--draft { background: rgba(143,144,166,0.15); color: var(--dark-3); }
+
+/* ── Section ─────────────────────────────────────────────────────────────── */
+.comp-detail-section { display: flex; flex-direction: column; gap: 10px; }
+.comp-detail-section-title {
+  font-size: var(--text-tiny);
+  font-weight: 700;
+  color: var(--dark-2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ── Scoring chips ───────────────────────────────────────────────────────── */
+.comp-detail-scoring { display: flex; gap: 8px; }
+.comp-score-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: var(--white);
+  border: 1px solid var(--dark-5);
+  border-radius: 8px;
+  padding: 8px 16px;
+  min-width: 64px;
+}
+.comp-score-pts  { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--main-blue); }
+.comp-score-label { font-size: 11px; color: var(--dark-3); white-space: nowrap; }
+
+/* ── Tiers ───────────────────────────────────────────────────────────────── */
+.comp-detail-tiers { display: flex; flex-direction: column; gap: 6px; }
+.comp-tier-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--white);
+  border: 1px solid var(--dark-5);
+  border-radius: 6px;
+  font-size: var(--text-tiny);
+}
+.comp-tier-name    { font-weight: 700; color: var(--dark-1); min-width: 80px; }
+.comp-tier-meta    { color: var(--dark-3); white-space: nowrap; }
+.comp-tier-rosters { color: var(--dark-2); flex: 1; }
+
+/* ── Structure flags ─────────────────────────────────────────────────────── */
+.comp-detail-flags { display: flex; flex-wrap: wrap; gap: 6px; }
+.comp-flag {
+  font-size: var(--text-tiny);
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+.comp-flag--on  { background: rgba(0,48,73,0.08); color: var(--main-blue); }
+.comp-flag--off { background: var(--dark-6); color: var(--dark-4); }
+
+/* ── Empty ───────────────────────────────────────────────────────────────── */
+.comp-detail-empty {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  font-style: italic;
+  text-align: center;
+  padding: var(--p1);
+}

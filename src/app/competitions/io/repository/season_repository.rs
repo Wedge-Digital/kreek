@@ -4,7 +4,7 @@ use crate::app::competitions::domain::competition_invitations::CompetitionInvita
 use crate::app::competitions::domain::competition_rules::CompetitionRules;
 use crate::app::competitions::domain::competition_season::CompetitionSeason;
 use crate::app::competitions::domain::competition_structure::CompetitionStructure;
-use crate::app::competitions::domain::season_repository_port::{ISeasonRepository, SeasonBaseInfo, SeasonRepositoryError};
+use crate::app::competitions::domain::season_repository_port::{ISeasonRepository, SeasonBaseInfo, SeasonFull, SeasonRepositoryError};
 use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId};
 
 fn db_err(e: impl std::fmt::Display) -> SeasonRepositoryError {
@@ -159,6 +159,46 @@ impl ISeasonRepository for SeasonRepository {
             return Err(SeasonRepositoryError::SeasonNotFound);
         }
         Ok(())
+    }
+
+    async fn find_full(&self, season_id: &SeasonId) -> Result<Option<SeasonFull>, SeasonRepositoryError> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            season_id:        String,
+            season_name:      String,
+            status:           String,
+            rules:            Option<String>,
+            structure:        Option<String>,
+            competition_id:   String,
+            competition_name: String,
+        }
+
+        let row: Option<Row> = sqlx::query_as(
+            include_str!("sql/seasons/find_season_full.sql")
+        )
+        .bind(season_id.to_string())
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(db_err)?;
+
+        let Some(r) = row else { return Ok(None) };
+
+        let rules = r.rules
+            .as_deref()
+            .and_then(|s| serde_json::from_str(s).ok());
+        let structure = r.structure
+            .as_deref()
+            .and_then(|s| serde_json::from_str(s).ok());
+
+        Ok(Some(SeasonFull {
+            season_id:        r.season_id,
+            season_name:      r.season_name,
+            status:           r.status,
+            competition_id:   r.competition_id,
+            competition_name: r.competition_name,
+            rules,
+            structure,
+        }))
     }
 
     async fn set_ready(&self, season_id: &SeasonId) -> Result<(), SeasonRepositoryError> {

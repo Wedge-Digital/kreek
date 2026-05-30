@@ -1,3 +1,10 @@
+{% extends "app-layout.html" %}
+{% import "components/upload_widget.html" as cmp %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/new-competition.css">
+<link rel="stylesheet" href="/static/css/components/create-card.css">
+<link rel="stylesheet" href="/static/css/components/upload.css">
 <div class="create-card ">
   <!-- Header banner -->
   <div class="create-header">
@@ -68,7 +75,6 @@
             <div class="spinner spinner--sm"></div>
           </div>
         </div>
-        {% import "components/upload_widget.html" as cmp %}
         {% call cmp::cloudinary_upload("logo_url", logo_url_value, "teams/logos", "Logo", logo_error) %}
 
       {% if let Some(err) = general_error %}
@@ -101,3 +107,4 @@
     }
   })();
 </script>
+{% endblock %}

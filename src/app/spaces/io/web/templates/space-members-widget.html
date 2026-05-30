@@ -1,4 +1,25 @@
-<select id="admins-select" name="admin_ids[]" multiple placeholder="Sélectionnez des coachs...">
+{% if single %}
+<select id="members-select-single" name="{{ field_name }}" placeholder="Sélectionnez un coach...">
+  <option value="">Sélectionnez un coach…</option>
+  {% for member in members %}
+  <option value="{{ member.id }}"{% if member.selected %} selected{% endif %}>{{ member.name }}</option>
+  {% endfor %}
+</select>
+
+<script>
+  (function () {
+    const el = document.getElementById('members-select-single');
+    if (el && !el.tomselect) {
+      new TomSelect(el, {
+        maxItems: 1,
+        allowEmptyOption: true,
+        placeholder: 'Sélectionnez un coach…',
+      });
+    }
+  })();
+</script>
+{% else %}
+<select id="admins-select" name="{{ field_name }}" multiple placeholder="Sélectionnez des coachs...">
   {% for member in members %}
   <option value="{{ member.id }}"{% if member.selected %} selected{% endif %}>{{ member.name }}</option>
   {% endfor %}
@@ -16,3 +37,4 @@
     }
   })();
 </script>
+{% endif %}

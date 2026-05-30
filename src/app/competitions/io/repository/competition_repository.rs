@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
 use crate::app::competitions::domain::competition::Competition;
-use crate::app::competitions::domain::competition_repository_port::{CompetitionBaseInfo, CompetitionRepositoryError, CompetitionSummary, ICompetitionRepository};
+use crate::app::competitions::domain::competition_repository_port::{CompetitionBaseInfo, CompetitionRepositoryError, CompetitionSummary, CompetitionWithSeasons, ICompetitionRepository, SeasonOption};
 use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, CompetitionId, SpaceId};
 use crate::app::shared_kernel::competition_name::CompetitionName;
 use crate::app::shared_kernel::competition_profile::CompetitionProfile;
@@ -97,6 +97,48 @@ impl ICompetitionRepository for CompetitionRepository {
         let admin_names = rows.into_iter().filter_map(|r| r.coach_name).collect();
 
         Ok(Some(CompetitionBaseInfo { name, logo, admin_ids, admin_names }))
+    }
+
+    async fn find_with_seasons(&self, space_id: &SpaceId) -> Result<Vec<CompetitionWithSeasons>, CompetitionRepositoryError> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            competition_id:   String,
+            competition_name: String,
+            season_id:        String,
+            season_name:      String,
+            status:           String,
+        }
+
+        let rows = sqlx::query_as::<_, Row>(
+            include_str!("sql/competitions/find_competitions_with_seasons.sql")
+        )
+        .bind(space_id.to_string())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(db_err)?;
+
+        // Preserve SQL ordering (c.name ASC) while grouping by competition_id
+        let mut result: Vec<CompetitionWithSeasons> = vec![];
+        for r in rows {
+            match result.iter_mut().find(|c| c.competition_id == r.competition_id) {
+                Some(existing) => existing.seasons.push(SeasonOption {
+                    season_id:   r.season_id,
+                    season_name: r.season_name,
+                    status:      r.status,
+                }),
+                None => result.push(CompetitionWithSeasons {
+                    competition_id:   r.competition_id,
+                    competition_name: r.competition_name,
+                    seasons:          vec![SeasonOption {
+                        season_id:   r.season_id,
+                        season_name: r.season_name,
+                        status:      r.status,
+                    }],
+                }),
+            }
+        }
+
+        Ok(result)
     }
 
     async fn update_base_info(&self, competition_id: &CompetitionId, name: &CompetitionName, logo: &CloudinaryImage, admin_ids: &[CoachId]) -> Result<(), CompetitionRepositoryError> {

@@ -6,6 +6,7 @@
            hx-trigger="click"
            hx-get="{{ routes.home() }}"
            hx-target="#app-content"
+           hx-select="#app-content"
            hx-swap="innerHTML"
            hx-push-url="true"
       >
@@ -24,12 +25,14 @@
           <div class="sub-menu-btn{% if self.competitions_active() %} active{% endif %}"
                hx-get="{{ competition_routes.all_competitions(sid) }}"
                hx-target="#app-content"
+               hx-select="#app-content"
                hx-swap="innerHTML"
                hx-push-url="true">Les Compétitions</div>
           <div class="sub-menu-btn">Saisir un Match</div>
           <div class="sub-menu-btn{% if self.teams_active() %} active{% endif %}"
                hx-get="{{ team_routes.draft_team(sid) }}"
                hx-target="#app-content"
+               hx-select="#app-content"
                hx-swap="innerHTML"
                hx-push-url="true">Créer une équipe</div>
           <div class="sub-menu-btn">Toutes les équipes</div>

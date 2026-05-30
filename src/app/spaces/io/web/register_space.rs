@@ -11,15 +11,15 @@ use crate::app::shared_kernel::common_types::CloudinaryImage;
 use crate::app::shared_kernel::space_name::SpaceName;
 use crate::app::spaces::routes::path;
 use crate::app::spaces::uses_cases::register_new_space::{execute, RegisterNewSpaceCommand, RegisterSpaceError};
-use crate::app::team_creation::routes::Routes;
+use crate::app::team_creation::routes::Routes as TeamRoutes;
 use crate::state::AppState;
-use crate::web::app_layout::AppLayout;
 use crate::web::routes::Routes as WebRoutes;
 
 #[derive(Template, Default)]
 #[template(path = "new-space.html")]
 pub struct NewSpaceTemplate {
-    pub routes:            Routes,
+    pub web_routes:        WebRoutes,
+    pub team_routes:       TeamRoutes,
     pub space_name_value:  String,
     pub space_name_error:  Option<String>,
     pub logo_url_value:    String,
@@ -35,13 +35,8 @@ impl IntoResponse for NewSpaceTemplate {
     }
 }
 
-pub async fn register_space(headers: axum::http::HeaderMap) -> impl IntoResponse {
-    if headers.contains_key("hx-request") {
-        NewSpaceTemplate::default().into_response()
-    } else {
-        let content = NewSpaceTemplate::default().render().unwrap_or_default();
-        AppLayout { content, routes: WebRoutes }.into_response()
-    }
+pub async fn register_space() -> impl IntoResponse {
+    NewSpaceTemplate::default().into_response()
 }
 
 #[derive(Deserialize)]

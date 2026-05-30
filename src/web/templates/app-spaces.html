@@ -4,6 +4,7 @@
      hx-trigger="click"
      hx-get="{{ news_routes.space_home(space.id) }}"
      hx-target="#app-content"
+     hx-select="#app-content"
      hx-swap="innerHTML"
      hx-push-url="true"
      hx-on::after-request="htmx.trigger(document.body, 'space:changed')"
@@ -15,6 +16,7 @@
      hx-trigger="click"
      hx-get="/app/space/create"
      hx-target="#app-content"
+     hx-select="#app-content"
      hx-swap="innerHTML"
      hx-push-url="true"
      title="Ajouter une ligue">+</div>
@@ -22,6 +24,7 @@
      hx-trigger="click"
      hx-get="/app/space/all"
      hx-target="#app-content"
+     hx-select="#app-content"
      hx-swap="innerHTML"
      hx-push-url="true"
      title="Rechercher une ligue">🔍</div>

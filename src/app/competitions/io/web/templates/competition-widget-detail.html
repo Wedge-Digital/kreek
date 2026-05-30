@@ -1,0 +1,78 @@
+<input type="hidden" name="competition_id" value="{{ competition_id }}">
+
+<div class="comp-detail-card">
+
+  <div class="comp-detail-header">
+    <div class="comp-detail-title">{{ competition_name }}</div>
+    <div class="comp-detail-season">{{ season_name }}</div>
+    <span class="comp-detail-badge {% if status == "ready" %}comp-badge--ready{% else %}comp-badge--draft{% endif %}">
+      {% if status == "ready" %}Prête{% else %}{{ status }}{% endif %}
+    </span>
+  </div>
+
+  {% if let Some(r) = rules %}
+  <div class="comp-detail-section">
+    <div class="comp-detail-section-title">Règles</div>
+
+    <div class="comp-detail-scoring">
+      <div class="comp-score-chip">
+        <span class="comp-score-pts">{{ r.win_pts }}</span>
+        <span class="comp-score-label">pts victoire</span>
+      </div>
+      <div class="comp-score-chip">
+        <span class="comp-score-pts">{{ r.draw_pts }}</span>
+        <span class="comp-score-label">pts nul</span>
+      </div>
+      <div class="comp-score-chip">
+        <span class="comp-score-pts">{{ r.lose_pts }}</span>
+        <span class="comp-score-label">pts défaite</span>
+      </div>
+    </div>
+
+    {% if !r.tiers.is_empty() %}
+    <div class="comp-detail-tiers">
+      {% for tier in r.tiers %}
+      <div class="comp-tier-row">
+        <span class="comp-tier-name">{{ tier.name }}</span>
+        <span class="comp-tier-meta">{{ tier.budget }} TV · {{ tier.start_xp }} XP</span>
+        <span class="comp-tier-rosters">
+          {% for roster in tier.rosters %}{{ roster }}{% if !loop.last %}, {% endif %}{% endfor %}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if let Some(s) = structure %}
+  <div class="comp-detail-section">
+    <div class="comp-detail-section-title">Structure</div>
+    <div class="comp-detail-flags">
+      {% if s.use_groups %}
+      <div class="comp-flag comp-flag--on">
+        Groupes :
+        {% for g in s.group_names %}{{ g }}{% if !loop.last %} · {% endif %}{% endfor %}
+      </div>
+      {% endif %}
+      {% if s.use_playoffs %}
+      <div class="comp-flag comp-flag--on">Phase finale</div>
+      {% endif %}
+      {% if s.use_schedule %}
+      <div class="comp-flag comp-flag--on">
+        Calendrier {{ s.start_date }}
+        {% if !s.end_date.is_empty() %} → {{ s.end_date }}{% endif %}
+      </div>
+      {% endif %}
+      {% if !s.use_groups && !s.use_playoffs && !s.use_schedule %}
+      <div class="comp-flag comp-flag--off">Structure non configurée</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if rules.is_none() && structure.is_none() %}
+  <div class="comp-detail-empty">Aucune configuration disponible pour cette saison.</div>
+  {% endif %}
+
+</div>

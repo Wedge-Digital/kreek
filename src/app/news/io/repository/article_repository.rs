@@ -3,7 +3,6 @@ use sqlx::PgPool;
 use crate::app::news::domain::article::{Article, ArticleParagraph};
 use crate::app::news::domain::article_repository_port::{ArticleRepositoryError, IArticleRepository};
 use crate::app::shared_kernel::common_types::{ArticleId, SpaceId, UserId};
-use sqlx::Row;
 
 fn db_err(e: impl std::fmt::Display) -> ArticleRepositoryError {
     ArticleRepositoryError::Database(e.to_string())

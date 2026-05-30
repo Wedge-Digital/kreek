@@ -1,4 +1,9 @@
+{% extends "app-layout.html" %}
 {% import "components/upload_widget.html" as cmp %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/app-create-article.css">
+<link rel="stylesheet" href="/static/css/components/upload.css">
 <div class="editor-container">
 
     <!-- Header banner -->
@@ -9,7 +14,7 @@
     </div>
 
     <form id="article-form"
-          hx-post="{{ routes.post_article(space_id) }}"
+          hx-post="{{ news_routes.post_article(space_id) }}"
           hx-target="#app-content"
           hx-swap="innerHTML">
 
@@ -184,3 +189,4 @@
     };
 })();
 </script>
+{% endblock %}

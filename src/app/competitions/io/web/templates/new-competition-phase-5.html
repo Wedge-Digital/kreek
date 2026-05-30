@@ -1,3 +1,7 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/new-competition-phase-5.css">
 <div class="create-card">
 
     <div class="create-header">
@@ -53,6 +57,7 @@
             <a class="recap-card-edit"
                hx-get="{{ competition_routes.new_competition(space_id) }}"
                hx-target="#app-content"
+               hx-select="#app-content"
                hx-swap="innerHTML"
                hx-push-url="true">Modifier</a>
         </div>
@@ -100,6 +105,7 @@
             <a class="recap-card-edit"
                hx-get="{{ competition_routes.new_competition_rules(space_id, competition_id, season_id) }}"
                hx-target="#app-content"
+               hx-select="#app-content"
                hx-swap="innerHTML"
                hx-push-url="true">Modifier</a>
         </div>
@@ -148,6 +154,7 @@
             <a class="recap-card-edit"
                hx-get="{{ competition_routes.new_competition_structure(space_id, competition_id, season_id) }}"
                hx-target="#app-content"
+               hx-select="#app-content"
                hx-swap="innerHTML"
                hx-push-url="true">Modifier</a>
         </div>
@@ -183,6 +190,7 @@
             <a class="recap-card-edit"
                hx-get="{{ competition_routes.new_competition_invitations(space_id, competition_id, season_id) }}"
                hx-target="#app-content"
+               hx-select="#app-content"
                hx-swap="innerHTML"
                hx-push-url="true">Modifier</a>
         </div>
@@ -230,6 +238,7 @@
         <button class="btn btn-outline btn-action"
                 hx-get="{{ competition_routes.new_competition_invitations(space_id, competition_id, season_id) }}"
                 hx-target="#app-content"
+                hx-select="#app-content"
                 hx-swap="innerHTML"
                 hx-push-url="true">
             ← Retour
@@ -270,3 +279,4 @@
     };
 })();
 </script>
+{% endblock %}

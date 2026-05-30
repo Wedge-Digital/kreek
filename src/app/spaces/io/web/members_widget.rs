@@ -16,7 +16,11 @@ pub struct MemberItem {
 #[derive(Template)]
 #[template(path = "space-members-widget.html")]
 pub struct SpaceMembersWidgetTemplate {
-    pub members: Vec<MemberItem>,
+    pub members:    Vec<MemberItem>,
+    /// Sélection unique (false = multi-select par défaut)
+    pub single:     bool,
+    /// Nom du champ form (`admin_ids[]` par défaut, `coach_id` pour single)
+    pub field_name: String,
 }
 
 impl IntoResponse for SpaceMembersWidgetTemplate {
@@ -30,7 +34,11 @@ impl IntoResponse for SpaceMembersWidgetTemplate {
 
 #[derive(Deserialize, Default)]
 pub struct MembersWidgetQuery {
-    pub selected: Option<String>,
+    pub selected:   Option<String>,
+    /// `?single=true` → sélection unique, champ `coach_id`
+    pub single:     Option<bool>,
+    /// Nom du champ form à utiliser (surcharge le défaut)
+    pub field_name: Option<String>,
 }
 
 pub async fn get_members_widget(
@@ -42,6 +50,10 @@ pub async fn get_members_widget(
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
+
+    let single = query.single.unwrap_or(false);
+    let field_name = query.field_name
+        .unwrap_or_else(|| if single { "coach_id".into() } else { "admin_ids[]".into() });
 
     let selected_ids: HashSet<String> = query.selected
         .as_deref()
@@ -65,5 +77,5 @@ pub async fn get_members_widget(
         })
         .collect();
 
-    SpaceMembersWidgetTemplate { members }.into_response()
+    SpaceMembersWidgetTemplate { members, single, field_name }.into_response()
 }

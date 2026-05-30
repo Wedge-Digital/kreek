@@ -1,3 +1,9 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/app-home.css">
+<link rel="stylesheet" href="/static/css/pages/all-spaces.css">
+<link rel="stylesheet" href="/static/css/components/competition-widget.css">
 <div class="allspace-home-grid">
 
 <div class="spaces-header">
@@ -8,7 +14,7 @@
 
 <form id="join-spaces-form"
       hx-ext="json-enc"
-      hx-post="{{ routes.join() }}"
+      hx-post="{{ space_routes.join() }}"
       hx-target="#app-content"
       hx-swap="innerHTML"
       hx-push-url="true">
@@ -42,8 +48,10 @@
 
 <p>Si vous souhaitez créer une compétition, une ligue....</p>
 <a class="btn btn-primary" href="/app/space/create"
-   hx-get="{{ routes.register_space() }}"
+   hx-get="{{ space_routes.register_space() }}"
    hx-target="#app-content"
+   hx-select="#app-content"
    hx-swap="innerHTML"
    hx-push-url="true">Je crée un nouvel espace</a>
 </div>
+{% endblock %}

@@ -100,6 +100,7 @@ mod tests {
         async fn find_by_space_id(&self, _: &SpaceId) -> Result<Vec<CompetitionSummary>, CompetitionRepositoryError> { Ok(vec![]) }
         async fn find_base_info(&self, _: &CompetitionId) -> Result<Option<CompetitionBaseInfo>, CompetitionRepositoryError> { Ok(None) }
         async fn update_base_info(&self, _: &CompetitionId, _: &CompetitionName, _: &CloudinaryImage, _: &[CoachId]) -> Result<(), CompetitionRepositoryError> { Ok(()) }
+        async fn find_with_seasons(&self, _: &SpaceId) -> Result<Vec<crate::app::competitions::domain::competition_repository_port::CompetitionWithSeasons>, CompetitionRepositoryError> { Ok(vec![]) }
     }
 
     struct FakeSeasonRepo;
@@ -116,6 +117,7 @@ mod tests {
         async fn find_invitations(&self, _: &SeasonId) -> Result<Option<CompetitionInvitations>, SeasonRepositoryError> { Ok(None) }
         async fn save_invitations(&self, _: &SeasonId, _: &CompetitionInvitations) -> Result<(), SeasonRepositoryError> { Ok(()) }
         async fn set_ready(&self, _: &SeasonId) -> Result<(), SeasonRepositoryError> { Ok(()) }
+        async fn find_full(&self, _: &SeasonId) -> Result<Option<crate::app::competitions::domain::season_repository_port::SeasonFull>, SeasonRepositoryError> { Ok(None) }
     }
 
     fn make_cmd() -> CreateDraftCompetitionCommand {

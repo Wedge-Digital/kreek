@@ -1,13 +1,13 @@
 use askama::Template;
 use axum::extract::{Path, Query, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
 use crate::app::news::domain::article::Article;
 use crate::app::news::routes::Routes as NewsRoutes;
 use crate::app::shared_kernel::common_types::SpaceId;
 use crate::state::AppState;
-use crate::web::app_layout::AppLayout;
+use crate::web::routes::Routes as WebRoutes;
 
 const PER_PAGE: i64 = 10;
 
@@ -76,7 +76,8 @@ fn build_pagination(page: i64, total_pages: i64) -> Vec<PaginationItem> {
 #[derive(Template, Default)]
 #[template(path = "news-feed.html")]
 pub struct NewsFeedTemplate {
-    pub routes:           NewsRoutes,
+    pub web_routes:       WebRoutes,
+    pub news_routes:      NewsRoutes,
     pub space_id:         String,
     pub featured:         Option<ArticleViewModel>,
     pub articles:         Vec<ArticleViewModel>,
@@ -102,7 +103,6 @@ pub struct PageQuery {
 pub async fn get_news_feed(
     Path(space_id_raw): Path<String>,
     Query(query):       Query<PageQuery>,
-    headers:            HeaderMap,
     State(state):       State<AppState>,
 ) -> impl IntoResponse {
     let page = query.page.unwrap_or(1).max(1);
@@ -122,20 +122,14 @@ pub async fn get_news_feed(
     let featured = if page == 1 { view_models.drain(..1.min(view_models.len())).next() } else { None };
     let pagination_items = build_pagination(page, total_pages);
 
-    let tmpl = NewsFeedTemplate {
-        routes: Default::default(),
-        space_id: space_id_raw,
+    NewsFeedTemplate {
+        web_routes:  Default::default(),
+        news_routes: Default::default(),
+        space_id:    space_id_raw,
         featured,
         articles: view_models,
         page,
         total_pages,
         pagination_items,
-    };
-
-    if headers.contains_key("hx-request") {
-        tmpl.into_response()
-    } else {
-        let content = tmpl.render().unwrap_or_default();
-        AppLayout { content, routes: Default::default() }.into_response()
-    }
+    }.into_response()
 }

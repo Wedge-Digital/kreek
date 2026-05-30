@@ -1,7 +1,7 @@
 use askama::Template;
 use axum::body::Body;
 use axum::extract::{Path, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use axum::Json;
 use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
@@ -10,11 +10,12 @@ use crate::app::competitions::use_cases::save_competition_invitations::{SaveComp
 use crate::app::shared_kernel::common_types::SeasonId;
 use crate::app::spaces::routes::Routes as SpaceRoutes;
 use crate::state::AppState;
-use crate::web::app_layout::AppLayout;
+use crate::web::routes::Routes as WebRoutes;
 
 #[derive(Template)]
 #[template(path = "new-competition-phase-4.html")]
 pub struct NewCompetitionPhase4Template {
+    pub web_routes:                WebRoutes,
     pub competition_routes:        Routes,
     pub space_id:                  String,
     pub competition_id:            String,
@@ -35,7 +36,6 @@ impl IntoResponse for NewCompetitionPhase4Template {
 pub async fn get_new_competition_phase_4(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
-    headers: HeaderMap,
 ) -> impl IntoResponse {
     let sid = match SeasonId::try_new(&season_id) {
         Ok(id) => id,
@@ -57,20 +57,15 @@ pub async fn get_new_competition_phase_4(
         }
     };
 
-    let tmpl = NewCompetitionPhase4Template {
+    NewCompetitionPhase4Template {
+        web_routes:              WebRoutes,
         competition_routes:      Routes,
         coach_search_widget_url: SpaceRoutes.coach_search_widget(&space_id),
         space_id,
         competition_id,
         season_id,
         existing_invitations_json,
-    };
-    if headers.contains_key("hx-request") {
-        tmpl.into_response()
-    } else {
-        let content = tmpl.render().unwrap_or_default();
-        AppLayout { content, routes: Default::default() }.into_response()
-    }
+    }.into_response()
 }
 
 pub async fn post_competition_invitations(

@@ -47,6 +47,12 @@ INSERT_SQL = """
     ON CONFLICT (legacy_id) DO NOTHING
 """
 
+INSERT_CACHE_SQL = """
+    INSERT INTO spaces__user_cache (id, coach_name, coach_icon, email)
+    VALUES (%s, %s, NULL, %s)
+    ON CONFLICT (id) DO NOTHING
+"""
+
 CHECK_EMAIL_SQL      = "SELECT id FROM auth__users WHERE email = %s"
 CHECK_COACH_NAME_SQL = "SELECT id FROM auth__users WHERE coach_name = %s"
 
@@ -149,6 +155,7 @@ def main():
 
         try:
             cursor.execute(INSERT_SQL, (new_ulid, legacy_id, coach_name, email, password, created_at))
+            cursor.execute(INSERT_CACHE_SQL, (new_ulid, coach_name, email))
             inserted += 1
         except psycopg2.Error as e:
             print(f"  ERREUR pour {base_name} <{email}> : {e}", file=sys.stderr)

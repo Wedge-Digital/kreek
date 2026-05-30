@@ -72,6 +72,251 @@ fn initials(name: &str) -> String {
         .to_uppercase()
 }
 
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+    use async_trait::async_trait;
+    use axum::body::to_bytes;
+    use axum::http::{Request, StatusCode};
+    use axum::routing::get;
+    use axum::Router;
+    use tower::ServiceExt;
+    use crate::app::auth::auth_backend::AuthBackend;
+    use crate::app::auth::context::AuthContext;
+    use crate::app::auth::io::repository::tests::fake_reset_token_repository::FakeResetTokenRepository;
+    use crate::app::auth::io::repository::tests::fake_user_repository::{FakeUserRepository, FindResult};
+    use crate::app::competitions::context::CompetitionsContext;
+    use crate::app::competitions::io::repository::tests::fake_competition_repository::FakeCompetitionRepository;
+    use crate::app::competitions::io::repository::tests::fake_season_repository::FakeSeasonRepository;
+    use crate::app::news::context::NewsContext;
+    use crate::app::news::domain::article::Article;
+    use crate::app::news::domain::article_repository_port::{ArticleRepositoryError, IArticleRepository};
+    use crate::app::news::domain::comment::Comment;
+    use crate::app::news::domain::comment_repository_port::{CommentRepositoryError, ICommentRepository};
+    use crate::app::shared_kernel::authorization::SpaceProfile;
+    use crate::app::shared_kernel::coach_name::CoachName;
+    use crate::app::shared_kernel::common_types::{ArticleId, CoachId, SpaceId};
+    use crate::app::shared_kernel::email::Email;
+    use crate::app::spaces::context::SpacesContext;
+    use crate::app::spaces::domain::space::Space;
+    use crate::app::spaces::domain::space_repository_port::space_repository_port::{ISpaceRepository, SpaceRepositoryError, SpaceSummary};
+    use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::{ISpaceUserCacheRepository, SpaceUserCacheRepositoryError};
+    use crate::app::spaces::domain::user::User as SpaceUser;
+    use crate::app::spaces::io::web::coach_search::{search_coaches, get_coach_search_widget};
+    use crate::app::spaces::routes::path;
+    use crate::lib::services::email::fakes::console_email_service::ConsoleEmailService;
+    use crate::lib::services::event_bus::event_bus::new_bus;
+    use crate::state::AppState;
+    use super::initials;
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+
+    fn make_user(name: &str) -> SpaceUser {
+        SpaceUser::new(
+            CoachId::new(),
+            CoachName::try_new(name).unwrap(),
+            None,
+            Email::try_new("test@test.com").unwrap(),
+        )
+    }
+
+    struct FakeCache { users: Vec<SpaceUser> }
+
+    #[async_trait]
+    impl ISpaceUserCacheRepository for FakeCache {
+        async fn add_user(&self, _: &SpaceUser) -> Result<(), SpaceUserCacheRepositoryError> { Ok(()) }
+        async fn find_user_by_id(&self, _: &CoachId) -> Result<SpaceUser, SpaceUserCacheRepositoryError> { Err(SpaceUserCacheRepositoryError::UserNotFoundInCache) }
+        async fn find_all_users(&self) -> Result<Vec<SpaceUser>, SpaceUserCacheRepositoryError> { Ok(vec![]) }
+        async fn list_members_for_space(&self, _: &SpaceId) -> Result<Vec<SpaceUser>, SpaceUserCacheRepositoryError> {
+            Ok(self.users.clone())
+        }
+    }
+
+    struct FakeSpaceRepo;
+    #[async_trait]
+    impl ISpaceRepository for FakeSpaceRepo {
+        async fn save(&self, _: &Space) -> Result<(), SpaceRepositoryError> { Ok(()) }
+        async fn add_member(&self, _: &SpaceId, _: &CoachId, _: &SpaceProfile) -> Result<(), SpaceRepositoryError> { Ok(()) }
+        async fn join_spaces(&self, _: &[SpaceId], _: &CoachId) -> Result<(), SpaceRepositoryError> { Ok(()) }
+        async fn find_by_id(&self, _: &SpaceId) -> Result<Option<Space>, SpaceRepositoryError> { Ok(None) }
+        async fn find_by_coach_id(&self, _: &CoachId) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> { Ok(vec![]) }
+        async fn find_member_profile(&self, _: &CoachId, _: &SpaceId) -> Result<Option<SpaceProfile>, SpaceRepositoryError> { Ok(None) }
+        async fn find_all(&self) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> { Ok(vec![]) }
+    }
+
+    struct FakeArticleRepo;
+    #[async_trait]
+    impl IArticleRepository for FakeArticleRepo {
+        async fn save(&self, _: &Article) -> Result<(), ArticleRepositoryError> { Ok(()) }
+        async fn find_by_space(&self, _: &SpaceId, _: i64, _: i64) -> Result<(Vec<Article>, i64), ArticleRepositoryError> { Ok((vec![], 0)) }
+        async fn find_by_id(&self, _: &ArticleId) -> Result<Option<Article>, ArticleRepositoryError> { Ok(None) }
+    }
+
+    struct FakeCommentRepo;
+    #[async_trait]
+    impl ICommentRepository for FakeCommentRepo {
+        async fn save(&self, _: &Comment) -> Result<(), CommentRepositoryError> { Ok(()) }
+        async fn find_by_article(&self, _: &ArticleId) -> Result<Vec<Comment>, CommentRepositoryError> { Ok(vec![]) }
+    }
+
+    fn build_router(users: Vec<SpaceUser>) -> Router {
+        use axum_login::AuthManagerLayerBuilder;
+        use tower_sessions::{MemoryStore, SessionManagerLayer};
+
+        let user_repo   = Arc::new(FakeUserRepository { find_result: FindResult::NotFound });
+        let session_layer = SessionManagerLayer::new(MemoryStore::default());
+        let auth_layer    = AuthManagerLayerBuilder::new(
+            AuthBackend::new(user_repo.clone() as Arc<dyn crate::app::auth::ports::IUserRepository>, false),
+            session_layer,
+        ).build();
+
+        let bus = new_bus();
+        let state = AppState {
+            auth: AuthContext {
+                user_repository:        user_repo as Arc<dyn crate::app::auth::ports::IUserRepository>,
+                reset_token_repository: Arc::new(FakeResetTokenRepository {
+                    find_result: crate::app::auth::io::repository::tests::fake_reset_token_repository::FindResult::NotFound,
+                }),
+                event_bus: bus.clone(),
+            },
+            spaces: SpacesContext {
+                space_repository:      Arc::new(FakeSpaceRepo),
+                user_cache_repository: Arc::new(FakeCache { users }),
+                event_bus:             bus.clone(),
+            },
+            competitions: CompetitionsContext {
+                competition_repository: Arc::new(FakeCompetitionRepository),
+                season_repository:      Arc::new(FakeSeasonRepository),
+                event_bus:              bus.clone(),
+            },
+            news: NewsContext {
+                article_repository: Arc::new(FakeArticleRepo),
+                comment_repository: Arc::new(FakeCommentRepo),
+            },
+            references:    crate::app::references::context::ReferencesContext::new(),
+            email_service: Arc::new(ConsoleEmailService),
+            host_domain:   "localhost:8080".into(),
+            bypass_auth:   false,
+            event_bus:     bus.clone(),
+            app_event_bus: new_bus(),
+        };
+
+        Router::new()
+            .route(path::SPACE_COACH_SEARCH, get(search_coaches))
+            .route(path::SPACE_COACH_SEARCH_WIDGET, get(get_coach_search_widget))
+            .with_state(state)
+            .layer(auth_layer)
+    }
+
+    async fn get_body(app: Router, uri: &str) -> (StatusCode, String) {
+        let resp = app
+            .oneshot(Request::builder().uri(uri).body(axum::body::Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let status = resp.status();
+        let bytes  = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        (status, String::from_utf8(bytes.to_vec()).unwrap())
+    }
+
+    // ── initials() ────────────────────────────────────────────────────────
+
+    #[test]
+    fn initials_single_word() {
+        assert_eq!(initials("Bagouze"), "B");
+    }
+
+    #[test]
+    fn initials_two_words() {
+        assert_eq!(initials("Colonel Castor"), "CC");
+    }
+
+    #[test]
+    fn initials_more_than_two_words_takes_first_two() {
+        assert_eq!(initials("Le Grand Tacticien"), "LG");
+    }
+
+    #[test]
+    fn initials_empty_string() {
+        assert_eq!(initials(""), "");
+    }
+
+    #[test]
+    fn initials_lowercased_input_is_uppercased() {
+        assert_eq!(initials("anne-marie dupont"), "AD");
+    }
+
+    // ── search_coaches ────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn empty_query_returns_all_members() {
+        let space_id = SpaceId::new().to_string();
+        let users    = vec![make_user("Bagouze"), make_user("LeTacticien")];
+        let app      = build_router(users);
+        let uri      = format!("/app/{}/coaches/search?q=", space_id);
+
+        let (status, body) = get_body(app, &uri).await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.contains("Bagouze"));
+        assert!(body.contains("LeTacticien"));
+    }
+
+    #[tokio::test]
+    async fn query_filters_by_name_case_insensitive() {
+        let space_id = SpaceId::new().to_string();
+        let users    = vec![make_user("Bagouze"), make_user("LeTacticien"), make_user("Colonel Castor")];
+        let app      = build_router(users);
+        let uri      = format!("/app/{}/coaches/search?q=tacticien", space_id);
+
+        let (status, body) = get_body(app, &uri).await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.contains("LeTacticien"));
+        assert!(!body.contains("Bagouze"));
+        assert!(!body.contains("Colonel Castor"));
+    }
+
+    #[tokio::test]
+    async fn excluded_ids_are_filtered_out() {
+        let space_id = SpaceId::new().to_string();
+        let user1    = make_user("Bagouze");
+        let excluded = user1.id.to_string();
+        let users    = vec![user1, make_user("LeTacticien")];
+        let app      = build_router(users);
+        let uri      = format!("/app/{}/coaches/search?q=&excluded={}", space_id, excluded);
+
+        let (status, body) = get_body(app, &uri).await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert!(!body.contains("Bagouze"));
+        assert!(body.contains("LeTacticien"));
+    }
+
+    #[tokio::test]
+    async fn no_results_shows_empty_state() {
+        let space_id = SpaceId::new().to_string();
+        let app      = build_router(vec![]);
+        let uri      = format!("/app/{}/coaches/search?q=", space_id);
+
+        let (status, body) = get_body(app, &uri).await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.contains("Aucun coach trouvé"));
+    }
+
+    #[tokio::test]
+    async fn widget_returns_search_url() {
+        let space_id = SpaceId::new().to_string();
+        let app      = build_router(vec![]);
+        let uri      = format!("/app/{}/coaches/search-widget", space_id);
+
+        let (status, body) = get_body(app, &uri).await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.contains(&format!("/app/{}/coaches/search", space_id)));
+    }
+}
+
 pub async fn search_coaches(
     Path(space_id): Path<String>,
     State(state): State<AppState>,

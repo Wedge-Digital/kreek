@@ -5,7 +5,7 @@ use axum::response::{Html, IntoResponse, Response};
 use crate::app::competitions::routes::Routes;
 use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId};
 use crate::state::AppState;
-use crate::web::app_layout::AppLayout;
+use crate::web::routes::Routes as WebRoutes;
 
 fn cloudinary_transform(url: &str, transform: &str) -> String {
     const MARKER: &str = "/upload/";
@@ -203,6 +203,7 @@ fn mock_flop_casualties() -> Vec<StatRow> {
 #[derive(Template)]
 #[template(path = "competition-detail.html")]
 pub struct CompetitionDetailTemplate {
+    pub web_routes:           WebRoutes,
     pub competition_routes:   Routes,
     pub space_id:             String,
     pub competition_id:       String,
@@ -345,8 +346,9 @@ fn full_page(
     flop_tds: Vec<StatRow>,
     flop_casualties: Vec<StatRow>,
 ) -> Response {
-    let tmpl = CompetitionDetailTemplate {
-        competition_routes: Routes,
+    CompetitionDetailTemplate {
+        web_routes:           WebRoutes,
+        competition_routes:   Routes,
         space_id,
         competition_id,
         season_id,
@@ -363,14 +365,7 @@ fn full_page(
         top_casualties,
         flop_tds,
         flop_casualties,
-    };
-    match tmpl.render() {
-        Ok(html) => {
-            let content = html;
-            AppLayout { content, routes: Default::default() }.into_response()
-        }
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    }
+    }.into_response()
 }
 
 // ── Handlers ──────────────────────────────────────────────────────────────────
@@ -378,7 +373,6 @@ fn full_page(
 pub async fn get_competition_detail(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
-    headers: HeaderMap,
 ) -> impl IntoResponse {
     let cid = match CompetitionId::try_new(&competition_id) {
         Ok(id) => id,
@@ -394,7 +388,8 @@ pub async fn get_competition_detail(
         Err(r) => return r,
     };
 
-    let tmpl = CompetitionDetailTemplate {
+    CompetitionDetailTemplate {
+        web_routes:           WebRoutes,
         competition_routes:   Routes,
         space_id,
         competition_id,
@@ -412,14 +407,7 @@ pub async fn get_competition_detail(
         top_casualties:  vec![],
         flop_tds:        vec![],
         flop_casualties: vec![],
-    };
-
-    if headers.contains_key("hx-request") {
-        tmpl.into_response()
-    } else {
-        let content = tmpl.render().unwrap_or_default();
-        AppLayout { content, routes: Default::default() }.into_response()
-    }
+    }.into_response()
 }
 
 pub async fn get_tab_standings(

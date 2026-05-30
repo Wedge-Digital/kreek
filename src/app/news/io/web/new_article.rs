@@ -1,14 +1,15 @@
 use askama::Template;
 use axum::extract::Path;
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use crate::app::news::routes::Routes as NewsRoutes;
-use crate::web::app_layout::AppLayout;
+use crate::web::routes::Routes as WebRoutes;
 
 #[derive(Template, Default)]
 #[template(path = "new-article.html")]
 pub struct NewArticleTemplate {
-    pub routes:          NewsRoutes,
+    pub web_routes:      WebRoutes,
+    pub news_routes:     NewsRoutes,
     pub space_id:        String,
     pub image_url_value: String,
     pub image_error:     Option<String>,
@@ -28,12 +29,6 @@ impl IntoResponse for NewArticleTemplate {
     }
 }
 
-pub async fn get_new_article(Path(space_id): Path<String>, headers: HeaderMap) -> impl IntoResponse {
-    let tmpl = NewArticleTemplate { space_id, ..Default::default() };
-    if headers.contains_key("hx-request") {
-        tmpl.into_response()
-    } else {
-        let content = tmpl.render().unwrap_or_default();
-        AppLayout { content, routes: Default::default() }.into_response()
-    }
+pub async fn get_new_article(Path(space_id): Path<String>) -> impl IntoResponse {
+    NewArticleTemplate { space_id, ..Default::default() }.into_response()
 }

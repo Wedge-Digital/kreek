@@ -63,8 +63,12 @@ mod tests {
     use crate::app::competitions::io::repository::tests::fake_competition_repository::FakeCompetitionRepository;
     use crate::app::competitions::io::repository::tests::fake_season_repository::FakeSeasonRepository;
     use crate::app::news::context::NewsContext;
+    use crate::app::news::domain::article::Article;
+    use crate::app::news::domain::article_repository_port::{ArticleRepositoryError, IArticleRepository};
+    use crate::app::news::domain::comment::Comment;
+    use crate::app::news::domain::comment_repository_port::{CommentRepositoryError, ICommentRepository};
     use crate::app::shared_kernel::authorization::SpaceProfile;
-    use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
+    use crate::app::shared_kernel::common_types::{ArticleId, CoachId, SpaceId};
     use crate::app::spaces::context::SpacesContext;
     use crate::app::spaces::domain::space::Space;
     use crate::app::spaces::domain::space_repository_port::space_repository_port::{ISpaceRepository, SpaceRepositoryError, SpaceSummary};
@@ -113,6 +117,7 @@ mod tests {
             },
             news: NewsContext {
                 article_repository: Arc::new(FakeNewsRepository),
+                comment_repository: Arc::new(FakeCommentRepository),
             },
             references:   crate::app::references::context::ReferencesContext::new(),
             email_service: Arc::new(ConsoleEmailService),
@@ -145,6 +150,21 @@ mod tests {
     async fn body_string(response: axum::response::Response) -> String {
         let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         String::from_utf8(bytes.to_vec()).unwrap()
+    }
+
+    struct FakeNewsRepository;
+    #[async_trait::async_trait]
+    impl IArticleRepository for FakeNewsRepository {
+        async fn save(&self, _: &Article) -> Result<(), ArticleRepositoryError> { Ok(()) }
+        async fn find_by_space(&self, _: &SpaceId, _: i64, _: i64) -> Result<(Vec<Article>, i64), ArticleRepositoryError> { Ok((vec![], 0)) }
+        async fn find_by_id(&self, _: &ArticleId) -> Result<Option<Article>, ArticleRepositoryError> { Ok(None) }
+    }
+
+    struct FakeCommentRepository;
+    #[async_trait::async_trait]
+    impl ICommentRepository for FakeCommentRepository {
+        async fn save(&self, _: &Comment) -> Result<(), CommentRepositoryError> { Ok(()) }
+        async fn find_by_article(&self, _: &ArticleId) -> Result<Vec<Comment>, CommentRepositoryError> { Ok(vec![]) }
     }
 
     struct FakeUserCacheRepository;

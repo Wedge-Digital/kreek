@@ -1,6 +1,6 @@
 use askama::Template;
 use axum::extract::{Path, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::news::domain::article::ArticleParagraph;
@@ -8,7 +8,7 @@ use crate::app::news::domain::comment::Comment;
 use crate::app::news::routes::Routes as NewsRoutes;
 use crate::app::shared_kernel::common_types::ArticleId;
 use crate::state::AppState;
-use crate::web::app_layout::AppLayout;
+use crate::web::routes::Routes as WebRoutes;
 
 pub struct ParagraphViewModel {
     pub title:   String,
@@ -63,7 +63,8 @@ impl From<Comment> for CommentViewModel {
 #[derive(Template)]
 #[template(path = "article-detail.html")]
 pub struct ArticleDetailTemplate {
-    pub routes:               NewsRoutes,
+    pub web_routes:           WebRoutes,
+    pub news_routes:          NewsRoutes,
     pub space_id:             String,
     pub article_id:           String,
     pub title:                String,
@@ -91,7 +92,6 @@ impl IntoResponse for ArticleDetailTemplate {
 pub async fn get_article(
     Path((space_id_raw, article_id_raw)): Path<(String, String)>,
     auth_session:                          AuthSession,
-    headers:                               HeaderMap,
     State(state):                          State<AppState>,
 ) -> impl IntoResponse {
     let Ok(article_id) = ArticleId::try_new(&article_id_raw) else {
@@ -126,8 +126,9 @@ pub async fn get_article(
         .map(|c: char| c.to_uppercase().next().unwrap_or('?').to_string())
         .unwrap_or_else(|| "?".to_string());
 
-    let tmpl = ArticleDetailTemplate {
-        routes:               Default::default(),
+    ArticleDetailTemplate {
+        web_routes:           Default::default(),
+        news_routes:          Default::default(),
         space_id:             space_id_raw,
         article_id:           article_id_raw,
         author_initial,
@@ -141,12 +142,5 @@ pub async fn get_article(
         paragraphs:           article.content.into_iter().map(Into::into).collect(),
         comments:             comments_raw.into_iter().map(Into::into).collect(),
         current_user_initial,
-    };
-
-    if headers.contains_key("hx-request") {
-        tmpl.into_response()
-    } else {
-        let content = tmpl.render().unwrap_or_default();
-        AppLayout { content, routes: Default::default() }.into_response()
-    }
+    }.into_response()
 }

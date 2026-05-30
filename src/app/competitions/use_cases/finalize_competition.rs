@@ -70,6 +70,7 @@ mod tests {
         async fn set_ready(&self, _: &SeasonId) -> Result<(), SeasonRepositoryError> {
             if self.fail { Err(SeasonRepositoryError::SeasonNotFound) } else { Ok(()) }
         }
+        async fn find_full(&self, _: &SeasonId) -> Result<Option<crate::app::competitions::domain::season_repository_port::SeasonFull>, SeasonRepositoryError> { Ok(None) }
     }
 
     fn make_cmd() -> FinalizeCompetitionCommand {

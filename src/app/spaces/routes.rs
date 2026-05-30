@@ -23,4 +23,7 @@ impl Routes {
     pub fn coach_search(&self, space_id: &str) -> String {
         path::SPACE_COACH_SEARCH.replace("{space_id}", space_id)
     }
+    pub fn members_widget(&self, space_id: &str) -> String {
+        path::SPACE_MEMBERS_WIDGET.replace("{space_id}", space_id)
+    }
 }
