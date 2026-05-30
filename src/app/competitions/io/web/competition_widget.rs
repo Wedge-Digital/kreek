@@ -7,27 +7,20 @@ use crate::app::competitions::routes::Routes as CompetitionRoutes;
 use crate::app::shared_kernel::common_types::{SeasonId, SpaceId};
 use crate::state::AppState;
 
-// ── Widget principal (liste des compétitions + sélecteur) ───────────────────
+// ── Widget principal : sélecteur compétition ─────────────────────────────────
 
-pub struct SeasonWidgetItem {
-    pub season_id:   String,
-    pub season_name: String,
-    pub status:      String,
-    pub selected:    bool,
-}
-
-pub struct CompetitionWidgetGroup {
+pub struct CompetitionItem {
     pub competition_id:   String,
     pub competition_name: String,
-    pub seasons:          Vec<SeasonWidgetItem>,
 }
 
 #[derive(Template)]
 #[template(path = "competition-widget.html")]
 pub struct CompetitionWidgetTemplate {
-    pub routes:   CompetitionRoutes,
-    pub space_id: String,
-    pub groups:   Vec<CompetitionWidgetGroup>,
+    pub routes:       CompetitionRoutes,
+    pub space_id:     String,
+    pub competitions: Vec<CompetitionItem>,
+    pub show_detail:  bool,
 }
 
 impl IntoResponse for CompetitionWidgetTemplate {
@@ -41,7 +34,8 @@ impl IntoResponse for CompetitionWidgetTemplate {
 
 #[derive(Deserialize, Default)]
 pub struct CompetitionWidgetQuery {
-    pub selected: Option<String>,
+    #[serde(default)]
+    pub show_detail: bool,
 }
 
 pub async fn get_competition_widget(
@@ -53,32 +47,91 @@ pub async fn get_competition_widget(
         return StatusCode::BAD_REQUEST.into_response();
     };
 
-    let selected = query.selected.clone().unwrap_or_default();
-
     let competitions = state.competitions.competition_repository
         .find_with_seasons(&space_id)
         .await
-        .unwrap_or_default();
-
-    let groups = competitions.into_iter().map(|c| CompetitionWidgetGroup {
-        competition_id:   c.competition_id,
-        competition_name: c.competition_name,
-        seasons: c.seasons.into_iter().map(|s| SeasonWidgetItem {
-            selected:    s.season_id == selected,
-            season_id:   s.season_id,
-            season_name: s.season_name,
-            status:      s.status,
-        }).collect(),
-    }).collect();
+        .unwrap_or_default()
+        .into_iter()
+        .map(|c| CompetitionItem {
+            competition_id:   c.competition_id,
+            competition_name: c.competition_name,
+        })
+        .collect();
 
     CompetitionWidgetTemplate {
-        routes:   Default::default(),
-        space_id: space_id_raw,
-        groups,
+        routes:      Default::default(),
+        space_id:    space_id_raw,
+        competitions,
+        show_detail: query.show_detail,
     }.into_response()
 }
 
-// ── Panneau de détail (chargé au changement de sélection) ──────────────────
+// ── Fragment saisons (chargé au changement de compétition) ───────────────────
+
+pub struct SeasonItem {
+    pub season_id:   String,
+    pub season_name: String,
+    pub status:      String,
+}
+
+#[derive(Template)]
+#[template(path = "competition-widget-seasons.html")]
+pub struct SeasonSelectorTemplate {
+    pub routes:      CompetitionRoutes,
+    pub space_id:    String,
+    pub seasons:     Vec<SeasonItem>,
+    pub show_detail: bool,
+}
+
+impl IntoResponse for SeasonSelectorTemplate {
+    fn into_response(self) -> Response {
+        match self.render() {
+            Ok(html) => Html(html).into_response(),
+            Err(_)   => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        }
+    }
+}
+
+#[derive(Deserialize, Default)]
+pub struct SeasonsQuery {
+    pub competition_id: Option<String>,
+    #[serde(default)]
+    pub show_detail:    bool,
+}
+
+pub async fn get_competition_widget_seasons(
+    Path(space_id_raw): Path<String>,
+    Query(query):       Query<SeasonsQuery>,
+    State(state):       State<AppState>,
+) -> impl IntoResponse {
+    let Ok(space_id) = SpaceId::try_new(&space_id_raw) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+
+    let competition_id = query.competition_id.unwrap_or_default();
+
+    let seasons = state.competitions.competition_repository
+        .find_with_seasons(&space_id)
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .find(|c| c.competition_id == competition_id)
+        .map(|c| c.seasons.into_iter().map(|s| SeasonItem {
+            season_id:   s.season_id,
+            season_name: s.season_name,
+            status:      s.status,
+        }).collect())
+        .unwrap_or_default();
+
+    SeasonSelectorTemplate {
+        routes:      Default::default(),
+        space_id:    space_id_raw,
+        seasons,
+        show_detail: query.show_detail,
+    }.into_response()
+}
+
+// ── Panneau de détail (chargé au changement de saison) ───────────────────────
 
 pub struct TierViewModel {
     pub name:      String,
@@ -137,7 +190,7 @@ pub async fn get_competition_widget_detail(
         .await
         .unwrap_or(None)
     else {
-        return StatusCode::NOT_FOUND.into_response();
+        return Html(r#"<div class="comp-detail-empty">Données indisponibles pour cette saison.</div>"#).into_response();
     };
 
     let rules = full.rules.map(|r| RulesViewModel {

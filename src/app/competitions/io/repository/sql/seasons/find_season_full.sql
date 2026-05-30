@@ -2,8 +2,8 @@ SELECT
     s.id         AS season_id,
     s.name       AS season_name,
     s.status,
-    s.rules,
-    s.structure,
+    s.rules::text,
+    s.structure::text,
     c.id         AS competition_id,
     c.name       AS competition_name
 FROM competition_seasons s

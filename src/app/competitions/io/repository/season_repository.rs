@@ -181,7 +181,10 @@ impl ISeasonRepository for SeasonRepository {
         .await
         .map_err(db_err)?;
 
-        let Some(r) = row else { return Ok(None) };
+        let Some(r) = row else {
+            tracing::warn!("find_full: season {} not found in competition_seasons", season_id);
+            return Ok(None)
+        };
 
         let rules = r.rules
             .as_deref()

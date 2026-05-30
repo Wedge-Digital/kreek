@@ -12,6 +12,7 @@ pub mod path {
     pub const COMPETITION_TAB_TEAMS:        &str = "/app/{space_id}/competitions/{competition_id}/{season_id}/teams";
     pub const COMPETITION_TAB_STATS:        &str = "/app/{space_id}/competitions/{competition_id}/{season_id}/stats";
     pub const COMPETITION_WIDGET:           &str = "/app/{space_id}/competitions/widget";
+    pub const COMPETITION_WIDGET_SEASONS:   &str = "/app/{space_id}/competitions/widget/seasons";
     pub const COMPETITION_WIDGET_DETAIL:    &str = "/app/{space_id}/competitions/widget/{season_id}";
 }
 
@@ -53,6 +54,9 @@ impl Routes {
     }
     pub fn competition_widget(&self, sid: &str) -> String {
         path::COMPETITION_WIDGET.replace("{space_id}", sid)
+    }
+    pub fn competition_widget_seasons(&self, sid: &str) -> String {
+        path::COMPETITION_WIDGET_SEASONS.replace("{space_id}", sid)
     }
     pub fn competition_widget_detail(&self, sid: &str, season_id: &str) -> String {
         path::COMPETITION_WIDGET_DETAIL.replace("{space_id}", sid).replace("{season_id}", season_id)

@@ -1,58 +1,38 @@
+<link rel="stylesheet" href="/static/css/components/competition-widget.css">
 <div class="competition-widget">
-  {% if groups.is_empty() %}
+  {% if competitions.is_empty() %}
   <div class="competition-widget-empty">Pas de compétition disponible.</div>
   {% else %}
-  <select id="competition-season-select"
-          name="season_id"
-          hx-get="{{ routes.competition_widget_detail(space_id, "") }}"
-          hx-trigger="change"
-          hx-target="#competition-widget-detail"
-          hx-swap="innerHTML"
-          hx-vals='js:{"season_id": document.getElementById("competition-season-select").value}'
-          placeholder="Sélectionnez une compétition…">
-    <option value="">Sélectionnez une compétition…</option>
-    {% for group in groups %}
-    <optgroup label="{{ group.competition_name }}">
-      {% for season in group.seasons %}
-      <option value="{{ season.season_id }}"{% if season.selected %} selected{% endif %}>
-        {{ season.season_name }}
-        {% if season.status == "ready" %} ✓{% endif %}
-      </option>
-      {% endfor %}
-    </optgroup>
-    {% endfor %}
-  </select>
 
+  <div class="form-group">
+    <label class="form-label" for="competition-select">Compétition</label>
+    <select id="competition-select"
+            class="form-select"
+            name="competition_id"
+            hx-get="{{ routes.competition_widget_seasons(space_id) }}{% if show_detail %}?show_detail=true{% endif %}"
+            hx-trigger="change"
+            hx-target="#season-select-wrapper"
+            hx-swap="innerHTML"
+            hx-include="this">
+      <option value="">Sélectionnez une compétition…</option>
+      {% for c in competitions %}
+      <option value="{{ c.competition_id }}">{{ c.competition_name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div id="season-select-wrapper">
+    <div class="form-group">
+      <label class="form-label" for="season-select">Saison</label>
+      <select id="season-select" class="form-select" disabled>
+        <option value="">— Sélectionnez d'abord une compétition —</option>
+      </select>
+    </div>
+  </div>
+
+  {% if show_detail %}
   <div id="competition-widget-detail" class="competition-widget-detail"></div>
   {% endif %}
+
+  {% endif %}
 </div>
-
-<script>
-(function () {
-  var el = document.getElementById('competition-season-select');
-  if (!el || el.tomselect) return;
-
-  new TomSelect(el, {
-    placeholder: 'Sélectionnez une compétition…',
-    allowEmptyOption: true,
-    maxItems: 1,
-    onInitialize: function () {
-      // Déclencher le chargement du détail si une valeur est présente au chargement
-      var val = this.getValue();
-      if (val) { htmx.trigger(el, 'change'); }
-    },
-  });
-
-  // Reconstruire l'URL avec le season_id sélectionné avant l'envoi HTMX
-  el.addEventListener('change', function () {
-    var val = el.tomselect ? el.tomselect.getValue() : el.value;
-    if (!val) {
-      document.getElementById('competition-widget-detail').innerHTML = '';
-      return;
-    }
-    var base = el.getAttribute('hx-get').replace(/\/[^/]*$/, '');
-    el.setAttribute('hx-get', base + '/' + val);
-    htmx.process(el);
-  });
-})();
-</script>

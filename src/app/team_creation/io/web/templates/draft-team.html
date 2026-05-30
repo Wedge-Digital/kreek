@@ -4,8 +4,7 @@
 {% block content %}
 <link rel="stylesheet" href="/static/css/pages/app-new-team.css">
 <link rel="stylesheet" href="/static/css/components/create-card.css">
-<link rel="stylesheet" href="/static/css/components/upload.css">
-<div class="create-card">
+<link rel="stylesheet" href="/static/css/components/upload.css"><div class="create-card">
     <div class="create-header">
         <div class="create-header-icon">🏈</div>
         <div class="create-header-text">
@@ -33,7 +32,6 @@
     </div>
 
     <div class="form-group create-team">
-        <label class="form-label">Compétition</label>
         <div hx-get="{{ comp_routes.competition_widget(space_id) }}"
              hx-trigger="load"
              hx-swap="innerHTML">
