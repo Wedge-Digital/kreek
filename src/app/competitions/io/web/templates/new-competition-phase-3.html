@@ -393,7 +393,7 @@
         const redirect = res.headers.get('HX-Redirect');
         if (redirect) {
           history.pushState({}, '', redirect);
-          htmx.ajax('GET', redirect, { target: '#app-content', swap: 'innerHTML' });
+          htmx.ajax('GET', redirect, { target: '#app-content', swap: 'innerHTML', select: '#app-content' });
         }
         return;
       }
