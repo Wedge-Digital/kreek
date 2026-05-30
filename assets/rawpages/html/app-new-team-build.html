@@ -5,14 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Construire l'équipe — Blood Bowl Club</title>
   <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.4.1/dist/css/tom-select.min.css">
   <style>
-    .create-card { background: var(--white); border-radius: 12px; padding: var(--p4); max-width: 1100px; margin: 0 auto; }
+    /* ── Layout ──────────────────────────────────────────────────────────── */
+    .home-grid  { display: flex; gap: var(--p2); height: 100%; align-items: stretch; width: 100%; }
+    .home-main  { flex: 3; display: flex; flex-direction: column; gap: var(--p1); overflow-y: auto; scrollbar-width: none; }
+    .home-main::-webkit-scrollbar { display: none; }
+    .home-side  { flex: 1; align-self: flex-start; position: sticky; top: var(--p2); max-height: calc(100vh - 80px); overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; gap: var(--p2); }
+
+    /* ── Create card ─────────────────────────────────────────────────────── */
+    .create-card { background: var(--white); border-radius: 12px; padding: var(--p4); }
     .create-card-title { font-family: var(--font-title); font-size: var(--h2); font-weight: 700; color: var(--dark-1); margin-bottom: var(--p05); text-align: center; }
     .create-card-sub { font-size: var(--text-small); color: var(--dark-3); text-align: center; margin-bottom: var(--p2); }
 
     .section-label { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-2); margin-bottom: var(--p1); }
 
-    /* Player table */
+    /* ── Player table ────────────────────────────────────────────────────── */
     .player-table { width: 100%; border-collapse: collapse; }
     .player-table th {
       background: var(--dark-6); border: 1px solid var(--dark-5);
@@ -23,9 +31,9 @@
       border: 1px solid var(--dark-5); padding: 10px 8px;
       font-size: var(--text-tiny); color: var(--dark-1); text-align: center;
     }
-    .player-table tr:nth-child(odd) td { background: var(--dark-7); }
+    .player-table tr:nth-child(odd) td  { background: var(--dark-7); }
     .player-table tr:nth-child(even) td { background: var(--white); }
-    .player-table td.player-name { text-align: left; font-weight: 500; }
+    .player-table td.player-name   { text-align: left; font-weight: 500; }
     .player-table td.player-skills { text-align: left; }
     .player-table tfoot td { background: var(--dark-6); font-weight: 600; color: var(--dark-1); border-top: 2px solid var(--dark-4); }
 
@@ -35,6 +43,205 @@
       display: inline-flex; align-items: center; justify-content: center;
     }
     .tbl-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    /* ── Roster TomSelect ────────────────────────────────────────────────── */
+    #roster-select-wrap { max-width: 400px; }
+    #roster-select-wrap .ts-wrapper { width: 100%; }
+    #roster-select-wrap .ts-control {
+      padding: 14px 16px; border: 1px solid var(--dark-4); border-radius: 6px;
+      font-size: var(--text-small); color: var(--dark-1); background: var(--white);
+      outline: none; box-shadow: none; cursor: pointer;
+    }
+    #roster-select-wrap .ts-wrapper.focus .ts-control {
+      border-color: var(--main-blue); box-shadow: 0 0 0 3px rgba(0,48,73,0.08);
+    }
+    #roster-select-wrap .ts-control input { font-size: var(--text-small); color: var(--dark-1); padding: 0; }
+    #roster-select-wrap .ts-control .item { display: flex; align-items: center; gap: 8px; }
+    #roster-select-wrap .ts-dropdown {
+      border: 1px solid var(--dark-4); border-top: none;
+      border-radius: 0 0 6px 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      font-size: var(--text-small);
+    }
+    #roster-select-wrap .ts-dropdown .option {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; color: var(--dark-1);
+    }
+    #roster-select-wrap .ts-dropdown .option.active,
+    #roster-select-wrap .ts-dropdown .option:hover {
+      background: rgba(0,48,73,0.05); color: var(--dark-1);
+    }
+    #roster-select-wrap .ts-control .placeholder { color: var(--dark-4); }
+
+    /* ── Tier badges ─────────────────────────────────────────────────────── */
+    .roster-tier-badge {
+      font-size: 11px; font-weight: 700; padding: 2px 8px;
+      border-radius: 4px; white-space: nowrap; flex-shrink: 0;
+    }
+    .tier-1 { background: rgba(0,48,73,0.10); color: var(--main-blue); }
+    .tier-2 { background: rgba(255,107,53,0.12); color: var(--orange); }
+    .tier-3 { background: rgba(143,144,166,0.15); color: var(--dark-3); }
+
+    /* ── Cart ────────────────────────────────────────────────────────────── */
+    .cart {
+      background: var(--dark-6);
+      border: 1px solid var(--dark-5);
+      border-radius: 12px;
+      padding: var(--p2) var(--p3);
+      display: flex;
+      flex-direction: column;
+      gap: var(--p1);
+    }
+    .cart-title {
+      font-family: var(--font-title);
+      font-size: var(--h5);
+      font-weight: 700;
+      color: var(--dark-1);
+      padding-bottom: var(--p1);
+      border-bottom: 2px solid var(--dark-4);
+    }
+    .cart-section-label {
+      font-size: var(--text-tiny);
+      font-weight: 700;
+      color: var(--dark-3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 4px;
+    }
+    .cart-line {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--p1);
+      font-size: var(--text-small);
+      color: var(--dark-1);
+    }
+    .cart-line-name  { flex: 1; }
+    .cart-line-qty   { color: var(--dark-3); min-width: 28px; text-align: right; }
+    .cart-line-price { font-weight: 600; min-width: 80px; text-align: right; }
+    .cart-separator  { border: none; border-top: 1px solid var(--dark-5); margin: 4px 0; }
+    .cart-subtotal {
+      display: flex;
+      justify-content: space-between;
+      font-size: var(--text-small);
+      color: var(--dark-2);
+      font-weight: 600;
+    }
+    .cart-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: var(--p1);
+      border-top: 2px solid var(--dark-4);
+    }
+    .cart-total-label { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); }
+    .cart-total-amount { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--main-blue); }
+    .cart-budget-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .cart-budget-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+    }
+    .cart-progress { height: 6px; background: var(--dark-5); border-radius: 3px; }
+    .cart-progress-inner { height: 100%; border-radius: 3px; background: var(--main-blue); width: 85%; transition: width 0.3s; }
+    .cart-actions {
+      display: flex;
+      flex-direction: column;
+      gap: var(--p1);
+      padding-top: 4px;
+    }
+
+    /* ── Sidebar rules panel ─────────────────────────────────────────────── */
+    .rules-panel {
+      background: var(--white);
+      border-radius: 10px;
+      padding: var(--p2);
+      display: flex;
+      flex-direction: column;
+      gap: var(--p1);
+    }
+    .rules-panel-title {
+      font-family: var(--font-title);
+      font-size: var(--h5);
+      font-weight: 700;
+      color: var(--dark-1);
+      padding-bottom: var(--p1);
+      border-bottom: 2px solid var(--dark-5);
+    }
+    .rules-comp-name {
+      font-size: var(--text-small);
+      font-weight: 700;
+      color: var(--dark-0);
+    }
+    .rules-season {
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+      font-style: italic;
+      margin-top: -6px;
+    }
+    .rules-section {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-top: var(--p1);
+      border-top: 1px solid var(--dark-6);
+    }
+    .rules-section-title {
+      font-size: var(--text-tiny);
+      font-weight: 700;
+      color: var(--dark-2);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .rules-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: var(--text-tiny);
+    }
+    .rules-row-label { color: var(--dark-3); }
+    .rules-row-value { font-weight: 600; color: var(--dark-1); }
+    .rules-scoring {
+      display: flex;
+      gap: 6px;
+    }
+    .rules-score-chip {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      background: var(--dark-6);
+      border: 1px solid var(--dark-5);
+      border-radius: 8px;
+      padding: 8px 4px;
+    }
+    .rules-score-pts   { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--main-blue); }
+    .rules-score-label { font-size: 10px; color: var(--dark-3); white-space: nowrap; }
+    .rules-tier {
+      background: var(--dark-6);
+      border: 1px solid var(--dark-5);
+      border-radius: 6px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .rules-tier-name   { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-1); }
+    .rules-tier-meta   { font-size: 11px; color: var(--dark-3); }
+    .rules-badge {
+      align-self: flex-start;
+      font-size: var(--text-tiny);
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(98,149,132,0.15);
+      color: var(--green);
+    }
   </style>
 </head>
 <body>
@@ -67,184 +274,305 @@
         <div class="sub-menu-placeholder"></div>
       </div>
 
-      <div class="page-content-wide">
-        <div class="create-card">
+      <div class="page-content">
+        <div class="home-grid">
 
-          <!-- Card header -->
-          <div class="create-card-title">Création d'une nouvelle équipe</div>
-          <div class="create-card-sub">Vous êtes sur le point de créer une nouvelle équipe. C'est très simple. Suivez le guide</div>
-          <div class="separator" style="margin-bottom: var(--p3);"></div>
+          <!-- ── Contenu principal ─────────────────────────────────────── -->
+          <div class="home-main">
+            <div class="create-card">
 
-          <!-- Step 2: Roster -->
-          <div class="section-label">2 — Sélectionnez votre roster</div>
-          <div style="margin-bottom: var(--p2);">
-            <select class="form-select" style="max-width: 400px;">
-              <option>Choisissez un roster...</option>
-              <option selected>Chaos Rénégats</option>
-              <option>Elfes Sylvestres</option>
-              <option>Hauts Elfes</option>
-              <option>Elfes Noirs</option>
-              <option>Orques</option>
-              <option>Nains</option>
-              <option>Skavens</option>
-              <option>Morts-vivants</option>
-              <option>Humains</option>
-              <option>Hommes-lézards</option>
-            </select>
+              <div class="create-card-title">Création d'une nouvelle équipe</div>
+              <div class="create-card-sub">Vous êtes sur le point de créer une nouvelle équipe. C'est très simple. Suivez le guide</div>
+              <div class="separator" style="margin-bottom: var(--p3);"></div>
+
+              <!-- Step 2: Roster -->
+              <div class="section-label">2 — Sélectionnez votre roster</div>
+              <div id="roster-select-wrap" style="margin-bottom: var(--p2);">
+                <select id="roster-select">
+                  <option value="">Choisissez un roster…</option>
+                  <option value="chaos"    data-tier="2" selected>Chaos Rénégats</option>
+                  <option value="elfsy"    data-tier="1">Elfes Sylvestres</option>
+                  <option value="hautelfs" data-tier="1">Hauts Elfes</option>
+                  <option value="darkelfs" data-tier="1">Elfes Noirs</option>
+                  <option value="orques"   data-tier="1">Orques</option>
+                  <option value="nains"    data-tier="1">Nains</option>
+                  <option value="skavens"  data-tier="1">Skavens</option>
+                  <option value="undead"   data-tier="2">Morts-vivants</option>
+                  <option value="humans"   data-tier="1">Humains</option>
+                  <option value="lizards"  data-tier="1">Hommes-lézards</option>
+                </select>
+              </div>
+
+              <!-- Step 3: Players -->
+              <div class="section-label">3 — Sélectionnez vos joueurs</div>
+              <div style="overflow-x: auto; margin-bottom: var(--p2);">
+                <table class="player-table">
+                  <thead>
+                    <tr>
+                      <th>Qté max</th>
+                      <th style="text-align: left; min-width: 200px;">Nom</th>
+                      <th>Prix</th>
+                      <th>M</th><th>F</th><th>Ag</th><th>Cp</th><th>Av</th>
+                      <th style="text-align: left; min-width: 220px;">Compétences</th>
+                      <th>Qté</th>
+                      <th>Coût total</th>
+                      <th></th><th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>0-16</td>
+                      <td class="player-name">Bloodborn Marauder Linemen</td>
+                      <td>60 kpO</td>
+                      <td>6</td><td>3</td><td>3+</td><td>4+</td><td>8+</td>
+                      <td class="player-skills">Frénésie, Châtaigne +1, Griffes, Fureur débridée, Solitaire 4+</td>
+                      <td>6</td><td>360 kpO</td>
+                      <td><button class="tbl-btn">+</button></td>
+                      <td><button class="tbl-btn">−</button></td>
+                    </tr>
+                    <tr>
+                      <td>0-4</td>
+                      <td class="player-name">Chaos Warrior</td>
+                      <td>90 kpO</td>
+                      <td>5</td><td>4</td><td>3+</td><td>—</td><td>9+</td>
+                      <td class="player-skills">Monstrueux, Tenant le mur</td>
+                      <td>2</td><td>180 kpO</td>
+                      <td><button class="tbl-btn">+</button></td>
+                      <td><button class="tbl-btn">−</button></td>
+                    </tr>
+                    <tr>
+                      <td>0-1</td>
+                      <td class="player-name">Minotaure</td>
+                      <td>150 kpO</td>
+                      <td>5</td><td>5</td><td>4+</td><td>—</td><td>9+</td>
+                      <td class="player-skills">Monstrueux, Frénésie, Tête de boeuf, Faible d'esprit</td>
+                      <td>1</td><td>150 kpO</td>
+                      <td><button class="tbl-btn">+</button></td>
+                      <td><button class="tbl-btn">−</button></td>
+                    </tr>
+                    <tr>
+                      <td>0-2</td>
+                      <td class="player-name">Beastman Runner</td>
+                      <td>80 kpO</td>
+                      <td>6</td><td>3</td><td>3+</td><td>4+</td><td>8+</td>
+                      <td class="player-skills">Frénésie, Corne, Solitaire 4+</td>
+                      <td>2</td><td>160 kpO</td>
+                      <td><button class="tbl-btn">+</button></td>
+                      <td><button class="tbl-btn">−</button></td>
+                    </tr>
+                    <tr>
+                      <td>0-4</td>
+                      <td class="player-name">Chosen Blocker</td>
+                      <td>100 kpO</td>
+                      <td>5</td><td>4</td><td>3+</td><td>—</td><td>9+</td>
+                      <td class="player-skills">Monstrueux, Marquage</td>
+                      <td>0</td><td>0 kpO</td>
+                      <td><button class="tbl-btn">+</button></td>
+                      <td><button class="tbl-btn">−</button></td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="9"></td>
+                      <td colspan="2">Total : 11 Joueurs, 850 kpO</td>
+                      <td></td><td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              <!-- Step 4: Staff -->
+              <div class="section-label">4 — Sélectionnez votre staff</div>
+              <div style="overflow-x: auto; margin-bottom: var(--p4);">
+                <table class="player-table" style="max-width: 600px;">
+                  <thead>
+                    <tr>
+                      <th>Qté max</th>
+                      <th style="text-align: left;">Poste</th>
+                      <th>Prix</th>
+                      <th>Qté</th>
+                      <th>Prix total</th>
+                      <th></th><th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>0-8</td>
+                      <td style="text-align: left; font-weight: 500;">Relances</td>
+                      <td>60 kpO</td>
+                      <td>3</td><td>180 kpO</td>
+                      <td><button class="tbl-btn">+</button></td>
+                      <td><button class="tbl-btn">−</button></td>
+                    </tr>
+                    <tr>
+                      <td>0-6</td>
+                      <td style="text-align: left; font-weight: 500;">Cheerleaders</td>
+                      <td>10 kpO</td>
+                      <td>0</td><td>0 kpO</td>
+                      <td><button class="tbl-btn">+</button></td>
+                      <td><button class="tbl-btn">−</button></td>
+                    </tr>
+                    <tr>
+                      <td>0-6</td>
+                      <td style="text-align: left; font-weight: 500;">Assistants d'entraînement</td>
+                      <td>10 kpO</td>
+                      <td>0</td><td>0 kpO</td>
+                      <td><button class="tbl-btn">+</button></td>
+                      <td><button class="tbl-btn">−</button></td>
+                    </tr>
+                    <tr>
+                      <td>0-1</td>
+                      <td style="text-align: left; font-weight: 500;">Apothicaire</td>
+                      <td>50 kpO</td>
+                      <td>1</td><td>50 kpO</td>
+                      <td><button class="tbl-btn">+</button></td>
+                      <td><button class="tbl-btn">−</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div style="display: flex; flex-direction: column; align-items: center; gap: var(--p2); max-width: 200px; margin: 0 auto;">
+                <button class="btn btn-outline" style="width: 100%;"
+                  onclick="window.location.href='../app-new-team.html'">← Retour</button>
+              </div>
+
+            </div>
           </div>
 
-          <!-- Step 3: Players -->
-          <div class="section-label">3 — Sélectionnez vos joueurs</div>
-          <div style="overflow-x: auto; margin-bottom: var(--p2);">
-            <table class="player-table">
-              <thead>
-                <tr>
-                  <th>Qté max</th>
-                  <th style="text-align: left; min-width: 200px;">Nom</th>
-                  <th>Prix</th>
-                  <th>M</th><th>F</th><th>Ag</th><th>Cp</th><th>Av</th>
-                  <th style="text-align: left; min-width: 220px;">Compétences</th>
-                  <th>Qté</th>
-                  <th>Coût total</th>
-                  <th></th><th></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>0-16</td>
-                  <td class="player-name">Bloodborn Marauder Linemen</td>
-                  <td>60 kpO</td>
-                  <td>6</td><td>3</td><td>3+</td><td>4+</td><td>8+</td>
-                  <td class="player-skills">Frénésie, Châtaigne +1, Griffes, Fureur débridée, Solitaire 4+</td>
-                  <td>6</td><td>360 kpO</td>
-                  <td><button class="tbl-btn">+</button></td>
-                  <td><button class="tbl-btn">−</button></td>
-                </tr>
-                <tr>
-                  <td>0-4</td>
-                  <td class="player-name">Chaos Warrior</td>
-                  <td>90 kpO</td>
-                  <td>5</td><td>4</td><td>3+</td><td>—</td><td>9+</td>
-                  <td class="player-skills">Monstrueux, Tenant le mur</td>
-                  <td>2</td><td>180 kpO</td>
-                  <td><button class="tbl-btn">+</button></td>
-                  <td><button class="tbl-btn">−</button></td>
-                </tr>
-                <tr>
-                  <td>0-1</td>
-                  <td class="player-name">Minotaure</td>
-                  <td>150 kpO</td>
-                  <td>5</td><td>5</td><td>4+</td><td>—</td><td>9+</td>
-                  <td class="player-skills">Monstrueux, Frénésie, Tête de boeuf, Faible d'esprit</td>
-                  <td>1</td><td>150 kpO</td>
-                  <td><button class="tbl-btn">+</button></td>
-                  <td><button class="tbl-btn">−</button></td>
-                </tr>
-                <tr>
-                  <td>0-2</td>
-                  <td class="player-name">Beastman Runner</td>
-                  <td>80 kpO</td>
-                  <td>6</td><td>3</td><td>3+</td><td>4+</td><td>8+</td>
-                  <td class="player-skills">Frénésie, Corne, Solitaire 4+</td>
-                  <td>2</td><td>160 kpO</td>
-                  <td><button class="tbl-btn">+</button></td>
-                  <td><button class="tbl-btn">−</button></td>
-                </tr>
-                <tr>
-                  <td>0-4</td>
-                  <td class="player-name">Chosen Blocker</td>
-                  <td>100 kpO</td>
-                  <td>5</td><td>4</td><td>3+</td><td>—</td><td>9+</td>
-                  <td class="player-skills">Monstrueux, Marquage</td>
-                  <td>0</td><td>0 kpO</td>
-                  <td><button class="tbl-btn">+</button></td>
-                  <td><button class="tbl-btn">−</button></td>
-                </tr>
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colspan="9"></td>
-                  <td colspan="2">Total : 11 Joueurs, 850 kpO</td>
-                  <td></td><td></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+          <!-- ── Sidebar droite ─────────────────────────────────────────── -->
+          <div class="home-side">
+            <div class="rules-panel">
+              <div class="rules-panel-title">Compétition</div>
 
-          <!-- Hire players button -->
-          <div style="display: flex; justify-content: center; margin-bottom: var(--p4);">
-            <button class="btn btn-primary" style="width: 300px;">Engager les joueurs</button>
-          </div>
+              <div>
+                <div class="rules-comp-name">Ligue de Condate</div>
+                <div class="rules-season">Saison 3 · 2024–2025</div>
+              </div>
+              <!-- Tiers -->
+              <div class="rules-section">
+                <div class="rules-section-title">Tiers disponibles</div>
+                <div class="rules-tier">
+                  <div class="rules-tier-name">Débutants</div>
+                  <div class="rules-tier-meta">Budget : 1 000 kpO · XP départ : 0</div>
+                </div>
+                <div class="rules-tier">
+                  <div class="rules-tier-name">Expérimentés</div>
+                  <div class="rules-tier-meta">Budget : 1 150 kpO · XP départ : 51</div>
+                </div>
+              </div>
 
-          <!-- Step 4: Staff -->
-          <div class="section-label">4 — Sélectionnez votre staff</div>
-          <div style="overflow-x: auto; margin-bottom: var(--p4);">
-            <table class="player-table" style="max-width: 600px;">
-              <thead>
-                <tr>
-                  <th>Qté max</th>
-                  <th style="text-align: left;">Poste</th>
-                  <th>Prix</th>
-                  <th>Qté</th>
-                  <th>Prix total</th>
-                  <th></th><th></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>0-8</td>
-                  <td style="text-align: left; font-weight: 500;">Relances</td>
-                  <td>60 kpO</td>
-                  <td>3</td>
-                  <td>180 kpO</td>
-                  <td><button class="tbl-btn">+</button></td>
-                  <td><button class="tbl-btn">−</button></td>
-                </tr>
-                <tr>
-                  <td>0-6</td>
-                  <td style="text-align: left; font-weight: 500;">Cheerleaders</td>
-                  <td>10 kpO</td>
-                  <td>0</td>
-                  <td>0 kpO</td>
-                  <td><button class="tbl-btn">+</button></td>
-                  <td><button class="tbl-btn">−</button></td>
-                </tr>
-                <tr>
-                  <td>0-6</td>
-                  <td style="text-align: left; font-weight: 500;">Assistants d'entraînement</td>
-                  <td>10 kpO</td>
-                  <td>0</td>
-                  <td>0 kpO</td>
-                  <td><button class="tbl-btn">+</button></td>
-                  <td><button class="tbl-btn">−</button></td>
-                </tr>
-                <tr>
-                  <td>0-1</td>
-                  <td style="text-align: left; font-weight: 500;">Apothicaire</td>
-                  <td>50 kpO</td>
-                  <td>1</td>
-                  <td>50 kpO</td>
-                  <td><button class="tbl-btn">+</button></td>
-                  <td><button class="tbl-btn">−</button></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+            </div><!-- /rules-panel -->
 
-          <!-- Navigation buttons -->
-          <div style="display: flex; flex-direction: column; align-items: center; gap: var(--p2); max-width: 200px; margin: 0 auto;">
-            <button class="btn btn-primary" style="width: 100%;">
-              Suivant →
-            </button>
-            <button class="btn btn-outline" style="width: 100%;"
-              onclick="window.location.href='../app-new-team.html'">
-              ← Retour
-            </button>
-          </div>
+            <!-- Cart -->
+            <div class="cart" style="margin-top: var(--p2);">
+              <div class="cart-title">🛒 Récapitulatif</div>
+
+              <div class="cart-section-label">Joueurs</div>
+              <div class="cart-line">
+                <span class="cart-line-name">Bloodborn Marauder</span>
+                <span class="cart-line-qty">×6</span>
+                <span class="cart-line-price">360 kpO</span>
+              </div>
+              <div class="cart-line">
+                <span class="cart-line-name">Chaos Warrior</span>
+                <span class="cart-line-qty">×2</span>
+                <span class="cart-line-price">180 kpO</span>
+              </div>
+              <div class="cart-line">
+                <span class="cart-line-name">Minotaure</span>
+                <span class="cart-line-qty">×1</span>
+                <span class="cart-line-price">150 kpO</span>
+              </div>
+              <div class="cart-line">
+                <span class="cart-line-name">Beastman Runner</span>
+                <span class="cart-line-qty">×2</span>
+                <span class="cart-line-price">160 kpO</span>
+              </div>
+              <div class="cart-subtotal">
+                <span>Sous-total joueurs</span>
+                <span>850 kpO</span>
+              </div>
+
+              <hr class="cart-separator">
+
+              <div class="cart-section-label">Staff &amp; équipement</div>
+              <div class="cart-line">
+                <span class="cart-line-name">Relances</span>
+                <span class="cart-line-qty">×3</span>
+                <span class="cart-line-price">180 kpO</span>
+              </div>
+              <div class="cart-line">
+                <span class="cart-line-name">Apothicaire</span>
+                <span class="cart-line-qty">×1</span>
+                <span class="cart-line-price">50 kpO</span>
+              </div>
+              <div class="cart-subtotal">
+                <span>Sous-total staff</span>
+                <span>230 kpO</span>
+              </div>
+
+              <hr class="cart-separator">
+
+              <div class="cart-total">
+                <span class="cart-total-label">Total</span>
+                <span class="cart-total-amount">1 080 kpO</span>
+              </div>
+
+              <div class="cart-budget-bar">
+                <div class="cart-budget-meta">
+                  <span>Budget utilisé</span>
+                  <span>1 080 / 1 150 kpO</span>
+                </div>
+                <div class="cart-progress">
+                  <div class="cart-progress-inner" style="width: 94%;"></div>
+                </div>
+                <div style="font-size: var(--text-tiny); color: var(--green); font-weight: 600; text-align: right;">
+                  70 kpO restants
+                </div>
+              </div>
+
+              <div class="cart-actions">
+                <button class="btn btn-primary">Suivant →</button>
+              </div>
+            </div><!-- /cart -->
+
+          </div><!-- /home-side -->
 
         </div>
       </div>
     </div>
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.4.1/dist/js/tom-select.complete.min.js"></script>
+  <script>
+  (function () {
+    var TIERS = { '1': 'Tier 1', '2': 'Tier 2', '3': 'Tier 3' };
+    var CLASSES = { '1': 'tier-1', '2': 'tier-2', '3': 'tier-3' };
+
+    function badge(tier) {
+      if (!tier) return '';
+      return '<span class="roster-tier-badge ' + (CLASSES[tier] || '') + '">' + (TIERS[tier] || '') + '</span>';
+    }
+
+    new TomSelect('#roster-select', {
+      allowEmptyOption: true,
+      maxItems: 1,
+      render: {
+        option: function (data) {
+          return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">'
+            + '<span>' + data.text + '</span>'
+            + badge(data.tier)
+            + '</div>';
+        },
+        item: function (data) {
+          return '<div style="display:flex;align-items:center;gap:8px;">'
+            + '<span>' + data.text + '</span>'
+            + badge(data.tier)
+            + '</div>';
+        },
+      },
+    });
+  })();
+  </script>
 </body>
 </html>
