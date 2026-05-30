@@ -1,0 +1,27 @@
+{% extends "app-layout.html" %}
+{% import "components/team-card.html" as card_cmp %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/components/team-card.css">
+
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--p2);">
+    <div class="h3-gras">Mes Équipes</div>
+    <a class="btn btn-primary-blue btn-sm"
+       hx-get="{{ team_routes.draft_team(space_id) }}"
+       hx-target="#app-content"
+       hx-select="#app-content"
+       hx-swap="innerHTML"
+       hx-push-url="true">+ Nouvelle équipe</a>
+</div>
+
+<div class="teams-grid">
+    {% for team in teams %}
+    {% call card_cmp::card(team.name, team.logo, team.roster, "", team.tv, team.status, team.status_label, team_routes.team_build(space_id, team.id)) %}
+    {% endfor %}
+    {% if teams.is_empty() %}
+    <div class="empty-state">
+        Vous n'avez pas encore d'équipe dans cet espace.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

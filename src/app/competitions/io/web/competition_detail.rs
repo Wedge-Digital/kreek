@@ -42,6 +42,7 @@ pub struct Journee {
 
 pub struct TeamCard {
     pub name:   String,
+    pub logo:   Option<String>,
     pub roster: String,
     pub coach:  String,
     pub tv:     u32,
@@ -136,17 +137,17 @@ fn mock_journees() -> Vec<Journee> {
 
 fn mock_teams() -> Vec<TeamCard> {
     vec![
-        TeamCard { name: "Les Guerriers du Nord".into(), roster: "Nordiques".into(),      coach: "CoachAlpha".into(),   tv: 1850 },
-        TeamCard { name: "Waaagh! FC".into(),            roster: "Orques".into(),          coach: "WaaghMaster".into(),  tv: 1720 },
-        TeamCard { name: "Chaos United".into(),          roster: "Chaos".into(),           coach: "ChaosBoss".into(),    tv: 1680 },
-        TeamCard { name: "Elfes Sylvains SC".into(),     roster: "Elfes Sylvains".into(),  coach: "ElveRunner".into(),   tv: 1540 },
-        TeamCard { name: "Nains de Fer".into(),          roster: "Nains".into(),           coach: "IronBeard".into(),    tv: 1490 },
-        TeamCard { name: "Skavens du Sous-sol".into(),   roster: "Skavens".into(),         coach: "SkavRunner".into(),   tv: 1310 },
-        TeamCard { name: "Humains Ordinaires".into(),    roster: "Humains".into(),         coach: "HumanCoach".into(),   tv: 1200 },
-        TeamCard { name: "Nécromants XI".into(),         roster: "Nécromants".into(),      coach: "NecroMind".into(),    tv: 1050 },
-        TeamCard { name: "Orques Sauvages".into(),       roster: "Orques Sauvages".into(), coach: "GreenFist".into(),    tv:  820 },
-        TeamCard { name: "Halflings United".into(),       roster: "Halflings".into(),       coach: "TinyCoach".into(),    tv:  530 },
-        TeamCard { name: "Les Intrépides Chevaliers de la Montagne Éternelle".into(), roster: "Bretonniens".into(), coach: "LongNameCoach".into(), tv: 1150 },
+        TeamCard { name: "Les Guerriers du Nord".into(), logo: None, roster: "Nordiques".into(),      coach: "CoachAlpha".into(),   tv: 1850 },
+        TeamCard { name: "Waaagh! FC".into(),            logo: None, roster: "Orques".into(),          coach: "WaaghMaster".into(),  tv: 1720 },
+        TeamCard { name: "Chaos United".into(),          logo: None, roster: "Chaos".into(),           coach: "ChaosBoss".into(),    tv: 1680 },
+        TeamCard { name: "Elfes Sylvains SC".into(),     logo: None, roster: "Elfes Sylvains".into(),  coach: "ElveRunner".into(),   tv: 1540 },
+        TeamCard { name: "Nains de Fer".into(),          logo: None, roster: "Nains".into(),           coach: "IronBeard".into(),    tv: 1490 },
+        TeamCard { name: "Skavens du Sous-sol".into(),   logo: None, roster: "Skavens".into(),         coach: "SkavRunner".into(),   tv: 1310 },
+        TeamCard { name: "Humains Ordinaires".into(),    logo: None, roster: "Humains".into(),         coach: "HumanCoach".into(),   tv: 1200 },
+        TeamCard { name: "Nécromants XI".into(),         logo: None, roster: "Nécromants".into(),      coach: "NecroMind".into(),    tv: 1050 },
+        TeamCard { name: "Orques Sauvages".into(),       logo: None, roster: "Orques Sauvages".into(), coach: "GreenFist".into(),    tv:  820 },
+        TeamCard { name: "Halflings United".into(),      logo: None, roster: "Halflings".into(),       coach: "TinyCoach".into(),    tv:  530 },
+        TeamCard { name: "Les Intrépides Chevaliers de la Montagne Éternelle".into(), logo: None, roster: "Bretonniens".into(), coach: "LongNameCoach".into(), tv: 1150 },
     ]
 }
 

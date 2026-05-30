@@ -57,3 +57,7 @@
 .coach-select .ts-dropdown .option { padding: 10px 16px; color: var(--dark-1); }
 .coach-select .ts-dropdown .option.active,
 .coach-select .ts-dropdown .option:hover { background: rgba(0,48,73,0.06); color: var(--main-blue); }
+.tab-empty-state {
+  background: var(--white); border-radius: 10px; padding: var(--p2);
+  color: var(--dark-3); font-size: var(--text-small); text-align: center;
+}

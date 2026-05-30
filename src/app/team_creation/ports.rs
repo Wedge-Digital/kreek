@@ -22,6 +22,7 @@ impl std::fmt::Display for RepositoryError {
 pub trait ITeamDraftRepository: Send + Sync {
     async fn save(&self, team: &DraftTeam, space_id: &str) -> Result<(), RepositoryError>;
     async fn find_by_id(&self, id: &TeamId) -> Result<Option<DraftTeam>, RepositoryError>;
+    async fn find_by_coach_and_space(&self, coach_id: &str, space_id: &str) -> Result<Vec<DraftTeam>, RepositoryError>;
 }
 
 /// Port de lecture pour les données de référence (rulesets).

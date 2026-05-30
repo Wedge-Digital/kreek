@@ -11,7 +11,8 @@ use crate::web::routes::Routes;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ActiveSection {
     Competitions,
-    Teams,
+    CreateTeam,
+    MyTeams,
 }
 
 #[derive(Template, Default)]
@@ -30,8 +31,12 @@ impl AppMenu {
         matches!(self.active_section, Some(ActiveSection::Competitions))
     }
 
-    fn teams_active(&self) -> bool {
-        matches!(self.active_section, Some(ActiveSection::Teams))
+    fn create_team_active(&self) -> bool {
+        matches!(self.active_section, Some(ActiveSection::CreateTeam))
+    }
+
+    fn my_teams_active(&self) -> bool {
+        matches!(self.active_section, Some(ActiveSection::MyTeams))
     }
 }
 
@@ -68,8 +73,11 @@ fn extract_active_section(current_url: &str) -> Option<ActiveSection> {
     if parts.len() >= 3 && parts[0] == "app" && parts[1].len() == 26 {
         match parts[2] {
             "competitions" => Some(ActiveSection::Competitions),
-            "team"        => Some(ActiveSection::Teams),
-            _             => None,
+            "team" => match parts.get(3) {
+                Some(&"list") => Some(ActiveSection::MyTeams),
+                _             => Some(ActiveSection::CreateTeam),
+            },
+            _ => None,
         }
     } else {
         None
@@ -165,9 +173,21 @@ mod tests {
     }
 
     #[test]
-    fn section_teams_sur_team() {
+    fn section_create_team_sur_team_create() {
         let s = extract_active_section(&format!("/app/{ULID}/team/create"));
-        assert_eq!(s, Some(ActiveSection::Teams));
+        assert_eq!(s, Some(ActiveSection::CreateTeam));
+    }
+
+    #[test]
+    fn section_create_team_sur_team_build() {
+        let s = extract_active_section(&format!("/app/{ULID}/team/01ARZ3NDEKTSV4RRFFQ69G5FAV/build"));
+        assert_eq!(s, Some(ActiveSection::CreateTeam));
+    }
+
+    #[test]
+    fn section_my_teams_sur_team_list() {
+        let s = extract_active_section(&format!("/app/{ULID}/team/list"));
+        assert_eq!(s, Some(ActiveSection::MyTeams));
     }
 
     #[test]

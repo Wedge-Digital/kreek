@@ -1,0 +1,29 @@
+{% macro card(name, logo, roster, coach, tv, status, status_label, link) %}
+<div class="team-card card-shadow"
+     {% if !link.is_empty() %}
+     hx-get="{{ link }}"
+     hx-target="#app-content"
+     hx-select="#app-content"
+     hx-swap="innerHTML"
+     hx-push-url="true"
+     {% endif %}>
+    <div class="team-card-logo">
+        {% if let Some(url) = logo %}
+        <img src="{{ url }}" alt="{{ name }}">
+        {% endif %}
+    </div>
+    <div class="team-card-name h6-gras">{{ name }}</div>
+    {% if !roster.is_empty() %}
+    <div class="team-card-roster text-tiny text-dark-3">{{ roster }}</div>
+    {% endif %}
+    {% if !coach.is_empty() %}
+    <div class="team-card-coach text-tiny text-dark-2">{{ coach }}</div>
+    {% endif %}
+    {% if tv > 0 %}
+    <div class="team-card-tv text-tiny">{{ tv }} kPo</div>
+    {% endif %}
+    {% if !status.is_empty() %}
+    <div class="team-card-status team-card-status--{{ status }}">{{ status_label }}</div>
+    {% endif %}
+</div>
+{% endmacro card %}

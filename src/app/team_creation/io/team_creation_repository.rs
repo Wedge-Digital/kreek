@@ -94,4 +94,44 @@ impl ITeamDraftRepository for TeamDraftRepository {
             r.competition_id, r.season_id, creation_rules,
         )))
     }
+
+    async fn find_by_coach_and_space(&self, coach_id: &str, space_id: &str) -> Result<Vec<DraftTeam>, RepositoryError> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            id:             String,
+            created_by:     String,
+            competition_id: String,
+            season_id:      String,
+            name:           String,
+            coach_id:       String,
+            logo:           Option<String>,
+            creation_rules: serde_json::Value,
+        }
+
+        let rows: Vec<Row> = sqlx::query_as(
+            "SELECT id, coach_id AS created_by, competition_id, season_id,
+                    name, coach_id, logo, creation_rules
+             FROM team_drafts
+             WHERE coach_id = $1 AND space_id = $2
+             ORDER BY created_at DESC",
+        )
+        .bind(coach_id)
+        .bind(space_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(db_err)?;
+
+        rows.into_iter().map(|r| {
+            let entity_id      = TeamId::try_new(&r.id).map_err(db_err)?;
+            let created_by     = UserId::try_new(&r.created_by).map_err(db_err)?;
+            let coach_id_val   = CoachId::try_new(&r.coach_id).map_err(db_err)?;
+            let team_name      = TeamName::try_new(r.name).map_err(db_err)?;
+            let logo           = r.logo.as_deref()
+                .and_then(|u| crate::app::shared_kernel::common_types::CloudinaryImage::try_new(u).ok());
+            let creation_rules: CreationRules = serde_json::from_value(r.creation_rules)
+                .map_err(|e| RepositoryError::PersistenceError(e.to_string()))?;
+            let base_infos = BaseTeamInfo::new(team_name, coach_id_val, logo);
+            Ok(DraftTeam::from_parts(entity_id, created_by, base_infos, r.competition_id, r.season_id, creation_rules))
+        }).collect()
+    }
 }
