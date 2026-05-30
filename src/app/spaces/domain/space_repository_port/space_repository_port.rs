@@ -1,5 +1,5 @@
 use crate::app::shared_kernel::authorization::SpaceProfile;
-use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
+use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, SpaceId};
 use crate::app::spaces::domain::space::Space;
 use async_trait::async_trait;
 use std::fmt;
@@ -7,16 +7,7 @@ use std::fmt;
 pub struct SpaceSummary {
     pub id:   String,
     pub name: String,
-    pub logo: String,
-}
-
-impl SpaceSummary {
-    pub fn logo_thumb(&self, width: u32, height: u32) -> String {
-        self.logo.replace(
-            "image/upload/",
-            &format!("image/upload/w_{width},h_{height},c_fill/"),
-        )
-    }
+    pub logo: CloudinaryImage,
 }
 
 #[derive(Debug)]

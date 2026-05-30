@@ -53,7 +53,7 @@ pub async fn space_all(
             is_member: member_ids.contains(&s.id),
             id:        s.id,
             name:      s.name,
-            logo:      s.logo,
+            logo:      s.logo.thumbnail(100, 100),
         })
         .collect();
 

@@ -40,7 +40,16 @@ pub struct CloudinaryImage(String);
 impl Display for CloudinaryImage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_ref())
-    }   
+    }
+}
+
+impl CloudinaryImage {
+    pub fn thumbnail(&self, w: u32, h: u32) -> String {
+        crate::app::shared_kernel::cloudinary::transform(
+            self.as_ref(),
+            &format!("c_fill,w_{w},h_{h},q_auto,f_auto"),
+        )
+    }
 }
 
 impl Display for SUlid {

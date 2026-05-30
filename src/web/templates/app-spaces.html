@@ -9,7 +9,7 @@
      hx-push-url="true"
      hx-on::after-request="htmx.trigger(document.body, 'space:changed')"
      title="{{ space.name }}">
-  <img src="{{ space.logo_thumb(100, 100) }}" alt="{{ space.name }}" width="100" height="100">
+  <img src="{{ space.logo.thumbnail(100, 100) }}" alt="{{ space.name }}" width="100" height="100">
 </div>
 {% endfor %}
 <div class="league-btn league-btn--icon"

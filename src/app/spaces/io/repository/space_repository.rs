@@ -131,10 +131,15 @@ impl ISpaceRepository for SpaceRepository {
             .await
             .map_err(db_err)?;
 
-        Ok(rows
-            .into_iter()
-            .map(|r| SpaceSummary { id: r.id, name: r.space_name, logo: r.space_icon_path })
-            .collect())
+        rows.into_iter()
+            .map(|r| {
+                Ok(SpaceSummary {
+                    id:   r.id,
+                    name: r.space_name,
+                    logo: CloudinaryImage::try_new(&r.space_icon_path).map_err(db_err)?,
+                })
+            })
+            .collect()
     }
 
     async fn find_by_coach_id(&self, coach_id: &CoachId) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
@@ -151,10 +156,15 @@ impl ISpaceRepository for SpaceRepository {
             .await
             .map_err(db_err)?;
 
-        Ok(rows
-            .into_iter()
-            .map(|r| SpaceSummary { id: r.id, name: r.space_name, logo: r.space_icon_path })
-            .collect())
+        rows.into_iter()
+            .map(|r| {
+                Ok(SpaceSummary {
+                    id:   r.id,
+                    name: r.space_name,
+                    logo: CloudinaryImage::try_new(&r.space_icon_path).map_err(db_err)?,
+                })
+            })
+            .collect()
     }
 
     async fn find_by_id(&self, id: &SpaceId) -> Result<Option<Space>, SpaceRepositoryError> {

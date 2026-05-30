@@ -7,15 +7,7 @@ use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId};
 use crate::state::AppState;
 use crate::web::routes::Routes as WebRoutes;
 
-fn cloudinary_transform(url: &str, transform: &str) -> String {
-    const MARKER: &str = "/upload/";
-    if let Some(pos) = url.find(MARKER) {
-        let (before, after) = url.split_at(pos + MARKER.len());
-        format!("{}{}/{}", before, transform, after)
-    } else {
-        url.to_string()
-    }
-}
+use crate::app::shared_kernel::cloudinary;
 
 // ── Mock data structs ─────────────────────────────────────────────────────────
 
@@ -320,7 +312,7 @@ async fn load_page_base(
     let competition_initials = initials(&base.name);
 
     let competition_logo = base.logo.map(|url| {
-        cloudinary_transform(&url, "c_fill,w_200,h_200,q_auto,f_auto")
+        cloudinary::transform(&url, "c_fill,w_200,h_200,q_auto,f_auto")
     });
 
     Ok(PageBase {
