@@ -223,24 +223,6 @@
         renderInvited();
     };
 
-    // ── Initialisation de la widget après son chargement HTMX ────────────────
-
-    document.getElementById('coach-search-widget').addEventListener('htmx:afterSettle', function () {
-        // Synchronise excluded-ids avec les coachs déjà invités dans le state
-        const excludedEl = document.getElementById('excluded-ids');
-        if (excludedEl) excludedEl.value = state.invitedCoaches.map(function (c) { return c.id; }).join(',');
-
-        // Fermer le panneau résultats au clic en dehors de la widget
-        document.addEventListener('click', function (e) {
-            const panel = document.getElementById('coaches-search-results');
-            const input = document.getElementById('coach-search');
-            if (!panel || !input) return;
-            if (!panel.contains(e.target) && e.target !== input) {
-                panel.innerHTML = '';
-            }
-        });
-    }, { once: true });
-
     // ── Soumission ────────────────────────────────────────────────────────────
 
     window.submitInvitations = function () {
@@ -311,6 +293,25 @@
     }
 
     applyState();
+
+    // ── Initialisation de la widget après son chargement HTMX ────────────────
+
+    var searchWidget = document.getElementById('coach-search-widget');
+    if (searchWidget) {
+        searchWidget.addEventListener('htmx:afterSettle', function () {
+            var excludedEl = document.getElementById('excluded-ids');
+            if (excludedEl) excludedEl.value = state.invitedCoaches.map(function (c) { return c.id; }).join(',');
+
+            document.addEventListener('click', function (e) {
+                var panel = document.getElementById('coaches-search-results');
+                var input = document.getElementById('coach-search');
+                if (!panel || !input) return;
+                if (!panel.contains(e.target) && e.target !== input) {
+                    panel.innerHTML = '';
+                }
+            });
+        }, { once: true });
+    }
 })();
 </script>
 {% endblock %}
