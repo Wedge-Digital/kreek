@@ -2,11 +2,16 @@ use askama::Template;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
-use crate::app::references::io::web::pickers::{build_roster_items_with_tiers, RosterPickerItemWithTier};
+use crate::app::references::io::web::pickers::{
+    build_player_positions, build_roster_items_with_tiers,
+    PlayerPositionVm, RosterPickerItemWithTier,
+};
 use crate::app::shared_kernel::common_types::EntityId;
 use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
 use crate::state::AppState;
 use crate::web::routes::Routes as WebRoutes;
+
+// ── Page complète ─────────────────────────────────────────────────────────────
 
 #[derive(Template)]
 #[template(path = "build-team.html")]
@@ -57,4 +62,37 @@ pub async fn build_team(
         team_id,
         rosters,
     }.into_response()
+}
+
+// ── Fragment joueurs ──────────────────────────────────────────────────────────
+
+#[derive(Template)]
+#[template(path = "roster-players-fragment.html")]
+pub struct RosterPlayersFragment {
+    pub positions: Vec<PlayerPositionVm>,
+}
+
+impl IntoResponse for RosterPlayersFragment {
+    fn into_response(self) -> Response {
+        match self.render() {
+            Ok(html) => Html(html).into_response(),
+            Err(_)   => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        }
+    }
+}
+
+pub async fn get_roster_players(
+    Path((_space_id, _team_id, roster_uid)): Path<(String, String, String)>,
+    State(state):                             State<AppState>,
+) -> impl IntoResponse {
+    let repo = state.references.repository.as_ref();
+
+    let team = match repo.find_team_by_uid(&roster_uid) {
+        Some(t) => t,
+        None    => return StatusCode::NOT_FOUND.into_response(),
+    };
+
+    let positions = build_player_positions(team, repo);
+
+    RosterPlayersFragment { positions }.into_response()
 }

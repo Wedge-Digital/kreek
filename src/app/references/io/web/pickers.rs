@@ -1,3 +1,4 @@
+use crate::app::references::domain::models::Team;
 use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::team_creation::domain::creation_rules::CreationRules;
 
@@ -48,6 +49,44 @@ pub fn build_roster_items_with_tiers(
 
     items.sort_by(|a, b| a.name.cmp(&b.name));
     items
+}
+
+pub struct PlayerPositionVm {
+    pub name:          String,
+    pub cost:          u32,
+    pub max_qty_label: String,
+    pub ma:            u8,
+    pub st:            u8,
+    pub ag:            String,
+    pub pa:            String,
+    pub av:            String,
+    pub skills:        String,
+}
+
+fn to_stat_plus(v: u8) -> String {
+    if v == 0 { "—".into() } else { format!("{}+", v) }
+}
+
+pub fn build_player_positions(team: &Team, repo: &dyn IReferenceRepository) -> Vec<PlayerPositionVm> {
+    team.available_players.iter().map(|p| {
+        let skills = p.skills.iter()
+            .map(|uid| repo.find_skill_by_uid(uid)
+                .map(|s| s.name.clone())
+                .unwrap_or_else(|| uid.clone()))
+            .collect::<Vec<_>>()
+            .join(", ");
+        PlayerPositionVm {
+            name:          p.position_name.clone(),
+            cost:          p.cost,
+            max_qty_label: format!("0-{}", p.max_quantity),
+            ma:            p.ma,
+            st:            p.st,
+            ag:            to_stat_plus(p.ag),
+            pa:            to_stat_plus(p.pa),
+            av:            to_stat_plus(p.av),
+            skills,
+        }
+    }).collect()
 }
 
 pub fn build_roster_items(repo: &dyn IReferenceRepository) -> Vec<RosterPickerItem> {

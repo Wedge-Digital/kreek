@@ -1,0 +1,20 @@
+{% for pos in positions %}
+<tr>
+  <td>{{ pos.max_qty_label }}</td>
+  <td class="player-name">{{ pos.name }}</td>
+  <td>{{ pos.cost }} kPo</td>
+  <td>{{ pos.ma }}</td><td>{{ pos.st }}</td>
+  <td>{{ pos.ag }}</td><td>{{ pos.pa }}</td><td>{{ pos.av }}</td>
+  <td class="player-skills">{{ pos.skills }}</td>
+  <td>0</td><td>0 kPo</td>
+  <td><button class="tbl-btn" type="button">+</button></td>
+  <td><button class="tbl-btn" type="button">−</button></td>
+</tr>
+{% endfor %}
+{% if positions.is_empty() %}
+<tr>
+  <td colspan="13" style="text-align:center; color:var(--dark-3); font-style:italic; padding: var(--p2);">
+    Sélectionnez un roster pour afficher les postes disponibles.
+  </td>
+</tr>
+{% endif %}
