@@ -58,3 +58,7 @@ pub struct RemoveRerollCommand {
     pub team_id:  TeamId,
     pub space_id: String,
 }
+
+pub struct SubmitTeamCommand {
+    pub team_id: TeamId,
+}

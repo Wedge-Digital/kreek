@@ -7,7 +7,8 @@ use crate::app::team_creation::domain::team_ruleset_selected::RulesetSelectedTea
 use crate::app::team_creation::domain::team_staff::TeamStaff;
 use serde::{Deserialize, Serialize};
 
-pub const MAX_REROLL_COUNT: u8 = 8;
+pub const MAX_REROLL_COUNT:           u8    = 8;
+pub const MIN_PLAYERS_FOR_SUBMISSION: usize = 11;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RosterSelectedTeam {
@@ -229,6 +230,18 @@ impl RosterSelectedTeam {
         }
         self.reroll_count += count;
         Ok(())
+    }
+
+    // -------------------------------------------------------------------------
+    // Validation de soumission
+    // -------------------------------------------------------------------------
+
+    pub fn validate_for_submission(&self) -> Result<(), Vec<DomainError>> {
+        let mut errors = Vec::new();
+        if self.hired_players.len() < MIN_PLAYERS_FOR_SUBMISSION {
+            errors.push(DomainError::InsufficientPlayerCount);
+        }
+        if errors.is_empty() { Ok(()) } else { Err(errors) }
     }
 
     pub fn remove_reroll(&mut self, count: u8) {

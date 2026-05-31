@@ -16,7 +16,7 @@
 
 <div class="teams-grid">
     {% for team in teams %}
-    {% call card_cmp::card(team.name, team.logo, team.roster, "", team.tv, team.status, team.status_label, team_routes.team_build(space_id, team.id)) %}
+    {% call card_cmp::card(team.name, team.logo, team.roster, "", team.tv, team.status, team.status_label, team.link) %}
     {% endfor %}
     {% if teams.is_empty() %}
     <div class="empty-state">

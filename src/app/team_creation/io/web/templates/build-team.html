@@ -149,6 +149,13 @@
     <div id="team-cart" class="cart">
       {% call cart_cmp::cart_body(cart) %}
     </div>
+    <div class="cart-actions" style="margin-top: var(--p1);">
+      <button class="btn btn-primary"
+              hx-post="{{ team_routes.submit_team(space_id, team_id) }}"
+              hx-target="#submit-error"
+              hx-swap="innerHTML">Valider →</button>
+      <div id="submit-error" class="table-error-zone"></div>
+    </div>
 
   </div><!-- /home-side -->
 

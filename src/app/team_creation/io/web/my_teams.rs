@@ -16,6 +16,7 @@ pub struct TeamCardVm {
     pub tv:           u32,
     pub status:       String,
     pub status_label: String,
+    pub link:         String,
 }
 
 #[derive(Template)]
@@ -56,14 +57,30 @@ pub async fn my_teams(
         }
     };
 
-    let team_vms = teams.into_iter().map(|t| TeamCardVm {
-        id:           t.get_id().to_string(),
-        name:         t.base_infos().name().clone().into_inner(),
-        logo:         t.base_infos().logo_url().map(|u| u.as_ref().to_string()),
-        roster:       String::new(),
-        tv:           0,
-        status:       "draft".into(),
-        status_label: "Brouillon".into(),
+    let submitted_ids = state.team_creation.roster_repository
+        .find_submitted_ids_for_space(&space_id_raw)
+        .await
+        .unwrap_or_default();
+
+    let routes: crate::app::team_creation::routes::Routes = Default::default();
+    let team_vms = teams.into_iter().map(|t| {
+        let id = t.get_id().to_string();
+        let submitted = submitted_ids.contains(&id);
+        let link = if submitted {
+            routes.team_detail(&space_id_raw, &id)
+        } else {
+            routes.team_build(&space_id_raw, &id)
+        };
+        TeamCardVm {
+            id,
+            name:         t.base_infos().name().clone().into_inner(),
+            logo:         t.base_infos().logo_url().map(|u| u.as_ref().to_string()),
+            roster:       String::new(),
+            tv:           0,
+            status:       if submitted { "active".into() } else { "draft".into() },
+            status_label: if submitted { "Inscrite".into() } else { "Brouillon".into() },
+            link,
+        }
     }).collect();
 
     MyTeamsTemplate {

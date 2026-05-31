@@ -24,14 +24,15 @@ use crate::app::team_creation::domain::team_staff::TeamStaff;
 use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
 use crate::app::team_creation::use_cases::commands::{
     BuyRerollCommand, BuyStaffCommand, FirePlayerCommand, HirePlayerCommand,
-    RemoveRerollCommand, RemoveStaffCommand,
+    RemoveRerollCommand, RemoveStaffCommand, SubmitTeamCommand,
 };
-use crate::app::team_creation::use_cases::buy_reroll  as buy_reroll_uc;
-use crate::app::team_creation::use_cases::buy_staff   as buy_staff_uc;
-use crate::app::team_creation::use_cases::fire_player as fire_uc;
-use crate::app::team_creation::use_cases::hire_player as hire_uc;
+use crate::app::team_creation::use_cases::buy_reroll   as buy_reroll_uc;
+use crate::app::team_creation::use_cases::buy_staff    as buy_staff_uc;
+use crate::app::team_creation::use_cases::fire_player  as fire_uc;
+use crate::app::team_creation::use_cases::hire_player  as hire_uc;
 use crate::app::team_creation::use_cases::remove_reroll as remove_reroll_uc;
 use crate::app::team_creation::use_cases::remove_staff  as remove_staff_uc;
+use crate::app::team_creation::use_cases::submit_team   as submit_uc;
 use crate::state::AppState;
 use crate::web::routes::Routes as WebRoutes;
 
@@ -782,4 +783,46 @@ pub async fn remove_reroll(
     let cart   = build_cart_vm(&updated_team);
 
     RerollRowFragment { reroll, team_routes: Default::default(), space_id, team_id, cart }.into_response()
+}
+
+// ── Handler submit_team ───────────────────────────────────────────────────────
+
+pub async fn submit_team(
+    Path((space_id, team_id)): Path<(String, String)>,
+    State(state):              State<AppState>,
+) -> impl IntoResponse {
+    let team_id_val = match EntityId::try_new(&team_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let cmd = SubmitTeamCommand { team_id: team_id_val };
+
+    match submit_uc::execute(cmd, state.team_creation.roster_repository.as_ref()).await {
+        Ok(()) => {}
+        Err(submit_uc::SubmitTeamError::TeamNotFound) =>
+            return StatusCode::NOT_FOUND.into_response(),
+        Err(submit_uc::SubmitTeamError::Domain(ref errors)) => {
+            let msgs: String = errors.iter()
+                .map(|e| format!(r#"<p class="table-error">{}</p>"#, submit_uc::domain_error_message(e)))
+                .collect();
+            return Response::builder()
+                .header("HX-Retarget", "#submit-error")
+                .header("HX-Reswap", "innerHTML")
+                .header("content-type", "text/html; charset=utf-8")
+                .body(Body::from(msgs))
+                .unwrap();
+        }
+        Err(submit_uc::SubmitTeamError::Repository(e)) => {
+            tracing::error!("submit_team repo error: {e}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    }
+
+    let team_routes: TeamCreationRoutes = Default::default();
+    Response::builder()
+        .header("HX-Redirect", team_routes.my_teams(&space_id))
+        .header("HX-Trigger", r#"{"showToast":"Équipe soumise avec succès !"}"#)
+        .body(Body::empty())
+        .unwrap()
 }

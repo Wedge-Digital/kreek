@@ -1,0 +1,214 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/app-team-detail.css">
+
+<div class="team-page">
+
+  <div style="margin-bottom: var(--p1);">
+    <a style="color: var(--dark-3); font-size: var(--text-tiny); cursor: pointer;"
+       hx-get="{{ team_routes.my_teams(space_id) }}"
+       hx-target="#app-content"
+       hx-select="#app-content"
+       hx-swap="innerHTML"
+       hx-push-url="true">← Mes équipes</a>
+  </div>
+
+  <!-- En-tête -->
+  <div class="team-header">
+
+    <!-- Logo équipe -->
+    <div class="team-header-logo">KF</div>
+
+    <!-- Infos principales -->
+    <div class="team-header-info">
+      <div class="team-header-top">
+        <div class="team-header-name">Les Korrigans FC</div>
+        <span class="team-status-badge team-status-badge--ready">Prête à jouer</span>
+      </div>
+      <div class="team-header-meta">
+        <div class="meta-item">
+          <div class="meta-label">Roster</div>
+          <div class="meta-value">Elfes Sylvestres</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Coach</div>
+          <div class="meta-value">Colonel Castor</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Ligue</div>
+          <div class="meta-value">Ligue de Condate</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Saison</div>
+          <div class="meta-value">2024</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Valeur d'équipe</div>
+          <div class="meta-value">1 250 kPo</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Classement</div>
+          <div class="meta-value">🏆 1er</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Icône roster -->
+    <div class="team-header-roster">
+      <div class="roster-icon">ES</div>
+      <div class="roster-icon-label">Elfes Sylvestres</div>
+    </div>
+
+  </div>
+
+  <!-- Barre d'actions -->
+  <div class="team-actions">
+    <button class="btn-team-action">Modifier</button>
+    <button class="btn-team-action">Customiser</button>
+    <button class="btn-team-action">Imprimer en PDF</button>
+    <button class="btn-team-delete">Supprimer</button>
+  </div>
+
+  <!-- Onglets -->
+  <div class="tabs" style="background: var(--white); padding: 0 var(--p2); border-bottom: 1px solid var(--dark-5);">
+    <div class="tab active">Joueurs & Staff</div>
+    <div class="tab">Matchs</div>
+    <div class="tab">Actualités</div>
+    <div class="tab">Trésorerie</div>
+  </div>
+
+  <!-- Tableau joueurs -->
+  <div class="players-panel" style="border-radius: 0;">
+    <div class="staff-panel-title">Joueurs</div>
+    <table class="player-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nom</th>
+          <th>Poste</th>
+          <th>MA</th><th>ST</th><th>AG</th><th>PA</th><th>AV</th>
+          <th>Compétences</th>
+          <th>Valeur (kPo)</th>
+          <th>SPP</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td><td><strong>Aerindel</strong></td>
+          <td><span class="player-pos pos-thrower">Lanceur</span></td>
+          <td>7</td><td>3</td><td>4+</td><td>2+</td><td>8+</td>
+          <td><span class="player-skill">Passe</span><span class="player-skill">Sûr</span></td>
+          <td>95</td><td>18</td>
+        </tr>
+        <tr>
+          <td>2</td><td><strong>Sylvara</strong></td>
+          <td><span class="player-pos pos-catcher">Receveur</span></td>
+          <td>8</td><td>2</td><td>3+</td><td>4+</td><td>8+</td>
+          <td><span class="player-skill">Attraper</span><span class="player-skill">Esquiver</span></td>
+          <td>65</td><td>24</td>
+        </tr>
+        <tr>
+          <td>3</td><td><strong>Maerindel</strong></td>
+          <td><span class="player-pos pos-catcher">Receveur</span></td>
+          <td>8</td><td>2</td><td>3+</td><td>4+</td><td>8+</td>
+          <td><span class="player-skill">Attraper</span><span class="player-skill">Esquiver</span></td>
+          <td>65</td><td>11</td>
+        </tr>
+        <tr>
+          <td>4</td><td><strong>Tyrandel</strong></td>
+          <td><span class="player-pos pos-blitzer">Frappeur</span></td>
+          <td>7</td><td>3</td><td>3+</td><td>5+</td><td>8+</td>
+          <td><span class="player-skill">Esquiver</span><span class="player-skill">Bloc</span></td>
+          <td>110</td><td>30</td>
+        </tr>
+        <tr>
+          <td>5</td><td><strong>Corandel</strong></td>
+          <td><span class="player-pos pos-blitzer">Frappeur</span></td>
+          <td>7</td><td>3</td><td>3+</td><td>5+</td><td>8+</td>
+          <td><span class="player-skill">Esquiver</span></td>
+          <td>110</td><td>6</td>
+        </tr>
+        <tr>
+          <td>6</td><td><strong>Findas</strong></td>
+          <td><span class="player-pos pos-lineman">Défenseur</span></td>
+          <td>7</td><td>3</td><td>3+</td><td>5+</td><td>8+</td>
+          <td><span class="player-skill">Esquiver</span></td>
+          <td>70</td><td>9</td>
+        </tr>
+        <tr>
+          <td>7</td><td><strong>Galadras</strong></td>
+          <td><span class="player-pos pos-lineman">Défenseur</span></td>
+          <td>7</td><td>3</td><td>3+</td><td>5+</td><td>8+</td>
+          <td></td>
+          <td>70</td><td>3</td>
+        </tr>
+        <tr>
+          <td>8</td><td><strong>Mirindel</strong></td>
+          <td><span class="player-pos pos-lineman">Défenseur</span></td>
+          <td>7</td><td>3</td><td>3+</td><td>5+</td><td>8+</td>
+          <td></td>
+          <td>70</td><td>0</td>
+        </tr>
+        <tr class="subtotal-row">
+          <td colspan="9" style="text-align: right;">Sous-total joueurs</td>
+          <td style="text-align: right;">655 kPo</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Tableau staff -->
+  <div class="staff-panel">
+    <div class="staff-panel-title">Staff</div>
+    <table class="player-table staff-table">
+      <thead>
+        <tr>
+          <th style="text-align: left;">Poste</th>
+          <th style="text-align: center;">Quantité</th>
+          <th style="text-align: center;">Prix (kPo)</th>
+          <th style="text-align: center;">Coût total (kPo)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Relances</strong></td>
+          <td style="text-align: center;">3</td>
+          <td style="text-align: center;">50</td>
+          <td style="text-align: center;">150</td>
+        </tr>
+        <tr>
+          <td><strong>Apothicaire</strong></td>
+          <td style="text-align: center;">1</td>
+          <td style="text-align: center;">50</td>
+          <td style="text-align: center;">50</td>
+        </tr>
+        <tr>
+          <td><strong>Assistants d'entraîneur</strong></td>
+          <td style="text-align: center;">2</td>
+          <td style="text-align: center;">10</td>
+          <td style="text-align: center;">20</td>
+        </tr>
+        <tr>
+          <td><strong>Cheerleaders</strong></td>
+          <td style="text-align: center;">3</td>
+          <td style="text-align: center;">10</td>
+          <td style="text-align: center;">30</td>
+        </tr>
+        <tr>
+          <td><strong>Facteur de fans</strong></td>
+          <td style="text-align: center;">2</td>
+          <td style="text-align: center;">10</td>
+          <td style="text-align: center;">20</td>
+        </tr>
+        <tr class="subtotal-row">
+          <td colspan="3" style="text-align: right;">Sous-total staff</td>
+          <td style="text-align: center;">270 kPo</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}

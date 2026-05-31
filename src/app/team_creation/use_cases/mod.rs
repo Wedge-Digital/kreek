@@ -8,3 +8,4 @@ pub mod buy_staff;
 pub mod remove_staff;
 pub mod buy_reroll;
 pub mod remove_reroll;
+pub mod submit_team;

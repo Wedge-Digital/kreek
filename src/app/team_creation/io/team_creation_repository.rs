@@ -192,4 +192,30 @@ impl ITeamRosterRepository for TeamRosterRepository {
 
         Ok(Some(team))
     }
+
+    async fn mark_submitted(&self, id: &TeamId) -> Result<(), RepositoryError> {
+        sqlx::query(
+            "UPDATE team_roster_selections SET submitted_at = now() WHERE id = $1",
+        )
+        .bind(id.to_string())
+        .execute(&self.pool)
+        .await
+        .map_err(db_err)?;
+        Ok(())
+    }
+
+    async fn find_submitted_ids_for_space(&self, space_id: &str) -> Result<Vec<String>, RepositoryError> {
+        #[derive(sqlx::FromRow)]
+        struct Row { id: String }
+
+        let rows: Vec<Row> = sqlx::query_as(
+            "SELECT id FROM team_roster_selections WHERE space_id = $1 AND submitted_at IS NOT NULL",
+        )
+        .bind(space_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(db_err)?;
+
+        Ok(rows.into_iter().map(|r| r.id).collect())
+    }
 }

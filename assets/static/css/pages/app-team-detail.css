@@ -1,4 +1,4 @@
-.team-page { max-width: 1100px; margin: 0 auto; }
+.team-page { max-width: 1400px; margin: 0 auto; }
 
 /* En-tête équipe */
 .team-header {
@@ -19,16 +19,63 @@
 .meta-item   { display: flex; flex-direction: column; gap: 2px; }
 .meta-label  { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
 .meta-value  { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
-.team-header-stats { display: flex; gap: var(--p3); }
-.stat-block  { text-align: center; }
-.stat-val    { font-family: var(--font-title); font-size: var(--h3); font-weight: 800; }
-.stat-val.win  { color: var(--green); }
-.stat-val.draw { color: var(--dark-2); }
-.stat-val.loss { color: var(--red); }
-.stat-label  { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; }
+
+/* En-tête — ligne nom + badge */
+.team-header-top  { display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap; }
+
+/* Badge état */
+.team-status-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 20px;
+  font-size: var(--text-tiny); font-weight: 700; white-space: nowrap;
+}
+.team-status-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.team-status-badge--ready  { background: rgba(98,149,132,0.15); color: var(--green); }
+.team-status-badge--match  { background: rgba(255,107,53,0.12);  color: var(--orange); }
+
+/* Icône roster (droite du header) */
+.team-header-roster { display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
+.roster-icon {
+  width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, #629584, #3a6655);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-weight: 900; font-size: 28px; color: var(--white);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+.roster-icon-label { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; text-align: center; max-width: 120px; }
+
+/* Barre d'actions */
+.team-actions {
+  background: var(--white); padding: 10px var(--p2);
+  display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid var(--dark-5);
+}
+.team-actions .btn-team-action {
+  padding: 7px 16px; border-radius: 6px; font-size: var(--text-small);
+  border: none; background: var(--main-blue); color: var(--white);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.team-actions .btn-team-action:hover { opacity: 0.85; }
+.team-actions .btn-team-delete {
+  padding: 7px 16px; border-radius: 6px; font-size: var(--text-small); font-weight: 600;
+  border: none; background: var(--red); color: var(--white);
+  cursor: pointer; margin-left: auto;
+  transition: opacity 0.15s;
+}
+.team-actions .btn-team-delete:hover { opacity: 0.85; }
 
 /* Tableau joueurs */
-.players-panel { background: var(--white); border-radius: 0 0 10px 10px; padding: var(--p2); }
+.players-panel { background: var(--white); padding: var(--p2); border-bottom: 1px solid var(--dark-5); }
+
+/* Tableau staff */
+.staff-panel { background: var(--white); border-radius: 0 0 10px 10px; padding: var(--p2); }
+.staff-panel-title {
+  font-size: var(--text-small); font-weight: 700; color: var(--dark-2);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: var(--p1);
+}
+.staff-table td { color: var(--dark-1); }
 .player-table  { width: 100%; border-collapse: collapse; }
 .player-table th {
   text-align: left; padding: 10px 12px;
@@ -39,6 +86,11 @@
 .player-table td        { padding: 12px; border-bottom: 1px solid var(--dark-6); font-size: var(--text-small); }
 .player-table tr:hover td { background: var(--dark-7); cursor: pointer; }
 .player-table tr:last-child td { border-bottom: none; }
+.player-table tr.subtotal-row td {
+  border-top: 2px solid var(--dark-4); border-bottom: none;
+  background: var(--dark-6); font-weight: 700; color: var(--dark-0);
+  font-size: var(--text-small);
+}
 
 .player-pos    { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: var(--text-tiny); font-weight: 700; }
 .pos-lineman   { background: rgba(0,48,73,0.1);       color: var(--main-blue); }

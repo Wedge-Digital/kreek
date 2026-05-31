@@ -9,6 +9,8 @@ pub mod path {
     pub const REMOVE_STAFF:   &str = "/app/{space_id}/team/{team_id}/staff/remove";
     pub const BUY_REROLL:     &str = "/app/{space_id}/team/{team_id}/rerolls/buy";
     pub const REMOVE_REROLL:  &str = "/app/{space_id}/team/{team_id}/rerolls/remove";
+    pub const SUBMIT_TEAM:    &str = "/app/{space_id}/team/{team_id}/submit";
+    pub const TEAM_DETAIL:    &str = "/app/{space_id}/team/{team_id}/detail";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -57,6 +59,16 @@ impl Routes {
     }
     pub fn remove_reroll(&self, space_id: &str, team_id: &str) -> String {
         path::REMOVE_REROLL
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+    pub fn submit_team(&self, space_id: &str, team_id: &str) -> String {
+        path::SUBMIT_TEAM
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+    pub fn team_detail(&self, space_id: &str, team_id: &str) -> String {
+        path::TEAM_DETAIL
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
     }

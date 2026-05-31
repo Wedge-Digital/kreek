@@ -30,6 +30,8 @@ pub trait ITeamDraftRepository: Send + Sync {
 pub trait ITeamRosterRepository: Send + Sync {
     async fn save(&self, team: &RosterSelectedTeam, space_id: &str) -> Result<(), RepositoryError>;
     async fn find_by_id(&self, id: &TeamId) -> Result<Option<RosterSelectedTeam>, RepositoryError>;
+    async fn mark_submitted(&self, id: &TeamId) -> Result<(), RepositoryError>;
+    async fn find_submitted_ids_for_space(&self, space_id: &str) -> Result<Vec<String>, RepositoryError>;
 }
 
 /// Port de lecture pour les données de référence (rulesets).
