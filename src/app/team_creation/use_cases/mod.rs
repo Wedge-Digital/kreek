@@ -4,3 +4,7 @@ pub mod create_draft_team;
 pub mod commands;
 pub mod hire_player;
 pub mod fire_player;
+pub mod buy_staff;
+pub mod remove_staff;
+pub mod buy_reroll;
+pub mod remove_reroll;

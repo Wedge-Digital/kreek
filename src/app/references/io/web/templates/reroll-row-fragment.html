@@ -1,0 +1,26 @@
+{% import "cart-fragment.html" as cart_cmp %}
+<tr id="staff-row-reroll">
+  <td>0-{{ reroll.max }}</td>
+  <td style="text-align: left; font-weight: 500;">Relances</td>
+  <td>{{ reroll.price }}</td>
+  <td>{{ reroll.quantity }}</td>
+  <td>{{ reroll.line_cost }}</td>
+  <td>
+    <button class="tbl-btn" type="button"
+            hx-post="{{ team_routes.buy_reroll(space_id, team_id) }}"
+            hx-target="closest tr"
+            hx-swap="outerHTML"
+            {% if reroll.quantity >= reroll.max %}disabled{% endif %}>+</button>
+  </td>
+  <td>
+    <button class="tbl-btn" type="button"
+            hx-post="{{ team_routes.remove_reroll(space_id, team_id) }}"
+            hx-target="closest tr"
+            hx-swap="outerHTML"
+            {% if reroll.quantity == 0 %}disabled{% endif %}>−</button>
+  </td>
+</tr>
+<div id="staff-table-error" class="table-error-zone" hx-swap-oob="true"></div>
+<div id="team-cart" class="cart" hx-swap-oob="true">
+  {% call cart_cmp::cart_body(Some(cart)) %}
+</div>

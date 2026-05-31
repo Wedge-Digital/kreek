@@ -27,6 +27,7 @@
             {% if row.quantity == 0 %}disabled{% endif %}>−</button>
   </td>
 </tr>
+<div id="player-table-error" class="table-error-zone" hx-swap-oob="true"></div>
 <div id="team-cart" class="cart" hx-swap-oob="true">
   {% call cart_cmp::cart_body(Some(cart)) %}
 </div>

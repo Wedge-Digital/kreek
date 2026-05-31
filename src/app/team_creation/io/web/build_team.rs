@@ -1,4 +1,5 @@
 use askama::Template;
+use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
@@ -19,9 +20,16 @@ use crate::app::team_creation::domain::team_draft::DraftTeam;
 use crate::app::team_creation::domain::team_roster_selected::{MAX_REROLL_COUNT, RosterSelectedTeam};
 use crate::app::team_creation::domain::team_staff::TeamStaff;
 use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
-use crate::app::team_creation::use_cases::commands::{FirePlayerCommand, HirePlayerCommand};
+use crate::app::team_creation::use_cases::commands::{
+    BuyRerollCommand, BuyStaffCommand, FirePlayerCommand, HirePlayerCommand,
+    RemoveRerollCommand, RemoveStaffCommand,
+};
+use crate::app::team_creation::use_cases::buy_reroll  as buy_reroll_uc;
+use crate::app::team_creation::use_cases::buy_staff   as buy_staff_uc;
 use crate::app::team_creation::use_cases::fire_player as fire_uc;
 use crate::app::team_creation::use_cases::hire_player as hire_uc;
+use crate::app::team_creation::use_cases::remove_reroll as remove_reroll_uc;
+use crate::app::team_creation::use_cases::remove_staff  as remove_staff_uc;
 use crate::state::AppState;
 use crate::web::routes::Routes as WebRoutes;
 
@@ -32,6 +40,7 @@ pub struct StaffRowVm {
     pub name:          String,
     pub price:         u32,
     pub max_qty_label: String,
+    pub max_qty:       usize,
     pub quantity:      usize,
     pub line_cost:     u32,
 }
@@ -154,6 +163,7 @@ fn build_staff_rows(team: &RosterSelectedTeam) -> Vec<StaffRowVm> {
             name:          staff.name.0.clone(),
             price:         staff.price.0,
             max_qty_label: format!("0-{}", staff.max_quantity.0),
+            max_qty:       staff.max_quantity.0 as usize,
             quantity,
             line_cost,
         }
@@ -213,6 +223,26 @@ fn build_cart_vm(team: &RosterSelectedTeam) -> CartVm {
         remaining,
         progress_pct,
     }
+}
+
+// ── Helpers de réponse d'erreur HTMX ─────────────────────────────────────────
+
+fn player_error(msg: &str) -> Response {
+    Response::builder()
+        .header("HX-Retarget", "#player-table-error")
+        .header("HX-Reswap", "innerHTML")
+        .header("content-type", "text/html; charset=utf-8")
+        .body(Body::from(format!(r#"<p class="table-error">{msg}</p>"#)))
+        .unwrap()
+}
+
+fn staff_error(msg: &str) -> Response {
+    Response::builder()
+        .header("HX-Retarget", "#staff-table-error")
+        .header("HX-Reswap", "innerHTML")
+        .header("content-type", "text/html; charset=utf-8")
+        .body(Body::from(format!(r#"<p class="table-error">{msg}</p>"#)))
+        .unwrap()
 }
 
 // ── Page complète ─────────────────────────────────────────────────────────────
@@ -444,14 +474,8 @@ pub async fn hire_player(
             return StatusCode::NOT_FOUND.into_response(),
         Err(hire_uc::HirePlayerError::PlayerNotFound) =>
             return StatusCode::UNPROCESSABLE_ENTITY.into_response(),
-        Err(hire_uc::HirePlayerError::Domain(e)) => {
-            let msg  = hire_uc::domain_error_message(&e);
-            let frag = format!(
-                r#"<tr id="player-row-{}"><td colspan="13" class="player-row-error">{}</td></tr>"#,
-                body.player_id, msg
-            );
-            return (StatusCode::OK, Html(frag)).into_response();
-        }
+        Err(hire_uc::HirePlayerError::Domain(e)) =>
+            return player_error(hire_uc::domain_error_message(&e)),
         Err(hire_uc::HirePlayerError::Repository(e)) => {
             tracing::error!("hire_player repo error: {e}");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
@@ -504,14 +528,8 @@ pub async fn fire_player(
             return StatusCode::NOT_FOUND.into_response(),
         Err(fire_uc::FirePlayerError::PlayerNotFound) =>
             return StatusCode::UNPROCESSABLE_ENTITY.into_response(),
-        Err(fire_uc::FirePlayerError::Domain(e)) => {
-            let msg  = fire_uc::domain_error_message(&e);
-            let frag = format!(
-                r#"<tr id="player-row-{}"><td colspan="13" class="player-row-error">{}</td></tr>"#,
-                body.player_id, msg
-            );
-            return (StatusCode::OK, Html(frag)).into_response();
-        }
+        Err(fire_uc::FirePlayerError::Domain(e)) =>
+            return player_error(fire_uc::domain_error_message(&e)),
         Err(fire_uc::FirePlayerError::Repository(e)) => {
             tracing::error!("fire_player repo error: {e}");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
@@ -533,4 +551,195 @@ pub async fn fire_player(
         team_id,
         cart,
     }.into_response()
+}
+
+// ── Fragment ligne staff ──────────────────────────────────────────────────────
+
+#[derive(Template)]
+#[template(path = "staff-row-fragment.html")]
+pub struct StaffRowFragment {
+    pub row:         StaffRowVm,
+    pub team_routes: TeamCreationRoutes,
+    pub space_id:    String,
+    pub team_id:     String,
+    pub cart:        CartVm,
+}
+
+impl IntoResponse for StaffRowFragment {
+    fn into_response(self) -> Response {
+        match self.render() {
+            Ok(html) => Html(html).into_response(),
+            Err(_)   => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        }
+    }
+}
+
+// ── Fragment ligne relance ────────────────────────────────────────────────────
+
+#[derive(Template)]
+#[template(path = "reroll-row-fragment.html")]
+pub struct RerollRowFragment {
+    pub reroll:      RerollVm,
+    pub team_routes: TeamCreationRoutes,
+    pub space_id:    String,
+    pub team_id:     String,
+    pub cart:        CartVm,
+}
+
+impl IntoResponse for RerollRowFragment {
+    fn into_response(self) -> Response {
+        match self.render() {
+            Ok(html) => Html(html).into_response(),
+            Err(_)   => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        }
+    }
+}
+
+// ── Handler buy_staff ─────────────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+pub struct StaffBody {
+    pub staff_id: String,
+}
+
+pub async fn buy_staff(
+    Path((space_id, team_id)): Path<(String, String)>,
+    State(state):              State<AppState>,
+    axum::Json(body):          axum::Json<StaffBody>,
+) -> impl IntoResponse {
+    let team_id_val = match EntityId::try_new(&team_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let cmd = BuyStaffCommand {
+        team_id:  team_id_val,
+        space_id: space_id.clone(),
+        staff_id: StaffId(body.staff_id.clone()),
+    };
+
+    let updated_team = match buy_staff_uc::execute(cmd, state.team_creation.roster_repository.as_ref()).await {
+        Ok(t) => t,
+        Err(buy_staff_uc::BuyStaffError::TeamNotFound) =>
+            return StatusCode::NOT_FOUND.into_response(),
+        Err(buy_staff_uc::BuyStaffError::StaffNotFoundInRoster) =>
+            return StatusCode::UNPROCESSABLE_ENTITY.into_response(),
+        Err(buy_staff_uc::BuyStaffError::Domain(ref errors)) =>
+            return staff_error(buy_staff_uc::domain_error_message(errors)),
+        Err(buy_staff_uc::BuyStaffError::Repository(e)) => {
+            tracing::error!("buy_staff repo error: {e}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let staff_rows = build_staff_rows(&updated_team);
+    let row = match staff_rows.into_iter().find(|r| r.id == body.staff_id) {
+        Some(r) => r,
+        None    => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    let cart = build_cart_vm(&updated_team);
+
+    StaffRowFragment { row, team_routes: Default::default(), space_id, team_id, cart }.into_response()
+}
+
+// ── Handler remove_staff ──────────────────────────────────────────────────────
+
+pub async fn remove_staff(
+    Path((space_id, team_id)): Path<(String, String)>,
+    State(state):              State<AppState>,
+    axum::Json(body):          axum::Json<StaffBody>,
+) -> impl IntoResponse {
+    let team_id_val = match EntityId::try_new(&team_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let cmd = RemoveStaffCommand {
+        team_id:  team_id_val,
+        space_id: space_id.clone(),
+        staff_id: StaffId(body.staff_id.clone()),
+    };
+
+    let updated_team = match remove_staff_uc::execute(cmd, state.team_creation.roster_repository.as_ref()).await {
+        Ok(t) => t,
+        Err(remove_staff_uc::RemoveStaffError::TeamNotFound) =>
+            return StatusCode::NOT_FOUND.into_response(),
+        Err(remove_staff_uc::RemoveStaffError::StaffNotFoundInRoster) =>
+            return StatusCode::UNPROCESSABLE_ENTITY.into_response(),
+        Err(remove_staff_uc::RemoveStaffError::Domain(ref e)) =>
+            return staff_error(remove_staff_uc::domain_error_message(e)),
+        Err(remove_staff_uc::RemoveStaffError::Repository(e)) => {
+            tracing::error!("remove_staff repo error: {e}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let staff_rows = build_staff_rows(&updated_team);
+    let row = match staff_rows.into_iter().find(|r| r.id == body.staff_id) {
+        Some(r) => r,
+        None    => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    let cart = build_cart_vm(&updated_team);
+
+    StaffRowFragment { row, team_routes: Default::default(), space_id, team_id, cart }.into_response()
+}
+
+// ── Handler buy_reroll ────────────────────────────────────────────────────────
+
+pub async fn buy_reroll(
+    Path((space_id, team_id)): Path<(String, String)>,
+    State(state):              State<AppState>,
+) -> impl IntoResponse {
+    let team_id_val = match EntityId::try_new(&team_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let cmd = BuyRerollCommand { team_id: team_id_val, space_id: space_id.clone() };
+
+    let updated_team = match buy_reroll_uc::execute(cmd, state.team_creation.roster_repository.as_ref()).await {
+        Ok(t) => t,
+        Err(buy_reroll_uc::BuyRerollError::TeamNotFound) =>
+            return StatusCode::NOT_FOUND.into_response(),
+        Err(buy_reroll_uc::BuyRerollError::Domain(ref errors)) =>
+            return staff_error(buy_reroll_uc::domain_error_message(errors)),
+        Err(buy_reroll_uc::BuyRerollError::Repository(e)) => {
+            tracing::error!("buy_reroll repo error: {e}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let reroll = build_reroll_vm(&updated_team);
+    let cart   = build_cart_vm(&updated_team);
+
+    RerollRowFragment { reroll, team_routes: Default::default(), space_id, team_id, cart }.into_response()
+}
+
+// ── Handler remove_reroll ─────────────────────────────────────────────────────
+
+pub async fn remove_reroll(
+    Path((space_id, team_id)): Path<(String, String)>,
+    State(state):              State<AppState>,
+) -> impl IntoResponse {
+    let team_id_val = match EntityId::try_new(&team_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let cmd = RemoveRerollCommand { team_id: team_id_val, space_id: space_id.clone() };
+
+    let updated_team = match remove_reroll_uc::execute(cmd, state.team_creation.roster_repository.as_ref()).await {
+        Ok(t) => t,
+        Err(remove_reroll_uc::RemoveRerollError::TeamNotFound) =>
+            return StatusCode::NOT_FOUND.into_response(),
+        Err(remove_reroll_uc::RemoveRerollError::Repository(e)) => {
+            tracing::error!("remove_reroll repo error: {e}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let reroll = build_reroll_vm(&updated_team);
+    let cart   = build_cart_vm(&updated_team);
+
+    RerollRowFragment { reroll, team_routes: Default::default(), space_id, team_id, cart }.into_response()
 }

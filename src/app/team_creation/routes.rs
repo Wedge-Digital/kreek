@@ -5,6 +5,10 @@ pub mod path {
     pub const ROSTER_PLAYERS: &str = "/app/{space_id}/team/{team_id}/roster/{roster_uid}/players";
     pub const HIRE_PLAYER:    &str = "/app/{space_id}/team/{team_id}/players/hire";
     pub const FIRE_PLAYER:    &str = "/app/{space_id}/team/{team_id}/players/fire";
+    pub const BUY_STAFF:      &str = "/app/{space_id}/team/{team_id}/staff/buy";
+    pub const REMOVE_STAFF:   &str = "/app/{space_id}/team/{team_id}/staff/remove";
+    pub const BUY_REROLL:     &str = "/app/{space_id}/team/{team_id}/rerolls/buy";
+    pub const REMOVE_REROLL:  &str = "/app/{space_id}/team/{team_id}/rerolls/remove";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -33,6 +37,26 @@ impl Routes {
     }
     pub fn fire_player(&self, space_id: &str, team_id: &str) -> String {
         path::FIRE_PLAYER
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+    pub fn buy_staff(&self, space_id: &str, team_id: &str) -> String {
+        path::BUY_STAFF
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+    pub fn remove_staff(&self, space_id: &str, team_id: &str) -> String {
+        path::REMOVE_STAFF
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+    pub fn buy_reroll(&self, space_id: &str, team_id: &str) -> String {
+        path::BUY_REROLL
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+    pub fn remove_reroll(&self, space_id: &str, team_id: &str) -> String {
+        path::REMOVE_REROLL
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
     }

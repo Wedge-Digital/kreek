@@ -30,7 +30,7 @@
 
       <!-- Étape 3 : Joueurs -->
       <div class="section-label">3 — Sélectionnez vos joueurs</div>
-      <div id="player-table-container" style="overflow-x: auto; margin-bottom: var(--p2);">
+      <div id="player-table-container" style="overflow-x: auto;">
         <table class="player-table">
           <thead>
             <tr>
@@ -86,10 +86,11 @@
           </tbody>
         </table>
       </div>
+      <div id="player-table-error" class="table-error-zone"></div>
 
       <!-- Étape 4 : Staff -->
       <div class="section-label">4 — Sélectionnez votre staff</div>
-      <div id="staff-table-wrap" style="overflow-x: auto; margin-bottom: var(--p4);">
+      <div id="staff-table-wrap" style="overflow-x: auto; margin-bottom: var(--p2);">
         <table class="player-table" style="max-width: 600px;">
           <thead>
             <tr>
@@ -102,10 +103,11 @@
             </tr>
           </thead>
           <tbody id="staff-table-body">
-            {% call staff_cmp::staff_body(reroll, staff_rows) %}
+            {% call staff_cmp::staff_body(reroll, staff_rows, team_routes, space_id, team_id) %}
           </tbody>
         </table>
       </div>
+      <div id="staff-table-error" class="table-error-zone"></div>
 
       <div style="display: flex; justify-content: center;">
         <button class="btn btn-outline"

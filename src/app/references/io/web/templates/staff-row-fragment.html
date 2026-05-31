@@ -1,0 +1,30 @@
+{% import "cart-fragment.html" as cart_cmp %}
+<tr id="staff-row-{{ row.id }}">
+  <td>{{ row.max_qty_label }}</td>
+  <td style="text-align: left; font-weight: 500;">{{ row.name }}</td>
+  <td>{{ row.price }}</td>
+  <td>{{ row.quantity }}</td>
+  <td>{{ row.line_cost }}</td>
+  <td>
+    <button class="tbl-btn" type="button"
+            hx-post="{{ team_routes.buy_staff(space_id, team_id) }}"
+            hx-ext="json-enc"
+            hx-vals='{"staff_id":"{{ row.id }}"}'
+            hx-target="closest tr"
+            hx-swap="outerHTML"
+            {% if row.quantity >= row.max_qty %}disabled{% endif %}>+</button>
+  </td>
+  <td>
+    <button class="tbl-btn" type="button"
+            hx-post="{{ team_routes.remove_staff(space_id, team_id) }}"
+            hx-ext="json-enc"
+            hx-vals='{"staff_id":"{{ row.id }}"}'
+            hx-target="closest tr"
+            hx-swap="outerHTML"
+            {% if row.quantity == 0 %}disabled{% endif %}>−</button>
+  </td>
+</tr>
+<div id="staff-table-error" class="table-error-zone" hx-swap-oob="true"></div>
+<div id="team-cart" class="cart" hx-swap-oob="true">
+  {% call cart_cmp::cart_body(Some(cart)) %}
+</div>

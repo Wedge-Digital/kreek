@@ -1,4 +1,4 @@
-{% macro staff_body(reroll, staff_rows) %}
+{% macro staff_body(reroll, staff_rows, team_routes, space_id, team_id) %}
 {% if let Some(r) = reroll %}
 <tr id="staff-row-reroll">
   <td>0-{{ r.max }}</td>
@@ -6,8 +6,20 @@
   <td>{{ r.price }}</td>
   <td>{{ r.quantity }}</td>
   <td>{{ r.line_cost }}</td>
-  <td><button class="tbl-btn" type="button">+</button></td>
-  <td><button class="tbl-btn" type="button"{% if r.quantity == 0 %} disabled{% endif %}>−</button></td>
+  <td>
+    <button class="tbl-btn" type="button"
+            hx-post="{{ team_routes.buy_reroll(space_id, team_id) }}"
+            hx-target="closest tr"
+            hx-swap="outerHTML"
+            {% if r.quantity >= r.max %}disabled{% endif %}>+</button>
+  </td>
+  <td>
+    <button class="tbl-btn" type="button"
+            hx-post="{{ team_routes.remove_reroll(space_id, team_id) }}"
+            hx-target="closest tr"
+            hx-swap="outerHTML"
+            {% if r.quantity == 0 %}disabled{% endif %}>−</button>
+  </td>
 </tr>
 {% for row in staff_rows %}
 <tr id="staff-row-{{ row.id }}">
@@ -16,8 +28,24 @@
   <td>{{ row.price }}</td>
   <td>{{ row.quantity }}</td>
   <td>{{ row.line_cost }}</td>
-  <td><button class="tbl-btn" type="button">+</button></td>
-  <td><button class="tbl-btn" type="button"{% if row.quantity == 0 %} disabled{% endif %}>−</button></td>
+  <td>
+    <button class="tbl-btn" type="button"
+            hx-post="{{ team_routes.buy_staff(space_id, team_id) }}"
+            hx-ext="json-enc"
+            hx-vals='{"staff_id":"{{ row.id }}"}'
+            hx-target="closest tr"
+            hx-swap="outerHTML"
+            {% if row.quantity >= row.max_qty %}disabled{% endif %}>+</button>
+  </td>
+  <td>
+    <button class="tbl-btn" type="button"
+            hx-post="{{ team_routes.remove_staff(space_id, team_id) }}"
+            hx-ext="json-enc"
+            hx-vals='{"staff_id":"{{ row.id }}"}'
+            hx-target="closest tr"
+            hx-swap="outerHTML"
+            {% if row.quantity == 0 %}disabled{% endif %}>−</button>
+  </td>
 </tr>
 {% endfor %}
 {% else %}
@@ -29,7 +57,7 @@
 {% endif %}
 {% endmacro %}
 
-{% macro staff_table_oob(reroll, staff_rows) %}
+{% macro staff_table_oob(reroll, staff_rows, team_routes, space_id, team_id) %}
 <div id="staff-table-wrap" style="overflow-x: auto; margin-bottom: var(--p4);" hx-swap-oob="true">
   <table class="player-table" style="max-width: 600px;">
     <thead>
@@ -43,7 +71,7 @@
       </tr>
     </thead>
     <tbody id="staff-table-body">
-      {% call staff_body(reroll, staff_rows) %}
+      {% call staff_body(reroll, staff_rows, team_routes, space_id, team_id) %}
     </tbody>
   </table>
 </div>
