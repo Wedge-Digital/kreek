@@ -1,3 +1,4 @@
+{% import "cart-fragment.html" as cart_cmp %}
 {% for pos in positions %}
 <tr id="player-row-{{ pos.uid }}">
   <td>{{ pos.max_qty_label }}</td>
@@ -27,3 +28,6 @@
   </td>
 </tr>
 {% endif %}
+<div id="team-cart" class="cart" hx-swap-oob="true">
+  {% call cart_cmp::cart_body(cart) %}
+</div>

@@ -1,3 +1,4 @@
+{% import "cart-fragment.html" as cart_cmp %}
 <tr id="player-row-{{ row.uid }}">
   <td>{{ row.max_qty_label }}</td>
   <td class="player-name">{{ row.name }}</td>
@@ -26,3 +27,6 @@
             {% if row.quantity == 0 %}disabled{% endif %}>−</button>
   </td>
 </tr>
+<div id="team-cart" class="cart" hx-swap-oob="true">
+  {% call cart_cmp::cart_body(Some(cart)) %}
+</div>

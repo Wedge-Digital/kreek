@@ -1,0 +1,71 @@
+{% macro cart_body(cart) %}
+<div class="cart-title">🛒 Récapitulatif</div>
+
+{% if let Some(c) = cart %}
+
+{% if !c.player_lines.is_empty() %}
+<div class="cart-section-label">Joueurs</div>
+{% for line in c.player_lines %}
+<div class="cart-line">
+  <span class="cart-line-name">{{ line.name }}</span>
+  <span class="cart-line-qty">×{{ line.qty }}</span>
+  <span class="cart-line-price">{{ line.total }} kPo</span>
+</div>
+{% endfor %}
+<div class="cart-subtotal">
+  <span>Sous-total joueurs</span>
+  <span>{{ c.player_subtotal }} kPo</span>
+</div>
+<hr class="cart-separator">
+{% endif %}
+
+<div class="cart-section-label">Staff &amp; équipement</div>
+{% if c.reroll_qty > 0 %}
+<div class="cart-line">
+  <span class="cart-line-name">Relances</span>
+  <span class="cart-line-qty">×{{ c.reroll_qty }}</span>
+  <span class="cart-line-price">{{ c.reroll_cost }} kPo</span>
+</div>
+{% endif %}
+{% for line in c.staff_lines %}
+<div class="cart-line">
+  <span class="cart-line-name">{{ line.name }}</span>
+  <span class="cart-line-qty">×{{ line.qty }}</span>
+  <span class="cart-line-price">{{ line.total }} kPo</span>
+</div>
+{% endfor %}
+<div class="cart-subtotal">
+  <span>Sous-total staff</span>
+  <span>{{ c.staff_subtotal + c.reroll_cost }} kPo</span>
+</div>
+
+<hr class="cart-separator">
+
+<div class="cart-total">
+  <span class="cart-total-label">Total</span>
+  <span class="cart-total-amount">{{ c.total }} kPo</span>
+</div>
+
+<div class="cart-budget-bar">
+  <div class="cart-budget-meta">
+    <span>Budget utilisé</span>
+    <span>{{ c.total }} / {{ c.budget }} kPo</span>
+  </div>
+  <div class="cart-progress">
+    <div class="cart-progress-inner" style="width: {{ c.progress_pct }}%;"></div>
+  </div>
+  <div style="font-size: var(--text-tiny); color: var(--green); font-weight: 600; text-align: right;">
+    {{ c.remaining }} kPo restants
+  </div>
+</div>
+
+<div class="cart-actions">
+  <button class="btn btn-primary">Valider →</button>
+</div>
+
+{% else %}
+<div style="color: var(--dark-3); font-style: italic; font-size: var(--text-sm); padding: var(--p2) 0;">
+  Sélectionnez un roster et ajoutez des joueurs pour voir le récapitulatif.
+</div>
+{% endif %}
+{% endmacro %}

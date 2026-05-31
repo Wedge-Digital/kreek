@@ -1,5 +1,6 @@
 {% extends "app-layout.html" %}
 {% import "roster-picker-tiers.html" as roster_cmp %}
+{% import "cart-fragment.html" as cart_cmp %}
 
 {% block content %}
 <link rel="stylesheet" href="/static/css/pages/app-home.css">
@@ -43,11 +44,44 @@
             </tr>
           </thead>
           <tbody id="player-table-body">
+            {% if hired_rows.is_empty() %}
             <tr>
               <td colspan="13" style="text-align:center; color:var(--dark-3); font-style:italic; padding: var(--p2);">
                 Sélectionnez un roster pour afficher les postes disponibles.
               </td>
             </tr>
+            {% else %}
+            {% for row in hired_rows %}
+            <tr id="player-row-{{ row.uid }}">
+              <td>{{ row.max_qty_label }}</td>
+              <td class="player-name">{{ row.name }}</td>
+              <td>{{ row.cost_kpo }}</td>
+              <td>{{ row.ma }}</td><td>{{ row.st }}</td>
+              <td>{{ row.ag }}</td><td>{{ row.pa }}</td><td>{{ row.av }}</td>
+              <td class="player-skills">{{ row.skills }}</td>
+              <td>{{ row.quantity }}</td>
+              <td>{{ row.line_cost_kpo }} kPo</td>
+              <td>
+                <button class="tbl-btn" type="button"
+                        hx-post="{{ team_routes.hire_player(space_id, team_id) }}"
+                        hx-ext="json-enc"
+                        hx-vals='{"player_id":"{{ row.uid }}"}'
+                        hx-target="closest tr"
+                        hx-swap="outerHTML"
+                        {% if row.is_max %}disabled{% endif %}>+</button>
+              </td>
+              <td>
+                <button class="tbl-btn" type="button"
+                        hx-post="{{ team_routes.fire_player(space_id, team_id) }}"
+                        hx-ext="json-enc"
+                        hx-vals='{"player_id":"{{ row.uid }}"}'
+                        hx-target="closest tr"
+                        hx-swap="outerHTML"
+                        {% if row.quantity == 0 %}disabled{% endif %}>−</button>
+              </td>
+            </tr>
+            {% endfor %}
+            {% endif %}
           </tbody>
         </table>
       </div>
@@ -66,35 +100,35 @@
               <th></th><th></th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="staff-table-body">
+            {% if let Some(r) = reroll %}
             <tr>
-              <td>0-8</td>
+              <td>0-{{ r.max }}</td>
               <td style="text-align: left; font-weight: 500;">Relances</td>
-              <td>60 kpO</td><td>3</td><td>180 kpO</td>
-              <td><button class="tbl-btn">+</button></td>
-              <td><button class="tbl-btn">−</button></td>
+              <td>{{ r.price }} kPo</td>
+              <td>{{ r.quantity }}</td>
+              <td>{{ r.line_cost }} kPo</td>
+              <td><button class="tbl-btn" type="button">+</button></td>
+              <td><button class="tbl-btn" type="button">−</button></td>
             </tr>
+            {% for row in staff_rows %}
             <tr>
-              <td>0-6</td>
-              <td style="text-align: left; font-weight: 500;">Cheerleaders</td>
-              <td>10 kpO</td><td>0</td><td>0 kpO</td>
-              <td><button class="tbl-btn">+</button></td>
-              <td><button class="tbl-btn">−</button></td>
+              <td>{{ row.max_qty_label }}</td>
+              <td style="text-align: left; font-weight: 500;">{{ row.name }}</td>
+              <td>{{ row.price }} kPo</td>
+              <td>{{ row.quantity }}</td>
+              <td>{{ row.line_cost }} kPo</td>
+              <td><button class="tbl-btn" type="button">+</button></td>
+              <td><button class="tbl-btn" type="button">−</button></td>
             </tr>
+            {% endfor %}
+            {% else %}
             <tr>
-              <td>0-6</td>
-              <td style="text-align: left; font-weight: 500;">Assistants d'entraînement</td>
-              <td>10 kpO</td><td>0</td><td>0 kpO</td>
-              <td><button class="tbl-btn">+</button></td>
-              <td><button class="tbl-btn">−</button></td>
+              <td colspan="7" style="text-align:center; color:var(--dark-3); font-style:italic; padding: var(--p2);">
+                Sélectionnez un roster pour afficher le staff disponible.
+              </td>
             </tr>
-            <tr>
-              <td>0-1</td>
-              <td style="text-align: left; font-weight: 500;">Apothicaire</td>
-              <td>50 kpO</td><td>1</td><td>50 kpO</td>
-              <td><button class="tbl-btn">+</button></td>
-              <td><button class="tbl-btn">−</button></td>
-            </tr>
+            {% endif %}
           </tbody>
         </table>
       </div>
@@ -138,76 +172,8 @@
     </div>
 
     <!-- Panier -->
-    <div class="cart">
-      <div class="cart-title">🛒 Récapitulatif</div>
-
-      <div class="cart-section-label">Joueurs</div>
-      <div class="cart-line">
-        <span class="cart-line-name">Bloodborn Marauder</span>
-        <span class="cart-line-qty">×6</span>
-        <span class="cart-line-price">360 kpO</span>
-      </div>
-      <div class="cart-line">
-        <span class="cart-line-name">Chaos Warrior</span>
-        <span class="cart-line-qty">×2</span>
-        <span class="cart-line-price">180 kpO</span>
-      </div>
-      <div class="cart-line">
-        <span class="cart-line-name">Minotaure</span>
-        <span class="cart-line-qty">×1</span>
-        <span class="cart-line-price">150 kpO</span>
-      </div>
-      <div class="cart-line">
-        <span class="cart-line-name">Beastman Runner</span>
-        <span class="cart-line-qty">×2</span>
-        <span class="cart-line-price">160 kpO</span>
-      </div>
-      <div class="cart-subtotal">
-        <span>Sous-total joueurs</span>
-        <span>850 kpO</span>
-      </div>
-
-      <hr class="cart-separator">
-
-      <div class="cart-section-label">Staff &amp; équipement</div>
-      <div class="cart-line">
-        <span class="cart-line-name">Relances</span>
-        <span class="cart-line-qty">×3</span>
-        <span class="cart-line-price">180 kpO</span>
-      </div>
-      <div class="cart-line">
-        <span class="cart-line-name">Apothicaire</span>
-        <span class="cart-line-qty">×1</span>
-        <span class="cart-line-price">50 kpO</span>
-      </div>
-      <div class="cart-subtotal">
-        <span>Sous-total staff</span>
-        <span>230 kpO</span>
-      </div>
-
-      <hr class="cart-separator">
-
-      <div class="cart-total">
-        <span class="cart-total-label">Total</span>
-        <span class="cart-total-amount">1 080 kpO</span>
-      </div>
-
-      <div class="cart-budget-bar">
-        <div class="cart-budget-meta">
-          <span>Budget utilisé</span>
-          <span>1 080 / 1 150 kpO</span>
-        </div>
-        <div class="cart-progress">
-          <div class="cart-progress-inner" style="width: 94%;"></div>
-        </div>
-        <div style="font-size: var(--text-tiny); color: var(--green); font-weight: 600; text-align: right;">
-          70 kpO restants
-        </div>
-      </div>
-
-      <div class="cart-actions">
-        <button class="btn btn-primary">Valider →</button>
-      </div>
+    <div id="team-cart" class="cart">
+      {% call cart_cmp::cart_body(cart) %}
     </div>
 
   </div><!-- /home-side -->
@@ -224,7 +190,7 @@
   }
   var el = document.getElementById('roster-select');
   if (el && !el.tomselect) {
-    new TomSelect(el, {
+    var ts = new TomSelect(el, {
       allowEmptyOption: true,
       maxItems: 1,
       render: {
@@ -246,6 +212,9 @@
         });
       },
     });
+    {% if let Some(uid) = selected_roster_uid %}
+    ts.setValue('{{ uid }}', true);
+    {% endif %}
   }
 })();
 </script>
