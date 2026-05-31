@@ -65,7 +65,7 @@
 .rules-section-title { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2); text-transform: uppercase; letter-spacing: 0.5px; }
 .rules-tier { background: var(--dark-6); border: 1px solid var(--dark-5); border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 3px; }
 .rules-tier-name { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-1); }
-.rules-tier-meta { font-size: 11px; color: var(--dark-3); }
+.rules-tier-meta { font-size: 11px; color: var(--dark-1); }
 
 /* ── Cart ────────────────────────────────────────────────────────────── */
 .cart { background: var(--white); border: 1px solid var(--dark-5); border-radius: 12px; padding: var(--p2); display: flex; flex-direction: column; gap: var(--p1); margin-top: var(--p2);}

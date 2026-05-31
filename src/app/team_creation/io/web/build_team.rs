@@ -10,6 +10,8 @@ use crate::app::references::io::web::pickers::{
     build_player_positions, build_roster_items_with_tiers,
     HiredPlayerRowVm, PlayerPositionVm, RosterPickerItemWithTier,
 };
+use crate::app::competitions::domain::competition_repository_port::ICompetitionRepository;
+use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
 use crate::app::shared_kernel::common_types::{Entity, EntityId};
 use crate::app::shared_kernel::staff::{StaffId, StaffKind, StaffMaxQuantity, StaffName, StaffPrice};
 use crate::app::team_creation::domain::roster::{
@@ -225,6 +227,20 @@ fn build_cart_vm(team: &RosterSelectedTeam) -> CartVm {
     }
 }
 
+// ── Rules panel view model ────────────────────────────────────────────────────
+
+pub struct RulesTierVm {
+    pub name:     String,
+    pub budget:   u32,
+    pub start_xp: u32,
+}
+
+pub struct RulesPanelVm {
+    pub competition_name: String,
+    pub season_name:      String,
+    pub tiers:            Vec<RulesTierVm>,
+}
+
 // ── Helpers de réponse d'erreur HTMX ─────────────────────────────────────────
 
 fn player_error(msg: &str) -> Response {
@@ -260,6 +276,7 @@ pub struct BuildTeamTemplate {
     pub staff_rows:          Vec<StaffRowVm>,
     pub reroll:              Option<RerollVm>,
     pub cart:                Option<CartVm>,
+    pub rules_panel:         RulesPanelVm,
 }
 
 impl IntoResponse for BuildTeamTemplate {
@@ -312,6 +329,28 @@ pub async fn build_team(
         }
     };
 
+    let competition_name = if let Ok(id) = EntityId::try_new(draft.competition_id()) {
+        state.competitions.competition_repository
+            .find_base_info(&id).await.ok().flatten()
+            .map(|i| i.name).unwrap_or_default()
+    } else { String::new() };
+
+    let season_name = if let Ok(id) = EntityId::try_new(draft.season_id()) {
+        state.competitions.season_repository
+            .find_base_info(&id).await.ok().flatten()
+            .map(|i| i.name).unwrap_or_default()
+    } else { String::new() };
+
+    let rules_panel = RulesPanelVm {
+        competition_name,
+        season_name,
+        tiers: draft.creation_rules().tiers.iter().map(|t| RulesTierVm {
+            name:     t.name.clone(),
+            budget:   t.budget,
+            start_xp: t.start_xp,
+        }).collect(),
+    };
+
     BuildTeamTemplate {
         web_routes:  Default::default(),
         team_routes: Default::default(),
@@ -323,6 +362,7 @@ pub async fn build_team(
         staff_rows,
         reroll,
         cart,
+        rules_panel,
     }.into_response()
 }
 
