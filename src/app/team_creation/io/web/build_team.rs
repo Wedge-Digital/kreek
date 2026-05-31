@@ -19,7 +19,8 @@ use crate::app::team_creation::domain::team_draft::DraftTeam;
 use crate::app::team_creation::domain::team_roster_selected::{MAX_REROLL_COUNT, RosterSelectedTeam};
 use crate::app::team_creation::domain::team_staff::TeamStaff;
 use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
-use crate::app::team_creation::use_cases::commands::HirePlayerCommand;
+use crate::app::team_creation::use_cases::commands::{FirePlayerCommand, HirePlayerCommand};
+use crate::app::team_creation::use_cases::fire_player as fire_uc;
 use crate::app::team_creation::use_cases::hire_player as hire_uc;
 use crate::state::AppState;
 use crate::web::routes::Routes as WebRoutes;
@@ -445,6 +446,66 @@ pub async fn hire_player(
         }
         Err(hire_uc::HirePlayerError::Repository(e)) => {
             tracing::error!("hire_player repo error: {e}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let ref_repo = state.references.repository.as_ref();
+    let rows     = build_hired_rows(&updated_team, ref_repo);
+    let row      = match rows.into_iter().find(|r| r.uid == body.player_id) {
+        Some(r) => r,
+        None    => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    let cart = build_cart_vm(&updated_team);
+
+    PlayerRowFragment {
+        row,
+        team_routes: Default::default(),
+        space_id,
+        team_id,
+        cart,
+    }.into_response()
+}
+
+// ── Handler fire_player ───────────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+pub struct FirePlayerBody {
+    pub player_id: String,
+}
+
+pub async fn fire_player(
+    Path((space_id, team_id)): Path<(String, String)>,
+    State(state):              State<AppState>,
+    axum::Json(body):          axum::Json<FirePlayerBody>,
+) -> impl IntoResponse {
+    let team_id_val = match EntityId::try_new(&team_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let cmd = FirePlayerCommand {
+        team_id:   team_id_val,
+        space_id:  space_id.clone(),
+        player_id: PlayerId(body.player_id.clone()),
+    };
+
+    let updated_team = match fire_uc::execute(cmd, state.team_creation.roster_repository.as_ref()).await {
+        Ok(t) => t,
+        Err(fire_uc::FirePlayerError::TeamNotFound) =>
+            return StatusCode::NOT_FOUND.into_response(),
+        Err(fire_uc::FirePlayerError::PlayerNotFound) =>
+            return StatusCode::UNPROCESSABLE_ENTITY.into_response(),
+        Err(fire_uc::FirePlayerError::Domain(e)) => {
+            let msg  = fire_uc::domain_error_message(&e);
+            let frag = format!(
+                r#"<tr id="player-row-{}"><td colspan="13" class="player-row-error">{}</td></tr>"#,
+                body.player_id, msg
+            );
+            return (StatusCode::OK, Html(frag)).into_response();
+        }
+        Err(fire_uc::FirePlayerError::Repository(e)) => {
+            tracing::error!("fire_player repo error: {e}");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };

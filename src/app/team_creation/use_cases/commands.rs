@@ -29,3 +29,9 @@ pub struct HirePlayerCommand {
     pub space_id:  String,
     pub player_id: PlayerId,
 }
+
+pub struct FirePlayerCommand {
+    pub team_id:   TeamId,
+    pub space_id:  String,
+    pub player_id: PlayerId,
+}
