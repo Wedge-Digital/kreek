@@ -30,7 +30,7 @@
 
       <!-- Étape 3 : Joueurs -->
       <div class="section-label">3 — Sélectionnez vos joueurs</div>
-      <div style="overflow-x: auto; margin-bottom: var(--p2);">
+      <div id="player-table-container" style="overflow-x: auto; margin-bottom: var(--p2);">
         <table class="player-table">
           <thead>
             <tr>
@@ -89,7 +89,7 @@
 
       <!-- Étape 4 : Staff -->
       <div class="section-label">4 — Sélectionnez votre staff</div>
-      <div style="overflow-x: auto; margin-bottom: var(--p4);">
+      <div id="staff-table-wrap" style="overflow-x: auto; margin-bottom: var(--p4);">
         <table class="player-table" style="max-width: 600px;">
           <thead>
             <tr>
@@ -182,7 +182,7 @@
           return;
         }
         htmx.ajax('GET', '/app/{{ space_id }}/team/{{ team_id }}/roster/' + value + '/players', {
-          target: '#player-table-body', swap: 'innerHTML'
+          target: '#player-table-container', swap: 'innerHTML'
         });
       },
     });

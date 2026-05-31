@@ -28,3 +28,23 @@
 </tr>
 {% endif %}
 {% endmacro %}
+
+{% macro staff_table_oob(reroll, staff_rows) %}
+<div id="staff-table-wrap" style="overflow-x: auto; margin-bottom: var(--p4);" hx-swap-oob="true">
+  <table class="player-table" style="max-width: 600px;">
+    <thead>
+      <tr>
+        <th>Qté max</th>
+        <th style="text-align: left;">Poste</th>
+        <th>Prix (kPo)</th>
+        <th>Qté</th>
+        <th>Coût total (kPo)</th>
+        <th></th><th></th>
+      </tr>
+    </thead>
+    <tbody id="staff-table-body">
+      {% call staff_body(reroll, staff_rows) %}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}
