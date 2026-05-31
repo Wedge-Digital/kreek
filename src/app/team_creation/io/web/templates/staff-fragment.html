@@ -3,9 +3,9 @@
 <tr id="staff-row-reroll">
   <td>0-{{ r.max }}</td>
   <td style="text-align: left; font-weight: 500;">Relances</td>
-  <td>{{ r.price }} kPo</td>
+  <td>{{ r.price }}</td>
   <td>{{ r.quantity }}</td>
-  <td>{{ r.line_cost }} kPo</td>
+  <td>{{ r.line_cost }}</td>
   <td><button class="tbl-btn" type="button">+</button></td>
   <td><button class="tbl-btn" type="button"{% if r.quantity == 0 %} disabled{% endif %}>−</button></td>
 </tr>
@@ -13,9 +13,9 @@
 <tr id="staff-row-{{ row.id }}">
   <td>{{ row.max_qty_label }}</td>
   <td style="text-align: left; font-weight: 500;">{{ row.name }}</td>
-  <td>{{ row.price }} kPo</td>
+  <td>{{ row.price }}</td>
   <td>{{ row.quantity }}</td>
-  <td>{{ row.line_cost }} kPo</td>
+  <td>{{ row.line_cost }}</td>
   <td><button class="tbl-btn" type="button">+</button></td>
   <td><button class="tbl-btn" type="button"{% if row.quantity == 0 %} disabled{% endif %}>−</button></td>
 </tr>
