@@ -28,6 +28,7 @@ use crate::web::routes::Routes as WebRoutes;
 // ── View models ───────────────────────────────────────────────────────────────
 
 pub struct StaffRowVm {
+    pub id:            String,
     pub name:          String,
     pub price:         u32,
     pub max_qty_label: String,
@@ -149,6 +150,7 @@ fn build_staff_rows(team: &RosterSelectedTeam) -> Vec<StaffRowVm> {
         let quantity  = team.hired_staff().iter().filter(|s| s.id == staff.id).count();
         let line_cost = quantity as u32 * staff.price.0;
         StaffRowVm {
+            id:            staff.id.0.clone(),
             name:          staff.name.0.clone(),
             price:         staff.price.0,
             max_qty_label: format!("0-{}", staff.max_quantity.0),
@@ -304,6 +306,8 @@ pub struct RosterPlayersFragment {
     pub space_id:    String,
     pub team_id:     String,
     pub cart:        Option<CartVm>,
+    pub staff_rows:  Vec<StaffRowVm>,
+    pub reroll:      Option<RerollVm>,
 }
 
 impl IntoResponse for RosterPlayersFragment {
@@ -374,8 +378,10 @@ pub async fn get_roster_players(
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
 
-    let positions = build_player_positions(ref_team, ref_repo);
-    let cart      = Some(build_cart_vm(&roster_team));
+    let positions  = build_player_positions(ref_team, ref_repo);
+    let cart       = Some(build_cart_vm(&roster_team));
+    let staff_rows = build_staff_rows(&roster_team);
+    let reroll     = Some(build_reroll_vm(&roster_team));
 
     RosterPlayersFragment {
         positions,
@@ -383,6 +389,8 @@ pub async fn get_roster_players(
         space_id,
         team_id,
         cart,
+        staff_rows,
+        reroll,
     }.into_response()
 }
 

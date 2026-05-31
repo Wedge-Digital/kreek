@@ -1,4 +1,5 @@
 {% import "cart-fragment.html" as cart_cmp %}
+{% import "staff-fragment.html" as staff_cmp %}
 {% for pos in positions %}
 <tr id="player-row-{{ pos.uid }}">
   <td>{{ pos.max_qty_label }}</td>
@@ -31,3 +32,6 @@
 <div id="team-cart" class="cart" hx-swap-oob="true">
   {% call cart_cmp::cart_body(cart) %}
 </div>
+<tbody id="staff-table-body" hx-swap-oob="true">
+  {% call staff_cmp::staff_body(reroll, staff_rows) %}
+</tbody>

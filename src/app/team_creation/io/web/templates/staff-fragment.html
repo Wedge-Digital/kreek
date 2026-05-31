@@ -1,0 +1,30 @@
+{% macro staff_body(reroll, staff_rows) %}
+{% if let Some(r) = reroll %}
+<tr id="staff-row-reroll">
+  <td>0-{{ r.max }}</td>
+  <td style="text-align: left; font-weight: 500;">Relances</td>
+  <td>{{ r.price }} kPo</td>
+  <td>{{ r.quantity }}</td>
+  <td>{{ r.line_cost }} kPo</td>
+  <td><button class="tbl-btn" type="button">+</button></td>
+  <td><button class="tbl-btn" type="button"{% if r.quantity == 0 %} disabled{% endif %}>−</button></td>
+</tr>
+{% for row in staff_rows %}
+<tr id="staff-row-{{ row.id }}">
+  <td>{{ row.max_qty_label }}</td>
+  <td style="text-align: left; font-weight: 500;">{{ row.name }}</td>
+  <td>{{ row.price }} kPo</td>
+  <td>{{ row.quantity }}</td>
+  <td>{{ row.line_cost }} kPo</td>
+  <td><button class="tbl-btn" type="button">+</button></td>
+  <td><button class="tbl-btn" type="button"{% if row.quantity == 0 %} disabled{% endif %}>−</button></td>
+</tr>
+{% endfor %}
+{% else %}
+<tr>
+  <td colspan="7" style="text-align:center; color:var(--dark-3); font-style:italic; padding: var(--p2);">
+    Sélectionnez un roster pour afficher le staff disponible.
+  </td>
+</tr>
+{% endif %}
+{% endmacro %}
