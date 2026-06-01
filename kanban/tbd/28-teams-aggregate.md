@@ -27,67 +27,94 @@ Exemple de payload en base :
 
 La colonne `event_version` (défaut `"1.0"`) permet de gérer l'évolution du schéma d'un variant sans migration lourde. Les champs ajoutés en versions futures portent `#[serde(default)]` pour rester compatibles avec les anciens enregistrements.
 
+### Value objects requis dans ce BC
+
+Tous les newtypes doivent dériver `Serialize` / `Deserialize` pour apparaître dans les events persistés (cf. règle CLAUDE.md) :
+
+```rust
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)] pub struct TeamId(pub String);
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)] pub struct SpaceId(pub String);
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)] pub struct PlayerId(pub String);
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)] pub struct PositionId(pub String);
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)] pub struct CompetitionId(pub String);
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)] pub struct SeasonId(pub String);
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)] pub struct RosterId(pub String);
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)] pub struct RosterName(pub String);
+
+// Montants (pas de DomainError — validation implicite par u32)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)] pub struct Kpo(pub u32);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)] pub struct KpoDelta(pub i32);
+
+// CoachName et TeamName sont déjà définis dans shared_kernel — réutiliser
+// UserId est déjà défini dans shared_kernel — réutiliser
+```
+
 ```rust
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum TeamDomainEvent {
     // Depuis BC team_creation
     TeamCreated {
-        team_id:     String,
-        space_id:    String,
-        name:        String,
-        roster_id:   String,
-        roster_name: String,
-        coach_id:    String,
-        coach_name:  String,
-        treasury:    u32,
+        team_id:     TeamId,
+        space_id:    SpaceId,
+        name:        TeamName,
+        roster_id:   RosterId,
+        roster_name: RosterName,
+        coach_id:    UserId,
+        coach_name:  CoachName,
+        treasury:    Kpo,
     },
     // Depuis BC competitions
     TeamEnrolled {
-        competition_id: String,
-        season_id:      String,
+        competition_id: CompetitionId,
+        season_id:      SeasonId,
     },
     // Action admin
     TeamDismissed,
     // Depuis BC match_report
     MatchPlayedReceived {
         result:              MatchResult,
-        dedicated_fans_roll: u8,
-        treasury_income:     u32,
+        dedicated_fans_roll: u8,        // jet de dé 1D6 — pas de domaine propre
+        treasury_income:     Kpo,
         spp_gains:           Vec<SppGain>,
     },
     // Actions coach — phases post-match
     PlayerImprovementApplied {
-        player_id:   String,
+        player_id:   PlayerId,
         improvement: PlayerImprovement,
-        value_delta: u32,   // augmentation de TV liée à cette amélioration (règles BB2025)
+        value_delta: Kpo,
     },
     PlayerImprovementPhaseValidated,
     PlayerRecruited {
-        position_id:    String,
-        base_value_kpo: u32,  // valeur TV du poste (depuis référentiel)
-        cost_kpo:       u32,  // coût trésorerie (identique à base_value_kpo hors star players)
+        position_id:    PositionId,
+        base_value_kpo: Kpo,
+        cost_kpo:       Kpo,
     },
-    StaffBought       { staff_type: StaffType, quantity: u8, cost_kpo: u32 },
+    StaffBought { staff_type: StaffType, quantity: u8, cost_kpo: Kpo },
     RecruitmentPhaseValidated,
     PlayerFired {
-        player_id:           String,
-        value_kpo_at_firing: u32,  // base_value_kpo + Σ value_delta, calculé par le use case
+        player_id:           PlayerId,
+        value_kpo_at_firing: Kpo,
     },
     DismissalsPhaseValidated,
-    PlayerRetiredTemporarily  { player_id: String },
+    PlayerRetiredTemporarily { player_id: PlayerId },
     RetirementPhaseValidated,
-    // Depuis BC players — via app event bus (valeur joueur modifiée hors phase post-match)
-    PlayerValueUpdated { player_id: String, delta_kpo: i32 },
+    // Depuis BC players — via app event bus
+    PlayerValueUpdated { player_id: PlayerId, delta_kpo: KpoDelta },
     // Off-season
     PlayerNotReEngaged {
-        player_id:            String,
-        value_kpo_at_release: u32,
+        player_id:            PlayerId,
+        value_kpo_at_release: Kpo,
     },
     // Automatique
-    CostlyMistakesApplied { roll: u8, incident: IncidentType, gp_lost: u32 },
+    CostlyMistakesApplied { roll: u8, incident: IncidentType, gp_lost: Kpo },
     // Admin
-    GamePhaseOverridden { admin_id: String, from_phase: Option<String>, to_phase: String, reason: Option<String> },
+    GamePhaseOverridden {
+        admin_id:   UserId,
+        from_phase: Option<GamePhase>,  // enum, pas String
+        to_phase:   GamePhase,
+        reason:     Option<String>,     // texte libre — exception autorisée
+    },
 }
 ```
 
@@ -100,16 +127,16 @@ pub struct Team {
     pub space_id:     SpaceId,
     pub name:         TeamName,
     pub roster_id:    RosterId,
-    pub roster_name:  String,
+    pub roster_name:  RosterName,
     pub coach_id:     UserId,
-    pub coach_name:   String,
+    pub coach_name:   CoachName,
     // État de participation
     pub participation_status: ParticipationStatus,
     pub game_phase:           Option<GamePhase>,
     // Finances
-    pub dedicated_fans: u8,
-    pub treasury:       u32,
-    pub team_value:     u32,  // TV — maintenue par apply(), auto-suffisante depuis l'event store
+    pub dedicated_fans: u8,      // compteur simple, pas de logique domaine propre
+    pub treasury:       Kpo,
+    pub team_value:     Kpo,
     // Séquence pour optimistic locking
     pub version:        u64,
 }
@@ -248,7 +275,10 @@ pub enum DomainError {
 ## Checklist
 
 - [ ] `TeamDomainEvent` enum complet avec `Serialize`/`Deserialize`
-- [ ] Newtype wrappers : `TeamId`, `SpaceId`, `TeamName`, `RosterId`
+- [ ] Newtypes ID : `TeamId`, `SpaceId`, `PlayerId`, `PositionId`, `CompetitionId`, `SeasonId`, `RosterId` — tous avec `#[derive(Serialize, Deserialize)]`
+- [ ] Newtypes monétaires : `Kpo(u32)`, `KpoDelta(i32)` — avec `#[derive(Serialize, Deserialize)]`
+- [ ] `RosterName` newtype — réutiliser ou créer dans shared_kernel
+- [ ] Vérifier que `TeamName`, `CoachName`, `UserId` du shared_kernel dérivent `Serialize`/`Deserialize` (requis pour les events)
 - [ ] Value objects : `MatchResult`, `SppGain`, `PlayerImprovement`, `StaffType`, `IncidentType`
 - [ ] `ParticipationStatus` + `GamePhase` enums
 - [ ] Struct `Team` avec champ `version: u64`

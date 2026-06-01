@@ -109,6 +109,42 @@ Le middleware CSRF rejette les POST/PUT/DELETE/PATCH sans header `HX-Request: tr
 - Agrégats : n'exposent pas de référence mutable vers leur état interne
 - `DomainError` : enum exhaustif avec `thiserror`
 
+### Interdiction des types primitifs nus — règle obligatoire
+
+Les types primitifs (`String`, `u32`, `u8`, `i32`, `bool`) sont **interdits** dans :
+- les agrégats et entités domaine
+- les commandes applicatives
+- les événements domaine
+
+Utiliser systématiquement des **value objects** (newtypes) pour bénéficier de la vérification du compilateur :
+
+```rust
+// INTERDIT
+pub team_id:  String,
+pub treasury: u32,
+pub delta:    i32,
+
+// OBLIGATOIRE
+pub team_id:  TeamId,    // newtype wrapper
+pub treasury: Kpo,       // newtype pour les montants en kPo
+pub delta:    KpoDelta,  // newtype pour les deltas signés
+```
+
+Les newtypes doivent dériver `Serialize` / `Deserialize` quand ils apparaissent dans des events persistés :
+
+```rust
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TeamId(pub String);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Kpo(pub u32);
+```
+
+**Exceptions autorisées :**
+- View models (structs Askama / couche présentation) — les primitives y sont acceptées
+- Requêtes SQL (`sqlx::query!`) — les types sqlx ont leurs propres contraintes
+- `reason: Option<String>` et autres champs de texte libre sans validation domaine
+
 ---
 
 ## Projections event sourcing — règle fondamentale
