@@ -127,7 +127,12 @@ mod tests {
             teams: {
                 struct FakeTeamRepo;
                 #[async_trait::async_trait]
-                impl crate::app::teams::ports::ITeamRepository for FakeTeamRepo {}
+                impl crate::app::teams::ports::ITeamRepository for FakeTeamRepo {
+                    async fn append(&self, _: &str, _: &crate::app::teams::domain::team::TeamDomainEvent, _: u64)
+                        -> Result<u64, crate::app::teams::ports::RepositoryError> { Ok(1) }
+                    async fn find_by_id(&self, _: &str)
+                        -> Result<Option<crate::app::teams::domain::team::Team>, crate::app::teams::ports::RepositoryError> { Ok(None) }
+                }
                 crate::app::teams::context::TeamsContext {
                     team_repository: Arc::new(FakeTeamRepo),
                 }
