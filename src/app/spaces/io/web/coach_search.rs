@@ -177,6 +177,10 @@ mod tests {
             -> Result<(), crate::app::team_creation::ports::RepositoryError> { Ok(()) }
         async fn find_by_id(&self, _: &crate::app::shared_kernel::team::TeamId)
             -> Result<Option<crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam>, crate::app::team_creation::ports::RepositoryError> { Ok(None) }
+        async fn mark_submitted(&self, _: &crate::app::shared_kernel::team::TeamId)
+            -> Result<(), crate::app::team_creation::ports::RepositoryError> { Ok(()) }
+        async fn find_submitted_ids_for_space(&self, _: &str)
+            -> Result<Vec<String>, crate::app::team_creation::ports::RepositoryError> { Ok(vec![]) }
     }
 
     fn build_router(users: Vec<SpaceUser>) -> Router {
@@ -217,6 +221,14 @@ mod tests {
             team_creation: crate::app::team_creation::context::TeamCreationContext {
                 team_repository:   Arc::new(FakeTeamDraftRepository),
                 roster_repository: Arc::new(FakeTeamRosterRepository),
+            },
+            teams: {
+                struct FakeTeamRepo;
+                #[async_trait::async_trait]
+                impl crate::app::teams::ports::ITeamRepository for FakeTeamRepo {}
+                crate::app::teams::context::TeamsContext {
+                    team_repository: Arc::new(FakeTeamRepo),
+                }
             },
             email_service: Arc::new(ConsoleEmailService),
             host_domain:   "localhost:8080".into(),

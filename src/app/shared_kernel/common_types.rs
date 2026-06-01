@@ -16,6 +16,12 @@ pub type ArticleId = EntityId;
 
 pub type CommentId = EntityId;
 
+pub type PlayerId   = EntityId;
+
+pub type RosterId   = EntityId;
+
+pub type PositionId = EntityId;
+
 pub type EntityId = SUlid;
 
 pub type EventId = SUlid;
