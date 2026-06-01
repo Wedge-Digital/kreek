@@ -186,8 +186,8 @@ mod tests {
         async fn save(&self, _: &Space) -> Result<(), SpaceRepositoryError> { Ok(()) }
         async fn add_member(&self, _: &SpaceId, _: &CoachId, _: &SpaceProfile) -> Result<(),SpaceRepositoryError> { Ok(()) }
 
-        async fn join_spaces(&self, space_ids: &[SpaceId], coach_id: &CoachId) -> Result<(), SpaceRepositoryError> {
-            todo!()
+        async fn join_spaces(&self, _: &[SpaceId], _: &CoachId) -> Result<(), SpaceRepositoryError> {
+            Ok(())
         }
 
         async fn find_by_id(&self, _: &SpaceId) -> Result<Option<Space>,SpaceRepositoryError> { Ok(None) }
