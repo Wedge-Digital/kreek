@@ -1,12 +1,14 @@
-# BC `teams` — Consommation `MatchPlayed` + fans dévoués → phase "Amélioration joueurs"
+# BC `teams` — Listener app event `MatchPlayed` → domain event `PostMatchSequenceStarted`
 
 **Priorité : haute**
 **Dépend de :** `32-team-enrollment.md`
-**Contexte :** `teams` (consommateur) ← BC `match_report` (émetteur)
+**Contexte :** `teams` — couche IO (listener app event)
 
 ## Objectif
 
-Écouter l'app event `MatchPlayed` publié par le BC `match_report`, mettre à jour le compteur de fans dévoués (calcul automatique), et faire transiter l'équipe vers la phase `PlayerImprovement`.
+Recevoir l'app event `MatchPlayed` du BC `match_report` dans la **couche IO**, appeler la commande domaine `start_post_match_sequence()`, et appendre le domain event `PostMatchSequenceStarted` dans l'event store.
+
+Le domaine `teams` ignore que cet event vient de `match_report` — il ne connaît que `PostMatchSequenceStarted`.
 
 ---
 

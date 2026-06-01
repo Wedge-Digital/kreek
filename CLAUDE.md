@@ -147,6 +147,41 @@ pub struct Kpo(pub u32);
 
 ---
 
+## App events vs Domain events — règle fondamentale
+
+**Domain events** : produits par le domaine en réponse à une commande ou une action. Ils enregistrent ce qui s'est passé dans le domaine. Persistés dans l'event store (si le BC est event sourcé). Nommés en termes de faits domaine — jamais en termes de leur origine externe.
+
+**App events** : franchissent les frontières de BCs via l'app event bus. Ils viennent de l'extérieur du domaine et sont traités **exclusivement dans la couche IO** (listeners).
+
+```
+App event bus ──► Listener (couche IO)
+                      │
+                      ▼
+                  Use case applicatif
+                      │
+                      ▼
+                  Méthode domaine  ──► DomainEvent
+                                            │
+                                            ▼
+                                       Event store
+```
+
+**Règle de nommage des domain events** : le nom décrit ce qui s'est passé dans le domaine, pas d'où vient le déclencheur.
+
+```rust
+// INTERDIT — nom qui trahit l'origine externe
+MatchPlayedReceived { ... }
+PlayerValueChanged  { ... }
+
+// OBLIGATOIRE — nom en termes domaine
+PostMatchSequenceStarted { ... }
+PlayerValueAdjusted      { ... }
+```
+
+Le domaine ne connaît pas les app events. Il expose des méthodes de commande qui retournent des domain events. C'est le listener (IO) qui décide quelle commande domaine appeler en réponse à quel app event.
+
+---
+
 ## Projections event sourcing — règle fondamentale
 
 Toute mise à jour d'une table de projection doit s'exécuter **dans la même transaction base de données** que l'append de l'événement qui la déclenche.

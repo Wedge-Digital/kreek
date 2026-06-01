@@ -1,12 +1,14 @@
-# BC `teams` — Listener `PlayerValueChanged` depuis BC `players`
+# BC `teams` — Listener app event `PlayerValueChanged` → domain event `PlayerValueAdjusted`
 
 **Priorité : moyenne**
 **Dépend de :** `29-teams-repository.md`, `42-teams-projection.md`, BC `players` (non encore créé)
-**Contexte :** `teams` (consommateur) ← BC `players` (émetteur)
+**Contexte :** `teams` — couche IO (listener app event)
 
 ## Objectif
 
-Mettre à jour la TV de l'équipe quand BC `players` signale qu'un joueur a gagné de la valeur suite à une amélioration hors phase post-match (SPP accumulés en match → level up déclenché par BC `players`).
+Recevoir l'app event `PlayerValueChanged` du BC `players` dans la **couche IO**, et appendre le domain event `PlayerValueAdjusted` dans l'event store de BC `teams` pour mettre à jour la TV.
+
+Le domaine `teams` ignore que cet event vient de `players` — il ne connaît que `PlayerValueAdjusted`.
 
 ---
 

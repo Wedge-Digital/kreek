@@ -6,30 +6,36 @@
 
 ## Objectif
 
-Modéliser l'agrégat `Team` en event sourcing : son état est entièrement dérivé du rejeu de ses événements domaine. Aucun état courant n'est persisté directement — seuls les événements le sont.
+Modéliser l'agrégat `Team` en event sourcing : son état est entièrement dérivé du rejeu de ses événements domaine. Aucun état courant n'est persisté directement — seuls les événements domaine le sont.
+
+---
+
+## Distinction app events / domain events
+
+Le domaine `teams` ne connaît que ses propres **domain events**. Il ignore totalement l'existence des autres BCs et de leurs app events.
+
+```
+App event bus ──► Listener (couche IO)
+                      │
+                      ▼
+                  Use case applicatif
+                      │
+                      ▼
+                  Méthode domaine  ──► TeamDomainEvent
+                                            │
+                                            ▼
+                                       Event store
+```
+
+Certains domain events sont produits en réponse à des commandes internes (actions coach, admin) ; d'autres sont produits en réponse à des app events reçus dans la couche IO — mais le domaine ne fait pas cette distinction. Tous les domain events ont des noms qui décrivent **ce qui s'est passé dans le domaine**, pas d'où vient le déclencheur.
 
 ---
 
 ## Conception
 
-### Événements domaine de `Team`
-
-Tous les événements qui peuvent survenir sur une équipe, dans l'ordre chronologique possible :
-
-Le format de sérialisation est **internally tagged** avec `#[serde(tag = "type")]`. Chaque événement produit un JSON autonome avec un champ `type` discriminant, directement stockable dans la colonne `payload JSONB` de l'event store.
-
-Exemple de payload en base :
-```json
-{ "type": "TeamCreated",  "name": "Les Korrigans FC", "roster_id": "01J…", "treasury": 1000 }
-{ "type": "TeamEnrolled", "competition_id": "01J…", "season_id": "01J…" }
-{ "type": "TeamDismissed" }
-```
-
-La colonne `event_version` (défaut `"1.0"`) permet de gérer l'évolution du schéma d'un variant sans migration lourde. Les champs ajoutés en versions futures portent `#[serde(default)]` pour rester compatibles avec les anciens enregistrements.
-
 ### Value objects requis dans ce BC
 
-Tous les newtypes doivent dériver `Serialize` / `Deserialize` pour apparaître dans les events persistés (cf. règle CLAUDE.md) :
+Tous les newtypes dérivant `Serialize`/`Deserialize` pour apparaître dans les events persistés :
 
 ```rust
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)] pub struct TeamId(pub String);
@@ -41,19 +47,25 @@ Tous les newtypes doivent dériver `Serialize` / `Deserialize` pour apparaître 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)] pub struct RosterId(pub String);
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)] pub struct RosterName(pub String);
 
-// Montants (pas de DomainError — validation implicite par u32)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)] pub struct Kpo(pub u32);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)] pub struct KpoDelta(pub i32);
 
-// CoachName et TeamName sont déjà définis dans shared_kernel — réutiliser
-// UserId est déjà défini dans shared_kernel — réutiliser
+// TeamName, CoachName, UserId — réutiliser depuis shared_kernel
+// Vérifier qu'ils dérivent Serialize/Deserialize
 ```
+
+### Événements domaine
+
+Sérialisés en internally tagged avec `#[serde(tag = "type")]` :
 
 ```rust
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum TeamDomainEvent {
-    // Depuis BC team_creation
+
+    // ── Identité et cycle de vie ─────────────────────────────────────────
+    // (produits en réponse à des app events reçus dans la couche IO)
+
     TeamCreated {
         team_id:     TeamId,
         space_id:    SpaceId,
@@ -64,21 +76,21 @@ pub enum TeamDomainEvent {
         coach_name:  CoachName,
         treasury:    Kpo,
     },
-    // Depuis BC competitions
     TeamEnrolled {
         competition_id: CompetitionId,
         season_id:      SeasonId,
     },
-    // Action admin
     TeamDismissed,
-    // Depuis BC match_report
-    MatchPlayedReceived {
+
+    // ── Séquence post-match ───────────────────────────────────────────────
+    // PostMatchSequenceStarted : produit en réponse à l'app event MatchPlayed
+    // (nommé en termes domaine — pas "MatchPlayedReceived")
+    PostMatchSequenceStarted {
         result:              MatchResult,
-        dedicated_fans_roll: u8,        // jet de dé 1D6 — pas de domaine propre
+        dedicated_fans:      u8,   // nouvelle valeur calculée (fans dévoués après le match)
         treasury_income:     Kpo,
         spp_gains:           Vec<SppGain>,
     },
-    // Actions coach — phases post-match
     PlayerImprovementApplied {
         player_id:   PlayerId,
         improvement: PlayerImprovement,
@@ -99,22 +111,34 @@ pub enum TeamDomainEvent {
     DismissalsPhaseValidated,
     PlayerRetiredTemporarily { player_id: PlayerId },
     RetirementPhaseValidated,
-    // Depuis BC players — via app event bus
-    PlayerValueUpdated { player_id: PlayerId, delta_kpo: KpoDelta },
-    // Off-season
+    CostlyMistakesApplied { roll: u8, incident: IncidentType, gp_lost: Kpo },
+
+    // ── Valeur joueur ─────────────────────────────────────────────────────
+    // PlayerValueAdjusted : produit en réponse à l'app event PlayerValueChanged
+    // du BC players (nommé en termes domaine — pas "PlayerValueChanged")
+    PlayerValueAdjusted { player_id: PlayerId, delta_kpo: KpoDelta },
+
+    // ── Off-season ────────────────────────────────────────────────────────
+    OffSeasonStarted { season_id: SeasonId },
+    PlayerReEngaged   { player_id: PlayerId },
     PlayerNotReEngaged {
         player_id:            PlayerId,
         value_kpo_at_release: Kpo,
     },
-    // Automatique
-    CostlyMistakesApplied { roll: u8, incident: IncidentType, gp_lost: Kpo },
-    // Admin
+    OffSeasonCompleted,
+
+    // ── Administration ────────────────────────────────────────────────────
     GamePhaseOverridden {
         admin_id:   UserId,
-        from_phase: Option<GamePhase>,  // enum, pas String
+        from_phase: Option<GamePhase>,
         to_phase:   GamePhase,
-        reason:     Option<String>,     // texte libre — exception autorisée
+        reason:     Option<String>,  // texte libre — exception à la règle primitive
     },
+
+    // ── Modification d'identité ───────────────────────────────────────────
+    TeamRenamed     { name: TeamName },
+    InitialsChanged { initials: String },  // 2 caractères max, pas de VO dédié
+    LogoChanged     { logo_url: String },  // URL — texte libre
 }
 ```
 
@@ -122,7 +146,6 @@ pub enum TeamDomainEvent {
 
 ```rust
 pub struct Team {
-    // Identité
     pub id:           TeamId,
     pub space_id:     SpaceId,
     pub name:         TeamName,
@@ -130,33 +153,29 @@ pub struct Team {
     pub roster_name:  RosterName,
     pub coach_id:     UserId,
     pub coach_name:   CoachName,
-    // État de participation
     pub participation_status: ParticipationStatus,
     pub game_phase:           Option<GamePhase>,
-    // Finances
-    pub dedicated_fans: u8,      // compteur simple, pas de logique domaine propre
+    pub dedicated_fans: u8,   // compteur simple
     pub treasury:       Kpo,
     pub team_value:     Kpo,
-    // Séquence pour optimistic locking
-    pub version:        u64,
+    pub version:        u64,  // optimistic locking
 }
 ```
 
-### Pattern event sourcing
+### `Team::apply()` — rejeu pur
 
 ```rust
 impl Team {
-    /// Rejoue un événement sur l'agrégat — pure, sans effet de bord
     pub fn apply(mut self, event: &TeamDomainEvent) -> Self {
         match event {
             TeamDomainEvent::TeamCreated { team_id, space_id, name, roster_id,
                                            roster_name, coach_id, coach_name, treasury } => {
-                self.id           = TeamId::from(team_id);
-                self.space_id     = SpaceId::from(space_id);
-                self.name         = TeamName::from(name);
-                self.roster_id    = RosterId::from(roster_id);
+                self.id           = team_id.clone();
+                self.space_id     = space_id.clone();
+                self.name         = name.clone();
+                self.roster_id    = roster_id.clone();
                 self.roster_name  = roster_name.clone();
-                self.coach_id     = UserId::from(coach_id);
+                self.coach_id     = coach_id.clone();
                 self.coach_name   = coach_name.clone();
                 self.treasury     = *treasury;
                 self.participation_status = ParticipationStatus::PendingEnrollment;
@@ -170,9 +189,9 @@ impl Team {
                 self.participation_status = ParticipationStatus::Dismissed;
                 self.game_phase           = None;
             }
-            TeamDomainEvent::MatchPlayedReceived { result, dedicated_fans_roll, treasury_income, .. } => {
-                self.dedicated_fans = compute_fans(*dedicated_fans_roll, result);
-                self.treasury      += treasury_income;
+            TeamDomainEvent::PostMatchSequenceStarted { dedicated_fans, treasury_income, .. } => {
+                self.dedicated_fans = *dedicated_fans;
+                self.treasury.0    += treasury_income.0;
                 self.game_phase     = Some(GamePhase::PlayerImprovement);
             }
             TeamDomainEvent::PlayerImprovementPhaseValidated => {
@@ -185,32 +204,38 @@ impl Team {
                 self.game_phase = Some(GamePhase::TemporaryRetirement);
             }
             TeamDomainEvent::CostlyMistakesApplied { gp_lost, .. } => {
-                self.treasury   = self.treasury.saturating_sub(*gp_lost);
-                self.game_phase = Some(GamePhase::ReadyToPlay);
+                self.treasury.0  = self.treasury.0.saturating_sub(gp_lost.0);
+                self.game_phase  = Some(GamePhase::ReadyToPlay);
             }
             TeamDomainEvent::PlayerRecruited { base_value_kpo, cost_kpo, .. } => {
-                self.team_value += base_value_kpo;
-                self.treasury    = self.treasury.saturating_sub(*cost_kpo);
+                self.team_value.0 += base_value_kpo.0;
+                self.treasury.0    = self.treasury.0.saturating_sub(cost_kpo.0);
             }
             TeamDomainEvent::StaffBought { cost_kpo, .. } => {
-                self.team_value += cost_kpo;
-                self.treasury    = self.treasury.saturating_sub(*cost_kpo);
+                self.team_value.0 += cost_kpo.0;
+                self.treasury.0    = self.treasury.0.saturating_sub(cost_kpo.0);
             }
             TeamDomainEvent::PlayerImprovementApplied { value_delta, .. } => {
-                self.team_value += value_delta;
+                self.team_value.0 += value_delta.0;
             }
-            TeamDomainEvent::PlayerFired { value_kpo_at_firing, .. } => {
-                self.team_value = self.team_value.saturating_sub(*value_kpo_at_firing);
+            TeamDomainEvent::PlayerFired { value_kpo_at_firing, .. }
+            | TeamDomainEvent::PlayerNotReEngaged { value_kpo_at_release: value_kpo_at_firing, .. } => {
+                self.team_value.0 = self.team_value.0.saturating_sub(value_kpo_at_firing.0);
             }
-            TeamDomainEvent::PlayerNotReEngaged { value_kpo_at_release, .. } => {
-                self.team_value = self.team_value.saturating_sub(*value_kpo_at_release);
-            }
-            TeamDomainEvent::PlayerValueUpdated { delta_kpo, .. } => {
-                if *delta_kpo >= 0 {
-                    self.team_value += *delta_kpo as u32;
+            TeamDomainEvent::PlayerValueAdjusted { delta_kpo, .. } => {
+                if delta_kpo.0 >= 0 {
+                    self.team_value.0 += delta_kpo.0 as u32;
                 } else {
-                    self.team_value = self.team_value.saturating_sub((-delta_kpo) as u32);
+                    self.team_value.0 = self.team_value.0.saturating_sub((-delta_kpo.0) as u32);
                 }
+            }
+            TeamDomainEvent::OffSeasonCompleted => {
+                self.participation_status = ParticipationStatus::PendingEnrollment;
+                self.game_phase           = None;
+            }
+            TeamDomainEvent::TeamRenamed { name }      => { self.name = name.clone(); }
+            TeamDomainEvent::GamePhaseOverridden { to_phase, .. } => {
+                self.game_phase = Some(to_phase.clone());
             }
             _ => {}
         }
@@ -218,7 +243,6 @@ impl Team {
         self
     }
 
-    /// Hydrate l'agrégat depuis un flux d'événements
     pub fn hydrate(events: &[TeamDomainEvent]) -> Option<Self> {
         events.iter().fold(None, |acc, event| {
             Some(match acc {
@@ -230,27 +254,35 @@ impl Team {
 }
 ```
 
-### Commandes (produisent des événements)
+### Commandes (produisent des domain events)
 
-Les méthodes de commande valident les invariants puis retournent l'événement à persister — elles ne mutent pas l'agrégat directement :
+Les méthodes valident les invariants et retournent le domain event à persister. Elles ne mutent pas l'agrégat directement.
 
 ```rust
 impl Team {
-    pub fn enroll(&self, competition_id: String, season_id: String)
+    pub fn enroll(&self, competition_id: CompetitionId, season_id: SeasonId)
         -> Result<TeamDomainEvent, DomainError>
     {
         match self.participation_status {
-            ParticipationStatus::PendingEnrollment => Ok(TeamDomainEvent::TeamEnrolled { competition_id, season_id }),
+            ParticipationStatus::PendingEnrollment =>
+                Ok(TeamDomainEvent::TeamEnrolled { competition_id, season_id }),
             _ => Err(DomainError::InvalidTransition { ... }),
         }
     }
 
-    pub fn dismiss(&self) -> Result<TeamDomainEvent, DomainError> { ... }
+    pub fn dismiss(&self)
+        -> Result<TeamDomainEvent, DomainError> { ... }
 
-    pub fn receive_match_result(&self, ...) -> Result<TeamDomainEvent, DomainError> { ... }
+    pub fn start_post_match_sequence(&self, result: MatchResult, fans_roll: u8,
+                                     treasury_income: Kpo, spp_gains: Vec<SppGain>)
+        -> Result<TeamDomainEvent, DomainError> { ... }
 
     pub fn validate_improvement_phase(&self) -> Result<TeamDomainEvent, DomainError> { ... }
-    // etc.
+    pub fn validate_recruitment_phase(&self) -> Result<TeamDomainEvent, DomainError> { ... }
+    pub fn validate_dismissals_phase(&self)  -> Result<TeamDomainEvent, DomainError> { ... }
+    pub fn validate_retirement_phase(&self)  -> Result<TeamDomainEvent, DomainError> { ... }
+    pub fn override_phase(&self, admin_id: UserId, to: GamePhase, reason: Option<String>)
+        -> Result<TeamDomainEvent, DomainError> { ... }
 }
 ```
 
@@ -259,8 +291,8 @@ impl Team {
 ```rust
 #[derive(Debug, thiserror::Error)]
 pub enum DomainError {
-    #[error("transition invalide : {from} → {to}")]
-    InvalidTransition { from: String, to: String },
+    #[error("transition invalide")]
+    InvalidTransition { from: ParticipationStatus, to: ParticipationStatus },
     #[error("équipe non inscrite")]
     NotEnrolled,
     #[error("équipe déjà renvoyée")]
@@ -274,17 +306,17 @@ pub enum DomainError {
 
 ## Checklist
 
-- [ ] `TeamDomainEvent` enum complet avec `Serialize`/`Deserialize`
-- [ ] Newtypes ID : `TeamId`, `SpaceId`, `PlayerId`, `PositionId`, `CompetitionId`, `SeasonId`, `RosterId` — tous avec `#[derive(Serialize, Deserialize)]`
-- [ ] Newtypes monétaires : `Kpo(u32)`, `KpoDelta(i32)` — avec `#[derive(Serialize, Deserialize)]`
-- [ ] `RosterName` newtype — réutiliser ou créer dans shared_kernel
-- [ ] Vérifier que `TeamName`, `CoachName`, `UserId` du shared_kernel dérivent `Serialize`/`Deserialize` (requis pour les events)
+- [ ] `TeamDomainEvent` enum complet avec `#[serde(tag = "type")]`
+- [ ] Newtypes ID : `TeamId`, `SpaceId`, `PlayerId`, `PositionId`, `CompetitionId`, `SeasonId`, `RosterId` — tous avec `Serialize`/`Deserialize`
+- [ ] Newtypes monétaires : `Kpo(u32)`, `KpoDelta(i32)`
+- [ ] `RosterName` newtype — créer dans shared_kernel
+- [ ] Vérifier que `TeamName`, `CoachName`, `UserId` du shared_kernel dérivent `Serialize`/`Deserialize`
 - [ ] Value objects : `MatchResult`, `SppGain`, `PlayerImprovement`, `StaffType`, `IncidentType`
 - [ ] `ParticipationStatus` + `GamePhase` enums
 - [ ] Struct `Team` avec champ `version: u64`
-- [ ] `Team::apply()` — pure, couvre tous les variants
+- [ ] `Team::apply()` couvre tous les variants
 - [ ] `Team::hydrate()` — fold sur les événements
-- [ ] Commandes : `enroll()`, `dismiss()`, `receive_match_result()`, `validate_*_phase()`, `apply_costly_mistakes()`
-- [ ] `DomainError` complet avec `thiserror`
+- [ ] Commandes : `enroll()`, `dismiss()`, `start_post_match_sequence()`, `validate_*_phase()`, `override_phase()`
+- [ ] `DomainError` avec `thiserror` — pas de `String` dans les champs
 - [ ] Tests unitaires : hydratation depuis séquence d'événements
 - [ ] Tests unitaires : transitions valides et invalides
