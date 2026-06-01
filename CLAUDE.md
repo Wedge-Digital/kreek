@@ -111,6 +111,53 @@ Le middleware CSRF rejette les POST/PUT/DELETE/PATCH sans header `HX-Request: tr
 
 ---
 
+## Projections event sourcing — règle fondamentale
+
+Toute mise à jour d'une table de projection doit s'exécuter **dans la même transaction base de données** que l'append de l'événement qui la déclenche.
+
+```rust
+// CORRECT — atomique
+let mut tx = pool.begin().await?;
+insert_event(&mut tx, event).await?;
+update_projection(&mut tx, event).await?;
+tx.commit().await?;
+
+// INTERDIT — deux transactions séparées
+insert_event(&pool, event).await?;          // si ça passe…
+update_projection(&pool, event).await?;     // …et ça échoue : projection désynchronisée
+```
+
+Conséquences :
+- Si la transaction échoue, ni l'événement ni la projection ne sont écrits — cohérence garantie sans coordination distribuée
+- La projection est un **dérivé rebuildable** : en cas de désynchronisation exceptionnelle, on peut la reconstruire intégralement en rejouant l'event store
+- `update_projection_in_tx()` reçoit toujours un `&mut PgConnection` (ou `&mut Transaction`), jamais un `&PgPool`
+
+---
+
+## Souveraineté des données entre BCs — règle fondamentale
+
+Chaque BC est **souverain sur ses données** : il est formellement interdit à un BC d'effectuer des requêtes SQL sur des tables appartenant à un autre BC.
+
+L'assemblage de données issues de plusieurs BCs se fait **exclusivement au niveau du frontend**, par composition de widgets HTMX. Chaque BC expose ses propres fragments HTML, chargés indépendamment par la page hôte :
+
+```html
+<!-- Page fournie par BC teams — il ignore tout des données joueurs -->
+<div hx-get="{{ players_routes.team_roster_widget(space_id, team_id) }}"
+     hx-trigger="load"
+     hx-target="this">
+</div>
+<!-- Ce fragment est rendu et possédé par le BC players -->
+```
+
+Ce principe est déjà appliqué dans la page de construction d'équipe, où le widget de sélection du roster est fourni par le BC `references`.
+
+Conséquences :
+- Pas de projection locale de données d'un autre BC
+- Pas de synchronisation de données entre BCs via des listeners sauf pour les **transitions d'état métier** (ex. : `TeamCreated` déclenche la création d'un agrégat dans `teams`)
+- Aucun handler ne combine des requêtes SQL de deux BCs différents
+
+---
+
 ## Conventions templates (Askama + HTMX)
 
 - Un template de **page complète** pour le premier chargement

@@ -69,7 +69,7 @@
 .players-panel { background: var(--white); padding: var(--p2); border-bottom: 1px solid var(--dark-5); }
 
 /* Tableau staff */
-.staff-panel { background: var(--white); border-radius: 0 0 10px 10px; padding: var(--p2); }
+.staff-panel { background: var(--white); border-radius: 0 0 10px 10px; paddin: var(--p2); }
 .staff-panel-title {
   font-size: var(--text-small); font-weight: 700; color: var(--dark-2);
   text-transform: uppercase; letter-spacing: 0.5px;

@@ -6,11 +6,56 @@
   <title>Mes Équipes — Blood Bowl Club</title>
   <link rel="stylesheet" href="shared.css">
   <style>
+    /* ── Section header ─────────────────────────────────────── */
+    .section-title {
+      font-family: var(--font-title); font-size: var(--h4); font-weight: 700;
+      color: var(--dark-1); margin-bottom: var(--p1);
+      display: flex; align-items: center; gap: var(--p1);
+    }
+    .section-count {
+      background: var(--dark-5); border-radius: 20px;
+      padding: 2px 10px; font-size: var(--text-tiny); color: var(--dark-2); font-weight: 600;
+    }
+
+    /* ── Draft cards ────────────────────────────────────────── */
+    .drafts-list { display: flex; flex-direction: column; gap: var(--p05); margin-bottom: var(--p3); }
+    .draft-card {
+      background: var(--white); border-radius: 8px; border: 1px solid var(--dark-5);
+      padding: var(--p1) var(--p2);
+      display: flex; align-items: center; gap: var(--p2);
+    }
+    .draft-logo {
+      width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+      background: var(--dark-5);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 800; font-size: 14px; color: var(--dark-2);
+    }
+    .draft-info { flex: 1; }
+    .draft-name { font-weight: 700; font-size: var(--text-base); color: var(--dark-0); }
+    .draft-roster { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; }
+    .draft-status {
+      display: inline-block; padding: 2px 10px; border-radius: 20px;
+      font-size: var(--text-tiny); font-weight: 600;
+      background: rgba(255,140,0,0.1); color: var(--orange);
+    }
+    .draft-budget { font-size: var(--text-small); color: var(--dark-2); white-space: nowrap; }
+    .draft-budget span { color: var(--dark-0); font-weight: 600; }
+    .btn-draft-continue {
+      background: var(--dark-6); border: 1px solid var(--dark-5); border-radius: 6px;
+      padding: 6px 16px; font-size: var(--text-small); font-weight: 600; color: var(--dark-1);
+      cursor: pointer; white-space: nowrap; flex-shrink: 0;
+    }
+    .btn-draft-continue:hover { background: var(--dark-5); }
+
+    /* ── Active teams grid ──────────────────────────────────── */
     .teams-layout { display: flex; gap: var(--p2); }
     .filters-col { flex: 2; }
     .teams-col { flex: 8; display: flex; flex-direction: column; gap: var(--p1); }
 
-    .filters-panel { background: var(--white); border-radius: 10px; padding: var(--p2); display: flex; flex-direction: column; gap: var(--p2); position: sticky; top: 0; }
+    .filters-panel {
+      background: var(--white); border-radius: 10px; padding: var(--p2);
+      display: flex; flex-direction: column; gap: var(--p2); position: sticky; top: 0;
+    }
     .filter-group { display: flex; flex-direction: column; gap: var(--p1); }
     .filter-label { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
     .filter-label-text { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-2); }
@@ -20,17 +65,26 @@
     .team-card {
       background: var(--white); border-radius: 10px; border: 1px solid var(--dark-5);
       padding: var(--p2); display: flex; flex-direction: column; align-items: center; gap: var(--p1);
-      height: 360px; cursor: pointer; flex: 1;
+      min-height: 360px; cursor: pointer; flex: 1;
       transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+      position: relative;
     }
-    .team-card:hover {
-      border-color: var(--dark-3); box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-      transform: translateY(-3px);
+    .team-card:hover { border-color: var(--dark-3); box-shadow: 0 8px 24px rgba(0,0,0,0.1); transform: translateY(-3px); }
+
+    .team-status-badge {
+      position: absolute; top: 12px; right: 12px;
+      padding: 2px 10px; border-radius: 20px;
+      font-size: var(--text-tiny); font-weight: 600;
     }
+    .status-ready      { background: rgba(76,175,80,0.1);  color: var(--green); }
+    .status-pending    { background: rgba(255,140,0,0.1);  color: var(--orange); }
+    .status-post-match { background: rgba(33,150,243,0.1); color: #1976D2; }
+    .status-dismissed  { background: rgba(200,0,0,0.1);    color: var(--red); }
+
     .team-logo {
-      width: 100px; height: 100px; border-radius: 50%;
+      width: 90px; height: 90px; border-radius: 50%; margin-top: var(--p1);
       display: flex; align-items: center; justify-content: center;
-      font-family: var(--font-title); font-weight: 900; font-size: 30px; color: var(--white);
+      font-family: var(--font-title); font-weight: 900; font-size: 26px; color: var(--white);
     }
     .team-name { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-0); text-align: center; }
     .team-roster-tag {
@@ -38,8 +92,6 @@
       font-size: var(--text-tiny); color: var(--dark-2); font-weight: 500;
     }
     .team-value { font-size: var(--text-small); color: var(--dark-2); font-weight: 500; }
-    .team-coach { font-size: var(--text-tiny); color: var(--dark-3); margin-top: auto; }
-    .team-coach span { color: var(--main-blue); font-weight: 500; }
     .team-record { display: flex; gap: var(--p1); margin-top: var(--p05); }
     .record-item { text-align: center; }
     .record-val { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; }
@@ -47,6 +99,8 @@
     .record-val.draw { color: var(--dark-2); }
     .record-val.loss { color: var(--red); }
     .record-label { font-size: 10px; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .team-coach { font-size: var(--text-tiny); color: var(--dark-3); margin-top: auto; }
+    .team-coach span { color: var(--main-blue); font-weight: 500; }
   </style>
 </head>
 <body>
@@ -85,6 +139,7 @@
       </div>
 
       <div class="page-content">
+
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--p2);">
           <div class="h3-gras">Mes Équipes</div>
           <button class="btn btn-primary-blue btn-sm" onclick="window.location.href='app-new-team.html'">
@@ -92,57 +147,95 @@
           </button>
         </div>
 
+        <!-- ══ Section brouillons — fournie par BC team_creation ══════════════ -->
+        <div class="section-title">
+          En cours de création
+          <span class="section-count">2</span>
+        </div>
+
+        <div class="drafts-list">
+          <div class="draft-card">
+            <div class="draft-logo">KF</div>
+            <div class="draft-info">
+              <div class="draft-name">Les Korrigans FC</div>
+              <div class="draft-roster">Elfes Sylvestres</div>
+            </div>
+            <span class="draft-status">Brouillon</span>
+            <div class="draft-budget">Budget utilisé : <span>850 / 1 100 kPo</span></div>
+            <button class="btn-draft-continue">Continuer →</button>
+          </div>
+          <div class="draft-card">
+            <div class="draft-logo">RM</div>
+            <div class="draft-info">
+              <div class="draft-name">Ratlords de Mordheim</div>
+              <div class="draft-roster">Skavens</div>
+            </div>
+            <span class="draft-status">Brouillon</span>
+            <div class="draft-budget">Budget utilisé : <span>0 / 1 000 kPo</span></div>
+            <button class="btn-draft-continue">Continuer →</button>
+          </div>
+        </div>
+
+        <!-- ══ Section équipes actives — widget fourni par BC teams ══════════ -->
+        <!--
+          En production, cette section est chargée via :
+          hx-get="{{ teams_routes.my_teams_widget(space_id) }}"
+          hx-trigger="load"
+          hx-target="this"
+          hx-swap="innerHTML"
+        -->
+
+        <div class="section-title">
+          Mes équipes actives
+          <span class="section-count">6</span>
+        </div>
+
         <div class="teams-layout">
-          <!-- Filters -->
+
+          <!-- Filtres -->
           <div class="filters-col">
             <div class="filters-panel">
               <div class="h3-gras">Filtres</div>
               <div class="separator"></div>
               <div class="filter-group">
                 <div class="filter-label">
-                  <span class="filter-label-text">Clubs</span>
+                  <span class="filter-label-text">Statut</span>
                   <span class="filter-arrow">▼</span>
                 </div>
                 <select class="picker">
-                  <option>Tous les clubs...</option>
-                  <option>Ligue de Condate</option>
-                  <option>Korrigane Cup</option>
+                  <option>Tous les statuts...</option>
+                  <option>Prête à jouer</option>
+                  <option>En attente d'inscription</option>
+                  <option>Phase post-match</option>
+                  <option>Renvoyée</option>
                 </select>
               </div>
               <div class="filter-group">
                 <div class="filter-label">
-                  <span class="filter-label-text">Compétitions</span>
+                  <span class="filter-label-text">Compétition</span>
                   <span class="filter-arrow">▼</span>
                 </div>
                 <select class="picker">
                   <option>Toutes les compétitions...</option>
-                  <option>Saison 2024</option>
+                  <option>Ligue de Condate — Saison 2024</option>
                   <option>Korrigane Cup 2024</option>
-                </select>
-              </div>
-              <div class="filter-group">
-                <div class="filter-label">
-                  <span class="filter-label-text">Saisons</span>
-                  <span class="filter-arrow">▼</span>
-                </div>
-                <select class="picker">
-                  <option>Toutes les saisons...</option>
-                  <option>2024</option>
-                  <option>2023</option>
-                  <option>2022</option>
                 </select>
               </div>
             </div>
           </div>
 
-          <!-- Teams -->
+          <!-- Grille d'équipes actives -->
           <div class="teams-col">
+
             <div class="teams-row">
+
+              <!-- Équipe prête à jouer -->
               <div class="team-card" onclick="window.location.href='app-team-detail.html'">
+                <span class="team-status-badge status-ready">Prête à jouer</span>
                 <div class="team-logo" style="background: linear-gradient(135deg, #003049, #555770);">KF</div>
                 <div class="team-name">Les Korrigans FC</div>
                 <div class="team-roster-tag">Elfes Sylvestres</div>
-                <div class="team-value">1 250 000 pièces</div>
+                <div class="team-value">1 250 kPo</div>
                 <div class="team-record">
                   <div class="record-item"><div class="record-val win">8</div><div class="record-label">V</div></div>
                   <div class="record-item"><div class="record-val draw">2</div><div class="record-label">N</div></div>
@@ -150,11 +243,14 @@
                 </div>
                 <div class="team-coach">Coach : <span>Colonel Castor</span></div>
               </div>
+
+              <!-- Équipe en phase post-match (amélioration joueurs) -->
               <div class="team-card" onclick="window.location.href='app-team-detail.html'">
+                <span class="team-status-badge status-post-match">Amélioration joueurs</span>
                 <div class="team-logo" style="background: linear-gradient(135deg, #E02020, #1C1C29);">NU</div>
                 <div class="team-name">Nantes Undead</div>
                 <div class="team-roster-tag">Morts-vivants</div>
-                <div class="team-value">980 000 pièces</div>
+                <div class="team-value">980 kPo</div>
                 <div class="team-record">
                   <div class="record-item"><div class="record-val win">3</div><div class="record-label">V</div></div>
                   <div class="record-item"><div class="record-val draw">2</div><div class="record-label">N</div></div>
@@ -162,23 +258,29 @@
                 </div>
                 <div class="team-coach">Coach : <span>Le Nécroman</span></div>
               </div>
+
+              <!-- Équipe en attente d'inscription -->
               <div class="team-card" onclick="window.location.href='app-team-detail.html'">
+                <span class="team-status-badge status-pending">En attente d'inscription</span>
                 <div class="team-logo" style="background: linear-gradient(135deg, #629584, #003049);">SS</div>
                 <div class="team-name">Skaven Speedsters</div>
                 <div class="team-roster-tag">Skavens</div>
-                <div class="team-value">1 100 000 pièces</div>
+                <div class="team-value">1 100 kPo</div>
                 <div class="team-record">
-                  <div class="record-item"><div class="record-val win">7</div><div class="record-label">V</div></div>
-                  <div class="record-item"><div class="record-val draw">1</div><div class="record-label">N</div></div>
-                  <div class="record-item"><div class="record-val loss">3</div><div class="record-label">D</div></div>
+                  <div class="record-item"><div class="record-val win">—</div><div class="record-label">V</div></div>
+                  <div class="record-item"><div class="record-val draw">—</div><div class="record-label">N</div></div>
+                  <div class="record-item"><div class="record-val loss">—</div><div class="record-label">D</div></div>
                 </div>
                 <div class="team-coach">Coach : <span>Whiskers</span></div>
               </div>
+
+              <!-- Équipe prête à jouer -->
               <div class="team-card" onclick="window.location.href='app-team-detail.html'">
+                <span class="team-status-badge status-ready">Prête à jouer</span>
                 <div class="team-logo" style="background: linear-gradient(135deg, #FFD700, #003049);">OB</div>
                 <div class="team-name">Orc Boyz United</div>
                 <div class="team-roster-tag">Orques</div>
-                <div class="team-value">1 340 000 pièces</div>
+                <div class="team-value">1 340 kPo</div>
                 <div class="team-record">
                   <div class="record-item"><div class="record-val win">7</div><div class="record-label">V</div></div>
                   <div class="record-item"><div class="record-val draw">2</div><div class="record-label">N</div></div>
@@ -186,60 +288,11 @@
                 </div>
                 <div class="team-coach">Coach : <span>Grognash</span></div>
               </div>
-            </div>
 
-            <div class="teams-row">
-              <div class="team-card" onclick="window.location.href='app-team-detail.html'">
-                <div class="team-logo" style="background: linear-gradient(135deg, #6F35A5, #1C1C29);">DI</div>
-                <div class="team-name">Dwarf Ironbreakers</div>
-                <div class="team-roster-tag">Nains</div>
-                <div class="team-value">1 050 000 pièces</div>
-                <div class="team-record">
-                  <div class="record-item"><div class="record-val win">6</div><div class="record-label">V</div></div>
-                  <div class="record-item"><div class="record-val draw">1</div><div class="record-label">N</div></div>
-                  <div class="record-item"><div class="record-val loss">4</div><div class="record-label">D</div></div>
-                </div>
-                <div class="team-coach">Coach : <span>Barbe d'Acier</span></div>
-              </div>
-              <div class="team-card" onclick="window.location.href='app-team-detail.html'">
-                <div class="team-logo" style="background: linear-gradient(135deg, #8F90A6, #26263D);">CW</div>
-                <div class="team-name">Chaos Warriors</div>
-                <div class="team-roster-tag">Chaos Rénégats</div>
-                <div class="team-value">895 000 pièces</div>
-                <div class="team-record">
-                  <div class="record-item"><div class="record-val win">5</div><div class="record-label">V</div></div>
-                  <div class="record-item"><div class="record-val draw">3</div><div class="record-label">N</div></div>
-                  <div class="record-item"><div class="record-val loss">3</div><div class="record-label">D</div></div>
-                </div>
-                <div class="team-coach">Coach : <span>Korgath</span></div>
-              </div>
-              <div class="team-card" onclick="window.location.href='app-team-detail.html'">
-                <div class="team-logo" style="background: linear-gradient(135deg, #003049, #E02020);">DE</div>
-                <div class="team-name">Dark Elves Ravens</div>
-                <div class="team-roster-tag">Elfes Noirs</div>
-                <div class="team-value">1 150 000 pièces</div>
-                <div class="team-record">
-                  <div class="record-item"><div class="record-val win">5</div><div class="record-label">V</div></div>
-                  <div class="record-item"><div class="record-val draw">2</div><div class="record-label">N</div></div>
-                  <div class="record-item"><div class="record-val loss">4</div><div class="record-label">D</div></div>
-                </div>
-                <div class="team-coach">Coach : <span>Mélanira</span></div>
-              </div>
-              <div class="team-card" onclick="window.location.href='app-team-detail.html'">
-                <div class="team-logo" style="background: linear-gradient(135deg, #FF6B35, #1C1C29);">HE</div>
-                <div class="team-name">High Elf Nobles</div>
-                <div class="team-roster-tag">Hauts Elfes</div>
-                <div class="team-value">780 000 pièces</div>
-                <div class="team-record">
-                  <div class="record-item"><div class="record-val win">4</div><div class="record-label">V</div></div>
-                  <div class="record-item"><div class="record-val draw">2</div><div class="record-label">N</div></div>
-                  <div class="record-item"><div class="record-val loss">5</div><div class="record-label">D</div></div>
-                </div>
-                <div class="team-coach">Coach : <span>Aelindra</span></div>
-              </div>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   </div>
