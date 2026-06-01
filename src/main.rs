@@ -31,6 +31,7 @@ use crate::app::news::context::NewsContext;
 use crate::app::spaces::context::SpacesContext;
 use crate::app::references::context::ReferencesContext;
 use crate::app::team_creation::context::TeamCreationContext;
+use crate::app::teams::context::TeamsContext;
 use crate::lib::services::email::ResendMailService;
 use crate::lib::services::event_bus::event_bus::new_bus;
 use crate::lib::event_listener::event_log_feeder;
@@ -76,6 +77,7 @@ async fn main() {
         news:          NewsContext::new(&pool),
         references:    ReferencesContext::new(),
         team_creation: TeamCreationContext::new(&pool),
+        teams:         TeamsContext::new(&pool),
         email_service: Arc::new(ResendMailService::new(cfg.email.api_key, cfg.email.from, cfg.email.from_name)),
         host_domain:   cfg.host_domain,
         bypass_auth:   cfg.bypass_auth,
@@ -92,6 +94,7 @@ async fn main() {
     let protected = Router::new()
         .merge(app::news::router::router())
         .merge(app::team_creation::router::router())
+        .merge(app::teams::router::router())
         .merge(app::competitions::router::router())
         .merge(app::spaces::router::router())
         .merge(web::router::router())
