@@ -116,6 +116,19 @@ impl IntoResponse for NewCompetitionTemplate {
     }
 }
 
+fn hx_redirect(url: impl Into<String>) -> Response {
+    match Response::builder()
+        .header("HX-Redirect", url.into())
+        .body(Body::empty())
+    {
+        Ok(r)  => r,
+        Err(e) => {
+            tracing::error!("hx_redirect build failed: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
 fn members_widget_url(space_id: &str, selected_ids: &[String]) -> String {
     if selected_ids.is_empty() {
         format!("/app/{space_id}/members-widget")
@@ -222,10 +235,7 @@ pub async fn post_new_competition(
     };
 
     let Some(user) = auth_session.user else {
-        return Response::builder()
-            .header("HX-Redirect", crate::app::auth::routes::path::AUTH_LAYOUT)
-            .body(Body::empty())
-            .unwrap();
+        return hx_redirect(crate::app::auth::routes::path::AUTH_LAYOUT);
     };
 
     let admin_ids: Vec<CoachId> = payload.admin_ids
@@ -247,10 +257,8 @@ pub async fn post_new_competition(
         state.competitions.season_repository.as_ref(),
         &state.competitions.event_bus,
     ).await {
-        Ok((competition_id, season_id)) => Response::builder()
-            .header("HX-Redirect", Routes.new_competition_rules(&space_id, &competition_id.to_string(), &season_id.to_string()))
-            .body(Body::empty())
-            .unwrap(),
+        Ok((competition_id, season_id)) =>
+            hx_redirect(Routes.new_competition_rules(&space_id, &competition_id.to_string(), &season_id.to_string())),
 
         Err(CreateDraftCompetitionError::CompetitionNameAlreadyTaken) => {
             tmpl.name_error = Some("Une compétition avec ce nom existe déjà dans cet espace.".into());
@@ -330,10 +338,7 @@ pub async fn post_update_competition(
     };
 
     if auth_session.user.is_none() {
-        return Response::builder()
-            .header("HX-Redirect", crate::app::auth::routes::path::AUTH_LAYOUT)
-            .body(Body::empty())
-            .unwrap();
+        return hx_redirect(crate::app::auth::routes::path::AUTH_LAYOUT);
     }
 
     let admin_ids: Vec<CoachId> = payload.admin_ids
@@ -344,10 +349,8 @@ pub async fn post_update_competition(
     let cmd = UpdateDraftCompetitionCommand { competition_id: cid, space_id: sid, name, logo, admin_ids };
 
     match execute_update(cmd, state.competitions.competition_repository.as_ref()).await {
-        Ok(()) => Response::builder()
-            .header("HX-Redirect", Routes.new_competition_rules(&space_id, &competition_id, &season_id.to_string()))
-            .body(Body::empty())
-            .unwrap(),
+        Ok(()) =>
+            hx_redirect(Routes.new_competition_rules(&space_id, &competition_id, &season_id.to_string())),
 
         Err(UpdateDraftCompetitionError::CompetitionNameAlreadyTaken) => {
             tmpl.name_error = Some("Une compétition avec ce nom existe déjà dans cet espace.".into());
@@ -392,10 +395,8 @@ pub async fn post_competition_rules(
     };
 
     match execute_save_rules(cmd, state.competitions.season_repository.as_ref()).await {
-        Ok(()) => Response::builder()
-            .header("HX-Redirect", Routes.new_competition_structure(&space_id, &competition_id, &season_id))
-            .body(Body::empty())
-            .unwrap(),
+        Ok(()) =>
+            hx_redirect(Routes.new_competition_structure(&space_id, &competition_id, &season_id)),
 
         Err(SaveCompetitionRulesError::RosterInMultipleTiers { roster, tiers: (t1, t2) }) => {
             let msg = format!("Le roster « {} » est présent dans « {} » et « {} ».", roster, t1, t2);
