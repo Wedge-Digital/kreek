@@ -23,7 +23,12 @@ pub async fn login_success(headers: HeaderMap) -> impl IntoResponse {
     if headers.contains_key("hx-request") {
         LoginSuccessTemplate::default().into_response()
     } else {
-        let content = LoginSuccessTemplate::default().render().unwrap_or_default();
-        AuthLayout { content }.into_response()
+        match LoginSuccessTemplate::default().render() {
+            Ok(content) => AuthLayout { content }.into_response(),
+            Err(e) => {
+                tracing::error!("render failed: {e}");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        }
     }
 }

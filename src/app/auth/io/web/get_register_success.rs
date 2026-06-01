@@ -32,7 +32,12 @@ pub async fn register_success(headers: HeaderMap) -> impl IntoResponse {
     if headers.contains_key("hx-request") {
         RegisterSuccessTemplate::default().into_response()
     } else {
-        let content = RegisterSuccessTemplate::default().render().unwrap_or_default();
-        AuthLayout { content }.into_response()
+        match RegisterSuccessTemplate::default().render() {
+            Ok(content) => AuthLayout { content }.into_response(),
+            Err(e) => {
+                tracing::error!("render failed: {e}");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        }
     }
 }

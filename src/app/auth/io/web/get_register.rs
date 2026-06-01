@@ -29,7 +29,12 @@ pub async fn get_register(headers: HeaderMap) -> impl IntoResponse {
     if headers.contains_key("hx-request") {
         RegisterTemplate::default().into_response()
     } else {
-        let content = RegisterTemplate::default().render().unwrap_or_default();
-        AuthLayout { content }.into_response()
+        match RegisterTemplate::default().render() {
+            Ok(content) => AuthLayout { content }.into_response(),
+            Err(e) => {
+                tracing::error!("render failed: {e}");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        }
     }
 }

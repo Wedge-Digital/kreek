@@ -37,8 +37,13 @@ pub async fn display_reset_password(
     if headers.contains_key("hx-request") {
         template.into_response()
     } else {
-        let content = template.render().unwrap_or_default();
-        AuthLayout { content }.into_response()
+        match template.render() {
+            Ok(content) => AuthLayout { content }.into_response(),
+            Err(e) => {
+                tracing::error!("render failed: {e}");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        }
     }
 }
 

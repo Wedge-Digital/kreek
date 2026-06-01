@@ -48,8 +48,13 @@ pub async fn display_forgot_password(headers: HeaderMap) -> impl IntoResponse {
     if headers.contains_key("hx-request") {
         AuthForgotPassword::default().into_response()
     } else {
-        let content = AuthForgotPassword::default().render().unwrap_or_default();
-        AuthLayout { content }.into_response()
+        match AuthForgotPassword::default().render() {
+            Ok(content) => AuthLayout { content }.into_response(),
+            Err(e) => {
+                tracing::error!("render failed: {e}");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        }
     }
 }
 
@@ -57,8 +62,13 @@ pub async fn display_forgot_password_sent(headers: HeaderMap) -> impl IntoRespon
     if headers.contains_key("hx-request") {
         AuthForgotPasswordSent::default().into_response()
     } else {
-        let content = AuthForgotPasswordSent::default().render().unwrap_or_default();
-        AuthLayout { content }.into_response()
+        match AuthForgotPasswordSent::default().render() {
+            Ok(content) => AuthLayout { content }.into_response(),
+            Err(e) => {
+                tracing::error!("render failed: {e}");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        }
     }
 }
 
