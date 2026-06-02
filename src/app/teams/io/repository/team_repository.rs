@@ -119,6 +119,7 @@ mod tests {
             roster_name: "Elfes Sylvestres".to_string(),
             coach_id:    "01COACH00000000000000000000".to_string(),
             coach_name:  "Colonel Castor".to_string(),
+            treasury:    Kpo(1000),
         }
     }
 

@@ -25,7 +25,7 @@ use crate::web::middleware::bypass_auth::bypass_auth_middleware;
 use crate::web::middleware::require_auth::require_auth;
 use crate::web::middleware::request_log::request_log;
 use crate::app::auth::context::AuthContext;
-use crate::app::{auth, competitions, news, spaces, team_creation};
+use crate::app::{auth, competitions, news, spaces, team_creation, teams};
 use crate::app::competitions::context::CompetitionsContext;
 use crate::app::news::context::NewsContext;
 use crate::app::spaces::context::SpacesContext;
@@ -70,6 +70,7 @@ async fn main() {
 
     competitions::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
     team_creation::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
+    teams::context::init_listeners(&app_event_bus, pool.clone());
 
     let state = AppState {
         auth:          AuthContext::new(&pool, event_bus.clone()),

@@ -43,6 +43,7 @@ pub enum TeamDomainEvent {
         roster_name: String,
         coach_id:    String,
         coach_name:  String,
+        treasury:    Kpo,      // budget restant à l'issue de la construction
     },
     TeamEnrolled {
         competition_id:   String,
@@ -198,7 +199,7 @@ impl Team {
     pub fn apply(mut self, event: &TeamDomainEvent) -> Self {
         match event {
             TeamDomainEvent::TeamCreated {
-                team_id, space_id, name, roster_id, roster_name, coach_id, coach_name,
+                team_id, space_id, name, roster_id, roster_name, coach_id, coach_name, treasury,
             } => {
                 self.id          = team_id.clone();
                 self.space_id    = space_id.clone();
@@ -208,6 +209,7 @@ impl Team {
                 self.roster_name = roster_name.clone();
                 self.coach_id    = coach_id.clone();
                 self.coach_name  = coach_name.clone();
+                self.treasury    = *treasury;
                 self.participation_status = ParticipationStatus::PendingEnrollment;
                 self.game_phase  = None;
             }
@@ -437,6 +439,7 @@ mod tests {
             roster_name: "Elfes Sylvestres".to_string(),
             coach_id:    "01COACH00000000000000000000".to_string(),
             coach_name:  "Colonel Castor".to_string(),
+            treasury:    Kpo(1000),
         }
     }
 
@@ -516,7 +519,7 @@ mod tests {
         ];
         let team = Team::hydrate(&events).unwrap();
         assert_eq!(team.team_value, Kpo(95));
-        assert_eq!(team.treasury, Kpo(0));
+        assert_eq!(team.treasury, Kpo(905)); // 1000 initial - 95 coût
     }
 
     #[test]
