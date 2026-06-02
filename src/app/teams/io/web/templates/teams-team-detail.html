@@ -61,7 +61,11 @@
     </div>
 
     <div class="team-header-roster">
+      {% if let Some(logo) = vm.roster_logo_url %}
+      <img class="roster-icon roster-icon--img" src="{{ logo }}" alt="{{ vm.roster_name }}">
+      {% else %}
       <div class="roster-icon">{{ vm.roster_initials }}</div>
+      {% endif %}
       <div class="roster-icon-label">{{ vm.roster_name }}</div>
     </div>
 

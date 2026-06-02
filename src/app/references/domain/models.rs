@@ -91,6 +91,8 @@ pub struct Team {
     pub available_players: Vec<PlayerPosition>,
     #[serde(default)]
     pub leagues: Vec<String>,
+    #[serde(default)]
+    pub logo: Option<String>,
 }
 
 // ── Skill ─────────────────────────────────────────────────────────────────────

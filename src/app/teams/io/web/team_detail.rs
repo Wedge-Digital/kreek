@@ -1,3 +1,4 @@
+use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
 use crate::app::teams::domain::team::{GamePhase, ParticipationStatus, Team};
 use crate::state::AppState;
@@ -15,6 +16,7 @@ pub struct TeamDetailVm {
     pub initials: String,
     pub roster_name: String,
     pub roster_initials: String,
+    pub roster_logo_url: Option<String>,
     pub coach_name: String,
     pub dedicated_fans: u8,
     pub treasury_kpo: u32,
@@ -27,7 +29,7 @@ pub struct TeamDetailVm {
 }
 
 impl TeamDetailVm {
-    fn from(team: &Team, space_id: &str) -> Self {
+    fn from(team: &Team, space_id: &str, ref_repo: &dyn IReferenceRepository) -> Self {
         let (status_label, status_css_class) = status_display(team);
         let roster_initials = team
             .roster_name
@@ -37,12 +39,17 @@ impl TeamDetailVm {
             .collect::<String>()
             .to_uppercase();
 
+        let roster_logo_url = ref_repo
+            .find_team_by_uid(&team.roster_id)
+            .and_then(|t| t.logo.clone());
+
         Self {
             id: team.id.clone(),
             name: team.name.clone(),
             initials: team.initials.clone(),
             roster_name: team.roster_name.clone(),
             roster_initials,
+            roster_logo_url,
             coach_name: team.coach_name.clone(),
             dedicated_fans: team.dedicated_fans,
             treasury_kpo: team.treasury.0,
@@ -109,10 +116,11 @@ pub async fn team_detail(
     };
 
     let back_url = TeamCreationRoutes::default().my_teams(&space_id);
+    let ref_repo = state.references.repository.as_ref();
 
     TeamDetailTemplate {
         web_routes: Default::default(),
-        vm: TeamDetailVm::from(&team, &space_id),
+        vm: TeamDetailVm::from(&team, &space_id, ref_repo),
         back_url,
     }
     .into_response()
