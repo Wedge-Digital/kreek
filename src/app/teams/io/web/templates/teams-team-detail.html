@@ -87,5 +87,28 @@
     <div class="loading-placeholder" style="padding: var(--p2); color: var(--dark-3);">Chargement des joueurs…</div>
   </div>
 
+  <!-- Staff -->
+  {% if !vm.staff.lines.is_empty() %}
+  <div class="staff-panel">
+    <div class="staff-panel-title">Staff</div>
+    <table class="player-table staff-table">
+      <thead>
+        <tr>
+          <th style="text-align: left;">Poste</th>
+          <th style="text-align: center;">Quantité</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for line in vm.staff.lines %}
+        <tr>
+          <td><strong>{{ line.label }}</strong></td>
+          <td style="text-align: center;">{{ line.quantity }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
 </div>
 {% endblock %}

@@ -10,6 +10,46 @@ use axum::response::{Html, IntoResponse, Response};
 
 // ── View models ───────────────────────────────────────────────────────────────
 
+pub struct StaffLineVm {
+    pub label: String,
+    pub quantity: u8,
+}
+
+pub struct StaffVm {
+    pub lines: Vec<StaffLineVm>,
+}
+
+impl StaffVm {
+    fn from(team: &Team) -> Self {
+        let mut lines = Vec::new();
+        if team.rerolls.0 > 0 {
+            lines.push(StaffLineVm {
+                label: "Relances".into(),
+                quantity: team.rerolls.0,
+            });
+        }
+        if team.apothecaries.0 > 0 {
+            lines.push(StaffLineVm {
+                label: "Apothicaire".into(),
+                quantity: team.apothecaries.0,
+            });
+        }
+        if team.assistants.0 > 0 {
+            lines.push(StaffLineVm {
+                label: "Assistants".into(),
+                quantity: team.assistants.0,
+            });
+        }
+        if team.cheerleaders.0 > 0 {
+            lines.push(StaffLineVm {
+                label: "Cheerleaders".into(),
+                quantity: team.cheerleaders.0,
+            });
+        }
+        Self { lines }
+    }
+}
+
 pub struct TeamDetailVm {
     pub id: String,
     pub name: String,
@@ -26,6 +66,7 @@ pub struct TeamDetailVm {
     pub status_label: String,
     pub status_css_class: String,
     pub players_widget_url: String,
+    pub staff: StaffVm,
 }
 
 impl TeamDetailVm {
@@ -65,6 +106,7 @@ impl TeamDetailVm {
             status_label,
             status_css_class,
             players_widget_url: format!("/app/{space_id}/players/by-team/{}/widget", &team.id),
+            staff: StaffVm::from(team),
         }
     }
 }
