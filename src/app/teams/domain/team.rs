@@ -40,7 +40,8 @@ pub enum TeamDomainEvent {
         roster_name: String,
         coach_id: String,
         coach_name: String,
-        treasury: Kpo, // budget restant à l'issue de la construction
+        treasury: Kpo,
+        dedicated_fans: u8, // fans_factor acheté + 1 (base)
         rerolls: RerollCount,
         apothecaries: ApothecaryCount,
         assistants: AssistantCount,
@@ -245,6 +246,7 @@ impl Team {
                 coach_id,
                 coach_name,
                 treasury,
+                dedicated_fans,
                 rerolls,
                 apothecaries,
                 assistants,
@@ -259,6 +261,7 @@ impl Team {
                 self.coach_id = coach_id.clone();
                 self.coach_name = coach_name.clone();
                 self.treasury = *treasury;
+                self.dedicated_fans = *dedicated_fans;
                 self.rerolls = *rerolls;
                 self.apothecaries = *apothecaries;
                 self.assistants = *assistants;
@@ -594,6 +597,7 @@ mod tests {
             coach_id: "01COACH00000000000000000000".to_string(),
             coach_name: "Colonel Castor".to_string(),
             treasury: Kpo(1000),
+            dedicated_fans: 2, // 1 base + 1 amélioration
             rerolls: RerollCount(3),
             apothecaries: ApothecaryCount(1),
             assistants: AssistantCount(2),
@@ -699,8 +703,8 @@ mod tests {
             .start_post_match_sequence(MatchResult::Win, 4, Kpo(150), vec![])
             .unwrap();
         if let TeamDomainEvent::PostMatchSequenceStarted { dedicated_fans, .. } = &event {
-            // 0 (initial) + 4 (roll) + 1 (win modifier) = 5
-            assert_eq!(*dedicated_fans, 5);
+            // 2 (initial: 1 base + 1 amélioration) + 4 (roll) + 1 (win modifier) = 7
+            assert_eq!(*dedicated_fans, 7);
         } else {
             panic!("mauvais variant d'événement");
         }

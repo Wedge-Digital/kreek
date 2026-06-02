@@ -23,6 +23,7 @@ pub enum TeamCreationDomainEvent {
         apothecaries: ApothecaryCount,
         assistants: AssistantCount,
         cheerleaders: CheerleaderCount,
+        fans_factor: u8,
     },
 }
 
@@ -73,6 +74,7 @@ impl TeamCreationDomainEvent {
                 apothecaries,
                 assistants,
                 cheerleaders,
+                fans_factor,
                 ..
             } => Some(TeamCreationAppEvent::TeamCreated {
                 event_id: EventId::new().to_string(),
@@ -88,6 +90,7 @@ impl TeamCreationDomainEvent {
                 apothecaries: apothecaries.0,
                 assistants: assistants.0,
                 cheerleaders: cheerleaders.0,
+                fans_factor: *fans_factor,
             }),
         }
     }

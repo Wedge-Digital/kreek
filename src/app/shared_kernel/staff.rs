@@ -17,4 +17,5 @@ pub enum StaffKind {
     Apothecary,
     Cheerleaders,
     CoachAssistant,
+    FansFactor,
 }

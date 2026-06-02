@@ -48,6 +48,7 @@ pub async fn execute(
         AssistantCount::new(count_staff(&team, StaffKind::CoachAssistant)).unwrap_or_default();
     let cheerleaders =
         CheerleaderCount::new(count_staff(&team, StaffKind::Cheerleaders)).unwrap_or_default();
+    let fans_factor = count_staff(&team, StaffKind::FansFactor);
 
     let event = TeamCreationDomainEvent::TeamSubmitted {
         event_id: EventId::new(),
@@ -63,6 +64,7 @@ pub async fn execute(
         apothecaries,
         assistants,
         cheerleaders,
+        fans_factor,
     };
     let _ = bus.send(event.to_enveloppe());
 

@@ -32,6 +32,7 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                         apothecaries,
                         assistants,
                         cheerleaders,
+                        fans_factor,
                         ..
                     } = app_event;
                     let domain_event = TeamDomainEvent::TeamCreated {
@@ -43,6 +44,7 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                         coach_id,
                         coach_name,
                         treasury: Kpo(treasury),
+                        dedicated_fans: fans_factor + 1, // base 1 + améliorations achetées
                         rerolls: RerollCount::new(rerolls).unwrap_or_default(),
                         apothecaries: ApothecaryCount::new(apothecaries).unwrap_or_default(),
                         assistants: AssistantCount::new(assistants).unwrap_or_default(),

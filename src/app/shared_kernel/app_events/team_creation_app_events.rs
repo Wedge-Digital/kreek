@@ -14,10 +14,11 @@ pub enum TeamCreationAppEvent {
         coach_id: String,
         coach_name: String,
         treasury: u32,
-        rerolls: u8, // converti en RerollCount dans le listener BC teams
+        rerolls: u8,
         apothecaries: u8,
         assistants: u8,
         cheerleaders: u8,
+        fans_factor: u8, // améliorations achetées ; BC teams ajoute +1 (base)
     },
 }
 

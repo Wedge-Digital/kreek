@@ -123,6 +123,7 @@ mod tests {
             coach_id: "01COACH00000000000000000000".to_string(),
             coach_name: "Colonel Castor".to_string(),
             treasury: Kpo(1000),
+            dedicated_fans: 2,
             rerolls: RerollCount(3),
             apothecaries: ApothecaryCount(1),
             assistants: AssistantCount(2),

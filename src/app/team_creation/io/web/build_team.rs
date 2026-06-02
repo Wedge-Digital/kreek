@@ -84,6 +84,7 @@ fn staff_kind(uid: &str) -> StaffKind {
         "APOTHECARY" => StaffKind::Apothecary,
         "CHEERLEADERS" => StaffKind::Cheerleaders,
         "COACH_ASSISTANTS" => StaffKind::CoachAssistant,
+        "FAN_FACTOR" => StaffKind::FansFactor,
         _ => StaffKind::CoachAssistant,
     }
 }
@@ -100,7 +101,7 @@ pub fn build_roster_from_ref(ref_team: &RefTeam, ref_repo: &dyn IReferenceReposi
         })
         .collect();
 
-    let allowed_staff = ref_team
+    let mut allowed_staff: Vec<TeamStaff> = ref_team
         .allowed_staff
         .iter()
         .filter_map(|uid| {
@@ -117,6 +118,17 @@ pub fn build_roster_from_ref(ref_team: &RefTeam, ref_repo: &dyn IReferenceReposi
                 })
         })
         .collect();
+
+    // Facteur de fans : universel, disponible pour tous les rosters à la création
+    if let Some(ff) = ref_repo.list_staff().iter().find(|s| s.uid == "FAN_FACTOR") {
+        allowed_staff.push(TeamStaff {
+            id: StaffId(ff.uid.clone()),
+            name: StaffName(ff.name.clone()),
+            price: StaffPrice(ff.price),
+            max_quantity: StaffMaxQuantity(ff.max_quantity as u8),
+            kind: StaffKind::FansFactor,
+        });
+    }
 
     Roster {
         id: RosterId(ref_team.uid.clone()),
