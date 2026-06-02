@@ -41,7 +41,13 @@ impl TeamDetailVm {
 
         let roster_logo_url = ref_repo
             .find_team_by_uid(&team.roster_id)
-            .and_then(|t| t.logo.clone());
+            .and_then(|t| t.logo.as_deref())
+            .map(|url| {
+                crate::app::shared_kernel::cloudinary::transform(
+                    url,
+                    "c_fill,w_120,h_120,q_auto,f_auto",
+                )
+            });
 
         Self {
             id: team.id.clone(),
