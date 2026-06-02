@@ -1,30 +1,42 @@
-use askama::Template;
-use axum::extract::{Path, Query, State};
-use axum::http::StatusCode;
-use axum::response::{Html, IntoResponse, Response};
-use serde::Deserialize;
 use crate::app::news::domain::article::Article;
 use crate::app::news::routes::Routes as NewsRoutes;
 use crate::app::shared_kernel::common_types::SpaceId;
 use crate::state::AppState;
 use crate::web::routes::Routes as WebRoutes;
+use askama::Template;
+use axum::extract::{Path, Query, State};
+use axum::http::StatusCode;
+use axum::response::{Html, IntoResponse, Response};
+use serde::Deserialize;
 
 const PER_PAGE: i64 = 10;
 
 pub struct ArticleViewModel {
-    pub id:          String,
-    pub title:       String,
-    pub abstract_:   String,
-    pub tag:         String,
-    pub image:       Option<String>,
+    pub id: String,
+    pub title: String,
+    pub abstract_: String,
+    pub tag: String,
+    pub image: Option<String>,
     pub author_name: String,
-    pub created_at:  String,
+    pub created_at: String,
 }
 
 impl From<Article> for ArticleViewModel {
     fn from(a: Article) -> Self {
-        let months = ["janvier", "février", "mars", "avril", "mai", "juin",
-                      "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+        let months = [
+            "janvier",
+            "février",
+            "mars",
+            "avril",
+            "mai",
+            "juin",
+            "juillet",
+            "août",
+            "septembre",
+            "octobre",
+            "novembre",
+            "décembre",
+        ];
         let created_at = format!(
             "{} {} {}",
             a.created_at.day(),
@@ -32,11 +44,11 @@ impl From<Article> for ArticleViewModel {
             a.created_at.year(),
         );
         Self {
-            id:          a.id.to_string(),
-            title:       a.title,
-            abstract_:   a.abstract_,
-            tag:         a.tags.into_iter().next().unwrap_or_default(),
-            image:       a.image,
+            id: a.id.to_string(),
+            title: a.title,
+            abstract_: a.abstract_,
+            tag: a.tags.into_iter().next().unwrap_or_default(),
+            image: a.image,
             author_name: a.author_name,
             created_at,
         }
@@ -44,15 +56,19 @@ impl From<Article> for ArticleViewModel {
 }
 
 pub struct PaginationItem {
-    pub page:        Option<i64>, // None → ellipsis
-    pub is_active:   bool,
+    pub page: Option<i64>, // None → ellipsis
+    pub is_active: bool,
 }
 
 fn build_pagination(page: i64, total_pages: i64) -> Vec<PaginationItem> {
     let mut pages: Vec<i64> = vec![1, total_pages];
-    if page > 1           { pages.push(page - 1); }
+    if page > 1 {
+        pages.push(page - 1);
+    }
     pages.push(page);
-    if page < total_pages { pages.push(page + 1); }
+    if page < total_pages {
+        pages.push(page + 1);
+    }
 
     pages.sort_unstable();
     pages.dedup();
@@ -63,12 +79,21 @@ fn build_pagination(page: i64, total_pages: i64) -> Vec<PaginationItem> {
             let gap = p - pages[i - 1];
             if gap == 2 {
                 let mid = pages[i - 1] + 1;
-                items.push(PaginationItem { page: Some(mid), is_active: mid == page });
+                items.push(PaginationItem {
+                    page: Some(mid),
+                    is_active: mid == page,
+                });
             } else if gap > 2 {
-                items.push(PaginationItem { page: None, is_active: false });
+                items.push(PaginationItem {
+                    page: None,
+                    is_active: false,
+                });
             }
         }
-        items.push(PaginationItem { page: Some(p), is_active: p == page });
+        items.push(PaginationItem {
+            page: Some(p),
+            is_active: p == page,
+        });
     }
     items
 }
@@ -76,13 +101,13 @@ fn build_pagination(page: i64, total_pages: i64) -> Vec<PaginationItem> {
 #[derive(Template, Default)]
 #[template(path = "news-feed.html")]
 pub struct NewsFeedTemplate {
-    pub web_routes:       WebRoutes,
-    pub news_routes:      NewsRoutes,
-    pub space_id:         String,
-    pub featured:         Option<ArticleViewModel>,
-    pub articles:         Vec<ArticleViewModel>,
-    pub page:             i64,
-    pub total_pages:      i64,
+    pub web_routes: WebRoutes,
+    pub news_routes: NewsRoutes,
+    pub space_id: String,
+    pub featured: Option<ArticleViewModel>,
+    pub articles: Vec<ArticleViewModel>,
+    pub page: i64,
+    pub total_pages: i64,
     pub pagination_items: Vec<PaginationItem>,
 }
 
@@ -90,7 +115,7 @@ impl IntoResponse for NewsFeedTemplate {
     fn into_response(self) -> Response {
         match self.render() {
             Ok(html) => Html(html).into_response(),
-            Err(_)   => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
     }
 }
@@ -102,8 +127,8 @@ pub struct PageQuery {
 
 pub async fn get_news_feed(
     Path(space_id_raw): Path<String>,
-    Query(query):       Query<PageQuery>,
-    State(state):       State<AppState>,
+    Query(query): Query<PageQuery>,
+    State(state): State<AppState>,
 ) -> impl IntoResponse {
     let page = query.page.unwrap_or(1).max(1);
 
@@ -111,7 +136,9 @@ pub async fn get_news_feed(
         return StatusCode::BAD_REQUEST.into_response();
     };
 
-    let (all_articles, total) = state.news.article_repository
+    let (all_articles, total) = state
+        .news
+        .article_repository
         .find_by_space(&space_id, page, PER_PAGE)
         .await
         .unwrap_or_else(|_| (vec![], 0));
@@ -119,17 +146,22 @@ pub async fn get_news_feed(
     let total_pages = ((total + PER_PAGE - 1) / PER_PAGE).max(1);
     let mut view_models: Vec<ArticleViewModel> = all_articles.into_iter().map(Into::into).collect();
 
-    let featured = if page == 1 { view_models.drain(..1.min(view_models.len())).next() } else { None };
+    let featured = if page == 1 {
+        view_models.drain(..1.min(view_models.len())).next()
+    } else {
+        None
+    };
     let pagination_items = build_pagination(page, total_pages);
 
     NewsFeedTemplate {
-        web_routes:  Default::default(),
+        web_routes: Default::default(),
         news_routes: Default::default(),
-        space_id:    space_id_raw,
+        space_id: space_id_raw,
         featured,
         articles: view_models,
         page,
         total_pages,
         pagination_items,
-    }.into_response()
+    }
+    .into_response()
 }

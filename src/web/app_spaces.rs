@@ -1,19 +1,19 @@
-use askama::Template;
-use axum::extract::State;
-use axum::http::{HeaderMap, StatusCode};
-use axum::response::{Html, IntoResponse, Response};
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::news::routes::Routes as NewsRoutes;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::SpaceSummary;
 use crate::app::spaces::routes::Routes;
 use crate::state::AppState;
+use askama::Template;
+use axum::extract::State;
+use axum::http::{HeaderMap, StatusCode};
+use axum::response::{Html, IntoResponse, Response};
 
 #[derive(Template)]
 #[template(path = "app-spaces.html")]
 pub struct AppSpaces {
-    pub routes:          Routes,
-    pub news_routes:     NewsRoutes,
-    pub spaces:          Vec<SpaceSummary>,
+    pub routes: Routes,
+    pub news_routes: NewsRoutes,
+    pub spaces: Vec<SpaceSummary>,
     pub active_space_id: Option<String>,
 }
 
@@ -21,7 +21,7 @@ impl IntoResponse for AppSpaces {
     fn into_response(self) -> Response {
         match self.render() {
             Ok(html) => Html(html).into_response(),
-            Err(_)   => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
     }
 }
@@ -30,7 +30,8 @@ fn extract_space_id(current_url: &str) -> Option<String> {
     // HX-Current-URL is a full URL: http://host/app/{space_id}/home
     // Strip scheme://host to get the path
     let path = match current_url.find("://") {
-        Some(i) => current_url[i + 3..].find('/')
+        Some(i) => current_url[i + 3..]
+            .find('/')
             .map(|j| &current_url[i + 3 + j..])?,
         None => current_url,
     };
@@ -53,7 +54,8 @@ pub async fn app_spaces(
     };
 
     let spaces = state
-        .spaces.space_repository
+        .spaces
+        .space_repository
         .find_by_coach_id(&user.id)
         .await
         .unwrap_or_default();
@@ -68,5 +70,6 @@ pub async fn app_spaces(
         news_routes: NewsRoutes::default(),
         spaces,
         active_space_id,
-    }.into_response()
+    }
+    .into_response()
 }

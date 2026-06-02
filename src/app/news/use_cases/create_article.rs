@@ -1,5 +1,7 @@
 use crate::app::news::domain::article::{Article, ArticleParagraph};
-use crate::app::news::domain::article_repository_port::{ArticleRepositoryError, IArticleRepository};
+use crate::app::news::domain::article_repository_port::{
+    ArticleRepositoryError, IArticleRepository,
+};
 use crate::app::shared_kernel::common_types::{ArticleId, SpaceId, UserId};
 
 #[derive(Debug)]
@@ -12,9 +14,11 @@ pub enum CreateArticleError {
 impl std::fmt::Display for CreateArticleError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CreateArticleError::EmptyTitle   => write!(f, "Le titre est obligatoire"),
-            CreateArticleError::EmptyContent => write!(f, "L'article doit contenir au moins un paragraphe"),
-            CreateArticleError::Database(m)  => write!(f, "Erreur interne : {}", m),
+            CreateArticleError::EmptyTitle => write!(f, "Le titre est obligatoire"),
+            CreateArticleError::EmptyContent => {
+                write!(f, "L'article doit contenir au moins un paragraphe")
+            }
+            CreateArticleError::Database(m) => write!(f, "Erreur interne : {}", m),
         }
     }
 }
@@ -28,18 +32,18 @@ impl From<ArticleRepositoryError> for CreateArticleError {
 }
 
 pub struct CreateArticleCommand {
-    pub space_id:    SpaceId,
-    pub author_id:   UserId,
+    pub space_id: SpaceId,
+    pub author_id: UserId,
     pub author_name: String,
-    pub title:       String,
-    pub abstract_:   String,
-    pub tags:        Vec<String>,
-    pub image:       Option<String>,
-    pub paragraphs:  Vec<ArticleParagraph>,
+    pub title: String,
+    pub abstract_: String,
+    pub tags: Vec<String>,
+    pub image: Option<String>,
+    pub paragraphs: Vec<ArticleParagraph>,
 }
 
 pub async fn execute(
-    cmd:  CreateArticleCommand,
+    cmd: CreateArticleCommand,
     repo: &dyn IArticleRepository,
 ) -> Result<ArticleId, CreateArticleError> {
     if cmd.title.trim().is_empty() {

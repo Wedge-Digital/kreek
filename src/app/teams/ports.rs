@@ -1,5 +1,5 @@
-use async_trait::async_trait;
 use crate::app::teams::domain::team::{Team, TeamDomainEvent};
+use async_trait::async_trait;
 
 #[derive(Debug)]
 pub enum RepositoryError {
@@ -12,10 +12,10 @@ pub enum RepositoryError {
 impl std::fmt::Display for RepositoryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::ConcurrentWrite       => write!(f, "écriture concurrente détectée"),
-            Self::Serialization(e)      => write!(f, "erreur de sérialisation : {e}"),
-            Self::Deserialization(e)    => write!(f, "erreur de désérialisation : {e}"),
-            Self::Database(e)           => write!(f, "erreur base de données : {e}"),
+            Self::ConcurrentWrite => write!(f, "écriture concurrente détectée"),
+            Self::Serialization(e) => write!(f, "erreur de sérialisation : {e}"),
+            Self::Deserialization(e) => write!(f, "erreur de désérialisation : {e}"),
+            Self::Database(e) => write!(f, "erreur base de données : {e}"),
         }
     }
 }
@@ -27,8 +27,8 @@ pub trait ITeamRepository: Send + Sync {
     /// expected_version ne correspond pas à la version courante en base.
     async fn append(
         &self,
-        team_id:          &str,
-        event:            &TeamDomainEvent,
+        team_id: &str,
+        event: &TeamDomainEvent,
         expected_version: u64,
     ) -> Result<u64, RepositoryError>;
 

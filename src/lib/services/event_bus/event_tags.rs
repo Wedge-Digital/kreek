@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventTag {
-    pub name:  EventTagName,
+    pub name: EventTagName,
     pub value: String,
 }
 
@@ -17,10 +17,10 @@ pub enum EventTagName {
 impl ToString for EventTagName {
     fn to_string(&self) -> String {
         match self {
-            EventTagName::User        => "User".to_string(),
-            EventTagName::Space       => "Space".to_string(),
+            EventTagName::User => "User".to_string(),
+            EventTagName::Space => "Space".to_string(),
             EventTagName::Competition => "Competition".to_string(),
-            EventTagName::Team        => "Team".to_string(),
+            EventTagName::Team => "Team".to_string(),
         }
     }
 }

@@ -7,7 +7,7 @@ use crate::app::team_creation::domain::team_ruleset_selected::RulesetSelectedTea
 use crate::app::team_creation::domain::team_staff::TeamStaff;
 use serde::{Deserialize, Serialize};
 
-pub const MAX_REROLL_COUNT:           u8    = 8;
+pub const MAX_REROLL_COUNT: u8 = 8;
 pub const MIN_PLAYERS_FOR_SUBMISSION: usize = 11;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -47,7 +47,10 @@ impl RosterSelectedTeam {
     }
 
     pub fn cheerleaders_count(&self) -> usize {
-        self.hired_staff.iter().filter(|s| s.kind == StaffKind::Cheerleaders).count()
+        self.hired_staff
+            .iter()
+            .filter(|s| s.kind == StaffKind::Cheerleaders)
+            .count()
     }
 
     fn player_budget(&self) -> u32 {
@@ -116,7 +119,9 @@ impl RosterSelectedTeam {
             if !limit.includes_player(&player.id) {
                 continue;
             }
-            let count = self.hired_players.iter()
+            let count = self
+                .hired_players
+                .iter()
                 .filter(|p| limit.includes_player(&p.id))
                 .count();
             if count >= limit.limit as usize {
@@ -127,7 +132,9 @@ impl RosterSelectedTeam {
     }
 
     fn check_player_budget(&self, player: &PlayerDefinition) -> Result<(), DomainError> {
-        let remaining = self.remaining_budget().map_err(|_| DomainError::InsufficientBudget)?;
+        let remaining = self
+            .remaining_budget()
+            .map_err(|_| DomainError::InsufficientBudget)?;
         if remaining < player.price.0 {
             return Err(DomainError::InsufficientBudget);
         }
@@ -145,15 +152,26 @@ impl RosterSelectedTeam {
         Ok(())
     }
 
-    pub fn hire_many_players(&mut self, players: Vec<PlayerDefinition>) -> Result<(), Vec<DomainError>> {
-        let errors: Vec<DomainError> = players.into_iter()
+    pub fn hire_many_players(
+        &mut self,
+        players: Vec<PlayerDefinition>,
+    ) -> Result<(), Vec<DomainError>> {
+        let errors: Vec<DomainError> = players
+            .into_iter()
             .flat_map(|p| self.hire_player(p).err())
             .collect();
-        if errors.is_empty() { Ok(()) } else { Err(errors) }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
     }
 
     pub fn remove_player(&mut self, player: &PlayerDefinition) -> Result<(), DomainError> {
-        let pos = self.hired_players.iter().position(|p| p == player)
+        let pos = self
+            .hired_players
+            .iter()
+            .position(|p| p == player)
             .ok_or(DomainError::PlayerNotHired)?;
         self.hired_players.remove(pos);
         Ok(())
@@ -179,7 +197,9 @@ impl RosterSelectedTeam {
     }
 
     fn check_staff_budget(&self, staff: &TeamStaff) -> Result<(), DomainError> {
-        let remaining = self.remaining_budget().map_err(|_| DomainError::InsufficientBudget)?;
+        let remaining = self
+            .remaining_budget()
+            .map_err(|_| DomainError::InsufficientBudget)?;
         if remaining < staff.price.0 {
             return Err(DomainError::InsufficientBudget);
         }
@@ -188,9 +208,15 @@ impl RosterSelectedTeam {
 
     pub fn buy_staff(&mut self, staff: TeamStaff) -> Result<(), Vec<DomainError>> {
         let mut errors: Vec<DomainError> = Vec::new();
-        if let Err(e) = self.check_staff_limit(&staff) { errors.push(e); }
-        if let Err(e) = self.check_staff_budget(&staff) { errors.push(e); }
-        if let Err(e) = self.check_staff_is_allowed(&staff) { errors.push(e); }
+        if let Err(e) = self.check_staff_limit(&staff) {
+            errors.push(e);
+        }
+        if let Err(e) = self.check_staff_budget(&staff) {
+            errors.push(e);
+        }
+        if let Err(e) = self.check_staff_is_allowed(&staff) {
+            errors.push(e);
+        }
         if !errors.is_empty() {
             return Err(errors);
         }
@@ -199,7 +225,10 @@ impl RosterSelectedTeam {
     }
 
     pub fn remove_staff(&mut self, staff: &TeamStaff) -> Result<(), DomainError> {
-        let pos = self.hired_staff.iter().position(|s| s == staff)
+        let pos = self
+            .hired_staff
+            .iter()
+            .position(|s| s == staff)
             .ok_or(DomainError::StaffNotPurchased)?;
         self.hired_staff.remove(pos);
         Ok(())
@@ -218,7 +247,9 @@ impl RosterSelectedTeam {
 
     fn check_reroll_budget(&self, count: u8) -> Result<(), DomainError> {
         let cost = count as u32 * self.roster.reroll_price.0;
-        let remaining = self.remaining_budget().map_err(|_| DomainError::InsufficientRerollBudget)?;
+        let remaining = self
+            .remaining_budget()
+            .map_err(|_| DomainError::InsufficientRerollBudget)?;
         if remaining < cost {
             return Err(DomainError::InsufficientRerollBudget);
         }
@@ -227,8 +258,12 @@ impl RosterSelectedTeam {
 
     pub fn purchase_reroll(&mut self, count: u8) -> Result<(), Vec<DomainError>> {
         let mut errors: Vec<DomainError> = Vec::new();
-        if let Err(e) = self.check_reroll_max(count) { errors.push(e); }
-        if let Err(e) = self.check_reroll_budget(count) { errors.push(e); }
+        if let Err(e) = self.check_reroll_max(count) {
+            errors.push(e);
+        }
+        if let Err(e) = self.check_reroll_budget(count) {
+            errors.push(e);
+        }
         if !errors.is_empty() {
             return Err(errors);
         }
@@ -245,7 +280,11 @@ impl RosterSelectedTeam {
         if self.hired_players.len() < MIN_PLAYERS_FOR_SUBMISSION {
             errors.push(DomainError::InsufficientPlayerCount);
         }
-        if errors.is_empty() { Ok(()) } else { Err(errors) }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
     }
 
     pub fn remove_reroll(&mut self, count: u8) {

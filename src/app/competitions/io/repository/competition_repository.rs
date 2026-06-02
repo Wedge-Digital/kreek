@@ -1,10 +1,13 @@
-use async_trait::async_trait;
-use sqlx::PgPool;
 use crate::app::competitions::domain::competition::Competition;
-use crate::app::competitions::domain::competition_repository_port::{CompetitionBaseInfo, CompetitionRepositoryError, CompetitionSummary, CompetitionWithSeasons, ICompetitionRepository, SeasonOption};
+use crate::app::competitions::domain::competition_repository_port::{
+    CompetitionBaseInfo, CompetitionRepositoryError, CompetitionSummary, CompetitionWithSeasons,
+    ICompetitionRepository, SeasonOption,
+};
 use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, CompetitionId, SpaceId};
 use crate::app::shared_kernel::competition_name::CompetitionName;
 use crate::app::shared_kernel::competition_profile::CompetitionProfile;
+use async_trait::async_trait;
+use sqlx::PgPool;
 
 fn db_err(e: impl std::fmt::Display) -> CompetitionRepositoryError {
     CompetitionRepositoryError::Database(e.to_string())
@@ -23,13 +26,18 @@ impl CompetitionRepository {
 
 #[async_trait]
 impl ICompetitionRepository for CompetitionRepository {
-    async fn name_exists_in_space(&self, name: &CompetitionName, space_id: &SpaceId) -> Result<bool, CompetitionRepositoryError> {
-        let exists: bool = sqlx::query_scalar(include_str!("sql/competitions/find_by_name_in_space.sql"))
-            .bind(space_id.to_string())
-            .bind(name.value())
-            .fetch_one(&self.pool)
-            .await
-            .map_err(db_err)?;
+    async fn name_exists_in_space(
+        &self,
+        name: &CompetitionName,
+        space_id: &SpaceId,
+    ) -> Result<bool, CompetitionRepositoryError> {
+        let exists: bool =
+            sqlx::query_scalar(include_str!("sql/competitions/find_by_name_in_space.sql"))
+                .bind(space_id.to_string())
+                .bind(name.value())
+                .fetch_one(&self.pool)
+                .await
+                .map_err(db_err)?;
         Ok(exists)
     }
 
@@ -46,22 +54,34 @@ impl ICompetitionRepository for CompetitionRepository {
             .map_err(db_err)?;
 
         for admin_id in &competition.admin_ids {
-            sqlx::query(include_str!("sql/competitions/insert_competition_member.sql"))
-                .bind(competition.id.to_string())
-                .bind(admin_id.to_string())
-                .bind(CompetitionProfile::CompetitionAdmin.as_str())
-                .execute(&mut *tx)
-                .await
-                .map_err(db_err)?;
+            sqlx::query(include_str!(
+                "sql/competitions/insert_competition_member.sql"
+            ))
+            .bind(competition.id.to_string())
+            .bind(admin_id.to_string())
+            .bind(CompetitionProfile::CompetitionAdmin.as_str())
+            .execute(&mut *tx)
+            .await
+            .map_err(db_err)?;
         }
 
         tx.commit().await.map_err(db_err)?;
         Ok(())
     }
 
-    async fn find_by_space_id(&self, space_id: &SpaceId) -> Result<Vec<CompetitionSummary>, CompetitionRepositoryError> {
+    async fn find_by_space_id(
+        &self,
+        space_id: &SpaceId,
+    ) -> Result<Vec<CompetitionSummary>, CompetitionRepositoryError> {
         #[derive(sqlx::FromRow)]
-        struct Row { id: String, name: String, logo: String, season_id: Option<String>, status: Option<String>, season_count: i64 }
+        struct Row {
+            id: String,
+            name: String,
+            logo: String,
+            season_id: Option<String>,
+            status: Option<String>,
+            season_count: i64,
+        }
 
         let rows = sqlx::query_as::<_, Row>(include_str!("sql/competitions/find_by_space_id.sql"))
             .bind(space_id.to_string())
@@ -69,49 +89,71 @@ impl ICompetitionRepository for CompetitionRepository {
             .await
             .map_err(db_err)?;
 
-        Ok(rows.into_iter().map(|r| CompetitionSummary {
-            id:           r.id,
-            name:         r.name,
-            logo:         r.logo,
-            season_id:    r.season_id,
-            status:       r.status,
-            season_count: r.season_count,
-        }).collect())
+        Ok(rows
+            .into_iter()
+            .map(|r| CompetitionSummary {
+                id: r.id,
+                name: r.name,
+                logo: r.logo,
+                season_id: r.season_id,
+                status: r.status,
+                season_count: r.season_count,
+            })
+            .collect())
     }
 
-    async fn find_base_info(&self, competition_id: &CompetitionId) -> Result<Option<CompetitionBaseInfo>, CompetitionRepositoryError> {
-        #[derive(sqlx::FromRow)]
-        struct Row { competition_name: String, logo: Option<String>, coach_id: Option<String>, coach_name: Option<String> }
-
-        let rows = sqlx::query_as::<_, Row>(include_str!("sql/competitions/find_competition_by_id.sql"))
-            .bind(competition_id.to_string())
-            .fetch_all(&self.pool)
-            .await
-            .map_err(db_err)?;
-
-        if rows.is_empty() { return Ok(None); }
-
-        let name        = rows[0].competition_name.clone();
-        let logo        = rows[0].logo.clone();
-        let admin_ids   = rows.iter().filter_map(|r| r.coach_id.clone()).collect();
-        let admin_names = rows.into_iter().filter_map(|r| r.coach_name).collect();
-
-        Ok(Some(CompetitionBaseInfo { name, logo, admin_ids, admin_names }))
-    }
-
-    async fn find_with_seasons(&self, space_id: &SpaceId) -> Result<Vec<CompetitionWithSeasons>, CompetitionRepositoryError> {
+    async fn find_base_info(
+        &self,
+        competition_id: &CompetitionId,
+    ) -> Result<Option<CompetitionBaseInfo>, CompetitionRepositoryError> {
         #[derive(sqlx::FromRow)]
         struct Row {
-            competition_id:   String,
             competition_name: String,
-            season_id:        String,
-            season_name:      String,
-            status:           String,
+            logo: Option<String>,
+            coach_id: Option<String>,
+            coach_name: Option<String>,
         }
 
-        let rows = sqlx::query_as::<_, Row>(
-            include_str!("sql/competitions/find_competitions_with_seasons.sql")
-        )
+        let rows =
+            sqlx::query_as::<_, Row>(include_str!("sql/competitions/find_competition_by_id.sql"))
+                .bind(competition_id.to_string())
+                .fetch_all(&self.pool)
+                .await
+                .map_err(db_err)?;
+
+        if rows.is_empty() {
+            return Ok(None);
+        }
+
+        let name = rows[0].competition_name.clone();
+        let logo = rows[0].logo.clone();
+        let admin_ids = rows.iter().filter_map(|r| r.coach_id.clone()).collect();
+        let admin_names = rows.into_iter().filter_map(|r| r.coach_name).collect();
+
+        Ok(Some(CompetitionBaseInfo {
+            name,
+            logo,
+            admin_ids,
+            admin_names,
+        }))
+    }
+
+    async fn find_with_seasons(
+        &self,
+        space_id: &SpaceId,
+    ) -> Result<Vec<CompetitionWithSeasons>, CompetitionRepositoryError> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            competition_id: String,
+            competition_name: String,
+            season_id: String,
+            season_name: String,
+            status: String,
+        }
+
+        let rows = sqlx::query_as::<_, Row>(include_str!(
+            "sql/competitions/find_competitions_with_seasons.sql"
+        ))
         .bind(space_id.to_string())
         .fetch_all(&self.pool)
         .await
@@ -120,19 +162,22 @@ impl ICompetitionRepository for CompetitionRepository {
         // Preserve SQL ordering (c.name ASC) while grouping by competition_id
         let mut result: Vec<CompetitionWithSeasons> = vec![];
         for r in rows {
-            match result.iter_mut().find(|c| c.competition_id == r.competition_id) {
+            match result
+                .iter_mut()
+                .find(|c| c.competition_id == r.competition_id)
+            {
                 Some(existing) => existing.seasons.push(SeasonOption {
-                    season_id:   r.season_id,
+                    season_id: r.season_id,
                     season_name: r.season_name,
-                    status:      r.status,
+                    status: r.status,
                 }),
                 None => result.push(CompetitionWithSeasons {
-                    competition_id:   r.competition_id,
+                    competition_id: r.competition_id,
                     competition_name: r.competition_name,
-                    seasons:          vec![SeasonOption {
-                        season_id:   r.season_id,
+                    seasons: vec![SeasonOption {
+                        season_id: r.season_id,
                         season_name: r.season_name,
-                        status:      r.status,
+                        status: r.status,
                     }],
                 }),
             }
@@ -141,16 +186,23 @@ impl ICompetitionRepository for CompetitionRepository {
         Ok(result)
     }
 
-    async fn update_base_info(&self, competition_id: &CompetitionId, name: &CompetitionName, logo: &CloudinaryImage, admin_ids: &[CoachId]) -> Result<(), CompetitionRepositoryError> {
+    async fn update_base_info(
+        &self,
+        competition_id: &CompetitionId,
+        name: &CompetitionName,
+        logo: &CloudinaryImage,
+        admin_ids: &[CoachId],
+    ) -> Result<(), CompetitionRepositoryError> {
         let mut tx = self.pool.begin().await.map_err(db_err)?;
 
-        let found: Option<String> = sqlx::query_scalar(include_str!("sql/competitions/update_base_info.sql"))
-            .bind(name.value())
-            .bind(logo.as_ref())
-            .bind(competition_id.to_string())
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(db_err)?;
+        let found: Option<String> =
+            sqlx::query_scalar(include_str!("sql/competitions/update_base_info.sql"))
+                .bind(name.value())
+                .bind(logo.as_ref())
+                .bind(competition_id.to_string())
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(db_err)?;
 
         if found.is_none() {
             return Err(CompetitionRepositoryError::CompetitionNotFound);
@@ -163,13 +215,15 @@ impl ICompetitionRepository for CompetitionRepository {
             .map_err(db_err)?;
 
         for admin_id in admin_ids {
-            sqlx::query(include_str!("sql/competitions/insert_competition_member.sql"))
-                .bind(competition_id.to_string())
-                .bind(admin_id.to_string())
-                .bind(CompetitionProfile::CompetitionAdmin.as_str())
-                .execute(&mut *tx)
-                .await
-                .map_err(db_err)?;
+            sqlx::query(include_str!(
+                "sql/competitions/insert_competition_member.sql"
+            ))
+            .bind(competition_id.to_string())
+            .bind(admin_id.to_string())
+            .bind(CompetitionProfile::CompetitionAdmin.as_str())
+            .execute(&mut *tx)
+            .await
+            .map_err(db_err)?;
         }
 
         tx.commit().await.map_err(db_err)?;

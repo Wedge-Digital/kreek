@@ -1,5 +1,5 @@
 pub mod path {
-    pub const TEAM_DETAIL:  &str = "/app/{space_id}/teams/{team_id}";
+    pub const TEAM_DETAIL: &str = "/app/{space_id}/teams/{team_id}";
     pub const DISMISS_TEAM: &str = "/app/{space_id}/teams/{team_id}/dismiss";
 }
 

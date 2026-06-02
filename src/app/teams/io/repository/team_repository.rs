@@ -1,7 +1,7 @@
-use async_trait::async_trait;
-use sqlx::{PgPool, Row};
 use crate::app::teams::domain::team::{Team, TeamDomainEvent};
 use crate::app::teams::ports::{ITeamRepository, RepositoryError};
+use async_trait::async_trait;
+use sqlx::{PgPool, Row};
 
 pub struct TeamRepository {
     pool: PgPool,
@@ -15,9 +15,9 @@ impl TeamRepository {
     /// Stub — implémenté en carte 42 (projection).
     async fn update_projection_in_tx(
         &self,
-        _tx:      &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        _tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         _team_id: &str,
-        _event:   &TeamDomainEvent,
+        _event: &TeamDomainEvent,
         _version: u64,
     ) -> Result<(), RepositoryError> {
         Ok(())
@@ -28,18 +28,16 @@ impl TeamRepository {
 impl ITeamRepository for TeamRepository {
     async fn append(
         &self,
-        team_id:          &str,
-        event:            &TeamDomainEvent,
+        team_id: &str,
+        event: &TeamDomainEvent,
         expected_version: u64,
     ) -> Result<u64, RepositoryError> {
-        let new_version   = expected_version + 1;
-        let payload       = serde_json::to_value(event)
-            .map_err(RepositoryError::Serialization)?;
-        let event_type    = event.type_name();
+        let new_version = expected_version + 1;
+        let payload = serde_json::to_value(event).map_err(RepositoryError::Serialization)?;
+        let event_type = event.type_name();
         let event_version = event.schema_version();
 
-        let mut tx = self.pool.begin().await
-            .map_err(RepositoryError::Database)?;
+        let mut tx = self.pool.begin().await.map_err(RepositoryError::Database)?;
 
         sqlx::query(
             "INSERT INTO team_event_store (team_id, event_type, event_version, payload, version)
@@ -61,7 +59,8 @@ impl ITeamRepository for TeamRepository {
             RepositoryError::Database(e)
         })?;
 
-        self.update_projection_in_tx(&mut tx, team_id, event, new_version).await?;
+        self.update_projection_in_tx(&mut tx, team_id, event, new_version)
+            .await?;
 
         tx.commit().await.map_err(RepositoryError::Database)?;
         Ok(new_version)
@@ -81,7 +80,8 @@ impl ITeamRepository for TeamRepository {
             return Ok(None);
         }
 
-        let events: Vec<TeamDomainEvent> = rows.iter()
+        let events: Vec<TeamDomainEvent> = rows
+            .iter()
             .map(|r| {
                 let payload: serde_json::Value = r.get("payload");
                 serde_json::from_value(payload)
@@ -98,7 +98,7 @@ impl ITeamRepository for TeamRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::teams::domain::value_objects::{Kpo, MatchResult};
+    use crate::app::teams::domain::value_objects::Kpo;
     use sqlx::postgres::PgPoolOptions;
 
     async fn test_pool() -> Option<PgPool> {
@@ -112,22 +112,24 @@ mod tests {
 
     fn created_event(team_id: &str) -> TeamDomainEvent {
         TeamDomainEvent::TeamCreated {
-            team_id:     team_id.to_string(),
-            space_id:    "01SPACE00000000000000000000".to_string(),
-            name:        "Les Korrigans FC".to_string(),
-            roster_id:   "01ROST000000000000000000000".to_string(),
+            team_id: team_id.to_string(),
+            space_id: "01SPACE00000000000000000000".to_string(),
+            name: "Les Korrigans FC".to_string(),
+            roster_id: "01ROST000000000000000000000".to_string(),
             roster_name: "Elfes Sylvestres".to_string(),
-            coach_id:    "01COACH00000000000000000000".to_string(),
-            coach_name:  "Colonel Castor".to_string(),
-            treasury:    Kpo(1000),
+            coach_id: "01COACH00000000000000000000".to_string(),
+            coach_name: "Colonel Castor".to_string(),
+            treasury: Kpo(1000),
         }
     }
 
     #[tokio::test]
     #[ignore = "nécessite make migrate pour créer team_event_store"]
     async fn append_and_find_by_id() {
-        let Some(pool) = test_pool().await else { return };
-        let repo    = TeamRepository::new(pool);
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = TeamRepository::new(pool);
         let team_id = format!("TEST{}", ulid::Ulid::new());
 
         let event1 = created_event(&team_id);
@@ -135,10 +137,10 @@ mod tests {
         assert_eq!(v1, 1);
 
         let event2 = TeamDomainEvent::TeamEnrolled {
-            competition_id:   "01COMP000000000000000000000".to_string(),
+            competition_id: "01COMP000000000000000000000".to_string(),
             competition_name: "Ligue de Condate".to_string(),
-            season_id:        "01SEAS000000000000000000000".to_string(),
-            season_name:      "Saison 2025".to_string(),
+            season_id: "01SEAS000000000000000000000".to_string(),
+            season_name: "Saison 2025".to_string(),
         };
         let v2 = repo.append(&team_id, &event2, 1).await.unwrap();
         assert_eq!(v2, 2);
@@ -162,8 +164,10 @@ mod tests {
     #[tokio::test]
     #[ignore = "nécessite make migrate pour créer team_event_store"]
     async fn concurrent_write_is_rejected() {
-        let Some(pool) = test_pool().await else { return };
-        let repo    = TeamRepository::new(pool);
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = TeamRepository::new(pool);
         let team_id = format!("TEST{}", ulid::Ulid::new());
 
         let event = created_event(&team_id);

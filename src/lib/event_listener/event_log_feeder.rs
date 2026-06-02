@@ -1,7 +1,7 @@
+use crate::lib::persistance::event_log_repository::{EventLogRepository, IEventLogRepository};
+use crate::lib::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::sync::Arc;
-use crate::lib::services::event_bus::event_bus::EventBus;
-use crate::lib::persistance::event_log_repository::{EventLogRepository, IEventLogRepository};
 
 pub fn init(bus: &EventBus, pool: PgPool) {
     let repo = Arc::new(EventLogRepository::new(pool));

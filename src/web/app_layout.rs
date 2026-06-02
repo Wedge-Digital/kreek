@@ -1,9 +1,9 @@
-use axum::extract::State;
-use axum::response::{IntoResponse, Redirect};
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::news::routes::Routes as NewsRoutes;
 use crate::app::spaces::routes::path as spaces_path;
 use crate::state::AppState;
+use axum::extract::State;
+use axum::response::{IntoResponse, Redirect};
 
 pub async fn app_layout(
     auth_session: AuthSession,
@@ -14,7 +14,8 @@ pub async fn app_layout(
     };
 
     let spaces = state
-        .spaces.space_repository
+        .spaces
+        .space_repository
         .find_by_coach_id(&user.id)
         .await
         .unwrap_or_default();

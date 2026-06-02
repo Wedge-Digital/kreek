@@ -16,7 +16,10 @@ mod tests {
     fn inserts_transform_after_upload() {
         let url = "https://res.cloudinary.com/demo/image/upload/sample.jpg";
         let result = transform(url, "c_fill,w_100,h_100");
-        assert_eq!(result, "https://res.cloudinary.com/demo/image/upload/c_fill,w_100,h_100/sample.jpg");
+        assert_eq!(
+            result,
+            "https://res.cloudinary.com/demo/image/upload/c_fill,w_100,h_100/sample.jpg"
+        );
     }
 
     #[test]

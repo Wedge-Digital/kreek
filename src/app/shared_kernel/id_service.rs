@@ -13,18 +13,16 @@ impl IdService for EntityIdService {
     }
 }
 
-
 pub struct FakeIdService {
     pub id: EntityId,
 }
 
 impl FakeIdService {
     pub fn new() -> Self {
-        FakeIdService{
-            id:SUlid::try_new("01D39ZY06FGSCTVN4T2V9PKHFZ").unwrap()
+        FakeIdService {
+            id: SUlid::try_new("01D39ZY06FGSCTVN4T2V9PKHFZ").unwrap(),
         }
     }
-
 }
 
 impl IdService for FakeIdService {

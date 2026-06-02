@@ -8,24 +8,24 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DraftTeam {
-    entity_id:      TeamId,
-    created_by:     UserId,
-    base_infos:     BaseTeamInfo,
+    entity_id: TeamId,
+    created_by: UserId,
+    base_infos: BaseTeamInfo,
     /// Référence opaque vers le contexte Compétition — jamais jointé.
     competition_id: String,
     /// Référence opaque vers le contexte Compétition — jamais jointé.
-    season_id:      String,
+    season_id: String,
     /// Copie dénormalisée des règles de création au moment de la sélection.
     creation_rules: CreationRules,
 }
 
 impl DraftTeam {
     pub fn new<T: IdService>(
-        id_service:     &T,
-        created_by:     UserId,
+        id_service: &T,
+        created_by: UserId,
         base_team_infos: BaseTeamInfo,
         competition_id: String,
-        season_id:      String,
+        season_id: String,
         creation_rules: CreationRules,
     ) -> Self {
         DraftTeam {
@@ -61,14 +61,21 @@ impl DraftTeam {
 
     /// Reconstruit un `DraftTeam` depuis les données persistées (repository → domaine).
     pub fn from_parts(
-        entity_id:      TeamId,
-        created_by:     UserId,
-        base_infos:     BaseTeamInfo,
+        entity_id: TeamId,
+        created_by: UserId,
+        base_infos: BaseTeamInfo,
         competition_id: String,
-        season_id:      String,
+        season_id: String,
         creation_rules: CreationRules,
     ) -> Self {
-        DraftTeam { entity_id, created_by, base_infos, competition_id, season_id, creation_rules }
+        DraftTeam {
+            entity_id,
+            created_by,
+            base_infos,
+            competition_id,
+            season_id,
+            creation_rules,
+        }
     }
 
     pub fn select_ruleset(self, ruleset: Ruleset) -> RulesetSelectedTeam {

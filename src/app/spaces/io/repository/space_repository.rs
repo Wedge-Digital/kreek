@@ -5,9 +5,11 @@ use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, SpaceId}
 use crate::app::shared_kernel::space_name::SpaceName;
 use crate::app::spaces::domain::coach::Coach;
 use crate::app::spaces::domain::space::Space;
+use crate::app::spaces::domain::space_repository_port::space_repository_port::{
+    ISpaceRepository, SpaceRepositoryError, SpaceSummary,
+};
 use async_trait::async_trait;
 use sqlx::PgPool;
-use crate::app::spaces::domain::space_repository_port::space_repository_port::{ISpaceRepository, SpaceRepositoryError, SpaceSummary};
 
 fn db_err(e: impl std::fmt::Display) -> SpaceRepositoryError {
     SpaceRepositoryError::Database(e.to_string())
@@ -15,13 +17,13 @@ fn db_err(e: impl std::fmt::Display) -> SpaceRepositoryError {
 
 #[derive(sqlx::FromRow)]
 struct SpaceCoachRow {
-    space_id:        String,
-    space_name:      String,
+    space_id: String,
+    space_name: String,
     space_icon_path: String,
-    coach_id:        Option<String>,
-    coach_name:      Option<String>,
-    coach_icon:      Option<String>,
-    profile:         Option<String>,
+    coach_id: Option<String>,
+    coach_name: Option<String>,
+    coach_icon: Option<String>,
+    profile: Option<String>,
 }
 
 #[derive(Clone)]
@@ -101,7 +103,9 @@ impl ISpaceRepository for SpaceRepository {
         space_id: &SpaceId,
     ) -> Result<Option<SpaceProfile>, SpaceRepositoryError> {
         #[derive(sqlx::FromRow)]
-        struct Row { profile: String }
+        struct Row {
+            profile: String,
+        }
 
         let row = sqlx::query_as::<_, Row>(include_str!("sql/space/find_user_for_space.sql"))
             .bind(coach_id.to_string())
@@ -111,7 +115,7 @@ impl ISpaceRepository for SpaceRepository {
             .map_err(db_err)?;
 
         match row {
-            None    => Ok(None),
+            None => Ok(None),
             Some(r) => SpaceProfile::try_from(r.profile.as_str())
                 .map(Some)
                 .map_err(SpaceRepositoryError::Database),
@@ -121,8 +125,8 @@ impl ISpaceRepository for SpaceRepository {
     async fn find_all(&self) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
         #[derive(sqlx::FromRow)]
         struct Row {
-            id:              String,
-            space_name:      String,
+            id: String,
+            space_name: String,
             space_icon_path: String,
         }
 
@@ -134,7 +138,7 @@ impl ISpaceRepository for SpaceRepository {
         rows.into_iter()
             .map(|r| {
                 Ok(SpaceSummary {
-                    id:   r.id,
+                    id: r.id,
                     name: r.space_name,
                     logo: CloudinaryImage::try_new(&r.space_icon_path).map_err(db_err)?,
                 })
@@ -142,11 +146,14 @@ impl ISpaceRepository for SpaceRepository {
             .collect()
     }
 
-    async fn find_by_coach_id(&self, coach_id: &CoachId) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
+    async fn find_by_coach_id(
+        &self,
+        coach_id: &CoachId,
+    ) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
         #[derive(sqlx::FromRow)]
         struct Row {
-            id:              String,
-            space_name:      String,
+            id: String,
+            space_name: String,
             space_icon_path: String,
         }
 
@@ -159,7 +166,7 @@ impl ISpaceRepository for SpaceRepository {
         rows.into_iter()
             .map(|r| {
                 Ok(SpaceSummary {
-                    id:   r.id,
+                    id: r.id,
                     name: r.space_name,
                     logo: CloudinaryImage::try_new(&r.space_icon_path).map_err(db_err)?,
                 })
@@ -168,11 +175,12 @@ impl ISpaceRepository for SpaceRepository {
     }
 
     async fn find_by_id(&self, id: &SpaceId) -> Result<Option<Space>, SpaceRepositoryError> {
-        let rows = sqlx::query_as::<_, SpaceCoachRow>(include_str!("sql/space/find_space_by_id.sql"))
-            .bind(id.to_string())
-            .fetch_all(&self.pool)
-            .await
-            .map_err(db_err)?;
+        let rows =
+            sqlx::query_as::<_, SpaceCoachRow>(include_str!("sql/space/find_space_by_id.sql"))
+                .bind(id.to_string())
+                .fetch_all(&self.pool)
+                .await
+                .map_err(db_err)?;
 
         if rows.is_empty() {
             return Ok(None);
@@ -182,16 +190,16 @@ impl ISpaceRepository for SpaceRepository {
 
         let space_id = SpaceId::try_new(&first.space_id).map_err(db_err)?;
         let space_name = SpaceName::try_new(&first.space_name).map_err(db_err)?;
-        let logo = CloudinaryImage::try_new(
-            first.space_icon_path.clone(),
-        )
-        .map_err(db_err)?;
+        let logo = CloudinaryImage::try_new(first.space_icon_path.clone()).map_err(db_err)?;
 
         let mut coaches = Vec::new();
         for row in &rows {
-            let (Some(ref raw_id), Some(ref raw_name), Some(ref raw_icon), Some(ref raw_profile)) =
-                (&row.coach_id, &row.coach_name, &row.coach_icon, &row.profile)
-            else {
+            let (Some(ref raw_id), Some(ref raw_name), Some(ref raw_icon), Some(ref raw_profile)) = (
+                &row.coach_id,
+                &row.coach_name,
+                &row.coach_icon,
+                &row.profile,
+            ) else {
                 continue;
             };
 

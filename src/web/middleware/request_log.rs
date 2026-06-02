@@ -5,7 +5,7 @@ use axum::response::Response;
 
 pub async fn request_log(request: Request<Body>, next: Next) -> Response {
     let method = request.method().clone();
-    let path   = request.uri().path().to_owned();
+    let path = request.uri().path().to_owned();
     let thread = std::thread::current().id();
 
     tracing::info!(?thread, %method, %path, "→ requête reçue");

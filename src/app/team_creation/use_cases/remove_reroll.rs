@@ -8,7 +8,7 @@ pub enum RemoveRerollError {
 }
 
 pub async fn execute(
-    cmd:       RemoveRerollCommand,
+    cmd: RemoveRerollCommand,
     team_repo: &dyn ITeamRosterRepository,
 ) -> Result<RosterSelectedTeam, RemoveRerollError> {
     let mut team = team_repo

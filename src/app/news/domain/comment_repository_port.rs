@@ -1,6 +1,6 @@
-use async_trait::async_trait;
 use crate::app::news::domain::comment::Comment;
 use crate::app::shared_kernel::common_types::ArticleId;
+use async_trait::async_trait;
 
 #[derive(Debug)]
 pub enum CommentRepositoryError {

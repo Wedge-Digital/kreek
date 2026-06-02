@@ -9,7 +9,7 @@ pub enum DismissTeamError {
 }
 
 pub async fn execute(
-    cmd:       DismissTeamCommand,
+    cmd: DismissTeamCommand,
     team_repo: &dyn ITeamRepository,
 ) -> Result<(), DismissTeamError> {
     let team = team_repo

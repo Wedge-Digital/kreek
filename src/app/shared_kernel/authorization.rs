@@ -9,7 +9,7 @@ pub enum SpaceProfile {
 impl SpaceProfile {
     pub fn as_str(&self) -> &str {
         match self {
-            SpaceProfile::SpaceAdmin    => "SpaceAdmin",
+            SpaceProfile::SpaceAdmin => "SpaceAdmin",
             SpaceProfile::SpaceUser => "SpaceUser",
         }
     }
@@ -20,9 +20,9 @@ impl TryFrom<&str> for SpaceProfile {
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         match s {
-            "SpaceAdmin"    => Ok(SpaceProfile::SpaceAdmin),
-            "SpaceUser"    => Ok(SpaceProfile::SpaceUser),
-            other           => Err(format!("profil inconnu : {}", other)),
+            "SpaceAdmin" => Ok(SpaceProfile::SpaceAdmin),
+            "SpaceUser" => Ok(SpaceProfile::SpaceUser),
+            other => Err(format!("profil inconnu : {}", other)),
         }
     }
 }
@@ -33,7 +33,7 @@ mod tests {
 
     #[test]
     fn as_str_round_trips_for_all_variants() {
-        for variant in [SpaceProfile::SpaceAdmin,SpaceProfile::SpaceUser] {
+        for variant in [SpaceProfile::SpaceAdmin, SpaceProfile::SpaceUser] {
             let s = variant.as_str();
             assert_eq!(SpaceProfile::try_from(s).unwrap(), variant);
         }
@@ -41,8 +41,14 @@ mod tests {
 
     #[test]
     fn try_from_valid_strings() {
-        assert_eq!(SpaceProfile::try_from("SpaceAdmin").unwrap(), SpaceProfile::SpaceAdmin);
-        assert_eq!(SpaceProfile::try_from("SpaceUser").unwrap(), SpaceProfile::SpaceUser);
+        assert_eq!(
+            SpaceProfile::try_from("SpaceAdmin").unwrap(),
+            SpaceProfile::SpaceAdmin
+        );
+        assert_eq!(
+            SpaceProfile::try_from("SpaceUser").unwrap(),
+            SpaceProfile::SpaceUser
+        );
     }
 
     #[test]

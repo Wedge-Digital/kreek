@@ -7,7 +7,9 @@ pub fn team_creation_app_event_publisher(event_bus: &EventBus, app_event_bus: Ev
         loop {
             match rx.recv().await {
                 Ok(envelope) => {
-                    let Ok(event) = serde_json::from_value::<TeamCreationDomainEvent>(envelope.payload.clone()) else {
+                    let Ok(event) =
+                        serde_json::from_value::<TeamCreationDomainEvent>(envelope.payload.clone())
+                    else {
                         continue;
                     };
                     if let Some(app_event) = event.to_app_event() {

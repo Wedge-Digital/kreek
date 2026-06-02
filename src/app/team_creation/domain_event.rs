@@ -1,21 +1,21 @@
-use serde::{Deserialize, Serialize};
 use crate::app::shared_kernel::app_events::team_creation_app_events::TeamCreationAppEvent;
 use crate::app::shared_kernel::common_types::EventId;
 use crate::lib::event_envelope::EventEnvelope;
 use crate::lib::services::event_bus::event_tags::{EventTag, EventTagName};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum TeamCreationDomainEvent {
     TeamSubmitted {
-        event_id:    EventId,
-        team_id:     String,
-        space_id:    String,
-        team_name:   String,
-        roster_id:   String,
+        event_id: EventId,
+        team_id: String,
+        space_id: String,
+        team_name: String,
+        roster_id: String,
         roster_name: String,
-        coach_id:    String,
-        coach_name:  String,
-        treasury:    u32,
+        coach_id: String,
+        coach_name: String,
+        treasury: u32,
     },
 }
 
@@ -36,9 +36,17 @@ impl TeamCreationDomainEvent {
 
     pub fn get_tags(&self) -> Vec<EventTag> {
         match self {
-            Self::TeamSubmitted { space_id, team_id, .. } => vec![
-                EventTag { name: EventTagName::Space, value: space_id.clone() },
-                EventTag { name: EventTagName::Team,  value: team_id.clone() },
+            Self::TeamSubmitted {
+                space_id, team_id, ..
+            } => vec![
+                EventTag {
+                    name: EventTagName::Space,
+                    value: space_id.clone(),
+                },
+                EventTag {
+                    name: EventTagName::Team,
+                    value: team_id.clone(),
+                },
             ],
         }
     }
@@ -46,29 +54,36 @@ impl TeamCreationDomainEvent {
     pub fn to_app_event(&self) -> Option<TeamCreationAppEvent> {
         match self {
             Self::TeamSubmitted {
-                team_id, space_id, team_name,
-                roster_id, roster_name, coach_id, coach_name, treasury, ..
+                team_id,
+                space_id,
+                team_name,
+                roster_id,
+                roster_name,
+                coach_id,
+                coach_name,
+                treasury,
+                ..
             } => Some(TeamCreationAppEvent::TeamCreated {
-                event_id:    EventId::new().to_string(),
-                team_id:     team_id.clone(),
-                space_id:    space_id.clone(),
-                team_name:   team_name.clone(),
-                roster_id:   roster_id.clone(),
+                event_id: EventId::new().to_string(),
+                team_id: team_id.clone(),
+                space_id: space_id.clone(),
+                team_name: team_name.clone(),
+                roster_id: roster_id.clone(),
                 roster_name: roster_name.clone(),
-                coach_id:    coach_id.clone(),
-                coach_name:  coach_name.clone(),
-                treasury:    *treasury,
+                coach_id: coach_id.clone(),
+                coach_name: coach_name.clone(),
+                treasury: *treasury,
             }),
         }
     }
 
     pub fn to_enveloppe(&self) -> EventEnvelope {
         EventEnvelope {
-            event_id:    EventId::new().to_string(),
-            emitter:     self.team_id().to_string(),
-            event_type:  self.to_event_type().to_string(),
-            tags:        serde_json::to_value(self.get_tags()).unwrap(),
-            payload:     serde_json::to_value(self).unwrap(),
+            event_id: EventId::new().to_string(),
+            emitter: self.team_id().to_string(),
+            event_type: self.to_event_type().to_string(),
+            tags: serde_json::to_value(self.get_tags()).unwrap(),
+            payload: serde_json::to_value(self).unwrap(),
             occurred_at: time::OffsetDateTime::now_utc(),
         }
     }

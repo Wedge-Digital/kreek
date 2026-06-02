@@ -11,7 +11,7 @@ pub enum RemoveStaffError {
 }
 
 pub async fn execute(
-    cmd:       RemoveStaffCommand,
+    cmd: RemoveStaffCommand,
     team_repo: &dyn ITeamRosterRepository,
 ) -> Result<RosterSelectedTeam, RemoveStaffError> {
     let mut team = team_repo
@@ -20,7 +20,9 @@ pub async fn execute(
         .map_err(RemoveStaffError::Repository)?
         .ok_or(RemoveStaffError::TeamNotFound)?;
 
-    let staff_def = team.roster.allowed_staff
+    let staff_def = team
+        .roster
+        .allowed_staff
         .iter()
         .find(|s| s.id == cmd.staff_id)
         .cloned()
@@ -40,6 +42,6 @@ pub async fn execute(
 pub fn domain_error_message(e: &DomainError) -> &'static str {
     match e {
         DomainError::StaffNotPurchased => "Ce poste n'a pas été acheté.",
-        _                              => "Action impossible.",
+        _ => "Action impossible.",
     }
 }

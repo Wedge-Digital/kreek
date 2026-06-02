@@ -2,39 +2,39 @@ extern crate core;
 
 mod app;
 mod config;
-mod state;
-pub mod web;
 #[allow(special_module_name)]
 pub mod lib;
+mod state;
+pub mod web;
 
-use std::time::Duration;
 use config::AppConfig;
 use state::AppState;
+use std::time::Duration;
 
-use axum::{response::Redirect, routing::get, Router};
-use crate::app::auth::routes::path;
-use tower_http::{services::ServeDir, trace::TraceLayer};
-use tower_livereload::LiveReloadLayer;
-use std::sync::Arc;
-use axum::middleware::{from_fn, from_fn_with_state};
-use axum_login::AuthManagerLayerBuilder;
-use tower_sessions::SessionManagerLayer;
-use crate::lib::session_store::DashMapStore;
 use crate::app::auth::auth_backend::AuthBackend;
-use crate::web::middleware::bypass_auth::bypass_auth_middleware;
-use crate::web::middleware::require_auth::require_auth;
-use crate::web::middleware::request_log::request_log;
 use crate::app::auth::context::AuthContext;
-use crate::app::{auth, competitions, news, spaces, team_creation, teams};
+use crate::app::auth::routes::path;
 use crate::app::competitions::context::CompetitionsContext;
 use crate::app::news::context::NewsContext;
-use crate::app::spaces::context::SpacesContext;
 use crate::app::references::context::ReferencesContext;
+use crate::app::spaces::context::SpacesContext;
 use crate::app::team_creation::context::TeamCreationContext;
 use crate::app::teams::context::TeamsContext;
+use crate::app::{auth, competitions, spaces, team_creation, teams};
+use crate::lib::event_listener::event_log_feeder;
 use crate::lib::services::email::ResendMailService;
 use crate::lib::services::event_bus::event_bus::new_bus;
-use crate::lib::event_listener::event_log_feeder;
+use crate::lib::session_store::DashMapStore;
+use crate::web::middleware::bypass_auth::bypass_auth_middleware;
+use crate::web::middleware::request_log::request_log;
+use crate::web::middleware::require_auth::require_auth;
+use axum::middleware::{from_fn, from_fn_with_state};
+use axum::{response::Redirect, routing::get, Router};
+use axum_login::AuthManagerLayerBuilder;
+use std::sync::Arc;
+use tower_http::{services::ServeDir, trace::TraceLayer};
+use tower_livereload::LiveReloadLayer;
+use tower_sessions::SessionManagerLayer;
 
 #[tokio::main]
 async fn main() {
@@ -45,8 +45,8 @@ async fn main() {
         )
         .init();
 
-    let cfg = AppConfig::load()
-        .expect("Configuration invalide — vérifiez vos variables d'environnement");
+    let cfg =
+        AppConfig::load().expect("Configuration invalide — vérifiez vos variables d'environnement");
 
     let pool = sqlx::postgres::PgPoolOptions::new()
         .max_connections(cfg.database.max_connections)
@@ -59,7 +59,7 @@ async fn main() {
 
     let server_address = cfg.server_addr();
 
-    let event_bus     = new_bus();
+    let event_bus = new_bus();
     let app_event_bus = new_bus();
 
     event_log_feeder::init(&event_bus, pool.clone());
@@ -73,17 +73,21 @@ async fn main() {
     teams::context::init_listeners(&app_event_bus, pool.clone());
 
     let state = AppState {
-        auth:          AuthContext::new(&pool, event_bus.clone()),
-        spaces:        SpacesContext::new(&pool, event_bus.clone()),
-        competitions:  CompetitionsContext::new(&pool, event_bus.clone()),
-        news:          NewsContext::new(&pool),
-        references:    ReferencesContext::new(),
+        auth: AuthContext::new(&pool, event_bus.clone()),
+        spaces: SpacesContext::new(&pool, event_bus.clone()),
+        competitions: CompetitionsContext::new(&pool, event_bus.clone()),
+        news: NewsContext::new(&pool),
+        references: ReferencesContext::new(),
         team_creation: TeamCreationContext::new(&pool, event_bus.clone()),
-        teams:         TeamsContext::new(&pool),
-        email_service: Arc::new(ResendMailService::new(cfg.email.api_key, cfg.email.from, cfg.email.from_name)),
-        host_domain:   cfg.host_domain,
-        bypass_auth:   cfg.bypass_auth,
-        event_bus:     event_bus.clone(),
+        teams: TeamsContext::new(&pool),
+        email_service: Arc::new(ResendMailService::new(
+            cfg.email.api_key,
+            cfg.email.from,
+            cfg.email.from_name,
+        )),
+        host_domain: cfg.host_domain,
+        bypass_auth: cfg.bypass_auth,
+        event_bus: event_bus.clone(),
         app_event_bus: app_event_bus.clone(),
     };
 
@@ -91,7 +95,8 @@ async fn main() {
     let auth_layer = AuthManagerLayerBuilder::new(
         AuthBackend::new(state.auth.user_repository.clone(), cfg.bypass_auth),
         session_layer,
-    ).build();
+    )
+    .build();
 
     let protected = Router::new()
         .merge(app::news::router::router())
@@ -123,7 +128,9 @@ async fn main() {
         // limit (HTTP/1.1) after just two open tabs.
         #[derive(Clone, Copy)]
         struct NotHtmxRequest;
-        impl tower_livereload::predicate::Predicate<axum::http::Request<axum::body::Body>> for NotHtmxRequest {
+        impl tower_livereload::predicate::Predicate<axum::http::Request<axum::body::Body>>
+            for NotHtmxRequest
+        {
             fn check(&mut self, req: &axum::http::Request<axum::body::Body>) -> bool {
                 !req.headers().contains_key("hx-request")
             }
@@ -135,6 +142,8 @@ async fn main() {
             .layer(LiveReloadLayer::new().request_predicate(NotHtmxRequest))
     };
 
-    let listener = tokio::net::TcpListener::bind(&server_address).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(&server_address)
+        .await
+        .unwrap();
     axum::serve(listener, app).await.unwrap();
 }

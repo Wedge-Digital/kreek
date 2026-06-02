@@ -1,11 +1,13 @@
 use crate::app::shared_kernel::coach_icon::CoachIcon;
 use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
+use crate::app::shared_kernel::email::Email;
+use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::{
+    ISpaceUserCacheRepository, SpaceUserCacheRepositoryError,
+};
+use crate::app::spaces::domain::user::User;
 use async_trait::async_trait;
 use sqlx::PgPool;
-use crate::app::shared_kernel::email::Email;
-use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::{ISpaceUserCacheRepository, SpaceUserCacheRepositoryError};
-use crate::app::spaces::domain::user::User;
 
 fn db_err(e: impl std::fmt::Display) -> SpaceUserCacheRepositoryError {
     SpaceUserCacheRepositoryError::Database(e.to_string())
@@ -14,10 +16,10 @@ fn db_err(e: impl std::fmt::Display) -> SpaceUserCacheRepositoryError {
 #[derive(sqlx::FromRow)]
 struct Row {
     #[sqlx(rename = "id")]
-    coach_id:   String,
+    coach_id: String,
     coach_name: String,
     coach_icon: Option<String>,
-    email:      String,
+    email: String,
 }
 
 #[derive(Clone)]
@@ -44,10 +46,13 @@ impl ISpaceUserCacheRepository for SpaceUserCacheRepository {
                 if let sqlx::Error::Database(db_err) = &e {
                     if db_err.code().as_deref() == Some("23505") {
                         return match db_err.constraint() {
-                            Some("space_user_cache_coach_name_uq") => SpaceUserCacheRepositoryError::UsernameNameAlreadyPresentInCache,
-                            other => SpaceUserCacheRepositoryError::Database(
-                                format!("unique constraint violation on {:?}: {e}", other)
-                            ),
+                            Some("space_user_cache_coach_name_uq") => {
+                                SpaceUserCacheRepositoryError::UsernameNameAlreadyPresentInCache
+                            }
+                            other => SpaceUserCacheRepositoryError::Database(format!(
+                                "unique constraint violation on {:?}: {e}",
+                                other
+                            )),
                         };
                     }
                 }
@@ -69,11 +74,14 @@ impl ISpaceUserCacheRepository for SpaceUserCacheRepository {
                 name: CoachName::try_new(r.coach_name).unwrap(),
                 icon: r.coach_icon.map(|s| CoachIcon::try_new(s).unwrap()),
                 email: Email::try_new(r.email).unwrap(),
-                })
+            })
             .collect())
     }
 
-    async fn find_user_by_id(&self, coach_id: &CoachId) -> Result<User, SpaceUserCacheRepositoryError> {
+    async fn find_user_by_id(
+        &self,
+        coach_id: &CoachId,
+    ) -> Result<User, SpaceUserCacheRepositoryError> {
         tracing::debug!("find_user_by_id: {}", coach_id);
         let rows = sqlx::query_as::<_, Row>(include_str!("sql/user_cache/find_user_by_id.sql"))
             .bind(coach_id.to_string())
@@ -84,30 +92,33 @@ impl ISpaceUserCacheRepository for SpaceUserCacheRepository {
         rows.into_iter()
             .next()
             .map(|r| User {
-                id:    CoachId::try_new(&r.coach_id).unwrap(),
-                name:  CoachName::try_new(r.coach_name).unwrap(),
-                icon:  r.coach_icon.map(|s| CoachIcon::try_new(s).unwrap()),
+                id: CoachId::try_new(&r.coach_id).unwrap(),
+                name: CoachName::try_new(r.coach_name).unwrap(),
+                icon: r.coach_icon.map(|s| CoachIcon::try_new(s).unwrap()),
                 email: Email::try_new(r.email).unwrap(),
             })
             .ok_or(SpaceUserCacheRepositoryError::UserNotFoundInCache)
     }
 
-    async fn list_members_for_space(&self, space_id: &SpaceId) -> Result<Vec<User>, SpaceUserCacheRepositoryError> {
-        let rows = sqlx::query_as::<_, Row>(include_str!("sql/user_cache/list_members_for_space.sql"))
-            .bind(space_id.to_string())
-            .fetch_all(&self.pool)
-            .await
-            .map_err(db_err)?;
+    async fn list_members_for_space(
+        &self,
+        space_id: &SpaceId,
+    ) -> Result<Vec<User>, SpaceUserCacheRepositoryError> {
+        let rows =
+            sqlx::query_as::<_, Row>(include_str!("sql/user_cache/list_members_for_space.sql"))
+                .bind(space_id.to_string())
+                .fetch_all(&self.pool)
+                .await
+                .map_err(db_err)?;
 
         Ok(rows
             .into_iter()
             .map(|r| User {
-                id:    CoachId::try_new(&r.coach_id).unwrap(),
-                name:  CoachName::try_new(r.coach_name).unwrap(),
-                icon:  r.coach_icon.map(|s| CoachIcon::try_new(s).unwrap()),
+                id: CoachId::try_new(&r.coach_id).unwrap(),
+                name: CoachName::try_new(r.coach_name).unwrap(),
+                icon: r.coach_icon.map(|s| CoachIcon::try_new(s).unwrap()),
                 email: Email::try_new(r.email).unwrap(),
             })
             .collect())
     }
-
 }

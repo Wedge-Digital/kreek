@@ -1,8 +1,8 @@
-use async_trait::async_trait;
-use sqlx::PgPool;
-use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::auth::domain::reset_token::{ResetToken, Token};
 use crate::app::auth::ports::RepositoryError;
+use crate::app::shared_kernel::coach_name::CoachName;
+use async_trait::async_trait;
+use sqlx::PgPool;
 
 fn db_err(e: impl std::fmt::Display) -> RepositoryError {
     RepositoryError::Database(e.to_string())
@@ -17,7 +17,7 @@ pub trait IResetTokenRepository: Send + Sync {
 
 #[derive(sqlx::FromRow)]
 struct TokenRow {
-    token:      String,
+    token: String,
     coach_name: String,
     created_at: time::OffsetDateTime,
 }
@@ -27,7 +27,7 @@ impl TryFrom<TokenRow> for ResetToken {
 
     fn try_from(row: TokenRow) -> Result<Self, Self::Error> {
         Ok(ResetToken {
-            token:      Token::try_new(&row.token).map_err(db_err)?,
+            token: Token::try_new(&row.token).map_err(db_err)?,
             coach_name: CoachName::try_new(row.coach_name).map_err(db_err)?,
             created_at: row.created_at,
         })
@@ -48,11 +48,12 @@ impl ResetTokenRepository {
 #[async_trait]
 impl IResetTokenRepository for ResetTokenRepository {
     async fn find_by_token(&self, token: &str) -> Result<Option<ResetToken>, RepositoryError> {
-        let row = sqlx::query_as::<_, TokenRow>(include_str!("sql/find_token_infos_by_token_value.sql"))
-            .bind(token)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(db_err)?;
+        let row =
+            sqlx::query_as::<_, TokenRow>(include_str!("sql/find_token_infos_by_token_value.sql"))
+                .bind(token)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(db_err)?;
 
         Ok(row.map(ResetToken::try_from).transpose()?)
     }

@@ -1,12 +1,12 @@
-use askama::Template;
-use axum::extract::State;
-use axum::http::{HeaderMap, StatusCode};
-use axum::response::{Html, IntoResponse, Response};
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::routes::Routes as CompetitionRoutes;
 use crate::app::team_creation::routes::Routes as TeamRoutes;
 use crate::state::AppState;
 use crate::web::routes::Routes;
+use askama::Template;
+use axum::extract::State;
+use axum::http::{HeaderMap, StatusCode};
+use axum::response::{Html, IntoResponse, Response};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ActiveSection {
@@ -18,12 +18,12 @@ pub enum ActiveSection {
 #[derive(Template, Default)]
 #[template(path = "app-menu.html")]
 pub struct AppMenu {
-    pub routes:            Routes,
+    pub routes: Routes,
     pub competition_routes: CompetitionRoutes,
-    pub team_routes:       TeamRoutes,
-    pub space_name:        Option<String>,
-    pub space_id:          Option<String>,
-    pub active_section:    Option<ActiveSection>,
+    pub team_routes: TeamRoutes,
+    pub space_name: Option<String>,
+    pub space_id: Option<String>,
+    pub active_section: Option<ActiveSection>,
 }
 
 impl AppMenu {
@@ -44,15 +44,17 @@ impl IntoResponse for AppMenu {
     fn into_response(self) -> Response {
         match self.render() {
             Ok(html) => Html(html).into_response(),
-            Err(_)   => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
     }
 }
 
 fn path_parts(current_url: &str) -> Option<Vec<&str>> {
     let path = match current_url.find("://") {
-        Some(i) => current_url[i + 3..].find('/').map(|j| &current_url[i + 3 + j..])?,
-        None    => current_url,
+        Some(i) => current_url[i + 3..]
+            .find('/')
+            .map(|j| &current_url[i + 3 + j..])?,
+        None => current_url,
     };
     let path = path.split('?').next()?.split('#').next()?;
     Some(path.trim_start_matches('/').split('/').collect())
@@ -75,7 +77,7 @@ fn extract_active_section(current_url: &str) -> Option<ActiveSection> {
             "competitions" => Some(ActiveSection::Competitions),
             "team" => match parts.get(3) {
                 Some(&"list") => Some(ActiveSection::MyTeams),
-                _             => Some(ActiveSection::CreateTeam),
+                _ => Some(ActiveSection::CreateTeam),
             },
             _ => None,
         }
@@ -92,25 +94,39 @@ pub async fn app_menu(
     let (space_name, space_id, active_section) = {
         let result: Option<(String, String, Option<ActiveSection>)> = async {
             let user = auth_session.user?;
-            let current_url = headers.get("hx-current-url").and_then(|v| v.to_str().ok())?;
+            let current_url = headers
+                .get("hx-current-url")
+                .and_then(|v| v.to_str().ok())?;
             let sid = extract_space_id(current_url)?;
             let section = extract_active_section(current_url);
-            let spaces = state.spaces.space_repository.find_by_coach_id(&user.id).await.ok()?;
+            let spaces = state
+                .spaces
+                .space_repository
+                .find_by_coach_id(&user.id)
+                .await
+                .ok()?;
             let space = spaces.into_iter().find(|s| s.id == sid)?;
             Some((space.name, sid, section))
-        }.await;
+        }
+        .await;
         match result {
             Some((name, id, section)) => (Some(name), Some(id), section),
-            None                      => (None, None, None),
+            None => (None, None, None),
         }
     };
 
-    AppMenu { space_name, space_id, active_section, ..Default::default() }.into_response()
+    AppMenu {
+        space_name,
+        space_id,
+        active_section,
+        ..Default::default()
+    }
+    .into_response()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{extract_space_id, extract_active_section, ActiveSection};
+    use super::{extract_active_section, extract_space_id, ActiveSection};
 
     const ULID: &str = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
 
@@ -180,7 +196,9 @@ mod tests {
 
     #[test]
     fn section_create_team_sur_team_build() {
-        let s = extract_active_section(&format!("/app/{ULID}/team/01ARZ3NDEKTSV4RRFFQ69G5FAV/build"));
+        let s = extract_active_section(&format!(
+            "/app/{ULID}/team/01ARZ3NDEKTSV4RRFFQ69G5FAV/build"
+        ));
         assert_eq!(s, Some(ActiveSection::CreateTeam));
     }
 

@@ -1,10 +1,10 @@
+use crate::app::auth::auth_backend::{bypass_user, AuthSession};
+use crate::state::AppState;
 use axum::body::Body;
 use axum::extract::State;
 use axum::http::Request;
 use axum::middleware::Next;
 use axum::response::Response;
-use crate::app::auth::auth_backend::{AuthSession, bypass_user};
-use crate::state::AppState;
 
 pub async fn bypass_auth_middleware(
     State(state): State<AppState>,

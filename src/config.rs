@@ -3,42 +3,41 @@ use std::env;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct AppConfig {
-    pub server:      ServerConfig,
-    pub database:    DatabaseConfig,
-    pub auth:        AuthConfig,
-    pub email:       EmailConfig,
+    pub server: ServerConfig,
+    pub database: DatabaseConfig,
+    pub auth: AuthConfig,
+    pub email: EmailConfig,
     pub host_domain: String,
     pub bypass_auth: bool,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct ServerConfig {
-    pub host:               String,
-    pub port:               u16,
+    pub host: String,
+    pub port: u16,
     pub request_timeout_ms: u64,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct DatabaseConfig {
-    pub url:                     String,  // pas de défaut — obligatoire via env
-    pub max_connections:         u32,
-    pub min_connections:         u32,
+    pub url: String, // pas de défaut — obligatoire via env
+    pub max_connections: u32,
+    pub min_connections: u32,
     pub acquire_timeout_seconds: u64,
-    pub idle_timeout_seconds:    u64,
+    pub idle_timeout_seconds: u64,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct AuthConfig {
-    pub token_ttl_seconds:  u64,
+    pub token_ttl_seconds: u64,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct EmailConfig {
-    pub api_key:               String,
-    pub from:                  String,
-    pub from_name:             String,
+    pub api_key: String,
+    pub from: String,
+    pub from_name: String,
 }
-
 
 impl AppConfig {
     pub fn load() -> Result<Self, config::ConfigError> {
@@ -52,22 +51,16 @@ impl AppConfig {
 
         let config = config::Config::builder()
             // Couche 1 — valeurs par défaut
-            .add_source(
-                config::File::with_name("config/default")
-                    .required(true)
-            )
+            .add_source(config::File::with_name("config/default").required(true))
             // Couche 2 — surcharge par environnement (optionnelle)
-            .add_source(
-                config::File::with_name(&format!("config/{}", env))
-                    .required(false)
-            )
+            .add_source(config::File::with_name(&format!("config/{}", env)).required(false))
             // Couche 3 — variables d'environnement (priorité maximale)
             // APP__DATABASE__URL → database.url
             // APP__SERVER__PORT  → server.port
             .add_source(
                 config::Environment::default()
-                    .separator("__")       // double underscore pour les niveaux imbriqués
-                    .try_parsing(true)     // parse les types : "8080" → u16, "true" → bool
+                    .separator("__") // double underscore pour les niveaux imbriqués
+                    .try_parsing(true), // parse les types : "8080" → u16, "true" → bool
             )
             .build()?;
 

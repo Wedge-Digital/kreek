@@ -9,7 +9,7 @@ pub enum CompetitionProfile {
 impl CompetitionProfile {
     pub fn as_str(&self) -> &str {
         match self {
-            CompetitionProfile::CompetitionAdmin    => "CompetitionAdmin",
+            CompetitionProfile::CompetitionAdmin => "CompetitionAdmin",
             CompetitionProfile::CompetitionUser => "CompetitionUser",
         }
     }
@@ -20,9 +20,9 @@ impl TryFrom<&str> for CompetitionProfile {
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         match s {
-            "CompetitionAdmin"    => Ok(CompetitionProfile::CompetitionAdmin),
-            "CompetitionUser"    => Ok(CompetitionProfile::CompetitionUser),
-            other           => Err(format!("profil inconnu : {}", other)),
+            "CompetitionAdmin" => Ok(CompetitionProfile::CompetitionAdmin),
+            "CompetitionUser" => Ok(CompetitionProfile::CompetitionUser),
+            other => Err(format!("profil inconnu : {}", other)),
         }
     }
 }
@@ -33,7 +33,10 @@ mod tests {
 
     #[test]
     fn as_str_round_trips_for_all_variants() {
-        for variant in [CompetitionProfile::CompetitionAdmin,CompetitionProfile::CompetitionUser] {
+        for variant in [
+            CompetitionProfile::CompetitionAdmin,
+            CompetitionProfile::CompetitionUser,
+        ] {
             let s = variant.as_str();
             assert_eq!(CompetitionProfile::try_from(s).unwrap(), variant);
         }
@@ -41,8 +44,14 @@ mod tests {
 
     #[test]
     fn try_from_valid_strings() {
-        assert_eq!(CompetitionProfile::try_from("CompetitionAdmin").unwrap(), CompetitionProfile::CompetitionAdmin);
-        assert_eq!(CompetitionProfile::try_from("CompetitionUser").unwrap(), CompetitionProfile::CompetitionUser);
+        assert_eq!(
+            CompetitionProfile::try_from("CompetitionAdmin").unwrap(),
+            CompetitionProfile::CompetitionAdmin
+        );
+        assert_eq!(
+            CompetitionProfile::try_from("CompetitionUser").unwrap(),
+            CompetitionProfile::CompetitionUser
+        );
     }
 
     #[test]

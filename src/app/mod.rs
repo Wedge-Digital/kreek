@@ -1,10 +1,10 @@
 // pub mod access;
 // pub mod infra;
-pub mod team_creation;
-pub mod teams;
-pub mod shared_kernel;
 pub mod auth;
 pub mod competitions;
 pub mod news;
 pub mod references;
+pub mod shared_kernel;
 pub mod spaces;
+pub mod team_creation;
+pub mod teams;

@@ -11,7 +11,7 @@ pub enum FirePlayerError {
 }
 
 pub async fn execute(
-    cmd:       FirePlayerCommand,
+    cmd: FirePlayerCommand,
     team_repo: &dyn ITeamRosterRepository,
 ) -> Result<RosterSelectedTeam, FirePlayerError> {
     let mut team = team_repo
@@ -20,7 +20,9 @@ pub async fn execute(
         .map_err(FirePlayerError::Repository)?
         .ok_or(FirePlayerError::TeamNotFound)?;
 
-    let player_def = team.roster.player_definitions
+    let player_def = team
+        .roster
+        .player_definitions
         .iter()
         .find(|p| p.id == cmd.player_id)
         .cloned()
@@ -40,6 +42,6 @@ pub async fn execute(
 pub fn domain_error_message(e: &DomainError) -> &'static str {
     match e {
         DomainError::PlayerNotHired => "Ce joueur n'est pas dans votre équipe.",
-        _                           => "Action impossible.",
+        _ => "Action impossible.",
     }
 }

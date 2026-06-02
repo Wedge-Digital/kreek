@@ -1,21 +1,27 @@
-use sqlx::PgPool;
 use crate::lib::event_envelope::EventEnvelope;
+use sqlx::PgPool;
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct StoredEvent {
     pub global_position: i64,
-    pub event_id:        String,
-    pub emitter:         String,
-    pub event_type:      String,
-    pub tags:            serde_json::Value,
-    pub payload:         serde_json::Value,
-    pub occurred_at:     time::OffsetDateTime,
-    pub recorded_at:     time::OffsetDateTime,
+    pub event_id: String,
+    pub emitter: String,
+    pub event_type: String,
+    pub tags: serde_json::Value,
+    pub payload: serde_json::Value,
+    pub occurred_at: time::OffsetDateTime,
+    pub recorded_at: time::OffsetDateTime,
 }
 
 pub trait IEventLogRepository: Send + Sync {
-    fn find_by_tag(&self, tag_filter: serde_json::Value) -> impl std::future::Future<Output = Result<Vec<StoredEvent>, sqlx::Error>> + Send;
-    fn save(&self, event: &EventEnvelope) -> impl std::future::Future<Output = Result<(), sqlx::Error>> + Send;
+    fn find_by_tag(
+        &self,
+        tag_filter: serde_json::Value,
+    ) -> impl std::future::Future<Output = Result<Vec<StoredEvent>, sqlx::Error>> + Send;
+    fn save(
+        &self,
+        event: &EventEnvelope,
+    ) -> impl std::future::Future<Output = Result<(), sqlx::Error>> + Send;
 }
 
 pub struct EventLogRepository {
@@ -29,7 +35,10 @@ impl EventLogRepository {
 }
 
 impl IEventLogRepository for EventLogRepository {
-    async fn find_by_tag(&self, tag_filter: serde_json::Value) -> Result<Vec<StoredEvent>, sqlx::Error> {
+    async fn find_by_tag(
+        &self,
+        tag_filter: serde_json::Value,
+    ) -> Result<Vec<StoredEvent>, sqlx::Error> {
         sqlx::query_file_as!(
             StoredEvent,
             "src/lib/persistance/sql/find_by_tag.sql",

@@ -38,8 +38,8 @@ impl fmt::Display for DomainError {
             DomainError::StaffMaxReached => "team_creation.staff_max_reached",
             DomainError::MaxRerollsExceeded => "team_creation.max_rr_exceeded",
             DomainError::InsufficientRerollBudget => "team_creation.insufficient_reroll_budget",
-            DomainError::PlayerNotFoundInTeam    => "team_creation.player_not_found_in_team",
-            DomainError::StaffNotFoundInTeam     => "team_creation.staff_not_found_in_team",
+            DomainError::PlayerNotFoundInTeam => "team_creation.player_not_found_in_team",
+            DomainError::StaffNotFoundInTeam => "team_creation.staff_not_found_in_team",
             DomainError::InsufficientPlayerCount => "team_creation.insufficient_player_count",
         };
         write!(f, "{}", msg)

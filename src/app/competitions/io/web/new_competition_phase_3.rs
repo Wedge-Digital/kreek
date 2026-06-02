@@ -1,24 +1,26 @@
+use crate::app::competitions::domain::competition_structure::CompetitionStructure;
+use crate::app::competitions::routes::Routes;
+use crate::app::competitions::use_cases::save_competition_structure::{
+    execute, SaveCompetitionStructureCommand, SaveCompetitionStructureError,
+};
+use crate::app::shared_kernel::common_types::SeasonId;
+use crate::state::AppState;
+use crate::web::routes::Routes as WebRoutes;
 use askama::Template;
 use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use axum::Json;
-use crate::app::competitions::domain::competition_structure::CompetitionStructure;
-use crate::app::competitions::routes::Routes;
-use crate::app::competitions::use_cases::save_competition_structure::{SaveCompetitionStructureCommand, SaveCompetitionStructureError, execute};
-use crate::app::shared_kernel::common_types::SeasonId;
-use crate::state::AppState;
-use crate::web::routes::Routes as WebRoutes;
 
 #[derive(Template)]
 #[template(path = "new-competition-phase-3.html")]
 pub struct NewCompetitionPhase3Template {
-    pub web_routes:              WebRoutes,
-    pub competition_routes:      Routes,
-    pub space_id:                String,
-    pub competition_id:          String,
-    pub season_id:               String,
+    pub web_routes: WebRoutes,
+    pub competition_routes: Routes,
+    pub space_id: String,
+    pub competition_id: String,
+    pub season_id: String,
     pub existing_structure_json: String,
 }
 
@@ -26,7 +28,7 @@ impl IntoResponse for NewCompetitionPhase3Template {
     fn into_response(self) -> Response {
         match self.render() {
             Ok(html) => Html(html).into_response(),
-            Err(_)   => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
     }
 }
@@ -40,7 +42,9 @@ pub async fn get_new_competition_phase_3(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let existing_structure_json = state.competitions.season_repository
+    let existing_structure_json = state
+        .competitions
+        .season_repository
         .find_structure(&sid)
         .await
         .ok()
@@ -49,13 +53,14 @@ pub async fn get_new_competition_phase_3(
         .unwrap_or_else(|| "null".to_string());
 
     NewCompetitionPhase3Template {
-        web_routes:          WebRoutes,
-        competition_routes:  Routes,
+        web_routes: WebRoutes,
+        competition_routes: Routes,
         space_id,
         competition_id,
         season_id,
         existing_structure_json,
-    }.into_response()
+    }
+    .into_response()
 }
 
 pub async fn post_competition_structure(
@@ -65,21 +70,33 @@ pub async fn post_competition_structure(
 ) -> impl IntoResponse {
     let sid = match SeasonId::try_new(&season_id) {
         Ok(id) => id,
-        Err(_) => return (StatusCode::BAD_REQUEST, "Identifiant de saison invalide.").into_response(),
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, "Identifiant de saison invalide.").into_response()
+        }
     };
 
-    let cmd = SaveCompetitionStructureCommand { season_id: sid, structure };
+    let cmd = SaveCompetitionStructureCommand {
+        season_id: sid,
+        structure,
+    };
 
     match execute(cmd, state.competitions.season_repository.as_ref()).await {
         Ok(()) => Response::builder()
-            .header("HX-Redirect", Routes.new_competition_invitations(&space_id, &competition_id, &season_id))
+            .header(
+                "HX-Redirect",
+                Routes.new_competition_invitations(&space_id, &competition_id, &season_id),
+            )
             .body(Body::empty())
             .unwrap(),
 
-        Err(SaveCompetitionStructureError::SeasonNotFound) =>
-            (StatusCode::NOT_FOUND, "Saison introuvable.").into_response(),
+        Err(SaveCompetitionStructureError::SeasonNotFound) => {
+            (StatusCode::NOT_FOUND, "Saison introuvable.").into_response()
+        }
 
-        Err(SaveCompetitionStructureError::Database(_)) =>
-            (StatusCode::INTERNAL_SERVER_ERROR, "Erreur interne, veuillez réessayer.").into_response(),
+        Err(SaveCompetitionStructureError::Database(_)) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Erreur interne, veuillez réessayer.",
+        )
+            .into_response(),
     }
 }

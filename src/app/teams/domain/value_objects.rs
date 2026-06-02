@@ -34,8 +34,8 @@ impl MatchResult {
     /// Modificateur fans dévoués : +1 victoire, 0 nul, -1 défaite.
     pub fn fan_modifier(&self) -> i8 {
         match self {
-            Self::Win  =>  1,
-            Self::Draw =>  0,
+            Self::Win => 1,
+            Self::Draw => 0,
             Self::Loss => -1,
         }
     }
@@ -45,7 +45,7 @@ impl MatchResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SppGain {
-    pub player_id:  crate::app::shared_kernel::common_types::PlayerId,
+    pub player_id: crate::app::shared_kernel::common_types::PlayerId,
     pub spp_earned: u8,
 }
 
@@ -59,7 +59,11 @@ pub enum PlayerImprovement {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Stat {
-    Ma, St, Ag, Pa, Av,
+    Ma,
+    St,
+    Ag,
+    Pa,
+    Av,
 }
 
 // ── Staff ─────────────────────────────────────────────────────────────────────

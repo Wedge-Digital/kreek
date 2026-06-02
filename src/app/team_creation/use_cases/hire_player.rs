@@ -11,7 +11,7 @@ pub enum HirePlayerError {
 }
 
 pub async fn execute(
-    cmd:       HirePlayerCommand,
+    cmd: HirePlayerCommand,
     team_repo: &dyn ITeamRosterRepository,
 ) -> Result<RosterSelectedTeam, HirePlayerError> {
     let mut team = team_repo
@@ -20,7 +20,9 @@ pub async fn execute(
         .map_err(HirePlayerError::Repository)?
         .ok_or(HirePlayerError::TeamNotFound)?;
 
-    let player_def = team.roster.player_definitions
+    let player_def = team
+        .roster
+        .player_definitions
         .iter()
         .find(|p| p.id == cmd.player_id)
         .cloned()
@@ -39,11 +41,11 @@ pub async fn execute(
 
 pub fn domain_error_message(e: &DomainError) -> &'static str {
     match e {
-        DomainError::MaxPlayersReached        => "Vous ne pouvez pas engager plus de 16 joueurs.",
-        DomainError::MaxPlayersOfTypeReached  => "Quota maximum de ce poste atteint.",
-        DomainError::InsufficientBudget       => "Budget insuffisant pour ce joueur.",
-        DomainError::CrossLimitExceeded       => "Limite combinée de postes dépassée.",
+        DomainError::MaxPlayersReached => "Vous ne pouvez pas engager plus de 16 joueurs.",
+        DomainError::MaxPlayersOfTypeReached => "Quota maximum de ce poste atteint.",
+        DomainError::InsufficientBudget => "Budget insuffisant pour ce joueur.",
+        DomainError::CrossLimitExceeded => "Limite combinée de postes dépassée.",
         DomainError::PlayerNotAllowedInRoster => "Ce poste n'est pas disponible dans ce roster.",
-        _                                     => "Action impossible.",
+        _ => "Action impossible.",
     }
 }

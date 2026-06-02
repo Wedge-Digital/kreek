@@ -1,12 +1,14 @@
-use async_trait::async_trait;
-use sqlx::PgPool;
+use crate::app::shared_kernel::common_types::Entity;
 use crate::app::shared_kernel::common_types::{CoachId, UserId};
 use crate::app::shared_kernel::team::{BaseTeamInfo, TeamId, TeamName};
 use crate::app::team_creation::domain::creation_rules::CreationRules;
 use crate::app::team_creation::domain::team_draft::DraftTeam;
-use crate::app::shared_kernel::common_types::Entity;
 use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
-use crate::app::team_creation::ports::{ITeamDraftRepository, ITeamRosterRepository, RepositoryError};
+use crate::app::team_creation::ports::{
+    ITeamDraftRepository, ITeamRosterRepository, RepositoryError,
+};
+use async_trait::async_trait;
+use sqlx::PgPool;
 
 #[derive(Clone)]
 pub struct TeamDraftRepository {
@@ -57,13 +59,13 @@ impl ITeamDraftRepository for TeamDraftRepository {
     async fn find_by_id(&self, id: &TeamId) -> Result<Option<DraftTeam>, RepositoryError> {
         #[derive(sqlx::FromRow)]
         struct Row {
-            id:             String,
-            created_by:     String,
+            id: String,
+            created_by: String,
             competition_id: String,
-            season_id:      String,
-            name:           String,
-            coach_id:       String,
-            logo:           Option<String>,
+            season_id: String,
+            name: String,
+            coach_id: String,
+            logo: Option<String>,
             creation_rules: serde_json::Value,
         }
 
@@ -83,29 +85,37 @@ impl ITeamDraftRepository for TeamDraftRepository {
         let created_by = UserId::try_new(&r.created_by).map_err(db_err)?;
         let coach_id = CoachId::try_new(&r.coach_id).map_err(db_err)?;
         let team_name = TeamName::try_new(r.name).map_err(db_err)?;
-        let logo = r.logo
-            .as_deref()
-            .and_then(|u| crate::app::shared_kernel::common_types::CloudinaryImage::try_new(u).ok());
+        let logo = r.logo.as_deref().and_then(|u| {
+            crate::app::shared_kernel::common_types::CloudinaryImage::try_new(u).ok()
+        });
         let creation_rules: CreationRules = serde_json::from_value(r.creation_rules)
             .map_err(|e| RepositoryError::PersistenceError(e.to_string()))?;
 
         let base_infos = BaseTeamInfo::new(team_name, coach_id, logo);
         Ok(Some(DraftTeam::from_parts(
-            entity_id, created_by, base_infos,
-            r.competition_id, r.season_id, creation_rules,
+            entity_id,
+            created_by,
+            base_infos,
+            r.competition_id,
+            r.season_id,
+            creation_rules,
         )))
     }
 
-    async fn find_by_coach_and_space(&self, coach_id: &str, space_id: &str) -> Result<Vec<DraftTeam>, RepositoryError> {
+    async fn find_by_coach_and_space(
+        &self,
+        coach_id: &str,
+        space_id: &str,
+    ) -> Result<Vec<DraftTeam>, RepositoryError> {
         #[derive(sqlx::FromRow)]
         struct Row {
-            id:             String,
-            created_by:     String,
+            id: String,
+            created_by: String,
             competition_id: String,
-            season_id:      String,
-            name:           String,
-            coach_id:       String,
-            logo:           Option<String>,
+            season_id: String,
+            name: String,
+            coach_id: String,
+            logo: Option<String>,
             creation_rules: serde_json::Value,
         }
 
@@ -122,18 +132,28 @@ impl ITeamDraftRepository for TeamDraftRepository {
         .await
         .map_err(db_err)?;
 
-        rows.into_iter().map(|r| {
-            let entity_id      = TeamId::try_new(&r.id).map_err(db_err)?;
-            let created_by     = UserId::try_new(&r.created_by).map_err(db_err)?;
-            let coach_id_val   = CoachId::try_new(&r.coach_id).map_err(db_err)?;
-            let team_name      = TeamName::try_new(r.name).map_err(db_err)?;
-            let logo           = r.logo.as_deref()
-                .and_then(|u| crate::app::shared_kernel::common_types::CloudinaryImage::try_new(u).ok());
-            let creation_rules: CreationRules = serde_json::from_value(r.creation_rules)
-                .map_err(|e| RepositoryError::PersistenceError(e.to_string()))?;
-            let base_infos = BaseTeamInfo::new(team_name, coach_id_val, logo);
-            Ok(DraftTeam::from_parts(entity_id, created_by, base_infos, r.competition_id, r.season_id, creation_rules))
-        }).collect()
+        rows.into_iter()
+            .map(|r| {
+                let entity_id = TeamId::try_new(&r.id).map_err(db_err)?;
+                let created_by = UserId::try_new(&r.created_by).map_err(db_err)?;
+                let coach_id_val = CoachId::try_new(&r.coach_id).map_err(db_err)?;
+                let team_name = TeamName::try_new(r.name).map_err(db_err)?;
+                let logo = r.logo.as_deref().and_then(|u| {
+                    crate::app::shared_kernel::common_types::CloudinaryImage::try_new(u).ok()
+                });
+                let creation_rules: CreationRules = serde_json::from_value(r.creation_rules)
+                    .map_err(|e| RepositoryError::PersistenceError(e.to_string()))?;
+                let base_infos = BaseTeamInfo::new(team_name, coach_id_val, logo);
+                Ok(DraftTeam::from_parts(
+                    entity_id,
+                    created_by,
+                    base_infos,
+                    r.competition_id,
+                    r.season_id,
+                    creation_rules,
+                ))
+            })
+            .collect()
     }
 }
 
@@ -175,15 +195,16 @@ impl ITeamRosterRepository for TeamRosterRepository {
 
     async fn find_by_id(&self, id: &TeamId) -> Result<Option<RosterSelectedTeam>, RepositoryError> {
         #[derive(sqlx::FromRow)]
-        struct Row { state: serde_json::Value }
+        struct Row {
+            state: serde_json::Value,
+        }
 
-        let row: Option<Row> = sqlx::query_as(
-            "SELECT state FROM team_roster_selections WHERE id = $1",
-        )
-        .bind(id.to_string())
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(db_err)?;
+        let row: Option<Row> =
+            sqlx::query_as("SELECT state FROM team_roster_selections WHERE id = $1")
+                .bind(id.to_string())
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(db_err)?;
 
         let Some(r) = row else { return Ok(None) };
 
@@ -194,19 +215,22 @@ impl ITeamRosterRepository for TeamRosterRepository {
     }
 
     async fn mark_submitted(&self, id: &TeamId) -> Result<(), RepositoryError> {
-        sqlx::query(
-            "UPDATE team_roster_selections SET submitted_at = now() WHERE id = $1",
-        )
-        .bind(id.to_string())
-        .execute(&self.pool)
-        .await
-        .map_err(db_err)?;
+        sqlx::query("UPDATE team_roster_selections SET submitted_at = now() WHERE id = $1")
+            .bind(id.to_string())
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
         Ok(())
     }
 
-    async fn find_submitted_ids_for_space(&self, space_id: &str) -> Result<Vec<String>, RepositoryError> {
+    async fn find_submitted_ids_for_space(
+        &self,
+        space_id: &str,
+    ) -> Result<Vec<String>, RepositoryError> {
         #[derive(sqlx::FromRow)]
-        struct Row { id: String }
+        struct Row {
+            id: String,
+        }
 
         let rows: Vec<Row> = sqlx::query_as(
             "SELECT id FROM team_roster_selections WHERE space_id = $1 AND submitted_at IS NOT NULL",

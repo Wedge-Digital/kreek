@@ -1,8 +1,8 @@
-use async_trait::async_trait;
-use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::auth::domain::reset_token::{ResetToken, Token};
 use crate::app::auth::io::repository::reset_token_repository::IResetTokenRepository;
 use crate::app::auth::ports::RepositoryError;
+use crate::app::shared_kernel::coach_name::CoachName;
+use async_trait::async_trait;
 
 pub enum FindResult {
     Found,
@@ -19,11 +19,11 @@ impl IResetTokenRepository for FakeResetTokenRepository {
     async fn find_by_token(&self, _: &str) -> Result<Option<ResetToken>, RepositoryError> {
         match &self.find_result {
             FindResult::Found => Ok(Some(ResetToken {
-                token:      Token::new(),
+                token: Token::new(),
                 coach_name: CoachName::try_new("Bagouze").unwrap(),
                 created_at: time::OffsetDateTime::now_utc(),
             })),
-            FindResult::NotFound     => Ok(None),
+            FindResult::NotFound => Ok(None),
             FindResult::DbError(msg) => Err(RepositoryError::Database(msg.clone())),
         }
     }
@@ -31,14 +31,14 @@ impl IResetTokenRepository for FakeResetTokenRepository {
     async fn create(&self, _: &Token, _: &CoachName) -> Result<(), RepositoryError> {
         match &self.find_result {
             FindResult::DbError(msg) => Err(RepositoryError::Database(msg.clone())),
-            _                        => Ok(()),
+            _ => Ok(()),
         }
     }
 
     async fn delete_by_token(&self, _: &str) -> Result<(), RepositoryError> {
         match &self.find_result {
             FindResult::DbError(msg) => Err(RepositoryError::Database(msg.clone())),
-            _                        => Ok(()),
+            _ => Ok(()),
         }
     }
 }

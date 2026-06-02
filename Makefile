@@ -1,19 +1,32 @@
 EXEC_PROFILE ?= dev
 DATABASE_URL   = $(shell grep -E '^DATABASE__URL=' .env.$(EXEC_PROFILE) | cut -d= -f2-)
 
-.PHONY: dev test migrate db-prepare db-reset help
+.PHONY: dev test migrate migration prepare_db reset_db \
+        lint check-arch coverage analyze help
 
+# ── Aide ──────────────────────────────────────────────────────────────────────
 help:
-	@echo "Targets disponibles :"
-	@echo "  dev         Lance le serveur en mode watch (cargo-watch)"
-	@echo "  test        Lance les tests (utilise .env.test)"
-	@echo "  migrate              Applique les migrations SQLx"
-	@echo "  migration        Crée une migration  (ex: make new_migration desc=create_teams)"
-	@echo "  prepare_db           Régénère le cache sqlx (cargo sqlx prepare)"
-	@echo "  reset_db             Remet la base à zéro (sqlx database reset)"
 	@echo ""
-	@echo "Variable : EXEC_PROFILE (défaut : dev)"
+	@echo "  Développement"
+	@echo "  ─────────────────────────────────────────────────────"
+	@echo "  dev           Lance le serveur en mode watch"
+	@echo "  test          Lance les tests (utilise .env.test)"
+	@echo "  migrate       Applique les migrations SQLx"
+	@echo "  migration     Crée une migration (ex: make migration desc=create_teams)"
+	@echo "  prepare_db    Régénère le cache sqlx (cargo sqlx prepare)"
+	@echo "  reset_db      Remet la base à zéro (sqlx database reset)"
+	@echo ""
+	@echo "  Qualité & architecture"
+	@echo "  ─────────────────────────────────────────────────────"
+	@echo "  lint          Formatage (fmt) + linting (clippy)"
+	@echo "  check-arch    Vérifications architecturales (axes 2–6)"
+	@echo "  coverage      Couverture de tests (nécessite cargo-llvm-cov)"
+	@echo "  analyze       lint + check-arch (pipeline CI complet)"
+	@echo ""
+	@echo "  Variable : EXEC_PROFILE (défaut : dev)"
+	@echo ""
 
+# ── Développement ─────────────────────────────────────────────────────────────
 dev:
 	cargo watch -x run -w src -w assets/templates -w assets/static/css
 
@@ -32,3 +45,67 @@ prepare_db:
 
 reset_db:
 	DATABASE_URL=$(DATABASE_URL) sqlx database reset
+
+# ── Qualité Rust standard (axe 1) ────────────────────────────────────────────
+lint:
+	@echo ""
+	@echo "\033[1m\033[34m┌─ Axe 1 · Qualité Rust standard\033[0m"
+	@echo ""
+	@echo "  \033[1mFormatage...\033[0m"
+	@cargo fmt --check
+	@echo "  \033[32m✓ PASS\033[0m  cargo fmt"
+	@echo ""
+	@echo "  \033[1mLinting (correctness + unused imports)...\033[0m"
+	@if cargo clippy --tests -- \
+		-D clippy::correctness \
+		-D unused-imports \
+		-D unreachable-patterns \
+		-D irrefutable-let-patterns \
+		2>&1 | tee /tmp/kreek-clippy.log | grep -qE "^error"; then \
+		echo "  \033[31m✗ FAIL\033[0m  cargo clippy"; \
+		grep "^error" /tmp/kreek-clippy.log; \
+		exit 1; \
+	fi
+	@echo "  \033[32m✓ PASS\033[0m  cargo clippy"
+	@echo ""
+	@WARN_COUNT=$$(cargo clippy 2>&1 | grep -c "^warning:" || true); \
+		echo "  \033[33m⚠\033[0m  $$WARN_COUNT warning(s) de style non-bloquants — \`cargo clippy\` pour le détail"
+	@echo ""
+	@if command -v cargo-audit >/dev/null 2>&1; then \
+		echo "  \033[1mAudit des dépendances...\033[0m"; \
+		cargo audit && echo "  \033[32m✓ PASS\033[0m  cargo audit"; \
+	else \
+		echo "  \033[33m⚠ SKIP\033[0m  cargo audit non installé (cargo install cargo-audit)"; \
+	fi
+	@echo ""
+
+# ── Vérifications architecturales (axes 2–6) ──────────────────────────────────
+check-arch:
+	@./scripts/check-arch.sh all
+
+# ── Couverture de tests (axe 7) ───────────────────────────────────────────────
+coverage:
+	@if ! command -v cargo-llvm-cov >/dev/null 2>&1; then \
+		echo ""; \
+		echo "  \033[33m⚠\033[0m  cargo-llvm-cov non installé."; \
+		echo "     Installer avec : cargo install cargo-llvm-cov"; \
+		echo "     Puis relancer  : make coverage"; \
+		echo ""; \
+		exit 1; \
+	fi
+	@echo ""
+	@echo "\033[1m\033[34m┌─ Axe 7 · Couverture de tests\033[0m"
+	@echo ""
+	DATABASE_URL=$(shell grep -E '^DATABASE_URL=' .env.test | cut -d= -f2-) \
+		cargo llvm-cov \
+		--ignore-filename-regex="(tests|io/web|io/repository|main\.rs)" \
+		--summary-only
+	@echo ""
+	@echo "  Rapport HTML : cargo llvm-cov --html --open"
+	@echo ""
+
+# ── Pipeline complet ──────────────────────────────────────────────────────────
+analyze: lint check-arch
+	@echo ""
+	@echo "\033[1m\033[32m  ✓ Pipeline d'analyse terminé\033[0m"
+	@echo ""

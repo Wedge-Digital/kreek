@@ -1,16 +1,13 @@
 use core::fmt;
-use std::fmt::{Debug, Display};
+use std::fmt::Display;
 use ulid::{DecodeError, Ulid};
 
-
-#[derive(Debug, Copy, Clone, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Eq)]
 pub struct SUlid(Ulid);
 
 #[derive(Debug)]
 pub enum SUlidDecodeError {
-    /// The length of the string does not match the expected length
     InvalidLength,
-    /// A non-base32 character was found
     InvalidChar,
 }
 
@@ -24,27 +21,24 @@ impl Display for SUlidDecodeError {
     }
 }
 
+impl Display for SUlid {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 impl SUlid {
     pub fn new() -> Self {
         SUlid(Ulid::new())
     }
 
-    pub fn try_new(s: &str) ->  Result<SUlid, SUlidDecodeError>{
-        let ulid = Ulid::from_string(s);
-        match ulid {
+    pub fn try_new(s: &str) -> Result<SUlid, SUlidDecodeError> {
+        match Ulid::from_string(s) {
             Ok(ulid) => Ok(SUlid(ulid)),
-            Err(err) => match err {
-                DecodeError::InvalidLength => Err(SUlidDecodeError::InvalidLength),
-                DecodeError::InvalidChar => Err(SUlidDecodeError::InvalidChar),
-            },
+            Err(DecodeError::InvalidLength) => Err(SUlidDecodeError::InvalidLength),
+            Err(DecodeError::InvalidChar) => Err(SUlidDecodeError::InvalidChar),
         }
     }
-
-    pub fn to_string(&self) -> String {
-        self.0.to_string()
-    }
-
 }
 
 impl PartialEq for SUlid {
@@ -53,6 +47,12 @@ impl PartialEq for SUlid {
     }
 }
 
+// Hash doit être cohérent avec PartialEq — on délègue les deux au Ulid interne.
+impl std::hash::Hash for SUlid {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+    }
+}
 
 impl serde::Serialize for SUlid {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -68,10 +68,7 @@ impl<'de> serde::Deserialize<'de> for SUlid {
     where
         D: serde::Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer);
-        match s {
-            Ok(s) => SUlid::try_new(&s).map_err(serde::de::Error::custom),
-            Err(err) => Err(err),
-        }
+        let s = String::deserialize(deserializer)?;
+        SUlid::try_new(&s).map_err(serde::de::Error::custom)
     }
 }

@@ -21,10 +21,20 @@ pub struct BaseTeamInfo {
 
 impl BaseTeamInfo {
     pub fn new(name: TeamName, coach_id: CoachId, logo_url: Option<CloudinaryImage>) -> Self {
-        BaseTeamInfo { name, coach_id, logo_url }
+        BaseTeamInfo {
+            name,
+            coach_id,
+            logo_url,
+        }
     }
 
-    pub fn name(&self) -> &TeamName          { &self.name }
-    pub fn coach_id(&self) -> &CoachId       { &self.coach_id }
-    pub fn logo_url(&self) -> Option<&CloudinaryImage> { self.logo_url.as_ref() }
+    pub fn name(&self) -> &TeamName {
+        &self.name
+    }
+    pub fn coach_id(&self) -> &CoachId {
+        &self.coach_id
+    }
+    pub fn logo_url(&self) -> Option<&CloudinaryImage> {
+        self.logo_url.as_ref()
+    }
 }

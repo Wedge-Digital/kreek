@@ -1,9 +1,9 @@
+use crate::app::auth::auth_backend::AuthSession;
+use crate::app::auth::routes::path;
 use axum::body::Body;
 use axum::http::Request;
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Redirect, Response};
-use crate::app::auth::auth_backend::AuthSession;
-use crate::app::auth::routes::path;
 
 pub async fn require_auth(
     auth_session: AuthSession,

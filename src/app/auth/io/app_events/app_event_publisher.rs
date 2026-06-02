@@ -7,7 +7,9 @@ pub fn auth_app_event_publisher(event_bus: &EventBus, app_event_bus: EventBus) {
         loop {
             match rx.recv().await {
                 Ok(envelope) => {
-                    let Ok(event) = serde_json::from_value::<AuthDomainEvent>(envelope.payload.clone()) else {
+                    let Ok(event) =
+                        serde_json::from_value::<AuthDomainEvent>(envelope.payload.clone())
+                    else {
                         continue;
                     };
                     if let Some(app_event) = event.to_app_event() {
@@ -34,17 +36,17 @@ mod tests {
 
     #[tokio::test]
     async fn account_created_is_forwarded_to_app_event_bus() {
-        let event_bus     = new_bus();
+        let event_bus = new_bus();
         let app_event_bus = new_bus();
-        let mut rx        = app_event_bus.subscribe();
+        let mut rx = app_event_bus.subscribe();
 
         auth_app_event_publisher(&event_bus, app_event_bus);
 
         let event = AuthDomainEvent::AccountCreated {
-            event_id:  EventId::new(),
-            user_id:   CoachId::new(),
+            event_id: EventId::new(),
+            user_id: CoachId::new(),
             user_name: CoachName::try_new("TestCoach").unwrap(),
-            email:     Email::try_new("test@example.com").unwrap(),
+            email: Email::try_new("test@example.com").unwrap(),
         };
         let _ = event_bus.send(event.to_enveloppe());
 

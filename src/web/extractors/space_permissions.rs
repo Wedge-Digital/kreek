@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-use axum::extract::{FromRef, FromRequestParts, Path};
-use axum::http::request::Parts;
-use axum::http::StatusCode;
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::shared_kernel::authorization::SpaceProfile;
 use crate::app::shared_kernel::common_types::SpaceId;
 use crate::state::AppState;
+use axum::extract::{FromRef, FromRequestParts, Path};
+use axum::http::request::Parts;
+use axum::http::StatusCode;
+use std::collections::HashMap;
 
 /// Permissions de l'utilisateur courant sur l'espace courant.
 ///
@@ -48,7 +48,8 @@ where
         let space_id = SpaceId::try_new(raw_id).map_err(|_| StatusCode::BAD_REQUEST)?;
 
         let role = app_state
-            .spaces.space_repository
+            .spaces
+            .space_repository
             .find_member_profile(&user.id, &space_id)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
@@ -64,7 +65,10 @@ mod tests {
     use crate::app::shared_kernel::common_types::SpaceId;
 
     fn perms(role: SpaceProfile) -> SpacePermissions {
-        SpacePermissions { space_id: SpaceId::new(), role }
+        SpacePermissions {
+            space_id: SpaceId::new(),
+            role,
+        }
     }
 
     #[test]

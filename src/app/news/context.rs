@@ -1,9 +1,9 @@
-use std::sync::Arc;
-use sqlx::PgPool;
 use crate::app::news::domain::article_repository_port::IArticleRepository;
 use crate::app::news::domain::comment_repository_port::ICommentRepository;
 use crate::app::news::io::repository::article_repository::ArticleRepository;
 use crate::app::news::io::repository::comment_repository::CommentRepository;
+use sqlx::PgPool;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct NewsContext {

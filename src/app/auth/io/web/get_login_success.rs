@@ -1,8 +1,8 @@
+use crate::app::auth::io::web::auth_layout::AuthLayout;
+use crate::app::auth::routes::Routes;
 use askama::Template;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
-use crate::app::auth::io::web::auth_layout::AuthLayout;
-use crate::app::auth::routes::Routes;
 
 #[derive(Template, Default)]
 #[template(path = "auth-login-success.html")]
@@ -14,7 +14,7 @@ impl IntoResponse for LoginSuccessTemplate {
     fn into_response(self) -> Response {
         match self.render() {
             Ok(html) => Html(html).into_response(),
-            Err(_)   => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
     }
 }

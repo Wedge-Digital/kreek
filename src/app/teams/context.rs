@@ -1,9 +1,9 @@
-use std::sync::Arc;
-use sqlx::PgPool;
 use crate::app::teams::io::app_events::team_created_listener;
 use crate::app::teams::io::repository::team_repository::TeamRepository;
 use crate::app::teams::ports::ITeamRepository;
 use crate::lib::services::event_bus::event_bus::EventBus;
+use sqlx::PgPool;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct TeamsContext {

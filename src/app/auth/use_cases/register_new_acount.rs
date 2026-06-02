@@ -1,16 +1,16 @@
 use super::super::domain::error::AuthDomainError;
 use super::super::ports::{IUserRepository, RepositoryError};
+use crate::app::auth::domain::domain_event::AuthDomainEvent::AccountCreated;
+use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::shared_kernel::common_types::{EventId, UserId};
+use crate::app::shared_kernel::email::Email;
 use crate::app::shared_kernel::user::User;
 use crate::lib::services::event_bus::event_bus::EventBus;
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
     Argon2,
 };
-use crate::app::shared_kernel::coach_name::CoachName;
 use std::fmt;
-use crate::app::auth::domain::domain_event::AuthDomainEvent::AccountCreated;
-use crate::app::shared_kernel::email::Email;
 
 #[derive(Debug)]
 pub enum RegisterError {
@@ -25,23 +25,27 @@ pub enum RegisterError {
 }
 
 pub struct RegisterCommand {
-    pub coach_name:       String,
-    pub email:            String,
-    pub password:         String,
+    pub coach_name: String,
+    pub email: String,
+    pub password: String,
     pub password_confirm: String,
 }
 
 impl fmt::Display for RegisterError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            RegisterError::PasswordMismatch        => write!(f, "Les mots de passe ne correspondent pas"),
-            RegisterError::PasswordTooShort        => write!(f, "Le mot de passe doit contenir au moins 8 caractères"),
-            RegisterError::InvalidCoachName(e)     => write!(f, "{}", e),
-            RegisterError::InvalidEmail(e)         => write!(f, "{}", e),
-            RegisterError::CoachNameAlreadyTaken   => write!(f, "Ce nom de coach est déjà utilisé"),
-            RegisterError::EmailAlreadyTaken       => write!(f, "Cette adresse email est déjà utilisée"),
-            RegisterError::PasswordHashError       => write!(f, "Erreur lors du chiffrement du mot de passe"),
-            RegisterError::Database(msg)           => write!(f, "Erreur interne : {}", msg),
+            RegisterError::PasswordMismatch => write!(f, "Les mots de passe ne correspondent pas"),
+            RegisterError::PasswordTooShort => {
+                write!(f, "Le mot de passe doit contenir au moins 8 caractères")
+            }
+            RegisterError::InvalidCoachName(e) => write!(f, "{}", e),
+            RegisterError::InvalidEmail(e) => write!(f, "{}", e),
+            RegisterError::CoachNameAlreadyTaken => write!(f, "Ce nom de coach est déjà utilisé"),
+            RegisterError::EmailAlreadyTaken => write!(f, "Cette adresse email est déjà utilisée"),
+            RegisterError::PasswordHashError => {
+                write!(f, "Erreur lors du chiffrement du mot de passe")
+            }
+            RegisterError::Database(msg) => write!(f, "Erreur interne : {}", msg),
         }
     }
 }
@@ -50,8 +54,8 @@ impl From<RepositoryError> for RegisterError {
     fn from(e: RepositoryError) -> Self {
         match e {
             RepositoryError::CoachNameAlreadyTaken => RegisterError::CoachNameAlreadyTaken,
-            RepositoryError::EmailAlreadyTaken     => RegisterError::EmailAlreadyTaken,
-            RepositoryError::Database(msg)         => RegisterError::Database(msg),
+            RepositoryError::EmailAlreadyTaken => RegisterError::EmailAlreadyTaken,
+            RepositoryError::Database(msg) => RegisterError::Database(msg),
         }
     }
 }
@@ -71,12 +75,18 @@ pub async fn execute(
     }
 
     let coach_name = match CoachName::try_new(&cmd.coach_name) {
-        Ok(v)  => Some(v),
-        Err(e) => { errors.push(RegisterError::InvalidCoachName(e.into())); None }
+        Ok(v) => Some(v),
+        Err(e) => {
+            errors.push(RegisterError::InvalidCoachName(e.into()));
+            None
+        }
     };
     let email = match Email::try_new(&cmd.email) {
-        Ok(v)  => Some(v),
-        Err(e) => { errors.push(RegisterError::InvalidEmail(e.into())); None }
+        Ok(v) => Some(v),
+        Err(e) => {
+            errors.push(RegisterError::InvalidEmail(e.into()));
+            None
+        }
     };
 
     if !errors.is_empty() {
@@ -94,15 +104,23 @@ pub async fn execute(
     .map_err(|_| vec![RegisterError::PasswordHashError])?
     .map_err(|_| vec![RegisterError::PasswordHashError])?;
 
-    let user = User::new(UserId::new(), coach_name.unwrap(), None, email.unwrap(), password_hash);
+    let user = User::new(
+        UserId::new(),
+        coach_name.unwrap(),
+        None,
+        email.unwrap(),
+        password_hash,
+    );
 
-    repo.create(&user).await.map_err(|e| vec![RegisterError::from(e)])?;
+    repo.create(&user)
+        .await
+        .map_err(|e| vec![RegisterError::from(e)])?;
 
     let event = AccountCreated {
-        event_id:  EventId::new(),
-        user_id:   user.id.clone(),
+        event_id: EventId::new(),
+        user_id: user.id.clone(),
         user_name: user.coach_name.clone(),
-        email:     user.email.clone(),
+        email: user.email.clone(),
     };
     let _ = bus.send(event.to_enveloppe());
 
@@ -112,28 +130,40 @@ pub async fn execute(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_trait::async_trait;
     use crate::app::auth::ports::RepositoryError;
     use crate::app::shared_kernel::user::User;
     use crate::lib::services::event_bus::event_bus::new_bus;
+    use async_trait::async_trait;
 
-    struct FakeUserRepository { pub fail: bool }
+    struct FakeUserRepository {
+        pub fail: bool,
+    }
 
     #[async_trait]
     impl IUserRepository for FakeUserRepository {
         async fn create(&self, _: &User) -> Result<(), RepositoryError> {
-            if self.fail { Err(RepositoryError::Database("db error".into())) } else { Ok(()) }
+            if self.fail {
+                Err(RepositoryError::Database("db error".into()))
+            } else {
+                Ok(())
+            }
         }
-        async fn find_by_id(&self, _: &str)                    -> Result<Option<User>, RepositoryError> { Ok(None) }
-        async fn find_by_coach_name(&self, _: &str)            -> Result<Option<User>, RepositoryError> { Ok(None) }
-        async fn update_password_hash(&self, _: &str, _: &str) -> Result<(), RepositoryError> { Ok(()) }
+        async fn find_by_id(&self, _: &str) -> Result<Option<User>, RepositoryError> {
+            Ok(None)
+        }
+        async fn find_by_coach_name(&self, _: &str) -> Result<Option<User>, RepositoryError> {
+            Ok(None)
+        }
+        async fn update_password_hash(&self, _: &str, _: &str) -> Result<(), RepositoryError> {
+            Ok(())
+        }
     }
 
     fn valid_command() -> RegisterCommand {
         RegisterCommand {
-            coach_name:       "Bagouze".into(),
-            email:            "coach@example.com".into(),
-            password:         "password123".into(),
+            coach_name: "Bagouze".into(),
+            email: "coach@example.com".into(),
+            password: "password123".into(),
             password_confirm: "password123".into(),
         }
     }
@@ -141,7 +171,7 @@ mod tests {
     #[tokio::test]
     async fn user_registered_event_is_published_on_success() {
         let repo = FakeUserRepository { fail: false };
-        let bus  = new_bus();
+        let bus = new_bus();
         let mut rx = bus.subscribe();
 
         execute(valid_command(), &repo, &bus).await.unwrap();
@@ -153,7 +183,7 @@ mod tests {
     #[tokio::test]
     async fn no_event_is_published_when_repo_fails() {
         let repo = FakeUserRepository { fail: true };
-        let bus  = new_bus();
+        let bus = new_bus();
         let mut rx = bus.subscribe();
 
         let result = execute(valid_command(), &repo, &bus).await;
@@ -165,13 +195,13 @@ mod tests {
     #[tokio::test]
     async fn validation_errors_are_returned_without_publishing() {
         let repo = FakeUserRepository { fail: false };
-        let bus  = new_bus();
+        let bus = new_bus();
         let mut rx = bus.subscribe();
 
         let cmd = RegisterCommand {
-            coach_name:       "Bagouze".into(),
-            email:            "coach@example.com".into(),
-            password:         "court".into(),
+            coach_name: "Bagouze".into(),
+            email: "coach@example.com".into(),
+            password: "court".into(),
             password_confirm: "different".into(),
         };
 

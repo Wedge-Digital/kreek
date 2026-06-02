@@ -1,5 +1,5 @@
-use std::fmt::Display;
 use nutype::nutype;
+use std::fmt::Display;
 
 #[nutype(
     sanitize(trim),

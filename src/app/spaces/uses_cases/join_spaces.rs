@@ -1,11 +1,13 @@
 use crate::app::shared_kernel::authorization::SpaceProfile;
 use crate::app::shared_kernel::common_types::{CoachId, EventId, SpaceId};
 use crate::app::spaces::domain::domain_event::SpacesDomainEvent;
-use crate::app::spaces::domain::space_repository_port::space_repository_port::{ISpaceRepository, SpaceRepositoryError};
+use crate::app::spaces::domain::space_repository_port::space_repository_port::{
+    ISpaceRepository, SpaceRepositoryError,
+};
 use crate::lib::services::event_bus::event_bus::EventBus;
 
 pub struct JoinSpacesCommand {
-    pub coach_id:  CoachId,
+    pub coach_id: CoachId,
     pub space_ids: Vec<SpaceId>,
 }
 
@@ -35,9 +37,9 @@ pub async fn execute(
 
     for space_id in &cmd.space_ids {
         let event = SpacesDomainEvent::UserSubscribedToSpace {
-            event_id:     EventId::new(),
-            user_id:      cmd.coach_id,
-            space_id:     *space_id,
+            event_id: EventId::new(),
+            user_id: cmd.coach_id,
+            space_id: *space_id,
             space_profile: SpaceProfile::SpaceUser,
         };
         let _ = bus.send(event.to_enveloppe());
@@ -49,33 +51,65 @@ pub async fn execute(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_trait::async_trait;
     use crate::app::spaces::domain::space::Space;
-    use crate::app::spaces::domain::space_repository_port::space_repository_port::{SpaceSummary, ISpaceRepository};
+    use crate::app::spaces::domain::space_repository_port::space_repository_port::{
+        ISpaceRepository, SpaceSummary,
+    };
     use crate::lib::services::event_bus::event_bus::new_bus;
+    use async_trait::async_trait;
 
-    struct FakeRepo { pub fail: bool }
+    struct FakeRepo {
+        pub fail: bool,
+    }
 
     #[async_trait]
     impl ISpaceRepository for FakeRepo {
-        async fn save(&self, _: &Space) -> Result<(), SpaceRepositoryError> { Ok(()) }
-        async fn add_member(&self, _: &SpaceId, _: &CoachId, _: &SpaceProfile) -> Result<(), SpaceRepositoryError> { Ok(()) }
-        async fn join_spaces(&self, _: &[SpaceId], _: &CoachId) -> Result<(), SpaceRepositoryError> {
+        async fn save(&self, _: &Space) -> Result<(), SpaceRepositoryError> {
+            Ok(())
+        }
+        async fn add_member(
+            &self,
+            _: &SpaceId,
+            _: &CoachId,
+            _: &SpaceProfile,
+        ) -> Result<(), SpaceRepositoryError> {
+            Ok(())
+        }
+        async fn join_spaces(
+            &self,
+            _: &[SpaceId],
+            _: &CoachId,
+        ) -> Result<(), SpaceRepositoryError> {
             if self.fail {
                 Err(SpaceRepositoryError::Database("db error".into()))
             } else {
                 Ok(())
             }
         }
-        async fn find_by_id(&self, _: &SpaceId) -> Result<Option<Space>, SpaceRepositoryError> { Ok(None) }
-        async fn find_by_coach_id(&self, _: &CoachId) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> { Ok(vec![]) }
-        async fn find_member_profile(&self, _: &CoachId, _: &SpaceId) -> Result<Option<SpaceProfile>, SpaceRepositoryError> { Ok(None) }
-        async fn find_all(&self) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> { Ok(vec![]) }
+        async fn find_by_id(&self, _: &SpaceId) -> Result<Option<Space>, SpaceRepositoryError> {
+            Ok(None)
+        }
+        async fn find_by_coach_id(
+            &self,
+            _: &CoachId,
+        ) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
+            Ok(vec![])
+        }
+        async fn find_member_profile(
+            &self,
+            _: &CoachId,
+            _: &SpaceId,
+        ) -> Result<Option<SpaceProfile>, SpaceRepositoryError> {
+            Ok(None)
+        }
+        async fn find_all(&self) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
+            Ok(vec![])
+        }
     }
 
     fn cmd_with(n: usize) -> JoinSpacesCommand {
         JoinSpacesCommand {
-            coach_id:  CoachId::new(),
+            coach_id: CoachId::new(),
             space_ids: (0..n).map(|_| SpaceId::new()).collect(),
         }
     }

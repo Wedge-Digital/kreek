@@ -1,6 +1,6 @@
-use std::fmt::Display;
 use crate::app::shared_kernel::sulid::SUlid;
 use nutype::nutype;
+use std::fmt::Display;
 
 pub type CoachId = EntityId;
 
@@ -16,9 +16,9 @@ pub type ArticleId = EntityId;
 
 pub type CommentId = EntityId;
 
-pub type PlayerId   = EntityId;
+pub type PlayerId = EntityId;
 
-pub type RosterId   = EntityId;
+pub type RosterId = EntityId;
 
 pub type PositionId = EntityId;
 
@@ -26,7 +26,7 @@ pub type EntityId = SUlid;
 
 pub type EventId = SUlid;
 
-pub trait Entity:PartialEq<Self> {
+pub trait Entity: PartialEq<Self> {
     fn get_id(&self) -> EntityId;
 
     fn get_created_by(&self) -> EntityId;
@@ -55,11 +55,5 @@ impl CloudinaryImage {
             self.as_ref(),
             &format!("c_fill,w_{w},h_{h},q_auto,f_auto"),
         )
-    }
-}
-
-impl Display for SUlid {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
     }
 }

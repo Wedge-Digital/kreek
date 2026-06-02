@@ -1,4 +1,3 @@
-use serde::{Deserialize, Serialize};
 use crate::app::shared_kernel::app_events::spaces_app_events::SpacesAppEvent;
 use crate::app::shared_kernel::authorization::SpaceProfile;
 use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, EventId, SpaceId};
@@ -6,14 +5,37 @@ use crate::app::shared_kernel::space_name::SpaceName;
 use crate::lib::event_envelope::EventEnvelope;
 use crate::lib::services::event_bus::event_tags::EventTag;
 use crate::lib::services::event_bus::event_tags::EventTagName;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum SpacesDomainEvent {
-    SpaceCreated                { event_id: EventId, created_by: CoachId, space_name: SpaceName, space_logo: CloudinaryImage, space_id: SpaceId },
-    UserInvitedInSpace          { event_id: EventId, user_id: CoachId, space_id: SpaceId },
-    UserSubscribedToSpace       { event_id: EventId, user_id: CoachId, space_id: SpaceId, space_profile: SpaceProfile },
-    UserPromotedToSpaceAdmin    { event_id: EventId, user_id: CoachId, space_id: SpaceId },
-    SpaceArchived               { event_id: EventId, space_id: SpaceId },
+    SpaceCreated {
+        event_id: EventId,
+        created_by: CoachId,
+        space_name: SpaceName,
+        space_logo: CloudinaryImage,
+        space_id: SpaceId,
+    },
+    UserInvitedInSpace {
+        event_id: EventId,
+        user_id: CoachId,
+        space_id: SpaceId,
+    },
+    UserSubscribedToSpace {
+        event_id: EventId,
+        user_id: CoachId,
+        space_id: SpaceId,
+        space_profile: SpaceProfile,
+    },
+    UserPromotedToSpaceAdmin {
+        event_id: EventId,
+        user_id: CoachId,
+        space_id: SpaceId,
+    },
+    SpaceArchived {
+        event_id: EventId,
+        space_id: SpaceId,
+    },
 }
 
 pub const SPACE_CREATED: &str = "SpaceCreated";
@@ -25,34 +47,41 @@ pub const SPACE_ARCHIVED: &str = "SpaceArchived";
 impl SpacesDomainEvent {
     pub fn to_app_event(&self) -> Option<SpacesAppEvent> {
         match self {
-            SpacesDomainEvent::SpaceCreated { space_name, space_id, space_logo, created_by, .. } => {
-                Some(SpacesAppEvent::SpaceCreated {
-                    event_id:   EventId::new(),
-                    space_id:   *space_id,
-                    space_name: space_name.clone(),
-                    space_logo: space_logo.clone(),
-                    created_by: *created_by,
-                })
-            }
-            SpacesDomainEvent::UserSubscribedToSpace { user_id, space_id, space_profile,.. } => {
-                Some(SpacesAppEvent::UserSubscribed {
-                    event_id: EventId::new(),
-                    user_id: user_id.clone(),
-                    space_id: space_id.clone(),
-                    space_profile: space_profile.clone(),
-                })
-            }
+            SpacesDomainEvent::SpaceCreated {
+                space_name,
+                space_id,
+                space_logo,
+                created_by,
+                ..
+            } => Some(SpacesAppEvent::SpaceCreated {
+                event_id: EventId::new(),
+                space_id: *space_id,
+                space_name: space_name.clone(),
+                space_logo: space_logo.clone(),
+                created_by: *created_by,
+            }),
+            SpacesDomainEvent::UserSubscribedToSpace {
+                user_id,
+                space_id,
+                space_profile,
+                ..
+            } => Some(SpacesAppEvent::UserSubscribed {
+                event_id: EventId::new(),
+                user_id: user_id.clone(),
+                space_id: space_id.clone(),
+                space_profile: space_profile.clone(),
+            }),
             _ => None,
         }
     }
 
     pub fn to_event_type(&self) -> &'static str {
         match self {
-            Self::SpaceCreated { .. }                => SPACE_CREATED,
-            Self::UserInvitedInSpace { .. }          => USER_INVITED_IN_SPACE,
-            Self::UserSubscribedToSpace { .. }       => USER_SUBSCRIBED_TO_SPACE,
-            Self::UserPromotedToSpaceAdmin { .. }    => USER_PROMOTED_TO_SPACE_ADMIN,
-            Self::SpaceArchived { .. }               => SPACE_ARCHIVED,
+            Self::SpaceCreated { .. } => SPACE_CREATED,
+            Self::UserInvitedInSpace { .. } => USER_INVITED_IN_SPACE,
+            Self::UserSubscribedToSpace { .. } => USER_SUBSCRIBED_TO_SPACE,
+            Self::UserPromotedToSpaceAdmin { .. } => USER_PROMOTED_TO_SPACE_ADMIN,
+            Self::SpaceArchived { .. } => SPACE_ARCHIVED,
         }
     }
 
@@ -68,23 +97,42 @@ impl SpacesDomainEvent {
 
     pub fn get_tags(&self) -> Vec<EventTag> {
         match self {
-            Self::SpaceCreated { space_id, .. } =>  vec![
-                EventTag { name: EventTagName::Space, value: space_id.to_string()}
+            Self::SpaceCreated { space_id, .. } => vec![EventTag {
+                name: EventTagName::Space,
+                value: space_id.to_string(),
+            }],
+            Self::UserInvitedInSpace {
+                space_id, user_id, ..
+            } => vec![
+                EventTag {
+                    name: EventTagName::Space,
+                    value: space_id.to_string(),
+                },
+                EventTag {
+                    name: EventTagName::User,
+                    value: user_id.to_string(),
+                },
             ],
-            Self::UserInvitedInSpace { space_id, user_id, .. } =>  vec![
-                EventTag { name: EventTagName::Space, value: space_id.to_string()},
-                EventTag { name: EventTagName::User, value: user_id.to_string()}
+            Self::UserSubscribedToSpace {
+                space_id, user_id, ..
+            } => vec![
+                EventTag {
+                    name: EventTagName::Space,
+                    value: space_id.to_string(),
+                },
+                EventTag {
+                    name: EventTagName::User,
+                    value: user_id.to_string(),
+                },
             ],
-            Self::UserSubscribedToSpace { space_id, user_id, .. } =>  vec![
-                EventTag { name: EventTagName::Space, value: space_id.to_string()},
-                EventTag { name: EventTagName::User, value: user_id.to_string()}
-            ],
-            Self::UserPromotedToSpaceAdmin { space_id, .. } =>  vec![
-                EventTag { name: EventTagName::Space, value: space_id.to_string()}
-            ],
-            Self::SpaceArchived { space_id, .. } =>  vec![
-                EventTag { name: EventTagName::Space, value: space_id.to_string()}
-            ],
+            Self::UserPromotedToSpaceAdmin { space_id, .. } => vec![EventTag {
+                name: EventTagName::Space,
+                value: space_id.to_string(),
+            }],
+            Self::SpaceArchived { space_id, .. } => vec![EventTag {
+                name: EventTagName::Space,
+                value: space_id.to_string(),
+            }],
         }
     }
 

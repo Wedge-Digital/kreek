@@ -1,6 +1,6 @@
-use async_trait::async_trait;
 use crate::app::news::domain::article::Article;
 use crate::app::shared_kernel::common_types::{ArticleId, SpaceId};
+use async_trait::async_trait;
 
 #[derive(Debug)]
 pub enum ArticleRepositoryError {
@@ -21,9 +21,9 @@ pub trait IArticleRepository: Send + Sync {
 
     async fn find_by_space(
         &self,
-        space_id:  &SpaceId,
-        page:      i64,
-        per_page:  i64,
+        space_id: &SpaceId,
+        page: i64,
+        per_page: i64,
     ) -> Result<(Vec<Article>, i64), ArticleRepositoryError>;
 
     async fn find_by_id(

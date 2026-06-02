@@ -1,13 +1,22 @@
 #[cfg(test)]
 mod tests {
     use crate::app::shared_kernel::id_service::{FakeIdService, IdService};
-    use crate::app::shared_kernel::staff::{StaffId, StaffKind, StaffMaxQuantity, StaffName, StaffPrice};
+    use crate::app::shared_kernel::staff::{
+        StaffId, StaffKind, StaffMaxQuantity, StaffName, StaffPrice,
+    };
     use crate::app::shared_kernel::team::{BaseTeamInfo, TeamName};
     use crate::app::team_creation::domain::error::DomainError;
-    use crate::app::team_creation::domain::roster::{CrossLimit, PlayerDefinition, PlayerId, PlayerMaxQuantity, PlayerName, PlayerPrice, RerollBasePrice, Roster, RosterId, RosterName};
-    use crate::app::team_creation::domain::ruleset::{CreationBudget, RosterTier, Ruleset, RulesetId, RulesetName, TierId, TierName};
+    use crate::app::team_creation::domain::roster::{
+        CrossLimit, PlayerDefinition, PlayerId, PlayerMaxQuantity, PlayerName, PlayerPrice,
+        RerollBasePrice, Roster, RosterId, RosterName,
+    };
+    use crate::app::team_creation::domain::ruleset::{
+        CreationBudget, RosterTier, Ruleset, RulesetId, RulesetName, TierId, TierName,
+    };
     use crate::app::team_creation::domain::team_draft::DraftTeam;
-    use crate::app::team_creation::domain::team_roster_selected::{RosterSelectedTeam, MAX_REROLL_COUNT};
+    use crate::app::team_creation::domain::team_roster_selected::{
+        RosterSelectedTeam, MAX_REROLL_COUNT,
+    };
     use crate::app::team_creation::domain::team_ruleset_selected::RulesetSelectedTeam;
     use crate::app::team_creation::domain::team_staff::TeamStaff;
     // -------------------------------------------------------------------------
@@ -33,7 +42,12 @@ mod tests {
         }
     }
 
-    fn make_roster(id: &str, players: Vec<PlayerDefinition>, staff: Vec<TeamStaff>, reroll_price: u32) -> Roster {
+    fn make_roster(
+        id: &str,
+        players: Vec<PlayerDefinition>,
+        staff: Vec<TeamStaff>,
+        reroll_price: u32,
+    ) -> Roster {
         Roster {
             id: RosterId(id.to_string()),
             name: RosterName(format!("Roster {id}")),
@@ -63,10 +77,18 @@ mod tests {
         let id_service = FakeIdService::new();
         let creator_id = id_service.generate_id();
         let coach_id = CoachId::try_new("01F8Z3ZQZQZQZQZQZQZQZQZQZQ").unwrap();
-        let base = BaseTeamInfo::new(TeamName::try_new("Les Bleus".to_string()).unwrap(), coach_id, None);
+        let base = BaseTeamInfo::new(
+            TeamName::try_new("Les Bleus".to_string()).unwrap(),
+            coach_id,
+            None,
+        );
         let draft = DraftTeam::new(
-            &id_service, creator_id, base,
-            "comp-1".to_string(), "season-1".to_string(), CreationRules::default(),
+            &id_service,
+            creator_id,
+            base,
+            "comp-1".to_string(),
+            "season-1".to_string(),
+            CreationRules::default(),
         );
         let ruleset_team = RulesetSelectedTeam::new(draft, ruleset);
         RosterSelectedTeam::new(ruleset_team, roster)
@@ -95,7 +117,10 @@ mod tests {
         let ruleset = make_ruleset("r1", 1_000_000);
         let mut team = make_roster_selected(roster, ruleset);
 
-        assert_eq!(team.hire_player(player_out), Err(DomainError::PlayerNotAllowedInRoster));
+        assert_eq!(
+            team.hire_player(player_out),
+            Err(DomainError::PlayerNotAllowedInRoster)
+        );
     }
 
     #[test]
@@ -106,7 +131,10 @@ mod tests {
         let mut team = make_roster_selected(roster, ruleset);
 
         team.hire_player(player.clone()).unwrap();
-        assert_eq!(team.hire_player(player), Err(DomainError::MaxPlayersOfTypeReached));
+        assert_eq!(
+            team.hire_player(player),
+            Err(DomainError::MaxPlayersOfTypeReached)
+        );
     }
 
     #[test]
@@ -119,7 +147,10 @@ mod tests {
         for _ in 0..16 {
             team.hire_player(player.clone()).unwrap();
         }
-        assert_eq!(team.hire_player(player), Err(DomainError::MaxPlayersReached));
+        assert_eq!(
+            team.hire_player(player),
+            Err(DomainError::MaxPlayersReached)
+        );
     }
 
     #[test]
@@ -129,7 +160,10 @@ mod tests {
         let ruleset = make_ruleset("r1", 100_000);
         let mut team = make_roster_selected(roster, ruleset);
 
-        assert_eq!(team.hire_player(player), Err(DomainError::InsufficientBudget));
+        assert_eq!(
+            team.hire_player(player),
+            Err(DomainError::InsufficientBudget)
+        );
     }
 
     #[test]
@@ -172,7 +206,10 @@ mod tests {
         let ruleset = make_ruleset("r1", 1_000_000);
         let mut team = make_roster_selected(roster, ruleset);
 
-        assert_eq!(team.remove_player(&player), Err(DomainError::PlayerNotHired));
+        assert_eq!(
+            team.remove_player(&player),
+            Err(DomainError::PlayerNotHired)
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -247,7 +284,10 @@ mod tests {
         let ruleset = make_ruleset("r1", 1_000_000);
         let mut team = make_roster_selected(roster, ruleset);
 
-        assert_eq!(team.remove_staff(&staff), Err(DomainError::StaffNotPurchased));
+        assert_eq!(
+            team.remove_staff(&staff),
+            Err(DomainError::StaffNotPurchased)
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -350,7 +390,10 @@ mod tests {
         let ruleset = make_ruleset("r1", 1_000_000);
         let team = make_roster_selected(roster_a, ruleset);
 
-        assert_eq!(team.choose_roster(roster_b), Err(DomainError::RosterNotAllowed));
+        assert_eq!(
+            team.choose_roster(roster_b),
+            Err(DomainError::RosterNotAllowed)
+        );
     }
 
     // -------------------------------------------------------------------------

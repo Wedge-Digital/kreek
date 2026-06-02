@@ -1,11 +1,10 @@
-use sqlx::PgPool;
-use crate::app::shared_kernel::coach_name::CoachName;
-use crate::app::shared_kernel::email::Email;
 use crate::app::auth::io::repository::user_repository::UserRepository;
 use crate::app::auth::ports::{IUserRepository, RepositoryError};
-use crate::app::shared_kernel::coach_icon::CoachIcon;
+use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::shared_kernel::common_types::UserId;
+use crate::app::shared_kernel::email::Email;
 use crate::app::shared_kernel::user::User;
+use sqlx::PgPool;
 
 fn make_user(coach_name: &str, email: &str) -> User {
     User::new(
@@ -24,7 +23,9 @@ fn make_user(coach_name: &str, email: &str) -> User {
 async fn create_persiste_un_utilisateur(pool: PgPool) {
     let repo = UserRepository::new(pool);
 
-    let result = repo.create(&make_user("Bagouze", "bagouze@example.com")).await;
+    let result = repo
+        .create(&make_user("Bagouze", "bagouze@example.com"))
+        .await;
 
     assert!(result.is_ok());
 }
@@ -32,19 +33,30 @@ async fn create_persiste_un_utilisateur(pool: PgPool) {
 #[sqlx::test]
 async fn create_renvoie_coach_name_already_taken(pool: PgPool) {
     let repo = UserRepository::new(pool);
-    repo.create(&make_user("Bagouze", "premier@example.com")).await.unwrap();
+    repo.create(&make_user("Bagouze", "premier@example.com"))
+        .await
+        .unwrap();
 
-    let result = repo.create(&make_user("Bagouze", "second@example.com")).await;
+    let result = repo
+        .create(&make_user("Bagouze", "second@example.com"))
+        .await;
 
-    assert!(matches!(result, Err(RepositoryError::CoachNameAlreadyTaken)));
+    assert!(matches!(
+        result,
+        Err(RepositoryError::CoachNameAlreadyTaken)
+    ));
 }
 
 #[sqlx::test]
 async fn create_renvoie_email_already_taken(pool: PgPool) {
     let repo = UserRepository::new(pool);
-    repo.create(&make_user("PremierCoach", "partage@example.com")).await.unwrap();
+    repo.create(&make_user("PremierCoach", "partage@example.com"))
+        .await
+        .unwrap();
 
-    let result = repo.create(&make_user("SecondCoach", "partage@example.com")).await;
+    let result = repo
+        .create(&make_user("SecondCoach", "partage@example.com"))
+        .await;
 
     assert!(matches!(result, Err(RepositoryError::EmailAlreadyTaken)));
 }
@@ -88,7 +100,9 @@ async fn find_by_coach_name_preserves_id(pool: PgPool) {
 #[sqlx::test]
 async fn find_by_coach_name_est_sensible_a_la_casse(pool: PgPool) {
     let repo = UserRepository::new(pool);
-    repo.create(&make_user("Bagouze", "bagouze@example.com")).await.unwrap();
+    repo.create(&make_user("Bagouze", "bagouze@example.com"))
+        .await
+        .unwrap();
 
     let result = repo.find_by_coach_name("bagouze").await.unwrap();
 

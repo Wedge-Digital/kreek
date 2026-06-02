@@ -1,4 +1,6 @@
-use crate::app::shared_kernel::staff::{StaffId, StaffKind, StaffMaxQuantity, StaffName, StaffPrice};
+use crate::app::shared_kernel::staff::{
+    StaffId, StaffKind, StaffMaxQuantity, StaffName, StaffPrice,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1,13 +1,17 @@
-use sqlx::PgPool;
-use time::OffsetDateTime;
 use crate::lib::event_envelope::EventEnvelope;
 use crate::lib::persistance::event_log_repository::{EventLogRepository, IEventLogRepository};
+use sqlx::PgPool;
+use time::OffsetDateTime;
 
-fn make_event(event_type: &str, tags: serde_json::Value, payload: serde_json::Value) -> EventEnvelope {
+fn make_event(
+    event_type: &str,
+    tags: serde_json::Value,
+    payload: serde_json::Value,
+) -> EventEnvelope {
     EventEnvelope {
-        event_id:    "01JQQQQQQQQQQQQQQQQQQQQB01".into(),
-        emitter:     "01JQQQQQQQQQQQQQQQQQQQQ001".into(),
-        event_type:  event_type.into(),
+        event_id: "01JQQQQQQQQQQQQQQQQQQQQB01".into(),
+        emitter: "01JQQQQQQQQQQQQQQQQQQQQ001".into(),
+        event_type: event_type.into(),
         tags,
         payload,
         occurred_at: OffsetDateTime::now_utc(),
@@ -20,7 +24,10 @@ async fn find_by_tag_returns_only_matching_events(pool: PgPool) {
     let repo = EventLogRepository::new(pool);
 
     // When
-    let events = repo.find_by_tag(serde_json::json!({"team_id": "team-abc"})).await.unwrap();
+    let events = repo
+        .find_by_tag(serde_json::json!({"team_id": "team-abc"}))
+        .await
+        .unwrap();
 
     // Then
     assert_eq!(events.len(), 3);
@@ -33,7 +40,10 @@ async fn find_by_tag_returns_events_ordered_by_global_position(pool: PgPool) {
     let repo = EventLogRepository::new(pool);
 
     // When
-    let events = repo.find_by_tag(serde_json::json!({"team_id": "team-abc"})).await.unwrap();
+    let events = repo
+        .find_by_tag(serde_json::json!({"team_id": "team-abc"}))
+        .await
+        .unwrap();
 
     // Then
     assert_eq!(events.len(), 3);
@@ -49,7 +59,10 @@ async fn find_by_tag_returns_empty_for_unknown_tag(pool: PgPool) {
     let repo = EventLogRepository::new(pool);
 
     // When
-    let events = repo.find_by_tag(serde_json::json!({"team_id": "team-inconnu"})).await.unwrap();
+    let events = repo
+        .find_by_tag(serde_json::json!({"team_id": "team-inconnu"}))
+        .await
+        .unwrap();
 
     // Then
     assert!(events.is_empty());
@@ -66,7 +79,10 @@ async fn save_persists_event(pool: PgPool) {
 
     repo.save(&event).await.unwrap();
 
-    let found = repo.find_by_tag(serde_json::json!({"team_id": "team-save"})).await.unwrap();
+    let found = repo
+        .find_by_tag(serde_json::json!({"team_id": "team-save"}))
+        .await
+        .unwrap();
     assert_eq!(found.len(), 1);
     assert_eq!(found[0].event_type, "TeamDraftCreated");
     assert_eq!(found[0].payload["name"], "Les Bleus");
@@ -79,7 +95,10 @@ async fn find_by_tag_maps_all_fields_correctly(pool: PgPool) {
     let repo = EventLogRepository::new(pool);
 
     // When
-    let events = repo.find_by_tag(serde_json::json!({"team_id": "team-abc"})).await.unwrap();
+    let events = repo
+        .find_by_tag(serde_json::json!({"team_id": "team-abc"}))
+        .await
+        .unwrap();
     let first = &events[0];
 
     // Then
@@ -102,14 +121,23 @@ async fn find_by_tag_supports_multi_tag_filter(pool: PgPool) {
     repo.save(&event).await.unwrap();
 
     // When — filtre sur les deux tags
-    let found = repo.find_by_tag(serde_json::json!({"team_id": "team-multi", "space_id": "space-1"})).await.unwrap();
+    let found = repo
+        .find_by_tag(serde_json::json!({"team_id": "team-multi", "space_id": "space-1"}))
+        .await
+        .unwrap();
     assert_eq!(found.len(), 1);
 
     // When — filtre partiel : doit aussi matcher
-    let found_partial = repo.find_by_tag(serde_json::json!({"team_id": "team-multi"})).await.unwrap();
+    let found_partial = repo
+        .find_by_tag(serde_json::json!({"team_id": "team-multi"}))
+        .await
+        .unwrap();
     assert_eq!(found_partial.len(), 1);
 
     // When — mauvais space_id : ne doit pas matcher
-    let not_found = repo.find_by_tag(serde_json::json!({"team_id": "team-multi", "space_id": "space-99"})).await.unwrap();
+    let not_found = repo
+        .find_by_tag(serde_json::json!({"team_id": "team-multi", "space_id": "space-99"}))
+        .await
+        .unwrap();
     assert!(not_found.is_empty());
 }

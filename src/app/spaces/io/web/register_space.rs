@@ -1,3 +1,14 @@
+use crate::app::auth::auth_backend::AuthSession;
+use crate::app::auth::routes::path as auth_path;
+use crate::app::shared_kernel::common_types::CloudinaryImage;
+use crate::app::shared_kernel::space_name::SpaceName;
+use crate::app::spaces::routes::path;
+use crate::app::spaces::uses_cases::register_new_space::{
+    execute, RegisterNewSpaceCommand, RegisterSpaceError,
+};
+use crate::app::team_creation::routes::Routes as TeamRoutes;
+use crate::state::AppState;
+use crate::web::routes::Routes as WebRoutes;
 use askama::Template;
 use axum::body::Body;
 use axum::extract::State;
@@ -5,32 +16,23 @@ use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use axum::Form;
 use serde::Deserialize;
-use crate::app::auth::auth_backend::AuthSession;
-use crate::app::auth::routes::path as auth_path;
-use crate::app::shared_kernel::common_types::CloudinaryImage;
-use crate::app::shared_kernel::space_name::SpaceName;
-use crate::app::spaces::routes::path;
-use crate::app::spaces::uses_cases::register_new_space::{execute, RegisterNewSpaceCommand, RegisterSpaceError};
-use crate::app::team_creation::routes::Routes as TeamRoutes;
-use crate::state::AppState;
-use crate::web::routes::Routes as WebRoutes;
 
 #[derive(Template, Default)]
 #[template(path = "new-space.html")]
 pub struct NewSpaceTemplate {
-    pub web_routes:        WebRoutes,
-    pub team_routes:       TeamRoutes,
-    pub space_name_value:  String,
-    pub space_name_error:  Option<String>,
-    pub logo_url_value:    String,
-    pub logo_error:        Option<String>,
+    pub web_routes: WebRoutes,
+    pub team_routes: TeamRoutes,
+    pub space_name_value: String,
+    pub space_name_error: Option<String>,
+    pub logo_url_value: String,
+    pub logo_error: Option<String>,
 }
 
 impl IntoResponse for NewSpaceTemplate {
     fn into_response(self) -> Response {
         match self.render() {
             Ok(html) => Html(html).into_response(),
-            Err(_)   => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
     }
 }
@@ -42,7 +44,7 @@ pub async fn register_space() -> impl IntoResponse {
 #[derive(Deserialize)]
 pub struct RegisterSpaceFormPayload {
     pub space_name: String,
-    pub logo_url:   String,
+    pub logo_url: String,
 }
 
 pub async fn register_space_submit(
@@ -52,13 +54,13 @@ pub async fn register_space_submit(
 ) -> impl IntoResponse {
     let mut tmpl = NewSpaceTemplate {
         space_name_value: payload.space_name.clone(),
-        logo_url_value:   payload.logo_url.clone(),
+        logo_url_value: payload.logo_url.clone(),
         ..Default::default()
     };
 
     // Validation du nom d'espace
     let space_name = match SpaceName::try_new(&payload.space_name) {
-        Ok(v)  => Some(v),
+        Ok(v) => Some(v),
         Err(_) => {
             tmpl.space_name_error = Some(
                 "Le nom ne peut contenir que des lettres, chiffres, tirets et underscores (100 caractères max).".into(),
@@ -69,7 +71,7 @@ pub async fn register_space_submit(
 
     // Validation du logo
     let space_logo = match CloudinaryImage::try_new(payload.logo_url.clone()) {
-        Ok(v)  => Some(v),
+        Ok(v) => Some(v),
         Err(_) => {
             tmpl.logo_error = Some("Veuillez uploader un logo pour votre espace.".into());
             None
@@ -88,9 +90,20 @@ pub async fn register_space_submit(
     };
     let coach_id = user.id;
 
-    let cmd = RegisterNewSpaceCommand { coach_id, space_name, space_logo };
+    let cmd = RegisterNewSpaceCommand {
+        coach_id,
+        space_name,
+        space_logo,
+    };
 
-    match execute(cmd, state.spaces.space_repository.as_ref(), state.spaces.user_cache_repository.as_ref(), &state.event_bus).await {
+    match execute(
+        cmd,
+        state.spaces.space_repository.as_ref(),
+        state.spaces.user_cache_repository.as_ref(),
+        &state.event_bus,
+    )
+    .await
+    {
         Ok(()) => Response::builder()
             .header("HX-Redirect", path::NEW_SPACE)
             .body(Body::empty())
@@ -102,7 +115,8 @@ pub async fn register_space_submit(
         }
 
         Err(RegisterSpaceError::CoachNotFound) => {
-            tmpl.space_name_error = Some("Votre profil est introuvable, veuillez vous reconnecter.".into());
+            tmpl.space_name_error =
+                Some("Votre profil est introuvable, veuillez vous reconnecter.".into());
             tmpl.into_response()
         }
 

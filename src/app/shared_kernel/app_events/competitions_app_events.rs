@@ -1,10 +1,14 @@
-use serde::{Deserialize, Serialize};
 use crate::app::shared_kernel::common_types::{CompetitionId, EventId, SpaceId};
 use crate::lib::event_envelope::EventEnvelope;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum CompetitionsAppEvent {
-    CompetitionCreated { event_id: EventId, competition_id: CompetitionId, space_id: SpaceId },
+    CompetitionCreated {
+        event_id: EventId,
+        competition_id: CompetitionId,
+        space_id: SpaceId,
+    },
 }
 
 impl CompetitionsAppEvent {
@@ -21,11 +25,11 @@ impl CompetitionsAppEvent {
             Self::CompetitionCreated { competition_id, .. } => competition_id.to_string(),
         };
         EventEnvelope {
-            event_id:    EventId::new().to_string(),
+            event_id: EventId::new().to_string(),
             emitter,
-            event_type:  self.event_type().to_string(),
-            tags:        serde_json::json!([]),
-            payload:     serde_json::to_value(self).unwrap(),
+            event_type: self.event_type().to_string(),
+            tags: serde_json::json!([]),
+            payload: serde_json::to_value(self).unwrap(),
             occurred_at: time::OffsetDateTime::now_utc(),
         }
     }

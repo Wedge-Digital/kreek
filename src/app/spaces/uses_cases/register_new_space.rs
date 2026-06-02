@@ -1,14 +1,18 @@
 use crate::app::shared_kernel::authorization::SpaceProfile;
-use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, EventId, SpaceId, UserId};
+use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, SpaceId, UserId};
 use crate::app::shared_kernel::space_name::SpaceName;
-use crate::app::spaces::domain::domain_event::{SpacesDomainEvent, SPACE_CREATED, USER_PROMOTED_TO_SPACE_ADMIN, USER_SUBSCRIBED_TO_SPACE};
+use crate::app::spaces::domain::domain_event::SpacesDomainEvent;
 use crate::app::spaces::domain::space::Space;
-use crate::app::spaces::domain::space_repository_port::space_repository_port::{ISpaceRepository, SpaceRepositoryError};
-use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::{ISpaceUserCacheRepository, SpaceUserCacheRepositoryError};
+use crate::app::spaces::domain::space_repository_port::space_repository_port::{
+    ISpaceRepository, SpaceRepositoryError,
+};
+use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::{
+    ISpaceUserCacheRepository, SpaceUserCacheRepositoryError,
+};
 use crate::lib::services::event_bus::event_bus::EventBus;
 
 pub struct RegisterNewSpaceCommand {
-    pub coach_id:   CoachId,
+    pub coach_id: CoachId,
     pub space_name: SpaceName,
     pub space_logo: CloudinaryImage,
 }
@@ -23,9 +27,11 @@ pub enum RegisterSpaceError {
 impl From<SpaceUserCacheRepositoryError> for RegisterSpaceError {
     fn from(e: SpaceUserCacheRepositoryError) -> Self {
         match e {
-            SpaceUserCacheRepositoryError::UserNotFoundInCache               => RegisterSpaceError::CoachNotFound,
-            SpaceUserCacheRepositoryError::UsernameNameAlreadyPresentInCache => RegisterSpaceError::Database("username already in cache".into()),
-            SpaceUserCacheRepositoryError::Database(msg)                     => RegisterSpaceError::Database(msg),
+            SpaceUserCacheRepositoryError::UserNotFoundInCache => RegisterSpaceError::CoachNotFound,
+            SpaceUserCacheRepositoryError::UsernameNameAlreadyPresentInCache => {
+                RegisterSpaceError::Database("username already in cache".into())
+            }
+            SpaceUserCacheRepositoryError::Database(msg) => RegisterSpaceError::Database(msg),
         }
     }
 }
@@ -33,9 +39,13 @@ impl From<SpaceUserCacheRepositoryError> for RegisterSpaceError {
 impl From<SpaceRepositoryError> for RegisterSpaceError {
     fn from(e: SpaceRepositoryError) -> Self {
         match e {
-            SpaceRepositoryError::SpaceNameAlreadyTaken => RegisterSpaceError::SpaceNameAlreadyTaken,
-            SpaceRepositoryError::CoachAlreadyMember    => RegisterSpaceError::Database("coach already member on brand new space".into()),
-            SpaceRepositoryError::Database(msg)         => RegisterSpaceError::Database(msg),
+            SpaceRepositoryError::SpaceNameAlreadyTaken => {
+                RegisterSpaceError::SpaceNameAlreadyTaken
+            }
+            SpaceRepositoryError::CoachAlreadyMember => {
+                RegisterSpaceError::Database("coach already member on brand new space".into())
+            }
+            SpaceRepositoryError::Database(msg) => RegisterSpaceError::Database(msg),
         }
     }
 }
@@ -48,20 +58,18 @@ pub async fn execute(
 ) -> Result<(), RegisterSpaceError> {
     let space = Space::new(SpaceId::new(), cmd.space_name, cmd.space_logo, vec![]);
 
-    let curent_user = user_cache.find_user_by_id(&cmd.coach_id).await?;
+    let _curent_user = user_cache.find_user_by_id(&cmd.coach_id).await?;
 
-    repo.save(&space)
-        .await
-        .map_err(RegisterSpaceError::from)?;
+    repo.save(&space).await.map_err(RegisterSpaceError::from)?;
 
     repo.add_member(&space.id, &cmd.coach_id, &SpaceProfile::SpaceAdmin)
         .await
         .map_err(RegisterSpaceError::from)?;
 
     let space_created_payload = SpacesDomainEvent::SpaceCreated {
-        event_id:   UserId::new(),
+        event_id: UserId::new(),
         created_by: cmd.coach_id.clone(),
-        space_id:   space.id.clone(),
+        space_id: space.id.clone(),
         space_name: space.name.clone(),
         space_logo: space.logo.clone(),
     };
@@ -75,21 +83,41 @@ pub async fn execute(
 mod tests {
     use super::*;
     use crate::app::spaces::domain::space::Space;
-    use async_trait::async_trait;
-    use crate::app::spaces::domain::space_repository_port::space_repository_port::{ISpaceRepository, SpaceRepositoryError, SpaceSummary};
-    use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::{ISpaceUserCacheRepository, SpaceUserCacheRepositoryError};
+    use crate::app::spaces::domain::space_repository_port::space_repository_port::{
+        ISpaceRepository, SpaceRepositoryError, SpaceSummary,
+    };
+    use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::{
+        ISpaceUserCacheRepository, SpaceUserCacheRepositoryError,
+    };
     use crate::app::spaces::domain::user::User as SpaceUser;
     use crate::lib::services::event_bus::event_bus::new_bus;
+    use async_trait::async_trait;
 
-    struct FakeUserCache { pub user: Option<SpaceUser> }
+    struct FakeUserCache {
+        pub user: Option<SpaceUser>,
+    }
     #[async_trait]
     impl ISpaceUserCacheRepository for FakeUserCache {
-        async fn add_user(&self, _: &SpaceUser) -> Result<(), SpaceUserCacheRepositoryError> { Ok(()) }
-        async fn find_user_by_id(&self, _: &CoachId) -> Result<SpaceUser, SpaceUserCacheRepositoryError> {
-            self.user.clone().ok_or(SpaceUserCacheRepositoryError::UserNotFoundInCache)
+        async fn add_user(&self, _: &SpaceUser) -> Result<(), SpaceUserCacheRepositoryError> {
+            Ok(())
         }
-        async fn find_all_users(&self) -> Result<Vec<SpaceUser>, SpaceUserCacheRepositoryError> { Ok(vec![]) }
-        async fn list_members_for_space(&self, _: &SpaceId) -> Result<Vec<SpaceUser>, SpaceUserCacheRepositoryError> { Ok(vec![]) }
+        async fn find_user_by_id(
+            &self,
+            _: &CoachId,
+        ) -> Result<SpaceUser, SpaceUserCacheRepositoryError> {
+            self.user
+                .clone()
+                .ok_or(SpaceUserCacheRepositoryError::UserNotFoundInCache)
+        }
+        async fn find_all_users(&self) -> Result<Vec<SpaceUser>, SpaceUserCacheRepositoryError> {
+            Ok(vec![])
+        }
+        async fn list_members_for_space(
+            &self,
+            _: &SpaceId,
+        ) -> Result<Vec<SpaceUser>, SpaceUserCacheRepositoryError> {
+            Ok(vec![])
+        }
     }
 
     fn fake_user(coach_id: &CoachId) -> SpaceUser {
@@ -97,9 +125,12 @@ mod tests {
         use crate::app::shared_kernel::common_types::CloudinaryImage;
         use crate::app::shared_kernel::email::Email;
         SpaceUser {
-            id:    coach_id.clone(),
-            name:  CoachName::try_new("Coach").unwrap(),
-            icon:  Some(CloudinaryImage::try_new("https://res.cloudinary.com/demo/image/upload/sample.jpg").unwrap()),
+            id: coach_id.clone(),
+            name: CoachName::try_new("Coach").unwrap(),
+            icon: Some(
+                CloudinaryImage::try_new("https://res.cloudinary.com/demo/image/upload/sample.jpg")
+                    .unwrap(),
+            ),
             email: Email::try_new("coach@example.com").unwrap(),
         }
     }
@@ -111,11 +142,20 @@ mod tests {
         async fn save(&self, _space: &Space) -> Result<(), SpaceRepositoryError> {
             Ok(())
         }
-        async fn add_member(&self, _space_id: &SpaceId, _coach_id: &CoachId, _profile: &SpaceProfile) -> Result<(), SpaceRepositoryError> {
+        async fn add_member(
+            &self,
+            _space_id: &SpaceId,
+            _coach_id: &CoachId,
+            _profile: &SpaceProfile,
+        ) -> Result<(), SpaceRepositoryError> {
             Ok(())
         }
 
-        async fn join_spaces(&self, space_ids: &[SpaceId], coach_id: &CoachId) -> Result<(), SpaceRepositoryError> {
+        async fn join_spaces(
+            &self,
+            _space_ids: &[SpaceId],
+            _coach_id: &CoachId,
+        ) -> Result<(), SpaceRepositoryError> {
             Ok(())
         }
 
@@ -123,11 +163,18 @@ mod tests {
             Ok(None)
         }
 
-        async fn find_by_coach_id(&self, coach_id: &CoachId) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
+        async fn find_by_coach_id(
+            &self,
+            _coach_id: &CoachId,
+        ) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
             Ok(vec![])
         }
 
-        async fn find_member_profile(&self, coach_id: &CoachId, space_id: &SpaceId) -> Result<Option<SpaceProfile>, SpaceRepositoryError> {
+        async fn find_member_profile(
+            &self,
+            _coach_id: &CoachId,
+            _space_id: &SpaceId,
+        ) -> Result<Option<SpaceProfile>, SpaceRepositoryError> {
             Ok(Some(SpaceProfile::SpaceUser))
         }
 
@@ -143,11 +190,20 @@ mod tests {
         async fn save(&self, _space: &Space) -> Result<(), SpaceRepositoryError> {
             Err(SpaceRepositoryError::SpaceNameAlreadyTaken)
         }
-        async fn add_member(&self, _space_id: &SpaceId, _coach_id: &CoachId, _profile: &SpaceProfile) -> Result<(), SpaceRepositoryError> {
+        async fn add_member(
+            &self,
+            _space_id: &SpaceId,
+            _coach_id: &CoachId,
+            _profile: &SpaceProfile,
+        ) -> Result<(), SpaceRepositoryError> {
             Ok(())
         }
 
-        async fn join_spaces(&self, space_ids: &[SpaceId], coach_id: &CoachId) -> Result<(), SpaceRepositoryError> {
+        async fn join_spaces(
+            &self,
+            _space_ids: &[SpaceId],
+            _coach_id: &CoachId,
+        ) -> Result<(), SpaceRepositoryError> {
             Ok(())
         }
 
@@ -155,11 +211,18 @@ mod tests {
             Ok(None)
         }
 
-        async fn find_by_coach_id(&self, coach_id: &CoachId) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
+        async fn find_by_coach_id(
+            &self,
+            _coach_id: &CoachId,
+        ) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
             Ok(vec![])
         }
 
-        async fn find_member_profile(&self, coach_id: &CoachId, space_id: &SpaceId) -> Result<Option<SpaceProfile>, SpaceRepositoryError> {
+        async fn find_member_profile(
+            &self,
+            _coach_id: &CoachId,
+            _space_id: &SpaceId,
+        ) -> Result<Option<SpaceProfile>, SpaceRepositoryError> {
             Ok(Some(SpaceProfile::SpaceUser))
         }
 
@@ -170,29 +233,33 @@ mod tests {
 
     fn make_cmd() -> RegisterNewSpaceCommand {
         RegisterNewSpaceCommand {
-            coach_id:   CoachId::new(),
+            coach_id: CoachId::new(),
             space_name: SpaceName::try_new("LigueAlpha").unwrap(),
             space_logo: CloudinaryImage::try_new(
                 "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-            ).unwrap(),
+            )
+            .unwrap(),
         }
     }
 
     #[tokio::test]
     async fn execute_cree_espace_et_ajoute_fondateur_admin() {
-        let cmd    = make_cmd();
-        let user   = fake_user(&cmd.coach_id);
-        let cache  = FakeUserCache { user: Some(user) };
+        let cmd = make_cmd();
+        let user = fake_user(&cmd.coach_id);
+        let cache = FakeUserCache { user: Some(user) };
         let result = execute(cmd, &SpaceRepoOk, &cache, &new_bus()).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn execute_renvoie_space_name_already_taken() {
-        let cmd   = make_cmd();
-        let user  = fake_user(&cmd.coach_id);
+        let cmd = make_cmd();
+        let user = fake_user(&cmd.coach_id);
         let cache = FakeUserCache { user: Some(user) };
         let result = execute(cmd, &SpaceRepoNameTaken, &cache, &new_bus()).await;
-        assert!(matches!(result, Err(RegisterSpaceError::SpaceNameAlreadyTaken)));
+        assert!(matches!(
+            result,
+            Err(RegisterSpaceError::SpaceNameAlreadyTaken)
+        ));
     }
 }

@@ -1,8 +1,8 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::auth::routes::path;
+use axum::body::Body;
 use axum::http::header;
 use axum::response::{IntoResponse, Response};
-use axum::body::Body;
 
 pub async fn logout(mut auth_session: AuthSession) -> impl IntoResponse {
     if let Err(e) = auth_session.logout().await {

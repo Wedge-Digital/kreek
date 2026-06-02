@@ -1,3 +1,10 @@
+use crate::app::auth::io::web::auth_layout::AuthLayout;
+use crate::app::auth::routes::{path, Routes};
+use crate::app::auth::use_cases::send_reset_password_email::{
+    execute, SendResetPasswordEmailCommand, SendResetPasswordEmailError,
+};
+use crate::app::shared_kernel::coach_name::CoachName;
+use crate::state::AppState;
 use askama::Template;
 use axum::body::Body;
 use axum::extract::State;
@@ -5,18 +12,11 @@ use axum::http::{header, HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 use axum::Form;
 use serde::Deserialize;
-use crate::app::shared_kernel::coach_name::CoachName;
-use crate::app::auth::io::web::auth_layout::AuthLayout;
-use crate::app::auth::routes::{path, Routes};
-use crate::app::auth::use_cases::send_reset_password_email::{
-    SendResetPasswordEmailCommand, SendResetPasswordEmailError, execute,
-};
-use crate::state::AppState;
 
 #[derive(Template, Default)]
 #[template(path = "auth-forgot-password.html")]
 pub struct AuthForgotPassword {
-    pub error:  Option<String>,
+    pub error: Option<String>,
     pub routes: Routes,
 }
 
@@ -24,7 +24,7 @@ impl IntoResponse for AuthForgotPassword {
     fn into_response(self) -> Response {
         match self.render() {
             Ok(html) => Html(html).into_response(),
-            Err(_)   => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
     }
 }
@@ -39,7 +39,7 @@ impl IntoResponse for AuthForgotPasswordSent {
     fn into_response(self) -> Response {
         match self.render() {
             Ok(html) => Html(html).into_response(),
-            Err(_)   => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
     }
 }
@@ -82,19 +82,27 @@ pub async fn post_forgot_password(
     Form(payload): Form<LostPasswordPayload>,
 ) -> impl IntoResponse {
     let coach_name = match CoachName::try_new(&payload.coach_name) {
-        Ok(v)  => v,
-        Err(_) => return AuthForgotPassword {
-            error: Some("Nom de coach invalide.".into()),
-            ..Default::default()
-        }.into_response(),
+        Ok(v) => v,
+        Err(_) => {
+            return AuthForgotPassword {
+                error: Some("Nom de coach invalide.".into()),
+                ..Default::default()
+            }
+            .into_response()
+        }
     };
 
     match execute(
-        SendResetPasswordEmailCommand { coach_name, host_domain: state.host_domain.clone()},
+        SendResetPasswordEmailCommand {
+            coach_name,
+            host_domain: state.host_domain.clone(),
+        },
         state.auth.user_repository.as_ref(),
         state.auth.reset_token_repository.as_ref(),
         state.email_service.as_ref(),
-    ).await {
+    )
+    .await
+    {
         Ok(()) | Err(SendResetPasswordEmailError::CoachNameNotFound) => {
             let mut response = Response::new(Body::empty());
             response.headers_mut().insert(
@@ -106,6 +114,7 @@ pub async fn post_forgot_password(
         Err(_) => AuthForgotPassword {
             error: Some("Erreur interne, réessaie plus tard.".into()),
             ..Default::default()
-        }.into_response(),
+        }
+        .into_response(),
     }
 }

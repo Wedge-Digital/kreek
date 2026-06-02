@@ -1,8 +1,8 @@
+use crate::app::auth::ports::{IUserRepository, RepositoryError};
 use crate::app::shared_kernel::coach_icon::CoachIcon;
 use crate::app::shared_kernel::coach_name::CoachName;
-use crate::app::shared_kernel::email::Email;
-use crate::app::auth::ports::{IUserRepository, RepositoryError};
 use crate::app::shared_kernel::common_types::UserId;
+use crate::app::shared_kernel::email::Email;
 use crate::app::shared_kernel::user::User;
 use async_trait::async_trait;
 use sqlx::PgPool;
@@ -13,10 +13,10 @@ fn db_err(e: impl std::fmt::Display) -> RepositoryError {
 
 #[derive(sqlx::FromRow)]
 struct UserRow {
-    id:            String,
-    coach_name:    String,
-    coach_icon:    Option<String>,
-    email:         String,
+    id: String,
+    coach_name: String,
+    coach_icon: Option<String>,
+    email: String,
     password_hash: String,
 }
 
@@ -27,7 +27,10 @@ impl TryFrom<UserRow> for User {
         Ok(User::new(
             UserId::try_new(&row.id).map_err(db_err)?,
             CoachName::try_new(row.coach_name).map_err(db_err)?,
-            row.coach_icon.map(CoachIcon::try_new).transpose().map_err(db_err)?,
+            row.coach_icon
+                .map(CoachIcon::try_new)
+                .transpose()
+                .map_err(db_err)?,
             Email::try_new(row.email).map_err(db_err)?,
             row.password_hash,
         ))
@@ -49,26 +52,26 @@ impl UserRepository {
 impl IUserRepository for UserRepository {
     async fn create(&self, user: &User) -> Result<(), RepositoryError> {
         sqlx::query(include_str!("sql/insert_user.sql"))
-        .bind(user.id.to_string())
-        .bind(user.coach_name.clone().into_inner())
-        .bind(user.coach_icon.as_ref().map(|i| i.as_ref()))
-        .bind(user.email.value())
-        .bind(&user.password_hash)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| {
-            if let sqlx::Error::Database(db_err) = &e {
-                if db_err.code().as_deref() == Some("23505") {
-                    let constraint = db_err.constraint().unwrap_or("");
-                    return if constraint.contains("coach_name") {
-                        RepositoryError::CoachNameAlreadyTaken
-                    } else {
-                        RepositoryError::EmailAlreadyTaken
-                    };
+            .bind(user.id.to_string())
+            .bind(user.coach_name.clone().into_inner())
+            .bind(user.coach_icon.as_ref().map(|i| i.as_ref()))
+            .bind(user.email.value())
+            .bind(&user.password_hash)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| {
+                if let sqlx::Error::Database(db_err) = &e {
+                    if db_err.code().as_deref() == Some("23505") {
+                        let constraint = db_err.constraint().unwrap_or("");
+                        return if constraint.contains("coach_name") {
+                            RepositoryError::CoachNameAlreadyTaken
+                        } else {
+                            RepositoryError::EmailAlreadyTaken
+                        };
+                    }
                 }
-            }
-            RepositoryError::Database(e.to_string())
-        })?;
+                RepositoryError::Database(e.to_string())
+            })?;
 
         Ok(())
     }
@@ -92,7 +95,11 @@ impl IUserRepository for UserRepository {
         Ok(row.map(User::try_from).transpose()?)
     }
 
-    async fn update_password_hash(&self, coach_name: &str, new_hash: &str) -> Result<(), RepositoryError> {
+    async fn update_password_hash(
+        &self,
+        coach_name: &str,
+        new_hash: &str,
+    ) -> Result<(), RepositoryError> {
         sqlx::query(include_str!("sql/update_user_password.sql"))
             .bind(new_hash)
             .bind(coach_name)

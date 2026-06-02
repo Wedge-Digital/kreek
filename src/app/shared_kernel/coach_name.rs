@@ -1,5 +1,5 @@
-use nutype::nutype;
 use crate::app::auth::domain::error::AuthDomainError;
+use nutype::nutype;
 
 #[nutype(
     sanitize(trim),
@@ -11,9 +11,9 @@ pub struct CoachName(String);
 impl From<CoachNameError> for AuthDomainError {
     fn from(e: CoachNameError) -> Self {
         match e {
-            CoachNameError::NotEmptyViolated    => AuthDomainError::CoachNameEmpty,
-            CoachNameError::LenCharMaxViolated  => AuthDomainError::CoachNameTooLong,
-            CoachNameError::RegexViolated       => AuthDomainError::CoachNameInvalidChars,
+            CoachNameError::NotEmptyViolated => AuthDomainError::CoachNameEmpty,
+            CoachNameError::LenCharMaxViolated => AuthDomainError::CoachNameTooLong,
+            CoachNameError::RegexViolated => AuthDomainError::CoachNameInvalidChars,
         }
     }
 }
