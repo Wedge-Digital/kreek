@@ -1,0 +1,87 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/app-team-detail.css">
+
+<div class="team-page">
+
+  <div style="margin-bottom: var(--p1);">
+    <a style="color: var(--dark-3); font-size: var(--text-tiny); cursor: pointer;"
+       hx-get="{{ back_url }}"
+       hx-target="#app-content"
+       hx-select="#app-content"
+       hx-swap="innerHTML"
+       hx-push-url="true">← Mes équipes</a>
+  </div>
+
+  <!-- En-tête -->
+  <div class="team-header">
+
+    <div class="team-header-logo">{{ vm.initials }}</div>
+
+    <div class="team-header-info">
+      <div class="team-header-top">
+        <div class="team-header-name">{{ vm.name }}</div>
+        <span class="team-status-badge team-status-badge--{{ vm.status_css_class }}">{{ vm.status_label }}</span>
+      </div>
+      <div class="team-header-meta">
+        <div class="meta-item">
+          <div class="meta-label">Roster</div>
+          <div class="meta-value">{{ vm.roster_name }}</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Coach</div>
+          <div class="meta-value">{{ vm.coach_name }}</div>
+        </div>
+        {% if let Some(comp) = vm.competition_name %}
+        <div class="meta-item">
+          <div class="meta-label">Ligue</div>
+          <div class="meta-value">{{ comp }}</div>
+        </div>
+        {% endif %}
+        {% if let Some(season) = vm.season_name %}
+        <div class="meta-item">
+          <div class="meta-label">Saison</div>
+          <div class="meta-value">{{ season }}</div>
+        </div>
+        {% endif %}
+        <div class="meta-item">
+          <div class="meta-label">Valeur d'équipe</div>
+          <div class="meta-value">{{ vm.team_value_kpo }} kPo</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Trésorerie</div>
+          <div class="meta-value">{{ vm.treasury_kpo }} kPo</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Fans dévoués</div>
+          <div class="meta-value">{{ vm.dedicated_fans }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="team-header-roster">
+      <div class="roster-icon">{{ vm.roster_initials }}</div>
+      <div class="roster-icon-label">{{ vm.roster_name }}</div>
+    </div>
+
+  </div>
+
+  <!-- Onglets -->
+  <div class="tabs" style="background: var(--white); padding: 0 var(--p2); border-bottom: 1px solid var(--dark-5);">
+    <div class="tab active">Joueurs & Staff</div>
+    <div class="tab">Matchs</div>
+    <div class="tab">Trésorerie</div>
+  </div>
+
+  <!-- Widget joueurs — délégué au BC players -->
+  <div id="players-widget"
+       hx-get="{{ vm.players_widget_url }}"
+       hx-trigger="load"
+       hx-target="this"
+       hx-swap="innerHTML">
+    <div class="loading-placeholder" style="padding: var(--p2); color: var(--dark-3);">Chargement des joueurs…</div>
+  </div>
+
+</div>
+{% endblock %}
