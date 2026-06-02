@@ -7,8 +7,14 @@
 <div class="finalize-page">
 
   <!-- Breadcrumb -->
-  <div style="font-size: var(--text-tiny); color: var(--dark-3); cursor: pointer; margin-bottom: var(--p1);">
-    <a href="/app/{{ space_id }}/team/list" style="color: var(--dark-3);">← Mes équipes</a>
+  <div style="font-size: var(--text-tiny); color: var(--dark-3);">
+    <a href="/app/{{ space_id }}/team/list"
+       hx-get="{{ team_routes.my_teams(space_id) }}"
+       hx-target="#app-content"
+       hx-select="#app-content"
+       hx-swap="innerHTML"
+       hx-push-url="true"
+       style="color: var(--dark-3);">← Mes équipes</a>
   </div>
 
   <!-- ① Header équipe -->
@@ -31,7 +37,7 @@
         {% if header.spp_pool > 0 %}
         <div class="meta-item">
           <div class="meta-label">SPP à dépenser</div>
-          <div class="meta-value" style="color: #9A7800;">{{ header.spp_pool }} SPP</div>
+          <div class="meta-value" style="color: #9A7800;" id="spp-header-value">{{ header.spp_pool }} SPP</div>
         </div>
         {% endif %}
       </div>
@@ -40,46 +46,45 @@
 
   <!-- ② Sélecteur de ligue — carte B (références BC) -->
   <div id="league-selector-container"
-       hx-get="/références/leagues/selector?selected={{ header.league_uid }}&on_select={{ set_league_url }}"
-       hx-trigger="load, leagueSelected from:body"
-       hx-vals="js:{
-         selected:  event.detail?.league_id ?? '{{ header.league_uid }}',
-         on_select: '{{ set_league_url }}'
-       }"
+       hx-get="{{ league_selector_url }}"
+       hx-trigger="load"
        hx-target="this"
        hx-swap="outerHTML">
     <div class="league-selector-row">
       <div class="league-selector-label">Ligue de référence</div>
-      <div class="league-selector-hint">Chargement…</div>
+      <div class="league-selector-hint" style="color: var(--dark-4); font-style:italic;">Chargement…</div>
     </div>
   </div>
 
   <!-- ③ Split : joueurs + compétences -->
   <div class="split-layout">
 
-    <!-- Colonne gauche : joueurs — carte C (team_creation) -->
+    <!-- Colonne gauche — carte C (team_creation) -->
     <div class="player-list-panel">
       <div class="player-list-header">
         <div class="player-list-title">Joueurs</div>
-        <div class="spp-total-badge" id="spp-total-badge">Pool équipe : {{ header.spp_pool }} SPP</div>
+        <div class="spp-total-badge" id="spp-total-badge">
+          {% if header.spp_pool > 0 %}
+          Pool équipe : {{ header.spp_pool }} SPP
+          {% else %}
+          {{ players.len() }} joueurs
+          {% endif %}
+        </div>
       </div>
 
       {% for player in players %}
       <div id="player-row-{{ player.instance_id }}" class="player-row"
-           onclick="if(event.target.tagName!=='INPUT'){
-             document.querySelectorAll('.player-row').forEach(function(r){r.classList.remove('selected')});
-             this.classList.add('selected');
-             htmx.trigger(document.body,'playerSelected',{
-               player_id:'{{ player.instance_id }}',
-               roster_line_id:'{{ player.roster_line_id }}',
-               spp:{{ header.spp_pool }},
-               acquired:'{{ player.acquired_csv }}',
-               on_acquire:'{{ player.spend_spp_url }}',
-               on_cancel:'{{ player.cancel_spp_base_url }}'
-             });
-           }">
+           data-instance-id="{{ player.instance_id }}"
+           data-roster-line-id="{{ player.roster_line_id }}"
+           data-spp="{{ header.spp_pool }}"
+           data-acquired="{{ player.acquired_csv }}"
+           data-on-acquire="{{ player.spend_spp_url }}"
+           data-on-cancel="{{ player.cancel_spp_base_url }}"
+           onclick="selectPlayer(event, this)">
         <input class="jersey-input" type="number"
-               name="jersey" value="{{ player.jersey }}" min="1" max="99"
+               name="jersey"
+               {% if player.jersey > 0 %}value="{{ player.jersey }}"{% endif %}
+               placeholder="—" min="1" max="99"
                hx-post="{{ player.set_identity_url }}"
                hx-trigger="change"
                hx-ext="json-enc"
@@ -88,7 +93,9 @@
                hx-swap="outerHTML">
         <div class="player-row-info">
           <input class="player-name-input" type="text"
-                 name="name" value="{{ player.personal_name }}" placeholder="Nom du joueur"
+                 name="name"
+                 value="{{ player.personal_name }}"
+                 placeholder="Nom du joueur"
                  hx-post="{{ player.set_identity_url }}"
                  hx-trigger="blur"
                  hx-ext="json-enc"
@@ -111,12 +118,7 @@
     <div class="skill-panel">
 
       <!-- Carte D — header joueur (team_creation) -->
-      <div id="skill-header"
-           hx-get="{{ skill_header_url }}"
-           hx-trigger="playerSelected from:body"
-           hx-vals="js:{player_id: event.detail.player_id}"
-           hx-target="this"
-           hx-swap="outerHTML">
+      <div id="skill-header">
         <div class="skill-panel-empty">
           <div class="skill-panel-empty-icon" style="font-size:40px;opacity:0.3;">↑</div>
           <span>Sélectionnez un joueur pour gérer ses compétences</span>
@@ -124,19 +126,7 @@
       </div>
 
       <!-- Carte E — catalogue compétences (références BC) -->
-      <div id="skill-picker-container"
-           hx-get="/références/roster-lines/skill-picker"
-           hx-trigger="playerSelected from:body, skillsUpdated from:body"
-           hx-vals="js:{
-             roster_line_id: event.detail.roster_line_id,
-             spp:            event.detail.spp,
-             acquired:       event.detail.acquired,
-             on_acquire:     event.detail.on_acquire,
-             on_cancel:      event.detail.on_cancel
-           }"
-           hx-target="this"
-           hx-swap="outerHTML">
-      </div>
+      <div id="skill-picker-container"></div>
 
     </div><!-- /skill-panel -->
 
@@ -146,7 +136,11 @@
   <div class="spp-summary" id="spp-summary">
     <div class="spp-summary-header">
       <div class="spp-summary-title">Synthèse des SPP dépensés</div>
-      <div class="spp-summary-total">Pool équipe : <strong>{{ header.spp_pool }} SPP</strong></div>
+      <div class="spp-summary-total" id="spp-summary-totals">
+        {% if header.spp_pool > 0 %}
+        Pool équipe : <strong>{{ header.spp_pool }} SPP</strong>
+        {% endif %}
+      </div>
     </div>
     <div class="spp-empty-state">Aucune compétence acquise pour l'instant.</div>
   </div>
@@ -163,4 +157,58 @@
   </div>
 
 </div><!-- /finalize-page -->
+
+<script>
+(function () {
+
+  // ── Sélection d'un joueur ─────────────────────────────────────────────────
+  window.selectPlayer = function (event, row) {
+    if (event.target.tagName === 'INPUT') return;
+
+    document.querySelectorAll('.player-row').forEach(function (r) {
+      r.classList.remove('selected');
+    });
+    row.classList.add('selected');
+
+    var d = row.dataset;
+
+    // Carte D — header joueur (team_creation)
+    htmx.ajax('GET',
+      '{{ skill_header_url }}?player_id=' + encodeURIComponent(d.instanceId),
+      { target: '#skill-header', swap: 'outerHTML' }
+    );
+
+    // Carte E — skill picker (références BC)
+    loadSkillPicker(
+      d.rosterLineId, d.spp, d.acquired, d.onAcquire, d.onCancel
+    );
+  };
+
+  function loadSkillPicker(rosterLineId, spp, acquired, onAcquire, onCancel) {
+    var url = '/références/roster-lines/skill-picker'
+      + '?roster_line_id=' + encodeURIComponent(rosterLineId)
+      + '&spp=' + encodeURIComponent(spp)
+      + '&acquired=' + encodeURIComponent(acquired)
+      + '&on_acquire=' + encodeURIComponent(onAcquire)
+      + '&on_cancel=' + encodeURIComponent(onCancel);
+    htmx.ajax('GET', url, { target: '#skill-picker-container', swap: 'outerHTML' });
+  }
+
+  // ── Mise à jour après dépense / annulation de SPP ────────────────────────
+  document.body.addEventListener('skillsUpdated', function (evt) {
+    var d = evt.detail;
+    loadSkillPicker(d.roster_line_id, d.spp, d.acquired, d.on_acquire, d.on_cancel);
+  });
+
+  // ── Mise à jour du sélecteur de ligue après sélection ────────────────────
+  document.body.addEventListener('leagueSelected', function (evt) {
+    var url = '/références/leagues/selector'
+      + '?selected=' + encodeURIComponent(evt.detail.league_id)
+      + '&on_select=' + encodeURIComponent('{{ set_league_url }}');
+    htmx.ajax('GET', url, { target: '#league-selector-container', swap: 'outerHTML' });
+  });
+
+})();
+</script>
+
 {% endblock %}
