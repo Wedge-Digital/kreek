@@ -13,40 +13,58 @@ use axum::response::{Html, IntoResponse, Response};
 pub struct StaffLineVm {
     pub label: String,
     pub quantity: u8,
+    pub unit_price: u32,
+    pub total_price: u32,
 }
 
 pub struct StaffVm {
     pub lines: Vec<StaffLineVm>,
+    pub grand_total: u32,
 }
 
 impl StaffVm {
-    fn from(team: &Team) -> Self {
-        let mut lines = Vec::new();
-        if team.rerolls.0 > 0 {
-            lines.push(StaffLineVm {
+    fn from(team: &Team, reroll_price_kpo: u32) -> Self {
+        let fan_factor = if team.dedicated_fans == 0 {
+            1
+        } else {
+            team.dedicated_fans
+        };
+
+        let lines = vec![
+            StaffLineVm {
                 label: "Relances".into(),
                 quantity: team.rerolls.0,
-            });
-        }
-        if team.apothecaries.0 > 0 {
-            lines.push(StaffLineVm {
+                unit_price: reroll_price_kpo,
+                total_price: team.rerolls.0 as u32 * reroll_price_kpo,
+            },
+            StaffLineVm {
                 label: "Apothicaire".into(),
                 quantity: team.apothecaries.0,
-            });
-        }
-        if team.assistants.0 > 0 {
-            lines.push(StaffLineVm {
-                label: "Assistants".into(),
+                unit_price: 50,
+                total_price: team.apothecaries.0 as u32 * 50,
+            },
+            StaffLineVm {
+                label: "Assistants entraîneurs".into(),
                 quantity: team.assistants.0,
-            });
-        }
-        if team.cheerleaders.0 > 0 {
-            lines.push(StaffLineVm {
-                label: "Cheerleaders".into(),
+                unit_price: 10,
+                total_price: team.assistants.0 as u32 * 10,
+            },
+            StaffLineVm {
+                label: "Pom-pom girls".into(),
                 quantity: team.cheerleaders.0,
-            });
-        }
-        Self { lines }
+                unit_price: 10,
+                total_price: team.cheerleaders.0 as u32 * 10,
+            },
+            StaffLineVm {
+                label: "Facteur de fans".into(),
+                quantity: fan_factor,
+                unit_price: 10,
+                total_price: fan_factor as u32 * 10,
+            },
+        ];
+
+        let grand_total = lines.iter().map(|l| l.total_price).sum();
+        Self { lines, grand_total }
     }
 }
 
@@ -80,15 +98,16 @@ impl TeamDetailVm {
             .collect::<String>()
             .to_uppercase();
 
-        let roster_logo_url = ref_repo
-            .find_team_by_uid(&team.roster_id)
-            .and_then(|t| t.logo.as_deref())
-            .map(|url| {
-                crate::app::shared_kernel::cloudinary::transform(
-                    url,
-                    "c_fill,w_120,h_120,q_auto,f_auto",
-                )
-            });
+        let ref_roster = ref_repo.find_team_by_uid(&team.roster_id);
+
+        let roster_logo_url = ref_roster.and_then(|t| t.logo.as_deref()).map(|url| {
+            crate::app::shared_kernel::cloudinary::transform(
+                url,
+                "c_fill,w_120,h_120,q_auto,f_auto",
+            )
+        });
+
+        let reroll_price_kpo = ref_roster.map(|t| t.reroll_cost / 1000).unwrap_or(50);
 
         Self {
             id: team.id.clone(),
@@ -106,7 +125,7 @@ impl TeamDetailVm {
             status_label,
             status_css_class,
             players_widget_url: format!("/app/{space_id}/players/by-team/{}/widget", &team.id),
-            staff: StaffVm::from(team),
+            staff: StaffVm::from(team, reroll_price_kpo),
         }
     }
 }
