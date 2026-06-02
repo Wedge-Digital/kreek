@@ -30,7 +30,7 @@ impl StaffVm {
             team.dedicated_fans
         };
 
-        let lines = vec![
+        let mut lines = vec![
             StaffLineVm {
                 label: "Relances".into(),
                 quantity: team.rerolls.0,
@@ -55,15 +55,16 @@ impl StaffVm {
                 unit_price: 10,
                 total_price: team.cheerleaders.0 as u32 * 10,
             },
-            StaffLineVm {
-                label: "Facteur de fans".into(),
-                quantity: fan_factor,
-                unit_price: 10,
-                total_price: fan_factor as u32 * 10,
-            },
         ];
 
+        // Fans dévoués hors sous-total : calculer le total avant de les ajouter
         let grand_total = lines.iter().map(|l| l.total_price).sum();
+        lines.push(StaffLineVm {
+            label: "Fans dévoués".into(),
+            quantity: fan_factor,
+            unit_price: 10,
+            total_price: fan_factor as u32 * 10,
+        });
         Self { lines, grand_total }
     }
 }
