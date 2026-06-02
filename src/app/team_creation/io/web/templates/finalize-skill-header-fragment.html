@@ -1,0 +1,41 @@
+<div id="skill-header" hx-swap-oob="true">
+{% if let Some(player) = player %}
+  <div class="skill-player-header">
+    <div class="skill-player-info">
+      <div class="skill-player-identity">
+        <input class="skill-jersey-input" type="number"
+               name="jersey" value="{{ player.jersey }}" min="1" max="99"
+               hx-post="{{ player.set_identity_url }}"
+               hx-trigger="change"
+               hx-ext="json-enc"
+               hx-include="[name='name']">
+        <input class="skill-player-name-input" type="text"
+               name="name" value="{{ player.personal_name }}" placeholder="Nom du joueur"
+               hx-post="{{ player.set_identity_url }}"
+               hx-trigger="blur"
+               hx-ext="json-enc"
+               hx-include="[name='jersey']">
+      </div>
+      <div class="skill-player-pos">{{ player.position_name }} · {{ player.roster_name }}</div>
+      {% if !player.existing_skills.is_empty() %}
+      <div class="skill-player-existing">
+        <span class="existing-label">Compétences :</span>
+        {% for skill in player.existing_skills %}
+        <span class="skill-tag">{{ skill }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="spp-counter">
+      <div class="spp-counter-value">{{ spp_pool }}</div>
+      <div class="spp-counter-label">SPP restants</div>
+      <div class="spp-counter-sublabel">pool équipe</div>
+    </div>
+  </div>
+{% else %}
+  <div class="skill-panel-empty">
+    <div class="skill-panel-empty-icon">↑</div>
+    Sélectionnez un joueur pour gérer ses compétences
+  </div>
+{% endif %}
+</div>

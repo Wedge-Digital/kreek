@@ -2,7 +2,10 @@ use crate::app::shared_kernel::common_types::Entity;
 use crate::app::shared_kernel::staff::StaffKind;
 use crate::app::shared_kernel::team::TeamId;
 use crate::app::team_creation::domain::error::DomainError;
-use crate::app::team_creation::domain::roster::{PlayerDefinition, Roster, MAX_PLAYER_COUNT};
+use crate::app::team_creation::domain::roster::{
+    AcquiredSkill, AcquisitionMode, HiredPlayer, LeagueId, PlayerDefinition, PlayerId, Roster,
+    SkillId, MAX_PLAYER_COUNT,
+};
 use crate::app::team_creation::domain::team_ruleset_selected::RulesetSelectedTeam;
 use crate::app::team_creation::domain::team_staff::TeamStaff;
 use serde::{Deserialize, Serialize};
@@ -14,9 +17,13 @@ pub const MIN_PLAYERS_FOR_SUBMISSION: usize = 11;
 pub struct RosterSelectedTeam {
     team: RulesetSelectedTeam,
     pub roster: Roster,
-    hired_players: Vec<PlayerDefinition>,
+    hired_players: Vec<HiredPlayer>,
     hired_staff: Vec<TeamStaff>,
     reroll_count: u8,
+    #[serde(default)]
+    pub league_id: Option<LeagueId>,
+    #[serde(default)]
+    pub spp_pool: u8,
 }
 
 impl RosterSelectedTeam {
@@ -27,14 +34,20 @@ impl RosterSelectedTeam {
             hired_players: Vec::new(),
             hired_staff: Vec::new(),
             reroll_count: 0,
+            league_id: None,
+            spp_pool: 0,
         }
+    }
+
+    pub fn set_league(&mut self, league_id: LeagueId) {
+        self.league_id = Some(league_id);
     }
 
     pub fn base_infos(&self) -> &crate::app::shared_kernel::team::BaseTeamInfo {
         self.team.base_infos()
     }
 
-    pub fn hired_players(&self) -> &[PlayerDefinition] {
+    pub fn hired_players(&self) -> &[HiredPlayer] {
         &self.hired_players
     }
 
@@ -54,7 +67,7 @@ impl RosterSelectedTeam {
     }
 
     fn player_budget(&self) -> u32 {
-        self.hired_players.iter().map(|p| p.price.0).sum()
+        self.hired_players.iter().map(|p| p.definition.price.0).sum()
     }
 
     fn staff_budget(&self) -> u32 {
@@ -104,7 +117,7 @@ impl RosterSelectedTeam {
     }
 
     fn check_max_players_of_type(&self, player: &PlayerDefinition) -> Result<(), DomainError> {
-        let count = self.hired_players.iter().filter(|p| *p == player).count();
+        let count = self.hired_players.iter().filter(|p| p.definition == *player).count();
         if count >= player.max_quantity.0 as usize {
             return Err(DomainError::MaxPlayersOfTypeReached);
         }
@@ -122,7 +135,7 @@ impl RosterSelectedTeam {
             let count = self
                 .hired_players
                 .iter()
-                .filter(|p| limit.includes_player(&p.id))
+                .filter(|p| limit.includes_player(&p.definition.id))
                 .count();
             if count >= limit.limit as usize {
                 return Err(DomainError::CrossLimitExceeded);
@@ -148,7 +161,7 @@ impl RosterSelectedTeam {
             .and_then(|_| self.check_cross_limits(&player))
             .and_then(|_| self.check_player_budget(&player))?;
 
-        self.hired_players.push(player);
+        self.hired_players.push(HiredPlayer::new(player));
         Ok(())
     }
 
@@ -171,9 +184,86 @@ impl RosterSelectedTeam {
         let pos = self
             .hired_players
             .iter()
-            .position(|p| p == player)
+            .position(|p| p.definition == *player)
             .ok_or(DomainError::PlayerNotHired)?;
         self.hired_players.remove(pos);
+        Ok(())
+    }
+
+    pub fn spend_spp(
+        &mut self,
+        instance_id: &PlayerId,
+        skill_id: SkillId,
+        mode: AcquisitionMode,
+        spp_cost: u8,
+    ) -> Result<(), DomainError> {
+        if self.spp_pool < spp_cost {
+            return Err(DomainError::InsufficientSpp);
+        }
+        let player = self
+            .hired_players
+            .iter_mut()
+            .find(|p| p.instance_id == *instance_id)
+            .ok_or(DomainError::PlayerNotFoundInTeam)?;
+        if player.acquired_skills.iter().any(|s| s.skill_id == skill_id) {
+            return Err(DomainError::SkillAlreadyAcquired);
+        }
+        player.acquired_skills.push(AcquiredSkill {
+            skill_id,
+            mode,
+            spp_cost,
+        });
+        self.spp_pool = self.spp_pool.saturating_sub(spp_cost);
+        Ok(())
+    }
+
+    pub fn cancel_spp(
+        &mut self,
+        instance_id: &PlayerId,
+        skill_id: &SkillId,
+    ) -> Result<u8, DomainError> {
+        let player = self
+            .hired_players
+            .iter_mut()
+            .find(|p| p.instance_id == *instance_id)
+            .ok_or(DomainError::PlayerNotFoundInTeam)?;
+        let pos = player
+            .acquired_skills
+            .iter()
+            .position(|s| s.skill_id == *skill_id)
+            .ok_or(DomainError::SkillAlreadyAcquired)?;
+        let refunded = player.acquired_skills.remove(pos).spp_cost;
+        self.spp_pool = self.spp_pool.saturating_add(refunded);
+        Ok(refunded)
+    }
+
+    pub fn set_player_identity(
+        &mut self,
+        instance_id: &PlayerId,
+        name: String,
+        jersey: u8,
+    ) -> Result<(), DomainError> {
+        if name.len() > 50 {
+            return Err(DomainError::PlayerNameTooLong);
+        }
+        if jersey < 1 || jersey > 99 {
+            return Err(DomainError::InvalidJerseyNumber);
+        }
+        let duplicate = self
+            .hired_players
+            .iter()
+            .filter(|p| p.instance_id != *instance_id)
+            .any(|p| p.jersey == Some(jersey));
+        if duplicate {
+            return Err(DomainError::DuplicateJerseyNumber);
+        }
+        let player = self
+            .hired_players
+            .iter_mut()
+            .find(|p| p.instance_id == *instance_id)
+            .ok_or(DomainError::PlayerNotFoundInTeam)?;
+        player.personal_name = name;
+        player.jersey = Some(jersey);
         Ok(())
     }
 
@@ -279,6 +369,9 @@ impl RosterSelectedTeam {
         let mut errors = Vec::new();
         if self.hired_players.len() < MIN_PLAYERS_FOR_SUBMISSION {
             errors.push(DomainError::InsufficientPlayerCount);
+        }
+        if self.league_id.is_none() {
+            errors.push(DomainError::LeagueNotSelected);
         }
         if errors.is_empty() {
             Ok(())

@@ -153,7 +153,7 @@ pub fn build_hired_rows(
             let quantity = team
                 .hired_players()
                 .iter()
-                .filter(|p| p.id == def.id)
+                .filter(|p| p.definition.id == def.id)
                 .count();
             let line_cost_kpo = quantity as u32 * def.price.0;
             let is_max =
@@ -256,7 +256,7 @@ fn build_cart_vm(team: &RosterSelectedTeam) -> CartVm {
         let qty = team
             .hired_players()
             .iter()
-            .filter(|p| p.id == def.id)
+            .filter(|p| p.definition.id == def.id)
             .count();
         if qty > 0 {
             player_lines.push(CartLineVm {

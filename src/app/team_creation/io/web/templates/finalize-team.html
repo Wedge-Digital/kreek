@@ -1,0 +1,166 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/components/league-selector.css">
+<link rel="stylesheet" href="/static/css/pages/team-finalize.css">
+
+<div class="finalize-page">
+
+  <!-- Breadcrumb -->
+  <div style="font-size: var(--text-tiny); color: var(--dark-3); cursor: pointer; margin-bottom: var(--p1);">
+    <a href="/app/{{ space_id }}/team/list" style="color: var(--dark-3);">← Mes équipes</a>
+  </div>
+
+  <!-- ① Header équipe -->
+  <div class="team-header">
+    <div class="team-header-logo">{{ header.team_name|truncate(2) }}</div>
+    <div class="team-header-body">
+      <div class="team-header-top">
+        <div class="team-header-name">{{ header.team_name }}</div>
+        <span class="team-status-badge badge-draft">En cours de finalisation</span>
+      </div>
+      <div class="team-header-meta">
+        <div class="meta-item">
+          <div class="meta-label">Roster</div>
+          <div class="meta-value">{{ header.roster_name }}</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Trésorerie</div>
+          <div class="meta-value">{{ header.treasury_kpo }} kPo</div>
+        </div>
+        {% if header.spp_pool > 0 %}
+        <div class="meta-item">
+          <div class="meta-label">SPP à dépenser</div>
+          <div class="meta-value" style="color: #9A7800;">{{ header.spp_pool }} SPP</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ② Sélecteur de ligue — carte B (références BC) -->
+  <div id="league-selector-container"
+       hx-get="/références/leagues/selector?selected={{ header.league_uid }}&on_select={{ set_league_url }}"
+       hx-trigger="load, leagueSelected from:body"
+       hx-vals="js:{
+         selected:  event.detail?.league_id ?? '{{ header.league_uid }}',
+         on_select: '{{ set_league_url }}'
+       }"
+       hx-target="this"
+       hx-swap="outerHTML">
+    <div class="league-selector-row">
+      <div class="league-selector-label">Ligue de référence</div>
+      <div class="league-selector-hint">Chargement…</div>
+    </div>
+  </div>
+
+  <!-- ③ Split : joueurs + compétences -->
+  <div class="split-layout">
+
+    <!-- Colonne gauche : joueurs — carte C (team_creation) -->
+    <div class="player-list-panel">
+      <div class="player-list-header">
+        <div class="player-list-title">Joueurs</div>
+        <div class="spp-total-badge" id="spp-total-badge">Pool équipe : {{ header.spp_pool }} SPP</div>
+      </div>
+
+      {% for player in players %}
+      <div id="player-row-{{ player.instance_id }}" class="player-row"
+           onclick="if(event.target.tagName!=='INPUT'){
+             document.querySelectorAll('.player-row').forEach(function(r){r.classList.remove('selected')});
+             this.classList.add('selected');
+             htmx.trigger(document.body,'playerSelected',{
+               player_id:'{{ player.instance_id }}',
+               roster_line_id:'{{ player.roster_line_id }}',
+               spp:{{ header.spp_pool }},
+               acquired:'{{ player.acquired_csv }}',
+               on_acquire:'{{ player.spend_spp_url }}',
+               on_cancel:'{{ player.cancel_spp_base_url }}'
+             });
+           }">
+        <input class="jersey-input" type="number"
+               name="jersey" value="{{ player.jersey }}" min="1" max="99"
+               hx-post="{{ player.set_identity_url }}"
+               hx-trigger="change"
+               hx-ext="json-enc"
+               hx-include="closest .player-row [name='name']"
+               hx-target="#player-row-{{ player.instance_id }}"
+               hx-swap="outerHTML">
+        <div class="player-row-info">
+          <input class="player-name-input" type="text"
+                 name="name" value="{{ player.personal_name }}" placeholder="Nom du joueur"
+                 hx-post="{{ player.set_identity_url }}"
+                 hx-trigger="blur"
+                 hx-ext="json-enc"
+                 hx-include="closest .player-row [name='jersey']"
+                 hx-target="#player-row-{{ player.instance_id }}"
+                 hx-swap="outerHTML">
+          <div class="player-row-pos">{{ player.position_name }}</div>
+          {% if !player.base_skills.is_empty() %}
+          <div class="player-row-skills">{{ player.base_skills }}</div>
+          {% endif %}
+        </div>
+        {% if player.skills_acquired_count > 0 %}
+        <div class="skills-acquired-badge">{{ player.skills_acquired_count }} compét.</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div><!-- /player-list-panel -->
+
+    <!-- Colonne droite : panneau compétences -->
+    <div class="skill-panel">
+
+      <!-- Carte D — header joueur (team_creation) -->
+      <div id="skill-header"
+           hx-get="{{ skill_header_url }}"
+           hx-trigger="playerSelected from:body"
+           hx-vals="js:{player_id: event.detail.player_id}"
+           hx-target="this"
+           hx-swap="outerHTML">
+        <div class="skill-panel-empty">
+          <div class="skill-panel-empty-icon" style="font-size:40px;opacity:0.3;">↑</div>
+          <span>Sélectionnez un joueur pour gérer ses compétences</span>
+        </div>
+      </div>
+
+      <!-- Carte E — catalogue compétences (références BC) -->
+      <div id="skill-picker-container"
+           hx-get="/références/roster-lines/skill-picker"
+           hx-trigger="playerSelected from:body, skillsUpdated from:body"
+           hx-vals="js:{
+             roster_line_id: event.detail.roster_line_id,
+             spp:            event.detail.spp,
+             acquired:       event.detail.acquired,
+             on_acquire:     event.detail.on_acquire,
+             on_cancel:      event.detail.on_cancel
+           }"
+           hx-target="this"
+           hx-swap="outerHTML">
+      </div>
+
+    </div><!-- /skill-panel -->
+
+  </div><!-- /split-layout -->
+
+  <!-- ④ Synthèse SPP — carte F (team_creation) -->
+  <div class="spp-summary" id="spp-summary">
+    <div class="spp-summary-header">
+      <div class="spp-summary-title">Synthèse des SPP dépensés</div>
+      <div class="spp-summary-total">Pool équipe : <strong>{{ header.spp_pool }} SPP</strong></div>
+    </div>
+    <div class="spp-empty-state">Aucune compétence acquise pour l'instant.</div>
+  </div>
+
+  <!-- ⑤ Barre de soumission — carte G -->
+  <div class="submit-bar">
+    <button type="button" class="btn-submit"
+            hx-post="{{ team_routes.submit_team(space_id, team_id) }}"
+            hx-target="#submit-errors"
+            hx-swap="innerHTML">
+      Soumettre l'équipe →
+    </button>
+    <div id="submit-errors"></div>
+  </div>
+
+</div><!-- /finalize-page -->
+{% endblock %}

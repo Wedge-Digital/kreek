@@ -1,5 +1,5 @@
 use crate::app::references::domain::models::{
-    Inducement, League, Skill, SkillCategory, SpecialRule, Staff, StarPlayer, Team,
+    Inducement, League, PlayerPosition, Skill, SkillCategory, SpecialRule, Staff, StarPlayer, Team,
 };
 
 pub trait IReferenceRepository: Send + Sync {
@@ -16,4 +16,5 @@ pub trait IReferenceRepository: Send + Sync {
     fn find_star_player_by_uid(&self, uid: &str) -> Option<&StarPlayer>;
     fn find_team_by_uid(&self, uid: &str) -> Option<&Team>;
     fn find_skill_by_uid(&self, uid: &str) -> Option<&Skill>;
+    fn find_position_by_uid(&self, uid: &str) -> Option<&PlayerPosition>;
 }

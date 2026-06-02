@@ -1,5 +1,5 @@
 use crate::app::references::domain::models::{
-    Inducement, League, Skill, SkillCategory, SpecialRule, Staff, StarPlayer, Team,
+    Inducement, League, PlayerPosition, Skill, SkillCategory, SpecialRule, Staff, StarPlayer, Team,
 };
 use crate::app::references::domain::port::IReferenceRepository;
 use serde::Deserialize;
@@ -150,5 +150,11 @@ impl IReferenceRepository for InMemoryReferenceRepository {
     }
     fn find_skill_by_uid(&self, uid: &str) -> Option<&Skill> {
         self.skills.iter().find(|x| x.uid == uid)
+    }
+    fn find_position_by_uid(&self, uid: &str) -> Option<&PlayerPosition> {
+        self.teams
+            .iter()
+            .flat_map(|t| t.available_players.iter())
+            .find(|p| p.uid == uid)
     }
 }

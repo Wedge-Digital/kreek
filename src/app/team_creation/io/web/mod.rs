@@ -1,5 +1,9 @@
 pub mod build_team;
+pub mod finalize_team;
 pub mod draft_team;
 pub mod my_teams;
 pub mod post_draft_team;
+pub mod set_league;
+pub mod spp_management;
+pub mod set_player_identity;
 pub mod team_detail;

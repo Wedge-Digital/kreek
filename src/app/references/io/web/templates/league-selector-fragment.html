@@ -1,0 +1,40 @@
+<div class="league-selector-container" id="league-selector-container">
+  <div class="league-selector-row">
+    <div class="league-selector-label">Ligue de référence</div>
+    <div class="league-selector-hint">Choisissez la ligue d'appartenance de votre équipe</div>
+
+    <div class="league-trigger-wrapper">
+      <button type="button" class="league-trigger {% if selected_label.is_some() %}{% else %}league-trigger--empty{% endif %}"
+              onclick="this.closest('.league-trigger-wrapper').classList.toggle('open')">
+        <div class="league-trigger-info">
+          {% if let Some(label) = selected_label %}
+            <div class="league-trigger-name">{{ label }}</div>
+            <div class="league-trigger-uid">{{ selected_uid }}</div>
+          {% else %}
+            <div class="league-trigger-placeholder">Choisir une ligue…</div>
+          {% endif %}
+        </div>
+        <span class="league-trigger-arrow">▾</span>
+      </button>
+
+      <div class="league-dropdown">
+        {% for league in leagues %}
+        <button type="button"
+                class="league-option {% if league.is_selected %}active{% endif %}"
+                hx-post="{{ on_select }}"
+                hx-vals='{"league_id": "{{ league.uid }}"}'
+                hx-target="#league-selector-container"
+                hx-swap="outerHTML">
+          <div class="league-option-body">
+            <div class="league-option-name">{{ league.label }}</div>
+            <div class="league-option-uid">{{ league.uid }}</div>
+          </div>
+          {% if league.is_selected %}
+          <span class="league-option-check">✓</span>
+          {% endif %}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>

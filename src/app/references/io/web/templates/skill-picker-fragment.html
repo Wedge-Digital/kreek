@@ -1,0 +1,158 @@
+<div id="skill-picker-container" class="skill-picker-fragment">
+
+  <!-- Filtres -->
+  <div class="skill-filters">
+    <div class="filter-row">
+      <span class="filter-label">Catégorie</span>
+      {% for cat in categories %}
+      <button type="button" class="filter-pill {% if cat.is_primary %}filter-pill--primary{% endif %}"
+              data-filter-cat="{{ cat.uid }}">
+        {{ cat.label }}
+      </button>
+      {% endfor %}
+      <button type="button" class="filter-pill active" data-filter-cat="ALL">Tout</button>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">Nature</span>
+      <button type="button" class="filter-pill active" data-filter-nature="ALL">Tout</button>
+      <button type="button" class="filter-pill" data-filter-nature="standard">Standard</button>
+      <button type="button" class="filter-pill" data-filter-nature="elite">Élite</button>
+    </div>
+    <div class="filter-row" style="margin-top: 2px; padding-top: var(--p1); border-top: 1px solid var(--dark-6);">
+      <span class="filter-label">Mode</span>
+      <div class="mode-toggle">
+        <button type="button" class="mode-btn active-chosen" data-mode="chosen">✓ Choisie</button>
+        <button type="button" class="mode-btn" data-mode="random">🎲 Aléatoire</button>
+      </div>
+      <span class="mode-cost-hint">
+        Choisie : <span class="mode-cost-chosen">3 SPP</span> (standard) ·
+        Aléatoire : <span class="mode-cost-random">2 SPP</span> (standard)
+      </span>
+    </div>
+  </div>
+
+  <!-- Table compétences -->
+  <div class="skill-list">
+    <table class="skill-list-table">
+      <thead>
+        <tr>
+          <th style="min-width: 200px;">Compétence</th>
+          <th>Catégorie</th>
+          <th>Nature</th>
+          <th class="cost-col-chosen">Coût (Choisie)</th>
+          <th class="cost-col-random" style="display:none;">Coût (Aléatoire)</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for skill in skills %}
+        <tr data-cat="{{ skill.category_uid }}" data-nature="{% if skill.is_elite %}elite{% else %}standard{% endif %}"
+            class="{% if skill.is_acquired ||!skill.is_affordable_chosen %}row-disabled{% endif %}">
+          <td>
+            <div class="skill-name">{{ skill.name }}</div>
+            <div class="skill-desc">{{ skill.description }}</div>
+          </td>
+          <td>
+            <span class="skill-type-pill {{ skill.category_css }}">{{ skill.category_label }}</span>
+            {% if skill.is_primary %}<span class="primary-badge">P</span>{% endif %}
+          </td>
+          <td>
+            <span class="skill-type-pill {% if skill.is_elite %}nature-elite{% else %}nature-normal{% endif %}">
+              {% if skill.is_elite %}Élite{% else %}Standard{% endif %}
+            </span>
+          </td>
+          <td class="cost-col-chosen">
+            <span class="spp-cost spp-cost-chosen">{{ skill.cost_chosen }} SPP</span>
+          </td>
+          <td class="cost-col-random" style="display:none;">
+            <span class="spp-cost spp-cost-random">{{ skill.cost_random }} SPP</span>
+          </td>
+          <td>
+            {% if skill.is_acquired %}
+            <button type="button" class="btn-add-skill" disabled>Déjà acquise</button>
+            {% else if !skill.is_affordable_chosen %}
+            <button type="button" class="btn-add-skill btn-add-skill--chosen" disabled>Budget insuf.</button>
+            <button type="button" class="btn-add-skill btn-add-skill--random random" style="display:none;"
+                    {% if !skill.is_affordable_random %}disabled{% endif %}
+                    hx-post="{{ on_acquire }}"
+                    hx-vals='{"skill_id": "{{ skill.uid }}", "mode": "random"}'>
+              🎲 Tirer au sort
+            </button>
+            {% else %}
+            <button type="button" class="btn-add-skill btn-add-skill--chosen"
+                    hx-post="{{ on_acquire }}"
+                    hx-vals='{"skill_id": "{{ skill.uid }}", "mode": "chosen"}'>
+              + Choisir
+            </button>
+            <button type="button" class="btn-add-skill btn-add-skill--random random" style="display:none;"
+                    {% if !skill.is_affordable_random %}disabled{% endif %}
+                    hx-post="{{ on_acquire }}"
+                    hx-vals='{"skill_id": "{{ skill.uid }}", "mode": "random"}'>
+              🎲 Tirer au sort
+            </button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  var container = document.getElementById('skill-picker-container');
+  if (!container) return;
+
+  var activeFilterCat    = 'ALL';
+  var activeFilterNature = 'ALL';
+  var activeMode         = 'chosen';
+
+  function applyFilters() {
+    container.querySelectorAll('tbody tr').forEach(function(row) {
+      var cat    = row.dataset.cat;
+      var nature = row.dataset.nature;
+      var catOk    = activeFilterCat    === 'ALL' || cat    === activeFilterCat;
+      var natureOk = activeFilterNature === 'ALL' || nature === activeFilterNature;
+      row.style.display = (catOk && natureOk) ? '' : 'none';
+    });
+  }
+
+  function applyMode(mode) {
+    activeMode = mode;
+    var isChosen = mode === 'chosen';
+    container.querySelectorAll('.cost-col-chosen').forEach(function(el) { el.style.display = isChosen ? '' : 'none'; });
+    container.querySelectorAll('.cost-col-random').forEach(function(el) { el.style.display = isChosen ? 'none' : ''; });
+    container.querySelectorAll('.btn-add-skill--chosen').forEach(function(el) { el.style.display = isChosen ? '' : 'none'; });
+    container.querySelectorAll('.btn-add-skill--random').forEach(function(el) { el.style.display = isChosen ? 'none' : ''; });
+  }
+
+  container.querySelectorAll('[data-filter-cat]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      container.querySelectorAll('[data-filter-cat]').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      activeFilterCat = btn.dataset.filterCat;
+      applyFilters();
+    });
+  });
+
+  container.querySelectorAll('[data-filter-nature]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      container.querySelectorAll('[data-filter-nature]').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      activeFilterNature = btn.dataset.filterNature;
+      applyFilters();
+    });
+  });
+
+  container.querySelectorAll('.mode-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      container.querySelectorAll('.mode-btn').forEach(function(b) { b.classList.remove('active-chosen', 'active-random'); });
+      var mode = btn.dataset.mode;
+      btn.classList.add(mode === 'chosen' ? 'active-chosen' : 'active-random');
+      applyMode(mode);
+    });
+  });
+})();
+</script>

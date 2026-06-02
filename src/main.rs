@@ -20,7 +20,7 @@ use crate::app::references::context::ReferencesContext;
 use crate::app::spaces::context::SpacesContext;
 use crate::app::team_creation::context::TeamCreationContext;
 use crate::app::teams::context::TeamsContext;
-use crate::app::{auth, competitions, spaces, team_creation, teams};
+use crate::app::{auth, competitions, references, spaces, team_creation, teams};
 use crate::lib::event_listener::event_log_feeder;
 use crate::lib::services::email::ResendMailService;
 use crate::lib::services::event_bus::event_bus::new_bus;
@@ -100,6 +100,7 @@ async fn main() {
 
     let protected = Router::new()
         .merge(app::news::router::router())
+        .merge(app::references::router::router())
         .merge(app::team_creation::router::router())
         .merge(app::teams::router::router())
         .merge(app::competitions::router::router())
