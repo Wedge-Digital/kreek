@@ -24,12 +24,6 @@ pub struct StaffVm {
 
 impl StaffVm {
     fn from(team: &Team, reroll_price_kpo: u32) -> Self {
-        let fan_factor = if team.dedicated_fans == 0 {
-            1
-        } else {
-            team.dedicated_fans
-        };
-
         let mut lines = vec![
             StaffLineVm {
                 label: "Relances".into(),
@@ -57,14 +51,7 @@ impl StaffVm {
             },
         ];
 
-        // Fans dévoués hors sous-total : calculer le total avant de les ajouter
         let grand_total = lines.iter().map(|l| l.total_price).sum();
-        lines.push(StaffLineVm {
-            label: "Fans dévoués".into(),
-            quantity: fan_factor,
-            unit_price: 10,
-            total_price: fan_factor as u32 * 10,
-        });
         Self { lines, grand_total }
     }
 }
