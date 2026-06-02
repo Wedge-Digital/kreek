@@ -124,9 +124,12 @@
     .player-row-pos    { font-size: var(--text-tiny); color: var(--dark-3); }
     .player-row-skills { font-size: 11px; color: var(--dark-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    .spp-badge { flex-shrink: 0; font-size: var(--text-tiny); font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
-    .spp-badge-active { background: rgba(255,215,0,0.2); color: #9A7800; }
-    .spp-badge-zero   { background: var(--dark-6); color: var(--dark-4); }
+    /* Badge compétences acquises depuis le pool (par joueur) */
+    .skills-acquired-badge {
+      flex-shrink: 0; font-size: var(--text-tiny); font-weight: 700;
+      padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+      background: rgba(98,149,132,0.15); color: #3a6655;
+    }
 
     /* ── Right panel : skill picker ──────────────────────────────────────── */
     .skill-panel {
@@ -173,8 +176,9 @@
       background: rgba(255,215,0,0.12); border: 1px solid rgba(255,215,0,0.4);
       border-radius: 10px; padding: 10px 18px;
     }
-    .spp-counter-value { font-family: var(--font-title); font-size: var(--h4); font-weight: 800; color: #9A7800; }
-    .spp-counter-label { font-size: var(--text-tiny); color: #9A7800; font-weight: 600; }
+    .spp-counter-value    { font-family: var(--font-title); font-size: var(--h4); font-weight: 800; color: #9A7800; }
+    .spp-counter-label    { font-size: var(--text-tiny); color: #9A7800; font-weight: 600; }
+    .spp-counter-sublabel { font-size: 10px; color: rgba(154,120,0,0.6); font-weight: 500; margin-top: 1px; }
 
     /* Filter + mode bar */
     .skill-filters {
@@ -382,7 +386,7 @@
             <div class="player-list-panel">
               <div class="player-list-header">
                 <div class="player-list-title">Joueurs</div>
-                <div class="spp-total-badge">6 SPP restants</div>
+                <div class="spp-total-badge">Pool équipe : 3 SPP</div>
               </div>
 
               <!-- Joueur sélectionné -->
@@ -393,17 +397,17 @@
                   <div class="player-row-pos">Lanceur</div>
                   <div class="player-row-skills">Passe · Sûr</div>
                 </div>
-                <div class="spp-badge spp-badge-active">3 SPP</div>
               </div>
 
+              <!-- Sylvara a reçu 1 compétence du pool -->
               <div class="player-row">
                 <input class="jersey-input" type="number" value="11" min="1" max="99">
                 <div class="player-row-info">
                   <input class="player-name-input" type="text" value="Sylvara">
                   <div class="player-row-pos">Receveur</div>
-                  <div class="player-row-skills">Attraper · Esquiver</div>
+                  <div class="player-row-skills">Attraper · Esquiver · Sûr</div>
                 </div>
-                <div class="spp-badge spp-badge-active">3 SPP</div>
+                <div class="skills-acquired-badge">1 compét.</div>
               </div>
 
               <div class="player-row">
@@ -413,7 +417,6 @@
                   <div class="player-row-pos">Receveur</div>
                   <div class="player-row-skills">Attraper · Esquiver</div>
                 </div>
-                <div class="spp-badge spp-badge-zero">0 SPP</div>
               </div>
 
               <div class="player-row">
@@ -423,7 +426,6 @@
                   <div class="player-row-pos">Frappeur</div>
                   <div class="player-row-skills">Esquiver · Bloc</div>
                 </div>
-                <div class="spp-badge spp-badge-zero">0 SPP</div>
               </div>
 
               <div class="player-row">
@@ -433,7 +435,6 @@
                   <div class="player-row-pos">Frappeur</div>
                   <div class="player-row-skills">Esquiver</div>
                 </div>
-                <div class="spp-badge spp-badge-zero">0 SPP</div>
               </div>
 
               <div class="player-row">
@@ -443,7 +444,6 @@
                   <div class="player-row-pos">Défenseur</div>
                   <div class="player-row-skills">Esquiver</div>
                 </div>
-                <div class="spp-badge spp-badge-zero">0 SPP</div>
               </div>
 
               <div class="player-row">
@@ -453,7 +453,6 @@
                   <div class="player-row-pos">Défenseur</div>
                   <div class="player-row-skills">Esquiver</div>
                 </div>
-                <div class="spp-badge spp-badge-zero">0 SPP</div>
               </div>
 
               <div class="player-row">
@@ -463,7 +462,6 @@
                   <div class="player-row-pos">Défenseur</div>
                   <div class="player-row-skills">Esquiver</div>
                 </div>
-                <div class="spp-badge spp-badge-zero">0 SPP</div>
               </div>
 
             </div><!-- /player-list-panel -->
@@ -487,7 +485,8 @@
                 </div>
                 <div class="spp-counter">
                   <div class="spp-counter-value">3</div>
-                  <div class="spp-counter-label">SPP à dépenser</div>
+                  <div class="spp-counter-label">SPP restants</div>
+                  <div class="spp-counter-sublabel">pool équipe</div>
                 </div>
               </div>
 
