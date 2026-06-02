@@ -111,6 +111,9 @@ mod tests {
     }
 
     fn created_event(team_id: &str) -> TeamDomainEvent {
+        use crate::app::shared_kernel::staff_counts::{
+            ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
+        };
         TeamDomainEvent::TeamCreated {
             team_id: team_id.to_string(),
             space_id: "01SPACE00000000000000000000".to_string(),
@@ -120,6 +123,10 @@ mod tests {
             coach_id: "01COACH00000000000000000000".to_string(),
             coach_name: "Colonel Castor".to_string(),
             treasury: Kpo(1000),
+            rerolls: RerollCount(3),
+            apothecaries: ApothecaryCount(1),
+            assistants: AssistantCount(2),
+            cheerleaders: CheerleaderCount(3),
         }
     }
 

@@ -11,6 +11,7 @@ pub mod id_service;
 mod ports;
 pub mod space_name;
 pub mod staff;
+pub mod staff_counts;
 pub mod sulid;
 pub mod team;
 mod tests;

@@ -1,3 +1,6 @@
+use crate::app::shared_kernel::staff_counts::{
+    ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
+};
 use crate::app::teams::domain::error::DomainError;
 use crate::app::teams::domain::value_objects::{
     IncidentType, Kpo, KpoDelta, MatchResult, PlayerImprovement, SppGain, StaffType,
@@ -38,6 +41,10 @@ pub enum TeamDomainEvent {
         coach_id: String,
         coach_name: String,
         treasury: Kpo, // budget restant à l'issue de la construction
+        rerolls: RerollCount,
+        apothecaries: ApothecaryCount,
+        assistants: AssistantCount,
+        cheerleaders: CheerleaderCount,
     },
     TeamEnrolled {
         competition_id: String,
@@ -182,6 +189,10 @@ pub struct Team {
     pub dedicated_fans: u8,
     pub treasury: Kpo,
     pub team_value: Kpo,
+    pub rerolls: RerollCount,
+    pub apothecaries: ApothecaryCount,
+    pub assistants: AssistantCount,
+    pub cheerleaders: CheerleaderCount,
     pub version: u64,
 }
 
@@ -206,6 +217,10 @@ impl Default for Team {
             dedicated_fans: 0,
             treasury: Kpo(0),
             team_value: Kpo(0),
+            rerolls: RerollCount::default(),
+            apothecaries: ApothecaryCount::default(),
+            assistants: AssistantCount::default(),
+            cheerleaders: CheerleaderCount::default(),
             version: 0,
         }
     }
@@ -224,6 +239,10 @@ impl Team {
                 coach_id,
                 coach_name,
                 treasury,
+                rerolls,
+                apothecaries,
+                assistants,
+                cheerleaders,
             } => {
                 self.id = team_id.clone();
                 self.space_id = space_id.clone();
@@ -234,6 +253,10 @@ impl Team {
                 self.coach_id = coach_id.clone();
                 self.coach_name = coach_name.clone();
                 self.treasury = *treasury;
+                self.rerolls = *rerolls;
+                self.apothecaries = *apothecaries;
+                self.assistants = *assistants;
+                self.cheerleaders = *cheerleaders;
                 self.participation_status = ParticipationStatus::PendingEnrollment;
                 self.game_phase = None;
             }
@@ -470,6 +493,9 @@ fn initials_from(name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::shared_kernel::staff_counts::{
+        ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
+    };
 
     fn created_event() -> TeamDomainEvent {
         TeamDomainEvent::TeamCreated {
@@ -481,6 +507,10 @@ mod tests {
             coach_id: "01COACH00000000000000000000".to_string(),
             coach_name: "Colonel Castor".to_string(),
             treasury: Kpo(1000),
+            rerolls: RerollCount(3),
+            apothecaries: ApothecaryCount(1),
+            assistants: AssistantCount(2),
+            cheerleaders: CheerleaderCount(3),
         }
     }
 

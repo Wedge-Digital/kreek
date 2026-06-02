@@ -1,4 +1,7 @@
 use crate::app::shared_kernel::app_events::team_creation_app_events::TeamCreationAppEvent;
+use crate::app::shared_kernel::staff_counts::{
+    ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
+};
 use crate::app::teams::domain::team::TeamDomainEvent;
 use crate::app::teams::domain::value_objects::Kpo;
 use crate::app::teams::ports::{ITeamRepository, RepositoryError};
@@ -25,6 +28,10 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                         coach_id,
                         coach_name,
                         treasury,
+                        rerolls,
+                        apothecaries,
+                        assistants,
+                        cheerleaders,
                         ..
                     } = app_event;
                     let domain_event = TeamDomainEvent::TeamCreated {
@@ -36,6 +43,10 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                         coach_id,
                         coach_name,
                         treasury: Kpo(treasury),
+                        rerolls: RerollCount::new(rerolls).unwrap_or_default(),
+                        apothecaries: ApothecaryCount::new(apothecaries).unwrap_or_default(),
+                        assistants: AssistantCount::new(assistants).unwrap_or_default(),
+                        cheerleaders: CheerleaderCount::new(cheerleaders).unwrap_or_default(),
                     };
                     if let Err(e) = team_repo.append(&team_id, &domain_event, 0).await {
                         match e {

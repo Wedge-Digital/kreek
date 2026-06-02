@@ -1,5 +1,8 @@
 use crate::app::shared_kernel::app_events::team_creation_app_events::TeamCreationAppEvent;
 use crate::app::shared_kernel::common_types::EventId;
+use crate::app::shared_kernel::staff_counts::{
+    ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
+};
 use crate::lib::event_envelope::EventEnvelope;
 use crate::lib::services::event_bus::event_tags::{EventTag, EventTagName};
 use serde::{Deserialize, Serialize};
@@ -16,6 +19,10 @@ pub enum TeamCreationDomainEvent {
         coach_id: String,
         coach_name: String,
         treasury: u32,
+        rerolls: RerollCount,
+        apothecaries: ApothecaryCount,
+        assistants: AssistantCount,
+        cheerleaders: CheerleaderCount,
     },
 }
 
@@ -62,6 +69,10 @@ impl TeamCreationDomainEvent {
                 coach_id,
                 coach_name,
                 treasury,
+                rerolls,
+                apothecaries,
+                assistants,
+                cheerleaders,
                 ..
             } => Some(TeamCreationAppEvent::TeamCreated {
                 event_id: EventId::new().to_string(),
@@ -73,6 +84,10 @@ impl TeamCreationDomainEvent {
                 coach_id: coach_id.clone(),
                 coach_name: coach_name.clone(),
                 treasury: *treasury,
+                rerolls: rerolls.0,
+                apothecaries: apothecaries.0,
+                assistants: assistants.0,
+                cheerleaders: cheerleaders.0,
             }),
         }
     }

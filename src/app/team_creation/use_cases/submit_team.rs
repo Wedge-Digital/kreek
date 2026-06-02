@@ -1,6 +1,11 @@
 use crate::app::shared_kernel::common_types::Entity;
 use crate::app::shared_kernel::common_types::EventId;
+use crate::app::shared_kernel::staff::StaffKind;
+use crate::app::shared_kernel::staff_counts::{
+    ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
+};
 use crate::app::team_creation::domain::error::DomainError;
+use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
 use crate::app::team_creation::domain_event::TeamCreationDomainEvent;
 use crate::app::team_creation::ports::{ITeamRosterRepository, RepositoryError};
 use crate::app::team_creation::use_cases::commands::SubmitTeamCommand;
@@ -10,6 +15,10 @@ pub enum SubmitTeamError {
     TeamNotFound,
     Domain(Vec<DomainError>),
     Repository(RepositoryError),
+}
+
+fn count_staff(team: &RosterSelectedTeam, kind: StaffKind) -> u8 {
+    team.hired_staff().iter().filter(|s| s.kind == kind).count() as u8
 }
 
 pub async fn execute(
@@ -32,6 +41,14 @@ pub async fn execute(
         .map_err(SubmitTeamError::Repository)?;
 
     let base = team.base_infos();
+    let rerolls = RerollCount::new(team.reroll_count()).unwrap_or_default();
+    let apothecaries =
+        ApothecaryCount::new(count_staff(&team, StaffKind::Apothecary)).unwrap_or_default();
+    let assistants =
+        AssistantCount::new(count_staff(&team, StaffKind::CoachAssistant)).unwrap_or_default();
+    let cheerleaders =
+        CheerleaderCount::new(count_staff(&team, StaffKind::Cheerleaders)).unwrap_or_default();
+
     let event = TeamCreationDomainEvent::TeamSubmitted {
         event_id: EventId::new(),
         team_id: team.get_id().to_string(),
@@ -42,6 +59,10 @@ pub async fn execute(
         coach_id: base.coach_id().to_string(),
         coach_name: cmd.coach_name,
         treasury: team.remaining_budget().unwrap_or(0),
+        rerolls,
+        apothecaries,
+        assistants,
+        cheerleaders,
     };
     let _ = bus.send(event.to_enveloppe());
 
