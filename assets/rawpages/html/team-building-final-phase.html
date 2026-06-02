@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finalisation de l'équipe — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+
+    /* ── Page layout ─────────────────────────────────────────────────────── */
+    .finalize-page {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+    }
+
+    /* ── Team header ─────────────────────────────────────────────────────── */
+    .team-header {
+      background: var(--white);
+      border-radius: 10px;
+      padding: var(--p2);
+      display: flex;
+      align-items: flex-start;
+      gap: var(--p3);
+    }
+    .team-header-logo {
+      width: 80px; height: 80px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, #629584, #3a6655);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: 26px; color: var(--white);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+    .team-header-body { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .team-header-top  { display: flex; align-items: center; gap: var(--p1); }
+    .team-header-name { font-family: var(--font-title); font-size: var(--h3); font-weight: 800; color: var(--dark-0); }
+    .team-status-badge { font-size: var(--text-tiny); font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+    .badge-draft { background: rgba(255,107,53,0.12); color: var(--orange); }
+    .team-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
+    .meta-item  { display: flex; flex-direction: column; gap: 2px; }
+    .meta-label { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-value { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+    .roster-icon-small {
+      width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, #629584, #3a6655);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 13px; color: var(--white);
+      align-self: center;
+    }
+
+    /* ── League selector row ─────────────────────────────────────────────── */
+    .league-selector-row {
+      background: var(--white); border-radius: 10px; padding: var(--p2);
+      display: flex; align-items: center; gap: var(--p2);
+    }
+    .league-selector-label { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); white-space: nowrap; }
+    .league-selector-hint  { font-size: var(--text-tiny); color: var(--dark-3); flex: 1; }
+    .league-widget-placeholder {
+      display: flex; align-items: center; gap: var(--p1);
+      border: 1px solid var(--dark-4); border-radius: 8px; padding: 10px 16px;
+      min-width: 340px; cursor: pointer; background: var(--white); transition: border-color 0.15s;
+    }
+    .league-widget-placeholder:hover { border-color: var(--main-blue); }
+    .league-widget-selected { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+    .league-widget-name { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+    .league-widget-uid  { font-size: var(--text-tiny); color: var(--dark-3); font-family: monospace; }
+    .league-widget-arrow { color: var(--dark-3); font-size: 18px; }
+
+    /* ── Split layout ────────────────────────────────────────────────────── */
+    .split-layout { display: flex; gap: var(--p2); align-items: flex-start; }
+
+    /* ── Left panel : player list ────────────────────────────────────────── */
+    .player-list-panel {
+      width: 320px; flex-shrink: 0;
+      background: var(--white); border-radius: 10px; overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .player-list-header {
+      padding: var(--p1) var(--p2); border-bottom: 2px solid var(--dark-5);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .player-list-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); }
+    .spp-total-badge {
+      font-size: var(--text-tiny); font-weight: 700; color: #9A7800;
+      background: rgba(255,215,0,0.15); border-radius: 20px; padding: 2px 10px;
+    }
+    .player-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px var(--p2); border-bottom: 1px solid var(--dark-6);
+      cursor: pointer; transition: background 0.1s;
+    }
+    .player-row:hover { background: var(--dark-7); }
+    .player-row.selected { background: rgba(0,48,73,0.05); border-left: 3px solid var(--main-blue); padding-left: calc(var(--p2) - 3px); }
+    .player-row:last-child { border-bottom: none; }
+
+    /* Numéro de maillot */
+    .jersey-input {
+      width: 38px; height: 32px; border: 1px solid var(--dark-4); border-radius: 6px;
+      text-align: center; font-size: var(--text-tiny); font-weight: 700; color: var(--dark-1);
+      background: var(--white); flex-shrink: 0;
+    }
+    .jersey-input:focus { outline: none; border-color: var(--main-blue); }
+    .jersey-badge {
+      width: 38px; height: 32px; border: 1px solid var(--dark-5); border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+      background: var(--dark-6); flex-shrink: 0;
+    }
+
+    .player-row-info { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+    /* Nom du joueur éditable — ressemble à du texte au repos */
+    .player-name-input {
+      width: 100%; border: none; background: transparent;
+      font-size: var(--text-small); font-weight: 600; color: var(--dark-1);
+      padding: 0; outline: none;
+      border-bottom: 1px dashed transparent;
+      transition: border-color 0.15s;
+    }
+    .player-name-input:hover { border-bottom-color: var(--dark-4); }
+    .player-name-input:focus { border-bottom-color: var(--main-blue); background: transparent; }
+
+    .player-row-pos    { font-size: var(--text-tiny); color: var(--dark-3); }
+    .player-row-skills { font-size: 11px; color: var(--dark-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .spp-badge { flex-shrink: 0; font-size: var(--text-tiny); font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+    .spp-badge-active { background: rgba(255,215,0,0.2); color: #9A7800; }
+    .spp-badge-zero   { background: var(--dark-6); color: var(--dark-4); }
+
+    /* ── Right panel : skill picker ──────────────────────────────────────── */
+    .skill-panel {
+      flex: 1; background: var(--white); border-radius: 10px; overflow: hidden;
+      display: flex; flex-direction: column; min-height: 580px;
+    }
+    .skill-panel-empty {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: var(--p1); color: var(--dark-3); font-size: var(--text-small);
+    }
+    .skill-panel-empty-icon { font-size: 40px; opacity: 0.3; }
+
+    /* Player detail in right panel */
+    .skill-player-header {
+      padding: var(--p2); border-bottom: 1px solid var(--dark-5);
+      display: flex; align-items: center; justify-content: space-between; gap: var(--p2);
+    }
+    .skill-player-info { display: flex; flex-direction: column; gap: 4px; }
+    .skill-player-identity { display: flex; align-items: center; gap: 10px; }
+    .skill-jersey-input {
+      width: 52px; height: 40px; border: 1.5px solid var(--dark-4); border-radius: 8px;
+      text-align: center; font-family: var(--font-title); font-size: var(--h5); font-weight: 800; color: var(--dark-1);
+      background: var(--white); flex-shrink: 0;
+    }
+    .skill-jersey-input:focus { outline: none; border-color: var(--main-blue); }
+    .skill-player-name-input {
+      border: none; background: transparent;
+      font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-0);
+      padding: 0; outline: none;
+      border-bottom: 2px dashed transparent;
+      transition: border-color 0.15s;
+      min-width: 0; flex: 1;
+    }
+    .skill-player-name-input::placeholder { color: var(--dark-4); font-weight: 500; font-style: italic; }
+    .skill-player-name-input:hover { border-bottom-color: var(--dark-4); }
+    .skill-player-name-input:focus { border-bottom-color: var(--main-blue); }
+    .skill-player-pos  { font-size: var(--text-small); color: var(--dark-3); }
+    .skill-player-existing { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
+    .existing-label { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .skill-tag { font-size: var(--text-tiny); font-weight: 600; padding: 3px 10px; border-radius: 20px; background: var(--dark-5); color: var(--dark-1); }
+
+    .spp-counter {
+      display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0;
+      background: rgba(255,215,0,0.12); border: 1px solid rgba(255,215,0,0.4);
+      border-radius: 10px; padding: 10px 18px;
+    }
+    .spp-counter-value { font-family: var(--font-title); font-size: var(--h4); font-weight: 800; color: #9A7800; }
+    .spp-counter-label { font-size: var(--text-tiny); color: #9A7800; font-weight: 600; }
+
+    /* Filter + mode bar */
+    .skill-filters {
+      padding: var(--p1) var(--p2); border-bottom: 1px solid var(--dark-5);
+      display: flex; flex-direction: column; gap: var(--p1);
+    }
+    .filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .filter-label { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.4px; min-width: 42px; }
+    .filter-pill {
+      font-size: var(--text-tiny); font-weight: 600; padding: 5px 14px;
+      border-radius: 20px; border: 1.5px solid var(--dark-4); background: var(--white);
+      color: var(--dark-2); cursor: pointer; transition: all 0.12s;
+    }
+    .filter-pill:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .filter-pill.active { background: var(--main-blue); border-color: var(--main-blue); color: var(--white); }
+
+    /* Mode d'acquisition toggle */
+    .mode-toggle { display: flex; border: 1.5px solid var(--dark-4); border-radius: 8px; overflow: hidden; }
+    .mode-btn {
+      flex: 1; padding: 6px 14px; font-size: var(--text-tiny); font-weight: 700;
+      border: none; cursor: pointer; background: var(--white); color: var(--dark-3);
+      transition: all 0.12s; white-space: nowrap;
+    }
+    .mode-btn + .mode-btn { border-left: 1.5px solid var(--dark-4); }
+    .mode-btn.active-chosen  { background: var(--main-blue); color: var(--white); }
+    .mode-btn.active-random  { background: #9A7800; color: var(--white); }
+    .mode-cost-hint { font-size: var(--text-tiny); color: var(--dark-3); }
+    .mode-cost-chosen { color: var(--main-blue); font-weight: 700; }
+    .mode-cost-random { color: #9A7800; font-weight: 700; }
+
+    /* Skill list */
+    .skill-list { flex: 1; overflow-y: auto; }
+    .skill-list-table { width: 100%; border-collapse: collapse; }
+    .skill-list-table th {
+      text-align: left; padding: 8px var(--p2);
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.4px;
+      border-bottom: 1px solid var(--dark-5); background: var(--dark-6);
+      position: sticky; top: 0;
+    }
+    .skill-list-table td { padding: 12px var(--p2); font-size: var(--text-small); border-bottom: 1px solid var(--dark-6); vertical-align: middle; }
+    .skill-list-table tr:last-child td { border-bottom: none; }
+    .skill-list-table tr:hover td { background: var(--dark-7); }
+    .skill-name { font-weight: 600; color: var(--dark-1); }
+    .skill-desc { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; max-width: 280px; }
+    .skill-type-pill { display: inline-block; font-size: var(--text-tiny); font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+    .type-general  { background: rgba(0,48,73,0.08); color: var(--main-blue); }
+    .type-strength { background: rgba(224,32,32,0.08); color: var(--red); }
+    .type-agility  { background: rgba(98,149,132,0.12); color: var(--green); }
+    .type-passing  { background: rgba(255,215,0,0.18); color: #9A7800; }
+    .type-mutation { background: rgba(111,53,165,0.1); color: var(--light-1); }
+    .nature-normal { background: var(--dark-5); color: var(--dark-2); }
+    .nature-elite  { background: rgba(255,107,53,0.1); color: var(--orange); }
+    .spp-cost { font-size: var(--text-tiny); font-weight: 700; white-space: nowrap; }
+    .spp-cost-chosen { color: var(--main-blue); }
+    .spp-cost-random { color: #9A7800; }
+    .btn-add-skill {
+      padding: 6px 16px; border-radius: 6px; border: 1.5px solid var(--main-blue);
+      background: var(--white); color: var(--main-blue);
+      font-size: var(--text-tiny); font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.12s;
+    }
+    .btn-add-skill:hover { background: var(--main-blue); color: var(--white); }
+    .btn-add-skill.random { border-color: #9A7800; color: #9A7800; }
+    .btn-add-skill.random:hover { background: #9A7800; color: var(--white); }
+    .btn-add-skill:disabled { border-color: var(--dark-4); color: var(--dark-4); cursor: default; background: var(--white); }
+    .row-disabled { opacity: 0.45; }
+
+    /* ── SPP Summary ─────────────────────────────────────────────────────── */
+    .spp-summary {
+      background: var(--white); border-radius: 10px; overflow: hidden;
+    }
+    .spp-summary-header {
+      padding: var(--p1) var(--p2); border-bottom: 2px solid var(--dark-5);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .spp-summary-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); }
+    .spp-summary-total { font-size: var(--text-tiny); color: var(--dark-3); }
+    .spp-summary-total strong { color: #9A7800; }
+    .spp-summary-table { width: 100%; border-collapse: collapse; }
+    .spp-summary-table th {
+      text-align: left; padding: 8px var(--p2);
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.4px;
+      background: var(--dark-6); border-bottom: 1px solid var(--dark-5);
+    }
+    .spp-summary-table td { padding: 10px var(--p2); font-size: var(--text-small); border-bottom: 1px solid var(--dark-6); vertical-align: middle; }
+    .spp-summary-table tr:last-child td { border-bottom: none; }
+    .spp-summary-table tr:hover td { background: var(--dark-7); }
+    .summary-player { font-weight: 600; color: var(--dark-1); }
+    .summary-pos    { font-size: var(--text-tiny); color: var(--dark-3); }
+    .mode-chip {
+      display: inline-block; font-size: var(--text-tiny); font-weight: 700;
+      padding: 2px 10px; border-radius: 20px;
+    }
+    .mode-chip-chosen { background: rgba(0,48,73,0.08); color: var(--main-blue); }
+    .mode-chip-random { background: rgba(154,120,0,0.1); color: #9A7800; }
+    .summary-cost { font-weight: 700; color: #9A7800; }
+    .spp-empty-state { padding: var(--p2); text-align: center; color: var(--dark-3); font-size: var(--text-small); }
+
+    /* ── Submit bar ──────────────────────────────────────────────────────── */
+    .submit-bar { display: flex; justify-content: flex-end; padding: var(--p1) 0; }
+    .btn-submit {
+      padding: 14px 36px; background: var(--main-blue); color: var(--white);
+      border-radius: 8px; font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+      cursor: pointer; border: none; display: flex; align-items: center; gap: 10px; transition: opacity 0.15s;
+    }
+    .btn-submit:hover { opacity: 0.9; }
+
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+
+      <!-- Menu bar -->
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active">Équipes</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <!-- Page content -->
+      <div class="page-content">
+        <div class="finalize-page">
+
+          <!-- Breadcrumb -->
+          <div style="font-size: var(--text-tiny); color: var(--dark-3); cursor: pointer;">
+            ← Mes équipes
+          </div>
+
+          <!-- ① Team header -->
+          <div class="team-header">
+            <div class="team-header-logo">KF</div>
+            <div class="team-header-body">
+              <div class="team-header-top">
+                <div class="team-header-name">Les Korrigans FC</div>
+                <span class="team-status-badge badge-draft">En cours de finalisation</span>
+              </div>
+              <div class="team-header-meta">
+                <div class="meta-item">
+                  <div class="meta-label">Roster</div>
+                  <div class="meta-value">Elfes Sylvestres</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Coach</div>
+                  <div class="meta-value">Bagouze</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Valeur d'équipe</div>
+                  <div class="meta-value">1 250 kPo</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Trésorerie</div>
+                  <div class="meta-value">550 kPo</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">SPP à dépenser</div>
+                  <div class="meta-value" style="color: #9A7800;">6 SPP</div>
+                </div>
+              </div>
+            </div>
+            <div class="roster-icon-small">ES</div>
+          </div>
+
+          <!-- ② Ligue de référence -->
+          <div class="league-selector-row">
+            <div class="league-selector-label">Ligue de référence</div>
+            <div class="league-selector-hint">Choisissez la ligue d'appartenance de votre équipe</div>
+            <div class="league-widget-placeholder">
+              <div class="league-widget-selected">
+                <div class="league-widget-name">Ligue des Forêts Anciennes</div>
+                <div class="league-widget-uid">WOODLAND_LEAGUE</div>
+              </div>
+              <div class="league-widget-arrow">▾</div>
+            </div>
+          </div>
+
+          <!-- ③ Split : joueurs + compétences -->
+          <div class="split-layout">
+
+            <!-- Colonne gauche : joueurs -->
+            <div class="player-list-panel">
+              <div class="player-list-header">
+                <div class="player-list-title">Joueurs</div>
+                <div class="spp-total-badge">6 SPP restants</div>
+              </div>
+
+              <!-- Joueur sélectionné -->
+              <div class="player-row selected">
+                <input class="jersey-input" type="number" value="7" min="1" max="99">
+                <div class="player-row-info">
+                  <input class="player-name-input" type="text" value="Aerindel">
+                  <div class="player-row-pos">Lanceur</div>
+                  <div class="player-row-skills">Passe · Sûr</div>
+                </div>
+                <div class="spp-badge spp-badge-active">3 SPP</div>
+              </div>
+
+              <div class="player-row">
+                <input class="jersey-input" type="number" value="11" min="1" max="99">
+                <div class="player-row-info">
+                  <input class="player-name-input" type="text" value="Sylvara">
+                  <div class="player-row-pos">Receveur</div>
+                  <div class="player-row-skills">Attraper · Esquiver</div>
+                </div>
+                <div class="spp-badge spp-badge-active">3 SPP</div>
+              </div>
+
+              <div class="player-row">
+                <input class="jersey-input" type="number" value="3" min="1" max="99">
+                <div class="player-row-info">
+                  <input class="player-name-input" type="text" value="Maerindel">
+                  <div class="player-row-pos">Receveur</div>
+                  <div class="player-row-skills">Attraper · Esquiver</div>
+                </div>
+                <div class="spp-badge spp-badge-zero">0 SPP</div>
+              </div>
+
+              <div class="player-row">
+                <input class="jersey-input" type="number" value="4" min="1" max="99">
+                <div class="player-row-info">
+                  <input class="player-name-input" type="text" value="Tyrandel">
+                  <div class="player-row-pos">Frappeur</div>
+                  <div class="player-row-skills">Esquiver · Bloc</div>
+                </div>
+                <div class="spp-badge spp-badge-zero">0 SPP</div>
+              </div>
+
+              <div class="player-row">
+                <input class="jersey-input" type="number" value="5" min="1" max="99">
+                <div class="player-row-info">
+                  <input class="player-name-input" type="text" value="Corandel">
+                  <div class="player-row-pos">Frappeur</div>
+                  <div class="player-row-skills">Esquiver</div>
+                </div>
+                <div class="spp-badge spp-badge-zero">0 SPP</div>
+              </div>
+
+              <div class="player-row">
+                <input class="jersey-input" type="number" value="6" min="1" max="99">
+                <div class="player-row-info">
+                  <input class="player-name-input" type="text" value="Findas">
+                  <div class="player-row-pos">Défenseur</div>
+                  <div class="player-row-skills">Esquiver</div>
+                </div>
+                <div class="spp-badge spp-badge-zero">0 SPP</div>
+              </div>
+
+              <div class="player-row">
+                <input class="jersey-input" type="number" value="8" min="1" max="99">
+                <div class="player-row-info">
+                  <input class="player-name-input" type="text" value="Galadras">
+                  <div class="player-row-pos">Défenseur</div>
+                  <div class="player-row-skills">Esquiver</div>
+                </div>
+                <div class="spp-badge spp-badge-zero">0 SPP</div>
+              </div>
+
+              <div class="player-row">
+                <input class="jersey-input" type="number" value="9" min="1" max="99">
+                <div class="player-row-info">
+                  <input class="player-name-input" type="text" value="Mirindel">
+                  <div class="player-row-pos">Défenseur</div>
+                  <div class="player-row-skills">Esquiver</div>
+                </div>
+                <div class="spp-badge spp-badge-zero">0 SPP</div>
+              </div>
+
+            </div><!-- /player-list-panel -->
+
+            <!-- Colonne droite : panneau compétences -->
+            <div class="skill-panel">
+
+              <!-- En-tête joueur -->
+              <div class="skill-player-header">
+                <div class="skill-player-info">
+                  <div class="skill-player-identity">
+                    <input class="skill-jersey-input" type="number" value="7" min="1" max="99">
+                    <input class="skill-player-name-input" type="text" value="Aerindel" placeholder="Nom du joueur">
+                  </div>
+                  <div class="skill-player-pos">Lanceur · Elfes Sylvestres</div>
+                  <div class="skill-player-existing">
+                    <span class="existing-label">Compétences :</span>
+                    <span class="skill-tag">Passe</span>
+                    <span class="skill-tag">Sûr</span>
+                  </div>
+                </div>
+                <div class="spp-counter">
+                  <div class="spp-counter-value">3</div>
+                  <div class="spp-counter-label">SPP à dépenser</div>
+                </div>
+              </div>
+
+              <!-- Filtres + mode d'acquisition -->
+              <div class="skill-filters">
+                <div class="filter-row">
+                  <span class="filter-label">Type</span>
+                  <button class="filter-pill active">Tout</button>
+                  <button class="filter-pill">Général</button>
+                  <button class="filter-pill">Force</button>
+                  <button class="filter-pill">Agilité</button>
+                  <button class="filter-pill">Passe</button>
+                  <button class="filter-pill">Mutation</button>
+                </div>
+                <div class="filter-row">
+                  <span class="filter-label">Nature</span>
+                  <button class="filter-pill active">Normal</button>
+                  <button class="filter-pill">Élite</button>
+                </div>
+                <div class="filter-row" style="margin-top: 2px; padding-top: var(--p1); border-top: 1px solid var(--dark-6);">
+                  <span class="filter-label">Mode</span>
+                  <!-- Toggle Choisie / Aléatoire — change le coût en SPP -->
+                  <div class="mode-toggle">
+                    <button class="mode-btn active-chosen">✓ Choisie</button>
+                    <button class="mode-btn">🎲 Aléatoire</button>
+                  </div>
+                  <span class="mode-cost-hint">
+                    Choisie : <span class="mode-cost-chosen">3 SPP</span> (normal) ·
+                    Aléatoire : <span class="mode-cost-random">2 SPP</span> (normal)
+                  </span>
+                </div>
+              </div>
+
+              <!-- Liste compétences — mode Choisie actif -->
+              <div class="skill-list">
+                <table class="skill-list-table">
+                  <thead>
+                    <tr>
+                      <th style="min-width: 200px;">Compétence</th>
+                      <th>Type</th>
+                      <th>Nature</th>
+                      <th>Coût</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <div class="skill-name">Bras fort</div>
+                        <div class="skill-desc">Ignore les modificateurs de distance lors des passes longues.</div>
+                      </td>
+                      <td><span class="skill-type-pill type-passing">Passe</span></td>
+                      <td><span class="skill-type-pill nature-normal">Normal</span></td>
+                      <td><span class="spp-cost spp-cost-chosen">3 SPP</span></td>
+                      <td><button class="btn-add-skill">+ Choisir</button></td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div class="skill-name">Dague</div>
+                        <div class="skill-desc">Peut blesser un joueur au contact même sans plaquage.</div>
+                      </td>
+                      <td><span class="skill-type-pill type-general">Général</span></td>
+                      <td><span class="skill-type-pill nature-normal">Normal</span></td>
+                      <td><span class="spp-cost spp-cost-chosen">3 SPP</span></td>
+                      <td><button class="btn-add-skill">+ Choisir</button></td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div class="skill-name">Touche de maître</div>
+                        <div class="skill-desc">Relance les jets de Blessure sur une passe à courte portée.</div>
+                      </td>
+                      <td><span class="skill-type-pill type-passing">Passe</span></td>
+                      <td><span class="skill-type-pill nature-normal">Normal</span></td>
+                      <td><span class="spp-cost spp-cost-chosen">3 SPP</span></td>
+                      <td><button class="btn-add-skill">+ Choisir</button></td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div class="skill-name">Réception sûre</div>
+                        <div class="skill-desc">Ne rate jamais une réception sur une passe précise.</div>
+                      </td>
+                      <td><span class="skill-type-pill type-general">Général</span></td>
+                      <td><span class="skill-type-pill nature-normal">Normal</span></td>
+                      <td><span class="spp-cost spp-cost-chosen">3 SPP</span></td>
+                      <td><button class="btn-add-skill">+ Choisir</button></td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div class="skill-name">Esquiver</div>
+                        <div class="skill-desc">Relance le premier jet d'esquive raté par activation.</div>
+                      </td>
+                      <td><span class="skill-type-pill type-agility">Agilité</span></td>
+                      <td><span class="skill-type-pill nature-normal">Normal</span></td>
+                      <td><span class="spp-cost spp-cost-chosen">3 SPP</span></td>
+                      <td><button class="btn-add-skill">+ Choisir</button></td>
+                    </tr>
+                    <!-- Compétences élite : coût 6 SPP en mode Choisie, budget insuffisant (3 SPP) -->
+                    <tr class="row-disabled">
+                      <td>
+                        <div class="skill-name">Présence sur le terrain</div>
+                        <div class="skill-desc">Les adversaires relancent leurs jets d'armure réussis.</div>
+                      </td>
+                      <td><span class="skill-type-pill type-strength">Force</span></td>
+                      <td><span class="skill-type-pill nature-elite">Élite</span></td>
+                      <td><span class="spp-cost spp-cost-chosen">6 SPP</span></td>
+                      <td><button class="btn-add-skill" disabled>Budget insuf.</button></td>
+                    </tr>
+                    <tr class="row-disabled">
+                      <td>
+                        <div class="skill-name">Regard hypnotique</div>
+                        <div class="skill-desc">Force un adversaire adjacent à subir un modificateur sur ses jets.</div>
+                      </td>
+                      <td><span class="skill-type-pill type-general">Général</span></td>
+                      <td><span class="skill-type-pill nature-elite">Élite</span></td>
+                      <td><span class="spp-cost spp-cost-chosen">6 SPP</span></td>
+                      <td><button class="btn-add-skill" disabled>Budget insuf.</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div><!-- /skill-list -->
+
+            </div><!-- /skill-panel -->
+
+          </div><!-- /split-layout -->
+
+          <!-- ④ Synthèse des SPP dépensés -->
+          <div class="spp-summary">
+            <div class="spp-summary-header">
+              <div class="spp-summary-title">Synthèse des SPP dépensés</div>
+              <div class="spp-summary-total">
+                Dépensés : <strong>3 SPP</strong> · Restants : <strong>3 SPP</strong>
+              </div>
+            </div>
+            <table class="spp-summary-table">
+              <thead>
+                <tr>
+                  <th>Joueur</th>
+                  <th>Compétence acquise</th>
+                  <th>Type</th>
+                  <th>Mode</th>
+                  <th>Coût</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Exemple : Sylvara a déjà dépensé 3 SPP -->
+                <tr>
+                  <td>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                      <div class="jersey-badge">11</div>
+                      <div>
+                        <div class="summary-player">Sylvara</div>
+                        <div class="summary-pos">Receveur</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><strong>Sûr</strong></td>
+                  <td><span class="skill-type-pill type-general">Général</span></td>
+                  <td><span class="mode-chip mode-chip-chosen">Choisie</span></td>
+                  <td><span class="summary-cost">3 SPP</span></td>
+                  <td>
+                    <button style="font-size: 12px; color: var(--dark-3); cursor: pointer; background: none; border: none; padding: 4px 8px; border-radius: 4px;"
+                            onmouseenter="this.style.color='var(--red)'" onmouseleave="this.style.color='var(--dark-3)'">
+                      ✕ Annuler
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div><!-- /spp-summary -->
+
+          <!-- ⑤ Barre de soumission -->
+          <div class="submit-bar">
+            <button class="btn-submit">
+              Soumettre l'équipe →
+            </button>
+          </div>
+
+        </div><!-- /finalize-page -->
+      </div><!-- /page-content -->
+
+    </div><!-- /main-area -->
+  </div><!-- /app-layout -->
+
+  <script>
+    // Toggle Mode Choisie / Aléatoire — démo statique
+    document.querySelectorAll('.mode-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var btns = this.closest('.mode-toggle').querySelectorAll('.mode-btn');
+        btns.forEach(function(b) { b.classList.remove('active-chosen', 'active-random'); });
+        if (this.textContent.includes('Choisie')) {
+          this.classList.add('active-chosen');
+          // Coûts normaux → 3 SPP choisie, élite → 6 SPP
+          document.querySelectorAll('.spp-cost').forEach(function(el) {
+            var row = el.closest('tr');
+            var isElite = row && row.querySelector('.nature-elite');
+            el.textContent = isElite ? '6 SPP' : '3 SPP';
+            el.className = 'spp-cost spp-cost-chosen';
+          });
+          document.querySelectorAll('.btn-add-skill:not([disabled])').forEach(function(b) {
+            b.textContent = '+ Choisir'; b.classList.remove('random');
+          });
+          document.querySelector('.mode-cost-hint').innerHTML =
+            'Choisie : <span class="mode-cost-chosen">3 SPP</span> (normal) · Aléatoire : <span class="mode-cost-random">2 SPP</span> (normal)';
+        } else {
+          this.classList.add('active-random');
+          // Coûts aléatoires → 2 SPP normal, 4 SPP élite
+          document.querySelectorAll('.spp-cost').forEach(function(el) {
+            var row = el.closest('tr');
+            var isElite = row && row.querySelector('.nature-elite');
+            el.textContent = isElite ? '4 SPP' : '2 SPP';
+            el.className = 'spp-cost spp-cost-random';
+          });
+          document.querySelectorAll('.btn-add-skill:not([disabled])').forEach(function(b) {
+            b.textContent = '🎲 Tirer au sort'; b.classList.add('random');
+          });
+          document.querySelector('.mode-cost-hint').innerHTML =
+            'Choisie : <span class="mode-cost-chosen">3 SPP</span> (normal) · Aléatoire : <span class="mode-cost-random">2 SPP</span> (normal)';
+        }
+      });
+    });
+
+    // Sélection d'un joueur (simulation)
+    document.querySelectorAll('.player-row').forEach(function(row) {
+      row.addEventListener('click', function(e) {
+        if (e.target.classList.contains('jersey-input') || e.target.classList.contains('player-name-input')) return;
+        document.querySelectorAll('.player-row').forEach(function(r) { r.classList.remove('selected'); });
+        this.classList.add('selected');
+      });
+    });
+  </script>
+
+</body>
+</html>
