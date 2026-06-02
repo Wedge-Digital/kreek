@@ -537,7 +537,9 @@ pub async fn get_roster_players(
         }
     };
 
-    let roster_team: RosterSelectedTeam = match state
+    let starting_spp = draft.creation_rules().get_starting_xp_for_roster(&roster_uid);
+
+    let mut roster_team: RosterSelectedTeam = match state
         .team_creation
         .roster_repository
         .find_by_id(&team_id_val)
@@ -566,6 +568,8 @@ pub async fn get_roster_players(
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
+
+    roster_team.spp_pool = starting_spp;
 
     if let Err(e) = state
         .team_creation

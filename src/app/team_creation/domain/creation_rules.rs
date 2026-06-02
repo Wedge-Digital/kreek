@@ -20,6 +20,15 @@ pub struct CreationRules {
 }
 
 impl CreationRules {
+    /// Retourne les SPP de départ pour un roster donné (0 si non trouvé).
+    pub fn get_starting_xp_for_roster(&self, roster_uid: &str) -> u8 {
+        self.tiers
+            .iter()
+            .find(|t| t.rosters.iter().any(|r| r == roster_uid))
+            .map(|t| t.start_xp.min(255) as u8)
+            .unwrap_or(0)
+    }
+
     /// Convertit les règles dénormalisées en `Ruleset` domaine,
     /// utilisé pour les validations métier (budget, roster autorisé).
     /// L'identifiant de la saison sert d'id de ruleset — les deux contextes
