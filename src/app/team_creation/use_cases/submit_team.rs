@@ -76,6 +76,9 @@ pub fn domain_error_message(e: &DomainError) -> &'static str {
         DomainError::InsufficientPlayerCount => {
             "Vous devez engager au moins 11 joueurs pour soumettre votre équipe."
         }
+        DomainError::LeagueNotSelected => {
+            "Veuillez sélectionner une ligue avant de soumettre."
+        }
         _ => "Action impossible.",
     }
 }

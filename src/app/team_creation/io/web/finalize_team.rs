@@ -1,15 +1,18 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::references::routes::Routes as RefRoutes;
-use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
+use crate::app::team_creation::domain::roster::LeagueId;
 use crate::app::team_creation::io::web::set_player_identity::{
-    build_skill_header_vm, SkillHeaderFragmentTemplate, SkillHeaderPlayerVm,
+    build_skill_header_vm, SkillHeaderFragmentTemplate,
 };
-use crate::app::team_creation::io::web::spp_management::{build_summary, SppSummaryTemplate};
 use crate::app::team_creation::routes::Routes;
+use crate::app::team_creation::use_cases::set_league::{SetLeagueCommand, SetLeagueError};
+use crate::app::team_creation::use_cases::commands::SubmitTeamCommand;
+use crate::app::team_creation::use_cases::submit_team as submit_uc;
 use crate::app::shared_kernel::common_types::EntityId;
 use crate::web::routes::Routes as WebRoutes;
 use crate::state::AppState;
 use askama::Template;
+use axum::body::Body;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
@@ -112,10 +115,14 @@ pub async fn skill_header(
 // ── Main page GET ─────────────────────────────────────────────────────────────
 
 pub async fn finalize_team(
-    _auth_session: AuthSession,
+    auth_session: AuthSession,
     Path((space_id, team_id)): Path<(String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
+    let Some(user) = auth_session.user else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
+
     let team_entity_id = match EntityId::try_new(&team_id) {
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
@@ -135,37 +142,97 @@ pub async fn finalize_team(
         }
     };
 
-    let routes = Routes::default();
-    let ref_routes = RefRoutes::default();
     let ref_repo = state.references.repository.as_ref();
+    let routes = Routes::default();
 
-    let set_league_url = routes.finalize_team(&space_id, &team_id).replace("/finalize", "/league");
+    // Ligues disponibles pour ce roster
+    let roster_leagues: Vec<String> = ref_repo
+        .list_teams()
+        .iter()
+        .find(|t| t.uid == team.roster.id.0)
+        .map(|t| t.leagues.clone())
+        .unwrap_or_default();
+
+    // ── Skip si finalisation inutile ──────────────────────────────────────────
+    if !team.needs_finalization(roster_leagues.len()) {
+        // Auto-affecter la ligue unique si pas encore définie
+        if team.league_id.is_none() {
+            let league_id = LeagueId(roster_leagues[0].clone());
+            if let Err(e) = crate::app::team_creation::use_cases::set_league::execute(
+                SetLeagueCommand {
+                    team_id:   team_entity_id.clone(),
+                    space_id:  space_id.clone(),
+                    league_id,
+                },
+                state.team_creation.roster_repository.as_ref(),
+            )
+            .await
+            {
+                match e {
+                    SetLeagueError::TeamNotFound => return StatusCode::NOT_FOUND.into_response(),
+                    SetLeagueError::Repository(_) => {
+                        return StatusCode::INTERNAL_SERVER_ERROR.into_response()
+                    }
+                }
+            }
+        }
+
+        // Soumettre directement
+        let cmd = SubmitTeamCommand {
+            team_id:    team_entity_id,
+            space_id:   space_id.clone(),
+            coach_name: user.coach_name.into_inner(),
+        };
+        return match submit_uc::execute(
+            cmd,
+            state.team_creation.roster_repository.as_ref(),
+            &state.team_creation.event_bus,
+        )
+        .await
+        {
+            Ok(()) => Response::builder()
+                .header("HX-Redirect", routes.my_teams(&space_id))
+                .header("HX-Trigger", r#"{"showToast":"Équipe soumise avec succès !"}"#)
+                .body(Body::empty())
+                .unwrap()
+                .into_response(),
+            Err(submit_uc::SubmitTeamError::Domain(errors)) => {
+                let msgs: String = errors
+                    .iter()
+                    .map(|e| format!("<p>{}</p>", submit_uc::domain_error_message(e)))
+                    .collect();
+                Response::builder()
+                    .status(422)
+                    .header("Content-Type", "text/html")
+                    .body(Body::from(msgs))
+                    .unwrap()
+                    .into_response()
+            }
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        };
+    }
+
+    // ── Rendre la page de finalisation ───────────────────────────────────────
+    let ref_routes = RefRoutes::default();
+    let set_league_url = routes.set_league(&space_id, &team_id);
     let league_selector_url = ref_routes.league_selector(
         team.league_id.as_ref().map(|l| l.0.as_str()).unwrap_or(""),
-        &routes.set_league(&space_id, &team_id),
+        &set_league_url,
     );
 
     let players: Vec<FinalizePlayerRowVm> = team
         .hired_players()
         .iter()
         .map(|p| {
-            let base_skills = p
-                .definition
-                .id
-                .0
-                .split("__")
-                .last()
-                .and_then(|pos_uid| {
-                    ref_repo
-                        .find_position_by_uid(&p.definition.id.0)
-                        .map(|pos| {
-                            pos.skills
-                                .iter()
-                                .filter_map(|uid| ref_repo.find_skill_by_uid(uid))
-                                .map(|s| s.name.clone())
-                                .collect::<Vec<_>>()
-                                .join(" · ")
-                        })
+            let base_skills = ref_repo
+                .find_position_by_uid(&p.definition.id.0)
+                .map(|pos| {
+                    pos.skills
+                        .iter()
+                        .filter_map(|uid| ref_repo.find_skill_by_uid(uid))
+                        .map(|s| s.name.clone())
+                        .collect::<Vec<_>>()
+                        .join(" · ")
                 })
                 .unwrap_or_default();
 
@@ -185,7 +252,6 @@ pub async fn finalize_team(
         })
         .collect();
 
-    let tv_kpo = team.remaining_budget().map(|_| 0).unwrap_or(0);
     let treasury_kpo = team.remaining_budget().unwrap_or(0);
 
     let (league_uid, league_label) = team
@@ -204,7 +270,7 @@ pub async fn finalize_team(
         team_name: team.base_infos().name().clone().into_inner(),
         roster_name: team.roster.name.0.clone(),
         coach_id: String::new(),
-        tv_kpo,
+        tv_kpo: 0,
         treasury_kpo,
         spp_pool: team.spp_pool,
         league_uid,
@@ -213,7 +279,7 @@ pub async fn finalize_team(
 
     FinalizeTeamTemplate {
         web_routes: WebRoutes::default(),
-        team_routes: routes.clone(),
+        team_routes: routes,
         ref_routes,
         space_id: space_id.clone(),
         team_id: team_id.clone(),

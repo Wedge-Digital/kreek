@@ -152,7 +152,9 @@
     <div class="cart-actions" style="margin-top: var(--p1);">
       <a class="btn btn-primary"
          hx-get="{{ team_routes.finalize_team(space_id, team_id) }}"
-         hx-target="body"
+         hx-target="#app-content"
+         hx-select="#app-content"
+         hx-swap="innerHTML"
          hx-push-url="true">Terminer la construction →</a>
     </div>
 
