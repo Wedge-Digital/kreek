@@ -7,18 +7,20 @@
 ## Objectif
 
 Afficher la section staff (relances, apothicaire, assistants, cheerleaders) dans la fiche d'équipe
-à partir des données de l'agrégat `Team`, sans aucune dépendance vers un autre BC.
+à partir des champs typés de l'agrégat `Team`, sans aucune dépendance vers un autre BC.
 
 ---
 
 ## Conception
 
-### `StaffVm`
+### `StaffLineVm` et `StaffVm`
+
+View models uniquement — les primitifs y sont autorisés (couche présentation).
 
 ```rust
 pub struct StaffLineVm {
     pub label:    String,
-    pub quantity: u8,
+    pub quantity: u8,   // vue model : primitif autorisé ici
 }
 
 pub struct StaffVm {
@@ -26,16 +28,16 @@ pub struct StaffVm {
 }
 ```
 
-Construit depuis l'agrégat hydraté :
+Construit depuis l'agrégat, en lisant les value objects :
 
 ```rust
 impl StaffVm {
-    fn from(team: &Team) -> Self {
+    pub fn from(team: &Team) -> Self {
         let mut lines = Vec::new();
-        if team.rerolls      > 0 { lines.push(StaffLineVm { label: "Relances".into(),   quantity: team.rerolls }); }
-        if team.apothecaries > 0 { lines.push(StaffLineVm { label: "Apothicaire".into(), quantity: team.apothecaries }); }
-        if team.assistants   > 0 { lines.push(StaffLineVm { label: "Assistants".into(),  quantity: team.assistants }); }
-        if team.cheerleaders > 0 { lines.push(StaffLineVm { label: "Cheerleaders".into(), quantity: team.cheerleaders }); }
+        if team.rerolls.0      > 0 { lines.push(StaffLineVm { label: "Relances".into(),    quantity: team.rerolls.0 }); }
+        if team.apothecaries.0 > 0 { lines.push(StaffLineVm { label: "Apothicaire".into(), quantity: team.apothecaries.0 }); }
+        if team.assistants.0   > 0 { lines.push(StaffLineVm { label: "Assistants".into(),  quantity: team.assistants.0 }); }
+        if team.cheerleaders.0 > 0 { lines.push(StaffLineVm { label: "Cheerleaders".into(), quantity: team.cheerleaders.0 }); }
         Self { lines }
     }
 }
@@ -52,7 +54,7 @@ pub struct TeamDetailVm {
 
 ### Template `teams-team-detail.html`
 
-Remplacer le placeholder par la table staff réelle :
+Remplacer le slot de chargement des joueurs par la table staff réelle :
 
 ```html
 {% if !vm.staff.lines.is_empty() %}
@@ -61,8 +63,8 @@ Remplacer le placeholder par la table staff réelle :
   <table class="player-table staff-table">
     <thead>
       <tr>
-        <th>Poste</th>
-        <th>Quantité</th>
+        <th style="text-align: left;">Poste</th>
+        <th style="text-align: center;">Quantité</th>
       </tr>
     </thead>
     <tbody>
@@ -82,8 +84,8 @@ Remplacer le placeholder par la table staff réelle :
 
 ## Checklist
 
-- [ ] `StaffVm` + `StaffLineVm` dans `teams/io/web/team_detail.rs`
-- [ ] `StaffVm::from(&team)` : construit depuis les champs staff de l'agrégat
+- [ ] `StaffLineVm` + `StaffVm` dans `teams/io/web/team_detail.rs`
+- [ ] `StaffVm::from(&team)` : lit les `.0` des value objects de l'agrégat
 - [ ] `TeamDetailVm` enrichi du champ `staff: StaffVm`
-- [ ] Template `teams-team-detail.html` : section staff câblée (masquée si vide)
 - [ ] `TeamDetailVm::from()` : appel à `StaffVm::from(&team)`
+- [ ] Template `teams-team-detail.html` : section staff câblée, masquée si vide
