@@ -10,6 +10,10 @@ pub enum DomainError {
     NotEnrolled,
     AlreadyDismissed,
     WrongGamePhase(Option<GamePhase>),
+    StaffTypeNotBuyable,
+    StaffTypeNotDismissable,
+    InsufficientStaff,
+    InsufficientTreasury,
 }
 
 impl fmt::Display for DomainError {
@@ -21,6 +25,13 @@ impl fmt::Display for DomainError {
             Self::NotEnrolled => write!(f, "équipe non inscrite"),
             Self::AlreadyDismissed => write!(f, "équipe déjà renvoyée"),
             Self::WrongGamePhase(p) => write!(f, "phase de jeu incorrecte : {p:?}"),
+            Self::StaffTypeNotBuyable => write!(
+                f,
+                "ce type de staff ne peut pas être acheté en phase de recrutement"
+            ),
+            Self::StaffTypeNotDismissable => write!(f, "ce type de staff ne peut pas être renvoyé"),
+            Self::InsufficientStaff => write!(f, "quantité insuffisante de ce staff"),
+            Self::InsufficientTreasury => write!(f, "trésorerie insuffisante"),
         }
     }
 }

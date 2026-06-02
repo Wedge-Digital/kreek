@@ -78,6 +78,11 @@ pub enum TeamDomainEvent {
         quantity: u8,
         cost_kpo: Kpo,
     },
+    StaffDismissed {
+        staff_type: StaffType,
+        quantity: u8,
+        refund_kpo: Kpo,
+    },
     RecruitmentPhaseValidated,
     PlayerFired {
         player_id: String,
@@ -144,6 +149,7 @@ impl TeamDomainEvent {
             Self::PlayerImprovementPhaseValidated => "PlayerImprovementPhaseValidated",
             Self::PlayerRecruited { .. } => "PlayerRecruited",
             Self::StaffBought { .. } => "StaffBought",
+            Self::StaffDismissed { .. } => "StaffDismissed",
             Self::RecruitmentPhaseValidated => "RecruitmentPhaseValidated",
             Self::PlayerFired { .. } => "PlayerFired",
             Self::DismissalsPhaseValidated => "DismissalsPhaseValidated",
@@ -310,9 +316,46 @@ impl Team {
                 self.team_value.0 += base_value_kpo.0;
                 self.treasury.0 = self.treasury.0.saturating_sub(cost_kpo.0);
             }
-            TeamDomainEvent::StaffBought { cost_kpo, .. } => {
+            TeamDomainEvent::StaffBought {
+                staff_type,
+                quantity,
+                cost_kpo,
+            } => {
+                match staff_type {
+                    StaffType::Reroll => self.rerolls.0 = self.rerolls.0.saturating_add(*quantity),
+                    StaffType::Apothecary => {
+                        self.apothecaries.0 = self.apothecaries.0.saturating_add(*quantity)
+                    }
+                    StaffType::Assistant => {
+                        self.assistants.0 = self.assistants.0.saturating_add(*quantity)
+                    }
+                    StaffType::Cheerleader => {
+                        self.cheerleaders.0 = self.cheerleaders.0.saturating_add(*quantity)
+                    }
+                    StaffType::FansFactor => {}
+                }
                 self.team_value.0 += cost_kpo.0;
                 self.treasury.0 = self.treasury.0.saturating_sub(cost_kpo.0);
+            }
+            TeamDomainEvent::StaffDismissed {
+                staff_type,
+                quantity,
+                refund_kpo,
+            } => {
+                match staff_type {
+                    StaffType::Apothecary => {
+                        self.apothecaries.0 = self.apothecaries.0.saturating_sub(*quantity)
+                    }
+                    StaffType::Assistant => {
+                        self.assistants.0 = self.assistants.0.saturating_sub(*quantity)
+                    }
+                    StaffType::Cheerleader => {
+                        self.cheerleaders.0 = self.cheerleaders.0.saturating_sub(*quantity)
+                    }
+                    _ => {} // Reroll, FansFactor : non renvoyables
+                }
+                self.team_value.0 = self.team_value.0.saturating_sub(refund_kpo.0);
+                self.treasury.0 += refund_kpo.0;
             }
             TeamDomainEvent::PlayerImprovementApplied { value_delta, .. } => {
                 self.team_value.0 += value_delta.0;
@@ -430,6 +473,50 @@ impl Team {
             dedicated_fans,
             treasury_income,
             spp_gains,
+        })
+    }
+
+    pub fn buy_staff(
+        &self,
+        staff_type: StaffType,
+        quantity: u8,
+        cost_kpo: Kpo,
+    ) -> Result<TeamDomainEvent, DomainError> {
+        self.expect_phase(GamePhase::Recruitment)?;
+        match staff_type {
+            StaffType::Reroll | StaffType::Assistant | StaffType::Cheerleader => {}
+            _ => return Err(DomainError::StaffTypeNotBuyable),
+        }
+        if self.treasury.0 < cost_kpo.0 {
+            return Err(DomainError::InsufficientTreasury);
+        }
+        Ok(TeamDomainEvent::StaffBought {
+            staff_type,
+            quantity,
+            cost_kpo,
+        })
+    }
+
+    pub fn dismiss_staff(
+        &self,
+        staff_type: StaffType,
+        quantity: u8,
+        refund_kpo: Kpo,
+    ) -> Result<TeamDomainEvent, DomainError> {
+        self.expect_phase(GamePhase::Dismissals)?;
+        let owned = match staff_type {
+            StaffType::Apothecary => self.apothecaries.0,
+            StaffType::Assistant => self.assistants.0,
+            StaffType::Cheerleader => self.cheerleaders.0,
+            _ => return Err(DomainError::StaffTypeNotDismissable),
+        };
+        if quantity > owned {
+            return Err(DomainError::InsufficientStaff);
+        }
+        Ok(TeamDomainEvent::StaffDismissed {
+            staff_type,
+            quantity,
+            refund_kpo,
         })
     }
 
@@ -652,5 +739,135 @@ mod tests {
         assert_eq!(initials_from("Les Korrigans FC"), "LK");
         assert_eq!(initials_from("Nantes Undead"), "NU");
         assert_eq!(initials_from("Skaven"), "S");
+    }
+
+    fn recruitment_phase_team() -> Team {
+        let events = vec![
+            created_event(),
+            enrolled_event(),
+            TeamDomainEvent::PostMatchSequenceStarted {
+                result: MatchResult::Win,
+                dedicated_fans: 5,
+                treasury_income: Kpo(150),
+                spp_gains: vec![],
+            },
+            TeamDomainEvent::PlayerImprovementPhaseValidated,
+            // treasury = 1000 + 150 = 1150, phase = Recruitment
+        ];
+        Team::hydrate(&events).unwrap()
+    }
+
+    fn dismissals_phase_team() -> Team {
+        let events = vec![
+            created_event(),
+            enrolled_event(),
+            TeamDomainEvent::PostMatchSequenceStarted {
+                result: MatchResult::Win,
+                dedicated_fans: 5,
+                treasury_income: Kpo(150),
+                spp_gains: vec![],
+            },
+            TeamDomainEvent::PlayerImprovementPhaseValidated,
+            TeamDomainEvent::RecruitmentPhaseValidated,
+            // phase = Dismissals
+        ];
+        Team::hydrate(&events).unwrap()
+    }
+
+    #[test]
+    fn buy_staff_hors_phase_retourne_erreur() {
+        let events = vec![created_event(), enrolled_event()];
+        let team = Team::hydrate(&events).unwrap();
+        // Phase ReadyToPlay — pas Recruitment
+        assert!(matches!(
+            team.buy_staff(StaffType::Reroll, 1, Kpo(50)),
+            Err(DomainError::WrongGamePhase(_))
+        ));
+    }
+
+    #[test]
+    fn buy_staff_type_non_autorise_retourne_erreur() {
+        let team = recruitment_phase_team();
+        assert!(matches!(
+            team.buy_staff(StaffType::Apothecary, 1, Kpo(50)),
+            Err(DomainError::StaffTypeNotBuyable)
+        ));
+        assert!(matches!(
+            team.buy_staff(StaffType::FansFactor, 1, Kpo(50)),
+            Err(DomainError::StaffTypeNotBuyable)
+        ));
+    }
+
+    #[test]
+    fn buy_staff_tresorerie_insuffisante_retourne_erreur() {
+        let team = recruitment_phase_team();
+        // treasury = 1150, coût = 2000
+        assert!(matches!(
+            team.buy_staff(StaffType::Reroll, 1, Kpo(2000)),
+            Err(DomainError::InsufficientTreasury)
+        ));
+    }
+
+    #[test]
+    fn buy_staff_met_a_jour_compteur_et_tresorerie() {
+        let team = recruitment_phase_team();
+        assert_eq!(team.rerolls.0, 3);
+        assert_eq!(team.treasury.0, 1150);
+
+        let event = team.buy_staff(StaffType::Reroll, 2, Kpo(100)).unwrap();
+        let team = team.apply(&event);
+
+        assert_eq!(team.rerolls.0, 5);
+        assert_eq!(team.treasury.0, 1050);
+    }
+
+    #[test]
+    fn buy_assistant_met_a_jour_compteur() {
+        let team = recruitment_phase_team();
+        let event = team.buy_staff(StaffType::Assistant, 1, Kpo(10)).unwrap();
+        let team = team.apply(&event);
+        assert_eq!(team.assistants.0, 3); // 2 initial + 1
+    }
+
+    #[test]
+    fn dismiss_staff_hors_phase_retourne_erreur() {
+        let team = recruitment_phase_team();
+        assert!(matches!(
+            team.dismiss_staff(StaffType::Assistant, 1, Kpo(10)),
+            Err(DomainError::WrongGamePhase(_))
+        ));
+    }
+
+    #[test]
+    fn dismiss_staff_reroll_retourne_erreur() {
+        let team = dismissals_phase_team();
+        assert!(matches!(
+            team.dismiss_staff(StaffType::Reroll, 1, Kpo(50)),
+            Err(DomainError::StaffTypeNotDismissable)
+        ));
+    }
+
+    #[test]
+    fn dismiss_staff_quantite_insuffisante_retourne_erreur() {
+        let team = dismissals_phase_team();
+        // 1 apothecary initial
+        assert!(matches!(
+            team.dismiss_staff(StaffType::Apothecary, 2, Kpo(50)),
+            Err(DomainError::InsufficientStaff)
+        ));
+    }
+
+    #[test]
+    fn dismiss_staff_met_a_jour_compteur_et_tresorerie() {
+        let team = dismissals_phase_team();
+        let treasury_before = team.treasury.0;
+
+        let event = team
+            .dismiss_staff(StaffType::Assistant, 1, Kpo(10))
+            .unwrap();
+        let team = team.apply(&event);
+
+        assert_eq!(team.assistants.0, 1); // 2 - 1
+        assert_eq!(team.treasury.0, treasury_before + 10);
     }
 }
