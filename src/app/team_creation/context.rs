@@ -1,19 +1,27 @@
 use std::sync::Arc;
 use sqlx::PgPool;
+use crate::app::team_creation::io::app_events::app_event_publisher::team_creation_app_event_publisher;
 use crate::app::team_creation::io::team_creation_repository::{TeamDraftRepository, TeamRosterRepository};
 use crate::app::team_creation::ports::{ITeamDraftRepository, ITeamRosterRepository};
+use crate::lib::services::event_bus::event_bus::EventBus;
 
 #[derive(Clone)]
 pub struct TeamCreationContext {
     pub team_repository:   Arc<dyn ITeamDraftRepository>,
     pub roster_repository: Arc<dyn ITeamRosterRepository>,
+    pub event_bus:         EventBus,
+}
+
+pub fn init_app_event_publisher(event_bus: &EventBus, app_event_bus: EventBus) {
+    team_creation_app_event_publisher(event_bus, app_event_bus);
 }
 
 impl TeamCreationContext {
-    pub fn new(pool: &PgPool) -> Self {
+    pub fn new(pool: &PgPool, event_bus: EventBus) -> Self {
         Self {
             team_repository:   Arc::new(TeamDraftRepository::new(pool.clone())),
             roster_repository: Arc::new(TeamRosterRepository::new(pool.clone())),
+            event_bus,
         }
     }
 }

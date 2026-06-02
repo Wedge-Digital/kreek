@@ -25,7 +25,7 @@ use crate::web::middleware::bypass_auth::bypass_auth_middleware;
 use crate::web::middleware::require_auth::require_auth;
 use crate::web::middleware::request_log::request_log;
 use crate::app::auth::context::AuthContext;
-use crate::app::{auth, competitions, news, spaces};
+use crate::app::{auth, competitions, news, spaces, team_creation};
 use crate::app::competitions::context::CompetitionsContext;
 use crate::app::news::context::NewsContext;
 use crate::app::spaces::context::SpacesContext;
@@ -69,6 +69,7 @@ async fn main() {
     spaces::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
 
     competitions::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
+    team_creation::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
 
     let state = AppState {
         auth:          AuthContext::new(&pool, event_bus.clone()),
@@ -76,7 +77,7 @@ async fn main() {
         competitions:  CompetitionsContext::new(&pool, event_bus.clone()),
         news:          NewsContext::new(&pool),
         references:    ReferencesContext::new(),
-        team_creation: TeamCreationContext::new(&pool),
+        team_creation: TeamCreationContext::new(&pool, event_bus.clone()),
         teams:         TeamsContext::new(&pool),
         email_service: Arc::new(ResendMailService::new(cfg.email.api_key, cfg.email.from, cfg.email.from_name)),
         host_domain:   cfg.host_domain,

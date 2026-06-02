@@ -18,6 +18,10 @@ impl RulesetSelectedTeam {
         RulesetSelectedTeam { team, ruleset }
     }
 
+    pub fn base_infos(&self) -> &crate::app::shared_kernel::team::BaseTeamInfo {
+        self.team.base_infos()
+    }
+
     pub fn choose_roster(self, roster: Roster) -> Result<RosterSelectedTeam, DomainError> {
         if self.ruleset.is_roster_not_allowed(&roster.id) {
             return Err(DomainError::RosterNotAllowed);

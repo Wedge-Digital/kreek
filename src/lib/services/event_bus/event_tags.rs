@@ -11,14 +11,16 @@ pub enum EventTagName {
     User,
     Space,
     Competition,
+    Team,
 }
 
 impl ToString for EventTagName {
     fn to_string(&self) -> String {
         match self {
-            EventTagName::User => "User".to_string(),
-            EventTagName::Space => "Space".to_string(),
+            EventTagName::User        => "User".to_string(),
+            EventTagName::Space       => "Space".to_string(),
             EventTagName::Competition => "Competition".to_string(),
+            EventTagName::Team        => "Team".to_string(),
         }
     }
 }

@@ -221,6 +221,7 @@ mod tests {
             team_creation: crate::app::team_creation::context::TeamCreationContext {
                 team_repository:   Arc::new(FakeTeamDraftRepository),
                 roster_repository: Arc::new(FakeTeamRosterRepository),
+                event_bus:         bus.clone(),
             },
             teams: {
                 struct FakeTeamRepo;

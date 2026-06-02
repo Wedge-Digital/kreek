@@ -30,6 +30,10 @@ impl RosterSelectedTeam {
         }
     }
 
+    pub fn base_infos(&self) -> &crate::app::shared_kernel::team::BaseTeamInfo {
+        self.team.base_infos()
+    }
+
     pub fn hired_players(&self) -> &[PlayerDefinition] {
         &self.hired_players
     }

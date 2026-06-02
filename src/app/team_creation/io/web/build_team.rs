@@ -4,6 +4,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
+use crate::app::auth::auth_backend::AuthSession;
 use crate::app::references::domain::models::Team as RefTeam;
 use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::references::io::web::pickers::{
@@ -790,15 +791,24 @@ pub async fn remove_reroll(
 pub async fn submit_team(
     Path((space_id, team_id)): Path<(String, String)>,
     State(state):              State<AppState>,
+    auth_session:              AuthSession,
 ) -> impl IntoResponse {
     let team_id_val = match EntityId::try_new(&team_id) {
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let cmd = SubmitTeamCommand { team_id: team_id_val };
+    let Some(user) = auth_session.user else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
 
-    match submit_uc::execute(cmd, state.team_creation.roster_repository.as_ref()).await {
+    let cmd = SubmitTeamCommand {
+        team_id:    team_id_val,
+        space_id:   space_id.clone(),
+        coach_name: user.coach_name.into_inner(),
+    };
+
+    match submit_uc::execute(cmd, state.team_creation.roster_repository.as_ref(), &state.team_creation.event_bus).await {
         Ok(()) => {}
         Err(submit_uc::SubmitTeamError::TeamNotFound) =>
             return StatusCode::NOT_FOUND.into_response(),
