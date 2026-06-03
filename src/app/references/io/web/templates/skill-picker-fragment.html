@@ -50,7 +50,6 @@
             class="{% if skill.is_acquired ||!skill.is_affordable_chosen %}row-disabled{% endif %}">
           <td>
             <div class="skill-name">{{ skill.name }}</div>
-            <div class="skill-desc">{{ skill.description }}</div>
           </td>
           <td>
             <span class="skill-type-pill {{ skill.category_css }}">{{ skill.category_label }}</span>

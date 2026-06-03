@@ -19,7 +19,6 @@ pub struct SkillPickerParams {
 pub struct SkillRowVm {
     pub uid: String,
     pub name: String,
-    pub description: String,
     pub category_uid: String,
     pub category_label: String,
     pub category_css: String,
@@ -134,7 +133,6 @@ pub async fn skill_picker(
                 cost_random,
                 uid: s.uid.clone(),
                 name: s.name.clone(),
-                description: s.description.clone(),
                 category_uid: s.category.clone(),
                 category_label: cat_label,
                 category_css: category_css(&s.category).to_string(),

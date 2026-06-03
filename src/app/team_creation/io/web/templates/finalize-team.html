@@ -185,7 +185,7 @@
   };
 
   function loadSkillPicker(rosterLineId, spp, acquired, onAcquire, onCancel) {
-    var url = '/références/roster-lines/skill-picker'
+    var url = '/references/roster-lines/skill-picker'
       + '?roster_line_id=' + encodeURIComponent(rosterLineId)
       + '&spp=' + encodeURIComponent(spp)
       + '&acquired=' + encodeURIComponent(acquired)
@@ -202,7 +202,7 @@
 
   // ── Mise à jour du sélecteur de ligue après sélection ────────────────────
   document.body.addEventListener('leagueSelected', function (evt) {
-    var url = '/références/leagues/selector'
+    var url = '/references/leagues/selector'
       + '?selected=' + encodeURIComponent(evt.detail.league_id)
       + '&on_select=' + encodeURIComponent('{{ set_league_url }}');
     htmx.ajax('GET', url, { target: '#league-selector-container', swap: 'outerHTML' });
