@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finalisation — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <style>
+
+    /* ── Page layout ─────────────────────────────────────────────────────── */
+    .finalize-page {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+    }
+
+    /* ── Breadcrumb ──────────────────────────────────────────────────────── */
+    .breadcrumb {
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+      cursor: pointer;
+    }
+    .breadcrumb:hover { color: var(--main-blue); }
+
+    /* ── Team header ─────────────────────────────────────────────────────── */
+    .team-header {
+      background: var(--white);
+      border-radius: var(--card-radius);
+      padding: var(--p2);
+      display: flex;
+      align-items: flex-start;
+      gap: var(--p3);
+    }
+    .team-header-logo {
+      width: 72px; height: 72px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, #629584, #3a6655);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: 22px; color: var(--white);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+    .team-header-body { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+    .team-header-top  { display: flex; align-items: center; gap: var(--p1); }
+    .team-header-name { font-family: var(--font-title); font-size: var(--h3); font-weight: 800; color: var(--dark-0); }
+    .badge-draft {
+      font-size: var(--text-tiny); font-weight: 700; padding: 3px 10px;
+      border-radius: 20px; background: rgba(255,107,53,0.12); color: var(--orange);
+    }
+    .team-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
+    .meta-item  { display: flex; flex-direction: column; gap: 2px; }
+    .meta-label { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-value { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+
+    /* SPP budget bar */
+    .spp-budget {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 14px 18px;
+      background: rgba(255,215,0,0.07);
+      border: 1px solid rgba(255,215,0,0.3);
+      border-radius: 8px;
+      min-width: 260px;
+    }
+    .spp-budget-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: var(--p1);
+    }
+    .spp-budget-label {
+      font-size: var(--text-tiny);
+      font-weight: 700;
+      color: #9A7800;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .spp-budget-numbers {
+      font-family: var(--font-title);
+      font-size: var(--h5);
+      font-weight: 800;
+      color: #9A7800;
+      white-space: nowrap;
+    }
+    .spp-budget-bar {
+      height: 8px;
+      background: rgba(154,120,0,0.15);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .spp-budget-bar-inner {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #9A7800, #FFD700);
+      transition: width 0.4s ease;
+    }
+    .spp-budget-bottom {
+      display: flex;
+      justify-content: space-between;
+      font-size: var(--text-tiny);
+      color: rgba(154,120,0,0.75);
+    }
+
+    /* ── Split layout ────────────────────────────────────────────────────── */
+    .split-layout {
+      display: flex;
+      gap: var(--p2);
+      align-items: flex-start;
+    }
+
+    /* ── Left panel: player list ─────────────────────────────────────────── */
+    .player-list-panel {
+      width: 300px;
+      flex-shrink: 0;
+      background: var(--white);
+      border-radius: var(--card-radius);
+      overflow: hidden;
+    }
+    .player-list-header {
+      padding: 10px var(--p2);
+      border-bottom: 2px solid var(--dark-5);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .player-list-title {
+      font-family: var(--font-title);
+      font-size: var(--h5);
+      font-weight: 700;
+      color: var(--dark-1);
+    }
+    .player-count-badge {
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+      font-weight: 600;
+    }
+    .player-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px var(--p2);
+      border-bottom: 1px solid var(--dark-6);
+      cursor: pointer;
+      transition: background 0.1s;
+      position: relative;
+    }
+    .player-row:hover { background: var(--dark-7); }
+    .player-row.selected {
+      background: rgba(0,48,73,0.04);
+      border-left: 3px solid var(--main-blue);
+      padding-left: calc(var(--p2) - 3px);
+    }
+    .player-row:last-child { border-bottom: none; }
+
+    .jersey-badge {
+      width: 36px; height: 30px;
+      border: 1.5px solid var(--dark-5);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: var(--text-tiny); font-weight: 800; color: var(--dark-3);
+      background: var(--dark-6);
+      flex-shrink: 0;
+      font-family: var(--font-title);
+    }
+    .player-row.selected .jersey-badge {
+      border-color: var(--main-blue);
+      color: var(--main-blue);
+      background: rgba(0,48,73,0.06);
+    }
+    .player-row-info { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .player-row-name { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+    .player-row-pos  { font-size: var(--text-tiny); color: var(--dark-3); }
+    .player-row-skills {
+      font-size: 11px;
+      color: var(--dark-4);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .skills-assigned-badge {
+      flex-shrink: 0;
+      font-size: var(--text-tiny);
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: rgba(98,149,132,0.15);
+      color: #3a6655;
+      white-space: nowrap;
+    }
+
+    /* ── Right panel: skill picker ───────────────────────────────────────── */
+    .skill-panel {
+      flex: 1;
+      background: var(--white);
+      border-radius: var(--card-radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 560px;
+    }
+
+    /* Empty state */
+    .skill-panel-empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--p1);
+      color: var(--dark-3);
+      font-size: var(--text-small);
+      padding: var(--p4);
+    }
+    .skill-panel-empty-icon { font-size: 42px; opacity: 0.25; }
+
+    /* Player header in skill panel */
+    .skill-player-header {
+      padding: var(--p2);
+      border-bottom: 2px solid var(--dark-5);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--p2);
+    }
+    .skill-player-info { display: flex; flex-direction: column; gap: 6px; }
+    .skill-player-name {
+      font-family: var(--font-title);
+      font-size: var(--h4);
+      font-weight: 700;
+      color: var(--dark-0);
+    }
+    .skill-player-pos {
+      font-size: var(--text-small);
+      color: var(--dark-3);
+    }
+    .skill-player-base {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      margin-top: 2px;
+    }
+    .base-skill-label {
+      font-size: var(--text-tiny);
+      font-weight: 700;
+      color: var(--dark-3);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .skill-tag {
+      font-size: var(--text-tiny);
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: var(--dark-5);
+      color: var(--dark-1);
+    }
+
+    /* Mode toggle */
+    .skill-controls {
+      padding: var(--p1) var(--p2);
+      border-bottom: 1px solid var(--dark-5);
+      display: flex;
+      align-items: center;
+      gap: var(--p2);
+      flex-wrap: wrap;
+    }
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .control-label {
+      font-size: var(--text-tiny);
+      font-weight: 700;
+      color: var(--dark-3);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+    }
+    .mode-toggle {
+      display: flex;
+      border: 1.5px solid var(--dark-4);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .mode-btn {
+      padding: 6px 16px;
+      font-size: var(--text-tiny);
+      font-weight: 700;
+      border: none;
+      background: var(--white);
+      color: var(--dark-3);
+      cursor: pointer;
+      transition: all 0.12s;
+      white-space: nowrap;
+    }
+    .mode-btn + .mode-btn { border-left: 1.5px solid var(--dark-4); }
+    .mode-btn.active-chosen { background: var(--main-blue); color: var(--white); }
+    .mode-btn.active-random { background: #9A7800; color: var(--white); }
+
+    .cost-hint {
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+    }
+    .cost-chosen { color: var(--main-blue); font-weight: 700; }
+    .cost-random { color: #9A7800; font-weight: 700; }
+
+    /* Category filter pills */
+    .filter-pills {
+      display: flex;
+      gap: 0;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .filter-pill-group {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .filter-pill-group-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .filter-group-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--dark-4);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .filter-group-sep {
+      width: 1px;
+      height: 28px;
+      background: var(--dark-5);
+      margin: 0 10px;
+      flex-shrink: 0;
+    }
+    .filter-pill {
+      font-size: var(--text-tiny);
+      font-weight: 600;
+      padding: 5px 14px;
+      border-radius: 20px;
+      border: 1.5px solid var(--dark-4);
+      background: var(--white);
+      color: var(--dark-2);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .filter-pill:hover  { border-color: var(--main-blue); color: var(--main-blue); }
+    .filter-pill.active { background: var(--main-blue); border-color: var(--main-blue); color: var(--white); }
+
+    /* Skill list table */
+    .skill-list { flex: 1; overflow-y: auto; }
+    .skill-list-table { width: 100%; border-collapse: collapse; }
+    .skill-list-table th {
+      text-align: left;
+      padding: 8px var(--p2);
+      font-size: var(--text-tiny);
+      font-weight: 700;
+      color: var(--dark-3);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      border-bottom: 1px solid var(--dark-5);
+      background: var(--dark-6);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .skill-list-table td {
+      padding: 12px var(--p2);
+      font-size: var(--text-small);
+      border-bottom: 1px solid var(--dark-6);
+      vertical-align: middle;
+    }
+    .skill-list-table tr:last-child td { border-bottom: none; }
+    .skill-list-table tr:hover td { background: var(--dark-7); }
+    .skill-list-table tr.row-disabled td { opacity: 0.4; }
+    .skill-name { font-weight: 600; color: var(--dark-1); }
+    .skill-desc { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; max-width: 280px; }
+
+    .skill-type-pill {
+      display: inline-block;
+      font-size: var(--text-tiny);
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .type-general  { background: rgba(0,48,73,0.08);     color: var(--main-blue); }
+    .type-strength { background: rgba(224,32,32,0.08);   color: var(--red); }
+    .type-agility  { background: rgba(98,149,132,0.12);  color: var(--green); }
+    .type-passing  { background: rgba(255,215,0,0.18);   color: #9A7800; }
+    .type-mutation { background: rgba(111,53,165,0.10);  color: var(--light-1); }
+
+    .access-normal { background: var(--dark-5);               color: var(--dark-2); }
+    .access-elite  { background: rgba(255,107,53,0.10);       color: var(--orange); }
+
+    .spp-cost { font-size: var(--text-tiny); font-weight: 700; white-space: nowrap; }
+    .spp-cost-chosen { color: var(--main-blue); }
+    .spp-cost-random { color: #9A7800; }
+
+    .btn-add-skill {
+      padding: 6px 16px;
+      border-radius: 6px;
+      border: 1.5px solid var(--main-blue);
+      background: var(--white);
+      color: var(--main-blue);
+      font-size: var(--text-tiny);
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.12s;
+    }
+    .btn-add-skill:hover:not(:disabled) { background: var(--main-blue); color: var(--white); }
+    .btn-add-skill.random { border-color: #9A7800; color: #9A7800; }
+    .btn-add-skill.random:hover:not(:disabled) { background: #9A7800; color: var(--white); }
+    .btn-add-skill:disabled {
+      border-color: var(--dark-4);
+      color: var(--dark-4);
+      cursor: default;
+      background: var(--white);
+    }
+    .btn-add-skill.already {
+      border-color: var(--green);
+      color: var(--green);
+      cursor: pointer;
+      background: rgba(98,149,132,0.08);
+    }
+    .btn-add-skill.already:hover { background: rgba(224,32,32,0.06); border-color: var(--red); color: var(--red); }
+
+    /* ── SPP Summary ─────────────────────────────────────────────────────── */
+    .spp-summary {
+      background: var(--white);
+      border-radius: var(--card-radius);
+      overflow: hidden;
+    }
+    .spp-summary-header {
+      padding: 10px var(--p2);
+      border-bottom: 2px solid var(--dark-5);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--p2);
+    }
+    .spp-summary-title {
+      font-family: var(--font-title);
+      font-size: var(--h5);
+      font-weight: 700;
+      color: var(--dark-1);
+    }
+    .spp-summary-meta { font-size: var(--text-tiny); color: var(--dark-3); }
+    .spp-summary-meta strong { color: #9A7800; }
+    .spp-summary-table { width: 100%; border-collapse: collapse; }
+    .spp-summary-table th {
+      text-align: left;
+      padding: 8px var(--p2);
+      font-size: var(--text-tiny);
+      font-weight: 700;
+      color: var(--dark-3);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      background: var(--dark-6);
+      border-bottom: 1px solid var(--dark-5);
+    }
+    .spp-summary-table td {
+      padding: 10px var(--p2);
+      font-size: var(--text-small);
+      border-bottom: 1px solid var(--dark-6);
+      vertical-align: middle;
+    }
+    .spp-summary-table tr:last-child td { border-bottom: none; }
+    .spp-summary-table tr:hover td { background: var(--dark-7); }
+    .summary-player { font-weight: 600; color: var(--dark-1); }
+    .summary-pos    { font-size: var(--text-tiny); color: var(--dark-3); }
+    .mode-chip {
+      display: inline-block;
+      font-size: var(--text-tiny);
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 20px;
+    }
+    .mode-chip-chosen { background: rgba(0,48,73,0.08);     color: var(--main-blue); }
+    .mode-chip-random { background: rgba(154,120,0,0.10);   color: #9A7800; }
+    .summary-cost { font-weight: 700; color: #9A7800; }
+    .spp-empty-state {
+      padding: var(--p2) var(--p2);
+      text-align: center;
+      color: var(--dark-3);
+      font-size: var(--text-small);
+      font-style: italic;
+    }
+    .btn-cancel-entry {
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+      cursor: pointer;
+      background: none;
+      border: 1px solid var(--dark-5);
+      padding: 4px 10px;
+      border-radius: 5px;
+      transition: all 0.12s;
+    }
+    .btn-cancel-entry:hover { color: var(--red); border-color: var(--red); }
+
+    /* ── Player list footer + submit ─────────────────────────────────────── */
+    .player-list-footer {
+      padding: var(--p1) var(--p2);
+      border-top: 2px solid var(--dark-5);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .btn-submit {
+      width: 100%;
+      padding: 12px var(--p1);
+      background: var(--main-blue);
+      color: var(--white);
+      border-radius: 8px;
+      font-family: var(--font-title);
+      font-size: var(--text-small);
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      text-align: center;
+      transition: opacity 0.15s;
+    }
+    .btn-submit:hover { opacity: 0.9; }
+    .submit-hint {
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+      text-align: center;
+    }
+
+    /* Alpine cloak */
+    [x-cloak] { display: none !important; }
+
+  </style>
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-top"></div>
+    <div class="league-btn league-btn-active">TC</div>
+    <div class="league-btn">KC</div>
+    <div class="league-btn">LM</div>
+    <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+  </div>
+
+  <div class="main-area">
+
+    <!-- Menu bar -->
+    <div class="menu-bar">
+      <div class="menu-bar-inner">
+        <div class="menu-left">
+          <div class="menu-logo">
+            <div class="menu-logo-icon">BBC</div>
+            <span class="menu-logo-text">Blood Bowl Club</span>
+          </div>
+          <a class="menu-item" href="app-home.html">Accueil</a>
+          <a class="menu-item active">Équipes</a>
+          <a class="menu-item">Règles du jeu</a>
+        </div>
+        <div class="menu-right">
+          <a class="menu-item">Administration</a>
+          <div class="menu-account">👤</div>
+        </div>
+      </div>
+      <div class="sub-menu-placeholder"></div>
+    </div>
+
+    <!-- Page content — Alpine root -->
+    <div class="page-content">
+      <div class="finalize-page" x-data="finalizePage()" x-cloak>
+
+        <!-- Breadcrumb -->
+        <div class="breadcrumb">← Mes équipes</div>
+
+        <!-- ① Team header + SPP budget -->
+        <div class="team-header">
+          <div class="team-header-logo" x-text="teamInitials"></div>
+          <div class="team-header-body">
+            <div class="team-header-top">
+              <div class="team-header-name" x-text="teamName"></div>
+              <span class="badge-draft">En cours de finalisation</span>
+            </div>
+            <div class="team-header-meta">
+              <div class="meta-item">
+                <div class="meta-label">Roster</div>
+                <div class="meta-value" x-text="rosterName"></div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">Trésorerie</div>
+                <div class="meta-value" x-text="treasury + ' kPo'"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SPP budget bar -->
+          <div class="spp-budget" x-show="sppPool > 0">
+            <div class="spp-budget-top">
+              <span class="spp-budget-label">Budget de compétences</span>
+              <span class="spp-budget-numbers" x-text="sppSpent + ' / ' + sppPool + ' SPP'"></span>
+            </div>
+            <div class="spp-budget-bar">
+              <div class="spp-budget-bar-inner"
+                   :style="'width:' + sppPercent + '%'"
+                   :style="sppPercent >= 100 ? 'background: var(--red)' : ''"></div>
+            </div>
+            <div class="spp-budget-bottom">
+              <span x-text="assignments.length + ' compétence(s) attribuée(s)'"></span>
+              <span x-text="sppRemaining + ' SPP restants'"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ② Split: players + skills -->
+        <div class="split-layout">
+
+          <!-- Colonne gauche: liste des joueurs -->
+          <div class="player-list-panel">
+            <div class="player-list-header">
+              <div class="player-list-title">Joueurs</div>
+              <div class="player-count-badge" x-text="players.length + ' joueurs'"></div>
+            </div>
+
+            <template x-for="player in players" :key="player.id">
+              <div class="player-row"
+                   :class="{ selected: selectedPlayerId === player.id }"
+                   @click="selectPlayer(player.id)">
+                <div class="jersey-badge" x-text="player.jersey"></div>
+                <div class="player-row-info">
+                  <div class="player-row-name" x-text="player.name"></div>
+                  <div class="player-row-pos" x-text="player.positionName"></div>
+                  <div class="player-row-skills" x-show="player.baseSkills.length > 0"
+                       x-text="player.baseSkills.join(' · ')"></div>
+                </div>
+                <div class="skills-assigned-badge"
+                     x-show="playerAssignedCount(player.id) > 0"
+                     x-text="playerAssignedLabel(player.id)"></div>
+              </div>
+            </template>
+
+            <div class="player-list-footer">
+              <button class="btn-submit" @click="submitAssignments()">
+                Soumettre l'équipe →
+              </button>
+              <div class="submit-hint"
+                   x-show="assignments.length > 0"
+                   x-text="assignments.length + ' attribution(s) · ' + sppSpent + ' SPP dépensés'"></div>
+            </div>
+          </div>
+
+          <!-- Colonne droite: skill picker -->
+          <div class="skill-panel">
+
+            <!-- Empty state -->
+            <div class="skill-panel-empty" x-show="!selectedPlayer">
+              <div class="skill-panel-empty-icon">☝</div>
+              <span>Sélectionnez un joueur pour lui attribuer une compétence</span>
+            </div>
+
+            <!-- Player selected -->
+            <template x-if="selectedPlayer">
+              <div style="display:flex; flex-direction:column; flex:1;">
+
+                <!-- Header joueur -->
+                <div class="skill-player-header">
+                  <div class="skill-player-info">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                      <div class="jersey-badge" style="width:44px; height:38px; font-size:16px;"
+                           x-text="selectedPlayer.jersey"></div>
+                      <div class="skill-player-name" x-text="selectedPlayer.name"></div>
+                    </div>
+                    <div class="skill-player-pos" x-text="selectedPlayer.positionName + ' · ' + rosterName"></div>
+                    <div class="skill-player-base" x-show="selectedPlayer.baseSkills.length > 0">
+                      <span class="base-skill-label">Compétences :</span>
+                      <template x-for="skill in selectedPlayer.baseSkills" :key="skill">
+                        <span class="skill-tag" x-text="skill"></span>
+                      </template>
+                      <template x-for="a in assignmentsForPlayer(selectedPlayer.id)" :key="a.skillId">
+                        <span class="skill-tag"
+                              style="background: rgba(98,149,132,0.15); color: #3a6655;"
+                              x-text="a.skillName + ' ✓'"></span>
+                      </template>
+                    </div>
+                  </div>
+                  <!-- SPP restants -->
+                  <div style="display:flex; flex-direction:column; align-items:center; gap:3px; flex-shrink:0;
+                              background: rgba(255,215,0,0.12); border:1px solid rgba(255,215,0,0.4);
+                              border-radius:10px; padding:10px 18px;">
+                    <div style="font-family:var(--font-title); font-size:var(--h4); font-weight:800; color:#9A7800;"
+                         x-text="sppRemaining"></div>
+                    <div style="font-size:var(--text-tiny); color:#9A7800; font-weight:600;">SPP restants</div>
+                    <div style="font-size:10px; color:rgba(154,120,0,0.6);">pool équipe</div>
+                  </div>
+                </div>
+
+                <!-- Contrôles: mode + filtre catégorie -->
+                <div class="skill-controls">
+                  <div class="control-group">
+                    <span class="control-label">Mode</span>
+                    <div class="mode-toggle">
+                      <button class="mode-btn"
+                              :class="mode === 'chosen' ? 'active-chosen' : ''"
+                              @click="mode = 'chosen'">✓ Choisie</button>
+                      <button class="mode-btn"
+                              :class="mode === 'random' ? 'active-random' : ''"
+                              @click="mode = 'random'">🎲 Aléatoire</button>
+                    </div>
+                    <span class="cost-hint">
+                      Choisie :
+                      <span class="cost-chosen">3 SPP</span> /
+                      <span class="cost-chosen" style="opacity:0.7;">6 SPP</span>
+                      &nbsp;·&nbsp; Aléatoire :
+                      <span class="cost-random">2 SPP</span> /
+                      <span class="cost-random" style="opacity:0.7;">4 SPP</span>
+                    </span>
+                  </div>
+
+                  <div class="control-group" style="align-items:flex-start;">
+                    <span class="control-label" style="margin-top:14px;">Filtre</span>
+                    <div class="filter-pills">
+
+                      <!-- Tout -->
+                      <div class="filter-pill-group-wrap">
+                        <span class="filter-group-label">&nbsp;</span>
+                        <div class="filter-pill-group">
+                          <button class="filter-pill"
+                                  :class="isFilterActive('all') ? 'active' : ''"
+                                  @click="toggleFilter('all')">Tout</button>
+                        </div>
+                      </div>
+
+                      <div class="filter-group-sep"></div>
+
+                      <!-- Normales / Élite -->
+                      <div class="filter-pill-group-wrap">
+                        <span class="filter-group-label">Accès</span>
+                        <div class="filter-pill-group">
+                          <button class="filter-pill"
+                                  :class="isFilterActive('normal') ? 'active' : ''"
+                                  @click="toggleFilter('normal')">Normales</button>
+                          <button class="filter-pill"
+                                  :class="isFilterActive('elite') ? 'active' : ''"
+                                  @click="toggleFilter('elite')">Élite</button>
+                        </div>
+                      </div>
+
+                      <div class="filter-group-sep"></div>
+
+                      <!-- Primaires / Secondaires -->
+                      <div class="filter-pill-group-wrap">
+                        <span class="filter-group-label">Priorité</span>
+                        <div class="filter-pill-group">
+                          <button class="filter-pill"
+                                  :class="isFilterActive('primary') ? 'active' : ''"
+                                  @click="toggleFilter('primary')">Primaires</button>
+                          <button class="filter-pill"
+                                  :class="isFilterActive('secondary') ? 'active' : ''"
+                                  @click="toggleFilter('secondary')">Secondaires</button>
+                        </div>
+                      </div>
+
+                      <div class="filter-group-sep"></div>
+
+                      <!-- Catégories individuelles -->
+                      <div class="filter-pill-group-wrap">
+                        <span class="filter-group-label">Type</span>
+                        <div class="filter-pill-group">
+                          <template x-for="cat in availableCategories" :key="cat.key">
+                            <button class="filter-pill"
+                                    :class="isFilterActive(cat.key) ? 'active' : ''"
+                                    @click="toggleFilter(cat.key)"
+                                    x-text="cat.label"></button>
+                          </template>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Liste des compétences -->
+                <div class="skill-list">
+                  <table class="skill-list-table">
+                    <thead>
+                      <tr>
+                        <th style="min-width:200px;">Compétence</th>
+                        <th>Type</th>
+                        <th>Accès</th>
+                        <th>Coût</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template x-for="skill in filteredSkills" :key="skill.id">
+                        <tr :class="{ 'row-disabled': !canAfford(skill.isElite) && !isAlreadyAssigned(selectedPlayer.id, skill.id) }">
+                          <td>
+                            <div class="skill-name" x-text="skill.name"></div>
+                            <div class="skill-desc" x-text="skill.desc"></div>
+                          </td>
+                          <td>
+                            <span class="skill-type-pill"
+                                  :class="'type-' + skill.category"
+                                  x-text="categoryLabel(skill.category)"></span>
+                          </td>
+                          <td>
+                            <span class="skill-type-pill"
+                                  :class="skill.isElite ? 'access-elite' : 'access-normal'"
+                                  x-text="skill.isElite ? 'Élite' : 'Normal'"></span>
+                          </td>
+                          <td>
+                            <span class="spp-cost"
+                                  :class="mode === 'chosen' ? 'spp-cost-chosen' : 'spp-cost-random'"
+                                  x-text="skillCost(skill.isElite) + ' SPP'"></span>
+                          </td>
+                          <td>
+                            <!-- Déjà attribuée — bouton pour annuler -->
+                            <button class="btn-add-skill already"
+                                    x-show="isAlreadyAssigned(selectedPlayer.id, skill.id)"
+                                    @click="removeAssignmentBySkill(selectedPlayer.id, skill.id)">✓ Attribuée &nbsp;✕</button>
+                            <!-- Budget insuffisant -->
+                            <button class="btn-add-skill"
+                                    :class="mode === 'random' ? 'random' : ''"
+                                    x-show="!isAlreadyAssigned(selectedPlayer.id, skill.id) && !canAfford(skill.isElite)"
+                                    disabled>Budget insuf.</button>
+                            <!-- Disponible -->
+                            <button class="btn-add-skill"
+                                    :class="mode === 'random' ? 'random' : ''"
+                                    x-show="!isAlreadyAssigned(selectedPlayer.id, skill.id) && canAfford(skill.isElite)"
+                                    @click="assignSkill(skill)"
+                                    x-text="mode === 'chosen' ? '+ Choisir' : '🎲 Tirer'"></button>
+                          </td>
+                        </tr>
+                      </template>
+                      <tr x-show="filteredSkills.length === 0">
+                        <td colspan="5" style="text-align:center; color:var(--dark-3); font-style:italic; padding:var(--p2);">
+                          Aucune compétence disponible dans cette catégorie.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+              </div>
+            </template>
+
+          </div><!-- /skill-panel -->
+
+        </div><!-- /split-layout -->
+
+
+      </div><!-- /finalize-page -->
+    </div><!-- /page-content -->
+
+  </div><!-- /main-area -->
+</div><!-- /app-layout -->
+
+<script>
+function finalizePage() {
+  return {
+
+    /* ── Données équipe (injectées par le serveur en prod) ─────────────── */
+    teamName:   'Les Korrigans FC',
+    rosterName: 'Elfes Sylvestres',
+    treasury:   550,
+    sppPool:    20,
+
+    get teamInitials() {
+      return this.teamName.split(' ').filter(w => w.length > 2).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    },
+
+    /* ── Joueurs ─────────────────────────────────────────────────────────── */
+    players: [
+      {
+        id: 'p1', jersey: 7, name: 'Aerindel',
+        positionName: 'Lanceur',
+        baseSkills: ['Passe', 'Sûr'],
+        normalCategories: ['general', 'passing'],
+        eliteCategories:  ['strength', 'agility'],
+      },
+      {
+        id: 'p2', jersey: 11, name: 'Sylvara',
+        positionName: 'Receveur',
+        baseSkills: ['Attraper', 'Esquiver', 'Sûr'],
+        normalCategories: ['general', 'agility'],
+        eliteCategories:  ['strength', 'passing'],
+      },
+      {
+        id: 'p3', jersey: 3, name: 'Maerindel',
+        positionName: 'Receveur',
+        baseSkills: ['Attraper', 'Esquiver'],
+        normalCategories: ['general', 'agility'],
+        eliteCategories:  ['strength', 'passing'],
+      },
+      {
+        id: 'p4', jersey: 4, name: 'Tyrandel',
+        positionName: 'Frappeur',
+        baseSkills: ['Esquiver', 'Bloc'],
+        normalCategories: ['general', 'strength'],
+        eliteCategories:  ['agility', 'passing'],
+      },
+      {
+        id: 'p5', jersey: 5, name: 'Corandel',
+        positionName: 'Frappeur',
+        baseSkills: ['Esquiver'],
+        normalCategories: ['general', 'strength'],
+        eliteCategories:  ['agility', 'passing'],
+      },
+      {
+        id: 'p6', jersey: 6, name: 'Findas',
+        positionName: 'Défenseur',
+        baseSkills: ['Esquiver'],
+        normalCategories: ['general'],
+        eliteCategories:  ['strength', 'agility', 'passing'],
+      },
+      {
+        id: 'p7', jersey: 8, name: 'Galadras',
+        positionName: 'Défenseur',
+        baseSkills: ['Esquiver'],
+        normalCategories: ['general'],
+        eliteCategories:  ['strength', 'agility', 'passing'],
+      },
+      {
+        id: 'p8', jersey: 9, name: 'Mirindel',
+        positionName: 'Défenseur',
+        baseSkills: ['Esquiver'],
+        normalCategories: ['general'],
+        eliteCategories:  ['strength', 'agility', 'passing'],
+      },
+    ],
+
+    /* ── Catalogue compétences ───────────────────────────────────────────── */
+    catalog: {
+      general: [
+        { id: 'block',   name: 'Bloc',            desc: 'Ne tombe pas lors d\'un placage raté.' },
+        { id: 'dodge',   name: 'Esquiver',         desc: 'Relance le premier jet d\'esquive raté par activation.' },
+        { id: 'sure',    name: 'Sûr',              desc: 'Relance le premier jet de gestion de balle raté.' },
+        { id: 'guard',   name: 'Garde',            desc: 'Aide aux plaquages même depuis la zone de marquage.' },
+        { id: 'wrestle', name: 'Lutteuse',         desc: 'Peut tomber avec l\'adversaire lors d\'un placage.' },
+        { id: 'kick',    name: 'Botteuse',         desc: 'Peut choisir la direction du coup de pied d\'envoi.' },
+        { id: 'safe_r',  name: 'Réception sûre',  desc: 'Ne rate jamais une réception sur une passe précise.' },
+        { id: 'dagger',  name: 'Dague',            desc: 'Peut blesser un joueur au contact sans plaquage.' },
+      ],
+      passing: [
+        { id: 'pass',    name: 'Passe longue',     desc: 'Ignore les modificateurs de distance lors des passes longues.' },
+        { id: 'touch',   name: 'Touche de maître', desc: 'Relance les jets de blessure sur une passe courte.' },
+        { id: 'strong',  name: 'Bras fort',        desc: 'Portée de passe augmentée d\'un cran.' },
+        { id: 'dump',    name: 'Passe rapide',     desc: 'Peut passer après avoir couru.' },
+      ],
+      agility: [
+        { id: 'acro',    name: 'Acrobatie',        desc: 'Peut tenter une esquive même après être tombé.' },
+        { id: 'catch',   name: 'Attraper',         desc: 'Relance le premier jet de réception raté.' },
+        { id: 'concen',  name: 'Concentration',    desc: 'Peut relancer un jet de passe ou de réception.' },
+        { id: 'jump',    name: 'Saut',             desc: 'Peut sauter par-dessus les joueurs adjacents.' },
+        { id: 'dive',    name: 'Plongeon',         desc: 'Peut plonger sur un joueur porteur du ballon.' },
+      ],
+      strength: [
+        { id: 'pres',    name: 'Présence',         desc: 'Les adversaires relancent leurs jets d\'armure réussis.' },
+        { id: 'stand',   name: 'Costaud',          desc: 'Ne peut pas être mis au sol par un seul attaquant.' },
+        { id: 'mighty',  name: 'Coup de marteau',  desc: 'Peut transformer un résultat Renversé en KO.' },
+      ],
+      mutation: [
+        { id: 'tent',    name: 'Tentacules',       desc: 'Empêche les esquives et plaquages adverses.' },
+        { id: 'claw',    name: 'Griffe',           desc: 'Modifie les jets d\'armure en faveur de l\'attaquant.' },
+        { id: 'long',    name: 'Membres allongés', desc: 'Zone de marquage étendue.' },
+      ],
+    },
+
+    /* ── État UI ─────────────────────────────────────────────────────────── */
+    selectedPlayerId: null,
+    mode:             'chosen',
+    activeFilters:    [],
+    assignments:      [],
+
+    /* ── Getters SPP ─────────────────────────────────────────────────────── */
+    get sppSpent()     { return this.assignments.reduce((s, a) => s + a.cost, 0); },
+    get sppRemaining() { return this.sppPool - this.sppSpent; },
+    get sppPercent()   { return this.sppPool > 0 ? Math.min(100, Math.round((this.sppSpent / this.sppPool) * 100)) : 0; },
+
+    /* ── Joueur sélectionné ──────────────────────────────────────────────── */
+    get selectedPlayer() {
+      return this.players.find(p => p.id === this.selectedPlayerId) || null;
+    },
+
+    selectPlayer(id) {
+      this.selectedPlayerId = id;
+      this.activeFilters = [];
+    },
+
+    isFilterActive(key) {
+      if (key === 'all') return this.activeFilters.length === 0;
+      return this.activeFilters.includes(key);
+    },
+    toggleFilter(key) {
+      if (key === 'all') { this.activeFilters = []; return; }
+      const idx = this.activeFilters.indexOf(key);
+      if (idx !== -1) this.activeFilters.splice(idx, 1);
+      else            this.activeFilters.push(key);
+    },
+
+    /* ── Catégories disponibles pour le joueur sélectionné ──────────────── */
+    get availableCategories() {
+      const player = this.selectedPlayer;
+      if (!player) return [];
+      const all = [...player.normalCategories, ...player.eliteCategories];
+      return [...new Set(all)].map(key => ({ key, label: this.categoryLabel(key) }));
+    },
+
+    /* ── Compétences filtrées ────────────────────────────────────────────── */
+    get filteredSkills() {
+      const player = this.selectedPlayer;
+      if (!player) return [];
+
+      let skills = [];
+      const allCats = [...player.normalCategories, ...player.eliteCategories];
+      allCats.forEach(cat => {
+        (this.catalog[cat] || []).forEach(skill => {
+          if (!player.baseSkills.includes(skill.name)) {
+            skills.push({
+              ...skill,
+              category: cat,
+              isElite: player.eliteCategories.includes(cat) && !player.normalCategories.includes(cat),
+            });
+          }
+        });
+      });
+
+      if (this.activeFilters.length > 0) {
+        skills = skills.filter(s => this.activeFilters.some(f => {
+          if (f === 'primary'   || f === 'normal')    return !s.isElite;
+          if (f === 'secondary' || f === 'elite')     return  s.isElite;
+          return s.category === f;
+        }));
+      }
+
+      return skills;
+    },
+
+    /* ── Coût selon mode et niveau d'accès ──────────────────────────────── */
+    skillCost(isElite) {
+      if (this.mode === 'chosen') return isElite ? 6 : 3;
+      return isElite ? 4 : 2;
+    },
+    canAfford(isElite) {
+      return this.sppRemaining >= this.skillCost(isElite);
+    },
+
+    /* ── Attribution ─────────────────────────────────────────────────────── */
+    isAlreadyAssigned(playerId, skillId) {
+      return this.assignments.some(a => a.playerId === playerId && a.skillId === skillId);
+    },
+    assignmentsForPlayer(playerId) {
+      return this.assignments.filter(a => a.playerId === playerId);
+    },
+    playerAssignedCount(playerId) {
+      return this.assignments.filter(a => a.playerId === playerId).length;
+    },
+    playerAssignedLabel(playerId) {
+      const names = this.assignments.filter(a => a.playerId === playerId).map(a => a.skillName);
+      if (names.length === 0) return '';
+      if (names.length === 1) return names[0];
+      return names.slice(0, 1)[0] + ' +' + (names.length - 1);
+    },
+
+    assignSkill(skill) {
+      const player = this.selectedPlayer;
+      if (!player) return;
+      const cost = this.skillCost(skill.isElite);
+      if (this.sppRemaining < cost) return;
+      if (this.isAlreadyAssigned(player.id, skill.id)) return;
+
+      this.assignments.push({
+        playerId:     player.id,
+        playerName:   player.name,
+        positionName: player.positionName,
+        jerseyNumber: player.jersey,
+        skillId:      skill.id,
+        skillName:    skill.name,
+        category:     skill.category,
+        isElite:      skill.isElite,
+        mode:         this.mode,
+        cost:         cost,
+      });
+    },
+
+    removeAssignment(idx) {
+      this.assignments.splice(idx, 1);
+    },
+    removeAssignmentBySkill(playerId, skillId) {
+      const idx = this.assignments.findIndex(a => a.playerId === playerId && a.skillId === skillId);
+      if (idx !== -1) this.assignments.splice(idx, 1);
+    },
+
+    /* ── Label catégorie ─────────────────────────────────────────────────── */
+    categoryLabel(key) {
+      return { general: 'Général', strength: 'Force', agility: 'Agilité', passing: 'Passe', mutation: 'Mutation' }[key] || key;
+    },
+
+    /* ── Soumission ──────────────────────────────────────────────────────── */
+    submitAssignments() {
+      const payload = this.assignments.map(a => ({
+        player_id: a.playerId,
+        skill_id:  a.skillId,
+        mode:      a.mode,
+        cost:      a.cost,
+      }));
+      console.log('POST /finalize', JSON.stringify(payload, null, 2));
+      alert('Payload prêt (voir console) :\n' + JSON.stringify(payload, null, 2));
+    },
+
+  };
+}
+</script>
+
+</body>
+</html>
