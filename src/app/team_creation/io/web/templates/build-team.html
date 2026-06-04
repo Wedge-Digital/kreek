@@ -6,7 +6,9 @@
 {% block content %}
 <link rel="stylesheet" href="/static/css/pages/app-home.css">
 <link rel="stylesheet" href="/static/css/components/create-card.css">
+<link rel="stylesheet" href="/static/css/components/league-selector.css">
 <link rel="stylesheet" href="/static/css/pages/team-build.css">
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
 
 <div class="home-grid">
 
@@ -24,9 +26,20 @@
 
       <div class="create-team-body">
 
-      <!-- Étape 2 : Roster -->
-      <div class="section-label">2 — Sélectionnez votre roster</div>
-      {% call roster_cmp::roster_picker(rosters) %}
+      <!-- Étape 2 : Roster + Ligue -->
+      <div class="section-label">2 — Sélectionnez votre roster et votre ligue</div>
+      <div class="roster-league-row">
+
+        <div class="roster-league-col">
+          <div class="league-selector-label">Roster</div>
+          {% call roster_cmp::roster_picker(rosters) %}
+        </div>
+
+        <div class="roster-league-col">
+          <div id="league-selector-zone"></div>
+        </div>
+
+      </div>
 
       <!-- Étape 3 : Joueurs -->
       <div class="section-label">3 — Sélectionnez vos joueurs</div>
@@ -163,13 +176,54 @@
 </div><!-- /home-grid -->
 
 <script>
+// Fonction Alpine.js pour le sélecteur de ligue — doit être globale
+function leagueSelector(onSelectUrl) {
+  return {
+    onSelect(value) {
+      if (!value) return;
+      fetch(onSelectUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'HX-Request': 'true' },
+        body: JSON.stringify({ league_id: value }),
+      }).then(res => {
+        const raw = res.headers.get('HX-Trigger');
+        if (!raw) return;
+        try {
+          const obj = JSON.parse(raw);
+          Object.keys(obj).forEach(k =>
+            document.dispatchEvent(new CustomEvent(k, { detail: obj[k], bubbles: true }))
+          );
+        } catch(e) {}
+      });
+    }
+  };
+}
+
 (function () {
+  var SET_LEAGUE_URL = '/app/{{ space_id }}/team/{{ team_id }}/league';
+  var LEAGUE_SELECTOR_BASE = '/references/leagues/selector';
+  var currentRosterUid = '';
+
+  function reloadLeagueSelector(rosterUid, selectedLeague) {
+    currentRosterUid = rosterUid;
+    var url = LEAGUE_SELECTOR_BASE
+      + '?roster_id='  + encodeURIComponent(rosterUid)
+      + '&selected='   + encodeURIComponent(selectedLeague || '')
+      + '&on_select='  + encodeURIComponent(SET_LEAGUE_URL);
+    htmx.ajax('GET', url, { target: '#league-selector-zone', swap: 'innerHTML' });
+  }
+
+  document.addEventListener('leagueSelected', function (e) {
+    if (currentRosterUid) reloadLeagueSelector(currentRosterUid, e.detail.league_id);
+  });
+
   var CLASSES = ['', 'tier-1', 'tier-2', 'tier-3', 'tier-4'];
   function badge(d) {
     if (!d.tierName) return '';
     var cls = CLASSES[d.tierIndex] || '';
     return '<span class="roster-tier-badge ' + cls + '">' + d.tierName + '</span>';
   }
+
   var el = document.getElementById('roster-select');
   if (el && !el.tomselect) {
     var ts = new TomSelect(el, {
@@ -187,15 +241,20 @@
         if (!value) {
           document.getElementById('player-table-body').innerHTML =
             '<tr><td colspan="13" style="text-align:center;color:var(--dark-3);font-style:italic;padding:var(--p2);">Sélectionnez un roster pour afficher les postes disponibles.</td></tr>';
+          document.getElementById('league-selector-zone').innerHTML = '';
+          currentRosterUid = '';
           return;
         }
         htmx.ajax('GET', '/app/{{ space_id }}/team/{{ team_id }}/roster/' + value + '/players', {
           target: '#player-table-container', swap: 'innerHTML'
         });
+        reloadLeagueSelector(value, '');
       },
     });
     {% if let Some(uid) = selected_roster_uid %}
+    currentRosterUid = '{{ uid }}';
     ts.setValue('{{ uid }}', true);
+    htmx.ajax('GET', '{{ league_selector_url|safe }}', { target: '#league-selector-zone', swap: 'innerHTML' });
     {% endif %}
   }
 })();

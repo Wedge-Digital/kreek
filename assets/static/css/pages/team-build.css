@@ -24,8 +24,21 @@
 }
 .tbl-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
 
+/* ── Roster + League côte à côte ─────────────────────────────────────── */
+.roster-league-row {
+  display: flex;
+  gap: var(--p2);
+  align-items: flex-start;
+}
+.roster-league-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
 /* ── Roster TomSelect ────────────────────────────────────────────────── */
-#roster-select-wrap { max-width: 400px; }
+#roster-select-wrap { width: 100%; }
 #roster-select-wrap .ts-wrapper { width: 100%; }
 #roster-select-wrap .ts-control {
   padding: 14px 16px; border: 1px solid var(--dark-4); border-radius: 6px;

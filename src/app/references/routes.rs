@@ -16,6 +16,16 @@ impl Routes {
         )
     }
 
+    pub fn league_selector_for_roster(&self, selected: &str, on_select: &str, roster_id: &str) -> String {
+        format!(
+            "{}?selected={}&on_select={}&roster_id={}",
+            path::LEAGUE_SELECTOR,
+            selected,
+            on_select,
+            roster_id,
+        )
+    }
+
     pub fn skill_picker_base(&self) -> &'static str {
         path::SKILL_PICKER
     }

@@ -210,6 +210,29 @@
 </div>
 
 <script>
+// Fonction Alpine.js pour le sélecteur de ligue
+function leagueSelector(onSelectUrl) {
+  return {
+    onSelect(value) {
+      if (!value) return;
+      fetch(onSelectUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'HX-Request': 'true' },
+        body: JSON.stringify({ league_id: value }),
+      }).then(res => {
+        const raw = res.headers.get('HX-Trigger');
+        if (!raw) return;
+        try {
+          const obj = JSON.parse(raw);
+          Object.keys(obj).forEach(k =>
+            document.dispatchEvent(new CustomEvent(k, { detail: obj[k], bubbles: true }))
+          );
+        } catch(e) {}
+      });
+    }
+  };
+}
+
 const FINALIZE_DATA = {{ data_json|safe }};
 
 function finalizePage() {

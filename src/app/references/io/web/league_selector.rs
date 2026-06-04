@@ -11,6 +11,8 @@ pub struct LeagueSelectorParams {
     #[serde(default)]
     pub selected: String,
     pub on_select: String,
+    #[serde(default)]
+    pub roster_id: String,
 }
 
 pub struct LeagueSelectorVm {
@@ -41,12 +43,22 @@ pub async fn league_selector(
     Query(params): Query<LeagueSelectorParams>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let leagues: Vec<LeagueSelectorVm> = state
-        .references
-        .repository
+    let ref_repo = state.references.repository.as_ref();
+
+    // Si roster_id fourni, restreindre aux ligues supportées par ce roster
+    let allowed: Option<std::collections::HashSet<&str>> = if !params.roster_id.is_empty() {
+        ref_repo
+            .find_team_by_uid(&params.roster_id)
+            .map(|t| t.leagues.iter().map(String::as_str).collect())
+    } else {
+        None
+    };
+
+    let leagues: Vec<LeagueSelectorVm> = ref_repo
         .list_leagues()
         .iter()
-        .map(|l: &League| LeagueSelectorVm {
+        .filter(|l| allowed.as_ref().map_or(true, |set| set.contains(l.uid.as_str())))
+        .map(|l| LeagueSelectorVm {
             is_selected: l.uid == params.selected,
             uid: l.uid.clone(),
             label: l.label.clone(),
