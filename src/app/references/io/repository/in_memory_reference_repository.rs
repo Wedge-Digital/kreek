@@ -1,5 +1,6 @@
 use crate::app::references::domain::models::{
-    Inducement, League, PlayerPosition, Skill, SkillCategory, SpecialRule, Staff, StarPlayer, Team,
+    Inducement, League, PlayerPosition, Skill, SkillCategory, SkillCostLevel, SpecialRule, Staff,
+    StarPlayer, Team,
 };
 use crate::app::references::domain::port::IReferenceRepository;
 use serde::Deserialize;
@@ -46,17 +47,21 @@ struct LeaguesFile {
     leagues: Vec<League>,
 }
 
+// skill_cost.json est un tableau JSON de premier niveau, pas d'objet wrapper
+type SkillCostFile = Vec<SkillCostLevel>;
+
 // ── In-memory repository ──────────────────────────────────────────────────────
 
 pub struct InMemoryReferenceRepository {
-    inducements: Vec<Inducement>,
-    star_players: Vec<StarPlayer>,
-    teams: Vec<Team>,
-    skills: Vec<Skill>,
-    skill_categories: Vec<SkillCategory>,
-    special_rules: Vec<SpecialRule>,
-    staff: Vec<Staff>,
-    leagues: Vec<League>,
+    inducements:       Vec<Inducement>,
+    star_players:      Vec<StarPlayer>,
+    teams:             Vec<Team>,
+    skills:            Vec<Skill>,
+    skill_categories:  Vec<SkillCategory>,
+    special_rules:     Vec<SpecialRule>,
+    staff:             Vec<Staff>,
+    leagues:           Vec<League>,
+    skill_cost_matrix: Vec<SkillCostLevel>,
 }
 
 impl InMemoryReferenceRepository {
@@ -109,6 +114,11 @@ impl InMemoryReferenceRepository {
             ))
             .expect("leagues_fr.json invalid")
             .leagues,
+
+            skill_cost_matrix: serde_json::from_str::<SkillCostFile>(include_str!(
+                "../../../../../assets/references/skill_cost.json"
+            ))
+            .expect("skill_cost.json invalid"),
         }
     }
 }
@@ -156,5 +166,9 @@ impl IReferenceRepository for InMemoryReferenceRepository {
             .iter()
             .flat_map(|t| t.available_players.iter())
             .find(|p| p.uid == uid)
+    }
+
+    fn skill_cost_matrix(&self) -> &[SkillCostLevel] {
+        &self.skill_cost_matrix
     }
 }

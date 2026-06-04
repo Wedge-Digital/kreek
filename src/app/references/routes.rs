@@ -15,4 +15,8 @@ impl Routes {
             on_select,
         )
     }
+
+    pub fn skill_picker_base(&self) -> &'static str {
+        path::SKILL_PICKER
+    }
 }

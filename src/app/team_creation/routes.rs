@@ -1,24 +1,19 @@
 pub mod path {
-    pub const DRAFT_TEAM: &str = "/app/{space_id}/team/create";
-    pub const TEAM_BUILD: &str = "/app/{space_id}/team/{team_id}/build";
-    pub const MY_TEAMS: &str = "/app/{space_id}/team/list";
-    pub const ROSTER_PLAYERS: &str = "/app/{space_id}/team/{team_id}/roster/{roster_uid}/players";
-    pub const HIRE_PLAYER: &str = "/app/{space_id}/team/{team_id}/players/hire";
-    pub const FIRE_PLAYER: &str = "/app/{space_id}/team/{team_id}/players/fire";
-    pub const BUY_STAFF: &str = "/app/{space_id}/team/{team_id}/staff/buy";
-    pub const REMOVE_STAFF: &str = "/app/{space_id}/team/{team_id}/staff/remove";
-    pub const BUY_REROLL: &str = "/app/{space_id}/team/{team_id}/rerolls/buy";
-    pub const REMOVE_REROLL: &str = "/app/{space_id}/team/{team_id}/rerolls/remove";
-    pub const SUBMIT_TEAM: &str = "/app/{space_id}/team/{team_id}/submit";
-    pub const TEAM_DETAIL: &str = "/app/{space_id}/team/{team_id}/detail";
-    pub const SET_PLAYER_IDENTITY: &str =
-        "/app/{space_id}/team/{team_id}/players/{instance_id}/identity";
-    pub const SET_LEAGUE: &str = "/app/{space_id}/team/{team_id}/league";
-    pub const SPEND_SPP: &str = "/app/{space_id}/team/{team_id}/players/{instance_id}/skills";
-    pub const CANCEL_SPP: &str =
-        "/app/{space_id}/team/{team_id}/players/{instance_id}/skills/{skill_id}";
-    pub const FINALIZE_TEAM: &str = "/app/{space_id}/team/{team_id}/finalize";
-    pub const SKILL_HEADER: &str = "/app/{space_id}/team/{team_id}/skill-header";
+    pub const DRAFT_TEAM:          &str = "/app/{space_id}/team/create";
+    pub const TEAM_BUILD:          &str = "/app/{space_id}/team/{team_id}/build";
+    pub const MY_TEAMS:            &str = "/app/{space_id}/team/list";
+    pub const ROSTER_PLAYERS:      &str = "/app/{space_id}/team/{team_id}/roster/{roster_uid}/players";
+    pub const HIRE_PLAYER:         &str = "/app/{space_id}/team/{team_id}/players/hire";
+    pub const FIRE_PLAYER:         &str = "/app/{space_id}/team/{team_id}/players/fire";
+    pub const BUY_STAFF:           &str = "/app/{space_id}/team/{team_id}/staff/buy";
+    pub const REMOVE_STAFF:        &str = "/app/{space_id}/team/{team_id}/staff/remove";
+    pub const BUY_REROLL:          &str = "/app/{space_id}/team/{team_id}/rerolls/buy";
+    pub const REMOVE_REROLL:       &str = "/app/{space_id}/team/{team_id}/rerolls/remove";
+    pub const SUBMIT_TEAM:         &str = "/app/{space_id}/team/{team_id}/submit";
+    pub const TEAM_DETAIL:         &str = "/app/{space_id}/team/{team_id}/detail";
+    pub const SET_PLAYER_IDENTITY: &str = "/app/{space_id}/team/{team_id}/players/{instance_id}/identity";
+    pub const SET_LEAGUE:          &str = "/app/{space_id}/team/{team_id}/league";
+    pub const FINALIZE_TEAM:       &str = "/app/{space_id}/team/{team_id}/finalize";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -82,12 +77,7 @@ impl Routes {
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
     }
-    pub fn set_player_identity(
-        &self,
-        space_id: &str,
-        team_id: &str,
-        instance_id: &str,
-    ) -> String {
+    pub fn set_player_identity(&self, space_id: &str, team_id: &str, instance_id: &str) -> String {
         path::SET_PLAYER_IDENTITY
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
@@ -102,36 +92,5 @@ impl Routes {
         path::FINALIZE_TEAM
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
-    }
-    pub fn skill_header(&self, space_id: &str, team_id: &str) -> String {
-        path::SKILL_HEADER
-            .replace("{space_id}", space_id)
-            .replace("{team_id}", team_id)
-    }
-    pub fn spend_spp(&self, space_id: &str, team_id: &str, instance_id: &str) -> String {
-        path::SPEND_SPP
-            .replace("{space_id}", space_id)
-            .replace("{team_id}", team_id)
-            .replace("{instance_id}", instance_id)
-    }
-    pub fn cancel_spp(
-        &self,
-        space_id: &str,
-        team_id: &str,
-        instance_id: &str,
-        skill_id: &str,
-    ) -> String {
-        path::CANCEL_SPP
-            .replace("{space_id}", space_id)
-            .replace("{team_id}", team_id)
-            .replace("{instance_id}", instance_id)
-            .replace("{skill_id}", skill_id)
-    }
-    pub fn cancel_spp_base(&self, space_id: &str, team_id: &str, instance_id: &str) -> String {
-        path::CANCEL_SPP
-            .replace("{space_id}", space_id)
-            .replace("{team_id}", team_id)
-            .replace("{instance_id}", instance_id)
-            .replace("/{skill_id}", "")
     }
 }

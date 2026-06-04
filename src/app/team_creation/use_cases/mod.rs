@@ -1,3 +1,4 @@
+pub mod batch_finalize;
 pub mod buy_reroll;
 pub mod buy_staff;
 pub mod commands;
@@ -7,9 +8,7 @@ pub mod hire_player;
 pub mod register_new_team;
 pub mod remove_reroll;
 pub mod remove_staff;
-pub mod cancel_creation_spp;
 pub mod select_ruleset;
 pub mod set_league;
-pub mod spend_creation_spp;
 pub mod set_player_identity;
 pub mod submit_team;

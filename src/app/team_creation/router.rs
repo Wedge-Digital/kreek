@@ -3,11 +3,10 @@ use crate::app::team_creation::io::web::build_team::{
     remove_staff, submit_team,
 };
 use crate::app::team_creation::io::web::draft_team::draft_team;
+use crate::app::team_creation::io::web::finalize_team::{finalize_team, post_finalize_team};
 use crate::app::team_creation::io::web::my_teams::my_teams;
 use crate::app::team_creation::io::web::post_draft_team::post_draft_team;
-use crate::app::team_creation::io::web::finalize_team::{finalize_team, skill_header};
 use crate::app::team_creation::io::web::set_league::set_league;
-use crate::app::team_creation::io::web::spp_management::{cancel_spp, spend_spp};
 use crate::app::team_creation::io::web::set_player_identity::set_player_identity;
 use crate::app::team_creation::io::web::team_detail::team_detail;
 use crate::app::team_creation::routes::path;
@@ -28,13 +27,7 @@ pub fn router() -> Router<AppState> {
         .route(path::REMOVE_REROLL, axum::routing::post(remove_reroll))
         .route(path::SUBMIT_TEAM, axum::routing::post(submit_team))
         .route(path::TEAM_DETAIL, get(team_detail))
-        .route(
-            path::SET_PLAYER_IDENTITY,
-            axum::routing::post(set_player_identity),
-        )
+        .route(path::SET_PLAYER_IDENTITY, axum::routing::post(set_player_identity))
         .route(path::SET_LEAGUE, axum::routing::post(set_league))
-        .route(path::SPEND_SPP, axum::routing::post(spend_spp))
-        .route(path::CANCEL_SPP, axum::routing::delete(cancel_spp))
-        .route(path::FINALIZE_TEAM, get(finalize_team))
-        .route(path::SKILL_HEADER, get(skill_header))
+        .route(path::FINALIZE_TEAM, get(finalize_team).post(post_finalize_team))
 }

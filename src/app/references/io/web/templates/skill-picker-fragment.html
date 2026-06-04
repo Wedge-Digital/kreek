@@ -1,33 +1,83 @@
-<div id="skill-picker-container" class="skill-picker-fragment">
+<div id="skill-picker-container"
+     x-data="skillPicker({{ skills_json }}, {{ categories_json }}, {{ spp_remaining }}, {{ pricing_json }}, {{ initial_mode_json }}, {{ initial_filters_json }})"
+     @spp-updated.window="sppRemaining = $event.detail.sppRemaining">
 
-  <!-- Filtres -->
-  <div class="skill-filters">
-    <div class="filter-row">
-      <span class="filter-label">Catégorie</span>
-      {% for cat in categories %}
-      <button type="button" class="filter-pill {% if cat.is_primary %}filter-pill--primary{% endif %}"
-              data-filter-cat="{{ cat.uid }}">
-        {{ cat.label }}
-      </button>
-      {% endfor %}
-      <button type="button" class="filter-pill active" data-filter-cat="ALL">Tout</button>
-    </div>
-    <div class="filter-row">
-      <span class="filter-label">Nature</span>
-      <button type="button" class="filter-pill active" data-filter-nature="ALL">Tout</button>
-      <button type="button" class="filter-pill" data-filter-nature="standard">Standard</button>
-      <button type="button" class="filter-pill" data-filter-nature="elite">Élite</button>
-    </div>
-    <div class="filter-row" style="margin-top: 2px; padding-top: var(--p1); border-top: 1px solid var(--dark-6);">
-      <span class="filter-label">Mode</span>
+  <!-- Contrôles : mode + filtres -->
+  <div class="skill-controls">
+
+    <div class="control-group">
+      <span class="control-label">Mode</span>
       <div class="mode-toggle">
-        <button type="button" class="mode-btn active-chosen" data-mode="chosen">✓ Choisie</button>
-        <button type="button" class="mode-btn" data-mode="random">🎲 Aléatoire</button>
+        <button class="mode-btn" :class="mode === 'chosen' ? 'active-chosen' : ''"
+                @click="mode = 'chosen'">✓ Choisie</button>
+        <button class="mode-btn" :class="mode === 'random' ? 'active-random' : ''"
+                @click="mode = 'random'">🎲 Aléatoire</button>
       </div>
-      <span class="mode-cost-hint">
-        Choisie : <span class="mode-cost-chosen">3 SPP</span> (standard) ·
-        Aléatoire : <span class="mode-cost-random">2 SPP</span> (standard)
+      <span class="cost-hint">
+        Choisie :
+        <span class="cost-chosen" x-text="pricing.chosen.primary + ' SPP'"></span> /
+        <span class="cost-chosen" style="opacity:.7" x-text="pricing.chosen.secondary + ' SPP'"></span>
+        &nbsp;·&nbsp; Aléatoire :
+        <span class="cost-random" x-text="pricing.random + ' SPP'"></span>
       </span>
+    </div>
+
+    <div class="control-group" style="align-items:flex-start;">
+      <span class="control-label" style="margin-top:14px;">Filtre</span>
+      <div class="filter-pills">
+
+        <div class="filter-pill-group-wrap">
+          <span class="filter-group-label">&nbsp;</span>
+          <div class="filter-pill-group">
+            <button class="filter-pill"
+                    :class="activeFilters.length === 0 ? 'active' : ''"
+                    @click="activeFilters = []">Tout</button>
+          </div>
+        </div>
+
+        <div class="filter-group-sep"></div>
+
+        <div class="filter-pill-group-wrap">
+          <span class="filter-group-label">Priorité</span>
+          <div class="filter-pill-group">
+            <button class="filter-pill"
+                    :class="activeFilters.includes('primary') ? 'active' : ''"
+                    @click="toggleFilter('primary')">Primaires</button>
+            <button class="filter-pill"
+                    :class="activeFilters.includes('secondary') ? 'active' : ''"
+                    @click="toggleFilter('secondary')">Secondaires</button>
+          </div>
+        </div>
+
+        <div class="filter-group-sep"></div>
+
+        <div class="filter-pill-group-wrap">
+          <span class="filter-group-label">Nature</span>
+          <div class="filter-pill-group">
+            <button class="filter-pill"
+                    :class="activeFilters.includes('elite') ? 'active' : ''"
+                    @click="toggleFilter('elite')">Élite</button>
+            <button class="filter-pill"
+                    :class="activeFilters.includes('standard') ? 'active' : ''"
+                    @click="toggleFilter('standard')">Standard</button>
+          </div>
+        </div>
+
+        <div class="filter-group-sep"></div>
+
+        <div class="filter-pill-group-wrap">
+          <span class="filter-group-label">Type</span>
+          <div class="filter-pill-group">
+            <template x-for="cat in categories" :key="cat.id">
+              <button class="filter-pill"
+                      :class="activeFilters.includes(cat.id) ? 'active' : ''"
+                      @click="toggleFilter(cat.id)"
+                      x-text="cat.label"></button>
+            </template>
+          </div>
+        </div>
+
+      </div>
     </div>
   </div>
 
@@ -36,63 +86,70 @@
     <table class="skill-list-table">
       <thead>
         <tr>
-          <th style="min-width: 200px;">Compétence</th>
-          <th>Catégorie</th>
-          <th>Nature</th>
-          <th class="cost-col-chosen">Coût (Choisie)</th>
-          <th class="cost-col-random" style="display:none;">Coût (Aléatoire)</th>
+          <th style="min-width:200px;">Compétence</th>
+          <th>Type</th>
+          <th>Accès</th>
+          <th>Coût</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
-        {% for skill in skills %}
-        <tr data-cat="{{ skill.category_uid }}" data-nature="{% if skill.is_elite %}elite{% else %}standard{% endif %}"
-            class="{% if skill.is_acquired ||!skill.is_affordable_chosen %}row-disabled{% endif %}">
-          <td>
-            <div class="skill-name">{{ skill.name }}</div>
-          </td>
-          <td>
-            <span class="skill-type-pill {{ skill.category_css }}">{{ skill.category_label }}</span>
-            {% if skill.is_primary %}<span class="primary-badge">P</span>{% endif %}
-          </td>
-          <td>
-            <span class="skill-type-pill {% if skill.is_elite %}nature-elite{% else %}nature-normal{% endif %}">
-              {% if skill.is_elite %}Élite{% else %}Standard{% endif %}
-            </span>
-          </td>
-          <td class="cost-col-chosen">
-            <span class="spp-cost spp-cost-chosen">{{ skill.cost_chosen }} SPP</span>
-          </td>
-          <td class="cost-col-random" style="display:none;">
-            <span class="spp-cost spp-cost-random">{{ skill.cost_random }} SPP</span>
-          </td>
-          <td>
-            {% if skill.is_acquired %}
-            <button type="button" class="btn-add-skill" disabled>Déjà acquise</button>
-            {% else if !skill.is_affordable_chosen %}
-            <button type="button" class="btn-add-skill btn-add-skill--chosen" disabled>Budget insuf.</button>
-            <button type="button" class="btn-add-skill btn-add-skill--random random" style="display:none;"
-                    {% if !skill.is_affordable_random %}disabled{% endif %}
-                    hx-post="{{ on_acquire }}"
-                    hx-vals='{"skill_id": "{{ skill.uid }}", "mode": "random"}'>
-              🎲 Tirer au sort
-            </button>
-            {% else %}
-            <button type="button" class="btn-add-skill btn-add-skill--chosen"
-                    hx-post="{{ on_acquire }}"
-                    hx-vals='{"skill_id": "{{ skill.uid }}", "mode": "chosen"}'>
-              + Choisir
-            </button>
-            <button type="button" class="btn-add-skill btn-add-skill--random random" style="display:none;"
-                    {% if !skill.is_affordable_random %}disabled{% endif %}
-                    hx-post="{{ on_acquire }}"
-                    hx-vals='{"skill_id": "{{ skill.uid }}", "mode": "random"}'>
-              🎲 Tirer au sort
-            </button>
-            {% endif %}
+        <template x-for="skill in filteredSkills" :key="skill.id">
+          <tr :class="{ 'row-disabled': !skill.isAcquired && !canAfford(skill) }">
+            <td>
+              <div class="skill-name-row">
+                <span class="skill-name" x-text="skill.name"></span>
+                <span class="skill-elite-badge" x-show="skill.isElite">Élite</span>
+              </div>
+            </td>
+            <td>
+              <span class="skill-type-pill" :class="skill.categoryCss"
+                    x-text="skill.categoryLabel"></span>
+            </td>
+            <td>
+              <span class="skill-type-pill"
+                    :class="skill.isPrimary ? 'access-normal' : 'access-elite'"
+                    x-text="skill.isPrimary ? 'Primaire' : 'Secondaire'"></span>
+            </td>
+            <td>
+              <span class="spp-cost"
+                    :class="mode === 'chosen' ? 'spp-cost-chosen' : 'spp-cost-random'"
+                    x-text="currentCost(skill) + ' SPP'"></span>
+            </td>
+            <td>
+              <!-- Déjà attribuée -->
+              <button class="btn-add-skill already"
+                      x-show="skill.isAcquired"
+                      @click="$dispatch('skill-cancel-request', { skillId: skill.id })">
+                ✓ Attribuée &nbsp;✕
+              </button>
+              <!-- Budget insuffisant -->
+              <button class="btn-add-skill"
+                      :class="mode === 'random' ? 'random' : ''"
+                      x-show="!skill.isAcquired && !canAfford(skill)"
+                      disabled>Budget insuf.</button>
+              <!-- Disponible — random désactivé pour secondaires -->
+              <button class="btn-add-skill"
+                      :class="mode === 'random' ? 'random' : ''"
+                      x-show="!skill.isAcquired && canAfford(skill)"
+                      :disabled="mode === 'random' && !skill.isPrimary"
+                      @click="$dispatch('skill-selected', {
+                        skillId:   skill.id,
+                        skillName: skill.name,
+                        category:  skill.category,
+                        isPrimary: skill.isPrimary,
+                        isElite:   skill.isElite,
+                        mode:      mode
+                      })"
+                      x-text="mode === 'chosen' ? '+ Choisir' : '🎲 Tirer'"></button>
+            </td>
+          </tr>
+        </template>
+        <tr x-show="filteredSkills.length === 0">
+          <td colspan="5" style="text-align:center;color:var(--dark-3);font-style:italic;padding:var(--p2);">
+            Aucune compétence dans cette catégorie.
           </td>
         </tr>
-        {% endfor %}
       </tbody>
     </table>
   </div>
@@ -100,58 +157,50 @@
 </div>
 
 <script>
-(function() {
-  var container = document.getElementById('skill-picker-container');
-  if (!container) return;
+function skillPicker(skills, categories, sppRemaining, pricing, initialMode, initialFilters) {
+  return {
+    skills,
+    categories,
+    sppRemaining,
+    pricing,
+    mode:          initialMode    || 'chosen',
+    activeFilters: initialFilters || [],
 
-  var activeFilterCat    = 'ALL';
-  var activeFilterNature = 'ALL';
-  var activeMode         = 'chosen';
+    init() {
+      this.$watch('mode',          v => this.$dispatch('picker-mode-changed',    { mode: v }));
+      this.$watch('activeFilters', v => this.$dispatch('picker-filters-changed', { filters: [...v] }));
+    },
 
-  function applyFilters() {
-    container.querySelectorAll('tbody tr').forEach(function(row) {
-      var cat    = row.dataset.cat;
-      var nature = row.dataset.nature;
-      var catOk    = activeFilterCat    === 'ALL' || cat    === activeFilterCat;
-      var natureOk = activeFilterNature === 'ALL' || nature === activeFilterNature;
-      row.style.display = (catOk && natureOk) ? '' : 'none';
-    });
-  }
+    get filteredSkills() {
+      if (this.activeFilters.length === 0) return this.skills;
+      const access = this.activeFilters.filter(f => f === 'primary' || f === 'secondary');
+      const nature = this.activeFilters.filter(f => f === 'elite'   || f === 'standard');
+      const types  = this.activeFilters.filter(f => f !== 'primary' && f !== 'secondary' && f !== 'elite' && f !== 'standard');
+      return this.skills.filter(s => {
+        if (access.length > 0 && !access.some(f => f === 'primary' ?  s.isPrimary : !s.isPrimary)) return false;
+        if (nature.length > 0 && !nature.some(f => f === 'elite'   ?  s.isElite   : !s.isElite))   return false;
+        if (types.length  > 0 && !types.some(f  => s.category === f))                               return false;
+        return true;
+      });
+    },
 
-  function applyMode(mode) {
-    activeMode = mode;
-    var isChosen = mode === 'chosen';
-    container.querySelectorAll('.cost-col-chosen').forEach(function(el) { el.style.display = isChosen ? '' : 'none'; });
-    container.querySelectorAll('.cost-col-random').forEach(function(el) { el.style.display = isChosen ? 'none' : ''; });
-    container.querySelectorAll('.btn-add-skill--chosen').forEach(function(el) { el.style.display = isChosen ? '' : 'none'; });
-    container.querySelectorAll('.btn-add-skill--random').forEach(function(el) { el.style.display = isChosen ? 'none' : ''; });
-  }
+    toggleFilter(key) {
+      const idx = this.activeFilters.indexOf(key);
+      if (idx !== -1) this.activeFilters.splice(idx, 1);
+      else            this.activeFilters.push(key);
+    },
 
-  container.querySelectorAll('[data-filter-cat]').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      container.querySelectorAll('[data-filter-cat]').forEach(function(b) { b.classList.remove('active'); });
-      btn.classList.add('active');
-      activeFilterCat = btn.dataset.filterCat;
-      applyFilters();
-    });
-  });
+    canAfford(skill) {
+      return this.sppRemaining >= this.currentCost(skill);
+    },
 
-  container.querySelectorAll('[data-filter-nature]').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      container.querySelectorAll('[data-filter-nature]').forEach(function(b) { b.classList.remove('active'); });
-      btn.classList.add('active');
-      activeFilterNature = btn.dataset.filterNature;
-      applyFilters();
-    });
-  });
-
-  container.querySelectorAll('.mode-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      container.querySelectorAll('.mode-btn').forEach(function(b) { b.classList.remove('active-chosen', 'active-random'); });
-      var mode = btn.dataset.mode;
-      btn.classList.add(mode === 'chosen' ? 'active-chosen' : 'active-random');
-      applyMode(mode);
-    });
-  });
-})();
+    currentCost(skill) {
+      if (this.mode === 'random') {
+        return skill.isElite ? this.pricing.randomElite : this.pricing.random;
+      }
+      const costs = skill.isElite ? this.pricing.chosenElite : this.pricing.chosen;
+      return skill.isPrimary ? costs.primary : costs.secondary;
+    },
+  };
+}
 </script>
