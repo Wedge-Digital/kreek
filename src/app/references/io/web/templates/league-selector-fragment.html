@@ -1,10 +1,21 @@
-<div id="league-selector-container"
-     x-data="leagueSelector('{{ on_select }}')">
+<div id="league-selector-container">
   <div class="league-selector-label">Ligue de référence</div>
-  <select class="league-select" @change="onSelect($event.target.value)">
-    <option value="">Choisissez une ligue…</option>
-    {% for league in leagues %}
-    <option value="{{ league.uid }}"{% if league.is_selected %} selected{% endif %}>{{ league.label }}</option>
-    {% endfor %}
-  </select>
+  {% if leagues.is_empty() %}
+    <div class="selector-none">Pas de ligue disponible</div>
+  {% else if leagues.len() == 1 %}
+    <select class="league-select" disabled>
+      {% for league in leagues %}
+      <option value="{{ league.uid }}" selected>{{ league.label }}</option>
+      {% endfor %}
+    </select>
+  {% else %}
+    <div x-data="leagueSelector('{{ on_select }}')">
+      <select class="league-select" @change="onSelect($event.target.value)">
+        <option value="">Choisissez une ligue…</option>
+        {% for league in leagues %}
+        <option value="{{ league.uid }}"{% if league.is_selected %} selected{% endif %}>{{ league.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  {% endif %}
 </div>

@@ -8,6 +8,7 @@ use crate::app::team_creation::io::web::my_teams::my_teams;
 use crate::app::team_creation::io::web::post_draft_team::post_draft_team;
 use crate::app::team_creation::io::web::set_league::set_league;
 use crate::app::team_creation::io::web::set_player_identity::set_player_identity;
+use crate::app::team_creation::io::web::set_special_rule::set_special_rule;
 use crate::app::team_creation::io::web::team_detail::team_detail;
 use crate::app::team_creation::routes::path;
 use crate::state::AppState;
@@ -29,5 +30,6 @@ pub fn router() -> Router<AppState> {
         .route(path::TEAM_DETAIL, get(team_detail))
         .route(path::SET_PLAYER_IDENTITY, axum::routing::post(set_player_identity))
         .route(path::SET_LEAGUE, axum::routing::post(set_league))
+        .route(path::SET_SPECIAL_RULE, axum::routing::post(set_special_rule))
         .route(path::FINALIZE_TEAM, get(finalize_team).post(post_finalize_team))
 }

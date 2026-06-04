@@ -5,4 +5,5 @@ pub mod my_teams;
 pub mod post_draft_team;
 pub mod set_league;
 pub mod set_player_identity;
+pub mod set_special_rule;
 pub mod team_detail;

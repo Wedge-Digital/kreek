@@ -13,6 +13,7 @@ pub mod path {
     pub const TEAM_DETAIL:         &str = "/app/{space_id}/team/{team_id}/detail";
     pub const SET_PLAYER_IDENTITY: &str = "/app/{space_id}/team/{team_id}/players/{instance_id}/identity";
     pub const SET_LEAGUE:          &str = "/app/{space_id}/team/{team_id}/league";
+    pub const SET_SPECIAL_RULE:    &str = "/app/{space_id}/team/{team_id}/special-rule";
     pub const FINALIZE_TEAM:       &str = "/app/{space_id}/team/{team_id}/finalize";
 }
 
@@ -85,6 +86,11 @@ impl Routes {
     }
     pub fn set_league(&self, space_id: &str, team_id: &str) -> String {
         path::SET_LEAGUE
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+    pub fn set_special_rule(&self, space_id: &str, team_id: &str) -> String {
+        path::SET_SPECIAL_RULE
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
     }

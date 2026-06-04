@@ -58,18 +58,6 @@
     </div>
   </div>
 
-  <!-- ② Sélecteur de ligue — widget références (HTMX) -->
-  <div id="league-selector-container"
-       hx-get="{{ league_selector_url }}"
-       hx-trigger="load"
-       hx-target="this"
-       hx-swap="outerHTML">
-    <div class="league-selector-row">
-      <div class="league-selector-label">Ligue de référence</div>
-      <div style="color:var(--dark-4);font-style:italic;">Chargement…</div>
-    </div>
-  </div>
-
   <!-- ③ Split : joueurs + compétences -->
   <div class="split-layout">
 

@@ -1,0 +1,21 @@
+<div id="special-rule-selector-container">
+  <div class="league-selector-label">Règle spéciale</div>
+  {% if rules.is_empty() %}
+    <div class="selector-none">Pas de règle spéciale</div>
+  {% else if rules.len() == 1 %}
+    <select class="league-select" disabled>
+      {% for rule in rules %}
+      <option value="{{ rule.uid }}" selected>{{ rule.label }}</option>
+      {% endfor %}
+    </select>
+  {% else %}
+    <div x-data="specialRuleSelector('{{ on_select }}')">
+      <select class="league-select" @change="onSelect($event.target.value)">
+        <option value="">Choisissez une règle…</option>
+        {% for rule in rules %}
+        <option value="{{ rule.uid }}"{% if rule.is_selected %} selected{% endif %}>{{ rule.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  {% endif %}
+</div>

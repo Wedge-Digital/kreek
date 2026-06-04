@@ -66,13 +66,11 @@ struct FinalizeData {
 #[derive(Template)]
 #[template(path = "finalize-team.html")]
 pub struct FinalizeTeamTemplate {
-    pub web_routes:          WebRoutes,
-    pub team_routes:         Routes,
-    pub space_id:            String,
-    pub team_id:             String,
-    pub league_selector_url: String,
-    pub set_league_url:      String,
-    pub data_json:           String,
+    pub web_routes:  WebRoutes,
+    pub team_routes: Routes,
+    pub space_id:    String,
+    pub team_id:     String,
+    pub data_json:   String,
 }
 
 impl IntoResponse for FinalizeTeamTemplate {
@@ -255,20 +253,11 @@ pub async fn finalize_team(
 
     let data_json = serde_json::to_string(&data).expect("FINALIZE_DATA serialization");
 
-    let ref_routes       = RefRoutes::default();
-    let set_league_url   = routes.set_league(&space_id, &team_id);
-    let league_selector_url = ref_routes.league_selector(
-        team.league_id.as_ref().map(|l| l.0.as_str()).unwrap_or(""),
-        &set_league_url,
-    );
-
     FinalizeTeamTemplate {
-        web_routes: WebRoutes::default(),
+        web_routes:  WebRoutes::default(),
         team_routes: routes,
-        space_id: space_id.clone(),
-        team_id: team_id.clone(),
-        league_selector_url,
-        set_league_url,
+        space_id:    space_id.clone(),
+        team_id:     team_id.clone(),
         data_json,
     }
     .into_response()

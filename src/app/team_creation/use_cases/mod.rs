@@ -11,4 +11,5 @@ pub mod remove_staff;
 pub mod select_ruleset;
 pub mod set_league;
 pub mod set_player_identity;
+pub mod set_special_rule;
 pub mod submit_team;

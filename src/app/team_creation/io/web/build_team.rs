@@ -11,7 +11,7 @@ use crate::app::shared_kernel::staff::{
 };
 use crate::app::team_creation::domain::roster::{
     LeagueId, PlayerDefinition, PlayerId, PlayerMaxQuantity, PlayerName, PlayerPrice,
-    RerollBasePrice, Roster, RosterId, RosterName,
+    RerollBasePrice, Roster, RosterId, RosterName, SpecialRuleId,
 };
 use crate::app::team_creation::domain::team_draft::DraftTeam;
 use crate::app::team_creation::domain::team_roster_selected::{
@@ -358,6 +358,7 @@ pub struct BuildTeamTemplate {
     pub rosters: Vec<RosterPickerItemWithTier>,
     pub selected_roster_uid: Option<String>,
     pub league_selector_url: String,
+    pub special_rule_selector_url: String,
     pub hired_rows: Vec<HiredPlayerRowVm>,
     pub staff_rows: Vec<StaffRowVm>,
     pub reroll: Option<RerollVm>,
@@ -413,25 +414,39 @@ pub async fn build_team(
     let ref_repo = state.references.repository.as_ref();
     let rosters = build_roster_items_with_tiers(ref_repo, draft.creation_rules());
 
-    let (selected_roster_uid, selected_league_uid, hired_rows, staff_rows, reroll, cart) =
+    let (selected_roster_uid, selected_league_uid, selected_special_rule_uid, hired_rows, staff_rows, reroll, cart) =
         match &roster_team {
-            None => (None, None, vec![], vec![], None, None),
+            None => (None, None, None, vec![], vec![], None, None),
             Some(team) => {
-                let roster_uid  = team.roster.id.0.clone();
-                let league_uid  = team.league_id.as_ref().map(|l| l.0.clone());
+                let roster_uid       = team.roster.id.0.clone();
+                let league_uid       = team.league_id.as_ref().map(|l| l.0.clone());
+                let special_rule_uid = team.special_rule_id.as_ref().map(|r| r.0.clone());
                 let rows   = build_hired_rows(team, ref_repo);
                 let staff  = build_staff_rows(team);
                 let rv     = build_reroll_vm(team);
                 let cv     = build_cart_vm(team);
-                (Some(roster_uid), league_uid, rows, staff, Some(rv), Some(cv))
+                (Some(roster_uid), league_uid, special_rule_uid, rows, staff, Some(rv), Some(cv))
             }
         };
 
-    let set_league_url = TeamCreationRoutes::default().set_league(&space_id, &team_id);
+    let routes      = TeamCreationRoutes::default();
+    let ref_routes  = RefRoutes::default();
+
+    let set_league_url = routes.set_league(&space_id, &team_id);
     let league_selector_url = match &selected_roster_uid {
-        Some(roster_uid) => RefRoutes::default().league_selector_for_roster(
+        Some(roster_uid) => ref_routes.league_selector_for_roster(
             selected_league_uid.as_deref().unwrap_or(""),
             &set_league_url,
+            roster_uid,
+        ),
+        None => String::new(),
+    };
+
+    let set_special_rule_url = routes.set_special_rule(&space_id, &team_id);
+    let special_rule_selector_url = match &selected_roster_uid {
+        Some(roster_uid) => ref_routes.special_rule_selector_for_roster(
+            selected_special_rule_uid.as_deref().unwrap_or(""),
+            &set_special_rule_url,
             roster_uid,
         ),
         None => String::new(),
@@ -488,6 +503,7 @@ pub async fn build_team(
         rosters,
         selected_roster_uid,
         league_selector_url,
+        special_rule_selector_url,
         hired_rows,
         staff_rows,
         reroll,
@@ -590,6 +606,12 @@ pub async fn get_roster_players(
     let roster_leagues = &ref_team.leagues;
     if roster_leagues.len() == 1 {
         roster_team.set_league(LeagueId(roster_leagues[0].clone()));
+    }
+
+    // Auto-set règle spéciale si le roster n'en a qu'une
+    let roster_special_rules = &ref_team.special_rules;
+    if roster_special_rules.len() == 1 {
+        roster_team.set_special_rule(SpecialRuleId(roster_special_rules[0].clone()));
     }
 
     if let Err(e) = state

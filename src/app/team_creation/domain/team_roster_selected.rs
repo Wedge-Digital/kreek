@@ -4,7 +4,7 @@ use crate::app::shared_kernel::team::TeamId;
 use crate::app::team_creation::domain::error::DomainError;
 use crate::app::team_creation::domain::roster::{
     AcquiredSkill, AcquisitionMode, HiredPlayer, LeagueId, PlayerDefinition, PlayerId, Roster,
-    SkillId, MAX_PLAYER_COUNT,
+    SkillId, SpecialRuleId, MAX_PLAYER_COUNT,
 };
 use crate::app::team_creation::domain::team_ruleset_selected::RulesetSelectedTeam;
 use crate::app::team_creation::domain::team_staff::TeamStaff;
@@ -23,6 +23,8 @@ pub struct RosterSelectedTeam {
     #[serde(default)]
     pub league_id: Option<LeagueId>,
     #[serde(default)]
+    pub special_rule_id: Option<SpecialRuleId>,
+    #[serde(default)]
     pub spp_pool: u8,
 }
 
@@ -35,12 +37,17 @@ impl RosterSelectedTeam {
             hired_staff: Vec::new(),
             reroll_count: 0,
             league_id: None,
+            special_rule_id: None,
             spp_pool: 0,
         }
     }
 
     pub fn set_league(&mut self, league_id: LeagueId) {
         self.league_id = Some(league_id);
+    }
+
+    pub fn set_special_rule(&mut self, rule_id: SpecialRuleId) {
+        self.special_rule_id = Some(rule_id);
     }
 
     pub fn base_infos(&self) -> &crate::app::shared_kernel::team::BaseTeamInfo {
