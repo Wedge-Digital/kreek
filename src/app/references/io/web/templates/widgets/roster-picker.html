@@ -1,6 +1,6 @@
 <link rel="stylesheet" href="/static/css/widgets/roster-picker.css">
   <div class="roster-grid"
-       x-init="$el.getSelected = () => $store.rosterPickerStore.getSelected()"
+       x-init="$el.parentElement.getSelected = () => Alpine.store('rosterPickerStore').getSelected()"
   >
     {% for item in rosters %}
     <span class="roster-chip"
@@ -33,7 +33,7 @@
     },
 
     getSelected() {
-      return [...this.selected];
+      return [...this.selected].sort();
     }
   })
 </script>

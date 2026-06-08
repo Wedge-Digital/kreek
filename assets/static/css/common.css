@@ -147,7 +147,7 @@ ul { list-style: none; }
   min-height: 36px;
   padding: var(--p1) var(--p3);
 }
-.btn-outline:hover { background: rgba(0,48,73,0.06); }
+.btn-outline:hover { background: rgba(0,48,73,0.06); cursor: pointer;}
 
 .btn-text {
   background: transparent;

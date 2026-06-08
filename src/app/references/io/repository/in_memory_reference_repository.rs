@@ -126,10 +126,12 @@ impl InMemoryReferenceRepository {
 
 impl IReferenceRepository for InMemoryReferenceRepository {
     fn list_roster_definitions(&self) -> Vec<RosterDefinition> {
-        self.teams.iter().map(|team:&Team| RosterDefinition {
+        let mut rosters: Vec<RosterDefinition> = self.teams.iter().map(|team: &Team| RosterDefinition {
             id: RosterId(team.uid.clone()),
-            name: RosterName(team.name.clone())
-        }).collect()
+            name: RosterName(team.name.clone()),
+        }).collect();
+        rosters.sort_unstable_by(|a, b| a.id.0.cmp(&b.id.0));
+        rosters
     }
 
     fn list_inducements(&self) -> &[Inducement] {
