@@ -1,6 +1,8 @@
 // pub mod access;
 // pub mod infra;
 pub mod auth;
+pub mod routes;
+pub mod players;
 pub mod competitions;
 pub mod news;
 pub mod references;

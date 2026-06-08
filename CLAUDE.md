@@ -235,6 +235,20 @@ Conséquences :
 - Des templates de **fragments** pour les réponses HTMX (swap partiel)
 - Les structs de template ne portent que des **view models** — pas d'entités domaine
 
+### Interdiction des styles inline — règle obligatoire
+
+Les attributs `style="..."` sont **totalement interdits** dans les templates HTML.
+
+```html
+<!-- INTERDIT -->
+<div style="color: red; margin-top: 8px;">…</div>
+
+<!-- OBLIGATOIRE — utiliser des classes CSS -->
+<div class="text-error mt-2">…</div>
+```
+
+Tout besoin de style passe par des classes CSS définies dans les fichiers `.css` du projet (`assets/static/css/`).
+
 ### Réponses HTMX spéciales
 
 ```rust
@@ -292,3 +306,31 @@ Phase 2 : migration vers `RedisStore` — le changement est localisé à `main.r
 - Tests d'intégration repository : utilisent une vraie PgPool
 - Fixtures SQL dans `tests/fixtures/*.sql`
 - Ne pas mocker sqlx — les tests doivent frapper une vraie base
+
+---
+
+## Pièges frontend connus — Alpine.js + HTMX
+
+### Alpine.js : chargement unique dans le layout de base
+
+Alpine CDN est chargé **uniquement dans `app-layout.html`** (`<head>`, avec `defer`).  
+Ne jamais l'inclure dans un `{% block content %}` de page individuelle.
+
+**Pourquoi :** HTMX navigue sans rechargement complet — il ré-exécute les `<script>` trouvés dans le contenu swappé. Si deux pages chargent chacune le CDN Alpine, la navigation entre elles via HTMX crée une **deuxième instance Alpine** en mémoire. Les deux instances se disputent l'initialisation des composants `x-data`, notamment les fragments injectés dynamiquement via `htmx.ajax`. Symptôme typique : le composant fonctionne sur rechargement complet de la page (F5) mais pas lors de la navigation HTMX.
+
+Les fonctions Alpine (`finalizePage`, `skillPicker`, etc.) restent dans des `<script>` inline des pages — HTMX les ré-exécute correctement à chaque navigation.
+
+### Fragments HTMX : ne pas répéter l'`id` du conteneur cible
+
+Quand un fragment est injecté via `htmx.ajax` avec `swap: 'innerHTML'`, l'élément racine du fragment **ne doit pas avoir le même `id` que son conteneur**.
+
+```html
+<!-- INTERDIT — id dupliqué dans le DOM après injection -->
+<!-- Conteneur dans la page : -->
+<div id="skill-picker-container" x-show="selectedPlayerId"></div>
+<!-- Fragment retourné par le serveur : -->
+<div id="skill-picker-container" x-data="skillPicker(...)">...</div>
+
+<!-- CORRECT — le fragment est le contenu du conteneur, pas le conteneur lui-même -->
+<div x-data="skillPicker(...)">...</div>
+```

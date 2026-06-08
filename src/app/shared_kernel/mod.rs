@@ -16,3 +16,4 @@ pub mod sulid;
 pub mod team;
 mod tests;
 pub mod user;
+pub mod RosterDefinition;

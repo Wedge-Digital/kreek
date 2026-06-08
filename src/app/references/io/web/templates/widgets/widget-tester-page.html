@@ -1,0 +1,24 @@
+{% extends "widget-tester-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/widgets/roster-picker.css">
+<div class="test-roster-picker">
+    <div class="form-header">Test for roster picker </div>
+    <div>Roster roster picker is just a way to enable or disable roster selection</div>
+    <div>
+        <div hx-get="{{ routes.references.roster_picker() }}"
+             hx-trigger="load"
+             hx-target="this"
+             hx-swap="innerHTML">
+        </div>
+    </div>
+    <p>
+        Rosters sélectionnés :
+        <span x-text="$refs.getSelected().join(', ') || 'aucun'"></span>
+    </p>
+    <div class="btn-outline form-btn">choisir les rosters</div>
+</div>
+
+{% endblock %}
+
+

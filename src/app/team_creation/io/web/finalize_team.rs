@@ -71,6 +71,7 @@ pub struct FinalizeTeamTemplate {
     pub space_id:    String,
     pub team_id:     String,
     pub data_json:   String,
+    pub logo_url:    Option<String>,
 }
 
 impl IntoResponse for FinalizeTeamTemplate {
@@ -253,12 +254,15 @@ pub async fn finalize_team(
 
     let data_json = serde_json::to_string(&data).expect("FINALIZE_DATA serialization");
 
+    let logo_url = team.base_infos().logo_url().map(|img| img.thumbnail(120, 120));
+
     FinalizeTeamTemplate {
         web_routes:  WebRoutes::default(),
         team_routes: routes,
         space_id:    space_id.clone(),
         team_id:     team_id.clone(),
         data_json,
+        logo_url,
     }
     .into_response()
 }

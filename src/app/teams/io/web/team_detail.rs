@@ -60,6 +60,7 @@ pub struct TeamDetailVm {
     pub id: String,
     pub name: String,
     pub initials: String,
+    pub logo_url: Option<String>,
     pub roster_name: String,
     pub roster_initials: String,
     pub roster_logo_url: Option<String>,
@@ -97,10 +98,18 @@ impl TeamDetailVm {
 
         let reroll_price_kpo = ref_roster.map(|t| t.reroll_cost / 1000).unwrap_or(50);
 
+        let logo_url = team.logo_url.as_deref().map(|url| {
+            crate::app::shared_kernel::cloudinary::transform(
+                url,
+                "c_fill,w_120,h_120,q_auto,f_auto",
+            )
+        });
+
         Self {
             id: team.id.clone(),
             name: team.name.clone(),
             initials: team.initials.clone(),
+            logo_url,
             roster_name: team.roster_name.clone(),
             roster_initials,
             roster_logo_url,

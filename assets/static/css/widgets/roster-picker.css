@@ -1,0 +1,9 @@
+/* Rosters grid */
+.roster-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.roster-chip {
+    padding: 6px 14px; border: 2px solid var(--dark-5); border-radius: 20px;
+    font-size: var(--text-tiny); font-weight: 500; cursor: pointer;
+    background: var(--white); color: var(--dark-2); transition: all 0.12s;
+}
+.roster-chip:hover { border-color: var(--dark-4); color: var(--dark-1); }
+.roster-chip.selected { border-color: var(--green); color: var(--green); background: rgba(98,149,132,0.08); }

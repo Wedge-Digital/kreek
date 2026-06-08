@@ -1,6 +1,7 @@
 use crate::app::team_creation::domain::team_staff::TeamStaff;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
+use derive_more::Display;
 
 pub const MAX_PLAYER_COUNT: u8 = 16;
 
@@ -19,10 +20,10 @@ pub struct PlayerPrice(pub u32);
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct RerollBasePrice(pub u32);
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Display)]
 pub struct RosterId(pub String);
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Display)]
 pub struct RosterName(pub String);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

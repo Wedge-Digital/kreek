@@ -3,7 +3,6 @@
 {% block content %}
 <link rel="stylesheet" href="/static/css/components/league-selector.css">
 <link rel="stylesheet" href="/static/css/pages/team-finalize.css">
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
 
 <div class="finalize-page"
      x-data="finalizePage()"
@@ -24,7 +23,13 @@
 
   <!-- ① Header équipe + budget SPP -->
   <div class="team-header">
+    {% if let Some(url) = logo_url %}
+    <div class="team-header-logo">
+      <img src="{{ url }}" alt="" width="120" height="120" style="object-fit:cover;display:block;">
+    </div>
+    {% else %}
     <div class="team-header-logo" x-text="teamInitials"></div>
+    {% endif %}
     <div class="team-header-body">
       <div class="team-header-top">
         <div class="team-header-name" x-text="teamName"></div>
@@ -198,6 +203,55 @@
 </div>
 
 <script>
+// Fonction Alpine.js pour le skill picker — définie ici pour être disponible
+// avant qu'Alpine initialise les éléments x-data injectés par HTMX
+function skillPicker(skills, categories, sppRemaining, pricing, initialMode, initialFilters) {
+  return {
+    skills,
+    categories,
+    sppRemaining,
+    pricing,
+    mode:          initialMode    || 'chosen',
+    activeFilters: initialFilters || [],
+
+    init() {
+      this.$watch('mode',          v => this.$dispatch('picker-mode-changed',    { mode: v }));
+      this.$watch('activeFilters', v => this.$dispatch('picker-filters-changed', { filters: [...v] }));
+    },
+
+    get filteredSkills() {
+      if (this.activeFilters.length === 0) return this.skills;
+      const access = this.activeFilters.filter(f => f === 'primary' || f === 'secondary');
+      const nature = this.activeFilters.filter(f => f === 'elite'   || f === 'standard');
+      const types  = this.activeFilters.filter(f => f !== 'primary' && f !== 'secondary' && f !== 'elite' && f !== 'standard');
+      return this.skills.filter(s => {
+        if (access.length > 0 && !access.some(f => f === 'primary' ?  s.isPrimary : !s.isPrimary)) return false;
+        if (nature.length > 0 && !nature.some(f => f === 'elite'   ?  s.isElite   : !s.isElite))   return false;
+        if (types.length  > 0 && !types.some(f  => s.category === f))                               return false;
+        return true;
+      });
+    },
+
+    toggleFilter(key) {
+      const idx = this.activeFilters.indexOf(key);
+      if (idx !== -1) this.activeFilters.splice(idx, 1);
+      else            this.activeFilters.push(key);
+    },
+
+    canAfford(skill) {
+      return this.sppRemaining >= this.currentCost(skill);
+    },
+
+    currentCost(skill) {
+      if (this.mode === 'random') {
+        return skill.isElite ? this.pricing.randomElite : this.pricing.random;
+      }
+      const costs = skill.isElite ? this.pricing.chosenElite : this.pricing.chosen;
+      return skill.isPrimary ? costs.primary : costs.secondary;
+    },
+  };
+}
+
 // Fonction Alpine.js pour le sélecteur de ligue
 function leagueSelector(onSelectUrl) {
   return {

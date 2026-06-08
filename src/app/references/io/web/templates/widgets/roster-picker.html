@@ -1,0 +1,39 @@
+<link rel="stylesheet" href="/static/css/widgets/roster-picker.css">
+  <div class="roster-grid"
+       x-init="$el.getSelected = () => $store.rosterPickerStore.getSelected()"
+  >
+    {% for item in rosters %}
+    <span class="roster-chip"
+          data-uid="{{ item.id }}"
+          x-init="$store.rosterPickerStore.register($el.dataset.uid)"
+          x-bind:class="$store.rosterPickerStore.isSelected($el.dataset.uid) ? 'selected' : ''"
+          @click="$store.rosterPickerStore.toggle($el.dataset.uid)">{{ item.name }}</span>
+    {% endfor %}
+  </div>
+
+<script>
+  Alpine.store('rosterPickerStore', {
+    selected: [],
+
+    toggle(uid) {
+      if (this.selected.includes(uid)) {
+        this.selected = this.selected.filter(id => id !== uid)
+      }
+      else {
+        this.selected.push(uid)
+      }
+    },
+
+    isSelected(id) {
+      return this.selected.includes(id)
+    },
+
+    register(uid) {
+      this.selected.push(uid); // par défaut : tous sélectionnés
+    },
+
+    getSelected() {
+      return [...this.selected];
+    }
+  })
+</script>

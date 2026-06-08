@@ -33,15 +33,16 @@ pub enum GamePhase {
 pub enum TeamDomainEvent {
     // Identité et cycle de vie
     TeamCreated {
-        team_id: String, // SUlid sérialisé en String
+        team_id: String,
         space_id: String,
-        name: String, // TeamName inner value
+        name: String,
+        logo_url: Option<String>,
         roster_id: String,
         roster_name: String,
         coach_id: String,
         coach_name: String,
         treasury: Kpo,
-        dedicated_fans: u8, // fans_factor acheté + 1 (base)
+        dedicated_fans: u8,
         rerolls: RerollCount,
         apothecaries: ApothecaryCount,
         assistants: AssistantCount,
@@ -241,6 +242,7 @@ impl Team {
                 team_id,
                 space_id,
                 name,
+                logo_url,
                 roster_id,
                 roster_name,
                 coach_id,
@@ -256,6 +258,7 @@ impl Team {
                 self.space_id = space_id.clone();
                 self.name = name.clone();
                 self.initials = initials_from(name);
+                self.logo_url = logo_url.clone();
                 self.roster_id = roster_id.clone();
                 self.roster_name = roster_name.clone();
                 self.coach_id = coach_id.clone();

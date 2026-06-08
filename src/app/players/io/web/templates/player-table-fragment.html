@@ -1,0 +1,60 @@
+<div class="players-widget">
+  {% if players.is_empty() %}
+  <div style="padding: var(--p2); color: var(--dark-3); font-style: italic;">
+    Aucun joueur enregistré pour cette équipe.
+  </div>
+  {% else %}
+  <table class="player-table">
+    <thead>
+      <tr>
+        <th style="text-align: center; width: 40px;">#</th>
+        <th style="text-align: left;">Nom</th>
+        <th style="text-align: left;">Poste</th>
+        <th style="text-align: left; min-width: 180px;">Compétences de base</th>
+        <th style="text-align: left; min-width: 180px;">Compétences acquises</th>
+        <th style="text-align: center;">SPP</th>
+        <th style="text-align: center;">Valeur</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in players %}
+      <tr>
+        <td style="text-align: center; color: var(--dark-3); font-family: monospace;">
+          {% if let Some(j) = p.jersey %}{{ j }}{% else %}—{% endif %}
+        </td>
+        <td>
+          <strong>
+            {% if p.personal_name.is_empty() %}{{ p.position_name }}{% else %}{{ p.personal_name }}{% endif %}
+          </strong>
+        </td>
+        <td style="color: var(--dark-2);">{{ p.position_name }}</td>
+        <td>
+          {% if p.base_skills.is_empty() %}
+          <span style="color: var(--dark-4); font-style: italic;">—</span>
+          {% else %}
+          <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+            {% for skill in p.base_skills %}
+            <span class="skill-tag {{ skill.category_css }}">{{ skill.name }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </td>
+        <td>
+          {% if p.acquired_skills.is_empty() %}
+          <span style="color: var(--dark-4); font-style: italic;">—</span>
+          {% else %}
+          <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+            {% for acq in p.acquired_skills %}
+            <span class="skill-tag {{ acq.category_css }}">{{ acq.skill_name }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </td>
+        <td style="text-align: center; font-weight: 600;">{{ p.spp }}</td>
+        <td style="text-align: center;">{{ p.value_kpo }} kPo</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>

@@ -4,6 +4,7 @@ use crate::app::news::context::NewsContext;
 use crate::app::references::context::ReferencesContext;
 use crate::app::spaces::context::SpacesContext;
 use crate::app::team_creation::context::TeamCreationContext;
+use crate::app::players::context::PlayersContext;
 use crate::app::teams::context::TeamsContext;
 use crate::lib::services::email::IEmailService;
 use crate::lib::services::event_bus::event_bus::EventBus;
@@ -17,7 +18,8 @@ pub struct AppState {
     pub news: NewsContext,
     pub references: ReferencesContext,
     pub team_creation: TeamCreationContext,
-    pub teams: TeamsContext,
+    pub teams:   TeamsContext,
+    pub players: PlayersContext,
     pub email_service: Arc<dyn IEmailService>,
     pub host_domain: String,
     pub bypass_auth: bool,

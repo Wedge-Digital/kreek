@@ -118,6 +118,7 @@ mod tests {
             team_id: team_id.to_string(),
             space_id: "01SPACE00000000000000000000".to_string(),
             name: "Les Korrigans FC".to_string(),
+            logo_url: None,
             roster_id: "01ROST000000000000000000000".to_string(),
             roster_name: "Elfes Sylvestres".to_string(),
             coach_id: "01COACH00000000000000000000".to_string(),
@@ -132,7 +133,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "nécessite make migrate pour créer team_event_store"]
     async fn append_and_find_by_id() {
         let Some(pool) = test_pool().await else {
             return;
@@ -170,7 +170,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "nécessite make migrate pour créer team_event_store"]
     async fn concurrent_write_is_rejected() {
         let Some(pool) = test_pool().await else {
             return;

@@ -28,6 +28,7 @@ tower-sessions = "0.14"
 dashmap = "6"
 reqwest = { version = "0.12", features = ["json"] }
 chrono = "0.4.44"
+derive_more = { version = "2.1.1", features = ["display"] }
 
 [dev-dependencies]
 mockito = "1"

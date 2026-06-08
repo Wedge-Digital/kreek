@@ -4,7 +4,8 @@ use crate::app::references::domain::models::{
 };
 use crate::app::references::domain::port::IReferenceRepository;
 use serde::Deserialize;
-
+use crate::app::shared_kernel::RosterDefinition::RosterDefinition;
+use crate::app::team_creation::domain::roster::{RosterId, RosterName};
 // ── Raw JSON wrappers (deserialization only) ──────────────────────────────────
 
 #[derive(Deserialize)]
@@ -124,6 +125,13 @@ impl InMemoryReferenceRepository {
 }
 
 impl IReferenceRepository for InMemoryReferenceRepository {
+    fn list_roster_definitions(&self) -> Vec<RosterDefinition> {
+        self.teams.iter().map(|team:&Team| RosterDefinition {
+            id: RosterId(team.uid.clone()),
+            name: RosterName(team.name.clone())
+        }).collect()
+    }
+
     fn list_inducements(&self) -> &[Inducement] {
         &self.inducements
     }

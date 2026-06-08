@@ -2,8 +2,10 @@ use crate::app::references::domain::models::{
     Inducement, League, PlayerPosition, Skill, SkillCategory, SkillCostLevel, SpecialRule, Staff,
     StarPlayer, Team,
 };
+use crate::app::shared_kernel::RosterDefinition::RosterDefinition;
 
 pub trait IReferenceRepository: Send + Sync {
+    fn list_roster_definitions(&self) -> Vec<RosterDefinition>;
     fn list_inducements(&self) -> &[Inducement];
     fn list_star_players(&self) -> &[StarPlayer];
     fn list_teams(&self) -> &[Team];

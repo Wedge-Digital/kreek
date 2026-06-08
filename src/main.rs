@@ -19,8 +19,9 @@ use crate::app::news::context::NewsContext;
 use crate::app::references::context::ReferencesContext;
 use crate::app::spaces::context::SpacesContext;
 use crate::app::team_creation::context::TeamCreationContext;
+use crate::app::players::context::PlayersContext;
 use crate::app::teams::context::TeamsContext;
-use crate::app::{auth, competitions, references, spaces, team_creation, teams};
+use crate::app::{auth, competitions, players, references, spaces, team_creation, teams};
 use crate::lib::event_listener::event_log_feeder;
 use crate::lib::services::email::ResendMailService;
 use crate::lib::services::event_bus::event_bus::new_bus;
@@ -71,6 +72,12 @@ async fn main() {
     competitions::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
     team_creation::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
     teams::context::init_listeners(&app_event_bus, pool.clone());
+    let refs_for_players = references::context::ReferencesContext::new();
+    players::context::init_listeners(
+        &app_event_bus,
+        pool.clone(),
+        refs_for_players.repository.clone(),
+    );
 
     let state = AppState {
         auth: AuthContext::new(&pool, event_bus.clone()),
@@ -79,7 +86,8 @@ async fn main() {
         news: NewsContext::new(&pool),
         references: ReferencesContext::new(),
         team_creation: TeamCreationContext::new(&pool, event_bus.clone()),
-        teams: TeamsContext::new(&pool),
+        teams:   TeamsContext::new(&pool),
+        players: PlayersContext::new(&pool),
         email_service: Arc::new(ResendMailService::new(
             cfg.email.api_key,
             cfg.email.from,
@@ -102,6 +110,7 @@ async fn main() {
         .merge(app::news::router::router())
         .merge(app::references::router::router())
         .merge(app::team_creation::router::router())
+        .merge(app::players::router::router())
         .merge(app::teams::router::router())
         .merge(app::competitions::router::router())
         .merge(app::spaces::router::router())
