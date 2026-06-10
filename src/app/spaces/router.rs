@@ -1,7 +1,7 @@
 use crate::app::spaces::io::web::all_spaces::space_all;
-use crate::app::spaces::io::web::coach_search::{get_coach_search_widget, search_coaches};
+use crate::app::spaces::io::web::coach_search::{get_coach_search_widget, get_coach_search_widget_by_query, search_coaches_controller};
 use crate::app::spaces::io::web::join_spaces::join_spaces;
-use crate::app::spaces::io::web::members_widget::get_members_widget;
+use crate::app::spaces::io::web::widget_tester_controller::space_widget_tester_controller;
 use crate::app::spaces::io::web::register_space::{register_space, register_space_submit};
 use crate::app::spaces::routes::path;
 use crate::state::AppState;
@@ -20,6 +20,10 @@ pub fn router() -> Router<AppState> {
             path::SPACE_COACH_SEARCH_WIDGET,
             get(get_coach_search_widget),
         )
-        .route(path::SPACE_COACH_SEARCH, get(search_coaches))
-        .route(path::SPACE_MEMBERS_WIDGET, get(get_members_widget))
+        .route(
+            path::SPACE_COACH_SEARCH_WIDGET_BY_QUERY,
+            get(get_coach_search_widget_by_query),
+        )
+        .route(path::SPACE_COACH_SEARCH, get(search_coaches_controller))
+        .route(path::SPACE_WIDGET_TESTER, get(space_widget_tester_controller))
 }

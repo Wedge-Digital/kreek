@@ -19,18 +19,43 @@
     <div class="btn-outline form-btn" @click="$store.pageTesterStore.selectRosters($refs.rosterPicker.getSelected())">choisir les rosters</div>
     <span x-text="$store.pageTesterStore.getSelectedRoster().join(', ')"></span>
 </div>
+<div class="test-roster-picker" x-data>
+    <div class="form-header">Test for inducement picker</div>
+    <div>Inducement picker for competition setting</div>
+    <div>
+        <div hx-get="{{ routes.references.inducement_picker() }}"
+             x-ref="inducementPicker"
+             hx-trigger="load"
+             hx-target="this"
+             hx-swap="innerHTML">
+        </div>
+    </div>
+    <p>
+        Inducements sélectionnés :
+    </p>
+    <div class="btn-outline form-btn" @click="$store.pageTesterStore.selectInducements($refs.inducementPicker.getSelected())">choisir les inducements</div>
+    <span x-text="$store.pageTesterStore.getSelectedInducements().join(', ')"></span>
+</div>
 <script>
     document.addEventListener('alpine:init', () => {
     Alpine.store('pageTesterStore', {
         selectedRosters: [],
+        selectedInducements: [],
 
         getSelectedRoster() {
             return this.selectedRosters;
         },
 
         selectRosters(selectedRosters) {
-            console.log("selectedRosters", selectedRosters);
             this.selectedRosters.push(selectedRosters); // par défaut : tous sélectionnés
+        },
+        getSelectedInducements() {
+            return this.selectedInducements;
+        },
+
+        selectInducements(selectedInducements) {
+            console.log(selectedInducements);
+            this.selectedInducements.push(selectedInducements); // par défaut : tous sélectionnés
         },
     })
     });

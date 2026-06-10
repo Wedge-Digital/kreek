@@ -5,7 +5,7 @@ use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use sqlx::query::Query;
 use crate::app::references::domain::port::IReferenceRepository;
-use crate::app::shared_kernel::RosterDefinition::RosterDefinition;
+use crate::app::shared_kernel::roster_definition::RosterDefinition;
 use crate::app::team_creation::domain::roster::Roster;
 use crate::state::AppState;
 

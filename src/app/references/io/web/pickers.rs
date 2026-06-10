@@ -137,17 +137,6 @@ pub fn build_roster_items(repo: &dyn IReferenceRepository) -> Vec<RosterPickerIt
     items
 }
 
-pub fn build_inducement_items(repo: &dyn IReferenceRepository) -> Vec<InducementPickerItem> {
-    repo.list_inducements()
-        .iter()
-        .map(|i| InducementPickerItem {
-            uid: i.uid.clone(),
-            name: i.name.clone(),
-            cost: i.cost,
-        })
-        .collect()
-}
-
 pub fn build_star_player_items(repo: &dyn IReferenceRepository) -> Vec<StarPlayerPickerItem> {
     repo.list_star_players()
         .iter()

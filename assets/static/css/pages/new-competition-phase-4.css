@@ -51,33 +51,7 @@
 .empty-list { text-align: center; padding: var(--p3); color: var(--dark-3); font-size: var(--text-small); }
 .empty-icon { font-size: 40px; display: block; margin-bottom: var(--p1); }
 
-.coaches-search-panel {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    z-index: 10;
-    background: var(--white);
-    border: 1px solid var(--dark-5);
-    border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-    max-height: 260px;
-    overflow-y: auto;
-    margin-top: 4px;
-}
-.coaches-search-panel:empty { display: none; }
 
-.coach-result-row {
-    display: flex;
-    align-items: center;
-    gap: var(--p1);
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--dark-6);
-    cursor: default;
-    transition: background 0.1s;
-}
-.coach-result-row:last-child { border-bottom: none; }
-.coach-result-row:hover { background: var(--dark-6); }
 
 .btn-add-coach {
     background: none;

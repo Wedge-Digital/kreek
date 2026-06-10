@@ -4,6 +4,7 @@ pub mod path {
     pub const SKILL_PICKER:          &str = "/references/roster-lines/skill-picker";
     pub const REF_WIDGETS:           &str = "/test/references/widgets";
     pub const ROSTER_PICKER:         &str = "/references/roster-picker";
+    pub const INDUCEMENT_PICKER:         &str = "/references/inducement-picker";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -45,5 +46,9 @@ impl Routes {
 
     pub fn roster_picker(&self) -> &'static str {
         path::ROSTER_PICKER
+    }
+
+    pub fn inducement_picker(&self) -> &'static str {
+        path::INDUCEMENT_PICKER
     }
 }

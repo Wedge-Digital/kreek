@@ -10,9 +10,9 @@ use serde::Deserialize;
 // ── Widget (barre de recherche + panneau résultats) ──────────────────────────
 
 #[derive(Template)]
-#[template(path = "space-coach-search-widget.html")]
+#[template(path = "widgets/coach-select.html")]
 pub struct SpaceCoachSearchWidgetTemplate {
-    pub search_url: String,
+    pub space_id: String,
 }
 
 impl IntoResponse for SpaceCoachSearchWidgetTemplate {
@@ -30,6 +30,19 @@ pub async fn get_coach_search_widget(Path(space_id): Path<String>) -> impl IntoR
     }
 }
 
+#[derive(Deserialize)]
+pub struct CoachSearchWidgetParams {
+    pub space_id: String,
+}
+
+pub async fn get_coach_search_widget_by_query(
+    Query(params): Query<CoachSearchWidgetParams>,
+) -> impl IntoResponse {
+    SpaceCoachSearchWidgetTemplate {
+        search_url: Routes.coach_search(&params.space_id),
+    }
+}
+
 // ── Résultats de recherche ────────────────────────────────────────────────────
 
 pub struct CoachResultItem {
@@ -39,7 +52,7 @@ pub struct CoachResultItem {
 }
 
 #[derive(Template)]
-#[template(path = "space-coach-search-results.html")]
+#[template(path = "widgets/space-coach-search-results.html")]
 pub struct CoachSearchResultsTemplate {
     pub coaches: Vec<CoachResultItem>,
 }
@@ -67,6 +80,55 @@ fn initials(name: &str) -> String {
         .take(2)
         .collect::<String>()
         .to_uppercase()
+}
+
+pub async fn search_coaches_controller(
+    Path(space_id): Path<String>,
+    State(state): State<AppState>,
+    Query(params): Query<SearchParams>,
+) -> impl IntoResponse {
+    let sid = match SpaceId::try_new(&space_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let excluded: std::collections::HashSet<String> = params
+        .excluded
+        .split(',')
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect();
+
+    let query = params.q.trim().to_lowercase();
+
+    let all_members = state
+        .spaces
+        .user_cache_repository
+        .list_members_for_space(&sid)
+        .await
+        .unwrap_or_default();
+
+    let coaches = all_members
+        .into_iter()
+        .filter_map(|u| {
+            let id = u.id.to_string();
+            if excluded.contains(&id) {
+                return None;
+            }
+            let name = u.name.into_inner();
+            if !query.is_empty() && !name.to_lowercase().contains(&query) {
+                return None;
+            }
+            let ini = initials(&name);
+            Some(CoachResultItem {
+                id,
+                coach_name: name,
+                initials: ini,
+            })
+        })
+        .collect();
+
+    CoachSearchResultsTemplate { coaches }.into_response()
 }
 
 #[cfg(test)]
@@ -103,7 +165,7 @@ mod tests {
         ISpaceUserCacheRepository, SpaceUserCacheRepositoryError,
     };
     use crate::app::spaces::domain::user::User as SpaceUser;
-    use crate::app::spaces::io::web::coach_search::{get_coach_search_widget, search_coaches};
+    use crate::app::spaces::io::web::coach_search::{get_coach_search_widget, search_coaches_controller};
     use crate::app::spaces::routes::path;
     use crate::lib::services::email::fakes::console_email_service::ConsoleEmailService;
     use crate::lib::services::event_bus::event_bus::new_bus;
@@ -362,7 +424,7 @@ mod tests {
         };
 
         Router::new()
-            .route(path::SPACE_COACH_SEARCH, get(search_coaches))
+            .route(path::SPACE_COACH_SEARCH, get(search_coaches_controller))
             .route(
                 path::SPACE_COACH_SEARCH_WIDGET,
                 get(get_coach_search_widget),
@@ -489,51 +551,3 @@ mod tests {
     }
 }
 
-pub async fn search_coaches(
-    Path(space_id): Path<String>,
-    State(state): State<AppState>,
-    Query(params): Query<SearchParams>,
-) -> impl IntoResponse {
-    let sid = match SpaceId::try_new(&space_id) {
-        Ok(id) => id,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
-    let excluded: std::collections::HashSet<String> = params
-        .excluded
-        .split(',')
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string())
-        .collect();
-
-    let query = params.q.trim().to_lowercase();
-
-    let all_members = state
-        .spaces
-        .user_cache_repository
-        .list_members_for_space(&sid)
-        .await
-        .unwrap_or_default();
-
-    let coaches = all_members
-        .into_iter()
-        .filter_map(|u| {
-            let id = u.id.to_string();
-            if excluded.contains(&id) {
-                return None;
-            }
-            let name = u.name.into_inner();
-            if !query.is_empty() && !name.to_lowercase().contains(&query) {
-                return None;
-            }
-            let ini = initials(&name);
-            Some(CoachResultItem {
-                id,
-                coach_name: name,
-                initials: ini,
-            })
-        })
-        .collect();
-
-    CoachSearchResultsTemplate { coaches }.into_response()
-}

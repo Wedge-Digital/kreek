@@ -1,0 +1,15 @@
+<link rel="stylesheet" href="/static/css/widgets/coach-search.css">
+<select id="space-select"
+        name="space_id"
+        hx-get="{{ search_url }}"
+        hx-trigger="load, keyup changed delay:500"
+        hx-target="#coach-search-container"
+        hx-swap="innerHTML">
+    <option value="">-- Liste des coachs --</option>
+    {% for space in spaces %}
+    <option value="{{ space.id }}">{{ space.name }}</option>
+    {% endfor %}
+</select>
+<script>
+    new TomSelect('#space-select', { placeholder: '-- Choisir un espace --' });
+</script>

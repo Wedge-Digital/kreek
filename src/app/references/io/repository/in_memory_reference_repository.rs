@@ -4,7 +4,8 @@ use crate::app::references::domain::models::{
 };
 use crate::app::references::domain::port::IReferenceRepository;
 use serde::Deserialize;
-use crate::app::shared_kernel::RosterDefinition::RosterDefinition;
+use crate::app::shared_kernel::inducement_definition::{InducementCost, InducementDefinition, InducementId, InducementName};
+use crate::app::shared_kernel::roster_definition::RosterDefinition;
 use crate::app::team_creation::domain::roster::{RosterId, RosterName};
 // ── Raw JSON wrappers (deserialization only) ──────────────────────────────────
 
@@ -134,9 +135,16 @@ impl IReferenceRepository for InMemoryReferenceRepository {
         rosters
     }
 
-    fn list_inducements(&self) -> &[Inducement] {
-        &self.inducements
+    fn list_inducements(&self) -> Vec<InducementDefinition>{
+        let mut inducements: Vec<InducementDefinition> = self.inducements.iter().map(|inducement| InducementDefinition {
+            id: InducementId(inducement.uid.clone()),
+            cost: InducementCost::try_new(inducement.cost).expect("invalid inducement cost"),
+            name: InducementName(inducement.name.clone()),
+        }).collect();
+        inducements.sort_unstable_by(|a, b| a.id.0.cmp(&b.id.0));
+        inducements
     }
+
     fn list_star_players(&self) -> &[StarPlayer] {
         &self.star_players
     }

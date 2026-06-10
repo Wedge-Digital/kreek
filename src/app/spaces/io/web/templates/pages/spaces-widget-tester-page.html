@@ -1,0 +1,59 @@
+{% extends "widget-tester-layout.html" %}
+
+{% block content %}
+<div class="test-roster-picker" x-data="{ spaceId: '' }">
+    <div class="form-header">Test for coach picker </div>
+
+    <div class="form-group">
+        <label class="form-label">Espace</label>
+        <select id="space-select"
+                name="space_id"
+                hx-get="{{ routes.spaces.coach_search_widget_by_query() }}"
+                hx-trigger="change[this.value != '']"
+                hx-target="#coach-search-container"
+                hx-swap="innerHTML">
+            <option value="">-- Choisir un espace --</option>
+            {% for space in spaces %}
+            <option value="{{ space.id }}">{{ space.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <div id="coach-search-container"></div>
+    </div>
+    <p>
+        Rosters sélectionnés :
+    </p>
+    <div class="btn-outline form-btn" @click="$store.pageTesterStore.selectRosters($refs.rosterPicker.getSelected())">choisir les rosters</div>
+    <span x-text="$store.pageTesterStore.getSelectedRoster().join(', ')"></span>
+</div>
+<script>
+    new TomSelect('#space-select', { placeholder: '-- Choisir un espace --' });
+
+    document.addEventListener('alpine:init', () => {
+    Alpine.store('pageTesterStore', {
+        selectedRosters: [],
+        selectedInducements: [],
+
+        getSelectedRoster() {
+            return this.selectedRosters;
+        },
+
+        selectRosters(selectedRosters) {
+            this.selectedRosters.push(selectedRosters); // par défaut : tous sélectionnés
+        },
+        getSelectedInducements() {
+            return this.selectedInducements;
+        },
+
+        selectInducements(selectedInducements) {
+            console.log(selectedInducements);
+            this.selectedInducements.push(selectedInducements); // par défaut : tous sélectionnés
+        },
+    })
+    });
+</script>
+{% endblock %}
+
+

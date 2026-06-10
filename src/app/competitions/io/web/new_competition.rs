@@ -11,7 +11,7 @@ use crate::app::competitions::use_cases::update_draft_competition::{
     execute as execute_update, UpdateDraftCompetitionCommand, UpdateDraftCompetitionError,
 };
 use crate::app::references::io::web::pickers::{
-    build_inducement_items, build_roster_items, build_star_player_items, InducementPickerItem,
+    build_roster_items, build_star_player_items, InducementPickerItem,
     RosterPickerItem, StarPlayerPickerItem,
 };
 use crate::app::shared_kernel::common_types::{
@@ -40,7 +40,6 @@ pub struct NewCompetitionPhase2Template {
     pub season_id: String,
     pub season_name_value: String,
     pub rosters: Vec<RosterPickerItem>,
-    pub inducements: Vec<InducementPickerItem>,
     pub star_players: Vec<StarPlayerPickerItem>,
     pub existing_rules_json: String,
 }
@@ -91,7 +90,6 @@ pub async fn get_new_competition_phase_2(
         season_id,
         season_name_value,
         rosters: build_roster_items(refs),
-        inducements: build_inducement_items(refs),
         star_players: build_star_player_items(refs),
         existing_rules_json,
     }
