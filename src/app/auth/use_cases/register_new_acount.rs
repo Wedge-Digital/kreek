@@ -5,7 +5,7 @@ use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::shared_kernel::common_types::{EventId, UserId};
 use crate::app::shared_kernel::email::Email;
 use crate::app::shared_kernel::user::User;
-use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::event_bus::EventBus;
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
     Argon2,
@@ -132,7 +132,7 @@ mod tests {
     use super::*;
     use crate::app::auth::ports::RepositoryError;
     use crate::app::shared_kernel::user::User;
-    use crate::lib::services::event_bus::event_bus::new_bus;
+    use crate::common::services::event_bus::event_bus::new_bus;
     use async_trait::async_trait;
 
     struct FakeUserRepository {

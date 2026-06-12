@@ -1,15 +1,21 @@
-<link rel="stylesheet" href="/static/css/widgets/coach-search.css">
-<select id="space-select"
-        name="space_id"
-        hx-get="{{ search_url }}"
-        hx-trigger="load, keyup changed delay:500"
-        hx-target="#coach-search-container"
-        hx-swap="innerHTML">
-    <option value="">-- Liste des coachs --</option>
-    {% for space in spaces %}
-    <option value="{{ space.id }}">{{ space.name }}</option>
-    {% endfor %}
-</select>
-<script>
-    new TomSelect('#space-select', { placeholder: '-- Choisir un espace --' });
-</script>
+<div x-data="{
+    init() {
+        this._ts = new TomSelect(this.$refs.select, {
+            placeholder: '-- Choisir un coach --',
+            items: [],
+            onChange: (value) => {
+                const name = this._ts.options[value]?.text ?? '';
+                htmx.trigger(document.body, 'coachSelected', { id: value, name: name });
+            }
+        });
+    },
+    destroy() {
+        if (this._ts) this._ts.destroy();
+    }
+}">
+    <select x-ref="select">
+        {% for coach in coaches %}
+        <option value="{{ coach.id }}">{{ coach.name }}</option>
+        {% endfor %}
+    </select>
+</div>

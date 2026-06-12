@@ -5,7 +5,7 @@ use crate::app::shared_kernel::staff_counts::{
 use crate::app::teams::domain::team::TeamDomainEvent;
 use crate::app::teams::domain::value_objects::Kpo;
 use crate::app::teams::ports::{ITeamRepository, RepositoryError};
-use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
 
 pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {

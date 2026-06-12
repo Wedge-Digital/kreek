@@ -3,7 +3,7 @@ use crate::app::team_creation::io::team_creation_repository::{
     TeamDraftRepository, TeamRosterRepository,
 };
 use crate::app::team_creation::ports::{ITeamDraftRepository, ITeamRosterRepository};
-use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::sync::Arc;
 

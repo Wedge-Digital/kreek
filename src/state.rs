@@ -6,8 +6,8 @@ use crate::app::spaces::context::SpacesContext;
 use crate::app::team_creation::context::TeamCreationContext;
 use crate::app::players::context::PlayersContext;
 use crate::app::teams::context::TeamsContext;
-use crate::lib::services::email::IEmailService;
-use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::common::services::email::IEmailService;
+use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
 
 #[derive(Clone)]

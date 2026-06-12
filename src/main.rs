@@ -3,7 +3,7 @@ extern crate core;
 mod app;
 mod config;
 #[allow(special_module_name)]
-pub mod lib;
+pub mod common;
 mod state;
 pub mod web;
 
@@ -22,10 +22,10 @@ use crate::app::team_creation::context::TeamCreationContext;
 use crate::app::players::context::PlayersContext;
 use crate::app::teams::context::TeamsContext;
 use crate::app::{auth, competitions, players, references, spaces, team_creation, teams};
-use crate::lib::event_listener::event_log_feeder;
-use crate::lib::services::email::ResendMailService;
-use crate::lib::services::event_bus::event_bus::new_bus;
-use crate::lib::session_store::DashMapStore;
+use crate::common::event_listener::event_log_feeder;
+use crate::common::services::email::ResendMailService;
+use crate::common::services::event_bus::event_bus::new_bus;
+use crate::common::session_store::DashMapStore;
 use crate::web::middleware::bypass_auth::bypass_auth_middleware;
 use crate::web::middleware::request_log::request_log;
 use crate::web::middleware::require_auth::require_auth;

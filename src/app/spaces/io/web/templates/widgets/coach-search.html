@@ -1,0 +1,39 @@
+<link rel="stylesheet" href="/static/css/widgets/coach-search.css">
+<div class="coaches-search-panel">
+    <div class="search-row">
+    <input type="text"
+           class="form-input"
+           name="q"
+           placeholder="Rechercher..."
+           hx-get="{{ routes.spaces.coach_search_results() }}?space_id={{ space_id }}"
+           hx-trigger="load, keyup changed delay:300ms"
+           hx-target="#coach-search-results"
+           hx-params="q"
+           hx-swap="innerHTML">
+   </div>
+    <div id="coach-search-results"></div>
+</div>
+<script>
+(function () {
+    const panel = document.currentScript.previousElementSibling;
+    panel.addEventListener('keydown', function (e) {
+        const rows = Array.from(panel.querySelectorAll('.coach-result-row'));
+        const input = panel.querySelector('input[name="q"]');
+        const focused = document.activeElement;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (focused === input) { rows[0]?.focus(); }
+            else { rows[rows.indexOf(focused) + 1]?.focus(); }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const idx = rows.indexOf(focused);
+            if (idx <= 0) { input?.focus(); }
+            else { rows[idx - 1]?.focus(); }
+        } else if (e.key === 'Enter' && rows.includes(focused)) {
+            e.preventDefault();
+            focused.click();
+        }
+    });
+})();
+</script>

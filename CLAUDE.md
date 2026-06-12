@@ -229,6 +229,107 @@ Conséquences :
 
 ---
 
+## Conventions widgets HTMX — règles fondamentales
+
+Un widget est un fragment HTML autonome exposé par un BC via un endpoint GET. Il encapsule son rendu, son comportement et son CSS. Il est chargé par une page hôte sans que celle-ci connaisse ses détails internes.
+
+### Règle 1 — Pas de références croisées entre BCs
+
+Un BC ne référence **jamais** directement la widget d'un autre BC. La page hôte peut composer plusieurs widgets de BCs différents, mais chaque BC n'importe que ses propres URLs de widgets.
+
+```rust
+// INTERDIT — BC teams référence une route du BC players
+hx-get="{{ players_routes.roster_widget() }}"  // dans un template du BC teams
+
+// CORRECT — la page hôte (neutre) compose les deux
+// ou chaque BC expose son propre endpoint qui connaît ses propres routes
+```
+
+### Règle 2 — Communication par événements DOM sur `body`
+
+Les widgets **ne s'appellent pas mutuellement**. Ils publient leurs actions via des événements DOM, les consommateurs s'abonnent indépendamment.
+
+```js
+// Publication (dans le widget, au clic / à la sélection)
+htmx.trigger(document.body, 'coachSelected', { id: '...', name: '...' });
+
+// Abonnement Alpine (dans la page hôte ou un autre widget)
+@coach-selected.window="doSomething($event.detail)"
+
+// Abonnement HTMX (déclenche une requête)
+hx-trigger="coachSelected from:body"
+```
+
+**Format des événements** : payload `{ id, name }` pour les entités sélectionnées. Nommer les événements en `camelCase` côté JS — HTMX les convertit automatiquement en `kebab-case` pour `@event.window`.
+
+### Règle 3 — Isolation HTMX (`hx-disinherit="*"`)
+
+L'élément racine d'un widget pose `hx-disinherit="*"` pour bloquer **tout** héritage d'attributs HTMX venant de la page hôte (`hx-vals`, `hx-headers`, `hx-params`, etc.).
+
+```html
+<!-- Widget coach-search — racine isolée -->
+<div class="coaches-search-panel" hx-disinherit="*">
+    ...
+</div>
+```
+
+Sans cela, les `hx-vals` ou `hx-include` de la page hôte s'injectent silencieusement dans les requêtes du widget.
+
+### Règle 4 — Paramètres contextuels baked dans l'URL
+
+Les paramètres contextuels reçus par le widget (ex. `space_id`) sont **baked dans l'URL `hx-get`** par Askama lors du rendu. Ne pas les récupérer via `hx-include` pointant vers le DOM parent.
+
+```html
+<!-- CORRECT — space_id fourni par le serveur au rendu du widget -->
+hx-get="{{ routes.spaces.coach_search_results() }}?space_id={{ space_id }}"
+hx-params="q"
+
+<!-- INTERDIT — couplage au DOM de la page hôte -->
+hx-include="[name='space_id']"
+```
+
+### Règle 5 — CSS embarqué, pas de dépendance au layout
+
+Chaque widget embarque son propre `<link rel="stylesheet">`. Il n'assume pas que la page hôte charge ses styles.
+
+```html
+<link rel="stylesheet" href="/static/css/widgets/coach-search.css">
+<div class="coaches-search-panel" hx-disinherit="*">…</div>
+```
+
+### Règle 6 — Scripts sans ID globaux
+
+Les scripts de comportement d'un widget (navigation clavier, init de composant tiers, etc.) référencent leur conteneur via `document.currentScript.previousElementSibling`, pas via un `id` global.
+
+```html
+<div class="coaches-search-panel" hx-disinherit="*">…</div>
+<script>
+(function () {
+    const panel = document.currentScript.previousElementSibling;
+    // tout le comportement est scoped à `panel`
+})();
+</script>
+```
+
+**Pourquoi :** évite les collisions si le même widget est présent plusieurs fois dans la page, et évite de polluer le namespace global.
+
+### Règle 7 — Lifecycle des composants tiers (TomSelect, etc.)
+
+Les composants JS tiers intégrés dans un widget sont wrappés dans un `x-data` Alpine avec `init()` et `destroy()` pour un cycle de vie propre lors des swaps HTMX.
+
+```html
+<div x-data="{
+    init() { this._ts = new TomSelect(this.$refs.select, { ... }); },
+    destroy() { this._ts?.destroy(); }
+}">
+    <select x-ref="select">…</select>
+</div>
+```
+
+Ne jamais initialiser TomSelect (ou équivalent) dans un `<script>` nu sans lifecycle — le composant survivrait au remplacement du DOM et causerait des doublons.
+
+---
+
 ## Conventions templates (Askama + HTMX)
 
 - Un template de **page complète** pour le premier chargement

@@ -3,8 +3,8 @@ use nutype::nutype;
 
 #[nutype(
     sanitize(trim),
-    validate(not_empty, len_char_max = 50, regex = r"^[a-zA-Z0-9 ]+$"),
-    derive(Eq, Hash, PartialEq, Debug, Clone, Serialize, Deserialize)
+    validate(not_empty, len_char_max = 50, regex = r"^[\p{L}0-9. -]+$"),
+    derive(Eq, Hash, PartialEq, Debug, Clone, Serialize, Deserialize, Display)
 )]
 pub struct CoachName(String);
 
@@ -83,18 +83,25 @@ mod tests {
     }
 
     #[test]
-    fn accented_characters_are_rejected() {
-        assert_eq!(
-            CoachName::try_new("Bâgouze").unwrap_err(),
-            CoachNameError::RegexViolated,
-        );
+    fn accented_characters_are_valid() {
+        assert!(CoachName::try_new("Bâgouze").is_ok());
+        assert!(CoachName::try_new("Hervé").is_ok());
+        assert!(CoachName::try_new("Ñoño").is_ok());
     }
 
     #[test]
-    fn hyphen_is_rejected() {
-        assert_eq!(
-            CoachName::try_new("Dark-Nagash").unwrap_err(),
-            CoachNameError::RegexViolated,
-        );
+    fn hyphen_is_valid() {
+        assert!(CoachName::try_new("Dark-Nagash").is_ok());
+    }
+
+    #[test]
+    fn special_characters_are_still_rejected() {
+        for name in ["Bag@uze", "Coach!", "Test#1", "foo/bar"] {
+            assert_eq!(
+                CoachName::try_new(name).unwrap_err(),
+                CoachNameError::RegexViolated,
+                "'{name}' aurait dû être rejeté",
+            );
+        }
     }
 }

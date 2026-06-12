@@ -1,5 +1,5 @@
 use crate::app::shared_kernel::common_types::EventId;
-use crate::lib::event_envelope::EventEnvelope;
+use crate::common::event_envelope::EventEnvelope;
 use serde::{Deserialize, Serialize};
 
 // ── Payloads joueurs ───────────────────────────────────────────────────────────

@@ -20,3 +20,4 @@ pub mod roster_definition;
 
 pub mod inducement_definition;
 pub mod space_definition;
+pub mod coach_definition;

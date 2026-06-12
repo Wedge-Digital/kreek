@@ -16,7 +16,7 @@ pub struct SpacesWidgetPageTesterTemplate {
     pub spaces: Vec<SpaceDefinition>,
 }
 
-pub async fn space_widget_tester_controller(
+pub async fn get_space_widget_tester(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let spaces = state.spaces.space_repository.find_all()
@@ -24,8 +24,8 @@ pub async fn space_widget_tester_controller(
         .unwrap_or_default()
         .into_iter()
         .map(|s| SpaceDefinition {
-            id: SpaceId::try_new(s.id).expect(""),
-            name: SpaceName::try_new(s.name).expect("") })
+            id: SpaceId::try_new(&s.id).expect(""),
+            name: SpaceName::try_new(&s.name).expect("") })
         .collect();
 
     SpacesWidgetPageTesterTemplate {

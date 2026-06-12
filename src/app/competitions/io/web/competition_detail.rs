@@ -8,7 +8,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 
 use crate::app::shared_kernel::cloudinary;
-
+use crate::common::initials::initials;
 // ── Mock data structs ─────────────────────────────────────────────────────────
 
 pub struct StandingRow {
@@ -56,14 +56,6 @@ pub struct StatRow {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-fn initials(name: &str) -> String {
-    name.split_whitespace()
-        .filter_map(|w| w.chars().next())
-        .take(2)
-        .collect::<String>()
-        .to_uppercase()
-}
 
 fn mock_standings() -> Vec<StandingRow> {
     vec![

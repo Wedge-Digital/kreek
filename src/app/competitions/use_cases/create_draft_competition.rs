@@ -11,7 +11,7 @@ use crate::app::shared_kernel::common_types::{
     CloudinaryImage, CoachId, CompetitionId, EventId, SeasonId, SpaceId,
 };
 use crate::app::shared_kernel::competition_name::CompetitionName;
-use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::event_bus::EventBus;
 
 pub struct CreateDraftCompetitionCommand {
     pub space_id: SpaceId,
@@ -101,7 +101,7 @@ mod tests {
         ISeasonRepository, SeasonBaseInfo, SeasonRepositoryError,
     };
     use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, SpaceId};
-    use crate::lib::services::event_bus::event_bus::new_bus;
+    use crate::common::services::event_bus::event_bus::new_bus;
     use async_trait::async_trait;
 
     const LOGO: &str = "https://res.cloudinary.com/demo/image/upload/sample.jpg";

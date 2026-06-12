@@ -3,7 +3,7 @@ use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
 use crate::app::competitions::io::app_events::app_event_publisher::competitions_app_event_publisher;
 use crate::app::competitions::io::repository::competition_repository::CompetitionRepository;
 use crate::app::competitions::io::repository::season_repository::SeasonRepository;
-use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::sync::Arc;
 

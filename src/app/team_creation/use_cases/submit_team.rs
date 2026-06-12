@@ -14,7 +14,7 @@ use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
 use crate::app::team_creation::domain_event::TeamCreationDomainEvent;
 use crate::app::team_creation::ports::{ITeamRosterRepository, RepositoryError};
 use crate::app::team_creation::use_cases::commands::SubmitTeamCommand;
-use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::event_bus::EventBus;
 
 pub enum SubmitTeamError {
     TeamNotFound,

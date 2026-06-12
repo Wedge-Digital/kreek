@@ -1,5 +1,5 @@
-use crate::lib::event_envelope::EventEnvelope;
-use crate::lib::persistance::event_log_repository::{EventLogRepository, IEventLogRepository};
+use crate::common::event_envelope::EventEnvelope;
+use crate::common::persistance::event_log_repository::{EventLogRepository, IEventLogRepository};
 use sqlx::PgPool;
 use time::OffsetDateTime;
 

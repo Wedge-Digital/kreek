@@ -4,7 +4,7 @@ use crate::app::spaces::domain::domain_event::SpacesDomainEvent;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::{
     ISpaceRepository, SpaceRepositoryError,
 };
-use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::event_bus::EventBus;
 
 pub struct JoinSpacesCommand {
     pub coach_id: CoachId,
@@ -55,7 +55,7 @@ mod tests {
     use crate::app::spaces::domain::space_repository_port::space_repository_port::{
         ISpaceRepository, SpaceSummary,
     };
-    use crate::lib::services::event_bus::event_bus::new_bus;
+    use crate::common::services::event_bus::event_bus::new_bus;
     use async_trait::async_trait;
 
     struct FakeRepo {

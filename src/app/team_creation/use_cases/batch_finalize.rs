@@ -11,7 +11,7 @@ use crate::app::team_creation::domain::roster::{AcquisitionMode, HiredPlayer, Pl
 use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
 use crate::app::team_creation::domain_event::TeamCreationDomainEvent;
 use crate::app::team_creation::ports::{ITeamRosterRepository, RepositoryError};
-use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::event_bus::EventBus;
 use crate::app::shared_kernel::common_types::EntityId;
 use std::collections::{HashMap, HashSet};
 
