@@ -3,7 +3,7 @@ use std::fmt::Display;
 
 #[nutype(
     sanitize(trim),
-    validate(len_char_max = 100, regex = r"^[\p{L}0-9_\-' ]+$"),
+    validate(len_char_max = 100, regex = r"^[\p{L}0-9_\-'. ]+$"),
     derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, AsRef)
 )]
 pub struct SpaceName(String);

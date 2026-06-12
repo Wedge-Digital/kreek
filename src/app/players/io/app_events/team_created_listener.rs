@@ -8,7 +8,7 @@ use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::shared_kernel::app_events::team_creation_app_events::{
     PlayerPayload, TeamCreationAppEvent,
 };
-use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::fmt;
 use std::sync::Arc;

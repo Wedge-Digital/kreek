@@ -1,0 +1,21 @@
+<div x-data="{
+    init() {
+        this._ts = new TomSelect(this.$refs.select, {
+            placeholder: '-- Choisir un coach --',
+            items: [],
+            onChange: (value) => {
+                const name = this._ts.options[value]?.text ?? '';
+                htmx.trigger(document.body, 'coachSelected', { id: value, name: name });
+            }
+        });
+    },
+    destroy() {
+        if (this._ts) this._ts.destroy();
+    }
+}">
+    <select x-ref="select">
+        {% for coach in coaches %}
+        <option value="{{ coach.id }}">{{ coach.name }}</option>
+        {% endfor %}
+    </select>
+</div>

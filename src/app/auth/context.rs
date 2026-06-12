@@ -4,7 +4,7 @@ use crate::app::auth::io::repository::reset_token_repository::{
 };
 use crate::app::auth::io::repository::user_repository::UserRepository;
 use crate::app::auth::ports::IUserRepository;
-use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::sync::Arc;
 

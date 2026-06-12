@@ -1,4 +1,4 @@
-use crate::lib::event_envelope::EventEnvelope;
+use crate::common::event_envelope::EventEnvelope;
 use sqlx::PgPool;
 
 #[derive(Debug, sqlx::FromRow)]
@@ -41,7 +41,7 @@ impl IEventLogRepository for EventLogRepository {
     ) -> Result<Vec<StoredEvent>, sqlx::Error> {
         sqlx::query_file_as!(
             StoredEvent,
-            "src/lib/persistance/sql/find_by_tag.sql",
+            "src/common/persistance/sql/find_by_tag.sql",
             tag_filter,
         )
         .fetch_all(&self.pool)

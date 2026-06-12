@@ -15,7 +15,7 @@ pub async fn widget_tester_controller(
 }
 
 #[derive(Template)]
-#[template(path = "widgets/widget-tester-page.html")]
+#[template(path = "pages/widget-tester-page.html")]
 pub struct ReferencesWidgetPageTesterTemplate {
     pub routes: AppRoutes,
 }

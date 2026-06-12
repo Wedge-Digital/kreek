@@ -9,7 +9,7 @@ use crate::app::spaces::domain::space_repository_port::space_repository_port::{
 use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::{
     ISpaceUserCacheRepository, SpaceUserCacheRepositoryError,
 };
-use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::event_bus::EventBus;
 
 pub struct RegisterNewSpaceCommand {
     pub coach_id: CoachId,
@@ -90,7 +90,7 @@ mod tests {
         ISpaceUserCacheRepository, SpaceUserCacheRepositoryError,
     };
     use crate::app::spaces::domain::user::User as SpaceUser;
-    use crate::lib::services::event_bus::event_bus::new_bus;
+    use crate::common::services::event_bus::event_bus::new_bus;
     use async_trait::async_trait;
 
     struct FakeUserCache {

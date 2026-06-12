@@ -5,8 +5,8 @@ use crate::app::shared_kernel::common_types::EventId;
 use crate::app::shared_kernel::staff_counts::{
     ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
 };
-use crate::lib::event_envelope::EventEnvelope;
-use crate::lib::services::event_bus::event_tags::{EventTag, EventTagName};
+use crate::common::event_envelope::EventEnvelope;
+use crate::common::services::event_bus::event_tags::{EventTag, EventTagName};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

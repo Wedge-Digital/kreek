@@ -115,7 +115,7 @@ impl ISpaceUserCacheRepository for SpaceUserCacheRepository {
             .into_iter()
             .map(|r| User {
                 id: CoachId::try_new(&r.coach_id).unwrap(),
-                name: CoachName::try_new(r.coach_name).unwrap(),
+                name: CoachName::try_new(&r.coach_name).expect(&format!("CoachName invalide en base : '{}'", r.coach_name.clone())),
                 icon: r.coach_icon.map(|s| CoachIcon::try_new(s).unwrap()),
                 email: Email::try_new(r.email).unwrap(),
             })

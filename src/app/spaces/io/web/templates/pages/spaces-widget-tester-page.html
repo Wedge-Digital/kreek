@@ -1,0 +1,51 @@
+{% extends "widget-tester-layout.html" %}
+
+{% block content %}
+<div class="test-roster-picker" x-data="{ spaceId: '' }">
+    <div class="form-header">Test for coach picker </div>
+
+    <div class="form-group">
+        <label class="form-label">Espace</label>
+        <select id="space-select"
+                name="space_id"
+                hx-get="{{ routes.spaces.coach_select_widget() }}"
+                hx-trigger="change[this.value != '']"
+                hx-target="#coach-select-container"
+                hx-swap="innerHTML"
+                hx-on:change="htmx.trigger(document.body, 'spaceSelected', { spaceId: this.value })">
+            <option value="">-- Choisir un espace --</option>
+            {% for space in spaces %}
+            <option value="{{ space.id }}">{{ space.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <div class="form-header">Liste des coachs de l'espace</div>
+        <div id="coach-select-container"></div>
+    </div>
+
+    <div>
+        <div class="form-header">Moteur de recherche de coachs de l'espace</div>
+        <div id="coach-search-container"
+             hx-get="{{ routes.spaces.coach_search_widget() }}"
+             hx-trigger="spaceSelected from:body"
+             hx-vals="js:{ space_id: event?.detail?.spaceId ?? '' }"
+             hx-target="this"
+             hx-swap="innerHTML">
+        </div>
+    </div>
+
+    <div x-data="{ coaches: [] }"
+         @coach-selected.window="coaches = [...coaches, $event.detail]">
+        <template x-for="coach in coaches">
+            <p>Coach sélectionné : <span x-text="coach.name"></span></p>
+        </template>
+    </div>
+</div>
+<script>
+    new TomSelect('#space-select', { placeholder: '-- Choisir un espace --' });
+</script>
+{% endblock %}
+
+

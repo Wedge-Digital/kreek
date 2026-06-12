@@ -1,5 +1,5 @@
 use crate::app::team_creation::domain_event::TeamCreationDomainEvent;
-use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::event_bus::EventBus;
 
 pub fn team_creation_app_event_publisher(event_bus: &EventBus, app_event_bus: EventBus) {
     let mut rx = event_bus.subscribe();

@@ -2,9 +2,9 @@ use crate::app::shared_kernel::app_events::auth_app_events::AuthAppEvent;
 use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::shared_kernel::common_types::{CoachId, EventId};
 use crate::app::shared_kernel::email::Email;
-use crate::lib::event_envelope::EventEnvelope;
-use crate::lib::services::event_bus::event_tags::EventTag;
-use crate::lib::services::event_bus::event_tags::EventTagName;
+use crate::common::event_envelope::EventEnvelope;
+use crate::common::services::event_bus::event_tags::EventTag;
+use crate::common::services::event_bus::event_tags::EventTagName;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]

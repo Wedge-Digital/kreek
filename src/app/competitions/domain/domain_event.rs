@@ -3,8 +3,8 @@ use crate::app::shared_kernel::common_types::{
     CloudinaryImage, CoachId, CompetitionId, EventId, SpaceId,
 };
 use crate::app::shared_kernel::competition_name::CompetitionName;
-use crate::lib::event_envelope::EventEnvelope;
-use crate::lib::services::event_bus::event_tags::{EventTag, EventTagName};
+use crate::common::event_envelope::EventEnvelope;
+use crate::common::services::event_bus::event_tags::{EventTag, EventTagName};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

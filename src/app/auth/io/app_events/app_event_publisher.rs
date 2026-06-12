@@ -1,5 +1,5 @@
 use crate::app::auth::domain::domain_event::AuthDomainEvent;
-use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::event_bus::EventBus;
 
 pub fn auth_app_event_publisher(event_bus: &EventBus, app_event_bus: EventBus) {
     let mut rx = event_bus.subscribe();
@@ -32,7 +32,7 @@ mod tests {
     use crate::app::shared_kernel::coach_name::CoachName;
     use crate::app::shared_kernel::common_types::{CoachId, EventId};
     use crate::app::shared_kernel::email::Email;
-    use crate::lib::services::event_bus::event_bus::new_bus;
+    use crate::common::services::event_bus::event_bus::new_bus;
 
     #[tokio::test]
     async fn account_created_is_forwarded_to_app_event_bus() {

@@ -14,7 +14,7 @@ pub struct MemberItem {
 }
 
 #[derive(Template)]
-#[template(path = "space-members-widget.html")]
+#[template(path = "widgets/space-members-widget.html")]
 pub struct SpaceMembersWidgetTemplate {
     pub members: Vec<MemberItem>,
     /// Sélection unique (false = multi-select par défaut)

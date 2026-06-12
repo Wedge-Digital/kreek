@@ -1,7 +1,7 @@
 use crate::app::teams::io::app_events::team_created_listener;
 use crate::app::teams::io::repository::team_repository::TeamRepository;
 use crate::app::teams::ports::ITeamRepository;
-use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::sync::Arc;
 

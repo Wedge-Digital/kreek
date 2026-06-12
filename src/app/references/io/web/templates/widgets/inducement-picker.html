@@ -1,0 +1,43 @@
+<link rel="stylesheet" href="/static/css/widgets/inducement-picker.css">
+<div class="inducement-grid"
+     x-init="$el.parentElement.getSelected = () => Alpine.store('inducementPickerStore').getSelected()"
+>
+  <div class="inducement-grid">
+    {% for item in inducements %}
+    <span class="inducement-chip"
+          data-uid="{{ item.id }}"
+          x-init="$store.inducementPickerStore.register($el.dataset.uid)"
+          x-bind:class="$store.inducementPickerStore.isSelected($el.dataset.uid) ? 'selected' : ''"
+          @click="$store.inducementPickerStore.toggle($el.dataset.uid)">
+      {{ item.name }}
+      <small class="picker-cost">{{ item.cost }}</small>
+    </span>
+    {% endfor %}
+  </div>
+</div>
+<script>
+  Alpine.store('inducementPickerStore', {
+    selectedInducement: [],
+
+    toggle(uid) {
+      if (this.selectedInducement.includes(uid)) {
+        this.selectedInducement = this.selectedInducement.filter(id => id !== uid)
+      }
+      else {
+        this.selectedInducement.push(uid)
+      }
+    },
+
+    isSelected(id) {
+      return this.selectedInducement.includes(id)
+    },
+
+    register(uid) {
+      this.selectedInducement.push(uid); // par défaut : tous sélectionnés
+    },
+
+    getSelected() {
+      return [...this.selectedInducement].sort();
+    }
+  })
+</script>

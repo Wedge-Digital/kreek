@@ -82,8 +82,8 @@ mod tests {
         ISpaceUserCacheRepository, SpaceUserCacheRepositoryError,
     };
     use crate::app::spaces::domain::user::User as SpaceUser;
-    use crate::lib::services::email::fakes::console_email_service::ConsoleEmailService;
-    use crate::lib::services::event_bus::event_bus::new_bus;
+    use crate::common::services::email::fakes::console_email_service::ConsoleEmailService;
+    use crate::common::services::event_bus::event_bus::new_bus;
     use crate::state::AppState;
     use argon2::password_hash::{rand_core::OsRng, SaltString};
     use argon2::{Argon2, PasswordHasher};

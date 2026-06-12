@@ -2,9 +2,9 @@ use crate::app::shared_kernel::app_events::spaces_app_events::SpacesAppEvent;
 use crate::app::shared_kernel::authorization::SpaceProfile;
 use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, EventId, SpaceId};
 use crate::app::shared_kernel::space_name::SpaceName;
-use crate::lib::event_envelope::EventEnvelope;
-use crate::lib::services::event_bus::event_tags::EventTag;
-use crate::lib::services::event_bus::event_tags::EventTagName;
+use crate::common::event_envelope::EventEnvelope;
+use crate::common::services::event_bus::event_tags::EventTag;
+use crate::common::services::event_bus::event_tags::EventTagName;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

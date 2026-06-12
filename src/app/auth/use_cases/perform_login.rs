@@ -3,8 +3,8 @@ use crate::app::auth::domain::domain_event::AuthDomainEvent::UserLoggedIn;
 use crate::app::auth::domain::domain_event::USER_LOGGED_IN;
 use crate::app::shared_kernel::common_types::{EventId, UserId};
 use crate::app::shared_kernel::user::User;
-use crate::lib::event_envelope::EventEnvelope;
-use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::common::event_envelope::EventEnvelope;
+use crate::common::services::event_bus::event_bus::EventBus;
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use serde::Deserialize;
 use std::fmt;
@@ -93,7 +93,7 @@ mod tests {
     use crate::app::auth::io::repository::tests::fake_user_repository::{
         FakeUserRepository, FindResult,
     };
-    use crate::lib::services::event_bus::event_bus::new_bus;
+    use crate::common::services::event_bus::event_bus::new_bus;
     use argon2::password_hash::{rand_core::OsRng, SaltString};
     use argon2::{Argon2, PasswordHasher};
 

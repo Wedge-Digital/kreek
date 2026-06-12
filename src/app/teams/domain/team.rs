@@ -595,6 +595,7 @@ mod tests {
             team_id: "01TEAM000000000000000000000".to_string(),
             space_id: "01SPACE00000000000000000000".to_string(),
             name: "Les Korrigans FC".to_string(),
+            logo_url: None,
             roster_id: "01ROST000000000000000000000".to_string(),
             roster_name: "Elfes Sylvestres".to_string(),
             coach_id: "01COACH00000000000000000000".to_string(),

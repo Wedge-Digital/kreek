@@ -1,4 +1,4 @@
-use crate::lib::event_envelope::EventEnvelope;
+use crate::common::event_envelope::EventEnvelope;
 use tokio::sync::broadcast;
 
 pub type EventBus = broadcast::Sender<EventEnvelope>;

@@ -16,4 +16,8 @@ pub mod sulid;
 pub mod team;
 mod tests;
 pub mod user;
-pub mod RosterDefinition;
+pub mod roster_definition;
+
+pub mod inducement_definition;
+pub mod space_definition;
+pub mod coach_definition;

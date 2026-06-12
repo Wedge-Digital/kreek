@@ -1,5 +1,5 @@
-use crate::lib::persistance::event_log_repository::{EventLogRepository, IEventLogRepository};
-use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::common::persistance::event_log_repository::{EventLogRepository, IEventLogRepository};
+use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::sync::Arc;
 

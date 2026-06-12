@@ -3,7 +3,7 @@ use crate::app::auth::io::repository::reset_token_repository::IResetTokenReposit
 use crate::app::auth::ports::{IUserRepository, RepositoryError};
 use crate::app::auth::routes::path;
 use crate::app::shared_kernel::coach_name::CoachName;
-use crate::lib::services::email::{EmailError, IEmailService};
+use crate::common::services::email::{EmailError, IEmailService};
 use askama::Template;
 use std::fmt;
 
@@ -101,7 +101,7 @@ mod tests {
     };
     use crate::app::auth::ports::RepositoryError;
     use crate::app::shared_kernel::coach_name::CoachName;
-    use crate::lib::services::email::fakes::console_email_service::ConsoleEmailService;
+    use crate::common::services::email::fakes::console_email_service::ConsoleEmailService;
     use async_trait::async_trait;
     use tokio::sync::Mutex;
 

@@ -3,7 +3,7 @@ use crate::app::competitions::domain::season_repository_port::{
     ISeasonRepository, SeasonRepositoryError,
 };
 use crate::app::shared_kernel::common_types::{CoachId, CompetitionId, EventId, SeasonId, SpaceId};
-use crate::lib::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::event_bus::EventBus;
 
 pub struct FinalizeCompetitionCommand {
     pub competition_id: CompetitionId,
@@ -58,7 +58,7 @@ mod tests {
         SeasonBaseInfo, SeasonRepositoryError,
     };
     use crate::app::shared_kernel::common_types::{CompetitionId, SpaceId};
-    use crate::lib::services::event_bus::event_bus::new_bus;
+    use crate::common::services::event_bus::event_bus::new_bus;
     use async_trait::async_trait;
 
     struct FakeRepo {

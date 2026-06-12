@@ -1,4 +1,4 @@
-use crate::lib::services::email::{EmailError, IEmailService};
+use crate::common::services::email::{EmailError, IEmailService};
 use async_trait::async_trait;
 
 pub struct ConsoleEmailService;

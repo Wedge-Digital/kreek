@@ -23,7 +23,7 @@ pub struct NewCompetitionPhase4Template {
     pub competition_id: String,
     pub season_id: String,
     pub existing_invitations_json: String,
-    pub coach_search_widget_url: String,
+    // pub coach_search_widget_url: String,
 }
 
 impl IntoResponse for NewCompetitionPhase4Template {
@@ -64,7 +64,7 @@ pub async fn get_new_competition_phase_4(
     NewCompetitionPhase4Template {
         web_routes: WebRoutes,
         competition_routes: Routes,
-        coach_search_widget_url: SpaceRoutes.coach_search_widget(&space_id),
+        // coach_search_widget_url: SpaceRoutes.coach_selector_widget(&space_id),
         space_id,
         competition_id,
         season_id,
