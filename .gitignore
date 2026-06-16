@@ -18,11 +18,7 @@
 Thumbs.db
 
 # Local scripts (data extraction, one-off tools)
-/scripts/*.sh
-scripts/*.sh
 /scripts/__pycache__
-/scripts/migrate_articles_images.sh
-/scripts/migrate_spaces_images.sh
 
 # Tests E2E (Playwright)
 /tests/e2e/__pycache__
