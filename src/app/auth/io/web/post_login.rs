@@ -110,7 +110,6 @@ mod tests {
         let auth_layer = AuthManagerLayerBuilder::new(
             AuthBackend::new(
                 mock.clone() as Arc<dyn crate::app::auth::ports::IUserRepository>,
-                false,
             ),
             session_layer,
         )

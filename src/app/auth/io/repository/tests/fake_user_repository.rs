@@ -22,6 +22,9 @@ impl IUserRepository for FakeUserRepository {
     async fn find_by_id(&self, _: &str) -> Result<Option<User>, RepositoryError> {
         self.find_by_coach_name("").await
     }
+    async fn find_by_legacy_id(&self, _: i32) -> Result<Option<User>, RepositoryError> {
+        unimplemented!()
+    }
     async fn update_password_hash(&self, _: &str, _: &str) -> Result<(), RepositoryError> {
         Ok(())
     }

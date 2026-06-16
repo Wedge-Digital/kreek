@@ -101,7 +101,7 @@ async fn main() {
 
     let session_layer = SessionManagerLayer::new(DashMapStore::new());
     let auth_layer = AuthManagerLayerBuilder::new(
-        AuthBackend::new(state.auth.user_repository.clone(), cfg.bypass_auth),
+        AuthBackend::new(state.auth.user_repository.clone()),
         session_layer,
     )
     .build();

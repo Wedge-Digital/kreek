@@ -1,7 +1,7 @@
 EXEC_PROFILE ?= dev
 DATABASE_URL   = $(shell grep -E '^DATABASE__URL=' .env.$(EXEC_PROFILE) | cut -d= -f2-)
 
-.PHONY: dev test migrate migration prepare_db reset_db \
+.PHONY: dev test e2e migrate migration prepare_db reset_db \
         lint check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
@@ -11,6 +11,7 @@ help:
 	@echo "  ─────────────────────────────────────────────────────"
 	@echo "  dev           Lance le serveur en mode watch"
 	@echo "  test          Lance les tests (utilise .env.test)"
+	@echo "  e2e           Lance les tests E2E Playwright (nécessite le serveur dev lancé)"
 	@echo "  migrate       Applique les migrations SQLx"
 	@echo "  migration     Crée une migration (ex: make migration desc=create_teams)"
 	@echo "  prepare_db    Régénère le cache sqlx (cargo sqlx prepare)"
@@ -32,6 +33,9 @@ dev:
 
 test:
 	DATABASE_URL=$(shell grep -E '^DATABASE_URL=' .env.test | cut -d= -f2-) cargo test
+
+e2e:
+	cd tests/e2e && uv run pytest -v
 
 migrate:
 	DATABASE_URL=$(DATABASE_URL) sqlx migrate run

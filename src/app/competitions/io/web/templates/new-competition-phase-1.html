@@ -68,11 +68,13 @@
 
         <div class="form-group">
           <label class="form-label">Administrateurs de la compétition</label>
-          <div hx-get="{{ members_widget_url }}"
-               hx-trigger="load"
-               hx-target="this"
-               hx-swap="outerHTML">
-            <div class="spinner spinner--sm"></div>
+          <div x-data="adminSelector({{ initial_admin_ids_json }}, '{{ space_id }}')"
+               @coach-selected.window="addCoach($event.detail)"
+               @coach-removed.window="removeCoach($event.detail)">
+            <template x-for="id in selectedIds" :key="id">
+              <input type="hidden" name="admin_ids[]" :value="id">
+            </template>
+            <div id="coach-search-widget"></div>
           </div>
         </div>
         {% call cmp::cloudinary_upload("logo_url", logo_url_value, "teams/logos", "Logo", logo_error) %}
@@ -96,15 +98,29 @@
 </div>
 
 <script>
-  (function () {
-    const el = document.getElementById('admins-select');
-    if (el && !el.tomselect) {
-      new TomSelect(el, {
-        plugins: ['remove_button'],
-        maxItems: null,
-        placeholder: 'Sélectionnez des coachs...',
-      });
-    }
-  })();
+function adminSelector(initialIds, spaceId) {
+    return {
+        selectedIds: initialIds,
+        spaceId: spaceId,
+        init() { this._reload(); },
+        addCoach(detail) {
+            if (!this.selectedIds.includes(detail.id)) {
+                this.selectedIds.push(detail.id);
+                this._reload();
+            }
+        },
+        removeCoach(detail) {
+            this.selectedIds = this.selectedIds.filter((id) => id !== detail.id);
+            this._reload();
+        },
+        _reload() {
+            const selected = this.selectedIds.join(',');
+            htmx.ajax('GET', `/app/coaches/widget/search?space_id=${this.spaceId}&selected=${selected}`, {
+                target: '#coach-search-widget',
+                swap: 'innerHTML',
+            });
+        },
+    };
+}
 </script>
 {% endblock %}

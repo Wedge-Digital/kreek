@@ -1,11 +1,24 @@
 <link rel="stylesheet" href="/static/css/widgets/coach-search.css">
-<div class="coaches-search-panel">
+<div class="coaches-search-panel" hx-disinherit="*">
+    {% if !selected_coaches.is_empty() %}
+    <div class="coach-selected-list">
+        {% for coach in selected_coaches %}
+        <div class="coach-selected-badge" data-id="{{ coach.id }}" data-name="{{ coach.name }}">
+            <span class="coach-selected-badge__initials">{{ coach.initials }}</span>
+            <span class="coach-selected-badge__name">{{ coach.name }}</span>
+            <button type="button"
+                    class="coach-selected-badge__remove"
+                    onclick="const el=this.closest('.coach-selected-badge');htmx.trigger(document.body,'coachRemoved',{id:el.dataset.id,name:el.dataset.name})">×</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
     <div class="search-row">
     <input type="text"
            class="form-input"
            name="q"
            placeholder="Rechercher..."
-           hx-get="{{ routes.spaces.coach_search_results() }}?space_id={{ space_id }}"
+           hx-get="{{ routes.spaces.coach_search_results() }}?space_id={{ space_id }}&excluded={{ excluded }}"
            hx-trigger="load, keyup changed delay:300ms"
            hx-target="#coach-search-results"
            hx-params="q"

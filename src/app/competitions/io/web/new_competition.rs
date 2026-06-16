@@ -98,20 +98,38 @@ pub async fn get_new_competition_phase_2(
 
 // ── Phase 1 ──────────────────────────────────────────────────────────────────
 
-#[derive(Template, Default)]
+#[derive(Template)]
 #[template(path = "new-competition-phase-1.html")]
 pub struct NewCompetitionTemplate {
     pub web_routes: WebRoutes,
     pub space_id: String,
     pub competition_id: Option<String>,
     pub season_id: Option<String>,
-    pub members_widget_url: String,
+    pub initial_admin_ids_json: String,
     pub name_value: String,
     pub name_error: Option<String>,
     pub logo_url_value: String,
     pub logo_error: Option<String>,
     pub general_error: Option<String>,
     pub competition_routes: Routes,
+}
+
+impl Default for NewCompetitionTemplate {
+    fn default() -> Self {
+        Self {
+            web_routes: WebRoutes,
+            space_id: String::new(),
+            competition_id: None,
+            season_id: None,
+            initial_admin_ids_json: "[]".to_string(),
+            name_value: String::new(),
+            name_error: None,
+            logo_url_value: String::new(),
+            logo_error: None,
+            general_error: None,
+            competition_routes: Routes,
+        }
+    }
 }
 
 impl IntoResponse for NewCompetitionTemplate {
@@ -136,22 +154,9 @@ fn hx_redirect(url: impl Into<String>) -> Response {
     }
 }
 
-fn members_widget_url(space_id: &str, selected_ids: &[String]) -> String {
-    if selected_ids.is_empty() {
-        format!("/app/{space_id}/members-widget")
-    } else {
-        format!(
-            "/app/{space_id}/members-widget?selected={}",
-            selected_ids.join(",")
-        )
-    }
-}
-
 pub async fn get_new_competition_phase_1(Path(space_id): Path<String>) -> impl IntoResponse {
-    let url = members_widget_url(&space_id, &[]);
     NewCompetitionTemplate {
         space_id,
-        members_widget_url: url,
         ..Default::default()
     }
     .into_response()
@@ -186,9 +191,10 @@ pub async fn get_new_competition_phase_1_edit(
         .flatten()
         .map(|s| s.to_string());
 
-    let url = members_widget_url(&space_id, &base.admin_ids);
+    let initial_admin_ids_json =
+        serde_json::to_string(&base.admin_ids).unwrap_or_else(|_| "[]".to_string());
     NewCompetitionTemplate {
-        members_widget_url: url,
+        initial_admin_ids_json,
         competition_id: Some(competition_id),
         season_id,
         name_value: base.name,
@@ -216,10 +222,11 @@ pub async fn post_new_competition(
     State(state): State<AppState>,
     Json(payload): Json<CreateCompetitionFormPayload>,
 ) -> impl IntoResponse {
-    let url = members_widget_url(&space_id, &[]);
+    let initial_admin_ids_json =
+        serde_json::to_string(&payload.admin_ids).unwrap_or_else(|_| "[]".to_string());
     let mut tmpl = NewCompetitionTemplate {
         space_id: space_id.clone(),
-        members_widget_url: url,
+        initial_admin_ids_json,
         name_value: payload.name.clone(),
         logo_url_value: payload.logo_url.clone(),
         ..Default::default()
@@ -308,12 +315,13 @@ pub async fn post_update_competition(
     State(state): State<AppState>,
     Json(payload): Json<CreateCompetitionFormPayload>,
 ) -> impl IntoResponse {
-    let url = members_widget_url(&space_id, &payload.admin_ids);
+    let initial_admin_ids_json =
+        serde_json::to_string(&payload.admin_ids).unwrap_or_else(|_| "[]".to_string());
     let mut tmpl = NewCompetitionTemplate {
         space_id: space_id.clone(),
         competition_id: Some(competition_id.clone()),
         season_id: payload.season_id.clone(),
-        members_widget_url: url,
+        initial_admin_ids_json,
         name_value: payload.name.clone(),
         logo_url_value: payload.logo_url.clone(),
         ..Default::default()

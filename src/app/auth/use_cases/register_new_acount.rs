@@ -151,6 +151,9 @@ mod tests {
         async fn find_by_id(&self, _: &str) -> Result<Option<User>, RepositoryError> {
             Ok(None)
         }
+        async fn find_by_legacy_id(&self, _: i32) -> Result<Option<User>, RepositoryError> {
+            Ok(None)
+        }
         async fn find_by_coach_name(&self, _: &str) -> Result<Option<User>, RepositoryError> {
             Ok(None)
         }

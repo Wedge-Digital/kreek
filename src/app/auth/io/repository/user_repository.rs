@@ -85,6 +85,15 @@ impl IUserRepository for UserRepository {
         Ok(row.map(User::try_from).transpose()?)
     }
 
+    async fn find_by_legacy_id(&self, legacy_id: i32) -> Result<Option<User>, RepositoryError> {
+        let row = sqlx::query_as::<_, UserRow>(include_str!("sql/find_user_by_legacy_id.sql"))
+            .bind(legacy_id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(db_err)?;
+        Ok(row.map(User::try_from).transpose()?)
+    }
+
     async fn find_by_coach_name(&self, coach_name: &str) -> Result<Option<User>, RepositoryError> {
         let row = sqlx::query_as::<_, UserRow>(include_str!("sql/find_user_by_coach_name.sql"))
             .bind(coach_name)

@@ -1,23 +1,19 @@
 use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
 use crate::state::AppState;
 use askama::Template;
-use axum::extract::{Path, Query, State};
+use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::coach_definition::CoachDefinition;
-use crate::app::shared_kernel::coach_name::CoachName;
 use crate::common::initials::initials;
 
-// ── Résultats de recherche ────────────────────────────────────────────────────
 #[derive(Deserialize)]
-pub struct SearchParams {
+pub struct CoachSearchWidgetParams {
     pub space_id: String,
     #[serde(default)]
-    pub q: String,
-    #[serde(default)]
-    pub excluded: String,
+    pub selected: String,
 }
 
 #[derive(Template)]
@@ -25,6 +21,8 @@ pub struct SearchParams {
 pub struct CoachSearchTemplate {
     pub routes: AppRoutes,
     pub space_id: String,
+    pub selected_coaches: Vec<CoachDefinition>,
+    pub excluded: String,
 }
 
 impl IntoResponse for CoachSearchTemplate {
@@ -37,10 +35,35 @@ impl IntoResponse for CoachSearchTemplate {
 }
 
 pub async fn search_coaches_controller(
-    Query(params): Query<SearchParams>,
+    State(state): State<AppState>,
+    Query(params): Query<CoachSearchWidgetParams>,
 ) -> impl IntoResponse {
+    if SpaceId::try_new(&params.space_id).is_err() {
+        return StatusCode::BAD_REQUEST.into_response();
+    }
+
+    let mut selected_coaches = Vec::new();
+    for id_str in params.selected.split(',').filter(|s| !s.is_empty()) {
+        if let Ok(coach_id) = CoachId::try_new(id_str) {
+            if let Ok(user) = state.spaces.user_cache_repository.find_user_by_id(&coach_id).await {
+                let name_str = user.name.to_string();
+                let initials_str = initials(&name_str);
+                selected_coaches.push(CoachDefinition {
+                    id: user.id,
+                    name: user.name,
+                    icon: user.icon,
+                    initials: initials_str,
+                });
+            }
+        }
+    }
+
+    let excluded = params.selected.clone();
+
     CoachSearchTemplate {
         routes: AppRoutes::default(),
         space_id: params.space_id,
+        selected_coaches,
+        excluded,
     }.into_response()
 }

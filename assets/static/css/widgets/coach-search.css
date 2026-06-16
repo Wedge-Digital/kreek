@@ -78,3 +78,52 @@
 
 .search-container { position: relative; }
 .search-row .form-input { flex: 1; margin: 0; }
+
+.coach-selected-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--p1);
+    margin-bottom: var(--p1);
+}
+
+.coach-selected-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--dark-6);
+    border: 1px solid var(--dark-5);
+    border-radius: 20px;
+    padding: 4px 8px 4px 4px;
+}
+
+.coach-selected-badge__initials {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--dark-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--white);
+    font-size: var(--text-tiny);
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.coach-selected-badge__name {
+    font-size: var(--text-small);
+    font-weight: 500;
+    color: var(--dark-1);
+}
+
+.coach-selected-badge__remove {
+    background: none;
+    border: none;
+    color: var(--dark-3);
+    cursor: pointer;
+    padding: 0 4px;
+    font-size: 16px;
+    line-height: 1;
+    border-radius: 50%;
+}
+.coach-selected-badge__remove:hover { color: var(--dark-1); background: var(--dark-5); }

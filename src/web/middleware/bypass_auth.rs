@@ -1,10 +1,12 @@
-use crate::app::auth::auth_backend::{bypass_user, AuthSession};
+use crate::app::auth::auth_backend::AuthSession;
 use crate::state::AppState;
 use axum::body::Body;
 use axum::extract::State;
 use axum::http::Request;
 use axum::middleware::Next;
 use axum::response::Response;
+
+const BYPASS_AUTH_LEGACY_USER_ID: i32 = 1;
 
 pub async fn bypass_auth_middleware(
     State(state): State<AppState>,
@@ -18,11 +20,26 @@ pub async fn bypass_auth_middleware(
 
     if state.bypass_auth && auth_session.user.is_none() {
         tracing::debug!(%path, "bypass_auth: login automatique");
-        if auth_session.login(&bypass_user()).await.is_ok() {
-            tracing::debug!(%path, "bypass_auth: login OK");
-            request.extensions_mut().insert(auth_session);
-        } else {
-            tracing::warn!(%path, "bypass_auth: login échoué");
+        match state
+            .auth
+            .user_repository
+            .find_by_legacy_id(BYPASS_AUTH_LEGACY_USER_ID)
+            .await
+        {
+            Ok(Some(user)) => {
+                if auth_session.login(&user).await.is_ok() {
+                    tracing::debug!(%path, "bypass_auth: login OK");
+                    request.extensions_mut().insert(auth_session);
+                } else {
+                    tracing::warn!(%path, "bypass_auth: login échoué");
+                }
+            }
+            Ok(None) => {
+                tracing::warn!(%path, "bypass_auth: utilisateur legacy_id=1 introuvable");
+            }
+            Err(e) => {
+                tracing::warn!(%path, error = %e, "bypass_auth: erreur lors de la recherche utilisateur");
+            }
         }
     }
 

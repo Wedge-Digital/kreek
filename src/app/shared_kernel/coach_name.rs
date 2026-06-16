@@ -3,7 +3,7 @@ use nutype::nutype;
 
 #[nutype(
     sanitize(trim),
-    validate(not_empty, len_char_max = 50, regex = r"^[\p{L}0-9. -]+$"),
+    validate(not_empty, len_char_max = 50, regex = r"^[\p{L}0-9._ -]+$"),
     derive(Eq, Hash, PartialEq, Debug, Clone, Serialize, Deserialize, Display)
 )]
 pub struct CoachName(String);
@@ -92,6 +92,11 @@ mod tests {
     #[test]
     fn hyphen_is_valid() {
         assert!(CoachName::try_new("Dark-Nagash").is_ok());
+    }
+
+    #[test]
+    fn underscore_is_valid() {
+        assert!(CoachName::try_new("Bagouze_2").is_ok());
     }
 
     #[test]
