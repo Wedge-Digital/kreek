@@ -1,21 +1,4 @@
 <link rel="stylesheet" href="/static/css/widgets/coach-search.css">
     <div class="coach-search-results">
-        {% if coaches.is_empty() %}
-        <div class="coach-search-empty">Aucun coach trouvé</div>
-        {% else %}
-            {% for coach in coaches %}
-            <div class="coach-result-row invited-row"
-                 tabindex="0"
-                 data-id="{{ coach.id }}"
-                 data-name="{{ coach.name }}"
-                 data-initials="{{ coach.initials }}"
-                 onclick="const r=this; htmx.trigger(document.body,'coachSelected',{id:r.dataset.id,name:r.dataset.name})">
-                <div class="invited-avatar">{{ coach.initials }}</div>
-                <div class="invited-info">
-                    <div class="invited-name">{{ coach.name }}</div>
-                </div>
-                <button type="button" class="btn-add-coach">+ Ajouter</button>
-            </div>
-            {% endfor %}
-        {% endif %}
+        {% include "widgets/_coach-result-rows.html" %}
     </div>

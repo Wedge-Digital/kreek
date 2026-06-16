@@ -159,6 +159,28 @@ mod tests {
                     team_repository: Arc::new(FakeTeamRepo),
                 }
             },
+            players: {
+                struct FakePlayerRepo;
+                #[async_trait::async_trait]
+                impl crate::app::players::ports::IPlayerRepository for FakePlayerRepo {
+                    async fn append(&self, _: &crate::app::players::domain::player::PlayerId, _: &crate::app::players::domain::player::TeamId, _: &crate::app::players::domain::events::PlayerDomainEvent, _: i32)
+                        -> Result<(), crate::app::players::ports::RepositoryError> { Ok(()) }
+                    async fn find_by_id(&self, _: &crate::app::players::domain::player::PlayerId)
+                        -> Result<Option<crate::app::players::domain::player::Player>, crate::app::players::ports::RepositoryError> { Ok(None) }
+                    async fn find_by_team_id(&self, _: &crate::app::players::domain::player::TeamId)
+                        -> Result<Vec<crate::app::players::domain::player::Player>, crate::app::players::ports::RepositoryError> { Ok(vec![]) }
+                }
+                struct FakePlayerProjectionRepo;
+                #[async_trait::async_trait]
+                impl crate::app::players::ports::IPlayerProjectionRepository for FakePlayerProjectionRepo {
+                    async fn find_by_team_id(&self, _: &crate::app::players::domain::player::TeamId)
+                        -> Result<Vec<crate::app::players::ports::PlayerProjection>, crate::app::players::ports::RepositoryError> { Ok(vec![]) }
+                }
+                crate::app::players::context::PlayersContext {
+                    repository:            Arc::new(FakePlayerRepo),
+                    projection_repository: Arc::new(FakePlayerProjectionRepo),
+                }
+            },
             email_service: Arc::new(ConsoleEmailService),
             host_domain:   "localhost:8080".into(),
             bypass_auth:   false,

@@ -37,32 +37,22 @@ impl IntoResponse for CoachSearchResultsTemplate {
     }
 }
 
-pub async fn coaches_search_results_controller(
-    State(state): State<AppState>,
-    Query(params): Query<SearchParams>,
-) -> impl IntoResponse {
-    let sid = match SpaceId::try_new(&params.space_id) {
-        Ok(id) => id,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
-    let excluded: std::collections::HashSet<String> = params
-        .excluded
-        .split(',')
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string())
-        .collect();
-
-    let query = params.q.trim().to_lowercase();
+pub(crate) async fn find_coaches(
+    state: &AppState,
+    space_id: &SpaceId,
+    query: &str,
+    excluded: &std::collections::HashSet<String>,
+) -> Vec<CoachDefinition> {
+    let query = query.trim().to_lowercase();
 
     let all_members = state
         .spaces
         .user_cache_repository
-        .list_members_for_space(&sid)
+        .list_members_for_space(space_id)
         .await
         .unwrap_or_default();
 
-    let coaches = all_members
+    all_members
         .into_iter()
         .filter_map(|u| {
             let id = u.id.to_string();
@@ -80,7 +70,26 @@ pub async fn coaches_search_results_controller(
                 icon: u.icon.clone()
             })
         })
+        .collect()
+}
+
+pub async fn coaches_search_results_controller(
+    State(state): State<AppState>,
+    Query(params): Query<SearchParams>,
+) -> impl IntoResponse {
+    let sid = match SpaceId::try_new(&params.space_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let excluded: std::collections::HashSet<String> = params
+        .excluded
+        .split(',')
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
         .collect();
+
+    let coaches = find_coaches(&state, &sid, &params.q, &excluded).await;
 
     CoachSearchResultsTemplate {
         routes: AppRoutes::default(),

@@ -19,12 +19,22 @@
            name="q"
            placeholder="Rechercher..."
            hx-get="{{ routes.spaces.coach_search_results() }}?space_id={{ space_id }}&excluded={{ excluded }}"
-           hx-trigger="load, keyup changed delay:300ms"
+           hx-trigger="keyup changed delay:300ms"
            hx-target="#coach-search-results"
+           hx-indicator="#coach-search-spinner"
            hx-params="q"
            hx-swap="innerHTML">
    </div>
-    <div id="coach-search-results"></div>
+    <div class="coach-search-results-wrapper">
+        <div id="coach-search-spinner" class="coach-search-spinner">
+            <span class="coach-search-spinner__circle"></span>
+        </div>
+        <div id="coach-search-results">
+            <div class="coach-search-results">
+                {% include "widgets/_coach-result-rows.html" %}
+            </div>
+        </div>
+    </div>
 </div>
 <script>
 (function () {

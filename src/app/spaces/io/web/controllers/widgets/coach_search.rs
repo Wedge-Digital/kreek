@@ -7,6 +7,7 @@ use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::coach_definition::CoachDefinition;
+use crate::app::spaces::io::web::controllers::widgets::coach_search_results::find_coaches;
 use crate::common::initials::initials;
 
 #[derive(Deserialize)]
@@ -22,6 +23,7 @@ pub struct CoachSearchTemplate {
     pub routes: AppRoutes,
     pub space_id: String,
     pub selected_coaches: Vec<CoachDefinition>,
+    pub coaches: Vec<CoachDefinition>,
     pub excluded: String,
 }
 
@@ -38,9 +40,10 @@ pub async fn search_coaches_controller(
     State(state): State<AppState>,
     Query(params): Query<CoachSearchWidgetParams>,
 ) -> impl IntoResponse {
-    if SpaceId::try_new(&params.space_id).is_err() {
-        return StatusCode::BAD_REQUEST.into_response();
-    }
+    let space_id = match SpaceId::try_new(&params.space_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
 
     let mut selected_coaches = Vec::new();
     for id_str in params.selected.split(',').filter(|s| !s.is_empty()) {
@@ -58,12 +61,21 @@ pub async fn search_coaches_controller(
         }
     }
 
+    let excluded_set: std::collections::HashSet<String> = params
+        .selected
+        .split(',')
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect();
+    let coaches = find_coaches(&state, &space_id, "", &excluded_set).await;
+
     let excluded = params.selected.clone();
 
     CoachSearchTemplate {
         routes: AppRoutes::default(),
         space_id: params.space_id,
         selected_coaches,
+        coaches,
         excluded,
     }.into_response()
 }
