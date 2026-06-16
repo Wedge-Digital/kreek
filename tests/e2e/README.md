@@ -55,3 +55,11 @@ Ou depuis la racine : `make e2e`.
   Couvre la navigation réelle entre phases (HX-Redirect natif d'htmx pour
   1→2, navigation SPA `htmx.ajax` + `pushState` pour 2→3) — pas seulement
   chaque phase isolément.
+- `test_phase4_invitations.py` : phase 4 ("Invitations") — mode d'accès (2
+  options), validation des inscriptions (Oui/Non), widget coach-search
+  réintégré pour l'invitation, visibilité conditionnelle de la section
+  d'invitation selon le mode d'accès, récap en phase 5. Traverse
+  obligatoirement le vrai parcours 1→2→3→4 : la régression corrigée (un
+  déséquilibre de balises `<div>` qui empêchait le `<script>` de la page de
+  s'exécuter) ne se manifestait que lors de la navigation SPA réelle depuis
+  la phase 3, pas via un accès direct à l'URL.

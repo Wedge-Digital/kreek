@@ -44,6 +44,7 @@ pub struct NewCompetitionPhase5Template {
     // Invitations section
     pub has_invitations: bool,
     pub access_mode_label: String,
+    pub validation_label: String,
     pub invited_label: String,
     pub spots_label: Option<String>,
     pub spots_warn: bool,
@@ -218,6 +219,7 @@ pub async fn get_new_competition_phase_5(
     let (
         has_invitations,
         access_mode_label,
+        validation_label,
         invited_label,
         spots_label,
         spots_warn,
@@ -227,9 +229,15 @@ pub async fn get_new_competition_phase_5(
         total_spots,
     ) = if let Some(inv) = &invitations {
         let mode_label = match inv.access_mode.as_str() {
-            "public_link" => "Lien public",
             "open" => "Inscription libre",
             _ => "Sur invitation (liste fermée)",
+        }
+        .to_string();
+
+        let validation_label = if inv.requires_validation {
+            "Oui (validation par les commissaires)"
+        } else {
+            "Non (acceptation automatique)"
         }
         .to_string();
 
@@ -253,11 +261,13 @@ pub async fn get_new_competition_phase_5(
         let deadline = inv.registration_deadline.clone();
 
         (
-            true, mode_label, inv_label, spots, spots_w, deadline, unfilled, remaining, total,
+            true, mode_label, validation_label, inv_label, spots, spots_w, deadline, unfilled,
+            remaining, total,
         )
     } else {
         (
             false,
+            String::new(),
             String::new(),
             String::new(),
             None,
@@ -294,6 +304,7 @@ pub async fn get_new_competition_phase_5(
         dates_label,
         has_invitations,
         access_mode_label,
+        validation_label,
         invited_label,
         spots_label,
         spots_warn,

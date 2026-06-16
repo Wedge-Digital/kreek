@@ -46,16 +46,27 @@
         <div class="section-title">1 — Mode d'accès à la compétition :</div>
         <div class="choice-group" id="access-mode-btns">
             <div class="choice-btn selected" data-val="invitation" onclick="setAccessMode('invitation')">Sur invitation (liste fermée)</div>
-            <div class="choice-btn" data-val="public_link" onclick="setAccessMode('public_link')">Lien public (quiconque avec le lien peut s'inscrire)</div>
-            <div class="choice-btn" data-val="open" onclick="setAccessMode('open')">Inscription libre (tout le monde)</div>
+            <div class="choice-btn" data-val="open" onclick="setAccessMode('open')">Inscription libre (tous les membres de l'espace peuvent s'inscrire)</div>
         </div>
+        <div class="info-note mt-1" id="access-mode-help"></div>
     </div>
 
     <div class="separator"></div>
 
-    <!-- Section 2: Inviter des coachs -->
+    <!-- Section 2: Validation des inscriptions -->
     <div class="section">
-        <div class="section-title">2 — Inviter des coachs :</div>
+        <div class="section-title">2 — Validation des inscriptions :</div>
+        <div class="choice-group" id="validation-mode-btns">
+            <div class="choice-btn selected" data-val="true" onclick="setRequiresValidation(true)">Oui — les commissaires valident les inscriptions</div>
+            <div class="choice-btn" data-val="false" onclick="setRequiresValidation(false)">Non — une demande d'inscription est automatiquement acceptée</div>
+        </div>
+    </div>
+
+    <div class="separator" id="invite-section-separator"></div>
+
+    <!-- Section 3: Inviter des coachs (uniquement en mode "sur invitation") -->
+    <div class="section" id="invite-section">
+        <div class="section-title">3 — Inviter des coachs :</div>
 
         <div class="count-bar">
             <div class="flex-1">
@@ -70,20 +81,14 @@
             </div>
         </div>
 
-
-        <div id="invited-list" class="invited-list mt-1">
-            <div class="empty-list">
-                <span class="empty-icon">👥</span>
-                Aucun coach invité pour l'instant
-            </div>
-        </div>
+        <div id="invite-coach-widget" class="mt-1"></div>
     </div>
 
     <div class="separator"></div>
 
-    <!-- Section 3: Limites d'inscription -->
+    <!-- Section 4: Limites d'inscription -->
     <div class="section">
-        <div class="section-title">3 — Limites d'inscription :</div>
+        <div class="section-title">4 — Limites d'inscription :</div>
         <div class="two-col-grid">
             <div class="form-group">
                 <label class="form-label" for="max-participants">Nombre maximum de participants</label>
@@ -105,11 +110,13 @@
         </div>
     </div>
 
+    <div id="invitations-error-banner" class="form-error-banner" hidden></div>
+
     <div class="separator"></div>
 
     <div class="form-actions">
         <button class="btn btn-outline btn-action"
-                hx-get="{{ competition_routes.new_competition_structure(space_id, competition_id, season_id) }}"
+                hx-get="{{ routes.competitions.new_competition_structure(space_id, competition_id, season_id) }}"
                 hx-target="#app-content"
                 hx-select="#app-content"
                 hx-swap="innerHTML"
@@ -123,15 +130,22 @@
     </div>
 
   </div>
-    </div>
 </div>
 
 <script>
 (function () {
     const INITIAL = {{ existing_invitations_json|safe }};
+    const SPACE_ID = "{{ space_id }}";
+    const COACH_SEARCH_WIDGET_URL = "{{ routes.spaces.coach_search_widget() }}";
+
+    const ACCESS_MODE_HELP = {
+        invitation: '📌 Seuls les coachs ayant été invités pourront s\'inscrire.',
+        open:       '📌 Tous les membres de l\'espace peuvent s\'inscrire librement.',
+    };
 
     let state = {
         accessMode:           'invitation',
+        requiresValidation:   true,
         invitedCoaches:       [],
         maxParticipants:      null,
         registrationDeadline: null,
@@ -147,75 +161,75 @@
         });
     }
 
-    function escHtml(s) {
-        return String(s)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
+    function makeInitials(name) {
+        return String(name).trim().split(/\s+/).slice(0, 2)
+            .map(function (w) { return w.charAt(0).toUpperCase(); })
+            .join('');
     }
 
-    // ── Rendu de la liste des invités ─────────────────────────────────────────
+    // ── Compteur d'inscriptions ─────────────────────────────────────────────
 
-    function renderInvited() {
-        const list  = document.getElementById('invited-list');
+    function renderInvitedCount() {
         const count = state.invitedCoaches.length;
         const max   = state.maxParticipants;
 
         document.getElementById('invited-count').textContent = max ? count + ' / ' + max : String(count);
         const pct = (max && max > 0) ? Math.min(100, Math.round(count / max * 100)) : 0;
         document.getElementById('progress-inner').style.width = pct + '%';
-
-        const excludedEl = document.getElementById('excluded-ids');
-        if (excludedEl) excludedEl.value = state.invitedCoaches.map(function (c) { return c.id; }).join(',');
-
-        if (count === 0) {
-            list.innerHTML = '<div class="empty-list"><span class="empty-icon">👥</span>Aucun coach invité pour l\'instant</div>';
-            return;
-        }
-
-        list.innerHTML = state.invitedCoaches.map(function (coach) {
-            return '<div class="invited-row">' +
-                '<div class="invited-avatar">' + escHtml(coach.initials) + '</div>' +
-                '<div class="invited-info">' +
-                    '<div class="invited-name">' + escHtml(coach.coach_name) + '</div>' +
-                '</div>' +
-                '<button type="button" class="invited-remove" onclick="removeCoach(\'' + escHtml(coach.id) + '\')" title="Retirer">✕</button>' +
-            '</div>';
-        }).join('');
     }
 
-    // ── Actions globales ──────────────────────────────────────────────────────
+    // ── Widget coach-search (BC space) — invitation de coachs ─────────────────
+    // Composition à l'exécution via sa route HTTP, comme en phase 1. Le widget
+    // gère lui-même l'affichage des coachs sélectionnés (badges + suppression) ;
+    // cette page se contente d'écouter ses événements DOM pour construire le
+    // payload d'invitation et mettre à jour le compteur.
 
-    window.addCoachFromResult = function (btn) {
-        const row = btn.closest('.coach-result-row');
-        if (!row) return;
-        addCoach({ id: row.dataset.id, coach_name: row.dataset.name, initials: row.dataset.initials });
-    };
-
-    function addCoach(data) {
-        if (state.invitedCoaches.some(function (c) { return c.id === data.id; })) return;
-        state.invitedCoaches.push(data);
-        renderInvited();
-        document.getElementById('coaches-search-results').innerHTML = '';
-        document.getElementById('coach-search').value = '';
+    function reloadCoachWidget() {
+        const selected = state.invitedCoaches.map(function (c) { return c.id; }).join(',');
+        htmx.ajax('GET', COACH_SEARCH_WIDGET_URL + '?space_id=' + SPACE_ID + '&selected=' + selected, {
+            target: '#invite-coach-widget',
+            swap: 'innerHTML',
+        });
     }
 
-    window.removeCoach = function (id) {
+    document.body.addEventListener('coachSelected', function (e) {
+        const id = e.detail.id;
+        if (state.invitedCoaches.some(function (c) { return c.id === id; })) return;
+        state.invitedCoaches.push({ id: id, coach_name: e.detail.name, initials: makeInitials(e.detail.name) });
+        renderInvitedCount();
+        reloadCoachWidget();
+    });
+
+    document.body.addEventListener('coachRemoved', function (e) {
+        const id = e.detail.id;
         state.invitedCoaches = state.invitedCoaches.filter(function (c) { return c.id !== id; });
-        renderInvited();
-    };
+        renderInvitedCount();
+        reloadCoachWidget();
+    });
 
     // ── Sections ─────────────────────────────────────────────────────────────
+
+    function updateInviteSectionVisibility() {
+        const visible = state.accessMode === 'invitation';
+        document.getElementById('invite-section').hidden = !visible;
+        document.getElementById('invite-section-separator').hidden = !visible;
+    }
 
     window.setAccessMode = function (mode) {
         state.accessMode = mode;
         activateBtn('access-mode-btns', mode);
+        document.getElementById('access-mode-help').textContent = ACCESS_MODE_HELP[mode] || '';
+        updateInviteSectionVisibility();
+    };
+
+    window.setRequiresValidation = function (val) {
+        state.requiresValidation = val;
+        activateBtn('validation-mode-btns', String(val));
     };
 
     window.onMaxParticipantsChange = function (val) {
         state.maxParticipants = val ? +val : null;
-        renderInvited();
+        renderInvitedCount();
     };
 
     // ── Soumission ────────────────────────────────────────────────────────────
@@ -226,6 +240,7 @@
 
         const payload = {
             access_mode:           state.accessMode,
+            requires_validation:   state.requiresValidation,
             invited_coaches:       state.invitedCoaches.map(function (c) {
                 return { id: c.id, coach_name: c.coach_name, initials: c.initials };
             }),
@@ -248,15 +263,10 @@
                 return;
             }
             return res.text().then(function (msg) {
-                let banner = document.getElementById('invitations-error-banner');
-                if (!banner) {
-                    banner = document.createElement('div');
-                    banner.id = 'invitations-error-banner';
-                    banner.style.cssText = 'background:var(--red-light,#fef2f2);border:1px solid var(--red-badge);' +
-                        'color:var(--red-badge);border-radius:8px;padding:12px 16px;margin-bottom:var(--p2);font-size:var(--text-small);';
-                    document.querySelector('.create-card').prepend(banner);
-                }
+                const banner = document.getElementById('invitations-error-banner');
                 banner.textContent = msg;
+                banner.hidden = false;
+                banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 if (btn) { btn.disabled = false; btn.textContent = 'Enregistrer & continuer →'; }
             });
         });
@@ -266,6 +276,9 @@
 
     function applyState() {
         activateBtn('access-mode-btns', state.accessMode);
+        activateBtn('validation-mode-btns', String(state.requiresValidation));
+        document.getElementById('access-mode-help').textContent = ACCESS_MODE_HELP[state.accessMode] || '';
+        updateInviteSectionVisibility();
 
         const maxEl = document.getElementById('max-participants');
         if (maxEl) maxEl.value = state.maxParticipants != null ? String(state.maxParticipants) : '';
@@ -276,11 +289,13 @@
         const notifyEl = document.getElementById('notify-email');
         if (notifyEl) notifyEl.checked = state.notifyByEmail;
 
-        renderInvited();
+        renderInvitedCount();
+        reloadCoachWidget();
     }
 
     if (INITIAL) {
         state.accessMode           = INITIAL.access_mode           || 'invitation';
+        state.requiresValidation   = INITIAL.requires_validation   != null ? INITIAL.requires_validation : true;
         state.invitedCoaches       = Array.isArray(INITIAL.invited_coaches) ? INITIAL.invited_coaches : [];
         state.maxParticipants      = INITIAL.max_participants       != null ? INITIAL.max_participants : null;
         state.registrationDeadline = INITIAL.registration_deadline  || null;
@@ -288,25 +303,6 @@
     }
 
     applyState();
-
-    // ── Initialisation de la widget après son chargement HTMX ────────────────
-
-    var searchWidget = document.getElementById('coach-search-widget');
-    if (searchWidget) {
-        searchWidget.addEventListener('htmx:afterSettle', function () {
-            var excludedEl = document.getElementById('excluded-ids');
-            if (excludedEl) excludedEl.value = state.invitedCoaches.map(function (c) { return c.id; }).join(',');
-
-            document.addEventListener('click', function (e) {
-                var panel = document.getElementById('coaches-search-results');
-                var input = document.getElementById('coach-search');
-                if (!panel || !input) return;
-                if (!panel.contains(e.target) && e.target !== input) {
-                    panel.innerHTML = '';
-                }
-            });
-        }, { once: true });
-    }
 })();
 </script>
 {% endblock %}
