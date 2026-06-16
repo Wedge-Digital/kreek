@@ -7,7 +7,7 @@ import pytest
 BASE_URL = os.environ.get("E2E_BASE_URL", "http://localhost:3210")
 # Space appartenant à l'utilisateur legacy_id=1 ("Bagouze_2"), celui que
 # bypass_auth connecte automatiquement en dev (BYPASS_AUTH=true).
-SPACE_ID = os.environ.get("E2E_SPACE_ID", "01KV8YMG89JGSZHZYRJW8PB6KX")
+SPACE_ID = os.environ.get("E2E_SPACE_ID", "01KV8Z2BJ36MVQMES84Q09J25Z")
 # La page phase 2 ("rules") n'exige pas que competition_id/season_id existent
 # réellement en base — le contrôleur retombe sur des valeurs par défaut. Un
 # ULID au bon format suffit donc à charger la page sans créer de compétition.

@@ -12,6 +12,11 @@ INPUT="${INPUT:-${SCRIPTS_DIR}/extracted_competitions.json}"
 
 cd "$SCRIPTS_DIR"
 
+if [ ! -f "$INPUT" ]; then
+    echo "SKIP : $INPUT introuvable (lancer extract_competitions.py contre la base legacy pour le générer)" >&2
+    exit 0
+fi
+
 uv run import_competitions.py \
     --host     "$DB_HOST" \
     --port     "$DB_PORT" \
