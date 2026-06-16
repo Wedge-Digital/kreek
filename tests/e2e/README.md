@@ -34,7 +34,10 @@ Ou depuis la racine : `make e2e`.
 | Variable | Défaut | Usage |
 |---|---|---|
 | `E2E_BASE_URL` | `http://localhost:3210` | URL du serveur dev |
-| `E2E_SPACE_ID` | `01KV65QPBK151AJTSAMB8BE6SS` | Space appartenant à l'utilisateur `legacy_id=1`, connecté automatiquement par `bypass_auth` |
+| `E2E_SPACE_ID` | résolu dynamiquement | Space ciblé par les tests. Par défaut, résolu au lancement de la suite via `GET /app/spaces` (premier espace de l'utilisateur `legacy_id=1`, connecté automatiquement par `bypass_auth`) — robuste à un `make init_db` qui régénère des ULIDs aléatoires. Surcharger uniquement pour cibler un espace précis. |
+| `E2E_COMPETITION_ID` / `E2E_SEASON_ID` | `E2E_SPACE_ID` | Utilisés seulement par `competition_rules_url` (la page accepte des IDs inexistants) |
+
+**Important** : `seed_space_members.py` (appelé par `make init_db WITH_SEED=1`) affecte 100 coachs **aléatoires** par espace — rien ne garantit que l'utilisateur `legacy_id=1` en fasse partie après un seed donné. Si la résolution dynamique échoue ("Aucun space_id trouvé"), relancer `./scripts/seed_space_members.sh` (idempotent, ré-tire aléatoirement) jusqu'à ce qu'il soit inclus.
 
 ## Portée actuelle
 
