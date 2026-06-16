@@ -10,10 +10,7 @@ use crate::app::competitions::use_cases::save_competition_rules::{
 use crate::app::competitions::use_cases::update_draft_competition::{
     execute as execute_update, UpdateDraftCompetitionCommand, UpdateDraftCompetitionError,
 };
-use crate::app::references::io::web::pickers::{
-    build_roster_items, build_star_player_items, InducementPickerItem,
-    RosterPickerItem, StarPlayerPickerItem,
-};
+use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::common_types::{
     CloudinaryImage, CoachId, CompetitionId, SeasonId, SpaceId,
 };
@@ -34,13 +31,11 @@ use serde::Deserialize;
 #[template(path = "new-competition-phase-2.html")]
 pub struct NewCompetitionPhase2Template {
     pub web_routes: WebRoutes,
-    pub competition_routes: Routes,
+    pub routes: AppRoutes,
     pub space_id: String,
     pub competition_id: String,
     pub season_id: String,
     pub season_name_value: String,
-    pub rosters: Vec<RosterPickerItem>,
-    pub star_players: Vec<StarPlayerPickerItem>,
     pub existing_rules_json: String,
 }
 
@@ -81,16 +76,13 @@ pub async fn get_new_competition_phase_2(
         .map(|b| b.name)
         .unwrap_or_else(|| "Saison 1".to_string());
 
-    let refs = state.references.repository.as_ref();
     NewCompetitionPhase2Template {
         web_routes: WebRoutes,
-        competition_routes: Routes,
+        routes: AppRoutes::default(),
         space_id,
         competition_id,
         season_id,
         season_name_value,
-        rosters: build_roster_items(refs),
-        star_players: build_star_player_items(refs),
         existing_rules_json,
     }
     .into_response()

@@ -43,3 +43,9 @@ Ou depuis la racine : `make e2e`.
   exclusion des résultats, suppression, transmission de `admin_ids` au
   serveur, absence d'erreurs console JS (vérifié automatiquement sur chaque
   test via une fixture autouse).
+- `test_phase2_pickers.py` : widgets roster/inducement/star-player picker sur
+  la phase 2 ("Règles") — chargement des 3 widgets par tier, sélection
+  "tout sélectionné" par défaut sur un tier neuf, **indépendance de l'état
+  entre tiers** (régression-clé : ces widgets utilisaient un store Alpine
+  global avant correction, ce qui faisait fuiter la sélection d'un tier vers
+  les autres), toggle d'un chip.

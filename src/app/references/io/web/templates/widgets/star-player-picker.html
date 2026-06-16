@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="/static/css/widgets/roster-picker.css">
+<div class="roster-grid"
+     hx-disinherit="*"
+     data-instance-id="{{ instance_id }}"
+     x-data="{
+        instanceId: '{{ instance_id }}',
+        selected: {{ selected_json }},
+        isSelected(uid) { return this.selected.includes(uid); },
+        toggle(uid) {
+          this.selected = this.selected.includes(uid)
+            ? this.selected.filter(id => id !== uid)
+            : [...this.selected, uid];
+          this.notify();
+        },
+        notify() {
+          htmx.trigger(document.body, 'starPlayerPickerChanged', { instanceId: this.instanceId, selected: this.selected });
+        }
+     }"
+     x-init="notify()"
+>
+  {% for item in star_players %}
+  <span class="roster-chip"
+        data-uid="{{ item.uid }}"
+        x-bind:class="isSelected('{{ item.uid }}') ? 'selected' : ''"
+        @click="toggle('{{ item.uid }}')">{{ item.name }}</span>
+  {% endfor %}
+</div>

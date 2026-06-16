@@ -1,15 +1,15 @@
+use crate::app::references::domain::port::IReferenceRepository;
+use crate::app::references::io::web::pickers::{build_star_player_items, StarPlayerPickerItem};
 use crate::app::routes::AppRoutes;
+use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
-use crate::app::references::domain::port::IReferenceRepository;
-use crate::app::shared_kernel::roster_definition::RosterDefinition;
-use crate::state::AppState;
 
 #[derive(Deserialize)]
-pub struct RosterPickerParams {
+pub struct StarPlayerPickerParams {
     #[serde(default)]
     pub instance_id: String,
     #[serde(default)]
@@ -18,14 +18,14 @@ pub struct RosterPickerParams {
     pub select_all: bool,
 }
 
-pub async fn roster_picker_controller(
+pub async fn star_player_picker_controller(
     State(state): State<AppState>,
-    Query(params): Query<RosterPickerParams>,
+    Query(params): Query<StarPlayerPickerParams>,
 ) -> impl IntoResponse {
-    let rosters = state.references.repository.list_roster_definitions();
+    let star_players = build_star_player_items(state.references.repository.as_ref());
 
     let selected: Vec<String> = if params.select_all {
-        rosters.iter().map(|r| r.id.to_string()).collect()
+        star_players.iter().map(|s| s.uid.clone()).collect()
     } else {
         params
             .selected
@@ -35,24 +35,25 @@ pub async fn roster_picker_controller(
             .collect()
     };
 
-    RosterPickerTemplate {
+    StarPlayerPickerTemplate {
         routes: AppRoutes::default(),
-        rosters,
+        star_players,
         instance_id: params.instance_id,
         selected_json: serde_json::to_string(&selected).unwrap_or_else(|_| "[]".to_string()),
-    }.into_response()
+    }
+    .into_response()
 }
 
 #[derive(Template)]
-#[template(path = "widgets/roster-picker.html")]
-pub struct RosterPickerTemplate {
+#[template(path = "widgets/star-player-picker.html")]
+pub struct StarPlayerPickerTemplate {
     pub routes: AppRoutes,
-    pub rosters: Vec<RosterDefinition>,
+    pub star_players: Vec<StarPlayerPickerItem>,
     pub instance_id: String,
     pub selected_json: String,
 }
 
-impl IntoResponse for RosterPickerTemplate {
+impl IntoResponse for StarPlayerPickerTemplate {
     fn into_response(self) -> Response {
         match self.render() {
             Ok(html) => Html(html).into_response(),

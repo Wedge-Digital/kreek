@@ -408,6 +408,16 @@ Phase 2 : migration vers `RedisStore` — le changement est localisé à `main.r
 - Fixtures SQL dans `tests/fixtures/*.sql`
 - Ne pas mocker sqlx — les tests doivent frapper une vraie base
 
+### Couverture obligatoire — règle fondamentale
+
+Toute fonctionnalité livrée doit être couverte par :
+1. **Un test unitaire** (`cargo test`) — logique domaine/use case, co-localisé avec le code.
+2. **Un test end-to-end** (`tests/e2e/`, pytest + Playwright) — comportement réel dans un navigateur contre le serveur dev lancé.
+
+Le test unitaire vérifie la logique ; le test E2E vérifie que le rendu HTML/HTMX/Alpine.js produit fonctionne réellement (le bug du widget coach-search et celui des pickers de tiers en phase 2 n'auraient été détectés par aucun test unitaire — uniquement par un test E2E piloté en navigateur).
+
+Voir `tests/e2e/README.md` pour l'exécution (`make e2e`, nécessite le serveur dev lancé).
+
 ---
 
 ## Pièges frontend connus — Alpine.js + HTMX
