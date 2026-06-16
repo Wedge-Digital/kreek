@@ -32,7 +32,7 @@ dev:
 	cargo watch -x run -w src -w assets/templates -w assets/static/css
 
 test:
-	DATABASE_URL=$(shell grep -E '^DATABASE_URL=' .env.test | cut -d= -f2-) cargo test
+	DATABASE_URL=$(shell grep -E '^DATABASE__URL=' .env.test | cut -d= -f2-) cargo test
 
 e2e:
 	cd tests/e2e && uv run pytest -v
@@ -100,7 +100,7 @@ coverage:
 	@echo ""
 	@echo "\033[1m\033[34m┌─ Axe 7 · Couverture de tests\033[0m"
 	@echo ""
-	DATABASE_URL=$(shell grep -E '^DATABASE_URL=' .env.test | cut -d= -f2-) \
+	DATABASE_URL=$(shell grep -E '^DATABASE__URL=' .env.test | cut -d= -f2-) \
 		cargo llvm-cov \
 		--ignore-filename-regex="(tests|io/web|io/repository|main\.rs)" \
 		--summary-only
