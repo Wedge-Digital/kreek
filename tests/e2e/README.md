@@ -49,3 +49,9 @@ Ou depuis la racine : `make e2e`.
   entre tiers** (régression-clé : ces widgets utilisaient un store Alpine
   global avant correction, ce qui faisait fuiter la sélection d'un tier vers
   les autres), toggle d'un chip.
+- `test_full_competition_creation_flow.py` : parcours complet phase 1 → 2 → 3
+  (informations + admin + logo → règles + tiers → structure), avec une
+  vraie compétition/saison persistée en base (nom unique par exécution).
+  Couvre la navigation réelle entre phases (HX-Redirect natif d'htmx pour
+  1→2, navigation SPA `htmx.ajax` + `pushState` pour 2→3) — pas seulement
+  chaque phase isolément.
