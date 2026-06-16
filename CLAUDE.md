@@ -109,9 +109,14 @@ Le middleware CSRF rejette les POST/PUT/DELETE/PATCH sans header `HX-Request: tr
 - Agrégats : n'exposent pas de référence mutable vers leur état interne
 - `DomainError` : enum exhaustif avec `thiserror`
 
-### Interdiction des types primitifs nus — règle obligatoire
+### Interdiction des types primitifs nus — règle obligatoire (principe CQRS)
 
-Les types primitifs (`String`, `u32`, `u8`, `i32`, `bool`) sont **interdits** dans :
+Règle issue des principes CQRS appliqués à ce projet : **tout ce qui entre dans le système doit être validé**, et **tout ce qui constitue le domaine suit la même exigence**. Seul ce qui **sort** (lecture/query) peut être un view model composé de types primitifs.
+
+- Côté écriture (command) : commandes applicatives, agrégats, entités, événements domaine → **aucun type primitif nu**, toujours un value object (nutype) avec ses règles de validité.
+- Côté lecture (query) : view models, DTOs de repository port retournés par des méthodes `find_*`/`list_*`/`search_*` → les primitives sont acceptées, car ces types ne portent aucune invariant à protéger, seulement des données à afficher.
+
+Les types primitifs (`String`, `u32`, `u8`, `i32`, `bool`) sont donc **interdits** dans :
 - les agrégats et entités domaine
 - les commandes applicatives
 - les événements domaine
@@ -142,6 +147,7 @@ pub struct Kpo(pub u32);
 
 **Exceptions autorisées :**
 - View models (structs Askama / couche présentation) — les primitives y sont acceptées
+- DTOs de lecture (query) renvoyés par les repository ports — convention de ce projet : ces types vivent dans des fichiers `*_port.rs` / `*_repository_port.rs`
 - Requêtes SQL (`sqlx::query!`) — les types sqlx ont leurs propres contraintes
 - `reason: Option<String>` et autres champs de texte libre sans validation domaine
 
