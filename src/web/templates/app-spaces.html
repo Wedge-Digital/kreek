@@ -14,7 +14,7 @@
 {% endfor %}
 <div class="league-btn league-btn--icon"
      hx-trigger="click"
-     hx-get="/app/space/create"
+     hx-get="{{ routes.register_space() }}"
      hx-target="#app-content"
      hx-select="#app-content"
      hx-swap="innerHTML"
@@ -22,7 +22,7 @@
      title="Ajouter une ligue">+</div>
 <div class="find-space-btn league-btn--icon"
      hx-trigger="click"
-     hx-get="/app/space/all"
+     hx-get="{{ routes.space_all() }}"
      hx-target="#app-content"
      hx-select="#app-content"
      hx-swap="innerHTML"

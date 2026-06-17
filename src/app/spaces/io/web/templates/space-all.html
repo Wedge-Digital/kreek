@@ -47,7 +47,7 @@
 </form>
 
 <p>Si vous souhaitez créer une compétition, une ligue....</p>
-<a class="btn btn-primary" href="/app/space/create"
+<a class="btn btn-primary" href="{{ space_routes.register_space() }}"
    hx-get="{{ space_routes.register_space() }}"
    hx-target="#app-content"
    hx-select="#app-content"

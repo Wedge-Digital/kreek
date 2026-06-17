@@ -31,6 +31,9 @@ impl Routes {
     pub fn login(&self) -> &'static str {
         path::LOGIN
     }
+    pub fn logout(&self) -> &'static str {
+        path::LOGOUT
+    }
     pub fn login_success(&self) -> &'static str {
         path::LOGIN_SUCCESS
     }

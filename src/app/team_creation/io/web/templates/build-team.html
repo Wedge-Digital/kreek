@@ -228,10 +228,10 @@ function specialRuleSelector(onSelectUrl) {
 }
 
 (function () {
-  var SET_LEAGUE_URL       = '/app/{{ space_id }}/team/{{ team_id }}/league';
-  var SET_SPECIAL_RULE_URL = '/app/{{ space_id }}/team/{{ team_id }}/special-rule';
-  var LEAGUE_SELECTOR_BASE       = '/references/leagues/selector';
-  var SPECIAL_RULE_SELECTOR_BASE = '/references/special-rules/selector';
+  var SET_LEAGUE_URL       = '{{ team_routes.set_league(space_id, team_id) }}';
+  var SET_SPECIAL_RULE_URL = '{{ team_routes.set_special_rule(space_id, team_id) }}';
+  var LEAGUE_SELECTOR_BASE       = '{{ ref_routes.league_selector_base() }}';
+  var SPECIAL_RULE_SELECTOR_BASE = '{{ ref_routes.special_rule_selector_base() }}';
   var currentRosterUid = '';
 
   function loadZone(zone, url) {
@@ -301,7 +301,7 @@ function specialRuleSelector(onSelectUrl) {
           currentRosterUid = '';
           return;
         }
-        htmx.ajax('GET', '/app/{{ space_id }}/team/{{ team_id }}/roster/' + value + '/players', {
+        htmx.ajax('GET', '{{ team_routes.roster_players(space_id, team_id, "__ROSTER_UID__")|safe }}'.replace('__ROSTER_UID__', value), {
           target: '#player-table-container', swap: 'innerHTML'
         });
         reloadLeagueSelector(value, '');

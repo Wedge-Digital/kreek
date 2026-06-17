@@ -3,6 +3,7 @@ use crate::app::shared_kernel::common_types::{CoachId, Entity, UserId};
 use crate::app::shared_kernel::id_service::EntityIdService;
 use crate::app::shared_kernel::team::TeamName;
 use crate::app::team_creation::domain::creation_rules::CreationRules;
+use crate::app::team_creation::routes::Routes as TeamRoutes;
 use crate::app::team_creation::use_cases::create_draft_team::create_draft_team;
 use crate::state::AppState;
 use axum::body::Body;
@@ -92,11 +93,9 @@ pub async fn post_draft_team(
         return error_response("Erreur lors de la sauvegarde. Réessayez.");
     }
 
+    let routes = TeamRoutes;
     Response::builder()
-        .header(
-            "HX-Redirect",
-            format!("/app/{}/team/{}/build", space_id_raw, team.get_id()),
-        )
+        .header("HX-Redirect", routes.team_build(&space_id_raw, &team.get_id().to_string()))
         .body(Body::empty())
         .unwrap()
         .into_response()

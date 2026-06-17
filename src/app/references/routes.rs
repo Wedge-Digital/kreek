@@ -41,6 +41,14 @@ impl Routes {
         )
     }
 
+    pub fn league_selector_base(&self) -> &'static str {
+        path::LEAGUE_SELECTOR
+    }
+
+    pub fn special_rule_selector_base(&self) -> &'static str {
+        path::SPECIAL_RULE_SELECTOR
+    }
+
     pub fn skill_picker_base(&self) -> &'static str {
         path::SKILL_PICKER
     }

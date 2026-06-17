@@ -353,6 +353,7 @@ fn staff_error(msg: &str) -> Response {
 pub struct BuildTeamTemplate {
     pub web_routes: WebRoutes,
     pub team_routes: TeamCreationRoutes,
+    pub ref_routes: RefRoutes,
     pub space_id: String,
     pub team_id: String,
     pub rosters: Vec<RosterPickerItemWithTier>,
@@ -498,6 +499,7 @@ pub async fn build_team(
     BuildTeamTemplate {
         web_routes: Default::default(),
         team_routes: Default::default(),
+        ref_routes: Default::default(),
         space_id,
         team_id,
         rosters,

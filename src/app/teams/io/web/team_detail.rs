@@ -1,3 +1,4 @@
+use crate::app::players::routes::Routes as PlayerRoutes;
 use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
 use crate::app::teams::domain::team::{GamePhase, ParticipationStatus, Team};
@@ -121,7 +122,7 @@ impl TeamDetailVm {
             season_name: team.season_name.clone(),
             status_label,
             status_css_class,
-            players_widget_url: format!("/app/{space_id}/players/by-team/{}/widget", &team.id),
+            players_widget_url: PlayerRoutes.players_by_team_widget(space_id, &team.id),
             staff: StaffVm::from(team, reroll_price_kpo),
         }
     }

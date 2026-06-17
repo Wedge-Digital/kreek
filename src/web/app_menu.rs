@@ -1,4 +1,5 @@
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::auth::routes::Routes as AuthRoutes;
 use crate::app::competitions::routes::Routes as CompetitionRoutes;
 use crate::app::team_creation::routes::Routes as TeamRoutes;
 use crate::state::AppState;
@@ -19,6 +20,7 @@ pub enum ActiveSection {
 #[template(path = "app-menu.html")]
 pub struct AppMenu {
     pub routes: Routes,
+    pub auth_routes: AuthRoutes,
     pub competition_routes: CompetitionRoutes,
     pub team_routes: TeamRoutes,
     pub space_name: Option<String>,
