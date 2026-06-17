@@ -1,4 +1,4 @@
-<div id="special-rule-selector-container">
+<div id="special-rule-selector-container" hx-disinherit="*">
   <div class="league-selector-label">Règle spéciale</div>
   {% if rules.is_empty() %}
     <div class="selector-none">Pas de règle spéciale</div>
@@ -9,13 +9,16 @@
       {% endfor %}
     </select>
   {% else %}
-    <div x-data="specialRuleSelector('{{ on_select }}')">
-      <select class="league-select" @change="onSelect($event.target.value)">
-        <option value="">Choisissez une règle…</option>
-        {% for rule in rules %}
-        <option value="{{ rule.uid }}"{% if rule.is_selected %} selected{% endif %}>{{ rule.label }}</option>
-        {% endfor %}
-      </select>
-    </div>
+    <select class="league-select"
+            hx-post="{{ on_select }}"
+            hx-ext="json-enc"
+            hx-vals='js:{"special_rule_id": event.target.value}'
+            hx-trigger="change"
+            hx-swap="none">
+      <option value="">Choisissez une règle…</option>
+      {% for rule in rules %}
+      <option value="{{ rule.uid }}"{% if rule.is_selected %} selected{% endif %}>{{ rule.label }}</option>
+      {% endfor %}
+    </select>
   {% endif %}
 </div>

@@ -1,4 +1,4 @@
-<div id="league-selector-container">
+<div id="league-selector-container" hx-disinherit="*">
   <div class="league-selector-label">Ligue de référence</div>
   {% if leagues.is_empty() %}
     <div class="selector-none">Pas de ligue disponible</div>
@@ -9,13 +9,16 @@
       {% endfor %}
     </select>
   {% else %}
-    <div x-data="leagueSelector('{{ on_select }}')">
-      <select class="league-select" @change="onSelect($event.target.value)">
-        <option value="">Choisissez une ligue…</option>
-        {% for league in leagues %}
-        <option value="{{ league.uid }}"{% if league.is_selected %} selected{% endif %}>{{ league.label }}</option>
-        {% endfor %}
-      </select>
-    </div>
+    <select class="league-select"
+            hx-post="{{ on_select }}"
+            hx-ext="json-enc"
+            hx-vals='js:{"league_id": event.target.value}'
+            hx-trigger="change"
+            hx-swap="none">
+      <option value="">Choisissez une ligue…</option>
+      {% for league in leagues %}
+      <option value="{{ league.uid }}"{% if league.is_selected %} selected{% endif %}>{{ league.label }}</option>
+      {% endfor %}
+    </select>
   {% endif %}
 </div>

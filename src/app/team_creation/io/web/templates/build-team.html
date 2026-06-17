@@ -36,11 +36,31 @@
         </div>
 
         <div class="roster-league-col">
-          <div id="league-selector-zone"></div>
+          <div id="league-selector-zone"
+               hx-get="{{ ref_routes.league_selector_base() }}"
+               hx-trigger="rosterSelected from:body, leagueSelected from:body"
+               hx-vals='js:{
+                 "roster_id": (event.detail?.uid || document.body.dataset.rosterUid || ""),
+                 "selected": (event.detail?.league_id || ""),
+                 "on_select": "{{ team_routes.set_league(space_id, team_id) }}"
+               }'
+               hx-target="this"
+               hx-swap="innerHTML">
+          </div>
         </div>
 
         <div class="roster-league-col">
-          <div id="special-rule-selector-zone"></div>
+          <div id="special-rule-selector-zone"
+               hx-get="{{ ref_routes.special_rule_selector_base() }}"
+               hx-trigger="rosterSelected from:body, specialRuleSelected from:body"
+               hx-vals='js:{
+                 "roster_id": (event.detail?.uid || document.body.dataset.rosterUid || ""),
+                 "selected": (event.detail?.special_rule_id || ""),
+                 "on_select": "{{ team_routes.set_special_rule(space_id, team_id) }}"
+               }'
+               hx-target="this"
+               hx-swap="innerHTML">
+          </div>
         </div>
 
       </div>
@@ -121,107 +141,8 @@
 </div><!-- /home-grid -->
 
 <script>
-// Fonction Alpine.js générique pour les sélecteurs de référence
-function leagueSelector(onSelectUrl) {
-  return {
-    onSelect(value) {
-      if (!value) return;
-      fetch(onSelectUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'HX-Request': 'true' },
-        body: JSON.stringify({ league_id: value }),
-      }).then(res => {
-        const raw = res.headers.get('HX-Trigger');
-        if (!raw) return;
-        try {
-          const obj = JSON.parse(raw);
-          Object.keys(obj).forEach(k =>
-            document.dispatchEvent(new CustomEvent(k, { detail: obj[k], bubbles: true }))
-          );
-        } catch(e) {}
-      });
-    }
-  };
-}
-
-function specialRuleSelector(onSelectUrl) {
-  return {
-    onSelect(value) {
-      if (!value) return;
-      fetch(onSelectUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'HX-Request': 'true' },
-        body: JSON.stringify({ special_rule_id: value }),
-      }).then(res => {
-        const raw = res.headers.get('HX-Trigger');
-        if (!raw) return;
-        try {
-          const obj = JSON.parse(raw);
-          Object.keys(obj).forEach(k =>
-            document.dispatchEvent(new CustomEvent(k, { detail: obj[k], bubbles: true }))
-          );
-        } catch(e) {}
-      });
-    }
-  };
-}
-
-(function () {
-  var SET_LEAGUE_URL       = '{{ team_routes.set_league(space_id, team_id) }}';
-  var SET_SPECIAL_RULE_URL = '{{ team_routes.set_special_rule(space_id, team_id) }}';
-  var LEAGUE_SELECTOR_BASE       = '{{ ref_routes.league_selector_base() }}';
-  var SPECIAL_RULE_SELECTOR_BASE = '{{ ref_routes.special_rule_selector_base() }}';
-  var currentRosterUid = '';
-
-  function loadZone(zone, url) {
-    zone.innerHTML = '';
-    fetch(url, { headers: { 'HX-Request': 'true' } })
-      .then(function(r) { return r.text(); })
-      .then(function(html) {
-        zone.innerHTML = html;
-        if (window.Alpine) Alpine.initTree(zone);
-      });
-  }
-
-  function reloadLeagueSelector(rosterUid, selected) {
-    currentRosterUid = rosterUid;
-    loadZone(
-      document.getElementById('league-selector-zone'),
-      LEAGUE_SELECTOR_BASE
-        + '?roster_id=' + encodeURIComponent(rosterUid)
-        + '&selected='  + encodeURIComponent(selected || '')
-        + '&on_select=' + encodeURIComponent(SET_LEAGUE_URL)
-    );
-  }
-
-  function reloadSpecialRuleSelector(rosterUid, selected) {
-    loadZone(
-      document.getElementById('special-rule-selector-zone'),
-      SPECIAL_RULE_SELECTOR_BASE
-        + '?roster_id=' + encodeURIComponent(rosterUid)
-        + '&selected='  + encodeURIComponent(selected || '')
-        + '&on_select=' + encodeURIComponent(SET_SPECIAL_RULE_URL)
-    );
-  }
-
-  document.addEventListener('leagueSelected', function(e) {
-    if (currentRosterUid) reloadLeagueSelector(currentRosterUid, e.detail.league_id);
-  });
-  document.addEventListener('specialRuleSelected', function(e) {
-    if (currentRosterUid) reloadSpecialRuleSelector(currentRosterUid, e.detail.special_rule_id);
-  });
-
-  document.addEventListener('rosterSelected', function(e) {
-    var value = e.detail.uid;
-    if (!value) {
-      document.getElementById('league-selector-zone').innerHTML = '';
-      document.getElementById('special-rule-selector-zone').innerHTML = '';
-      currentRosterUid = '';
-      return;
-    }
-    reloadLeagueSelector(value, '');
-    reloadSpecialRuleSelector(value, '');
-  });
-})();
+document.addEventListener('rosterSelected', function(e) {
+    document.body.dataset.rosterUid = e.detail.uid || '';
+});
 </script>
 {% endblock %}
