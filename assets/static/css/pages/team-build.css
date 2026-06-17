@@ -28,7 +28,7 @@
 .roster-league-row {
   display: flex;
   gap: var(--p2);
-  align-items: flex-start;
+  align-items: stretch;
 }
 .roster-league-col {
   display: flex;
@@ -37,23 +37,6 @@
   min-width: 0;
 }
 
-/* ── Roster TomSelect ────────────────────────────────────────────────── */
-#roster-select-wrap { width: 100%; }
-#roster-select-wrap .ts-wrapper { width: 100%; }
-#roster-select-wrap .ts-control {
-  padding: 14px 16px; border: 1px solid var(--dark-4); border-radius: 6px;
-  font-size: var(--text-small); color: var(--dark-1); background: var(--white);
-  outline: none; box-shadow: none; cursor: pointer;
-}
-#roster-select-wrap .ts-wrapper.focus .ts-control { border-color: var(--main-blue); box-shadow: 0 0 0 3px rgba(0,48,73,0.08); }
-#roster-select-wrap .ts-control input { font-size: var(--text-small); color: var(--dark-1); padding: 0; }
-#roster-select-wrap .ts-control .item { display: flex; align-items: center; gap: 8px; }
-#roster-select-wrap .ts-dropdown { border: 1px solid var(--dark-4); border-top: none; border-radius: 0 0 6px 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); font-size: var(--text-small); }
-#roster-select-wrap .ts-dropdown .option { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; color: var(--dark-1); }
-#roster-select-wrap .ts-dropdown .option.active,
-#roster-select-wrap .ts-dropdown .option:hover { background: rgba(0,48,73,0.05); }
-#roster-select-wrap .ts-control .placeholder { color: var(--dark-4); }
-
 .create-team-body {
   width: 100%;
   padding: var(--p2);
@@ -61,12 +44,6 @@
   flex-direction: column;
   gap: var(--p1);
 }
-
-/* ── Tier badges ─────────────────────────────────────────────────────── */
-.roster-tier-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
-.tier-1 { background: rgba(0,48,73,0.10); color: var(--main-blue); }
-.tier-2 { background: rgba(255,107,53,0.12); color: var(--orange); }
-.tier-3 { background: rgba(143,144,166,0.15); color: var(--dark-3); }
 
 /* ── Sidebar rules panel ─────────────────────────────────────────────── */
 .rules-panel { background: var(--white); border-radius: 10px; padding: var(--p2); display: flex; flex-direction: column; gap: var(--p1); }
