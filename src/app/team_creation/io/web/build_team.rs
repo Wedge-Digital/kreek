@@ -2,27 +2,17 @@ use crate::app::auth::auth_backend::AuthSession;
 use crate::app::references::routes::Routes as RefRoutes;
 use crate::app::shared_kernel::common_types::EntityId;
 use crate::app::shared_kernel::staff::StaffId;
-use crate::app::team_creation::domain::roster::{LeagueId, PlayerId, SpecialRuleId};
-use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
-use crate::app::team_creation::io::web::builders::{
-    build_hired_rows, build_player_positions,
-};
 use crate::app::team_creation::io::web::view_models::{
-    HiredPlayerRowVm, PlayerPositionVm, RerollVm, RulesPanelVm,
-    RulesTierVm, StaffRowVm,
+    RerollVm, RulesPanelVm, RulesTierVm, StaffRowVm,
 };
 use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
 use crate::app::team_creation::use_cases::buy_reroll as buy_reroll_uc;
 use crate::app::team_creation::use_cases::buy_staff as buy_staff_uc;
 use crate::app::team_creation::use_cases::commands::{
-    BuyRerollCommand, BuyStaffCommand, FirePlayerCommand, HirePlayerCommand, RemoveRerollCommand,
-    RemoveStaffCommand, SubmitTeamCommand,
+    BuyRerollCommand, BuyStaffCommand, RemoveRerollCommand, RemoveStaffCommand, SubmitTeamCommand,
 };
-use crate::app::team_creation::use_cases::fire_player as fire_uc;
-use crate::app::team_creation::use_cases::hire_player as hire_uc;
 use crate::app::team_creation::use_cases::remove_reroll as remove_reroll_uc;
 use crate::app::team_creation::use_cases::remove_staff as remove_staff_uc;
-use crate::app::team_creation::use_cases::roster_service;
 use crate::app::team_creation::use_cases::submit_team as submit_uc;
 use crate::state::AppState;
 use crate::web::routes::Routes as WebRoutes;
@@ -34,15 +24,6 @@ use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
 
 // ── Helpers de réponse d'erreur HTMX ─────────────────────────────────────────
-
-fn player_error(msg: &str) -> Response {
-    Response::builder()
-        .header("HX-Retarget", "#player-table-error")
-        .header("HX-Reswap", "innerHTML")
-        .header("content-type", "text/html; charset=utf-8")
-        .body(Body::from(format!(r#"<p class="table-error">{msg}</p>"#)))
-        .unwrap()
-}
 
 fn staff_error(msg: &str) -> Response {
     Response::builder()
@@ -63,7 +44,6 @@ pub struct BuildTeamTemplate {
     pub ref_routes: RefRoutes,
     pub space_id: String,
     pub team_id: String,
-    pub hired_rows: Vec<HiredPlayerRowVm>,
     pub staff_rows: Vec<StaffRowVm>,
     pub reroll: Option<RerollVm>,
     pub rules_panel: RulesPanelVm,
@@ -114,20 +94,12 @@ pub async fn build_team(
         }
     };
 
-    let ref_data = state.team_creation.reference_data.as_ref();
-
-    let (hired_rows, staff_rows, reroll) = match &roster_team {
-        None => (vec![], vec![], None),
+    let (staff_rows, reroll) = match &roster_team {
+        None => (vec![], None),
         Some(team) => {
-            let roster_uid = team.roster.id.0.clone();
-            let roster_def = ref_data.find_roster_definition(&roster_uid);
-            let rows = match &roster_def {
-                Some(rd) => build_hired_rows(team, rd),
-                None => vec![],
-            };
             let staff = StaffRowVm::all_from_domain(team);
             let rv = RerollVm::from_domain(team);
-            (rows, staff, Some(rv))
+            (staff, Some(rv))
         }
     };
 
@@ -180,292 +152,9 @@ pub async fn build_team(
         ref_routes: Default::default(),
         space_id,
         team_id,
-        hired_rows,
         staff_rows,
         reroll,
         rules_panel,
-    }
-    .into_response()
-}
-
-// ── Fragment joueurs (sélection roster) ───────────────────────────────────────
-
-#[derive(Template)]
-#[template(path = "roster-players-fragment.html")]
-pub struct RosterPlayersFragment {
-    pub positions: Vec<PlayerPositionVm>,
-    pub team_routes: TeamCreationRoutes,
-    pub space_id: String,
-    pub team_id: String,
-    pub staff_rows: Vec<StaffRowVm>,
-    pub reroll: Option<RerollVm>,
-}
-
-impl IntoResponse for RosterPlayersFragment {
-    fn into_response(self) -> Response {
-        match self.render() {
-            Ok(html) => Response::builder()
-                .header("content-type", "text/html; charset=utf-8")
-                .header("HX-Trigger", "teamMutated")
-                .body(Body::from(html))
-                .unwrap(),
-            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-        }
-    }
-}
-
-pub async fn get_roster_players(
-    Path((space_id, team_id, roster_uid)): Path<(String, String, String)>,
-    State(state): State<AppState>,
-) -> impl IntoResponse {
-    let ref_data = state.team_creation.reference_data.as_ref();
-
-    let roster = match roster_service::load_roster(&roster_uid, ref_data) {
-        Some(r) => r,
-        None => return StatusCode::NOT_FOUND.into_response(),
-    };
-
-    let meta = roster_service::roster_metadata(&roster_uid, ref_data).unwrap();
-
-    let roster_def = match ref_data.find_roster_definition(&roster_uid) {
-        Some(d) => d,
-        None => return StatusCode::NOT_FOUND.into_response(),
-    };
-
-    let team_id_val = match EntityId::try_new(&team_id) {
-        Ok(id) => id,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
-    let draft = match state
-        .team_creation
-        .team_repository
-        .find_by_id(&team_id_val)
-        .await
-    {
-        Ok(Some(t)) => t,
-        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
-        Err(e) => {
-            tracing::error!("get_roster_players draft find: {e}");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-    };
-
-    let starting_spp = draft.creation_rules().get_starting_xp_for_roster(&roster_uid);
-
-    let mut roster_team: RosterSelectedTeam = match state
-        .team_creation
-        .roster_repository
-        .find_by_id(&team_id_val)
-        .await
-    {
-        Ok(Some(existing)) => match existing.choose_roster(roster) {
-            Ok(t) => t,
-            Err(e) => {
-                tracing::warn!("choose_roster rejected: {:?}", e);
-                return StatusCode::UNPROCESSABLE_ENTITY.into_response();
-            }
-        },
-        Ok(None) => {
-            let ruleset = draft.derive_ruleset();
-            let ruleset_team = draft.select_ruleset(ruleset);
-            match ruleset_team.choose_roster(roster) {
-                Ok(t) => t,
-                Err(e) => {
-                    tracing::warn!("choose_roster initial rejected: {:?}", e);
-                    return StatusCode::UNPROCESSABLE_ENTITY.into_response();
-                }
-            }
-        }
-        Err(e) => {
-            tracing::error!("get_roster_players roster_repo find: {e}");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-    };
-
-    roster_team.spp_pool = starting_spp;
-
-    if meta.leagues.len() == 1 {
-        roster_team.set_league(LeagueId(meta.leagues[0].clone()));
-    }
-
-    if meta.special_rules.len() == 1 {
-        roster_team.set_special_rule(SpecialRuleId(meta.special_rules[0].clone()));
-    }
-
-    if let Err(e) = state
-        .team_creation
-        .roster_repository
-        .save(&roster_team, &space_id)
-        .await
-    {
-        tracing::error!("get_roster_players roster_repo save: {e}");
-        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-    }
-
-    let positions = build_player_positions(&roster_def);
-    let staff_rows = StaffRowVm::all_from_domain(&roster_team);
-    let reroll = Some(RerollVm::from_domain(&roster_team));
-
-    RosterPlayersFragment {
-        positions,
-        team_routes: Default::default(),
-        space_id,
-        team_id,
-        staff_rows,
-        reroll,
-    }
-    .into_response()
-}
-
-// ── Fragment ligne joueur ─────────────────────────────────────────────────────
-
-#[derive(Template)]
-#[template(path = "player-row-fragment.html")]
-pub struct PlayerRowFragment {
-    pub row: HiredPlayerRowVm,
-    pub team_routes: TeamCreationRoutes,
-    pub space_id: String,
-    pub team_id: String,
-}
-
-impl IntoResponse for PlayerRowFragment {
-    fn into_response(self) -> Response {
-        match self.render() {
-            Ok(html) => Response::builder()
-                .header("content-type", "text/html; charset=utf-8")
-                .header("HX-Trigger", "teamMutated")
-                .body(Body::from(html))
-                .unwrap(),
-            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-        }
-    }
-}
-
-// ── Handler hire_player ───────────────────────────────────────────────────────
-
-#[derive(Deserialize)]
-pub struct HirePlayerBody {
-    pub player_id: String,
-}
-
-pub async fn hire_player(
-    Path((space_id, team_id)): Path<(String, String)>,
-    State(state): State<AppState>,
-    axum::Json(body): axum::Json<HirePlayerBody>,
-) -> impl IntoResponse {
-    let team_id_val = match EntityId::try_new(&team_id) {
-        Ok(id) => id,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
-    let cmd = HirePlayerCommand {
-        team_id: team_id_val,
-        space_id: space_id.clone(),
-        player_id: PlayerId(body.player_id.clone()),
-    };
-
-    let updated_team =
-        match hire_uc::execute(cmd, state.team_creation.roster_repository.as_ref()).await {
-            Ok(t) => t,
-            Err(hire_uc::HirePlayerError::TeamNotFound) => {
-                return StatusCode::NOT_FOUND.into_response()
-            }
-            Err(hire_uc::HirePlayerError::PlayerNotFound) => {
-                return StatusCode::UNPROCESSABLE_ENTITY.into_response()
-            }
-            Err(hire_uc::HirePlayerError::Domain(e)) => {
-                return player_error(hire_uc::domain_error_message(&e))
-            }
-            Err(hire_uc::HirePlayerError::Repository(e)) => {
-                tracing::error!("hire_player repo error: {e}");
-                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-            }
-        };
-
-    let roster_def = match state
-        .team_creation
-        .reference_data
-        .find_roster_definition(&updated_team.roster.id.0)
-    {
-        Some(d) => d,
-        None => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    };
-    let rows = build_hired_rows(&updated_team, &roster_def);
-    let row = match rows.into_iter().find(|r| r.uid == body.player_id) {
-        Some(r) => r,
-        None => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    };
-
-    PlayerRowFragment {
-        row,
-        team_routes: Default::default(),
-        space_id,
-        team_id,
-    }
-    .into_response()
-}
-
-// ── Handler fire_player ───────────────────────────────────────────────────────
-
-#[derive(Deserialize)]
-pub struct FirePlayerBody {
-    pub player_id: String,
-}
-
-pub async fn fire_player(
-    Path((space_id, team_id)): Path<(String, String)>,
-    State(state): State<AppState>,
-    axum::Json(body): axum::Json<FirePlayerBody>,
-) -> impl IntoResponse {
-    let team_id_val = match EntityId::try_new(&team_id) {
-        Ok(id) => id,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
-    let cmd = FirePlayerCommand {
-        team_id: team_id_val,
-        space_id: space_id.clone(),
-        player_id: PlayerId(body.player_id.clone()),
-    };
-
-    let updated_team =
-        match fire_uc::execute(cmd, state.team_creation.roster_repository.as_ref()).await {
-            Ok(t) => t,
-            Err(fire_uc::FirePlayerError::TeamNotFound) => {
-                return StatusCode::NOT_FOUND.into_response()
-            }
-            Err(fire_uc::FirePlayerError::PlayerNotFound) => {
-                return StatusCode::UNPROCESSABLE_ENTITY.into_response()
-            }
-            Err(fire_uc::FirePlayerError::Domain(e)) => {
-                return player_error(fire_uc::domain_error_message(&e))
-            }
-            Err(fire_uc::FirePlayerError::Repository(e)) => {
-                tracing::error!("fire_player repo error: {e}");
-                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-            }
-        };
-
-    let roster_def = match state
-        .team_creation
-        .reference_data
-        .find_roster_definition(&updated_team.roster.id.0)
-    {
-        Some(d) => d,
-        None => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    };
-    let rows = build_hired_rows(&updated_team, &roster_def);
-    let row = match rows.into_iter().find(|r| r.uid == body.player_id) {
-        Some(r) => r,
-        None => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    };
-
-    PlayerRowFragment {
-        row,
-        team_routes: Default::default(),
-        space_id,
-        team_id,
     }
     .into_response()
 }

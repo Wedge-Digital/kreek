@@ -17,6 +17,7 @@ pub mod path {
     pub const FINALIZE_TEAM:       &str = "/app/{space_id}/team/{team_id}/finalize";
     pub const CART_WIDGET:         &str = "/app/{space_id}/team/{team_id}/widgets/cart";
     pub const ROSTER_PICKER_WIDGET: &str = "/app/{space_id}/team/{team_id}/widgets/roster-picker";
+    pub const PLAYER_TABLE_WIDGET: &str = "/app/{space_id}/team/{team_id}/widgets/player-table";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -98,6 +99,11 @@ impl Routes {
     }
     pub fn finalize_team(&self, space_id: &str, team_id: &str) -> String {
         path::FINALIZE_TEAM
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+    pub fn player_table_widget(&self, space_id: &str, team_id: &str) -> String {
+        path::PLAYER_TABLE_WIDGET
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
     }

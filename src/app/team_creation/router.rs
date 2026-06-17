@@ -1,8 +1,10 @@
 use crate::app::team_creation::io::web::build_team::{
-    build_team, buy_reroll, buy_staff, fire_player, get_roster_players, hire_player, remove_reroll,
-    remove_staff, submit_team,
+    build_team, buy_reroll, buy_staff, remove_reroll, remove_staff, submit_team,
 };
 use crate::app::team_creation::io::web::widgets::cart_widget::cart_widget;
+use crate::app::team_creation::io::web::widgets::player_table_widget::{
+    fire_player, hire_player, player_table_widget,
+};
 use crate::app::team_creation::io::web::widgets::roster_picker_widget::roster_picker_widget;
 use crate::app::team_creation::io::web::draft_team::draft_team;
 use crate::app::team_creation::io::web::finalize_team::{finalize_team, post_finalize_team};
@@ -21,7 +23,7 @@ pub fn router() -> Router<AppState> {
         .route(path::DRAFT_TEAM, get(draft_team).post(post_draft_team))
         .route(path::TEAM_BUILD, get(build_team))
         .route(path::MY_TEAMS, get(my_teams))
-        .route(path::ROSTER_PLAYERS, get(get_roster_players))
+        .route(path::PLAYER_TABLE_WIDGET, get(player_table_widget))
         .route(path::HIRE_PLAYER, axum::routing::post(hire_player))
         .route(path::FIRE_PLAYER, axum::routing::post(fire_player))
         .route(path::BUY_STAFF, axum::routing::post(buy_staff))

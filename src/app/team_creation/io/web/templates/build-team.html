@@ -48,66 +48,13 @@
 
       <!-- Étape 3 : Joueurs -->
       <div class="section-label">3 — Sélectionnez vos joueurs</div>
-      <div id="player-table-container" style="overflow-x: auto;">
-        <table class="player-table">
-          <thead>
-            <tr>
-              <th>Qté max</th>
-              <th style="text-align: left; min-width: 200px;">Nom</th>
-              <th>Prix (kPo)</th>
-              <th>M</th><th>F</th><th>Ag</th><th>Cp</th><th>Av</th>
-              <th style="text-align: left; min-width: 220px;">Compétences</th>
-              <th>Qté</th>
-              <th>Coût total (kPo)</th>
-              <th></th><th></th>
-            </tr>
-          </thead>
-          <tbody id="player-table-body">
-            {% if hired_rows.is_empty() %}
-            <tr>
-              <td colspan="13" style="text-align:center; color:var(--dark-3); font-style:italic; padding: var(--p2);">
-                Sélectionnez un roster pour afficher les postes disponibles.
-              </td>
-            </tr>
-            {% else %}
-            {% for row in hired_rows %}
-            <tr id="player-row-{{ row.uid }}">
-              <td>{{ row.max_qty_label }}</td>
-              <td class="player-name">{{ row.name }}</td>
-              <td>{{ row.cost_kpo }}</td>
-              <td>{{ row.ma }}</td>
-              <td>{{ row.st }}</td>
-              <td>{{ row.ag }}</td>
-              <td>{{ row.pa }}</td>
-              <td>{{ row.av }}</td>
-              <td class="player-skills">{{ row.skills }}</td>
-              <td>{{ row.quantity }}</td>
-              <td>{{ row.line_cost_kpo }}</td>
-              <td>
-                <button class="tbl-btn" type="button"
-                        hx-post="{{ team_routes.hire_player(space_id, team_id) }}"
-                        hx-ext="json-enc"
-                        hx-vals='{"player_id":"{{ row.uid }}"}'
-                        hx-target="closest tr"
-                        hx-swap="outerHTML"
-                        {% if row.is_max %}disabled{% endif %}>+</button>
-              </td>
-              <td>
-                <button class="tbl-btn" type="button"
-                        hx-post="{{ team_routes.fire_player(space_id, team_id) }}"
-                        hx-ext="json-enc"
-                        hx-vals='{"player_id":"{{ row.uid }}"}'
-                        hx-target="closest tr"
-                        hx-swap="outerHTML"
-                        {% if row.quantity == 0 %}disabled{% endif %}>−</button>
-              </td>
-            </tr>
-            {% endfor %}
-            {% endif %}
-          </tbody>
-        </table>
+      <div id="player-table-container"
+           hx-get="{{ team_routes.player_table_widget(space_id, team_id) }}"
+           hx-trigger="load, rosterSelected from:body"
+           hx-vals='js:{"roster_uid": (event?.detail?.uid || "")}'
+           hx-target="this"
+           hx-swap="innerHTML">
       </div>
-      <div id="player-table-error" class="table-error-zone"></div>
 
       <!-- Étape 4 : Staff -->
       <div class="section-label">4 — Sélectionnez votre staff</div>
@@ -280,16 +227,11 @@ function specialRuleSelector(onSelectUrl) {
   document.addEventListener('rosterSelected', function(e) {
     var value = e.detail.uid;
     if (!value) {
-      document.getElementById('player-table-body').innerHTML =
-        '<tr><td colspan="13" class="table-empty-msg">Sélectionnez un roster pour afficher les postes disponibles.</td></tr>';
       document.getElementById('league-selector-zone').innerHTML = '';
       document.getElementById('special-rule-selector-zone').innerHTML = '';
       currentRosterUid = '';
       return;
     }
-    htmx.ajax('GET', '{{ team_routes.roster_players(space_id, team_id, "__ROSTER_UID__")|safe }}'.replace('__ROSTER_UID__', value), {
-      target: '#player-table-container', swap: 'innerHTML'
-    });
     reloadLeagueSelector(value, '');
     reloadSpecialRuleSelector(value, '');
   });
