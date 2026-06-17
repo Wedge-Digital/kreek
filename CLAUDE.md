@@ -414,6 +414,49 @@ Ne jamais initialiser TomSelect (ou équivalent) dans un `<script>` nu sans life
 
 ---
 
+## Pages complexes — pattern « page d'assemblage à widgets »
+
+Pour toute page impliquant 3+ sections interactives indépendantes ou des données de plusieurs BCs, appliquer ce pattern (validé sur la refacto build-team).
+
+### Architecture
+
+```
+Page hôte (build_team.rs + build-team.html)
+│   Assemblage pur, quasi zéro JS.
+│   Chaque section dynamique = un conteneur hx-get + hx-trigger.
+│
+├── Widget A (widgets/cart_widget.rs + templates/widgets/cart-widget.html)
+│   Endpoint GET dédié, gère ses mutations, émet des événements DOM.
+│
+├── Widget B (widgets/player_table_widget.rs + ...)
+│   Écoute les événements des autres widgets via hx-trigger="event from:body".
+│
+└── Domain service (use_cases/roster_service.rs)
+    Transforme les DTOs du port en objets domaine.
+    Les handlers appellent le service, jamais les DTOs directement.
+```
+
+### Principes
+
+1. **La page hôte ne porte pas de logique** — pas de calcul de VMs, pas de JS d'orchestration, pas de macros Askama. Elle compose des `hx-get` + `hx-trigger`.
+2. **Chaque widget est autonome** — endpoint GET (chargement) + endpoints POST (mutations), template isolé avec `hx-disinherit="*"`, JS scoped via Alpine `init()`/`destroy()`.
+3. **Communication par événements DOM** — les widgets émettent via `HX-Trigger` header ou `htmx.trigger(document.body, ...)`, les consommateurs s'abonnent via `hx-trigger="eventName from:body"`.
+4. **Données inter-BCs via ACL** — port dans `ports.rs`, adapter dans `src/infrastructure/<bc>/`, domain service dans `use_cases/` pour le mapping port → domaine.
+5. **VMs purs domaine** : constructeurs `from_domain()` co-localisés. **VMs dépendant du port** : fonctions dans `builders.rs`.
+
+### Quand appliquer
+
+- Page avec 3+ sections interactives indépendantes
+- Page qui combine des données de plusieurs BCs
+- Page avec beaucoup de JS orchestrant des échanges HTMX (signe qu'il faut découper)
+
+### Quand NE PAS appliquer
+
+- Page simple avec un formulaire et une réponse (CRUD classique)
+- Page statique avec un seul fragment HTMX
+
+---
+
 ## Conventions templates (Askama + HTMX)
 
 - Un template de **page complète** pour le premier chargement
