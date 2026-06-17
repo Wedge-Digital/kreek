@@ -420,6 +420,25 @@ Ne jamais initialiser TomSelect (ou équivalent) dans un `<script>` nu sans life
 - Des templates de **fragments** pour les réponses HTMX (swap partiel)
 - Les structs de template ne portent que des **view models** — pas d'entités domaine
 
+### Construction des view models — règle obligatoire
+
+Les view models qui se construisent **uniquement à partir d'objets domaine** doivent exposer un constructeur `from_domain()` (ou `all_from_domain()` pour les collections) directement sur la struct VM. La logique de projection vit avec le type, pas dans un fichier builder séparé.
+
+```rust
+// CORRECT — constructeur co-localisé avec le VM
+let cart = CartVm::from_domain(&roster_team);
+let staff_rows = StaffRowVm::all_from_domain(&roster_team);
+let reroll = RerollVm::from_domain(&roster_team);
+```
+
+Les view models qui dépendent de **DTOs de port** (données inter-BC) en plus du domaine restent construits par des fonctions dans `builders.rs`, car le fichier `view_models.rs` ne doit pas importer les types du port.
+
+```rust
+// CORRECT — builder séparé car dépend du port
+let rows = build_hired_rows(&roster_team, &roster_def);
+let positions = build_player_positions(&roster_def);
+```
+
 ### Interdiction des styles inline — règle obligatoire
 
 Les attributs `style="..."` sont **totalement interdits** dans les templates HTML.

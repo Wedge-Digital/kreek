@@ -1,5 +1,4 @@
 use crate::app::references::domain::port::IReferenceRepository;
-use crate::app::references::io::web::pickers::{build_star_player_items, StarPlayerPickerItem};
 use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use askama::Template;
@@ -16,6 +15,21 @@ pub struct StarPlayerPickerParams {
     pub selected: String,
     #[serde(default)]
     pub select_all: bool,
+}
+
+pub struct StarPlayerPickerItem {
+    pub uid: String,
+    pub name: String,
+}
+
+fn build_star_player_items(repo: &dyn IReferenceRepository) -> Vec<StarPlayerPickerItem> {
+    repo.list_star_players()
+        .iter()
+        .map(|s| StarPlayerPickerItem {
+            uid: s.uid.clone(),
+            name: s.name.clone(),
+        })
+        .collect()
 }
 
 pub async fn star_player_picker_controller(
