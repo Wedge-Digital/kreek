@@ -1,0 +1,45 @@
+<div class="roster-picker-widget" hx-disinherit="*"
+     x-data="{
+    init() {
+        var CLASSES = ['', 'tier-1', 'tier-2', 'tier-3', 'tier-4'];
+        function badge(d) {
+            if (!d.tierName) return '';
+            var cls = CLASSES[d.tierIndex] || '';
+            return '<span class=\'roster-tier-badge ' + cls + '\'>' + d.tierName + '</span>';
+        }
+        this._ts = new TomSelect(this.$refs.select, {
+            allowEmptyOption: true,
+            maxItems: 1,
+            render: {
+                option: function(d) {
+                    return '<div class=\'roster-option\'><span>' + d.text + '</span>' + badge(d) + '</div>';
+                },
+                item: function(d) {
+                    return '<div class=\'roster-option\'><span>' + d.text + '</span>' + badge(d) + '</div>';
+                },
+            },
+            onChange: (value) => {
+                htmx.trigger(document.body, 'rosterSelected', {
+                    uid: value,
+                    name: this._ts.options[value]?.text ?? ''
+                });
+            },
+        });
+        {% if let Some(uid) = selected %}
+        this._ts.setValue('{{ uid }}', true);
+        {% endif %}
+    },
+    destroy() {
+        if (this._ts) this._ts.destroy();
+    }
+}">
+    <select x-ref="select">
+        <option value="">Choisissez un roster…</option>
+        {% for item in rosters %}
+        <option value="{{ item.uid }}"
+                data-tier-index="{{ item.tier_index }}"
+                data-tier-name="{{ item.tier_name }}"
+                data-reroll-cost="{{ item.reroll_cost }}">{{ item.name }}</option>
+        {% endfor %}
+    </select>
+</div>

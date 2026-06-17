@@ -1,5 +1,4 @@
 {% extends "app-layout.html" %}
-{% import "widgets/roster-picker-tiers.html" as roster_cmp %}
 {% import "staff-fragment.html" as staff_cmp %}
 
 {% block content %}
@@ -30,7 +29,11 @@
 
         <div class="roster-league-col">
           <div class="league-selector-label">Roster</div>
-          {% call roster_cmp::roster_picker(rosters) %}
+          <div hx-get="{{ team_routes.roster_picker_widget(space_id, team_id) }}"
+               hx-trigger="load"
+               hx-target="this"
+               hx-swap="innerHTML">
+          </div>
         </div>
 
         <div class="roster-league-col">
@@ -274,49 +277,22 @@ function specialRuleSelector(onSelectUrl) {
     if (currentRosterUid) reloadSpecialRuleSelector(currentRosterUid, e.detail.special_rule_id);
   });
 
-  var CLASSES = ['', 'tier-1', 'tier-2', 'tier-3', 'tier-4'];
-  function badge(d) {
-    if (!d.tierName) return '';
-    var cls = CLASSES[d.tierIndex] || '';
-    return '<span class="roster-tier-badge ' + cls + '">' + d.tierName + '</span>';
-  }
-
-  var el = document.getElementById('roster-select');
-  if (el && !el.tomselect) {
-    var ts = new TomSelect(el, {
-      allowEmptyOption: true,
-      maxItems: 1,
-      render: {
-        option: function (d) {
-          return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><span>' + d.text + '</span>' + badge(d) + '</div>';
-        },
-        item: function (d) {
-          return '<div style="display:flex;align-items:center;gap:8px;"><span>' + d.text + '</span>' + badge(d) + '</div>';
-        },
-      },
-      onChange: function (value) {
-        if (!value) {
-          document.getElementById('player-table-body').innerHTML =
-            '<tr><td colspan="13" style="text-align:center;color:var(--dark-3);font-style:italic;padding:var(--p2);">Sélectionnez un roster pour afficher les postes disponibles.</td></tr>';
-          document.getElementById('league-selector-zone').innerHTML = '';
-          document.getElementById('special-rule-selector-zone').innerHTML = '';
-          currentRosterUid = '';
-          return;
-        }
-        htmx.ajax('GET', '{{ team_routes.roster_players(space_id, team_id, "__ROSTER_UID__")|safe }}'.replace('__ROSTER_UID__', value), {
-          target: '#player-table-container', swap: 'innerHTML'
-        });
-        reloadLeagueSelector(value, '');
-        reloadSpecialRuleSelector(value, '');
-      },
+  document.addEventListener('rosterSelected', function(e) {
+    var value = e.detail.uid;
+    if (!value) {
+      document.getElementById('player-table-body').innerHTML =
+        '<tr><td colspan="13" class="table-empty-msg">Sélectionnez un roster pour afficher les postes disponibles.</td></tr>';
+      document.getElementById('league-selector-zone').innerHTML = '';
+      document.getElementById('special-rule-selector-zone').innerHTML = '';
+      currentRosterUid = '';
+      return;
+    }
+    htmx.ajax('GET', '{{ team_routes.roster_players(space_id, team_id, "__ROSTER_UID__")|safe }}'.replace('__ROSTER_UID__', value), {
+      target: '#player-table-container', swap: 'innerHTML'
     });
-    {% if let Some(uid) = selected_roster_uid %}
-    currentRosterUid = '{{ uid }}';
-    ts.setValue('{{ uid }}', true);
-    loadZone(document.getElementById('league-selector-zone'), '{{ league_selector_url|safe }}');
-    loadZone(document.getElementById('special-rule-selector-zone'), '{{ special_rule_selector_url|safe }}');
-    {% endif %}
-  }
+    reloadLeagueSelector(value, '');
+    reloadSpecialRuleSelector(value, '');
+  });
 })();
 </script>
 {% endblock %}

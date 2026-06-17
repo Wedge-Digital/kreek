@@ -5,10 +5,10 @@ use crate::app::shared_kernel::staff::StaffId;
 use crate::app::team_creation::domain::roster::{LeagueId, PlayerId, SpecialRuleId};
 use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
 use crate::app::team_creation::io::web::builders::{
-    build_hired_rows, build_player_positions, build_roster_items_with_tiers,
+    build_hired_rows, build_player_positions,
 };
 use crate::app::team_creation::io::web::view_models::{
-    HiredPlayerRowVm, PlayerPositionVm, RerollVm, RosterPickerItemWithTier, RulesPanelVm,
+    HiredPlayerRowVm, PlayerPositionVm, RerollVm, RulesPanelVm,
     RulesTierVm, StaffRowVm,
 };
 use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
@@ -63,10 +63,6 @@ pub struct BuildTeamTemplate {
     pub ref_routes: RefRoutes,
     pub space_id: String,
     pub team_id: String,
-    pub rosters: Vec<RosterPickerItemWithTier>,
-    pub selected_roster_uid: Option<String>,
-    pub league_selector_url: String,
-    pub special_rule_selector_url: String,
     pub hired_rows: Vec<HiredPlayerRowVm>,
     pub staff_rows: Vec<StaffRowVm>,
     pub reroll: Option<RerollVm>,
@@ -119,47 +115,20 @@ pub async fn build_team(
     };
 
     let ref_data = state.team_creation.reference_data.as_ref();
-    let rosters = build_roster_items_with_tiers(ref_data, draft.creation_rules());
 
-    let (selected_roster_uid, selected_league_uid, selected_special_rule_uid, hired_rows, staff_rows, reroll) =
-        match &roster_team {
-            None => (None, None, None, vec![], vec![], None),
-            Some(team) => {
-                let roster_uid       = team.roster.id.0.clone();
-                let league_uid       = team.league_id.as_ref().map(|l| l.0.clone());
-                let special_rule_uid = team.special_rule_id.as_ref().map(|r| r.0.clone());
-                let roster_def = ref_data.find_roster_definition(&roster_uid);
-                let rows = match &roster_def {
-                    Some(rd) => build_hired_rows(team, rd),
-                    None => vec![],
-                };
-                let staff  = StaffRowVm::all_from_domain(team);
-                let rv     = RerollVm::from_domain(team);
-                (Some(roster_uid), league_uid, special_rule_uid, rows, staff, Some(rv))
-            }
-        };
-
-    let routes      = TeamCreationRoutes::default();
-    let ref_routes  = RefRoutes::default();
-
-    let set_league_url = routes.set_league(&space_id, &team_id);
-    let league_selector_url = match &selected_roster_uid {
-        Some(roster_uid) => ref_routes.league_selector_for_roster(
-            selected_league_uid.as_deref().unwrap_or(""),
-            &set_league_url,
-            roster_uid,
-        ),
-        None => String::new(),
-    };
-
-    let set_special_rule_url = routes.set_special_rule(&space_id, &team_id);
-    let special_rule_selector_url = match &selected_roster_uid {
-        Some(roster_uid) => ref_routes.special_rule_selector_for_roster(
-            selected_special_rule_uid.as_deref().unwrap_or(""),
-            &set_special_rule_url,
-            roster_uid,
-        ),
-        None => String::new(),
+    let (hired_rows, staff_rows, reroll) = match &roster_team {
+        None => (vec![], vec![], None),
+        Some(team) => {
+            let roster_uid = team.roster.id.0.clone();
+            let roster_def = ref_data.find_roster_definition(&roster_uid);
+            let rows = match &roster_def {
+                Some(rd) => build_hired_rows(team, rd),
+                None => vec![],
+            };
+            let staff = StaffRowVm::all_from_domain(team);
+            let rv = RerollVm::from_domain(team);
+            (rows, staff, Some(rv))
+        }
     };
 
     let competition_name = if let Ok(id) = EntityId::try_new(draft.competition_id()) {
@@ -211,10 +180,6 @@ pub async fn build_team(
         ref_routes: Default::default(),
         space_id,
         team_id,
-        rosters,
-        selected_roster_uid,
-        league_selector_url,
-        special_rule_selector_url,
         hired_rows,
         staff_rows,
         reroll,
