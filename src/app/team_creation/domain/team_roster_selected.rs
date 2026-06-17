@@ -3,8 +3,8 @@ use crate::app::shared_kernel::staff::StaffKind;
 use crate::app::shared_kernel::team::TeamId;
 use crate::app::team_creation::domain::error::DomainError;
 use crate::app::team_creation::domain::roster::{
-    AcquiredSkill, AcquisitionMode, HiredPlayer, LeagueId, PlayerDefinition, PlayerId, Roster,
-    SkillId, SpecialRuleId, MAX_PLAYER_COUNT,
+    AcquiredSkill, AcquisitionMode, HiredPlayer, JerseyNumber, LeagueId, PlayerDefinition,
+    PlayerId, Roster, SkillId, SpecialRuleId, MAX_PLAYER_COUNT,
 };
 use crate::app::team_creation::domain::team_ruleset_selected::RulesetSelectedTeam;
 use crate::app::team_creation::domain::team_staff::TeamStaff;
@@ -248,13 +248,10 @@ impl RosterSelectedTeam {
         &mut self,
         instance_id: &PlayerId,
         name: String,
-        jersey: u8,
+        jersey: JerseyNumber,
     ) -> Result<(), DomainError> {
         if name.len() > 50 {
             return Err(DomainError::PlayerNameTooLong);
-        }
-        if jersey < 1 || jersey > 99 {
-            return Err(DomainError::InvalidJerseyNumber);
         }
         let duplicate = self
             .hired_players

@@ -186,7 +186,7 @@ pub async fn finalize_team(
     let mut used_jerseys: std::collections::HashSet<u8> = team
         .hired_players()
         .iter()
-        .filter_map(|p| p.jersey)
+        .filter_map(|p| p.jersey.map(|j| j.0))
         .collect();
     let mut next_jersey = 1u8;
 
@@ -195,7 +195,7 @@ pub async fn finalize_team(
         .iter()
         .map(|p| {
             let jersey = match p.jersey {
-                Some(j) => j,
+                Some(j) => j.0,
                 None => {
                     while used_jerseys.contains(&next_jersey) { next_jersey += 1; }
                     let j = next_jersey;

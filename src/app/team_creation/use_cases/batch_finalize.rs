@@ -16,12 +16,12 @@ use crate::app::shared_kernel::common_types::EntityId;
 use std::collections::{HashMap, HashSet};
 
 pub fn assign_jerseys(players: &[HiredPlayer]) -> HashMap<String, u8> {
-    let mut used: HashSet<u8> = players.iter().filter_map(|p| p.jersey).collect();
+    let mut used: HashSet<u8> = players.iter().filter_map(|p| p.jersey.map(|j| j.0)).collect();
     let mut next: u8 = 1;
     let mut result = HashMap::new();
     for p in players {
         let jersey = match p.jersey {
-            Some(j) => j,
+            Some(j) => j.0,
             None => {
                 while used.contains(&next) { next += 1; }
                 let j = next;

@@ -1,5 +1,5 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::team_creation::domain::roster::PlayerId;
+use crate::app::team_creation::domain::roster::{JerseyNumber, PlayerId};
 use crate::app::team_creation::use_cases::set_player_identity as uc;
 use crate::app::team_creation::use_cases::set_player_identity::SetPlayerIdentityCommand;
 use crate::app::shared_kernel::common_types::EntityId;
@@ -26,12 +26,26 @@ pub async fn set_player_identity(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
+    let jersey = match JerseyNumber::try_new(body.jersey) {
+        Ok(j) => j,
+        Err(e) => {
+            return axum::http::Response::builder()
+                .status(422)
+                .header("Content-Type", "text/html")
+                .body(axum::body::Body::from(format!(
+                    r#"<div class="identity-error">{e}</div>"#
+                )))
+                .unwrap()
+                .into_response()
+        }
+    };
+
     let cmd = SetPlayerIdentityCommand {
         team_id:     team_entity_id,
         space_id:    space_id.clone(),
         instance_id: PlayerId(instance_id.clone()),
         name:        body.name.unwrap_or_default().trim().to_string(),
-        jersey:      body.jersey,
+        jersey,
     };
 
     match uc::execute(cmd, state.team_creation.roster_repository.as_ref()).await {

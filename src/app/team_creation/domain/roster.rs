@@ -1,3 +1,4 @@
+use crate::app::team_creation::domain::error::DomainError;
 use crate::app::team_creation::domain::team_staff::TeamStaff;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
@@ -19,6 +20,18 @@ pub struct PlayerPrice(pub u32);
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct RerollBasePrice(pub u32);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct JerseyNumber(pub u8);
+
+impl JerseyNumber {
+    pub fn try_new(n: u8) -> Result<Self, DomainError> {
+        if n < 1 || n > 99 {
+            return Err(DomainError::InvalidJerseyNumber);
+        }
+        Ok(Self(n))
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Display)]
 pub struct RosterId(pub String);
@@ -60,7 +73,7 @@ pub struct HiredPlayer {
     #[serde(default)]
     pub personal_name: String,
     #[serde(default)]
-    pub jersey: Option<u8>,
+    pub jersey: Option<JerseyNumber>,
     #[serde(default)]
     pub acquired_skills: Vec<AcquiredSkill>,
 }
