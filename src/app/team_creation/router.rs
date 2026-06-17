@@ -1,11 +1,12 @@
-use crate::app::team_creation::io::web::build_team::{
-    build_team, buy_reroll, buy_staff, remove_reroll, remove_staff, submit_team,
-};
+use crate::app::team_creation::io::web::build_team::{build_team, submit_team};
 use crate::app::team_creation::io::web::widgets::cart_widget::cart_widget;
 use crate::app::team_creation::io::web::widgets::player_table_widget::{
     fire_player, hire_player, player_table_widget,
 };
 use crate::app::team_creation::io::web::widgets::roster_picker_widget::roster_picker_widget;
+use crate::app::team_creation::io::web::widgets::staff_table_widget::{
+    buy_reroll, buy_staff, remove_reroll, remove_staff, staff_table_widget,
+};
 use crate::app::team_creation::io::web::draft_team::draft_team;
 use crate::app::team_creation::io::web::finalize_team::{finalize_team, post_finalize_team};
 use crate::app::team_creation::io::web::my_teams::my_teams;
@@ -38,4 +39,5 @@ pub fn router() -> Router<AppState> {
         .route(path::FINALIZE_TEAM, get(finalize_team).post(post_finalize_team))
         .route(path::CART_WIDGET, get(cart_widget))
         .route(path::ROSTER_PICKER_WIDGET, get(roster_picker_widget))
+        .route(path::STAFF_TABLE_WIDGET, get(staff_table_widget))
 }

@@ -2,9 +2,7 @@ use crate::app::shared_kernel::common_types::EntityId;
 use crate::app::team_creation::domain::roster::{LeagueId, PlayerId, SpecialRuleId};
 use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
 use crate::app::team_creation::io::web::builders::{build_hired_rows, build_player_positions};
-use crate::app::team_creation::io::web::view_models::{
-    HiredPlayerRowVm, PlayerPositionVm, RerollVm, StaffRowVm,
-};
+use crate::app::team_creation::io::web::view_models::{HiredPlayerRowVm, PlayerPositionVm};
 use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
 use crate::app::team_creation::use_cases::fire_player as fire_uc;
 use crate::app::team_creation::use_cases::hire_player as hire_uc;
@@ -45,8 +43,6 @@ pub struct PlayerTableWidgetTemplate {
     pub team_routes: TeamCreationRoutes,
     pub space_id: String,
     pub team_id: String,
-    pub staff_rows: Vec<StaffRowVm>,
-    pub reroll: Option<RerollVm>,
     pub has_roster: bool,
 }
 
@@ -75,8 +71,6 @@ pub async fn player_table_widget(
             team_routes: Default::default(),
             space_id,
             team_id,
-            staff_rows: vec![],
-            reroll: None,
             has_roster: false,
         }
         .into_response();
@@ -171,8 +165,6 @@ pub async fn player_table_widget(
 
     let positions = build_player_positions(&roster_def);
     let hired_rows = build_hired_rows(&roster_team, &roster_def);
-    let staff_rows = StaffRowVm::all_from_domain(&roster_team);
-    let reroll = Some(RerollVm::from_domain(&roster_team));
 
     PlayerTableWidgetTemplate {
         positions,
@@ -180,8 +172,6 @@ pub async fn player_table_widget(
         team_routes: Default::default(),
         space_id,
         team_id,
-        staff_rows,
-        reroll,
         has_roster: true,
     }
     .into_response()

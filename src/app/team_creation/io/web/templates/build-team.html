@@ -1,5 +1,4 @@
 {% extends "app-layout.html" %}
-{% import "staff-fragment.html" as staff_cmp %}
 
 {% block content %}
 <link rel="stylesheet" href="/static/css/pages/app-home.css">
@@ -58,24 +57,12 @@
 
       <!-- Étape 4 : Staff -->
       <div class="section-label">4 — Sélectionnez votre staff</div>
-      <div id="staff-table-wrap" style="overflow-x: auto; margin-bottom: var(--p2);">
-        <table class="player-table" style="max-width: 600px;">
-          <thead>
-            <tr>
-              <th>Qté max</th>
-              <th style="text-align: left;">Poste</th>
-              <th>Prix (kPo)</th>
-              <th>Qté</th>
-              <th>Coût total (kPo)</th>
-              <th></th><th></th>
-            </tr>
-          </thead>
-          <tbody id="staff-table-body">
-            {% call staff_cmp::staff_body(reroll, staff_rows, team_routes, space_id, team_id) %}
-          </tbody>
-        </table>
+      <div id="staff-table-container"
+           hx-get="{{ team_routes.staff_table_widget(space_id, team_id) }}"
+           hx-trigger="load, rosterSelected from:body"
+           hx-target="this"
+           hx-swap="innerHTML">
       </div>
-      <div id="staff-table-error" class="table-error-zone"></div>
 
       <div style="display: flex; justify-content: center;">
         <button class="btn btn-outline"

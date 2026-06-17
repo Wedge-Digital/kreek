@@ -1,0 +1,73 @@
+<div hx-disinherit="*">
+<table class="player-table" style="max-width: 600px;">
+  <thead>
+    <tr>
+      <th>Qté max</th>
+      <th class="col-name-staff">Poste</th>
+      <th>Prix (kPo)</th>
+      <th>Qté</th>
+      <th>Coût total (kPo)</th>
+      <th></th><th></th>
+    </tr>
+  </thead>
+  <tbody id="staff-table-body">
+    {% if let Some(r) = reroll %}
+    <tr id="staff-row-reroll">
+      <td>0-{{ r.max }}</td>
+      <td class="staff-name">Relances</td>
+      <td>{{ r.price }}</td>
+      <td>{{ r.quantity }}</td>
+      <td>{{ r.line_cost }}</td>
+      <td>
+        <button class="tbl-btn" type="button"
+                hx-post="{{ team_routes.buy_reroll(space_id, team_id) }}"
+                hx-target="closest tr"
+                hx-swap="outerHTML"
+                {% if r.quantity >= r.max %}disabled{% endif %}>+</button>
+      </td>
+      <td>
+        <button class="tbl-btn" type="button"
+                hx-post="{{ team_routes.remove_reroll(space_id, team_id) }}"
+                hx-target="closest tr"
+                hx-swap="outerHTML"
+                {% if r.quantity == 0 %}disabled{% endif %}>−</button>
+      </td>
+    </tr>
+    {% for row in staff_rows %}
+    <tr id="staff-row-{{ row.id }}">
+      <td>{{ row.max_qty_label }}</td>
+      <td class="staff-name">{{ row.name }}</td>
+      <td>{{ row.price }}</td>
+      <td>{{ row.quantity }}</td>
+      <td>{{ row.line_cost }}</td>
+      <td>
+        <button class="tbl-btn" type="button"
+                hx-post="{{ team_routes.buy_staff(space_id, team_id) }}"
+                hx-ext="json-enc"
+                hx-vals='{"staff_id":"{{ row.id }}"}'
+                hx-target="closest tr"
+                hx-swap="outerHTML"
+                {% if row.quantity >= row.max_qty %}disabled{% endif %}>+</button>
+      </td>
+      <td>
+        <button class="tbl-btn" type="button"
+                hx-post="{{ team_routes.remove_staff(space_id, team_id) }}"
+                hx-ext="json-enc"
+                hx-vals='{"staff_id":"{{ row.id }}"}'
+                hx-target="closest tr"
+                hx-swap="outerHTML"
+                {% if row.quantity == 0 %}disabled{% endif %}>−</button>
+      </td>
+    </tr>
+    {% endfor %}
+    {% else %}
+    <tr>
+      <td colspan="7" class="table-empty-msg">
+        Sélectionnez un roster pour afficher le staff disponible.
+      </td>
+    </tr>
+    {% endif %}
+  </tbody>
+</table>
+<div id="staff-table-error" class="table-error-zone"></div>
+</div>
