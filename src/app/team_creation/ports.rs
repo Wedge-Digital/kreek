@@ -4,6 +4,48 @@ use crate::app::team_creation::domain::team_draft::DraftTeam;
 use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
 use async_trait::async_trait;
 
+// ── Anti-Corruption Layer — données de référence ─────────────────────────────
+
+pub struct RosterDefinition {
+    pub uid: String,
+    pub name: String,
+    pub reroll_cost: u32,
+    pub available_players: Vec<PlayerPositionDefinition>,
+    pub allowed_staff_uids: Vec<String>,
+    pub leagues: Vec<String>,
+    pub special_rules: Vec<String>,
+}
+
+pub struct PlayerPositionDefinition {
+    pub uid: String,
+    pub position_name: String,
+    pub cost: u32,
+    pub max_quantity: u8,
+    pub ma: u8,
+    pub st: u8,
+    pub ag: u8,
+    pub pa: u8,
+    pub av: u8,
+    pub skills: Vec<SkillDefinition>,
+}
+
+pub struct SkillDefinition {
+    pub uid: String,
+    pub name: String,
+}
+
+pub struct StaffDefinition {
+    pub uid: String,
+    pub name: String,
+    pub price: u32,
+    pub max_quantity: u8,
+}
+
+pub trait IReferenceDataPort: Send + Sync {
+    fn find_roster_definition(&self, roster_uid: &str) -> Option<RosterDefinition>;
+    fn list_staff_definitions(&self) -> Vec<StaffDefinition>;
+}
+
 #[derive(Debug)]
 pub enum RepositoryError {
     NotFound,

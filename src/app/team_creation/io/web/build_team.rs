@@ -1,10 +1,4 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::references::domain::models::Team as RefTeam;
-use crate::app::references::domain::port::IReferenceRepository;
-use crate::app::references::io::web::pickers::{
-    build_player_positions, build_roster_items_with_tiers, HiredPlayerRowVm, PlayerPositionVm,
-    RosterPickerItemWithTier,
-};
 use crate::app::shared_kernel::common_types::EntityId;
 use crate::app::shared_kernel::staff::{
     StaffId, StaffKind, StaffMaxQuantity, StaffName, StaffPrice,
@@ -18,6 +12,7 @@ use crate::app::team_creation::domain::team_roster_selected::{
     RosterSelectedTeam, MAX_REROLL_COUNT,
 };
 use crate::app::team_creation::domain::team_staff::TeamStaff;
+use crate::app::team_creation::ports::{IReferenceDataPort, RosterDefinition};
 use crate::app::references::routes::Routes as RefRoutes;
 use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
 use crate::app::team_creation::use_cases::buy_reroll as buy_reroll_uc;
@@ -78,7 +73,100 @@ pub struct CartVm {
     pub progress_pct: u32,
 }
 
-// ── Roster builder: references → domain ──────────────────────────────────────
+// ── View models (reference-derived) ──────────────────────────────────────────
+
+pub struct HiredPlayerRowVm {
+    pub uid: String,
+    pub name: String,
+    pub cost_kpo: u32,
+    pub max_qty_label: String,
+    pub ma: u8,
+    pub st: u8,
+    pub ag: String,
+    pub pa: String,
+    pub av: String,
+    pub skills: String,
+    pub quantity: usize,
+    pub line_cost_kpo: u32,
+    pub is_max: bool,
+}
+
+pub struct PlayerPositionVm {
+    pub uid: String,
+    pub name: String,
+    pub cost: u32,
+    pub max_qty_label: String,
+    pub ma: u8,
+    pub st: u8,
+    pub ag: String,
+    pub pa: String,
+    pub av: String,
+    pub skills: String,
+}
+
+pub struct RosterPickerItemWithTier {
+    pub uid: String,
+    pub name: String,
+    pub tier_name: String,
+    pub tier_index: usize,
+    pub reroll_cost: u32,
+}
+
+fn to_stat_plus(v: u8) -> String {
+    if v == 0 { "—".into() } else { format!("{}+", v) }
+}
+
+pub fn build_player_positions(roster_def: &RosterDefinition) -> Vec<PlayerPositionVm> {
+    roster_def
+        .available_players
+        .iter()
+        .map(|p| {
+            let skills = p.skills.iter().map(|s| s.name.as_str()).collect::<Vec<_>>().join(", ");
+            PlayerPositionVm {
+                uid: p.uid.clone(),
+                name: p.position_name.clone(),
+                cost: p.cost / 1000,
+                max_qty_label: format!("0-{}", p.max_quantity),
+                ma: p.ma,
+                st: p.st,
+                ag: to_stat_plus(p.ag),
+                pa: to_stat_plus(p.pa),
+                av: to_stat_plus(p.av),
+                skills,
+            }
+        })
+        .collect()
+}
+
+pub fn build_roster_items_with_tiers(
+    ref_data: &dyn IReferenceDataPort,
+    rules: &crate::app::team_creation::domain::creation_rules::CreationRules,
+) -> Vec<RosterPickerItemWithTier> {
+    let mut items: Vec<RosterPickerItemWithTier> = rules
+        .tiers
+        .iter()
+        .enumerate()
+        .flat_map(|(i, tier)| {
+            let tier_name = tier.name.clone();
+            let tier_index = i + 1;
+            tier.rosters.iter().filter_map(move |uid| {
+                ref_data
+                    .find_roster_definition(uid)
+                    .map(|def| RosterPickerItemWithTier {
+                        uid: def.uid,
+                        name: def.name,
+                        tier_name: tier_name.clone(),
+                        tier_index,
+                        reroll_cost: def.reroll_cost,
+                    })
+            })
+        })
+        .collect();
+    items.sort_by(|a, b| a.name.cmp(&b.name));
+    items
+}
+
+// ── Roster builder: definition → domain ─────────────────────────────────────
 
 fn staff_kind(uid: &str) -> StaffKind {
     match uid {
@@ -90,8 +178,11 @@ fn staff_kind(uid: &str) -> StaffKind {
     }
 }
 
-pub fn build_roster_from_ref(ref_team: &RefTeam, ref_repo: &dyn IReferenceRepository) -> Roster {
-    let player_definitions = ref_team
+pub fn build_roster_from_definition(
+    def: &RosterDefinition,
+    ref_data: &dyn IReferenceDataPort,
+) -> Roster {
+    let player_definitions = def
         .available_players
         .iter()
         .map(|p| PlayerDefinition {
@@ -102,42 +193,43 @@ pub fn build_roster_from_ref(ref_team: &RefTeam, ref_repo: &dyn IReferenceReposi
         })
         .collect();
 
-    let mut allowed_staff: Vec<TeamStaff> = ref_team
-        .allowed_staff
+    let all_staff = ref_data.list_staff_definitions();
+    let mut allowed_staff: Vec<TeamStaff> = def
+        .allowed_staff_uids
         .iter()
         .filter_map(|uid| {
-            ref_repo
-                .list_staff()
+            all_staff
                 .iter()
                 .find(|s| s.uid == *uid)
                 .map(|s| TeamStaff {
                     id: StaffId(s.uid.clone()),
                     name: StaffName(s.name.clone()),
                     price: StaffPrice(s.price),
-                    max_quantity: StaffMaxQuantity(s.max_quantity as u8),
+                    max_quantity: StaffMaxQuantity(s.max_quantity),
                     kind: staff_kind(&s.uid),
                 })
         })
         .collect();
 
-    // Facteur de fans : universel, disponible pour tous les rosters à la création
-    if let Some(ff) = ref_repo.list_staff().iter().find(|s| s.uid == "FAN_FACTOR") {
-        allowed_staff.push(TeamStaff {
-            id: StaffId(ff.uid.clone()),
-            name: StaffName(ff.name.clone()),
-            price: StaffPrice(ff.price),
-            max_quantity: StaffMaxQuantity(ff.max_quantity as u8),
-            kind: StaffKind::FansFactor,
-        });
+    if !allowed_staff.iter().any(|s| s.id.0 == "FAN_FACTOR") {
+        if let Some(ff) = all_staff.iter().find(|s| s.uid == "FAN_FACTOR") {
+            allowed_staff.push(TeamStaff {
+                id: StaffId(ff.uid.clone()),
+                name: StaffName(ff.name.clone()),
+                price: StaffPrice(ff.price),
+                max_quantity: StaffMaxQuantity(ff.max_quantity),
+                kind: StaffKind::FansFactor,
+            });
+        }
     }
 
     Roster {
-        id: RosterId(ref_team.uid.clone()),
-        name: RosterName(ref_team.name.clone()),
+        id: RosterId(def.uid.clone()),
+        name: RosterName(def.name.clone()),
         player_definitions,
         allowed_staff,
         cross_limits: vec![],
-        reroll_price: RerollBasePrice(ref_team.reroll_cost / 1000),
+        reroll_price: RerollBasePrice(def.reroll_cost / 1000),
     }
 }
 
@@ -145,7 +237,7 @@ pub fn build_roster_from_ref(ref_team: &RefTeam, ref_repo: &dyn IReferenceReposi
 
 pub fn build_hired_rows(
     team: &RosterSelectedTeam,
-    ref_repo: &dyn IReferenceRepository,
+    roster_def: &RosterDefinition,
 ) -> Vec<HiredPlayerRowVm> {
     team.roster
         .player_definitions
@@ -160,40 +252,15 @@ pub fn build_hired_rows(
             let is_max =
                 quantity >= def.max_quantity.0 as usize || team.hired_players().len() >= 16;
 
-            let (ma, st, ag, pa, av, skills) = ref_repo
-                .list_teams()
-                .iter()
-                .flat_map(|t| t.available_players.iter().map(move |p| (t, p)))
-                .find(|(_, p)| p.uid == def.id.0)
-                .map(|(_, p)| {
-                    let to_plus = |v: u8| {
-                        if v == 0 {
-                            "—".into()
-                        } else {
-                            format!("{}+", v)
-                        }
-                    };
-                    let skills = p
-                        .skills
-                        .iter()
-                        .map(|uid| {
-                            ref_repo
-                                .find_skill_by_uid(uid)
-                                .map(|s| s.name.clone())
-                                .unwrap_or_else(|| uid.clone())
-                        })
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    (
-                        p.ma,
-                        p.st,
-                        to_plus(p.ag),
-                        to_plus(p.pa),
-                        to_plus(p.av),
-                        skills,
-                    )
-                })
-                .unwrap_or((0, 0, "?".into(), "?".into(), "?".into(), String::new()));
+            let pos = roster_def.available_players.iter().find(|p| p.uid == def.id.0);
+
+            let (ma, st, ag, pa, av, skills) = match pos {
+                Some(p) => {
+                    let skills = p.skills.iter().map(|s| s.name.as_str()).collect::<Vec<_>>().join(", ");
+                    (p.ma, p.st, to_stat_plus(p.ag), to_stat_plus(p.pa), to_stat_plus(p.av), skills)
+                }
+                None => (0, 0, "?".into(), "?".into(), "?".into(), String::new()),
+            };
 
             HiredPlayerRowVm {
                 uid: def.id.0.clone(),
@@ -412,8 +479,8 @@ pub async fn build_team(
         }
     };
 
-    let ref_repo = state.references.repository.as_ref();
-    let rosters = build_roster_items_with_tiers(ref_repo, draft.creation_rules());
+    let ref_data = state.team_creation.reference_data.as_ref();
+    let rosters = build_roster_items_with_tiers(ref_data, draft.creation_rules());
 
     let (selected_roster_uid, selected_league_uid, selected_special_rule_uid, hired_rows, staff_rows, reroll, cart) =
         match &roster_team {
@@ -422,7 +489,11 @@ pub async fn build_team(
                 let roster_uid       = team.roster.id.0.clone();
                 let league_uid       = team.league_id.as_ref().map(|l| l.0.clone());
                 let special_rule_uid = team.special_rule_id.as_ref().map(|r| r.0.clone());
-                let rows   = build_hired_rows(team, ref_repo);
+                let roster_def = ref_data.find_roster_definition(&roster_uid);
+                let rows = match &roster_def {
+                    Some(rd) => build_hired_rows(team, rd),
+                    None => vec![],
+                };
                 let staff  = build_staff_rows(team);
                 let rv     = build_reroll_vm(team);
                 let cv     = build_cart_vm(team);
@@ -542,10 +613,10 @@ pub async fn get_roster_players(
     Path((space_id, team_id, roster_uid)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let ref_repo = state.references.repository.as_ref();
+    let ref_data = state.team_creation.reference_data.as_ref();
 
-    let ref_team = match ref_repo.find_team_by_uid(&roster_uid) {
-        Some(t) => t,
+    let roster_def = match ref_data.find_roster_definition(&roster_uid) {
+        Some(d) => d,
         None => return StatusCode::NOT_FOUND.into_response(),
     };
 
@@ -554,7 +625,7 @@ pub async fn get_roster_players(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let roster = build_roster_from_ref(ref_team, ref_repo);
+    let roster = build_roster_from_definition(&roster_def, ref_data);
 
     let draft: DraftTeam = match state
         .team_creation
@@ -604,16 +675,12 @@ pub async fn get_roster_players(
 
     roster_team.spp_pool = starting_spp;
 
-    // Auto-set league si le roster n'en supporte qu'une
-    let roster_leagues = &ref_team.leagues;
-    if roster_leagues.len() == 1 {
-        roster_team.set_league(LeagueId(roster_leagues[0].clone()));
+    if roster_def.leagues.len() == 1 {
+        roster_team.set_league(LeagueId(roster_def.leagues[0].clone()));
     }
 
-    // Auto-set règle spéciale si le roster n'en a qu'une
-    let roster_special_rules = &ref_team.special_rules;
-    if roster_special_rules.len() == 1 {
-        roster_team.set_special_rule(SpecialRuleId(roster_special_rules[0].clone()));
+    if roster_def.special_rules.len() == 1 {
+        roster_team.set_special_rule(SpecialRuleId(roster_def.special_rules[0].clone()));
     }
 
     if let Err(e) = state
@@ -626,7 +693,7 @@ pub async fn get_roster_players(
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
 
-    let positions = build_player_positions(ref_team, ref_repo);
+    let positions = build_player_positions(&roster_def);
     let cart = Some(build_cart_vm(&roster_team));
     let staff_rows = build_staff_rows(&roster_team);
     let reroll = Some(build_reroll_vm(&roster_team));
@@ -705,8 +772,11 @@ pub async fn hire_player(
             }
         };
 
-    let ref_repo = state.references.repository.as_ref();
-    let rows = build_hired_rows(&updated_team, ref_repo);
+    let roster_def = match state.team_creation.reference_data.find_roster_definition(&updated_team.roster.id.0) {
+        Some(d) => d,
+        None => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    let rows = build_hired_rows(&updated_team, &roster_def);
     let row = match rows.into_iter().find(|r| r.uid == body.player_id) {
         Some(r) => r,
         None => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
@@ -764,8 +834,11 @@ pub async fn fire_player(
             }
         };
 
-    let ref_repo = state.references.repository.as_ref();
-    let rows = build_hired_rows(&updated_team, ref_repo);
+    let roster_def = match state.team_creation.reference_data.find_roster_definition(&updated_team.roster.id.0) {
+        Some(d) => d,
+        None => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    let rows = build_hired_rows(&updated_team, &roster_def);
     let row = match rows.into_iter().find(|r| r.uid == body.player_id) {
         Some(r) => r,
         None => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),

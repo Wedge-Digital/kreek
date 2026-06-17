@@ -144,6 +144,7 @@ mod tests {
             team_creation: crate::app::team_creation::context::TeamCreationContext {
                 team_repository:   Arc::new(FakeTeamDraftRepository),
                 roster_repository: Arc::new(FakeTeamRosterRepository),
+                reference_data:    Arc::new(FakeReferenceData),
                 event_bus:         event_bus.clone(),
             },
             teams: {
@@ -380,6 +381,12 @@ mod tests {
         ) -> Result<Vec<String>, crate::app::team_creation::ports::RepositoryError> {
             Ok(vec![])
         }
+    }
+
+    struct FakeReferenceData;
+    impl crate::app::team_creation::ports::IReferenceDataPort for FakeReferenceData {
+        fn find_roster_definition(&self, _: &str) -> Option<crate::app::team_creation::ports::RosterDefinition> { None }
+        fn list_staff_definitions(&self) -> Vec<crate::app::team_creation::ports::StaffDefinition> { vec![] }
     }
 
     #[tokio::test]

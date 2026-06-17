@@ -4,6 +4,7 @@ mod app;
 mod config;
 #[allow(special_module_name)]
 pub mod common;
+mod infrastructure;
 mod state;
 pub mod web;
 
@@ -19,6 +20,7 @@ use crate::app::news::context::NewsContext;
 use crate::app::references::context::ReferencesContext;
 use crate::app::spaces::context::SpacesContext;
 use crate::app::team_creation::context::TeamCreationContext;
+use crate::infrastructure::team_creation::reference_data_adapter::ReferenceDataAdapter;
 use crate::app::players::context::PlayersContext;
 use crate::app::teams::context::TeamsContext;
 use crate::app::{auth, competitions, players, references, spaces, team_creation, teams};
@@ -85,7 +87,11 @@ async fn main() {
         competitions: CompetitionsContext::new(&pool, event_bus.clone()),
         news: NewsContext::new(&pool),
         references: ReferencesContext::new(),
-        team_creation: TeamCreationContext::new(&pool, event_bus.clone()),
+        team_creation: TeamCreationContext::new(
+            &pool,
+            event_bus.clone(),
+            Arc::new(ReferenceDataAdapter::new(refs_for_players.repository.clone())),
+        ),
         teams:   TeamsContext::new(&pool),
         players: PlayersContext::new(&pool),
         email_service: Arc::new(ResendMailService::new(

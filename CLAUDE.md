@@ -235,6 +235,84 @@ Conséquences :
 
 ---
 
+## Adapters inter-BCs — règle fondamentale
+
+Quand un BC a besoin de données d'un autre BC **en lecture synchrone** (pas via un app event), la communication passe par un **port (trait)** défini dans le BC consommateur et un **adapter** instancié dans la couche d'infrastructure applicative.
+
+### Principe
+
+- Le BC consommateur définit un **trait + DTOs** dans son module `ports.rs`. Il ne connaît pas le BC source.
+- L'adapter qui implémente ce trait vit dans `src/infrastructure/<bc_consommateur>/`. Il est le seul à importer le BC source.
+- L'adapter est instancié dans `main.rs` et injecté dans le contexte du BC consommateur via le trait.
+
+```
+src/
+├── app/
+│   ├── team_creation/        ← pur, ne connaît pas references
+│   │   └── ports.rs          ← trait IReferenceDataPort + DTOs
+│   └── references/
+├── infrastructure/
+│   └── team_creation/
+│       └── reference_data_adapter.rs   ← implémente IReferenceDataPort en appelant references
+└── main.rs                   ← instancie l'adapter, injecte dans TeamCreationContext
+```
+
+### Pourquoi
+
+- Le BC reste pur et testable (on peut mocker le port en test unitaire)
+- Le choix de l'implémentation est une décision d'infrastructure applicative
+- Si les BCs sont déployés séparément, on remplace l'adapter in-process par un adapter réseau — le BC ne change pas
+- `check-arch` ne signale aucune violation : seul `infrastructure/` importe le BC source
+
+### Règles
+
+- **Jamais d'import direct** d'un BC source dans le code du BC consommateur (`domain/`, `ports.rs`, `io/web/`, `use_cases/`)
+- **Jamais d'adapter dans le BC** lui-même (`app/<bc>/io/` ne doit pas contenir d'adapter inter-BC)
+- Le `context.rs` du BC consommateur reçoit un `Arc<dyn Port>`, il ne connaît pas l'implémentation concrète
+- Un sous-dossier par BC consommateur dans `src/infrastructure/` : `infrastructure/team_creation/`, `infrastructure/teams/`, etc.
+
+---
+
+## Domain services pour données inter-BCs — règle fondamentale
+
+Quand un BC récupère des données d'un autre BC via un port (cf. section « Adapters inter-BCs »), les DTOs du port **ne doivent jamais** être manipulés directement par les handlers. La transformation des DTOs du port en objets du domaine local passe par un **domain service** dans la couche `use_cases/`.
+
+### Principe
+
+Le domain service reçoit le port en paramètre et retourne des objets du domaine du BC consommateur. Les handlers appellent ce service — ils ne connaissent ni les DTOs du port, ni la logique de mapping.
+
+```rust
+// use_cases/roster_service.rs — dans le BC team_creation
+
+pub fn load_roster(
+    roster_uid: &str,
+    ref_data: &dyn IReferenceDataPort,
+) -> Option<Roster> {
+    let def = ref_data.find_roster_definition(roster_uid)?;
+    Some(build_roster_from_definition(&def, ref_data))
+}
+```
+
+```rust
+// handler — n'importe jamais RosterDefinition
+let roster = roster_service::load_roster(&roster_uid, ref_data)
+    .ok_or(StatusCode::NOT_FOUND)?;
+```
+
+### Pourquoi
+
+- Les handlers restent minces : orchestration pure, pas de logique de mapping
+- La logique de transformation (ex. résolution du staff, mapping `staff_kind`, ajout de FAN_FACTOR) est testable unitairement sans handler ni HTTP
+- Si le port change (nouveaux champs, restructuration des DTOs), seul le domain service est impacté — pas les handlers
+
+### Règles
+
+- **Jamais de DTO de port** (`RosterDefinition`, `StaffDefinition`, etc.) dans un handler ou un template — toujours passer par le domain service pour obtenir un objet domaine
+- Le domain service vit dans `use_cases/` (couche applicative), pas dans `domain/` (le domaine pur ne connaît pas les ports)
+- Les view models (VMs) de la couche présentation sont construits à partir des objets domaine retournés par le service, pas à partir des DTOs du port
+
+---
+
 ## Conventions widgets HTMX — règles fondamentales
 
 Un widget est un fragment HTML autonome exposé par un BC via un endpoint GET. Il encapsule son rendu, son comportement et son CSS. Il est chargé par une page hôte sans que celle-ci connaisse ses détails internes.
