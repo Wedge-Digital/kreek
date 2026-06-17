@@ -12,5 +12,7 @@ pub mod select_ruleset;
 pub mod set_league;
 pub mod set_player_identity;
 pub mod set_special_rule;
+pub mod cancel_creation_spp;
 pub mod roster_service;
+pub mod spend_creation_spp;
 pub mod submit_team;

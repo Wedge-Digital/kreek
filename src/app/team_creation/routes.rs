@@ -15,6 +15,8 @@ pub mod path {
     pub const SET_LEAGUE:          &str = "/app/{space_id}/team/{team_id}/league";
     pub const SET_SPECIAL_RULE:    &str = "/app/{space_id}/team/{team_id}/special-rule";
     pub const FINALIZE_TEAM:       &str = "/app/{space_id}/team/{team_id}/finalize";
+    pub const SPEND_SPP:           &str = "/app/{space_id}/team/{team_id}/players/{instance_id}/skills";
+    pub const CANCEL_SPP:          &str = "/app/{space_id}/team/{team_id}/players/{instance_id}/skills/{skill_id}";
     pub const CART_WIDGET:         &str = "/app/{space_id}/team/{team_id}/widgets/cart";
     pub const ROSTER_PICKER_WIDGET: &str = "/app/{space_id}/team/{team_id}/widgets/roster-picker";
     pub const PLAYER_TABLE_WIDGET: &str = "/app/{space_id}/team/{team_id}/widgets/player-table";
@@ -97,6 +99,19 @@ impl Routes {
         path::SET_SPECIAL_RULE
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
+    }
+    pub fn spend_spp(&self, space_id: &str, team_id: &str, instance_id: &str) -> String {
+        path::SPEND_SPP
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+            .replace("{instance_id}", instance_id)
+    }
+    pub fn cancel_spp(&self, space_id: &str, team_id: &str, instance_id: &str, skill_id: &str) -> String {
+        path::CANCEL_SPP
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+            .replace("{instance_id}", instance_id)
+            .replace("{skill_id}", skill_id)
     }
     pub fn finalize_team(&self, space_id: &str, team_id: &str) -> String {
         path::FINALIZE_TEAM

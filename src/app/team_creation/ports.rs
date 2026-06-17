@@ -41,9 +41,19 @@ pub struct StaffDefinition {
     pub max_quantity: u8,
 }
 
+pub struct SkillCostResult {
+    pub spp_cost: u8,
+}
+
 pub trait IReferenceDataPort: Send + Sync {
     fn find_roster_definition(&self, roster_uid: &str) -> Option<RosterDefinition>;
     fn list_staff_definitions(&self) -> Vec<StaffDefinition>;
+    fn resolve_skill_cost(
+        &self,
+        roster_line_id: &str,
+        skill_id: &str,
+        mode: &str,
+    ) -> Option<SkillCostResult>;
 }
 
 #[derive(Debug)]

@@ -387,6 +387,7 @@ mod tests {
     impl crate::app::team_creation::ports::IReferenceDataPort for FakeReferenceData {
         fn find_roster_definition(&self, _: &str) -> Option<crate::app::team_creation::ports::RosterDefinition> { None }
         fn list_staff_definitions(&self) -> Vec<crate::app::team_creation::ports::StaffDefinition> { vec![] }
+        fn resolve_skill_cost(&self, _: &str, _: &str, _: &str) -> Option<crate::app::team_creation::ports::SkillCostResult> { None }
     }
 
     #[tokio::test]

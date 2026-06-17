@@ -1,7 +1,7 @@
 use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::team_creation::ports::{
-    IReferenceDataPort, PlayerPositionDefinition, RosterDefinition, SkillDefinition,
-    StaffDefinition,
+    IReferenceDataPort, PlayerPositionDefinition, RosterDefinition, SkillCostResult,
+    SkillDefinition, StaffDefinition,
 };
 use std::sync::Arc;
 
@@ -56,6 +56,31 @@ impl IReferenceDataPort for ReferenceDataAdapter {
             leagues: team.leagues.clone(),
             special_rules: team.special_rules.clone(),
         })
+    }
+
+    fn resolve_skill_cost(
+        &self,
+        roster_line_id: &str,
+        skill_id: &str,
+        mode: &str,
+    ) -> Option<SkillCostResult> {
+        let position = self.repo.find_position_by_uid(roster_line_id)?;
+        let skill = self.repo.find_skill_by_uid(skill_id)?;
+
+        let is_primary = position.primary_access.iter().any(|c| c == &skill.category);
+        let is_elite = skill.skill_type == "Élite";
+
+        let pricing = self.repo.skill_cost_matrix().iter().find(|l| l.level == 1)?;
+
+        let spp_cost = match mode {
+            "random" => pricing.random_for(is_elite),
+            _ => {
+                let costs = pricing.chosen_for(is_elite);
+                if is_primary { costs.primary } else { costs.secondary }
+            }
+        };
+
+        Some(SkillCostResult { spp_cost })
     }
 
     fn list_staff_definitions(&self) -> Vec<StaffDefinition> {

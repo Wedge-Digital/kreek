@@ -4,6 +4,7 @@ use crate::app::team_creation::io::web::widgets::player_table_widget::{
     fire_player, hire_player, player_table_widget,
 };
 use crate::app::team_creation::io::web::widgets::roster_picker_widget::roster_picker_widget;
+use crate::app::team_creation::io::web::widgets::spp_widget::{cancel_spp, spend_spp};
 use crate::app::team_creation::io::web::widgets::staff_table_widget::{
     buy_reroll, buy_staff, remove_reroll, remove_staff, staff_table_widget,
 };
@@ -40,4 +41,6 @@ pub fn router() -> Router<AppState> {
         .route(path::CART_WIDGET, get(cart_widget))
         .route(path::ROSTER_PICKER_WIDGET, get(roster_picker_widget))
         .route(path::STAFF_TABLE_WIDGET, get(staff_table_widget))
+        .route(path::SPEND_SPP, axum::routing::post(spend_spp))
+        .route(path::CANCEL_SPP, axum::routing::delete(cancel_spp))
 }

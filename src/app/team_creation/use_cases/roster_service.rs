@@ -143,6 +143,10 @@ mod tests {
                 },
             ]
         }
+
+        fn resolve_skill_cost(&self, _: &str, _: &str, _: &str) -> Option<crate::app::team_creation::ports::SkillCostResult> {
+            Some(crate::app::team_creation::ports::SkillCostResult { spp_cost: 3 })
+        }
     }
 
     #[test]
