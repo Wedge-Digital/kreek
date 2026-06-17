@@ -13,7 +13,7 @@ use askama::Template;
 use axum::body::Body;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
-use axum::response::{Html, IntoResponse, Response};
+use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
