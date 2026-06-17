@@ -2,7 +2,7 @@ EXEC_PROFILE ?= dev
 DATABASE_URL   = $(shell grep -E '^DATABASE__URL=' .env.$(EXEC_PROFILE) | cut -d= -f2-)
 
 .PHONY: dev test e2e migrate migration prepare_db reset_db init_db \
-        lint check-arch coverage analyze help
+        seed_accounts lint check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
 help:
@@ -16,7 +16,8 @@ help:
 	@echo "  migration     Crée une migration (ex: make migration desc=create_teams)"
 	@echo "  prepare_db    Régénère le cache sqlx (cargo sqlx prepare)"
 	@echo "  reset_db      Remet la base à zéro (sqlx database reset)"
-	@echo "  init_db       reset_db + import des données legacy (WITH_SEED=1 pour aussi affecter les coachs aux spaces)"
+	@echo "  init_db       reset_db + import des données legacy + seed comptes dev (WITH_SEED=1 pour aussi affecter les coachs aux spaces)"
+	@echo "  seed_accounts Seed les comptes dev (scripts/seed_accounts.json)"
 	@echo ""
 	@echo "  Qualité & architecture"
 	@echo "  ─────────────────────────────────────────────────────"
@@ -51,10 +52,16 @@ prepare_db:
 reset_db:
 	DATABASE_URL=$(DATABASE_URL) sqlx database reset -y -f
 
+seed_accounts:
+	DATABASE_URL=$(DATABASE_URL) cargo run -- seed-accounts
+
 init_db: reset_db
 	@echo ""
 	@echo "  Import des données legacy…"
 	@./scripts/import_all.sh
+	@echo ""
+	@echo "  Seed des comptes dev…"
+	@DATABASE_URL=$(DATABASE_URL) cargo run -- seed-accounts
 ifeq ($(WITH_SEED),1)
 	@echo ""
 	@echo "  Affectation des coachs aux spaces…"

@@ -1,6 +1,7 @@
 extern crate core;
 
 mod app;
+mod cli;
 mod config;
 #[allow(special_module_name)]
 pub mod common;
@@ -34,10 +35,40 @@ use crate::web::middleware::require_auth::require_auth;
 use axum::middleware::{from_fn, from_fn_with_state};
 use axum::{response::Redirect, routing::get, Router};
 use axum_login::AuthManagerLayerBuilder;
+use clap::Parser;
 use std::sync::Arc;
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tower_livereload::LiveReloadLayer;
 use tower_sessions::SessionManagerLayer;
+
+#[derive(Parser)]
+#[command(name = "kreek", about = "kreek — Blood Bowl league manager")]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Command>,
+}
+
+#[derive(clap::Subcommand)]
+enum Command {
+    /// Lance le serveur HTTP
+    Serve,
+    /// Seed les comptes utilisateurs depuis un fichier JSON
+    SeedAccounts {
+        #[arg(long, default_value = "scripts/seed_accounts.json")]
+        input: String,
+    },
+}
+
+async fn init_pool(cfg: &AppConfig) -> sqlx::PgPool {
+    sqlx::postgres::PgPoolOptions::new()
+        .max_connections(cfg.database.max_connections)
+        .min_connections(cfg.database.min_connections)
+        .acquire_timeout(Duration::from_secs(cfg.database.acquire_timeout_seconds))
+        .idle_timeout(Duration::from_secs(cfg.database.idle_timeout_seconds))
+        .connect(&cfg.database.url)
+        .await
+        .expect("Impossible de se connecter à la base de données")
+}
 
 #[tokio::main]
 async fn main() {
@@ -48,18 +79,25 @@ async fn main() {
         )
         .init();
 
+    let cli = Cli::parse();
+
     let cfg =
         AppConfig::load().expect("Configuration invalide — vérifiez vos variables d'environnement");
 
-    let pool = sqlx::postgres::PgPoolOptions::new()
-        .max_connections(cfg.database.max_connections)
-        .min_connections(cfg.database.min_connections)
-        .acquire_timeout(Duration::from_secs(cfg.database.acquire_timeout_seconds))
-        .idle_timeout(Duration::from_secs(cfg.database.idle_timeout_seconds))
-        .connect(&cfg.database.url)
-        .await
-        .expect("Impossible de se connecter à la base de données");
+    let pool = init_pool(&cfg).await;
 
+    match cli.command.unwrap_or(Command::Serve) {
+        Command::Serve => run_server(cfg, pool).await,
+        Command::SeedAccounts { input } => {
+            if let Err(e) = cli::seed_accounts::execute(&pool, &input).await {
+                tracing::error!("seed-accounts failed: {e}");
+                std::process::exit(1);
+            }
+        }
+    }
+}
+
+async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
     let server_address = cfg.server_addr();
 
     let event_bus = new_bus();
@@ -138,10 +176,6 @@ async fn main() {
 
     #[cfg(debug_assertions)]
     let app = {
-        // Exclude HTMX fragment requests from livereload script injection.
-        // Without this, every HTMX swap injects a new <script> that opens a
-        // persistent SSE connection, exhausting the browser's 6-connection-per-origin
-        // limit (HTTP/1.1) after just two open tabs.
         #[derive(Clone, Copy)]
         struct NotHtmxRequest;
         impl tower_livereload::predicate::Predicate<axum::http::Request<axum::body::Body>>
