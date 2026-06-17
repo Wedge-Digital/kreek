@@ -2,6 +2,7 @@ use crate::app::team_creation::io::web::build_team::{
     build_team, buy_reroll, buy_staff, fire_player, get_roster_players, hire_player, remove_reroll,
     remove_staff, submit_team,
 };
+use crate::app::team_creation::io::web::widgets::cart_widget::cart_widget;
 use crate::app::team_creation::io::web::draft_team::draft_team;
 use crate::app::team_creation::io::web::finalize_team::{finalize_team, post_finalize_team};
 use crate::app::team_creation::io::web::my_teams::my_teams;
@@ -32,4 +33,5 @@ pub fn router() -> Router<AppState> {
         .route(path::SET_LEAGUE, axum::routing::post(set_league))
         .route(path::SET_SPECIAL_RULE, axum::routing::post(set_special_rule))
         .route(path::FINALIZE_TEAM, get(finalize_team).post(post_finalize_team))
+        .route(path::CART_WIDGET, get(cart_widget))
 }

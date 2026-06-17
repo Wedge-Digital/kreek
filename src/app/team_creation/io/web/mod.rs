@@ -9,3 +9,4 @@ pub mod set_player_identity;
 pub mod set_special_rule;
 pub mod team_detail;
 pub mod view_models;
+pub mod widgets;

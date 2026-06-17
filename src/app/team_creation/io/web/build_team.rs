@@ -8,7 +8,7 @@ use crate::app::team_creation::io::web::builders::{
     build_hired_rows, build_player_positions, build_roster_items_with_tiers,
 };
 use crate::app::team_creation::io::web::view_models::{
-    CartVm, HiredPlayerRowVm, PlayerPositionVm, RerollVm, RosterPickerItemWithTier, RulesPanelVm,
+    HiredPlayerRowVm, PlayerPositionVm, RerollVm, RosterPickerItemWithTier, RulesPanelVm,
     RulesTierVm, StaffRowVm,
 };
 use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
@@ -70,7 +70,6 @@ pub struct BuildTeamTemplate {
     pub hired_rows: Vec<HiredPlayerRowVm>,
     pub staff_rows: Vec<StaffRowVm>,
     pub reroll: Option<RerollVm>,
-    pub cart: Option<CartVm>,
     pub rules_panel: RulesPanelVm,
 }
 
@@ -122,9 +121,9 @@ pub async fn build_team(
     let ref_data = state.team_creation.reference_data.as_ref();
     let rosters = build_roster_items_with_tiers(ref_data, draft.creation_rules());
 
-    let (selected_roster_uid, selected_league_uid, selected_special_rule_uid, hired_rows, staff_rows, reroll, cart) =
+    let (selected_roster_uid, selected_league_uid, selected_special_rule_uid, hired_rows, staff_rows, reroll) =
         match &roster_team {
-            None => (None, None, None, vec![], vec![], None, None),
+            None => (None, None, None, vec![], vec![], None),
             Some(team) => {
                 let roster_uid       = team.roster.id.0.clone();
                 let league_uid       = team.league_id.as_ref().map(|l| l.0.clone());
@@ -136,8 +135,7 @@ pub async fn build_team(
                 };
                 let staff  = StaffRowVm::all_from_domain(team);
                 let rv     = RerollVm::from_domain(team);
-                let cv     = CartVm::from_domain(team);
-                (Some(roster_uid), league_uid, special_rule_uid, rows, staff, Some(rv), Some(cv))
+                (Some(roster_uid), league_uid, special_rule_uid, rows, staff, Some(rv))
             }
         };
 
@@ -220,7 +218,6 @@ pub async fn build_team(
         hired_rows,
         staff_rows,
         reroll,
-        cart,
         rules_panel,
     }
     .into_response()
@@ -235,7 +232,6 @@ pub struct RosterPlayersFragment {
     pub team_routes: TeamCreationRoutes,
     pub space_id: String,
     pub team_id: String,
-    pub cart: Option<CartVm>,
     pub staff_rows: Vec<StaffRowVm>,
     pub reroll: Option<RerollVm>,
 }
@@ -243,7 +239,11 @@ pub struct RosterPlayersFragment {
 impl IntoResponse for RosterPlayersFragment {
     fn into_response(self) -> Response {
         match self.render() {
-            Ok(html) => Html(html).into_response(),
+            Ok(html) => Response::builder()
+                .header("content-type", "text/html; charset=utf-8")
+                .header("HX-Trigger", "teamMutated")
+                .body(Body::from(html))
+                .unwrap(),
             Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
     }
@@ -339,7 +339,6 @@ pub async fn get_roster_players(
     }
 
     let positions = build_player_positions(&roster_def);
-    let cart = Some(CartVm::from_domain(&roster_team));
     let staff_rows = StaffRowVm::all_from_domain(&roster_team);
     let reroll = Some(RerollVm::from_domain(&roster_team));
 
@@ -348,7 +347,6 @@ pub async fn get_roster_players(
         team_routes: Default::default(),
         space_id,
         team_id,
-        cart,
         staff_rows,
         reroll,
     }
@@ -364,13 +362,16 @@ pub struct PlayerRowFragment {
     pub team_routes: TeamCreationRoutes,
     pub space_id: String,
     pub team_id: String,
-    pub cart: CartVm,
 }
 
 impl IntoResponse for PlayerRowFragment {
     fn into_response(self) -> Response {
         match self.render() {
-            Ok(html) => Html(html).into_response(),
+            Ok(html) => Response::builder()
+                .header("content-type", "text/html; charset=utf-8")
+                .header("HX-Trigger", "teamMutated")
+                .body(Body::from(html))
+                .unwrap(),
             Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
     }
@@ -430,14 +431,12 @@ pub async fn hire_player(
         Some(r) => r,
         None => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
-    let cart = CartVm::from_domain(&updated_team);
 
     PlayerRowFragment {
         row,
         team_routes: Default::default(),
         space_id,
         team_id,
-        cart,
     }
     .into_response()
 }
@@ -496,14 +495,12 @@ pub async fn fire_player(
         Some(r) => r,
         None => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
-    let cart = CartVm::from_domain(&updated_team);
 
     PlayerRowFragment {
         row,
         team_routes: Default::default(),
         space_id,
         team_id,
-        cart,
     }
     .into_response()
 }
@@ -517,13 +514,16 @@ pub struct StaffRowFragment {
     pub team_routes: TeamCreationRoutes,
     pub space_id: String,
     pub team_id: String,
-    pub cart: CartVm,
 }
 
 impl IntoResponse for StaffRowFragment {
     fn into_response(self) -> Response {
         match self.render() {
-            Ok(html) => Html(html).into_response(),
+            Ok(html) => Response::builder()
+                .header("content-type", "text/html; charset=utf-8")
+                .header("HX-Trigger", "teamMutated")
+                .body(Body::from(html))
+                .unwrap(),
             Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
     }
@@ -538,13 +538,16 @@ pub struct RerollRowFragment {
     pub team_routes: TeamCreationRoutes,
     pub space_id: String,
     pub team_id: String,
-    pub cart: CartVm,
 }
 
 impl IntoResponse for RerollRowFragment {
     fn into_response(self) -> Response {
         match self.render() {
-            Ok(html) => Html(html).into_response(),
+            Ok(html) => Response::builder()
+                .header("content-type", "text/html; charset=utf-8")
+                .header("HX-Trigger", "teamMutated")
+                .body(Body::from(html))
+                .unwrap(),
             Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
     }
@@ -596,14 +599,11 @@ pub async fn buy_staff(
         Some(r) => r,
         None => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
-    let cart = CartVm::from_domain(&updated_team);
-
     StaffRowFragment {
         row,
         team_routes: Default::default(),
         space_id,
         team_id,
-        cart,
     }
     .into_response()
 }
@@ -649,14 +649,11 @@ pub async fn remove_staff(
         Some(r) => r,
         None => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
-    let cart = CartVm::from_domain(&updated_team);
-
     StaffRowFragment {
         row,
         team_routes: Default::default(),
         space_id,
         team_id,
-        cart,
     }
     .into_response()
 }
@@ -693,14 +690,11 @@ pub async fn buy_reroll(
         };
 
     let reroll = RerollVm::from_domain(&updated_team);
-    let cart = CartVm::from_domain(&updated_team);
-
     RerollRowFragment {
         reroll,
         team_routes: Default::default(),
         space_id,
         team_id,
-        cart,
     }
     .into_response()
 }
@@ -738,14 +732,11 @@ pub async fn remove_reroll(
     };
 
     let reroll = RerollVm::from_domain(&updated_team);
-    let cart = CartVm::from_domain(&updated_team);
-
     RerollRowFragment {
         reroll,
         team_routes: Default::default(),
         space_id,
         team_id,
-        cart,
     }
     .into_response()
 }

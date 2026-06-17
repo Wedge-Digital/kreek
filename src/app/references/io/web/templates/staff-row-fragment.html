@@ -1,4 +1,3 @@
-{% import "cart-fragment.html" as cart_cmp %}
 <tr id="staff-row-{{ row.id }}">
   <td>{{ row.max_qty_label }}</td>
   <td style="text-align: left; font-weight: 500;">{{ row.name }}</td>
@@ -25,6 +24,3 @@
   </td>
 </tr>
 <div id="staff-table-error" class="table-error-zone" hx-swap-oob="true"></div>
-<div id="team-cart" class="cart" hx-swap-oob="true">
-  {% call cart_cmp::cart_body(Some(cart)) %}
-</div>

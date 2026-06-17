@@ -15,6 +15,7 @@ pub mod path {
     pub const SET_LEAGUE:          &str = "/app/{space_id}/team/{team_id}/league";
     pub const SET_SPECIAL_RULE:    &str = "/app/{space_id}/team/{team_id}/special-rule";
     pub const FINALIZE_TEAM:       &str = "/app/{space_id}/team/{team_id}/finalize";
+    pub const CART_WIDGET:         &str = "/app/{space_id}/team/{team_id}/widgets/cart";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -96,6 +97,11 @@ impl Routes {
     }
     pub fn finalize_team(&self, space_id: &str, team_id: &str) -> String {
         path::FINALIZE_TEAM
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+    pub fn cart_widget(&self, space_id: &str, team_id: &str) -> String {
+        path::CART_WIDGET
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
     }
