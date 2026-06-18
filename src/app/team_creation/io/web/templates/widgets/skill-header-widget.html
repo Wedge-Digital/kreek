@@ -1,0 +1,52 @@
+<div class="skill-header-widget" hx-disinherit="*">
+{% if let Some(p) = player %}
+  <div class="skill-header-identity">
+    <input class="jersey-input" type="number" name="jersey" value="{{ p.jersey }}"
+           min="1" max="99"
+           hx-post="{{ team_routes.set_player_identity(space_id, team_id, p.player_id) }}"
+           hx-ext="json-enc"
+           hx-trigger="change"
+           hx-swap="none">
+    <input class="player-name-input" type="text" name="name" value="{{ p.name }}"
+           placeholder="Nom du joueur"
+           hx-post="{{ team_routes.set_player_identity(space_id, team_id, p.player_id) }}"
+           hx-ext="json-enc"
+           hx-trigger="blur"
+           hx-swap="none">
+  </div>
+
+  <div class="skill-header-meta">
+    <span class="skill-header-position">{{ p.position_name }}</span>
+    <span class="skill-header-sep">·</span>
+    <span class="skill-header-roster">{{ p.roster_name }}</span>
+  </div>
+
+  <div class="skill-header-spp">
+    <span class="spp-badge">{{ p.spp_pool }} SPP</span> restants dans le pool équipe
+  </div>
+
+  {% if !p.acquired_skills.is_empty() %}
+  <div class="skill-header-acquired">
+    <span class="acquired-label">Compétences acquises</span>
+    <div class="acquired-tags">
+      {% for skill in p.acquired_skills %}
+      <span class="acquired-tag">
+        <span class="acquired-tag-name">{{ skill.name }}</span>
+        <span class="acquired-tag-meta">{{ skill.mode_label }} · {{ skill.spp_cost }} SPP</span>
+        <button class="acquired-tag-cancel"
+                hx-delete="{{ team_routes.cancel_spp(space_id, team_id, p.player_id, skill.skill_id) }}"
+                hx-swap="none"
+                title="Annuler">✕</button>
+      </span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+{% else %}
+  <div class="skill-panel-empty">
+    <div class="skill-panel-empty-icon">⬆</div>
+    Sélectionnez un joueur pour gérer ses compétences
+  </div>
+{% endif %}
+</div>

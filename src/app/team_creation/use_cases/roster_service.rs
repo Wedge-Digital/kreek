@@ -148,6 +148,10 @@ mod tests {
             Some(crate::app::team_creation::ports::SkillCostResult { spp_cost: 3 })
         }
 
+        fn resolve_skill_name(&self, uid: &str) -> Option<String> {
+            if uid == "DODGE" { Some("Esquive".into()) } else { None }
+        }
+
         fn resolve_base_skills(&self, _: &str) -> Vec<String> { vec!["Esquive".into()] }
 
         fn skill_pricing_level_1(&self) -> Option<crate::app::team_creation::ports::SkillPricingDefinition> {

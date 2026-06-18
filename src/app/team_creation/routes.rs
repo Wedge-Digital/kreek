@@ -18,6 +18,7 @@ pub mod path {
     pub const SPEND_SPP:           &str = "/app/{space_id}/team/{team_id}/players/{instance_id}/skills";
     pub const CANCEL_SPP:          &str = "/app/{space_id}/team/{team_id}/players/{instance_id}/skills/{skill_id}";
     pub const CART_WIDGET:         &str = "/app/{space_id}/team/{team_id}/widgets/cart";
+    pub const SKILL_HEADER_WIDGET: &str = "/app/{space_id}/team/{team_id}/widgets/skill-header";
     pub const ROSTER_PICKER_WIDGET: &str = "/app/{space_id}/team/{team_id}/widgets/roster-picker";
     pub const PLAYER_TABLE_WIDGET: &str = "/app/{space_id}/team/{team_id}/widgets/player-table";
     pub const STAFF_TABLE_WIDGET:  &str = "/app/{space_id}/team/{team_id}/widgets/staff-table";
@@ -130,6 +131,11 @@ impl Routes {
     }
     pub fn roster_picker_widget(&self, space_id: &str, team_id: &str) -> String {
         path::ROSTER_PICKER_WIDGET
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+    pub fn skill_header_widget(&self, space_id: &str, team_id: &str) -> String {
+        path::SKILL_HEADER_WIDGET
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
     }

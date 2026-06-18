@@ -60,6 +60,7 @@ pub trait IReferenceDataPort: Send + Sync {
         skill_id: &str,
         mode: &str,
     ) -> Option<SkillCostResult>;
+    fn resolve_skill_name(&self, skill_uid: &str) -> Option<String>;
     fn resolve_base_skills(&self, roster_line_id: &str) -> Vec<String>;
     fn skill_pricing_level_1(&self) -> Option<SkillPricingDefinition>;
 }

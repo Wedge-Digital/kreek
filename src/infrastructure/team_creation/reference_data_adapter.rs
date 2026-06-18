@@ -83,6 +83,10 @@ impl IReferenceDataPort for ReferenceDataAdapter {
         Some(SkillCostResult { spp_cost })
     }
 
+    fn resolve_skill_name(&self, skill_uid: &str) -> Option<String> {
+        self.repo.find_skill_by_uid(skill_uid).map(|s| s.name.clone())
+    }
+
     fn resolve_base_skills(&self, roster_line_id: &str) -> Vec<String> {
         let Some(position) = self.repo.find_position_by_uid(roster_line_id) else {
             return vec![];
