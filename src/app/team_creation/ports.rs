@@ -45,6 +45,12 @@ pub struct SkillCostResult {
     pub spp_cost: u8,
 }
 
+pub struct SkillPricingDefinition {
+    pub chosen_primary: u8,
+    pub chosen_secondary: u8,
+    pub random: u8,
+}
+
 pub trait IReferenceDataPort: Send + Sync {
     fn find_roster_definition(&self, roster_uid: &str) -> Option<RosterDefinition>;
     fn list_staff_definitions(&self) -> Vec<StaffDefinition>;
@@ -54,6 +60,8 @@ pub trait IReferenceDataPort: Send + Sync {
         skill_id: &str,
         mode: &str,
     ) -> Option<SkillCostResult>;
+    fn resolve_base_skills(&self, roster_line_id: &str) -> Vec<String>;
+    fn skill_pricing_level_1(&self) -> Option<SkillPricingDefinition>;
 }
 
 #[derive(Debug)]

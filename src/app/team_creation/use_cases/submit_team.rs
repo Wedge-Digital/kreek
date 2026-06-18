@@ -1,7 +1,6 @@
 use crate::app::shared_kernel::app_events::team_creation_app_events::{
     AcquiredSkillPayload, PlayerPayload,
 };
-use crate::app::team_creation::use_cases::batch_finalize::assign_jerseys;
 use crate::app::shared_kernel::common_types::Entity;
 use crate::app::shared_kernel::common_types::EventId;
 use crate::app::shared_kernel::staff::StaffKind;
@@ -31,7 +30,7 @@ pub async fn execute(
     team_repo: &dyn ITeamRosterRepository,
     bus: &EventBus,
 ) -> Result<(), SubmitTeamError> {
-    let team = team_repo
+    let mut team = team_repo
         .find_by_id(&cmd.team_id)
         .await
         .map_err(SubmitTeamError::Repository)?
@@ -39,6 +38,8 @@ pub async fn execute(
 
     team.validate_for_submission()
         .map_err(SubmitTeamError::Domain)?;
+
+    team.assign_missing_jerseys();
 
     team_repo
         .mark_submitted(&team.get_id())
@@ -52,13 +53,12 @@ pub async fn execute(
     let cheerleaders = CheerleaderCount::new(count_staff(&team, StaffKind::Cheerleaders)).unwrap_or_default();
     let fans_factor  = count_staff(&team, StaffKind::FansFactor);
 
-    let jersey_map = assign_jerseys(team.hired_players());
     let players: Vec<PlayerPayload> = team.hired_players().iter().map(|p| PlayerPayload {
         instance_id:     p.instance_id.0.clone(),
         roster_line_id:  p.definition.id.0.clone(),
         position_name:   p.definition.name.0.clone(),
         personal_name:   p.personal_name.clone(),
-        jersey:          Some(*jersey_map.get(&p.instance_id.0).expect("player in jersey_map")),
+        jersey:          p.jersey.map(|j| j.0),
         acquired_skills: p.acquired_skills.iter().map(|a| AcquiredSkillPayload {
             skill_id: a.skill_id.0.clone(),
             mode:     match a.mode {

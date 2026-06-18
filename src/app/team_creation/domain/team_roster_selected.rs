@@ -244,6 +244,25 @@ impl RosterSelectedTeam {
         Ok(refunded)
     }
 
+    pub fn assign_missing_jerseys(&mut self) {
+        let mut used: std::collections::HashSet<u8> = self
+            .hired_players
+            .iter()
+            .filter_map(|p| p.jersey.map(|j| j.0))
+            .collect();
+        let mut next = 1u8;
+        for player in &mut self.hired_players {
+            if player.jersey.is_none() {
+                while used.contains(&next) {
+                    next += 1;
+                }
+                player.jersey = Some(JerseyNumber(next));
+                used.insert(next);
+                next += 1;
+            }
+        }
+    }
+
     pub fn set_player_identity(
         &mut self,
         instance_id: &PlayerId,

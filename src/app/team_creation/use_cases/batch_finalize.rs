@@ -7,39 +7,17 @@ use crate::app::shared_kernel::staff_counts::{
     ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
 };
 use crate::app::team_creation::domain::error::DomainError;
-use crate::app::team_creation::domain::roster::{AcquisitionMode, HiredPlayer, PlayerId, SkillId};
+use crate::app::team_creation::domain::roster::{AcquisitionMode, PlayerId, SkillId};
 use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
 use crate::app::team_creation::domain_event::TeamCreationDomainEvent;
-use crate::app::team_creation::ports::{ITeamRosterRepository, RepositoryError};
+use crate::app::team_creation::ports::{IReferenceDataPort, ITeamRosterRepository, RepositoryError};
 use crate::common::services::event_bus::event_bus::EventBus;
 use crate::app::shared_kernel::common_types::EntityId;
-use std::collections::{HashMap, HashSet};
-
-pub fn assign_jerseys(players: &[HiredPlayer]) -> HashMap<String, u8> {
-    let mut used: HashSet<u8> = players.iter().filter_map(|p| p.jersey.map(|j| j.0)).collect();
-    let mut next: u8 = 1;
-    let mut result = HashMap::new();
-    for p in players {
-        let jersey = match p.jersey {
-            Some(j) => j.0,
-            None => {
-                while used.contains(&next) { next += 1; }
-                let j = next;
-                used.insert(j);
-                next += 1;
-                j
-            }
-        };
-        result.insert(p.instance_id.0.clone(), jersey);
-    }
-    result
-}
 
 pub struct SkillAssignment {
     pub player_id: PlayerId,
     pub skill_id:  SkillId,
     pub mode:      AcquisitionMode,
-    pub spp_cost:  u8,
 }
 
 pub struct BatchFinalizeCommand {
@@ -62,6 +40,7 @@ fn count_staff(team: &RosterSelectedTeam, kind: StaffKind) -> u8 {
 pub async fn execute(
     cmd: BatchFinalizeCommand,
     repo: &dyn ITeamRosterRepository,
+    ref_data: &dyn IReferenceDataPort,
     bus: &EventBus,
 ) -> Result<(), BatchFinalizeError> {
     let mut team = repo
@@ -72,13 +51,32 @@ pub async fn execute(
 
     let mut errors = Vec::new();
     for a in &cmd.assignments {
-        if let Err(e) = team.spend_spp(&a.player_id, a.skill_id.clone(), a.mode, a.spp_cost) {
+        let roster_line_id = team
+            .hired_players()
+            .iter()
+            .find(|p| p.instance_id == a.player_id)
+            .map(|p| p.definition.id.0.clone())
+            .unwrap_or_default();
+
+        let mode_str = match a.mode {
+            AcquisitionMode::Chosen => "chosen",
+            AcquisitionMode::Random => "random",
+        };
+
+        let spp_cost = ref_data
+            .resolve_skill_cost(&roster_line_id, &a.skill_id.0, mode_str)
+            .map(|c| c.spp_cost)
+            .unwrap_or(0);
+
+        if let Err(e) = team.spend_spp(&a.player_id, a.skill_id.clone(), a.mode, spp_cost) {
             errors.push(e);
         }
     }
     if !errors.is_empty() {
         return Err(BatchFinalizeError::Domain(errors));
     }
+
+    team.assign_missing_jerseys();
 
     team.validate_for_submission()
         .map_err(BatchFinalizeError::Domain)?;
@@ -98,13 +96,12 @@ pub async fn execute(
     let cheers     = CheerleaderCount::new(count_staff(&team, StaffKind::Cheerleaders)).unwrap_or_default();
     let fans       = count_staff(&team, StaffKind::FansFactor);
 
-    let jersey_map = assign_jerseys(team.hired_players());
     let players: Vec<PlayerPayload> = team.hired_players().iter().map(|p| PlayerPayload {
         instance_id:     p.instance_id.0.clone(),
         roster_line_id:  p.definition.id.0.clone(),
         position_name:   p.definition.name.0.clone(),
         personal_name:   p.personal_name.clone(),
-        jersey:          Some(*jersey_map.get(&p.instance_id.0).expect("player in jersey_map")),
+        jersey:          p.jersey.map(|j| j.0),
         acquired_skills: p.acquired_skills.iter().map(|a| AcquiredSkillPayload {
             skill_id: a.skill_id.0.clone(),
             mode:     match a.mode {

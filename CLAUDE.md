@@ -93,11 +93,77 @@ Le middleware CSRF rejette les POST/PUT/DELETE/PATCH sans header `HX-Request: tr
 
 ---
 
+## Responsabilités des couches — règle fondamentale
+
+### Couche IO/Web (handlers) — Adapter entrant
+
+Le handler est un **traducteur de protocole HTTP**. Il ne prend aucune décision métier.
+
+Responsabilités :
+- Valider le format de la requête (parsing, types, paramètres manquants)
+- Construire la commande (ou query) à partir de la requête validée, y compris la validation des Value Objects via leurs smart constructors (`JerseyNumber::try_new()`, `EntityId::try_new()`, etc.)
+- Appeler le use case — un seul par handler, sauf orchestration de flow HTTP (auto-skip, redirect conditionnel)
+- Transformer le résultat du use case en réponse HTTP (template, fragment, redirect, erreur)
+
+**Interdit** : toute logique qui répond à la question "que doit-il se passer ?" — calcul de coûts, attribution de jerseys, vérification de doublons, transformation d'entités domaine, résolution de données métier via les ports.
+
+### Couche Use Cases (application) — Orchestration
+
+Le use case est un **chef d'orchestre**. Il coordonne les appels entre le domaine, les repositories et les ports, mais ne contient pas de logique métier.
+
+Responsabilités :
+- Charger les agrégats depuis les repositories
+- Charger les données externes nécessaires via les ports (ACL)
+- Appeler les méthodes métier sur les agrégats
+- Persister les modifications
+- Émettre les événements (domaine ou applicatifs)
+- Gérer les transactions (si atomicité requise)
+
+**Interdit** : logique métier qui pourrait vivre dans l'agrégat — le use case ne décide pas si un joueur peut être recruté, il demande à l'agrégat. Le use case ne connaît pas HTTP, HTML, ni les formats de sérialisation.
+
+### Couche Domaine — Cœur métier
+
+L'agrégat est le **gardien des invariants**. Toute logique qui répond à "est-ce autorisé ?" ou "que se passe-t-il quand ?" vit ici.
+
+Responsabilités :
+- Valider les règles métier (budget suffisant, jersey unique, max joueurs, skill non dupliquée, etc.)
+- Muter l'état interne selon les commandes domaine
+- Retourner des erreurs domaine typées (`DomainError`) en cas de violation
+- Émettre des événements domaine (si event-sourcé)
+
+**Interdit** : toute dépendance framework (axum, sqlx, serde pour le web), accès aux ports, appels async, connaissance des repositories.
+
+### Grille de décision
+
+| Question | Couche |
+|---|---|
+| "Ce champ HTTP est-il présent et bien typé ?" | Handler |
+| "Quel agrégat charger ? Quel port appeler ?" | Use case |
+| "Ce joueur peut-il être recruté ? Ce jersey est-il libre ?" | Domaine |
+| "Quel template rendre ? Quel header HTTP retourner ?" | Handler |
+| "Quel coût SPP pour ce skill ?" | Use case (via port) |
+| "Le pool SPP est-il suffisant ?" | Domaine |
+
+### Conventions de nommage des fichiers
+
+| Couche | Suffixe fichier | Exemple |
+|---|---|---|
+| IO/Web (handlers Axum) | `_controller.rs` | `build_team_controller.rs`, `set_league_controller.rs` |
+| Use cases | `_use_case.rs` | `hire_player_use_case.rs`, `submit_team_use_case.rs` |
+| Domain services | `_service.rs` | `roster_service.rs` |
+| Widgets (dans `widgets/`) | `_widget.rs` | `cart_widget.rs`, `player_table_widget.rs` |
+| View models | fichier `view_models.rs`, structs suffixées `Vm` | `CartVm`, `StaffRowVm` |
+| Domaine / Ports / Templates | pas de suffixe imposé | `roster.rs`, `ports.rs` |
+
+Ces conventions sont appliquées au fil de l'eau — pas de renommage massif, mais tout nouveau fichier ou fichier modifié doit les suivre.
+
+---
+
 ## Conventions handlers
 
 - Un handler = une responsabilité
 - Signature de retour : `Result<impl IntoResponse, AppError>`
-- Aucune logique métier dans un handler — déléguer au service applicatif
+- Le handler est un traducteur HTTP — il applique les règles de la section « Responsabilités des couches »
 - Utilisateur courant via `AuthSession` injecté par axum-login
 
 ---

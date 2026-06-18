@@ -1,5 +1,4 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::references::domain::models::ChosenSkillCost;
 use crate::app::references::routes::Routes as RefRoutes;
 use crate::app::team_creation::domain::roster::{AcquisitionMode, LeagueId, PlayerId, SkillId};
 use crate::app::team_creation::routes::Routes;
@@ -43,8 +42,14 @@ struct PlayerJson {
 }
 
 #[derive(Serialize)]
+struct PricingChosenJson {
+    primary:   u8,
+    secondary: u8,
+}
+
+#[derive(Serialize)]
 struct PricingJson {
-    chosen: ChosenSkillCost,
+    chosen: PricingChosenJson,
     random: u8,
 }
 
@@ -111,14 +116,13 @@ pub async fn finalize_team(
         }
     };
 
-    let ref_repo = state.references.repository.as_ref();
+    let ref_data = state.team_creation.reference_data.as_ref();
     let routes   = Routes::default();
 
-    let roster_leagues: Vec<String> = ref_repo
-        .list_teams()
-        .iter()
-        .find(|t| t.uid == team.roster.id.0)
-        .map(|t| t.leagues.clone())
+    let roster_def = ref_data.find_roster_definition(&team.roster.id.0);
+    let roster_leagues: Vec<String> = roster_def
+        .as_ref()
+        .map(|d| d.leagues.clone())
         .unwrap_or_default();
 
     // ── Skip si pas de finalisation nécessaire ────────────────────────────────
@@ -177,44 +181,20 @@ pub async fn finalize_team(
     }
 
     // ── Construire FINALIZE_DATA ──────────────────────────────────────────────
-    let pricing_level = ref_repo
-        .skill_cost_matrix()
-        .iter()
-        .find(|l| l.level == 1)
-        .expect("level 1 must exist in skill cost matrix");
+    let pricing = ref_data.skill_pricing_level_1().unwrap_or(
+        crate::app::team_creation::ports::SkillPricingDefinition {
+            chosen_primary: 0, chosen_secondary: 0, random: 0,
+        },
+    );
 
-    let mut used_jerseys: std::collections::HashSet<u8> = team
-        .hired_players()
-        .iter()
-        .filter_map(|p| p.jersey.map(|j| j.0))
-        .collect();
-    let mut next_jersey = 1u8;
+    let mut team = team;
+    team.assign_missing_jerseys();
 
     let players: Vec<PlayerJson> = team
         .hired_players()
         .iter()
         .map(|p| {
-            let jersey = match p.jersey {
-                Some(j) => j.0,
-                None => {
-                    while used_jerseys.contains(&next_jersey) { next_jersey += 1; }
-                    let j = next_jersey;
-                    used_jerseys.insert(j);
-                    next_jersey += 1;
-                    j
-                }
-            };
-
-            let base_skills: Vec<String> = ref_repo
-                .find_position_by_uid(&p.definition.id.0)
-                .map(|pos| {
-                    pos.skills
-                        .iter()
-                        .filter_map(|uid| ref_repo.find_skill_by_uid(uid))
-                        .map(|s| s.name.clone())
-                        .collect()
-                })
-                .unwrap_or_default();
+            let base_skills = ref_data.resolve_base_skills(&p.definition.id.0);
 
             let existing_skill_ids: Vec<String> = p
                 .acquired_skills
@@ -224,7 +204,7 @@ pub async fn finalize_team(
 
             PlayerJson {
                 id:                 p.instance_id.0.clone(),
-                jersey,
+                jersey:             p.jersey.map(|j| j.0).unwrap_or(0),
                 name:               if p.personal_name.is_empty() {
                     p.definition.name.0.clone()
                 } else {
@@ -244,8 +224,11 @@ pub async fn finalize_team(
         treasury:     team.remaining_budget().unwrap_or(0),
         spp_pool:     team.spp_pool,
         pricing: PricingJson {
-            chosen: pricing_level.chosen.clone(),
-            random: pricing_level.random,
+            chosen: PricingChosenJson {
+                primary: pricing.chosen_primary,
+                secondary: pricing.chosen_secondary,
+            },
+            random: pricing.random,
         },
         submit_url:            routes.finalize_team(&space_id, &team_id),
         skill_picker_base_url: RefRoutes::default().skill_picker_base().to_string(),
@@ -295,45 +278,18 @@ pub async fn post_finalize_team(
         Err(_)      => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
 
-    let ref_repo      = state.references.repository.as_ref();
-    let pricing_level = ref_repo
-        .skill_cost_matrix()
+    let assignments: Vec<SkillAssignment> = body
         .iter()
-        .find(|l| l.level == 1)
-        .expect("level 1 must exist");
-
-    let mut assignments = Vec::new();
-    for req in &body {
-        let mode = if req.mode == "random" {
-            AcquisitionMode::Random
-        } else {
-            AcquisitionMode::Chosen
-        };
-
-        let Some(player) = team.hired_players().iter().find(|p| p.instance_id.0 == req.player_id) else {
-            return StatusCode::BAD_REQUEST.into_response();
-        };
-        let Some(skill) = ref_repo.find_skill_by_uid(&req.skill_id) else {
-            return StatusCode::BAD_REQUEST.into_response();
-        };
-        let Some(position) = ref_repo.find_position_by_uid(&player.definition.id.0) else {
-            return StatusCode::BAD_REQUEST.into_response();
-        };
-
-        let is_primary = position.primary_access.contains(&skill.category);
-        let spp_cost = match (mode, is_primary) {
-            (AcquisitionMode::Chosen, true)  => pricing_level.chosen.primary,
-            (AcquisitionMode::Chosen, false) => pricing_level.chosen.secondary,
-            (AcquisitionMode::Random, _)     => pricing_level.random,
-        };
-
-        assignments.push(SkillAssignment {
+        .map(|req| SkillAssignment {
             player_id: PlayerId(req.player_id.clone()),
-            skill_id:  SkillId(req.skill_id.clone()),
-            mode,
-            spp_cost,
-        });
-    }
+            skill_id: SkillId(req.skill_id.clone()),
+            mode: if req.mode == "random" {
+                AcquisitionMode::Random
+            } else {
+                AcquisitionMode::Chosen
+            },
+        })
+        .collect();
 
     let cmd = BatchFinalizeCommand {
         team_id:     team_entity_id,
@@ -347,6 +303,7 @@ pub async fn post_finalize_team(
     match batch_uc::execute(
         cmd,
         state.team_creation.roster_repository.as_ref(),
+        state.team_creation.reference_data.as_ref(),
         &state.team_creation.event_bus,
     )
     .await

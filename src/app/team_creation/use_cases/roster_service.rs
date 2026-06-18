@@ -147,6 +147,14 @@ mod tests {
         fn resolve_skill_cost(&self, _: &str, _: &str, _: &str) -> Option<crate::app::team_creation::ports::SkillCostResult> {
             Some(crate::app::team_creation::ports::SkillCostResult { spp_cost: 3 })
         }
+
+        fn resolve_base_skills(&self, _: &str) -> Vec<String> { vec!["Esquive".into()] }
+
+        fn skill_pricing_level_1(&self) -> Option<crate::app::team_creation::ports::SkillPricingDefinition> {
+            Some(crate::app::team_creation::ports::SkillPricingDefinition {
+                chosen_primary: 3, chosen_secondary: 6, random: 2,
+            })
+        }
     }
 
     #[test]
