@@ -10,6 +10,13 @@ Directives de travail pour Claude Code sur ce projet.
 
 2. **Toutes les règles dans ce fichier** : toutes les règles de projet, conventions et préférences doivent être inscrites dans ce `CLAUDE.md` (versionné dans git), jamais dans la mémoire locale Claude Code uniquement. Cela garantit un comportement identique sur toutes les machines. La mémoire locale ne sert qu'à des rappels contextuels temporaires, pas à des règles durables.
 
+3. **Protocole de démarrage d'une carte** : quand on commence une carte, suivre cet ordre :
+   1. Rappeler le contenu synthétique et l'objectif de la carte
+   2. Présenter le plan de réalisation détaillé (fichiers impactés, étapes, ordre)
+   3. Attendre la validation de l'utilisateur avant de commencer à coder
+   
+   Ne jamais commencer à coder une carte sans validation explicite du plan.
+
 ---
 
 ## Projet
