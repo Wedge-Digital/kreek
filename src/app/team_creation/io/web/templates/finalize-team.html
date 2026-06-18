@@ -175,6 +175,26 @@
 <script>
 document.addEventListener('playerSelected', function(e) {
     document.body.dataset.playerId = e.detail.player_id || '';
+    document.body.dataset.onAcquire = e.detail.on_acquire || '';
+});
+
+document.addEventListener('skill-selected', function(e) {
+    var url = document.body.dataset.onAcquire;
+    if (!url) return;
+    fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'HX-Request': 'true' },
+        body: JSON.stringify({ skill_id: e.detail.skillId, mode: e.detail.mode })
+    }).then(function(res) {
+        var trigger = res.headers.get('HX-Trigger');
+        if (!trigger) return;
+        try {
+            var obj = JSON.parse(trigger);
+            Object.keys(obj).forEach(function(k) {
+                htmx.trigger(document.body, k, obj[k]);
+            });
+        } catch(ex) {}
+    });
 });
 </script>
 {% endblock %}

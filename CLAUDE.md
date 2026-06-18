@@ -17,6 +17,8 @@ Directives de travail pour Claude Code sur ce projet.
    
    Ne jamais commencer à coder une carte sans validation explicite du plan.
 
+4. **Suppression de code — vérification obligatoire** : avant de supprimer du code (fonction, bloc JS, macro Askama, struct, etc.), vérifier exhaustivement qu'il n'est utilisé nulle part — ni dans le code Rust, ni dans les templates HTML, ni dans le JS inline. Lister les consommateurs avant de supprimer. Si du code est supprimé, le comportement qu'il assurait doit être couvert par le nouveau code avant le commit.
+
 ---
 
 ## Projet
