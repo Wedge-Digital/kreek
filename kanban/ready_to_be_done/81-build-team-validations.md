@@ -1,18 +1,17 @@
-# BC `team_creation` — Validations de la page build-team avant finalisation
+# BC `team_creation` — Validations et redirections build-team / finalize-team
 
 **Priorité : haute**
 **Dépend de :** rien
-**Contexte :** BC `team_creation` — page build-team + handler finalize GET
+**Contexte :** BC `team_creation` — pages build-team + finalize-team
 
 ## Objectif
 
-Empêcher le passage en phase de finalisation si l'équipe ne respecte pas les prérequis. Aujourd'hui le bouton "Terminer la construction" est toujours actif et le handler finalize_team GET ne valide pas le nombre de joueurs avant de rendre la page.
+1. Empêcher le passage en phase de finalisation si l'équipe ne respecte pas les prérequis
+2. Implémenter les règles de redirection entre build-team, finalize-team et page équipe
 
 ---
 
-## Validations à appliquer
-
-### Avant de quitter la page build-team
+## Validations à appliquer avant finalisation
 
 | Règle | Source | Message d'erreur |
 |---|---|---|
@@ -20,41 +19,50 @@ Empêcher le passage en phase de finalisation si l'équipe ne respecte pas les p
 | Un roster doit être sélectionné | `roster.id` non vide | "Sélectionnez un roster." |
 | Budget non dépassé | `remaining_budget() >= 0` | "Le budget est dépassé." |
 
-### Dans le handler GET finalize_team
-
-Le handler doit valider **avant** de rendre la page de finalisation (pas seulement dans le chemin auto-skip). Si les prérequis ne sont pas remplis, il redirige vers la page build-team avec un message d'erreur.
+Le handler GET `finalize_team` doit valider ces prérequis **avant** de rendre la page. Si non respectés, retourne une erreur visible depuis build-team.
 
 ---
 
-## Conception
+## Règles de redirection
 
-### Option A — Validation serveur uniquement
+### Depuis build-team (bouton "Terminer la construction")
 
-Le handler GET `finalize_team` vérifie les prérequis. Si non respectés, retourne un fragment d'erreur HTMX (ex. `HX-Retarget` vers une zone d'erreur dans la page build-team, ou `HX-Redirect` vers build-team avec un query param `?error=...`).
+| Condition | Redirection |
+|---|---|
+| Prérequis non remplis (< 11 joueurs, pas de roster, budget dépassé) | Reste sur build-team avec message d'erreur |
+| Prérequis OK + SPP à dépenser (`spp_pool > 0`) | Redirige vers la page de finalisation |
+| Prérequis OK + pas de SPP + plusieurs ligues | Redirige vers la page de finalisation (choix de ligue) |
+| Prérequis OK + pas de SPP + une seule ligue | Auto-submit → redirige vers la page de l'équipe (BC teams) |
 
-### Option B — Validation serveur + indication visuelle
+### Depuis finalize-team (bouton "Soumettre l'équipe")
 
-En plus de la validation serveur :
-- Le bouton "Terminer la construction" est visuellement désactivé quand les prérequis ne sont pas remplis
-- Le cart widget affiche le nombre de joueurs recrutés et le minimum requis
-- Un message sous le bouton indique ce qui manque
+| Condition | Redirection |
+|---|---|
+| Soumission réussie | Redirige vers la page de l'équipe (BC teams) : `/app/{space_id}/team/{team_id}/detail` |
+| Erreur de validation | Reste sur finalize-team avec messages d'erreur |
 
-L'option B est meilleure pour l'UX mais nécessite que le cart ou un widget dédié connaisse le nombre de joueurs.
+### Depuis finalize-team (auto-skip, pas de finalisation nécessaire)
+
+Le handler GET `finalize_team` détecte que la finalisation n'est pas nécessaire → auto-set league + auto-submit → redirige vers la page de l'équipe.
 
 ---
 
-## Plan recommandé
+## Plan
 
-1. Dans le handler GET `finalize_team` : ajouter une validation `hired_players.len() < MIN_PLAYERS_FOR_SUBMISSION` → retourner une erreur ou redirect
-2. Dans le cart widget : afficher le compteur de joueurs (ex. "7/11 joueurs") et le statut (prêt ou non)
-3. Le bouton "Terminer la construction" pourrait être dans le cart widget (qui connaît l'état) plutôt qu'en dur dans la page
+1. Handler GET `finalize_team` : ajouter validation des prérequis avant de rendre la page
+2. Handler GET `finalize_team` : changer la redirection auto-skip de `my_teams` vers `team_detail`
+3. Handler POST `finalize_team` : changer la redirection de `my_teams` vers `team_detail`
+4. Handler `submit_team` (build-team) : changer la redirection de `my_teams` vers `team_detail`
+5. Cart widget : afficher le compteur de joueurs (ex. "7/11 joueurs")
 
 ---
 
 ## Checklist
 
-- [ ] Handler GET `finalize_team` : valider le nombre de joueurs avant de rendre la page
+- [ ] Handler GET `finalize_team` : valider minimum 11 joueurs avant de rendre la page
 - [ ] Si validation échoue : retourner un message d'erreur visible depuis build-team
+- [ ] Redirection auto-skip : `my_teams` → `team_detail`
+- [ ] Redirection POST finalize : `my_teams` → `team_detail`
+- [ ] Redirection submit_team (build) : `my_teams` → `team_detail`
 - [ ] Cart widget : afficher le compteur de joueurs recrutés vs minimum
-- [ ] Indication visuelle que l'équipe n'est pas prête à être finalisée
 - [ ] Test : impossible de passer en finalisation avec moins de 11 joueurs
