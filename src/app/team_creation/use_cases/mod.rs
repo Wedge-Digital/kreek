@@ -1,4 +1,3 @@
-pub mod batch_finalize;
 pub mod buy_reroll;
 pub mod buy_staff;
 pub mod commands;

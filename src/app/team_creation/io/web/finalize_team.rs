@@ -1,10 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::references::routes::Routes as RefRoutes;
-use crate::app::team_creation::domain::roster::{AcquisitionMode, LeagueId, PlayerId, SkillId};
+use crate::app::team_creation::domain::roster::LeagueId;
 use crate::app::team_creation::routes::Routes;
-use crate::app::team_creation::use_cases::batch_finalize::{
-    self as batch_uc, BatchFinalizeCommand, SkillAssignment,
-};
 use crate::app::team_creation::use_cases::commands::SubmitTeamCommand;
 use crate::app::team_creation::use_cases::set_league::{SetLeagueCommand, SetLeagueError};
 use crate::app::team_creation::use_cases::submit_team as submit_uc;
@@ -16,16 +13,7 @@ use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
-use serde::{Deserialize, Serialize};
-
-// ── POST body ─────────────────────────────────────────────────────────────────
-
-#[derive(Deserialize)]
-pub struct AssignmentRequest {
-    pub player_id: String,
-    pub skill_id:  String,
-    pub mode:      String,
-}
+use serde::Serialize;
 
 // ── Serializable page data (FINALIZE_DATA) ────────────────────────────────────
 
@@ -256,7 +244,6 @@ pub async fn post_finalize_team(
     auth_session: AuthSession,
     Path((space_id, team_id)): Path<(String, String)>,
     State(state): State<AppState>,
-    axum::Json(body): axum::Json<Vec<AssignmentRequest>>,
 ) -> impl IntoResponse {
     let Some(user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
@@ -267,66 +254,48 @@ pub async fn post_finalize_team(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let team = match state
-        .team_creation
-        .roster_repository
-        .find_by_id(&team_entity_id)
-        .await
-    {
-        Ok(Some(t)) => t,
-        Ok(None)    => return StatusCode::NOT_FOUND.into_response(),
-        Err(_)      => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    };
-
-    let assignments: Vec<SkillAssignment> = body
-        .iter()
-        .map(|req| SkillAssignment {
-            player_id: PlayerId(req.player_id.clone()),
-            skill_id: SkillId(req.skill_id.clone()),
-            mode: if req.mode == "random" {
-                AcquisitionMode::Random
-            } else {
-                AcquisitionMode::Chosen
-            },
-        })
-        .collect();
-
-    let cmd = BatchFinalizeCommand {
-        team_id:     team_entity_id,
-        space_id:    space_id.clone(),
-        coach_name:  user.coach_name.into_inner(),
-        assignments,
+    let cmd = SubmitTeamCommand {
+        team_id:    team_entity_id,
+        space_id:   space_id.clone(),
+        coach_name: user.coach_name.into_inner(),
     };
 
     let routes = Routes::default();
 
-    match batch_uc::execute(
+    match submit_uc::execute(
         cmd,
         state.team_creation.roster_repository.as_ref(),
-        state.team_creation.reference_data.as_ref(),
         &state.team_creation.event_bus,
     )
     .await
     {
         Ok(()) => Response::builder()
             .header("HX-Redirect", routes.my_teams(&space_id))
+            .header("HX-Trigger", r#"{"showToast":"Équipe soumise avec succès !"}"#)
             .body(Body::empty())
             .unwrap()
             .into_response(),
-        Err(batch_uc::BatchFinalizeError::TeamNotFound) => StatusCode::NOT_FOUND.into_response(),
-        Err(batch_uc::BatchFinalizeError::Domain(errors)) => {
+        Err(submit_uc::SubmitTeamError::TeamNotFound) => {
+            StatusCode::NOT_FOUND.into_response()
+        }
+        Err(submit_uc::SubmitTeamError::Domain(ref errors)) => {
             let msgs: String = errors
                 .iter()
-                .map(|e| format!("<p>{}</p>", batch_uc::domain_error_message(e)))
+                .map(|e| format!(
+                    r#"<p class="table-error">{}</p>"#,
+                    submit_uc::domain_error_message(e)
+                ))
                 .collect();
             Response::builder()
-                .status(422)
-                .header("Content-Type", "text/html")
+                .header("HX-Retarget", "#submit-errors")
+                .header("HX-Reswap", "innerHTML")
+                .header("content-type", "text/html; charset=utf-8")
                 .body(Body::from(msgs))
                 .unwrap()
                 .into_response()
         }
-        Err(batch_uc::BatchFinalizeError::Repository(_)) => {
+        Err(submit_uc::SubmitTeamError::Repository(e)) => {
+            tracing::error!("post_finalize_team repo error: {e}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }

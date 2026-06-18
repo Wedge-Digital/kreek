@@ -657,3 +657,21 @@ Quand un fragment est injecté via `htmx.ajax` avec `swap: 'innerHTML'`, l'élé
 <!-- CORRECT — le fragment est le contenu du conteneur, pas le conteneur lui-même -->
 <div x-data="skillPicker(...)">...</div>
 ```
+
+---
+
+## Kanban — cycle de vie des cartes
+
+```
+to_be_refined → ready_to_be_done → done
+                                  → cancelled
+```
+
+| Dossier | Contenu |
+|---|---|
+| `to_be_refined/` | Cartes avec questions ouvertes ou design incomplet |
+| `ready_to_be_done/` | Cartes prêtes à implémenter, design validé |
+| `done/` | Cartes implémentées, commitées et pushées |
+| `cancelled/` | Cartes abandonnées (remplacées par un découpage, devenues obsolètes, scope abandonné) |
+
+**Règle** : une carte est déplacée dans `done/` dans le **même commit** que le code qui la termine, ou dans le commit immédiatement suivant. Ne jamais laisser une carte en `ready_to_be_done/` après que son code a été pushé.
