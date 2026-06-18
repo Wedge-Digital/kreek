@@ -85,14 +85,12 @@ impl TeamCreationDomainEvent {
     }
 
     pub fn to_enveloppe(&self) -> EventEnvelope {
-        let app_event = self.to_app_event()
-            .expect("TeamCreationDomainEvent must produce an app event");
         EventEnvelope {
             event_id:   EventId::new().to_string(),
             emitter:    self.team_id().to_string(),
             event_type: self.to_event_type().to_string(),
             tags:       serde_json::to_value(self.get_tags()).unwrap(),
-            payload:    serde_json::to_value(&app_event).unwrap(),
+            payload:    serde_json::to_value(self).unwrap(),
             occurred_at: time::OffsetDateTime::now_utc(),
         }
     }
