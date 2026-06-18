@@ -202,3 +202,27 @@ pub struct RulesPanelVm {
     pub season_name: String,
     pub tiers: Vec<RulesTierVm>,
 }
+
+// ── Finalize page VMs ────────────────────────────────────────────────────────
+
+pub struct FinalizePlayerVm {
+    pub id: String,
+    pub jersey: u8,
+    pub name: String,
+    pub position_name: String,
+    pub roster_line_id: String,
+    pub base_skills: Vec<String>,
+    pub acquired_count: usize,
+    pub acquired_csv: String,
+}
+
+pub struct SppLogEntryVm {
+    pub player_id: String,
+    pub player_name: String,
+    pub jersey: u8,
+    pub position_name: String,
+    pub skill_id: String,
+    pub skill_name: String,
+    pub mode_label: String,
+    pub spp_cost: u8,
+}

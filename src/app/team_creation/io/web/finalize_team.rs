@@ -1,6 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::references::routes::Routes as RefRoutes;
 use crate::app::team_creation::domain::roster::LeagueId;
+use crate::app::team_creation::io::web::view_models::{FinalizePlayerVm, SppLogEntryVm};
 use crate::app::team_creation::routes::Routes;
 use crate::app::team_creation::use_cases::commands::SubmitTeamCommand;
 use crate::app::team_creation::use_cases::set_league::{SetLeagueCommand, SetLeagueError};
@@ -13,58 +14,24 @@ use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
-use serde::Serialize;
-
-// ── Serializable page data (FINALIZE_DATA) ────────────────────────────────────
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct PlayerJson {
-    id:                 String,
-    jersey:             u8,
-    name:               String,
-    position_name:      String,
-    roster_line_id:     String,
-    base_skills:        Vec<String>,
-    existing_skill_ids: Vec<String>,
-}
-
-#[derive(Serialize)]
-struct PricingChosenJson {
-    primary:   u8,
-    secondary: u8,
-}
-
-#[derive(Serialize)]
-struct PricingJson {
-    chosen: PricingChosenJson,
-    random: u8,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct FinalizeData {
-    team_name:             String,
-    roster_name:           String,
-    treasury:              u32,
-    spp_pool:              u8,
-    pricing:               PricingJson,
-    submit_url:            String,
-    skill_picker_base_url: String,
-    players:               Vec<PlayerJson>,
-}
 
 // ── Template ──────────────────────────────────────────────────────────────────
 
 #[derive(Template)]
 #[template(path = "finalize-team.html")]
 pub struct FinalizeTeamTemplate {
-    pub web_routes:  WebRoutes,
+    pub web_routes: WebRoutes,
     pub team_routes: Routes,
-    pub space_id:    String,
-    pub team_id:     String,
-    pub data_json:   String,
-    pub logo_url:    Option<String>,
+    pub ref_routes: RefRoutes,
+    pub space_id: String,
+    pub team_id: String,
+    pub logo_url: Option<String>,
+    pub team_name: String,
+    pub roster_name: String,
+    pub treasury: u32,
+    pub spp_pool: u8,
+    pub players: Vec<FinalizePlayerVm>,
+    pub spp_log: Vec<SppLogEntryVm>,
 }
 
 impl IntoResponse for FinalizeTeamTemplate {
@@ -95,7 +62,7 @@ pub async fn finalize_team(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let team = match state.team_creation.roster_repository.find_by_id(&team_entity_id).await {
+    let mut team = match state.team_creation.roster_repository.find_by_id(&team_entity_id).await {
         Ok(Some(t)) => t,
         Ok(None)    => return StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
@@ -168,72 +135,82 @@ pub async fn finalize_team(
         };
     }
 
-    // ── Construire FINALIZE_DATA ──────────────────────────────────────────────
-    let pricing = ref_data.skill_pricing_level_1().unwrap_or(
-        crate::app::team_creation::ports::SkillPricingDefinition {
-            chosen_primary: 0, chosen_secondary: 0, random: 0,
-        },
-    );
-
-    let mut team = team;
+    // ── Construire les VMs ───────────────────────────────────────────────────
     team.assign_missing_jerseys();
 
-    let players: Vec<PlayerJson> = team
+    let players: Vec<FinalizePlayerVm> = team
         .hired_players()
         .iter()
         .map(|p| {
             let base_skills = ref_data.resolve_base_skills(&p.definition.id.0);
-
-            let existing_skill_ids: Vec<String> = p
+            let acquired_csv: String = p
                 .acquired_skills
                 .iter()
-                .map(|a| a.skill_id.0.clone())
-                .collect();
+                .map(|a| a.skill_id.0.as_str())
+                .collect::<Vec<_>>()
+                .join(",");
 
-            PlayerJson {
-                id:                 p.instance_id.0.clone(),
-                jersey:             p.jersey.map(|j| j.0).unwrap_or(0),
-                name:               if p.personal_name.is_empty() {
+            FinalizePlayerVm {
+                id: p.instance_id.0.clone(),
+                jersey: p.jersey.map(|j| j.0).unwrap_or(0),
+                name: if p.personal_name.is_empty() {
                     p.definition.name.0.clone()
                 } else {
                     p.personal_name.clone()
                 },
-                position_name:      p.definition.name.0.clone(),
-                roster_line_id:     p.definition.id.0.clone(),
+                position_name: p.definition.name.0.clone(),
+                roster_line_id: p.definition.id.0.clone(),
                 base_skills,
-                existing_skill_ids,
+                acquired_count: p.acquired_skills.len(),
+                acquired_csv,
             }
         })
         .collect();
 
-    let data = FinalizeData {
-        team_name:    team.base_infos().name().clone().into_inner(),
-        roster_name:  team.roster.name.0.clone(),
-        treasury:     team.remaining_budget().unwrap_or(0),
-        spp_pool:     team.spp_pool,
-        pricing: PricingJson {
-            chosen: PricingChosenJson {
-                primary: pricing.chosen_primary,
-                secondary: pricing.chosen_secondary,
-            },
-            random: pricing.random,
-        },
-        submit_url:            routes.finalize_team(&space_id, &team_id),
-        skill_picker_base_url: RefRoutes::default().skill_picker_base().to_string(),
-        players,
-    };
-
-    let data_json = serde_json::to_string(&data).expect("FINALIZE_DATA serialization");
+    let spp_log: Vec<SppLogEntryVm> = team
+        .hired_players()
+        .iter()
+        .flat_map(|p| {
+            p.acquired_skills.iter().map(move |a| {
+                let skill_name = ref_data
+                    .resolve_skill_name(&a.skill_id.0)
+                    .unwrap_or_else(|| a.skill_id.0.clone());
+                SppLogEntryVm {
+                    player_id: p.instance_id.0.clone(),
+                    player_name: if p.personal_name.is_empty() {
+                        p.definition.name.0.clone()
+                    } else {
+                        p.personal_name.clone()
+                    },
+                    jersey: p.jersey.map(|j| j.0).unwrap_or(0),
+                    position_name: p.definition.name.0.clone(),
+                    skill_id: a.skill_id.0.clone(),
+                    skill_name,
+                    mode_label: match a.mode {
+                        crate::app::team_creation::domain::roster::AcquisitionMode::Chosen => "Choisie".into(),
+                        crate::app::team_creation::domain::roster::AcquisitionMode::Random => "Aléatoire".into(),
+                    },
+                    spp_cost: a.spp_cost,
+                }
+            })
+        })
+        .collect();
 
     let logo_url = team.base_infos().logo_url().map(|img| img.thumbnail(120, 120));
 
     FinalizeTeamTemplate {
-        web_routes:  WebRoutes::default(),
+        web_routes: WebRoutes::default(),
         team_routes: routes,
-        space_id:    space_id.clone(),
-        team_id:     team_id.clone(),
-        data_json,
+        ref_routes: RefRoutes::default(),
+        space_id,
+        team_id,
         logo_url,
+        team_name: team.base_infos().name().clone().into_inner(),
+        roster_name: team.roster.name.0.clone(),
+        treasury: team.remaining_budget().unwrap_or(0),
+        spp_pool: team.spp_pool,
+        players,
+        spp_log,
     }
     .into_response()
 }
