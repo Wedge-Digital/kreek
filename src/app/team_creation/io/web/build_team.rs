@@ -23,6 +23,7 @@ pub struct BuildTeamTemplate {
     pub ref_routes: RefRoutes,
     pub space_id: String,
     pub team_id: String,
+    pub selected_roster_uid: Option<String>,
     pub rules_panel: RulesPanelVm,
 }
 
@@ -56,6 +57,16 @@ pub async fn build_team(
             tracing::error!("build_team draft find {team_id}: {e}");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
+    };
+
+    let selected_roster_uid = match state
+        .team_creation
+        .roster_repository
+        .find_by_id(&team_id_val)
+        .await
+    {
+        Ok(Some(team)) => Some(team.roster.id.0.clone()),
+        _ => None,
     };
 
     let competition_name = if let Ok(id) = EntityId::try_new(draft.competition_id()) {
@@ -107,6 +118,7 @@ pub async fn build_team(
         ref_routes: Default::default(),
         space_id,
         team_id,
+        selected_roster_uid,
         rules_panel,
     }
     .into_response()

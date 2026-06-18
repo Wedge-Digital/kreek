@@ -30,6 +30,9 @@ pub struct FinalizeTeamTemplate {
     pub roster_name: String,
     pub treasury: u32,
     pub spp_pool: u8,
+    pub spp_spent: u8,
+    pub spp_total: u8,
+    pub spp_pct: u8,
     pub players: Vec<FinalizePlayerVm>,
     pub spp_log: Vec<SppLogEntryVm>,
 }
@@ -198,6 +201,10 @@ pub async fn finalize_team(
 
     let logo_url = team.base_infos().logo_url().map(|img| img.thumbnail(120, 120));
 
+    let spp_spent: u8 = spp_log.iter().map(|e| e.spp_cost).sum();
+    let spp_total = team.spp_pool + spp_spent;
+    let spp_pct = if spp_total > 0 { (spp_spent as u16 * 100 / spp_total as u16) as u8 } else { 0 };
+
     FinalizeTeamTemplate {
         web_routes: WebRoutes::default(),
         team_routes: routes,
@@ -209,6 +216,9 @@ pub async fn finalize_team(
         roster_name: team.roster.name.0.clone(),
         treasury: team.remaining_budget().unwrap_or(0),
         spp_pool: team.spp_pool,
+        spp_spent,
+        spp_total,
+        spp_pct,
         players,
         spp_log,
     }

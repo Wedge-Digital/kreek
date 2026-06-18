@@ -155,4 +155,50 @@
   </div>
 
 </div>
+<script>
+function skillPicker(skills, categories, sppRemaining, pricing, initialMode, initialFilters) {
+  return {
+    skills,
+    categories,
+    sppRemaining,
+    pricing,
+    mode: initialMode || 'chosen',
+    activeFilters: initialFilters || [],
+
+    get filteredSkills() {
+      return this.skills.filter(s => {
+        if (this.activeFilters.length === 0) return true;
+        for (const f of this.activeFilters) {
+          if (f === 'primary' && s.isPrimary) return true;
+          if (f === 'secondary' && !s.isPrimary) return true;
+          if (f === 'elite' && s.isElite) return true;
+          if (f === 'standard' && !s.isElite) return true;
+          if (f === s.category) return true;
+        }
+        return false;
+      });
+    },
+
+    toggleFilter(id) {
+      if (this.activeFilters.includes(id)) {
+        this.activeFilters = this.activeFilters.filter(f => f !== id);
+      } else {
+        this.activeFilters = [...this.activeFilters, id];
+      }
+    },
+
+    canAfford(skill) {
+      return this.currentCost(skill) <= this.sppRemaining;
+    },
+
+    currentCost(skill) {
+      if (this.mode === 'random') {
+        return skill.isElite ? this.pricing.randomElite : this.pricing.random;
+      }
+      const costs = skill.isElite ? this.pricing.chosenElite : this.pricing.chosen;
+      return skill.isPrimary ? costs.primary : costs.secondary;
+    },
+  };
+}
+</script>
 

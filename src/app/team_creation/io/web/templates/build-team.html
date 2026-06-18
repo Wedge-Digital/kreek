@@ -70,7 +70,7 @@
       <div id="player-table-container"
            hx-get="{{ team_routes.player_table_widget(space_id, team_id) }}"
            hx-trigger="load, rosterSelected from:body"
-           hx-vals='js:{"roster_uid": (event?.detail?.uid || "")}'
+           hx-vals='js:{"roster_uid": (event?.detail?.uid || "{{ selected_roster_uid.as_deref().unwrap_or_default() }}")}'
            hx-target="this"
            hx-swap="innerHTML">
       </div>
@@ -141,6 +141,9 @@
 </div><!-- /home-grid -->
 
 <script>
+{% if let Some(uid) = selected_roster_uid %}
+document.body.dataset.rosterUid = '{{ uid }}';
+{% endif %}
 document.addEventListener('rosterSelected', function(e) {
     document.body.dataset.rosterUid = e.detail.uid || '';
 });

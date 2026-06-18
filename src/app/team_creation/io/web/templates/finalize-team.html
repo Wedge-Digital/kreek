@@ -30,27 +30,21 @@
       <div class="team-header-name">{{ team_name }}</div>
       <div class="team-header-roster">{{ roster_name }}</div>
       <div class="team-header-budget">Trésorerie : {{ treasury }} kPo</div>
-      {% if spp_pool > 0 %}
-      <div class="team-header-spp">
-        <span class="spp-badge">{{ spp_pool }} SPP</span> à distribuer
+      {% if spp_total > 0 %}
+      <div class="spp-budget">
+        <div class="spp-budget-top">
+          <span class="spp-budget-label">Budget SPP</span>
+          <span class="spp-budget-numbers">{{ spp_spent }} / {{ spp_total }} SPP</span>
+        </div>
+        <div class="spp-budget-bar">
+          <div class="spp-budget-bar-inner" style="width: {{ spp_pct }}%;"></div>
+        </div>
+        <div class="spp-budget-bottom">
+          <span>{{ spp_spent }} dépensés</span>
+          <span>{{ spp_pool }} restants</span>
+        </div>
       </div>
       {% endif %}
-    </div>
-  </div>
-
-  <!-- ── B — League selector (BC références) ────────────────────────── -->
-  <div class="finalize-section">
-    <div class="section-label">Ligue</div>
-    <div id="league-selector-zone"
-         hx-get="{{ ref_routes.league_selector_base() }}"
-         hx-trigger="load, leagueSelected from:body"
-         hx-vals='js:{
-           "roster_id": "",
-           "selected": (event.detail?.league_id || ""),
-           "on_select": "{{ team_routes.set_league(space_id, team_id) }}"
-         }'
-         hx-target="this"
-         hx-swap="innerHTML">
     </div>
   </div>
 

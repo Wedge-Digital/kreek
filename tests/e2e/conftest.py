@@ -69,7 +69,7 @@ def competition_rules_url(space_id):
 # la gère correctement (ex: un test qui déclenche volontairement un 422).
 # Ce n'est pas une erreur JS — on l'exclut pour ne garder que les vraies
 # exceptions (TypeError, ReferenceError, throw non capturé, etc.).
-_BENIGN_CONSOLE_PATTERNS = ("Failed to load resource",)
+_BENIGN_CONSOLE_PATTERNS = ("Failed to load resource", "Response Status Error Code")
 
 
 @pytest.fixture
