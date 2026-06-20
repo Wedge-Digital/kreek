@@ -166,25 +166,22 @@ function skillPicker(skills, categories, sppRemaining, pricing, initialMode, ini
     activeFilters: initialFilters || [],
 
     get filteredSkills() {
-      return this.skills.filter(s => {
-        if (this.activeFilters.length === 0) return true;
-        for (const f of this.activeFilters) {
-          if (f === 'primary' && s.isPrimary) return true;
-          if (f === 'secondary' && !s.isPrimary) return true;
-          if (f === 'elite' && s.isElite) return true;
-          if (f === 'standard' && !s.isElite) return true;
-          if (f === s.category) return true;
-        }
-        return false;
+      if (this.activeFilters.length === 0) return this.skills;
+      var access = this.activeFilters.filter(function(f) { return f === 'primary' || f === 'secondary'; });
+      var nature = this.activeFilters.filter(function(f) { return f === 'elite' || f === 'standard'; });
+      var types  = this.activeFilters.filter(function(f) { return f !== 'primary' && f !== 'secondary' && f !== 'elite' && f !== 'standard'; });
+      return this.skills.filter(function(s) {
+        if (access.length > 0 && !access.some(function(f) { return f === 'primary' ? s.isPrimary : !s.isPrimary; })) return false;
+        if (nature.length > 0 && !nature.some(function(f) { return f === 'elite' ? s.isElite : !s.isElite; })) return false;
+        if (types.length  > 0 && !types.some(function(f)  { return s.category === f; })) return false;
+        return true;
       });
     },
 
-    toggleFilter(id) {
-      if (this.activeFilters.includes(id)) {
-        this.activeFilters = this.activeFilters.filter(f => f !== id);
-      } else {
-        this.activeFilters = [...this.activeFilters, id];
-      }
+    toggleFilter(key) {
+      var idx = this.activeFilters.indexOf(key);
+      if (idx !== -1) this.activeFilters.splice(idx, 1);
+      else this.activeFilters.push(key);
     },
 
     canAfford(skill) {

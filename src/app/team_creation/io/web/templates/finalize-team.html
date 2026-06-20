@@ -30,21 +30,11 @@
       <div class="team-header-name">{{ team_name }}</div>
       <div class="team-header-roster">{{ roster_name }}</div>
       <div class="team-header-budget">Trésorerie : {{ treasury }} kPo</div>
-      {% if spp_total > 0 %}
-      <div class="spp-budget">
-        <div class="spp-budget-top">
-          <span class="spp-budget-label">Budget SPP</span>
-          <span class="spp-budget-numbers">{{ spp_spent }} / {{ spp_total }} SPP</span>
-        </div>
-        <div class="spp-budget-bar">
-          <div class="spp-budget-bar-inner" style="width: {{ spp_pct }}%;"></div>
-        </div>
-        <div class="spp-budget-bottom">
-          <span>{{ spp_spent }} dépensés</span>
-          <span>{{ spp_pool }} restants</span>
-        </div>
-      </div>
-      {% endif %}
+    </div>
+    <div hx-get="{{ team_routes.spp_budget_widget(space_id, team_id) }}"
+         hx-trigger="load, skillsUpdated from:body"
+         hx-target="this"
+         hx-swap="innerHTML">
     </div>
   </div>
 
@@ -54,32 +44,10 @@
     <!-- ── C — Liste joueurs (panneau gauche) ─────────────────────── -->
     <div class="finalize-left">
       <div class="section-label">Joueurs</div>
-      <div class="player-list">
-        {% for p in players %}
-        <div class="player-row"
-             data-player-id="{{ p.id }}"
-             onclick="
-               document.querySelectorAll('.player-row').forEach(r => r.classList.remove('selected'));
-               this.classList.add('selected');
-               htmx.trigger(document.body, 'playerSelected', {
-                 player_id: '{{ p.id }}',
-                 roster_line_id: '{{ p.roster_line_id }}',
-                 spp: {{ spp_pool }},
-                 acquired: '{{ p.acquired_csv }}',
-                 on_acquire: '{{ team_routes.spend_spp(space_id, team_id, p.id) }}',
-                 on_cancel: '{{ team_routes.spend_spp(space_id, team_id, p.id) }}'
-               });
-             ">
-          <div class="player-row-jersey">{{ p.jersey }}</div>
-          <div class="player-row-info">
-            <div class="player-row-name">{{ p.name }}</div>
-            <div class="player-row-pos">{{ p.position_name }}</div>
-          </div>
-          {% if p.acquired_count > 0 %}
-          <span class="player-row-badge">{{ p.acquired_count }} compét.</span>
-          {% endif %}
-        </div>
-        {% endfor %}
+      <div hx-get="{{ team_routes.player_list_widget(space_id, team_id) }}"
+           hx-trigger="load, skillsUpdated from:body"
+           hx-target="this"
+           hx-swap="innerHTML">
       </div>
 
       <!-- ── G — Submit ─────────────────────────────────────────────── -->
@@ -112,7 +80,7 @@
 
       <!-- ── E — Skill picker (BC références widget) ──────────────── -->
       <div id="skill-picker-container"
-           hx-get="{{ ref_routes.skill_picker_base() }}"
+           hx-get="{{ app_routes.references.skill_picker_base() }}"
            hx-trigger="playerSelected from:body, skillsUpdated from:body"
            hx-vals='js:{
              "roster_line_id": (event.detail?.roster_line_id || ""),
@@ -178,6 +146,17 @@ document.addEventListener('playerSelected', function(e) {
     document.body.dataset.onAcquire = e.detail.on_acquire || '';
 });
 
+function handleSppResponse(res) {
+    var trigger = res.headers.get('HX-Trigger');
+    if (!trigger) return;
+    try {
+        var obj = JSON.parse(trigger);
+        Object.keys(obj).forEach(function(k) {
+            htmx.trigger(document.body, k, obj[k]);
+        });
+    } catch(ex) {}
+}
+
 document.addEventListener('skill-selected', function(e) {
     var url = document.body.dataset.onAcquire;
     if (!url) return;
@@ -185,16 +164,16 @@ document.addEventListener('skill-selected', function(e) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'HX-Request': 'true' },
         body: JSON.stringify({ skill_id: e.detail.skillId, mode: e.detail.mode })
-    }).then(function(res) {
-        var trigger = res.headers.get('HX-Trigger');
-        if (!trigger) return;
-        try {
-            var obj = JSON.parse(trigger);
-            Object.keys(obj).forEach(function(k) {
-                htmx.trigger(document.body, k, obj[k]);
-            });
-        } catch(ex) {}
-    });
+    }).then(handleSppResponse);
+});
+
+document.addEventListener('skill-cancel-request', function(e) {
+    var url = document.body.dataset.onAcquire;
+    if (!url || !e.detail.skillId) return;
+    fetch(url + '/' + e.detail.skillId, {
+        method: 'DELETE',
+        headers: { 'HX-Request': 'true' }
+    }).then(handleSppResponse);
 });
 </script>
 {% endblock %}

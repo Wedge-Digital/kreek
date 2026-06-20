@@ -1,7 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::common_types::Entity;
 use crate::app::team_creation::routes::Routes as TeamRoutes;
-use crate::app::teams::routes::Routes as TeamsRoutes;
 use crate::state::AppState;
 use crate::web::routes::Routes as WebRoutes;
 use askama::Template;
@@ -68,14 +68,14 @@ pub async fn my_teams(
         .unwrap_or_default();
 
     let creation_routes = TeamRoutes::default();
-    let teams_routes = TeamsRoutes::default();
+    let app_routes = AppRoutes::default();
     let team_vms = teams
         .into_iter()
         .map(|t| {
             let id = t.get_id().to_string();
             let submitted = submitted_ids.contains(&id);
             let link = if submitted {
-                teams_routes.team_detail(&space_id_raw, &id)
+                app_routes.teams.team_detail(&space_id_raw, &id)
             } else {
                 creation_routes.team_build(&space_id_raw, &id)
             };

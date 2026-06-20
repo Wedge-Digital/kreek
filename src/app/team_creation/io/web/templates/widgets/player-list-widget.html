@@ -1,0 +1,27 @@
+<div class="player-list" hx-disinherit="*">
+  {% for p in players %}
+  <div class="player-row"
+       data-player-id="{{ p.id }}"
+       onclick="
+         document.querySelectorAll('.player-row').forEach(r => r.classList.remove('selected'));
+         this.classList.add('selected');
+         htmx.trigger(document.body, 'playerSelected', {
+           player_id: '{{ p.id }}',
+           roster_line_id: '{{ p.roster_line_id }}',
+           spp: {{ spp_pool }},
+           acquired: '{{ p.acquired_csv }}',
+           on_acquire: '{{ team_routes.spend_spp(space_id, team_id, p.id) }}',
+           on_cancel: '{{ team_routes.spend_spp(space_id, team_id, p.id) }}'
+         });
+       ">
+    <div class="player-row-jersey">{{ p.jersey }}</div>
+    <div class="player-row-info">
+      <div class="player-row-name">{{ p.name }}</div>
+      <div class="player-row-pos">{{ p.position_name }}</div>
+    </div>
+    {% if p.acquired_count > 0 %}
+    <span class="player-row-badge">{{ p.acquired_count }} compét.</span>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>

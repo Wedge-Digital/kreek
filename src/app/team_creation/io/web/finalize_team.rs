@@ -1,7 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::references::routes::Routes as RefRoutes;
 use crate::app::team_creation::domain::roster::LeagueId;
-use crate::app::team_creation::io::web::view_models::{FinalizePlayerVm, SppLogEntryVm};
+use crate::app::team_creation::io::web::view_models::SppLogEntryVm;
+use crate::app::routes::AppRoutes;
 use crate::app::team_creation::routes::Routes;
 use crate::app::team_creation::use_cases::commands::SubmitTeamCommand;
 use crate::app::team_creation::use_cases::set_league::{SetLeagueCommand, SetLeagueError};
@@ -22,18 +22,13 @@ use axum::response::{Html, IntoResponse, Response};
 pub struct FinalizeTeamTemplate {
     pub web_routes: WebRoutes,
     pub team_routes: Routes,
-    pub ref_routes: RefRoutes,
+    pub app_routes: AppRoutes,
     pub space_id: String,
     pub team_id: String,
     pub logo_url: Option<String>,
     pub team_name: String,
     pub roster_name: String,
     pub treasury: u32,
-    pub spp_pool: u8,
-    pub spp_spent: u8,
-    pub spp_total: u8,
-    pub spp_pct: u8,
-    pub players: Vec<FinalizePlayerVm>,
     pub spp_log: Vec<SppLogEntryVm>,
 }
 
@@ -77,6 +72,21 @@ pub async fn finalize_team(
     let ref_data = state.team_creation.reference_data.as_ref();
     let routes   = Routes::default();
 
+    // ── Validation des prérequis ─────────────────────────────────────────────
+    use crate::app::team_creation::domain::team_roster_selected::MIN_PLAYERS_FOR_SUBMISSION;
+    if team.hired_players().len() < MIN_PLAYERS_FOR_SUBMISSION {
+        return Response::builder()
+            .header("HX-Retarget", "#submit-error")
+            .header("HX-Reswap", "innerHTML")
+            .header("content-type", "text/html; charset=utf-8")
+            .body(Body::from(format!(
+                r#"<p class="table-error">Vous devez recruter au moins {} joueurs avant de finaliser.</p>"#,
+                MIN_PLAYERS_FOR_SUBMISSION
+            )))
+            .unwrap()
+            .into_response();
+    }
+
     let roster_def = ref_data.find_roster_definition(&team.roster.id.0);
     let roster_leagues: Vec<String> = roster_def
         .as_ref()
@@ -117,7 +127,7 @@ pub async fn finalize_team(
         .await
         {
             Ok(()) => Response::builder()
-                .header("HX-Redirect", routes.my_teams(&space_id))
+                .header("HX-Redirect", AppRoutes::default().teams.team_detail(&space_id, &team_id))
                 .header("HX-Trigger", r#"{"showToast":"Équipe soumise avec succès !"}"#)
                 .body(Body::empty())
                 .unwrap()
@@ -139,37 +149,6 @@ pub async fn finalize_team(
     }
 
     // ── Construire les VMs ───────────────────────────────────────────────────
-    team.assign_missing_jerseys();
-
-    let players: Vec<FinalizePlayerVm> = team
-        .hired_players()
-        .iter()
-        .map(|p| {
-            let base_skills = ref_data.resolve_base_skills(&p.definition.id.0);
-            let acquired_csv: String = p
-                .acquired_skills
-                .iter()
-                .map(|a| a.skill_id.0.as_str())
-                .collect::<Vec<_>>()
-                .join(",");
-
-            FinalizePlayerVm {
-                id: p.instance_id.0.clone(),
-                jersey: p.jersey.map(|j| j.0).unwrap_or(0),
-                name: if p.personal_name.is_empty() {
-                    p.definition.name.0.clone()
-                } else {
-                    p.personal_name.clone()
-                },
-                position_name: p.definition.name.0.clone(),
-                roster_line_id: p.definition.id.0.clone(),
-                base_skills,
-                acquired_count: p.acquired_skills.len(),
-                acquired_csv,
-            }
-        })
-        .collect();
-
     let spp_log: Vec<SppLogEntryVm> = team
         .hired_players()
         .iter()
@@ -201,25 +180,16 @@ pub async fn finalize_team(
 
     let logo_url = team.base_infos().logo_url().map(|img| img.thumbnail(120, 120));
 
-    let spp_spent: u8 = spp_log.iter().map(|e| e.spp_cost).sum();
-    let spp_total = team.spp_pool + spp_spent;
-    let spp_pct = if spp_total > 0 { (spp_spent as u16 * 100 / spp_total as u16) as u8 } else { 0 };
-
     FinalizeTeamTemplate {
         web_routes: WebRoutes::default(),
         team_routes: routes,
-        ref_routes: RefRoutes::default(),
+        app_routes: AppRoutes::default(),
         space_id,
         team_id,
         logo_url,
         team_name: team.base_infos().name().clone().into_inner(),
         roster_name: team.roster.name.0.clone(),
         treasury: team.remaining_budget().unwrap_or(0),
-        spp_pool: team.spp_pool,
-        spp_spent,
-        spp_total,
-        spp_pct,
-        players,
         spp_log,
     }
     .into_response()
@@ -257,7 +227,7 @@ pub async fn post_finalize_team(
     .await
     {
         Ok(()) => Response::builder()
-            .header("HX-Redirect", routes.my_teams(&space_id))
+            .header("HX-Redirect", AppRoutes::default().teams.team_detail(&space_id, &team_id))
             .header("HX-Trigger", r#"{"showToast":"Équipe soumise avec succès !"}"#)
             .body(Body::empty())
             .unwrap()

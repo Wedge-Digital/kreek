@@ -58,6 +58,10 @@
   </div>
 </div>
 
+<div class="cart-player-count {% if c.player_count >= c.min_players %}cart-player-count--ok{% else %}cart-player-count--missing{% endif %}">
+  {{ c.player_count }} / {{ c.min_players }} joueurs
+</div>
+
 {% else %}
 <div class="cart-empty">
   Sélectionnez un roster et ajoutez des joueurs pour voir le récapitulatif.

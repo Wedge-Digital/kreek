@@ -85,6 +85,8 @@ pub struct CartVm {
     pub budget: u32,
     pub remaining: u32,
     pub progress_pct: u32,
+    pub player_count: usize,
+    pub min_players: usize,
 }
 
 impl CartVm {
@@ -146,6 +148,8 @@ impl CartVm {
             budget,
             remaining,
             progress_pct,
+            player_count: team.hired_players().len(),
+            min_players: crate::app::team_creation::domain::team_roster_selected::MIN_PLAYERS_FOR_SUBMISSION,
         }
     }
 }

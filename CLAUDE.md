@@ -19,6 +19,10 @@ Directives de travail pour Claude Code sur ce projet.
 
 4. **Suppression de code — vérification obligatoire** : avant de supprimer du code (fonction, bloc JS, macro Askama, struct, etc.), vérifier exhaustivement qu'il n'est utilisé nulle part — ni dans le code Rust, ni dans les templates HTML, ni dans le JS inline. Lister les consommateurs avant de supprimer. Si du code est supprimé, le comportement qu'il assurait doit être couvert par le nouveau code avant le commit.
 
+5. **Déplacement de code — copier-coller obligatoire** : quand on déplace du code d'un fichier à un autre, il est **interdit** de le réécrire. Toujours faire un copier-coller exact du code source, puis adapter uniquement les imports et les références si nécessaire. Ne jamais réécrire de mémoire.
+
+6. **Workflow « Nouvelle fonctionnalité »** : pour les fonctionnalités complexes (nouvelle page, nouveau parcours utilisateur), suivre le workflow défini dans `.claude/workflows/new-feature.md`. Activé à la demande par l'utilisateur ("on suit le workflow feature"). Non utilisé pour les bugs, refactos ou modifications mineures.
+
 ---
 
 ## Projet
@@ -182,6 +186,22 @@ Ces conventions sont appliquées au fil de l'eau — pas de renommage massif, ma
 - Signature de retour : `Result<impl IntoResponse, AppError>`
 - Le handler est un traducteur HTTP — il applique les règles de la section « Responsabilités des couches »
 - Utilisateur courant via `AuthSession` injecté par axum-login
+
+### Accès aux routes — règle obligatoire
+
+Les routes des autres BCs sont **toujours** accédées via `AppRoutes` (qui agrège toutes les routes de l'application), jamais par un import direct du module de routes d'un autre BC.
+
+```rust
+// INTERDIT — import direct des routes d'un autre BC
+use crate::app::teams::routes::Routes as TeamsRoutes;
+let url = TeamsRoutes::default().team_detail(&space_id, &team_id);
+
+// OBLIGATOIRE — via AppRoutes
+use crate::app::routes::AppRoutes;
+let url = AppRoutes::default().teams.team_detail(&space_id, &team_id);
+```
+
+Un import direct de `crate::app::<autre_bc>::routes::Routes` dans un handler est une **violation architecturale**.
 
 ---
 

@@ -1,5 +1,5 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::references::routes::Routes as RefRoutes;
+use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::common_types::EntityId;
 use crate::app::team_creation::io::web::view_models::{RulesPanelVm, RulesTierVm};
 use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
@@ -20,7 +20,7 @@ use axum::response::{Html, IntoResponse, Response};
 pub struct BuildTeamTemplate {
     pub web_routes: WebRoutes,
     pub team_routes: TeamCreationRoutes,
-    pub ref_routes: RefRoutes,
+    pub app_routes: AppRoutes,
     pub space_id: String,
     pub team_id: String,
     pub selected_roster_uid: Option<String>,
@@ -115,7 +115,7 @@ pub async fn build_team(
     BuildTeamTemplate {
         web_routes: Default::default(),
         team_routes: Default::default(),
-        ref_routes: Default::default(),
+        app_routes: Default::default(),
         space_id,
         team_id,
         selected_roster_uid,
@@ -180,9 +180,9 @@ pub async fn submit_team(
         }
     }
 
-    let team_routes: TeamCreationRoutes = Default::default();
+    let app_routes = AppRoutes::default();
     Response::builder()
-        .header("HX-Redirect", team_routes.my_teams(&space_id))
+        .header("HX-Redirect", app_routes.teams.team_detail(&space_id, &team_id))
         .header(
             "HX-Trigger",
             r#"{"showToast":"Équipe soumise avec succès !"}"#,

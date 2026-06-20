@@ -77,7 +77,7 @@
 }
 
 /* ── Left panel: player list ──────────────────────────────────────────── */
-.player-list { overflow-y: auto; max-height: 500px; }
+.player-list { overflow-y: auto; max-height: 500px; scrollbar-color: var(--dark-4) var(--white); }
 .player-list-panel {
   width: 300px; flex-shrink: 0;
   background: var(--white); border-radius: var(--card-radius); overflow: hidden;

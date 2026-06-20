@@ -30,14 +30,14 @@
 
         <div class="form-label">Qui sera le coach de cette équipe ?</div>
         <div class="coach-select"
-             hx-get="{{ space_routes.members_widget(space_id) }}?single=true&field_name=coach_id"
+             hx-get="{{ app_routes.spaces.coach_select_widget() }}?space_id={{ space_id }}"
              hx-trigger="load"
              hx-target="this"
              hx-swap="innerHTML">
         </div>
         {% call cmp::cloudinary_upload("logo_url", logo_url_value, "teams/logos", "Logo de votre équipe", logo_error) %}
 
-        <div hx-get="{{ comp_routes.competition_widget(space_id) }}"
+        <div hx-get="{{ app_routes.competitions.competition_widget(space_id) }}"
              hx-trigger="load"
              hx-target="this"
              hx-swap="innerHTML">

@@ -74,6 +74,12 @@
 .cart-budget-meta { display: flex; justify-content: space-between; font-size: var(--text-tiny); color: var(--dark-3); }
 .cart-progress { height: 6px; background: var(--dark-5); border-radius: 3px; }
 .cart-progress-inner { height: 100%; border-radius: 3px; background: var(--main-blue); transition: width 0.3s; }
+.cart-player-count {
+  font-size: var(--text-tiny); font-weight: 700; text-align: center;
+  padding: 6px; border-radius: 6px; margin-top: 4px;
+}
+.cart-player-count--ok { color: var(--green); background: rgba(98,149,132,0.10); }
+.cart-player-count--missing { color: #c0392b; background: rgba(192,57,43,0.08); }
 .cart-actions { display: flex; flex-direction: column; gap: var(--p1); padding-top: 4px; }
 
 /* ── Zones d'erreur sous les tableaux ────────────────────────────────── */

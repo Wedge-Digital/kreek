@@ -1,6 +1,5 @@
-use crate::app::players::routes::Routes as PlayerRoutes;
+use crate::app::routes::AppRoutes;
 use crate::app::references::domain::port::IReferenceRepository;
-use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
 use crate::app::teams::domain::team::{GamePhase, ParticipationStatus, Team};
 use crate::state::AppState;
 use crate::web::routes::Routes as WebRoutes;
@@ -122,7 +121,7 @@ impl TeamDetailVm {
             season_name: team.season_name.clone(),
             status_label,
             status_css_class,
-            players_widget_url: PlayerRoutes.players_by_team_widget(space_id, &team.id),
+            players_widget_url: AppRoutes::default().players.players_by_team_widget(space_id, &team.id),
             staff: StaffVm::from(team, reroll_price_kpo),
         }
     }
@@ -180,7 +179,7 @@ pub async fn team_detail(
         }
     };
 
-    let back_url = TeamCreationRoutes::default().my_teams(&space_id);
+    let back_url = AppRoutes::default().team_creation.my_teams(&space_id);
     let ref_repo = state.references.repository.as_ref();
 
     TeamDetailTemplate {

@@ -37,7 +37,7 @@
 
         <div class="roster-league-col">
           <div id="league-selector-zone"
-               hx-get="{{ ref_routes.league_selector_base() }}"
+               hx-get="{{ app_routes.references.league_selector_base() }}"
                hx-trigger="rosterSelected from:body, leagueSelected from:body"
                hx-vals='js:{
                  "roster_id": (event.detail?.uid || document.body.dataset.rosterUid || ""),
@@ -51,7 +51,7 @@
 
         <div class="roster-league-col">
           <div id="special-rule-selector-zone"
-               hx-get="{{ ref_routes.special_rule_selector_base() }}"
+               hx-get="{{ app_routes.references.special_rule_selector_base() }}"
                hx-trigger="rosterSelected from:body, specialRuleSelected from:body"
                hx-vals='js:{
                  "roster_id": (event.detail?.uid || document.body.dataset.rosterUid || ""),
@@ -79,11 +79,12 @@
       <div class="section-label">4 — Sélectionnez votre staff</div>
       <div id="staff-table-container"
            hx-get="{{ team_routes.staff_table_widget(space_id, team_id) }}"
-           hx-trigger="load, rosterSelected from:body"
+           hx-trigger="load, teamMutated from:body"
            hx-target="this"
            hx-swap="innerHTML">
       </div>
-
+      </div><!-- /create-body -->
+    </div>
       <div style="display: flex; justify-content: center;">
         <button class="btn btn-outline"
                 hx-get="{{ team_routes.draft_team(space_id) }}"
@@ -93,10 +94,7 @@
                 hx-push-url="true">
           ← Retour
         </button>
-      </div>
-
-      </div><!-- /create-body -->
-    </div><!-- /create-card -->
+      </div><!-- /create-card -->
   </div>
 
   <!-- ── Sidebar droite ───────────────────────────────────────────────── -->

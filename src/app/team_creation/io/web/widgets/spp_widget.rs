@@ -30,6 +30,7 @@ fn skills_updated_trigger(team: &RosterSelectedTeam, player_id: &str, space_id: 
 
     serde_json::json!({
         "skillsUpdated": {
+            "player_id": player_id,
             "roster_line_id": roster_line_id,
             "spp": team.spp_pool,
             "acquired": acquired_csv,

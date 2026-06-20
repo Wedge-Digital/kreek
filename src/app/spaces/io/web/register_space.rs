@@ -7,7 +7,7 @@ use crate::app::spaces::routes::Routes as SpaceRoutes;
 use crate::app::spaces::uses_cases::register_new_space::{
     execute, RegisterNewSpaceCommand, RegisterSpaceError,
 };
-use crate::app::team_creation::routes::Routes as TeamRoutes;
+use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use crate::web::routes::Routes as WebRoutes;
 use askama::Template;
@@ -22,7 +22,7 @@ use serde::Deserialize;
 #[template(path = "new-space.html")]
 pub struct NewSpaceTemplate {
     pub web_routes: WebRoutes,
-    pub team_routes: TeamRoutes,
+    pub app_routes: AppRoutes,
     pub space_routes: SpaceRoutes,
     pub space_name_value: String,
     pub space_name_error: Option<String>,

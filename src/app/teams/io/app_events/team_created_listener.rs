@@ -52,6 +52,7 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                         assistants: AssistantCount::new(assistants).unwrap_or_default(),
                         cheerleaders: CheerleaderCount::new(cheerleaders).unwrap_or_default(),
                     };
+                    tracing::info!("teams team_created_listener: received TeamCreated for {team_id}");
                     if let Err(e) = team_repo.append(&team_id, &domain_event, 0).await {
                         match e {
                             RepositoryError::ConcurrentWrite => tracing::warn!(

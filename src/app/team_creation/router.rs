@@ -3,7 +3,9 @@ use crate::app::team_creation::io::web::widgets::cart_widget::cart_widget;
 use crate::app::team_creation::io::web::widgets::player_table_widget::{
     fire_player, hire_player, player_table_widget,
 };
+use crate::app::team_creation::io::web::widgets::player_list_widget::player_list_widget;
 use crate::app::team_creation::io::web::widgets::roster_picker_widget::roster_picker_widget;
+use crate::app::team_creation::io::web::widgets::spp_budget_widget::spp_budget_widget;
 use crate::app::team_creation::io::web::widgets::skill_header_widget::skill_header_widget;
 use crate::app::team_creation::io::web::widgets::spp_widget::{cancel_spp, spend_spp};
 use crate::app::team_creation::io::web::widgets::staff_table_widget::{
@@ -43,6 +45,8 @@ pub fn router() -> Router<AppState> {
         .route(path::ROSTER_PICKER_WIDGET, get(roster_picker_widget))
         .route(path::STAFF_TABLE_WIDGET, get(staff_table_widget))
         .route(path::SKILL_HEADER_WIDGET, get(skill_header_widget))
+        .route(path::SPP_BUDGET_WIDGET, get(spp_budget_widget))
+        .route(path::PLAYER_LIST_WIDGET, get(player_list_widget))
         .route(path::SPEND_SPP, axum::routing::post(spend_spp))
         .route(path::CANCEL_SPP, axum::routing::delete(cancel_spp))
 }

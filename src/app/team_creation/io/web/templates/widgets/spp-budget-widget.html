@@ -1,0 +1,15 @@
+{% if let Some(b) = budget %}
+<div class="spp-budget">
+  <div class="spp-budget-top">
+    <span class="spp-budget-label">Budget SPP</span>
+    <span class="spp-budget-numbers">{{ b.spp_spent }} / {{ b.spp_total }} SPP</span>
+  </div>
+  <div class="spp-budget-bar">
+    <div class="spp-budget-bar-inner" style="width: {{ b.spp_pct }}%;"></div>
+  </div>
+  <div class="spp-budget-bottom">
+    <span>{{ b.spp_spent }} dépensés</span>
+    <span>{{ b.spp_pool }} restants</span>
+  </div>
+</div>
+{% endif %}
