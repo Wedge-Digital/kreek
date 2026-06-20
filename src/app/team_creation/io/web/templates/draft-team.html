@@ -21,7 +21,6 @@
             </div>
         </div>
 
-        <div id="draft-team-error" style="color: var(--red); font-size: var(--text-small); min-height: 20px;"></div>
 
         <div class="form-group create-team">
             <label class="form-label" for="team_name">Nom de votre équipe</label>
@@ -29,6 +28,7 @@
                    placeholder="ex : Les Korrigans FC" required>
 
         <div class="form-label">Qui sera le coach de cette équipe ?</div>
+        <input type="hidden" name="coach_id" id="coach_id_field" value="">
         <div class="coach-select"
              hx-get="{{ app_routes.spaces.coach_select_widget() }}?space_id={{ space_id }}"
              hx-trigger="load"
@@ -44,6 +44,7 @@
         </div>
     </div>
 
+    <div id="draft-team-error" class="draft-error-zone"></div>
     <div class="create-team buttons">
         <button type="button" class="btn btn-outline btn-action"
                 onclick="history.back()">
@@ -56,4 +57,10 @@
     </div>
 
 </form>
+<script>
+document.addEventListener('coachSelected', function(e) {
+    var field = document.getElementById('coach_id_field');
+    if (field) field.value = e.detail.id || '';
+});
+</script>
 {% endblock %}

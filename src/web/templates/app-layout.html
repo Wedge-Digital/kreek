@@ -9,6 +9,16 @@
   <link rel="stylesheet" href="/static/css/components/tom-select.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.4.1/dist/css/tom-select.min.css">
   <script src="/static/js/htmx.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      htmx.config.responseHandling = [
+        {code:"204", swap: false},
+        {code:"[23]..", swap: true},
+        {code:"422", swap: true},
+        {code:"[45]..", swap: false}
+      ];
+    });
+  </script>
   <script src="/static/js/htmx-ext-json-enc.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tom-select@2.4.1/dist/js/tom-select.complete.min.js"></script>

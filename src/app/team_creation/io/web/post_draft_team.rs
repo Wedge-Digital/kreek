@@ -26,10 +26,15 @@ pub async fn post_draft_team(
     auth_session: AuthSession,
     Path(space_id_raw): Path<String>,
     State(state): State<AppState>,
-    Json(form): Json<DraftTeamForm>,
+    body: Result<Json<DraftTeamForm>, axum::extract::rejection::JsonRejection>,
 ) -> impl IntoResponse {
     let Some(user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
+    };
+
+    let Json(form) = match body {
+        Ok(json) => json,
+        Err(_) => return error_response("Veuillez remplir tous les champs obligatoires (compétition, saison)."),
     };
 
     let team_name = match TeamName::try_new(form.team_name) {
@@ -41,10 +46,10 @@ pub async fn post_draft_team(
         }
     };
 
-    let coach_id_str = form
-        .coach_id
-        .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| user.id.to_string());
+    let coach_id_str = match form.coach_id.filter(|s| !s.is_empty()) {
+        Some(id) => id,
+        None => return error_response("Veuillez sélectionner un coach."),
+    };
     let coach_id = match CoachId::try_new(&coach_id_str) {
         Ok(id) => id,
         Err(_) => return error_response("Identifiant de coach invalide."),
@@ -102,5 +107,9 @@ pub async fn post_draft_team(
 }
 
 fn error_response(msg: &str) -> Response {
-    (StatusCode::UNPROCESSABLE_ENTITY, msg.to_string()).into_response()
+    Response::builder()
+        .status(StatusCode::UNPROCESSABLE_ENTITY)
+        .header("content-type", "text/html; charset=utf-8")
+        .body(Body::from(format!(r#"<p class="table-error">{msg}</p>"#)))
+        .unwrap()
 }
