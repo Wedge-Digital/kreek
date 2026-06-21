@@ -1,6 +1,6 @@
 use crate::app::shared_kernel::common_types::EntityId;
 use crate::app::teams::use_cases::approve_enrollment::{self, ApproveEnrollmentError};
-use crate::app::teams::use_cases::commands::{ApproveEnrollmentCommand, RejectEnrollmentCommand};
+use crate::app::teams::use_cases::commands::RejectEnrollmentCommand;
 use crate::app::teams::use_cases::reject_enrollment::{self, RejectEnrollmentError};
 use crate::state::AppState;
 use axum::body::Body;
@@ -29,15 +29,7 @@ pub async fn approve_enrollment(
         Err(_) => return error_response(StatusCode::BAD_REQUEST),
     };
 
-    let cmd = ApproveEnrollmentCommand {
-        team_id: team_entity_id,
-        competition_id: String::new(),
-        competition_name: String::new(),
-        season_id: String::new(),
-        season_name: String::new(),
-    };
-
-    match approve_enrollment::execute(cmd, state.teams.team_repository.as_ref()).await {
+    match approve_enrollment::execute(&team_entity_id, state.teams.team_repository.as_ref()).await {
         Ok(()) => enrollment_changed(),
         Err(ApproveEnrollmentError::TeamNotFound) => error_response(StatusCode::NOT_FOUND),
         Err(ApproveEnrollmentError::Domain(_)) => error_response(StatusCode::UNPROCESSABLE_ENTITY),
@@ -131,14 +123,7 @@ pub async fn approve_all_enrollments(
             Ok(id) => id,
             Err(_) => continue,
         };
-        let cmd = ApproveEnrollmentCommand {
-            team_id,
-            competition_id: params.competition_id.clone(),
-            competition_name: String::new(),
-            season_id: params.season_id.clone(),
-            season_name: String::new(),
-        };
-        if let Err(e) = approve_enrollment::execute(cmd, state.teams.team_repository.as_ref()).await
+        if let Err(e) = approve_enrollment::execute(&team_id, state.teams.team_repository.as_ref()).await
         {
             tracing::warn!("approve_all skip {}: {e:?}", row.team_id);
         }
