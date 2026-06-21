@@ -1,0 +1,53 @@
+<div class="admin-panel" hx-disinherit="*">
+  <div class="panel-header">
+    <div class="panel-title">En attente de validation</div>
+    <span class="panel-count panel-count--pending">{{ teams.len() }}</span>
+  </div>
+
+  {% if !teams.is_empty() %}
+  <div class="actions-bar">
+    <div class="actions-bar-left"></div>
+    <div class="actions-bar-right">
+      <button class="btn-primary-sm"
+              hx-post="{{ app_routes.teams.approve_all_enrollments() }}?competition_id={{ competition_id }}&season_id={{ season_id }}"
+              hx-swap="none">✅ Tout valider</button>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="enrollment-list">
+    {% for t in teams %}
+    <div class="enrollment-row enrollment-row--pending">
+      <div class="enrollment-logo">{{ t.team_initials }}</div>
+      <div class="enrollment-info">
+        <div class="enrollment-name">{{ t.team_name }}</div>
+        <div class="enrollment-meta">
+          <span>Coach : <strong>{{ t.coach_name }}</strong></span>
+          <span>·</span>
+          <span>Roster : {{ t.roster_name }}</span>
+        </div>
+      </div>
+      <span class="enrollment-status status--pending">En attente</span>
+      <div class="enrollment-actions">
+        <button class="action-btn action-btn--approve"
+                hx-post="{{ app_routes.teams.approve_enrollment(space_id, t.team_id) }}"
+                hx-swap="none">
+          <span class="action-btn-icon">✓</span> Valider
+        </button>
+        <button class="action-btn action-btn--danger"
+                hx-post="{{ app_routes.teams.reject_enrollment(space_id, t.team_id) }}"
+                hx-swap="none">
+          <span class="action-btn-icon">✕</span> Refuser
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+
+    {% if teams.is_empty() %}
+    <div class="empty-state">
+      <div class="empty-state-icon">✅</div>
+      <div class="empty-state-text">Aucune inscription en attente</div>
+    </div>
+    {% endif %}
+  </div>
+</div>

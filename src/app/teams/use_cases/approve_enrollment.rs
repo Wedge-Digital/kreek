@@ -2,6 +2,7 @@ use crate::app::teams::domain::error::DomainError;
 use crate::app::teams::ports::{ITeamRepository, RepositoryError};
 use crate::app::teams::use_cases::commands::ApproveEnrollmentCommand;
 
+#[derive(Debug)]
 pub enum ApproveEnrollmentError {
     TeamNotFound,
     Domain(DomainError),
