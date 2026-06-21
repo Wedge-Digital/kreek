@@ -70,10 +70,12 @@ pub async fn execute(
     }).collect();
 
     let event = TeamCreationDomainEvent::TeamSubmitted {
-        event_id:     EventId::new(),
-        team_id:      team.get_id().to_string(),
-        space_id:     cmd.space_id,
-        team_name:    base.name().clone().into_inner(),
+        event_id:       EventId::new(),
+        team_id:        team.get_id().to_string(),
+        space_id:       cmd.space_id,
+        competition_id: cmd.competition_id,
+        season_id:      cmd.season_id,
+        team_name:      base.name().clone().into_inner(),
         roster_id:    team.roster.id.0.clone(),
         roster_name:  team.roster.name.0.clone(),
         coach_id:     base.coach_id().to_string(),

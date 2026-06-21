@@ -23,9 +23,22 @@ pub async fn submit_team(
         return StatusCode::UNAUTHORIZED.into_response();
     };
 
+    let draft = match state
+        .team_creation
+        .team_repository
+        .find_by_id(&team_id_val)
+        .await
+    {
+        Ok(Some(d)) => d,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+
     let cmd = SubmitTeamCommand {
         team_id: team_id_val,
         space_id: space_id.clone(),
+        competition_id: draft.competition_id().to_string(),
+        season_id: draft.season_id().to_string(),
         coach_name: user.coach_name.into_inner(),
     };
 

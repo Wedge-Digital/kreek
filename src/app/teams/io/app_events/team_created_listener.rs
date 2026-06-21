@@ -22,6 +22,8 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                     let TeamCreationAppEvent::TeamCreated {
                         team_id,
                         space_id,
+                        competition_id,
+                        season_id,
                         team_name,
                         roster_id,
                         roster_name,
@@ -39,6 +41,8 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                     let domain_event = TeamDomainEvent::TeamCreated {
                         team_id: team_id.clone(),
                         space_id,
+                        competition_id,
+                        season_id,
                         name: team_name,
                         logo_url,
                         roster_id,

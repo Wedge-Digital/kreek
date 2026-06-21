@@ -155,6 +155,8 @@ mod tests {
                         -> Result<u64, crate::app::teams::ports::RepositoryError> { Ok(1) }
                     async fn find_by_id(&self, _: &str)
                         -> Result<Option<crate::app::teams::domain::team::Team>, crate::app::teams::ports::RepositoryError> { Ok(None) }
+                    async fn find_by_season_and_status(&self, _: &str, _: &str)
+                        -> Result<Vec<crate::app::teams::ports::TeamEnrollmentRow>, crate::app::teams::ports::RepositoryError> { Ok(vec![]) }
                 }
                 crate::app::teams::context::TeamsContext {
                     team_repository: Arc::new(FakeTeamRepo),

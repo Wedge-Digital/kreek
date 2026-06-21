@@ -22,22 +22,28 @@ impl TeamRepository {
         match event {
             TeamDomainEvent::TeamCreated {
                 space_id,
+                competition_id,
+                season_id,
                 name,
                 coach_name,
                 roster_name,
                 ..
             } => {
                 sqlx::query(
-                    "INSERT INTO team_enrollment_projection (team_id, space_id, team_name, coach_name, roster_name, status)
-                     VALUES ($1, $2, $3, $4, $5, 'PendingEnrollment')
+                    "INSERT INTO team_enrollment_projection (team_id, space_id, competition_id, season_id, team_name, coach_name, roster_name, status)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, 'PendingEnrollment')
                      ON CONFLICT (team_id) DO UPDATE SET
                        team_name = EXCLUDED.team_name,
                        coach_name = EXCLUDED.coach_name,
                        roster_name = EXCLUDED.roster_name,
+                       competition_id = EXCLUDED.competition_id,
+                       season_id = EXCLUDED.season_id,
                        updated_at = now()",
                 )
                 .bind(team_id)
                 .bind(space_id)
+                .bind(competition_id)
+                .bind(season_id)
                 .bind(name)
                 .bind(coach_name)
                 .bind(roster_name)
@@ -217,6 +223,8 @@ mod tests {
         TeamDomainEvent::TeamCreated {
             team_id: team_id.to_string(),
             space_id: "01SPACE00000000000000000000".to_string(),
+            competition_id: "01COMP000000000000000000000".to_string(),
+            season_id: "01SEAS000000000000000000000".to_string(),
             name: "Les Korrigans FC".to_string(),
             logo_url: None,
             roster_id: "01ROST000000000000000000000".to_string(),

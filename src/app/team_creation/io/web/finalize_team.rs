@@ -65,6 +65,15 @@ pub async fn finalize_team(
         }
     };
 
+    let draft = match state.team_creation.team_repository.find_by_id(&team_entity_id).await {
+        Ok(Some(d)) => d,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("finalize_team draft find: {e}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
     let ref_data = state.team_creation.reference_data.as_ref();
 
     // ── Validation des prérequis ─────────────────────────────────────────────
@@ -110,9 +119,11 @@ pub async fn finalize_team(
         }
 
         let cmd = SubmitTeamCommand {
-            team_id:    team_entity_id,
-            space_id:   space_id.clone(),
-            coach_name: user.coach_name.into_inner(),
+            team_id:        team_entity_id,
+            space_id:       space_id.clone(),
+            competition_id: draft.competition_id().to_string(),
+            season_id:      draft.season_id().to_string(),
+            coach_name:     user.coach_name.into_inner(),
         };
         return match submit_uc::execute(
             cmd,
@@ -204,10 +215,18 @@ pub async fn post_finalize_team(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
+    let post_draft = match state.team_creation.team_repository.find_by_id(&team_entity_id).await {
+        Ok(Some(d)) => d,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+
     let cmd = SubmitTeamCommand {
-        team_id:    team_entity_id,
-        space_id:   space_id.clone(),
-        coach_name: user.coach_name.into_inner(),
+        team_id:        team_entity_id,
+        space_id:       space_id.clone(),
+        competition_id: post_draft.competition_id().to_string(),
+        season_id:      post_draft.season_id().to_string(),
+        coach_name:     user.coach_name.into_inner(),
     };
 
     match submit_uc::execute(

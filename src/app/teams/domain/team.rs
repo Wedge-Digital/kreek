@@ -36,6 +36,8 @@ pub enum TeamDomainEvent {
     TeamCreated {
         team_id: String,
         space_id: String,
+        competition_id: String,
+        season_id: String,
         name: String,
         logo_url: Option<String>,
         roster_id: String,
@@ -247,6 +249,8 @@ impl Team {
             TeamDomainEvent::TeamCreated {
                 team_id,
                 space_id,
+                competition_id,
+                season_id,
                 name,
                 logo_url,
                 roster_id,
@@ -262,6 +266,8 @@ impl Team {
             } => {
                 self.id = team_id.clone();
                 self.space_id = space_id.clone();
+                self.competition_id = Some(competition_id.clone());
+                self.season_id = Some(season_id.clone());
                 self.name = name.clone();
                 self.initials = initials_from(name);
                 self.logo_url = logo_url.clone();
@@ -618,6 +624,8 @@ mod tests {
         TeamDomainEvent::TeamCreated {
             team_id: "01TEAM000000000000000000000".to_string(),
             space_id: "01SPACE00000000000000000000".to_string(),
+            competition_id: "01COMP000000000000000000000".to_string(),
+            season_id: "01SEAS000000000000000000000".to_string(),
             name: "Les Korrigans FC".to_string(),
             logo_url: None,
             roster_id: "01ROST000000000000000000000".to_string(),
