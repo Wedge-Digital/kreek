@@ -232,7 +232,10 @@ pub async fn dashboard_fragment(
         }
     };
 
-    let is_comp_admin = comp_info.admin_ids.contains(&user.id.to_string());
+    let user_id_str = user.id.to_string();
+    let coach_name_str = user.coach_name.clone().into_inner();
+    let is_comp_admin = comp_info.admin_ids.contains(&user_id_str)
+        || comp_info.admin_names.contains(&coach_name_str);
 
     if !is_space_admin && !is_comp_admin {
         return StatusCode::FORBIDDEN.into_response();

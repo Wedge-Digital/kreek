@@ -1,3 +1,4 @@
+use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId};
 use crate::state::AppState;
@@ -506,6 +507,7 @@ pub struct CompetitionDetailTemplate {
     pub competition_initials: String,
     pub season_name: String,
     pub admin_names: Vec<String>,
+    pub is_admin: bool,
     pub active_tab: &'static str,
     // tab content (only one is populated per request)
     pub standings: Vec<StandingRow>,
@@ -596,6 +598,7 @@ struct PageBase {
     competition_initials: String,
     season_name: String,
     admin_names: Vec<String>,
+    admin_ids: Vec<String>,
 }
 
 async fn load_page_base(
@@ -641,6 +644,7 @@ async fn load_page_base(
         competition_initials,
         season_name,
         admin_names: base.admin_names,
+        admin_ids: base.admin_ids,
     })
 }
 
@@ -650,6 +654,7 @@ fn full_page(
     competition_id: String,
     season_id: String,
     active_tab: &'static str,
+    is_admin: bool,
     standings: Vec<StandingRow>,
     journees: Vec<Journee>,
     teams: Vec<TeamCard>,
@@ -668,6 +673,7 @@ fn full_page(
         competition_initials: pb.competition_initials,
         season_name: pb.season_name,
         admin_names: pb.admin_names,
+        is_admin,
         active_tab,
         standings,
         journees,
@@ -683,6 +689,7 @@ fn full_page(
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
 pub async fn get_competition_detail(
+    auth_session: AuthSession,
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
@@ -700,6 +707,13 @@ pub async fn get_competition_detail(
         Err(r) => return r,
     };
 
+    let is_admin = auth_session.user.as_ref().map_or(false, |user| {
+        let user_id_str = user.id.to_string();
+        let coach_name_str = user.coach_name.clone().into_inner();
+        pb.admin_names.contains(&coach_name_str)
+            || pb.admin_ids.contains(&user_id_str)
+    });
+
     CompetitionDetailTemplate {
         app_routes: AppRoutes::default(),
         space_id,
@@ -710,6 +724,7 @@ pub async fn get_competition_detail(
         competition_initials: pb.competition_initials,
         season_name: pb.season_name,
         admin_names: pb.admin_names,
+        is_admin,
         active_tab: "standings",
         standings: mock_standings(),
         journees: vec![],
@@ -751,6 +766,7 @@ pub async fn get_tab_standings(
         competition_id,
         season_id,
         "standings",
+        false,
         mock_standings(),
         vec![],
         vec![],
@@ -790,6 +806,7 @@ pub async fn get_tab_matches(
         competition_id,
         season_id,
         "matches",
+        false,
         vec![],
         mock_journees(),
         vec![],
@@ -829,6 +846,7 @@ pub async fn get_tab_teams(
         competition_id,
         season_id,
         "teams",
+        false,
         vec![],
         vec![],
         mock_teams(),
@@ -871,6 +889,7 @@ pub async fn get_tab_stats(
         competition_id,
         season_id,
         "stats",
+        false,
         vec![],
         vec![],
         vec![],

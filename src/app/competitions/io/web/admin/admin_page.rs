@@ -55,15 +55,10 @@ pub async fn admin_page(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let is_space_admin = match state
-        .spaces
-        .space_repository
-        .find_member_profile(&user.id, &space_entity_id)
-        .await
-    {
-        Ok(Some(SpaceProfile::SpaceAdmin)) => true,
-        _ => false,
-    };
+    let is_space_admin = matches!(
+        state.spaces.space_repository.find_member_profile(&user.id, &space_entity_id).await,
+        Ok(Some(SpaceProfile::SpaceAdmin))
+    );
 
     let comp_info = match state
         .competitions
@@ -79,7 +74,10 @@ pub async fn admin_page(
         }
     };
 
-    let is_comp_admin = comp_info.admin_ids.contains(&user.id.to_string());
+    let user_id_str = user.id.to_string();
+    let coach_name_str = user.coach_name.clone().into_inner();
+    let is_comp_admin = comp_info.admin_ids.contains(&user_id_str)
+        || comp_info.admin_names.contains(&coach_name_str);
 
     if !is_space_admin && !is_comp_admin {
         return StatusCode::FORBIDDEN.into_response();

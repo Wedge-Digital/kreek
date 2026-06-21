@@ -34,6 +34,12 @@
                 <button class="btn btn-primary-blue btn-sm">
                     + Saisir un match
                 </button>
+                {% if is_admin %}
+                <a class="btn btn-outline btn-sm"
+                   href="{{ app_routes.competitions.admin(space_id, competition_id, season_id) }}">
+                    ⚙️ Administration
+                </a>
+                {% endif %}
             </div>
         </div>
 
