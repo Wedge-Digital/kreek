@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Poules — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ── Layout ── */
+    .admin-container {
+      max-width: 1060px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+      padding-bottom: var(--p4);
+    }
+
+    /* ── Banner (shared) ── */
+    .admin-banner {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 12px; padding: var(--p2);
+      display: flex; align-items: center; gap: var(--p2);
+    }
+    .admin-banner-icon {
+      width: 56px; height: 56px; border-radius: 12px;
+      background: rgba(255,255,255,0.12);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; flex-shrink: 0;
+    }
+    .admin-banner-info { flex: 1; }
+    .admin-banner-title { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--white); }
+    .admin-banner-sub { font-size: var(--text-tiny); color: rgba(255,255,255,0.65); margin-top: 4px; }
+    .admin-banner-badge {
+      background: rgba(255,107,53,0.25); color: var(--orange);
+      font-size: var(--text-tiny); font-weight: 700;
+      padding: 4px 12px; border-radius: 20px;
+      border: 1px solid rgba(255,107,53,0.4);
+    }
+    .admin-banner-back {
+      font-size: var(--text-tiny); color: rgba(255,255,255,0.5);
+      text-decoration: none; margin-top: 4px; display: inline-block;
+    }
+    .admin-banner-back:hover { color: rgba(255,255,255,0.8); }
+
+    /* ── Tabs (shared) ── */
+    .admin-tabs {
+      display: flex; gap: 4px;
+      background: var(--white); border-radius: 10px;
+      padding: 6px; border: 1px solid var(--dark-5);
+    }
+    .admin-tab {
+      flex: 1; text-align: center;
+      padding: 8px var(--p1); border-radius: 7px;
+      font-size: var(--text-tiny); font-weight: 600;
+      color: var(--dark-3); cursor: pointer;
+      transition: all 0.15s; text-decoration: none;
+    }
+    .admin-tab:hover  { background: var(--dark-6); color: var(--dark-1); }
+    .admin-tab.active { background: var(--main-blue); color: var(--white); }
+
+    /* ── Panel card ── */
+    .admin-panel {
+      background: var(--white); border-radius: 12px;
+      padding: var(--p2);
+      display: flex; flex-direction: column; gap: var(--p2);
+    }
+    .panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .panel-title {
+      font-family: var(--font-title); font-size: var(--h5);
+      font-weight: 700; color: var(--dark-1);
+    }
+
+    /* ── Actions bar ── */
+    .actions-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: var(--p1);
+    }
+    .actions-bar-left { display: flex; gap: var(--p1); align-items: center; }
+    .actions-bar-right { display: flex; gap: 8px; }
+
+    .btn-primary-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--main-blue); color: var(--white);
+      font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer; border: none; transition: opacity 0.15s;
+    }
+    .btn-primary-sm:hover { opacity: 0.9; }
+
+    .btn-outline-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--white); color: var(--dark-2);
+      font-size: var(--text-tiny); font-weight: 600;
+      cursor: pointer; border: 1px solid var(--dark-5);
+      transition: all 0.15s;
+    }
+    .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    .btn-danger-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--white); color: var(--dark-3);
+      font-size: var(--text-tiny); font-weight: 600;
+      cursor: pointer; border: 1px solid var(--dark-5);
+      transition: all 0.15s;
+    }
+    .btn-danger-sm:hover { border-color: var(--red); color: var(--red); background: rgba(224,32,32,0.04); }
+
+    /* ── Poules grid ── */
+    .groups-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: var(--p2);
+    }
+
+    .group-card {
+      border: 1px solid var(--dark-5);
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--white);
+    }
+    .group-card-head {
+      background: var(--main-blue);
+      color: var(--white);
+      padding: 10px var(--p2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .group-card-name {
+      font-family: var(--font-title);
+      font-weight: 700;
+      font-size: var(--text-small);
+    }
+    .group-card-count {
+      font-size: var(--text-tiny);
+      opacity: 0.7;
+    }
+    .group-card-body {
+      padding: var(--p1);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-height: 120px;
+    }
+
+    /* ── Team in group ── */
+    .group-team {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--dark-6);
+      background: var(--white);
+      cursor: grab;
+      transition: all 0.15s;
+    }
+    .group-team:hover {
+      border-color: var(--dark-4);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    .group-team.dragging {
+      opacity: 0.5;
+      border-style: dashed;
+    }
+
+    .group-team-logo {
+      width: 28px; height: 28px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 11px;
+      color: var(--white); flex-shrink: 0;
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+    }
+    .group-team-info { flex: 1; min-width: 0; }
+    .group-team-name {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .group-team-meta {
+      font-size: 11px; color: var(--dark-4);
+    }
+    .group-team-handle {
+      color: var(--dark-4); font-size: 14px; cursor: grab;
+      flex-shrink: 0;
+    }
+
+    /* ── Drop zone ── */
+    .group-drop-zone {
+      border: 2px dashed var(--dark-5);
+      border-radius: 6px;
+      padding: var(--p1);
+      text-align: center;
+      font-size: var(--text-tiny);
+      color: var(--dark-4);
+      font-style: italic;
+      transition: all 0.15s;
+    }
+    .group-drop-zone.drag-over {
+      border-color: var(--main-blue);
+      background: rgba(0,48,73,0.04);
+      color: var(--main-blue);
+    }
+
+    /* ── Unassigned pool ── */
+    .unassigned-pool {
+      background: var(--dark-7);
+      border: 1px solid var(--dark-5);
+      border-radius: 10px;
+      padding: var(--p2);
+    }
+    .unassigned-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: var(--p1);
+    }
+    .unassigned-title {
+      font-family: var(--font-title); font-size: var(--h5);
+      font-weight: 700; color: var(--dark-2);
+    }
+    .unassigned-count {
+      font-size: var(--text-tiny); font-weight: 700;
+      padding: 2px 10px; border-radius: 20px;
+      background: rgba(255,107,53,0.12); color: var(--orange);
+    }
+    .unassigned-teams {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+
+    .unassigned-chip {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px;
+      border: 1px solid var(--dark-5);
+      border-radius: 8px;
+      background: var(--white);
+      cursor: grab;
+      font-size: var(--text-tiny);
+      font-weight: 500;
+      color: var(--dark-2);
+      transition: all 0.15s;
+    }
+    .unassigned-chip:hover {
+      border-color: var(--main-blue);
+      color: var(--main-blue);
+    }
+    .unassigned-chip-logo {
+      width: 22px; height: 22px; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 700; color: var(--white);
+      background: linear-gradient(135deg, var(--dark-3), var(--dark-1));
+      flex-shrink: 0;
+    }
+
+    /* ── Info note ── */
+    .info-note {
+      font-size: var(--text-tiny); color: var(--dark-3);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .info-note-icon { font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item" href="app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item active">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="admin-container">
+
+          <!-- ══ Banner ══════════════════════════════════════════════ -->
+          <div class="admin-banner">
+            <div class="admin-banner-icon">🏆</div>
+            <div class="admin-banner-info">
+              <div class="admin-banner-title">Ligue de Condate — Saison 5</div>
+              <div class="admin-banner-sub">Administration de la compétition · 3 administrateurs</div>
+              <a href="app-competition-detail.html" class="admin-banner-back">← Retour à la compétition</a>
+            </div>
+            <div class="admin-banner-badge">Admin</div>
+          </div>
+
+          <!-- ══ Tabs ═══════════════════════════════════════════════ -->
+          <div class="admin-tabs">
+            <a class="admin-tab" href="app-competition-admin.html">📊 Tableau de bord</a>
+            <a class="admin-tab" href="app-competition-admin-enrollments.html">📋 Inscriptions</a>
+            <a class="admin-tab active" href="#">🎲 Poules</a>
+            <a class="admin-tab" href="app-competition-admin-schedule.html">📅 Calendrier</a>
+            <a class="admin-tab" href="app-competition-admin-results.html">✅ Résultats</a>
+            <a class="admin-tab" href="app-competition-admin-settings.html">⚙️ Paramètres</a>
+          </div>
+
+          <!-- ══ Actions ════════════════════════════════════════════ -->
+          <div class="admin-panel">
+            <div class="actions-bar">
+              <div class="actions-bar-left">
+                <span class="info-note">
+                  <span class="info-note-icon">💡</span>
+                  Glissez les équipes pour les répartir manuellement, ou utilisez le tirage aléatoire.
+                </span>
+              </div>
+              <div class="actions-bar-right">
+                <button class="btn-danger-sm">🗑️ Vider les poules</button>
+                <button class="btn-primary-sm">🎲 Tirage aléatoire</button>
+                <button class="btn-outline-sm">💾 Enregistrer</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ Équipes non assignées ══════════════════════════════ -->
+          <div class="unassigned-pool">
+            <div class="unassigned-header">
+              <div class="unassigned-title">Équipes non assignées</div>
+              <span class="unassigned-count">4 restantes</span>
+            </div>
+            <div class="unassigned-teams">
+
+              <div class="unassigned-chip" draggable="true">
+                <div class="unassigned-chip-logo" style="background: linear-gradient(135deg, var(--orange), #1C1C29);">WE</div>
+                Warpstone Engineers
+              </div>
+
+              <div class="unassigned-chip" draggable="true">
+                <div class="unassigned-chip-logo" style="background: linear-gradient(135deg, var(--green), #003049);">DT</div>
+                Dead Trees
+              </div>
+
+              <div class="unassigned-chip" draggable="true">
+                <div class="unassigned-chip-logo">NR</div>
+                Nuln Raiders
+              </div>
+
+              <div class="unassigned-chip" draggable="true">
+                <div class="unassigned-chip-logo" style="background: linear-gradient(135deg, #6F35A5, #26263D);">BK</div>
+                Blood Knights
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ══ Poules ═════════════════════════════════════════════ -->
+          <div class="groups-grid">
+
+            <!-- Poule A -->
+            <div class="group-card">
+              <div class="group-card-head">
+                <span class="group-card-name">Poule A</span>
+                <span class="group-card-count">5 équipes</span>
+              </div>
+              <div class="group-card-body">
+
+                <div class="group-team" draggable="true">
+                  <div class="group-team-logo" style="background: linear-gradient(135deg, #E02020, #555770);">SC</div>
+                  <div class="group-team-info">
+                    <div class="group-team-name">Skull Crushers</div>
+                    <div class="group-team-meta">Darkmoule · Orques</div>
+                  </div>
+                  <span class="group-team-handle">⠿</span>
+                </div>
+
+                <div class="group-team" draggable="true">
+                  <div class="group-team-logo" style="background: linear-gradient(135deg, #6F35A5, #26263D);">MR</div>
+                  <div class="group-team-info">
+                    <div class="group-team-name">Midnight Raiders</div>
+                    <div class="group-team-meta">Grim · Elfes Noirs</div>
+                  </div>
+                  <span class="group-team-handle">⠿</span>
+                </div>
+
+                <div class="group-team" draggable="true">
+                  <div class="group-team-logo">IF</div>
+                  <div class="group-team-info">
+                    <div class="group-team-name">Iron Forge</div>
+                    <div class="group-team-meta">Guigui · Nains</div>
+                  </div>
+                  <span class="group-team-handle">⠿</span>
+                </div>
+
+                <div class="group-team" draggable="true">
+                  <div class="group-team-logo" style="background: linear-gradient(135deg, var(--green), #003049);">ST</div>
+                  <div class="group-team-info">
+                    <div class="group-team-name">Storm Treemen</div>
+                    <div class="group-team-meta">Yan · Elfes Sylvains</div>
+                  </div>
+                  <span class="group-team-handle">⠿</span>
+                </div>
+
+                <div class="group-team" draggable="true">
+                  <div class="group-team-logo" style="background: linear-gradient(135deg, var(--orange), #1C1C29);">HL</div>
+                  <div class="group-team-info">
+                    <div class="group-team-name">Halfling Legends</div>
+                    <div class="group-team-meta">Playmore · Halflings</div>
+                  </div>
+                  <span class="group-team-handle">⠿</span>
+                </div>
+
+                <div class="group-drop-zone">Déposez une équipe ici</div>
+
+              </div>
+            </div>
+
+            <!-- Poule B -->
+            <div class="group-card">
+              <div class="group-card-head" style="background: var(--dark-2);">
+                <span class="group-card-name">Poule B</span>
+                <span class="group-card-count">5 équipes</span>
+              </div>
+              <div class="group-card-body">
+
+                <div class="group-team" draggable="true">
+                  <div class="group-team-logo" style="background: linear-gradient(135deg, var(--green), #003049);">CU</div>
+                  <div class="group-team-info">
+                    <div class="group-team-name">Chaos United</div>
+                    <div class="group-team-meta">Calltrakk · Élus du Chaos</div>
+                  </div>
+                  <span class="group-team-handle">⠿</span>
+                </div>
+
+                <div class="group-team" draggable="true">
+                  <div class="group-team-logo">GT</div>
+                  <div class="group-team-info">
+                    <div class="group-team-name">Green Tide</div>
+                    <div class="group-team-meta">foxxx · Gobelins</div>
+                  </div>
+                  <span class="group-team-handle">⠿</span>
+                </div>
+
+                <div class="group-team" draggable="true">
+                  <div class="group-team-logo" style="background: linear-gradient(135deg, #E02020, #555770);">RS</div>
+                  <div class="group-team-info">
+                    <div class="group-team-name">Red Skulls</div>
+                    <div class="group-team-meta">Crisis · Khorne</div>
+                  </div>
+                  <span class="group-team-handle">⠿</span>
+                </div>
+
+                <div class="group-team" draggable="true">
+                  <div class="group-team-logo" style="background: linear-gradient(135deg, var(--main-blue), var(--dark-2));">UW</div>
+                  <div class="group-team-info">
+                    <div class="group-team-name">Underworld Warriors</div>
+                    <div class="group-team-meta">Sebco · Underworld</div>
+                  </div>
+                  <span class="group-team-handle">⠿</span>
+                </div>
+
+                <div class="group-team" draggable="true">
+                  <div class="group-team-logo" style="background: linear-gradient(135deg, #6F35A5, #26263D);">NE</div>
+                  <div class="group-team-info">
+                    <div class="group-team-name">Necrotic Elite</div>
+                    <div class="group-team-meta">NecroBob · Morts-Vivants</div>
+                  </div>
+                  <span class="group-team-handle">⠿</span>
+                </div>
+
+                <div class="group-drop-zone">Déposez une équipe ici</div>
+
+              </div>
+            </div>
+
+          </div><!-- /groups-grid -->
+
+        </div><!-- /admin-container -->
+      </div><!-- /page-content -->
+    </div><!-- /main-area -->
+  </div><!-- /app-layout -->
+</body>
+</html>

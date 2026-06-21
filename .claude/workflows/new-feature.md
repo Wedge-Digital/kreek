@@ -6,40 +6,75 @@ Chaque phase produit un livrable validé par l'utilisateur avant de passer à la
 
 ---
 
+## Organisation et progression
+
+### Granularité : page par page
+
+Les phases 2 à 8 s'appliquent **page par page** (ou onglet par onglet), pas à la fonctionnalité entière. Seule la Phase 1 (maquettes) peut couvrir plusieurs pages d'un coup pour avoir une vision d'ensemble.
+
+### Fichiers de spec
+
+Chaque fonctionnalité a un dossier de spec :
+
+```
+docs/specs/<feature>/
+├── README.md                ← index, statut par page
+├── 01-<page-name>.md        ← phases 2-8 pour cette page
+├── 02-<page-name>.md
+└── ...
+```
+
+Le `README.md` contient le tableau de progression :
+
+```markdown
+| Page | Maquette | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
+|---|---|---|---|---|---|---|---|---|
+| Dashboard | ✅ | ✅ | | | | | | |
+| Inscriptions | ✅ | | | | | | | |
+```
+
+### Contexte minimal
+
+Quand on attaque une page, on lit **uniquement** son fichier de spec et le README — pas les specs des autres pages. Cela permet de travailler sans surcharger le contexte.
+
+---
+
 ## Phase 1 — Design (maquettes)
 
 **Entrée** : besoin utilisateur exprimé en texte
-**Contexte à charger** : design system (`assets/static/css/`), direction artistique, maquettes existantes, principes UX du projet
+**Contexte à charger** : design system (`assets/static/css/`), direction artistique, maquettes existantes (`assets/rawpages/`), principes UX du projet
+**Granularité** : toutes les pages de la fonctionnalité (vue d'ensemble)
 
 ### Processus
 
 1. Comprendre le besoin : poser des questions si nécessaire
 2. Identifier les écrans / pages concernés par la fonctionnalité
-3. Créer une maquette HTML/CSS statique pour chaque écran
+3. Créer une maquette HTML/CSS statique pour chaque écran dans `assets/rawpages/html/`
 4. Présenter les maquettes à l'utilisateur
 5. Itérer par boucles successives sur le feedback : ajustements visuels, interactions, états (vide, chargé, erreur, succès)
 6. Valider l'ensemble des maquettes
 
 ### Sortie
 
-Ensemble de maquettes HTML/CSS validées, couvrant tous les écrans et états de la fonctionnalité.
+Ensemble de maquettes HTML/CSS validées dans `assets/rawpages/html/`.
 
 ### Règles
 
-- Les maquettes utilisent le design system existant (variables CSS, classes existantes)
+- Les maquettes utilisent le design system existant (shared.css, variables CSS)
 - Chaque état est maquetté : état vide, état chargé, état d'erreur, état de succès
-- Les maquettes sont des fichiers statiques consultables dans un navigateur
-- On ne passe à la phase 2 qu'après validation explicite de toutes les maquettes
+- Un fichier par page/onglet
+- On ne passe aux phases suivantes qu'après validation de toutes les maquettes
 
 ---
 
 ## Phase 2 — Architecture front (spec de composition)
 
-**Entrée** : maquettes validées
+**Entrée** : maquette validée de la page
+**Granularité** : une page à la fois
 
 ### Processus
 
-Pour chaque page maquettée :
+Pour la page en cours :
 
 1. **Identifier les widgets** qui composent la page (sections autonomes avec leur propre endpoint)
 2. **Définir la communication** entre widgets :
@@ -47,25 +82,25 @@ Pour chaque page maquettée :
    - Quels événements chaque widget écoute (`hx-trigger="eventName from:body"`)
    - Le payload de chaque événement (quels champs, quels types)
 3. **Séparer front vs back** :
-   - Ce qui est géré côté front (JS/Alpine inline dans le widget) : toggle, filtres locaux, animations
+   - Ce qui est géré côté front (JS/Alpine inline dans le widget) : toggle, filtres locaux, drag & drop
    - Ce qui est envoyé au back (HTMX `hx-get`/`hx-post`) : chargement de données, mutations
 4. **Modes d'interaction** de chaque widget : lecture seule, édition (auto-save), sélection, mutation
 5. **Widgets existantes réutilisables** : vérifier dans `src/app/*/io/web/widgets/` et `src/app/*/io/web/templates/widgets/`
 
 ### Sortie
 
-Document de spec front par page :
+Section "Phase 2 — Architecture front" dans le fichier de spec de la page :
 
 ```
-Page : [nom]
-URL  : [route]
-
 | Widget | BC | Endpoint | Trigger | Émet | Mode |
 |--------|-----|----------|---------|------|------|
 | ...    | ... | ...      | ...     | ...  | ...  |
 
 Événements :
 - eventName : { payload } — émis par [widget], écouté par [widgets]
+
+Actions :
+- POST /endpoint — description → HX-Trigger: eventName
 ```
 
 ### Règles
@@ -78,34 +113,23 @@ URL  : [route]
 
 ## Phase 3 — Architecture back (organisation des traitements)
 
-**Entrée** : spec front validée
+**Entrée** : spec front validée de la page
+**Granularité** : une page à la fois
 
 ### Processus
 
-1. **Mapper widgets → BCs** : quel BC fournit chaque widget identifiée en phase 2
-2. **Vérifier les widgets existantes** : grep dans les fichiers widgets existants, identifier ce qui peut être réutilisé tel quel vs ce qui doit être créé
+1. **Mapper widgets → BCs** : quel BC fournit chaque widget
+2. **Vérifier les widgets existantes** : grep dans les fichiers widgets existants
 3. **Définir les fichiers** :
    - Un fichier handler par widget dans `widgets/` (convention `_widget.rs`)
    - Un fichier template par widget dans `templates/widgets/`
    - Les routes dans `routes.rs`
-4. **Identifier les ports nécessaires** : si un widget a besoin de données d'un autre BC, définir la méthode à ajouter sur `IReferenceDataPort` (ou créer un nouveau port)
-5. **Identifier les domain services** : si un handler a besoin de transformer des DTOs de port en objets domaine, créer ou enrichir un service dans `use_cases/`
+4. **Identifier les ports nécessaires** : si un widget a besoin de données d'un autre BC
+5. **Identifier les domain services** : si un handler a besoin de transformer des DTOs de port en objets domaine
 
 ### Sortie
 
-Plan de fichiers :
-
-```
-src/app/<bc>/io/web/
-├── widgets/
-│   ├── <widget_a>_widget.rs    ← NOUVEAU
-│   └── <widget_b>_widget.rs    ← EXISTANT (réutilisé)
-├── templates/widgets/
-│   ├── <widget_a>-widget.html  ← NOUVEAU
-│   └── <widget_b>-widget.html  ← EXISTANT
-├── routes.rs                   ← routes ajoutées
-└── router.rs                   ← routes câblées
-```
+Section "Phase 3 — Architecture back" dans le fichier de spec avec le plan de fichiers.
 
 ### Règles
 
@@ -117,7 +141,8 @@ src/app/<bc>/io/web/
 
 ## Phase 4 — Contrats de données (DTOs entrée/sortie)
 
-**Entrée** : plan back validé
+**Entrée** : plan back validé de la page
+**Granularité** : une page à la fois
 
 ### Processus
 
@@ -134,7 +159,7 @@ Pour chaque handler identifié :
 
 ### Sortie
 
-Structs Rust écrites dans les fichiers appropriés (`view_models.rs`, `ports.rs`, handlers). Pas encore d'implémentation des handlers — uniquement les types.
+Section "Phase 4 — DTOs" dans le fichier de spec avec les structs Rust.
 
 ### Règles
 
@@ -146,7 +171,8 @@ Structs Rust écrites dans les fichiers appropriés (`view_models.rs`, `ports.rs
 
 ## Phase 5 — Use cases (couche commande)
 
-**Entrée** : DTOs et commandes définis
+**Entrée** : DTOs et commandes définis pour la page
+**Granularité** : une page à la fois
 
 ### Processus
 
@@ -164,7 +190,7 @@ Pour chaque mutation (POST/PUT/DELETE) :
 
 ### Sortie
 
-Fichiers use case avec orchestration complète. Les méthodes domaine appelées peuvent être des stubs à ce stade.
+Section "Phase 5 — Use cases" dans le fichier de spec avec les signatures et l'orchestration.
 
 ### Règles
 
@@ -176,7 +202,8 @@ Fichiers use case avec orchestration complète. Les méthodes domaine appelées 
 
 ## Phase 6 — Domaine (logique métier)
 
-**Entrée** : use cases définis
+**Entrée** : use cases définis pour la page
+**Granularité** : une page à la fois
 
 ### Processus
 
@@ -187,7 +214,7 @@ Fichiers use case avec orchestration complète. Les méthodes domaine appelées 
 
 ### Sortie
 
-Code domaine testé (`cargo test` passe).
+Section "Phase 6 — Domaine" dans le fichier de spec. Code domaine testé (`cargo test` passe).
 
 ### Règles
 
@@ -199,7 +226,8 @@ Code domaine testé (`cargo test` passe).
 
 ## Phase 7 — Effets de bord (persistance, événements, réponses)
 
-**Entrée** : domaine implémenté et testé
+**Entrée** : domaine implémenté et testé pour la page
+**Granularité** : une page à la fois
 
 ### Processus
 
@@ -212,7 +240,7 @@ Code domaine testé (`cargo test` passe).
 
 ### Sortie
 
-Fonctionnalité complète, testée (unitaire + E2E), commitée.
+Code complet, testé (unitaire + E2E), commité.
 
 ### Règles
 
@@ -220,3 +248,32 @@ Fonctionnalité complète, testée (unitaire + E2E), commitée.
 - Avant de supprimer du code : vérifier qu'il n'est utilisé nulle part (règle 4)
 - Quand on déplace du code : copier-coller exact (règle 5)
 - Commit après validation utilisateur (règle 1)
+
+---
+
+## Phase 8 — Cartes kanban
+
+**Entrée** : spec complète de la page (phases 2-7)
+**Granularité** : une page à la fois
+
+### Processus
+
+À partir de la spec complète de la page, produire un ensemble de **cartes kanban** dans `kanban/ready_to_be_done/` :
+
+1. Découper l'implémentation en cartes indépendantes et ordonnées
+2. Chaque carte correspond à une unité livrable (compilable, testable, commitable)
+3. Chaque carte contient : objectif, dépendances, conception détaillée, checklist
+4. Les cartes suivent le cycle de vie kanban (cf. CLAUDE.md)
+
+### Sortie
+
+Cartes kanban créées dans `kanban/ready_to_be_done/`. Le fichier de spec de la page est marqué comme complet dans le README.
+
+### Règles de découpage
+
+- Une carte par widget (handler + template + route)
+- Une carte par use case / mutation complexe
+- Une carte pour les value objects et méthodes domaine
+- Une carte pour les tests E2E de la page
+- Les cartes sont ordonnées par dépendance (domaine → use case → handler → template)
+- Chaque carte est réalisable en une session de travail

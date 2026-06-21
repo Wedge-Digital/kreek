@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administration compétition — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ── Layout ── */
+    .admin-container {
+      max-width: 1060px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+      padding-bottom: var(--p4);
+    }
+
+    /* ── Header banner ── */
+    .admin-banner {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 12px;
+      padding: var(--p2);
+      display: flex;
+      align-items: center;
+      gap: var(--p2);
+    }
+    .admin-banner-icon {
+      width: 56px; height: 56px; border-radius: 12px;
+      background: rgba(255,255,255,0.12);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; flex-shrink: 0;
+    }
+    .admin-banner-info { flex: 1; }
+    .admin-banner-title {
+      font-family: var(--font-title); font-size: var(--h4); font-weight: 700;
+      color: var(--white);
+    }
+    .admin-banner-sub { font-size: var(--text-tiny); color: rgba(255,255,255,0.65); margin-top: 4px; }
+    .admin-banner-badge {
+      background: rgba(255,107,53,0.25); color: var(--orange);
+      font-size: var(--text-tiny); font-weight: 700;
+      padding: 4px 12px; border-radius: 20px;
+      border: 1px solid rgba(255,107,53,0.4);
+    }
+    .admin-banner-back {
+      font-size: var(--text-tiny); color: rgba(255,255,255,0.5);
+      text-decoration: none; margin-top: 4px; display: inline-block;
+    }
+    .admin-banner-back:hover { color: rgba(255,255,255,0.8); }
+
+    /* ── Tabs ── */
+    .admin-tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--white);
+      border-radius: 10px;
+      padding: 6px;
+      border: 1px solid var(--dark-5);
+    }
+    .admin-tab {
+      flex: 1; text-align: center;
+      padding: 8px var(--p1);
+      border-radius: 7px;
+      font-size: var(--text-tiny); font-weight: 600;
+      color: var(--dark-3); cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+    .admin-tab:hover  { background: var(--dark-6); color: var(--dark-1); }
+    .admin-tab.active { background: var(--main-blue); color: var(--white); }
+
+    /* ── Panel card ── */
+    .admin-panel {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p2);
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+    }
+    .panel-title {
+      font-family: var(--font-title); font-size: var(--h5);
+      font-weight: 700; color: var(--dark-1);
+    }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: flex;
+      gap: var(--p1);
+    }
+    .stat-chip {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--dark-6); border-radius: 8px;
+      padding: 10px var(--p2); flex: 1;
+    }
+    .stat-chip-icon { font-size: 18px; }
+    .stat-chip-value {
+      font-family: var(--font-title); font-size: var(--h5);
+      font-weight: 700; color: var(--main-blue);
+    }
+    .stat-chip-label { font-size: var(--text-tiny); color: var(--dark-3); }
+    .stat-chip--warn .stat-chip-value { color: var(--orange); }
+    .stat-chip--ok .stat-chip-value { color: var(--green); }
+
+    /* ── Progress section ── */
+    .progress-section {
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .progress-row {
+      display: flex; align-items: center; gap: var(--p1);
+    }
+    .progress-label {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-2);
+      min-width: 140px;
+    }
+    .progress-bar-wrap {
+      flex: 1; height: 8px; background: var(--dark-5);
+      border-radius: 4px; overflow: hidden;
+    }
+    .progress-bar-inner {
+      height: 100%; border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+    .progress-bar-inner--blue { background: var(--main-blue); }
+    .progress-bar-inner--green { background: var(--green); }
+    .progress-bar-inner--orange { background: var(--orange); }
+    .progress-value {
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2);
+      min-width: 50px; text-align: right;
+    }
+
+    /* ── Activity feed ── */
+    .activity-list { display: flex; flex-direction: column; gap: 8px; }
+    .activity-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px var(--p1);
+      border-radius: 8px;
+      transition: background 0.1s;
+    }
+    .activity-row:hover { background: var(--dark-7); }
+    .activity-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+    .activity-icon--enroll { background: rgba(98,149,132,0.12); }
+    .activity-icon--match  { background: rgba(0,48,73,0.08); }
+    .activity-icon--warn   { background: rgba(255,107,53,0.10); }
+    .activity-info { flex: 1; }
+    .activity-text { font-size: var(--text-tiny); color: var(--dark-1); }
+    .activity-text strong { font-weight: 600; }
+    .activity-time { font-size: 11px; color: var(--dark-4); margin-top: 2px; }
+
+    /* ── Actions rapides ── */
+    .quick-actions {
+      display: flex; gap: var(--p1); flex-wrap: wrap;
+    }
+    .quick-action-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 18px;
+      border: 1px solid var(--dark-5); border-radius: 8px;
+      font-size: var(--text-tiny); font-weight: 600;
+      color: var(--dark-2); cursor: pointer;
+      background: var(--white);
+      transition: all 0.15s;
+    }
+    .quick-action-btn:hover {
+      background: rgba(0,48,73,0.04); border-color: var(--main-blue); color: var(--main-blue);
+    }
+    .quick-action-icon { font-size: 16px; }
+
+    /* ── Two-col layout ── */
+    .two-col { display: flex; gap: var(--p2); }
+    .two-col > * { flex: 1; }
+
+    /* ── Alert banner ── */
+    .alert-banner {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px var(--p2);
+      border-radius: 8px;
+      font-size: var(--text-tiny);
+    }
+    .alert-banner--warn {
+      background: rgba(255,107,53,0.08);
+      border: 1px solid rgba(255,107,53,0.2);
+      color: #9A5000;
+    }
+    .alert-banner--info {
+      background: rgba(0,48,73,0.04);
+      border: 1px solid rgba(0,48,73,0.12);
+      color: var(--main-blue);
+    }
+    .alert-banner-icon { font-size: 18px; flex-shrink: 0; }
+    .alert-banner-text { flex: 1; }
+    .alert-banner-action {
+      font-weight: 700; cursor: pointer; white-space: nowrap;
+      padding: 4px 12px; border-radius: 6px;
+      transition: background 0.15s;
+    }
+    .alert-banner--warn .alert-banner-action { color: var(--orange); }
+    .alert-banner--warn .alert-banner-action:hover { background: rgba(255,107,53,0.1); }
+
+    /* ── Section separator ── */
+    .section-sep { height: 1px; background: var(--dark-5); }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item" href="app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item active">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="admin-container">
+
+          <!-- ══ Banner ══════════════════════════════════════════════ -->
+          <div class="admin-banner">
+            <div class="admin-banner-icon">🏆</div>
+            <div class="admin-banner-info">
+              <div class="admin-banner-title">Ligue de Condate — Saison 5</div>
+              <div class="admin-banner-sub">Administration de la compétition · 3 administrateurs</div>
+              <a href="app-competition-detail.html" class="admin-banner-back">← Retour à la compétition</a>
+            </div>
+            <div class="admin-banner-badge">Admin</div>
+          </div>
+
+          <!-- ══ Tabs ═══════════════════════════════════════════════ -->
+          <div class="admin-tabs">
+            <a class="admin-tab active" href="#dashboard">📊 Tableau de bord</a>
+            <a class="admin-tab" href="#enrollments">📋 Inscriptions</a>
+            <a class="admin-tab" href="#groups">🎲 Poules</a>
+            <a class="admin-tab" href="#schedule">📅 Calendrier</a>
+            <a class="admin-tab" href="#results">✅ Résultats</a>
+            <a class="admin-tab" href="#settings">⚙️ Paramètres</a>
+          </div>
+
+          <!-- ══ Alertes ════════════════════════════════════════════ -->
+          <div class="alert-banner alert-banner--warn">
+            <span class="alert-banner-icon">⚠️</span>
+            <span class="alert-banner-text"><strong>3 inscriptions en attente</strong> — Des coachs attendent la validation de leur équipe.</span>
+            <span class="alert-banner-action">Gérer →</span>
+          </div>
+
+          <div class="alert-banner alert-banner--info">
+            <span class="alert-banner-icon">📅</span>
+            <span class="alert-banner-text"><strong>Journée 4</strong> terminée — Les résultats sont en attente de validation.</span>
+            <span class="alert-banner-action">Valider →</span>
+          </div>
+
+          <!-- ══ Stats rapides ══════════════════════════════════════ -->
+          <div class="stats-bar">
+            <div class="stat-chip">
+              <span class="stat-chip-icon">👥</span>
+              <div>
+                <div class="stat-chip-value">14</div>
+                <div class="stat-chip-label">Équipes inscrites</div>
+              </div>
+            </div>
+            <div class="stat-chip stat-chip--warn">
+              <span class="stat-chip-icon">⏳</span>
+              <div>
+                <div class="stat-chip-value">3</div>
+                <div class="stat-chip-label">En attente</div>
+              </div>
+            </div>
+            <div class="stat-chip">
+              <span class="stat-chip-icon">⚔️</span>
+              <div>
+                <div class="stat-chip-value">28</div>
+                <div class="stat-chip-label">Matchs joués</div>
+              </div>
+            </div>
+            <div class="stat-chip">
+              <span class="stat-chip-icon">📅</span>
+              <div>
+                <div class="stat-chip-value">63</div>
+                <div class="stat-chip-label">Matchs restants</div>
+              </div>
+            </div>
+            <div class="stat-chip stat-chip--ok">
+              <span class="stat-chip-icon">✅</span>
+              <div>
+                <div class="stat-chip-value">4 / 13</div>
+                <div class="stat-chip-label">Journées validées</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ Progression + Actions rapides ═════════════════════ -->
+          <div class="two-col">
+
+            <!-- Progression -->
+            <div class="admin-panel">
+              <div class="panel-title">Progression de la saison</div>
+              <div class="progress-section">
+                <div class="progress-row">
+                  <span class="progress-label">Inscriptions</span>
+                  <div class="progress-bar-wrap">
+                    <div class="progress-bar-inner progress-bar-inner--green" style="width: 82%;"></div>
+                  </div>
+                  <span class="progress-value">14 / 17</span>
+                </div>
+                <div class="progress-row">
+                  <span class="progress-label">Matchs joués</span>
+                  <div class="progress-bar-wrap">
+                    <div class="progress-bar-inner progress-bar-inner--blue" style="width: 31%;"></div>
+                  </div>
+                  <span class="progress-value">28 / 91</span>
+                </div>
+                <div class="progress-row">
+                  <span class="progress-label">Journées validées</span>
+                  <div class="progress-bar-wrap">
+                    <div class="progress-bar-inner progress-bar-inner--orange" style="width: 31%;"></div>
+                  </div>
+                  <span class="progress-value">4 / 13</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Actions rapides -->
+            <div class="admin-panel">
+              <div class="panel-title">Actions rapides</div>
+              <div class="quick-actions">
+                <button class="quick-action-btn">
+                  <span class="quick-action-icon">📋</span>
+                  Gérer les inscriptions
+                </button>
+                <button class="quick-action-btn">
+                  <span class="quick-action-icon">🎲</span>
+                  Tirage au sort
+                </button>
+                <button class="quick-action-btn">
+                  <span class="quick-action-icon">📅</span>
+                  Ajouter une journée de repos
+                </button>
+                <button class="quick-action-btn">
+                  <span class="quick-action-icon">✅</span>
+                  Valider la journée en cours
+                </button>
+                <button class="quick-action-btn">
+                  <span class="quick-action-icon">📤</span>
+                  Clôturer les inscriptions
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ══ Activité récente ═══════════════════════════════════ -->
+          <div class="admin-panel">
+            <div class="panel-title">Activité récente</div>
+            <div class="activity-list">
+
+              <div class="activity-row">
+                <div class="activity-icon activity-icon--warn">⏳</div>
+                <div class="activity-info">
+                  <div class="activity-text"><strong>Bagouze</strong> a inscrit l'équipe <strong>Les Korrigans FC</strong> — en attente de validation</div>
+                  <div class="activity-time">il y a 12 min</div>
+                </div>
+              </div>
+
+              <div class="activity-row">
+                <div class="activity-icon activity-icon--match">⚔️</div>
+                <div class="activity-info">
+                  <div class="activity-text"><strong>Darkmoule</strong> a soumis le résultat de <strong>Skull Crushers vs Midnight Raiders</strong> (J5)</div>
+                  <div class="activity-time">il y a 1h</div>
+                </div>
+              </div>
+
+              <div class="activity-row">
+                <div class="activity-icon activity-icon--enroll">✅</div>
+                <div class="activity-info">
+                  <div class="activity-text">Inscription de <strong>Chaos United</strong> validée par <strong>Grim</strong></div>
+                  <div class="activity-time">il y a 3h</div>
+                </div>
+              </div>
+
+              <div class="activity-row">
+                <div class="activity-icon activity-icon--match">⚔️</div>
+                <div class="activity-info">
+                  <div class="activity-text"><strong>foxxx</strong> a soumis le résultat de <strong>Green Tide vs Iron Dwarves</strong> (J5)</div>
+                  <div class="activity-time">il y a 5h</div>
+                </div>
+              </div>
+
+              <div class="activity-row">
+                <div class="activity-icon activity-icon--enroll">📋</div>
+                <div class="activity-info">
+                  <div class="activity-text"><strong>Silou</strong> a inscrit l'équipe <strong>Shadow Stalkers</strong> — en attente de validation</div>
+                  <div class="activity-time">hier, 18:42</div>
+                </div>
+              </div>
+
+              <div class="activity-row">
+                <div class="activity-icon activity-icon--warn">📅</div>
+                <div class="activity-info">
+                  <div class="activity-text">Journée de repos programmée le <strong>15 juillet</strong></div>
+                  <div class="activity-time">hier, 14:30</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div><!-- /admin-container -->
+      </div><!-- /page-content -->
+    </div><!-- /main-area -->
+  </div><!-- /app-layout -->
+</body>
+</html>

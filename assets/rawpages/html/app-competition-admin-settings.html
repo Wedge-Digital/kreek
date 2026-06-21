@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Paramètres — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ── Layout ── */
+    .admin-container {
+      max-width: 1060px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+      padding-bottom: var(--p4);
+    }
+
+    /* ── Banner (shared) ── */
+    .admin-banner {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 12px; padding: var(--p2);
+      display: flex; align-items: center; gap: var(--p2);
+    }
+    .admin-banner-icon {
+      width: 56px; height: 56px; border-radius: 12px;
+      background: rgba(255,255,255,0.12);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; flex-shrink: 0;
+    }
+    .admin-banner-info { flex: 1; }
+    .admin-banner-title { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--white); }
+    .admin-banner-sub { font-size: var(--text-tiny); color: rgba(255,255,255,0.65); margin-top: 4px; }
+    .admin-banner-badge {
+      background: rgba(255,107,53,0.25); color: var(--orange);
+      font-size: var(--text-tiny); font-weight: 700;
+      padding: 4px 12px; border-radius: 20px;
+      border: 1px solid rgba(255,107,53,0.4);
+    }
+    .admin-banner-back {
+      font-size: var(--text-tiny); color: rgba(255,255,255,0.5);
+      text-decoration: none; margin-top: 4px; display: inline-block;
+    }
+    .admin-banner-back:hover { color: rgba(255,255,255,0.8); }
+
+    /* ── Tabs (shared) ── */
+    .admin-tabs {
+      display: flex; gap: 4px;
+      background: var(--white); border-radius: 10px;
+      padding: 6px; border: 1px solid var(--dark-5);
+    }
+    .admin-tab {
+      flex: 1; text-align: center;
+      padding: 8px var(--p1); border-radius: 7px;
+      font-size: var(--text-tiny); font-weight: 600;
+      color: var(--dark-3); cursor: pointer;
+      transition: all 0.15s; text-decoration: none;
+    }
+    .admin-tab:hover  { background: var(--dark-6); color: var(--dark-1); }
+    .admin-tab.active { background: var(--main-blue); color: var(--white); }
+
+    /* ── Settings panel ── */
+    .settings-panel {
+      background: var(--white);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .settings-panel-head {
+      padding: var(--p2);
+      border-bottom: 2px solid var(--dark-5);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .settings-panel-title {
+      font-family: var(--font-title); font-size: var(--h5);
+      font-weight: 700; color: var(--dark-1);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .settings-panel-title-icon { font-size: 18px; }
+    .settings-panel-body {
+      padding: var(--p2);
+      display: flex; flex-direction: column; gap: var(--p2);
+    }
+
+    /* ── Form elements ── */
+    .form-row {
+      display: flex; align-items: flex-start; gap: var(--p2);
+    }
+    .form-row-label {
+      min-width: 160px; flex-shrink: 0;
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-2);
+      padding-top: 10px;
+    }
+    .form-row-content { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .form-row-hint { font-size: 11px; color: var(--dark-4); }
+
+    .form-input {
+      padding: 10px 14px;
+      border: 1px solid var(--dark-4); border-radius: 7px;
+      font-size: var(--text-small); color: var(--dark-1);
+      font-family: inherit; outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      width: 100%;
+    }
+    .form-input:focus {
+      border-color: var(--main-blue);
+      box-shadow: 0 0 0 3px rgba(0,48,73,0.08);
+    }
+
+    .form-select {
+      padding: 10px 14px;
+      border: 1px solid var(--dark-4); border-radius: 7px;
+      font-size: var(--text-small); color: var(--dark-1);
+      font-family: inherit; outline: none; background: var(--white);
+      cursor: pointer;
+    }
+    .form-select:focus { border-color: var(--main-blue); }
+
+    /* ── Logo upload ── */
+    .logo-row {
+      display: flex; align-items: center; gap: var(--p2);
+    }
+    .logo-preview {
+      width: 80px; height: 80px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: 24px;
+      color: var(--white); flex-shrink: 0;
+    }
+    .logo-actions { display: flex; flex-direction: column; gap: 6px; }
+
+    /* ── Admin list ── */
+    .admin-list { display: flex; flex-direction: column; gap: 6px; }
+    .admin-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px;
+      border: 1px solid var(--dark-6); border-radius: 8px;
+    }
+    .admin-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 12px;
+      color: var(--white); flex-shrink: 0;
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+    }
+    .admin-name { flex: 1; font-size: var(--text-tiny); font-weight: 500; color: var(--dark-1); }
+    .admin-role { font-size: 11px; color: var(--dark-3); }
+    .admin-remove {
+      font-size: 11px; color: var(--dark-4); cursor: pointer;
+      padding: 4px 8px; border-radius: 4px;
+      transition: all 0.15s;
+    }
+    .admin-remove:hover { color: var(--red); background: rgba(224,32,32,0.06); }
+
+    .admin-add-row {
+      display: flex; gap: 8px;
+    }
+    .admin-add-input {
+      flex: 1; padding: 8px 12px;
+      border: 1px solid var(--dark-5); border-radius: 7px;
+      font-size: var(--text-tiny); font-family: inherit;
+      color: var(--dark-1); outline: none;
+    }
+    .admin-add-input:focus { border-color: var(--main-blue); }
+
+    /* ── Rules recap ── */
+    .rules-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: var(--p2);
+    }
+    .rule-block {
+      background: var(--dark-7);
+      border-radius: 8px;
+      padding: var(--p1);
+    }
+    .rule-block-title {
+      font-size: 11px; font-weight: 700; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.4px;
+      margin-bottom: 8px;
+    }
+    .rule-row {
+      display: flex; justify-content: space-between;
+      font-size: var(--text-tiny); color: var(--dark-2);
+      padding: 3px 0;
+    }
+    .rule-row strong { color: var(--dark-1); }
+
+    /* ── Tier list ── */
+    .tier-list { display: flex; flex-direction: column; gap: 8px; }
+    .tier-row {
+      display: flex; align-items: center; gap: var(--p1);
+      padding: 10px var(--p1);
+      background: var(--dark-7); border-radius: 8px;
+    }
+    .tier-badge {
+      font-size: 11px; font-weight: 700;
+      padding: 2px 8px; border-radius: 4px;
+      color: var(--white); flex-shrink: 0;
+    }
+    .tier-badge--1 { background: var(--main-blue); }
+    .tier-badge--2 { background: var(--orange); }
+    .tier-badge--3 { background: var(--dark-3); }
+    .tier-name { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); flex: 1; }
+    .tier-meta { font-size: 11px; color: var(--dark-3); }
+
+    /* ── Buttons ── */
+    .btn-primary-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--main-blue); color: var(--white);
+      font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer; border: none; transition: opacity 0.15s;
+    }
+    .btn-primary-sm:hover { opacity: 0.9; }
+
+    .btn-outline-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--white); color: var(--dark-2);
+      font-size: var(--text-tiny); font-weight: 600;
+      cursor: pointer; border: 1px solid var(--dark-5);
+      transition: all 0.15s;
+    }
+    .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    .btn-danger-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--white); color: var(--dark-3);
+      font-size: var(--text-tiny); font-weight: 600;
+      cursor: pointer; border: 1px solid var(--dark-5);
+      transition: all 0.15s;
+    }
+    .btn-danger-sm:hover { border-color: var(--red); color: var(--red); background: rgba(224,32,32,0.04); }
+
+    /* ── Section separator ── */
+    .section-sep { height: 1px; background: var(--dark-5); }
+
+    /* ── Danger zone ── */
+    .danger-zone {
+      border: 1px solid rgba(224,32,32,0.2);
+      border-radius: 12px;
+      padding: var(--p2);
+      background: rgba(224,32,32,0.02);
+    }
+    .danger-zone-title {
+      font-family: var(--font-title); font-size: var(--h5);
+      font-weight: 700; color: var(--red);
+      margin-bottom: var(--p1);
+    }
+    .danger-zone-actions {
+      display: flex; gap: var(--p1); flex-wrap: wrap;
+    }
+    .danger-zone-item {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--p2);
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(224,32,32,0.1);
+    }
+    .danger-zone-item:last-child { border-bottom: none; }
+    .danger-zone-item-info { flex: 1; }
+    .danger-zone-item-label { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); }
+    .danger-zone-item-desc { font-size: 11px; color: var(--dark-3); margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item" href="app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item active">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="admin-container">
+
+          <!-- ══ Banner ══════════════════════════════════════════════ -->
+          <div class="admin-banner">
+            <div class="admin-banner-icon">🏆</div>
+            <div class="admin-banner-info">
+              <div class="admin-banner-title">Ligue de Condate — Saison 5</div>
+              <div class="admin-banner-sub">Administration de la compétition · 3 administrateurs</div>
+              <a href="app-competition-detail.html" class="admin-banner-back">← Retour à la compétition</a>
+            </div>
+            <div class="admin-banner-badge">Admin</div>
+          </div>
+
+          <!-- ══ Tabs ═══════════════════════════════════════════════ -->
+          <div class="admin-tabs">
+            <a class="admin-tab" href="app-competition-admin.html">📊 Tableau de bord</a>
+            <a class="admin-tab" href="app-competition-admin-enrollments.html">📋 Inscriptions</a>
+            <a class="admin-tab" href="app-competition-admin-groups.html">🎲 Poules</a>
+            <a class="admin-tab" href="app-competition-admin-schedule.html">📅 Calendrier</a>
+            <a class="admin-tab" href="app-competition-admin-results.html">✅ Résultats</a>
+            <a class="admin-tab active" href="#">⚙️ Paramètres</a>
+          </div>
+
+          <!-- ══ Informations générales ═════════════════════════════ -->
+          <div class="settings-panel">
+            <div class="settings-panel-head">
+              <div class="settings-panel-title">
+                <span class="settings-panel-title-icon">📝</span>
+                Informations générales
+              </div>
+              <button class="btn-primary-sm">💾 Enregistrer</button>
+            </div>
+            <div class="settings-panel-body">
+              <div class="form-row">
+                <div class="form-row-label">Nom</div>
+                <div class="form-row-content">
+                  <input type="text" class="form-input" value="Ligue de Condate">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-row-label">Saison</div>
+                <div class="form-row-content">
+                  <input type="text" class="form-input" value="Saison 5">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-row-label">Logo</div>
+                <div class="form-row-content">
+                  <div class="logo-row">
+                    <div class="logo-preview">LC</div>
+                    <div class="logo-actions">
+                      <button class="btn-outline-sm">🖼️ Changer le logo</button>
+                      <div class="form-row-hint">JPG, PNG ou WebP · 2 Mo max</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ Administrateurs ════════════════════════════════════ -->
+          <div class="settings-panel">
+            <div class="settings-panel-head">
+              <div class="settings-panel-title">
+                <span class="settings-panel-title-icon">👥</span>
+                Administrateurs
+              </div>
+            </div>
+            <div class="settings-panel-body">
+              <div class="admin-list">
+                <div class="admin-row">
+                  <div class="admin-avatar">B</div>
+                  <span class="admin-name">Bagouze</span>
+                  <span class="admin-role">Créateur</span>
+                </div>
+                <div class="admin-row">
+                  <div class="admin-avatar" style="background: linear-gradient(135deg, var(--green), #003049);">G</div>
+                  <span class="admin-name">Grim</span>
+                  <span class="admin-role">Admin</span>
+                  <span class="admin-remove">✕ Retirer</span>
+                </div>
+                <div class="admin-row">
+                  <div class="admin-avatar" style="background: linear-gradient(135deg, var(--orange), #1C1C29);">D</div>
+                  <span class="admin-name">Darkmoule</span>
+                  <span class="admin-role">Admin</span>
+                  <span class="admin-remove">✕ Retirer</span>
+                </div>
+              </div>
+
+              <div class="section-sep"></div>
+
+              <div class="admin-add-row">
+                <input type="text" class="admin-add-input" placeholder="Rechercher un coach à ajouter…">
+                <button class="btn-primary-sm">+ Ajouter</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ Règles de la compétition ══════════════════════════ -->
+          <div class="settings-panel">
+            <div class="settings-panel-head">
+              <div class="settings-panel-title">
+                <span class="settings-panel-title-icon">📏</span>
+                Règles de la compétition
+              </div>
+              <button class="btn-outline-sm">✏️ Modifier</button>
+            </div>
+            <div class="settings-panel-body">
+              <div class="rules-grid">
+                <div class="rule-block">
+                  <div class="rule-block-title">Points de classement</div>
+                  <div class="rule-row"><span>Victoire</span> <strong>3 pts</strong></div>
+                  <div class="rule-row"><span>Match nul</span> <strong>1 pt</strong></div>
+                  <div class="rule-row"><span>Défaite</span> <strong>0 pt</strong></div>
+                </div>
+                <div class="rule-block">
+                  <div class="rule-block-title">Bonus</div>
+                  <div class="rule-row"><span>Bonus offensif</span> <strong>+1 pt (≥ 3 TD écart)</strong></div>
+                  <div class="rule-row"><span>Bonus défensif</span> <strong>+1 pt</strong></div>
+                </div>
+              </div>
+
+              <div class="section-sep"></div>
+
+              <div class="settings-panel-title" style="font-size: var(--text-tiny); margin-bottom: 8px;">
+                Tiers
+              </div>
+              <div class="tier-list">
+                <div class="tier-row">
+                  <span class="tier-badge tier-badge--1">T1</span>
+                  <span class="tier-name">Débutants</span>
+                  <span class="tier-meta">Budget 1060 kPo · 0 XP départ</span>
+                </div>
+                <div class="tier-row">
+                  <span class="tier-badge tier-badge--2">T2</span>
+                  <span class="tier-name">Confirmés</span>
+                  <span class="tier-meta">Budget 1160 kPo · 6 XP départ</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ Inscriptions ══════════════════════════════════════ -->
+          <div class="settings-panel">
+            <div class="settings-panel-head">
+              <div class="settings-panel-title">
+                <span class="settings-panel-title-icon">📋</span>
+                Paramètres d'inscription
+              </div>
+              <button class="btn-primary-sm">💾 Enregistrer</button>
+            </div>
+            <div class="settings-panel-body">
+              <div class="form-row">
+                <div class="form-row-label">Mode d'accès</div>
+                <div class="form-row-content">
+                  <select class="form-select">
+                    <option selected>Sur invitation uniquement</option>
+                    <option>Ouvert à tous les membres de l'espace</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-row-label">Validation</div>
+                <div class="form-row-content">
+                  <select class="form-select">
+                    <option selected>Validation manuelle par un admin</option>
+                    <option>Inscription automatique</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-row-label">Places max</div>
+                <div class="form-row-content">
+                  <input type="number" class="form-input" value="20" style="width: 100px;">
+                  <div class="form-row-hint">0 = illimité</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ Zone de danger ════════════════════════════════════ -->
+          <div class="danger-zone">
+            <div class="danger-zone-title">⚠️ Zone de danger</div>
+            <div class="danger-zone-item">
+              <div class="danger-zone-item-info">
+                <div class="danger-zone-item-label">Réinitialiser la saison</div>
+                <div class="danger-zone-item-desc">Supprime tous les résultats, les poules et le calendrier. Les équipes inscrites sont conservées.</div>
+              </div>
+              <button class="btn-danger-sm">Réinitialiser</button>
+            </div>
+            <div class="danger-zone-item">
+              <div class="danger-zone-item-info">
+                <div class="danger-zone-item-label">Supprimer la saison</div>
+                <div class="danger-zone-item-desc">Supprime définitivement cette saison et toutes ses données. Action irréversible.</div>
+              </div>
+              <button class="btn-danger-sm">Supprimer</button>
+            </div>
+          </div>
+
+        </div><!-- /admin-container -->
+      </div><!-- /page-content -->
+    </div><!-- /main-area -->
+  </div><!-- /app-layout -->
+</body>
+</html>

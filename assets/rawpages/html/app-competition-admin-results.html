@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Résultats — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ── Layout ── */
+    .admin-container {
+      max-width: 1060px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+      padding-bottom: var(--p4);
+    }
+
+    /* ── Banner (shared) ── */
+    .admin-banner {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 12px; padding: var(--p2);
+      display: flex; align-items: center; gap: var(--p2);
+    }
+    .admin-banner-icon {
+      width: 56px; height: 56px; border-radius: 12px;
+      background: rgba(255,255,255,0.12);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; flex-shrink: 0;
+    }
+    .admin-banner-info { flex: 1; }
+    .admin-banner-title { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--white); }
+    .admin-banner-sub { font-size: var(--text-tiny); color: rgba(255,255,255,0.65); margin-top: 4px; }
+    .admin-banner-badge {
+      background: rgba(255,107,53,0.25); color: var(--orange);
+      font-size: var(--text-tiny); font-weight: 700;
+      padding: 4px 12px; border-radius: 20px;
+      border: 1px solid rgba(255,107,53,0.4);
+    }
+    .admin-banner-back {
+      font-size: var(--text-tiny); color: rgba(255,255,255,0.5);
+      text-decoration: none; margin-top: 4px; display: inline-block;
+    }
+    .admin-banner-back:hover { color: rgba(255,255,255,0.8); }
+
+    /* ── Tabs (shared) ── */
+    .admin-tabs {
+      display: flex; gap: 4px;
+      background: var(--white); border-radius: 10px;
+      padding: 6px; border: 1px solid var(--dark-5);
+    }
+    .admin-tab {
+      flex: 1; text-align: center;
+      padding: 8px var(--p1); border-radius: 7px;
+      font-size: var(--text-tiny); font-weight: 600;
+      color: var(--dark-3); cursor: pointer;
+      transition: all 0.15s; text-decoration: none;
+    }
+    .admin-tab:hover  { background: var(--dark-6); color: var(--dark-1); }
+    .admin-tab.active { background: var(--main-blue); color: var(--white); }
+
+    /* ── Results split layout (same as schedule) ── */
+    .results-layout {
+      display: flex;
+      gap: var(--p2);
+      min-height: 600px;
+    }
+
+    /* ── Round sidebar (left) ── */
+    .round-sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p1);
+    }
+    .round-sidebar-title {
+      font-family: var(--font-title); font-size: var(--h5);
+      font-weight: 700; color: var(--dark-1);
+      padding: 0 8px var(--p1) 8px;
+      border-bottom: 2px solid var(--dark-5);
+      margin-bottom: 4px;
+    }
+    .round-sidebar-list {
+      display: flex; flex-direction: column; gap: 3px;
+      overflow-y: auto; flex: 1;
+    }
+
+    .round-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.12s;
+      text-decoration: none;
+      border: 1px solid transparent;
+    }
+    .round-item:hover { background: var(--dark-7); }
+    .round-item.active {
+      background: rgba(0,48,73,0.06);
+      border-color: var(--main-blue);
+    }
+
+    .round-item-num {
+      width: 28px; height: 28px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 12px;
+      flex-shrink: 0;
+    }
+    .round-item-num--validated { background: rgba(98,149,132,0.12); color: var(--green); }
+    .round-item-num--pending { background: rgba(255,107,53,0.12); color: var(--orange); }
+    .round-item-num--upcoming { background: var(--dark-6); color: var(--dark-3); }
+
+    .round-item-info { flex: 1; min-width: 0; }
+    .round-item-name {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
+    }
+    .round-item.active .round-item-name { color: var(--main-blue); }
+    .round-item-status {
+      font-size: 11px; color: var(--dark-4); margin-top: 1px;
+    }
+    .round-item-status--pending { color: var(--orange); }
+    .round-item-status--validated { color: var(--green); }
+
+    .round-item-badge {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .round-item-badge--warn { background: var(--orange); }
+
+    /* ── Round detail (right) ── */
+    .round-detail {
+      flex: 1;
+      background: var(--white);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .round-detail-head {
+      padding: var(--p2);
+      border-bottom: 2px solid var(--dark-5);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+    .round-detail-head-left { display: flex; flex-direction: column; gap: 6px; }
+    .round-detail-name {
+      font-family: var(--font-title); font-size: var(--h4);
+      font-weight: 700; color: var(--dark-1);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .round-detail-meta {
+      display: flex; gap: var(--p2); font-size: var(--text-tiny); color: var(--dark-3);
+    }
+    .round-detail-meta strong { color: var(--dark-2); }
+    .round-detail-head-right { display: flex; gap: 8px; }
+
+    .round-badge {
+      font-size: 11px; font-weight: 700;
+      padding: 3px 10px; border-radius: 12px;
+    }
+    .round-badge--pending { background: rgba(255,107,53,0.12); color: var(--orange); }
+    .round-badge--validated { background: rgba(98,149,132,0.12); color: var(--green); }
+    .round-badge--upcoming { background: var(--dark-6); color: var(--dark-3); }
+
+    .btn-primary-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--main-blue); color: var(--white);
+      font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer; border: none; transition: opacity 0.15s;
+    }
+    .btn-primary-sm:hover { opacity: 0.9; }
+
+    .btn-success-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--green); color: var(--white);
+      font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer; border: none; transition: opacity 0.15s;
+    }
+    .btn-success-sm:hover { opacity: 0.9; }
+
+    .btn-outline-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--white); color: var(--dark-2);
+      font-size: var(--text-tiny); font-weight: 600;
+      cursor: pointer; border: 1px solid var(--dark-5);
+      transition: all 0.15s;
+    }
+    .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    /* ── Match result card ── */
+    .round-body {
+      padding: var(--p2);
+      flex: 1;
+      display: flex; flex-direction: column; gap: var(--p1);
+    }
+
+    .result-card {
+      border: 1px solid var(--dark-5);
+      border-radius: 10px;
+      overflow: hidden;
+      transition: box-shadow 0.15s;
+    }
+    .result-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .result-card--submitted { border-left: 3px solid var(--orange); }
+    .result-card--validated { border-left: 3px solid var(--green); }
+    .result-card--not-played { border-left: 3px solid var(--dark-5); }
+
+    .result-card-head {
+      padding: 12px var(--p2);
+      display: flex; align-items: center; gap: var(--p1);
+      background: var(--dark-7);
+    }
+
+    .result-teams {
+      flex: 1;
+      display: flex; align-items: center;
+      gap: 10px;
+    }
+    .result-team-name {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
+      flex: 1;
+    }
+    .result-team-name--home { text-align: right; }
+    .result-team-name--away { text-align: left; }
+
+    .result-score {
+      display: flex; align-items: center; gap: 8px;
+      flex-shrink: 0;
+    }
+    .result-score-num {
+      font-family: var(--font-title); font-size: var(--h5);
+      font-weight: 700; color: var(--dark-0);
+      min-width: 24px; text-align: center;
+    }
+    .result-score-sep { color: var(--dark-4); font-weight: 700; }
+    .result-score--pending {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-4);
+      padding: 0 8px;
+    }
+
+    .result-status-badge {
+      font-size: 11px; font-weight: 700;
+      padding: 3px 10px; border-radius: 12px;
+      flex-shrink: 0;
+    }
+    .result-status-badge--submitted { background: rgba(255,107,53,0.12); color: var(--orange); }
+    .result-status-badge--validated { background: rgba(98,149,132,0.12); color: var(--green); }
+    .result-status-badge--not-played { background: var(--dark-6); color: var(--dark-3); }
+
+    .result-group-tag {
+      font-size: 10px; font-weight: 700;
+      padding: 1px 6px; border-radius: 4px;
+      background: var(--dark-6); color: var(--dark-3);
+      flex-shrink: 0;
+    }
+
+    /* ── Result detail (expandable) ── */
+    .result-card-body {
+      padding: 12px var(--p2);
+      border-top: 1px solid var(--dark-5);
+      display: flex; align-items: flex-start; gap: var(--p2);
+    }
+
+    .result-detail-col { flex: 1; }
+    .result-detail-title {
+      font-size: 11px; font-weight: 700; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.4px;
+      margin-bottom: 6px;
+    }
+    .result-detail-row {
+      display: flex; justify-content: space-between;
+      font-size: var(--text-tiny); color: var(--dark-2);
+      padding: 2px 0;
+    }
+    .result-detail-row strong { color: var(--dark-1); }
+
+    .result-detail-sep {
+      width: 1px; background: var(--dark-5);
+      align-self: stretch; flex-shrink: 0;
+    }
+
+    .result-actions {
+      display: flex; flex-direction: column;
+      gap: 6px; align-items: flex-end;
+      justify-content: center;
+      flex-shrink: 0;
+      padding-left: var(--p1);
+    }
+    .result-action-btn {
+      padding: 6px 14px; border-radius: 6px;
+      font-size: 11px; font-weight: 600;
+      border: 1px solid var(--dark-5);
+      background: var(--white); color: var(--dark-3);
+      cursor: pointer; transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .result-action-btn--approve { color: var(--green); border-color: rgba(98,149,132,0.3); }
+    .result-action-btn--approve:hover { background: rgba(98,149,132,0.08); border-color: var(--green); }
+    .result-action-btn--reject:hover { background: rgba(224,32,32,0.06); border-color: var(--red); color: var(--red); }
+
+    /* ── Summary bar ── */
+    .result-summary {
+      padding: var(--p1) var(--p2);
+      border-top: 1px solid var(--dark-5);
+      display: flex; gap: var(--p2);
+      font-size: var(--text-tiny); color: var(--dark-3);
+    }
+    .result-summary strong { color: var(--dark-2); }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center; padding: var(--p4) var(--p2);
+      color: var(--dark-3);
+    }
+    .empty-state-icon { font-size: 40px; margin-bottom: var(--p1); opacity: 0.4; }
+    .empty-state-text { font-size: var(--text-tiny); }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item" href="app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item active">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="admin-container">
+
+          <!-- ══ Banner ══════════════════════════════════════════════ -->
+          <div class="admin-banner">
+            <div class="admin-banner-icon">🏆</div>
+            <div class="admin-banner-info">
+              <div class="admin-banner-title">Ligue de Condate — Saison 5</div>
+              <div class="admin-banner-sub">Administration de la compétition · 3 administrateurs</div>
+              <a href="app-competition-detail.html" class="admin-banner-back">← Retour à la compétition</a>
+            </div>
+            <div class="admin-banner-badge">Admin</div>
+          </div>
+
+          <!-- ══ Tabs ═══════════════════════════════════════════════ -->
+          <div class="admin-tabs">
+            <a class="admin-tab" href="app-competition-admin.html">📊 Tableau de bord</a>
+            <a class="admin-tab" href="app-competition-admin-enrollments.html">📋 Inscriptions</a>
+            <a class="admin-tab" href="app-competition-admin-groups.html">🎲 Poules</a>
+            <a class="admin-tab" href="app-competition-admin-schedule.html">📅 Calendrier</a>
+            <a class="admin-tab active" href="#">✅ Résultats</a>
+            <a class="admin-tab" href="app-competition-admin-settings.html">⚙️ Paramètres</a>
+          </div>
+
+          <!-- ══ Results split layout ═════════════════════════════ -->
+          <div class="results-layout">
+
+            <!-- ── Round sidebar ─────────────────────────────────── -->
+            <div class="round-sidebar">
+              <div class="round-sidebar-title">Journées</div>
+              <div class="round-sidebar-list">
+
+                <a class="round-item" href="#">
+                  <div class="round-item-num round-item-num--validated">1</div>
+                  <div class="round-item-info">
+                    <div class="round-item-name">Journée 1</div>
+                    <div class="round-item-status round-item-status--validated">✓ Validée</div>
+                  </div>
+                </a>
+
+                <a class="round-item" href="#">
+                  <div class="round-item-num round-item-num--validated">2</div>
+                  <div class="round-item-info">
+                    <div class="round-item-name">Journée 2</div>
+                    <div class="round-item-status round-item-status--validated">✓ Validée</div>
+                  </div>
+                </a>
+
+                <a class="round-item active" href="#">
+                  <div class="round-item-num round-item-num--pending">3</div>
+                  <div class="round-item-info">
+                    <div class="round-item-name">Journée 3</div>
+                    <div class="round-item-status round-item-status--pending">1 soumis · 3 en attente</div>
+                  </div>
+                  <div class="round-item-badge round-item-badge--warn"></div>
+                </a>
+
+                <a class="round-item" href="#">
+                  <div class="round-item-num round-item-num--upcoming">4</div>
+                  <div class="round-item-info">
+                    <div class="round-item-name">Journée 4</div>
+                    <div class="round-item-status">Pas encore commencée</div>
+                  </div>
+                </a>
+
+                <a class="round-item" href="#">
+                  <div class="round-item-num round-item-num--upcoming">5</div>
+                  <div class="round-item-info">
+                    <div class="round-item-name">Journée 5</div>
+                    <div class="round-item-status">Pas encore commencée</div>
+                  </div>
+                </a>
+
+                <a class="round-item" href="#">
+                  <div class="round-item-num round-item-num--upcoming">6</div>
+                  <div class="round-item-info">
+                    <div class="round-item-name">Journée 6</div>
+                    <div class="round-item-status">Pas encore commencée</div>
+                  </div>
+                </a>
+
+              </div>
+            </div>
+
+            <!-- ── Round detail (Journée 3 selected) ─────────────── -->
+            <div class="round-detail">
+              <div class="round-detail-head">
+                <div class="round-detail-head-left">
+                  <div class="round-detail-name">
+                    Journée 3
+                    <span class="round-badge round-badge--pending">⏳ En attente de validation</span>
+                  </div>
+                  <div class="round-detail-meta">
+                    <span><strong>4</strong> matchs</span>
+                    <span><strong>1</strong> rapport soumis</span>
+                    <span><strong>3</strong> non joués</span>
+                  </div>
+                </div>
+                <div class="round-detail-head-right">
+                  <button class="btn-success-sm">✅ Valider la journée</button>
+                </div>
+              </div>
+
+              <div class="round-body">
+
+                <!-- Match 1 — Rapport soumis -->
+                <div class="result-card result-card--submitted">
+                  <div class="result-card-head">
+                    <div class="result-teams">
+                      <span class="result-team-name result-team-name--home">Underworld Warriors</span>
+                      <div class="result-score">
+                        <span class="result-score-num">1</span>
+                        <span class="result-score-sep">—</span>
+                        <span class="result-score-num">2</span>
+                      </div>
+                      <span class="result-team-name result-team-name--away">Green Tide</span>
+                    </div>
+                    <span class="result-group-tag">B</span>
+                    <span class="result-status-badge result-status-badge--submitted">Soumis</span>
+                  </div>
+                  <div class="result-card-body">
+                    <div class="result-detail-col">
+                      <div class="result-detail-title">Underworld Warriors</div>
+                      <div class="result-detail-row"><span>Touchdowns</span> <strong>1</strong></div>
+                      <div class="result-detail-row"><span>Sorties</span> <strong>3</strong></div>
+                      <div class="result-detail-row"><span>Passes réussies</span> <strong>0</strong></div>
+                      <div class="result-detail-row"><span>Soumis par</span> <strong>Sebco</strong></div>
+                    </div>
+                    <div class="result-detail-sep"></div>
+                    <div class="result-detail-col">
+                      <div class="result-detail-title">Green Tide</div>
+                      <div class="result-detail-row"><span>Touchdowns</span> <strong>2</strong></div>
+                      <div class="result-detail-row"><span>Sorties</span> <strong>1</strong></div>
+                      <div class="result-detail-row"><span>Passes réussies</span> <strong>2</strong></div>
+                      <div class="result-detail-row"><span>Soumis par</span> <strong>foxxx</strong></div>
+                    </div>
+                    <div class="result-actions">
+                      <button class="result-action-btn result-action-btn--approve">✓ Valider</button>
+                      <button class="result-action-btn result-action-btn--reject">✕ Rejeter</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Match 2 — Non joué -->
+                <div class="result-card result-card--not-played">
+                  <div class="result-card-head">
+                    <div class="result-teams">
+                      <span class="result-team-name result-team-name--home">Storm Treemen</span>
+                      <span class="result-score--pending">vs</span>
+                      <span class="result-team-name result-team-name--away">Skull Crushers</span>
+                    </div>
+                    <span class="result-group-tag">A</span>
+                    <span class="result-status-badge result-status-badge--not-played">Non joué</span>
+                  </div>
+                </div>
+
+                <!-- Match 3 — Non joué -->
+                <div class="result-card result-card--not-played">
+                  <div class="result-card-head">
+                    <div class="result-teams">
+                      <span class="result-team-name result-team-name--home">Halfling Legends</span>
+                      <span class="result-score--pending">vs</span>
+                      <span class="result-team-name result-team-name--away">Iron Forge</span>
+                    </div>
+                    <span class="result-group-tag">A</span>
+                    <span class="result-status-badge result-status-badge--not-played">Non joué</span>
+                  </div>
+                </div>
+
+                <!-- Match 4 — Non joué -->
+                <div class="result-card result-card--not-played">
+                  <div class="result-card-head">
+                    <div class="result-teams">
+                      <span class="result-team-name result-team-name--home">Chaos United</span>
+                      <span class="result-score--pending">vs</span>
+                      <span class="result-team-name result-team-name--away">Red Skulls</span>
+                    </div>
+                    <span class="result-group-tag">B</span>
+                    <span class="result-status-badge result-status-badge--not-played">Non joué</span>
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="result-summary">
+                <span><strong>1</strong> rapport soumis</span>
+                <span><strong>3</strong> matchs non joués</span>
+                <span><strong>0</strong> validé</span>
+              </div>
+            </div>
+
+          </div><!-- /results-layout -->
+
+        </div><!-- /admin-container -->
+      </div><!-- /page-content -->
+    </div><!-- /main-area -->
+  </div><!-- /app-layout -->
+</body>
+</html>

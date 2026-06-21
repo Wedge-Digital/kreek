@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Inscriptions — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ── Layout ── */
+    .admin-container {
+      max-width: 1060px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+      padding-bottom: var(--p4);
+    }
+
+    /* ── Banner (shared) ── */
+    .admin-banner {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 12px;
+      padding: var(--p2);
+      display: flex;
+      align-items: center;
+      gap: var(--p2);
+    }
+    .admin-banner-icon {
+      width: 56px; height: 56px; border-radius: 12px;
+      background: rgba(255,255,255,0.12);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; flex-shrink: 0;
+    }
+    .admin-banner-info { flex: 1; }
+    .admin-banner-title {
+      font-family: var(--font-title); font-size: var(--h4); font-weight: 700;
+      color: var(--white);
+    }
+    .admin-banner-sub { font-size: var(--text-tiny); color: rgba(255,255,255,0.65); margin-top: 4px; }
+    .admin-banner-badge {
+      background: rgba(255,107,53,0.25); color: var(--orange);
+      font-size: var(--text-tiny); font-weight: 700;
+      padding: 4px 12px; border-radius: 20px;
+      border: 1px solid rgba(255,107,53,0.4);
+    }
+    .admin-banner-back {
+      font-size: var(--text-tiny); color: rgba(255,255,255,0.5);
+      text-decoration: none; margin-top: 4px; display: inline-block;
+    }
+    .admin-banner-back:hover { color: rgba(255,255,255,0.8); }
+
+    /* ── Tabs (shared) ── */
+    .admin-tabs {
+      display: flex; gap: 4px;
+      background: var(--white); border-radius: 10px;
+      padding: 6px; border: 1px solid var(--dark-5);
+    }
+    .admin-tab {
+      flex: 1; text-align: center;
+      padding: 8px var(--p1); border-radius: 7px;
+      font-size: var(--text-tiny); font-weight: 600;
+      color: var(--dark-3); cursor: pointer;
+      transition: all 0.15s; text-decoration: none;
+    }
+    .admin-tab:hover  { background: var(--dark-6); color: var(--dark-1); }
+    .admin-tab.active { background: var(--main-blue); color: var(--white); }
+
+    /* ── Panel card ── */
+    .admin-panel {
+      background: var(--white); border-radius: 12px;
+      padding: var(--p2);
+      display: flex; flex-direction: column; gap: var(--p2);
+    }
+    .panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .panel-title {
+      font-family: var(--font-title); font-size: var(--h5);
+      font-weight: 700; color: var(--dark-1);
+    }
+    .panel-count {
+      font-size: var(--text-tiny); font-weight: 700;
+      padding: 2px 10px; border-radius: 20px;
+    }
+    .panel-count--pending { background: rgba(255,107,53,0.12); color: var(--orange); }
+    .panel-count--enrolled { background: rgba(98,149,132,0.12); color: var(--green); }
+    .panel-count--waiting { background: rgba(0,48,73,0.08); color: var(--main-blue); }
+
+    /* ── Stats bar ── */
+    .stats-bar { display: flex; gap: var(--p1); }
+    .stat-chip {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--dark-6); border-radius: 8px;
+      padding: 10px var(--p2); flex: 1;
+    }
+    .stat-chip-icon { font-size: 18px; }
+    .stat-chip-value {
+      font-family: var(--font-title); font-size: var(--h5);
+      font-weight: 700; color: var(--main-blue);
+    }
+    .stat-chip-label { font-size: var(--text-tiny); color: var(--dark-3); }
+    .stat-chip--warn .stat-chip-value { color: var(--orange); }
+    .stat-chip--ok .stat-chip-value { color: var(--green); }
+
+    /* ── Enrollment row ── */
+    .enrollment-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .enrollment-row {
+      display: flex; align-items: center; gap: var(--p1);
+      padding: 12px var(--p2);
+      border: 1px solid var(--dark-5); border-radius: 10px;
+      background: var(--white);
+      transition: box-shadow 0.15s;
+    }
+    .enrollment-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .enrollment-row--pending { border-left: 3px solid var(--orange); }
+
+    .enrollment-logo {
+      width: 40px; height: 40px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 14px;
+      color: var(--white); flex-shrink: 0;
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+    }
+
+    .enrollment-info { flex: 1; min-width: 0; }
+    .enrollment-name {
+      font-size: var(--text-small); font-weight: 600; color: var(--dark-1);
+    }
+    .enrollment-meta {
+      font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px;
+      display: flex; gap: var(--p1);
+    }
+
+    .enrollment-status {
+      font-size: var(--text-tiny); font-weight: 700;
+      padding: 3px 10px; border-radius: 20px;
+      flex-shrink: 0;
+    }
+    .status--enrolled { background: rgba(98,149,132,0.12); color: var(--green); }
+    .status--pending  { background: rgba(255,107,53,0.12); color: var(--orange); }
+    .status--dismissed { background: rgba(224,32,32,0.08); color: var(--red); }
+
+    .enrollment-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    .action-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 12px;
+      border: 1px solid var(--dark-5); border-radius: 7px;
+      background: var(--white); font-size: var(--text-tiny); font-weight: 500;
+      color: var(--dark-2); cursor: pointer;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .action-btn:hover { background: var(--dark-6); border-color: var(--dark-4); }
+    .action-btn--approve { color: var(--green); border-color: rgba(98,149,132,0.3); }
+    .action-btn--approve:hover { background: rgba(98,149,132,0.08); border-color: var(--green); }
+    .action-btn--danger { color: var(--dark-3); }
+    .action-btn--danger:hover { background: rgba(224,32,32,0.06); border-color: var(--red); color: var(--red); }
+    .action-btn-icon { font-size: 14px; }
+
+    /* ── Coach list (without team) ── */
+    .coach-row {
+      display: flex; align-items: center; gap: var(--p1);
+      padding: 10px var(--p2);
+      border: 1px solid var(--dark-5); border-radius: 10px;
+    }
+    .coach-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 14px;
+      color: var(--white); flex-shrink: 0;
+      background: linear-gradient(135deg, var(--dark-3), var(--dark-1));
+    }
+    .coach-name { font-size: var(--text-small); font-weight: 500; color: var(--dark-2); flex: 1; }
+    .coach-status { font-size: var(--text-tiny); color: var(--dark-4); font-style: italic; }
+
+    /* ── Actions bar ── */
+    .actions-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--p1);
+    }
+    .actions-bar-left { display: flex; gap: var(--p1); align-items: center; }
+    .actions-bar-right { display: flex; gap: 8px; }
+
+    .btn-primary-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--main-blue); color: var(--white);
+      font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer; border: none;
+      transition: opacity 0.15s;
+    }
+    .btn-primary-sm:hover { opacity: 0.9; }
+
+    .btn-outline-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--white); color: var(--dark-2);
+      font-size: var(--text-tiny); font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--dark-5);
+      transition: all 0.15s;
+    }
+    .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    /* ── Section separator ── */
+    .section-sep { height: 1px; background: var(--dark-5); }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item" href="app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item active">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="admin-container">
+
+          <!-- ══ Banner ══════════════════════════════════════════════ -->
+          <div class="admin-banner">
+            <div class="admin-banner-icon">🏆</div>
+            <div class="admin-banner-info">
+              <div class="admin-banner-title">Ligue de Condate — Saison 5</div>
+              <div class="admin-banner-sub">Administration de la compétition · 3 administrateurs</div>
+              <a href="app-competition-detail.html" class="admin-banner-back">← Retour à la compétition</a>
+            </div>
+            <div class="admin-banner-badge">Admin</div>
+          </div>
+
+          <!-- ══ Tabs ═══════════════════════════════════════════════ -->
+          <div class="admin-tabs">
+            <a class="admin-tab" href="app-competition-admin.html">📊 Tableau de bord</a>
+            <a class="admin-tab active" href="#">📋 Inscriptions</a>
+            <a class="admin-tab" href="app-competition-admin-groups.html">🎲 Poules</a>
+            <a class="admin-tab" href="app-competition-admin-schedule.html">📅 Calendrier</a>
+            <a class="admin-tab" href="app-competition-admin-results.html">✅ Résultats</a>
+            <a class="admin-tab" href="app-competition-admin-settings.html">⚙️ Paramètres</a>
+          </div>
+
+          <!-- ══ Stats ══════════════════════════════════════════════ -->
+          <div class="stats-bar">
+            <div class="stat-chip stat-chip--ok">
+              <span class="stat-chip-icon">✅</span>
+              <div>
+                <div class="stat-chip-value">14</div>
+                <div class="stat-chip-label">Inscrites</div>
+              </div>
+            </div>
+            <div class="stat-chip stat-chip--warn">
+              <span class="stat-chip-icon">⏳</span>
+              <div>
+                <div class="stat-chip-value">3</div>
+                <div class="stat-chip-label">En attente</div>
+              </div>
+            </div>
+            <div class="stat-chip">
+              <span class="stat-chip-icon">👥</span>
+              <div>
+                <div class="stat-chip-value">5</div>
+                <div class="stat-chip-label">Coachs sans équipe</div>
+              </div>
+            </div>
+            <div class="stat-chip">
+              <span class="stat-chip-icon">🎯</span>
+              <div>
+                <div class="stat-chip-value">14 / 20</div>
+                <div class="stat-chip-label">Places occupées</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ En attente de validation ═══════════════════════════ -->
+          <div class="admin-panel">
+            <div class="panel-header">
+              <div class="panel-title">En attente de validation</div>
+              <span class="panel-count panel-count--pending">3</span>
+            </div>
+
+            <div class="actions-bar">
+              <div class="actions-bar-left">
+              </div>
+              <div class="actions-bar-right">
+                <button class="btn-primary-sm">✅ Tout valider</button>
+              </div>
+            </div>
+
+            <div class="enrollment-list">
+
+              <div class="enrollment-row enrollment-row--pending">
+                <div class="enrollment-logo">KF</div>
+                <div class="enrollment-info">
+                  <div class="enrollment-name">Les Korrigans FC</div>
+                  <div class="enrollment-meta">
+                    <span>Coach : <strong>Bagouze</strong></span>
+                    <span>·</span>
+                    <span>Roster : Humains</span>
+                    <span>·</span>
+                    <span>Tier 1</span>
+                  </div>
+                </div>
+                <span class="enrollment-status status--pending">En attente</span>
+                <div class="enrollment-actions">
+                  <button class="action-btn action-btn--approve">
+                    <span class="action-btn-icon">✓</span> Valider
+                  </button>
+                  <button class="action-btn action-btn--danger">
+                    <span class="action-btn-icon">✕</span> Refuser
+                  </button>
+                </div>
+              </div>
+
+              <div class="enrollment-row enrollment-row--pending">
+                <div class="enrollment-logo" style="background: linear-gradient(135deg, var(--green), #003049);">SS</div>
+                <div class="enrollment-info">
+                  <div class="enrollment-name">Shadow Stalkers</div>
+                  <div class="enrollment-meta">
+                    <span>Coach : <strong>Silou</strong></span>
+                    <span>·</span>
+                    <span>Roster : Elfes Noirs</span>
+                    <span>·</span>
+                    <span>Tier 1</span>
+                  </div>
+                </div>
+                <span class="enrollment-status status--pending">En attente</span>
+                <div class="enrollment-actions">
+                  <button class="action-btn action-btn--approve">
+                    <span class="action-btn-icon">✓</span> Valider
+                  </button>
+                  <button class="action-btn action-btn--danger">
+                    <span class="action-btn-icon">✕</span> Refuser
+                  </button>
+                </div>
+              </div>
+
+              <div class="enrollment-row enrollment-row--pending">
+                <div class="enrollment-logo" style="background: linear-gradient(135deg, var(--orange), #1C1C29);">WE</div>
+                <div class="enrollment-info">
+                  <div class="enrollment-name">Warpstone Engineers</div>
+                  <div class="enrollment-meta">
+                    <span>Coach : <strong>Krix</strong></span>
+                    <span>·</span>
+                    <span>Roster : Skavens</span>
+                    <span>·</span>
+                    <span>Tier 2</span>
+                  </div>
+                </div>
+                <span class="enrollment-status status--pending">En attente</span>
+                <div class="enrollment-actions">
+                  <button class="action-btn action-btn--approve">
+                    <span class="action-btn-icon">✓</span> Valider
+                  </button>
+                  <button class="action-btn action-btn--danger">
+                    <span class="action-btn-icon">✕</span> Refuser
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ══ Équipes inscrites (validées) ══════════════════════ -->
+          <div class="admin-panel">
+            <div class="panel-header">
+              <div class="panel-title">Équipes inscrites</div>
+              <span class="panel-count panel-count--enrolled">14</span>
+            </div>
+
+            <div class="enrollment-list">
+
+              <div class="enrollment-row">
+                <div class="enrollment-logo" style="background: linear-gradient(135deg, #E02020, #555770);">SC</div>
+                <div class="enrollment-info">
+                  <div class="enrollment-name">Skull Crushers</div>
+                  <div class="enrollment-meta">
+                    <span>Coach : <strong>Darkmoule</strong></span>
+                    <span>·</span>
+                    <span>Roster : Orques</span>
+                    <span>·</span>
+                    <span>Tier 1</span>
+                    <span>·</span>
+                    <span>Poule A</span>
+                  </div>
+                </div>
+                <span class="enrollment-status status--enrolled">Inscrite</span>
+                <div class="enrollment-actions">
+                  <button class="action-btn action-btn--danger">
+                    <span class="action-btn-icon">🚫</span> Renvoyer
+                  </button>
+                </div>
+              </div>
+
+              <div class="enrollment-row">
+                <div class="enrollment-logo" style="background: linear-gradient(135deg, #6F35A5, #26263D);">MR</div>
+                <div class="enrollment-info">
+                  <div class="enrollment-name">Midnight Raiders</div>
+                  <div class="enrollment-meta">
+                    <span>Coach : <strong>Grim</strong></span>
+                    <span>·</span>
+                    <span>Roster : Elfes Noirs</span>
+                    <span>·</span>
+                    <span>Tier 1</span>
+                    <span>·</span>
+                    <span>Poule A</span>
+                  </div>
+                </div>
+                <span class="enrollment-status status--enrolled">Inscrite</span>
+                <div class="enrollment-actions">
+                  <button class="action-btn action-btn--danger">
+                    <span class="action-btn-icon">🚫</span> Renvoyer
+                  </button>
+                </div>
+              </div>
+
+              <div class="enrollment-row">
+                <div class="enrollment-logo" style="background: linear-gradient(135deg, var(--green), #003049);">CU</div>
+                <div class="enrollment-info">
+                  <div class="enrollment-name">Chaos United</div>
+                  <div class="enrollment-meta">
+                    <span>Coach : <strong>Calltrakk</strong></span>
+                    <span>·</span>
+                    <span>Roster : Élus du Chaos</span>
+                    <span>·</span>
+                    <span>Tier 2</span>
+                    <span>·</span>
+                    <span>Poule B</span>
+                  </div>
+                </div>
+                <span class="enrollment-status status--enrolled">Inscrite</span>
+                <div class="enrollment-actions">
+                  <button class="action-btn action-btn--danger">
+                    <span class="action-btn-icon">🚫</span> Renvoyer
+                  </button>
+                </div>
+              </div>
+
+              <div class="enrollment-row">
+                <div class="enrollment-logo">GT</div>
+                <div class="enrollment-info">
+                  <div class="enrollment-name">Green Tide</div>
+                  <div class="enrollment-meta">
+                    <span>Coach : <strong>foxxx</strong></span>
+                    <span>·</span>
+                    <span>Roster : Gobelins</span>
+                    <span>·</span>
+                    <span>Tier 2</span>
+                    <span>·</span>
+                    <span>Poule B</span>
+                  </div>
+                </div>
+                <span class="enrollment-status status--enrolled">Inscrite</span>
+                <div class="enrollment-actions">
+                  <button class="action-btn action-btn--danger">
+                    <span class="action-btn-icon">🚫</span> Renvoyer
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ══ Coachs invités sans équipe ════════════════════════ -->
+          <div class="admin-panel">
+            <div class="panel-header">
+              <div class="panel-title">Coachs invités — sans équipe inscrite</div>
+              <span class="panel-count panel-count--waiting">5</span>
+            </div>
+
+            <div class="enrollment-list">
+
+              <div class="coach-row">
+                <div class="coach-avatar">P</div>
+                <div class="coach-name">Pacha</div>
+                <div class="coach-status">Invité · pas encore d'équipe</div>
+              </div>
+
+              <div class="coach-row">
+                <div class="coach-avatar" style="background: linear-gradient(135deg, var(--orange), #1C1C29);">L</div>
+                <div class="coach-name">Lepandawan</div>
+                <div class="coach-status">Invité · pas encore d'équipe</div>
+              </div>
+
+              <div class="coach-row">
+                <div class="coach-avatar" style="background: linear-gradient(135deg, #6F35A5, #26263D);">M</div>
+                <div class="coach-name">Mortadell</div>
+                <div class="coach-status">Invité · pas encore d'équipe</div>
+              </div>
+
+              <div class="coach-row">
+                <div class="coach-avatar" style="background: linear-gradient(135deg, var(--green), #003049);">R</div>
+                <div class="coach-name">reQQy</div>
+                <div class="coach-status">Invité · pas encore d'équipe</div>
+              </div>
+
+              <div class="coach-row">
+                <div class="coach-avatar" style="background: linear-gradient(135deg, var(--main-blue), var(--dark-2));">T</div>
+                <div class="coach-name">Tackorion</div>
+                <div class="coach-status">Invité · pas encore d'équipe</div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ══ Actions globales ══════════════════════════════════ -->
+          <div class="admin-panel">
+            <div class="actions-bar">
+              <div class="actions-bar-left">
+                <button class="btn-outline-sm">📤 Clôturer les inscriptions</button>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /admin-container -->
+      </div><!-- /page-content -->
+    </div><!-- /main-area -->
+  </div><!-- /app-layout -->
+</body>
+</html>
