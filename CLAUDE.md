@@ -23,6 +23,8 @@ Directives de travail pour Claude Code sur ce projet.
 
 6. **Workflow « Nouvelle fonctionnalité »** : pour les fonctionnalités complexes (nouvelle page, nouveau parcours utilisateur), suivre le workflow défini dans `.claude/workflows/new-feature.md`. Activé à la demande par l'utilisateur ("on suit le workflow feature"). Non utilisé pour les bugs, refactos ou modifications mineures.
 
+7. **Chaque livrable doit être discuté et validé** : que ce soit une phase du workflow, une carte kanban, un plan de réalisation, ou un fichier de spec — le contenu doit être **présenté à l'utilisateur pour discussion** avant d'être écrit/commité. Ne jamais produire un livrable de manière autonome. Présenter d'abord, discuter, ajuster, puis écrire sur validation explicite.
+
 ---
 
 ## Projet
