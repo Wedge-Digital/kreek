@@ -1,0 +1,115 @@
+use crate::app::auth::auth_backend::AuthSession;
+use crate::app::routes::AppRoutes;
+use crate::app::shared_kernel::authorization::SpaceProfile;
+use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId, SpaceId};
+use crate::state::AppState;
+use askama::Template;
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
+use axum::response::{Html, IntoResponse, Response};
+
+#[derive(Template)]
+#[template(path = "admin-page.html")]
+pub struct AdminPageTemplate {
+    pub app_routes: AppRoutes,
+    pub space_id: String,
+    pub competition_id: String,
+    pub season_id: String,
+    pub competition_name: String,
+    pub season_name: String,
+    pub admin_count: usize,
+    pub active_tab: String,
+    pub content: String,
+}
+
+impl IntoResponse for AdminPageTemplate {
+    fn into_response(self) -> Response {
+        match self.render() {
+            Ok(html) => Html(html).into_response(),
+            Err(e) => {
+                tracing::error!("admin page template render error: {e}");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        }
+    }
+}
+
+pub async fn admin_page(
+    auth_session: AuthSession,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    let Some(user) = auth_session.user else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
+
+    let comp_id = match CompetitionId::try_new(&competition_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let space_entity_id = match SpaceId::try_new(&space_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let is_space_admin = match state
+        .spaces
+        .space_repository
+        .find_member_profile(&user.id, &space_entity_id)
+        .await
+    {
+        Ok(Some(SpaceProfile::SpaceAdmin)) => true,
+        _ => false,
+    };
+
+    let comp_info = match state
+        .competitions
+        .competition_repository
+        .find_base_info(&comp_id)
+        .await
+    {
+        Ok(Some(info)) => info,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("admin_page competition find: {e}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let is_comp_admin = comp_info.admin_ids.contains(&user.id.to_string());
+
+    if !is_space_admin && !is_comp_admin {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+
+    let season_entity_id = match SeasonId::try_new(&season_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let season_name = state
+        .competitions
+        .season_repository
+        .find_base_info(&season_entity_id)
+        .await
+        .ok()
+        .flatten()
+        .map(|i| i.name)
+        .unwrap_or_default();
+
+    let content = "<p class=\"admin-placeholder\">Tableau de bord — à venir</p>".to_string();
+
+    AdminPageTemplate {
+        app_routes: AppRoutes::default(),
+        space_id,
+        competition_id,
+        season_id,
+        competition_name: comp_info.name,
+        season_name,
+        admin_count: comp_info.admin_ids.len(),
+        active_tab: "dashboard".to_string(),
+        content,
+    }
+    .into_response()
+}

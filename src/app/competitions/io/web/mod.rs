@@ -1,3 +1,4 @@
+pub mod admin;
 pub mod all_competition;
 pub mod competition_detail;
 pub mod competition_widget;

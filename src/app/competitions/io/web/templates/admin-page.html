@@ -1,0 +1,52 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/competition-admin.css">
+
+<div class="admin-container">
+
+  <div class="admin-banner">
+    <div class="admin-banner-icon">🏆</div>
+    <div class="admin-banner-info">
+      <div class="admin-banner-title">{{ competition_name }} — {{ season_name }}</div>
+      <div class="admin-banner-sub">Administration de la compétition · {{ admin_count }} administrateur{% if admin_count > 1 %}s{% endif %}</div>
+      <a href="{{ app_routes.competitions.competition_detail(space_id, competition_id, season_id) }}"
+         class="admin-banner-back">← Retour à la compétition</a>
+    </div>
+    <div class="admin-banner-badge">Admin</div>
+  </div>
+
+  <div class="admin-tabs">
+    <a class="admin-tab{% if active_tab == "dashboard" %} active{% endif %}"
+       hx-get="{{ app_routes.competitions.admin_dashboard(space_id, competition_id, season_id) }}"
+       hx-target="#admin-content"
+       hx-swap="innerHTML"
+       hx-push-url="{{ app_routes.competitions.admin_dashboard(space_id, competition_id, season_id) }}">📊 Tableau de bord</a>
+    <a class="admin-tab{% if active_tab == "enrollments" %} active{% endif %}"
+       hx-get="#"
+       hx-target="#admin-content"
+       hx-swap="innerHTML">📋 Inscriptions</a>
+    <a class="admin-tab{% if active_tab == "groups" %} active{% endif %}"
+       hx-get="#"
+       hx-target="#admin-content"
+       hx-swap="innerHTML">🎲 Poules</a>
+    <a class="admin-tab{% if active_tab == "schedule" %} active{% endif %}"
+       hx-get="#"
+       hx-target="#admin-content"
+       hx-swap="innerHTML">📅 Calendrier</a>
+    <a class="admin-tab{% if active_tab == "results" %} active{% endif %}"
+       hx-get="#"
+       hx-target="#admin-content"
+       hx-swap="innerHTML">✅ Résultats</a>
+    <a class="admin-tab{% if active_tab == "settings" %} active{% endif %}"
+       hx-get="#"
+       hx-target="#admin-content"
+       hx-swap="innerHTML">⚙️ Paramètres</a>
+  </div>
+
+  <div id="admin-content">
+    {{ content|safe }}
+  </div>
+
+</div>
+{% endblock %}
