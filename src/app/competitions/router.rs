@@ -1,5 +1,6 @@
 use crate::app::competitions::io::web::all_competition::get_all_competition;
 use crate::app::competitions::io::web::admin::admin_page::admin_page;
+use crate::app::competitions::io::web::admin::dashboard::dashboard_fragment;
 use crate::app::competitions::io::web::competition_detail::{
     get_competition_detail, get_tab_matches, get_tab_standings, get_tab_stats, get_tab_teams,
 };
@@ -66,4 +67,5 @@ pub fn router() -> Router<AppState> {
             get(get_competition_widget_detail),
         )
         .route(path::COMPETITION_ADMIN, get(admin_page))
+        .route(path::COMPETITION_ADMIN_DASHBOARD, get(dashboard_fragment))
 }

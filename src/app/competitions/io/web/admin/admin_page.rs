@@ -1,4 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::competitions::io::web::admin::dashboard::build_dashboard_fragment;
+use crate::app::competitions::use_cases::admin::dashboard_query;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::authorization::SpaceProfile;
 use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId, SpaceId};
@@ -98,10 +100,30 @@ pub async fn admin_page(
         .map(|i| i.name)
         .unwrap_or_default();
 
-    let content = "<p class=\"admin-placeholder\">Tableau de bord — à venir</p>".to_string();
+    let app_routes = AppRoutes::default();
+
+    let summary = match dashboard_query::execute(
+        &comp_id,
+        &season_entity_id,
+        state.competitions.competition_repository.as_ref(),
+        state.competitions.season_repository.as_ref(),
+    )
+    .await
+    {
+        Ok(s) => s,
+        Err(e) => {
+            tracing::error!("admin_page dashboard_query error: {e:?}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let dashboard = build_dashboard_fragment(
+        &summary, &app_routes, &space_id, &competition_id, &season_id,
+    );
+    let content = dashboard.render().unwrap_or_default();
 
     AdminPageTemplate {
-        app_routes: AppRoutes::default(),
+        app_routes,
         space_id,
         competition_id,
         season_id,
