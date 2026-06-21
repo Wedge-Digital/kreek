@@ -14,7 +14,7 @@ Toutes dans `assets/rawpages/html/` :
 
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| Dashboard | ✅ | ✅ | | | | | |
+| Dashboard | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | ✅ (82-85) |
 | Inscriptions | ✅ | | | | | | |
 | Poules | ✅ | | | | | | |
 | Calendrier | ✅ | | | | | | |
@@ -28,7 +28,12 @@ docs/specs/competition-admin/
 ├── README.md
 ├── dashboard/
 │   ├── 02-front.md     ✅
-│   └── 03-back.md      ✅
+│   ├── 03-back.md      ✅
+│   ├── 04-dtos.md      ✅
+│   ├── 05-use-cases.md ✅
+│   ├── 06-domaine.md   N/A
+│   ├── 07-integration.md ✅
+│   └── 08-cards.md     ✅ → cartes 82-85
 ├── enrollments/
 │   └── 02-front.md     ✅
 ├── groups/
