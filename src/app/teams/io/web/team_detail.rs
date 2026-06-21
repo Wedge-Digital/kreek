@@ -129,6 +129,7 @@ impl TeamDetailVm {
 fn status_display(team: &Team) -> (String, String) {
     match &team.participation_status {
         ParticipationStatus::Dismissed => ("Renvoyée".into(), "dismissed".into()),
+        ParticipationStatus::Rejected => ("Inscription refusée".into(), "dismissed".into()),
         ParticipationStatus::PendingEnrollment => {
             ("En attente d'inscription".into(), "pending".into())
         }

@@ -14,6 +14,7 @@ pub enum ParticipationStatus {
     PendingEnrollment,
     Enrolled,
     Dismissed,
+    Rejected,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -55,6 +56,10 @@ pub enum TeamDomainEvent {
         season_name: String,
     },
     TeamDismissed,
+    TeamEnrollmentRejected {
+        competition_id: String,
+        season_id: String,
+    },
 
     // Séquence post-match
     // Nommé en termes domaine — déclenché par l'app event MatchPlayed (IO layer)
@@ -146,6 +151,7 @@ impl TeamDomainEvent {
             Self::TeamCreated { .. } => "TeamCreated",
             Self::TeamEnrolled { .. } => "TeamEnrolled",
             Self::TeamDismissed => "TeamDismissed",
+            Self::TeamEnrollmentRejected { .. } => "TeamEnrollmentRejected",
             Self::PostMatchSequenceStarted { .. } => "PostMatchSequenceStarted",
             Self::PlayerImprovementApplied { .. } => "PlayerImprovementApplied",
             Self::PlayerImprovementPhaseValidated => "PlayerImprovementPhaseValidated",
@@ -288,6 +294,9 @@ impl Team {
             TeamDomainEvent::TeamDismissed => {
                 self.participation_status = ParticipationStatus::Dismissed;
                 self.game_phase = None;
+            }
+            TeamDomainEvent::TeamEnrollmentRejected { .. } => {
+                self.participation_status = ParticipationStatus::Rejected;
             }
             TeamDomainEvent::PostMatchSequenceStarted {
                 dedicated_fans,
@@ -446,6 +455,21 @@ impl Team {
             _ => Err(DomainError::InvalidTransition {
                 from: self.participation_status.clone(),
                 to: ParticipationStatus::Enrolled,
+            }),
+        }
+    }
+
+    pub fn reject_enrollment(&self) -> Result<TeamDomainEvent, DomainError> {
+        match self.participation_status {
+            ParticipationStatus::PendingEnrollment => {
+                Ok(TeamDomainEvent::TeamEnrollmentRejected {
+                    competition_id: self.competition_id.clone().unwrap_or_default(),
+                    season_id: self.season_id.clone().unwrap_or_default(),
+                })
+            }
+            _ => Err(DomainError::InvalidTransition {
+                from: self.participation_status.clone(),
+                to: ParticipationStatus::Rejected,
             }),
         }
     }
@@ -877,5 +901,101 @@ mod tests {
 
         assert_eq!(team.assistants.0, 1); // 2 - 1
         assert_eq!(team.treasury.0, treasury_before + 10);
+    }
+
+    // ── reject_enrollment ────────────────────────────────────────────────
+
+    #[test]
+    fn reject_enrollment_transitions_to_rejected() {
+        let events = vec![created_event()];
+        let team = Team::hydrate(&events).unwrap();
+        let event = team.reject_enrollment().unwrap();
+        let team = team.apply(&event);
+        assert_eq!(team.participation_status, ParticipationStatus::Rejected);
+    }
+
+    #[test]
+    fn cannot_reject_enrolled_team() {
+        let events = vec![created_event(), enrolled_event()];
+        let team = Team::hydrate(&events).unwrap();
+        assert!(team.reject_enrollment().is_err());
+    }
+
+    #[test]
+    fn cannot_reject_already_rejected_team() {
+        let events = vec![
+            created_event(),
+            TeamDomainEvent::TeamEnrollmentRejected {
+                competition_id: "01COMP000000000000000000000".to_string(),
+                season_id: "01SEAS000000000000000000000".to_string(),
+            },
+        ];
+        let team = Team::hydrate(&events).unwrap();
+        assert!(team.reject_enrollment().is_err());
+    }
+
+    #[test]
+    fn cannot_enroll_rejected_team() {
+        let events = vec![
+            created_event(),
+            TeamDomainEvent::TeamEnrollmentRejected {
+                competition_id: "01COMP000000000000000000000".to_string(),
+                season_id: "01SEAS000000000000000000000".to_string(),
+            },
+        ];
+        let team = Team::hydrate(&events).unwrap();
+        assert!(team
+            .enroll(
+                "01COMP000000000000000000000".to_string(),
+                "Ligue".to_string(),
+                "01SEAS000000000000000000000".to_string(),
+                "Saison".to_string(),
+            )
+            .is_err());
+    }
+
+    #[test]
+    fn cannot_dismiss_pending_team() {
+        let events = vec![created_event()];
+        let team = Team::hydrate(&events).unwrap();
+        assert!(team.dismiss().is_err());
+    }
+
+    // ── hydratation séquences complètes ──────────────────────────────────
+
+    #[test]
+    fn hydrate_created_then_enrolled() {
+        let events = vec![created_event(), enrolled_event()];
+        let team = Team::hydrate(&events).unwrap();
+        assert_eq!(team.participation_status, ParticipationStatus::Enrolled);
+        assert_eq!(team.competition_name.as_deref(), Some("Ligue de Condate"));
+        assert_eq!(team.version, 2);
+    }
+
+    #[test]
+    fn hydrate_created_then_rejected() {
+        let events = vec![
+            created_event(),
+            TeamDomainEvent::TeamEnrollmentRejected {
+                competition_id: "01COMP000000000000000000000".to_string(),
+                season_id: "01SEAS000000000000000000000".to_string(),
+            },
+        ];
+        let team = Team::hydrate(&events).unwrap();
+        assert_eq!(team.participation_status, ParticipationStatus::Rejected);
+        assert_eq!(team.version, 2);
+    }
+
+    #[test]
+    fn hydrate_created_enrolled_then_dismissed() {
+        let events = vec![
+            created_event(),
+            enrolled_event(),
+            TeamDomainEvent::TeamDismissed,
+        ];
+        let team = Team::hydrate(&events).unwrap();
+        assert_eq!(team.participation_status, ParticipationStatus::Dismissed);
+        assert_eq!(team.game_phase, None);
+        assert_eq!(team.version, 3);
     }
 }
