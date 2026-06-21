@@ -29,6 +29,7 @@
 
         <div class="form-label">Qui sera le coach de cette équipe ?</div>
         <input type="hidden" name="coach_id" id="coach_id_field" value="">
+        <input type="hidden" name="coach_name" id="coach_name_field" value="">
         <div class="coach-select"
              hx-get="{{ app_routes.spaces.coach_select_widget() }}?space_id={{ space_id }}"
              hx-trigger="load"
@@ -59,8 +60,10 @@
 </form>
 <script>
 document.addEventListener('coachSelected', function(e) {
-    var field = document.getElementById('coach_id_field');
-    if (field) field.value = e.detail.id || '';
+    var idField = document.getElementById('coach_id_field');
+    var nameField = document.getElementById('coach_name_field');
+    if (idField) idField.value = e.detail.id || '';
+    if (nameField) nameField.value = e.detail.name || '';
 });
 </script>
 {% endblock %}

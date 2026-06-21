@@ -33,11 +33,12 @@ impl ITeamDraftRepository for TeamDraftRepository {
             .map_err(|e| RepositoryError::PersistenceError(e.to_string()))?;
 
         sqlx::query(
-            "INSERT INTO team_drafts (id, space_id, competition_id, season_id, name, coach_id, logo, creation_rules)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            "INSERT INTO team_drafts (id, space_id, competition_id, season_id, name, coach_id, coach_name, logo, creation_rules)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
              ON CONFLICT (id) DO UPDATE SET
                name           = EXCLUDED.name,
                coach_id       = EXCLUDED.coach_id,
+               coach_name     = EXCLUDED.coach_name,
                logo           = EXCLUDED.logo,
                creation_rules = EXCLUDED.creation_rules",
         )
@@ -47,6 +48,7 @@ impl ITeamDraftRepository for TeamDraftRepository {
         .bind(team.season_id())
         .bind(team.base_infos().name().clone().into_inner())
         .bind(team.base_infos().coach_id().to_string())
+        .bind(team.coach_name())
         .bind(logo)
         .bind(creation_rules)
         .execute(&self.pool)
@@ -65,13 +67,14 @@ impl ITeamDraftRepository for TeamDraftRepository {
             season_id: String,
             name: String,
             coach_id: String,
+            coach_name: String,
             logo: Option<String>,
             creation_rules: serde_json::Value,
         }
 
         let row: Option<Row> = sqlx::query_as(
             "SELECT id, coach_id AS created_by, competition_id, season_id,
-                    name, coach_id, logo, creation_rules
+                    name, coach_id, coach_name, logo, creation_rules
              FROM team_drafts WHERE id = $1",
         )
         .bind(id.to_string())
@@ -96,6 +99,7 @@ impl ITeamDraftRepository for TeamDraftRepository {
             entity_id,
             created_by,
             base_infos,
+            r.coach_name,
             r.competition_id,
             r.season_id,
             creation_rules,
@@ -115,13 +119,14 @@ impl ITeamDraftRepository for TeamDraftRepository {
             season_id: String,
             name: String,
             coach_id: String,
+            coach_name: String,
             logo: Option<String>,
             creation_rules: serde_json::Value,
         }
 
         let rows: Vec<Row> = sqlx::query_as(
             "SELECT id, coach_id AS created_by, competition_id, season_id,
-                    name, coach_id, logo, creation_rules
+                    name, coach_id, coach_name, logo, creation_rules
              FROM team_drafts
              WHERE coach_id = $1 AND space_id = $2
              ORDER BY created_at DESC",
@@ -148,6 +153,7 @@ impl ITeamDraftRepository for TeamDraftRepository {
                     entity_id,
                     created_by,
                     base_infos,
+                    r.coach_name,
                     r.competition_id,
                     r.season_id,
                     creation_rules,

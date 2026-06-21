@@ -39,7 +39,7 @@ pub async fn submit_team(
         space_id: space_id.clone(),
         competition_id: draft.competition_id().to_string(),
         season_id: draft.season_id().to_string(),
-        coach_name: user.coach_name.into_inner(),
+        coach_name: draft.coach_name().to_string(),
     };
 
     match submit_uc::execute(

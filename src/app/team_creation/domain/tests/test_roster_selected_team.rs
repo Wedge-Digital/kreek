@@ -86,6 +86,7 @@ mod tests {
             &id_service,
             creator_id,
             base,
+            "Coach Test".to_string(),
             "comp-1".to_string(),
             "season-1".to_string(),
             CreationRules::default(),

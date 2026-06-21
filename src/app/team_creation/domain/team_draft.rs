@@ -11,6 +11,7 @@ pub struct DraftTeam {
     entity_id: TeamId,
     created_by: UserId,
     base_infos: BaseTeamInfo,
+    coach_name: String,
     /// Référence opaque vers le contexte Compétition — jamais jointé.
     competition_id: String,
     /// Référence opaque vers le contexte Compétition — jamais jointé.
@@ -24,6 +25,7 @@ impl DraftTeam {
         id_service: &T,
         created_by: UserId,
         base_team_infos: BaseTeamInfo,
+        coach_name: String,
         competition_id: String,
         season_id: String,
         creation_rules: CreationRules,
@@ -32,6 +34,7 @@ impl DraftTeam {
             entity_id: id_service.generate_id(),
             created_by,
             base_infos: base_team_infos,
+            coach_name,
             competition_id,
             season_id,
             creation_rules,
@@ -40,6 +43,10 @@ impl DraftTeam {
 
     pub fn base_infos(&self) -> &BaseTeamInfo {
         &self.base_infos
+    }
+
+    pub fn coach_name(&self) -> &str {
+        &self.coach_name
     }
 
     pub fn season_id(&self) -> &str {
@@ -64,6 +71,7 @@ impl DraftTeam {
         entity_id: TeamId,
         created_by: UserId,
         base_infos: BaseTeamInfo,
+        coach_name: String,
         competition_id: String,
         season_id: String,
         creation_rules: CreationRules,
@@ -72,6 +80,7 @@ impl DraftTeam {
             entity_id,
             created_by,
             base_infos,
+            coach_name,
             competition_id,
             season_id,
             creation_rules,

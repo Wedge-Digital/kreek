@@ -16,6 +16,7 @@ use serde::Deserialize;
 pub struct DraftTeamForm {
     pub team_name: String,
     pub coach_id: Option<String>,
+    pub coach_name: Option<String>,
     pub logo_url: Option<String>,
     pub competition_id: String,
     pub season_id: String,
@@ -77,11 +78,13 @@ pub async fn post_draft_team(
     let created_by = UserId::try_new(&user_id_str).unwrap_or_else(|_| user.id.clone());
 
     let id_service = EntityIdService {};
+    let coach_name_val = form.coach_name.unwrap_or_default();
     let team = create_draft_team(
         &id_service,
         created_by,
         team_name,
         coach_id,
+        coach_name_val,
         logo_url,
         form.competition_id,
         form.season_id,
