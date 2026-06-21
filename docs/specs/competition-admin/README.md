@@ -1,6 +1,6 @@
 # Administration de compétition — Progression
 
-## Maquettes
+## Maquettes (Phase 1 ✅)
 
 Toutes dans `assets/rawpages/html/` :
 - `app-competition-admin.html` — Tableau de bord
@@ -12,14 +12,34 @@ Toutes dans `assets/rawpages/html/` :
 
 ## Progression par page
 
-| Page | Maquette | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
-|---|---|---|---|---|---|---|---|---|
-| Dashboard | ✅ | ✅ | | | | | | |
-| Inscriptions | ✅ | ✅ | | | | | | |
-| Poules | ✅ | ✅ | | | | | | |
-| Calendrier | ✅ | ✅ | | | | | | |
-| Résultats | ✅ | ✅ | | | | | | |
-| Paramètres | ✅ | ✅ | | | | | | |
+| Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
+|---|---|---|---|---|---|---|---|
+| Dashboard | ✅ | ✅ | | | | | |
+| Inscriptions | ✅ | | | | | | |
+| Poules | ✅ | | | | | | |
+| Calendrier | ✅ | | | | | | |
+| Résultats | ✅ | | | | | | |
+| Paramètres | ✅ | | | | | | |
+
+## Structure des specs
+
+```
+docs/specs/competition-admin/
+├── README.md
+├── dashboard/
+│   ├── 02-front.md     ✅
+│   └── 03-back.md      ✅
+├── enrollments/
+│   └── 02-front.md     ✅
+├── groups/
+│   └── 02-front.md     ✅
+├── schedule/
+│   └── 02-front.md     ✅
+├── results/
+│   └── 02-front.md     ✅
+└── settings/
+    └── 02-front.md     ✅
+```
 
 ## Accès
 
@@ -30,4 +50,4 @@ Toutes dans `assets/rawpages/html/` :
 
 - **Haute** : Dashboard, Inscriptions, Poules, Calendrier
 - **Moyenne** : Résultats
-- **Basse** : Paramètres (modifier règles), Tableau de bord (stats détaillées)
+- **Basse** : Paramètres

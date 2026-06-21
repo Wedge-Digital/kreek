@@ -2,7 +2,7 @@
 
 Ce workflow gouverne la création de nouvelles fonctionnalités. Il est **activé à la demande** par l'utilisateur ("on suit le workflow feature" ou "active le workflow"). Il n'est PAS utilisé pour les corrections de bugs, les refactos isolées, ou les modifications mineures.
 
-Chaque phase produit un livrable validé par l'utilisateur avant de passer à la suivante. On ne code pas avant la phase 6.
+Chaque phase produit un **fichier de sortie** validé par l'utilisateur avant de passer à la suivante. On ne code pas pendant les phases de conception (2-7). Le code est produit lors de l'implémentation des cartes kanban (phase 8).
 
 ---
 
@@ -14,23 +14,30 @@ Les phases 2 à 8 s'appliquent **page par page** (ou onglet par onglet), pas à 
 
 ### Fichiers de spec
 
-Chaque fonctionnalité a un dossier de spec :
+Chaque fonctionnalité a un dossier de spec, avec un sous-dossier par page et un fichier par phase :
 
 ```
 docs/specs/<feature>/
-├── README.md                ← index, statut par page
-├── 01-<page-name>.md        ← phases 2-8 pour cette page
-├── 02-<page-name>.md
-└── ...
+├── README.md                    ← index, statut par page
+├── <page-name>/
+│   ├── 02-front.md              ← phase 2 : architecture front
+│   ├── 03-back.md               ← phase 3 : architecture back
+│   ├── 04-dtos.md               ← phase 4 : contrats de données
+│   ├── 05-use-cases.md          ← phase 5 : use cases
+│   ├── 06-domaine.md            ← phase 6 : logique métier
+│   ├── 07-integration.md        ← phase 7 : persistance, événements, réponses
+│   └── 08-cards.md              ← phase 8 : cartes kanban (dernière phase de spec)
+└── <autre-page>/
+    └── ...
 ```
 
 Le `README.md` contient le tableau de progression :
 
 ```markdown
-| Page | Maquette | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
-|---|---|---|---|---|---|---|---|---|
-| Dashboard | ✅ | ✅ | | | | | | |
-| Inscriptions | ✅ | | | | | | | |
+| Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
+|---|---|---|---|---|---|---|---|
+| Dashboard | ✅ | ✅ | | | | | |
+| Inscriptions | ✅ | | | | | | |
 ```
 
 ### Contexte minimal
@@ -56,7 +63,7 @@ Quand on attaque une page, on lit **uniquement** son fichier de spec et le READM
 
 ### Sortie
 
-Ensemble de maquettes HTML/CSS validées dans `assets/rawpages/html/`.
+Maquettes HTML/CSS dans `assets/rawpages/html/` (un fichier par page).
 
 ### Règles
 
@@ -89,7 +96,7 @@ Pour la page en cours :
 
 ### Sortie
 
-Section "Phase 2 — Architecture front" dans le fichier de spec de la page :
+Fichier `<page>/02-front.md` :
 
 ```
 | Widget | BC | Endpoint | Trigger | Émet | Mode |
@@ -129,7 +136,7 @@ Actions :
 
 ### Sortie
 
-Section "Phase 3 — Architecture back" dans le fichier de spec avec le plan de fichiers.
+Fichier `<page>/03-back.md` avec le plan de fichiers, routes, ports.
 
 ### Règles
 
@@ -159,7 +166,7 @@ Pour chaque handler identifié :
 
 ### Sortie
 
-Section "Phase 4 — DTOs" dans le fichier de spec avec les structs Rust.
+Fichier `<page>/04-dtos.md` avec les structs Rust (DTOs entrée, VMs sortie, DTOs port).
 
 ### Règles
 
@@ -190,7 +197,7 @@ Pour chaque mutation (POST/PUT/DELETE) :
 
 ### Sortie
 
-Section "Phase 5 — Use cases" dans le fichier de spec avec les signatures et l'orchestration.
+Fichier `<page>/05-use-cases.md` avec les signatures, orchestration, erreurs.
 
 ### Règles
 
@@ -214,7 +221,7 @@ Section "Phase 5 — Use cases" dans le fichier de spec avec les signatures et l
 
 ### Sortie
 
-Section "Phase 6 — Domaine" dans le fichier de spec. Code domaine testé (`cargo test` passe).
+Fichier `<page>/06-domaine.md` avec les méthodes domaine, value objects, erreurs, tests prévus.
 
 ### Règles
 
@@ -226,32 +233,31 @@ Section "Phase 6 — Domaine" dans le fichier de spec. Code domaine testé (`car
 
 ## Phase 7 — Effets de bord (persistance, événements, réponses)
 
-**Entrée** : domaine implémenté et testé pour la page
+**Entrée** : domaine spécifié pour la page
 **Granularité** : une page à la fois
 
 ### Processus
 
-1. **Persistance** : implémenter les méthodes repository (si nouvelles)
-2. **Événements** : câbler les événements domaine → app event bus → listeners inter-BC
-3. **Handlers** : implémenter les handlers HTTP (le code est minimal — construction de commande + appel use case + rendu template)
-4. **Templates** : intégrer les maquettes de la phase 1 dans les templates Askama
-5. **Tests E2E** : écrire les tests Playwright pour le parcours complet
-6. **Validation manuelle** : tester dans le navigateur
+Spécifier (sans coder) :
+
+1. **Persistance** : quelles méthodes repository sont nécessaires (nouvelles ou existantes)
+2. **Événements** : quels événements domaine émettre, quels listeners câbler
+3. **Handlers** : signature de chaque handler HTTP (extracteurs, retour)
+4. **Templates** : quels templates Askama créer, quels VMs ils consomment
+5. **Tests E2E** : scénarios Playwright prévus
 
 ### Sortie
 
-Code complet, testé (unitaire + E2E), commité.
+Fichier `<page>/07-integration.md` avec les détails de persistance, événements, handlers, templates, tests E2E prévus.
 
 ### Règles
 
 - Les handlers sont des traducteurs HTTP — pas de logique métier (cf. CLAUDE.md)
-- Avant de supprimer du code : vérifier qu'il n'est utilisé nulle part (règle 4)
-- Quand on déplace du code : copier-coller exact (règle 5)
-- Commit après validation utilisateur (règle 1)
+- Cette phase est de la conception, pas de l'implémentation
 
 ---
 
-## Phase 8 — Cartes kanban
+## Phase 8 — Cartes kanban (dernière phase de conception)
 
 **Entrée** : spec complète de la page (phases 2-7)
 **Granularité** : une page à la fois
@@ -267,7 +273,9 @@ Code complet, testé (unitaire + E2E), commité.
 
 ### Sortie
 
-Cartes kanban créées dans `kanban/ready_to_be_done/`. Le fichier de spec de la page est marqué comme complet dans le README.
+- Fichier `<page>/08-cards.md` — liste des cartes avec résumé et ordre
+- Cartes kanban créées dans `kanban/ready_to_be_done/`
+- README mis à jour avec la progression
 
 ### Règles de découpage
 
@@ -277,3 +285,9 @@ Cartes kanban créées dans `kanban/ready_to_be_done/`. Le fichier de spec de la
 - Une carte pour les tests E2E de la page
 - Les cartes sont ordonnées par dépendance (domaine → use case → handler → template)
 - Chaque carte est réalisable en une session de travail
+
+---
+
+## Après le workflow : implémentation
+
+L'implémentation se fait **carte par carte**, en suivant les cartes produites en phase 8. Ce n'est plus le workflow — c'est le travail normal de développement, gouverné par les règles du CLAUDE.md (validation humaine, protocole de démarrage de carte, etc.).
