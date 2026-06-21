@@ -1,0 +1,13 @@
+<link rel="stylesheet" href="/static/css/pages/competition-admin-enrollments.css">
+
+<div id="pending-container"
+     hx-get="{{ app_routes.teams.pending_enrollment_widget(space_id) }}?competition_id={{ competition_id }}&season_id={{ season_id }}"
+     hx-trigger="load, enrollmentChanged from:body"
+     hx-swap="innerHTML">
+</div>
+
+<div id="enrolled-container"
+     hx-get="{{ app_routes.teams.enrolled_teams_widget(space_id) }}?competition_id={{ competition_id }}&season_id={{ season_id }}"
+     hx-trigger="load, enrollmentChanged from:body"
+     hx-swap="innerHTML">
+</div>

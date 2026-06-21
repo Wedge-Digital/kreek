@@ -1,0 +1,60 @@
+/* ── Enrollment rows ── */
+.enrollment-list { display: flex; flex-direction: column; gap: 8px; }
+
+.enrollment-row {
+  display: flex; align-items: center; gap: var(--p1);
+  padding: 12px var(--p2);
+  border: 1px solid var(--dark-5); border-radius: 10px;
+  background: var(--white);
+  transition: box-shadow 0.15s;
+}
+.enrollment-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.enrollment-row--pending { border-left: 3px solid var(--orange); }
+
+.enrollment-logo {
+  width: 40px; height: 40px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-weight: 700; font-size: 14px;
+  color: var(--white); flex-shrink: 0;
+  background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+}
+
+.enrollment-info { flex: 1; min-width: 0; }
+.enrollment-name { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+.enrollment-meta {
+  font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px;
+  display: flex; gap: var(--p1);
+}
+
+.enrollment-status {
+  font-size: var(--text-tiny); font-weight: 700;
+  padding: 3px 10px; border-radius: 20px; flex-shrink: 0;
+}
+.status--enrolled { background: rgba(98,149,132,0.12); color: var(--green); }
+.status--pending  { background: rgba(255,107,53,0.12); color: var(--orange); }
+
+.enrollment-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ── Action buttons ── */
+.action-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid var(--dark-5); border-radius: 7px;
+  background: var(--white); font-size: var(--text-tiny); font-weight: 500;
+  color: var(--dark-2); cursor: pointer;
+  transition: all 0.15s; white-space: nowrap;
+}
+.action-btn:hover { background: var(--dark-6); border-color: var(--dark-4); }
+.action-btn--approve { color: var(--green); border-color: rgba(98,149,132,0.3); }
+.action-btn--approve:hover { background: rgba(98,149,132,0.08); border-color: var(--green); }
+.action-btn--danger { color: var(--dark-3); }
+.action-btn--danger:hover { background: rgba(224,32,32,0.06); border-color: var(--red); color: var(--red); }
+.action-btn-icon { font-size: 14px; }
+
+/* ── Panel count badges ── */
+.panel-count {
+  font-size: var(--text-tiny); font-weight: 700;
+  padding: 2px 10px; border-radius: 20px;
+}
+.panel-count--pending { background: rgba(255,107,53,0.12); color: var(--orange); }
+.panel-count--enrolled { background: rgba(98,149,132,0.12); color: var(--green); }

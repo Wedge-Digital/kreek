@@ -27,6 +27,8 @@ pub mod path {
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin";
     pub const COMPETITION_ADMIN_DASHBOARD: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/dashboard";
+    pub const COMPETITION_ADMIN_ENROLLMENTS: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/enrollments";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -117,6 +119,12 @@ impl Routes {
     }
     pub fn admin_dashboard(&self, sid: &str, cid: &str, season_id: &str) -> String {
         path::COMPETITION_ADMIN_DASHBOARD
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_enrollments(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_ENROLLMENTS
             .replace("{space_id}", sid)
             .replace("{competition_id}", cid)
             .replace("{season_id}", season_id)
