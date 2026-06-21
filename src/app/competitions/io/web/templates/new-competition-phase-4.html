@@ -116,7 +116,7 @@
 
     <div class="form-actions">
         <button class="btn btn-outline btn-action"
-                hx-get="{{ routes.competitions.new_competition_structure(space_id, competition_id, season_id) }}"
+                hx-get="{{ app_routes.competitions.new_competition_structure(space_id, competition_id, season_id) }}"
                 hx-target="#app-content"
                 hx-select="#app-content"
                 hx-swap="innerHTML"
@@ -136,7 +136,7 @@
 (function () {
     const INITIAL = {{ existing_invitations_json|safe }};
     const SPACE_ID = "{{ space_id }}";
-    const COACH_SEARCH_WIDGET_URL = "{{ routes.spaces.coach_search_widget() }}";
+    const COACH_SEARCH_WIDGET_URL = "{{ app_routes.spaces.coach_search_widget() }}";
 
     const ACCESS_MODE_HELP = {
         invitation: '📌 Seuls les coachs ayant été invités pourront s\'inscrire.',

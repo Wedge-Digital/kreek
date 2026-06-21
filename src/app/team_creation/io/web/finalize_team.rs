@@ -2,12 +2,10 @@ use crate::app::auth::auth_backend::AuthSession;
 use crate::app::team_creation::domain::roster::LeagueId;
 use crate::app::team_creation::io::web::view_models::SppLogEntryVm;
 use crate::app::routes::AppRoutes;
-use crate::app::team_creation::routes::Routes;
 use crate::app::team_creation::use_cases::commands::SubmitTeamCommand;
-use crate::app::team_creation::use_cases::set_league::{SetLeagueCommand, SetLeagueError};
+use crate::app::team_creation::use_cases::build_team::set_league::{SetLeagueCommand, SetLeagueError};
 use crate::app::team_creation::use_cases::submit_team as submit_uc;
 use crate::app::shared_kernel::common_types::EntityId;
-use crate::web::routes::Routes as WebRoutes;
 use crate::state::AppState;
 use askama::Template;
 use axum::body::Body;
@@ -20,8 +18,6 @@ use axum::response::{Html, IntoResponse, Response};
 #[derive(Template)]
 #[template(path = "finalize-team.html")]
 pub struct FinalizeTeamTemplate {
-    pub web_routes: WebRoutes,
-    pub team_routes: Routes,
     pub app_routes: AppRoutes,
     pub space_id: String,
     pub team_id: String,
@@ -70,7 +66,6 @@ pub async fn finalize_team(
     };
 
     let ref_data = state.team_creation.reference_data.as_ref();
-    let routes   = Routes::default();
 
     // ── Validation des prérequis ─────────────────────────────────────────────
     use crate::app::team_creation::domain::team_roster_selected::MIN_PLAYERS_FOR_SUBMISSION;
@@ -94,10 +89,10 @@ pub async fn finalize_team(
         .unwrap_or_default();
 
     // ── Skip si pas de finalisation nécessaire ────────────────────────────────
-    if !team.needs_finalization(roster_leagues.len()) {
+    if !team.needs_finalization() {
         if team.league_id.is_none() {
             let league_id = LeagueId(roster_leagues[0].clone());
-            if let Err(e) = crate::app::team_creation::use_cases::set_league::execute(
+            if let Err(e) = crate::app::team_creation::use_cases::build_team::set_league::execute(
                 SetLeagueCommand {
                     team_id:  team_entity_id.clone(),
                     space_id: space_id.clone(),
@@ -181,8 +176,6 @@ pub async fn finalize_team(
     let logo_url = team.base_infos().logo_url().map(|img| img.thumbnail(120, 120));
 
     FinalizeTeamTemplate {
-        web_routes: WebRoutes::default(),
-        team_routes: routes,
         app_routes: AppRoutes::default(),
         space_id,
         team_id,
@@ -216,8 +209,6 @@ pub async fn post_finalize_team(
         space_id:   space_id.clone(),
         coach_name: user.coach_name.into_inner(),
     };
-
-    let routes = Routes::default();
 
     match submit_uc::execute(
         cmd,

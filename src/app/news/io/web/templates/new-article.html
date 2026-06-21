@@ -14,7 +14,7 @@
     </div>
 
     <form id="article-form"
-          hx-post="{{ news_routes.post_article(space_id) }}"
+          hx-post="{{ app_routes.news.post_article(space_id) }}"
           hx-target="#app-content"
           hx-swap="innerHTML">
 

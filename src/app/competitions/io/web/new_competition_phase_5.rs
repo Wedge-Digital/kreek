@@ -1,11 +1,10 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::competitions::routes::Routes;
 use crate::app::competitions::use_cases::finalize_competition::{
     execute as execute_finalize, FinalizeCompetitionCommand, FinalizeCompetitionError,
 };
+use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId, SpaceId};
 use crate::state::AppState;
-use crate::web::routes::Routes as WebRoutes;
 use askama::Template;
 use axum::body::Body;
 use axum::extract::{Path, State};
@@ -15,8 +14,7 @@ use axum::response::{Html, IntoResponse, Response};
 #[derive(Template)]
 #[template(path = "new-competition-phase-5.html")]
 pub struct NewCompetitionPhase5Template {
-    pub web_routes: WebRoutes,
-    pub competition_routes: Routes,
+    pub app_routes: AppRoutes,
     pub space_id: String,
     pub competition_id: String,
     pub season_id: String,
@@ -280,8 +278,7 @@ pub async fn get_new_competition_phase_5(
     };
 
     NewCompetitionPhase5Template {
-        web_routes: WebRoutes,
-        competition_routes: Routes,
+        app_routes: AppRoutes::default(),
         space_id,
         competition_id,
         season_id,
@@ -364,7 +361,7 @@ pub async fn post_finalize_competition(
         Ok(()) => Response::builder()
             .header(
                 "HX-Redirect",
-                Routes.competition_detail(&space_id, &competition_id, &season_id),
+                AppRoutes::default().competitions.competition_detail(&space_id, &competition_id, &season_id),
             )
             .body(Body::empty())
             .unwrap(),

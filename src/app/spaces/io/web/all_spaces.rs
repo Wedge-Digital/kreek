@@ -1,7 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::spaces::routes::Routes as SpaceRoutes;
+use crate::app::routes::AppRoutes;
 use crate::state::AppState;
-use crate::web::routes::Routes as WebRoutes;
 use askama::Template;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -18,8 +17,7 @@ pub struct SpaceCard {
 #[derive(Template)]
 #[template(path = "space-all.html")]
 pub struct SpaceAllTemplate {
-    pub web_routes: WebRoutes,
-    pub space_routes: SpaceRoutes,
+    pub app_routes: AppRoutes,
     pub spaces: Vec<SpaceCard>,
 }
 
@@ -59,8 +57,7 @@ pub async fn space_all(
         .collect();
 
     SpaceAllTemplate {
-        web_routes: Default::default(),
-        space_routes: Default::default(),
+        app_routes: Default::default(),
         spaces,
     }
     .into_response()

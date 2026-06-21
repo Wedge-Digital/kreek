@@ -7,7 +7,7 @@
   <!-- Breadcrumb -->
   <div class="breadcrumb">
     <span class="breadcrumb-link"
-          hx-get="{{ news_routes.space_home(space_id) }}"
+          hx-get="{{ app_routes.news.space_home(space_id) }}"
           hx-target="#app-content"
           hx-select="#app-content"
           hx-swap="innerHTML"
@@ -112,7 +112,7 @@
     </div>
 
     <!-- Compose -->
-    <form hx-post="{{ news_routes.post_comment(space_id, article_id) }}"
+    <form hx-post="{{ app_routes.news.post_comment(space_id, article_id) }}"
           hx-target="#app-content"
           hx-swap="innerHTML">
       <div class="comment-compose">

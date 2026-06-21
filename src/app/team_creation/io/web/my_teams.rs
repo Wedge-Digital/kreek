@@ -1,9 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::common_types::Entity;
-use crate::app::team_creation::routes::Routes as TeamRoutes;
 use crate::state::AppState;
-use crate::web::routes::Routes as WebRoutes;
 use askama::Template;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -23,8 +21,7 @@ pub struct TeamCardVm {
 #[derive(Template)]
 #[template(path = "my-teams.html")]
 pub struct MyTeamsTemplate {
-    pub web_routes: WebRoutes,
-    pub team_routes: TeamRoutes,
+    pub app_routes: AppRoutes,
     pub space_id: String,
     pub teams: Vec<TeamCardVm>,
 }
@@ -67,7 +64,6 @@ pub async fn my_teams(
         .await
         .unwrap_or_default();
 
-    let creation_routes = TeamRoutes::default();
     let app_routes = AppRoutes::default();
     let team_vms = teams
         .into_iter()
@@ -77,7 +73,7 @@ pub async fn my_teams(
             let link = if submitted {
                 app_routes.teams.team_detail(&space_id_raw, &id)
             } else {
-                creation_routes.team_build(&space_id_raw, &id)
+                app_routes.team_creation.team_build(&space_id_raw, &id)
             };
             TeamCardVm {
                 id,
@@ -101,8 +97,7 @@ pub async fn my_teams(
         .collect();
 
     MyTeamsTemplate {
-        web_routes: Default::default(),
-        team_routes: Default::default(),
+        app_routes: Default::default(),
         space_id: space_id_raw,
         teams: team_vms,
     }

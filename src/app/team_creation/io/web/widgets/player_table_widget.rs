@@ -3,9 +3,9 @@ use crate::app::team_creation::domain::roster::{LeagueId, PlayerId, SpecialRuleI
 use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
 use crate::app::team_creation::io::web::builders::{build_hired_rows, build_player_positions};
 use crate::app::team_creation::io::web::view_models::{HiredPlayerRowVm, PlayerPositionVm};
-use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
-use crate::app::team_creation::use_cases::fire_player as fire_uc;
-use crate::app::team_creation::use_cases::hire_player as hire_uc;
+use crate::app::routes::AppRoutes;
+use crate::app::team_creation::use_cases::build_team::fire_player as fire_uc;
+use crate::app::team_creation::use_cases::build_team::hire_player as hire_uc;
 use crate::app::team_creation::use_cases::commands::{FirePlayerCommand, HirePlayerCommand};
 use crate::app::team_creation::use_cases::roster_service;
 use crate::state::AppState;
@@ -40,7 +40,7 @@ pub struct PlayerTableParams {
 pub struct PlayerTableWidgetTemplate {
     pub positions: Vec<PlayerPositionVm>,
     pub hired_rows: Vec<HiredPlayerRowVm>,
-    pub team_routes: TeamCreationRoutes,
+    pub app_routes: AppRoutes,
     pub space_id: String,
     pub team_id: String,
     pub has_roster: bool,
@@ -68,7 +68,7 @@ pub async fn player_table_widget(
         return PlayerTableWidgetTemplate {
             positions: vec![],
             hired_rows: vec![],
-            team_routes: Default::default(),
+            app_routes: Default::default(),
             space_id,
             team_id,
             has_roster: false,
@@ -169,7 +169,7 @@ pub async fn player_table_widget(
     PlayerTableWidgetTemplate {
         positions,
         hired_rows,
-        team_routes: Default::default(),
+        app_routes: Default::default(),
         space_id,
         team_id,
         has_roster: true,
@@ -183,7 +183,7 @@ pub async fn player_table_widget(
 #[template(path = "widgets/player-row-fragment.html")]
 pub struct PlayerRowFragment {
     pub row: HiredPlayerRowVm,
-    pub team_routes: TeamCreationRoutes,
+    pub app_routes: AppRoutes,
     pub space_id: String,
     pub team_id: String,
 }
@@ -258,7 +258,7 @@ pub async fn hire_player(
 
     PlayerRowFragment {
         row,
-        team_routes: Default::default(),
+        app_routes: Default::default(),
         space_id,
         team_id,
     }
@@ -322,7 +322,7 @@ pub async fn fire_player(
 
     PlayerRowFragment {
         row,
-        team_routes: Default::default(),
+        app_routes: Default::default(),
         space_id,
         team_id,
     }

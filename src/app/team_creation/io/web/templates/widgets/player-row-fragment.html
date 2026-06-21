@@ -9,7 +9,7 @@
   <td>{{ row.line_cost_kpo }}</td>
   <td>
     <button class="tbl-btn" type="button"
-            hx-post="{{ team_routes.hire_player(space_id, team_id) }}"
+            hx-post="{{ app_routes.team_creation.hire_player(space_id, team_id) }}"
             hx-ext="json-enc"
             hx-vals='{"player_id":"{{ row.uid }}"}'
             hx-target="closest tr"
@@ -18,7 +18,7 @@
   </td>
   <td>
     <button class="tbl-btn" type="button"
-            hx-post="{{ team_routes.fire_player(space_id, team_id) }}"
+            hx-post="{{ app_routes.team_creation.fire_player(space_id, team_id) }}"
             hx-ext="json-enc"
             hx-vals='{"player_id":"{{ row.uid }}"}'
             hx-target="closest tr"

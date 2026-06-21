@@ -10,8 +10,8 @@
            roster_line_id: '{{ p.roster_line_id }}',
            spp: {{ spp_pool }},
            acquired: '{{ p.acquired_csv }}',
-           on_acquire: '{{ team_routes.spend_spp(space_id, team_id, p.id) }}',
-           on_cancel: '{{ team_routes.spend_spp(space_id, team_id, p.id) }}'
+           on_acquire: '{{ app_routes.team_creation.spend_spp(space_id, team_id, p.id) }}',
+           on_cancel: '{{ app_routes.team_creation.spend_spp(space_id, team_id, p.id) }}'
          });
        ">
     <div class="player-row-jersey">{{ p.jersey }}</div>

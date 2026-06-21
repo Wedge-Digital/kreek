@@ -2,7 +2,6 @@ use crate::app::routes::AppRoutes;
 use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::teams::domain::team::{GamePhase, ParticipationStatus, Team};
 use crate::state::AppState;
-use crate::web::routes::Routes as WebRoutes;
 use askama::Template;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -150,7 +149,7 @@ fn status_display(team: &Team) -> (String, String) {
 #[derive(Template)]
 #[template(path = "teams-team-detail.html")]
 pub struct TeamDetailTemplate {
-    pub web_routes: WebRoutes,
+    pub app_routes: AppRoutes,
     pub vm: TeamDetailVm,
     pub back_url: String,
 }
@@ -183,7 +182,7 @@ pub async fn team_detail(
     let ref_repo = state.references.repository.as_ref();
 
     TeamDetailTemplate {
-        web_routes: Default::default(),
+        app_routes: Default::default(),
         vm: TeamDetailVm::from(&team, &space_id, ref_repo),
         back_url,
     }

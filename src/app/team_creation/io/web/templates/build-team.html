@@ -28,7 +28,7 @@
 
         <div class="roster-league-col">
           <div class="league-selector-label">Roster</div>
-          <div hx-get="{{ team_routes.roster_picker_widget(space_id, team_id) }}"
+          <div hx-get="{{ app_routes.team_creation.roster_picker_widget(space_id, team_id) }}"
                hx-trigger="load"
                hx-target="this"
                hx-swap="innerHTML">
@@ -42,7 +42,7 @@
                hx-vals='js:{
                  "roster_id": (event.detail?.uid || document.body.dataset.rosterUid || ""),
                  "selected": (event.detail?.league_id || ""),
-                 "on_select": "{{ team_routes.set_league(space_id, team_id) }}"
+                 "on_select": "{{ app_routes.team_creation.set_league(space_id, team_id) }}"
                }'
                hx-target="this"
                hx-swap="innerHTML">
@@ -56,7 +56,7 @@
                hx-vals='js:{
                  "roster_id": (event.detail?.uid || document.body.dataset.rosterUid || ""),
                  "selected": (event.detail?.special_rule_id || ""),
-                 "on_select": "{{ team_routes.set_special_rule(space_id, team_id) }}"
+                 "on_select": "{{ app_routes.team_creation.set_special_rule(space_id, team_id) }}"
                }'
                hx-target="this"
                hx-swap="innerHTML">
@@ -68,7 +68,7 @@
       <!-- Étape 3 : Joueurs -->
       <div class="section-label">3 — Sélectionnez vos joueurs</div>
       <div id="player-table-container"
-           hx-get="{{ team_routes.player_table_widget(space_id, team_id) }}"
+           hx-get="{{ app_routes.team_creation.player_table_widget(space_id, team_id) }}"
            hx-trigger="load, rosterSelected from:body"
            hx-vals='js:{"roster_uid": (event?.detail?.uid || "{{ selected_roster_uid.as_deref().unwrap_or_default() }}")}'
            hx-target="this"
@@ -78,7 +78,7 @@
       <!-- Étape 4 : Staff -->
       <div class="section-label">4 — Sélectionnez votre staff</div>
       <div id="staff-table-container"
-           hx-get="{{ team_routes.staff_table_widget(space_id, team_id) }}"
+           hx-get="{{ app_routes.team_creation.staff_table_widget(space_id, team_id) }}"
            hx-trigger="load, teamMutated from:body"
            hx-target="this"
            hx-swap="innerHTML">
@@ -87,7 +87,7 @@
     </div>
       <div style="display: flex; justify-content: center;">
         <button class="btn btn-outline"
-                hx-get="{{ team_routes.draft_team(space_id) }}"
+                hx-get="{{ app_routes.team_creation.draft_team(space_id) }}"
                 hx-target="#app-content"
                 hx-select="#app-content"
                 hx-swap="innerHTML"
@@ -120,14 +120,14 @@
 
     <!-- Panier -->
     <div id="team-cart" class="cart"
-         hx-get="{{ team_routes.cart_widget(space_id, team_id) }}"
+         hx-get="{{ app_routes.team_creation.cart_widget(space_id, team_id) }}"
          hx-trigger="load, teamMutated from:body"
          hx-target="this"
          hx-swap="innerHTML">
     </div>
     <div class="cart-actions" style="margin-top: var(--p1);">
       <a class="btn btn-primary"
-         hx-get="{{ team_routes.finalize_team(space_id, team_id) }}"
+         hx-get="{{ app_routes.team_creation.finalize_team(space_id, team_id) }}"
          hx-target="#app-content"
          hx-select="#app-content"
          hx-swap="innerHTML"

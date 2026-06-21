@@ -1,7 +1,6 @@
-use crate::app::competitions::routes::Routes;
+use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId};
 use crate::state::AppState;
-use crate::web::routes::Routes as WebRoutes;
 use askama::Template;
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
@@ -498,8 +497,7 @@ fn mock_flop_casualties() -> Vec<StatRow> {
 #[derive(Template)]
 #[template(path = "competition-detail.html")]
 pub struct CompetitionDetailTemplate {
-    pub web_routes: WebRoutes,
-    pub competition_routes: Routes,
+    pub app_routes: AppRoutes,
     pub space_id: String,
     pub competition_id: String,
     pub season_id: String,
@@ -661,8 +659,7 @@ fn full_page(
     flop_casualties: Vec<StatRow>,
 ) -> Response {
     CompetitionDetailTemplate {
-        web_routes: WebRoutes,
-        competition_routes: Routes,
+        app_routes: AppRoutes::default(),
         space_id,
         competition_id,
         season_id,
@@ -704,8 +701,7 @@ pub async fn get_competition_detail(
     };
 
     CompetitionDetailTemplate {
-        web_routes: WebRoutes,
-        competition_routes: Routes,
+        app_routes: AppRoutes::default(),
         space_id,
         competition_id,
         season_id,

@@ -7,7 +7,7 @@
 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--p2);">
     <div class="h3-gras">Mes Équipes</div>
     <a class="btn btn-primary-blue btn-sm"
-       hx-get="{{ team_routes.draft_team(space_id) }}"
+       hx-get="{{ app_routes.team_creation.draft_team(space_id) }}"
        hx-target="#app-content"
        hx-select="#app-content"
        hx-swap="innerHTML"

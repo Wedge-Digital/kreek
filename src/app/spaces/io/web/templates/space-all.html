@@ -14,7 +14,7 @@
 
 <form id="join-spaces-form"
       hx-ext="json-enc"
-      hx-post="{{ space_routes.join() }}"
+      hx-post="{{ app_routes.spaces.join() }}"
       hx-target="#app-content"
       hx-swap="innerHTML"
       hx-push-url="true">
@@ -47,8 +47,8 @@
 </form>
 
 <p>Si vous souhaitez créer une compétition, une ligue....</p>
-<a class="btn btn-primary" href="{{ space_routes.register_space() }}"
-   hx-get="{{ space_routes.register_space() }}"
+<a class="btn btn-primary" href="{{ app_routes.spaces.register_space() }}"
+   hx-get="{{ app_routes.spaces.register_space() }}"
    hx-target="#app-content"
    hx-select="#app-content"
    hx-swap="innerHTML"

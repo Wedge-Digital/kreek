@@ -15,7 +15,7 @@
       Créez la première pour inviter des équipes et gérer vos ligues.
     </p>
     <button class="btn btn-primary"
-            hx-get="{{ competition_routes.new_competition(space_id) }}"
+            hx-get="{{ app_routes.competitions.new_competition(space_id) }}"
             hx-target="#app-content"
             hx-select="#app-content"
             hx-swap="innerHTML"
@@ -30,7 +30,7 @@
   <div class="section-header competitions">
     <div class="h3-gras">Toutes les compétitions</div>
     <button class="btn btn-primary btn-fit"
-            hx-get="{{ competition_routes.new_competition(space_id) }}"
+            hx-get="{{ app_routes.competitions.new_competition(space_id) }}"
             hx-target="#app-content"
             hx-select="#app-content"
             hx-swap="innerHTML"

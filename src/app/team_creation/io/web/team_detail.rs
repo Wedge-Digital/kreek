@@ -1,6 +1,5 @@
-use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
+use crate::app::routes::AppRoutes;
 use crate::state::AppState;
-use crate::web::routes::Routes as WebRoutes;
 use askama::Template;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -9,8 +8,7 @@ use axum::response::{Html, IntoResponse, Response};
 #[derive(Template)]
 #[template(path = "team-detail.html")]
 pub struct TeamDetailTemplate {
-    pub web_routes: WebRoutes,
-    pub team_routes: TeamCreationRoutes,
+    pub app_routes: AppRoutes,
     pub space_id: String,
     pub team_id: String,
 }
@@ -29,8 +27,7 @@ pub async fn team_detail(
     State(_state): State<AppState>,
 ) -> impl IntoResponse {
     TeamDetailTemplate {
-        web_routes: Default::default(),
-        team_routes: Default::default(),
+        app_routes: Default::default(),
         space_id,
         team_id,
     }

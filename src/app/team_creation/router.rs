@@ -1,4 +1,5 @@
-use crate::app::team_creation::io::web::build_team::{build_team, submit_team};
+use crate::app::team_creation::io::web::build_team::display_page::build_team;
+use crate::app::team_creation::io::web::build_team::submit_team::submit_team;
 use crate::app::team_creation::io::web::widgets::cart_widget::cart_widget;
 use crate::app::team_creation::io::web::widgets::player_table_widget::{
     fire_player, hire_player, player_table_widget,

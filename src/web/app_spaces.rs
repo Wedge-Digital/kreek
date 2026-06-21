@@ -1,7 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::news::routes::Routes as NewsRoutes;
+use crate::app::routes::AppRoutes;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::SpaceSummary;
-use crate::app::spaces::routes::Routes;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::State;
@@ -11,8 +10,7 @@ use axum::response::{Html, IntoResponse, Response};
 #[derive(Template)]
 #[template(path = "app-spaces.html")]
 pub struct AppSpaces {
-    pub routes: Routes,
-    pub news_routes: NewsRoutes,
+    pub app_routes: AppRoutes,
     pub spaces: Vec<SpaceSummary>,
     pub active_space_id: Option<String>,
 }
@@ -66,8 +64,7 @@ pub async fn app_spaces(
         .and_then(extract_space_id);
 
     AppSpaces {
-        routes: Routes::default(),
-        news_routes: NewsRoutes::default(),
+        app_routes: AppRoutes::default(),
         spaces,
         active_space_id,
     }

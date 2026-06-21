@@ -57,7 +57,7 @@
             <div class="recap-card-icon">🏟️</div>
             <div class="recap-card-title">Informations générales</div>
             <a class="recap-card-edit"
-               hx-get="{{ competition_routes.new_competition(space_id) }}"
+               hx-get="{{ app_routes.competitions.new_competition(space_id) }}"
                hx-target="#app-content"
                hx-select="#app-content"
                hx-swap="innerHTML"
@@ -105,7 +105,7 @@
             <div class="recap-card-icon">📋</div>
             <div class="recap-card-title">Règles de la compétition</div>
             <a class="recap-card-edit"
-               hx-get="{{ competition_routes.new_competition_rules(space_id, competition_id, season_id) }}"
+               hx-get="{{ app_routes.competitions.new_competition_rules(space_id, competition_id, season_id) }}"
                hx-target="#app-content"
                hx-select="#app-content"
                hx-swap="innerHTML"
@@ -154,7 +154,7 @@
             <div class="recap-card-icon">🏗️</div>
             <div class="recap-card-title">Structure de la compétition</div>
             <a class="recap-card-edit"
-               hx-get="{{ competition_routes.new_competition_structure(space_id, competition_id, season_id) }}"
+               hx-get="{{ app_routes.competitions.new_competition_structure(space_id, competition_id, season_id) }}"
                hx-target="#app-content"
                hx-select="#app-content"
                hx-swap="innerHTML"
@@ -190,7 +190,7 @@
             <div class="recap-card-icon">📩</div>
             <div class="recap-card-title">Invitations</div>
             <a class="recap-card-edit"
-               hx-get="{{ competition_routes.new_competition_invitations(space_id, competition_id, season_id) }}"
+               hx-get="{{ app_routes.competitions.new_competition_invitations(space_id, competition_id, season_id) }}"
                hx-target="#app-content"
                hx-select="#app-content"
                hx-swap="innerHTML"
@@ -233,7 +233,7 @@
             Vous pourrez modifier les paramètres depuis le panneau d'administration.
         </div>
         <button class="btn-cta"
-                hx-post="{{ competition_routes.new_competition_validation(space_id, competition_id, season_id) }}"
+                hx-post="{{ app_routes.competitions.new_competition_validation(space_id, competition_id, season_id) }}"
                 hx-target="#finalize-error"
                 hx-swap="innerHTML">
             🏆 Créer la compétition
@@ -246,7 +246,7 @@
 
     <div class="form-actions--left">
         <button class="btn btn-outline btn-action"
-                hx-get="{{ competition_routes.new_competition_invitations(space_id, competition_id, season_id) }}"
+                hx-get="{{ app_routes.competitions.new_competition_invitations(space_id, competition_id, season_id) }}"
                 hx-target="#app-content"
                 hx-select="#app-content"
                 hx-swap="innerHTML"

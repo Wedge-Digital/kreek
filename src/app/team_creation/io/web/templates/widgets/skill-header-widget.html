@@ -3,13 +3,13 @@
   <div class="skill-header-identity">
     <input class="jersey-input" type="number" name="jersey" value="{{ p.jersey }}"
            min="1" max="99"
-           hx-post="{{ team_routes.set_player_identity(space_id, team_id, p.player_id) }}"
+           hx-post="{{ app_routes.team_creation.set_player_identity(space_id, team_id, p.player_id) }}"
            hx-ext="json-enc"
            hx-trigger="change"
            hx-swap="none">
     <input class="player-name-input" type="text" name="name" value="{{ p.name }}"
            placeholder="Nom du joueur"
-           hx-post="{{ team_routes.set_player_identity(space_id, team_id, p.player_id) }}"
+           hx-post="{{ app_routes.team_creation.set_player_identity(space_id, team_id, p.player_id) }}"
            hx-ext="json-enc"
            hx-trigger="blur"
            hx-swap="none">
@@ -34,7 +34,7 @@
         <span class="acquired-tag-name">{{ skill.name }}</span>
         <span class="acquired-tag-meta">{{ skill.mode_label }} · {{ skill.spp_cost }} SPP</span>
         <button class="acquired-tag-cancel"
-                hx-delete="{{ team_routes.cancel_spp(space_id, team_id, p.player_id, skill.skill_id) }}"
+                hx-delete="{{ app_routes.team_creation.cancel_spp(space_id, team_id, p.player_id, skill.skill_id) }}"
                 hx-swap="none"
                 title="Annuler">✕</button>
       </span>

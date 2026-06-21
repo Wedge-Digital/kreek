@@ -27,7 +27,7 @@
 <body>
   <div class="app-layout">
     <div class="sidebar"
-         hx-get="{{ web_routes.spaces() }}"
+         hx-get="{{ app_routes.web.spaces() }}"
          hx-trigger="load, space:changed from:body"
          hx-swap="innerHTML">
     </div>
@@ -36,7 +36,7 @@
       <!-- Menu bar -->
       <div class="menu-bar"
            hx-trigger="load, space:changed from:body, htmx:pushedIntoHistory from:body"
-           hx-get="{{ web_routes.menu() }}"
+           hx-get="{{ app_routes.web.menu() }}"
            hx-swap="innerHTML">
       </div>
 

@@ -1,6 +1,6 @@
 use crate::app::shared_kernel::common_types::EntityId;
 use crate::app::team_creation::io::web::view_models::FinalizePlayerVm;
-use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
+use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -10,7 +10,7 @@ use axum::response::{Html, IntoResponse, Response};
 #[derive(Template)]
 #[template(path = "widgets/player-list-widget.html")]
 pub struct PlayerListWidgetTemplate {
-    pub team_routes: TeamCreationRoutes,
+    pub app_routes: AppRoutes,
     pub space_id: String,
     pub team_id: String,
     pub spp_pool: u8,
@@ -83,7 +83,7 @@ pub async fn player_list_widget(
         .collect();
 
     PlayerListWidgetTemplate {
-        team_routes: Default::default(),
+        app_routes: Default::default(),
         space_id,
         team_id,
         spp_pool: team.spp_pool,

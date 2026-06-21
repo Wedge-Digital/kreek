@@ -15,7 +15,7 @@
     </div>
 
     <form class="create-body new-space"
-          hx-post="{{ space_routes.register_space() }}"
+          hx-post="{{ app_routes.spaces.register_space() }}"
           hx-target="#new-space-card"
           hx-swap="outerHTML">
 
@@ -34,7 +34,7 @@
 
         <div class="form-actions">
             <button type="button" class="btn btn-outline"
-                    hx-get="{{ space_routes.register_space() }}" hx-target="body" hx-push-url="true">
+                    hx-get="{{ app_routes.spaces.register_space() }}" hx-target="body" hx-push-url="true">
                 Annuler
             </button>
             <button type="submit" class="btn btn-primary">

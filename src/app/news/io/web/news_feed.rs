@@ -1,8 +1,7 @@
 use crate::app::news::domain::article::Article;
-use crate::app::news::routes::Routes as NewsRoutes;
+use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::common_types::SpaceId;
 use crate::state::AppState;
-use crate::web::routes::Routes as WebRoutes;
 use askama::Template;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
@@ -101,8 +100,7 @@ fn build_pagination(page: i64, total_pages: i64) -> Vec<PaginationItem> {
 #[derive(Template, Default)]
 #[template(path = "news-feed.html")]
 pub struct NewsFeedTemplate {
-    pub web_routes: WebRoutes,
-    pub news_routes: NewsRoutes,
+    pub app_routes: AppRoutes,
     pub space_id: String,
     pub featured: Option<ArticleViewModel>,
     pub articles: Vec<ArticleViewModel>,
@@ -154,8 +152,7 @@ pub async fn get_news_feed(
     let pagination_items = build_pagination(page, total_pages);
 
     NewsFeedTemplate {
-        web_routes: Default::default(),
-        news_routes: Default::default(),
+        app_routes: Default::default(),
         space_id: space_id_raw,
         featured,
         articles: view_models,

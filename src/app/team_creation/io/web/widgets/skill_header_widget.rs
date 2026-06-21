@@ -1,5 +1,5 @@
 use crate::app::shared_kernel::common_types::EntityId;
-use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
+use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, Query, State};
@@ -33,7 +33,7 @@ pub struct SkillHeaderVm {
 #[derive(Template)]
 #[template(path = "widgets/skill-header-widget.html")]
 pub struct SkillHeaderWidgetTemplate {
-    pub team_routes: TeamCreationRoutes,
+    pub app_routes: AppRoutes,
     pub space_id: String,
     pub team_id: String,
     pub player: Option<SkillHeaderVm>,
@@ -55,7 +55,7 @@ pub async fn skill_header_widget(
 ) -> impl IntoResponse {
     if params.player_id.is_empty() {
         return SkillHeaderWidgetTemplate {
-            team_routes: Default::default(),
+            app_routes: Default::default(),
             space_id,
             team_id,
             player: None,
@@ -129,7 +129,7 @@ pub async fn skill_header_widget(
         });
 
     SkillHeaderWidgetTemplate {
-        team_routes: Default::default(),
+        app_routes: Default::default(),
         space_id,
         team_id,
         player: player_vm,

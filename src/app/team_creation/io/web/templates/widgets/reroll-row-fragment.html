@@ -6,14 +6,14 @@
   <td>{{ reroll.line_cost }}</td>
   <td>
     <button class="tbl-btn" type="button"
-            hx-post="{{ team_routes.buy_reroll(space_id, team_id) }}"
+            hx-post="{{ app_routes.team_creation.buy_reroll(space_id, team_id) }}"
             hx-target="closest tr"
             hx-swap="outerHTML"
             {% if reroll.quantity >= reroll.max %}disabled{% endif %}>+</button>
   </td>
   <td>
     <button class="tbl-btn" type="button"
-            hx-post="{{ team_routes.remove_reroll(space_id, team_id) }}"
+            hx-post="{{ app_routes.team_creation.remove_reroll(space_id, team_id) }}"
             hx-target="closest tr"
             hx-swap="outerHTML"
             {% if reroll.quantity == 0 %}disabled{% endif %}>−</button>

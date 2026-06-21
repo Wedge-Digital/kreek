@@ -1,7 +1,5 @@
 use crate::app::routes::AppRoutes;
-use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
 use crate::web::extractors::space_permissions::SpacePermissions;
-use crate::web::routes::Routes as WebRoutes;
 use askama::Template;
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
@@ -9,9 +7,7 @@ use axum::response::{Html, IntoResponse, Response};
 #[derive(Template)]
 #[template(path = "draft-team.html")]
 pub struct DraftTeamTemplate {
-    pub web_routes: WebRoutes,
     pub app_routes: AppRoutes,
-    pub team_routes: TeamCreationRoutes,
     pub space_id: String,
     pub logo_url_value: String,
     pub logo_error: Option<String>,
@@ -29,9 +25,7 @@ impl IntoResponse for DraftTeamTemplate {
 
 pub async fn draft_team(perms: SpacePermissions) -> impl IntoResponse {
     DraftTeamTemplate {
-        web_routes: Default::default(),
         app_routes: Default::default(),
-        team_routes: Default::default(),
         space_id: perms.space_id.to_string(),
         logo_url_value: String::new(),
         logo_error: None,

@@ -1,6 +1,5 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::domain::competition_rules::CompetitionRules;
-use crate::app::competitions::routes::Routes;
 use crate::app::competitions::use_cases::create_draft_competition::{
     execute, CreateDraftCompetitionCommand, CreateDraftCompetitionError,
 };
@@ -16,7 +15,6 @@ use crate::app::shared_kernel::common_types::{
 };
 use crate::app::shared_kernel::competition_name::CompetitionName;
 use crate::state::AppState;
-use crate::web::routes::Routes as WebRoutes;
 use askama::Template;
 use axum::body::Body;
 use axum::extract::{Path, State};
@@ -30,8 +28,7 @@ use serde::Deserialize;
 #[derive(Template)]
 #[template(path = "new-competition-phase-2.html")]
 pub struct NewCompetitionPhase2Template {
-    pub web_routes: WebRoutes,
-    pub routes: AppRoutes,
+    pub app_routes: AppRoutes,
     pub space_id: String,
     pub competition_id: String,
     pub season_id: String,
@@ -77,8 +74,7 @@ pub async fn get_new_competition_phase_2(
         .unwrap_or_else(|| "Saison 1".to_string());
 
     NewCompetitionPhase2Template {
-        web_routes: WebRoutes,
-        routes: AppRoutes::default(),
+        app_routes: AppRoutes::default(),
         space_id,
         competition_id,
         season_id,
@@ -93,7 +89,7 @@ pub async fn get_new_competition_phase_2(
 #[derive(Template)]
 #[template(path = "new-competition-phase-1.html")]
 pub struct NewCompetitionTemplate {
-    pub web_routes: WebRoutes,
+    pub app_routes: AppRoutes,
     pub space_id: String,
     pub competition_id: Option<String>,
     pub season_id: Option<String>,
@@ -103,13 +99,12 @@ pub struct NewCompetitionTemplate {
     pub logo_url_value: String,
     pub logo_error: Option<String>,
     pub general_error: Option<String>,
-    pub competition_routes: Routes,
 }
 
 impl Default for NewCompetitionTemplate {
     fn default() -> Self {
         Self {
-            web_routes: WebRoutes,
+            app_routes: AppRoutes::default(),
             space_id: String::new(),
             competition_id: None,
             season_id: None,
@@ -119,7 +114,6 @@ impl Default for NewCompetitionTemplate {
             logo_url_value: String::new(),
             logo_error: None,
             general_error: None,
-            competition_routes: Routes,
         }
     }
 }
@@ -280,7 +274,7 @@ pub async fn post_new_competition(
     )
     .await
     {
-        Ok((competition_id, season_id)) => hx_redirect(Routes.new_competition_rules(
+        Ok((competition_id, season_id)) => hx_redirect(AppRoutes::default().competitions.new_competition_rules(
             &space_id,
             &competition_id.to_string(),
             &season_id.to_string(),
@@ -388,7 +382,7 @@ pub async fn post_update_competition(
     };
 
     match execute_update(cmd, state.competitions.competition_repository.as_ref()).await {
-        Ok(()) => hx_redirect(Routes.new_competition_rules(
+        Ok(()) => hx_redirect(AppRoutes::default().competitions.new_competition_rules(
             &space_id,
             &competition_id,
             &season_id.to_string(),
@@ -441,7 +435,7 @@ pub async fn post_competition_rules(
 
     match execute_save_rules(cmd, state.competitions.season_repository.as_ref()).await {
         Ok(()) => {
-            hx_redirect(Routes.new_competition_structure(&space_id, &competition_id, &season_id))
+            hx_redirect(AppRoutes::default().competitions.new_competition_structure(&space_id, &competition_id, &season_id))
         }
 
         Err(SaveCompetitionRulesError::RosterInMultipleTiers {

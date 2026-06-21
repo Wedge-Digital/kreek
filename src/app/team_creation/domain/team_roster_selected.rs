@@ -391,9 +391,8 @@ impl RosterSelectedTeam {
     /// Détermine si la page de finalisation est nécessaire.
     /// Retourne false (skip) seulement si :
     ///   - le pool SPP est vide (rien à dépenser), ET
-    ///   - la ligue est fixée par le roster (exactement 1 option → pas de choix)
-    pub fn needs_finalization(&self, available_league_count: usize) -> bool {
-        self.spp_pool > 0 || available_league_count != 1
+    pub fn needs_finalization(&self) -> bool {
+        self.spp_pool > 0
     }
 
     pub fn validate_for_submission(&self) -> Result<(), Vec<DomainError>> {

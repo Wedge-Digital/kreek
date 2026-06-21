@@ -1,5 +1,4 @@
-use crate::app::news::routes::Routes as NewsRoutes;
-use crate::web::routes::Routes as WebRoutes;
+use crate::app::routes::AppRoutes;
 use askama::Template;
 use axum::extract::Path;
 use axum::http::StatusCode;
@@ -8,8 +7,7 @@ use axum::response::{Html, IntoResponse, Response};
 #[derive(Template, Default)]
 #[template(path = "new-article.html")]
 pub struct NewArticleTemplate {
-    pub web_routes: WebRoutes,
-    pub news_routes: NewsRoutes,
+    pub app_routes: AppRoutes,
     pub space_id: String,
     pub image_url_value: String,
     pub image_error: Option<String>,

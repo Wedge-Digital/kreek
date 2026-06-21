@@ -7,7 +7,7 @@
 
   <div style="margin-bottom: var(--p1);">
     <a style="color: var(--dark-3); font-size: var(--text-tiny); cursor: pointer;"
-       hx-get="{{ team_routes.my_teams(space_id) }}"
+       hx-get="{{ app_routes.team_creation.my_teams(space_id) }}"
        hx-target="#app-content"
        hx-select="#app-content"
        hx-swap="innerHTML"

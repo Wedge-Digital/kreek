@@ -116,7 +116,7 @@
   <!-- ── Navigation ── -->
   <div class="form-actions">
     <button class="btn btn-outline btn-action"
-            hx-get="{{ routes.competitions.new_competition_info(space_id, competition_id) }}"
+            hx-get="{{ app_routes.competitions.new_competition_info(space_id, competition_id) }}"
             hx-target="#app-content"
             hx-select="#app-content"
             hx-swap="innerHTML"
@@ -135,9 +135,9 @@
 <script>
 (function () {
   const INITIAL_RULES = {{ existing_rules_json|safe }};
-  const ROSTER_PICKER_URL = "{{ routes.references.roster_picker() }}";
-  const INDUCEMENT_PICKER_URL = "{{ routes.references.inducement_picker() }}";
-  const STAR_PLAYER_PICKER_URL = "{{ routes.references.star_player_picker() }}";
+  const ROSTER_PICKER_URL = "{{ app_routes.references.roster_picker() }}";
+  const INDUCEMENT_PICKER_URL = "{{ app_routes.references.inducement_picker() }}";
+  const STAR_PLAYER_PICKER_URL = "{{ app_routes.references.star_player_picker() }}";
 
   const TIER_COLORS = [
     { head: "rgba(230,57,70,0.08)",   badge: "var(--red-badge)" },

@@ -2,7 +2,7 @@
 {% for space in spaces %}
 <div class="league-btn{% if active_space_id.as_deref() == Some(space.id.as_str()) %} league-btn-active{% endif %}"
      hx-trigger="click"
-     hx-get="{{ news_routes.space_home(space.id) }}"
+     hx-get="{{ app_routes.news.space_home(space.id) }}"
      hx-target="#app-content"
      hx-select="#app-content"
      hx-swap="innerHTML"
@@ -14,7 +14,7 @@
 {% endfor %}
 <div class="league-btn league-btn--icon"
      hx-trigger="click"
-     hx-get="{{ routes.register_space() }}"
+     hx-get="{{ app_routes.spaces.register_space() }}"
      hx-target="#app-content"
      hx-select="#app-content"
      hx-swap="innerHTML"
@@ -22,7 +22,7 @@
      title="Ajouter une ligue">+</div>
 <div class="find-space-btn league-btn--icon"
      hx-trigger="click"
-     hx-get="{{ routes.space_all() }}"
+     hx-get="{{ app_routes.spaces.space_all() }}"
      hx-target="#app-content"
      hx-select="#app-content"
      hx-swap="innerHTML"

@@ -8,7 +8,7 @@
 
 <form id="draft-team-form"
       hx-ext="json-enc"
-      hx-post="{{ team_routes.draft_team(space_id) }}"
+      hx-post="{{ app_routes.team_creation.draft_team(space_id) }}"
       hx-target="#draft-team-error"
       hx-swap="innerHTML">
 

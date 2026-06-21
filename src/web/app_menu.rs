@@ -1,9 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::auth::routes::Routes as AuthRoutes;
-use crate::app::competitions::routes::Routes as CompetitionRoutes;
-use crate::app::team_creation::routes::Routes as TeamRoutes;
+use crate::app::routes::AppRoutes;
 use crate::state::AppState;
-use crate::web::routes::Routes;
 use askama::Template;
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
@@ -19,10 +16,7 @@ pub enum ActiveSection {
 #[derive(Template, Default)]
 #[template(path = "app-menu.html")]
 pub struct AppMenu {
-    pub routes: Routes,
-    pub auth_routes: AuthRoutes,
-    pub competition_routes: CompetitionRoutes,
-    pub team_routes: TeamRoutes,
+    pub app_routes: AppRoutes,
     pub space_name: Option<String>,
     pub space_id: Option<String>,
     pub active_section: Option<ActiveSection>,

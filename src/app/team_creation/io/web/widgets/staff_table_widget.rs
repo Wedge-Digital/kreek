@@ -1,14 +1,14 @@
 use crate::app::shared_kernel::common_types::EntityId;
 use crate::app::shared_kernel::staff::StaffId;
 use crate::app::team_creation::io::web::view_models::{RerollVm, StaffRowVm};
-use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
-use crate::app::team_creation::use_cases::buy_reroll as buy_reroll_uc;
-use crate::app::team_creation::use_cases::buy_staff as buy_staff_uc;
+use crate::app::routes::AppRoutes;
+use crate::app::team_creation::use_cases::build_team::buy_reroll as buy_reroll_uc;
+use crate::app::team_creation::use_cases::build_team::buy_staff as buy_staff_uc;
 use crate::app::team_creation::use_cases::commands::{
     BuyRerollCommand, BuyStaffCommand, RemoveRerollCommand, RemoveStaffCommand,
 };
-use crate::app::team_creation::use_cases::remove_reroll as remove_reroll_uc;
-use crate::app::team_creation::use_cases::remove_staff as remove_staff_uc;
+use crate::app::team_creation::use_cases::build_team::remove_reroll as remove_reroll_uc;
+use crate::app::team_creation::use_cases::build_team::remove_staff as remove_staff_uc;
 use crate::state::AppState;
 use askama::Template;
 use axum::body::Body;
@@ -33,7 +33,7 @@ fn staff_error(msg: &str) -> Response {
 #[derive(Template)]
 #[template(path = "widgets/staff-table-widget.html")]
 pub struct StaffTableWidgetTemplate {
-    pub team_routes: TeamCreationRoutes,
+    pub app_routes: AppRoutes,
     pub space_id: String,
     pub team_id: String,
     pub staff_rows: Vec<StaffRowVm>,
@@ -73,7 +73,7 @@ pub async fn staff_table_widget(
     };
 
     StaffTableWidgetTemplate {
-        team_routes: Default::default(),
+        app_routes: Default::default(),
         space_id,
         team_id,
         staff_rows,
@@ -88,7 +88,7 @@ pub async fn staff_table_widget(
 #[template(path = "widgets/staff-row-fragment.html")]
 pub struct StaffRowFragment {
     pub row: StaffRowVm,
-    pub team_routes: TeamCreationRoutes,
+    pub app_routes: AppRoutes,
     pub space_id: String,
     pub team_id: String,
 }
@@ -112,7 +112,7 @@ impl IntoResponse for StaffRowFragment {
 #[template(path = "widgets/reroll-row-fragment.html")]
 pub struct RerollRowFragment {
     pub reroll: RerollVm,
-    pub team_routes: TeamCreationRoutes,
+    pub app_routes: AppRoutes,
     pub space_id: String,
     pub team_id: String,
 }
@@ -178,7 +178,7 @@ pub async fn buy_staff(
     };
     StaffRowFragment {
         row,
-        team_routes: Default::default(),
+        app_routes: Default::default(),
         space_id,
         team_id,
     }
@@ -228,7 +228,7 @@ pub async fn remove_staff(
     };
     StaffRowFragment {
         row,
-        team_routes: Default::default(),
+        app_routes: Default::default(),
         space_id,
         team_id,
     }
@@ -269,7 +269,7 @@ pub async fn buy_reroll(
     let reroll = RerollVm::from_domain(&updated_team);
     RerollRowFragment {
         reroll,
-        team_routes: Default::default(),
+        app_routes: Default::default(),
         space_id,
         team_id,
     }
@@ -311,7 +311,7 @@ pub async fn remove_reroll(
     let reroll = RerollVm::from_domain(&updated_team);
     RerollRowFragment {
         reroll,
-        team_routes: Default::default(),
+        app_routes: Default::default(),
         space_id,
         team_id,
     }

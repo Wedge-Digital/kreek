@@ -1,7 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::team_creation::domain::roster::SpecialRuleId;
-use crate::app::team_creation::use_cases::set_special_rule as uc;
-use crate::app::team_creation::use_cases::set_special_rule::SetSpecialRuleCommand;
+use crate::app::team_creation::use_cases::build_team::set_special_rule as uc;
+use crate::app::team_creation::use_cases::build_team::set_special_rule::SetSpecialRuleCommand;
 use crate::app::shared_kernel::common_types::EntityId;
 use crate::state::AppState;
 use axum::extract::{Path, State};

@@ -201,11 +201,7 @@ pub struct RulesTierVm {
     pub start_xp: u32,
 }
 
-pub struct RulesPanelVm {
-    pub competition_name: String,
-    pub season_name: String,
-    pub tiers: Vec<RulesTierVm>,
-}
+
 
 // ── Finalize page VMs ────────────────────────────────────────────────────────
 

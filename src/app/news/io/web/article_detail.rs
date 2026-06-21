@@ -1,10 +1,9 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::news::domain::article::ArticleParagraph;
 use crate::app::news::domain::comment::Comment;
-use crate::app::news::routes::Routes as NewsRoutes;
+use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::common_types::ArticleId;
 use crate::state::AppState;
-use crate::web::routes::Routes as WebRoutes;
 use askama::Template;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -92,8 +91,7 @@ impl From<Comment> for CommentViewModel {
 #[derive(Template)]
 #[template(path = "article-detail.html")]
 pub struct ArticleDetailTemplate {
-    pub web_routes: WebRoutes,
-    pub news_routes: NewsRoutes,
+    pub app_routes: AppRoutes,
     pub space_id: String,
     pub article_id: String,
     pub title: String,
@@ -169,8 +167,7 @@ pub async fn get_article(
         .unwrap_or_else(|| "?".to_string());
 
     ArticleDetailTemplate {
-        web_routes: Default::default(),
-        news_routes: Default::default(),
+        app_routes: Default::default(),
         space_id: space_id_raw,
         article_id: article_id_raw,
         author_initial,

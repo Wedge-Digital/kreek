@@ -41,25 +41,25 @@
         <div class="detail-right">
             <div class="tabs">
                 <div class="tab {% if active_tab == "standings" %}active{% endif %}"
-                     hx-get="{{ competition_routes.competition_tab_standings(space_id, competition_id, season_id) }}"
+                     hx-get="{{ app_routes.competitions.competition_tab_standings(space_id, competition_id, season_id) }}"
                      hx-target="#tab-content"
                      hx-swap="innerHTML"
                      hx-push-url="true"
                      onclick="setActiveTab(this)">Classement</div>
                 <div class="tab {% if active_tab == "matches" %}active{% endif %}"
-                     hx-get="{{ competition_routes.competition_tab_matches(space_id, competition_id, season_id) }}"
+                     hx-get="{{ app_routes.competitions.competition_tab_matches(space_id, competition_id, season_id) }}"
                      hx-target="#tab-content"
                      hx-swap="innerHTML"
                      hx-push-url="true"
                      onclick="setActiveTab(this)">Matchs</div>
                 <div class="tab {% if active_tab == "teams" %}active{% endif %}"
-                     hx-get="{{ competition_routes.competition_tab_teams(space_id, competition_id, season_id) }}"
+                     hx-get="{{ app_routes.competitions.competition_tab_teams(space_id, competition_id, season_id) }}"
                      hx-target="#tab-content"
                      hx-swap="innerHTML"
                      hx-push-url="true"
                      onclick="setActiveTab(this)">Équipes</div>
                 <div class="tab {% if active_tab == "stats" %}active{% endif %}"
-                     hx-get="{{ competition_routes.competition_tab_stats(space_id, competition_id, season_id) }}"
+                     hx-get="{{ app_routes.competitions.competition_tab_stats(space_id, competition_id, season_id) }}"
                      hx-target="#tab-content"
                      hx-swap="innerHTML"
                      hx-push-url="true"

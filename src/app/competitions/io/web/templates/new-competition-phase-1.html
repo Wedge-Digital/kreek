@@ -45,8 +45,9 @@
     </div>
 
     <form hx-ext="json-enc"
-          hx-post="{% if let Some(cid) = competition_id %}{{ competition_routes.new_competition_info(space_id.as_str(), cid.as_str()) }}{% else %}{{ competition_routes.new_competition(space_id.as_str()) }}{% endif %}"
+          hx-post="{% if let Some(cid) = competition_id %}{{ app_routes.competitions.new_competition_info(space_id.as_str(), cid.as_str()) }}{% else %}{{ app_routes.competitions.new_competition(space_id.as_str()) }}{% endif %}"
           hx-target="#app-content"
+          hx-select="#app-content"
           hx-swap="innerHTML">
 
       {% if let Some(sid) = season_id %}

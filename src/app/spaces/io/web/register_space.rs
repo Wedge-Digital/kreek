@@ -3,13 +3,11 @@ use crate::app::auth::routes::path as auth_path;
 use crate::app::shared_kernel::common_types::CloudinaryImage;
 use crate::app::shared_kernel::space_name::SpaceName;
 use crate::app::spaces::routes::path;
-use crate::app::spaces::routes::Routes as SpaceRoutes;
 use crate::app::spaces::uses_cases::register_new_space::{
     execute, RegisterNewSpaceCommand, RegisterSpaceError,
 };
 use crate::app::routes::AppRoutes;
 use crate::state::AppState;
-use crate::web::routes::Routes as WebRoutes;
 use askama::Template;
 use axum::body::Body;
 use axum::extract::State;
@@ -21,9 +19,7 @@ use serde::Deserialize;
 #[derive(Template, Default)]
 #[template(path = "new-space.html")]
 pub struct NewSpaceTemplate {
-    pub web_routes: WebRoutes,
     pub app_routes: AppRoutes,
-    pub space_routes: SpaceRoutes,
     pub space_name_value: String,
     pub space_name_error: Option<String>,
     pub logo_url_value: String,

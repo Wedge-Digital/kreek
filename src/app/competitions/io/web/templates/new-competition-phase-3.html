@@ -176,7 +176,7 @@
 
   <div class="form-actions">
     <button class="btn btn-outline btn-action"
-            hx-get="{{ competition_routes.new_competition_rules(space_id, competition_id, season_id) }}"
+            hx-get="{{ app_routes.competitions.new_competition_rules(space_id, competition_id, season_id) }}"
             hx-target="#app-content"
             hx-select="#app-content"
             hx-swap="innerHTML"

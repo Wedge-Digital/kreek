@@ -8,7 +8,7 @@
 
   <!-- Breadcrumb -->
   <div class="breadcrumb">
-    <a hx-get="{{ team_routes.my_teams(space_id) }}"
+    <a hx-get="{{ app_routes.team_creation.my_teams(space_id) }}"
        hx-target="#app-content"
        hx-select="#app-content"
        hx-swap="innerHTML"
@@ -31,7 +31,7 @@
       <div class="team-header-roster">{{ roster_name }}</div>
       <div class="team-header-budget">Trésorerie : {{ treasury }} kPo</div>
     </div>
-    <div hx-get="{{ team_routes.spp_budget_widget(space_id, team_id) }}"
+    <div hx-get="{{ app_routes.team_creation.spp_budget_widget(space_id, team_id) }}"
          hx-trigger="load, skillsUpdated from:body"
          hx-target="this"
          hx-swap="innerHTML">
@@ -44,7 +44,7 @@
     <!-- ── C — Liste joueurs (panneau gauche) ─────────────────────── -->
     <div class="finalize-left">
       <div class="section-label">Joueurs</div>
-      <div hx-get="{{ team_routes.player_list_widget(space_id, team_id) }}"
+      <div hx-get="{{ app_routes.team_creation.player_list_widget(space_id, team_id) }}"
            hx-trigger="load, skillsUpdated from:body"
            hx-target="this"
            hx-swap="innerHTML">
@@ -53,7 +53,7 @@
       <!-- ── G — Submit ─────────────────────────────────────────────── -->
       <div class="submit-bar">
         <button class="btn btn-primary"
-                hx-post="{{ team_routes.finalize_team(space_id, team_id) }}"
+                hx-post="{{ app_routes.team_creation.finalize_team(space_id, team_id) }}"
                 hx-target="#submit-errors"
                 hx-swap="innerHTML">
           Soumettre l'équipe →
@@ -67,7 +67,7 @@
 
       <!-- ── D — Skill header (BC team_creation widget) ────────────── -->
       <div id="skill-header"
-           hx-get="{{ team_routes.skill_header_widget(space_id, team_id) }}"
+           hx-get="{{ app_routes.team_creation.skill_header_widget(space_id, team_id) }}"
            hx-trigger="playerSelected from:body, skillsUpdated from:body"
            hx-vals='js:{"player_id": (event.detail?.player_id || "")}'
            hx-target="this"
@@ -127,7 +127,7 @@
           <td><span class="summary-cost">{{ entry.spp_cost }} SPP</span></td>
           <td>
             <button class="btn-cancel-spp"
-                    hx-delete="{{ team_routes.cancel_spp(space_id, team_id, entry.player_id, entry.skill_id) }}"
+                    hx-delete="{{ app_routes.team_creation.cancel_spp(space_id, team_id, entry.player_id, entry.skill_id) }}"
                     hx-swap="none"
                     title="Annuler">✕</button>
           </td>
