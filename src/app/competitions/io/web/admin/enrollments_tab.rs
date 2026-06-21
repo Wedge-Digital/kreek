@@ -1,11 +1,10 @@
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::competitions::io::web::admin::admin_page::render_admin_page;
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::authorization::SpaceProfile;
-use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId, SpaceId};
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 
 #[derive(Template)]
@@ -33,52 +32,17 @@ pub async fn enrollments_tab(
     auth_session: AuthSession,
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
+    headers: HeaderMap,
 ) -> impl IntoResponse {
-    let Some(user) = auth_session.user else {
-        return StatusCode::UNAUTHORIZED.into_response();
-    };
-
-    let comp_id = match CompetitionId::try_new(&competition_id) {
-        Ok(id) => id,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
-    let space_entity_id = match SpaceId::try_new(&space_id) {
-        Ok(id) => id,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
-    let _season_id = match SeasonId::try_new(&season_id) {
-        Ok(id) => id,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-
-    let is_space_admin = matches!(
-        state.spaces.space_repository.find_member_profile(&user.id, &space_entity_id).await,
-        Ok(Some(SpaceProfile::SpaceAdmin))
-    );
-
-    let comp_info = match state.competitions.competition_repository.find_base_info(&comp_id).await {
-        Ok(Some(info)) => info,
-        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
-        Err(e) => {
-            tracing::error!("enrollments_tab competition find: {e}");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    if headers.contains_key("hx-request") {
+        return EnrollmentsTabTemplate {
+            app_routes: AppRoutes::default(),
+            space_id,
+            competition_id,
+            season_id,
         }
-    };
-
-    let is_comp_admin = comp_info.admin_ids.contains(&user.id.to_string())
-        || comp_info.admin_names.contains(&user.coach_name.clone().into_inner());
-
-    if !is_space_admin && !is_comp_admin {
-        return StatusCode::FORBIDDEN.into_response();
+        .into_response();
     }
 
-    EnrollmentsTabTemplate {
-        app_routes: AppRoutes::default(),
-        space_id,
-        competition_id,
-        season_id,
-    }
-    .into_response()
+    render_admin_page(auth_session, &space_id, &competition_id, &season_id, "enrollments", &state).await
 }

@@ -41,16 +41,27 @@ pub async fn admin_page(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
+    render_admin_page(auth_session, &space_id, &competition_id, &season_id, "dashboard", &state).await
+}
+
+pub async fn render_admin_page(
+    auth_session: AuthSession,
+    space_id: &str,
+    competition_id: &str,
+    season_id: &str,
+    active_tab: &str,
+    state: &AppState,
+) -> Response {
     let Some(user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
 
-    let comp_id = match CompetitionId::try_new(&competition_id) {
+    let comp_id = match CompetitionId::try_new(competition_id) {
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let space_entity_id = match SpaceId::try_new(&space_id) {
+    let space_entity_id = match SpaceId::try_new(space_id) {
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
@@ -83,7 +94,7 @@ pub async fn admin_page(
         return StatusCode::FORBIDDEN.into_response();
     }
 
-    let season_entity_id = match SeasonId::try_new(&season_id) {
+    let season_entity_id = match SeasonId::try_new(season_id) {
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
@@ -100,35 +111,48 @@ pub async fn admin_page(
 
     let app_routes = AppRoutes::default();
 
-    let summary = match dashboard_query::execute(
-        &comp_id,
-        &season_entity_id,
-        state.competitions.competition_repository.as_ref(),
-        state.competitions.season_repository.as_ref(),
-    )
-    .await
-    {
-        Ok(s) => s,
-        Err(e) => {
-            tracing::error!("admin_page dashboard_query error: {e:?}");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    let content = match active_tab {
+        "enrollments" => {
+            let tpl = super::enrollments_tab::EnrollmentsTabTemplate {
+                app_routes,
+                space_id: space_id.to_string(),
+                competition_id: competition_id.to_string(),
+                season_id: season_id.to_string(),
+            };
+            tpl.render().unwrap_or_default()
+        }
+        _ => {
+            let summary = match dashboard_query::execute(
+                &comp_id,
+                &season_entity_id,
+                state.competitions.competition_repository.as_ref(),
+                state.competitions.season_repository.as_ref(),
+            )
+            .await
+            {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::error!("admin_page dashboard_query error: {e:?}");
+                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                }
+            };
+
+            let dashboard = build_dashboard_fragment(
+                &summary, &app_routes, space_id, competition_id, season_id,
+            );
+            dashboard.render().unwrap_or_default()
         }
     };
 
-    let dashboard = build_dashboard_fragment(
-        &summary, &app_routes, &space_id, &competition_id, &season_id,
-    );
-    let content = dashboard.render().unwrap_or_default();
-
     AdminPageTemplate {
         app_routes,
-        space_id,
-        competition_id,
-        season_id,
+        space_id: space_id.to_string(),
+        competition_id: competition_id.to_string(),
+        season_id: season_id.to_string(),
         competition_name: comp_info.name,
         season_name,
         admin_count: comp_info.admin_ids.len(),
-        active_tab: "dashboard".to_string(),
+        active_tab: active_tab.to_string(),
         content,
     }
     .into_response()
