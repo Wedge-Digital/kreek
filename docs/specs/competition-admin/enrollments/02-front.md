@@ -1,25 +1,26 @@
-# Inscriptions — Admin compétition
+# Inscriptions — Phase 2 : Architecture front ✅
 
-## Phase 2 — Architecture front ✅
+Page d'assemblage à widgets. Les données d'inscription (équipes pending / enrolled) viennent du BC `teams`. Les données d'invitation (coachs sans équipe) viennent du BC `competitions`.
 
 | Widget | BC | Endpoint | Trigger | Émet | Mode |
 |---|---|---|---|---|---|
 | Stats bar | competitions | inline | — | — | Lecture |
-| Pending list | competitions | `GET .../admin/enrollments/pending` | `load, enrollmentChanged from:body` | — | Lecture + action |
-| Enrolled list | competitions | `GET .../admin/enrollments/enrolled` | `load, enrollmentChanged from:body` | — | Lecture + action |
-| Coaches waiting | competitions | `GET .../admin/enrollments/coaches-waiting` | `load, enrollmentChanged from:body` | — | Lecture |
+| Pending list | teams | `GET /app/{space_id}/team/widgets/pending?competition_id=...&season_id=...` | `load, enrollmentChanged from:body` | — | Lecture + action |
+| Enrolled list | teams | `GET /app/{space_id}/team/widgets/enrolled?competition_id=...&season_id=...` | `load, enrollmentChanged from:body` | — | Lecture + action |
 
 ### Événements
 
-- `enrollmentChanged` — émis après : valider, refuser, renvoyer, tout valider, clôturer inscriptions. Tous les widgets se rechargent.
+- `enrollmentChanged` — émis par les widgets `teams` (approve/reject/dismiss/approve-all) et par le handler `close` (competitions). Tous les widgets se rechargent.
 
 ### Actions
 
-- `POST .../admin/enrollments/{team_id}/approve` → valider une inscription → `HX-Trigger: enrollmentChanged`
-- `POST .../admin/enrollments/{team_id}/reject` → refuser → `HX-Trigger: enrollmentChanged`
-- `POST .../admin/enrollments/{team_id}/dismiss` → renvoyer → `HX-Trigger: enrollmentChanged`
-- `POST .../admin/enrollments/approve-all` → tout valider → `HX-Trigger: enrollmentChanged`
-- `POST .../admin/enrollments/close` → clôturer les inscriptions → `HX-Trigger: enrollmentChanged`
+| Action | BC | Endpoint |
+|---|---|---|
+| Valider une inscription | teams | `POST /app/{space_id}/team/{team_id}/enrollment/approve` → `HX-Trigger: enrollmentChanged` |
+| Refuser une inscription | teams | `POST /app/{space_id}/team/{team_id}/enrollment/reject` → `HX-Trigger: enrollmentChanged` |
+| Renvoyer une équipe | teams | `POST /app/{space_id}/team/{team_id}/enrollment/dismiss` → `HX-Trigger: enrollmentChanged` |
+| Tout valider | teams | `POST /app/{space_id}/team/widgets/pending/approve-all?competition_id=...&season_id=...` → `HX-Trigger: enrollmentChanged` |
+| Clôturer inscriptions | competitions | `POST .../admin/enrollments/close` → `HX-Trigger: enrollmentChanged` |
 
 ### JS côté front
 
