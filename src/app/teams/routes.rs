@@ -7,6 +7,7 @@ pub mod path {
     pub const REJECT_ENROLLMENT: &str = "/app/{space_id}/team/{team_id}/enrollment/reject";
     pub const DISMISS_ENROLLMENT: &str = "/app/{space_id}/team/{team_id}/enrollment/dismiss";
     pub const APPROVE_ALL_ENROLLMENTS: &str = "/app/{space_id}/team/widgets/pending/approve-all";
+    pub const COMPETITION_TEAMS_WIDGET: &str = "/app/team/widgets/competition-teams";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -47,5 +48,8 @@ impl Routes {
     }
     pub fn approve_all_enrollments(&self) -> String {
         path::APPROVE_ALL_ENROLLMENTS.replace("{space_id}", "_")
+    }
+    pub fn competition_teams_widget(&self) -> String {
+        path::COMPETITION_TEAMS_WIDGET.to_string()
     }
 }

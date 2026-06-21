@@ -1,5 +1,5 @@
 use crate::app::teams::domain::team::{Team, TeamDomainEvent};
-use crate::app::teams::ports::{ITeamRepository, RepositoryError, TeamEnrollmentRow};
+use crate::app::teams::ports::{ITeamRepository, RepositoryError, TeamCardRow, TeamEnrollmentRow};
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
 
@@ -25,19 +25,23 @@ impl TeamRepository {
                 competition_id,
                 season_id,
                 name,
+                logo_url,
                 coach_name,
                 roster_name,
+                treasury,
                 ..
             } => {
                 sqlx::query(
-                    "INSERT INTO team_enrollment_projection (team_id, space_id, competition_id, season_id, team_name, coach_name, roster_name, status)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, 'PendingEnrollment')
+                    "INSERT INTO team_projection (team_id, space_id, competition_id, season_id, team_name, coach_name, roster_name, logo_url, team_value, status)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PendingEnrollment')
                      ON CONFLICT (team_id) DO UPDATE SET
                        team_name = EXCLUDED.team_name,
                        coach_name = EXCLUDED.coach_name,
                        roster_name = EXCLUDED.roster_name,
                        competition_id = EXCLUDED.competition_id,
                        season_id = EXCLUDED.season_id,
+                       logo_url = EXCLUDED.logo_url,
+                       team_value = EXCLUDED.team_value,
                        updated_at = now()",
                 )
                 .bind(team_id)
@@ -47,6 +51,8 @@ impl TeamRepository {
                 .bind(name)
                 .bind(coach_name)
                 .bind(roster_name)
+                .bind(logo_url)
+                .bind(treasury.0 as i32)
                 .execute(&mut **tx)
                 .await
                 .map_err(RepositoryError::Database)?;
@@ -57,7 +63,7 @@ impl TeamRepository {
                 ..
             } => {
                 sqlx::query(
-                    "UPDATE team_enrollment_projection
+                    "UPDATE team_projection
                      SET status = 'Enrolled', competition_id = $2, season_id = $3, updated_at = now()
                      WHERE team_id = $1",
                 )
@@ -70,7 +76,7 @@ impl TeamRepository {
             }
             TeamDomainEvent::TeamDismissed => {
                 sqlx::query(
-                    "UPDATE team_enrollment_projection SET status = 'Dismissed', updated_at = now() WHERE team_id = $1",
+                    "UPDATE team_projection SET status = 'Dismissed', updated_at = now() WHERE team_id = $1",
                 )
                 .bind(team_id)
                 .execute(&mut **tx)
@@ -79,7 +85,7 @@ impl TeamRepository {
             }
             TeamDomainEvent::TeamEnrollmentRejected { .. } => {
                 sqlx::query(
-                    "UPDATE team_enrollment_projection SET status = 'Rejected', updated_at = now() WHERE team_id = $1",
+                    "UPDATE team_projection SET status = 'Rejected', updated_at = now() WHERE team_id = $1",
                 )
                 .bind(team_id)
                 .execute(&mut **tx)
@@ -176,7 +182,7 @@ impl ITeamRepository for TeamRepository {
 
         let rows = sqlx::query_as::<_, Row>(
             "SELECT team_id, team_name, coach_name, roster_name, status
-             FROM team_enrollment_projection
+             FROM team_projection
              WHERE season_id = $1 AND status = $2
              ORDER BY updated_at DESC",
         )
@@ -194,6 +200,44 @@ impl ITeamRepository for TeamRepository {
                 coach_name: r.coach_name,
                 roster_name: r.roster_name,
                 status: r.status,
+            })
+            .collect())
+    }
+
+    async fn find_enrolled_for_season(
+        &self,
+        season_id: &str,
+    ) -> Result<Vec<TeamCardRow>, RepositoryError> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            team_id: String,
+            team_name: String,
+            coach_name: String,
+            roster_name: String,
+            logo_url: Option<String>,
+            team_value: i32,
+        }
+
+        let rows = sqlx::query_as::<_, Row>(
+            "SELECT team_id, team_name, coach_name, roster_name, logo_url, team_value
+             FROM team_projection
+             WHERE season_id = $1 AND status = 'Enrolled'
+             ORDER BY team_name ASC",
+        )
+        .bind(season_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| TeamCardRow {
+                team_id: r.team_id,
+                team_name: r.team_name,
+                coach_name: r.coach_name,
+                roster_name: r.roster_name,
+                logo_url: r.logo_url,
+                team_value: r.team_value as u32,
             })
             .collect())
     }

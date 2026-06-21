@@ -1,5 +1,6 @@
 use crate::app::teams::io::web::dismiss_team::dismiss_team;
 use crate::app::teams::io::web::team_detail::team_detail;
+use crate::app::teams::io::web::widgets::competition_teams_widget::competition_teams_widget;
 use crate::app::teams::io::web::widgets::enrollment_actions::{
     approve_all_enrollments, approve_enrollment, dismiss_enrollment, reject_enrollment,
 };
@@ -25,4 +26,8 @@ pub fn router() -> Router<AppState> {
         .route(path::REJECT_ENROLLMENT, post(reject_enrollment))
         .route(path::DISMISS_ENROLLMENT, post(dismiss_enrollment))
         .route(path::APPROVE_ALL_ENROLLMENTS, post(approve_all_enrollments))
+        .route(
+            path::COMPETITION_TEAMS_WIDGET,
+            get(competition_teams_widget),
+        )
 }

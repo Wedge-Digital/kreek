@@ -41,6 +41,11 @@ pub trait ITeamRepository: Send + Sync {
         season_id: &str,
         status: &str,
     ) -> Result<Vec<TeamEnrollmentRow>, RepositoryError>;
+
+    async fn find_enrolled_for_season(
+        &self,
+        season_id: &str,
+    ) -> Result<Vec<TeamCardRow>, RepositoryError>;
 }
 
 pub struct TeamEnrollmentRow {
@@ -49,4 +54,13 @@ pub struct TeamEnrollmentRow {
     pub coach_name: String,
     pub roster_name: String,
     pub status: String,
+}
+
+pub struct TeamCardRow {
+    pub team_id: String,
+    pub team_name: String,
+    pub coach_name: String,
+    pub roster_name: String,
+    pub logo_url: Option<String>,
+    pub team_value: u32,
 }

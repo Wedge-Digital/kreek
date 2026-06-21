@@ -1,11 +1,4 @@
-{% import "components/team-card.html" as card_cmp %}
-<div class="teams-grid">
-    {% for team in teams %}
-    {% call card_cmp::card(team.name, team.logo, team.roster, team.coach, team.tv, "", "", "") %}
-    {% endfor %}
-    {% if teams.is_empty() %}
-    <div class="tab-empty-state teams-empty">
-        Aucune équipe inscrite pour le moment.
-    </div>
-    {% endif %}
+<div hx-get="{{ app_routes.teams.competition_teams_widget() }}?season_id={{ season_id }}&space_id={{ space_id }}"
+     hx-trigger="load"
+     hx-swap="innerHTML">
 </div>

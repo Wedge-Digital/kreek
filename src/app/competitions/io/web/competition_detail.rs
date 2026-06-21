@@ -512,7 +512,6 @@ pub struct CompetitionDetailTemplate {
     // tab content (only one is populated per request)
     pub standings: Vec<StandingRow>,
     pub journees: Vec<Journee>,
-    pub teams: Vec<TeamCard>,
     pub top_tds: Vec<StatRow>,
     pub top_casualties: Vec<StatRow>,
     pub flop_tds: Vec<StatRow>,
@@ -545,7 +544,9 @@ pub struct MatchesTabTemplate {
 #[derive(Template)]
 #[template(path = "competition-tab-teams.html")]
 pub struct TeamsTabTemplate {
-    pub teams: Vec<TeamCard>,
+    pub app_routes: AppRoutes,
+    pub space_id: String,
+    pub season_id: String,
 }
 
 #[derive(Template)]
@@ -657,7 +658,6 @@ fn full_page(
     is_admin: bool,
     standings: Vec<StandingRow>,
     journees: Vec<Journee>,
-    teams: Vec<TeamCard>,
     top_tds: Vec<StatRow>,
     top_casualties: Vec<StatRow>,
     flop_tds: Vec<StatRow>,
@@ -677,7 +677,6 @@ fn full_page(
         active_tab,
         standings,
         journees,
-        teams,
         top_tds,
         top_casualties,
         flop_tds,
@@ -728,7 +727,6 @@ pub async fn get_competition_detail(
         active_tab: "standings",
         standings: mock_standings(),
         journees: vec![],
-        teams: vec![],
         top_tds: vec![],
         top_casualties: vec![],
         flop_tds: vec![],
@@ -773,7 +771,6 @@ pub async fn get_tab_standings(
         vec![],
         vec![],
         vec![],
-        vec![],
     )
 }
 
@@ -813,7 +810,6 @@ pub async fn get_tab_matches(
         vec![],
         vec![],
         vec![],
-        vec![],
     )
 }
 
@@ -824,7 +820,9 @@ pub async fn get_tab_teams(
 ) -> impl IntoResponse {
     if headers.contains_key("hx-request") {
         return TeamsTabTemplate {
-            teams: mock_teams(),
+            app_routes: AppRoutes::default(),
+            space_id,
+            season_id,
         }
         .into_response();
     }
@@ -849,7 +847,6 @@ pub async fn get_tab_teams(
         false,
         vec![],
         vec![],
-        mock_teams(),
         vec![],
         vec![],
         vec![],
@@ -890,7 +887,6 @@ pub async fn get_tab_stats(
         season_id,
         "stats",
         false,
-        vec![],
         vec![],
         vec![],
         mock_top_tds(),
