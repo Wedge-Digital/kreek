@@ -15,7 +15,7 @@ Toutes dans `assets/rawpages/html/` :
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
 | Dashboard | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | ✅ (82-85) |
-| Inscriptions | ✅ | | | | | | |
+| Inscriptions | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (86-92) |
 | Poules | ✅ | | | | | | |
 | Calendrier | ✅ | | | | | | |
 | Résultats | ✅ | | | | | | |
