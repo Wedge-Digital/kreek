@@ -34,4 +34,19 @@ pub trait ITeamRepository: Send + Sync {
 
     /// Charge tous les événements d'une équipe et hydrate l'agrégat par rejeu.
     async fn find_by_id(&self, team_id: &str) -> Result<Option<Team>, RepositoryError>;
+
+    /// Liste les équipes inscrites à une saison par statut.
+    async fn find_by_season_and_status(
+        &self,
+        season_id: &str,
+        status: &str,
+    ) -> Result<Vec<TeamEnrollmentRow>, RepositoryError>;
+}
+
+pub struct TeamEnrollmentRow {
+    pub team_id: String,
+    pub team_name: String,
+    pub coach_name: String,
+    pub roster_name: String,
+    pub status: String,
 }
