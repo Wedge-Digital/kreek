@@ -78,72 +78,72 @@
     </div>
   </div>
 
-  <div class="add-match-form hidden" x-data="{
-    _tsHome: null,
-    _tsAway: null,
-    init() {
-      var teams = [
-        {% for t in detail.team_options %}
-        { value: '{{ t.team_id }}', text: '{{ t.team_name }}', coach: '{{ t.coach_name }}', roster: '{{ t.roster_name }}' },
-        {% endfor %}
-      ];
-      var tsConfig = {
-        valueField: 'value',
-        labelField: 'text',
-        searchField: ['text', 'coach', 'roster'],
-        options: teams,
-        render: {
-          option: function(data, escape) {
-            return '<div class=\"ts-team-option\">'
-              + '<div class=\"ts-team-name\">' + escape(data.text) + '</div>'
-              + '<div class=\"ts-team-meta\">' + escape(data.coach) + ' · ' + escape(data.roster) + '</div>'
-              + '</div>';
-          },
-          item: function(data, escape) {
-            return '<div>' + escape(data.text) + '</div>';
-          }
-        }
-      };
-      this._tsHome = new TomSelect(this.$refs.homeSelect, Object.assign({}, tsConfig, { placeholder: 'Équipe domicile…' }));
-      this._tsAway = new TomSelect(this.$refs.awaySelect, Object.assign({}, tsConfig, { placeholder: 'Équipe extérieur…' }));
-    },
-    destroy() {
-      if (this._tsHome) this._tsHome.destroy();
-      if (this._tsAway) this._tsAway.destroy();
-    },
-    submit() {
-      var home = this._tsHome ? this._tsHome.getValue() : '';
-      var away = this._tsAway ? this._tsAway.getValue() : '';
-      if (!home || !away || home === away) return;
-      var self = this;
-      fetch('{{ app_routes.competitions.admin_schedule_add_match(space_id, competition_id, season_id) }}', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'HX-Request': 'true' },
-        body: JSON.stringify({ round_id: '{{ detail.round_id }}', home_team_id: home, away_team_id: away })
-      }).then(function() { htmx.trigger(document.body, 'scheduleChanged'); });
-    },
-    cancel() {
-      this.$el.classList.add('hidden');
-    }
-  }">
+  <div class="add-match-form hidden"
+       id="add-match-form-{{ detail.round_id }}"
+       data-add-match-url="{{ app_routes.competitions.admin_schedule_add_match(space_id, competition_id, season_id) }}"
+       data-round-id="{{ detail.round_id }}">
     <div class="add-match-form-inner">
       <div class="add-match-selects">
         <div class="add-match-field">
           <label class="add-match-label">Domicile</label>
-          <select x-ref="homeSelect"></select>
+          <select class="add-match-home-select"></select>
         </div>
         <span class="add-match-vs">vs</span>
         <div class="add-match-field">
           <label class="add-match-label">Extérieur</label>
-          <select x-ref="awaySelect"></select>
+          <select class="add-match-away-select"></select>
         </div>
       </div>
       <div class="add-match-buttons">
-        <button class="btn-add-match" @click="submit()">✓ Ajouter</button>
-        <button class="btn-outline-sm" @click="cancel()">Annuler</button>
+        <button class="btn-add-match" data-action="submit">✓ Ajouter</button>
+        <button class="btn-outline-sm" data-action="cancel">Annuler</button>
       </div>
     </div>
   </div>
+  <script>
+  (function() {
+    var form = document.currentScript.previousElementSibling;
+    var teams = [
+      {% for t in detail.team_options %}
+      { value: '{{ t.team_id }}', text: '{{ t.team_name }}', coach: '{{ t.coach_name }}', roster: '{{ t.roster_name }}' },
+      {% endfor %}
+    ];
+    var tsConfig = {
+      valueField: 'value',
+      labelField: 'text',
+      searchField: ['text', 'coach', 'roster'],
+      options: teams,
+      render: {
+        option: function(data, escape) {
+          return '<div class="ts-team-option">'
+            + '<div class="ts-team-name">' + escape(data.text) + '</div>'
+            + '<div class="ts-team-meta">' + escape(data.coach) + ' · ' + escape(data.roster) + '</div>'
+            + '</div>';
+        },
+        item: function(data, escape) {
+          return '<div>' + escape(data.text) + '</div>';
+        }
+      }
+    };
+    var tsHome = new TomSelect(form.querySelector('.add-match-home-select'), Object.assign({}, tsConfig, { placeholder: 'Équipe domicile…' }));
+    var tsAway = new TomSelect(form.querySelector('.add-match-away-select'), Object.assign({}, tsConfig, { placeholder: 'Équipe extérieur…' }));
+
+    form.querySelector('[data-action="submit"]').addEventListener('click', function() {
+      var home = tsHome.getValue();
+      var away = tsAway.getValue();
+      if (!home || !away || home === away) return;
+      fetch(form.dataset.addMatchUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'HX-Request': 'true' },
+        body: JSON.stringify({ round_id: form.dataset.roundId, home_team_id: home, away_team_id: away })
+      }).then(function() { htmx.trigger(document.body, 'scheduleChanged'); });
+    });
+
+    form.querySelector('[data-action="cancel"]').addEventListener('click', function() {
+      form.classList.add('hidden');
+    });
+  })();
+  </script>
 
   <div class="match-list">
     {% for f in detail.fixtures %}
