@@ -147,10 +147,24 @@ mod tests {
                 impl crate::app::competitions::ports::ITeamInfoPort for FakeTeamInfoPort {
                     async fn find_enrolled_teams(&self, _: &str) -> Result<Vec<crate::app::competitions::ports::TeamInfoDto>, String> { Ok(vec![]) }
                 }
+                struct FakeMatchDayRepo;
+                #[async_trait::async_trait]
+                impl crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository for FakeMatchDayRepo {
+                    async fn find_by_season(&self, _: &str) -> Result<Vec<crate::app::competitions::domain::match_day::MatchDay>, crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(vec![]) }
+                    async fn find_by_id(&self, _: &str) -> Result<Option<crate::app::competitions::domain::match_day::MatchDay>, crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(None) }
+                    async fn save_match_day(&self, _: &crate::app::competitions::domain::match_day::MatchDay) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
+                    async fn delete_match_day(&self, _: &str) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
+                    async fn save_pairing(&self, _: &str, _: &crate::app::competitions::domain::match_day::Pairing) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
+                    async fn delete_pairing(&self, _: &str) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
+                    async fn clear_pairings(&self, _: &str) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
+                    async fn clear_all_pairings(&self, _: &str) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
+                    async fn ensure_match_days_from_structure(&self, _: &str, _: &[(String, String, String, Option<String>, Option<String>)]) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
+                }
                 CompetitionsContext {
                     competition_repository: Arc::new(FakeCompetitionRepository),
                     season_repository:      Arc::new(FakeSeasonRepository),
                     group_repository:       Arc::new(FakeGroupRepo),
+                    match_day_repository:   Arc::new(FakeMatchDayRepo),
                     team_info_port:         Arc::new(FakeTeamInfoPort),
                     event_bus:              event_bus.clone(),
                 }

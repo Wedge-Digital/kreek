@@ -3,6 +3,7 @@ pub mod competition_invitations;
 pub mod competition_repository_port;
 pub mod group_repository_port;
 pub mod match_day;
+pub mod match_day_repository_port;
 pub mod competition_rules;
 pub mod competition_season;
 pub mod competition_structure;
