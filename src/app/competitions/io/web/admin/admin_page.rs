@@ -152,6 +152,15 @@ pub async fn render_admin_page(
             };
             tpl.render().unwrap_or_default()
         }
+        "schedule" => {
+            let tpl = super::schedule_tab::ScheduleTabTemplate {
+                app_routes,
+                space_id: space_id.to_string(),
+                competition_id: competition_id.to_string(),
+                season_id: season_id.to_string(),
+            };
+            tpl.render().unwrap_or_default()
+        }
         _ => {
             let summary = match dashboard_query::execute(
                 &comp_id,

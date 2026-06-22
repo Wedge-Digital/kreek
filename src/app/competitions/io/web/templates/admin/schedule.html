@@ -1,0 +1,52 @@
+<link rel="stylesheet" href="/static/css/pages/competition-admin-schedule.css">
+
+<div class="admin-panel" class="schedule-actions-panel">
+  <div class="actions-bar">
+    <div class="actions-bar-left">
+      <span class="info-note">
+        <span class="info-note-icon">&#128197;</span>
+        Gérez le calendrier des journées et les rencontres de la saison.
+      </span>
+    </div>
+    <div class="actions-bar-right">
+      <button class="btn-danger-sm"
+              hx-post="{{ app_routes.competitions.admin_schedule_clear_all(space_id, competition_id, season_id) }}"
+              hx-swap="none"
+              hx-confirm="Vider tous les matchs de toutes les journées ?">Vider tous les matchs</button>
+      <button class="btn-primary-sm"
+              hx-post="{{ app_routes.competitions.admin_schedule_generate_all(space_id, competition_id, season_id) }}"
+              hx-swap="none">Générer toutes les rencontres</button>
+    </div>
+  </div>
+</div>
+
+<div class="schedule-layout">
+  <div id="schedule-sidebar"
+       hx-get="{{ app_routes.competitions.admin_schedule_rounds(space_id, competition_id, season_id) }}"
+       hx-trigger="load, scheduleChanged from:body"
+       hx-swap="innerHTML">
+  </div>
+
+  <div id="schedule-detail"
+       hx-get="{{ app_routes.competitions.admin_schedule_round_detail(space_id, competition_id, season_id) }}"
+       hx-trigger="roundSelected from:body, scheduleChanged from:body"
+       hx-vals='js:{"round_id": (event && event.detail && event.detail.round_id) || document.querySelector(".round-item.active")?.dataset?.roundId || ""}'
+       hx-swap="innerHTML">
+  </div>
+</div>
+
+<script>
+(function () {
+    document.body.addEventListener('roundSelected', function (evt) {
+        var roundId = evt.detail && evt.detail.round_id;
+        if (!roundId) return;
+        document.querySelectorAll('.round-item').forEach(function (el) {
+            el.classList.remove('active');
+            if (el.getAttribute('onclick') && el.getAttribute('onclick').indexOf(roundId) !== -1) {
+                el.classList.add('active');
+                el.dataset.roundId = roundId;
+            }
+        });
+    });
+})();
+</script>

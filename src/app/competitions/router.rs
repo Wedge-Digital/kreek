@@ -9,6 +9,15 @@ use crate::app::competitions::io::web::admin::groups_tab::groups_tab;
 use crate::app::competitions::io::web::admin::groups_widgets::{
     group_cards_widget, unassigned_pool_widget,
 };
+use crate::app::competitions::io::web::admin::schedule_actions::{
+    delete_match, delete_round, post_add_match, post_add_rest, post_add_round,
+    post_clear_all, post_clear_round_pairings, post_generate_all,
+    post_generate_round_pairings, put_update_round,
+};
+use crate::app::competitions::io::web::admin::schedule_tab::schedule_tab;
+use crate::app::competitions::io::web::admin::schedule_widgets::{
+    schedule_round_detail_widget, schedule_sidebar_widget,
+};
 use crate::app::competitions::io::web::competition_detail::{
     get_competition_detail, get_tab_matches, get_tab_standings, get_tab_stats, get_tab_teams,
 };
@@ -30,7 +39,7 @@ use crate::app::competitions::io::web::new_competition_phase_5::{
 };
 use crate::app::competitions::routes::path;
 use crate::state::AppState;
-use axum::routing::{get, post};
+use axum::routing::{delete, get, post, put};
 use axum::Router;
 
 pub fn router() -> Router<AppState> {
@@ -94,5 +103,51 @@ pub fn router() -> Router<AppState> {
         .route(
             path::COMPETITION_ADMIN_GROUPS_ASSIGN,
             post(post_assign_team),
+        )
+        // ── Schedule tab ──
+        .route(path::COMPETITION_ADMIN_SCHEDULE, get(schedule_tab))
+        .route(
+            path::COMPETITION_ADMIN_SCHEDULE_ROUNDS,
+            get(schedule_sidebar_widget),
+        )
+        .route(
+            path::COMPETITION_ADMIN_SCHEDULE_ROUND_DETAIL,
+            get(schedule_round_detail_widget),
+        )
+        .route(
+            path::COMPETITION_ADMIN_SCHEDULE_GENERATE_ALL,
+            post(post_generate_all),
+        )
+        .route(
+            path::COMPETITION_ADMIN_SCHEDULE_CLEAR_ALL,
+            post(post_clear_all),
+        )
+        .route(
+            path::COMPETITION_ADMIN_SCHEDULE_ADD_ROUND,
+            post(post_add_round),
+        )
+        .route(
+            path::COMPETITION_ADMIN_SCHEDULE_ADD_REST,
+            post(post_add_rest),
+        )
+        .route(
+            path::COMPETITION_ADMIN_SCHEDULE_ROUND,
+            put(put_update_round).delete(delete_round),
+        )
+        .route(
+            path::COMPETITION_ADMIN_SCHEDULE_GENERATE_ROUND,
+            post(post_generate_round_pairings),
+        )
+        .route(
+            path::COMPETITION_ADMIN_SCHEDULE_CLEAR_ROUND,
+            post(post_clear_round_pairings),
+        )
+        .route(
+            path::COMPETITION_ADMIN_SCHEDULE_ADD_MATCH,
+            post(post_add_match),
+        )
+        .route(
+            path::COMPETITION_ADMIN_SCHEDULE_DELETE_MATCH,
+            delete(delete_match),
         )
 }

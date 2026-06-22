@@ -41,6 +41,30 @@ pub mod path {
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/groups/reset";
     pub const COMPETITION_ADMIN_GROUPS_ASSIGN: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/groups/assign";
+    pub const COMPETITION_ADMIN_SCHEDULE: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule";
+    pub const COMPETITION_ADMIN_SCHEDULE_ROUNDS: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/rounds";
+    pub const COMPETITION_ADMIN_SCHEDULE_ROUND_DETAIL: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/round";
+    pub const COMPETITION_ADMIN_SCHEDULE_GENERATE_ALL: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/generate-all";
+    pub const COMPETITION_ADMIN_SCHEDULE_CLEAR_ALL: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/clear-all";
+    pub const COMPETITION_ADMIN_SCHEDULE_ADD_ROUND: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/add-round";
+    pub const COMPETITION_ADMIN_SCHEDULE_ADD_REST: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/add-rest";
+    pub const COMPETITION_ADMIN_SCHEDULE_ROUND: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/rounds/{round_id}";
+    pub const COMPETITION_ADMIN_SCHEDULE_GENERATE_ROUND: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/generate-round";
+    pub const COMPETITION_ADMIN_SCHEDULE_CLEAR_ROUND: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/clear-round";
+    pub const COMPETITION_ADMIN_SCHEDULE_ADD_MATCH: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/add-match";
+    pub const COMPETITION_ADMIN_SCHEDULE_DELETE_MATCH: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/delete-match";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -173,6 +197,79 @@ impl Routes {
     }
     pub fn admin_groups_assign(&self, sid: &str, cid: &str, season_id: &str) -> String {
         path::COMPETITION_ADMIN_GROUPS_ASSIGN
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_schedule(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_SCHEDULE
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_schedule_rounds(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_SCHEDULE_ROUNDS
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_schedule_round_detail(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_SCHEDULE_ROUND_DETAIL
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_schedule_generate_all(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_SCHEDULE_GENERATE_ALL
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_schedule_clear_all(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_SCHEDULE_CLEAR_ALL
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_schedule_add_round(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_SCHEDULE_ADD_ROUND
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_schedule_add_rest(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_SCHEDULE_ADD_REST
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_schedule_round(&self, sid: &str, cid: &str, season_id: &str, round_id: &str) -> String {
+        path::COMPETITION_ADMIN_SCHEDULE_ROUND
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+            .replace("{round_id}", round_id)
+    }
+    pub fn admin_schedule_generate_round(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_SCHEDULE_GENERATE_ROUND
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_schedule_clear_round(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_SCHEDULE_CLEAR_ROUND
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_schedule_add_match(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_SCHEDULE_ADD_MATCH
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_schedule_delete_match(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_SCHEDULE_DELETE_MATCH
             .replace("{space_id}", sid)
             .replace("{competition_id}", cid)
             .replace("{season_id}", season_id)
