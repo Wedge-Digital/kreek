@@ -99,6 +99,11 @@
   border-color: var(--dark-4);
   box-shadow: 0 2px 6px rgba(0,0,0,0.06);
 }
+.group-team.dragging,
+.unassigned-chip.dragging {
+  opacity: 0.4;
+  border-style: dashed;
+}
 .group-team-logo {
   width: 28px; height: 28px; border-radius: 6px;
   display: flex; align-items: center; justify-content: center;

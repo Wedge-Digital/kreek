@@ -30,3 +30,65 @@
      hx-trigger="load, groupsChanged from:body"
      hx-swap="innerHTML">
 </div>
+
+<script>
+(function () {
+    var assignUrl = '{{ app_routes.competitions.admin_groups_assign(space_id, competition_id, season_id) }}';
+    var draggedTeamId = null;
+
+    document.addEventListener('dragstart', function (e) {
+        var el = e.target.closest('[data-team-id]');
+        if (!el) return;
+        draggedTeamId = el.dataset.teamId;
+        el.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+    });
+
+    document.addEventListener('dragend', function (e) {
+        var el = e.target.closest('[data-team-id]');
+        if (el) el.classList.remove('dragging');
+        draggedTeamId = null;
+        document.querySelectorAll('.group-drop-zone').forEach(function (z) {
+            z.classList.remove('drag-over');
+        });
+    });
+
+    document.addEventListener('dragover', function (e) {
+        var zone = e.target.closest('.group-drop-zone, .group-card-body');
+        if (zone) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            var dropZone = zone.closest('.group-card-body');
+            if (dropZone) {
+                var dz = dropZone.querySelector('.group-drop-zone');
+                if (dz) dz.classList.add('drag-over');
+            }
+        }
+    });
+
+    document.addEventListener('dragleave', function (e) {
+        var zone = e.target.closest('.group-drop-zone');
+        if (zone) zone.classList.remove('drag-over');
+    });
+
+    document.addEventListener('drop', function (e) {
+        var card = e.target.closest('.group-card');
+        if (!card || !draggedTeamId) return;
+        e.preventDefault();
+
+        var groupId = card.dataset.groupId;
+        fetch(assignUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'HX-Request': 'true'
+            },
+            body: JSON.stringify({ team_id: draggedTeamId, group_id: groupId })
+        }).then(function () {
+            htmx.trigger(document.body, 'groupsChanged');
+        });
+
+        draggedTeamId = null;
+    });
+})();
+</script>
