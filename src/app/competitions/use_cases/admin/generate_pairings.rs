@@ -33,6 +33,17 @@ pub async fn execute(
         .await
         .map_err(|e| GenerateError::Repository(e.to_string()))?;
 
+    tracing::info!(
+        "generate_pairings: {} groups found for season {season_id}",
+        groups.len()
+    );
+    for g in &groups {
+        tracing::info!(
+            "  group '{}': {} teams {:?}",
+            g.group_name, g.team_ids.len(), g.team_ids
+        );
+    }
+
     if groups.is_empty() {
         return Err(GenerateError::NoGroups);
     }
@@ -62,8 +73,14 @@ pub async fn execute(
         }
     }
 
+    tracing::info!("generate_pairings: {} already played pairs", already_played.len());
+
     for group in &groups {
         let pairings = generate_round_pairings(&group.team_ids, &already_played);
+        tracing::info!(
+            "generate_pairings: group '{}' -> {} pairings generated",
+            group.group_name, pairings.len()
+        );
 
         for (home, away) in pairings {
             let pairing = Pairing {
