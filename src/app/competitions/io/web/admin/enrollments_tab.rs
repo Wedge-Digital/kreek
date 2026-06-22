@@ -1,6 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::io::web::admin::admin_page::render_admin_page;
 use crate::app::routes::AppRoutes;
+use crate::app::shared_kernel::common_types::SeasonId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -14,6 +15,7 @@ pub struct EnrollmentsTabTemplate {
     pub space_id: String,
     pub competition_id: String,
     pub season_id: String,
+    pub requires_validation: bool,
 }
 
 impl IntoResponse for EnrollmentsTabTemplate {
@@ -35,11 +37,25 @@ pub async fn enrollments_tab(
     headers: HeaderMap,
 ) -> impl IntoResponse {
     if headers.contains_key("hx-request") {
+        let requires_validation = match SeasonId::try_new(&season_id) {
+            Ok(sid) => state
+                .competitions
+                .season_repository
+                .find_invitations(&sid)
+                .await
+                .ok()
+                .flatten()
+                .map(|inv| inv.requires_validation)
+                .unwrap_or(true),
+            Err(_) => true,
+        };
+
         return EnrollmentsTabTemplate {
             app_routes: AppRoutes::default(),
             space_id,
             competition_id,
             season_id,
+            requires_validation,
         }
         .into_response();
     }

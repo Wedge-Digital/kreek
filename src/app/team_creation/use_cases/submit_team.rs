@@ -88,6 +88,7 @@ pub async fn execute(
         cheerleaders,
         fans_factor,
         players,
+        auto_enroll: cmd.auto_enroll,
     };
     let _ = bus.send(event.to_enveloppe());
 

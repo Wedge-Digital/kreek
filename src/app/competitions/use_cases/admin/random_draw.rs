@@ -40,10 +40,8 @@ pub async fn execute(
         .map_err(|e| DrawError::Repository(e.to_string()))?;
 
     let mut team_ids: Vec<&str> = enrolled.iter().map(|t| t.team_id.as_str()).collect();
-    tracing::info!("random_draw BEFORE shuffle: {:?}", team_ids);
     let mut rng = rand::rngs::StdRng::from_os_rng();
     team_ids.shuffle(&mut rng);
-    tracing::info!("random_draw AFTER shuffle: {:?}", team_ids);
 
     let group_ids: Vec<&str> = groups.iter().map(|g| g.group_id.as_str()).collect();
 

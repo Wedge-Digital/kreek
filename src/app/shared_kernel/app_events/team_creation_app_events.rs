@@ -44,6 +44,8 @@ pub enum TeamCreationAppEvent {
         cheerleaders:   u8,
         fans_factor:    u8,
         players:        Vec<PlayerPayload>,
+        #[serde(default)]
+        auto_enroll:    bool,
     },
 }
 

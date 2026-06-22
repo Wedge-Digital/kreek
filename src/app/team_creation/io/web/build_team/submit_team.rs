@@ -1,6 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::EntityId;
+use crate::app::shared_kernel::common_types::{EntityId, SeasonId};
 use crate::app::team_creation::use_cases::commands::SubmitTeamCommand;
 use crate::app::team_creation::use_cases::submit_team as submit_uc;
 use crate::state::AppState;
@@ -34,12 +34,26 @@ pub async fn submit_team(
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
 
+    let auto_enroll = match SeasonId::try_new(draft.season_id()) {
+        Ok(sid) => state
+            .competitions
+            .season_repository
+            .find_invitations(&sid)
+            .await
+            .ok()
+            .flatten()
+            .map(|inv| !inv.requires_validation)
+            .unwrap_or(false),
+        Err(_) => false,
+    };
+
     let cmd = SubmitTeamCommand {
         team_id: team_id_val,
         space_id: space_id.clone(),
         competition_id: draft.competition_id().to_string(),
         season_id: draft.season_id().to_string(),
         coach_name: draft.coach_name().to_string(),
+        auto_enroll,
     };
 
     match submit_uc::execute(

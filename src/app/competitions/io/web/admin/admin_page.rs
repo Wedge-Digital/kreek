@@ -124,11 +124,22 @@ pub async fn render_admin_page(
 
     let content = match active_tab {
         "enrollments" => {
+            let requires_validation = state
+                .competitions
+                .season_repository
+                .find_invitations(&season_entity_id)
+                .await
+                .ok()
+                .flatten()
+                .map(|inv| inv.requires_validation)
+                .unwrap_or(true);
+
             let tpl = super::enrollments_tab::EnrollmentsTabTemplate {
                 app_routes,
                 space_id: space_id.to_string(),
                 competition_id: competition_id.to_string(),
                 season_id: season_id.to_string(),
+                requires_validation,
             };
             tpl.render().unwrap_or_default()
         }

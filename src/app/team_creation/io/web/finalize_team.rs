@@ -5,7 +5,7 @@ use crate::app::routes::AppRoutes;
 use crate::app::team_creation::use_cases::commands::SubmitTeamCommand;
 use crate::app::team_creation::use_cases::build_team::set_league::{SetLeagueCommand, SetLeagueError};
 use crate::app::team_creation::use_cases::submit_team as submit_uc;
-use crate::app::shared_kernel::common_types::EntityId;
+use crate::app::shared_kernel::common_types::{EntityId, SeasonId};
 use crate::state::AppState;
 use askama::Template;
 use axum::body::Body;
@@ -74,6 +74,19 @@ pub async fn finalize_team(
         }
     };
 
+    let auto_enroll = match SeasonId::try_new(draft.season_id()) {
+        Ok(sid) => state
+            .competitions
+            .season_repository
+            .find_invitations(&sid)
+            .await
+            .ok()
+            .flatten()
+            .map(|inv| !inv.requires_validation)
+            .unwrap_or(false),
+        Err(_) => false,
+    };
+
     let ref_data = state.team_creation.reference_data.as_ref();
 
     // ── Validation des prérequis ─────────────────────────────────────────────
@@ -124,6 +137,7 @@ pub async fn finalize_team(
             competition_id: draft.competition_id().to_string(),
             season_id:      draft.season_id().to_string(),
             coach_name:     draft.coach_name().to_string(),
+            auto_enroll,
         };
         return match submit_uc::execute(
             cmd,
@@ -221,12 +235,26 @@ pub async fn post_finalize_team(
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
 
+    let post_auto_enroll = match SeasonId::try_new(post_draft.season_id()) {
+        Ok(sid) => state
+            .competitions
+            .season_repository
+            .find_invitations(&sid)
+            .await
+            .ok()
+            .flatten()
+            .map(|inv| !inv.requires_validation)
+            .unwrap_or(false),
+        Err(_) => false,
+    };
+
     let cmd = SubmitTeamCommand {
         team_id:        team_entity_id,
         space_id:       space_id.clone(),
         competition_id: post_draft.competition_id().to_string(),
         season_id:      post_draft.season_id().to_string(),
-        coach_name:     user.coach_name.into_inner(),
+        coach_name:     post_draft.coach_name().to_string(),
+        auto_enroll:    post_auto_enroll,
     };
 
     match submit_uc::execute(

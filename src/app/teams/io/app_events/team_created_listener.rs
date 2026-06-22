@@ -1,10 +1,12 @@
 use crate::app::shared_kernel::app_events::team_creation_app_events::TeamCreationAppEvent;
+use crate::app::shared_kernel::common_types::EntityId;
 use crate::app::shared_kernel::staff_counts::{
     ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
 };
 use crate::app::teams::domain::team::TeamDomainEvent;
 use crate::app::teams::domain::value_objects::Kpo;
 use crate::app::teams::ports::{ITeamRepository, RepositoryError};
+use crate::app::teams::use_cases::approve_enrollment;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
 
@@ -36,6 +38,7 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                         assistants,
                         cheerleaders,
                         fans_factor,
+                        auto_enroll,
                         ..
                     } = app_event;
                     let domain_event = TeamDomainEvent::TeamCreated {
@@ -62,9 +65,25 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                             RepositoryError::ConcurrentWrite => tracing::warn!(
                                 "teams team_created_listener: TeamCreated déjà persisté pour {team_id}"
                             ),
-                            other => tracing::error!(
-                                "teams team_created_listener: échec append pour {team_id}: {other}"
-                            ),
+                            other => {
+                                tracing::error!(
+                                    "teams team_created_listener: échec append pour {team_id}: {other}"
+                                );
+                                continue;
+                            }
+                        }
+                    }
+
+                    if auto_enroll {
+                        tracing::info!("teams team_created_listener: auto-enrolling {team_id}");
+                        if let Ok(eid) = EntityId::try_new(&team_id) {
+                            if let Err(e) =
+                                approve_enrollment::execute(&eid, team_repo.as_ref()).await
+                            {
+                                tracing::error!(
+                                    "teams team_created_listener: auto-enroll failed for {team_id}: {e:?}"
+                                );
+                            }
                         }
                     }
                 }

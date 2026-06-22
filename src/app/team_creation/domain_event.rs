@@ -30,6 +30,7 @@ pub enum TeamCreationDomainEvent {
         cheerleaders:   CheerleaderCount,
         fans_factor:    u8,
         players:        Vec<PlayerPayload>,
+        auto_enroll:    bool,
     },
 }
 
@@ -64,7 +65,7 @@ impl TeamCreationDomainEvent {
                 team_name, roster_id, roster_name,
                 coach_id, coach_name, logo_url, treasury,
                 rerolls, apothecaries, assistants, cheerleaders, fans_factor,
-                players,
+                players, auto_enroll,
                 ..
             } => Some(TeamCreationAppEvent::TeamCreated {
                 event_id:       EventId::new().to_string(),
@@ -85,6 +86,7 @@ impl TeamCreationDomainEvent {
                 cheerleaders:   cheerleaders.0,
                 fans_factor:    *fans_factor,
                 players:        players.clone(),
+                auto_enroll:    *auto_enroll,
             }),
         }
     }
