@@ -250,6 +250,10 @@
       font-size: 11px; font-weight: 600; color: var(--dark-3);
       text-transform: uppercase; letter-spacing: 0.3px;
     }
+    .ts-team-option { padding: 4px 0; }
+    .ts-team-name { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); }
+    .ts-team-meta { font-size: 11px; color: var(--dark-3); margin-top: 1px; }
+
     .add-match-vs {
       font-size: var(--h5); font-weight: 700; color: var(--dark-4);
       padding-bottom: 12px; flex-shrink: 0;
@@ -611,8 +615,35 @@
               <!-- Formulaire ajout match (visible au clic sur "Ajouter un match") -->
               <div class="add-match-form" x-data="{
                 init() {
-                  this._tsHome = new TomSelect(this.$refs.homeSelect, { placeholder: 'Équipe domicile…' });
-                  this._tsAway = new TomSelect(this.$refs.awaySelect, { placeholder: 'Équipe extérieur…' });
+                  var tsConfig = {
+                    searchField: ['text', 'coach', 'roster'],
+                    onInitialize: function() {
+                      var self = this;
+                      Object.keys(self.options).forEach(function(key) {
+                        var opt = self.getOption(key);
+                        if (opt) {
+                          var el = self.input.querySelector('option[value=\"' + key + '\"]');
+                          if (el) {
+                            self.options[key].coach = el.dataset.coach || '';
+                            self.options[key].roster = el.dataset.roster || '';
+                          }
+                        }
+                      });
+                    },
+                    render: {
+                      option: function(data, escape) {
+                        return '<div class=\"ts-team-option\">'
+                          + '<div class=\"ts-team-name\">' + escape(data.text) + '</div>'
+                          + '<div class=\"ts-team-meta\">' + escape(data.coach) + ' · ' + escape(data.roster) + '</div>'
+                          + '</div>';
+                      },
+                      item: function(data, escape) {
+                        return '<div>' + escape(data.text) + '</div>';
+                      }
+                    }
+                  };
+                  this._tsHome = new TomSelect(this.$refs.homeSelect, Object.assign({}, tsConfig, { placeholder: 'Équipe domicile…' }));
+                  this._tsAway = new TomSelect(this.$refs.awaySelect, Object.assign({}, tsConfig, { placeholder: 'Équipe extérieur…' }));
                 },
                 destroy() {
                   this._tsHome?.destroy();
@@ -624,14 +655,14 @@
                     <label class="add-match-label">Domicile</label>
                     <select x-ref="homeSelect" name="home_team_id">
                       <option value="">— Sélectionner —</option>
-                      <option value="team-1">Skull Crushers</option>
-                      <option value="team-2">Midnight Raiders</option>
-                      <option value="team-3">Iron Forge</option>
-                      <option value="team-4">Storm Treemen</option>
-                      <option value="team-5">Halfling Legends</option>
-                      <option value="team-6">Chaos United</option>
-                      <option value="team-7">Green Tide</option>
-                      <option value="team-8">Red Skulls</option>
+                      <option value="team-1" data-coach="Darkmoule" data-roster="Orques">Skull Crushers</option>
+                      <option value="team-2" data-coach="Grim" data-roster="Elfes Noirs">Midnight Raiders</option>
+                      <option value="team-3" data-coach="Guigui" data-roster="Nains">Iron Forge</option>
+                      <option value="team-4" data-coach="Yan" data-roster="Elfes Sylvains">Storm Treemen</option>
+                      <option value="team-5" data-coach="Playmore" data-roster="Halflings">Halfling Legends</option>
+                      <option value="team-6" data-coach="Calltrakk" data-roster="Élus du Chaos">Chaos United</option>
+                      <option value="team-7" data-coach="foxxx" data-roster="Gobelins">Green Tide</option>
+                      <option value="team-8" data-coach="Crisis" data-roster="Khorne">Red Skulls</option>
                     </select>
                   </div>
                   <div class="add-match-vs">vs</div>
@@ -639,14 +670,14 @@
                     <label class="add-match-label">Extérieur</label>
                     <select x-ref="awaySelect" name="away_team_id">
                       <option value="">— Sélectionner —</option>
-                      <option value="team-1">Skull Crushers</option>
-                      <option value="team-2">Midnight Raiders</option>
-                      <option value="team-3">Iron Forge</option>
-                      <option value="team-4">Storm Treemen</option>
-                      <option value="team-5">Halfling Legends</option>
-                      <option value="team-6">Chaos United</option>
-                      <option value="team-7">Green Tide</option>
-                      <option value="team-8">Red Skulls</option>
+                      <option value="team-1" data-coach="Darkmoule" data-roster="Orques">Skull Crushers</option>
+                      <option value="team-2" data-coach="Grim" data-roster="Elfes Noirs">Midnight Raiders</option>
+                      <option value="team-3" data-coach="Guigui" data-roster="Nains">Iron Forge</option>
+                      <option value="team-4" data-coach="Yan" data-roster="Elfes Sylvains">Storm Treemen</option>
+                      <option value="team-5" data-coach="Playmore" data-roster="Halflings">Halfling Legends</option>
+                      <option value="team-6" data-coach="Calltrakk" data-roster="Élus du Chaos">Chaos United</option>
+                      <option value="team-7" data-coach="foxxx" data-roster="Gobelins">Green Tide</option>
+                      <option value="team-8" data-coach="Crisis" data-roster="Khorne">Red Skulls</option>
                     </select>
                   </div>
                   <button class="btn-add-match">✓ Ajouter</button>
