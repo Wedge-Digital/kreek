@@ -46,12 +46,12 @@
       <button class="btn-danger-sm"
               hx-post="{{ app_routes.competitions.admin_schedule_clear_round(space_id, competition_id, season_id) }}"
               hx-vals='{"round_id": "{{ detail.round_id }}"}'
-              hx-headers='{"Content-Type": "application/json", "HX-Request": "true"}'
+              hx-ext="json-enc"
               hx-swap="none">Vider les matchs</button>
       <button class="btn-primary-sm"
               hx-post="{{ app_routes.competitions.admin_schedule_generate_round(space_id, competition_id, season_id) }}"
               hx-vals='{"round_id": "{{ detail.round_id }}"}'
-              hx-headers='{"Content-Type": "application/json", "HX-Request": "true"}'
+              hx-ext="json-enc"
               hx-swap="none">Générer les rencontres</button>
       <button class="btn-outline-sm"
               onclick="this.closest('.round-detail').querySelector('.add-match-form').classList.toggle('hidden')">+ Ajouter un match</button>

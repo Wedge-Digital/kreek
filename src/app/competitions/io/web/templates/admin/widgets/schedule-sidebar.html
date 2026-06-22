@@ -33,13 +33,13 @@
   <div class="round-sidebar-actions">
     <button class="btn-outline-sm"
             hx-post="{{ app_routes.competitions.admin_schedule_add_round(space_id, competition_id, season_id) }}"
+            hx-ext="json-enc"
             hx-vals='{"name": ""}'
-            hx-headers='{"Content-Type": "application/json", "HX-Request": "true"}'
             hx-swap="none">+ Ajouter une journée</button>
     <button class="btn-outline-sm"
             hx-post="{{ app_routes.competitions.admin_schedule_add_rest(space_id, competition_id, season_id) }}"
+            hx-ext="json-enc"
             hx-vals='{"name": ""}'
-            hx-headers='{"Content-Type": "application/json", "HX-Request": "true"}'
             hx-swap="none">&#9728; Ajouter un repos</button>
   </div>
 </div>
