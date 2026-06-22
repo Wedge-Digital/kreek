@@ -1,0 +1,131 @@
+<div class="round-detail" hx-disinherit="*">
+  <div class="round-detail-header">
+    <div class="round-detail-title">{{ detail.name }}</div>
+    <span class="round-detail-badge round-detail-badge--{{ detail.day_type }}">
+      {% if detail.day_type == "rest" %}Repos{% else if detail.day_type == "fixed_date" %}Date fixe{% else %}Plage{% endif %}
+    </span>
+  </div>
+
+  {% if detail.day_type == "rest" %}
+  <div class="round-detail-rest">
+    <div class="round-detail-rest-icon">&#9728;</div>
+    <div class="round-detail-rest-text">Journée de repos — pas de matchs programmés.</div>
+  </div>
+
+  <div class="round-detail-footer">
+    <button class="btn-danger-sm"
+            hx-delete="{{ app_routes.competitions.admin_schedule_round(space_id, competition_id, season_id, detail.round_id) }}"
+            hx-swap="none"
+            hx-confirm="Supprimer cette journée de repos ?">Supprimer</button>
+  </div>
+  {% else %}
+
+  <div class="round-date-config">
+    <div class="round-date-fields">
+      {% if detail.day_type == "fixed_date" %}
+      <label class="round-date-label">Date
+        <input type="date" class="round-date-input" value="{{ detail.date_start }}" disabled>
+      </label>
+      {% else %}
+      <label class="round-date-label">Début
+        <input type="date" class="round-date-input" value="{{ detail.date_start }}" disabled>
+      </label>
+      <label class="round-date-label">Fin
+        <input type="date" class="round-date-input" value="{{ detail.date_end }}" disabled>
+      </label>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="match-actions-bar">
+    <span class="info-note">
+      <span class="info-note-icon">&#9917;</span>
+      {{ detail.fixtures.len() }} match{% if detail.fixtures.len() != 1 %}s{% endif %}
+    </span>
+    <div class="match-actions-right">
+      <button class="btn-danger-sm"
+              hx-post="{{ app_routes.competitions.admin_schedule_clear_round(space_id, competition_id, season_id) }}"
+              hx-vals='{"round_id": "{{ detail.round_id }}"}'
+              hx-headers='{"Content-Type": "application/json", "HX-Request": "true"}'
+              hx-swap="none">Vider les matchs</button>
+      <button class="btn-primary-sm"
+              hx-post="{{ app_routes.competitions.admin_schedule_generate_round(space_id, competition_id, season_id) }}"
+              hx-vals='{"round_id": "{{ detail.round_id }}"}'
+              hx-headers='{"Content-Type": "application/json", "HX-Request": "true"}'
+              hx-swap="none">Générer les rencontres</button>
+      <button class="btn-outline-sm"
+              onclick="this.closest('.round-detail').querySelector('.add-match-form').classList.toggle('hidden')">+ Ajouter un match</button>
+    </div>
+  </div>
+
+  <div class="add-match-form hidden" x-data="{ showForm: false }">
+    <div class="add-match-form-inner">
+      <div class="add-match-selects">
+        <select class="add-match-select" data-role="home">
+          <option value="">Domicile...</option>
+          {% for t in detail.team_options %}
+          <option value="{{ t.team_id }}">{{ t.team_name }} ({{ t.coach_name }})</option>
+          {% endfor %}
+        </select>
+        <span class="add-match-vs">vs</span>
+        <select class="add-match-select" data-role="away">
+          <option value="">Extérieur...</option>
+          {% for t in detail.team_options %}
+          <option value="{{ t.team_id }}">{{ t.team_name }} ({{ t.coach_name }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="add-match-buttons">
+        <button class="btn-primary-sm add-match-submit"
+                onclick="(function(btn){
+                  var form = btn.closest('.add-match-form');
+                  var home = form.querySelector('[data-role=home]').value;
+                  var away = form.querySelector('[data-role=away]').value;
+                  if (!home || !away || home === away) return;
+                  fetch('{{ app_routes.competitions.admin_schedule_add_match(space_id, competition_id, season_id) }}', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json','HX-Request':'true'},
+                    body: JSON.stringify({round_id:'{{ detail.round_id }}',home_team_id:home,away_team_id:away})
+                  }).then(function(){ htmx.trigger(document.body,'scheduleChanged'); });
+                })(this)">Ajouter</button>
+        <button class="btn-outline-sm"
+                onclick="this.closest('.add-match-form').classList.add('hidden')">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="match-list">
+    {% for f in detail.fixtures %}
+    <div class="match-row">
+      <div class="match-row-teams">
+        <span class="match-row-home">{{ f.home_team_name }}</span>
+        <span class="match-row-vs">vs</span>
+        <span class="match-row-away">{{ f.away_team_name }}</span>
+      </div>
+      {% if !f.group_name.is_empty() %}
+      <span class="match-row-group">{{ f.group_name }}</span>
+      {% endif %}
+      <button class="match-row-delete"
+              onclick="(function(btn){
+                fetch('{{ app_routes.competitions.admin_schedule_delete_match(space_id, competition_id, season_id) }}', {
+                  method: 'DELETE',
+                  headers: {'Content-Type':'application/json','HX-Request':'true'},
+                  body: JSON.stringify({pairing_id:'{{ f.fixture_id }}'})
+                }).then(function(){ htmx.trigger(document.body,'scheduleChanged'); });
+              })(this)" title="Supprimer ce match">&#10005;</button>
+    </div>
+    {% endfor %}
+
+    {% if detail.fixtures.is_empty() %}
+    <div class="match-list-empty">Aucun match programmé. Utilisez "Générer les rencontres" ou ajoutez manuellement.</div>
+    {% endif %}
+  </div>
+
+  <div class="round-detail-footer">
+    <button class="btn-danger-sm"
+            hx-delete="{{ app_routes.competitions.admin_schedule_round(space_id, competition_id, season_id, detail.round_id) }}"
+            hx-swap="none"
+            hx-confirm="Supprimer cette journée et tous ses matchs ?">Supprimer la journée</button>
+  </div>
+  {% endif %}
+</div>
