@@ -63,7 +63,9 @@ pub struct SubmitTeamCommand {
     pub team_id: TeamId,
     pub space_id: String,
     pub competition_id: String,
+    pub competition_name: String,
     pub season_id: String,
+    pub season_name: String,
     pub coach_name: String,
     pub auto_enroll: bool,
 }

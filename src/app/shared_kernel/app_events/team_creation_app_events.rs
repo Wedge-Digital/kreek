@@ -29,9 +29,13 @@ pub enum TeamCreationAppEvent {
         event_id:       String,
         team_id:        String,
         space_id:       String,
-        competition_id: String,
-        season_id:      String,
-        team_name:      String,
+        competition_id:   String,
+        #[serde(default)]
+        competition_name: String,
+        season_id:        String,
+        #[serde(default)]
+        season_name:      String,
+        team_name:        String,
         roster_id:      String,
         roster_name:    String,
         coach_id:       String,
