@@ -1,7 +1,9 @@
 use crate::app::competitions::domain::competition_repository_port::ICompetitionRepository;
+use crate::app::competitions::domain::group_repository_port::IGroupRepository;
 use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
 use crate::app::competitions::io::app_events::app_event_publisher::competitions_app_event_publisher;
 use crate::app::competitions::io::repository::competition_repository::CompetitionRepository;
+use crate::app::competitions::io::repository::group_repository::GroupRepository;
 use crate::app::competitions::io::repository::season_repository::SeasonRepository;
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
@@ -11,6 +13,7 @@ use std::sync::Arc;
 pub struct CompetitionsContext {
     pub competition_repository: Arc<dyn ICompetitionRepository>,
     pub season_repository: Arc<dyn ISeasonRepository>,
+    pub group_repository: Arc<dyn IGroupRepository>,
     pub event_bus: EventBus,
 }
 
@@ -23,6 +26,7 @@ impl CompetitionsContext {
         Self {
             competition_repository: Arc::new(CompetitionRepository::new(pool.clone())),
             season_repository: Arc::new(SeasonRepository::new(pool.clone())),
+            group_repository: Arc::new(GroupRepository::new(pool.clone())),
             event_bus,
         }
     }
