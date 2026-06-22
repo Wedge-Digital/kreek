@@ -1477,6 +1477,7 @@ dependencies = [
  "dotenvy",
  "mockito",
  "nutype",
+ "rand 0.9.4",
  "regex",
  "reqwest",
  "serde",

@@ -131,10 +131,29 @@ mod tests {
                 user_cache_repository: Arc::new(FakeUserCacheRepository),
                 event_bus:             event_bus.clone(),
             },
-            competitions: CompetitionsContext {
-                competition_repository: Arc::new(FakeCompetitionRepository),
-                season_repository:      Arc::new(FakeSeasonRepository),
-                event_bus:              event_bus.clone(),
+            competitions: {
+                struct FakeGroupRepo;
+                #[async_trait::async_trait]
+                impl crate::app::competitions::domain::group_repository_port::IGroupRepository for FakeGroupRepo {
+                    async fn find_groups(&self, _: &str) -> Result<Vec<crate::app::competitions::domain::group_repository_port::GroupWithTeams>, crate::app::competitions::domain::group_repository_port::GroupRepositoryError> { Ok(vec![]) }
+                    async fn save_assignments(&self, _: &[(String, String)]) -> Result<(), crate::app::competitions::domain::group_repository_port::GroupRepositoryError> { Ok(()) }
+                    async fn reset_assignments(&self, _: &str) -> Result<(), crate::app::competitions::domain::group_repository_port::GroupRepositoryError> { Ok(()) }
+                    async fn assign_team(&self, _: &str, _: &str) -> Result<(), crate::app::competitions::domain::group_repository_port::GroupRepositoryError> { Ok(()) }
+                    async fn unassign_team(&self, _: &str) -> Result<(), crate::app::competitions::domain::group_repository_port::GroupRepositoryError> { Ok(()) }
+                    async fn ensure_groups_from_structure(&self, _: &str, _: &[(String, String)]) -> Result<(), crate::app::competitions::domain::group_repository_port::GroupRepositoryError> { Ok(()) }
+                }
+                struct FakeTeamInfoPort;
+                #[async_trait::async_trait]
+                impl crate::app::competitions::ports::ITeamInfoPort for FakeTeamInfoPort {
+                    async fn find_enrolled_teams(&self, _: &str) -> Result<Vec<crate::app::competitions::ports::TeamInfoDto>, String> { Ok(vec![]) }
+                }
+                CompetitionsContext {
+                    competition_repository: Arc::new(FakeCompetitionRepository),
+                    season_repository:      Arc::new(FakeSeasonRepository),
+                    group_repository:       Arc::new(FakeGroupRepo),
+                    team_info_port:         Arc::new(FakeTeamInfoPort),
+                    event_bus:              event_bus.clone(),
+                }
             },
             news: NewsContext {
                 article_repository: Arc::new(FakeNewsRepository),
