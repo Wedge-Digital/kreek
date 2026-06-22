@@ -1,6 +1,7 @@
 use crate::app::competitions::domain::competition_repository_port::ICompetitionRepository;
 use crate::app::competitions::domain::group_repository_port::IGroupRepository;
 use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
+use crate::app::competitions::ports::ITeamInfoPort;
 use crate::app::competitions::io::app_events::app_event_publisher::competitions_app_event_publisher;
 use crate::app::competitions::io::repository::competition_repository::CompetitionRepository;
 use crate::app::competitions::io::repository::group_repository::GroupRepository;
@@ -14,6 +15,7 @@ pub struct CompetitionsContext {
     pub competition_repository: Arc<dyn ICompetitionRepository>,
     pub season_repository: Arc<dyn ISeasonRepository>,
     pub group_repository: Arc<dyn IGroupRepository>,
+    pub team_info_port: Arc<dyn ITeamInfoPort>,
     pub event_bus: EventBus,
 }
 
@@ -22,11 +24,12 @@ pub fn init_app_event_publisher(event_bus: &EventBus, app_event_bus: EventBus) {
 }
 
 impl CompetitionsContext {
-    pub fn new(pool: &PgPool, event_bus: EventBus) -> Self {
+    pub fn new(pool: &PgPool, event_bus: EventBus, team_info_port: Arc<dyn ITeamInfoPort>) -> Self {
         Self {
             competition_repository: Arc::new(CompetitionRepository::new(pool.clone())),
             season_repository: Arc::new(SeasonRepository::new(pool.clone())),
             group_repository: Arc::new(GroupRepository::new(pool.clone())),
+            team_info_port,
             event_bus,
         }
     }
