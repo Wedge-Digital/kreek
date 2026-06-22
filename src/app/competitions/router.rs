@@ -9,6 +9,7 @@ use crate::app::competitions::io::web::admin::groups_tab::groups_tab;
 use crate::app::competitions::io::web::admin::groups_widgets::{
     group_cards_widget, unassigned_pool_widget,
 };
+use crate::app::competitions::io::web::admin::results_tab::results_tab;
 use crate::app::competitions::io::web::admin::schedule_actions::{
     delete_match, delete_round, post_add_match, post_add_rest, post_add_round,
     post_clear_all, post_clear_round_pairings, post_generate_all,
@@ -104,6 +105,7 @@ pub fn router() -> Router<AppState> {
             path::COMPETITION_ADMIN_GROUPS_ASSIGN,
             post(post_assign_team),
         )
+        .route(path::COMPETITION_ADMIN_RESULTS, get(results_tab))
         // ── Schedule tab ──
         .route(path::COMPETITION_ADMIN_SCHEDULE, get(schedule_tab))
         .route(

@@ -65,6 +65,8 @@ pub mod path {
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/add-match";
     pub const COMPETITION_ADMIN_SCHEDULE_DELETE_MATCH: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/delete-match";
+    pub const COMPETITION_ADMIN_RESULTS: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/results";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -270,6 +272,12 @@ impl Routes {
     }
     pub fn admin_schedule_delete_match(&self, sid: &str, cid: &str, season_id: &str) -> String {
         path::COMPETITION_ADMIN_SCHEDULE_DELETE_MATCH
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_results(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_RESULTS
             .replace("{space_id}", sid)
             .replace("{competition_id}", cid)
             .replace("{season_id}", season_id)

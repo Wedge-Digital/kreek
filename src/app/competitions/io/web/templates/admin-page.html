@@ -40,9 +40,10 @@
        hx-swap="innerHTML"
        hx-push-url="{{ app_routes.competitions.admin_schedule(space_id, competition_id, season_id) }}">📅 Calendrier</a>
     <a class="admin-tab{% if active_tab == "results" %} active{% endif %}"
-       hx-get="#"
+       hx-get="{{ app_routes.competitions.admin_results(space_id, competition_id, season_id) }}"
        hx-target="#admin-content"
-       hx-swap="innerHTML">✅ Résultats</a>
+       hx-swap="innerHTML"
+       hx-push-url="{{ app_routes.competitions.admin_results(space_id, competition_id, season_id) }}">✅ Résultats</a>
     <a class="admin-tab{% if active_tab == "settings" %} active{% endif %}"
        hx-get="#"
        hx-target="#admin-content"
