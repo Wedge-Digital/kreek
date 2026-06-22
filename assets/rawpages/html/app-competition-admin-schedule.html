@@ -233,6 +233,36 @@
       border-bottom: 1px solid var(--dark-5);
     }
 
+    /* ── Add match form ── */
+    .add-match-form {
+      padding: var(--p1) var(--p2);
+      background: var(--dark-7);
+      border-bottom: 1px solid var(--dark-5);
+    }
+    .add-match-row {
+      display: flex; align-items: flex-end; gap: var(--p1);
+    }
+    .add-match-field { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .add-match-label {
+      font-size: 11px; font-weight: 600; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .add-match-select {
+      padding: 8px 12px;
+      border: 1px solid var(--dark-4); border-radius: 7px;
+      font-size: var(--text-tiny); color: var(--dark-1);
+      font-family: inherit; background: var(--white);
+      cursor: pointer; outline: none;
+      width: 100%;
+    }
+    .add-match-select:focus { border-color: var(--main-blue); }
+    .add-match-vs {
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-4);
+      padding-bottom: 10px; flex-shrink: 0;
+    }
+    .add-match-confirm,
+    .add-match-cancel { flex-shrink: 0; }
+
     .date-config-mode {
       display: flex; gap: 4px;
     }
@@ -569,6 +599,43 @@
                     <button class="btn-outline-sm">🎲 Générer les rencontres</button>
                     <button class="btn-primary-sm">➕ Ajouter un match</button>
                   </div>
+                </div>
+              </div>
+
+              <!-- Formulaire ajout match (visible au clic sur "Ajouter un match") -->
+              <div class="add-match-form">
+                <div class="add-match-row">
+                  <div class="add-match-field">
+                    <label class="add-match-label">Domicile</label>
+                    <select class="add-match-select">
+                      <option value="">— Sélectionner —</option>
+                      <option>Skull Crushers</option>
+                      <option>Midnight Raiders</option>
+                      <option>Iron Forge</option>
+                      <option>Storm Treemen</option>
+                      <option>Halfling Legends</option>
+                      <option>Chaos United</option>
+                      <option>Green Tide</option>
+                      <option>Red Skulls</option>
+                    </select>
+                  </div>
+                  <div class="add-match-vs">vs</div>
+                  <div class="add-match-field">
+                    <label class="add-match-label">Extérieur</label>
+                    <select class="add-match-select">
+                      <option value="">— Sélectionner —</option>
+                      <option>Skull Crushers</option>
+                      <option>Midnight Raiders</option>
+                      <option>Iron Forge</option>
+                      <option>Storm Treemen</option>
+                      <option>Halfling Legends</option>
+                      <option>Chaos United</option>
+                      <option>Green Tide</option>
+                      <option>Red Skulls</option>
+                    </select>
+                  </div>
+                  <button class="btn-primary-sm add-match-confirm">✓ Ajouter</button>
+                  <button class="btn-outline-sm add-match-cancel">Annuler</button>
                 </div>
               </div>
 
