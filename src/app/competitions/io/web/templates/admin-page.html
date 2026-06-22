@@ -16,7 +16,7 @@
     <div class="admin-banner-badge">Admin</div>
   </div>
 
-  <div class="admin-tabs">
+  <div class="admin-tabs" onclick="if(event.target.classList.contains('admin-tab')){this.querySelectorAll('.admin-tab').forEach(function(t){t.classList.remove('active')});event.target.classList.add('active');}">
     <a class="admin-tab{% if active_tab == "dashboard" %} active{% endif %}"
        hx-get="{{ app_routes.competitions.admin_dashboard(space_id, competition_id, season_id) }}"
        hx-target="#admin-content"
