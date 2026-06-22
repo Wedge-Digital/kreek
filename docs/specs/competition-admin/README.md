@@ -18,6 +18,7 @@ Toutes dans `assets/rawpages/html/` :
 | Inscriptions | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (86-92) |
 | Poules | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (93-98) |
 | Calendrier | ✅ | | | | | | |
+
 | Résultats | ✅ | | | | | | |
 | Paramètres | ✅ | | | | | | |
 
