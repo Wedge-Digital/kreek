@@ -7,6 +7,7 @@
   <div class="round-sidebar-list">
     {% for round in rounds %}
     <div class="round-item round-item--{{ round.day_type }}"
+         data-round-id="{{ round.round_id }}"
          onclick="htmx.trigger(document.body, 'roundSelected', { round_id: '{{ round.round_id }}' })">
       <div class="round-item-icon">
         {% if round.day_type == "rest" %}
@@ -43,3 +44,12 @@
             hx-swap="none">&#9728; Ajouter un repos</button>
   </div>
 </div>
+<script>
+(function() {
+  var activeId = document.body.dataset.activeRoundId;
+  if (activeId) {
+    var el = document.querySelector('.round-item[data-round-id="' + activeId + '"]');
+    if (el) el.classList.add('active');
+  }
+})();
+</script>

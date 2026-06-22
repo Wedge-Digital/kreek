@@ -30,7 +30,7 @@
   <div id="schedule-detail"
        hx-get="{{ app_routes.competitions.admin_schedule_round_detail(space_id, competition_id, season_id) }}"
        hx-trigger="roundSelected from:body, scheduleChanged from:body"
-       hx-vals='js:{"round_id": (event && event.detail && event.detail.round_id) || document.querySelector(".round-item.active")?.dataset?.roundId || ""}'
+       hx-vals='js:{"round_id": (event && event.detail && event.detail.round_id) || document.body.dataset.activeRoundId || ""}'
        hx-swap="innerHTML">
   </div>
 </div>
@@ -40,13 +40,7 @@
     document.body.addEventListener('roundSelected', function (evt) {
         var roundId = evt.detail && evt.detail.round_id;
         if (!roundId) return;
-        document.querySelectorAll('.round-item').forEach(function (el) {
-            el.classList.remove('active');
-            if (el.getAttribute('onclick') && el.getAttribute('onclick').indexOf(roundId) !== -1) {
-                el.classList.add('active');
-                el.dataset.roundId = roundId;
-            }
-        });
+        document.body.dataset.activeRoundId = roundId;
     });
 })();
 </script>
