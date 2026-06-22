@@ -235,7 +235,7 @@
 
     /* ── Add match form ── */
     .add-match-form {
-      padding: var(--p1) var(--p2);
+      padding: var(--p2);
       background: var(--dark-7);
       border-bottom: 1px solid var(--dark-5);
     }
@@ -248,20 +248,27 @@
       text-transform: uppercase; letter-spacing: 0.3px;
     }
     .add-match-select {
-      padding: 8px 12px;
-      border: 1px solid var(--dark-4); border-radius: 7px;
-      font-size: var(--text-tiny); color: var(--dark-1);
+      padding: 10px 14px;
+      border: 1px solid var(--dark-4); border-radius: 6px;
+      font-size: var(--text-small); color: var(--dark-1);
       font-family: inherit; background: var(--white);
       cursor: pointer; outline: none;
       width: 100%;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .add-match-select:focus { border-color: var(--main-blue); }
+    .add-match-select:focus {
+      border-color: var(--main-blue);
+      box-shadow: 0 0 0 3px rgba(0,48,73,0.1);
+    }
     .add-match-vs {
-      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-4);
-      padding-bottom: 10px; flex-shrink: 0;
+      font-size: var(--h5); font-weight: 700; color: var(--dark-4);
+      padding-bottom: 12px; flex-shrink: 0;
     }
     .add-match-confirm,
-    .add-match-cancel { flex-shrink: 0; }
+    .add-match-cancel {
+      flex-shrink: 0;
+      padding: 10px 20px;
+    }
 
     .date-config-mode {
       display: flex; gap: 4px;
