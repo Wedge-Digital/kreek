@@ -226,6 +226,13 @@
       font-size: var(--text-tiny);
     }
     .date-config-label { font-weight: 600; color: var(--dark-2); flex-shrink: 0; }
+
+    /* ── Round match actions ── */
+    .round-match-actions {
+      padding: var(--p1) var(--p2);
+      border-bottom: 1px solid var(--dark-5);
+    }
+
     .date-config-mode {
       display: flex; gap: 4px;
     }
@@ -387,8 +394,8 @@
                 </span>
               </div>
               <div class="actions-bar-right">
-                <button class="btn-danger-sm">🗑️ Vider le calendrier</button>
-                <button class="btn-outline-sm">🎲 Générer le calendrier</button>
+                <button class="btn-danger-sm">🗑️ Vider toutes les rencontres</button>
+                <button class="btn-outline-sm">🎲 Générer toutes les rencontres</button>
               </div>
             </div>
           </div>
@@ -547,6 +554,22 @@
                 <input type="date" class="date-input" value="2025-10-24">
                 <span class="date-sep">→</span>
                 <input type="date" class="date-input" value="2025-11-07">
+              </div>
+
+              <div class="round-match-actions">
+                <div class="actions-bar">
+                  <div class="actions-bar-left">
+                    <span class="info-note">
+                      <span class="info-note-icon">⚔️</span>
+                      4 rencontres planifiées
+                    </span>
+                  </div>
+                  <div class="actions-bar-right">
+                    <button class="btn-danger-sm">🗑️ Vider les matchs</button>
+                    <button class="btn-outline-sm">🎲 Générer les rencontres</button>
+                    <button class="btn-primary-sm">➕ Ajouter un match</button>
+                  </div>
+                </div>
               </div>
 
               <div class="round-body">
