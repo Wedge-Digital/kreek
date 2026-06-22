@@ -20,21 +20,41 @@
   </div>
   {% else %}
 
-  <div class="round-date-config">
-    <div class="round-date-fields">
-      {% if detail.day_type == "fixed_date" %}
-      <label class="round-date-label">Date
-        <input type="date" class="round-date-input" value="{{ detail.date_start }}" disabled>
-      </label>
-      {% else %}
-      <label class="round-date-label">Début
-        <input type="date" class="round-date-input" value="{{ detail.date_start }}" disabled>
-      </label>
-      <label class="round-date-label">Fin
-        <input type="date" class="round-date-input" value="{{ detail.date_end }}" disabled>
-      </label>
-      {% endif %}
+  <div class="round-date-config" x-data="{
+    dayType: '{{ detail.day_type }}',
+    dateStart: '{{ detail.date_start }}',
+    dateEnd: '{{ detail.date_end }}',
+    saving: false,
+    save() {
+      this.saving = true;
+      var self = this;
+      fetch('{{ app_routes.competitions.admin_schedule_round(space_id, competition_id, season_id, detail.round_id) }}', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'HX-Request': 'true' },
+        body: JSON.stringify({ day_type: self.dayType, date_start: self.dateStart, date_end: self.dayType === 'fixed_date' ? self.dateStart : self.dateEnd })
+      }).then(function() {
+        self.saving = false;
+        htmx.trigger(document.body, 'scheduleChanged');
+      });
+    }
+  }">
+    <span class="date-config-label">Date :</span>
+    <div class="date-config-mode">
+      <button class="date-mode-btn" :class="{ active: dayType === 'fixed_date' }" @click="dayType = 'fixed_date'">Date fixe</button>
+      <button class="date-mode-btn" :class="{ active: dayType === 'time_frame' }" @click="dayType = 'time_frame'">Plage</button>
     </div>
+    <template x-if="dayType === 'fixed_date'">
+      <div class="date-config-inputs">
+        <input type="date" class="date-input" x-model="dateStart" @change="save()">
+      </div>
+    </template>
+    <template x-if="dayType === 'time_frame'">
+      <div class="date-config-inputs">
+        <input type="date" class="date-input" x-model="dateStart" @change="save()">
+        <span class="date-sep">&rarr;</span>
+        <input type="date" class="date-input" x-model="dateEnd" @change="save()">
+      </div>
+    </template>
   </div>
 
   <div class="match-actions-bar">

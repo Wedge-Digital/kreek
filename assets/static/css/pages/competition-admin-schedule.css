@@ -136,21 +136,47 @@
   background: var(--dark-7);
   border-radius: 8px;
   padding: var(--p1) var(--p2);
+  display: flex; align-items: center; gap: var(--p2);
 }
-.round-date-fields {
-  display: flex; gap: var(--p2); align-items: end;
+.date-config-label {
+  font-size: var(--text-tiny); font-weight: 600; color: var(--dark-2);
+  flex-shrink: 0;
 }
-.round-date-label {
-  display: flex; flex-direction: column; gap: 4px;
-  font-size: var(--text-tiny); font-weight: 600; color: var(--dark-3);
+.date-config-mode {
+  display: flex; gap: 4px;
 }
-.round-date-input {
+.date-mode-btn {
+  padding: 5px 14px; border-radius: 6px;
+  font-size: var(--text-tiny); font-weight: 600;
+  border: 1px solid var(--dark-5);
+  background: var(--white); color: var(--dark-3);
+  cursor: pointer; transition: all 0.12s;
+}
+.date-mode-btn.active {
+  background: var(--main-blue); color: var(--white); border-color: var(--main-blue);
+}
+.date-mode-btn:hover:not(.active) {
+  border-color: var(--dark-4); color: var(--dark-1);
+}
+.date-config-inputs {
+  display: flex; align-items: center; gap: 8px;
+}
+.date-input {
   padding: 6px 10px;
   border: 1px solid var(--dark-5);
   border-radius: 6px;
   font-size: var(--text-tiny);
+  font-family: inherit;
+  color: var(--dark-1);
   background: var(--white);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
+.date-input:focus {
+  border-color: var(--main-blue);
+  box-shadow: 0 0 0 3px rgba(0,48,73,0.08);
+}
+.date-sep { color: var(--dark-4); font-weight: 600; }
 
 /* ── Match actions bar ── */
 .match-actions-bar {
