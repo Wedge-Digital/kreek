@@ -64,15 +64,9 @@
     </span>
     <div class="match-actions-right">
       <button class="btn-danger-sm"
-              hx-post="{{ app_routes.competitions.admin_schedule_clear_round(space_id, competition_id, season_id) }}"
-              hx-vals='{"round_id": "{{ detail.round_id }}"}'
-              hx-ext="json-enc"
-              hx-swap="none">Vider les matchs</button>
+              onclick="fetch('{{ app_routes.competitions.admin_schedule_clear_round(space_id, competition_id, season_id) }}',{method:'POST',headers:{'Content-Type':'application/json','HX-Request':'true'},body:JSON.stringify({round_id:'{{ detail.round_id }}'})}).then(function(){htmx.trigger(document.body,'scheduleChanged')})">Vider les matchs</button>
       <button class="btn-primary-sm"
-              hx-post="{{ app_routes.competitions.admin_schedule_generate_round(space_id, competition_id, season_id) }}"
-              hx-vals='{"round_id": "{{ detail.round_id }}"}'
-              hx-ext="json-enc"
-              hx-swap="none">Générer les rencontres</button>
+              onclick="fetch('{{ app_routes.competitions.admin_schedule_generate_round(space_id, competition_id, season_id) }}',{method:'POST',headers:{'Content-Type':'application/json','HX-Request':'true'},body:JSON.stringify({round_id:'{{ detail.round_id }}'})}).then(function(){htmx.trigger(document.body,'scheduleChanged')})">Générer les rencontres</button>
       <button class="btn-outline-sm"
               onclick="this.closest('.round-detail').querySelector('.add-match-form').classList.toggle('hidden')">+ Ajouter un match</button>
     </div>
