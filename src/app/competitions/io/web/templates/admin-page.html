@@ -44,10 +44,6 @@
        hx-target="#admin-content"
        hx-swap="innerHTML"
        hx-push-url="{{ app_routes.competitions.admin_results(space_id, competition_id, season_id) }}">✅ Résultats</a>
-    <a class="admin-tab{% if active_tab == "settings" %} active{% endif %}"
-       hx-get="#"
-       hx-target="#admin-content"
-       hx-swap="innerHTML">⚙️ Paramètres</a>
   </div>
 
   <div id="admin-content">
