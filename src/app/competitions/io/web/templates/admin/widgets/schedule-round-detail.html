@@ -78,38 +78,69 @@
     </div>
   </div>
 
-  <div class="add-match-form hidden" x-data="{ showForm: false }">
+  <div class="add-match-form hidden" x-data="{
+    _tsHome: null,
+    _tsAway: null,
+    init() {
+      var teams = [
+        {% for t in detail.team_options %}
+        { value: '{{ t.team_id }}', text: '{{ t.team_name }}', coach: '{{ t.coach_name }}', roster: '{{ t.roster_name }}' },
+        {% endfor %}
+      ];
+      var tsConfig = {
+        valueField: 'value',
+        labelField: 'text',
+        searchField: ['text', 'coach', 'roster'],
+        options: teams,
+        render: {
+          option: function(data, escape) {
+            return '<div class=\"ts-team-option\">'
+              + '<div class=\"ts-team-name\">' + escape(data.text) + '</div>'
+              + '<div class=\"ts-team-meta\">' + escape(data.coach) + ' · ' + escape(data.roster) + '</div>'
+              + '</div>';
+          },
+          item: function(data, escape) {
+            return '<div>' + escape(data.text) + '</div>';
+          }
+        }
+      };
+      this._tsHome = new TomSelect(this.$refs.homeSelect, Object.assign({}, tsConfig, { placeholder: 'Équipe domicile…' }));
+      this._tsAway = new TomSelect(this.$refs.awaySelect, Object.assign({}, tsConfig, { placeholder: 'Équipe extérieur…' }));
+    },
+    destroy() {
+      if (this._tsHome) this._tsHome.destroy();
+      if (this._tsAway) this._tsAway.destroy();
+    },
+    submit() {
+      var home = this._tsHome ? this._tsHome.getValue() : '';
+      var away = this._tsAway ? this._tsAway.getValue() : '';
+      if (!home || !away || home === away) return;
+      var self = this;
+      fetch('{{ app_routes.competitions.admin_schedule_add_match(space_id, competition_id, season_id) }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'HX-Request': 'true' },
+        body: JSON.stringify({ round_id: '{{ detail.round_id }}', home_team_id: home, away_team_id: away })
+      }).then(function() { htmx.trigger(document.body, 'scheduleChanged'); });
+    },
+    cancel() {
+      this.$el.classList.add('hidden');
+    }
+  }">
     <div class="add-match-form-inner">
       <div class="add-match-selects">
-        <select class="add-match-select" data-role="home">
-          <option value="">Domicile...</option>
-          {% for t in detail.team_options %}
-          <option value="{{ t.team_id }}">{{ t.team_name }} ({{ t.coach_name }})</option>
-          {% endfor %}
-        </select>
+        <div class="add-match-field">
+          <label class="add-match-label">Domicile</label>
+          <select x-ref="homeSelect"></select>
+        </div>
         <span class="add-match-vs">vs</span>
-        <select class="add-match-select" data-role="away">
-          <option value="">Extérieur...</option>
-          {% for t in detail.team_options %}
-          <option value="{{ t.team_id }}">{{ t.team_name }} ({{ t.coach_name }})</option>
-          {% endfor %}
-        </select>
+        <div class="add-match-field">
+          <label class="add-match-label">Extérieur</label>
+          <select x-ref="awaySelect"></select>
+        </div>
       </div>
       <div class="add-match-buttons">
-        <button class="btn-primary-sm add-match-submit"
-                onclick="(function(btn){
-                  var form = btn.closest('.add-match-form');
-                  var home = form.querySelector('[data-role=home]').value;
-                  var away = form.querySelector('[data-role=away]').value;
-                  if (!home || !away || home === away) return;
-                  fetch('{{ app_routes.competitions.admin_schedule_add_match(space_id, competition_id, season_id) }}', {
-                    method: 'POST',
-                    headers: {'Content-Type':'application/json','HX-Request':'true'},
-                    body: JSON.stringify({round_id:'{{ detail.round_id }}',home_team_id:home,away_team_id:away})
-                  }).then(function(){ htmx.trigger(document.body,'scheduleChanged'); });
-                })(this)">Ajouter</button>
-        <button class="btn-outline-sm"
-                onclick="this.closest('.add-match-form').classList.add('hidden')">Annuler</button>
+        <button class="btn-add-match" @click="submit()">✓ Ajouter</button>
+        <button class="btn-outline-sm" @click="cancel()">Annuler</button>
       </div>
     </div>
   </div>

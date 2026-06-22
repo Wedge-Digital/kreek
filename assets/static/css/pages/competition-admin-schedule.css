@@ -215,6 +215,27 @@
   display: flex; gap: 8px; justify-content: flex-end;
 }
 
+/* ── TomSelect team options ── */
+.ts-team-option { padding: 4px 0; }
+.ts-team-name { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); }
+.ts-team-meta { font-size: 11px; color: var(--dark-3); margin-top: 1px; }
+
+.add-match-field { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.add-match-label {
+  font-size: 11px; font-weight: 600; color: var(--dark-3);
+  text-transform: uppercase; letter-spacing: 0.3px;
+}
+.btn-add-match {
+  flex-shrink: 0;
+  padding: 10px 20px; border-radius: 7px;
+  background: var(--main-blue); color: var(--white);
+  font-size: var(--text-tiny); font-weight: 700;
+  cursor: pointer;
+  border: 2px solid var(--main-blue);
+  transition: opacity 0.15s;
+}
+.btn-add-match:hover { opacity: 0.9; }
+
 /* ── Match list ── */
 .match-list {
   display: flex; flex-direction: column; gap: 4px;
