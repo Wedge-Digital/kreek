@@ -16,7 +16,7 @@ Toutes dans `assets/rawpages/html/` :
 |---|---|---|---|---|---|---|---|
 | Dashboard | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | ✅ (82-85) |
 | Inscriptions | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (86-92) |
-| Poules | ✅ | | | | | | |
+| Poules | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (93-98) |
 | Calendrier | ✅ | | | | | | |
 | Résultats | ✅ | | | | | | |
 | Paramètres | ✅ | | | | | | |
