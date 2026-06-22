@@ -2,6 +2,13 @@ use crate::app::competitions::io::web::all_competition::get_all_competition;
 use crate::app::competitions::io::web::admin::admin_page::admin_page;
 use crate::app::competitions::io::web::admin::dashboard::dashboard_fragment;
 use crate::app::competitions::io::web::admin::enrollments_tab::enrollments_tab;
+use crate::app::competitions::io::web::admin::groups_actions::{
+    post_assign_team, post_random_draw, post_reset_groups,
+};
+use crate::app::competitions::io::web::admin::groups_tab::groups_tab;
+use crate::app::competitions::io::web::admin::groups_widgets::{
+    group_cards_widget, unassigned_pool_widget,
+};
 use crate::app::competitions::io::web::competition_detail::{
     get_competition_detail, get_tab_matches, get_tab_standings, get_tab_stats, get_tab_teams,
 };
@@ -23,7 +30,7 @@ use crate::app::competitions::io::web::new_competition_phase_5::{
 };
 use crate::app::competitions::routes::path;
 use crate::state::AppState;
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::Router;
 
 pub fn router() -> Router<AppState> {
@@ -70,4 +77,22 @@ pub fn router() -> Router<AppState> {
         .route(path::COMPETITION_ADMIN, get(admin_page))
         .route(path::COMPETITION_ADMIN_DASHBOARD, get(dashboard_fragment))
         .route(path::COMPETITION_ADMIN_ENROLLMENTS, get(enrollments_tab))
+        .route(path::COMPETITION_ADMIN_GROUPS, get(groups_tab))
+        .route(
+            path::COMPETITION_ADMIN_GROUPS_UNASSIGNED,
+            get(unassigned_pool_widget),
+        )
+        .route(path::COMPETITION_ADMIN_GROUPS_CARDS, get(group_cards_widget))
+        .route(
+            path::COMPETITION_ADMIN_GROUPS_RANDOM_DRAW,
+            post(post_random_draw),
+        )
+        .route(
+            path::COMPETITION_ADMIN_GROUPS_RESET,
+            post(post_reset_groups),
+        )
+        .route(
+            path::COMPETITION_ADMIN_GROUPS_ASSIGN,
+            post(post_assign_team),
+        )
 }

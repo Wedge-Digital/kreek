@@ -1,6 +1,7 @@
 use crate::app::competitions::domain::group_repository_port::{GroupRepositoryError, IGroupRepository};
 use crate::app::competitions::ports::ITeamInfoPort;
 use rand::seq::SliceRandom;
+use rand::SeedableRng;
 
 #[derive(Debug)]
 pub enum DrawError {
@@ -39,7 +40,7 @@ pub async fn execute(
         .map_err(|e| DrawError::Repository(e.to_string()))?;
 
     let mut team_ids: Vec<&str> = enrolled.iter().map(|t| t.team_id.as_str()).collect();
-    let mut rng = rand::rng();
+    let mut rng = rand::rngs::StdRng::from_os_rng();
     team_ids.shuffle(&mut rng);
 
     let group_ids: Vec<&str> = groups.iter().map(|g| g.group_id.as_str()).collect();

@@ -1,0 +1,19 @@
+<div class="unassigned-pool" hx-disinherit="*">
+  <div class="unassigned-header">
+    <div class="unassigned-title">Équipes non assignées</div>
+    {% if !teams.is_empty() %}
+    <span class="unassigned-count">{{ teams.len() }} restante{% if teams.len() > 1 %}s{% endif %}</span>
+    {% endif %}
+  </div>
+  <div class="unassigned-teams">
+    {% for t in teams %}
+    <div class="unassigned-chip" draggable="true" data-team-id="{{ t.team_id }}">
+      <div class="unassigned-chip-logo">{{ t.team_initials }}</div>
+      {{ t.team_name }}
+    </div>
+    {% endfor %}
+    {% if teams.is_empty() %}
+    <div class="empty-state-inline">Toutes les équipes sont assignées.</div>
+    {% endif %}
+  </div>
+</div>

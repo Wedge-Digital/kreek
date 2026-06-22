@@ -27,10 +27,13 @@
        hx-target="#admin-content"
        hx-swap="innerHTML"
        hx-push-url="{{ app_routes.competitions.admin_enrollments(space_id, competition_id, season_id) }}">📋 Inscriptions</a>
+    {% if has_groups %}
     <a class="admin-tab{% if active_tab == "groups" %} active{% endif %}"
-       hx-get="#"
+       hx-get="{{ app_routes.competitions.admin_groups(space_id, competition_id, season_id) }}"
        hx-target="#admin-content"
-       hx-swap="innerHTML">🎲 Poules</a>
+       hx-swap="innerHTML"
+       hx-push-url="{{ app_routes.competitions.admin_groups(space_id, competition_id, season_id) }}">🎲 Poules</a>
+    {% endif %}
     <a class="admin-tab{% if active_tab == "schedule" %} active{% endif %}"
        hx-get="#"
        hx-target="#admin-content"

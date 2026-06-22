@@ -29,6 +29,18 @@ pub mod path {
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/dashboard";
     pub const COMPETITION_ADMIN_ENROLLMENTS: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/enrollments";
+    pub const COMPETITION_ADMIN_GROUPS: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/groups";
+    pub const COMPETITION_ADMIN_GROUPS_UNASSIGNED: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/groups/unassigned";
+    pub const COMPETITION_ADMIN_GROUPS_CARDS: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/groups/cards";
+    pub const COMPETITION_ADMIN_GROUPS_RANDOM_DRAW: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/groups/random-draw";
+    pub const COMPETITION_ADMIN_GROUPS_RESET: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/groups/reset";
+    pub const COMPETITION_ADMIN_GROUPS_ASSIGN: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/groups/assign";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -125,6 +137,42 @@ impl Routes {
     }
     pub fn admin_enrollments(&self, sid: &str, cid: &str, season_id: &str) -> String {
         path::COMPETITION_ADMIN_ENROLLMENTS
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_groups(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_GROUPS
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_groups_unassigned(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_GROUPS_UNASSIGNED
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_groups_cards(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_GROUPS_CARDS
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_groups_random_draw(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_GROUPS_RANDOM_DRAW
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_groups_reset(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_GROUPS_RESET
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_groups_assign(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_GROUPS_ASSIGN
             .replace("{space_id}", sid)
             .replace("{competition_id}", cid)
             .replace("{season_id}", season_id)

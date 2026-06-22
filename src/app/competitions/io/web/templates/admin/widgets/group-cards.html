@@ -1,0 +1,30 @@
+<div class="groups-grid" hx-disinherit="*">
+  {% for group in groups %}
+  <div class="group-card" data-group-id="{{ group.group_id }}">
+    <div class="group-card-head">
+      <span class="group-card-name">{{ group.name }}</span>
+      <span class="group-card-count">{{ group.teams.len() }} équipe{% if group.teams.len() > 1 %}s{% endif %}</span>
+    </div>
+    <div class="group-card-body">
+      {% for t in group.teams %}
+      <div class="group-team" draggable="true" data-team-id="{{ t.team_id }}">
+        <div class="group-team-logo">{{ t.team_initials }}</div>
+        <div class="group-team-info">
+          <div class="group-team-name">{{ t.team_name }}</div>
+          <div class="group-team-meta">{{ t.coach_name }} · {{ t.roster_name }}</div>
+        </div>
+        <span class="group-team-handle">⠿</span>
+      </div>
+      {% endfor %}
+      <div class="group-drop-zone">Déposez une équipe ici</div>
+    </div>
+  </div>
+  {% endfor %}
+
+  {% if groups.is_empty() %}
+  <div class="empty-state">
+    <div class="empty-state-icon">🎲</div>
+    <div class="empty-state-text">Aucune poule configurée pour cette saison.</div>
+  </div>
+  {% endif %}
+</div>

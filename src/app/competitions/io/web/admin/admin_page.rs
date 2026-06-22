@@ -20,6 +20,7 @@ pub struct AdminPageTemplate {
     pub competition_name: String,
     pub season_name: String,
     pub admin_count: usize,
+    pub has_groups: bool,
     pub active_tab: String,
     pub content: String,
 }
@@ -109,11 +110,30 @@ pub async fn render_admin_page(
         .map(|i| i.name)
         .unwrap_or_default();
 
+    let has_groups = state
+        .competitions
+        .season_repository
+        .find_structure(&season_entity_id)
+        .await
+        .ok()
+        .flatten()
+        .map(|s| s.ranking_group.use_ranking_groups && s.ranking_group.ranking_groups.len() > 1)
+        .unwrap_or(false);
+
     let app_routes = AppRoutes::default();
 
     let content = match active_tab {
         "enrollments" => {
             let tpl = super::enrollments_tab::EnrollmentsTabTemplate {
+                app_routes,
+                space_id: space_id.to_string(),
+                competition_id: competition_id.to_string(),
+                season_id: season_id.to_string(),
+            };
+            tpl.render().unwrap_or_default()
+        }
+        "groups" => {
+            let tpl = super::groups_tab::GroupsTabTemplate {
                 app_routes,
                 space_id: space_id.to_string(),
                 competition_id: competition_id.to_string(),
@@ -152,6 +172,7 @@ pub async fn render_admin_page(
         competition_name: comp_info.name,
         season_name,
         admin_count: comp_info.admin_ids.len(),
+        has_groups,
         active_tab: active_tab.to_string(),
         content,
     }
