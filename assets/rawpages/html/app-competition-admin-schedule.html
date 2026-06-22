@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin — Calendrier — Blood Bowl Club</title>
   <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.4.1/dist/css/tom-select.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.4.1/dist/js/tom-select.complete.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
   <style>
     /* ── Layout ── */
     .admin-container {
@@ -247,24 +250,20 @@
       font-size: 11px; font-weight: 600; color: var(--dark-3);
       text-transform: uppercase; letter-spacing: 0.3px;
     }
-    .add-match-select {
-      padding: 10px 14px;
-      border: 1px solid var(--dark-4); border-radius: 6px;
-      font-size: var(--text-small); color: var(--dark-1);
-      font-family: inherit; background: var(--white);
-      cursor: pointer; outline: none;
-      width: 100%;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .add-match-select:focus {
-      border-color: var(--main-blue);
-      box-shadow: 0 0 0 3px rgba(0,48,73,0.1);
-    }
     .add-match-vs {
       font-size: var(--h5); font-weight: 700; color: var(--dark-4);
       padding-bottom: 12px; flex-shrink: 0;
     }
-    .add-match-confirm,
+    .btn-add-match {
+      flex-shrink: 0;
+      padding: 10px 20px; border-radius: 7px;
+      background: var(--main-blue); color: var(--white);
+      font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer;
+      border: 2px solid var(--main-blue);
+      transition: opacity 0.15s;
+    }
+    .btn-add-match:hover { opacity: 0.9; }
     .add-match-cancel {
       flex-shrink: 0;
       padding: 10px 20px;
@@ -610,38 +609,47 @@
               </div>
 
               <!-- Formulaire ajout match (visible au clic sur "Ajouter un match") -->
-              <div class="add-match-form">
+              <div class="add-match-form" x-data="{
+                init() {
+                  this._tsHome = new TomSelect(this.$refs.homeSelect, { placeholder: 'Équipe domicile…' });
+                  this._tsAway = new TomSelect(this.$refs.awaySelect, { placeholder: 'Équipe extérieur…' });
+                },
+                destroy() {
+                  this._tsHome?.destroy();
+                  this._tsAway?.destroy();
+                }
+              }">
                 <div class="add-match-row">
                   <div class="add-match-field">
                     <label class="add-match-label">Domicile</label>
-                    <select class="add-match-select">
+                    <select x-ref="homeSelect" name="home_team_id">
                       <option value="">— Sélectionner —</option>
-                      <option>Skull Crushers</option>
-                      <option>Midnight Raiders</option>
-                      <option>Iron Forge</option>
-                      <option>Storm Treemen</option>
-                      <option>Halfling Legends</option>
-                      <option>Chaos United</option>
-                      <option>Green Tide</option>
-                      <option>Red Skulls</option>
+                      <option value="team-1">Skull Crushers</option>
+                      <option value="team-2">Midnight Raiders</option>
+                      <option value="team-3">Iron Forge</option>
+                      <option value="team-4">Storm Treemen</option>
+                      <option value="team-5">Halfling Legends</option>
+                      <option value="team-6">Chaos United</option>
+                      <option value="team-7">Green Tide</option>
+                      <option value="team-8">Red Skulls</option>
                     </select>
                   </div>
                   <div class="add-match-vs">vs</div>
                   <div class="add-match-field">
                     <label class="add-match-label">Extérieur</label>
-                    <select class="add-match-select">
+                    <select x-ref="awaySelect" name="away_team_id">
                       <option value="">— Sélectionner —</option>
-                      <option>Skull Crushers</option>
-                      <option>Midnight Raiders</option>
-                      <option>Iron Forge</option>
-                      <option>Storm Treemen</option>
-                      <option>Halfling Legends</option>
-                      <option>Chaos United</option>
-                      <option>Green Tide</option>
-                      <option>Red Skulls</option>
+                      <option value="team-1">Skull Crushers</option>
+                      <option value="team-2">Midnight Raiders</option>
+                      <option value="team-3">Iron Forge</option>
+                      <option value="team-4">Storm Treemen</option>
+                      <option value="team-5">Halfling Legends</option>
+                      <option value="team-6">Chaos United</option>
+                      <option value="team-7">Green Tide</option>
+                      <option value="team-8">Red Skulls</option>
                     </select>
                   </div>
-                  <button class="btn-primary-sm add-match-confirm">✓ Ajouter</button>
+                  <button class="btn-add-match">✓ Ajouter</button>
                   <button class="btn-outline-sm add-match-cancel">Annuler</button>
                 </div>
               </div>
