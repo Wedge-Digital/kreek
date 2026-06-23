@@ -587,6 +587,14 @@ let rows = build_hired_rows(&roster_team, &roster_def);
 let positions = build_player_positions(&roster_def);
 ```
 
+### Selects — TomSelect obligatoire
+
+Tout élément `<select>` dans l'application doit être un **widget TomSelect** (searchable, avec style homogène). Les `<select>` natifs sont interdits dans les templates finaux.
+
+- TomSelect est initialisé via Alpine.js `init()`/`destroy()` ou via un `<script>` scoped (cf. convention widgets)
+- Le style TomSelect doit être homogène avec le design system (`common.css`, `tom-select.css`)
+- Les maquettes (`rawpages/`) peuvent utiliser TomSelect directement pour valider le rendu
+
 ### Interdiction des styles inline — règle obligatoire
 
 Les attributs `style="..."` sont **totalement interdits** dans les templates HTML.
