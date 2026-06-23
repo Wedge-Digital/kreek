@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rapport de match — Étape 2 — Avant-match</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ── Mobile-first layout ── */
+    .mr-container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: var(--p1);
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+      padding-bottom: var(--p4);
+    }
+
+    /* ── Header ── */
+    .mr-header {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 12px;
+      padding: var(--p2);
+      text-align: center;
+    }
+    .mr-header-icon { font-size: 36px; margin-bottom: 8px; }
+    .mr-header-title {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+      color: var(--white);
+    }
+    .mr-header-sub {
+      font-size: var(--text-tiny); color: rgba(255,255,255,0.6); margin-top: 4px;
+    }
+
+    /* ── Steps indicator ── */
+    .mr-steps {
+      display: flex; align-items: center; justify-content: center;
+      gap: 4px; padding: 8px 0;
+    }
+    .mr-step {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; flex-shrink: 0;
+    }
+    .mr-step--active { background: var(--main-blue); color: var(--white); }
+    .mr-step--pending { background: var(--dark-5); color: var(--dark-3); }
+    .mr-step--done { background: var(--green); color: var(--white); }
+    .mr-step-line { width: 20px; height: 2px; background: var(--dark-5); flex-shrink: 0; }
+    .mr-step-line--done { background: var(--green); }
+
+    /* ── Match banner (compact VS) ── */
+    .mr-match-banner {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p2);
+      display: flex; align-items: center; gap: var(--p1);
+    }
+    .mr-match-team {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center;
+    }
+    .mr-match-logo {
+      width: 44px; height: 44px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 14px;
+      color: var(--white);
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+    }
+    .mr-match-name {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
+    }
+    .mr-match-coach {
+      font-size: 11px; color: var(--dark-3);
+    }
+    .mr-match-vs {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+      color: var(--dark-4); flex-shrink: 0;
+    }
+
+    /* ── Card ── */
+    .mr-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p2);
+      display: flex; flex-direction: column; gap: var(--p2);
+    }
+    .mr-card-title {
+      font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
+      color: var(--dark-1);
+    }
+
+    /* ── Section separator ── */
+    .mr-sep { height: 1px; background: var(--dark-5); }
+
+    /* ── Fan factor section ── */
+    .mr-fan-section {
+      display: flex; flex-direction: column; gap: var(--p1);
+    }
+    .mr-fan-row {
+      display: flex; align-items: center; gap: var(--p1);
+      padding: 10px var(--p1);
+      background: var(--dark-7); border-radius: 8px;
+    }
+    .mr-fan-team {
+      flex: 1; font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
+      min-width: 0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .mr-fan-dedicated {
+      display: flex; align-items: center; gap: 4px;
+      font-size: var(--text-tiny); color: var(--dark-3);
+    }
+    .mr-fan-plus { color: var(--dark-4); font-weight: 700; }
+    .mr-fan-dice {
+      display: flex; align-items: center; gap: 4px;
+    }
+    .mr-fan-dice-input {
+      width: 44px; height: 36px; text-align: center;
+      border: 1px solid var(--dark-4); border-radius: 6px;
+      font-size: var(--text-small); font-weight: 700;
+      color: var(--dark-1); background: var(--white);
+      font-family: inherit; outline: none;
+    }
+    .mr-fan-dice-input:focus {
+      border-color: var(--main-blue);
+      box-shadow: 0 0 0 3px rgba(0,48,73,0.1);
+    }
+    .mr-fan-dice-label {
+      font-size: 11px; color: var(--dark-4);
+    }
+    .mr-fan-equals { color: var(--dark-4); font-weight: 700; font-size: var(--text-tiny); }
+    .mr-fan-total {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+      color: var(--main-blue); min-width: 28px; text-align: center;
+    }
+
+    /* ── Journaliers info ── */
+    .mr-info-banner {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px var(--p1);
+      border-radius: 8px;
+      font-size: var(--text-tiny);
+    }
+    .mr-info-banner--neutral {
+      background: rgba(0,48,73,0.04);
+      border: 1px solid rgba(0,48,73,0.1);
+      color: var(--main-blue);
+    }
+    .mr-info-banner--ok {
+      background: rgba(98,149,132,0.08);
+      border: 1px solid rgba(98,149,132,0.2);
+      color: #3d6b5e;
+    }
+    .mr-info-icon { font-size: 16px; flex-shrink: 0; }
+
+    /* ── TV comparison ── */
+    .mr-tv-section {
+      display: flex; flex-direction: column; gap: var(--p1);
+    }
+    .mr-tv-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px var(--p1);
+      background: var(--dark-7); border-radius: 8px;
+    }
+    .mr-tv-team {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
+    }
+    .mr-tv-value {
+      font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
+      color: var(--dark-1);
+    }
+    .mr-tv-diff {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px;
+      padding: 8px var(--p1);
+      background: rgba(255,107,53,0.06);
+      border: 1px solid rgba(255,107,53,0.15);
+      border-radius: 8px;
+      font-size: var(--text-tiny); color: #9A5000;
+    }
+    .mr-tv-diff--equal {
+      background: rgba(98,149,132,0.06);
+      border-color: rgba(98,149,132,0.15);
+      color: #3d6b5e;
+    }
+
+    /* ── Inducements summary ── */
+    .mr-inducements-summary {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .mr-inducement-team-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px var(--p1);
+      border: 1px solid var(--dark-5);
+      border-radius: 8px;
+    }
+    .mr-inducement-team-info {
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .mr-inducement-team-name {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
+    }
+    .mr-inducement-team-budget {
+      font-size: 11px; color: var(--dark-3);
+    }
+    .mr-inducement-order {
+      font-size: 11px; font-weight: 700; color: var(--dark-4);
+      padding: 2px 8px; border-radius: 12px;
+      background: var(--dark-6);
+    }
+    .mr-inducement-order--first {
+      background: rgba(0,48,73,0.08); color: var(--main-blue);
+    }
+
+    /* ── Actions ── */
+    .mr-actions {
+      display: flex; gap: var(--p1);
+    }
+    .mr-actions .btn-outline-sm { flex: 1; text-align: center; }
+    .mr-actions .btn-primary-sm { flex: 2; text-align: center; }
+
+    .btn-primary-sm {
+      padding: 12px 20px; border-radius: 8px;
+      background: var(--main-blue); color: var(--white);
+      font-size: var(--text-small); font-weight: 700;
+      cursor: pointer; border: none; transition: opacity 0.15s;
+    }
+    .btn-primary-sm:hover { opacity: 0.9; }
+
+    .btn-outline-sm {
+      padding: 12px 20px; border-radius: 8px;
+      background: var(--white); color: var(--dark-2);
+      font-size: var(--text-small); font-weight: 600;
+      cursor: pointer; border: 1px solid var(--dark-5);
+      transition: all 0.15s;
+    }
+    .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    @media (min-width: 768px) {
+      .mr-container { padding: var(--p2); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+          </div>
+          <div class="menu-right">
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="mr-container">
+
+          <!-- Header -->
+          <div class="mr-header">
+            <div class="mr-header-icon">📋</div>
+            <div class="mr-header-title">Séquence d'avant-match</div>
+            <div class="mr-header-sub">Fan factor, journaliers, coups de pouce</div>
+          </div>
+
+          <!-- Steps -->
+          <div class="mr-steps">
+            <div class="mr-step mr-step--done">✓</div>
+            <div class="mr-step-line mr-step-line--done"></div>
+            <div class="mr-step mr-step--active">2</div>
+            <div class="mr-step-line"></div>
+            <div class="mr-step mr-step--pending">3</div>
+            <div class="mr-step-line"></div>
+            <div class="mr-step mr-step--pending">4</div>
+            <div class="mr-step-line"></div>
+            <div class="mr-step mr-step--pending">5</div>
+          </div>
+
+          <!-- Match banner -->
+          <div class="mr-match-banner">
+            <div class="mr-match-team">
+              <div class="mr-match-logo">ST</div>
+              <div class="mr-match-name">Storm Treemen</div>
+              <div class="mr-match-coach">Yan · Elfes Sylvains</div>
+            </div>
+            <span class="mr-match-vs">VS</span>
+            <div class="mr-match-team">
+              <div class="mr-match-logo" style="background: linear-gradient(135deg, #E02020, #555770);">SC</div>
+              <div class="mr-match-name">Skull Crushers</div>
+              <div class="mr-match-coach">Darkmoule · Orques</div>
+            </div>
+          </div>
+
+          <!-- Fan factor -->
+          <div class="mr-card">
+            <div class="mr-card-title">🎲 Fan Factor</div>
+            <div class="mr-fan-section">
+              <div class="mr-fan-row">
+                <span class="mr-fan-team">Storm Treemen</span>
+                <span class="mr-fan-dedicated">Fans : 3</span>
+                <span class="mr-fan-plus">+</span>
+                <div class="mr-fan-dice">
+                  <input type="number" class="mr-fan-dice-input" min="1" max="3" value="2" placeholder="D3">
+                  <span class="mr-fan-dice-label">D3</span>
+                </div>
+                <span class="mr-fan-equals">=</span>
+                <span class="mr-fan-total">5</span>
+              </div>
+
+              <div class="mr-fan-row">
+                <span class="mr-fan-team">Skull Crushers</span>
+                <span class="mr-fan-dedicated">Fans : 2</span>
+                <span class="mr-fan-plus">+</span>
+                <div class="mr-fan-dice">
+                  <input type="number" class="mr-fan-dice-input" min="1" max="3" value="1" placeholder="D3">
+                  <span class="mr-fan-dice-label">D3</span>
+                </div>
+                <span class="mr-fan-equals">=</span>
+                <span class="mr-fan-total">3</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Journaliers -->
+          <div class="mr-card">
+            <div class="mr-card-title">👥 Journaliers</div>
+
+            <div class="mr-info-banner mr-info-banner--ok">
+              <span class="mr-info-icon">✅</span>
+              <span><strong>Storm Treemen</strong> — 12 joueurs, aucun journalier nécessaire.</span>
+            </div>
+
+            <div class="mr-info-banner mr-info-banner--neutral">
+              <span class="mr-info-icon">➕</span>
+              <span><strong>Skull Crushers</strong> — 9 joueurs, <strong>2 journaliers</strong> ajoutés automatiquement (Lineman).</span>
+            </div>
+          </div>
+
+          <!-- TV comparison -->
+          <div class="mr-card">
+            <div class="mr-card-title">⚖️ Comparaison des valeurs d'équipe</div>
+            <div class="mr-tv-section">
+              <div class="mr-tv-row">
+                <span class="mr-tv-team">Storm Treemen</span>
+                <span class="mr-tv-value">1 120 kPo</span>
+              </div>
+              <div class="mr-tv-row">
+                <span class="mr-tv-team">Skull Crushers</span>
+                <span class="mr-tv-value">1 060 kPo</span>
+              </div>
+              <div class="mr-tv-diff">
+                <span>⚠️</span>
+                <span>Différence de <strong>60 kPo</strong> en faveur de <strong>Storm Treemen</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Inducements order -->
+          <div class="mr-card">
+            <div class="mr-card-title">🛒 Coups de pouce</div>
+            <div class="mr-inducements-summary">
+              <div class="mr-inducement-team-row">
+                <div class="mr-inducement-team-info">
+                  <div class="mr-inducement-team-name">Storm Treemen</div>
+                  <div class="mr-inducement-team-budget">Budget : trésorerie (150 kPo disponibles)</div>
+                </div>
+                <span class="mr-inducement-order mr-inducement-order--first">1er</span>
+              </div>
+
+              <div class="mr-inducement-team-row">
+                <div class="mr-inducement-team-info">
+                  <div class="mr-inducement-team-name">Skull Crushers</div>
+                  <div class="mr-inducement-team-budget">Budget : 60 kPo (différence) + dépenses adverses + 50 kPo trésorerie</div>
+                </div>
+                <span class="mr-inducement-order">2e</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="mr-actions">
+            <button class="btn-outline-sm">← Retour</button>
+            <button class="btn-primary-sm">Acheter les coups de pouce →</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
