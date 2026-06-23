@@ -71,6 +71,7 @@ Maquettes HTML/CSS dans `assets/rawpages/html/` (un fichier par page).
 - Les maquettes utilisent le design system existant (shared.css, variables CSS)
 - Chaque état est maquetté : état vide, état chargé, état d'erreur, état de succès
 - Un fichier par page/onglet
+- **Interdit de commiter une maquette non validée par l'utilisateur** — présenter d'abord, attendre la validation explicite, puis commiter
 - On ne passe aux phases suivantes qu'après validation de toutes les maquettes
 
 ---
