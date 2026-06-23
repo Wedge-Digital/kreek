@@ -71,19 +71,10 @@
       font-size: var(--text-tiny); font-weight: 600; color: var(--dark-2);
       text-transform: uppercase; letter-spacing: 0.3px;
     }
-    .mr-select {
-      padding: 12px 14px;
-      border: 1px solid var(--dark-4); border-radius: 8px;
-      font-size: var(--text-small); color: var(--dark-1);
-      font-family: inherit; background: var(--white);
-      cursor: pointer; outline: none;
-      width: 100%;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .mr-select:focus {
-      border-color: var(--main-blue);
-      box-shadow: 0 0 0 3px rgba(0,48,73,0.1);
-    }
+    /* ── TomSelect custom rendering ── */
+    .ts-team-option { padding: 4px 0; }
+    .ts-team-name { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); }
+    .ts-team-meta { font-size: 11px; color: var(--dark-3); margin-top: 1px; }
 
     /* ── VS section ── */
     .mr-vs-section {
@@ -250,31 +241,19 @@
             <!-- Compétition -->
             <div class="mr-field">
               <label class="mr-label">Compétition</label>
-              <select class="mr-select" id="competition-select">
-                <option value="">— Choisir une compétition —</option>
-                <option value="comp-1" selected>Ligue de Condate</option>
-                <option value="comp-2">Tournoi des Korrigans</option>
-              </select>
+              <select id="competition-select"></select>
             </div>
 
             <!-- Saison -->
             <div class="mr-field">
               <label class="mr-label">Saison</label>
-              <select class="mr-select" id="season-select">
-                <option value="">— Choisir une saison —</option>
-                <option value="s-1" selected>Saison 5</option>
-              </select>
+              <select id="season-select"></select>
             </div>
 
             <!-- Journée -->
             <div class="mr-field">
               <label class="mr-label">Journée</label>
-              <select class="mr-select" id="round-select">
-                <option value="">— Choisir une journée —</option>
-                <option value="r-1">Journée 1 — 12 sept. → 26 sept.</option>
-                <option value="r-2">Journée 2 — 26 sept. → 10 oct.</option>
-                <option value="r-3" selected>Journée 3 — 24 oct. → 7 nov.</option>
-              </select>
+              <select id="round-select"></select>
             </div>
 
           </div>
@@ -286,13 +265,7 @@
               <!-- Home team -->
               <div class="mr-field">
                 <label class="mr-label">Équipe domicile</label>
-                <select class="mr-select" id="home-select">
-                  <option value="">— Choisir —</option>
-                  <option value="t-1">Skull Crushers — Darkmoule · Orques</option>
-                  <option value="t-2">Midnight Raiders — Grim · Elfes Noirs</option>
-                  <option value="t-3">Iron Forge — Guigui · Nains</option>
-                  <option value="t-4" selected>Storm Treemen — Yan · Elfes Sylvains</option>
-                </select>
+                <select id="home-select"></select>
               </div>
 
               <!-- Selected home team card -->
@@ -314,13 +287,7 @@
               <!-- Away team -->
               <div class="mr-field">
                 <label class="mr-label">Équipe visiteur</label>
-                <select class="mr-select" id="away-select">
-                  <option value="">— Choisir —</option>
-                  <option value="t-1" selected>Skull Crushers — Darkmoule · Orques</option>
-                  <option value="t-2">Midnight Raiders — Grim · Elfes Noirs</option>
-                  <option value="t-3">Iron Forge — Guigui · Nains</option>
-                  <option value="t-4">Storm Treemen — Yan · Elfes Sylvains</option>
-                </select>
+                <select id="away-select"></select>
               </div>
 
               <!-- Selected away team card -->
@@ -351,5 +318,116 @@
       </div><!-- /page-content -->
     </div><!-- /main-area -->
   </div><!-- /app-layout -->
+
+<script>
+(function() {
+  var teams = [
+    { value: 't-1', text: 'Skull Crushers', coach: 'Darkmoule', roster: 'Orques', tv: '1060 kPo' },
+    { value: 't-2', text: 'Midnight Raiders', coach: 'Grim', roster: 'Elfes Noirs', tv: '1100 kPo' },
+    { value: 't-3', text: 'Iron Forge', coach: 'Guigui', roster: 'Nains', tv: '1080 kPo' },
+    { value: 't-4', text: 'Storm Treemen', coach: 'Yan', roster: 'Elfes Sylvains', tv: '1120 kPo' },
+    { value: 't-5', text: 'Halfling Legends', coach: 'Playmore', roster: 'Halflings', tv: '950 kPo' },
+    { value: 't-6', text: 'Chaos United', coach: 'Calltrakk', roster: 'Élus du Chaos', tv: '1140 kPo' },
+  ];
+
+  var teamTsConfig = {
+    valueField: 'value',
+    labelField: 'text',
+    searchField: ['text', 'coach', 'roster'],
+    options: teams,
+    render: {
+      option: function(data, escape) {
+        return '<div class="ts-team-option">'
+          + '<div class="ts-team-name">' + escape(data.text) + '</div>'
+          + '<div class="ts-team-meta">' + escape(data.coach) + ' · ' + escape(data.roster) + ' · ' + escape(data.tv) + '</div>'
+          + '</div>';
+      },
+      item: function(data, escape) {
+        return '<div>' + escape(data.text) + '</div>';
+      }
+    }
+  };
+
+  new TomSelect('#competition-select', {
+    options: [
+      { value: 'comp-1', text: 'Ligue de Condate' },
+      { value: 'comp-2', text: 'Tournoi des Korrigans' },
+    ],
+    valueField: 'value', labelField: 'text',
+    searchField: ['text'],
+    placeholder: 'Choisir une compétition…',
+    items: ['comp-1'],
+  });
+
+  new TomSelect('#season-select', {
+    options: [
+      { value: 's-1', text: 'Saison 5' },
+    ],
+    valueField: 'value', labelField: 'text',
+    searchField: ['text'],
+    placeholder: 'Choisir une saison…',
+    items: ['s-1'],
+  });
+
+  new TomSelect('#round-select', {
+    options: [
+      { value: 'r-1', text: 'Journée 1', dates: '12 → 26 sept.' },
+      { value: 'r-2', text: 'Journée 2', dates: '26 sept. → 10 oct.' },
+      { value: 'r-3', text: 'Journée 3', dates: '24 oct. → 7 nov.' },
+    ],
+    valueField: 'value', labelField: 'text',
+    searchField: ['text'],
+    placeholder: 'Choisir une journée…',
+    items: ['r-3'],
+    render: {
+      option: function(data, escape) {
+        return '<div class="ts-team-option">'
+          + '<div class="ts-team-name">' + escape(data.text) + '</div>'
+          + '<div class="ts-team-meta">' + escape(data.dates) + '</div>'
+          + '</div>';
+      },
+      item: function(data, escape) {
+        return '<div>' + escape(data.text) + '</div>';
+      }
+    }
+  });
+
+  function updateTeamCard(cardEl, teamData) {
+    if (!teamData) {
+      cardEl.className = 'mr-team-card mr-team-card--empty';
+      cardEl.innerHTML = 'Sélectionnez une équipe';
+      return;
+    }
+    cardEl.className = 'mr-team-card mr-team-card--selected';
+    var initials = teamData.text.split(' ').map(function(w){ return w[0]; }).join('').substring(0,2).toUpperCase();
+    cardEl.innerHTML = '<div class="mr-team-logo">' + initials + '</div>'
+      + '<div class="mr-team-info">'
+      + '<div class="mr-team-name">' + teamData.text + '</div>'
+      + '<div class="mr-team-meta">Coach : ' + teamData.coach + ' · ' + teamData.roster + ' · TV ' + teamData.tv + '</div>'
+      + '</div>';
+  }
+
+  var homeCard = document.querySelectorAll('.mr-team-card')[0];
+  var awayCard = document.querySelectorAll('.mr-team-card')[1];
+
+  var tsHome = new TomSelect('#home-select', Object.assign({}, teamTsConfig, {
+    placeholder: 'Équipe domicile…',
+    items: ['t-4'],
+    onChange: function(val) {
+      var data = this.options[val];
+      updateTeamCard(homeCard, data);
+    }
+  }));
+
+  var tsAway = new TomSelect('#away-select', Object.assign({}, teamTsConfig, {
+    placeholder: 'Équipe visiteur…',
+    items: ['t-1'],
+    onChange: function(val) {
+      var data = this.options[val];
+      updateTeamCard(awayCard, data);
+    }
+  }));
+})();
+</script>
 </body>
 </html>
