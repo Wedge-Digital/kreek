@@ -24,6 +24,7 @@ pub async fn post_generate_all(
         &season_id,
         state.competitions.match_day_repository.as_ref(),
         state.competitions.group_repository.as_ref(),
+        state.competitions.team_info_port.as_ref(),
     )
     .await
     {
@@ -242,6 +243,7 @@ pub async fn post_generate_round_pairings(
         &season_id,
         state.competitions.match_day_repository.as_ref(),
         state.competitions.group_repository.as_ref(),
+        state.competitions.team_info_port.as_ref(),
     )
     .await
     {

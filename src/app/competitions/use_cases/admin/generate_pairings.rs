@@ -1,7 +1,8 @@
-use crate::app::competitions::domain::group_repository_port::IGroupRepository;
+use crate::app::competitions::domain::group_repository_port::{GroupWithTeams, IGroupRepository};
 use crate::app::competitions::domain::match_day::generate_round_pairings;
 use crate::app::competitions::domain::match_day::Pairing;
 use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
+use crate::app::competitions::ports::ITeamInfoPort;
 use std::collections::HashSet;
 
 #[derive(Debug)]
@@ -17,6 +18,7 @@ pub async fn execute(
     season_id: &str,
     match_day_repo: &dyn IMatchDayRepository,
     group_repo: &dyn IGroupRepository,
+    team_port: &dyn ITeamInfoPort,
 ) -> Result<(), GenerateError> {
     let match_day = match_day_repo
         .find_by_id(match_day_id)
@@ -33,9 +35,23 @@ pub async fn execute(
         .await
         .map_err(|e| GenerateError::Repository(e.to_string()))?;
 
-    if groups.is_empty() {
-        return Err(GenerateError::NoGroups);
-    }
+    let groups = if groups.is_empty() {
+        let enrolled = team_port
+            .find_enrolled_teams(season_id)
+            .await
+            .map_err(|e| GenerateError::Repository(e))?;
+        if enrolled.is_empty() {
+            return Err(GenerateError::NoGroups);
+        }
+        vec![GroupWithTeams {
+            group_id: "default".to_string(),
+            group_name: "Toutes les équipes".to_string(),
+            position: 0,
+            team_ids: enrolled.iter().map(|t| t.team_id.clone()).collect(),
+        }]
+    } else {
+        groups
+    };
 
     match_day_repo
         .clear_pairings(match_day_id)
