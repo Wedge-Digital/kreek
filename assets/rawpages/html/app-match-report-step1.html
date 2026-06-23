@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rapport de match — Étape 1</title>
+  <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.4.1/dist/css/tom-select.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.4.1/dist/js/tom-select.complete.min.js"></script>
+  <style>
+    /* ── Mobile-first layout ── */
+    .mr-container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: var(--p1);
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+      padding-bottom: var(--p4);
+    }
+
+    /* ── Header ── */
+    .mr-header {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 12px;
+      padding: var(--p2);
+      text-align: center;
+    }
+    .mr-header-icon { font-size: 36px; margin-bottom: 8px; }
+    .mr-header-title {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+      color: var(--white);
+    }
+    .mr-header-sub {
+      font-size: var(--text-tiny); color: rgba(255,255,255,0.6); margin-top: 4px;
+    }
+
+    /* ── Steps indicator ── */
+    .mr-steps {
+      display: flex; align-items: center; justify-content: center;
+      gap: 4px;
+      padding: 8px 0;
+    }
+    .mr-step {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700;
+      flex-shrink: 0;
+    }
+    .mr-step--active { background: var(--main-blue); color: var(--white); }
+    .mr-step--pending { background: var(--dark-5); color: var(--dark-3); }
+    .mr-step--done { background: var(--green); color: var(--white); }
+    .mr-step-line {
+      width: 20px; height: 2px; background: var(--dark-5); flex-shrink: 0;
+    }
+    .mr-step-line--done { background: var(--green); }
+
+    /* ── Card ── */
+    .mr-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p2);
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+    }
+
+    /* ── Form elements ── */
+    .mr-field { display: flex; flex-direction: column; gap: 6px; }
+    .mr-label {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-2);
+      text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .mr-select {
+      padding: 12px 14px;
+      border: 1px solid var(--dark-4); border-radius: 8px;
+      font-size: var(--text-small); color: var(--dark-1);
+      font-family: inherit; background: var(--white);
+      cursor: pointer; outline: none;
+      width: 100%;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .mr-select:focus {
+      border-color: var(--main-blue);
+      box-shadow: 0 0 0 3px rgba(0,48,73,0.1);
+    }
+
+    /* ── VS section ── */
+    .mr-vs-section {
+      display: flex; flex-direction: column; gap: var(--p1);
+    }
+    .mr-vs-divider {
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px;
+      padding: 4px 0;
+    }
+    .mr-vs-line { flex: 1; height: 1px; background: var(--dark-5); }
+    .mr-vs-text {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+      color: var(--dark-3);
+    }
+
+    /* ── Team card (selected state) ── */
+    .mr-team-card {
+      border: 2px solid var(--dark-5);
+      border-radius: 10px;
+      padding: var(--p1);
+      display: flex; align-items: center; gap: var(--p1);
+      transition: all 0.15s;
+      min-height: 60px;
+    }
+    .mr-team-card--selected {
+      border-color: var(--main-blue);
+      background: rgba(0,48,73,0.03);
+    }
+    .mr-team-card--empty {
+      border-style: dashed;
+      justify-content: center;
+      color: var(--dark-4);
+      font-size: var(--text-tiny);
+      font-style: italic;
+    }
+    .mr-team-logo {
+      width: 40px; height: 40px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 14px;
+      color: var(--white); flex-shrink: 0;
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+    }
+    .mr-team-info { flex: 1; min-width: 0; }
+    .mr-team-name {
+      font-size: var(--text-small); font-weight: 600; color: var(--dark-1);
+    }
+    .mr-team-meta {
+      font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px;
+    }
+
+    /* ── Error ── */
+    .mr-error {
+      background: rgba(224,32,32,0.06);
+      border: 1px solid rgba(224,32,32,0.2);
+      border-radius: 8px;
+      padding: 10px var(--p1);
+      font-size: var(--text-tiny); color: var(--red);
+      display: none;
+    }
+    .mr-error.visible { display: flex; align-items: center; gap: 8px; }
+    .mr-error-icon { font-size: 16px; flex-shrink: 0; }
+
+    /* ── Actions ── */
+    .mr-actions {
+      display: flex; gap: var(--p1);
+    }
+    .mr-actions .btn-outline-sm { flex: 1; text-align: center; }
+    .mr-actions .btn-primary-sm { flex: 2; text-align: center; }
+
+    .btn-primary-sm {
+      padding: 12px 20px; border-radius: 8px;
+      background: var(--main-blue); color: var(--white);
+      font-size: var(--text-small); font-weight: 700;
+      cursor: pointer; border: none; transition: opacity 0.15s;
+    }
+    .btn-primary-sm:hover { opacity: 0.9; }
+    .btn-primary-sm:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-outline-sm {
+      padding: 12px 20px; border-radius: 8px;
+      background: var(--white); color: var(--dark-2);
+      font-size: var(--text-small); font-weight: 600;
+      cursor: pointer; border: 1px solid var(--dark-5);
+      transition: all 0.15s;
+    }
+    .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    /* ── Pre-filled info banner ── */
+    .mr-prefilled {
+      background: rgba(98,149,132,0.08);
+      border: 1px solid rgba(98,149,132,0.2);
+      border-radius: 8px;
+      padding: 10px var(--p1);
+      font-size: var(--text-tiny); color: #3d6b5e;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .mr-prefilled-icon { font-size: 16px; flex-shrink: 0; }
+
+    /* ── Responsive ── */
+    @media (min-width: 768px) {
+      .mr-container { padding: var(--p2); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+          </div>
+          <div class="menu-right">
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="mr-container">
+
+          <!-- Header -->
+          <div class="mr-header">
+            <div class="mr-header-icon">📋</div>
+            <div class="mr-header-title">Rapport de match</div>
+            <div class="mr-header-sub">Saisissez les informations de votre match</div>
+          </div>
+
+          <!-- Steps -->
+          <div class="mr-steps">
+            <div class="mr-step mr-step--active">1</div>
+            <div class="mr-step-line"></div>
+            <div class="mr-step mr-step--pending">2</div>
+            <div class="mr-step-line"></div>
+            <div class="mr-step mr-step--pending">3</div>
+            <div class="mr-step-line"></div>
+            <div class="mr-step mr-step--pending">4</div>
+            <div class="mr-step-line"></div>
+            <div class="mr-step mr-step--pending">5</div>
+          </div>
+
+          <!-- Pre-filled banner (shown when coming from calendar) -->
+          <!--
+          <div class="mr-prefilled">
+            <span class="mr-prefilled-icon">✅</span>
+            <span>Match pré-sélectionné depuis le calendrier — vérifiez et continuez.</span>
+          </div>
+          -->
+
+          <!-- Form card -->
+          <div class="mr-card">
+
+            <!-- Compétition -->
+            <div class="mr-field">
+              <label class="mr-label">Compétition</label>
+              <select class="mr-select" id="competition-select">
+                <option value="">— Choisir une compétition —</option>
+                <option value="comp-1" selected>Ligue de Condate</option>
+                <option value="comp-2">Tournoi des Korrigans</option>
+              </select>
+            </div>
+
+            <!-- Saison -->
+            <div class="mr-field">
+              <label class="mr-label">Saison</label>
+              <select class="mr-select" id="season-select">
+                <option value="">— Choisir une saison —</option>
+                <option value="s-1" selected>Saison 5</option>
+              </select>
+            </div>
+
+            <!-- Journée -->
+            <div class="mr-field">
+              <label class="mr-label">Journée</label>
+              <select class="mr-select" id="round-select">
+                <option value="">— Choisir une journée —</option>
+                <option value="r-1">Journée 1 — 12 sept. → 26 sept.</option>
+                <option value="r-2">Journée 2 — 26 sept. → 10 oct.</option>
+                <option value="r-3" selected>Journée 3 — 24 oct. → 7 nov.</option>
+              </select>
+            </div>
+
+          </div>
+
+          <!-- Teams selection -->
+          <div class="mr-card">
+            <div class="mr-vs-section">
+
+              <!-- Home team -->
+              <div class="mr-field">
+                <label class="mr-label">Équipe domicile</label>
+                <select class="mr-select" id="home-select">
+                  <option value="">— Choisir —</option>
+                  <option value="t-1">Skull Crushers — Darkmoule · Orques</option>
+                  <option value="t-2">Midnight Raiders — Grim · Elfes Noirs</option>
+                  <option value="t-3">Iron Forge — Guigui · Nains</option>
+                  <option value="t-4" selected>Storm Treemen — Yan · Elfes Sylvains</option>
+                </select>
+              </div>
+
+              <!-- Selected home team card -->
+              <div class="mr-team-card mr-team-card--selected">
+                <div class="mr-team-logo">ST</div>
+                <div class="mr-team-info">
+                  <div class="mr-team-name">Storm Treemen</div>
+                  <div class="mr-team-meta">Coach : Yan · Elfes Sylvains · TV 1120 kPo</div>
+                </div>
+              </div>
+
+              <!-- VS divider -->
+              <div class="mr-vs-divider">
+                <div class="mr-vs-line"></div>
+                <span class="mr-vs-text">VS</span>
+                <div class="mr-vs-line"></div>
+              </div>
+
+              <!-- Away team -->
+              <div class="mr-field">
+                <label class="mr-label">Équipe visiteur</label>
+                <select class="mr-select" id="away-select">
+                  <option value="">— Choisir —</option>
+                  <option value="t-1" selected>Skull Crushers — Darkmoule · Orques</option>
+                  <option value="t-2">Midnight Raiders — Grim · Elfes Noirs</option>
+                  <option value="t-3">Iron Forge — Guigui · Nains</option>
+                  <option value="t-4">Storm Treemen — Yan · Elfes Sylvains</option>
+                </select>
+              </div>
+
+              <!-- Selected away team card -->
+              <div class="mr-team-card mr-team-card--selected">
+                <div class="mr-team-logo" style="background: linear-gradient(135deg, #E02020, #555770);">SC</div>
+                <div class="mr-team-info">
+                  <div class="mr-team-name">Skull Crushers</div>
+                  <div class="mr-team-meta">Coach : Darkmoule · Orques · TV 1060 kPo</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Error (hidden by default) -->
+          <div class="mr-error" id="match-error">
+            <span class="mr-error-icon">⚠️</span>
+            <span>Ce match ne correspond à aucune rencontre prévue au calendrier pour cette journée.</span>
+          </div>
+
+          <!-- Actions -->
+          <div class="mr-actions">
+            <button class="btn-outline-sm">Annuler</button>
+            <button class="btn-primary-sm">Commencer →</button>
+          </div>
+
+        </div><!-- /mr-container -->
+      </div><!-- /page-content -->
+    </div><!-- /main-area -->
+  </div><!-- /app-layout -->
+</body>
+</html>
