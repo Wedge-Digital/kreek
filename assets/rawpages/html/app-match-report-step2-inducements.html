@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rapport de match — Coups de pouce</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ── Mobile-first layout ── */
+    .mr-container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: var(--p1);
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+      padding-bottom: 120px;
+    }
+
+    /* ── Header ── */
+    .mr-header {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 12px;
+      padding: var(--p2);
+      text-align: center;
+    }
+    .mr-header-icon { font-size: 36px; margin-bottom: 8px; }
+    .mr-header-title {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+      color: var(--white);
+    }
+    .mr-header-sub {
+      font-size: var(--text-tiny); color: rgba(255,255,255,0.6); margin-top: 4px;
+    }
+
+    /* ── Steps ── */
+    .mr-steps {
+      display: flex; align-items: center; justify-content: center;
+      gap: 4px; padding: 8px 0;
+    }
+    .mr-step {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; flex-shrink: 0;
+    }
+    .mr-step--active { background: var(--main-blue); color: var(--white); }
+    .mr-step--pending { background: var(--dark-5); color: var(--dark-3); }
+    .mr-step--done { background: var(--green); color: var(--white); }
+    .mr-step-line { width: 20px; height: 2px; background: var(--dark-5); flex-shrink: 0; }
+    .mr-step-line--done { background: var(--green); }
+
+    /* ── Budget banner ── */
+    .mr-budget-banner {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p2);
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--p1);
+    }
+    .mr-budget-team {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .mr-budget-logo {
+      width: 40px; height: 40px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 14px;
+      color: var(--white); flex-shrink: 0;
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+    }
+    .mr-budget-info { display: flex; flex-direction: column; }
+    .mr-budget-name {
+      font-size: var(--text-small); font-weight: 600; color: var(--dark-1);
+    }
+    .mr-budget-label {
+      font-size: 11px; color: var(--dark-3);
+    }
+    .mr-budget-amount {
+      display: flex; flex-direction: column; align-items: flex-end;
+    }
+    .mr-budget-value {
+      font-family: var(--font-title); font-size: var(--h4); font-weight: 700;
+      color: var(--main-blue);
+    }
+    .mr-budget-unit {
+      font-size: 11px; color: var(--dark-3);
+    }
+    .mr-budget-value--over { color: var(--red); }
+
+    /* ── Category tabs ── */
+    .mr-tabs {
+      display: flex; gap: 4px;
+      background: var(--white);
+      border-radius: 10px;
+      padding: 4px;
+      border: 1px solid var(--dark-5);
+    }
+    .mr-tab {
+      flex: 1; text-align: center;
+      padding: 8px 6px;
+      border-radius: 7px;
+      font-size: 12px; font-weight: 600;
+      color: var(--dark-3); cursor: pointer;
+      transition: all 0.15s;
+    }
+    .mr-tab:hover { background: var(--dark-6); color: var(--dark-1); }
+    .mr-tab.active { background: var(--main-blue); color: var(--white); }
+
+    /* ── Inducement card ── */
+    .mr-inducement-list {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .mr-inducement-card {
+      background: var(--white);
+      border: 1px solid var(--dark-5);
+      border-radius: 10px;
+      overflow: hidden;
+      transition: box-shadow 0.15s;
+    }
+    .mr-inducement-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .mr-inducement-card--selected {
+      border-color: var(--main-blue);
+      background: rgba(0,48,73,0.02);
+    }
+
+    .mr-inducement-main {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px;
+    }
+    .mr-inducement-info { flex: 1; min-width: 0; }
+    .mr-inducement-name {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
+    }
+    .mr-inducement-desc {
+      font-size: 11px; color: var(--dark-3); margin-top: 2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .mr-inducement-price {
+      font-family: var(--font-title); font-size: var(--text-tiny); font-weight: 700;
+      color: var(--main-blue); flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .mr-inducement-qty {
+      display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+    }
+    .mr-qty-btn {
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 700;
+      border: 1px solid var(--dark-5);
+      background: var(--white); color: var(--dark-2);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .mr-qty-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .mr-qty-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .mr-qty-value {
+      font-size: var(--text-small); font-weight: 700; color: var(--dark-1);
+      min-width: 20px; text-align: center;
+    }
+    .mr-inducement-toggle {
+      padding: 6px 10px;
+      font-size: 11px; color: var(--dark-3);
+      cursor: pointer; background: none; border: none;
+      text-decoration: underline;
+      transition: color 0.15s;
+    }
+    .mr-inducement-toggle:hover { color: var(--main-blue); }
+
+    /* ── Star player detail (expandable) ── */
+    .mr-star-detail {
+      border-top: 1px solid var(--dark-6);
+      padding: 10px 12px;
+      background: var(--dark-7);
+      display: none;
+    }
+    .mr-star-detail.open { display: block; }
+
+    .mr-star-stats {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+    .mr-star-stat {
+      text-align: center;
+      padding: 4px;
+      background: var(--white);
+      border-radius: 4px;
+      border: 1px solid var(--dark-6);
+    }
+    .mr-star-stat-label {
+      font-size: 9px; font-weight: 700; color: var(--dark-3);
+      text-transform: uppercase;
+    }
+    .mr-star-stat-value {
+      font-family: var(--font-title); font-size: var(--text-tiny); font-weight: 700;
+      color: var(--dark-1);
+    }
+    .mr-star-skills {
+      font-size: 11px; color: var(--dark-2); margin-bottom: 6px;
+    }
+    .mr-star-skills strong { color: var(--dark-1); }
+    .mr-star-power {
+      font-size: 11px; color: var(--dark-2);
+      padding: 6px 8px;
+      background: rgba(255,107,53,0.06);
+      border: 1px solid rgba(255,107,53,0.15);
+      border-radius: 6px;
+    }
+    .mr-star-power strong {
+      color: var(--orange); font-weight: 700;
+    }
+
+    /* ── Sticky cart ── */
+    .mr-cart {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--white);
+      border-top: 2px solid var(--dark-5);
+      padding: var(--p1) var(--p2);
+      z-index: 100;
+      box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+    }
+    .mr-cart-inner {
+      max-width: 600px;
+      margin: 0 auto;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .mr-cart-summary {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .mr-cart-items {
+      font-size: var(--text-tiny); color: var(--dark-2);
+    }
+    .mr-cart-items strong { color: var(--dark-1); }
+    .mr-cart-total {
+      display: flex; align-items: baseline; gap: 4px;
+    }
+    .mr-cart-total-value {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+      color: var(--main-blue);
+    }
+    .mr-cart-total-unit { font-size: 11px; color: var(--dark-3); }
+    .mr-cart-total-value--over { color: var(--red); }
+    .mr-cart-remaining {
+      font-size: 11px; color: var(--dark-3); text-align: right;
+    }
+    .mr-cart-remaining--over { color: var(--red); font-weight: 600; }
+    .mr-cart-actions {
+      display: flex; gap: 8px;
+    }
+    .mr-cart-actions .btn-outline-sm { flex: 1; text-align: center; padding: 10px; }
+    .mr-cart-actions .btn-primary-sm { flex: 2; text-align: center; padding: 10px; }
+
+    .btn-primary-sm {
+      padding: 12px 20px; border-radius: 8px;
+      background: var(--main-blue); color: var(--white);
+      font-size: var(--text-small); font-weight: 700;
+      cursor: pointer; border: none; transition: opacity 0.15s;
+    }
+    .btn-primary-sm:hover { opacity: 0.9; }
+    .btn-outline-sm {
+      padding: 12px 20px; border-radius: 8px;
+      background: var(--white); color: var(--dark-2);
+      font-size: var(--text-small); font-weight: 600;
+      cursor: pointer; border: 1px solid var(--dark-5);
+      transition: all 0.15s;
+    }
+    .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    @media (min-width: 768px) {
+      .mr-container { padding: var(--p2); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+          </div>
+          <div class="menu-right">
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="mr-container">
+
+          <!-- Header -->
+          <div class="mr-header">
+            <div class="mr-header-icon">🛒</div>
+            <div class="mr-header-title">Coups de pouce</div>
+            <div class="mr-header-sub">Storm Treemen — achète en premier</div>
+          </div>
+
+          <!-- Steps -->
+          <div class="mr-steps">
+            <div class="mr-step mr-step--done">✓</div>
+            <div class="mr-step-line mr-step-line--done"></div>
+            <div class="mr-step mr-step--active">2</div>
+            <div class="mr-step-line"></div>
+            <div class="mr-step mr-step--pending">3</div>
+            <div class="mr-step-line"></div>
+            <div class="mr-step mr-step--pending">4</div>
+            <div class="mr-step-line"></div>
+            <div class="mr-step mr-step--pending">5</div>
+          </div>
+
+          <!-- Budget -->
+          <div class="mr-budget-banner">
+            <div class="mr-budget-team">
+              <div class="mr-budget-logo">ST</div>
+              <div class="mr-budget-info">
+                <div class="mr-budget-name">Storm Treemen</div>
+                <div class="mr-budget-label">Budget disponible (trésorerie)</div>
+              </div>
+            </div>
+            <div class="mr-budget-amount">
+              <div class="mr-budget-value">150</div>
+              <div class="mr-budget-unit">kPo</div>
+            </div>
+          </div>
+
+          <!-- Category tabs -->
+          <div class="mr-tabs">
+            <div class="mr-tab active" onclick="showCategory('common', this)">Communs</div>
+            <div class="mr-tab" onclick="showCategory('special', this)">Spéciaux</div>
+            <div class="mr-tab" onclick="showCategory('stars', this)">Star Players</div>
+          </div>
+
+          <!-- ══ Communs ══ -->
+          <div class="mr-inducement-list" id="cat-common">
+
+            <div class="mr-inducement-card">
+              <div class="mr-inducement-main">
+                <div class="mr-inducement-info">
+                  <div class="mr-inducement-name">Pot-de-vin à l'arbitre</div>
+                  <div class="mr-inducement-desc">Permet de relancer un jet d'armure, de blessure ou de KO une fois par mi-temps.</div>
+                </div>
+                <span class="mr-inducement-price">100 kPo</span>
+                <div class="mr-inducement-qty">
+                  <button class="mr-qty-btn" disabled>−</button>
+                  <span class="mr-qty-value">0</span>
+                  <button class="mr-qty-btn">+</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mr-inducement-card">
+              <div class="mr-inducement-main">
+                <div class="mr-inducement-info">
+                  <div class="mr-inducement-name">Relance supplémentaire</div>
+                  <div class="mr-inducement-desc">Ajoute une relance d'équipe pour ce match uniquement.</div>
+                </div>
+                <span class="mr-inducement-price">50 kPo</span>
+                <div class="mr-inducement-qty">
+                  <button class="mr-qty-btn" disabled>−</button>
+                  <span class="mr-qty-value">0</span>
+                  <button class="mr-qty-btn">+</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mr-inducement-card mr-inducement-card--selected">
+              <div class="mr-inducement-main">
+                <div class="mr-inducement-info">
+                  <div class="mr-inducement-name">Chef des Pom-pom girls</div>
+                  <div class="mr-inducement-desc">+1 aux jets de récupération de KO à la mi-temps.</div>
+                </div>
+                <span class="mr-inducement-price">50 kPo</span>
+                <div class="mr-inducement-qty">
+                  <button class="mr-qty-btn">−</button>
+                  <span class="mr-qty-value">1</span>
+                  <button class="mr-qty-btn">+</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mr-inducement-card">
+              <div class="mr-inducement-main">
+                <div class="mr-inducement-info">
+                  <div class="mr-inducement-name">Assistant coach supplémentaire</div>
+                  <div class="mr-inducement-desc">+1 aux jets de récupération de KO à la mi-temps.</div>
+                </div>
+                <span class="mr-inducement-price">20 kPo</span>
+                <div class="mr-inducement-qty">
+                  <button class="mr-qty-btn" disabled>−</button>
+                  <span class="mr-qty-value">0</span>
+                  <button class="mr-qty-btn">+</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ══ Spéciaux (hidden) ══ -->
+          <div class="mr-inducement-list" id="cat-special" style="display:none;">
+
+            <div class="mr-inducement-card">
+              <div class="mr-inducement-main">
+                <div class="mr-inducement-info">
+                  <div class="mr-inducement-name">Médecin de la Peste</div>
+                  <div class="mr-inducement-desc">Permet de modifier un résultat de blessure "Mort" en "Blessure grave" une fois par match.</div>
+                </div>
+                <span class="mr-inducement-price">100 kPo</span>
+                <div class="mr-inducement-qty">
+                  <button class="mr-qty-btn" disabled>−</button>
+                  <span class="mr-qty-value">0</span>
+                  <button class="mr-qty-btn">+</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mr-inducement-card">
+              <div class="mr-inducement-main">
+                <div class="mr-inducement-info">
+                  <div class="mr-inducement-name">Sorcier</div>
+                  <div class="mr-inducement-desc">Une fois par match, peut lancer un sortilège dévastateur contre l'équipe adverse.</div>
+                </div>
+                <span class="mr-inducement-price">150 kPo</span>
+                <div class="mr-inducement-qty">
+                  <button class="mr-qty-btn" disabled>−</button>
+                  <span class="mr-qty-value">0</span>
+                  <button class="mr-qty-btn">+</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ══ Stars (hidden) ══ -->
+          <div class="mr-inducement-list" id="cat-stars" style="display:none;">
+
+            <!-- Star 1 — collapsed -->
+            <div class="mr-inducement-card">
+              <div class="mr-inducement-main">
+                <div class="mr-inducement-info">
+                  <div class="mr-inducement-name">Roxana Darknail</div>
+                  <div class="mr-inducement-desc">Elfes Noirs, Elfes Sylvains, Hauts Elfes</div>
+                </div>
+                <span class="mr-inducement-price">270 kPo</span>
+                <div class="mr-inducement-qty">
+                  <button class="mr-qty-btn" disabled>−</button>
+                  <span class="mr-qty-value">0</span>
+                  <button class="mr-qty-btn">+</button>
+                </div>
+              </div>
+              <button class="mr-inducement-toggle" onclick="this.parentElement.querySelector('.mr-star-detail').classList.toggle('open')">Voir les stats ▾</button>
+              <div class="mr-star-detail">
+                <div class="mr-star-stats">
+                  <div class="mr-star-stat">
+                    <div class="mr-star-stat-label">MA</div>
+                    <div class="mr-star-stat-value">8</div>
+                  </div>
+                  <div class="mr-star-stat">
+                    <div class="mr-star-stat-label">ST</div>
+                    <div class="mr-star-stat-value">3</div>
+                  </div>
+                  <div class="mr-star-stat">
+                    <div class="mr-star-stat-label">AG</div>
+                    <div class="mr-star-stat-value">2+</div>
+                  </div>
+                  <div class="mr-star-stat">
+                    <div class="mr-star-stat-label">PA</div>
+                    <div class="mr-star-stat-value">4+</div>
+                  </div>
+                  <div class="mr-star-stat">
+                    <div class="mr-star-stat-label">AV</div>
+                    <div class="mr-star-stat-value">8+</div>
+                  </div>
+                </div>
+                <div class="mr-star-skills">
+                  <strong>Compétences :</strong> Esquive, Fente, Saut, Réception
+                </div>
+                <div class="mr-star-power">
+                  <strong>Pouvoir :</strong> « Danse de l'Ombre » — Une fois par match, peut se déplacer de 3 cases supplémentaires en ignorant les zones de tacle.
+                </div>
+              </div>
+            </div>
+
+            <!-- Star 2 — expanded -->
+            <div class="mr-inducement-card mr-inducement-card--selected">
+              <div class="mr-inducement-main">
+                <div class="mr-inducement-info">
+                  <div class="mr-inducement-name">Helmut Wulf</div>
+                  <div class="mr-inducement-desc">Disponible pour toutes les équipes</div>
+                </div>
+                <span class="mr-inducement-price">140 kPo</span>
+                <div class="mr-inducement-qty">
+                  <button class="mr-qty-btn">−</button>
+                  <span class="mr-qty-value">1</span>
+                  <button class="mr-qty-btn" disabled>+</button>
+                </div>
+              </div>
+              <button class="mr-inducement-toggle" onclick="this.parentElement.querySelector('.mr-star-detail').classList.toggle('open')">Masquer les stats ▴</button>
+              <div class="mr-star-detail open">
+                <div class="mr-star-stats">
+                  <div class="mr-star-stat">
+                    <div class="mr-star-stat-label">MA</div>
+                    <div class="mr-star-stat-value">6</div>
+                  </div>
+                  <div class="mr-star-stat">
+                    <div class="mr-star-stat-label">ST</div>
+                    <div class="mr-star-stat-value">3</div>
+                  </div>
+                  <div class="mr-star-stat">
+                    <div class="mr-star-stat-label">AG</div>
+                    <div class="mr-star-stat-value">3+</div>
+                  </div>
+                  <div class="mr-star-stat">
+                    <div class="mr-star-stat-label">PA</div>
+                    <div class="mr-star-stat-value">—</div>
+                  </div>
+                  <div class="mr-star-stat">
+                    <div class="mr-star-stat-label">AV</div>
+                    <div class="mr-star-stat-value">8+</div>
+                  </div>
+                </div>
+                <div class="mr-star-skills">
+                  <strong>Compétences :</strong> Tronçonneuse, Secret Weapon, Stand Firm
+                </div>
+                <div class="mr-star-power">
+                  <strong>Pouvoir :</strong> « Massacre à la Tronçonneuse » — Les attaques de blocage de Helmut infligent automatiquement une blessure armure -3 à la cible.
+                </div>
+              </div>
+            </div>
+
+            <!-- Star 3 -->
+            <div class="mr-inducement-card">
+              <div class="mr-inducement-main">
+                <div class="mr-inducement-info">
+                  <div class="mr-inducement-name">Grak & Crumblehorn</div>
+                  <div class="mr-inducement-desc">Nains, Halflings, Ogres</div>
+                </div>
+                <span class="mr-inducement-price">250 kPo</span>
+                <div class="mr-inducement-qty">
+                  <button class="mr-qty-btn" disabled>−</button>
+                  <span class="mr-qty-value">0</span>
+                  <button class="mr-qty-btn">+</button>
+                </div>
+              </div>
+              <button class="mr-inducement-toggle" onclick="this.parentElement.querySelector('.mr-star-detail').classList.toggle('open')">Voir les stats ▾</button>
+              <div class="mr-star-detail">
+                <div class="mr-star-stats">
+                  <div class="mr-star-stat">
+                    <div class="mr-star-stat-label">MA</div>
+                    <div class="mr-star-stat-value">5</div>
+                  </div>
+                  <div class="mr-star-stat">
+                    <div class="mr-star-stat-label">ST</div>
+                    <div class="mr-star-stat-value">5</div>
+                  </div>
+                  <div class="mr-star-stat">
+                    <div class="mr-star-stat-label">AG</div>
+                    <div class="mr-star-stat-value">4+</div>
+                  </div>
+                  <div class="mr-star-stat">
+                    <div class="mr-star-stat-label">PA</div>
+                    <div class="mr-star-stat-value">5+</div>
+                  </div>
+                  <div class="mr-star-stat">
+                    <div class="mr-star-stat-label">AV</div>
+                    <div class="mr-star-stat-value">10+</div>
+                  </div>
+                </div>
+                <div class="mr-star-skills">
+                  <strong>Compétences :</strong> Bone Head, Loner (4+), Mighty Blow (+1), Thick Skull, Throw Team-Mate
+                </div>
+                <div class="mr-star-power">
+                  <strong>Pouvoir :</strong> « Le Duo Infernal » — Grak peut lancer Crumblehorn comme un projectile vivant une fois par mi-temps (portée 3 cases, force d'impact 6).
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sticky cart -->
+  <div class="mr-cart">
+    <div class="mr-cart-inner">
+      <div class="mr-cart-summary">
+        <div class="mr-cart-items"><strong>2</strong> coups de pouce sélectionnés</div>
+        <div class="mr-cart-total">
+          <span class="mr-cart-total-value">190</span>
+          <span class="mr-cart-total-unit">/ 150 kPo</span>
+        </div>
+      </div>
+      <div class="mr-cart-remaining mr-cart-remaining--over">
+        ⚠️ Budget dépassé de 40 kPo
+      </div>
+      <div class="mr-cart-actions">
+        <button class="btn-outline-sm">Passer</button>
+        <button class="btn-primary-sm">Valider les achats →</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  function showCategory(cat, el) {
+    document.querySelectorAll('.mr-inducement-list').forEach(function(l) { l.style.display = 'none'; });
+    document.getElementById('cat-' + cat).style.display = 'flex';
+    document.querySelectorAll('.mr-tab').forEach(function(t) { t.classList.remove('active'); });
+    el.classList.add('active');
+  }
+  </script>
+</body>
+</html>
