@@ -59,7 +59,8 @@ Quand on attaque une page, on lit **uniquement** son fichier de spec et le READM
 3. Créer une maquette HTML/CSS statique pour chaque écran dans `assets/rawpages/html/`
 4. Présenter les maquettes à l'utilisateur
 5. Itérer par boucles successives sur le feedback : ajustements visuels, interactions, états (vide, chargé, erreur, succès)
-6. Valider l'ensemble des maquettes
+6. **Pour chaque page** : poser la question « **Vois-tu des règles métier à préciser à cette étape ?** » — noter les règles identifiées dans le fichier de spec de la page
+7. Valider l'ensemble des maquettes
 
 ### Sortie
 
@@ -93,6 +94,7 @@ Pour la page en cours :
    - Ce qui est envoyé au back (HTMX `hx-get`/`hx-post`) : chargement de données, mutations
 4. **Modes d'interaction** de chaque widget : lecture seule, édition (auto-save), sélection, mutation
 5. **Widgets existantes réutilisables** : vérifier dans `src/app/*/io/web/widgets/` et `src/app/*/io/web/templates/widgets/`
+6. **Règles métier** : poser la question « **Vois-tu des règles métier à préciser à cette étape ?** »
 
 ### Sortie
 
@@ -133,6 +135,7 @@ Actions :
    - Les routes dans `routes.rs`
 4. **Identifier les ports nécessaires** : si un widget a besoin de données d'un autre BC
 5. **Identifier les domain services** : si un handler a besoin de transformer des DTOs de port en objets domaine
+6. **Règles métier** : poser la question « **Vois-tu des règles métier à préciser à cette étape ?** »
 
 ### Sortie
 
@@ -163,6 +166,7 @@ Pour chaque handler identifié :
    - VMs dépendant du port : fonctions dans `builders.rs`
    - VMs suffixés `Vm` (convention)
 3. **DTOs de port** : si un nouveau port est nécessaire, définir les structs dans `ports.rs`
+4. **Règles métier** : poser la question « **Vois-tu des règles métier à préciser à cette étape ?** »
 
 ### Sortie
 
@@ -194,6 +198,7 @@ Pour chaque mutation (POST/PUT/DELETE) :
    - Persister les modifications
    - Émettre les événements
 4. Définir les erreurs applicatives (enum)
+5. **Règles métier** : poser la question « **Vois-tu des règles métier à préciser à cette étape ?** »
 
 ### Sortie
 
@@ -214,14 +219,19 @@ Fichier `<page>/05-use-cases.md` avec les signatures, orchestration, erreurs.
 
 ### Processus
 
-1. Implémenter les méthodes domaine sur les agrégats (appelées par les use cases)
-2. Créer les value objects nécessaires avec smart constructors
-3. Définir les erreurs domaine (`DomainError`)
-4. Écrire les tests unitaires pour chaque règle métier
+1. **Récapituler toutes les règles métier** identifiées aux phases précédentes (phases 1 à 5) — les lister exhaustivement et les présenter à l'utilisateur pour validation avant de poursuivre
+2. Poser la question : « **Voici les règles métier identifiées. Vois-tu des règles métier manquantes ou à corriger ?** »
+3. Implémenter les méthodes domaine sur les agrégats (appelées par les use cases)
+4. Créer les value objects nécessaires avec smart constructors
+5. Définir les erreurs domaine (`DomainError`)
+6. Écrire les tests unitaires pour chaque règle métier
 
 ### Sortie
 
-Fichier `<page>/06-domaine.md` avec les méthodes domaine, value objects, erreurs, tests prévus.
+Fichier `<page>/06-domaine.md` avec :
+- **Récapitulatif exhaustif des règles métier** (validé par l'utilisateur)
+- Méthodes domaine, value objects, erreurs
+- Tests prévus couvrant chaque règle métier
 
 ### Règles
 
