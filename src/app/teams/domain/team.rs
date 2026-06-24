@@ -20,6 +20,7 @@ pub enum ParticipationStatus {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum GamePhase {
     ReadyToPlay,
+    MatchReporting,
     PlayerImprovement,
     Recruitment,
     Dismissals,
@@ -63,6 +64,11 @@ pub enum TeamDomainEvent {
     TeamEnrollmentRejected {
         competition_id: String,
         season_id: String,
+    },
+
+    // Rapport de match en cours de saisie
+    MatchReportingStarted {
+        match_report_id: String,
     },
 
     // Séquence post-match
@@ -156,6 +162,7 @@ impl TeamDomainEvent {
             Self::TeamEnrolled { .. } => "TeamEnrolled",
             Self::TeamDismissed => "TeamDismissed",
             Self::TeamEnrollmentRejected { .. } => "TeamEnrollmentRejected",
+            Self::MatchReportingStarted { .. } => "MatchReportingStarted",
             Self::PostMatchSequenceStarted { .. } => "PostMatchSequenceStarted",
             Self::PlayerImprovementApplied { .. } => "PlayerImprovementApplied",
             Self::PlayerImprovementPhaseValidated => "PlayerImprovementPhaseValidated",
@@ -309,6 +316,9 @@ impl Team {
             }
             TeamDomainEvent::TeamEnrollmentRejected { .. } => {
                 self.participation_status = ParticipationStatus::Rejected;
+            }
+            TeamDomainEvent::MatchReportingStarted { .. } => {
+                self.game_phase = Some(GamePhase::MatchReporting);
             }
             TeamDomainEvent::PostMatchSequenceStarted {
                 dedicated_fans,
@@ -495,6 +505,14 @@ impl Team {
                 to: ParticipationStatus::Dismissed,
             }),
         }
+    }
+
+    pub fn start_match_reporting(
+        &self,
+        match_report_id: String,
+    ) -> Result<TeamDomainEvent, DomainError> {
+        self.expect_phase(GamePhase::ReadyToPlay)?;
+        Ok(TeamDomainEvent::MatchReportingStarted { match_report_id })
     }
 
     pub fn start_post_match_sequence(
@@ -968,6 +986,39 @@ mod tests {
                 "Saison".to_string(),
             )
             .is_err());
+    }
+
+    #[test]
+    fn start_match_reporting_from_ready_to_play() {
+        let events = vec![created_event(), enrolled_event()];
+        let team = Team::hydrate(&events).unwrap();
+        assert_eq!(team.game_phase, Some(GamePhase::ReadyToPlay));
+
+        let event = team
+            .start_match_reporting("01MR00000000000000000000000".to_string())
+            .unwrap();
+        let team = team.apply(&event);
+        assert_eq!(team.game_phase, Some(GamePhase::MatchReporting));
+    }
+
+    #[test]
+    fn start_match_reporting_wrong_phase_fails() {
+        let events = vec![
+            created_event(),
+            enrolled_event(),
+            TeamDomainEvent::PostMatchSequenceStarted {
+                result: MatchResult::Win,
+                dedicated_fans: 5,
+                treasury_income: Kpo(150),
+                spp_gains: vec![],
+            },
+        ];
+        let team = Team::hydrate(&events).unwrap();
+        assert_eq!(team.game_phase, Some(GamePhase::PlayerImprovement));
+        assert!(matches!(
+            team.start_match_reporting("01MR00000000000000000000000".to_string()),
+            Err(DomainError::WrongGamePhase(_))
+        ));
     }
 
     #[test]

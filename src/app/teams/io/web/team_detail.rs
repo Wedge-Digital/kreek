@@ -135,6 +135,7 @@ fn status_display(team: &Team) -> (String, String) {
         }
         ParticipationStatus::Enrolled => match &team.game_phase {
             Some(GamePhase::ReadyToPlay) => ("Prête à jouer".into(), "ready".into()),
+            Some(GamePhase::MatchReporting) => ("Rapport en cours".into(), "phase".into()),
             Some(GamePhase::PlayerImprovement) => ("Phase d'amélioration".into(), "phase".into()),
             Some(GamePhase::Recruitment) => ("Phase de recrutement".into(), "phase".into()),
             Some(GamePhase::Dismissals) => ("Phase de renvois".into(), "phase".into()),

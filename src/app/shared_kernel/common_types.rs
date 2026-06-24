@@ -22,6 +22,12 @@ pub type RosterId = EntityId;
 
 pub type PositionId = EntityId;
 
+pub type MatchReportId = EntityId;
+
+pub type RoundId = EntityId;
+
+pub type PairingId = EntityId;
+
 pub type EntityId = SUlid;
 
 pub type EventId = SUlid;
