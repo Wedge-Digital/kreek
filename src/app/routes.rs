@@ -1,5 +1,6 @@
 use crate::app::auth::routes::Routes as AuthRoutes;
 use crate::app::competitions::routes::Routes as CompetitionsRoutes;
+use crate::app::match_report::routes::Routes as MatchReportRoutes;
 use crate::app::news::routes::Routes as NewsRoutes;
 use crate::app::players::routes::Routes as PlayersRoutes;
 use crate::app::references::routes::Routes as ReferencesRoutes;
@@ -18,6 +19,7 @@ pub struct AppRoutes {
     pub auth:          AuthRoutes,
     pub web:           WebRoutes,
     pub competitions:  CompetitionsRoutes,
+    pub match_report:  MatchReportRoutes,
     pub news:          NewsRoutes,
     pub spaces:        SpacesRoutes,
     pub team_creation: TeamCreationRoutes,

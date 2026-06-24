@@ -24,7 +24,7 @@ use crate::app::team_creation::context::TeamCreationContext;
 use crate::infrastructure::team_creation::reference_data_adapter::ReferenceDataAdapter;
 use crate::app::players::context::PlayersContext;
 use crate::app::teams::context::TeamsContext;
-use crate::app::{auth, competitions, players, references, spaces, team_creation, teams};
+use crate::app::{auth, competitions, match_report, players, references, spaces, team_creation, teams};
 use crate::common::event_listener::event_log_feeder;
 use crate::common::services::email::ResendMailService;
 use crate::common::services::event_bus::event_bus::new_bus;
@@ -137,6 +137,20 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             event_bus.clone(),
             Arc::new(ReferenceDataAdapter::new(refs_for_players.repository.clone())),
         ),
+        match_report: {
+            let comp_data = Arc::new(
+                crate::infrastructure::match_report::competition_data_adapter::CompetitionDataAdapter::new(
+                    Arc::new(crate::app::competitions::io::repository::competition_repository::CompetitionRepository::new(pool.clone())),
+                    Arc::new(crate::app::competitions::io::repository::match_day_repository::MatchDayRepository::new(pool.clone())),
+                ),
+            );
+            let team_data = Arc::new(
+                crate::infrastructure::match_report::team_data_adapter::TeamDataAdapter::new(
+                    Arc::new(crate::app::teams::io::repository::team_repository::TeamRepository::new(pool.clone())),
+                ),
+            );
+            match_report::context::MatchReportContext::new(&pool, comp_data, team_data)
+        },
         teams:   TeamsContext::new(&pool),
         players: PlayersContext::new(&pool),
         email_service: Arc::new(ResendMailService::new(
@@ -163,6 +177,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
         .merge(app::team_creation::router::router())
         .merge(app::players::router::router())
         .merge(app::teams::router::router())
+        .merge(app::match_report::router::router())
         .merge(app::competitions::router::router())
         .merge(app::spaces::router::router())
         .merge(web::router::router())

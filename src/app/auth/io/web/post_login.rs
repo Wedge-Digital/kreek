@@ -219,6 +219,35 @@ mod tests {
                     projection_repository: Arc::new(FakePlayerProjectionRepo),
                 }
             },
+            match_report: {
+                struct FakeMrRepo;
+                #[async_trait::async_trait]
+                impl crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository for FakeMrRepo {
+                    async fn append(&self, _: &str, _: &crate::app::match_report::domain::events::MatchReportDomainEvent, _: u64)
+                        -> Result<u64, crate::app::match_report::domain::match_report_repository_port::RepositoryError> { Ok(1) }
+                    async fn find_by_id(&self, _: &str)
+                        -> Result<Option<crate::app::match_report::domain::match_report_state::MatchReportState>, crate::app::match_report::domain::match_report_repository_port::RepositoryError> { Ok(None) }
+                }
+                struct FakeCompDataPort;
+                #[async_trait::async_trait]
+                impl crate::app::match_report::ports::ICompetitionDataPort for FakeCompDataPort {
+                    async fn list_competitions_with_active_season(&self, _: &str) -> Result<Vec<crate::app::match_report::ports::CompetitionOptionDto>, String> { Ok(vec![]) }
+                    async fn list_seasons(&self, _: &str) -> Result<Vec<crate::app::match_report::ports::SeasonOptionDto>, String> { Ok(vec![]) }
+                    async fn list_rounds(&self, _: &str) -> Result<Vec<crate::app::match_report::ports::RoundOptionDto>, String> { Ok(vec![]) }
+                    async fn is_competition_admin(&self, _: &str, _: &str) -> Result<bool, String> { Ok(false) }
+                }
+                struct FakeTeamDataPort;
+                #[async_trait::async_trait]
+                impl crate::app::match_report::ports::ITeamDataPort for FakeTeamDataPort {
+                    async fn list_enrolled_teams(&self, _: &str) -> Result<Vec<crate::app::match_report::ports::EnrolledTeamDto>, String> { Ok(vec![]) }
+                    async fn is_team_ready_to_play(&self, _: &str) -> Result<bool, String> { Ok(true) }
+                }
+                crate::app::match_report::context::MatchReportContext {
+                    match_report_repo: Arc::new(FakeMrRepo),
+                    competition_data: Arc::new(FakeCompDataPort),
+                    team_data: Arc::new(FakeTeamDataPort),
+                }
+            },
             email_service: Arc::new(ConsoleEmailService),
             host_domain:   "localhost:8080".into(),
             bypass_auth:   false,
