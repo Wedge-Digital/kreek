@@ -58,9 +58,9 @@
                  oninput="onGroupCountChange(+this.value)">
         </div>
       </div>
-      <div class="form-group mt-2">
+      <div class="form-group">
         <label class="form-label">Répartition des équipes</label>
-        <div class="choice-group mt-1" id="dispatch-type-btns">
+        <div class="choice-group" id="dispatch-type-btns">
           <div class="choice-btn selected" data-val="automatic" onclick="setDispatchType('automatic')">Automatique</div>
           <div class="choice-btn" data-val="manual" onclick="setDispatchType('manual')">Manuelle</div>
           <div class="info-note">📌 Automatique, le système tire au sort la répartition. Manuelle, les commissaires font la répartition. La répartition est modifiable à tout moment.</div>
@@ -96,9 +96,9 @@
           </select>
         </div>
       </div>
-      <div class="form-group mt-2">
+      <div class="form-group">
         <label class="form-label">Match pour la 3e place</label>
-        <div class="choice-group mt-1" id="third-place-btns">
+        <div class="choice-group" id="third-place-btns">
           <div class="choice-btn selected" data-val="true" onclick="setThirdPlace(true)">Oui</div>
           <div class="choice-btn" data-val="false" onclick="setThirdPlace(false)">Non</div>
         </div>
@@ -111,15 +111,9 @@
   <!-- Section 3: Calendrier -->
   <div class="section">
     <div class="section-title">3 — Gestion du calendrier</div>
-    <div class="choice-group" id="schedule-mode-btns">
-      <div class="choice-btn selected" data-val="automatic" onclick="setScheduleMode('automatic')">Automatique (généré par le système)</div>
-      <div class="choice-btn" data-val="manual" onclick="setScheduleMode('manual')">Manuel (défini par l'administrateur)</div>
-      <div class="choice-btn" data-val="free" onclick="setScheduleMode('free')">Libre (les coachs s'arrangent)</div>
-    </div>
-
     <div class="sub-section" id="schedule-config">
       <div class="sub-section-title">Paramètres du calendrier</div>
-      <div class="two-col-grid mb-2">
+      <div class="two-col-grid">
         <div class="form-group">
           <label class="form-label">Début de la saison</label>
           <input type="date" id="schedule-start-date" class="form-input"
@@ -141,7 +135,7 @@
                  oninput="state.playOffEndDate = this.value">
         </div>
       </div>
-      <div class="form-group mb-2">
+      <div class="form-group">
         <label class="form-label">Fuseau horaire</label>
         <select id="schedule-timezone" class="picker" onchange="state.scheduleTimezone = this.value">
           <option value="Europe/Paris" selected>Europe/Paris</option>
@@ -150,17 +144,26 @@
           <option value="UTC">UTC</option>
         </select>
       </div>
-      <div class="form-group mb-2">
+      <div class="form-group">
         <label class="form-label">Notifications e-mail</label>
-        <div class="choice-group mt-1" id="mail-notif-btns">
+        <div class="choice-group" id="mail-notif-btns">
           <div class="choice-btn selected" data-val="true" onclick="setMailNotif(true)">Activées</div>
           <div class="choice-btn" data-val="false" onclick="setMailNotif(false)">Désactivées</div>
         </div>
         <div class="info-note">📌 Des rappels seront envoyés aux équipes à l'ouverture et à la fermeture de la phase, ou pour confirmer la participation au multiplexe.</div>
       </div>
 
+    </div>
+  </div>
+
+  <div class="separator"></div>
+
+  <!-- Section 4: Journées de match -->
+  <div class="section">
+    <div class="section-title">4 — Journées de match</div>
+    <div class="info-note">Définissez les journées de match de la saison. Chaque journée peut être une date fixe (multiplexe) ou une fenêtre temporelle pendant laquelle les coachs organisent leurs matchs librement.</div>
+    <div class="sub-section">
       <div>
-        <div class="sub-section-title mb-1">Journées</div>
         <div id="dates-list" class="dates-list"></div>
         <div class="dates-add-btns">
           <button type="button" class="btn btn-outline btn-sm btn-fit"
@@ -204,7 +207,6 @@
     qualifiedTeamPerPool: 2,
     matchForThirdPlace:   true,
     useSchedule:          true,
-    scheduleType:         'automatic',
     scheduleStartDate:    '',
     scheduleEndDate:      '',
     playOffStartDate:     '',
@@ -289,11 +291,6 @@
 
   // ── Section 3: Schedule ─────────────────────────────────────────────────────
 
-  window.setScheduleMode = function (mode) {
-    state.scheduleType = mode;
-    activateBtn('schedule-mode-btns', mode);
-  };
-
   window.setMailNotif = function (on) {
     state.useMailNotification = on;
     activateBtn('mail-notif-btns', on);
@@ -363,7 +360,6 @@
       },
       schedule: {
         use_schedule:          state.useSchedule,
-        schedule_type:         state.scheduleType,
         schedule_start_date:   state.scheduleStartDate,
         schedule_end_date:     state.scheduleEndDate,
         play_off_start_date:   state.playOffStartDate,
@@ -429,7 +425,6 @@
     if (qpp) qpp.value = String(state.qualifiedTeamPerPool);
     activateBtn('third-place-btns', state.matchForThirdPlace);
 
-    activateBtn('schedule-mode-btns', state.scheduleType);
     document.getElementById('schedule-start-date').value = state.scheduleStartDate;
     document.getElementById('schedule-end-date').value   = state.scheduleEndDate;
     document.getElementById('playoff-start-date').value  = state.playOffStartDate;
@@ -454,7 +449,6 @@
 
     const sc = s.schedule;
     state.useSchedule          = sc.use_schedule;
-    state.scheduleType         = sc.schedule_type;
     state.scheduleStartDate    = sc.schedule_start_date;
     state.scheduleEndDate      = sc.schedule_end_date;
     state.playOffStartDate     = sc.play_off_start_date;

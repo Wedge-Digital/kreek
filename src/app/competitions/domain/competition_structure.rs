@@ -30,6 +30,7 @@ pub struct PlayOffsPhase {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScheduleConfig {
     pub use_schedule: bool,
+    #[serde(default)]
     pub schedule_type: String,
     pub schedule_start_date: String,
     pub play_off_start_date: String,
