@@ -1,12 +1,21 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
+use crate::app::match_report::domain::value_objects::MatchReportOrigin;
 use crate::app::match_report::io::web::view_models::*;
+use crate::app::match_report::use_cases::{
+    create_match_report_use_case, update_match_selection_use_case,
+};
 use crate::app::routes::AppRoutes;
+use crate::app::shared_kernel::common_types::{
+    CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
+};
+use crate::app::shared_kernel::team::TeamId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Redirect, Response};
+use axum::Form;
 use serde::Deserialize;
 
 // ── Templates ────────────────────────────────────────────────────────────────
@@ -422,4 +431,132 @@ pub async fn teams_fragment(
         is_admin: false,
     }
     .into_response()
+}
+
+// ── POST form ────────────────────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+pub struct CreateMatchReportForm {
+    pub competition_id: String,
+    pub season_id: String,
+    pub round_id: String,
+    pub home_team_id: String,
+    pub away_team_id: String,
+}
+
+// ── Handlers POST ────────────────────────────────────────────────────────────
+
+pub async fn create_match_report(
+    auth_session: AuthSession,
+    Path(space_id): Path<String>,
+    State(state): State<AppState>,
+    Form(form): Form<CreateMatchReportForm>,
+) -> impl IntoResponse {
+    let Some(user) = auth_session.user else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
+
+    let cmd = create_match_report_use_case::CreateMatchReportCommand {
+        space_id: match SpaceId::try_new(&space_id) {
+            Ok(id) => id,
+            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+        },
+        competition_id: match CompetitionId::try_new(&form.competition_id) {
+            Ok(id) => id,
+            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+        },
+        season_id: match SeasonId::try_new(&form.season_id) {
+            Ok(id) => id,
+            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+        },
+        round_id: match RoundId::try_new(&form.round_id) {
+            Ok(id) => id,
+            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+        },
+        home_team_id: match TeamId::try_new(&form.home_team_id) {
+            Ok(id) => id,
+            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+        },
+        away_team_id: match TeamId::try_new(&form.away_team_id) {
+            Ok(id) => id,
+            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+        },
+        created_by: user.id,
+        origin: MatchReportOrigin::Manual,
+    };
+
+    match create_match_report_use_case::execute(
+        cmd,
+        state.match_report.match_report_repo.as_ref(),
+    )
+    .await
+    {
+        Ok(mr_id) => {
+            let url = AppRoutes::default()
+                .match_report
+                .edit_match_report(&space_id, &mr_id.to_string());
+            Redirect::to(&url).into_response()
+        }
+        Err(create_match_report_use_case::CreateMatchReportError::SameTeam) => {
+            StatusCode::BAD_REQUEST.into_response()
+        }
+        Err(e) => {
+            tracing::error!("create_match_report: {e:?}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn update_match_selection(
+    auth_session: AuthSession,
+    Path((space_id, match_report_id)): Path<(String, String)>,
+    State(state): State<AppState>,
+    Form(form): Form<CreateMatchReportForm>,
+) -> impl IntoResponse {
+    let Some(user) = auth_session.user else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
+
+    let cmd = update_match_selection_use_case::UpdateMatchSelectionCommand {
+        match_report_id: match MatchReportId::try_new(&match_report_id) {
+            Ok(id) => id,
+            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+        },
+        home_team_id: match TeamId::try_new(&form.home_team_id) {
+            Ok(id) => id,
+            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+        },
+        away_team_id: match TeamId::try_new(&form.away_team_id) {
+            Ok(id) => id,
+            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+        },
+        confirmed_by: user.id,
+    };
+
+    match update_match_selection_use_case::execute(
+        cmd,
+        state.match_report.match_report_repo.as_ref(),
+        state.match_report.team_data.as_ref(),
+    )
+    .await
+    {
+        Ok(_mr_id) => {
+            let url = format!(
+                "/app/{}/match-report/{}/step2",
+                space_id, match_report_id
+            );
+            Redirect::to(&url).into_response()
+        }
+        Err(update_match_selection_use_case::UpdateMatchSelectionError::SameTeam) => {
+            StatusCode::BAD_REQUEST.into_response()
+        }
+        Err(update_match_selection_use_case::UpdateMatchSelectionError::TeamNotAvailable(tid)) => {
+            tracing::warn!("update_match_selection: team {tid} not available");
+            StatusCode::CONFLICT.into_response()
+        }
+        Err(e) => {
+            tracing::error!("update_match_selection: {e:?}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
 }
