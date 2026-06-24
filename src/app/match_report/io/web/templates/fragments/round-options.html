@@ -1,0 +1,17 @@
+<select id="round-select" name="round_id"
+        hx-get="{{ teams_url }}"
+        hx-trigger="change"
+        hx-target="#teams-container"
+        hx-swap="innerHTML"
+        hx-include="[name='season_id']">
+  <option value="">Choisir une journée…</option>
+  {% for r in rounds %}
+  <option value="{{ r.id }}" {% if r.selected %}selected{% endif %}>{{ r.name }}{% if !r.dates.is_empty() %} ({{ r.dates }}){% endif %}</option>
+  {% endfor %}
+</select>
+<script>
+(function() {
+  var el = document.getElementById('round-select');
+  if (el && !el.tomselect) new TomSelect(el, { searchField: ['text'] });
+})();
+</script>

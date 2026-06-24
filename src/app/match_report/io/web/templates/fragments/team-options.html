@@ -1,0 +1,82 @@
+<!-- Home team -->
+<div class="mr-field">
+  <label class="mr-label">
+    {% if is_admin %}Équipe domicile{% else %}Mon équipe{% endif %}
+  </label>
+  <select id="home-select" name="home_team_id">
+    <option value="">Sélectionner…</option>
+    {% for t in teams %}
+    {% if is_admin || t.is_own_team %}
+    <option value="{{ t.id }}"
+            data-coach="{{ t.coach_name }}" data-roster="{{ t.roster_name }}" data-tv="{{ t.tv }}">
+      {{ t.name }}
+    </option>
+    {% endif %}
+    {% endfor %}
+  </select>
+</div>
+
+<div class="mr-team-card mr-team-card--empty" id="home-card">
+  Sélectionnez une équipe
+</div>
+
+<!-- VS divider -->
+<div class="mr-vs-divider">
+  <div class="mr-vs-line"></div>
+  <span class="mr-vs-text">VS</span>
+  <div class="mr-vs-line"></div>
+</div>
+
+<!-- Away team -->
+<div class="mr-field">
+  <label class="mr-label">
+    {% if is_admin %}Équipe visiteur{% else %}Adversaire{% endif %}
+  </label>
+  <select id="away-select" name="away_team_id">
+    <option value="">Sélectionner…</option>
+    {% for t in teams %}
+    <option value="{{ t.id }}"
+            data-coach="{{ t.coach_name }}" data-roster="{{ t.roster_name }}" data-tv="{{ t.tv }}">
+      {{ t.name }}
+    </option>
+    {% endfor %}
+  </select>
+</div>
+
+<div class="mr-team-card mr-team-card--empty" id="away-card">
+  Sélectionnez une équipe
+</div>
+
+<script>
+(function() {
+  function initTeamSelect(selectId, cardId) {
+    var el = document.getElementById(selectId);
+    if (!el || el.tomselect) return;
+    new TomSelect(el, {
+      searchField: ['text'],
+      onChange: function(val) {
+        var card = document.getElementById(cardId);
+        var opt = el.querySelector('option[value="' + val + '"]');
+        if (!opt || !val) {
+          card.className = 'mr-team-card mr-team-card--empty';
+          card.innerHTML = 'Sélectionnez une équipe';
+          return;
+        }
+        var name = opt.textContent.trim();
+        var coach = opt.dataset.coach || '';
+        var roster = opt.dataset.roster || '';
+        var tv = opt.dataset.tv || '';
+        var initials = name.split(' ').map(function(w){ return w[0]; }).join('').substring(0,2).toUpperCase();
+        card.className = 'mr-team-card mr-team-card--selected';
+        card.innerHTML = '<div class="mr-team-logo">' + initials + '</div>'
+          + '<div class="mr-team-info">'
+          + '<div class="mr-team-name">' + name + '</div>'
+          + '<div class="mr-team-meta">Coach : ' + coach + ' &middot; ' + roster + ' &middot; TV ' + tv + '</div>'
+          + '</div>';
+      }
+    });
+  }
+  initTeamSelect('home-select', 'home-card');
+  initTeamSelect('away-select', 'away-card');
+})();
+</script>
