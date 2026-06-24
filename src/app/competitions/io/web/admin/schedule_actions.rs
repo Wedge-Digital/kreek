@@ -17,14 +17,16 @@ fn schedule_changed() -> Response {
 // ── Generate all pairings ────────────────────────────────────────────────────
 
 pub async fn post_generate_all(
-    Path((_space_id, _competition_id, season_id)): Path<(String, String, String)>,
+    Path((space_id, _competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> Response {
     match generate_all_pairings::execute(
         &season_id,
+        &space_id,
         state.competitions.match_day_repository.as_ref(),
         state.competitions.group_repository.as_ref(),
         state.competitions.team_info_port.as_ref(),
+        &state.app_event_bus,
     )
     .await
     {
@@ -234,16 +236,18 @@ pub struct RoundIdBody {
 }
 
 pub async fn post_generate_round_pairings(
-    Path((_space_id, _competition_id, season_id)): Path<(String, String, String)>,
+    Path((space_id, _competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
     axum::Json(body): axum::Json<RoundIdBody>,
 ) -> Response {
     match generate_pairings::execute(
         &body.round_id,
         &season_id,
+        &space_id,
         state.competitions.match_day_repository.as_ref(),
         state.competitions.group_repository.as_ref(),
         state.competitions.team_info_port.as_ref(),
+        &state.app_event_bus,
     )
     .await
     {
@@ -286,14 +290,14 @@ pub struct AddMatchBody {
 }
 
 pub async fn post_add_match(
-    Path((_space_id, _competition_id, _season_id)): Path<(String, String, String)>,
+    Path((space_id, _competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
     axum::Json(body): axum::Json<AddMatchBody>,
 ) -> Response {
     let pairing = Pairing {
         id: ulid::Ulid::new().to_string(),
-        home_team_id: body.home_team_id,
-        away_team_id: body.away_team_id,
+        home_team_id: body.home_team_id.clone(),
+        away_team_id: body.away_team_id.clone(),
     };
 
     match state
@@ -302,7 +306,23 @@ pub async fn post_add_match(
         .save_pairing(&body.round_id, &pairing)
         .await
     {
-        Ok(()) => schedule_changed(),
+        Ok(()) => {
+            use crate::app::shared_kernel::app_events::competitions_app_events::CompetitionsAppEvent;
+            use crate::app::shared_kernel::common_types::EventId;
+            let _ = state.app_event_bus.send(
+                CompetitionsAppEvent::PairingCreated {
+                    event_id: EventId::new(),
+                    pairing_id: pairing.id.clone(),
+                    season_id: season_id.clone(),
+                    round_id: body.round_id.clone(),
+                    home_team_id: body.home_team_id,
+                    away_team_id: body.away_team_id,
+                    space_id: space_id.clone(),
+                }
+                .to_enveloppe(),
+            );
+            schedule_changed()
+        }
         Err(e) => {
             tracing::error!("post_add_match: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()

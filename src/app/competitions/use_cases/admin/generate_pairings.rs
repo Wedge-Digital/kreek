@@ -3,6 +3,9 @@ use crate::app::competitions::domain::match_day::generate_round_pairings;
 use crate::app::competitions::domain::match_day::Pairing;
 use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
 use crate::app::competitions::ports::ITeamInfoPort;
+use crate::app::shared_kernel::app_events::competitions_app_events::CompetitionsAppEvent;
+use crate::app::shared_kernel::common_types::EventId;
+use crate::common::services::event_bus::event_bus::EventBus;
 use std::collections::HashSet;
 
 #[derive(Debug)]
@@ -16,9 +19,11 @@ pub enum GenerateError {
 pub async fn execute(
     match_day_id: &str,
     season_id: &str,
+    space_id: &str,
     match_day_repo: &dyn IMatchDayRepository,
     group_repo: &dyn IGroupRepository,
     team_port: &dyn ITeamInfoPort,
+    app_event_bus: &EventBus,
 ) -> Result<(), GenerateError> {
     let match_day = match_day_repo
         .find_by_id(match_day_id)
@@ -91,6 +96,19 @@ pub async fn execute(
                 .save_pairing(match_day_id, &pairing)
                 .await
                 .map_err(|e| GenerateError::Repository(e.to_string()))?;
+
+            let _ = app_event_bus.send(
+                CompetitionsAppEvent::PairingCreated {
+                    event_id: EventId::new(),
+                    pairing_id: pairing.id.clone(),
+                    season_id: season_id.to_string(),
+                    round_id: match_day_id.to_string(),
+                    home_team_id: home.clone(),
+                    away_team_id: away.clone(),
+                    space_id: space_id.to_string(),
+                }
+                .to_enveloppe(),
+            );
 
             let norm = if home < away {
                 (home, away)

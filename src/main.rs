@@ -112,6 +112,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
     competitions::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
     team_creation::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
     teams::context::init_listeners(&app_event_bus, pool.clone());
+    match_report::context::init_listeners(&app_event_bus, pool.clone());
     let refs_for_players = references::context::ReferencesContext::new();
     players::context::init_listeners(
         &app_event_bus,
