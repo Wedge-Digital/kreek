@@ -2,5 +2,6 @@ pub mod error;
 pub mod events;
 pub mod match_report_draft;
 pub mod match_report_pre_match;
+pub mod match_report_repository_port;
 pub mod match_report_state;
 pub mod value_objects;
