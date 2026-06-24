@@ -5,59 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rapport de match — Étape 3 — Actions domicile</title>
   <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="match-report-shared.css">
   <style>
-    /* ── Mobile-first layout ── */
+    /* ── Override container gap ── */
     .mr-container {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: var(--p1);
-      display: flex;
-      flex-direction: column;
       gap: var(--p1);
-      padding-bottom: var(--p4);
     }
 
-    /* ── Header ── */
-    .mr-header {
-      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
-      border-radius: 12px;
-      padding: var(--p2);
-      text-align: center;
-    }
-    .mr-header-icon { font-size: 36px; margin-bottom: 8px; }
-    .mr-header-title {
-      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
-      color: var(--white);
-    }
-    .mr-header-sub {
-      font-size: var(--text-tiny); color: rgba(255,255,255,0.6); margin-top: 4px;
-    }
-
-    /* ── Steps ── */
-    .mr-steps {
-      display: flex; align-items: center; justify-content: center;
-      gap: 4px; padding: 8px 0;
-    }
-    .mr-step {
-      width: 32px; height: 32px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 700; flex-shrink: 0;
-    }
-    .mr-step--active { background: var(--main-blue); color: var(--white); }
-    .mr-step--pending { background: var(--dark-5); color: var(--dark-3); }
-    .mr-step--done { background: var(--green); color: var(--white); }
-    .mr-step-line { width: 20px; height: 2px; background: var(--dark-5); flex-shrink: 0; }
-    .mr-step-line--done { background: var(--green); }
-
-    /* ── Card ── */
+    /* ── Card overrides for step3 ── */
     .mr-card {
-      background: var(--white);
-      border-radius: 12px;
       padding: var(--p1);
-      display: flex; flex-direction: column; gap: 8px;
+      gap: 8px;
     }
     .mr-card-title {
-      font-family: var(--font-title); font-size: var(--text-tiny); font-weight: 700;
+      font-size: var(--text-tiny);
       color: var(--dark-2); text-transform: uppercase; letter-spacing: 0.3px;
       padding: 0 4px;
     }
@@ -260,46 +221,22 @@
       outline: none; flex-shrink: 0;
     }
 
-    /* ── Warn banner ── */
-    .mr-warn-banner {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px var(--p1); border-radius: 8px;
-      font-size: var(--text-tiny);
-      background: rgba(255,107,53,0.08);
-      border: 1px solid rgba(255,107,53,0.2);
-      color: #9A5000;
-    }
-
-    /* ── Actions (bottom) ── */
-    .mr-actions {
-      display: flex; gap: var(--p1);
-    }
-    .mr-actions .btn-outline-sm { flex: 1; text-align: center; }
-    .mr-actions .btn-primary-sm { flex: 2; text-align: center; }
-
-    .btn-primary-sm {
-      padding: 12px 20px; border-radius: 8px;
-      background: var(--main-blue); color: var(--white);
-      font-size: var(--text-small); font-weight: 700;
-      cursor: pointer; border: none; transition: opacity 0.15s;
-    }
-    .btn-primary-sm:hover { opacity: 0.9; }
-    .btn-outline-sm {
-      padding: 12px 20px; border-radius: 8px;
-      background: var(--white); color: var(--dark-2);
-      font-size: var(--text-small); font-weight: 600;
-      cursor: pointer; border: 1px solid var(--dark-5);
-      transition: all 0.15s;
-    }
-    .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
-
     @media (min-width: 768px) {
-      .mr-container { padding: var(--p2); }
       .mr-player-grid { grid-template-columns: repeat(4, 1fr); }
     }
   </style>
 </head>
 <body>
+  <div class="mobile-header">
+    <div class="mobile-header-space">
+      <div class="mobile-header-space-logo">TC</div>
+      <span class="mobile-header-space-name">Tribu Celtique</span>
+      <span class="mobile-header-space-chevron">&#9660;</span>
+    </div>
+    <div class="mobile-header-actions">
+      <button class="mobile-header-btn">&#128100;</button>
+    </div>
+  </div>
   <div class="app-layout">
     <div class="sidebar">
       <div class="sidebar-top"></div>
@@ -605,8 +542,8 @@
 
           <!-- Actions -->
           <div class="mr-actions">
-            <button class="btn-outline-sm">← Retour</button>
-            <button class="btn-primary-sm">Actions visiteur →</button>
+            <a href="app-match-report-step2-inducements.html" class="btn-outline-sm">← Retour</a>
+            <a href="app-match-report-step5.html" class="btn-primary-sm">Actions visiteur →</a>
           </div>
 
         </div>
@@ -624,5 +561,12 @@
     el.classList.add('active');
   }
   </script>
+  <div class="mobile-tabbar">
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#127968;</span><span class="mobile-tab-label">Accueil</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#127942;</span><span class="mobile-tab-label">Compétitions</span></a>
+    <a class="mobile-tab active" href="#"><span class="mobile-tab-icon">&#128203;</span><span class="mobile-tab-label">Match</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#128737;&#65039;</span><span class="mobile-tab-label">Équipes</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#128100;</span><span class="mobile-tab-label">Compte</span></a>
+  </div>
 </body>
 </html>

@@ -5,93 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rapport de match — Étape 2 — Avant-match</title>
   <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="match-report-shared.css">
   <style>
-    /* ── Mobile-first layout ── */
-    .mr-container {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: var(--p1);
-      display: flex;
-      flex-direction: column;
-      gap: var(--p2);
-      padding-bottom: var(--p4);
-    }
-
-    /* ── Header ── */
-    .mr-header {
-      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
-      border-radius: 12px;
-      padding: var(--p2);
-      text-align: center;
-    }
-    .mr-header-icon { font-size: 36px; margin-bottom: 8px; }
-    .mr-header-title {
-      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
-      color: var(--white);
-    }
-    .mr-header-sub {
-      font-size: var(--text-tiny); color: rgba(255,255,255,0.6); margin-top: 4px;
-    }
-
-    /* ── Steps indicator ── */
-    .mr-steps {
-      display: flex; align-items: center; justify-content: center;
-      gap: 4px; padding: 8px 0;
-    }
-    .mr-step {
-      width: 32px; height: 32px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 700; flex-shrink: 0;
-    }
-    .mr-step--active { background: var(--main-blue); color: var(--white); }
-    .mr-step--pending { background: var(--dark-5); color: var(--dark-3); }
-    .mr-step--done { background: var(--green); color: var(--white); }
-    .mr-step-line { width: 20px; height: 2px; background: var(--dark-5); flex-shrink: 0; }
-    .mr-step-line--done { background: var(--green); }
-
-    /* ── Match banner (compact VS) ── */
-    .mr-match-banner {
-      background: var(--white);
-      border-radius: 12px;
-      padding: var(--p2);
-      display: flex; align-items: center; gap: var(--p1);
-    }
-    .mr-match-team {
-      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center;
-    }
-    .mr-match-logo {
-      width: 44px; height: 44px; border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-family: var(--font-title); font-weight: 700; font-size: 14px;
-      color: var(--white);
-      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
-    }
-    .mr-match-name {
-      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
-    }
-    .mr-match-coach {
-      font-size: 11px; color: var(--dark-3);
-    }
-    .mr-match-vs {
-      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
-      color: var(--dark-4); flex-shrink: 0;
-    }
-
-    /* ── Card ── */
-    .mr-card {
-      background: var(--white);
-      border-radius: 12px;
-      padding: var(--p2);
-      display: flex; flex-direction: column; gap: var(--p2);
-    }
-    .mr-card-title {
-      font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
-      color: var(--dark-1);
-    }
-
-    /* ── Section separator ── */
-    .mr-sep { height: 1px; background: var(--dark-5); }
-
     /* ── Fan factor section ── */
     .mr-fan-section {
       display: flex; flex-direction: column; gap: var(--p1);
@@ -133,25 +48,6 @@
       font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
       color: var(--main-blue); min-width: 28px; text-align: center;
     }
-
-    /* ── Journaliers info ── */
-    .mr-info-banner {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px var(--p1);
-      border-radius: 8px;
-      font-size: var(--text-tiny);
-    }
-    .mr-info-banner--neutral {
-      background: rgba(0,48,73,0.04);
-      border: 1px solid rgba(0,48,73,0.1);
-      color: var(--main-blue);
-    }
-    .mr-info-banner--ok {
-      background: rgba(98,149,132,0.08);
-      border: 1px solid rgba(98,149,132,0.2);
-      color: #3d6b5e;
-    }
-    .mr-info-icon { font-size: 16px; flex-shrink: 0; }
 
     /* ── TV comparison ── */
     .mr-tv-section {
@@ -211,37 +107,19 @@
     .mr-inducement-order--first {
       background: rgba(0,48,73,0.08); color: var(--main-blue);
     }
-
-    /* ── Actions ── */
-    .mr-actions {
-      display: flex; gap: var(--p1);
-    }
-    .mr-actions .btn-outline-sm { flex: 1; text-align: center; }
-    .mr-actions .btn-primary-sm { flex: 2; text-align: center; }
-
-    .btn-primary-sm {
-      padding: 12px 20px; border-radius: 8px;
-      background: var(--main-blue); color: var(--white);
-      font-size: var(--text-small); font-weight: 700;
-      cursor: pointer; border: none; transition: opacity 0.15s;
-    }
-    .btn-primary-sm:hover { opacity: 0.9; }
-
-    .btn-outline-sm {
-      padding: 12px 20px; border-radius: 8px;
-      background: var(--white); color: var(--dark-2);
-      font-size: var(--text-small); font-weight: 600;
-      cursor: pointer; border: 1px solid var(--dark-5);
-      transition: all 0.15s;
-    }
-    .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
-
-    @media (min-width: 768px) {
-      .mr-container { padding: var(--p2); }
-    }
   </style>
 </head>
 <body>
+  <div class="mobile-header">
+    <div class="mobile-header-space">
+      <div class="mobile-header-space-logo">TC</div>
+      <span class="mobile-header-space-name">Tribu Celtique</span>
+      <span class="mobile-header-space-chevron">&#9660;</span>
+    </div>
+    <div class="mobile-header-actions">
+      <button class="mobile-header-btn">&#128100;</button>
+    </div>
+  </div>
   <div class="app-layout">
     <div class="sidebar">
       <div class="sidebar-top"></div>
@@ -391,13 +269,20 @@
 
           <!-- Actions -->
           <div class="mr-actions">
-            <button class="btn-outline-sm">← Retour</button>
-            <button class="btn-primary-sm">Acheter les coups de pouce →</button>
+            <a href="app-match-report-step1.html" class="btn-outline-sm">← Retour</a>
+            <a href="app-match-report-step2-inducements.html" class="btn-primary-sm">Acheter les coups de pouce →</a>
           </div>
 
         </div>
       </div>
     </div>
+  </div>
+  <div class="mobile-tabbar">
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#127968;</span><span class="mobile-tab-label">Accueil</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#127942;</span><span class="mobile-tab-label">Compétitions</span></a>
+    <a class="mobile-tab active" href="#"><span class="mobile-tab-icon">&#128203;</span><span class="mobile-tab-label">Match</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#128737;&#65039;</span><span class="mobile-tab-label">Équipes</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#128100;</span><span class="mobile-tab-label">Compte</span></a>
   </div>
 </body>
 </html>

@@ -5,50 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rapport de match — Étape 5 — Après-match</title>
   <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="match-report-shared.css">
   <style>
-    /* ── Mobile-first layout ── */
-    .mr-container {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: var(--p1);
-      display: flex;
-      flex-direction: column;
-      gap: var(--p2);
-      padding-bottom: var(--p4);
-    }
-
-    /* ── Header ── */
-    .mr-header {
-      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
-      border-radius: 12px;
-      padding: var(--p2);
-      text-align: center;
-    }
-    .mr-header-icon { font-size: 36px; margin-bottom: 8px; }
-    .mr-header-title {
-      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
-      color: var(--white);
-    }
-    .mr-header-sub {
-      font-size: var(--text-tiny); color: rgba(255,255,255,0.6); margin-top: 4px;
-    }
-
-    /* ── Steps ── */
-    .mr-steps {
-      display: flex; align-items: center; justify-content: center;
-      gap: 4px; padding: 8px 0;
-    }
-    .mr-step {
-      width: 32px; height: 32px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 700; flex-shrink: 0;
-    }
-    .mr-step--active { background: var(--main-blue); color: var(--white); }
-    .mr-step--pending { background: var(--dark-5); color: var(--dark-3); }
-    .mr-step--done { background: var(--green); color: var(--white); }
-    .mr-step-line { width: 20px; height: 2px; background: var(--dark-5); flex-shrink: 0; }
-    .mr-step-line--done { background: var(--green); }
-
     /* ── Score banner ── */
     .mr-score-banner {
       background: var(--white);
@@ -80,18 +38,6 @@
     }
     .mr-score-sep {
       font-size: var(--h4); color: var(--dark-4); font-weight: 700;
-    }
-
-    /* ── Card ── */
-    .mr-card {
-      background: var(--white);
-      border-radius: 12px;
-      padding: var(--p2);
-      display: flex; flex-direction: column; gap: var(--p2);
-    }
-    .mr-card-title {
-      font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
-      color: var(--dark-1);
     }
 
     /* ── Team row (gains / fan factor) ── */
@@ -173,35 +119,19 @@
       margin-left: 8px;
     }
 
-    /* ── Actions ── */
-    .mr-actions {
-      display: flex; gap: var(--p1);
-    }
-    .mr-actions .btn-outline-sm { flex: 1; text-align: center; }
-    .mr-actions .btn-primary-sm { flex: 2; text-align: center; }
-
-    .btn-primary-sm {
-      padding: 12px 20px; border-radius: 8px;
-      background: var(--main-blue); color: var(--white);
-      font-size: var(--text-small); font-weight: 700;
-      cursor: pointer; border: none; transition: opacity 0.15s;
-    }
-    .btn-primary-sm:hover { opacity: 0.9; }
-    .btn-outline-sm {
-      padding: 12px 20px; border-radius: 8px;
-      background: var(--white); color: var(--dark-2);
-      font-size: var(--text-small); font-weight: 600;
-      cursor: pointer; border: 1px solid var(--dark-5);
-      transition: all 0.15s;
-    }
-    .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
-
-    @media (min-width: 768px) {
-      .mr-container { padding: var(--p2); }
-    }
   </style>
 </head>
 <body>
+  <div class="mobile-header">
+    <div class="mobile-header-space">
+      <div class="mobile-header-space-logo">TC</div>
+      <span class="mobile-header-space-name">Tribu Celtique</span>
+      <span class="mobile-header-space-chevron">&#9660;</span>
+    </div>
+    <div class="mobile-header-actions">
+      <button class="mobile-header-btn">&#128100;</button>
+    </div>
+  </div>
   <div class="app-layout">
     <div class="sidebar">
       <div class="sidebar-top"></div>
@@ -341,8 +271,8 @@
 
           <!-- Actions -->
           <div class="mr-actions">
-            <button class="btn-outline-sm">← Retour</button>
-            <button class="btn-primary-sm">Voir le récapitulatif →</button>
+            <a href="app-match-report-step3.html" class="btn-outline-sm">← Retour</a>
+            <a href="app-match-report-recap.html" class="btn-primary-sm">Voir le récapitulatif →</a>
           </div>
 
         </div>
@@ -361,5 +291,12 @@
     if (val < 0) el.classList.add('negative');
   }
   </script>
+  <div class="mobile-tabbar">
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#127968;</span><span class="mobile-tab-label">Accueil</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#127942;</span><span class="mobile-tab-label">Compétitions</span></a>
+    <a class="mobile-tab active" href="#"><span class="mobile-tab-icon">&#128203;</span><span class="mobile-tab-label">Match</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#128737;&#65039;</span><span class="mobile-tab-label">Équipes</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#128100;</span><span class="mobile-tab-label">Compte</span></a>
+  </div>
 </body>
 </html>

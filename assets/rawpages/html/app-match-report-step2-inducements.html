@@ -5,49 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rapport de match — Coups de pouce</title>
   <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="match-report-shared.css">
   <style>
-    /* ── Mobile-first layout ── */
+    /* ── Override container padding-bottom for sticky cart ── */
     .mr-container {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: var(--p1);
-      display: flex;
-      flex-direction: column;
-      gap: var(--p2);
       padding-bottom: 120px;
     }
-
-    /* ── Header ── */
-    .mr-header {
-      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
-      border-radius: 12px;
-      padding: var(--p2);
-      text-align: center;
-    }
-    .mr-header-icon { font-size: 36px; margin-bottom: 8px; }
-    .mr-header-title {
-      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
-      color: var(--white);
-    }
-    .mr-header-sub {
-      font-size: var(--text-tiny); color: rgba(255,255,255,0.6); margin-top: 4px;
-    }
-
-    /* ── Steps ── */
-    .mr-steps {
-      display: flex; align-items: center; justify-content: center;
-      gap: 4px; padding: 8px 0;
-    }
-    .mr-step {
-      width: 32px; height: 32px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 700; flex-shrink: 0;
-    }
-    .mr-step--active { background: var(--main-blue); color: var(--white); }
-    .mr-step--pending { background: var(--dark-5); color: var(--dark-3); }
-    .mr-step--done { background: var(--green); color: var(--white); }
-    .mr-step-line { width: 20px; height: 2px; background: var(--dark-5); flex-shrink: 0; }
-    .mr-step-line--done { background: var(--green); }
 
     /* ── Budget banner ── */
     .mr-budget-banner {
@@ -156,14 +119,18 @@
       font-size: var(--text-small); font-weight: 700; color: var(--dark-1);
       min-width: 20px; text-align: center;
     }
+    .mr-inducement-card--star { cursor: pointer; }
+    .mr-inducement-card--star .mr-inducement-main { pointer-events: none; }
+    .mr-inducement-card--star .mr-inducement-qty { pointer-events: auto; }
+    .mr-inducement-card--star .mr-inducement-qty .mr-qty-btn { pointer-events: auto; }
+
     .mr-inducement-toggle {
       padding: 6px 10px;
       font-size: 11px; color: var(--dark-3);
-      cursor: pointer; background: none; border: none;
+      background: none; border: none;
       text-decoration: underline;
-      transition: color 0.15s;
+      pointer-events: none;
     }
-    .mr-inducement-toggle:hover { color: var(--main-blue); }
 
     /* ── Star player detail (expandable) ── */
     .mr-star-detail {
@@ -251,28 +218,19 @@
     .mr-cart-actions .btn-outline-sm { flex: 1; text-align: center; padding: 10px; }
     .mr-cart-actions .btn-primary-sm { flex: 2; text-align: center; padding: 10px; }
 
-    .btn-primary-sm {
-      padding: 12px 20px; border-radius: 8px;
-      background: var(--main-blue); color: var(--white);
-      font-size: var(--text-small); font-weight: 700;
-      cursor: pointer; border: none; transition: opacity 0.15s;
-    }
-    .btn-primary-sm:hover { opacity: 0.9; }
-    .btn-outline-sm {
-      padding: 12px 20px; border-radius: 8px;
-      background: var(--white); color: var(--dark-2);
-      font-size: var(--text-small); font-weight: 600;
-      cursor: pointer; border: 1px solid var(--dark-5);
-      transition: all 0.15s;
-    }
-    .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
-
-    @media (min-width: 768px) {
-      .mr-container { padding: var(--p2); }
-    }
   </style>
 </head>
 <body>
+  <div class="mobile-header">
+    <div class="mobile-header-space">
+      <div class="mobile-header-space-logo">TC</div>
+      <span class="mobile-header-space-name">Tribu Celtique</span>
+      <span class="mobile-header-space-chevron">&#9660;</span>
+    </div>
+    <div class="mobile-header-actions">
+      <button class="mobile-header-btn">&#128100;</button>
+    </div>
+  </div>
   <div class="app-layout">
     <div class="sidebar">
       <div class="sidebar-top"></div>
@@ -445,7 +403,7 @@
           <div class="mr-inducement-list" id="cat-stars" style="display:none;">
 
             <!-- Star 1 — collapsed -->
-            <div class="mr-inducement-card">
+            <div class="mr-inducement-card mr-inducement-card--star">
               <div class="mr-inducement-main">
                 <div class="mr-inducement-info">
                   <div class="mr-inducement-name">Roxana Darknail</div>
@@ -458,7 +416,7 @@
                   <button class="mr-qty-btn">+</button>
                 </div>
               </div>
-              <button class="mr-inducement-toggle" onclick="this.parentElement.querySelector('.mr-star-detail').classList.toggle('open')">Voir les stats ▾</button>
+              <button class="mr-inducement-toggle">Voir les stats ▾</button>
               <div class="mr-star-detail">
                 <div class="mr-star-stats">
                   <div class="mr-star-stat">
@@ -492,7 +450,7 @@
             </div>
 
             <!-- Star 2 — expanded -->
-            <div class="mr-inducement-card mr-inducement-card--selected">
+            <div class="mr-inducement-card mr-inducement-card--selected mr-inducement-card--star">
               <div class="mr-inducement-main">
                 <div class="mr-inducement-info">
                   <div class="mr-inducement-name">Helmut Wulf</div>
@@ -539,7 +497,7 @@
             </div>
 
             <!-- Star 3 -->
-            <div class="mr-inducement-card">
+            <div class="mr-inducement-card mr-inducement-card--star">
               <div class="mr-inducement-main">
                 <div class="mr-inducement-info">
                   <div class="mr-inducement-name">Grak & Crumblehorn</div>
@@ -552,7 +510,7 @@
                   <button class="mr-qty-btn">+</button>
                 </div>
               </div>
-              <button class="mr-inducement-toggle" onclick="this.parentElement.querySelector('.mr-star-detail').classList.toggle('open')">Voir les stats ▾</button>
+              <button class="mr-inducement-toggle">Voir les stats ▾</button>
               <div class="mr-star-detail">
                 <div class="mr-star-stats">
                   <div class="mr-star-stat">
@@ -606,8 +564,8 @@
         ⚠️ Budget dépassé de 40 kPo
       </div>
       <div class="mr-cart-actions">
-        <button class="btn-outline-sm">Passer</button>
-        <button class="btn-primary-sm">Valider les achats →</button>
+        <a href="app-match-report-step3.html" class="btn-outline-sm">Passer</a>
+        <a href="app-match-report-step3.html" class="btn-primary-sm">Valider les achats →</a>
       </div>
     </div>
   </div>
@@ -619,6 +577,25 @@
     document.querySelectorAll('.mr-tab').forEach(function(t) { t.classList.remove('active'); });
     el.classList.add('active');
   }
+
+  document.addEventListener('click', function(e) {
+    var card = e.target.closest('.mr-inducement-card--star');
+    if (!card) return;
+    if (e.target.closest('.mr-qty-btn')) return;
+    var detail = card.querySelector('.mr-star-detail');
+    var toggle = card.querySelector('.mr-inducement-toggle');
+    if (detail) {
+      var isOpen = detail.classList.toggle('open');
+      if (toggle) toggle.textContent = isOpen ? 'Masquer les stats ▴' : 'Voir les stats ▾';
+    }
+  });
   </script>
+  <div class="mobile-tabbar">
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#127968;</span><span class="mobile-tab-label">Accueil</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#127942;</span><span class="mobile-tab-label">Compétitions</span></a>
+    <a class="mobile-tab active" href="#"><span class="mobile-tab-icon">&#128203;</span><span class="mobile-tab-label">Match</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#128737;&#65039;</span><span class="mobile-tab-label">Équipes</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#128100;</span><span class="mobile-tab-label">Compte</span></a>
+  </div>
 </body>
 </html>

@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rapport de match — Récapitulatif</title>
+  <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="match-report-shared.css">
+  <style>
+    /* ── Score banner (big) ── */
+    .mr-score-big {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p3) var(--p2);
+      display: flex; align-items: center;
+    }
+    .mr-score-big-team {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
+      text-align: center;
+    }
+    .mr-score-big-logo {
+      width: 56px; height: 56px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 18px;
+      color: var(--white);
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+    }
+    .mr-score-big-name {
+      font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
+      color: var(--dark-1);
+    }
+    .mr-score-big-coach {
+      font-size: 11px; color: var(--dark-3);
+    }
+    .mr-score-big-result {
+      font-size: 10px; font-weight: 700;
+      padding: 2px 10px; border-radius: 12px;
+    }
+    .mr-score-big-result--win { background: rgba(98,149,132,0.12); color: var(--green); }
+    .mr-score-big-result--lose { background: rgba(224,32,32,0.08); color: var(--red); }
+    .mr-score-big-result--draw { background: var(--dark-6); color: var(--dark-3); }
+    .mr-score-big-center {
+      display: flex; align-items: center; gap: 12px;
+      flex-shrink: 0; padding: 0 var(--p1);
+    }
+    .mr-score-big-value {
+      font-family: var(--font-title); font-size: var(--h2); font-weight: 700;
+      color: var(--dark-0);
+    }
+    .mr-score-big-sep {
+      font-size: var(--h3); color: var(--dark-4); font-weight: 700;
+    }
+
+    /* ── Match info ── */
+    .mr-info-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p2);
+    }
+    .mr-info-row {
+      display: flex; justify-content: space-between;
+      padding: 6px 0;
+      font-size: var(--text-tiny);
+      border-bottom: 1px solid var(--dark-6);
+    }
+    .mr-info-row:last-child { border-bottom: none; }
+    .mr-info-label { color: var(--dark-3); }
+    .mr-info-value { color: var(--dark-1); font-weight: 600; }
+
+    /* ── Section card override ── */
+    .mr-card {
+      gap: var(--p1);
+    }
+
+    /* ── Team logo (used in gains) ── */
+    .mr-recap-team-logo {
+      width: 28px; height: 28px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 11px;
+      color: var(--white); flex-shrink: 0;
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+    }
+
+    /* ── Gains recap ── */
+    .mr-gains-recap {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 0;
+    }
+    .mr-gains-recap + .mr-gains-recap { border-top: 1px solid var(--dark-6); }
+    .mr-gains-recap-team {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .mr-gains-recap-team-name {
+      font-size: var(--text-small); color: var(--dark-1);
+    }
+    .mr-gains-recap-value {
+      font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
+      color: var(--main-blue);
+    }
+
+    /* ── Fan recap ── */
+    .mr-fan-recap {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 0;
+    }
+    .mr-fan-recap + .mr-fan-recap { border-top: 1px solid var(--dark-6); }
+    .mr-fan-recap-team {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .mr-fan-recap-team-name {
+      font-size: var(--text-small); color: var(--dark-1);
+    }
+    .mr-fan-recap-mod {
+      font-size: var(--text-small); font-weight: 700;
+    }
+    .mr-fan-recap-mod--positive { color: var(--green); }
+    .mr-fan-recap-mod--negative { color: var(--red); }
+    .mr-fan-recap-mod--neutral { color: var(--dark-3); }
+    .mr-fan-recap-result {
+      font-size: var(--text-tiny); color: var(--dark-3);
+    }
+
+    /* ── Timeline ── */
+    .mr-timeline {
+      display: flex; flex-direction: column; gap: 0;
+      border-left: 3px solid var(--dark-5);
+      margin-left: 16px;
+    }
+    .mr-timeline-label {
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+      text-align: center;
+      padding: 10px 0;
+      text-transform: uppercase; letter-spacing: 0.3px;
+    }
+
+    .mr-tl-entry {
+      display: flex; gap: 12px;
+      padding: 8px 0 8px 20px;
+      position: relative;
+    }
+    .mr-tl-entry-icon {
+      position: absolute;
+      left: -14px; top: 10px;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      background: var(--white);
+      z-index: 1;
+    }
+
+    .mr-tl-turn {
+      width: 32px; height: 32px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: var(--text-tiny); font-weight: 700;
+      flex-shrink: 0;
+    }
+    .mr-tl-turn--home {
+      background: var(--main-blue); color: var(--white);
+    }
+    .mr-tl-turn--away {
+      background: rgba(0,48,73,0.08); color: var(--main-blue);
+      border: 1px solid rgba(0,48,73,0.15);
+    }
+    .mr-tl-entry--mvp .mr-tl-turn {
+      background: rgba(255,215,0,0.15); color: #9A7800;
+      font-size: 16px;
+    }
+
+    .mr-tl-body { flex: 1; min-width: 0; }
+    .mr-tl-main {
+      display: flex; align-items: center; gap: 6px;
+      flex-wrap: wrap;
+    }
+    .mr-tl-team-tag {
+      font-size: 10px; font-weight: 700;
+      padding: 2px 6px; border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .mr-tl-team-tag--home { background: var(--main-blue); color: var(--white); }
+    .mr-tl-team-tag--away { background: rgba(0,48,73,0.08); color: var(--main-blue); border: 1px solid rgba(0,48,73,0.15); }
+    .mr-tl-text {
+      font-size: var(--text-small); color: var(--dark-1);
+    }
+    .mr-tl-text strong { font-weight: 600; }
+    .mr-tl-score {
+      font-size: var(--text-tiny); font-weight: 700; color: var(--main-blue);
+      margin-top: 2px;
+    }
+    .mr-tl-injury {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--red);
+      margin-top: 2px;
+      padding: 3px 8px;
+      background: rgba(224,32,32,0.06);
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    /* ── Actions override ── */
+    .btn-primary-sm {
+      padding: 14px 20px;
+      background: var(--green);
+    }
+    .btn-outline-sm {
+      padding: 14px 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="mobile-header">
+    <div class="mobile-header-space">
+      <div class="mobile-header-space-logo">TC</div>
+      <span class="mobile-header-space-name">Tribu Celtique</span>
+      <span class="mobile-header-space-chevron">&#9660;</span>
+    </div>
+    <div class="mobile-header-actions">
+      <button class="mobile-header-btn">&#128100;</button>
+    </div>
+  </div>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+          </div>
+          <div class="menu-right">
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="mr-container">
+
+          <!-- Header -->
+          <div class="mr-header">
+            <div class="mr-header-icon">📋</div>
+            <div class="mr-header-title">Récapitulatif du match</div>
+            <div class="mr-header-sub">Vérifiez et soumettez le rapport</div>
+          </div>
+
+          <!-- Steps (all done) -->
+          <div class="mr-steps">
+            <div class="mr-step mr-step--done">✓</div>
+            <div class="mr-step-line mr-step-line--done"></div>
+            <div class="mr-step mr-step--done">✓</div>
+            <div class="mr-step-line mr-step-line--done"></div>
+            <div class="mr-step mr-step--done">✓</div>
+            <div class="mr-step-line mr-step-line--done"></div>
+            <div class="mr-step mr-step--done">✓</div>
+            <div class="mr-step-line mr-step-line--done"></div>
+            <div class="mr-step mr-step--done">✓</div>
+          </div>
+
+          <!-- Big score -->
+          <div class="mr-score-big">
+            <div class="mr-score-big-team">
+              <div class="mr-score-big-logo">ST</div>
+              <div class="mr-score-big-name">Storm Treemen</div>
+              <div class="mr-score-big-coach">Yan</div>
+              <span class="mr-score-big-result mr-score-big-result--win">Victoire</span>
+            </div>
+            <div class="mr-score-big-center">
+              <span class="mr-score-big-value">2</span>
+              <span class="mr-score-big-sep">—</span>
+              <span class="mr-score-big-value">1</span>
+            </div>
+            <div class="mr-score-big-team">
+              <div class="mr-score-big-logo" style="background: linear-gradient(135deg, #E02020, #555770);">SC</div>
+              <div class="mr-score-big-name">Skull Crushers</div>
+              <div class="mr-score-big-coach">Darkmoule</div>
+              <span class="mr-score-big-result mr-score-big-result--lose">Défaite</span>
+            </div>
+          </div>
+
+          <!-- Match info -->
+          <div class="mr-info-card">
+            <div class="mr-info-row">
+              <span class="mr-info-label">Compétition</span>
+              <span class="mr-info-value">Ligue de Condate</span>
+            </div>
+            <div class="mr-info-row">
+              <span class="mr-info-label">Saison</span>
+              <span class="mr-info-value">Saison 5</span>
+            </div>
+            <div class="mr-info-row">
+              <span class="mr-info-label">Journée</span>
+              <span class="mr-info-value">Journée 3</span>
+            </div>
+          </div>
+
+          <!-- Chronologie complète -->
+          <div class="mr-card">
+            <div class="mr-card-title">⏱️ Chronologie du match</div>
+
+            <div class="mr-timeline-label">1ère mi-temps</div>
+            <div class="mr-timeline">
+              <div class="mr-tl-entry">
+                <div class="mr-tl-entry-icon">🏈</div>
+                <div class="mr-tl-turn mr-tl-turn--home">T1</div>
+                <div class="mr-tl-body">
+                  <div class="mr-tl-main">
+                    <span class="mr-tl-team-tag mr-tl-team-tag--home">ST</span>
+                    <span class="mr-tl-text"><strong>#7 Aëlindra</strong> marque un <strong>Touchdown</strong></span>
+                  </div>
+                  <div class="mr-tl-score">Score : 1 — 0</div>
+                </div>
+              </div>
+
+              <div class="mr-tl-entry">
+                <div class="mr-tl-entry-icon">🎯</div>
+                <div class="mr-tl-turn mr-tl-turn--home">T4</div>
+                <div class="mr-tl-body">
+                  <div class="mr-tl-main">
+                    <span class="mr-tl-team-tag mr-tl-team-tag--home">ST</span>
+                    <span class="mr-tl-text"><strong>#1 Thalion</strong> réussit une <strong>Passe</strong></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mr-tl-entry">
+                <div class="mr-tl-entry-icon">🏈</div>
+                <div class="mr-tl-turn mr-tl-turn--away">T5</div>
+                <div class="mr-tl-body">
+                  <div class="mr-tl-main">
+                    <span class="mr-tl-team-tag mr-tl-team-tag--away">SC</span>
+                    <span class="mr-tl-text"><strong>#4 Grishnak</strong> marque un <strong>Touchdown</strong></span>
+                  </div>
+                  <div class="mr-tl-score">Score : 1 — 1</div>
+                </div>
+              </div>
+
+              <div class="mr-tl-entry mr-tl-entry--damage">
+                <div class="mr-tl-entry-icon">🩸</div>
+                <div class="mr-tl-turn mr-tl-turn--home">T6</div>
+                <div class="mr-tl-body">
+                  <div class="mr-tl-main">
+                    <span class="mr-tl-team-tag mr-tl-team-tag--home">ST</span>
+                    <span class="mr-tl-text"><strong>#3 Grotak</strong> subit un <strong>KO</strong></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mr-timeline-label">Mi-temps — Score : 1 — 1</div>
+
+            <div class="mr-timeline">
+              <div class="mr-tl-entry mr-tl-entry--damage">
+                <div class="mr-tl-entry-icon">🩸</div>
+                <div class="mr-tl-turn mr-tl-turn--home">T9</div>
+                <div class="mr-tl-body">
+                  <div class="mr-tl-main">
+                    <span class="mr-tl-team-tag mr-tl-team-tag--home">ST</span>
+                    <span class="mr-tl-text"><strong>#11 Fenris</strong> fait une <strong>sortie !</strong></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mr-tl-entry">
+                <div class="mr-tl-entry-icon">🏈</div>
+                <div class="mr-tl-turn mr-tl-turn--home">T12</div>
+                <div class="mr-tl-body">
+                  <div class="mr-tl-main">
+                    <span class="mr-tl-team-tag mr-tl-team-tag--home">ST</span>
+                    <span class="mr-tl-text"><strong>#7 Aëlindra</strong> marque un <strong>Touchdown</strong></span>
+                  </div>
+                  <div class="mr-tl-score">Score : 2 — 1</div>
+                </div>
+              </div>
+
+              <div class="mr-tl-entry mr-tl-entry--damage">
+                <div class="mr-tl-entry-icon">🩸</div>
+                <div class="mr-tl-turn mr-tl-turn--away">T14</div>
+                <div class="mr-tl-body">
+                  <div class="mr-tl-main">
+                    <span class="mr-tl-team-tag mr-tl-team-tag--away">SC</span>
+                    <span class="mr-tl-text"><strong>#8 Uzgrot</strong> subit une <strong>Commotion</strong></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mr-timeline-label">Fin du match — Score final : 2 — 1</div>
+
+            <!-- MVP -->
+            <div class="mr-timeline">
+              <div class="mr-tl-entry mr-tl-entry--mvp">
+                <div class="mr-tl-entry-icon">⭐</div>
+                <div class="mr-tl-turn mr-tl-turn--home">★</div>
+                <div class="mr-tl-body">
+                  <div class="mr-tl-main">
+                    <span class="mr-tl-team-tag mr-tl-team-tag--home">ST</span>
+                    <span class="mr-tl-text"><strong>#7 Aëlindra</strong> — <strong>MVP</strong> · 7 SPP au total</span>
+                  </div>
+                </div>
+              </div>
+              <div class="mr-tl-entry mr-tl-entry--mvp">
+                <div class="mr-tl-entry-icon">⭐</div>
+                <div class="mr-tl-turn mr-tl-turn--away">★</div>
+                <div class="mr-tl-body">
+                  <div class="mr-tl-main">
+                    <span class="mr-tl-team-tag mr-tl-team-tag--away">SC</span>
+                    <span class="mr-tl-text"><strong>#4 Grishnak</strong> — <strong>MVP</strong> · 6 SPP au total</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gains & Fan factor -->
+          <div class="mr-card">
+            <div class="mr-card-title">💰 Gains & Fan Factor</div>
+
+            <div class="mr-gains-recap">
+              <div class="mr-gains-recap-team">
+                <div class="mr-recap-team-logo">ST</div>
+                <span class="mr-gains-recap-team-name">Storm Treemen</span>
+              </div>
+              <span class="mr-gains-recap-value">+50 000 pO</span>
+            </div>
+            <div class="mr-gains-recap">
+              <div class="mr-gains-recap-team">
+                <div class="mr-recap-team-logo" style="background: linear-gradient(135deg, #E02020, #555770);">SC</div>
+                <span class="mr-gains-recap-team-name">Skull Crushers</span>
+              </div>
+              <span class="mr-gains-recap-value">+30 000 pO</span>
+            </div>
+
+            <div style="height: 1px; background: var(--dark-5);"></div>
+
+            <div class="mr-fan-recap">
+              <div class="mr-fan-recap-team">
+                <div class="mr-recap-team-logo">ST</div>
+                <span class="mr-fan-recap-team-name">Storm Treemen</span>
+              </div>
+              <span class="mr-fan-recap-mod mr-fan-recap-mod--positive">+1 fan</span>
+              <span class="mr-fan-recap-result">3 → 4</span>
+            </div>
+            <div class="mr-fan-recap">
+              <div class="mr-fan-recap-team">
+                <div class="mr-recap-team-logo" style="background: linear-gradient(135deg, #E02020, #555770);">SC</div>
+                <span class="mr-fan-recap-team-name">Skull Crushers</span>
+              </div>
+              <span class="mr-fan-recap-mod mr-fan-recap-mod--negative">-1 fan</span>
+              <span class="mr-fan-recap-result">2 → 1</span>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="mr-actions">
+            <a href="app-match-report-step5.html" class="btn-outline-sm">← Modifier</a>
+            <button class="btn-primary-sm">✅ Soumettre le rapport</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="mobile-tabbar">
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#127968;</span><span class="mobile-tab-label">Accueil</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#127942;</span><span class="mobile-tab-label">Compétitions</span></a>
+    <a class="mobile-tab active" href="#"><span class="mobile-tab-icon">&#128203;</span><span class="mobile-tab-label">Match</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#128737;&#65039;</span><span class="mobile-tab-label">Équipes</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#128100;</span><span class="mobile-tab-label">Compte</span></a>
+  </div>
+</body>
+</html>

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Layout Mobile — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ══════════════════════════════════════════════════════════════════
+       Mobile Layout — masque le chrome desktop, affiche header + bottom bar
+       ══════════════════════════════════════════════════════════════════ */
+
+    /* ── Masquer le desktop layout ── */
+    .sidebar { display: none; }
+    .menu-bar { display: none; }
+    .app-layout {
+      display: block;
+      height: auto;
+      overflow: visible;
+    }
+    .main-area { width: 100%; }
+    .page-content {
+      padding: 0;
+      height: auto;
+      overflow: visible;
+    }
+
+    /* ── Mobile header ── */
+    .mobile-header {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 500;
+      background: var(--dark-0);
+      border-bottom: none;
+      display: flex; align-items: center;
+      padding: 0 var(--p1);
+      height: 52px;
+    }
+    .mobile-header-space {
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer;
+      flex: 1;
+    }
+    .mobile-header-space-logo {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 11px;
+      color: var(--white); flex-shrink: 0;
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+    }
+    .mobile-header-space-name {
+      font-family: var(--font-title); font-size: var(--text-tiny); font-weight: 700;
+      color: var(--white);
+    }
+    .mobile-header-space-chevron {
+      font-size: 10px; color: rgba(255,255,255,0.5);
+      margin-left: 2px;
+    }
+    .mobile-header-actions {
+      display: flex; gap: 8px; flex-shrink: 0;
+    }
+    .mobile-header-btn {
+      width: 36px; height: 36px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      background: none; border: none; cursor: pointer;
+      color: rgba(255,255,255,0.7);
+      transition: background 0.12s;
+    }
+    .mobile-header-btn:hover { background: rgba(255,255,255,0.1); }
+    .mobile-header-btn--notif { position: relative; }
+    .mobile-header-notif-dot {
+      position: absolute; top: 6px; right: 6px;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--red);
+      border: 2px solid var(--white);
+    }
+
+    /* ── Space drawer (overlay) ── */
+    .space-drawer-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 600;
+      display: none;
+    }
+    .space-drawer-overlay.open { display: block; }
+
+    .space-drawer {
+      position: fixed; top: 0; left: 0; bottom: 0;
+      width: 280px;
+      background: var(--white);
+      z-index: 700;
+      display: flex; flex-direction: column;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.1);
+    }
+    .space-drawer.open { transform: translateX(0); }
+
+    .space-drawer-header {
+      padding: var(--p2);
+      border-bottom: 1px solid var(--dark-5);
+    }
+    .space-drawer-title {
+      font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
+      color: var(--dark-1);
+    }
+    .space-drawer-sub {
+      font-size: 11px; color: var(--dark-3); margin-top: 2px;
+    }
+    .space-drawer-list {
+      flex: 1; overflow-y: auto; padding: var(--p1);
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .space-drawer-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .space-drawer-item:hover { background: var(--dark-7); }
+    .space-drawer-item.active {
+      background: rgba(0,48,73,0.06);
+      border: 1px solid rgba(0,48,73,0.1);
+    }
+    .space-drawer-item-logo {
+      width: 36px; height: 36px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 12px;
+      color: var(--white); flex-shrink: 0;
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+    }
+    .space-drawer-item-info { flex: 1; }
+    .space-drawer-item-name {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
+    }
+    .space-drawer-item-meta {
+      font-size: 11px; color: var(--dark-3);
+    }
+    .space-drawer-item-check {
+      color: var(--green); font-size: 16px; flex-shrink: 0;
+    }
+    .space-drawer-footer {
+      padding: var(--p1);
+      border-top: 1px solid var(--dark-5);
+    }
+    .space-drawer-add {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: var(--text-tiny); font-weight: 600;
+      color: var(--dark-3);
+      border: 1px dashed var(--dark-5);
+      cursor: pointer;
+      transition: all 0.12s;
+      background: none;
+      width: 100%;
+    }
+    .space-drawer-add:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    /* ── Content area ── */
+    .mobile-content {
+      padding-top: 52px;
+      padding-bottom: 68px;
+      min-height: 100vh;
+    }
+
+    /* ── Bottom tab bar ── */
+    .mobile-tabbar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      z-index: 500;
+      background: var(--dark-0);
+      border-top: none;
+      display: flex;
+      padding: 4px 0;
+      padding-bottom: max(4px, env(safe-area-inset-bottom));
+    }
+    .mobile-tab {
+      flex: 1;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      padding: 6px 0;
+      cursor: pointer;
+      transition: color 0.12s;
+      text-decoration: none;
+      background: none; border: none;
+    }
+    .mobile-tab-icon { font-size: 20px; }
+    .mobile-tab-label {
+      font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.45);
+    }
+    .mobile-tab:hover .mobile-tab-label { color: rgba(255,255,255,0.7); }
+    .mobile-tab.active .mobile-tab-label { color: var(--white); }
+    .mobile-tab.active .mobile-tab-icon { filter: none; }
+
+    /* ── Sample page content ── */
+    .demo-page {
+      padding: var(--p1);
+      display: flex; flex-direction: column; gap: var(--p1);
+    }
+    .demo-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p2);
+    }
+    .demo-card-title {
+      font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
+      color: var(--dark-1); margin-bottom: 8px;
+    }
+    .demo-card-text {
+      font-size: var(--text-tiny); color: var(--dark-3); line-height: 1.5;
+    }
+    .demo-banner {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 12px;
+      padding: var(--p2);
+      color: var(--white);
+    }
+    .demo-banner-title {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+    }
+    .demo-banner-sub {
+      font-size: var(--text-tiny); color: rgba(255,255,255,0.6); margin-top: 4px;
+    }
+    .demo-list {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .demo-list-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--dark-5); border-radius: 8px;
+      background: var(--white);
+    }
+    .demo-list-icon { font-size: 20px; }
+    .demo-list-info { flex: 1; }
+    .demo-list-name { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); }
+    .demo-list-meta { font-size: 11px; color: var(--dark-3); }
+    .demo-list-arrow { color: var(--dark-4); font-size: 14px; }
+  </style>
+</head>
+<body>
+
+  <!-- ══ Mobile Header ══ -->
+  <div class="mobile-header">
+    <div class="mobile-header-space" onclick="toggleDrawer()">
+      <div class="mobile-header-space-logo">TC</div>
+      <span class="mobile-header-space-name">Tribu Celtique</span>
+      <span class="mobile-header-space-chevron">▼</span>
+    </div>
+    <div class="mobile-header-actions">
+      <button class="mobile-header-btn mobile-header-btn--notif">
+        🔔
+        <span class="mobile-header-notif-dot"></span>
+      </button>
+      <button class="mobile-header-btn">👤</button>
+    </div>
+  </div>
+
+  <!-- ══ Space Drawer ══ -->
+  <div class="space-drawer-overlay" id="drawer-overlay" onclick="toggleDrawer()"></div>
+  <div class="space-drawer" id="space-drawer">
+    <div class="space-drawer-header">
+      <div class="space-drawer-title">Mes espaces</div>
+      <div class="space-drawer-sub">Sélectionnez un espace</div>
+    </div>
+    <div class="space-drawer-list">
+      <div class="space-drawer-item active" onclick="toggleDrawer()">
+        <div class="space-drawer-item-logo">TC</div>
+        <div class="space-drawer-item-info">
+          <div class="space-drawer-item-name">Tribu Celtique</div>
+          <div class="space-drawer-item-meta">12 membres · 3 compétitions</div>
+        </div>
+        <span class="space-drawer-item-check">✓</span>
+      </div>
+      <div class="space-drawer-item" onclick="toggleDrawer()">
+        <div class="space-drawer-item-logo" style="background: linear-gradient(135deg, var(--green), #003049);">KC</div>
+        <div class="space-drawer-item-info">
+          <div class="space-drawer-item-name">Korrigans Club</div>
+          <div class="space-drawer-item-meta">8 membres · 1 compétition</div>
+        </div>
+      </div>
+      <div class="space-drawer-item" onclick="toggleDrawer()">
+        <div class="space-drawer-item-logo" style="background: linear-gradient(135deg, var(--orange), #1C1C29);">LM</div>
+        <div class="space-drawer-item-info">
+          <div class="space-drawer-item-name">Liga Mortel</div>
+          <div class="space-drawer-item-meta">24 membres · 5 compétitions</div>
+        </div>
+      </div>
+    </div>
+    <div class="space-drawer-footer">
+      <button class="space-drawer-add">+ Rejoindre un espace</button>
+    </div>
+  </div>
+
+  <!-- ══ Content ══ -->
+  <div class="mobile-content">
+    <div class="demo-page">
+
+      <div class="demo-banner">
+        <div class="demo-banner-title">Ligue de Condate — Saison 5</div>
+        <div class="demo-banner-sub">Journée 3 en cours · 14 équipes inscrites</div>
+      </div>
+
+      <div class="demo-card">
+        <div class="demo-card-title">🏆 Compétitions</div>
+        <div class="demo-list">
+          <div class="demo-list-item">
+            <span class="demo-list-icon">🏟️</span>
+            <div class="demo-list-info">
+              <div class="demo-list-name">Ligue de Condate</div>
+              <div class="demo-list-meta">Saison 5 · En cours</div>
+            </div>
+            <span class="demo-list-arrow">›</span>
+          </div>
+          <div class="demo-list-item">
+            <span class="demo-list-icon">🏟️</span>
+            <div class="demo-list-info">
+              <div class="demo-list-name">Tournoi des Korrigans</div>
+              <div class="demo-list-meta">Saison 1 · Inscriptions ouvertes</div>
+            </div>
+            <span class="demo-list-arrow">›</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="demo-card">
+        <div class="demo-card-title">⚔️ Prochains matchs</div>
+        <div class="demo-list">
+          <div class="demo-list-item">
+            <span class="demo-list-icon">📋</span>
+            <div class="demo-list-info">
+              <div class="demo-list-name">Storm Treemen vs Skull Crushers</div>
+              <div class="demo-list-meta">Journée 3 · 24 oct. → 7 nov.</div>
+            </div>
+            <span class="demo-list-arrow">›</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="demo-card">
+        <div class="demo-card-title">📊 Mes équipes</div>
+        <div class="demo-list">
+          <div class="demo-list-item">
+            <span class="demo-list-icon">🛡️</span>
+            <div class="demo-list-info">
+              <div class="demo-list-name">Storm Treemen</div>
+              <div class="demo-list-meta">Elfes Sylvains · TV 1120 kPo · Prête à jouer</div>
+            </div>
+            <span class="demo-list-arrow">›</span>
+          </div>
+          <div class="demo-list-item">
+            <span class="demo-list-icon">🛡️</span>
+            <div class="demo-list-info">
+              <div class="demo-list-name">Chaos United</div>
+              <div class="demo-list-meta">Élus du Chaos · TV 1140 kPo · Phase de recrutement</div>
+            </div>
+            <span class="demo-list-arrow">›</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ Bottom Tab Bar ══ -->
+  <div class="mobile-tabbar">
+    <a class="mobile-tab active" href="#">
+      <span class="mobile-tab-icon">🏠</span>
+      <span class="mobile-tab-label">Accueil</span>
+    </a>
+    <a class="mobile-tab" href="#">
+      <span class="mobile-tab-icon">🏆</span>
+      <span class="mobile-tab-label">Compétitions</span>
+    </a>
+    <a class="mobile-tab" href="#">
+      <span class="mobile-tab-icon">📋</span>
+      <span class="mobile-tab-label">Match</span>
+    </a>
+    <a class="mobile-tab" href="#">
+      <span class="mobile-tab-icon">🛡️</span>
+      <span class="mobile-tab-label">Équipes</span>
+    </a>
+    <a class="mobile-tab" href="#">
+      <span class="mobile-tab-icon">👤</span>
+      <span class="mobile-tab-label">Compte</span>
+    </a>
+  </div>
+
+  <script>
+  function toggleDrawer() {
+    document.getElementById('space-drawer').classList.toggle('open');
+    document.getElementById('drawer-overlay').classList.toggle('open');
+  }
+  </script>
+</body>
+</html>
