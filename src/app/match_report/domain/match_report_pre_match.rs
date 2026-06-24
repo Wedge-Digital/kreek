@@ -16,6 +16,7 @@ pub struct MatchReportPreMatch {
     pub away_team_id: TeamId,
     pub created_by: CoachId,
     pub origin: MatchReportOrigin,
+    pub pairing_id: Option<String>,
     pub version: u64,
 }
 
@@ -31,6 +32,7 @@ impl MatchReportPreMatch {
             away_team_id: draft.away_team_id,
             created_by: draft.created_by,
             origin: draft.origin,
+            pairing_id: draft.pairing_id,
             version: draft.version + 1,
         }
     }

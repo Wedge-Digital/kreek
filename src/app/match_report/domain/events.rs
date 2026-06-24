@@ -18,6 +18,8 @@ pub enum MatchReportDomainEvent {
         away_team_id: TeamId,
         created_by: CoachId,
         origin: MatchReportOrigin,
+        #[serde(default)]
+        pairing_id: Option<String>,
     },
     SelectionUpdated {
         home_team_id: TeamId,
@@ -27,6 +29,9 @@ pub enum MatchReportDomainEvent {
     SelectionConfirmed {
         confirmed_by: CoachId,
     },
+    MatchReportCancelled {
+        reason: String,
+    },
 }
 
 impl MatchReportDomainEvent {
@@ -35,6 +40,7 @@ impl MatchReportDomainEvent {
             Self::MatchReportCreated { .. } => "MatchReportCreated",
             Self::SelectionUpdated { .. } => "SelectionUpdated",
             Self::SelectionConfirmed { .. } => "SelectionConfirmed",
+            Self::MatchReportCancelled { .. } => "MatchReportCancelled",
         }
     }
 

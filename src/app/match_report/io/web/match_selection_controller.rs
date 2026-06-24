@@ -144,6 +144,30 @@ async fn is_admin(
 
 // ── Handlers GET ─────────────────────────────────────────────────────────────
 
+pub async fn from_pairing(
+    Path((space_id, pairing_id)): Path<(String, String)>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    let mr_id = match state
+        .match_report
+        .match_report_repo
+        .find_id_by_pairing(&pairing_id)
+        .await
+    {
+        Ok(Some(id)) => id,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("from_pairing find_id_by_pairing {pairing_id}: {e}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let url = AppRoutes::default()
+        .match_report
+        .edit_match_report(&space_id, &mr_id);
+    Redirect::to(&url).into_response()
+}
+
 pub async fn new_match_report(
     auth_session: AuthSession,
     Path(space_id): Path<String>,
@@ -326,6 +350,9 @@ pub async fn edit_match_report(
             );
             Redirect::to(&url).into_response()
         }
+        MatchReportState::Cancelled(_) => {
+            StatusCode::GONE.into_response()
+        }
     }
 }
 
@@ -483,6 +510,7 @@ pub async fn create_match_report(
         },
         created_by: user.id,
         origin: MatchReportOrigin::Manual,
+        pairing_id: None,
     };
 
     match create_match_report_use_case::execute(

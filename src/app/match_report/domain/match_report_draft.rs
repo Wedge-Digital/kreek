@@ -18,6 +18,7 @@ pub struct MatchReportDraft {
     pub away_team_id: TeamId,
     pub created_by: CoachId,
     pub origin: MatchReportOrigin,
+    pub pairing_id: Option<String>,
     pub version: u64,
 }
 
@@ -32,6 +33,7 @@ impl MatchReportDraft {
         away_team_id: TeamId,
         created_by: CoachId,
         origin: MatchReportOrigin,
+        pairing_id: Option<String>,
     ) -> Result<(Self, MatchReportDomainEvent), DomainError> {
         if home_team_id == away_team_id {
             return Err(DomainError::SameTeam);
@@ -46,6 +48,7 @@ impl MatchReportDraft {
             away_team_id,
             created_by,
             origin,
+            pairing_id,
         };
         let draft = Self::from_created_event(&event);
         Ok((draft, event))
@@ -69,6 +72,10 @@ impl MatchReportDraft {
         Ok((updated, event))
     }
 
+    pub fn cancel(self, reason: String) -> MatchReportDomainEvent {
+        MatchReportDomainEvent::MatchReportCancelled { reason }
+    }
+
     pub fn confirm_selection(
         self,
         confirmed_by: CoachId,
@@ -90,6 +97,7 @@ impl MatchReportDraft {
                 away_team_id,
                 created_by,
                 origin,
+                pairing_id,
             } => Self {
                 id: *match_report_id,
                 space_id: *space_id,
@@ -100,6 +108,7 @@ impl MatchReportDraft {
                 away_team_id: *away_team_id,
                 created_by: *created_by,
                 origin: *origin,
+                pairing_id: pairing_id.clone(),
                 version: 1,
             },
             _ => unreachable!("from_created_event appelé avec un mauvais event"),

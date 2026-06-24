@@ -19,6 +19,7 @@ pub fn init(app_event_bus: &EventBus, repo: Arc<dyn IMatchReportRepository>) {
                         continue;
                     };
                     let CompetitionsAppEvent::PairingCreated {
+                        pairing_id,
                         season_id,
                         round_id,
                         home_team_id,
@@ -47,6 +48,7 @@ pub fn init(app_event_bus: &EventBus, repo: Arc<dyn IMatchReportRepository>) {
                         away_team_id: away,
                         created_by: coach,
                         origin: MatchReportOrigin::Pairing,
+                        pairing_id: Some(pairing_id),
                     };
 
                     match create_match_report_use_case::execute(cmd, repo.as_ref()).await {

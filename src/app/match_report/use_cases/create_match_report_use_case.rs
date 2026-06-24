@@ -17,6 +17,7 @@ pub struct CreateMatchReportCommand {
     pub away_team_id: TeamId,
     pub created_by: CoachId,
     pub origin: MatchReportOrigin,
+    pub pairing_id: Option<String>,
 }
 
 #[derive(Debug)]
@@ -41,6 +42,7 @@ pub async fn execute(
         cmd.away_team_id,
         cmd.created_by,
         cmd.origin,
+        cmd.pairing_id,
     )
     .map_err(|_| CreateMatchReportError::SameTeam)?;
 

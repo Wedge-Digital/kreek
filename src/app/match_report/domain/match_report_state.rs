@@ -4,9 +4,16 @@ use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 
 #[derive(Debug)]
+pub struct MatchReportCancelled {
+    pub id: String,
+    pub reason: String,
+}
+
+#[derive(Debug)]
 pub enum MatchReportState {
     Draft(MatchReportDraft),
     PreMatch(MatchReportPreMatch),
+    Cancelled(MatchReportCancelled),
 }
 
 pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState, DomainError> {
@@ -29,6 +36,20 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                 Some(MatchReportState::Draft(draft)),
                 MatchReportDomainEvent::SelectionConfirmed { .. },
             ) => MatchReportState::PreMatch(MatchReportPreMatch::from_draft(draft)),
+            (
+                Some(MatchReportState::Draft(draft)),
+                MatchReportDomainEvent::MatchReportCancelled { reason, .. },
+            ) => MatchReportState::Cancelled(MatchReportCancelled {
+                id: draft.id.to_string(),
+                reason: reason.clone(),
+            }),
+            (
+                Some(MatchReportState::PreMatch(pm)),
+                MatchReportDomainEvent::MatchReportCancelled { reason, .. },
+            ) => MatchReportState::Cancelled(MatchReportCancelled {
+                id: pm.id.to_string(),
+                reason: reason.clone(),
+            }),
             _ => return Err(DomainError::InvalidEventSequence),
         });
     }
@@ -87,6 +108,7 @@ mod tests {
             away_team_id: away_id,
             created_by: coach_id,
             origin: MatchReportOrigin::Manual,
+            pairing_id: None,
         }
     }
 
@@ -105,6 +127,7 @@ mod tests {
             team_id,
             CoachId::new(),
             MatchReportOrigin::Manual,
+            None,
         );
         assert_eq!(result.unwrap_err(), DomainError::SameTeam);
     }
@@ -123,6 +146,7 @@ mod tests {
             away_id,
             coach_id,
             MatchReportOrigin::Pairing,
+            None,
         )
         .unwrap();
 
@@ -146,6 +170,7 @@ mod tests {
         let (draft, _) = MatchReportDraft::create(
             mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
             MatchReportOrigin::Manual,
+            None,
         )
         .unwrap();
 
@@ -161,6 +186,7 @@ mod tests {
         let (draft, _) = MatchReportDraft::create(
             mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
             MatchReportOrigin::Manual,
+            None,
         )
         .unwrap();
 
@@ -186,6 +212,7 @@ mod tests {
         let (draft, _) = MatchReportDraft::create(
             mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
             MatchReportOrigin::Manual,
+            None,
         )
         .unwrap();
 

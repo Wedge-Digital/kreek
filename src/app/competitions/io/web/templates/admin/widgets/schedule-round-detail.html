@@ -142,11 +142,17 @@
   <div class="match-list">
     {% for f in detail.fixtures %}
     <div class="match-row">
-      <div class="match-row-teams">
+      <a class="match-row-teams match-row-link"
+         href="{{ app_routes.match_report.from_pairing(space_id, f.fixture_id) }}"
+         hx-get="{{ app_routes.match_report.from_pairing(space_id, f.fixture_id) }}"
+         hx-target="#app-content"
+         hx-select="#app-content"
+         hx-swap="innerHTML"
+         hx-push-url="true">
         <span class="match-row-home">{{ f.home_team_name }}</span>
         <span class="match-row-vs">vs</span>
         <span class="match-row-away">{{ f.away_team_name }}</span>
-      </div>
+      </a>
       {% if !f.group_name.is_empty() %}
       <span class="match-row-group">{{ f.group_name }}</span>
       {% endif %}

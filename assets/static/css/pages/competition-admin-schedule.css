@@ -261,6 +261,13 @@
   flex: 1; display: flex; align-items: center; gap: 8px;
   min-width: 0;
 }
+.match-row-link {
+  text-decoration: none; cursor: pointer;
+}
+.match-row-link:hover .match-row-home,
+.match-row-link:hover .match-row-away {
+  color: var(--main-blue);
+}
 .match-row-home, .match-row-away {
   font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

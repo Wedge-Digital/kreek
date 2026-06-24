@@ -32,6 +32,7 @@ impl MatchReportRepository {
                 away_team_id,
                 created_by,
                 origin,
+                pairing_id,
                 ..
             } => {
                 let origin_str = match origin {
@@ -45,8 +46,8 @@ impl MatchReportRepository {
                 sqlx::query(
                     "INSERT INTO match_report_projection
                         (match_report_id, space_id, competition_id, season_id, round_id,
-                         home_team_id, away_team_id, created_by, origin, phase, version)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'Draft', $10)
+                         home_team_id, away_team_id, created_by, origin, phase, version, pairing_id)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'Draft', $10, $11)
                      ON CONFLICT (match_report_id) DO NOTHING",
                 )
                 .bind(match_report_id)
@@ -59,6 +60,7 @@ impl MatchReportRepository {
                 .bind(created_by.to_string())
                 .bind(origin_str)
                 .bind(version as i64)
+                .bind(pairing_id.as_deref())
                 .execute(&mut **tx)
                 .await
                 .map_err(RepositoryError::Database)?;
@@ -85,6 +87,18 @@ impl MatchReportRepository {
                 sqlx::query(
                     "UPDATE match_report_projection
                      SET phase = 'PreMatch', version = $2, updated_at = now()
+                     WHERE match_report_id = $1",
+                )
+                .bind(match_report_id)
+                .bind(version as i64)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
+            MatchReportDomainEvent::MatchReportCancelled { .. } => {
+                sqlx::query(
+                    "UPDATE match_report_projection
+                     SET phase = 'Cancelled', version = $2, updated_at = now()
                      WHERE match_report_id = $1",
                 )
                 .bind(match_report_id)
@@ -172,6 +186,23 @@ impl IMatchReportRepository for MatchReportRepository {
 
         Ok(Some(state))
     }
+
+    async fn find_id_by_pairing(
+        &self,
+        pairing_id: &str,
+    ) -> Result<Option<String>, RepositoryError> {
+        let row = sqlx::query(
+            "SELECT match_report_id FROM match_report_projection
+             WHERE pairing_id = $1
+             LIMIT 1",
+        )
+        .bind(pairing_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+
+        Ok(row.map(|r| r.get("match_report_id")))
+    }
 }
 
 #[cfg(test)]
@@ -200,6 +231,7 @@ mod tests {
             away_team_id: TeamId::new(),
             created_by: CoachId::new(),
             origin: MatchReportOrigin::Manual,
+            pairing_id: None,
         }
     }
 

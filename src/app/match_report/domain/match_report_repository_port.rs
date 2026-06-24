@@ -36,4 +36,9 @@ pub trait IMatchReportRepository: Send + Sync {
         &self,
         match_report_id: &str,
     ) -> Result<Option<MatchReportState>, RepositoryError>;
+
+    async fn find_id_by_pairing(
+        &self,
+        pairing_id: &str,
+    ) -> Result<Option<String>, RepositoryError>;
 }

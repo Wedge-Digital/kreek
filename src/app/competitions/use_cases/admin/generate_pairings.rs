@@ -58,10 +58,26 @@ pub async fn execute(
         groups
     };
 
+    let existing_pairings: Vec<String> = match_day
+        .pairings
+        .iter()
+        .map(|p| p.id.clone())
+        .collect();
+
     match_day_repo
         .clear_pairings(match_day_id)
         .await
         .map_err(|e| GenerateError::Repository(e.to_string()))?;
+
+    for pid in &existing_pairings {
+        let _ = app_event_bus.send(
+            CompetitionsAppEvent::PairingDeleted {
+                event_id: EventId::new(),
+                pairing_id: pid.clone(),
+            }
+            .to_enveloppe(),
+        );
+    }
 
     let all_days = match_day_repo
         .find_by_season(season_id)

@@ -7,6 +7,20 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 
+fn emit_pairing_deleted_events(bus: &crate::common::services::event_bus::event_bus::EventBus, pairing_ids: &[String]) {
+    use crate::app::shared_kernel::app_events::competitions_app_events::CompetitionsAppEvent;
+    use crate::app::shared_kernel::common_types::EventId;
+    for pid in pairing_ids {
+        let _ = bus.send(
+            CompetitionsAppEvent::PairingDeleted {
+                event_id: EventId::new(),
+                pairing_id: pid.clone(),
+            }
+            .to_enveloppe(),
+        );
+    }
+}
+
 fn schedule_changed() -> Response {
     Response::builder()
         .header("HX-Trigger", "scheduleChanged")
@@ -44,13 +58,27 @@ pub async fn post_clear_all(
     Path((_space_id, _competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> Response {
+    let all_days = state
+        .competitions
+        .match_day_repository
+        .find_by_season(&season_id)
+        .await
+        .unwrap_or_default();
+    let pairing_ids: Vec<String> = all_days
+        .iter()
+        .flat_map(|d| d.pairings.iter().map(|p| p.id.clone()))
+        .collect();
+
     match state
         .competitions
         .match_day_repository
         .clear_all_pairings(&season_id)
         .await
     {
-        Ok(()) => schedule_changed(),
+        Ok(()) => {
+            emit_pairing_deleted_events(&state.app_event_bus, &pairing_ids);
+            schedule_changed()
+        }
         Err(e) => {
             tracing::error!("post_clear_all: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -214,13 +242,28 @@ pub async fn delete_round(
     Path((_space_id, _competition_id, _season_id, round_id)): Path<(String, String, String, String)>,
     State(state): State<AppState>,
 ) -> Response {
+    let match_day = state
+        .competitions
+        .match_day_repository
+        .find_by_id(&round_id)
+        .await
+        .ok()
+        .flatten();
+    let pairing_ids: Vec<String> = match_day
+        .iter()
+        .flat_map(|d| d.pairings.iter().map(|p| p.id.clone()))
+        .collect();
+
     match state
         .competitions
         .match_day_repository
         .delete_match_day(&round_id)
         .await
     {
-        Ok(()) => schedule_changed(),
+        Ok(()) => {
+            emit_pairing_deleted_events(&state.app_event_bus, &pairing_ids);
+            schedule_changed()
+        }
         Err(e) => {
             tracing::error!("delete_round: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -266,13 +309,28 @@ pub async fn post_clear_round_pairings(
     State(state): State<AppState>,
     axum::Json(body): axum::Json<RoundIdBody>,
 ) -> Response {
+    let match_day = state
+        .competitions
+        .match_day_repository
+        .find_by_id(&body.round_id)
+        .await
+        .ok()
+        .flatten();
+    let pairing_ids: Vec<String> = match_day
+        .iter()
+        .flat_map(|d| d.pairings.iter().map(|p| p.id.clone()))
+        .collect();
+
     match state
         .competitions
         .match_day_repository
         .clear_pairings(&body.round_id)
         .await
     {
-        Ok(()) => schedule_changed(),
+        Ok(()) => {
+            emit_pairing_deleted_events(&state.app_event_bus, &pairing_ids);
+            schedule_changed()
+        }
         Err(e) => {
             tracing::error!("post_clear_round_pairings: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -348,7 +406,10 @@ pub async fn delete_match(
         .delete_pairing(&body.pairing_id)
         .await
     {
-        Ok(()) => schedule_changed(),
+        Ok(()) => {
+            emit_pairing_deleted_events(&state.app_event_bus, &[body.pairing_id]);
+            schedule_changed()
+        }
         Err(e) => {
             tracing::error!("delete_match: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()

@@ -18,16 +18,22 @@ pub enum CompetitionsAppEvent {
         away_team_id: String,
         space_id: String,
     },
+    PairingDeleted {
+        event_id: EventId,
+        pairing_id: String,
+    },
 }
 
 impl CompetitionsAppEvent {
     pub const COMPETITION_CREATED: &'static str = "CompetitionCreated";
     pub const PAIRING_CREATED: &'static str = "PairingCreated";
+    pub const PAIRING_DELETED: &'static str = "PairingDeleted";
 
     pub fn event_type(&self) -> &'static str {
         match self {
             Self::CompetitionCreated { .. } => Self::COMPETITION_CREATED,
             Self::PairingCreated { .. } => Self::PAIRING_CREATED,
+            Self::PairingDeleted { .. } => Self::PAIRING_DELETED,
         }
     }
 
@@ -35,6 +41,7 @@ impl CompetitionsAppEvent {
         let emitter = match self {
             Self::CompetitionCreated { competition_id, .. } => competition_id.to_string(),
             Self::PairingCreated { pairing_id, .. } => pairing_id.clone(),
+            Self::PairingDeleted { pairing_id, .. } => pairing_id.clone(),
         };
         EventEnvelope {
             event_id: EventId::new().to_string(),

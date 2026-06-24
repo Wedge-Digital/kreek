@@ -9,6 +9,13 @@
       </span>
     </div>
     <div class="actions-bar-right">
+      <a class="btn-outline-sm"
+         href="{{ app_routes.match_report.new_match_report(space_id) }}"
+         hx-get="{{ app_routes.match_report.new_match_report(space_id) }}"
+         hx-target="#app-content"
+         hx-select="#app-content"
+         hx-swap="innerHTML"
+         hx-push-url="true">&#128203; Saisir un rapport de match</a>
       <button class="btn-danger-sm"
               hx-post="{{ app_routes.competitions.admin_schedule_clear_all(space_id, competition_id, season_id) }}"
               hx-swap="none"
