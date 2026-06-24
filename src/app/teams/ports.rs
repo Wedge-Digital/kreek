@@ -59,8 +59,10 @@ pub struct TeamEnrollmentRow {
 pub struct TeamCardRow {
     pub team_id: String,
     pub team_name: String,
+    pub coach_id: String,
     pub coach_name: String,
     pub roster_name: String,
     pub logo_url: Option<String>,
     pub team_value: u32,
+    pub game_phase: Option<String>,
 }
