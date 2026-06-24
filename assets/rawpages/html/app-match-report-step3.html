@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rapport de match — Étape 3 — Actions domicile</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ── Mobile-first layout ── */
+    .mr-container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: var(--p1);
+      display: flex;
+      flex-direction: column;
+      gap: var(--p1);
+      padding-bottom: var(--p4);
+    }
+
+    /* ── Header ── */
+    .mr-header {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 12px;
+      padding: var(--p2);
+      text-align: center;
+    }
+    .mr-header-icon { font-size: 36px; margin-bottom: 8px; }
+    .mr-header-title {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+      color: var(--white);
+    }
+    .mr-header-sub {
+      font-size: var(--text-tiny); color: rgba(255,255,255,0.6); margin-top: 4px;
+    }
+
+    /* ── Steps ── */
+    .mr-steps {
+      display: flex; align-items: center; justify-content: center;
+      gap: 4px; padding: 8px 0;
+    }
+    .mr-step {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; flex-shrink: 0;
+    }
+    .mr-step--active { background: var(--main-blue); color: var(--white); }
+    .mr-step--pending { background: var(--dark-5); color: var(--dark-3); }
+    .mr-step--done { background: var(--green); color: var(--white); }
+    .mr-step-line { width: 20px; height: 2px; background: var(--dark-5); flex-shrink: 0; }
+    .mr-step-line--done { background: var(--green); }
+
+    /* ── Card ── */
+    .mr-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p1);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .mr-card-title {
+      font-family: var(--font-title); font-size: var(--text-tiny); font-weight: 700;
+      color: var(--dark-2); text-transform: uppercase; letter-spacing: 0.3px;
+      padding: 0 4px;
+    }
+
+    /* ── Turn grid ── */
+    .mr-turn-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 4px;
+    }
+    .mr-turn-btn {
+      height: 36px;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: var(--text-tiny); font-weight: 700;
+      border: 1px solid var(--dark-5);
+      background: var(--white); color: var(--dark-2);
+      cursor: pointer; transition: all 0.12s;
+    }
+    .mr-turn-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .mr-turn-btn.active {
+      background: var(--main-blue); color: var(--white); border-color: var(--main-blue);
+    }
+    .mr-turn-btn.has-events {
+      border-color: var(--green);
+      color: var(--green);
+    }
+    .mr-turn-btn.has-events.active {
+      background: var(--main-blue); color: var(--white); border-color: var(--main-blue);
+    }
+    .mr-turn-sep {
+      grid-column: 1 / -1;
+      height: 1px; background: var(--dark-6);
+    }
+    .mr-turn-label {
+      grid-column: 1 / -1;
+      font-size: 10px; color: var(--dark-4); text-align: center;
+      padding: 2px 0;
+    }
+
+    /* ── Player grid ── */
+    .mr-player-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+    }
+    .mr-player-chip {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid var(--dark-5);
+      background: var(--white);
+      cursor: pointer; transition: all 0.12s;
+      min-width: 0;
+    }
+    .mr-player-chip:hover { border-color: var(--main-blue); }
+    .mr-player-chip.active {
+      background: rgba(0,48,73,0.06); border-color: var(--main-blue);
+    }
+    .mr-player-chip.has-damage {
+      border-left: 3px solid var(--red);
+    }
+    .mr-player-chip.is-mvp {
+      border-color: var(--gold); background: rgba(255,215,0,0.05);
+    }
+    .mr-player-chip-jersey {
+      width: 24px; height: 24px; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+      color: var(--white); flex-shrink: 0;
+      background: var(--main-blue);
+    }
+    .mr-player-chip.has-damage .mr-player-chip-jersey { background: var(--red); }
+    .mr-player-chip.is-mvp .mr-player-chip-jersey { background: var(--gold); color: var(--dark-0); }
+    .mr-player-chip-info {
+      flex: 1; min-width: 0; overflow: hidden;
+    }
+    .mr-player-chip-name {
+      font-size: 11px; font-weight: 600; color: var(--dark-1);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .mr-player-chip-pos {
+      font-size: 9px; color: var(--dark-4);
+    }
+    .mr-player-chip-badges {
+      display: flex; gap: 2px; flex-shrink: 0;
+    }
+    .mr-mini-badge {
+      font-size: 8px; font-weight: 700; padding: 1px 3px; border-radius: 3px;
+    }
+    .mr-mini-badge--td { background: rgba(98,149,132,0.15); color: var(--green); }
+    .mr-mini-badge--dmg { background: rgba(224,32,32,0.12); color: var(--red); }
+    .mr-mini-badge--mvp { background: rgba(255,215,0,0.2); color: #9A7800; }
+
+    /* ── Action buttons ── */
+    .mr-action-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .mr-action-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 10px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--dark-5);
+      background: var(--white);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .mr-action-btn:hover { border-color: var(--main-blue); background: rgba(0,48,73,0.03); }
+    .mr-action-btn:active { transform: scale(0.96); }
+    .mr-action-btn--damage {
+      border-color: rgba(224,32,32,0.2);
+      background: rgba(224,32,32,0.02);
+    }
+    .mr-action-btn--damage:hover { border-color: var(--red); background: rgba(224,32,32,0.06); }
+    .mr-action-btn--mvp {
+      border-color: rgba(255,215,0,0.3);
+      background: rgba(255,215,0,0.03);
+    }
+    .mr-action-btn--mvp:hover { border-color: var(--gold); background: rgba(255,215,0,0.08); }
+    .mr-action-btn-icon { font-size: 20px; }
+    .mr-action-btn-label {
+      font-size: 10px; font-weight: 600; color: var(--dark-2);
+      text-align: center;
+    }
+    .mr-action-btn--damage .mr-action-btn-label { color: var(--red); }
+    .mr-action-btn--mvp .mr-action-btn-label { color: #9A7800; }
+
+    .mr-action-btn.disabled {
+      opacity: 0.3; cursor: not-allowed; pointer-events: none;
+    }
+
+    /* ── Hint ── */
+    .mr-hint {
+      font-size: 11px; color: var(--dark-4); text-align: center;
+      font-style: italic; padding: 4px;
+    }
+
+    /* ── Event log ── */
+    .mr-log {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p1);
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .mr-log-title {
+      font-family: var(--font-title); font-size: var(--text-tiny); font-weight: 700;
+      color: var(--dark-2); text-transform: uppercase; letter-spacing: 0.3px;
+      padding: 0 4px; margin-bottom: 4px;
+    }
+    .mr-log-entry {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: var(--text-tiny);
+      transition: background 0.1s;
+    }
+    .mr-log-entry:hover { background: var(--dark-7); }
+    .mr-log-entry--damage { background: rgba(224,32,32,0.03); }
+    .mr-log-entry--damage:hover { background: rgba(224,32,32,0.06); }
+
+    .mr-log-turn {
+      width: 24px; height: 24px; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700;
+      background: var(--dark-6); color: var(--dark-3);
+      flex-shrink: 0;
+    }
+    .mr-log-entry--damage .mr-log-turn {
+      background: rgba(224,32,32,0.1); color: var(--red);
+    }
+    .mr-log-icon { font-size: 14px; flex-shrink: 0; }
+    .mr-log-text {
+      flex: 1; color: var(--dark-1); min-width: 0;
+    }
+    .mr-log-text strong { font-weight: 600; }
+    .mr-log-text--damage { color: var(--red); }
+    .mr-log-delete {
+      background: none; border: none; cursor: pointer;
+      color: var(--dark-4); font-size: 12px; padding: 4px;
+      border-radius: 4px; transition: all 0.15s; flex-shrink: 0;
+    }
+    .mr-log-delete:hover { color: var(--red); background: rgba(224,32,32,0.06); }
+
+    .mr-log-empty {
+      font-size: var(--text-tiny); color: var(--dark-4); font-style: italic;
+      text-align: center; padding: var(--p1);
+    }
+
+    /* ── MVP log entry ── */
+    .mr-log-entry--mvp { background: rgba(255,215,0,0.04); }
+    .mr-log-entry--mvp .mr-log-turn { background: rgba(255,215,0,0.15); color: #9A7800; }
+
+    /* ── Injury sub-select (shown in log for damage entries) ── */
+    .mr-log-injury-select {
+      padding: 4px 8px;
+      border: 1px solid rgba(224,32,32,0.2); border-radius: 4px;
+      font-size: 10px; color: var(--dark-1);
+      font-family: inherit; background: var(--white);
+      outline: none; flex-shrink: 0;
+    }
+
+    /* ── Warn banner ── */
+    .mr-warn-banner {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px var(--p1); border-radius: 8px;
+      font-size: var(--text-tiny);
+      background: rgba(255,107,53,0.08);
+      border: 1px solid rgba(255,107,53,0.2);
+      color: #9A5000;
+    }
+
+    /* ── Actions (bottom) ── */
+    .mr-actions {
+      display: flex; gap: var(--p1);
+    }
+    .mr-actions .btn-outline-sm { flex: 1; text-align: center; }
+    .mr-actions .btn-primary-sm { flex: 2; text-align: center; }
+
+    .btn-primary-sm {
+      padding: 12px 20px; border-radius: 8px;
+      background: var(--main-blue); color: var(--white);
+      font-size: var(--text-small); font-weight: 700;
+      cursor: pointer; border: none; transition: opacity 0.15s;
+    }
+    .btn-primary-sm:hover { opacity: 0.9; }
+    .btn-outline-sm {
+      padding: 12px 20px; border-radius: 8px;
+      background: var(--white); color: var(--dark-2);
+      font-size: var(--text-small); font-weight: 600;
+      cursor: pointer; border: 1px solid var(--dark-5);
+      transition: all 0.15s;
+    }
+    .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    @media (min-width: 768px) {
+      .mr-container { padding: var(--p2); }
+      .mr-player-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+          </div>
+          <div class="menu-right">
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="mr-container">
+
+          <!-- Header -->
+          <div class="mr-header">
+            <div class="mr-header-icon">⚔️</div>
+            <div class="mr-header-title">Actions — Storm Treemen</div>
+            <div class="mr-header-sub">Sélectionnez un tour, un joueur, puis une action</div>
+          </div>
+
+          <!-- Steps -->
+          <div class="mr-steps">
+            <div class="mr-step mr-step--done">✓</div>
+            <div class="mr-step-line mr-step-line--done"></div>
+            <div class="mr-step mr-step--done">✓</div>
+            <div class="mr-step-line mr-step-line--done"></div>
+            <div class="mr-step mr-step--active">3</div>
+            <div class="mr-step-line"></div>
+            <div class="mr-step mr-step--pending">4</div>
+            <div class="mr-step-line"></div>
+            <div class="mr-step mr-step--pending">5</div>
+          </div>
+
+          <!-- 1. Turn selector -->
+          <div class="mr-card">
+            <div class="mr-card-title">Tour</div>
+            <div class="mr-turn-grid">
+              <div class="mr-turn-label">— 1ère mi-temps —</div>
+              <div class="mr-turn-btn has-events" onclick="selectTurn(this)">1</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">2</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">3</div>
+              <div class="mr-turn-btn active has-events" onclick="selectTurn(this)">4</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">5</div>
+              <div class="mr-turn-btn has-events" onclick="selectTurn(this)">6</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">7</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">8</div>
+              <div class="mr-turn-label">— 2ème mi-temps —</div>
+              <div class="mr-turn-btn has-events" onclick="selectTurn(this)">9</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">10</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">11</div>
+              <div class="mr-turn-btn active has-events" onclick="selectTurn(this)">12</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">13</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">14</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">15</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">16</div>
+            </div>
+          </div>
+
+          <!-- 2. Player selector -->
+          <div class="mr-card">
+            <div class="mr-card-title">Joueur</div>
+            <div class="mr-player-grid">
+
+              <div class="mr-player-chip" onclick="selectPlayer(this)">
+                <div class="mr-player-chip-jersey">1</div>
+                <div class="mr-player-chip-info">
+                  <div class="mr-player-chip-name">Thalion</div>
+                  <div class="mr-player-chip-pos">Thrower</div>
+                </div>
+              </div>
+
+              <div class="mr-player-chip" onclick="selectPlayer(this)">
+                <div class="mr-player-chip-jersey">2</div>
+                <div class="mr-player-chip-info">
+                  <div class="mr-player-chip-name">Elrohir</div>
+                  <div class="mr-player-chip-pos">Lineman</div>
+                </div>
+              </div>
+
+              <div class="mr-player-chip has-damage" onclick="selectPlayer(this)">
+                <div class="mr-player-chip-jersey">3</div>
+                <div class="mr-player-chip-info">
+                  <div class="mr-player-chip-name">Grotak</div>
+                  <div class="mr-player-chip-pos">Blitzer</div>
+                </div>
+                <div class="mr-player-chip-badges">
+                  <span class="mr-mini-badge mr-mini-badge--dmg">KO</span>
+                </div>
+              </div>
+
+              <div class="mr-player-chip" onclick="selectPlayer(this)">
+                <div class="mr-player-chip-jersey">4</div>
+                <div class="mr-player-chip-info">
+                  <div class="mr-player-chip-name">Celeborn</div>
+                  <div class="mr-player-chip-pos">Lineman</div>
+                </div>
+              </div>
+
+              <div class="mr-player-chip" onclick="selectPlayer(this)">
+                <div class="mr-player-chip-jersey">5</div>
+                <div class="mr-player-chip-info">
+                  <div class="mr-player-chip-name">Galadhon</div>
+                  <div class="mr-player-chip-pos">Lineman</div>
+                </div>
+              </div>
+
+              <div class="mr-player-chip" onclick="selectPlayer(this)">
+                <div class="mr-player-chip-jersey">6</div>
+                <div class="mr-player-chip-info">
+                  <div class="mr-player-chip-name">Nimrodel</div>
+                  <div class="mr-player-chip-pos">Catcher</div>
+                </div>
+              </div>
+
+              <div class="mr-player-chip active is-mvp" onclick="selectPlayer(this)">
+                <div class="mr-player-chip-jersey">7</div>
+                <div class="mr-player-chip-info">
+                  <div class="mr-player-chip-name">Aëlindra</div>
+                  <div class="mr-player-chip-pos">Catcher</div>
+                </div>
+                <div class="mr-player-chip-badges">
+                  <span class="mr-mini-badge mr-mini-badge--td">2</span>
+                  <span class="mr-mini-badge mr-mini-badge--mvp">★</span>
+                </div>
+              </div>
+
+              <div class="mr-player-chip" onclick="selectPlayer(this)">
+                <div class="mr-player-chip-jersey">8</div>
+                <div class="mr-player-chip-info">
+                  <div class="mr-player-chip-name">Orophin</div>
+                  <div class="mr-player-chip-pos">Blitzer</div>
+                </div>
+              </div>
+
+              <div class="mr-player-chip" onclick="selectPlayer(this)">
+                <div class="mr-player-chip-jersey">9</div>
+                <div class="mr-player-chip-info">
+                  <div class="mr-player-chip-name">Ithildin</div>
+                  <div class="mr-player-chip-pos">Wardancer</div>
+                </div>
+              </div>
+
+              <div class="mr-player-chip" onclick="selectPlayer(this)">
+                <div class="mr-player-chip-jersey">10</div>
+                <div class="mr-player-chip-info">
+                  <div class="mr-player-chip-name">Haldir</div>
+                  <div class="mr-player-chip-pos">Treeman</div>
+                </div>
+              </div>
+
+              <div class="mr-player-chip has-damage" onclick="selectPlayer(this)">
+                <div class="mr-player-chip-jersey">11</div>
+                <div class="mr-player-chip-info">
+                  <div class="mr-player-chip-name">Fenris</div>
+                  <div class="mr-player-chip-pos">Lineman</div>
+                </div>
+                <div class="mr-player-chip-badges">
+                  <span class="mr-mini-badge mr-mini-badge--dmg">☠</span>
+                </div>
+              </div>
+
+              <div class="mr-player-chip" onclick="selectPlayer(this)">
+                <div class="mr-player-chip-jersey">12</div>
+                <div class="mr-player-chip-info">
+                  <div class="mr-player-chip-name">Amroth</div>
+                  <div class="mr-player-chip-pos">Lineman</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- 3. Action buttons -->
+          <div class="mr-card">
+            <div class="mr-card-title">Action</div>
+            <div class="mr-hint">Tour <strong>4</strong> · <strong>Aëlindra</strong> (Catcher #7)</div>
+            <div class="mr-action-grid">
+              <button class="mr-action-btn">
+                <span class="mr-action-btn-icon">🏈</span>
+                <span class="mr-action-btn-label">Touchdown</span>
+              </button>
+              <button class="mr-action-btn">
+                <span class="mr-action-btn-icon">🎯</span>
+                <span class="mr-action-btn-label">Passe</span>
+              </button>
+              <button class="mr-action-btn">
+                <span class="mr-action-btn-icon">🛡️</span>
+                <span class="mr-action-btn-label">Interception</span>
+              </button>
+              <button class="mr-action-btn">
+                <span class="mr-action-btn-icon">👊</span>
+                <span class="mr-action-btn-label">Agression</span>
+              </button>
+              <button class="mr-action-btn">
+                <span class="mr-action-btn-icon">🤸</span>
+                <span class="mr-action-btn-label">Lancer</span>
+              </button>
+              <button class="mr-action-btn mr-action-btn--damage">
+                <span class="mr-action-btn-icon">🩸</span>
+                <span class="mr-action-btn-label">Blessure</span>
+              </button>
+            </div>
+            <button class="mr-action-btn mr-action-btn--mvp" style="width: 100%;">
+              <span class="mr-action-btn-icon">⭐</span>
+              <span class="mr-action-btn-label">Désigner MVP</span>
+            </button>
+          </div>
+
+          <!-- 4. Event log -->
+          <div class="mr-log">
+            <div class="mr-log-title">Événements du match</div>
+
+            <div class="mr-log-entry">
+              <div class="mr-log-turn">1</div>
+              <span class="mr-log-icon">🏈</span>
+              <span class="mr-log-text"><strong>#7 Aëlindra</strong> — Touchdown</span>
+              <button class="mr-log-delete" title="Supprimer">✕</button>
+            </div>
+
+            <div class="mr-log-entry">
+              <div class="mr-log-turn">4</div>
+              <span class="mr-log-icon">🎯</span>
+              <span class="mr-log-text"><strong>#1 Thalion</strong> — Passe réussie</span>
+              <button class="mr-log-delete" title="Supprimer">✕</button>
+            </div>
+
+            <div class="mr-log-entry mr-log-entry--damage">
+              <div class="mr-log-turn">6</div>
+              <span class="mr-log-icon">🩸</span>
+              <span class="mr-log-text mr-log-text--damage"><strong>#3 Grotak</strong> — Blessure</span>
+              <select class="mr-log-injury-select">
+                <option value="">Gravité…</option>
+                <option value="stunned">Sonné</option>
+                <option value="concussion">Commotion</option>
+                <option selected value="ko">KO</option>
+                <option value="elimination">Élimination</option>
+                <option value="sequel">Séquelle</option>
+                <option value="death">Mort</option>
+              </select>
+              <button class="mr-log-delete" title="Supprimer">✕</button>
+            </div>
+
+            <div class="mr-log-entry mr-log-entry--damage">
+              <div class="mr-log-turn">9</div>
+              <span class="mr-log-icon">🩸</span>
+              <span class="mr-log-text mr-log-text--damage"><strong>#11 Fenris</strong> — Blessure</span>
+              <select class="mr-log-injury-select">
+                <option value="">Gravité…</option>
+                <option value="stunned">Sonné</option>
+                <option value="concussion">Commotion</option>
+                <option value="ko">KO</option>
+                <option selected value="elimination">Élimination</option>
+                <option value="sequel">Séquelle</option>
+                <option value="death">Mort</option>
+              </select>
+              <select class="mr-log-injury-select" style="margin-left: -4px;">
+                <option value="">Détail…</option>
+                <option selected value="head">-1 AV</option>
+                <option value="knee">-1 MA</option>
+                <option value="arm">-1 PA</option>
+                <option value="neck">-1 AG</option>
+                <option value="shoulder">-1 ST</option>
+              </select>
+              <button class="mr-log-delete" title="Supprimer">✕</button>
+            </div>
+
+            <div class="mr-log-entry">
+              <div class="mr-log-turn">12</div>
+              <span class="mr-log-icon">🏈</span>
+              <span class="mr-log-text"><strong>#7 Aëlindra</strong> — Touchdown</span>
+              <button class="mr-log-delete" title="Supprimer">✕</button>
+            </div>
+
+            <div class="mr-log-entry mr-log-entry--mvp">
+              <div class="mr-log-turn">★</div>
+              <span class="mr-log-icon">⭐</span>
+              <span class="mr-log-text"><strong>#7 Aëlindra</strong> — MVP</span>
+              <button class="mr-log-delete" title="Supprimer">✕</button>
+            </div>
+
+          </div>
+
+          <!-- MVP warning -->
+          <!--
+          <div class="mr-warn-banner">
+            <span>⚠️</span>
+            <span>N'oubliez pas de désigner le <strong>MVP</strong> de l'équipe.</span>
+          </div>
+          -->
+
+          <!-- Actions -->
+          <div class="mr-actions">
+            <button class="btn-outline-sm">← Retour</button>
+            <button class="btn-primary-sm">Actions visiteur →</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  function selectTurn(el) {
+    el.parentElement.querySelectorAll('.mr-turn-btn').forEach(function(b) { b.classList.remove('active'); });
+    el.classList.add('active');
+  }
+  function selectPlayer(el) {
+    el.parentElement.querySelectorAll('.mr-player-chip').forEach(function(b) { b.classList.remove('active'); });
+    el.classList.add('active');
+  }
+  </script>
+</body>
+</html>
