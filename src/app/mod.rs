@@ -10,3 +10,4 @@ pub mod shared_kernel;
 pub mod spaces;
 pub mod team_creation;
 pub mod teams;
+pub mod match_report;
