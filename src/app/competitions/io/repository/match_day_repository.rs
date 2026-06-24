@@ -211,7 +211,11 @@ impl IMatchDayRepository for MatchDayRepository {
             sqlx::query(
                 "INSERT INTO competition_match_days (id, season_id, name, day_type, date_start, date_end, position)
                  VALUES ($1, $2, $3, $4, $5, $6, $7)
-                 ON CONFLICT (id) DO NOTHING",
+                 ON CONFLICT (season_id, position) DO UPDATE SET
+                   name = EXCLUDED.name,
+                   day_type = EXCLUDED.day_type,
+                   date_start = EXCLUDED.date_start,
+                   date_end = EXCLUDED.date_end",
             )
             .bind(id)
             .bind(season_id)
