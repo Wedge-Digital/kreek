@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rapport de match — Étape 5 — Après-match</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ── Mobile-first layout ── */
+    .mr-container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: var(--p1);
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+      padding-bottom: var(--p4);
+    }
+
+    /* ── Header ── */
+    .mr-header {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 12px;
+      padding: var(--p2);
+      text-align: center;
+    }
+    .mr-header-icon { font-size: 36px; margin-bottom: 8px; }
+    .mr-header-title {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+      color: var(--white);
+    }
+    .mr-header-sub {
+      font-size: var(--text-tiny); color: rgba(255,255,255,0.6); margin-top: 4px;
+    }
+
+    /* ── Steps ── */
+    .mr-steps {
+      display: flex; align-items: center; justify-content: center;
+      gap: 4px; padding: 8px 0;
+    }
+    .mr-step {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; flex-shrink: 0;
+    }
+    .mr-step--active { background: var(--main-blue); color: var(--white); }
+    .mr-step--pending { background: var(--dark-5); color: var(--dark-3); }
+    .mr-step--done { background: var(--green); color: var(--white); }
+    .mr-step-line { width: 20px; height: 2px; background: var(--dark-5); flex-shrink: 0; }
+    .mr-step-line--done { background: var(--green); }
+
+    /* ── Score banner ── */
+    .mr-score-banner {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p2);
+      display: flex; align-items: center;
+    }
+    .mr-score-team {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+      text-align: center;
+    }
+    .mr-score-logo {
+      width: 44px; height: 44px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 14px;
+      color: var(--white);
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+    }
+    .mr-score-name {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
+    }
+    .mr-score-center {
+      display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0; padding: 0 var(--p1);
+    }
+    .mr-score-value {
+      font-family: var(--font-title); font-size: var(--h3); font-weight: 700;
+      color: var(--dark-0);
+    }
+    .mr-score-sep {
+      font-size: var(--h4); color: var(--dark-4); font-weight: 700;
+    }
+
+    /* ── Card ── */
+    .mr-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p2);
+      display: flex; flex-direction: column; gap: var(--p2);
+    }
+    .mr-card-title {
+      font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
+      color: var(--dark-1);
+    }
+
+    /* ── Team row (gains / fan factor) ── */
+    .mr-team-row {
+      display: flex; flex-direction: column; gap: 8px;
+      padding: var(--p1);
+      background: var(--dark-7); border-radius: 8px;
+    }
+    .mr-team-row-header {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .mr-team-row-logo {
+      width: 32px; height: 32px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 12px;
+      color: var(--white); flex-shrink: 0;
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+    }
+    .mr-team-row-name {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
+      flex: 1;
+    }
+
+    /* ── Gains input ── */
+    .mr-gains-row {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .mr-gains-label {
+      font-size: var(--text-tiny); color: var(--dark-3); flex: 1;
+    }
+    .mr-gains-input {
+      width: 100px; height: 38px; text-align: center;
+      border: 1px solid var(--dark-4); border-radius: 6px;
+      font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
+      color: var(--dark-1); background: var(--white);
+      outline: none;
+    }
+    .mr-gains-input:focus {
+      border-color: var(--main-blue);
+      box-shadow: 0 0 0 3px rgba(0,48,73,0.1);
+    }
+    .mr-gains-unit {
+      font-size: var(--text-tiny); color: var(--dark-3);
+    }
+    .mr-gains-detail {
+      font-size: 11px; color: var(--dark-4); font-style: italic;
+    }
+
+    /* ── Fan factor modifier ── */
+    .mr-fan-mod-row {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .mr-fan-mod-label {
+      font-size: var(--text-tiny); color: var(--dark-3); flex: 1;
+    }
+    .mr-fan-mod-btns {
+      display: flex; align-items: center; gap: 4px;
+    }
+    .mr-fan-mod-btn {
+      width: 36px; height: 36px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: var(--text-tiny); font-weight: 700;
+      border: 1px solid var(--dark-5);
+      background: var(--white); color: var(--dark-2);
+      cursor: pointer; transition: all 0.12s;
+    }
+    .mr-fan-mod-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .mr-fan-mod-btn.active {
+      background: var(--main-blue); color: var(--white); border-color: var(--main-blue);
+    }
+    .mr-fan-mod-btn.active.negative {
+      background: var(--red); border-color: var(--red);
+    }
+    .mr-fan-mod-btn.active.positive {
+      background: var(--green); border-color: var(--green);
+    }
+    .mr-fan-mod-current {
+      font-size: 11px; color: var(--dark-4);
+      margin-left: 8px;
+    }
+
+    /* ── Actions ── */
+    .mr-actions {
+      display: flex; gap: var(--p1);
+    }
+    .mr-actions .btn-outline-sm { flex: 1; text-align: center; }
+    .mr-actions .btn-primary-sm { flex: 2; text-align: center; }
+
+    .btn-primary-sm {
+      padding: 12px 20px; border-radius: 8px;
+      background: var(--main-blue); color: var(--white);
+      font-size: var(--text-small); font-weight: 700;
+      cursor: pointer; border: none; transition: opacity 0.15s;
+    }
+    .btn-primary-sm:hover { opacity: 0.9; }
+    .btn-outline-sm {
+      padding: 12px 20px; border-radius: 8px;
+      background: var(--white); color: var(--dark-2);
+      font-size: var(--text-small); font-weight: 600;
+      cursor: pointer; border: 1px solid var(--dark-5);
+      transition: all 0.15s;
+    }
+    .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    @media (min-width: 768px) {
+      .mr-container { padding: var(--p2); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+          </div>
+          <div class="menu-right">
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="mr-container">
+
+          <!-- Header -->
+          <div class="mr-header">
+            <div class="mr-header-icon">📊</div>
+            <div class="mr-header-title">Séquence d'après-match</div>
+            <div class="mr-header-sub">Gains et modification du fan factor</div>
+          </div>
+
+          <!-- Steps -->
+          <div class="mr-steps">
+            <div class="mr-step mr-step--done">✓</div>
+            <div class="mr-step-line mr-step-line--done"></div>
+            <div class="mr-step mr-step--done">✓</div>
+            <div class="mr-step-line mr-step-line--done"></div>
+            <div class="mr-step mr-step--done">✓</div>
+            <div class="mr-step-line mr-step-line--done"></div>
+            <div class="mr-step mr-step--done">✓</div>
+            <div class="mr-step-line mr-step-line--done"></div>
+            <div class="mr-step mr-step--active">5</div>
+          </div>
+
+          <!-- Score banner -->
+          <div class="mr-score-banner">
+            <div class="mr-score-team">
+              <div class="mr-score-logo">ST</div>
+              <div class="mr-score-name">Storm Treemen</div>
+            </div>
+            <div class="mr-score-center">
+              <span class="mr-score-value">2</span>
+              <span class="mr-score-sep">—</span>
+              <span class="mr-score-value">1</span>
+            </div>
+            <div class="mr-score-team">
+              <div class="mr-score-logo" style="background: linear-gradient(135deg, #E02020, #555770);">SC</div>
+              <div class="mr-score-name">Skull Crushers</div>
+            </div>
+          </div>
+
+          <!-- Gains -->
+          <div class="mr-card">
+            <div class="mr-card-title">💰 Gains du match</div>
+
+            <div class="mr-team-row">
+              <div class="mr-team-row-header">
+                <div class="mr-team-row-logo">ST</div>
+                <span class="mr-team-row-name">Storm Treemen</span>
+              </div>
+              <div class="mr-gains-row">
+                <span class="mr-gains-label">Recettes</span>
+                <input type="number" class="mr-gains-input" value="50000" step="10000">
+                <span class="mr-gains-unit">pO</span>
+              </div>
+              <div class="mr-gains-detail">Calcul : (5 + 3) / 2 × 10 000 + 2 TD × 10 000 = 60 000 pO</div>
+            </div>
+
+            <div class="mr-team-row">
+              <div class="mr-team-row-header">
+                <div class="mr-team-row-logo" style="background: linear-gradient(135deg, #E02020, #555770);">SC</div>
+                <span class="mr-team-row-name">Skull Crushers</span>
+              </div>
+              <div class="mr-gains-row">
+                <span class="mr-gains-label">Recettes</span>
+                <input type="number" class="mr-gains-input" value="30000" step="10000">
+                <span class="mr-gains-unit">pO</span>
+              </div>
+              <div class="mr-gains-detail">Calcul : (3 + 5) / 2 × 10 000 + 1 TD × 10 000 = 50 000 pO</div>
+            </div>
+
+          </div>
+
+          <!-- Fan factor -->
+          <div class="mr-card">
+            <div class="mr-card-title">📣 Modification du Fan Factor</div>
+
+            <div class="mr-team-row">
+              <div class="mr-team-row-header">
+                <div class="mr-team-row-logo">ST</div>
+                <span class="mr-team-row-name">Storm Treemen</span>
+                <span class="mr-fan-mod-current">Fans actuels : 3</span>
+              </div>
+              <div class="mr-fan-mod-row">
+                <span class="mr-fan-mod-label">Modification</span>
+                <div class="mr-fan-mod-btns">
+                  <button class="mr-fan-mod-btn" onclick="selectFanMod(this)">-2</button>
+                  <button class="mr-fan-mod-btn" onclick="selectFanMod(this)">-1</button>
+                  <button class="mr-fan-mod-btn active" onclick="selectFanMod(this)">0</button>
+                  <button class="mr-fan-mod-btn active positive" onclick="selectFanMod(this)">+1</button>
+                  <button class="mr-fan-mod-btn" onclick="selectFanMod(this)">+2</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mr-team-row">
+              <div class="mr-team-row-header">
+                <div class="mr-team-row-logo" style="background: linear-gradient(135deg, #E02020, #555770);">SC</div>
+                <span class="mr-team-row-name">Skull Crushers</span>
+                <span class="mr-fan-mod-current">Fans actuels : 2</span>
+              </div>
+              <div class="mr-fan-mod-row">
+                <span class="mr-fan-mod-label">Modification</span>
+                <div class="mr-fan-mod-btns">
+                  <button class="mr-fan-mod-btn" onclick="selectFanMod(this)">-2</button>
+                  <button class="mr-fan-mod-btn active negative" onclick="selectFanMod(this)">-1</button>
+                  <button class="mr-fan-mod-btn" onclick="selectFanMod(this)">0</button>
+                  <button class="mr-fan-mod-btn" onclick="selectFanMod(this)">+1</button>
+                  <button class="mr-fan-mod-btn" onclick="selectFanMod(this)">+2</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Actions -->
+          <div class="mr-actions">
+            <button class="btn-outline-sm">← Retour</button>
+            <button class="btn-primary-sm">Voir le récapitulatif →</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  function selectFanMod(el) {
+    el.parentElement.querySelectorAll('.mr-fan-mod-btn').forEach(function(b) {
+      b.classList.remove('active', 'positive', 'negative');
+    });
+    el.classList.add('active');
+    var val = parseInt(el.textContent);
+    if (val > 0) el.classList.add('positive');
+    if (val < 0) el.classList.add('negative');
+  }
+  </script>
+</body>
+</html>
