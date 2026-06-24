@@ -1,4 +1,4 @@
-use crate::app::teams::io::app_events::team_created_listener;
+use crate::app::teams::io::app_events::{match_report_confirmed_listener, team_created_listener};
 use crate::app::teams::io::repository::team_repository::TeamRepository;
 use crate::app::teams::ports::ITeamRepository;
 use crate::common::services::event_bus::event_bus::EventBus;
@@ -12,7 +12,8 @@ pub struct TeamsContext {
 
 pub fn init_listeners(app_event_bus: &EventBus, pool: PgPool) {
     let repo = Arc::new(TeamRepository::new(pool));
-    team_created_listener::init(app_event_bus, repo);
+    team_created_listener::init(app_event_bus, repo.clone());
+    match_report_confirmed_listener::init(app_event_bus, repo);
 }
 
 impl TeamsContext {

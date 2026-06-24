@@ -537,6 +537,7 @@ pub async fn update_match_selection(
         cmd,
         state.match_report.match_report_repo.as_ref(),
         state.match_report.team_data.as_ref(),
+        &state.app_event_bus,
     )
     .await
     {
