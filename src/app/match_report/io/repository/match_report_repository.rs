@@ -203,6 +203,32 @@ impl IMatchReportRepository for MatchReportRepository {
 
         Ok(row.map(|r| r.get("match_report_id")))
     }
+
+    async fn find_id_by_round_and_teams(
+        &self,
+        round_id: &str,
+        team_a: &str,
+        team_b: &str,
+    ) -> Result<Option<String>, RepositoryError> {
+        let row = sqlx::query(
+            "SELECT match_report_id FROM match_report_projection
+             WHERE round_id = $1
+               AND phase != 'Cancelled'
+               AND (
+                 (home_team_id = $2 AND away_team_id = $3)
+                 OR (home_team_id = $3 AND away_team_id = $2)
+               )
+             LIMIT 1",
+        )
+        .bind(round_id)
+        .bind(team_a)
+        .bind(team_b)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+
+        Ok(row.map(|r| r.get("match_report_id")))
+    }
 }
 
 #[cfg(test)]

@@ -255,6 +255,7 @@ pub async fn create_match_report(
     match create_match_report_use_case::execute(
         cmd,
         state.match_report.match_report_repo.as_ref(),
+        &state.app_event_bus,
     )
     .await
     {

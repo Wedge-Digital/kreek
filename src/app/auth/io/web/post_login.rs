@@ -229,6 +229,8 @@ mod tests {
                         -> Result<Option<crate::app::match_report::domain::match_report_state::MatchReportState>, crate::app::match_report::domain::match_report_repository_port::RepositoryError> { Ok(None) }
                     async fn find_id_by_pairing(&self, _: &str)
                         -> Result<Option<String>, crate::app::match_report::domain::match_report_repository_port::RepositoryError> { Ok(None) }
+                    async fn find_id_by_round_and_teams(&self, _: &str, _: &str, _: &str)
+                        -> Result<Option<String>, crate::app::match_report::domain::match_report_repository_port::RepositoryError> { Ok(None) }
                 }
                 struct FakeCompDataPort;
                 #[async_trait::async_trait]

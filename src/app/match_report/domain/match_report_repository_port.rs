@@ -41,4 +41,11 @@ pub trait IMatchReportRepository: Send + Sync {
         &self,
         pairing_id: &str,
     ) -> Result<Option<String>, RepositoryError>;
+
+    async fn find_id_by_round_and_teams(
+        &self,
+        round_id: &str,
+        team_a: &str,
+        team_b: &str,
+    ) -> Result<Option<String>, RepositoryError>;
 }

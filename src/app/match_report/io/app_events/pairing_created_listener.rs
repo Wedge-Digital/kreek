@@ -8,6 +8,7 @@ use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
 
 pub fn init(app_event_bus: &EventBus, repo: Arc<dyn IMatchReportRepository>) {
+    let bus = app_event_bus.clone();
     let mut rx = app_event_bus.subscribe();
     tokio::spawn(async move {
         loop {
@@ -52,7 +53,7 @@ pub fn init(app_event_bus: &EventBus, repo: Arc<dyn IMatchReportRepository>) {
                         pairing_id: Some(pairing_id),
                     };
 
-                    match create_match_report_use_case::execute(cmd, repo.as_ref()).await {
+                    match create_match_report_use_case::execute(cmd, repo.as_ref(), &bus).await {
                         Ok(mr_id) => {
                             tracing::info!(
                                 "pairing_created_listener: created match report {mr_id} for pairing"
