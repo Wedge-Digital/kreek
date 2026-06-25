@@ -291,6 +291,39 @@ PlayerValueAdjusted      { ... }
 
 Le domaine ne connaît pas les app events. Il expose des méthodes de commande qui retournent des domain events. C'est le listener (IO) qui décide quelle commande domaine appeler en réponse à quel app event.
 
+### Émission des app events — règle obligatoire
+
+L'`app_event_bus` **ne vit que dans la couche IO**. Ni les use cases, ni les handlers n'y accèdent directement. Tout app event est le résultat d'un domain event, converti par un **publisher** (couche IO) qui souscrit au bus interne du BC.
+
+```
+Use case ──► DomainEvent (bus interne BC)
+                  │
+                  ▼
+             Publisher (couche IO)  ──► AppEvent (app event bus)
+```
+
+**Flux obligatoire** : pour qu'un BC émette un app event à destination des autres BCs, il faut :
+1. Le use case (ou le handler, s'il n'y a pas de use case) émet un **domain event** sur le bus interne du BC (`event_bus`)
+2. Le **publisher** du BC (`io/app_events/app_event_publisher.rs`) souscrit au bus interne, désérialise le domain event, et appelle `to_app_event()` pour produire l'app event correspondant
+3. Le publisher publie l'app event sur l'`app_event_bus`
+
+**Conséquences** :
+- L'`app_event_bus` n'est **jamais** passé en paramètre d'un use case
+- Un handler n'émet **jamais** d'app event directement — il émet un domain event sur le bus interne du BC
+- Pour ajouter un nouvel app event, il faut d'abord un domain event correspondant dans l'enum du BC, puis un mapping dans `to_app_event()`
+- Le publisher est le **seul point de conversion** domain event → app event dans le BC
+
+```rust
+// INTERDIT — émission directe d'app event depuis un use case
+let _ = app_event_bus.send(CompetitionsAppEvent::PairingCreated { ... }.to_enveloppe());
+
+// INTERDIT — émission directe d'app event depuis un handler
+let _ = state.app_event_bus.send(CompetitionsAppEvent::PairingDeleted { ... }.to_enveloppe());
+
+// OBLIGATOIRE — émission d'un domain event, le publisher fait la conversion
+let _ = bus.send(CompetitionsDomainEvent::PairingCreated { ... }.to_enveloppe());
+```
+
 ---
 
 ## Projections event sourcing — règle fondamentale
