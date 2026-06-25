@@ -1,6 +1,6 @@
 use crate::app::teams::io::app_events::{match_report_confirmed_listener, team_created_listener};
 use crate::app::teams::io::repository::team_repository::TeamRepository;
-use crate::app::teams::ports::ITeamRepository;
+use crate::app::teams::ports::{IJourneymanTypePort, IPlayerCountPort, ITeamRepository};
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -8,6 +8,8 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct TeamsContext {
     pub team_repository: Arc<dyn ITeamRepository>,
+    pub player_count_port: Arc<dyn IPlayerCountPort>,
+    pub journeyman_type_port: Arc<dyn IJourneymanTypePort>,
 }
 
 pub fn init_listeners(app_event_bus: &EventBus, pool: PgPool) {
@@ -17,9 +19,15 @@ pub fn init_listeners(app_event_bus: &EventBus, pool: PgPool) {
 }
 
 impl TeamsContext {
-    pub fn new(pool: &PgPool) -> Self {
+    pub fn new(
+        pool: &PgPool,
+        player_count_port: Arc<dyn IPlayerCountPort>,
+        journeyman_type_port: Arc<dyn IJourneymanTypePort>,
+    ) -> Self {
         Self {
             team_repository: Arc::new(TeamRepository::new(pool.clone())),
+            player_count_port,
+            journeyman_type_port,
         }
     }
 }

@@ -151,7 +151,17 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             );
             match_report::context::MatchReportContext::new(&pool, comp_data, team_data)
         },
-        teams:   TeamsContext::new(&pool),
+        teams: {
+            let player_count = Arc::new(
+                crate::infrastructure::teams::player_count_adapter::PlayerCountAdapter::new(pool.clone()),
+            );
+            let journeyman_type = Arc::new(
+                crate::infrastructure::teams::journeyman_type_adapter::JourneymanTypeAdapter::new(
+                    refs_for_players.repository.clone(),
+                ),
+            );
+            TeamsContext::new(&pool, player_count, journeyman_type)
+        },
         players: PlayersContext::new(&pool),
         email_service: Arc::new(ResendMailService::new(
             cfg.email.api_key,

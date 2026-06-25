@@ -7,6 +7,7 @@ use crate::app::teams::io::web::widgets::enrollment_actions::{
 use crate::app::teams::io::web::widgets::enrolled_teams_widget::enrolled_teams_widget;
 use crate::app::teams::io::web::widgets::pending_enrollment_widget::pending_enrollment_widget;
 use crate::app::teams::io::web::widgets::team_selection_tester::get_team_selection_tester;
+use crate::app::teams::io::web::widgets::team_match_context_widget::get_team_match_context_json;
 use crate::app::teams::io::web::widgets::team_selection_widget::{
     get_team_selection_json, get_team_selection_widget,
 };
@@ -40,4 +41,8 @@ pub fn router() -> Router<AppState> {
         )
         .route(path::TEAM_SELECTION_JSON, get(get_team_selection_json))
         .route(path::TEAM_SELECTION_TESTER, get(get_team_selection_tester))
+        .route(
+            path::TEAM_MATCH_CONTEXT_JSON,
+            get(get_team_match_context_json),
+        )
 }

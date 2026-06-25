@@ -1,6 +1,15 @@
 use crate::app::teams::domain::team::{Team, TeamDomainEvent};
 use async_trait::async_trait;
 
+#[async_trait]
+pub trait IPlayerCountPort: Send + Sync {
+    async fn count_for_team(&self, team_id: &str) -> u32;
+}
+
+pub trait IJourneymanTypePort: Send + Sync {
+    fn journeyman_type_for_roster(&self, roster_id: &str) -> String;
+}
+
 #[derive(Debug)]
 pub enum RepositoryError {
     ConcurrentWrite,

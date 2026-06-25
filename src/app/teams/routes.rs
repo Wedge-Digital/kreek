@@ -11,6 +11,7 @@ pub mod path {
     pub const TEAM_SELECTION_WIDGET: &str = "/app/{space_id}/team/widgets/team-selection";
     pub const TEAM_SELECTION_JSON: &str = "/app/{space_id}/team/widgets/team-selection/json";
     pub const TEAM_SELECTION_TESTER: &str = "/team/widgets/tester";
+    pub const TEAM_MATCH_CONTEXT_JSON: &str = "/app/{space_id}/team/widgets/match-context/json";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -60,5 +61,9 @@ impl Routes {
     }
     pub fn team_selection_json(&self, space_id: &str) -> String {
         path::TEAM_SELECTION_JSON.replace("{space_id}", space_id)
+    }
+
+    pub fn team_match_context_json(&self, space_id: &str) -> String {
+        path::TEAM_MATCH_CONTEXT_JSON.replace("{space_id}", space_id)
     }
 }
