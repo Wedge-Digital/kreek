@@ -5,7 +5,7 @@
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
 | step1-selection | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| step2-avant-match | | | | | | | |
+| step2-avant-match | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | step2-inducements | | | | | | | |
 | step3-actions | | | | | | | |
 | step5-apres-match | | | | | | | |

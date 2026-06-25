@@ -1,0 +1,61 @@
+/* ── Fan factor ─────────────────────────────────────────────────────────── */
+.mr-fan-section { display: flex; flex-direction: column; gap: var(--p1); }
+.mr-fan-row {
+  display: flex; align-items: center; gap: var(--p1);
+  padding: 10px var(--p1);
+  background: var(--dark-7); border-radius: 8px;
+}
+.mr-fan-team {
+  flex: 1; font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
+  min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mr-fan-dedicated { display: flex; align-items: center; gap: 4px; font-size: var(--text-tiny); color: var(--dark-3); }
+.mr-fan-plus  { color: var(--dark-4); font-weight: 700; }
+.mr-fan-dice  { display: flex; align-items: center; gap: 4px; }
+.mr-fan-dice-input {
+  width: 44px; height: 36px; text-align: center;
+  border: 1px solid var(--dark-4); border-radius: 6px;
+  font-size: var(--text-small); font-weight: 700;
+  color: var(--dark-1); background: var(--white);
+  font-family: inherit; outline: none;
+}
+.mr-fan-dice-input:focus { border-color: var(--main-blue); box-shadow: 0 0 0 3px rgba(0,48,73,0.1); }
+.mr-fan-dice-label { font-size: 11px; color: var(--dark-4); }
+.mr-fan-equals { color: var(--dark-4); font-weight: 700; font-size: var(--text-tiny); }
+.mr-fan-total  { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--main-blue); min-width: 28px; text-align: center; }
+
+/* ── TV comparison ──────────────────────────────────────────────────────── */
+.mr-tv-section { display: flex; flex-direction: column; gap: var(--p1); }
+.mr-tv-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px var(--p1); background: var(--dark-7); border-radius: 8px;
+}
+.mr-tv-team  { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); }
+.mr-tv-value { font-family: var(--font-title); font-size: var(--text-small); font-weight: 700; color: var(--dark-1); }
+.mr-tv-diff {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 8px var(--p1);
+  background: rgba(255,107,53,0.06); border: 1px solid rgba(255,107,53,0.15);
+  border-radius: 8px; font-size: var(--text-tiny); color: #9A5000;
+}
+.mr-tv-diff--equal { background: rgba(98,149,132,0.06); border-color: rgba(98,149,132,0.15); color: #3d6b5e; }
+
+/* ── Inducements ────────────────────────────────────────────────────────── */
+.mr-inducements-summary { display: flex; flex-direction: column; gap: 8px; }
+.mr-inducement-team-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px var(--p1); border: 1px solid var(--dark-5); border-radius: 8px;
+}
+.mr-inducement-team-info  { display: flex; flex-direction: column; gap: 2px; }
+.mr-inducement-team-name  { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); }
+.mr-inducement-team-budget { font-size: 11px; color: var(--dark-3); }
+.mr-inducement-order { font-size: 11px; font-weight: 700; color: var(--dark-4); padding: 2px 8px; border-radius: 12px; background: var(--dark-6); }
+.mr-inducement-order--first { background: rgba(0,48,73,0.08); color: var(--main-blue); }
+
+/* ── Fan factor already recorded ────────────────────────────────────────── */
+.mr-fan-recorded {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px var(--p1); border-radius: 8px;
+  background: rgba(98,149,132,0.08); border: 1px solid rgba(98,149,132,0.2);
+  font-size: var(--text-tiny); color: #3d6b5e;
+}

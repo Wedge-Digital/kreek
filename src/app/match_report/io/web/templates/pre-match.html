@@ -1,0 +1,272 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/match-report-shared.css">
+<link rel="stylesheet" href="/static/css/pages/match-report-step1.css">
+<link rel="stylesheet" href="/static/css/pages/match-report-pre-match.css">
+
+<div class="mr-container"
+     x-data="{
+       home: null, away: null,
+       homeRoll: 2, awayRoll: 2,
+       get homeTotal() { return this.home ? this.home.dedicated_fans + parseInt(this.homeRoll) : '-'; },
+       get awayTotal() { return this.away ? this.away.dedicated_fans + parseInt(this.awayRoll) : '-'; },
+       get tvDiff() {
+         if (!this.home || !this.away) return 0;
+         return Math.abs(this.home.ctv - this.away.ctv);
+       },
+       get richerTeamName() {
+         if (!this.home || !this.away || this.home.ctv === this.away.ctv) return null;
+         return this.home.ctv > this.away.ctv ? this.home.team_name : this.away.team_name;
+       },
+       get poorerTeam() {
+         if (!this.home || !this.away) return null;
+         return this.home.ctv <= this.away.ctv ? this.home : this.away;
+       },
+       get richerTeam() {
+         if (!this.home || !this.away) return null;
+         return this.home.ctv >= this.away.ctv ? this.home : this.away;
+       },
+       formatKpo(v) {
+         if (!v && v !== 0) return '…';
+         if (v >= 1000) {
+           const maj = Math.floor(v / 1000);
+           const min = Math.floor((v % 1000) / 100);
+           return min > 0 ? maj + ' ' + min + '00 kPo' : maj + ' 000 kPo';
+         }
+         return v + ' kPo';
+       },
+       journeymenCount(team) {
+         if (!team) return 0;
+         return team.player_count >= 11 ? 0 : 11 - team.player_count;
+       },
+       async init() {
+         const [h, a] = await Promise.all([
+           fetch('{{ home_team_context_url }}').then(r => r.json()),
+           fetch('{{ away_team_context_url }}').then(r => r.json()),
+         ]);
+         this.home = h;
+         this.away = a;
+       }
+     }">
+
+  <!-- Header -->
+  <div class="mr-header">
+    <div class="mr-header-icon">&#128203;</div>
+    <div class="mr-header-title">Séquence d&#39;avant-match</div>
+    <div class="mr-header-sub">Fan factor, journaliers, coups de pouce</div>
+  </div>
+
+  <!-- Steps -->
+  <div class="mr-steps">
+    <div class="mr-step mr-step--done">&#10003;</div>
+    <div class="mr-step-line mr-step-line--done"></div>
+    <div class="mr-step mr-step--active">2</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">3</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">4</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">5</div>
+  </div>
+
+  <!-- Match banner -->
+  <div class="mr-match-banner">
+    <div class="mr-match-team">
+      <div class="mr-match-logo">{{ home_initials }}</div>
+      <div class="mr-match-name">{{ home_team_name }}</div>
+      <div class="mr-match-coach">{{ home_coach_name }} · {{ home_roster_name }}</div>
+    </div>
+    <span class="mr-match-vs">VS</span>
+    <div class="mr-match-team">
+      <div class="mr-match-logo mr-match-logo--away">{{ away_initials }}</div>
+      <div class="mr-match-name">{{ away_team_name }}</div>
+      <div class="mr-match-coach">{{ away_coach_name }} · {{ away_roster_name }}</div>
+    </div>
+  </div>
+
+  <form method="post" action="{{ form_action }}">
+
+    <!-- Fan factor -->
+    <div class="mr-card">
+      <div class="mr-card-title">&#127922; Fan Factor</div>
+
+      {% if fan_factor_already_recorded %}
+      <div class="mr-fan-recorded">
+        <span>&#9989;</span>
+        <span>Fan factor déjà enregistré — vous pouvez le modifier ci-dessous.</span>
+      </div>
+      {% endif %}
+
+      <div class="mr-fan-section">
+        <div class="mr-fan-row">
+          <span class="mr-fan-team">{{ home_team_name }}</span>
+          <span class="mr-fan-dedicated">
+            Fans :&#32;<span x-text="home ? home.dedicated_fans : '…'"></span>
+          </span>
+          <span class="mr-fan-plus">+</span>
+          <div class="mr-fan-dice">
+            <input type="number" class="mr-fan-dice-input"
+                   name="home_fan_roll" min="1" max="3" value="2"
+                   x-model="homeRoll" required>
+            <span class="mr-fan-dice-label">D3</span>
+          </div>
+          <span class="mr-fan-equals">=</span>
+          <span class="mr-fan-total" x-text="homeTotal"></span>
+        </div>
+
+        <div class="mr-fan-row">
+          <span class="mr-fan-team">{{ away_team_name }}</span>
+          <span class="mr-fan-dedicated">
+            Fans :&#32;<span x-text="away ? away.dedicated_fans : '…'"></span>
+          </span>
+          <span class="mr-fan-plus">+</span>
+          <div class="mr-fan-dice">
+            <input type="number" class="mr-fan-dice-input"
+                   name="away_fan_roll" min="1" max="3" value="2"
+                   x-model="awayRoll" required>
+            <span class="mr-fan-dice-label">D3</span>
+          </div>
+          <span class="mr-fan-equals">=</span>
+          <span class="mr-fan-total" x-text="awayTotal"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Journaliers -->
+    <div class="mr-card">
+      <div class="mr-card-title">&#128101; Journaliers</div>
+
+      <template x-if="home">
+        <div>
+          <template x-if="journeymenCount(home) === 0">
+            <div class="mr-info-banner mr-info-banner--ok">
+              <span class="mr-info-icon">&#9989;</span>
+              <span>
+                <strong x-text="home.team_name"></strong>&#32;—&#32;
+                <span x-text="home.player_count"></span> joueurs, aucun journalier nécessaire.
+              </span>
+            </div>
+          </template>
+          <template x-if="journeymenCount(home) > 0">
+            <div class="mr-info-banner mr-info-banner--neutral">
+              <span class="mr-info-icon">&#43;</span>
+              <span>
+                <strong x-text="home.team_name"></strong>&#32;—&#32;
+                <span x-text="home.player_count"></span> joueurs,
+                <strong x-text="journeymenCount(home)"></strong> journalier(s) ajouté(s)
+                (<span x-text="home.journeyman_type"></span>).
+              </span>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <template x-if="away">
+        <div>
+          <template x-if="journeymenCount(away) === 0">
+            <div class="mr-info-banner mr-info-banner--ok">
+              <span class="mr-info-icon">&#9989;</span>
+              <span>
+                <strong x-text="away.team_name"></strong>&#32;—&#32;
+                <span x-text="away.player_count"></span> joueurs, aucun journalier nécessaire.
+              </span>
+            </div>
+          </template>
+          <template x-if="journeymenCount(away) > 0">
+            <div class="mr-info-banner mr-info-banner--neutral">
+              <span class="mr-info-icon">&#43;</span>
+              <span>
+                <strong x-text="away.team_name"></strong>&#32;—&#32;
+                <span x-text="away.player_count"></span> joueurs,
+                <strong x-text="journeymenCount(away)"></strong> journalier(s) ajouté(s)
+                (<span x-text="away.journeyman_type"></span>).
+              </span>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <template x-if="!home || !away">
+        <div class="mr-info-banner mr-info-banner--neutral">
+          <span class="mr-info-icon">&#8230;</span>
+          <span>Chargement des données d&#39;équipe…</span>
+        </div>
+      </template>
+    </div>
+
+    <!-- TV comparison -->
+    <div class="mr-card">
+      <div class="mr-card-title">&#9878;&#65039; Valeurs d&#39;équipe</div>
+      <div class="mr-tv-section">
+        <div class="mr-tv-row">
+          <span class="mr-tv-team">{{ home_team_name }}</span>
+          <span class="mr-tv-value" x-text="formatKpo(home ? home.ctv : null)"></span>
+        </div>
+        <div class="mr-tv-row">
+          <span class="mr-tv-team">{{ away_team_name }}</span>
+          <span class="mr-tv-value" x-text="formatKpo(away ? away.ctv : null)"></span>
+        </div>
+        <template x-if="home && away && tvDiff === 0">
+          <div class="mr-tv-diff mr-tv-diff--equal">
+            <span>&#9889;</span>
+            <span>Valeurs d&#39;équipe égales.</span>
+          </div>
+        </template>
+        <template x-if="home && away && tvDiff > 0">
+          <div class="mr-tv-diff">
+            <span>&#9888;&#65039;</span>
+            <span>
+              Différence de <strong x-text="formatKpo(tvDiff)"></strong>
+              en faveur de <strong x-text="richerTeamName"></strong>.
+            </span>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Inducements order -->
+    <div class="mr-card">
+      <div class="mr-card-title">&#128722; Coups de pouce</div>
+      <template x-if="home && away">
+        <div class="mr-inducements-summary">
+          <!-- Richer team goes first (buys with treasury only) -->
+          <div class="mr-inducement-team-row">
+            <div class="mr-inducement-team-info">
+              <div class="mr-inducement-team-name" x-text="richerTeam.team_name"></div>
+              <div class="mr-inducement-team-budget">
+                Budget : trésorerie (<span x-text="formatKpo(richerTeam.treasury)"></span> disponibles)
+              </div>
+            </div>
+            <span class="mr-inducement-order mr-inducement-order--first">1er</span>
+          </div>
+          <!-- Poorer team goes second (diff + rival spend + treasury) -->
+          <div class="mr-inducement-team-row">
+            <div class="mr-inducement-team-info">
+              <div class="mr-inducement-team-name" x-text="poorerTeam.team_name"></div>
+              <div class="mr-inducement-team-budget">
+                Budget : diff TV + dépenses adverses + <span x-text="formatKpo(poorerTeam.treasury)"></span> trésorerie
+              </div>
+            </div>
+            <span class="mr-inducement-order">2e</span>
+          </div>
+        </div>
+      </template>
+      <template x-if="!home || !away">
+        <div class="mr-info-banner mr-info-banner--neutral">
+          <span class="mr-info-icon">&#8230;</span>
+          <span>Chargement des données d&#39;équipe…</span>
+        </div>
+      </template>
+    </div>
+
+    <!-- Actions -->
+    <div class="mr-actions">
+      <a href="{{ app_routes.match_report.edit_match_report(space_id.as_str(), match_report_id.as_str()) }}"
+         class="btn-outline-sm">&#8592; Retour</a>
+      <button type="submit" class="btn-primary-sm">Enregistrer et continuer &#8594;</button>
+    </div>
+
+  </form>
+</div>
+{% endblock %}
