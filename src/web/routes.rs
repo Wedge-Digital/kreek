@@ -3,6 +3,9 @@ pub mod path {
     pub const APP_LAYOUT: &str = "/app";
     pub const SPACES: &str = "/app/spaces";
     pub const MENU: &str = "/app/menu";
+    pub const KREEK_SELECT_TESTER: &str = "/kreek-select-tester";
+    pub const KREEK_SELECT_TESTER_DATA: &str = "/kreek-select-tester/data";
+    pub const KREEK_SELECT_TESTER_COLORS: &str = "/kreek-select-tester/colors";
 }
 
 /// Struct exposing route helpers to Askama templates.

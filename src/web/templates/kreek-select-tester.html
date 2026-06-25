@@ -1,0 +1,164 @@
+{% extends "widget-tester-layout.html" %}
+
+{% block content %}
+<div class="test-kreek-select">
+    <div class="form-header">Test : kreek-select</div>
+
+    <!-- Test 1 : select simple -->
+    <div class="test-section">
+        <div class="test-title">1. Select simple (chargement URL)</div>
+        <kreek-select
+            name="fruit"
+            url="/kreek-select-tester/data"
+            value-field="id"
+            label-field="name"
+            placeholder="Choisir un fruit…">
+        </kreek-select>
+    </div>
+
+    <!-- Test 2 : select avec événement -->
+    <div class="test-section">
+        <div class="test-title">2. Select avec événement DOM</div>
+        <kreek-select
+            name="fruit_event"
+            url="/kreek-select-tester/data"
+            value-field="id"
+            label-field="name"
+            event="fruitSelected"
+            event-fields="color"
+            placeholder="Choisir un fruit (émet fruitSelected)…">
+        </kreek-select>
+    </div>
+
+    <!-- Test 3 : select pré-rempli -->
+    <div class="test-section">
+        <div class="test-title">3. Select pré-rempli (selected-value="cherry")</div>
+        <kreek-select
+            name="fruit_prefill"
+            url="/kreek-select-tester/data"
+            value-field="id"
+            label-field="name"
+            event="fruitPrefillSelected"
+            selected-value="cherry"
+            placeholder="Choisir un fruit…">
+        </kreek-select>
+    </div>
+
+    <!-- Test 4 : select désactivé -->
+    <div class="test-section">
+        <div class="test-title">4. Select désactivé</div>
+        <kreek-select
+            name="fruit_disabled"
+            url="/kreek-select-tester/data"
+            value-field="id"
+            label-field="name"
+            placeholder="Désactivé…"
+            disabled>
+        </kreek-select>
+    </div>
+
+    <!-- Test 5 : select avec rendu riche (templates HTML) -->
+    <div class="test-section">
+        <div class="test-title">5. Select avec rendu riche (option-template + selected-template)</div>
+        <kreek-select
+            name="fruit_rich"
+            url="/kreek-select-tester/data"
+            value-field="id"
+            label-field="name"
+            event="fruitRichSelected"
+            event-fields="color"
+            option-template="tpl-fruit-option"
+            selected-template="tpl-fruit-selected"
+            placeholder="Choisir un fruit…">
+        </kreek-select>
+    </div>
+
+    <!-- Test 6 : cascade (couleur → fruits filtrés) -->
+    <div class="test-section">
+        <div class="test-title">6. Cascade : choisir une couleur charge les fruits de cette couleur</div>
+        <kreek-select
+            name="color_cascade"
+            url="/kreek-select-tester/colors"
+            value-field="id"
+            label-field="name"
+            event="colorSelected"
+            placeholder="Choisir une couleur…">
+        </kreek-select>
+        <kreek-select
+            name="fruit_cascade"
+            url="/kreek-select-tester/data"
+            value-field="id"
+            label-field="name"
+            event="fruitCascadeSelected"
+            event-fields="color"
+            listen="colorSelected"
+            listen-param="id"
+            listen-query="color"
+            option-template="tpl-fruit-option"
+            selected-template="tpl-fruit-selected"
+            placeholder="Fruits de cette couleur…">
+        </kreek-select>
+    </div>
+
+    <!-- Test 7 : sélection multiple avec badges -->
+    <div class="test-section">
+        <div class="test-title">7. Sélection multiple (badges)</div>
+        <kreek-select
+            name="fruits_multi"
+            url="/kreek-select-tester/data"
+            value-field="id"
+            label-field="name"
+            event="fruitsMultiSelected"
+            event-fields="color"
+            multiple
+            placeholder="Choisir des fruits…">
+        </kreek-select>
+    </div>
+
+    <!-- Templates HTML pour le rendu riche -->
+    <template id="tpl-fruit-option">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="width: 12px; height: 12px; border-radius: 50%; background: %color%; flex-shrink: 0;"></span>
+            <div>
+                <div style="font-weight: 600;">%name%</div>
+                <div style="font-size: 11px; color: #888;">Couleur : %color%</div>
+            </div>
+        </div>
+    </template>
+    <template id="tpl-fruit-selected">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="width: 10px; height: 10px; border-radius: 50%; background: %color%;"></span>
+            <span>%name%</span>
+            <span style="font-size: 11px; color: #888;">(%color%)</span>
+        </div>
+    </template>
+
+    <!-- Log d'événements -->
+    <div class="form-header">Événements reçus</div>
+    <div id="event-log"
+         x-data="{ events: [] }"
+         @fruit-selected.window="events.push({ name: 'fruitSelected', detail: $event.detail, ts: new Date().toLocaleTimeString() })"
+         @fruit-prefill-selected.window="events.push({ name: 'fruitPrefillSelected', detail: $event.detail, ts: new Date().toLocaleTimeString() })"
+         @fruit-rich-selected.window="events.push({ name: 'fruitRichSelected', detail: $event.detail, ts: new Date().toLocaleTimeString() })"
+         @color-selected.window="events.push({ name: 'colorSelected', detail: $event.detail, ts: new Date().toLocaleTimeString() })"
+         @fruit-cascade-selected.window="events.push({ name: 'fruitCascadeSelected', detail: $event.detail, ts: new Date().toLocaleTimeString() })"
+         @fruits-multi-selected.window="events.push({ name: 'fruitsMultiSelected', detail: $event.detail, ts: new Date().toLocaleTimeString() })"
+         style="border: 1px solid #444; padding: 16px; border-radius: 8px; min-height: 40px;">
+        <template x-if="events.length === 0">
+            <p style="color: #888; font-style: italic;">Aucun événement reçu.</p>
+        </template>
+        <template x-for="(evt, i) in events" :key="i">
+            <div style="margin-bottom: 8px; padding: 8px; background: #f0f4f8; border-radius: 4px; font-size: 13px;">
+                <strong x-text="evt.name"></strong> <span style="color: #888;" x-text="evt.ts"></span><br>
+                <span x-text="JSON.stringify(evt.detail)"></span>
+            </div>
+        </template>
+    </div>
+</div>
+
+<style>
+.test-kreek-select { display: flex; flex-direction: column; gap: var(--p2); max-width: 500px; }
+.test-section { display: flex; flex-direction: column; gap: 6px; }
+.test-title { font-size: var(--text-small); font-weight: 600; color: var(--dark-2); }
+</style>
+{% endblock %}
