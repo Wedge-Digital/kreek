@@ -1,7 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::MatchReportOrigin;
-use crate::app::match_report::io::web::view_models::*;
 use crate::app::match_report::use_cases::{
     create_match_report_use_case, update_match_selection_use_case,
 };
@@ -12,7 +11,7 @@ use crate::app::shared_kernel::common_types::{
 use crate::app::shared_kernel::team::TeamId;
 use crate::state::AppState;
 use askama::Template;
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::Form;
@@ -26,10 +25,7 @@ pub struct MatchSelectionTemplate {
     pub app_routes: AppRoutes,
     pub space_id: String,
     pub widget_url: String,
-    pub teams_url: String,
-    pub teams: Vec<TeamOptionVm>,
-    pub selected: Option<SelectedMatchVm>,
-    pub is_admin: bool,
+    pub team_widget_url: String,
     pub is_prefilled: bool,
     pub error_message: Option<String>,
     pub form_action: String,
@@ -44,62 +40,7 @@ impl IntoResponse for MatchSelectionTemplate {
     }
 }
 
-#[derive(Template)]
-#[template(path = "fragments/team-options.html")]
-pub struct TeamOptionsFragment {
-    pub teams: Vec<TeamOptionVm>,
-    pub is_admin: bool,
-}
-
-impl IntoResponse for TeamOptionsFragment {
-    fn into_response(self) -> Response {
-        match self.render() {
-            Ok(html) => Html(html).into_response(),
-            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-        }
-    }
-}
-
-// ── Query params ─────────────────────────────────────────────────────────────
-
-#[derive(Deserialize)]
-pub struct TeamsQuery {
-    pub season_id: Option<String>,
-}
-
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-fn format_tv(kpo: u32) -> String {
-    if kpo >= 1000 {
-        let major = kpo / 1000;
-        let minor = (kpo % 1000) / 100;
-        if minor > 0 {
-            format!("{} {}00 kPo", major, minor)
-        } else {
-            format!("{} 000 kPo", major)
-        }
-    } else {
-        format!("{} kPo", kpo)
-    }
-}
-
-async fn is_admin(
-    state: &AppState,
-    competition_id: Option<&str>,
-    coach_id: &str,
-) -> bool {
-    if let Some(comp_id) = competition_id {
-        if let Ok(true) = state
-            .match_report
-            .competition_data
-            .is_competition_admin(comp_id, coach_id)
-            .await
-        {
-            return true;
-        }
-    }
-    false
-}
 
 fn build_widget_url(space_id: &str) -> String {
     AppRoutes::default()
@@ -120,6 +61,27 @@ fn build_widget_url_prefilled(
         competition_id,
         season_id,
         round_id,
+    )
+}
+
+fn build_team_widget_url(space_id: &str) -> String {
+    AppRoutes::default()
+        .teams
+        .team_selection_widget(space_id)
+}
+
+fn build_team_widget_url_prefilled(
+    space_id: &str,
+    season_id: &str,
+    home_id: &str,
+    away_id: &str,
+) -> String {
+    format!(
+        "{}?season_id={}&selected_home={}&selected_away={}",
+        AppRoutes::default().teams.team_selection_widget(space_id),
+        season_id,
+        home_id,
+        away_id,
     )
 }
 
@@ -161,18 +123,12 @@ pub async fn new_match_report(
     let form_action = AppRoutes::default()
         .match_report
         .new_match_report(&space_id);
-    let teams_url = AppRoutes::default()
-        .match_report
-        .teams_fragment(&space_id);
 
     MatchSelectionTemplate {
         app_routes: Default::default(),
         widget_url: build_widget_url(&space_id),
-        teams_url,
+        team_widget_url: build_team_widget_url(&space_id),
         space_id,
-        teams: vec![],
-        selected: None,
-        is_admin: false,
         is_prefilled: false,
         error_message: None,
         form_action,
@@ -185,10 +141,9 @@ pub async fn edit_match_report(
     Path((space_id, match_report_id)): Path<(String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let Some(user) = auth_session.user else {
+    let Some(_user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
-    let coach_id = user.id.to_string();
 
     let mr_state = match state
         .match_report
@@ -209,51 +164,22 @@ pub async fn edit_match_report(
             let comp_id = draft.competition_id.to_string();
             let season_id = draft.season_id.to_string();
             let round_id = draft.round_id.to_string();
-
-            let admin = is_admin(&state, Some(&comp_id), &coach_id).await;
-
             let home_id = draft.home_team_id.to_string();
             let away_id = draft.away_team_id.to_string();
-
-            let teams = state
-                .match_report
-                .team_data
-                .list_enrolled_teams(&season_id)
-                .await
-                .unwrap_or_default()
-                .into_iter()
-                .filter(|t| t.game_phase.as_deref() == Some("ReadyToPlay"))
-                .map(|t| TeamOptionVm {
-                    is_own_team: t.coach_id == coach_id,
-                    id: t.team_id,
-                    name: t.team_name,
-                    coach_name: t.coach_name,
-                    roster_name: t.roster_name,
-                    tv: format_tv(t.team_value),
-                })
-                .collect();
 
             let form_action = AppRoutes::default()
                 .match_report
                 .edit_match_report(&space_id, &match_report_id);
-            let teams_url = AppRoutes::default()
-                .match_report
-                .teams_fragment(&space_id);
 
             MatchSelectionTemplate {
                 app_routes: Default::default(),
                 widget_url: build_widget_url_prefilled(
                     &space_id, &comp_id, &season_id, &round_id,
                 ),
-                teams_url,
+                team_widget_url: build_team_widget_url_prefilled(
+                    &space_id, &season_id, &home_id, &away_id,
+                ),
                 space_id,
-                teams,
-                selected: Some(SelectedMatchVm {
-                    match_report_id: match_report_id.clone(),
-                    home_team_id: home_id,
-                    away_team_id: away_id,
-                }),
-                is_admin: admin,
                 is_prefilled: true,
                 error_message: None,
                 form_action,
@@ -271,42 +197,6 @@ pub async fn edit_match_report(
             StatusCode::GONE.into_response()
         }
     }
-}
-
-pub async fn teams_fragment(
-    auth_session: AuthSession,
-    Query(q): Query<TeamsQuery>,
-    State(state): State<AppState>,
-) -> impl IntoResponse {
-    let coach_id = auth_session
-        .user
-        .map(|u| u.id.to_string())
-        .unwrap_or_default();
-
-    let season_id = q.season_id.unwrap_or_default();
-    let teams = state
-        .match_report
-        .team_data
-        .list_enrolled_teams(&season_id)
-        .await
-        .unwrap_or_default()
-        .into_iter()
-        .filter(|t| t.game_phase.as_deref() == Some("ReadyToPlay"))
-        .map(|t| TeamOptionVm {
-            is_own_team: t.coach_id == coach_id,
-            id: t.team_id,
-            name: t.team_name,
-            coach_name: t.coach_name,
-            roster_name: t.roster_name,
-            tv: format_tv(t.team_value),
-        })
-        .collect();
-
-    TeamOptionsFragment {
-        teams,
-        is_admin: false,
-    }
-    .into_response()
 }
 
 // ── POST form ────────────────────────────────────────────────────────────────

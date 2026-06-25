@@ -238,7 +238,6 @@ mod tests {
                 struct FakeTeamDataPort;
                 #[async_trait::async_trait]
                 impl crate::app::match_report::ports::ITeamDataPort for FakeTeamDataPort {
-                    async fn list_enrolled_teams(&self, _: &str) -> Result<Vec<crate::app::match_report::ports::EnrolledTeamDto>, String> { Ok(vec![]) }
                     async fn is_team_ready_to_play(&self, _: &str) -> Result<bool, String> { Ok(true) }
                 }
                 crate::app::match_report::context::MatchReportContext {

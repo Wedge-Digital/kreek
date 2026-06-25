@@ -12,7 +12,7 @@
     document.getElementById('mr-round-id').value = d.id || '';
     if (d.season_id) {
       htmx.ajax('GET',
-        '{{ teams_url }}?season_id=' + encodeURIComponent(d.season_id),
+        '{{ team_widget_url }}' + (('{{ team_widget_url }}').indexOf('?') === -1 ? '?' : '&') + 'season_id=' + encodeURIComponent(d.season_id),
         { target: '#teams-container', swap: 'innerHTML' });
     }
   }
@@ -66,18 +66,20 @@
       </div>
     </div>
 
-    <!-- Teams selection -->
+    <!-- Teams selection (widget du BC teams) -->
     <div class="mr-card">
-      <div class="mr-vs-section" id="teams-container">
-
-        {% if !teams.is_empty() %}
-        {% include "fragments/team-options.html" %}
+      <div id="teams-container">
+        {% if is_prefilled %}
+        <div hx-get="{{ team_widget_url }}"
+             hx-trigger="load"
+             hx-target="#teams-container"
+             hx-swap="innerHTML">
+        </div>
         {% else %}
         <div class="mr-teams-placeholder">
           Sélectionnez une compétition, une saison et une journée pour voir les équipes disponibles.
         </div>
         {% endif %}
-
       </div>
     </div>
 

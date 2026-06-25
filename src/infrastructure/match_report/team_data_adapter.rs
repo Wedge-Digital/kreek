@@ -1,4 +1,4 @@
-use crate::app::match_report::ports::{EnrolledTeamDto, ITeamDataPort};
+use crate::app::match_report::ports::ITeamDataPort;
 use crate::app::teams::ports::ITeamRepository;
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -15,28 +15,6 @@ impl TeamDataAdapter {
 
 #[async_trait]
 impl ITeamDataPort for TeamDataAdapter {
-    async fn list_enrolled_teams(&self, season_id: &str) -> Result<Vec<EnrolledTeamDto>, String> {
-        let rows = self
-            .team_repo
-            .find_enrolled_for_season(season_id)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        Ok(rows
-            .into_iter()
-            .map(|r| EnrolledTeamDto {
-                team_id: r.team_id,
-                team_name: r.team_name,
-                coach_id: r.coach_id,
-                coach_name: r.coach_name,
-                roster_name: r.roster_name,
-                team_value: r.team_value,
-                logo_url: r.logo_url,
-                game_phase: r.game_phase,
-            })
-            .collect())
-    }
-
     async fn is_team_ready_to_play(&self, team_id: &str) -> Result<bool, String> {
         let team = self
             .team_repo
