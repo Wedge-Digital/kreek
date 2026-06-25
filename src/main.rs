@@ -21,6 +21,7 @@ use crate::app::news::context::NewsContext;
 use crate::app::references::context::ReferencesContext;
 use crate::app::spaces::context::SpacesContext;
 use crate::app::team_creation::context::TeamCreationContext;
+use crate::infrastructure::team_creation::competition_rules_adapter::CompetitionRulesAdapter;
 use crate::infrastructure::team_creation::reference_data_adapter::ReferenceDataAdapter;
 use crate::app::players::context::PlayersContext;
 use crate::app::teams::context::TeamsContext;
@@ -137,6 +138,9 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             &pool,
             event_bus.clone(),
             Arc::new(ReferenceDataAdapter::new(refs_for_players.repository.clone())),
+            Arc::new(CompetitionRulesAdapter::new(Arc::new(
+                crate::app::competitions::io::repository::season_repository::SeasonRepository::new(pool.clone()),
+            ))),
         ),
         match_report: {
             let comp_data = Arc::new(

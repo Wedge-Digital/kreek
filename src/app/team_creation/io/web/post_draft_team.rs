@@ -2,7 +2,6 @@ use crate::app::auth::auth_backend::AuthSession;
 use crate::app::shared_kernel::common_types::{CoachId, Entity, UserId};
 use crate::app::shared_kernel::id_service::EntityIdService;
 use crate::app::shared_kernel::team::TeamName;
-use crate::app::team_creation::domain::creation_rules::CreationRules;
 use crate::app::team_creation::routes::Routes as TeamRoutes;
 use crate::app::team_creation::use_cases::create_draft_team::create_draft_team;
 use crate::state::AppState;
@@ -20,7 +19,6 @@ pub struct DraftTeamForm {
     pub logo_url: Option<String>,
     pub competition_id: String,
     pub season_id: String,
-    pub tc_creation_rules: String,
 }
 
 pub async fn post_draft_team(
@@ -65,14 +63,16 @@ pub async fn post_draft_team(
         return error_response("Sélectionnez une compétition et une saison.");
     }
 
-    let creation_rules: CreationRules = match serde_json::from_str(&form.tc_creation_rules) {
-        Ok(r) => r,
-        Err(_) => return error_response("Données de compétition invalides — rechargez la page."),
+    let creation_rules = match state
+        .team_creation
+        .competition_rules
+        .find_creation_rules_for_season(&form.season_id)
+        .await
+    {
+        Some(r) if !r.tiers.is_empty() => r,
+        Some(_) => return error_response("La compétition sélectionnée n'a pas de règles de création."),
+        None => return error_response("Saison introuvable — rechargez la page."),
     };
-
-    if creation_rules.tiers.is_empty() {
-        return error_response("La compétition sélectionnée n'a pas de règles de création.");
-    }
 
     let user_id_str = user.id.to_string();
     let created_by = UserId::try_new(&user_id_str).unwrap_or_else(|_| user.id.clone());

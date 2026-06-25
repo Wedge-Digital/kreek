@@ -7,9 +7,6 @@
 <div class="mr-container" x-data="{
   handleContext(e) {
     var d = e.detail;
-    document.getElementById('mr-competition-id').value = d.competition_id || '';
-    document.getElementById('mr-season-id').value = d.season_id || '';
-    document.getElementById('mr-round-id').value = d.id || '';
     if (d.season_id) {
       htmx.ajax('GET',
         '{{ team_widget_url }}' + (('{{ team_widget_url }}').indexOf('?') === -1 ? '?' : '&') + 'season_id=' + encodeURIComponent(d.season_id),
@@ -53,9 +50,6 @@
   {% endif %}
 
   <form method="post" action="{{ form_action }}">
-    <input type="hidden" name="competition_id" id="mr-competition-id" value="">
-    <input type="hidden" name="season_id" id="mr-season-id" value="">
-    <input type="hidden" name="round_id" id="mr-round-id" value="">
 
     <!-- Competition / Season / Round (widget du BC competitions) -->
     <div class="mr-card">

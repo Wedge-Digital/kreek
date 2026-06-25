@@ -1,4 +1,5 @@
 use crate::app::shared_kernel::team::TeamId;
+use crate::app::team_creation::domain::creation_rules::CreationRules;
 use crate::app::team_creation::domain::ruleset::Ruleset;
 use crate::app::team_creation::domain::team_draft::DraftTeam;
 use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
@@ -107,4 +108,9 @@ pub trait ITeamRosterRepository: Send + Sync {
 pub trait RulesetRepository: Send + Sync {
     async fn find_by_id(&self, id: &str) -> Result<Option<Ruleset>, RepositoryError>;
     async fn find_all(&self) -> Result<Vec<Ruleset>, RepositoryError>;
+}
+
+#[async_trait]
+pub trait ICompetitionCreationRulesPort: Send + Sync {
+    async fn find_creation_rules_for_season(&self, season_id: &str) -> Option<CreationRules>;
 }
