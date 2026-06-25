@@ -9,6 +9,7 @@ use axum::response::{Html, IntoResponse, Response};
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ActiveSection {
     Competitions,
+    MatchReport,
     CreateTeam,
     MyTeams,
 }
@@ -26,6 +27,10 @@ pub struct AppMenu {
 impl AppMenu {
     fn competitions_active(&self) -> bool {
         matches!(self.active_section, Some(ActiveSection::Competitions))
+    }
+
+    fn match_report_active(&self) -> bool {
+        matches!(self.active_section, Some(ActiveSection::MatchReport))
     }
 
     fn create_team_active(&self) -> bool {
@@ -72,6 +77,7 @@ fn extract_active_section(current_url: &str) -> Option<ActiveSection> {
     if parts.len() >= 3 && parts[0] == "app" && parts[1].len() == 26 {
         match parts[2] {
             "competitions" => Some(ActiveSection::Competitions),
+            "match-report" => Some(ActiveSection::MatchReport),
             "team" => match parts.get(3) {
                 Some(&"list") => Some(ActiveSection::MyTeams),
                 _ => Some(ActiveSection::CreateTeam),

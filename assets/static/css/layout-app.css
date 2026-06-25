@@ -248,6 +248,10 @@
   }
   .mobile-tab:hover .mobile-tab-label { color: rgba(255,255,255,0.7); }
   .mobile-tab.active .mobile-tab-label { color: var(--white); }
+  .mobile-tab-link {
+    text-decoration: none; color: inherit;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
 
   /* ── Space drawer ── */
   .space-drawer-overlay, .space-drawer { display: block; }

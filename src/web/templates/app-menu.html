@@ -80,18 +80,16 @@
        hx-target="#app-content"
        hx-select="#app-content"
        hx-swap="innerHTML"
-       hx-push-url="true"
-       onclick="document.querySelectorAll('.mobile-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active')">
+       hx-push-url="true">
     <span class="mobile-tab-icon">🏆</span>
     <span class="mobile-tab-label">Compétitions</span>
   </div>
-  <div class="mobile-tab"
+  <div class="mobile-tab{% if self.match_report_active() %} active{% endif %}"
        hx-get="{{ app_routes.match_report.new_match_report(sid) }}"
        hx-target="#app-content"
        hx-select="#app-content"
        hx-swap="innerHTML"
-       hx-push-url="true"
-       onclick="document.querySelectorAll('.mobile-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active')">
+       hx-push-url="true">
     <span class="mobile-tab-icon">📋</span>
     <span class="mobile-tab-label">Match</span>
   </div>
@@ -100,8 +98,7 @@
        hx-target="#app-content"
        hx-select="#app-content"
        hx-swap="innerHTML"
-       hx-push-url="true"
-       onclick="document.querySelectorAll('.mobile-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active')">
+       hx-push-url="true">
     <span class="mobile-tab-icon">🛡️</span>
     <span class="mobile-tab-label">Équipes</span>
   </div>
@@ -110,13 +107,12 @@
        hx-target="#app-content"
        hx-select="#app-content"
        hx-swap="innerHTML"
-       hx-push-url="true"
-       onclick="document.querySelectorAll('.mobile-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active')">
+       hx-push-url="true">
     <span class="mobile-tab-icon">📊</span>
     <span class="mobile-tab-label">Mes équipes</span>
   </div>
   <div class="mobile-tab">
-    <a href="{{ app_routes.auth.logout() }}" style="text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;">
+    <a class="mobile-tab-link" href="{{ app_routes.auth.logout() }}">
       <span class="mobile-tab-icon">👤</span>
       <span class="mobile-tab-label">Compte</span>
     </a>
