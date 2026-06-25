@@ -1,4 +1,5 @@
 
+<!-- ══ Desktop menu bar ══ -->
 <div class="menu-bar">
   <div class="menu-bar-inner">
     <div class="menu-left">
@@ -54,3 +55,71 @@
     {% endif %}
   </div>
 </div>
+
+<!-- ══ Mobile header ══ -->
+<div class="mobile-header">
+  <div class="mobile-header-space" @click="drawerOpen = !drawerOpen">
+    {% if let Some(logo) = space_logo %}
+    <img class="mobile-header-space-logo" src="{{ logo }}" alt="">
+    {% else %}
+    <div class="mobile-header-space-logo">K</div>
+    {% endif %}
+    <span class="mobile-header-space-name">{{ space_name.as_deref().unwrap_or("Kreek") }}</span>
+    <span class="mobile-header-space-chevron">▼</span>
+  </div>
+  <div class="mobile-header-actions">
+    <a class="mobile-header-btn" href="{{ app_routes.auth.logout() }}">👤</a>
+  </div>
+</div>
+
+<!-- ══ Mobile tab bar ══ -->
+{% if let Some(sid) = space_id %}
+<div class="mobile-tabbar">
+  <div class="mobile-tab{% if self.competitions_active() %} active{% endif %}"
+       hx-get="{{ app_routes.competitions.all_competitions(sid) }}"
+       hx-target="#app-content"
+       hx-select="#app-content"
+       hx-swap="innerHTML"
+       hx-push-url="true"
+       onclick="document.querySelectorAll('.mobile-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active')">
+    <span class="mobile-tab-icon">🏆</span>
+    <span class="mobile-tab-label">Compétitions</span>
+  </div>
+  <div class="mobile-tab"
+       hx-get="{{ app_routes.match_report.new_match_report(sid) }}"
+       hx-target="#app-content"
+       hx-select="#app-content"
+       hx-swap="innerHTML"
+       hx-push-url="true"
+       onclick="document.querySelectorAll('.mobile-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active')">
+    <span class="mobile-tab-icon">📋</span>
+    <span class="mobile-tab-label">Match</span>
+  </div>
+  <div class="mobile-tab{% if self.create_team_active() %} active{% endif %}"
+       hx-get="{{ app_routes.team_creation.draft_team(sid) }}"
+       hx-target="#app-content"
+       hx-select="#app-content"
+       hx-swap="innerHTML"
+       hx-push-url="true"
+       onclick="document.querySelectorAll('.mobile-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active')">
+    <span class="mobile-tab-icon">🛡️</span>
+    <span class="mobile-tab-label">Équipes</span>
+  </div>
+  <div class="mobile-tab{% if self.my_teams_active() %} active{% endif %}"
+       hx-get="{{ app_routes.team_creation.my_teams(sid) }}"
+       hx-target="#app-content"
+       hx-select="#app-content"
+       hx-swap="innerHTML"
+       hx-push-url="true"
+       onclick="document.querySelectorAll('.mobile-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active')">
+    <span class="mobile-tab-icon">📊</span>
+    <span class="mobile-tab-label">Mes équipes</span>
+  </div>
+  <div class="mobile-tab">
+    <a href="{{ app_routes.auth.logout() }}" style="text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;">
+      <span class="mobile-tab-icon">👤</span>
+      <span class="mobile-tab-label">Compte</span>
+    </a>
+  </div>
+</div>
+{% endif %}

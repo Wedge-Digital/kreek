@@ -28,7 +28,8 @@
   <script src="/static/js/kreek-select.js"></script>
 </head>
 <body>
-  <div class="app-layout">
+  <div class="app-layout" x-data="{ drawerOpen: false }">
+    <!-- Desktop sidebar -->
     <div class="sidebar"
          hx-get="{{ app_routes.web.spaces() }}"
          hx-trigger="load, space:changed from:body"
@@ -36,8 +37,8 @@
     </div>
 
     <div class="main-area">
-      <!-- Menu bar -->
-      <div class="menu-bar"
+      <!-- Desktop + mobile menu (loaded via HTMX) -->
+      <div class="menu-zone"
            hx-trigger="load, space:changed from:body, htmx:pushedIntoHistory from:body"
            hx-get="{{ app_routes.web.menu() }}"
            hx-swap="innerHTML">
@@ -48,6 +49,24 @@
         <div class="home-grid" id="app-content">
           {% block content %}{% endblock %}
         </div>
+      </div>
+    </div>
+
+    <!-- Mobile space drawer overlay -->
+    <div class="space-drawer-overlay"
+         x-show="drawerOpen"
+         @click="drawerOpen = false"
+         x-cloak>
+    </div>
+    <div class="space-drawer" :class="{ open: drawerOpen }">
+      <div class="space-drawer-header">
+        <div class="space-drawer-title">Mes espaces</div>
+      </div>
+      <div class="space-drawer-list"
+           @click="drawerOpen = false"
+           hx-get="{{ app_routes.web.spaces() }}"
+           hx-trigger="load, space:changed from:body"
+           hx-swap="innerHTML">
       </div>
     </div>
   </div>

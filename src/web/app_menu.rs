@@ -19,6 +19,7 @@ pub struct AppMenu {
     pub app_routes: AppRoutes,
     pub space_name: Option<String>,
     pub space_id: Option<String>,
+    pub space_logo: Option<String>,
     pub active_section: Option<ActiveSection>,
 }
 
@@ -87,8 +88,8 @@ pub async fn app_menu(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    let (space_name, space_id, active_section) = {
-        let result: Option<(String, String, Option<ActiveSection>)> = async {
+    let (space_name, space_id, active_section, space_logo) = {
+        let result: Option<(String, String, Option<ActiveSection>, String)> = async {
             let user = auth_session.user?;
             let current_url = headers
                 .get("hx-current-url")
@@ -102,18 +103,20 @@ pub async fn app_menu(
                 .await
                 .ok()?;
             let space = spaces.into_iter().find(|s| s.id == sid)?;
-            Some((space.name, sid, section))
+            let logo = space.logo.thumbnail(64, 64);
+            Some((space.name, sid, section, logo))
         }
         .await;
         match result {
-            Some((name, id, section)) => (Some(name), Some(id), section),
-            None => (None, None, None),
+            Some((name, id, section, logo)) => (Some(name), Some(id), section, Some(logo)),
+            None => (None, None, None, None),
         }
     };
 
     AppMenu {
         space_name,
         space_id,
+        space_logo,
         active_section,
         ..Default::default()
     }
