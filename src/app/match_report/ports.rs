@@ -1,39 +1,7 @@
 use async_trait::async_trait;
 
-pub struct CompetitionOptionDto {
-    pub competition_id: String,
-    pub name: String,
-}
-
-pub struct SeasonOptionDto {
-    pub season_id: String,
-    pub name: String,
-}
-
-pub struct RoundOptionDto {
-    pub round_id: String,
-    pub name: String,
-    pub date_start: Option<String>,
-    pub date_end: Option<String>,
-}
-
 #[async_trait]
 pub trait ICompetitionDataPort: Send + Sync {
-    async fn list_competitions_with_active_season(
-        &self,
-        space_id: &str,
-    ) -> Result<Vec<CompetitionOptionDto>, String>;
-
-    async fn list_seasons(
-        &self,
-        competition_id: &str,
-    ) -> Result<Vec<SeasonOptionDto>, String>;
-
-    async fn list_rounds(
-        &self,
-        season_id: &str,
-    ) -> Result<Vec<RoundOptionDto>, String>;
-
     async fn is_competition_admin(
         &self,
         competition_id: &str,

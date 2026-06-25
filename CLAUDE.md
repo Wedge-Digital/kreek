@@ -620,13 +620,31 @@ let rows = build_hired_rows(&roster_team, &roster_def);
 let positions = build_player_positions(&roster_def);
 ```
 
-### Selects — TomSelect obligatoire
+### Selects — kreek-select obligatoire
 
-Tout élément `<select>` dans l'application doit être un **widget TomSelect** (searchable, avec style homogène). Les `<select>` natifs sont interdits dans les templates finaux.
+Tout sélecteur dans l'application doit être un **`<kreek-select>`** (Web Component custom). Les `<select>` natifs et TomSelect sont **interdits** dans les templates finaux.
 
-- TomSelect est initialisé via Alpine.js `init()`/`destroy()` ou via un `<script>` scoped (cf. convention widgets)
-- Le style TomSelect doit être homogène avec le design system (`common.css`, `tom-select.css`)
-- Les maquettes (`rawpages/`) peuvent utiliser TomSelect directement pour valider le rendu
+`kreek-select` gère automatiquement :
+- Le chargement des données depuis une URL JSON (`url`)
+- La recherche dans les options
+- Le lifecycle (création / destruction sur swap HTMX via `connectedCallback` / `disconnectedCallback`)
+- Les cascades entre selects (`listen` / `event`)
+- Le rendu riche via `<template>` (`option-template` / `selected-template`)
+- La sélection multiple avec badges (`multiple`)
+
+```html
+<!-- Exemple simple -->
+<kreek-select name="fruit" url="/api/fruits" placeholder="Choisir un fruit…"></kreek-select>
+
+<!-- Exemple cascade -->
+<kreek-select name="color" url="/api/colors" event="colorSelected"></kreek-select>
+<kreek-select name="fruit" url="/api/fruits" listen="colorSelected"
+              listen-param="id" listen-query="color"></kreek-select>
+```
+
+- Le composant est défini dans `assets/static/js/kreek-select.js`, le CSS dans `assets/static/css/components/kreek-select.css`
+- Page de test : `/kreek-select-tester`
+- Les maquettes (`rawpages/`) peuvent utiliser des `<select>` natifs pour valider le rendu
 
 ### Interdiction des styles inline — règle obligatoire
 

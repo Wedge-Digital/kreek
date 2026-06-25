@@ -4,7 +4,19 @@
 <link rel="stylesheet" href="/static/css/pages/match-report-shared.css">
 <link rel="stylesheet" href="/static/css/pages/match-report-step1.css">
 
-<div class="mr-container">
+<div class="mr-container" x-data="{
+  handleContext(e) {
+    var d = e.detail;
+    document.getElementById('mr-competition-id').value = d.competition_id || '';
+    document.getElementById('mr-season-id').value = d.season_id || '';
+    document.getElementById('mr-round-id').value = d.id || '';
+    if (d.season_id) {
+      htmx.ajax('GET',
+        '{{ teams_url }}?season_id=' + encodeURIComponent(d.season_id),
+        { target: '#teams-container', swap: 'innerHTML' });
+    }
+  }
+}" @match-context-selected.window="handleContext($event)">
 
   <!-- Header -->
   <div class="mr-header">
@@ -40,176 +52,41 @@
   </div>
   {% endif %}
 
-  <!-- Form card: Competition / Season / Round -->
   <form method="post" action="{{ form_action }}">
-  <div class="mr-card">
+    <input type="hidden" name="competition_id" id="mr-competition-id" value="">
+    <input type="hidden" name="season_id" id="mr-season-id" value="">
+    <input type="hidden" name="round_id" id="mr-round-id" value="">
 
-    <!-- Compétition -->
-    <div class="mr-field">
-      <label class="mr-label">Compétition</label>
-      <div id="competition-container">
-        <select id="competition-select" name="competition_id"
-                hx-get="{{ seasons_url }}"
-                hx-trigger="change"
-                hx-target="#season-container"
-                hx-swap="innerHTML"
-                hx-include="this">
-          <option value="">Choisir une compétition…</option>
-          {% for c in competitions %}
-          <option value="{{ c.id }}" {% if c.selected %}selected{% endif %}>{{ c.name }}</option>
-          {% endfor %}
-        </select>
+    <!-- Competition / Season / Round (widget du BC competitions) -->
+    <div class="mr-card">
+      <div hx-get="{{ widget_url }}"
+           hx-trigger="load"
+           hx-target="this"
+           hx-swap="innerHTML">
       </div>
     </div>
 
-    <!-- Saison -->
-    <div class="mr-field">
-      <label class="mr-label">Saison</label>
-      <div id="season-container">
-        <select id="season-select" name="season_id"
-                hx-get="{{ rounds_url }}"
-                hx-trigger="change"
-                hx-target="#round-container"
-                hx-swap="innerHTML"
-                hx-include="this">
-          <option value="">Choisir une saison…</option>
-          {% for s in seasons %}
-          <option value="{{ s.id }}" {% if s.selected %}selected{% endif %}>{{ s.name }}</option>
-          {% endfor %}
-        </select>
+    <!-- Teams selection -->
+    <div class="mr-card">
+      <div class="mr-vs-section" id="teams-container">
+
+        {% if !teams.is_empty() %}
+        {% include "fragments/team-options.html" %}
+        {% else %}
+        <div class="mr-teams-placeholder">
+          Sélectionnez une compétition, une saison et une journée pour voir les équipes disponibles.
+        </div>
+        {% endif %}
+
       </div>
     </div>
 
-    <!-- Journée -->
-    <div class="mr-field">
-      <label class="mr-label">Journée</label>
-      <div id="round-container">
-        <select id="round-select" name="round_id"
-                hx-get="{{ teams_url }}"
-                hx-trigger="change"
-                hx-target="#teams-container"
-                hx-swap="innerHTML"
-                hx-include="[name='season_id']">
-          <option value="">Choisir une journée…</option>
-          {% for r in rounds %}
-          <option value="{{ r.id }}" {% if r.selected %}selected{% endif %}>{{ r.name }}{% if !r.dates.is_empty() %} ({{ r.dates }}){% endif %}</option>
-          {% endfor %}
-        </select>
-      </div>
+    <!-- Actions -->
+    <div class="mr-actions">
+      <a href="javascript:history.back()" class="btn-outline-sm">Annuler</a>
+      <button type="submit" class="btn-primary-sm">Commencer &#8594;</button>
     </div>
-
-  </div>
-
-  <!-- Teams selection -->
-  <div class="mr-card">
-    <div class="mr-vs-section" id="teams-container">
-
-      <!-- Home team -->
-      <div class="mr-field">
-        <label class="mr-label">
-          {% if is_admin %}Équipe domicile{% else %}Mon équipe{% endif %}
-        </label>
-        <select id="home-select" name="home_team_id">
-          <option value="">Sélectionner…</option>
-          {% for t in teams %}
-          {% if is_admin || t.is_own_team %}
-          <option value="{{ t.id }}"
-                  data-coach="{{ t.coach_name }}" data-roster="{{ t.roster_name }}" data-tv="{{ t.tv }}"
-                  {% if let Some(sel) = selected %}{% if sel.home_team_id == t.id %}selected{% endif %}{% endif %}>
-            {{ t.name }}
-          </option>
-          {% endif %}
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="mr-team-card mr-team-card--empty" id="home-card">
-        Sélectionnez une équipe
-      </div>
-
-      <!-- VS divider -->
-      <div class="mr-vs-divider">
-        <div class="mr-vs-line"></div>
-        <span class="mr-vs-text">VS</span>
-        <div class="mr-vs-line"></div>
-      </div>
-
-      <!-- Away team -->
-      <div class="mr-field">
-        <label class="mr-label">
-          {% if is_admin %}Équipe visiteur{% else %}Adversaire{% endif %}
-        </label>
-        <select id="away-select" name="away_team_id">
-          <option value="">Sélectionner…</option>
-          {% for t in teams %}
-          <option value="{{ t.id }}"
-                  data-coach="{{ t.coach_name }}" data-roster="{{ t.roster_name }}" data-tv="{{ t.tv }}"
-                  {% if let Some(sel) = selected %}{% if sel.away_team_id == t.id %}selected{% endif %}{% endif %}>
-            {{ t.name }}
-          </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="mr-team-card mr-team-card--empty" id="away-card">
-        Sélectionnez une équipe
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Actions -->
-  <div class="mr-actions">
-    <a href="javascript:history.back()" class="btn-outline-sm">Annuler</a>
-    <button type="submit" class="btn-primary-sm">Commencer &#8594;</button>
-  </div>
 
   </form>
 </div>
-
-<script>
-(function() {
-  function initTomSelect(id, searchFields) {
-    var el = document.getElementById(id);
-    if (!el || el.tomselect) return;
-    new TomSelect(el, { searchField: searchFields || ['text'] });
-  }
-
-  initTomSelect('competition-select', ['text']);
-  initTomSelect('season-select', ['text']);
-  initTomSelect('round-select', ['text']);
-
-  function initTeamSelect(selectId, cardId) {
-    var el = document.getElementById(selectId);
-    if (!el || el.tomselect) return;
-    new TomSelect(el, {
-      searchField: ['text'],
-      onChange: function(val) {
-        var card = document.getElementById(cardId);
-        var opt = el.querySelector('option[value="' + val + '"]');
-        if (!opt || !val) {
-          card.className = 'mr-team-card mr-team-card--empty';
-          card.innerHTML = 'Sélectionnez une équipe';
-          return;
-        }
-        var name = opt.textContent.trim();
-        var coach = opt.dataset.coach || '';
-        var roster = opt.dataset.roster || '';
-        var tv = opt.dataset.tv || '';
-        var initials = name.split(' ').map(function(w){ return w[0]; }).join('').substring(0,2).toUpperCase();
-        card.className = 'mr-team-card mr-team-card--selected';
-        card.innerHTML = '<div class="mr-team-logo">' + initials + '</div>'
-          + '<div class="mr-team-info">'
-          + '<div class="mr-team-name">' + name + '</div>'
-          + '<div class="mr-team-meta">Coach : ' + coach + ' &middot; ' + roster + ' &middot; TV ' + tv + '</div>'
-          + '</div>';
-      }
-    });
-    if (el.value) el.tomselect.trigger('change', el.value);
-  }
-
-  initTeamSelect('home-select', 'home-card');
-  initTeamSelect('away-select', 'away-card');
-})();
-</script>
 {% endblock %}

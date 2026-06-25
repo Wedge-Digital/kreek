@@ -23,8 +23,10 @@ use crate::app::competitions::io::web::competition_detail::{
     get_competition_detail, get_tab_matches, get_tab_standings, get_tab_stats, get_tab_teams,
 };
 use crate::app::competitions::io::web::competition_widget::{
-    get_competition_widget, get_competition_widget_detail, get_competition_widget_seasons,
+    get_competition_widget, get_competition_widget_detail, get_json_competitions,
+    get_json_rounds, get_json_seasons,
 };
+use crate::app::competitions::io::web::widget_tester_controller::get_competitions_widget_tester;
 use crate::app::competitions::io::web::new_competition::{
     get_new_competition_phase_1, get_new_competition_phase_1_edit, get_new_competition_phase_2,
     post_competition_rules, post_new_competition, post_update_competition,
@@ -77,12 +79,24 @@ pub fn router() -> Router<AppState> {
         .route(path::COMPETITION_TAB_STATS, get(get_tab_stats))
         .route(path::COMPETITION_WIDGET, get(get_competition_widget))
         .route(
-            path::COMPETITION_WIDGET_SEASONS,
-            get(get_competition_widget_seasons),
+            path::COMPETITION_WIDGET_JSON_COMPETITIONS,
+            get(get_json_competitions),
+        )
+        .route(
+            path::COMPETITION_WIDGET_JSON_SEASONS,
+            get(get_json_seasons),
+        )
+        .route(
+            path::COMPETITION_WIDGET_JSON_ROUNDS,
+            get(get_json_rounds),
         )
         .route(
             path::COMPETITION_WIDGET_DETAIL,
             get(get_competition_widget_detail),
+        )
+        .route(
+            path::COMPETITION_WIDGET_TESTER,
+            get(get_competitions_widget_tester),
         )
         .route(path::COMPETITION_ADMIN, get(admin_page))
         .route(path::COMPETITION_ADMIN_DASHBOARD, get(dashboard_fragment))

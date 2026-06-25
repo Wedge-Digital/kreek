@@ -1,4 +1,5 @@
 .competition-widget { display: flex; flex-direction: column; gap: var(--p1); }
+.competition-widget .hidden { display: none; }
 
 /* ── Placeholder quand aucune compétition ────────────────────────────────── */
 .competition-widget-empty {

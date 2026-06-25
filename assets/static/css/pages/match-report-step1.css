@@ -1,3 +1,29 @@
+/* ── Competition widget override inside match-report card ── */
+.mr-card .competition-widget { gap: var(--p1); }
+.mr-card .competition-widget .form-group {
+  margin-bottom: 0;
+  gap: 6px;
+}
+.mr-card .competition-widget .form-label {
+  font-size: var(--text-tiny);
+  font-weight: 600;
+  color: var(--dark-2);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.mr-card .competition-widget kreek-select .ks-control {
+  padding: 10px 14px;
+  font-size: var(--text-tiny);
+}
+
+.mr-teams-placeholder {
+  padding: var(--p2);
+  text-align: center;
+  font-size: var(--text-tiny);
+  color: var(--dark-4);
+  font-style: italic;
+}
+
 /* ── VS section ── */
 .mr-vs-section {
   display: flex; flex-direction: column; gap: var(--p1);

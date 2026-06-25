@@ -1,0 +1,107 @@
+{% extends "widget-tester-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/components/competition-widget.css">
+
+<div class="test-competition-widget">
+    <div class="form-header">Test : widget cascade compétition / saison / journée</div>
+
+    <div class="form-group">
+        <label class="form-label">Espace</label>
+        <select id="space-select">
+            <option value="">-- Choisir un espace --</option>
+            {% for space in spaces %}
+            <option value="{{ space.id }}">{{ space.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Widget vide -->
+    <div class="form-header">Widget vide (mode show_rounds)</div>
+    <div id="widget-container"
+         data-widget-base="/app/__SID__/competitions/widget?show_rounds=true"
+         style="border: 1px dashed #888; padding: 16px; border-radius: 8px; min-height: 60px;">
+        <p style="color: #888; font-style: italic;">Sélectionnez un espace pour charger le widget.</p>
+    </div>
+
+    <!-- Widget pré-rempli -->
+    <div class="form-header">Widget pré-rempli</div>
+    <div style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 8px;"
+         x-data="{ lastEvt: null }"
+         @match-context-selected.window="lastEvt = $event.detail">
+        <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
+            <label class="form-label">competition_id</label>
+            <input id="prefill-comp" class="form-input" type="text" placeholder="..." :value="lastEvt?.competition_id || ''">
+        </div>
+        <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
+            <label class="form-label">season_id</label>
+            <input id="prefill-season" class="form-input" type="text" placeholder="..." :value="lastEvt?.season_id || ''">
+        </div>
+        <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
+            <label class="form-label">round_id</label>
+            <input id="prefill-round" class="form-input" type="text" placeholder="..." :value="lastEvt?.id || ''">
+        </div>
+        <button id="btn-prefill" class="btn btn-primary btn-sm" type="button"
+                style="white-space: nowrap;">Charger pré-rempli</button>
+    </div>
+    <div id="widget-container-prefilled"
+         data-widget-base="/app/__SID__/competitions/widget?show_rounds=true"
+         style="border: 1px dashed #888; padding: 16px; border-radius: 8px; min-height: 60px;">
+        <p style="color: #888; font-style: italic;">Remplissez les IDs ci-dessus puis cliquez "Charger pré-rempli".</p>
+    </div>
+
+    <!-- Événements reçus -->
+    <div class="form-header">Événements reçus</div>
+    <div id="event-log"
+         x-data="{ events: [] }"
+         @match-context-selected.window="events.push({ ...($event.detail), ts: new Date().toLocaleTimeString() })"
+         style="border: 1px solid #444; padding: 16px; border-radius: 8px; min-height: 40px;">
+        <template x-if="events.length === 0">
+            <p style="color: #888; font-style: italic;">Aucun événement matchContextSelected reçu.</p>
+        </template>
+        <template x-for="(evt, i) in events" :key="i">
+            <div style="margin-bottom: 8px; padding: 8px; background: #f0f4f8; border-radius: 4px; font-size: 13px;">
+                <strong>matchContextSelected</strong> <span style="color: #888;" x-text="evt.ts"></span><br>
+                competition_id: <span x-text="evt.competition_id"></span><br>
+                season_id: <span x-text="evt.season_id"></span><br>
+                round_id: <span x-text="evt.id"></span><br>
+                name: <span x-text="evt.name"></span>
+            </div>
+        </template>
+    </div>
+</div>
+
+<script>
+(function() {
+    var spaceSel = document.getElementById('space-select');
+    var container = document.getElementById('widget-container');
+    var containerPrefilled = document.getElementById('widget-container-prefilled');
+    var base = container.dataset.widgetBase;
+
+    new TomSelect(spaceSel, { placeholder: '-- Choisir un espace --' });
+
+    spaceSel.addEventListener('change', function() {
+        var sid = spaceSel.value;
+        if (!sid) {
+            container.innerHTML = '<p style="color: #888; font-style: italic;">Sélectionnez un espace pour charger le widget.</p>';
+            return;
+        }
+        var url = base.replace('__SID__', sid);
+        htmx.ajax('GET', url, { target: container, swap: 'innerHTML' });
+    });
+
+    document.getElementById('btn-prefill').addEventListener('click', function() {
+        var sid = spaceSel.value;
+        if (!sid) { alert('Sélectionnez d\'abord un espace.'); return; }
+        var compId = document.getElementById('prefill-comp').value;
+        var seasonId = document.getElementById('prefill-season').value;
+        var roundId = document.getElementById('prefill-round').value;
+        var url = base.replace('__SID__', sid)
+            + '&competition_id=' + encodeURIComponent(compId)
+            + '&season_id=' + encodeURIComponent(seasonId)
+            + '&round_id=' + encodeURIComponent(roundId);
+        htmx.ajax('GET', url, { target: containerPrefilled, swap: 'innerHTML' });
+    });
+})();
+</script>
+{% endblock %}

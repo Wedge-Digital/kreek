@@ -25,12 +25,8 @@ use serde::Deserialize;
 pub struct MatchSelectionTemplate {
     pub app_routes: AppRoutes,
     pub space_id: String,
-    pub seasons_url: String,
-    pub rounds_url: String,
+    pub widget_url: String,
     pub teams_url: String,
-    pub competitions: Vec<CompetitionOptionVm>,
-    pub seasons: Vec<SeasonOptionVm>,
-    pub rounds: Vec<RoundOptionVm>,
     pub teams: Vec<TeamOptionVm>,
     pub selected: Option<SelectedMatchVm>,
     pub is_admin: bool,
@@ -40,38 +36,6 @@ pub struct MatchSelectionTemplate {
 }
 
 impl IntoResponse for MatchSelectionTemplate {
-    fn into_response(self) -> Response {
-        match self.render() {
-            Ok(html) => Html(html).into_response(),
-            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-        }
-    }
-}
-
-#[derive(Template)]
-#[template(path = "fragments/season-options.html")]
-pub struct SeasonOptionsFragment {
-    pub rounds_url: String,
-    pub seasons: Vec<SeasonOptionVm>,
-}
-
-impl IntoResponse for SeasonOptionsFragment {
-    fn into_response(self) -> Response {
-        match self.render() {
-            Ok(html) => Html(html).into_response(),
-            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-        }
-    }
-}
-
-#[derive(Template)]
-#[template(path = "fragments/round-options.html")]
-pub struct RoundOptionsFragment {
-    pub teams_url: String,
-    pub rounds: Vec<RoundOptionVm>,
-}
-
-impl IntoResponse for RoundOptionsFragment {
     fn into_response(self) -> Response {
         match self.render() {
             Ok(html) => Html(html).into_response(),
@@ -99,12 +63,7 @@ impl IntoResponse for TeamOptionsFragment {
 // ── Query params ─────────────────────────────────────────────────────────────
 
 #[derive(Deserialize)]
-pub struct CompetitionQuery {
-    pub competition_id: Option<String>,
-}
-
-#[derive(Deserialize)]
-pub struct SeasonQuery {
+pub struct TeamsQuery {
     pub season_id: Option<String>,
 }
 
@@ -142,6 +101,28 @@ async fn is_admin(
     false
 }
 
+fn build_widget_url(space_id: &str) -> String {
+    AppRoutes::default()
+        .competitions
+        .competition_widget(space_id)
+        + "?show_rounds=true"
+}
+
+fn build_widget_url_prefilled(
+    space_id: &str,
+    competition_id: &str,
+    season_id: &str,
+    round_id: &str,
+) -> String {
+    format!(
+        "{}?show_rounds=true&competition_id={}&season_id={}&round_id={}",
+        AppRoutes::default().competitions.competition_widget(space_id),
+        competition_id,
+        season_id,
+        round_id,
+    )
+}
+
 // ── Handlers GET ─────────────────────────────────────────────────────────────
 
 pub async fn from_pairing(
@@ -171,41 +152,24 @@ pub async fn from_pairing(
 pub async fn new_match_report(
     auth_session: AuthSession,
     Path(space_id): Path<String>,
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
 ) -> impl IntoResponse {
-    let Some(user) = auth_session.user else {
+    let Some(_user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
-    let coach_id = user.id.to_string();
-
-    let competitions = state
-        .match_report
-        .competition_data
-        .list_competitions_with_active_season(&space_id)
-        .await
-        .unwrap_or_default()
-        .into_iter()
-        .map(|c| CompetitionOptionVm {
-            id: c.competition_id,
-            name: c.name,
-            selected: false,
-        })
-        .collect();
 
     let form_action = AppRoutes::default()
         .match_report
         .new_match_report(&space_id);
+    let teams_url = AppRoutes::default()
+        .match_report
+        .teams_fragment(&space_id);
 
-    let mr_routes = AppRoutes::default().match_report;
     MatchSelectionTemplate {
         app_routes: Default::default(),
-        seasons_url: mr_routes.seasons_fragment(&space_id),
-        rounds_url: mr_routes.rounds_fragment(&space_id),
-        teams_url: mr_routes.teams_fragment(&space_id),
+        widget_url: build_widget_url(&space_id),
+        teams_url,
         space_id,
-        competitions,
-        seasons: vec![],
-        rounds: vec![],
         teams: vec![],
         selected: None,
         is_admin: false,
@@ -248,53 +212,6 @@ pub async fn edit_match_report(
 
             let admin = is_admin(&state, Some(&comp_id), &coach_id).await;
 
-            let competitions = state
-                .match_report
-                .competition_data
-                .list_competitions_with_active_season(&space_id)
-                .await
-                .unwrap_or_default()
-                .into_iter()
-                .map(|c| CompetitionOptionVm {
-                    selected: c.competition_id == comp_id,
-                    id: c.competition_id,
-                    name: c.name,
-                })
-                .collect();
-
-            let seasons = state
-                .match_report
-                .competition_data
-                .list_seasons(&comp_id)
-                .await
-                .unwrap_or_default()
-                .into_iter()
-                .map(|s| SeasonOptionVm {
-                    selected: s.season_id == season_id,
-                    id: s.season_id,
-                    name: s.name,
-                })
-                .collect();
-
-            let rounds = state
-                .match_report
-                .competition_data
-                .list_rounds(&season_id)
-                .await
-                .unwrap_or_default()
-                .into_iter()
-                .map(|r| RoundOptionVm {
-                    selected: r.round_id == round_id,
-                    id: r.round_id,
-                    name: r.name,
-                    dates: match (r.date_start, r.date_end) {
-                        (Some(s), Some(e)) => format!("{} → {}", s, e),
-                        (Some(s), None) => s,
-                        _ => String::new(),
-                    },
-                })
-                .collect();
-
             let home_id = draft.home_team_id.to_string();
             let away_id = draft.away_team_id.to_string();
 
@@ -319,17 +236,17 @@ pub async fn edit_match_report(
             let form_action = AppRoutes::default()
                 .match_report
                 .edit_match_report(&space_id, &match_report_id);
+            let teams_url = AppRoutes::default()
+                .match_report
+                .teams_fragment(&space_id);
 
-            let mr_routes2 = AppRoutes::default().match_report;
             MatchSelectionTemplate {
                 app_routes: Default::default(),
-                seasons_url: mr_routes2.seasons_fragment(&space_id),
-                rounds_url: mr_routes2.rounds_fragment(&space_id),
-                teams_url: mr_routes2.teams_fragment(&space_id),
+                widget_url: build_widget_url_prefilled(
+                    &space_id, &comp_id, &season_id, &round_id,
+                ),
+                teams_url,
                 space_id,
-                competitions,
-                seasons,
-                rounds,
                 teams,
                 selected: Some(SelectedMatchVm {
                     match_report_id: match_report_id.clone(),
@@ -356,77 +273,9 @@ pub async fn edit_match_report(
     }
 }
 
-pub async fn seasons_fragment(
-    Path(space_id): Path<String>,
-    Query(q): Query<CompetitionQuery>,
-    State(state): State<AppState>,
-) -> impl IntoResponse {
-    let competition_id = q.competition_id.unwrap_or_default();
-    let seasons = state
-        .match_report
-        .competition_data
-        .list_seasons(&competition_id)
-        .await
-        .unwrap_or_default()
-        .into_iter()
-        .enumerate()
-        .map(|(i, s)| SeasonOptionVm {
-            selected: i == 0,
-            id: s.season_id,
-            name: s.name,
-        })
-        .collect();
-
-    let rounds_url = AppRoutes::default()
-        .match_report
-        .rounds_fragment(&space_id);
-
-    SeasonOptionsFragment {
-        rounds_url,
-        seasons,
-    }
-    .into_response()
-}
-
-pub async fn rounds_fragment(
-    Path(space_id): Path<String>,
-    Query(q): Query<SeasonQuery>,
-    State(state): State<AppState>,
-) -> impl IntoResponse {
-    let season_id = q.season_id.unwrap_or_default();
-    let rounds = state
-        .match_report
-        .competition_data
-        .list_rounds(&season_id)
-        .await
-        .unwrap_or_default()
-        .into_iter()
-        .map(|r| RoundOptionVm {
-            selected: false,
-            id: r.round_id,
-            name: r.name,
-            dates: match (r.date_start, r.date_end) {
-                (Some(s), Some(e)) => format!("{} → {}", s, e),
-                (Some(s), None) => s,
-                _ => String::new(),
-            },
-        })
-        .collect();
-
-    let teams_url = AppRoutes::default()
-        .match_report
-        .teams_fragment(&space_id);
-
-    RoundOptionsFragment {
-        teams_url,
-        rounds,
-    }
-    .into_response()
-}
-
 pub async fn teams_fragment(
     auth_session: AuthSession,
-    Query(q): Query<SeasonQuery>,
+    Query(q): Query<TeamsQuery>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let coach_id = auth_session

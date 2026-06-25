@@ -233,9 +233,6 @@ mod tests {
                 struct FakeCompDataPort;
                 #[async_trait::async_trait]
                 impl crate::app::match_report::ports::ICompetitionDataPort for FakeCompDataPort {
-                    async fn list_competitions_with_active_season(&self, _: &str) -> Result<Vec<crate::app::match_report::ports::CompetitionOptionDto>, String> { Ok(vec![]) }
-                    async fn list_seasons(&self, _: &str) -> Result<Vec<crate::app::match_report::ports::SeasonOptionDto>, String> { Ok(vec![]) }
-                    async fn list_rounds(&self, _: &str) -> Result<Vec<crate::app::match_report::ports::RoundOptionDto>, String> { Ok(vec![]) }
                     async fn is_competition_admin(&self, _: &str, _: &str) -> Result<bool, String> { Ok(false) }
                 }
                 struct FakeTeamDataPort;

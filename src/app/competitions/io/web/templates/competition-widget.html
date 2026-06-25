@@ -1,38 +1,70 @@
 <link rel="stylesheet" href="/static/css/components/competition-widget.css">
-<div class="competition-widget">
-  {% if competitions.is_empty() %}
-  <div class="competition-widget-empty">Pas de compétition disponible.</div>
-  {% else %}
+<div class="competition-widget" hx-disinherit="*">
 
   <div class="form-group">
-    <label class="form-label" for="competition-select">Compétition</label>
-    <select id="competition-select"
-            class="form-select"
-            name="competition_id"
-            hx-get="{{ routes.competition_widget_seasons(space_id) }}{% if show_detail %}?show_detail=true{% endif %}"
-            hx-trigger="change"
-            hx-target="#season-select-wrapper"
-            hx-swap="innerHTML"
-            hx-include="this">
-      <option value="">Sélectionnez une compétition…</option>
-      {% for c in competitions %}
-      <option value="{{ c.competition_id }}">{{ c.competition_name }}</option>
-      {% endfor %}
-    </select>
+    <label class="form-label">Compétition</label>
+    <kreek-select
+        name="competition_id"
+        url="{{ routes.competition_widget_json_competitions(space_id) }}"
+        value-field="id"
+        label-field="name"
+        event="competitionSelected"
+        placeholder="Sélectionnez une compétition…"
+        {% if !selected_competition_id.is_empty() %}selected-value="{{ selected_competition_id }}"{% endif %}>
+    </kreek-select>
   </div>
 
-  <div id="season-select-wrapper">
-    <div class="form-group">
-      <label class="form-label" for="season-select">Saison</label>
-      <select id="season-select" class="form-select" disabled>
-        <option value="">— Sélectionnez d'abord une compétition —</option>
-      </select>
-    </div>
+  <div class="form-group">
+    <label class="form-label">Saison</label>
+    <kreek-select
+        name="season_id"
+        url="{{ routes.competition_widget_json_seasons(space_id) }}"
+        value-field="id"
+        label-field="name"
+        listen="competitionSelected"
+        listen-param="id"
+        listen-query="competition_id"
+        event="seasonSelected"
+        auto-select-first
+        placeholder="Sélectionnez une saison…"
+        {% if !selected_season_id.is_empty() %}selected-value="{{ selected_season_id }}"{% endif %}>
+    </kreek-select>
   </div>
 
-  <div id="competition-widget-detail"
-       class="competition-widget-detail"
-       {% if !show_detail %}style="display:none"{% endif %}></div>
-
+  {% if show_rounds %}
+  <div class="form-group">
+    <label class="form-label">Journée</label>
+    <kreek-select
+        name="round_id"
+        url="{{ routes.competition_widget_json_rounds(space_id) }}"
+        value-field="id"
+        label-field="name"
+        listen="seasonSelected"
+        listen-param="id"
+        listen-query="season_id"
+        event="matchContextSelected"
+        event-fields="competition_id,season_id"
+        auto-select-first
+        placeholder="Sélectionnez une journée…"
+        {% if !selected_round_id.is_empty() %}selected-value="{{ selected_round_id }}"{% endif %}>
+    </kreek-select>
+  </div>
   {% endif %}
+
+  {% if show_detail %}
+  <div id="competition-widget-detail" class="competition-widget-detail"></div>
+  <script>
+  (function () {
+    var detailBase = '{{ routes.competition_widget_detail(space_id, "__SID__") }}'.replace('__SID__', '');
+    var detail = document.getElementById('competition-widget-detail');
+    document.body.addEventListener('seasonSelected', function (e) {
+      var seasonId = e.detail && e.detail.id;
+      if (!seasonId) { detail.innerHTML = ''; return; }
+      var url = detailBase + seasonId;
+      htmx.ajax('GET', url, { target: detail, swap: 'innerHTML' });
+    });
+  })();
+  </script>
+  {% endif %}
+
 </div>

@@ -4,23 +4,21 @@ use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
-use axum::response::{Html, IntoResponse, Response};
+use axum::response::{Html, IntoResponse, Json, Response};
 use serde::{Deserialize, Serialize};
 
-// ── Widget principal : sélecteur compétition ─────────────────────────────────
-
-pub struct CompetitionItem {
-    pub competition_id: String,
-    pub competition_name: String,
-}
+// ── Widget principal ─────────────────────────────────────────────────────────
 
 #[derive(Template)]
 #[template(path = "competition-widget.html")]
 pub struct CompetitionWidgetTemplate {
     pub routes: CompetitionRoutes,
     pub space_id: String,
-    pub competitions: Vec<CompetitionItem>,
     pub show_detail: bool,
+    pub show_rounds: bool,
+    pub selected_competition_id: String,
+    pub selected_season_id: String,
+    pub selected_round_id: String,
 }
 
 impl IntoResponse for CompetitionWidgetTemplate {
@@ -36,11 +34,66 @@ impl IntoResponse for CompetitionWidgetTemplate {
 pub struct CompetitionWidgetQuery {
     #[serde(default)]
     pub show_detail: bool,
+    #[serde(default)]
+    pub show_rounds: bool,
+    pub competition_id: Option<String>,
+    pub season_id: Option<String>,
+    pub round_id: Option<String>,
 }
 
 pub async fn get_competition_widget(
     Path(space_id_raw): Path<String>,
     Query(query): Query<CompetitionWidgetQuery>,
+    State(_state): State<AppState>,
+) -> impl IntoResponse {
+    CompetitionWidgetTemplate {
+        routes: Default::default(),
+        space_id: space_id_raw,
+        show_detail: query.show_detail,
+        show_rounds: query.show_rounds,
+        selected_competition_id: query.competition_id.unwrap_or_default(),
+        selected_season_id: query.season_id.unwrap_or_default(),
+        selected_round_id: query.round_id.unwrap_or_default(),
+    }
+    .into_response()
+}
+
+// ── Endpoints JSON pour kreek-select ─────────────────────────────────────────
+
+#[derive(Serialize)]
+pub struct CompetitionJson {
+    pub id: String,
+    pub name: String,
+}
+
+#[derive(Serialize)]
+pub struct SeasonJson {
+    pub id: String,
+    pub name: String,
+    pub status: String,
+}
+
+#[derive(Serialize)]
+pub struct RoundJson {
+    pub id: String,
+    pub name: String,
+    pub dates: String,
+    pub competition_id: String,
+    pub season_id: String,
+}
+
+#[derive(Deserialize, Default)]
+pub struct SeasonsJsonQuery {
+    pub competition_id: Option<String>,
+}
+
+#[derive(Deserialize, Default)]
+pub struct RoundsJsonQuery {
+    pub season_id: Option<String>,
+}
+
+pub async fn get_json_competitions(
+    Path(space_id_raw): Path<String>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let Ok(space_id) = SpaceId::try_new(&space_id_raw) else {
@@ -55,62 +108,26 @@ pub async fn get_competition_widget(
     {
         Ok(list) => list,
         Err(e) => {
-            tracing::error!("competition_widget find_with_seasons space={space_id_raw}: {e}");
+            tracing::error!("json_competitions find_with_seasons space={space_id_raw}: {e}");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
-    }
-    .into_iter()
-    .map(|c| CompetitionItem {
-        competition_id: c.competition_id,
-        competition_name: c.competition_name,
-    })
-    .collect();
+    };
 
-    CompetitionWidgetTemplate {
-        routes: Default::default(),
-        space_id: space_id_raw,
-        competitions,
-        show_detail: query.show_detail,
-    }
-    .into_response()
+    let result: Vec<CompetitionJson> = competitions
+        .into_iter()
+        .filter(|c| !c.seasons.is_empty())
+        .map(|c| CompetitionJson {
+            id: c.competition_id,
+            name: c.competition_name,
+        })
+        .collect();
+
+    Json(result).into_response()
 }
 
-// ── Fragment saisons (chargé au changement de compétition) ───────────────────
-
-pub struct SeasonItem {
-    pub season_id: String,
-    pub season_name: String,
-    pub status: String,
-}
-
-#[derive(Template)]
-#[template(path = "competition-widget-seasons.html")]
-pub struct SeasonSelectorTemplate {
-    pub routes: CompetitionRoutes,
-    pub space_id: String,
-    pub seasons: Vec<SeasonItem>,
-    pub show_detail: bool,
-}
-
-impl IntoResponse for SeasonSelectorTemplate {
-    fn into_response(self) -> Response {
-        match self.render() {
-            Ok(html) => Html(html).into_response(),
-            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-        }
-    }
-}
-
-#[derive(Deserialize, Default)]
-pub struct SeasonsQuery {
-    pub competition_id: Option<String>,
-    #[serde(default)]
-    pub show_detail: bool,
-}
-
-pub async fn get_competition_widget_seasons(
+pub async fn get_json_seasons(
     Path(space_id_raw): Path<String>,
-    Query(query): Query<SeasonsQuery>,
+    Query(query): Query<SeasonsJsonQuery>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let Ok(space_id) = SpaceId::try_new(&space_id_raw) else {
@@ -119,7 +136,7 @@ pub async fn get_competition_widget_seasons(
 
     let competition_id = query.competition_id.unwrap_or_default();
 
-    let seasons = match state
+    let seasons: Vec<SeasonJson> = match state
         .competitions
         .competition_repository
         .find_with_seasons(&space_id)
@@ -127,10 +144,8 @@ pub async fn get_competition_widget_seasons(
     {
         Ok(list) => list,
         Err(e) => {
-            tracing::error!(
-                "competition_widget_seasons find_with_seasons space={space_id_raw}: {e}"
-            );
-            vec![]
+            tracing::error!("json_seasons find_with_seasons space={space_id_raw}: {e}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     }
     .into_iter()
@@ -138,22 +153,79 @@ pub async fn get_competition_widget_seasons(
     .map(|c| {
         c.seasons
             .into_iter()
-            .map(|s| SeasonItem {
-                season_id: s.season_id,
-                season_name: s.season_name,
+            .rev()
+            .map(|s| SeasonJson {
+                id: s.season_id,
+                name: s.season_name,
                 status: s.status,
             })
             .collect()
     })
     .unwrap_or_default();
 
-    SeasonSelectorTemplate {
-        routes: Default::default(),
-        space_id: space_id_raw,
-        seasons,
-        show_detail: query.show_detail,
-    }
-    .into_response()
+    Json(seasons).into_response()
+}
+
+pub async fn get_json_rounds(
+    Path(space_id_raw): Path<String>,
+    Query(query): Query<RoundsJsonQuery>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    let season_id = query.season_id.unwrap_or_default();
+
+    let match_days = match state
+        .competitions
+        .match_day_repository
+        .find_by_season(&season_id)
+        .await
+    {
+        Ok(days) => days,
+        Err(e) => {
+            tracing::error!("json_rounds find_by_season {season_id}: {e}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let competition_id = match state
+        .competitions
+        .competition_repository
+        .find_with_seasons(
+            &SpaceId::try_new(&space_id_raw).unwrap_or_else(|_| SpaceId::new()),
+        )
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .find(|c| c.seasons.iter().any(|s| s.season_id == season_id))
+    {
+        Some(c) => c.competition_id,
+        None => String::new(),
+    };
+
+    let mut filtered: Vec<_> = match_days
+        .into_iter()
+        .filter(|md| !md.is_rest())
+        .collect();
+    filtered.reverse();
+
+    let rounds: Vec<RoundJson> = filtered
+        .into_iter()
+        .map(|md| {
+            let dates = match (md.date_start, md.date_end) {
+                (Some(s), Some(e)) => format!("{s} \u{2192} {e}"),
+                (Some(s), None) => s,
+                _ => String::new(),
+            };
+            RoundJson {
+                id: md.id,
+                name: md.name,
+                dates,
+                competition_id: competition_id.clone(),
+                season_id: season_id.clone(),
+            }
+        })
+        .collect();
+
+    Json(rounds).into_response()
 }
 
 // ── Panneau de détail (chargé au changement de saison) ───────────────────────
@@ -307,3 +379,4 @@ pub async fn get_competition_widget_detail(
     }
     .into_response()
 }
+
