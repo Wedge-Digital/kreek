@@ -1,3 +1,8 @@
+.my-teams-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--p2);
+}
+
 .teams-layout { display: flex; gap: var(--p2); }
 .filters-col  { flex: 2; }
 .teams-col    { flex: 8; display: flex; flex-direction: column; gap: var(--p1); }
@@ -34,3 +39,11 @@
 .record-val.draw { color: var(--dark-2); }
 .record-val.loss { color: var(--red); }
 .record-label { font-size: 10px; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
+
+@media (max-width: 768px) {
+  .my-teams-container { padding: var(--p1); }
+  .my-teams-header { flex-direction: column; align-items: flex-start; gap: var(--p1); margin-bottom: var(--p1); }
+  .my-teams-header .btn { width: 100%; }
+  .teams-grid { grid-template-columns: 1fr 1fr; }
+  .team-card { height: auto; flex: none; }
+}

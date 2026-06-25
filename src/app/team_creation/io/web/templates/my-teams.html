@@ -3,25 +3,28 @@
 
 {% block content %}
 <link rel="stylesheet" href="/static/css/components/team-card.css">
+<link rel="stylesheet" href="/static/css/pages/app-my-teams.css">
 
-<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--p2);">
-    <div class="h3-gras">Mes Équipes</div>
-    <a class="btn btn-primary-blue btn-sm"
-       hx-get="{{ app_routes.team_creation.draft_team(space_id) }}"
-       hx-target="#app-content"
-       hx-select="#app-content"
-       hx-swap="innerHTML"
-       hx-push-url="true">+ Nouvelle équipe</a>
-</div>
+<div class="my-teams-container">
+  <div class="my-teams-header">
+      <div class="h3-gras">Mes Équipes</div>
+      <a class="btn btn-primary-blue btn-sm"
+         hx-get="{{ app_routes.team_creation.draft_team(space_id) }}"
+         hx-target="#app-content"
+         hx-select="#app-content"
+         hx-swap="innerHTML"
+         hx-push-url="true">+ Nouvelle équipe</a>
+  </div>
 
-<div class="teams-grid">
-    {% for team in teams %}
-    {% call card_cmp::card(team.name, team.logo, team.roster, "", team.tv, team.status, team.status_label, team.link) %}
-    {% endfor %}
-    {% if teams.is_empty() %}
-    <div class="empty-state">
-        Vous n'avez pas encore d'équipe dans cet espace.
-    </div>
-    {% endif %}
+  <div class="teams-grid">
+      {% for team in teams %}
+      {% call card_cmp::card(team.name, team.logo, team.roster, "", team.tv, team.status, team.status_label, team.link) %}
+      {% endfor %}
+      {% if teams.is_empty() %}
+      <div class="empty-state">
+          Vous n'avez pas encore d'équipe dans cet espace.
+      </div>
+      {% endif %}
+  </div>
 </div>
 {% endblock %}
