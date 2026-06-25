@@ -6,6 +6,10 @@ use crate::app::teams::io::web::widgets::enrollment_actions::{
 };
 use crate::app::teams::io::web::widgets::enrolled_teams_widget::enrolled_teams_widget;
 use crate::app::teams::io::web::widgets::pending_enrollment_widget::pending_enrollment_widget;
+use crate::app::teams::io::web::widgets::team_selection_tester::get_team_selection_tester;
+use crate::app::teams::io::web::widgets::team_selection_widget::{
+    get_team_selection_json, get_team_selection_widget,
+};
 use crate::app::teams::routes::path;
 use crate::state::AppState;
 use axum::{
@@ -30,4 +34,10 @@ pub fn router() -> Router<AppState> {
             path::COMPETITION_TEAMS_WIDGET,
             get(competition_teams_widget),
         )
+        .route(
+            path::TEAM_SELECTION_WIDGET,
+            get(get_team_selection_widget),
+        )
+        .route(path::TEAM_SELECTION_JSON, get(get_team_selection_json))
+        .route(path::TEAM_SELECTION_TESTER, get(get_team_selection_tester))
 }

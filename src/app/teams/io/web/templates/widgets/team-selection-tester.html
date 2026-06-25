@@ -1,0 +1,143 @@
+{% extends "widget-tester-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/components/team-selection.css">
+
+<div class="test-team-selection">
+    <div class="form-header">Test : widget team-selection</div>
+
+    <!-- Espace -->
+    <div class="form-group">
+        <label class="form-label">Espace</label>
+        <select id="space-select">
+            <option value="">-- Choisir un espace --</option>
+            {% for space in spaces %}
+            <option value="{{ space.id }}">{{ space.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Cascade compétition → saison (recréés dynamiquement au changement d'espace) -->
+    <div id="cascade-container"></div>
+
+    <!-- Widget team-selection (chargé dynamiquement) -->
+    <div class="form-header">Widget team-selection</div>
+    <div id="widget-container"
+         style="border: 1px dashed #888; padding: 16px; border-radius: 8px; min-height: 60px;">
+        <p style="color: #888; font-style: italic;">Sélectionnez un espace et une saison pour charger le widget.</p>
+    </div>
+
+    <!-- Widget pré-rempli -->
+    <div class="form-header">Widget pré-rempli</div>
+    <div style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 8px;"
+         x-data="{ lastHome: '', lastAway: '' }"
+         @home-team-selected.window="lastHome = $event.detail.id"
+         @away-team-selected.window="lastAway = $event.detail.id">
+        <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
+            <label class="form-label">selected_home</label>
+            <input id="prefill-home" class="form-input" type="text" placeholder="..." :value="lastHome">
+        </div>
+        <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
+            <label class="form-label">selected_away</label>
+            <input id="prefill-away" class="form-input" type="text" placeholder="..." :value="lastAway">
+        </div>
+        <button id="btn-prefill" class="btn btn-primary btn-sm" type="button"
+                style="white-space: nowrap;">Charger pré-rempli</button>
+    </div>
+    <div id="widget-container-prefilled"
+         style="border: 1px dashed #888; padding: 16px; border-radius: 8px; min-height: 60px;">
+        <p style="color: #888; font-style: italic;">Remplissez les IDs ci-dessus puis cliquez "Charger pré-rempli".</p>
+    </div>
+
+    <!-- Événements reçus -->
+    <div class="form-header">Événements reçus</div>
+    <div id="event-log"
+         x-data="{ events: [] }"
+         @home-team-selected.window="events.push({ name: 'homeTeamSelected', detail: $event.detail, ts: new Date().toLocaleTimeString() })"
+         @away-team-selected.window="events.push({ name: 'awayTeamSelected', detail: $event.detail, ts: new Date().toLocaleTimeString() })"
+         style="border: 1px solid #444; padding: 16px; border-radius: 8px; min-height: 40px;">
+        <template x-if="events.length === 0">
+            <p style="color: #888; font-style: italic;">Aucun événement reçu.</p>
+        </template>
+        <template x-for="(evt, i) in events" :key="i">
+            <div style="margin-bottom: 8px; padding: 8px; background: #f0f4f8; border-radius: 4px; font-size: 13px;">
+                <strong x-text="evt.name"></strong> <span style="color: #888;" x-text="evt.ts"></span><br>
+                <span x-text="JSON.stringify(evt.detail)"></span>
+            </div>
+        </template>
+    </div>
+</div>
+
+<script>
+(function() {
+    var spaceSel = document.getElementById('space-select');
+    var cascadeContainer = document.getElementById('cascade-container');
+    var widgetContainer = document.getElementById('widget-container');
+    var widgetPrefilled = document.getElementById('widget-container-prefilled');
+    var currentSpaceId = '';
+    var currentSeasonId = '';
+
+    new TomSelect(spaceSel, { placeholder: '-- Choisir un espace --' });
+
+    function widgetBase(sid) {
+        return '/app/' + sid + '/team/widgets/team-selection';
+    }
+
+    spaceSel.addEventListener('change', function() {
+        currentSpaceId = spaceSel.value;
+        widgetContainer.innerHTML = '<p style="color: #888; font-style: italic;">Sélectionnez une saison pour charger le widget.</p>';
+        if (!currentSpaceId) {
+            cascadeContainer.innerHTML = '';
+            return;
+        }
+        var compUrl = '/app/' + currentSpaceId + '/competitions/widget/json/competitions';
+        var seasonUrl = '/app/' + currentSpaceId + '/competitions/widget/json/seasons';
+        cascadeContainer.innerHTML =
+            '<div class="form-group">'
+          +   '<label class="form-label">Compétition</label>'
+          +   '<kreek-select name="competition_id"'
+          +     ' url="' + compUrl + '"'
+          +     ' value-field="id" label-field="name"'
+          +     ' event="testerCompSelected"'
+          +     ' placeholder="Choisir une compétition…">'
+          +   '</kreek-select>'
+          + '</div>'
+          + '<div class="form-group">'
+          +   '<label class="form-label">Saison</label>'
+          +   '<kreek-select name="season_id"'
+          +     ' url="' + seasonUrl + '"'
+          +     ' value-field="id" label-field="name"'
+          +     ' listen="testerCompSelected" listen-param="id" listen-query="competition_id"'
+          +     ' event="testerSeasonSelected"'
+          +     ' auto-select-first'
+          +     ' placeholder="Choisir une saison…">'
+          +   '</kreek-select>'
+          + '</div>';
+    });
+
+    document.body.addEventListener('testerSeasonSelected', function(e) {
+        var seasonId = e.detail && e.detail.id;
+        if (!seasonId || !currentSpaceId) return;
+        currentSeasonId = seasonId;
+        var url = widgetBase(currentSpaceId) + '?season_id=' + encodeURIComponent(seasonId);
+        htmx.ajax('GET', url, { target: widgetContainer, swap: 'innerHTML' });
+    });
+
+    document.getElementById('btn-prefill').addEventListener('click', function() {
+        if (!currentSpaceId) { alert('Sélectionnez un espace d\'abord.'); return; }
+        if (!currentSeasonId) { alert('Sélectionnez une saison d\'abord.'); return; }
+        var home = document.getElementById('prefill-home').value;
+        var away = document.getElementById('prefill-away').value;
+        var url = widgetBase(currentSpaceId)
+            + '?season_id=' + encodeURIComponent(currentSeasonId)
+            + '&selected_home=' + encodeURIComponent(home)
+            + '&selected_away=' + encodeURIComponent(away);
+        htmx.ajax('GET', url, { target: widgetPrefilled, swap: 'innerHTML' });
+    });
+})();
+</script>
+
+<style>
+.test-team-selection { display: flex; flex-direction: column; gap: var(--p2); max-width: 600px; }
+</style>
+{% endblock %}

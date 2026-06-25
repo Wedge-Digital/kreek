@@ -1,0 +1,67 @@
+<div class="team-selection-widget" hx-disinherit="*">
+
+  <!-- Home team -->
+  <div class="ts-field">
+    <label class="ts-label">Équipe domicile</label>
+    <kreek-select
+        name="home_team_id"
+        url="{{ routes.team_selection_json(space_id) }}?season_id={{ season_id }}"
+        value-field="id"
+        label-field="name"
+        event="homeTeamSelected"
+        event-fields="coach_name,roster_name,tv,coach_id"
+        search-fields="name,coach_name"
+        option-template="tpl-team-option"
+        selected-template="tpl-team-selected"
+        placeholder="Sélectionner une équipe…"
+        {% if !selected_home.is_empty() %}selected-value="{{ selected_home }}"{% endif %}>
+    </kreek-select>
+  </div>
+
+  <!-- VS divider -->
+  <div class="ts-vs-divider">
+    <div class="ts-vs-line"></div>
+    <span class="ts-vs-text">VS</span>
+    <div class="ts-vs-line"></div>
+  </div>
+
+  <!-- Away team -->
+  <div class="ts-field">
+    <label class="ts-label">Équipe visiteur</label>
+    <kreek-select
+        name="away_team_id"
+        url="{{ routes.team_selection_json(space_id) }}?season_id={{ season_id }}"
+        value-field="id"
+        label-field="name"
+        event="awayTeamSelected"
+        event-fields="coach_name,roster_name,tv,coach_id"
+        search-fields="name,coach_name"
+        option-template="tpl-team-option"
+        selected-template="tpl-team-selected"
+        placeholder="Sélectionner une équipe…"
+        {% if !selected_away.is_empty() %}selected-value="{{ selected_away }}"{% endif %}>
+    </kreek-select>
+  </div>
+
+  <!-- Templates de rendu riche -->
+  <template id="tpl-team-option">
+    <div class="ts-team-row">
+      <div class="ts-team-logo">%name%</div>
+      <div class="ts-team-info">
+        <div class="ts-team-name">%name%</div>
+        <div class="ts-team-meta">Coach : %coach_name% · %roster_name%</div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-team-selected">
+    <div class="ts-team-row ts-team-row--compact">
+      <div class="ts-team-logo ts-team-logo--sm">%name%</div>
+      <div class="ts-team-info">
+        <div class="ts-team-name">%name%</div>
+        <div class="ts-team-meta">%coach_name% · %roster_name%</div>
+      </div>
+    </div>
+  </template>
+
+</div>

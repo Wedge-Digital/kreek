@@ -8,6 +8,9 @@ pub mod path {
     pub const DISMISS_ENROLLMENT: &str = "/app/{space_id}/team/{team_id}/enrollment/dismiss";
     pub const APPROVE_ALL_ENROLLMENTS: &str = "/app/{space_id}/team/widgets/pending/approve-all";
     pub const COMPETITION_TEAMS_WIDGET: &str = "/app/team/widgets/competition-teams";
+    pub const TEAM_SELECTION_WIDGET: &str = "/app/{space_id}/team/widgets/team-selection";
+    pub const TEAM_SELECTION_JSON: &str = "/app/{space_id}/team/widgets/team-selection/json";
+    pub const TEAM_SELECTION_TESTER: &str = "/team/widgets/tester";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -51,5 +54,11 @@ impl Routes {
     }
     pub fn competition_teams_widget(&self) -> String {
         path::COMPETITION_TEAMS_WIDGET.to_string()
+    }
+    pub fn team_selection_widget(&self, space_id: &str) -> String {
+        path::TEAM_SELECTION_WIDGET.replace("{space_id}", space_id)
+    }
+    pub fn team_selection_json(&self, space_id: &str) -> String {
+        path::TEAM_SELECTION_JSON.replace("{space_id}", space_id)
     }
 }

@@ -6,6 +6,7 @@
  *   url            — URL GET retournant un JSON array
  *   value-field    — champ JSON pour la valeur (défaut: "id")
  *   label-field    — champ JSON pour le texte affiché (défaut: "name")
+ *   search-fields  — champs JSON sur lesquels la recherche s'applique, séparés par virgule (défaut: label-field)
  *   placeholder    — texte placeholder (défaut: "Sélectionnez…")
  *   event          — nom de l'événement DOM émis sur document.body au changement
  *   event-fields   — champs JSON inclus dans le payload de l'événement, séparés par virgule
@@ -27,6 +28,8 @@
       this._url = this.getAttribute('url') || '';
       this._valueField = this.getAttribute('value-field') || 'id';
       this._labelField = this.getAttribute('label-field') || 'name';
+      this._searchFields = (this.getAttribute('search-fields') || '')
+        .split(',').map(function (s) { return s.trim(); }).filter(Boolean);
       this._placeholder = this.getAttribute('placeholder') || 'Sélectionnez…';
       this._eventName = this.getAttribute('event') || '';
       this._eventFields = (this.getAttribute('event-fields') || '')
@@ -217,9 +220,13 @@
       this._optionsList.innerHTML = '';
       this._highlightIdx = -1;
 
+      var fields = self._searchFields.length > 0 ? self._searchFields : [lf];
       var filtered = this._items.filter(function (item) {
         if (!filter) return true;
-        return String(item[lf]).toLowerCase().indexOf(filter) !== -1;
+        for (var i = 0; i < fields.length; i++) {
+          if (String(item[fields[i]] || '').toLowerCase().indexOf(filter) !== -1) return true;
+        }
+        return false;
       });
 
       if (filtered.length === 0) {

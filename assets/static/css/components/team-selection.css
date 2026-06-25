@@ -1,0 +1,57 @@
+.team-selection-widget {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p1);
+}
+
+.ts-field { display: flex; flex-direction: column; gap: 6px; }
+
+.ts-label {
+  font-size: var(--text-tiny);
+  font-weight: 600;
+  color: var(--dark-2);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.ts-vs-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+.ts-vs-line { flex: 1; height: 1px; background: var(--dark-5); }
+.ts-vs-text {
+  font-family: var(--font-title);
+  font-size: var(--h5);
+  font-weight: 700;
+  color: var(--dark-3);
+}
+
+/* ── Team option rendering ── */
+.ts-team-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ts-team-row--compact { gap: 8px; }
+
+.ts-team-logo {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--white);
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ts-team-logo--sm { width: 28px; height: 28px; font-size: 9px; }
+
+.ts-team-info { flex: 1; min-width: 0; }
+.ts-team-name { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+.ts-team-meta { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 1px; }
