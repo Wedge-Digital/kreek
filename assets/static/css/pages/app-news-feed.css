@@ -183,3 +183,70 @@
   font-size: var(--text-small);
   user-select: none;
 }
+
+@media (max-width: 768px) {
+  .feed-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--p1);
+    padding: var(--p1) var(--p1) 0;
+  }
+  .feed-header-actions {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* Filter tabs — style compact, scroll horizontal avec fondu droit */
+  .feed-header-actions {
+    position: relative;
+  }
+  .feed-header-actions::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 32px;
+    background: linear-gradient(to right, transparent, var(--dark-7));
+    pointer-events: none;
+  }
+  .filter-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    gap: 6px;
+  }
+  .filter-tabs::-webkit-scrollbar { display: none; }
+  .filter-tab {
+    padding: 5px 12px;
+    font-size: 11px;
+    border: none;
+    border-radius: 20px;
+    background: var(--dark-6);
+    color: var(--dark-2);
+    white-space: nowrap;
+  }
+  .filter-tab.active {
+    background: var(--main-blue);
+    color: var(--white);
+  }
+  .filter-tab:hover { border-color: unset; }
+
+  .news-feed { padding: 0 var(--p1); }
+
+  /* Carte featured — plus haute, titre réduit, abstract masqué */
+  .news-card-featured { height: 320px; border-radius: 8px; margin: 0 var(--p1); }
+  .news-title { font-size: 20px; }
+  .news-abstract { display: none; }
+  .news-card-bottom { padding: 16px; gap: 8px; }
+  .news-author-row { align-items: center; }
+  .news-avatar { width: 28px; height: 28px; font-size: 12px; }
+  .news-author-name { font-size: 12px; }
+  .news-author-date { font-size: 11px; }
+
+  .latest-news-card { flex-direction: column; }
+  .latest-news-img  { width: 100%; min-width: unset; height: 140px; }
+
+  .pagination { padding: var(--p1); }
+}

@@ -5,6 +5,12 @@
 }
 .home-side  { flex: 1; }
 
+@media (max-width: 768px) {
+  .home-grid { flex-direction: column; height: auto; }
+  .home-main { flex: none; overflow-y: visible; }
+  .home-side  { display: none; }
+}
+
 /* News Card — featured */
 .news-card-featured {
   border-radius: 12px; overflow: hidden; position: relative;
