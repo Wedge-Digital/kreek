@@ -28,7 +28,12 @@
                hx-select="#app-content"
                hx-swap="innerHTML"
                hx-push-url="true">Les Compétitions</div>
-          <div class="sub-menu-btn">Saisir un Match</div>
+          <div class="sub-menu-btn"
+               hx-get="{{ app_routes.match_report.new_match_report(sid) }}"
+               hx-target="#app-content"
+               hx-select="#app-content"
+               hx-swap="innerHTML"
+               hx-push-url="true">Saisir un Match</div>
           <div class="sub-menu-btn{% if self.create_team_active() %} active{% endif %}"
                hx-get="{{ app_routes.team_creation.draft_team(sid) }}"
                hx-target="#app-content"

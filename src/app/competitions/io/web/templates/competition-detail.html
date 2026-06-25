@@ -31,9 +31,14 @@
                         <option selected>{{ season_name }}</option>
                     </select>
                 </div>
-                <button class="btn btn-primary-blue btn-sm">
+                <a class="btn btn-primary-blue btn-sm"
+                   hx-get="{{ app_routes.match_report.new_match_report(space_id) }}"
+                   hx-target="#app-content"
+                   hx-select="#app-content"
+                   hx-swap="innerHTML"
+                   hx-push-url="true">
                     + Saisir un match
-                </button>
+                </a>
                 {% if is_admin %}
                 <a class="btn btn-outline btn-sm"
                    href="{{ app_routes.competitions.admin(space_id, competition_id, season_id) }}">
