@@ -84,3 +84,9 @@
   line-height: 1.7;
   max-width: 380px;
 }
+
+@media (max-width: 768px) {
+  .competition-container { padding: var(--p1); }
+  .section-header.competitions { flex-direction: column; align-items: flex-start; gap: var(--p1); }
+  .section-header.competitions .btn { width: 100%; }
+}

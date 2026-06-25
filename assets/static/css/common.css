@@ -73,7 +73,7 @@
 /* ─── Reset ─── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
-body { font-family: var(--font-body); font-size: var(--text-small); color: var(--dark-1); }
+body { font-family: var(--font-body); font-size: var(--text-small); color: var(--dark-1); background: var(--dark-7); }
 a { text-decoration: none; color: inherit; }
 button { cursor: pointer; border: none; background: none; font-family: inherit; }
 input, select, textarea { font-family: inherit; font-size: inherit; }
