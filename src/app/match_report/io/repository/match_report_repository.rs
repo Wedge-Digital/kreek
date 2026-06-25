@@ -95,6 +95,7 @@ impl MatchReportRepository {
                 .await
                 .map_err(RepositoryError::Database)?;
             }
+            MatchReportDomainEvent::FanFactorRecorded { .. } => {}
             MatchReportDomainEvent::MatchReportCancelled { .. } => {
                 sqlx::query(
                     "UPDATE match_report_projection

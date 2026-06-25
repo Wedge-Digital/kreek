@@ -1,9 +1,9 @@
 use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
+use crate::app::match_report::domain::value_objects::{D3Roll, MatchReportOrigin};
 use crate::app::shared_kernel::common_types::{
     CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
 };
 use crate::app::shared_kernel::team::TeamId;
-use crate::app::match_report::domain::value_objects::MatchReportOrigin;
 
 #[derive(Debug, Clone)]
 pub struct MatchReportPreMatch {
@@ -17,10 +17,32 @@ pub struct MatchReportPreMatch {
     pub created_by: CoachId,
     pub origin: MatchReportOrigin,
     pub pairing_id: Option<String>,
+    pub home_fan_roll: Option<D3Roll>,
+    pub away_fan_roll: Option<D3Roll>,
     pub version: u64,
 }
 
+use crate::app::match_report::domain::events::MatchReportDomainEvent;
+
 impl MatchReportPreMatch {
+    pub fn record_fan_factor(
+        &self,
+        home_fan_roll: D3Roll,
+        away_fan_roll: D3Roll,
+        recorded_by: CoachId,
+    ) -> (Self, MatchReportDomainEvent) {
+        let event = MatchReportDomainEvent::FanFactorRecorded {
+            home_fan_roll,
+            away_fan_roll,
+            recorded_by,
+        };
+        let mut updated = self.clone();
+        updated.home_fan_roll = Some(home_fan_roll);
+        updated.away_fan_roll = Some(away_fan_roll);
+        updated.version += 1;
+        (updated, event)
+    }
+
     pub fn from_draft(draft: MatchReportDraft) -> Self {
         Self {
             id: draft.id,
@@ -33,6 +55,8 @@ impl MatchReportPreMatch {
             created_by: draft.created_by,
             origin: draft.origin,
             pairing_id: draft.pairing_id,
+            home_fan_roll: None,
+            away_fan_roll: None,
             version: draft.version + 1,
         }
     }

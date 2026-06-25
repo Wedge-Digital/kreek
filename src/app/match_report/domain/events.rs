@@ -1,4 +1,4 @@
-use crate::app::match_report::domain::value_objects::MatchReportOrigin;
+use crate::app::match_report::domain::value_objects::{D3Roll, MatchReportOrigin};
 use crate::app::shared_kernel::common_types::{
     CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
 };
@@ -29,6 +29,11 @@ pub enum MatchReportDomainEvent {
     SelectionConfirmed {
         confirmed_by: CoachId,
     },
+    FanFactorRecorded {
+        home_fan_roll: D3Roll,
+        away_fan_roll: D3Roll,
+        recorded_by: CoachId,
+    },
     MatchReportCancelled {
         reason: String,
     },
@@ -40,6 +45,7 @@ impl MatchReportDomainEvent {
             Self::MatchReportCreated { .. } => "MatchReportCreated",
             Self::SelectionUpdated { .. } => "SelectionUpdated",
             Self::SelectionConfirmed { .. } => "SelectionConfirmed",
+            Self::FanFactorRecorded { .. } => "FanFactorRecorded",
             Self::MatchReportCancelled { .. } => "MatchReportCancelled",
         }
     }

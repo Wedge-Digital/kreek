@@ -45,6 +45,20 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             }),
             (
                 Some(MatchReportState::PreMatch(pm)),
+                MatchReportDomainEvent::FanFactorRecorded {
+                    home_fan_roll,
+                    away_fan_roll,
+                    ..
+                },
+            ) => {
+                let mut updated = pm;
+                updated.home_fan_roll = Some(*home_fan_roll);
+                updated.away_fan_roll = Some(*away_fan_roll);
+                updated.version += 1;
+                MatchReportState::PreMatch(updated)
+            }
+            (
+                Some(MatchReportState::PreMatch(pm)),
                 MatchReportDomainEvent::MatchReportCancelled { reason, .. },
             ) => MatchReportState::Cancelled(MatchReportCancelled {
                 id: pm.id.to_string(),
@@ -60,7 +74,7 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::match_report::domain::value_objects::MatchReportOrigin;
+    use crate::app::match_report::domain::value_objects::{D3Roll, MatchReportOrigin};
     use crate::app::shared_kernel::common_types::{
         CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
     };
@@ -286,6 +300,96 @@ mod tests {
         if let MatchReportState::PreMatch(pm) = state {
             assert_eq!(pm.id, mr_id);
             assert_eq!(pm.version, 2);
+        }
+    }
+
+    // ── record_fan_factor ─────────────────────────────────────────────
+
+    fn make_pre_match() -> MatchReportPreMatch {
+        let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
+            test_ids();
+        let (draft, _) = MatchReportDraft::create(
+            mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
+            MatchReportOrigin::Manual, None,
+        ).unwrap();
+        let (pm, _) = draft.confirm_selection(coach_id);
+        pm
+    }
+
+    #[test]
+    fn record_fan_factor_emet_evenement() {
+        let pm = make_pre_match();
+        let (_, event) = pm.record_fan_factor(
+            D3Roll::try_new(2).unwrap(),
+            D3Roll::try_new(1).unwrap(),
+            CoachId::new(),
+        );
+        assert!(matches!(event, MatchReportDomainEvent::FanFactorRecorded { .. }));
+    }
+
+    #[test]
+    fn record_fan_factor_met_a_jour_les_champs() {
+        let pm = make_pre_match();
+        let (updated, _) = pm.record_fan_factor(
+            D3Roll::try_new(3).unwrap(),
+            D3Roll::try_new(1).unwrap(),
+            CoachId::new(),
+        );
+        assert_eq!(updated.home_fan_roll, Some(D3Roll::try_new(3).unwrap()));
+        assert_eq!(updated.away_fan_roll, Some(D3Roll::try_new(1).unwrap()));
+        assert_eq!(updated.version, pm.version + 1);
+    }
+
+    // ── rehydrate fan factor ────────────────────────────────────────────
+
+    #[test]
+    fn rehydrate_fan_factor_recorded() {
+        let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
+            test_ids();
+        let events = vec![
+            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
+            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+            MatchReportDomainEvent::FanFactorRecorded {
+                home_fan_roll: D3Roll::try_new(2).unwrap(),
+                away_fan_roll: D3Roll::try_new(3).unwrap(),
+                recorded_by: coach_id,
+            },
+        ];
+        let state = rehydrate(events).unwrap();
+        if let MatchReportState::PreMatch(pm) = state {
+            assert_eq!(pm.home_fan_roll, Some(D3Roll::try_new(2).unwrap()));
+            assert_eq!(pm.away_fan_roll, Some(D3Roll::try_new(3).unwrap()));
+            assert_eq!(pm.version, 3);
+        } else {
+            panic!("attendu PreMatch");
+        }
+    }
+
+    #[test]
+    fn rehydrate_double_fan_factor_last_wins() {
+        let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
+            test_ids();
+        let events = vec![
+            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
+            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+            MatchReportDomainEvent::FanFactorRecorded {
+                home_fan_roll: D3Roll::try_new(1).unwrap(),
+                away_fan_roll: D3Roll::try_new(1).unwrap(),
+                recorded_by: coach_id,
+            },
+            MatchReportDomainEvent::FanFactorRecorded {
+                home_fan_roll: D3Roll::try_new(3).unwrap(),
+                away_fan_roll: D3Roll::try_new(2).unwrap(),
+                recorded_by: coach_id,
+            },
+        ];
+        let state = rehydrate(events).unwrap();
+        if let MatchReportState::PreMatch(pm) = state {
+            assert_eq!(pm.home_fan_roll, Some(D3Roll::try_new(3).unwrap()));
+            assert_eq!(pm.away_fan_roll, Some(D3Roll::try_new(2).unwrap()));
+            assert_eq!(pm.version, 4);
+        } else {
+            panic!("attendu PreMatch");
         }
     }
 
