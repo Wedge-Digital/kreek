@@ -24,23 +24,43 @@ pub enum CompetitionsDomainEvent {
         space_id: SpaceId,
         finalized_by: CoachId,
     },
+    PairingCreated {
+        event_id: EventId,
+        pairing_id: String,
+        competition_id: String,
+        season_id: String,
+        round_id: String,
+        home_team_id: String,
+        away_team_id: String,
+        space_id: String,
+    },
+    PairingDeleted {
+        event_id: EventId,
+        pairing_id: String,
+    },
 }
 
 pub const COMPETITION_CREATED: &str = "CompetitionCreated";
 pub const COMPETITION_READY: &str = "CompetitionReady";
+pub const PAIRING_CREATED: &str = "PairingCreated";
+pub const PAIRING_DELETED: &str = "PairingDeleted";
 
 impl CompetitionsDomainEvent {
     pub fn to_event_type(&self) -> &'static str {
         match self {
             Self::CompetitionCreated { .. } => COMPETITION_CREATED,
             Self::CompetitionReady { .. } => COMPETITION_READY,
+            Self::PairingCreated { .. } => PAIRING_CREATED,
+            Self::PairingDeleted { .. } => PAIRING_DELETED,
         }
     }
 
-    fn competition_id(&self) -> CompetitionId {
+    fn emitter_id(&self) -> String {
         match self {
-            Self::CompetitionCreated { competition_id, .. } => *competition_id,
-            Self::CompetitionReady { competition_id, .. } => *competition_id,
+            Self::CompetitionCreated { competition_id, .. } => competition_id.to_string(),
+            Self::CompetitionReady { competition_id, .. } => competition_id.to_string(),
+            Self::PairingCreated { pairing_id, .. } => pairing_id.clone(),
+            Self::PairingDeleted { pairing_id, .. } => pairing_id.clone(),
         }
     }
 
@@ -65,6 +85,7 @@ impl CompetitionsDomainEvent {
                     value: competition_id.to_string(),
                 },
             ],
+            Self::PairingCreated { .. } | Self::PairingDeleted { .. } => vec![],
         }
     }
 
@@ -79,6 +100,31 @@ impl CompetitionsDomainEvent {
                 competition_id: *competition_id,
                 space_id: *space_id,
             }),
+            Self::PairingCreated {
+                pairing_id,
+                competition_id,
+                season_id,
+                round_id,
+                home_team_id,
+                away_team_id,
+                space_id,
+                ..
+            } => Some(CompetitionsAppEvent::PairingCreated {
+                event_id: EventId::new(),
+                pairing_id: pairing_id.clone(),
+                competition_id: competition_id.clone(),
+                season_id: season_id.clone(),
+                round_id: round_id.clone(),
+                home_team_id: home_team_id.clone(),
+                away_team_id: away_team_id.clone(),
+                space_id: space_id.clone(),
+            }),
+            Self::PairingDeleted { pairing_id, .. } => {
+                Some(CompetitionsAppEvent::PairingDeleted {
+                    event_id: EventId::new(),
+                    pairing_id: pairing_id.clone(),
+                })
+            }
             _ => None,
         }
     }
@@ -86,7 +132,7 @@ impl CompetitionsDomainEvent {
     pub fn to_enveloppe(&self) -> EventEnvelope {
         EventEnvelope {
             event_id: EventId::new().to_string(),
-            emitter: self.competition_id().to_string(),
+            emitter: self.emitter_id(),
             event_type: self.to_event_type().to_string(),
             tags: serde_json::to_value(self.get_tags()).unwrap(),
             payload: serde_json::to_value(self).unwrap(),

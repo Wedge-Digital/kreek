@@ -20,6 +20,7 @@ pub fn init(app_event_bus: &EventBus, repo: Arc<dyn IMatchReportRepository>) {
                     };
                     let CompetitionsAppEvent::PairingCreated {
                         pairing_id,
+                        competition_id,
                         season_id,
                         round_id,
                         home_team_id,
@@ -32,12 +33,12 @@ pub fn init(app_event_bus: &EventBus, repo: Arc<dyn IMatchReportRepository>) {
                     };
 
                     let Ok(space) = SpaceId::try_new(&space_id) else { continue };
-                    let Ok(comp) = CompetitionId::try_new("00000000000000000000000000") else { continue };
+                    let Ok(comp) = CompetitionId::try_new(&competition_id) else { continue };
                     let Ok(season) = SeasonId::try_new(&season_id) else { continue };
                     let Ok(round) = RoundId::try_new(&round_id) else { continue };
                     let Ok(home) = TeamId::try_new(&home_team_id) else { continue };
                     let Ok(away) = TeamId::try_new(&away_team_id) else { continue };
-                    let Ok(coach) = SpaceId::try_new("00000000000000000000000000") else { continue };
+                    let Ok(coach) = CompetitionId::try_new(&competition_id) else { continue };
 
                     let cmd = create_match_report_use_case::CreateMatchReportCommand {
                         space_id: space,

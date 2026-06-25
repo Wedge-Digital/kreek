@@ -12,11 +12,12 @@ pub enum GenerateAllError {
 
 pub async fn execute(
     season_id: &str,
+    competition_id: &str,
     space_id: &str,
     match_day_repo: &dyn IMatchDayRepository,
     group_repo: &dyn IGroupRepository,
     team_port: &dyn ITeamInfoPort,
-    app_event_bus: &EventBus,
+    event_bus: &EventBus,
 ) -> Result<(), GenerateAllError> {
     let days = match_day_repo
         .find_by_season(season_id)
@@ -27,7 +28,7 @@ pub async fn execute(
         if day.is_rest() {
             continue;
         }
-        generate_pairings::execute(&day.id, season_id, space_id, match_day_repo, group_repo, team_port, app_event_bus)
+        generate_pairings::execute(&day.id, season_id, competition_id, space_id, match_day_repo, group_repo, team_port, event_bus)
             .await
             .map_err(GenerateAllError::Generate)?;
     }

@@ -12,6 +12,7 @@ pub enum CompetitionsAppEvent {
     PairingCreated {
         event_id: EventId,
         pairing_id: String,
+        competition_id: String,
         season_id: String,
         round_id: String,
         home_team_id: String,

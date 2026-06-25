@@ -1,5 +1,8 @@
+use crate::app::competitions::domain::domain_event::CompetitionsDomainEvent;
 use crate::app::competitions::domain::match_day::{MatchDay, MatchDayType, Pairing};
 use crate::app::competitions::use_cases::admin::{generate_all_pairings, generate_pairings};
+use crate::app::shared_kernel::common_types::EventId;
+use crate::common::services::event_bus::event_bus::EventBus;
 use crate::state::AppState;
 use axum::body::Body;
 use axum::extract::{Path, State};
@@ -7,12 +10,10 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 
-fn emit_pairing_deleted_events(bus: &crate::common::services::event_bus::event_bus::EventBus, pairing_ids: &[String]) {
-    use crate::app::shared_kernel::app_events::competitions_app_events::CompetitionsAppEvent;
-    use crate::app::shared_kernel::common_types::EventId;
+fn emit_pairing_deleted_events(bus: &EventBus, pairing_ids: &[String]) {
     for pid in pairing_ids {
         let _ = bus.send(
-            CompetitionsAppEvent::PairingDeleted {
+            CompetitionsDomainEvent::PairingDeleted {
                 event_id: EventId::new(),
                 pairing_id: pid.clone(),
             }
@@ -31,16 +32,17 @@ fn schedule_changed() -> Response {
 // ── Generate all pairings ────────────────────────────────────────────────────
 
 pub async fn post_generate_all(
-    Path((space_id, _competition_id, season_id)): Path<(String, String, String)>,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> Response {
     match generate_all_pairings::execute(
         &season_id,
+        &competition_id,
         &space_id,
         state.competitions.match_day_repository.as_ref(),
         state.competitions.group_repository.as_ref(),
         state.competitions.team_info_port.as_ref(),
-        &state.app_event_bus,
+        &state.competitions.event_bus,
     )
     .await
     {
@@ -76,7 +78,7 @@ pub async fn post_clear_all(
         .await
     {
         Ok(()) => {
-            emit_pairing_deleted_events(&state.app_event_bus, &pairing_ids);
+            emit_pairing_deleted_events(&state.competitions.event_bus, &pairing_ids);
             schedule_changed()
         }
         Err(e) => {
@@ -261,7 +263,7 @@ pub async fn delete_round(
         .await
     {
         Ok(()) => {
-            emit_pairing_deleted_events(&state.app_event_bus, &pairing_ids);
+            emit_pairing_deleted_events(&state.competitions.event_bus, &pairing_ids);
             schedule_changed()
         }
         Err(e) => {
@@ -279,18 +281,19 @@ pub struct RoundIdBody {
 }
 
 pub async fn post_generate_round_pairings(
-    Path((space_id, _competition_id, season_id)): Path<(String, String, String)>,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
     axum::Json(body): axum::Json<RoundIdBody>,
 ) -> Response {
     match generate_pairings::execute(
         &body.round_id,
         &season_id,
+        &competition_id,
         &space_id,
         state.competitions.match_day_repository.as_ref(),
         state.competitions.group_repository.as_ref(),
         state.competitions.team_info_port.as_ref(),
-        &state.app_event_bus,
+        &state.competitions.event_bus,
     )
     .await
     {
@@ -328,7 +331,7 @@ pub async fn post_clear_round_pairings(
         .await
     {
         Ok(()) => {
-            emit_pairing_deleted_events(&state.app_event_bus, &pairing_ids);
+            emit_pairing_deleted_events(&state.competitions.event_bus, &pairing_ids);
             schedule_changed()
         }
         Err(e) => {
@@ -348,7 +351,7 @@ pub struct AddMatchBody {
 }
 
 pub async fn post_add_match(
-    Path((space_id, _competition_id, season_id)): Path<(String, String, String)>,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
     axum::Json(body): axum::Json<AddMatchBody>,
 ) -> Response {
@@ -365,12 +368,11 @@ pub async fn post_add_match(
         .await
     {
         Ok(()) => {
-            use crate::app::shared_kernel::app_events::competitions_app_events::CompetitionsAppEvent;
-            use crate::app::shared_kernel::common_types::EventId;
-            let _ = state.app_event_bus.send(
-                CompetitionsAppEvent::PairingCreated {
+            let _ = state.competitions.event_bus.send(
+                CompetitionsDomainEvent::PairingCreated {
                     event_id: EventId::new(),
                     pairing_id: pairing.id.clone(),
+                    competition_id: competition_id.clone(),
                     season_id: season_id.clone(),
                     round_id: body.round_id.clone(),
                     home_team_id: body.home_team_id,
@@ -407,7 +409,7 @@ pub async fn delete_match(
         .await
     {
         Ok(()) => {
-            emit_pairing_deleted_events(&state.app_event_bus, &[body.pairing_id]);
+            emit_pairing_deleted_events(&state.competitions.event_bus, &[body.pairing_id]);
             schedule_changed()
         }
         Err(e) => {
