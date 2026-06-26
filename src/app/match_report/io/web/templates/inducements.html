@@ -23,19 +23,32 @@
     <div class="mr-header-sub">Achetez des inducements pour rééquilibrer le match</div>
   </div>
 
-  <!-- Équipe courante -->
-  <div class="mr-team-banner">
-    <div class="mr-team-logo">{{ team_initials }}</div>
-    <div class="mr-team-info">
-      <div class="mr-team-name">{{ team_name }}</div>
-      <div class="mr-team-order">{{ order_label }}</div>
-    </div>
+  <!-- Étapes -->
+  <div class="mr-steps">
+    <div class="mr-step mr-step--done">&#10003;</div>
+    <div class="mr-step-line mr-step-line--done"></div>
+    <div class="mr-step mr-step--active">2</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">3</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">4</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">5</div>
   </div>
 
-  <!-- Bannière budget -->
-  <div class="mr-budget-banner">
-    <span class="mr-budget-label">Budget disponible</span>
-    <span class="mr-budget-amount">{{ budget }} kPo</span>
+  <!-- Bannière équipe + budget (combinée) -->
+  <div class="mr-budget-banner mr-team-banner">
+    <div class="mr-budget-team">
+      <div class="mr-budget-logo">{{ team_initials }}</div>
+      <div class="mr-budget-info">
+        <div class="mr-budget-name">{{ team_name }}</div>
+        <div class="mr-budget-label">{{ order_label }}</div>
+      </div>
+    </div>
+    <div class="mr-budget-amount">
+      <div class="mr-budget-value">{{ budget }}</div>
+      <div class="mr-budget-unit">kPo</div>
+    </div>
   </div>
 
   <!-- Widget inducement-selector chargé via HTMX -->
@@ -50,23 +63,30 @@
   <!-- Cart sticky footer -->
   <form method="post" action="{{ form_action }}" class="mr-cart-footer">
     <input type="hidden" name="selection" :value="selectionJson">
+    <div class="mr-cart-inner">
 
-    <div class="mr-cart-summary">
-      <span x-text="items.length === 0 ? 'Aucun coup de pouce sélectionné' : items.length + ' coup(s) de pouce'"></span>
-      <span class="mr-cart-total" :class="{ 'mr-cart-total--over': overBudget }">
-        <span x-text="totalCost"></span> / {{ budget }} kPo
-      </span>
-    </div>
+      <div class="mr-cart-summary">
+        <div class="mr-cart-items"
+             x-text="items.length === 0 ? 'Aucun coup de pouce sélectionné' : items.length + ' coup(s) de pouce sélectionné(s)'">
+        </div>
+        <div class="mr-cart-total">
+          <span class="mr-cart-total-value" :class="{ 'mr-cart-total-value--over': overBudget }"
+                x-text="totalCost"></span>
+          <span class="mr-cart-total-unit">/ {{ budget }} kPo</span>
+        </div>
+      </div>
 
-    <div class="mr-cart-warning" x-show="overBudget">
-      Budget dépassé de <span x-text="totalCost - budget"></span> kPo
-    </div>
+      <div class="mr-cart-remaining mr-cart-remaining--over" x-show="overBudget">
+        &#9888;&#65039; Budget dépassé de <span x-text="totalCost - budget"></span> kPo
+      </div>
 
-    <div class="mr-cart-actions">
-      <a href="{{ pass_url }}" class="btn-outline-sm">Passer</a>
-      <button type="submit" class="btn-primary-sm" :disabled="overBudget">
-        Valider les achats &#8594;
-      </button>
+      <div class="mr-cart-actions">
+        <a href="{{ pass_url }}" class="btn-outline-sm">Passer</a>
+        <button type="submit" class="btn-primary-sm" :disabled="overBudget">
+          Valider les achats &#8594;
+        </button>
+      </div>
+
     </div>
   </form>
 

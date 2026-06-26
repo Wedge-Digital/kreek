@@ -2,42 +2,38 @@
 <div class="inducement-selector" hx-disinherit="*" x-data="inducementSelector()">
 
   <!-- Onglets -->
-  <div class="is-tabs">
+  <div class="mr-tabs">
     {% if !common_items.is_empty() %}
-    <button class="is-tab" :class="{ 'is-tab--active': activeTab === 'common' }" @click="activeTab = 'common'">
-      Communs
-    </button>
+    <div class="mr-tab" :class="{ active: activeTab === 'common' }" @click="activeTab = 'common'">Communs</div>
     {% endif %}
     {% if !special_items.is_empty() %}
-    <button class="is-tab" :class="{ 'is-tab--active': activeTab === 'special' }" @click="activeTab = 'special'">
-      Spéciaux
-    </button>
+    <div class="mr-tab" :class="{ active: activeTab === 'special' }" @click="activeTab = 'special'">Spéciaux</div>
     {% endif %}
     {% if !star_player_items.is_empty() %}
-    <button class="is-tab" :class="{ 'is-tab--active': activeTab === 'stars' }" @click="activeTab = 'stars'">
-      Star Players
-    </button>
+    <div class="mr-tab" :class="{ active: activeTab === 'stars' }" @click="activeTab = 'stars'">Star Players</div>
     {% endif %}
   </div>
 
   <!-- Communs -->
   {% if !common_items.is_empty() %}
-  <div x-show="activeTab === 'common'" class="is-panel">
+  <div class="mr-inducement-list" x-show="activeTab === 'common'">
     {% for item in common_items %}
-    <div class="is-card">
-      <div class="is-card__info">
-        <span class="is-card__name">{{ item.name }}</span>
-        <span class="is-card__cost">{{ item.unit_cost }} kPo</span>
-        <p class="is-card__desc">{{ item.description }}</p>
-      </div>
-      <div class="is-qty">
-        <button class="is-qty__btn" type="button"
-                @click="decrement('{{ item.uid }}')"
-                :disabled="qty('{{ item.uid }}') === 0">-</button>
-        <span class="is-qty__val" x-text="qty('{{ item.uid }}')"></span>
-        <button class="is-qty__btn" type="button"
-                @click="increment('{{ item.uid }}')"
-                :disabled="qty('{{ item.uid }}') >= {{ item.max_qty }}">+</button>
+    <div class="mr-inducement-card" :class="{ 'mr-inducement-card--selected': qty('{{ item.uid }}') > 0 }">
+      <div class="mr-inducement-main">
+        <div class="mr-inducement-info">
+          <div class="mr-inducement-name">{{ item.name }}</div>
+          <div class="mr-inducement-desc">{{ item.description }}</div>
+        </div>
+        <span class="mr-inducement-price">{{ item.unit_cost }} kPo</span>
+        <div class="mr-inducement-qty">
+          <button class="mr-qty-btn" type="button"
+                  @click="decrement('{{ item.uid }}')"
+                  :disabled="qty('{{ item.uid }}') === 0">−</button>
+          <span class="mr-qty-value" x-text="qty('{{ item.uid }}')"></span>
+          <button class="mr-qty-btn" type="button"
+                  @click="increment('{{ item.uid }}')"
+                  :disabled="qty('{{ item.uid }}') >= {{ item.max_qty }}">+</button>
+        </div>
       </div>
     </div>
     {% endfor %}
@@ -46,22 +42,24 @@
 
   <!-- Spéciaux -->
   {% if !special_items.is_empty() %}
-  <div x-show="activeTab === 'special'" class="is-panel">
+  <div class="mr-inducement-list" x-show="activeTab === 'special'">
     {% for item in special_items %}
-    <div class="is-card">
-      <div class="is-card__info">
-        <span class="is-card__name">{{ item.name }}</span>
-        <span class="is-card__cost">{{ item.unit_cost }} kPo</span>
-        <p class="is-card__desc">{{ item.description }}</p>
-      </div>
-      <div class="is-qty">
-        <button class="is-qty__btn" type="button"
-                @click="decrement('{{ item.uid }}')"
-                :disabled="qty('{{ item.uid }}') === 0">-</button>
-        <span class="is-qty__val" x-text="qty('{{ item.uid }}')"></span>
-        <button class="is-qty__btn" type="button"
-                @click="increment('{{ item.uid }}')"
-                :disabled="qty('{{ item.uid }}') >= {{ item.max_qty }}">+</button>
+    <div class="mr-inducement-card" :class="{ 'mr-inducement-card--selected': qty('{{ item.uid }}') > 0 }">
+      <div class="mr-inducement-main">
+        <div class="mr-inducement-info">
+          <div class="mr-inducement-name">{{ item.name }}</div>
+          <div class="mr-inducement-desc">{{ item.description }}</div>
+        </div>
+        <span class="mr-inducement-price">{{ item.unit_cost }} kPo</span>
+        <div class="mr-inducement-qty">
+          <button class="mr-qty-btn" type="button"
+                  @click="decrement('{{ item.uid }}')"
+                  :disabled="qty('{{ item.uid }}') === 0">−</button>
+          <span class="mr-qty-value" x-text="qty('{{ item.uid }}')"></span>
+          <button class="mr-qty-btn" type="button"
+                  @click="increment('{{ item.uid }}')"
+                  :disabled="qty('{{ item.uid }}') >= {{ item.max_qty }}">+</button>
+        </div>
       </div>
     </div>
     {% endfor %}
@@ -70,38 +68,43 @@
 
   <!-- Star Players -->
   {% if !star_player_items.is_empty() %}
-  <div x-show="activeTab === 'stars'" class="is-panel">
+  <div class="mr-inducement-list" x-show="activeTab === 'stars'">
     {% for sp in star_player_items %}
-    <div class="is-star-card">
-      <div class="is-star-card__header" @click="toggleStar('{{ sp.uid }}')">
-        <span class="is-card__name">{{ sp.name }}</span>
-        <span class="is-card__cost">{{ sp.cost }} kPo</span>
-        <span class="is-star-card__chevron" :class="{ 'is-star-card__chevron--open': openStars.has('{{ sp.uid }}') }">v</span>
+    <div class="mr-inducement-card mr-inducement-card--star"
+         :class="{ 'mr-inducement-card--selected': qty('{{ sp.uid }}') > 0 }"
+         @click="toggleStar('{{ sp.uid }}')">
+      <div class="mr-inducement-main">
+        <div class="mr-inducement-info">
+          <div class="mr-inducement-name">{{ sp.name }}</div>
+          <div class="mr-inducement-desc">{{ sp.rosters_label }}</div>
+        </div>
+        <span class="mr-inducement-price">{{ sp.cost }} kPo</span>
+        <div class="mr-inducement-qty" @click.stop>
+          <button class="mr-qty-btn" type="button"
+                  @click.stop="decrement('{{ sp.uid }}')"
+                  :disabled="qty('{{ sp.uid }}') === 0">−</button>
+          <span class="mr-qty-value" x-text="qty('{{ sp.uid }}')"></span>
+          <button class="mr-qty-btn" type="button"
+                  @click.stop="increment('{{ sp.uid }}')"
+                  :disabled="qty('{{ sp.uid }}') >= 1">+</button>
+        </div>
       </div>
-      <div class="is-star-card__stats" x-show="openStars.has('{{ sp.uid }}')">
-        <div class="is-stats-row">
-          <span>MA {{ sp.ma }}</span>
-          <span>ST {{ sp.st }}</span>
-          <span>AG {{ sp.ag }}</span>
-          <span>PA {{ sp.pa }}</span>
-          <span>AV {{ sp.av }}</span>
+      <button class="mr-inducement-toggle" type="button" @click.stop="toggleStar('{{ sp.uid }}')"
+              x-text="openStars.has('{{ sp.uid }}') ? 'Masquer les stats ▴' : 'Voir les stats ▾'"></button>
+      <div class="mr-star-detail" x-show="openStars.has('{{ sp.uid }}')">
+        <div class="mr-star-stats">
+          <div class="mr-star-stat"><div class="mr-star-stat-label">MA</div><div class="mr-star-stat-value">{{ sp.ma }}</div></div>
+          <div class="mr-star-stat"><div class="mr-star-stat-label">ST</div><div class="mr-star-stat-value">{{ sp.st }}</div></div>
+          <div class="mr-star-stat"><div class="mr-star-stat-label">AG</div><div class="mr-star-stat-value">{{ sp.ag }}</div></div>
+          <div class="mr-star-stat"><div class="mr-star-stat-label">PA</div><div class="mr-star-stat-value">{{ sp.pa }}</div></div>
+          <div class="mr-star-stat"><div class="mr-star-stat-label">AV</div><div class="mr-star-stat-value">{{ sp.av }}</div></div>
         </div>
         {% if !sp.skills.is_empty() %}
-        <p class="is-skills">{{ sp.skills|join(", ") }}</p>
+        <div class="mr-star-skills"><strong>Compétences :</strong> {{ sp.skills|join(", ") }}</div>
         {% endif %}
         {% if !sp.special_ability_name.is_empty() %}
-        <p class="is-special"><strong>{{ sp.special_ability_name }}</strong> — {{ sp.special_ability_description }}</p>
+        <div class="mr-star-power"><strong>{{ sp.special_ability_name }}</strong> — {{ sp.special_ability_description }}</div>
         {% endif %}
-        <p class="is-rosters">{{ sp.rosters_label }}</p>
-      </div>
-      <div class="is-qty">
-        <button class="is-qty__btn" type="button"
-                @click="decrement('{{ sp.uid }}')"
-                :disabled="qty('{{ sp.uid }}') === 0">-</button>
-        <span class="is-qty__val" x-text="qty('{{ sp.uid }}')"></span>
-        <button class="is-qty__btn" type="button"
-                @click="increment('{{ sp.uid }}')"
-                :disabled="qty('{{ sp.uid }}') >= 1">+</button>
       </div>
     </div>
     {% endfor %}
@@ -132,6 +135,7 @@
       },
       toggleStar(uid) {
         if (this.openStars.has(uid)) { this.openStars.delete(uid); } else { this.openStars.add(uid); }
+        this.openStars = new Set(this.openStars);
       },
       emit() {
         const selected = this.items.filter(i => i.qty > 0);
