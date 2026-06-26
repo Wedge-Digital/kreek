@@ -96,6 +96,9 @@ impl MatchReportRepository {
                 .map_err(RepositoryError::Database)?;
             }
             MatchReportDomainEvent::FanFactorRecorded { .. } => {}
+            MatchReportDomainEvent::TeamValuesRecorded { .. } => {}
+            MatchReportDomainEvent::InducementsRecorded { .. } => {}
+            MatchReportDomainEvent::StarPlayerEngaged { .. } => {}
             MatchReportDomainEvent::MatchReportCancelled { .. } => {
                 sqlx::query(
                     "UPDATE match_report_projection

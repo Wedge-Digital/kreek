@@ -1,4 +1,6 @@
 use crate::app::match_report::domain::error::DomainError;
+use crate::app::shared_kernel::inducement_definition::InducementId;
+use derive_more::Display;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -24,9 +26,44 @@ impl D3Roll {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Display)]
+pub struct TeamValue(pub u32);
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InducementPurchase {
+    pub uid: InducementId,
+    pub qty: u8,
+    pub unit_cost: u32,
+}
+
+impl InducementPurchase {
+    pub fn total_cost(&self) -> u32 {
+        self.unit_cost * self.qty as u32
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn team_value_ord() {
+        let a = TeamValue(1000);
+        let b = TeamValue(1100);
+        assert!(b > a);
+        assert!(a < b);
+        assert_eq!(TeamValue(1000), TeamValue(1000));
+    }
+
+    #[test]
+    fn inducement_purchase_total_cost() {
+        let p = InducementPurchase {
+            uid: InducementId("BRIBE".to_string()),
+            qty: 2,
+            unit_cost: 50_000,
+        };
+        assert_eq!(p.total_cost(), 100_000);
+    }
 
     #[test]
     fn d3roll_accepte_1_2_3() {

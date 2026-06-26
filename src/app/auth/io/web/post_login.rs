@@ -174,11 +174,19 @@ mod tests {
                 comment_repository: Arc::new(FakeCommentRepository),
             },
             references:    crate::app::references::context::ReferencesContext::new(),
-            team_creation: crate::app::team_creation::context::TeamCreationContext {
-                team_repository:   Arc::new(FakeTeamDraftRepository),
-                roster_repository: Arc::new(FakeTeamRosterRepository),
-                reference_data:    Arc::new(FakeReferenceData),
-                event_bus:         event_bus.clone(),
+            team_creation: {
+                struct FakeCompetitionRules;
+                #[async_trait::async_trait]
+                impl crate::app::team_creation::ports::ICompetitionCreationRulesPort for FakeCompetitionRules {
+                    async fn find_creation_rules_for_season(&self, _: &str) -> Option<crate::app::team_creation::domain::creation_rules::CreationRules> { None }
+                }
+                crate::app::team_creation::context::TeamCreationContext {
+                    team_repository:   Arc::new(FakeTeamDraftRepository),
+                    roster_repository: Arc::new(FakeTeamRosterRepository),
+                    reference_data:    Arc::new(FakeReferenceData),
+                    competition_rules: Arc::new(FakeCompetitionRules),
+                    event_bus:         event_bus.clone(),
+                }
             },
             teams: {
                 struct FakeTeamRepo;
@@ -193,8 +201,19 @@ mod tests {
                     async fn find_enrolled_for_season(&self, _: &str)
                         -> Result<Vec<crate::app::teams::ports::TeamCardRow>, crate::app::teams::ports::RepositoryError> { Ok(vec![]) }
                 }
+                struct FakePlayerCountPort;
+                #[async_trait::async_trait]
+                impl crate::app::teams::ports::IPlayerCountPort for FakePlayerCountPort {
+                    async fn count_for_team(&self, _: &str) -> u32 { 0 }
+                }
+                struct FakeJourneymanTypePort;
+                impl crate::app::teams::ports::IJourneymanTypePort for FakeJourneymanTypePort {
+                    fn journeyman_type_for_roster(&self, _: &str) -> String { String::new() }
+                }
                 crate::app::teams::context::TeamsContext {
-                    team_repository: Arc::new(FakeTeamRepo),
+                    team_repository:       Arc::new(FakeTeamRepo),
+                    player_count_port:     Arc::new(FakePlayerCountPort),
+                    journeyman_type_port:  Arc::new(FakeJourneymanTypePort),
                 }
             },
             players: {
@@ -241,6 +260,7 @@ mod tests {
                 #[async_trait::async_trait]
                 impl crate::app::match_report::ports::ITeamDataPort for FakeTeamDataPort {
                     async fn is_team_ready_to_play(&self, _: &str) -> Result<bool, String> { Ok(true) }
+                    async fn find_team_info(&self, _: &str) -> Option<crate::app::match_report::ports::TeamInfoDto> { None }
                 }
                 crate::app::match_report::context::MatchReportContext {
                     match_report_repo: Arc::new(FakeMrRepo),
