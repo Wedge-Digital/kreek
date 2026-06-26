@@ -70,7 +70,7 @@ mod tests {
             qty: 2,
             unit_cost: 50,
         };
-        assert_eq!(p.total_cost(), 100_000);
+        assert_eq!(p.total_cost(), 100); // 2 × 50 kPo
     }
 
     #[test]

@@ -37,6 +37,13 @@ pub trait IMatchReportRepository: Send + Sync {
         match_report_id: &str,
     ) -> Result<Option<MatchReportState>, RepositoryError>;
 
+    async fn append_many(
+        &self,
+        match_report_id: &str,
+        events: Vec<MatchReportDomainEvent>,
+        expected_version: u64,
+    ) -> Result<u64, RepositoryError>;
+
     async fn find_id_by_pairing(
         &self,
         pairing_id: &str,

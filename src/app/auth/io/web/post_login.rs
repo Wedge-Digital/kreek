@@ -244,6 +244,8 @@ mod tests {
                 impl crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository for FakeMrRepo {
                     async fn append(&self, _: &str, _: &crate::app::match_report::domain::events::MatchReportDomainEvent, _: u64)
                         -> Result<u64, crate::app::match_report::domain::match_report_repository_port::RepositoryError> { Ok(1) }
+                    async fn append_many(&self, _: &str, _: Vec<crate::app::match_report::domain::events::MatchReportDomainEvent>, _: u64)
+                        -> Result<u64, crate::app::match_report::domain::match_report_repository_port::RepositoryError> { Ok(1) }
                     async fn find_by_id(&self, _: &str)
                         -> Result<Option<crate::app::match_report::domain::match_report_state::MatchReportState>, crate::app::match_report::domain::match_report_repository_port::RepositoryError> { Ok(None) }
                     async fn find_id_by_pairing(&self, _: &str)

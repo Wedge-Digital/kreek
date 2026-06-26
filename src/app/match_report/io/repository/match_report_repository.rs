@@ -96,8 +96,41 @@ impl MatchReportRepository {
                 .map_err(RepositoryError::Database)?;
             }
             MatchReportDomainEvent::FanFactorRecorded { .. } => {}
-            MatchReportDomainEvent::TeamValuesRecorded { .. } => {}
-            MatchReportDomainEvent::InducementsRecorded { .. } => {}
+            MatchReportDomainEvent::TeamValuesRecorded { home_team_value, away_team_value, .. } => {
+                sqlx::query(
+                    "UPDATE match_report_projection
+                     SET home_team_value = $2, away_team_value = $3, version = $4, updated_at = now()
+                     WHERE match_report_id = $1",
+                )
+                .bind(match_report_id)
+                .bind(home_team_value.0 as i32)
+                .bind(away_team_value.0 as i32)
+                .bind(version as i64)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
+            MatchReportDomainEvent::InducementsRecorded { team_id, purchases, .. } => {
+                let json = serde_json::to_value(purchases).map_err(RepositoryError::Serialization)?;
+                let is_home = sqlx::query(
+                    "SELECT home_team_id FROM match_report_projection WHERE match_report_id = $1",
+                )
+                .bind(match_report_id)
+                .fetch_one(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)
+                .map(|r| r.get::<String, _>("home_team_id") == team_id.to_string())?;
+                let col = if is_home { "home_inducements" } else { "away_inducements" };
+                sqlx::query(&format!(
+                    "UPDATE match_report_projection SET {col} = $2, version = $3, updated_at = now() WHERE match_report_id = $1"
+                ))
+                .bind(match_report_id)
+                .bind(&json)
+                .bind(version as i64)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
             MatchReportDomainEvent::StarPlayerEngaged { .. } => {}
             MatchReportDomainEvent::MatchReportCancelled { .. } => {
                 sqlx::query(
@@ -189,6 +222,43 @@ impl IMatchReportRepository for MatchReportRepository {
             rehydrate(events).map_err(|e| RepositoryError::Rehydration(e.to_string()))?;
 
         Ok(Some(state))
+    }
+
+    async fn append_many(
+        &self,
+        match_report_id: &str,
+        events: Vec<MatchReportDomainEvent>,
+        expected_version: u64,
+    ) -> Result<u64, RepositoryError> {
+        let mut tx = self.pool.begin().await.map_err(RepositoryError::Database)?;
+        let mut version = expected_version;
+        for event in &events {
+            version += 1;
+            let payload = serde_json::to_value(event).map_err(RepositoryError::Serialization)?;
+            sqlx::query(
+                "INSERT INTO match_report_event_store
+                    (match_report_id, event_type, event_version, payload, version)
+                 VALUES ($1, $2, $3, $4, $5)",
+            )
+            .bind(match_report_id)
+            .bind(event.type_name())
+            .bind(event.schema_version())
+            .bind(&payload)
+            .bind(version as i64)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                if let sqlx::Error::Database(ref db) = e {
+                    if db.constraint() == Some("match_report_es_version") {
+                        return RepositoryError::ConcurrentWrite;
+                    }
+                }
+                RepositoryError::Database(e)
+            })?;
+            self.update_projection_in_tx(&mut tx, match_report_id, event, version).await?;
+        }
+        tx.commit().await.map_err(RepositoryError::Database)?;
+        Ok(version)
     }
 
     async fn find_id_by_pairing(
