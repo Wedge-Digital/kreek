@@ -170,13 +170,27 @@ pub async fn post_pre_match(
         recorded_by: user.id,
     };
 
-    match record_fan_factor_use_case::execute(cmd, state.match_report.match_report_repo.as_ref())
-        .await
-    {
-        Ok(_) => {
+    let outcome = record_fan_factor_use_case::execute(
+        cmd,
+        state.match_report.match_report_repo.as_ref(),
+        state.match_report.team_data.as_ref(),
+        state.match_report.competition_data.as_ref(),
+    )
+    .await;
+
+    match outcome {
+        Ok(record_fan_factor_use_case::RecordFanFactorOutcome::RedirectToInducements {
+            topdog_team_id,
+        }) => {
             let url = AppRoutes::default()
                 .match_report
-                .step2(&space_id, &match_report_id);
+                .inducements(&space_id, &match_report_id, &topdog_team_id);
+            Redirect::to(&url).into_response()
+        }
+        Ok(record_fan_factor_use_case::RecordFanFactorOutcome::RedirectToStep3) => {
+            let url = AppRoutes::default()
+                .match_report
+                .step3(&space_id, &match_report_id);
             Redirect::to(&url).into_response()
         }
         Err(record_fan_factor_use_case::RecordFanFactorError::NotFound) => {
