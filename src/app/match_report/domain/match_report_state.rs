@@ -59,6 +59,34 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             }
             (
                 Some(MatchReportState::PreMatch(pm)),
+                MatchReportDomainEvent::TeamValuesRecorded { home_team_value, away_team_value, .. },
+            ) => {
+                let mut updated = pm;
+                updated.home_team_value = Some(*home_team_value);
+                updated.away_team_value = Some(*away_team_value);
+                updated.version += 1;
+                MatchReportState::PreMatch(updated)
+            }
+            (
+                Some(MatchReportState::PreMatch(pm)),
+                MatchReportDomainEvent::InducementsRecorded { team_id, purchases, .. },
+            ) => {
+                let mut updated = pm;
+                if team_id == &updated.home_team_id {
+                    updated.home_inducements = Some(purchases.clone());
+                } else {
+                    updated.away_inducements = Some(purchases.clone());
+                }
+                updated.version += 1;
+                MatchReportState::PreMatch(updated)
+            }
+            (Some(MatchReportState::PreMatch(pm)), MatchReportDomainEvent::StarPlayerEngaged { .. }) => {
+                let mut updated = pm;
+                updated.version += 1;
+                MatchReportState::PreMatch(updated)
+            }
+            (
+                Some(MatchReportState::PreMatch(pm)),
                 MatchReportDomainEvent::MatchReportCancelled { reason, .. },
             ) => MatchReportState::Cancelled(MatchReportCancelled {
                 id: pm.id.to_string(),

@@ -42,6 +42,14 @@ impl InducementPurchase {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct AllowedInducementSpec {
+    pub uid: InducementId,
+    pub max_qty: u8,
+    pub unit_cost: u32,
+    pub is_star_player: bool,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -60,7 +68,7 @@ mod tests {
         let p = InducementPurchase {
             uid: InducementId("BRIBE".to_string()),
             qty: 2,
-            unit_cost: 50_000,
+            unit_cost: 50,
         };
         assert_eq!(p.total_cost(), 100_000);
     }

@@ -6,7 +6,7 @@
 |---|---|
 | R1 | TeamValue plus haute = TopDog. Égalité = home team = TopDog |
 | R2 | TopDog achète en premier. Budget TopDog = trésorerie TopDog (hard cap) |
-| R3 | Underdog budget = \|TV_home − TV_away\| + dépenses TopDog + min(trésorerie Underdog, 50 000) |
+| R3 | Underdog budget = \|TV_home − TV_away\| + dépenses TopDog + min(trésorerie Underdog, 50 kPo) |
 | R4 | Si trésorerie Underdog < 50 000 → on engage la totalité (pas de pénalité) |
 | R5 | Budget dépassé → `BudgetExceeded` (front bloqué + validation back) |
 | R6 | Quantité achetée > `maxQty` d'un inducement → `MaxQtyExceeded` |
@@ -103,7 +103,7 @@ pub fn inducement_budget_for(
 - Sinon (Underdog) :
   ```
   let tv_diff = home_tv.abs_diff(away_tv);
-  let treasury_contribution = treasury.min(50_000);
+  let treasury_contribution = treasury.min(50); // cap à 50 kPo = 50 000 gp
   tv_diff + self.topdog_spending() + treasury_contribution
   ```
 
