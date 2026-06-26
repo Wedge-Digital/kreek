@@ -1,5 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::io::web::admin::dashboard::build_dashboard_fragment;
+use crate::app::competitions::io::web::admin::summary_tab::build_summary_fragment;
 use crate::app::competitions::use_cases::admin::dashboard_query;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::authorization::SpaceProfile;
@@ -142,6 +143,26 @@ pub async fn render_admin_page(
                 requires_validation,
             };
             tpl.render().unwrap_or_default()
+        }
+        "summary" => {
+            match build_summary_fragment(
+                &comp_id,
+                &season_entity_id,
+                state.competitions.competition_repository.as_ref(),
+                state.competitions.season_repository.as_ref(),
+                app_routes,
+                space_id,
+                competition_id,
+                season_id,
+            )
+            .await
+            {
+                Some(tpl) => tpl.render().unwrap_or_default(),
+                None => {
+                    tracing::error!("admin_page summary build failed for {competition_id}/{season_id}");
+                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                }
+            }
         }
         "groups" => {
             let tpl = super::groups_tab::GroupsTabTemplate {

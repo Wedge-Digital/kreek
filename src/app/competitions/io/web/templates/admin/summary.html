@@ -1,0 +1,162 @@
+<link rel="stylesheet" href="/static/css/components/create-card.css">
+<link rel="stylesheet" href="/static/css/pages/new-competition-phase-5.css">
+
+{% if has_unfilled_spots %}
+<div class="warn-box">
+    <div class="warn-icon">⚠️</div>
+    <div class="warn-text">
+        <div class="warn-title">Inscriptions incomplètes</div>
+        {{ remaining_spots }} places restantes sur {{ total_spots }}.
+    </div>
+</div>
+{% endif %}
+
+<!-- Recap 1: Informations générales -->
+<div class="recap-card">
+    <div class="recap-card-header">
+        <div class="recap-card-icon">🏟️</div>
+        <div class="recap-card-title">Informations générales</div>
+    </div>
+    <div class="recap-card-body">
+        <div class="recap-header-layout">
+            <div class="recap-logo">
+                {% if let Some(logo) = competition_logo %}
+                <img src="{{ logo }}" alt="{{ competition_name }}" class="recap-logo-img">
+                {% else %}
+                🏆
+                {% endif %}
+            </div>
+            <div class="flex-1">
+                <div class="recap-row">
+                    <span class="recap-key">Compétition</span>
+                    <span class="recap-val highlight">{{ competition_name }}</span>
+                </div>
+                <div class="recap-row">
+                    <span class="recap-key">Saison</span>
+                    <span class="recap-val highlight">{{ season_name }}</span>
+                </div>
+                {% if !admin_names.is_empty() %}
+                <div class="recap-row">
+                    <span class="recap-key">Administrateurs</span>
+                    <span class="recap-val">
+                        <div class="admin-chips">
+                            {% for name in admin_names %}
+                            <span class="admin-chip">{{ name }}</span>
+                            {% endfor %}
+                        </div>
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recap 2: Règles -->
+{% if has_rules %}
+<div class="recap-card">
+    <div class="recap-card-header">
+        <div class="recap-card-icon">📋</div>
+        <div class="recap-card-title">Règles de la compétition</div>
+    </div>
+    <div class="recap-card-body">
+        <div class="recap-row">
+            <span class="recap-key">Points VND</span>
+            <span class="recap-val">{{ ranking_points_label }}</span>
+        </div>
+        {% if let Some(bonus) = bonus_label %}
+        <div class="recap-row">
+            <span class="recap-key">Points bonus</span>
+            <span class="recap-val">{{ bonus }}</span>
+        </div>
+        {% endif %}
+        {% if let Some(tiers) = tiers_label %}
+        <div class="recap-row">
+            <span class="recap-key">Tiers</span>
+            <span class="recap-val">{{ tiers }}</span>
+        </div>
+        {% endif %}
+        {% if !rosters_preview.is_empty() %}
+        <div class="recap-row recap-row--last">
+            <span class="recap-key">Rosters autorisés</span>
+            <span class="recap-val">
+                <div class="pill-list">
+                    {% for roster in rosters_preview %}
+                    <span class="pill">{{ roster }}</span>
+                    {% endfor %}
+                    {% if rosters_extra > 0 %}
+                    <span class="pill pill--primary">+{{ rosters_extra }} autres</span>
+                    {% endif %}
+                </div>
+            </span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Recap 3: Structure -->
+{% if has_structure %}
+<div class="recap-card">
+    <div class="recap-card-header">
+        <div class="recap-card-icon">🏗️</div>
+        <div class="recap-card-title">Structure de la compétition</div>
+    </div>
+    <div class="recap-card-body">
+        {% if let Some(groups) = groups_label %}
+        <div class="recap-row">
+            <span class="recap-key">Phase de groupes</span>
+            <span class="recap-val">{{ groups }}</span>
+        </div>
+        {% endif %}
+        {% if let Some(playoffs) = playoffs_label %}
+        <div class="recap-row">
+            <span class="recap-key">Phase finale</span>
+            <span class="recap-val">{{ playoffs }}</span>
+        </div>
+        {% endif %}
+        {% if let Some(dates) = dates_label %}
+        <div class="recap-row">
+            <span class="recap-key">Dates</span>
+            <span class="recap-val">{{ dates }}</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Recap 4: Invitations -->
+{% if has_invitations %}
+<div class="recap-card">
+    <div class="recap-card-header">
+        <div class="recap-card-icon">📩</div>
+        <div class="recap-card-title">Invitations</div>
+    </div>
+    <div class="recap-card-body">
+        <div class="recap-row">
+            <span class="recap-key">Mode d'accès</span>
+            <span class="recap-val">{{ access_mode_label }}</span>
+        </div>
+        <div class="recap-row">
+            <span class="recap-key">Validation des inscriptions</span>
+            <span class="recap-val">{{ validation_label }}</span>
+        </div>
+        <div class="recap-row">
+            <span class="recap-key">Invitations envoyées</span>
+            <span class="recap-val">{{ invited_label }}</span>
+        </div>
+        {% if let Some(spots) = spots_label %}
+        <div class="recap-row">
+            <span class="recap-key">Places disponibles</span>
+            <span class="recap-val {% if spots_warn %}warn{% endif %}">{{ spots }}</span>
+        </div>
+        {% endif %}
+        {% if let Some(deadline) = deadline_label %}
+        <div class="recap-row">
+            <span class="recap-key">Date limite</span>
+            <span class="recap-val">{{ deadline }}</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

@@ -22,6 +22,11 @@
        hx-target="#admin-content"
        hx-swap="innerHTML"
        hx-push-url="{{ app_routes.competitions.admin_dashboard(space_id, competition_id, season_id) }}">📊 Tableau de bord</a>
+    <a class="admin-tab{% if active_tab == "summary" %} active{% endif %}"
+       hx-get="{{ app_routes.competitions.admin_summary(space_id, competition_id, season_id) }}"
+       hx-target="#admin-content"
+       hx-swap="innerHTML"
+       hx-push-url="{{ app_routes.competitions.admin_summary(space_id, competition_id, season_id) }}">📋 Résumé</a>
     <a class="admin-tab{% if active_tab == "enrollments" %} active{% endif %}"
        hx-get="{{ app_routes.competitions.admin_enrollments(space_id, competition_id, season_id) }}"
        hx-target="#admin-content"
