@@ -1,0 +1,148 @@
+<link rel="stylesheet" href="/static/css/widgets/inducement-selector.css">
+<div class="inducement-selector" hx-disinherit="*" x-data="inducementSelector()">
+
+  <!-- Onglets -->
+  <div class="is-tabs">
+    {% if !common_items.is_empty() %}
+    <button class="is-tab" :class="{ 'is-tab--active': activeTab === 'common' }" @click="activeTab = 'common'">
+      Communs
+    </button>
+    {% endif %}
+    {% if !special_items.is_empty() %}
+    <button class="is-tab" :class="{ 'is-tab--active': activeTab === 'special' }" @click="activeTab = 'special'">
+      Spéciaux
+    </button>
+    {% endif %}
+    {% if !star_player_items.is_empty() %}
+    <button class="is-tab" :class="{ 'is-tab--active': activeTab === 'stars' }" @click="activeTab = 'stars'">
+      Star Players
+    </button>
+    {% endif %}
+  </div>
+
+  <!-- Communs -->
+  {% if !common_items.is_empty() %}
+  <div x-show="activeTab === 'common'" class="is-panel">
+    {% for item in common_items %}
+    <div class="is-card">
+      <div class="is-card__info">
+        <span class="is-card__name">{{ item.name }}</span>
+        <span class="is-card__cost">{{ item.unit_cost }} kPo</span>
+        <p class="is-card__desc">{{ item.description }}</p>
+      </div>
+      <div class="is-qty">
+        <button class="is-qty__btn" type="button"
+                @click="decrement('{{ item.uid }}')"
+                :disabled="qty('{{ item.uid }}') === 0">-</button>
+        <span class="is-qty__val" x-text="qty('{{ item.uid }}')"></span>
+        <button class="is-qty__btn" type="button"
+                @click="increment('{{ item.uid }}')"
+                :disabled="qty('{{ item.uid }}') >= {{ item.max_qty }}">+</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Spéciaux -->
+  {% if !special_items.is_empty() %}
+  <div x-show="activeTab === 'special'" class="is-panel">
+    {% for item in special_items %}
+    <div class="is-card">
+      <div class="is-card__info">
+        <span class="is-card__name">{{ item.name }}</span>
+        <span class="is-card__cost">{{ item.unit_cost }} kPo</span>
+        <p class="is-card__desc">{{ item.description }}</p>
+      </div>
+      <div class="is-qty">
+        <button class="is-qty__btn" type="button"
+                @click="decrement('{{ item.uid }}')"
+                :disabled="qty('{{ item.uid }}') === 0">-</button>
+        <span class="is-qty__val" x-text="qty('{{ item.uid }}')"></span>
+        <button class="is-qty__btn" type="button"
+                @click="increment('{{ item.uid }}')"
+                :disabled="qty('{{ item.uid }}') >= {{ item.max_qty }}">+</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Star Players -->
+  {% if !star_player_items.is_empty() %}
+  <div x-show="activeTab === 'stars'" class="is-panel">
+    {% for sp in star_player_items %}
+    <div class="is-star-card">
+      <div class="is-star-card__header" @click="toggleStar('{{ sp.uid }}')">
+        <span class="is-card__name">{{ sp.name }}</span>
+        <span class="is-card__cost">{{ sp.cost }} kPo</span>
+        <span class="is-star-card__chevron" :class="{ 'is-star-card__chevron--open': openStars.has('{{ sp.uid }}') }">v</span>
+      </div>
+      <div class="is-star-card__stats" x-show="openStars.has('{{ sp.uid }}')">
+        <div class="is-stats-row">
+          <span>MA {{ sp.ma }}</span>
+          <span>ST {{ sp.st }}</span>
+          <span>AG {{ sp.ag }}</span>
+          <span>PA {{ sp.pa }}</span>
+          <span>AV {{ sp.av }}</span>
+        </div>
+        {% if !sp.skills.is_empty() %}
+        <p class="is-skills">{{ sp.skills|join(", ") }}</p>
+        {% endif %}
+        {% if !sp.special_ability_name.is_empty() %}
+        <p class="is-special"><strong>{{ sp.special_ability_name }}</strong> — {{ sp.special_ability_description }}</p>
+        {% endif %}
+        <p class="is-rosters">{{ sp.rosters_label }}</p>
+      </div>
+      <div class="is-qty">
+        <button class="is-qty__btn" type="button"
+                @click="decrement('{{ sp.uid }}')"
+                :disabled="qty('{{ sp.uid }}') === 0">-</button>
+        <span class="is-qty__val" x-text="qty('{{ sp.uid }}')"></span>
+        <button class="is-qty__btn" type="button"
+                @click="increment('{{ sp.uid }}')"
+                :disabled="qty('{{ sp.uid }}') >= 1">+</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+<script>
+(function() {
+  const items = {{ items_json|safe }};
+  const instanceId = '{{ instance_id }}';
+  const defaultTab = '{% if !common_items.is_empty() %}common{% else if !special_items.is_empty() %}special{% else %}stars{% endif %}';
+
+  window.inducementSelector = function() {
+    return {
+      activeTab: defaultTab,
+      openStars: new Set(),
+      items: items,
+      instanceId: instanceId,
+      qty(uid) { const item = this.items.find(i => i.uid === uid); return item ? item.qty : 0; },
+      increment(uid) {
+        const item = this.items.find(i => i.uid === uid);
+        if (item && item.qty < item.max_qty) { item.qty++; this.emit(); }
+      },
+      decrement(uid) {
+        const item = this.items.find(i => i.uid === uid);
+        if (item && item.qty > 0) { item.qty--; this.emit(); }
+      },
+      toggleStar(uid) {
+        if (this.openStars.has(uid)) { this.openStars.delete(uid); } else { this.openStars.add(uid); }
+      },
+      emit() {
+        const selected = this.items.filter(i => i.qty > 0);
+        const total_cost = selected.reduce((sum, i) => sum + i.qty * i.unit_cost, 0);
+        htmx.trigger(document.body, 'inducementSelectionChanged', {
+          instanceId: this.instanceId,
+          items: selected.map(i => ({ uid: i.uid, name: i.name, qty: i.qty, unit_cost: i.unit_cost })),
+          total_cost
+        });
+      }
+    };
+  };
+})();
+</script>

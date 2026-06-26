@@ -1,0 +1,152 @@
+.inducement-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.is-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  padding-bottom: 0.25rem;
+}
+
+.is-tab {
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px 4px 0 0;
+  border: 1px solid transparent;
+  background: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--color-text-muted, #6b7280);
+}
+
+.is-tab--active {
+  background: var(--color-surface, #fff);
+  border-color: var(--color-border, #e5e7eb);
+  border-bottom-color: var(--color-surface, #fff);
+  color: var(--color-text, #111827);
+  font-weight: 500;
+  margin-bottom: -1px;
+}
+
+.is-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.is-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+  background: var(--color-surface, #fff);
+}
+
+.is-card__info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.is-card__name {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.is-card__cost {
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #6b7280);
+}
+
+.is-card__desc {
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #6b7280);
+  margin: 0;
+}
+
+.is-qty {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.is-qty__btn {
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  border: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-surface, #fff);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.is-qty__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.is-qty__val {
+  min-width: 1.2rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Star players */
+.is-star-card {
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+  background: var(--color-surface, #fff);
+  overflow: hidden;
+}
+
+.is-star-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+}
+
+.is-star-card__header .is-card__name { flex: 1; }
+
+.is-star-card__chevron {
+  transition: transform 0.15s;
+  font-size: 0.9rem;
+}
+
+.is-star-card__chevron--open {
+  transform: rotate(180deg);
+}
+
+.is-star-card__stats {
+  padding: 0.5rem 0.75rem 0.6rem;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-surface-subtle, #f9fafb);
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.is-stats-row {
+  display: flex;
+  gap: 0.75rem;
+  font-weight: 500;
+}
+
+.is-skills, .is-special, .is-rosters {
+  margin: 0;
+  color: var(--color-text-muted, #6b7280);
+}

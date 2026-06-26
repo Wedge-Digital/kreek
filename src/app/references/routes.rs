@@ -4,7 +4,8 @@ pub mod path {
     pub const SKILL_PICKER:          &str = "/references/roster-lines/skill-picker";
     pub const REF_WIDGETS:           &str = "/test/references/widgets";
     pub const ROSTER_PICKER:         &str = "/references/roster-picker";
-    pub const INDUCEMENT_PICKER:         &str = "/references/inducement-picker";
+    pub const INDUCEMENT_PICKER:     &str = "/references/inducement-picker";
+    pub const INDUCEMENT_SELECTOR:   &str = "/references/inducement-selector";
     pub const STAR_PLAYER_PICKER:    &str = "/references/star-player-picker";
 }
 
@@ -59,6 +60,10 @@ impl Routes {
 
     pub fn inducement_picker(&self) -> &'static str {
         path::INDUCEMENT_PICKER
+    }
+
+    pub fn inducement_selector(&self) -> &'static str {
+        path::INDUCEMENT_SELECTOR
     }
 
     pub fn star_player_picker(&self) -> &'static str {
