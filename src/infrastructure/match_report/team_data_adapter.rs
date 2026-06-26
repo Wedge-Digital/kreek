@@ -35,6 +35,17 @@ impl ITeamDataPort for TeamDataAdapter {
             team_name: team.name,
             coach_name: team.coach_name,
             roster_name: team.roster_name,
+            roster_id: team.roster_id,
         })
+    }
+
+    async fn find_team_value(&self, team_id: &str) -> Option<u32> {
+        let team = self.team_repo.find_by_id(team_id).await.ok()??;
+        Some(team.team_value.0)
+    }
+
+    async fn find_team_treasury(&self, team_id: &str) -> Option<u32> {
+        let team = self.team_repo.find_by_id(team_id).await.ok()??;
+        Some(team.treasury.0)
     }
 }
