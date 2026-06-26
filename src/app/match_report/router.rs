@@ -1,3 +1,4 @@
+use crate::app::match_report::io::web::inducements_controller::{get_inducements, post_inducements};
 use crate::app::match_report::io::web::match_selection_controller::{
     create_match_report, edit_match_report, from_pairing, new_match_report,
     update_match_selection,
@@ -16,4 +17,5 @@ pub fn router() -> Router<AppState> {
         .route(path::MATCH_REPORT_EDIT, get(edit_match_report).post(update_match_selection))
         .route(path::MATCH_REPORT_FROM_PAIRING, get(from_pairing))
         .route(path::MATCH_REPORT_STEP2, get(get_pre_match).post(post_pre_match))
+        .route(path::MATCH_REPORT_INDUCEMENTS, get(get_inducements).post(post_inducements))
 }

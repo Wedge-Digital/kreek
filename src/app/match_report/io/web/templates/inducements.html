@@ -1,0 +1,74 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/match-report-shared.css">
+<link rel="stylesheet" href="/static/css/pages/match-report-inducements.css">
+
+<div class="mr-container"
+     x-data="{
+       items: [],
+       totalCost: 0,
+       budget: {{ budget }},
+       get overBudget() { return this.totalCost > this.budget; },
+       get selectionJson() {
+         return JSON.stringify(this.items.map(i => ({ uid: i.uid, name: i.name, qty: i.qty, unit_cost: i.unit_cost })));
+       }
+     }"
+     @inducement-selection-changed.window="items = $event.detail.items; totalCost = $event.detail.total_cost">
+
+  <!-- Header -->
+  <div class="mr-header">
+    <div class="mr-header-icon">&#128722;</div>
+    <div class="mr-header-title">Coups de pouce</div>
+    <div class="mr-header-sub">Achetez des inducements pour rééquilibrer le match</div>
+  </div>
+
+  <!-- Équipe courante -->
+  <div class="mr-team-banner">
+    <div class="mr-team-logo">{{ team_initials }}</div>
+    <div class="mr-team-info">
+      <div class="mr-team-name">{{ team_name }}</div>
+      <div class="mr-team-order">{{ order_label }}</div>
+    </div>
+  </div>
+
+  <!-- Bannière budget -->
+  <div class="mr-budget-banner">
+    <span class="mr-budget-label">Budget disponible</span>
+    <span class="mr-budget-amount">{{ budget }} kPo</span>
+  </div>
+
+  <!-- Widget inducement-selector chargé via HTMX -->
+  <div class="mr-selector-zone"
+       hx-get="{{ inducement_selector_url }}"
+       hx-trigger="load"
+       hx-target="this"
+       hx-swap="innerHTML">
+    <div class="mr-loading">Chargement des inducements…</div>
+  </div>
+
+  <!-- Cart sticky footer -->
+  <form method="post" action="{{ form_action }}" class="mr-cart-footer">
+    <input type="hidden" name="selection" :value="selectionJson">
+
+    <div class="mr-cart-summary">
+      <span x-text="items.length === 0 ? 'Aucun coup de pouce sélectionné' : items.length + ' coup(s) de pouce'"></span>
+      <span class="mr-cart-total" :class="{ 'mr-cart-total--over': overBudget }">
+        <span x-text="totalCost"></span> / {{ budget }} kPo
+      </span>
+    </div>
+
+    <div class="mr-cart-warning" x-show="overBudget">
+      Budget dépassé de <span x-text="totalCost - budget"></span> kPo
+    </div>
+
+    <div class="mr-cart-actions">
+      <a href="{{ pass_url }}" class="btn-outline-sm">Passer</a>
+      <button type="submit" class="btn-primary-sm" :disabled="overBudget">
+        Valider les achats &#8594;
+      </button>
+    </div>
+  </form>
+
+</div>
+{% endblock %}
