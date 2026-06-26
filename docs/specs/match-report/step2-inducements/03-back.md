@@ -79,6 +79,16 @@ pub away_inducements:  Option<Vec<InducementPurchase>>,  // None = pas encore ac
 | `TeamValue(u32)` | Valeur d'équipe en kPo |
 | `InducementPurchase { uid: InducementId, qty: u8 }` | Un achat (uid + quantité achetée) |
 
+### Nouveaux domain events
+
+| Event | Émis quand |
+|---|---|
+| `TeamValuesRecorded` | Fan factor enregistré → TV des deux équipes capturées |
+| `InducementsRecorded` | Équipe valide ses achats (même vide si "Passer") |
+| `StarPlayerEngaged` | **Un event par star player recruté** — porte `team_id` + `star_player_uid` |
+
+`StarPlayerEngaged` est émis en plus de `InducementsRecorded`, dans la même transaction. Non émis si aucun star player acheté.
+
 ### Nouvelles `DomainError`
 
 `BudgetExceeded`, `MaxQtyExceeded`, `StarPlayerLimitExceeded`, `StarPlayerConflict`, `TeamValuesNotRecorded`, `InducementsAlreadyRecorded`

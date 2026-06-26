@@ -111,8 +111,9 @@ pub struct TeamValue(u32);
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InducementPurchase {
-    pub uid:  InducementId,
-    pub qty:  u8,
+    pub uid:       InducementId,
+    pub qty:       u8,
+    pub unit_cost: u32,  // conservé pour topdog_spending() sans recalcul
 }
 ```
 
@@ -182,8 +183,14 @@ async fn find_team_treasury(&self, team_id: &str) -> Option<u32>;
 
 ```rust
 pub struct TierRulesDto {
-    pub allowed_inducement_uids:   Vec<String>,
-    pub allowed_star_player_uids:  Vec<String>,
+    pub allowed_inducements:  Vec<InducementSpecDto>,
+    pub allowed_star_players: Vec<InducementSpecDto>,
+}
+
+pub struct InducementSpecDto {
+    pub uid:       String,
+    pub max_qty:   u8,
+    pub unit_cost: u32,
 }
 
 async fn find_tier_rules_for_roster(
@@ -193,9 +200,11 @@ async fn find_tier_rules_for_roster(
 ) -> Option<TierRulesDto>;
 ```
 
+L'adapter infrastructure assemble ces données depuis Competitions BC (UIDs autorisés) + References BC (détails per UID : `max_qty`, `unit_cost`). Les UIDs seuls sont extraits pour construire l'URL du widget.
+
 | Produit par | Consommé par |
 |---|---|
-| Adapter Competitions BC (lit `TierRule.inducements` + `TierRule.star_players`) | `get_inducements` handler (construit l'URL du widget) · `record_inducements_use_case` (valide les UIDs soumis) |
+| Adapter Competitions+References BC | `get_inducements` handler (extrait les UIDs pour l'URL du widget) · `record_inducements_use_case` (passe `allowed_specs` au domaine pour validation `maxQty` + coût) |
 
 ---
 
