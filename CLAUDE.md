@@ -182,6 +182,32 @@ Ces conventions sont appliquées au fil de l'eau — pas de renommage massif, ma
 
 ---
 
+## Règles de codage
+
+### Taille des fonctions — règle obligatoire
+
+**Une fonction ne doit pas dépasser 20 lignes de code.** Au-delà, c'est une erreur de conception : la fonction fait trop de choses et doit être découpée.
+
+Cette règle s'applique à toutes les couches : handlers, use cases, méthodes domaine, fonctions utilitaires, fonctions JS/Alpine.
+
+```rust
+// INTERDIT — fonction trop longue, mauvaise conception
+pub async fn post_some_handler(...) -> impl IntoResponse {
+    // 40 lignes de logique mélangée...
+}
+
+// OBLIGATOIRE — découper en fonctions nommées
+pub async fn post_some_handler(...) -> impl IntoResponse {
+    let cmd = build_command(&form)?;          // délègue le parsing
+    let result = execute_use_case(cmd).await; // délègue l'orchestration
+    build_response(result)                    // délègue la réponse
+}
+```
+
+**Pourquoi :** une fonction longue est un signe que plusieurs responsabilités sont mélangées. Le découpage force la nomination explicite de chaque intention, améliore la lisibilité et la testabilité.
+
+---
+
 ## Conventions handlers
 
 - Un handler = une responsabilité

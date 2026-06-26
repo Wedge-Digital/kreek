@@ -167,11 +167,12 @@ Pour chaque handler identifié :
    - VMs dépendant du port : fonctions dans `builders.rs`
    - VMs suffixés `Vm` (convention)
 3. **DTOs de port** : si un nouveau port est nécessaire, définir les structs dans `ports.rs`
-4. **Règles métier** : poser la question « **Vois-tu des règles métier à préciser à cette étape ?** »
+4. **Interfaces d'utilisation** : pour chaque DTO, préciser explicitement **qui l'émet** (le produit) et **qui le consomme** — handler, use case, template, widget, Alpine, etc. Cette information est obligatoire dans le fichier `04-dtos.md`.
+5. **Règles métier** : poser la question « **Vois-tu des règles métier à préciser à cette étape ?** »
 
 ### Sortie
 
-Fichier `<page>/04-dtos.md` avec les structs Rust (DTOs entrée, VMs sortie, DTOs port).
+Fichier `<page>/04-dtos.md` avec les structs Rust (DTOs entrée, VMs sortie, DTOs port) et leurs interfaces d'utilisation (émetteur → consommateur).
 
 ### Règles
 
