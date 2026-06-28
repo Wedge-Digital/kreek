@@ -3,7 +3,28 @@
 {% block content %}
 <link rel="stylesheet" href="/static/css/pages/match-report-actions.css">
 
-<div class="mr-actions-container">
+<div class="mr-actions-container" x-data="{
+    selectedTurn: null,
+    selectedPlayerId: null,
+    selectedPlayerType: null,
+    actionPanelUrl: '{{ action_panel_url }}',
+    init() {
+        document.body.addEventListener('turnSelected', (e) => {
+            this.selectedTurn = e.detail.turn;
+            this.maybeLoadPanel();
+        });
+        document.body.addEventListener('playerSelected', (e) => {
+            this.selectedPlayerId = e.detail.player_id;
+            this.selectedPlayerType = e.detail.player_type;
+            this.maybeLoadPanel();
+        });
+    },
+    maybeLoadPanel() {
+        if (!this.selectedTurn || !this.selectedPlayerId) return;
+        const url = this.actionPanelUrl + '?turn=' + this.selectedTurn + '&player_id=' + this.selectedPlayerId + '&player_type=' + (this.selectedPlayerType || 'regular');
+        htmx.ajax('GET', url, { target: '#action-panel', swap: 'innerHTML' });
+    }
+}">
     <h2 class="mr-step-title">
         {% if team_side == "home" %}Équipe domicile — Actions{% else %}Équipe extérieur — Actions{% endif %}
     </h2>
@@ -14,7 +35,7 @@
                 <h3>Sélectionner un tour</h3>
                 <div id="turn-selector"
                      hx-get="{{ turn_selector_url }}"
-                     hx-trigger="load, actionRecorded from:body, actionDeleted from:body"
+                     hx-trigger="load"
                      hx-target="this"
                      hx-swap="innerHTML">
                 </div>
@@ -30,7 +51,7 @@
                 </div>
             </div>
 
-            <div class="mr-widget-section" id="temp-player-selector"
+            <div id="temp-player-selector"
                  hx-get="{{ temp_player_selector_url }}"
                  hx-trigger="load"
                  hx-target="this"
@@ -39,10 +60,13 @@
         </div>
 
         <div class="mr-col-actions">
-            <div id="action-panel">
-            </div>
+            <div id="action-panel"></div>
 
-            <div id="action-log">
+            <div id="action-log"
+                 hx-get="{{ action_log_url }}"
+                 hx-trigger="load, actionRecorded from:body, actionDeleted from:body"
+                 hx-target="this"
+                 hx-swap="innerHTML">
             </div>
         </div>
     </div>

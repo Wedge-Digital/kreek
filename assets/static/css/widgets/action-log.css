@@ -1,0 +1,37 @@
+.action-log {
+    padding: 1rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 8px;
+}
+
+.action-log-empty {
+    color: var(--color-text-secondary, #6b7280);
+    font-size: 0.875rem;
+}
+
+.action-log-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.action-log-table th,
+.action-log-table td {
+    padding: 0.4rem 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+
+.action-log-delete {
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: #ef4444;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+}
+
+.action-log-delete:hover {
+    background: #fef2f2;
+    border-radius: 4px;
+}

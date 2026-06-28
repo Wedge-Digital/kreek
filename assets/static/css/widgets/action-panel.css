@@ -1,0 +1,60 @@
+.action-panel {
+    padding: 1rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 8px;
+}
+
+.action-btn-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+}
+
+.action-btn {
+    padding: 0.5rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+    background: var(--color-surface, #fff);
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+
+.action-btn:hover {
+    background: var(--color-surface-hover, #f3f4f6);
+}
+
+.action-btn--injury {
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+.injury-selector,
+.sequel-selector {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: var(--color-surface-secondary, #f9fafb);
+    border-radius: 4px;
+}
+
+.injury-title,
+.sequel-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.injury-btn-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.injury-btn-grid button,
+.sequel-selector button {
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--color-border, #e5e7eb);
+    background: var(--color-surface, #fff);
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}

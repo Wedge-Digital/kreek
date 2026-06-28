@@ -17,6 +17,8 @@ pub struct ActionsStepTemplate {
     pub turn_selector_url:        String,
     pub player_selector_url:      String,
     pub temp_player_selector_url: String,
+    pub action_panel_url:         String,
+    pub action_log_url:           String,
 }
 
 impl IntoResponse for ActionsStepTemplate {
@@ -62,14 +64,18 @@ async fn get_step(
         TeamSide::Home => pm.home_team_id.to_string(),
         TeamSide::Away => pm.away_team_id.to_string(),
     };
-    let (turn_selector_url, temp_player_selector_url) = match side {
+    let (turn_selector_url, temp_player_selector_url, action_panel_url, action_log_url) = match side {
         TeamSide::Home => (
             routes.match_report.step3_turn_selector(&space_id, &mr_id),
             routes.match_report.step3_temp_players(&space_id, &mr_id),
+            routes.match_report.step3_action_panel(&space_id, &mr_id),
+            routes.match_report.step3_action_log(&space_id, &mr_id),
         ),
         TeamSide::Away => (
             routes.match_report.step4_turn_selector(&space_id, &mr_id),
             routes.match_report.step4_temp_players(&space_id, &mr_id),
+            routes.match_report.step4_action_panel(&space_id, &mr_id),
+            routes.match_report.step4_action_log(&space_id, &mr_id),
         ),
     };
     let player_selector_url = routes.players.match_player_selector(&space_id, &team_id);
@@ -83,5 +89,7 @@ async fn get_step(
         turn_selector_url,
         player_selector_url,
         temp_player_selector_url,
+        action_panel_url,
+        action_log_url,
     }.into_response()
 }
