@@ -372,7 +372,7 @@ fn set_inducements_for(pm: &mut MatchReportPreMatch, team_id: &TeamId, purchases
 mod tests {
     use super::*;
     use crate::app::match_report::domain::value_objects::{
-        InducementCost, InducementQty, MatchReportOrigin,
+        InducementCost, InducementQty, IsStarPlayer, MatchReportOrigin,
     };
     use crate::app::shared_kernel::common_types::{
         CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,

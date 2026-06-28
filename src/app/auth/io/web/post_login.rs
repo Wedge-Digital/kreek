@@ -252,6 +252,8 @@ mod tests {
                         -> Result<Option<String>, crate::app::match_report::domain::match_report_repository_port::RepositoryError> { Ok(None) }
                     async fn find_id_by_round_and_teams(&self, _: &str, _: &str, _: &str)
                         -> Result<Option<String>, crate::app::match_report::domain::match_report_repository_port::RepositoryError> { Ok(None) }
+                    async fn find_actions_by_match_and_side(&self, _: &str, _: crate::app::match_report::domain::value_objects::TeamSide)
+                        -> Result<Vec<crate::app::match_report::domain::match_report_repository_port::MatchActionRow>, crate::app::match_report::domain::match_report_repository_port::RepositoryError> { Ok(vec![]) }
                 }
                 struct FakeCompDataPort;
                 #[async_trait::async_trait]

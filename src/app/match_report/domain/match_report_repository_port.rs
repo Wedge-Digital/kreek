@@ -1,6 +1,18 @@
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
+use crate::app::match_report::domain::value_objects::TeamSide;
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MatchActionRow {
+    pub action_id: String,
+    pub turn_number: i16,
+    pub player_id: String,
+    pub player_type: String,
+    pub action_json: serde_json::Value,
+    pub player_display_name: String,
+}
 
 #[derive(Debug)]
 pub enum RepositoryError {
@@ -55,4 +67,10 @@ pub trait IMatchReportRepository: Send + Sync {
         team_a: &str,
         team_b: &str,
     ) -> Result<Option<String>, RepositoryError>;
+
+    async fn find_actions_by_match_and_side(
+        &self,
+        match_report_id: &str,
+        side: TeamSide,
+    ) -> Result<Vec<MatchActionRow>, RepositoryError>;
 }

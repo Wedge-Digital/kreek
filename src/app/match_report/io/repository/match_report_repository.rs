@@ -1,8 +1,9 @@
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_repository_port::{
-    IMatchReportRepository, RepositoryError,
+    IMatchReportRepository, MatchActionRow, RepositoryError,
 };
 use crate::app::match_report::domain::match_report_state::{rehydrate, MatchReportState};
+use crate::app::match_report::domain::value_objects::TeamSide;
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
 
@@ -132,11 +133,69 @@ impl MatchReportRepository {
                 .map_err(RepositoryError::Database)?;
             }
             MatchReportDomainEvent::StarPlayerEngaged { .. } => {}
-            // projection handlers for step3-4 events — implemented in card 116
-            MatchReportDomainEvent::TempPlayersInitialized { .. } => {}
-            MatchReportDomainEvent::TempPlayersReset { .. } => {}
-            MatchReportDomainEvent::ActionRecorded { .. } => {}
-            MatchReportDomainEvent::ActionDeleted { .. } => {}
+            MatchReportDomainEvent::TempPlayersInitialized { team_id, players } => {
+                let json = serde_json::to_value(players).map_err(RepositoryError::Serialization)?;
+                let is_home = is_home_team(tx, match_report_id, &team_id.to_string()).await?;
+                let col = if is_home { "home_temp_players" } else { "away_temp_players" };
+                sqlx::query(&format!(
+                    "UPDATE match_report_projection SET {col} = $2, version = $3, updated_at = now() WHERE match_report_id = $1"
+                ))
+                .bind(match_report_id)
+                .bind(&json)
+                .bind(version as i64)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
+            MatchReportDomainEvent::TempPlayersReset { team_id } => {
+                let is_home = is_home_team(tx, match_report_id, &team_id.to_string()).await?;
+                let col = if is_home { "home_temp_players" } else { "away_temp_players" };
+                sqlx::query(&format!(
+                    "UPDATE match_report_projection SET {col} = '[]'::jsonb, version = $2, updated_at = now() WHERE match_report_id = $1"
+                ))
+                .bind(match_report_id)
+                .bind(version as i64)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
+            MatchReportDomainEvent::ActionRecorded {
+                action_id, team_side, turn, player, action, player_display_name, ..
+            } => {
+                use crate::app::match_report::domain::value_objects::TeamSide;
+                let (player_id, player_type) = match player {
+                    crate::app::match_report::domain::value_objects::ActionPlayer::Regular(id) => (id.to_string(), "regular"),
+                    crate::app::match_report::domain::value_objects::ActionPlayer::Temp(id) => (id.0.clone(), "temp"),
+                };
+                let action_json = serde_json::to_value(action).map_err(RepositoryError::Serialization)?;
+                let side_str = match team_side { TeamSide::Home => "home", TeamSide::Away => "away" };
+                sqlx::query(
+                    "INSERT INTO match_report_actions
+                        (action_id, match_report_id, team_side, turn_number, player_id,
+                         player_type, action_json, player_display_name)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                )
+                .bind(&action_id.0)
+                .bind(match_report_id)
+                .bind(side_str)
+                .bind(turn.value() as i16)
+                .bind(&player_id)
+                .bind(player_type)
+                .bind(&action_json)
+                .bind(player_display_name)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
+            MatchReportDomainEvent::ActionDeleted { action_id, .. } => {
+                sqlx::query(
+                    "UPDATE match_report_actions SET is_deleted = TRUE WHERE action_id = $1",
+                )
+                .bind(&action_id.0)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
             MatchReportDomainEvent::MatchReportCancelled { .. } => {
                 sqlx::query(
                     "UPDATE match_report_projection
@@ -152,6 +211,21 @@ impl MatchReportRepository {
         }
         Ok(())
     }
+}
+
+async fn is_home_team(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    match_report_id: &str,
+    team_id: &str,
+) -> Result<bool, RepositoryError> {
+    let row = sqlx::query(
+        "SELECT home_team_id FROM match_report_projection WHERE match_report_id = $1",
+    )
+    .bind(match_report_id)
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(RepositoryError::Database)?;
+    Ok(row.get::<String, _>("home_team_id") == team_id)
 }
 
 #[async_trait]
@@ -307,6 +381,36 @@ impl IMatchReportRepository for MatchReportRepository {
         .map_err(RepositoryError::Database)?;
 
         Ok(row.map(|r| r.get("match_report_id")))
+    }
+
+    async fn find_actions_by_match_and_side(
+        &self,
+        match_report_id: &str,
+        side: TeamSide,
+    ) -> Result<Vec<MatchActionRow>, RepositoryError> {
+        use crate::app::match_report::domain::value_objects::TeamSide;
+        let side_str = match side { TeamSide::Home => "home", TeamSide::Away => "away" };
+        let rows = sqlx::query(
+            "SELECT action_id, turn_number, player_id, player_type,
+                    action_json, player_display_name
+             FROM match_report_actions
+             WHERE match_report_id = $1 AND team_side = $2 AND NOT is_deleted
+             ORDER BY recorded_at",
+        )
+        .bind(match_report_id)
+        .bind(side_str)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+
+        Ok(rows.iter().map(|r| MatchActionRow {
+            action_id: r.get("action_id"),
+            turn_number: r.get("turn_number"),
+            player_id: r.get("player_id"),
+            player_type: r.get("player_type"),
+            action_json: r.get("action_json"),
+            player_display_name: r.get("player_display_name"),
+        }).collect())
     }
 }
 
