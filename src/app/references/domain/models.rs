@@ -74,6 +74,8 @@ pub struct PlayerPosition {
     pub secondary_access: Vec<String>,
     #[serde(rename = "max_quantity")]
     pub max_quantity: u8,
+    #[serde(default)]
+    pub is_journalier: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]

@@ -7,7 +7,7 @@
 | step1-selection | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | step2-avant-match | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | step2-inducements | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| step3-actions | | | | | | | |
+| step3-4-actions | ✅ | ✅ | ✅ | | | | |
 | step5-apres-match | | | | | | | |
 | recap | | | | | | | |
 
@@ -42,6 +42,11 @@
 - Score déduit des TDs (pas de saisie manuelle)
 - Fan factor : dedicated fans + D3
 - Gains : (somme fan factors / 2) × 10 000 + nb TD × 10 000 pO
-- 1 MVP par équipe (warning si oublié)
-- Actions par tour (1-16) : TD, Passe, Interception, Agression, Lancer, Blessure
-- Blessures : gravité (Sonné → Mort) + caractérisation si élimination/séquelle
+- MVP : pas de limite par équipe, warning si aucun MVP désigné
+- Actions par tour (1-16) : TD, Passe, Interception, Agression, Lancer, Sortie, Blessé, MVP
+- Blessures : Commotion (1-8) | Amoché (9-10) | Blessure Sérieuse/Niggling (11-12) | Séquelle + stat (13-14) | Mort (15-16)
+- Niggling (11-12) : affect uniquement les joueurs réguliers, pas les temporaires
+- Joueurs temporaires (star, merc, journalier) identifiés par TempPlayerId (UUID match-scoped), pas de nom sauf star players
+- Journaliers : max(0, 11 - joueurs_disponibles), info fournie par BC Players
+- Mercenaires : déclarés comme inducements (même flux que star players en step 2)
+- Broadcast vers BC Players : tous les événements d'action → BC Players calcule les SPP
