@@ -1,6 +1,7 @@
 use crate::app::shared_kernel::common_types::{CoachId, Entity, EntityId};
 use crate::app::shared_kernel::id_service::{FakeIdService, IdService};
 use crate::app::shared_kernel::team::{BaseTeamInfo, TeamName};
+use crate::app::shared_kernel::tier::{CreationBudget, StartingXp, TierName};
 use crate::app::team_creation::domain::creation_rules::{CreationRules, CreationTier};
 use crate::app::team_creation::domain::team_draft::DraftTeam;
 use crate::app::team_creation::use_cases::create_draft_team::create_draft_team;
@@ -8,9 +9,9 @@ use crate::app::team_creation::use_cases::create_draft_team::create_draft_team;
 fn make_creation_rules() -> CreationRules {
     CreationRules {
         tiers: vec![CreationTier {
-            name: "Débutants".to_string(),
-            budget: 1_000_000,
-            start_xp: 0,
+            name: TierName::try_new("Debutants").unwrap(),
+            budget: CreationBudget(1_000_000),
+            start_xp: StartingXp::try_new(0).unwrap(),
             rosters: vec!["Test Roster".to_string()],
         }],
     }

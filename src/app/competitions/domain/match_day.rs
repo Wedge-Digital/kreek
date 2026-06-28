@@ -1,4 +1,17 @@
+use crate::app::shared_kernel::common_types::{MatchId, PairingId, SeasonId};
+use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::date_string::DateString;
+use crate::app::shared_kernel::name_vo::NameVo;
+use nutype::nutype;
 use std::collections::HashSet;
+
+pub type MatchDayName = NameVo;
+
+#[nutype(
+    validate(greater_or_equal = 0),
+    derive(Debug, Clone, Copy, PartialEq, Eq, Display)
+)]
+pub struct MatchDayPosition(i32);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MatchDayType {
@@ -27,20 +40,20 @@ impl MatchDayType {
 
 #[derive(Debug, Clone)]
 pub struct Pairing {
-    pub id: String,
-    pub home_team_id: String,
-    pub away_team_id: String,
+    pub id: PairingId,
+    pub home_team_id: TeamId,
+    pub away_team_id: TeamId,
 }
 
 #[derive(Debug, Clone)]
 pub struct MatchDay {
-    pub id: String,
-    pub season_id: String,
-    pub name: String,
+    pub id: MatchId,
+    pub season_id: SeasonId,
+    pub name: MatchDayName,
     pub day_type: MatchDayType,
-    pub date_start: Option<String>,
-    pub date_end: Option<String>,
-    pub position: i32,
+    pub date_start: Option<DateString>,
+    pub date_end: Option<DateString>,
+    pub position: MatchDayPosition,
     pub pairings: Vec<Pairing>,
 }
 

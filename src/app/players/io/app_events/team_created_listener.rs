@@ -1,5 +1,9 @@
 use crate::app::players::domain::events::PlayerDomainEvent;
 use crate::app::players::domain::player::{AcquisitionMode, PlayerId, Spp, TeamId, ValueKpo};
+use crate::app::players::domain::value_objects::{
+    JerseyVo, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
+};
+use crate::app::shared_kernel::common_types::SpaceId;
 use crate::app::players::io::repository::player_repository::{
     insert_player_event, upsert_player_projection,
 };
@@ -44,14 +48,13 @@ impl From<RepositoryError> for ListenerError {
 fn resolve_base_skills(
     roster_line_id: &str,
     ref_repo:       &dyn IReferenceRepository,
-) -> Vec<String> {
+) -> Vec<SkillId> {
     ref_repo
         .find_position_by_uid(roster_line_id)
         .map(|pos| {
             pos.skills
                 .iter()
-                .filter_map(|uid| ref_repo.find_skill_by_uid(uid))
-                .map(|s| s.name.clone())
+                .filter_map(|uid| SkillId::try_new(uid.clone()).ok())
                 .collect()
         })
         .unwrap_or_default()
@@ -101,14 +104,20 @@ async fn handle_player(
     let starting_value  = ValueKpo(base_position_kpo(&payload.roster_line_id, ref_repo));
 
     // ── Version 1 : création du joueur (sans compétences acquises) ────────────
+    let space_id_vo = SpaceId::try_new(space_id).unwrap_or_else(|_| SpaceId::new());
+    let position_name = PositionNameVo::try_new(payload.position_name.clone())
+        .unwrap_or_else(|_| PositionNameVo::try_new("Joueur".to_string()).unwrap());
+    let roster_line_id = RosterLineId::try_new(payload.roster_line_id.clone())
+        .unwrap_or_else(|_| RosterLineId::try_new("unknown".to_string()).unwrap());
+    let jersey_vo = payload.jersey.and_then(|j| JerseyVo::try_new(j as u16).ok());
+
     let created = PlayerDomainEvent::PlayerCreated {
         player_id:      player_id.clone(),
         team_id:        team_id_vo.clone(),
-        space_id:       space_id.to_string(),
-        position_name:  payload.position_name.clone(),
-        roster_line_id: payload.roster_line_id.clone(),
-        personal_name:  payload.personal_name.clone(),
-        jersey:         payload.jersey,
+        space_id:       space_id_vo,
+        position_name,
+        roster_line_id,
+        jersey:         jersey_vo,
         base_skills,
         starting_spp:   Spp(0),
         starting_value,
@@ -137,14 +146,21 @@ async fn handle_player(
         let category_css = skill_category_css(category).to_string();
         let value_delta  = ValueKpo(skill_value_delta(is_primary, is_elite));
 
+        let skill_id_vo = SkillId::try_new(skill.skill_id.clone())
+            .unwrap_or_else(|_| SkillId::try_new("unknown".to_string()).unwrap());
+        let skill_name_vo = SkillName::try_new(skill_name.clone())
+            .unwrap_or_else(|_| SkillName::try_new("Unknown".to_string()).unwrap());
+        let spp_cost_vo = SppCost::try_new(skill.spp_cost)
+            .unwrap_or_else(|_| SppCost::try_new(0).unwrap());
+
         let earned = PlayerDomainEvent::InitialSkillEarned {
             player_id:   player_id.clone(),
             team_id:     team_id_vo.clone(),
-            skill_id:    skill.skill_id.clone(),
-            skill_name,
+            skill_id:    skill_id_vo,
+            skill_name:  skill_name_vo,
             category_css,
             mode:        parse_mode(&skill.mode),
-            spp_cost:    skill.spp_cost,
+            spp_cost:    spp_cost_vo,
             is_primary,
             is_elite,
             value_delta,

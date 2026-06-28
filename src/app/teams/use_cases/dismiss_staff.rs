@@ -1,11 +1,11 @@
 use crate::app::teams::domain::error::DomainError;
-use crate::app::teams::domain::value_objects::{Kpo, StaffType};
+use crate::app::teams::domain::value_objects::{Kpo, StaffQuantity, StaffType};
 use crate::app::teams::ports::{ITeamRepository, RepositoryError};
 
 pub struct DismissStaffCommand {
     pub team_id: String,
     pub staff_type: StaffType,
-    pub quantity: u8,
+    pub quantity: StaffQuantity,
     pub refund_kpo: Kpo,
 }
 

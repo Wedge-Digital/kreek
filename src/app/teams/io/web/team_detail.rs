@@ -80,13 +80,14 @@ impl TeamDetailVm {
         let (status_label, status_css_class) = status_display(team);
         let roster_initials = team
             .roster_name
+            .as_ref()
             .split_whitespace()
-            .filter_map(|w| w.chars().next())
+            .filter_map(|w: &str| w.chars().next())
             .take(2)
             .collect::<String>()
             .to_uppercase();
 
-        let ref_roster = ref_repo.find_team_by_uid(&team.roster_id);
+        let ref_roster = ref_repo.find_team_by_uid(&team.roster_id.to_string());
 
         let roster_logo_url = ref_roster.and_then(|t| t.logo.as_deref()).map(|url| {
             crate::app::shared_kernel::cloudinary::transform(
@@ -105,22 +106,22 @@ impl TeamDetailVm {
         });
 
         Self {
-            id: team.id.clone(),
-            name: team.name.clone(),
+            id: team.id.to_string(),
+            name: team.name.to_string(),
             initials: team.initials.clone(),
             logo_url,
-            roster_name: team.roster_name.clone(),
+            roster_name: team.roster_name.to_string(),
             roster_initials,
             roster_logo_url,
             coach_name: team.coach_name.clone(),
-            dedicated_fans: team.dedicated_fans,
+            dedicated_fans: team.dedicated_fans.into_inner(),
             treasury_kpo: team.treasury.0,
             team_value_kpo: team.team_value.0,
             competition_name: team.competition_name.clone(),
             season_name: team.season_name.clone(),
             status_label,
             status_css_class,
-            players_widget_url: AppRoutes::default().players.players_by_team_widget(space_id, &team.id),
+            players_widget_url: AppRoutes::default().players.players_by_team_widget(space_id, &team.id.to_string()),
             staff: StaffVm::from(team, reroll_price_kpo),
         }
     }

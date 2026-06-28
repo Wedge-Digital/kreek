@@ -4,7 +4,8 @@ use crate::app::competitions::domain::match_day::generate_round_pairings;
 use crate::app::competitions::domain::match_day::Pairing;
 use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
 use crate::app::competitions::ports::ITeamInfoPort;
-use crate::app::shared_kernel::common_types::EventId;
+use crate::app::shared_kernel::common_types::{EventId, PairingId};
+use crate::app::shared_kernel::team::TeamId;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::collections::HashSet;
 
@@ -62,7 +63,7 @@ pub async fn execute(
     let existing_pairings: Vec<String> = match_day
         .pairings
         .iter()
-        .map(|p| p.id.clone())
+        .map(|p| p.id.to_string())
         .collect();
 
     match_day_repo
@@ -87,15 +88,13 @@ pub async fn execute(
 
     let mut already_played: HashSet<(String, String)> = HashSet::new();
     for day in &all_days {
-        if day.id == match_day_id {
+        if day.id.to_string() == match_day_id {
             continue;
         }
         for p in &day.pairings {
-            let pair = if p.home_team_id < p.away_team_id {
-                (p.home_team_id.clone(), p.away_team_id.clone())
-            } else {
-                (p.away_team_id.clone(), p.home_team_id.clone())
-            };
+            let home = p.home_team_id.to_string();
+            let away = p.away_team_id.to_string();
+            let pair = if home < away { (home, away) } else { (away, home) };
             already_played.insert(pair);
         }
     }
@@ -105,9 +104,9 @@ pub async fn execute(
 
         for (home, away) in pairings {
             let pairing = Pairing {
-                id: ulid::Ulid::new().to_string(),
-                home_team_id: home.clone(),
-                away_team_id: away.clone(),
+                id: PairingId::new(),
+                home_team_id: TeamId::try_new(&home).expect("valid team id"),
+                away_team_id: TeamId::try_new(&away).expect("valid team id"),
             };
             match_day_repo
                 .save_pairing(match_day_id, &pairing)
@@ -117,7 +116,7 @@ pub async fn execute(
             let _ = event_bus.send(
                 CompetitionsDomainEvent::PairingCreated {
                     event_id: EventId::new(),
-                    pairing_id: pairing.id.clone(),
+                    pairing_id: pairing.id.to_string(),
                     competition_id: competition_id.to_string(),
                     season_id: season_id.to_string(),
                     round_id: match_day_id.to_string(),

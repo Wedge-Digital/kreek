@@ -47,13 +47,13 @@ impl TeamRepository {
                        updated_at = now()",
                 )
                 .bind(team_id)
-                .bind(space_id)
-                .bind(competition_id)
-                .bind(season_id)
-                .bind(name)
-                .bind(coach_id)
+                .bind(space_id.to_string())
+                .bind(competition_id.to_string())
+                .bind(season_id.to_string())
+                .bind(name.as_ref())
+                .bind(coach_id.to_string())
                 .bind(coach_name)
-                .bind(roster_name)
+                .bind(roster_name.as_ref())
                 .bind(logo_url)
                 .bind(treasury.0 as i32)
                 .execute(&mut **tx)
@@ -71,8 +71,8 @@ impl TeamRepository {
                      WHERE team_id = $1",
                 )
                 .bind(team_id)
-                .bind(competition_id)
-                .bind(season_id)
+                .bind(competition_id.to_string())
+                .bind(season_id.to_string())
                 .execute(&mut **tx)
                 .await
                 .map_err(RepositoryError::Database)?;
@@ -264,7 +264,9 @@ impl ITeamRepository for TeamRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::teams::domain::value_objects::Kpo;
+    use crate::app::shared_kernel::common_types::{CoachId, CompetitionId, RosterId, SeasonId, SpaceId};
+    use crate::app::shared_kernel::team::TeamId;
+    use crate::app::teams::domain::value_objects::{DedicatedFans, Kpo, RosterName, TeamName};
     use sqlx::postgres::PgPoolOptions;
 
     async fn test_pool() -> Option<PgPool> {
@@ -281,20 +283,20 @@ mod tests {
             ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
         };
         TeamDomainEvent::TeamCreated {
-            team_id: team_id.to_string(),
-            space_id: "01SPACE00000000000000000000".to_string(),
-            competition_id: "01COMP000000000000000000000".to_string(),
+            team_id: TeamId::try_new(team_id).unwrap(),
+            space_id: SpaceId::try_new("00000000000000000000000001").unwrap(),
+            competition_id: CompetitionId::try_new("00000000000000000000000002").unwrap(),
             competition_name: "Ligue de Condate".to_string(),
-            season_id: "01SEAS000000000000000000000".to_string(),
+            season_id: SeasonId::try_new("00000000000000000000000003").unwrap(),
             season_name: "Saison 2025".to_string(),
-            name: "Les Korrigans FC".to_string(),
+            name: TeamName::try_new("Les Korrigans FC").unwrap(),
             logo_url: None,
-            roster_id: "01ROST000000000000000000000".to_string(),
-            roster_name: "Elfes Sylvestres".to_string(),
-            coach_id: "01COACH00000000000000000000".to_string(),
+            roster_id: RosterId::try_new("00000000000000000000000004").unwrap(),
+            roster_name: RosterName::try_new("Elfes Sylvestres").unwrap(),
+            coach_id: CoachId::try_new("00000000000000000000000005").unwrap(),
             coach_name: "Colonel Castor".to_string(),
             treasury: Kpo(1000),
-            dedicated_fans: 2,
+            dedicated_fans: DedicatedFans::try_new(2).unwrap(),
             rerolls: RerollCount(3),
             apothecaries: ApothecaryCount(1),
             assistants: AssistantCount(2),
@@ -308,23 +310,23 @@ mod tests {
             return;
         };
         let repo = TeamRepository::new(pool);
-        let team_id = format!("TEST{}", ulid::Ulid::new());
+        let team_id = ulid::Ulid::new().to_string();
 
         let event1 = created_event(&team_id);
         let v1 = repo.append(&team_id, &event1, 0).await.unwrap();
         assert_eq!(v1, 1);
 
         let event2 = TeamDomainEvent::TeamEnrolled {
-            competition_id: "01COMP000000000000000000000".to_string(),
+            competition_id: CompetitionId::try_new("00000000000000000000000002").unwrap(),
             competition_name: "Ligue de Condate".to_string(),
-            season_id: "01SEAS000000000000000000000".to_string(),
+            season_id: SeasonId::try_new("00000000000000000000000003").unwrap(),
             season_name: "Saison 2025".to_string(),
         };
         let v2 = repo.append(&team_id, &event2, 1).await.unwrap();
         assert_eq!(v2, 2);
 
         let team = repo.find_by_id(&team_id).await.unwrap().unwrap();
-        assert_eq!(team.name, "Les Korrigans FC");
+        assert_eq!(team.name.as_ref(), "Les Korrigans FC");
         assert_eq!(team.version, 2);
         assert_eq!(
             team.participation_status,
@@ -345,7 +347,7 @@ mod tests {
             return;
         };
         let repo = TeamRepository::new(pool);
-        let team_id = format!("TEST{}", ulid::Ulid::new());
+        let team_id = ulid::Ulid::new().to_string();
 
         let event = created_event(&team_id);
         repo.append(&team_id, &event, 0).await.unwrap();

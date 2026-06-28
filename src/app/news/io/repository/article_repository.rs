@@ -2,6 +2,8 @@ use crate::app::news::domain::article::{Article, ArticleParagraph};
 use crate::app::news::domain::article_repository_port::{
     ArticleRepositoryError, IArticleRepository,
 };
+use crate::app::news::domain::article_tag::ArticleTag;
+use crate::app::news::domain::article_title::ArticleTitle;
 use crate::app::shared_kernel::common_types::{ArticleId, SpaceId, UserId};
 use async_trait::async_trait;
 use sqlx::PgPool;
@@ -31,14 +33,16 @@ impl TryFrom<ArticleRow> for Article {
     fn try_from(row: ArticleRow) -> Result<Self, Self::Error> {
         let paragraphs: Vec<ArticleParagraph> =
             serde_json::from_value(row.content).map_err(|e| db_err(e))?;
+        let title = ArticleTitle::try_new(row.title).map_err(|e| db_err(e))?;
+        let tags = row.tags.iter().filter_map(|s| s.parse::<ArticleTag>().ok()).collect();
         Ok(Article::new(
             ArticleId::try_new(&row.id).map_err(|e| db_err(e))?,
             SpaceId::try_new(&row.space_id).map_err(|e| db_err(e))?,
             UserId::try_new(&row.author_id).map_err(|e| db_err(e))?,
             row.author_name,
-            row.title,
+            title,
             row.abstract_,
-            row.tags,
+            tags,
             row.image,
             paragraphs,
             row.created_at,
@@ -62,13 +66,14 @@ impl IArticleRepository for ArticleRepository {
     async fn save(&self, article: &Article) -> Result<(), ArticleRepositoryError> {
         let content_json = serde_json::to_value(&article.content).map_err(|e| db_err(e))?;
 
+        let tag_strings: Vec<String> = article.tags.iter().map(|t| t.to_string()).collect();
         sqlx::query(include_str!("sql/articles/insert_article.sql"))
             .bind(article.id.to_string())
             .bind(article.space_id.to_string())
             .bind(article.author_id.to_string())
-            .bind(&article.title)
+            .bind(article.title.as_ref())
             .bind(&article.abstract_)
-            .bind(&article.tags)
+            .bind(&tag_strings)
             .bind(article.image.as_deref())
             .bind(content_json)
             .execute(&self.pool)

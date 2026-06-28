@@ -55,7 +55,7 @@ pub struct RerollVm {
 
 impl RerollVm {
     pub fn from_domain(team: &RosterSelectedTeam) -> Self {
-        let price = team.roster.reroll_price.0;
+        let price = team.roster.reroll_price.into_inner();
         let quantity = team.reroll_count();
         Self {
             price,
@@ -100,16 +100,16 @@ impl CartVm {
                 .count();
             if qty > 0 {
                 player_lines.push(CartLineVm {
-                    name: def.name.0.clone(),
+                    name: def.name.as_ref().to_string(),
                     qty,
-                    total: qty as u32 * def.price.0,
+                    total: qty as u32 * def.price.into_inner(),
                 });
             }
         }
         let player_subtotal: u32 = player_lines.iter().map(|l| l.total).sum();
 
         let reroll_qty = team.reroll_count();
-        let reroll_cost = team.roster.reroll_price.0 * reroll_qty as u32;
+        let reroll_cost = team.roster.reroll_price.into_inner() * reroll_qty as u32;
 
         let mut staff_lines: Vec<CartLineVm> = Vec::new();
         for staff in &team.roster.allowed_staff {

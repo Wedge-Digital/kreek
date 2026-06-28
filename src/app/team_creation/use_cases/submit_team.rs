@@ -56,16 +56,16 @@ pub async fn execute(
     let players: Vec<PlayerPayload> = team.hired_players().iter().map(|p| PlayerPayload {
         instance_id:     p.instance_id.0.clone(),
         roster_line_id:  p.definition.id.0.clone(),
-        position_name:   p.definition.name.0.clone(),
+        position_name:   p.definition.name.as_ref().to_string(),
         personal_name:   p.personal_name.clone(),
-        jersey:          p.jersey.map(|j| j.0),
+        jersey:          p.jersey.map(|j| j.into_inner()),
         acquired_skills: p.acquired_skills.iter().map(|a| AcquiredSkillPayload {
             skill_id: a.skill_id.0.clone(),
             mode:     match a.mode {
                 AcquisitionMode::Chosen => "Chosen".to_string(),
                 AcquisitionMode::Random => "Random".to_string(),
             },
-            spp_cost: a.spp_cost,
+            spp_cost: a.spp_cost.into_inner(),
         }).collect(),
     }).collect();
 
@@ -79,7 +79,7 @@ pub async fn execute(
         season_name:      cmd.season_name,
         team_name:        base.name().clone().into_inner(),
         roster_id:    team.roster.id.0.clone(),
-        roster_name:  team.roster.name.0.clone(),
+        roster_name:  team.roster.name.as_ref().to_string(),
         coach_id:     base.coach_id().to_string(),
         coach_name:   cmd.coach_name,
         logo_url:     base.logo_url().map(|img| img.as_ref().to_string()),

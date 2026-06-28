@@ -53,9 +53,9 @@ pub fn build_hired_rows(
                 .iter()
                 .filter(|p| p.definition.id == def.id)
                 .count();
-            let line_cost_kpo = quantity as u32 * def.price.0;
+            let line_cost_kpo = quantity as u32 * def.price.into_inner();
             let is_max =
-                quantity >= def.max_quantity.0 as usize || team.hired_players().len() >= 16;
+                quantity >= def.max_quantity.into_inner() as usize || team.hired_players().len() >= 16;
 
             let pos = roster_def
                 .available_players
@@ -84,9 +84,9 @@ pub fn build_hired_rows(
 
             HiredPlayerRowVm {
                 uid: def.id.0.clone(),
-                name: def.name.0.clone(),
-                cost_kpo: def.price.0,
-                max_qty_label: format!("0-{}", def.max_quantity.0),
+                name: def.name.as_ref().to_string(),
+                cost_kpo: def.price.into_inner(),
+                max_qty_label: format!("0-{}", def.max_quantity.into_inner()),
                 ma,
                 st,
                 ag,
@@ -110,7 +110,7 @@ pub fn build_roster_items_with_tiers(
         .iter()
         .enumerate()
         .flat_map(|(i, tier)| {
-            let tier_name = tier.name.clone();
+            let tier_name = tier.name.clone().into_inner();
             let tier_index = i + 1;
             tier.rosters.iter().filter_map(move |uid| {
                 ref_data

@@ -2,6 +2,8 @@ use crate::app::news::domain::article::{Article, ArticleParagraph};
 use crate::app::news::domain::article_repository_port::{
     ArticleRepositoryError, IArticleRepository,
 };
+use crate::app::news::domain::article_tag::ArticleTag;
+use crate::app::news::domain::article_title::ArticleTitle;
 use crate::app::shared_kernel::common_types::{ArticleId, SpaceId, UserId};
 
 #[derive(Debug)]
@@ -35,9 +37,9 @@ pub struct CreateArticleCommand {
     pub space_id: SpaceId,
     pub author_id: UserId,
     pub author_name: String,
-    pub title: String,
+    pub title: ArticleTitle,
     pub abstract_: String,
-    pub tags: Vec<String>,
+    pub tags: Vec<ArticleTag>,
     pub image: Option<String>,
     pub paragraphs: Vec<ArticleParagraph>,
 }
@@ -46,9 +48,6 @@ pub async fn execute(
     cmd: CreateArticleCommand,
     repo: &dyn IArticleRepository,
 ) -> Result<ArticleId, CreateArticleError> {
-    if cmd.title.trim().is_empty() {
-        return Err(CreateArticleError::EmptyTitle);
-    }
     if cmd.paragraphs.is_empty() {
         return Err(CreateArticleError::EmptyContent);
     }
@@ -59,7 +58,7 @@ pub async fn execute(
         cmd.space_id,
         cmd.author_id,
         cmd.author_name,
-        cmd.title.trim().to_string(),
+        cmd.title,
         cmd.abstract_.trim().to_string(),
         cmd.tags,
         cmd.image.filter(|s| !s.trim().is_empty()),

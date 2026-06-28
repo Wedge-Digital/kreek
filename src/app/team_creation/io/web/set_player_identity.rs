@@ -28,13 +28,13 @@ pub async fn set_player_identity(
 
     let jersey = match JerseyNumber::try_new(body.jersey) {
         Ok(j) => j,
-        Err(e) => {
+        Err(_) => {
             return axum::http::Response::builder()
                 .status(422)
                 .header("Content-Type", "text/html")
-                .body(axum::body::Body::from(format!(
-                    r#"<div class="identity-error">{e}</div>"#
-                )))
+                .body(axum::body::Body::from(
+                    r#"<div class="identity-error">Le numéro de maillot doit être compris entre 1 et 99.</div>"#,
+                ))
                 .unwrap()
                 .into_response()
         }

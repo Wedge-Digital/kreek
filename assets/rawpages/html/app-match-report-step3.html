@@ -94,13 +94,6 @@
     .mr-player-chip.active {
       background: rgba(0,48,73,0.06); border-color: var(--main-blue);
     }
-    .mr-player-chip.has-damage {
-      border-left: 3px solid var(--red);
-    }
-    .mr-player-chip.is-mvp {
-      border-color: var(--gold); background: rgba(255,215,0,0.05);
-    }
-
     /* Journeyman chip — bordure pointillée, maillot gris */
     .mr-player-chip--journeyman {
       border-style: dashed;
@@ -131,8 +124,6 @@
       color: var(--white); flex-shrink: 0;
       background: var(--main-blue);
     }
-    .mr-player-chip.has-damage .mr-player-chip-jersey { background: var(--red); }
-    .mr-player-chip.is-mvp .mr-player-chip-jersey { background: var(--gold); color: var(--dark-0); }
     .mr-player-chip-info {
       flex: 1; min-width: 0; overflow: hidden;
     }
@@ -143,16 +134,6 @@
     .mr-player-chip-pos {
       font-size: 9px; color: var(--dark-4);
     }
-    .mr-player-chip-badges {
-      display: flex; gap: 2px; flex-shrink: 0;
-    }
-    .mr-mini-badge {
-      font-size: 8px; font-weight: 700; padding: 1px 3px; border-radius: 3px;
-    }
-    .mr-mini-badge--td { background: rgba(98,149,132,0.15); color: var(--green); }
-    .mr-mini-badge--dmg { background: rgba(224,32,32,0.12); color: var(--red); }
-    .mr-mini-badge--mvp { background: rgba(255,215,0,0.2); color: #9A7800; }
-
     /* ── Action buttons ── */
     .mr-action-grid {
       display: grid;
@@ -275,8 +256,107 @@
       outline: none; flex-shrink: 0;
     }
 
+    /* ── Player sections ── */
+    .mr-player-section { display: flex; flex-direction: column; gap: 6px; }
+    .mr-player-section + .mr-player-section { margin-top: 8px; }
+    .mr-player-section-label {
+      font-size: 9px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--dark-4); padding: 0 2px;
+    }
+    .mr-player-section-label--journeyman { color: var(--dark-3); }
+    .mr-player-section-label--mercenary  { color: var(--dark-3); }
+    .mr-player-section-label--star       { color: #9A7800; }
+    .mr-player-chip--journeyman { border-style: dashed; }
+    .mr-player-chip--journeyman .mr-player-chip-jersey { background: var(--dark-4); }
+    .mr-player-chip--mercenary { border-style: dashed; }
+    .mr-player-chip--mercenary .mr-player-chip-jersey { background: var(--dark-3); }
+    .mr-player-chip--star { border-color: rgba(255,215,0,0.4); }
+    .mr-player-chip--star .mr-player-chip-jersey {
+      background: rgba(255,215,0,0.15); color: #9A7800;
+      font-size: 14px;
+    }
+
+    /* ── Action status row ── */
+    .mr-action-status-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+      margin-top: 4px;
+    }
+    .mr-action-btn--sortie {
+      border-color: rgba(224,32,32,0.15); background: rgba(224,32,32,0.02);
+    }
+    .mr-action-btn--sortie:hover { border-color: var(--red); background: rgba(224,32,32,0.06); }
+    .mr-action-btn--sortie .mr-action-btn-label { color: var(--red); }
+    .mr-action-btn--damage .mr-action-btn-label { color: var(--dark-2); }
+
+    /* ── Injury panel (inline) ── */
+    .mr-injury-panel {
+      margin-top: 8px; padding-top: 12px;
+      border-top: 1px solid var(--dark-6);
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .mr-injury-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.4px; color: var(--dark-3); padding: 0 2px;
+    }
+    .mr-injury-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    }
+    .mr-injury-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 10px;
+      border-radius: 8px; border: 1px solid var(--dark-5);
+      background: var(--white); cursor: pointer; transition: all 0.12s;
+      text-align: left;
+    }
+    .mr-injury-btn:hover { border-color: var(--dark-3); }
+    .mr-injury-btn.active {
+      border-color: var(--main-blue);
+      background: rgba(0,48,73,0.06);
+    }
+    .mr-injury-btn--death { border-color: rgba(224,32,32,0.2); }
+    .mr-injury-btn--death:hover { border-color: var(--red); }
+    .mr-injury-btn--death.active { border-color: var(--red); background: rgba(224,32,32,0.05); }
+    .mr-injury-btn--full { grid-column: 1 / -1; }
+    .mr-injury-roll {
+      font-size: 10px; font-weight: 700;
+      color: var(--dark-4); white-space: nowrap; flex-shrink: 0;
+      width: 32px; text-align: center;
+    }
+    .mr-injury-label {
+      font-size: 12px; font-weight: 600; color: var(--dark-1);
+    }
+    .mr-injury-btn--death .mr-injury-label { color: var(--red); }
+
+    /* ── Sequel detail ── */
+    .mr-sequel-panel {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .mr-sequel-grid {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;
+    }
+    .mr-sequel-btn {
+      padding: 8px 4px; border-radius: 6px; text-align: center;
+      font-size: 11px; font-weight: 700;
+      border: 1px solid var(--dark-5); background: var(--white);
+      cursor: pointer; color: var(--dark-2); transition: all 0.12s;
+    }
+    .mr-sequel-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .mr-sequel-btn.active {
+      border-color: var(--main-blue); background: var(--main-blue); color: var(--white);
+    }
+
+    /* ── Injury confirm ── */
+    .mr-injury-confirm {
+      padding: 12px; border-radius: 8px;
+      background: var(--main-blue); color: var(--white);
+      text-align: center; font-size: 13px; font-weight: 700;
+      cursor: pointer; border: none;
+    }
+
     @media (min-width: 768px) {
       .mr-player-grid { grid-template-columns: repeat(4, 1fr); }
+      .mr-injury-grid { grid-template-columns: repeat(3, 1fr); }
+      .mr-sequel-grid { grid-template-columns: repeat(5, 1fr); }
     }
   </style>
 </head>
@@ -387,14 +467,11 @@
                   </div>
                 </div>
 
-                <div class="mr-player-chip has-damage" onclick="selectPlayer(this)">
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
                   <div class="mr-player-chip-jersey">3</div>
                   <div class="mr-player-chip-info">
                     <div class="mr-player-chip-name">Grotak</div>
                     <div class="mr-player-chip-pos">Blitzer</div>
-                  </div>
-                  <div class="mr-player-chip-badges">
-                    <span class="mr-mini-badge mr-mini-badge--dmg">KO</span>
                   </div>
                 </div>
 
@@ -422,15 +499,11 @@
                   </div>
                 </div>
 
-                <div class="mr-player-chip active is-mvp" onclick="selectPlayer(this)">
+                <div class="mr-player-chip active" onclick="selectPlayer(this)">
                   <div class="mr-player-chip-jersey">7</div>
                   <div class="mr-player-chip-info">
                     <div class="mr-player-chip-name">Aëlindra</div>
                     <div class="mr-player-chip-pos">Catcher</div>
-                  </div>
-                  <div class="mr-player-chip-badges">
-                    <span class="mr-mini-badge mr-mini-badge--td">2</span>
-                    <span class="mr-mini-badge mr-mini-badge--mvp">★</span>
                   </div>
                 </div>
 
@@ -458,14 +531,11 @@
                   </div>
                 </div>
 
-                <div class="mr-player-chip has-damage" onclick="selectPlayer(this)">
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
                   <div class="mr-player-chip-jersey">11</div>
                   <div class="mr-player-chip-info">
                     <div class="mr-player-chip-name">Fenris</div>
                     <div class="mr-player-chip-pos">Lineman</div>
-                  </div>
-                  <div class="mr-player-chip-badges">
-                    <span class="mr-mini-badge mr-mini-badge--dmg">☠</span>
                   </div>
                 </div>
 
@@ -474,6 +544,22 @@
                   <div class="mr-player-chip-info">
                     <div class="mr-player-chip-name">Amroth</div>
                     <div class="mr-player-chip-pos">Lineman</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Section : mercenaires -->
+            <div class="mr-player-section">
+              <div class="mr-player-section-label mr-player-section-label--mercenary">Mercenaires</div>
+              <div class="mr-player-grid">
+
+                <div class="mr-player-chip mr-player-chip--mercenary" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">⚔</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Mercenaire</div>
+                    <div class="mr-player-chip-pos">Blitzer</div>
                   </div>
                 </div>
 
@@ -553,7 +639,7 @@
               </button>
             </div>
             <div class="mr-action-status-row">
-              <button class="mr-action-btn mr-action-btn--damage">
+              <button class="mr-action-btn mr-action-btn--damage" id="btn-blesse" onclick="toggleBlesse(this)">
                 <span class="mr-action-btn-icon">🚑</span>
                 <span class="mr-action-btn-label">Blessé</span>
               </button>
@@ -561,6 +647,47 @@
                 <span class="mr-action-btn-icon">⭐</span>
                 <span class="mr-action-btn-label">Désigner MVP</span>
               </button>
+            </div>
+
+            <!-- Panneau blessure (affiché quand "Blessé" est sélectionné) -->
+            <div class="mr-injury-panel" id="injury-panel" style="display:none">
+              <div class="mr-injury-title">Type de blessure</div>
+              <div class="mr-injury-grid">
+                <button class="mr-injury-btn" onclick="selectInjuryType(this,'commotion')">
+                  <span class="mr-injury-roll">1–8</span>
+                  <span class="mr-injury-label">Commotion</span>
+                </button>
+                <button class="mr-injury-btn" onclick="selectInjuryType(this,'amoche')">
+                  <span class="mr-injury-roll">9–10</span>
+                  <span class="mr-injury-label">Amoché</span>
+                </button>
+                <button class="mr-injury-btn" onclick="selectInjuryType(this,'serious')">
+                  <span class="mr-injury-roll">11–12</span>
+                  <span class="mr-injury-label">Blessure Sérieuse</span>
+                </button>
+                <button class="mr-injury-btn" onclick="selectInjuryType(this,'sequel')">
+                  <span class="mr-injury-roll">13–14</span>
+                  <span class="mr-injury-label">Séquelle</span>
+                </button>
+                <button class="mr-injury-btn mr-injury-btn--death mr-injury-btn--full" onclick="selectInjuryType(this,'death')">
+                  <span class="mr-injury-roll">15–16</span>
+                  <span class="mr-injury-label">Mort</span>
+                </button>
+              </div>
+
+              <!-- Détail séquelle (affiché seulement si Séquelle est sélectionné) -->
+              <div class="mr-sequel-panel" id="sequel-panel" style="display:none">
+                <div class="mr-injury-title">Séquelle</div>
+                <div class="mr-sequel-grid">
+                  <button class="mr-sequel-btn" onclick="selectSequel(this,'-1 AV')">-1 AV</button>
+                  <button class="mr-sequel-btn" onclick="selectSequel(this,'-1 MA')">-1 MA</button>
+                  <button class="mr-sequel-btn" onclick="selectSequel(this,'-1 PA')">-1 PA</button>
+                  <button class="mr-sequel-btn" onclick="selectSequel(this,'-1 AG')">-1 AG</button>
+                  <button class="mr-sequel-btn" onclick="selectSequel(this,'-1 ST')">-1 ST</button>
+                </div>
+              </div>
+
+              <button class="mr-injury-confirm" id="injury-confirm" style="display:none" onclick="confirmInjury()">Confirmer</button>
             </div>
           </div>
 
@@ -584,41 +711,15 @@
 
             <div class="mr-log-entry mr-log-entry--damage">
               <div class="mr-log-turn">6</div>
-              <span class="mr-log-icon">🩸</span>
-              <span class="mr-log-text mr-log-text--damage"><strong>#3 Grotak</strong> — Blessure</span>
-              <select class="mr-log-injury-select">
-                <option value="">Gravité…</option>
-                <option value="stunned">Sonné</option>
-                <option value="concussion">Commotion</option>
-                <option selected value="ko">KO</option>
-                <option value="elimination">Élimination</option>
-                <option value="sequel">Séquelle</option>
-                <option value="death">Mort</option>
-              </select>
+              <span class="mr-log-icon">🚑</span>
+              <span class="mr-log-text mr-log-text--damage"><strong>#3 Grotak</strong> — Blessé · Amoché</span>
               <button class="mr-log-delete" title="Supprimer">✕</button>
             </div>
 
             <div class="mr-log-entry mr-log-entry--damage">
               <div class="mr-log-turn">9</div>
-              <span class="mr-log-icon">🩸</span>
-              <span class="mr-log-text mr-log-text--damage"><strong>#11 Fenris</strong> — Blessure</span>
-              <select class="mr-log-injury-select">
-                <option value="">Gravité…</option>
-                <option value="stunned">Sonné</option>
-                <option value="concussion">Commotion</option>
-                <option value="ko">KO</option>
-                <option selected value="elimination">Élimination</option>
-                <option value="sequel">Séquelle</option>
-                <option value="death">Mort</option>
-              </select>
-              <select class="mr-log-injury-select" style="margin-left: -4px;">
-                <option value="">Détail…</option>
-                <option selected value="head">-1 AV</option>
-                <option value="knee">-1 MA</option>
-                <option value="arm">-1 PA</option>
-                <option value="neck">-1 AG</option>
-                <option value="shoulder">-1 ST</option>
-              </select>
+              <span class="mr-log-icon">🚑</span>
+              <span class="mr-log-text mr-log-text--damage"><strong>#11 Fenris</strong> — Blessé · Séquelle (-1 AV)</span>
               <button class="mr-log-delete" title="Supprimer">✕</button>
             </div>
 
@@ -649,7 +750,7 @@
           <!-- Actions -->
           <div class="mr-actions">
             <a href="app-match-report-step2-inducements.html" class="btn-outline-sm">← Retour</a>
-            <a href="app-match-report-step5.html" class="btn-primary-sm">Actions visiteur →</a>
+            <a href="app-match-report-step4.html" class="btn-primary-sm">Actions visiteur →</a>
           </div>
 
         </div>
@@ -658,13 +759,80 @@
   </div>
 
   <script>
+  var selectedInjuryType = null;
+  var selectedSequel = null;
+
   function selectTurn(el) {
     el.parentElement.querySelectorAll('.mr-turn-btn').forEach(function(b) { b.classList.remove('active'); });
     el.classList.add('active');
   }
+
   function selectPlayer(el) {
     el.closest('.mr-card').querySelectorAll('.mr-player-chip').forEach(function(b) { b.classList.remove('active'); });
     el.classList.add('active');
+  }
+
+  function toggleBlesse(btn) {
+    var isActive = btn.classList.toggle('active');
+    var panel = document.getElementById('injury-panel');
+    panel.style.display = isActive ? '' : 'none';
+    if (!isActive) {
+      resetInjuryPanel();
+    }
+  }
+
+  function resetInjuryPanel() {
+    selectedInjuryType = null;
+    selectedSequel = null;
+    document.querySelectorAll('.mr-injury-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.mr-sequel-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.getElementById('sequel-panel').style.display = 'none';
+    document.getElementById('injury-confirm').style.display = 'none';
+  }
+
+  function selectInjuryType(btn, type) {
+    document.querySelectorAll('.mr-injury-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    selectedInjuryType = type;
+    selectedSequel = null;
+    document.querySelectorAll('.mr-sequel-btn').forEach(function(b) { b.classList.remove('active'); });
+    var sequelPanel = document.getElementById('sequel-panel');
+    sequelPanel.style.display = (type === 'sequel') ? '' : 'none';
+    updateConfirmBtn();
+  }
+
+  function selectSequel(btn, stat) {
+    document.querySelectorAll('.mr-sequel-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    selectedSequel = stat;
+    updateConfirmBtn();
+  }
+
+  var injuryLabels = {
+    commotion: 'Commotion',
+    amoche: 'Amoché',
+    serious: 'Blessure Sérieuse',
+    sequel: 'Séquelle',
+    death: 'Mort'
+  };
+
+  function updateConfirmBtn() {
+    var btn = document.getElementById('injury-confirm');
+    if (!selectedInjuryType) { btn.style.display = 'none'; return; }
+    if (selectedInjuryType === 'sequel' && !selectedSequel) { btn.style.display = 'none'; return; }
+    var label = injuryLabels[selectedInjuryType];
+    if (selectedSequel) label += ' (' + selectedSequel + ')';
+    btn.textContent = 'Confirmer — ' + label;
+    btn.style.display = '';
+  }
+
+  function confirmInjury() {
+    var panel = document.getElementById('injury-panel');
+    panel.style.display = 'none';
+    document.getElementById('btn-blesse').classList.remove('active');
+    resetInjuryPanel();
+    // En implémentation réelle : POST vers le serveur via HTMX
+    alert('Blessure enregistrée → ' + (selectedInjuryType || 'unknown'));
   }
   </script>
   <div class="mobile-tabbar">

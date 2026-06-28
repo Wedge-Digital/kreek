@@ -150,7 +150,7 @@ pub async fn group_cards_widget(
             .ranking_group
             .ranking_groups
             .iter()
-            .map(|g| (g.id.clone(), g.name.clone()))
+            .map(|g| (g.id.as_ref().to_string(), g.name.as_ref().to_string()))
             .collect();
         if !struct_groups.is_empty() {
             if let Err(e) = state

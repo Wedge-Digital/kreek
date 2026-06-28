@@ -1,4 +1,5 @@
 use crate::app::shared_kernel::app_events::match_report_app_events::MatchReportAppEvent;
+use crate::app::shared_kernel::common_types::MatchReportId;
 use crate::app::teams::ports::ITeamRepository;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
@@ -21,6 +22,16 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                         ..
                     } = app_event;
 
+                    let mr_id = match MatchReportId::try_new(&match_report_id) {
+                        Ok(id) => id,
+                        Err(e) => {
+                            tracing::warn!(
+                                "match_report_confirmed_listener: invalid match_report_id {match_report_id}: {e}"
+                            );
+                            continue;
+                        }
+                    };
+
                     for team_id in [&home_team_id, &away_team_id] {
                         let team = match team_repo.find_by_id(team_id).await {
                             Ok(Some(t)) => t,
@@ -38,7 +49,7 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                             }
                         };
 
-                        let event = match team.start_match_reporting(match_report_id.clone()) {
+                        let event = match team.start_match_reporting(mr_id) {
                             Ok(e) => e,
                             Err(e) => {
                                 tracing::warn!(

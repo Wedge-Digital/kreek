@@ -101,9 +101,9 @@ pub async fn build_team(
             .tiers
             .iter()
             .map(|t| RulesTierVm {
-                name: t.name.clone(),
-                budget: t.budget,
-                start_xp: t.start_xp,
+                name: t.name.clone().into_inner(),
+                budget: t.budget.0,
+                start_xp: t.start_xp.into_inner(),
             })
             .collect(),
     };

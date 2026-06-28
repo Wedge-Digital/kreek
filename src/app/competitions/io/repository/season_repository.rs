@@ -30,7 +30,7 @@ impl ISeasonRepository for SeasonRepository {
         sqlx::query(include_str!("sql/seasons/insert_season.sql"))
             .bind(season.id.to_string())
             .bind(season.competition_id.to_string())
-            .bind(&season.name)
+            .bind(season.name.as_ref())
             .execute(&self.pool)
             .await
             .map_err(db_err)?;

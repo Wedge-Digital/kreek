@@ -1,4 +1,8 @@
 use crate::app::players::domain::events::PlayerDomainEvent;
+use crate::app::players::domain::value_objects::{
+    JerseyVo, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
+};
+use crate::app::shared_kernel::common_types::SpaceId;
 use serde::{Deserialize, Serialize};
 
 // ── Value objects ──────────────────────────────────────────────────────────────
@@ -19,10 +23,10 @@ pub struct ValueKpo(pub u32);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcquiredSkill {
-    pub skill_id:   String,
-    pub skill_name: String,
+    pub skill_id:   SkillId,
+    pub skill_name: SkillName,
     pub mode:       AcquisitionMode,
-    pub spp_cost:   u8,
+    pub spp_cost:   SppCost,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -37,12 +41,11 @@ pub enum AcquisitionMode {
 pub struct Player {
     pub id:              PlayerId,
     pub team_id:         TeamId,
-    pub space_id:        String,
-    pub position_name:   String,
-    pub roster_line_id:  String,
-    pub personal_name:   String,
-    pub jersey:          Option<u8>,
-    pub base_skills:     Vec<String>,
+    pub space_id:        SpaceId,
+    pub position_name:  PositionNameVo,
+    pub roster_line_id:  RosterLineId,
+    pub jersey:          Option<JerseyVo>,
+    pub base_skills:     Vec<SkillId>,
     pub acquired_skills: Vec<AcquiredSkill>,
     pub spp:             Spp,
     pub value:           ValueKpo,
@@ -63,7 +66,7 @@ impl Player {
         match event {
             PlayerDomainEvent::PlayerCreated {
                 player_id, team_id, space_id, position_name, roster_line_id,
-                personal_name, jersey, base_skills, starting_spp, starting_value,
+                jersey, base_skills, starting_spp, starting_value,
             } => {
                 if current.is_some() {
                     return current;
@@ -72,9 +75,8 @@ impl Player {
                     id:              player_id.clone(),
                     team_id:         team_id.clone(),
                     space_id:        space_id.clone(),
-                    position_name:   position_name.clone(),
+                    position_name:     position_name.clone(),
                     roster_line_id:  roster_line_id.clone(),
-                    personal_name:   personal_name.clone(),
                     jersey:          *jersey,
                     base_skills:     base_skills.clone(),
                     acquired_skills: vec![],

@@ -1,7 +1,11 @@
 use crate::app::competitions::domain::domain_event::CompetitionsDomainEvent;
-use crate::app::competitions::domain::match_day::{MatchDay, MatchDayType, Pairing};
+use crate::app::competitions::domain::match_day::{
+    MatchDay, MatchDayName, MatchDayPosition, MatchDayType, Pairing,
+};
 use crate::app::competitions::use_cases::admin::{generate_all_pairings, generate_pairings};
-use crate::app::shared_kernel::common_types::EventId;
+use crate::app::shared_kernel::common_types::{EventId, MatchId, PairingId, SeasonId};
+use crate::app::shared_kernel::date_string::DateString;
+use crate::app::shared_kernel::team::TeamId;
 use crate::common::services::event_bus::event_bus::EventBus;
 use crate::state::AppState;
 use axum::body::Body;
@@ -68,7 +72,7 @@ pub async fn post_clear_all(
         .unwrap_or_default();
     let pairing_ids: Vec<String> = all_days
         .iter()
-        .flat_map(|d| d.pairings.iter().map(|p| p.id.clone()))
+        .flat_map(|d| d.pairings.iter().map(|p| p.id.to_string()))
         .collect();
 
     match state
@@ -108,19 +112,26 @@ pub async fn post_add_round(
         .unwrap_or_default();
 
     let position = existing.len() as i32;
-    let name = body
+    let raw_name = body
         .name
         .filter(|n| !n.is_empty())
         .unwrap_or_else(|| format!("Journée {}", position + 1));
 
+    let Ok(sid) = SeasonId::try_new(&season_id) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    let Ok(name) = MatchDayName::try_new(raw_name) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+
     let match_day = MatchDay {
-        id: ulid::Ulid::new().to_string(),
-        season_id: season_id.clone(),
+        id: MatchId::new(),
+        season_id: sid,
         name,
         day_type: MatchDayType::FixedDate,
         date_start: None,
         date_end: None,
-        position,
+        position: MatchDayPosition::try_new(position).unwrap(),
         pairings: vec![],
     };
 
@@ -153,19 +164,26 @@ pub async fn post_add_rest(
         .unwrap_or_default();
 
     let position = existing.len() as i32;
-    let name = body
+    let raw_name = body
         .name
         .filter(|n| !n.is_empty())
         .unwrap_or_else(|| format!("Repos {}", position + 1));
 
+    let Ok(sid) = SeasonId::try_new(&season_id) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    let Ok(name) = MatchDayName::try_new(raw_name) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+
     let match_day = MatchDay {
-        id: ulid::Ulid::new().to_string(),
-        season_id: season_id.clone(),
+        id: MatchId::new(),
+        season_id: sid,
         name,
         day_type: MatchDayType::Rest,
         date_start: None,
         date_end: None,
-        position,
+        position: MatchDayPosition::try_new(position).unwrap(),
         pairings: vec![],
     };
 
@@ -212,15 +230,28 @@ pub async fn put_update_round(
         }
     };
 
+    let name = body
+        .name
+        .and_then(|s| MatchDayName::try_new(s).ok())
+        .unwrap_or(existing.name.clone());
+    let day_type = body
+        .day_type
+        .as_deref()
+        .map(MatchDayType::from_str)
+        .unwrap_or(existing.day_type);
+    let date_start = body
+        .date_start
+        .and_then(|s| DateString::try_new(s).ok())
+        .or(existing.date_start);
+    let date_end = body
+        .date_end
+        .and_then(|s| DateString::try_new(s).ok())
+        .or(existing.date_end);
     let updated = MatchDay {
-        name: body.name.unwrap_or(existing.name),
-        day_type: body
-            .day_type
-            .as_deref()
-            .map(MatchDayType::from_str)
-            .unwrap_or(existing.day_type),
-        date_start: body.date_start.or(existing.date_start),
-        date_end: body.date_end.or(existing.date_end),
+        name,
+        day_type,
+        date_start,
+        date_end,
         ..existing
     };
 
@@ -253,7 +284,7 @@ pub async fn delete_round(
         .flatten();
     let pairing_ids: Vec<String> = match_day
         .iter()
-        .flat_map(|d| d.pairings.iter().map(|p| p.id.clone()))
+        .flat_map(|d| d.pairings.iter().map(|p| p.id.to_string()))
         .collect();
 
     match state
@@ -321,7 +352,7 @@ pub async fn post_clear_round_pairings(
         .flatten();
     let pairing_ids: Vec<String> = match_day
         .iter()
-        .flat_map(|d| d.pairings.iter().map(|p| p.id.clone()))
+        .flat_map(|d| d.pairings.iter().map(|p| p.id.to_string()))
         .collect();
 
     match state
@@ -355,10 +386,16 @@ pub async fn post_add_match(
     State(state): State<AppState>,
     axum::Json(body): axum::Json<AddMatchBody>,
 ) -> Response {
+    let Ok(home) = TeamId::try_new(&body.home_team_id) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    let Ok(away) = TeamId::try_new(&body.away_team_id) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
     let pairing = Pairing {
-        id: ulid::Ulid::new().to_string(),
-        home_team_id: body.home_team_id.clone(),
-        away_team_id: body.away_team_id.clone(),
+        id: PairingId::new(),
+        home_team_id: home,
+        away_team_id: away,
     };
 
     match state
@@ -371,7 +408,7 @@ pub async fn post_add_match(
             let _ = state.competitions.event_bus.send(
                 CompetitionsDomainEvent::PairingCreated {
                     event_id: EventId::new(),
-                    pairing_id: pairing.id.clone(),
+                    pairing_id: pairing.id.to_string(),
                     competition_id: competition_id.clone(),
                     season_id: season_id.clone(),
                     round_id: body.round_id.clone(),

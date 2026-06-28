@@ -1,5 +1,6 @@
 use crate::app::competitions::domain::competition_structure::ScheduledDate;
 use crate::app::competitions::domain::match_day::MatchDayType;
+use crate::app::shared_kernel::date_string::DateString;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::common_types::SeasonId;
 use crate::state::AppState;
@@ -42,12 +43,12 @@ impl IntoResponse for RoundSidebarTemplate {
     }
 }
 
-fn date_label_for(day_type: &MatchDayType, date_start: &Option<String>, date_end: &Option<String>) -> String {
+fn date_label_for(day_type: &MatchDayType, date_start: &Option<DateString>, date_end: &Option<DateString>) -> String {
     match day_type {
-        MatchDayType::FixedDate => date_start.clone().unwrap_or_default(),
+        MatchDayType::FixedDate => date_start.as_ref().map(|d| d.to_string()).unwrap_or_default(),
         MatchDayType::TimeFrame => {
-            let s = date_start.clone().unwrap_or_default();
-            let e = date_end.clone().unwrap_or_default();
+            let s = date_start.as_ref().map(|d| d.to_string()).unwrap_or_default();
+            let e = date_end.as_ref().map(|d| d.to_string()).unwrap_or_default();
             if s.is_empty() && e.is_empty() {
                 String::new()
             } else {
@@ -87,10 +88,10 @@ pub async fn schedule_sidebar_widget(
                     multiplexe_date,
                 } => (
                     ulid::Ulid::new().to_string(),
-                    name.clone(),
+                    name.as_ref().to_string(),
                     "fixed_date".to_string(),
-                    Some(multiplexe_date.clone()),
-                    Some(multiplexe_date.clone()),
+                    Some(multiplexe_date.as_ref().to_string()),
+                    Some(multiplexe_date.as_ref().to_string()),
                 ),
                 ScheduledDate::TimeFrame {
                     name,
@@ -98,10 +99,10 @@ pub async fn schedule_sidebar_widget(
                     end_date,
                 } => (
                     ulid::Ulid::new().to_string(),
-                    name.clone(),
+                    name.as_ref().to_string(),
                     "time_frame".to_string(),
-                    Some(start_date.clone()),
-                    Some(end_date.clone()),
+                    Some(start_date.as_ref().to_string()),
+                    Some(end_date.as_ref().to_string()),
                 ),
             })
             .collect();
@@ -140,8 +141,8 @@ pub async fn schedule_sidebar_widget(
             };
             let dl = date_label_for(&d.day_type, &d.date_start, &d.date_end);
             RoundItemVm {
-                round_id: d.id,
-                name: d.name,
+                round_id: d.id.to_string(),
+                name: d.name.into_inner(),
                 date_label: dl,
                 day_type: day_type_str,
                 status: "upcoming".to_string(),
@@ -278,20 +279,22 @@ pub async fn schedule_round_detail_widget(
         .pairings
         .iter()
         .map(|p| {
+            let home_id = p.home_team_id.to_string();
+            let away_id = p.away_team_id.to_string();
             let home_name = team_map
-                .get(p.home_team_id.as_str())
+                .get(home_id.as_str())
                 .map(|t| t.team_name.clone())
-                .unwrap_or_else(|| p.home_team_id.clone());
+                .unwrap_or_else(|| home_id.clone());
             let away_name = team_map
-                .get(p.away_team_id.as_str())
+                .get(away_id.as_str())
                 .map(|t| t.team_name.clone())
-                .unwrap_or_else(|| p.away_team_id.clone());
+                .unwrap_or(away_id);
             let gn = team_to_group
-                .get(p.home_team_id.as_str())
+                .get(home_id.as_str())
                 .copied()
                 .unwrap_or("");
             FixtureVm {
-                fixture_id: p.id.clone(),
+                fixture_id: p.id.to_string(),
                 home_team_name: home_name,
                 away_team_name: away_name,
                 group_name: gn.to_string(),
@@ -316,11 +319,11 @@ pub async fn schedule_round_detail_widget(
     };
 
     let detail = RoundDetailVm {
-        round_id: match_day.id,
-        name: match_day.name,
+        round_id: match_day.id.to_string(),
+        name: match_day.name.into_inner(),
         day_type: day_type_str,
-        date_start: match_day.date_start.unwrap_or_default(),
-        date_end: match_day.date_end.unwrap_or_default(),
+        date_start: match_day.date_start.unwrap_or_default().into_inner(),
+        date_end: match_day.date_end.unwrap_or_default().into_inner(),
         fixtures,
         team_options,
     };

@@ -69,9 +69,10 @@ pub async fn upsert_player_projection(
     match event {
         PlayerDomainEvent::PlayerCreated {
             player_id, team_id, space_id, position_name, roster_line_id,
-            personal_name, jersey, base_skills, starting_spp, starting_value,
+            jersey, base_skills, starting_spp, starting_value,
         } => {
-            let base_json = serde_json::to_value(base_skills).map_err(RepositoryError::Serialization)?;
+            let skill_ids: Vec<&str> = base_skills.iter().map(|s| s.as_ref()).collect();
+            let base_json = serde_json::to_value(&skill_ids).map_err(RepositoryError::Serialization)?;
 
             sqlx::query(
                 "INSERT INTO players_projection
@@ -82,11 +83,11 @@ pub async fn upsert_player_projection(
             )
             .bind(&player_id.0)
             .bind(&team_id.0)
-            .bind(space_id)
-            .bind(position_name)
-            .bind(roster_line_id)
-            .bind(personal_name)
-            .bind(jersey.map(|j| j as i16))
+            .bind(space_id.to_string())
+            .bind(position_name.as_ref())
+            .bind(roster_line_id.as_ref())
+            .bind("")
+            .bind(jersey.map(|j| j.into_inner() as i16))
             .bind(&base_json)
             .bind(starting_spp.0 as i32)
             .bind(starting_value.0 as i32)
@@ -99,14 +100,14 @@ pub async fn upsert_player_projection(
             player_id, skill_id, skill_name, category_css, mode, spp_cost, value_delta, ..
         } => {
             let acq = AcquiredSkillProjection {
-                skill_id:     skill_id.clone(),
-                skill_name:   skill_name.clone(),
+                skill_id:     skill_id.as_ref().to_string(),
+                skill_name:   skill_name.as_ref().to_string(),
                 category_css: category_css.clone(),
                 mode: match mode {
                     AcquisitionMode::Chosen => "Chosen".to_string(),
                     AcquisitionMode::Random => "Random".to_string(),
                 },
-                spp_cost: *spp_cost as i32,
+                spp_cost: spp_cost.into_inner() as i32,
             };
             let acq_json = serde_json::to_value(&acq).map_err(RepositoryError::Serialization)?;
 

@@ -10,6 +10,15 @@ set -euo pipefail
 
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+if [ -n "${EXEC_PROFILE:-}" ]; then
+    :
+elif [ -n "${1:-}" ] && [[ "${1}" != -* ]]; then
+    EXEC_PROFILE="$1"; shift
+else
+    EXEC_PROFILE="dev"
+fi
+export EXEC_PROFILE
+
 echo "=== [1/4] Import users ==="
 "${SCRIPTS_DIR}/import_users.sh" "$@"
 

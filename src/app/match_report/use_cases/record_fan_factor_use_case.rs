@@ -85,10 +85,10 @@ async fn fetch_team_values(
     let (home_raw, away_raw) =
         tokio::join!(team_data.find_team_value(&home_id), team_data.find_team_value(&away_id));
     let home_tv = home_raw
-        .map(TeamValue)
+        .and_then(|v| TeamValue::try_new(v).ok())
         .ok_or_else(|| RecordFanFactorError::TeamValueUnavailable(home_id))?;
     let away_tv = away_raw
-        .map(TeamValue)
+        .and_then(|v| TeamValue::try_new(v).ok())
         .ok_or_else(|| RecordFanFactorError::TeamValueUnavailable(away_id))?;
     Ok((home_tv, away_tv))
 }

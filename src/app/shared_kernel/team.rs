@@ -1,13 +1,8 @@
 use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, EntityId};
-use nutype::nutype;
+use crate::app::shared_kernel::name_vo::NameVo;
 use serde::{Deserialize, Serialize};
 
-#[nutype(
-    sanitize(trim),
-    validate(not_empty, len_char_max = 50, regex = r"^[\p{L}0-9 -]+$"),
-    derive(Debug, Clone, Serialize, Deserialize)
-)]
-pub struct TeamName(String);
+pub type TeamName = NameVo;
 
 pub type TeamId = EntityId;
 

@@ -47,14 +47,14 @@ pub async fn get_team_match_context_json(
     let journeyman_type = state
         .teams
         .journeyman_type_port
-        .journeyman_type_for_roster(&team.roster_id);
+        .journeyman_type_for_roster(&team.roster_id.to_string());
 
     Json(TeamMatchContextJson {
-        team_id: team.id.clone(),
-        team_name: team.name.clone(),
+        team_id: team.id.to_string(),
+        team_name: team.name.to_string(),
         coach_name: team.coach_name.clone(),
-        roster_name: team.roster_name.clone(),
-        dedicated_fans: team.dedicated_fans as u32,
+        roster_name: team.roster_name.to_string(),
+        dedicated_fans: team.dedicated_fans.into_inner() as u32,
         player_count,
         ctv: team.team_value.0,
         treasury: team.treasury.0,

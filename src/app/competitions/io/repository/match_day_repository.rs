@@ -1,12 +1,48 @@
-use crate::app::competitions::domain::match_day::{MatchDay, MatchDayType, Pairing};
+use crate::app::competitions::domain::match_day::{
+    MatchDay, MatchDayName, MatchDayPosition, MatchDayType, Pairing,
+};
 use crate::app::competitions::domain::match_day_repository_port::{
     IMatchDayRepository, MatchDayRepositoryError,
 };
+use crate::app::shared_kernel::common_types::{MatchId, PairingId, SeasonId};
+use crate::app::shared_kernel::date_string::DateString;
+use crate::app::shared_kernel::team::TeamId;
 use async_trait::async_trait;
 use sqlx::PgPool;
 
 fn db_err(e: sqlx::Error) -> MatchDayRepositoryError {
     MatchDayRepositoryError::Database(e.to_string())
+}
+
+fn data_err(msg: &str) -> MatchDayRepositoryError {
+    MatchDayRepositoryError::Database(msg.to_string())
+}
+
+fn parse_match_day(
+    id: String,
+    season_id: String,
+    name: String,
+    day_type: String,
+    date_start: Option<String>,
+    date_end: Option<String>,
+    position: i32,
+    pairings: Vec<Pairing>,
+) -> Result<MatchDay, MatchDayRepositoryError> {
+    Ok(MatchDay {
+        id: MatchId::try_new(&id).map_err(|_| data_err("invalid match day id"))?,
+        season_id: SeasonId::try_new(&season_id).map_err(|_| data_err("invalid season id"))?,
+        name: MatchDayName::try_new(name).map_err(|_| data_err("invalid match day name"))?,
+        day_type: MatchDayType::from_str(&day_type),
+        date_start: date_start
+            .map(|s| DateString::try_new(s).map_err(|_| data_err("invalid date_start")))
+            .transpose()?,
+        date_end: date_end
+            .map(|s| DateString::try_new(s).map_err(|_| data_err("invalid date_end")))
+            .transpose()?,
+        position: MatchDayPosition::try_new(position)
+            .map_err(|_| data_err("invalid position"))?,
+        pairings,
+    })
 }
 
 pub struct MatchDayRepository {
@@ -50,16 +86,10 @@ impl IMatchDayRepository for MatchDayRepository {
         let mut result = Vec::with_capacity(day_rows.len());
         for d in day_rows {
             let pairings = self.load_pairings(&d.id).await?;
-            result.push(MatchDay {
-                id: d.id,
-                season_id: d.season_id,
-                name: d.name,
-                day_type: MatchDayType::from_str(&d.day_type),
-                date_start: d.date_start,
-                date_end: d.date_end,
-                position: d.position,
+            result.push(parse_match_day(
+                d.id, d.season_id, d.name, d.day_type, d.date_start, d.date_end, d.position,
                 pairings,
-            });
+            )?);
         }
 
         Ok(result)
@@ -92,16 +122,10 @@ impl IMatchDayRepository for MatchDayRepository {
         let Some(d) = row else { return Ok(None) };
 
         let pairings = self.load_pairings(&d.id).await?;
-        Ok(Some(MatchDay {
-            id: d.id,
-            season_id: d.season_id,
-            name: d.name,
-            day_type: MatchDayType::from_str(&d.day_type),
-            date_start: d.date_start,
-            date_end: d.date_end,
-            position: d.position,
+        Ok(Some(parse_match_day(
+            d.id, d.season_id, d.name, d.day_type, d.date_start, d.date_end, d.position,
             pairings,
-        }))
+        )?))
     }
 
     async fn save_match_day(
@@ -118,13 +142,13 @@ impl IMatchDayRepository for MatchDayRepository {
                date_end = EXCLUDED.date_end,
                position = EXCLUDED.position",
         )
-        .bind(&match_day.id)
-        .bind(&match_day.season_id)
-        .bind(&match_day.name)
+        .bind(match_day.id.to_string())
+        .bind(match_day.season_id.to_string())
+        .bind(match_day.name.as_ref())
         .bind(match_day.day_type.as_str())
-        .bind(&match_day.date_start)
-        .bind(&match_day.date_end)
-        .bind(match_day.position)
+        .bind(match_day.date_start.as_ref().map(|d| d.as_ref()))
+        .bind(match_day.date_end.as_ref().map(|d| d.as_ref()))
+        .bind(match_day.position.into_inner())
         .execute(&self.pool)
         .await
         .map_err(db_err)?;
@@ -153,10 +177,10 @@ impl IMatchDayRepository for MatchDayRepository {
              VALUES ($1, $2, $3, $4)
              ON CONFLICT (id) DO NOTHING",
         )
-        .bind(&pairing.id)
+        .bind(pairing.id.to_string())
         .bind(match_day_id)
-        .bind(&pairing.home_team_id)
-        .bind(&pairing.away_team_id)
+        .bind(pairing.home_team_id.to_string())
+        .bind(pairing.away_team_id.to_string())
         .execute(&self.pool)
         .await
         .map_err(db_err)?;
@@ -254,13 +278,16 @@ impl MatchDayRepository {
         .await
         .map_err(db_err)?;
 
-        Ok(rows
-            .into_iter()
-            .map(|r| Pairing {
-                id: r.id,
-                home_team_id: r.home_team_id,
-                away_team_id: r.away_team_id,
-            })
-            .collect())
+        let mut pairings = Vec::with_capacity(rows.len());
+        for r in rows {
+            pairings.push(Pairing {
+                id: PairingId::try_new(&r.id).map_err(|_| data_err("invalid pairing id"))?,
+                home_team_id: TeamId::try_new(&r.home_team_id)
+                    .map_err(|_| data_err("invalid home_team_id"))?,
+                away_team_id: TeamId::try_new(&r.away_team_id)
+                    .map_err(|_| data_err("invalid away_team_id"))?,
+            });
+        }
+        Ok(pairings)
     }
 }

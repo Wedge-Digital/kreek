@@ -11,6 +11,7 @@ use crate::app::shared_kernel::common_types::{
     CloudinaryImage, CoachId, CompetitionId, EventId, SeasonId, SpaceId,
 };
 use crate::app::shared_kernel::competition_name::CompetitionName;
+use crate::app::shared_kernel::season_name::SeasonName;
 use crate::common::services::event_bus::event_bus::EventBus;
 
 pub struct CreateDraftCompetitionCommand {
@@ -67,7 +68,7 @@ pub async fn execute(
 
     repo.save(&competition).await?;
 
-    let season = CompetitionSeason::new(competition_id, "Saison 1".to_string());
+    let season = CompetitionSeason::new(competition_id, SeasonName::try_new("Saison 1").unwrap());
     let season_id = season.id;
     season_repo.save(&season).await?;
 

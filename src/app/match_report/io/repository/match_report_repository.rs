@@ -103,8 +103,8 @@ impl MatchReportRepository {
                      WHERE match_report_id = $1",
                 )
                 .bind(match_report_id)
-                .bind(home_team_value.0 as i32)
-                .bind(away_team_value.0 as i32)
+                .bind(home_team_value.into_inner() as i32)
+                .bind(away_team_value.into_inner() as i32)
                 .bind(version as i64)
                 .execute(&mut **tx)
                 .await

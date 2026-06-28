@@ -28,7 +28,7 @@ pub async fn execute(
         if day.is_rest() {
             continue;
         }
-        generate_pairings::execute(&day.id, season_id, competition_id, space_id, match_day_repo, group_repo, team_port, event_bus)
+        generate_pairings::execute(&day.id.to_string(), season_id, competition_id, space_id, match_day_repo, group_repo, team_port, event_bus)
             .await
             .map_err(GenerateAllError::Generate)?;
     }
