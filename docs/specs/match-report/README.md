@@ -7,7 +7,7 @@
 | step1-selection | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | step2-avant-match | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | step2-inducements | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| step3-4-actions | ✅ | ✅ | ✅ | | | | |
+| step3-4-actions | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | step5-apres-match | | | | | | | |
 | recap | | | | | | | |
 
