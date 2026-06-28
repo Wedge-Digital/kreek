@@ -81,8 +81,73 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                 updated.version += 1;
                 MatchReportState::PreMatch(updated)
             }
-            (Some(MatchReportState::PreMatch(pm)), MatchReportDomainEvent::StarPlayerEngaged { .. }) => {
+            (
+                Some(MatchReportState::PreMatch(pm)),
+                MatchReportDomainEvent::StarPlayerEngaged { team_id, star_player_uid, .. },
+            ) => {
                 let mut updated = pm;
+                updated.star_engagements.push((team_id.clone(), star_player_uid.clone()));
+                updated.version += 1;
+                MatchReportState::PreMatch(updated)
+            }
+            (
+                Some(MatchReportState::PreMatch(pm)),
+                MatchReportDomainEvent::TempPlayersInitialized { team_id, players },
+            ) => {
+                let mut updated = pm;
+                if team_id == &updated.home_team_id {
+                    updated.home_temp_players = players.clone();
+                } else {
+                    updated.away_temp_players = players.clone();
+                }
+                updated.version += 1;
+                MatchReportState::PreMatch(updated)
+            }
+            (
+                Some(MatchReportState::PreMatch(pm)),
+                MatchReportDomainEvent::TempPlayersReset { team_id },
+            ) => {
+                let mut updated = pm;
+                if team_id == &updated.home_team_id {
+                    updated.home_temp_players = vec![];
+                } else {
+                    updated.away_temp_players = vec![];
+                }
+                updated.version += 1;
+                MatchReportState::PreMatch(updated)
+            }
+            (
+                Some(MatchReportState::PreMatch(pm)),
+                MatchReportDomainEvent::ActionRecorded {
+                    action_id, team_side, turn, player, action, player_display_name, ..
+                },
+            ) => {
+                use crate::app::match_report::domain::value_objects::{MatchAction, TeamSide};
+                let entry = MatchAction {
+                    id: action_id.clone(),
+                    turn: *turn,
+                    player: player.clone(),
+                    action: action.clone(),
+                    player_display_name: player_display_name.clone(),
+                };
+                let mut updated = pm;
+                match team_side {
+                    TeamSide::Home => updated.home_actions.push(entry),
+                    TeamSide::Away => updated.away_actions.push(entry),
+                }
+                updated.version += 1;
+                MatchReportState::PreMatch(updated)
+            }
+            (
+                Some(MatchReportState::PreMatch(pm)),
+                MatchReportDomainEvent::ActionDeleted { action_id, team_side, .. },
+            ) => {
+                use crate::app::match_report::domain::value_objects::TeamSide;
+                let mut updated = pm;
+                match team_side {
+                    TeamSide::Home => updated.home_actions.retain(|a| &a.id != action_id),
+                    TeamSide::Away => updated.away_actions.retain(|a| &a.id != action_id),
+                }
                 updated.version += 1;
                 MatchReportState::PreMatch(updated)
             }

@@ -2,14 +2,15 @@ use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
 use crate::app::match_report::domain::value_objects::{
-    AllowedInducementSpec, D3Roll, InducementPurchase, InducementQty, IsStarPlayer,
-    MatchReportOrigin, TeamValue,
+    ActionId, ActionPlayer, AllowedInducementSpec, D3Roll, InducementPurchase, InducementQty,
+    MatchAction, MatchActionType, MatchReportOrigin, TeamSide, TeamValue, TempPlayer,
 };
 use crate::app::shared_kernel::common_types::{
     CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
 };
 use crate::app::shared_kernel::inducement_definition::InducementId;
 use crate::app::shared_kernel::team::TeamId;
+use crate::app::match_report::domain::value_objects::TurnNumber;
 
 #[derive(Debug, Clone)]
 pub struct MatchReportPreMatch {
@@ -29,6 +30,11 @@ pub struct MatchReportPreMatch {
     pub away_team_value: Option<TeamValue>,
     pub home_inducements: Option<Vec<InducementPurchase>>,
     pub away_inducements: Option<Vec<InducementPurchase>>,
+    pub star_engagements: Vec<(TeamId, InducementId)>,
+    pub home_temp_players: Vec<TempPlayer>,
+    pub away_temp_players: Vec<TempPlayer>,
+    pub home_actions: Vec<MatchAction>,
+    pub away_actions: Vec<MatchAction>,
     pub version: u64,
 }
 
@@ -119,6 +125,114 @@ impl MatchReportPreMatch {
         if team_id == &self.home_team_id { self.home_inducements.as_ref() } else { self.away_inducements.as_ref() }
     }
 
+    pub fn init_temp_players(
+        &self,
+        team_id: &TeamId,
+        players: Vec<TempPlayer>,
+    ) -> (Self, MatchReportDomainEvent) {
+        let event = MatchReportDomainEvent::TempPlayersInitialized { team_id: team_id.clone(), players: players.clone() };
+        let mut updated = self.clone();
+        if team_id == &updated.home_team_id {
+            updated.home_temp_players = players;
+        } else {
+            updated.away_temp_players = players;
+        }
+        updated.version += 1;
+        (updated, event)
+    }
+
+    pub fn reset_temp_players(&self, team_id: &TeamId) -> (Self, MatchReportDomainEvent) {
+        let event = MatchReportDomainEvent::TempPlayersReset { team_id: team_id.clone() };
+        let mut updated = self.clone();
+        if team_id == &updated.home_team_id {
+            updated.home_temp_players = vec![];
+        } else {
+            updated.away_temp_players = vec![];
+        }
+        updated.version += 1;
+        (updated, event)
+    }
+
+    pub fn record_action(
+        &self,
+        team_side: TeamSide,
+        turn: TurnNumber,
+        player: ActionPlayer,
+        action: MatchActionType,
+        player_display_name: String,
+        action_id: ActionId,
+        recorded_by: CoachId,
+    ) -> (Self, MatchReportDomainEvent) {
+        let event = MatchReportDomainEvent::ActionRecorded {
+            action_id: action_id.clone(),
+            team_side,
+            turn,
+            player: player.clone(),
+            action: action.clone(),
+            player_display_name: player_display_name.clone(),
+            recorded_by,
+        };
+        let entry = MatchAction { id: action_id, turn, player, action, player_display_name };
+        let mut updated = self.clone();
+        match team_side {
+            TeamSide::Home => updated.home_actions.push(entry),
+            TeamSide::Away => updated.away_actions.push(entry),
+        }
+        updated.version += 1;
+        (updated, event)
+    }
+
+    pub fn delete_action(
+        &self,
+        action_id: &ActionId,
+        deleted_by: CoachId,
+    ) -> Result<(Self, MatchReportDomainEvent), DomainError> {
+        let team_side = if self.home_actions.iter().any(|a| &a.id == action_id) {
+            TeamSide::Home
+        } else if self.away_actions.iter().any(|a| &a.id == action_id) {
+            TeamSide::Away
+        } else {
+            return Err(DomainError::ActionNotFound(action_id.0.clone()));
+        };
+        let event = MatchReportDomainEvent::ActionDeleted {
+            action_id: action_id.clone(),
+            team_side,
+            deleted_by,
+        };
+        let mut updated = self.clone();
+        match team_side {
+            TeamSide::Home => updated.home_actions.retain(|a| &a.id != action_id),
+            TeamSide::Away => updated.away_actions.retain(|a| &a.id != action_id),
+        }
+        updated.version += 1;
+        Ok((updated, event))
+    }
+
+    pub fn temp_players_for(&self, side: TeamSide) -> &[TempPlayer] {
+        match side {
+            TeamSide::Home => &self.home_temp_players,
+            TeamSide::Away => &self.away_temp_players,
+        }
+    }
+
+    pub fn star_player_uids_for(&self, team_id: &TeamId) -> Vec<InducementId> {
+        self.star_engagements.iter()
+            .filter(|(tid, _)| tid == team_id)
+            .map(|(_, uid)| uid.clone())
+            .collect()
+    }
+
+    pub fn purchases_for(&self, team_id: &TeamId) -> &[InducementPurchase] {
+        self.inducements_for(team_id).map(|v| v.as_slice()).unwrap_or(&[])
+    }
+
+    pub fn actions_for(&self, side: TeamSide) -> &[MatchAction] {
+        match side {
+            TeamSide::Home => &self.home_actions,
+            TeamSide::Away => &self.away_actions,
+        }
+    }
+
     pub fn from_draft(draft: MatchReportDraft) -> Self {
         Self {
             id: draft.id,
@@ -137,6 +251,11 @@ impl MatchReportPreMatch {
             away_team_value: None,
             home_inducements: None,
             away_inducements: None,
+            star_engagements: vec![],
+            home_temp_players: vec![],
+            away_temp_players: vec![],
+            home_actions: vec![],
+            away_actions: vec![],
             version: draft.version + 1,
         }
     }
@@ -269,7 +388,11 @@ mod tests {
             created_by: CoachId::new(), origin: MatchReportOrigin::Manual, pairing_id: None,
             home_fan_roll: None, away_fan_roll: None,
             home_team_value: Some(TeamValue::try_new(home_tv).unwrap()), away_team_value: Some(TeamValue::try_new(away_tv).unwrap()),
-            home_inducements: None, away_inducements: None, version: 1,
+            home_inducements: None, away_inducements: None,
+            star_engagements: vec![],
+            home_temp_players: vec![], away_temp_players: vec![],
+            home_actions: vec![], away_actions: vec![],
+            version: 1,
         }
     }
 
@@ -420,5 +543,131 @@ mod tests {
         pm.home_inducements = Some(vec![]);
         let result = pm.record_inducements(&pm.home_team_id.clone(), &[], 0, &[], &[], CoachId::new());
         assert!(matches!(result, Err(DomainError::InducementsAlreadyRecorded)));
+    }
+
+    // ── step3-4 : temp players ────────────────────────────────────────────────
+
+    use crate::app::match_report::domain::value_objects::{TempPlayerId, TempPlayerKind};
+
+    fn make_journalier(pm: &MatchReportPreMatch) -> TempPlayer {
+        TempPlayer {
+            id: TempPlayerId("tp-01".to_string()),
+            team_id: pm.home_team_id.clone(),
+            kind: TempPlayerKind::Journalier { position_uid: "LIN".to_string() },
+            display_name: None,
+        }
+    }
+
+    #[test]
+    fn init_temp_players_sets_list() {
+        let pm = make_pm(1000, 1000);
+        let player = make_journalier(&pm);
+        let (updated, event) = pm.init_temp_players(&pm.home_team_id.clone(), vec![player]);
+        assert_eq!(updated.home_temp_players.len(), 1);
+        assert!(updated.away_temp_players.is_empty());
+        assert!(matches!(event, MatchReportDomainEvent::TempPlayersInitialized { .. }));
+        assert_eq!(updated.version, pm.version + 1);
+    }
+
+    #[test]
+    fn reset_temp_players_clears_list() {
+        let pm = make_pm(1000, 1000);
+        let player = make_journalier(&pm);
+        let (with_players, _) = pm.init_temp_players(&pm.home_team_id.clone(), vec![player]);
+        let (reset, event) = with_players.reset_temp_players(&pm.home_team_id.clone());
+        assert!(reset.home_temp_players.is_empty());
+        assert!(matches!(event, MatchReportDomainEvent::TempPlayersReset { .. }));
+    }
+
+    // ── step3-4 : actions ─────────────────────────────────────────────────────
+
+    use crate::app::match_report::domain::value_objects::{ActionId, ActionPlayer, MatchActionType, TeamSide, TurnNumber};
+    use crate::app::shared_kernel::common_types::PlayerId;
+
+    fn make_action(pm: &MatchReportPreMatch, side: TeamSide) -> (MatchReportPreMatch, MatchReportDomainEvent) {
+        pm.record_action(
+            side,
+            TurnNumber::try_new(3).unwrap(),
+            ActionPlayer::Regular(PlayerId::new()),
+            MatchActionType::Touchdown,
+            "Jean Dupont (#5)".to_string(),
+            ActionId("act-01".to_string()),
+            CoachId::new(),
+        )
+    }
+
+    #[test]
+    fn record_action_pushes_to_home_actions() {
+        let pm = make_pm(1000, 1000);
+        let (updated, _) = make_action(&pm, TeamSide::Home);
+        assert_eq!(updated.home_actions.len(), 1);
+        assert!(updated.away_actions.is_empty());
+    }
+
+    #[test]
+    fn record_action_pushes_to_away_actions() {
+        let pm = make_pm(1000, 1000);
+        let (updated, _) = make_action(&pm, TeamSide::Away);
+        assert_eq!(updated.away_actions.len(), 1);
+        assert!(updated.home_actions.is_empty());
+    }
+
+    #[test]
+    fn record_two_actions_same_player_same_turn() {
+        let pm = make_pm(1000, 1000);
+        let (pm2, _) = make_action(&pm, TeamSide::Home);
+        let (pm3, _) = make_action(&pm2, TeamSide::Home);
+        assert_eq!(pm3.home_actions.len(), 2);
+    }
+
+    #[test]
+    fn record_two_mvp_same_team() {
+        let pm = make_pm(1000, 1000);
+        let (pm2, _) = pm.record_action(TeamSide::Home, TurnNumber::try_new(1).unwrap(), ActionPlayer::Regular(PlayerId::new()), MatchActionType::Mvp, "A".to_string(), ActionId("a1".to_string()), CoachId::new());
+        let (pm3, _) = pm2.record_action(TeamSide::Home, TurnNumber::try_new(1).unwrap(), ActionPlayer::Regular(PlayerId::new()), MatchActionType::Mvp, "B".to_string(), ActionId("a2".to_string()), CoachId::new());
+        assert_eq!(pm3.home_actions.len(), 2);
+    }
+
+    #[test]
+    fn delete_action_removes_entry() {
+        let pm = make_pm(1000, 1000);
+        let (pm2, _) = make_action(&pm, TeamSide::Home);
+        let action_id = pm2.home_actions[0].id.clone();
+        let (pm3, event) = pm2.delete_action(&action_id, CoachId::new()).unwrap();
+        assert!(pm3.home_actions.is_empty());
+        assert!(matches!(event, MatchReportDomainEvent::ActionDeleted { .. }));
+    }
+
+    #[test]
+    fn delete_action_fails_when_not_found() {
+        let pm = make_pm(1000, 1000);
+        let result = pm.delete_action(&ActionId("missing".to_string()), CoachId::new());
+        assert!(matches!(result, Err(DomainError::ActionNotFound(_))));
+    }
+
+    #[test]
+    fn actions_for_returns_correct_side() {
+        let pm = make_pm(1000, 1000);
+        let (pm2, _) = make_action(&pm, TeamSide::Home);
+        assert_eq!(pm2.actions_for(TeamSide::Home).len(), 1);
+        assert_eq!(pm2.actions_for(TeamSide::Away).len(), 0);
+    }
+
+    #[test]
+    fn star_player_uids_for_returns_engaged_uids() {
+        let mut pm = make_pm(1000, 1000);
+        let uid = InducementId("SP1".to_string());
+        pm.star_engagements.push((pm.home_team_id.clone(), uid.clone()));
+        let result = pm.star_player_uids_for(&pm.home_team_id.clone());
+        assert_eq!(result, vec![uid]);
+        assert!(pm.star_player_uids_for(&pm.away_team_id.clone()).is_empty());
+    }
+
+    #[test]
+    fn purchases_for_returns_team_inducements() {
+        let mut pm = make_pm(1000, 1000);
+        pm.home_inducements = Some(vec![]);
+        assert_eq!(pm.purchases_for(&pm.home_team_id.clone()).len(), 0);
+        assert_eq!(pm.purchases_for(&pm.away_team_id.clone()).len(), 0);
     }
 }
