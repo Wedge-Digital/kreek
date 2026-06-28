@@ -209,6 +209,7 @@ pub async fn post_inducements(
         state.match_report.match_report_repo.as_ref(),
         state.match_report.team_data.as_ref(),
         state.match_report.competition_data.as_ref(),
+        state.match_report.player_data.as_ref(),
     )
     .await
     {

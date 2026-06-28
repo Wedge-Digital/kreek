@@ -3,7 +3,8 @@ use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatc
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{AllowedInducementSpec, IsStarPlayer};
-use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort, TierRulesDto};
+use crate::app::match_report::ports::{ICompetitionDataPort, IPlayerDataPort, ITeamDataPort, TierRulesDto};
+use crate::app::match_report::use_cases::init_temp_players_use_case::{self, InitTempPlayersCommand};
 use crate::app::shared_kernel::common_types::{CoachId, MatchReportId};
 use crate::app::shared_kernel::inducement_definition::InducementId;
 use crate::app::shared_kernel::team::TeamId;
@@ -43,6 +44,7 @@ pub async fn execute(
     repo: &dyn IMatchReportRepository,
     team_data: &dyn ITeamDataPort,
     competition_data: &dyn ICompetitionDataPort,
+    player_data: &dyn IPlayerDataPort,
 ) -> Result<RecordInducementsOutcome, RecordInducementsError> {
     let mr_id = cmd.match_report_id.to_string();
     let pm = load_pre_match_with_tv(repo, &mr_id).await?;
@@ -68,6 +70,14 @@ pub async fn execute(
     repo.append_many(&mr_id, events, version_before)
         .await
         .map_err(|e| RecordInducementsError::Repository(e.to_string()))?;
+    init_temp_players_use_case::execute(
+        InitTempPlayersCommand { match_report_id: cmd.match_report_id, team_id: cmd.team_id },
+        repo,
+        team_data,
+        player_data,
+    )
+    .await
+    .map_err(|e| RecordInducementsError::Repository(format!("{e:?}")))?;
     route_outcome(&updated_pm)
 }
 
