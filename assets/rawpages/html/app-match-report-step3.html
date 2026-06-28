@@ -65,6 +65,22 @@
       grid-template-columns: repeat(3, 1fr);
       gap: 4px;
     }
+    .mr-player-section {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .mr-player-section + .mr-player-section {
+      margin-top: 6px;
+      padding-top: 8px;
+      border-top: 1px solid var(--dark-6);
+    }
+    .mr-player-section-label {
+      font-size: 10px; font-weight: 700; color: var(--dark-4);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 0 2px;
+    }
+    .mr-player-section-label--journeyman { color: var(--dark-3); }
+    .mr-player-section-label--star { color: #9A7800; }
+
     .mr-player-chip {
       display: flex; align-items: center; gap: 6px;
       padding: 8px;
@@ -84,6 +100,30 @@
     .mr-player-chip.is-mvp {
       border-color: var(--gold); background: rgba(255,215,0,0.05);
     }
+
+    /* Journeyman chip — bordure pointillée, maillot gris */
+    .mr-player-chip--journeyman {
+      border-style: dashed;
+      border-color: var(--dark-4);
+    }
+    .mr-player-chip--journeyman .mr-player-chip-jersey {
+      background: var(--dark-3);
+    }
+    .mr-player-chip--journeyman:hover { border-color: var(--main-blue); border-style: solid; }
+    .mr-player-chip--journeyman.active { border-style: solid; }
+
+    /* Star player chip — accent or, maillot doré */
+    .mr-player-chip--star {
+      border-color: rgba(255,215,0,0.5);
+      background: rgba(255,215,0,0.03);
+    }
+    .mr-player-chip--star .mr-player-chip-jersey {
+      background: var(--gold);
+      color: var(--dark-0);
+    }
+    .mr-player-chip--star:hover { border-color: var(--gold); background: rgba(255,215,0,0.07); }
+    .mr-player-chip--star.active { border-color: var(--gold); background: rgba(255,215,0,0.1); }
+
     .mr-player-chip-jersey {
       width: 24px; height: 24px; border-radius: 4px;
       display: flex; align-items: center; justify-content: center;
@@ -146,6 +186,20 @@
     }
     .mr-action-btn--damage .mr-action-btn-label { color: var(--red); }
     .mr-action-btn--mvp .mr-action-btn-label { color: #9A7800; }
+
+    .mr-action-btn--sortie {
+      border-color: rgba(255,107,53,0.25);
+      background: rgba(255,107,53,0.02);
+    }
+    .mr-action-btn--sortie:hover { border-color: var(--orange); background: rgba(255,107,53,0.07); }
+    .mr-action-btn--sortie .mr-action-btn-label { color: var(--orange); }
+
+    .mr-action-status-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 2px;
+    }
 
     .mr-action-btn.disabled {
       opacity: 0.3; cursor: not-allowed; pointer-events: none;
@@ -311,115 +365,161 @@
           <!-- 2. Player selector -->
           <div class="mr-card">
             <div class="mr-card-title">Joueur</div>
-            <div class="mr-player-grid">
 
-              <div class="mr-player-chip" onclick="selectPlayer(this)">
-                <div class="mr-player-chip-jersey">1</div>
-                <div class="mr-player-chip-info">
-                  <div class="mr-player-chip-name">Thalion</div>
-                  <div class="mr-player-chip-pos">Thrower</div>
+            <!-- Section : joueurs réguliers -->
+            <div class="mr-player-section">
+              <div class="mr-player-section-label">Équipe</div>
+              <div class="mr-player-grid">
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">1</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Thalion</div>
+                    <div class="mr-player-chip-pos">Thrower</div>
+                  </div>
                 </div>
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">2</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Elrohir</div>
+                    <div class="mr-player-chip-pos">Lineman</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip has-damage" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">3</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Grotak</div>
+                    <div class="mr-player-chip-pos">Blitzer</div>
+                  </div>
+                  <div class="mr-player-chip-badges">
+                    <span class="mr-mini-badge mr-mini-badge--dmg">KO</span>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">4</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Celeborn</div>
+                    <div class="mr-player-chip-pos">Lineman</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">5</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Galadhon</div>
+                    <div class="mr-player-chip-pos">Lineman</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">6</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Nimrodel</div>
+                    <div class="mr-player-chip-pos">Catcher</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip active is-mvp" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">7</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Aëlindra</div>
+                    <div class="mr-player-chip-pos">Catcher</div>
+                  </div>
+                  <div class="mr-player-chip-badges">
+                    <span class="mr-mini-badge mr-mini-badge--td">2</span>
+                    <span class="mr-mini-badge mr-mini-badge--mvp">★</span>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">8</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Orophin</div>
+                    <div class="mr-player-chip-pos">Blitzer</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">9</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Ithildin</div>
+                    <div class="mr-player-chip-pos">Wardancer</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">10</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Haldir</div>
+                    <div class="mr-player-chip-pos">Treeman</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip has-damage" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">11</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Fenris</div>
+                    <div class="mr-player-chip-pos">Lineman</div>
+                  </div>
+                  <div class="mr-player-chip-badges">
+                    <span class="mr-mini-badge mr-mini-badge--dmg">☠</span>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">12</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Amroth</div>
+                    <div class="mr-player-chip-pos">Lineman</div>
+                  </div>
+                </div>
+
               </div>
-
-              <div class="mr-player-chip" onclick="selectPlayer(this)">
-                <div class="mr-player-chip-jersey">2</div>
-                <div class="mr-player-chip-info">
-                  <div class="mr-player-chip-name">Elrohir</div>
-                  <div class="mr-player-chip-pos">Lineman</div>
-                </div>
-              </div>
-
-              <div class="mr-player-chip has-damage" onclick="selectPlayer(this)">
-                <div class="mr-player-chip-jersey">3</div>
-                <div class="mr-player-chip-info">
-                  <div class="mr-player-chip-name">Grotak</div>
-                  <div class="mr-player-chip-pos">Blitzer</div>
-                </div>
-                <div class="mr-player-chip-badges">
-                  <span class="mr-mini-badge mr-mini-badge--dmg">KO</span>
-                </div>
-              </div>
-
-              <div class="mr-player-chip" onclick="selectPlayer(this)">
-                <div class="mr-player-chip-jersey">4</div>
-                <div class="mr-player-chip-info">
-                  <div class="mr-player-chip-name">Celeborn</div>
-                  <div class="mr-player-chip-pos">Lineman</div>
-                </div>
-              </div>
-
-              <div class="mr-player-chip" onclick="selectPlayer(this)">
-                <div class="mr-player-chip-jersey">5</div>
-                <div class="mr-player-chip-info">
-                  <div class="mr-player-chip-name">Galadhon</div>
-                  <div class="mr-player-chip-pos">Lineman</div>
-                </div>
-              </div>
-
-              <div class="mr-player-chip" onclick="selectPlayer(this)">
-                <div class="mr-player-chip-jersey">6</div>
-                <div class="mr-player-chip-info">
-                  <div class="mr-player-chip-name">Nimrodel</div>
-                  <div class="mr-player-chip-pos">Catcher</div>
-                </div>
-              </div>
-
-              <div class="mr-player-chip active is-mvp" onclick="selectPlayer(this)">
-                <div class="mr-player-chip-jersey">7</div>
-                <div class="mr-player-chip-info">
-                  <div class="mr-player-chip-name">Aëlindra</div>
-                  <div class="mr-player-chip-pos">Catcher</div>
-                </div>
-                <div class="mr-player-chip-badges">
-                  <span class="mr-mini-badge mr-mini-badge--td">2</span>
-                  <span class="mr-mini-badge mr-mini-badge--mvp">★</span>
-                </div>
-              </div>
-
-              <div class="mr-player-chip" onclick="selectPlayer(this)">
-                <div class="mr-player-chip-jersey">8</div>
-                <div class="mr-player-chip-info">
-                  <div class="mr-player-chip-name">Orophin</div>
-                  <div class="mr-player-chip-pos">Blitzer</div>
-                </div>
-              </div>
-
-              <div class="mr-player-chip" onclick="selectPlayer(this)">
-                <div class="mr-player-chip-jersey">9</div>
-                <div class="mr-player-chip-info">
-                  <div class="mr-player-chip-name">Ithildin</div>
-                  <div class="mr-player-chip-pos">Wardancer</div>
-                </div>
-              </div>
-
-              <div class="mr-player-chip" onclick="selectPlayer(this)">
-                <div class="mr-player-chip-jersey">10</div>
-                <div class="mr-player-chip-info">
-                  <div class="mr-player-chip-name">Haldir</div>
-                  <div class="mr-player-chip-pos">Treeman</div>
-                </div>
-              </div>
-
-              <div class="mr-player-chip has-damage" onclick="selectPlayer(this)">
-                <div class="mr-player-chip-jersey">11</div>
-                <div class="mr-player-chip-info">
-                  <div class="mr-player-chip-name">Fenris</div>
-                  <div class="mr-player-chip-pos">Lineman</div>
-                </div>
-                <div class="mr-player-chip-badges">
-                  <span class="mr-mini-badge mr-mini-badge--dmg">☠</span>
-                </div>
-              </div>
-
-              <div class="mr-player-chip" onclick="selectPlayer(this)">
-                <div class="mr-player-chip-jersey">12</div>
-                <div class="mr-player-chip-info">
-                  <div class="mr-player-chip-name">Amroth</div>
-                  <div class="mr-player-chip-pos">Lineman</div>
-                </div>
-              </div>
-
             </div>
+
+            <!-- Section : journaliers -->
+            <div class="mr-player-section">
+              <div class="mr-player-section-label mr-player-section-label--journeyman">Journaliers</div>
+              <div class="mr-player-grid">
+
+                <div class="mr-player-chip mr-player-chip--journeyman" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">13</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Journalier</div>
+                    <div class="mr-player-chip-pos">Lineman</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip mr-player-chip--journeyman" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">14</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Journalier</div>
+                    <div class="mr-player-chip-pos">Lineman</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Section : star players -->
+            <div class="mr-player-section">
+              <div class="mr-player-section-label mr-player-section-label--star">Star players</div>
+              <div class="mr-player-grid">
+
+                <div class="mr-player-chip mr-player-chip--star" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">⭐</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Morg 'n' Thorg</div>
+                    <div class="mr-player-chip-pos">Star Player</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
           </div>
 
           <!-- 3. Action buttons -->
@@ -447,15 +547,21 @@
                 <span class="mr-action-btn-icon">🤸</span>
                 <span class="mr-action-btn-label">Lancer</span>
               </button>
-              <button class="mr-action-btn mr-action-btn--damage">
+              <button class="mr-action-btn mr-action-btn--sortie">
                 <span class="mr-action-btn-icon">🩸</span>
-                <span class="mr-action-btn-label">Blessure</span>
+                <span class="mr-action-btn-label">Sortie</span>
               </button>
             </div>
-            <button class="mr-action-btn mr-action-btn--mvp" style="width: 100%;">
-              <span class="mr-action-btn-icon">⭐</span>
-              <span class="mr-action-btn-label">Désigner MVP</span>
-            </button>
+            <div class="mr-action-status-row">
+              <button class="mr-action-btn mr-action-btn--damage">
+                <span class="mr-action-btn-icon">🚑</span>
+                <span class="mr-action-btn-label">Blessé</span>
+              </button>
+              <button class="mr-action-btn mr-action-btn--mvp">
+                <span class="mr-action-btn-icon">⭐</span>
+                <span class="mr-action-btn-label">Désigner MVP</span>
+              </button>
+            </div>
           </div>
 
           <!-- 4. Event log -->
@@ -557,7 +663,7 @@
     el.classList.add('active');
   }
   function selectPlayer(el) {
-    el.parentElement.querySelectorAll('.mr-player-chip').forEach(function(b) { b.classList.remove('active'); });
+    el.closest('.mr-card').querySelectorAll('.mr-player-chip').forEach(function(b) { b.classList.remove('active'); });
     el.classList.add('active');
   }
   </script>
