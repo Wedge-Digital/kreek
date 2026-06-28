@@ -7,6 +7,16 @@ pub mod path {
         "/app/{space_id}/match-report/{match_report_id}/inducements/{team_id}";
     pub const MATCH_REPORT_STEP3: &str =
         "/app/{space_id}/match-report/{match_report_id}/step3";
+    pub const MATCH_REPORT_STEP4: &str =
+        "/app/{space_id}/match-report/{match_report_id}/step4";
+    pub const MATCH_REPORT_STEP3_TURN_SELECTOR: &str =
+        "/app/{space_id}/match-report/{match_report_id}/step3/turn-selector";
+    pub const MATCH_REPORT_STEP4_TURN_SELECTOR: &str =
+        "/app/{space_id}/match-report/{match_report_id}/step4/turn-selector";
+    pub const MATCH_REPORT_STEP3_TEMP_PLAYERS: &str =
+        "/app/{space_id}/match-report/{match_report_id}/step3/temp-players";
+    pub const MATCH_REPORT_STEP4_TEMP_PLAYERS: &str =
+        "/app/{space_id}/match-report/{match_report_id}/step4/temp-players";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -44,6 +54,36 @@ impl Routes {
 
     pub fn step3(&self, space_id: &str, match_report_id: &str) -> String {
         path::MATCH_REPORT_STEP3
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+    }
+
+    pub fn step4(&self, space_id: &str, match_report_id: &str) -> String {
+        path::MATCH_REPORT_STEP4
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+    }
+
+    pub fn step3_turn_selector(&self, space_id: &str, match_report_id: &str) -> String {
+        path::MATCH_REPORT_STEP3_TURN_SELECTOR
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+    }
+
+    pub fn step4_turn_selector(&self, space_id: &str, match_report_id: &str) -> String {
+        path::MATCH_REPORT_STEP4_TURN_SELECTOR
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+    }
+
+    pub fn step3_temp_players(&self, space_id: &str, match_report_id: &str) -> String {
+        path::MATCH_REPORT_STEP3_TEMP_PLAYERS
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+    }
+
+    pub fn step4_temp_players(&self, space_id: &str, match_report_id: &str) -> String {
+        path::MATCH_REPORT_STEP4_TEMP_PLAYERS
             .replace("{space_id}", space_id)
             .replace("{match_report_id}", match_report_id)
     }

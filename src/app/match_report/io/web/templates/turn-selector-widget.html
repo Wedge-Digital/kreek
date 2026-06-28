@@ -1,0 +1,21 @@
+<link rel="stylesheet" href="/static/css/widgets/turn-selector.css">
+<div class="turn-selector" hx-disinherit="*">
+    <div class="turn-grid">
+        {% for turn in turns %}
+        <button class="turn-btn {% if turn.has_action %}has-action{% endif %}"
+                data-turn="{{ turn.turn }}">
+            {{ turn.turn }}
+        </button>
+        {% endfor %}
+    </div>
+    <script>
+    (function () {
+        const panel = document.currentScript.previousElementSibling;
+        panel.querySelectorAll('.turn-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                htmx.trigger(document.body, 'turnSelected', { turn: parseInt(btn.dataset.turn) });
+            });
+        });
+    })();
+    </script>
+</div>

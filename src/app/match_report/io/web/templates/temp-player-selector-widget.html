@@ -1,0 +1,28 @@
+{% if !players.is_empty() %}
+<link rel="stylesheet" href="/static/css/widgets/temp-player-selector.css">
+<div class="temp-player-selector" hx-disinherit="*">
+    <h4 class="temp-player-title">Joueurs temporaires</h4>
+    <ul class="temp-player-list">
+        {% for player in players %}
+        <li class="temp-player-item"
+            data-player-id="{{ player.temp_player_id }}"
+            data-player-type="temp">
+            {{ player.label }}
+        </li>
+        {% endfor %}
+    </ul>
+    <script>
+    (function () {
+        const panel = document.currentScript.previousElementSibling;
+        panel.querySelectorAll('.temp-player-item').forEach(function (item) {
+            item.addEventListener('click', function () {
+                htmx.trigger(document.body, 'playerSelected', {
+                    player_id: item.dataset.playerId,
+                    player_type: item.dataset.playerType
+                });
+            });
+        });
+    })();
+    </script>
+</div>
+{% endif %}

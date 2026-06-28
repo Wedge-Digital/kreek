@@ -1,0 +1,50 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/match-report-actions.css">
+
+<div class="mr-actions-container">
+    <h2 class="mr-step-title">
+        {% if team_side == "home" %}Équipe domicile — Actions{% else %}Équipe extérieur — Actions{% endif %}
+    </h2>
+
+    <div class="mr-actions-layout">
+        <div class="mr-col-selectors">
+            <div class="mr-widget-section">
+                <h3>Sélectionner un tour</h3>
+                <div id="turn-selector"
+                     hx-get="{{ turn_selector_url }}"
+                     hx-trigger="load, actionRecorded from:body, actionDeleted from:body"
+                     hx-target="this"
+                     hx-swap="innerHTML">
+                </div>
+            </div>
+
+            <div class="mr-widget-section">
+                <h3>Joueurs réguliers</h3>
+                <div id="player-selector"
+                     hx-get="{{ player_selector_url }}"
+                     hx-trigger="load"
+                     hx-target="this"
+                     hx-swap="innerHTML">
+                </div>
+            </div>
+
+            <div class="mr-widget-section" id="temp-player-selector"
+                 hx-get="{{ temp_player_selector_url }}"
+                 hx-trigger="load"
+                 hx-target="this"
+                 hx-swap="innerHTML">
+            </div>
+        </div>
+
+        <div class="mr-col-actions">
+            <div id="action-panel">
+            </div>
+
+            <div id="action-log">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
