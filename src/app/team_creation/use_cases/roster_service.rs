@@ -1,9 +1,10 @@
 use crate::app::shared_kernel::staff::{
     StaffId, StaffKind, StaffMaxQuantity, StaffName, StaffPrice,
 };
+use crate::app::shared_kernel::common_types::RosterId;
 use crate::app::team_creation::domain::roster::{
     PlayerDefinition, PlayerId, PlayerMaxQuantity, PlayerName, PlayerPrice, RerollBasePrice, Roster,
-    RosterId, RosterName,
+    RosterName,
 };
 use crate::app::team_creation::domain::team_staff::TeamStaff;
 use crate::app::team_creation::ports::IReferenceDataPort;
@@ -19,11 +20,13 @@ pub fn load_roster(roster_uid: &str, ref_data: &dyn IReferenceDataPort) -> Optio
     let player_definitions = def
         .available_players
         .iter()
-        .map(|p| PlayerDefinition {
-            id: PlayerId(p.uid.clone()),
-            name: PlayerName(p.position_name.clone()),
-            max_quantity: PlayerMaxQuantity(p.max_quantity),
-            price: PlayerPrice(p.cost / 1000),
+        .filter_map(|p| {
+            Some(PlayerDefinition {
+                id:           PlayerId(p.uid.clone()),
+                name:         PlayerName::try_new(p.position_name.clone()).ok()?,
+                max_quantity: PlayerMaxQuantity::try_new(p.max_quantity).ok()?,
+                price:        PlayerPrice::try_new(p.cost / 1000).ok()?,
+            })
         })
         .collect();
 
@@ -58,12 +61,12 @@ pub fn load_roster(roster_uid: &str, ref_data: &dyn IReferenceDataPort) -> Optio
     }
 
     Some(Roster {
-        id: RosterId(def.uid.clone()),
-        name: RosterName(def.name.clone()),
+        id:           RosterId(def.uid.clone()),
+        name:         RosterName::try_new(def.name.clone()).ok()?,
         player_definitions,
         allowed_staff,
         cross_limits: vec![],
-        reroll_price: RerollBasePrice(def.reroll_cost / 1000),
+        reroll_price: RerollBasePrice::try_new(def.reroll_cost / 1000).ok()?,
     })
 }
 
@@ -170,10 +173,10 @@ mod tests {
     fn load_roster_builds_valid_roster() {
         let roster = load_roster("LIZARDMEN", &FakeRefData).unwrap();
         assert_eq!(roster.id.0, "LIZARDMEN");
-        assert_eq!(roster.name.0, "Hommes-Lézards");
-        assert_eq!(roster.reroll_price.0, 70);
+        assert_eq!(roster.name.as_ref(), "Hommes-Lézards");
+        assert_eq!(roster.reroll_price.into_inner(), 70);
         assert_eq!(roster.player_definitions.len(), 1);
-        assert_eq!(roster.player_definitions[0].price.0, 60);
+        assert_eq!(roster.player_definitions[0].price.into_inner(), 60);
     }
 
     #[test]

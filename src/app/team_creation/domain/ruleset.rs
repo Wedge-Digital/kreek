@@ -1,5 +1,6 @@
+use crate::app::shared_kernel::tier::{CreationBudget, TierName};
 use crate::app::team_creation::domain::error::DomainError;
-use crate::app::team_creation::domain::roster::RosterId;
+use crate::app::shared_kernel::common_types::RosterId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -8,14 +9,8 @@ pub struct RulesetId(pub String);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RulesetName(pub String);
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct CreationBudget(pub u32);
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TierId(pub String);
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TierName(pub String);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RosterTier {

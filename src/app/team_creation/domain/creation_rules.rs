@@ -1,16 +1,15 @@
-use crate::app::team_creation::domain::roster::RosterId;
-use crate::app::team_creation::domain::ruleset::{
-    CreationBudget, RosterTier, Ruleset, RulesetId, RulesetName, TierId, TierName,
-};
+use crate::app::shared_kernel::tier::{CreationBudget, StartingXp, TierName};
+use crate::app::shared_kernel::common_types::RosterId;
+use crate::app::team_creation::domain::ruleset::{RosterTier, Ruleset, RulesetId, RulesetName, TierId};
 use serde::{Deserialize, Serialize};
 
 /// Règles de création copiées depuis le contexte Compétition au moment de la création d'équipe.
 /// Ce VO appartient au contexte team_creation — jamais de jointure vers competition_seasons.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreationTier {
-    pub name: String,
-    pub budget: u32,
-    pub start_xp: u32,
+    pub name: TierName,
+    pub budget: CreationBudget,
+    pub start_xp: StartingXp,
     pub rosters: Vec<String>,
 }
 
@@ -25,7 +24,7 @@ impl CreationRules {
         self.tiers
             .iter()
             .find(|t| t.rosters.iter().any(|r| r == roster_uid))
-            .map(|t| t.start_xp.min(255) as u8)
+            .map(|t| t.start_xp.into_inner().min(255) as u8)
             .unwrap_or(0)
     }
 
@@ -41,10 +40,10 @@ impl CreationRules {
                 .tiers
                 .iter()
                 .map(|t| RosterTier {
-                    id: TierId(t.name.clone()),
-                    name: TierName(t.name.clone()),
+                    id: TierId(t.name.clone().into_inner()),
+                    name: t.name.clone(),
                     roster_ids: t.rosters.iter().map(|r| RosterId(r.clone())).collect(),
-                    budget: CreationBudget(t.budget),
+                    budget: t.budget,
                 })
                 .collect(),
         }

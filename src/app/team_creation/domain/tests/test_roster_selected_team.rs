@@ -6,12 +6,14 @@ mod tests {
     };
     use crate::app::shared_kernel::team::{BaseTeamInfo, TeamName};
     use crate::app::team_creation::domain::error::DomainError;
+    use crate::app::shared_kernel::common_types::RosterId;
     use crate::app::team_creation::domain::roster::{
         CrossLimit, PlayerDefinition, PlayerId, PlayerMaxQuantity, PlayerName, PlayerPrice,
-        RerollBasePrice, Roster, RosterId, RosterName,
+        RerollBasePrice, Roster, RosterName,
     };
+    use crate::app::shared_kernel::tier::{CreationBudget, TierName};
     use crate::app::team_creation::domain::ruleset::{
-        CreationBudget, RosterTier, Ruleset, RulesetId, RulesetName, TierId, TierName,
+        RosterTier, Ruleset, RulesetId, RulesetName, TierId,
     };
     use crate::app::team_creation::domain::team_draft::DraftTeam;
     use crate::app::team_creation::domain::team_roster_selected::{
@@ -25,10 +27,10 @@ mod tests {
 
     fn make_player(id: &str, price: u32, max_quantity: u8) -> PlayerDefinition {
         PlayerDefinition {
-            id: PlayerId(id.to_string()),
-            name: PlayerName(format!("Player {id}")),
-            max_quantity: PlayerMaxQuantity(max_quantity),
-            price: PlayerPrice(price),
+            id:           PlayerId(id.to_string()),
+            name:         PlayerName::try_new(format!("Player {id}")).unwrap(),
+            max_quantity: PlayerMaxQuantity::try_new(max_quantity).unwrap(),
+            price:        PlayerPrice::try_new(price).unwrap(),
         }
     }
 
@@ -49,12 +51,12 @@ mod tests {
         reroll_price: u32,
     ) -> Roster {
         Roster {
-            id: RosterId(id.to_string()),
-            name: RosterName(format!("Roster {id}")),
+            id:                 RosterId(id.to_string()),
+            name:               RosterName::try_new(format!("Roster {id}")).unwrap(),
             player_definitions: players,
-            allowed_staff: staff,
-            cross_limits: vec![],
-            reroll_price: RerollBasePrice(reroll_price),
+            allowed_staff:      staff,
+            cross_limits:       vec![],
+            reroll_price:       RerollBasePrice::try_new(reroll_price).unwrap(),
         }
     }
 
@@ -64,7 +66,7 @@ mod tests {
             name: RulesetName("Ruleset 1".to_string()),
             tiers: vec![RosterTier {
                 id: TierId("tier-1".to_string()),
-                name: TierName("Tier 1".to_string()),
+                name: TierName::try_new("Tier 1").unwrap(),
                 roster_ids: vec![RosterId(roster_id.to_string())],
                 budget: CreationBudget(budget),
             }],
@@ -101,9 +103,9 @@ mod tests {
 
     #[test]
     fn hire_player_ok() {
-        let player = make_player("p1", 60_000, 2);
-        let roster = make_roster("r1", vec![player.clone()], vec![], 50_000);
-        let ruleset = make_ruleset("r1", 1_000_000);
+        let player = make_player("p1", 60, 2);
+        let roster = make_roster("r1", vec![player.clone()], vec![], 50);
+        let ruleset = make_ruleset("r1", 1_000);
         let mut team = make_roster_selected(roster, ruleset);
 
         assert!(team.hire_player(player).is_ok());
@@ -112,10 +114,10 @@ mod tests {
 
     #[test]
     fn hire_player_not_in_roster_returns_error() {
-        let player_in = make_player("p1", 60_000, 2);
-        let player_out = make_player("p2", 60_000, 2);
-        let roster = make_roster("r1", vec![player_in], vec![], 50_000);
-        let ruleset = make_ruleset("r1", 1_000_000);
+        let player_in = make_player("p1", 60, 2);
+        let player_out = make_player("p2", 60, 2);
+        let roster = make_roster("r1", vec![player_in], vec![], 50);
+        let ruleset = make_ruleset("r1", 1_000);
         let mut team = make_roster_selected(roster, ruleset);
 
         assert_eq!(
@@ -126,9 +128,9 @@ mod tests {
 
     #[test]
     fn hire_player_exceeds_max_per_type_returns_error() {
-        let player = make_player("p1", 60_000, 1);
-        let roster = make_roster("r1", vec![player.clone()], vec![], 50_000);
-        let ruleset = make_ruleset("r1", 1_000_000);
+        let player = make_player("p1", 60, 1);
+        let roster = make_roster("r1", vec![player.clone()], vec![], 50);
+        let ruleset = make_ruleset("r1", 1_000);
         let mut team = make_roster_selected(roster, ruleset);
 
         team.hire_player(player.clone()).unwrap();
@@ -140,9 +142,9 @@ mod tests {
 
     #[test]
     fn hire_player_exceeds_total_max_returns_error() {
-        let player = make_player("p1", 1_000, 20);
-        let roster = make_roster("r1", vec![player.clone()], vec![], 50_000);
-        let ruleset = make_ruleset("r1", 10_000_000);
+        let player = make_player("p1", 1, 16);
+        let roster = make_roster("r1", vec![player.clone()], vec![], 50);
+        let ruleset = make_ruleset("r1", 10_000);
         let mut team = make_roster_selected(roster, ruleset);
 
         for _ in 0..16 {
@@ -156,9 +158,9 @@ mod tests {
 
     #[test]
     fn hire_player_insufficient_budget_returns_error() {
-        let player = make_player("p1", 200_000, 2);
-        let roster = make_roster("r1", vec![player.clone()], vec![], 50_000);
-        let ruleset = make_ruleset("r1", 100_000);
+        let player = make_player("p1", 200, 2);
+        let roster = make_roster("r1", vec![player.clone()], vec![], 50);
+        let ruleset = make_ruleset("r1", 100);
         let mut team = make_roster_selected(roster, ruleset);
 
         assert_eq!(
@@ -169,14 +171,15 @@ mod tests {
 
     #[test]
     fn hire_player_cross_limit_exceeded_returns_error() {
-        let p1 = make_player("p1", 60_000, 4);
-        let p2 = make_player("p2", 60_000, 4);
-        let mut roster = make_roster("r1", vec![p1.clone(), p2.clone()], vec![], 50_000);
+        let p1 = make_player("p1", 60, 4);
+        let p2 = make_player("p2", 60, 4);
+        let mut roster = make_roster("r1", vec![p1.clone(), p2.clone()], vec![], 50);
+        use crate::app::team_creation::domain::roster::CrossLimitCount;
         roster.cross_limits = vec![CrossLimit {
-            limit: 2,
+            limit:              CrossLimitCount::try_new(2).unwrap(),
             limited_player_ids: vec![PlayerId("p1".to_string()), PlayerId("p2".to_string())],
         }];
-        let ruleset = make_ruleset("r1", 1_000_000);
+        let ruleset = make_ruleset("r1", 1_000);
         let mut team = make_roster_selected(roster, ruleset);
 
         team.hire_player(p1.clone()).unwrap();
@@ -190,9 +193,9 @@ mod tests {
 
     #[test]
     fn remove_player_ok() {
-        let player = make_player("p1", 60_000, 2);
-        let roster = make_roster("r1", vec![player.clone()], vec![], 50_000);
-        let ruleset = make_ruleset("r1", 1_000_000);
+        let player = make_player("p1", 60, 2);
+        let roster = make_roster("r1", vec![player.clone()], vec![], 50);
+        let ruleset = make_ruleset("r1", 1_000);
         let mut team = make_roster_selected(roster, ruleset);
 
         team.hire_player(player.clone()).unwrap();
@@ -202,9 +205,9 @@ mod tests {
 
     #[test]
     fn remove_player_not_hired_returns_error() {
-        let player = make_player("p1", 60_000, 2);
-        let roster = make_roster("r1", vec![player.clone()], vec![], 50_000);
-        let ruleset = make_ruleset("r1", 1_000_000);
+        let player = make_player("p1", 60, 2);
+        let roster = make_roster("r1", vec![player.clone()], vec![], 50);
+        let ruleset = make_ruleset("r1", 1_000);
         let mut team = make_roster_selected(roster, ruleset);
 
         assert_eq!(
@@ -219,9 +222,9 @@ mod tests {
 
     #[test]
     fn buy_staff_ok() {
-        let staff = make_staff("s1", 10_000, 1, StaffKind::Apothecary);
-        let roster = make_roster("r1", vec![], vec![staff.clone()], 50_000);
-        let ruleset = make_ruleset("r1", 1_000_000);
+        let staff = make_staff("s1", 10, 1, StaffKind::Apothecary);
+        let roster = make_roster("r1", vec![], vec![staff.clone()], 50);
+        let ruleset = make_ruleset("r1", 1_000);
         let mut team = make_roster_selected(roster, ruleset);
 
         assert!(team.buy_staff(staff).is_ok());
@@ -230,9 +233,9 @@ mod tests {
 
     #[test]
     fn buy_staff_not_allowed_returns_error() {
-        let staff = make_staff("s1", 10_000, 1, StaffKind::Apothecary);
-        let roster = make_roster("r1", vec![], vec![], 50_000);
-        let ruleset = make_ruleset("r1", 1_000_000);
+        let staff = make_staff("s1", 10, 1, StaffKind::Apothecary);
+        let roster = make_roster("r1", vec![], vec![], 50);
+        let ruleset = make_ruleset("r1", 1_000);
         let mut team = make_roster_selected(roster, ruleset);
 
         let errors = team.buy_staff(staff).unwrap_err();
@@ -241,9 +244,9 @@ mod tests {
 
     #[test]
     fn buy_staff_max_reached_returns_error() {
-        let staff = make_staff("s1", 10_000, 1, StaffKind::Apothecary);
-        let roster = make_roster("r1", vec![], vec![staff.clone()], 50_000);
-        let ruleset = make_ruleset("r1", 1_000_000);
+        let staff = make_staff("s1", 10, 1, StaffKind::Apothecary);
+        let roster = make_roster("r1", vec![], vec![staff.clone()], 50);
+        let ruleset = make_ruleset("r1", 1_000);
         let mut team = make_roster_selected(roster, ruleset);
 
         team.buy_staff(staff.clone()).unwrap();
@@ -253,9 +256,9 @@ mod tests {
 
     #[test]
     fn buy_staff_insufficient_budget_returns_error() {
-        let staff = make_staff("s1", 500_000, 1, StaffKind::Apothecary);
-        let roster = make_roster("r1", vec![], vec![staff.clone()], 50_000);
-        let ruleset = make_ruleset("r1", 100_000);
+        let staff = make_staff("s1", 200, 1, StaffKind::Apothecary);
+        let roster = make_roster("r1", vec![], vec![staff.clone()], 50);
+        let ruleset = make_ruleset("r1", 100);
         let mut team = make_roster_selected(roster, ruleset);
 
         let errors = team.buy_staff(staff).unwrap_err();
@@ -268,9 +271,9 @@ mod tests {
 
     #[test]
     fn remove_staff_ok() {
-        let staff = make_staff("s1", 10_000, 1, StaffKind::CoachAssistant);
-        let roster = make_roster("r1", vec![], vec![staff.clone()], 50_000);
-        let ruleset = make_ruleset("r1", 1_000_000);
+        let staff = make_staff("s1", 10, 1, StaffKind::CoachAssistant);
+        let roster = make_roster("r1", vec![], vec![staff.clone()], 50);
+        let ruleset = make_ruleset("r1", 1_000);
         let mut team = make_roster_selected(roster, ruleset);
 
         team.buy_staff(staff.clone()).unwrap();
@@ -280,9 +283,9 @@ mod tests {
 
     #[test]
     fn remove_staff_not_purchased_returns_error() {
-        let staff = make_staff("s1", 10_000, 1, StaffKind::CoachAssistant);
-        let roster = make_roster("r1", vec![], vec![staff.clone()], 50_000);
-        let ruleset = make_ruleset("r1", 1_000_000);
+        let staff = make_staff("s1", 10, 1, StaffKind::CoachAssistant);
+        let roster = make_roster("r1", vec![], vec![staff.clone()], 50);
+        let ruleset = make_ruleset("r1", 1_000);
         let mut team = make_roster_selected(roster, ruleset);
 
         assert_eq!(
@@ -297,8 +300,8 @@ mod tests {
 
     #[test]
     fn purchase_reroll_ok() {
-        let roster = make_roster("r1", vec![], vec![], 50_000);
-        let ruleset = make_ruleset("r1", 1_000_000);
+        let roster = make_roster("r1", vec![], vec![], 50);
+        let ruleset = make_ruleset("r1", 1_000);
         let mut team = make_roster_selected(roster, ruleset);
 
         assert!(team.purchase_reroll(3).is_ok());
@@ -307,8 +310,8 @@ mod tests {
 
     #[test]
     fn purchase_reroll_exceeds_max_returns_error() {
-        let roster = make_roster("r1", vec![], vec![], 50_000);
-        let ruleset = make_ruleset("r1", 10_000_000);
+        let roster = make_roster("r1", vec![], vec![], 50);
+        let ruleset = make_ruleset("r1", 10_000);
         let mut team = make_roster_selected(roster, ruleset);
 
         let errors = team.purchase_reroll(MAX_REROLL_COUNT + 1).unwrap_err();
@@ -317,8 +320,8 @@ mod tests {
 
     #[test]
     fn purchase_reroll_insufficient_budget_returns_error() {
-        let roster = make_roster("r1", vec![], vec![], 100_000);
-        let ruleset = make_ruleset("r1", 50_000);
+        let roster = make_roster("r1", vec![], vec![], 100);
+        let ruleset = make_ruleset("r1", 50);
         let mut team = make_roster_selected(roster, ruleset);
 
         let errors = team.purchase_reroll(1).unwrap_err();
@@ -327,8 +330,8 @@ mod tests {
 
     #[test]
     fn remove_reroll_decrements_count() {
-        let roster = make_roster("r1", vec![], vec![], 50_000);
-        let ruleset = make_ruleset("r1", 1_000_000);
+        let roster = make_roster("r1", vec![], vec![], 50);
+        let ruleset = make_ruleset("r1", 1_000);
         let mut team = make_roster_selected(roster, ruleset);
 
         team.purchase_reroll(4).unwrap();
@@ -338,8 +341,8 @@ mod tests {
 
     #[test]
     fn remove_reroll_saturates_at_zero() {
-        let roster = make_roster("r1", vec![], vec![], 50_000);
-        let ruleset = make_ruleset("r1", 1_000_000);
+        let roster = make_roster("r1", vec![], vec![], 50);
+        let ruleset = make_ruleset("r1", 1_000);
         let mut team = make_roster_selected(roster, ruleset);
 
         team.purchase_reroll(2).unwrap();
@@ -353,9 +356,9 @@ mod tests {
 
     #[test]
     fn choose_roster_same_id_returns_unchanged_team() {
-        let player = make_player("p1", 60_000, 2);
-        let roster = make_roster("r1", vec![player.clone()], vec![], 50_000);
-        let ruleset = make_ruleset("r1", 1_000_000);
+        let player = make_player("p1", 60, 2);
+        let roster = make_roster("r1", vec![player.clone()], vec![], 50);
+        let ruleset = make_ruleset("r1", 1_000);
         let mut team = make_roster_selected(roster.clone(), ruleset);
 
         team.hire_player(player).unwrap();
@@ -365,17 +368,17 @@ mod tests {
 
     #[test]
     fn choose_roster_new_allowed_roster_resets_purchases() {
-        let player = make_player("p1", 60_000, 2);
-        let roster_a = make_roster("r1", vec![player.clone()], vec![], 50_000);
-        let roster_b = make_roster("r2", vec![], vec![], 50_000);
+        let player = make_player("p1", 60, 2);
+        let roster_a = make_roster("r1", vec![player.clone()], vec![], 50);
+        let roster_b = make_roster("r2", vec![], vec![], 50);
         let ruleset = Ruleset {
             id: RulesetId("ruleset-1".to_string()),
             name: RulesetName("Ruleset 1".to_string()),
             tiers: vec![RosterTier {
                 id: TierId("tier-1".to_string()),
-                name: TierName("Tier 1".to_string()),
+                name: TierName::try_new("Tier 1").unwrap(),
                 roster_ids: vec![RosterId("r1".to_string()), RosterId("r2".to_string())],
-                budget: CreationBudget(1_000_000),
+                budget: CreationBudget(1_000),
             }],
         };
         let mut team = make_roster_selected(roster_a, ruleset);
@@ -386,9 +389,9 @@ mod tests {
 
     #[test]
     fn choose_roster_not_in_ruleset_returns_error() {
-        let roster_a = make_roster("r1", vec![], vec![], 50_000);
-        let roster_b = make_roster("r2", vec![], vec![], 50_000);
-        let ruleset = make_ruleset("r1", 1_000_000);
+        let roster_a = make_roster("r1", vec![], vec![], 50);
+        let roster_b = make_roster("r2", vec![], vec![], 50);
+        let ruleset = make_ruleset("r1", 1_000);
         let team = make_roster_selected(roster_a, ruleset);
 
         assert_eq!(
@@ -403,12 +406,12 @@ mod tests {
 
     #[test]
     fn remaining_budget_decreases_after_hire() {
-        let player = make_player("p1", 80_000, 2);
-        let roster = make_roster("r1", vec![player.clone()], vec![], 50_000);
-        let ruleset = make_ruleset("r1", 1_000_000);
+        let player = make_player("p1", 80, 2);
+        let roster = make_roster("r1", vec![player.clone()], vec![], 50);
+        let ruleset = make_ruleset("r1", 1_000);
         let mut team = make_roster_selected(roster, ruleset);
 
         team.hire_player(player).unwrap();
-        assert_eq!(team.remaining_budget().unwrap(), 920_000);
+        assert_eq!(team.remaining_budget().unwrap(), 920);
     }
 }
