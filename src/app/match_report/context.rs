@@ -1,7 +1,7 @@
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
 use crate::app::match_report::io::app_events::{pairing_created_listener, pairing_deleted_listener};
 use crate::app::match_report::io::repository::match_report_repository::MatchReportRepository;
-use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
+use crate::app::match_report::ports::{ICompetitionDataPort, IPlayerDataPort, ITeamDataPort};
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -11,6 +11,7 @@ pub struct MatchReportContext {
     pub match_report_repo: Arc<dyn IMatchReportRepository>,
     pub competition_data: Arc<dyn ICompetitionDataPort>,
     pub team_data: Arc<dyn ITeamDataPort>,
+    pub player_data: Arc<dyn IPlayerDataPort>,
 }
 
 pub fn init_listeners(app_event_bus: &EventBus, pool: PgPool) {
@@ -24,11 +25,13 @@ impl MatchReportContext {
         pool: &PgPool,
         competition_data: Arc<dyn ICompetitionDataPort>,
         team_data: Arc<dyn ITeamDataPort>,
+        player_data: Arc<dyn IPlayerDataPort>,
     ) -> Self {
         Self {
             match_report_repo: Arc::new(MatchReportRepository::new(pool.clone())),
             competition_data,
             team_data,
+            player_data,
         }
     }
 }

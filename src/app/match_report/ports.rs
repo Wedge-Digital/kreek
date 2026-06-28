@@ -1,6 +1,12 @@
 use async_trait::async_trait;
 
 #[async_trait]
+pub trait IPlayerDataPort: Send + Sync {
+    async fn count_available_players(&self, team_id: &str) -> Result<usize, String>;
+    async fn find_player_display(&self, player_id: &str) -> Option<String>;
+}
+
+#[async_trait]
 pub trait ICompetitionDataPort: Send + Sync {
     async fn is_competition_admin(
         &self,
@@ -48,4 +54,12 @@ pub trait ITeamDataPort: Send + Sync {
     async fn find_team_value(&self, team_id: &str) -> Option<u32>;
 
     async fn find_team_treasury(&self, team_id: &str) -> Option<u32>;
+
+    async fn find_journalier_position(&self, team_id: &str) -> Option<JournalierPositionDto>;
+}
+
+#[derive(Debug)]
+pub struct JournalierPositionDto {
+    pub position_uid: String,
+    pub position_name: String,
 }

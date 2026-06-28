@@ -232,6 +232,8 @@ mod tests {
                 impl crate::app::players::ports::IPlayerProjectionRepository for FakePlayerProjectionRepo {
                     async fn find_by_team_id(&self, _: &crate::app::players::domain::player::TeamId)
                         -> Result<Vec<crate::app::players::ports::PlayerProjection>, crate::app::players::ports::RepositoryError> { Ok(vec![]) }
+                    async fn find_by_id(&self, _: &str)
+                        -> Result<Option<crate::app::players::ports::PlayerProjection>, crate::app::players::ports::RepositoryError> { Ok(None) }
                 }
                 crate::app::players::context::PlayersContext {
                     repository:            Arc::new(FakePlayerRepo),
@@ -268,11 +270,19 @@ mod tests {
                     async fn find_team_info(&self, _: &str) -> Option<crate::app::match_report::ports::TeamInfoDto> { None }
                     async fn find_team_value(&self, _: &str) -> Option<u32> { None }
                     async fn find_team_treasury(&self, _: &str) -> Option<u32> { None }
+                    async fn find_journalier_position(&self, _: &str) -> Option<crate::app::match_report::ports::JournalierPositionDto> { None }
+                }
+                struct FakePlayerDataPort;
+                #[async_trait::async_trait]
+                impl crate::app::match_report::ports::IPlayerDataPort for FakePlayerDataPort {
+                    async fn count_available_players(&self, _: &str) -> Result<usize, String> { Ok(0) }
+                    async fn find_player_display(&self, _: &str) -> Option<String> { None }
                 }
                 crate::app::match_report::context::MatchReportContext {
                     match_report_repo: Arc::new(FakeMrRepo),
                     competition_data: Arc::new(FakeCompDataPort),
                     team_data: Arc::new(FakeTeamDataPort),
+                    player_data: Arc::new(FakePlayerDataPort),
                 }
             },
             email_service: Arc::new(ConsoleEmailService),

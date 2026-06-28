@@ -55,6 +55,11 @@ pub trait IPlayerProjectionRepository: Send + Sync {
         &self,
         team_id: &TeamId,
     ) -> Result<Vec<PlayerProjection>, RepositoryError>;
+
+    async fn find_by_id(
+        &self,
+        player_id: &str,
+    ) -> Result<Option<PlayerProjection>, RepositoryError>;
 }
 
 // ── Event store port ───────────────────────────────────────────────────────────

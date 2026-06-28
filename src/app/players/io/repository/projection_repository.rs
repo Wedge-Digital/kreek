@@ -58,4 +58,39 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
             })
             .collect()
     }
+
+    async fn find_by_id(&self, player_id: &str) -> Result<Option<PlayerProjection>, RepositoryError> {
+        let row = sqlx::query(
+            "SELECT player_id, team_id, space_id, position_name, roster_line_id,
+                    personal_name, jersey, base_skills, acquired_skills, spp, value_kpo
+             FROM players_projection WHERE player_id = $1",
+        )
+        .bind(player_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+
+        row.map(|r| {
+            let base_skills: Vec<String> =
+                serde_json::from_value(r.get::<serde_json::Value, _>("base_skills"))
+                    .map_err(RepositoryError::Deserialization)?;
+            let acquired_skills: Vec<AcquiredSkillProjection> =
+                serde_json::from_value(r.get::<serde_json::Value, _>("acquired_skills"))
+                    .map_err(RepositoryError::Deserialization)?;
+            Ok(PlayerProjection {
+                player_id:      r.get("player_id"),
+                team_id:        r.get("team_id"),
+                space_id:       r.get("space_id"),
+                position_name:  r.get("position_name"),
+                roster_line_id: r.get("roster_line_id"),
+                personal_name:  r.get("personal_name"),
+                jersey:         r.get("jersey"),
+                base_skills,
+                acquired_skills,
+                spp:            r.get("spp"),
+                value_kpo:      r.get("value_kpo"),
+            })
+        })
+        .transpose()
+    }
 }
