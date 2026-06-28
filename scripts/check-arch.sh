@@ -7,8 +7,9 @@
 #   4. Pas de route en dur dans le front (toujours via routes.*)
 #   5. Projections event sourcing dans la même transaction
 #
-# Axe en avertissement (n'affecte pas le code de sortie) :
+# Axes en avertissement (n'affectent pas le code de sortie) :
 #   6. Value objects systématiques (CQRS) — primitifs nus côté écriture domaine
+#   7. Taille des fonctions — max 20 lignes (CLAUDE.md §"Taille des fonctions")
 #
 # Usage : ./scripts/check-arch.sh all
 
@@ -109,6 +110,39 @@ axe6=$(grep -rnE "^\s*pub \w+:\s*(String|u32|u8|i32|bool)\b" --include="*.rs" sr
     | grep -v "_port.rs" || true)
 count=$(printf '%s\n' "$axe6" | sed '/^$/d' | wc -l | tr -d ' ')
 if [ "$count" -gt 0 ]; then print_warn "$axe6" "$count"; else print_pass; fi
+echo ""
+
+# ── Axe 7 (avertissement) : taille des fonctions ───────────────────────────
+echo -e "${BOLD}Axe 7 · Taille des fonctions — max 20 lignes (avertissement)${RESET}"
+axe7=$(find src/ -name "*.rs" -print0 2>/dev/null | xargs -0 awk '
+FNR == 1 { in_fn = 0; depth = 0; fn_line = 0; fname = "" }
+{
+    line = $0
+    if (index(line, "//") > 0) line = substr(line, 1, index(line, "//")-1)
+    gsub(/"[^"]*"/, "", line)
+    if (!in_fn && line ~ /[[:space:]]fn[[:space:]]/) {
+        in_fn = 1; depth = 0; fn_line = FNR
+        fname = $0; sub(/^[[:space:]]*/, "", fname); sub(/[({].*/, "", fname)
+    }
+    if (in_fn) {
+        n = length(line)
+        for (i = 1; i <= n; i++) {
+            c = substr(line, i, 1)
+            if (c == "{") depth++
+            else if (c == "}") {
+                depth--
+                if (depth <= 0) {
+                    cnt = FNR - fn_line + 1
+                    if (cnt > 20) printf "%s:%d: %d lignes — %s\n", FILENAME, fn_line, cnt, fname
+                    in_fn = 0
+                }
+            }
+        }
+    }
+}
+' 2>/dev/null || true)
+count7=$(printf '%s\n' "$axe7" | sed '/^$/d' | wc -l | tr -d ' ')
+if [ "$count7" -gt 0 ]; then print_warn "$axe7" "$count7"; else print_pass; fi
 echo ""
 
 if [ "$EXIT_CODE" -eq 0 ]; then
