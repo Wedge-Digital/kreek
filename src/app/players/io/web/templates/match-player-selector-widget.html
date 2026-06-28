@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="/static/css/widgets/match-player-selector.css">
+<div class="match-player-selector" hx-disinherit="*">
+    <ul class="player-list">
+        {% for player in players %}
+        <li class="player-item"
+            data-player-id="{{ player.player_id }}"
+            data-player-type="regular">
+            {{ player.display_name }}
+        </li>
+        {% endfor %}
+    </ul>
+    <script>
+    (function () {
+        const panel = document.currentScript.previousElementSibling;
+        panel.querySelectorAll('.player-item').forEach(function (item) {
+            item.addEventListener('click', function () {
+                htmx.trigger(document.body, 'playerSelected', {
+                    player_id: item.dataset.playerId,
+                    player_type: item.dataset.playerType
+                });
+            });
+        });
+    })();
+    </script>
+</div>
