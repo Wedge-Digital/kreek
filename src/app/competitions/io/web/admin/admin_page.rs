@@ -150,6 +150,7 @@ pub async fn render_admin_page(
                 &season_entity_id,
                 state.competitions.competition_repository.as_ref(),
                 state.competitions.season_repository.as_ref(),
+                state.references.repository.as_ref(),
                 app_routes,
                 space_id,
                 competition_id,

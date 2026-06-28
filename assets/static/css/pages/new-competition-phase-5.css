@@ -1,7 +1,9 @@
 /* Recap cards */
 .recap-card {
-    border: 1px solid var(--dark-5); border-radius: 10px; overflow: hidden;
+    background: var(--white);
+    border: 1px solid var(--dark-4); border-radius: 10px; overflow: hidden;
     margin-bottom: var(--p2);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 .recap-card-header {
     background: var(--dark-6); padding: 12px 20px;
@@ -16,9 +18,9 @@
     padding: 4px 10px; border: 1px solid var(--main-blue); border-radius: 4px;
 }
 .recap-card-edit:hover { background: rgba(0,48,73,0.06); }
-.recap-card-body { padding: var(--p2); }
+.recap-card-body { padding: var(--p2); background: var(--white); }
 .recap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 0; }
-.recap-row { display: flex; align-items: baseline; gap: var(--p1); padding: 5px 0; border-bottom: 1px solid var(--dark-6); }
+.recap-row { display: flex; align-items: baseline; gap: var(--p1); padding: 5px 0; border-bottom: 1px solid var(--dark-5); }
 .recap-row:last-child { border-bottom: none; }
 .recap-key { min-width: 140px; font-size: var(--text-tiny); color: var(--dark-3); font-weight: 500; flex-shrink: 0; }
 .recap-val { font-size: var(--text-tiny); color: var(--dark-1); }
@@ -68,4 +70,4 @@
 .recap-header-layout { display: flex; gap: var(--p2); align-items: flex-start; }
 .recap-logo-img      { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
 .recap-row--last     { border-bottom: none; align-items: flex-start; }
-.cta-disclaimer      { margin-top: var(--p1); font-size: var(--text-tiny); color: rgba(255,255,255,0.4); }
+.cta-disclaimer      { margin-top: var(--p1); font-size: var(--text-tiny); color: rgba(255,255,255,0.4); }.pill-list--mt { margin-top: 4px; }

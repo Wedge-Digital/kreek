@@ -115,6 +115,14 @@
 }
 .btn-danger-sm:hover { border-color: var(--red); color: var(--red); background: rgba(224,32,32,0.04); }
 
+/* ── Summary tab ── */
+.admin-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p1);
+  max-width: 720px;
+}
+
 /* ── Placeholder ── */
 .admin-placeholder {
   text-align: center;

@@ -1,6 +1,8 @@
 <link rel="stylesheet" href="/static/css/components/create-card.css">
 <link rel="stylesheet" href="/static/css/pages/new-competition-phase-5.css">
 
+<div class="admin-summary">
+
 {% if has_unfilled_spots %}
 <div class="warn-box">
     <div class="warn-icon">⚠️</div>
@@ -95,6 +97,39 @@
 </div>
 {% endif %}
 
+<!-- Recap 2b: Coups de pouce autorisés par tier -->
+{% if !tiers_inducements.is_empty() %}
+<div class="recap-card">
+    <div class="recap-card-header">
+        <div class="recap-card-icon">🛒</div>
+        <div class="recap-card-title">Coups de pouce autorisés</div>
+    </div>
+    <div class="recap-card-body">
+        {% for tier in tiers_inducements %}
+        <div class="recap-row recap-row--last">
+            <span class="recap-key">{{ tier.tier_name }}</span>
+            <span class="recap-val">
+                {% if !tier.inducement_names.is_empty() %}
+                <div class="pill-list">
+                    {% for name in tier.inducement_names %}
+                    <span class="pill">{{ name }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% if !tier.star_player_names.is_empty() %}
+                <div class="pill-list pill-list--mt">
+                    {% for name in tier.star_player_names %}
+                    <span class="pill pill--primary">⭐ {{ name }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 <!-- Recap 3: Structure -->
 {% if has_structure %}
 <div class="recap-card">
@@ -160,3 +195,5 @@
     </div>
 </div>
 {% endif %}
+
+</div>

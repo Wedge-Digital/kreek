@@ -3,15 +3,22 @@ use crate::app::competitions::domain::competition_repository_port::ICompetitionR
 use crate::app::competitions::domain::competition_rules::CompetitionRules;
 use crate::app::competitions::domain::competition_structure::CompetitionStructure;
 use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
-use crate::app::competitions::io::web::admin::admin_page::render_admin_page;
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId};
+use crate::app::shared_kernel::authorization::SpaceProfile;
+use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId, SpaceId};
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
+
+pub struct TierInducementsVm {
+    pub tier_name: String,
+    pub inducement_names: Vec<String>,
+    pub star_player_names: Vec<String>,
+}
 
 #[derive(Template)]
 #[template(path = "admin/summary.html")]
@@ -33,6 +40,7 @@ pub struct SummaryTabTemplate {
     pub tiers_label: Option<String>,
     pub rosters_preview: Vec<String>,
     pub rosters_extra: usize,
+    pub tiers_inducements: Vec<TierInducementsVm>,
     pub has_structure: bool,
     pub groups_label: Option<String>,
     pub playoffs_label: Option<String>,
@@ -63,7 +71,59 @@ pub async fn summary_tab_fragment(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    render_admin_page(auth_session, &space_id, &competition_id, &season_id, "summary", &state).await
+    let Some(user) = auth_session.user else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
+
+    let comp_id = match CompetitionId::try_new(&competition_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+    let space_entity_id = match SpaceId::try_new(&space_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+    let season_entity_id = match SeasonId::try_new(&season_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let is_space_admin = matches!(
+        state.spaces.space_repository.find_member_profile(&user.id, &space_entity_id).await,
+        Ok(Some(SpaceProfile::SpaceAdmin))
+    );
+    let comp_info = match state.competitions.competition_repository.find_base_info(&comp_id).await {
+        Ok(Some(info)) => info,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("summary_tab_fragment competition find: {e}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+    let user_id_str = user.id.to_string();
+    let coach_name_str = user.coach_name.clone().into_inner();
+    let is_comp_admin = comp_info.admin_ids.contains(&user_id_str)
+        || comp_info.admin_names.contains(&coach_name_str);
+    if !is_space_admin && !is_comp_admin {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+
+    match build_summary_fragment(
+        &comp_id,
+        &season_entity_id,
+        state.competitions.competition_repository.as_ref(),
+        state.competitions.season_repository.as_ref(),
+        state.references.repository.as_ref(),
+        AppRoutes::default(),
+        &space_id,
+        &competition_id,
+        &season_id,
+    )
+    .await
+    {
+        Some(tpl) => tpl.into_response(),
+        None => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
 }
 
 pub async fn build_summary_fragment(
@@ -71,6 +131,7 @@ pub async fn build_summary_fragment(
     season_id: &SeasonId,
     comp_repo: &dyn ICompetitionRepository,
     season_repo: &dyn ISeasonRepository,
+    ref_repo: &dyn IReferenceRepository,
     app_routes: AppRoutes,
     space_id: &str,
     competition_id: &str,
@@ -90,8 +151,8 @@ pub async fn build_summary_fragment(
     let structure = structure.ok().flatten();
     let invitations = invitations.ok().flatten();
 
-    let (has_rules, ranking_points_label, bonus_label, tiers_label, rosters_preview, rosters_extra) =
-        build_rules_labels(&rules);
+    let (has_rules, ranking_points_label, bonus_label, tiers_label, rosters_preview, rosters_extra, tiers_inducements) =
+        build_rules_labels(&rules, ref_repo);
     let (has_structure, groups_label, playoffs_label, dates_label) =
         build_structure_labels(&structure);
     let (
@@ -125,6 +186,7 @@ pub async fn build_summary_fragment(
         tiers_label,
         rosters_preview,
         rosters_extra,
+        tiers_inducements,
         has_structure,
         groups_label,
         playoffs_label,
@@ -141,9 +203,10 @@ pub async fn build_summary_fragment(
 
 fn build_rules_labels(
     rules: &Option<CompetitionRules>,
-) -> (bool, String, Option<String>, Option<String>, Vec<String>, usize) {
+    ref_repo: &dyn IReferenceRepository,
+) -> (bool, String, Option<String>, Option<String>, Vec<String>, usize, Vec<TierInducementsVm>) {
     let Some(r) = rules else {
-        return (false, String::new(), None, None, vec![], 0);
+        return (false, String::new(), None, None, vec![], 0, vec![]);
     };
     let rr = &r.ranking_rules;
     let pts = format!(
@@ -177,7 +240,34 @@ fn build_rules_labels(
     let all_rosters: Vec<String> = r.tiers.iter().flat_map(|t| t.rosters.clone()).collect();
     let extra = all_rosters.len().saturating_sub(12);
     let preview = all_rosters.into_iter().take(12).collect();
-    (true, pts, bonus, tiers, preview, extra)
+
+    let tiers_inducements = build_tiers_inducements(r, ref_repo);
+
+    (true, pts, bonus, tiers, preview, extra, tiers_inducements)
+}
+
+fn build_tiers_inducements(
+    rules: &CompetitionRules,
+    ref_repo: &dyn IReferenceRepository,
+) -> Vec<TierInducementsVm> {
+    rules.tiers.iter().filter_map(|tier| {
+        let inducement_names: Vec<String> = tier.inducements.iter()
+            .filter_map(|uid| ref_repo.find_inducement_by_uid(uid))
+            .map(|ind| ind.name.clone())
+            .collect();
+        let star_player_names: Vec<String> = tier.star_players.iter()
+            .filter_map(|uid| ref_repo.find_star_player_by_uid(uid))
+            .map(|sp| sp.name.clone())
+            .collect();
+        if inducement_names.is_empty() && star_player_names.is_empty() {
+            return None;
+        }
+        Some(TierInducementsVm {
+            tier_name: tier.name.clone(),
+            inducement_names,
+            star_player_names,
+        })
+    }).collect()
 }
 
 fn build_structure_labels(

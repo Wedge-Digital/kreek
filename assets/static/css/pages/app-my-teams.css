@@ -17,7 +17,7 @@
 .team-card {
   background: var(--white); border-radius: 10px; border: 1px solid var(--dark-5);
   padding: var(--p2); display: flex; flex-direction: column; align-items: center; gap: var(--p1);
-  height: 360px; cursor: pointer; flex: 1;
+  cursor: pointer; flex: 1;
   transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
 }
 .team-card:hover { border-color: var(--dark-3); box-shadow: 0 8px 24px rgba(0,0,0,0.1); transform: translateY(-3px); }
