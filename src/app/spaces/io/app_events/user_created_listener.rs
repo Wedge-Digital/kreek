@@ -1,6 +1,6 @@
 use crate::app::shared_kernel::app_events::auth_app_events::AuthAppEvent;
 use crate::app::shared_kernel::common_types::SpaceId;
-use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::ISpaceUserCacheRepository;
+use crate::app::spaces::domain::space_repository_port::user_cache_repository_port::ISpaceUserCacheRepository;
 use crate::app::spaces::domain::user::User;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
@@ -61,7 +61,7 @@ mod tests {
     use crate::app::shared_kernel::coach_name::CoachName;
     use crate::app::shared_kernel::common_types::{CoachId, EventId, UserId};
     use crate::app::shared_kernel::email::Email;
-    use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::SpaceUserCacheRepositoryError;
+    use crate::app::spaces::domain::space_repository_port::user_cache_repository_port::SpaceUserCacheRepositoryError;
     use crate::common::event_envelope::EventEnvelope;
     use crate::common::services::event_bus::event_bus::new_bus;
     use async_trait::async_trait;

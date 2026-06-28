@@ -1,5 +1,5 @@
 use crate::app::spaces::domain::space_repository_port::space_repository_port::ISpaceRepository;
-use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::ISpaceUserCacheRepository;
+use crate::app::spaces::domain::space_repository_port::user_cache_repository_port::ISpaceUserCacheRepository;
 use crate::app::spaces::io::app_events::app_event_publisher::spaces_app_event_publisher;
 use crate::app::spaces::io::app_events::user_created_listener::user_created_listener;
 use crate::app::spaces::io::repository::space_repository::SpaceRepository;

@@ -1,4 +1,5 @@
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::competitions::domain::competition_invitations::AccessMode;
 use crate::app::competitions::use_cases::finalize_competition::{
     execute as execute_finalize, FinalizeCompetitionCommand, FinalizeCompetitionError,
 };
@@ -132,7 +133,7 @@ pub async fn get_new_competition_phase_5(
             );
 
             let bonus: Option<String> = {
-                let off = if rr.offensive_bonus.activated {
+                let off = if rr.offensive_bonus.activated.0 {
                     Some(format!(
                         "+{} si ≥ {} TDs",
                         rr.offensive_bonus.points, rr.offensive_bonus.diff_td
@@ -140,7 +141,7 @@ pub async fn get_new_competition_phase_5(
                 } else {
                     None
                 };
-                let def = if rr.defensive_bonus.activated {
+                let def = if rr.defensive_bonus.activated.0 {
                     Some(format!("+{} si ≤ 1 TD encaissé", rr.defensive_bonus.points))
                 } else {
                     None
@@ -159,7 +160,7 @@ pub async fn get_new_competition_phase_5(
                 let names = r
                     .tiers
                     .iter()
-                    .map(|t| t.name.as_str())
+                    .map(|t| t.name.as_ref())
                     .collect::<Vec<_>>()
                     .join(", ");
                 Some(format!(
@@ -180,16 +181,16 @@ pub async fn get_new_competition_phase_5(
 
     // ── Structure ────────────────────────────────────────────────────────────
     let (has_structure, groups_label, playoffs_label, dates_label) = if let Some(s) = &structure {
-        let groups: Option<String> = if s.ranking_group.use_ranking_groups {
+        let groups: Option<String> = if s.ranking_group.use_ranking_groups.0 {
             let n = s.ranking_group.ranking_groups.len();
             Some(format!("{n} poule{}", if n > 1 { "s" } else { "" }))
         } else {
             None
         };
 
-        let playoffs: Option<String> = if s.play_offs_phase.use_playoffs_phase {
+        let playoffs: Option<String> = if s.play_offs_phase.use_playoffs_phase.0 {
             let q = s.play_offs_phase.qualified_team_per_pool;
-            let third = if s.play_offs_phase.final_phase_match_for_third_place {
+            let third = if s.play_offs_phase.final_phase_match_for_third_place.0 {
                 " · Match 3e place"
             } else {
                 ""
@@ -199,7 +200,7 @@ pub async fn get_new_competition_phase_5(
             None
         };
 
-        let dates: Option<String> = if s.schedule.use_schedule {
+        let dates: Option<String> = if s.schedule.use_schedule.0 {
             Some(format!(
                 "{} → {}",
                 s.schedule.schedule_start_date, s.schedule.schedule_end_date
@@ -226,13 +227,13 @@ pub async fn get_new_competition_phase_5(
         remaining_spots,
         total_spots,
     ) = if let Some(inv) = &invitations {
-        let mode_label = match inv.access_mode.as_str() {
-            "open" => "Inscription libre",
-            _ => "Sur invitation (liste fermée)",
+        let mode_label = match inv.access_mode {
+            AccessMode::Open => "Inscription libre",
+            AccessMode::Invitation => "Sur invitation (liste fermée)",
         }
         .to_string();
 
-        let validation_label = if inv.requires_validation {
+        let validation_label = if inv.requires_validation.0 {
             "Oui (validation par les commissaires)"
         } else {
             "Non (acceptation automatique)"

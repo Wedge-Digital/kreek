@@ -2,11 +2,12 @@ use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
+use crate::app::shared_kernel::common_types::MatchReportId;
 
 #[derive(Debug)]
 pub struct MatchReportCancelled {
-    pub id: String,
-    pub reason: String,
+    pub id: MatchReportId,
+    pub reason: String, // arch:ok texte libre
 }
 
 #[derive(Debug)]
@@ -40,7 +41,7 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                 Some(MatchReportState::Draft(draft)),
                 MatchReportDomainEvent::MatchReportCancelled { reason, .. },
             ) => MatchReportState::Cancelled(MatchReportCancelled {
-                id: draft.id.to_string(),
+                id: draft.id,
                 reason: reason.clone(),
             }),
             (
@@ -89,7 +90,7 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                 Some(MatchReportState::PreMatch(pm)),
                 MatchReportDomainEvent::MatchReportCancelled { reason, .. },
             ) => MatchReportState::Cancelled(MatchReportCancelled {
-                id: pm.id.to_string(),
+                id: pm.id,
                 reason: reason.clone(),
             }),
             _ => return Err(DomainError::InvalidEventSequence),

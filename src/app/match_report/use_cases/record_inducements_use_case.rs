@@ -2,7 +2,7 @@ use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
-use crate::app::match_report::domain::value_objects::AllowedInducementSpec;
+use crate::app::match_report::domain::value_objects::{AllowedInducementSpec, IsStarPlayer};
 use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort, TierRulesDto};
 use crate::app::shared_kernel::common_types::{CoachId, MatchReportId};
 use crate::app::shared_kernel::inducement_definition::InducementId;
@@ -136,17 +136,22 @@ async fn fetch_treasury(
 }
 
 fn build_allowed_specs(tier: &TierRulesDto) -> Vec<AllowedInducementSpec> {
-    let inducements = tier.allowed_inducements.iter().map(|s| AllowedInducementSpec {
-        uid: InducementId(s.uid.clone()),
-        max_qty: s.max_qty,
-        unit_cost: s.unit_cost,
-        is_star_player: false,
+    use crate::app::match_report::domain::value_objects::{InducementCost, InducementQty};
+    let inducements = tier.allowed_inducements.iter().filter_map(|s| {
+        Some(AllowedInducementSpec {
+            uid: InducementId(s.uid.clone()),
+            max_qty: InducementQty::try_new(s.max_qty).ok()?,
+            unit_cost: InducementCost::try_new(s.unit_cost).ok()?,
+            is_star_player: IsStarPlayer(false),
+        })
     });
-    let stars = tier.allowed_star_players.iter().map(|s| AllowedInducementSpec {
-        uid: InducementId(s.uid.clone()),
-        max_qty: s.max_qty,
-        unit_cost: s.unit_cost,
-        is_star_player: true,
+    let stars = tier.allowed_star_players.iter().filter_map(|s| {
+        Some(AllowedInducementSpec {
+            uid: InducementId(s.uid.clone()),
+            max_qty: InducementQty::try_new(s.max_qty).ok()?,
+            unit_cost: InducementCost::try_new(s.unit_cost).ok()?,
+            is_star_player: IsStarPlayer(true),
+        })
     });
     inducements.chain(stars).collect()
 }

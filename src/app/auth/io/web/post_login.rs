@@ -78,7 +78,7 @@ mod tests {
     use crate::app::spaces::domain::space_repository_port::space_repository_port::{
         ISpaceRepository, SpaceRepositoryError, SpaceSummary,
     };
-    use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::{
+    use crate::app::spaces::domain::space_repository_port::user_cache_repository_port::{
         ISpaceUserCacheRepository, SpaceUserCacheRepositoryError,
     };
     use crate::app::spaces::domain::user::User as SpaceUser;

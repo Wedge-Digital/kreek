@@ -109,7 +109,7 @@ pub struct HiredPlayer {
     pub instance_id:     PlayerId,
     pub definition:      PlayerDefinition,
     #[serde(default)]
-    pub personal_name:   String,
+    pub personal_name:   String, // arch:ok texte libre
     #[serde(default)]
     pub jersey:          Option<JerseyNumber>,
     #[serde(default)]

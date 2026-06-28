@@ -2,7 +2,8 @@ use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
 use crate::app::match_report::domain::value_objects::{
-    AllowedInducementSpec, D3Roll, InducementPurchase, MatchReportOrigin, TeamValue,
+    AllowedInducementSpec, D3Roll, InducementPurchase, InducementQty, IsStarPlayer,
+    MatchReportOrigin, TeamValue,
 };
 use crate::app::shared_kernel::common_types::{
     CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
@@ -84,7 +85,7 @@ impl MatchReportPreMatch {
         if team_id == self.topdog_team_id() {
             treasury
         } else {
-            let tv_diff = self.home_team_value.unwrap().0.abs_diff(self.away_team_value.unwrap().0);
+            let tv_diff = self.home_team_value.unwrap().into_inner().abs_diff(self.away_team_value.unwrap().into_inner());
             tv_diff + self.topdog_spending() + treasury.min(50)
         }
     }
@@ -159,8 +160,8 @@ fn validate_max_qty(
 ) -> Result<(), DomainError> {
     for (uid, qty) in purchases {
         if let Some(spec) = allowed_specs.iter().find(|s| &s.uid == uid) {
-            if qty > &spec.max_qty {
-                return Err(DomainError::MaxQtyExceeded { uid: uid.0.clone(), qty: *qty, max_qty: spec.max_qty });
+            if *qty > spec.max_qty.into_inner() {
+                return Err(DomainError::MaxQtyExceeded { uid: uid.0.clone(), qty: *qty, max_qty: spec.max_qty.into_inner() });
             }
         }
     }
@@ -172,7 +173,7 @@ fn validate_star_player_limit(
     allowed_specs: &[AllowedInducementSpec],
 ) -> Result<(), DomainError> {
     let star_count = purchases.iter()
-        .filter(|(uid, _)| allowed_specs.iter().any(|s| &s.uid == uid && s.is_star_player))
+        .filter(|(uid, _)| allowed_specs.iter().any(|s| &s.uid == uid && s.is_star_player.0))
         .count();
     if star_count > 2 { Err(DomainError::StarPlayerLimitExceeded) } else { Ok(()) }
 }
@@ -183,7 +184,7 @@ fn validate_star_player_conflict(
     opponent_star_uids: &[InducementId],
 ) -> Result<(), DomainError> {
     for (uid, _) in purchases {
-        let is_star = allowed_specs.iter().any(|s| &s.uid == uid && s.is_star_player);
+        let is_star = allowed_specs.iter().any(|s| &s.uid == uid && s.is_star_player.0);
         if is_star && opponent_star_uids.contains(uid) {
             return Err(DomainError::StarPlayerConflict { uid: uid.0.clone() });
         }
@@ -197,7 +198,7 @@ fn validate_budget(
     budget: u32,
 ) -> Result<(), DomainError> {
     let spent: u32 = purchases.iter()
-        .filter_map(|(uid, qty)| allowed_specs.iter().find(|s| &s.uid == uid).map(|s| s.unit_cost * (*qty as u32)))
+        .filter_map(|(uid, qty)| allowed_specs.iter().find(|s| &s.uid == uid).map(|s| s.unit_cost.into_inner() * (*qty as u32)))
         .sum();
     if spent > budget { Err(DomainError::BudgetExceeded { spent, budget }) } else { Ok(()) }
 }
@@ -210,7 +211,7 @@ fn build_purchase_list(
         .filter_map(|(uid, qty)| {
             allowed_specs.iter().find(|s| &s.uid == uid).map(|spec| InducementPurchase {
                 uid: uid.clone(),
-                qty: *qty,
+                qty: InducementQty::try_new(*qty).expect("qty validated at IO boundary"),
                 unit_cost: spec.unit_cost,
             })
         })
@@ -229,7 +230,7 @@ fn build_inducement_events(
         recorded_by: recorded_by.clone(),
     }];
     for p in purchase_list {
-        if allowed_specs.iter().any(|s| s.uid == p.uid && s.is_star_player) {
+        if allowed_specs.iter().any(|s| s.uid == p.uid && s.is_star_player.0) {
             events.push(MatchReportDomainEvent::StarPlayerEngaged {
                 team_id: team_id.clone(),
                 star_player_uid: p.uid.clone(),
@@ -251,7 +252,9 @@ fn set_inducements_for(pm: &mut MatchReportPreMatch, team_id: &TeamId, purchases
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::match_report::domain::value_objects::MatchReportOrigin;
+    use crate::app::match_report::domain::value_objects::{
+        InducementCost, InducementQty, MatchReportOrigin,
+    };
     use crate::app::shared_kernel::common_types::{
         CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
     };
@@ -265,13 +268,18 @@ mod tests {
             round_id: RoundId::new(), home_team_id: home_id, away_team_id: away_id,
             created_by: CoachId::new(), origin: MatchReportOrigin::Manual, pairing_id: None,
             home_fan_roll: None, away_fan_roll: None,
-            home_team_value: Some(TeamValue(home_tv)), away_team_value: Some(TeamValue(away_tv)),
+            home_team_value: Some(TeamValue::try_new(home_tv).unwrap()), away_team_value: Some(TeamValue::try_new(away_tv).unwrap()),
             home_inducements: None, away_inducements: None, version: 1,
         }
     }
 
     fn spec(uid: &str, max_qty: u8, unit_cost: u32, is_star: bool) -> AllowedInducementSpec {
-        AllowedInducementSpec { uid: InducementId(uid.to_string()), max_qty, unit_cost, is_star_player: is_star }
+        AllowedInducementSpec {
+            uid: InducementId(uid.to_string()),
+            max_qty: InducementQty::try_new(max_qty).unwrap(),
+            unit_cost: InducementCost::try_new(unit_cost).unwrap(),
+            is_star_player: IsStarPlayer(is_star),
+        }
     }
 
     #[test]

@@ -1,4 +1,4 @@
-use crate::app::competitions::domain::competition_rules::CompetitionRules;
+use crate::app::competitions::domain::competition_rules::{Activated, CompetitionRules};
 use crate::app::competitions::domain::season_repository_port::{
     ISeasonRepository, SeasonRepositoryError,
 };
@@ -37,10 +37,10 @@ pub async fn execute(
     let mut seen: HashMap<&str, &str> = HashMap::new();
     for tier in &cmd.rules.tiers {
         for roster in &tier.rosters {
-            if let Some(prev) = seen.insert(roster.as_str(), tier.name.as_str()) {
+            if let Some(prev) = seen.insert(roster.as_str(), tier.name.as_ref()) {
                 return Err(SaveCompetitionRulesError::RosterInMultipleTiers {
                     roster: roster.clone(),
-                    tiers: (prev.to_string(), tier.name.clone()),
+                    tiers: (prev.to_string(), tier.name.as_ref().to_string()),
                 });
             }
         }
@@ -56,8 +56,9 @@ mod tests {
     use super::*;
     use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
     use crate::app::competitions::domain::competition_rules::{
-        DefensiveBonus, OffensiveBonus, RankingRules, TierRule,
+        DefensiveBonus, OffensiveBonus, RankingPoints, RankingRules, TdDiff, TierRule,
     };
+    use crate::app::shared_kernel::tier::{CreationBudget, StartingXp, TierName};
     use crate::app::competitions::domain::competition_season::CompetitionSeason;
     use crate::app::competitions::domain::competition_structure::CompetitionStructure;
     use crate::app::competitions::domain::season_repository_port::{
@@ -148,17 +149,17 @@ mod tests {
     fn base_rules(tiers: Vec<TierRule>) -> CompetitionRules {
         CompetitionRules {
             ranking_rules: RankingRules {
-                win_points: 3,
-                draw_points: 1,
-                lose_points: 0,
+                win_points: RankingPoints::try_new(3).unwrap(),
+                draw_points: RankingPoints::try_new(1).unwrap(),
+                lose_points: RankingPoints::try_new(0).unwrap(),
                 offensive_bonus: OffensiveBonus {
-                    activated: true,
-                    diff_td: 3,
-                    points: 1,
+                    activated: Activated(true),
+                    diff_td: TdDiff::try_new(3).unwrap(),
+                    points: RankingPoints::try_new(1).unwrap(),
                 },
                 defensive_bonus: DefensiveBonus {
-                    activated: true,
-                    points: 1,
+                    activated: Activated(true),
+                    points: RankingPoints::try_new(1).unwrap(),
                 },
                 additionnal_ranking_points: HashMap::new(),
             },
@@ -168,9 +169,9 @@ mod tests {
 
     fn tier(name: &str, rosters: Vec<&str>) -> TierRule {
         TierRule {
-            name: name.into(),
-            budget: 1060,
-            starting_xp: 0,
+            name: TierName::try_new(name).unwrap(),
+            budget: CreationBudget(1060),
+            starting_xp: StartingXp::try_new(0).unwrap(),
             rosters: rosters.into_iter().map(String::from).collect(),
             inducements: vec![],
             star_players: vec![],

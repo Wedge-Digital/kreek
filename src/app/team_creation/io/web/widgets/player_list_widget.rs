@@ -67,13 +67,13 @@ pub async fn player_list_widget(
 
             FinalizePlayerVm {
                 id: p.instance_id.0.clone(),
-                jersey: p.jersey.map(|j| j.0).unwrap_or(0),
+                jersey: p.jersey.map(|j| j.into_inner()).unwrap_or(0),
                 name: if p.personal_name.is_empty() {
-                    p.definition.name.0.clone()
+                    p.definition.name.as_ref().to_string()
                 } else {
                     p.personal_name.clone()
                 },
-                position_name: p.definition.name.0.clone(),
+                position_name: p.definition.name.as_ref().to_string(),
                 roster_line_id: p.definition.id.0.clone(),
                 base_skills,
                 acquired_count: p.acquired_skills.len(),
@@ -86,7 +86,7 @@ pub async fn player_list_widget(
         app_routes: Default::default(),
         space_id,
         team_id,
-        spp_pool: team.spp_pool,
+        spp_pool: team.spp_pool.0,
         players,
     }
     .into_response()

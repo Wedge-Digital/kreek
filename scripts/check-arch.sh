@@ -107,7 +107,10 @@ echo ""
 # ── Axe 6 (avertissement) : value objects systématiques (CQRS) ─────────────
 echo -e "${BOLD}Axe 6 · Value objects systématiques — CQRS (avertissement)${RESET}"
 axe6=$(grep -rnE "^\s*pub \w+:\s*(String|u32|u8|i32|bool)\b" --include="*.rs" src/app/*/domain/ 2>/dev/null \
-    | grep -v "_port.rs" || true)
+    | grep -v "_port\.rs\|_repository_port\.rs" \
+    | grep -v "references/domain/models\.rs" \
+    | grep -v "arch:ok" \
+    || true)
 count=$(printf '%s\n' "$axe6" | sed '/^$/d' | wc -l | tr -d ' ')
 if [ "$count" -gt 0 ]; then print_warn "$axe6" "$count"; else print_pass; fi
 echo ""

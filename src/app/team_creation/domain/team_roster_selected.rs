@@ -4,11 +4,15 @@ use crate::app::shared_kernel::team::TeamId;
 use crate::app::team_creation::domain::error::DomainError;
 use crate::app::team_creation::domain::roster::{
     AcquiredSkill, AcquisitionMode, HiredPlayer, JerseyNumber, LeagueId, PlayerDefinition,
-    PlayerId, Roster, SkillId, SpecialRuleId, MAX_PLAYER_COUNT,
+    PlayerId, Roster, SkillId, SpecialRuleId, SppCost, MAX_PLAYER_COUNT,
 };
 use crate::app::team_creation::domain::team_ruleset_selected::RulesetSelectedTeam;
 use crate::app::team_creation::domain::team_staff::TeamStaff;
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct SppPool(pub u8);
 
 pub const MAX_REROLL_COUNT: u8 = 8;
 pub const MIN_PLAYERS_FOR_SUBMISSION: usize = 11;
@@ -25,7 +29,7 @@ pub struct RosterSelectedTeam {
     #[serde(default)]
     pub special_rule_id: Option<SpecialRuleId>,
     #[serde(default)]
-    pub spp_pool: u8,
+    pub spp_pool: SppPool,
 }
 
 impl RosterSelectedTeam {
@@ -38,7 +42,7 @@ impl RosterSelectedTeam {
             reroll_count: 0,
             league_id: None,
             special_rule_id: None,
-            spp_pool: 0,
+            spp_pool: SppPool(0),
         }
     }
 
@@ -74,7 +78,7 @@ impl RosterSelectedTeam {
     }
 
     fn player_budget(&self) -> u32 {
-        self.hired_players.iter().map(|p| p.definition.price.0).sum()
+        self.hired_players.iter().map(|p| p.definition.price.into_inner()).sum()
     }
 
     fn staff_budget(&self) -> u32 {
@@ -82,7 +86,7 @@ impl RosterSelectedTeam {
     }
 
     fn reroll_budget(&self) -> u32 {
-        self.reroll_count as u32 * self.roster.reroll_price.0
+        self.reroll_count as u32 * self.roster.reroll_price.into_inner()
     }
 
     pub fn remaining_budget(&self) -> Result<u32, DomainError> {
@@ -125,7 +129,7 @@ impl RosterSelectedTeam {
 
     fn check_max_players_of_type(&self, player: &PlayerDefinition) -> Result<(), DomainError> {
         let count = self.hired_players.iter().filter(|p| p.definition == *player).count();
-        if count >= player.max_quantity.0 as usize {
+        if count >= player.max_quantity.into_inner() as usize {
             return Err(DomainError::MaxPlayersOfTypeReached);
         }
         Ok(())
@@ -144,7 +148,7 @@ impl RosterSelectedTeam {
                 .iter()
                 .filter(|p| limit.includes_player(&p.definition.id))
                 .count();
-            if count >= limit.limit as usize {
+            if count >= limit.limit.into_inner() as usize {
                 return Err(DomainError::CrossLimitExceeded);
             }
         }
@@ -155,7 +159,7 @@ impl RosterSelectedTeam {
         let remaining = self
             .remaining_budget()
             .map_err(|_| DomainError::InsufficientBudget)?;
-        if remaining < player.price.0 {
+        if remaining < player.price.into_inner() {
             return Err(DomainError::InsufficientBudget);
         }
         Ok(())
@@ -202,9 +206,9 @@ impl RosterSelectedTeam {
         instance_id: &PlayerId,
         skill_id: SkillId,
         mode: AcquisitionMode,
-        spp_cost: u8,
+        spp_cost: SppCost,
     ) -> Result<(), DomainError> {
-        if self.spp_pool < spp_cost {
+        if self.spp_pool.0 < spp_cost.into_inner() {
             return Err(DomainError::InsufficientSpp);
         }
         let player = self
@@ -220,7 +224,7 @@ impl RosterSelectedTeam {
             mode,
             spp_cost,
         });
-        self.spp_pool = self.spp_pool.saturating_sub(spp_cost);
+        self.spp_pool = SppPool(self.spp_pool.0.saturating_sub(spp_cost.into_inner()));
         Ok(())
     }
 
@@ -228,7 +232,7 @@ impl RosterSelectedTeam {
         &mut self,
         instance_id: &PlayerId,
         skill_id: &SkillId,
-    ) -> Result<u8, DomainError> {
+    ) -> Result<SppCost, DomainError> {
         let player = self
             .hired_players
             .iter_mut()
@@ -240,7 +244,7 @@ impl RosterSelectedTeam {
             .position(|s| s.skill_id == *skill_id)
             .ok_or(DomainError::SkillAlreadyAcquired)?;
         let refunded = player.acquired_skills.remove(pos).spp_cost;
-        self.spp_pool = self.spp_pool.saturating_add(refunded);
+        self.spp_pool = SppPool(self.spp_pool.0.saturating_add(refunded.into_inner()));
         Ok(refunded)
     }
 
@@ -248,7 +252,7 @@ impl RosterSelectedTeam {
         let mut used: std::collections::HashSet<u8> = self
             .hired_players
             .iter()
-            .filter_map(|p| p.jersey.map(|j| j.0))
+            .filter_map(|p| p.jersey.map(|j| j.into_inner()))
             .collect();
         let mut next = 1u8;
         for player in &mut self.hired_players {
@@ -256,7 +260,7 @@ impl RosterSelectedTeam {
                 while used.contains(&next) {
                     next += 1;
                 }
-                player.jersey = Some(JerseyNumber(next));
+                player.jersey = JerseyNumber::try_new(next).ok();
                 used.insert(next);
                 next += 1;
             }
@@ -359,7 +363,7 @@ impl RosterSelectedTeam {
     }
 
     fn check_reroll_budget(&self, count: u8) -> Result<(), DomainError> {
-        let cost = count as u32 * self.roster.reroll_price.0;
+        let cost = count as u32 * self.roster.reroll_price.into_inner();
         let remaining = self
             .remaining_budget()
             .map_err(|_| DomainError::InsufficientRerollBudget)?;
@@ -392,7 +396,7 @@ impl RosterSelectedTeam {
     /// Retourne false (skip) seulement si :
     ///   - le pool SPP est vide (rien à dépenser), ET
     pub fn needs_finalization(&self) -> bool {
-        self.spp_pool > 0
+        self.spp_pool.0 > 0
     }
 
     pub fn validate_for_submission(&self) -> Result<(), Vec<DomainError>> {

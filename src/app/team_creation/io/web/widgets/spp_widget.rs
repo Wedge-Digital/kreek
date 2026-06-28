@@ -32,7 +32,7 @@ fn skills_updated_trigger(team: &RosterSelectedTeam, player_id: &str, space_id: 
         "skillsUpdated": {
             "player_id": player_id,
             "roster_line_id": roster_line_id,
-            "spp": team.spp_pool,
+            "spp": team.spp_pool.0,
             "acquired": acquired_csv,
             "on_acquire": routes.spend_spp(space_id, team_id, player_id),
             "on_cancel": routes.spend_spp(space_id, team_id, player_id)

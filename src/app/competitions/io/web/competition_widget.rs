@@ -212,12 +212,12 @@ pub async fn get_json_rounds(
         .map(|md| {
             let dates = match (md.date_start, md.date_end) {
                 (Some(s), Some(e)) => format!("{s} \u{2192} {e}"),
-                (Some(s), None) => s,
+                (Some(s), None) => s.into_inner(),
                 _ => String::new(),
             };
             RoundJson {
-                id: md.id,
-                name: md.name,
+                id: md.id.to_string(),
+                name: md.name.into_inner(),
                 dates,
                 competition_id: competition_id.clone(),
                 season_id: season_id.clone(),
@@ -326,9 +326,9 @@ pub async fn get_competition_widget_detail(
                     .tiers
                     .iter()
                     .map(|t| TierContext {
-                        name: t.name.clone(),
-                        budget: t.budget,
-                        start_xp: t.starting_xp,
+                        name: t.name.clone().into_inner(),
+                        budget: t.budget.0,
+                        start_xp: t.starting_xp.into_inner(),
                         rosters: t.rosters.clone(),
                     })
                     .collect(),
@@ -338,33 +338,33 @@ pub async fn get_competition_widget_detail(
         .unwrap_or_default();
 
     let rules = full.rules.map(|r| RulesViewModel {
-        win_pts: r.ranking_rules.win_points,
-        draw_pts: r.ranking_rules.draw_points,
-        lose_pts: r.ranking_rules.lose_points,
+        win_pts: r.ranking_rules.win_points.into_inner(),
+        draw_pts: r.ranking_rules.draw_points.into_inner(),
+        lose_pts: r.ranking_rules.lose_points.into_inner(),
         tiers: r
             .tiers
             .into_iter()
             .map(|t| TierViewModel {
-                name: t.name,
-                budget: t.budget,
-                start_xp: t.starting_xp,
+                name: t.name.into_inner(),
+                budget: t.budget.0,
+                start_xp: t.starting_xp.into_inner(),
                 rosters: t.rosters,
             })
             .collect(),
     });
 
     let structure = full.structure.map(|s| StructureViewModel {
-        use_groups: s.ranking_group.use_ranking_groups,
+        use_groups: s.ranking_group.use_ranking_groups.0,
         group_names: s
             .ranking_group
             .ranking_groups
             .into_iter()
-            .map(|g| g.name)
+            .map(|g| g.name.into_inner())
             .collect(),
-        use_playoffs: s.play_offs_phase.use_playoffs_phase,
-        use_schedule: s.schedule.use_schedule,
-        start_date: s.schedule.schedule_start_date,
-        end_date: s.schedule.schedule_end_date,
+        use_playoffs: s.play_offs_phase.use_playoffs_phase.0,
+        use_schedule: s.schedule.use_schedule.0,
+        start_date: s.schedule.schedule_start_date.into_inner(),
+        end_date: s.schedule.schedule_end_date.into_inner(),
     });
 
     CompetitionWidgetDetailTemplate {

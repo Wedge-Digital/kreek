@@ -108,22 +108,22 @@ pub async fn skill_header_widget(
                                 "Aléatoire".into()
                             }
                         },
-                        spp_cost: a.spp_cost,
+                        spp_cost: a.spp_cost.into_inner(),
                     }
                 })
                 .collect();
 
             SkillHeaderVm {
                 player_id: p.instance_id.0.clone(),
-                jersey: p.jersey.map(|j| j.0).unwrap_or(0),
+                jersey: p.jersey.map(|j| j.into_inner()).unwrap_or(0),
                 name: if p.personal_name.is_empty() {
-                    p.definition.name.0.clone()
+                    p.definition.name.as_ref().to_string()
                 } else {
                     p.personal_name.clone()
                 },
-                position_name: p.definition.name.0.clone(),
-                roster_name: team.roster.name.0.clone(),
-                spp_pool: team.spp_pool,
+                position_name: p.definition.name.as_ref().to_string(),
+                roster_name: team.roster.name.as_ref().to_string(),
+                spp_pool: team.spp_pool.0,
                 acquired_skills,
             }
         });

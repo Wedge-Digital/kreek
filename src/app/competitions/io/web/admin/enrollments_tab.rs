@@ -45,7 +45,7 @@ pub async fn enrollments_tab(
                 .await
                 .ok()
                 .flatten()
-                .map(|inv| inv.requires_validation)
+                .map(|inv| inv.requires_validation.0)
                 .unwrap_or(true),
             Err(_) => true,
         };

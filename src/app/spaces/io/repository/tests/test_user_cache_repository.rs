@@ -3,7 +3,7 @@ use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
 use crate::app::shared_kernel::email::Email;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::ISpaceRepository;
-use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::{
+use crate::app::spaces::domain::space_repository_port::user_cache_repository_port::{
     ISpaceUserCacheRepository, SpaceUserCacheRepositoryError,
 };
 use crate::app::spaces::domain::user::User;

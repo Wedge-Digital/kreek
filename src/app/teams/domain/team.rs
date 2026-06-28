@@ -204,12 +204,12 @@ pub struct Team {
     pub id: TeamId,
     pub space_id: SpaceId,
     pub name: TeamName,
-    pub initials: String,
+    pub initials: String,    // arch:ok texte libre calculé
     pub logo_url: Option<String>,
     pub roster_id: RosterId,
     pub roster_name: RosterName,
     pub coach_id: CoachId,
-    pub coach_name: String,
+    pub coach_name: String,  // arch:ok texte libre dénormalisé
     pub competition_id: Option<CompetitionId>,
     pub competition_name: Option<String>,
     pub season_id: Option<SeasonId>,

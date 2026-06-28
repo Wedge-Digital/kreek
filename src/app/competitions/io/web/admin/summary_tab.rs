@@ -1,4 +1,4 @@
-use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
+use crate::app::competitions::domain::competition_invitations::{AccessMode, CompetitionInvitations};
 use crate::app::competitions::domain::competition_repository_port::ICompetitionRepository;
 use crate::app::competitions::domain::competition_rules::CompetitionRules;
 use crate::app::competitions::domain::competition_structure::CompetitionStructure;
@@ -214,12 +214,12 @@ fn build_rules_labels(
         rr.win_points, rr.draw_points, rr.lose_points
     );
     let bonus: Option<String> = {
-        let off = if rr.offensive_bonus.activated {
+        let off = if rr.offensive_bonus.activated.0 {
             Some(format!("+{} si ≥ {} TDs", rr.offensive_bonus.points, rr.offensive_bonus.diff_td))
         } else {
             None
         };
-        let def = if rr.defensive_bonus.activated {
+        let def = if rr.defensive_bonus.activated.0 {
             Some(format!("+{} si ≤ 1 TD encaissé", rr.defensive_bonus.points))
         } else {
             None
@@ -234,7 +234,7 @@ fn build_rules_labels(
     let tiers: Option<String> = if r.tiers.is_empty() {
         None
     } else {
-        let names = r.tiers.iter().map(|t| t.name.as_str()).collect::<Vec<_>>().join(", ");
+        let names = r.tiers.iter().map(|t| t.name.as_ref()).collect::<Vec<_>>().join(", ");
         Some(format!("{} tier{} : {names}", r.tiers.len(), if r.tiers.len() > 1 { "s" } else { "" }))
     };
     let all_rosters: Vec<String> = r.tiers.iter().flat_map(|t| t.rosters.clone()).collect();
@@ -263,7 +263,7 @@ fn build_tiers_inducements(
             return None;
         }
         Some(TierInducementsVm {
-            tier_name: tier.name.clone(),
+            tier_name: tier.name.clone().into_inner(),
             inducement_names,
             star_player_names,
         })
@@ -276,20 +276,20 @@ fn build_structure_labels(
     let Some(s) = structure else {
         return (false, None, None, None);
     };
-    let groups: Option<String> = if s.ranking_group.use_ranking_groups {
+    let groups: Option<String> = if s.ranking_group.use_ranking_groups.0 {
         let n = s.ranking_group.ranking_groups.len();
         Some(format!("{n} poule{}", if n > 1 { "s" } else { "" }))
     } else {
         None
     };
-    let playoffs: Option<String> = if s.play_offs_phase.use_playoffs_phase {
+    let playoffs: Option<String> = if s.play_offs_phase.use_playoffs_phase.0 {
         let q = s.play_offs_phase.qualified_team_per_pool;
-        let third = if s.play_offs_phase.final_phase_match_for_third_place { " · Match 3e place" } else { "" };
+        let third = if s.play_offs_phase.final_phase_match_for_third_place.0 { " · Match 3e place" } else { "" };
         Some(format!("Top {q} par poule{third}"))
     } else {
         None
     };
-    let dates: Option<String> = if s.schedule.use_schedule {
+    let dates: Option<String> = if s.schedule.use_schedule.0 {
         Some(format!("{} → {}", s.schedule.schedule_start_date, s.schedule.schedule_end_date))
     } else {
         None
@@ -303,12 +303,12 @@ fn build_invitations_labels(
     let Some(inv) = invitations else {
         return (false, String::new(), String::new(), String::new(), None, false, None, false, 0, 0);
     };
-    let mode_label = match inv.access_mode.as_str() {
-        "open" => "Inscription libre",
-        _ => "Sur invitation (liste fermée)",
+    let mode_label = match inv.access_mode {
+        AccessMode::Open => "Inscription libre",
+        AccessMode::Invitation => "Sur invitation (liste fermée)",
     }
     .to_string();
-    let validation_label = if inv.requires_validation {
+    let validation_label = if inv.requires_validation.0 {
         "Oui (validation par les commissaires)"
     } else {
         "Non (acceptation automatique)"

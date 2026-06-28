@@ -42,7 +42,7 @@ pub async fn submit_team(
             .await
             .ok()
             .flatten()
-            .map(|inv| !inv.requires_validation)
+            .map(|inv| !inv.requires_validation.0)
             .unwrap_or(false),
         Err(_) => false,
     };

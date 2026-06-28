@@ -118,7 +118,7 @@ pub async fn render_admin_page(
         .await
         .ok()
         .flatten()
-        .map(|s| s.ranking_group.use_ranking_groups && s.ranking_group.ranking_groups.len() > 1)
+        .map(|s| s.ranking_group.use_ranking_groups.0 && s.ranking_group.ranking_groups.len() > 1)
         .unwrap_or(false);
 
     let app_routes = AppRoutes::default();
@@ -132,7 +132,7 @@ pub async fn render_admin_page(
                 .await
                 .ok()
                 .flatten()
-                .map(|inv| inv.requires_validation)
+                .map(|inv| inv.requires_validation.0)
                 .unwrap_or(true);
 
             let tpl = super::enrollments_tab::EnrollmentsTabTemplate {

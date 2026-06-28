@@ -82,7 +82,7 @@ pub async fn finalize_team(
             .await
             .ok()
             .flatten()
-            .map(|inv| !inv.requires_validation)
+            .map(|inv| !inv.requires_validation.0)
             .unwrap_or(false),
         Err(_) => false,
     };
@@ -193,19 +193,19 @@ pub async fn finalize_team(
                 SppLogEntryVm {
                     player_id: p.instance_id.0.clone(),
                     player_name: if p.personal_name.is_empty() {
-                        p.definition.name.0.clone()
+                        p.definition.name.as_ref().to_string()
                     } else {
                         p.personal_name.clone()
                     },
-                    jersey: p.jersey.map(|j| j.0).unwrap_or(0),
-                    position_name: p.definition.name.0.clone(),
+                    jersey: p.jersey.map(|j| j.into_inner()).unwrap_or(0),
+                    position_name: p.definition.name.as_ref().to_string(),
                     skill_id: a.skill_id.0.clone(),
                     skill_name,
                     mode_label: match a.mode {
                         crate::app::team_creation::domain::roster::AcquisitionMode::Chosen => "Choisie".into(),
                         crate::app::team_creation::domain::roster::AcquisitionMode::Random => "Aléatoire".into(),
                     },
-                    spp_cost: a.spp_cost,
+                    spp_cost: a.spp_cost.into_inner(),
                 }
             })
         })
@@ -219,7 +219,7 @@ pub async fn finalize_team(
         team_id,
         logo_url,
         team_name: team.base_infos().name().clone().into_inner(),
-        roster_name: team.roster.name.0.clone(),
+        roster_name: team.roster.name.as_ref().to_string(),
         treasury: team.remaining_budget().unwrap_or(0),
         spp_log,
     }
@@ -256,7 +256,7 @@ pub async fn post_finalize_team(
             .await
             .ok()
             .flatten()
-            .map(|inv| !inv.requires_validation)
+            .map(|inv| !inv.requires_validation.0)
             .unwrap_or(false),
         Err(_) => false,
     };

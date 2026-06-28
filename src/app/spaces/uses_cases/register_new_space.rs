@@ -6,7 +6,7 @@ use crate::app::spaces::domain::space::Space;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::{
     ISpaceRepository, SpaceRepositoryError,
 };
-use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::{
+use crate::app::spaces::domain::space_repository_port::user_cache_repository_port::{
     ISpaceUserCacheRepository, SpaceUserCacheRepositoryError,
 };
 use crate::common::services::event_bus::event_bus::EventBus;
@@ -86,7 +86,7 @@ mod tests {
     use crate::app::spaces::domain::space_repository_port::space_repository_port::{
         ISpaceRepository, SpaceRepositoryError, SpaceSummary,
     };
-    use crate::app::spaces::domain::space_repository_port::user_cache_repository_ports::{
+    use crate::app::spaces::domain::space_repository_port::user_cache_repository_port::{
         ISpaceUserCacheRepository, SpaceUserCacheRepositoryError,
     };
     use crate::app::spaces::domain::user::User as SpaceUser;

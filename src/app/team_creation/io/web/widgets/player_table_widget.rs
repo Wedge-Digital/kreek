@@ -1,6 +1,6 @@
 use crate::app::shared_kernel::common_types::EntityId;
 use crate::app::team_creation::domain::roster::{LeagueId, PlayerId, SpecialRuleId};
-use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
+use crate::app::team_creation::domain::team_roster_selected::{RosterSelectedTeam, SppPool};
 use crate::app::team_creation::io::web::builders::{build_hired_rows, build_player_positions};
 use crate::app::team_creation::io::web::view_models::{HiredPlayerRowVm, PlayerPositionVm};
 use crate::app::routes::AppRoutes;
@@ -143,7 +143,7 @@ pub async fn player_table_widget(
         }
     };
 
-    roster_team.spp_pool = starting_spp;
+    roster_team.spp_pool = SppPool(starting_spp);
 
     if meta.leagues.len() == 1 {
         roster_team.set_league(LeagueId(meta.leagues[0].clone()));

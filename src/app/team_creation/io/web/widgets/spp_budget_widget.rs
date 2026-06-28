@@ -47,16 +47,16 @@ pub async fn spp_budget_widget(
                 .hired_players()
                 .iter()
                 .flat_map(|p| p.acquired_skills.iter())
-                .map(|a| a.spp_cost)
+                .map(|a| a.spp_cost.into_inner())
                 .sum();
-            let spp_total = team.spp_pool + spp_spent;
+            let spp_total = team.spp_pool.0 + spp_spent;
             let spp_pct = if spp_total > 0 {
                 (spp_spent as u16 * 100 / spp_total as u16) as u8
             } else {
                 0
             };
             Some(SppBudgetVm {
-                spp_pool: team.spp_pool,
+                spp_pool: team.spp_pool.0,
                 spp_spent,
                 spp_total,
                 spp_pct,

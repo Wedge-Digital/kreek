@@ -1,7 +1,10 @@
 use crate::app::match_report::domain::error::DomainError;
 use crate::app::shared_kernel::inducement_definition::InducementId;
-use derive_more::Display;
+use nutype::nutype;
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct IsStarPlayer(pub bool);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MatchReportOrigin {
@@ -26,28 +29,43 @@ impl D3Roll {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Display)]
-pub struct TeamValue(pub u32);
+#[nutype(
+    validate(less_or_equal = 3000),
+    derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Display)
+)]
+pub struct TeamValue(u32);
+
+#[nutype(
+    validate(greater_or_equal = 1, less_or_equal = 10),
+    derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)
+)]
+pub struct InducementQty(u8);
+
+#[nutype(
+    validate(greater_or_equal = 1),
+    derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)
+)]
+pub struct InducementCost(u32);
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InducementPurchase {
     pub uid: InducementId,
-    pub qty: u8,
-    pub unit_cost: u32,
+    pub qty: InducementQty,
+    pub unit_cost: InducementCost,
 }
 
 impl InducementPurchase {
     pub fn total_cost(&self) -> u32 {
-        self.unit_cost * self.qty as u32
+        self.unit_cost.into_inner() * self.qty.into_inner() as u32
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct AllowedInducementSpec {
     pub uid: InducementId,
-    pub max_qty: u8,
-    pub unit_cost: u32,
-    pub is_star_player: bool,
+    pub max_qty: InducementQty,
+    pub unit_cost: InducementCost,
+    pub is_star_player: IsStarPlayer,
 }
 
 #[cfg(test)]
@@ -56,19 +74,19 @@ mod tests {
 
     #[test]
     fn team_value_ord() {
-        let a = TeamValue(1000);
-        let b = TeamValue(1100);
+        let a = TeamValue::try_new(1000).unwrap();
+        let b = TeamValue::try_new(1100).unwrap();
         assert!(b > a);
         assert!(a < b);
-        assert_eq!(TeamValue(1000), TeamValue(1000));
+        assert_eq!(TeamValue::try_new(1000).unwrap(), TeamValue::try_new(1000).unwrap());
     }
 
     #[test]
     fn inducement_purchase_total_cost() {
         let p = InducementPurchase {
             uid: InducementId("BRIBE".to_string()),
-            qty: 2,
-            unit_cost: 50,
+            qty: InducementQty::try_new(2).unwrap(),
+            unit_cost: InducementCost::try_new(50).unwrap(),
         };
         assert_eq!(p.total_cost(), 100); // 2 × 50 kPo
     }
