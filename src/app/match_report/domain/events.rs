@@ -1,9 +1,13 @@
-use crate::app::match_report::domain::value_objects::{D3Roll, InducementPurchase, MatchReportOrigin, TeamValue};
+use crate::app::match_report::domain::value_objects::{
+    ActionId, ActionPlayer, D3Roll, InducementPurchase, MatchActionType, MatchReportOrigin,
+    TeamSide, TeamValue, TempPlayer,
+};
 use crate::app::shared_kernel::inducement_definition::InducementId;
 use crate::app::shared_kernel::common_types::{
     CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
 };
 use crate::app::shared_kernel::team::TeamId;
+use crate::app::match_report::domain::value_objects::TurnNumber;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,6 +57,27 @@ pub enum MatchReportDomainEvent {
         star_player_uid: InducementId,
         recorded_by: CoachId,
     },
+    TempPlayersInitialized {
+        team_id: TeamId,
+        players: Vec<TempPlayer>,
+    },
+    TempPlayersReset {
+        team_id: TeamId,
+    },
+    ActionRecorded {
+        action_id: ActionId,
+        team_side: TeamSide,
+        turn: TurnNumber,
+        player: ActionPlayer,
+        action: MatchActionType,
+        player_display_name: String,
+        recorded_by: CoachId,
+    },
+    ActionDeleted {
+        action_id: ActionId,
+        team_side: TeamSide,
+        deleted_by: CoachId,
+    },
 }
 
 impl MatchReportDomainEvent {
@@ -66,6 +91,10 @@ impl MatchReportDomainEvent {
             Self::TeamValuesRecorded { .. } => "TeamValuesRecorded",
             Self::InducementsRecorded { .. } => "InducementsRecorded",
             Self::StarPlayerEngaged { .. } => "StarPlayerEngaged",
+            Self::TempPlayersInitialized { .. } => "TempPlayersInitialized",
+            Self::TempPlayersReset { .. } => "TempPlayersReset",
+            Self::ActionRecorded { .. } => "ActionRecorded",
+            Self::ActionDeleted { .. } => "ActionDeleted",
         }
     }
 

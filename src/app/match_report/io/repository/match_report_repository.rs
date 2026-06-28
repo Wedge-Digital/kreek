@@ -132,6 +132,11 @@ impl MatchReportRepository {
                 .map_err(RepositoryError::Database)?;
             }
             MatchReportDomainEvent::StarPlayerEngaged { .. } => {}
+            // projection handlers for step3-4 events — implemented in card 116
+            MatchReportDomainEvent::TempPlayersInitialized { .. } => {}
+            MatchReportDomainEvent::TempPlayersReset { .. } => {}
+            MatchReportDomainEvent::ActionRecorded { .. } => {}
+            MatchReportDomainEvent::ActionDeleted { .. } => {}
             MatchReportDomainEvent::MatchReportCancelled { .. } => {
                 sqlx::query(
                     "UPDATE match_report_projection

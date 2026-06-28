@@ -12,6 +12,8 @@ pub enum DomainError {
     StarPlayerConflict { uid: String },
     TeamValuesNotRecorded,
     InducementsAlreadyRecorded,
+    InvalidTurn(u8),
+    ActionNotFound(String),
 }
 
 impl fmt::Display for DomainError {
@@ -33,6 +35,8 @@ impl fmt::Display for DomainError {
             }
             Self::TeamValuesNotRecorded => write!(f, "les team values ne sont pas encore enregistrées"),
             Self::InducementsAlreadyRecorded => write!(f, "les inducements ont déjà été enregistrés pour cette équipe"),
+            Self::InvalidTurn(v) => write!(f, "tour invalide : {v} (attendu 1..=16)"),
+            Self::ActionNotFound(id) => write!(f, "action introuvable : {id}"),
         }
     }
 }
