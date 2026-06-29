@@ -119,7 +119,7 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             (
                 Some(MatchReportState::PreMatch(pm)),
                 MatchReportDomainEvent::ActionRecorded {
-                    action_id, team_side, turn, player, action, player_display_name, ..
+                    action_id, team_side, turn, player, action, player_display_name, player_position, ..
                 },
             ) => {
                 use crate::app::match_report::domain::value_objects::{MatchAction, TeamSide};
@@ -129,6 +129,7 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                     player: player.clone(),
                     action: action.clone(),
                     player_display_name: player_display_name.clone(),
+                    player_position: player_position.clone(),
                 };
                 let mut updated = pm;
                 match team_side {

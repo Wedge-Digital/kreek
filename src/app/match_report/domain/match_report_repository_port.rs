@@ -12,6 +12,7 @@ pub struct MatchActionRow {
     pub player_type: String,
     pub action_json: serde_json::Value,
     pub player_display_name: String,
+    pub player_position: String,
 }
 
 #[derive(Debug)]

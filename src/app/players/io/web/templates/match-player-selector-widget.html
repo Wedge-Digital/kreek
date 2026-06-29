@@ -1,22 +1,32 @@
-<link rel="stylesheet" href="/static/css/widgets/match-player-selector.css">
-<div class="match-player-selector" hx-disinherit="*">
-    <ul class="player-list">
-        {% for player in players %}
-        <li class="player-item"
+<link rel="stylesheet" href="/static/css/pages/match-report-shared.css">
+<div class="mr-player-chip-list" hx-disinherit="*">
+    {% for player in players %}
+    <button class="mr-player-chip"
+            type="button"
             data-player-id="{{ player.player_id }}"
             data-player-type="regular">
-            {{ player.display_name }}
-        </li>
-        {% endfor %}
-    </ul>
+        <div class="mr-player-chip-jersey">
+            {% if let Some(n) = player.jersey %}{{ n }}{% else %}?{% endif %}
+        </div>
+        <div class="mr-player-chip-info">
+            <div class="mr-player-chip-name">
+                {% if !player.name.is_empty() %}{{ player.name }}{% else %}{{ player.position }}{% endif %}
+            </div>
+        </div>
+    </button>
+    {% endfor %}
     <script>
     (function () {
-        const panel = document.currentScript.previousElementSibling;
-        panel.querySelectorAll('.player-item').forEach(function (item) {
-            item.addEventListener('click', function () {
+        const list = document.currentScript.parentElement;
+        list.querySelectorAll('.mr-player-chip').forEach(function (chip) {
+            chip.addEventListener('click', function () {
+                document.querySelectorAll('.mr-player-chip').forEach(function (c) {
+                    c.classList.remove('active');
+                });
+                chip.classList.add('active');
                 htmx.trigger(document.body, 'playerSelected', {
-                    player_id: item.dataset.playerId,
-                    player_type: item.dataset.playerType
+                    player_id: chip.dataset.playerId,
+                    player_type: chip.dataset.playerType
                 });
             });
         });

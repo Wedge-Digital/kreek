@@ -1,38 +1,25 @@
-<link rel="stylesheet" href="/static/css/widgets/action-log.css">
-<div class="action-log" hx-disinherit="*"
-     hx-trigger="actionRecorded from:body, actionDeleted from:body"
-     hx-get=""
-     hx-target="this"
-     hx-swap="outerHTML">
+<link rel="stylesheet" href="/static/css/pages/match-report-shared.css">
+<div class="mr-card" hx-disinherit="*">
+    <div class="mr-log-title">Journal des actions</div>
     {% if actions.is_empty() %}
-    <p class="action-log-empty">Aucune action enregistrée.</p>
+    <div class="mr-log-empty">Aucune action enregistrée.</div>
     {% else %}
-    <table class="action-log-table">
-        <thead>
-            <tr>
-                <th>Tour</th>
-                <th>Joueur</th>
-                <th>Action</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for action in actions %}
-            <tr>
-                <td>{{ action.turn }}</td>
-                <td>{{ action.player_name }}</td>
-                <td>{{ action.action_label }}</td>
-                <td>
-                    <button type="button"
-                            hx-delete="{{ action.delete_url }}"
-                            hx-confirm="Supprimer cette action ?"
-                            class="action-log-delete">
-                        ✕
-                    </button>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="mr-log">
+        {% for action in actions %}
+        <div class="mr-log-entry">
+            <div class="mr-log-turn">T{{ action.turn }}</div>
+            <div class="mr-log-icon">{{ action.action_icon }}</div>
+            <div class="mr-log-text">
+                <strong>{% if action.player_name.is_empty() %}{{ action.player_position }}{% else %}{{ action.player_name }}{% endif %}</strong> — {{ action.action_label }}
+            </div>
+            <button type="button"
+                    class="mr-log-delete"
+                    hx-delete="{{ action.delete_url }}"
+                    hx-swap="none">
+                ✕
+            </button>
+        </div>
+        {% endfor %}
+    </div>
     {% endif %}
 </div>

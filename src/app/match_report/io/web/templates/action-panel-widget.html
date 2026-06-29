@@ -1,9 +1,10 @@
-<link rel="stylesheet" href="/static/css/widgets/action-panel.css">
-<div class="action-panel" hx-disinherit="*"
+<link rel="stylesheet" href="/static/css/pages/match-report-shared.css">
+<div class="mr-card" hx-disinherit="*"
      x-data="{
         showInjury: false,
         showSequel: false,
         injuryType: '',
+        sequelStat: 'AV',
         submitAction(type) {
             this.showInjury = false;
             this.showSequel = false;
@@ -16,6 +17,7 @@
                 },
                 swap: 'none'
             });
+            htmx.trigger(document.body, 'actionRecorded', {});
         },
         submitBlesse() {
             const data = {
@@ -25,45 +27,93 @@
                 action_type: 'BLESSE',
                 injury_type: this.injuryType
             };
-            if (this.injuryType === 'SEQUEL') {
-                data.sequel_stat = document.getElementById('sequel-stat-select').value;
-            }
+            if (this.injuryType === 'SEQUEL') { data.sequel_stat = this.sequelStat; }
             htmx.ajax('POST', '{{ post_url }}', { values: data, swap: 'none' });
+            htmx.trigger(document.body, 'actionRecorded', {});
             this.showInjury = false;
             this.showSequel = false;
         }
      }">
-    <div class="action-btn-grid">
-        <button type="button" class="action-btn" @click="submitAction('TOUCHDOWN')">TD</button>
-        <button type="button" class="action-btn" @click="submitAction('PASSE')">Passe</button>
-        <button type="button" class="action-btn" @click="submitAction('INTERCEPTION')">Interception</button>
-        <button type="button" class="action-btn" @click="submitAction('AGRESSION')">Agression</button>
-        <button type="button" class="action-btn" @click="submitAction('LANCER')">Lancer</button>
-        <button type="button" class="action-btn" @click="submitAction('SORTIE')">Sortie</button>
-        <button type="button" class="action-btn" @click="submitAction('MVP')">MVP</button>
-        <button type="button" class="action-btn action-btn--injury" @click="showInjury = true">Blessé</button>
+    <div class="mr-action-grid">
+        <button type="button" class="mr-action-btn" @click="submitAction('TOUCHDOWN')">
+            <span class="mr-action-btn-icon">🏈</span>
+            <span class="mr-action-btn-label">Touchdown</span>
+        </button>
+        <button type="button" class="mr-action-btn" @click="submitAction('PASSE')">
+            <span class="mr-action-btn-icon">🎯</span>
+            <span class="mr-action-btn-label">Passe</span>
+        </button>
+        <button type="button" class="mr-action-btn" @click="submitAction('INTERCEPTION')">
+            <span class="mr-action-btn-icon">🛡️</span>
+            <span class="mr-action-btn-label">Interception</span>
+        </button>
+        <button type="button" class="mr-action-btn" @click="submitAction('AGRESSION')">
+            <span class="mr-action-btn-icon">💥</span>
+            <span class="mr-action-btn-label">Agression</span>
+        </button>
+        <button type="button" class="mr-action-btn" @click="submitAction('LANCER')">
+            <span class="mr-action-btn-icon">🤾</span>
+            <span class="mr-action-btn-label">Lancer</span>
+        </button>
+        <button type="button" class="mr-action-btn mr-action-btn--sortie" @click="submitAction('SORTIE')">
+            <span class="mr-action-btn-icon">🩸</span>
+            <span class="mr-action-btn-label">Sortie</span>
+        </button>
+    </div>
+    <div class="mr-action-status-row">
+        <button type="button" class="mr-action-btn mr-action-btn--damage" @click="showInjury = true">
+            <span class="mr-action-btn-icon">🚑</span>
+            <span class="mr-action-btn-label">Blessé</span>
+        </button>
+        <button type="button" class="mr-action-btn mr-action-btn--mvp" @click="submitAction('MVP')">
+            <span class="mr-action-btn-icon">⭐</span>
+            <span class="mr-action-btn-label">MVP</span>
+        </button>
     </div>
 
-    <div x-show="showInjury" class="injury-selector">
-        <p class="injury-title">Type de blessure :</p>
-        <div class="injury-btn-grid">
-            <button type="button" @click="injuryType='COMMOTION'; submitBlesse()">Commotion</button>
-            <button type="button" @click="injuryType='AMOCHE'; submitBlesse()">Amoché</button>
-            <button type="button" @click="injuryType='BLESSURE_SERIEUSE'; submitBlesse()">Blessure Sérieuse</button>
-            <button type="button" @click="injuryType='MORT'; submitBlesse()">Mort</button>
-            <button type="button" @click="injuryType='SEQUEL'; showSequel = true">Séquelle…</button>
+    <div class="mr-injury-panel" x-show="showInjury">
+        <div class="mr-injury-title">Type de blessure</div>
+        <div class="mr-injury-grid">
+            <button type="button" class="mr-injury-btn"
+                    @click="injuryType='COMMOTION'; submitBlesse()">
+                <span class="mr-injury-roll">1–8</span>
+                <span class="mr-injury-label">Commotion</span>
+            </button>
+            <button type="button" class="mr-injury-btn"
+                    @click="injuryType='AMOCHE'; submitBlesse()">
+                <span class="mr-injury-roll">9–10</span>
+                <span class="mr-injury-label">Amoché</span>
+            </button>
+            <button type="button" class="mr-injury-btn"
+                    @click="injuryType='BLESSURE_SERIEUSE'; submitBlesse()">
+                <span class="mr-injury-roll">11–12</span>
+                <span class="mr-injury-label">Blessure Sérieuse</span>
+            </button>
+            <button type="button" class="mr-injury-btn"
+                    @click="injuryType='SEQUEL'; showSequel = true">
+                <span class="mr-injury-roll">13–14</span>
+                <span class="mr-injury-label">Blessure Grave</span>
+            </button>
+            <button type="button" class="mr-injury-btn mr-injury-btn--death"
+                    @click="injuryType='MORT'; submitBlesse()">
+                <span class="mr-injury-roll">15–16</span>
+                <span class="mr-injury-label">Mort</span>
+            </button>
         </div>
     </div>
 
-    <div x-show="showSequel" class="sequel-selector">
-        <p class="sequel-title">Stat touchée :</p>
-        <select id="sequel-stat-select">
+    <div class="mr-injury-panel" x-show="showSequel">
+        <div class="mr-injury-title">Séquelle — stat touchée</div>
+        <select class="mr-sequel-select" x-model="sequelStat">
             <option value="AV">-AV</option>
             <option value="MA">-MA</option>
             <option value="PA">-PA</option>
             <option value="AG">-AG</option>
             <option value="ST">-ST</option>
         </select>
-        <button type="button" @click="submitBlesse()">Confirmer</button>
+        <button type="button" class="mr-injury-btn mr-injury-btn--full"
+                @click="submitBlesse()">
+            <span class="mr-injury-label">Confirmer la blessure grave</span>
+        </button>
     </div>
 </div>

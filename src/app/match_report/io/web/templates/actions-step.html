@@ -1,13 +1,18 @@
 {% extends "app-layout.html" %}
 
 {% block content %}
+<link rel="stylesheet" href="/static/css/pages/match-report-shared.css">
 <link rel="stylesheet" href="/static/css/pages/match-report-actions.css">
 
-<div class="mr-actions-container" x-data="{
+<div class="mr-container" x-data="{
     selectedTurn: null,
     selectedPlayerId: null,
     selectedPlayerType: null,
     actionPanelUrl: '{{ action_panel_url }}',
+    toastVisible: false,
+    toastMessage: '',
+    toastType: 'success',
+    _toastTimer: null,
     init() {
         document.body.addEventListener('turnSelected', (e) => {
             this.selectedTurn = e.detail.turn;
@@ -18,57 +23,132 @@
             this.selectedPlayerType = e.detail.player_type;
             this.maybeLoadPanel();
         });
+        document.body.addEventListener('actionRecorded', () => {
+            this.showToast('Action enregistrée', 'success');
+        });
+        document.body.addEventListener('actionDeleted', () => {
+            this.showToast('Action supprimée', 'delete');
+        });
     },
     maybeLoadPanel() {
         if (!this.selectedTurn || !this.selectedPlayerId) return;
-        const url = this.actionPanelUrl + '?turn=' + this.selectedTurn + '&player_id=' + this.selectedPlayerId + '&player_type=' + (this.selectedPlayerType || 'regular');
+        const url = this.actionPanelUrl
+            + '?turn=' + this.selectedTurn
+            + '&player_id=' + this.selectedPlayerId
+            + '&player_type=' + (this.selectedPlayerType || 'regular');
         htmx.ajax('GET', url, { target: '#action-panel', swap: 'innerHTML' });
+    },
+    showToast(msg, type) {
+        this.toastMessage = msg;
+        this.toastType = type;
+        this.toastVisible = true;
+        clearTimeout(this._toastTimer);
+        this._toastTimer = setTimeout(() => { this.toastVisible = false; }, 2500);
     }
 }">
-    <h2 class="mr-step-title">
-        {% if team_side == "home" %}Équipe domicile — Actions{% else %}Équipe extérieur — Actions{% endif %}
-    </h2>
+    <!-- Header -->
+    <div class="mr-header">
+        <div class="mr-header-icon">🏈</div>
+        <div class="mr-header-title">{% if team_side == "home" %}Actions — Équipe domicile{% else %}Actions — Équipe extérieure{% endif %}</div>
+        <div class="mr-header-sub">Enregistrement des actions du match</div>
+    </div>
 
-    <div class="mr-actions-layout">
-        <div class="mr-col-selectors">
-            <div class="mr-widget-section">
-                <h3>Sélectionner un tour</h3>
-                <div id="turn-selector"
-                     hx-get="{{ turn_selector_url }}"
-                     hx-trigger="load"
-                     hx-target="this"
-                     hx-swap="innerHTML">
-                </div>
-            </div>
+    <!-- Steps -->
+    <div class="mr-steps">
+        <div class="mr-step mr-step--done">✓</div>
+        <div class="mr-step-line mr-step-line--done"></div>
+        <div class="mr-step mr-step--done">✓</div>
+        <div class="mr-step-line mr-step-line--done"></div>
+        {% if team_side == "home" %}
+        <div class="mr-step mr-step--active">3</div>
+        <div class="mr-step-line"></div>
+        <div class="mr-step mr-step--pending">4</div>
+        {% else %}
+        <div class="mr-step mr-step--done">✓</div>
+        <div class="mr-step-line mr-step-line--done"></div>
+        <div class="mr-step mr-step--active">4</div>
+        {% endif %}
+        <div class="mr-step-line"></div>
+        <div class="mr-step mr-step--pending">5</div>
+    </div>
 
-            <div class="mr-widget-section">
-                <h3>Joueurs réguliers</h3>
-                <div id="player-selector"
-                     hx-get="{{ player_selector_url }}"
-                     hx-trigger="load"
-                     hx-target="this"
-                     hx-swap="innerHTML">
-                </div>
-            </div>
+    <!-- Match banner -->
+    <div class="mr-match-banner">
+        <div class="mr-match-team">
+            <div class="mr-match-logo">{{ home_initials }}</div>
+            <div class="mr-match-name">{{ home_team_name }}</div>
+        </div>
+        <span class="mr-match-vs">VS</span>
+        <div class="mr-match-team">
+            <div class="mr-match-logo mr-match-logo--away">{{ away_initials }}</div>
+            <div class="mr-match-name">{{ away_team_name }}</div>
+        </div>
+    </div>
 
-            <div id="temp-player-selector"
-                 hx-get="{{ temp_player_selector_url }}"
+    <!-- Sélection du tour et du joueur -->
+    <div class="mr-card mr-players-card">
+        <div class="mr-card-title">Tour de jeu</div>
+        <div id="turn-selector"
+             hx-get="{{ turn_selector_url }}"
+             hx-trigger="load"
+             hx-target="this"
+             hx-swap="innerHTML">
+        </div>
+
+        <div class="mr-sep"></div>
+
+        <div class="mr-card-title">Joueurs</div>
+
+        <div class="mr-player-section">
+            <div class="mr-player-section-label">Équipe</div>
+            <div id="player-selector"
+                 hx-get="{{ player_selector_url }}"
                  hx-trigger="load"
                  hx-target="this"
                  hx-swap="innerHTML">
             </div>
         </div>
 
-        <div class="mr-col-actions">
-            <div id="action-panel"></div>
-
-            <div id="action-log"
-                 hx-get="{{ action_log_url }}"
-                 hx-trigger="load, actionRecorded from:body, actionDeleted from:body"
-                 hx-target="this"
-                 hx-swap="innerHTML">
-            </div>
+        <div id="temp-player-selector"
+             hx-get="{{ temp_player_selector_url }}"
+             hx-trigger="load"
+             hx-target="this"
+             hx-swap="innerHTML">
         </div>
+    </div>
+
+    <!-- Panel d'actions (chargé après sélection tour + joueur) -->
+    <div id="action-panel"></div>
+
+    <!-- Journal des actions -->
+    <div id="action-log"
+         hx-get="{{ action_log_url }}"
+         hx-trigger="load, actionRecorded from:body, actionDeleted from:body"
+         hx-target="this"
+         hx-swap="innerHTML">
+    </div>
+
+    <!-- Toast -->
+    <div class="mr-toast"
+         :class="'mr-toast--' + toastType"
+         x-show="toastVisible"
+         x-transition:enter="mr-toast-enter"
+         x-transition:enter-start="mr-toast-enter-start"
+         x-transition:enter-end="mr-toast-enter-end"
+         x-transition:leave="mr-toast-leave"
+         x-transition:leave-start="mr-toast-leave-start"
+         x-transition:leave-end="mr-toast-leave-end"
+         x-text="toastMessage">
+    </div>
+
+    <!-- Navigation -->
+    <div class="mr-nav-row">
+        <a class="btn-outline-sm" href="{{ back_url }}">← Retour</a>
+        {% if next_disabled %}
+        <button class="btn-primary-sm" disabled>{{ next_label }} →</button>
+        {% else %}
+        <a class="btn-primary-sm" href="{{ next_url }}">{{ next_label }} →</a>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

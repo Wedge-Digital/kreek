@@ -4,6 +4,7 @@ use async_trait::async_trait;
 pub trait IPlayerDataPort: Send + Sync {
     async fn count_available_players(&self, team_id: &str) -> Result<usize, String>;
     async fn find_player_display(&self, player_id: &str) -> Option<String>;
+    async fn find_player_position(&self, player_id: &str) -> Option<String>;
 }
 
 #[async_trait]

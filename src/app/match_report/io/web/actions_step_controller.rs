@@ -14,11 +14,27 @@ pub struct ActionsStepTemplate {
     pub space_id:                 String,
     pub match_report_id:          String,
     pub team_side:                String,
+    pub home_team_name:           String,
+    pub away_team_name:           String,
+    pub home_initials:            String,
+    pub away_initials:            String,
     pub turn_selector_url:        String,
     pub player_selector_url:      String,
     pub temp_player_selector_url: String,
     pub action_panel_url:         String,
     pub action_log_url:           String,
+    pub back_url:                 String,
+    pub next_url:                 String,
+    pub next_label:               String,
+    pub next_disabled:            bool,
+}
+
+fn initials_from(name: &str) -> String {
+    name.split_whitespace()
+        .filter_map(|w| w.chars().next())
+        .take(2)
+        .collect::<String>()
+        .to_uppercase()
 }
 
 impl IntoResponse for ActionsStepTemplate {
@@ -60,10 +76,15 @@ async fn get_step(
     };
 
     let routes = AppRoutes::default();
-    let team_id = match side {
-        TeamSide::Home => pm.home_team_id.to_string(),
-        TeamSide::Away => pm.away_team_id.to_string(),
-    };
+    let home_id = pm.home_team_id.to_string();
+    let away_id = pm.away_team_id.to_string();
+    let team_id = match side { TeamSide::Home => home_id.clone(), TeamSide::Away => away_id.clone() };
+    let (home_info, away_info) = tokio::join!(
+        state.match_report.team_data.find_team_info(&home_id),
+        state.match_report.team_data.find_team_info(&away_id),
+    );
+    let home_info = home_info.unwrap_or_default();
+    let away_info = away_info.unwrap_or_default();
     let (turn_selector_url, temp_player_selector_url, action_panel_url, action_log_url) = match side {
         TeamSide::Home => (
             routes.match_report.step3_turn_selector(&space_id, &mr_id),
@@ -80,16 +101,32 @@ async fn get_step(
     };
     let player_selector_url = routes.players.match_player_selector(&space_id, &team_id);
     let team_side_label = match side { TeamSide::Home => "home", TeamSide::Away => "away" };
+    let back_url = match side {
+        TeamSide::Home => routes.match_report.step2(&space_id, &mr_id),
+        TeamSide::Away => routes.match_report.step3(&space_id, &mr_id),
+    };
+    let (next_url, next_label, next_disabled) = match side {
+        TeamSide::Home => (routes.match_report.step4(&space_id, &mr_id), "Équipe extérieure", false),
+        TeamSide::Away => ("#".to_string(), "Résumé", true),
+    };
 
     ActionsStepTemplate {
         app_routes: routes,
         space_id,
         match_report_id: mr_id,
         team_side: team_side_label.to_string(),
+        home_initials: initials_from(&home_info.team_name),
+        away_initials: initials_from(&away_info.team_name),
+        home_team_name: home_info.team_name,
+        away_team_name: away_info.team_name,
         turn_selector_url,
         player_selector_url,
         temp_player_selector_url,
         action_panel_url,
         action_log_url,
+        back_url,
+        next_url,
+        next_label: next_label.to_string(),
+        next_disabled,
     }.into_response()
 }

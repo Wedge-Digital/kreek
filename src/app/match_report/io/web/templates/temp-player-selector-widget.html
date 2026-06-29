@@ -1,24 +1,54 @@
-{% if !players.is_empty() %}
-<link rel="stylesheet" href="/static/css/widgets/temp-player-selector.css">
-<div class="temp-player-selector" hx-disinherit="*">
-    <h4 class="temp-player-title">Joueurs temporaires</h4>
-    <ul class="temp-player-list">
-        {% for player in players %}
-        <li class="temp-player-item"
-            data-player-id="{{ player.temp_player_id }}"
-            data-player-type="temp">
-            {{ player.label }}
-        </li>
-        {% endfor %}
-    </ul>
+{% if !journaliers.is_empty() || !stars.is_empty() %}
+<link rel="stylesheet" href="/static/css/pages/match-report-shared.css">
+<div class="mr-temp-players" hx-disinherit="*">
+    {% if !journaliers.is_empty() %}
+    <div class="mr-player-section">
+        <div class="mr-player-section-label mr-player-section-label--journeyman">Journaliers</div>
+        <div class="mr-player-chip-list">
+            {% for player in journaliers %}
+            <button class="mr-player-chip mr-player-chip--journeyman"
+                    type="button"
+                    data-player-id="{{ player.temp_player_id }}"
+                    data-player-type="temp">
+                <div class="mr-player-chip-jersey">J</div>
+                <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">{{ player.label }}</div>
+                </div>
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% if !stars.is_empty() %}
+    <div class="mr-player-section">
+        <div class="mr-player-section-label mr-player-section-label--star">Star Players</div>
+        <div class="mr-player-chip-list">
+            {% for player in stars %}
+            <button class="mr-player-chip mr-player-chip--star"
+                    type="button"
+                    data-player-id="{{ player.temp_player_id }}"
+                    data-player-type="temp">
+                <div class="mr-player-chip-jersey">★</div>
+                <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">{{ player.label }}</div>
+                </div>
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
     <script>
     (function () {
-        const panel = document.currentScript.previousElementSibling;
-        panel.querySelectorAll('.temp-player-item').forEach(function (item) {
-            item.addEventListener('click', function () {
+        const container = document.currentScript.parentElement;
+        container.querySelectorAll('.mr-player-chip').forEach(function (chip) {
+            chip.addEventListener('click', function () {
+                document.querySelectorAll('.mr-player-chip').forEach(function (c) {
+                    c.classList.remove('active');
+                });
+                chip.classList.add('active');
                 htmx.trigger(document.body, 'playerSelected', {
-                    player_id: item.dataset.playerId,
-                    player_type: item.dataset.playerType
+                    player_id: chip.dataset.playerId,
+                    player_type: chip.dataset.playerType
                 });
             });
         });

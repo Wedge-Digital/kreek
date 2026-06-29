@@ -160,7 +160,7 @@ impl MatchReportRepository {
                 .map_err(RepositoryError::Database)?;
             }
             MatchReportDomainEvent::ActionRecorded {
-                action_id, team_side, turn, player, action, player_display_name, ..
+                action_id, team_side, turn, player, action, player_display_name, player_position, ..
             } => {
                 use crate::app::match_report::domain::value_objects::TeamSide;
                 let (player_id, player_type) = match player {
@@ -172,8 +172,8 @@ impl MatchReportRepository {
                 sqlx::query(
                     "INSERT INTO match_report_actions
                         (action_id, match_report_id, team_side, turn_number, player_id,
-                         player_type, action_json, player_display_name)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                         player_type, action_json, player_display_name, player_position)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
                 )
                 .bind(&action_id.0)
                 .bind(match_report_id)
@@ -183,6 +183,7 @@ impl MatchReportRepository {
                 .bind(player_type)
                 .bind(&action_json)
                 .bind(player_display_name)
+                .bind(player_position)
                 .execute(&mut **tx)
                 .await
                 .map_err(RepositoryError::Database)?;
@@ -392,10 +393,10 @@ impl IMatchReportRepository for MatchReportRepository {
         let side_str = match side { TeamSide::Home => "home", TeamSide::Away => "away" };
         let rows = sqlx::query(
             "SELECT action_id, turn_number, player_id, player_type,
-                    action_json, player_display_name
+                    action_json, player_display_name, player_position
              FROM match_report_actions
              WHERE match_report_id = $1 AND team_side = $2 AND NOT is_deleted
-             ORDER BY recorded_at",
+             ORDER BY turn_number ASC, recorded_at ASC",
         )
         .bind(match_report_id)
         .bind(side_str)
@@ -410,6 +411,7 @@ impl IMatchReportRepository for MatchReportRepository {
             player_type: r.get("player_type"),
             action_json: r.get("action_json"),
             player_display_name: r.get("player_display_name"),
+            player_position: r.get("player_position"),
         }).collect())
     }
 }

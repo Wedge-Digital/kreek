@@ -71,6 +71,8 @@ pub enum MatchReportDomainEvent {
         player: ActionPlayer,
         action: MatchActionType,
         player_display_name: String,
+        #[serde(default)]
+        player_position: String,
         recorded_by: CoachId,
     },
     ActionDeleted {

@@ -70,6 +70,7 @@ mod tests {
             ActionPlayer::Regular(crate::app::shared_kernel::common_types::PlayerId::new()),
             MatchActionType::Touchdown,
             "Player Name".into(),
+            String::new(),
             action_id.clone(),
             CoachId::new(),
         );

@@ -1,18 +1,21 @@
-<link rel="stylesheet" href="/static/css/widgets/turn-selector.css">
-<div class="turn-selector" hx-disinherit="*">
-    <div class="turn-grid">
-        {% for turn in turns %}
-        <button class="turn-btn {% if turn.has_action %}has-action{% endif %}"
-                data-turn="{{ turn.turn }}">
-            {{ turn.turn }}
-        </button>
-        {% endfor %}
-    </div>
+<link rel="stylesheet" href="/static/css/pages/match-report-shared.css">
+<div class="mr-turn-grid" hx-disinherit="*">
+    {% for turn in turns %}
+    <button class="mr-turn-btn {% if turn.has_action %}has-action{% endif %}"
+            type="button"
+            data-turn="{{ turn.turn }}">
+        {{ turn.turn }}
+    </button>
+    {% endfor %}
     <script>
     (function () {
-        const panel = document.currentScript.previousElementSibling;
-        panel.querySelectorAll('.turn-btn').forEach(function (btn) {
+        const grid = document.currentScript.parentElement;
+        grid.querySelectorAll('.mr-turn-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
+                grid.querySelectorAll('.mr-turn-btn').forEach(function (b) {
+                    b.classList.remove('active');
+                });
+                btn.classList.add('active');
                 htmx.trigger(document.body, 'turnSelected', { turn: parseInt(btn.dataset.turn) });
             });
         });

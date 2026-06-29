@@ -6,8 +6,10 @@ use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 
 pub struct PlayerRowVm {
-    pub player_id:    String,
-    pub display_name: String,
+    pub player_id: String,
+    pub name:      String,
+    pub position:  String,
+    pub jersey:    Option<i16>,
 }
 
 #[derive(Template)]
@@ -30,19 +32,14 @@ pub async fn match_player_selector_widget(
         .into_iter()
         .map(|p| PlayerRowVm {
             player_id: p.player_id,
-            display_name: build_display(&p.personal_name, p.jersey),
+            name:      p.personal_name,
+            position:  p.position_name,
+            jersey:    p.jersey,
         })
         .collect();
     let template = MatchPlayerSelectorTemplate { players: vms };
     match template.render() {
         Ok(html) => Html(html).into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    }
-}
-
-fn build_display(name: &str, jersey: Option<i16>) -> String {
-    match jersey {
-        Some(n) => format!("{name} #{n}"),
-        None => name.to_string(),
     }
 }

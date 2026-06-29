@@ -159,6 +159,8 @@ pub struct MatchAction {
     pub player: ActionPlayer,
     pub action: MatchActionType,
     pub player_display_name: String,
+    #[serde(default)]
+    pub player_position: String,
 }
 
 #[cfg(test)]

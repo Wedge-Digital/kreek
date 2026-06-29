@@ -277,6 +277,7 @@ mod tests {
                 impl crate::app::match_report::ports::IPlayerDataPort for FakePlayerDataPort {
                     async fn count_available_players(&self, _: &str) -> Result<usize, String> { Ok(0) }
                     async fn find_player_display(&self, _: &str) -> Option<String> { None }
+                    async fn find_player_position(&self, _: &str) -> Option<String> { None }
                 }
                 crate::app::match_report::context::MatchReportContext {
                     match_report_repo: Arc::new(FakeMrRepo),

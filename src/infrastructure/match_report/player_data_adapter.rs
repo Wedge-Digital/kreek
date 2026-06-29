@@ -27,4 +27,9 @@ impl IPlayerDataPort for PlayerDataAdapter {
         let jersey = player.jersey.map(|j| format!(" (#{j})")).unwrap_or_default();
         Some(format!("{}{}", player.personal_name, jersey))
     }
+
+    async fn find_player_position(&self, player_id: &str) -> Option<String> {
+        let player = self.player_projection_repo.find_by_id(player_id).await.ok()??;
+        Some(player.position_name)
+    }
 }

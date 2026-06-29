@@ -40,9 +40,9 @@ pub async fn execute(
         _ => return Err(RecordActionError::NotInPreMatchPhase),
     };
 
-    let display_name = resolve_display_name(&cmd.player, cmd.team_side, &pm, player_data).await?;
+    let (display_name, position) = resolve_player_info(&cmd.player, cmd.team_side, &pm, player_data).await?;
     let action_id = ActionId(ulid::Ulid::new().to_string());
-    let (_, event) = pm.record_action(cmd.team_side, cmd.turn, cmd.player, cmd.action, display_name, action_id.clone(), cmd.recorded_by);
+    let (_, event) = pm.record_action(cmd.team_side, cmd.turn, cmd.player, cmd.action, display_name, position, action_id.clone(), cmd.recorded_by);
 
     let outcome = RecordActionOutcome { action_id: action_id.0.clone() };
     repo.append(&mr_id, &event, pm.version)
@@ -51,19 +51,23 @@ pub async fn execute(
     Ok(outcome)
 }
 
-async fn resolve_display_name(
+async fn resolve_player_info(
     player: &ActionPlayer,
     side: TeamSide,
     pm: &crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch,
     player_data: &dyn IPlayerDataPort,
-) -> Result<String, RecordActionError> {
+) -> Result<(String, String), RecordActionError> {
     match player {
         ActionPlayer::Regular(pid) => {
-            player_data.find_player_display(&pid.to_string()).await
-                .ok_or_else(|| RecordActionError::PlayerNotFound(pid.to_string()))
+            let id = pid.to_string();
+            let display = player_data.find_player_display(&id).await
+                .ok_or_else(|| RecordActionError::PlayerNotFound(id.clone()))?;
+            let position = player_data.find_player_position(&id).await.unwrap_or_default();
+            Ok((display, position))
         }
         ActionPlayer::Temp(tid) => {
-            resolve_temp_display(tid, side, pm)
+            let display = resolve_temp_display(tid, side, pm)?;
+            Ok((display, String::new()))
         }
     }
 }

@@ -160,6 +160,7 @@ impl MatchReportPreMatch {
         player: ActionPlayer,
         action: MatchActionType,
         player_display_name: String,
+        player_position: String,
         action_id: ActionId,
         recorded_by: CoachId,
     ) -> (Self, MatchReportDomainEvent) {
@@ -170,9 +171,10 @@ impl MatchReportPreMatch {
             player: player.clone(),
             action: action.clone(),
             player_display_name: player_display_name.clone(),
+            player_position: player_position.clone(),
             recorded_by,
         };
-        let entry = MatchAction { id: action_id, turn, player, action, player_display_name };
+        let entry = MatchAction { id: action_id, turn, player, action, player_display_name, player_position };
         let mut updated = self.clone();
         match team_side {
             TeamSide::Home => updated.home_actions.push(entry),
@@ -591,6 +593,7 @@ mod tests {
             ActionPlayer::Regular(PlayerId::new()),
             MatchActionType::Touchdown,
             "Jean Dupont (#5)".to_string(),
+            "Blitzeur".to_string(),
             ActionId("act-01".to_string()),
             CoachId::new(),
         )
@@ -623,8 +626,8 @@ mod tests {
     #[test]
     fn record_two_mvp_same_team() {
         let pm = make_pm(1000, 1000);
-        let (pm2, _) = pm.record_action(TeamSide::Home, TurnNumber::try_new(1).unwrap(), ActionPlayer::Regular(PlayerId::new()), MatchActionType::Mvp, "A".to_string(), ActionId("a1".to_string()), CoachId::new());
-        let (pm3, _) = pm2.record_action(TeamSide::Home, TurnNumber::try_new(1).unwrap(), ActionPlayer::Regular(PlayerId::new()), MatchActionType::Mvp, "B".to_string(), ActionId("a2".to_string()), CoachId::new());
+        let (pm2, _) = pm.record_action(TeamSide::Home, TurnNumber::try_new(1).unwrap(), ActionPlayer::Regular(PlayerId::new()), MatchActionType::Mvp, "A".to_string(), String::new(), ActionId("a1".to_string()), CoachId::new());
+        let (pm3, _) = pm2.record_action(TeamSide::Home, TurnNumber::try_new(1).unwrap(), ActionPlayer::Regular(PlayerId::new()), MatchActionType::Mvp, "B".to_string(), String::new(), ActionId("a2".to_string()), CoachId::new());
         assert_eq!(pm3.home_actions.len(), 2);
     }
 

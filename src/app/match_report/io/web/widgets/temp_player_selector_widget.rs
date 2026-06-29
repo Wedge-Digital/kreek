@@ -14,7 +14,8 @@ pub struct TempPlayerRowVm {
 #[derive(Template)]
 #[template(path = "temp-player-selector-widget.html")]
 pub struct TempPlayerSelectorTemplate {
-    pub players: Vec<TempPlayerRowVm>,
+    pub journaliers: Vec<TempPlayerRowVm>,
+    pub stars:       Vec<TempPlayerRowVm>,
 }
 
 impl IntoResponse for TempPlayerSelectorTemplate {
@@ -51,15 +52,18 @@ async fn render_temp_players(mr_id: &str, side: TeamSide, state: &AppState) -> R
         Some(MatchReportState::PreMatch(pm)) => pm,
         _ => return StatusCode::NOT_FOUND.into_response(),
     };
-    let players: Vec<TempPlayerRowVm> = pm
-        .temp_players_for(side)
-        .iter()
-        .map(|tp| TempPlayerRowVm {
+    let (mut journaliers, mut stars) = (Vec::new(), Vec::new());
+    for tp in pm.temp_players_for(side).iter() {
+        let vm = TempPlayerRowVm {
             temp_player_id: tp.id.0.clone(),
             label: tp.display_name.clone().unwrap_or_else(|| kind_label(&tp.kind)),
-        })
-        .collect();
-    TempPlayerSelectorTemplate { players }.into_response()
+        };
+        match &tp.kind {
+            TempPlayerKind::StarPlayer { .. } => stars.push(vm),
+            _ => journaliers.push(vm),
+        }
+    }
+    TempPlayerSelectorTemplate { journaliers, stars }.into_response()
 }
 
 fn kind_label(kind: &TempPlayerKind) -> String {
