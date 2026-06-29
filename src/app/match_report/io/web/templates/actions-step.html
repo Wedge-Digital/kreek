@@ -49,7 +49,7 @@
     <!-- Header -->
     <div class="mr-header">
         <div class="mr-header-icon">🏈</div>
-        <div class="mr-header-title">{% if team_side == "home" %}Actions — Équipe domicile{% else %}Actions — Équipe extérieure{% endif %}</div>
+        <div class="mr-header-title">Actions — {% if team_side == "home" %}{{ home_team_name }}{% else %}{{ away_team_name }}{% endif %}</div>
         <div class="mr-header-sub">Enregistrement des actions du match</div>
     </div>
 
