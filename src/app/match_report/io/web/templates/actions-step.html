@@ -75,12 +75,20 @@
     <!-- Match banner -->
     <div class="mr-match-banner">
         <div class="mr-match-team">
+            {% if let Some(url) = home_logo_url %}
+            <img class="mr-match-logo mr-match-logo--img" src="{{ url }}" alt="{{ home_initials }}">
+            {% else %}
             <div class="mr-match-logo">{{ home_initials }}</div>
+            {% endif %}
             <div class="mr-match-name">{{ home_team_name }}</div>
         </div>
         <span class="mr-match-vs">VS</span>
         <div class="mr-match-team">
+            {% if let Some(url) = away_logo_url %}
+            <img class="mr-match-logo mr-match-logo--away mr-match-logo--img" src="{{ url }}" alt="{{ away_initials }}">
+            {% else %}
             <div class="mr-match-logo mr-match-logo--away">{{ away_initials }}</div>
+            {% endif %}
             <div class="mr-match-name">{{ away_team_name }}</div>
         </div>
     </div>

@@ -10,7 +10,7 @@
             <div class="mr-log-turn">T{{ action.turn }}</div>
             <div class="mr-log-icon">{{ action.action_icon }}</div>
             <div class="mr-log-text">
-                <strong>{% if action.player_name.is_empty() %}{{ action.player_position }}{% else %}{{ action.player_name }}{% endif %}</strong> — {{ action.action_label }}
+                {% if !action.player_name.is_empty() %}<strong>{{ action.player_name }}</strong> — {% endif %}{{ action.action_label }}
             </div>
             <button type="button"
                     class="mr-log-delete"

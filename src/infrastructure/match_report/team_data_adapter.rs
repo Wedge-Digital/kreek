@@ -37,10 +37,11 @@ impl ITeamDataPort for TeamDataAdapter {
     async fn find_team_info(&self, team_id: &str) -> Option<TeamInfoDto> {
         let team = self.team_repo.find_by_id(team_id).await.ok()??;
         Some(TeamInfoDto {
-            team_name: team.name.to_string(),
+            team_name:  team.name.to_string(),
             coach_name: team.coach_name,
             roster_name: team.roster_name.to_string(),
-            roster_id: team.roster_id.to_string(),
+            roster_id:  team.roster_id.to_string(),
+            logo_url:   team.logo_url,
         })
     }
 

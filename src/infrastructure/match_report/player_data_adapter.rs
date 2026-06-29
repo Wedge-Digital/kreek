@@ -24,8 +24,13 @@ impl IPlayerDataPort for PlayerDataAdapter {
 
     async fn find_player_display(&self, player_id: &str) -> Option<String> {
         let player = self.player_projection_repo.find_by_id(player_id).await.ok()??;
-        let jersey = player.jersey.map(|j| format!(" (#{j})")).unwrap_or_default();
-        Some(format!("{}{}", player.personal_name, jersey))
+        let label = if !player.personal_name.is_empty() {
+            player.personal_name.clone()
+        } else {
+            player.position_name.clone()
+        };
+        let jersey = player.jersey.map(|j| format!(" #{j}")).unwrap_or_default();
+        Some(format!("{}{}", label, jersey))
     }
 
     async fn find_player_position(&self, player_id: &str) -> Option<String> {

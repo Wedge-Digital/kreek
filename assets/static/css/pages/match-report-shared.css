@@ -118,6 +118,9 @@
   color: var(--white);
   background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
 }
+.mr-match-logo--img {
+  object-fit: cover; background: none;
+}
 .mr-match-name {
   font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
 }

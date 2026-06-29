@@ -41,6 +41,7 @@ pub struct TeamInfoDto {
     pub coach_name: String,
     pub roster_name: String,
     pub roster_id: String,
+    pub logo_url: Option<String>,
 }
 
 #[async_trait]
