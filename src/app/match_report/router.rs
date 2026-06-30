@@ -17,6 +17,7 @@ use crate::app::match_report::io::web::widgets::action_panel_widget::{
 use crate::app::match_report::io::web::widgets::turn_selector_widget::{
     get_turn_selector_step3, get_turn_selector_step4,
 };
+use crate::app::match_report::io::web::widgets::mercenary_selector_widget::get_mercenary_selector;
 use crate::app::match_report::io::web::widgets::temp_player_selector_widget::{
     get_temp_players_step3, get_temp_players_step4,
 };
@@ -47,4 +48,5 @@ pub fn router() -> Router<AppState> {
         .route(path::MATCH_REPORT_STEP3_ACTIONS, post(post_action_step3))
         .route(path::MATCH_REPORT_STEP4_ACTIONS, post(post_action_step4))
         .route(path::MATCH_REPORT_ACTION, delete(delete_action))
+        .route(path::MATCH_REPORT_MERCENARY_SELECTOR, get(get_mercenary_selector))
 }

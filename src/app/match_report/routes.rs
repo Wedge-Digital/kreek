@@ -31,6 +31,8 @@ pub mod path {
         "/app/{space_id}/match-report/{match_report_id}/step4/actions";
     pub const MATCH_REPORT_ACTION: &str =
         "/app/{space_id}/match-report/{match_report_id}/actions/{action_id}";
+    pub const MATCH_REPORT_MERCENARY_SELECTOR: &str =
+        "/app/{space_id}/match-report/{match_report_id}/step2/{team_id}/mercenaires";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -143,5 +145,17 @@ impl Routes {
             .replace("{space_id}", space_id)
             .replace("{match_report_id}", match_report_id)
             .replace("{action_id}", action_id)
+    }
+
+    pub fn mercenary_selector(
+        &self,
+        space_id: &str,
+        match_report_id: &str,
+        team_id: &str,
+    ) -> String {
+        path::MATCH_REPORT_MERCENARY_SELECTOR
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+            .replace("{team_id}", team_id)
     }
 }

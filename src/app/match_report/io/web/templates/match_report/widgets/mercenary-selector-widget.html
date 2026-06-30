@@ -1,0 +1,91 @@
+<link rel="stylesheet" href="/static/css/widgets/mercenary-selector.css">
+<div class="merco-selector" hx-disinherit="*" x-data="mercenarySelector()">
+
+  <div class="merco-section">
+    <div class="merco-section-header">
+      <div>
+        <div class="merco-section-title">Choisir une position</div>
+      </div>
+      <div class="merco-dots">
+        <div class="merco-dot" :class="hiredList.length > 0 ? 'merco-dot--filled' : 'merco-dot--empty'"></div>
+        <div class="merco-dot" :class="hiredList.length > 1 ? 'merco-dot--filled' : 'merco-dot--empty'"></div>
+        <div class="merco-dot" :class="hiredList.length > 2 ? 'merco-dot--filled' : 'merco-dot--empty'"></div>
+        <span class="merco-dot-label" x-text="hiredList.length + ' / 3'"></span>
+      </div>
+    </div>
+    <div class="merco-section-body">
+      <div class="merco-position-grid">
+        {% for pos in positions %}
+        <div class="merco-position-card{% if pos.disabled %} disabled{% endif %}"
+             {% if !pos.disabled %}@click="selectPosition('{{ pos.uid }}', '{{ pos.name }}', {{ pos.base_cost }}, $el)"{% endif %}>
+          <div class="merco-position-name">{{ pos.name }}</div>
+          <div class="merco-position-price">{{ pos.base_cost }} kPo</div>
+          <div class="merco-position-count">{{ pos.count_in_team }} / {{ pos.max_qty }} dans l'équipe</div>
+          {% if pos.disabled %}
+          <span class="merco-position-full">Complet</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="merco-hire-panel" x-show="selectedPosition" x-cloak>
+    <div class="merco-hire-panel-header">
+      <div class="merco-hire-panel-icon">⚔️</div>
+      <div>
+        <div class="merco-hire-panel-title">Recruter un mercenaire</div>
+        <div class="merco-hire-panel-pos" x-text="selectedPosition?.name"></div>
+      </div>
+    </div>
+    <div class="merco-hire-options">
+      <div class="merco-hire-option" @click="hire('base')">
+        <div class="merco-hire-option-title">Mercenaire</div>
+        <div class="merco-hire-option-price" x-text="(selectedPosition ? selectedPosition.baseCost + 30 : 0) + ' kPo'"></div>
+        <div class="merco-hire-option-detail">Prix de base + 30 kPo</div>
+        <button class="merco-hire-btn merco-hire-btn--base" type="button">Recruter</button>
+      </div>
+      <div class="merco-hire-option" @click="hire('lvl1')">
+        <div class="merco-hire-option-title">Mercenaire Niv. 1</div>
+        <div class="merco-hire-option-price" x-text="(selectedPosition ? selectedPosition.baseCost + 80 : 0) + ' kPo'"></div>
+        <div class="merco-hire-option-detail">Prix de base + 80 kPo</div>
+        <span class="merco-hire-option-badge">+1 compétence</span>
+        <button class="merco-hire-btn merco-hire-btn--lvl1" type="button">Recruter</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+(function () {
+    const root = document.currentScript.previousElementSibling;
+    function mercenarySelector() {
+        return {
+            selectedPosition: null,
+            hiredList: [],
+            selectPosition(uid, name, baseCost, cardEl) {
+                root.querySelectorAll('.merco-position-card').forEach(c => c.classList.remove('selected'));
+                cardEl.classList.add('selected');
+                this.selectedPosition = { uid, name, baseCost };
+            },
+            hire(level) {
+                if (!this.selectedPosition || this.hiredList.length >= 3) return;
+                const cost = this.selectedPosition.baseCost + (level === 'lvl1' ? 80 : 30);
+                const entry = { position_uid: this.selectedPosition.uid, level, name: this.selectedPosition.name, cost };
+                this.hiredList.push(entry);
+                root.querySelectorAll('.merco-position-card').forEach(c => c.classList.remove('selected'));
+                this.selectedPosition = null;
+                htmx.trigger(document.body, 'mercenarySelectionChanged', { mercs: this.hiredList });
+            },
+            removeMerc(idx) {
+                this.hiredList.splice(idx, 1);
+                htmx.trigger(document.body, 'mercenarySelectionChanged', { mercs: this.hiredList });
+            },
+            init() {
+                document.body.addEventListener('removeMercenaire', e => this.removeMerc(e.detail.idx));
+            },
+        };
+    }
+    window.mercenarySelector = mercenarySelector;
+})();
+</script>
