@@ -25,7 +25,7 @@ pub fn load_roster(roster_uid: &str, ref_data: &dyn IReferenceDataPort) -> Optio
                 id:           PlayerId(p.uid.clone()),
                 name:         PlayerName::try_new(p.position_name.clone()).ok()?,
                 max_quantity: PlayerMaxQuantity::try_new(p.max_quantity).ok()?,
-                price:        PlayerPrice::try_new(p.cost / 1000).ok()?,
+                price:        PlayerPrice::try_new(p.cost).ok()?,
             })
         })
         .collect();
@@ -66,7 +66,7 @@ pub fn load_roster(roster_uid: &str, ref_data: &dyn IReferenceDataPort) -> Optio
         player_definitions,
         allowed_staff,
         cross_limits: vec![],
-        reroll_price: RerollBasePrice::try_new(def.reroll_cost / 1000).ok()?,
+        reroll_price: RerollBasePrice::try_new(def.reroll_cost).ok()?,
     })
 }
 
@@ -108,11 +108,11 @@ mod tests {
             Some(RosterDefinition {
                 uid: "LIZARDMEN".into(),
                 name: "Hommes-Lézards".into(),
-                reroll_cost: 70000,
+                reroll_cost: 70,
                 available_players: vec![PlayerPositionDefinition {
                     uid: "SKINK".into(),
                     position_name: "Skink".into(),
-                    cost: 60000,
+                    cost: 60,
                     max_quantity: 12,
                     ma: 8,
                     st: 2,

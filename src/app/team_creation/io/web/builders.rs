@@ -27,7 +27,7 @@ pub fn build_player_positions(roster_def: &RosterDefinition) -> Vec<PlayerPositi
             PlayerPositionVm {
                 uid: p.uid.clone(),
                 name: p.position_name.clone(),
-                cost: p.cost / 1000,
+                cost: p.cost,
                 max_qty_label: format!("0-{}", p.max_quantity),
                 ma: p.ma,
                 st: p.st,

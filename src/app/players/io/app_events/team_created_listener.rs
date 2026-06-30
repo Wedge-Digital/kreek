@@ -63,7 +63,7 @@ fn resolve_base_skills(
 fn base_position_kpo(roster_line_id: &str, ref_repo: &dyn IReferenceRepository) -> u32 {
     ref_repo
         .find_position_by_uid(roster_line_id)
-        .map(|pos| pos.cost / 1000)
+        .map(|pos| pos.cost)
         .unwrap_or(0)
 }
 

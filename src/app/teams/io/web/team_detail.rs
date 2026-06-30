@@ -96,7 +96,7 @@ impl TeamDetailVm {
             )
         });
 
-        let reroll_price_kpo = ref_roster.map(|t| t.reroll_cost / 1000).unwrap_or(50);
+        let reroll_price_kpo = ref_roster.map(|t| t.reroll_cost).unwrap_or(50);
 
         let logo_url = team.logo_url.as_deref().map(|url| {
             crate::app::shared_kernel::cloudinary::transform(
