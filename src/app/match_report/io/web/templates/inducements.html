@@ -6,15 +6,31 @@
 
 <div class="mr-container"
      x-data="{
+       activeSection: 'common',
        items: [],
        totalCost: 0,
        budget: {{ budget }},
-       get overBudget() { return this.totalCost > this.budget; },
+       mercenaryCart: [],
+       get mercenaryTotal() { return this.mercenaryCart.reduce((s, m) => s + m.cost, 0); },
+       get grandTotal() { return this.totalCost + this.mercenaryTotal; },
+       get overBudget() { return this.grandTotal > this.budget; },
        get selectionJson() {
          return JSON.stringify(this.items.map(i => ({ uid: i.uid, name: i.name, qty: i.qty, unit_cost: i.unit_cost })));
+       },
+       get mercenaryJson() {
+         return JSON.stringify(this.mercenaryCart.map(m => ({ position_uid: m.position_uid, level: m.level })));
+       },
+       switchTab(tab) {
+         this.activeSection = tab;
+         if (tab !== 'merco') {
+           htmx.trigger(document.body, 'switchInducementTab', { tab });
+         } else {
+           htmx.trigger(document.body, 'mercenairesActivated', {});
+         }
        }
      }"
-     @inducement-selection-changed.window="items = $event.detail.items; totalCost = $event.detail.total_cost">
+     @inducement-selection-changed.window="items = $event.detail.items; totalCost = $event.detail.total_cost"
+     @mercenary-selection-changed.window="mercenaryCart = $event.detail.mercs">
 
   <!-- Header -->
   <div class="mr-header">
@@ -36,7 +52,7 @@
     <div class="mr-step mr-step--pending">5</div>
   </div>
 
-  <!-- Bannière équipe + budget (combinée) -->
+  <!-- Bannière équipe + budget -->
   <div class="mr-budget-banner mr-team-banner">
     <div class="mr-budget-team">
       <div class="mr-budget-logo">{{ team_initials }}</div>
@@ -51,8 +67,17 @@
     </div>
   </div>
 
-  <!-- Widget inducement-selector chargé via HTMX -->
+  <!-- Tab bar — 4 onglets -->
+  <div class="mr-tabs">
+    <div class="mr-tab" :class="{ active: activeSection === 'common' }" @click="switchTab('common')">Communs</div>
+    <div class="mr-tab" :class="{ active: activeSection === 'special' }" @click="switchTab('special')">Spéciaux</div>
+    <div class="mr-tab" :class="{ active: activeSection === 'stars' }" @click="switchTab('stars')">Stars</div>
+    <div class="mr-tab" :class="{ active: activeSection === 'merco' }" @click="switchTab('merco')">Mercenaires</div>
+  </div>
+
+  <!-- Zone widget inducement-selector (Communs / Spéciaux / Stars) -->
   <div class="mr-selector-zone"
+       x-show="activeSection !== 'merco'"
        hx-get="{{ inducement_selector_url }}"
        hx-trigger="load"
        hx-target="this"
@@ -60,24 +85,52 @@
     <div class="mr-loading">Chargement des inducements…</div>
   </div>
 
+  <!-- Zone widget mercenary-selector (lazy) -->
+  <div class="mr-selector-zone"
+       x-show="activeSection === 'merco'"
+       x-cloak
+       hx-get="{{ mercenary_selector_url }}"
+       hx-trigger="mercenairesActivated from:body once"
+       hx-target="this"
+       hx-swap="innerHTML">
+  </div>
+
   <!-- Cart sticky footer -->
   <form method="post" action="{{ form_action }}" class="mr-cart-footer">
     <input type="hidden" name="selection" :value="selectionJson">
+    <input type="hidden" name="mercenaries" :value="mercenaryJson">
     <div class="mr-cart-inner">
+
+      <!-- Liste mercenaires dans le panier -->
+      <template x-if="mercenaryCart.length > 0">
+        <div class="mr-cart-merco-list">
+          <template x-for="(m, idx) in mercenaryCart" :key="idx">
+            <div class="mr-cart-merco-item">
+              <div class="mr-cart-merco-info">
+                <div class="mr-cart-merco-name" x-text="m.name"></div>
+                <div class="mr-cart-merco-type" x-text="m.level === 'lvl1' ? 'Mercenaire Niv. 1' : 'Mercenaire'"></div>
+              </div>
+              <div class="mr-cart-merco-price" x-text="m.cost + ' kPo'"></div>
+              <button class="mr-cart-merco-remove" type="button"
+                      @click="htmx.trigger(document.body, 'removeMercenaire', { idx })">&#10005;</button>
+            </div>
+          </template>
+        </div>
+      </template>
 
       <div class="mr-cart-summary">
         <div class="mr-cart-items"
-             x-text="items.length === 0 ? 'Aucun coup de pouce sélectionné' : items.length + ' coup(s) de pouce sélectionné(s)'">
+             x-text="(items.length + mercenaryCart.length) === 0 ? 'Aucun coup de pouce sélectionné' : (items.length + mercenaryCart.length) + ' coup(s) de pouce sélectionné(s)'">
         </div>
         <div class="mr-cart-total">
           <span class="mr-cart-total-value" :class="{ 'mr-cart-total-value--over': overBudget }"
-                x-text="totalCost"></span>
+                x-text="grandTotal"></span>
           <span class="mr-cart-total-unit">/ {{ budget }} kPo</span>
         </div>
       </div>
 
       <div class="mr-cart-remaining mr-cart-remaining--over" x-show="overBudget">
-        &#9888;&#65039; Budget dépassé de <span x-text="totalCost - budget"></span> kPo
+        &#9888;&#65039; Budget dépassé de <span x-text="grandTotal - budget"></span> kPo
       </div>
 
       <div class="mr-cart-actions">

@@ -1,18 +1,6 @@
 <link rel="stylesheet" href="/static/css/widgets/inducement-selector.css">
-<div class="inducement-selector" hx-disinherit="*" x-data="inducementSelector()">
-
-  <!-- Onglets -->
-  <div class="mr-tabs">
-    {% if !common_items.is_empty() %}
-    <div class="mr-tab" :class="{ active: activeTab === 'common' }" @click="activeTab = 'common'">Communs</div>
-    {% endif %}
-    {% if !special_items.is_empty() %}
-    <div class="mr-tab" :class="{ active: activeTab === 'special' }" @click="activeTab = 'special'">Spéciaux</div>
-    {% endif %}
-    {% if !star_player_items.is_empty() %}
-    <div class="mr-tab" :class="{ active: activeTab === 'stars' }" @click="activeTab = 'stars'">Star Players</div>
-    {% endif %}
-  </div>
+<div class="inducement-selector" hx-disinherit="*" x-data="inducementSelector()"
+     @switch-inducement-tab.window="activeTab = $event.detail.tab">
 
   <!-- Communs -->
   {% if !common_items.is_empty() %}

@@ -2,10 +2,11 @@ use crate::app::auth::auth_backend::AuthSession;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
 use crate::app::match_report::use_cases::record_inducements_use_case::{
-    self, InducementPurchaseCmd, RecordInducementsCommand, RecordInducementsOutcome,
+    self, InducementPurchaseCmd, MercenaryLevel, MercenaryPurchaseCmd, RecordInducementsCommand,
+    RecordInducementsOutcome,
 };
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::MatchReportId;
+use crate::app::shared_kernel::common_types::{MatchReportId, PositionId};
 use crate::app::shared_kernel::inducement_definition::InducementId;
 use crate::app::shared_kernel::team::TeamId;
 use crate::state::AppState;
@@ -29,9 +30,10 @@ pub struct InducementsTemplate {
     pub team_initials: String,
     pub order_label: String,
     pub budget: u32,
-    pub inducement_selector_url: String,
-    pub form_action: String,
-    pub pass_url: String,
+    pub inducement_selector_url:  String,
+    pub mercenary_selector_url:   String,
+    pub form_action:              String,
+    pub pass_url:                 String,
 }
 
 impl IntoResponse for InducementsTemplate {
@@ -99,6 +101,7 @@ async fn build_vm(
     let budget = pm.inducement_budget_for(&team_id, treasury);
     let is_topdog = pm.topdog_team_id() == &team_id;
     let selector_url = build_selector_url(routes, &tier, &team_info.roster_id);
+    let mercenary_url = routes.match_report.mercenary_selector(space_id, &mr_id.to_string(), &team_id.to_string());
     let pass_url = build_pass_url(routes, space_id, &mr_id.to_string(), &pm, is_topdog);
     let form_action =
         routes.match_report.inducements(space_id, &mr_id.to_string(), &team_id.to_string());
@@ -118,7 +121,8 @@ async fn build_vm(
         team_initials: initials,
         order_label: if is_topdog { "TopDog — achète en premier".to_string() } else { "Underdog — achète en second".to_string() },
         budget,
-        inducement_selector_url: selector_url,
+        inducement_selector_url:  selector_url,
+        mercenary_selector_url:   mercenary_url,
         form_action,
         pass_url,
     })
@@ -175,7 +179,9 @@ fn build_pass_url(
 #[derive(Deserialize)]
 pub struct InducementsForm {
     #[serde(default)]
-    pub selection: String,
+    pub selection:   String,
+    #[serde(default)]
+    pub mercenaries: String,
 }
 
 #[derive(Deserialize)]
@@ -198,11 +204,15 @@ pub async fn post_inducements(
         Err(r) => return r,
     };
     let purchases = parse_purchases(&form.selection);
+    let mercenary_purchases = match parse_mercenaries(&form.mercenaries) {
+        Ok(v) => v,
+        Err(r) => return r,
+    };
     let cmd = RecordInducementsCommand {
         match_report_id: mr_id,
         team_id: team_id_vo,
         purchases,
-        mercenary_purchases: vec![],  // parsé dans la carte 128
+        mercenary_purchases,
         recorded_by: user.id,
     };
     match record_inducements_use_case::execute(
@@ -240,6 +250,27 @@ fn parse_path_ids(
     let team_id_vo =
         TeamId::try_new(team_id).map_err(|_| StatusCode::BAD_REQUEST.into_response())?;
     Ok((mr_id, team_id_vo))
+}
+
+#[derive(serde::Deserialize)]
+struct MercenaryItem {
+    position_uid: String,
+    level:        String,
+}
+
+fn parse_mercenaries(json: &str) -> Result<Vec<MercenaryPurchaseCmd>, Response> {
+    let items: Vec<MercenaryItem> = serde_json::from_str(json).unwrap_or_default();
+    items
+        .into_iter()
+        .filter(|m| !m.position_uid.is_empty())
+        .map(|m| {
+            let position_id = PositionId::try_new(&m.position_uid)
+                .map_err(|_| StatusCode::BAD_REQUEST.into_response())?;
+            let level = MercenaryLevel::try_from_str(&m.level)
+                .map_err(|_| StatusCode::BAD_REQUEST.into_response())?;
+            Ok(MercenaryPurchaseCmd { position_id, level })
+        })
+        .collect()
 }
 
 fn parse_purchases(selection_json: &str) -> Vec<InducementPurchaseCmd> {
