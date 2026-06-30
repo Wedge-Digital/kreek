@@ -98,12 +98,13 @@ fn collect_mercs(
 ) -> Vec<TempPlayer> {
     pm.purchases_for(team_id)
         .iter()
-        .filter(|p| p.uid.0 == "MERCENARY_PLAYER")
+        .filter(|p| p.uid.0.starts_with("MERCO:"))
         .flat_map(|p| {
-            (0..p.qty.into_inner()).map(|_| TempPlayer {
+            let position_uid = p.uid.0.splitn(3, ':').nth(1).unwrap_or("").to_string();
+            (0..p.qty.into_inner()).map(move |_| TempPlayer {
                 id: TempPlayerId(ulid::Ulid::new().to_string()),
                 team_id: team_id.clone(),
-                kind: TempPlayerKind::Mercenary { position_uid: String::new() },
+                kind: TempPlayerKind::Mercenary { position_uid: position_uid.clone() },
                 display_name: None,
             })
         })
@@ -155,13 +156,26 @@ mod tests {
     fn collect_mercs_creates_qty_per_purchase() {
         let mut pm = make_pm();
         pm.home_inducements = Some(vec![InducementPurchase {
-            uid: InducementId("MERCENARY_PLAYER".into()),
+            uid: InducementId("MERCO:blitzeur:base".into()),
             qty: InducementQty::try_new(2).unwrap(),
-            unit_cost: InducementCost::try_new(30).unwrap(),
+            unit_cost: InducementCost::try_new(130).unwrap(),
         }]);
         let mercs = collect_mercs(&pm, &pm.home_team_id.clone());
         assert_eq!(mercs.len(), 2);
-        assert!(matches!(&mercs[0].kind, TempPlayerKind::Mercenary { .. }));
+        assert!(matches!(&mercs[0].kind, TempPlayerKind::Mercenary { position_uid } if position_uid == "blitzeur"));
+    }
+
+    #[test]
+    fn collect_mercs_extracts_position_uid_from_encoded_uid() {
+        let mut pm = make_pm();
+        pm.home_inducements = Some(vec![InducementPurchase {
+            uid: InducementId("MERCO:witch-elf:lvl1".into()),
+            qty: InducementQty::try_new(1).unwrap(),
+            unit_cost: InducementCost::try_new(180).unwrap(),
+        }]);
+        let mercs = collect_mercs(&pm, &pm.home_team_id.clone());
+        assert_eq!(mercs.len(), 1);
+        assert!(matches!(&mercs[0].kind, TempPlayerKind::Mercenary { position_uid } if position_uid == "witch-elf"));
     }
 
     #[test]

@@ -271,6 +271,7 @@ mod tests {
                     async fn find_team_value(&self, _: &str) -> Option<u32> { None }
                     async fn find_team_treasury(&self, _: &str) -> Option<u32> { None }
                     async fn find_journalier_position(&self, _: &str) -> Option<crate::app::match_report::ports::JournalierPositionDto> { None }
+                    async fn find_roster_positions(&self, _: &str) -> Vec<crate::app::match_report::ports::RosterPositionDto> { vec![] }
                 }
                 struct FakePlayerDataPort;
                 #[async_trait::async_trait]
@@ -278,6 +279,7 @@ mod tests {
                     async fn count_available_players(&self, _: &str) -> Result<usize, String> { Ok(0) }
                     async fn find_player_display(&self, _: &str) -> Option<String> { None }
                     async fn find_player_position(&self, _: &str) -> Option<String> { None }
+                    async fn find_player_counts_by_position(&self, _: &str) -> Vec<crate::app::match_report::ports::PositionCountDto> { vec![] }
                 }
                 crate::app::match_report::context::MatchReportContext {
                     match_report_repo: Arc::new(FakeMrRepo),

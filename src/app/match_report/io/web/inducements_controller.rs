@@ -202,6 +202,7 @@ pub async fn post_inducements(
         match_report_id: mr_id,
         team_id: team_id_vo,
         purchases,
+        mercenary_purchases: vec![],  // parsé dans la carte 128
         recorded_by: user.id,
     };
     match record_inducements_use_case::execute(
