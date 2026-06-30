@@ -47,7 +47,6 @@ fn build_position_grid(
 ) -> Vec<PositionCardVm> {
     positions
         .into_iter()
-        .filter(|p| !p.is_journalier)
         .map(|p| {
             let count_in_team = counts
                 .iter()
