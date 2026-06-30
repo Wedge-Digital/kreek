@@ -272,7 +272,21 @@ fn validate_purchases(
     validate_max_qty(purchases, allowed_specs)?;
     validate_star_player_limit(purchases, allowed_specs)?;
     validate_star_player_conflict(purchases, allowed_specs, opponent_star_uids)?;
-    validate_budget(purchases, allowed_specs, budget)
+    validate_budget(purchases, allowed_specs, budget)?;
+    validate_mercenary_limit(purchases)
+}
+
+fn validate_mercenary_limit(purchases: &[(InducementId, u8)]) -> Result<(), DomainError> {
+    let total: u8 = purchases
+        .iter()
+        .filter(|(uid, _)| uid.0.starts_with("MERCO:"))
+        .map(|(_, qty)| *qty)
+        .sum();
+    if total > 3 {
+        Err(DomainError::TooManyMercenaries { requested: total, max: 3 })
+    } else {
+        Ok(())
+    }
 }
 
 fn validate_max_qty(
@@ -672,5 +686,121 @@ mod tests {
         pm.home_inducements = Some(vec![]);
         assert_eq!(pm.purchases_for(&pm.home_team_id.clone()).len(), 0);
         assert_eq!(pm.purchases_for(&pm.away_team_id.clone()).len(), 0);
+    }
+
+    // ── Mercenaires ───────────────────────────────────────────────────────────
+
+    fn merco_spec(position_uid: &str, level: &str, max_qty: u8, cost: u32) -> AllowedInducementSpec {
+        spec(&format!("MERCO:{position_uid}:{level}"), max_qty, cost, false)
+    }
+
+    #[test]
+    fn record_inducements_fails_when_more_than_3_mercos() {
+        let pm = make_pm(1000, 1000);
+        let specs = vec![
+            merco_spec("pos-a", "base", 4, 100),
+            merco_spec("pos-b", "base", 4, 100),
+        ];
+        let result = pm.record_inducements(
+            &pm.home_team_id.clone(),
+            &[
+                (InducementId("MERCO:pos-a:base".into()), 2),
+                (InducementId("MERCO:pos-b:base".into()), 2),
+            ],
+            10_000,
+            &specs,
+            &[],
+            CoachId::new(),
+        );
+        assert!(matches!(result, Err(DomainError::TooManyMercenaries { requested: 4, max: 3 })));
+    }
+
+    #[test]
+    fn record_inducements_with_exactly_3_mercos_succeeds() {
+        let pm = make_pm(1000, 1000);
+        let specs = vec![merco_spec("pos-a", "base", 3, 100)];
+        let result = pm.record_inducements(
+            &pm.home_team_id.clone(),
+            &[(InducementId("MERCO:pos-a:base".into()), 3)],
+            10_000,
+            &specs,
+            &[],
+            CoachId::new(),
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn record_inducements_merco_count_is_sum_of_qtys() {
+        let pm = make_pm(1000, 1000);
+        let specs = vec![
+            merco_spec("pos-a", "base", 3, 100),
+            merco_spec("pos-b", "lvl1", 3, 180),
+        ];
+        let result = pm.record_inducements(
+            &pm.home_team_id.clone(),
+            &[
+                (InducementId("MERCO:pos-a:base".into()), 2),
+                (InducementId("MERCO:pos-b:lvl1".into()), 2),
+            ],
+            10_000,
+            &specs,
+            &[],
+            CoachId::new(),
+        );
+        assert!(matches!(result, Err(DomainError::TooManyMercenaries { requested: 4, max: 3 })));
+    }
+
+    #[test]
+    fn record_inducements_merco_respects_position_max_qty() {
+        let pm = make_pm(1000, 1000);
+        let specs = vec![merco_spec("pos-a", "base", 1, 100)];
+        let result = pm.record_inducements(
+            &pm.home_team_id.clone(),
+            &[(InducementId("MERCO:pos-a:base".into()), 2)],
+            10_000,
+            &specs,
+            &[],
+            CoachId::new(),
+        );
+        assert!(matches!(result, Err(DomainError::MaxQtyExceeded { .. })));
+    }
+
+    #[test]
+    fn record_inducements_merco_cost_counts_toward_budget() {
+        let pm = make_pm(1000, 1000);
+        let specs = vec![merco_spec("pos-a", "base", 1, 180)];
+        let result = pm.record_inducements(
+            &pm.home_team_id.clone(),
+            &[(InducementId("MERCO:pos-a:base".into()), 1)],
+            100,
+            &specs,
+            &[],
+            CoachId::new(),
+        );
+        assert!(matches!(result, Err(DomainError::BudgetExceeded { .. })));
+    }
+
+    #[test]
+    fn record_inducements_with_mercos_and_classic_succeed() {
+        let pm = make_pm(1000, 1000);
+        let specs = vec![
+            spec("BRIBE", 1, 50, false),
+            merco_spec("pos-a", "base", 2, 130),
+        ];
+        let result = pm.record_inducements(
+            &pm.home_team_id.clone(),
+            &[
+                (InducementId("BRIBE".into()), 1),
+                (InducementId("MERCO:pos-a:base".into()), 2),
+            ],
+            1_000,
+            &specs,
+            &[],
+            CoachId::new(),
+        );
+        assert!(result.is_ok());
+        let (updated, _) = result.unwrap();
+        assert_eq!(updated.home_inducements.as_ref().unwrap().len(), 2);
     }
 }

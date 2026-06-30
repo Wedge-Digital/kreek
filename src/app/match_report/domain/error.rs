@@ -14,6 +14,7 @@ pub enum DomainError {
     InducementsAlreadyRecorded,
     InvalidTurn(u8),
     ActionNotFound(String),
+    TooManyMercenaries { requested: u8, max: u8 },
 }
 
 impl fmt::Display for DomainError {
@@ -37,6 +38,9 @@ impl fmt::Display for DomainError {
             Self::InducementsAlreadyRecorded => write!(f, "les inducements ont déjà été enregistrés pour cette équipe"),
             Self::InvalidTurn(v) => write!(f, "tour invalide : {v} (attendu 1..=16)"),
             Self::ActionNotFound(id) => write!(f, "action introuvable : {id}"),
+            Self::TooManyMercenaries { requested, max } => {
+                write!(f, "trop de mercenaires : {requested} demandés, max {max}")
+            }
         }
     }
 }
