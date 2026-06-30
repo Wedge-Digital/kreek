@@ -1,0 +1,43 @@
+{% import "components/upload_widget.html" as cmp %}
+
+<link rel="stylesheet" href="/static/css/pages/new-space.css">
+<link rel="stylesheet" href="/static/css/components/create-card.css">
+<link rel="stylesheet" href="/static/css/components/upload.css">
+<div id="new-space-card" class="create-card new-space">
+    <div class="create-header">
+        <div class="create-header-icon">🏈</div>
+        <div class="create-header-text">
+            <div class="title">Créer un nouvel espace</div>
+            <div class="sub">Un espace est le lieu ou vous crééerez vos compétition, vos équipes etc....</div>
+        </div>
+    </div>
+
+    <form class="create-body new-space"
+          hx-post="{{ app_routes.spaces.register_space() }}"
+          hx-target="#new-space-card"
+          hx-swap="outerHTML">
+
+        {% call cmp::cloudinary_upload("logo_url", logo_url_value, "spaces/logos", "Logo de votre espace", logo_error) %}
+
+        <div class="form-group">
+            <label class="form-label">Nom de votre espace</label>
+            <input type="text" class="form-input {% if space_name_error.is_some() %}form-input--error{% endif %}"
+                   name="space_name"
+                   placeholder="ex : LigueDesZazous"
+                   value="{{ space_name_value }}">
+            {% if let Some(err) = space_name_error %}
+            <div class="form-error">{{ err }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-actions">
+            <button type="button" class="btn btn-outline"
+                    hx-get="{{ app_routes.spaces.register_space() }}" hx-target="body" hx-push-url="true">
+                Annuler
+            </button>
+            <button type="submit" class="btn btn-primary">
+                Créer →
+            </button>
+        </div>
+    </form>
+</div>

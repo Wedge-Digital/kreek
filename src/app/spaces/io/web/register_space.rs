@@ -35,6 +35,25 @@ impl IntoResponse for NewSpaceTemplate {
     }
 }
 
+#[derive(Template, Default)]
+#[template(path = "new-space-form.html")]
+pub struct NewSpaceFormTemplate {
+    pub app_routes: AppRoutes,
+    pub space_name_value: String,
+    pub space_name_error: Option<String>,
+    pub logo_url_value: String,
+    pub logo_error: Option<String>,
+}
+
+impl IntoResponse for NewSpaceFormTemplate {
+    fn into_response(self) -> Response {
+        match self.render() {
+            Ok(html) => Html(html).into_response(),
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        }
+    }
+}
+
 pub async fn register_space() -> impl IntoResponse {
     NewSpaceTemplate::default().into_response()
 }
@@ -50,7 +69,7 @@ pub async fn register_space_submit(
     State(state): State<AppState>,
     Form(payload): Form<RegisterSpaceFormPayload>,
 ) -> impl IntoResponse {
-    let mut tmpl = NewSpaceTemplate {
+    let mut form = NewSpaceFormTemplate {
         space_name_value: payload.space_name.clone(),
         logo_url_value: payload.logo_url.clone(),
         ..Default::default()
@@ -60,7 +79,7 @@ pub async fn register_space_submit(
     let space_name = match SpaceName::try_new(&payload.space_name) {
         Ok(v) => Some(v),
         Err(_) => {
-            tmpl.space_name_error = Some(
+            form.space_name_error = Some(
                 "Le nom ne peut contenir que des lettres, chiffres, tirets et underscores (100 caractères max).".into(),
             );
             None
@@ -71,13 +90,13 @@ pub async fn register_space_submit(
     let space_logo = match CloudinaryImage::try_new(payload.logo_url.clone()) {
         Ok(v) => Some(v),
         Err(_) => {
-            tmpl.logo_error = Some("Veuillez uploader un logo pour votre espace.".into());
+            form.logo_error = Some("Veuillez uploader un logo pour votre espace.".into());
             None
         }
     };
 
     let (Some(space_name), Some(space_logo)) = (space_name, space_logo) else {
-        return tmpl.into_response();
+        return form.into_response();
     };
 
     let Some(user) = auth_session.user else {
@@ -108,19 +127,19 @@ pub async fn register_space_submit(
             .unwrap(),
 
         Err(RegisterSpaceError::SpaceNameAlreadyTaken) => {
-            tmpl.space_name_error = Some("Ce nom d'espace est déjà utilisé.".into());
-            tmpl.into_response()
+            form.space_name_error = Some("Ce nom d'espace est déjà utilisé.".into());
+            form.into_response()
         }
 
         Err(RegisterSpaceError::CoachNotFound) => {
-            tmpl.space_name_error =
+            form.space_name_error =
                 Some("Votre profil est introuvable, veuillez vous reconnecter.".into());
-            tmpl.into_response()
+            form.into_response()
         }
 
         Err(RegisterSpaceError::Database(_)) => {
-            tmpl.space_name_error = Some("Erreur interne, veuillez réessayer.".into());
-            tmpl.into_response()
+            form.space_name_error = Some("Erreur interne, veuillez réessayer.".into());
+            form.into_response()
         }
     }
 }
