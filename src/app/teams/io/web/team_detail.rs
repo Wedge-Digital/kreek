@@ -23,7 +23,7 @@ pub struct StaffVm {
 
 impl StaffVm {
     fn from(team: &Team, reroll_price_kpo: u32) -> Self {
-        let mut lines = vec![
+        let lines = vec![
             StaffLineVm {
                 label: "Relances".into(),
                 quantity: team.rerolls.0,

@@ -1,4 +1,4 @@
-use crate::app::match_report::ports::{IPlayerDataPort, ITeamDataPort, PositionCountDto, RosterPositionDto};
+use crate::app::match_report::ports::{PositionCountDto, RosterPositionDto};
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};

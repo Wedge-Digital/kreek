@@ -1,4 +1,4 @@
-use crate::app::competitions::domain::group_repository_port::{GroupRepositoryError, IGroupRepository};
+use crate::app::competitions::domain::group_repository_port::IGroupRepository;
 use crate::app::competitions::ports::ITeamInfoPort;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;

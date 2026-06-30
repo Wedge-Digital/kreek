@@ -19,7 +19,7 @@ pub async fn submit_team(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let Some(user) = auth_session.user else {
+    let Some(_user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
 

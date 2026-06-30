@@ -3,7 +3,6 @@ use askama::Template;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
-use sqlx::query::Query;
 use crate::state::AppState;
 
 pub async fn widget_tester_controller(

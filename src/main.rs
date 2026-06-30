@@ -151,7 +151,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
                 ),
             );
             let team_data = Arc::new(
-                crate::infrastructure::match_report::team_data_adapter::TeamDataAdapter::new(
+                crate::infrastructure::match_report::ref_team_data_adapter::RefTeamDataAdapter::new(
                     Arc::new(crate::app::teams::io::repository::team_repository::TeamRepository::new(pool.clone())),
                     refs_for_players.repository.clone(),
                 ),

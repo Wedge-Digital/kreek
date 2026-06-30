@@ -49,7 +49,7 @@ mod tests {
     fn make_pm_with_action() -> (MatchReportPreMatch, ActionId) {
         let home_id = TeamId::new();
         let away_id = TeamId::new();
-        let mut pm = MatchReportPreMatch {
+        let pm = MatchReportPreMatch {
             id: MatchReportId::new(), space_id: SpaceId::new(),
             competition_id: CompetitionId::new(), season_id: SeasonId::new(),
             round_id: RoundId::new(), home_team_id: home_id.clone(), away_team_id: away_id,

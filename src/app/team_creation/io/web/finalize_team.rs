@@ -47,7 +47,7 @@ pub async fn finalize_team(
     Path((space_id, team_id)): Path<(String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let Some(user) = auth_session.user else {
+    let Some(_user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
 
@@ -56,7 +56,7 @@ pub async fn finalize_team(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let mut team = match state.team_creation.roster_repository.find_by_id(&team_entity_id).await {
+    let team = match state.team_creation.roster_repository.find_by_id(&team_entity_id).await {
         Ok(Some(t)) => t,
         Ok(None)    => return StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
@@ -233,7 +233,7 @@ pub async fn post_finalize_team(
     Path((space_id, team_id)): Path<(String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let Some(user) = auth_session.user else {
+    let Some(_user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
 

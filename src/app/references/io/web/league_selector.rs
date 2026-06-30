@@ -1,4 +1,3 @@
-use crate::app::references::domain::models::League;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Query, State};

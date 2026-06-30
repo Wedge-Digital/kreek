@@ -1,4 +1,4 @@
-use crate::app::competitions::domain::competition_rules::{Activated, CompetitionRules};
+use crate::app::competitions::domain::competition_rules::CompetitionRules;
 use crate::app::competitions::domain::season_repository_port::{
     ISeasonRepository, SeasonRepositoryError,
 };
@@ -56,7 +56,7 @@ mod tests {
     use super::*;
     use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
     use crate::app::competitions::domain::competition_rules::{
-        DefensiveBonus, OffensiveBonus, RankingPoints, RankingRules, TdDiff, TierRule,
+        Activated, DefensiveBonus, OffensiveBonus, RankingPoints, RankingRules, TdDiff, TierRule,
     };
     use crate::app::shared_kernel::tier::{CreationBudget, StartingXp, TierName};
     use crate::app::competitions::domain::competition_season::CompetitionSeason;

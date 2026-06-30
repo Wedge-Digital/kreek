@@ -2,7 +2,7 @@ use crate::app::shared_kernel::common_types::{SpaceId};
 use crate::common::initials::initials;
 use crate::state::AppState;
 use askama::Template;
-use axum::extract::{Path, Query, State};
+use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
