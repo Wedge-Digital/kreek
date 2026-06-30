@@ -1,4 +1,4 @@
-use crate::app::match_report::ports::IPlayerDataPort;
+use crate::app::match_report::ports::{IPlayerDataPort, PositionCountDto};
 use crate::app::players::ports::IPlayerProjectionRepository;
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -36,5 +36,23 @@ impl IPlayerDataPort for PlayerDataAdapter {
     async fn find_player_position(&self, player_id: &str) -> Option<String> {
         let player = self.player_projection_repo.find_by_id(player_id).await.ok()??;
         Some(player.position_name)
+    }
+
+    async fn find_player_counts_by_position(&self, team_id: &str) -> Vec<PositionCountDto> {
+        use crate::app::players::domain::player::TeamId;
+        let tid = TeamId(team_id.to_string());
+        let players = self
+            .player_projection_repo
+            .find_by_team_id(&tid)
+            .await
+            .unwrap_or_default();
+        let mut counts: std::collections::HashMap<String, u8> = std::collections::HashMap::new();
+        for p in &players {
+            *counts.entry(p.roster_line_id.clone()).or_insert(0) += 1;
+        }
+        counts
+            .into_iter()
+            .map(|(position_uid, count)| PositionCountDto { position_uid, count })
+            .collect()
     }
 }

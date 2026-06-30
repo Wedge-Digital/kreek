@@ -5,6 +5,7 @@ pub trait IPlayerDataPort: Send + Sync {
     async fn count_available_players(&self, team_id: &str) -> Result<usize, String>;
     async fn find_player_display(&self, player_id: &str) -> Option<String>;
     async fn find_player_position(&self, player_id: &str) -> Option<String>;
+    async fn find_player_counts_by_position(&self, team_id: &str) -> Vec<PositionCountDto>;
 }
 
 #[async_trait]
@@ -58,10 +59,25 @@ pub trait ITeamDataPort: Send + Sync {
     async fn find_team_treasury(&self, team_id: &str) -> Option<u32>;
 
     async fn find_journalier_position(&self, team_id: &str) -> Option<JournalierPositionDto>;
+
+    async fn find_roster_positions(&self, team_id: &str) -> Vec<RosterPositionDto>;
 }
 
 #[derive(Debug)]
 pub struct JournalierPositionDto {
     pub position_uid: String,
     pub position_name: String,
+}
+
+pub struct RosterPositionDto {
+    pub position_uid:  String,
+    pub position_name: String,
+    pub base_cost:     u32,
+    pub max_qty:       u8,
+    pub is_journalier: bool,
+}
+
+pub struct PositionCountDto {
+    pub position_uid: String,
+    pub count:        u8,
 }
