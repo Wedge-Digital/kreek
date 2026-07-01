@@ -1,6 +1,32 @@
 use crate::app::competitions::domain::match_day::{MatchDay, Pairing};
 use async_trait::async_trait;
 
+pub struct PairingDisplayDto {
+    pub pairing_id: String,
+    pub round_id: String,
+    pub round_name: String,
+    pub round_position: i32,
+    pub round_date_start: Option<String>,
+    pub round_date_end: Option<String>,
+    pub round_day_type: String,
+    pub home_team_name: String,
+    pub home_roster_name: String,
+    pub home_coach_name: String,
+    pub home_logo_url: Option<String>,
+    pub home_initials: String,
+    pub away_team_name: String,
+    pub away_roster_name: String,
+    pub away_coach_name: String,
+    pub away_logo_url: Option<String>,
+    pub away_initials: String,
+    pub match_status: String,
+    pub home_score: Option<i32>,
+    pub away_score: Option<i32>,
+    pub home_casualties: Option<i32>,
+    pub away_casualties: Option<i32>,
+    pub match_report_url: Option<String>,
+}
+
 #[derive(Debug)]
 pub enum MatchDayRepositoryError {
     Database(String),
@@ -62,4 +88,18 @@ pub trait IMatchDayRepository: Send + Sync {
         season_id: &str,
         entries: &[(String, String, String, Option<String>, Option<String>)],
     ) -> Result<(), MatchDayRepositoryError>;
+
+    async fn list_resultats(
+        &self,
+        season_id: &str,
+        cursor_position: Option<i32>,
+        limit_rounds: u32,
+    ) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError>;
+
+    async fn list_calendrier(
+        &self,
+        season_id: &str,
+        cursor_position: Option<i32>,
+        limit_rounds: u32,
+    ) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError>;
 }

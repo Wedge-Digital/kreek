@@ -2,7 +2,7 @@ use crate::app::competitions::domain::match_day::{
     MatchDay, MatchDayName, MatchDayPosition, MatchDayType, Pairing,
 };
 use crate::app::competitions::domain::match_day_repository_port::{
-    IMatchDayRepository, MatchDayRepositoryError,
+    IMatchDayRepository, MatchDayRepositoryError, PairingDisplayDto,
 };
 use crate::app::shared_kernel::common_types::{MatchId, PairingId, SeasonId};
 use crate::app::shared_kernel::date_string::DateString;
@@ -226,6 +226,38 @@ impl IMatchDayRepository for MatchDayRepository {
         Ok(())
     }
 
+    async fn list_resultats(
+        &self,
+        season_id: &str,
+        cursor_position: Option<i32>,
+        limit_rounds: u32,
+    ) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> {
+        list_from_projection(
+            &self.pool,
+            season_id,
+            cursor_position,
+            limit_rounds,
+            include_str!("sql/match_days/list_resultats.sql"),
+        )
+        .await
+    }
+
+    async fn list_calendrier(
+        &self,
+        season_id: &str,
+        cursor_position: Option<i32>,
+        limit_rounds: u32,
+    ) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> {
+        list_from_projection(
+            &self.pool,
+            season_id,
+            cursor_position,
+            limit_rounds,
+            include_str!("sql/match_days/list_calendrier.sql"),
+        )
+        .await
+    }
+
     async fn ensure_match_days_from_structure(
         &self,
         season_id: &str,
@@ -254,6 +286,80 @@ impl IMatchDayRepository for MatchDayRepository {
         }
         Ok(())
     }
+}
+
+#[derive(sqlx::FromRow)]
+struct ProjectionRow {
+    pairing_id: String,
+    round_id: String,
+    round_name: String,
+    round_position: i32,
+    round_date_start: Option<String>,
+    round_date_end: Option<String>,
+    round_day_type: String,
+    home_team_name: String,
+    home_roster_name: String,
+    home_coach_name: String,
+    home_logo_url: Option<String>,
+    home_initials: String,
+    away_team_name: String,
+    away_roster_name: String,
+    away_coach_name: String,
+    away_logo_url: Option<String>,
+    away_initials: String,
+    match_status: String,
+    home_score: Option<i32>,
+    away_score: Option<i32>,
+    home_casualties: Option<i32>,
+    away_casualties: Option<i32>,
+    match_report_url: Option<String>,
+}
+
+impl From<ProjectionRow> for PairingDisplayDto {
+    fn from(r: ProjectionRow) -> Self {
+        Self {
+            pairing_id: r.pairing_id,
+            round_id: r.round_id,
+            round_name: r.round_name,
+            round_position: r.round_position,
+            round_date_start: r.round_date_start,
+            round_date_end: r.round_date_end,
+            round_day_type: r.round_day_type,
+            home_team_name: r.home_team_name,
+            home_roster_name: r.home_roster_name,
+            home_coach_name: r.home_coach_name,
+            home_logo_url: r.home_logo_url,
+            home_initials: r.home_initials,
+            away_team_name: r.away_team_name,
+            away_roster_name: r.away_roster_name,
+            away_coach_name: r.away_coach_name,
+            away_logo_url: r.away_logo_url,
+            away_initials: r.away_initials,
+            match_status: r.match_status,
+            home_score: r.home_score,
+            away_score: r.away_score,
+            home_casualties: r.home_casualties,
+            away_casualties: r.away_casualties,
+            match_report_url: r.match_report_url,
+        }
+    }
+}
+
+async fn list_from_projection(
+    pool: &PgPool,
+    season_id: &str,
+    cursor_position: Option<i32>,
+    _limit_rounds: u32,
+    sql: &str,
+) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> {
+    let rows = sqlx::query_as::<_, ProjectionRow>(sql)
+        .bind(season_id)
+        .bind(cursor_position)
+        .fetch_all(pool)
+        .await
+        .map_err(db_err)?;
+
+    Ok(rows.into_iter().map(Into::into).collect())
 }
 
 impl MatchDayRepository {
