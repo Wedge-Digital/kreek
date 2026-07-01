@@ -16,7 +16,7 @@ impl PlayerCountAdapter {
 impl IPlayerCountPort for PlayerCountAdapter {
     async fn count_for_team(&self, team_id: &str) -> u32 {
         let row: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM players_projection WHERE team_id = $1",
+            "SELECT COUNT(*) FROM players_proj WHERE team_id = $1",
         )
         .bind(team_id)
         .fetch_one(&self.pool)

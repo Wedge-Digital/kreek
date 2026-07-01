@@ -24,7 +24,7 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
         let rows = sqlx::query(
             "SELECT player_id, team_id, space_id, position_name, roster_line_id,
                     personal_name, jersey, base_skills, acquired_skills, spp, value_kpo
-             FROM players_projection
+             FROM players_proj
              WHERE team_id = $1
              ORDER BY jersey NULLS LAST, player_id",
         )
@@ -63,7 +63,7 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
         let row = sqlx::query(
             "SELECT player_id, team_id, space_id, position_name, roster_line_id,
                     personal_name, jersey, base_skills, acquired_skills, spp, value_kpo
-             FROM players_projection WHERE player_id = $1",
+             FROM players_proj WHERE player_id = $1",
         )
         .bind(player_id)
         .fetch_optional(&self.pool)

@@ -33,7 +33,7 @@ impl TeamRepository {
                 ..
             } => {
                 sqlx::query(
-                    "INSERT INTO team_projection (team_id, space_id, competition_id, season_id, team_name, coach_id, coach_name, roster_name, logo_url, team_value, status, game_phase)
+                    "INSERT INTO team_proj (team_id, space_id, competition_id, season_id, team_name, coach_id, coach_name, roster_name, logo_url, team_value, status, game_phase)
                      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'PendingEnrollment', NULL)
                      ON CONFLICT (team_id) DO UPDATE SET
                        team_name = EXCLUDED.team_name,
@@ -66,7 +66,7 @@ impl TeamRepository {
                 ..
             } => {
                 sqlx::query(
-                    "UPDATE team_projection
+                    "UPDATE team_proj
                      SET status = 'Enrolled', competition_id = $2, season_id = $3, game_phase = 'ReadyToPlay', updated_at = now()
                      WHERE team_id = $1",
                 )
@@ -79,7 +79,7 @@ impl TeamRepository {
             }
             TeamDomainEvent::MatchReportingStarted { .. } => {
                 sqlx::query(
-                    "UPDATE team_projection SET game_phase = 'MatchReporting', updated_at = now() WHERE team_id = $1",
+                    "UPDATE team_proj SET game_phase = 'MatchReporting', updated_at = now() WHERE team_id = $1",
                 )
                 .bind(team_id)
                 .execute(&mut **tx)
@@ -88,7 +88,7 @@ impl TeamRepository {
             }
             TeamDomainEvent::TeamDismissed => {
                 sqlx::query(
-                    "UPDATE team_projection SET status = 'Dismissed', updated_at = now() WHERE team_id = $1",
+                    "UPDATE team_proj SET status = 'Dismissed', updated_at = now() WHERE team_id = $1",
                 )
                 .bind(team_id)
                 .execute(&mut **tx)
@@ -97,7 +97,7 @@ impl TeamRepository {
             }
             TeamDomainEvent::TeamEnrollmentRejected { .. } => {
                 sqlx::query(
-                    "UPDATE team_projection SET status = 'Rejected', updated_at = now() WHERE team_id = $1",
+                    "UPDATE team_proj SET status = 'Rejected', updated_at = now() WHERE team_id = $1",
                 )
                 .bind(team_id)
                 .execute(&mut **tx)
@@ -194,7 +194,7 @@ impl ITeamRepository for TeamRepository {
 
         let rows = sqlx::query_as::<_, Row>(
             "SELECT team_id, team_name, coach_name, roster_name, status
-             FROM team_projection
+             FROM team_proj
              WHERE season_id = $1 AND status = $2
              ORDER BY updated_at DESC",
         )
@@ -234,7 +234,7 @@ impl ITeamRepository for TeamRepository {
 
         let rows = sqlx::query_as::<_, Row>(
             "SELECT team_id, team_name, coach_id, coach_name, roster_name, logo_url, team_value, game_phase
-             FROM team_projection
+             FROM team_proj
              WHERE season_id = $1 AND status = 'Enrolled'
              ORDER BY team_name ASC",
         )

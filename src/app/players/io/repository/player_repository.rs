@@ -75,7 +75,7 @@ pub async fn upsert_player_projection(
             let base_json = serde_json::to_value(&skill_ids).map_err(RepositoryError::Serialization)?;
 
             sqlx::query(
-                "INSERT INTO players_projection
+                "INSERT INTO players_proj
                      (player_id, team_id, space_id, position_name, roster_line_id,
                       personal_name, jersey, base_skills, acquired_skills, spp, value_kpo, version)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, '[]'::jsonb, $9, $10, 1)
@@ -112,7 +112,7 @@ pub async fn upsert_player_projection(
             let acq_json = serde_json::to_value(&acq).map_err(RepositoryError::Serialization)?;
 
             sqlx::query(
-                "UPDATE players_projection
+                "UPDATE players_proj
                  SET acquired_skills = acquired_skills || jsonb_build_array($1::jsonb),
                      value_kpo = value_kpo + $2,
                      version   = version + 1

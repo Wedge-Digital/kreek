@@ -45,7 +45,7 @@ impl MatchReportRepository {
                     }
                 };
                 sqlx::query(
-                    "INSERT INTO match_report_projection
+                    "INSERT INTO match_report_proj
                         (match_report_id, space_id, competition_id, season_id, round_id,
                          home_team_id, away_team_id, created_by, origin, phase, version, pairing_id)
                      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'Draft', $10, $11)
@@ -72,7 +72,7 @@ impl MatchReportRepository {
                 ..
             } => {
                 sqlx::query(
-                    "UPDATE match_report_projection
+                    "UPDATE match_report_proj
                      SET home_team_id = $2, away_team_id = $3, version = $4, updated_at = now()
                      WHERE match_report_id = $1",
                 )
@@ -86,7 +86,7 @@ impl MatchReportRepository {
             }
             MatchReportDomainEvent::SelectionConfirmed { .. } => {
                 sqlx::query(
-                    "UPDATE match_report_projection
+                    "UPDATE match_report_proj
                      SET phase = 'PreMatch', version = $2, updated_at = now()
                      WHERE match_report_id = $1",
                 )
@@ -99,7 +99,7 @@ impl MatchReportRepository {
             MatchReportDomainEvent::FanFactorRecorded { .. } => {}
             MatchReportDomainEvent::TeamValuesRecorded { home_team_value, away_team_value, .. } => {
                 sqlx::query(
-                    "UPDATE match_report_projection
+                    "UPDATE match_report_proj
                      SET home_team_value = $2, away_team_value = $3, version = $4, updated_at = now()
                      WHERE match_report_id = $1",
                 )
@@ -114,7 +114,7 @@ impl MatchReportRepository {
             MatchReportDomainEvent::InducementsRecorded { team_id, purchases, .. } => {
                 let json = serde_json::to_value(purchases).map_err(RepositoryError::Serialization)?;
                 let is_home = sqlx::query(
-                    "SELECT home_team_id FROM match_report_projection WHERE match_report_id = $1",
+                    "SELECT home_team_id FROM match_report_proj WHERE match_report_id = $1",
                 )
                 .bind(match_report_id)
                 .fetch_one(&mut **tx)
@@ -123,7 +123,7 @@ impl MatchReportRepository {
                 .map(|r| r.get::<String, _>("home_team_id") == team_id.to_string())?;
                 let col = if is_home { "home_inducements" } else { "away_inducements" };
                 sqlx::query(&format!(
-                    "UPDATE match_report_projection SET {col} = $2, version = $3, updated_at = now() WHERE match_report_id = $1"
+                    "UPDATE match_report_proj SET {col} = $2, version = $3, updated_at = now() WHERE match_report_id = $1"
                 ))
                 .bind(match_report_id)
                 .bind(&json)
@@ -138,7 +138,7 @@ impl MatchReportRepository {
                 let is_home = is_home_team(tx, match_report_id, &team_id.to_string()).await?;
                 let col = if is_home { "home_temp_players" } else { "away_temp_players" };
                 sqlx::query(&format!(
-                    "UPDATE match_report_projection SET {col} = $2, version = $3, updated_at = now() WHERE match_report_id = $1"
+                    "UPDATE match_report_proj SET {col} = $2, version = $3, updated_at = now() WHERE match_report_id = $1"
                 ))
                 .bind(match_report_id)
                 .bind(&json)
@@ -151,7 +151,7 @@ impl MatchReportRepository {
                 let is_home = is_home_team(tx, match_report_id, &team_id.to_string()).await?;
                 let col = if is_home { "home_temp_players" } else { "away_temp_players" };
                 sqlx::query(&format!(
-                    "UPDATE match_report_projection SET {col} = '[]'::jsonb, version = $2, updated_at = now() WHERE match_report_id = $1"
+                    "UPDATE match_report_proj SET {col} = '[]'::jsonb, version = $2, updated_at = now() WHERE match_report_id = $1"
                 ))
                 .bind(match_report_id)
                 .bind(version as i64)
@@ -199,7 +199,7 @@ impl MatchReportRepository {
             }
             MatchReportDomainEvent::MatchReportCancelled { .. } => {
                 sqlx::query(
-                    "UPDATE match_report_projection
+                    "UPDATE match_report_proj
                      SET phase = 'Cancelled', version = $2, updated_at = now()
                      WHERE match_report_id = $1",
                 )
@@ -220,7 +220,7 @@ async fn is_home_team(
     team_id: &str,
 ) -> Result<bool, RepositoryError> {
     let row = sqlx::query(
-        "SELECT home_team_id FROM match_report_projection WHERE match_report_id = $1",
+        "SELECT home_team_id FROM match_report_proj WHERE match_report_id = $1",
     )
     .bind(match_report_id)
     .fetch_one(&mut **tx)
@@ -346,7 +346,7 @@ impl IMatchReportRepository for MatchReportRepository {
         pairing_id: &str,
     ) -> Result<Option<String>, RepositoryError> {
         let row = sqlx::query(
-            "SELECT match_report_id FROM match_report_projection
+            "SELECT match_report_id FROM match_report_proj
              WHERE pairing_id = $1
              LIMIT 1",
         )
@@ -365,7 +365,7 @@ impl IMatchReportRepository for MatchReportRepository {
         team_b: &str,
     ) -> Result<Option<String>, RepositoryError> {
         let row = sqlx::query(
-            "SELECT match_report_id FROM match_report_projection
+            "SELECT match_report_id FROM match_report_proj
              WHERE round_id = $1
                AND phase != 'Cancelled'
                AND (
@@ -478,7 +478,7 @@ mod tests {
             .execute(&pool)
             .await
             .ok();
-        sqlx::query("DELETE FROM match_report_projection WHERE match_report_id = $1")
+        sqlx::query("DELETE FROM match_report_proj WHERE match_report_id = $1")
             .bind(&mr_id)
             .execute(&pool)
             .await
@@ -507,7 +507,7 @@ mod tests {
             .execute(&pool)
             .await
             .ok();
-        sqlx::query("DELETE FROM match_report_projection WHERE match_report_id = $1")
+        sqlx::query("DELETE FROM match_report_proj WHERE match_report_id = $1")
             .bind(&mr_id)
             .execute(&pool)
             .await
