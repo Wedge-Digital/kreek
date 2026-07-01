@@ -177,7 +177,7 @@ async fn render_full_page(
     };
     let _ = (journees, next_cursor);
     full_page(pb, space_id, competition_id, season_id, "calendrier", false,
-        vec![], vec![], vec![], vec![], vec![], vec![])
+        vec![], vec![], vec![], vec![], vec![])
 }
 
 #[cfg(test)]

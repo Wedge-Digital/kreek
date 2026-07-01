@@ -16,6 +16,10 @@ pub mod path {
         "/app/{space_id}/competitions/{competition_id}/{season_id}/standings";
     pub const COMPETITION_TAB_MATCHES: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/matches";
+    pub const COMPETITION_TAB_RESULTATS: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/resultats";
+    pub const COMPETITION_TAB_CALENDRIER: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/calendrier";
     pub const COMPETITION_TAB_TEAMS: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/teams";
     pub const COMPETITION_TAB_STATS: &str =
@@ -127,6 +131,18 @@ impl Routes {
     }
     pub fn competition_tab_matches(&self, sid: &str, cid: &str, season_id: &str) -> String {
         path::COMPETITION_TAB_MATCHES
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn competition_tab_resultats(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_TAB_RESULTATS
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn competition_tab_calendrier(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_TAB_CALENDRIER
             .replace("{space_id}", sid)
             .replace("{competition_id}", cid)
             .replace("{season_id}", season_id)

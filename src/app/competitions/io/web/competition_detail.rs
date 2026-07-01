@@ -21,32 +21,6 @@ pub struct StandingRow {
     pub points: u32,
 }
 
-pub struct MatchEntry {
-    pub home: String,
-    pub home_roster: String,
-    pub home_coach: String,
-    pub home_logo: Option<String>,
-    pub home_initials: String,
-    pub away: String,
-    pub away_roster: String,
-    pub away_coach: String,
-    pub away_logo: Option<String>,
-    pub away_initials: String,
-    pub home_score: u32,
-    pub away_score: u32,
-    pub home_casualties: u32,
-    pub away_casualties: u32,
-    pub date: String,
-    pub is_upcoming: bool,
-    pub is_in_progress: bool,
-    pub match_report_url: Option<String>,
-}
-
-pub struct Journee {
-    pub label: String,
-    pub matches: Vec<MatchEntry>,
-}
-
 pub struct TeamCard {
     pub name: String,
     pub logo: Option<String>,
@@ -155,115 +129,6 @@ fn mock_standings() -> Vec<StandingRow> {
             draws: 1,
             losses: 7,
             points: 1,
-        },
-    ]
-}
-
-fn mock_journees() -> Vec<Journee> {
-    vec![
-        Journee {
-            label: "Journée 9".into(),
-            matches: vec![
-                MatchEntry {
-                    home: "Les Guerriers du Nord".into(), home_roster: "Nordiques".into(),
-                    home_coach: "CoachAlpha".into(), home_logo: None, home_initials: "GN".into(),
-                    away: "Waaagh! FC".into(), away_roster: "Orques".into(),
-                    away_coach: "WaaghMaster".into(), away_logo: None, away_initials: "WF".into(),
-                    home_score: 0, away_score: 0, home_casualties: 0, away_casualties: 0,
-                    date: "25 mai".into(), is_upcoming: true, is_in_progress: false, match_report_url: None,
-                },
-                MatchEntry {
-                    home: "Chaos United".into(), home_roster: "Chaos".into(),
-                    home_coach: "ChaosBoss".into(), home_logo: None, home_initials: "CU".into(),
-                    away: "Elfes Sylvains SC".into(), away_roster: "Elfes Sylvains".into(),
-                    away_coach: "ElveRunner".into(), away_logo: None, away_initials: "ES".into(),
-                    home_score: 0, away_score: 0, home_casualties: 0, away_casualties: 0,
-                    date: "25 mai".into(), is_upcoming: true, is_in_progress: false, match_report_url: None,
-                },
-                MatchEntry {
-                    home: "Nains de Fer".into(), home_roster: "Nains".into(),
-                    home_coach: "IronBeard".into(), home_logo: None, home_initials: "NF".into(),
-                    away: "Orques Sauvages".into(), away_roster: "Orques Sauvages".into(),
-                    away_coach: "GreenFist".into(), away_logo: None, away_initials: "OS".into(),
-                    home_score: 0, away_score: 0, home_casualties: 0, away_casualties: 0,
-                    date: "26 mai".into(), is_upcoming: true, is_in_progress: false, match_report_url: None,
-                },
-            ],
-        },
-        Journee {
-            label: "Journée 8".into(),
-            matches: vec![
-                MatchEntry {
-                    home: "Les Guerriers du Nord".into(), home_roster: "Nordiques".into(),
-                    home_coach: "CoachAlpha".into(), home_logo: None, home_initials: "GN".into(),
-                    away: "Chaos United".into(), away_roster: "Chaos".into(),
-                    away_coach: "ChaosBoss".into(), away_logo: None, away_initials: "CU".into(),
-                    home_score: 2, away_score: 1, home_casualties: 3, away_casualties: 1,
-                    date: "18 mai".into(), is_upcoming: false, is_in_progress: false, match_report_url: None,
-                },
-                MatchEntry {
-                    home: "Waaagh! FC".into(), home_roster: "Orques".into(),
-                    home_coach: "WaaghMaster".into(), home_logo: None, home_initials: "WF".into(),
-                    away: "Elfes Sylvains SC".into(), away_roster: "Elfes Sylvains".into(),
-                    away_coach: "ElveRunner".into(), away_logo: None, away_initials: "ES".into(),
-                    home_score: 0, away_score: 0, home_casualties: 0, away_casualties: 0,
-                    date: "18 mai".into(), is_upcoming: false, is_in_progress: true,
-                    match_report_url: Some("/app/space/match-report/01JXYZ/step1".into()),
-                },
-                MatchEntry {
-                    home: "Nains de Fer".into(), home_roster: "Nains".into(),
-                    home_coach: "IronBeard".into(), home_logo: None, home_initials: "NF".into(),
-                    away: "Skavens du Sous-sol".into(), away_roster: "Skavens".into(),
-                    away_coach: "SkavRunner".into(), away_logo: None, away_initials: "SD".into(),
-                    home_score: 1, away_score: 1, home_casualties: 2, away_casualties: 2,
-                    date: "19 mai".into(), is_upcoming: false, is_in_progress: false, match_report_url: None,
-                },
-                MatchEntry {
-                    home: "Humains Ordinaires".into(), home_roster: "Humains".into(),
-                    home_coach: "HumanCoach".into(), home_logo: None, home_initials: "HO".into(),
-                    away: "Halflings United".into(), away_roster: "Halflings".into(),
-                    away_coach: "TinyCoach".into(), away_logo: None, away_initials: "HU".into(),
-                    home_score: 2, away_score: 0, home_casualties: 1, away_casualties: 4,
-                    date: "19 mai".into(), is_upcoming: false, is_in_progress: false, match_report_url: None,
-                },
-            ],
-        },
-        Journee {
-            label: "Journée 7".into(),
-            matches: vec![
-                MatchEntry {
-                    home: "Chaos United".into(), home_roster: "Chaos".into(),
-                    home_coach: "ChaosBoss".into(), home_logo: None, home_initials: "CU".into(),
-                    away: "Waaagh! FC".into(), away_roster: "Orques".into(),
-                    away_coach: "WaaghMaster".into(), away_logo: None, away_initials: "WF".into(),
-                    home_score: 1, away_score: 2, home_casualties: 4, away_casualties: 2,
-                    date: "11 mai".into(), is_upcoming: false, is_in_progress: false, match_report_url: None,
-                },
-                MatchEntry {
-                    home: "Elfes Sylvains SC".into(), home_roster: "Elfes Sylvains".into(),
-                    home_coach: "ElveRunner".into(), home_logo: None, home_initials: "ES".into(),
-                    away: "Les Guerriers du Nord".into(), away_roster: "Nordiques".into(),
-                    away_coach: "CoachAlpha".into(), away_logo: None, away_initials: "GN".into(),
-                    home_score: 0, away_score: 3, home_casualties: 0, away_casualties: 1,
-                    date: "11 mai".into(), is_upcoming: false, is_in_progress: false, match_report_url: None,
-                },
-                MatchEntry {
-                    home: "Nécromants XI".into(), home_roster: "Nécromants".into(),
-                    home_coach: "NecroMind".into(), home_logo: None, home_initials: "NX".into(),
-                    away: "Nains de Fer".into(), away_roster: "Nains".into(),
-                    away_coach: "IronBeard".into(), away_logo: None, away_initials: "NF".into(),
-                    home_score: 0, away_score: 2, home_casualties: 1, away_casualties: 3,
-                    date: "12 mai".into(), is_upcoming: false, is_in_progress: false, match_report_url: None,
-                },
-                MatchEntry {
-                    home: "Orques Sauvages".into(), home_roster: "Orques Sauvages".into(),
-                    home_coach: "GreenFist".into(), home_logo: None, home_initials: "OS".into(),
-                    away: "Humains Ordinaires".into(), away_roster: "Humains".into(),
-                    away_coach: "HumanCoach".into(), away_logo: None, away_initials: "HO".into(),
-                    home_score: 1, away_score: 1, home_casualties: 3, away_casualties: 1,
-                    date: "12 mai".into(), is_upcoming: false, is_in_progress: false, match_report_url: None,
-                },
-            ],
         },
     ]
 }
@@ -508,7 +373,6 @@ pub struct CompetitionDetailTemplate {
     pub active_tab: &'static str,
     // tab content (only one is populated per request)
     pub standings: Vec<StandingRow>,
-    pub journees: Vec<Journee>,
     pub top_tds: Vec<StatRow>,
     pub top_casualties: Vec<StatRow>,
     pub flop_tds: Vec<StatRow>,
@@ -533,12 +397,6 @@ pub struct StandingsTabTemplate {
 }
 
 #[derive(Template)]
-#[template(path = "competition-tab-matches.html")]
-pub struct MatchesTabTemplate {
-    pub journees: Vec<Journee>,
-}
-
-#[derive(Template)]
 #[template(path = "competition-tab-teams.html")]
 pub struct TeamsTabTemplate {
     pub app_routes: AppRoutes,
@@ -556,14 +414,6 @@ pub struct StatsTabTemplate {
 }
 
 impl IntoResponse for StandingsTabTemplate {
-    fn into_response(self) -> Response {
-        match self.render() {
-            Ok(h) => Html(h).into_response(),
-            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-        }
-    }
-}
-impl IntoResponse for MatchesTabTemplate {
     fn into_response(self) -> Response {
         match self.render() {
             Ok(h) => Html(h).into_response(),
@@ -654,7 +504,6 @@ pub(crate) fn full_page(
     active_tab: &'static str,
     is_admin: bool,
     standings: Vec<StandingRow>,
-    journees: Vec<Journee>,
     top_tds: Vec<StatRow>,
     top_casualties: Vec<StatRow>,
     flop_tds: Vec<StatRow>,
@@ -673,7 +522,6 @@ pub(crate) fn full_page(
         is_admin,
         active_tab,
         standings,
-        journees,
         top_tds,
         top_casualties,
         flop_tds,
@@ -723,7 +571,6 @@ pub async fn get_competition_detail(
         is_admin,
         active_tab: "standings",
         standings: mock_standings(),
-        journees: vec![],
         top_tds: vec![],
         top_casualties: vec![],
         flop_tds: vec![],
@@ -763,46 +610,6 @@ pub async fn get_tab_standings(
         "standings",
         false,
         mock_standings(),
-        vec![],
-        vec![],
-        vec![],
-        vec![],
-        vec![],
-    )
-}
-
-pub async fn get_tab_matches(
-    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
-    State(state): State<AppState>,
-    headers: HeaderMap,
-) -> impl IntoResponse {
-    if headers.contains_key("hx-request") {
-        return MatchesTabTemplate {
-            journees: mock_journees(),
-        }
-        .into_response();
-    }
-    let cid = match CompetitionId::try_new(&competition_id) {
-        Ok(id) => id,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-    let sid = match SeasonId::try_new(&season_id) {
-        Ok(id) => id,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-    let pb = match load_page_base(&cid, &sid, &state, &competition_id).await {
-        Ok(v) => v,
-        Err(r) => return r,
-    };
-    full_page(
-        pb,
-        space_id,
-        competition_id,
-        season_id,
-        "matches",
-        false,
-        vec![],
-        mock_journees(),
         vec![],
         vec![],
         vec![],
@@ -847,7 +654,6 @@ pub async fn get_tab_teams(
         vec![],
         vec![],
         vec![],
-        vec![],
     )
 }
 
@@ -884,7 +690,6 @@ pub async fn get_tab_stats(
         season_id,
         "stats",
         false,
-        vec![],
         vec![],
         mock_top_tds(),
         mock_top_casualties(),

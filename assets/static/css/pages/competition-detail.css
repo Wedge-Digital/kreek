@@ -72,7 +72,13 @@
 .match-side         { display: flex; align-items: center; gap: 10px; }
 .match-side--away   { justify-content: flex-end; }
 
-.match-team-logo-sm { width: 72px; height: 72px; border-radius: 10px; background: var(--dark-5); flex-shrink: 0; }
+.match-team-logo-sm { width: 72px; height: 72px; border-radius: 10px; background: var(--dark-5); flex-shrink: 0; overflow: hidden; }
+.match-team-logo-sm--img { object-fit: cover; display: block; width: 100%; height: 100%; }
+.match-team-logo-sm--initials {
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-size: 18px; font-weight: 900; color: var(--white);
+  background: linear-gradient(135deg, var(--dark-2) 0%, var(--dark-3) 100%);
+}
 
 .match-team-info         { display: flex; flex-direction: column; gap: 2px; }
 .match-team-info--right  { text-align: right; }
@@ -87,6 +93,34 @@
 .match-cas-num     { font-size: var(--text-tiny); color: var(--dark-3); min-width: 14px; text-align: center; }
 .match-cas-sep     { font-size: var(--text-tiny); color: var(--dark-4); }
 .match-date        { font-size: var(--text-tiny); color: var(--dark-4); margin-top: 2px; }
+
+/* Match statuts */
+.match-widget--in-progress { background: rgba(0, 48, 73, 0.02); }
+
+.match-status-badge {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  border-radius: 6px; padding: 3px 10px;
+}
+.match-status-badge--upcoming {
+  color: var(--dark-3); background: var(--dark-6); border: 1px solid var(--dark-5);
+}
+.match-status-badge--in-progress {
+  color: var(--white); background: var(--main-blue);
+  animation: match-pulse 2s ease-in-out infinite;
+}
+@keyframes match-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.7; }
+}
+
+.match-in-progress-block { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+
+.match-report-link {
+  font-size: var(--text-tiny); font-weight: 600; color: var(--main-blue);
+  border: 1.5px solid var(--main-blue); border-radius: 6px;
+  padding: 3px 10px; text-decoration: none; transition: all 0.15s; white-space: nowrap;
+}
+.match-report-link:hover { background: var(--main-blue); color: var(--white); }
 
 /* Teams grid */
 .teams-grid {
@@ -135,3 +169,43 @@
   color: var(--dark-3); font-size: var(--text-small); text-align: center;
 }
 .teams-empty { grid-column: 1 / -1; }
+
+/* Calendrier & Résultats — journée */
+.cal-journee        { background: var(--white); border-radius: 10px; overflow: hidden; margin-bottom: var(--p1); }
+.cal-journee-header {
+  padding: 12px var(--p2); border-bottom: 2px solid var(--dark-5);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.cal-journee-meta   { display: flex; align-items: center; gap: 12px; }
+
+/* Calendrier — ligne de match */
+.cal-row {
+  display: grid; grid-template-columns: 1fr 60px 1fr;
+  align-items: center; gap: 0;
+  padding: 10px var(--p2); border-bottom: 1px solid var(--dark-6);
+}
+.cal-row:last-child { border-bottom: none; }
+
+.cal-team       { display: flex; align-items: center; gap: 8px; }
+.cal-team-home  { justify-content: flex-start; }
+.cal-team-away  { justify-content: flex-end; }
+.cal-team-name  { font-size: var(--text-small); font-weight: 500; color: var(--dark-1); }
+.cal-team-away .cal-team-name { text-align: right; }
+
+.cal-logo           { width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0; }
+.cal-logo--img      { object-fit: cover; }
+.cal-logo--initials {
+  background: linear-gradient(135deg, var(--dark-2) 0%, var(--dark-3) 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-size: 11px; font-weight: 900; color: var(--white);
+}
+
+.cal-center { display: flex; justify-content: center; }
+.cal-vs     { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-4); letter-spacing: 1px; }
+
+/* Résultats — journées groupées */
+#resultats-list   { display: flex; flex-direction: column; }
+#calendrier-list  { display: flex; flex-direction: column; }
+
+/* Sentinel infinite scroll */
+.scroll-sentinel { height: 1px; }

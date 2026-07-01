@@ -57,12 +57,20 @@
                      hx-swap="innerHTML"
                      hx-push-url="true"
                      onclick="setActiveTab(this)">Classement</div>
-                <div class="tab {% if active_tab == "matches" %}active{% endif %}"
-                     hx-get="{{ app_routes.competitions.competition_tab_matches(space_id, competition_id, season_id) }}"
+                <div class="tab {% if active_tab == "resultats" %}active{% endif %}"
+                     data-lazy
+                     hx-get="{{ app_routes.competitions.competition_tab_resultats(space_id, competition_id, season_id) }}"
                      hx-target="#tab-content"
                      hx-swap="innerHTML"
                      hx-push-url="true"
-                     onclick="setActiveTab(this)">Matchs</div>
+                     onclick="setActiveTab(this)">Résultats</div>
+                <div class="tab {% if active_tab == "calendrier" %}active{% endif %}"
+                     data-lazy
+                     hx-get="{{ app_routes.competitions.competition_tab_calendrier(space_id, competition_id, season_id) }}"
+                     hx-target="#tab-content"
+                     hx-swap="innerHTML"
+                     hx-push-url="true"
+                     onclick="setActiveTab(this)">Calendrier</div>
                 <div class="tab {% if active_tab == "teams" %}active{% endif %}"
                      hx-get="{{ app_routes.competitions.competition_tab_teams(space_id, competition_id, season_id) }}"
                      hx-target="#tab-content"
@@ -80,11 +88,9 @@
             <div id="tab-content">
                 {% if active_tab == "standings" %}
                 {% include "competition-tab-standings.html" %}
-                {% else if active_tab == "matches" %}
-                {% include "competition-tab-matches.html" %}
                 {% else if active_tab == "teams" %}
                 {% include "competition-tab-teams.html" %}
-                {% else %}
+                {% else if active_tab == "stats" %}
                 {% include "competition-tab-stats.html" %}
                 {% endif %}
             </div>
@@ -97,5 +103,9 @@ function setActiveTab(el) {
     document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
 }
+document.addEventListener('DOMContentLoaded', function () {
+    var lazyTab = document.querySelector('.tabs .tab.active[data-lazy]');
+    if (lazyTab) htmx.trigger(lazyTab, 'click');
+});
 </script>
 {% endblock %}

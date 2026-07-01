@@ -20,9 +20,11 @@ use crate::app::competitions::io::web::admin::schedule_tab::schedule_tab;
 use crate::app::competitions::io::web::admin::schedule_widgets::{
     schedule_round_detail_widget, schedule_sidebar_widget,
 };
+use crate::app::competitions::io::web::calendrier_tab_controller::get_calendrier_tab;
 use crate::app::competitions::io::web::competition_detail::{
-    get_competition_detail, get_tab_matches, get_tab_standings, get_tab_stats, get_tab_teams,
+    get_competition_detail, get_tab_standings, get_tab_stats, get_tab_teams,
 };
+use crate::app::competitions::io::web::resultats_tab_controller::get_resultats_tab;
 use crate::app::competitions::io::web::competition_widget::{
     get_competition_widget, get_competition_widget_detail, get_json_competitions,
     get_json_rounds, get_json_seasons,
@@ -75,7 +77,8 @@ pub fn router() -> Router<AppState> {
             get(get_new_competition_phase_5).post(post_finalize_competition),
         )
         .route(path::COMPETITION_TAB_STANDINGS, get(get_tab_standings))
-        .route(path::COMPETITION_TAB_MATCHES, get(get_tab_matches))
+        .route(path::COMPETITION_TAB_RESULTATS, get(get_resultats_tab))
+        .route(path::COMPETITION_TAB_CALENDRIER, get(get_calendrier_tab))
         .route(path::COMPETITION_TAB_TEAMS, get(get_tab_teams))
         .route(path::COMPETITION_TAB_STATS, get(get_tab_stats))
         .route(path::COMPETITION_WIDGET, get(get_competition_widget))
