@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM competition_match_display_proj WHERE pairing_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "360feac5182bfdc23e3772e3d0e387858cc192ab19c6f77c2365e1108598d9f5"
+}

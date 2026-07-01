@@ -110,7 +110,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
     spaces::context::init_app_event_listeners(&app_event_bus, pool.clone());
     spaces::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
 
-    competitions::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
+    competitions::context::init_listeners(&event_bus, app_event_bus.clone(), pool.clone());
     team_creation::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
     teams::context::init_listeners(&app_event_bus, pool.clone());
     match_report::context::init_listeners(&app_event_bus, pool.clone());

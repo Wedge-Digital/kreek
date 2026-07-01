@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO competition_match_display_proj (\n            pairing_id, season_id, round_id, round_name, round_position,\n            round_date_start, round_date_end, round_day_type,\n            home_team_id, home_team_name, home_roster_name, home_coach_name, home_logo_url, home_initials,\n            away_team_id, away_team_name, away_roster_name, away_coach_name, away_logo_url, away_initials,\n            match_status\n        ) VALUES (\n            $1, $2, $3, $4, $5, $6, $7, $8,\n            $9, $10, $11, $12, $13, $14,\n            $15, $16, $17, $18, $19, $20,\n            'upcoming'\n        ) ON CONFLICT (pairing_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Int4",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b7c877f41f4ed5d71e8de397b1b7b6031e10f6153e616c02d185e3650cf0df6c"
+}
