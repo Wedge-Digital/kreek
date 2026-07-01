@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE competition_match_display_proj\n         SET match_status = 'in_progress',\n             match_report_id = $2,\n             match_report_url = $3\n         WHERE pairing_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4f15098d8662c6496d26273b13052ac410c7fe2607eafcfc600567a54d9e365f"
+}

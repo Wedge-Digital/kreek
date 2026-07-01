@@ -4,6 +4,7 @@ use crate::app::competitions::domain::match_day_repository_port::IMatchDayReposi
 use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
 use crate::app::competitions::ports::ITeamInfoPort;
 use crate::app::competitions::io::app_events::app_event_publisher::competitions_app_event_publisher;
+use crate::app::competitions::io::app_events::match_report_confirmed_listener;
 use crate::app::competitions::io::app_events::pairing_projection_listener;
 use crate::app::competitions::io::repository::competition_repository::CompetitionRepository;
 use crate::app::competitions::io::repository::group_repository::GroupRepository;
@@ -24,8 +25,9 @@ pub struct CompetitionsContext {
 }
 
 pub fn init_listeners(event_bus: &EventBus, app_event_bus: EventBus, pool: PgPool) {
+    pairing_projection_listener::init(event_bus, pool.clone());
+    match_report_confirmed_listener::init(&app_event_bus, pool);
     competitions_app_event_publisher(event_bus, app_event_bus);
-    pairing_projection_listener::init(event_bus, pool);
 }
 
 impl CompetitionsContext {
