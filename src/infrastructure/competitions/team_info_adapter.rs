@@ -29,6 +29,7 @@ impl ITeamInfoPort for TeamInfoAdapter {
                 team_name: r.team_name,
                 coach_name: r.coach_name,
                 roster_name: r.roster_name,
+                logo_url: r.logo_url,
             })
             .collect())
     }

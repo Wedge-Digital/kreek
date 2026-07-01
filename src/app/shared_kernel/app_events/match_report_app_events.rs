@@ -10,6 +10,7 @@ pub enum MatchReportAppEvent {
         home_team_id: String,
         away_team_id: String,
         space_id: String,
+        pairing_id: Option<String>,
     },
 }
 

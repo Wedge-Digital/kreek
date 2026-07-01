@@ -79,6 +79,7 @@ pub async fn execute(
     let space_id = draft.space_id.to_string();
     let home_id = draft.home_team_id.to_string();
     let away_id = draft.away_team_id.to_string();
+    let pairing_id = draft.pairing_id.clone();
 
     let (_pre_match, confirm_event) = draft.confirm_selection(cmd.confirmed_by);
 
@@ -93,6 +94,7 @@ pub async fn execute(
             home_team_id: home_id,
             away_team_id: away_id,
             space_id,
+            pairing_id,
         }
         .to_enveloppe(),
     );

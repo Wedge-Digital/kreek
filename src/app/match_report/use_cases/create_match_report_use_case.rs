@@ -102,6 +102,7 @@ async fn confirm_existing(
                     home_team_id: home_id,
                     away_team_id: away_id,
                     space_id,
+                    pairing_id: pre_match.pairing_id.clone(),
                 }
                 .to_enveloppe(),
             );
