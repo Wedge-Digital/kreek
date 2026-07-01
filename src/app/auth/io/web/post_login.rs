@@ -159,6 +159,8 @@ mod tests {
                     async fn clear_pairings(&self, _: &str) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
                     async fn clear_all_pairings(&self, _: &str) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
                     async fn ensure_match_days_from_structure(&self, _: &str, _: &[(String, String, String, Option<String>, Option<String>)]) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
+                    async fn list_resultats(&self, _: &str, _: Option<i32>, _: u32) -> Result<Vec<crate::app::competitions::domain::match_day_repository_port::PairingDisplayDto>, crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(vec![]) }
+                    async fn list_calendrier(&self, _: &str, _: Option<i32>, _: u32) -> Result<Vec<crate::app::competitions::domain::match_day_repository_port::PairingDisplayDto>, crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(vec![]) }
                 }
                 CompetitionsContext {
                     competition_repository: Arc::new(FakeCompetitionRepository),

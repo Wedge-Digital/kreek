@@ -1,0 +1,58 @@
+{% if is_initial %}<div id="calendrier-list">{% endif %}
+
+{% for journee in journees %}
+<div class="cal-journee card-shadow">
+    <div class="cal-journee-header">
+        <span class="section-label">{{ journee.label }}</span>
+        <div class="cal-journee-meta">
+            {% if !journee.date_range.is_empty() %}
+            <span class="text-tiny text-dark-3">{{ journee.date_range }}</span>
+            {% endif %}
+            <span class="text-tiny text-dark-3">{{ journee.match_count }} match{% if journee.match_count > 1 %}s{% endif %}</span>
+        </div>
+    </div>
+
+    {% for m in journee.matches %}
+    <div class="cal-row">
+        <div class="cal-team cal-team-home">
+            {% if let Some(logo) = m.home_logo %}
+            <img src="{{ logo }}" class="cal-logo cal-logo--img" alt="{{ m.home_name }}">
+            {% else %}
+            <div class="cal-logo cal-logo--initials">{{ m.home_initials }}</div>
+            {% endif %}
+            <div class="cal-team-name">{{ m.home_name }}</div>
+        </div>
+
+        <div class="cal-center">
+            <span class="cal-vs">VS</span>
+        </div>
+
+        <div class="cal-team cal-team-away">
+            <div class="cal-team-name">{{ m.away_name }}</div>
+            {% if let Some(logo) = m.away_logo %}
+            <img src="{{ logo }}" class="cal-logo cal-logo--img" alt="{{ m.away_name }}">
+            {% else %}
+            <div class="cal-logo cal-logo--initials">{{ m.away_initials }}</div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endfor %}
+
+{% if journees.is_empty() && is_initial %}
+<div class="tab-empty-state card-shadow">
+    Aucun match à venir pour le moment.
+</div>
+{% endif %}
+
+{% if let Some(cursor) = next_cursor %}
+<div class="scroll-sentinel"
+     hx-get="/app/{{ space_id }}/competitions/{{ competition_id }}/seasons/{{ season_id }}/calendrier?cursor={{ cursor }}"
+     hx-trigger="intersect once"
+     hx-target="#calendrier-list"
+     hx-swap="beforeend">
+</div>
+{% endif %}
+
+{% if is_initial %}</div>{% endif %}
