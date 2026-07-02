@@ -37,6 +37,10 @@ pub enum MatchReportDomainEvent {
     FanFactorRecorded {
         home_fan_roll: D3Roll,
         away_fan_roll: D3Roll,
+        #[serde(default)]
+        home_dedicated_fans: u32,
+        #[serde(default)]
+        away_dedicated_fans: u32,
         recorded_by: CoachId,
     },
     MatchReportCancelled {

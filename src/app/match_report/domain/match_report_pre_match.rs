@@ -26,6 +26,8 @@ pub struct MatchReportPreMatch {
     pub pairing_id: Option<String>,
     pub home_fan_roll: Option<D3Roll>,
     pub away_fan_roll: Option<D3Roll>,
+    pub home_dedicated_fans: u32,
+    pub away_dedicated_fans: u32,
     pub home_team_value: Option<TeamValue>,
     pub away_team_value: Option<TeamValue>,
     pub home_inducements: Option<Vec<InducementPurchase>>,
@@ -43,12 +45,22 @@ impl MatchReportPreMatch {
         &self,
         home_fan_roll: D3Roll,
         away_fan_roll: D3Roll,
+        home_dedicated_fans: u32,
+        away_dedicated_fans: u32,
         recorded_by: CoachId,
     ) -> (Self, MatchReportDomainEvent) {
-        let event = MatchReportDomainEvent::FanFactorRecorded { home_fan_roll, away_fan_roll, recorded_by };
+        let event = MatchReportDomainEvent::FanFactorRecorded {
+            home_fan_roll,
+            away_fan_roll,
+            home_dedicated_fans,
+            away_dedicated_fans,
+            recorded_by,
+        };
         let mut updated = self.clone();
         updated.home_fan_roll = Some(home_fan_roll);
         updated.away_fan_roll = Some(away_fan_roll);
+        updated.home_dedicated_fans = home_dedicated_fans;
+        updated.away_dedicated_fans = away_dedicated_fans;
         updated.version += 1;
         (updated, event)
     }
@@ -246,6 +258,8 @@ impl MatchReportPreMatch {
             pairing_id: draft.pairing_id,
             home_fan_roll: None,
             away_fan_roll: None,
+            home_dedicated_fans: 0,
+            away_dedicated_fans: 0,
             home_team_value: None,
             away_team_value: None,
             home_inducements: None,
@@ -400,6 +414,7 @@ mod tests {
             round_id: RoundId::new(), home_team_id: home_id, away_team_id: away_id,
             created_by: CoachId::new(), origin: MatchReportOrigin::Manual, pairing_id: None,
             home_fan_roll: None, away_fan_roll: None,
+            home_dedicated_fans: 0, away_dedicated_fans: 0,
             home_team_value: Some(TeamValue::try_new(home_tv).unwrap()), away_team_value: Some(TeamValue::try_new(away_tv).unwrap()),
             home_inducements: None, away_inducements: None,
             star_engagements: vec![],

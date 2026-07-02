@@ -43,6 +43,7 @@ pub struct TeamInfoDto {
     pub roster_name: String,
     pub roster_id: String,
     pub logo_url: Option<String>,
+    pub dedicated_fans: u32,
 }
 
 #[async_trait]

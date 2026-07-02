@@ -171,6 +171,8 @@ pub async fn post_pre_match(
         match_report_id: mr_id,
         home_fan_roll,
         away_fan_roll,
+        home_dedicated_fans: 0,
+        away_dedicated_fans: 0,
         recorded_by: user.id,
     };
 

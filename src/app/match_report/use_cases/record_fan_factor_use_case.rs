@@ -9,6 +9,8 @@ pub struct RecordFanFactorCommand {
     pub match_report_id: MatchReportId,
     pub home_fan_roll: D3Roll,
     pub away_fan_roll: D3Roll,
+    pub home_dedicated_fans: u32,
+    pub away_dedicated_fans: u32,
     pub recorded_by: CoachId,
 }
 
@@ -27,19 +29,37 @@ pub enum RecordFanFactorError {
 }
 
 pub async fn execute(
-    cmd: RecordFanFactorCommand,
+    mut cmd: RecordFanFactorCommand,
     repo: &dyn IMatchReportRepository,
     team_data: &dyn ITeamDataPort,
     competition_data: &dyn ICompetitionDataPort,
 ) -> Result<RecordFanFactorOutcome, RecordFanFactorError> {
     let mr_id = cmd.match_report_id.to_string();
     let pre_match = load_pre_match(repo, &mr_id).await?;
+    let (home_fans, away_fans) = fetch_dedicated_fans(&pre_match, team_data).await;
+    cmd.home_dedicated_fans = home_fans;
+    cmd.away_dedicated_fans = away_fans;
     let (updated, events) = build_events(pre_match, cmd, team_data).await?;
     let version_before = updated.version - events.len() as u64;
     repo.append_many(&mr_id, events, version_before)
         .await
         .map_err(|e| RecordFanFactorError::Repository(e.to_string()))?;
     determine_outcome(&updated, team_data, competition_data).await
+}
+
+async fn fetch_dedicated_fans(
+    pm: &MatchReportPreMatch,
+    team_data: &dyn ITeamDataPort,
+) -> (u32, u32) {
+    let home_id = pm.home_team_id.to_string();
+    let away_id = pm.away_team_id.to_string();
+    let (home_info, away_info) = tokio::join!(
+        team_data.find_team_info(&home_id),
+        team_data.find_team_info(&away_id),
+    );
+    let home = home_info.map(|i| i.dedicated_fans).unwrap_or(0);
+    let away = away_info.map(|i| i.dedicated_fans).unwrap_or(0);
+    (home, away)
 }
 
 async fn load_pre_match(
@@ -68,8 +88,13 @@ async fn build_events(
     ),
     RecordFanFactorError,
 > {
-    let (updated_ff, ff_event) =
-        pm.record_fan_factor(cmd.home_fan_roll, cmd.away_fan_roll, cmd.recorded_by.clone());
+    let (updated_ff, ff_event) = pm.record_fan_factor(
+        cmd.home_fan_roll,
+        cmd.away_fan_roll,
+        cmd.home_dedicated_fans,
+        cmd.away_dedicated_fans,
+        cmd.recorded_by.clone(),
+    );
     let (home_tv, away_tv) = fetch_team_values(&updated_ff, team_data).await?;
     let (updated_tv, tv_event) =
         updated_ff.record_team_values(home_tv, away_tv, cmd.recorded_by);
