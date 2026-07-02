@@ -88,6 +88,12 @@ pub async fn get_pre_match(
                 .edit_match_report(&space_id, &match_report_id);
             return Redirect::to(&url).into_response();
         }
+        MatchReportState::ReadyToPublish(_) => {
+            let url = AppRoutes::default()
+                .match_report
+                .step5(&space_id, &match_report_id);
+            return Redirect::to(&url).into_response();
+        }
         MatchReportState::Cancelled(_) => return StatusCode::GONE.into_response(),
     };
 

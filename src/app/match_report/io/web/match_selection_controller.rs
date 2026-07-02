@@ -193,6 +193,12 @@ pub async fn edit_match_report(
             );
             Redirect::to(&url).into_response()
         }
+        MatchReportState::ReadyToPublish(_) => {
+            let url = AppRoutes::default()
+                .match_report
+                .step5(&space_id, &match_report_id);
+            Redirect::to(&url).into_response()
+        }
         MatchReportState::Cancelled(_) => {
             StatusCode::GONE.into_response()
         }

@@ -209,6 +209,18 @@ impl MatchReportRepository {
                 .await
                 .map_err(RepositoryError::Database)?;
             }
+            MatchReportDomainEvent::PostMatchRecorded { .. } => {
+                sqlx::query(
+                    "UPDATE match_report_proj
+                     SET phase = 'ReadyToPublish', version = $2, updated_at = now()
+                     WHERE match_report_id = $1",
+                )
+                .bind(match_report_id)
+                .bind(version as i64)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
         }
         Ok(())
     }

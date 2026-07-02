@@ -86,6 +86,20 @@ pub struct AllowedInducementSpec {
     pub is_star_player: IsStarPlayer,
 }
 
+// ── step5 : après-match ───────────────────────────────────────────────────────
+
+#[nutype(
+    validate(greater = 0),
+    derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)
+)]
+pub struct MatchGain(u32);
+
+#[nutype(
+    validate(greater_or_equal = -2, less_or_equal = 2),
+    derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)
+)]
+pub struct FanFactorMod(i8);
+
 // ── step3-4 : actions match ───────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

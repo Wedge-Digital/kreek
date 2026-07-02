@@ -1,9 +1,11 @@
 use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
+use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::value_objects::{
-    ActionId, ActionPlayer, AllowedInducementSpec, D3Roll, InducementPurchase, InducementQty,
-    MatchAction, MatchActionType, MatchReportOrigin, TeamSide, TeamValue, TempPlayer,
+    ActionId, ActionPlayer, AllowedInducementSpec, D3Roll, FanFactorMod, InducementPurchase,
+    InducementQty, MatchAction, MatchActionType, MatchGain, MatchReportOrigin, TeamSide,
+    TeamValue, TempPlayer,
 };
 use crate::app::shared_kernel::common_types::{
     CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
@@ -244,6 +246,62 @@ impl MatchReportPreMatch {
         }
     }
 
+    pub fn compute_score(&self) -> (u8, u8) {
+        let home = self.home_actions.iter()
+            .filter(|a| matches!(a.action, MatchActionType::Touchdown))
+            .count() as u8;
+        let away = self.away_actions.iter()
+            .filter(|a| matches!(a.action, MatchActionType::Touchdown))
+            .count() as u8;
+        (home, away)
+    }
+
+    pub fn compute_cas(&self) -> (u8, u8) {
+        let home = self.home_actions.iter()
+            .filter(|a| matches!(a.action, MatchActionType::Sortie))
+            .count() as u8;
+        let away = self.away_actions.iter()
+            .filter(|a| matches!(a.action, MatchActionType::Sortie))
+            .count() as u8;
+        (home, away)
+    }
+
+    pub fn suggest_gains(&self) -> (u32, u32) {
+        let fans_home = self.home_dedicated_fans
+            + self.home_fan_roll.map(|r| r.value() as u32).unwrap_or(0);
+        let fans_away = self.away_dedicated_fans
+            + self.away_fan_roll.map(|r| r.value() as u32).unwrap_or(0);
+        let (tds_home, tds_away) = self.compute_score();
+        let base = (fans_home + fans_away) / 2 * 10_000;
+        (base + tds_home as u32 * 10_000, base + tds_away as u32 * 10_000)
+    }
+
+    pub fn record_post_match(
+        &self,
+        home_gain: MatchGain,
+        away_gain: MatchGain,
+        home_fan_mod: FanFactorMod,
+        away_fan_mod: FanFactorMod,
+        summary_title: Option<String>,
+        summary_body: Option<String>,
+        recorded_by: CoachId,
+    ) -> (MatchReportReadyToPublish, MatchReportDomainEvent) {
+        let event = MatchReportDomainEvent::PostMatchRecorded {
+            home_gain,
+            away_gain,
+            home_fan_mod,
+            away_fan_mod,
+            summary_title: summary_title.clone(),
+            summary_body: summary_body.clone(),
+            recorded_by,
+        };
+        let ready = MatchReportReadyToPublish::from_pre_match(
+            self, home_gain, away_gain, home_fan_mod, away_fan_mod,
+            summary_title, summary_body,
+        );
+        (ready, event)
+    }
+
     pub fn from_draft(draft: MatchReportDraft) -> Self {
         Self {
             id: draft.id,
@@ -399,7 +457,7 @@ fn set_inducements_for(pm: &mut MatchReportPreMatch, team_id: &TeamId, purchases
 mod tests {
     use super::*;
     use crate::app::match_report::domain::value_objects::{
-        InducementCost, InducementQty, IsStarPlayer, MatchReportOrigin,
+        InducementCost, InducementQty, IsStarPlayer, InjuryType, MatchReportOrigin,
     };
     use crate::app::shared_kernel::common_types::{
         CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
@@ -806,5 +864,141 @@ mod tests {
         assert!(result.is_ok());
         let (updated, _) = result.unwrap();
         assert_eq!(updated.home_inducements.as_ref().unwrap().len(), 2);
+    }
+
+    // ── step5 : compute_score ────────────────────────────────────────────────
+
+    fn add_td(pm: &MatchReportPreMatch, side: TeamSide) -> MatchReportPreMatch {
+        pm.record_action(
+            side, TurnNumber::try_new(1).unwrap(),
+            ActionPlayer::Regular(PlayerId::new()),
+            MatchActionType::Touchdown,
+            "A".into(), "B".into(),
+            ActionId(format!("td-{}", rand_id())), CoachId::new(),
+        ).0
+    }
+
+    fn add_sortie(pm: &MatchReportPreMatch, side: TeamSide) -> MatchReportPreMatch {
+        pm.record_action(
+            side, TurnNumber::try_new(1).unwrap(),
+            ActionPlayer::Regular(PlayerId::new()),
+            MatchActionType::Sortie,
+            "A".into(), "B".into(),
+            ActionId(format!("so-{}", rand_id())), CoachId::new(),
+        ).0
+    }
+
+    fn add_blesse(pm: &MatchReportPreMatch, side: TeamSide) -> MatchReportPreMatch {
+        pm.record_action(
+            side, TurnNumber::try_new(1).unwrap(),
+            ActionPlayer::Regular(PlayerId::new()),
+            MatchActionType::Blesse { injury: InjuryType::Commotion },
+            "A".into(), "B".into(),
+            ActionId(format!("bl-{}", rand_id())), CoachId::new(),
+        ).0
+    }
+
+    fn rand_id() -> u64 {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap().subsec_nanos() as u64
+    }
+
+    #[test]
+    fn compute_score_counts_touchdowns_only() {
+        let pm = make_pm(1000, 1000);
+        let pm = add_td(&pm, TeamSide::Home);
+        let pm = add_td(&pm, TeamSide::Home);
+        let pm = add_td(&pm, TeamSide::Away);
+        assert_eq!(pm.compute_score(), (2, 1));
+    }
+
+    #[test]
+    fn compute_score_zero_when_no_touchdowns() {
+        let pm = make_pm(1000, 1000);
+        let pm = add_sortie(&pm, TeamSide::Home);
+        assert_eq!(pm.compute_score(), (0, 0));
+    }
+
+    #[test]
+    fn compute_cas_counts_sorties_only() {
+        let pm = make_pm(1000, 1000);
+        let pm = add_sortie(&pm, TeamSide::Home);
+        let pm = add_sortie(&pm, TeamSide::Home);
+        let pm = add_blesse(&pm, TeamSide::Home);
+        let pm = add_sortie(&pm, TeamSide::Away);
+        assert_eq!(pm.compute_cas(), (2, 1));
+    }
+
+    #[test]
+    fn compute_cas_ignores_blesse() {
+        let pm = make_pm(1000, 1000);
+        let pm = add_blesse(&pm, TeamSide::Home);
+        let pm = add_blesse(&pm, TeamSide::Away);
+        assert_eq!(pm.compute_cas(), (0, 0));
+    }
+
+    // ── step5 : suggest_gains ────────────────────────────────────────────────
+
+    fn pm_with_fans(home_dedicated: u32, away_dedicated: u32, home_roll: u8, away_roll: u8) -> MatchReportPreMatch {
+        let mut pm = make_pm(1000, 1000);
+        pm.home_dedicated_fans = home_dedicated;
+        pm.away_dedicated_fans = away_dedicated;
+        pm.home_fan_roll = Some(D3Roll::try_new(home_roll).unwrap());
+        pm.away_fan_roll = Some(D3Roll::try_new(away_roll).unwrap());
+        pm
+    }
+
+    #[test]
+    fn suggest_gains_no_tds() {
+        // fans_home = 10 + 2 = 12, fans_away = 10 + 1 = 11, base = (12+11)/2 = 11 → 110_000
+        let pm = pm_with_fans(10, 10, 2, 1);
+        let (home, away) = pm.suggest_gains();
+        // (10+2 + 10+1) / 2 * 10_000 = 23/2 * 10_000 = 11 * 10_000 = 110_000
+        assert_eq!(home, 110_000);
+        assert_eq!(away, 110_000);
+    }
+
+    #[test]
+    fn suggest_gains_with_touchdowns() {
+        // fans_home = 10+2=12, fans_away = 10+1=11, base = 11 * 10_000 = 110_000
+        // home scored 2 TDs, away scored 1 TD
+        let pm = pm_with_fans(10, 10, 2, 1);
+        let pm = add_td(&pm, TeamSide::Home);
+        let pm = add_td(&pm, TeamSide::Home);
+        let pm = add_td(&pm, TeamSide::Away);
+        let (home, away) = pm.suggest_gains();
+        assert_eq!(home, 110_000 + 2 * 10_000);
+        assert_eq!(away, 110_000 + 1 * 10_000);
+    }
+
+    #[test]
+    fn suggest_gains_zero_fans_zero_tds() {
+        let mut pm = make_pm(1000, 1000);
+        pm.home_fan_roll = Some(D3Roll::try_new(1).unwrap());
+        pm.away_fan_roll = Some(D3Roll::try_new(1).unwrap());
+        let (home, away) = pm.suggest_gains();
+        // fans = 0+1, base = (1+1)/2 * 10_000 = 10_000
+        assert_eq!(home, 10_000);
+        assert_eq!(away, 10_000);
+    }
+
+    // ── step5 : record_post_match ────────────────────────────────────────────
+
+    #[test]
+    fn record_post_match_emits_event_and_returns_ready_to_publish() {
+        let pm = pm_with_fans(10, 10, 2, 1);
+        let home_gain = MatchGain::try_new(130_000).unwrap();
+        let away_gain = MatchGain::try_new(110_000).unwrap();
+        let home_mod = FanFactorMod::try_new(1).unwrap();
+        let away_mod = FanFactorMod::try_new(-1).unwrap();
+        let (ready, event) = pm.record_post_match(
+            home_gain, away_gain, home_mod, away_mod,
+            Some("Titre".into()), None, CoachId::new(),
+        );
+        assert_eq!(ready.home_gain, home_gain);
+        assert_eq!(ready.away_gain, away_gain);
+        assert_eq!(ready.home_fan_mod, home_mod);
+        assert_eq!(ready.away_fan_mod, away_mod);
+        assert!(matches!(event, MatchReportDomainEvent::PostMatchRecorded { .. }));
     }
 }

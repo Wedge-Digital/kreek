@@ -1,6 +1,6 @@
 use crate::app::match_report::domain::value_objects::{
-    ActionId, ActionPlayer, D3Roll, InducementPurchase, MatchActionType, MatchReportOrigin,
-    TeamSide, TeamValue, TempPlayer,
+    ActionId, ActionPlayer, D3Roll, FanFactorMod, InducementPurchase, MatchActionType,
+    MatchGain, MatchReportOrigin, TeamSide, TeamValue, TempPlayer,
 };
 use crate::app::shared_kernel::inducement_definition::InducementId;
 use crate::app::shared_kernel::common_types::{
@@ -84,6 +84,15 @@ pub enum MatchReportDomainEvent {
         team_side: TeamSide,
         deleted_by: CoachId,
     },
+    PostMatchRecorded {
+        home_gain: MatchGain,
+        away_gain: MatchGain,
+        home_fan_mod: FanFactorMod,
+        away_fan_mod: FanFactorMod,
+        summary_title: Option<String>,
+        summary_body: Option<String>,
+        recorded_by: CoachId,
+    },
 }
 
 impl MatchReportDomainEvent {
@@ -101,6 +110,7 @@ impl MatchReportDomainEvent {
             Self::TempPlayersReset { .. } => "TempPlayersReset",
             Self::ActionRecorded { .. } => "ActionRecorded",
             Self::ActionDeleted { .. } => "ActionDeleted",
+            Self::PostMatchRecorded { .. } => "PostMatchRecorded",
         }
     }
 

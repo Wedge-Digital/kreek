@@ -2,6 +2,7 @@ use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
+use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::shared_kernel::common_types::MatchReportId;
 
 #[derive(Debug)]
@@ -14,6 +15,7 @@ pub struct MatchReportCancelled {
 pub enum MatchReportState {
     Draft(MatchReportDraft),
     PreMatch(MatchReportPreMatch),
+    ReadyToPublish(MatchReportReadyToPublish),
     Cancelled(MatchReportCancelled),
 }
 
@@ -164,6 +166,35 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                 id: pm.id,
                 reason: reason.clone(),
             }),
+            (
+                Some(MatchReportState::PreMatch(pm)),
+                MatchReportDomainEvent::PostMatchRecorded {
+                    home_gain, away_gain, home_fan_mod, away_fan_mod,
+                    summary_title, summary_body, ..
+                },
+            ) => MatchReportState::ReadyToPublish(
+                MatchReportReadyToPublish::from_pre_match(
+                    &pm, *home_gain, *away_gain, *home_fan_mod, *away_fan_mod,
+                    summary_title.clone(), summary_body.clone(),
+                )
+            ),
+            (
+                Some(MatchReportState::ReadyToPublish(rtp)),
+                MatchReportDomainEvent::PostMatchRecorded {
+                    home_gain, away_gain, home_fan_mod, away_fan_mod,
+                    summary_title, summary_body, ..
+                },
+            ) => {
+                let mut updated = rtp;
+                updated.home_gain = *home_gain;
+                updated.away_gain = *away_gain;
+                updated.home_fan_mod = *home_fan_mod;
+                updated.away_fan_mod = *away_fan_mod;
+                updated.summary_title = summary_title.clone();
+                updated.summary_body = summary_body.clone();
+                updated.version += 1;
+                MatchReportState::ReadyToPublish(updated)
+            }
             _ => return Err(DomainError::InvalidEventSequence),
         });
     }
