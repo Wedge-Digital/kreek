@@ -4,6 +4,22 @@ use crate::app::shared_kernel::inducement_definition::InducementId;
 use crate::app::shared_kernel::team::TeamId;
 use nutype::nutype;
 use serde::{Deserialize, Serialize};
+use std::fmt;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RosterPositionUid(pub String);
+
+impl RosterPositionUid {
+    pub fn try_new(s: &str) -> Result<Self, &'static str> {
+        if s.is_empty() { Err("position uid vide") } else { Ok(Self(s.to_string())) }
+    }
+}
+
+impl fmt::Display for RosterPositionUid {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct IsStarPlayer(pub bool);

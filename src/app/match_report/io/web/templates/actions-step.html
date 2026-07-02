@@ -48,23 +48,23 @@
 }">
     <!-- Header -->
     <div class="mr-header">
-        <div class="mr-header-icon">🏈</div>
-        <div class="mr-header-title">Actions — {% if team_side == "home" %}{{ home_team_name }}{% else %}{{ away_team_name }}{% endif %}</div>
+        <div class="mr-header-icon">&#127944;</div>
+        <div class="mr-header-title">Actions</div>
         <div class="mr-header-sub">Enregistrement des actions du match</div>
     </div>
 
     <!-- Steps -->
     <div class="mr-steps">
-        <div class="mr-step mr-step--done">✓</div>
+        <div class="mr-step mr-step--done">&#10003;</div>
         <div class="mr-step-line mr-step-line--done"></div>
-        <div class="mr-step mr-step--done">✓</div>
+        <div class="mr-step mr-step--done">&#10003;</div>
         <div class="mr-step-line mr-step-line--done"></div>
         {% if team_side == "home" %}
         <div class="mr-step mr-step--active">3</div>
         <div class="mr-step-line"></div>
         <div class="mr-step mr-step--pending">4</div>
         {% else %}
-        <div class="mr-step mr-step--done">✓</div>
+        <div class="mr-step mr-step--done">&#10003;</div>
         <div class="mr-step-line mr-step-line--done"></div>
         <div class="mr-step mr-step--active">4</div>
         {% endif %}
@@ -72,25 +72,29 @@
         <div class="mr-step mr-step--pending">5</div>
     </div>
 
-    <!-- Match banner -->
-    <div class="mr-match-banner">
-        <div class="mr-match-team">
+    <!-- Bannière équipe active -->
+    <div class="mr-banner">
+        {% if team_side == "home" %}
             {% if let Some(url) = home_logo_url %}
-            <img class="mr-match-logo mr-match-logo--img" src="{{ url }}" alt="{{ home_initials }}">
+            <img class="mr-banner-logo mr-banner-logo--img" src="{{ url }}" alt="{{ home_initials }}">
             {% else %}
-            <div class="mr-match-logo">{{ home_initials }}</div>
+            <div class="mr-banner-logo">{{ home_initials }}</div>
             {% endif %}
-            <div class="mr-match-name">{{ home_team_name }}</div>
-        </div>
-        <span class="mr-match-vs">VS</span>
-        <div class="mr-match-team">
+            <div>
+                <div class="mr-banner-name">{{ home_team_name }}</div>
+                <div class="mr-banner-label">Équipe à domicile</div>
+            </div>
+        {% else %}
             {% if let Some(url) = away_logo_url %}
-            <img class="mr-match-logo mr-match-logo--away mr-match-logo--img" src="{{ url }}" alt="{{ away_initials }}">
+            <img class="mr-banner-logo mr-banner-logo--img" src="{{ url }}" alt="{{ away_initials }}">
             {% else %}
-            <div class="mr-match-logo mr-match-logo--away">{{ away_initials }}</div>
+            <div class="mr-banner-logo">{{ away_initials }}</div>
             {% endif %}
-            <div class="mr-match-name">{{ away_team_name }}</div>
-        </div>
+            <div>
+                <div class="mr-banner-name">{{ away_team_name }}</div>
+                <div class="mr-banner-label">Équipe visiteur</div>
+            </div>
+        {% endif %}
     </div>
 
     <!-- Sélection du tour et du joueur -->

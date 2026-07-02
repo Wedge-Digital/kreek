@@ -105,9 +105,6 @@ impl MatchReportPreMatch {
         opponent_star_uids: &[InducementId],
         recorded_by: CoachId,
     ) -> Result<(Self, Vec<MatchReportDomainEvent>), DomainError> {
-        if self.inducements_for(team_id).is_some() {
-            return Err(DomainError::InducementsAlreadyRecorded);
-        }
         validate_purchases(purchases, allowed_specs, opponent_star_uids, budget)?;
         let purchase_list = build_purchase_list(purchases, allowed_specs);
         let events = build_inducement_events(team_id, &purchase_list, allowed_specs, recorded_by);
@@ -551,14 +548,6 @@ mod tests {
         let mut pm = make_pm(1000, 1000);
         pm.home_inducements = Some(vec![]);
         assert!(!pm.is_inducements_phase_complete());
-    }
-
-    #[test]
-    fn record_inducements_fails_when_already_recorded() {
-        let mut pm = make_pm(1000, 1000);
-        pm.home_inducements = Some(vec![]);
-        let result = pm.record_inducements(&pm.home_team_id.clone(), &[], 0, &[], &[], CoachId::new());
-        assert!(matches!(result, Err(DomainError::InducementsAlreadyRecorded)));
     }
 
     // ── step3-4 : temp players ────────────────────────────────────────────────

@@ -21,7 +21,7 @@
        },
        get poorerTeam() {
          if (!this.home || !this.away) return null;
-         return this.home.ctv <= this.away.ctv ? this.home : this.away;
+         return this.home.ctv < this.away.ctv ? this.home : this.away;
        },
        get richerTeam() {
          if (!this.home || !this.away) return null;
@@ -73,13 +73,21 @@
   <!-- Match banner -->
   <div class="mr-match-banner">
     <div class="mr-match-team">
+      {% if let Some(url) = home_logo_url %}
+      <img class="mr-match-logo mr-match-logo--img" src="{{ url }}" alt="{{ home_initials }}">
+      {% else %}
       <div class="mr-match-logo">{{ home_initials }}</div>
+      {% endif %}
       <div class="mr-match-name">{{ home_team_name }}</div>
       <div class="mr-match-coach">{{ home_coach_name }} · {{ home_roster_name }}</div>
     </div>
     <span class="mr-match-vs">VS</span>
     <div class="mr-match-team">
-      <div class="mr-match-logo mr-match-logo--away">{{ away_initials }}</div>
+      {% if let Some(url) = away_logo_url %}
+      <img class="mr-match-logo mr-match-logo--img" src="{{ url }}" alt="{{ away_initials }}">
+      {% else %}
+      <div class="mr-match-logo">{{ away_initials }}</div>
+      {% endif %}
       <div class="mr-match-name">{{ away_team_name }}</div>
       <div class="mr-match-coach">{{ away_coach_name }} · {{ away_roster_name }}</div>
     </div>

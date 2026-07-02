@@ -11,7 +11,6 @@ pub enum DomainError {
     StarPlayerLimitExceeded,
     StarPlayerConflict { uid: String },
     TeamValuesNotRecorded,
-    InducementsAlreadyRecorded,
     InvalidTurn(u8),
     ActionNotFound(String),
     TooManyMercenaries { requested: u8, max: u8 },
@@ -35,7 +34,6 @@ impl fmt::Display for DomainError {
                 write!(f, "star player {uid} déjà recruté par l'équipe adverse")
             }
             Self::TeamValuesNotRecorded => write!(f, "les team values ne sont pas encore enregistrées"),
-            Self::InducementsAlreadyRecorded => write!(f, "les inducements ont déjà été enregistrés pour cette équipe"),
             Self::InvalidTurn(v) => write!(f, "tour invalide : {v} (attendu 1..=16)"),
             Self::ActionNotFound(id) => write!(f, "action introuvable : {id}"),
             Self::TooManyMercenaries { requested, max } => {

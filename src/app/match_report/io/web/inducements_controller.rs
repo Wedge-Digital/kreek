@@ -1,12 +1,13 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
+use crate::app::match_report::domain::value_objects::RosterPositionUid;
 use crate::app::match_report::use_cases::record_inducements_use_case::{
     self, InducementPurchaseCmd, MercenaryLevel, MercenaryPurchaseCmd, RecordInducementsCommand,
     RecordInducementsOutcome,
 };
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::{MatchReportId, PositionId};
+use crate::app::shared_kernel::common_types::MatchReportId;
 use crate::app::shared_kernel::inducement_definition::InducementId;
 use crate::app::shared_kernel::team::TeamId;
 use crate::state::AppState;
@@ -264,7 +265,7 @@ fn parse_mercenaries(json: &str) -> Result<Vec<MercenaryPurchaseCmd>, Response> 
         .into_iter()
         .filter(|m| !m.position_uid.is_empty())
         .map(|m| {
-            let position_id = PositionId::try_new(&m.position_uid)
+            let position_id = RosterPositionUid::try_new(&m.position_uid)
                 .map_err(|_| StatusCode::BAD_REQUEST.into_response())?;
             let level = MercenaryLevel::try_from_str(&m.level)
                 .map_err(|_| StatusCode::BAD_REQUEST.into_response())?;

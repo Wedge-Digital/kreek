@@ -132,6 +132,24 @@
   color: var(--dark-4); flex-shrink: 0;
 }
 
+/* ── Team banner (équipe active) ── */
+.mr-banner {
+  background: var(--white);
+  border-radius: 12px;
+  padding: var(--p2);
+  display: flex; align-items: center; gap: 12px;
+}
+.mr-banner-logo {
+  width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-weight: 700; font-size: 14px;
+  color: var(--white);
+  background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+}
+.mr-banner-logo--img { object-fit: cover; background: none; }
+.mr-banner-name { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+.mr-banner-label { font-size: 11px; color: var(--dark-3); margin-top: 2px; }
+
 /* ── Actions (bottom buttons) ── */
 .mr-actions {
   display: flex; gap: var(--p1);

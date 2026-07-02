@@ -73,6 +73,7 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                 MatchReportDomainEvent::InducementsRecorded { team_id, purchases, .. },
             ) => {
                 let mut updated = pm;
+                updated.star_engagements.retain(|(tid, _)| tid != team_id);
                 if team_id == &updated.home_team_id {
                     updated.home_inducements = Some(purchases.clone());
                 } else {

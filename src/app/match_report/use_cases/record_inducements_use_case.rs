@@ -2,13 +2,13 @@ use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
-use crate::app::match_report::domain::value_objects::{AllowedInducementSpec, IsStarPlayer};
+use crate::app::match_report::domain::value_objects::{AllowedInducementSpec, IsStarPlayer, RosterPositionUid};
 use crate::app::match_report::ports::{
     ICompetitionDataPort, IPlayerDataPort, ITeamDataPort, PositionCountDto, RosterPositionDto,
     TierRulesDto,
 };
 use crate::app::match_report::use_cases::init_temp_players_use_case::{self, InitTempPlayersCommand};
-use crate::app::shared_kernel::common_types::{CoachId, MatchReportId, PositionId};
+use crate::app::shared_kernel::common_types::{CoachId, MatchReportId};
 use crate::app::shared_kernel::inducement_definition::InducementId;
 use crate::app::shared_kernel::team::TeamId;
 use std::collections::HashMap;
@@ -45,7 +45,7 @@ impl MercenaryLevel {
 }
 
 pub struct MercenaryPurchaseCmd {
-    pub position_id: PositionId,
+    pub position_id: RosterPositionUid,
     pub level:       MercenaryLevel,
 }
 
@@ -75,8 +75,8 @@ pub enum RecordInducementsError {
     UnauthorizedInducement(String),
     Domain(DomainError),
     Repository(String),
-    InvalidMercenaryPosition(PositionId),
-    MercenaryPositionIsJournalier(PositionId),
+    InvalidMercenaryPosition(RosterPositionUid),
+    MercenaryPositionIsJournalier(RosterPositionUid),
     PlayerCountUnavailable(String),
 }
 
@@ -226,7 +226,7 @@ async fn fetch_treasury(
 // ── Build specs + purchases ───────────────────────────────────────────────────
 
 struct ValidatedMercenary {
-    position_id: PositionId,
+    position_id: RosterPositionUid,
     level:       MercenaryLevel,
     cost:        u32,
     max_qty:     u8,
