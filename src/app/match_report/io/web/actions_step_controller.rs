@@ -72,14 +72,13 @@ async fn get_step(
         Ok(s) => s,
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
-    let pm = match state_opt {
-        Some(MatchReportState::PreMatch(pm)) => pm,
+    let (home_id, away_id) = match state_opt {
+        Some(MatchReportState::PreMatch(pm)) => (pm.home_team_id.to_string(), pm.away_team_id.to_string()),
+        Some(MatchReportState::ReadyToPublish(rtp)) => (rtp.home_team_id.to_string(), rtp.away_team_id.to_string()),
         Some(_) | None => return StatusCode::NOT_FOUND.into_response(),
     };
 
     let routes = AppRoutes::default();
-    let home_id = pm.home_team_id.to_string();
-    let away_id = pm.away_team_id.to_string();
     let team_id = match side { TeamSide::Home => home_id.clone(), TeamSide::Away => away_id.clone() };
     let (home_info, away_info) = tokio::join!(
         state.match_report.team_data.find_team_info(&home_id),
