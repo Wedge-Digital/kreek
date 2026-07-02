@@ -73,7 +73,7 @@
 .match-side--away   { justify-content: flex-end; }
 
 .match-team-logo-sm { width: 72px; height: 72px; border-radius: 10px; background: var(--dark-5); flex-shrink: 0; overflow: hidden; }
-.match-team-logo-sm--img { object-fit: cover; display: block; width: 100%; height: 100%; }
+.match-team-logo-sm--img { object-fit: cover; display: block; }
 .match-team-logo-sm--initials {
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-title); font-size: 18px; font-weight: 900; color: var(--white);

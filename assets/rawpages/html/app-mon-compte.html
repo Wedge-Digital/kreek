@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mon compte — Kreek</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+
+    /* ── Layout ── */
+    .account-layout {
+      max-width: 860px;
+      margin: 0 auto;
+      display: flex;
+      gap: var(--p2);
+      padding-bottom: var(--p4);
+      align-items: flex-start;
+    }
+
+    /* ── Side nav ── */
+    .account-sidenav {
+      width: 220px;
+      min-width: 220px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: sticky;
+      top: var(--p1);
+    }
+    .sidenav-label {
+      font-size: var(--text-tiny);
+      font-weight: 700;
+      color: var(--dark-3);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 10px 12px 6px;
+    }
+    .sidenav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: var(--text-small);
+      font-weight: 500;
+      color: var(--dark-2);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .sidenav-item:hover { background: var(--white); color: var(--dark-1); }
+    .sidenav-item.active {
+      background: var(--white);
+      color: var(--main-blue);
+      font-weight: 600;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .sidenav-item-icon { font-size: 16px; width: 20px; text-align: center; }
+    .sidenav-sep { height: 1px; background: var(--dark-5); margin: 8px 12px; }
+
+    /* ── Main content ── */
+    .account-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+    }
+
+    /* ── Section card ── */
+    .account-section {
+      background: var(--white);
+      border-radius: 12px;
+      border: 1px solid var(--dark-5);
+      overflow: hidden;
+    }
+    .section-header {
+      padding: var(--p2);
+      border-bottom: 1px solid var(--dark-5);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .section-header-left { display: flex; align-items: center; gap: 10px; }
+    .section-icon {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: var(--dark-6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .section-title {
+      font-family: var(--font-title);
+      font-size: var(--h5);
+      font-weight: 700;
+      color: var(--dark-1);
+    }
+    .section-sub {
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+      margin-top: 2px;
+    }
+    .section-body {
+      padding: var(--p2);
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+    }
+
+    /* ── Avatar upload ── */
+    .avatar-row {
+      display: flex;
+      align-items: center;
+      gap: var(--p2);
+    }
+    .avatar-preview {
+      width: 88px; height: 88px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-2) 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 800; font-size: 32px;
+      color: var(--white); flex-shrink: 0; position: relative;
+      cursor: pointer; overflow: hidden;
+    }
+    .avatar-overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s;
+      font-size: 24px;
+    }
+    .avatar-preview:hover .avatar-overlay { opacity: 1; }
+    .avatar-info { flex: 1; }
+    .avatar-name {
+      font-family: var(--font-title);
+      font-size: var(--h5);
+      font-weight: 700;
+      color: var(--dark-1);
+    }
+    .avatar-hint {
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+    .avatar-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .btn-xs {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 6px;
+      font-size: var(--text-tiny); font-weight: 600;
+      cursor: pointer; transition: all 0.15s; border: 1px solid;
+    }
+    .btn-xs-primary {
+      background: var(--dark-0); color: var(--white); border-color: var(--dark-0);
+    }
+    .btn-xs-primary:hover { opacity: 0.85; }
+    .btn-xs-outline {
+      background: transparent; color: var(--dark-2); border-color: var(--dark-4);
+    }
+    .btn-xs-outline:hover { background: var(--dark-6); border-color: var(--dark-3); }
+    .btn-xs-danger {
+      background: transparent; color: var(--red); border-color: rgba(224,32,32,0.3);
+    }
+    .btn-xs-danger:hover { background: rgba(224,32,32,0.06); border-color: var(--red); }
+
+    /* ── Form row (2 cols) ── */
+    .form-row {
+      display: flex;
+      gap: var(--p1);
+    }
+    .form-row .form-group { flex: 1; }
+
+    /* ── Form hint ── */
+    .form-hint {
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+
+    /* ── Input with suffix icon ── */
+    .input-with-action {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+    .input-with-action .form-group { flex: 1; }
+
+    /* ── Email badge ── */
+    .email-status {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: var(--text-tiny); font-weight: 600;
+      padding: 3px 8px; border-radius: 4px;
+      margin-left: 8px;
+    }
+    .email-verified { background: rgba(98,149,132,0.15); color: var(--green); }
+    .email-unverified { background: rgba(255,107,53,0.12); color: var(--orange); }
+
+    /* ── Toggle switch ── */
+    .pref-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--dark-6);
+    }
+    .pref-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .pref-row:first-child { padding-top: 0; }
+    .pref-info { flex: 1; }
+    .pref-label {
+      font-size: var(--text-small);
+      font-weight: 500;
+      color: var(--dark-1);
+    }
+    .pref-desc {
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+      margin-top: 3px;
+      line-height: 1.4;
+    }
+    .toggle {
+      position: relative;
+      width: 44px; height: 24px;
+      flex-shrink: 0; margin-left: var(--p1);
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-track {
+      position: absolute; inset: 0;
+      background: var(--dark-4);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--white);
+      top: 3px; left: 3px;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle input:checked ~ .toggle-track { background: var(--main-blue); }
+    .toggle input:checked ~ .toggle-track::after { transform: translateX(20px); }
+
+    /* ── NAF section ── */
+    .naf-explainer {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: rgba(0,48,73,0.05);
+      border: 1px solid rgba(0,48,73,0.12);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .naf-explainer-icon { font-size: 20px; flex-shrink: 0; }
+    .naf-explainer-text {
+      font-size: var(--text-tiny);
+      color: var(--dark-2);
+      line-height: 1.5;
+    }
+    .naf-explainer-text a { color: var(--link-blue); text-decoration: underline; }
+
+    /* ── Security section ── */
+    .pw-strength {
+      display: flex;
+      gap: 4px;
+      margin-top: 6px;
+    }
+    .pw-bar {
+      flex: 1; height: 4px; border-radius: 2px;
+      background: var(--dark-5);
+    }
+    .pw-bar.filled-weak   { background: var(--red); }
+    .pw-bar.filled-medium { background: var(--orange); }
+    .pw-bar.filled-strong { background: var(--green); }
+
+    /* ── Danger zone ── */
+    .danger-zone {
+      background: var(--white);
+      border-radius: 12px;
+      border: 1px solid rgba(224,32,32,0.25);
+      overflow: hidden;
+    }
+    .danger-header {
+      padding: var(--p2);
+      border-bottom: 1px solid rgba(224,32,32,0.15);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .danger-icon {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: rgba(224,32,32,0.1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .danger-body {
+      padding: var(--p2);
+      display: flex;
+      flex-direction: column;
+      gap: var(--p1);
+    }
+    .danger-action-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--dark-6);
+    }
+    .danger-action-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .danger-action-info .pref-label { color: var(--dark-1); }
+    .btn-xs-danger-filled {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 6px;
+      font-size: var(--text-tiny); font-weight: 600;
+      background: rgba(224,32,32,0.08);
+      color: var(--red);
+      border: 1px solid rgba(224,32,32,0.3);
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .btn-xs-danger-filled:hover { background: var(--red); color: var(--white); border-color: var(--red); }
+
+    /* ── Save bar ── */
+    .save-bar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      padding-top: var(--p1);
+      border-top: 1px solid var(--dark-5);
+    }
+    .btn-save {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 24px;
+      background: var(--main-blue);
+      color: var(--white);
+      border-radius: 8px;
+      font-size: var(--text-small);
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      border: none;
+    }
+    .btn-save:hover { opacity: 0.85; }
+    .btn-cancel {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 24px;
+      background: transparent;
+      color: var(--dark-2);
+      border-radius: 8px;
+      font-size: var(--text-small);
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+      border: 1px solid var(--dark-4);
+    }
+    .btn-cancel:hover { background: var(--dark-6); }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: var(--p3); left: 50%; transform: translateX(-50%);
+      background: var(--dark-0); color: var(--white);
+      font-size: var(--text-tiny); font-weight: 600;
+      padding: 10px 20px; border-radius: 8px;
+      display: flex; align-items: center; gap: 8px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 1000;
+    }
+    .toast.visible { opacity: 1; }
+
+    /* ── Mobile header (masqué sur desktop) ── */
+    .mobile-header { display: none; }
+
+    /* ══ Responsive ══════════════════════════════════════════════════════ */
+    @media (max-width: 768px) {
+
+      /* Masquer le chrome desktop */
+      .sidebar  { display: none !important; }
+      .menu-bar { display: none !important; }
+      .app-layout {
+        display: block !important;
+        height: auto !important;
+        overflow: visible !important;
+      }
+      .main-area { width: 100% !important; }
+      .page-content {
+        padding: 0 !important;
+        height: auto !important;
+        overflow: visible !important;
+        padding-top: 52px !important;
+        padding-bottom: var(--p4) !important;
+      }
+
+      /* Afficher le mobile header */
+      .mobile-header {
+        display: flex !important;
+        position: fixed; top: 0; left: 0; right: 0; z-index: 500;
+        background: var(--dark-0);
+        align-items: center;
+        padding: 0 var(--p1);
+        height: 52px;
+      }
+
+      /* Layout compte : colonne */
+      .account-layout {
+        flex-direction: column;
+        padding: var(--p1);
+        gap: var(--p1);
+        max-width: 100%;
+      }
+
+      /* Sidenav → scroll horizontal */
+      .account-sidenav {
+        width: 100%;
+        min-width: 0;
+        position: static;
+        flex-direction: row;
+        overflow-x: auto;
+        gap: 4px;
+        padding-bottom: 4px;
+        scrollbar-width: none;
+        -webkit-scrollbar: none;
+      }
+      .account-sidenav::-webkit-scrollbar { display: none; }
+      .sidenav-label { display: none; }
+      .sidenav-sep   { display: none; }
+      .sidenav-item {
+        flex-shrink: 0;
+        white-space: nowrap;
+        padding: 8px 12px;
+        font-size: var(--text-tiny);
+        background: var(--white);
+        border: 1px solid var(--dark-5);
+      }
+      .sidenav-item.active {
+        border-color: var(--main-blue);
+      }
+
+      /* Formulaires en colonne */
+      .form-row          { flex-direction: column; }
+      .input-with-action { flex-direction: column; align-items: stretch; }
+      .input-with-action button { height: 44px; }
+
+      /* Save bar */
+      .save-bar { flex-direction: column-reverse; }
+      .btn-save  { width: 100%; justify-content: center; }
+      .btn-cancel { width: 100%; justify-content: center; }
+
+      /* Danger zone : empiler les action rows */
+      .danger-action-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+    }
+
+  </style>
+</head>
+<body>
+
+<!-- Mobile header (masqué sur desktop) -->
+<div class="mobile-header">
+  <div style="display:flex; align-items:center; gap:8px; flex:1;">
+    <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--main-blue),var(--dark-2));display:flex;align-items:center;justify-content:center;font-family:var(--font-title);font-weight:700;font-size:11px;color:var(--white);">TC</div>
+    <span style="font-family:var(--font-title);font-size:var(--text-tiny);font-weight:700;color:var(--white);">Tribu Celtique</span>
+  </div>
+  <div style="font-size:22px;color:rgba(255,255,255,0.8);outline:2px solid var(--orange);outline-offset:2px;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;">👤</div>
+</div>
+
+<div class="app-layout">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-top"></div>
+    <div class="league-btn league-btn-active">TC</div>
+    <div class="league-btn">KC</div>
+    <div class="league-btn">LM</div>
+    <div class="league-btn" style="background: var(--dark-3); font-size: 24px; font-family: var(--font-body);">+</div>
+  </div>
+
+  <!-- Main area -->
+  <div class="main-area">
+
+    <!-- Menu bar -->
+    <div class="menu-bar">
+      <div class="menu-bar-inner">
+        <div class="menu-left">
+          <div class="menu-logo">
+            <div class="menu-logo-icon">BBC</div>
+            <span class="menu-logo-text">Blood Bowl Club</span>
+          </div>
+          <a class="menu-item" href="app-home.html">Accueil</a>
+          <a class="menu-item" href="app-competition-list.html">Compétitions</a>
+          <a class="menu-item">Règles du jeu</a>
+        </div>
+        <div class="menu-right">
+          <div class="menu-account" title="Mon compte" style="outline: 2px solid var(--orange); outline-offset: 2px;">👤</div>
+        </div>
+      </div>
+      <div class="sub-menu-placeholder"></div>
+    </div>
+
+    <!-- Page content -->
+    <div class="page-content">
+      <div class="account-layout">
+
+        <!-- ══ Side nav ══════════════════════════════════════════════ -->
+        <nav class="account-sidenav">
+          <div class="sidenav-label">Mon compte</div>
+          <div class="sidenav-item active" onclick="scrollTo('profil')">
+            <span class="sidenav-item-icon">👤</span> Profil
+          </div>
+          <div class="sidenav-item" onclick="scrollTo('naf')">
+            <span class="sidenav-item-icon">🏆</span> Numéro NAF
+          </div>
+          <div class="sidenav-item" onclick="scrollTo('contact')">
+            <span class="sidenav-item-icon">✉️</span> Email de contact
+          </div>
+
+          <div class="sidenav-sep"></div>
+          <div class="sidenav-label">Préférences</div>
+          <div class="sidenav-item" onclick="scrollTo('notifs')">
+            <span class="sidenav-item-icon">🔔</span> Notifications
+          </div>
+          <div class="sidenav-item" onclick="scrollTo('securite')">
+            <span class="sidenav-item-icon">🔒</span> Sécurité
+          </div>
+
+          <div class="sidenav-sep"></div>
+          <div class="sidenav-item" onclick="scrollTo('danger')" style="color: var(--red);">
+            <span class="sidenav-item-icon">⚠️</span> Zone de danger
+          </div>
+        </nav>
+
+        <!-- ══ Main content ══════════════════════════════════════════ -->
+        <div class="account-main">
+
+          <!-- ── Section : Profil ──────────────────────────────────── -->
+          <div class="account-section" id="profil">
+            <div class="section-header">
+              <div class="section-header-left">
+                <div class="section-icon">👤</div>
+                <div>
+                  <div class="section-title">Profil public</div>
+                  <div class="section-sub">Visible par les autres membres de vos ligues</div>
+                </div>
+              </div>
+            </div>
+            <div class="section-body">
+
+              <!-- Avatar -->
+              <div class="avatar-row">
+                <div class="avatar-preview">
+                  BC
+                  <div class="avatar-overlay">📷</div>
+                </div>
+                <div class="avatar-info">
+                  <div class="avatar-name">BertrandCoach</div>
+                  <div class="avatar-hint">
+                    JPG, PNG ou WebP · max 2 Mo<br>
+                    Recommandé : carré, au moins 200×200 px
+                  </div>
+                  <div class="avatar-actions">
+                    <button class="btn-xs btn-xs-primary">Changer l'avatar</button>
+                    <button class="btn-xs btn-xs-outline">Supprimer</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="separator"></div>
+
+              <!-- Pseudo -->
+              <div class="form-group">
+                <label class="form-label">Pseudo <span style="color:var(--red)">*</span></label>
+                <input class="form-input" type="text" value="BertrandCoach" placeholder="Votre pseudo…">
+                <div class="form-hint">Identifiant unique · utilisé dans les classements et journaux de match</div>
+              </div>
+
+              <!-- Bio -->
+              <div class="form-group">
+                <label class="form-label">Biographie</label>
+                <textarea class="form-input" rows="3" placeholder="Quelques mots sur vous, votre style de jeu, vos races favorites…"></textarea>
+                <div class="form-hint">Max 280 caractères · visible sur votre profil public</div>
+              </div>
+
+              <div class="save-bar">
+                <button class="btn-cancel">Annuler</button>
+                <button class="btn-save" onclick="showToast('Profil mis à jour ✓')">Enregistrer</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Section : NAF ─────────────────────────────────────── -->
+          <div class="account-section" id="naf">
+            <div class="section-header">
+              <div class="section-header-left">
+                <div class="section-icon">🏆</div>
+                <div>
+                  <div class="section-title">Numéro NAF</div>
+                  <div class="section-sub">Identifiant officiel de l'organisation Blood Bowl internationale</div>
+                </div>
+              </div>
+              <span class="badge badge-blue">Optionnel</span>
+            </div>
+            <div class="section-body">
+
+              <div class="naf-explainer">
+                <div class="naf-explainer-icon">ℹ️</div>
+                <div class="naf-explainer-text">
+                  Le <strong>NAF</strong> (National Association Football) est l'association mondiale de Blood Bowl.
+                  Renseigner votre numéro permet d'afficher votre classement NAF officiel sur votre profil
+                  et d'y lier vos tournois. Vous pouvez trouver votre numéro sur
+                  <a href="#" target="_blank">naf.org</a>.
+                </div>
+              </div>
+
+              <div class="input-with-action">
+                <div class="form-group">
+                  <label class="form-label">Numéro NAF</label>
+                  <input class="form-input" type="text" value="38274" placeholder="ex. 38274">
+                </div>
+                <button class="btn-xs btn-xs-outline" style="margin-bottom: 0; height: 50px; padding: 0 16px;">
+                  Vérifier
+                </button>
+              </div>
+
+              <!-- Exemple de profil NAF trouvé -->
+              <div style="background: var(--dark-6); border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; border: 1px solid var(--dark-5);">
+                <div style="font-size: 28px;">🏅</div>
+                <div>
+                  <div style="font-size: var(--text-small); font-weight: 600; color: var(--dark-1);">BertrandCoach</div>
+                  <div style="font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px;">
+                    Rang NAF : <strong style="color: var(--main-blue)">1 842</strong> ·
+                    Tournois joués : <strong>47</strong> ·
+                    Race favorite : Nains
+                  </div>
+                </div>
+                <span class="email-status email-verified" style="margin-left: auto;">✓ Vérifié</span>
+              </div>
+
+              <div class="save-bar">
+                <button class="btn-cancel">Annuler</button>
+                <button class="btn-save" onclick="showToast('Numéro NAF enregistré ✓')">Enregistrer</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Section : Email de contact ────────────────────────── -->
+          <div class="account-section" id="contact">
+            <div class="section-header">
+              <div class="section-header-left">
+                <div class="section-icon">✉️</div>
+                <div>
+                  <div class="section-title">Email de contact</div>
+                  <div class="section-sub">Utilisé pour les notifications et la connexion</div>
+                </div>
+              </div>
+            </div>
+            <div class="section-body">
+
+              <div class="form-group">
+                <label class="form-label">
+                  Adresse email actuelle
+                  <span class="email-status email-verified">✓ Vérifiée</span>
+                </label>
+                <input class="form-input" type="email" value="bertrand@example.com" readonly
+                  style="background: var(--dark-6); color: var(--dark-2);">
+              </div>
+
+              <div class="separator"></div>
+
+              <div class="form-group">
+                <label class="form-label">Nouvelle adresse email</label>
+                <input class="form-input" type="email" placeholder="nouvelle@adresse.com">
+                <div class="form-hint">Un email de confirmation sera envoyé à la nouvelle adresse</div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Confirmer le mot de passe actuel</label>
+                <input class="form-input" type="password" placeholder="••••••••">
+                <div class="form-hint">Pour des raisons de sécurité, nous demandons votre mot de passe</div>
+              </div>
+
+              <div class="save-bar">
+                <button class="btn-cancel">Annuler</button>
+                <button class="btn-save" onclick="showToast('Un email de confirmation a été envoyé ✓')">
+                  Envoyer le lien de confirmation
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Section : Notifications ────────────────────────────── -->
+          <div class="account-section" id="notifs">
+            <div class="section-header">
+              <div class="section-header-left">
+                <div class="section-icon">🔔</div>
+                <div>
+                  <div class="section-title">Notifications par email</div>
+                  <div class="section-sub">Choisissez ce que vous souhaitez recevoir</div>
+                </div>
+              </div>
+            </div>
+            <div class="section-body">
+
+              <div class="pref-row">
+                <div class="pref-info">
+                  <div class="pref-label">Invitations à rejoindre une ligue</div>
+                  <div class="pref-desc">Recevoir un email quand un commissaire vous invite dans son espace</div>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" checked>
+                  <span class="toggle-track"></span>
+                </label>
+              </div>
+
+              <div class="pref-row">
+                <div class="pref-info">
+                  <div class="pref-label">Actualités et annonces de la ligue</div>
+                  <div class="pref-desc">Recevoir les emails envoyés par les administrateurs de vos ligues</div>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" checked>
+                  <span class="toggle-track"></span>
+                </label>
+              </div>
+
+              <div class="save-bar">
+                <button class="btn-save" onclick="showToast('Préférences enregistrées ✓')">Enregistrer</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Section : Sécurité ─────────────────────────────────── -->
+          <div class="account-section" id="securite">
+            <div class="section-header">
+              <div class="section-header-left">
+                <div class="section-icon">🔒</div>
+                <div>
+                  <div class="section-title">Sécurité</div>
+                  <div class="section-sub">Mot de passe et connexion</div>
+                </div>
+              </div>
+            </div>
+            <div class="section-body">
+
+              <div class="form-group">
+                <label class="form-label">Mot de passe actuel</label>
+                <input class="form-input" type="password" placeholder="••••••••">
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Nouveau mot de passe</label>
+                  <input class="form-input" type="password" placeholder="••••••••" oninput="updateStrength(this.value)">
+                  <div class="pw-strength" id="pw-strength">
+                    <div class="pw-bar" id="bar1"></div>
+                    <div class="pw-bar" id="bar2"></div>
+                    <div class="pw-bar" id="bar3"></div>
+                    <div class="pw-bar" id="bar4"></div>
+                  </div>
+                  <div class="form-hint" id="pw-hint">Min. 8 caractères, avec chiffres et symboles</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Confirmer le nouveau mot de passe</label>
+                  <input class="form-input" type="password" placeholder="••••••••">
+                </div>
+              </div>
+
+              <div class="save-bar">
+                <button class="btn-cancel">Annuler</button>
+                <button class="btn-save" onclick="showToast('Mot de passe mis à jour ✓')">Modifier le mot de passe</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Zone de danger ─────────────────────────────────────── -->
+          <div class="danger-zone" id="danger">
+            <div class="danger-header">
+              <div class="danger-icon">⚠️</div>
+              <div>
+                <div class="section-title" style="color: var(--red);">Zone de danger</div>
+                <div class="section-sub">Ces actions sont irréversibles · réfléchissez avant d'agir</div>
+              </div>
+            </div>
+            <div class="danger-body">
+
+              <div class="danger-action-row" style="border-bottom: none; padding-bottom: 0;">
+                <div class="danger-action-info">
+                  <div class="pref-label">Supprimer mon compte</div>
+                  <div class="pref-desc">Supprime définitivement votre compte · vos équipes restent dans les ligues</div>
+                </div>
+                <button class="btn-xs-danger-filled">Supprimer mon compte</button>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+        <!-- fin account-main -->
+      </div>
+    </div>
+    <!-- fin page-content -->
+
+  </div>
+  <!-- fin main-area -->
+</div>
+<!-- fin app-layout -->
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span>✓</span>
+  <span id="toast-msg">Enregistré</span>
+</div>
+
+<script>
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    document.getElementById('toast-msg').textContent = msg;
+    t.classList.add('visible');
+    setTimeout(() => t.classList.remove('visible'), 2800);
+  }
+
+  function updateStrength(val) {
+    const bars = [1,2,3,4].map(i => document.getElementById('bar' + i));
+    const hint = document.getElementById('pw-hint');
+    bars.forEach(b => b.className = 'pw-bar');
+    if (val.length === 0) { hint.textContent = 'Min. 8 caractères, avec chiffres et symboles'; return; }
+    let score = 0;
+    if (val.length >= 8)  score++;
+    if (val.length >= 12) score++;
+    if (/[0-9]/.test(val) && /[^a-zA-Z0-9]/.test(val)) score++;
+    if (val.length >= 16 && score >= 3) score++;
+    const levels = ['filled-weak','filled-weak','filled-medium','filled-strong'];
+    const labels = ['Trop court','Faible','Moyen','Fort'];
+    for (let i = 0; i < score; i++) bars[i].classList.add(levels[score - 1]);
+    hint.textContent = 'Niveau : ' + (labels[score - 1] || 'Trop court');
+  }
+</script>
+</body>
+</html>

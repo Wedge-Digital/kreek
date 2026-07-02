@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rapport de match — Mercenaires</title>
+  <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="match-report-shared.css">
+  <style>
+    .mr-container { padding-bottom: 160px; }
+
+    /* ── Budget banner ── */
+    .mr-budget-banner {
+      background: var(--white); border-radius: 12px; padding: var(--p2);
+      display: flex; align-items: center; justify-content: space-between; gap: var(--p1);
+    }
+    .mr-budget-team { display: flex; align-items: center; gap: 10px; }
+    .mr-budget-logo {
+      width: 40px; height: 40px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 14px; color: var(--white);
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+    }
+    .mr-budget-info { display: flex; flex-direction: column; }
+    .mr-budget-name { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+    .mr-budget-label { font-size: 11px; color: var(--dark-3); }
+    .mr-budget-amount { display: flex; flex-direction: column; align-items: flex-end; }
+    .mr-budget-value {
+      font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--main-blue);
+    }
+    .mr-budget-unit { font-size: 11px; color: var(--dark-3); }
+
+    /* ── Tabs — 4 onglets ── */
+    .mr-tabs {
+      display: flex; gap: 4px;
+      background: var(--white); border-radius: 10px; padding: 4px;
+      border: 1px solid var(--dark-5);
+    }
+    .mr-tab {
+      flex: 1; text-align: center; padding: 8px 4px; border-radius: 7px;
+      font-size: 11px; font-weight: 600; color: var(--dark-3); cursor: pointer;
+      transition: all 0.15s; line-height: 1.3;
+    }
+    .mr-tab:hover { background: var(--dark-6); color: var(--dark-1); }
+    .mr-tab.active { background: var(--main-blue); color: var(--white); }
+
+    /* ── Card section ── */
+    .mr-section {
+      background: var(--white); border-radius: 12px;
+      border: 1px solid var(--dark-5); overflow: hidden;
+    }
+    .mr-section-header {
+      padding: 12px 14px 10px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--dark-6);
+    }
+    .mr-section-title {
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-1);
+    }
+    .mr-section-sub { font-size: 11px; color: var(--dark-3); }
+    .mr-section-body { padding: 12px 14px; }
+
+    /* ── Compteur ── */
+    .mr-merc-dots { display: flex; gap: 6px; align-items: center; }
+    .mr-merc-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--dark-5); border: 2px solid var(--dark-4); flex-shrink: 0;
+    }
+    .mr-merc-dot--filled { background: var(--main-blue); border-color: var(--main-blue); }
+    .mr-merc-dot--empty-slot {
+      background: transparent; border: 2px dashed var(--dark-4);
+    }
+
+    /* ── Grille positions ── */
+    .mr-position-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    }
+    .mr-position-card {
+      border: 2px solid var(--dark-5); border-radius: 10px;
+      padding: 11px 10px; cursor: pointer; transition: all 0.15s;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .mr-position-card:not(.disabled):hover {
+      border-color: var(--main-blue); box-shadow: 0 2px 8px rgba(0,48,73,0.1);
+    }
+    .mr-position-card.selected {
+      border-color: var(--main-blue); background: rgba(0,48,73,0.04);
+    }
+    .mr-position-card.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+    .mr-position-name { font-size: 12px; font-weight: 700; color: var(--dark-1); line-height: 1.2; }
+    .mr-position-price {
+      font-family: var(--font-title); font-size: 13px; font-weight: 700; color: var(--main-blue);
+    }
+    .mr-position-count { font-size: 10px; color: var(--dark-3); margin-top: 1px; }
+    .mr-position-full {
+      display: inline-block; font-size: 9px; font-weight: 700;
+      background: var(--dark-4); color: var(--white);
+      border-radius: 4px; padding: 1px 5px;
+      text-transform: uppercase; letter-spacing: 0.4px; width: fit-content;
+    }
+
+    /* ── Panel d'embauche ── */
+    .mr-hire-panel {
+      background: var(--white); border-radius: 12px;
+      border: 2px solid var(--main-blue); overflow: hidden;
+    }
+    .mr-hire-panel-header {
+      padding: 10px 14px;
+      background: var(--main-blue);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .mr-hire-panel-header-icon { font-size: 16px; }
+    .mr-hire-panel-header-title {
+      font-size: var(--text-tiny); font-weight: 700; color: var(--white);
+    }
+    .mr-hire-panel-header-pos {
+      font-size: 11px; color: rgba(255,255,255,0.75); font-weight: 400;
+    }
+    .mr-hire-options {
+      display: grid; grid-template-columns: 1fr 1fr;
+    }
+    .mr-hire-option {
+      padding: 14px 12px;
+      display: flex; flex-direction: column; gap: 5px;
+      cursor: pointer; transition: background 0.15s;
+      border-right: 1px solid var(--dark-6);
+    }
+    .mr-hire-option:last-child { border-right: none; }
+    .mr-hire-option:hover { background: var(--dark-7); }
+    .mr-hire-option-title { font-size: 12px; font-weight: 700; color: var(--dark-1); }
+    .mr-hire-option-price {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--main-blue);
+    }
+    .mr-hire-option-detail { font-size: 10px; color: var(--dark-3); line-height: 1.4; }
+    .mr-hire-option-badge {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      background: rgba(0,48,73,0.1); color: var(--main-blue);
+      border-radius: 4px; padding: 2px 6px; width: fit-content;
+      border: 1px solid rgba(0,48,73,0.15);
+    }
+    .mr-hire-btn {
+      margin-top: 4px; padding: 8px 10px; border-radius: 8px;
+      font-size: 12px; font-weight: 600; text-align: center;
+      border: none; cursor: pointer; transition: all 0.15s; width: 100%;
+    }
+    .mr-hire-btn--base { background: var(--dark-6); color: var(--dark-1); }
+    .mr-hire-btn--base:hover { background: var(--dark-5); }
+    .mr-hire-btn--lvl1 { background: var(--main-blue); color: var(--white); }
+    .mr-hire-btn--lvl1:hover { opacity: 0.9; }
+
+    /* ── Cart footer ── */
+    .mr-cart-footer {
+      position: fixed; bottom: 56px; left: 0; right: 0; z-index: 100;
+      background: var(--white); border-top: 2px solid var(--dark-5);
+    }
+    @media (min-width: 768px) { .mr-cart-footer { bottom: 0; left: 60px; } }
+
+    .mr-cart-merc-list {
+      border-bottom: 1px solid var(--dark-6);
+      max-height: 120px; overflow-y: auto;
+    }
+    .mr-cart-merc-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--dark-6);
+    }
+    .mr-cart-merc-item:last-child { border-bottom: none; }
+    .mr-cart-merc-info { flex: 1; min-width: 0; }
+    .mr-cart-merc-name {
+      font-size: 12px; font-weight: 600; color: var(--dark-1);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .mr-cart-merc-type { font-size: 10px; color: var(--dark-3); }
+    .mr-cart-merc-price {
+      font-family: var(--font-title); font-size: 13px; font-weight: 700;
+      color: var(--main-blue); flex-shrink: 0;
+    }
+    .mr-cart-merc-remove {
+      background: none; border: 1px solid var(--dark-5); border-radius: 6px;
+      cursor: pointer; color: var(--dark-3);
+      width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+      font-size: 13px; flex-shrink: 0; transition: all 0.15s;
+    }
+    .mr-cart-merc-remove:hover { background: var(--red); border-color: var(--red); color: var(--white); }
+
+    .mr-cart-bottom { padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+    .mr-cart-summary { display: flex; align-items: baseline; justify-content: space-between; }
+    .mr-cart-label { font-size: var(--text-tiny); color: var(--dark-2); }
+    .mr-cart-label strong { color: var(--dark-1); }
+    .mr-cart-total { display: flex; align-items: baseline; gap: 4px; }
+    .mr-cart-total-value {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--main-blue);
+    }
+    .mr-cart-total-unit { font-size: 11px; color: var(--dark-3); }
+    .mr-cart-remaining { font-size: 11px; color: var(--dark-3); text-align: right; }
+    .mr-cart-remaining--over { color: var(--red); font-weight: 600; }
+    .mr-cart-actions { display: flex; gap: 8px; }
+    .mr-cart-actions .btn-outline-sm { flex: 1; text-align: center; padding: 10px; }
+    .mr-cart-actions .btn-primary-sm { flex: 2; text-align: center; padding: 10px; }
+
+    /* ── Demo toggle ── */
+    .demo-toggle {
+      display: flex; gap: 6px; align-items: center;
+      padding: 7px 10px; background: var(--dark-6); border-radius: 8px;
+      font-size: 11px;
+    }
+    .demo-toggle span { color: var(--dark-3); flex-shrink: 0; }
+    .demo-toggle button {
+      padding: 4px 9px; border-radius: 6px; border: 1px solid var(--dark-4);
+      background: var(--white); cursor: pointer; font-size: 11px; white-space: nowrap;
+    }
+    .demo-toggle button.active { background: var(--main-blue); color: var(--white); border-color: var(--main-blue); }
+  </style>
+</head>
+<body>
+  <div class="mobile-header">
+    <div class="mobile-header-space">
+      <div class="mobile-header-space-logo">TC</div>
+      <span class="mobile-header-space-name">Tribu Celtique</span>
+    </div>
+    <div class="mobile-header-actions">
+      <button class="mobile-header-btn">&#128100;</button>
+    </div>
+  </div>
+
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+          </div>
+          <div class="menu-right"><div class="menu-account">👤</div></div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="mr-container">
+
+          <div class="mr-header">
+            <div class="mr-header-icon">🛒</div>
+            <div class="mr-header-title">Coups de pouce</div>
+            <div class="mr-header-sub">Elfes Noirs de la Nuit — achète en premier</div>
+          </div>
+
+          <div class="mr-steps">
+            <div class="mr-step mr-step--done">✓</div>
+            <div class="mr-step-line mr-step-line--done"></div>
+            <div class="mr-step mr-step--active">2</div>
+            <div class="mr-step-line"></div>
+            <div class="mr-step mr-step--pending">3</div>
+            <div class="mr-step-line"></div>
+            <div class="mr-step mr-step--pending">4</div>
+            <div class="mr-step-line"></div>
+            <div class="mr-step mr-step--pending">5</div>
+          </div>
+
+          <div class="mr-budget-banner">
+            <div class="mr-budget-team">
+              <div class="mr-budget-logo">EN</div>
+              <div class="mr-budget-info">
+                <div class="mr-budget-name">Elfes Noirs de la Nuit</div>
+                <div class="mr-budget-label">Budget disponible (trésorerie)</div>
+              </div>
+            </div>
+            <div class="mr-budget-amount">
+              <div class="mr-budget-value">350</div>
+              <div class="mr-budget-unit">kPo</div>
+            </div>
+          </div>
+
+          <div class="mr-tabs">
+            <div class="mr-tab" onclick="showCategory('common', this)">Communs</div>
+            <div class="mr-tab" onclick="showCategory('special', this)">Spéciaux</div>
+            <div class="mr-tab" onclick="showCategory('stars', this)">Stars</div>
+            <div class="mr-tab active" onclick="showCategory('merco', this)">Mercenaires</div>
+          </div>
+
+          <!-- ══ Mercenaires ══ -->
+          <div id="cat-merco" style="display:flex; flex-direction:column; gap:12px;">
+
+            <div class="demo-toggle">
+              <span>Démo :</span>
+              <button class="active" onclick="setState('empty', this)">Aucune sélection</button>
+              <button onclick="setState('selected', this)">Position choisie</button>
+              <button onclick="setState('hired', this)">1 mercenaire recruté</button>
+            </div>
+
+            <!-- Section 1 — Choix de la position -->
+            <div class="mr-section">
+              <div class="mr-section-header">
+                <div>
+                  <div class="mr-section-title">Choisir une position</div>
+                  <div class="mr-section-sub">Roster : Elfes Noirs</div>
+                </div>
+                <div class="mr-merc-dots">
+                  <div class="mr-merc-dot mr-merc-dot--empty-slot" id="dot-0"></div>
+                  <div class="mr-merc-dot mr-merc-dot--empty-slot" id="dot-1"></div>
+                  <div class="mr-merc-dot mr-merc-dot--empty-slot" id="dot-2"></div>
+                  <span style="font-family:var(--font-title);font-size:11px;font-weight:700;color:var(--dark-2);margin-left:4px;" id="dot-label">0 / 3</span>
+                </div>
+              </div>
+              <div class="mr-section-body">
+                <div class="mr-position-grid">
+
+                  <div class="mr-position-card" id="pos-blitzeur" onclick="selectPosition('blitzeur', 'Blitzeur Elfe Noire', 90, this)">
+                    <div class="mr-position-name">Blitzeur Elfe Noire</div>
+                    <div class="mr-position-price">90 kPo</div>
+                    <div class="mr-position-count" id="pos-blitzeur-count">1 / 2 dans l'équipe</div>
+                  </div>
+
+                  <div class="mr-position-card" onclick="selectPosition('receveur', 'Receveur Elfe Noire', 70, this)">
+                    <div class="mr-position-name">Receveur Elfe Noire</div>
+                    <div class="mr-position-price">70 kPo</div>
+                    <div class="mr-position-count">0 / 4 dans l'équipe</div>
+                  </div>
+
+                  <div class="mr-position-card disabled">
+                    <div class="mr-position-name">Coureur Elfe Noire</div>
+                    <div class="mr-position-price">100 kPo</div>
+                    <div class="mr-position-count">2 / 2 dans l'équipe</div>
+                    <span class="mr-position-full">Complet</span>
+                  </div>
+
+                  <div class="mr-position-card" onclick="selectPosition('lineman', 'Lineman Elfe Noire', 60, this)">
+                    <div class="mr-position-name">Lineman Elfe Noire</div>
+                    <div class="mr-position-price">60 kPo</div>
+                    <div class="mr-position-count">3 / 7 dans l'équipe</div>
+                  </div>
+
+                  <div class="mr-position-card" onclick="selectPosition('witch', 'Witch Elf', 110, this)">
+                    <div class="mr-position-name">Witch Elf</div>
+                    <div class="mr-position-price">110 kPo</div>
+                    <div class="mr-position-count">0 / 2 dans l'équipe</div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <!-- Section 2 — Options d'embauche (visible après sélection) -->
+            <div class="mr-hire-panel" id="hire-panel" style="display:none;">
+              <div class="mr-hire-panel-header">
+                <div class="mr-hire-panel-header-icon">⚔️</div>
+                <div>
+                  <div class="mr-hire-panel-header-title">Recruter un mercenaire</div>
+                  <div class="mr-hire-panel-header-pos" id="hire-position-name">Blitzeur Elfe Noire</div>
+                </div>
+              </div>
+              <div class="mr-hire-options">
+                <div class="mr-hire-option" onclick="hire('base')">
+                  <div class="mr-hire-option-title">Mercenaire</div>
+                  <div class="mr-hire-option-price" id="price-base">120 kPo</div>
+                  <div class="mr-hire-option-detail">Prix de base + 30 kPo</div>
+                  <button class="mr-hire-btn mr-hire-btn--base">Recruter</button>
+                </div>
+                <div class="mr-hire-option" onclick="hire('lvl1')">
+                  <div class="mr-hire-option-title">Mercenaire Niv. 1</div>
+                  <div class="mr-hire-option-price" id="price-lvl1">170 kPo</div>
+                  <div class="mr-hire-option-detail">Prix de base + 80 kPo</div>
+                  <span class="mr-hire-option-badge">+1 compétence</span>
+                  <button class="mr-hire-btn mr-hire-btn--lvl1">Recruter</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ══ Autres onglets (placeholder) ══ -->
+          <div id="cat-common" style="display:none;">
+            <div style="padding:24px;text-align:center;color:var(--dark-3);font-size:var(--text-tiny);">(onglet Communs)</div>
+          </div>
+          <div id="cat-special" style="display:none;">
+            <div style="padding:24px;text-align:center;color:var(--dark-3);font-size:var(--text-tiny);">(onglet Spéciaux)</div>
+          </div>
+          <div id="cat-stars" style="display:none;">
+            <div style="padding:24px;text-align:center;color:var(--dark-3);font-size:var(--text-tiny);">(onglet Stars)</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Cart footer ── -->
+  <div class="mr-cart-footer">
+    <!-- Liste des mercenaires recrutés (masquée si vide) -->
+    <div class="mr-cart-merc-list" id="cart-merc-list" style="display:none;"></div>
+
+    <div class="mr-cart-bottom">
+      <div class="mr-cart-summary">
+        <div class="mr-cart-label" id="cart-label">Aucun coup de pouce</div>
+        <div class="mr-cart-total">
+          <span class="mr-cart-total-value" id="cart-total">0</span>
+          <span class="mr-cart-total-unit">/ 350 kPo</span>
+        </div>
+      </div>
+      <div class="mr-cart-remaining" id="cart-remaining">350 kPo disponibles</div>
+      <div class="mr-cart-actions">
+        <a href="#" class="btn-outline-sm">Passer</a>
+        <a href="#" class="btn-primary-sm">Valider les achats →</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="mobile-tabbar">
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#127968;</span><span class="mobile-tab-label">Accueil</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#127942;</span><span class="mobile-tab-label">Compétitions</span></a>
+    <a class="mobile-tab active" href="#"><span class="mobile-tab-icon">&#128203;</span><span class="mobile-tab-label">Match</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#128737;&#65039;</span><span class="mobile-tab-label">Équipes</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#128100;</span><span class="mobile-tab-label">Compte</span></a>
+  </div>
+
+  <script>
+    var currentPosition = null;
+    var hiredList = [];
+
+    function showCategory(cat, el) {
+      ['common','special','stars','merco'].forEach(function(c) {
+        var d = document.getElementById('cat-' + c);
+        if (d) d.style.display = 'none';
+      });
+      var t = document.getElementById('cat-' + cat);
+      if (t) t.style.display = 'flex';
+      document.querySelectorAll('.mr-tab').forEach(function(t) { t.classList.remove('active'); });
+      el.classList.add('active');
+    }
+
+    function selectPosition(id, name, price, cardEl) {
+      document.querySelectorAll('.mr-position-card:not(.disabled)').forEach(function(c) { c.classList.remove('selected'); });
+      cardEl.classList.add('selected');
+      currentPosition = { id: id, name: name, price: price };
+      document.getElementById('hire-position-name').textContent = name;
+      document.getElementById('price-base').textContent = (price + 30) + ' kPo';
+      document.getElementById('price-lvl1').textContent = (price + 80) + ' kPo';
+      document.getElementById('hire-panel').style.display = 'block';
+      document.getElementById('hire-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function hire(type) {
+      if (!currentPosition || hiredList.length >= 3) return;
+      hiredList.push({
+        name: currentPosition.name,
+        type: type === 'lvl1' ? 'Mercenaire Niv. 1' : 'Mercenaire',
+        price: currentPosition.price + (type === 'lvl1' ? 80 : 30)
+      });
+      document.querySelectorAll('.mr-position-card').forEach(function(c) { c.classList.remove('selected'); });
+      document.getElementById('hire-panel').style.display = 'none';
+      currentPosition = null;
+      refresh();
+    }
+
+    function removeHired(idx) {
+      hiredList.splice(idx, 1);
+      refresh();
+    }
+
+    function refresh() {
+      /* Cart list */
+      var listEl = document.getElementById('cart-merc-list');
+      listEl.innerHTML = '';
+      if (hiredList.length > 0) {
+        listEl.style.display = 'block';
+        hiredList.forEach(function(item, i) {
+          listEl.innerHTML +=
+            '<div class="mr-cart-merc-item">' +
+              '<div class="mr-cart-merc-info">' +
+                '<div class="mr-cart-merc-name">' + item.name + '</div>' +
+                '<div class="mr-cart-merc-type">' + item.type + '</div>' +
+              '</div>' +
+              '<div class="mr-cart-merc-price">' + item.price + ' kPo</div>' +
+              '<button class="mr-cart-merc-remove" onclick="removeHired(' + i + ')">✕</button>' +
+            '</div>';
+        });
+      } else {
+        listEl.style.display = 'none';
+      }
+
+      /* Cart summary */
+      var total = hiredList.reduce(function(s, x) { return s + x.price; }, 0);
+      var budget = 350;
+      var n = hiredList.length;
+      document.getElementById('cart-label').innerHTML =
+        n === 0 ? 'Aucun coup de pouce'
+                : '<strong>' + n + '</strong> mercenaire' + (n > 1 ? 's' : '');
+      document.getElementById('cart-total').textContent = total;
+      var rem = budget - total;
+      var remEl = document.getElementById('cart-remaining');
+      if (rem < 0) {
+        remEl.textContent = '⚠️ Budget dépassé de ' + (-rem) + ' kPo';
+        remEl.className = 'mr-cart-remaining mr-cart-remaining--over';
+      } else {
+        remEl.textContent = rem + ' kPo disponibles';
+        remEl.className = 'mr-cart-remaining';
+      }
+
+      /* Dots */
+      for (var i = 0; i < 3; i++) {
+        var d = document.getElementById('dot-' + i);
+        d.className = 'mr-merc-dot ' + (i < n ? 'mr-merc-dot--filled' : 'mr-merc-dot--empty-slot');
+      }
+      document.getElementById('dot-label').textContent = n + ' / 3';
+    }
+
+    /* ── États de démo ── */
+    function setState(state, btn) {
+      document.querySelectorAll('.demo-toggle button').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      hiredList = [];
+      currentPosition = null;
+      document.querySelectorAll('.mr-position-card').forEach(function(c) { c.classList.remove('selected'); });
+      document.getElementById('hire-panel').style.display = 'none';
+
+      if (state === 'selected') {
+        selectPosition('blitzeur', 'Blitzeur Elfe Noire', 90, document.getElementById('pos-blitzeur'));
+      }
+      if (state === 'hired') {
+        hiredList.push({ name: 'Blitzeur Elfe Noire', type: 'Mercenaire Niv. 1', price: 170 });
+      }
+      refresh();
+    }
+  </script>
+</body>
+</html>

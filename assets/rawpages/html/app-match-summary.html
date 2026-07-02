@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Résumé du match — Storm Treemen 2–1 Skull Crushers</title>
+  <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="match-report-shared.css">
+  <style>
+
+    /* ════════════════════════════════════════════════════
+       Layout global
+    ════════════════════════════════════════════════════ */
+    .ms-page {
+      max-width: 980px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+      padding-bottom: var(--p5);
+    }
+
+    /* ════════════════════════════════════════════════════
+       Hero banner — style ESPN (fond blanc, aéré)
+    ════════════════════════════════════════════════════ */
+    .ms-hero {
+      background: var(--white);
+      border-radius: 12px;
+      border: 1px solid var(--dark-5);
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    }
+
+    /* Bande de contexte — sombre, compacte */
+    .ms-hero-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px var(--p3);
+      background: var(--dark-1);
+    }
+    .ms-hero-context {
+      font-size: var(--text-tiny);
+      font-family: var(--font-accent);
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.55);
+    }
+    .ms-hero-date {
+      font-size: var(--text-tiny);
+      color: rgba(255,255,255,0.4);
+      font-weight: 500;
+    }
+
+    /* Scoreboard principal */
+    .ms-scoreboard {
+      display: flex;
+      align-items: center;
+      padding: var(--p2) var(--p3) var(--p2);
+      gap: 0;
+    }
+
+    /* Bloc équipe */
+    .ms-hero-team {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: var(--p1);
+    }
+    .ms-hero-team--away {
+      flex-direction: row-reverse;
+      text-align: right;
+    }
+    .ms-hero-logo {
+      width: 56px; height: 56px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 800; font-size: 18px;
+      color: var(--white); flex-shrink: 0;
+      background: linear-gradient(135deg, var(--main-blue) 0%, #0a4a6a 100%);
+    }
+    .ms-hero-logo--away {
+      background: linear-gradient(135deg, #8B1A1A 0%, #3A1A1A 100%);
+    }
+    .ms-hero-team-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .ms-hero-team-name {
+      font-family: var(--font-title);
+      font-size: var(--h5);
+      font-weight: 700;
+      color: var(--dark-0);
+      line-height: 1.1;
+    }
+    .ms-hero-coach {
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+    }
+    .ms-result-badge {
+      font-size: 10px;
+      font-weight: 700;
+      font-family: var(--font-accent);
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
+      width: fit-content;
+    }
+    .ms-result-win  { background: rgba(98,149,132,0.1);  color: var(--green); }
+    .ms-result-lose { background: rgba(224,32,32,0.07);  color: var(--red);   }
+
+    /* Score central */
+    .ms-score-center {
+      flex-shrink: 0;
+      padding: 0 var(--p2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+    .ms-score-display {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .ms-score-num {
+      font-family: var(--font-title);
+      font-size: 88px;
+      font-weight: 900;
+      color: var(--dark-0);
+      line-height: 1;
+      letter-spacing: -6px;
+    }
+    .ms-score-sep {
+      font-family: var(--font-title);
+      font-size: 40px;
+      font-weight: 300;
+      color: var(--dark-4);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    /* Barre de stats — sombre, clairement séparée du scoreboard */
+    .ms-hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      background: var(--dark-0);
+    }
+    .ms-hero-stat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      padding: 12px var(--p1);
+      border-right: 1px solid rgba(255,255,255,0.07);
+    }
+    .ms-hero-stat:last-child { border-right: none; }
+    .ms-hero-stat-value {
+      font-family: var(--font-title);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--white);
+    }
+    .ms-hero-stat-value--orange { color: var(--orange); }
+    .ms-hero-stat-label {
+      font-size: 10px;
+      color: rgba(255,255,255,0.4);
+      font-family: var(--font-accent);
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      text-transform: uppercase;
+      text-align: center;
+    }
+
+    /* ════════════════════════════════════════════════════
+       2-column body
+    ════════════════════════════════════════════════════ */
+    .ms-body {
+      display: flex;
+      gap: var(--p2);
+      align-items: flex-start;
+    }
+    .ms-main  { flex: 3; display: flex; flex-direction: column; gap: var(--p2); min-width: 0; }
+    .ms-aside { flex: 2; display: flex; flex-direction: column; gap: var(--p2); min-width: 0; }
+
+    /* ════════════════════════════════════════════════════
+       Cards
+    ════════════════════════════════════════════════════ */
+    .ms-card {
+      background: var(--white);
+      border-radius: 12px;
+      border: 1px solid var(--dark-5);
+      overflow: hidden;
+    }
+    .ms-card-header {
+      padding: 14px var(--p2);
+      border-bottom: 1px solid var(--dark-5);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ms-card-header-icon { font-size: 16px; }
+    .ms-card-header-title {
+      font-family: var(--font-title);
+      font-size: var(--text-small);
+      font-weight: 700;
+      color: var(--dark-1);
+      flex: 1;
+    }
+    .ms-card-body {
+      padding: var(--p2);
+      display: flex;
+      flex-direction: column;
+      gap: var(--p1);
+    }
+
+    /* ════════════════════════════════════════════════════
+       Article
+    ════════════════════════════════════════════════════ */
+    .ms-article-headline {
+      font-family: var(--font-title);
+      font-size: var(--h4);
+      font-weight: 700;
+      color: var(--dark-0);
+      line-height: 1.2;
+    }
+    .ms-article-byline {
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .ms-article-byline-sep { color: var(--dark-5); }
+    .ms-article-body {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .ms-article-p {
+      font-size: var(--text-small);
+      color: var(--dark-1);
+      line-height: 1.7;
+    }
+    .ms-article-p strong { font-weight: 600; color: var(--dark-0); }
+
+    /* Pull quote */
+    .ms-pullquote {
+      border-left: 4px solid var(--orange);
+      padding: 8px var(--p1);
+      background: rgba(255,107,53,0.04);
+      border-radius: 0 8px 8px 0;
+    }
+    .ms-pullquote-text {
+      font-family: var(--font-title);
+      font-size: var(--text-small);
+      font-style: italic;
+      color: var(--dark-1);
+      line-height: 1.5;
+    }
+
+    /* ════════════════════════════════════════════════════
+       Key moments (timeline narrative)
+    ════════════════════════════════════════════════════ */
+    .ms-timeline { display: flex; flex-direction: column; gap: 0; }
+    .ms-half-label {
+      font-size: 10px;
+      font-weight: 700;
+      font-family: var(--font-accent);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--dark-3);
+      padding: 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ms-half-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--dark-5);
+    }
+
+    .ms-event {
+      display: flex;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--dark-6);
+    }
+    .ms-event:last-child { border-bottom: none; }
+
+    .ms-event-turn {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800;
+      font-family: var(--font-accent);
+      flex-shrink: 0;
+    }
+    .ms-event-turn--home { background: var(--main-blue); color: var(--white); }
+    .ms-event-turn--away { background: rgba(139,26,26,0.12); color: #8B1A1A; border: 1px solid rgba(139,26,26,0.2); }
+    .ms-event-turn--mvp  { background: rgba(255,215,0,0.15); color: #9A7800; border: 1px solid rgba(255,215,0,0.3); font-size: 16px; }
+
+    .ms-event-icon {
+      font-size: 18px;
+      line-height: 36px;
+      flex-shrink: 0;
+    }
+
+    .ms-event-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .ms-event-title {
+      font-size: var(--text-small);
+      color: var(--dark-1);
+      font-weight: 500;
+    }
+    .ms-event-title strong { font-weight: 700; color: var(--dark-0); }
+    .ms-event-score {
+      font-size: var(--text-tiny);
+      font-weight: 700;
+      color: var(--main-blue);
+    }
+    .ms-event-injury {
+      font-size: var(--text-tiny);
+      font-weight: 600;
+      color: var(--red);
+      background: rgba(224,32,32,0.07);
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    .ms-event-injury--ko {
+      color: var(--orange);
+      background: rgba(255,107,53,0.07);
+    }
+    .ms-event-injury--out {
+      color: #8B1A1A;
+      background: rgba(139,26,26,0.07);
+    }
+
+    /* ════════════════════════════════════════════════════
+       Sidebar cards
+    ════════════════════════════════════════════════════ */
+
+    /* MVP card */
+    .ms-mvp-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+    }
+    .ms-mvp-row + .ms-mvp-row { border-top: 1px solid var(--dark-6); }
+    .ms-mvp-team-badge {
+      width: 36px; height: 36px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 12px;
+      color: var(--white); flex-shrink: 0;
+    }
+    .ms-mvp-team-badge--home { background: linear-gradient(135deg, var(--main-blue), #0a4a6a); }
+    .ms-mvp-team-badge--away { background: linear-gradient(135deg, #8B1A1A, #3A1A1A); }
+    .ms-mvp-info { flex: 1; }
+    .ms-mvp-name {
+      font-size: var(--text-small);
+      font-weight: 700;
+      color: var(--dark-0);
+    }
+    .ms-mvp-detail {
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+      margin-top: 2px;
+    }
+    .ms-mvp-star {
+      font-size: 22px;
+    }
+
+    /* Performer rows */
+    .ms-perf-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--dark-6);
+    }
+    .ms-perf-row:last-child { border-bottom: none; }
+    .ms-perf-jersey {
+      width: 28px; height: 28px; border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: var(--white);
+      flex-shrink: 0;
+    }
+    .ms-perf-jersey--home { background: var(--main-blue); }
+    .ms-perf-jersey--away { background: #8B1A1A; }
+    .ms-perf-name { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); flex: 1; }
+    .ms-perf-pos  { font-size: var(--text-tiny); color: var(--dark-3); }
+    .ms-perf-spp  {
+      font-family: var(--font-title);
+      font-size: var(--text-small);
+      font-weight: 700;
+      color: var(--main-blue);
+    }
+    .ms-perf-spp-label { font-size: 10px; color: var(--dark-4); font-weight: 400; }
+
+    /* Stat rows (gains / fan factor) */
+    .ms-stat-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--dark-6);
+    }
+    .ms-stat-row:last-child { border-bottom: none; }
+    .ms-stat-team {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ms-stat-logo {
+      width: 24px; height: 24px; border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 9px;
+      color: var(--white);
+    }
+    .ms-stat-logo--home { background: linear-gradient(135deg, var(--main-blue), #0a4a6a); }
+    .ms-stat-logo--away { background: linear-gradient(135deg, #8B1A1A, #3A1A1A); }
+    .ms-stat-name { font-size: var(--text-small); color: var(--dark-1); }
+    .ms-stat-value {
+      font-family: var(--font-title);
+      font-size: var(--text-small);
+      font-weight: 700;
+    }
+    .ms-stat-value--gain  { color: var(--green); }
+    .ms-stat-value--pos   { color: var(--green); }
+    .ms-stat-value--neg   { color: var(--red); }
+    .ms-stat-value--neu   { color: var(--dark-3); }
+    .ms-stat-sub { font-size: var(--text-tiny); color: var(--dark-3); }
+
+    /* Injury rows */
+    .ms-injury-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--dark-6);
+    }
+    .ms-injury-row:last-child { border-bottom: none; }
+    .ms-injury-icon { font-size: 16px; flex-shrink: 0; }
+    .ms-injury-info { flex: 1; }
+    .ms-injury-player { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+    .ms-injury-detail { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 1px; }
+    .ms-injury-badge {
+      font-size: 10px; font-weight: 700;
+      padding: 3px 8px; border-radius: 4px;
+      white-space: nowrap;
+    }
+    .ms-injury-badge--ko        { background: rgba(255,107,53,0.1); color: var(--orange); }
+    .ms-injury-badge--commo     { background: rgba(255,107,53,0.1); color: var(--orange); }
+    .ms-injury-badge--sortie    { background: rgba(224,32,32,0.08); color: var(--red); }
+    .ms-injury-badge--death     { background: rgba(0,0,0,0.07);     color: var(--dark-2); }
+
+    /* CTA */
+    .ms-cta-row {
+      display: flex;
+      gap: var(--p1);
+    }
+    .ms-btn-primary {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px;
+      background: var(--main-blue);
+      color: var(--white);
+      border-radius: 8px;
+      font-size: var(--text-small);
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      border: none;
+      text-decoration: none;
+    }
+    .ms-btn-primary:hover { opacity: 0.85; }
+    .ms-btn-outline {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px;
+      background: transparent;
+      color: var(--dark-2);
+      border-radius: 8px;
+      font-size: var(--text-small);
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--dark-4);
+      transition: background 0.15s;
+      text-decoration: none;
+    }
+    .ms-btn-outline:hover { background: var(--dark-6); }
+
+    /* ════════════════════════════════════════════════════
+       Responsive — mobile
+    ════════════════════════════════════════════════════ */
+    @media (max-width: 768px) {
+
+      /* hero */
+      .ms-hero-header { padding: 8px var(--p1); flex-wrap: wrap; gap: 4px; }
+      .ms-hero-context { font-size: 9px; }
+      .ms-hero-date { font-size: 9px; }
+
+      .ms-scoreboard { padding: var(--p1); }
+      .ms-hero-logo { width: 40px; height: 40px; font-size: 13px; }
+      .ms-hero-team-name { font-size: var(--text-small); }
+      .ms-hero-coach { display: none; }
+      .ms-result-badge { font-size: 9px; padding: 2px 6px; }
+      .ms-score-num { font-size: 60px; letter-spacing: -3px; }
+      .ms-score-sep { font-size: 32px; }
+      .ms-score-center { padding: 0 var(--p1); }
+
+      .ms-hero-stats { flex-wrap: wrap; }
+      .ms-hero-stat { flex: 1 1 30%; min-width: 0; padding: 8px 4px; }
+      .ms-hero-stat-value { font-size: 15px; }
+      .ms-hero-stat-label { font-size: 9px; }
+
+      /* body → single column */
+      .ms-body { flex-direction: column; }
+
+      /* article headline */
+      .ms-article-headline { font-size: var(--text-medium); }
+
+      /* CTA */
+      .ms-cta-row { flex-direction: column; }
+    }
+
+  </style>
+</head>
+<body>
+
+<!-- Mobile header -->
+<div class="mobile-header">
+  <div class="mobile-header-space">
+    <div class="mobile-header-space-logo">TC</div>
+    <span class="mobile-header-space-name">Tribu Celtique</span>
+    <span class="mobile-header-space-chevron">&#9660;</span>
+  </div>
+  <div class="mobile-header-actions">
+    <button class="mobile-header-btn">&#128100;</button>
+  </div>
+</div>
+
+<div class="app-layout">
+  <div class="sidebar">
+    <div class="sidebar-top"></div>
+    <div class="league-btn league-btn-active">TC</div>
+    <div class="league-btn">KC</div>
+  </div>
+
+  <div class="main-area">
+    <div class="menu-bar">
+      <div class="menu-bar-inner">
+        <div class="menu-left">
+          <div class="menu-logo">
+            <div class="menu-logo-icon">BBC</div>
+            <span class="menu-logo-text">Blood Bowl Club</span>
+          </div>
+          <a class="menu-item" href="app-home.html">Accueil</a>
+          <a class="menu-item active" href="app-competition-list.html">Compétitions</a>
+          <a class="menu-item">Règles du jeu</a>
+        </div>
+        <div class="menu-right">
+          <div class="menu-account">👤</div>
+        </div>
+      </div>
+      <div class="sub-menu-placeholder"></div>
+    </div>
+
+    <div class="page-content">
+      <div class="ms-page">
+
+        <!-- ══ HERO ══════════════════════════════════════════════════ -->
+        <div class="ms-hero">
+
+          <!-- Contexte -->
+          <div class="ms-hero-header">
+            <span class="ms-hero-context">Ligue de Condate · Saison 5 · Journée 3</span>
+<span class="ms-hero-date">7 novembre 2024</span>
+          </div>
+
+          <!-- Scoreboard -->
+          <div class="ms-scoreboard">
+
+            <!-- Équipe domicile -->
+            <div class="ms-hero-team">
+              <div class="ms-hero-logo">ST</div>
+              <div class="ms-hero-team-info">
+                <div class="ms-hero-team-name">Storm Treemen</div>
+                <div class="ms-hero-coach">Coach Yan · Elfes Sylvains</div>
+                <span class="ms-result-badge ms-result-win">Victoire</span>
+              </div>
+            </div>
+
+            <!-- Score -->
+            <div class="ms-score-center">
+              <div class="ms-score-display">
+                <span class="ms-score-num">2</span>
+                <span class="ms-score-sep">–</span>
+                <span class="ms-score-num">1</span>
+              </div>
+            </div>
+
+            <!-- Équipe visiteur -->
+            <div class="ms-hero-team ms-hero-team--away">
+              <div class="ms-hero-logo ms-hero-logo--away">SC</div>
+              <div class="ms-hero-team-info">
+                <div class="ms-hero-team-name">Skull Crushers</div>
+                <div class="ms-hero-coach">Coach Darkmoule · Orques</div>
+                <span class="ms-result-badge ms-result-lose">Défaite</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Stats strip -->
+          <div class="ms-hero-stats">
+            <div class="ms-hero-stat">
+              <span class="ms-hero-stat-value">2</span>
+              <span class="ms-hero-stat-label">TDs Storm</span>
+            </div>
+            <div class="ms-hero-stat">
+              <span class="ms-hero-stat-value">1</span>
+              <span class="ms-hero-stat-label">TD Skull</span>
+            </div>
+            <div class="ms-hero-stat">
+              <span class="ms-hero-stat-value ms-hero-stat-value--orange">2</span>
+              <span class="ms-hero-stat-label">Blessures</span>
+            </div>
+            <div class="ms-hero-stat">
+              <span class="ms-hero-stat-value ms-hero-stat-value--orange">1</span>
+              <span class="ms-hero-stat-label">KO</span>
+            </div>
+            <div class="ms-hero-stat">
+              <span class="ms-hero-stat-value">5 – 3</span>
+              <span class="ms-hero-stat-label">Fans</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ══ BODY ═══════════════════════════════════════════════════ -->
+        <div class="ms-body">
+
+          <!-- ── Colonne principale ──────────────────────────────── -->
+          <div class="ms-main">
+
+            <!-- Article -->
+            <div class="ms-card">
+              <div class="ms-card-header">
+                <span class="ms-card-header-icon">📰</span>
+                <span class="ms-card-header-title">Compte-rendu</span>
+                <span style="font-size:var(--text-tiny);color:var(--dark-3);">Soumis par <strong>Yan</strong></span>
+              </div>
+              <div class="ms-card-body">
+
+                <div class="ms-article-headline">
+                  Les Storm Treemen résistent aux coups de boutoir des Skull Crushers
+                </div>
+
+                <div class="ms-article-byline">
+                  <span>Journée 3 — Ligue de Condate</span>
+                  <span class="ms-article-byline-sep">·</span>
+                  <span>Match soumis le 7 nov. 2024</span>
+                </div>
+
+                <div class="ms-article-body">
+                  <p class="ms-article-p">
+                    Dans un match haché et disputé, les <strong>Storm Treemen</strong> de coach Yan ont
+                    conservé leur avantage jusqu'au coup de sifflet final pour l'emporter <strong>2 à 1</strong>
+                    face aux <strong>Skull Crushers</strong> de Darkmoule. Un succès précieux qui conforte
+                    les Elfes Sylvains à la troisième journée de la Ligue de Condate.
+                  </p>
+
+                  <div class="ms-pullquote">
+                    <div class="ms-pullquote-text">
+                      Deux touchdowns signés Aëlindra, une passe de Thalion — les Storm ont montré
+                      leur vraie mesure défensive face à une ligne orque particulièrement agressive.
+                    </div>
+                  </div>
+
+                  <p class="ms-article-p">
+                    Les Orques ont poussé fort en première mi-temps, égalisant à la mi-temps via
+                    <strong>#4 Grishnak</strong> au tour 5, répondant au touchdown inaugural d'Aëlindra
+                    au tour 1. Le KO de Grotak au tour 6 a semé le doute chez les Sylvains, qui
+                    ont résisté à la supériorité numérique adverse.
+                  </p>
+
+                  <p class="ms-article-p">
+                    En deuxième mi-temps, malgré la sortie violente de <strong>#11 Fenris</strong> au
+                    tour 9 et la commotion d'Uzgrot côté Skull, c'est bien Aëlindra qui a scellé
+                    la victoire au tour 12, son deuxième touchdownd du soir, pour porter le score
+                    à <strong>2–1</strong> définitif.
+                  </p>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Chronologie -->
+            <div class="ms-card">
+              <div class="ms-card-header">
+                <span class="ms-card-header-icon">⏱️</span>
+                <span class="ms-card-header-title">Moments clés</span>
+              </div>
+              <div class="ms-card-body">
+                <div class="ms-timeline">
+
+                  <div class="ms-half-label">1ère mi-temps</div>
+
+                  <div class="ms-event">
+                    <div class="ms-event-turn ms-event-turn--home">T1</div>
+                    <div class="ms-event-icon">🏈</div>
+                    <div class="ms-event-body">
+                      <div class="ms-event-title"><strong>#7 Aëlindra</strong> (Catcher) marque un Touchdown</div>
+                      <div class="ms-event-score">Score : 1 — 0</div>
+                    </div>
+                  </div>
+
+                  <div class="ms-event">
+                    <div class="ms-event-turn ms-event-turn--home">T4</div>
+                    <div class="ms-event-icon">🎯</div>
+                    <div class="ms-event-body">
+                      <div class="ms-event-title"><strong>#1 Thalion</strong> (Thrower) réussit une Passe décisive</div>
+                    </div>
+                  </div>
+
+                  <div class="ms-event">
+                    <div class="ms-event-turn ms-event-turn--away">T5</div>
+                    <div class="ms-event-icon">🏈</div>
+                    <div class="ms-event-body">
+                      <div class="ms-event-title"><strong>#4 Grishnak</strong> (Blitzer) marque un Touchdown</div>
+                      <div class="ms-event-score">Score : 1 — 1</div>
+                    </div>
+                  </div>
+
+                  <div class="ms-event">
+                    <div class="ms-event-turn ms-event-turn--home">T6</div>
+                    <div class="ms-event-icon">💢</div>
+                    <div class="ms-event-body">
+                      <div class="ms-event-title"><strong>#3 Grotak</strong> (Blitzer) subit un impact</div>
+                      <span class="ms-event-injury ms-event-injury--ko">KO</span>
+                    </div>
+                  </div>
+
+                  <div class="ms-half-label">2ème mi-temps · Mi-temps : 1 — 1</div>
+
+                  <div class="ms-event">
+                    <div class="ms-event-turn ms-event-turn--home">T9</div>
+                    <div class="ms-event-icon">🩸</div>
+                    <div class="ms-event-body">
+                      <div class="ms-event-title"><strong>#11 Fenris</strong> (Lineman) expulsé du terrain</div>
+                      <span class="ms-event-injury ms-event-injury--out">Sortie</span>
+                    </div>
+                  </div>
+
+                  <div class="ms-event">
+                    <div class="ms-event-turn ms-event-turn--home">T12</div>
+                    <div class="ms-event-icon">🏈</div>
+                    <div class="ms-event-body">
+                      <div class="ms-event-title"><strong>#7 Aëlindra</strong> (Catcher) marque un Touchdown</div>
+                      <div class="ms-event-score">Score : 2 — 1 ← Score final</div>
+                    </div>
+                  </div>
+
+                  <div class="ms-event">
+                    <div class="ms-event-turn ms-event-turn--away">T14</div>
+                    <div class="ms-event-icon">💢</div>
+                    <div class="ms-event-body">
+                      <div class="ms-event-title"><strong>#8 Uzgrot</strong> (Lineman) subit un impact</div>
+                      <span class="ms-event-injury">Commotion</span>
+                    </div>
+                  </div>
+
+                  <div class="ms-half-label">MVPs</div>
+
+                  <div class="ms-event">
+                    <div class="ms-event-turn ms-event-turn--mvp">★</div>
+                    <div class="ms-event-icon">⭐</div>
+                    <div class="ms-event-body">
+                      <div class="ms-event-title"><strong>#7 Aëlindra</strong> — MVP Storm Treemen · 7 SPP au total</div>
+                    </div>
+                  </div>
+
+                  <div class="ms-event">
+                    <div class="ms-event-turn ms-event-turn--mvp" style="border-color: rgba(139,26,26,0.25); background: rgba(139,26,26,0.08); color: #8B1A1A;">★</div>
+                    <div class="ms-event-icon">⭐</div>
+                    <div class="ms-event-body">
+                      <div class="ms-event-title"><strong>#4 Grishnak</strong> — MVP Skull Crushers · 6 SPP au total</div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <!-- CTA -->
+            <div class="ms-cta-row">
+              <a class="ms-btn-outline" href="app-competition-detail.html">← Retour aux résultats</a>
+              <a class="ms-btn-primary" href="app-team-detail.html">Voir la fiche Storm Treemen →</a>
+            </div>
+
+          </div>
+          <!-- fin ms-main -->
+
+          <!-- ── Sidebar ─────────────────────────────────────────── -->
+          <div class="ms-aside">
+
+            <!-- MVPs -->
+            <div class="ms-card">
+              <div class="ms-card-header">
+                <span class="ms-card-header-icon">⭐</span>
+                <span class="ms-card-header-title">Joueurs du match</span>
+              </div>
+              <div class="ms-card-body">
+                <div class="ms-mvp-row">
+                  <div class="ms-mvp-team-badge ms-mvp-team-badge--home">ST</div>
+                  <div class="ms-mvp-info">
+                    <div class="ms-mvp-name">#7 Aëlindra</div>
+                    <div class="ms-mvp-detail">Catcher · Storm Treemen · MVP + 2 TD</div>
+                  </div>
+                  <span class="ms-mvp-star">🌟</span>
+                </div>
+                <div class="ms-mvp-row">
+                  <div class="ms-mvp-team-badge ms-mvp-team-badge--away">SC</div>
+                  <div class="ms-mvp-info">
+                    <div class="ms-mvp-name">#4 Grishnak</div>
+                    <div class="ms-mvp-detail">Blitzer · Skull Crushers · MVP + 1 TD</div>
+                  </div>
+                  <span class="ms-mvp-star">⭐</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Performances -->
+            <div class="ms-card">
+              <div class="ms-card-header">
+                <span class="ms-card-header-icon">📊</span>
+                <span class="ms-card-header-title">Performances (SPP)</span>
+              </div>
+              <div class="ms-card-body" style="gap:0; padding: var(--p1) var(--p2);">
+                <div class="ms-perf-row">
+                  <div class="ms-perf-jersey ms-perf-jersey--home">7</div>
+                  <div>
+                    <div class="ms-perf-name">Aëlindra</div>
+                    <div class="ms-perf-pos">Catcher · Storm</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div class="ms-perf-spp">+7 <span class="ms-perf-spp-label">SPP</span></div>
+                  </div>
+                </div>
+                <div class="ms-perf-row">
+                  <div class="ms-perf-jersey ms-perf-jersey--away">4</div>
+                  <div>
+                    <div class="ms-perf-name">Grishnak</div>
+                    <div class="ms-perf-pos">Blitzer · Skull</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div class="ms-perf-spp">+6 <span class="ms-perf-spp-label">SPP</span></div>
+                  </div>
+                </div>
+                <div class="ms-perf-row">
+                  <div class="ms-perf-jersey ms-perf-jersey--home">1</div>
+                  <div>
+                    <div class="ms-perf-name">Thalion</div>
+                    <div class="ms-perf-pos">Thrower · Storm</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div class="ms-perf-spp">+1 <span class="ms-perf-spp-label">SPP</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Gains & Fan factor -->
+            <div class="ms-card">
+              <div class="ms-card-header">
+                <span class="ms-card-header-icon">💰</span>
+                <span class="ms-card-header-title">Gains & Fan Factor</span>
+              </div>
+              <div class="ms-card-body" style="gap:0; padding: var(--p1) var(--p2);">
+
+                <div style="font-size:10px;font-weight:700;color:var(--dark-3);text-transform:uppercase;letter-spacing:0.5px;padding:4px 0 6px;">Recettes</div>
+                <div class="ms-stat-row">
+                  <div class="ms-stat-team">
+                    <div class="ms-stat-logo ms-stat-logo--home">ST</div>
+                    <span class="ms-stat-name">Storm Treemen</span>
+                  </div>
+                  <span class="ms-stat-value ms-stat-value--gain">+50 000 pO</span>
+                </div>
+                <div class="ms-stat-row">
+                  <div class="ms-stat-team">
+                    <div class="ms-stat-logo ms-stat-logo--away">SC</div>
+                    <span class="ms-stat-name">Skull Crushers</span>
+                  </div>
+                  <span class="ms-stat-value ms-stat-value--gain">+30 000 pO</span>
+                </div>
+
+                <div style="height:1px;background:var(--dark-5);margin:8px 0;"></div>
+
+                <div style="font-size:10px;font-weight:700;color:var(--dark-3);text-transform:uppercase;letter-spacing:0.5px;padding:4px 0 6px;">Fan Factor</div>
+                <div class="ms-stat-row">
+                  <div class="ms-stat-team">
+                    <div class="ms-stat-logo ms-stat-logo--home">ST</div>
+                    <span class="ms-stat-name">Storm Treemen</span>
+                  </div>
+                  <div style="text-align:right;">
+                    <div class="ms-stat-value ms-stat-value--pos">+1 fan</div>
+                    <div class="ms-stat-sub">3 → 4</div>
+                  </div>
+                </div>
+                <div class="ms-stat-row">
+                  <div class="ms-stat-team">
+                    <div class="ms-stat-logo ms-stat-logo--away">SC</div>
+                    <span class="ms-stat-name">Skull Crushers</span>
+                  </div>
+                  <div style="text-align:right;">
+                    <div class="ms-stat-value ms-stat-value--neg">−1 fan</div>
+                    <div class="ms-stat-sub">2 → 1</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Blessés -->
+            <div class="ms-card">
+              <div class="ms-card-header">
+                <span class="ms-card-header-icon">🩺</span>
+                <span class="ms-card-header-title">Bilan sanitaire</span>
+              </div>
+              <div class="ms-card-body" style="gap:0; padding: var(--p1) var(--p2);">
+                <div class="ms-injury-row">
+                  <div class="ms-injury-icon">💢</div>
+                  <div class="ms-injury-info">
+                    <div class="ms-injury-player">#3 Grotak</div>
+                    <div class="ms-injury-detail">Blitzer · Storm Treemen · Tour 6</div>
+                  </div>
+                  <span class="ms-injury-badge ms-injury-badge--ko">KO</span>
+                </div>
+                <div class="ms-injury-row">
+                  <div class="ms-injury-icon">🩸</div>
+                  <div class="ms-injury-info">
+                    <div class="ms-injury-player">#11 Fenris</div>
+                    <div class="ms-injury-detail">Lineman · Storm Treemen · Tour 9</div>
+                  </div>
+                  <span class="ms-injury-badge ms-injury-badge--sortie">Sortie</span>
+                </div>
+                <div class="ms-injury-row">
+                  <div class="ms-injury-icon">💢</div>
+                  <div class="ms-injury-info">
+                    <div class="ms-injury-player">#8 Uzgrot</div>
+                    <div class="ms-injury-detail">Lineman · Skull Crushers · Tour 14</div>
+                  </div>
+                  <span class="ms-injury-badge ms-injury-badge--commo">Commotion</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          <!-- fin ms-aside -->
+
+        </div>
+        <!-- fin ms-body -->
+
+      </div>
+      <!-- fin ms-page -->
+    </div>
+    <!-- fin page-content -->
+  </div>
+</div>
+
+<!-- Mobile tab bar -->
+<div class="mobile-tabbar">
+  <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#127968;</span><span class="mobile-tab-label">Accueil</span></a>
+  <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#127942;</span><span class="mobile-tab-label">Compétitions</span></a>
+  <a class="mobile-tab active" href="#"><span class="mobile-tab-icon">&#128203;</span><span class="mobile-tab-label">Match</span></a>
+  <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#128737;&#65039;</span><span class="mobile-tab-label">Équipes</span></a>
+  <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#128100;</span><span class="mobile-tab-label">Compte</span></a>
+</div>
+
+</body>
+</html>

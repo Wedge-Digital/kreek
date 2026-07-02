@@ -6,56 +6,208 @@
   <title>Ligue de Condate — Blood Bowl Club</title>
   <link rel="stylesheet" href="shared.css">
   <style>
-    .detail-layout { display: flex; gap: var(--p1); height: 100%; }
-    .detail-left { flex: 1; }
-    .detail-right { flex: 4; overflow-y: auto; }
+    /* ─── Layout ─── */
+    .detail-layout    { display: flex; gap: var(--p1); height: 100%; }
+    .detail-left      { flex: 1; }
+    .detail-right     { flex: 4; overflow-y: auto; }
 
-    /* Left panel */
-    .left-panel { background: var(--white); border-radius: 10px; padding: var(--p2); display: flex; flex-direction: column; gap: var(--p2); position: sticky; top: 0; }
+    /* ─── Left panel ─── */
+    .left-panel {
+      background: var(--white); border-radius: 10px; padding: var(--p2);
+      display: flex; flex-direction: column; gap: var(--p2); position: sticky; top: 0;
+    }
     .league-banner {
       border-radius: 8px; height: 120px;
       background: linear-gradient(135deg, #003049 0%, #555770 100%);
       display: flex; align-items: center; justify-content: center;
       font-family: var(--font-title); font-size: 36px; font-weight: 900; color: var(--white);
     }
-    .league-meta { display: flex; flex-direction: column; gap: 8px; }
-    .league-meta-item { display: flex; justify-content: space-between; font-size: var(--text-tiny); }
+    .league-meta       { display: flex; flex-direction: column; gap: 8px; }
+    .league-meta-item  { display: flex; justify-content: space-between; font-size: var(--text-tiny); }
     .league-meta-label { color: var(--dark-3); }
     .league-meta-value { color: var(--dark-1); font-weight: 500; }
-    .filter-section { display: flex; flex-direction: column; gap: var(--p1); }
-    .filter-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-2); }
 
-    /* Right panel content */
-    .comp-header { background: var(--white); border-radius: 10px; padding: var(--p2); margin-bottom: var(--p1); display: flex; align-items: center; gap: var(--p2); }
-    .comp-title-block { flex: 1; }
+    /* ─── Standings ─── */
     .standings-table { background: var(--white); border-radius: 10px; overflow: hidden; margin-bottom: var(--p1); }
-    .standings-header { display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px; padding: 12px 16px; background: var(--dark-0); color: var(--white); font-size: var(--text-tiny); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; gap: 8px; align-items: center; }
-    .standings-row { display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px; padding: 12px 16px; gap: 8px; align-items: center; border-bottom: 1px solid var(--dark-6); font-size: var(--text-small); }
-    .standings-row:last-child { border-bottom: none; }
+    .standings-head  {
+      display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px;
+      padding: 12px 16px; gap: 8px; align-items: center;
+      background: var(--dark-0); color: var(--white);
+      font-size: var(--text-tiny); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    }
+    .standings-row {
+      display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px;
+      padding: 12px 16px; gap: 8px; align-items: center;
+      border-bottom: 1px solid var(--dark-6); font-size: var(--text-tiny);
+    }
+    .standings-row:last-child      { border-bottom: none; }
     .standings-row:nth-child(even) { background: var(--dark-7); }
-    .standings-row:hover { background: var(--dark-6); }
-    .standings-rank { color: var(--dark-3); font-weight: 700; text-align: center; }
-    .standings-team { font-weight: 500; color: var(--dark-1); }
-    .standings-num { text-align: center; color: var(--dark-2); }
-    .standings-pts { text-align: center; font-weight: 700; color: var(--dark-0); }
-    .standings-row.top3 { background: rgba(0,48,73,0.04); }
+    .standings-row:hover           { background: var(--dark-6); cursor: pointer; }
+    .standings-row.top3            { background: rgba(0,48,73,0.04); }
+    .s-rank { color: var(--dark-3); font-weight: 700; text-align: center; }
+    .s-team { font-weight: 600; color: var(--dark-1); font-size: var(--text-small); }
+    .s-num  { text-align: center; color: var(--dark-2); }
+    .s-pts  { text-align: center; font-weight: 700; color: var(--dark-0); }
 
-    .matches-list { background: var(--white); border-radius: 10px; overflow: hidden; }
-    .matches-list-header { padding: var(--p2); border-bottom: 2px solid var(--dark-5); display: flex; align-items: center; justify-content: space-between; }
-    .match-row { padding: var(--p1) var(--p2); border-bottom: 1px solid var(--dark-6); display: flex; align-items: center; justify-content: space-between; }
-    .match-row:last-child { border-bottom: none; }
-    .match-row:hover { background: var(--dark-7); cursor: pointer; }
-    .match-teams-cell { display: flex; flex-direction: column; gap: 4px; flex: 1; }
-    .match-team-line { display: flex; align-items: center; gap: 8px; font-size: var(--text-small); }
-    .match-team-logo-sm { width: 24px; height: 24px; border-radius: 4px; background: var(--dark-4); flex-shrink: 0; }
-    .match-score-cell { display: flex; gap: 8px; align-items: center; padding: 0 var(--p2); }
-    .match-score-num { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-0); min-width: 20px; text-align: center; }
-    .match-score-sep { color: var(--dark-4); }
-    .match-date-cell { font-size: var(--text-tiny); color: var(--dark-3); min-width: 90px; text-align: right; }
+    /* ─── Section block (shared) ─── */
+    .section-block        { background: var(--white); border-radius: 10px; overflow: hidden; margin-bottom: var(--p1); }
+    .section-block-header {
+      padding: 14px var(--p2); border-bottom: 1px solid var(--dark-5);
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--dark-7);
+    }
+    .section-label { font-family: var(--font-title); font-size: 11px; font-weight: 900; color: var(--dark-1); text-transform: uppercase; letter-spacing: 0.8px; }
+    .section-sub   { font-size: var(--text-tiny); color: var(--dark-3); }
+
+    /* ─── Match widget (Résultats) ─── */
+    .match-row {
+      display: grid; grid-template-columns: 1fr 140px 1fr;
+      align-items: center; padding: 12px var(--p2);
+      border-bottom: 1px solid var(--dark-6);
+      cursor: pointer; transition: background 0.1s;
+    }
+    .match-row:last-child      { border-bottom: none; }
+    .match-row:hover           { background: var(--dark-7); }
+    .match-row.in-progress-row { background: rgba(0,48,73,0.02); }
+
+    .team-side       { display: flex; align-items: center; gap: 10px; }
+    .team-side-away  { justify-content: flex-end; }
+
+    .team-logo {
+      width: 64px; height: 64px; border-radius: 10px; flex-shrink: 0;
+      overflow: hidden; background: var(--dark-5);
+    }
+    .team-logo-initials {
+      width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-size: 16px; font-weight: 900; color: var(--white);
+      background: linear-gradient(135deg, var(--dark-2) 0%, var(--dark-3) 100%);
+    }
+    .team-logo img   { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .team-info       { display: flex; flex-direction: column; gap: 2px; }
+    .team-info-right { text-align: right; }
+    .team-name       { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+    .team-sub        { font-size: var(--text-tiny); color: var(--dark-3); }
+
+    .score-block  { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .score-tds    { display: flex; align-items: center; gap: 6px; }
+    .score-num    { font-family: var(--font-title); font-size: var(--h5); font-weight: 900; color: var(--dark-0); min-width: 18px; text-align: center; }
+    .score-sep    { color: var(--dark-3); }
+    .score-cas    { display: flex; align-items: center; gap: 4px; }
+    .cas-num      { font-size: var(--text-tiny); color: var(--dark-3); min-width: 14px; text-align: center; }
+    .cas-sep      { font-size: var(--text-tiny); color: var(--dark-4); }
+    .match-date   { font-size: var(--text-tiny); color: var(--dark-4); margin-top: 2px; }
+
+    .status-badge             { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; border-radius: 6px; padding: 3px 10px; }
+    .status-badge-in-progress { color: var(--white); background: var(--main-blue); animation: pulse-badge 2s ease-in-out infinite; }
+    @keyframes pulse-badge    { 0%, 100% { opacity: 1; } 50% { opacity: 0.65; } }
+
+    .in-progress-block { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .report-link {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--main-blue);
+      border: 1.5px solid var(--main-blue); border-radius: 6px;
+      padding: 3px 10px; text-decoration: none; white-space: nowrap; transition: all 0.15s;
+    }
+    .report-link:hover { background: var(--main-blue); color: var(--white); }
+
+    /* ─── Calendar rows ─── */
+    .cal-row {
+      display: grid; grid-template-columns: 1fr auto 1fr;
+      align-items: center; gap: 12px; padding: 10px var(--p2);
+      border-bottom: 1px solid var(--dark-6);
+      cursor: pointer; transition: background 0.1s;
+    }
+    .cal-row:last-child { border-bottom: none; }
+    .cal-row:hover      { background: var(--dark-7); }
+
+    .cal-team      { display: flex; align-items: center; gap: 8px; }
+    .cal-team-away { justify-content: flex-end; }
+
+    .cal-logo {
+      width: 38px; height: 38px; border-radius: 7px; flex-shrink: 0;
+      overflow: hidden; background: var(--dark-5);
+    }
+    .cal-logo-initials {
+      width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-size: 11px; font-weight: 900; color: var(--white);
+      background: linear-gradient(135deg, var(--dark-2) 0%, var(--dark-3) 100%);
+    }
+    .cal-logo img   { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .cal-name       { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+    .cal-coach      { font-size: var(--text-tiny); color: var(--dark-3); }
+    .cal-name-right  { text-align: right; }
+    .cal-coach-right { text-align: right; }
+
+    .cal-center { display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0; }
+    .cal-vs     { font-family: var(--font-title); font-size: 11px; font-weight: 900; color: var(--dark-4); letter-spacing: 0.5px; }
+    .cal-date   { font-size: 10px; color: var(--dark-3); white-space: nowrap; }
+
+    /* ─── Misc ─── */
+    .scroll-sentinel { padding: var(--p2); text-align: center; color: var(--dark-4); font-size: var(--text-tiny); }
+    .tab-placeholder { background: var(--white); border-radius: 10px; padding: var(--p2); color: var(--dark-3); font-size: var(--text-small); text-align: center; }
+    .text-center     { text-align: center; }
+
+    /* ─── Responsive — tablette (≤ 900px) ─── */
+    @media (max-width: 900px) {
+      .match-row        { grid-template-columns: 1fr 110px 1fr; padding: 10px var(--p1); }
+      .team-logo        { width: 48px; height: 48px; border-radius: 8px; }
+      .team-logo-initials { font-size: 13px; }
+      .score-num        { font-size: 16px; }
+
+      .cal-row          { padding: 8px var(--p1); gap: 8px; }
+      .cal-logo         { width: 32px; height: 32px; border-radius: 6px; }
+      .cal-logo-initials { font-size: 9px; }
+    }
+
+    /* ─── Responsive — mobile (≤ 640px) ─── */
+    @media (max-width: 640px) {
+      .detail-layout  { flex-direction: column; }
+      .detail-left    { display: none; }
+      .detail-right   { overflow-y: visible; }
+
+      /* Match rows */
+      .match-row      { grid-template-columns: 1fr 80px 1fr; padding: 8px 10px; gap: 4px; }
+      .team-logo      { width: 36px; height: 36px; border-radius: 6px; }
+      .team-logo-initials { font-size: 10px; }
+      .team-name      { font-size: 13px; }
+      .team-sub       { display: none; }
+      .team-side      { gap: 6px; }
+      .score-num      { font-size: 15px; min-width: 14px; }
+      .score-cas      { display: none; }
+      .match-date     { font-size: 10px; }
+      .status-badge   { font-size: 9px; padding: 2px 7px; }
+      .report-link    { font-size: 10px; padding: 2px 7px; }
+
+      /* Cal rows */
+      .cal-row        { padding: 7px 10px; gap: 6px; }
+      .cal-logo       { width: 28px; height: 28px; border-radius: 5px; }
+      .cal-logo-initials { font-size: 8px; }
+      .cal-name       { font-size: 13px; }
+      .cal-coach      { display: none; }
+      .cal-team       { gap: 6px; }
+
+      /* Tabs */
+      .tabs           { gap: 0; }
+      .tab            { padding: 8px 10px; font-size: 13px; }
+
+      /* Section header */
+      .section-block-header { padding: 10px; }
+    }
+
+    /* ─── Responsive — très petit (≤ 400px) ─── */
+    @media (max-width: 400px) {
+      .match-row      { grid-template-columns: 1fr 70px 1fr; }
+      .team-logo      { display: none; }
+      .team-name      { font-size: 12px; }
+      .cal-name       { font-size: 12px; }
+      .tab            { padding: 7px 8px; font-size: 12px; }
+    }
   </style>
 </head>
 <body>
   <div class="app-layout">
+
+    <!-- Sidebar -->
     <div class="sidebar">
       <div class="sidebar-top"></div>
       <div class="league-btn league-btn-active">TC</div>
@@ -65,6 +217,7 @@
     </div>
 
     <div class="main-area">
+      <!-- Menu bar -->
       <div class="menu-bar">
         <div class="menu-bar-inner">
           <div class="menu-left">
@@ -84,11 +237,13 @@
         <div class="sub-menu-placeholder"></div>
       </div>
 
+      <!-- Page content -->
       <div class="page-content-wide">
         <div class="detail-layout">
+
           <!-- Left panel -->
           <div class="detail-left">
-            <div class="left-panel">
+            <div class="left-panel card-shadow">
               <div class="league-banner">LC</div>
               <div>
                 <div class="h5-gras">Ligue de Condate</div>
@@ -105,148 +260,322 @@
                 </div>
                 <div class="league-meta-item">
                   <span class="league-meta-label">Journées</span>
-                  <span class="league-meta-value">11/22</span>
-                </div>
-                <div class="league-meta-item">
-                  <span class="league-meta-label">Ville</span>
-                  <span class="league-meta-value">Rennes</span>
+                  <span class="league-meta-value">8/22</span>
                 </div>
               </div>
-              <div class="separator"></div>
-              <div class="filter-section">
-                <div class="filter-title">Saison</div>
-                <select class="picker">
-                  <option>Saison 2024</option>
-                  <option>Saison 2023</option>
-                  <option>Saison 2022</option>
-                </select>
-                <div class="filter-title">Journée</div>
-                <select class="picker">
-                  <option>Toutes les journées</option>
-                  <option>Journée 1</option>
-                  <option>Journée 2</option>
-                </select>
-              </div>
-              <button class="btn btn-primary-blue btn-sm" onclick="window.location.href='app-match-report-1.html'">
-                + Saisir un match
-              </button>
             </div>
           </div>
 
           <!-- Right panel -->
           <div class="detail-right">
+
+            <!-- 5 onglets -->
             <div class="tabs" style="margin-bottom: var(--p1);">
-              <div class="tab active">Classement</div>
-              <div class="tab">Matchs</div>
-              <div class="tab">Équipes</div>
-              <div class="tab">Statistiques</div>
+              <div class="tab" onclick="showTab('classement', this)">Classement</div>
+              <div class="tab active" onclick="showTab('resultats', this)">Résultats</div>
+              <div class="tab" onclick="showTab('calendrier', this)">Calendrier</div>
+              <div class="tab" onclick="showTab('equipes', this)">Équipes</div>
+              <div class="tab" onclick="showTab('stats', this)">Statistiques</div>
             </div>
 
-            <div class="standings-table card-shadow">
-              <div class="standings-header">
-                <div>#</div>
-                <div>Équipe</div>
-                <div style="text-align:center;">MJ</div>
-                <div style="text-align:center;">V</div>
-                <div style="text-align:center;">N</div>
-                <div style="text-align:center;">D</div>
-                <div style="text-align:center;">Pts</div>
-              </div>
-              <div class="standings-row top3">
-                <div class="standings-rank">1</div>
-                <div class="standings-team">🏆 Les Korrigans FC</div>
-                <div class="standings-num">11</div>
-                <div class="standings-num">8</div>
-                <div class="standings-num">2</div>
-                <div class="standings-num">1</div>
-                <div class="standings-pts">26</div>
-              </div>
-              <div class="standings-row top3">
-                <div class="standings-rank">2</div>
-                <div class="standings-team">Orc Boyz United</div>
-                <div class="standings-num">11</div>
-                <div class="standings-num">7</div>
-                <div class="standings-num">2</div>
-                <div class="standings-num">2</div>
-                <div class="standings-pts">23</div>
-              </div>
-              <div class="standings-row top3">
-                <div class="standings-rank">3</div>
-                <div class="standings-team">Skaven Speedsters</div>
-                <div class="standings-num">11</div>
-                <div class="standings-num">7</div>
-                <div class="standings-num">1</div>
-                <div class="standings-num">3</div>
-                <div class="standings-pts">22</div>
-              </div>
-              <div class="standings-row">
-                <div class="standings-rank">4</div>
-                <div class="standings-team">Dwarf Ironbreakers</div>
-                <div class="standings-num">11</div>
-                <div class="standings-num">6</div>
-                <div class="standings-num">1</div>
-                <div class="standings-num">4</div>
-                <div class="standings-pts">19</div>
-              </div>
-              <div class="standings-row">
-                <div class="standings-rank">5</div>
-                <div class="standings-team">Chaos Warriors</div>
-                <div class="standings-num">11</div>
-                <div class="standings-num">5</div>
-                <div class="standings-num">3</div>
-                <div class="standings-num">3</div>
-                <div class="standings-pts">18</div>
-              </div>
-              <div class="standings-row">
-                <div class="standings-rank">6</div>
-                <div class="standings-team">Dark Elves Ravens</div>
-                <div class="standings-num">11</div>
-                <div class="standings-num">5</div>
-                <div class="standings-num">2</div>
-                <div class="standings-num">4</div>
-                <div class="standings-pts">17</div>
-              </div>
-              <div class="standings-row">
-                <div class="standings-rank">7</div>
-                <div class="standings-team">High Elf Nobles</div>
-                <div class="standings-num">11</div>
-                <div class="standings-num">4</div>
-                <div class="standings-num">2</div>
-                <div class="standings-num">5</div>
-                <div class="standings-pts">14</div>
-              </div>
-              <div class="standings-row">
-                <div class="standings-rank">8</div>
-                <div class="standings-team">Nantes Undead</div>
-                <div class="standings-num">11</div>
-                <div class="standings-num">3</div>
-                <div class="standings-num">2</div>
-                <div class="standings-num">6</div>
-                <div class="standings-pts">11</div>
-              </div>
-              <div class="standings-row">
-                <div class="standings-rank">9</div>
-                <div class="standings-team">Lizardmen FC</div>
-                <div class="standings-num">11</div>
-                <div class="standings-num">2</div>
-                <div class="standings-num">3</div>
-                <div class="standings-num">6</div>
-                <div class="standings-pts">9</div>
-              </div>
-              <div class="standings-row">
-                <div class="standings-rank">10</div>
-                <div class="standings-team">Human Mercenaries</div>
-                <div class="standings-num">11</div>
-                <div class="standings-num">1</div>
-                <div class="standings-num">2</div>
-                <div class="standings-num">8</div>
-                <div class="standings-pts">5</div>
+            <!-- ── Classement ── -->
+            <div id="tab-classement" class="tab-content" style="display:none;">
+              <div class="standings-table card-shadow">
+                <div class="standings-head">
+                  <div>#</div><div>Équipe</div>
+                  <div class="text-center">MJ</div><div class="text-center">V</div>
+                  <div class="text-center">N</div><div class="text-center">D</div>
+                  <div class="text-center">Pts</div>
+                </div>
+                <div class="standings-row top3"><div class="s-rank">1</div><div class="s-team">🏆 Les Korrigans FC</div><div class="s-num">8</div><div class="s-num">6</div><div class="s-num">1</div><div class="s-num">1</div><div class="s-pts">19</div></div>
+                <div class="standings-row top3"><div class="s-rank">2</div><div class="s-team">Orc Boyz United</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">2</div><div class="s-num">1</div><div class="s-pts">17</div></div>
+                <div class="standings-row top3"><div class="s-rank">3</div><div class="s-team">Skaven Speedsters</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">1</div><div class="s-num">2</div><div class="s-pts">16</div></div>
+                <div class="standings-row"><div class="s-rank">4</div><div class="s-team">Dwarf Ironbreakers</div><div class="s-num">8</div><div class="s-num">4</div><div class="s-num">1</div><div class="s-num">3</div><div class="s-pts">13</div></div>
+                <div class="standings-row"><div class="s-rank">5</div><div class="s-team">Chaos Warriors</div><div class="s-num">8</div><div class="s-num">3</div><div class="s-num">2</div><div class="s-num">3</div><div class="s-pts">11</div></div>
+                <div class="standings-row"><div class="s-rank">6</div><div class="s-team">Dark Elves Ravens</div><div class="s-num">8</div><div class="s-num">3</div><div class="s-num">1</div><div class="s-num">4</div><div class="s-pts">10</div></div>
               </div>
             </div>
-          </div>
+
+            <!-- ── Résultats ── -->
+            <div id="tab-resultats" class="tab-content">
+
+              <!-- Journée 8 — mixte -->
+              <div class="section-block card-shadow">
+                <div class="section-block-header">
+                  <span class="section-label">Journée 8</span>
+                  <span class="section-sub">4 matchs</span>
+                </div>
+
+                <!-- terminé -->
+                <div class="match-row">
+                  <div class="team-side">
+                    <div class="team-logo"><div class="team-logo-initials">GN</div></div>
+                    <div class="team-info">
+                      <div class="team-name">Guerriers du Nord</div>
+                      <div class="team-sub">Nordiques · CoachAlpha</div>
+                    </div>
+                  </div>
+                  <div class="score-block">
+                    <div class="score-tds">
+                      <span class="score-num">2</span><span class="score-sep">–</span><span class="score-num">1</span>
+                    </div>
+                    <div class="score-cas">
+                      <span class="cas-num">3</span><span class="cas-sep">sor.</span><span class="cas-num">1</span>
+                    </div>
+                    <div class="match-date">18 mai</div>
+                  </div>
+                  <div class="team-side team-side-away">
+                    <div class="team-info team-info-right">
+                      <div class="team-name">Chaos United</div>
+                      <div class="team-sub">ChaosBoss · Chaos</div>
+                    </div>
+                    <div class="team-logo"><div class="team-logo-initials">CU</div></div>
+                  </div>
+                </div>
+
+                <!-- en cours de saisie -->
+                <div class="match-row in-progress-row">
+                  <div class="team-side">
+                    <div class="team-logo"><div class="team-logo-initials">WF</div></div>
+                    <div class="team-info">
+                      <div class="team-name">Waaagh! FC</div>
+                      <div class="team-sub">Orques · WaaghMaster</div>
+                    </div>
+                  </div>
+                  <div class="score-block">
+                    <div class="in-progress-block">
+                      <div class="status-badge status-badge-in-progress">En cours de saisie</div>
+                      <a href="#" class="report-link">Accéder au rapport →</a>
+                      <div class="match-date">18 mai</div>
+                    </div>
+                  </div>
+                  <div class="team-side team-side-away">
+                    <div class="team-info team-info-right">
+                      <div class="team-name">Elfes Sylvains SC</div>
+                      <div class="team-sub">ElveRunner · Elfes</div>
+                    </div>
+                    <div class="team-logo"><div class="team-logo-initials">ES</div></div>
+                  </div>
+                </div>
+
+                <!-- terminé -->
+                <div class="match-row">
+                  <div class="team-side">
+                    <div class="team-logo"><div class="team-logo-initials">NF</div></div>
+                    <div class="team-info">
+                      <div class="team-name">Nains de Fer</div>
+                      <div class="team-sub">Nains · IronBeard</div>
+                    </div>
+                  </div>
+                  <div class="score-block">
+                    <div class="score-tds">
+                      <span class="score-num">1</span><span class="score-sep">–</span><span class="score-num">1</span>
+                    </div>
+                    <div class="score-cas">
+                      <span class="cas-num">2</span><span class="cas-sep">sor.</span><span class="cas-num">2</span>
+                    </div>
+                    <div class="match-date">19 mai</div>
+                  </div>
+                  <div class="team-side team-side-away">
+                    <div class="team-info team-info-right">
+                      <div class="team-name">Skavens du Sous-sol</div>
+                      <div class="team-sub">SkavRunner · Skavens</div>
+                    </div>
+                    <div class="team-logo"><div class="team-logo-initials">SD</div></div>
+                  </div>
+                </div>
+
+                <!-- terminé avec logo image -->
+                <div class="match-row">
+                  <div class="team-side">
+                    <div class="team-logo"><img src="https://placehold.co/64x64/003049/ffffff?text=HO" alt="HO"></div>
+                    <div class="team-info">
+                      <div class="team-name">Humains Ordinaires</div>
+                      <div class="team-sub">Humains · HumanCoach</div>
+                    </div>
+                  </div>
+                  <div class="score-block">
+                    <div class="score-tds">
+                      <span class="score-num">2</span><span class="score-sep">–</span><span class="score-num">0</span>
+                    </div>
+                    <div class="score-cas">
+                      <span class="cas-num">1</span><span class="cas-sep">sor.</span><span class="cas-num">4</span>
+                    </div>
+                    <div class="match-date">19 mai</div>
+                  </div>
+                  <div class="team-side team-side-away">
+                    <div class="team-info team-info-right">
+                      <div class="team-name">Halflings United</div>
+                      <div class="team-sub">TinyCoach · Halflings</div>
+                    </div>
+                    <div class="team-logo"><img src="https://placehold.co/64x64/b41e1e/ffffff?text=HU" alt="HU"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Journée 7 -->
+              <div class="section-block card-shadow">
+                <div class="section-block-header">
+                  <span class="section-label">Journée 7</span>
+                  <span class="section-sub">4 matchs</span>
+                </div>
+                <div class="match-row">
+                  <div class="team-side">
+                    <div class="team-logo"><div class="team-logo-initials">CU</div></div>
+                    <div class="team-info"><div class="team-name">Chaos United</div><div class="team-sub">Chaos · ChaosBoss</div></div>
+                  </div>
+                  <div class="score-block">
+                    <div class="score-tds"><span class="score-num">1</span><span class="score-sep">–</span><span class="score-num">2</span></div>
+                    <div class="score-cas"><span class="cas-num">4</span><span class="cas-sep">sor.</span><span class="cas-num">2</span></div>
+                    <div class="match-date">11 mai</div>
+                  </div>
+                  <div class="team-side team-side-away">
+                    <div class="team-info team-info-right"><div class="team-name">Waaagh! FC</div><div class="team-sub">WaaghMaster · Orques</div></div>
+                    <div class="team-logo"><div class="team-logo-initials">WF</div></div>
+                  </div>
+                </div>
+                <div class="match-row">
+                  <div class="team-side">
+                    <div class="team-logo"><div class="team-logo-initials">ES</div></div>
+                    <div class="team-info"><div class="team-name">Elfes Sylvains SC</div><div class="team-sub">Elfes · ElveRunner</div></div>
+                  </div>
+                  <div class="score-block">
+                    <div class="score-tds"><span class="score-num">0</span><span class="score-sep">–</span><span class="score-num">3</span></div>
+                    <div class="score-cas"><span class="cas-num">0</span><span class="cas-sep">sor.</span><span class="cas-num">1</span></div>
+                    <div class="match-date">11 mai</div>
+                  </div>
+                  <div class="team-side team-side-away">
+                    <div class="team-info team-info-right"><div class="team-name">Guerriers du Nord</div><div class="team-sub">CoachAlpha · Nordiques</div></div>
+                    <div class="team-logo"><div class="team-logo-initials">GN</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="scroll-sentinel">↓ Chargement de la journée suivante…</div>
+            </div>
+
+            <!-- ── Calendrier ── -->
+            <div id="tab-calendrier" class="tab-content" style="display:none;">
+
+              <!-- Journée 9 -->
+              <div class="section-block card-shadow">
+                <div class="section-block-header">
+                  <span class="section-label">Journée 9</span>
+                  <span class="section-sub">25 – 26 mai 2026 · 3 matchs</span>
+                </div>
+                <div class="cal-row">
+                  <div class="cal-team">
+                    <div class="cal-logo"><div class="cal-logo-initials">GN</div></div>
+                    <div><div class="cal-name">Guerriers du Nord</div><div class="cal-coach">CoachAlpha</div></div>
+                  </div>
+                  <div class="cal-center"><span class="cal-vs">VS</span><span class="cal-date">25 mai</span></div>
+                  <div class="cal-team cal-team-away">
+                    <div><div class="cal-name cal-name-right">Waaagh! FC</div><div class="cal-coach cal-coach-right">WaaghMaster</div></div>
+                    <div class="cal-logo"><div class="cal-logo-initials">WF</div></div>
+                  </div>
+                </div>
+                <div class="cal-row">
+                  <div class="cal-team">
+                    <div class="cal-logo"><div class="cal-logo-initials">CU</div></div>
+                    <div><div class="cal-name">Chaos United</div><div class="cal-coach">ChaosBoss</div></div>
+                  </div>
+                  <div class="cal-center"><span class="cal-vs">VS</span><span class="cal-date">25 mai</span></div>
+                  <div class="cal-team cal-team-away">
+                    <div><div class="cal-name cal-name-right">Elfes Sylvains SC</div><div class="cal-coach cal-coach-right">ElveRunner</div></div>
+                    <div class="cal-logo"><div class="cal-logo-initials">ES</div></div>
+                  </div>
+                </div>
+                <div class="cal-row">
+                  <div class="cal-team">
+                    <div class="cal-logo"><div class="cal-logo-initials">NF</div></div>
+                    <div><div class="cal-name">Nains de Fer</div><div class="cal-coach">IronBeard</div></div>
+                  </div>
+                  <div class="cal-center"><span class="cal-vs">VS</span><span class="cal-date">26 mai</span></div>
+                  <div class="cal-team cal-team-away">
+                    <div><div class="cal-name cal-name-right">Orques Sauvages</div><div class="cal-coach cal-coach-right">GreenFist</div></div>
+                    <div class="cal-logo"><div class="cal-logo-initials">OS</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Journée 10 -->
+              <div class="section-block card-shadow">
+                <div class="section-block-header">
+                  <span class="section-label">Journée 10</span>
+                  <span class="section-sub">1 – 2 juin 2026 · 4 matchs</span>
+                </div>
+                <div class="cal-row">
+                  <div class="cal-team">
+                    <div class="cal-logo"><img src="https://placehold.co/38x38/003049/ffffff?text=HO" alt="HO"></div>
+                    <div><div class="cal-name">Humains Ordinaires</div><div class="cal-coach">HumanCoach</div></div>
+                  </div>
+                  <div class="cal-center"><span class="cal-vs">VS</span><span class="cal-date">1 juin</span></div>
+                  <div class="cal-team cal-team-away">
+                    <div><div class="cal-name cal-name-right">Skavens du Sous-sol</div><div class="cal-coach cal-coach-right">SkavRunner</div></div>
+                    <div class="cal-logo"><div class="cal-logo-initials">SD</div></div>
+                  </div>
+                </div>
+                <div class="cal-row">
+                  <div class="cal-team">
+                    <div class="cal-logo"><div class="cal-logo-initials">HU</div></div>
+                    <div><div class="cal-name">Halflings United</div><div class="cal-coach">TinyCoach</div></div>
+                  </div>
+                  <div class="cal-center"><span class="cal-vs">VS</span><span class="cal-date">1 juin</span></div>
+                  <div class="cal-team cal-team-away">
+                    <div><div class="cal-name cal-name-right">Nécromants XI</div><div class="cal-coach cal-coach-right">NecroMind</div></div>
+                    <div class="cal-logo"><div class="cal-logo-initials">NX</div></div>
+                  </div>
+                </div>
+                <div class="cal-row">
+                  <div class="cal-team">
+                    <div class="cal-logo"><div class="cal-logo-initials">WF</div></div>
+                    <div><div class="cal-name">Waaagh! FC</div><div class="cal-coach">WaaghMaster</div></div>
+                  </div>
+                  <div class="cal-center"><span class="cal-vs">VS</span><span class="cal-date">2 juin</span></div>
+                  <div class="cal-team cal-team-away">
+                    <div><div class="cal-name cal-name-right">Nains de Fer</div><div class="cal-coach cal-coach-right">IronBeard</div></div>
+                    <div class="cal-logo"><div class="cal-logo-initials">NF</div></div>
+                  </div>
+                </div>
+                <div class="cal-row">
+                  <div class="cal-team">
+                    <div class="cal-logo"><div class="cal-logo-initials">CU</div></div>
+                    <div><div class="cal-name">Chaos United</div><div class="cal-coach">ChaosBoss</div></div>
+                  </div>
+                  <div class="cal-center"><span class="cal-vs">VS</span><span class="cal-date">2 juin</span></div>
+                  <div class="cal-team cal-team-away">
+                    <div><div class="cal-name cal-name-right">Guerriers du Nord</div><div class="cal-coach cal-coach-right">CoachAlpha</div></div>
+                    <div class="cal-logo"><div class="cal-logo-initials">GN</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="scroll-sentinel">↓ Chargement de la journée suivante…</div>
+            </div>
+
+            <!-- ── Équipes ── -->
+            <div id="tab-equipes" class="tab-content" style="display:none;">
+              <div class="tab-placeholder card-shadow">Widget équipes (chargement HTMX)</div>
+            </div>
+
+            <!-- ── Statistiques ── -->
+            <div id="tab-stats" class="tab-content" style="display:none;">
+              <div class="tab-placeholder card-shadow">Statistiques (à venir)</div>
+            </div>
+
+          </div><!-- /detail-right -->
         </div>
       </div>
     </div>
   </div>
+
+  <script>
+    function showTab(name, el) {
+      document.querySelectorAll('.tab-content').forEach(function(t) { t.style.display = 'none'; });
+      document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+      document.getElementById('tab-' + name).style.display = '';
+      el.classList.add('active');
+    }
+  </script>
 </body>
 </html>
