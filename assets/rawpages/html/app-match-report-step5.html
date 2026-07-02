@@ -15,7 +15,7 @@
       display: flex; align-items: center;
     }
     .mr-score-team {
-      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
       text-align: center;
     }
     .mr-score-logo {
@@ -29,8 +29,11 @@
       font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
     }
     .mr-score-center {
-      display: flex; align-items: center; gap: 10px;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
       flex-shrink: 0; padding: 0 var(--p1);
+    }
+    .mr-score-nums {
+      display: flex; align-items: center; gap: 10px;
     }
     .mr-score-value {
       font-family: var(--font-title); font-size: var(--h3); font-weight: 700;
@@ -39,6 +42,14 @@
     .mr-score-sep {
       font-size: var(--h4); color: var(--dark-4); font-weight: 700;
     }
+    .mr-score-logo--img { object-fit: cover; background: none; border-radius: 10px; }
+    .mr-score-cas {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      font-size: 11px; color: var(--dark-4);
+    }
+    .mr-score-cas-label { letter-spacing: 0.3px; text-transform: uppercase; font-weight: 600; }
+    .mr-score-cas-num { font-family: var(--font-title); font-size: 13px; font-weight: 700; color: var(--dark-3); }
+    .mr-score-cas-sep { color: var(--dark-5); }
 
     /* ── Team row (gains / fan factor) ── */
     .mr-team-row {
@@ -61,19 +72,25 @@
       flex: 1;
     }
 
-    /* ── Gains input ── */
-    .mr-gains-row {
-      display: flex; align-items: center; gap: 8px;
+    /* ── Gains ── */
+    .mr-gains-team-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: var(--p1); background: var(--dark-7); border-radius: 8px;
     }
-    .mr-gains-label {
-      font-size: var(--text-tiny); color: var(--dark-3); flex: 1;
+    .mr-gains-team-info {
+      flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0;
+    }
+    .mr-gains-team-text {
+      display: flex; flex-direction: column; gap: 2px; min-width: 0;
+    }
+    .mr-gains-input-group {
+      display: flex; align-items: center; gap: 6px; flex-shrink: 0;
     }
     .mr-gains-input {
-      width: 100px; height: 38px; text-align: center;
+      width: 90px; height: 36px; text-align: right; padding: 0 8px;
       border: 1px solid var(--dark-4); border-radius: 6px;
       font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
-      color: var(--dark-1); background: var(--white);
-      outline: none;
+      color: var(--dark-1); background: var(--white); outline: none;
     }
     .mr-gains-input:focus {
       border-color: var(--main-blue);
@@ -83,6 +100,41 @@
       font-size: var(--text-tiny); color: var(--dark-3);
     }
     .mr-gains-detail {
+      font-size: 11px; color: var(--dark-4); font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* ── Résumé du match ── */
+    .mr-resume-field {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .mr-resume-label {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-2);
+    }
+    .mr-resume-optional {
+      font-size: 11px; color: var(--dark-4); font-weight: 400; margin-left: 6px;
+    }
+    .mr-resume-input {
+      width: 100%; height: 38px; padding: 0 10px; box-sizing: border-box;
+      border: 1px solid var(--dark-4); border-radius: 6px;
+      font-family: inherit; font-size: var(--text-small); color: var(--dark-1);
+      background: var(--white); outline: none;
+    }
+    .mr-resume-input:focus {
+      border-color: var(--main-blue);
+      box-shadow: 0 0 0 3px rgba(0,48,73,0.1);
+    }
+    .mr-resume-textarea {
+      width: 100%; min-height: 120px; padding: 10px; box-sizing: border-box;
+      border: 1px solid var(--dark-4); border-radius: 6px;
+      font-family: inherit; font-size: var(--text-small); color: var(--dark-1);
+      background: var(--white); outline: none;
+      resize: vertical; line-height: 1.6;
+    }
+    .mr-resume-textarea:focus {
+      border-color: var(--main-blue);
+      box-shadow: 0 0 0 3px rgba(0,48,73,0.1);
+    }
+    .mr-resume-hint {
       font-size: 11px; color: var(--dark-4); font-style: italic;
     }
 
@@ -181,15 +233,24 @@
           <!-- Score banner -->
           <div class="mr-score-banner">
             <div class="mr-score-team">
+              <!-- avec logo : <img class="mr-score-logo mr-score-logo--img" src="…" alt="ST"> -->
               <div class="mr-score-logo">ST</div>
               <div class="mr-score-name">Storm Treemen</div>
             </div>
             <div class="mr-score-center">
-              <span class="mr-score-value">2</span>
-              <span class="mr-score-sep">—</span>
-              <span class="mr-score-value">1</span>
+              <div class="mr-score-nums">
+                <span class="mr-score-value">2</span>
+                <span class="mr-score-sep">—</span>
+                <span class="mr-score-value">1</span>
+              </div>
+              <div class="mr-score-cas">
+                <span class="mr-score-cas-num">1</span>
+                <span class="mr-score-cas-sep">–</span>
+                <span class="mr-score-cas-num">2</span>
+              </div>
             </div>
             <div class="mr-score-team">
+              <!-- avec logo : <img class="mr-score-logo mr-score-logo--img" src="…" alt="SC"> -->
               <div class="mr-score-logo" style="background: linear-gradient(135deg, #E02020, #555770);">SC</div>
               <div class="mr-score-name">Skull Crushers</div>
             </div>
@@ -199,30 +260,32 @@
           <div class="mr-card">
             <div class="mr-card-title">💰 Gains du match</div>
 
-            <div class="mr-team-row">
-              <div class="mr-team-row-header">
+            <div class="mr-gains-team-row">
+              <div class="mr-gains-team-info">
                 <div class="mr-team-row-logo">ST</div>
-                <span class="mr-team-row-name">Storm Treemen</span>
+                <div class="mr-gains-team-text">
+                  <span class="mr-team-row-name">Storm Treemen</span>
+                  <span class="mr-gains-detail">(5+3)/2 × 10k + 2 TD × 10k = 60 000</span>
+                </div>
               </div>
-              <div class="mr-gains-row">
-                <span class="mr-gains-label">Recettes</span>
-                <input type="number" class="mr-gains-input" value="50000" step="10000">
-                <span class="mr-gains-unit">pO</span>
+              <div class="mr-gains-input-group">
+                <input type="number" class="mr-gains-input" value="60000" step="10000">
+                <span class="mr-gains-unit">kPo</span>
               </div>
-              <div class="mr-gains-detail">Calcul : (5 + 3) / 2 × 10 000 + 2 TD × 10 000 = 60 000 pO</div>
             </div>
 
-            <div class="mr-team-row">
-              <div class="mr-team-row-header">
+            <div class="mr-gains-team-row">
+              <div class="mr-gains-team-info">
                 <div class="mr-team-row-logo" style="background: linear-gradient(135deg, #E02020, #555770);">SC</div>
-                <span class="mr-team-row-name">Skull Crushers</span>
+                <div class="mr-gains-team-text">
+                  <span class="mr-team-row-name">Skull Crushers</span>
+                  <span class="mr-gains-detail">(5+3)/2 × 10k + 1 TD × 10k = 50 000</span>
+                </div>
               </div>
-              <div class="mr-gains-row">
-                <span class="mr-gains-label">Recettes</span>
-                <input type="number" class="mr-gains-input" value="30000" step="10000">
-                <span class="mr-gains-unit">pO</span>
+              <div class="mr-gains-input-group">
+                <input type="number" class="mr-gains-input" value="50000" step="10000">
+                <span class="mr-gains-unit">kPo</span>
               </div>
-              <div class="mr-gains-detail">Calcul : (3 + 5) / 2 × 10 000 + 1 TD × 10 000 = 50 000 pO</div>
             </div>
 
           </div>
@@ -267,6 +330,25 @@
               </div>
             </div>
 
+          </div>
+
+          <!-- Résumé du match -->
+          <div class="mr-card">
+            <div class="mr-card-title">&#128203; Résumé du match <span class="mr-resume-optional">(facultatif)</span></div>
+
+            <div class="mr-resume-field">
+              <label class="mr-resume-label">Titre</label>
+              <input type="text" class="mr-resume-input"
+                     placeholder="Ex. : Les Storm Treemen s'imposent dans un match serré…"
+                     value="Les Storm Treemen résistent aux coups de boutoir des Skull Crushers">
+            </div>
+
+            <div class="mr-resume-field">
+              <label class="mr-resume-label">Corps du texte</label>
+              <textarea class="mr-resume-textarea"
+                        placeholder="Décrivez le déroulé du match, les moments clés, les performances remarquables…">Dans un match haché et disputé, les Storm Treemen de coach Yan ont conservé leur avantage jusqu'au coup de sifflet final pour l'emporter 2 à 1 face aux Skull Crushers de Darkmoule.</textarea>
+              <span class="mr-resume-hint">Ce texte sera affiché dans la page de résumé du match.</span>
+            </div>
           </div>
 
           <!-- Actions -->

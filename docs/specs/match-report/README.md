@@ -9,7 +9,7 @@
 | step2-inducements | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | step2-mercenaires | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | step3-4-actions | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| step5-apres-match | | | | | | | |
+| step5-apres-match | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | recap | | | | | | | |
 
 ## Règles métier transverses (identifiées en phase 1)
