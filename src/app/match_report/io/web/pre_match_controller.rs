@@ -80,27 +80,25 @@ pub async fn get_pre_match(
         }
     };
 
-    let pre_match = match mr_state {
-        MatchReportState::PreMatch(pm) => pm,
+    let (home_id, away_id, fan_factor_already_recorded) = match mr_state {
+        MatchReportState::PreMatch(pm) => (
+            pm.home_team_id.to_string(),
+            pm.away_team_id.to_string(),
+            pm.home_fan_roll.is_some() && pm.away_fan_roll.is_some(),
+        ),
+        MatchReportState::ReadyToPublish(rtp) => (
+            rtp.home_team_id.to_string(),
+            rtp.away_team_id.to_string(),
+            true,
+        ),
         MatchReportState::Draft(_) => {
             let url = AppRoutes::default()
                 .match_report
                 .edit_match_report(&space_id, &match_report_id);
             return Redirect::to(&url).into_response();
         }
-        MatchReportState::ReadyToPublish(_) => {
-            let url = AppRoutes::default()
-                .match_report
-                .step5(&space_id, &match_report_id);
-            return Redirect::to(&url).into_response();
-        }
         MatchReportState::Cancelled(_) => return StatusCode::GONE.into_response(),
     };
-
-    let home_id = pre_match.home_team_id.to_string();
-    let away_id = pre_match.away_team_id.to_string();
-    let fan_factor_already_recorded =
-        pre_match.home_fan_roll.is_some() && pre_match.away_fan_roll.is_some();
 
     let (home_info, away_info) = tokio::join!(
         state.match_report.team_data.find_team_info(&home_id),
