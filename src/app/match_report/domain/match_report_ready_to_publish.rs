@@ -1,8 +1,9 @@
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::value_objects::{
-    D3Roll, FanFactorMod, MatchAction, MatchGain, MatchReportOrigin, TempPlayer,
+    D3Roll, FanFactorMod, InducementPurchase, MatchAction, MatchGain, MatchReportOrigin, TempPlayer,
 };
+use crate::app::shared_kernel::inducement_definition::InducementId;
 use crate::app::shared_kernel::common_types::{
     CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
 };
@@ -24,6 +25,9 @@ pub struct MatchReportReadyToPublish {
     pub away_fan_roll: Option<D3Roll>,
     pub home_dedicated_fans: u32,
     pub away_dedicated_fans: u32,
+    pub home_inducements: Option<Vec<InducementPurchase>>,
+    pub away_inducements: Option<Vec<InducementPurchase>>,
+    pub star_engagements: Vec<(TeamId, InducementId)>,
     pub home_temp_players: Vec<TempPlayer>,
     pub away_temp_players: Vec<TempPlayer>,
     pub home_actions: Vec<MatchAction>,
@@ -63,6 +67,9 @@ impl MatchReportReadyToPublish {
             away_fan_roll: pm.away_fan_roll,
             home_dedicated_fans: pm.home_dedicated_fans,
             away_dedicated_fans: pm.away_dedicated_fans,
+            home_inducements: pm.home_inducements.clone(),
+            away_inducements: pm.away_inducements.clone(),
+            star_engagements: pm.star_engagements.clone(),
             home_temp_players: pm.home_temp_players.clone(),
             away_temp_players: pm.away_temp_players.clone(),
             home_actions: pm.home_actions.clone(),
@@ -74,6 +81,35 @@ impl MatchReportReadyToPublish {
             away_fan_mod,
             summary_title,
             summary_body,
+        }
+    }
+
+    pub fn into_pre_match(self) -> MatchReportPreMatch {
+        MatchReportPreMatch {
+            id: self.id,
+            space_id: self.space_id,
+            competition_id: self.competition_id,
+            season_id: self.season_id,
+            round_id: self.round_id,
+            home_team_id: self.home_team_id,
+            away_team_id: self.away_team_id,
+            created_by: self.created_by,
+            origin: self.origin,
+            pairing_id: self.pairing_id,
+            home_fan_roll: self.home_fan_roll,
+            away_fan_roll: self.away_fan_roll,
+            home_dedicated_fans: self.home_dedicated_fans,
+            away_dedicated_fans: self.away_dedicated_fans,
+            home_team_value: None,
+            away_team_value: None,
+            home_inducements: self.home_inducements,
+            away_inducements: self.away_inducements,
+            star_engagements: self.star_engagements,
+            home_temp_players: self.home_temp_players,
+            away_temp_players: self.away_temp_players,
+            home_actions: self.home_actions,
+            away_actions: self.away_actions,
+            version: self.version,
         }
     }
 

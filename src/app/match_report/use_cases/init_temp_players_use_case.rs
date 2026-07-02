@@ -55,6 +55,7 @@ async fn load_pm(
         .ok_or(InitTempPlayersError::NotFound)?;
     match state {
         MatchReportState::PreMatch(pm) => Ok(pm),
+        MatchReportState::ReadyToPublish(rtp) => Ok(rtp.into_pre_match()),
         _ => Err(InitTempPlayersError::NotInPreMatchPhase),
     }
 }

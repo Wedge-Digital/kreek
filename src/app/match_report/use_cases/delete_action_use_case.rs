@@ -26,6 +26,7 @@ pub async fn execute(
     let state = repo.find_by_id(&mr_id).await.map_err(|e| DeleteActionError::Repository(e.to_string()))?;
     let pm = match state.ok_or(DeleteActionError::NotFound)? {
         MatchReportState::PreMatch(pm) => pm,
+        MatchReportState::ReadyToPublish(rtp) => rtp.into_pre_match(),
         _ => return Err(DeleteActionError::NotInPreMatchPhase),
     };
 

@@ -73,6 +73,7 @@ async fn load_pre_match(
         .ok_or(RecordFanFactorError::NotFound)?;
     match state {
         MatchReportState::PreMatch(pm) => Ok(pm),
+        MatchReportState::ReadyToPublish(rtp) => Ok(rtp.into_pre_match()),
         _ => Err(RecordFanFactorError::NotInPreMatchPhase),
     }
 }

@@ -37,6 +37,7 @@ pub async fn execute(
     let state = repo.find_by_id(&mr_id).await.map_err(|e| RecordActionError::Repository(e.to_string()))?;
     let pm = match state.ok_or(RecordActionError::NotFound)? {
         MatchReportState::PreMatch(pm) => pm,
+        MatchReportState::ReadyToPublish(rtp) => rtp.into_pre_match(),
         _ => return Err(RecordActionError::NotInPreMatchPhase),
     };
 

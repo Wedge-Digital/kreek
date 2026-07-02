@@ -2,7 +2,7 @@ use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
-use crate::app::match_report::domain::value_objects::{AllowedInducementSpec, IsStarPlayer, RosterPositionUid};
+use crate::app::match_report::domain::value_objects::{AllowedInducementSpec, IsStarPlayer, RosterPositionUid, TeamValue};
 use crate::app::match_report::ports::{
     ICompetitionDataPort, IPlayerDataPort, ITeamDataPort, PositionCountDto, RosterPositionDto,
     TierRulesDto,
@@ -90,7 +90,20 @@ pub async fn execute(
     player_data: &dyn IPlayerDataPort,
 ) -> Result<RecordInducementsOutcome, RecordInducementsError> {
     let mr_id = cmd.match_report_id.to_string();
-    let pm = load_pre_match_with_tv(repo, &mr_id).await?;
+    let mut pm = load_pre_match(repo, &mr_id).await?;
+    if pm.home_team_value.is_none() || pm.away_team_value.is_none() {
+        let home_id = pm.home_team_id.to_string();
+        let away_id = pm.away_team_id.to_string();
+        let (home_raw, away_raw) = tokio::join!(
+            team_data.find_team_value(&home_id),
+            team_data.find_team_value(&away_id),
+        );
+        pm.home_team_value = home_raw.and_then(|v| TeamValue::try_new(v).ok());
+        pm.away_team_value = away_raw.and_then(|v| TeamValue::try_new(v).ok());
+        if pm.home_team_value.is_none() || pm.away_team_value.is_none() {
+            return Err(RecordInducementsError::TeamValuesNotRecorded);
+        }
+    }
     let tier = fetch_tier_rules(&pm, &cmd.team_id, team_data, competition_data).await?;
     validate_purchase_uids(&cmd.purchases, &tier)?;
     let roster_positions = team_data.find_roster_positions(&cmd.team_id.to_string()).await;
@@ -111,7 +124,7 @@ pub async fn execute(
 
 // ── Validation helpers ────────────────────────────────────────────────────────
 
-async fn load_pre_match_with_tv(
+async fn load_pre_match(
     repo: &dyn IMatchReportRepository,
     mr_id: &str,
 ) -> Result<MatchReportPreMatch, RecordInducementsError> {
@@ -120,14 +133,11 @@ async fn load_pre_match_with_tv(
         .await
         .map_err(|e| RecordInducementsError::Repository(e.to_string()))?
         .ok_or(RecordInducementsError::NotFound)?;
-    let pm = match state {
-        MatchReportState::PreMatch(pm) => pm,
-        _ => return Err(RecordInducementsError::NotInPreMatchPhase),
-    };
-    if pm.home_team_value.is_none() || pm.away_team_value.is_none() {
-        return Err(RecordInducementsError::TeamValuesNotRecorded);
+    match state {
+        MatchReportState::PreMatch(pm) => Ok(pm),
+        MatchReportState::ReadyToPublish(rtp) => Ok(rtp.into_pre_match()),
+        _ => Err(RecordInducementsError::NotInPreMatchPhase),
     }
-    Ok(pm)
 }
 
 async fn fetch_tier_rules(

@@ -1,7 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
-use crate::app::match_report::domain::value_objects::RosterPositionUid;
+use crate::app::match_report::domain::value_objects::{RosterPositionUid, TeamValue};
 use crate::app::match_report::use_cases::record_inducements_use_case::{
     self, InducementPurchaseCmd, MercenaryLevel, MercenaryPurchaseCmd, RecordInducementsCommand,
     RecordInducementsOutcome,
@@ -89,7 +89,17 @@ async fn build_vm(
     competition_data: &dyn ICompetitionDataPort,
     routes: &AppRoutes,
 ) -> Result<InducementsTemplate, Response> {
-    let pm = load_pre_match_vm(repo, &mr_id.to_string()).await?;
+    let mut pm = load_pre_match_vm(repo, &mr_id.to_string()).await?;
+    if pm.home_team_value.is_none() || pm.away_team_value.is_none() {
+        let home_id = pm.home_team_id.to_string();
+        let away_id = pm.away_team_id.to_string();
+        let (home_raw, away_raw) = tokio::join!(
+            team_data.find_team_value(&home_id),
+            team_data.find_team_value(&away_id),
+        );
+        pm.home_team_value = home_raw.and_then(|v| TeamValue::try_new(v).ok());
+        pm.away_team_value = away_raw.and_then(|v| TeamValue::try_new(v).ok());
+    }
     let team_info = team_data
         .find_team_info(&team_id.to_string())
         .await
@@ -141,6 +151,7 @@ async fn load_pre_match_vm(
         .ok_or_else(|| StatusCode::NOT_FOUND.into_response())?;
     match state {
         MatchReportState::PreMatch(pm) => Ok(pm),
+        MatchReportState::ReadyToPublish(rtp) => Ok(rtp.into_pre_match()),
         _ => Err(StatusCode::CONFLICT.into_response()),
     }
 }
