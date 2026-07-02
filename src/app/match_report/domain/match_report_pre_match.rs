@@ -272,8 +272,8 @@ impl MatchReportPreMatch {
         let fans_away = self.away_dedicated_fans
             + self.away_fan_roll.map(|r| r.value() as u32).unwrap_or(0);
         let (tds_home, tds_away) = self.compute_score();
-        let base = (fans_home + fans_away) / 2 * 10_000;
-        (base + tds_home as u32 * 10_000, base + tds_away as u32 * 10_000)
+        let base = (fans_home + fans_away) / 2 * 10;
+        (base + tds_home as u32 * 10, base + tds_away as u32 * 10)
     }
 
     pub fn record_post_match(
@@ -950,25 +950,23 @@ mod tests {
 
     #[test]
     fn suggest_gains_no_tds() {
-        // fans_home = 10 + 2 = 12, fans_away = 10 + 1 = 11, base = (12+11)/2 = 11 → 110_000
+        // fans_home = 10+2=12, fans_away = 10+1=11, base = (12+11)/2 = 11 → 11 * 10 = 110 kPo
         let pm = pm_with_fans(10, 10, 2, 1);
         let (home, away) = pm.suggest_gains();
-        // (10+2 + 10+1) / 2 * 10_000 = 23/2 * 10_000 = 11 * 10_000 = 110_000
-        assert_eq!(home, 110_000);
-        assert_eq!(away, 110_000);
+        assert_eq!(home, 110);
+        assert_eq!(away, 110);
     }
 
     #[test]
     fn suggest_gains_with_touchdowns() {
-        // fans_home = 10+2=12, fans_away = 10+1=11, base = 11 * 10_000 = 110_000
-        // home scored 2 TDs, away scored 1 TD
+        // base = 11 * 10 = 110 kPo ; home 2 TDs, away 1 TD
         let pm = pm_with_fans(10, 10, 2, 1);
         let pm = add_td(&pm, TeamSide::Home);
         let pm = add_td(&pm, TeamSide::Home);
         let pm = add_td(&pm, TeamSide::Away);
         let (home, away) = pm.suggest_gains();
-        assert_eq!(home, 110_000 + 2 * 10_000);
-        assert_eq!(away, 110_000 + 1 * 10_000);
+        assert_eq!(home, 110 + 2 * 10);
+        assert_eq!(away, 110 + 1 * 10);
     }
 
     #[test]
@@ -977,9 +975,9 @@ mod tests {
         pm.home_fan_roll = Some(D3Roll::try_new(1).unwrap());
         pm.away_fan_roll = Some(D3Roll::try_new(1).unwrap());
         let (home, away) = pm.suggest_gains();
-        // fans = 0+1, base = (1+1)/2 * 10_000 = 10_000
-        assert_eq!(home, 10_000);
-        assert_eq!(away, 10_000);
+        // fans = 0+1=1 chaque, base = (1+1)/2 * 10 = 10 kPo
+        assert_eq!(home, 10);
+        assert_eq!(away, 10);
     }
 
     // ── step5 : record_post_match ────────────────────────────────────────────
@@ -987,8 +985,8 @@ mod tests {
     #[test]
     fn record_post_match_emits_event_and_returns_ready_to_publish() {
         let pm = pm_with_fans(10, 10, 2, 1);
-        let home_gain = MatchGain::try_new(130_000).unwrap();
-        let away_gain = MatchGain::try_new(110_000).unwrap();
+        let home_gain = MatchGain::try_new(130).unwrap();
+        let away_gain = MatchGain::try_new(110).unwrap();
         let home_mod = FanFactorMod::try_new(1).unwrap();
         let away_mod = FanFactorMod::try_new(-1).unwrap();
         let (ready, event) = pm.record_post_match(

@@ -109,7 +109,7 @@ async fn get_step(
     };
     let (next_url, next_label, next_disabled) = match side {
         TeamSide::Home => (routes.match_report.step4(&space_id, &mr_id), "Équipe extérieure", false),
-        TeamSide::Away => ("#".to_string(), "Résumé", true),
+        TeamSide::Away => (routes.match_report.step5(&space_id, &mr_id), "Après-match", false),
     };
 
     ActionsStepTemplate {
