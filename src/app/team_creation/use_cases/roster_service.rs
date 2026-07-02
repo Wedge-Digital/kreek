@@ -126,6 +126,7 @@ mod tests {
                 }],
                 allowed_staff_uids: vec!["APOTHECARY".into()],
                 leagues: vec!["WOODLAND".into()],
+                league_choice_required: false,
                 special_rules: vec!["LUSTRIAN_SUPERLEAGUE".into()],
             })
         }

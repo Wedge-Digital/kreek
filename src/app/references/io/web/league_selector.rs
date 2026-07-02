@@ -44,19 +44,28 @@ pub async fn league_selector(
 ) -> impl IntoResponse {
     let ref_repo = state.references.repository.as_ref();
 
-    // Si roster_id fourni, restreindre aux ligues supportées par ce roster
-    let allowed: Option<std::collections::HashSet<&str>> = if !params.roster_id.is_empty() {
+    let (league_uids, choice_required): (Vec<String>, bool) = if !params.roster_id.is_empty() {
         ref_repo
             .find_team_by_uid(&params.roster_id)
-            .map(|t| t.leagues.iter().map(String::as_str).collect())
+            .map(|t| {
+                let uids = if t.league_choice_required {
+                    t.leagues.clone()
+                } else {
+                    // Pas de choix : on n'expose que la première ligue (auto-sélection)
+                    t.leagues.iter().take(1).cloned().collect()
+                };
+                (uids, t.league_choice_required)
+            })
+            .unwrap_or_default()
     } else {
-        None
+        (vec![], false)
     };
 
-    let leagues: Vec<LeagueSelectorVm> = ref_repo
-        .list_leagues()
+    // Construire les VMs dans l'ordre des ligues du roster
+    let all_leagues = ref_repo.list_leagues();
+    let leagues: Vec<LeagueSelectorVm> = league_uids
         .iter()
-        .filter(|l| allowed.as_ref().map_or(true, |set| set.contains(l.uid.as_str())))
+        .filter_map(|uid| all_leagues.iter().find(|l| &l.uid == uid))
         .map(|l| LeagueSelectorVm {
             is_selected: l.uid == params.selected,
             uid: l.uid.clone(),
@@ -68,6 +77,8 @@ pub async fn league_selector(
         .iter()
         .find(|l| l.is_selected)
         .map(|l| l.label.clone());
+
+    let _ = choice_required; // utilisé via la longueur de leagues dans le template
 
     LeagueSelectorTemplate {
         leagues,

@@ -5,6 +5,15 @@ use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
 
+// Les UIDs concrets que FAVOURED_OF_CHOOSE_* doit exposer
+const FIVE_CHAOS_GODS: [&str; 5] = [
+    "FAVOURED_OF_KHORNE",
+    "FAVOURED_OF_NURGLE",
+    "FAVOURED_OF_SLAANESH",
+    "FAVOURED_OF_TZEENTCH",
+    "FAVOURED_OF_UNDIVIDED",
+];
+
 #[derive(Deserialize)]
 pub struct SpecialRuleSelectorParams {
     #[serde(default)]
@@ -44,18 +53,36 @@ pub async fn special_rule_selector(
 ) -> impl IntoResponse {
     let ref_repo = state.references.repository.as_ref();
 
-    let allowed: Option<std::collections::HashSet<&str>> = if !params.roster_id.is_empty() {
+    let team_rules: Vec<String> = if !params.roster_id.is_empty() {
         ref_repo
             .find_team_by_uid(&params.roster_id)
-            .map(|t| t.special_rules.iter().map(String::as_str).collect())
+            .map(|t| t.special_rules.clone())
+            .unwrap_or_default()
     } else {
-        None
+        vec![]
     };
 
-    let rules: Vec<SpecialRuleVm> = ref_repo
-        .list_special_rules()
+    // Seuls les UIDs FAVOURED_OF_CHOOSE_* déclenchent un choix utilisateur
+    let has_choose = team_rules
         .iter()
-        .filter(|r| allowed.as_ref().map_or(true, |set| set.contains(r.uid.as_str())))
+        .any(|r| r.starts_with("FAVOURED_OF_CHOOSE_"));
+
+    if !has_choose {
+        return SpecialRuleSelectorTemplate {
+            rules: vec![],
+            selected_uid: params.selected,
+            selected_label: None,
+            on_select: params.on_select,
+        }
+        .into_response();
+    }
+
+    // Les deux placeholders existants s'expandent vers les 5 dieux du Chaos
+    // L'ordre est déterminé par FIVE_CHAOS_GODS, pas par le repository
+    let all_rules = ref_repo.list_special_rules();
+    let rules: Vec<SpecialRuleVm> = FIVE_CHAOS_GODS
+        .iter()
+        .filter_map(|uid| all_rules.iter().find(|r| r.uid == *uid))
         .map(|r| SpecialRuleVm {
             is_selected: r.uid == params.selected,
             uid:         r.uid.clone(),
