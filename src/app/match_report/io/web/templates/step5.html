@@ -1,0 +1,217 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/match-report-shared.css">
+<link rel="stylesheet" href="/static/css/pages/match-report-step5.css">
+
+<div class="mr-container"
+     x-data="{
+       homeMod: {{ home_fan_mod }},
+       awayMod: {{ away_fan_mod }},
+       modClass(selected, val) {
+         if (selected !== val) return '';
+         if (val > 0) return 'active positive';
+         if (val < 0) return 'active negative';
+         return 'active';
+       }
+     }">
+
+  <!-- Header -->
+  <div class="mr-header">
+    <div class="mr-header-icon">&#128203;</div>
+    <div class="mr-header-title">Séquence d&#39;après-match</div>
+    <div class="mr-header-sub">Gains et modification du fan factor</div>
+  </div>
+
+  <!-- Steps -->
+  <div class="mr-steps">
+    <div class="mr-step mr-step--done">&#10003;</div>
+    <div class="mr-step-line mr-step-line--done"></div>
+    <div class="mr-step mr-step--done">&#10003;</div>
+    <div class="mr-step-line mr-step-line--done"></div>
+    <div class="mr-step mr-step--done">&#10003;</div>
+    <div class="mr-step-line mr-step-line--done"></div>
+    <div class="mr-step mr-step--done">&#10003;</div>
+    <div class="mr-step-line mr-step-line--done"></div>
+    <div class="mr-step mr-step--active">5</div>
+  </div>
+
+  {% if already_recorded %}
+  <div class="mr-info-banner mr-info-banner--neutral">
+    <span class="mr-info-icon">&#9998;</span>
+    <span>Après-match déjà enregistré — vous pouvez modifier et soumettre à nouveau.</span>
+  </div>
+  {% endif %}
+
+  <!-- Score banner -->
+  <div class="mr-score-banner">
+    <div class="mr-score-team">
+      {% if let Some(url) = home_logo_url.as_ref() %}
+      <img class="mr-score-logo mr-score-logo--img" src="{{ url }}" alt="{{ home_initials }}">
+      {% else %}
+      <div class="mr-score-logo">{{ home_initials }}</div>
+      {% endif %}
+      <div class="mr-score-name">{{ home_team_name }}</div>
+    </div>
+    <div class="mr-score-center">
+      <div class="mr-score-nums">
+        <span class="mr-score-value">{{ home_score }}</span>
+        <span class="mr-score-sep">&#8212;</span>
+        <span class="mr-score-value">{{ away_score }}</span>
+      </div>
+      <div class="mr-score-cas">
+        <span class="mr-score-cas-num">{{ home_cas }}</span>
+        <span class="mr-score-cas-sep">&#8211;</span>
+        <span class="mr-score-cas-num">{{ away_cas }}</span>
+      </div>
+    </div>
+    <div class="mr-score-team">
+      {% if let Some(url) = away_logo_url.as_ref() %}
+      <img class="mr-score-logo mr-score-logo--img" src="{{ url }}" alt="{{ away_initials }}">
+      {% else %}
+      <div class="mr-score-logo">{{ away_initials }}</div>
+      {% endif %}
+      <div class="mr-score-name">{{ away_team_name }}</div>
+    </div>
+  </div>
+
+  <form method="post" action="{{ form_action }}">
+
+    <!-- Gains -->
+    <div class="mr-card">
+      <div class="mr-card-title">&#128176; Gains du match</div>
+
+      <div class="mr-gains-team-row">
+        <div class="mr-gains-team-info">
+          {% if let Some(url) = home_logo_url.as_ref() %}
+          <img class="mr-team-row-logo mr-score-logo--img" src="{{ url }}" alt="{{ home_initials }}">
+          {% else %}
+          <div class="mr-team-row-logo">{{ home_initials }}</div>
+          {% endif %}
+          <div class="mr-gains-team-text">
+            <span class="mr-team-row-name">{{ home_team_name }}</span>
+          </div>
+        </div>
+        <div class="mr-gains-input-group">
+          <input type="number" class="mr-gains-input"
+                 name="home_gain"
+                 value="{{ home_gain }}"
+                 min="1"
+                 step="10000"
+                 required>
+          <span class="mr-gains-unit">kPo</span>
+        </div>
+      </div>
+
+      <div class="mr-gains-team-row">
+        <div class="mr-gains-team-info">
+          {% if let Some(url) = away_logo_url.as_ref() %}
+          <img class="mr-team-row-logo mr-score-logo--img" src="{{ url }}" alt="{{ away_initials }}">
+          {% else %}
+          <div class="mr-team-row-logo">{{ away_initials }}</div>
+          {% endif %}
+          <div class="mr-gains-team-text">
+            <span class="mr-team-row-name">{{ away_team_name }}</span>
+          </div>
+        </div>
+        <div class="mr-gains-input-group">
+          <input type="number" class="mr-gains-input"
+                 name="away_gain"
+                 value="{{ away_gain }}"
+                 min="1"
+                 step="10000"
+                 required>
+          <span class="mr-gains-unit">kPo</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fan factor -->
+    <div class="mr-card">
+      <div class="mr-card-title">&#128226; Modification du Fan Factor</div>
+
+      <input type="hidden" name="home_fan_mod" x-bind:value="homeMod">
+      <div class="mr-team-row">
+        <div class="mr-team-row-header">
+          {% if let Some(url) = home_logo_url.as_ref() %}
+          <img class="mr-team-row-logo mr-score-logo--img" src="{{ url }}" alt="{{ home_initials }}">
+          {% else %}
+          <div class="mr-team-row-logo">{{ home_initials }}</div>
+          {% endif %}
+          <span class="mr-team-row-name">{{ home_team_name }}</span>
+        </div>
+        <div class="mr-fan-mod-row">
+          <span class="mr-fan-mod-label">Modification</span>
+          <div class="mr-fan-mod-btns">
+            <button type="button" class="mr-fan-mod-btn"
+                    :class="modClass(homeMod, -2)" @click="homeMod = -2">-2</button>
+            <button type="button" class="mr-fan-mod-btn"
+                    :class="modClass(homeMod, -1)" @click="homeMod = -1">-1</button>
+            <button type="button" class="mr-fan-mod-btn"
+                    :class="modClass(homeMod, 0)" @click="homeMod = 0">0</button>
+            <button type="button" class="mr-fan-mod-btn"
+                    :class="modClass(homeMod, 1)" @click="homeMod = 1">+1</button>
+            <button type="button" class="mr-fan-mod-btn"
+                    :class="modClass(homeMod, 2)" @click="homeMod = 2">+2</button>
+          </div>
+        </div>
+      </div>
+
+      <input type="hidden" name="away_fan_mod" x-bind:value="awayMod">
+      <div class="mr-team-row">
+        <div class="mr-team-row-header">
+          {% if let Some(url) = away_logo_url.as_ref() %}
+          <img class="mr-team-row-logo mr-score-logo--img" src="{{ url }}" alt="{{ away_initials }}">
+          {% else %}
+          <div class="mr-team-row-logo">{{ away_initials }}</div>
+          {% endif %}
+          <span class="mr-team-row-name">{{ away_team_name }}</span>
+        </div>
+        <div class="mr-fan-mod-row">
+          <span class="mr-fan-mod-label">Modification</span>
+          <div class="mr-fan-mod-btns">
+            <button type="button" class="mr-fan-mod-btn"
+                    :class="modClass(awayMod, -2)" @click="awayMod = -2">-2</button>
+            <button type="button" class="mr-fan-mod-btn"
+                    :class="modClass(awayMod, -1)" @click="awayMod = -1">-1</button>
+            <button type="button" class="mr-fan-mod-btn"
+                    :class="modClass(awayMod, 0)" @click="awayMod = 0">0</button>
+            <button type="button" class="mr-fan-mod-btn"
+                    :class="modClass(awayMod, 1)" @click="awayMod = 1">+1</button>
+            <button type="button" class="mr-fan-mod-btn"
+                    :class="modClass(awayMod, 2)" @click="awayMod = 2">+2</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Résumé -->
+    <div class="mr-card">
+      <div class="mr-card-title">&#128203; Résumé du match <span class="mr-resume-optional">(facultatif)</span></div>
+
+      <div class="mr-resume-field">
+        <label class="mr-resume-label">Titre</label>
+        <input type="text" class="mr-resume-input"
+               name="summary_title"
+               placeholder="Ex. : Les Storm Treemen s'imposent dans un match serré…"
+               value="{% if let Some(t) = summary_title.as_ref() %}{{ t }}{% endif %}">
+      </div>
+
+      <div class="mr-resume-field">
+        <label class="mr-resume-label">Corps du texte</label>
+        <textarea class="mr-resume-textarea"
+                  name="summary_body"
+                  placeholder="Décrivez le déroulé du match, les moments clés, les performances remarquables…">{% if let Some(b) = summary_body.as_ref() %}{{ b }}{% endif %}</textarea>
+        <span class="mr-resume-hint">Ce texte sera affiché dans la page de résumé du match.</span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="mr-actions">
+      <a href="{{ back_url }}" class="btn-outline-sm">&#8592; Retour</a>
+      <button type="submit" class="btn-primary-sm">Enregistrer &#8594;</button>
+    </div>
+
+  </form>
+</div>
+{% endblock %}

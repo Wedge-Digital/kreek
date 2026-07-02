@@ -1,4 +1,5 @@
 use crate::app::match_report::io::web::actions_step_controller::{get_step3, get_step4};
+use crate::app::match_report::io::web::step5_controller::{get_step5, post_step5};
 use crate::app::match_report::io::web::inducements_controller::{get_inducements, post_inducements};
 use crate::app::match_report::io::web::match_selection_controller::{
     create_match_report, edit_match_report, from_pairing, new_match_report,
@@ -37,6 +38,7 @@ pub fn router() -> Router<AppState> {
         .route(path::MATCH_REPORT_INDUCEMENTS, get(get_inducements).post(post_inducements))
         .route(path::MATCH_REPORT_STEP3, get(get_step3))
         .route(path::MATCH_REPORT_STEP4, get(get_step4))
+        .route(path::MATCH_REPORT_STEP5, get(get_step5).post(post_step5))
         .route(path::MATCH_REPORT_STEP3_TURN_SELECTOR, get(get_turn_selector_step3))
         .route(path::MATCH_REPORT_STEP4_TURN_SELECTOR, get(get_turn_selector_step4))
         .route(path::MATCH_REPORT_STEP3_TEMP_PLAYERS, get(get_temp_players_step3))
