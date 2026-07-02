@@ -1,4 +1,5 @@
 pub mod create_match_report_use_case;
+pub mod record_post_match_use_case;
 pub mod delete_action_use_case;
 pub mod init_temp_players_use_case;
 pub mod record_action_use_case;
