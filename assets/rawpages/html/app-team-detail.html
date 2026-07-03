@@ -108,12 +108,16 @@
       padding: 8px 16px; border-radius: 6px; font-size: var(--text-tiny); font-weight: 700;
       white-space: nowrap; border: none; cursor: pointer; text-decoration: none;
       display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+      font-family: inherit;
     }
+    .state-banner-cta--outline {
+      background: transparent; border: 1.5px solid var(--dark-3); color: var(--dark-2);
+    }
+    .state-banner-cta--outline:hover { border-color: var(--main-blue); color: var(--main-blue); }
     .state-banner--pending { background: rgba(255,107,53,0.06); }
-    .state-banner--pending .state-banner-cta { background: var(--orange); color: var(--white); }
     .state-banner--ready   { background: rgba(98,149,132,0.06); }
     .state-banner--phase   { background: rgba(0,48,73,0.05); }
-    .state-banner--phase .state-banner-cta { background: var(--main-blue); color: var(--white); }
+    .state-banner--phase .state-banner-cta:not(.state-banner-cta--outline) { background: var(--main-blue); color: var(--white); }
 
     /* ── NOUVEAU — sélecteur de démonstration (n'existe pas en prod) ─────── */
     .demo-switcher {
@@ -170,7 +174,8 @@
           <button class="state-pill active" data-state="ready" onclick="setTeamState('ready')">Prête à jouer</button>
           <button class="state-pill" data-state="match" onclick="setTeamState('match')">Rapport de match en cours</button>
           <button class="state-pill" data-state="improvement" onclick="setTeamState('improvement')">Phase d'évolution des joueurs</button>
-          <button class="state-pill" data-state="recruitment" onclick="setTeamState('recruitment')">Phase d'achat</button>
+          <button class="state-pill" data-state="recruitment" onclick="setTeamState('recruitment')">Phase de recrutement</button>
+          <button class="state-pill" data-state="dismissals" onclick="setTeamState('dismissals')">Phase de renvois</button>
         </div>
 
         <div style="margin-bottom: var(--p1);">
@@ -229,12 +234,12 @@
           <!-- Bandeaux d'état contextuels — un seul visible à la fois, piloté par le sélecteur -->
           <div class="state-banner state-banner--pending" data-state="pending" style="display:none;">
             <span class="state-banner-icon">📋</span>
-            <span class="state-banner-text"><strong>Équipe non inscrite.</strong> Inscrivez-la à une compétition pour pouvoir jouer.</span>
-            <a class="state-banner-cta" href="app-competition-list.html">S'inscrire à une compétition →</a>
+            <span class="state-banner-text"><strong>Équipe en attente d'inscription.</strong> L'inscription est en cours de validation par un commissaire de ligue.</span>
           </div>
           <div class="state-banner state-banner--ready" data-state="ready" style="display:flex;">
             <span class="state-banner-icon">✅</span>
             <span class="state-banner-text"><strong>Équipe prête à jouer.</strong> Aucune action requise avant le prochain match.</span>
+            <button class="state-banner-cta state-banner-cta--outline" onclick="window.print()">Imprimer en PDF</button>
           </div>
           <div class="state-banner state-banner--phase" data-state="match" style="display:none;">
             <span class="state-banner-icon">📝</span>
@@ -244,12 +249,19 @@
           <div class="state-banner state-banner--phase" data-state="improvement" style="display:none;">
             <span class="state-banner-icon">⚡</span>
             <span class="state-banner-text"><strong>Phase d'évolution des joueurs.</strong> Des joueurs ont des SPP à dépenser suite au dernier match.</span>
-            <a class="state-banner-cta" href="app-player-detail.html">Gérer les évolutions →</a>
+            <button class="state-banner-cta" onclick="finishImprovement()">Évolutions terminées</button>
           </div>
           <div class="state-banner state-banner--phase" data-state="recruitment" style="display:none;">
             <span class="state-banner-icon">🛒</span>
-            <span class="state-banner-text"><strong>Phase d'achat.</strong> Recrutez des joueurs ou du staff avant le prochain match.</span>
-            <a class="state-banner-cta" href="app-new-team-build.html">Recruter →</a>
+            <span class="state-banner-text"><strong>Phase de recrutement.</strong> Achetez des joueurs ou du staff avant de terminer les achats.</span>
+            <a class="state-banner-cta state-banner-cta--outline" href="app-new-team-build.html">Recruter →</a>
+            <button class="state-banner-cta" onclick="finishRecruitment()">Terminer les achats</button>
+          </div>
+          <div class="state-banner state-banner--phase" data-state="dismissals" style="display:none;">
+            <span class="state-banner-icon">🚪</span>
+            <span class="state-banner-text"><strong>Phase de renvois.</strong> Renvoyez les joueurs dont vous ne voulez plus avant de valider.</span>
+            <button class="state-banner-cta state-banner-cta--outline" onclick="alert('Maquette à venir : liste des joueurs à renvoyer')">Gérer les renvois</button>
+            <button class="state-banner-cta" onclick="validateDismissals()">Valider les renvois</button>
           </div>
 
           <!-- Onglets -->
@@ -407,6 +419,7 @@
     match:       { label: 'Rapport en cours',           css: 'phase' },
     improvement: { label: "Phase d'amélioration",       css: 'phase' },
     recruitment: { label: 'Phase de recrutement',       css: 'phase' },
+    dismissals:  { label: 'Phase de renvois',           css: 'phase' },
   };
 
   function setTeamState(state) {
@@ -425,6 +438,23 @@
   function openPlayer() {
     var editable = window.currentTeamState === 'improvement';
     window.location.href = editable ? 'app-player-detail.html' : 'app-player-detail-readonly.html';
+  }
+
+  // Valide la phase d'amélioration (validate-improvement) → GamePhase::Recruitment
+  function finishImprovement() {
+    setTeamState('recruitment');
+  }
+
+  // Valide la phase de recrutement (validate-recruitment) → GamePhase::Dismissals
+  function finishRecruitment() {
+    setTeamState('dismissals');
+  }
+
+  // Valide la phase de renvois (validate-dismissals) → GamePhase::TemporaryRetirement
+  // Simplifié ici en retour à "Prête à jouer" — la retraite temporaire n'est pas
+  // encore maquettée (carte 43, to_be_refined).
+  function validateDismissals() {
+    setTeamState('ready');
   }
 </script>
 
