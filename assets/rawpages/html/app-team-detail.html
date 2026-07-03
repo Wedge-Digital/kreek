@@ -6,9 +6,9 @@
   <title>Les Korrigans FC — Blood Bowl Club</title>
   <link rel="stylesheet" href="shared.css">
   <style>
-    .team-page { max-width: 1100px; margin: 0 auto; }
+    /* ── Repris tel quel de assets/static/css/pages/app-team-detail.css ──── */
+    .team-page { max-width: 1400px; margin: 0 auto; }
 
-    /* Team header */
     .team-header {
       background: var(--white); border-radius: 10px 10px 0 0; padding: var(--p2);
       display: flex; align-items: flex-start; gap: var(--p3);
@@ -20,42 +20,115 @@
       display: flex; align-items: center; justify-content: center;
       font-family: var(--font-title); font-weight: 900; font-size: 36px; color: var(--white);
       box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      overflow: hidden;
     }
     .team-header-info { flex: 1; display: flex; flex-direction: column; gap: var(--p1); }
     .team-header-name { font-family: var(--font-title); font-size: var(--h2); font-weight: 800; color: var(--dark-0); }
     .team-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
-    .meta-item { display: flex; flex-direction: column; gap: 2px; }
-    .meta-label { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
-    .meta-value { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
-    .team-header-stats { display: flex; gap: var(--p3); }
-    .stat-block { text-align: center; }
-    .stat-val { font-family: var(--font-title); font-size: var(--h3); font-weight: 800; }
-    .stat-val.win { color: var(--green); }
-    .stat-val.draw { color: var(--dark-2); }
-    .stat-val.loss { color: var(--red); }
-    .stat-label { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; }
+    .meta-item   { display: flex; flex-direction: column; gap: 2px; }
+    .meta-label  { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-value  { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
 
-    /* Players table */
-    .players-panel { background: var(--white); border-radius: 0 0 10px 10px; padding: var(--p2); }
-    .player-table { width: 100%; border-collapse: collapse; padding: var(--p1)}
+    .team-header-top  { display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap; }
+
+    /* Badge état — les 5 variantes réellement produites par status_display() côté back */
+    .team-status-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 20px;
+      font-size: var(--text-tiny); font-weight: 700; white-space: nowrap;
+    }
+    .team-status-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    .team-status-badge--pending    { background: rgba(255,107,53,0.12);  color: var(--orange); }
+    .team-status-badge--ready      { background: rgba(98,149,132,0.15); color: var(--green); }
+    .team-status-badge--phase      { background: rgba(0,48,73,0.10);    color: var(--main-blue); }
+    .team-status-badge--offseason  { background: var(--dark-6);         color: var(--dark-3); }
+    .team-status-badge--dismissed  { background: rgba(224,32,32,0.10);  color: var(--red); }
+
+    .team-header-roster { display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
+    .roster-icon {
+      width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, #629584, #3a6655);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: 28px; color: var(--white);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .roster-icon-label { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; text-align: center; max-width: 120px; }
+
+    .staff-panel { background: var(--white); border-radius: 0 0 10px 10px; padding: var(--p2); }
+    .staff-panel-title {
+      font-size: var(--text-small); font-weight: 700; color: var(--dark-2);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: var(--p1);
+    }
+    .staff-table td { color: var(--dark-1); }
+
+    /* ── Repris tel quel de assets/static/css/widgets/team-player-widget.css ── */
+    .player-table  { width: 100%; border-collapse: collapse; }
+    .players-widget { padding: var(--p2); background: var(--white); }
     .player-table th {
       text-align: left; padding: 10px 12px;
       font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
       text-transform: uppercase; letter-spacing: 0.5px;
       border-bottom: 2px solid var(--dark-5); background: var(--dark-6);
     }
-    .player-table td { padding: 12px; border-bottom: 1px solid var(--dark-6); font-size: var(--text-small); }
-    .player-table tr:hover td { background: var(--dark-7); cursor: pointer; }
+    .player-table td { padding: 12px; font-size: var(--text-small); }
+    .player-table tbody tr:nth-child(odd)  td { background: var(--white); }
+    .player-table tbody tr:nth-child(even) td { background: var(--dark-6); }
+    .player-table tbody tr:hover td { background: var(--dark-5); cursor: pointer; }
+    .player-table tbody.no-hover tr:nth-child(odd):hover  td { background: var(--white);  cursor: default; }
+    .player-table tbody.no-hover tr:nth-child(even):hover td { background: var(--dark-6); cursor: default; }
     .player-table tr:last-child td { border-bottom: none; }
-    .player-pos {
-      display: inline-block; padding: 2px 8px; border-radius: 4px;
-      font-size: var(--text-tiny); font-weight: 700;
+    .player-table tr.subtotal-row td {
+      border-top: 2px solid var(--dark-4); border-bottom: none;
+      background: var(--dark-6); font-weight: 700; color: var(--dark-0);
+      font-size: var(--text-small);
     }
-    .pos-lineman { background: rgba(0,48,73,0.1); color: var(--main-blue); }
-    .pos-blitzer { background: rgba(224,32,32,0.1); color: var(--red); }
+    .player-pos  { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: var(--text-tiny); font-weight: 700; }
+    .pos-lineman { background: rgba(0,48,73,0.1);    color: var(--main-blue); }
+    .pos-blitzer { background: rgba(224,32,32,0.1);  color: var(--red); }
     .pos-thrower { background: rgba(98,149,132,0.1); color: var(--green); }
     .pos-catcher { background: rgba(255,215,0,0.15); color: #9A7800; }
-    .player-skill { background: var(--dark-5); color: var(--dark-1); border-radius: 4px; padding: 2px 6px; font-size: 11px; margin-right: 4px; display: inline-block; }
+    .skill-tag     { display: inline-block; font-size: var(--text-tiny); font-weight: 600; padding: 3px 10px; border-radius: 20px; background: var(--dark-5); color: var(--dark-1); }
+    .type-general  { background: rgba(0,48,73,0.08);    color: var(--main-blue); }
+    .type-strength { background: rgba(224,32,32,0.08);  color: var(--red); }
+    .type-agility  { background: rgba(98,149,132,0.12); color: var(--green); }
+    .type-passing  { background: rgba(255,215,0,0.18);  color: #9A7800; }
+    .type-mutation { background: rgba(111,53,165,0.10); color: #6f35a5; }
+
+    /* ── NOUVEAU — bandeau d'état contextuel (à discuter) ────────────────── */
+    .state-banner {
+      border-radius: 0; padding: var(--p1) var(--p2);
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      border-bottom: 2px solid var(--dark-5);
+    }
+    .state-banner-icon { font-size: 22px; flex-shrink: 0; }
+    .state-banner-text { flex: 1; font-size: var(--text-small); color: var(--dark-2); min-width: 220px; }
+    .state-banner-text strong { color: var(--dark-1); }
+    .state-banner-cta {
+      padding: 8px 16px; border-radius: 6px; font-size: var(--text-tiny); font-weight: 700;
+      white-space: nowrap; border: none; cursor: pointer; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+    }
+    .state-banner--pending { background: rgba(255,107,53,0.06); }
+    .state-banner--pending .state-banner-cta { background: var(--orange); color: var(--white); }
+    .state-banner--ready   { background: rgba(98,149,132,0.06); }
+    .state-banner--phase   { background: rgba(0,48,73,0.05); }
+    .state-banner--phase .state-banner-cta { background: var(--main-blue); color: var(--white); }
+
+    /* ── NOUVEAU — sélecteur de démonstration (n'existe pas en prod) ─────── */
+    .demo-switcher {
+      background: rgba(255,215,0,0.08); border: 1px dashed rgba(154,120,0,0.4);
+      border-radius: 8px; padding: 10px var(--p2); margin-bottom: var(--p1);
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .demo-switcher-label { font-size: var(--text-tiny); font-weight: 700; color: #9A7800; text-transform: uppercase; letter-spacing: 0.4px; }
+    .state-pill {
+      font-size: var(--text-tiny); font-weight: 600; padding: 5px 14px; border-radius: 20px;
+      border: 1.5px solid var(--dark-4); background: var(--white); color: var(--dark-2);
+      cursor: pointer; transition: all 0.12s;
+    }
+    .state-pill:hover  { border-color: var(--main-blue); color: var(--main-blue); }
+    .state-pill.active { background: var(--main-blue); border-color: var(--main-blue); color: var(--white); }
   </style>
 </head>
 <body>
@@ -77,7 +150,7 @@
               <span class="menu-logo-text">Blood Bowl Club</span>
             </div>
             <a class="menu-item" href="app-home.html">Accueil</a>
-            <a class="menu-item active">Compétitions</a>
+            <a class="menu-item active">Équipes</a>
             <a class="menu-item">Règles du jeu</a>
           </div>
           <div class="menu-right">
@@ -89,15 +162,32 @@
       </div>
 
       <div class="page-content">
+
+        <!-- Sélecteur de démonstration — outil de maquette, n'existe pas en prod -->
+        <div class="demo-switcher">
+          <span class="demo-switcher-label">Aperçu maquette — état de l'équipe :</span>
+          <button class="state-pill" data-state="pending" onclick="setTeamState('pending')">En attente d'inscription</button>
+          <button class="state-pill active" data-state="ready" onclick="setTeamState('ready')">Prête à jouer</button>
+          <button class="state-pill" data-state="match" onclick="setTeamState('match')">Rapport de match en cours</button>
+          <button class="state-pill" data-state="improvement" onclick="setTeamState('improvement')">Phase d'évolution des joueurs</button>
+          <button class="state-pill" data-state="recruitment" onclick="setTeamState('recruitment')">Phase d'achat</button>
+        </div>
+
         <div style="margin-bottom: var(--p1);">
           <a href="app-my-teams.html" style="color: var(--dark-3); font-size: var(--text-tiny);">← Mes équipes</a>
         </div>
 
         <div class="team-page">
+
+          <!-- En-tête -->
           <div class="team-header">
             <div class="team-header-logo">KF</div>
+
             <div class="team-header-info">
-              <div class="team-header-name">Les Korrigans FC</div>
+              <div class="team-header-top">
+                <div class="team-header-name">Les Korrigans FC</div>
+                <span id="team-status-badge" class="team-status-badge team-status-badge--ready">Prête à jouer</span>
+              </div>
               <div class="team-header-meta">
                 <div class="meta-item">
                   <div class="meta-label">Roster</div>
@@ -113,116 +203,230 @@
                 </div>
                 <div class="meta-item">
                   <div class="meta-label">Saison</div>
-                  <div class="meta-value">2024</div>
+                  <div class="meta-value">Saison 5</div>
                 </div>
                 <div class="meta-item">
                   <div class="meta-label">Valeur d'équipe</div>
-                  <div class="meta-value">1 250 kPo</div>
+                  <div class="meta-value">873 kPo</div>
                 </div>
-              </div>
-              <div class="team-header-stats">
-                <div class="stat-block">
-                  <div class="stat-val win">8</div>
-                  <div class="stat-label">Victoires</div>
+                <div class="meta-item">
+                  <div class="meta-label">Trésorerie</div>
+                  <div class="meta-value">40 kPo</div>
                 </div>
-                <div class="stat-block">
-                  <div class="stat-val draw">2</div>
-                  <div class="stat-label">Nuls</div>
-                </div>
-                <div class="stat-block">
-                  <div class="stat-val loss">1</div>
-                  <div class="stat-label">Défaites</div>
+                <div class="meta-item">
+                  <div class="meta-label">Fans dévoués</div>
+                  <div class="meta-value">5</div>
                 </div>
               </div>
             </div>
+
+            <div class="team-header-roster">
+              <div class="roster-icon">ES</div>
+              <div class="roster-icon-label">Elfes Sylvestres</div>
+            </div>
           </div>
 
-          <div class="tabs" style="background: var(--white); border-radius: 0; padding: 0 var(--p2); border-bottom: none;">
-            <div class="tab active">Joueurs</div>
+          <!-- Bandeaux d'état contextuels — un seul visible à la fois, piloté par le sélecteur -->
+          <div class="state-banner state-banner--pending" data-state="pending" style="display:none;">
+            <span class="state-banner-icon">📋</span>
+            <span class="state-banner-text"><strong>Équipe non inscrite.</strong> Inscrivez-la à une compétition pour pouvoir jouer.</span>
+            <a class="state-banner-cta" href="app-competition-list.html">S'inscrire à une compétition →</a>
+          </div>
+          <div class="state-banner state-banner--ready" data-state="ready" style="display:flex;">
+            <span class="state-banner-icon">✅</span>
+            <span class="state-banner-text"><strong>Équipe prête à jouer.</strong> Aucune action requise avant le prochain match.</span>
+          </div>
+          <div class="state-banner state-banner--phase" data-state="match" style="display:none;">
+            <span class="state-banner-icon">📝</span>
+            <span class="state-banner-text"><strong>Rapport de match en cours.</strong> La saisie du dernier match n'est pas terminée.</span>
+            <a class="state-banner-cta" href="app-match-report-step3.html">Reprendre le rapport →</a>
+          </div>
+          <div class="state-banner state-banner--phase" data-state="improvement" style="display:none;">
+            <span class="state-banner-icon">⚡</span>
+            <span class="state-banner-text"><strong>Phase d'évolution des joueurs.</strong> Des joueurs ont des SPP à dépenser suite au dernier match.</span>
+            <a class="state-banner-cta" href="app-player-detail.html">Gérer les évolutions →</a>
+          </div>
+          <div class="state-banner state-banner--phase" data-state="recruitment" style="display:none;">
+            <span class="state-banner-icon">🛒</span>
+            <span class="state-banner-text"><strong>Phase d'achat.</strong> Recrutez des joueurs ou du staff avant le prochain match.</span>
+            <a class="state-banner-cta" href="app-new-team-build.html">Recruter →</a>
+          </div>
+
+          <!-- Onglets -->
+          <div class="tabs" style="background: var(--white); padding: 0 var(--p2); border-bottom: 1px solid var(--dark-5);">
+            <div class="tab active">Joueurs &amp; Staff</div>
             <div class="tab">Matchs</div>
             <div class="tab">Trésorerie</div>
           </div>
 
-          <div class="players-panel">
+          <!-- Widget joueurs — délégué au BC players en prod (hx-get), inliné ici pour la maquette -->
+          <div class="players-widget">
             <table class="player-table">
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>Nom</th>
-                  <th>Poste</th>
-                  <th>MA</th>
-                  <th>ST</th>
-                  <th>AG</th>
-                  <th>PA</th>
-                  <th>AV</th>
-                  <th>Compétences</th>
-                  <th>Valeur</th>
-                  <th>SPP</th>
+                  <th style="text-align: center; width: 40px;">#</th>
+                  <th style="text-align: left;">Nom</th>
+                  <th style="text-align: left;">Poste</th>
+                  <th style="text-align: left; min-width: 180px;">Compétences de base</th>
+                  <th style="text-align: left; min-width: 180px;">Compétences acquises</th>
+                  <th style="text-align: center;">SPP</th>
+                  <th style="text-align: center;">Valeur</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>1</td><td><strong>Aerindel</strong></td>
+                <tr onclick="openPlayer()">
+                  <td style="text-align: center; color: var(--dark-3); font-family: monospace;">1</td>
+                  <td><strong>Aerindel</strong></td>
                   <td><span class="player-pos pos-thrower">Lanceur</span></td>
-                  <td>7</td><td>3</td><td>4+</td><td>2+</td><td>8+</td>
-                  <td><span class="player-skill">Passe</span><span class="player-skill">Sûr</span></td>
-                  <td>95 000</td><td>18</td>
+                  <td><span class="skill-tag type-passing">Passe</span> <span class="skill-tag type-general">Sûr</span></td>
+                  <td><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td style="text-align: center; font-weight: 600;">18</td>
+                  <td style="text-align: center;">95 kPo</td>
                 </tr>
-                <tr>
-                  <td>2</td><td><strong>Sylvara</strong></td>
+                <tr onclick="openPlayer()">
+                  <td style="text-align: center; color: var(--dark-3); font-family: monospace;">2</td>
+                  <td><strong>Sylvara</strong></td>
                   <td><span class="player-pos pos-catcher">Receveur</span></td>
-                  <td>8</td><td>2</td><td>3+</td><td>4+</td><td>8+</td>
-                  <td><span class="player-skill">Attraper</span><span class="player-skill">Esquiver</span></td>
-                  <td>65 000</td><td>24</td>
+                  <td><span class="skill-tag type-agility">Attraper</span> <span class="skill-tag type-general">Esquiver</span></td>
+                  <td><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td style="text-align: center; font-weight: 600;">24</td>
+                  <td style="text-align: center;">65 kPo</td>
                 </tr>
-                <tr>
-                  <td>3</td><td><strong>Maerindel</strong></td>
+                <tr onclick="openPlayer()">
+                  <td style="text-align: center; color: var(--dark-3); font-family: monospace;">3</td>
+                  <td><strong>Maerindel</strong></td>
                   <td><span class="player-pos pos-catcher">Receveur</span></td>
-                  <td>8</td><td>2</td><td>3+</td><td>4+</td><td>8+</td>
-                  <td><span class="player-skill">Attraper</span><span class="player-skill">Esquiver</span></td>
-                  <td>65 000</td><td>11</td>
+                  <td><span class="skill-tag type-agility">Attraper</span> <span class="skill-tag type-general">Esquiver</span></td>
+                  <td><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td style="text-align: center; font-weight: 600;">11</td>
+                  <td style="text-align: center;">65 kPo</td>
                 </tr>
-                <tr>
-                  <td>4</td><td><strong>Tyrandel</strong></td>
+                <tr onclick="openPlayer()">
+                  <td style="text-align: center; color: var(--dark-3); font-family: monospace;">4</td>
+                  <td><strong>Tyrandel</strong></td>
                   <td><span class="player-pos pos-blitzer">Frappeur</span></td>
-                  <td>7</td><td>3</td><td>3+</td><td>5+</td><td>8+</td>
-                  <td><span class="player-skill">Esquiver</span><span class="player-skill">Bloc</span></td>
-                  <td>110 000</td><td>30</td>
+                  <td><span class="skill-tag type-general">Esquiver</span></td>
+                  <td><span class="skill-tag type-general">Bloc</span> <span class="skill-tag type-strength">Garde</span></td>
+                  <td style="text-align: center; font-weight: 600;">13</td>
+                  <td style="text-align: center;">128 kPo</td>
                 </tr>
-                <tr>
-                  <td>5</td><td><strong>Corandel</strong></td>
+                <tr onclick="openPlayer()">
+                  <td style="text-align: center; color: var(--dark-3); font-family: monospace;">5</td>
+                  <td><strong>Corandel</strong></td>
                   <td><span class="player-pos pos-blitzer">Frappeur</span></td>
-                  <td>7</td><td>3</td><td>3+</td><td>5+</td><td>8+</td>
-                  <td><span class="player-skill">Esquiver</span></td>
-                  <td>110 000</td><td>6</td>
+                  <td><span class="skill-tag type-general">Esquiver</span></td>
+                  <td><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td style="text-align: center; font-weight: 600;">6</td>
+                  <td style="text-align: center;">110 kPo</td>
                 </tr>
-                <tr>
-                  <td>6</td><td><strong>Findas</strong></td>
+                <tr onclick="openPlayer()">
+                  <td style="text-align: center; color: var(--dark-3); font-family: monospace;">6</td>
+                  <td><strong>Findas</strong></td>
                   <td><span class="player-pos pos-lineman">Défenseur</span></td>
-                  <td>7</td><td>3</td><td>3+</td><td>5+</td><td>8+</td>
-                  <td><span class="player-skill">Esquiver</span></td>
-                  <td>70 000</td><td>9</td>
+                  <td><span class="skill-tag type-general">Esquiver</span></td>
+                  <td><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td style="text-align: center; font-weight: 600;">9</td>
+                  <td style="text-align: center;">70 kPo</td>
                 </tr>
-                <tr>
-                  <td>7</td><td><strong>Galadras</strong></td>
+                <tr onclick="openPlayer()">
+                  <td style="text-align: center; color: var(--dark-3); font-family: monospace;">7</td>
+                  <td><strong>Galadras</strong></td>
                   <td><span class="player-pos pos-lineman">Défenseur</span></td>
-                  <td>7</td><td>3</td><td>3+</td><td>5+</td><td>8+</td>
-                  <td></td>
-                  <td>70 000</td><td>3</td>
+                  <td><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td style="text-align: center; font-weight: 600;">3</td>
+                  <td style="text-align: center;">70 kPo</td>
                 </tr>
-                <tr>
-                  <td>8</td><td><strong>Mirindel</strong></td>
+                <tr onclick="openPlayer()">
+                  <td style="text-align: center; color: var(--dark-3); font-family: monospace;">8</td>
+                  <td><strong>Mirindel</strong></td>
                   <td><span class="player-pos pos-lineman">Défenseur</span></td>
-                  <td>7</td><td>3</td><td>3+</td><td>5+</td><td>8+</td>
-                  <td></td>
-                  <td>70 000</td><td>0</td>
+                  <td><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td style="text-align: center; font-weight: 600;">0</td>
+                  <td style="text-align: center;">70 kPo</td>
                 </tr>
               </tbody>
             </table>
           </div>
+
+          <!-- Staff -->
+          <div class="staff-panel">
+            <div class="staff-panel-title">Staff</div>
+            <table class="player-table staff-table">
+              <thead>
+                <tr>
+                  <th style="text-align: left;">Poste</th>
+                  <th style="text-align: center;">Quantité</th>
+                  <th style="text-align: center;">Prix (kPo)</th>
+                  <th style="text-align: center;">Coût total (kPo)</th>
+                </tr>
+              </thead>
+              <tbody class="no-hover">
+                <tr>
+                  <td><strong>Relances</strong></td>
+                  <td style="text-align: center;">2</td>
+                  <td style="text-align: center;">50</td>
+                  <td style="text-align: center;">100</td>
+                </tr>
+                <tr>
+                  <td><strong>Apothicaire</strong></td>
+                  <td style="text-align: center;">1</td>
+                  <td style="text-align: center;">50</td>
+                  <td style="text-align: center;">50</td>
+                </tr>
+                <tr>
+                  <td><strong>Assistants entraîneurs</strong></td>
+                  <td style="text-align: center;">2</td>
+                  <td style="text-align: center;">10</td>
+                  <td style="text-align: center;">20</td>
+                </tr>
+                <tr>
+                  <td><strong>Pom-pom girls</strong></td>
+                  <td style="text-align: center;">3</td>
+                  <td style="text-align: center;">10</td>
+                  <td style="text-align: center;">30</td>
+                </tr>
+                <tr class="subtotal-row">
+                  <td colspan="3" style="text-align: right;">Sous-total staff</td>
+                  <td style="text-align: center;">200</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
         </div>
       </div>
     </div>
   </div>
+
+<script>
+  var STATE_META = {
+    pending:     { label: "En attente d'inscription",  css: 'pending' },
+    ready:       { label: 'Prête à jouer',              css: 'ready' },
+    match:       { label: 'Rapport en cours',           css: 'phase' },
+    improvement: { label: "Phase d'amélioration",       css: 'phase' },
+    recruitment: { label: 'Phase de recrutement',       css: 'phase' },
+  };
+
+  function setTeamState(state) {
+    document.querySelectorAll('.state-pill').forEach(function (el) {
+      el.classList.toggle('active', el.dataset.state === state);
+    });
+    document.querySelectorAll('.state-banner').forEach(function (el) {
+      el.style.display = (el.dataset.state === state) ? 'flex' : 'none';
+    });
+    var badge = document.getElementById('team-status-badge');
+    badge.className = 'team-status-badge team-status-badge--' + STATE_META[state].css;
+    badge.textContent = STATE_META[state].label;
+    window.currentTeamState = state;
+  }
+
+  function openPlayer() {
+    var editable = window.currentTeamState === 'improvement';
+    window.location.href = editable ? 'app-player-detail.html' : 'app-player-detail-readonly.html';
+  }
+</script>
+
 </body>
 </html>

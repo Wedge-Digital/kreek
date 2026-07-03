@@ -31,8 +31,11 @@
   font-size: var(--text-tiny); font-weight: 700; white-space: nowrap;
 }
 .team-status-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-.team-status-badge--ready  { background: rgba(98,149,132,0.15); color: var(--green); }
-.team-status-badge--match  { background: rgba(255,107,53,0.12);  color: var(--orange); }
+.team-status-badge--pending    { background: rgba(255,107,53,0.12);  color: var(--orange); }
+.team-status-badge--ready      { background: rgba(98,149,132,0.15); color: var(--green); }
+.team-status-badge--phase      { background: rgba(0,48,73,0.10);    color: var(--main-blue); }
+.team-status-badge--offseason  { background: var(--dark-6);         color: var(--dark-3); }
+.team-status-badge--dismissed  { background: rgba(224,32,32,0.10);  color: var(--red); }
 
 /* Icône roster (droite du header) */
 .team-header-roster { display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }

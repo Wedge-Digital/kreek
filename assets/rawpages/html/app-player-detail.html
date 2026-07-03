@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tyrandel — Fiche joueur — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <style>
+
+    /* ── Page layout ─────────────────────────────────────────────────────── */
+    .player-page {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+    }
+    .breadcrumb { font-size: var(--text-tiny); color: var(--dark-3); cursor: pointer; }
+    .breadcrumb:hover { color: var(--main-blue); }
+
+    /* ── Player header ───────────────────────────────────────────────────── */
+    .player-header {
+      background: var(--white);
+      border-radius: var(--card-radius);
+      padding: var(--p2);
+      display: flex;
+      align-items: flex-start;
+      gap: var(--p3);
+      flex-wrap: wrap;
+    }
+    .player-avatar {
+      width: 110px; height: 110px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: 40px; color: var(--white);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      background: linear-gradient(135deg, var(--red), #7a1414);
+    }
+    .player-header-body { flex: 1; min-width: 240px; display: flex; flex-direction: column; gap: 10px; }
+    .player-header-top  { display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap; }
+    .player-name        { font-family: var(--font-title); font-size: var(--h3); font-weight: 800; color: var(--dark-0); }
+
+    .jersey-chip {
+      width: 36px; height: 30px;
+      border: 1.5px solid var(--dark-5); border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: var(--text-tiny); font-weight: 800; color: var(--dark-3);
+      background: var(--dark-6); font-family: var(--font-title);
+    }
+
+    .player-pos {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: var(--text-tiny); font-weight: 700;
+    }
+    .pos-lineman { background: rgba(0,48,73,0.1); color: var(--main-blue); }
+    .pos-blitzer { background: rgba(224,32,32,0.1); color: var(--red); }
+    .pos-thrower { background: rgba(98,149,132,0.1); color: var(--green); }
+    .pos-catcher { background: rgba(255,215,0,0.15); color: #9A7800; }
+
+    .player-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
+    .meta-item  { display: flex; flex-direction: column; gap: 2px; }
+    .meta-label { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-value { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+    .meta-value.value-up { color: var(--green); }
+
+    .player-stats-row { display: flex; gap: var(--p3); flex-wrap: wrap; }
+    .pstat     { text-align: center; min-width: 34px; }
+    .pstat-val { font-family: var(--font-title); font-size: var(--h5); font-weight: 800; color: var(--dark-1); }
+    .pstat-label { font-size: 10px; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.4px; }
+
+    .player-skills-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .skill-tag {
+      font-size: var(--text-tiny); font-weight: 600; padding: 3px 10px;
+      border-radius: 20px; background: var(--dark-5); color: var(--dark-1);
+    }
+    .skill-tag--acquired { background: rgba(98,149,132,0.15); color: #3a6655; }
+    .skill-tag--draft {
+      background: rgba(0,48,73,0.08); color: var(--main-blue);
+      border: 1px dashed var(--main-blue);
+    }
+
+    /* SPP wallet (repris du budget SPP de la finalisation d'équipe) */
+    .spp-budget {
+      display: flex; flex-direction: column; gap: 6px;
+      padding: 14px 18px;
+      background: rgba(255,215,0,0.07);
+      border: 1px solid rgba(255,215,0,0.3);
+      border-radius: 8px;
+      min-width: 260px;
+    }
+    .spp-budget-top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--p1); }
+    .spp-budget-label {
+      font-size: var(--text-tiny); font-weight: 700; color: #9A7800;
+      text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .spp-budget-numbers {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 800; color: #9A7800; white-space: nowrap;
+    }
+    .spp-budget-bar { height: 8px; background: rgba(154,120,0,0.15); border-radius: 4px; overflow: hidden; }
+    .spp-budget-bar-inner {
+      height: 100%; border-radius: 4px;
+      background: linear-gradient(90deg, #9A7800, #FFD700);
+      transition: width 0.4s ease;
+    }
+    .spp-budget-bottom {
+      display: flex; justify-content: space-between; font-size: var(--text-tiny); color: rgba(154,120,0,0.75);
+    }
+
+    /* ── Split layout ────────────────────────────────────────────────────── */
+    .pd-split { display: flex; gap: var(--p2); align-items: flex-start; }
+
+    /* ── Left: historique de matchs ──────────────────────────────────────── */
+    .pd-left {
+      width: 360px; flex-shrink: 0;
+      display: flex; flex-direction: column; gap: var(--p2);
+    }
+    .history-panel { background: var(--white); border-radius: var(--card-radius); overflow: hidden; }
+    .history-panel-header {
+      padding: 10px var(--p2); border-bottom: 2px solid var(--dark-5);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .history-panel-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); }
+    .history-count-badge { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; }
+
+    .career-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--dark-6); }
+    .career-stat {
+      background: var(--white); padding: 12px 8px; text-align: center;
+      display: flex; flex-direction: column; gap: 2px; align-items: center;
+    }
+    .career-stat-icon { font-size: 16px; }
+    .career-stat-val  { font-family: var(--font-title); font-size: var(--h5); font-weight: 800; color: var(--dark-1); }
+    .career-stat-label { font-size: 10px; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.3px; }
+
+    .match-list { display: flex; flex-direction: column; }
+    .match-card { padding: var(--p1) var(--p2); border-top: 1px solid var(--dark-6); display: flex; flex-direction: column; gap: 8px; }
+    .match-card-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .match-opponent { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .match-opponent-name { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .match-meta { font-size: 10px; color: var(--dark-3); }
+    .match-score { font-size: var(--text-tiny); color: var(--dark-3); white-space: nowrap; }
+
+    .match-actions { display: flex; flex-direction: column; gap: 3px; }
+    .pd-log-entry { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; font-size: var(--text-tiny); }
+    .pd-log-entry:hover { background: var(--dark-7); }
+    .pd-log-icon { font-size: 13px; flex-shrink: 0; width: 18px; text-align: center; }
+    .pd-log-text { flex: 1; color: var(--dark-1); }
+    .pd-log-spp  { font-weight: 700; color: #9A7800; white-space: nowrap; }
+    .pd-log-empty { font-size: var(--text-tiny); color: var(--dark-4); font-style: italic; padding: 4px 6px; }
+
+    .match-subtotal {
+      display: flex; justify-content: flex-end; gap: 4px;
+      font-size: 10px; color: rgba(154,120,0,0.8); font-weight: 700;
+      border-top: 1px dashed var(--dark-6); padding-top: 6px;
+    }
+
+    /* ── Right: dépense des SPP ──────────────────────────────────────────── */
+    .pd-right {
+      flex: 1;
+      background: var(--white);
+      border-radius: var(--card-radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 560px;
+    }
+    .spend-panel-header {
+      padding: var(--p2); border-bottom: 2px solid var(--dark-5);
+      display: flex; align-items: center; justify-content: space-between; gap: var(--p2); flex-wrap: wrap;
+    }
+    .spend-panel-title { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-0); }
+    .spend-panel-remaining {
+      display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0;
+      background: rgba(255,215,0,0.12); border: 1px solid rgba(255,215,0,0.4);
+      border-radius: 10px; padding: 8px 18px;
+    }
+    .spend-panel-remaining-val { font-family: var(--font-title); font-size: var(--h4); font-weight: 800; color: #9A7800; }
+    .spend-panel-remaining-label { font-size: var(--text-tiny); color: #9A7800; font-weight: 600; }
+
+    /* Onglets compétence / caractéristique (repris de .tabs) */
+    .tabs { display: flex; border-bottom: 2px solid var(--dark-5); gap: 4px; padding: 0 var(--p2); }
+    .tab {
+      padding: 10px 20px; font-size: var(--text-small); font-weight: 500; color: var(--dark-2);
+      cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .tab:hover { color: var(--dark-1); }
+    .tab.active { color: var(--main-blue); border-bottom-color: var(--main-blue); }
+
+    /* Mode toggle (repris de la finalisation) */
+    .skill-controls {
+      padding: var(--p1) var(--p2); border-bottom: 1px solid var(--dark-5);
+      display: flex; align-items: center; gap: var(--p2); flex-wrap: wrap;
+    }
+    .control-group { display: flex; align-items: center; gap: 8px; }
+    .control-label {
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap;
+    }
+    .mode-toggle { display: flex; border: 1.5px solid var(--dark-4); border-radius: 8px; overflow: hidden; }
+    .mode-btn {
+      padding: 6px 16px; font-size: var(--text-tiny); font-weight: 700; border: none;
+      background: var(--white); color: var(--dark-3); cursor: pointer; transition: all 0.12s; white-space: nowrap;
+    }
+    .mode-btn + .mode-btn { border-left: 1.5px solid var(--dark-4); }
+    .mode-btn.active-chosen { background: var(--main-blue); color: var(--white); }
+    .mode-btn.active-random { background: #9A7800; color: var(--white); }
+    .cost-hint { font-size: var(--text-tiny); color: var(--dark-3); }
+    .cost-chosen { color: var(--main-blue); font-weight: 700; }
+    .cost-random { color: #9A7800; font-weight: 700; }
+
+    /* Filtres catégorie (repris de la finalisation) */
+    .filter-pills { display: flex; gap: 0; flex-wrap: wrap; align-items: center; }
+    .filter-pill-group { display: flex; gap: 4px; align-items: center; }
+    .filter-pill-group-wrap { display: flex; flex-direction: column; gap: 3px; }
+    .filter-group-label { font-size: 10px; font-weight: 700; color: var(--dark-4); text-transform: uppercase; letter-spacing: 0.5px; }
+    .filter-group-sep { width: 1px; height: 28px; background: var(--dark-5); margin: 0 10px; flex-shrink: 0; }
+    .filter-pill {
+      font-size: var(--text-tiny); font-weight: 600; padding: 5px 14px; border-radius: 20px;
+      border: 1.5px solid var(--dark-4); background: var(--white); color: var(--dark-2);
+      cursor: pointer; transition: all 0.12s;
+    }
+    .filter-pill:hover  { border-color: var(--main-blue); color: var(--main-blue); }
+    .filter-pill.active { background: var(--main-blue); border-color: var(--main-blue); color: var(--white); }
+
+    /* Table compétences (repris de la finalisation) */
+    .skill-list { flex: 1; overflow-y: auto; }
+    .skill-list-table { width: 100%; border-collapse: collapse; }
+    .skill-list-table th {
+      text-align: left; padding: 8px var(--p2); font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid var(--dark-5);
+      background: var(--dark-6); position: sticky; top: 0; z-index: 1;
+    }
+    .skill-list-table td { padding: 12px var(--p2); font-size: var(--text-small); border-bottom: 1px solid var(--dark-6); vertical-align: middle; }
+    .skill-list-table tr:last-child td { border-bottom: none; }
+    .skill-list-table tr:hover td { background: var(--dark-7); }
+    .skill-list-table tr.row-disabled td { opacity: 0.4; }
+    .skill-name { font-weight: 600; color: var(--dark-1); }
+    .skill-desc { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; max-width: 280px; }
+
+    .skill-type-pill { display: inline-block; font-size: var(--text-tiny); font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+    .type-general  { background: rgba(0,48,73,0.08);     color: var(--main-blue); }
+    .type-strength { background: rgba(224,32,32,0.08);   color: var(--red); }
+    .type-agility  { background: rgba(98,149,132,0.12);  color: var(--green); }
+    .type-passing  { background: rgba(255,215,0,0.18);   color: #9A7800; }
+    .type-mutation { background: rgba(111,53,165,0.10);  color: var(--light-1); }
+    .access-normal { background: var(--dark-5);         color: var(--dark-2); }
+    .access-elite  { background: rgba(255,107,53,0.10); color: var(--orange); }
+
+    .spp-cost { font-size: var(--text-tiny); font-weight: 700; white-space: nowrap; }
+    .spp-cost-chosen { color: var(--main-blue); }
+    .spp-cost-random { color: #9A7800; }
+
+    .btn-add-skill {
+      padding: 6px 16px; border-radius: 6px; border: 1.5px solid var(--main-blue);
+      background: var(--white); color: var(--main-blue); font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer; white-space: nowrap; transition: all 0.12s;
+    }
+    .btn-add-skill:hover:not(:disabled) { background: var(--main-blue); color: var(--white); }
+    .btn-add-skill.random { border-color: #9A7800; color: #9A7800; }
+    .btn-add-skill.random:hover:not(:disabled) { background: #9A7800; color: var(--white); }
+    .btn-add-skill:disabled { border-color: var(--dark-4); color: var(--dark-4); cursor: default; background: var(--white); }
+    .btn-add-skill.already { border-color: var(--green); color: var(--green); background: rgba(98,149,132,0.08); cursor: default; }
+
+    /* ── Caractéristiques ────────────────────────────────────────────────── */
+    .stat-grid-wrap { padding: var(--p2); flex: 1; overflow-y: auto; }
+    .stat-grid-hint { font-size: var(--text-tiny); color: var(--dark-3); font-style: italic; margin-bottom: var(--p1); }
+    .stat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--p1); }
+    .stat-card {
+      border: 1.5px solid var(--dark-5); border-radius: 10px; padding: var(--p1);
+      display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+    }
+    .stat-card.staged { border-color: var(--main-blue); background: rgba(0,48,73,0.04); }
+    .stat-card-name { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.4px; }
+    .stat-card-change { display: flex; align-items: center; gap: 6px; font-family: var(--font-title); font-weight: 800; }
+    .stat-current { font-size: var(--h5); color: var(--dark-3); }
+    .stat-arrow { font-size: var(--text-small); color: var(--dark-4); }
+    .stat-new { font-size: var(--h5); color: var(--main-blue); }
+    .stat-cost-badge { font-size: var(--text-tiny); font-weight: 700; color: #9A7800; }
+    .stat-card-btn {
+      width: 100%; padding: 6px; border-radius: 6px; border: 1.5px solid var(--main-blue);
+      background: var(--white); color: var(--main-blue); font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer; transition: all 0.12s;
+    }
+    .stat-card-btn:hover:not(:disabled) { background: var(--main-blue); color: var(--white); }
+    .stat-card-btn:disabled { border-color: var(--dark-4); color: var(--dark-4); cursor: default; }
+    .stat-card-btn.staged { border-color: var(--green); color: var(--green); background: rgba(98,149,132,0.08); }
+
+    /* ── Résumé des attributions en cours (repris de la finalisation) ──── */
+    .spp-summary { border-top: 2px solid var(--dark-5); }
+    .spp-summary-header {
+      padding: 10px var(--p2); border-bottom: 2px solid var(--dark-5);
+      display: flex; align-items: center; justify-content: space-between; gap: var(--p2); flex-wrap: wrap;
+    }
+    .spp-summary-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); }
+    .spp-summary-meta { font-size: var(--text-tiny); color: var(--dark-3); }
+    .spp-summary-meta strong { color: var(--green); }
+    .spp-summary-table { width: 100%; border-collapse: collapse; }
+    .spp-summary-table th {
+      text-align: left; padding: 8px var(--p2); font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.4px; background: var(--dark-6); border-bottom: 1px solid var(--dark-5);
+    }
+    .spp-summary-table td { padding: 10px var(--p2); font-size: var(--text-small); border-bottom: 1px solid var(--dark-6); vertical-align: middle; }
+    .spp-summary-table tr:last-child td { border-bottom: none; }
+    .mode-chip { display: inline-block; font-size: var(--text-tiny); font-weight: 700; padding: 2px 10px; border-radius: 20px; }
+    .mode-chip-chosen { background: rgba(0,48,73,0.08); color: var(--main-blue); }
+    .mode-chip-random { background: rgba(154,120,0,0.10); color: #9A7800; }
+    .mode-chip-stat   { background: rgba(98,149,132,0.12); color: #3a6655; }
+    .summary-cost  { font-weight: 700; color: #9A7800; }
+    .summary-value { font-weight: 700; color: var(--green); }
+    .spp-empty-state { padding: var(--p2); text-align: center; color: var(--dark-3); font-size: var(--text-small); font-style: italic; }
+    .btn-cancel-entry {
+      font-size: var(--text-tiny); color: var(--dark-3); cursor: pointer; background: none;
+      border: 1px solid var(--dark-5); padding: 4px 10px; border-radius: 5px; transition: all 0.12s;
+    }
+    .btn-cancel-entry:hover { color: var(--red); border-color: var(--red); }
+
+    .spend-panel-footer { padding: var(--p1) var(--p2); border-top: 2px solid var(--dark-5); }
+    .btn-submit {
+      width: 100%; padding: 12px var(--p1); background: var(--main-blue); color: var(--white);
+      border-radius: 8px; font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
+      cursor: pointer; border: none; text-align: center; transition: opacity 0.15s;
+    }
+    .btn-submit:hover:not(:disabled) { opacity: 0.9; }
+    .btn-submit:disabled { opacity: 0.4; cursor: default; }
+
+    [x-cloak] { display: none !important; }
+
+    /* ── Mobile header (masqué sur desktop) ─────────────────────────────── */
+    .mobile-header { display: none; }
+
+    /* ── Responsive — tablette (≤ 960px) ─────────────────────────────────── */
+    @media (max-width: 960px) {
+      .pd-split { flex-direction: column; }
+      .pd-left  { width: 100%; }
+      .stat-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    /* ── Responsive — mobile (≤ 768px) ───────────────────────────────────── */
+    @media (max-width: 768px) {
+      .sidebar  { display: none !important; }
+      .menu-bar { display: none !important; }
+      .app-layout { display: block !important; height: auto !important; overflow: visible !important; }
+      .main-area  { width: 100% !important; }
+      .page-content {
+        padding: var(--p1) !important; height: auto !important; overflow: visible !important;
+        padding-top: 64px !important; padding-bottom: var(--p3) !important;
+      }
+      .mobile-header {
+        display: flex !important; position: fixed; top: 0; left: 0; right: 0; z-index: 500;
+        background: var(--dark-0); align-items: center; gap: 10px; padding: 0 var(--p1); height: 52px;
+      }
+
+      .player-header { padding: var(--p1); gap: var(--p1); }
+      .player-avatar { width: 72px; height: 72px; font-size: 26px; }
+      .player-name    { font-size: var(--h5); }
+      .spp-budget { min-width: 0; width: 100%; }
+
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .filter-pills { gap: 4px; }
+      .filter-group-sep { display: none; }
+    }
+    @media (max-width: 420px) {
+      .stat-grid { grid-template-columns: 1fr; }
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- Mobile header (masqué sur desktop) -->
+  <div class="mobile-header">
+    <span style="color: rgba(255,255,255,0.8); font-size: 18px;">←</span>
+    <div class="jersey-chip" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: var(--white);">4</div>
+    <span style="font-family: var(--font-title); font-size: var(--text-tiny); font-weight: 700; color: var(--white);">Tyrandel</span>
+  </div>
+
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px; font-family: var(--font-body);">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active">Équipes</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="player-page" x-data="playerDetail()" x-cloak>
+
+          <div class="breadcrumb">← Les Korrigans FC</div>
+
+          <!-- ① En-tête joueur -->
+          <div class="player-header">
+            <div class="player-avatar" x-text="player.jersey"></div>
+            <div class="player-header-body">
+              <div class="player-header-top">
+                <div class="player-name" x-text="player.name"></div>
+                <span class="jersey-chip" x-text="'#' + player.jersey"></span>
+                <span class="player-pos" :class="'pos-' + player.posKey" x-text="player.positionName"></span>
+              </div>
+              <div class="player-header-meta">
+                <div class="meta-item">
+                  <div class="meta-label">Roster</div>
+                  <div class="meta-value" x-text="player.rosterName"></div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Valeur actuelle</div>
+                  <div class="meta-value" :class="valueDelta > 0 ? 'value-up' : ''" x-text="formattedValue"></div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Matchs joués</div>
+                  <div class="meta-value" x-text="matches.length"></div>
+                </div>
+              </div>
+              <div class="player-stats-row">
+                <div class="pstat"><div class="pstat-val" x-text="player.ma"></div><div class="pstat-label">MA</div></div>
+                <div class="pstat"><div class="pstat-val" x-text="player.st"></div><div class="pstat-label">ST</div></div>
+                <div class="pstat"><div class="pstat-val" x-text="player.ag + '+'"></div><div class="pstat-label">AG</div></div>
+                <div class="pstat"><div class="pstat-val" x-text="player.pa + '+'"></div><div class="pstat-label">PA</div></div>
+                <div class="pstat"><div class="pstat-val" x-text="player.av + '+'"></div><div class="pstat-label">AV</div></div>
+              </div>
+              <div class="player-skills-row">
+                <template x-for="skill in player.baseSkills" :key="'base-'+skill">
+                  <span class="skill-tag" x-text="skill"></span>
+                </template>
+                <template x-for="skill in player.acquiredSkills" :key="'acq-'+skill">
+                  <span class="skill-tag skill-tag--acquired" x-text="skill + ' ✓'"></span>
+                </template>
+                <template x-for="a in draftAssignments.filter(a => a.type === 'skill')" :key="'draft-'+a.id">
+                  <span class="skill-tag skill-tag--draft" x-text="a.label + ' …'"></span>
+                </template>
+              </div>
+            </div>
+
+            <!-- Portefeuille SPP -->
+            <div class="spp-budget">
+              <div class="spp-budget-top">
+                <span class="spp-budget-label">SPP du joueur</span>
+                <span class="spp-budget-numbers" x-text="sppSpentTotal + ' / ' + player.sppEarned + ' SPP'"></span>
+              </div>
+              <div class="spp-budget-bar">
+                <div class="spp-budget-bar-inner" :style="'width:' + sppPercent + '%'"></div>
+              </div>
+              <div class="spp-budget-bottom">
+                <span>Gagnés sur <span x-text="matches.length"></span> matchs</span>
+                <span x-text="sppRemaining + ' SPP disponibles'"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ② Historique + dépense -->
+          <div class="pd-split">
+
+            <!-- Colonne gauche : historique de matchs -->
+            <div class="pd-left">
+              <div class="history-panel">
+                <div class="history-panel-header">
+                  <div class="history-panel-title">Résumé de carrière</div>
+                </div>
+                <div class="career-summary">
+                  <div class="career-stat"><span class="career-stat-icon">🏈</span><span class="career-stat-val" x-text="careerTotals.touchdown"></span><span class="career-stat-label">Essais</span></div>
+                  <div class="career-stat"><span class="career-stat-icon">🎯</span><span class="career-stat-val" x-text="careerTotals.pass"></span><span class="career-stat-label">Passes</span></div>
+                  <div class="career-stat"><span class="career-stat-icon">🛡️</span><span class="career-stat-val" x-text="careerTotals.interception"></span><span class="career-stat-label">Intercept.</span></div>
+                  <div class="career-stat"><span class="career-stat-icon">🩸</span><span class="career-stat-val" x-text="careerTotals.casualty"></span><span class="career-stat-label">Sorties</span></div>
+                  <div class="career-stat"><span class="career-stat-icon">⭐</span><span class="career-stat-val" x-text="careerTotals.mvp"></span><span class="career-stat-label">MVP</span></div>
+                  <div class="career-stat"><span class="career-stat-icon">💰</span><span class="career-stat-val" x-text="player.sppEarned"></span><span class="career-stat-label">SPP total</span></div>
+                </div>
+              </div>
+
+              <div class="history-panel">
+                <div class="history-panel-header">
+                  <div class="history-panel-title">Historique de matchs</div>
+                  <div class="history-count-badge" x-text="matches.length + ' matchs'"></div>
+                </div>
+                <div class="match-list">
+                  <template x-for="match in matches" :key="match.id">
+                    <div class="match-card">
+                      <div class="match-card-header">
+                        <div class="match-opponent">
+                          <span class="match-opponent-name" x-text="match.opponent"></span>
+                          <span class="match-meta">
+                            <span class="badge" :class="'badge-' + match.resultColor" x-text="match.resultLabel"></span>
+                            &nbsp;<span x-text="match.round"></span>
+                          </span>
+                        </div>
+                        <div class="match-score" x-text="'TD ' + match.tdFor + '-' + match.tdAgainst"></div>
+                      </div>
+                      <div class="match-actions">
+                        <template x-for="action in match.actions" :key="action.label">
+                          <div class="pd-log-entry">
+                            <span class="pd-log-icon" x-text="action.icon"></span>
+                            <span class="pd-log-text" x-text="action.label"></span>
+                            <span class="pd-log-spp" x-text="'+' + action.spp + ' SPP'"></span>
+                          </div>
+                        </template>
+                        <div class="pd-log-empty" x-show="match.actions.length === 0">Aucune action marquante ce match.</div>
+                      </div>
+                      <div class="match-subtotal" x-show="match.actions.length > 0">
+                        <span x-text="'+' + matchTotal(match) + ' SPP'"></span>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+
+            <!-- Colonne droite : dépense des SPP -->
+            <div class="pd-right">
+              <div class="spend-panel-header">
+                <div class="spend-panel-title">Dépenser les SPP</div>
+                <div class="spend-panel-remaining">
+                  <div class="spend-panel-remaining-val" x-text="sppRemaining"></div>
+                  <div class="spend-panel-remaining-label">SPP restants</div>
+                </div>
+              </div>
+
+              <div class="tabs">
+                <div class="tab" :class="activeTab === 'skills' ? 'active' : ''" @click="activeTab = 'skills'">Compétences</div>
+                <div class="tab" :class="activeTab === 'stats' ? 'active' : ''" @click="activeTab = 'stats'">Caractéristiques</div>
+              </div>
+
+              <!-- Onglet compétences -->
+              <template x-if="activeTab === 'skills'">
+                <div style="display:flex; flex-direction:column; flex:1; min-height:0;">
+                  <div class="skill-controls">
+                    <div class="control-group">
+                      <span class="control-label">Mode</span>
+                      <div class="mode-toggle">
+                        <button class="mode-btn" :class="mode === 'chosen' ? 'active-chosen' : ''" @click="mode = 'chosen'">✓ Choisie</button>
+                        <button class="mode-btn" :class="mode === 'random' ? 'active-random' : ''" @click="mode = 'random'">🎲 Aléatoire</button>
+                      </div>
+                      <span class="cost-hint">
+                        Choisie : <span class="cost-chosen">6</span> / <span class="cost-chosen" style="opacity:0.7;">12 SPP</span>
+                        &nbsp;·&nbsp; Aléatoire : <span class="cost-random">3</span> / <span class="cost-random" style="opacity:0.7;">6 SPP</span>
+                      </span>
+                    </div>
+                    <div class="control-group" style="align-items:flex-start;">
+                      <span class="control-label" style="margin-top:14px;">Filtre</span>
+                      <div class="filter-pills">
+                        <div class="filter-pill-group-wrap">
+                          <span class="filter-group-label">&nbsp;</span>
+                          <div class="filter-pill-group">
+                            <button class="filter-pill" :class="isFilterActive('all') ? 'active' : ''" @click="toggleFilter('all')">Tout</button>
+                          </div>
+                        </div>
+                        <div class="filter-group-sep"></div>
+                        <div class="filter-pill-group-wrap">
+                          <span class="filter-group-label">Accès</span>
+                          <div class="filter-pill-group">
+                            <button class="filter-pill" :class="isFilterActive('normal') ? 'active' : ''" @click="toggleFilter('normal')">Normales</button>
+                            <button class="filter-pill" :class="isFilterActive('elite') ? 'active' : ''" @click="toggleFilter('elite')">Élite</button>
+                          </div>
+                        </div>
+                        <div class="filter-group-sep"></div>
+                        <div class="filter-pill-group-wrap">
+                          <span class="filter-group-label">Type</span>
+                          <div class="filter-pill-group">
+                            <template x-for="cat in availableCategories" :key="cat.key">
+                              <button class="filter-pill" :class="isFilterActive(cat.key) ? 'active' : ''" @click="toggleFilter(cat.key)" x-text="cat.label"></button>
+                            </template>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="skill-list">
+                    <table class="skill-list-table">
+                      <thead>
+                        <tr>
+                          <th style="min-width:200px;">Compétence</th>
+                          <th>Type</th>
+                          <th>Accès</th>
+                          <th>Coût</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template x-for="skill in filteredSkills" :key="skill.id">
+                          <tr :class="{ 'row-disabled': !canAfford(skillCost(skill.isElite)) }">
+                            <td>
+                              <div class="skill-name" x-text="skill.name"></div>
+                              <div class="skill-desc" x-text="skill.desc"></div>
+                            </td>
+                            <td><span class="skill-type-pill" :class="'type-' + skill.category" x-text="categoryLabel(skill.category)"></span></td>
+                            <td><span class="skill-type-pill" :class="skill.isElite ? 'access-elite' : 'access-normal'" x-text="skill.isElite ? 'Élite' : 'Normal'"></span></td>
+                            <td><span class="spp-cost" :class="mode === 'chosen' ? 'spp-cost-chosen' : 'spp-cost-random'" x-text="skillCost(skill.isElite) + ' SPP'"></span></td>
+                            <td>
+                              <button class="btn-add-skill" :class="mode === 'random' ? 'random' : ''"
+                                      x-show="canAfford(skillCost(skill.isElite))"
+                                      @click="assignSkill(skill)"
+                                      x-text="mode === 'chosen' ? '+ Choisir' : '🎲 Tirer'"></button>
+                              <button class="btn-add-skill" x-show="!canAfford(skillCost(skill.isElite))" disabled>Budget insuf.</button>
+                            </td>
+                          </tr>
+                        </template>
+                        <tr x-show="filteredSkills.length === 0">
+                          <td colspan="5" style="text-align:center; color:var(--dark-3); font-style:italic; padding:var(--p2);">
+                            Aucune compétence disponible dans cette catégorie.
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Onglet caractéristiques -->
+              <template x-if="activeTab === 'stats'">
+                <div class="stat-grid-wrap">
+                  <div class="stat-grid-hint">Coûts indicatifs — barème SPP à confirmer (carte dédiée à venir).</div>
+                  <div class="stat-grid">
+                    <template x-for="stat in statDefs" :key="stat.key">
+                      <div class="stat-card" :class="isStatStaged(stat.key) ? 'staged' : ''">
+                        <div class="stat-card-name" x-text="stat.label"></div>
+                        <div class="stat-card-change">
+                          <span class="stat-current" x-text="stat.display(stat.current)"></span>
+                          <span class="stat-arrow">→</span>
+                          <span class="stat-new" x-text="stat.display(stat.current + 1)"></span>
+                        </div>
+                        <span class="stat-cost-badge" x-text="stat.cost + ' SPP · +' + stat.valueDelta + ' kPo'"></span>
+                        <button class="stat-card-btn"
+                                :class="isStatStaged(stat.key) ? 'staged' : ''"
+                                :disabled="isStatStaged(stat.key) || !canAfford(stat.cost)"
+                                @click="increaseStat(stat)"
+                                x-text="isStatStaged(stat.key) ? 'En attente' : (canAfford(stat.cost) ? 'Augmenter' : 'Budget insuf.')"></button>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Résumé des attributions en cours -->
+              <div class="spp-summary">
+                <div class="spp-summary-header">
+                  <div class="spp-summary-title">Évolutions en attente</div>
+                  <div class="spp-summary-meta" x-show="draftAssignments.length > 0">
+                    <strong x-text="draftValueDelta + ' kPo'"></strong> de valeur d'équipe ajoutée
+                  </div>
+                </div>
+                <div class="spp-empty-state" x-show="draftAssignments.length === 0">
+                  Aucune évolution en attente — choisissez une compétence ou une caractéristique ci-dessus.
+                </div>
+                <table class="spp-summary-table" x-show="draftAssignments.length > 0">
+                  <thead>
+                    <tr><th>Attribution</th><th>Mode</th><th>Coût</th><th>Valeur</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="(a, idx) in draftAssignments" :key="a.id">
+                      <tr>
+                        <td x-text="a.label"></td>
+                        <td>
+                          <span class="mode-chip" :class="a.type === 'stat' ? 'mode-chip-stat' : (a.mode === 'chosen' ? 'mode-chip-chosen' : 'mode-chip-random')"
+                                x-text="a.type === 'stat' ? 'Caractéristique' : (a.mode === 'chosen' ? 'Choisie' : 'Aléatoire')"></span>
+                        </td>
+                        <td class="summary-cost" x-text="a.cost + ' SPP'"></td>
+                        <td class="summary-value" x-text="'+' + a.valueDelta + ' kPo'"></td>
+                        <td><button class="btn-cancel-entry" @click="removeDraft(idx)">Annuler</button></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="spend-panel-footer">
+                <button class="btn-submit" :disabled="draftAssignments.length === 0" @click="submitAssignments()">
+                  Enregistrer les évolutions
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+function playerDetail() {
+  return {
+
+    /* ── Joueur (injecté par le serveur en prod) ─────────────────────────── */
+    player: {
+      name: 'Tyrandel', jersey: 4, posKey: 'blitzer', positionName: 'Frappeur',
+      rosterName: 'Elfes Sylvestres', value: 110000,
+      ma: 7, st: 3, ag: 3, pa: 5, av: 8,
+      baseSkills: ['Esquiver'],
+      acquiredSkills: ['Bloc'],
+      sppEarned: 31,
+      sppAlreadySpent: 6,
+      normalCategories: ['general', 'strength'],
+      eliteCategories:  ['agility', 'passing'],
+    },
+
+    /* ── Historique de matchs ─────────────────────────────────────────────── */
+    matches: [
+      { id: 'm6', opponent: 'Bone Crushers', round: 'J6', resultLabel: 'Victoire', resultColor: 'green', tdFor: 3, tdAgainst: 1,
+        actions: [
+          { icon: '🏈', label: 'Touchdown', spp: 3 },
+          { icon: '🎯', label: 'Passe réussie', spp: 1 },
+          { icon: '🩸', label: 'Sortie infligée', spp: 2 },
+        ] },
+      { id: 'm5', opponent: 'Green Machine', round: 'J5', resultLabel: 'Victoire', resultColor: 'green', tdFor: 2, tdAgainst: 0,
+        actions: [
+          { icon: '🏈', label: 'Touchdown', spp: 3 },
+          { icon: '🎯', label: 'Passe réussie', spp: 1 },
+          { icon: '🩸', label: 'Sortie infligée', spp: 2 },
+        ] },
+      { id: 'm4', opponent: 'Nightmare Warband', round: 'J4', resultLabel: 'Victoire', resultColor: 'green', tdFor: 3, tdAgainst: 0,
+        actions: [
+          { icon: '🏈', label: 'Touchdown', spp: 3 },
+          { icon: '🏈', label: 'Touchdown', spp: 3 },
+          { icon: '🛡️', label: 'Interception', spp: 2 },
+          { icon: '⭐', label: 'MVP', spp: 4 },
+        ] },
+      { id: 'm3', opponent: 'Skull Crushers', round: 'J3', resultLabel: 'Défaite', resultColor: 'red', tdFor: 0, tdAgainst: 2,
+        actions: [] },
+      { id: 'm2', opponent: 'Iron Golems', round: 'J2', resultLabel: 'Nul', resultColor: 'dark', tdFor: 1, tdAgainst: 1,
+        actions: [
+          { icon: '🎯', label: 'Passe réussie', spp: 1 },
+          { icon: '🩸', label: 'Sortie infligée', spp: 2 },
+        ] },
+      { id: 'm1', opponent: 'Chaos United', round: 'J1', resultLabel: 'Victoire', resultColor: 'green', tdFor: 2, tdAgainst: 1,
+        actions: [
+          { icon: '🏈', label: 'Touchdown', spp: 3 },
+          { icon: '🎯', label: 'Passe réussie', spp: 1 },
+        ] },
+    ],
+
+    careerTotals: { touchdown: 5, pass: 4, interception: 1, casualty: 3, mvp: 1 },
+
+    matchTotal(match) {
+      return match.actions.reduce((sum, a) => sum + a.spp, 0);
+    },
+
+    /* ── Catalogue de compétences (repris de la finalisation d'équipe) ────── */
+    catalog: {
+      general: [
+        { id: 'block',   name: 'Bloc',            desc: 'Ne tombe pas lors d\'un placage raté.' },
+        { id: 'sure',    name: 'Sûr',              desc: 'Relance le premier jet de gestion de balle raté.' },
+        { id: 'guard',   name: 'Garde',            desc: 'Aide aux plaquages même depuis la zone de marquage.' },
+        { id: 'wrestle', name: 'Lutteuse',         desc: 'Peut tomber avec l\'adversaire lors d\'un placage.' },
+        { id: 'kick',    name: 'Botteuse',         desc: 'Peut choisir la direction du coup de pied d\'envoi.' },
+      ],
+      strength: [
+        { id: 'pres',    name: 'Présence',         desc: 'Les adversaires relancent leurs jets d\'armure réussis.' },
+        { id: 'stand',   name: 'Costaud',          desc: 'Ne peut pas être mis au sol par un seul attaquant.' },
+        { id: 'mighty',  name: 'Coup de marteau',  desc: 'Peut transformer un résultat Renversé en KO.' },
+      ],
+      agility: [
+        { id: 'acro',    name: 'Acrobatie',        desc: 'Peut tenter une esquive même après être tombé.' },
+        { id: 'catch',   name: 'Attraper',         desc: 'Relance le premier jet de réception raté.' },
+        { id: 'jump',    name: 'Saut',             desc: 'Peut sauter par-dessus les joueurs adjacents.' },
+      ],
+      passing: [
+        { id: 'pass',    name: 'Passe longue',     desc: 'Ignore les modificateurs de distance lors des passes longues.' },
+        { id: 'strong',  name: 'Bras fort',        desc: 'Portée de passe augmentée d\'un cran.' },
+      ],
+    },
+
+    /* ── État UI ─────────────────────────────────────────────────────────── */
+    activeTab:        'skills',
+    mode:             'chosen',
+    activeFilters:    [],
+    draftAssignments: [],
+    nextDraftId:      1,
+
+    /* ── Définition des caractéristiques (coûts SPP indicatifs) ──────────── */
+    get statDefs() {
+      return [
+        { key: 'ma', label: 'MA', current: this.player.ma, cost: 20, valueDelta: 30, display: v => v },
+        { key: 'st', label: 'ST', current: this.player.st, cost: 30, valueDelta: 50, display: v => v },
+        { key: 'ag', label: 'AG', current: this.player.ag, cost: 40, valueDelta: 40, display: v => v + '+' },
+        { key: 'pa', label: 'PA', current: this.player.pa, cost: 20, valueDelta: 30, display: v => v + '+' },
+        { key: 'av', label: 'AV', current: this.player.av, cost: 20, valueDelta: 30, display: v => v + '+' },
+      ];
+    },
+    isStatStaged(key) {
+      return this.draftAssignments.some(a => a.type === 'stat' && a.statKey === key);
+    },
+
+    /* ── SPP ─────────────────────────────────────────────────────────────── */
+    get sppSpentDraft() { return this.draftAssignments.reduce((s, a) => s + a.cost, 0); },
+    get sppSpentTotal() { return this.player.sppAlreadySpent + this.sppSpentDraft; },
+    get sppRemaining()  { return this.player.sppEarned - this.sppSpentTotal; },
+    get sppPercent()    { return Math.min(100, Math.round((this.sppSpentTotal / this.player.sppEarned) * 100)); },
+    canAfford(cost)     { return this.sppRemaining >= cost; },
+
+    get draftValueDelta() { return this.draftAssignments.reduce((s, a) => s + a.valueDelta, 0); },
+    get valueDelta()      { return this.draftValueDelta; },
+    get formattedValue()  {
+      const total = this.player.value + this.valueDelta * 1000;
+      return total.toLocaleString('fr-FR') + ' Po';
+    },
+
+    /* ── Filtres ─────────────────────────────────────────────────────────── */
+    isFilterActive(key) {
+      if (key === 'all') return this.activeFilters.length === 0;
+      return this.activeFilters.includes(key);
+    },
+    toggleFilter(key) {
+      if (key === 'all') { this.activeFilters = []; return; }
+      const idx = this.activeFilters.indexOf(key);
+      if (idx !== -1) this.activeFilters.splice(idx, 1);
+      else            this.activeFilters.push(key);
+    },
+    get availableCategories() {
+      const all = [...this.player.normalCategories, ...this.player.eliteCategories];
+      return [...new Set(all)].map(key => ({ key, label: this.categoryLabel(key) }));
+    },
+    categoryLabel(key) {
+      return { general: 'Général', strength: 'Force', agility: 'Agilité', passing: 'Passe' }[key] || key;
+    },
+
+    /* ── Compétences filtrées ──────────────────────────────────────────────── */
+    get filteredSkills() {
+      const known = [...this.player.baseSkills, ...this.player.acquiredSkills,
+                      ...this.draftAssignments.filter(a => a.type === 'skill').map(a => a.label)];
+      let skills = [];
+      const allCats = [...this.player.normalCategories, ...this.player.eliteCategories];
+      allCats.forEach(cat => {
+        (this.catalog[cat] || []).forEach(skill => {
+          if (!known.includes(skill.name)) {
+            skills.push({ ...skill, category: cat, isElite: this.player.eliteCategories.includes(cat) });
+          }
+        });
+      });
+      if (this.activeFilters.length > 0) {
+        skills = skills.filter(s => this.activeFilters.some(f => {
+          if (f === 'normal') return !s.isElite;
+          if (f === 'elite')  return  s.isElite;
+          return s.category === f;
+        }));
+      }
+      return skills;
+    },
+    skillCost(isElite) {
+      if (this.mode === 'chosen') return isElite ? 12 : 6;
+      return isElite ? 6 : 3;
+    },
+
+    /* ── Attribution ─────────────────────────────────────────────────────── */
+    assignSkill(skill) {
+      const cost = this.skillCost(skill.isElite);
+      if (!this.canAfford(cost)) return;
+      this.draftAssignments.push({
+        id: this.nextDraftId++, type: 'skill', label: skill.name, mode: this.mode,
+        cost, valueDelta: skill.isElite ? 20 : 10,
+      });
+    },
+    increaseStat(stat) {
+      if (this.isStatStaged(stat.key) || !this.canAfford(stat.cost)) return;
+      this.draftAssignments.push({
+        id: this.nextDraftId++, type: 'stat', statKey: stat.key, label: stat.label + ' +1',
+        cost: stat.cost, valueDelta: stat.valueDelta,
+      });
+    },
+    removeDraft(idx) {
+      this.draftAssignments.splice(idx, 1);
+    },
+
+    /* ── Soumission ──────────────────────────────────────────────────────── */
+    submitAssignments() {
+      const payload = this.draftAssignments.map(a => ({
+        type: a.type, label: a.label, mode: a.mode || null, cost: a.cost,
+      }));
+      console.log('POST /player-improvement', JSON.stringify(payload, null, 2));
+
+      this.draftAssignments.forEach(a => {
+        if (a.type === 'skill') this.player.acquiredSkills.push(a.label);
+        if (a.type === 'stat')  this.player[a.statKey] += 1;
+      });
+      this.player.value += this.draftValueDelta * 1000;
+      this.player.sppAlreadySpent += this.sppSpentDraft;
+      this.draftAssignments = [];
+    },
+
+  };
+}
+</script>
+
+</body>
+</html>

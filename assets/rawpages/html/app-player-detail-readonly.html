@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tyrandel — Fiche joueur — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+
+    /* ── Page layout ─────────────────────────────────────────────────────── */
+    .player-page {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+    }
+    .breadcrumb { font-size: var(--text-tiny); color: var(--dark-3); cursor: pointer; }
+    .breadcrumb:hover { color: var(--main-blue); }
+
+    /* ── Player header ───────────────────────────────────────────────────── */
+    .player-header {
+      background: var(--white);
+      border-radius: var(--card-radius);
+      padding: var(--p2);
+      display: flex;
+      align-items: flex-start;
+      gap: var(--p3);
+      flex-wrap: wrap;
+    }
+    .player-avatar {
+      width: 110px; height: 110px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: 40px; color: var(--white);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      background: linear-gradient(135deg, var(--red), #7a1414);
+    }
+    .player-header-body { flex: 1; min-width: 240px; display: flex; flex-direction: column; gap: 10px; }
+    .player-header-top  { display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap; }
+    .player-name        { font-family: var(--font-title); font-size: var(--h3); font-weight: 800; color: var(--dark-0); }
+
+    .jersey-chip {
+      width: 36px; height: 30px;
+      border: 1.5px solid var(--dark-5); border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: var(--text-tiny); font-weight: 800; color: var(--dark-3);
+      background: var(--dark-6); font-family: var(--font-title);
+    }
+
+    .player-pos {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: var(--text-tiny); font-weight: 700;
+    }
+    .pos-lineman { background: rgba(0,48,73,0.1); color: var(--main-blue); }
+    .pos-blitzer { background: rgba(224,32,32,0.1); color: var(--red); }
+    .pos-thrower { background: rgba(98,149,132,0.1); color: var(--green); }
+    .pos-catcher { background: rgba(255,215,0,0.15); color: #9A7800; }
+
+    .badge-locked {
+      font-size: var(--text-tiny); font-weight: 700; padding: 3px 10px;
+      border-radius: 20px; background: var(--dark-6); color: var(--dark-3);
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+
+    .player-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
+    .meta-item  { display: flex; flex-direction: column; gap: 2px; }
+    .meta-label { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-value { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+
+    .player-stats-row { display: flex; gap: var(--p3); flex-wrap: wrap; }
+    .pstat     { text-align: center; min-width: 34px; }
+    .pstat-val { font-family: var(--font-title); font-size: var(--h5); font-weight: 800; color: var(--dark-1); }
+    .pstat-label { font-size: 10px; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.4px; }
+
+    .player-skills-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .skill-tag {
+      font-size: var(--text-tiny); font-weight: 600; padding: 3px 10px;
+      border-radius: 20px; background: var(--dark-5); color: var(--dark-1);
+    }
+    .skill-tag--acquired { background: rgba(98,149,132,0.15); color: #3a6655; }
+
+    /* Portefeuille SPP (lecture seule) */
+    .spp-budget {
+      display: flex; flex-direction: column; gap: 6px;
+      padding: 14px 18px;
+      background: var(--dark-6);
+      border: 1px solid var(--dark-5);
+      border-radius: 8px;
+      min-width: 260px;
+    }
+    .spp-budget-top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--p1); }
+    .spp-budget-label {
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .spp-budget-numbers {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 800; color: var(--dark-2); white-space: nowrap;
+    }
+    .spp-budget-bar { height: 8px; background: var(--dark-5); border-radius: 4px; overflow: hidden; }
+    .spp-budget-bar-inner { height: 100%; border-radius: 4px; background: var(--dark-3); }
+    .spp-budget-bottom {
+      display: flex; justify-content: space-between; font-size: var(--text-tiny); color: var(--dark-3);
+    }
+
+    /* ── Split layout ────────────────────────────────────────────────────── */
+    .pd-split { display: flex; gap: var(--p2); align-items: flex-start; }
+
+    /* ── Left: historique de matchs ──────────────────────────────────────── */
+    .pd-left {
+      width: 360px; flex-shrink: 0;
+      display: flex; flex-direction: column; gap: var(--p2);
+    }
+    .history-panel { background: var(--white); border-radius: var(--card-radius); overflow: hidden; }
+    .history-panel-header {
+      padding: 10px var(--p2); border-bottom: 2px solid var(--dark-5);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .history-panel-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); }
+    .history-count-badge { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; }
+
+    .career-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--dark-6); }
+    .career-stat {
+      background: var(--white); padding: 12px 8px; text-align: center;
+      display: flex; flex-direction: column; gap: 2px; align-items: center;
+    }
+    .career-stat-icon { font-size: 16px; }
+    .career-stat-val  { font-family: var(--font-title); font-size: var(--h5); font-weight: 800; color: var(--dark-1); }
+    .career-stat-label { font-size: 10px; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.3px; }
+
+    .match-list { display: flex; flex-direction: column; }
+    .match-card { padding: var(--p1) var(--p2); border-top: 1px solid var(--dark-6); display: flex; flex-direction: column; gap: 8px; }
+    .match-card-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .match-opponent { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .match-opponent-name { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .match-meta { font-size: 10px; color: var(--dark-3); }
+    .match-score { font-size: var(--text-tiny); color: var(--dark-3); white-space: nowrap; }
+
+    .match-actions { display: flex; flex-direction: column; gap: 3px; }
+    .pd-log-entry { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; font-size: var(--text-tiny); }
+    .pd-log-entry:hover { background: var(--dark-7); }
+    .pd-log-icon { font-size: 13px; flex-shrink: 0; width: 18px; text-align: center; }
+    .pd-log-text { flex: 1; color: var(--dark-1); }
+    .pd-log-spp  { font-weight: 700; color: #9A7800; white-space: nowrap; }
+    .pd-log-empty { font-size: var(--text-tiny); color: var(--dark-4); font-style: italic; padding: 4px 6px; }
+
+    .match-subtotal {
+      display: flex; justify-content: flex-end; gap: 4px;
+      font-size: 10px; color: rgba(154,120,0,0.8); font-weight: 700;
+      border-top: 1px dashed var(--dark-6); padding-top: 6px;
+    }
+
+    /* ── Right: journal des évolutions (lecture seule) ───────────────────── */
+    .pd-right {
+      flex: 1;
+      background: var(--white);
+      border-radius: var(--card-radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .spend-panel-header {
+      padding: var(--p2); border-bottom: 2px solid var(--dark-5);
+      display: flex; align-items: center; justify-content: space-between; gap: var(--p2); flex-wrap: wrap;
+    }
+    .spend-panel-title { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-0); }
+    .spend-panel-remaining {
+      display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0;
+      background: var(--dark-6); border: 1px solid var(--dark-5);
+      border-radius: 10px; padding: 8px 18px;
+    }
+    .spend-panel-remaining-val { font-family: var(--font-title); font-size: var(--h4); font-weight: 800; color: var(--dark-2); }
+    .spend-panel-remaining-label { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; }
+
+    /* Bandeau de verrouillage */
+    .lock-banner {
+      margin: var(--p2) var(--p2) 0;
+      padding: var(--p1) var(--p2);
+      background: rgba(0,48,73,0.04);
+      border: 1px solid rgba(0,48,73,0.12);
+      border-radius: 8px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .lock-banner-icon { font-size: 20px; flex-shrink: 0; }
+    .lock-banner-text { font-size: var(--text-tiny); color: var(--dark-2); line-height: 1.4; }
+    .lock-banner-text strong { color: var(--dark-1); }
+
+    /* Journal des évolutions (repris de la table de résumé SPP) */
+    .spp-summary { padding: var(--p2); flex: 1; }
+    .spp-summary-table { width: 100%; border-collapse: collapse; }
+    .spp-summary-table th {
+      text-align: left; padding: 8px var(--p1); font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.4px; background: var(--dark-6); border-bottom: 1px solid var(--dark-5);
+    }
+    .spp-summary-table td { padding: 10px var(--p1); font-size: var(--text-small); border-bottom: 1px solid var(--dark-6); vertical-align: middle; }
+    .spp-summary-table tr:last-child td { border-bottom: none; }
+    .mode-chip { display: inline-block; font-size: var(--text-tiny); font-weight: 700; padding: 2px 10px; border-radius: 20px; }
+    .mode-chip-chosen { background: rgba(0,48,73,0.08); color: var(--main-blue); }
+    .mode-chip-random { background: rgba(154,120,0,0.10); color: #9A7800; }
+    .mode-chip-stat   { background: rgba(98,149,132,0.12); color: #3a6655; }
+    .summary-cost  { font-weight: 700; color: #9A7800; }
+    .summary-value { font-weight: 700; color: var(--green); }
+    .summary-ref   { font-size: var(--text-tiny); color: var(--dark-3); }
+    .spp-empty-state { padding: var(--p3); text-align: center; color: var(--dark-3); font-size: var(--text-small); font-style: italic; }
+
+    /* ── Mobile header (masqué sur desktop) ─────────────────────────────── */
+    .mobile-header { display: none; }
+
+    /* ── Responsive — tablette (≤ 960px) ─────────────────────────────────── */
+    @media (max-width: 960px) {
+      .pd-split { flex-direction: column; }
+      .pd-left  { width: 100%; }
+    }
+
+    /* ── Responsive — mobile (≤ 768px) ───────────────────────────────────── */
+    @media (max-width: 768px) {
+      .sidebar  { display: none !important; }
+      .menu-bar { display: none !important; }
+      .app-layout { display: block !important; height: auto !important; overflow: visible !important; }
+      .main-area  { width: 100% !important; }
+      .page-content {
+        padding: var(--p1) !important; height: auto !important; overflow: visible !important;
+        padding-top: 64px !important; padding-bottom: var(--p3) !important;
+      }
+      .mobile-header {
+        display: flex !important; position: fixed; top: 0; left: 0; right: 0; z-index: 500;
+        background: var(--dark-0); align-items: center; gap: 10px; padding: 0 var(--p1); height: 52px;
+      }
+
+      .player-header { padding: var(--p1); gap: var(--p1); }
+      .player-avatar { width: 72px; height: 72px; font-size: 26px; }
+      .player-name    { font-size: var(--h5); }
+      .spp-budget { min-width: 0; width: 100%; }
+
+      .spp-summary-table th:nth-child(5), .spp-summary-table td:nth-child(5) { display: none; }
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- Mobile header (masqué sur desktop) -->
+  <div class="mobile-header">
+    <span style="color: rgba(255,255,255,0.8); font-size: 18px;">←</span>
+    <div class="jersey-chip" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: var(--white);">4</div>
+    <span style="font-family: var(--font-title); font-size: var(--text-tiny); font-weight: 700; color: var(--white);">Tyrandel</span>
+  </div>
+
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px; font-family: var(--font-body);">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active">Équipes</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="player-page">
+
+          <div class="breadcrumb">← Les Korrigans FC</div>
+
+          <!-- ① En-tête joueur -->
+          <div class="player-header">
+            <div class="player-avatar">4</div>
+            <div class="player-header-body">
+              <div class="player-header-top">
+                <div class="player-name">Tyrandel</div>
+                <span class="jersey-chip">#4</span>
+                <span class="player-pos pos-blitzer">Frappeur</span>
+                <span class="badge-locked">🔒 Hors phase d'amélioration</span>
+              </div>
+              <div class="player-header-meta">
+                <div class="meta-item">
+                  <div class="meta-label">Roster</div>
+                  <div class="meta-value">Elfes Sylvestres</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Valeur actuelle</div>
+                  <div class="meta-value">128 000 Po</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Matchs joués</div>
+                  <div class="meta-value">6</div>
+                </div>
+              </div>
+              <div class="player-stats-row">
+                <div class="pstat"><div class="pstat-val">7</div><div class="pstat-label">MA</div></div>
+                <div class="pstat"><div class="pstat-val">3</div><div class="pstat-label">ST</div></div>
+                <div class="pstat"><div class="pstat-val">3+</div><div class="pstat-label">AG</div></div>
+                <div class="pstat"><div class="pstat-val">5+</div><div class="pstat-label">PA</div></div>
+                <div class="pstat"><div class="pstat-val">8+</div><div class="pstat-label">AV</div></div>
+              </div>
+              <div class="player-skills-row">
+                <span class="skill-tag">Esquiver</span>
+                <span class="skill-tag skill-tag--acquired">Bloc ✓</span>
+                <span class="skill-tag skill-tag--acquired">Garde ✓</span>
+              </div>
+            </div>
+
+            <!-- Portefeuille SPP -->
+            <div class="spp-budget">
+              <div class="spp-budget-top">
+                <span class="spp-budget-label">SPP du joueur</span>
+                <span class="spp-budget-numbers">18 / 31 SPP</span>
+              </div>
+              <div class="spp-budget-bar">
+                <div class="spp-budget-bar-inner" style="width: 58%;"></div>
+              </div>
+              <div class="spp-budget-bottom">
+                <span>Gagnés sur 6 matchs</span>
+                <span>13 SPP en réserve</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ② Historique + journal -->
+          <div class="pd-split">
+
+            <!-- Colonne gauche : historique de matchs -->
+            <div class="pd-left">
+              <div class="history-panel">
+                <div class="history-panel-header">
+                  <div class="history-panel-title">Résumé de carrière</div>
+                </div>
+                <div class="career-summary">
+                  <div class="career-stat"><span class="career-stat-icon">🏈</span><span class="career-stat-val">5</span><span class="career-stat-label">Essais</span></div>
+                  <div class="career-stat"><span class="career-stat-icon">🎯</span><span class="career-stat-val">4</span><span class="career-stat-label">Passes</span></div>
+                  <div class="career-stat"><span class="career-stat-icon">🛡️</span><span class="career-stat-val">1</span><span class="career-stat-label">Intercept.</span></div>
+                  <div class="career-stat"><span class="career-stat-icon">🩸</span><span class="career-stat-val">3</span><span class="career-stat-label">Sorties</span></div>
+                  <div class="career-stat"><span class="career-stat-icon">⭐</span><span class="career-stat-val">1</span><span class="career-stat-label">MVP</span></div>
+                  <div class="career-stat"><span class="career-stat-icon">💰</span><span class="career-stat-val">31</span><span class="career-stat-label">SPP total</span></div>
+                </div>
+              </div>
+
+              <div class="history-panel">
+                <div class="history-panel-header">
+                  <div class="history-panel-title">Historique de matchs</div>
+                  <div class="history-count-badge">6 matchs</div>
+                </div>
+                <div class="match-list">
+
+                  <div class="match-card">
+                    <div class="match-card-header">
+                      <div class="match-opponent">
+                        <span class="match-opponent-name">Bone Crushers</span>
+                        <span class="match-meta"><span class="badge badge-green">Victoire</span>&nbsp;J6</span>
+                      </div>
+                      <div class="match-score">TD 3-1</div>
+                    </div>
+                    <div class="match-actions">
+                      <div class="pd-log-entry"><span class="pd-log-icon">🏈</span><span class="pd-log-text">Touchdown</span><span class="pd-log-spp">+3 SPP</span></div>
+                      <div class="pd-log-entry"><span class="pd-log-icon">🎯</span><span class="pd-log-text">Passe réussie</span><span class="pd-log-spp">+1 SPP</span></div>
+                      <div class="pd-log-entry"><span class="pd-log-icon">🩸</span><span class="pd-log-text">Sortie infligée</span><span class="pd-log-spp">+2 SPP</span></div>
+                    </div>
+                    <div class="match-subtotal"><span>+6 SPP</span></div>
+                  </div>
+
+                  <div class="match-card">
+                    <div class="match-card-header">
+                      <div class="match-opponent">
+                        <span class="match-opponent-name">Green Machine</span>
+                        <span class="match-meta"><span class="badge badge-green">Victoire</span>&nbsp;J5</span>
+                      </div>
+                      <div class="match-score">TD 2-0</div>
+                    </div>
+                    <div class="match-actions">
+                      <div class="pd-log-entry"><span class="pd-log-icon">🏈</span><span class="pd-log-text">Touchdown</span><span class="pd-log-spp">+3 SPP</span></div>
+                      <div class="pd-log-entry"><span class="pd-log-icon">🎯</span><span class="pd-log-text">Passe réussie</span><span class="pd-log-spp">+1 SPP</span></div>
+                      <div class="pd-log-entry"><span class="pd-log-icon">🩸</span><span class="pd-log-text">Sortie infligée</span><span class="pd-log-spp">+2 SPP</span></div>
+                    </div>
+                    <div class="match-subtotal"><span>+6 SPP</span></div>
+                  </div>
+
+                  <div class="match-card">
+                    <div class="match-card-header">
+                      <div class="match-opponent">
+                        <span class="match-opponent-name">Nightmare Warband</span>
+                        <span class="match-meta"><span class="badge badge-green">Victoire</span>&nbsp;J4</span>
+                      </div>
+                      <div class="match-score">TD 3-0</div>
+                    </div>
+                    <div class="match-actions">
+                      <div class="pd-log-entry"><span class="pd-log-icon">🏈</span><span class="pd-log-text">Touchdown</span><span class="pd-log-spp">+3 SPP</span></div>
+                      <div class="pd-log-entry"><span class="pd-log-icon">🏈</span><span class="pd-log-text">Touchdown</span><span class="pd-log-spp">+3 SPP</span></div>
+                      <div class="pd-log-entry"><span class="pd-log-icon">🛡️</span><span class="pd-log-text">Interception</span><span class="pd-log-spp">+2 SPP</span></div>
+                      <div class="pd-log-entry"><span class="pd-log-icon">⭐</span><span class="pd-log-text">MVP</span><span class="pd-log-spp">+4 SPP</span></div>
+                    </div>
+                    <div class="match-subtotal"><span>+12 SPP</span></div>
+                  </div>
+
+                  <div class="match-card">
+                    <div class="match-card-header">
+                      <div class="match-opponent">
+                        <span class="match-opponent-name">Skull Crushers</span>
+                        <span class="match-meta"><span class="badge badge-red">Défaite</span>&nbsp;J3</span>
+                      </div>
+                      <div class="match-score">TD 0-2</div>
+                    </div>
+                    <div class="match-actions">
+                      <div class="pd-log-empty">Aucune action marquante ce match.</div>
+                    </div>
+                  </div>
+
+                  <div class="match-card">
+                    <div class="match-card-header">
+                      <div class="match-opponent">
+                        <span class="match-opponent-name">Iron Golems</span>
+                        <span class="match-meta"><span class="badge badge-dark">Nul</span>&nbsp;J2</span>
+                      </div>
+                      <div class="match-score">TD 1-1</div>
+                    </div>
+                    <div class="match-actions">
+                      <div class="pd-log-entry"><span class="pd-log-icon">🎯</span><span class="pd-log-text">Passe réussie</span><span class="pd-log-spp">+1 SPP</span></div>
+                      <div class="pd-log-entry"><span class="pd-log-icon">🩸</span><span class="pd-log-text">Sortie infligée</span><span class="pd-log-spp">+2 SPP</span></div>
+                    </div>
+                    <div class="match-subtotal"><span>+3 SPP</span></div>
+                  </div>
+
+                  <div class="match-card">
+                    <div class="match-card-header">
+                      <div class="match-opponent">
+                        <span class="match-opponent-name">Chaos United</span>
+                        <span class="match-meta"><span class="badge badge-green">Victoire</span>&nbsp;J1</span>
+                      </div>
+                      <div class="match-score">TD 2-1</div>
+                    </div>
+                    <div class="match-actions">
+                      <div class="pd-log-entry"><span class="pd-log-icon">🏈</span><span class="pd-log-text">Touchdown</span><span class="pd-log-spp">+3 SPP</span></div>
+                      <div class="pd-log-entry"><span class="pd-log-icon">🎯</span><span class="pd-log-text">Passe réussie</span><span class="pd-log-spp">+1 SPP</span></div>
+                    </div>
+                    <div class="match-subtotal"><span>+4 SPP</span></div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <!-- Colonne droite : journal des évolutions (lecture seule) -->
+            <div class="pd-right">
+              <div class="spend-panel-header">
+                <div class="spend-panel-title">Journal des évolutions</div>
+                <div class="spend-panel-remaining">
+                  <div class="spend-panel-remaining-val">13</div>
+                  <div class="spend-panel-remaining-label">SPP en réserve</div>
+                </div>
+              </div>
+
+              <div class="lock-banner">
+                <span class="lock-banner-icon">🔒</span>
+                <span class="lock-banner-text">
+                  <strong>La dépense de SPP n'est pas disponible actuellement.</strong><br>
+                  Elle s'ouvre uniquement pendant la phase d'amélioration qui suit un match. Tyrandel a 13 SPP en réserve qui pourront être dépensés après le prochain match.
+                </span>
+              </div>
+
+              <div class="spp-summary">
+                <table class="spp-summary-table">
+                  <thead>
+                    <tr><th>Évolution</th><th>Mode</th><th>Coût</th><th>Valeur</th><th>Obtenue</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Bloc</td>
+                      <td><span class="mode-chip mode-chip-chosen">Choisie</span></td>
+                      <td class="summary-cost">6 SPP</td>
+                      <td class="summary-value">+10 kPo</td>
+                      <td class="summary-ref">J2 vs Iron Golems</td>
+                    </tr>
+                    <tr>
+                      <td>Garde</td>
+                      <td><span class="mode-chip mode-chip-chosen">Choisie</span></td>
+                      <td class="summary-cost">12 SPP</td>
+                      <td class="summary-value">+20 kPo</td>
+                      <td class="summary-ref">J4 vs Nightmare Warband</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
