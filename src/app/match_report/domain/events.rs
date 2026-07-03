@@ -123,4 +123,17 @@ impl MatchReportDomainEvent {
     pub fn schema_version(&self) -> &'static str {
         "1.0"
     }
+
+    /// Enveloppe pour publication sur le bus interne du BC. `match_report_id` est fourni
+    /// par l'appelant (déjà connu du use case) plutôt que dupliqué dans chaque variant.
+    pub fn to_enveloppe(&self, match_report_id: &str) -> crate::common::event_envelope::EventEnvelope {
+        crate::common::event_envelope::EventEnvelope {
+            event_id: crate::app::shared_kernel::common_types::EventId::new().to_string(),
+            emitter: match_report_id.to_string(),
+            event_type: self.type_name().to_string(),
+            tags: serde_json::json!([]),
+            payload: serde_json::to_value(self).unwrap(),
+            occurred_at: time::OffsetDateTime::now_utc(),
+        }
+    }
 }

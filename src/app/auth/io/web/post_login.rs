@@ -289,6 +289,7 @@ mod tests {
                     competition_data: Arc::new(FakeCompDataPort),
                     team_data: Arc::new(FakeTeamDataPort),
                     player_data: Arc::new(FakePlayerDataPort),
+                    event_bus: crate::common::services::event_bus::event_bus::new_bus(),
                 }
             },
             email_service: Arc::new(ConsoleEmailService),

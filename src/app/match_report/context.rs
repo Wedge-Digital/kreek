@@ -1,5 +1,7 @@
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
-use crate::app::match_report::io::app_events::{pairing_created_listener, pairing_deleted_listener};
+use crate::app::match_report::io::app_events::{
+    app_event_publisher, pairing_created_listener, pairing_deleted_listener,
+};
 use crate::app::match_report::io::repository::match_report_repository::MatchReportRepository;
 use crate::app::match_report::ports::{ICompetitionDataPort, IPlayerDataPort, ITeamDataPort};
 use crate::common::services::event_bus::event_bus::EventBus;
@@ -12,12 +14,18 @@ pub struct MatchReportContext {
     pub competition_data: Arc<dyn ICompetitionDataPort>,
     pub team_data: Arc<dyn ITeamDataPort>,
     pub player_data: Arc<dyn IPlayerDataPort>,
+    pub event_bus: EventBus,
 }
 
-pub fn init_listeners(app_event_bus: &EventBus, pool: PgPool) {
+pub fn init_listeners(event_bus: &EventBus, app_event_bus: &EventBus, pool: PgPool) {
     let repo = Arc::new(MatchReportRepository::new(pool));
     pairing_created_listener::init(app_event_bus, repo.clone());
-    pairing_deleted_listener::init(app_event_bus, repo);
+    pairing_deleted_listener::init(app_event_bus, repo.clone());
+    app_event_publisher::match_report_app_event_publisher(
+        event_bus,
+        app_event_bus.clone(),
+        repo,
+    );
 }
 
 impl MatchReportContext {
@@ -26,12 +34,14 @@ impl MatchReportContext {
         competition_data: Arc<dyn ICompetitionDataPort>,
         team_data: Arc<dyn ITeamDataPort>,
         player_data: Arc<dyn IPlayerDataPort>,
+        event_bus: EventBus,
     ) -> Self {
         Self {
             match_report_repo: Arc::new(MatchReportRepository::new(pool.clone())),
             competition_data,
             team_data,
             player_data,
+            event_bus,
         }
     }
 }

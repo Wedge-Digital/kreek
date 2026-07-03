@@ -113,7 +113,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
     competitions::context::init_listeners(&event_bus, app_event_bus.clone(), pool.clone());
     team_creation::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
     teams::context::init_listeners(&app_event_bus, pool.clone());
-    match_report::context::init_listeners(&app_event_bus, pool.clone());
+    match_report::context::init_listeners(&event_bus, &app_event_bus, pool.clone());
     let refs_for_players = references::context::ReferencesContext::new();
     players::context::init_listeners(
         &app_event_bus,
@@ -162,7 +162,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
                     Arc::new(crate::app::players::io::repository::projection_repository::PgPlayerProjectionRepository::new(pool.clone())),
                 ),
             );
-            match_report::context::MatchReportContext::new(&pool, comp_data, team_data, player_data)
+            match_report::context::MatchReportContext::new(&pool, comp_data, team_data, player_data, event_bus.clone())
         },
         teams: {
             let player_count = Arc::new(

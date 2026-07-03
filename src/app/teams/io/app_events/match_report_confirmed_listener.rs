@@ -20,7 +20,10 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                         home_team_id,
                         away_team_id,
                         ..
-                    } = app_event;
+                    } = app_event
+                    else {
+                        continue;
+                    };
 
                     let mr_id = match MatchReportId::try_new(&match_report_id) {
                         Ok(id) => id,
