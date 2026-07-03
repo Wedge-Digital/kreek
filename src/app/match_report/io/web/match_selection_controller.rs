@@ -202,6 +202,9 @@ pub async fn edit_match_report(
         MatchReportState::Cancelled(_) => {
             StatusCode::GONE.into_response()
         }
+        MatchReportState::Published(_) => {
+            StatusCode::CONFLICT.into_response()
+        }
     }
 }
 

@@ -8,6 +8,7 @@ use crate::app::shared_kernel::common_types::{
 };
 use crate::app::shared_kernel::team::TeamId;
 use crate::app::match_report::domain::value_objects::TurnNumber;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -93,6 +94,10 @@ pub enum MatchReportDomainEvent {
         summary_body: Option<String>,
         recorded_by: CoachId,
     },
+    MatchReportPublished {
+        published_by: CoachId,
+        published_at: DateTime<Utc>,
+    },
 }
 
 impl MatchReportDomainEvent {
@@ -111,6 +116,7 @@ impl MatchReportDomainEvent {
             Self::ActionRecorded { .. } => "ActionRecorded",
             Self::ActionDeleted { .. } => "ActionDeleted",
             Self::PostMatchRecorded { .. } => "PostMatchRecorded",
+            Self::MatchReportPublished { .. } => "MatchReportPublished",
         }
     }
 

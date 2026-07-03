@@ -28,7 +28,7 @@ axum-login = "0.18"
 tower-sessions = "0.14"
 dashmap = "6"
 reqwest = { version = "0.12", features = ["json"] }
-chrono = "0.4.44"
+chrono = { version = "0.4.44", features = ["serde"] }
 clap = { version = "4", features = ["derive"] }
 derive_more = { version = "2.1.1", features = ["display"] }
 

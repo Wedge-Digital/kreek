@@ -56,7 +56,9 @@ pub async fn execute(
             );
             (updated.version, ev)
         }
-        MatchReportState::Draft(_) | MatchReportState::Cancelled(_) => {
+        MatchReportState::Draft(_)
+        | MatchReportState::Cancelled(_)
+        | MatchReportState::Published(_) => {
             return Err(RecordPostMatchError::NotInCompatibleState);
         }
     };

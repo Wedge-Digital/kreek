@@ -111,6 +111,7 @@ async fn confirm_existing(
         }
         MatchReportState::PreMatch(_) => Ok(mr_id),
         MatchReportState::ReadyToPublish(_) => Ok(mr_id),
+        MatchReportState::Published(_) => Ok(mr_id),
         MatchReportState::Cancelled(_) => {
             Err(CreateMatchReportError::Repository("rapport annulé".into()))
         }

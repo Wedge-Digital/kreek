@@ -91,6 +91,11 @@ pub async fn get_pre_match(
             rtp.away_team_id.to_string(),
             true,
         ),
+        MatchReportState::Published(p) => (
+            p.home_team_id.to_string(),
+            p.away_team_id.to_string(),
+            true,
+        ),
         MatchReportState::Draft(_) => {
             let url = AppRoutes::default()
                 .match_report

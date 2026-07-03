@@ -1,4 +1,5 @@
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
+use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::value_objects::{
     D3Roll, FanFactorMod, InducementPurchase, MatchAction, MatchGain, MatchReportOrigin, TempPlayer,
@@ -8,6 +9,7 @@ use crate::app::shared_kernel::common_types::{
     CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
 };
 use crate::app::shared_kernel::team::TeamId;
+use chrono::Utc;
 
 #[derive(Debug, Clone)]
 pub struct MatchReportReadyToPublish {
@@ -141,5 +143,85 @@ impl MatchReportReadyToPublish {
         updated.summary_body = summary_body;
         updated.version += 1;
         (updated, event)
+    }
+
+    pub fn publish(&self, published_by: CoachId) -> (MatchReportPublished, MatchReportDomainEvent) {
+        let published_at = Utc::now();
+        let event = MatchReportDomainEvent::MatchReportPublished {
+            published_by,
+            published_at,
+        };
+        let published = MatchReportPublished::from_ready_to_publish(self, published_by, published_at);
+        (published, event)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::match_report::domain::value_objects::MatchReportOrigin;
+    use crate::app::shared_kernel::common_types::{CompetitionId, RoundId, SeasonId, SpaceId};
+
+    fn make_rtp(summary_title: Option<String>, summary_body: Option<String>) -> MatchReportReadyToPublish {
+        MatchReportReadyToPublish {
+            id: MatchReportId::new(),
+            space_id: SpaceId::new(),
+            competition_id: CompetitionId::new(),
+            season_id: SeasonId::new(),
+            round_id: RoundId::new(),
+            home_team_id: TeamId::new(),
+            away_team_id: TeamId::new(),
+            created_by: CoachId::new(),
+            origin: MatchReportOrigin::Manual,
+            pairing_id: None,
+            home_fan_roll: None,
+            away_fan_roll: None,
+            home_dedicated_fans: 0,
+            away_dedicated_fans: 0,
+            home_inducements: None,
+            away_inducements: None,
+            star_engagements: vec![],
+            home_temp_players: vec![],
+            away_temp_players: vec![],
+            home_actions: vec![],
+            away_actions: vec![],
+            version: 5,
+            home_gain: MatchGain::try_new(10_000).unwrap(),
+            away_gain: MatchGain::try_new(5_000).unwrap(),
+            home_fan_mod: FanFactorMod::try_new(1).unwrap(),
+            away_fan_mod: FanFactorMod::try_new(-1).unwrap(),
+            summary_title,
+            summary_body,
+        }
+    }
+
+    #[test]
+    fn publish_produces_published_state_with_all_fields_copied() {
+        let rtp = make_rtp(Some("Titre".to_string()), Some("Corps".to_string()));
+        let published_by = CoachId::new();
+        let before = Utc::now();
+        let (published, _event) = rtp.publish(published_by);
+
+        assert_eq!(published.id, rtp.id);
+        assert_eq!(published.home_team_id, rtp.home_team_id);
+        assert_eq!(published.summary_title, rtp.summary_title);
+        assert_eq!(published.summary_body, rtp.summary_body);
+        assert_eq!(published.published_by, published_by);
+        assert!(published.published_at >= before);
+    }
+
+    #[test]
+    fn publish_succeeds_without_summary() {
+        let rtp = make_rtp(None, None);
+        let (published, _event) = rtp.publish(CoachId::new());
+        assert!(published.summary_title.is_none());
+        assert!(published.summary_body.is_none());
+    }
+
+    #[test]
+    fn publish_increments_version() {
+        let rtp = make_rtp(None, None);
+        let (published, _event) = rtp.publish(CoachId::new());
+        assert_eq!(published.version, rtp.version + 1);
     }
 }

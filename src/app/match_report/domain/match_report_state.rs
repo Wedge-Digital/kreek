@@ -1,6 +1,7 @@
 use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
+use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::shared_kernel::common_types::MatchReportId;
@@ -16,6 +17,7 @@ pub enum MatchReportState {
     Draft(MatchReportDraft),
     PreMatch(MatchReportPreMatch),
     ReadyToPublish(MatchReportReadyToPublish),
+    Published(MatchReportPublished),
     Cancelled(MatchReportCancelled),
 }
 
@@ -306,6 +308,12 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                 updated.version += 1;
                 MatchReportState::ReadyToPublish(updated)
             }
+            (
+                Some(MatchReportState::ReadyToPublish(rtp)),
+                MatchReportDomainEvent::MatchReportPublished { published_by, published_at },
+            ) => MatchReportState::Published(
+                MatchReportPublished::from_ready_to_publish(&rtp, *published_by, *published_at),
+            ),
             _ => return Err(DomainError::InvalidEventSequence),
         });
     }
@@ -657,5 +665,36 @@ mod tests {
             confirmed_by: CoachId::new(),
         }]);
         assert_eq!(result.unwrap_err(), DomainError::InvalidEventSequence);
+    }
+
+    #[test]
+    fn rehydrate_ready_to_publish_then_published_yields_published_state() {
+        let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
+            test_ids();
+        let events = vec![
+            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
+            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+            MatchReportDomainEvent::PostMatchRecorded {
+                home_gain: crate::app::match_report::domain::value_objects::MatchGain::try_new(10_000).unwrap(),
+                away_gain: crate::app::match_report::domain::value_objects::MatchGain::try_new(5_000).unwrap(),
+                home_fan_mod: crate::app::match_report::domain::value_objects::FanFactorMod::try_new(1).unwrap(),
+                away_fan_mod: crate::app::match_report::domain::value_objects::FanFactorMod::try_new(-1).unwrap(),
+                summary_title: None,
+                summary_body: None,
+                recorded_by: coach_id,
+            },
+            MatchReportDomainEvent::MatchReportPublished {
+                published_by: coach_id,
+                published_at: chrono::Utc::now(),
+            },
+        ];
+        let state = rehydrate(events).unwrap();
+        match state {
+            MatchReportState::Published(p) => {
+                assert_eq!(p.id, mr_id);
+                assert_eq!(p.published_by, coach_id);
+            }
+            _ => panic!("attendu Published"),
+        }
     }
 }

@@ -95,6 +95,7 @@ pub async fn get_step5(
             return Redirect::to(&url).into_response();
         }
         MatchReportState::Cancelled(_) => return StatusCode::GONE.into_response(),
+        MatchReportState::Published(_) => return StatusCode::CONFLICT.into_response(),
     };
 
     let _ = already_recorded;
