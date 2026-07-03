@@ -284,11 +284,31 @@ mod tests {
                     async fn find_player_position(&self, _: &str) -> Option<String> { None }
                     async fn find_player_counts_by_position(&self, _: &str) -> Vec<crate::app::match_report::ports::PositionCountDto> { vec![] }
                 }
+                struct FakeCoachDataPort;
+                #[async_trait::async_trait]
+                impl crate::app::match_report::ports::ICoachDataPort for FakeCoachDataPort {
+                    async fn find_coach_name(&self, _: &str) -> Option<String> { None }
+                }
+                struct FakeSppCalculatorPort;
+                #[async_trait::async_trait]
+                impl crate::app::match_report::ports::ISppCalculatorPort for FakeSppCalculatorPort {
+                    async fn calculate_match_spp(
+                        &self,
+                        _: &[crate::app::match_report::domain::value_objects::MatchAction],
+                        _: &[crate::app::match_report::domain::value_objects::MatchAction],
+                        _: &str,
+                        _: &str,
+                    ) -> crate::app::match_report::ports::SppMatchResult {
+                        Default::default()
+                    }
+                }
                 crate::app::match_report::context::MatchReportContext {
                     match_report_repo: Arc::new(FakeMrRepo),
                     competition_data: Arc::new(FakeCompDataPort),
                     team_data: Arc::new(FakeTeamDataPort),
                     player_data: Arc::new(FakePlayerDataPort),
+                    coach_data: Arc::new(FakeCoachDataPort),
+                    spp_calculator: Arc::new(FakeSppCalculatorPort),
                     event_bus: crate::common::services::event_bus::event_bus::new_bus(),
                 }
             },

@@ -23,6 +23,9 @@
 
         <div class="match-score-block">
             {% if m.is_completed %}
+            {% if let Some(url) = m.report_url %}
+            <a href="{{ url }}" class="match-widget-link" aria-label="Voir la synthèse du match"></a>
+            {% endif %}
             <div class="match-score-tds">
                 <span class="match-score-num">{{ m.home_score.unwrap_or(0) }}</span>
                 <span class="match-score-sep">–</span>

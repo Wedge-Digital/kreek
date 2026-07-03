@@ -281,7 +281,7 @@ pub async fn post_step5(
 
     match record_post_match_use_case::execute(cmd, state.match_report.match_report_repo.as_ref()).await {
         Ok(record_post_match_use_case::RecordPostMatchOutcome::Success) => {
-            let url = AppRoutes::default().match_report.step5(&space_id, &match_report_id);
+            let url = AppRoutes::default().match_report.recap(&space_id, &match_report_id);
             Redirect::to(&url).into_response()
         }
         Err(record_post_match_use_case::RecordPostMatchError::NotFound) => {

@@ -61,6 +61,7 @@
 
 /* Match widget */
 .match-widget {
+  position: relative;
   display: grid; grid-template-columns: 1fr 120px 1fr;
   align-items: center; gap: 0;
   padding: 12px var(--p2); border-bottom: 1px solid var(--dark-6);
@@ -68,6 +69,10 @@
 }
 .match-widget:last-child { border-bottom: none; }
 .match-widget:hover      { background: var(--dark-7); }
+
+.match-widget-link {
+  position: absolute; inset: 0;
+}
 
 .match-side         { display: flex; align-items: center; gap: 10px; }
 .match-side--away   { justify-content: flex-end; }

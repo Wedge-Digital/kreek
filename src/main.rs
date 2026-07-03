@@ -162,7 +162,15 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
                     Arc::new(crate::app::players::io::repository::projection_repository::PgPlayerProjectionRepository::new(pool.clone())),
                 ),
             );
-            match_report::context::MatchReportContext::new(&pool, comp_data, team_data, player_data, event_bus.clone())
+            let coach_data = Arc::new(
+                crate::infrastructure::match_report::coach_data_adapter::CoachDataAdapter::new(
+                    Arc::new(crate::app::spaces::io::repository::user_cache_repository::SpaceUserCacheRepository::new(pool.clone())),
+                ),
+            );
+            let spp_calculator = Arc::new(
+                crate::infrastructure::match_report::spp_calculator_adapter::SppCalculatorAdapter,
+            );
+            match_report::context::MatchReportContext::new(&pool, comp_data, team_data, player_data, coach_data, spp_calculator, event_bus.clone())
         },
         teams: {
             let player_count = Arc::new(

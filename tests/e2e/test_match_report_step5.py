@@ -3,7 +3,7 @@
 Scénarios couverts :
 - S1 — Accès step5 depuis état PreMatch : page affichée, score et CAS visibles
 - S2 — Suggestion de gain pré-remplie dans les inputs (après fan factor enregistré)
-- S3 — Soumission valide (gains + fan mods + résumé) → redirect, état ReadyToPublish
+- S3 — Soumission valide (gains + fan mods + résumé) → redirect vers récap, état ReadyToPublish
 - S4 — Soumission minimale sans résumé → acceptée
 - S5 — Re-soumission → formulaire pré-rempli avec valeurs existantes, modification acceptée
 - S6 — Accès depuis état Draft → redirect vers edit match report
@@ -225,7 +225,7 @@ def test_s2_gain_suggestion_prefilled(page: Page, space_id, mr_step5):
 # ── S3 — Soumission valide avec résumé ───────────────────────────────────────
 
 def test_s3_valid_submission_with_summary(space_id, step5_ctx):
-    """POST step5 valide → redirect vers step5, rapport en ReadyToPublish."""
+    """POST step5 valide → redirect vers la page récap, rapport en ReadyToPublish."""
     mr_id = _advance_to_step5_ready(space_id, step5_ctx, home_idx=0, away_idx=1)
 
     resp = _post_step5(
@@ -238,8 +238,8 @@ def test_s3_valid_submission_with_summary(space_id, step5_ctx):
         summary_body="Victoire au bout du suspense.",
     )
     assert resp.status_code in (302, 303), f"POST step5: {resp.status_code}\n{resp.text[:200]}"
-    assert f"/step5" in resp.headers.get("Location", ""), \
-        f"Redirect attendu vers step5, got: {resp.headers.get('Location')!r}"
+    assert "/recap" in resp.headers.get("Location", ""), \
+        f"Redirect attendu vers la page récap, got: {resp.headers.get('Location')!r}"
 
     phase = _phase_in_db(mr_id)
     assert phase == "ReadyToPublish", f"Phase attendue ReadyToPublish, got {phase!r}"

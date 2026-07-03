@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE competition_match_display_proj\n         SET match_status = 'completed',\n             home_score = $2,\n             away_score = $3,\n             home_casualties = $4,\n             away_casualties = $5,\n             match_report_url = $6\n         WHERE pairing_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c526c9554c0bcb8bcf9af4a28b4130bef00e3c019d013e317f4b71bdb69719d8"
+}

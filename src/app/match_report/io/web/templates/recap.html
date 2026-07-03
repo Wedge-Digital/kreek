@@ -1,0 +1,310 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/match-report-recap.css">
+
+<div class="ms-page">
+
+  <!-- ══ HERO ══════════════════════════════════════════════════ -->
+  <div class="ms-hero">
+
+    {% if let Some(ctx) = round_context.as_ref() %}
+    <div class="ms-hero-header">
+      <span class="ms-hero-context">{{ ctx.competition_name }} &middot; {{ ctx.season_name }} &middot; {{ ctx.round_name }}</span>
+    </div>
+    {% endif %}
+
+    <div class="ms-scoreboard">
+
+      <div class="ms-hero-team">
+        {% if let Some(url) = home_banner.logo_url.as_ref() %}
+        <img class="ms-hero-logo ms-hero-logo--img" src="{{ url }}" alt="{{ home_banner.team_initials }}">
+        {% else %}
+        <div class="ms-hero-logo">{{ home_banner.team_initials }}</div>
+        {% endif %}
+        <div class="ms-hero-team-info">
+          <div class="ms-hero-team-name">{{ home_banner.team_name }}</div>
+          <div class="ms-hero-coach">{{ home_banner.coach_name }}</div>
+          {% if home_banner.result_badge == "Victoire" %}
+          <span class="ms-result-badge ms-result-win">{{ home_banner.result_badge }}</span>
+          {% else if home_banner.result_badge == "Défaite" %}
+          <span class="ms-result-badge ms-result-lose">{{ home_banner.result_badge }}</span>
+          {% else %}
+          <span class="ms-result-badge ms-result-draw">{{ home_banner.result_badge }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="ms-score-center">
+        <div class="ms-score-display">
+          <span class="ms-score-num">{{ result.home_score }}</span>
+          <span class="ms-score-sep">&#8211;</span>
+          <span class="ms-score-num">{{ result.away_score }}</span>
+        </div>
+      </div>
+
+      <div class="ms-hero-team ms-hero-team--away">
+        {% if let Some(url) = away_banner.logo_url.as_ref() %}
+        <img class="ms-hero-logo ms-hero-logo--img ms-hero-logo--away" src="{{ url }}" alt="{{ away_banner.team_initials }}">
+        {% else %}
+        <div class="ms-hero-logo ms-hero-logo--away">{{ away_banner.team_initials }}</div>
+        {% endif %}
+        <div class="ms-hero-team-info">
+          <div class="ms-hero-team-name">{{ away_banner.team_name }}</div>
+          <div class="ms-hero-coach">{{ away_banner.coach_name }}</div>
+          {% if away_banner.result_badge == "Victoire" %}
+          <span class="ms-result-badge ms-result-win">{{ away_banner.result_badge }}</span>
+          {% else if away_banner.result_badge == "Défaite" %}
+          <span class="ms-result-badge ms-result-lose">{{ away_banner.result_badge }}</span>
+          {% else %}
+          <span class="ms-result-badge ms-result-draw">{{ away_banner.result_badge }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+
+    <div class="ms-hero-stats">
+      <div class="ms-hero-stat">
+        <span class="ms-hero-stat-value">{{ result.home_score }}</span>
+        <span class="ms-hero-stat-label">TDs {{ home_banner.team_name }}</span>
+      </div>
+      <div class="ms-hero-stat">
+        <span class="ms-hero-stat-value">{{ result.away_score }}</span>
+        <span class="ms-hero-stat-label">TDs {{ away_banner.team_name }}</span>
+      </div>
+      <div class="ms-hero-stat">
+        <span class="ms-hero-stat-value ms-hero-stat-value--orange">{{ injuries.len() }}</span>
+        <span class="ms-hero-stat-label">Blessures</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ BODY ═══════════════════════════════════════════════════ -->
+  <div class="ms-body">
+
+    <!-- ── Colonne principale ──────────────────────────────── -->
+    <div class="ms-main">
+
+      {% if let Some(title) = result.summary_title.as_ref() %}
+      <div class="ms-card">
+        <div class="ms-card-header">
+          <span class="ms-card-header-icon">&#128240;</span>
+          <span class="ms-card-header-title">Compte-rendu</span>
+          {% if let Some(coach) = submitted_by.as_ref() %}
+          <span class="ms-card-header-byline">Soumis par <strong>{{ coach }}</strong></span>
+          {% endif %}
+        </div>
+        <div class="ms-card-body">
+          <div class="ms-article-headline">{{ title }}</div>
+          {% if let Some(body) = result.summary_body.as_ref() %}
+          <div class="ms-article-body">
+            <p class="ms-article-p">{{ body }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="ms-card">
+        <div class="ms-card-header">
+          <span class="ms-card-header-icon">&#9201;&#65039;</span>
+          <span class="ms-card-header-title">Moments cl&eacute;s</span>
+        </div>
+        <div class="ms-card-body">
+          <div class="ms-timeline">
+
+            {% for half in timeline_halves %}
+            <div class="ms-half-label">{{ half.label }}</div>
+            {% for event in half.events %}
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--{{ event.side }}">T{{ event.turn }}</div>
+              <div class="ms-event-icon">{{ event.action_icon }}</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>{{ event.player_display_name }}</strong>
+                  {% if !event.player_position.is_empty() %}({{ event.player_position }}){% endif %}
+                  {{ event.action_label }}
+                </div>
+                {% if let Some(label) = event.injury_label.as_ref() %}
+                <span class="ms-event-injury ms-event-injury--{{ event.injury_badge_class }}">{{ label }}</span>
+                {% endif %}
+                {% if event.action_label == "Sortie" %}
+                <span class="ms-event-injury ms-event-injury--out">Sortie</span>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+            {% endfor %}
+
+            {% if !mvps.is_empty() %}
+            <div class="ms-half-label">MVPs</div>
+            {% for mvp in mvps %}
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--mvp ms-event-turn--mvp--{{ mvp.side }}">&#9733;</div>
+              <div class="ms-event-icon">&#11088;</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title"><strong>{{ mvp.player_display_name }}</strong> &mdash; MVP {{ mvp.team_name }}</div>
+              </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+
+          </div>
+        </div>
+      </div>
+
+      <div class="ms-cta-row">
+        {% if is_published %}
+        <a class="ms-btn-outline" href="{{ competition_url }}">&#8592; Retour aux r&eacute;sultats</a>
+        <a class="ms-btn-primary" href="{{ home_team_detail_url }}">Voir la fiche {{ home_banner.team_name }} &#8594;</a>
+        {% else %}
+        <a class="ms-btn-outline" href="{{ back_to_step5_url }}">&#8592; Modifier &eacute;tape 5</a>
+        <form class="ms-cta-form" method="post" action="{{ publish_url }}">
+          <button type="submit" class="ms-btn-primary">Publier &#8594;</button>
+        </form>
+        {% endif %}
+      </div>
+
+    </div>
+    <!-- fin ms-main -->
+
+    <!-- ── Sidebar ─────────────────────────────────────────── -->
+    <div class="ms-aside">
+
+      {% if !mvps.is_empty() %}
+      <div class="ms-card">
+        <div class="ms-card-header">
+          <span class="ms-card-header-icon">&#11088;</span>
+          <span class="ms-card-header-title">Joueurs du match</span>
+        </div>
+        <div class="ms-card-body">
+          {% for mvp in mvps %}
+          <div class="ms-mvp-row">
+            <div class="ms-mvp-team-badge ms-mvp-team-badge--{{ mvp.side }}">
+              {% if mvp.side == "home" %}{{ home_banner.team_initials }}{% else %}{{ away_banner.team_initials }}{% endif %}
+            </div>
+            <div class="ms-mvp-info">
+              <div class="ms-mvp-name">{{ mvp.player_display_name }}</div>
+              <div class="ms-mvp-detail">{{ mvp.player_position }} &middot; {{ mvp.team_name }}</div>
+            </div>
+            <span class="ms-mvp-star">&#127775;</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if !performances.is_empty() %}
+      <div class="ms-card">
+        <div class="ms-card-header">
+          <span class="ms-card-header-icon">&#128202;</span>
+          <span class="ms-card-header-title">Performances (SPP)</span>
+        </div>
+        <div class="ms-card-body ms-card-body--tight">
+          {% for row in performances %}
+          <div class="ms-perf-row">
+            <div class="ms-perf-jersey ms-perf-jersey--{{ row.side }}">
+              {% if row.side == "home" %}{{ home_banner.team_initials }}{% else %}{{ away_banner.team_initials }}{% endif %}
+            </div>
+            <div class="ms-perf-info">
+              <div class="ms-perf-name">{{ row.player_display_name }}</div>
+              <div class="ms-perf-pos">{{ row.player_position }}</div>
+            </div>
+            <div class="ms-perf-spp">+{{ row.spp_earned }} <span class="ms-perf-spp-label">SPP</span></div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="ms-card">
+        <div class="ms-card-header">
+          <span class="ms-card-header-icon">&#128176;</span>
+          <span class="ms-card-header-title">Gains &amp; Fan Factor</span>
+        </div>
+        <div class="ms-card-body ms-card-body--tight">
+
+          <div class="ms-card-subheader">Recettes</div>
+          <div class="ms-stat-row">
+            <div class="ms-stat-team">
+              <div class="ms-stat-logo ms-stat-logo--home">{{ home_banner.team_initials }}</div>
+              <span class="ms-stat-name">{{ home_banner.team_name }}</span>
+            </div>
+            <span class="ms-stat-value ms-stat-value--gain">+{{ gains_fan.home_gain_kpo }} kPo</span>
+          </div>
+          <div class="ms-stat-row">
+            <div class="ms-stat-team">
+              <div class="ms-stat-logo ms-stat-logo--away">{{ away_banner.team_initials }}</div>
+              <span class="ms-stat-name">{{ away_banner.team_name }}</span>
+            </div>
+            <span class="ms-stat-value ms-stat-value--gain">+{{ gains_fan.away_gain_kpo }} kPo</span>
+          </div>
+
+          <div class="ms-divider"></div>
+
+          <div class="ms-card-subheader">Fan Factor</div>
+          <div class="ms-stat-row">
+            <div class="ms-stat-team">
+              <div class="ms-stat-logo ms-stat-logo--home">{{ home_banner.team_initials }}</div>
+              <span class="ms-stat-name">{{ home_banner.team_name }}</span>
+            </div>
+            {% if gains_fan.home_fan_mod > 0 %}
+            <span class="ms-stat-value ms-stat-value--pos">+{{ gains_fan.home_fan_mod }} fan</span>
+            {% else if gains_fan.home_fan_mod < 0 %}
+            <span class="ms-stat-value ms-stat-value--neg">{{ gains_fan.home_fan_mod }} fan</span>
+            {% else %}
+            <span class="ms-stat-value ms-stat-value--neu">0 fan</span>
+            {% endif %}
+          </div>
+          <div class="ms-stat-row">
+            <div class="ms-stat-team">
+              <div class="ms-stat-logo ms-stat-logo--away">{{ away_banner.team_initials }}</div>
+              <span class="ms-stat-name">{{ away_banner.team_name }}</span>
+            </div>
+            {% if gains_fan.away_fan_mod > 0 %}
+            <span class="ms-stat-value ms-stat-value--pos">+{{ gains_fan.away_fan_mod }} fan</span>
+            {% else if gains_fan.away_fan_mod < 0 %}
+            <span class="ms-stat-value ms-stat-value--neg">{{ gains_fan.away_fan_mod }} fan</span>
+            {% else %}
+            <span class="ms-stat-value ms-stat-value--neu">0 fan</span>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+
+      {% if !injuries.is_empty() %}
+      <div class="ms-card">
+        <div class="ms-card-header">
+          <span class="ms-card-header-icon">&#129660;</span>
+          <span class="ms-card-header-title">Bilan sanitaire</span>
+        </div>
+        <div class="ms-card-body ms-card-body--tight">
+          {% for injury in injuries %}
+          <div class="ms-injury-row">
+            <div class="ms-injury-icon">&#128168;</div>
+            <div class="ms-injury-info">
+              <div class="ms-injury-player">{{ injury.player_display_name }}</div>
+              <div class="ms-injury-detail">
+                {{ injury.player_position }} &middot;
+                {% if injury.side == "home" %}{{ home_banner.team_name }}{% else %}{{ away_banner.team_name }}{% endif %}
+                &middot; Tour {{ injury.turn }}
+              </div>
+            </div>
+            <span class="ms-injury-badge ms-injury-badge--{{ injury.injury_badge_class }}">{{ injury.injury_label }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+    <!-- fin ms-aside -->
+
+  </div>
+  <!-- fin ms-body -->
+
+</div>
+{% endblock %}

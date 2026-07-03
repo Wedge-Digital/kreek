@@ -80,7 +80,46 @@
 }
 .cart-player-count--ok { color: var(--green); background: rgba(98,149,132,0.10); }
 .cart-player-count--missing { color: #c0392b; background: rgba(192,57,43,0.08); }
-.cart-actions { display: flex; flex-direction: column; gap: var(--p1); padding-top: 4px; }
+.cart-actions { display: flex; flex-direction: column; gap: var(--p1); padding-top: 4px; margin-top: var(--p1); }
+
+/* ── Staff table ─────────────────────────────────────────────────────── */
+.staff-table { max-width: 600px; }
+
+/* ── Bouton retour ───────────────────────────────────────────────────── */
+.btn-back-wrapper { display: flex; justify-content: center; }
+
+/* ── Responsive ──────────────────────────────────────────────────────── */
+
+/* Sidebar (panier) toujours visible sur la page de construction */
+@media (max-width: 768px) {
+  .home-grid--with-cart .home-side { display: block; }
+}
+
+/* Roster / Ligue / Règle spéciale : 3 col → 2 col → 1 col */
+@media (max-width: 900px) {
+  .roster-league-row { flex-wrap: wrap; }
+  .roster-league-col { flex: 1 1 200px; }
+  .roster-league-col:first-child { flex: 1 1 100%; }
+}
+@media (max-width: 640px) {
+  .roster-league-col { flex: 1 1 100%; }
+}
+
+/* Tableau joueurs — colonnes stats (M/F/Ag/Cp/Av) masquées sur tablette */
+@media (max-width: 900px) {
+  .player-table th:nth-child(4), .player-table th:nth-child(5),
+  .player-table th:nth-child(6), .player-table th:nth-child(7),
+  .player-table th:nth-child(8),
+  .player-table td:nth-child(4), .player-table td:nth-child(5),
+  .player-table td:nth-child(6), .player-table td:nth-child(7),
+  .player-table td:nth-child(8) { display: none; }
+}
+
+/* Tableau joueurs — Qté max (col 1) + Coût total (col 11) masqués sur mobile */
+@media (max-width: 640px) {
+  .player-table th:nth-child(1), .player-table th:nth-child(11),
+  .player-table td:nth-child(1), .player-table td:nth-child(11) { display: none; }
+}
 
 /* ── Zones d'erreur sous les tableaux ────────────────────────────────── */
 .table-error-zone { min-height: 0; }

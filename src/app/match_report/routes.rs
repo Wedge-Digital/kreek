@@ -35,6 +35,10 @@ pub mod path {
         "/app/{space_id}/match-report/{match_report_id}/actions/{action_id}";
     pub const MATCH_REPORT_MERCENARY_SELECTOR: &str =
         "/app/{space_id}/match-report/{match_report_id}/step2/{team_id}/mercenaires";
+    pub const MATCH_REPORT_RECAP: &str =
+        "/app/{space_id}/match-report/{match_report_id}/recap";
+    pub const MATCH_REPORT_RECAP_PUBLISH: &str =
+        "/app/{space_id}/match-report/{match_report_id}/recap/publish";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -165,5 +169,17 @@ impl Routes {
             .replace("{space_id}", space_id)
             .replace("{match_report_id}", match_report_id)
             .replace("{team_id}", team_id)
+    }
+
+    pub fn recap(&self, space_id: &str, match_report_id: &str) -> String {
+        path::MATCH_REPORT_RECAP
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+    }
+
+    pub fn recap_publish(&self, space_id: &str, match_report_id: &str) -> String {
+        path::MATCH_REPORT_RECAP_PUBLISH
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
     }
 }

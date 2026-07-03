@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="/static/css/components/league-selector.css">
 <link rel="stylesheet" href="/static/css/pages/team-build.css">
 
-<div class="home-grid">
+<div class="home-grid home-grid--with-cart">
 
   <!-- ── Contenu principal ───────────────────────────────────────────── -->
   <div class="home-main">
@@ -85,7 +85,7 @@
       </div>
       </div><!-- /create-body -->
     </div>
-      <div style="display: flex; justify-content: center;">
+      <div class="btn-back-wrapper">
         <button class="btn btn-outline"
                 hx-get="{{ app_routes.team_creation.draft_team(space_id) }}"
                 hx-target="#app-content"
@@ -125,7 +125,7 @@
          hx-target="this"
          hx-swap="innerHTML">
     </div>
-    <div class="cart-actions" style="margin-top: var(--p1);">
+    <div class="cart-actions">
       <a class="btn btn-primary"
          hx-get="{{ app_routes.team_creation.finalize_team(space_id, team_id) }}"
          hx-target="#app-content"

@@ -3,7 +3,9 @@ use crate::app::match_report::io::app_events::{
     app_event_publisher, pairing_created_listener, pairing_deleted_listener,
 };
 use crate::app::match_report::io::repository::match_report_repository::MatchReportRepository;
-use crate::app::match_report::ports::{ICompetitionDataPort, IPlayerDataPort, ITeamDataPort};
+use crate::app::match_report::ports::{
+    ICoachDataPort, ICompetitionDataPort, IPlayerDataPort, ISppCalculatorPort, ITeamDataPort,
+};
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -14,6 +16,8 @@ pub struct MatchReportContext {
     pub competition_data: Arc<dyn ICompetitionDataPort>,
     pub team_data: Arc<dyn ITeamDataPort>,
     pub player_data: Arc<dyn IPlayerDataPort>,
+    pub coach_data: Arc<dyn ICoachDataPort>,
+    pub spp_calculator: Arc<dyn ISppCalculatorPort>,
     pub event_bus: EventBus,
 }
 
@@ -29,11 +33,14 @@ pub fn init_listeners(event_bus: &EventBus, app_event_bus: &EventBus, pool: PgPo
 }
 
 impl MatchReportContext {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         pool: &PgPool,
         competition_data: Arc<dyn ICompetitionDataPort>,
         team_data: Arc<dyn ITeamDataPort>,
         player_data: Arc<dyn IPlayerDataPort>,
+        coach_data: Arc<dyn ICoachDataPort>,
+        spp_calculator: Arc<dyn ISppCalculatorPort>,
         event_bus: EventBus,
     ) -> Self {
         Self {
@@ -41,6 +48,8 @@ impl MatchReportContext {
             competition_data,
             team_data,
             player_data,
+            coach_data,
+            spp_calculator,
             event_bus,
         }
     }

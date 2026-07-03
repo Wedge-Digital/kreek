@@ -25,6 +25,8 @@ Directives de travail pour Claude Code sur ce projet.
 
 7. **Chaque livrable doit être discuté et validé** : que ce soit une phase du workflow, une carte kanban, un plan de réalisation, ou un fichier de spec — le contenu doit être **présenté à l'utilisateur pour discussion** avant d'être écrit/commité. Ne jamais produire un livrable de manière autonome. Présenter d'abord, discuter, ajuster, puis écrire sur validation explicite.
 
+8. **Ne jamais démarrer de serveur de développement soi-même** : l'utilisateur gère son propre serveur (`cargo run`, `make dev`, binaire lancé manuellement, etc.). Ne jamais lancer, redémarrer ou tuer ce serveur de sa propre initiative pour une vérification. Si une vérification nécessite un serveur actif, vérifier s'il tourne déjà (ex. `curl` sur le port attendu) et l'utiliser tel quel ; sinon, demander à l'utilisateur de le démarrer.
+
 ---
 
 ## Projet
