@@ -134,8 +134,8 @@
       </div>
 
       <div class="mr-cart-actions">
-        <a href="{{ pass_url }}" class="btn-outline-sm">Passer</a>
-        <button type="submit" class="btn-primary-sm" :disabled="overBudget">
+        <button type="submit" name="intent" value="pass" class="btn-outline-sm">Passer</button>
+        <button type="submit" name="intent" value="validate" class="btn-primary-sm" :disabled="overBudget">
           Valider les achats &#8594;
         </button>
       </div>

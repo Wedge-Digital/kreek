@@ -128,10 +128,6 @@ impl MatchReportPreMatch {
         Ok((updated, events))
     }
 
-    pub fn is_inducements_phase_complete(&self) -> bool {
-        self.home_inducements.is_some() && self.away_inducements.is_some()
-    }
-
     fn inducements_for(&self, team_id: &TeamId) -> Option<&Vec<InducementPurchase>> {
         if team_id == &self.home_team_id { self.home_inducements.as_ref() } else { self.away_inducements.as_ref() }
     }
@@ -606,21 +602,6 @@ mod tests {
         let specs = vec![spec("BRIBE", 2, 10_000, false)];
         let (_, events) = pm.record_inducements(&pm.home_team_id.clone(), &[(InducementId("BRIBE".into()), 1)], 1_000_000, &specs, &[], CoachId::new()).unwrap();
         assert_eq!(events.len(), 1);
-    }
-
-    #[test]
-    fn is_inducements_phase_complete_when_both_recorded() {
-        let mut pm = make_pm(1000, 1000);
-        pm.home_inducements = Some(vec![]);
-        pm.away_inducements = Some(vec![]);
-        assert!(pm.is_inducements_phase_complete());
-    }
-
-    #[test]
-    fn is_inducements_phase_not_complete_when_only_one_recorded() {
-        let mut pm = make_pm(1000, 1000);
-        pm.home_inducements = Some(vec![]);
-        assert!(!pm.is_inducements_phase_complete());
     }
 
     // ── step3-4 : temp players ────────────────────────────────────────────────

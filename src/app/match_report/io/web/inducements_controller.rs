@@ -34,7 +34,6 @@ pub struct InducementsTemplate {
     pub inducement_selector_url:  String,
     pub mercenary_selector_url:   String,
     pub form_action:              String,
-    pub pass_url:                 String,
 }
 
 impl IntoResponse for InducementsTemplate {
@@ -113,7 +112,6 @@ async fn build_vm(
     let is_topdog = pm.topdog_team_id() == &team_id;
     let selector_url = build_selector_url(routes, &tier, &team_info.roster_id);
     let mercenary_url = routes.match_report.mercenary_selector(space_id, &mr_id.to_string(), &team_id.to_string());
-    let pass_url = build_pass_url(routes, space_id, &mr_id.to_string(), &pm, is_topdog);
     let form_action =
         routes.match_report.inducements(space_id, &mr_id.to_string(), &team_id.to_string());
     let initials = team_info
@@ -135,7 +133,6 @@ async fn build_vm(
         inducement_selector_url:  selector_url,
         mercenary_selector_url:   mercenary_url,
         form_action,
-        pass_url,
     })
 }
 
@@ -172,28 +169,27 @@ fn build_selector_url(
     )
 }
 
-fn build_pass_url(
-    routes: &AppRoutes,
-    space_id: &str,
-    mr_id: &str,
-    pm: &crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch,
-    is_topdog: bool,
-) -> String {
-    if is_topdog {
-        routes.match_report.inducements(space_id, mr_id, &pm.underdog_team_id().to_string())
-    } else {
-        routes.match_report.step3(space_id, mr_id)
-    }
-}
-
 // ── POST ──────────────────────────────────────────────────────────────────────
 
 #[derive(Deserialize)]
 pub struct InducementsForm {
     #[serde(default)]
+    pub intent:      String,
+    #[serde(default)]
     pub selection:   String,
     #[serde(default)]
     pub mercenaries: String,
+}
+
+fn resolve_purchases_from_form(
+    form: &InducementsForm,
+) -> Result<(Vec<InducementPurchaseCmd>, Vec<MercenaryPurchaseCmd>), Response> {
+    if form.intent == "pass" {
+        return Ok((Vec::new(), Vec::new()));
+    }
+    let purchases = parse_purchases(&form.selection);
+    let mercenary_purchases = parse_mercenaries(&form.mercenaries)?;
+    Ok((purchases, mercenary_purchases))
 }
 
 #[derive(Deserialize)]
@@ -215,8 +211,7 @@ pub async fn post_inducements(
         Ok(ids) => ids,
         Err(r) => return r,
     };
-    let purchases = parse_purchases(&form.selection);
-    let mercenary_purchases = match parse_mercenaries(&form.mercenaries) {
+    let (purchases, mercenary_purchases) = match resolve_purchases_from_form(&form) {
         Ok(v) => v,
         Err(r) => return r,
     };

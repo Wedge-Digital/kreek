@@ -328,7 +328,7 @@ def test_submit_with_mercenaire_creates_temp_player(page: Page, space_id, merco_
     expect(page.locator(".mr-cart-merco-item")).to_have_count(1)
 
     with page.expect_navigation(wait_until="load"):
-        page.locator("button[type='submit']").click()
+        page.locator("button[name='intent'][value='validate']").click()
 
     new_url = page.url
     assert "/inducements/" in new_url or "/step3" in new_url, (
@@ -353,7 +353,7 @@ def test_submit_without_mercenaires_regression(page: Page, space_id, merco_mr):
 
     # Soumet sans toucher aux mercenaires (champ mercenaries vide = [])
     with page.expect_navigation(wait_until="load"):
-        page.locator("button[type='submit']").click()
+        page.locator("button[name='intent'][value='validate']").click()
 
     new_url = page.url
     assert "/inducements/" in new_url or "/step3" in new_url, (
