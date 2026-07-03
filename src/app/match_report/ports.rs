@@ -1,3 +1,4 @@
+use crate::app::match_report::domain::value_objects::{ActionPlayer, MatchAction};
 use async_trait::async_trait;
 
 #[async_trait]
@@ -21,6 +22,19 @@ pub trait ICompetitionDataPort: Send + Sync {
         season_id: &str,
         roster_id: &str,
     ) -> Option<TierRulesDto>;
+
+    async fn find_round_context(
+        &self,
+        season_id: &str,
+        round_id: &str,
+    ) -> Option<RoundContextDto>;
+}
+
+#[derive(Debug, Clone)]
+pub struct RoundContextDto {
+    pub competition_name: String,
+    pub season_name: String,
+    pub round_name: String,
 }
 
 #[derive(Debug, Default)]
@@ -81,4 +95,32 @@ pub struct RosterPositionDto {
 pub struct PositionCountDto {
     pub position_uid: String,
     pub count:        u8,
+}
+
+#[async_trait]
+pub trait ICoachDataPort: Send + Sync {
+    async fn find_coach_name(&self, coach_id: &str) -> Option<String>;
+}
+
+#[async_trait]
+pub trait ISppCalculatorPort: Send + Sync {
+    async fn calculate_match_spp(
+        &self,
+        home_actions: &[MatchAction],
+        away_actions: &[MatchAction],
+        home_roster_id: &str,
+        away_roster_id: &str,
+    ) -> SppMatchResult;
+}
+
+#[derive(Debug, Default)]
+pub struct SppMatchResult {
+    pub home: Vec<PlayerSppDto>,
+    pub away: Vec<PlayerSppDto>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PlayerSppDto {
+    pub action_player: ActionPlayer,
+    pub spp: u8,
 }

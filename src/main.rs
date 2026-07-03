@@ -148,6 +148,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
                     Arc::new(crate::app::competitions::io::repository::competition_repository::CompetitionRepository::new(pool.clone())),
                     Arc::new(crate::app::competitions::io::repository::season_repository::SeasonRepository::new(pool.clone())),
                     refs_for_players.repository.clone(),
+                    Arc::new(crate::app::competitions::io::repository::match_day_repository::MatchDayRepository::new(pool.clone())),
                 ),
             );
             let team_data = Arc::new(

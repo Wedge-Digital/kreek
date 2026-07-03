@@ -264,6 +264,7 @@ mod tests {
                 impl crate::app::match_report::ports::ICompetitionDataPort for FakeCompDataPort {
                     async fn is_competition_admin(&self, _: &str, _: &str) -> Result<bool, String> { Ok(false) }
                     async fn find_tier_rules_for_roster(&self, _: &str, _: &str) -> Option<crate::app::match_report::ports::TierRulesDto> { None }
+                    async fn find_round_context(&self, _: &str, _: &str) -> Option<crate::app::match_report::ports::RoundContextDto> { None }
                 }
                 struct FakeTeamDataPort;
                 #[async_trait::async_trait]

@@ -1,6 +1,9 @@
 use crate::app::competitions::domain::competition_repository_port::ICompetitionRepository;
+use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
 use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
-use crate::app::match_report::ports::{ICompetitionDataPort, InducementSpecDto, TierRulesDto};
+use crate::app::match_report::ports::{
+    ICompetitionDataPort, InducementSpecDto, RoundContextDto, TierRulesDto,
+};
 use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::shared_kernel::common_types::SeasonId;
 use async_trait::async_trait;
@@ -10,6 +13,7 @@ pub struct CompetitionDataAdapter {
     competition_repo: Arc<dyn ICompetitionRepository>,
     season_repo: Arc<dyn ISeasonRepository>,
     reference_repo: Arc<dyn IReferenceRepository>,
+    match_day_repo: Arc<dyn IMatchDayRepository>,
 }
 
 impl CompetitionDataAdapter {
@@ -17,8 +21,9 @@ impl CompetitionDataAdapter {
         competition_repo: Arc<dyn ICompetitionRepository>,
         season_repo: Arc<dyn ISeasonRepository>,
         reference_repo: Arc<dyn IReferenceRepository>,
+        match_day_repo: Arc<dyn IMatchDayRepository>,
     ) -> Self {
-        Self { competition_repo, season_repo, reference_repo }
+        Self { competition_repo, season_repo, reference_repo, match_day_repo }
     }
 }
 
@@ -63,6 +68,21 @@ impl ICompetitionDataPort for CompetitionDataAdapter {
             .filter_map(|uid| build_star_player_spec(uid, &*self.reference_repo))
             .collect();
         Some(TierRulesDto { allowed_inducements, allowed_star_players })
+    }
+
+    async fn find_round_context(
+        &self,
+        season_id: &str,
+        round_id: &str,
+    ) -> Option<RoundContextDto> {
+        let sid = SeasonId::try_new(season_id).ok()?;
+        let season = self.season_repo.find_full(&sid).await.ok()??;
+        let round = self.match_day_repo.find_by_id(round_id).await.ok()??;
+        Some(RoundContextDto {
+            competition_name: season.competition_name,
+            season_name: season.season_name,
+            round_name: round.name.to_string(),
+        })
     }
 }
 
