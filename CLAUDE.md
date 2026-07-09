@@ -703,6 +703,66 @@ Response::builder().header("HX-Trigger", r#"{"showToast": "Sauvegardé"}"#).body
 
 ---
 
+## Responsivité
+
+Approche **desktop-first** : les media queries utilisent `max-width`, on adapte le layout vers le bas à partir d'un rendu desktop de référence. Pas de framework CSS, pas de classes utilitaires génériques (`.hide-mobile`, `.col-*`, etc.) — chaque page gère sa propre responsivité avec ses propres classes.
+
+### Breakpoint
+
+Un seul breakpoint de référence pour toute l'application :
+
+```css
+@media (max-width: 768px) { ... }
+```
+
+Ce breakpoint marque la bascule desktop ↔ mobile/tablette. Le réutiliser systématiquement pour rester cohérent avec l'existant plutôt que d'introduire de nouvelles valeurs de coupure.
+
+Exceptions ponctuelles déjà présentes dans le code (à ne pas généraliser sans raison) : `400px` (grille de chips joueurs), `640px`/`900px` (masquage progressif de colonnes de tableau).
+
+### Chrome global — géré une seule fois, jamais par les pages
+
+La bascule sidebar/menu desktop ↔ header/tabbar mobile est gérée intégralement par `app-layout.html` + `layout-app.css` + `app-menu.html` (markup desktop et mobile co-existent dans le même template, c'est le CSS qui bascule l'affichage via `@media`). **Aucune page de contenu ne doit réimplémenter cette logique** — elle n'a à se soucier que de son propre contenu interne.
+
+Si un élément `position: fixed; bottom: 0` (cart, footer d'action) est utilisé dans une page, décaler son `bottom` sous 768px pour ne pas chevaucher la `.mobile-tabbar` globale (~64px de hauteur) :
+
+```css
+.mr-cart-footer { position: fixed; bottom: 0; left: 0; right: 0; }
+@media (max-width: 768px) {
+  .mr-container { padding-bottom: 180px; }
+  .mr-cart-footer { bottom: 64px; }
+}
+```
+
+### Layout de page
+
+- Container central limité en largeur (`max-width: 900-980px; margin: 0 auto;`), en `flex-direction: column`, avec `gap` exprimé en tokens `var(--p0)` à `var(--p5)` (jamais de valeur `px` en dur pour l'espacement).
+- Grilles régulières (chips, boutons d'action, cartes) : `display: grid; grid-template-columns: repeat(N, 1fr);`.
+- Layouts asymétriques (article + sidebar, 2 colonnes) : `display: flex` avec des ratios `flex: N`, qui basculent en `flex-direction: column` sous 768px.
+
+### Design tokens
+
+Les tokens (couleurs, spacing `--p0..--p5`, typo `--text-*`, `--radius-*`) sont définis dans le `:root` de `assets/static/css/common.css`. Toujours réutiliser ces tokens plutôt que des valeurs en dur.
+
+**Il n'existe pas de variable `--breakpoint-*`** — les breakpoints restent des valeurs `px` en dur dans chaque `@media`, à répéter telles quelles (`768px`) plutôt qu'inventées.
+
+### Pattern mobile-first ponctuel (grilles à colonnes croissantes)
+
+Pour une grille dont le nombre de colonnes doit croître avec l'espace disponible, le pattern `min-width` est accepté en exception au desktop-first global :
+
+```css
+.mr-player-chip-list { display: grid; grid-template-columns: repeat(2, 1fr); }
+@media (min-width: 400px) { .mr-player-chip-list { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 768px) { .mr-player-chip-list { grid-template-columns: repeat(4, 1fr); } }
+```
+
+### Ce qui n'est pas utilisé — ne pas introduire sans discussion
+
+- Pas de `clamp()` ni d'unités `vw`/`vh` fluides pour le texte — les ajustements de taille se font en dur par breakpoint.
+- Pas de système de grille type Bootstrap (`.col-*`, `.row`).
+- Pas de classes utilitaires responsive transverses (`.hide-mobile`, `.d-md-*`).
+
+---
+
 ## Gestion des erreurs
 
 `AppError` est l'enum central (`src/error.rs`) qui implémente `IntoResponse`.  
