@@ -14,7 +14,6 @@ pub struct RosterDefinition {
     pub available_players: Vec<PlayerPositionDefinition>,
     pub allowed_staff_uids: Vec<String>,
     pub leagues: Vec<String>,
-    pub league_choice_required: bool,
     pub special_rules: Vec<String>,
 }
 

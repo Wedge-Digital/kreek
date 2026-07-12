@@ -94,8 +94,6 @@ pub struct Team {
     #[serde(default)]
     pub leagues: Vec<String>,
     #[serde(default)]
-    pub league_choice_required: bool,
-    #[serde(default)]
     pub logo: Option<String>,
 }
 

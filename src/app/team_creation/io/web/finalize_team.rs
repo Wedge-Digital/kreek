@@ -1,10 +1,9 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::team_creation::domain::roster::LeagueId;
 use crate::app::team_creation::io::web::view_models::SppLogEntryVm;
 use crate::app::routes::AppRoutes;
 use crate::app::team_creation::use_cases::commands::SubmitTeamCommand;
-use crate::app::team_creation::use_cases::build_team::set_league::{SetLeagueCommand, SetLeagueError};
 use crate::app::team_creation::use_cases::submit_team as submit_uc;
+use crate::app::team_creation::use_cases::roster_service;
 use crate::app::shared_kernel::common_types::{CompetitionId, EntityId, SeasonId};
 use crate::state::AppState;
 use askama::Template;
@@ -115,33 +114,26 @@ pub async fn finalize_team(
             .into_response();
     }
 
-    let roster_def = ref_data.find_roster_definition(&team.roster.id.0);
-    let roster_leagues: Vec<String> = roster_def
-        .as_ref()
-        .map(|d| d.leagues.clone())
-        .unwrap_or_default();
+    let league_selection_missing = roster_service::league_selection_missing(
+        &team.roster.id.0,
+        team.league_id.is_some(),
+        ref_data,
+    );
+
+    if league_selection_missing {
+        return Response::builder()
+            .header("HX-Retarget", "#submit-error")
+            .header("HX-Reswap", "innerHTML")
+            .header("content-type", "text/html; charset=utf-8")
+            .body(Body::from(
+                r#"<p class="table-error">Veuillez sélectionner une ligue avant de terminer la construction.</p>"#,
+            ))
+            .unwrap()
+            .into_response();
+    }
 
     // ── Skip si pas de finalisation nécessaire ────────────────────────────────
     if !team.needs_finalization() {
-        if team.league_id.is_none() {
-            let league_id = LeagueId(roster_leagues[0].clone());
-            if let Err(e) = crate::app::team_creation::use_cases::build_team::set_league::execute(
-                SetLeagueCommand {
-                    team_id:  team_entity_id.clone(),
-                    space_id: space_id.clone(),
-                    league_id,
-                },
-                state.team_creation.roster_repository.as_ref(),
-            )
-            .await
-            {
-                return match e {
-                    SetLeagueError::TeamNotFound  => StatusCode::NOT_FOUND.into_response(),
-                    SetLeagueError::Repository(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-                };
-            }
-        }
-
         let cmd = SubmitTeamCommand {
             team_id:        team_entity_id,
             space_id:       space_id.clone(),

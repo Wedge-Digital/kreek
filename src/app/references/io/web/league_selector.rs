@@ -44,21 +44,13 @@ pub async fn league_selector(
 ) -> impl IntoResponse {
     let ref_repo = state.references.repository.as_ref();
 
-    let (league_uids, choice_required): (Vec<String>, bool) = if !params.roster_id.is_empty() {
+    let league_uids: Vec<String> = if !params.roster_id.is_empty() {
         ref_repo
             .find_team_by_uid(&params.roster_id)
-            .map(|t| {
-                let uids = if t.league_choice_required {
-                    t.leagues.clone()
-                } else {
-                    // Pas de choix : on n'expose que la première ligue (auto-sélection)
-                    t.leagues.iter().take(1).cloned().collect()
-                };
-                (uids, t.league_choice_required)
-            })
+            .map(|t| t.leagues.clone())
             .unwrap_or_default()
     } else {
-        (vec![], false)
+        vec![]
     };
 
     // Construire les VMs dans l'ordre des ligues du roster
@@ -77,8 +69,6 @@ pub async fn league_selector(
         .iter()
         .find(|l| l.is_selected)
         .map(|l| l.label.clone());
-
-    let _ = choice_required; // utilisé via la longueur de leagues dans le template
 
     LeagueSelectorTemplate {
         leagues,

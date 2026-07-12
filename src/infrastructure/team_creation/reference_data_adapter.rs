@@ -54,7 +54,6 @@ impl IReferenceDataPort for ReferenceDataAdapter {
                 .collect(),
             allowed_staff_uids: team.allowed_staff.clone(),
             leagues: team.leagues.clone(),
-            league_choice_required: team.league_choice_required,
             special_rules: team.special_rules.clone(),
         })
     }

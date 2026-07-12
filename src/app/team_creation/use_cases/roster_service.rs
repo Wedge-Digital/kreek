@@ -81,6 +81,22 @@ pub fn roster_metadata(
     })
 }
 
+/// Un roster à choix multiple de ligues doit avoir une ligue affectée
+/// pour pouvoir terminer la construction. Un roster à ligue unique est
+/// auto-affecté pendant le build : ce cas ne déclenche jamais ce blocage.
+pub fn league_selection_missing(
+    roster_uid: &str,
+    league_already_set: bool,
+    ref_data: &dyn IReferenceDataPort,
+) -> bool {
+    if league_already_set {
+        return false;
+    }
+    roster_metadata(roster_uid, ref_data)
+        .map(|m| m.leagues.len() > 1)
+        .unwrap_or(false)
+}
+
 fn staff_kind(uid: &str) -> StaffKind {
     match uid {
         "APOTHECARY" => StaffKind::Apothecary,
@@ -102,33 +118,41 @@ mod tests {
 
     impl IReferenceDataPort for FakeRefData {
         fn find_roster_definition(&self, uid: &str) -> Option<RosterDefinition> {
-            if uid != "LIZARDMEN" {
-                return None;
-            }
-            Some(RosterDefinition {
-                uid: "LIZARDMEN".into(),
-                name: "Hommes-Lézards".into(),
-                reroll_cost: 70,
-                available_players: vec![PlayerPositionDefinition {
-                    uid: "SKINK".into(),
-                    position_name: "Skink".into(),
-                    cost: 60,
-                    max_quantity: 12,
-                    ma: 8,
-                    st: 2,
-                    ag: 3,
-                    pa: 4,
-                    av: 8,
-                    skills: vec![SkillDefinition {
-                        uid: "DODGE".into(),
-                        name: "Esquive".into(),
+            match uid {
+                "LIZARDMEN" => Some(RosterDefinition {
+                    uid: "LIZARDMEN".into(),
+                    name: "Hommes-Lézards".into(),
+                    reroll_cost: 70,
+                    available_players: vec![PlayerPositionDefinition {
+                        uid: "SKINK".into(),
+                        position_name: "Skink".into(),
+                        cost: 60,
+                        max_quantity: 12,
+                        ma: 8,
+                        st: 2,
+                        ag: 3,
+                        pa: 4,
+                        av: 8,
+                        skills: vec![SkillDefinition {
+                            uid: "DODGE".into(),
+                            name: "Esquive".into(),
+                        }],
                     }],
-                }],
-                allowed_staff_uids: vec!["APOTHECARY".into()],
-                leagues: vec!["WOODLAND".into()],
-                league_choice_required: false,
-                special_rules: vec!["LUSTRIAN_SUPERLEAGUE".into()],
-            })
+                    allowed_staff_uids: vec!["APOTHECARY".into()],
+                    leagues: vec!["WOODLAND".into()],
+                    special_rules: vec!["LUSTRIAN_SUPERLEAGUE".into()],
+                }),
+                "CHAOS_DWARF" => Some(RosterDefinition {
+                    uid: "CHAOS_DWARF".into(),
+                    name: "Nain du Chaos".into(),
+                    reroll_cost: 70,
+                    available_players: vec![],
+                    allowed_staff_uids: vec!["APOTHECARY".into()],
+                    leagues: vec!["BADLANDS_BRAWL".into(), "CHAOS_CLASH".into()],
+                    special_rules: vec!["FAVOURED_OF_HASHUT".into()],
+                }),
+                _ => None,
+            }
         }
 
         fn list_staff_definitions(&self) -> Vec<StaffDefinition> {
@@ -193,5 +217,27 @@ mod tests {
         let meta = roster_metadata("LIZARDMEN", &FakeRefData).unwrap();
         assert_eq!(meta.leagues, vec!["WOODLAND"]);
         assert_eq!(meta.special_rules, vec!["LUSTRIAN_SUPERLEAGUE"]);
+    }
+
+    #[test]
+    fn league_selection_missing_false_for_single_league_roster() {
+        // LIZARDMEN n'a qu'une ligue : jamais bloquant, même sans league_id affecté.
+        assert!(!league_selection_missing("LIZARDMEN", false, &FakeRefData));
+    }
+
+    #[test]
+    fn league_selection_missing_true_for_multi_league_roster_without_selection() {
+        // CHAOS_DWARF a 2 ligues possibles : bloquant tant qu'aucune n'est choisie.
+        assert!(league_selection_missing("CHAOS_DWARF", false, &FakeRefData));
+    }
+
+    #[test]
+    fn league_selection_missing_false_once_league_selected() {
+        assert!(!league_selection_missing("CHAOS_DWARF", true, &FakeRefData));
+    }
+
+    #[test]
+    fn league_selection_missing_false_for_unknown_roster() {
+        assert!(!league_selection_missing("UNKNOWN", false, &FakeRefData));
     }
 }
