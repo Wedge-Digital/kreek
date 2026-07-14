@@ -23,7 +23,8 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
     ) -> Result<Vec<PlayerProjection>, RepositoryError> {
         let rows = sqlx::query(
             "SELECT player_id, team_id, space_id, position_name, roster_line_id,
-                    personal_name, jersey, base_skills, acquired_skills, spp, value_kpo
+                    personal_name, jersey, base_skills, acquired_skills, spp, value_kpo,
+                    participation_status
              FROM players_proj
              WHERE team_id = $1
              ORDER BY jersey NULLS LAST, player_id",
@@ -54,6 +55,7 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
                     acquired_skills,
                     spp:            r.get("spp"),
                     value_kpo:      r.get("value_kpo"),
+                    participation_status: r.get("participation_status"),
                 })
             })
             .collect()
@@ -62,7 +64,8 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
     async fn find_by_id(&self, player_id: &str) -> Result<Option<PlayerProjection>, RepositoryError> {
         let row = sqlx::query(
             "SELECT player_id, team_id, space_id, position_name, roster_line_id,
-                    personal_name, jersey, base_skills, acquired_skills, spp, value_kpo
+                    personal_name, jersey, base_skills, acquired_skills, spp, value_kpo,
+                    participation_status
              FROM players_proj WHERE player_id = $1",
         )
         .bind(player_id)
@@ -89,6 +92,7 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
                 acquired_skills,
                 spp:            r.get("spp"),
                 value_kpo:      r.get("value_kpo"),
+                participation_status: r.get("participation_status"),
             })
         })
         .transpose()

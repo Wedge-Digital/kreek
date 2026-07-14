@@ -1,6 +1,7 @@
 use crate::app::players::domain::player::TeamId;
 use crate::app::players::ports::{AcquiredSkillProjection, PlayerProjection};
 use crate::app::references::domain::port::IReferenceRepository;
+use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -21,6 +22,7 @@ impl std::fmt::Display for SkillTagVm {
 }
 
 pub struct PlayerRowVm {
+    pub player_id:       String,
     pub jersey:          Option<i16>,
     pub personal_name:   String,
     pub position_name:   String,
@@ -62,7 +64,9 @@ fn build_base_skills(p: &PlayerProjection, ref_repo: &dyn IReferenceRepository) 
 #[derive(Template)]
 #[template(path = "player-table-fragment.html")]
 pub struct PlayerTableTemplate {
-    pub players: Vec<PlayerRowVm>,
+    pub app_routes: AppRoutes,
+    pub space_id:   String,
+    pub players:    Vec<PlayerRowVm>,
 }
 
 impl IntoResponse for PlayerTableTemplate {
@@ -80,7 +84,7 @@ impl IntoResponse for PlayerTableTemplate {
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 pub async fn player_table_widget(
-    Path((_space_id, team_id)): Path<(String, String)>,
+    Path((space_id, team_id)): Path<(String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let projections = state
@@ -95,6 +99,7 @@ pub async fn player_table_widget(
     let players = projections.into_iter().map(|p| {
         let base_skills = build_base_skills(&p, ref_repo);
         PlayerRowVm {
+            player_id:       p.player_id,
             jersey:          p.jersey,
             personal_name:   p.personal_name,
             position_name:   p.position_name,
@@ -105,5 +110,5 @@ pub async fn player_table_widget(
         }
     }).collect();
 
-    PlayerTableTemplate { players }.into_response()
+    PlayerTableTemplate { app_routes: AppRoutes::default(), space_id, players }.into_response()
 }

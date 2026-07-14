@@ -113,8 +113,28 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
     competitions::context::init_listeners(&event_bus, app_event_bus.clone(), pool.clone());
     team_creation::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
     teams::context::init_listeners(&app_event_bus, pool.clone());
-    match_report::context::init_listeners(&event_bus, &app_event_bus, pool.clone());
     let refs_for_players = references::context::ReferencesContext::new();
+    let match_report_comp_data = Arc::new(
+        crate::infrastructure::match_report::competition_data_adapter::CompetitionDataAdapter::new(
+            Arc::new(crate::app::competitions::io::repository::competition_repository::CompetitionRepository::new(pool.clone())),
+            Arc::new(crate::app::competitions::io::repository::season_repository::SeasonRepository::new(pool.clone())),
+            refs_for_players.repository.clone(),
+            Arc::new(crate::app::competitions::io::repository::match_day_repository::MatchDayRepository::new(pool.clone())),
+        ),
+    );
+    let match_report_team_data = Arc::new(
+        crate::infrastructure::match_report::ref_team_data_adapter::RefTeamDataAdapter::new(
+            Arc::new(crate::app::teams::io::repository::team_repository::TeamRepository::new(pool.clone())),
+            refs_for_players.repository.clone(),
+        ),
+    );
+    match_report::context::init_listeners(
+        &event_bus,
+        &app_event_bus,
+        pool.clone(),
+        match_report_comp_data.clone(),
+        match_report_team_data.clone(),
+    );
     players::context::init_listeners(
         &app_event_bus,
         pool.clone(),
@@ -143,20 +163,8 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             ))),
         ),
         match_report: {
-            let comp_data = Arc::new(
-                crate::infrastructure::match_report::competition_data_adapter::CompetitionDataAdapter::new(
-                    Arc::new(crate::app::competitions::io::repository::competition_repository::CompetitionRepository::new(pool.clone())),
-                    Arc::new(crate::app::competitions::io::repository::season_repository::SeasonRepository::new(pool.clone())),
-                    refs_for_players.repository.clone(),
-                    Arc::new(crate::app::competitions::io::repository::match_day_repository::MatchDayRepository::new(pool.clone())),
-                ),
-            );
-            let team_data = Arc::new(
-                crate::infrastructure::match_report::ref_team_data_adapter::RefTeamDataAdapter::new(
-                    Arc::new(crate::app::teams::io::repository::team_repository::TeamRepository::new(pool.clone())),
-                    refs_for_players.repository.clone(),
-                ),
-            );
+            let comp_data = match_report_comp_data.clone();
+            let team_data = match_report_team_data.clone();
             let player_data = Arc::new(
                 crate::infrastructure::match_report::player_data_adapter::PlayerDataAdapter::new(
                     Arc::new(crate::app::players::io::repository::projection_repository::PgPlayerProjectionRepository::new(pool.clone())),

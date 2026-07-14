@@ -1,3 +1,4 @@
+use crate::app::players::io::web::player_debug_controller::player_debug_controller;
 use crate::app::players::io::web::player_table::player_table_widget;
 use crate::app::players::io::web::widgets::match_player_selector_widget::match_player_selector_widget;
 use crate::app::players::routes::path;
@@ -8,4 +9,5 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route(path::PLAYERS_BY_TEAM_WIDGET, get(player_table_widget))
         .route(path::MATCH_PLAYER_SELECTOR, get(match_player_selector_widget))
+        .route(path::PLAYER_DEBUG, get(player_debug_controller))
 }

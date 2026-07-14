@@ -1,0 +1,233 @@
+use crate::app::players::domain::match_impact::{InjuryType, MatchContext, MatchReportId, RoundId, SppEarned, StatKind};
+use crate::app::players::domain::player::{Player, PlayerId, TeamId};
+use crate::app::players::ports::IPlayerRepository;
+use crate::app::references::domain::port::IReferenceRepository;
+use crate::app::shared_kernel::app_events::player_match_impact_app_events::{
+    InjuryTypePayload, PlayerMatchContextPayload, PlayerMatchImpactAppEvent,
+};
+use crate::common::services::event_bus::event_bus::EventBus;
+use std::sync::Arc;
+
+pub fn init(
+    app_event_bus: &EventBus,
+    player_repo: Arc<dyn IPlayerRepository>,
+    ref_repo: Arc<dyn IReferenceRepository>,
+) {
+    let mut rx = app_event_bus.subscribe();
+    tokio::spawn(async move {
+        loop {
+            match rx.recv().await {
+                Ok(envelope) => {
+                    let Ok(app_event) =
+                        serde_json::from_value::<PlayerMatchImpactAppEvent>(envelope.payload.clone())
+                    else {
+                        continue;
+                    };
+                    handle_event(app_event, player_repo.as_ref(), ref_repo.as_ref()).await;
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                    tracing::warn!("player_match_impact_listener: lagged by {n}");
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+            }
+        }
+    });
+}
+
+async fn handle_event(
+    app_event: PlayerMatchImpactAppEvent,
+    player_repo: &dyn IPlayerRepository,
+    ref_repo: &dyn IReferenceRepository,
+) {
+    // TeamMatchConcluded est traité par team_match_concluded_listener.
+    let (context_payload, player) = match &app_event {
+        PlayerMatchImpactAppEvent::TeamMatchConcluded { .. } => return,
+        PlayerMatchImpactAppEvent::PlayerPerformedTouchdown(c)
+        | PlayerMatchImpactAppEvent::PlayerPerformedPass(c)
+        | PlayerMatchImpactAppEvent::PlayerPerformedInterception(c)
+        | PlayerMatchImpactAppEvent::PlayerPerformedCasualty(c)
+        | PlayerMatchImpactAppEvent::PlayerPerformedMvp(c)
+        | PlayerMatchImpactAppEvent::PlayerPerformedFoul(c) => (c.clone(), load_player(player_repo, &c.player_id).await),
+        PlayerMatchImpactAppEvent::PlayerInjured { context, .. } => {
+            (context.clone(), load_player(player_repo, &context.player_id).await)
+        }
+    };
+
+    let Some(player) = player else {
+        tracing::warn!(
+            "player_match_impact_listener: joueur {} introuvable",
+            context_payload.player_id
+        );
+        return;
+    };
+
+    let context = to_match_context(&context_payload);
+
+    let event = match app_event {
+        PlayerMatchImpactAppEvent::PlayerPerformedTouchdown(_) => {
+            player.record_touchdown(context, spp_earned(ref_repo.touchdown_spp()))
+        }
+        PlayerMatchImpactAppEvent::PlayerPerformedPass(_) => {
+            player.record_pass(context, spp_earned(ref_repo.pass_spp()))
+        }
+        PlayerMatchImpactAppEvent::PlayerPerformedInterception(_) => {
+            player.record_interception(context, spp_earned(ref_repo.interception_spp()))
+        }
+        PlayerMatchImpactAppEvent::PlayerPerformedCasualty(_) => {
+            player.record_casualty(context, spp_earned(ref_repo.casualty_spp()))
+        }
+        PlayerMatchImpactAppEvent::PlayerPerformedMvp(_) => {
+            player.record_mvp(context, spp_earned(ref_repo.mvp_spp()))
+        }
+        PlayerMatchImpactAppEvent::PlayerPerformedFoul(_) => player.record_foul(context),
+        PlayerMatchImpactAppEvent::PlayerInjured { injury_type, .. } => {
+            player.record_injury(context, to_injury_type(&injury_type))
+        }
+        PlayerMatchImpactAppEvent::TeamMatchConcluded { .. } => unreachable!(),
+    };
+
+    let next_version = player.version + 1;
+    if let Err(e) = player_repo.append(&player.id, &player.team_id, &event, next_version).await {
+        tracing::error!(
+            "player_match_impact_listener: append {}: {e}",
+            context_payload.player_id
+        );
+    }
+}
+
+async fn load_player(player_repo: &dyn IPlayerRepository, player_id: &str) -> Option<Player> {
+    player_repo.find_by_id(&PlayerId(player_id.to_string())).await.ok().flatten()
+}
+
+fn spp_earned(amount: u8) -> SppEarned {
+    // Le barème `references` garantit toujours >= 1 (BR4) — panique volontaire sinon.
+    SppEarned::try_new(amount as u32).expect("le barème SPP doit toujours être >= 1")
+}
+
+fn to_match_context(c: &PlayerMatchContextPayload) -> MatchContext {
+    MatchContext {
+        match_report_id:    MatchReportId(c.match_report_id.clone()),
+        round_id:           RoundId(c.round_id.clone()),
+        round_label:        c.round_label.clone(),
+        opponent_team_id:   TeamId(c.opponent_team_id.clone()),
+        opponent_team_name: c.opponent_team_name.clone(),
+    }
+}
+
+fn to_injury_type(payload: &InjuryTypePayload) -> InjuryType {
+    match payload {
+        InjuryTypePayload::Commotion => InjuryType::Commotion,
+        InjuryTypePayload::Amoche => InjuryType::Amoche,
+        InjuryTypePayload::BlessureSerieuse => InjuryType::BlessureSerieuse,
+        InjuryTypePayload::Sequel { stat } => InjuryType::Sequel { stat: to_stat_kind(stat) },
+        InjuryTypePayload::Mort => InjuryType::Mort,
+    }
+}
+
+fn to_stat_kind(stat: &str) -> StatKind {
+    match stat {
+        "Ma" => StatKind::Ma,
+        "St" => StatKind::St,
+        "Ag" => StatKind::Ag,
+        "Pa" => StatKind::Pa,
+        "Av" => StatKind::Av,
+        other => {
+            tracing::warn!("player_match_impact_listener: stat inconnue '{other}', défaut Ag");
+            StatKind::Ag
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::players::domain::events::PlayerDomainEvent;
+    use crate::app::players::domain::match_impact::PlayerParticipationStatus;
+    use crate::app::players::domain::player::{Spp, ValueKpo};
+    use crate::app::players::domain::value_objects::{PositionNameVo, RosterLineId};
+    use crate::app::players::io::repository::player_repository::PgPlayerRepository;
+    use crate::app::references::io::repository::in_memory_reference_repository::InMemoryReferenceRepository;
+    use crate::app::shared_kernel::common_types::SpaceId;
+    use sqlx::PgPool;
+
+    fn sample_context_payload(player_id: &str) -> PlayerMatchContextPayload {
+        PlayerMatchContextPayload {
+            match_report_id:    "mr1".into(),
+            round_id:           "r1".into(),
+            round_label:        "Journée 5".into(),
+            opponent_team_id:   "opponent".into(),
+            opponent_team_name: "Bone Crushers".into(),
+            player_id:          player_id.to_string(),
+        }
+    }
+
+    async fn seed_player(repo: &PgPlayerRepository, player_id: &str, team_id: &str) {
+        let created = PlayerDomainEvent::PlayerCreated {
+            player_id:      PlayerId(player_id.to_string()),
+            team_id:        TeamId(team_id.to_string()),
+            space_id:       SpaceId::new(),
+            position_name:  PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
+            roster_line_id: RosterLineId::try_new("BLITZER".to_string()).unwrap(),
+            jersey:         None,
+            base_skills:    vec![],
+            starting_spp:   Spp(0),
+            starting_value: ValueKpo(100_000),
+        };
+        repo.append(&PlayerId(player_id.into()), &TeamId(team_id.into()), &created, 1)
+            .await
+            .unwrap();
+    }
+
+    #[sqlx::test]
+    async fn touchdown_event_credits_spp_on_existing_player(pool: PgPool) {
+        let player_repo = PgPlayerRepository::new(pool);
+        let ref_repo = InMemoryReferenceRepository::load();
+        seed_player(&player_repo, "p1", "t1").await;
+
+        handle_event(
+            PlayerMatchImpactAppEvent::PlayerPerformedTouchdown(sample_context_payload("p1")),
+            &player_repo,
+            &ref_repo,
+        )
+        .await;
+
+        let player = player_repo.find_by_id(&PlayerId("p1".into())).await.unwrap().unwrap();
+        assert_eq!(player.spp.0, 3);
+        assert_eq!(player.career_touchdowns.0, 1);
+        assert_eq!(player.version, 2);
+    }
+
+    #[sqlx::test]
+    async fn injury_event_updates_participation_status(pool: PgPool) {
+        let player_repo = PgPlayerRepository::new(pool);
+        let ref_repo = InMemoryReferenceRepository::load();
+        seed_player(&player_repo, "p2", "t1").await;
+
+        handle_event(
+            PlayerMatchImpactAppEvent::PlayerInjured {
+                context:     sample_context_payload("p2"),
+                injury_type: InjuryTypePayload::BlessureSerieuse,
+            },
+            &player_repo,
+            &ref_repo,
+        )
+        .await;
+
+        let player = player_repo.find_by_id(&PlayerId("p2".into())).await.unwrap().unwrap();
+        assert_eq!(player.participation_status, PlayerParticipationStatus::MissingNextGame);
+        assert_eq!(player.career_persistent_injuries.0, 1);
+    }
+
+    #[sqlx::test]
+    async fn unknown_player_is_ignored_without_panicking(pool: PgPool) {
+        let player_repo = PgPlayerRepository::new(pool);
+        let ref_repo = InMemoryReferenceRepository::load();
+
+        handle_event(
+            PlayerMatchImpactAppEvent::PlayerPerformedTouchdown(sample_context_payload("ghost")),
+            &player_repo,
+            &ref_repo,
+        )
+        .await;
+    }
+}

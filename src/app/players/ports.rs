@@ -47,6 +47,7 @@ pub struct PlayerProjection {
     pub acquired_skills: Vec<AcquiredSkillProjection>,
     pub spp:             i32,
     pub value_kpo:       i32,
+    pub participation_status: String,
 }
 
 #[async_trait]

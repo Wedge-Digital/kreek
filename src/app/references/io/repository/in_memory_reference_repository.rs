@@ -191,4 +191,25 @@ impl IReferenceRepository for InMemoryReferenceRepository {
     fn skill_cost_matrix(&self) -> &[SkillCostLevel] {
         &self.skill_cost_matrix
     }
+
+    fn touchdown_spp(&self) -> u8 { 3 }
+    fn pass_spp(&self) -> u8 { 1 }
+    fn interception_spp(&self) -> u8 { 2 }
+    fn casualty_spp(&self) -> u8 { 2 }
+    fn mvp_spp(&self) -> u8 { 4 }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn spp_scale_matches_blood_bowl_standard_barème() {
+        let repo = InMemoryReferenceRepository::load();
+        assert_eq!(repo.touchdown_spp(), 3);
+        assert_eq!(repo.pass_spp(), 1);
+        assert_eq!(repo.interception_spp(), 2);
+        assert_eq!(repo.casualty_spp(), 2);
+        assert_eq!(repo.mvp_spp(), 4);
+    }
 }

@@ -22,4 +22,11 @@ pub trait IReferenceRepository: Send + Sync {
     fn find_skill_by_uid(&self, uid: &str) -> Option<&Skill>;
     fn find_position_by_uid(&self, uid: &str) -> Option<&PlayerPosition>;
     fn skill_cost_matrix(&self) -> &[SkillCostLevel];
+
+    // ── Barème SPP par type d'action (règle Blood Bowl standard, fixe) ──────────
+    fn touchdown_spp(&self) -> u8;
+    fn pass_spp(&self) -> u8;
+    fn interception_spp(&self) -> u8;
+    fn casualty_spp(&self) -> u8;
+    fn mvp_spp(&self) -> u8;
 }

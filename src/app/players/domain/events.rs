@@ -1,4 +1,7 @@
 use crate::app::players::domain::player::{AcquisitionMode, PlayerId, Spp, TeamId, ValueKpo};
+use crate::app::players::domain::match_impact::{
+    InjuryType, MatchContext, MatchReportId, SppEarned,
+};
 use crate::app::players::domain::value_objects::{
     JerseyVo, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
 };
@@ -29,5 +32,56 @@ pub enum PlayerDomainEvent {
         is_primary:   bool,
         is_elite:     bool,
         value_delta:  ValueKpo,
+    },
+
+    // ── Impact des rapports de match ───────────────────────────────────────────
+    // player_id/team_id sont redondants avec l'agrégat (déjà identifié par son
+    // propre flux d'events) mais nécessaires à la couche persistance, qui route
+    // l'append par (player_id, team_id) — même besoin que PlayerCreated/InitialSkillEarned.
+    TouchdownScored {
+        player_id:  PlayerId,
+        team_id:    TeamId,
+        context:    MatchContext,
+        spp_earned: SppEarned,
+    },
+    PassCompleted {
+        player_id:  PlayerId,
+        team_id:    TeamId,
+        context:    MatchContext,
+        spp_earned: SppEarned,
+    },
+    InterceptionMade {
+        player_id:  PlayerId,
+        team_id:    TeamId,
+        context:    MatchContext,
+        spp_earned: SppEarned,
+    },
+    CasualtyInflicted {
+        player_id:  PlayerId,
+        team_id:    TeamId,
+        context:    MatchContext,
+        spp_earned: SppEarned,
+    },
+    MatchMvpNamed {
+        player_id:  PlayerId,
+        team_id:    TeamId,
+        context:    MatchContext,
+        spp_earned: SppEarned,
+    },
+    FoulCommitted {
+        player_id: PlayerId,
+        team_id:   TeamId,
+        context:   MatchContext,
+    },
+    InjurySustained {
+        player_id:   PlayerId,
+        team_id:     TeamId,
+        context:     MatchContext,
+        injury_type: InjuryType,
+    },
+    PlayerAvailabilityRestored {
+        player_id:       PlayerId,
+        team_id:         TeamId,
+        match_report_id: MatchReportId,
     },
 }

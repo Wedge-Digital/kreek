@@ -1,0 +1,64 @@
+.player-debug {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p2);
+  max-width: 900px;
+}
+
+.player-debug-header h1 {
+  font-family: var(--font-title);
+  font-size: var(--h4);
+  color: var(--dark-0);
+}
+
+.player-debug-hint {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  font-style: italic;
+}
+
+.player-debug-section h2 {
+  font-family: var(--font-title);
+  font-size: var(--h5);
+  color: var(--dark-1);
+  margin-bottom: var(--p1);
+}
+
+.player-debug-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--white);
+}
+
+.player-debug-table th,
+.player-debug-table td {
+  text-align: left;
+  padding: 8px var(--p1);
+  border-bottom: 1px solid var(--dark-6);
+  font-size: var(--text-small);
+}
+
+.player-debug-table th {
+  width: 240px;
+  color: var(--dark-3);
+  font-weight: 700;
+}
+
+.player-debug-empty {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  font-style: italic;
+}
+
+.player-debug-status {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: var(--text-tiny);
+  font-weight: 700;
+}
+
+.player-debug-status--Available        { background: rgba(98,149,132,0.15); color: var(--green); }
+.player-debug-status--MissingNextGame  { background: rgba(255,107,53,0.12); color: var(--orange); }
+.player-debug-status--Retired          { background: var(--dark-6); color: var(--dark-3); }
+.player-debug-status--Dead             { background: rgba(224,32,32,0.10); color: var(--red); }

@@ -19,7 +19,7 @@
     </thead>
     <tbody>
       {% for p in players %}
-      <tr>
+      <tr class="player-table-row" onclick="window.location.href='{{ app_routes.players.player_debug(space_id, p.player_id) }}'">
         <td style="text-align: center; color: var(--dark-3); font-family: monospace;">
           {% if let Some(j) = p.jersey %}{{ j }}{% else %}—{% endif %}
         </td>

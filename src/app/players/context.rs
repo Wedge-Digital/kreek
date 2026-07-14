@@ -1,4 +1,6 @@
-use crate::app::players::io::app_events::team_created_listener;
+use crate::app::players::io::app_events::{
+    player_match_impact_listener, team_created_listener, team_match_concluded_listener,
+};
 use crate::app::players::io::repository::player_repository::PgPlayerRepository;
 use crate::app::players::io::repository::projection_repository::PgPlayerProjectionRepository;
 use crate::app::players::ports::{IPlayerProjectionRepository, IPlayerRepository};
@@ -27,5 +29,8 @@ pub fn init_listeners(
     pool:          PgPool,
     refs:          Arc<dyn IReferenceRepository>,
 ) {
-    team_created_listener::init(app_event_bus, pool, refs);
+    let player_repo: Arc<dyn IPlayerRepository> = Arc::new(PgPlayerRepository::new(pool.clone()));
+    team_created_listener::init(app_event_bus, pool, refs.clone());
+    player_match_impact_listener::init(app_event_bus, player_repo.clone(), refs);
+    team_match_concluded_listener::init(app_event_bus, player_repo);
 }

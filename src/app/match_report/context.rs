@@ -21,7 +21,13 @@ pub struct MatchReportContext {
     pub event_bus: EventBus,
 }
 
-pub fn init_listeners(event_bus: &EventBus, app_event_bus: &EventBus, pool: PgPool) {
+pub fn init_listeners(
+    event_bus: &EventBus,
+    app_event_bus: &EventBus,
+    pool: PgPool,
+    competition_data: Arc<dyn ICompetitionDataPort>,
+    team_data: Arc<dyn ITeamDataPort>,
+) {
     let repo = Arc::new(MatchReportRepository::new(pool));
     pairing_created_listener::init(app_event_bus, repo.clone());
     pairing_deleted_listener::init(app_event_bus, repo.clone());
@@ -29,6 +35,8 @@ pub fn init_listeners(event_bus: &EventBus, app_event_bus: &EventBus, pool: PgPo
         event_bus,
         app_event_bus.clone(),
         repo,
+        competition_data,
+        team_data,
     );
 }
 

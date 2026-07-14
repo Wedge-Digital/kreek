@@ -1,0 +1,76 @@
+{% extends "widget-tester-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/player-debug.css">
+
+<div class="player-debug">
+  <div class="player-debug-header">
+    <h1>Debug joueur — {{ vm.id }}</h1>
+    <p class="player-debug-hint">Page de développement — dump brut de l'agrégat <code>Player</code>, aucun style de production.</p>
+  </div>
+
+  <table class="player-debug-table">
+    <tbody>
+      <tr><th>ID</th><td>{{ vm.id }}</td></tr>
+      <tr><th>Équipe</th><td>{{ vm.team_id }}</td></tr>
+      <tr><th>Poste</th><td>{{ vm.position_name }} ({{ vm.roster_line_id }})</td></tr>
+      <tr><th>Maillot</th><td>{{ vm.jersey }}</td></tr>
+      <tr><th>Version</th><td>{{ vm.version }}</td></tr>
+      <tr><th>SPP</th><td>{{ vm.spp }}</td></tr>
+      <tr><th>Valeur</th><td>{{ vm.value_kpo }} Po</td></tr>
+      <tr><th>Statut de participation</th><td><span class="player-debug-status player-debug-status--{{ vm.participation_status }}">{{ vm.participation_status }}</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="player-debug-section">
+    <h2>Compteurs de carrière</h2>
+    <table class="player-debug-table">
+      <tbody>
+        <tr><th>Essais</th><td>{{ vm.career_touchdowns }}</td></tr>
+        <tr><th>Passes</th><td>{{ vm.career_passes }}</td></tr>
+        <tr><th>Interceptions</th><td>{{ vm.career_interceptions }}</td></tr>
+        <tr><th>Sorties</th><td>{{ vm.career_casualties }}</td></tr>
+        <tr><th>MVP</th><td>{{ vm.career_mvps }}</td></tr>
+        <tr><th>Fautes</th><td>{{ vm.career_fouls }}</td></tr>
+        <tr><th>Blessures persistantes</th><td>{{ vm.career_persistent_injuries }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="player-debug-section">
+    <h2>Blessures ({{ vm.injuries.len() }})</h2>
+    {% if vm.injuries.is_empty() %}
+    <p class="player-debug-empty">Aucune blessure enregistrée.</p>
+    {% else %}
+    <table class="player-debug-table">
+      <thead>
+        <tr><th>Type</th><th>Journée</th><th>Adversaire</th></tr>
+      </thead>
+      <tbody>
+        {% for injury in vm.injuries %}
+        <tr><td>{{ injury.label }}</td><td>{{ injury.round_label }}</td><td>{{ injury.opponent_team_name }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+
+  <div class="player-debug-section">
+    <h2>Ajustements de statistiques ({{ vm.stat_adjustments.len() }})</h2>
+    {% if vm.stat_adjustments.is_empty() %}
+    <p class="player-debug-empty">Aucun ajustement.</p>
+    {% else %}
+    <table class="player-debug-table">
+      <thead>
+        <tr><th>Stat</th><th>Malus</th></tr>
+      </thead>
+      <tbody>
+        {% for adj in vm.stat_adjustments %}
+        <tr><td>{{ adj.stat }}</td><td>{{ adj.malus }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -19,6 +19,14 @@ fn event_type_name(event: &PlayerDomainEvent) -> &'static str {
     match event {
         PlayerDomainEvent::PlayerCreated { .. } => "PlayerCreated",
         PlayerDomainEvent::InitialSkillEarned   { .. } => "InitialSkillEarned",
+        PlayerDomainEvent::TouchdownScored          { .. } => "TouchdownScored",
+        PlayerDomainEvent::PassCompleted            { .. } => "PassCompleted",
+        PlayerDomainEvent::InterceptionMade         { .. } => "InterceptionMade",
+        PlayerDomainEvent::CasualtyInflicted        { .. } => "CasualtyInflicted",
+        PlayerDomainEvent::MatchMvpNamed            { .. } => "MatchMvpNamed",
+        PlayerDomainEvent::FoulCommitted            { .. } => "FoulCommitted",
+        PlayerDomainEvent::InjurySustained          { .. } => "InjurySustained",
+        PlayerDomainEvent::PlayerAvailabilityRestored { .. } => "PlayerAvailabilityRestored",
     }
 }
 
@@ -26,6 +34,14 @@ fn player_and_team_id(event: &PlayerDomainEvent) -> (&str, &str) {
     match event {
         PlayerDomainEvent::PlayerCreated { player_id, team_id, .. } => (&player_id.0, &team_id.0),
         PlayerDomainEvent::InitialSkillEarned   { player_id, team_id, .. } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::TouchdownScored            { player_id, team_id, .. } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::PassCompleted              { player_id, team_id, .. } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::InterceptionMade           { player_id, team_id, .. } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::CasualtyInflicted          { player_id, team_id, .. } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::MatchMvpNamed              { player_id, team_id, .. } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::FoulCommitted              { player_id, team_id, .. } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::InjurySustained            { player_id, team_id, .. } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::PlayerAvailabilityRestored { player_id, team_id, .. } => (&player_id.0, &team_id.0),
     }
 }
 
@@ -125,9 +141,78 @@ pub async fn upsert_player_projection(
             .await
             .map_err(RepositoryError::Database)?;
         }
+
+        PlayerDomainEvent::TouchdownScored { player_id, spp_earned, .. }
+        | PlayerDomainEvent::PassCompleted { player_id, spp_earned, .. }
+        | PlayerDomainEvent::InterceptionMade { player_id, spp_earned, .. }
+        | PlayerDomainEvent::CasualtyInflicted { player_id, spp_earned, .. }
+        | PlayerDomainEvent::MatchMvpNamed { player_id, spp_earned, .. } => {
+            sqlx::query(
+                "UPDATE players_proj SET spp = spp + $1, version = version + 1 WHERE player_id = $2",
+            )
+            .bind(spp_earned.into_inner() as i32)
+            .bind(&player_id.0)
+            .execute(&mut **tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+        }
+
+        PlayerDomainEvent::FoulCommitted { player_id, .. } => {
+            sqlx::query("UPDATE players_proj SET version = version + 1 WHERE player_id = $1")
+                .bind(&player_id.0)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+        }
+
+        PlayerDomainEvent::InjurySustained { player_id, injury_type, .. } => {
+            match injury_status_label(injury_type) {
+                Some(status) => {
+                    sqlx::query(
+                        "UPDATE players_proj SET participation_status = $1, version = version + 1 WHERE player_id = $2",
+                    )
+                    .bind(status)
+                    .bind(&player_id.0)
+                    .execute(&mut **tx)
+                    .await
+                    .map_err(RepositoryError::Database)?;
+                }
+                None => {
+                    sqlx::query("UPDATE players_proj SET version = version + 1 WHERE player_id = $1")
+                        .bind(&player_id.0)
+                        .execute(&mut **tx)
+                        .await
+                        .map_err(RepositoryError::Database)?;
+                }
+            }
+        }
+
+        PlayerDomainEvent::PlayerAvailabilityRestored { player_id, .. } => {
+            sqlx::query(
+                "UPDATE players_proj SET participation_status = 'Available', version = version + 1 WHERE player_id = $1",
+            )
+            .bind(&player_id.0)
+            .execute(&mut **tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+        }
     }
 
     Ok(())
+}
+
+/// Statut de participation projeté pour un type de blessure, miroir de la règle
+/// domaine (`Player::apply`, branche `InjurySustained`). `None` = pas de
+/// changement de statut (Commotion).
+fn injury_status_label(injury: &crate::app::players::domain::match_impact::InjuryType) -> Option<&'static str> {
+    use crate::app::players::domain::match_impact::InjuryType;
+    match injury {
+        InjuryType::Commotion => None,
+        InjuryType::Mort => Some("Dead"),
+        InjuryType::BlessureSerieuse | InjuryType::Amoche | InjuryType::Sequel { .. } => {
+            Some("MissingNextGame")
+        }
+    }
 }
 
 #[async_trait]
