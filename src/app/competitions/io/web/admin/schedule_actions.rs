@@ -1,18 +1,16 @@
 use crate::app::competitions::domain::domain_event::CompetitionsDomainEvent;
-use crate::app::competitions::domain::match_day::{
-    MatchDay, MatchDayName, MatchDayPosition, MatchDayType, Pairing,
-};
-use crate::app::competitions::use_cases::admin::{generate_all_pairings, generate_pairings};
-use crate::app::shared_kernel::common_types::{EventId, MatchId, PairingId, SeasonId};
+use crate::app::competitions::domain::match_day::{MatchDay, MatchDayName, MatchDayPosition, MatchDayType};
+use crate::app::competitions::use_cases::admin::{add_match_use_case, generate_all_pairings, generate_pairings};
+use crate::app::shared_kernel::common_types::{EventId, MatchId, SeasonId};
 use crate::app::shared_kernel::date_string::DateString;
-use crate::app::shared_kernel::team::TeamId;
 use crate::common::services::event_bus::event_bus::EventBus;
 use crate::state::AppState;
 use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use serde::Deserialize;
+use axum::Json;
+use serde::{Deserialize, Serialize};
 
 fn emit_pairing_deleted_events(bus: &EventBus, pairing_ids: &[String]) {
     for pid in pairing_ids {
@@ -33,6 +31,38 @@ fn schedule_changed() -> Response {
         .unwrap()
 }
 
+#[derive(Serialize, Default)]
+struct ScheduleActionResult {
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    skipped_teams: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    skipped_rounds: Vec<String>,
+}
+
+/// Même effet que `schedule_changed()`, en signalant en plus à l'admin les
+/// équipes exclues de l'appariement (non `Enrolled`) et/ou les journées non
+/// régénérées car elles avaient déjà des appariements.
+fn schedule_changed_with_warning(skipped_teams: Vec<String>, skipped_rounds: Vec<String>) -> Response {
+    let mut response = Json(ScheduleActionResult { skipped_teams, skipped_rounds }).into_response();
+    response.headers_mut().insert("HX-Trigger", "scheduleChanged".parse().unwrap());
+    response
+}
+
+#[derive(Serialize)]
+struct ErrorResult {
+    error: String,
+}
+
+fn add_match_refused(names: &[String]) -> Response {
+    let message = format!("Match non créé : équipe(s) non enrôlée(s) pour cette saison : {}", names.join(", "));
+    (StatusCode::UNPROCESSABLE_ENTITY, Json(ErrorResult { error: message })).into_response()
+}
+
+fn pairings_already_exist_refused() -> Response {
+    let message = "Cette journée a déjà des appariements. Videz-les d'abord (\"Vider les matchs\") avant de régénérer.".to_string();
+    (StatusCode::UNPROCESSABLE_ENTITY, Json(ErrorResult { error: message })).into_response()
+}
+
 // ── Generate all pairings ────────────────────────────────────────────────────
 
 pub async fn post_generate_all(
@@ -50,7 +80,7 @@ pub async fn post_generate_all(
     )
     .await
     {
-        Ok(()) => schedule_changed(),
+        Ok(outcome) => schedule_changed_with_warning(outcome.skipped_team_names, outcome.skipped_round_names),
         Err(e) => {
             tracing::error!("post_generate_all: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -328,7 +358,8 @@ pub async fn post_generate_round_pairings(
     )
     .await
     {
-        Ok(()) => schedule_changed(),
+        Ok(outcome) => schedule_changed_with_warning(outcome.skipped_team_names, vec![]),
+        Err(generate_pairings::GenerateError::PairingsAlreadyExist) => pairings_already_exist_refused(),
         Err(e) => {
             tracing::error!("post_generate_round_pairings: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -386,53 +417,23 @@ pub async fn post_add_match(
     State(state): State<AppState>,
     axum::Json(body): axum::Json<AddMatchBody>,
 ) -> Response {
-    let Ok(home) = TeamId::try_new(&body.home_team_id) else {
-        return StatusCode::BAD_REQUEST.into_response();
-    };
-    let Ok(away) = TeamId::try_new(&body.away_team_id) else {
-        return StatusCode::BAD_REQUEST.into_response();
-    };
-    let pairing = Pairing {
-        id: PairingId::new(),
-        home_team_id: home,
-        away_team_id: away,
-    };
-
-    match state
-        .competitions
-        .match_day_repository
-        .save_pairing(&body.round_id, &pairing)
-        .await
+    match add_match_use_case::execute(
+        &body.round_id,
+        &season_id,
+        &competition_id,
+        &space_id,
+        &body.home_team_id,
+        &body.away_team_id,
+        state.competitions.match_day_repository.as_ref(),
+        state.competitions.team_info_port.as_ref(),
+        &state.competitions.event_bus,
+    )
+    .await
     {
-        Ok(()) => {
-            let _ = state.competitions.event_bus.send(
-                CompetitionsDomainEvent::PairingCreated {
-                    event_id: EventId::new(),
-                    pairing_id: pairing.id.to_string(),
-                    competition_id: competition_id.clone(),
-                    season_id: season_id.clone(),
-                    round_id: body.round_id.clone(),
-                    home_team_id: body.home_team_id,
-                    away_team_id: body.away_team_id,
-                    space_id: space_id.clone(),
-                    home_team_name: String::new(),
-                    home_roster_name: String::new(),
-                    home_coach_name: String::new(),
-                    home_logo_url: None,
-                    away_team_name: String::new(),
-                    away_roster_name: String::new(),
-                    away_coach_name: String::new(),
-                    away_logo_url: None,
-                    round_name: String::new(),
-                    round_position: 0,
-                    round_date_start: None,
-                    round_date_end: None,
-                    round_day_type: String::new(),
-                }
-                .to_enveloppe(),
-            );
-            schedule_changed()
-        }
+        Ok(()) => schedule_changed_with_warning(vec![], vec![]),
+        Err(add_match_use_case::AddMatchError::TeamsNotEnrolled(names)) => add_match_refused(&names),
+        Err(add_match_use_case::AddMatchError::RoundNotFound) => StatusCode::NOT_FOUND.into_response(),
+        Err(add_match_use_case::AddMatchError::InvalidTeamId) => StatusCode::BAD_REQUEST.into_response(),
         Err(e) => {
             tracing::error!("post_add_match: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()

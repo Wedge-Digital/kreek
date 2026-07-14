@@ -146,6 +146,7 @@ mod tests {
                 #[async_trait::async_trait]
                 impl crate::app::competitions::ports::ITeamInfoPort for FakeTeamInfoPort {
                     async fn find_enrolled_teams(&self, _: &str) -> Result<Vec<crate::app::competitions::ports::TeamInfoDto>, String> { Ok(vec![]) }
+                    async fn find_team_names(&self, _: &[String]) -> Result<Vec<crate::app::competitions::ports::TeamInfoDto>, String> { Ok(vec![]) }
                 }
                 struct FakeMatchDayRepo;
                 #[async_trait::async_trait]

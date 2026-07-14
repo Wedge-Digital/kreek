@@ -22,7 +22,8 @@
               hx-confirm="Vider tous les matchs de toutes les journées ?">Vider tous les matchs</button>
       <button class="btn-primary-sm"
               hx-post="{{ app_routes.competitions.admin_schedule_generate_all(space_id, competition_id, season_id) }}"
-              hx-swap="none">Générer toutes les rencontres</button>
+              hx-swap="none"
+              hx-on::after-request="window.handleScheduleActionResponse(event.detail.xhr)">Générer toutes les rencontres</button>
     </div>
   </div>
 </div>
@@ -50,4 +51,31 @@
         document.body.dataset.activeRoundId = roundId;
     });
 })();
+
+// Partagé avec schedule-round-detail.html (widget enfant chargé via HTMX) —
+// affiche à l'admin le résultat d'une action de planification : erreur de
+// refus (ex. journée déjà pourvue d'appariements), ou avertissement sur les
+// équipes/journées ignorées silencieusement lors d'un appariement en masse.
+// `xhrLike` : { status, responseText } — accepte aussi bien un vrai XMLHttpRequest
+// (via hx-on::after-request) qu'un objet construit à la main depuis un fetch().
+// Retourne true si l'action a réussi (le planning a pu changer), false sinon.
+window.handleScheduleActionResponse = function (xhrLike) {
+    var data = {};
+    try { data = JSON.parse(xhrLike.responseText || '{}'); } catch (e) { /* corps non-JSON */ }
+
+    if (xhrLike.status >= 400) {
+        alert(data.error || 'Une erreur est survenue.');
+        return false;
+    }
+
+    var messages = [];
+    if (data.skipped_teams && data.skipped_teams.length) {
+        messages.push("Équipe(s) non enrôlée(s) ignorée(s) : " + data.skipped_teams.join(', '));
+    }
+    if (data.skipped_rounds && data.skipped_rounds.length) {
+        messages.push("Journée(s) déjà pourvue(s) d'appariements, non régénérée(s) : " + data.skipped_rounds.join(', '));
+    }
+    if (messages.length) alert(messages.join('\n'));
+    return true;
+};
 </script>

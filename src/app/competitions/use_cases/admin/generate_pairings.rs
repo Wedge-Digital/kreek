@@ -4,6 +4,9 @@ use crate::app::competitions::domain::match_day::generate_round_pairings;
 use crate::app::competitions::domain::match_day::{MatchDay, Pairing};
 use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
 use crate::app::competitions::ports::{ITeamInfoPort, TeamInfoDto};
+use crate::app::competitions::use_cases::admin::team_enrollment::{
+    filter_enrolled_team_ids, load_enrolled_teams, resolve_team_names,
+};
 use crate::app::shared_kernel::common_types::{EventId, PairingId};
 use crate::app::shared_kernel::team::TeamId;
 use crate::common::services::event_bus::event_bus::EventBus;
@@ -13,8 +16,17 @@ use std::collections::{HashMap, HashSet};
 pub enum GenerateError {
     MatchDayNotFound,
     IsRestDay,
+    PairingsAlreadyExist,
     NoGroups,
     Repository(String),
+}
+
+/// `skipped_team_names` : équipes présentes dans un groupe/poule mais non
+/// `Enrolled` pour la saison — jamais appariées (BR : pas de pairing pour une
+/// équipe non enrôlée, donc pas d'event `PairingCreated` la concernant).
+#[derive(Debug, Default)]
+pub struct GenerateOutcome {
+    pub skipped_team_names: Vec<String>,
 }
 
 pub async fn execute(
@@ -26,7 +38,7 @@ pub async fn execute(
     group_repo: &dyn IGroupRepository,
     team_port: &dyn ITeamInfoPort,
     event_bus: &EventBus,
-) -> Result<(), GenerateError> {
+) -> Result<GenerateOutcome, GenerateError> {
     let match_day = match_day_repo
         .find_by_id(match_day_id)
         .await
@@ -36,99 +48,94 @@ pub async fn execute(
     if match_day.is_rest() {
         return Err(GenerateError::IsRestDay);
     }
-
-    let team_display = load_display_map(season_id, team_port).await?;
-
-    let groups = group_repo
-        .find_groups(season_id)
-        .await
-        .map_err(|e| GenerateError::Repository(e.to_string()))?;
-
-    let groups = if groups.is_empty() {
-        if team_display.is_empty() {
-            return Err(GenerateError::NoGroups);
-        }
-        vec![GroupWithTeams {
-            group_id: "default".to_string(),
-            group_name: "Toutes les équipes".to_string(),
-            position: 0,
-            team_ids: team_display.keys().cloned().collect(),
-        }]
-    } else {
-        groups
-    };
-
-    let existing_pairings: Vec<String> = match_day
-        .pairings
-        .iter()
-        .map(|p| p.id.to_string())
-        .collect();
-
-    match_day_repo
-        .clear_pairings(match_day_id)
-        .await
-        .map_err(|e| GenerateError::Repository(e.to_string()))?;
-
-    for pid in &existing_pairings {
-        let _ = event_bus.send(
-            CompetitionsDomainEvent::PairingDeleted {
-                event_id: EventId::new(),
-                pairing_id: pid.clone(),
-            }
-            .to_enveloppe(),
-        );
+    if !match_day.pairings.is_empty() {
+        return Err(GenerateError::PairingsAlreadyExist);
     }
+
+    let team_display = load_enrolled_teams(season_id, team_port)
+        .await
+        .map_err(GenerateError::Repository)?;
+    let groups = load_groups(season_id, group_repo, &team_display).await?;
 
     let all_days = match_day_repo
         .find_by_season(season_id)
         .await
         .map_err(|e| GenerateError::Repository(e.to_string()))?;
-
     let mut already_played = build_played_set(&all_days, match_day_id);
 
+    let mut skipped_team_ids: Vec<String> = Vec::new();
     for group in &groups {
-        let pairings = generate_round_pairings(&group.team_ids, &already_played);
-
-        for (home, away) in pairings {
-            let pairing = Pairing {
-                id: PairingId::new(),
-                home_team_id: TeamId::try_new(&home).expect("valid team id"),
-                away_team_id: TeamId::try_new(&away).expect("valid team id"),
-            };
-            match_day_repo
-                .save_pairing(match_day_id, &pairing)
-                .await
-                .map_err(|e| GenerateError::Repository(e.to_string()))?;
-
-            emit_pairing_created(
-                &home,
-                &away,
-                &pairing,
-                competition_id,
-                season_id,
-                space_id,
-                &match_day,
-                &team_display,
-                event_bus,
-            );
-
-            let norm = if home < away { (home, away) } else { (away, home) };
-            already_played.insert(norm);
-        }
+        let (filtered_ids, skipped) = filter_enrolled_team_ids(&group.team_ids, &team_display);
+        skipped_team_ids.extend(skipped);
+        generate_and_save_group_pairings(
+            &filtered_ids, &mut already_played, match_day_id, competition_id, season_id,
+            space_id, &match_day, &team_display, match_day_repo, event_bus,
+        )
+        .await?;
     }
 
-    Ok(())
+    let skipped_team_names = resolve_team_names(skipped_team_ids, team_port).await;
+    Ok(GenerateOutcome { skipped_team_names })
 }
 
-async fn load_display_map(
+async fn load_groups(
     season_id: &str,
-    team_port: &dyn ITeamInfoPort,
-) -> Result<HashMap<String, TeamInfoDto>, GenerateError> {
-    let enrolled = team_port
-        .find_enrolled_teams(season_id)
+    group_repo: &dyn IGroupRepository,
+    team_display: &HashMap<String, TeamInfoDto>,
+) -> Result<Vec<GroupWithTeams>, GenerateError> {
+    let groups = group_repo
+        .find_groups(season_id)
         .await
-        .map_err(GenerateError::Repository)?;
-    Ok(enrolled.into_iter().map(|t| (t.team_id.clone(), t)).collect())
+        .map_err(|e| GenerateError::Repository(e.to_string()))?;
+
+    if !groups.is_empty() {
+        return Ok(groups);
+    }
+    if team_display.is_empty() {
+        return Err(GenerateError::NoGroups);
+    }
+    Ok(vec![GroupWithTeams {
+        group_id: "default".to_string(),
+        group_name: "Toutes les équipes".to_string(),
+        position: 0,
+        team_ids: team_display.keys().cloned().collect(),
+    }])
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn generate_and_save_group_pairings(
+    team_ids: &[String],
+    already_played: &mut HashSet<(String, String)>,
+    match_day_id: &str,
+    competition_id: &str,
+    season_id: &str,
+    space_id: &str,
+    match_day: &MatchDay,
+    team_display: &HashMap<String, TeamInfoDto>,
+    match_day_repo: &dyn IMatchDayRepository,
+    event_bus: &EventBus,
+) -> Result<(), GenerateError> {
+    let pairings = generate_round_pairings(team_ids, already_played);
+
+    for (home, away) in pairings {
+        let pairing = Pairing {
+            id: PairingId::new(),
+            home_team_id: TeamId::try_new(&home).expect("valid team id"),
+            away_team_id: TeamId::try_new(&away).expect("valid team id"),
+        };
+        match_day_repo
+            .save_pairing(match_day_id, &pairing)
+            .await
+            .map_err(|e| GenerateError::Repository(e.to_string()))?;
+
+        emit_pairing_created(
+            &home, &away, &pairing, competition_id, season_id, space_id, match_day, team_display, event_bus,
+        );
+
+        let norm = if home < away { (home, away) } else { (away, home) };
+        already_played.insert(norm);
+    }
+    Ok(())
 }
 
 fn build_played_set(days: &[MatchDay], exclude_id: &str) -> HashSet<(String, String)> {
@@ -158,15 +165,10 @@ fn emit_pairing_created(
     team_display: &HashMap<String, TeamInfoDto>,
     event_bus: &EventBus,
 ) {
-    let empty = TeamInfoDto {
-        team_id: String::new(),
-        team_name: String::new(),
-        coach_name: String::new(),
-        roster_name: String::new(),
-        logo_url: None,
-    };
-    let home_info = team_display.get(home).unwrap_or(&empty);
-    let away_info = team_display.get(away).unwrap_or(&empty);
+    // Invariant garanti par le filtrage fait avant l'appel à generate_round_pairings :
+    // home/away ne peuvent être ici que des ids déjà présents dans team_display.
+    let home_info = team_display.get(home).expect("home team filtré comme enrôlé avant appariement");
+    let away_info = team_display.get(away).expect("away team filtré comme enrôlé avant appariement");
 
     let _ = event_bus.send(
         CompetitionsDomainEvent::PairingCreated {
@@ -194,4 +196,87 @@ fn emit_pairing_created(
         }
         .to_enveloppe(),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::competitions::domain::group_repository_port::GroupRepositoryError;
+    use crate::app::competitions::domain::match_day::{MatchDayName, MatchDayPosition, MatchDayType};
+    use crate::app::competitions::domain::match_day_repository_port::{MatchDayRepositoryError, PairingDisplayDto};
+    use crate::app::shared_kernel::common_types::{MatchId, SeasonId};
+    use async_trait::async_trait;
+
+    struct FakeMatchDayRepo(MatchDay);
+    #[async_trait]
+    impl IMatchDayRepository for FakeMatchDayRepo {
+        async fn find_by_season(&self, _: &str) -> Result<Vec<MatchDay>, MatchDayRepositoryError> { Ok(vec![self.0.clone()]) }
+        async fn find_by_id(&self, _: &str) -> Result<Option<MatchDay>, MatchDayRepositoryError> { Ok(Some(self.0.clone())) }
+        async fn save_match_day(&self, _: &MatchDay) -> Result<(), MatchDayRepositoryError> { Ok(()) }
+        async fn delete_match_day(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
+        async fn save_pairing(&self, _: &str, _: &Pairing) -> Result<(), MatchDayRepositoryError> { Ok(()) }
+        async fn delete_pairing(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
+        async fn clear_pairings(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
+        async fn clear_all_pairings(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
+        async fn ensure_match_days_from_structure(&self, _: &str, _: &[(String, String, String, Option<String>, Option<String>)]) -> Result<(), MatchDayRepositoryError> { Ok(()) }
+        async fn list_resultats(&self, _: &str, _: Option<i32>, _: u32) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> { Ok(vec![]) }
+        async fn list_calendrier(&self, _: &str, _: Option<i32>, _: u32) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> { Ok(vec![]) }
+    }
+
+    struct FakeGroupRepo;
+    #[async_trait]
+    impl IGroupRepository for FakeGroupRepo {
+        async fn find_groups(&self, _: &str) -> Result<Vec<GroupWithTeams>, GroupRepositoryError> { Ok(vec![]) }
+        async fn save_assignments(&self, _: &[(String, String)]) -> Result<(), GroupRepositoryError> { Ok(()) }
+        async fn reset_assignments(&self, _: &str) -> Result<(), GroupRepositoryError> { Ok(()) }
+        async fn assign_team(&self, _: &str, _: &str) -> Result<(), GroupRepositoryError> { Ok(()) }
+        async fn unassign_team(&self, _: &str) -> Result<(), GroupRepositoryError> { Ok(()) }
+        async fn ensure_groups_from_structure(&self, _: &str, _: &[(String, String)]) -> Result<(), GroupRepositoryError> { Ok(()) }
+    }
+
+    struct FakeTeamInfoPort;
+    #[async_trait]
+    impl ITeamInfoPort for FakeTeamInfoPort {
+        async fn find_enrolled_teams(&self, _: &str) -> Result<Vec<TeamInfoDto>, String> { Ok(vec![]) }
+        async fn find_team_names(&self, _: &[String]) -> Result<Vec<TeamInfoDto>, String> { Ok(vec![]) }
+    }
+
+    fn match_day_with_pairings(pairings: Vec<Pairing>) -> MatchDay {
+        MatchDay {
+            id: MatchId::new(), season_id: SeasonId::new(),
+            name: MatchDayName::try_new("Journée 1".to_string()).unwrap(),
+            day_type: MatchDayType::FixedDate, date_start: None, date_end: None,
+            position: MatchDayPosition::try_new(0).unwrap(), pairings,
+        }
+    }
+
+    #[tokio::test]
+    async fn refuses_when_match_day_already_has_pairings() {
+        let existing = Pairing {
+            id: PairingId::new(),
+            home_team_id: TeamId::try_new("01ARZ3NDEKTSV4RRFFQ69G5FAV").unwrap(),
+            away_team_id: TeamId::try_new("01ARZ3NDEKTSV4RRFFQ69G5FAW").unwrap(),
+        };
+        let match_day_repo = FakeMatchDayRepo(match_day_with_pairings(vec![existing]));
+        let group_repo = FakeGroupRepo;
+        let team_port = FakeTeamInfoPort;
+        let event_bus = crate::common::services::event_bus::event_bus::new_bus();
+
+        let result = execute("d1", "s1", "c1", "sp1", &match_day_repo, &group_repo, &team_port, &event_bus).await;
+
+        assert!(matches!(result, Err(GenerateError::PairingsAlreadyExist)));
+    }
+
+    #[tokio::test]
+    async fn proceeds_when_match_day_has_no_pairings() {
+        let match_day_repo = FakeMatchDayRepo(match_day_with_pairings(vec![]));
+        let group_repo = FakeGroupRepo;
+        let team_port = FakeTeamInfoPort;
+        let event_bus = crate::common::services::event_bus::event_bus::new_bus();
+
+        let result = execute("d1", "s1", "c1", "sp1", &match_day_repo, &group_repo, &team_port, &event_bus).await;
+
+        // pas de groupes ni d'équipes enrôlées -> NoGroups, mais surtout PAS PairingsAlreadyExist
+        assert!(matches!(result, Err(GenerateError::NoGroups)));
+    }
 }

@@ -33,4 +33,20 @@ impl ITeamInfoPort for TeamInfoAdapter {
             })
             .collect())
     }
+
+    async fn find_team_names(&self, team_ids: &[String]) -> Result<Vec<TeamInfoDto>, String> {
+        let mut out = Vec::with_capacity(team_ids.len());
+        for id in team_ids {
+            if let Ok(Some(team)) = self.team_repo.find_by_id(id).await {
+                out.push(TeamInfoDto {
+                    team_id:     id.clone(),
+                    team_name:   team.name.to_string(),
+                    coach_name:  team.coach_name.clone(),
+                    roster_name: team.roster_name.to_string(),
+                    logo_url:    team.logo_url.clone(),
+                });
+            }
+        }
+        Ok(out)
+    }
 }
