@@ -1,5 +1,6 @@
 use crate::app::players::domain::match_impact::{InjuryType, MatchContext, MatchReportId, RoundId, SppEarned, StatKind};
 use crate::app::players::domain::player::{Player, PlayerId, TeamId};
+use crate::app::players::io::app_events::team_match_concluded_listener::handle_team_match_concluded;
 use crate::app::players::ports::IPlayerRepository;
 use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::shared_kernel::app_events::player_match_impact_app_events::{
@@ -39,9 +40,14 @@ async fn handle_event(
     player_repo: &dyn IPlayerRepository,
     ref_repo: &dyn IReferenceRepository,
 ) {
-    // TeamMatchConcluded est traité par team_match_concluded_listener.
+    // Traité dans cette même tâche séquentielle (et non par un listener à part) pour
+    // garantir que TeamMatchConcluded n'est jamais appliqué avant les events d'action
+    // du même match — sinon les deux tâches se disputent la même version du joueur.
+    if let PlayerMatchImpactAppEvent::TeamMatchConcluded { .. } = &app_event {
+        return dispatch_team_match_concluded(app_event, player_repo).await;
+    }
+
     let (context_payload, player) = match &app_event {
-        PlayerMatchImpactAppEvent::TeamMatchConcluded { .. } => return,
         PlayerMatchImpactAppEvent::PlayerPerformedTouchdown(c)
         | PlayerMatchImpactAppEvent::PlayerPerformedPass(c)
         | PlayerMatchImpactAppEvent::PlayerPerformedInterception(c)
@@ -51,6 +57,7 @@ async fn handle_event(
         PlayerMatchImpactAppEvent::PlayerInjured { context, .. } => {
             (context.clone(), load_player(player_repo, &context.player_id).await)
         }
+        PlayerMatchImpactAppEvent::TeamMatchConcluded { .. } => unreachable!("traité plus haut"),
     };
 
     let Some(player) = player else {
@@ -93,6 +100,27 @@ async fn handle_event(
             context_payload.player_id
         );
     }
+}
+
+async fn dispatch_team_match_concluded(
+    app_event: PlayerMatchImpactAppEvent,
+    player_repo: &dyn IPlayerRepository,
+) {
+    let PlayerMatchImpactAppEvent::TeamMatchConcluded {
+        team_id, match_report_id, round_id, round_label,
+        opponent_team_id, opponent_team_name, team_score, opponent_score,
+    } = app_event
+    else {
+        return;
+    };
+    let context = MatchContext {
+        match_report_id: MatchReportId(match_report_id),
+        round_id:        RoundId(round_id),
+        round_label,
+        opponent_team_id:   TeamId(opponent_team_id),
+        opponent_team_name,
+    };
+    handle_team_match_concluded(player_repo, &team_id, context, team_score, opponent_score).await;
 }
 
 async fn load_player(player_repo: &dyn IPlayerRepository, player_id: &str) -> Option<Player> {

@@ -1,8 +1,8 @@
 use crate::app::players::domain::events::PlayerDomainEvent;
 use crate::app::players::domain::match_impact::{
     CasualtyCount, FoulCount, InterceptionCount, InjuryType, MatchContext, MatchReportId,
-    MvpCount, PassCount, PersistentInjuryCount, PlayerInjuryRecord, PlayerParticipationStatus,
-    SppEarned, StatAdjustment, TouchdownCount,
+    MatchesPlayedCount, MvpCount, PassCount, PersistentInjuryCount, PlayerInjuryRecord,
+    PlayerParticipationStatus, SppEarned, StatAdjustment, TouchdownCount,
 };
 use crate::app::players::domain::value_objects::{
     JerseyVo, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
@@ -66,6 +66,7 @@ pub struct Player {
     pub career_persistent_injuries: PersistentInjuryCount,
     pub injuries:                   Vec<PlayerInjuryRecord>,
     pub stat_adjustments:           Vec<StatAdjustment>,
+    pub matches_played:             MatchesPlayedCount,
 
     /// Version courante de l'agrégat (nombre d'events déjà appliqués) — permet à
     /// l'appelant de connaître la prochaine version à utiliser pour `append()`,
@@ -114,6 +115,7 @@ impl Player {
                     career_persistent_injuries: PersistentInjuryCount::default(),
                     injuries:                   vec![],
                     stat_adjustments:           vec![],
+                    matches_played:             MatchesPlayedCount::default(),
                     version:                    1,
                 })
             }
@@ -207,6 +209,12 @@ impl Player {
                 player.version += 1;
                 Some(player)
             }
+            PlayerDomainEvent::MatchConcluded { .. } => {
+                let mut player = current?;
+                player.matches_played.0 += 1;
+                player.version += 1;
+                Some(player)
+            }
         }
     }
 
@@ -251,6 +259,11 @@ impl Player {
     pub fn restore_availability(&self, match_report_id: MatchReportId) -> PlayerDomainEvent {
         PlayerDomainEvent::PlayerAvailabilityRestored {
             player_id: self.id.clone(), team_id: self.team_id.clone(), match_report_id,
+        }
+    }
+    pub fn record_match_concluded(&self, context: MatchContext, team_score: u8, opponent_score: u8) -> PlayerDomainEvent {
+        PlayerDomainEvent::MatchConcluded {
+            player_id: self.id.clone(), team_id: self.team_id.clone(), context, team_score, opponent_score,
         }
     }
 }
@@ -387,5 +400,24 @@ mod match_impact_tests {
         let event = player.restore_availability(MatchReportId("mr2".into()));
         let player = Player::apply(Some(player), &event).unwrap();
         assert_eq!(player.participation_status, PlayerParticipationStatus::Dead);
+    }
+
+    #[test]
+    fn match_concluded_increments_matches_played() {
+        let player = sample_player();
+        assert_eq!(player.matches_played.0, 0);
+        let event = player.record_match_concluded(sample_context(), 2, 1);
+        let player = Player::apply(Some(player), &event).unwrap();
+        assert_eq!(player.matches_played.0, 1);
+    }
+
+    #[test]
+    fn match_concluded_does_not_affect_other_counters() {
+        let player = sample_player();
+        let event = player.record_match_concluded(sample_context(), 2, 1);
+        let player = Player::apply(Some(player), &event).unwrap();
+        assert_eq!(player.career_touchdowns.0, 0);
+        assert_eq!(player.spp.0, 0);
+        assert_eq!(player.participation_status, PlayerParticipationStatus::Available);
     }
 }

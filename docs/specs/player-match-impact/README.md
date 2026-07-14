@@ -20,8 +20,14 @@ périmètre** de cette feature.
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
 | player-report-events | ➖ (pas de front) | ➖ (pas de widget/route HTTP, traité dans 07) | ✅ | ➖ (pas de use case dédié, méthodes domaine appelées directement par les listeners) | ✅ | ✅ | ✅ |
+| player-detail-page | ✅ (page unique, pas de widgets) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 *(DTOs = contrats des `PlayerReportEvents`, phase 4, figés dans la discussion précédant `06-domaine.md` ; Domaine = phase 6, validé.)*
+
+`player-detail-page` câble la maquette `app-player-detail-readonly.html` sur
+données réelles (voir `player-detail-page/02-07-conception.md`) — mode
+Customisation et dépense de SPP en saison restent hors scope, boutons présents
+mais non câblés.
 
 ## Règles métier transverses (identifiées en phase 1-6)
 

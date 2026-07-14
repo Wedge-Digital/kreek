@@ -84,4 +84,12 @@ pub trait IPlayerRepository: Send + Sync {
         &self,
         team_id: &TeamId,
     ) -> Result<Vec<Player>, RepositoryError>;
+
+    /// Events bruts d'un joueur, ordonnés (version ASC) — contrairement à
+    /// `find_by_id` (agrégat hydraté final), nécessaire pour reconstruire un
+    /// historique à la lecture (ex. historique de matchs, `match_history_service`).
+    async fn find_events_by_id(
+        &self,
+        player_id: &PlayerId,
+    ) -> Result<Vec<PlayerDomainEvent>, RepositoryError>;
 }

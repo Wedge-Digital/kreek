@@ -36,8 +36,14 @@ pub enum PlayerMatchImpactAppEvent {
         injury_type: InjuryTypePayload,
     },
     TeamMatchConcluded {
-        team_id:         String,
-        match_report_id: String,
+        team_id:            String,
+        match_report_id:    String,
+        round_id:           String,
+        round_label:        String,
+        opponent_team_id:   String,
+        opponent_team_name: String,
+        team_score:         u8,
+        opponent_score:     u8,
     },
 }
 

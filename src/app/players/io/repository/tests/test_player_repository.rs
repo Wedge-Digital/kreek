@@ -118,3 +118,38 @@ async fn find_by_team_id_returns_only_missing_next_game_players_for_restoration(
         .count();
     assert_eq!(still_missing, 0);
 }
+
+#[sqlx::test]
+async fn append_match_concluded_increments_matches_played_and_projection_version(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool);
+    let player_id = PlayerId("p4".into());
+    let team_id = TeamId("t1".into());
+    let player = seed_player(&repo, &player_id, &team_id).await;
+
+    let event = player.record_match_concluded(sample_context(), 2, 1);
+    repo.append(&player_id, &team_id, &event, 2).await.unwrap();
+
+    let reloaded = repo.find_by_id(&player_id).await.unwrap().unwrap();
+    assert_eq!(reloaded.matches_played.0, 1);
+    assert_eq!(reloaded.version, 2);
+}
+
+#[sqlx::test]
+async fn find_events_by_id_returns_raw_events_in_order(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool);
+    let player_id = PlayerId("p5".into());
+    let team_id = TeamId("t1".into());
+    let player = seed_player(&repo, &player_id, &team_id).await;
+
+    let touchdown = player.record_touchdown(sample_context(), SppEarned::try_new(3).unwrap());
+    repo.append(&player_id, &team_id, &touchdown, 2).await.unwrap();
+    let player = Player::from_events(&repo.find_events_by_id(&player_id).await.unwrap()).unwrap();
+    let concluded = player.record_match_concluded(sample_context(), 2, 1);
+    repo.append(&player_id, &team_id, &concluded, 3).await.unwrap();
+
+    let events = repo.find_events_by_id(&player_id).await.unwrap();
+    assert_eq!(events.len(), 3);
+    assert!(matches!(events[0], PlayerDomainEvent::PlayerCreated { .. }));
+    assert!(matches!(events[1], PlayerDomainEvent::TouchdownScored { .. }));
+    assert!(matches!(events[2], PlayerDomainEvent::MatchConcluded { .. }));
+}

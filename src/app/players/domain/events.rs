@@ -84,4 +84,11 @@ pub enum PlayerDomainEvent {
         team_id:         TeamId,
         match_report_id: MatchReportId,
     },
+    MatchConcluded {
+        player_id:      PlayerId,
+        team_id:        TeamId,
+        context:        MatchContext,
+        team_score:     u8,
+        opponent_score: u8,
+    },
 }

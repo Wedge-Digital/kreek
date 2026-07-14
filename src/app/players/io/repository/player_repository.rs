@@ -27,6 +27,7 @@ fn event_type_name(event: &PlayerDomainEvent) -> &'static str {
         PlayerDomainEvent::FoulCommitted            { .. } => "FoulCommitted",
         PlayerDomainEvent::InjurySustained          { .. } => "InjurySustained",
         PlayerDomainEvent::PlayerAvailabilityRestored { .. } => "PlayerAvailabilityRestored",
+        PlayerDomainEvent::MatchConcluded { .. } => "MatchConcluded",
     }
 }
 
@@ -42,6 +43,7 @@ fn player_and_team_id(event: &PlayerDomainEvent) -> (&str, &str) {
         PlayerDomainEvent::FoulCommitted              { player_id, team_id, .. } => (&player_id.0, &team_id.0),
         PlayerDomainEvent::InjurySustained            { player_id, team_id, .. } => (&player_id.0, &team_id.0),
         PlayerDomainEvent::PlayerAvailabilityRestored { player_id, team_id, .. } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::MatchConcluded { player_id, team_id, .. } => (&player_id.0, &team_id.0),
     }
 }
 
@@ -196,6 +198,13 @@ pub async fn upsert_player_projection(
             .await
             .map_err(RepositoryError::Database)?;
         }
+        PlayerDomainEvent::MatchConcluded { player_id, .. } => {
+            sqlx::query("UPDATE players_proj SET version = version + 1 WHERE player_id = $1")
+                .bind(&player_id.0)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+        }
     }
 
     Ok(())
@@ -255,6 +264,25 @@ impl IPlayerRepository for PgPlayerRepository {
             .map_err(RepositoryError::Deserialization)?;
 
         Ok(Player::from_events(&events))
+    }
+
+    async fn find_events_by_id(
+        &self,
+        player_id: &PlayerId,
+    ) -> Result<Vec<PlayerDomainEvent>, RepositoryError> {
+        let rows = sqlx::query(
+            "SELECT payload FROM players_events
+             WHERE player_id = $1 ORDER BY version ASC",
+        )
+        .bind(&player_id.0)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+
+        rows.iter()
+            .map(|r| serde_json::from_value(r.get::<serde_json::Value, _>("payload")))
+            .collect::<Result<_, _>>()
+            .map_err(RepositoryError::Deserialization)
     }
 
     async fn find_by_team_id(

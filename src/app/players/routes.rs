@@ -2,6 +2,7 @@ pub mod path {
     pub const PLAYERS_BY_TEAM_WIDGET: &str = "/app/{space_id}/players/by-team/{team_id}/widget";
     pub const MATCH_PLAYER_SELECTOR: &str = "/app/{space_id}/players/teams/{team_id}/match-selector";
     pub const PLAYER_DEBUG: &str = "/app/{space_id}/players/{player_id}/debug";
+    pub const PLAYER_DETAIL: &str = "/app/{space_id}/players/{player_id}/detail";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -22,6 +23,12 @@ impl Routes {
 
     pub fn player_debug(&self, space_id: &str, player_id: &str) -> String {
         path::PLAYER_DEBUG
+            .replace("{space_id}", space_id)
+            .replace("{player_id}", player_id)
+    }
+
+    pub fn player_detail(&self, space_id: &str, player_id: &str) -> String {
+        path::PLAYER_DETAIL
             .replace("{space_id}", space_id)
             .replace("{player_id}", player_id)
     }

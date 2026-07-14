@@ -121,17 +121,32 @@ async fn publish_player_impact_events(
         let _ = app_event_bus.send(event.to_enveloppe());
     }
 
+    let home_score = count_touchdowns(&p.home_actions);
+    let away_score = count_touchdowns(&p.away_actions);
+
     let _ = app_event_bus.send(
         PlayerMatchImpactAppEvent::TeamMatchConcluded {
-            team_id:         p.home_team_id.to_string(),
-            match_report_id: p.id.to_string(),
+            team_id:            p.home_team_id.to_string(),
+            match_report_id:    home_ctx_base.match_report_id.clone(),
+            round_id:           home_ctx_base.round_id.clone(),
+            round_label:        home_ctx_base.round_label.clone(),
+            opponent_team_id:   home_ctx_base.opponent_team_id.clone(),
+            opponent_team_name: home_ctx_base.opponent_team_name.clone(),
+            team_score:         home_score,
+            opponent_score:     away_score,
         }
         .to_enveloppe(),
     );
     let _ = app_event_bus.send(
         PlayerMatchImpactAppEvent::TeamMatchConcluded {
-            team_id:         p.away_team_id.to_string(),
-            match_report_id: p.id.to_string(),
+            team_id:            p.away_team_id.to_string(),
+            match_report_id:    away_ctx_base.match_report_id.clone(),
+            round_id:           away_ctx_base.round_id.clone(),
+            round_label:        away_ctx_base.round_label.clone(),
+            opponent_team_id:   away_ctx_base.opponent_team_id.clone(),
+            opponent_team_name: away_ctx_base.opponent_team_name.clone(),
+            team_score:         away_score,
+            opponent_score:     home_score,
         }
         .to_enveloppe(),
     );

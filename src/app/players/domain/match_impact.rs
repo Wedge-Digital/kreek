@@ -85,3 +85,5 @@ pub struct MvpCount(pub u16);
 pub struct FoulCount(pub u16);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct PersistentInjuryCount(pub u16);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct MatchesPlayedCount(pub u16);

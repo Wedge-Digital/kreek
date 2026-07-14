@@ -1,7 +1,9 @@
 //! Test d'intégration bout-en-bout du pipeline "impact des rapports de match" côté
-//! `players` : publication d'app events réels sur un vrai `EventBus`, écoutés par
-//! les vrais listeners (`player_match_impact_listener`, `team_match_concluded_listener`)
-//! tournant en tâches de fond contre une vraie `PgPool` — pas de mock, pas de navigateur
+//! `players` : publication d'app events réels sur un vrai `EventBus`, écoutés par le
+//! vrai listener (`player_match_impact_listener`, qui traite aussi `TeamMatchConcluded`
+//! en délégant à `team_match_concluded_listener::handle_team_match_concluded` dans la
+//! même tâche séquentielle) tournant en tâche de fond contre une vraie `PgPool` — pas
+//! de mock, pas de navigateur
 //! (feature 100% backend, cf. `docs/specs/player-match-impact/player-report-events/07-integration.md` §7).
 //!
 //! Portée assumée : ce test exerce le pipeline `app_event_bus → players`, qui est la
@@ -17,9 +19,10 @@ use crate::app::players::domain::events::PlayerDomainEvent;
 use crate::app::players::domain::match_impact::PlayerParticipationStatus;
 use crate::app::players::domain::player::{PlayerId, Spp, TeamId, ValueKpo};
 use crate::app::players::domain::value_objects::{PositionNameVo, RosterLineId};
-use crate::app::players::io::app_events::{player_match_impact_listener, team_match_concluded_listener};
+use crate::app::players::io::app_events::player_match_impact_listener;
 use crate::app::players::io::repository::player_repository::PgPlayerRepository;
 use crate::app::players::ports::IPlayerRepository;
+use crate::app::players::use_cases::match_history_service::build_match_history;
 use crate::app::references::io::repository::in_memory_reference_repository::InMemoryReferenceRepository;
 use crate::app::shared_kernel::app_events::player_match_impact_app_events::{
     InjuryTypePayload, PlayerMatchContextPayload, PlayerMatchImpactAppEvent,
@@ -79,7 +82,6 @@ async fn full_pipeline_credits_spp_and_records_injury_then_restores_availability
     let app_event_bus = new_bus();
 
     player_match_impact_listener::init(&app_event_bus, player_repo.clone(), ref_repo);
-    team_match_concluded_listener::init(&app_event_bus, player_repo.clone());
 
     seed_player(player_repo.as_ref(), "scorer", "t1").await;
     seed_player(player_repo.as_ref(), "injured", "t1").await;
@@ -130,8 +132,14 @@ async fn full_pipeline_credits_spp_and_records_injury_then_restores_availability
     // ── TeamMatchConcluded : restaure la disponibilité du joueur blessé ───────
     let _ = app_event_bus.send(
         PlayerMatchImpactAppEvent::TeamMatchConcluded {
-            team_id:         "t1".into(),
-            match_report_id: "mr2".into(),
+            team_id:            "t1".into(),
+            match_report_id:    "mr2".into(),
+            round_id:           "r2".into(),
+            round_label:        "Journée 6".into(),
+            opponent_team_id:   "opponent2".into(),
+            opponent_team_name: "Green Machine".into(),
+            team_score:         1,
+            opponent_score:     1,
         }
         .to_enveloppe(),
     );
@@ -152,4 +160,60 @@ async fn full_pipeline_credits_spp_and_records_injury_then_restores_availability
     let injured = player_repo.find_by_id(&PlayerId("injured".into())).await.unwrap().unwrap();
     assert_eq!(injured.participation_status, PlayerParticipationStatus::Available);
     assert_eq!(injured.career_persistent_injuries.0, 1); // conservé après restauration
+}
+
+/// Régression : avant le passage à un listener unique et séquentiel, l'event
+/// d'action et `TeamMatchConcluded` du même match étaient traités par deux tâches
+/// concurrentes se disputant la même version de joueur — l'une des deux perdait
+/// la course et son event était silencieusement abandonné, laissant la carte
+/// d'historique de match sans journée ni adversaire. Ici les deux events sont
+/// envoyés dos à dos, sans attente entre eux, pour reproduire ce scénario.
+#[sqlx::test]
+async fn action_and_team_match_concluded_sent_back_to_back_both_land_in_history(pool: PgPool) {
+    let player_repo: Arc<dyn IPlayerRepository> = Arc::new(PgPlayerRepository::new(pool));
+    let ref_repo = Arc::new(InMemoryReferenceRepository::load());
+    let app_event_bus = new_bus();
+
+    player_match_impact_listener::init(&app_event_bus, player_repo.clone(), ref_repo);
+    seed_player(player_repo.as_ref(), "scorer", "t1").await;
+
+    let mut mr3_context = context("scorer");
+    mr3_context.match_report_id = "mr3".into();
+    let _ = app_event_bus.send(
+        PlayerMatchImpactAppEvent::PlayerPerformedTouchdown(mr3_context).to_enveloppe(),
+    );
+    let _ = app_event_bus.send(
+        PlayerMatchImpactAppEvent::TeamMatchConcluded {
+            team_id:            "t1".into(),
+            match_report_id:    "mr3".into(),
+            round_id:           "r1".into(),
+            round_label:        "Journée 5".into(),
+            opponent_team_id:   "opponent".into(),
+            opponent_team_name: "Bone Crushers".into(),
+            team_score:         1,
+            opponent_score:     0,
+        }
+        .to_enveloppe(),
+    );
+
+    wait_for(|| {
+        let player_repo = player_repo.clone();
+        async move {
+            player_repo
+                .find_by_id(&PlayerId("scorer".into()))
+                .await
+                .ok()
+                .flatten()
+                .map(|p| p.matches_played.0 > 0)
+                .unwrap_or(false)
+        }
+    })
+    .await;
+
+    let events = player_repo.find_events_by_id(&PlayerId("scorer".into())).await.unwrap();
+    let history = build_match_history(&events);
+    let mr3 = history.iter().find(|m| m.match_report_id == "mr3").unwrap();
+    assert_eq!(mr3.round_label, "Journée 5");
+    assert_eq!(mr3.opponent_team_name, "Bone Crushers");
+    assert_eq!(mr3.actions.len(), 1);
 }

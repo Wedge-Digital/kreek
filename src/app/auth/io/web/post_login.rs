@@ -228,6 +228,8 @@ mod tests {
                         -> Result<Option<crate::app::players::domain::player::Player>, crate::app::players::ports::RepositoryError> { Ok(None) }
                     async fn find_by_team_id(&self, _: &crate::app::players::domain::player::TeamId)
                         -> Result<Vec<crate::app::players::domain::player::Player>, crate::app::players::ports::RepositoryError> { Ok(vec![]) }
+                    async fn find_events_by_id(&self, _: &crate::app::players::domain::player::PlayerId)
+                        -> Result<Vec<crate::app::players::domain::events::PlayerDomainEvent>, crate::app::players::ports::RepositoryError> { Ok(vec![]) }
                 }
                 struct FakePlayerProjectionRepo;
                 #[async_trait::async_trait]

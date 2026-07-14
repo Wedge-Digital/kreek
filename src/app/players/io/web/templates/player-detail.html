@@ -1,0 +1,188 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/player-detail.css">
+
+<div class="player-page">
+
+  <div style="margin-bottom: var(--p1);">
+    <a class="player-detail-back"
+       hx-get="{{ app_routes.teams.team_detail(space_id, vm.team_id) }}"
+       hx-target="#app-content"
+       hx-select="#app-content"
+       hx-swap="innerHTML"
+       hx-push-url="true">← {{ vm.team_name }}</a>
+  </div>
+
+  <!-- ① En-tête joueur -->
+  <div class="player-header">
+    {% if let Some(j) = vm.jersey %}
+    <div class="player-avatar">{{ j }}</div>
+    {% else %}
+    <div class="player-avatar">—</div>
+    {% endif %}
+    <div class="player-header-body">
+      <div class="player-header-top">
+        <div class="player-name">{{ vm.name }}</div>
+        {% if let Some(j) = vm.jersey %}
+        <span class="jersey-chip">#{{ j }}</span>
+        {% endif %}
+        <span class="player-pos">{{ vm.position_name }}</span>
+        <span class="badge-locked">🔒 Hors phase d'amélioration</span>
+      </div>
+      <div class="player-header-meta">
+        <div class="meta-item">
+          <div class="meta-label">Valeur actuelle</div>
+          <div class="meta-value">{{ vm.value_formatted }}</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Matchs joués</div>
+          <div class="meta-value">{{ vm.matches_played }}</div>
+        </div>
+      </div>
+      <div class="player-stats-row">
+        <div class="pstat"><div class="pstat-val">{{ vm.ma }}</div><div class="pstat-label">MV</div></div>
+        <div class="pstat"><div class="pstat-val">{{ vm.st }}</div><div class="pstat-label">FO</div></div>
+        <div class="pstat"><div class="pstat-val">{{ vm.ag }}+</div><div class="pstat-label">AG</div></div>
+        <div class="pstat"><div class="pstat-val">{{ vm.pa }}+</div><div class="pstat-label">PA</div></div>
+        <div class="pstat"><div class="pstat-val">{{ vm.av }}+</div><div class="pstat-label">AR</div></div>
+      </div>
+      <div class="player-skills-row">
+        {% for skill in vm.base_skills %}
+        <span class="skill-tag">{{ skill }}</span>
+        {% endfor %}
+        {% for skill in vm.acquired_skills %}
+        <span class="skill-tag skill-tag--acquired">{{ skill }} ✓</span>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Portefeuille SPP -->
+    <div class="spp-budget">
+      <div class="spp-budget-top">
+        <span class="spp-budget-label">SPP gagnés / dépensés</span>
+        <span class="spp-budget-numbers">{{ vm.spp_spent }} / {{ vm.spp_earned }} SPP</span>
+      </div>
+      <div class="spp-budget-bar">
+        <div class="spp-budget-bar-inner" style="width: {{ vm.spp_percent }}%;"></div>
+      </div>
+      <div class="spp-budget-bottom">
+        <span>Gagnés sur {{ vm.matches_played }} matchs</span>
+        <span>{{ vm.spp_reserve }} SPP en réserve</span>
+      </div>
+      <div class="spp-budget-actions">
+        <button class="btn-customise" disabled title="Fonctionnalité à venir">✏️ Customiser</button>
+        <button class="btn-toggle-spp" disabled title="Fonctionnalité à venir">▶ Activer la dépense de SPP</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② Historique + journal -->
+  <div class="pd-split">
+
+    <!-- Colonne gauche : historique de matchs -->
+    <div class="pd-left">
+      <div class="history-panel">
+        <div class="history-panel-header">
+          <div class="history-panel-title">Résumé de carrière</div>
+        </div>
+        <div class="career-summary">
+          <div class="career-stat"><span class="career-stat-icon">🏈</span><span class="career-stat-val">{{ vm.career_touchdowns }}</span><span class="career-stat-label">Essais</span></div>
+          <div class="career-stat"><span class="career-stat-icon">🎯</span><span class="career-stat-val">{{ vm.career_passes }}</span><span class="career-stat-label">Passes</span></div>
+          <div class="career-stat"><span class="career-stat-icon">🛡️</span><span class="career-stat-val">{{ vm.career_interceptions }}</span><span class="career-stat-label">Intercept.</span></div>
+          <div class="career-stat"><span class="career-stat-icon">🩸</span><span class="career-stat-val">{{ vm.career_casualties }}</span><span class="career-stat-label">Sorties</span></div>
+          <div class="career-stat"><span class="career-stat-icon">⭐</span><span class="career-stat-val">{{ vm.career_mvps }}</span><span class="career-stat-label">MVP</span></div>
+          <div class="career-stat"><span class="career-stat-icon">💰</span><span class="career-stat-val">{{ vm.spp_earned }}</span><span class="career-stat-label">SPP total</span></div>
+        </div>
+      </div>
+
+      <div class="history-panel">
+        <div class="history-panel-header">
+          <div class="history-panel-title">Historique de matchs</div>
+          <div class="history-count-badge">{{ vm.matches_played }} matchs</div>
+        </div>
+        <div class="match-list">
+          {% if vm.match_history.is_empty() %}
+          <div class="pd-empty-state">Aucun match enregistré pour l'instant.</div>
+          {% else %}
+          {% for m in vm.match_history %}
+          <div class="match-card">
+            <div class="match-card-top">
+              <span class="match-round">{{ m.round_label }}</span>
+              <span class="badge badge-{{ m.result_css }}">{{ m.result_label }}</span>
+            </div>
+            <div class="match-card-vs">
+              <span class="match-opponent-name">{{ m.opponent_name }}</span>
+              <span class="match-score">{{ m.team_score }} – {{ m.opponent_score }}</span>
+            </div>
+            <div class="match-actions">
+              {% if m.actions.is_empty() %}
+              <div class="pd-log-empty">Aucune action marquante ce match.</div>
+              {% else %}
+              {% for a in m.actions %}
+              <div class="pd-log-entry">
+                <span class="pd-log-icon">{{ a.icon }}</span>
+                <span class="pd-log-text">{{ a.label }}</span>
+                {% if let Some(spp) = a.spp %}
+                <span class="pd-log-spp">+{{ spp }} SPP</span>
+                {% endif %}
+              </div>
+              {% endfor %}
+              {% endif %}
+            </div>
+            {% if m.subtotal_spp > 0 %}
+            <div class="match-subtotal"><span>+{{ m.subtotal_spp }} SPP</span></div>
+            {% endif %}
+          </div>
+          {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Colonne droite : journal des évolutions (lecture seule) -->
+    <div class="pd-right">
+      <div class="spend-panel-header">
+        <div class="spend-panel-title">Journal des évolutions</div>
+        <div class="spend-panel-remaining">
+          <div class="spend-panel-remaining-val">{{ vm.spp_reserve }}</div>
+          <div class="spend-panel-remaining-label">SPP en réserve</div>
+        </div>
+      </div>
+
+      <div class="lock-banner">
+        <span class="lock-banner-icon">🔒</span>
+        <span class="lock-banner-text">
+          <strong>La dépense de SPP n'est pas disponible actuellement.</strong><br>
+          Elle s'ouvre uniquement pendant la phase d'amélioration qui suit un match. {{ vm.name }} a {{ vm.spp_reserve }} SPP en réserve qui pourront être dépensés après le prochain match.
+        </span>
+      </div>
+
+      <div class="spp-summary">
+        {% if vm.evolution_log.is_empty() %}
+        <div class="spp-empty-state">Aucune évolution enregistrée pour l'instant.</div>
+        {% else %}
+        <table class="spp-summary-table">
+          <thead>
+            <tr><th>Évolution</th><th>Mode</th><th>Coût</th><th>Valeur</th><th>Obtenue</th></tr>
+          </thead>
+          <tbody>
+            {% for row in vm.evolution_log %}
+            <tr>
+              <td>{{ row.label }}</td>
+              <td><span class="mode-chip mode-chip-chosen">{{ row.mode_label }}</span></td>
+              <td class="summary-cost">{{ row.cost }}</td>
+              <td class="summary-value">{{ row.value }}</td>
+              <td class="summary-ref">{{ row.origin }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
