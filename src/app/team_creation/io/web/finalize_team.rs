@@ -39,6 +39,26 @@ impl IntoResponse for FinalizeTeamTemplate {
     }
 }
 
+/// Le lien "Terminer la construction" est un `hx-get` de navigation de page,
+/// avec `hx-select="#app-content"` pour n'extraire que ce fragment de la page
+/// finalize-team en cas de succès. `HX-Retarget` seul ne suffit donc pas pour
+/// une erreur : `hx-select` filtrerait la réponse et n'y trouverait aucun
+/// `#app-content`, donc rien ne s'afficherait. `HX-Reselect` remplace le
+/// sélecteur pour cette réponse précise, en le faisant correspondre au conteneur
+/// `#submit-errors` déjà présent sur build-team.html (et donc au retarget).
+fn submit_error_response(message: String) -> Response {
+    Response::builder()
+        .header("HX-Retarget", "#submit-errors")
+        .header("HX-Reselect", "#submit-errors")
+        .header("HX-Reswap", "outerHTML")
+        .header("content-type", "text/html; charset=utf-8")
+        .body(Body::from(format!(
+            r#"<div id="submit-errors" class="table-error-zone"><p class="table-error">{message}</p></div>"#
+        )))
+        .unwrap()
+        .into_response()
+}
+
 // ── GET ───────────────────────────────────────────────────────────────────────
 
 pub async fn finalize_team(
@@ -102,16 +122,10 @@ pub async fn finalize_team(
     // ── Validation des prérequis ─────────────────────────────────────────────
     use crate::app::team_creation::domain::team_roster_selected::MIN_PLAYERS_FOR_SUBMISSION;
     if team.hired_players().len() < MIN_PLAYERS_FOR_SUBMISSION {
-        return Response::builder()
-            .header("HX-Retarget", "#submit-error")
-            .header("HX-Reswap", "innerHTML")
-            .header("content-type", "text/html; charset=utf-8")
-            .body(Body::from(format!(
-                r#"<p class="table-error">Vous devez recruter au moins {} joueurs avant de finaliser.</p>"#,
-                MIN_PLAYERS_FOR_SUBMISSION
-            )))
-            .unwrap()
-            .into_response();
+        return submit_error_response(format!(
+            "Vous devez recruter au moins {} joueurs avant de finaliser.",
+            MIN_PLAYERS_FOR_SUBMISSION
+        ));
     }
 
     let league_selection_missing = roster_service::league_selection_missing(
@@ -121,15 +135,9 @@ pub async fn finalize_team(
     );
 
     if league_selection_missing {
-        return Response::builder()
-            .header("HX-Retarget", "#submit-error")
-            .header("HX-Reswap", "innerHTML")
-            .header("content-type", "text/html; charset=utf-8")
-            .body(Body::from(
-                r#"<p class="table-error">Veuillez sélectionner une ligue avant de terminer la construction.</p>"#,
-            ))
-            .unwrap()
-            .into_response();
+        return submit_error_response(
+            "Veuillez sélectionner une ligue avant de terminer la construction.".to_string(),
+        );
     }
 
     // ── Skip si pas de finalisation nécessaire ────────────────────────────────
@@ -311,5 +319,24 @@ pub async fn post_finalize_team(
             tracing::error!("post_finalize_team repo error: {e}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Régression : le lien "Terminer la construction" est un hx-get avec
+    /// hx-select="#app-content" (navigation de page). HX-Retarget seul est
+    /// filtré par ce hx-select côté client et n'affiche rien — HX-Reselect
+    /// doit pointer vers un sélecteur présent dans le corps de la réponse.
+    #[test]
+    fn submit_error_response_overrides_client_side_select_to_avoid_empty_swap() {
+        let response = submit_error_response("Message de test".to_string());
+        let headers = response.headers();
+
+        assert_eq!(headers.get("HX-Retarget").unwrap(), "#submit-errors");
+        assert_eq!(headers.get("HX-Reselect").unwrap(), "#submit-errors");
+        assert_eq!(headers.get("HX-Reswap").unwrap(), "outerHTML");
     }
 }
