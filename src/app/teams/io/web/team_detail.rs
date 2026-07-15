@@ -55,6 +55,104 @@ impl StaffVm {
     }
 }
 
+pub enum BannerCtaVm {
+    Print,
+    Navigate {
+        label: String,
+        href: String,
+    },
+    Mutate {
+        label: String,
+        post_url: String,
+    },
+}
+
+pub struct BannerVm {
+    pub css_variant: String,
+    pub icon: String,
+    pub title: String,
+    pub detail: String,
+    pub ctas: Vec<BannerCtaVm>,
+}
+
+impl BannerVm {
+    fn from_domain(team: &Team, space_id: &str, app_routes: &AppRoutes) -> Option<Self> {
+        use GamePhase::*;
+        use ParticipationStatus::*;
+
+        let team_id = team.id.to_string();
+        match (&team.participation_status, &team.game_phase) {
+            (PendingEnrollment, _) => Some(Self {
+                css_variant: "pending".into(),
+                icon: "📋".into(),
+                title: "Équipe en attente d'inscription.".into(),
+                detail: "L'inscription est en cours de validation par un commissaire de ligue."
+                    .into(),
+                ctas: vec![],
+            }),
+            (Enrolled, Some(ReadyToPlay)) => Some(Self {
+                css_variant: "ready".into(),
+                icon: "✅".into(),
+                title: "Équipe prête à jouer.".into(),
+                detail: "Aucune action requise avant le prochain match.".into(),
+                ctas: vec![BannerCtaVm::Print],
+            }),
+            (Enrolled, Some(MatchReporting)) => {
+                let href = team
+                    .current_match_report_id
+                    .as_ref()
+                    .map(|id| {
+                        app_routes
+                            .match_report
+                            .edit_match_report(space_id, &id.to_string())
+                    })
+                    .unwrap_or_default();
+                Some(Self {
+                    css_variant: "phase".into(),
+                    icon: "📝".into(),
+                    title: "Rapport de match en cours.".into(),
+                    detail: "La saisie du dernier match n'est pas terminée.".into(),
+                    ctas: vec![BannerCtaVm::Navigate {
+                        label: "Reprendre le rapport →".into(),
+                        href,
+                    }],
+                })
+            }
+            (Enrolled, Some(PlayerImprovement)) => Some(Self {
+                css_variant: "phase".into(),
+                icon: "⚡".into(),
+                title: "Phase d'amélioration des joueurs.".into(),
+                detail: "Des joueurs ont des SPP à dépenser suite au dernier match.".into(),
+                ctas: vec![BannerCtaVm::Mutate {
+                    label: "Évolutions terminées".into(),
+                    post_url: app_routes.teams.validate_improvement_phase(space_id, &team_id),
+                }],
+            }),
+            (Enrolled, Some(Recruitment)) => Some(Self {
+                css_variant: "phase".into(),
+                icon: "🛒".into(),
+                title: "Phase de recrutement.".into(),
+                detail: "Achetez des joueurs ou du staff avant de terminer les achats.".into(),
+                ctas: vec![BannerCtaVm::Mutate {
+                    label: "Terminer les achats".into(),
+                    post_url: app_routes.teams.validate_recruitment_phase(space_id, &team_id),
+                }],
+            }),
+            (Enrolled, Some(Dismissals)) => Some(Self {
+                css_variant: "phase".into(),
+                icon: "🚪".into(),
+                title: "Phase de renvois.".into(),
+                detail: "Renvoyez les joueurs dont vous ne voulez plus avant de valider.".into(),
+                ctas: vec![BannerCtaVm::Mutate {
+                    label: "Valider les renvois".into(),
+                    post_url: app_routes.teams.validate_dismissals_phase(space_id, &team_id),
+                }],
+            }),
+            _ => None,
+        }
+    }
+}
+
 pub struct TeamDetailVm {
     pub id: String,
     pub name: String,
@@ -73,6 +171,7 @@ pub struct TeamDetailVm {
     pub status_css_class: String,
     pub players_widget_url: String,
     pub staff: StaffVm,
+    pub banner: Option<BannerVm>,
 }
 
 impl TeamDetailVm {
@@ -105,6 +204,9 @@ impl TeamDetailVm {
             )
         });
 
+        let app_routes = AppRoutes::default();
+        let banner = BannerVm::from_domain(team, space_id, &app_routes);
+
         Self {
             id: team.id.to_string(),
             name: team.name.to_string(),
@@ -121,8 +223,9 @@ impl TeamDetailVm {
             season_name: team.season_name.clone(),
             status_label,
             status_css_class,
-            players_widget_url: AppRoutes::default().players.players_by_team_widget(space_id, &team.id.to_string()),
+            players_widget_url: app_routes.players.players_by_team_widget(space_id, &team.id.to_string()),
             staff: StaffVm::from(team, reroll_price_kpo),
+            banner,
         }
     }
 }

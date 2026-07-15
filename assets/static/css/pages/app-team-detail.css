@@ -49,6 +49,29 @@
 .roster-icon--img { background: transparent; box-shadow: none; padding: 4px; object-fit: contain; }
 .roster-icon-label { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; text-align: center; max-width: 120px; }
 
+/* Bandeau d'état contextuel */
+.state-banner {
+  border-radius: 0; padding: var(--p1) var(--p2);
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  border-bottom: 2px solid var(--dark-5);
+}
+.state-banner-icon { font-size: 22px; flex-shrink: 0; }
+.state-banner-text { flex: 1; font-size: var(--text-small); color: var(--dark-2); min-width: 220px; }
+.state-banner-text strong { color: var(--dark-1); }
+.state-banner-cta {
+  padding: 8px 16px; border-radius: 6px; font-size: var(--text-tiny); font-weight: 700;
+  white-space: nowrap; border: none; cursor: pointer; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+  font-family: inherit; background: var(--main-blue); color: var(--white);
+}
+.state-banner-cta--outline {
+  background: transparent; border: 1.5px solid var(--dark-3); color: var(--dark-2);
+}
+.state-banner-cta--outline:hover { border-color: var(--main-blue); color: var(--main-blue); }
+.state-banner--pending { background: rgba(255,107,53,0.06); }
+.state-banner--ready   { background: rgba(98,149,132,0.06); }
+.state-banner--phase   { background: rgba(0,48,73,0.05); }
+
 /* Barre d'actions */
 .team-actions {
   background: var(--white); padding: 10px var(--p2);
