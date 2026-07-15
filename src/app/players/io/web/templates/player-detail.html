@@ -28,7 +28,9 @@
         <span class="jersey-chip">#{{ j }}</span>
         {% endif %}
         <span class="player-pos">{{ vm.position_name }}</span>
+        {% if !vm.can_spend %}
         <span class="badge-locked">🔒 Hors phase d'amélioration</span>
+        {% endif %}
       </div>
       <div class="player-header-meta">
         <div class="meta-item">
@@ -60,7 +62,7 @@
     <!-- Portefeuille SPP -->
     <div class="spp-budget">
       <div class="spp-budget-top">
-        <span class="spp-budget-label">SPP gagnés / dépensés</span>
+        <span class="spp-budget-label">SPP dépensés / gagnés</span>
         <span class="spp-budget-numbers">{{ vm.spp_spent }} / {{ vm.spp_earned }} SPP</span>
       </div>
       <div class="spp-budget-bar">
@@ -72,7 +74,6 @@
       </div>
       <div class="spp-budget-actions">
         <button class="btn-customise" disabled title="Fonctionnalité à venir">✏️ Customiser</button>
-        <button class="btn-toggle-spp" disabled title="Fonctionnalité à venir">▶ Activer la dépense de SPP</button>
       </div>
     </div>
   </div>

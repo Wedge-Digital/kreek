@@ -58,6 +58,7 @@ pub struct PlayerDetailVm {
     pub can_customise: bool,
     pub match_history:  Vec<MatchHistoryCardVm>,
     pub right_panel_widget_url: String,
+    pub can_spend: bool,
 }
 
 fn format_thousands(n: u32) -> String {
@@ -177,13 +178,16 @@ pub async fn player_detail_controller(
     let can_spend = team.game_phase == Some(GamePhase::PlayerImprovement)
         && can_spend_spp(&state, &user, &space_id_vo, &team).await;
     let app_routes = AppRoutes::default();
-    let right_panel_widget_url = if can_spend {
-        app_routes.players.spp_spending_widget(&space_id, &player_id)
-    } else {
-        app_routes.players.evolution_journal_widget(&space_id, &player_id)
-    };
+    // Le panneau droit charge toujours le journal par défaut — c'est le bouton
+    // "Activer la dépense de SPP" (rendu par le journal lui-même si can_spend,
+    // à la place du bandeau verrouillé) qui bascule vers le mode dépense.
+    let right_panel_widget_url = format!(
+        "{}?can_spend={}",
+        app_routes.players.evolution_journal_widget(&space_id, &player_id),
+        can_spend,
+    );
 
-    let vm = build_vm(&state, &player, &events, &team, can_customise, right_panel_widget_url);
+    let vm = build_vm(&state, &player, &events, &team, can_customise, right_panel_widget_url, can_spend);
 
     PlayerDetailTemplate { app_routes, space_id, vm }.into_response()
 }
@@ -234,6 +238,7 @@ fn build_vm(
     team: &Team,
     can_customise: bool,
     right_panel_widget_url: String,
+    can_spend: bool,
 ) -> PlayerDetailVm {
     let ref_repo = state.references.repository.as_ref();
     let stats = player_stats_service::resolve_stats(player, ref_repo)
@@ -265,6 +270,7 @@ fn build_vm(
         can_customise,
         match_history,
         right_panel_widget_url,
+        can_spend,
     }
 }
 

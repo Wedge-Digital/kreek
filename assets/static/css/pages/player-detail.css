@@ -160,6 +160,13 @@
   border-radius: 8px;
   display: flex; align-items: center; gap: 10px;
 }
+
+/* Bouton "Activer la dépense de SPP" — remplace le lock-banner ci-dessus au
+   même emplacement quand can_spend est vrai, même marge d'inset. */
+.pd-right > .btn-toggle-spp {
+  width: calc(100% - 2 * var(--p2));
+  margin: var(--p2) var(--p2) 0;
+}
 .lock-banner-icon { font-size: 20px; flex-shrink: 0; }
 .lock-banner-text { font-size: var(--text-tiny); color: var(--dark-2); line-height: 1.4; }
 .lock-banner-text strong { color: var(--dark-1); }

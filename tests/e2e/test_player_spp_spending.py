@@ -1,8 +1,12 @@
 """Tests E2E — dépense de SPP sur la fiche joueur (slot journal / panneau de dépense).
 
 Scénarios couverts :
-- Équipe hors phase PlayerImprovement → widget journal (lecture seule) affiché.
-- Équipe en phase, coach de l'équipe → panneau de dépense visible, achat d'une
+- Équipe hors phase PlayerImprovement → widget journal (lecture seule) affiché,
+  bouton "Activer la dépense de SPP" absent.
+- Équipe en phase → journal affiché par défaut, bouton visible ; le clic sur
+  le bouton bascule explicitement vers le panneau de dépense (pas d'activation
+  automatique au chargement de la page).
+- Équipe en phase, coach de l'équipe, dépense activée → achat d'une
   compétence → réserve SPP diminuée, tag de compétence acquise en plus.
 - Joueur sans aucun SPP → aucune compétence achetable dans skill_picker (son
   comportement existant : bouton "Budget insuf.").
@@ -173,6 +177,13 @@ def _wait_for(check, attempts=30, delay_s=0.2):
     pytest.fail("condition jamais satisfaite (pipeline app event pas propagé à temps)")
 
 
+def _activate_spp_spending(page: Page) -> None:
+    """Le panneau droit charge le journal par défaut — il faut cliquer sur
+    "Activer la dépense de SPP" pour basculer vers le panneau de dépense."""
+    page.locator(".btn-toggle-spp").click()
+    expect(page.locator(".tabs")).to_be_visible(timeout=10000)
+
+
 # ── Fixture : équipe publiée, en PlayerImprovement, joueur crédité en SPP ──────
 
 @pytest.fixture(scope="module")
@@ -248,14 +259,32 @@ def test_journal_widget_shown_outside_player_improvement_phase(page: Page, space
     page.goto(f"{BASE_URL}/app/{space_id}/players/{player_id}/detail", wait_until="load")
     expect(page.locator(".lock-banner")).to_be_visible()
     expect(page.locator(".tabs")).to_have_count(0)
+    expect(page.locator(".btn-toggle-spp")).to_have_count(0)
+
+
+def test_toggle_button_hidden_outside_player_improvement_phase(page: Page, space_id, untouched_team_player):
+    player_id = untouched_team_player["player_id"]
+    page.goto(f"{BASE_URL}/app/{space_id}/players/{player_id}/detail", wait_until="load")
+    expect(page.locator(".badge-locked")).to_be_visible()
+    expect(page.locator(".btn-toggle-spp")).to_have_count(0)
+
+
+def test_journal_shown_by_default_then_toggle_reveals_spending_panel(page: Page, space_id, spp_ctx):
+    player_id = spp_ctx["rich_player_id"]
+    page.goto(f"{BASE_URL}/app/{space_id}/players/{player_id}/detail", wait_until="load")
+
+    expect(page.locator(".badge-locked")).to_have_count(0)
+    expect(page.locator(".btn-toggle-spp")).to_be_visible()
+    expect(page.locator(".tabs")).to_have_count(0)
+
+    _activate_spp_spending(page)
+    expect(page.locator(".lock-banner")).to_have_count(0)
 
 
 def test_coach_sees_spending_panel_and_can_purchase_a_skill(page: Page, space_id, spp_ctx):
     player_id = spp_ctx["rich_player_id"]
     page.goto(f"{BASE_URL}/app/{space_id}/players/{player_id}/detail", wait_until="load")
-
-    expect(page.locator(".tabs")).to_be_visible()
-    expect(page.locator(".lock-banner")).to_have_count(0)
+    _activate_spp_spending(page)
 
     reserve_before = int(page.locator(".spend-panel-remaining-val").inner_text())
     tags_before = page.locator(".skill-tag--acquired").count()
@@ -276,8 +305,8 @@ def test_coach_sees_spending_panel_and_can_purchase_a_skill(page: Page, space_id
 def test_player_with_no_spp_cannot_afford_any_skill(page: Page, space_id, spp_ctx):
     player_id = spp_ctx["poor_player_id"]
     page.goto(f"{BASE_URL}/app/{space_id}/players/{player_id}/detail", wait_until="load")
+    _activate_spp_spending(page)
 
-    expect(page.locator(".tabs")).to_be_visible()
     page.wait_for_selector(".skill-list-table", timeout=10000)
 
     choosable = page.locator(".btn-add-skill:visible", has_text="Choisir")
@@ -289,6 +318,7 @@ def test_player_with_no_spp_cannot_afford_any_skill(page: Page, space_id, spp_ct
 def test_stat_increase_updates_stat_and_reserve(page: Page, space_id, spp_ctx):
     player_id = spp_ctx["stat_player_id"]
     page.goto(f"{BASE_URL}/app/{space_id}/players/{player_id}/detail", wait_until="load")
+    _activate_spp_spending(page)
 
     page.locator(".tab", has_text="Caractéristiques").click()
     ma_before = int(page.locator(".pstat-val").first.inner_text())
@@ -314,6 +344,7 @@ def test_team_value_increases_after_a_purchase(page: Page, space_id, spp_ctx):
     value_before = int(value_item.inner_text().replace("kPo", "").strip())
 
     page.goto(f"{BASE_URL}/app/{space_id}/players/{player_id}/detail", wait_until="load")
+    _activate_spp_spending(page)
     page.wait_for_selector(".skill-list-table", timeout=10000)
     choosable = page.locator(".btn-add-skill:visible", has_text="Choisir")
     expect(choosable.first).to_be_visible(timeout=10000)

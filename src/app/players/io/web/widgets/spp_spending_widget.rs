@@ -168,7 +168,8 @@ pub async fn spp_spending_widget(
     if !is_eligible(&state, &user, &space_id, &player).await {
         // Défense en profondeur : si l'URL est atteinte directement hors
         // contexte éligible, on retombe sur le journal en lecture seule.
-        return evolution_journal_widget(Path((space_id, player_id)), State(state)).await.into_response();
+        let params = crate::app::players::io::web::widgets::evolution_journal_widget::EvolutionJournalParams { can_spend: false };
+        return evolution_journal_widget(Path((space_id, player_id)), axum::extract::Query(params), State(state)).await.into_response();
     }
 
     let app_routes = AppRoutes::default();

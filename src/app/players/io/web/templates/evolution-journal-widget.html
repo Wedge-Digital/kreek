@@ -1,4 +1,4 @@
-<div class="pd-right" hx-disinherit="*">
+<div class="pd-right" id="pd-right-panel" hx-disinherit="*">
   <div class="spend-panel-header">
     <div class="spend-panel-title">Journal des évolutions</div>
     <div class="spend-panel-remaining">
@@ -7,6 +7,12 @@
     </div>
   </div>
 
+  {% if vm.can_spend %}
+  <button class="btn-toggle-spp"
+          hx-get="{{ vm.spp_spending_widget_url }}"
+          hx-target="#pd-right-panel"
+          hx-swap="outerHTML">▶ Activer la dépense de SPP</button>
+  {% else %}
   <div class="lock-banner">
     <span class="lock-banner-icon">🔒</span>
     <span class="lock-banner-text">
@@ -14,6 +20,7 @@
       Elle s'ouvre uniquement pendant la phase d'amélioration qui suit un match. {{ vm.player_name }} a {{ vm.spp_reserve }} SPP en réserve qui pourront être dépensés après le prochain match.
     </span>
   </div>
+  {% endif %}
 
   <div class="spp-summary">
     {% if vm.evolution_log.is_empty() %}
