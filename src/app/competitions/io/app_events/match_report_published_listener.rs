@@ -1,12 +1,27 @@
+use crate::app::competitions::domain::domain_event::CompetitionsDomainEvent;
+use crate::app::competitions::domain::match_day::Pairing;
+use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
+use crate::app::competitions::io::app_events::pairing_projection_listener;
+use crate::app::competitions::ports::ITeamInfoPort;
+use crate::app::competitions::use_cases::admin::team_enrollment::load_enrolled_teams;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::app_events::match_report_app_events::{
     ActionTypePayload, MatchActionPublishedPayload, MatchReportAppEvent,
     MatchReportPublishedPayload,
 };
+use crate::app::shared_kernel::common_types::{EventId, PairingId};
+use crate::app::shared_kernel::team::TeamId;
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
+use std::sync::Arc;
 
-pub fn init(app_event_bus: &EventBus, pool: PgPool) {
+pub fn init(
+    app_event_bus: &EventBus,
+    event_bus: EventBus,
+    pool: PgPool,
+    match_day_repo: Arc<dyn IMatchDayRepository>,
+    team_port: Arc<dyn ITeamInfoPort>,
+) {
     let mut rx = app_event_bus.subscribe();
     tokio::spawn(async move {
         loop {
@@ -17,7 +32,7 @@ pub fn init(app_event_bus: &EventBus, pool: PgPool) {
                     else {
                         continue;
                     };
-                    handle_event(event, &pool).await;
+                    handle_event(event, &pool, &event_bus, match_day_repo.as_ref(), team_port.as_ref()).await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("competitions::match_report_published_listener: lagged by {n}");
@@ -28,11 +43,18 @@ pub fn init(app_event_bus: &EventBus, pool: PgPool) {
     });
 }
 
-async fn handle_event(event: MatchReportAppEvent, pool: &PgPool) {
+async fn handle_event(
+    event: MatchReportAppEvent,
+    pool: &PgPool,
+    event_bus: &EventBus,
+    match_day_repo: &dyn IMatchDayRepository,
+    team_port: &dyn ITeamInfoPort,
+) {
     let MatchReportAppEvent::MatchReportPublished(payload) = event else {
         return;
     };
-    let Some(pairing_id) = payload.pairing_id.clone() else {
+
+    let Some(pairing_id) = resolve_pairing_id(&payload, pool, match_day_repo, team_port, event_bus).await else {
         return;
     };
 
@@ -52,6 +74,114 @@ async fn handle_event(event: MatchReportAppEvent, pool: &PgPool) {
             "competitions::match_report_published_listener: update {pairing_id}: {e}"
         );
     }
+}
+
+/// Un rapport "manuel" (saisi hors calendrier) n'a pas de pairing — la ligne de
+/// projection résultats/calendrier n'existe donc pas encore à ce stade. On crée
+/// alors un vrai pairing pour la journée déjà choisie à la création du rapport,
+/// exactement comme le ferait "Ajouter un match" : la ligne de projection est
+/// insérée en synchrone (même tâche) pour éviter toute course avec l'UPDATE qui
+/// suit, et l'event PairingCreated est aussi émis pour la cohérence du système
+/// (ex. suivi des équipes déjà affrontées côté génération automatique).
+async fn resolve_pairing_id(
+    payload: &MatchReportPublishedPayload,
+    pool: &PgPool,
+    match_day_repo: &dyn IMatchDayRepository,
+    team_port: &dyn ITeamInfoPort,
+    event_bus: &EventBus,
+) -> Option<String> {
+    if let Some(pairing_id) = &payload.pairing_id {
+        return Some(pairing_id.clone());
+    }
+
+    let match_day = match match_day_repo.find_by_id(&payload.round_id).await {
+        Ok(Some(d)) => d,
+        Ok(None) => {
+            tracing::error!(
+                "match_report_published_listener: journée {} introuvable pour le rapport manuel {}",
+                payload.round_id, payload.match_report_id
+            );
+            return None;
+        }
+        Err(e) => {
+            tracing::error!("match_report_published_listener: find_by_id journée {}: {e}", payload.round_id);
+            return None;
+        }
+    };
+
+    let team_display = match load_enrolled_teams(&payload.season_id, team_port).await {
+        Ok(m) => m,
+        Err(e) => {
+            tracing::error!("match_report_published_listener: load_enrolled_teams: {e}");
+            return None;
+        }
+    };
+    let Some(home_info) = team_display.get(&payload.home_team_id) else {
+        tracing::error!(
+            "match_report_published_listener: équipe domicile {} non enrôlée pour le rapport manuel {}",
+            payload.home_team_id, payload.match_report_id
+        );
+        return None;
+    };
+    let Some(away_info) = team_display.get(&payload.away_team_id) else {
+        tracing::error!(
+            "match_report_published_listener: équipe extérieure {} non enrôlée pour le rapport manuel {}",
+            payload.away_team_id, payload.match_report_id
+        );
+        return None;
+    };
+
+    let (Ok(home_team_id), Ok(away_team_id)) = (
+        TeamId::try_new(&payload.home_team_id),
+        TeamId::try_new(&payload.away_team_id),
+    ) else {
+        tracing::error!("match_report_published_listener: id d'équipe invalide pour {}", payload.match_report_id);
+        return None;
+    };
+    let pairing = Pairing { id: PairingId::new(), home_team_id, away_team_id };
+    if let Err(e) = match_day_repo.save_pairing(&payload.round_id, &pairing).await {
+        tracing::error!("match_report_published_listener: save_pairing: {e}");
+        return None;
+    }
+
+    let pairing_id = pairing.id.to_string();
+    pairing_projection_listener::insert_projection(
+        pool, &pairing_id, &payload.season_id, &payload.round_id,
+        &match_day.name.to_string(), match_day.position.into_inner(),
+        match_day.date_start.as_ref().map(AsRef::as_ref), match_day.date_end.as_ref().map(AsRef::as_ref), match_day.day_type.as_str(),
+        &payload.home_team_id, &home_info.team_name, &home_info.roster_name, &home_info.coach_name, home_info.logo_url.as_deref(),
+        &payload.away_team_id, &away_info.team_name, &away_info.roster_name, &away_info.coach_name, away_info.logo_url.as_deref(),
+    )
+    .await;
+
+    let _ = event_bus.send(
+        CompetitionsDomainEvent::PairingCreated {
+            event_id: EventId::new(),
+            pairing_id: pairing_id.clone(),
+            competition_id: payload.competition_id.clone(),
+            season_id: payload.season_id.clone(),
+            round_id: payload.round_id.clone(),
+            home_team_id: payload.home_team_id.clone(),
+            away_team_id: payload.away_team_id.clone(),
+            space_id: payload.space_id.clone(),
+            home_team_name: home_info.team_name.clone(),
+            home_roster_name: home_info.roster_name.clone(),
+            home_coach_name: home_info.coach_name.clone(),
+            home_logo_url: home_info.logo_url.clone(),
+            away_team_name: away_info.team_name.clone(),
+            away_roster_name: away_info.roster_name.clone(),
+            away_coach_name: away_info.coach_name.clone(),
+            away_logo_url: away_info.logo_url.clone(),
+            round_name: match_day.name.to_string(),
+            round_position: match_day.position.into_inner(),
+            round_date_start: match_day.date_start.as_ref().map(|d| d.to_string()),
+            round_date_end: match_day.date_end.as_ref().map(|d| d.to_string()),
+            round_day_type: match_day.day_type.as_str().to_string(),
+        }
+        .to_enveloppe(),
+    );
+
+    Some(pairing_id)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -98,6 +228,7 @@ fn count_casualties(actions: &[MatchActionPublishedPayload]) -> i32 {
 mod tests {
     use super::*;
     use crate::app::shared_kernel::app_events::match_report_app_events::PlayerRefPayload;
+    use sqlx::Row;
 
     fn action(action: ActionTypePayload) -> MatchActionPublishedPayload {
         MatchActionPublishedPayload {
@@ -129,5 +260,103 @@ mod tests {
             action(ActionTypePayload::Blesse { injury: "Mort".to_string() }),
         ];
         assert_eq!(count_casualties(&actions), 0);
+    }
+
+    use crate::app::competitions::domain::match_day::{MatchDay, MatchDayName, MatchDayPosition, MatchDayType};
+    use crate::app::competitions::domain::match_day_repository_port::{MatchDayRepositoryError, PairingDisplayDto};
+    use crate::app::competitions::ports::TeamInfoDto;
+    use crate::app::shared_kernel::common_types::{MatchId, SeasonId};
+
+    struct FakeMatchDayRepo(MatchDay);
+    #[async_trait::async_trait]
+    impl IMatchDayRepository for FakeMatchDayRepo {
+        async fn find_by_season(&self, _: &str) -> Result<Vec<MatchDay>, MatchDayRepositoryError> { Ok(vec![]) }
+        async fn find_by_id(&self, _: &str) -> Result<Option<MatchDay>, MatchDayRepositoryError> { Ok(Some(self.0.clone())) }
+        async fn save_match_day(&self, _: &MatchDay) -> Result<(), MatchDayRepositoryError> { Ok(()) }
+        async fn delete_match_day(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
+        async fn save_pairing(&self, _: &str, _: &Pairing) -> Result<(), MatchDayRepositoryError> { Ok(()) }
+        async fn delete_pairing(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
+        async fn clear_pairings(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
+        async fn clear_all_pairings(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
+        async fn ensure_match_days_from_structure(&self, _: &str, _: &[(String, String, String, Option<String>, Option<String>)]) -> Result<(), MatchDayRepositoryError> { Ok(()) }
+        async fn list_resultats(&self, _: &str, _: Option<i32>, _: u32) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> { Ok(vec![]) }
+        async fn list_calendrier(&self, _: &str, _: Option<i32>, _: u32) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> { Ok(vec![]) }
+    }
+
+    struct FakeTeamInfoPort(Vec<TeamInfoDto>);
+    #[async_trait::async_trait]
+    impl ITeamInfoPort for FakeTeamInfoPort {
+        async fn find_enrolled_teams(&self, _: &str) -> Result<Vec<TeamInfoDto>, String> { Ok(self.0.clone()) }
+        async fn find_team_names(&self, _: &[String]) -> Result<Vec<TeamInfoDto>, String> { Ok(vec![]) }
+    }
+
+    fn sample_payload(home: &str, away: &str, pairing_id: Option<String>) -> MatchReportPublishedPayload {
+        MatchReportPublishedPayload {
+            match_report_id: "mr1".into(), space_id: "sp1".into(), competition_id: "c1".into(),
+            season_id: "s1".into(), round_id: "r1".into(), pairing_id,
+            published_at: chrono::Utc::now(),
+            home_team_id: home.into(), away_team_id: away.into(),
+            home_score: 1, away_score: 0, home_gain_kpo: 0, away_gain_kpo: 0,
+            home_fan_mod: 0, away_fan_mod: 0,
+            home_actions: vec![], away_actions: vec![], home_temp_players: vec![], away_temp_players: vec![],
+        }
+    }
+
+    /// Régression : un rapport manuel (pairing_id: None) n'avait jamais de ligne
+    /// dans competition_match_display_proj — donc n'apparaissait jamais dans
+    /// "résultats". resolve_pairing_id doit créer un vrai pairing et sa
+    /// projection, en synchrone, avant que l'UPDATE des scores ne s'exécute.
+    #[sqlx::test]
+    async fn resolve_pairing_id_creates_a_real_pairing_and_projection_for_manual_reports(pool: PgPool) {
+        let home = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
+        let away = "01ARZ3NDEKTSV4RRFFQ69G5FAW";
+        let match_day = MatchDay {
+            id: MatchId::new(), season_id: SeasonId::new(),
+            name: MatchDayName::try_new("Journée 7".to_string()).unwrap(),
+            day_type: MatchDayType::FixedDate, date_start: None, date_end: None,
+            position: MatchDayPosition::try_new(3).unwrap(), pairings: vec![],
+        };
+        let match_day_repo = FakeMatchDayRepo(match_day);
+        let team_port = FakeTeamInfoPort(vec![
+            TeamInfoDto { team_id: home.into(), team_name: "Home".into(), coach_name: "C1".into(), roster_name: "R1".into(), logo_url: None },
+            TeamInfoDto { team_id: away.into(), team_name: "Away".into(), coach_name: "C2".into(), roster_name: "R2".into(), logo_url: None },
+        ]);
+        let event_bus = crate::common::services::event_bus::event_bus::new_bus();
+        let payload = sample_payload(home, away, None);
+
+        let pairing_id = resolve_pairing_id(&payload, &pool, &match_day_repo, &team_port, &event_bus)
+            .await
+            .expect("un pairing doit être créé pour un rapport manuel");
+
+        let row = sqlx::query(
+            "SELECT home_team_name, away_team_name, round_name FROM competition_match_display_proj WHERE pairing_id = $1",
+        )
+        .bind(&pairing_id)
+        .fetch_one(&pool)
+        .await
+        .expect("la ligne de projection doit exister");
+        assert_eq!(row.get::<String, _>("home_team_name"), "Home");
+        assert_eq!(row.get::<String, _>("away_team_name"), "Away");
+        assert_eq!(row.get::<String, _>("round_name"), "Journée 7");
+    }
+
+    #[tokio::test]
+    async fn resolve_pairing_id_returns_existing_id_unchanged_for_scheduled_reports() {
+        let match_day = MatchDay {
+            id: MatchId::new(), season_id: SeasonId::new(),
+            name: MatchDayName::try_new("Journée 1".to_string()).unwrap(),
+            day_type: MatchDayType::FixedDate, date_start: None, date_end: None,
+            position: MatchDayPosition::try_new(0).unwrap(), pairings: vec![],
+        };
+        let match_day_repo = FakeMatchDayRepo(match_day);
+        let team_port = FakeTeamInfoPort(vec![]);
+        let event_bus = crate::common::services::event_bus::event_bus::new_bus();
+        let payload = sample_payload("home", "away", Some("existing-pairing".into()));
+
+        // pas de pool réel nécessaire ici : le retour anticipé n'y touche jamais.
+        let pool = sqlx::PgPool::connect_lazy("postgres://unused/unused").unwrap();
+        let pairing_id = resolve_pairing_id(&payload, &pool, &match_day_repo, &team_port, &event_bus).await;
+
+        assert_eq!(pairing_id, Some("existing-pairing".to_string()));
     }
 }

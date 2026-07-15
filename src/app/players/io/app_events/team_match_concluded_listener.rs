@@ -105,15 +105,18 @@ mod tests {
         repo.append(&injured.id, &injured.team_id, &injury_event, 2).await.unwrap();
 
         seed_player(&repo, "healthy", "t1").await;
-        seed_player(&repo, "other_team_injured", "t2").await;
+        let other_team_injured = seed_player(&repo, "other_team_injured", "t2").await;
+        let other_team_injury_event = other_team_injured.record_injury(sample_context(), InjuryType::Amoche);
+        repo.append(&other_team_injured.id, &other_team_injured.team_id, &other_team_injury_event, 2).await.unwrap();
 
         handle_team_match_concluded(&repo, "t1", concluded_context(), 2, 1).await;
 
         let injured_after = repo.find_by_id(&PlayerId("injured".into())).await.unwrap().unwrap();
         assert_eq!(injured_after.participation_status, PlayerParticipationStatus::Available);
 
-        // le joueur de l'autre équipe n'est jamais touché
+        // le joueur de l'autre équipe n'est jamais touché : ni restauré, ni MatchConcluded ajouté
         let other_team_after = repo.find_by_id(&PlayerId("other_team_injured".into())).await.unwrap().unwrap();
+        assert_eq!(other_team_after.participation_status, PlayerParticipationStatus::MissingNextGame);
         assert_eq!(other_team_after.version, 2); // seulement sa blessure initiale, pas de MatchConcluded
     }
 

@@ -79,7 +79,7 @@ async fn handle_event(event: CompetitionsDomainEvent, pool: &PgPool) {
 }
 
 #[allow(clippy::too_many_arguments)]
-async fn insert_projection(
+pub(crate) async fn insert_projection(
     pool: &PgPool,
     pairing_id: &str,
     season_id: &str,

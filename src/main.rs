@@ -110,7 +110,21 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
     spaces::context::init_app_event_listeners(&app_event_bus, pool.clone());
     spaces::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
 
-    competitions::context::init_listeners(&event_bus, app_event_bus.clone(), pool.clone());
+    let competitions_team_info_port = Arc::new(
+        crate::infrastructure::competitions::team_info_adapter::TeamInfoAdapter::new(
+            Arc::new(crate::app::teams::io::repository::team_repository::TeamRepository::new(pool.clone())),
+        ),
+    );
+    let competitions_match_day_repository = Arc::new(
+        crate::app::competitions::io::repository::match_day_repository::MatchDayRepository::new(pool.clone()),
+    );
+    competitions::context::init_listeners(
+        &event_bus,
+        app_event_bus.clone(),
+        pool.clone(),
+        competitions_match_day_repository.clone(),
+        competitions_team_info_port.clone(),
+    );
     team_creation::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
     teams::context::init_listeners(&app_event_bus, pool.clone());
     let refs_for_players = references::context::ReferencesContext::new();
@@ -144,14 +158,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
     let state = AppState {
         auth: AuthContext::new(&pool, event_bus.clone()),
         spaces: SpacesContext::new(&pool, event_bus.clone()),
-        competitions: {
-            let team_info_port = Arc::new(
-                crate::infrastructure::competitions::team_info_adapter::TeamInfoAdapter::new(
-                    Arc::new(crate::app::teams::io::repository::team_repository::TeamRepository::new(pool.clone())),
-                ),
-            );
-            CompetitionsContext::new(&pool, event_bus.clone(), team_info_port)
-        },
+        competitions: CompetitionsContext::new(&pool, event_bus.clone(), competitions_team_info_port),
         news: NewsContext::new(&pool),
         references: ReferencesContext::new(),
         team_creation: TeamCreationContext::new(

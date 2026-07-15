@@ -25,10 +25,16 @@ pub struct CompetitionsContext {
     pub event_bus: EventBus,
 }
 
-pub fn init_listeners(event_bus: &EventBus, app_event_bus: EventBus, pool: PgPool) {
+pub fn init_listeners(
+    event_bus: &EventBus,
+    app_event_bus: EventBus,
+    pool: PgPool,
+    match_day_repository: Arc<dyn IMatchDayRepository>,
+    team_info_port: Arc<dyn ITeamInfoPort>,
+) {
     pairing_projection_listener::init(event_bus, pool.clone());
     match_report_confirmed_listener::init(&app_event_bus, pool.clone());
-    match_report_published_listener::init(&app_event_bus, pool);
+    match_report_published_listener::init(&app_event_bus, event_bus.clone(), pool, match_day_repository, team_info_port);
     competitions_app_event_publisher(event_bus, app_event_bus);
 }
 
