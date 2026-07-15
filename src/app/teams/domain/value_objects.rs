@@ -45,17 +45,6 @@ pub enum MatchResult {
     Loss,
 }
 
-impl MatchResult {
-    /// Modificateur fans dévoués : +1 victoire, 0 nul, -1 défaite.
-    pub fn fan_modifier(&self) -> i8 {
-        match self {
-            Self::Win => 1,
-            Self::Draw => 0,
-            Self::Loss => -1,
-        }
-    }
-}
-
 // ── Fans dévoués ──────────────────────────────────────────────────────────────
 
 #[nutype(

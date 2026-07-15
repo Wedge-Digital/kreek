@@ -533,16 +533,15 @@ impl Team {
     pub fn start_post_match_sequence(
         &self,
         result: MatchResult,
-        fans_roll: u8,
+        fan_mod: i8,
         treasury_income: Kpo,
         spp_gains: Vec<SppGain>,
     ) -> Result<TeamDomainEvent, DomainError> {
         self.expect_phase(GamePhase::MatchReporting)?;
-        let modifier = result.fan_modifier();
-        let raw = (self.dedicated_fans.into_inner() as i16
-            + fans_roll as i16
-            + modifier as i16)
-            .max(0) as u8;
+        // fan_mod est déjà la valeur finale saisie par le coach sur le rapport
+        // de match (bornée -2..2 côté BC match_report) — appliquée telle
+        // quelle, aucun recalcul via le résultat du match.
+        let raw = (self.dedicated_fans.into_inner() as i16 + fan_mod as i16).max(0) as u8;
         let dedicated_fans =
             DedicatedFans::try_new(raw.min(20)).expect("clamped to valid range");
         Ok(TeamDomainEvent::PostMatchSequenceStarted {
@@ -799,11 +798,11 @@ mod tests {
         ];
         let team = Team::hydrate(&events).unwrap();
         let event = team
-            .start_post_match_sequence(MatchResult::Win, 4, Kpo(150), vec![])
+            .start_post_match_sequence(MatchResult::Win, 2, Kpo(150), vec![])
             .unwrap();
         if let TeamDomainEvent::PostMatchSequenceStarted { dedicated_fans, .. } = &event {
-            // 2 (initial: 1 base + 1 amélioration) + 4 (roll) + 1 (win modifier) = 7
-            assert_eq!(dedicated_fans.into_inner(), 7);
+            // 2 (initial: 1 base + 1 amélioration) + 2 (fan_mod du rapport) = 4
+            assert_eq!(dedicated_fans.into_inner(), 4);
         } else {
             panic!("mauvais variant d'événement");
         }
@@ -819,12 +818,34 @@ mod tests {
             },
         ];
         let team = Team::hydrate(&events).unwrap();
-        // 2 fans + roll 18 + win +1 = 21 → clampé à 20
+        // 2 fans + fan_mod 100 → clampé à 20 (la borne -2..2 est imposée côté
+        // match_report/FanFactorMod, pas ici — ce test vérifie le clamp mécanique)
         let event = team
-            .start_post_match_sequence(MatchResult::Win, 18, Kpo(0), vec![])
+            .start_post_match_sequence(MatchResult::Win, 100, Kpo(0), vec![])
             .unwrap();
         if let TeamDomainEvent::PostMatchSequenceStarted { dedicated_fans, .. } = &event {
             assert_eq!(dedicated_fans.into_inner(), 20);
+        } else {
+            panic!("mauvais variant d'événement");
+        }
+    }
+
+    #[test]
+    fn post_match_sequence_negative_fan_mod_never_goes_below_zero() {
+        let events = vec![
+            created_event(),
+            enrolled_event(),
+            TeamDomainEvent::MatchReportingStarted {
+                match_report_id: match_report_id(),
+            },
+        ];
+        let team = Team::hydrate(&events).unwrap();
+        // 2 fans - 2 (fan_mod minimal du rapport) = 0
+        let event = team
+            .start_post_match_sequence(MatchResult::Loss, -2, Kpo(0), vec![])
+            .unwrap();
+        if let TeamDomainEvent::PostMatchSequenceStarted { dedicated_fans, .. } = &event {
+            assert_eq!(dedicated_fans.into_inner(), 0);
         } else {
             panic!("mauvais variant d'événement");
         }
