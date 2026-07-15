@@ -1,7 +1,73 @@
+<link rel="stylesheet" href="/static/css/pages/competition-detail.css">
 <div class="admin-panel">
-  <div class="empty-state">
+
+{% for journee in journees %}
+<div class="matches-list card-shadow">
+    <div class="matches-list-header">
+        <span class="section-label">{{ journee.label }}</span>
+        <span class="text-tiny text-dark-3">{{ journee.matches.len() }} match{% if journee.matches.len() > 1 %}s{% endif %}</span>
+    </div>
+    {% for m in journee.matches %}
+    <div class="match-widget {% if m.is_in_progress %}match-widget--in-progress{% endif %} {% if m.report_url.is_some() %}match-widget--clickable{% endif %}">
+
+        {% if let Some(url) = m.report_url %}
+        <a href="{{ url }}" class="match-widget-link" aria-label="Voir le rapport de match"></a>
+        {% endif %}
+
+        <div class="match-side match-side--home">
+            {% if let Some(logo) = m.home_logo %}
+            <img src="{{ logo }}" class="match-team-logo-sm match-team-logo-sm--img" alt="{{ m.home_name }}">
+            {% else %}
+            <div class="match-team-logo-sm match-team-logo-sm--initials">{{ m.home_initials }}</div>
+            {% endif %}
+            <div class="match-team-info">
+                <div class="match-team-name">{{ m.home_name }}</div>
+                <div class="match-team-sub">{{ m.home_roster }} · {{ m.home_coach }}</div>
+            </div>
+        </div>
+
+        <div class="match-score-block">
+            {% if m.is_completed %}
+            <div class="match-score-tds">
+                <span class="match-score-num">{{ m.home_score.unwrap_or(0) }}</span>
+                <span class="match-score-sep">–</span>
+                <span class="match-score-num">{{ m.away_score.unwrap_or(0) }}</span>
+            </div>
+            <div class="match-score-cas">
+                <span class="match-cas-num">{{ m.home_cas.unwrap_or(0) }}</span>
+                <span class="match-cas-sep">sor.</span>
+                <span class="match-cas-num">{{ m.away_cas.unwrap_or(0) }}</span>
+            </div>
+            {% else if m.is_in_progress %}
+            <div class="match-in-progress-block">
+                <div class="match-status-badge match-status-badge--in-progress">En cours de saisie</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="match-side match-side--away">
+            <div class="match-team-info match-team-info--right">
+                <div class="match-team-name">{{ m.away_name }}</div>
+                <div class="match-team-sub">{{ m.away_coach }} · {{ m.away_roster }}</div>
+            </div>
+            {% if let Some(logo) = m.away_logo %}
+            <img src="{{ logo }}" class="match-team-logo-sm match-team-logo-sm--img" alt="{{ m.away_name }}">
+            {% else %}
+            <div class="match-team-logo-sm match-team-logo-sm--initials">{{ m.away_initials }}</div>
+            {% endif %}
+        </div>
+
+    </div>
+    {% endfor %}
+</div>
+{% endfor %}
+
+{% if journees.is_empty() %}
+<div class="empty-state">
     <div class="empty-state-icon">✅</div>
     <div class="empty-state-text">Aucun résultat soumis pour le moment.</div>
     <div class="empty-state-sub">Les résultats apparaîtront ici lorsque les coachs soumettront leurs rapports de match.</div>
-  </div>
+</div>
+{% endif %}
+
 </div>

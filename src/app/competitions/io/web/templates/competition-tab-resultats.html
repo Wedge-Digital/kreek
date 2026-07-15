@@ -7,7 +7,11 @@
         <span class="text-tiny text-dark-3">{{ journee.matches.len() }} match{% if journee.matches.len() > 1 %}s{% endif %}</span>
     </div>
     {% for m in journee.matches %}
-    <div class="match-widget {% if m.is_in_progress %}match-widget--in-progress{% endif %}">
+    <div class="match-widget {% if m.is_in_progress %}match-widget--in-progress{% endif %} {% if m.report_url.is_some() %}match-widget--clickable{% endif %}">
+
+        {% if let Some(url) = m.report_url %}
+        <a href="{{ url }}" class="match-widget-link" aria-label="Voir le rapport de match"></a>
+        {% endif %}
 
         <div class="match-side match-side--home">
             {% if let Some(logo) = m.home_logo %}
@@ -23,9 +27,6 @@
 
         <div class="match-score-block">
             {% if m.is_completed %}
-            {% if let Some(url) = m.report_url %}
-            <a href="{{ url }}" class="match-widget-link" aria-label="Voir la synthèse du match"></a>
-            {% endif %}
             <div class="match-score-tds">
                 <span class="match-score-num">{{ m.home_score.unwrap_or(0) }}</span>
                 <span class="match-score-sep">–</span>
@@ -39,9 +40,6 @@
             {% else if m.is_in_progress %}
             <div class="match-in-progress-block">
                 <div class="match-status-badge match-status-badge--in-progress">En cours de saisie</div>
-                {% if let Some(url) = m.report_url %}
-                <a href="{{ url }}" class="match-report-link">Accéder au rapport →</a>
-                {% endif %}
             </div>
             {% endif %}
         </div>

@@ -65,10 +65,11 @@
   display: grid; grid-template-columns: 1fr 120px 1fr;
   align-items: center; gap: 0;
   padding: 12px var(--p2); border-bottom: 1px solid var(--dark-6);
-  cursor: pointer; transition: background 0.1s;
+  transition: background 0.1s;
 }
 .match-widget:last-child { border-bottom: none; }
-.match-widget:hover      { background: var(--dark-7); }
+.match-widget--clickable { cursor: pointer; }
+.match-widget--clickable:hover { background: var(--dark-7); }
 
 .match-widget-link {
   position: absolute; inset: 0;
@@ -119,13 +120,6 @@
 }
 
 .match-in-progress-block { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-
-.match-report-link {
-  font-size: var(--text-tiny); font-weight: 600; color: var(--main-blue);
-  border: 1.5px solid var(--main-blue); border-radius: 6px;
-  padding: 3px 10px; text-decoration: none; transition: all 0.15s; white-space: nowrap;
-}
-.match-report-link:hover { background: var(--main-blue); color: var(--white); }
 
 /* Teams grid */
 .teams-grid {

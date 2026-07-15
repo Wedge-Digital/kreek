@@ -106,7 +106,7 @@ mod tests {
     }
 
     fn dto(id: &str) -> TeamInfoDto {
-        TeamInfoDto { team_id: id.into(), team_name: format!("Team {id}"), coach_name: String::new(), roster_name: String::new(), logo_url: None }
+        TeamInfoDto { team_id: id.into(), team_name: format!("Team {id}"), coach_id: String::new(), coach_name: String::new(), roster_name: String::new(), logo_url: None }
     }
 
     fn day(position: i32, pairings: Vec<Pairing>) -> MatchDay {

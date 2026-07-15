@@ -54,7 +54,7 @@ mod tests {
     fn dto(id: &str) -> TeamInfoDto {
         TeamInfoDto {
             team_id: id.to_string(), team_name: format!("Team {id}"),
-            coach_name: String::new(), roster_name: String::new(), logo_url: None,
+            coach_id: String::new(), coach_name: String::new(), roster_name: String::new(), logo_url: None,
         }
     }
 

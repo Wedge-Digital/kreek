@@ -1,5 +1,8 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::io::web::admin::admin_page::render_admin_page;
+use crate::app::competitions::io::web::resultats_view::{
+    build_journees, load_resultats, JourneeResultatsVm, ResultAuthorization,
+};
 use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use askama::Template;
@@ -14,6 +17,7 @@ pub struct ResultsTabTemplate {
     pub space_id: String,
     pub competition_id: String,
     pub season_id: String,
+    pub journees: Vec<JourneeResultatsVm>,
 }
 
 impl IntoResponse for ResultsTabTemplate {
@@ -35,11 +39,22 @@ pub async fn results_tab(
     headers: HeaderMap,
 ) -> impl IntoResponse {
     if headers.contains_key("hx-request") {
+        let rows = match load_resultats(&state, &season_id, None).await {
+            Ok(r) => r,
+            Err(r) => return r,
+        };
+        // La page admin d'où cette carte est atteinte réserve déjà l'accès
+        // aux admins d'espace/compétition (render_admin_page) — toutes les
+        // lignes sont donc autorisées ici.
+        let (journees, _next_cursor) =
+            build_journees(rows, usize::MAX, &ResultAuthorization::unrestricted());
+
         return ResultsTabTemplate {
             app_routes: AppRoutes::default(),
             space_id,
             competition_id,
             season_id,
+            journees,
         }
         .into_response();
     }

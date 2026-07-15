@@ -318,8 +318,8 @@ mod tests {
         };
         let match_day_repo = FakeMatchDayRepo(match_day);
         let team_port = FakeTeamInfoPort(vec![
-            TeamInfoDto { team_id: home.into(), team_name: "Home".into(), coach_name: "C1".into(), roster_name: "R1".into(), logo_url: None },
-            TeamInfoDto { team_id: away.into(), team_name: "Away".into(), coach_name: "C2".into(), roster_name: "R2".into(), logo_url: None },
+            TeamInfoDto { team_id: home.into(), team_name: "Home".into(), coach_id: "coach1".into(), coach_name: "C1".into(), roster_name: "R1".into(), logo_url: None },
+            TeamInfoDto { team_id: away.into(), team_name: "Away".into(), coach_id: "coach2".into(), coach_name: "C2".into(), roster_name: "R2".into(), logo_url: None },
         ]);
         let event_bus = crate::common::services::event_bus::event_bus::new_bus();
         let payload = sample_payload(home, away, None);

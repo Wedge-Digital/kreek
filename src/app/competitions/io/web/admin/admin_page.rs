@@ -175,11 +175,23 @@ pub async fn render_admin_page(
             tpl.render().unwrap_or_default()
         }
         "results" => {
+            let rows = state
+                .competitions
+                .match_day_repository
+                .list_resultats(season_id, None, u32::MAX)
+                .await
+                .unwrap_or_default();
+            let (journees, _next_cursor) = crate::app::competitions::io::web::resultats_view::build_journees(
+                rows,
+                usize::MAX,
+                &crate::app::competitions::io::web::resultats_view::ResultAuthorization::unrestricted(),
+            );
             let tpl = super::results_tab::ResultsTabTemplate {
                 app_routes,
                 space_id: space_id.to_string(),
                 competition_id: competition_id.to_string(),
                 season_id: season_id.to_string(),
+                journees,
             };
             tpl.render().unwrap_or_default()
         }

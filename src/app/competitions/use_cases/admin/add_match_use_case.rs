@@ -155,13 +155,13 @@ mod tests {
         async fn find_team_names(&self, team_ids: &[String]) -> Result<Vec<TeamInfoDto>, String> {
             Ok(vec![TeamInfoDto {
                 team_id: team_ids[0].clone(), team_name: format!("Équipe {}", team_ids[0]),
-                coach_name: String::new(), roster_name: String::new(), logo_url: None,
+                coach_id: String::new(), coach_name: String::new(), roster_name: String::new(), logo_url: None,
             }])
         }
     }
 
     fn dto(id: &str, name: &str) -> TeamInfoDto {
-        TeamInfoDto { team_id: id.into(), team_name: name.into(), coach_name: "Coach".into(), roster_name: "Roster".into(), logo_url: None }
+        TeamInfoDto { team_id: id.into(), team_name: name.into(), coach_id: "coach".into(), coach_name: "Coach".into(), roster_name: "Roster".into(), logo_url: None }
     }
 
     fn sample_match_day() -> MatchDay {

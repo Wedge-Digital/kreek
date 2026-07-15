@@ -27,6 +27,7 @@ impl ITeamInfoPort for TeamInfoAdapter {
             .map(|r| TeamInfoDto {
                 team_id: r.team_id,
                 team_name: r.team_name,
+                coach_id: r.coach_id,
                 coach_name: r.coach_name,
                 roster_name: r.roster_name,
                 logo_url: r.logo_url,
@@ -41,6 +42,7 @@ impl ITeamInfoPort for TeamInfoAdapter {
                 out.push(TeamInfoDto {
                     team_id:     id.clone(),
                     team_name:   team.name.to_string(),
+                    coach_id:    team.coach_id.to_string(),
                     coach_name:  team.coach_name.clone(),
                     roster_name: team.roster_name.to_string(),
                     logo_url:    team.logo_url.clone(),
