@@ -223,6 +223,7 @@ pub struct Team {
     pub apothecaries: ApothecaryCount,
     pub assistants: AssistantCount,
     pub cheerleaders: CheerleaderCount,
+    pub current_match_report_id: Option<MatchReportId>,
     pub version: u64,
 }
 
@@ -251,6 +252,7 @@ impl Default for Team {
             apothecaries: ApothecaryCount::default(),
             assistants: AssistantCount::default(),
             cheerleaders: CheerleaderCount::default(),
+            current_match_report_id: None,
             version: 0,
         }
     }
@@ -322,8 +324,9 @@ impl Team {
             TeamDomainEvent::TeamEnrollmentRejected { .. } => {
                 self.participation_status = ParticipationStatus::Rejected;
             }
-            TeamDomainEvent::MatchReportingStarted { .. } => {
+            TeamDomainEvent::MatchReportingStarted { match_report_id } => {
                 self.game_phase = Some(GamePhase::MatchReporting);
+                self.current_match_report_id = Some(*match_report_id);
             }
             TeamDomainEvent::PostMatchSequenceStarted {
                 dedicated_fans,
@@ -333,6 +336,7 @@ impl Team {
                 self.dedicated_fans = *dedicated_fans;
                 self.treasury.0 += treasury_income.0;
                 self.game_phase = Some(GamePhase::PlayerImprovement);
+                self.current_match_report_id = None;
             }
             TeamDomainEvent::PlayerImprovementPhaseValidated => {
                 self.game_phase = Some(GamePhase::Recruitment);
@@ -341,7 +345,11 @@ impl Team {
                 self.game_phase = Some(GamePhase::Dismissals);
             }
             TeamDomainEvent::DismissalsPhaseValidated => {
-                self.game_phase = Some(GamePhase::TemporaryRetirement);
+                // Simplification temporaire : la retraite temporaire (carte 39,
+                // to_be_refined) n'étant pas encore implémentée, on revient
+                // directement en ReadyToPlay plutôt que de bloquer l'équipe
+                // dans une phase sans action possible.
+                self.game_phase = Some(GamePhase::ReadyToPlay);
             }
             TeamDomainEvent::RetirementPhaseValidated => {
                 self.game_phase = Some(GamePhase::OffSeason);
@@ -529,9 +537,7 @@ impl Team {
         treasury_income: Kpo,
         spp_gains: Vec<SppGain>,
     ) -> Result<TeamDomainEvent, DomainError> {
-        if self.game_phase != Some(GamePhase::ReadyToPlay) {
-            return Err(DomainError::WrongGamePhase(self.game_phase.clone()));
-        }
+        self.expect_phase(GamePhase::MatchReporting)?;
         let modifier = result.fan_modifier();
         let raw = (self.dedicated_fans.into_inner() as i16
             + fans_roll as i16
@@ -784,7 +790,13 @@ mod tests {
 
     #[test]
     fn post_match_sequence_calculates_fans_correctly() {
-        let events = vec![created_event(), enrolled_event()];
+        let events = vec![
+            created_event(),
+            enrolled_event(),
+            TeamDomainEvent::MatchReportingStarted {
+                match_report_id: match_report_id(),
+            },
+        ];
         let team = Team::hydrate(&events).unwrap();
         let event = team
             .start_post_match_sequence(MatchResult::Win, 4, Kpo(150), vec![])
@@ -799,7 +811,13 @@ mod tests {
 
     #[test]
     fn post_match_sequence_clamps_fans_at_20() {
-        let events = vec![created_event(), enrolled_event()];
+        let events = vec![
+            created_event(),
+            enrolled_event(),
+            TeamDomainEvent::MatchReportingStarted {
+                match_report_id: match_report_id(),
+            },
+        ];
         let team = Team::hydrate(&events).unwrap();
         // 2 fans + roll 18 + win +1 = 21 → clampé à 20
         let event = team
@@ -837,7 +855,7 @@ mod tests {
 
         let event = team.validate_dismissals_phase().unwrap();
         let team = team.apply(&event);
-        assert_eq!(team.game_phase, Some(GamePhase::TemporaryRetirement));
+        assert_eq!(team.game_phase, Some(GamePhase::ReadyToPlay));
     }
 
     #[test]
@@ -1057,6 +1075,34 @@ mod tests {
         let event = team.start_match_reporting(match_report_id()).unwrap();
         let team = team.apply(&event);
         assert_eq!(team.game_phase, Some(GamePhase::MatchReporting));
+    }
+
+    #[test]
+    fn start_match_reporting_sets_current_match_report_id() {
+        let events = vec![created_event(), enrolled_event()];
+        let team = Team::hydrate(&events).unwrap();
+        let event = team.start_match_reporting(match_report_id()).unwrap();
+        let team = team.apply(&event);
+        assert_eq!(team.current_match_report_id, Some(match_report_id()));
+    }
+
+    #[test]
+    fn post_match_sequence_clears_current_match_report_id() {
+        let events = vec![
+            created_event(),
+            enrolled_event(),
+            TeamDomainEvent::MatchReportingStarted {
+                match_report_id: match_report_id(),
+            },
+        ];
+        let team = Team::hydrate(&events).unwrap();
+        assert_eq!(team.current_match_report_id, Some(match_report_id()));
+
+        let event = team
+            .start_post_match_sequence(MatchResult::Win, 4, Kpo(150), vec![])
+            .unwrap();
+        let team = team.apply(&event);
+        assert_eq!(team.current_match_report_id, None);
     }
 
     #[test]
