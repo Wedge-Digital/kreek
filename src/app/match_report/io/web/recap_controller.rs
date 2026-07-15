@@ -14,7 +14,9 @@ use crate::app::match_report::use_cases::publish_match_report_use_case::{
     self, PublishMatchReportCommand, PublishMatchReportError,
 };
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::MatchReportId;
+use crate::app::shared_kernel::authorization::SpaceProfile;
+use crate::app::shared_kernel::common_types::{MatchReportId, SpaceId};
+use crate::app::shared_kernel::user::User;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -121,9 +123,9 @@ pub async fn get_recap(
     Path((space_id, match_report_id)): Path<(String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    if auth_session.user.is_none() {
+    let Some(user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
-    }
+    };
 
     let mr_state = match state.match_report.match_report_repo.find_by_id(&match_report_id).await {
         Ok(Some(s)) => s,
@@ -143,9 +145,55 @@ pub async fn get_recap(
         MatchReportState::Cancelled(_) => return StatusCode::GONE.into_response(),
     };
 
+    if !is_authorized(&state, &user, &space_id, &source).await {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+
     build_recap_template(&space_id, &match_report_id, is_published, source, &state)
         .await
         .into_response()
+}
+
+/// Autorisé si l'utilisateur est admin d'espace, admin de la compétition du
+/// rapport, ou coach de l'une des deux équipes concernées.
+async fn is_authorized(state: &AppState, user: &User, space_id: &str, source: &RecapSource<'_>) -> bool {
+    let user_id = user.id.to_string();
+
+    let is_space_admin = match SpaceId::try_new(space_id) {
+        Ok(sid) => matches!(
+            state.spaces.space_repository.find_member_profile(&user.id, &sid).await,
+            Ok(Some(SpaceProfile::SpaceAdmin))
+        ),
+        Err(_) => false,
+    };
+    if is_space_admin {
+        return true;
+    }
+
+    let is_comp_admin = state
+        .match_report
+        .competition_data
+        .is_competition_admin(&source.competition_id, &user_id)
+        .await
+        .unwrap_or(false);
+    if is_comp_admin {
+        return true;
+    }
+
+    let is_home_coach = state
+        .match_report
+        .team_data
+        .is_coach_of_team(&source.home_team_id, &user_id)
+        .await
+        .unwrap_or(false);
+    let is_away_coach = state
+        .match_report
+        .team_data
+        .is_coach_of_team(&source.away_team_id, &user_id)
+        .await
+        .unwrap_or(false);
+
+    is_home_coach || is_away_coach
 }
 
 async fn build_recap_template(

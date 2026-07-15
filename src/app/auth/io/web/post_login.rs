@@ -273,6 +273,7 @@ mod tests {
                 #[async_trait::async_trait]
                 impl crate::app::match_report::ports::ITeamDataPort for FakeTeamDataPort {
                     async fn is_team_ready_to_play(&self, _: &str) -> Result<bool, String> { Ok(true) }
+                    async fn is_coach_of_team(&self, _: &str, _: &str) -> Result<bool, String> { Ok(false) }
                     async fn find_team_info(&self, _: &str) -> Option<crate::app::match_report::ports::TeamInfoDto> { None }
                     async fn find_team_value(&self, _: &str) -> Option<u32> { None }
                     async fn find_team_treasury(&self, _: &str) -> Option<u32> { None }

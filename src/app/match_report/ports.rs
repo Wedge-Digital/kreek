@@ -67,6 +67,8 @@ pub trait ITeamDataPort: Send + Sync {
         team_id: &str,
     ) -> Result<bool, String>;
 
+    async fn is_coach_of_team(&self, team_id: &str, user_id: &str) -> Result<bool, String>;
+
     async fn find_team_info(&self, team_id: &str) -> Option<TeamInfoDto>;
 
     async fn find_team_value(&self, team_id: &str) -> Option<u32>;
