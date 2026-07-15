@@ -4,6 +4,7 @@ pub mod path {
     pub const PLAYER_DEBUG: &str = "/app/{space_id}/players/{player_id}/debug";
     pub const PLAYER_DETAIL: &str = "/app/{space_id}/players/{player_id}/detail";
     pub const PLAYER_SKILLS: &str = "/app/{space_id}/players/{player_id}/skills";
+    pub const PLAYER_STAT_INCREASE: &str = "/app/{space_id}/players/{player_id}/stats/{stat}";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -38,5 +39,12 @@ impl Routes {
         path::PLAYER_SKILLS
             .replace("{space_id}", space_id)
             .replace("{player_id}", player_id)
+    }
+
+    pub fn increase_stat(&self, space_id: &str, player_id: &str, stat: &str) -> String {
+        path::PLAYER_STAT_INCREASE
+            .replace("{space_id}", space_id)
+            .replace("{player_id}", player_id)
+            .replace("{stat}", stat)
     }
 }

@@ -1,3 +1,4 @@
+use crate::app::players::io::web::increase_stat_controller::post_increase_stat;
 use crate::app::players::io::web::player_debug_controller::player_debug_controller;
 use crate::app::players::io::web::player_detail_controller::player_detail_controller;
 use crate::app::players::io::web::player_table::player_table_widget;
@@ -17,4 +18,5 @@ pub fn router() -> Router<AppState> {
         .route(path::PLAYER_DEBUG, get(player_debug_controller))
         .route(path::PLAYER_DETAIL, get(player_detail_controller))
         .route(path::PLAYER_SKILLS, post(post_purchase_skill))
+        .route(path::PLAYER_STAT_INCREASE, post(post_increase_stat))
 }
