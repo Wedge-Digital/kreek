@@ -197,6 +197,15 @@ impl IReferenceRepository for InMemoryReferenceRepository {
     fn interception_spp(&self) -> u8 { 2 }
     fn casualty_spp(&self) -> u8 { 2 }
     fn mvp_spp(&self) -> u8 { 4 }
+
+    fn improvement_skill_value_delta(&self, is_secondary_access: bool) -> u32 {
+        if is_secondary_access { 40_000 } else { 20_000 }
+    }
+    fn improvement_stat_value_delta_ma(&self) -> u32 { 20_000 }
+    fn improvement_stat_value_delta_st(&self) -> u32 { 60_000 }
+    fn improvement_stat_value_delta_ag(&self) -> u32 { 30_000 }
+    fn improvement_stat_value_delta_pa(&self) -> u32 { 20_000 }
+    fn improvement_stat_value_delta_av(&self) -> u32 { 10_000 }
 }
 
 #[cfg(test)]
@@ -211,5 +220,17 @@ mod tests {
         assert_eq!(repo.interception_spp(), 2);
         assert_eq!(repo.casualty_spp(), 2);
         assert_eq!(repo.mvp_spp(), 4);
+    }
+
+    #[test]
+    fn improvement_value_delta_matches_official_table() {
+        let repo = InMemoryReferenceRepository::load();
+        assert_eq!(repo.improvement_skill_value_delta(false), 20_000);
+        assert_eq!(repo.improvement_skill_value_delta(true), 40_000);
+        assert_eq!(repo.improvement_stat_value_delta_ma(), 20_000);
+        assert_eq!(repo.improvement_stat_value_delta_st(), 60_000);
+        assert_eq!(repo.improvement_stat_value_delta_ag(), 30_000);
+        assert_eq!(repo.improvement_stat_value_delta_pa(), 20_000);
+        assert_eq!(repo.improvement_stat_value_delta_av(), 10_000);
     }
 }

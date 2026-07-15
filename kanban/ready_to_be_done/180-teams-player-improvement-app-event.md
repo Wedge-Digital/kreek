@@ -19,11 +19,28 @@ produit. Spec complète : `docs/specs/player-spp-spending/README.md`.
 
 ```rust
 pub enum PlayerImprovementAppEvent {
-    Purchased { team_id: String, player_id: String, value_delta: u32 },
+    Purchased { team_id: String, player_id: String, value_delta_po: u32 },
 }
 ```
 Nommé en termes domaine (le fait : une amélioration a été achetée), pas en
-termes d'origine technique.
+termes d'origine technique. `value_delta_po` explicitement suffixé `_po`
+dans le payload pour éviter toute ambiguïté à la frontière (voir point
+d'attention ci-dessous).
+
+### ⚠️ Point d'attention critique — unités différentes entre BCs
+
+`players::domain::player::ValueKpo` stocke en réalité des **Po bruts**
+malgré son nom (`ValueKpo(100_000)` → affiché "100 000 Po") — c'est l'unité
+de `PlayerSkillPurchased.value_delta`/`PlayerStatIncreased.value_delta`.
+
+`teams::domain::value_objects::Kpo` stocke lui de vrais **kPo**
+(`Kpo(873)` → affiché "873 kPo").
+
+**Le listener `teams` doit diviser par 1000** avant de construire
+`Kpo` à partir du `value_delta_po` reçu dans l'app event — sinon
+`team_value` serait incrémentée 1000× trop. Toutes les valeurs de la table
+officielle (10 000/20 000/30 000/40 000/60 000 Po) sont des multiples exacts
+de 1000, donc la division est toujours entière, sans arrondi.
 
 ### Publisher (`players/io/app_events/app_event_publisher.rs`, nouveau)
 

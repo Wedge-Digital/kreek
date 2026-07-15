@@ -106,6 +106,12 @@ mod tests {
         fn interception_spp(&self) -> u8 { 2 }
         fn casualty_spp(&self) -> u8 { 2 }
         fn mvp_spp(&self) -> u8 { 4 }
+        fn improvement_skill_value_delta(&self, _is_secondary_access: bool) -> u32 { 0 }
+        fn improvement_stat_value_delta_ma(&self) -> u32 { 0 }
+        fn improvement_stat_value_delta_st(&self) -> u32 { 0 }
+        fn improvement_stat_value_delta_ag(&self) -> u32 { 0 }
+        fn improvement_stat_value_delta_pa(&self) -> u32 { 0 }
+        fn improvement_stat_value_delta_av(&self) -> u32 { 0 }
     }
 
     fn sample_player() -> Player {
