@@ -10,3 +10,15 @@ pub struct DismissTeamCommand {
 pub struct RejectEnrollmentCommand {
     pub team_id: TeamId,
 }
+
+pub struct ValidateImprovementPhaseCommand {
+    pub team_id: TeamId,
+}
+
+pub struct ValidateRecruitmentPhaseCommand {
+    pub team_id: TeamId,
+}
+
+pub struct ValidateDismissalsPhaseCommand {
+    pub team_id: TeamId,
+}

@@ -12,6 +12,12 @@ pub mod path {
     pub const TEAM_SELECTION_JSON: &str = "/app/{space_id}/team/widgets/team-selection/json";
     pub const TEAM_SELECTION_TESTER: &str = "/team/widgets/tester";
     pub const TEAM_MATCH_CONTEXT_JSON: &str = "/app/{space_id}/team/widgets/match-context/json";
+    pub const VALIDATE_IMPROVEMENT_PHASE: &str =
+        "/app/{space_id}/teams/{team_id}/validate-improvement-phase";
+    pub const VALIDATE_RECRUITMENT_PHASE: &str =
+        "/app/{space_id}/teams/{team_id}/validate-recruitment-phase";
+    pub const VALIDATE_DISMISSALS_PHASE: &str =
+        "/app/{space_id}/teams/{team_id}/validate-dismissals-phase";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -65,5 +71,23 @@ impl Routes {
 
     pub fn team_match_context_json(&self, space_id: &str) -> String {
         path::TEAM_MATCH_CONTEXT_JSON.replace("{space_id}", space_id)
+    }
+
+    pub fn validate_improvement_phase(&self, space_id: &str, team_id: &str) -> String {
+        path::VALIDATE_IMPROVEMENT_PHASE
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+
+    pub fn validate_recruitment_phase(&self, space_id: &str, team_id: &str) -> String {
+        path::VALIDATE_RECRUITMENT_PHASE
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+
+    pub fn validate_dismissals_phase(&self, space_id: &str, team_id: &str) -> String {
+        path::VALIDATE_DISMISSALS_PHASE
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
     }
 }
