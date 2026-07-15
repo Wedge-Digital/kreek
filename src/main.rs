@@ -150,6 +150,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
         match_report_team_data.clone(),
     );
     players::context::init_listeners(
+        &event_bus,
         &app_event_bus,
         pool.clone(),
         refs_for_players.repository.clone(),
@@ -203,6 +204,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             Arc::new(crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter::new(
                 refs_for_players.repository.clone(),
             )),
+            event_bus.clone(),
         ),
         email_service: Arc::new(ResendMailService::new(
             cfg.email.api_key,

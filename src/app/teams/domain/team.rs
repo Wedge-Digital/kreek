@@ -616,6 +616,18 @@ impl Team {
             .map(|_| TeamDomainEvent::RetirementPhaseValidated)
     }
 
+    /// Enregistre l'effet sur `team_value` d'un achat de compétence/caractéristique
+    /// déjà validé côté BC `players` (registre d'un fait déjà survenu — pas de
+    /// garde ici, `players` a déjà vérifié SPP/phase/accès au moment de l'achat).
+    pub fn apply_player_improvement(
+        &self,
+        player_id: PlayerId,
+        improvement: PlayerImprovement,
+        value_delta: Kpo,
+    ) -> TeamDomainEvent {
+        TeamDomainEvent::PlayerImprovementApplied { player_id, improvement, value_delta }
+    }
+
     pub fn override_phase(
         &self,
         admin_id: CoachId,

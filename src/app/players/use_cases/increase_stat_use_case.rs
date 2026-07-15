@@ -2,6 +2,7 @@ use crate::app::players::domain::error::DomainError;
 use crate::app::players::ports::{IPlayerRepository, ISkillCatalogPort, RepositoryError};
 use crate::app::players::use_cases::commands::IncreaseStatCommand;
 use crate::app::players::use_cases::improvement_cost_service::resolve_stat_cost;
+use crate::common::services::event_bus::event_bus::EventBus;
 
 pub enum IncreaseStatError {
     PlayerNotFound,
@@ -13,6 +14,7 @@ pub async fn execute(
     cmd: IncreaseStatCommand,
     player_repo: &dyn IPlayerRepository,
     catalog: &dyn ISkillCatalogPort,
+    event_bus: &EventBus,
 ) -> Result<(), IncreaseStatError> {
     let player = player_repo
         .find_by_id(&cmd.player_id)
@@ -28,9 +30,11 @@ pub async fn execute(
         .map_err(IncreaseStatError::Domain)?;
 
     player_repo
-        .append(&player.id, &player.team_id, &event, player.version)
+        .append(&player.id, &player.team_id, &event, player.version + 1)
         .await
         .map_err(IncreaseStatError::Repository)?;
+
+    let _ = event_bus.send(event.to_enveloppe(&player.id.0));
 
     Ok(())
 }
@@ -89,7 +93,8 @@ mod tests {
     async fn increase_stat_credits_value_and_appends_stat_increase() {
         let repo = FakePlayerRepo(Mutex::new(vec![created_event()]));
         let cmd = IncreaseStatCommand { player_id: PlayerId("p1".into()), stat: StatKind::Ma };
-        execute(cmd, &repo, &FakeCatalog).await.ok().expect("achat valide");
+        let event_bus = crate::common::services::event_bus::event_bus::new_bus();
+        execute(cmd, &repo, &FakeCatalog, &event_bus).await.ok().expect("achat valide");
 
         let player = Player::from_events(&repo.0.lock().unwrap()).unwrap();
         assert_eq!(player.stat_increases.len(), 1);

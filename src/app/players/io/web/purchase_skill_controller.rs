@@ -70,7 +70,7 @@ pub async fn post_purchase_skill(
 
     let cmd = PurchaseSkillCommand { player_id: player.id.clone(), skill_id, mode };
 
-    match purchase_skill_use_case::execute(cmd, state.players.repository.as_ref(), state.players.skill_catalog.as_ref()).await {
+    match purchase_skill_use_case::execute(cmd, state.players.repository.as_ref(), state.players.skill_catalog.as_ref(), &state.players.event_bus).await {
         Ok(()) => Response::builder().header("HX-Refresh", "true").body(Body::empty()).unwrap(),
         Err(purchase_skill_use_case::PurchaseSkillError::PlayerNotFound) => StatusCode::NOT_FOUND.into_response(),
         Err(purchase_skill_use_case::PurchaseSkillError::Cost(e)) => {

@@ -16,21 +16,7 @@ impl PgPlayerRepository {
 }
 
 fn event_type_name(event: &PlayerDomainEvent) -> &'static str {
-    match event {
-        PlayerDomainEvent::PlayerCreated { .. } => "PlayerCreated",
-        PlayerDomainEvent::InitialSkillEarned   { .. } => "InitialSkillEarned",
-        PlayerDomainEvent::TouchdownScored          { .. } => "TouchdownScored",
-        PlayerDomainEvent::PassCompleted            { .. } => "PassCompleted",
-        PlayerDomainEvent::InterceptionMade         { .. } => "InterceptionMade",
-        PlayerDomainEvent::CasualtyInflicted        { .. } => "CasualtyInflicted",
-        PlayerDomainEvent::MatchMvpNamed            { .. } => "MatchMvpNamed",
-        PlayerDomainEvent::FoulCommitted            { .. } => "FoulCommitted",
-        PlayerDomainEvent::InjurySustained          { .. } => "InjurySustained",
-        PlayerDomainEvent::PlayerAvailabilityRestored { .. } => "PlayerAvailabilityRestored",
-        PlayerDomainEvent::MatchConcluded { .. } => "MatchConcluded",
-        PlayerDomainEvent::PlayerSkillPurchased { .. } => "PlayerSkillPurchased",
-        PlayerDomainEvent::PlayerStatIncreased { .. } => "PlayerStatIncreased",
-    }
+    event.type_name()
 }
 
 fn player_and_team_id(event: &PlayerDomainEvent) -> (&str, &str) {

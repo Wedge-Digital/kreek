@@ -57,7 +57,7 @@ pub async fn post_increase_stat(
 
     let cmd = IncreaseStatCommand { player_id: player.id.clone(), stat };
 
-    match increase_stat_use_case::execute(cmd, state.players.repository.as_ref(), state.players.skill_catalog.as_ref()).await {
+    match increase_stat_use_case::execute(cmd, state.players.repository.as_ref(), state.players.skill_catalog.as_ref(), &state.players.event_bus).await {
         Ok(()) => Response::builder().header("HX-Refresh", "true").body(Body::empty()).unwrap(),
         Err(increase_stat_use_case::IncreaseStatError::PlayerNotFound) => StatusCode::NOT_FOUND.into_response(),
         Err(increase_stat_use_case::IncreaseStatError::Domain(e)) => {

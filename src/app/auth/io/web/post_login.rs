@@ -252,6 +252,7 @@ mod tests {
                     repository:            Arc::new(FakePlayerRepo),
                     projection_repository: Arc::new(FakePlayerProjectionRepo),
                     skill_catalog:         Arc::new(FakeSkillCatalogPort),
+                    event_bus:             event_bus.clone(),
                 }
             },
             match_report: {

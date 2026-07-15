@@ -3,6 +3,7 @@ use crate::app::players::domain::value_objects::SkillName;
 use crate::app::players::ports::{IPlayerRepository, ISkillCatalogPort, RepositoryError};
 use crate::app::players::use_cases::commands::PurchaseSkillCommand;
 use crate::app::players::use_cases::improvement_cost_service::{resolve_skill_cost, ImprovementCostError};
+use crate::common::services::event_bus::event_bus::EventBus;
 
 pub enum PurchaseSkillError {
     PlayerNotFound,
@@ -15,6 +16,7 @@ pub async fn execute(
     cmd: PurchaseSkillCommand,
     player_repo: &dyn IPlayerRepository,
     catalog: &dyn ISkillCatalogPort,
+    event_bus: &EventBus,
 ) -> Result<(), PurchaseSkillError> {
     let player = player_repo
         .find_by_id(&cmd.player_id)
@@ -43,9 +45,11 @@ pub async fn execute(
         .map_err(PurchaseSkillError::Domain)?;
 
     player_repo
-        .append(&player.id, &player.team_id, &event, player.version)
+        .append(&player.id, &player.team_id, &event, player.version + 1)
         .await
         .map_err(PurchaseSkillError::Repository)?;
+
+    let _ = event_bus.send(event.to_enveloppe(&player.id.0));
 
     Ok(())
 }
