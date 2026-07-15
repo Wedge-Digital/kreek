@@ -68,9 +68,34 @@ Le listener ne fait qu'`append()`.
 
 ## Checklist
 
-- [ ] `start_post_match_sequence` : `fans_roll: u8` → `fan_mod: i8`, calcul direct sans `fan_modifier()`
-- [ ] `MatchResult::fan_modifier()` supprimé (devenu mort)
-- [ ] `handle_team` du listener transmet `fan_mod`/`gain_kpo` distincts par équipe, jamais croisés
-- [ ] Tests unitaires domaine mis à jour (`post_match_sequence_calculates_fans_correctly`, `post_match_sequence_clamps_fans_at_20`) pour la nouvelle signature
-- [ ] Nouveau test : fan_mod négatif fait baisser `dedicated_fans` sans descendre sous 0
-- [ ] Nouveau test (listener) : home et away reçoivent bien leurs propres valeurs respectives, jamais celles de l'adversaire
+- [x] `start_post_match_sequence` : `fans_roll: u8` → `fan_mod: i8`, calcul direct sans `fan_modifier()`
+- [x] `MatchResult::fan_modifier()` supprimé (devenu mort)
+- [x] `handle_team` du listener transmet `fan_mod`/`gain_kpo` distincts par équipe, jamais croisés
+- [x] Tests unitaires domaine mis à jour (`post_match_sequence_calculates_fans_correctly`, `post_match_sequence_clamps_fans_at_20`) pour la nouvelle signature
+- [x] Nouveau test : fan_mod négatif fait baisser `dedicated_fans` sans descendre sous 0
+- [x] Nouveau test (listener) : home et away reçoivent bien leurs propres valeurs respectives, jamais celles de l'adversaire
+
+---
+
+## Correctif ultérieur — désynchronisation `team_proj.game_phase` (commit `1290b47`)
+
+Cette carte a mis en évidence un bug préexistant plus large : `update_projection_in_tx()`
+(`io/repository/team_repository.rs`) ne gérait que 5 événements
+(`TeamCreated`, `TeamEnrolled`, `MatchReportingStarted`, `TeamDismissed`,
+`TeamEnrollmentRejected`) — les événements de progression de phase
+(`PostMatchSequenceStarted`, `PlayerImprovementPhaseValidated`,
+`RecruitmentPhaseValidated`, `DismissalsPhaseValidated`) tombaient dans le
+catch-all silencieux. Conséquence concrète : une fois un rapport de match
+démarré, `team_proj.game_phase` restait figé sur `'MatchReporting'` pour
+toujours, cassant la liste de sélection d'équipe du rapport de match (step 1,
+qui filtre sur `game_phase = 'ReadyToPlay'`) — une équipe ayant déjà joué
+n'y réapparaissait jamais, même après validation complète du cycle
+post-match.
+
+Corrigé en ajoutant les 4 arms manquants pour les événements actuellement
+atteignables. Aucun changement côté BC `match_report` : son garde-fou à la
+confirmation (`ITeamDataPort::is_team_ready_to_play`) relit l'event store en
+entier et n'a jamais été impacté par ce bug. Les futures cartes (retraite
+temporaire, off-season, override admin — cartes 39/40/43/46) devront ajouter
+leur propre arm de projection pour ne pas reproduire ce bug (commentaire
+laissé dans le code à cet effet).
