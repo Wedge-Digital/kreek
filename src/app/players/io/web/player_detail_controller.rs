@@ -302,6 +302,7 @@ mod tests {
                 skill_name: SkillName::try_new(format!("Skill{i}")).unwrap(),
                 mode: AcquisitionMode::Chosen,
                 spp_cost: SppCost::try_new(*cost).unwrap(),
+                value_delta: ValueKpo(0),
             });
         }
         player

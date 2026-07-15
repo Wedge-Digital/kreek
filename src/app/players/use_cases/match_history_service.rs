@@ -76,7 +76,9 @@ fn event_match_report_id(event: &PlayerDomainEvent) -> Option<String> {
         | PlayerDomainEvent::MatchConcluded { context, .. } => Some(context.match_report_id.0.clone()),
         PlayerDomainEvent::PlayerCreated { .. }
         | PlayerDomainEvent::InitialSkillEarned { .. }
-        | PlayerDomainEvent::PlayerAvailabilityRestored { .. } => None,
+        | PlayerDomainEvent::PlayerAvailabilityRestored { .. }
+        | PlayerDomainEvent::PlayerSkillPurchased { .. }
+        | PlayerDomainEvent::PlayerStatIncreased { .. } => None,
     }
 }
 
@@ -97,7 +99,9 @@ fn apply_event(entry: &mut MatchHistoryEntry, event: &PlayerDomainEvent) {
         PlayerDomainEvent::InjurySustained { .. } => push(entry, MatchHistoryActionKind::Injury, None),
         PlayerDomainEvent::PlayerCreated { .. }
         | PlayerDomainEvent::InitialSkillEarned { .. }
-        | PlayerDomainEvent::PlayerAvailabilityRestored { .. } => {}
+        | PlayerDomainEvent::PlayerAvailabilityRestored { .. }
+        | PlayerDomainEvent::PlayerSkillPurchased { .. }
+        | PlayerDomainEvent::PlayerStatIncreased { .. } => {}
     }
 }
 

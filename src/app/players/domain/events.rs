@@ -1,6 +1,6 @@
 use crate::app::players::domain::player::{AcquisitionMode, PlayerId, Spp, TeamId, ValueKpo};
 use crate::app::players::domain::match_impact::{
-    InjuryType, MatchContext, MatchReportId, SppEarned,
+    InjuryType, MatchContext, MatchReportId, SppEarned, StatKind,
 };
 use crate::app::players::domain::value_objects::{
     JerseyVo, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
@@ -32,6 +32,25 @@ pub enum PlayerDomainEvent {
         is_primary:   bool,
         is_elite:     bool,
         value_delta:  ValueKpo,
+    },
+
+    // ── Dépense de SPP post-match (phase PlayerImprovement) ────────────────────
+    PlayerSkillPurchased {
+        player_id:    PlayerId,
+        team_id:      TeamId,
+        skill_id:     SkillId,
+        skill_name:   SkillName,
+        category_css: String,
+        mode:         AcquisitionMode,
+        spp_cost:     SppCost,
+        value_delta:  ValueKpo,
+    },
+    PlayerStatIncreased {
+        player_id:   PlayerId,
+        team_id:     TeamId,
+        stat:        StatKind,
+        spp_cost:    SppCost,
+        value_delta: ValueKpo,
     },
 
     // ── Impact des rapports de match ───────────────────────────────────────────

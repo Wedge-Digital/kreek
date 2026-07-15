@@ -2,11 +2,15 @@ use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum DomainError {
-    // Réservé pour les futures règles métier (amélioration, renvoi, etc.)
+    SkillAlreadyAcquired,
+    InsufficientSpp,
 }
 
 impl fmt::Display for DomainError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "erreur domaine players")
+        match self {
+            Self::SkillAlreadyAcquired => write!(f, "compétence déjà possédée"),
+            Self::InsufficientSpp => write!(f, "SPP insuffisants"),
+        }
     }
 }

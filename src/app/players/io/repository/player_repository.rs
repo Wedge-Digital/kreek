@@ -28,6 +28,8 @@ fn event_type_name(event: &PlayerDomainEvent) -> &'static str {
         PlayerDomainEvent::InjurySustained          { .. } => "InjurySustained",
         PlayerDomainEvent::PlayerAvailabilityRestored { .. } => "PlayerAvailabilityRestored",
         PlayerDomainEvent::MatchConcluded { .. } => "MatchConcluded",
+        PlayerDomainEvent::PlayerSkillPurchased { .. } => "PlayerSkillPurchased",
+        PlayerDomainEvent::PlayerStatIncreased { .. } => "PlayerStatIncreased",
     }
 }
 
@@ -44,6 +46,8 @@ fn player_and_team_id(event: &PlayerDomainEvent) -> (&str, &str) {
         PlayerDomainEvent::InjurySustained            { player_id, team_id, .. } => (&player_id.0, &team_id.0),
         PlayerDomainEvent::PlayerAvailabilityRestored { player_id, team_id, .. } => (&player_id.0, &team_id.0),
         PlayerDomainEvent::MatchConcluded { player_id, team_id, .. } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::PlayerSkillPurchased { player_id, team_id, .. } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::PlayerStatIncreased { player_id, team_id, .. } => (&player_id.0, &team_id.0),
     }
 }
 
@@ -204,6 +208,47 @@ pub async fn upsert_player_projection(
                 .execute(&mut **tx)
                 .await
                 .map_err(RepositoryError::Database)?;
+        }
+
+        PlayerDomainEvent::PlayerSkillPurchased {
+            player_id, skill_id, skill_name, category_css, mode, spp_cost, value_delta, ..
+        } => {
+            let acq = AcquiredSkillProjection {
+                skill_id:     skill_id.as_ref().to_string(),
+                skill_name:   skill_name.as_ref().to_string(),
+                category_css: category_css.clone(),
+                mode: match mode {
+                    AcquisitionMode::Chosen => "Chosen".to_string(),
+                    AcquisitionMode::Random => "Random".to_string(),
+                },
+                spp_cost: spp_cost.into_inner() as i32,
+            };
+            let acq_json = serde_json::to_value(&acq).map_err(RepositoryError::Serialization)?;
+
+            sqlx::query(
+                "UPDATE players_proj
+                 SET acquired_skills = acquired_skills || jsonb_build_array($1::jsonb),
+                     value_kpo = value_kpo + $2,
+                     version   = version + 1
+                 WHERE player_id = $3",
+            )
+            .bind(&acq_json)
+            .bind(value_delta.0 as i32)
+            .bind(&player_id.0)
+            .execute(&mut **tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+        }
+
+        PlayerDomainEvent::PlayerStatIncreased { player_id, value_delta, .. } => {
+            sqlx::query(
+                "UPDATE players_proj SET value_kpo = value_kpo + $1, version = version + 1 WHERE player_id = $2",
+            )
+            .bind(value_delta.0 as i32)
+            .bind(&player_id.0)
+            .execute(&mut **tx)
+            .await
+            .map_err(RepositoryError::Database)?;
         }
     }
 
