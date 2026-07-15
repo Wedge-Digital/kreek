@@ -66,3 +66,13 @@ Ou depuis la racine : `make e2e`.
   déséquilibre de balises `<div>` qui empêchait le `<script>` de la page de
   s'exécuter) ne se manifestait que lors de la navigation SPA réelle depuis
   la phase 3, pas via un accès direct à l'URL.
+- `test_team_detail_state_banner.py` : bandeau d'état contextuel de la page
+  de détail d'équipe — rapport en cours (lien de reprise), phase
+  d'amélioration/recrutement/renvois (bouton de validation → transition réelle
+  de phase, badge d'en-tête mis à jour), retour à "Prête à jouer" (bandeau
+  impression). Séquence pilotée de bout en bout par de vraies actions
+  applicatives (création/publication d'un rapport de match puis les 3 routes
+  de validation de phase) sur une même équipe. En attente d'inscription
+  vérifié dynamiquement (skip si absent de la base seedée). Retraite
+  temporaire/off-season non testés — aucune voie applicative ne permet
+  actuellement de les atteindre (carte 46, admin override-phase, non faite).
