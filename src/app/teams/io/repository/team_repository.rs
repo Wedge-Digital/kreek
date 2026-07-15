@@ -104,6 +104,46 @@ impl TeamRepository {
                 .await
                 .map_err(RepositoryError::Database)?;
             }
+            TeamDomainEvent::PostMatchSequenceStarted { .. } => {
+                sqlx::query(
+                    "UPDATE team_proj SET game_phase = 'PlayerImprovement', updated_at = now() WHERE team_id = $1",
+                )
+                .bind(team_id)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
+            TeamDomainEvent::PlayerImprovementPhaseValidated => {
+                sqlx::query(
+                    "UPDATE team_proj SET game_phase = 'Recruitment', updated_at = now() WHERE team_id = $1",
+                )
+                .bind(team_id)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
+            TeamDomainEvent::RecruitmentPhaseValidated => {
+                sqlx::query(
+                    "UPDATE team_proj SET game_phase = 'Dismissals', updated_at = now() WHERE team_id = $1",
+                )
+                .bind(team_id)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
+            TeamDomainEvent::DismissalsPhaseValidated => {
+                sqlx::query(
+                    "UPDATE team_proj SET game_phase = 'ReadyToPlay', updated_at = now() WHERE team_id = $1",
+                )
+                .bind(team_id)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
+            // Autres événements (retraite temporaire, off-season, override admin) : pas encore
+            // produits par aucun use case (cartes 39/40/43/46 à faire) — quand l'un d'eux sera
+            // implémenté, ajouter ici l'arm correspondant, sous peine de reproduire le bug de
+            // désynchronisation de team_proj.game_phase déjà rencontré (cf. carte 175).
             _ => {}
         }
         Ok(())
