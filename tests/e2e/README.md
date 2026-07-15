@@ -76,3 +76,13 @@ Ou depuis la racine : `make e2e`.
   vérifié dynamiquement (skip si absent de la base seedée). Retraite
   temporaire/off-season non testés — aucune voie applicative ne permet
   actuellement de les atteindre (carte 46, admin override-phase, non faite).
+- `test_player_spp_spending.py` : slot droit de la fiche joueur (journal en
+  lecture seule vs panneau de dépense de SPP) — bascule automatique selon la
+  phase `PlayerImprovement` réelle de l'équipe (publication d'un vrai rapport
+  de match), achat d'une compétence (réserve SPP décrémentée, tag de
+  compétence acquise), joueur sans SPP (aucune compétence achetable),
+  augmentation de caractéristique (stat + réserve mises à jour),
+  incrémentation de `team_value` sur la fiche équipe (pipeline app event
+  `players → teams`). Utilisateur non autorisé non testé ici : `bypass_auth`
+  connecte toujours le même coach, incompatible avec ce scénario sans
+  fabriquer un état dans l'event store (cf. docstring du fichier).
