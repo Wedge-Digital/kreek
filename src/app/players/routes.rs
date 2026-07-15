@@ -5,6 +5,10 @@ pub mod path {
     pub const PLAYER_DETAIL: &str = "/app/{space_id}/players/{player_id}/detail";
     pub const PLAYER_SKILLS: &str = "/app/{space_id}/players/{player_id}/skills";
     pub const PLAYER_STAT_INCREASE: &str = "/app/{space_id}/players/{player_id}/stats/{stat}";
+    pub const PLAYER_EVOLUTION_JOURNAL_WIDGET: &str =
+        "/app/{space_id}/players/{player_id}/widgets/evolution-journal";
+    pub const PLAYER_SPP_SPENDING_WIDGET: &str =
+        "/app/{space_id}/players/{player_id}/widgets/spp-spending";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -46,5 +50,17 @@ impl Routes {
             .replace("{space_id}", space_id)
             .replace("{player_id}", player_id)
             .replace("{stat}", stat)
+    }
+
+    pub fn evolution_journal_widget(&self, space_id: &str, player_id: &str) -> String {
+        path::PLAYER_EVOLUTION_JOURNAL_WIDGET
+            .replace("{space_id}", space_id)
+            .replace("{player_id}", player_id)
+    }
+
+    pub fn spp_spending_widget(&self, space_id: &str, player_id: &str) -> String {
+        path::PLAYER_SPP_SPENDING_WIDGET
+            .replace("{space_id}", space_id)
+            .replace("{player_id}", player_id)
     }
 }

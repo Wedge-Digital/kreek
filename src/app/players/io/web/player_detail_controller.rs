@@ -1,5 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::players::domain::player::{Player, PlayerId};
+use crate::app::players::io::web::purchase_skill_controller::can_spend_spp;
 use crate::app::players::use_cases::match_history_service::{
     build_match_history, MatchHistoryAction, MatchHistoryActionKind, MatchHistoryEntry,
 };
@@ -7,7 +8,7 @@ use crate::app::players::use_cases::player_stats_service::{self, ResolvedPlayerS
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::authorization::SpaceProfile;
 use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
-use crate::app::teams::domain::team::Team;
+use crate::app::teams::domain::team::{GamePhase, Team};
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -33,14 +34,6 @@ pub struct MatchHistoryCardVm {
     pub subtotal_spp:  u32,
 }
 
-pub struct EvolutionLogRowVm {
-    pub label:      String,
-    pub mode_label: &'static str,
-    pub cost:       String,
-    pub value:      String,
-    pub origin:     &'static str,
-}
-
 pub struct PlayerDetailVm {
     pub player_id:    String,
     pub team_id:      String,
@@ -64,7 +57,7 @@ pub struct PlayerDetailVm {
     pub career_mvps:          u16,
     pub can_customise: bool,
     pub match_history:  Vec<MatchHistoryCardVm>,
-    pub evolution_log:  Vec<EvolutionLogRowVm>,
+    pub right_panel_widget_url: String,
 }
 
 fn format_thousands(n: u32) -> String {
@@ -108,22 +101,6 @@ fn match_history_card_vm(entry: MatchHistoryEntry) -> MatchHistoryCardVm {
         actions:        entry.actions.iter().map(action_line_vm).collect(),
         subtotal_spp,
     }
-}
-
-fn evolution_log_vm(player: &Player) -> Vec<EvolutionLogRowVm> {
-    player.acquired_skills.iter().map(|s| {
-        let mode_label = match s.mode {
-            crate::app::players::domain::player::AcquisitionMode::Chosen => "Choisie",
-            crate::app::players::domain::player::AcquisitionMode::Random => "Aléatoire",
-        };
-        EvolutionLogRowVm {
-            label:  s.skill_name.to_string(),
-            mode_label,
-            cost:   format!("{} SPP", s.spp_cost.into_inner()),
-            value:  String::new(),
-            origin: "Compétence initiale bonus",
-        }
-    }).collect()
 }
 
 async fn check_admin_rights(state: &AppState, coach_id: &CoachId, coach_name: &str, space_id: &SpaceId, team: &Team) -> bool {
@@ -196,9 +173,19 @@ pub async fn player_detail_controller(
 
     let coach_name = user.coach_name.clone().into_inner();
     let can_customise = check_admin_rights(&state, &user.id, &coach_name, &space_id_vo, &team).await;
-    let vm = build_vm(&state, &player, &events, &team, can_customise);
 
-    PlayerDetailTemplate { app_routes: AppRoutes::default(), space_id, vm }.into_response()
+    let can_spend = team.game_phase == Some(GamePhase::PlayerImprovement)
+        && can_spend_spp(&state, &user, &space_id_vo, &team).await;
+    let app_routes = AppRoutes::default();
+    let right_panel_widget_url = if can_spend {
+        app_routes.players.spp_spending_widget(&space_id, &player_id)
+    } else {
+        app_routes.players.evolution_journal_widget(&space_id, &player_id)
+    };
+
+    let vm = build_vm(&state, &player, &events, &team, can_customise, right_panel_widget_url);
+
+    PlayerDetailTemplate { app_routes, space_id, vm }.into_response()
 }
 
 async fn load_player(state: &AppState, player_id: &str) -> Result<Player, Response> {
@@ -234,8 +221,8 @@ struct SppBreakdown { earned: u32, spent: u32, reserve: u32, percent: u8 }
 
 fn compute_spp_breakdown(player: &Player) -> SppBreakdown {
     let earned = player.spp.0;
-    let spent: u32 = player.acquired_skills.iter().map(|s| s.spp_cost.into_inner() as u32).sum();
-    let reserve = earned.saturating_sub(spent);
+    let reserve = player.spp_remaining();
+    let spent = earned.saturating_sub(reserve);
     let percent = if earned == 0 { 0 } else { ((spent * 100) / earned).min(100) as u8 };
     SppBreakdown { earned, spent, reserve, percent }
 }
@@ -246,6 +233,7 @@ fn build_vm(
     events: &[crate::app::players::domain::events::PlayerDomainEvent],
     team: &Team,
     can_customise: bool,
+    right_panel_widget_url: String,
 ) -> PlayerDetailVm {
     let ref_repo = state.references.repository.as_ref();
     let stats = player_stats_service::resolve_stats(player, ref_repo)
@@ -276,7 +264,7 @@ fn build_vm(
         career_mvps:          player.career_mvps.0,
         can_customise,
         match_history,
-        evolution_log: evolution_log_vm(player),
+        right_panel_widget_url,
     }
 }
 
@@ -378,14 +366,5 @@ mod tests {
             team_score: 1, opponent_score: 1, actions: vec![],
         };
         assert_eq!(match_history_card_vm(draw).result_label, "Nul");
-    }
-
-    #[test]
-    fn evolution_log_vm_labels_acquired_skills_as_bonus_origin() {
-        let player = sample_player_with_spp(10, &[6]);
-        let rows = evolution_log_vm(&player);
-        assert_eq!(rows.len(), 1);
-        assert_eq!(rows[0].origin, "Compétence initiale bonus");
-        assert_eq!(rows[0].cost, "6 SPP");
     }
 }

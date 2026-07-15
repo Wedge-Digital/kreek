@@ -140,46 +140,15 @@
       </div>
     </div>
 
-    <!-- Colonne droite : journal des évolutions (lecture seule) -->
-    <div class="pd-right">
-      <div class="spend-panel-header">
-        <div class="spend-panel-title">Journal des évolutions</div>
-        <div class="spend-panel-remaining">
-          <div class="spend-panel-remaining-val">{{ vm.spp_reserve }}</div>
-          <div class="spend-panel-remaining-label">SPP en réserve</div>
-        </div>
-      </div>
-
-      <div class="lock-banner">
-        <span class="lock-banner-icon">🔒</span>
-        <span class="lock-banner-text">
-          <strong>La dépense de SPP n'est pas disponible actuellement.</strong><br>
-          Elle s'ouvre uniquement pendant la phase d'amélioration qui suit un match. {{ vm.name }} a {{ vm.spp_reserve }} SPP en réserve qui pourront être dépensés après le prochain match.
-        </span>
-      </div>
-
-      <div class="spp-summary">
-        {% if vm.evolution_log.is_empty() %}
-        <div class="spp-empty-state">Aucune évolution enregistrée pour l'instant.</div>
-        {% else %}
-        <table class="spp-summary-table">
-          <thead>
-            <tr><th>Évolution</th><th>Mode</th><th>Coût</th><th>Valeur</th><th>Obtenue</th></tr>
-          </thead>
-          <tbody>
-            {% for row in vm.evolution_log %}
-            <tr>
-              <td>{{ row.label }}</td>
-              <td><span class="mode-chip mode-chip-chosen">{{ row.mode_label }}</span></td>
-              <td class="summary-cost">{{ row.cost }}</td>
-              <td class="summary-value">{{ row.value }}</td>
-              <td class="summary-ref">{{ row.origin }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        {% endif %}
-      </div>
+    <!-- Colonne droite : slot rempli par le widget journal (défaut) ou dépense
+         de SPP (si l'équipe est en phase PlayerImprovement et l'utilisateur
+         autorisé) — même emplacement pour la future customisation. -->
+    <div id="pd-right-panel"
+         hx-get="{{ vm.right_panel_widget_url }}"
+         hx-trigger="load"
+         hx-target="this"
+         hx-swap="outerHTML">
+      <div class="pd-right"><div class="loading-placeholder">Chargement…</div></div>
     </div>
 
   </div>
