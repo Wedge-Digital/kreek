@@ -27,6 +27,8 @@ Directives de travail pour Claude Code sur ce projet.
 
 8. **Ne jamais démarrer de serveur de développement soi-même** : l'utilisateur gère son propre serveur (`cargo run`, `make dev`, binaire lancé manuellement, etc.). Ne jamais lancer, redémarrer ou tuer ce serveur de sa propre initiative pour une vérification. Si une vérification nécessite un serveur actif, vérifier s'il tourne déjà (ex. `curl` sur le port attendu) et l'utiliser tel quel ; sinon, demander à l'utilisateur de le démarrer.
 
+9. **Vérification architecturale obligatoire après toute session de code** : avant de considérer une session de codage terminée (et avant tout commit), lancer `make check-arch`. Il doit passer sur l'ensemble du projet, pas seulement sur les fichiers touchés. Exception ponctuelle en cours (2026-07) : une dette architecturale préexistante fait déjà échouer `check-arch` sur le projet ; elle est traitée à part une fois la feature en cours terminée, plutôt que de bloquer chaque session de code jusque-là. Une fois cette dette résolue, la règle s'applique strictement sans exception.
+
 ---
 
 ## Projet
