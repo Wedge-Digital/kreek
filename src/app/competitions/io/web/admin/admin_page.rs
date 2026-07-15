@@ -1,6 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::io::web::admin::dashboard::build_dashboard_fragment;
 use crate::app::competitions::io::web::admin::summary_tab::build_summary_fragment;
+use crate::app::competitions::domain::competition_repository_port::CompetitionBaseInfo;
 use crate::app::competitions::use_cases::admin::dashboard_query;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::authorization::SpaceProfile;
@@ -46,26 +47,30 @@ pub async fn admin_page(
     render_admin_page(auth_session, &space_id, &competition_id, &season_id, "dashboard", &state).await
 }
 
-pub async fn render_admin_page(
-    auth_session: AuthSession,
+/// Vérifie que l'utilisateur connecté est admin d'espace ou admin de la
+/// compétition — condition d'accès à **toute** l'administration de
+/// compétition. À appeler sur **chaque** route admin (page complète ET
+/// fragment htmx), pas seulement sur le chargement de page complet : sans
+/// quoi le chemin htmx (utilisé pour le changement d'onglet en SPA) contourne
+/// le contrôle d'accès.
+pub async fn require_admin_access(
+    auth_session: &AuthSession,
     space_id: &str,
     competition_id: &str,
-    season_id: &str,
-    active_tab: &str,
     state: &AppState,
-) -> Response {
-    let Some(user) = auth_session.user else {
-        return StatusCode::UNAUTHORIZED.into_response();
+) -> Result<CompetitionBaseInfo, Response> {
+    let Some(user) = &auth_session.user else {
+        return Err(StatusCode::UNAUTHORIZED.into_response());
     };
 
     let comp_id = match CompetitionId::try_new(competition_id) {
         Ok(id) => id,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+        Err(_) => return Err(StatusCode::BAD_REQUEST.into_response()),
     };
 
     let space_entity_id = match SpaceId::try_new(space_id) {
         Ok(id) => id,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+        Err(_) => return Err(StatusCode::BAD_REQUEST.into_response()),
     };
 
     let is_space_admin = matches!(
@@ -80,10 +85,10 @@ pub async fn render_admin_page(
         .await
     {
         Ok(Some(info)) => info,
-        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Ok(None) => return Err(StatusCode::NOT_FOUND.into_response()),
         Err(e) => {
-            tracing::error!("admin_page competition find: {e}");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            tracing::error!("require_admin_access competition find: {e}");
+            return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
         }
     };
 
@@ -93,8 +98,29 @@ pub async fn render_admin_page(
         || comp_info.admin_names.contains(&coach_name_str);
 
     if !is_space_admin && !is_comp_admin {
-        return StatusCode::FORBIDDEN.into_response();
+        return Err(StatusCode::FORBIDDEN.into_response());
     }
+
+    Ok(comp_info)
+}
+
+pub async fn render_admin_page(
+    auth_session: AuthSession,
+    space_id: &str,
+    competition_id: &str,
+    season_id: &str,
+    active_tab: &str,
+    state: &AppState,
+) -> Response {
+    let comp_info = match require_admin_access(&auth_session, space_id, competition_id, state).await {
+        Ok(info) => info,
+        Err(resp) => return resp,
+    };
+
+    let comp_id = match CompetitionId::try_new(competition_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
 
     let season_entity_id = match SeasonId::try_new(season_id) {
         Ok(id) => id,

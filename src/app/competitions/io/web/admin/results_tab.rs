@@ -1,5 +1,5 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::competitions::io::web::admin::admin_page::render_admin_page;
+use crate::app::competitions::io::web::admin::admin_page::{render_admin_page, require_admin_access};
 use crate::app::competitions::io::web::resultats_view::{
     build_journees, load_resultats, JourneeResultatsVm, ResultAuthorization,
 };
@@ -39,13 +39,16 @@ pub async fn results_tab(
     headers: HeaderMap,
 ) -> impl IntoResponse {
     if headers.contains_key("hx-request") {
+        if let Err(resp) = require_admin_access(&auth_session, &space_id, &competition_id, &state).await {
+            return resp;
+        }
+
         let rows = match load_resultats(&state, &season_id, None).await {
             Ok(r) => r,
             Err(r) => return r,
         };
-        // La page admin d'où cette carte est atteinte réserve déjà l'accès
-        // aux admins d'espace/compétition (render_admin_page) — toutes les
-        // lignes sont donc autorisées ici.
+        // require_admin_access garantit déjà admin d'espace ou de
+        // compétition — toutes les lignes sont autorisées ici.
         let (journees, _next_cursor) =
             build_journees(rows, usize::MAX, &ResultAuthorization::unrestricted());
 
