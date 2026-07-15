@@ -5,6 +5,8 @@ use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 
+fn default_level() -> u8 { 1 }
+
 #[derive(Deserialize)]
 pub struct SkillPickerParams {
     pub roster_line_id: String,
@@ -16,6 +18,10 @@ pub struct SkillPickerParams {
     pub mode: String,
     #[serde(default)]
     pub filters: String,
+    /// Niveau de progression (tarification carte 182) — défaut 1, conservant
+    /// le comportement historique de la finalisation d'équipe (toujours niveau 1).
+    #[serde(default = "default_level")]
+    pub level: u8,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -118,8 +124,8 @@ pub async fn skill_picker(
     let pricing = repo
         .skill_cost_matrix()
         .iter()
-        .find(|l| l.level == 1)
-        .expect("level 1 must exist");
+        .find(|l| l.level == params.level)
+        .expect("le niveau demandé doit exister dans la matrice de coût");
 
     let mut categories: Vec<CategoryFilterVm> = repo
         .list_skill_categories()

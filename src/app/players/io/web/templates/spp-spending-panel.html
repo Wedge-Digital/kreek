@@ -1,0 +1,61 @@
+<div class="pd-right" hx-disinherit="*" x-data="{ activeTab: 'skills' }">
+  <div class="spend-panel-header">
+    <div class="spend-panel-title">Dépenser les SPP</div>
+    <div class="spend-panel-remaining">
+      <div class="spend-panel-remaining-val">{{ vm.spp_remaining }}</div>
+      <div class="spend-panel-remaining-label">SPP restants</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab" :class="activeTab === 'skills' ? 'active' : ''" @click="activeTab = 'skills'">Compétences</div>
+    <div class="tab" :class="activeTab === 'stats' ? 'active' : ''" @click="activeTab = 'stats'">Caractéristiques</div>
+  </div>
+
+  <!-- Onglet compétences : widget skill_picker (BC references) réutilisé tel quel -->
+  <div x-show="activeTab === 'skills'">
+    <div hx-get="{{ vm.skill_picker_url }}"
+         hx-trigger="load"
+         hx-target="this"
+         hx-swap="innerHTML">
+      <div class="loading-placeholder">Chargement…</div>
+    </div>
+  </div>
+
+  <!-- Onglet caractéristiques -->
+  <div x-show="activeTab === 'stats'" class="stat-grid-wrap">
+    <div class="stat-grid">
+      {% for card in vm.stat_cards %}
+      <div class="stat-card">
+        <div class="stat-card-name">{{ card.label }}</div>
+        <div class="stat-card-change">
+          <span class="stat-current">{{ card.current_display }}</span>
+          <span class="stat-arrow">→</span>
+          <span class="stat-new">{{ card.next_display }}</span>
+        </div>
+        <span class="stat-cost-badge">{{ card.cost }} SPP · +{{ card.value_delta_kpo }} kPo</span>
+        {% if card.can_afford %}
+        <button class="stat-card-btn" hx-post="{{ card.increase_url }}" hx-swap="none">Augmenter</button>
+        {% else %}
+        <button class="stat-card-btn" disabled>Budget insuf.</button>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var panel = document.currentScript.previousElementSibling;
+  panel.addEventListener('skill-selected', function (e) {
+    fetch("{{ vm.purchase_skill_url }}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'HX-Request': 'true' },
+      body: JSON.stringify({ skill_id: e.detail.skillId, mode: e.detail.mode }),
+    }).then(function (res) {
+      if (res.ok) { window.location.reload(); }
+    });
+  });
+})();
+</script>

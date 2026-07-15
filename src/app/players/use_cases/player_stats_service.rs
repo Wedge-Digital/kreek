@@ -12,8 +12,9 @@ pub struct ResolvedPlayerStats {
 }
 
 /// Résout les stats finales d'un joueur : stat de base du poste (`references`)
-/// combinée avec les `stat_adjustments` accumulés (séquelles). L'agrégat `Player`
-/// reste pur — il ne stocke que le delta, jamais la valeur résolue (BR13).
+/// combinée avec les `stat_adjustments` accumulés (séquelles) et les
+/// `stat_increases` achetés en SPP. L'agrégat `Player` reste pur — il ne
+/// stocke que les deltas, jamais la valeur résolue (BR13).
 pub fn resolve_stats(player: &Player, ref_repo: &dyn IReferenceRepository) -> Option<ResolvedPlayerStats> {
     let base = ref_repo.find_position_by_uid(player.roster_line_id.as_ref())?;
     let mut stats = ResolvedPlayerStats {
@@ -24,20 +25,39 @@ pub fn resolve_stats(player: &Player, ref_repo: &dyn IReferenceRepository) -> Op
         av: base.av,
     };
     for adj in &player.stat_adjustments {
-        match adj.stat {
-            // MA/ST/AV : plus haut = meilleur (AV 2020 : le adversaire doit ATTEINDRE
-            // la cible pour blesser, donc plus haut = plus dur à blesser) → le malus DIMINUE la valeur.
-            // Cohérent avec le nommage `SequelStat::MinusAv` côté match_report.
-            StatKind::Ma => stats.ma = stats.ma.saturating_sub(adj.malus),
-            StatKind::St => stats.st = stats.st.saturating_sub(adj.malus),
-            StatKind::Av => stats.av = stats.av.saturating_sub(adj.malus),
-            // AG/PA : nombres cibles de dé à atteindre pour réussir une action,
-            // plus bas = meilleur → le malus AUGMENTE la valeur.
-            StatKind::Ag => stats.ag = stats.ag.saturating_add(adj.malus),
-            StatKind::Pa => stats.pa = stats.pa.saturating_add(adj.malus),
-        }
+        apply_malus(&mut stats, adj.stat, adj.malus);
+    }
+    for increase in &player.stat_increases {
+        apply_increase(&mut stats, increase.stat);
     }
     Some(stats)
+}
+
+fn apply_malus(stats: &mut ResolvedPlayerStats, stat: StatKind, malus: u8) {
+    match stat {
+        // MA/ST/AV : plus haut = meilleur (AV 2020 : le adversaire doit ATTEINDRE
+        // la cible pour blesser, donc plus haut = plus dur à blesser) → le malus DIMINUE la valeur.
+        // Cohérent avec le nommage `SequelStat::MinusAv` côté match_report.
+        StatKind::Ma => stats.ma = stats.ma.saturating_sub(malus),
+        StatKind::St => stats.st = stats.st.saturating_sub(malus),
+        StatKind::Av => stats.av = stats.av.saturating_sub(malus),
+        // AG/PA : nombres cibles de dé à atteindre pour réussir une action,
+        // plus bas = meilleur → le malus AUGMENTE la valeur.
+        StatKind::Ag => stats.ag = stats.ag.saturating_add(malus),
+        StatKind::Pa => stats.pa = stats.pa.saturating_add(malus),
+    }
+}
+
+/// Une augmentation SPP va toujours dans le sens de l'amélioration —
+/// inverse de `apply_malus` pour AG/PA (nombres cibles : plus bas = meilleur).
+fn apply_increase(stats: &mut ResolvedPlayerStats, stat: StatKind) {
+    match stat {
+        StatKind::Ma => stats.ma = stats.ma.saturating_add(1),
+        StatKind::St => stats.st = stats.st.saturating_add(1),
+        StatKind::Av => stats.av = stats.av.saturating_add(1),
+        StatKind::Ag => stats.ag = stats.ag.saturating_sub(1),
+        StatKind::Pa => stats.pa = stats.pa.saturating_sub(1),
+    }
 }
 
 #[cfg(test)]
@@ -45,8 +65,8 @@ mod tests {
     use super::*;
     use crate::app::players::domain::events::PlayerDomainEvent;
     use crate::app::players::domain::match_impact::StatAdjustment;
-    use crate::app::players::domain::player::{PlayerId, Spp, TeamId, ValueKpo};
-    use crate::app::players::domain::value_objects::{PositionNameVo, RosterLineId};
+    use crate::app::players::domain::player::{PlayerId, Spp, StatIncrease, TeamId, ValueKpo};
+    use crate::app::players::domain::value_objects::{PositionNameVo, RosterLineId, SppCost};
     use crate::app::references::domain::models::PlayerPosition;
     use crate::app::references::domain::models::{Inducement, League, Skill, SkillCategory, SkillCostLevel, SpecialRule, Staff, StarPlayer, Team};
     use crate::app::shared_kernel::common_types::SpaceId;
@@ -161,5 +181,27 @@ mod tests {
         let mut player = sample_player();
         player.roster_line_id = RosterLineId::try_new("UNKNOWN".to_string()).unwrap();
         assert!(resolve_stats(&player, &FakeRefRepo::new()).is_none());
+    }
+
+    #[test]
+    fn resolve_stats_applies_ma_st_av_increase_as_increase() {
+        let mut player = sample_player();
+        player.stat_increases.push(StatIncrease { stat: StatKind::Ma, spp_cost: SppCost::try_new(1).unwrap(), value_delta: ValueKpo(0) });
+        player.stat_increases.push(StatIncrease { stat: StatKind::St, spp_cost: SppCost::try_new(1).unwrap(), value_delta: ValueKpo(0) });
+        player.stat_increases.push(StatIncrease { stat: StatKind::Av, spp_cost: SppCost::try_new(1).unwrap(), value_delta: ValueKpo(0) });
+        let stats = resolve_stats(&player, &FakeRefRepo::new()).unwrap();
+        assert_eq!(stats.ma, 8);
+        assert_eq!(stats.st, 4);
+        assert_eq!(stats.av, 9);
+    }
+
+    #[test]
+    fn resolve_stats_applies_ag_pa_increase_as_decrease() {
+        let mut player = sample_player();
+        player.stat_increases.push(StatIncrease { stat: StatKind::Ag, spp_cost: SppCost::try_new(1).unwrap(), value_delta: ValueKpo(0) });
+        player.stat_increases.push(StatIncrease { stat: StatKind::Pa, spp_cost: SppCost::try_new(1).unwrap(), value_delta: ValueKpo(0) });
+        let stats = resolve_stats(&player, &FakeRefRepo::new()).unwrap();
+        assert_eq!(stats.ag, 2);
+        assert_eq!(stats.pa, 4);
     }
 }

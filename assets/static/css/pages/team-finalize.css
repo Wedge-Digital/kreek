@@ -152,88 +152,12 @@
 .base-skill-label    { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.4px; }
 .skill-tag           { font-size: var(--text-tiny); font-weight: 600; padding: 3px 10px; border-radius: 20px; background: var(--dark-5); color: var(--dark-1); }
 
-/* Skill controls (mode + filter) */
-.skill-controls {
-  padding: var(--p1) var(--p2); border-bottom: 1px solid var(--dark-5);
-  display: flex; align-items: center; gap: var(--p2); flex-wrap: wrap;
-}
-.control-group   { display: flex; align-items: center; gap: 8px; }
-.control-label   { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
-.cost-hint       { font-size: var(--text-tiny); color: var(--dark-3); }
-.cost-chosen     { color: var(--main-blue); font-weight: 700; }
-.cost-random     { color: #9A7800; font-weight: 700; }
+/* Description de compétence (finalize uniquement — pas dans le fragment skill_picker) */
+.skill-desc { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; max-width: 280px; }
 
-.mode-toggle { display: flex; border: 1.5px solid var(--dark-4); border-radius: 8px; overflow: hidden; }
-.mode-btn {
-  padding: 6px 16px; font-size: var(--text-tiny); font-weight: 700;
-  border: none; background: var(--white); color: var(--dark-3);
-  cursor: pointer; transition: all 0.12s; white-space: nowrap;
-}
-.mode-btn + .mode-btn { border-left: 1.5px solid var(--dark-4); }
-.mode-btn.active-chosen { background: var(--main-blue); color: var(--white); }
-.mode-btn.active-random { background: #9A7800; color: var(--white); }
-
-/* Filter pills */
-.filter-pills      { display: flex; gap: 0; flex-wrap: wrap; align-items: center; }
-.filter-pill-group-wrap { display: flex; flex-direction: column; gap: 3px; }
-.filter-group-label { font-size: 10px; font-weight: 700; color: var(--dark-4); text-transform: uppercase; letter-spacing: 0.5px; }
-.filter-pill-group { display: flex; gap: 4px; align-items: center; }
-.filter-group-sep  { width: 1px; height: 28px; background: var(--dark-5); margin: 0 10px; flex-shrink: 0; }
-.filter-pill {
-  font-size: var(--text-tiny); font-weight: 600; padding: 5px 14px;
-  border-radius: 20px; border: 1.5px solid var(--dark-4); background: var(--white);
-  color: var(--dark-2); cursor: pointer; transition: all 0.12s;
-}
-.filter-pill:hover  { border-color: var(--main-blue); color: var(--main-blue); }
-.filter-pill.active { background: var(--main-blue); border-color: var(--main-blue); color: var(--white); }
-
-/* Skill list table */
-.skill-list { flex: 1; overflow-y: auto; }
-.skill-list-table { width: 100%; border-collapse: collapse; }
-.skill-list-table th {
-  text-align: left; padding: 8px var(--p2);
-  font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
-  text-transform: uppercase; letter-spacing: 0.4px;
-  border-bottom: 1px solid var(--dark-5); background: var(--dark-6);
-  position: sticky; top: 0; z-index: 1;
-}
-.skill-list-table td { padding: 12px var(--p2); font-size: var(--text-small); border-bottom: 1px solid var(--dark-6); vertical-align: middle; }
-.skill-list-table tr:last-child td { border-bottom: none; }
-.skill-list-table tr:hover td { background: var(--dark-7); }
-.skill-list-table tr.row-disabled td { opacity: 0.4; }
-.skill-name-row  { display: flex; align-items: center; gap: 6px; }
-.skill-name      { font-weight: 600; color: var(--dark-1); }
-.skill-desc      { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; max-width: 280px; }
-.skill-elite-badge {
-  display: inline-block; font-size: 10px; font-weight: 700;
-  padding: 1px 5px; border-radius: 3px; white-space: nowrap; flex-shrink: 0;
-  background: rgba(111,53,165,0.10); color: var(--light-1);
-}
-
-.skill-type-pill { display: inline-block; font-size: var(--text-tiny); font-weight: 700; padding: 2px 8px; border-radius: 4px; }
-.type-general  { background: rgba(0,48,73,0.08);    color: var(--main-blue); }
-.type-strength { background: rgba(224,32,32,0.08);  color: var(--red); }
-.type-agility  { background: rgba(98,149,132,0.12); color: var(--green); }
-.type-passing  { background: rgba(255,215,0,0.18);  color: #9A7800; }
-.type-mutation { background: rgba(111,53,165,0.10); color: var(--light-1); }
-.access-normal { background: var(--dark-5);                color: var(--dark-2); }
-.access-elite  { background: rgba(255,107,53,0.10);        color: var(--orange); }
-
-.spp-cost        { font-size: var(--text-tiny); font-weight: 700; white-space: nowrap; }
-.spp-cost-chosen { color: var(--main-blue); }
-.spp-cost-random { color: #9A7800; }
-
-.btn-add-skill {
-  padding: 6px 16px; border-radius: 6px; border: 1.5px solid var(--main-blue);
-  background: var(--white); color: var(--main-blue);
-  font-size: var(--text-tiny); font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.12s;
-}
-.btn-add-skill:hover:not(:disabled) { background: var(--main-blue); color: var(--white); }
-.btn-add-skill.random { border-color: #9A7800; color: #9A7800; }
-.btn-add-skill.random:hover:not(:disabled) { background: #9A7800; color: var(--white); }
-.btn-add-skill:disabled { border-color: var(--dark-4); color: var(--dark-4); cursor: default; background: var(--white); }
-.btn-add-skill.already { border-color: var(--green); color: var(--green); background: rgba(98,149,132,0.08); }
-.btn-add-skill.already:hover { background: rgba(224,32,32,0.06); border-color: var(--red); color: var(--red); }
+/* Les styles du fragment skill_picker (contrôles, tableau, pills, boutons)
+   vivent désormais dans widgets/skill-picker.css, embarqué par le widget
+   lui-même (carte 182 — voir docs/specs/player-spp-spending). */
 
 /* ── SPP Summary ──────────────────────────────────────────────────────── */
 .spp-summary { background: var(--white); border-radius: var(--card-radius); overflow: hidden; }

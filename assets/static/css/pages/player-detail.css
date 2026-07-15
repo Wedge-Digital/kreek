@@ -180,6 +180,36 @@
 .summary-ref   { font-size: var(--text-tiny); color: var(--dark-3); }
 .spp-empty-state { padding: var(--p3); text-align: center; color: var(--dark-3); font-size: var(--text-small); font-style: italic; }
 
+/* ── Onglets compétences / caractéristiques (widget spp_spending) ────── */
+.tabs { display: flex; border-bottom: 2px solid var(--dark-5); gap: 4px; padding: 0 var(--p2); }
+.tab {
+  padding: 10px var(--p1); font-size: var(--text-small); font-weight: 600; color: var(--dark-3);
+  cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.12s;
+}
+.tab:hover { color: var(--dark-1); }
+.tab.active { color: var(--main-blue); border-bottom-color: var(--main-blue); }
+
+/* ── Caractéristiques ──────────────────────────────────────────────────── */
+.stat-grid-wrap { padding: var(--p2); }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--p1); }
+.stat-card {
+  border: 1.5px solid var(--dark-5); border-radius: 8px; padding: var(--p1);
+  display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+}
+.stat-card-name { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.4px; }
+.stat-card-change { display: flex; align-items: center; gap: 6px; font-family: var(--font-title); font-weight: 800; }
+.stat-current { color: var(--dark-3); }
+.stat-arrow { color: var(--dark-4); font-weight: 400; }
+.stat-new { color: var(--green); }
+.stat-cost-badge { font-size: var(--text-tiny); font-weight: 700; color: #9A7800; }
+.stat-card-btn {
+  width: 100%; padding: 6px 10px; border-radius: 6px; border: 1.5px solid var(--main-blue);
+  background: var(--white); color: var(--main-blue); font-size: var(--text-tiny); font-weight: 700;
+  cursor: pointer; transition: all 0.12s;
+}
+.stat-card-btn:hover:not(:disabled) { background: var(--main-blue); color: var(--white); }
+.stat-card-btn:disabled { border-color: var(--dark-4); color: var(--dark-4); cursor: default; }
+
 /* ── Responsive ──────────────────────────────────────────────────────── */
 @media (max-width: 960px) {
   .pd-split { flex-direction: column; }

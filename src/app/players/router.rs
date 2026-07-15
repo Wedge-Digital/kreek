@@ -5,6 +5,7 @@ use crate::app::players::io::web::player_table::player_table_widget;
 use crate::app::players::io::web::purchase_skill_controller::post_purchase_skill;
 use crate::app::players::io::web::widgets::evolution_journal_widget::evolution_journal_widget;
 use crate::app::players::io::web::widgets::match_player_selector_widget::match_player_selector_widget;
+use crate::app::players::io::web::widgets::spp_spending_widget::spp_spending_widget;
 use crate::app::players::routes::path;
 use crate::state::AppState;
 use axum::{
@@ -21,7 +22,5 @@ pub fn router() -> Router<AppState> {
         .route(path::PLAYER_SKILLS, post(post_purchase_skill))
         .route(path::PLAYER_STAT_INCREASE, post(post_increase_stat))
         .route(path::PLAYER_EVOLUTION_JOURNAL_WIDGET, get(evolution_journal_widget))
-        // Provisoire : le widget interactif de dépense de SPP arrive en carte 182.
-        // En attendant, on route sur le journal en lecture seule pour éviter un 404.
-        .route(path::PLAYER_SPP_SPENDING_WIDGET, get(evolution_journal_widget))
+        .route(path::PLAYER_SPP_SPENDING_WIDGET, get(spp_spending_widget))
 }

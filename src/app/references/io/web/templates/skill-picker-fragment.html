@@ -1,3 +1,4 @@
+<link rel="stylesheet" href="/static/css/widgets/skill-picker.css">
 <div hx-disinherit="*"
      x-data="skillPicker({{ skills_json }}, {{ categories_json }}, {{ spp_remaining }}, {{ pricing_json }}, {{ initial_mode_json }}, {{ initial_filters_json }})"
      @spp-updated.window="sppRemaining = $event.detail.sppRemaining">
