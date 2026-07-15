@@ -198,7 +198,12 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             );
             TeamsContext::new(&pool, player_count, journeyman_type)
         },
-        players: PlayersContext::new(&pool),
+        players: PlayersContext::new(
+            &pool,
+            Arc::new(crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter::new(
+                refs_for_players.repository.clone(),
+            )),
+        ),
         email_service: Arc::new(ResendMailService::new(
             cfg.email.api_key,
             cfg.email.from,

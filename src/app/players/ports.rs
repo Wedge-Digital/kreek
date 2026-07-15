@@ -93,3 +93,43 @@ pub trait IPlayerRepository: Send + Sync {
         player_id: &PlayerId,
     ) -> Result<Vec<PlayerDomainEvent>, RepositoryError>;
 }
+
+// ── ACL vers le BC `references` (catalogue de compétences, matrice de coût) ────
+// DTOs propres à `players` — jamais les types du domaine `references`
+// (règle CLAUDE.md « Adapters inter-BCs »).
+
+pub struct SkillCatalogEntryDto {
+    pub skill_id: String,
+    pub name:     String,
+    pub category: String,
+    pub is_elite: bool,
+}
+
+pub struct PositionAccessDto {
+    pub primary_categories:   Vec<String>,
+    pub secondary_categories: Vec<String>,
+}
+
+/// Coûts en SPP pour un niveau de la matrice, déjà résolus pour le statut
+/// élite demandé (l'adaptateur applique le repli élite→standard quand la
+/// donnée élite n'est pas renseignée) — unité SPP, pas Po (cf.
+/// `ISkillCatalogPort::skill_value_delta`/`stat_value_delta` pour la valeur
+/// d'équipe ajoutée, exprimée elle en Po).
+pub struct SkillCostLevelDto {
+    pub level:           u8,
+    pub chosen_primary:   u32,
+    pub chosen_secondary: u32,
+    pub random:           u32,
+    pub characteristic:   u32,
+}
+
+pub trait ISkillCatalogPort: Send + Sync {
+    fn find_skill(&self, skill_id: &str) -> Option<SkillCatalogEntryDto>;
+    fn position_access(&self, roster_line_id: &str) -> Option<PositionAccessDto>;
+    fn cost_for_level(&self, level: u8, is_elite: bool) -> Option<SkillCostLevelDto>;
+
+    /// Valeur (Po) ajoutée par l'achat d'une compétence primary/secondary.
+    fn skill_value_delta(&self, is_secondary_access: bool) -> u32;
+    /// Valeur (Po) ajoutée par une augmentation de la caractéristique donnée.
+    fn stat_value_delta(&self, stat: crate::app::players::domain::match_impact::StatKind) -> u32;
+}

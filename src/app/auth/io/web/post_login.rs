@@ -240,9 +240,18 @@ mod tests {
                     async fn find_by_id(&self, _: &str)
                         -> Result<Option<crate::app::players::ports::PlayerProjection>, crate::app::players::ports::RepositoryError> { Ok(None) }
                 }
+                struct FakeSkillCatalogPort;
+                impl crate::app::players::ports::ISkillCatalogPort for FakeSkillCatalogPort {
+                    fn find_skill(&self, _: &str) -> Option<crate::app::players::ports::SkillCatalogEntryDto> { None }
+                    fn position_access(&self, _: &str) -> Option<crate::app::players::ports::PositionAccessDto> { None }
+                    fn cost_for_level(&self, _: u8, _: bool) -> Option<crate::app::players::ports::SkillCostLevelDto> { None }
+                    fn skill_value_delta(&self, _: bool) -> u32 { 0 }
+                    fn stat_value_delta(&self, _: crate::app::players::domain::match_impact::StatKind) -> u32 { 0 }
+                }
                 crate::app::players::context::PlayersContext {
                     repository:            Arc::new(FakePlayerRepo),
                     projection_repository: Arc::new(FakePlayerProjectionRepo),
+                    skill_catalog:         Arc::new(FakeSkillCatalogPort),
                 }
             },
             match_report: {
