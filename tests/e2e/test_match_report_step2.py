@@ -10,10 +10,7 @@ Scénarios couverts :
 Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true).
 """
 
-import json
 import re
-import subprocess
-import urllib.request
 
 import pytest
 import requests
@@ -21,63 +18,6 @@ from playwright.sync_api import Page, expect
 
 BASE_URL = "http://localhost:3210"
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
-
-_PG_CONTAINER = "postgres-local"
-_PG_USER = "dev"
-_PG_DB = "kreek_db"
-
-
-# ── Helpers ──────────────────────────────────────────────────────────────────
-
-def _fetch_json(path: str):
-    with urllib.request.urlopen(f"{BASE_URL}{path}", timeout=5) as r:
-        return json.loads(r.read())
-
-
-def _query_db(sql: str) -> list[str]:
-    """Exécute une requête SQL via docker exec, retourne les lignes (une colonne)."""
-    result = subprocess.run(
-        ["docker", "exec", _PG_CONTAINER, "psql",
-         "-U", _PG_USER, "-d", _PG_DB, "-t", "-A", "-c", sql],
-        capture_output=True, text=True, timeout=10,
-    )
-    assert result.returncode == 0, f"psql error: {result.stderr}"
-    return [l.strip() for l in result.stdout.strip().splitlines() if l.strip()]
-
-
-def _resolve_match_context(space_id: str) -> dict:
-    """Retourne {competition_id, season_id, round_id, home_team_id, away_team_id}.
-
-    Les team_id sont lus directement en DB (sans filtre game_phase) : le widget
-    JSON filtre sur ReadyToPlay mais le use case de création ne l'exige pas.
-    """
-    competitions = _fetch_json(f"/app/{space_id}/competitions/widget/json/competitions")
-    assert competitions, "Aucune compétition disponible — lance make init_db WITH_SEED=1"
-    comp_id = competitions[0]["id"]
-
-    seasons = _fetch_json(f"/app/{space_id}/competitions/widget/json/seasons?competition_id={comp_id}")
-    assert seasons, f"Aucune saison pour la compétition {comp_id}"
-    season_id = seasons[0]["id"]
-
-    rounds = _fetch_json(f"/app/{space_id}/competitions/widget/json/rounds?season_id={season_id}")
-    assert rounds, f"Aucun round pour la saison {season_id}"
-    round_id = rounds[0]["id"]
-
-    rows = _query_db(
-        f"SELECT team_id FROM team_projection "
-        f"WHERE season_id = '{season_id}' AND status = 'Enrolled' "
-        f"ORDER BY team_name ASC LIMIT 4;"
-    )
-    assert len(rows) >= 2, (
-        f"Pas assez d'équipes inscrites pour la saison {season_id} "
-        "(il en faut au moins 2) — lance make init_db WITH_SEED=1"
-    )
-    return {
-        "competition_id": comp_id,
-        "season_id": season_id,
-        "round_id": round_id,
-        "teams": rows,
-    }
 
 
 def _create_draft(space_id: str, ctx: dict, home_idx: int = 0, away_idx: int = 1) -> str:
@@ -137,8 +77,15 @@ def _ensure_pre_match(space_id: str, mr_id: str, ctx: dict,
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
 @pytest.fixture(scope="session")
-def match_context(space_id):
-    return _resolve_match_context(space_id)
+def match_context(browser, space_id):
+    from competition_lifecycle import build_full_competition
+    full = build_full_competition(browser, space_id, num_teams=2)
+    return {
+        "competition_id": full["competition_id"],
+        "season_id": full["season_id"],
+        "round_id": full["round_ids"][0],
+        "teams": full["team_ids"],
+    }
 
 
 @pytest.fixture(scope="session")

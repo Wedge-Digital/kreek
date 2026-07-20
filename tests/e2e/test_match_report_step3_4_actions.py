@@ -18,62 +18,19 @@ Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true), base initialisée.
 
 import json
 import re
-import subprocess
 
 import pytest
 import requests
 from playwright.sync_api import Page, expect
 
+from db_helpers import query_db as _query_db
+
 BASE_URL = "http://localhost:3210"
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
 _INDUCEMENTS_TEAM_RE = re.compile(r"/inducements/([0-9A-Z]{26})")
 
-_PG_CONTAINER = "postgres-local"
-_PG_USER = "dev"
-_PG_DB = "kreek_db"
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-
-def _fetch_json(path: str):
-    import urllib.request
-    with urllib.request.urlopen(f"{BASE_URL}{path}", timeout=5) as r:
-        return json.loads(r.read())
-
-
-def _query_db(sql: str) -> list[str]:
-    result = subprocess.run(
-        ["docker", "exec", _PG_CONTAINER, "psql",
-         "-U", _PG_USER, "-d", _PG_DB, "-t", "-A", "-c", sql],
-        capture_output=True, text=True, timeout=10,
-    )
-    assert result.returncode == 0, f"psql error: {result.stderr}"
-    return [l.strip() for l in result.stdout.strip().splitlines() if l.strip()]
-
-
-def _resolve_match_context(space_id: str) -> dict:
-    competitions = _fetch_json(f"/app/{space_id}/competitions/widget/json/competitions")
-    assert competitions, "Aucune compétition — lance make init_db WITH_SEED=1"
-    comp_id = competitions[0]["id"]
-    seasons = _fetch_json(f"/app/{space_id}/competitions/widget/json/seasons?competition_id={comp_id}")
-    assert seasons, f"Aucune saison pour {comp_id}"
-    season_id = seasons[0]["id"]
-    rounds = _fetch_json(f"/app/{space_id}/competitions/widget/json/rounds?season_id={season_id}")
-    assert rounds, f"Aucun round pour {season_id}"
-    round_id = rounds[0]["id"]
-    rows = _query_db(
-        f"SELECT team_id FROM team_projection "
-        f"WHERE season_id = '{season_id}' AND status = 'Enrolled' "
-        f"ORDER BY team_name ASC LIMIT 4;"
-    )
-    assert len(rows) >= 2, "Pas assez d'équipes inscrites — make init_db WITH_SEED=1"
-    return {
-        "competition_id": comp_id,
-        "season_id": season_id,
-        "round_id": round_id,
-        "teams": rows,
-    }
-
 
 def _create_draft(space_id: str, ctx: dict, home_idx: int, away_idx: int) -> str:
     resp = requests.post(
@@ -118,7 +75,7 @@ def _ensure_pre_match(space_id: str, mr_id: str, ctx: dict,
 def _ensure_fan_factor(space_id: str, mr_id: str) -> str:
     """Soumet le fan factor si pas encore fait. Retourne le Location header."""
     rows = _query_db(
-        f"SELECT home_team_value FROM match_report_projection "
+        f"SELECT home_team_value FROM match_report_proj "
         f"WHERE match_report_id = '{mr_id}'"
     )
     if rows and rows[0] and rows[0] != "":
@@ -135,7 +92,7 @@ def _ensure_fan_factor(space_id: str, mr_id: str) -> str:
 def _ensure_inducements(space_id: str, mr_id: str) -> None:
     """Soumet des inducements vides pour les deux équipes si pas encore fait."""
     rows = _query_db(
-        f"SELECT home_inducements, away_inducements FROM match_report_projection "
+        f"SELECT home_inducements, away_inducements FROM match_report_proj "
         f"WHERE match_report_id = '{mr_id}'"
     )
     if rows:
@@ -146,7 +103,7 @@ def _ensure_inducements(space_id: str, mr_id: str) -> None:
     location = _ensure_fan_factor(space_id, mr_id)
     if not location:
         rows = _query_db(
-            f"SELECT home_team_id, away_team_id FROM match_report_projection "
+            f"SELECT home_team_id, away_team_id FROM match_report_proj "
             f"WHERE match_report_id = '{mr_id}'"
         )
         if rows:
@@ -195,14 +152,14 @@ def _record_action_api(space_id: str, mr_id: str, team_side: str,
 def _first_player_id(mr_id: str, team_side: str) -> str | None:
     """Retourne le premier player_id de l'équipe dans la projection."""
     rows = _query_db(
-        f"SELECT {team_side}_team_id FROM match_report_projection "
+        f"SELECT {team_side}_team_id FROM match_report_proj "
         f"WHERE match_report_id = '{mr_id}'"
     )
     if not rows:
         return None
     team_id = rows[0]
     player_rows = _query_db(
-        f"SELECT player_id FROM players_projection "
+        f"SELECT player_id FROM players_proj "
         f"WHERE team_id = '{team_id}' LIMIT 1"
     )
     return player_rows[0] if player_rows else None
@@ -224,8 +181,15 @@ def _select_turn_and_player(page: Page, turn: int = 3) -> None:
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 @pytest.fixture(scope="module")
-def step3_ctx(space_id):
-    return _resolve_match_context(space_id)
+def step3_ctx(browser, space_id):
+    from competition_lifecycle import build_full_competition
+    full = build_full_competition(browser, space_id, num_teams=4)
+    return {
+        "competition_id": full["competition_id"],
+        "season_id": full["season_id"],
+        "round_id": full["round_ids"][0],
+        "teams": full["team_ids"],
+    }
 
 
 @pytest.fixture(scope="module")
@@ -333,12 +297,11 @@ def test_s5_record_blesse_amoche(page: Page, space_id, mr_step3):
 
     page.locator(".mr-injury-btn").filter(has_text="Amoché").click()
 
-    page.wait_for_selector("#action-log .mr-log-entry", timeout=6000)
-    entries = page.locator("#action-log .mr-log-entry")
-    texts = [e.inner_text() for e in entries.all()]
-    assert any("Blessé" in t for t in texts), (
-        f"Aucune entrée Blessé dans le log : {texts}"
-    )
+    # Une entrée existe déjà (TD du tour précédent, module partagé) : on
+    # attend spécifiquement l'entrée T3/Blessé plutôt que "une entrée
+    # existe", sans quoi l'assertion passerait trivialement sur l'ancienne.
+    entry_t3 = page.locator("#action-log .mr-log-entry", has_text="T3")
+    expect(entry_t3).to_contain_text("Blessé", timeout=6000)
 
 
 # ── S6 — Enregistrer Blessé Séquelle −AV ─────────────────────────────────────
@@ -437,7 +400,7 @@ def test_s9_temp_player_visible_after_inducements(page: Page, space_id, mr_step3
 def test_s10_journaliers_auto(page: Page, space_id, mr_step3_full):
     """Si équipe < 11 joueurs, des journaliers sont présents dans temp-player-selector."""
     rows = _query_db(
-        f"SELECT home_team_id FROM match_report_projection "
+        f"SELECT home_team_id FROM match_report_proj "
         f"WHERE match_report_id = '{mr_step3_full}'"
     )
     if not rows:
@@ -445,7 +408,7 @@ def test_s10_journaliers_auto(page: Page, space_id, mr_step3_full):
 
     home_team_id = rows[0]
     count_rows = _query_db(
-        f"SELECT COUNT(*) FROM players_projection "
+        f"SELECT COUNT(*) FROM players_proj "
         f"WHERE team_id = '{home_team_id}'"
     )
     player_count = int(count_rows[0]) if count_rows else 11

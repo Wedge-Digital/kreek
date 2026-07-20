@@ -5,50 +5,31 @@ l'équipe (sélection roster, recrutement de 11 joueurs), accède à la
 page de finalisation, sélectionne un joueur, vérifie que le skill
 picker se charge, et soumet l'équipe.
 
+Le roster est sélectionné en déclenchant directement `rosterSelected`
+plutôt qu'en cliquant le widget TomSelect (flaky en Playwright headless —
+cf. `competition_lifecycle.py`), et la compétition est sélectionnée en
+ciblant l'option `<kreek-select>` par son nom exact (pas la première de la
+liste — cf. bug corrigé dans test_special_rule_selector.py/test_draft_team_errors.py).
+
 Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true).
 """
 
 import re
 import time
 
-import pytest
 from playwright.sync_api import Page, expect
 
-FAKE_LOGO_URL = "https://res.cloudinary.com/demo/image/upload/v1/sample.jpg"
+from competition_lifecycle import create_full_competition
+
+BASE_URL = "http://localhost:3210"
 
 
-def _create_competition_with_spp(page: Page, competition_create_url: str) -> str:
-    """Crée une compétition avec 1 tier à 6 SPP. Retourne l'URL de la phase 3."""
-    competition_name = f"Finalize E2E {time.time_ns()}"
-    page.goto(competition_create_url, wait_until="load")
-    page.fill("input[name='name']", competition_name)
-    page.wait_for_selector(".coach-result-row", timeout=5000)
-    page.locator(".coach-result-row").first.click()
-    page.evaluate(f"document.getElementById('logo_url').value = '{FAKE_LOGO_URL}'")
-    with page.expect_navigation(wait_until="load"):
-        page.click("button[type='submit']")
-
-    # Phase 2 — set 6 SPP on the tier
-    page.wait_for_selector(".tier-block", timeout=5000)
-    page.wait_for_selector(
-        ".tier-block [data-slot='star'] .roster-chip", timeout=5000
-    )
-    xp_input = page.locator(".tier-block").first.locator("input.tier-xp")
-    xp_input.fill("6")
-    xp_input.dispatch_event("change")
-    page.fill("#season_name", f"Saison Finalize E2E {time.time_ns()}")
-    page.click("button[onclick='submitRules()']")
-    page.wait_for_selector("#groups-config", timeout=10000)
-    return page.url
-
-
-@pytest.mark.skip(reason="WIP — le câblage rosterSelected → player table ne fonctionne pas dans Playwright")
 def test_build_and_finalize_with_spp(page: Page, competition_create_url, space_id):
-    # ── Phase 1-2-3 : créer la compétition ───────────────────────────
-    _create_competition_with_spp(page, competition_create_url)
+    # ── Phase 1-2-3-4-5 : créer une compétition dédiée (6 SPP) ────────
+    competition = create_full_competition(page, competition_create_url, num_rounds=1, tier_xp=6)
 
     # ── Accéder à la page de création d'équipe ───────────────────────
-    draft_url = f"http://localhost:3210/app/{space_id}/team/create"
+    draft_url = f"{BASE_URL}/app/{space_id}/team/create"
     page.goto(draft_url, wait_until="load")
 
     # Remplir le nom d'équipe
@@ -61,38 +42,28 @@ def test_build_and_finalize_with_spp(page: Page, competition_create_url, space_i
     page.locator(".ts-dropdown .option").first.click()
     page.wait_for_timeout(300)
 
-    # Sélectionner la compétition (dernière créée)
-    comp_select = page.locator("select[name='competition_id']")
+    # Sélectionner la compétition dédiée (kreek-select — cible par son nom exact)
+    comp_select = page.locator("kreek-select[name='competition_id']")
     comp_select.wait_for(timeout=5000)
-    page.wait_for_timeout(500)
-    options = comp_select.locator("option:not([value=''])").all()
-    assert options, "Aucune compétition disponible"
-    comp_select.select_option(options[-1].get_attribute("value"))
-    page.wait_for_timeout(500)
+    comp_select.locator(".ks-control").click()
+    comp_option = comp_select.locator(".ks-option", has_text=competition["name"])
+    comp_option.wait_for(timeout=5000)
+    comp_option.first.click()
 
-    # Sélectionner la saison
-    season_select = page.locator("select[name='season_id']")
-    season_select.wait_for(timeout=5000)
-    page.wait_for_timeout(500)
-    season_options = season_select.locator("option:not([value=''])").all()
-    assert season_options, "Aucune saison disponible"
-    season_select.select_option(season_options[-1].get_attribute("value"))
-    page.wait_for_timeout(300)
+    season_hidden = page.locator("kreek-select[name='season_id'] input[type='hidden']")
+    expect(season_hidden).not_to_have_value("", timeout=5000)
 
     # Soumettre le draft
     page.click("button[type='submit']")
     page.wait_for_url(re.compile(r".*/build$"), timeout=10000)
 
     # ── Page build-team ──────────────────────────────────────────────
-    # Attendre le roster picker widget
-    page.wait_for_selector(".roster-picker-widget select", timeout=5000)
-    page.wait_for_timeout(500)
-
-    # Sélectionner le premier roster via TomSelect
-    page.locator(".roster-picker-widget .ts-control").click()
-    page.wait_for_selector(".ts-dropdown .option", timeout=3000)
-    page.locator(".ts-dropdown .option").first.click()
-    page.wait_for_timeout(2000)
+    # Sélection du roster via l'événement DOM que TomSelect émettrait
+    # normalement, plutôt qu'un clic UI (peu fiable en Playwright headless).
+    page.evaluate(
+        "([uid, name]) => htmx.trigger(document.body, 'rosterSelected', {uid, name})",
+        ["HUMAN", "Humains"],
+    )
 
     # Attendre que le player table se charge
     page.wait_for_selector("#player-table-container .tbl-btn", timeout=10000)
@@ -129,8 +100,10 @@ def test_build_and_finalize_with_spp(page: Page, competition_create_url, space_i
     expect(page.locator(".team-header")).to_be_visible()
     expect(page.locator(".player-list")).to_be_visible()
 
-    # Vérifier que le SPP badge est affiché (6 SPP)
-    expect(page.locator(".spp-badge")).to_be_visible()
+    # Vérifier que le budget SPP est affiché (6 SPP) — .spp-badge n'existe
+    # que dans le skill-header, chargé après sélection d'un joueur (plus bas).
+    expect(page.locator(".spp-budget-numbers")).to_be_visible()
+    expect(page.locator(".spp-budget-numbers")).to_contain_text("6")
 
     # Sélectionner le premier joueur
     page.locator(".player-row").first.click()

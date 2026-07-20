@@ -6,7 +6,7 @@ Scénarios couverts :
 - Résumé de carrière cohérent avec les actions enregistrées (essais/passes/interceptions/sorties/MVP)
 - Historique de matchs : carte correspondant au match publié (adversaire/score/actions)
 - Bouton "✏️ Customiser" visible uniquement pour un admin d'espace/compétition (désactivé, feature à part)
-- Bouton "▶ Activer la dépense de SPP" toujours visible (désactivé, feature à part)
+- Bouton "▶ Activer la dépense de SPP" visible et actif en phase PlayerImprovement
 
 Setup de données via HTTP direct (comme test_match_report_recap.py) plutôt que
 via l'UI de construction d'équipe — le picker de roster (TomSelect) est connu
@@ -23,64 +23,15 @@ test_match_report_recap.py (indices 0-5).
 """
 
 import re
-import subprocess
 
 import pytest
 import requests
 from playwright.sync_api import Page, expect
 
+from db_helpers import query_db as _query_db
+
 BASE_URL = "http://localhost:3210"
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
-
-_PG_CONTAINER = "postgres-local"
-_PG_USER = "dev"
-_PG_DB = "kreek_db"
-
-
-# ── Helpers (setup HTTP direct — même pattern que test_match_report_recap.py) ──
-
-def _fetch_json(path: str):
-    import json
-    import urllib.request
-    with urllib.request.urlopen(f"{BASE_URL}{path}", timeout=5) as r:
-        return json.loads(r.read())
-
-
-def _query_db(sql: str) -> list[str]:
-    result = subprocess.run(
-        ["docker", "exec", _PG_CONTAINER, "psql",
-         "-U", _PG_USER, "-d", _PG_DB, "-t", "-A", "-c", sql],
-        capture_output=True, text=True, timeout=10,
-    )
-    assert result.returncode == 0, f"psql error: {result.stderr}"
-    return [l.strip() for l in result.stdout.strip().splitlines() if l.strip()]
-
-
-def _resolve_match_context(space_id: str) -> dict:
-    competitions = _fetch_json(f"/app/{space_id}/competitions/widget/json/competitions")
-    assert competitions, "Aucune compétition — lance make init_db WITH_SEED=1"
-    comp_id = competitions[0]["id"]
-    seasons = _fetch_json(f"/app/{space_id}/competitions/widget/json/seasons?competition_id={comp_id}")
-    assert seasons, f"Aucune saison pour {comp_id}"
-    season_id = seasons[0]["id"]
-    rounds = _fetch_json(f"/app/{space_id}/competitions/widget/json/rounds?season_id={season_id}")
-    assert len(rounds) >= 7, (
-        f"Au moins 7 journées attendues, trouvé {len(rounds)} — lance make init_db WITH_SEED=1"
-    )
-    rows = _query_db(
-        f"SELECT team_id FROM team_proj "
-        f"WHERE season_id = '{season_id}' AND status = 'Enrolled' "
-        f"ORDER BY team_name ASC LIMIT 12;"
-    )
-    assert len(rows) >= 12, (
-        f"Au moins 12 équipes inscrites attendues, trouvé {len(rows)} — lance make init_db WITH_SEED=1"
-    )
-    return {
-        "competition_id": comp_id,
-        "season_id": season_id,
-        "round_ids": [r["id"] for r in rounds],
-        "teams": rows,
-    }
 
 
 def _create_draft(space_id: str, ctx: dict, round_id: str, home_idx: int, away_idx: int) -> str:
@@ -188,12 +139,19 @@ def _wait_for(check, attempts=30, delay_s=0.2):
 # ── Fixture : match publié avec actions pour le joueur home ────────────────────
 
 @pytest.fixture(scope="module")
-def published_match(space_id):
-    """Équipes 10/11, dernière journée disponible — paire dédiée à ce module,
-    jamais utilisée par test_match_report_recap.py (indices 0-5)."""
-    ctx = _resolve_match_context(space_id)
-    round_id = ctx["round_ids"][-1]
-    home_idx, away_idx = 10, 11
+def published_match(browser, space_id):
+    """Compétition dédiée à ce module (2 équipes) — cf. docstring du module
+    competition_lifecycle.py sur l'isolation par fichier."""
+    from competition_lifecycle import build_full_competition
+    full = build_full_competition(browser, space_id, num_teams=2)
+    ctx = {
+        "competition_id": full["competition_id"],
+        "season_id": full["season_id"],
+        "round_ids": full["round_ids"],
+        "teams": full["team_ids"],
+    }
+    round_id = ctx["round_ids"][0]
+    home_idx, away_idx = 0, 1
 
     mr_id = _create_draft(space_id, ctx, round_id, home_idx, away_idx)
     _ensure_pre_match(space_id, mr_id, ctx, round_id, home_idx, away_idx)
@@ -266,7 +224,11 @@ def test_customise_button_present_but_disabled(page: Page, space_id, published_m
     expect(page.locator(".btn-customise")).to_be_disabled()
 
 
-def test_activate_spp_spending_button_always_present_but_disabled(page: Page, space_id, published_match):
+def test_activate_spp_spending_button_visible_and_enabled_in_player_improvement(page: Page, space_id, published_match):
+    """La dépense de SPP est une fonctionnalité réelle (cf. test_player_spp_spending.py) —
+    le bouton est actif dès que l'équipe est en phase PlayerImprovement, ce qui
+    est le cas ici (match publié par la fixture published_match)."""
     player_id = published_match["home_player_id"]
     page.goto(f"{BASE_URL}/app/{space_id}/players/{player_id}/detail", wait_until="load")
-    expect(page.locator(".btn-toggle-spp")).to_be_disabled()
+    expect(page.locator(".btn-toggle-spp")).to_be_visible()
+    expect(page.locator(".btn-toggle-spp")).to_be_enabled()

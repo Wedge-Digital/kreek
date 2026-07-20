@@ -22,72 +22,20 @@ Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true), base initialisée a
 WITH_SEED=1 sur une base fraîche).
 """
 
-import json
 import re
-import subprocess
 import time
 
 import pytest
 import requests
 from playwright.sync_api import Page, expect
 
+from db_helpers import query_db as _query_db
+
 BASE_URL = "http://localhost:3210"
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
 
-_PG_CONTAINER = "postgres-local"
-_PG_USER = "dev"
-_PG_DB = "kreek_db"
-
 _INJURY_LABELS = ("Commotion", "Amoché", "Blessure Sérieuse", "Séquelle", "Mort")
 _FAKE_ROUND_ID = "01ARZ3NDEKTSV4RRFFQ69G5FAV"
-
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
-def _fetch_json(path: str):
-    import urllib.request
-    with urllib.request.urlopen(f"{BASE_URL}{path}", timeout=5) as r:
-        return json.loads(r.read())
-
-
-def _query_db(sql: str) -> list[str]:
-    result = subprocess.run(
-        ["docker", "exec", _PG_CONTAINER, "psql",
-         "-U", _PG_USER, "-d", _PG_DB, "-t", "-A", "-c", sql],
-        capture_output=True, text=True, timeout=10,
-    )
-    assert result.returncode == 0, f"psql error: {result.stderr}"
-    return [l.strip() for l in result.stdout.strip().splitlines() if l.strip()]
-
-
-def _resolve_match_context(space_id: str) -> dict:
-    competitions = _fetch_json(f"/app/{space_id}/competitions/widget/json/competitions")
-    assert competitions, "Aucune compétition — lance make init_db WITH_SEED=1"
-    comp_id = competitions[0]["id"]
-    seasons = _fetch_json(f"/app/{space_id}/competitions/widget/json/seasons?competition_id={comp_id}")
-    assert seasons, f"Aucune saison pour {comp_id}"
-    season_id = seasons[0]["id"]
-    rounds = _fetch_json(f"/app/{space_id}/competitions/widget/json/rounds?season_id={season_id}")
-    assert len(rounds) >= 7, (
-        f"Au moins 7 journées attendues pour isoler les scénarios, trouvé {len(rounds)} — "
-        "lance make init_db WITH_SEED=1"
-    )
-    rows = _query_db(
-        f"SELECT team_id FROM team_proj "
-        f"WHERE season_id = '{season_id}' AND status = 'Enrolled' "
-        f"ORDER BY team_name ASC LIMIT 12;"
-    )
-    assert len(rows) >= 12, (
-        f"Au moins 12 équipes inscrites attendues (6 paires jamais réutilisées — une équipe "
-        f"reste verrouillée après confirmation d'un match, cf. docstring), trouvé {len(rows)} — "
-        "lance make init_db WITH_SEED=1"
-    )
-    return {
-        "competition_id": comp_id,
-        "season_id": season_id,
-        "round_ids": [r["id"] for r in rounds],
-        "teams": rows,
-    }
 
 
 def _create_draft(space_id: str, ctx: dict, round_id: str, home_idx: int, away_idx: int) -> str:
@@ -233,8 +181,15 @@ def _advance_to_ready_to_publish(space_id: str, ctx: dict, round_id: str,
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 @pytest.fixture(scope="module")
-def recap_ctx(space_id):
-    return _resolve_match_context(space_id)
+def recap_ctx(browser, space_id):
+    from competition_lifecycle import build_full_competition
+    full = build_full_competition(browser, space_id, num_teams=12)
+    return {
+        "competition_id": full["competition_id"],
+        "season_id": full["season_id"],
+        "round_ids": full["round_ids"],
+        "teams": full["team_ids"],
+    }
 
 
 @pytest.fixture(scope="module")

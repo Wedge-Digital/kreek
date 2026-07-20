@@ -26,20 +26,18 @@ def _select_coach(page: Page) -> None:
 
 
 def _select_competition_and_season(page: Page) -> None:
-    comp_select = page.locator("select[name='competition_id']")
+    """competition_id/season_id sont des <kreek-select> (input caché +
+    .ks-control/.ks-option), pas des <select> natifs. season_id se sélectionne
+    automatiquement une fois competition_id choisi (attribut auto-select-first)."""
+    comp_select = page.locator("kreek-select[name='competition_id']")
     comp_select.wait_for(timeout=5000)
-    page.wait_for_timeout(500)
-    options = comp_select.locator("option:not([value=''])").all()
-    if options:
-        comp_select.select_option(options[0].get_attribute("value"))
-        page.wait_for_timeout(500)
-    season_select = page.locator("select[name='season_id']")
-    season_select.wait_for(timeout=5000)
-    page.wait_for_timeout(500)
-    season_options = season_select.locator("option:not([value=''])").all()
-    if season_options:
-        season_select.select_option(season_options[0].get_attribute("value"))
-        page.wait_for_timeout(300)
+    comp_select.locator(".ks-control").click()
+    comp_select.locator(".ks-option").first.wait_for(timeout=5000)
+    options = comp_select.locator(".ks-option:not(.ks-empty)")
+    if options.count() > 0:
+        options.first.click()
+        season_hidden = page.locator("kreek-select[name='season_id'] input[type='hidden']")
+        expect(season_hidden).not_to_have_value("", timeout=5000)
 
 
 def test_submit_without_competition_shows_error(page: Page, space_id):
@@ -53,7 +51,7 @@ def test_submit_without_competition_shows_error(page: Page, space_id):
 
     error = page.locator("#draft-team-error")
     expect(error).not_to_be_empty()
-    expect(error).to_contain_text("champs obligatoires")
+    expect(error).to_contain_text("Sélectionnez une compétition et une saison")
 
 
 def test_submit_without_coach_shows_error(page: Page, space_id):

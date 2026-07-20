@@ -12,67 +12,22 @@ Scénarios couverts :
 Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true), base initialisée.
 """
 
-import json
 import re
-import subprocess
-import urllib.request
 
 import pytest
 import requests
 from playwright.sync_api import Page, expect
 
+from db_helpers import query_db as _query_db
+
 BASE_URL = "http://localhost:3210"
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
 _TEAM_ID_RE = re.compile(r"/inducements/([0-9A-Z]{26})")
 
-_PG_CONTAINER = "postgres-local"
-_PG_USER = "dev"
-_PG_DB = "kreek_db"
-
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
-def _fetch_json(path: str):
-    with urllib.request.urlopen(f"{BASE_URL}{path}", timeout=5) as r:
-        return json.loads(r.read())
-
-
-def _query_db(sql: str) -> list[str]:
-    result = subprocess.run(
-        ["docker", "exec", _PG_CONTAINER, "psql",
-         "-U", _PG_USER, "-d", _PG_DB, "-t", "-A", "-c", sql],
-        capture_output=True, text=True, timeout=10,
-    )
-    assert result.returncode == 0, f"psql error: {result.stderr}"
-    return [l.strip() for l in result.stdout.strip().splitlines() if l.strip()]
-
-
-def _resolve_match_context(space_id: str) -> dict:
-    competitions = _fetch_json(f"/app/{space_id}/competitions/widget/json/competitions")
-    assert competitions, "Aucune compétition — lance make init_db WITH_SEED=1"
-    comp_id = competitions[0]["id"]
-    seasons = _fetch_json(f"/app/{space_id}/competitions/widget/json/seasons?competition_id={comp_id}")
-    assert seasons, f"Aucune saison pour {comp_id}"
-    season_id = seasons[0]["id"]
-    rounds = _fetch_json(f"/app/{space_id}/competitions/widget/json/rounds?season_id={season_id}")
-    assert rounds, f"Aucun round pour {season_id}"
-    round_id = rounds[0]["id"]
-    rows = _query_db(
-        f"SELECT team_id FROM team_projection "
-        f"WHERE season_id = '{season_id}' AND status = 'Enrolled' "
-        f"ORDER BY team_name ASC LIMIT 4;"
-    )
-    assert len(rows) >= 2, "Pas assez d'équipes inscrites — make init_db WITH_SEED=1"
-    return {
-        "competition_id": comp_id,
-        "season_id": season_id,
-        "round_id": round_id,
-        "teams": rows,
-    }
-
 
 def _create_pre_match(space_id: str, ctx: dict, home_idx: int, away_idx: int) -> str:
-    """Crée un match report et le passe en état PreMatch."""
+    """Crée un match report — origine Manual, auto-confirmée en PreMatch en
+    un seul appel (cf. create_match_report_use_case::execute)."""
     resp = requests.post(
         f"{BASE_URL}/app/{space_id}/match-report/new",
         data={
@@ -88,21 +43,7 @@ def _create_pre_match(space_id: str, ctx: dict, home_idx: int, away_idx: int) ->
     location = resp.headers.get("Location", "")
     m = _ULID_RE.search(location)
     assert m, f"match_report_id introuvable dans Location: {location!r}"
-    mr_id = m.group(1)
-
-    resp2 = requests.post(
-        f"{BASE_URL}/app/{space_id}/match-report/{mr_id}",
-        data={
-            "competition_id": ctx["competition_id"],
-            "season_id": ctx["season_id"],
-            "round_id": ctx["round_id"],
-            "home_team_id": ctx["teams"][home_idx],
-            "away_team_id": ctx["teams"][away_idx],
-        },
-        allow_redirects=False,
-    )
-    assert resp2.status_code in (302, 303), f"confirm: {resp2.status_code}"
-    return mr_id
+    return m.group(1)
 
 
 def _post_fan_factor(space_id: str, mr_id: str) -> requests.Response:
@@ -130,8 +71,15 @@ def _post_pass(space_id: str, mr_id: str, team_id: str) -> requests.Response:
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 @pytest.fixture(scope="module")
-def inducements_ctx(space_id):
-    return _resolve_match_context(space_id)
+def inducements_ctx(browser, space_id):
+    from competition_lifecycle import build_full_competition
+    full = build_full_competition(browser, space_id, num_teams=4)
+    return {
+        "competition_id": full["competition_id"],
+        "season_id": full["season_id"],
+        "round_id": full["round_ids"][0],
+        "teams": full["team_ids"],
+    }
 
 
 @pytest.fixture(scope="module")
@@ -190,8 +138,10 @@ def test_inducements_widget_loaded(page: Page, space_id, inducements_mr):
 
     page.goto(f"{BASE_URL}{loc}", wait_until="load")
 
-    # Zone widget présente (même vide si aucun inducement configuré)
-    expect(page.locator(".mr-selector-zone")).to_be_visible()
+    # Zone widget présente (même vide si aucun inducement configuré) — deux
+    # zones .mr-selector-zone coexistent sur la page (inducements + mercos),
+    # on vérifie la première (inducements, toujours visible à l'arrivée).
+    expect(page.locator(".mr-selector-zone").first).to_be_visible()
 
 
 def test_pass_button_visible(page: Page, space_id, inducements_mr):

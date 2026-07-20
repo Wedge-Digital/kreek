@@ -42,64 +42,15 @@ module) sert de témoin "hors phase PlayerImprovement".
 """
 
 import re
-import subprocess
 
 import pytest
 import requests
 from playwright.sync_api import Page, expect
 
+from db_helpers import query_db as _query_db
+
 BASE_URL = "http://localhost:3210"
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
-
-_PG_CONTAINER = "postgres-local"
-_PG_USER = "dev"
-_PG_DB = "kreek_db"
-
-
-# ── Helpers (setup HTTP direct — même pattern que test_player_detail.py) ───────
-
-def _fetch_json(path: str):
-    import json
-    import urllib.request
-    with urllib.request.urlopen(f"{BASE_URL}{path}", timeout=5) as r:
-        return json.loads(r.read())
-
-
-def _query_db(sql: str) -> list[str]:
-    result = subprocess.run(
-        ["docker", "exec", _PG_CONTAINER, "psql",
-         "-U", _PG_USER, "-d", _PG_DB, "-t", "-A", "-c", sql],
-        capture_output=True, text=True, timeout=10,
-    )
-    assert result.returncode == 0, f"psql error: {result.stderr}"
-    return [l.strip() for l in result.stdout.strip().splitlines() if l.strip()]
-
-
-def _resolve_match_context(space_id: str) -> dict:
-    competitions = _fetch_json(f"/app/{space_id}/competitions/widget/json/competitions")
-    assert competitions, "Aucune compétition — lance make init_db WITH_SEED=1"
-    comp_id = competitions[0]["id"]
-    seasons = _fetch_json(f"/app/{space_id}/competitions/widget/json/seasons?competition_id={comp_id}")
-    assert seasons, f"Aucune saison pour {comp_id}"
-    season_id = seasons[0]["id"]
-    rounds = _fetch_json(f"/app/{space_id}/competitions/widget/json/rounds?season_id={season_id}")
-    assert len(rounds) >= 7, (
-        f"Au moins 7 journées attendues, trouvé {len(rounds)} — lance make init_db WITH_SEED=1"
-    )
-    rows = _query_db(
-        f"SELECT team_id FROM team_proj "
-        f"WHERE season_id = '{season_id}' AND status = 'Enrolled' "
-        f"ORDER BY team_name ASC LIMIT 12;"
-    )
-    assert len(rows) >= 12, (
-        f"Au moins 12 équipes inscrites attendues, trouvé {len(rows)} — lance make init_db WITH_SEED=1"
-    )
-    return {
-        "competition_id": comp_id,
-        "season_id": season_id,
-        "round_ids": [r["id"] for r in rounds],
-        "teams": rows,
-    }
 
 
 def _create_draft(space_id: str, ctx: dict, round_id: str, home_idx: int, away_idx: int) -> str:
@@ -187,10 +138,17 @@ def _activate_spp_spending(page: Page) -> None:
 # ── Fixture : équipe publiée, en PlayerImprovement, joueur crédité en SPP ──────
 
 @pytest.fixture(scope="module")
-def spp_ctx(space_id):
-    ctx = _resolve_match_context(space_id)
-    round_id = ctx["round_ids"][-3]
-    home_idx, away_idx = 6, 7
+def spp_ctx(browser, space_id):
+    from competition_lifecycle import build_full_competition
+    full = build_full_competition(browser, space_id, num_teams=3)
+    ctx = {
+        "competition_id": full["competition_id"],
+        "season_id": full["season_id"],
+        "round_ids": full["round_ids"],
+        "teams": full["team_ids"],
+    }
+    round_id = ctx["round_ids"][0]
+    home_idx, away_idx = 0, 1
 
     mr_id = _create_draft(space_id, ctx, round_id, home_idx, away_idx)
     _ensure_inducements(space_id, mr_id)
@@ -233,6 +191,7 @@ def spp_ctx(space_id):
     _wait_for(players_credited)
 
     return {
+        "teams": ctx["teams"],
         "home_team_id": home_team_id,
         "rich_player_id": rich_player,
         "poor_player_id": poor_player,
@@ -242,11 +201,10 @@ def spp_ctx(space_id):
 
 
 @pytest.fixture(scope="module")
-def untouched_team_player(space_id):
-    """Équipe d'indice 8 — jamais touchée par ce module, sert de témoin
-    'hors phase PlayerImprovement'."""
-    ctx = _resolve_match_context(space_id)
-    team_id = ctx["teams"][8]
+def untouched_team_player(spp_ctx):
+    """3e équipe de la compétition dédiée — jamais touchée par le match du
+    module, sert de témoin 'hors phase PlayerImprovement'."""
+    team_id = spp_ctx["teams"][2]
     players = _team_player_ids(team_id)
     assert players, f"aucun joueur trouvé pour {team_id}"
     return {"team_id": team_id, "player_id": players[0]}

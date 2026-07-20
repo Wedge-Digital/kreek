@@ -25,8 +25,15 @@ BASE_URL = "http://localhost:3210"
 FAKE_LOGO_URL = "https://res.cloudinary.com/demo/image/upload/v1/sample.jpg"
 
 
-def _create_minimal_competition(page: Page, competition_create_url: str) -> None:
-    """Crée une compétition avec un tier à 0 SPP (finalisation immédiate)."""
+def _create_minimal_competition(page: Page, competition_create_url: str) -> str:
+    """Crée une compétition avec un tier à 0 SPP (finalisation immédiate).
+
+    Retourne le nom de la compétition, unique par exécution — nécessaire pour
+    la retrouver ensuite dans le kreek-select de /team/create : la base de
+    test accumule les compétitions des runs précédents, et ce <kreek-select>
+    les liste par ordre alphabétique de nom (pas par date de création), donc
+    "la première option" n'est pas fiablement la nôtre.
+    """
     competition_name = f"SpecialRule E2E {time.time_ns()}"
     page.goto(competition_create_url, wait_until="load")
     page.fill("input[name='name']", competition_name)
@@ -43,9 +50,10 @@ def _create_minimal_competition(page: Page, competition_create_url: str) -> None
     page.fill("#season_name", f"Saison SpecialRule E2E {time.time_ns()}")
     page.click("button[onclick='submitRules()']")
     page.wait_for_selector("#groups-config", timeout=10000)
+    return competition_name
 
 
-def _create_draft_team(page: Page, space_id: str) -> str:
+def _create_draft_team(page: Page, space_id: str, competition_name: str) -> str:
     """Crée un draft d'équipe et retourne le team_id (atterrit sur /build)."""
     draft_url = f"{BASE_URL}/app/{space_id}/team/create"
     page.goto(draft_url, wait_until="load")
@@ -57,21 +65,18 @@ def _create_draft_team(page: Page, space_id: str) -> str:
     page.locator(".ts-dropdown .option").first.click()
     page.wait_for_timeout(300)
 
-    comp_select = page.locator("select[name='competition_id']")
+    # competition_id est un <kreek-select> (input caché + .ks-control/.ks-option,
+    # pas un <select> natif) — season_id se sélectionne automatiquement ensuite
+    # via son attribut auto-select-first une fois la compétition choisie.
+    comp_select = page.locator("kreek-select[name='competition_id']")
     comp_select.wait_for(timeout=5000)
-    page.wait_for_timeout(500)
-    options = comp_select.locator("option:not([value=''])").all()
-    assert options, "Aucune compétition disponible"
-    comp_select.select_option(options[-1].get_attribute("value"))
-    page.wait_for_timeout(500)
+    comp_select.locator(".ks-control").click()
+    comp_option = comp_select.locator(".ks-option", has_text=competition_name)
+    comp_option.wait_for(timeout=5000)
+    comp_option.first.click()
 
-    season_select = page.locator("select[name='season_id']")
-    season_select.wait_for(timeout=5000)
-    page.wait_for_timeout(500)
-    season_options = season_select.locator("option:not([value=''])").all()
-    assert season_options, "Aucune saison disponible"
-    season_select.select_option(season_options[-1].get_attribute("value"))
-    page.wait_for_timeout(300)
+    season_hidden = page.locator("kreek-select[name='season_id'] input[type='hidden']")
+    expect(season_hidden).not_to_have_value("", timeout=5000)
 
     page.click("button[type='submit']")
     page.wait_for_url(re.compile(r".*/build$"), timeout=10000)
@@ -110,8 +115,8 @@ def _hire_players(page: Page, count: int) -> int:
 
 
 def test_fixed_rules_display_as_chips(page: Page, space_id, competition_create_url):
-    _create_minimal_competition(page, competition_create_url)
-    team_id = _create_draft_team(page, space_id)
+    competition_name = _create_minimal_competition(page, competition_create_url)
+    team_id = _create_draft_team(page, space_id, competition_name)
     page.goto(f"{BASE_URL}/app/{space_id}/team/{team_id}/build", wait_until="load")
 
     _select_roster(page, "ORC", "Orques")
@@ -124,8 +129,8 @@ def test_fixed_rules_display_as_chips(page: Page, space_id, competition_create_u
 
 
 def test_no_rule_roster_shows_none_message(page: Page, space_id, competition_create_url):
-    _create_minimal_competition(page, competition_create_url)
-    team_id = _create_draft_team(page, space_id)
+    competition_name = _create_minimal_competition(page, competition_create_url)
+    team_id = _create_draft_team(page, space_id, competition_name)
     page.goto(f"{BASE_URL}/app/{space_id}/team/{team_id}/build", wait_until="load")
 
     _select_roster(page, "SKAVEN", "Skavens")
@@ -135,8 +140,8 @@ def test_no_rule_roster_shows_none_message(page: Page, space_id, competition_cre
 
 
 def test_choice_roster_keeps_interactive_select(page: Page, space_id, competition_create_url):
-    _create_minimal_competition(page, competition_create_url)
-    team_id = _create_draft_team(page, space_id)
+    competition_name = _create_minimal_competition(page, competition_create_url)
+    team_id = _create_draft_team(page, space_id, competition_name)
     page.goto(f"{BASE_URL}/app/{space_id}/team/{team_id}/build", wait_until="load")
 
     _select_roster(page, "CHAOS_RENEGADE", "Renégats du Chaos")
@@ -151,8 +156,8 @@ def test_choice_roster_keeps_interactive_select(page: Page, space_id, competitio
 def test_finalize_blocked_when_choice_roster_has_no_special_rule(
     page: Page, space_id, competition_create_url
 ):
-    _create_minimal_competition(page, competition_create_url)
-    team_id = _create_draft_team(page, space_id)
+    competition_name = _create_minimal_competition(page, competition_create_url)
+    team_id = _create_draft_team(page, space_id, competition_name)
     page.goto(f"{BASE_URL}/app/{space_id}/team/{team_id}/build", wait_until="load")
 
     _select_roster(page, "CHAOS_RENEGADE", "Renégats du Chaos")
