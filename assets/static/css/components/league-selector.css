@@ -62,3 +62,19 @@
   font-style: italic;
   background: var(--dark-7);
 }
+
+.special-rule-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.special-rule-chip {
+  font-size: var(--text-tiny);
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: rgba(98, 149, 132, 0.15);
+  color: var(--green);
+  white-space: nowrap;
+}

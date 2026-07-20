@@ -149,7 +149,12 @@ pub async fn player_table_widget(
         roster_team.set_league(LeagueId(meta.leagues[0].clone()));
     }
 
-    if meta.special_rules.len() == 1 {
+    // Un roster à choix (FAVOURED_OF_CHOOSE_*) a lui aussi une seule entrée
+    // dans special_rules, mais c'est un placeholder — pas une vraie règle à
+    // auto-assigner. Seule une règle fixe unique est auto-assignée ici.
+    let single_fixed_rule = meta.special_rules.len() == 1
+        && !meta.special_rules[0].starts_with("FAVOURED_OF_CHOOSE_");
+    if single_fixed_rule {
         roster_team.set_special_rule(SpecialRuleId(meta.special_rules[0].clone()));
     }
 

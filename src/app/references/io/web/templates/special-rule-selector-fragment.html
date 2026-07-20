@@ -2,12 +2,12 @@
   <div class="league-selector-label">Règle spéciale</div>
   {% if rules.is_empty() %}
     <div class="selector-none">Pas de règle spéciale</div>
-  {% else if rules.len() == 1 %}
-    <select class="league-select" disabled>
+  {% else if !is_choice %}
+    <div class="special-rule-chip-list">
       {% for rule in rules %}
-      <option value="{{ rule.uid }}" selected>{{ rule.label }}</option>
+      <span class="special-rule-chip">{{ rule.label }}</span>
       {% endfor %}
-    </select>
+    </div>
   {% else %}
     <select class="league-select"
             hx-post="{{ on_select }}"

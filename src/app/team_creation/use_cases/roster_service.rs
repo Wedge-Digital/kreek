@@ -97,6 +97,23 @@ pub fn league_selection_missing(
         .unwrap_or(false)
 }
 
+/// Un roster à choix de règle spéciale (FAVOURED_OF_CHOOSE_*, ex. Chaos
+/// Renégats/Élus) doit avoir une règle affectée pour pouvoir terminer la
+/// construction. Un roster à règle(s) fixe(s) — ou sans règle — ne déclenche
+/// jamais ce blocage.
+pub fn special_rule_selection_missing(
+    roster_uid: &str,
+    special_rule_already_set: bool,
+    ref_data: &dyn IReferenceDataPort,
+) -> bool {
+    if special_rule_already_set {
+        return false;
+    }
+    roster_metadata(roster_uid, ref_data)
+        .map(|m| m.special_rules.iter().any(|r| r.starts_with("FAVOURED_OF_CHOOSE_")))
+        .unwrap_or(false)
+}
+
 fn staff_kind(uid: &str) -> StaffKind {
     match uid {
         "APOTHECARY" => StaffKind::Apothecary,
@@ -150,6 +167,18 @@ mod tests {
                     allowed_staff_uids: vec!["APOTHECARY".into()],
                     leagues: vec!["BADLANDS_BRAWL".into(), "CHAOS_CLASH".into()],
                     special_rules: vec!["FAVOURED_OF_HASHUT".into()],
+                }),
+                "CHAOS_RENEGADE" => Some(RosterDefinition {
+                    uid: "CHAOS_RENEGADE".into(),
+                    name: "Renégats du Chaos".into(),
+                    reroll_cost: 60,
+                    available_players: vec![],
+                    allowed_staff_uids: vec![],
+                    leagues: vec!["CHAOS_CLASH".into()],
+                    special_rules: vec![
+                        "FAVOURED_OF_CHOOSE_EITHER_KHORNE_NURGLE_SLAANESH_TZEENTCH_OR_UNDIVIDED"
+                            .into(),
+                    ],
                 }),
                 _ => None,
             }
@@ -239,5 +268,26 @@ mod tests {
     #[test]
     fn league_selection_missing_false_for_unknown_roster() {
         assert!(!league_selection_missing("UNKNOWN", false, &FakeRefData));
+    }
+
+    #[test]
+    fn special_rule_selection_missing_false_for_fixed_rule_roster() {
+        // CHAOS_DWARF a une règle fixe (FAVOURED_OF_HASHUT), pas de choix : jamais bloquant.
+        assert!(!special_rule_selection_missing("CHAOS_DWARF", false, &FakeRefData));
+    }
+
+    #[test]
+    fn special_rule_selection_missing_true_for_choice_roster_without_selection() {
+        assert!(special_rule_selection_missing("CHAOS_RENEGADE", false, &FakeRefData));
+    }
+
+    #[test]
+    fn special_rule_selection_missing_false_once_selected() {
+        assert!(!special_rule_selection_missing("CHAOS_RENEGADE", true, &FakeRefData));
+    }
+
+    #[test]
+    fn special_rule_selection_missing_false_for_unknown_roster() {
+        assert!(!special_rule_selection_missing("UNKNOWN", false, &FakeRefData));
     }
 }

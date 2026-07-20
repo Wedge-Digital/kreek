@@ -81,6 +81,42 @@
     .tier-2 { background: rgba(255,107,53,0.12); color: var(--orange); }
     .tier-3 { background: rgba(143,144,166,0.15); color: var(--dark-3); }
 
+    /* ── Special rules (affichage read-only des règles fixes du roster) ──── */
+    .special-rules-preview { display: flex; flex-direction: column; gap: var(--p2); margin-bottom: var(--p3); }
+    .special-rules-example { display: flex; flex-direction: column; gap: 6px; }
+    .special-rules-example-title { font-size: var(--text-tiny); color: var(--dark-3); font-style: italic; }
+    .special-rule-chip-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .special-rule-chip {
+      font-size: var(--text-tiny); font-weight: 700; padding: 4px 10px;
+      border-radius: 12px; background: rgba(98,149,132,0.15); color: var(--green);
+      white-space: nowrap;
+    }
+    .special-rules-none {
+      padding: 10px 14px; border: 1px solid var(--dark-5); border-radius: 6px;
+      font-size: var(--text-small); color: var(--dark-3); font-style: italic;
+      background: var(--dark-7);
+    }
+    .special-rule-select {
+      width: 100%;
+      padding: 10px 36px 10px 12px;
+      border: 1px solid var(--dark-4);
+      border-radius: 6px;
+      font-size: var(--text-small);
+      font-family: inherit;
+      color: var(--dark-1);
+      background-color: var(--white);
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .special-rule-select:focus { border-color: var(--main-blue); box-shadow: 0 0 0 3px rgba(0,48,73,0.08); }
+    .special-rule-select:hover { border-color: var(--dark-3); }
+
     /* ── Cart ────────────────────────────────────────────────────────────── */
     .cart {
       background: var(--dark-6);
@@ -301,6 +337,46 @@
                   <option value="humans"   data-tier="1">Humains</option>
                   <option value="lizards"  data-tier="1">Hommes-lézards</option>
                 </select>
+              </div>
+
+              <!-- Règle(s) spéciale(s) du roster — affichage read-only, hors cas
+                   "choix parmi les dieux du Chaos" (CHAOS_RENEGADE / CHAOS_CHOSEN),
+                   qui garde son <select> interactif existant, inchangé. -->
+              <div class="section-label">Règle(s) spéciale(s) du roster</div>
+              <div class="special-rules-preview">
+
+                <div class="special-rules-example">
+                  <div class="special-rules-example-title">Roster sans règle spéciale — ex. Skavens</div>
+                  <div class="special-rules-none">Pas de règle spéciale</div>
+                </div>
+
+                <div class="special-rules-example">
+                  <div class="special-rules-example-title">Roster à une règle fixe — ex. Humains</div>
+                  <div class="special-rule-chip-list">
+                    <span class="special-rule-chip">Capitaine d'Équipe</span>
+                  </div>
+                </div>
+
+                <div class="special-rules-example">
+                  <div class="special-rules-example-title">Roster à plusieurs règles fixes — ex. Orques</div>
+                  <div class="special-rule-chip-list">
+                    <span class="special-rule-chip">Brutes Bagarreuses</span>
+                    <span class="special-rule-chip">Capitaine d'Équipe</span>
+                  </div>
+                </div>
+
+                <div class="special-rules-example">
+                  <div class="special-rules-example-title">Roster à choix de règle — ex. Renégats du Chaos</div>
+                  <select class="special-rule-select">
+                    <option value="">Choisissez une règle…</option>
+                    <option value="FAVOURED_OF_KHORNE">Favoris de Khorne</option>
+                    <option value="FAVOURED_OF_NURGLE">Favoris de Nurgle</option>
+                    <option value="FAVOURED_OF_SLAANESH">Favoris de Slaanesh</option>
+                    <option value="FAVOURED_OF_TZEENTCH">Favoris de Tzeentch</option>
+                    <option value="FAVOURED_OF_UNDIVIDED" selected>Favoris des Indivis</option>
+                  </select>
+                </div>
+
               </div>
 
               <!-- Step 3: Players -->

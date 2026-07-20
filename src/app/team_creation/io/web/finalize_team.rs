@@ -140,6 +140,19 @@ pub async fn finalize_team(
         );
     }
 
+    let special_rule_selection_missing = roster_service::special_rule_selection_missing(
+        &team.roster.id.0,
+        team.special_rule_id.is_some(),
+        ref_data,
+    );
+
+    if special_rule_selection_missing {
+        return submit_error_response(
+            "Veuillez sélectionner une règle spéciale avant de terminer la construction."
+                .to_string(),
+        );
+    }
+
     // ── Skip si pas de finalisation nécessaire ────────────────────────────────
     if !team.needs_finalization() {
         let cmd = SubmitTeamCommand {
