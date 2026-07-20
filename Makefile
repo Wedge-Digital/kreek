@@ -1,7 +1,7 @@
 EXEC_PROFILE ?= dev
 DATABASE_URL   = $(shell grep -E '^DATABASE__URL=' .env.$(EXEC_PROFILE) | cut -d= -f2-)
 
-.PHONY: dev test e2e migrate migration prepare_db reset_db reset_test_db init_db \
+.PHONY: dev test e2e all_tests migrate migration prepare_db reset_db reset_test_db init_db \
         seed_accounts lint check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
@@ -12,6 +12,7 @@ help:
 	@echo "  dev           Lance le serveur en mode watch"
 	@echo "  test          Lance les tests (utilise .env.test)"
 	@echo "  e2e           Lance les tests E2E Playwright (nécessite le serveur dev lancé)"
+	@echo "  all_tests     test + e2e — garde-fou obligatoire avant tout commit (cf. CLAUDE.md)"
 	@echo "  migrate       Applique les migrations SQLx"
 	@echo "  migration     Crée une migration (ex: make migration desc=create_teams)"
 	@echo "  prepare_db    Régénère le cache sqlx (cargo sqlx prepare)"
@@ -39,6 +40,13 @@ test: reset_test_db
 
 e2e:
 	cd tests/e2e && uv run pytest -v
+
+# Garde-fou avant commit (cf. CLAUDE.md, règle de collaboration obligatoire) :
+# make ne continue à e2e que si test a réussi (prérequis Make standard).
+all_tests: test e2e
+	@echo ""
+	@echo "  ✓ test + e2e : tout est vert"
+	@echo ""
 
 migrate:
 	DATABASE_URL=$(DATABASE_URL) sqlx migrate run
