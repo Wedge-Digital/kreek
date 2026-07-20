@@ -34,7 +34,7 @@ help:
 dev:
 	cargo watch -x run -w src -w assets/templates -w assets/static/css
 
-test:
+test: reset_test_db
 	DATABASE_URL=$(shell grep -E '^DATABASE__URL=' .env.test | cut -d= -f2-) cargo test
 
 e2e:

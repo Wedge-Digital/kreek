@@ -22,6 +22,7 @@ import time
 from playwright.sync_api import Page, expect
 
 BASE_URL = "http://localhost:3210"
+FAKE_LOGO_URL = "https://res.cloudinary.com/demo/image/upload/v1/sample.jpg"
 
 
 def _create_minimal_competition(page: Page, competition_create_url: str) -> None:
@@ -31,6 +32,7 @@ def _create_minimal_competition(page: Page, competition_create_url: str) -> None
     page.fill("input[name='name']", competition_name)
     page.wait_for_selector(".coach-result-row", timeout=5000)
     page.locator(".coach-result-row").first.click()
+    page.evaluate(f"document.getElementById('logo_url').value = '{FAKE_LOGO_URL}'")
     with page.expect_navigation(wait_until="load"):
         page.click("button[type='submit']")
 
