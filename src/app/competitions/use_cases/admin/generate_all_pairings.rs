@@ -78,7 +78,7 @@ mod tests {
         async fn find_by_id(&self, id: &str) -> Result<Option<MatchDay>, MatchDayRepositoryError> { Ok(self.0.get(id).cloned()) }
         async fn save_match_day(&self, _: &MatchDay) -> Result<(), MatchDayRepositoryError> { Ok(()) }
         async fn delete_match_day(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
-        async fn save_pairing(&self, _: &str, _: &Pairing) -> Result<(), MatchDayRepositoryError> { Ok(()) }
+        async fn save_pairing(&self, _: &str, _: &Pairing, _: &crate::app::competitions::domain::match_day_repository_port::NewPairingProjection) -> Result<(), MatchDayRepositoryError> { Ok(()) }
         async fn delete_pairing(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
         async fn clear_pairings(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
         async fn clear_all_pairings(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }

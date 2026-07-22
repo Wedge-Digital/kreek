@@ -1,7 +1,6 @@
 use crate::app::competitions::domain::domain_event::CompetitionsDomainEvent;
 use crate::app::competitions::domain::match_day::Pairing;
-use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
-use crate::app::competitions::io::app_events::pairing_projection_listener;
+use crate::app::competitions::domain::match_day_repository_port::{IMatchDayRepository, NewPairingProjection};
 use crate::app::competitions::ports::ITeamInfoPort;
 use crate::app::competitions::use_cases::admin::team_enrollment::load_enrolled_teams;
 use crate::app::routes::AppRoutes;
@@ -54,7 +53,7 @@ async fn handle_event(
         return;
     };
 
-    let Some(pairing_id) = resolve_pairing_id(&payload, pool, match_day_repo, team_port, event_bus).await else {
+    let Some(pairing_id) = resolve_pairing_id(&payload, match_day_repo, team_port, event_bus).await else {
         return;
     };
 
@@ -85,7 +84,6 @@ async fn handle_event(
 /// (ex. suivi des équipes déjà affrontées côté génération automatique).
 async fn resolve_pairing_id(
     payload: &MatchReportPublishedPayload,
-    pool: &PgPool,
     match_day_repo: &dyn IMatchDayRepository,
     team_port: &dyn ITeamInfoPort,
     event_bus: &EventBus,
@@ -139,20 +137,28 @@ async fn resolve_pairing_id(
         return None;
     };
     let pairing = Pairing { id: PairingId::new(), home_team_id, away_team_id };
-    if let Err(e) = match_day_repo.save_pairing(&payload.round_id, &pairing).await {
+    let projection = NewPairingProjection {
+        season_id: payload.season_id.clone(),
+        round_name: match_day.name.to_string(),
+        round_position: match_day.position.into_inner(),
+        round_date_start: match_day.date_start.as_ref().map(|d| d.to_string()),
+        round_date_end: match_day.date_end.as_ref().map(|d| d.to_string()),
+        round_day_type: match_day.day_type.as_str().to_string(),
+        home_team_name: home_info.team_name.clone(),
+        home_roster_name: home_info.roster_name.clone(),
+        home_coach_name: home_info.coach_name.clone(),
+        home_logo_url: home_info.logo_url.clone(),
+        away_team_name: away_info.team_name.clone(),
+        away_roster_name: away_info.roster_name.clone(),
+        away_coach_name: away_info.coach_name.clone(),
+        away_logo_url: away_info.logo_url.clone(),
+    };
+    if let Err(e) = match_day_repo.save_pairing(&payload.round_id, &pairing, &projection).await {
         tracing::error!("match_report_published_listener: save_pairing: {e}");
         return None;
     }
 
     let pairing_id = pairing.id.to_string();
-    pairing_projection_listener::insert_projection(
-        pool, &pairing_id, &payload.season_id, &payload.round_id,
-        &match_day.name.to_string(), match_day.position.into_inner(),
-        match_day.date_start.as_ref().map(AsRef::as_ref), match_day.date_end.as_ref().map(AsRef::as_ref), match_day.day_type.as_str(),
-        &payload.home_team_id, &home_info.team_name, &home_info.roster_name, &home_info.coach_name, home_info.logo_url.as_deref(),
-        &payload.away_team_id, &away_info.team_name, &away_info.roster_name, &away_info.coach_name, away_info.logo_url.as_deref(),
-    )
-    .await;
 
     let _ = event_bus.send(
         CompetitionsDomainEvent::PairingCreated {
@@ -274,7 +280,7 @@ mod tests {
         async fn find_by_id(&self, _: &str) -> Result<Option<MatchDay>, MatchDayRepositoryError> { Ok(Some(self.0.clone())) }
         async fn save_match_day(&self, _: &MatchDay) -> Result<(), MatchDayRepositoryError> { Ok(()) }
         async fn delete_match_day(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
-        async fn save_pairing(&self, _: &str, _: &Pairing) -> Result<(), MatchDayRepositoryError> { Ok(()) }
+        async fn save_pairing(&self, _: &str, _: &Pairing, _: &NewPairingProjection) -> Result<(), MatchDayRepositoryError> { Ok(()) }
         async fn delete_pairing(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
         async fn clear_pairings(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
         async fn clear_all_pairings(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
@@ -305,7 +311,10 @@ mod tests {
     /// Régression : un rapport manuel (pairing_id: None) n'avait jamais de ligne
     /// dans competition_match_display_proj — donc n'apparaissait jamais dans
     /// "résultats". resolve_pairing_id doit créer un vrai pairing et sa
-    /// projection, en synchrone, avant que l'UPDATE des scores ne s'exécute.
+    /// projection de façon atomique (même transaction, cf. carte 186) avant que
+    /// l'UPDATE des scores ne s'exécute. Utilise le vrai `MatchDayRepository`
+    /// (pas le fake) car l'écriture atomique vit maintenant dans l'implémentation
+    /// réelle de `save_pairing`, avec une vraie contrainte FK sur match_day_id.
     #[sqlx::test]
     async fn resolve_pairing_id_creates_a_real_pairing_and_projection_for_manual_reports(pool: PgPool) {
         let home = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
@@ -316,17 +325,26 @@ mod tests {
             day_type: MatchDayType::FixedDate, date_start: None, date_end: None,
             position: MatchDayPosition::try_new(3).unwrap(), pairings: vec![],
         };
-        let match_day_repo = FakeMatchDayRepo(match_day);
+        let match_day_repo = crate::app::competitions::io::repository::match_day_repository::MatchDayRepository::new(pool.clone());
+        match_day_repo.save_match_day(&match_day).await.expect("insertion de la journée de test");
         let team_port = FakeTeamInfoPort(vec![
             TeamInfoDto { team_id: home.into(), team_name: "Home".into(), coach_id: "coach1".into(), coach_name: "C1".into(), roster_name: "R1".into(), logo_url: None },
             TeamInfoDto { team_id: away.into(), team_name: "Away".into(), coach_id: "coach2".into(), coach_name: "C2".into(), roster_name: "R2".into(), logo_url: None },
         ]);
         let event_bus = crate::common::services::event_bus::event_bus::new_bus();
-        let payload = sample_payload(home, away, None);
+        let mut payload = sample_payload(home, away, None);
+        payload.round_id = match_day.id.to_string();
 
-        let pairing_id = resolve_pairing_id(&payload, &pool, &match_day_repo, &team_port, &event_bus)
+        let pairing_id = resolve_pairing_id(&payload, &match_day_repo, &team_port, &event_bus)
             .await
             .expect("un pairing doit être créé pour un rapport manuel");
+
+        let pairing_row = sqlx::query("SELECT match_day_id FROM competition_match_day_pairings WHERE id = $1")
+            .bind(&pairing_id)
+            .fetch_one(&pool)
+            .await
+            .expect("la ligne de pairing doit exister (même transaction que la projection)");
+        assert_eq!(pairing_row.get::<String, _>("match_day_id"), match_day.id.to_string());
 
         let row = sqlx::query(
             "SELECT home_team_name, away_team_name, round_name FROM competition_match_display_proj WHERE pairing_id = $1",
@@ -353,9 +371,7 @@ mod tests {
         let event_bus = crate::common::services::event_bus::event_bus::new_bus();
         let payload = sample_payload("home", "away", Some("existing-pairing".into()));
 
-        // pas de pool réel nécessaire ici : le retour anticipé n'y touche jamais.
-        let pool = sqlx::PgPool::connect_lazy("postgres://unused/unused").unwrap();
-        let pairing_id = resolve_pairing_id(&payload, &pool, &match_day_repo, &team_port, &event_bus).await;
+        let pairing_id = resolve_pairing_id(&payload, &match_day_repo, &team_port, &event_bus).await;
 
         assert_eq!(pairing_id, Some("existing-pairing".to_string()));
     }

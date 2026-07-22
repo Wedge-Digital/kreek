@@ -5,7 +5,7 @@ use crate::app::competitions::domain::match_day::{MatchDay, Pairing};
 use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
 use crate::app::competitions::ports::{ITeamInfoPort, TeamInfoDto};
 use crate::app::competitions::use_cases::admin::team_enrollment::{
-    filter_enrolled_team_ids, load_enrolled_teams, resolve_team_names,
+    build_new_pairing_projection, filter_enrolled_team_ids, load_enrolled_teams, resolve_team_names,
 };
 use crate::app::shared_kernel::common_types::{EventId, PairingId};
 use crate::app::shared_kernel::team::TeamId;
@@ -123,8 +123,9 @@ async fn generate_and_save_group_pairings(
             home_team_id: TeamId::try_new(&home).expect("valid team id"),
             away_team_id: TeamId::try_new(&away).expect("valid team id"),
         };
+        let projection = build_new_pairing_projection(&home, &away, season_id, match_day, team_display);
         match_day_repo
-            .save_pairing(match_day_id, &pairing)
+            .save_pairing(match_day_id, &pairing, &projection)
             .await
             .map_err(|e| GenerateError::Repository(e.to_string()))?;
 
@@ -214,7 +215,7 @@ mod tests {
         async fn find_by_id(&self, _: &str) -> Result<Option<MatchDay>, MatchDayRepositoryError> { Ok(Some(self.0.clone())) }
         async fn save_match_day(&self, _: &MatchDay) -> Result<(), MatchDayRepositoryError> { Ok(()) }
         async fn delete_match_day(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
-        async fn save_pairing(&self, _: &str, _: &Pairing) -> Result<(), MatchDayRepositoryError> { Ok(()) }
+        async fn save_pairing(&self, _: &str, _: &Pairing, _: &crate::app::competitions::domain::match_day_repository_port::NewPairingProjection) -> Result<(), MatchDayRepositoryError> { Ok(()) }
         async fn delete_pairing(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
         async fn clear_pairings(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
         async fn clear_all_pairings(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }

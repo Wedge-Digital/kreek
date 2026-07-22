@@ -2,11 +2,12 @@ use crate::app::competitions::domain::match_day::{
     MatchDay, MatchDayName, MatchDayPosition, MatchDayType, Pairing,
 };
 use crate::app::competitions::domain::match_day_repository_port::{
-    IMatchDayRepository, MatchDayRepositoryError, PairingDisplayDto,
+    IMatchDayRepository, MatchDayRepositoryError, NewPairingProjection, PairingDisplayDto,
 };
 use crate::app::shared_kernel::common_types::{MatchId, PairingId, SeasonId};
 use crate::app::shared_kernel::date_string::DateString;
 use crate::app::shared_kernel::team::TeamId;
+use crate::common::initials::initials;
 use async_trait::async_trait;
 use sqlx::PgPool;
 
@@ -159,11 +160,20 @@ impl IMatchDayRepository for MatchDayRepository {
         &self,
         match_day_id: &str,
     ) -> Result<(), MatchDayRepositoryError> {
+        let mut tx = self.pool.begin().await.map_err(db_err)?;
+        // Cascade DB sur competition_match_day_pairings, mais pas sur la
+        // projection (pas de FK) — nettoyage explicite dans la même tx.
         sqlx::query("DELETE FROM competition_match_days WHERE id = $1")
             .bind(match_day_id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(db_err)?;
+        sqlx::query("DELETE FROM competition_match_display_proj WHERE round_id = $1")
+            .bind(match_day_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(db_err)?;
+        tx.commit().await.map_err(db_err)?;
         Ok(())
     }
 
@@ -171,19 +181,67 @@ impl IMatchDayRepository for MatchDayRepository {
         &self,
         match_day_id: &str,
         pairing: &Pairing,
+        projection: &NewPairingProjection,
     ) -> Result<(), MatchDayRepositoryError> {
+        let pairing_id = pairing.id.to_string();
+        let home_team_id = pairing.home_team_id.to_string();
+        let away_team_id = pairing.away_team_id.to_string();
+        let home_initials = initials(&projection.home_team_name);
+        let away_initials = initials(&projection.away_team_name);
+
+        let mut tx = self.pool.begin().await.map_err(db_err)?;
         sqlx::query(
             "INSERT INTO competition_match_day_pairings (id, match_day_id, home_team_id, away_team_id)
              VALUES ($1, $2, $3, $4)
              ON CONFLICT (id) DO NOTHING",
         )
-        .bind(pairing.id.to_string())
+        .bind(&pairing_id)
         .bind(match_day_id)
-        .bind(pairing.home_team_id.to_string())
-        .bind(pairing.away_team_id.to_string())
-        .execute(&self.pool)
+        .bind(&home_team_id)
+        .bind(&away_team_id)
+        .execute(&mut *tx)
         .await
         .map_err(db_err)?;
+
+        sqlx::query(
+            r#"INSERT INTO competition_match_display_proj (
+                pairing_id, season_id, round_id, round_name, round_position,
+                round_date_start, round_date_end, round_day_type,
+                home_team_id, home_team_name, home_roster_name, home_coach_name, home_logo_url, home_initials,
+                away_team_id, away_team_name, away_roster_name, away_coach_name, away_logo_url, away_initials,
+                match_status
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8,
+                $9, $10, $11, $12, $13, $14,
+                $15, $16, $17, $18, $19, $20,
+                'upcoming'
+            ) ON CONFLICT (pairing_id) DO NOTHING"#,
+        )
+        .bind(&pairing_id)
+        .bind(&projection.season_id)
+        .bind(match_day_id)
+        .bind(&projection.round_name)
+        .bind(projection.round_position)
+        .bind(&projection.round_date_start)
+        .bind(&projection.round_date_end)
+        .bind(&projection.round_day_type)
+        .bind(&home_team_id)
+        .bind(&projection.home_team_name)
+        .bind(&projection.home_roster_name)
+        .bind(&projection.home_coach_name)
+        .bind(&projection.home_logo_url)
+        .bind(&home_initials)
+        .bind(&away_team_id)
+        .bind(&projection.away_team_name)
+        .bind(&projection.away_roster_name)
+        .bind(&projection.away_coach_name)
+        .bind(&projection.away_logo_url)
+        .bind(&away_initials)
+        .execute(&mut *tx)
+        .await
+        .map_err(db_err)?;
+
+        tx.commit().await.map_err(db_err)?;
         Ok(())
     }
 
@@ -191,11 +249,18 @@ impl IMatchDayRepository for MatchDayRepository {
         &self,
         pairing_id: &str,
     ) -> Result<(), MatchDayRepositoryError> {
+        let mut tx = self.pool.begin().await.map_err(db_err)?;
         sqlx::query("DELETE FROM competition_match_day_pairings WHERE id = $1")
             .bind(pairing_id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(db_err)?;
+        sqlx::query("DELETE FROM competition_match_display_proj WHERE pairing_id = $1")
+            .bind(pairing_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(db_err)?;
+        tx.commit().await.map_err(db_err)?;
         Ok(())
     }
 
@@ -203,11 +268,18 @@ impl IMatchDayRepository for MatchDayRepository {
         &self,
         match_day_id: &str,
     ) -> Result<(), MatchDayRepositoryError> {
+        let mut tx = self.pool.begin().await.map_err(db_err)?;
         sqlx::query("DELETE FROM competition_match_day_pairings WHERE match_day_id = $1")
             .bind(match_day_id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(db_err)?;
+        sqlx::query("DELETE FROM competition_match_display_proj WHERE round_id = $1")
+            .bind(match_day_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(db_err)?;
+        tx.commit().await.map_err(db_err)?;
         Ok(())
     }
 
@@ -215,14 +287,21 @@ impl IMatchDayRepository for MatchDayRepository {
         &self,
         season_id: &str,
     ) -> Result<(), MatchDayRepositoryError> {
+        let mut tx = self.pool.begin().await.map_err(db_err)?;
         sqlx::query(
             "DELETE FROM competition_match_day_pairings
              WHERE match_day_id IN (SELECT id FROM competition_match_days WHERE season_id = $1)",
         )
         .bind(season_id)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(db_err)?;
+        sqlx::query("DELETE FROM competition_match_display_proj WHERE season_id = $1")
+            .bind(season_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(db_err)?;
+        tx.commit().await.map_err(db_err)?;
         Ok(())
     }
 

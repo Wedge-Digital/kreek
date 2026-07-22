@@ -155,7 +155,7 @@ mod tests {
                     async fn find_by_id(&self, _: &str) -> Result<Option<crate::app::competitions::domain::match_day::MatchDay>, crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(None) }
                     async fn save_match_day(&self, _: &crate::app::competitions::domain::match_day::MatchDay) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
                     async fn delete_match_day(&self, _: &str) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
-                    async fn save_pairing(&self, _: &str, _: &crate::app::competitions::domain::match_day::Pairing) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
+                    async fn save_pairing(&self, _: &str, _: &crate::app::competitions::domain::match_day::Pairing, _: &crate::app::competitions::domain::match_day_repository_port::NewPairingProjection) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
                     async fn delete_pairing(&self, _: &str) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
                     async fn clear_pairings(&self, _: &str) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
                     async fn clear_all_pairings(&self, _: &str) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }

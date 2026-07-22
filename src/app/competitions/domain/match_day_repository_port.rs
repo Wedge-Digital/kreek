@@ -29,6 +29,28 @@ pub struct PairingDisplayDto {
     pub match_report_url: Option<String>,
 }
 
+/// Données d'affichage nécessaires pour projeter un pairing nouvellement créé
+/// dans `competition_match_display_proj`, en plus de son id et des ids
+/// d'équipes déjà portés par `Pairing`. Construit par l'appelant à partir de
+/// données déjà résolues (`MatchDay`, `TeamInfoDto`) — le repository ne fait
+/// aucune résolution, seulement l'écriture atomique pairing + projection.
+pub struct NewPairingProjection {
+    pub season_id: String,
+    pub round_name: String,
+    pub round_position: i32,
+    pub round_date_start: Option<String>,
+    pub round_date_end: Option<String>,
+    pub round_day_type: String,
+    pub home_team_name: String,
+    pub home_roster_name: String,
+    pub home_coach_name: String,
+    pub home_logo_url: Option<String>,
+    pub away_team_name: String,
+    pub away_roster_name: String,
+    pub away_coach_name: String,
+    pub away_logo_url: Option<String>,
+}
+
 #[derive(Debug)]
 pub enum MatchDayRepositoryError {
     Database(String),
@@ -68,6 +90,7 @@ pub trait IMatchDayRepository: Send + Sync {
         &self,
         match_day_id: &str,
         pairing: &Pairing,
+        projection: &NewPairingProjection,
     ) -> Result<(), MatchDayRepositoryError>;
 
     async fn delete_pairing(
