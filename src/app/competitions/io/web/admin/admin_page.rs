@@ -74,8 +74,8 @@ pub async fn require_admin_access(
     };
 
     let is_space_admin = matches!(
-        state.spaces.space_repository.find_member_profile(&user.id, &space_entity_id).await,
-        Ok(Some(SpaceProfile::SpaceAdmin))
+        state.competitions.space_member_port.find_member_profile(&user.id, &space_entity_id).await,
+        Some(SpaceProfile::SpaceAdmin)
     );
 
     let comp_info = match state
@@ -176,7 +176,7 @@ pub async fn render_admin_page(
                 &season_entity_id,
                 state.competitions.competition_repository.as_ref(),
                 state.competitions.season_repository.as_ref(),
-                state.references.repository.as_ref(),
+                state.competitions.reference_port.as_ref(),
                 app_routes,
                 space_id,
                 competition_id,

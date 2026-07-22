@@ -163,12 +163,28 @@ mod tests {
                     async fn list_resultats(&self, _: &str, _: Option<i32>, _: u32) -> Result<Vec<crate::app::competitions::domain::match_day_repository_port::PairingDisplayDto>, crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(vec![]) }
                     async fn list_calendrier(&self, _: &str, _: Option<i32>, _: u32) -> Result<Vec<crate::app::competitions::domain::match_day_repository_port::PairingDisplayDto>, crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(vec![]) }
                 }
+                struct FakeReferencePort;
+                impl crate::app::competitions::ports::ICompetitionReferencePort for FakeReferencePort {
+                    fn find_inducement_name(&self, _: &str) -> Option<String> { None }
+                    fn find_star_player_name(&self, _: &str) -> Option<String> { None }
+                }
+                struct FakeCompSpaceMemberPort;
+                #[async_trait::async_trait]
+                impl crate::app::competitions::ports::ICompetitionSpaceMemberPort for FakeCompSpaceMemberPort {
+                    async fn find_member_profile(
+                        &self,
+                        _: &crate::app::shared_kernel::common_types::CoachId,
+                        _: &crate::app::shared_kernel::common_types::SpaceId,
+                    ) -> Option<crate::app::shared_kernel::authorization::SpaceProfile> { None }
+                }
                 CompetitionsContext {
                     competition_repository: Arc::new(FakeCompetitionRepository),
                     season_repository:      Arc::new(FakeSeasonRepository),
                     group_repository:       Arc::new(FakeGroupRepo),
                     match_day_repository:   Arc::new(FakeMatchDayRepo),
                     team_info_port:         Arc::new(FakeTeamInfoPort),
+                    reference_port:         Arc::new(FakeReferencePort),
+                    space_member_port:      Arc::new(FakeCompSpaceMemberPort),
                     event_bus:              event_bus.clone(),
                 }
             },

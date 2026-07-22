@@ -164,7 +164,17 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
     let state = AppState {
         auth: AuthContext::new(&pool, event_bus.clone()),
         spaces: SpacesContext::new(&pool, event_bus.clone()),
-        competitions: CompetitionsContext::new(&pool, event_bus.clone(), competitions_team_info_port),
+        competitions: CompetitionsContext::new(
+            &pool,
+            event_bus.clone(),
+            competitions_team_info_port,
+            Arc::new(crate::infrastructure::competitions::reference_name_adapter::ReferenceNameAdapter::new(
+                refs_for_players.repository.clone(),
+            )),
+            Arc::new(crate::infrastructure::competitions::space_member_adapter::SpaceMemberAdapter::new(
+                Arc::new(crate::app::spaces::io::repository::space_repository::SpaceRepository::new(pool.clone())),
+            )),
+        ),
         news: NewsContext::new(&pool),
         references: ReferencesContext::new(),
         team_creation: TeamCreationContext::new(

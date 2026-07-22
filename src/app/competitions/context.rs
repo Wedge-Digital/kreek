@@ -2,7 +2,7 @@ use crate::app::competitions::domain::competition_repository_port::ICompetitionR
 use crate::app::competitions::domain::group_repository_port::IGroupRepository;
 use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
 use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
-use crate::app::competitions::ports::ITeamInfoPort;
+use crate::app::competitions::ports::{ICompetitionReferencePort, ICompetitionSpaceMemberPort, ITeamInfoPort};
 use crate::app::competitions::io::app_events::app_event_publisher::competitions_app_event_publisher;
 use crate::app::competitions::io::app_events::match_report_confirmed_listener;
 use crate::app::competitions::io::app_events::match_report_published_listener;
@@ -21,6 +21,8 @@ pub struct CompetitionsContext {
     pub group_repository: Arc<dyn IGroupRepository>,
     pub match_day_repository: Arc<dyn IMatchDayRepository>,
     pub team_info_port: Arc<dyn ITeamInfoPort>,
+    pub reference_port: Arc<dyn ICompetitionReferencePort>,
+    pub space_member_port: Arc<dyn ICompetitionSpaceMemberPort>,
     pub event_bus: EventBus,
 }
 
@@ -37,13 +39,21 @@ pub fn init_listeners(
 }
 
 impl CompetitionsContext {
-    pub fn new(pool: &PgPool, event_bus: EventBus, team_info_port: Arc<dyn ITeamInfoPort>) -> Self {
+    pub fn new(
+        pool: &PgPool,
+        event_bus: EventBus,
+        team_info_port: Arc<dyn ITeamInfoPort>,
+        reference_port: Arc<dyn ICompetitionReferencePort>,
+        space_member_port: Arc<dyn ICompetitionSpaceMemberPort>,
+    ) -> Self {
         Self {
             competition_repository: Arc::new(CompetitionRepository::new(pool.clone())),
             season_repository: Arc::new(SeasonRepository::new(pool.clone())),
             group_repository: Arc::new(GroupRepository::new(pool.clone())),
             match_day_repository: Arc::new(MatchDayRepository::new(pool.clone())),
             team_info_port,
+            reference_port,
+            space_member_port,
             event_bus,
         }
     }
