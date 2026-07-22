@@ -1,6 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::{CompetitionId, EntityId, SeasonId};
+use crate::app::shared_kernel::common_types::{EntityId, SeasonId};
 use crate::app::team_creation::use_cases::commands::SubmitTeamCommand;
 use crate::app::team_creation::use_cases::submit_team as submit_uc;
 use crate::state::AppState;
@@ -47,16 +47,14 @@ pub async fn submit_team(
         Err(_) => false,
     };
 
-    let competition_name = match CompetitionId::try_new(draft.competition_id()) {
-        Ok(cid) => state.competitions.competition_repository.find_base_info(&cid).await
-            .ok().flatten().map(|i| i.name).unwrap_or_default(),
-        Err(_) => String::new(),
-    };
-    let season_name = match SeasonId::try_new(draft.season_id()) {
-        Ok(sid) => state.competitions.season_repository.find_base_info(&sid).await
-            .ok().flatten().map(|i| i.name).unwrap_or_default(),
-        Err(_) => String::new(),
-    };
+    let competition_name = state.team_creation.competition_display
+        .find_competition_name(draft.competition_id())
+        .await
+        .unwrap_or_default();
+    let season_name = state.team_creation.competition_display
+        .find_season_name(draft.season_id())
+        .await
+        .unwrap_or_default();
 
     let cmd = SubmitTeamCommand {
         team_id: team_id_val,

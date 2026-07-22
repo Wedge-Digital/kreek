@@ -3,7 +3,8 @@ use crate::app::team_creation::io::team_creation_repository::{
     TeamDraftRepository, TeamRosterRepository,
 };
 use crate::app::team_creation::ports::{
-    ICompetitionCreationRulesPort, IReferenceDataPort, ITeamDraftRepository, ITeamRosterRepository,
+    ICompetitionCreationRulesPort, ICompetitionDisplayPort, IReferenceDataPort, ITeamDraftRepository,
+    ITeamRosterRepository,
 };
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
@@ -15,6 +16,7 @@ pub struct TeamCreationContext {
     pub roster_repository: Arc<dyn ITeamRosterRepository>,
     pub reference_data: Arc<dyn IReferenceDataPort>,
     pub competition_rules: Arc<dyn ICompetitionCreationRulesPort>,
+    pub competition_display: Arc<dyn ICompetitionDisplayPort>,
     pub event_bus: EventBus,
 }
 
@@ -28,12 +30,14 @@ impl TeamCreationContext {
         event_bus: EventBus,
         reference_data: Arc<dyn IReferenceDataPort>,
         competition_rules: Arc<dyn ICompetitionCreationRulesPort>,
+        competition_display: Arc<dyn ICompetitionDisplayPort>,
     ) -> Self {
         Self {
             team_repository: Arc::new(TeamDraftRepository::new(pool.clone())),
             roster_repository: Arc::new(TeamRosterRepository::new(pool.clone())),
             reference_data,
             competition_rules,
+            competition_display,
             event_bus,
         }
     }

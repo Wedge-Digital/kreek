@@ -4,7 +4,7 @@ use crate::app::routes::AppRoutes;
 use crate::app::team_creation::use_cases::commands::SubmitTeamCommand;
 use crate::app::team_creation::use_cases::submit_team as submit_uc;
 use crate::app::team_creation::use_cases::roster_service;
-use crate::app::shared_kernel::common_types::{CompetitionId, EntityId, SeasonId};
+use crate::app::shared_kernel::common_types::{EntityId, SeasonId};
 use crate::state::AppState;
 use askama::Template;
 use axum::body::Body;
@@ -106,16 +106,14 @@ pub async fn finalize_team(
         Err(_) => false,
     };
 
-    let draft_competition_name = match CompetitionId::try_new(draft.competition_id()) {
-        Ok(cid) => state.competitions.competition_repository.find_base_info(&cid).await
-            .ok().flatten().map(|i| i.name).unwrap_or_default(),
-        Err(_) => String::new(),
-    };
-    let draft_season_name = match SeasonId::try_new(draft.season_id()) {
-        Ok(sid) => state.competitions.season_repository.find_base_info(&sid).await
-            .ok().flatten().map(|i| i.name).unwrap_or_default(),
-        Err(_) => String::new(),
-    };
+    let draft_competition_name = state.team_creation.competition_display
+        .find_competition_name(draft.competition_id())
+        .await
+        .unwrap_or_default();
+    let draft_season_name = state.team_creation.competition_display
+        .find_season_name(draft.season_id())
+        .await
+        .unwrap_or_default();
 
     let ref_data = state.team_creation.reference_data.as_ref();
 
@@ -274,16 +272,14 @@ pub async fn post_finalize_team(
         Err(_) => false,
     };
 
-    let post_comp_name = match CompetitionId::try_new(post_draft.competition_id()) {
-        Ok(cid) => state.competitions.competition_repository.find_base_info(&cid).await
-            .ok().flatten().map(|i| i.name).unwrap_or_default(),
-        Err(_) => String::new(),
-    };
-    let post_season_name = match SeasonId::try_new(post_draft.season_id()) {
-        Ok(sid) => state.competitions.season_repository.find_base_info(&sid).await
-            .ok().flatten().map(|i| i.name).unwrap_or_default(),
-        Err(_) => String::new(),
-    };
+    let post_comp_name = state.team_creation.competition_display
+        .find_competition_name(post_draft.competition_id())
+        .await
+        .unwrap_or_default();
+    let post_season_name = state.team_creation.competition_display
+        .find_season_name(post_draft.season_id())
+        .await
+        .unwrap_or_default();
 
     let cmd = SubmitTeamCommand {
         team_id:          team_entity_id,

@@ -199,11 +199,18 @@ mod tests {
                 impl crate::app::team_creation::ports::ICompetitionCreationRulesPort for FakeCompetitionRules {
                     async fn find_creation_rules_for_season(&self, _: &str) -> Option<crate::app::team_creation::domain::creation_rules::CreationRules> { None }
                 }
+                struct FakeCompetitionDisplay;
+                #[async_trait::async_trait]
+                impl crate::app::team_creation::ports::ICompetitionDisplayPort for FakeCompetitionDisplay {
+                    async fn find_competition_name(&self, _: &str) -> Option<String> { None }
+                    async fn find_season_name(&self, _: &str) -> Option<String> { None }
+                }
                 crate::app::team_creation::context::TeamCreationContext {
                     team_repository:   Arc::new(FakeTeamDraftRepository),
                     roster_repository: Arc::new(FakeTeamRosterRepository),
                     reference_data:    Arc::new(FakeReferenceData),
                     competition_rules: Arc::new(FakeCompetitionRules),
+                    competition_display: Arc::new(FakeCompetitionDisplay),
                     event_bus:         event_bus.clone(),
                 }
             },

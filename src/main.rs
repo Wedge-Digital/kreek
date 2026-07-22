@@ -184,6 +184,10 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             Arc::new(CompetitionRulesAdapter::new(Arc::new(
                 crate::app::competitions::io::repository::season_repository::SeasonRepository::new(pool.clone()),
             ))),
+            Arc::new(crate::infrastructure::team_creation::competition_display_adapter::CompetitionDisplayAdapter::new(
+                Arc::new(crate::app::competitions::io::repository::competition_repository::CompetitionRepository::new(pool.clone())),
+                Arc::new(crate::app::competitions::io::repository::season_repository::SeasonRepository::new(pool.clone())),
+            )),
         ),
         match_report: {
             let comp_data = match_report_comp_data.clone();

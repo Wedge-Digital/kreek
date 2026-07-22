@@ -114,3 +114,11 @@ pub trait RulesetRepository: Send + Sync {
 pub trait ICompetitionCreationRulesPort: Send + Sync {
     async fn find_creation_rules_for_season(&self, season_id: &str) -> Option<CreationRules>;
 }
+
+// ── ACL vers le BC `competitions` (noms d'affichage compétition/saison) ────────
+
+#[async_trait]
+pub trait ICompetitionDisplayPort: Send + Sync {
+    async fn find_competition_name(&self, competition_id: &str) -> Option<String>;
+    async fn find_season_name(&self, season_id: &str) -> Option<String>;
+}
