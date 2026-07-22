@@ -2,7 +2,7 @@ use crate::app::players::domain::match_impact::{InjuryType, MatchContext, MatchR
 use crate::app::players::domain::player::{Player, PlayerId, TeamId};
 use crate::app::players::io::app_events::team_match_concluded_listener::handle_team_match_concluded;
 use crate::app::players::ports::IPlayerRepository;
-use crate::app::references::domain::port::IReferenceRepository;
+use crate::app::players::ports::ISkillCatalogPort;
 use crate::app::shared_kernel::app_events::player_match_impact_app_events::{
     InjuryTypePayload, PlayerMatchContextPayload, PlayerMatchImpactAppEvent,
 };
@@ -12,7 +12,7 @@ use std::sync::Arc;
 pub fn init(
     app_event_bus: &EventBus,
     player_repo: Arc<dyn IPlayerRepository>,
-    ref_repo: Arc<dyn IReferenceRepository>,
+    skill_catalog: Arc<dyn ISkillCatalogPort>,
 ) {
     let mut rx = app_event_bus.subscribe();
     tokio::spawn(async move {
@@ -24,7 +24,7 @@ pub fn init(
                     else {
                         continue;
                     };
-                    handle_event(app_event, player_repo.as_ref(), ref_repo.as_ref()).await;
+                    handle_event(app_event, player_repo.as_ref(), skill_catalog.as_ref()).await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("player_match_impact_listener: lagged by {n}");
@@ -38,7 +38,7 @@ pub fn init(
 async fn handle_event(
     app_event: PlayerMatchImpactAppEvent,
     player_repo: &dyn IPlayerRepository,
-    ref_repo: &dyn IReferenceRepository,
+    catalog: &dyn ISkillCatalogPort,
 ) {
     // Traité dans cette même tâche séquentielle (et non par un listener à part) pour
     // garantir que TeamMatchConcluded n'est jamais appliqué avant les events d'action
@@ -72,19 +72,19 @@ async fn handle_event(
 
     let event = match app_event {
         PlayerMatchImpactAppEvent::PlayerPerformedTouchdown(_) => {
-            player.record_touchdown(context, spp_earned(ref_repo.touchdown_spp()))
+            player.record_touchdown(context, spp_earned(catalog.touchdown_spp()))
         }
         PlayerMatchImpactAppEvent::PlayerPerformedPass(_) => {
-            player.record_pass(context, spp_earned(ref_repo.pass_spp()))
+            player.record_pass(context, spp_earned(catalog.pass_spp()))
         }
         PlayerMatchImpactAppEvent::PlayerPerformedInterception(_) => {
-            player.record_interception(context, spp_earned(ref_repo.interception_spp()))
+            player.record_interception(context, spp_earned(catalog.interception_spp()))
         }
         PlayerMatchImpactAppEvent::PlayerPerformedCasualty(_) => {
-            player.record_casualty(context, spp_earned(ref_repo.casualty_spp()))
+            player.record_casualty(context, spp_earned(catalog.casualty_spp()))
         }
         PlayerMatchImpactAppEvent::PlayerPerformedMvp(_) => {
-            player.record_mvp(context, spp_earned(ref_repo.mvp_spp()))
+            player.record_mvp(context, spp_earned(catalog.mvp_spp()))
         }
         PlayerMatchImpactAppEvent::PlayerPerformedFoul(_) => player.record_foul(context),
         PlayerMatchImpactAppEvent::PlayerInjured { injury_type, .. } => {
@@ -176,7 +176,13 @@ mod tests {
     use crate::app::players::io::repository::player_repository::PgPlayerRepository;
     use crate::app::references::io::repository::in_memory_reference_repository::InMemoryReferenceRepository;
     use crate::app::shared_kernel::common_types::SpaceId;
+    use crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter;
     use sqlx::PgPool;
+    use std::sync::Arc;
+
+    fn test_catalog() -> SkillCatalogAdapter {
+        SkillCatalogAdapter::new(Arc::new(InMemoryReferenceRepository::load()))
+    }
 
     fn sample_context_payload(player_id: &str) -> PlayerMatchContextPayload {
         PlayerMatchContextPayload {
@@ -209,13 +215,13 @@ mod tests {
     #[sqlx::test]
     async fn touchdown_event_credits_spp_on_existing_player(pool: PgPool) {
         let player_repo = PgPlayerRepository::new(pool);
-        let ref_repo = InMemoryReferenceRepository::load();
+        let catalog = test_catalog();
         seed_player(&player_repo, "p1", "t1").await;
 
         handle_event(
             PlayerMatchImpactAppEvent::PlayerPerformedTouchdown(sample_context_payload("p1")),
             &player_repo,
-            &ref_repo,
+            &catalog,
         )
         .await;
 
@@ -228,7 +234,7 @@ mod tests {
     #[sqlx::test]
     async fn injury_event_updates_participation_status(pool: PgPool) {
         let player_repo = PgPlayerRepository::new(pool);
-        let ref_repo = InMemoryReferenceRepository::load();
+        let catalog = test_catalog();
         seed_player(&player_repo, "p2", "t1").await;
 
         handle_event(
@@ -237,7 +243,7 @@ mod tests {
                 injury_type: InjuryTypePayload::BlessureSerieuse,
             },
             &player_repo,
-            &ref_repo,
+            &catalog,
         )
         .await;
 
@@ -249,12 +255,12 @@ mod tests {
     #[sqlx::test]
     async fn unknown_player_is_ignored_without_panicking(pool: PgPool) {
         let player_repo = PgPlayerRepository::new(pool);
-        let ref_repo = InMemoryReferenceRepository::load();
+        let catalog = test_catalog();
 
         handle_event(
             PlayerMatchImpactAppEvent::PlayerPerformedTouchdown(sample_context_payload("ghost")),
             &player_repo,
-            &ref_repo,
+            &catalog,
         )
         .await;
     }

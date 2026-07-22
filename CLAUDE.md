@@ -407,6 +407,19 @@ Conséquences :
 
 ---
 
+## Consultation vs propagation d'effet entre BCs — critère de choix
+
+Face à un besoin de communication inter-BC, la nature de l'opération détermine le mécanisme à utiliser :
+
+- **Consultation pure** (« j'ai besoin de connaître une donnée qui vit dans un autre BC pour prendre une décision maintenant ») → **port + adapter** (cf. « Adapters inter-BCs » ci-dessous). Le BC consommateur définit le port, interroge en synchrone, obtient toujours la donnée à jour au moment de la décision.
+- **Propagation d'un effet résultant de la mutation d'un agrégat** (« un agrégat vient de changer d'état, d'autres BCs doivent réagir ») → **app event** (cf. « App events vs Domain events » ci-dessus). Le BC source émet, les BCs intéressés écoutent et appliquent leur propre transition ou entretiennent leur propre projection locale.
+
+Le test pour trancher : est-ce qu'on a besoin de lire un état **au moment présent** pour décider d'une action (consultation → port), ou est-ce qu'on réagit à **un fait qui vient de se produire** ailleurs, sans besoin de relire l'état courant (propagation → event) ?
+
+Cas particulier à connaître : une vérification d'autorisation ou un garde-fou métier bloquant (« ce coach a-t-il le droit de faire X maintenant ? », « cette équipe est-elle dans la bonne phase de jeu ? ») est presque toujours une **consultation**, même si la donnée sous-jacente change rarement — la fraîcheur y est critique pour une règle bloquante, et un cache local alimenté par event introduirait un risque de décalage inacceptable (le garde-fou pourrait laisser passer une action qui vient d'être rendue invalide ailleurs). Préférer le port dans ce cas, même si l'intuition « donnée stable → autant la cacher » peut suggérer le contraire.
+
+---
+
 ## Adapters inter-BCs — règle fondamentale
 
 Quand un BC a besoin de données d'un autre BC **en lecture synchrone** (pas via un app event), la communication passe par un **port (trait)** défini dans le BC consommateur et un **adapter** instancié dans la couche d'infrastructure applicative.

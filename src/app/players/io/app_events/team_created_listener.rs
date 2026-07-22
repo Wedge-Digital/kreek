@@ -7,8 +7,7 @@ use crate::app::shared_kernel::common_types::SpaceId;
 use crate::app::players::io::repository::player_repository::{
     insert_player_event, upsert_player_projection,
 };
-use crate::app::players::ports::RepositoryError;
-use crate::app::references::domain::port::IReferenceRepository;
+use crate::app::players::ports::{ISkillCatalogPort, RepositoryError};
 use crate::app::shared_kernel::app_events::team_creation_app_events::{
     PlayerPayload, TeamCreationAppEvent,
 };
@@ -47,12 +46,12 @@ impl From<RepositoryError> for ListenerError {
 
 fn resolve_base_skills(
     roster_line_id: &str,
-    ref_repo:       &dyn IReferenceRepository,
+    catalog:        &dyn ISkillCatalogPort,
 ) -> Vec<SkillId> {
-    ref_repo
-        .find_position_by_uid(roster_line_id)
+    catalog
+        .find_position(roster_line_id)
         .map(|pos| {
-            pos.skills
+            pos.base_skills
                 .iter()
                 .filter_map(|uid| SkillId::try_new(uid.clone()).ok())
                 .collect()
@@ -60,9 +59,9 @@ fn resolve_base_skills(
         .unwrap_or_default()
 }
 
-fn base_position_kpo(roster_line_id: &str, ref_repo: &dyn IReferenceRepository) -> u32 {
-    ref_repo
-        .find_position_by_uid(roster_line_id)
+fn base_position_kpo(roster_line_id: &str, catalog: &dyn ISkillCatalogPort) -> u32 {
+    catalog
+        .find_position(roster_line_id)
         .map(|pos| pos.cost)
         .unwrap_or(0)
 }
@@ -95,13 +94,13 @@ async fn handle_player(
     space_id: &str,
     payload:  &PlayerPayload,
     pool:     &PgPool,
-    ref_repo: &dyn IReferenceRepository,
+    catalog:  &dyn ISkillCatalogPort,
 ) -> Result<(), ListenerError> {
     let player_id = PlayerId(payload.instance_id.clone());
     let team_id_vo = TeamId(team_id.to_string());
 
-    let base_skills     = resolve_base_skills(&payload.roster_line_id, ref_repo);
-    let starting_value  = ValueKpo(base_position_kpo(&payload.roster_line_id, ref_repo));
+    let base_skills     = resolve_base_skills(&payload.roster_line_id, catalog);
+    let starting_value  = ValueKpo(base_position_kpo(&payload.roster_line_id, catalog));
 
     // ── Version 1 : création du joueur (sans compétences acquises) ────────────
     let space_id_vo = SpaceId::try_new(space_id).unwrap_or_else(|_| SpaceId::new());
@@ -129,20 +128,21 @@ async fn handle_player(
     tx.commit().await.map_err(ListenerError::Database)?;
 
     // ── Versions 2..n : une compétence acquise par event ─────────────────────
-    let position = ref_repo.find_position_by_uid(&payload.roster_line_id);
+    let position = catalog.find_position(&payload.roster_line_id);
 
     for (idx, skill) in payload.acquired_skills.iter().enumerate() {
         let version    = (2 + idx) as i32;
-        let skill_ref  = ref_repo.find_skill_by_uid(&skill.skill_id);
-        let skill_name = skill_ref.map(|s| s.name.clone())
+        let skill_ref  = catalog.find_skill(&skill.skill_id);
+        let skill_name = skill_ref.as_ref().map(|s| s.name.clone())
                             .unwrap_or_else(|| skill.skill_id.clone());
         let is_primary = position
-            .map(|pos| pos.primary_access.iter().any(|cat| {
-                skill_ref.map(|s| s.category == *cat).unwrap_or(false)
+            .as_ref()
+            .map(|pos| pos.primary_categories.iter().any(|cat| {
+                skill_ref.as_ref().map(|s| s.category == *cat).unwrap_or(false)
             }))
             .unwrap_or(false);
-        let is_elite    = skill_ref.map(|s| s.skill_type == "Élite").unwrap_or(false);
-        let category    = skill_ref.map(|s| s.category.as_str()).unwrap_or("");
+        let is_elite    = skill_ref.as_ref().map(|s| s.is_elite).unwrap_or(false);
+        let category    = skill_ref.as_ref().map(|s| s.category.as_str()).unwrap_or("");
         let category_css = skill_category_css(category).to_string();
         let value_delta  = ValueKpo(skill_value_delta(is_primary, is_elite));
 
@@ -180,10 +180,10 @@ async fn handle_team_created(
     space_id: &str,
     players:  &[PlayerPayload],
     pool:     &PgPool,
-    ref_repo: &dyn IReferenceRepository,
+    catalog:  &dyn ISkillCatalogPort,
 ) -> Result<(), ListenerError> {
     for payload in players {
-        handle_player(team_id, space_id, payload, pool, ref_repo).await?;
+        handle_player(team_id, space_id, payload, pool, catalog).await?;
     }
     Ok(())
 }
@@ -193,7 +193,7 @@ async fn handle_team_created(
 pub fn init(
     app_event_bus: &EventBus,
     pool:          PgPool,
-    refs:          Arc<dyn IReferenceRepository>,
+    skill_catalog: Arc<dyn ISkillCatalogPort>,
 ) {
     let mut rx = app_event_bus.subscribe();
     tokio::spawn(async move {
@@ -209,7 +209,7 @@ pub fn init(
                         team_id,
                         space_id,
                         players, .. } = app_event;
-                    if let Err(e) = handle_team_created(&team_id, &space_id, &players, &pool, refs.as_ref()).await {
+                    if let Err(e) = handle_team_created(&team_id, &space_id, &players, &pool, skill_catalog.as_ref()).await {
                         match e {
                             ListenerError::AlreadyProcessed => tracing::warn!(
                                 "players team_created_listener: joueurs déjà créés pour {team_id}"

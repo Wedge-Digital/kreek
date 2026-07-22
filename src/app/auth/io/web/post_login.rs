@@ -243,15 +243,43 @@ mod tests {
                 struct FakeSkillCatalogPort;
                 impl crate::app::players::ports::ISkillCatalogPort for FakeSkillCatalogPort {
                     fn find_skill(&self, _: &str) -> Option<crate::app::players::ports::SkillCatalogEntryDto> { None }
+                    fn find_position(&self, _: &str) -> Option<crate::app::players::ports::PositionCatalogEntryDto> { None }
                     fn position_access(&self, _: &str) -> Option<crate::app::players::ports::PositionAccessDto> { None }
                     fn cost_for_level(&self, _: u8, _: bool) -> Option<crate::app::players::ports::SkillCostLevelDto> { None }
                     fn skill_value_delta(&self, _: bool) -> u32 { 0 }
                     fn stat_value_delta(&self, _: crate::app::players::domain::match_impact::StatKind) -> u32 { 0 }
+                    fn touchdown_spp(&self) -> u8 { 3 }
+                    fn pass_spp(&self) -> u8 { 1 }
+                    fn interception_spp(&self) -> u8 { 2 }
+                    fn casualty_spp(&self) -> u8 { 2 }
+                    fn mvp_spp(&self) -> u8 { 4 }
+                }
+                struct FakeRosterPort;
+                #[async_trait::async_trait]
+                impl crate::app::players::ports::IPlayerRosterPort for FakeRosterPort {
+                    async fn find_team_info(&self, _: &str) -> Option<crate::app::players::ports::TeamRosterInfoDto> { None }
+                }
+                struct FakeCompetitionPort;
+                #[async_trait::async_trait]
+                impl crate::app::players::ports::IPlayerCompetitionPort for FakeCompetitionPort {
+                    async fn find_admin_info(&self, _: &str) -> Option<crate::app::players::ports::CompetitionAdminInfoDto> { None }
+                }
+                struct FakeSpaceMemberPort;
+                #[async_trait::async_trait]
+                impl crate::app::players::ports::IPlayerSpaceMemberPort for FakeSpaceMemberPort {
+                    async fn find_member_profile(
+                        &self,
+                        _: &crate::app::shared_kernel::common_types::CoachId,
+                        _: &crate::app::shared_kernel::common_types::SpaceId,
+                    ) -> Option<crate::app::shared_kernel::authorization::SpaceProfile> { None }
                 }
                 crate::app::players::context::PlayersContext {
                     repository:            Arc::new(FakePlayerRepo),
                     projection_repository: Arc::new(FakePlayerProjectionRepo),
                     skill_catalog:         Arc::new(FakeSkillCatalogPort),
+                    roster_port:           Arc::new(FakeRosterPort),
+                    competition_port:      Arc::new(FakeCompetitionPort),
+                    space_member_port:     Arc::new(FakeSpaceMemberPort),
                     event_bus:             event_bus.clone(),
                 }
             },

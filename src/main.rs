@@ -128,6 +128,11 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
     team_creation::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
     teams::context::init_listeners(&app_event_bus, pool.clone());
     let refs_for_players = references::context::ReferencesContext::new();
+    let players_skill_catalog: Arc<dyn crate::app::players::ports::ISkillCatalogPort> = Arc::new(
+        crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter::new(
+            refs_for_players.repository.clone(),
+        ),
+    );
     let match_report_comp_data = Arc::new(
         crate::infrastructure::match_report::competition_data_adapter::CompetitionDataAdapter::new(
             Arc::new(crate::app::competitions::io::repository::competition_repository::CompetitionRepository::new(pool.clone())),
@@ -153,7 +158,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
         &event_bus,
         &app_event_bus,
         pool.clone(),
-        refs_for_players.repository.clone(),
+        players_skill_catalog.clone(),
     );
 
     let state = AppState {
@@ -201,8 +206,15 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
         },
         players: PlayersContext::new(
             &pool,
-            Arc::new(crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter::new(
-                refs_for_players.repository.clone(),
+            players_skill_catalog.clone(),
+            Arc::new(crate::infrastructure::players::team_roster_adapter::TeamRosterAdapter::new(
+                Arc::new(crate::app::teams::io::repository::team_repository::TeamRepository::new(pool.clone())),
+            )),
+            Arc::new(crate::infrastructure::players::competition_admin_adapter::CompetitionAdminAdapter::new(
+                Arc::new(crate::app::competitions::io::repository::competition_repository::CompetitionRepository::new(pool.clone())),
+            )),
+            Arc::new(crate::infrastructure::players::space_member_adapter::SpaceMemberAdapter::new(
+                Arc::new(crate::app::spaces::io::repository::space_repository::SpaceRepository::new(pool.clone())),
             )),
             event_bus.clone(),
         ),

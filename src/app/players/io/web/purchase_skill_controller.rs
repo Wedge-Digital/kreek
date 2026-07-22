@@ -1,11 +1,11 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::players::domain::player::{AcquisitionMode, PlayerId};
 use crate::app::players::domain::value_objects::SkillId;
+use crate::app::players::ports::TeamRosterInfoDto;
 use crate::app::players::use_cases::commands::PurchaseSkillCommand;
 use crate::app::players::use_cases::purchase_skill_use_case;
 use crate::app::shared_kernel::authorization::SpaceProfile;
 use crate::app::shared_kernel::common_types::SpaceId;
-use crate::app::teams::domain::team::{GamePhase, Team};
 use crate::state::AppState;
 use axum::body::Body;
 use axum::extract::{Path, State};
@@ -38,13 +38,8 @@ pub async fn post_purchase_skill(
         }
     };
 
-    let team = match state.teams.team_repository.find_by_id(&player.team_id.0).await {
-        Ok(Some(t)) => t,
-        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
-        Err(e) => {
-            tracing::error!("post_purchase_skill find team {}: {e}", player.team_id.0);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
+    let Some(team) = state.players.roster_port.find_team_info(&player.team_id.0).await else {
+        return StatusCode::NOT_FOUND.into_response();
     };
 
     let space_id_vo = match SpaceId::try_new(&space_id) {
@@ -52,7 +47,7 @@ pub async fn post_purchase_skill(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    if team.game_phase != Some(GamePhase::PlayerImprovement) {
+    if !team.in_player_improvement_phase {
         return StatusCode::FORBIDDEN.into_response();
     }
     if !can_spend_spp(&state, &user, &space_id_vo, &team).await {
@@ -94,14 +89,14 @@ pub async fn can_spend_spp(
     state: &AppState,
     user: &crate::app::shared_kernel::user::User,
     space_id: &SpaceId,
-    team: &Team,
+    team: &TeamRosterInfoDto,
 ) -> bool {
-    if team.coach_id.to_string() == user.id.to_string() {
+    if team.coach_id == user.id.to_string() {
         return true;
     }
     let is_space_admin = matches!(
-        state.spaces.space_repository.find_member_profile(&user.id, space_id).await,
-        Ok(Some(SpaceProfile::SpaceAdmin))
+        state.players.space_member_port.find_member_profile(&user.id, space_id).await,
+        Some(SpaceProfile::SpaceAdmin)
     );
     if is_space_admin {
         return true;
@@ -111,9 +106,9 @@ pub async fn can_spend_spp(
     };
     let user_id_str = user.id.to_string();
     let coach_name_str = user.coach_name.clone().into_inner();
-    match state.competitions.competition_repository.find_base_info(competition_id).await {
-        Ok(Some(info)) => info.admin_ids.contains(&user_id_str) || info.admin_names.contains(&coach_name_str),
-        _ => false,
+    match state.players.competition_port.find_admin_info(competition_id).await {
+        Some(info) => info.admin_ids.contains(&user_id_str) || info.admin_names.contains(&coach_name_str),
+        None => false,
     }
 }
 

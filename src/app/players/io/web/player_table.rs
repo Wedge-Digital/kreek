@@ -1,6 +1,5 @@
 use crate::app::players::domain::player::TeamId;
-use crate::app::players::ports::{AcquiredSkillProjection, PlayerProjection};
-use crate::app::references::domain::port::IReferenceRepository;
+use crate::app::players::ports::{AcquiredSkillProjection, ISkillCatalogPort, PlayerProjection};
 use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use askama::Template;
@@ -43,15 +42,15 @@ fn skill_category_css(category: &str) -> &'static str {
     }
 }
 
-fn build_base_skills(p: &PlayerProjection, ref_repo: &dyn IReferenceRepository) -> Vec<SkillTagVm> {
-    let Some(position) = ref_repo.find_position_by_uid(&p.roster_line_id) else {
+fn build_base_skills(p: &PlayerProjection, catalog: &dyn ISkillCatalogPort) -> Vec<SkillTagVm> {
+    let Some(position) = catalog.find_position(&p.roster_line_id) else {
         return p.base_skills.iter().map(|n| SkillTagVm {
             name:         n.clone(),
             category_css: "type-general".to_string(),
         }).collect();
     };
-    position.skills.iter()
-        .filter_map(|uid| ref_repo.find_skill_by_uid(uid))
+    position.base_skills.iter()
+        .filter_map(|uid| catalog.find_skill(uid))
         .map(|s| SkillTagVm {
             name:         s.name.clone(),
             category_css: skill_category_css(&s.category).to_string(),
@@ -94,10 +93,10 @@ pub async fn player_table_widget(
         .await
         .unwrap_or_default();
 
-    let ref_repo = state.references.repository.as_ref();
+    let catalog = state.players.skill_catalog.as_ref();
 
     let players = projections.into_iter().map(|p| {
-        let base_skills = build_base_skills(&p, ref_repo);
+        let base_skills = build_base_skills(&p, catalog);
         PlayerRowVm {
             player_id:       p.player_id,
             jersey:          p.jersey,

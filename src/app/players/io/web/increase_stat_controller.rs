@@ -5,7 +5,6 @@ use crate::app::players::io::web::purchase_skill_controller::can_spend_spp;
 use crate::app::players::use_cases::commands::IncreaseStatCommand;
 use crate::app::players::use_cases::increase_stat_use_case;
 use crate::app::shared_kernel::common_types::SpaceId;
-use crate::app::teams::domain::team::GamePhase;
 use crate::state::AppState;
 use axum::body::Body;
 use axum::extract::{Path, State};
@@ -34,13 +33,8 @@ pub async fn post_increase_stat(
         }
     };
 
-    let team = match state.teams.team_repository.find_by_id(&player.team_id.0).await {
-        Ok(Some(t)) => t,
-        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
-        Err(e) => {
-            tracing::error!("post_increase_stat find team {}: {e}", player.team_id.0);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
+    let Some(team) = state.players.roster_port.find_team_info(&player.team_id.0).await else {
+        return StatusCode::NOT_FOUND.into_response();
     };
 
     let space_id_vo = match SpaceId::try_new(&space_id) {
@@ -48,7 +42,7 @@ pub async fn post_increase_stat(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    if team.game_phase != Some(GamePhase::PlayerImprovement) {
+    if !team.in_player_improvement_phase {
         return StatusCode::FORBIDDEN.into_response();
     }
     if !can_spend_spp(&state, &user, &space_id_vo, &team).await {

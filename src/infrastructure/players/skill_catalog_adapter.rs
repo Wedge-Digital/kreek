@@ -1,5 +1,7 @@
 use crate::app::players::domain::match_impact::StatKind;
-use crate::app::players::ports::{ISkillCatalogPort, PositionAccessDto, SkillCatalogEntryDto, SkillCostLevelDto};
+use crate::app::players::ports::{
+    ISkillCatalogPort, PositionAccessDto, PositionCatalogEntryDto, SkillCatalogEntryDto, SkillCostLevelDto,
+};
 use crate::app::references::domain::port::IReferenceRepository;
 use std::sync::Arc;
 
@@ -21,6 +23,18 @@ impl ISkillCatalogPort for SkillCatalogAdapter {
             name:     skill.name.clone(),
             category: skill.category.clone(),
             is_elite: skill.skill_type == "Élite",
+        })
+    }
+
+    fn find_position(&self, roster_line_id: &str) -> Option<PositionCatalogEntryDto> {
+        let position = self.reference_repo.find_position_by_uid(roster_line_id)?;
+        Some(PositionCatalogEntryDto {
+            position_name: position.position_name.clone(),
+            cost:          position.cost,
+            ma: position.ma, st: position.st, ag: position.ag, pa: position.pa, av: position.av,
+            base_skills:          position.skills.clone(),
+            primary_categories:   position.primary_access.clone(),
+            secondary_categories: position.secondary_access.clone(),
         })
     }
 
@@ -57,6 +71,12 @@ impl ISkillCatalogPort for SkillCatalogAdapter {
             StatKind::Av => self.reference_repo.improvement_stat_value_delta_av(),
         }
     }
+
+    fn touchdown_spp(&self) -> u8 { self.reference_repo.touchdown_spp() }
+    fn pass_spp(&self) -> u8 { self.reference_repo.pass_spp() }
+    fn interception_spp(&self) -> u8 { self.reference_repo.interception_spp() }
+    fn casualty_spp(&self) -> u8 { self.reference_repo.casualty_spp() }
+    fn mvp_spp(&self) -> u8 { self.reference_repo.mvp_spp() }
 }
 
 #[cfg(test)]

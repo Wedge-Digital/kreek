@@ -47,7 +47,7 @@ mod tests {
     use crate::app::players::domain::player::{Player, PlayerId, Spp, TeamId, ValueKpo};
     use crate::app::players::domain::value_objects::{PositionNameVo, RosterLineId, SkillId, SkillName, SppCost};
     use crate::app::players::ports::{
-        PositionAccessDto, RepositoryError, SkillCatalogEntryDto, SkillCostLevelDto,
+        PositionAccessDto, PositionCatalogEntryDto, RepositoryError, SkillCatalogEntryDto, SkillCostLevelDto,
     };
     use crate::app::shared_kernel::common_types::SpaceId;
     use std::sync::Mutex;
@@ -55,12 +55,18 @@ mod tests {
     struct FakeCatalog;
     impl ISkillCatalogPort for FakeCatalog {
         fn find_skill(&self, _: &str) -> Option<SkillCatalogEntryDto> { None }
+        fn find_position(&self, _: &str) -> Option<PositionCatalogEntryDto> { None }
         fn position_access(&self, _: &str) -> Option<PositionAccessDto> { None }
         fn cost_for_level(&self, level: u8, _: bool) -> Option<SkillCostLevelDto> {
             Some(SkillCostLevelDto { level, chosen_primary: 0, chosen_secondary: 0, random: 0, characteristic: 14 })
         }
         fn skill_value_delta(&self, _: bool) -> u32 { 0 }
         fn stat_value_delta(&self, _: StatKind) -> u32 { 20_000 }
+        fn touchdown_spp(&self) -> u8 { 3 }
+        fn pass_spp(&self) -> u8 { 1 }
+        fn interception_spp(&self) -> u8 { 2 }
+        fn casualty_spp(&self) -> u8 { 2 }
+        fn mvp_spp(&self) -> u8 { 4 }
     }
 
     /// Fake fidèle au vrai repository : stocke les events bruts, rejoue via

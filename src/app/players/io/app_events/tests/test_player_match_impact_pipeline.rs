@@ -80,10 +80,10 @@ where
 #[sqlx::test]
 async fn full_pipeline_credits_spp_and_records_injury_then_restores_availability(pool: PgPool) {
     let player_repo: Arc<dyn IPlayerRepository> = Arc::new(PgPlayerRepository::new(pool));
-    let ref_repo = Arc::new(InMemoryReferenceRepository::load());
+    let skill_catalog: Arc<dyn crate::app::players::ports::ISkillCatalogPort> = Arc::new(crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter::new(Arc::new(InMemoryReferenceRepository::load())));
     let app_event_bus = new_bus();
 
-    player_match_impact_listener::init(&app_event_bus, player_repo.clone(), ref_repo);
+    player_match_impact_listener::init(&app_event_bus, player_repo.clone(), skill_catalog);
 
     seed_player(player_repo.as_ref(), "scorer", "t1").await;
     seed_player(player_repo.as_ref(), "injured", "t1").await;
@@ -173,10 +173,10 @@ async fn full_pipeline_credits_spp_and_records_injury_then_restores_availability
 #[sqlx::test]
 async fn action_and_team_match_concluded_sent_back_to_back_both_land_in_history(pool: PgPool) {
     let player_repo: Arc<dyn IPlayerRepository> = Arc::new(PgPlayerRepository::new(pool));
-    let ref_repo = Arc::new(InMemoryReferenceRepository::load());
+    let skill_catalog: Arc<dyn crate::app::players::ports::ISkillCatalogPort> = Arc::new(crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter::new(Arc::new(InMemoryReferenceRepository::load())));
     let app_event_bus = new_bus();
 
-    player_match_impact_listener::init(&app_event_bus, player_repo.clone(), ref_repo);
+    player_match_impact_listener::init(&app_event_bus, player_repo.clone(), skill_catalog);
     seed_player(player_repo.as_ref(), "scorer", "t1").await;
 
     let mut mr3_context = context("scorer");

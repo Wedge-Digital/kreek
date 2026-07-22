@@ -1,6 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::players::domain::player::{Player, PlayerId};
 use crate::app::players::io::web::purchase_skill_controller::can_spend_spp;
+use crate::app::players::ports::TeamRosterInfoDto;
 use crate::app::players::use_cases::match_history_service::{
     build_match_history, MatchHistoryAction, MatchHistoryActionKind, MatchHistoryEntry,
 };
@@ -8,7 +9,6 @@ use crate::app::players::use_cases::player_stats_service::{self, ResolvedPlayerS
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::authorization::SpaceProfile;
 use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
-use crate::app::teams::domain::team::{GamePhase, Team};
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -104,10 +104,10 @@ fn match_history_card_vm(entry: MatchHistoryEntry) -> MatchHistoryCardVm {
     }
 }
 
-async fn check_admin_rights(state: &AppState, coach_id: &CoachId, coach_name: &str, space_id: &SpaceId, team: &Team) -> bool {
+async fn check_admin_rights(state: &AppState, coach_id: &CoachId, coach_name: &str, space_id: &SpaceId, team: &TeamRosterInfoDto) -> bool {
     let is_space_admin = matches!(
-        state.spaces.space_repository.find_member_profile(coach_id, space_id).await,
-        Ok(Some(SpaceProfile::SpaceAdmin))
+        state.players.space_member_port.find_member_profile(coach_id, space_id).await,
+        Some(SpaceProfile::SpaceAdmin)
     );
     if is_space_admin {
         return true;
@@ -116,9 +116,9 @@ async fn check_admin_rights(state: &AppState, coach_id: &CoachId, coach_name: &s
         return false;
     };
     let coach_id_str = coach_id.to_string();
-    match state.competitions.competition_repository.find_base_info(competition_id).await {
-        Ok(Some(info)) => info.admin_ids.contains(&coach_id_str) || info.admin_names.contains(&coach_name.to_string()),
-        _ => false,
+    match state.players.competition_port.find_admin_info(competition_id).await {
+        Some(info) => info.admin_ids.contains(&coach_id_str) || info.admin_names.contains(&coach_name.to_string()),
+        None => false,
     }
 }
 
@@ -175,7 +175,7 @@ pub async fn player_detail_controller(
     let coach_name = user.coach_name.clone().into_inner();
     let can_customise = check_admin_rights(&state, &user.id, &coach_name, &space_id_vo, &team).await;
 
-    let can_spend = team.game_phase == Some(GamePhase::PlayerImprovement)
+    let can_spend = team.in_player_improvement_phase
         && can_spend_spp(&state, &user, &space_id_vo, &team).await;
     let app_routes = AppRoutes::default();
     // Le panneau droit charge toujours le journal par défaut — c'est le bouton
@@ -210,14 +210,10 @@ async fn load_events(state: &AppState, player: &Player) -> Result<Vec<crate::app
     })
 }
 
-async fn load_team(state: &AppState, player: &Player) -> Result<Team, Response> {
-    match state.teams.team_repository.find_by_id(&player.team_id.0).await {
-        Ok(Some(t)) => Ok(t),
-        Ok(None) => Err(StatusCode::NOT_FOUND.into_response()),
-        Err(e) => {
-            tracing::error!("player_detail_controller team find_by_id: {e}");
-            Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
-        }
+async fn load_team(state: &AppState, player: &Player) -> Result<TeamRosterInfoDto, Response> {
+    match state.players.roster_port.find_team_info(&player.team_id.0).await {
+        Some(t) => Ok(t),
+        None => Err(StatusCode::NOT_FOUND.into_response()),
     }
 }
 
@@ -235,16 +231,16 @@ fn build_vm(
     state: &AppState,
     player: &Player,
     events: &[crate::app::players::domain::events::PlayerDomainEvent],
-    team: &Team,
+    team: &TeamRosterInfoDto,
     can_customise: bool,
     right_panel_widget_url: String,
     can_spend: bool,
 ) -> PlayerDetailVm {
-    let ref_repo = state.references.repository.as_ref();
-    let stats = player_stats_service::resolve_stats(player, ref_repo)
+    let catalog = state.players.skill_catalog.as_ref();
+    let stats = player_stats_service::resolve_stats(player, catalog)
         .unwrap_or(ResolvedPlayerStats { ma: 0, st: 0, ag: 0, pa: 0, av: 0 });
     let base_skills = player.base_skills.iter()
-        .map(|id| ref_repo.find_skill_by_uid(id.as_ref()).map(|s| s.name.clone()).unwrap_or_else(|| id.as_ref().to_string()))
+        .map(|id| catalog.find_skill(id.as_ref()).map(|s| s.name).unwrap_or_else(|| id.as_ref().to_string()))
         .collect();
     let acquired_skills = player.acquired_skills.iter().map(|s| s.skill_name.to_string()).collect();
     let spp = compute_spp_breakdown(player);
@@ -253,7 +249,7 @@ fn build_vm(
     PlayerDetailVm {
         player_id:     player.id.0.clone(),
         team_id:       player.team_id.0.clone(),
-        team_name:     team.name.to_string(),
+        team_name:     team.team_name.clone(),
         name:          player.position_name.to_string(),
         jersey:        player.jersey.map(|j| j.into_inner() as i16),
         position_name: player.position_name.to_string(),

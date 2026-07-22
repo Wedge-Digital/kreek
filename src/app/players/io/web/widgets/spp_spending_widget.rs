@@ -8,7 +8,6 @@ use crate::app::players::use_cases::improvement_cost_service::resolve_stat_cost;
 use crate::app::players::use_cases::player_stats_service::{resolve_stats, ResolvedPlayerStats};
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::common_types::SpaceId;
-use crate::app::teams::domain::team::GamePhase;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -95,10 +94,9 @@ fn build_vm(
     player: &Player,
     routes: &AppRoutes,
     space_id: &str,
-    ref_repo: &dyn crate::app::references::domain::port::IReferenceRepository,
     catalog: &dyn ISkillCatalogPort,
 ) -> Option<SppSpendingVm> {
-    let stats = resolve_stats(player, ref_repo)?;
+    let stats = resolve_stats(player, catalog)?;
     let level = player.next_improvement_level();
     let spp_remaining = player.spp_remaining();
     let player_id = player.id.0.as_str();
@@ -173,20 +171,18 @@ pub async fn spp_spending_widget(
     }
 
     let app_routes = AppRoutes::default();
-    let ref_repo = state.references.repository.as_ref();
     let catalog = state.players.skill_catalog.as_ref();
 
-    match build_vm(&player, &app_routes, &space_id, ref_repo, catalog) {
+    match build_vm(&player, &app_routes, &space_id, catalog) {
         Some(vm) => SppSpendingTemplate { vm }.into_response(),
         None => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
 
 async fn is_eligible(state: &AppState, user: &crate::app::shared_kernel::user::User, space_id: &str, player: &Player) -> bool {
-    let Ok(team) = state.teams.team_repository.find_by_id(&player.team_id.0).await else { return false; };
-    let Some(team) = team else { return false; };
+    let Some(team) = state.players.roster_port.find_team_info(&player.team_id.0).await else { return false; };
     let Ok(space_id_vo) = SpaceId::try_new(space_id) else { return false; };
-    team.game_phase == Some(GamePhase::PlayerImprovement) && can_spend_spp(state, user, &space_id_vo, &team).await
+    team.in_player_improvement_phase && can_spend_spp(state, user, &space_id_vo, &team).await
 }
 
 #[cfg(test)]
@@ -233,11 +229,10 @@ mod tests {
     #[test]
     fn build_vm_wires_spp_remaining_level_and_urls() {
         let player = sample_player();
-        let ref_repo = InMemoryReferenceRepository::load();
         let catalog = SkillCatalogAdapter::new(std::sync::Arc::new(InMemoryReferenceRepository::load()));
         let routes = AppRoutes::default();
 
-        let vm = build_vm(&player, &routes, "space1", &ref_repo, &catalog).unwrap();
+        let vm = build_vm(&player, &routes, "space1", &catalog).unwrap();
 
         assert_eq!(vm.spp_remaining, 30);
         assert_eq!(vm.stat_cards.len(), 5);
@@ -257,11 +252,10 @@ mod tests {
             spp_cost: SppCost::try_new(6).unwrap(),
             value_delta: ValueKpo(20_000),
         });
-        let ref_repo = InMemoryReferenceRepository::load();
         let catalog = SkillCatalogAdapter::new(std::sync::Arc::new(InMemoryReferenceRepository::load()));
         let routes = AppRoutes::default();
 
-        let vm = build_vm(&player, &routes, "space1", &ref_repo, &catalog).unwrap();
+        let vm = build_vm(&player, &routes, "space1", &catalog).unwrap();
 
         // Niveau 2 désormais (une compétence déjà achetée) — le tarif doit suivre.
         assert!(vm.skill_picker_url.contains("level=2"));
@@ -272,10 +266,9 @@ mod tests {
     fn build_vm_returns_none_for_unknown_position() {
         let mut player = sample_player();
         player.roster_line_id = RosterLineId::try_new("UNKNOWN".to_string()).unwrap();
-        let ref_repo = InMemoryReferenceRepository::load();
         let catalog = SkillCatalogAdapter::new(std::sync::Arc::new(InMemoryReferenceRepository::load()));
         let routes = AppRoutes::default();
 
-        assert!(build_vm(&player, &routes, "space1", &ref_repo, &catalog).is_none());
+        assert!(build_vm(&player, &routes, "space1", &catalog).is_none());
     }
 }
