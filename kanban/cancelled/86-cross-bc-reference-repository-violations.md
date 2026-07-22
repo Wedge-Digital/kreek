@@ -1,3 +1,5 @@
+> **Annulée (2026-07-22)** — obsolète, ne couvrait qu'une fraction des violations axe 3 réelles. Remplacée par les cartes `187-arch-axe3-players-sovereignty.md` et `189-arch-axe3-teams-sovereignty.md`, issues d'un audit exhaustif de `make check-arch`.
+
 # Violations cross-BC : accès direct à IReferenceRepository
 
 **Priorité : moyenne**

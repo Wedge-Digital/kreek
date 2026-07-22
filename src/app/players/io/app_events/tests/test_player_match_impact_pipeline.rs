@@ -15,6 +15,8 @@
 //! → Published) aurait ajouté une dépendance lourde et sans rapport avec ce qui est
 //! réellement neuf dans cette carte.
 
+#![cfg(test)]
+
 use crate::app::players::domain::events::PlayerDomainEvent;
 use crate::app::players::domain::match_impact::PlayerParticipationStatus;
 use crate::app::players::domain::player::{PlayerId, Spp, TeamId, ValueKpo};

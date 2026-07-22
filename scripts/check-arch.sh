@@ -44,11 +44,13 @@ print_warn() {
     fi
 }
 
-# Code de production uniquement : tronque au premier marqueur #[cfg(test)],
-# les modules de test assemblent légitimement un AppState complet et n'ont
-# pas à respecter la souveraineté des BCs.
+# Code de production uniquement : tronque au premier marqueur #[cfg(test)]
+# (forme externe, module de test inline) ou #![cfg(test)] (forme interne,
+# fichier entier gaté depuis son mod.rs parent) — les modules de test
+# assemblent légitimement un AppState complet et n'ont pas à respecter la
+# souveraineté des BCs.
 strip_test_code() {
-    awk '/#\[cfg\(test\)\]/{exit} {print}' "$1"
+    awk '/#!?\[cfg\(test\)\]/{exit} {print}' "$1"
 }
 
 echo ""
@@ -93,14 +95,33 @@ echo ""
 echo -e "${BOLD}Axe 5 · Projections event sourcing dans la même transaction${RESET}"
 axe5=""
 while IFS= read -r f; do
+    # Un listener dont `init()` prend un `app_event_bus` réagit à un app event
+    # cross-BC déjà committé par un autre BC : par construction impossible de
+    # partager une transaction avec ce commit distant. Ce cas est exclu de
+    # l'axe 5, qui ne vise que les projections intra-BC (event + projection du
+    # même BC, appendés dans le même flux). Cf. CLAUDE.md "Projections event
+    # sourcing" et convention de nommage `app_event_bus` vs `event_bus` déjà
+    # en place dans les listeners du projet.
+    init_sig=$(awk '/fn[ \t]+init[ \t]*\(/{flag=1} flag{print; if (/\{/) {flag=0}}' "$f")
+    if printf '%s' "$init_sig" | grep -q 'app_event_bus'; then
+        continue
+    fi
+    # Code de production uniquement — les fichiers de test (gatés en
+    # #[cfg(test)] inline ou #![cfg(test)] pour tout le fichier) ne sont pas
+    # de vraies fonctions de projection, juste des noms de test qui matchent
+    # le regex (ex. `..._in_projection(pool: PgPool)`).
+    prod_code="$(strip_test_code "$f")"
     # Signature de la fonction étalée sur plusieurs lignes jusqu'à la
     # première accolade ouvrante : on la rassemble pour pouvoir grep
     # "PgPool" sans dépendre de la mise en forme.
-    sig=$(awk '/fn[ \t]+[A-Za-z0-9_]*(update_projection|_projection)[A-Za-z0-9_]*[ \t]*\(/{flag=1} flag{print; if (/\{/) {flag=0}}' "$f")
+    sig=$(printf '%s\n' "$prod_code" | awk '/fn[ \t]+[A-Za-z0-9_]*(insert|update|delete|upsert|apply|append|save)[A-Za-z0-9_]*projection[A-Za-z0-9_]*[ \t]*\(/{flag=1} flag{print; if (/\{/) {flag=0}}')
     if printf '%s' "$sig" | grep -qE '\bPgPool\b' ; then
         axe5+="$f: fonction de projection prenant un PgPool au lieu d'une Transaction/Connection"$'\n'
     fi
-done < <(grep -rlE "fn[ \t]+[A-Za-z0-9_]*(update_projection|_projection)[A-Za-z0-9_]*[ \t]*\(" --include="*.rs" src/ 2>/dev/null || true)
+# Seules les fonctions d'écriture de projection (insert/update/delete/...) sont
+# visées — les lectures (ex. `list_from_projection`) manipulent un PgPool
+# légitimement, sans contrainte de transaction partagée.
+done < <(grep -rlE "fn[ \t]+[A-Za-z0-9_]*(insert|update|delete|upsert|apply|append|save)[A-Za-z0-9_]*projection[A-Za-z0-9_]*[ \t]*\(" --include="*.rs" src/ 2>/dev/null || true)
 if [ -n "$axe5" ]; then print_fail "$axe5"; else print_pass; fi
 echo ""
 

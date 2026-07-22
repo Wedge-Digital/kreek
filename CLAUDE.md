@@ -379,6 +379,8 @@ Conséquences :
 - La projection est un **dérivé rebuildable** : en cas de désynchronisation exceptionnelle, on peut la reconstruire intégralement en rejouant l'event store
 - `update_projection_in_tx()` reçoit toujours un `&mut PgConnection` (ou `&mut Transaction`), jamais un `&PgPool`
 
+**Exception — projections mises à jour depuis un app event cross-BC** : cette règle de transaction unique vise les projections **intra-BC** (un agrégat et sa projection appartenant au même BC, appendés dans le même flux applicatif). Un listener qui réagit à un app event émis par un **autre** BC (souscription à `app_event_bus`, cf. section "App events vs Domain events") reçoit un événement déjà committé ailleurs — il est par construction impossible de partager une transaction avec ce commit distant. Ce cas reste asynchrone par nature ; la projection locale qu'il alimente est rebuildable depuis l'event store du BC source en cas de désynchronisation. `scripts/check-arch.sh` (axe 5) exclut ces listeners en repérant la convention de nommage déjà en place : `init(app_event_bus: &EventBus, ...)` pour un listener cross-BC, contre `init(event_bus: &EventBus, ...)` pour un listener intra-BC.
+
 ---
 
 ## Souveraineté des données entre BCs — règle fondamentale

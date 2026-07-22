@@ -1,3 +1,5 @@
+#![cfg(test)]
+
 use crate::app::players::domain::events::PlayerDomainEvent;
 use crate::app::players::domain::match_impact::{InjuryType, MatchContext, MatchReportId, RoundId, SppEarned};
 use crate::app::players::domain::player::{Player, PlayerId, TeamId, Spp, ValueKpo};

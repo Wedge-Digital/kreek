@@ -5,6 +5,8 @@
 //! construit `PlayerImprovementApplied` — `team_value` doit refléter la
 //! valeur ajoutée. Vrai `EventBus`, vrais repositories Postgres, pas de mock.
 
+#![cfg(test)]
+
 use crate::app::players::domain::events::PlayerDomainEvent;
 use crate::app::players::domain::player::{AcquisitionMode, PlayerId as DomainPlayerId};
 use crate::app::players::domain::value_objects::{PositionNameVo, RosterLineId, SkillId};

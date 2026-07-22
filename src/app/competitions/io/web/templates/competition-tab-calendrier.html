@@ -48,7 +48,7 @@
 
 {% if let Some(cursor) = next_cursor %}
 <div class="scroll-sentinel"
-     hx-get="/app/{{ space_id }}/competitions/{{ competition_id }}/seasons/{{ season_id }}/calendrier?cursor={{ cursor }}"
+     hx-get="{{ app_routes.competitions.competition_tab_calendrier(space_id, competition_id, season_id) }}?cursor={{ cursor }}"
      hx-trigger="intersect once"
      hx-target="#calendrier-list"
      hx-swap="beforeend">
