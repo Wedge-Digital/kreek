@@ -10,6 +10,17 @@ pub trait IJourneymanTypePort: Send + Sync {
     fn journeyman_type_for_roster(&self, roster_id: &str) -> String;
 }
 
+// ── ACL vers le BC `references` (affichage du roster sur la fiche équipe) ──────
+
+pub struct RosterInfoDto {
+    pub logo: Option<String>,
+    pub reroll_cost: u32,
+}
+
+pub trait IRosterInfoPort: Send + Sync {
+    fn find_roster_info(&self, roster_id: &str) -> Option<RosterInfoDto>;
+}
+
 #[derive(Debug)]
 pub enum RepositoryError {
     ConcurrentWrite,

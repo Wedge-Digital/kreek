@@ -229,10 +229,15 @@ mod tests {
                 impl crate::app::teams::ports::IJourneymanTypePort for FakeJourneymanTypePort {
                     fn journeyman_type_for_roster(&self, _: &str) -> String { String::new() }
                 }
+                struct FakeRosterInfoPort;
+                impl crate::app::teams::ports::IRosterInfoPort for FakeRosterInfoPort {
+                    fn find_roster_info(&self, _: &str) -> Option<crate::app::teams::ports::RosterInfoDto> { None }
+                }
                 crate::app::teams::context::TeamsContext {
                     team_repository:       Arc::new(FakeTeamRepo),
                     player_count_port:     Arc::new(FakePlayerCountPort),
                     journeyman_type_port:  Arc::new(FakeJourneymanTypePort),
+                    roster_info_port:      Arc::new(FakeRosterInfoPort),
                 }
             },
             players: {

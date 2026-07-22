@@ -1,6 +1,6 @@
 use crate::app::routes::AppRoutes;
-use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::teams::domain::team::{GamePhase, ParticipationStatus, Team};
+use crate::app::teams::ports::IRosterInfoPort;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -175,7 +175,7 @@ pub struct TeamDetailVm {
 }
 
 impl TeamDetailVm {
-    fn from(team: &Team, space_id: &str, ref_repo: &dyn IReferenceRepository) -> Self {
+    fn from(team: &Team, space_id: &str, roster_info_port: &dyn IRosterInfoPort) -> Self {
         let (status_label, status_css_class) = status_display(team);
         let roster_initials = team
             .roster_name
@@ -186,16 +186,16 @@ impl TeamDetailVm {
             .collect::<String>()
             .to_uppercase();
 
-        let ref_roster = ref_repo.find_team_by_uid(&team.roster_id.to_string());
+        let roster_info = roster_info_port.find_roster_info(&team.roster_id.to_string());
 
-        let roster_logo_url = ref_roster.and_then(|t| t.logo.as_deref()).map(|url| {
+        let roster_logo_url = roster_info.as_ref().and_then(|t| t.logo.as_deref()).map(|url| {
             crate::app::shared_kernel::cloudinary::transform(
                 url,
                 "c_fill,w_120,h_120,q_auto,f_auto",
             )
         });
 
-        let reroll_price_kpo = ref_roster.map(|t| t.reroll_cost).unwrap_or(50);
+        let reroll_price_kpo = roster_info.map(|t| t.reroll_cost).unwrap_or(50);
 
         let logo_url = team.logo_url.as_deref().map(|url| {
             crate::app::shared_kernel::cloudinary::transform(
@@ -285,11 +285,11 @@ pub async fn team_detail(
     };
 
     let back_url = AppRoutes::default().team_creation.my_teams(&space_id);
-    let ref_repo = state.references.repository.as_ref();
+    let roster_info_port = state.teams.roster_info_port.as_ref();
 
     TeamDetailTemplate {
         app_routes: Default::default(),
-        vm: TeamDetailVm::from(&team, &space_id, ref_repo),
+        vm: TeamDetailVm::from(&team, &space_id, roster_info_port),
         back_url,
     }
     .into_response()

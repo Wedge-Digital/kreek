@@ -212,7 +212,12 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
                     refs_for_players.repository.clone(),
                 ),
             );
-            TeamsContext::new(&pool, player_count, journeyman_type)
+            let roster_info = Arc::new(
+                crate::infrastructure::teams::roster_info_adapter::RosterInfoAdapter::new(
+                    refs_for_players.repository.clone(),
+                ),
+            );
+            TeamsContext::new(&pool, player_count, journeyman_type, roster_info)
         },
         players: PlayersContext::new(
             &pool,
