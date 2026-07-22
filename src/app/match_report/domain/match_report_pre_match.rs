@@ -3,9 +3,9 @@ use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::value_objects::{
-    ActionId, ActionPlayer, AllowedInducementSpec, D3Roll, FanFactorMod, InducementPurchase,
-    InducementQty, MatchAction, MatchActionType, MatchGain, MatchReportOrigin, TeamSide,
-    TeamValue, TempPlayer,
+    ActionId, ActionPlayer, AllowedInducementSpec, D3Roll, DedicatedFans, FanFactorMod,
+    InducementPurchase, InducementQty, MatchAction, MatchActionType, MatchGain, MatchReportOrigin,
+    TeamSide, TeamValue, TempPlayer,
 };
 use crate::app::shared_kernel::common_types::{
     CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
@@ -28,8 +28,8 @@ pub struct MatchReportPreMatch {
     pub pairing_id: Option<String>,
     pub home_fan_roll: Option<D3Roll>,
     pub away_fan_roll: Option<D3Roll>,
-    pub home_dedicated_fans: u32,
-    pub away_dedicated_fans: u32,
+    pub home_dedicated_fans: DedicatedFans,
+    pub away_dedicated_fans: DedicatedFans,
     pub home_team_value: Option<TeamValue>,
     pub away_team_value: Option<TeamValue>,
     pub home_inducements: Option<Vec<InducementPurchase>>,
@@ -47,8 +47,8 @@ impl MatchReportPreMatch {
         &self,
         home_fan_roll: D3Roll,
         away_fan_roll: D3Roll,
-        home_dedicated_fans: u32,
-        away_dedicated_fans: u32,
+        home_dedicated_fans: DedicatedFans,
+        away_dedicated_fans: DedicatedFans,
         recorded_by: CoachId,
     ) -> (Self, MatchReportDomainEvent) {
         let event = MatchReportDomainEvent::FanFactorRecorded {
@@ -263,9 +263,9 @@ impl MatchReportPreMatch {
     }
 
     pub fn suggest_gains(&self) -> (u32, u32) {
-        let fans_home = self.home_dedicated_fans
+        let fans_home = self.home_dedicated_fans.into_inner()
             + self.home_fan_roll.map(|r| r.value() as u32).unwrap_or(0);
-        let fans_away = self.away_dedicated_fans
+        let fans_away = self.away_dedicated_fans.into_inner()
             + self.away_fan_roll.map(|r| r.value() as u32).unwrap_or(0);
         let (tds_home, tds_away) = self.compute_score();
         let base = (fans_home + fans_away) / 2 * 10;
@@ -312,8 +312,8 @@ impl MatchReportPreMatch {
             pairing_id: draft.pairing_id,
             home_fan_roll: None,
             away_fan_roll: None,
-            home_dedicated_fans: 0,
-            away_dedicated_fans: 0,
+            home_dedicated_fans: DedicatedFans::default(),
+            away_dedicated_fans: DedicatedFans::default(),
             home_team_value: None,
             away_team_value: None,
             home_inducements: None,
@@ -468,7 +468,7 @@ mod tests {
             round_id: RoundId::new(), home_team_id: home_id, away_team_id: away_id,
             created_by: CoachId::new(), origin: MatchReportOrigin::Manual, pairing_id: None,
             home_fan_roll: None, away_fan_roll: None,
-            home_dedicated_fans: 0, away_dedicated_fans: 0,
+            home_dedicated_fans: DedicatedFans::default(), away_dedicated_fans: DedicatedFans::default(),
             home_team_value: Some(TeamValue::try_new(home_tv).unwrap()), away_team_value: Some(TeamValue::try_new(away_tv).unwrap()),
             home_inducements: None, away_inducements: None,
             star_engagements: vec![],
@@ -922,8 +922,8 @@ mod tests {
 
     fn pm_with_fans(home_dedicated: u32, away_dedicated: u32, home_roll: u8, away_roll: u8) -> MatchReportPreMatch {
         let mut pm = make_pm(1000, 1000);
-        pm.home_dedicated_fans = home_dedicated;
-        pm.away_dedicated_fans = away_dedicated;
+        pm.home_dedicated_fans = DedicatedFans::try_new(home_dedicated).unwrap();
+        pm.away_dedicated_fans = DedicatedFans::try_new(away_dedicated).unwrap();
         pm.home_fan_roll = Some(D3Roll::try_new(home_roll).unwrap());
         pm.away_fan_roll = Some(D3Roll::try_new(away_roll).unwrap());
         pm

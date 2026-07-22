@@ -1,6 +1,7 @@
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::value_objects::{
-    D3Roll, FanFactorMod, InducementPurchase, MatchAction, MatchGain, MatchReportOrigin, TempPlayer,
+    D3Roll, DedicatedFans, FanFactorMod, InducementPurchase, MatchAction, MatchGain,
+    MatchReportOrigin, TempPlayer,
 };
 use crate::app::shared_kernel::inducement_definition::InducementId;
 use crate::app::shared_kernel::common_types::{
@@ -23,8 +24,8 @@ pub struct MatchReportPublished {
     pub pairing_id: Option<String>,
     pub home_fan_roll: Option<D3Roll>,
     pub away_fan_roll: Option<D3Roll>,
-    pub home_dedicated_fans: u32,
-    pub away_dedicated_fans: u32,
+    pub home_dedicated_fans: DedicatedFans,
+    pub away_dedicated_fans: DedicatedFans,
     pub home_inducements: Option<Vec<InducementPurchase>>,
     pub away_inducements: Option<Vec<InducementPurchase>>,
     pub star_engagements: Vec<(TeamId, InducementId)>,

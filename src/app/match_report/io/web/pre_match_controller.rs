@@ -1,6 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
-use crate::app::match_report::domain::value_objects::D3Roll;
+use crate::app::match_report::domain::value_objects::{D3Roll, DedicatedFans};
 use crate::app::match_report::use_cases::record_fan_factor_use_case;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::common_types::MatchReportId;
@@ -180,8 +180,8 @@ pub async fn post_pre_match(
         match_report_id: mr_id,
         home_fan_roll,
         away_fan_roll,
-        home_dedicated_fans: 0,
-        away_dedicated_fans: 0,
+        home_dedicated_fans: DedicatedFans::default(),
+        away_dedicated_fans: DedicatedFans::default(),
         recorded_by: user.id,
     };
 

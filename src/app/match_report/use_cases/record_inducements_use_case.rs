@@ -350,7 +350,7 @@ fn route_outcome(pm: &MatchReportPreMatch, team_id: &TeamId) -> RecordInducement
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::match_report::domain::value_objects::MatchReportOrigin;
+    use crate::app::match_report::domain::value_objects::{DedicatedFans, MatchReportOrigin};
     use crate::app::shared_kernel::common_types::{CompetitionId, RoundId, SeasonId, SpaceId};
 
     fn make_pm(home_tv: u32, away_tv: u32) -> MatchReportPreMatch {
@@ -360,7 +360,7 @@ mod tests {
             round_id: RoundId::new(), home_team_id: TeamId::new(), away_team_id: TeamId::new(),
             created_by: CoachId::new(), origin: MatchReportOrigin::Manual, pairing_id: None,
             home_fan_roll: None, away_fan_roll: None,
-            home_dedicated_fans: 0, away_dedicated_fans: 0,
+            home_dedicated_fans: DedicatedFans::default(), away_dedicated_fans: DedicatedFans::default(),
             home_team_value: Some(TeamValue::try_new(home_tv).unwrap()),
             away_team_value: Some(TeamValue::try_new(away_tv).unwrap()),
             home_inducements: None, away_inducements: None,

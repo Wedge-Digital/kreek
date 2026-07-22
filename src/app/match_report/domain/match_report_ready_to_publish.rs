@@ -2,7 +2,8 @@ use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::value_objects::{
-    D3Roll, FanFactorMod, InducementPurchase, MatchAction, MatchGain, MatchReportOrigin, TempPlayer,
+    D3Roll, DedicatedFans, FanFactorMod, InducementPurchase, MatchAction, MatchGain,
+    MatchReportOrigin, TempPlayer,
 };
 use crate::app::shared_kernel::inducement_definition::InducementId;
 use crate::app::shared_kernel::common_types::{
@@ -25,8 +26,8 @@ pub struct MatchReportReadyToPublish {
     pub pairing_id: Option<String>,
     pub home_fan_roll: Option<D3Roll>,
     pub away_fan_roll: Option<D3Roll>,
-    pub home_dedicated_fans: u32,
-    pub away_dedicated_fans: u32,
+    pub home_dedicated_fans: DedicatedFans,
+    pub away_dedicated_fans: DedicatedFans,
     pub home_inducements: Option<Vec<InducementPurchase>>,
     pub away_inducements: Option<Vec<InducementPurchase>>,
     pub star_engagements: Vec<(TeamId, InducementId)>,
@@ -176,8 +177,8 @@ mod tests {
             pairing_id: None,
             home_fan_roll: None,
             away_fan_roll: None,
-            home_dedicated_fans: 0,
-            away_dedicated_fans: 0,
+            home_dedicated_fans: DedicatedFans::default(),
+            away_dedicated_fans: DedicatedFans::default(),
             home_inducements: None,
             away_inducements: None,
             star_engagements: vec![],

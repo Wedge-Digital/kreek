@@ -324,7 +324,7 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::match_report::domain::value_objects::{D3Roll, MatchReportOrigin};
+    use crate::app::match_report::domain::value_objects::{D3Roll, DedicatedFans, MatchReportOrigin};
     use crate::app::shared_kernel::common_types::{
         CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
     };
@@ -572,8 +572,8 @@ mod tests {
         let (_, event) = pm.record_fan_factor(
             D3Roll::try_new(2).unwrap(),
             D3Roll::try_new(1).unwrap(),
-            0,
-            0,
+            DedicatedFans::default(),
+            DedicatedFans::default(),
             CoachId::new(),
         );
         assert!(matches!(event, MatchReportDomainEvent::FanFactorRecorded { .. }));
@@ -585,8 +585,8 @@ mod tests {
         let (updated, _) = pm.record_fan_factor(
             D3Roll::try_new(3).unwrap(),
             D3Roll::try_new(1).unwrap(),
-            0,
-            0,
+            DedicatedFans::default(),
+            DedicatedFans::default(),
             CoachId::new(),
         );
         assert_eq!(updated.home_fan_roll, Some(D3Roll::try_new(3).unwrap()));
@@ -606,8 +606,8 @@ mod tests {
             MatchReportDomainEvent::FanFactorRecorded {
                 home_fan_roll: D3Roll::try_new(2).unwrap(),
                 away_fan_roll: D3Roll::try_new(3).unwrap(),
-                home_dedicated_fans: 0,
-                away_dedicated_fans: 0,
+                home_dedicated_fans: DedicatedFans::default(),
+                away_dedicated_fans: DedicatedFans::default(),
                 recorded_by: coach_id,
             },
         ];
@@ -631,15 +631,15 @@ mod tests {
             MatchReportDomainEvent::FanFactorRecorded {
                 home_fan_roll: D3Roll::try_new(1).unwrap(),
                 away_fan_roll: D3Roll::try_new(1).unwrap(),
-                home_dedicated_fans: 0,
-                away_dedicated_fans: 0,
+                home_dedicated_fans: DedicatedFans::default(),
+                away_dedicated_fans: DedicatedFans::default(),
                 recorded_by: coach_id,
             },
             MatchReportDomainEvent::FanFactorRecorded {
                 home_fan_roll: D3Roll::try_new(3).unwrap(),
                 away_fan_roll: D3Roll::try_new(2).unwrap(),
-                home_dedicated_fans: 0,
-                away_dedicated_fans: 0,
+                home_dedicated_fans: DedicatedFans::default(),
+                away_dedicated_fans: DedicatedFans::default(),
                 recorded_by: coach_id,
             },
         ];

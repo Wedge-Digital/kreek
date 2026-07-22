@@ -78,7 +78,7 @@ impl From<Player> for PlayerDebugVm {
         }).collect();
         let stat_adjustments = p.stat_adjustments.iter().map(|a| StatAdjustmentRowVm {
             stat:  stat_label(a.stat),
-            malus: a.malus,
+            malus: a.malus.into_inner(),
         }).collect();
 
         Self {

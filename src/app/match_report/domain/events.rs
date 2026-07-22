@@ -1,6 +1,6 @@
 use crate::app::match_report::domain::value_objects::{
-    ActionId, ActionPlayer, D3Roll, FanFactorMod, InducementPurchase, MatchActionType,
-    MatchGain, MatchReportOrigin, TeamSide, TeamValue, TempPlayer,
+    ActionId, ActionPlayer, D3Roll, DedicatedFans, FanFactorMod, InducementPurchase,
+    MatchActionType, MatchGain, MatchReportOrigin, TeamSide, TeamValue, TempPlayer,
 };
 use crate::app::shared_kernel::inducement_definition::InducementId;
 use crate::app::shared_kernel::common_types::{
@@ -39,9 +39,9 @@ pub enum MatchReportDomainEvent {
         home_fan_roll: D3Roll,
         away_fan_roll: D3Roll,
         #[serde(default)]
-        home_dedicated_fans: u32,
+        home_dedicated_fans: DedicatedFans,
         #[serde(default)]
-        away_dedicated_fans: u32,
+        away_dedicated_fans: DedicatedFans,
         recorded_by: CoachId,
     },
     MatchReportCancelled {

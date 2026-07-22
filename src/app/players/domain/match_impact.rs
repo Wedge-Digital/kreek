@@ -14,9 +14,9 @@ pub struct RoundId(pub String);
 pub struct MatchContext {
     pub match_report_id:    MatchReportId,
     pub round_id:           RoundId,
-    pub round_label:        String,
+    pub round_label:        String, // arch:ok texte libre dénormalisé (zéro appel inter-BC en lecture)
     pub opponent_team_id:   TeamId,
-    pub opponent_team_name: String,
+    pub opponent_team_name: String, // arch:ok texte libre dénormalisé (zéro appel inter-BC en lecture)
 }
 
 // ── SPP gagné par une action (résolu en amont via references, jamais calculé ici) ──
@@ -63,10 +63,16 @@ pub struct PlayerInjuryRecord {
     pub context:     MatchContext,
 }
 
+#[nutype(
+    validate(greater_or_equal = 1),
+    derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)
+)]
+pub struct StatMalus(u8);
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct StatAdjustment {
     pub stat:  StatKind,
-    pub malus: u8,
+    pub malus: StatMalus,
 }
 
 // ── Compteurs de carrière (même style que Spp/ValueKpo dans player.rs) ─────────────

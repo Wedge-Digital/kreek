@@ -1,7 +1,7 @@
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
-use crate::app::match_report::domain::value_objects::{D3Roll, TeamValue};
+use crate::app::match_report::domain::value_objects::{D3Roll, DedicatedFans, TeamValue};
 use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
 use crate::app::shared_kernel::common_types::{CoachId, MatchReportId};
 
@@ -9,8 +9,8 @@ pub struct RecordFanFactorCommand {
     pub match_report_id: MatchReportId,
     pub home_fan_roll: D3Roll,
     pub away_fan_roll: D3Roll,
-    pub home_dedicated_fans: u32,
-    pub away_dedicated_fans: u32,
+    pub home_dedicated_fans: DedicatedFans,
+    pub away_dedicated_fans: DedicatedFans,
     pub recorded_by: CoachId,
 }
 
@@ -37,8 +37,8 @@ pub async fn execute(
     let mr_id = cmd.match_report_id.to_string();
     let pre_match = load_pre_match(repo, &mr_id).await?;
     let (home_fans, away_fans) = fetch_dedicated_fans(&pre_match, team_data).await;
-    cmd.home_dedicated_fans = home_fans;
-    cmd.away_dedicated_fans = away_fans;
+    cmd.home_dedicated_fans = DedicatedFans::try_new(home_fans).unwrap_or_default();
+    cmd.away_dedicated_fans = DedicatedFans::try_new(away_fans).unwrap_or_default();
     let (updated, events) = build_events(pre_match, cmd, team_data).await?;
     let version_before = updated.version - events.len() as u64;
     repo.append_many(&mr_id, events, version_before)

@@ -117,7 +117,7 @@ mod tests {
     use super::*;
     use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
     use crate::app::match_report::domain::value_objects::{
-        InducementCost, InducementPurchase, InducementQty, MatchReportOrigin, TeamValue,
+        DedicatedFans, InducementCost, InducementPurchase, InducementQty, MatchReportOrigin, TeamValue,
     };
     use crate::app::shared_kernel::common_types::{
         CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
@@ -132,7 +132,7 @@ mod tests {
             round_id: RoundId::new(), home_team_id: TeamId::new(), away_team_id: TeamId::new(),
             created_by: CoachId::new(), origin: MatchReportOrigin::Manual, pairing_id: None,
             home_fan_roll: None, away_fan_roll: None,
-            home_dedicated_fans: 0, away_dedicated_fans: 0,
+            home_dedicated_fans: DedicatedFans::default(), away_dedicated_fans: DedicatedFans::default(),
             home_team_value: Some(TeamValue::try_new(1000).unwrap()),
             away_team_value: Some(TeamValue::try_new(1000).unwrap()),
             home_inducements: None, away_inducements: None,

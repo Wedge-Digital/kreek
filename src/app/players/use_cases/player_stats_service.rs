@@ -25,7 +25,7 @@ pub fn resolve_stats(player: &Player, catalog: &dyn ISkillCatalogPort) -> Option
         av: base.av,
     };
     for adj in &player.stat_adjustments {
-        apply_malus(&mut stats, adj.stat, adj.malus);
+        apply_malus(&mut stats, adj.stat, adj.malus.into_inner());
     }
     for increase in &player.stat_increases {
         apply_increase(&mut stats, increase.stat);
@@ -64,7 +64,7 @@ fn apply_increase(stats: &mut ResolvedPlayerStats, stat: StatKind) {
 mod tests {
     use super::*;
     use crate::app::players::domain::events::PlayerDomainEvent;
-    use crate::app::players::domain::match_impact::StatAdjustment;
+    use crate::app::players::domain::match_impact::{StatAdjustment, StatMalus};
     use crate::app::players::domain::player::{PlayerId, Spp, StatIncrease, TeamId, ValueKpo};
     use crate::app::players::domain::value_objects::{PositionNameVo, RosterLineId, SppCost};
     use crate::app::players::ports::{PositionAccessDto, PositionCatalogEntryDto, SkillCatalogEntryDto, SkillCostLevelDto};
@@ -124,9 +124,9 @@ mod tests {
     #[test]
     fn resolve_stats_applies_ma_st_av_malus_as_decrease() {
         let mut player = sample_player();
-        player.stat_adjustments.push(StatAdjustment { stat: StatKind::Ma, malus: 1 });
-        player.stat_adjustments.push(StatAdjustment { stat: StatKind::St, malus: 1 });
-        player.stat_adjustments.push(StatAdjustment { stat: StatKind::Av, malus: 1 });
+        player.stat_adjustments.push(StatAdjustment { stat: StatKind::Ma, malus: StatMalus::try_new(1).unwrap() });
+        player.stat_adjustments.push(StatAdjustment { stat: StatKind::St, malus: StatMalus::try_new(1).unwrap() });
+        player.stat_adjustments.push(StatAdjustment { stat: StatKind::Av, malus: StatMalus::try_new(1).unwrap() });
         let stats = resolve_stats(&player, &FakeSkillCatalog).unwrap();
         assert_eq!(stats.ma, 6);
         assert_eq!(stats.st, 2);
@@ -136,7 +136,7 @@ mod tests {
     #[test]
     fn resolve_stats_applies_ag_pa_malus_as_increase() {
         let mut player = sample_player();
-        player.stat_adjustments.push(StatAdjustment { stat: StatKind::Ag, malus: 1 });
+        player.stat_adjustments.push(StatAdjustment { stat: StatKind::Ag, malus: StatMalus::try_new(1).unwrap() });
         let stats = resolve_stats(&player, &FakeSkillCatalog).unwrap();
         assert_eq!(stats.ag, 4);
     }

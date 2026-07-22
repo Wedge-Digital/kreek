@@ -53,6 +53,16 @@ impl D3Roll {
 )]
 pub struct TeamValue(u32);
 
+/// Copie du `teams::DedicatedFans` de chaque équipe au moment de l'enregistrement
+/// du facteur fans — même borne (≤20), dupliquée ici car `match_report` ne peut
+/// pas importer le type domaine de `teams` (règle de souveraineté des BCs).
+#[nutype(
+    validate(less_or_equal = 20),
+    default = 0,
+    derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)
+)]
+pub struct DedicatedFans(u32);
+
 #[nutype(
     validate(greater_or_equal = 1, less_or_equal = 10),
     derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)
@@ -188,9 +198,9 @@ pub struct MatchAction {
     pub turn: TurnNumber,
     pub player: ActionPlayer,
     pub action: MatchActionType,
-    pub player_display_name: String,
+    pub player_display_name: String, // arch:ok texte libre dénormalisé (snapshot pour l'historique)
     #[serde(default)]
-    pub player_position: String,
+    pub player_position: String, // arch:ok texte libre dénormalisé (snapshot pour l'historique)
 }
 
 #[cfg(test)]

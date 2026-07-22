@@ -4,8 +4,8 @@ use std::collections::HashSet;
 /// `actor_key` est fourni par l'appelant (BC match_report, via son adapter) et sert
 /// uniquement de clé de regroupement, sans signification pour `spp_calculator`.
 pub struct SppActionInput {
-    pub actor_key: String,
-    pub is_injury: bool,
+    pub actor_key: String, // arch:ok entrée opaque, sans signification pour spp_calculator (cf. doc du module)
+    pub is_injury: bool, // arch:ok entrée opaque, sans signification pour spp_calculator (cf. doc du module)
 }
 
 pub struct SppCalculationResult {

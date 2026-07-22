@@ -3,7 +3,7 @@ use crate::app::players::domain::events::PlayerDomainEvent;
 use crate::app::players::domain::match_impact::{
     CasualtyCount, FoulCount, InterceptionCount, InjuryType, MatchContext, MatchReportId,
     MatchesPlayedCount, MvpCount, PassCount, PersistentInjuryCount, PlayerInjuryRecord,
-    PlayerParticipationStatus, SppEarned, StatAdjustment, StatKind, TouchdownCount,
+    PlayerParticipationStatus, SppEarned, StatAdjustment, StatKind, StatMalus, TouchdownCount,
 };
 use crate::app::players::domain::value_objects::{
     JerseyVo, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
@@ -83,7 +83,7 @@ pub struct Player {
     /// Version courante de l'agrégat (nombre d'events déjà appliqués) — permet à
     /// l'appelant de connaître la prochaine version à utiliser pour `append()`,
     /// même pattern que `teams::Team::version`.
-    pub version: i32,
+    pub version: i32, // arch:ok compteur technique d'event-sourcing, pas un concept domaine
 }
 
 impl Player {
@@ -235,7 +235,7 @@ impl Player {
                     }
                     InjuryType::Sequel { stat } => {
                         player.participation_status = PlayerParticipationStatus::MissingNextGame;
-                        player.stat_adjustments.push(StatAdjustment { stat: *stat, malus: 1 });
+                        player.stat_adjustments.push(StatAdjustment { stat: *stat, malus: StatMalus::try_new(1).unwrap() });
                     }
                 }
                 player.version += 1;
