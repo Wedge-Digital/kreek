@@ -7,7 +7,6 @@ use serde::Deserialize;
 use crate::app::shared_kernel::inducement_definition::{InducementCost, InducementDefinition, InducementId, InducementName};
 use crate::app::shared_kernel::roster_definition::RosterDefinition;
 use crate::app::shared_kernel::common_types::RosterId;
-use crate::app::team_creation::domain::roster::RosterName;
 // ── Raw JSON wrappers (deserialization only) ──────────────────────────────────
 
 #[derive(Deserialize)]
@@ -130,8 +129,7 @@ impl IReferenceRepository for InMemoryReferenceRepository {
     fn list_roster_definitions(&self) -> Vec<RosterDefinition> {
         let mut rosters: Vec<RosterDefinition> = self.teams.iter().map(|team: &Team| RosterDefinition {
             id: RosterId(team.uid.clone()),
-            name: RosterName::try_new(team.name.clone())
-                .unwrap_or_else(|_| RosterName::try_new("Unknown".to_string()).unwrap()),
+            name: team.name.clone(),
         }).collect();
         rosters.sort_unstable_by(|a, b| a.id.0.cmp(&b.id.0));
         rosters
