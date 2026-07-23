@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Tests unitaires
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: dev
+          POSTGRES_PASSWORD: devpassword
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Installer sqlx-cli (binaire précompilé)
+        uses: taiki-e/install-action@v2
+        with:
+          tool: sqlx-cli
+
+      - name: make test (reset_test_db + cargo test)
+        run: make test
+
+  e2e:
+    name: Tests E2E
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: dev
+          POSTGRES_PASSWORD: devpassword
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Installer sqlx-cli (binaire précompilé)
+        uses: taiki-e/install-action@v2
+        with:
+          tool: sqlx-cli
+
+      - name: Installer uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Initialiser la base (migrations + imports legacy + seed)
+        run: make init_db WITH_SEED=1
+
+      - name: Lancer le serveur en arrière-plan
+        run: |
+          nohup cargo run > server.log 2>&1 &
+          echo $! > server.pid
+
+      - name: Attendre que le serveur réponde
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3210 > /dev/null; then
+              echo "Serveur prêt."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Le serveur n'a jamais répondu." >&2
+          cat server.log
+          exit 1
+
+      - name: Installer les dépendances Python + Chromium
+        working-directory: tests/e2e
+        run: |
+          uv sync
+          uv run playwright install chromium --with-deps
+
+      - name: make e2e
+        run: make e2e
+
+      - name: Logs serveur (en cas d'échec)
+        if: failure()
+        run: cat server.log
+
+      - name: Arrêter le serveur
+        if: always()
+        run: kill "$(cat server.pid)" 2>/dev/null || true

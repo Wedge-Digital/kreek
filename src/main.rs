@@ -72,6 +72,17 @@ async fn init_pool(cfg: &AppConfig) -> sqlx::PgPool {
         .expect("Impossible de se connecter à la base de données")
 }
 
+// Embarque les fichiers SQL de `migrations/` dans le binaire à la compilation
+// (plus besoin du dossier sur la machine cible).
+static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
+
+async fn run_migrations(pool: &sqlx::PgPool) {
+    if let Err(e) = MIGRATOR.run(pool).await {
+        tracing::error!("échec des migrations au démarrage : {e}");
+        std::process::exit(1);
+    }
+}
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
@@ -87,6 +98,7 @@ async fn main() {
         AppConfig::load().expect("Configuration invalide — vérifiez vos variables d'environnement");
 
     let pool = init_pool(&cfg).await;
+    run_migrations(&pool).await;
 
     match cli.command.unwrap_or(Command::Serve) {
         Command::Serve => run_server(cfg, pool).await,

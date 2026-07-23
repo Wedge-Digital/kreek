@@ -13,7 +13,7 @@ help:
 	@echo "  test          Lance les tests (utilise .env.test)"
 	@echo "  e2e           Lance les tests E2E Playwright (nécessite le serveur dev lancé)"
 	@echo "  all_tests     test + e2e — garde-fou obligatoire avant tout commit (cf. CLAUDE.md)"
-	@echo "  migrate       Applique les migrations SQLx"
+	@echo "  migrate       Échappatoire manuelle (le binaire applique déjà les migrations au boot)"
 	@echo "  migration     Crée une migration (ex: make migration desc=create_teams)"
 	@echo "  prepare_db    Régénère le cache sqlx (cargo sqlx prepare)"
 	@echo "  reset_db      Remet la base à zéro (sqlx database reset)"
@@ -48,6 +48,10 @@ all_tests: test e2e
 	@echo "  ✓ test + e2e : tout est vert"
 	@echo ""
 
+# Échappatoire manuelle : le binaire embarque les migrations et les applique
+# automatiquement au démarrage (cf. run_migrations() dans main.rs). Cette
+# target reste utile pour du troubleshooting ponctuel (appliquer une
+# migration sans redémarrer le service).
 migrate:
 	DATABASE_URL=$(DATABASE_URL) sqlx migrate run
 
