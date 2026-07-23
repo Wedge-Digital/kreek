@@ -29,8 +29,6 @@ Directives de travail pour Claude Code sur ce projet.
 
 9. **Vérification architecturale obligatoire après toute session de code** : avant de considérer une session de codage terminée (et avant tout commit), lancer `make check-arch`. Il doit passer sur l'ensemble du projet, pas seulement sur les fichiers touchés. (Dette architecturale préexistante résolue le 2026-07-22 — cartes 184 à 191 ; la règle s'applique désormais strictement, sans exception.)
 
-10. **Tests obligatoires avant tout commit** : à chaque demande de commit de l'utilisateur, lancer `make all_tests` (= `make test` + `make e2e`) avant de committer/pusher quoi que ce soit. Si `make all_tests` échoue (tests unitaires ou e2e), **ne pas committer** — prévenir l'utilisateur de l'échec précis (fichier, test, message d'erreur) et attendre sa décision. Ne jamais contourner ce garde-fou (`--no-verify` ou équivalent) sauf demande explicite. Cas particulier : `make e2e` exige un serveur dev déjà lancé (cf. règle 8, jamais démarré par Claude) — si `make all_tests` échoue faute de serveur actif, le signaler clairement et demander à l'utilisateur de le démarrer plutôt que de committer sans le volet e2e.
-
 ---
 
 ## Projet
