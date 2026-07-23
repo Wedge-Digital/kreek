@@ -33,6 +33,28 @@ pub struct DrawCount(pub u32);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LossCount(pub u32);
 
+/// Compteurs cumulés d'une équipe avant un nouveau match — c'est tout ce dont
+/// `record_match` a besoin de la ligne précédente, pas la `RankingLine`
+/// complète (id, dates, etc. non pertinents pour le calcul).
+#[derive(Debug, Clone, Copy)]
+pub struct CumulativeTotals {
+    pub matches_played: MatchesPlayed,
+    pub wins: WinCount,
+    pub draws: DrawCount,
+    pub losses: LossCount,
+    pub ranking_points: RankingPoints,
+}
+
+impl CumulativeTotals {
+    pub const ZERO: CumulativeTotals = CumulativeTotals {
+        matches_played: MatchesPlayed(0),
+        wins: WinCount(0),
+        draws: DrawCount(0),
+        losses: LossCount(0),
+        ranking_points: RankingPoints(0),
+    };
+}
+
 /// Barème de points de classement d'une compétition — copie en lecture des
 /// règles consultées via `IRankingCompetitionPort` (carte 193), jamais le
 /// type domaine `competitions::RankingRules`.
@@ -82,11 +104,11 @@ impl RankingLine {
     }
 
     /// Construit la nouvelle ligne de classement d'une équipe après un match.
-    /// `previous` : dernière ligne connue de cette équipe pour cette saison
-    /// (`None` = première apparition de l'équipe dans le classement).
+    /// `previous` : compteurs cumulés de la dernière ligne connue de cette
+    /// équipe pour cette saison (`None` = première apparition dans le classement).
     #[allow(clippy::too_many_arguments)]
     pub fn record_match(
-        previous: Option<&RankingLine>,
+        previous: Option<CumulativeTotals>,
         team_id: TeamId,
         competition_id: CompetitionId,
         season_id: SeasonId,
@@ -96,9 +118,8 @@ impl RankingLine {
         outcome: MatchOutcome,
         rules: &RankingRules,
     ) -> RankingLine {
-        let (matches_played, wins, draws, losses, points) = previous
-            .map(|p| (p.matches_played, p.wins, p.draws, p.losses, p.ranking_points))
-            .unwrap_or((MatchesPlayed(0), WinCount(0), DrawCount(0), LossCount(0), RankingPoints(0)));
+        let CumulativeTotals { matches_played, wins, draws, losses, ranking_points: points } =
+            previous.unwrap_or(CumulativeTotals::ZERO);
 
         let match_points = match outcome {
             MatchOutcome::Win => rules.win_points,
@@ -128,6 +149,16 @@ mod tests {
 
     fn ids() -> (TeamId, CompetitionId, SeasonId, RoundId, MatchReportId) {
         (TeamId::new(), CompetitionId::new(), SeasonId::new(), RoundId::new(), MatchReportId::new())
+    }
+
+    fn totals_of(line: &RankingLine) -> CumulativeTotals {
+        CumulativeTotals {
+            matches_played: line.matches_played,
+            wins: line.wins,
+            draws: line.draws,
+            losses: line.losses,
+            ranking_points: line.ranking_points,
+        }
     }
 
     fn rules() -> RankingRules {
@@ -207,7 +238,7 @@ mod tests {
         );
 
         let next = RankingLine::record_match(
-            Some(&previous), team_id, competition_id, season_id, round_id, match_report_id,
+            Some(totals_of(&previous)), team_id, competition_id, season_id, round_id, match_report_id,
             Utc::now(), MatchOutcome::Draw, &rules(),
         );
 
@@ -225,7 +256,7 @@ mod tests {
 
         for outcome in [MatchOutcome::Win, MatchOutcome::Draw, MatchOutcome::Loss] {
             line = Some(RankingLine::record_match(
-                line.as_ref(), team_id.clone(), competition_id.clone(), season_id.clone(), round_id.clone(),
+                line.as_ref().map(totals_of), team_id.clone(), competition_id.clone(), season_id.clone(), round_id.clone(),
                 match_report_id.clone(), Utc::now(), outcome, &rules(),
             ));
         }
