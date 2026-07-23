@@ -311,6 +311,25 @@ mod tests {
                     event_bus:             event_bus.clone(),
                 }
             },
+            ranking: {
+                struct FakeRankingRepo;
+                #[async_trait::async_trait]
+                impl crate::app::ranking::ports::IRankingRepository for FakeRankingRepo {
+                    async fn find_latest_line(&self, _: &str, _: &str) -> Result<Option<crate::app::ranking::ports::RankingLineRow>, crate::app::ranking::ports::RankingRepositoryError> { Ok(None) }
+                    async fn find_latest_lines_for_season(&self, _: &str) -> Result<Vec<crate::app::ranking::ports::RankingLineRow>, crate::app::ranking::ports::RankingRepositoryError> { Ok(vec![]) }
+                    async fn insert_lines(&self, _: &[crate::app::ranking::domain::ranking_line::RankingLine]) -> Result<(), crate::app::ranking::ports::RankingRepositoryError> { Ok(()) }
+                }
+                struct FakeRankingCompetitionPort;
+                #[async_trait::async_trait]
+                impl crate::app::ranking::ports::IRankingCompetitionPort for FakeRankingCompetitionPort {
+                    async fn find_ranking_rules(&self, _: &str) -> Option<crate::app::ranking::ports::RankingRulesInfo> { None }
+                    async fn find_enrolled_teams(&self, _: &str) -> Vec<crate::app::ranking::ports::EnrolledTeamInfo> { vec![] }
+                }
+                crate::app::ranking::context::RankingContext {
+                    repository:       Arc::new(FakeRankingRepo),
+                    competition_port: Arc::new(FakeRankingCompetitionPort),
+                }
+            },
             match_report: {
                 struct FakeMrRepo;
                 #[async_trait::async_trait]

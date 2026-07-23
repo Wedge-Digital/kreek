@@ -24,8 +24,9 @@ use crate::app::team_creation::context::TeamCreationContext;
 use crate::infrastructure::team_creation::competition_rules_adapter::CompetitionRulesAdapter;
 use crate::infrastructure::team_creation::reference_data_adapter::ReferenceDataAdapter;
 use crate::app::players::context::PlayersContext;
+use crate::app::ranking::context::RankingContext;
 use crate::app::teams::context::TeamsContext;
-use crate::app::{auth, competitions, match_report, players, references, spaces, team_creation, teams};
+use crate::app::{auth, competitions, match_report, players, ranking, references, spaces, team_creation, teams};
 use crate::common::event_listener::event_log_feeder;
 use crate::common::services::email::ResendMailService;
 use crate::common::services::event_bus::event_bus::new_bus;
@@ -161,6 +162,14 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
         players_skill_catalog.clone(),
     );
 
+    let ranking_competition_port = Arc::new(
+        crate::infrastructure::ranking::competition_info_adapter::RankingCompetitionAdapter::new(
+            Arc::new(crate::app::competitions::io::repository::season_repository::SeasonRepository::new(pool.clone())),
+            competitions_team_info_port.clone(),
+        ),
+    );
+    ranking::context::init_listeners(&app_event_bus, pool.clone(), ranking_competition_port.clone());
+
     let state = AppState {
         auth: AuthContext::new(&pool, event_bus.clone()),
         spaces: SpacesContext::new(&pool, event_bus.clone()),
@@ -237,6 +246,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             )),
             event_bus.clone(),
         ),
+        ranking: RankingContext::new(&pool, ranking_competition_port),
         email_service: Arc::new(ResendMailService::new(
             cfg.email.api_key,
             cfg.email.from,
@@ -260,6 +270,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
         .merge(app::references::router::router())
         .merge(app::team_creation::router::router())
         .merge(app::players::router::router())
+        .merge(app::ranking::router::router())
         .merge(app::teams::router::router())
         .merge(app::match_report::router::router())
         .merge(app::competitions::router::router())
