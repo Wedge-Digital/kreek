@@ -11,16 +11,6 @@ use crate::app::shared_kernel::cloudinary;
 use crate::common::initials::initials;
 // ── Mock data structs ─────────────────────────────────────────────────────────
 
-pub struct StandingRow {
-    pub rank: u32,
-    pub name: String,
-    pub played: u32,
-    pub wins: u32,
-    pub draws: u32,
-    pub losses: u32,
-    pub points: u32,
-}
-
 pub struct TeamCard {
     pub name: String,
     pub logo: Option<String>,
@@ -37,101 +27,6 @@ pub struct StatRow {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-fn mock_standings() -> Vec<StandingRow> {
-    vec![
-        StandingRow {
-            rank: 1,
-            name: "Les Guerriers du Nord".into(),
-            played: 8,
-            wins: 7,
-            draws: 0,
-            losses: 1,
-            points: 21,
-        },
-        StandingRow {
-            rank: 2,
-            name: "Waaagh! FC".into(),
-            played: 8,
-            wins: 6,
-            draws: 1,
-            losses: 1,
-            points: 19,
-        },
-        StandingRow {
-            rank: 3,
-            name: "Chaos United".into(),
-            played: 8,
-            wins: 5,
-            draws: 2,
-            losses: 1,
-            points: 17,
-        },
-        StandingRow {
-            rank: 4,
-            name: "Elfes Sylvains SC".into(),
-            played: 8,
-            wins: 5,
-            draws: 0,
-            losses: 3,
-            points: 15,
-        },
-        StandingRow {
-            rank: 5,
-            name: "Nains de Fer".into(),
-            played: 8,
-            wins: 4,
-            draws: 1,
-            losses: 3,
-            points: 13,
-        },
-        StandingRow {
-            rank: 6,
-            name: "Skavens du Sous-sol".into(),
-            played: 8,
-            wins: 3,
-            draws: 2,
-            losses: 3,
-            points: 11,
-        },
-        StandingRow {
-            rank: 7,
-            name: "Humains Ordinaires".into(),
-            played: 8,
-            wins: 3,
-            draws: 0,
-            losses: 5,
-            points: 9,
-        },
-        StandingRow {
-            rank: 8,
-            name: "Nécromants XI".into(),
-            played: 8,
-            wins: 2,
-            draws: 1,
-            losses: 5,
-            points: 7,
-        },
-        StandingRow {
-            rank: 9,
-            name: "Orques Sauvages".into(),
-            played: 8,
-            wins: 1,
-            draws: 0,
-            losses: 7,
-            points: 3,
-        },
-        StandingRow {
-            rank: 10,
-            name: "Halflings United".into(),
-            played: 8,
-            wins: 0,
-            draws: 1,
-            losses: 7,
-            points: 1,
-        },
-    ]
-}
 
 fn mock_teams() -> Vec<TeamCard> {
     vec![
@@ -372,7 +267,6 @@ pub struct CompetitionDetailTemplate {
     pub is_admin: bool,
     pub active_tab: &'static str,
     // tab content (only one is populated per request)
-    pub standings: Vec<StandingRow>,
     pub top_tds: Vec<StatRow>,
     pub top_casualties: Vec<StatRow>,
     pub flop_tds: Vec<StatRow>,
@@ -393,7 +287,10 @@ impl IntoResponse for CompetitionDetailTemplate {
 #[derive(Template)]
 #[template(path = "competition-tab-standings.html")]
 pub struct StandingsTabTemplate {
-    pub standings: Vec<StandingRow>,
+    pub app_routes: AppRoutes,
+    pub space_id: String,
+    pub competition_id: String,
+    pub season_id: String,
 }
 
 #[derive(Template)]
@@ -503,7 +400,6 @@ pub(crate) fn full_page(
     season_id: String,
     active_tab: &'static str,
     is_admin: bool,
-    standings: Vec<StandingRow>,
     top_tds: Vec<StatRow>,
     top_casualties: Vec<StatRow>,
     flop_tds: Vec<StatRow>,
@@ -521,7 +417,6 @@ pub(crate) fn full_page(
         admin_names: pb.admin_names,
         is_admin,
         active_tab,
-        standings,
         top_tds,
         top_casualties,
         flop_tds,
@@ -570,7 +465,6 @@ pub async fn get_competition_detail(
         admin_names: pb.admin_names,
         is_admin,
         active_tab: "standings",
-        standings: mock_standings(),
         top_tds: vec![],
         top_casualties: vec![],
         flop_tds: vec![],
@@ -586,7 +480,10 @@ pub async fn get_tab_standings(
 ) -> impl IntoResponse {
     if headers.contains_key("hx-request") {
         return StandingsTabTemplate {
-            standings: mock_standings(),
+            app_routes: AppRoutes::default(),
+            space_id,
+            competition_id,
+            season_id,
         }
         .into_response();
     }
@@ -609,7 +506,6 @@ pub async fn get_tab_standings(
         season_id,
         "standings",
         false,
-        mock_standings(),
         vec![],
         vec![],
         vec![],
@@ -653,7 +549,6 @@ pub async fn get_tab_teams(
         vec![],
         vec![],
         vec![],
-        vec![],
     )
 }
 
@@ -690,7 +585,6 @@ pub async fn get_tab_stats(
         season_id,
         "stats",
         false,
-        vec![],
         mock_top_tds(),
         mock_top_casualties(),
         mock_flop_tds(),
