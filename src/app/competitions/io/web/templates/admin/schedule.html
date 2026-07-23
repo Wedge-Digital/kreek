@@ -75,6 +75,9 @@ window.handleScheduleActionResponse = function (xhrLike) {
     if (data.skipped_rounds && data.skipped_rounds.length) {
         messages.push("Journée(s) déjà pourvue(s) d'appariements, non régénérée(s) : " + data.skipped_rounds.join(', '));
     }
+    if (data.skipped_groups && data.skipped_groups.length) {
+        messages.push("Poule(s) sans effectif suffisant (moins de 2 équipes assignées), aucun appariement généré : " + data.skipped_groups.join(', '));
+    }
     if (messages.length) alert(messages.join('\n'));
     return true;
 };

@@ -14,10 +14,13 @@ pub enum GenerateAllError {
 /// précédemment ou ajoutés manuellement) — jamais régénérées automatiquement,
 /// pour ne pas écraser des matchs déjà saisis (il faut les vider explicitement
 /// via "Vider les matchs" avant de pouvoir régénérer cette journée).
+/// `skipped_group_names` : poules sans effectif suffisant (< 2 équipes
+/// enrôlées assignées) — dédupliquées car réévaluées à chaque journée.
 #[derive(Debug, Default)]
 pub struct GenerateAllOutcome {
     pub skipped_team_names: Vec<String>,
     pub skipped_round_names: Vec<String>,
+    pub skipped_group_names: Vec<String>,
 }
 
 pub async fn execute(
@@ -36,13 +39,17 @@ pub async fn execute(
 
     let mut skipped_team_names: Vec<String> = Vec::new();
     let mut skipped_round_names: Vec<String> = Vec::new();
+    let mut skipped_group_names: Vec<String> = Vec::new();
     for day in &days {
         if day.is_rest() {
             continue;
         }
         let result = generate_pairings::execute(&day.id.to_string(), season_id, competition_id, space_id, match_day_repo, group_repo, team_port, event_bus).await;
         match result {
-            Ok(outcome) => skipped_team_names.extend(outcome.skipped_team_names),
+            Ok(outcome) => {
+                skipped_team_names.extend(outcome.skipped_team_names);
+                skipped_group_names.extend(outcome.skipped_group_names);
+            }
             Err(generate_pairings::GenerateError::PairingsAlreadyExist) => {
                 skipped_round_names.push(day.name.to_string());
             }
@@ -52,7 +59,9 @@ pub async fn execute(
 
     skipped_team_names.sort();
     skipped_team_names.dedup();
-    Ok(GenerateAllOutcome { skipped_team_names, skipped_round_names })
+    skipped_group_names.sort();
+    skipped_group_names.dedup();
+    Ok(GenerateAllOutcome { skipped_team_names, skipped_round_names, skipped_group_names })
 }
 
 #[cfg(test)]

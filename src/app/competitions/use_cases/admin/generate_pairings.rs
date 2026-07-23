@@ -24,9 +24,14 @@ pub enum GenerateError {
 /// `skipped_team_names` : équipes présentes dans un groupe/poule mais non
 /// `Enrolled` pour la saison — jamais appariées (BR : pas de pairing pour une
 /// équipe non enrôlée, donc pas d'event `PairingCreated` la concernant).
+/// `skipped_group_names` : poules avec moins de 2 équipes enrôlées assignées
+/// — aucun appariement possible, sans quoi la génération réussirait
+/// silencieusement à 0 rencontre pour cette poule (BR : signaler explicitement
+/// plutôt que de laisser l'admin croire que la génération a échoué).
 #[derive(Debug, Default)]
 pub struct GenerateOutcome {
     pub skipped_team_names: Vec<String>,
+    pub skipped_group_names: Vec<String>,
 }
 
 pub async fn execute(
@@ -64,9 +69,14 @@ pub async fn execute(
     let mut already_played = build_played_set(&all_days, match_day_id);
 
     let mut skipped_team_ids: Vec<String> = Vec::new();
+    let mut skipped_group_names: Vec<String> = Vec::new();
     for group in &groups {
         let (filtered_ids, skipped) = filter_enrolled_team_ids(&group.team_ids, &team_display);
         skipped_team_ids.extend(skipped);
+        if filtered_ids.len() < 2 {
+            skipped_group_names.push(group.group_name.clone());
+            continue;
+        }
         generate_and_save_group_pairings(
             &filtered_ids, &mut already_played, match_day_id, competition_id, season_id,
             space_id, &match_day, &team_display, match_day_repo, event_bus,
@@ -75,7 +85,7 @@ pub async fn execute(
     }
 
     let skipped_team_names = resolve_team_names(skipped_team_ids, team_port).await;
-    Ok(GenerateOutcome { skipped_team_names })
+    Ok(GenerateOutcome { skipped_team_names, skipped_group_names })
 }
 
 async fn load_groups(
@@ -242,6 +252,26 @@ mod tests {
         async fn find_team_names(&self, _: &[String]) -> Result<Vec<TeamInfoDto>, String> { Ok(vec![]) }
     }
 
+    struct FakeGroupRepoWithEmptyGroup(&'static str);
+    #[async_trait]
+    impl IGroupRepository for FakeGroupRepoWithEmptyGroup {
+        async fn find_groups(&self, _: &str) -> Result<Vec<GroupWithTeams>, GroupRepositoryError> {
+            Ok(vec![GroupWithTeams { group_id: "g1".to_string(), group_name: self.0.to_string(), position: 0, team_ids: vec![] }])
+        }
+        async fn save_assignments(&self, _: &[(String, String)]) -> Result<(), GroupRepositoryError> { Ok(()) }
+        async fn reset_assignments(&self, _: &str) -> Result<(), GroupRepositoryError> { Ok(()) }
+        async fn assign_team(&self, _: &str, _: &str) -> Result<(), GroupRepositoryError> { Ok(()) }
+        async fn unassign_team(&self, _: &str) -> Result<(), GroupRepositoryError> { Ok(()) }
+        async fn ensure_groups_from_structure(&self, _: &str, _: &[(String, String)]) -> Result<(), GroupRepositoryError> { Ok(()) }
+    }
+
+    struct FakeTeamInfoPortWithEnrolled(Vec<TeamInfoDto>);
+    #[async_trait]
+    impl ITeamInfoPort for FakeTeamInfoPortWithEnrolled {
+        async fn find_enrolled_teams(&self, _: &str) -> Result<Vec<TeamInfoDto>, String> { Ok(self.0.clone()) }
+        async fn find_team_names(&self, _: &[String]) -> Result<Vec<TeamInfoDto>, String> { Ok(vec![]) }
+    }
+
     fn match_day_with_pairings(pairings: Vec<Pairing>) -> MatchDay {
         MatchDay {
             id: MatchId::new(), season_id: SeasonId::new(),
@@ -279,5 +309,22 @@ mod tests {
 
         // pas de groupes ni d'équipes enrôlées -> NoGroups, mais surtout PAS PairingsAlreadyExist
         assert!(matches!(result, Err(GenerateError::NoGroups)));
+    }
+
+    #[tokio::test]
+    async fn reports_group_with_fewer_than_two_teams_as_skipped_instead_of_silent_success() {
+        let match_day_repo = FakeMatchDayRepo(match_day_with_pairings(vec![]));
+        let group_repo = FakeGroupRepoWithEmptyGroup("Poule 1");
+        let team_port = FakeTeamInfoPortWithEnrolled(vec![TeamInfoDto {
+            team_id: "t1".into(), team_name: "Team 1".into(),
+            coach_id: String::new(), coach_name: String::new(), roster_name: String::new(), logo_url: None,
+        }]);
+        let event_bus = crate::common::services::event_bus::event_bus::new_bus();
+
+        let outcome = execute("d1", "s1", "c1", "sp1", &match_day_repo, &group_repo, &team_port, &event_bus)
+            .await
+            .expect("ne doit pas échouer, juste signaler la poule ignorée");
+
+        assert_eq!(outcome.skipped_group_names, vec!["Poule 1".to_string()]);
     }
 }

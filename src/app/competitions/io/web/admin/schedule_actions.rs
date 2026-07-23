@@ -37,13 +37,16 @@ struct ScheduleActionResult {
     skipped_teams: Vec<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     skipped_rounds: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    skipped_groups: Vec<String>,
 }
 
 /// Même effet que `schedule_changed()`, en signalant en plus à l'admin les
-/// équipes exclues de l'appariement (non `Enrolled`) et/ou les journées non
-/// régénérées car elles avaient déjà des appariements.
-fn schedule_changed_with_warning(skipped_teams: Vec<String>, skipped_rounds: Vec<String>) -> Response {
-    let mut response = Json(ScheduleActionResult { skipped_teams, skipped_rounds }).into_response();
+/// équipes exclues de l'appariement (non `Enrolled`), les journées non
+/// régénérées car elles avaient déjà des appariements, et/ou les poules sans
+/// effectif suffisant (< 2 équipes assignées, aucun appariement possible).
+fn schedule_changed_with_warning(skipped_teams: Vec<String>, skipped_rounds: Vec<String>, skipped_groups: Vec<String>) -> Response {
+    let mut response = Json(ScheduleActionResult { skipped_teams, skipped_rounds, skipped_groups }).into_response();
     response.headers_mut().insert("HX-Trigger", "scheduleChanged".parse().unwrap());
     response
 }
@@ -80,7 +83,7 @@ pub async fn post_generate_all(
     )
     .await
     {
-        Ok(outcome) => schedule_changed_with_warning(outcome.skipped_team_names, outcome.skipped_round_names),
+        Ok(outcome) => schedule_changed_with_warning(outcome.skipped_team_names, outcome.skipped_round_names, outcome.skipped_group_names),
         Err(e) => {
             tracing::error!("post_generate_all: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -358,7 +361,7 @@ pub async fn post_generate_round_pairings(
     )
     .await
     {
-        Ok(outcome) => schedule_changed_with_warning(outcome.skipped_team_names, vec![]),
+        Ok(outcome) => schedule_changed_with_warning(outcome.skipped_team_names, vec![], outcome.skipped_group_names),
         Err(generate_pairings::GenerateError::PairingsAlreadyExist) => pairings_already_exist_refused(),
         Err(e) => {
             tracing::error!("post_generate_round_pairings: {e:?}");
@@ -430,7 +433,7 @@ pub async fn post_add_match(
     )
     .await
     {
-        Ok(()) => schedule_changed_with_warning(vec![], vec![]),
+        Ok(()) => schedule_changed_with_warning(vec![], vec![], vec![]),
         Err(add_match_use_case::AddMatchError::TeamsNotEnrolled(names)) => add_match_refused(&names),
         Err(add_match_use_case::AddMatchError::RoundNotFound) => StatusCode::NOT_FOUND.into_response(),
         Err(add_match_use_case::AddMatchError::InvalidTeamId) => StatusCode::BAD_REQUEST.into_response(),
