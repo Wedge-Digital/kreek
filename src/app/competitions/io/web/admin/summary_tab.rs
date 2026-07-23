@@ -5,6 +5,7 @@ use crate::app::competitions::domain::competition_structure::CompetitionStructur
 use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::io::web::admin::admin_page::require_admin_access;
+use crate::app::competitions::io::web::rules_labels::format_bonus_label;
 use crate::app::competitions::ports::ICompetitionReferencePort;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId};
@@ -189,24 +190,7 @@ fn build_rules_labels(
         "Victoire = {} pts · Nul = {} pt · Défaite = {} pt",
         rr.win_points, rr.draw_points, rr.lose_points
     );
-    let bonus: Option<String> = {
-        let off = if rr.offensive_bonus.activated.0 {
-            Some(format!("+{} si ≥ {} TDs", rr.offensive_bonus.points, rr.offensive_bonus.diff_td))
-        } else {
-            None
-        };
-        let def = if rr.defensive_bonus.activated.0 {
-            Some(format!("+{} si ≤ 1 TD encaissé", rr.defensive_bonus.points))
-        } else {
-            None
-        };
-        match (off, def) {
-            (Some(o), Some(d)) => Some(format!("Offensif ({o}) · Défensif ({d})")),
-            (Some(o), None) => Some(format!("Offensif ({o})")),
-            (None, Some(d)) => Some(format!("Défensif ({d})")),
-            (None, None) => None,
-        }
-    };
+    let bonus = format_bonus_label(rr);
     let tiers: Option<String> = if r.tiers.is_empty() {
         None
     } else {

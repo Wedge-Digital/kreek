@@ -3,6 +3,7 @@ use crate::app::competitions::domain::competition_invitations::AccessMode;
 use crate::app::competitions::use_cases::finalize_competition::{
     execute as execute_finalize, FinalizeCompetitionCommand, FinalizeCompetitionError,
 };
+use crate::app::competitions::io::web::rules_labels::format_bonus_label;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId, SpaceId};
 use crate::state::AppState;
@@ -132,27 +133,7 @@ pub async fn get_new_competition_phase_5(
                 rr.win_points, rr.draw_points, rr.lose_points
             );
 
-            let bonus: Option<String> = {
-                let off = if rr.offensive_bonus.activated.0 {
-                    Some(format!(
-                        "+{} si ≥ {} TDs",
-                        rr.offensive_bonus.points, rr.offensive_bonus.diff_td
-                    ))
-                } else {
-                    None
-                };
-                let def = if rr.defensive_bonus.activated.0 {
-                    Some(format!("+{} si ≤ 1 TD encaissé", rr.defensive_bonus.points))
-                } else {
-                    None
-                };
-                match (off, def) {
-                    (Some(o), Some(d)) => Some(format!("Offensif ({o}) · Défensif ({d})")),
-                    (Some(o), None) => Some(format!("Offensif ({o})")),
-                    (None, Some(d)) => Some(format!("Défensif ({d})")),
-                    (None, None) => None,
-                }
-            };
+            let bonus = format_bonus_label(rr);
 
             let tiers: Option<String> = if r.tiers.is_empty() {
                 None

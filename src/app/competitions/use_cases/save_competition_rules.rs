@@ -56,7 +56,8 @@ mod tests {
     use super::*;
     use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
     use crate::app::competitions::domain::competition_rules::{
-        Activated, DefensiveBonus, OffensiveBonus, RankingPoints, RankingRules, TdDiff, TierRule,
+        Activated, AggressiveBonus, DefensiveBonus, MaxTdConceded, MinCasualties, MinTd,
+        OffensiveBonus, RankingPoints, RankingRules, TierRule,
     };
     use crate::app::shared_kernel::tier::{CreationBudget, StartingXp, TierName};
     use crate::app::competitions::domain::competition_season::CompetitionSeason;
@@ -154,12 +155,18 @@ mod tests {
                 lose_points: RankingPoints::try_new(0).unwrap(),
                 offensive_bonus: OffensiveBonus {
                     activated: Activated(true),
-                    diff_td: TdDiff::try_new(3).unwrap(),
+                    min_td: MinTd::try_new(3).unwrap(),
                     points: RankingPoints::try_new(1).unwrap(),
                 },
                 defensive_bonus: DefensiveBonus {
                     activated: Activated(true),
                     points: RankingPoints::try_new(1).unwrap(),
+                    max_td_conceded: MaxTdConceded::try_new(1).unwrap(),
+                },
+                aggressive_bonus: AggressiveBonus {
+                    activated: Activated(false),
+                    points: RankingPoints::try_new(1).unwrap(),
+                    min_casualties: MinCasualties::try_new(2).unwrap(),
                 },
                 additionnal_ranking_points: HashMap::new(),
             },

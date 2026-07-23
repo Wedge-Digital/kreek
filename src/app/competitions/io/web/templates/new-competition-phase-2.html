@@ -61,7 +61,7 @@
 
   <div class="separator"></div>
 
-  <!-- ── Bonus offensif / défensif ── -->
+  <!-- ── Bonus offensif / défensif / agressif ── -->
   <div class="rules-section">
     <div class="rules-section-title">Bonus de classement</div>
 
@@ -72,16 +72,29 @@
         <input type="number" id="off_points" class="bonus-num" value="1" min="0">
         <span class="label-tiny">pt si ≥</span>
         <input type="number" id="off_diff_td" class="bonus-num" value="3" min="1">
-        <span class="label-tiny">TDs</span>
+        <span class="label-tiny">TDs marqués</span>
       </div>
     </div>
 
-    <div class="bonus-row mb-0">
+    <div class="bonus-row">
       <input type="checkbox" id="def_activated" class="bonus-check" checked>
       <span class="bonus-label">Bonus défensif : +</span>
       <div class="bonus-inline">
         <input type="number" id="def_points" class="bonus-num" value="1" min="0">
-        <span class="label-tiny">pt si ≤ 1 TD encaissé</span>
+        <span class="label-tiny">pt si ≤</span>
+        <input type="number" id="def_max_td" class="bonus-num" value="1" min="0">
+        <span class="label-tiny">TD encaissés</span>
+      </div>
+    </div>
+
+    <div class="bonus-row mb-0">
+      <input type="checkbox" id="agg_activated" class="bonus-check">
+      <span class="bonus-label">Bonus agressif : +</span>
+      <div class="bonus-inline">
+        <input type="number" id="agg_points" class="bonus-num" value="1" min="0">
+        <span class="label-tiny">pt si &gt;</span>
+        <input type="number" id="agg_min_cas" class="bonus-num" value="2" min="0">
+        <span class="label-tiny">sorties infligées</span>
       </div>
     </div>
   </div>
@@ -329,6 +342,26 @@
 
   // ── Sérialisation JSON ────────────────────────────────────────────────────────
 
+  function buildBonusRules() {
+    return {
+      offensive_bonus: {
+        activated: document.getElementById('off_activated').checked,
+        diff_td:   +document.getElementById('off_diff_td').value,
+        points:    +document.getElementById('off_points').value,
+      },
+      defensive_bonus: {
+        activated:       document.getElementById('def_activated').checked,
+        points:          +document.getElementById('def_points').value,
+        max_td_conceded: +document.getElementById('def_max_td').value,
+      },
+      aggressive_bonus: {
+        activated:      document.getElementById('agg_activated').checked,
+        points:         +document.getElementById('agg_points').value,
+        min_casualties: +document.getElementById('agg_min_cas').value,
+      },
+    };
+  }
+
   function buildJSON() {
     return {
       season_name: document.getElementById('season_name').value || 'Saison 1',
@@ -336,15 +369,7 @@
         win_points:  +document.getElementById('win_points').value,
         draw_points: +document.getElementById('draw_points').value,
         lose_points: +document.getElementById('lose_points').value,
-        offensive_bonus: {
-          activated: document.getElementById('off_activated').checked,
-          diff_td:   +document.getElementById('off_diff_td').value,
-          points:    +document.getElementById('off_points').value,
-        },
-        defensive_bonus: {
-          activated: document.getElementById('def_activated').checked,
-          points:    +document.getElementById('def_points').value,
-        },
+        ...buildBonusRules(),
         additionnal_ranking_points: Object.fromEntries(
           criteriaOrder.map((c, idx) => [c.id, idx + 1])
         ),
@@ -391,6 +416,22 @@
 
   // ── Initialisation ────────────────────────────────────────────────────────────
 
+  function hydrateBonuses(rr) {
+    document.getElementById('off_activated').checked = rr.offensive_bonus.activated;
+    document.getElementById('off_points').value      = rr.offensive_bonus.points;
+    document.getElementById('off_diff_td').value     = rr.offensive_bonus.diff_td;
+
+    document.getElementById('def_activated').checked = rr.defensive_bonus.activated;
+    document.getElementById('def_points').value      = rr.defensive_bonus.points;
+    document.getElementById('def_max_td').value      = rr.defensive_bonus.max_td_conceded ?? 1;
+
+    // Rétro-compat : règles enregistrées avant l'ajout du bonus agressif.
+    const agg = rr.aggressive_bonus ?? { activated: false, points: 1, min_casualties: 2 };
+    document.getElementById('agg_activated').checked = agg.activated;
+    document.getElementById('agg_points').value      = agg.points;
+    document.getElementById('agg_min_cas').value     = agg.min_casualties;
+  }
+
   function initFromExistingRules(rules) {
     const rr = rules.ranking_rules;
 
@@ -398,12 +439,7 @@
     document.getElementById('draw_points').value = rr.draw_points;
     document.getElementById('lose_points').value = rr.lose_points;
 
-    document.getElementById('off_activated').checked = rr.offensive_bonus.activated;
-    document.getElementById('off_points').value      = rr.offensive_bonus.points;
-    document.getElementById('off_diff_td').value     = rr.offensive_bonus.diff_td;
-
-    document.getElementById('def_activated').checked = rr.defensive_bonus.activated;
-    document.getElementById('def_points').value      = rr.defensive_bonus.points;
+    hydrateBonuses(rr);
 
     // Critères de départage : reconstruction depuis la map {id: priorité}
     const pts = rr.additionnal_ranking_points;
