@@ -48,7 +48,7 @@
           hx-post="{% if let Some(cid) = competition_id %}{{ app_routes.competitions.new_competition_info(space_id.as_str(), cid.as_str()) }}{% else %}{{ app_routes.competitions.new_competition(space_id.as_str()) }}{% endif %}"
           hx-target="#app-content"
           hx-select="#app-content"
-          hx-swap="innerHTML">
+          hx-swap="outerHTML">
 
       {% if let Some(sid) = season_id %}
       <input type="hidden" name="season_id" value="{{ sid }}">

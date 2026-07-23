@@ -5,7 +5,7 @@
      hx-get="{{ app_routes.news.space_home(space.id) }}"
      hx-target="#app-content"
      hx-select="#app-content"
-     hx-swap="innerHTML"
+     hx-swap="outerHTML"
      hx-push-url="true"
      hx-on::after-request="htmx.trigger(document.body, 'space:changed')"
      title="{{ space.name }}">
@@ -18,7 +18,7 @@
      hx-get="{{ app_routes.spaces.register_space() }}"
      hx-target="#app-content"
      hx-select="#app-content"
-     hx-swap="innerHTML"
+     hx-swap="outerHTML"
      hx-push-url="true"
      title="Ajouter une ligue">+</div>
 <div class="find-space-btn league-btn--icon"
@@ -26,6 +26,6 @@
      hx-get="{{ app_routes.spaces.space_all() }}"
      hx-target="#app-content"
      hx-select="#app-content"
-     hx-swap="innerHTML"
+     hx-swap="outerHTML"
      hx-push-url="true"
      title="Rechercher une ligue">🔍</div>

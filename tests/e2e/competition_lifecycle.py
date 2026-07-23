@@ -130,6 +130,13 @@ def build_and_submit_team(page: Page, space_id: str, competition_name: str, coac
     assert team_match, f"team_id introuvable dans {page.url}"
     team_id = team_match.group(1)
 
+    # #player-table-body existe toujours dès le rendu initial (hx-trigger
+    # "load" sur #player-table-container, en plus de "rosterSelected") —
+    # l'attendre garantit que htmx a fini d'attacher ses listeners sur toute
+    # la page avant qu'on déclenche rosterSelected. Sans ça, l'event peut
+    # partir avant que #player-table-container écoute déjà, et le widget ne
+    # se met jamais à jour (course intermittente, cf. test_special_rule_selector.py).
+    page.wait_for_selector("#player-table-body", timeout=5000)
     page.evaluate(
         "([uid, name]) => htmx.trigger(document.body, 'rosterSelected', {uid, name})",
         [roster_uid, roster_name],
@@ -154,13 +161,35 @@ def build_and_submit_team(page: Page, space_id: str, competition_name: str, coac
     assert hired >= 11, f"N'a pu recruter que {hired} joueurs pour {team_id}"
 
     page.click("text=Terminer la construction →")
-    page.wait_for_timeout(1000)
+    # "Terminer la construction" est un lien HTMX (hx-get, hx-push-url), pas une
+    # navigation classique — un wait_for_timeout fixe pariait sur une durée de
+    # swap au lieu d'attendre le DOM réel. Sous charge (12 équipes construites
+    # d'affilée), le swap peut dépasser 1s : .submit-bar n'existe pas encore,
+    # count()==0, l'équipe restait silencieusement en brouillon (jamais soumise,
+    # jamais Enrolled — bug découvert via 11/12 équipes Enrolled au lieu de 12).
+    page.wait_for_selector(".submit-bar", timeout=10000)
+
+    # .submit-bar existe dès le rendu initial du swap, mais les widgets
+    # player-list et spp-budget (hx-trigger="load", pas de placeholder de
+    # hauteur réservée) chargent leur contenu juste après et poussent le
+    # bouton plus bas dans la page (~540px observé) — un clic pile pendant
+    # cette fenêtre de quelques dizaines de ms tombe dans le vide (bouton non
+    # cliqué, aucune requête POST envoyée, la page reste bloquée sur
+    # /finalize). Attendre le contenu réel de ces deux widgets avant de
+    # cliquer élimine la course, sans parier sur une durée arbitraire.
+    page.wait_for_selector(".player-list .player-row", timeout=5000)
+    page.wait_for_selector(".spp-budget", timeout=5000)
 
     # SPP > 0 : atterrit sur finalize-team.html, soumission sans dépense.
     submit_btn = page.locator(".submit-bar button")
     if submit_btn.count() > 0:
         submit_btn.click()
-        page.wait_for_timeout(1000)
+        # post_finalize_team répond par HX-Redirect vers /teams/{team_id} (pluriel)
+        # en cas de succès — navigation de toute la page, indépendante du
+        # hx-target du bouton. Signal de succès fiable, contrairement à un
+        # wait_for_timeout fixe qui pariait sur la durée de la chaîne
+        # soumission + auto-enrôlement (asynchrone, plus lente sous charge).
+        page.wait_for_url(re.compile(r".*/teams/.*"), timeout=10000)
 
     return team_id
 

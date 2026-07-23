@@ -10,7 +10,7 @@
        hx-get="{{ back_url }}"
        hx-target="#app-content"
        hx-select="#app-content"
-       hx-swap="innerHTML"
+       hx-swap="outerHTML"
        hx-push-url="true">← Mes équipes</a>
   </div>
 
@@ -86,7 +86,7 @@
         {% when BannerCtaVm::Print %}
           <button class="state-banner-cta state-banner-cta--outline" onclick="window.print()">Imprimer en PDF</button>
         {% when BannerCtaVm::Navigate { label, href } %}
-          <a class="state-banner-cta" hx-get="{{ href }}" hx-target="#app-content" hx-select="#app-content" hx-swap="innerHTML" hx-push-url="true">{{ label }}</a>
+          <a class="state-banner-cta" hx-get="{{ href }}" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML" hx-push-url="true">{{ label }}</a>
         {% when BannerCtaVm::Mutate { label, post_url } %}
           <button class="state-banner-cta" hx-post="{{ post_url }}">{{ label }}</button>
       {% endmatch %}

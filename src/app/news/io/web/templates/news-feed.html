@@ -18,7 +18,7 @@
               hx-get="{{ app_routes.news.new_article(space_id) }}"
               hx-target="#app-content"
               hx-select="#app-content"
-              hx-swap="innerHTML"
+              hx-swap="outerHTML"
               hx-push-url="true">
         + Rédiger un article
       </button>
@@ -30,7 +30,7 @@
        hx-get="{{ app_routes.news.article(space_id, f.id) }}"
        hx-target="#app-content"
        hx-select="#app-content"
-       hx-swap="innerHTML"
+       hx-swap="outerHTML"
        hx-push-url="true">
     <div class="news-card-img" {% if let Some(img) = f.image %}style="background-image: url('{{ img }}'); background-size: cover; background-position: center;"{% endif %}></div>
     <div class="news-card-gradient"></div>
@@ -64,7 +64,7 @@
          hx-get="{{ app_routes.news.article(space_id, article.id) }}"
          hx-target="#app-content"
          hx-select="#app-content"
-         hx-swap="innerHTML"
+         hx-swap="outerHTML"
          hx-push-url="true">
       {% if let Some(img) = article.image %}
       <div class="latest-news-img" style="background-image: url('{{ img }}'); background-size: cover; background-position: center;"></div>
@@ -113,7 +113,7 @@
             hx-get="{{ app_routes.news.space_home(space_id) }}?page={{ item.page.unwrap() }}"
             hx-target="#app-content"
             hx-select="#app-content"
-            hx-swap="innerHTML"
+            hx-swap="outerHTML"
             hx-push-url="true">
       {{ item.page.unwrap() }}
     </button>
