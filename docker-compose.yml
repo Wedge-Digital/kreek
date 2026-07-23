@@ -1,0 +1,21 @@
+services:
+  kreek:
+    build:
+      context: .
+      # Stage par défaut du Dockerfile = image runtime exécutable.
+    image: kreek
+    container_name: kreek-app
+    restart: unless-stopped
+    ports:
+      - "3210:3210"
+    env_file:
+      - .env.dev
+    environment:
+      # .env.dev vise un postgres local sur "localhost:4326" — depuis le conteneur,
+      # "localhost" pointerait vers le conteneur lui-même. On réécrit vers l'hôte.
+      DATABASE__HOST: host.docker.internal
+      DATABASE__URL: postgresql://root:root@host.docker.internal:4326/kreek_db
+    extra_hosts:
+      # host-gateway rend host.docker.internal résolvable sous Docker Engine Linux
+      # (pas seulement Docker Desktop).
+      - "host.docker.internal:host-gateway"

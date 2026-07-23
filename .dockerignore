@@ -1,0 +1,24 @@
+target
+.git
+.idea
+.venv
+.claude
+
+# Environnement local — jamais dans le contexte de build
+.env
+.env.*
+!.env.example
+
+# Non nécessaires à la compilation du binaire
+tests
+kanban
+docs
+doc
+blog
+assets/rawpages
+migrations
+scripts
+memory
+
+*.md
+!Cargo.lock
