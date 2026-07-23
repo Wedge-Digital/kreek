@@ -1,4 +1,4 @@
-use crate::app::shared_kernel::common_types::{MatchReportId, RoundId, SeasonId};
+use crate::app::shared_kernel::common_types::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::team::TeamId;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -20,6 +20,18 @@ impl std::ops::Add for RankingPoints {
         RankingPoints(self.0 + rhs.0)
     }
 }
+
+/// Compteurs cumulés d'une ligne de classement — newtypes sans invariant
+/// (sortent du régime primitif nu, règle CQRS), un type par compteur pour
+/// éviter toute confusion entre eux (même style que `players::TouchdownCount`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MatchesPlayed(pub u32);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WinCount(pub u32);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DrawCount(pub u32);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LossCount(pub u32);
 
 /// Barème de points de classement d'une compétition — copie en lecture des
 /// règles consultées via `IRankingCompetitionPort` (carte 193), jamais le
@@ -46,14 +58,15 @@ pub enum MatchOutcome {
 #[derive(Debug, Clone)]
 pub struct RankingLine {
     pub team_id: TeamId,
+    pub competition_id: CompetitionId,
     pub season_id: SeasonId,
     pub round_id: RoundId,
     pub match_report_id: MatchReportId,
     pub recorded_at: DateTime<Utc>,
-    pub matches_played: u32,
-    pub wins: u32,
-    pub draws: u32,
-    pub losses: u32,
+    pub matches_played: MatchesPlayed,
+    pub wins: WinCount,
+    pub draws: DrawCount,
+    pub losses: LossCount,
     pub ranking_points: RankingPoints,
 }
 
@@ -75,6 +88,7 @@ impl RankingLine {
     pub fn record_match(
         previous: Option<&RankingLine>,
         team_id: TeamId,
+        competition_id: CompetitionId,
         season_id: SeasonId,
         round_id: RoundId,
         match_report_id: MatchReportId,
@@ -84,7 +98,7 @@ impl RankingLine {
     ) -> RankingLine {
         let (matches_played, wins, draws, losses, points) = previous
             .map(|p| (p.matches_played, p.wins, p.draws, p.losses, p.ranking_points))
-            .unwrap_or((0, 0, 0, 0, RankingPoints(0)));
+            .unwrap_or((MatchesPlayed(0), WinCount(0), DrawCount(0), LossCount(0), RankingPoints(0)));
 
         let match_points = match outcome {
             MatchOutcome::Win => rules.win_points,
@@ -94,14 +108,15 @@ impl RankingLine {
 
         RankingLine {
             team_id,
+            competition_id,
             season_id,
             round_id,
             match_report_id,
             recorded_at,
-            matches_played: matches_played + 1,
-            wins: wins + u32::from(outcome == MatchOutcome::Win),
-            draws: draws + u32::from(outcome == MatchOutcome::Draw),
-            losses: losses + u32::from(outcome == MatchOutcome::Loss),
+            matches_played: MatchesPlayed(matches_played.0 + 1),
+            wins: WinCount(wins.0 + u32::from(outcome == MatchOutcome::Win)),
+            draws: DrawCount(draws.0 + u32::from(outcome == MatchOutcome::Draw)),
+            losses: LossCount(losses.0 + u32::from(outcome == MatchOutcome::Loss)),
             ranking_points: points + match_points,
         }
     }
@@ -111,8 +126,8 @@ impl RankingLine {
 mod tests {
     use super::*;
 
-    fn ids() -> (TeamId, SeasonId, RoundId, MatchReportId) {
-        (TeamId::new(), SeasonId::new(), RoundId::new(), MatchReportId::new())
+    fn ids() -> (TeamId, CompetitionId, SeasonId, RoundId, MatchReportId) {
+        (TeamId::new(), CompetitionId::new(), SeasonId::new(), RoundId::new(), MatchReportId::new())
     }
 
     fn rules() -> RankingRules {
@@ -143,7 +158,7 @@ mod tests {
 
     #[test]
     fn record_match_home_and_away_outcomes_are_symmetric() {
-        let (team_id, season_id, round_id, match_report_id) = ids();
+        let (team_id, competition_id, season_id, round_id, match_report_id) = ids();
         let home_score = MatchScore(2);
         let away_score = MatchScore(1);
 
@@ -154,78 +169,78 @@ mod tests {
         assert_eq!(away_outcome, MatchOutcome::Loss);
 
         let home_line = RankingLine::record_match(
-            None, team_id.clone(), season_id.clone(), round_id.clone(), match_report_id.clone(),
+            None, team_id.clone(), competition_id.clone(), season_id.clone(), round_id.clone(), match_report_id.clone(),
             Utc::now(), home_outcome, &rules(),
         );
         let away_line = RankingLine::record_match(
-            None, team_id, season_id, round_id, match_report_id,
+            None, team_id, competition_id, season_id, round_id, match_report_id,
             Utc::now(), away_outcome, &rules(),
         );
 
-        assert_eq!(home_line.wins, 1);
-        assert_eq!(home_line.losses, 0);
-        assert_eq!(away_line.wins, 0);
-        assert_eq!(away_line.losses, 1);
+        assert_eq!(home_line.wins.0, 1);
+        assert_eq!(home_line.losses.0, 0);
+        assert_eq!(away_line.wins.0, 0);
+        assert_eq!(away_line.losses.0, 1);
     }
 
     #[test]
     fn record_match_without_previous_line_starts_from_zero() {
-        let (team_id, season_id, round_id, match_report_id) = ids();
+        let (team_id, competition_id, season_id, round_id, match_report_id) = ids();
         let line = RankingLine::record_match(
-            None, team_id, season_id, round_id, match_report_id,
+            None, team_id, competition_id, season_id, round_id, match_report_id,
             Utc::now(), MatchOutcome::Win, &rules(),
         );
 
-        assert_eq!(line.matches_played, 1);
-        assert_eq!(line.wins, 1);
-        assert_eq!(line.draws, 0);
-        assert_eq!(line.losses, 0);
+        assert_eq!(line.matches_played.0, 1);
+        assert_eq!(line.wins.0, 1);
+        assert_eq!(line.draws.0, 0);
+        assert_eq!(line.losses.0, 0);
         assert_eq!(line.ranking_points.0, 3);
     }
 
     #[test]
     fn record_match_with_previous_line_accumulates() {
-        let (team_id, season_id, round_id, match_report_id) = ids();
+        let (team_id, competition_id, season_id, round_id, match_report_id) = ids();
         let previous = RankingLine::record_match(
-            None, team_id.clone(), season_id.clone(), round_id.clone(), match_report_id.clone(),
+            None, team_id.clone(), competition_id.clone(), season_id.clone(), round_id.clone(), match_report_id.clone(),
             Utc::now(), MatchOutcome::Win, &rules(),
         );
 
         let next = RankingLine::record_match(
-            Some(&previous), team_id, season_id, round_id, match_report_id,
+            Some(&previous), team_id, competition_id, season_id, round_id, match_report_id,
             Utc::now(), MatchOutcome::Draw, &rules(),
         );
 
-        assert_eq!(next.matches_played, 2);
-        assert_eq!(next.wins, 1);
-        assert_eq!(next.draws, 1);
-        assert_eq!(next.losses, 0);
+        assert_eq!(next.matches_played.0, 2);
+        assert_eq!(next.wins.0, 1);
+        assert_eq!(next.draws.0, 1);
+        assert_eq!(next.losses.0, 0);
         assert_eq!(next.ranking_points.0, 4); // 3 (victoire) + 1 (nul)
     }
 
     #[test]
     fn record_match_accumulates_over_three_successive_matches() {
-        let (team_id, season_id, round_id, match_report_id) = ids();
+        let (team_id, competition_id, season_id, round_id, match_report_id) = ids();
         let mut line: Option<RankingLine> = None;
 
         for outcome in [MatchOutcome::Win, MatchOutcome::Draw, MatchOutcome::Loss] {
             line = Some(RankingLine::record_match(
-                line.as_ref(), team_id.clone(), season_id.clone(), round_id.clone(),
+                line.as_ref(), team_id.clone(), competition_id.clone(), season_id.clone(), round_id.clone(),
                 match_report_id.clone(), Utc::now(), outcome, &rules(),
             ));
         }
 
         let line = line.unwrap();
-        assert_eq!(line.matches_played, 3);
-        assert_eq!(line.wins, 1);
-        assert_eq!(line.draws, 1);
-        assert_eq!(line.losses, 1);
+        assert_eq!(line.matches_played.0, 3);
+        assert_eq!(line.wins.0, 1);
+        assert_eq!(line.draws.0, 1);
+        assert_eq!(line.losses.0, 1);
         assert_eq!(line.ranking_points.0, 4); // 3 + 1 + 0
     }
 
     #[test]
     fn record_match_applies_points_from_rules_per_outcome() {
-        let (team_id, season_id, round_id, match_report_id) = ids();
+        let (team_id, competition_id, season_id, round_id, match_report_id) = ids();
         let custom_rules = RankingRules {
             win_points: RankingPoints(5),
             draw_points: RankingPoints(2),
@@ -233,15 +248,15 @@ mod tests {
         };
 
         let win = RankingLine::record_match(
-            None, team_id.clone(), season_id.clone(), round_id.clone(), match_report_id.clone(),
+            None, team_id.clone(), competition_id.clone(), season_id.clone(), round_id.clone(), match_report_id.clone(),
             Utc::now(), MatchOutcome::Win, &custom_rules,
         );
         let draw = RankingLine::record_match(
-            None, team_id.clone(), season_id.clone(), round_id.clone(), match_report_id.clone(),
+            None, team_id.clone(), competition_id.clone(), season_id.clone(), round_id.clone(), match_report_id.clone(),
             Utc::now(), MatchOutcome::Draw, &custom_rules,
         );
         let loss = RankingLine::record_match(
-            None, team_id, season_id, round_id, match_report_id,
+            None, team_id, competition_id, season_id, round_id, match_report_id,
             Utc::now(), MatchOutcome::Loss, &custom_rules,
         );
 
