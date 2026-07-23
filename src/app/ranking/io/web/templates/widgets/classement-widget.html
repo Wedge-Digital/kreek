@@ -30,7 +30,12 @@
                 <div class="standings-header-num">Pts</div>
             </div>
             {% for row in group.rows %}
-            <div class="standings-row">
+            <div class="standings-row"
+                 hx-get="{{ row.team_link }}"
+                 hx-target="#app-content"
+                 hx-select="#app-content"
+                 hx-swap="outerHTML"
+                 hx-push-url="true">
                 <div class="standings-rank">{% if row.rank == 1 %}🏆{% endif %}{{ row.rank }}</div>
                 <div class="standings-team">{{ row.team_name }}</div>
                 <div class="standings-num">{{ row.played }}</div>

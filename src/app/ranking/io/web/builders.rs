@@ -1,5 +1,6 @@
 use crate::app::ranking::io::web::widgets::classement_widget::{ClassementGroupVm, ClassementRowVm};
 use crate::app::ranking::ports::{EnrolledTeamInfo, RankingGroupInfo, RankingLineRow};
+use crate::app::routes::AppRoutes;
 use std::collections::HashSet;
 
 /// Un classement par poule si la saison en compte 2 ou plus (BR : chaque
@@ -8,26 +9,28 @@ use std::collections::HashSet;
 /// saison, comportement inchangé. Les équipes enrôlées non assignées à une
 /// poule sont regroupées à part plutôt que de disparaître silencieusement.
 pub fn build_classement_groups(
+    space_id: &str,
     lines: Vec<RankingLineRow>,
     teams: &[EnrolledTeamInfo],
     groups: &[RankingGroupInfo],
 ) -> Vec<ClassementGroupVm> {
     if groups.len() <= 1 {
-        return vec![build_group_vm(None, None, &lines, teams)];
+        return vec![build_group_vm(space_id, None, None, &lines, teams)];
     }
 
     let mut result: Vec<ClassementGroupVm> = groups
         .iter()
-        .map(|g| build_group_vm(Some(g.group_name.clone()), Some(&g.team_ids), &lines, teams))
+        .map(|g| build_group_vm(space_id, Some(g.group_name.clone()), Some(&g.team_ids), &lines, teams))
         .collect();
 
-    if let Some(unassigned) = build_unassigned_group(&lines, teams, groups) {
+    if let Some(unassigned) = build_unassigned_group(space_id, &lines, teams, groups) {
         result.push(unassigned);
     }
     result
 }
 
 fn build_unassigned_group(
+    space_id: &str,
     lines: &[RankingLineRow],
     teams: &[EnrolledTeamInfo],
     groups: &[RankingGroupInfo],
@@ -42,11 +45,12 @@ fn build_unassigned_group(
     if unassigned_ids.is_empty() {
         return None;
     }
-    Some(build_group_vm(Some("Non assignées".to_string()), Some(&unassigned_ids), lines, teams))
+    Some(build_group_vm(space_id, Some("Non assignées".to_string()), Some(&unassigned_ids), lines, teams))
 }
 
 /// `team_ids: None` = pas de filtrage (classement à plat, saison sans poule).
 fn build_group_vm(
+    space_id: &str,
     title: Option<String>,
     team_ids: Option<&[String]>,
     lines: &[RankingLineRow],
@@ -65,7 +69,7 @@ fn build_group_vm(
     ClassementGroupVm {
         title,
         has_enrolled_teams: !group_teams.is_empty(),
-        rows: build_classement_rows(group_lines, &group_teams),
+        rows: build_classement_rows(space_id, group_lines, &group_teams),
     }
 }
 
@@ -73,6 +77,7 @@ fn build_group_vm(
 /// (port `competitions`, pour les noms) — trie par points décroissants et
 /// assigne le rang à la construction (jamais stocké sur la ligne elle-même).
 pub fn build_classement_rows(
+    space_id: &str,
     lines: Vec<RankingLineRow>,
     teams: &[EnrolledTeamInfo],
 ) -> Vec<ClassementRowVm> {
@@ -84,9 +89,11 @@ pub fn build_classement_rows(
                 .find(|t| t.team_id == line.team_id)
                 .map(|t| t.team_name.clone())
                 .unwrap_or_else(|| line.team_id.clone());
+            let team_link = AppRoutes::default().teams.team_detail(space_id, &line.team_id);
             ClassementRowVm {
                 rank: 0,
                 team_name,
+                team_link,
                 played: line.matches_played,
                 wins: line.wins,
                 draws: line.draws,
@@ -120,7 +127,7 @@ mod tests {
         let lines = vec![line("t1", 3), line("t2", 9), line("t3", 6)];
         let teams = vec![team("t1", "A"), team("t2", "B"), team("t3", "C")];
 
-        let rows = build_classement_rows(lines, &teams);
+        let rows = build_classement_rows("sp1", lines, &teams);
 
         assert_eq!(rows[0].team_name, "B");
         assert_eq!(rows[0].rank, 1);
@@ -132,14 +139,20 @@ mod tests {
 
     #[test]
     fn resolves_team_names_from_enrolled_teams() {
-        let rows = build_classement_rows(vec![line("t1", 3)], &[team("t1", "Les Guerriers")]);
+        let rows = build_classement_rows("sp1", vec![line("t1", 3)], &[team("t1", "Les Guerriers")]);
         assert_eq!(rows[0].team_name, "Les Guerriers");
     }
 
     #[test]
     fn falls_back_to_team_id_when_name_unresolved() {
-        let rows = build_classement_rows(vec![line("t1", 3)], &[]);
+        let rows = build_classement_rows("sp1", vec![line("t1", 3)], &[]);
         assert_eq!(rows[0].team_name, "t1");
+    }
+
+    #[test]
+    fn builds_team_detail_link_from_space_and_team_id() {
+        let rows = build_classement_rows("sp1", vec![line("t1", 3)], &[team("t1", "A")]);
+        assert_eq!(rows[0].team_link, AppRoutes::default().teams.team_detail("sp1", "t1"));
     }
 
     fn group(id: &str, name: &str, team_ids: &[&str]) -> RankingGroupInfo {
@@ -155,8 +168,8 @@ mod tests {
         let teams = vec![team("t1", "A"), team("t2", "B")];
         let lines = vec![line("t1", 3), line("t2", 9)];
 
-        let none = build_classement_groups(lines.clone(), &teams, &[]);
-        let single = build_classement_groups(lines, &teams, &[group("g1", "Poule unique", &["t1", "t2"])]);
+        let none = build_classement_groups("sp1", lines.clone(), &teams, &[]);
+        let single = build_classement_groups("sp1", lines, &teams, &[group("g1", "Poule unique", &["t1", "t2"])]);
 
         for groups in [none, single] {
             assert_eq!(groups.len(), 1);
@@ -171,7 +184,7 @@ mod tests {
         let lines = vec![line("t1", 3), line("t2", 9), line("t3", 6), line("t4", 1)];
         let groups = vec![group("g1", "Poule 1", &["t1", "t2"]), group("g2", "Poule 2", &["t3", "t4"])];
 
-        let result = build_classement_groups(lines, &teams, &groups);
+        let result = build_classement_groups("sp1", lines, &teams, &groups);
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].title, Some("Poule 1".to_string()));
@@ -187,7 +200,7 @@ mod tests {
         let teams = vec![team("t1", "A"), team("t2", "B")];
         let groups = vec![group("g1", "Poule 1", &["t1", "t2"]), group("g2", "Poule 2", &[])];
 
-        let result = build_classement_groups(vec![], &teams, &groups);
+        let result = build_classement_groups("sp1", vec![], &teams, &groups);
 
         assert_eq!(result[1].title, Some("Poule 2".to_string()));
         assert!(!result[1].has_enrolled_teams);
@@ -199,7 +212,7 @@ mod tests {
         let teams = vec![team("t1", "A"), team("t2", "B")];
         let groups = vec![group("g1", "Poule 1", &["t1"]), group("g2", "Poule 2", &[])];
 
-        let result = build_classement_groups(vec![], &teams, &groups);
+        let result = build_classement_groups("sp1", vec![], &teams, &groups);
 
         assert_eq!(result.len(), 3);
         assert_eq!(result[2].title, Some("Non assignées".to_string()));
@@ -212,7 +225,7 @@ mod tests {
         let teams = vec![team("t1", "A")];
         let groups = vec![group("g1", "Poule 1", &["t1"]), group("g2", "Poule 2", &[])];
 
-        let result = build_classement_groups(vec![], &teams, &groups);
+        let result = build_classement_groups("sp1", vec![], &teams, &groups);
 
         assert_eq!(result.len(), 2);
     }

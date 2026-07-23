@@ -20,6 +20,7 @@
   display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px;
   padding: 12px 16px; gap: 8px; align-items: center;
   border-bottom: 1px solid var(--dark-6); font-size: var(--text-small);
+  cursor: pointer;
 }
 .standings-row:last-child      { border-bottom: none; }
 .standings-row:nth-child(even) { background: var(--dark-7); }

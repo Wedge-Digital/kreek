@@ -9,6 +9,7 @@ use askama::Template;
 pub struct ClassementRowVm {
     pub rank: u32,
     pub team_name: String,
+    pub team_link: String,
     pub played: u32,
     pub wins: u32,
     pub draws: u32,
@@ -50,18 +51,18 @@ impl IntoResponse for ClassementWidgetTemplate {
 
 pub async fn classement_widget(
     auth_session: AuthSession,
-    Path((_space_id, _competition_id, season_id)): Path<(String, String, String)>,
+    Path((space_id, _competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     if auth_session.user.is_none() {
         return StatusCode::UNAUTHORIZED.into_response();
     }
 
-    let vm = build_vm(&state, &season_id).await;
+    let vm = build_vm(&state, &space_id, &season_id).await;
     ClassementWidgetTemplate { vm }.into_response()
 }
 
-async fn build_vm(state: &AppState, season_id: &str) -> ClassementWidgetVm {
+async fn build_vm(state: &AppState, space_id: &str, season_id: &str) -> ClassementWidgetVm {
     let (rules, teams, lines, groups) = tokio::join!(
         state.ranking.competition_port.find_ranking_rules(season_id),
         state.ranking.competition_port.find_enrolled_teams(season_id),
@@ -73,7 +74,7 @@ async fn build_vm(state: &AppState, season_id: &str) -> ClassementWidgetVm {
     let groups_vm = if rules_missing {
         vec![]
     } else {
-        build_classement_groups(lines.unwrap_or_default(), &teams, &groups)
+        build_classement_groups(space_id, lines.unwrap_or_default(), &teams, &groups)
     };
 
     ClassementWidgetVm { rules_missing, groups: groups_vm }
