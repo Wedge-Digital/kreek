@@ -105,20 +105,29 @@
   .roster-league-col { flex: 1 1 100%; }
 }
 
-/* Tableau joueurs — colonnes stats (M/F/Ag/Cp/Av) masquées sur tablette */
+/* Tableau joueurs — colonnes stats (M/F/Ag/Cp/Av) masquées sur tablette.
+   Exclut .staff-table : mêmes colonnes 4-8 y sont Qté/Coût total/+/- (les
+   boutons d'ajout/retrait de staff disparaissaient sur cette largeur). */
 @media (max-width: 900px) {
-  .player-table th:nth-child(4), .player-table th:nth-child(5),
-  .player-table th:nth-child(6), .player-table th:nth-child(7),
-  .player-table th:nth-child(8),
-  .player-table td:nth-child(4), .player-table td:nth-child(5),
-  .player-table td:nth-child(6), .player-table td:nth-child(7),
-  .player-table td:nth-child(8) { display: none; }
+  .player-table:not(.staff-table) th:nth-child(4), .player-table:not(.staff-table) th:nth-child(5),
+  .player-table:not(.staff-table) th:nth-child(6), .player-table:not(.staff-table) th:nth-child(7),
+  .player-table:not(.staff-table) th:nth-child(8),
+  .player-table:not(.staff-table) td:nth-child(4), .player-table:not(.staff-table) td:nth-child(5),
+  .player-table:not(.staff-table) td:nth-child(6), .player-table:not(.staff-table) td:nth-child(7),
+  .player-table:not(.staff-table) td:nth-child(8) { display: none; }
 }
 
 /* Tableau joueurs — Qté max (col 1) + Coût total (col 11) masqués sur mobile */
 @media (max-width: 640px) {
-  .player-table th:nth-child(1), .player-table th:nth-child(11),
-  .player-table td:nth-child(1), .player-table td:nth-child(11) { display: none; }
+  .player-table:not(.staff-table) th:nth-child(1), .player-table:not(.staff-table) th:nth-child(11),
+  .player-table:not(.staff-table) td:nth-child(1), .player-table:not(.staff-table) td:nth-child(11) { display: none; }
+}
+
+/* Tableau staff — colonnes propres (Qté max/Poste/Prix/Qté/Coût total/+/-) :
+   masque Qté max (1) + Coût total (5) sur mobile, jamais les boutons. */
+@media (max-width: 640px) {
+  .staff-table th:nth-child(1), .staff-table th:nth-child(5),
+  .staff-table td:nth-child(1), .staff-table td:nth-child(5) { display: none; }
 }
 
 /* ── Zones d'erreur sous les tableaux ────────────────────────────────── */
