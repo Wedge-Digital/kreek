@@ -1,0 +1,72 @@
+use crate::app::auth::auth_backend::AuthSession;
+use crate::app::ranking::io::web::builders::build_classement_rows;
+use crate::state::AppState;
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
+use axum::response::{Html, IntoResponse, Response};
+use askama::Template;
+
+pub struct ClassementRowVm {
+    pub rank: u32,
+    pub team_name: String,
+    pub played: u32,
+    pub wins: u32,
+    pub draws: u32,
+    pub losses: u32,
+    pub points: u32,
+}
+
+pub struct ClassementWidgetVm {
+    pub rules_missing: bool,
+    pub has_enrolled_teams: bool,
+    pub rows: Vec<ClassementRowVm>,
+}
+
+#[derive(Template)]
+#[template(path = "widgets/classement-widget.html")]
+pub struct ClassementWidgetTemplate {
+    pub vm: ClassementWidgetVm,
+}
+
+impl IntoResponse for ClassementWidgetTemplate {
+    fn into_response(self) -> Response {
+        match self.render() {
+            Ok(html) => Html(html).into_response(),
+            Err(e) => {
+                tracing::error!("classement_widget render error: {e}");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        }
+    }
+}
+
+pub async fn classement_widget(
+    auth_session: AuthSession,
+    Path((_space_id, _competition_id, season_id)): Path<(String, String, String)>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    if auth_session.user.is_none() {
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
+
+    let vm = build_vm(&state, &season_id).await;
+    ClassementWidgetTemplate { vm }.into_response()
+}
+
+async fn build_vm(state: &AppState, season_id: &str) -> ClassementWidgetVm {
+    let (rules, teams, lines) = tokio::join!(
+        state.ranking.competition_port.find_ranking_rules(season_id),
+        state.ranking.competition_port.find_enrolled_teams(season_id),
+        state.ranking.repository.find_latest_lines_for_season(season_id),
+    );
+
+    let rules_missing = rules.is_none();
+    let has_enrolled_teams = !teams.is_empty();
+    let rows = if rules_missing {
+        vec![]
+    } else {
+        build_classement_rows(lines.unwrap_or_default(), &teams)
+    };
+
+    ClassementWidgetVm { rules_missing, has_enrolled_teams, rows }
+}

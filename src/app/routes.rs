@@ -3,6 +3,7 @@ use crate::app::competitions::routes::Routes as CompetitionsRoutes;
 use crate::app::match_report::routes::Routes as MatchReportRoutes;
 use crate::app::news::routes::Routes as NewsRoutes;
 use crate::app::players::routes::Routes as PlayersRoutes;
+use crate::app::ranking::routes::Routes as RankingRoutes;
 use crate::app::references::routes::Routes as ReferencesRoutes;
 use crate::app::spaces::routes::Routes as SpacesRoutes;
 use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
@@ -25,5 +26,6 @@ pub struct AppRoutes {
     pub team_creation: TeamCreationRoutes,
     pub teams:         TeamsRoutes,
     pub players:       PlayersRoutes,
+    pub ranking:       RankingRoutes,
     pub references:    ReferencesRoutes,
 }

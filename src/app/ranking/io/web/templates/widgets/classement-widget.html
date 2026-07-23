@@ -1,0 +1,39 @@
+<link rel="stylesheet" href="/static/css/widgets/classement-widget.css">
+<div class="ranking-classement-widget" hx-disinherit="*">
+{% if vm.rules_missing %}
+    <div class="table-error-zone">
+        <p class="table-error">Impossible d'afficher le classement : les règles de classement ne sont pas configurées pour cette saison.</p>
+    </div>
+{% else if !vm.has_enrolled_teams %}
+    <div class="tab-empty-state card-shadow">
+        Aucune équipe dans la compétition.
+    </div>
+{% else if vm.rows.is_empty() %}
+    <div class="tab-empty-state card-shadow">
+        Aucun match n'a encore été joué.
+    </div>
+{% else %}
+    <div class="standings-table card-shadow">
+        <div class="standings-header">
+            <div>#</div>
+            <div>Équipe</div>
+            <div class="standings-header-num">MJ</div>
+            <div class="standings-header-num">V</div>
+            <div class="standings-header-num">N</div>
+            <div class="standings-header-num">D</div>
+            <div class="standings-header-num">Pts</div>
+        </div>
+        {% for row in vm.rows %}
+        <div class="standings-row">
+            <div class="standings-rank">{% if row.rank == 1 %}🏆{% endif %}{{ row.rank }}</div>
+            <div class="standings-team">{{ row.team_name }}</div>
+            <div class="standings-num">{{ row.played }}</div>
+            <div class="standings-num">{{ row.wins }}</div>
+            <div class="standings-num">{{ row.draws }}</div>
+            <div class="standings-num">{{ row.losses }}</div>
+            <div class="standings-pts">{{ row.points }}</div>
+        </div>
+        {% endfor %}
+    </div>
+{% endif %}
+</div>

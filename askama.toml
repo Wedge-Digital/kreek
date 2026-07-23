@@ -10,4 +10,5 @@ dirs = [
     "src/app/teams/io/web/templates",
     "src/app/match_report/io/web/templates",
     "src/app/players/io/web/templates",
+    "src/app/ranking/io/web/templates",
     "src/web/templates"]

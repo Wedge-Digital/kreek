@@ -1,7 +1,9 @@
+use crate::app::ranking::io::web::widgets::classement_widget::classement_widget;
+use crate::app::ranking::routes::path;
 use crate::state::AppState;
+use axum::routing::get;
 use axum::Router;
 
-/// Route du widget Classement branchée en carte 197.
 pub fn router() -> Router<AppState> {
-    Router::new()
+    Router::new().route(path::CLASSEMENT_WIDGET, get(classement_widget))
 }
