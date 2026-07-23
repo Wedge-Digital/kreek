@@ -11,4 +11,5 @@ pub mod spaces;
 pub mod team_creation;
 pub mod teams;
 pub mod match_report;
+pub mod ranking;
 pub mod spp_calculator;
