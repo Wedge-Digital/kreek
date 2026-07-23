@@ -178,6 +178,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
         crate::infrastructure::ranking::competition_info_adapter::RankingCompetitionAdapter::new(
             Arc::new(crate::app::competitions::io::repository::season_repository::SeasonRepository::new(pool.clone())),
             competitions_team_info_port.clone(),
+            Arc::new(crate::app::competitions::io::repository::group_repository::GroupRepository::new(pool.clone())),
         ),
     );
     ranking::context::init_listeners(&app_event_bus, pool.clone(), ranking_competition_port.clone());

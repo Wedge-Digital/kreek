@@ -6,6 +6,7 @@ use async_trait::async_trait;
 /// Dernière ligne de classement enregistrée pour une équipe — compteurs
 /// cumulés depuis le début de la saison, pas seulement les points. DTO de
 /// lecture (query), primitifs acceptés (règle CQRS du CLAUDE.md).
+#[derive(Clone)]
 pub struct RankingLineRow {
     pub team_id: String,
     pub matches_played: u32,
@@ -60,13 +61,25 @@ pub struct RankingRulesInfo {
     pub lose_points: u32,
 }
 
+#[derive(Clone)]
 pub struct EnrolledTeamInfo {
     pub team_id: String,
     pub team_name: String,
+}
+
+/// Poule (groupe) de la saison, avec les ids des équipes qui lui sont
+/// assignées — reflète `competitions::IGroupRepository::find_groups`, sans
+/// exposer son type. Une saison sans poule (ou une seule) reste affichée en
+/// classement unique côté widget ; `ranking` n'a pas à connaître pourquoi.
+pub struct RankingGroupInfo {
+    pub group_id: String,
+    pub group_name: String,
+    pub team_ids: Vec<String>,
 }
 
 #[async_trait]
 pub trait IRankingCompetitionPort: Send + Sync {
     async fn find_ranking_rules(&self, season_id: &str) -> Option<RankingRulesInfo>;
     async fn find_enrolled_teams(&self, season_id: &str) -> Vec<EnrolledTeamInfo>;
+    async fn find_groups(&self, season_id: &str) -> Vec<RankingGroupInfo>;
 }

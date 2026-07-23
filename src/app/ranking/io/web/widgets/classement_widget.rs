@@ -1,5 +1,5 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::ranking::io::web::builders::build_classement_rows;
+use crate::app::ranking::io::web::builders::build_classement_groups;
 use crate::state::AppState;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -16,10 +16,18 @@ pub struct ClassementRowVm {
     pub points: u32,
 }
 
-pub struct ClassementWidgetVm {
-    pub rules_missing: bool,
+/// Un classement à afficher — soit l'unique classement de la saison
+/// (`title: None`, saison sans poule ou une seule), soit le classement d'une
+/// poule (`title: Some(nom)`) ou des équipes non assignées à une poule.
+pub struct ClassementGroupVm {
+    pub title: Option<String>,
     pub has_enrolled_teams: bool,
     pub rows: Vec<ClassementRowVm>,
+}
+
+pub struct ClassementWidgetVm {
+    pub rules_missing: bool,
+    pub groups: Vec<ClassementGroupVm>,
 }
 
 #[derive(Template)]
@@ -54,19 +62,19 @@ pub async fn classement_widget(
 }
 
 async fn build_vm(state: &AppState, season_id: &str) -> ClassementWidgetVm {
-    let (rules, teams, lines) = tokio::join!(
+    let (rules, teams, lines, groups) = tokio::join!(
         state.ranking.competition_port.find_ranking_rules(season_id),
         state.ranking.competition_port.find_enrolled_teams(season_id),
         state.ranking.repository.find_latest_lines_for_season(season_id),
+        state.ranking.competition_port.find_groups(season_id),
     );
 
     let rules_missing = rules.is_none();
-    let has_enrolled_teams = !teams.is_empty();
-    let rows = if rules_missing {
+    let groups_vm = if rules_missing {
         vec![]
     } else {
-        build_classement_rows(lines.unwrap_or_default(), &teams)
+        build_classement_groups(lines.unwrap_or_default(), &teams, &groups)
     };
 
-    ClassementWidgetVm { rules_missing, has_enrolled_teams, rows }
+    ClassementWidgetVm { rules_missing, groups: groups_vm }
 }

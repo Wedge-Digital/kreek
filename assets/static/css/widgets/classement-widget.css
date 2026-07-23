@@ -1,5 +1,11 @@
 /* Widget Classement — autonome, pas de dépendance à competition-detail.css */
 
+.ranking-group + .ranking-group { margin-top: var(--p3); }
+.ranking-group-title {
+  font-family: var(--font-title); font-size: var(--h4); font-weight: 700;
+  color: var(--dark-2); margin-bottom: var(--p1);
+}
+
 .standings-table {
   background: var(--white); border-radius: 10px; overflow: hidden; margin-bottom: var(--p1);
 }

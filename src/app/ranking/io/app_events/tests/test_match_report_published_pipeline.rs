@@ -28,6 +28,9 @@ impl IRankingCompetitionPort for FakeCompetitionPort {
     async fn find_enrolled_teams(&self, _: &str) -> Vec<EnrolledTeamInfo> {
         vec![]
     }
+    async fn find_groups(&self, _: &str) -> Vec<crate::app::ranking::ports::RankingGroupInfo> {
+        vec![]
+    }
 }
 
 fn sample_payload(season_id: &str, home_team_id: &str, away_team_id: &str) -> MatchReportPublishedPayload {

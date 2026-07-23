@@ -324,6 +324,7 @@ mod tests {
                 impl crate::app::ranking::ports::IRankingCompetitionPort for FakeRankingCompetitionPort {
                     async fn find_ranking_rules(&self, _: &str) -> Option<crate::app::ranking::ports::RankingRulesInfo> { None }
                     async fn find_enrolled_teams(&self, _: &str) -> Vec<crate::app::ranking::ports::EnrolledTeamInfo> { vec![] }
+                    async fn find_groups(&self, _: &str) -> Vec<crate::app::ranking::ports::RankingGroupInfo> { vec![] }
                 }
                 crate::app::ranking::context::RankingContext {
                     repository:       Arc::new(FakeRankingRepo),

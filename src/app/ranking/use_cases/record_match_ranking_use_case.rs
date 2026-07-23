@@ -111,6 +111,9 @@ mod tests {
         async fn find_enrolled_teams(&self, _: &str) -> Vec<EnrolledTeamInfo> {
             vec![]
         }
+        async fn find_groups(&self, _: &str) -> Vec<crate::app::ranking::ports::RankingGroupInfo> {
+            vec![]
+        }
     }
 
     #[derive(Default)]
