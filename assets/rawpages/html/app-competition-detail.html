@@ -43,7 +43,6 @@
     .standings-row:last-child      { border-bottom: none; }
     .standings-row:nth-child(even) { background: var(--dark-7); }
     .standings-row:hover           { background: var(--dark-6); cursor: pointer; }
-    .standings-row.top3            { background: rgba(0,48,73,0.04); }
     .s-rank { color: var(--dark-3); font-weight: 700; text-align: center; }
     .s-team { font-weight: 600; color: var(--dark-1); font-size: var(--text-small); }
     .s-num  { text-align: center; color: var(--dark-2); }
@@ -287,12 +286,41 @@
                   <div class="text-center">N</div><div class="text-center">D</div>
                   <div class="text-center">Pts</div>
                 </div>
-                <div class="standings-row top3"><div class="s-rank">1</div><div class="s-team">🏆 Les Korrigans FC</div><div class="s-num">8</div><div class="s-num">6</div><div class="s-num">1</div><div class="s-num">1</div><div class="s-pts">19</div></div>
-                <div class="standings-row top3"><div class="s-rank">2</div><div class="s-team">Orc Boyz United</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">2</div><div class="s-num">1</div><div class="s-pts">17</div></div>
-                <div class="standings-row top3"><div class="s-rank">3</div><div class="s-team">Skaven Speedsters</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">1</div><div class="s-num">2</div><div class="s-pts">16</div></div>
+                <div class="standings-row"><div class="s-rank">1</div><div class="s-team">🏆 Les Korrigans FC</div><div class="s-num">8</div><div class="s-num">6</div><div class="s-num">1</div><div class="s-num">1</div><div class="s-pts">19</div></div>
+                <div class="standings-row"><div class="s-rank">2</div><div class="s-team">Orc Boyz United</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">2</div><div class="s-num">1</div><div class="s-pts">17</div></div>
+                <div class="standings-row"><div class="s-rank">3</div><div class="s-team">Skaven Speedsters</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">1</div><div class="s-num">2</div><div class="s-pts">16</div></div>
                 <div class="standings-row"><div class="s-rank">4</div><div class="s-team">Dwarf Ironbreakers</div><div class="s-num">8</div><div class="s-num">4</div><div class="s-num">1</div><div class="s-num">3</div><div class="s-pts">13</div></div>
                 <div class="standings-row"><div class="s-rank">5</div><div class="s-team">Chaos Warriors</div><div class="s-num">8</div><div class="s-num">3</div><div class="s-num">2</div><div class="s-num">3</div><div class="s-pts">11</div></div>
                 <div class="standings-row"><div class="s-rank">6</div><div class="s-team">Dark Elves Ravens</div><div class="s-num">8</div><div class="s-num">3</div><div class="s-num">1</div><div class="s-num">4</div><div class="s-pts">10</div></div>
+              </div>
+            </div>
+
+            <!-- ── Classement — variante avec colonne Bonus (si la compétition définit des points bonus ; maquette de revue) ── -->
+            <div style="margin-top: var(--p3);">
+              <p class="section-label" style="margin-bottom: var(--p1);">Classement — variante avec points bonus (colonne conditionnelle, seulement si la compétition en définit)</p>
+              <div class="standings-table card-shadow">
+                <div class="standings-head" style="grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px;">
+                  <div>#</div><div>Équipe</div>
+                  <div class="text-center">MJ</div><div class="text-center">V</div>
+                  <div class="text-center">N</div><div class="text-center">D</div>
+                  <div class="text-center">Bonus</div>
+                  <div class="text-center">Pts</div>
+                </div>
+                <div class="standings-row" style="grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px;"><div class="s-rank">1</div><div class="s-team">🏆 Les Korrigans FC</div><div class="s-num">8</div><div class="s-num">6</div><div class="s-num">1</div><div class="s-num">1</div><div class="s-num">2</div><div class="s-pts">19</div></div>
+                <div class="standings-row" style="grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px;"><div class="s-rank">2</div><div class="s-team">Orc Boyz United</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">2</div><div class="s-num">1</div><div class="s-num">0</div><div class="s-pts">17</div></div>
+                <div class="standings-row" style="grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px;"><div class="s-rank">3</div><div class="s-team">Skaven Speedsters</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">1</div><div class="s-num">2</div><div class="s-num">1</div><div class="s-pts">16</div></div>
+              </div>
+            </div>
+
+            <!-- ── Classement — états vides (maquette de revue uniquement, hors bascule d'onglets réelle) ── -->
+            <div style="margin-top: var(--p3); padding-top: var(--p3); border-top: 2px dashed var(--dark-6);">
+              <p class="section-label" style="margin-bottom: var(--p1);">Classement — état vide : aucune équipe inscrite</p>
+              <div class="tab-empty-state card-shadow">
+                Aucune équipe dans la compétition.
+              </div>
+              <p class="section-label" style="margin: var(--p2) 0 var(--p1);">Classement — état vide : équipes inscrites, aucun match joué</p>
+              <div class="tab-empty-state card-shadow">
+                Aucun match n'a encore été joué.
               </div>
             </div>
 
