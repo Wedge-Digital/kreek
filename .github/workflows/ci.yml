@@ -56,7 +56,9 @@ jobs:
     name: Tests E2E
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: postgres://dev:devpassword@localhost:5432/kreek_db
+      # Le fichier .env.dev n'est chargé qu'au runtime (dotenvy) ; la compilation
+      # des macros query!/query_as! a besoin de la variable dès la compilation.
+      SQLX_OFFLINE: "true"
     services:
       postgres:
         image: postgres:17
@@ -88,6 +90,32 @@ jobs:
         uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
+
+      # Les scripts d'import (import_*.sh) et l'app (AppConfig::load via dotenvy)
+      # lisent tous .env.dev, gitignored donc absent en CI. On le matérialise avec
+      # les creds du service Postgres ci-dessus. BYPASS_AUTH=true : les e2e passent
+      # par le coach seedé DevCoach, sans login. EMAIL__API_KEY factice (aucun e2e
+      # n'envoie de vrai mail).
+      - name: Générer .env.dev (config CI)
+        run: |
+          cat > .env.dev <<'EOF'
+          ENV=development
+          DATABASE__URL=postgresql://dev:devpassword@localhost:5432/kreek_db
+          DATABASE__HOST=localhost
+          DATABASE__PORT=5432
+          DATABASE__USER=dev
+          DATABASE__PWD=devpassword
+          DATABASE__NAME=kreek_db
+          DATABASE__MAX_CONNECTIONS=20
+          SERVER__HOST=0.0.0.0
+          SERVER__PORT=3210
+          SQLX_OFFLINE=true
+          EMAIL__FROM=mailer@example.test
+          EMAIL__API_KEY=dummy-key-ci
+          EMAIL__FROM_NAME=KreekCI
+          HOST_DOMAIN=localhost:3210
+          BYPASS_AUTH=true
+          EOF
 
       - name: Initialiser la base (migrations + imports legacy + seed)
         run: make init_db WITH_SEED=1
