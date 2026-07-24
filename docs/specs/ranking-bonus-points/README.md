@@ -51,4 +51,4 @@ Ordre de traitement : **`competition-rules-form` d'abord**, puis `post-match-bon
 | Unité | Mockup | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|---|
 | competition-rules-form | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| post-match-bonus-calc | n/a | n/a | ✅ | ✅ | | | | |
+| post-match-bonus-calc | n/a | n/a | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | |
