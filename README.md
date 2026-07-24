@@ -35,3 +35,11 @@ cargo run -- seed-accounts --input scripts/seed_accounts.json
 authentification. **À n'utiliser qu'en développement local.** Ne jamais
 l'activer dans un environnement exposé — c'est un contournement total de
 l'authentification. La valeur par défaut est `false` (`config/default.toml`).
+
+## License
+
+Kreek is licensed under **AGPL-3.0-or-later**. See [`LICENSE`](LICENSE).
+
+For proprietary embedding or commercial redistribution without AGPL
+obligations, a commercial license is available — contact
+bertrand.begouin@wedge-digital.com.
