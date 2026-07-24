@@ -1,0 +1,8 @@
+[
+  {
+    "coach_name": "DevCoach",
+    "password": "changeme-dev-only",
+    "email": "dev@example.test",
+    "legacy_id": 1
+  }
+]

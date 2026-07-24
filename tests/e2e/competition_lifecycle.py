@@ -25,8 +25,8 @@ from playwright.sync_api import Page, expect
 
 BASE_URL = "http://localhost:3210"
 FAKE_LOGO_URL = "https://res.cloudinary.com/demo/image/upload/v1/sample.jpg"
-# Nom du compte connecté par bypass_auth (legacy_id=1) — cf. scripts/seed_accounts.json.
-BYPASS_AUTH_COACH_NAME = "Bagouze"
+# Nom du compte connecté par bypass_auth (legacy_id=1) — cf. scripts/seed_accounts.example.json.
+BYPASS_AUTH_COACH_NAME = "DevCoach"
 
 # Rosters sans FAVOURED_OF_CHOOSE_* (pas de choix de règle spéciale à gérer
 # ici) — cf. bilan des règles spéciales par roster.

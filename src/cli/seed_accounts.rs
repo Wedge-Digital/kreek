@@ -9,6 +9,8 @@ struct SeedAccount {
     coach_name: String,
     password: String,
     email: String,
+    #[serde(default)]
+    legacy_id: Option<i32>,
 }
 
 fn hash_password(password: &str) -> Result<String, argon2::password_hash::Error> {
@@ -31,16 +33,19 @@ pub async fn execute(pool: &PgPool, input: &str) -> Result<(), Box<dyn std::erro
 
         let result = sqlx::query(
             r#"
-            INSERT INTO auth__users (id, coach_name, email, password_hash, created_at)
-            VALUES ($1, $2, $3, $4, now())
+            INSERT INTO auth__users (id, coach_name, email, password_hash, legacy_id, created_at)
+            VALUES ($1, $2, $3, $4, $5, now())
             ON CONFLICT (coach_name)
-            DO UPDATE SET password_hash = EXCLUDED.password_hash, email = EXCLUDED.email
+            DO UPDATE SET password_hash = EXCLUDED.password_hash,
+                          email         = EXCLUDED.email,
+                          legacy_id     = EXCLUDED.legacy_id
             "#,
         )
         .bind(&id)
         .bind(&account.coach_name)
         .bind(&account.email)
         .bind(&hash)
+        .bind(account.legacy_id)
         .execute(pool)
         .await?;
 
