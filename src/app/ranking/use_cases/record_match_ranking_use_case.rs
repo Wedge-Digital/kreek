@@ -1,6 +1,7 @@
 use crate::app::ranking::domain::ranking_line::{
-    CumulativeTotals, DrawCount, LossCount, MatchScore, MatchesPlayed, RankingLine, RankingPoints,
-    RankingRules, WinCount,
+    AggressiveBonusRule, BonusActivated, CumulativeTotals, DefensiveBonusRule, DrawCount, LossCount,
+    MatchScore, MatchesPlayed, MaxTdConceded, MinCasualties, MinTd, OffensiveBonusRule, RankingLine,
+    RankingPoints, RankingRules, WinCount,
 };
 use crate::app::ranking::ports::{IRankingCompetitionPort, IRankingRepository, RankingLineRow};
 use crate::app::shared_kernel::common_types::{CompetitionId, MatchReportId, RoundId, SeasonId};
@@ -81,10 +82,26 @@ fn to_totals(row: RankingLineRow) -> CumulativeTotals {
 }
 
 fn to_domain_rules(info: crate::app::ranking::ports::RankingRulesInfo) -> RankingRules {
+    // Bonus désactivés à ce stade (mapping réel des bonus = carte 206).
     RankingRules {
         win_points: RankingPoints(info.win_points),
         draw_points: RankingPoints(info.draw_points),
         lose_points: RankingPoints(info.lose_points),
+        offensive_bonus: OffensiveBonusRule {
+            activated: BonusActivated(false),
+            min_td: MinTd(0),
+            points: RankingPoints(0),
+        },
+        defensive_bonus: DefensiveBonusRule {
+            activated: BonusActivated(false),
+            max_td_conceded: MaxTdConceded(0),
+            points: RankingPoints(0),
+        },
+        aggressive_bonus: AggressiveBonusRule {
+            activated: BonusActivated(false),
+            min_casualties: MinCasualties(0),
+            points: RankingPoints(0),
+        },
     }
 }
 
