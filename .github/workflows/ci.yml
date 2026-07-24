@@ -16,7 +16,12 @@ jobs:
     name: Tests unitaires
     runs-on: ubuntu-latest
     env:
+      # Injectée par le Makefile comme DATABASE_URL pour `reset_test_db` et `cargo test`.
+      # Aligne l'URL sur le service Postgres ci-dessous (port 5432, user `dev`).
       DATABASE_URL_TEST: postgres://dev:devpassword@localhost:5432/kreek_test
+      # Compile les macros query!/query_as! depuis le cache commité `.sqlx/`,
+      # sans connexion DB au moment de la compilation.
+      SQLX_OFFLINE: "true"
     services:
       postgres:
         image: postgres:17
