@@ -1,5 +1,14 @@
 EXEC_PROFILE ?= dev
-DATABASE_URL   = $(shell grep -E '^DATABASE__URL=' .env.$(EXEC_PROFILE) | cut -d= -f2-)
+
+# URL de la base par défaut (profil dev/legacy) : variable d'environnement
+# DATABASE_URL si elle est fournie (CI, convention sqlx), sinon .env.<profile>.
+# Le fallback fichier est silencieux si le .env est absent (2>/dev/null).
+DATABASE_URL := $(if $(DATABASE_URL),$(DATABASE_URL),$(shell grep -E '^DATABASE__URL=' .env.$(EXEC_PROFILE) 2>/dev/null | cut -d= -f2-))
+
+# URL de la base de test : variable d'environnement DATABASE_URL_TEST si fournie
+# (CI), sinon .env.test. Variable dédiée (pas DATABASE_URL) pour éviter qu'un
+# `export DATABASE_URL=…dev…` local ne fasse cibler la base dev par `make test`.
+TEST_DB_URL := $(if $(DATABASE_URL_TEST),$(DATABASE_URL_TEST),$(shell grep -E '^DATABASE__URL=' .env.test 2>/dev/null | cut -d= -f2-))
 
 .PHONY: dev test e2e all_tests migrate migration prepare_db reset_db reset_test_db init_db \
         seed_accounts lint check-arch coverage analyze help
@@ -36,7 +45,7 @@ dev:
 	cargo watch -x run -w src -w assets/templates -w assets/static/css
 
 test: reset_test_db
-	DATABASE_URL=$(shell grep -E '^DATABASE__URL=' .env.test | cut -d= -f2-) cargo test
+	DATABASE_URL=$(TEST_DB_URL) cargo test
 
 e2e:
 	cd tests/e2e && uv run pytest -v
@@ -66,7 +75,7 @@ reset_db:
 	DATABASE_URL=$(DATABASE_URL) sqlx database reset -y -f
 
 reset_test_db:
-	DATABASE_URL=$(shell grep -E '^DATABASE__URL=' .env.test | cut -d= -f2-) sqlx database reset -y -f
+	DATABASE_URL=$(TEST_DB_URL) sqlx database reset -y -f
 
 seed_accounts:
 	DATABASE_URL=$(DATABASE_URL) cargo run -- seed-accounts
@@ -137,7 +146,7 @@ coverage:
 	@echo ""
 	@echo "\033[1m\033[34m┌─ Axe 7 · Couverture de tests\033[0m"
 	@echo ""
-	DATABASE_URL=$(shell grep -E '^DATABASE__URL=' .env.test | cut -d= -f2-) \
+	DATABASE_URL=$(TEST_DB_URL) \
 		cargo llvm-cov \
 		--ignore-filename-regex="(tests|io/web|io/repository|main\.rs)" \
 		--summary-only
