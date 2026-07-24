@@ -7,7 +7,7 @@
 use crate::app::ranking::context::RankingContext;
 use crate::app::ranking::io::app_events::match_report_published_listener;
 use crate::app::ranking::ports::{
-    EnrolledTeamInfo, IRankingCompetitionPort, RankingRulesInfo,
+    BonusRuleInfo, EnrolledTeamInfo, IRankingCompetitionPort, RankingRulesInfo,
 };
 use crate::app::shared_kernel::app_events::match_report_app_events::MatchReportPublishedPayload;
 use crate::app::shared_kernel::app_events::match_report_app_events::MatchReportAppEvent;
@@ -18,12 +18,23 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use std::time::Duration;
 
+fn disabled_bonus() -> BonusRuleInfo {
+    BonusRuleInfo { activated: false, threshold: 0, points: 0 }
+}
+
 struct FakeCompetitionPort;
 
 #[async_trait::async_trait]
 impl IRankingCompetitionPort for FakeCompetitionPort {
     async fn find_ranking_rules(&self, _: &str) -> Option<RankingRulesInfo> {
-        Some(RankingRulesInfo { win_points: 3, draw_points: 1, lose_points: 0 })
+        Some(RankingRulesInfo {
+            win_points: 3,
+            draw_points: 1,
+            lose_points: 0,
+            offensive: disabled_bonus(),
+            defensive: disabled_bonus(),
+            aggressive: disabled_bonus(),
+        })
     }
     async fn find_enrolled_teams(&self, _: &str) -> Vec<EnrolledTeamInfo> {
         vec![]

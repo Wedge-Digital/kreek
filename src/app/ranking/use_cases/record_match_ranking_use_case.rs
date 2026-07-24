@@ -91,9 +91,26 @@ fn to_domain_rules(info: crate::app::ranking::ports::RankingRulesInfo) -> Rankin
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::ranking::ports::{EnrolledTeamInfo, RankingRepositoryError, RankingRulesInfo};
+    use crate::app::ranking::ports::{
+        BonusRuleInfo, EnrolledTeamInfo, RankingRepositoryError, RankingRulesInfo,
+    };
     use async_trait::async_trait;
     use std::sync::Mutex;
+
+    fn no_bonus() -> BonusRuleInfo {
+        BonusRuleInfo { activated: false, threshold: 0, points: 0 }
+    }
+
+    fn rules_info(win_points: u32, draw_points: u32, lose_points: u32) -> RankingRulesInfo {
+        RankingRulesInfo {
+            win_points,
+            draw_points,
+            lose_points,
+            offensive: no_bonus(),
+            defensive: no_bonus(),
+            aggressive: no_bonus(),
+        }
+    }
 
     struct FakeCompetitionPort {
         rules: Option<RankingRulesInfo>,
@@ -102,11 +119,7 @@ mod tests {
     #[async_trait]
     impl IRankingCompetitionPort for FakeCompetitionPort {
         async fn find_ranking_rules(&self, _: &str) -> Option<RankingRulesInfo> {
-            self.rules.as_ref().map(|r| RankingRulesInfo {
-                win_points: r.win_points,
-                draw_points: r.draw_points,
-                lose_points: r.lose_points,
-            })
+            self.rules.clone()
         }
         async fn find_enrolled_teams(&self, _: &str) -> Vec<EnrolledTeamInfo> {
             vec![]
@@ -173,7 +186,7 @@ mod tests {
     async fn records_both_lines_for_a_team_without_history() {
         let repo = FakeRepo::default();
         let port = FakeCompetitionPort {
-            rules: Some(RankingRulesInfo { win_points: 3, draw_points: 1, lose_points: 0 }),
+            rules: Some(rules_info(3, 1, 0)),
         };
         let home = TeamId::new();
         let away = TeamId::new();
@@ -194,7 +207,7 @@ mod tests {
     async fn accumulates_on_top_of_existing_history() {
         let repo = FakeRepo::default();
         let port = FakeCompetitionPort {
-            rules: Some(RankingRulesInfo { win_points: 3, draw_points: 1, lose_points: 0 }),
+            rules: Some(rules_info(3, 1, 0)),
         };
         let home = TeamId::new();
         let away = TeamId::new();

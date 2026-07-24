@@ -1,8 +1,11 @@
 use crate::app::competitions::domain::group_repository_port::IGroupRepository;
 use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
 use crate::app::competitions::ports::ITeamInfoPort;
+use crate::app::competitions::domain::competition_rules::{
+    AggressiveBonus, DefensiveBonus, OffensiveBonus,
+};
 use crate::app::ranking::ports::{
-    EnrolledTeamInfo, IRankingCompetitionPort, RankingGroupInfo, RankingRulesInfo,
+    BonusRuleInfo, EnrolledTeamInfo, IRankingCompetitionPort, RankingGroupInfo, RankingRulesInfo,
 };
 use crate::app::shared_kernel::common_types::SeasonId;
 use async_trait::async_trait;
@@ -33,6 +36,9 @@ impl IRankingCompetitionPort for RankingCompetitionAdapter {
             win_points: rules.ranking_rules.win_points.into_inner(),
             draw_points: rules.ranking_rules.draw_points.into_inner(),
             lose_points: rules.ranking_rules.lose_points.into_inner(),
+            offensive: offensive_info(&rules.ranking_rules.offensive_bonus),
+            defensive: defensive_info(&rules.ranking_rules.defensive_bonus),
+            aggressive: aggressive_info(&rules.ranking_rules.aggressive_bonus),
         })
     }
 
@@ -58,5 +64,29 @@ impl IRankingCompetitionPort for RankingCompetitionAdapter {
                 team_ids: g.team_ids,
             })
             .collect()
+    }
+}
+
+fn offensive_info(bonus: &OffensiveBonus) -> BonusRuleInfo {
+    BonusRuleInfo {
+        activated: bonus.activated.0,
+        threshold: bonus.min_td.into_inner(),
+        points: bonus.points.into_inner(),
+    }
+}
+
+fn defensive_info(bonus: &DefensiveBonus) -> BonusRuleInfo {
+    BonusRuleInfo {
+        activated: bonus.activated.0,
+        threshold: bonus.max_td_conceded.into_inner(),
+        points: bonus.points.into_inner(),
+    }
+}
+
+fn aggressive_info(bonus: &AggressiveBonus) -> BonusRuleInfo {
+    BonusRuleInfo {
+        activated: bonus.activated.0,
+        threshold: bonus.min_casualties.into_inner(),
+        points: bonus.points.into_inner(),
     }
 }

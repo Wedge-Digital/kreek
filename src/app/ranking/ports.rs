@@ -55,10 +55,25 @@ pub trait IRankingRepository: Send + Sync {
 // qui ré-expose ce dont `ranking` a besoin via son propre port vers `teams`
 // (`ITeamInfoPort`, déjà en place).
 
+/// Config d'un bonus de classement (offensif/défensif/agressif) — même forme pour
+/// les trois : activation + un seuil + des points. Le sens de `threshold` est porté
+/// par le champ qui contient ce DTO (`offensive`/`defensive`/`aggressive`). DTO de
+/// lecture (query), primitifs acceptés (règle CQRS du CLAUDE.md).
+#[derive(Clone)]
+pub struct BonusRuleInfo {
+    pub activated: bool,
+    pub threshold: u32, // min_td (off) | max_td_conceded (def) | min_casualties (agg)
+    pub points: u32,
+}
+
+#[derive(Clone)]
 pub struct RankingRulesInfo {
     pub win_points: u32,
     pub draw_points: u32,
     pub lose_points: u32,
+    pub offensive: BonusRuleInfo,
+    pub defensive: BonusRuleInfo,
+    pub aggressive: BonusRuleInfo,
 }
 
 #[derive(Clone)]
