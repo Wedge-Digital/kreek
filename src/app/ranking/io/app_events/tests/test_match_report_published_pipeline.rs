@@ -9,8 +9,10 @@ use crate::app::ranking::io::app_events::match_report_published_listener;
 use crate::app::ranking::ports::{
     BonusRuleInfo, EnrolledTeamInfo, IRankingCompetitionPort, RankingRulesInfo,
 };
-use crate::app::shared_kernel::app_events::match_report_app_events::MatchReportPublishedPayload;
-use crate::app::shared_kernel::app_events::match_report_app_events::MatchReportAppEvent;
+use crate::app::shared_kernel::app_events::match_report_app_events::{
+    ActionTypePayload, MatchActionPublishedPayload, MatchReportAppEvent, MatchReportPublishedPayload,
+    PlayerRefPayload,
+};
 use crate::app::shared_kernel::common_types::SeasonId;
 use crate::app::shared_kernel::team::TeamId;
 use crate::common::services::event_bus::event_bus::new_bus;
@@ -33,7 +35,8 @@ impl IRankingCompetitionPort for FakeCompetitionPort {
             lose_points: 0,
             offensive: disabled_bonus(),
             defensive: disabled_bonus(),
-            aggressive: disabled_bonus(),
+            // Bonus agressif activé : +1 point si > 1 sortie infligée.
+            aggressive: BonusRuleInfo { activated: true, threshold: 1, points: 1 },
         })
     }
     async fn find_enrolled_teams(&self, _: &str) -> Vec<EnrolledTeamInfo> {
@@ -61,10 +64,18 @@ fn sample_payload(season_id: &str, home_team_id: &str, away_team_id: &str) -> Ma
         away_gain_kpo: 0,
         home_fan_mod: 0,
         away_fan_mod: 0,
-        home_actions: vec![],
+        home_actions: vec![sortie(), sortie()], // 2 sorties > seuil (1) → bonus agressif
         away_actions: vec![],
         home_temp_players: vec![],
         away_temp_players: vec![],
+    }
+}
+
+fn sortie() -> MatchActionPublishedPayload {
+    MatchActionPublishedPayload {
+        turn: 1,
+        player: PlayerRefPayload::Regular { player_id: "p1".into() },
+        action: ActionTypePayload::Sortie,
     }
 }
 
@@ -107,7 +118,7 @@ async fn match_report_published_creates_two_ranking_lines(pool: PgPool) {
     let home_row = ranking.repository.find_latest_line(&season_id.to_string(), &home.to_string()).await.unwrap().unwrap();
     let away_row = ranking.repository.find_latest_line(&season_id.to_string(), &away.to_string()).await.unwrap().unwrap();
 
-    assert_eq!(home_row.ranking_points, 3); // victoire 2-1
-    assert_eq!(away_row.ranking_points, 0); // défaite
+    assert_eq!(home_row.ranking_points, 4); // victoire 2-1 (3) + bonus agressif (1)
+    assert_eq!(away_row.ranking_points, 0); // défaite, aucune sortie
     assert_eq!(home_row.matches_played, 1);
 }

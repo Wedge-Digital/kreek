@@ -1,7 +1,7 @@
 use crate::app::ranking::domain::ranking_line::{
-    AggressiveBonusRule, BonusActivated, CumulativeTotals, DefensiveBonusRule, DrawCount, LossCount,
-    MatchScore, MatchesPlayed, MaxTdConceded, MinCasualties, MinTd, OffensiveBonusRule, RankingLine,
-    RankingPoints, RankingRules, WinCount,
+    AggressiveBonusRule, BonusActivated, CasualtiesInflicted, CumulativeTotals, DefensiveBonusRule,
+    DrawCount, LossCount, MatchContext, MatchScore, MatchStats, MatchesPlayed, MaxTdConceded,
+    MinCasualties, MinTd, OffensiveBonusRule, RankingLine, RankingPoints, RankingRules, WinCount,
 };
 use crate::app::ranking::ports::{IRankingCompetitionPort, IRankingRepository, RankingLineRow};
 use crate::app::shared_kernel::common_types::{CompetitionId, MatchReportId, RoundId, SeasonId};
@@ -17,6 +17,8 @@ pub struct RecordMatchRankingCommand {
     pub away_team_id: TeamId,
     pub home_score: MatchScore,
     pub away_score: MatchScore,
+    pub home_casualties_inflicted: CasualtiesInflicted,
+    pub away_casualties_inflicted: CasualtiesInflicted,
     pub published_at: DateTime<Utc>,
 }
 
@@ -42,21 +44,51 @@ pub async fn execute(
     let home_previous = load_previous(repo, &season_id_str, &cmd.home_team_id.to_string()).await?;
     let away_previous = load_previous(repo, &season_id_str, &cmd.away_team_id.to_string()).await?;
 
-    let home_outcome = RankingLine::derive_outcome(cmd.home_score, cmd.away_score);
-    let away_outcome = RankingLine::derive_outcome(cmd.away_score, cmd.home_score);
-
-    let home_line = RankingLine::record_match(
-        home_previous, cmd.home_team_id, cmd.competition_id.clone(), cmd.season_id.clone(),
-        cmd.round_id.clone(), cmd.match_report_id.clone(), cmd.published_at, home_outcome, &rules,
-    );
-    let away_line = RankingLine::record_match(
-        away_previous, cmd.away_team_id, cmd.competition_id, cmd.season_id,
-        cmd.round_id, cmd.match_report_id, cmd.published_at, away_outcome, &rules,
-    );
+    let home_line = record_home(&cmd, home_previous, &rules);
+    let away_line = record_away(&cmd, away_previous, &rules);
 
     repo.insert_lines(&[home_line, away_line])
         .await
         .map_err(|e| RecordMatchRankingError::Repository(e.to_string()))
+}
+
+fn record_home(
+    cmd: &RecordMatchRankingCommand,
+    previous: Option<CumulativeTotals>,
+    rules: &RankingRules,
+) -> RankingLine {
+    let ctx = context_for(cmd, cmd.home_team_id.clone());
+    let stats = MatchStats {
+        own_td: cmd.home_score,
+        opponent_td: cmd.away_score,
+        casualties_inflicted: cmd.home_casualties_inflicted,
+    };
+    RankingLine::record_match(previous, ctx, stats, rules)
+}
+
+fn record_away(
+    cmd: &RecordMatchRankingCommand,
+    previous: Option<CumulativeTotals>,
+    rules: &RankingRules,
+) -> RankingLine {
+    let ctx = context_for(cmd, cmd.away_team_id.clone());
+    let stats = MatchStats {
+        own_td: cmd.away_score,
+        opponent_td: cmd.home_score,
+        casualties_inflicted: cmd.away_casualties_inflicted,
+    };
+    RankingLine::record_match(previous, ctx, stats, rules)
+}
+
+fn context_for(cmd: &RecordMatchRankingCommand, team_id: TeamId) -> MatchContext {
+    MatchContext {
+        team_id,
+        competition_id: cmd.competition_id.clone(),
+        season_id: cmd.season_id.clone(),
+        round_id: cmd.round_id.clone(),
+        match_report_id: cmd.match_report_id.clone(),
+        recorded_at: cmd.published_at,
+    }
 }
 
 async fn load_previous(
@@ -82,25 +114,24 @@ fn to_totals(row: RankingLineRow) -> CumulativeTotals {
 }
 
 fn to_domain_rules(info: crate::app::ranking::ports::RankingRulesInfo) -> RankingRules {
-    // Bonus désactivés à ce stade (mapping réel des bonus = carte 206).
     RankingRules {
         win_points: RankingPoints(info.win_points),
         draw_points: RankingPoints(info.draw_points),
         lose_points: RankingPoints(info.lose_points),
         offensive_bonus: OffensiveBonusRule {
-            activated: BonusActivated(false),
-            min_td: MinTd(0),
-            points: RankingPoints(0),
+            activated: BonusActivated(info.offensive.activated),
+            min_td: MinTd(info.offensive.threshold),
+            points: RankingPoints(info.offensive.points),
         },
         defensive_bonus: DefensiveBonusRule {
-            activated: BonusActivated(false),
-            max_td_conceded: MaxTdConceded(0),
-            points: RankingPoints(0),
+            activated: BonusActivated(info.defensive.activated),
+            max_td_conceded: MaxTdConceded(info.defensive.threshold),
+            points: RankingPoints(info.defensive.points),
         },
         aggressive_bonus: AggressiveBonusRule {
-            activated: BonusActivated(false),
-            min_casualties: MinCasualties(0),
-            points: RankingPoints(0),
+            activated: BonusActivated(info.aggressive.activated),
+            min_casualties: MinCasualties(info.aggressive.threshold),
+            points: RankingPoints(info.aggressive.points),
         },
     }
 }
@@ -183,6 +214,8 @@ mod tests {
             away_team_id,
             home_score: MatchScore(2),
             away_score: MatchScore(1),
+            home_casualties_inflicted: CasualtiesInflicted(0),
+            away_casualties_inflicted: CasualtiesInflicted(0),
             published_at: Utc::now(),
         }
     }
@@ -238,5 +271,25 @@ mod tests {
         assert_eq!(last_home_line.matches_played.0, 2);
         assert_eq!(last_home_line.ranking_points.0, 6); // 2 victoires
         assert_eq!(lines.len(), 4); // 2 matchs x 2 équipes, jamais écrasées
+    }
+
+    #[tokio::test]
+    async fn activated_bonus_is_added_to_the_team_points() {
+        let repo = FakeRepo::default();
+        let mut info = rules_info(3, 1, 0);
+        info.aggressive = BonusRuleInfo { activated: true, threshold: 1, points: 2 };
+        let port = FakeCompetitionPort { rules: Some(info) };
+        let home = TeamId::new();
+        let away = TeamId::new();
+        let mut cmd = sample_cmd(home.clone(), away.clone());
+        cmd.home_casualties_inflicted = CasualtiesInflicted(3); // > 1 → bonus agressif
+
+        execute(cmd, &repo, &port).await.unwrap();
+
+        let lines = repo.lines.lock().unwrap();
+        let home_line = lines.iter().find(|l| l.team_id == home).unwrap();
+        let away_line = lines.iter().find(|l| l.team_id == away).unwrap();
+        assert_eq!(home_line.ranking_points.0, 5); // victoire 2-1 (3) + bonus (2)
+        assert_eq!(away_line.ranking_points.0, 0); // défaite, aucune sortie
     }
 }

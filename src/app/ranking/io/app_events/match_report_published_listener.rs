@@ -1,9 +1,11 @@
-use crate::app::ranking::domain::ranking_line::MatchScore;
+use crate::app::ranking::domain::ranking_line::{CasualtiesInflicted, MatchScore};
 use crate::app::ranking::ports::IRankingCompetitionPort;
 use crate::app::ranking::use_cases::record_match_ranking_use_case::{
     self, RecordMatchRankingCommand,
 };
-use crate::app::shared_kernel::app_events::match_report_app_events::MatchReportAppEvent;
+use crate::app::shared_kernel::app_events::match_report_app_events::{
+    ActionTypePayload, MatchActionPublishedPayload, MatchReportAppEvent,
+};
 use crate::app::shared_kernel::common_types::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::team::TeamId;
 use crate::common::services::event_bus::event_bus::EventBus;
@@ -59,6 +61,8 @@ async fn handle_published(
         away_team_id,
         home_score: MatchScore(payload.home_score),
         away_score: MatchScore(payload.away_score),
+        home_casualties_inflicted: count_sorties(&payload.home_actions),
+        away_casualties_inflicted: count_sorties(&payload.away_actions),
         published_at: payload.published_at,
     };
 
@@ -68,4 +72,14 @@ async fn handle_published(
             match_report_id
         );
     }
+}
+
+/// Compte les sorties (`Sortie` seule) infligées par une équipe — filtrage IO :
+/// le domaine ne connaît pas les types du payload, il reçoit un nombre.
+fn count_sorties(actions: &[MatchActionPublishedPayload]) -> CasualtiesInflicted {
+    let count = actions
+        .iter()
+        .filter(|a| matches!(a.action, ActionTypePayload::Sortie))
+        .count();
+    CasualtiesInflicted(count as u32)
 }

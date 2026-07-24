@@ -188,6 +188,19 @@ pub struct RankingLine {
     pub ranking_points: RankingPoints,
 }
 
+/// Identité d'une ligne de classement à enregistrer — regroupe les champs
+/// contextuels de `record_match` (l'équipe, la compétition, la saison, la
+/// journée, le rapport, l'horodatage), séparés des données de calcul (`MatchStats`).
+#[derive(Debug, Clone)]
+pub struct MatchContext {
+    pub team_id: TeamId,
+    pub competition_id: CompetitionId,
+    pub season_id: SeasonId,
+    pub round_id: RoundId,
+    pub match_report_id: MatchReportId,
+    pub recorded_at: DateTime<Utc>,
+}
+
 impl RankingLine {
     /// Dérive le résultat d'une équipe à partir des deux scores — total,
     /// jamais d'erreur (toute paire de scores produit un résultat valide).
@@ -202,18 +215,15 @@ impl RankingLine {
     /// Construit la nouvelle ligne de classement d'une équipe après un match.
     /// `previous` : compteurs cumulés de la dernière ligne connue de cette
     /// équipe pour cette saison (`None` = première apparition dans le classement).
-    #[allow(clippy::too_many_arguments)]
+    /// L'outcome est dérivé des scores de `stats` ; les points bonus s'ajoutent
+    /// aux points de résultat.
     pub fn record_match(
         previous: Option<CumulativeTotals>,
-        team_id: TeamId,
-        competition_id: CompetitionId,
-        season_id: SeasonId,
-        round_id: RoundId,
-        match_report_id: MatchReportId,
-        recorded_at: DateTime<Utc>,
-        outcome: MatchOutcome,
+        ctx: MatchContext,
+        stats: MatchStats,
         rules: &RankingRules,
     ) -> RankingLine {
+        let outcome = Self::derive_outcome(stats.own_td, stats.opponent_td);
         let CumulativeTotals { matches_played, wins, draws, losses, ranking_points: points } =
             previous.unwrap_or(CumulativeTotals::ZERO);
 
@@ -224,17 +234,17 @@ impl RankingLine {
         };
 
         RankingLine {
-            team_id,
-            competition_id,
-            season_id,
-            round_id,
-            match_report_id,
-            recorded_at,
+            team_id: ctx.team_id,
+            competition_id: ctx.competition_id,
+            season_id: ctx.season_id,
+            round_id: ctx.round_id,
+            match_report_id: ctx.match_report_id,
+            recorded_at: ctx.recorded_at,
             matches_played: MatchesPlayed(matches_played.0 + 1),
             wins: WinCount(wins.0 + u32::from(outcome == MatchOutcome::Win)),
             draws: DrawCount(draws.0 + u32::from(outcome == MatchOutcome::Draw)),
             losses: LossCount(losses.0 + u32::from(outcome == MatchOutcome::Loss)),
-            ranking_points: points + match_points,
+            ranking_points: points + match_points + rules.bonus_points(&stats),
         }
     }
 }
@@ -286,6 +296,20 @@ mod tests {
         }
     }
 
+    fn ctx() -> MatchContext {
+        let (team_id, competition_id, season_id, round_id, match_report_id) = ids();
+        MatchContext { team_id, competition_id, season_id, round_id, match_report_id, recorded_at: Utc::now() }
+    }
+
+    /// Stats produisant l'outcome voulu, sans sortie (pour les tests V/N/D).
+    fn stats_for(outcome: MatchOutcome) -> MatchStats {
+        match outcome {
+            MatchOutcome::Win => stats(2, 1, 0),
+            MatchOutcome::Draw => stats(1, 1, 0),
+            MatchOutcome::Loss => stats(0, 2, 0),
+        }
+    }
+
     #[test]
     fn derive_outcome_higher_score_wins() {
         let outcome = RankingLine::derive_outcome(MatchScore(2), MatchScore(1));
@@ -306,24 +330,10 @@ mod tests {
 
     #[test]
     fn record_match_home_and_away_outcomes_are_symmetric() {
-        let (team_id, competition_id, season_id, round_id, match_report_id) = ids();
-        let home_score = MatchScore(2);
-        let away_score = MatchScore(1);
-
-        let home_outcome = RankingLine::derive_outcome(home_score, away_score);
-        let away_outcome = RankingLine::derive_outcome(away_score, home_score);
-
-        assert_eq!(home_outcome, MatchOutcome::Win);
-        assert_eq!(away_outcome, MatchOutcome::Loss);
-
-        let home_line = RankingLine::record_match(
-            None, team_id.clone(), competition_id.clone(), season_id.clone(), round_id.clone(), match_report_id.clone(),
-            Utc::now(), home_outcome, &rules(),
-        );
-        let away_line = RankingLine::record_match(
-            None, team_id, competition_id, season_id, round_id, match_report_id,
-            Utc::now(), away_outcome, &rules(),
-        );
+        let c = ctx();
+        // home marque 2 - away 1 : home gagne, away perd (scores croisés).
+        let home_line = RankingLine::record_match(None, c.clone(), stats(2, 1, 0), &rules());
+        let away_line = RankingLine::record_match(None, c, stats(1, 2, 0), &rules());
 
         assert_eq!(home_line.wins.0, 1);
         assert_eq!(home_line.losses.0, 0);
@@ -333,11 +343,7 @@ mod tests {
 
     #[test]
     fn record_match_without_previous_line_starts_from_zero() {
-        let (team_id, competition_id, season_id, round_id, match_report_id) = ids();
-        let line = RankingLine::record_match(
-            None, team_id, competition_id, season_id, round_id, match_report_id,
-            Utc::now(), MatchOutcome::Win, &rules(),
-        );
+        let line = RankingLine::record_match(None, ctx(), stats_for(MatchOutcome::Win), &rules());
 
         assert_eq!(line.matches_played.0, 1);
         assert_eq!(line.wins.0, 1);
@@ -348,16 +354,9 @@ mod tests {
 
     #[test]
     fn record_match_with_previous_line_accumulates() {
-        let (team_id, competition_id, season_id, round_id, match_report_id) = ids();
-        let previous = RankingLine::record_match(
-            None, team_id.clone(), competition_id.clone(), season_id.clone(), round_id.clone(), match_report_id.clone(),
-            Utc::now(), MatchOutcome::Win, &rules(),
-        );
-
-        let next = RankingLine::record_match(
-            Some(totals_of(&previous)), team_id, competition_id, season_id, round_id, match_report_id,
-            Utc::now(), MatchOutcome::Draw, &rules(),
-        );
+        let c = ctx();
+        let previous = RankingLine::record_match(None, c.clone(), stats_for(MatchOutcome::Win), &rules());
+        let next = RankingLine::record_match(Some(totals_of(&previous)), c, stats_for(MatchOutcome::Draw), &rules());
 
         assert_eq!(next.matches_played.0, 2);
         assert_eq!(next.wins.0, 1);
@@ -368,13 +367,12 @@ mod tests {
 
     #[test]
     fn record_match_accumulates_over_three_successive_matches() {
-        let (team_id, competition_id, season_id, round_id, match_report_id) = ids();
+        let c = ctx();
         let mut line: Option<RankingLine> = None;
 
         for outcome in [MatchOutcome::Win, MatchOutcome::Draw, MatchOutcome::Loss] {
             line = Some(RankingLine::record_match(
-                line.as_ref().map(totals_of), team_id.clone(), competition_id.clone(), season_id.clone(), round_id.clone(),
-                match_report_id.clone(), Utc::now(), outcome, &rules(),
+                line.as_ref().map(totals_of), c.clone(), stats_for(outcome), &rules(),
             ));
         }
 
@@ -388,7 +386,6 @@ mod tests {
 
     #[test]
     fn record_match_applies_points_from_rules_per_outcome() {
-        let (team_id, competition_id, season_id, round_id, match_report_id) = ids();
         let custom_rules = RankingRules {
             win_points: RankingPoints(5),
             draw_points: RankingPoints(2),
@@ -398,22 +395,25 @@ mod tests {
             aggressive_bonus: agg_disabled(),
         };
 
-        let win = RankingLine::record_match(
-            None, team_id.clone(), competition_id.clone(), season_id.clone(), round_id.clone(), match_report_id.clone(),
-            Utc::now(), MatchOutcome::Win, &custom_rules,
-        );
-        let draw = RankingLine::record_match(
-            None, team_id.clone(), competition_id.clone(), season_id.clone(), round_id.clone(), match_report_id.clone(),
-            Utc::now(), MatchOutcome::Draw, &custom_rules,
-        );
-        let loss = RankingLine::record_match(
-            None, team_id, competition_id, season_id, round_id, match_report_id,
-            Utc::now(), MatchOutcome::Loss, &custom_rules,
-        );
+        let win = RankingLine::record_match(None, ctx(), stats_for(MatchOutcome::Win), &custom_rules);
+        let draw = RankingLine::record_match(None, ctx(), stats_for(MatchOutcome::Draw), &custom_rules);
+        let loss = RankingLine::record_match(None, ctx(), stats_for(MatchOutcome::Loss), &custom_rules);
 
         assert_eq!(win.ranking_points.0, 5);
         assert_eq!(draw.ranking_points.0, 2);
         assert_eq!(loss.ranking_points.0, 1);
+    }
+
+    #[test]
+    fn losing_team_still_receives_bonus_via_record_match() {
+        let mut r = rules();
+        r.aggressive_bonus = AggressiveBonusRule {
+            activated: BonusActivated(true), min_casualties: MinCasualties(1), points: RankingPoints(2),
+        };
+        // Défaite 0-2 mais 3 sorties infligées (>1) → lose_points(0) + bonus(2).
+        let line = RankingLine::record_match(None, ctx(), stats(0, 2, 3), &r);
+        assert_eq!(line.losses.0, 1);
+        assert_eq!(line.ranking_points.0, 2);
     }
 
     // ── Bonus de classement — `RankingRules::bonus_points` ────────────────────
