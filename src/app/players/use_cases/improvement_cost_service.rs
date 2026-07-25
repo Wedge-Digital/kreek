@@ -67,19 +67,19 @@ mod tests {
     #[test]
     fn resolve_skill_cost_primary_access_level_1() {
         let (cost, value) = resolve_skill_cost(
-            &catalog(), "HUMAN__HUMAN_LINEMAN", "BLOCK", AcquisitionMode::Chosen, 1,
+            &catalog(), "DEMO_GRANIT__PIETAILLE", "APPUI_FERME", AcquisitionMode::Chosen, 1,
         ).unwrap();
-        // BLOCK est GENERAL, primary pour HUMAN_LINEMAN, élite — niveau 1 : chosen.primary = 6
-        // (chosen_elite absent dans skill_cost.json → repli sur le tarif standard)
+        // APPUI_FERME est GENERAL, primary pour la Piétaille, et Standard —
+        // niveau 1 : chosen.primary = 6 (le tarif Élite, lui, vaudrait 8)
         assert_eq!(cost.into_inner(), 6);
         assert_eq!(value.0, 20_000);
     }
 
     #[test]
     fn resolve_skill_cost_secondary_access_costs_more_and_yields_more_value() {
-        // AGILITY est secondary pour HUMAN_LINEMAN — DODGE est une compétence AGILITY
+        // STRENGTH est secondary pour la Piétaille — POIGNE_LARGE est STRENGTH/Standard
         let (cost, value) = resolve_skill_cost(
-            &catalog(), "HUMAN__HUMAN_LINEMAN", "DODGE", AcquisitionMode::Chosen, 1,
+            &catalog(), "DEMO_GRANIT__PIETAILLE", "POIGNE_LARGE", AcquisitionMode::Chosen, 1,
         ).unwrap();
         assert_eq!(cost.into_inner(), 10);
         assert_eq!(value.0, 40_000);
@@ -87,10 +87,10 @@ mod tests {
 
     #[test]
     fn resolve_skill_cost_category_not_accessible_is_rejected() {
-        // PASSING n'est ni primary ([GENERAL]) ni secondary ([AGILITY, DEVIOUS, STRENGTH])
-        // pour HUMAN_LINEMAN — ACCURATE est une compétence PASSING
+        // PASSING n'est ni primary ([GENERAL]) ni secondary ([STRENGTH]) pour la
+        // Piétaille — LANCER_TENDU existe bien, mais dans une catégorie fermée
         let result = resolve_skill_cost(
-            &catalog(), "HUMAN__HUMAN_LINEMAN", "ACCURATE", AcquisitionMode::Chosen, 1,
+            &catalog(), "DEMO_GRANIT__PIETAILLE", "LANCER_TENDU", AcquisitionMode::Chosen, 1,
         );
         assert_eq!(result, Err(ImprovementCostError::CategoryNotAccessible));
     }
@@ -98,7 +98,7 @@ mod tests {
     #[test]
     fn resolve_skill_cost_unknown_skill_is_rejected() {
         let result = resolve_skill_cost(
-            &catalog(), "HUMAN__HUMAN_LINEMAN", "NOT_A_REAL_SKILL", AcquisitionMode::Chosen, 1,
+            &catalog(), "DEMO_GRANIT__PIETAILLE", "NOT_A_REAL_SKILL", AcquisitionMode::Chosen, 1,
         );
         assert_eq!(result, Err(ImprovementCostError::SkillNotFound));
     }
@@ -106,8 +106,8 @@ mod tests {
     #[test]
     fn resolve_skill_cost_ignores_client_supplied_cost_always_recomputes_from_level() {
         // Même compétence, niveaux différents → coûts différents, jamais un coût "soumis"
-        let (cost_lvl1, _) = resolve_skill_cost(&catalog(), "HUMAN__HUMAN_LINEMAN", "BLOCK", AcquisitionMode::Chosen, 1).unwrap();
-        let (cost_lvl3, _) = resolve_skill_cost(&catalog(), "HUMAN__HUMAN_LINEMAN", "BLOCK", AcquisitionMode::Chosen, 3).unwrap();
+        let (cost_lvl1, _) = resolve_skill_cost(&catalog(), "DEMO_GRANIT__PIETAILLE", "APPUI_FERME", AcquisitionMode::Chosen, 1).unwrap();
+        let (cost_lvl3, _) = resolve_skill_cost(&catalog(), "DEMO_GRANIT__PIETAILLE", "APPUI_FERME", AcquisitionMode::Chosen, 3).unwrap();
         assert_ne!(cost_lvl1.into_inner(), cost_lvl3.into_inner());
         assert_eq!(cost_lvl3.into_inner(), 12);
     }

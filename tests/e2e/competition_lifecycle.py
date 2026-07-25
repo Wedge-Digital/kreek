@@ -28,13 +28,14 @@ FAKE_LOGO_URL = "https://res.cloudinary.com/demo/image/upload/v1/sample.jpg"
 # Nom du compte connecté par bypass_auth (legacy_id=1) — cf. scripts/seed_accounts.example.json.
 BYPASS_AUTH_COACH_NAME = "DevCoach"
 
-# Rosters sans FAVOURED_OF_CHOOSE_* (pas de choix de règle spéciale à gérer
-# ici) — cf. bilan des règles spéciales par roster.
+# Rosters du jeu de démonstration (assets/references.example) sans
+# FAVOURED_OF_CHOOSE_* : pas de choix de règle spéciale à gérer dans ce flux.
+# DEMO_LANTERNE en est donc exclu — c'est le seul roster à choix du jeu, et il
+# est couvert par test_special_rule_selector.py.
+# Consommé en modulo (cf. build_and_submit_team), la longueur est libre.
 ROSTERS = [
-    ("HUMAN", "Humains"),
-    ("ORC", "Orques"),
-    ("SKAVEN", "Skavens"),
-    ("DWARF", "Nains"),
+    ("DEMO_GRANIT", "Granitiers"),
+    ("DEMO_ZEPHYR", "Zéphyriens"),
 ]
 
 

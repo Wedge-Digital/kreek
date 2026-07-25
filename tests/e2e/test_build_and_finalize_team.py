@@ -62,7 +62,7 @@ def test_build_and_finalize_with_spp(page: Page, competition_create_url, space_i
     # normalement, plutôt qu'un clic UI (peu fiable en Playwright headless).
     page.evaluate(
         "([uid, name]) => htmx.trigger(document.body, 'rosterSelected', {uid, name})",
-        ["HUMAN", "Humains"],
+        ["DEMO_GRANIT", "Granitiers"],
     )
 
     # Attendre que le player table se charge

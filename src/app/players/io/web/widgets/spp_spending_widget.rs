@@ -198,8 +198,8 @@ mod tests {
     fn sample_player() -> Player {
         let created = PlayerDomainEvent::PlayerCreated {
             player_id: PlayerId("p1".into()), team_id: TeamId("t1".into()), space_id: SpaceId::new(),
-            position_name: PositionNameVo::try_new("Ligneur".to_string()).unwrap(),
-            roster_line_id: RosterLineId::try_new("HUMAN__HUMAN_LINEMAN".to_string()).unwrap(),
+            position_name: PositionNameVo::try_new("Piétaille des Carrières".to_string()).unwrap(),
+            roster_line_id: RosterLineId::try_new("DEMO_GRANIT__PIETAILLE".to_string()).unwrap(),
             jersey: None, base_skills: vec![], starting_spp: Spp(30), starting_value: ValueKpo(50_000),
         };
         Player::from_events(&[created]).unwrap()
@@ -236,7 +236,7 @@ mod tests {
 
         assert_eq!(vm.spp_remaining, 30);
         assert_eq!(vm.stat_cards.len(), 5);
-        assert!(vm.skill_picker_url.contains("roster_line_id=HUMAN__HUMAN_LINEMAN"));
+        assert!(vm.skill_picker_url.contains("roster_line_id=DEMO_GRANIT__PIETAILLE"));
         assert!(vm.skill_picker_url.contains("level=1"));
         assert!(vm.purchase_skill_url.contains("space1"));
         assert!(vm.purchase_skill_url.contains("p1"));

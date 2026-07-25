@@ -115,6 +115,7 @@ jobs:
           EMAIL__FROM_NAME=KreekCI
           HOST_DOMAIN=localhost:3210
           BYPASS_AUTH=true
+          REFERENCES__DIR=assets/references.example
           EOF
 
       - name: Initialiser la base (migrations + imports legacy + seed)

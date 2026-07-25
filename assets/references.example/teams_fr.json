@@ -64,7 +64,7 @@
       "name": "Zéphyriens",
       "rerollCost": 50,
       "tier": "Tier 2",
-      "specialRules": ["DEMO_SOUFFLE_DES_CIMES"],
+      "specialRules": [],
       "allowedStaff": ["APOTHECARY", "CHEERLEADERS", "COACH_ASSISTANTS"],
       "availablePlayers": [
         {

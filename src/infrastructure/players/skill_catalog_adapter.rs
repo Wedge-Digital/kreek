@@ -90,8 +90,10 @@ mod tests {
 
     #[test]
     fn find_skill_maps_elite_flag_correctly() {
-        let skill = adapter().find_skill("BLOCK").expect("BLOCK doit exister dans le référentiel");
-        assert_eq!(skill.name, "Blocage");
+        let skill = adapter()
+            .find_skill("SECOND_SOUFFLE")
+            .expect("SECOND_SOUFFLE doit exister dans le référentiel");
+        assert_eq!(skill.name, "Second Souffle");
         assert_eq!(skill.category, "GENERAL");
         assert!(skill.is_elite);
     }
@@ -103,9 +105,11 @@ mod tests {
 
     #[test]
     fn position_access_resolves_primary_and_secondary() {
-        let access = adapter().position_access("HUMAN__HUMAN_LINEMAN").expect("position doit exister");
+        let access = adapter()
+            .position_access("DEMO_GRANIT__PIETAILLE")
+            .expect("position doit exister");
         assert_eq!(access.primary_categories, vec!["GENERAL"]);
-        assert!(access.secondary_categories.contains(&"AGILITY".to_string()));
+        assert!(access.secondary_categories.contains(&"STRENGTH".to_string()));
     }
 
     #[test]

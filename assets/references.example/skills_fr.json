@@ -94,7 +94,7 @@
       "uid": "LOURDAUD",
       "name": "Lourdaud",
       "category": "TRAITS",
-      "type": "Standard",
+      "type": "Trait",
       "activation": "Passive",
       "description": "Ce joueur ne peut pas effectuer d'action de course deux tours de suite."
     }

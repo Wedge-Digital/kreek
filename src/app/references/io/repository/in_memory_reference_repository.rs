@@ -86,24 +86,15 @@ impl InMemoryReferenceRepository {
         })
     }
 
-    /// Jeu de données utilisé par les tests unitaires. Résolu depuis la racine
-    /// de la crate pour rester indépendant du répertoire courant.
+    /// Jeu de données des tests unitaires : le jeu de démonstration versionné,
+    /// jamais les données réelles — celles-ci ne sont pas dans le dépôt.
+    /// Résolu depuis la racine de la crate pour rester indépendant du
+    /// répertoire courant.
     #[cfg(test)]
     pub fn load_for_tests() -> Self {
-        Self::load_bundled("assets/references")
-    }
-
-    /// Jeu de démonstration versionné (`assets/references.example`).
-    #[cfg(test)]
-    pub fn load_example() -> Self {
-        Self::load_bundled("assets/references.example")
-    }
-
-    #[cfg(test)]
-    fn load_bundled(relative_dir: &str) -> Self {
-        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join(relative_dir);
-        Self::load_from_dir(&dir)
-            .unwrap_or_else(|e| panic!("jeu de données « {relative_dir} » invalide : {e}"))
+        const DIR: &str = "assets/references.example";
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join(DIR);
+        Self::load_from_dir(&dir).unwrap_or_else(|e| panic!("jeu de données « {DIR} » invalide : {e}"))
     }
 }
 
@@ -267,7 +258,7 @@ mod tests {
 
     #[test]
     fn example_dataset_is_referentially_consistent() {
-        let repo = InMemoryReferenceRepository::load_example();
+        let repo = InMemoryReferenceRepository::load_for_tests();
         let violations = check_consistency(&repo);
         assert!(violations.is_empty(), "incohérences : {violations:?}");
     }
@@ -276,7 +267,7 @@ mod tests {
     /// qui ne les fournit pas dégrade silencieusement des fonctionnalités.
     #[test]
     fn example_dataset_honours_hardcoded_uids() {
-        let repo = InMemoryReferenceRepository::load_example();
+        let repo = InMemoryReferenceRepository::load_for_tests();
         for uid in ["APOTHECARY", "CHEERLEADERS", "COACH_ASSISTANTS", "FAN_FACTOR"] {
             assert!(repo.list_staff().iter().any(|s| s.uid == uid), "staff manquant : {uid}");
         }
@@ -298,7 +289,7 @@ mod tests {
     /// il doit exercer les variations que la donnée réelle n'expose pas.
     #[test]
     fn example_dataset_exercises_optional_schema_fields() {
-        let repo = InMemoryReferenceRepository::load_example();
+        let repo = InMemoryReferenceRepository::load_for_tests();
 
         let teams = repo.list_teams();
         assert!(teams.iter().any(|t| t.logo.is_some()), "aucun logo renseigné");

@@ -1,10 +1,10 @@
 """Tests E2E de l'affichage des règles spéciales de roster et de leur
 caractère obligatoire à la finalisation d'une équipe.
 
-Un roster sans FAVOURED_OF_CHOOSE_* (ex. Orc, Skaven) affiche ses règles
-fixes en lecture seule (chips) ou "Pas de règle spéciale". Un roster à choix
-(ex. Chaos Renégats) garde son <select> interactif, et la finalisation de
-l'équipe est bloquée tant qu'aucune règle n'a été choisie.
+Un roster sans FAVOURED_OF_CHOOSE_* (jeu de démonstration : Granitiers,
+Zéphyriens) affiche ses règles fixes en lecture seule (chips) ou "Pas de règle
+spéciale". Un roster à choix (Lanterniers) garde son <select> interactif, et la
+finalisation de l'équipe est bloquée tant qu'aucune règle n'a été choisie.
 
 La sélection du roster ne passe pas par un clic UI sur le widget TomSelect
 (cf. test_build_and_finalize_team.py, skip WIP : ce câblage précis est connu
@@ -119,12 +119,12 @@ def test_fixed_rules_display_as_chips(page: Page, space_id, competition_create_u
     team_id = _create_draft_team(page, space_id, competition_name)
     page.goto(f"{BASE_URL}/app/{space_id}/team/{team_id}/build", wait_until="load")
 
-    _select_roster(page, "ORC", "Orques")
+    _select_roster(page, "DEMO_GRANIT", "Granitiers")
 
     zone = page.locator("#special-rule-selector-zone")
     expect(zone.locator(".special-rule-chip")).to_have_count(2)
-    expect(zone.locator(".special-rule-chip").nth(0)).to_have_text("Brutes Bagarreuses")
-    expect(zone.locator(".special-rule-chip").nth(1)).to_have_text("Capitaine d'Équipe")
+    expect(zone.locator(".special-rule-chip").nth(0)).to_have_text("Gens de Rocaille")
+    expect(zone.locator(".special-rule-chip").nth(1)).to_have_text("Meneur Né")
     expect(zone.locator("select")).to_have_count(0)
 
 
@@ -133,7 +133,7 @@ def test_no_rule_roster_shows_none_message(page: Page, space_id, competition_cre
     team_id = _create_draft_team(page, space_id, competition_name)
     page.goto(f"{BASE_URL}/app/{space_id}/team/{team_id}/build", wait_until="load")
 
-    _select_roster(page, "SKAVEN", "Skavens")
+    _select_roster(page, "DEMO_ZEPHYR", "Zéphyriens")
 
     zone = page.locator("#special-rule-selector-zone")
     expect(zone.locator(".selector-none")).to_have_text("Pas de règle spéciale")
@@ -144,7 +144,7 @@ def test_choice_roster_keeps_interactive_select(page: Page, space_id, competitio
     team_id = _create_draft_team(page, space_id, competition_name)
     page.goto(f"{BASE_URL}/app/{space_id}/team/{team_id}/build", wait_until="load")
 
-    _select_roster(page, "CHAOS_RENEGADE", "Renégats du Chaos")
+    _select_roster(page, "DEMO_LANTERNE", "Lanterniers")
 
     zone = page.locator("#special-rule-selector-zone")
     select = zone.locator("select.league-select")
@@ -160,7 +160,7 @@ def test_finalize_blocked_when_choice_roster_has_no_special_rule(
     team_id = _create_draft_team(page, space_id, competition_name)
     page.goto(f"{BASE_URL}/app/{space_id}/team/{team_id}/build", wait_until="load")
 
-    _select_roster(page, "CHAOS_RENEGADE", "Renégats du Chaos")
+    _select_roster(page, "DEMO_LANTERNE", "Lanterniers")
     hired = _hire_players(page, 11)
     assert hired >= 11, f"N'a pu recruter que {hired} joueurs (11 requis)"
 

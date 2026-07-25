@@ -10,7 +10,7 @@ DATABASE_URL := $(if $(DATABASE_URL),$(DATABASE_URL),$(shell grep -E '^DATABASE_
 # `export DATABASE_URL=…dev…` local ne fasse cibler la base dev par `make test`.
 TEST_DB_URL := $(if $(DATABASE_URL_TEST),$(DATABASE_URL_TEST),$(shell grep -E '^DATABASE__URL=' .env.test 2>/dev/null | cut -d= -f2-))
 
-.PHONY: dev test e2e all_tests migrate migration prepare_db reset_db reset_test_db init_db \
+.PHONY: dev dev-demo test e2e all_tests migrate migration prepare_db reset_db reset_test_db init_db \
         seed_accounts lint check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
@@ -19,8 +19,9 @@ help:
 	@echo "  Développement"
 	@echo "  ─────────────────────────────────────────────────────"
 	@echo "  dev           Lance le serveur en mode watch"
+	@echo "  dev-demo      Idem, mais servant le jeu de démo (assets/references.example) — requis par e2e"
 	@echo "  test          Lance les tests (utilise .env.test)"
-	@echo "  e2e           Lance les tests E2E Playwright (nécessite le serveur dev lancé)"
+	@echo "  e2e           Lance les tests E2E Playwright (nécessite \`make dev-demo\` lancé)"
 	@echo "  all_tests     test + e2e — garde-fou obligatoire avant tout commit (cf. CLAUDE.md)"
 	@echo "  migrate       Échappatoire manuelle (le binaire applique déjà les migrations au boot)"
 	@echo "  migration     Crée une migration (ex: make migration desc=create_teams)"
@@ -43,6 +44,13 @@ help:
 # ── Développement ─────────────────────────────────────────────────────────────
 dev:
 	cargo watch -x run -w src -w assets/templates -w assets/static/css
+
+# Serveur servant le jeu de démonstration versionné, et non tes données de
+# règles locales. C'est ce que la suite e2e attend : `make e2e` teste contre
+# les rosters de `assets/references.example` (Granitiers, Zéphyriens,
+# Lanterniers), pas contre le référentiel réel.
+dev-demo:
+	REFERENCES__DIR=assets/references.example cargo watch -x run -w src -w assets/templates -w assets/static/css
 
 test: reset_test_db
 	DATABASE_URL=$(TEST_DB_URL) cargo test
