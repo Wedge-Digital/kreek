@@ -26,6 +26,8 @@ Thumbs.db
 /tests/e2e/__pycache__
 /tests/e2e/.pytest_cache
 /tests/e2e/.venv
+/tests/e2e/test-results
+e2e.result
 
 # Données de migration & seed local (jamais versionnés en public)
 scripts/extracted_*.json
