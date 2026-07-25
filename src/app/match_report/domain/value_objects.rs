@@ -189,7 +189,7 @@ pub struct TempPlayer {
 pub enum TempPlayerKind {
     StarPlayer { ref_uid: String, position_uid: String },
     Mercenary { position_uid: String },
-    Journalier { position_uid: String },
+    Journeyman { position_uid: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -14,7 +14,7 @@ pub struct InitTempPlayersCommand {
 pub enum InitTempPlayersError {
     NotFound,
     NotInPreMatchPhase,
-    JournalierPositionUnavailable(String),
+    JourneymanPositionUnavailable(String),
     PlayerCountUnavailable(String),
     Repository(String),
 }
@@ -32,9 +32,9 @@ pub async fn execute(
 
     let stars = collect_stars(&pm, &cmd.team_id);
     let mercs = collect_mercs(&pm, &cmd.team_id);
-    let journaliers = collect_journaliers(&cmd.team_id, team_data, player_data).await?;
+    let journeymen = collect_journeymen(&cmd.team_id, team_data, player_data).await?;
 
-    let players = stars.into_iter().chain(mercs).chain(journaliers).collect();
+    let players = stars.into_iter().chain(mercs).chain(journeymen).collect();
     let (_, event) = pm.init_temp_players(&cmd.team_id, players);
 
     let version = pm.version;
@@ -193,7 +193,7 @@ mod tests {
     }
 }
 
-async fn collect_journaliers(
+async fn collect_journeymen(
     team_id: &TeamId,
     team_data: &dyn ITeamDataPort,
     player_data: &dyn IPlayerDataPort,
@@ -207,14 +207,14 @@ async fn collect_journaliers(
         return Ok(vec![]);
     }
     let pos = team_data
-        .find_journalier_position(&team_id.to_string())
+        .find_journeyman_position(&team_id.to_string())
         .await
-        .ok_or_else(|| InitTempPlayersError::JournalierPositionUnavailable(team_id.to_string()))?;
+        .ok_or_else(|| InitTempPlayersError::JourneymanPositionUnavailable(team_id.to_string()))?;
     Ok((0..n)
         .map(|_| TempPlayer {
             id: TempPlayerId(ulid::Ulid::new().to_string()),
             team_id: team_id.clone(),
-            kind: TempPlayerKind::Journalier { position_uid: pos.position_uid.clone() },
+            kind: TempPlayerKind::Journeyman { position_uid: pos.position_uid.clone() },
             display_name: None,
         })
         .collect())

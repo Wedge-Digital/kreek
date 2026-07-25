@@ -14,7 +14,7 @@ pub struct TempPlayerRowVm {
 #[derive(Template)]
 #[template(path = "temp-player-selector-widget.html")]
 pub struct TempPlayerSelectorTemplate {
-    pub journaliers: Vec<TempPlayerRowVm>,
+    pub journeymen: Vec<TempPlayerRowVm>,
     pub stars:       Vec<TempPlayerRowVm>,
 }
 
@@ -52,7 +52,7 @@ async fn render_temp_players(mr_id: &str, side: TeamSide, state: &AppState) -> R
         Some(MatchReportState::PreMatch(pm)) => pm,
         _ => return StatusCode::NOT_FOUND.into_response(),
     };
-    let (mut journaliers, mut stars) = (Vec::new(), Vec::new());
+    let (mut journeymen, mut stars) = (Vec::new(), Vec::new());
     for tp in pm.temp_players_for(side).iter() {
         let vm = TempPlayerRowVm {
             temp_player_id: tp.id.0.clone(),
@@ -60,16 +60,16 @@ async fn render_temp_players(mr_id: &str, side: TeamSide, state: &AppState) -> R
         };
         match &tp.kind {
             TempPlayerKind::StarPlayer { .. } => stars.push(vm),
-            _ => journaliers.push(vm),
+            _ => journeymen.push(vm),
         }
     }
-    TempPlayerSelectorTemplate { journaliers, stars }.into_response()
+    TempPlayerSelectorTemplate { journeymen, stars }.into_response()
 }
 
 fn kind_label(kind: &TempPlayerKind) -> String {
     match kind {
         TempPlayerKind::StarPlayer { ref_uid, .. } => ref_uid.clone(),
         TempPlayerKind::Mercenary { .. } => "Mercenaire".to_string(),
-        TempPlayerKind::Journalier { .. } => "Journalier".to_string(),
+        TempPlayerKind::Journeyman { .. } => "Journalier".to_string(),
     }
 }

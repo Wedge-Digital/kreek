@@ -286,9 +286,9 @@ fn build_player_ref(player: &ActionPlayer, temp_players: &[TempPlayer]) -> Playe
                     display_name: t.display_name.clone().unwrap_or_default(),
                 },
                 TempPlayerKind::Mercenary { .. } => PlayerRefPayload::Mercenary,
-                TempPlayerKind::Journalier { .. } => PlayerRefPayload::Journalier,
+                TempPlayerKind::Journeyman { .. } => PlayerRefPayload::Journeyman,
             })
-            .unwrap_or(PlayerRefPayload::Journalier),
+            .unwrap_or(PlayerRefPayload::Journeyman),
     }
 }
 
@@ -321,7 +321,7 @@ fn build_temp_player_payload(t: &TempPlayer) -> TempPlayerPayload {
     let kind = match &t.kind {
         TempPlayerKind::StarPlayer { .. } => "StarPlayer",
         TempPlayerKind::Mercenary { .. } => "Mercenary",
-        TempPlayerKind::Journalier { .. } => "Journalier",
+        TempPlayerKind::Journeyman { .. } => "Journeyman",
     };
     TempPlayerPayload {
         id: t.id.0.clone(),

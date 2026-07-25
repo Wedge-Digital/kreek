@@ -75,7 +75,7 @@ pub struct PlayerPosition {
     #[serde(rename = "max_quantity")]
     pub max_quantity: u8,
     #[serde(default)]
-    pub is_journalier: bool,
+    pub is_journeyman: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]

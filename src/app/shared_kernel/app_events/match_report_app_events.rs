@@ -51,7 +51,7 @@ pub enum PlayerRefPayload {
     Regular { player_id: String },
     Star { ref_uid: String, display_name: String },
     Mercenary,
-    Journalier,
+    Journeyman,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

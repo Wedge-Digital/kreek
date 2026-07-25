@@ -608,11 +608,11 @@ mod tests {
 
     use crate::app::match_report::domain::value_objects::{TempPlayerId, TempPlayerKind};
 
-    fn make_journalier(pm: &MatchReportPreMatch) -> TempPlayer {
+    fn make_journeyman(pm: &MatchReportPreMatch) -> TempPlayer {
         TempPlayer {
             id: TempPlayerId("tp-01".to_string()),
             team_id: pm.home_team_id.clone(),
-            kind: TempPlayerKind::Journalier { position_uid: "LIN".to_string() },
+            kind: TempPlayerKind::Journeyman { position_uid: "LIN".to_string() },
             display_name: None,
         }
     }
@@ -620,7 +620,7 @@ mod tests {
     #[test]
     fn init_temp_players_sets_list() {
         let pm = make_pm(1000, 1000);
-        let player = make_journalier(&pm);
+        let player = make_journeyman(&pm);
         let (updated, event) = pm.init_temp_players(&pm.home_team_id.clone(), vec![player]);
         assert_eq!(updated.home_temp_players.len(), 1);
         assert!(updated.away_temp_players.is_empty());
@@ -631,7 +631,7 @@ mod tests {
     #[test]
     fn reset_temp_players_clears_list() {
         let pm = make_pm(1000, 1000);
-        let player = make_journalier(&pm);
+        let player = make_journeyman(&pm);
         let (with_players, _) = pm.init_temp_players(&pm.home_team_id.clone(), vec![player]);
         let (reset, event) = with_players.reset_temp_players(&pm.home_team_id.clone());
         assert!(reset.home_temp_players.is_empty());

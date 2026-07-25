@@ -363,7 +363,7 @@ mod tests {
                     async fn find_team_info(&self, _: &str) -> Option<crate::app::match_report::ports::TeamInfoDto> { None }
                     async fn find_team_value(&self, _: &str) -> Option<u32> { None }
                     async fn find_team_treasury(&self, _: &str) -> Option<u32> { None }
-                    async fn find_journalier_position(&self, _: &str) -> Option<crate::app::match_report::ports::JournalierPositionDto> { None }
+                    async fn find_journeyman_position(&self, _: &str) -> Option<crate::app::match_report::ports::JourneymanPositionDto> { None }
                     async fn find_roster_positions(&self, _: &str) -> Vec<crate::app::match_report::ports::RosterPositionDto> { vec![] }
                 }
                 struct FakePlayerDataPort;

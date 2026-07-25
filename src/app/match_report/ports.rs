@@ -75,13 +75,13 @@ pub trait ITeamDataPort: Send + Sync {
 
     async fn find_team_treasury(&self, team_id: &str) -> Option<u32>;
 
-    async fn find_journalier_position(&self, team_id: &str) -> Option<JournalierPositionDto>;
+    async fn find_journeyman_position(&self, team_id: &str) -> Option<JourneymanPositionDto>;
 
     async fn find_roster_positions(&self, team_id: &str) -> Vec<RosterPositionDto>;
 }
 
 #[derive(Debug)]
-pub struct JournalierPositionDto {
+pub struct JourneymanPositionDto {
     pub position_uid: String,
     pub position_name: String,
 }
@@ -91,7 +91,7 @@ pub struct RosterPositionDto {
     pub position_name: String,
     pub base_cost:     u32,
     pub max_qty:       u8,
-    pub is_journalier: bool,
+    pub is_journeyman: bool,
 }
 
 pub struct PositionCountDto {

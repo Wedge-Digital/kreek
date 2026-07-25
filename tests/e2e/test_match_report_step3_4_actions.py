@@ -397,7 +397,7 @@ def test_s9_temp_player_visible_after_inducements(page: Page, space_id, mr_step3
 
 # ── S10 — Journaliers automatiques ────────────────────────────────────────────
 
-def test_s10_journaliers_auto(page: Page, space_id, mr_step3_full):
+def test_s10_journeymen_auto(page: Page, space_id, mr_step3_full):
     """Si équipe < 11 joueurs, des journaliers sont présents dans temp-player-selector."""
     rows = _query_db(
         f"SELECT home_team_id FROM match_report_proj "
@@ -420,8 +420,8 @@ def test_s10_journaliers_auto(page: Page, space_id, mr_step3_full):
               wait_until="load")
     page.wait_for_timeout(2000)
 
-    journaliers = page.locator("#temp-player-selector .mr-player-chip--journeyman")
-    assert journaliers.count() > 0, (
+    journeymen = page.locator("#temp-player-selector .mr-player-chip--journeyman")
+    assert journeymen.count() > 0, (
         f"Équipe a {player_count} joueurs mais aucun journalier dans temp-player-selector"
     )
 

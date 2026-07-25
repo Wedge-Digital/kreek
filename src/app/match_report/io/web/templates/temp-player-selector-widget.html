@@ -1,11 +1,11 @@
-{% if !journaliers.is_empty() || !stars.is_empty() %}
+{% if !journeymen.is_empty() || !stars.is_empty() %}
 <link rel="stylesheet" href="/static/css/pages/match-report-shared.css">
 <div class="mr-temp-players" hx-disinherit="*">
-    {% if !journaliers.is_empty() %}
+    {% if !journeymen.is_empty() %}
     <div class="mr-player-section">
         <div class="mr-player-section-label mr-player-section-label--journeyman">Journaliers</div>
         <div class="mr-player-chip-list">
-            {% for player in journaliers %}
+            {% for player in journeymen %}
             <button class="mr-player-chip mr-player-chip--journeyman"
                     type="button"
                     data-player-id="{{ player.temp_player_id }}"

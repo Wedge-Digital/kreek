@@ -1,4 +1,4 @@
-use crate::app::match_report::ports::{ITeamDataPort, JournalierPositionDto, RosterPositionDto, TeamInfoDto};
+use crate::app::match_report::ports::{ITeamDataPort, JourneymanPositionDto, RosterPositionDto, TeamInfoDto};
 use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::teams::ports::ITeamRepository;
 use async_trait::async_trait;
@@ -66,12 +66,12 @@ impl ITeamDataPort for RefTeamDataAdapter {
         Some(team.treasury.0)
     }
 
-    async fn find_journalier_position(&self, team_id: &str) -> Option<JournalierPositionDto> {
+    async fn find_journeyman_position(&self, team_id: &str) -> Option<JourneymanPositionDto> {
         let team = self.team_repo.find_by_id(team_id).await.ok()??;
         let roster_id = team.roster_id.to_string();
         let ref_team = self.reference_repo.find_team_by_uid(&roster_id)?;
-        let pos = ref_team.available_players.iter().find(|p| p.is_journalier)?;
-        Some(JournalierPositionDto {
+        let pos = ref_team.available_players.iter().find(|p| p.is_journeyman)?;
+        Some(JourneymanPositionDto {
             position_uid: pos.uid.clone(),
             position_name: pos.position_name.clone(),
         })
@@ -89,7 +89,7 @@ impl ITeamDataPort for RefTeamDataAdapter {
                 position_name: p.position_name.clone(),
                 base_cost:     p.cost,
                 max_qty:       p.max_quantity,
-                is_journalier: p.is_journalier,
+                is_journeyman: p.is_journeyman,
             })
             .collect()
     }

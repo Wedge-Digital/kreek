@@ -113,7 +113,7 @@ def test_mercenaires_tab_visible_and_widget_loads(page: Page, space_id, merco_mr
     expect(page.locator(".merco-position-grid")).to_be_visible()
 
 
-def test_journaliers_excluded_from_grid(page: Page, space_id, merco_mr):
+def test_journeymen_excluded_from_grid(page: Page, space_id, merco_mr):
     """TC-MERC-02 : aucune position marquée 'journalier' dans la grille."""
     url = _get_inducements_url(page, space_id, merco_mr)
     if url is None:
@@ -122,7 +122,7 @@ def test_journaliers_excluded_from_grid(page: Page, space_id, merco_mr):
     page.goto(url, wait_until="load")
     _open_mercenaires_tab(page)
 
-    # Le serveur filtre is_journalier côté handler — les cards présentes ne doivent
+    # Le serveur filtre is_journeyman côté handler — les cards présentes ne doivent
     # pas contenir le texte "journalier" (nom de position issu du roster reference).
     cards = page.locator(".merco-position-card")
     for i in range(cards.count()):
