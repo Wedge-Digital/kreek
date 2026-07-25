@@ -1,0 +1,54 @@
+{
+  "ruleset": "demo",
+  "edition": "Jeu de démonstration — données fictives",
+  "star_players": [
+    {
+      "uid": "DEMO_ORVAL_LE_PATIENT",
+      "name": "Orval le Patient",
+      "cost": 180,
+      "MA": 6,
+      "ST": 4,
+      "AG": "3+",
+      "PA": "5+",
+      "AV": "10+",
+      "playerType": "Percuteur, Granitier",
+      "skills": ["APPUI_FERME", "MASSE_INEBRANLABLE"],
+      "specialAbilityName": "Pierre Levée",
+      "specialAbilityDescription": "Une fois par rencontre, Orval peut annuler un déplacement forcé qui le viserait.",
+      "playsFor": ["LIGUE_DES_CIMES"],
+      "availableForRosters": ["DEMO_GRANIT", "DEMO_LANTERNE"]
+    },
+    {
+      "uid": "DEMO_SYLVE_AUX_MAINS_VIVES",
+      "name": "Sylve aux Mains Vives",
+      "cost": 210,
+      "MA": 8,
+      "ST": 2,
+      "AG": "2+",
+      "PA": "3+",
+      "AV": "8+",
+      "playerType": "Receveuse, Zéphyrienne",
+      "skills": ["RECEPTION_SURE", "PAS_DE_COTE", "SECOND_SOUFFLE"],
+      "specialAbilityName": "Course Portée",
+      "specialAbilityDescription": "Sylve peut relancer sa première tentative de réception de chaque mi-temps.",
+      "playsFor": [],
+      "availableForRosters": ["DEMO_GRANIT", "DEMO_ZEPHYR", "DEMO_LANTERNE"]
+    },
+    {
+      "uid": "DEMO_GRUMO_LE_TERNE",
+      "name": "Grumo le Terne",
+      "cost": 120,
+      "MA": 5,
+      "ST": 5,
+      "AG": "5+",
+      "PA": "-",
+      "AV": "11+",
+      "playerType": "Colosse",
+      "skills": ["LOURDAUD", "MASSE_INEBRANLABLE"],
+      "specialAbilityName": "Élan Pesant",
+      "specialAbilityDescription": "Grumo ne peut jamais recevoir le ballon, mais il déplace tout adversaire qu'il immobilise.",
+      "playsFor": ["COUPE_DES_SABLES"],
+      "availableForRosters": ["DEMO_GRANIT"]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "special_rules": [
+    { "uid": "DEMO_GENS_DE_ROCAILLE", "label": "Gens de Rocaille" },
+    { "uid": "DEMO_MENEUR_NE", "label": "Meneur Né" },
+    { "uid": "DEMO_SOUFFLE_DES_CIMES", "label": "Souffle des Cimes" },
+
+    { "uid": "FAVOURED_OF_CHOOSE_ANY", "label": "Favori d'une divinité au choix" },
+    { "uid": "FAVOURED_OF_KHORNE", "label": "Favori de la Première Divinité" },
+    { "uid": "FAVOURED_OF_NURGLE", "label": "Favori de la Deuxième Divinité" },
+    { "uid": "FAVOURED_OF_SLAANESH", "label": "Favori de la Troisième Divinité" },
+    { "uid": "FAVOURED_OF_TZEENTCH", "label": "Favori de la Quatrième Divinité" },
+    { "uid": "FAVOURED_OF_UNDIVIDED", "label": "Favori des Divinités Réunies" }
+  ]
+}

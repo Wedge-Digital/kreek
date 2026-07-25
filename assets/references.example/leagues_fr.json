@@ -1,0 +1,9 @@
+{
+  "ruleset": "demo",
+  "edition": "Jeu de démonstration — données fictives",
+  "leagues": [
+    { "uid": "LIGUE_DES_CIMES", "label": "Ligue des Cimes" },
+    { "uid": "COUPE_DES_SABLES", "label": "Coupe des Sables" },
+    { "uid": "CHALLENGE_SOUTERRAIN", "label": "Challenge Souterrain" }
+  ]
+}

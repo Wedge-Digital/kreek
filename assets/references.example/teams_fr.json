@@ -1,0 +1,173 @@
+{
+  "ruleset": "demo",
+  "edition": "Jeu de démonstration — données fictives",
+  "teams": [
+    {
+      "uid": "DEMO_GRANIT",
+      "name": "Granitiers",
+      "rerollCost": 60,
+      "tier": "Tier 1",
+      "specialRules": ["DEMO_GENS_DE_ROCAILLE", "DEMO_MENEUR_NE"],
+      "allowedStaff": ["APOTHECARY", "CHEERLEADERS", "COACH_ASSISTANTS", "FAN_FACTOR"],
+      "leagues": ["LIGUE_DES_CIMES"],
+      "logo": "demo-granit.svg",
+      "availablePlayers": [
+        {
+          "uid": "DEMO_GRANIT__PIETAILLE",
+          "positionName": "Piétaille des Carrières",
+          "cost": 50,
+          "MA": 5,
+          "ST": 3,
+          "AG": 4,
+          "PA": 5,
+          "AV": 10,
+          "skills": [],
+          "primaryAccess": ["GENERAL"],
+          "secondaryAccess": ["STRENGTH"],
+          "max_quantity": 16,
+          "is_journeyman": true
+        },
+        {
+          "uid": "DEMO_GRANIT__PERCUTEUR",
+          "positionName": "Percuteur",
+          "cost": 90,
+          "MA": 5,
+          "ST": 4,
+          "AG": 5,
+          "PA": 6,
+          "AV": 10,
+          "skills": ["APPUI_FERME"],
+          "primaryAccess": ["GENERAL", "STRENGTH"],
+          "secondaryAccess": ["AGILITY"],
+          "max_quantity": 4,
+          "is_journeyman": false
+        },
+        {
+          "uid": "DEMO_GRANIT__COLOSSE",
+          "positionName": "Colosse de Granit",
+          "cost": 140,
+          "MA": 4,
+          "ST": 5,
+          "AG": 5,
+          "PA": 6,
+          "AV": 11,
+          "skills": ["MASSE_INEBRANLABLE", "LOURDAUD"],
+          "primaryAccess": ["STRENGTH"],
+          "secondaryAccess": ["GENERAL"],
+          "max_quantity": 1,
+          "is_journeyman": false
+        }
+      ]
+    },
+    {
+      "uid": "DEMO_ZEPHYR",
+      "name": "Zéphyriens",
+      "rerollCost": 50,
+      "tier": "Tier 2",
+      "specialRules": ["DEMO_SOUFFLE_DES_CIMES"],
+      "allowedStaff": ["APOTHECARY", "CHEERLEADERS", "COACH_ASSISTANTS"],
+      "availablePlayers": [
+        {
+          "uid": "DEMO_ZEPHYR__PIETAILLE",
+          "positionName": "Piétaille des Courants",
+          "cost": 45,
+          "MA": 7,
+          "ST": 2,
+          "AG": 3,
+          "PA": 4,
+          "AV": 8,
+          "skills": [],
+          "primaryAccess": ["AGILITY"],
+          "secondaryAccess": ["GENERAL"],
+          "max_quantity": 16,
+          "is_journeyman": true
+        },
+        {
+          "uid": "DEMO_ZEPHYR__RECEVEUR",
+          "positionName": "Receveur",
+          "cost": 85,
+          "MA": 8,
+          "ST": 2,
+          "AG": 2,
+          "PA": 4,
+          "AV": 8,
+          "skills": ["RECEPTION_SURE", "PAS_DE_COTE"],
+          "primaryAccess": ["AGILITY", "GENERAL"],
+          "secondaryAccess": ["PASSING"],
+          "max_quantity": 4,
+          "is_journeyman": false
+        },
+        {
+          "uid": "DEMO_ZEPHYR__LANCEUR",
+          "positionName": "Lanceur",
+          "cost": 80,
+          "MA": 7,
+          "ST": 3,
+          "AG": 3,
+          "PA": 2,
+          "AV": 8,
+          "skills": ["LANCER_TENDU"],
+          "primaryAccess": ["PASSING"],
+          "secondaryAccess": ["AGILITY", "GENERAL"],
+          "max_quantity": 2,
+          "is_journeyman": false
+        }
+      ]
+    },
+    {
+      "uid": "DEMO_LANTERNE",
+      "name": "Lanterniers",
+      "rerollCost": 70,
+      "tier": "Tier 3",
+      "specialRules": ["FAVOURED_OF_CHOOSE_ANY"],
+      "allowedStaff": ["CHEERLEADERS", "COACH_ASSISTANTS"],
+      "availablePlayers": [
+        {
+          "uid": "DEMO_LANTERNE__PIETAILLE",
+          "positionName": "Piétaille des Galeries",
+          "cost": 40,
+          "MA": 6,
+          "ST": 3,
+          "AG": 4,
+          "PA": 5,
+          "AV": 9,
+          "skills": [],
+          "primaryAccess": ["GENERAL"],
+          "secondaryAccess": ["DEVIOUS"],
+          "max_quantity": 16,
+          "is_journeyman": true
+        },
+        {
+          "uid": "DEMO_LANTERNE__RODEUR",
+          "positionName": "Rôdeur",
+          "cost": 70,
+          "MA": 6,
+          "ST": 3,
+          "AG": 3,
+          "PA": 5,
+          "AV": 9,
+          "skills": ["COUP_BAS"],
+          "primaryAccess": ["DEVIOUS", "GENERAL"],
+          "secondaryAccess": ["AGILITY"],
+          "max_quantity": 2,
+          "is_journeyman": false
+        },
+        {
+          "uid": "DEMO_LANTERNE__MUTANT",
+          "positionName": "Mutant des Profondeurs",
+          "cost": 95,
+          "MA": 6,
+          "ST": 3,
+          "AG": 4,
+          "PA": 5,
+          "AV": 9,
+          "skills": ["ECAILLES_DURES"],
+          "primaryAccess": ["MUTATIONS"],
+          "secondaryAccess": ["GENERAL", "STRENGTH"],
+          "max_quantity": 2,
+          "is_journeyman": false
+        }
+      ]
+    }
+  ]
+}

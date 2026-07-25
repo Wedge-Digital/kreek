@@ -1,0 +1,34 @@
+{
+  "ruleset": "demo",
+  "edition": "Jeu de démonstration — données fictives",
+  "staff": [
+    {
+      "uid": "APOTHECARY",
+      "name": "Apothicaire",
+      "price": 50,
+      "maxQuantity": 1,
+      "description": "Soigne un joueur blessé une fois par rencontre."
+    },
+    {
+      "uid": "CHEERLEADERS",
+      "name": "Meneuses de Ban",
+      "price": 10,
+      "maxQuantity": 6,
+      "description": "Chaque meneuse améliore la ferveur du public en faveur de l'équipe."
+    },
+    {
+      "uid": "COACH_ASSISTANTS",
+      "name": "Assistants du Coach",
+      "price": 10,
+      "maxQuantity": 6,
+      "description": "Chaque assistant aide l'équipe à conserver son sang-froid en bord de terrain."
+    },
+    {
+      "uid": "FAN_FACTOR",
+      "name": "Facteur Fans",
+      "price": 5,
+      "maxQuantity": 2,
+      "description": "Augmente le nombre de supporters fidèles au départ de la saison."
+    }
+  ]
+}

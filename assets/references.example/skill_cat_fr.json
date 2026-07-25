@@ -1,0 +1,13 @@
+{
+  "ruleset": "demo",
+  "edition": "Jeu de démonstration — données fictives",
+  "skill_categories": [
+    { "id": "GENERAL", "label": "Général" },
+    { "id": "AGILITY", "label": "Agilité" },
+    { "id": "STRENGTH", "label": "Force" },
+    { "id": "PASSING", "label": "Passe" },
+    { "id": "DEVIOUS", "label": "Retors" },
+    { "id": "MUTATIONS", "label": "Mutations" },
+    { "id": "TRAITS", "label": "Traits" }
+  ]
+}

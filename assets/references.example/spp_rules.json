@@ -1,0 +1,18 @@
+{
+  "normal": [
+    { "action": "TD", "spp": 4 },
+    { "action": "CAS", "spp": 2 },
+    { "action": "REU", "spp": 1 },
+    { "action": "MVP", "spp": 5 },
+    { "action": "INT", "spp": 3 },
+    { "action": "TTM", "spp": 1 }
+  ],
+  "demo_offensif": [
+    { "action": "TD", "spp": 6 },
+    { "action": "CAS", "spp": 1 },
+    { "action": "REU", "spp": 2 },
+    { "action": "MVP", "spp": 5 },
+    { "action": "INT", "spp": 3 },
+    { "action": "TTM", "spp": 2 }
+  ]
+}

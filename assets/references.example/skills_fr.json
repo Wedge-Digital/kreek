@@ -1,0 +1,102 @@
+{
+  "ruleset": "demo",
+  "edition": "Jeu de démonstration — données fictives",
+  "skills": [
+    {
+      "uid": "APPUI_FERME",
+      "name": "Appui Ferme",
+      "category": "GENERAL",
+      "type": "Standard",
+      "activation": "Passive",
+      "description": "Ce joueur ne recule jamais de plus d'une case lorsqu'il est repoussé."
+    },
+    {
+      "uid": "SECOND_SOUFFLE",
+      "name": "Second Souffle",
+      "category": "GENERAL",
+      "type": "Élite",
+      "activation": "Active",
+      "description": "Une fois par mi-temps, ce joueur peut se relever sans dépenser de mouvement."
+    },
+    {
+      "uid": "PAS_DE_COTE",
+      "name": "Pas de Côté",
+      "category": "AGILITY",
+      "type": "Standard",
+      "activation": "Active",
+      "description": "Lorsqu'il est repoussé, ce joueur choisit lui-même la case d'arrivée parmi les cases libres adjacentes."
+    },
+    {
+      "uid": "RECEPTION_SURE",
+      "name": "Réception Sûre",
+      "category": "AGILITY",
+      "type": "Élite",
+      "activation": "Passive",
+      "description": "Ce joueur ignore le premier échec de réception de chaque mi-temps."
+    },
+    {
+      "uid": "POIGNE_LARGE",
+      "name": "Poigne Large",
+      "category": "STRENGTH",
+      "type": "Standard",
+      "activation": "Active",
+      "description": "Ce joueur peut immobiliser un adversaire adjacent au lieu de le repousser."
+    },
+    {
+      "uid": "MASSE_INEBRANLABLE",
+      "name": "Masse Inébranlable",
+      "category": "STRENGTH",
+      "type": "Élite",
+      "activation": "Passive",
+      "description": "Ce joueur ne peut être déplacé par aucun effet provoqué par un adversaire de Force inférieure."
+    },
+    {
+      "uid": "LANCER_TENDU",
+      "name": "Lancer Tendu",
+      "category": "PASSING",
+      "type": "Standard",
+      "activation": "Active",
+      "description": "Ce joueur peut échanger la portée de sa passe contre un bonus de précision."
+    },
+    {
+      "uid": "VISEE_LONGUE",
+      "name": "Visée Longue",
+      "category": "PASSING",
+      "type": "Élite",
+      "activation": "Active",
+      "description": "Ce joueur ignore le premier modificateur négatif de distance sur chacune de ses passes."
+    },
+    {
+      "uid": "COUP_BAS",
+      "name": "Coup Bas",
+      "category": "DEVIOUS",
+      "type": "Standard",
+      "activation": "Active",
+      "description": "Ce joueur peut tenter une action déloyale contre un adversaire au sol, au risque d'être exclu."
+    },
+    {
+      "uid": "ECAILLES_DURES",
+      "name": "Écailles Dures",
+      "category": "MUTATIONS",
+      "type": "Standard",
+      "activation": "Passive",
+      "description": "L'Armure de ce joueur est considérée comme supérieure d'un point face aux agressions."
+    },
+    {
+      "uid": "BRAS_SUPPLEMENTAIRE",
+      "name": "Bras Supplémentaire",
+      "category": "MUTATIONS",
+      "type": "Élite",
+      "activation": "Passive",
+      "description": "Ce joueur bénéficie d'un bonus à toutes ses tentatives de récupération du ballon."
+    },
+    {
+      "uid": "LOURDAUD",
+      "name": "Lourdaud",
+      "category": "TRAITS",
+      "type": "Standard",
+      "activation": "Passive",
+      "description": "Ce joueur ne peut pas effectuer d'action de course deux tours de suite."
+    }
+  ]
+}

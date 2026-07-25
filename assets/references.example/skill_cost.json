@@ -1,0 +1,44 @@
+[
+  {
+    "level": 1,
+    "chosen": { "primary": 6, "secondary": 10 },
+    "chosenElite": { "primary": 8, "secondary": 12 },
+    "random": 3,
+    "randomElite": 4,
+    "characteristic": 14
+  },
+  {
+    "level": 2,
+    "chosen": { "primary": 8, "secondary": 12 },
+    "chosenElite": { "primary": 10, "secondary": 14 },
+    "random": 4,
+    "randomElite": 5,
+    "characteristic": 16
+  },
+  {
+    "level": 3,
+    "chosen": { "primary": 12, "secondary": 16 },
+    "chosenElite": { "primary": 14, "secondary": 18 },
+    "random": 6,
+    "randomElite": 7,
+    "characteristic": 20
+  },
+  {
+    "level": 4,
+    "chosen": { "primary": 16, "secondary": 20 },
+    "random": 8,
+    "characteristic": 24
+  },
+  {
+    "level": 5,
+    "chosen": { "primary": 20, "secondary": 24 },
+    "random": 10,
+    "characteristic": 28
+  },
+  {
+    "level": 6,
+    "chosen": { "primary": 30, "secondary": 34 },
+    "random": 15,
+    "characteristic": 38
+  }
+]

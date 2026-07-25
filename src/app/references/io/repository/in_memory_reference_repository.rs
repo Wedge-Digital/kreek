@@ -90,8 +90,20 @@ impl InMemoryReferenceRepository {
     /// de la crate pour rester indépendant du répertoire courant.
     #[cfg(test)]
     pub fn load_for_tests() -> Self {
-        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/references");
-        Self::load_from_dir(&dir).expect("données de référence de test invalides")
+        Self::load_bundled("assets/references")
+    }
+
+    /// Jeu de démonstration versionné (`assets/references.example`).
+    #[cfg(test)]
+    pub fn load_example() -> Self {
+        Self::load_bundled("assets/references.example")
+    }
+
+    #[cfg(test)]
+    fn load_bundled(relative_dir: &str) -> Self {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join(relative_dir);
+        Self::load_from_dir(&dir)
+            .unwrap_or_else(|e| panic!("jeu de données « {relative_dir} » invalide : {e}"))
     }
 }
 
@@ -191,6 +203,17 @@ impl IReferenceRepository for InMemoryReferenceRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::references::domain::consistency::check_consistency;
+
+    /// Doit rester aligné sur `FIVE_CHAOS_GODS` (special_rule_selector.rs),
+    /// que le sélecteur de règle à choix résout depuis le jeu de données.
+    const CHOICE_RULE_UIDS: [&str; 5] = [
+        "FAVOURED_OF_KHORNE",
+        "FAVOURED_OF_NURGLE",
+        "FAVOURED_OF_SLAANESH",
+        "FAVOURED_OF_TZEENTCH",
+        "FAVOURED_OF_UNDIVIDED",
+    ];
 
     fn fixture_dir(name: &str) -> std::path::PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures").join(name)
@@ -238,6 +261,72 @@ mod tests {
             }
             other => panic!("erreur inattendue : {other}"),
         }
+    }
+
+    // ── Jeu de démonstration versionné ────────────────────────────────────────
+
+    #[test]
+    fn example_dataset_is_referentially_consistent() {
+        let repo = InMemoryReferenceRepository::load_example();
+        let violations = check_consistency(&repo);
+        assert!(violations.is_empty(), "incohérences : {violations:?}");
+    }
+
+    /// Les uids que le code de production interroge en dur. Un jeu de données
+    /// qui ne les fournit pas dégrade silencieusement des fonctionnalités.
+    #[test]
+    fn example_dataset_honours_hardcoded_uids() {
+        let repo = InMemoryReferenceRepository::load_example();
+        for uid in ["APOTHECARY", "CHEERLEADERS", "COACH_ASSISTANTS", "FAN_FACTOR"] {
+            assert!(repo.list_staff().iter().any(|s| s.uid == uid), "staff manquant : {uid}");
+        }
+        for uid in CHOICE_RULE_UIDS {
+            assert!(
+                repo.list_special_rules().iter().any(|r| r.uid == uid),
+                "règle spéciale manquante : {uid}"
+            );
+        }
+        for id in ["GENERAL", "AGILITY", "STRENGTH", "PASSING"] {
+            assert!(
+                repo.list_skill_categories().iter().any(|c| c.id == id),
+                "catégorie manquante : {id}"
+            );
+        }
+    }
+
+    /// Le jeu de démonstration sert de spécification exécutable du schéma :
+    /// il doit exercer les variations que la donnée réelle n'expose pas.
+    #[test]
+    fn example_dataset_exercises_optional_schema_fields() {
+        let repo = InMemoryReferenceRepository::load_example();
+
+        let teams = repo.list_teams();
+        assert!(teams.iter().any(|t| t.logo.is_some()), "aucun logo renseigné");
+        assert!(teams.iter().any(|t| t.logo.is_none()), "aucun logo omis");
+        assert!(teams.iter().any(|t| !t.leagues.is_empty()), "aucune ligue renseignée");
+
+        let positions: Vec<_> = teams.iter().flat_map(|t| t.available_players.iter()).collect();
+        assert!(positions.iter().any(|p| p.is_journeyman), "aucun journeyman");
+        assert!(positions.iter().any(|p| p.skills.is_empty()), "aucune position sans skill");
+        assert!(positions.iter().any(|p| !p.skills.is_empty()), "aucune position avec skills");
+
+        let inducements = repo.list_inducements();
+        assert!(!inducements.is_empty());
+        let raw: Vec<_> = inducements
+            .iter()
+            .filter_map(|i| repo.find_inducement_by_uid(&i.id.0))
+            .collect();
+        assert!(raw.iter().any(|i| i.reduced_cost.is_some()), "aucun reducedCost");
+        assert!(raw.iter().any(|i| i.reduced_cost.is_none()), "aucun reducedCost nul");
+        assert!(raw.iter().any(|i| !i.restricted_to.is_empty()), "aucun restrictedTo");
+
+        assert!(repo.list_star_players().iter().any(|s| !s.plays_for.is_empty()));
+        assert!(repo.list_star_players().iter().any(|s| s.plays_for.is_empty()));
+
+        let costs = repo.skill_cost_matrix();
+        assert!(costs.iter().any(|c| c.chosen_elite.is_some()), "aucun chosenElite");
+        assert!(costs.iter().any(|c| c.chosen_elite.is_none()), "aucun chosenElite omis");
+        assert!(costs.iter().any(|c| c.random_elite.is_some()), "aucun randomElite");
     }
 
     #[test]

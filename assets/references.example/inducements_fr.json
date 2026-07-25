@@ -1,0 +1,56 @@
+{
+  "ruleset": "demo",
+  "edition": "Jeu de démonstration — données fictives",
+  "inducements": [
+    {
+      "uid": "DEMO_RENFORT_TEMPORAIRE",
+      "name": "Renfort Temporaire",
+      "cost": 20,
+      "reducedCost": null,
+      "maxQuantity": 3,
+      "category": "COMMON",
+      "restrictedTo": [],
+      "description": "Ajoute un remplaçant pour la durée de la rencontre."
+    },
+    {
+      "uid": "DEMO_CHARIOT_DE_VIVRES",
+      "name": "Chariot de Vivres",
+      "cost": 15,
+      "reducedCost": null,
+      "maxQuantity": 5,
+      "category": "COMMON",
+      "restrictedTo": [],
+      "description": "Améliore l'endurance de l'équipe jusqu'à la fin de la rencontre."
+    },
+    {
+      "uid": "DEMO_MAGE_DES_BRUMES",
+      "name": "Mage des Brumes",
+      "cost": 60,
+      "reducedCost": 40,
+      "maxQuantity": 1,
+      "category": "WIZARD",
+      "restrictedTo": [],
+      "description": "Modifie une fois par rencontre les conditions météorologiques."
+    },
+    {
+      "uid": "DEMO_ARBITRE_COMPLAISANT",
+      "name": "Arbitre Complaisant",
+      "cost": 50,
+      "reducedCost": null,
+      "maxQuantity": 1,
+      "category": "BIASED_REFEREE",
+      "restrictedTo": [],
+      "description": "Ferme les yeux sur la première action déloyale de l'équipe."
+    },
+    {
+      "uid": "DEMO_MASSEUR_DOUTEUX",
+      "name": "Masseur Douteux",
+      "cost": 30,
+      "reducedCost": 20,
+      "maxQuantity": 2,
+      "category": "INFAMOUS_STAFF",
+      "restrictedTo": ["DEMO_GRANIT"],
+      "description": "Remet sur pied un joueur sonné, avec des résultats variables."
+    }
+  ]
+}
