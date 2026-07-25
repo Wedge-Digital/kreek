@@ -36,6 +36,23 @@ authentification. **À n'utiliser qu'en développement local.** Ne jamais
 l'activer dans un environnement exposé — c'est un contournement total de
 l'authentification. La valeur par défaut est `false` (`config/default.toml`).
 
+## Données de règles
+
+kreek est un moteur de gestion de ligue : il ne contient aucune règle de jeu.
+Il lit un ruleset au démarrage, dont le format est décrit dans
+[`docs/reference-data-schema.md`](docs/reference-data-schema.md).
+
+Un jeu de démonstration fictif et complet est fourni dans
+`assets/references.example/` — c'est le défaut, l'application tourne sans
+configuration. Pour jouer avec un autre corpus de règles, fournir son propre
+répertoire via `REFERENCES__DIR`.
+
+La licence AGPL-3.0 couvre le code de kreek. Elle ne s'étend pas aux données de
+règles que l'exploitant fournit, dont il lui appartient de vérifier qu'il a le
+droit de les utiliser.
+
+Projet non officiel, sans affiliation avec Games Workshop.
+
 ## License
 
 Kreek is licensed under **AGPL-3.0-or-later**. See [`LICENSE`](LICENSE).
