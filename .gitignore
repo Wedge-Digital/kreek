@@ -31,3 +31,8 @@ Thumbs.db
 scripts/extracted_*.json
 scripts/seed_accounts.json
 assets/articles.json
+
+# Données de règles fournies par l'exploitant (cf. docs/reference-data-schema.md).
+# Le slash final est nécessaire : il ne faut pas attraper assets/references.example/,
+# le jeu de démonstration, lui versionné.
+assets/references/

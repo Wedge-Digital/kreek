@@ -45,10 +45,11 @@ help:
 dev:
 	cargo watch -x run -w src -w assets/templates -w assets/static/css
 
-# Serveur servant le jeu de démonstration versionné, et non tes données de
-# règles locales. C'est ce que la suite e2e attend : `make e2e` teste contre
-# les rosters de `assets/references.example` (Granitiers, Zéphyriens,
-# Lanterniers), pas contre le référentiel réel.
+# Force le jeu de démonstration versionné, quelle que soit la configuration
+# locale. Utile quand `.env.dev` surcharge REFERENCES__DIR vers un jeu de
+# règles réel : la suite e2e attend les rosters de `assets/references.example`
+# (Granitiers, Zéphyriens, Lanterniers). Sans surcharge locale, `make dev`
+# sert déjà ce jeu — c'est le défaut de config/default.toml.
 dev-demo:
 	REFERENCES__DIR=assets/references.example cargo watch -x run -w src -w assets/templates -w assets/static/css
 

@@ -10,6 +10,11 @@ rendu HTML/HTMX/Alpine réellement produit dans un navigateur.
   (ex: `ENV=dev cargo run`, ou via `.env.dev`). Les tests ne le démarrent pas
   eux-mêmes — ils échouent immédiatement et clairement si rien ne répond sur
   `http://localhost:3210`.
+- Le serveur doit servir le **jeu de démonstration** (`assets/references.example`),
+  sur lequel les tests s'appuient : rosters Granitiers, Zéphyriens et
+  Lanterniers. C'est le défaut de `config/default.toml`, donc `make dev`
+  suffit — sauf si ton `.env.dev` surcharge `REFERENCES__DIR` vers un jeu de
+  règles réel, auquel cas lance `make dev-demo`.
 - `uv` installé.
 
 ## Installation (une fois)

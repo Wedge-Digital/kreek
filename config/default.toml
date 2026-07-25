@@ -14,7 +14,9 @@ token_ttl_seconds = 3600
 
 [references]
 # Répertoire des données de référence (règles de jeu), relatif au répertoire
-# de lancement. Non versionné — voir README, section « Données de règles ».
-dir = "assets/references"
+# de lancement. Le défaut est le jeu de démonstration versionné, pour qu'un
+# clone frais démarre sans configuration. Une exploitation réelle surcharge
+# avec REFERENCES__DIR (cf. docs/reference-data-schema.md).
+dir = "assets/references.example"
 
 bypass_auth = false
