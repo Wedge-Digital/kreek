@@ -6,7 +6,23 @@ import urllib.request
 import pytest
 
 BASE_URL = os.environ.get("E2E_BASE_URL", "http://localhost:3210")
-_ULID_IN_PATH_RE = re.compile(r"/app/([0-9A-Z]{26})/")
+
+# Roster du jeu de démonstration servant de sentinelle : sa présence atteste
+# que le serveur charge bien `assets/references.example`.
+DEMO_ROSTER_UID = "DEMO_GRANIT"
+
+# Espace dédié à la suite : toutes les compétitions et équipes créées par les
+# tests y atterrissent. Doit correspondre à SPACE_NAME dans
+# `src/cli/seed_e2e.rs` — une divergence fait échouer la résolution ci-dessous
+# avec un message explicite, jamais silencieusement.
+E2E_SPACE_NAME = "Espace E2E"
+
+# Dans /app/spaces, chaque espace est un bloc où l'identifiant précède son
+# libellé. Le segment intermédiaire interdit un nouveau `hx-get=`, pour qu'un
+# bloc sans title ne puisse pas déborder sur l'espace suivant.
+_SPACE_ENTRY_RE = re.compile(
+    r'hx-get="/app/([0-9A-Z]{26})/home"(?:(?!hx-get=)[\s\S])*?title="([^"]*)"'
+)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -21,14 +37,59 @@ def _server_is_running():
         )
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _server_serves_demo_ruleset(_server_is_running):
+    """Vérifie que le serveur sert bien `assets/references.example`.
+
+    Toute la suite s'appuie sur les rosters de démonstration (Granitiers,
+    Zéphyriens, Lanterniers). Un serveur servant un autre jeu de règles ne
+    produit pas d'erreur explicite : les widgets se rendent vides, les
+    sélections de roster n'ont aucun effet, et on récolte une cascade de
+    timeouts illisibles après plusieurs minutes. Ce contrôle transforme ça en
+    un message immédiat.
+    """
+    url = f"{BASE_URL}/references/roster-picker"
+    try:
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            final_url = resp.geturl()
+            html = resp.read().decode("utf-8")
+    except urllib.error.URLError as exc:
+        pytest.exit(f"Impossible de charger {url} ({exc}).", returncode=2)
+
+    # Sans authentification, la route redirige vers /auth/login : on récupère
+    # la page de connexion, où aucun roster ne figure. Sans cette distinction,
+    # un problème d'auth serait diagnostiqué à tort comme un mauvais jeu de
+    # données — c'est arrivé.
+    if "/auth/login" in final_url:
+        pytest.exit(
+            f"{url} redirige vers la page de connexion : le serveur n'a pas "
+            "authentifié la requête.\n"
+            "Vérifie BYPASS_AUTH=true, et que la base contient bien "
+            "l'utilisateur legacy_id=1 (`cargo run -- seed-accounts`).",
+            returncode=2,
+        )
+
+    if DEMO_ROSTER_UID not in html:
+        pytest.exit(
+            f"Le serveur ne sert pas le jeu de démonstration : le roster "
+            f"{DEMO_ROSTER_UID} est absent de {url}.\n"
+            "Relance le serveur avec `make dev-demo` (ou "
+            "REFERENCES__DIR=assets/references.example).",
+            returncode=2,
+        )
+
+
 @pytest.fixture(scope="session")
 def space_id(_server_is_running):
-    """Espace du coach connecté automatiquement par bypass_auth (legacy_id=1).
+    """Identifiant de l'espace « Espace E2E », créé par `make seed_e2e`.
 
-    Résolu dynamiquement via /app/spaces plutôt que codé en dur : un
-    `make init_db` régénère des ULIDs aléatoires à chaque réimport, ce qui
-    invaliderait silencieusement un identifiant figé. Surchargeable via
-    E2E_SPACE_ID pour cibler un espace précis.
+    Résolu par son nom, et non en prenant le premier espace venu : sur une base
+    contenant de vraies données, ce raccourci enverrait les compétitions et les
+    équipes créées par les tests dans un espace de production. À défaut de
+    trouver l'espace dédié, la suite s'arrête plutôt que d'écrire ailleurs.
+
+    Résolu à chaque exécution plutôt que figé en constante : l'identifiant est
+    régénéré à chaque `make reset_db`. Surchargeable via E2E_SPACE_ID.
     """
     override = os.environ.get("E2E_SPACE_ID")
     if override:
@@ -41,15 +102,16 @@ def space_id(_server_is_running):
     except urllib.error.URLError as exc:
         pytest.exit(f"Impossible de charger {url} ({exc}).", returncode=2)
 
-    match = _ULID_IN_PATH_RE.search(html)
-    if not match:
+    spaces = {name: uid for uid, name in _SPACE_ENTRY_RE.findall(html)}
+    if E2E_SPACE_NAME not in spaces:
         pytest.exit(
-            f"Aucun space_id trouvé dans {url} — l'utilisateur bypass_auth "
-            "(legacy_id=1) n'appartient à aucun space. "
-            "Lance `make init_db WITH_SEED=1` pour en créer.",
+            f"Espace « {E2E_SPACE_NAME} » introuvable dans {url}.\n"
+            f"Espaces visibles par l'utilisateur bypass_auth : "
+            f"{sorted(spaces) or 'aucun'}.\n"
+            "Lance `make seed_e2e` pour le créer.",
             returncode=2,
         )
-    return match.group(1)
+    return spaces[E2E_SPACE_NAME]
 
 
 @pytest.fixture

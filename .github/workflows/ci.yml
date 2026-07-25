@@ -118,8 +118,13 @@ jobs:
           REFERENCES__DIR=assets/references.example
           EOF
 
-      - name: Initialiser la base (migrations + imports legacy + seed)
-        run: make init_db WITH_SEED=1
+      # `make init_db` reposait sur scripts/extracted_*.json, non versionnés :
+      # inutilisable en CI. Le seed synthétique couvre tout ce dont la suite a
+      # besoin. Les migrations sont appliquées par le binaire au démarrage.
+      - name: Initialiser la base (reset + seed e2e synthétique)
+        run: |
+          make reset_db
+          make seed_e2e
 
       - name: Lancer le serveur en arrière-plan
         run: |

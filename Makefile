@@ -11,7 +11,7 @@ DATABASE_URL := $(if $(DATABASE_URL),$(DATABASE_URL),$(shell grep -E '^DATABASE_
 TEST_DB_URL := $(if $(DATABASE_URL_TEST),$(DATABASE_URL_TEST),$(shell grep -E '^DATABASE__URL=' .env.test 2>/dev/null | cut -d= -f2-))
 
 .PHONY: dev dev-demo test e2e all_tests migrate migration prepare_db reset_db reset_test_db init_db \
-        seed_accounts lint check-arch coverage analyze help
+        seed_accounts seed_e2e lint check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
 help:
@@ -30,6 +30,7 @@ help:
 	@echo "  reset_test_db Remet la base de test à zéro (.env.test)"
 	@echo "  init_db       reset_db + import des données legacy + seed comptes dev (WITH_SEED=1 pour aussi affecter les coachs aux spaces)"
 	@echo "  seed_accounts Seed les comptes dev (scripts/seed_accounts.json)"
+	@echo "  seed_e2e      Seed synthétique requis par la suite e2e (space + 12 coachs, idempotent)"
 	@echo ""
 	@echo "  Qualité & architecture"
 	@echo "  ─────────────────────────────────────────────────────"
@@ -88,6 +89,11 @@ reset_test_db:
 
 seed_accounts:
 	DATABASE_URL=$(DATABASE_URL) cargo run -- seed-accounts
+
+# Seed synthétique de la suite e2e : un space, DevCoach (legacy_id=1, connecté
+# par BYPASS_AUTH) et onze autres coachs. Idempotent — rejouable sans risque.
+seed_e2e:
+	DATABASE_URL=$(DATABASE_URL) cargo run -- seed-e2e
 
 init_db: reset_db
 	@echo ""

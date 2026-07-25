@@ -60,6 +60,8 @@ enum Command {
         #[arg(long, default_value = "scripts/seed_accounts.json")]
         input: String,
     },
+    /// Seed synthétique minimal pour la suite e2e (space + coachs + adhésions)
+    SeedE2e,
 }
 
 async fn init_pool(cfg: &AppConfig) -> sqlx::PgPool {
@@ -106,6 +108,12 @@ async fn main() {
         Command::SeedAccounts { input } => {
             if let Err(e) = cli::seed_accounts::execute(&pool, &input).await {
                 tracing::error!("seed-accounts failed: {e}");
+                std::process::exit(1);
+            }
+        }
+        Command::SeedE2e => {
+            if let Err(e) = cli::seed_e2e::execute(&pool).await {
+                tracing::error!("seed-e2e failed: {e}");
                 std::process::exit(1);
             }
         }
