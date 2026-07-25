@@ -7,6 +7,7 @@ pub struct AppConfig {
     pub database: DatabaseConfig,
     pub auth: AuthConfig,
     pub email: EmailConfig,
+    pub references: ReferencesConfig,
     pub host_domain: String,
     pub bypass_auth: bool,
 }
@@ -37,6 +38,14 @@ pub struct EmailConfig {
     pub api_key: String,
     pub from: String,
     pub from_name: String,
+}
+
+/// Répertoire des données de référence (règles de jeu), lu au démarrage.
+/// Les données ne sont pas embarquées dans le binaire : chaque déploiement
+/// fournit son propre jeu de règles via `REFERENCES__DIR`.
+#[derive(Debug, Deserialize, Clone)]
+pub struct ReferencesConfig {
+    pub dir: String,
 }
 
 impl AppConfig {

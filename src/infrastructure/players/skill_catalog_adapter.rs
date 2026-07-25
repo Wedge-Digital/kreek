@@ -85,7 +85,7 @@ mod tests {
     use crate::app::references::io::repository::in_memory_reference_repository::InMemoryReferenceRepository;
 
     fn adapter() -> SkillCatalogAdapter {
-        SkillCatalogAdapter::new(Arc::new(InMemoryReferenceRepository::load()))
+        SkillCatalogAdapter::new(Arc::new(InMemoryReferenceRepository::load_for_tests()))
     }
 
     #[test]

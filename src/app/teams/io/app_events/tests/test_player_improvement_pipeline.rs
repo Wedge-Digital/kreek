@@ -90,7 +90,7 @@ async fn seed_player(player_repo: &dyn IPlayerRepository, player_id: &str, team_
 async fn purchasing_a_skill_credits_team_value_via_app_event(pool: PgPool) {
     let team_repo: Arc<dyn ITeamRepository> = Arc::new(TeamRepository::new(pool.clone()));
     let player_repo: Arc<dyn IPlayerRepository> = Arc::new(PgPlayerRepository::new(pool));
-    let ref_repo = Arc::new(InMemoryReferenceRepository::load());
+    let ref_repo = Arc::new(InMemoryReferenceRepository::load_for_tests());
     let catalog = SkillCatalogAdapter::new(ref_repo);
 
     let internal_bus = new_bus();

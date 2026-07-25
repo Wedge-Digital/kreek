@@ -11,6 +11,7 @@ pub mod web;
 
 use config::AppConfig;
 use state::AppState;
+use std::path::Path;
 use std::time::Duration;
 
 use crate::app::auth::auth_backend::AuthBackend;
@@ -26,7 +27,7 @@ use crate::infrastructure::team_creation::reference_data_adapter::ReferenceDataA
 use crate::app::players::context::PlayersContext;
 use crate::app::ranking::context::RankingContext;
 use crate::app::teams::context::TeamsContext;
-use crate::app::{auth, competitions, match_report, players, ranking, references, spaces, team_creation, teams};
+use crate::app::{auth, competitions, match_report, players, ranking, spaces, team_creation, teams};
 use crate::common::event_listener::event_log_feeder;
 use crate::common::services::email::ResendMailService;
 use crate::common::services::event_bus::event_bus::new_bus;
@@ -111,6 +112,17 @@ async fn main() {
     }
 }
 
+/// Charge les données de référence au démarrage. Échec fatal : sans elles,
+/// l'application ne peut servir aucune page.
+fn load_references(cfg: &AppConfig) -> ReferencesContext {
+    ReferencesContext::new(Path::new(&cfg.references.dir)).unwrap_or_else(|e| {
+        panic!(
+            "{e} — vérifiez REFERENCES__DIR (valeur courante : « {} »)",
+            cfg.references.dir
+        )
+    })
+}
+
 async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
     let server_address = cfg.server_addr();
 
@@ -140,24 +152,24 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
     );
     team_creation::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
     teams::context::init_listeners(&app_event_bus, pool.clone());
-    let refs_for_players = references::context::ReferencesContext::new();
+    let references = load_references(&cfg);
     let players_skill_catalog: Arc<dyn crate::app::players::ports::ISkillCatalogPort> = Arc::new(
         crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter::new(
-            refs_for_players.repository.clone(),
+            references.repository.clone(),
         ),
     );
     let match_report_comp_data = Arc::new(
         crate::infrastructure::match_report::competition_data_adapter::CompetitionDataAdapter::new(
             Arc::new(crate::app::competitions::io::repository::competition_repository::CompetitionRepository::new(pool.clone())),
             Arc::new(crate::app::competitions::io::repository::season_repository::SeasonRepository::new(pool.clone())),
-            refs_for_players.repository.clone(),
+            references.repository.clone(),
             Arc::new(crate::app::competitions::io::repository::match_day_repository::MatchDayRepository::new(pool.clone())),
         ),
     );
     let match_report_team_data = Arc::new(
         crate::infrastructure::match_report::ref_team_data_adapter::RefTeamDataAdapter::new(
             Arc::new(crate::app::teams::io::repository::team_repository::TeamRepository::new(pool.clone())),
-            refs_for_players.repository.clone(),
+            references.repository.clone(),
         ),
     );
     match_report::context::init_listeners(
@@ -191,18 +203,18 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             event_bus.clone(),
             competitions_team_info_port,
             Arc::new(crate::infrastructure::competitions::reference_name_adapter::ReferenceNameAdapter::new(
-                refs_for_players.repository.clone(),
+                references.repository.clone(),
             )),
             Arc::new(crate::infrastructure::competitions::space_member_adapter::SpaceMemberAdapter::new(
                 Arc::new(crate::app::spaces::io::repository::space_repository::SpaceRepository::new(pool.clone())),
             )),
         ),
         news: NewsContext::new(&pool),
-        references: ReferencesContext::new(),
+        references: references.clone(),
         team_creation: TeamCreationContext::new(
             &pool,
             event_bus.clone(),
-            Arc::new(ReferenceDataAdapter::new(refs_for_players.repository.clone())),
+            Arc::new(ReferenceDataAdapter::new(references.repository.clone())),
             Arc::new(CompetitionRulesAdapter::new(Arc::new(
                 crate::app::competitions::io::repository::season_repository::SeasonRepository::new(pool.clone()),
             ))),
@@ -235,12 +247,12 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             );
             let journeyman_type = Arc::new(
                 crate::infrastructure::teams::journeyman_type_adapter::JourneymanTypeAdapter::new(
-                    refs_for_players.repository.clone(),
+                    references.repository.clone(),
                 ),
             );
             let roster_info = Arc::new(
                 crate::infrastructure::teams::roster_info_adapter::RosterInfoAdapter::new(
-                    refs_for_players.repository.clone(),
+                    references.repository.clone(),
                 ),
             );
             TeamsContext::new(&pool, player_count, journeyman_type, roster_info)

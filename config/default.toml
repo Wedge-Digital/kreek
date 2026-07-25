@@ -12,4 +12,9 @@ idle_timeout_seconds = 600
 [auth]
 token_ttl_seconds = 3600
 
+[references]
+# Répertoire des données de référence (règles de jeu), relatif au répertoire
+# de lancement. Non versionné — voir README, section « Données de règles ».
+dir = "assets/references"
+
 bypass_auth = false

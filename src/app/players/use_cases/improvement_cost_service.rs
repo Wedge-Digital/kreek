@@ -61,7 +61,7 @@ mod tests {
     use std::sync::Arc;
 
     fn catalog() -> SkillCatalogAdapter {
-        SkillCatalogAdapter::new(Arc::new(InMemoryReferenceRepository::load()))
+        SkillCatalogAdapter::new(Arc::new(InMemoryReferenceRepository::load_for_tests()))
     }
 
     #[test]

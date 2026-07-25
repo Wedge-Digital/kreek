@@ -3,7 +3,10 @@ use crate::app::references::domain::models::{
     StarPlayer, Team,
 };
 use crate::app::references::domain::port::IReferenceRepository;
+use crate::app::references::io::repository::reference_data_error::ReferenceDataError;
+use serde::de::DeserializeOwned;
 use serde::Deserialize;
+use std::path::Path;
 use crate::app::shared_kernel::inducement_definition::{InducementCost, InducementDefinition, InducementId, InducementName};
 use crate::app::shared_kernel::roster_definition::RosterDefinition;
 use crate::app::shared_kernel::common_types::RosterId;
@@ -67,62 +70,41 @@ pub struct InMemoryReferenceRepository {
 }
 
 impl InMemoryReferenceRepository {
-    pub fn load() -> Self {
-        Self {
-            inducements: serde_json::from_str::<InducementsFile>(include_str!(
-                "../../../../../assets/references/inducements_fr.json"
-            ))
-            .expect("inducements_fr.json invalid")
-            .inducements,
-
-            star_players: serde_json::from_str::<StarPlayersFile>(include_str!(
-                "../../../../../assets/references/star_players_fr.json"
-            ))
-            .expect("star_players_fr.json invalid")
-            .star_players,
-
-            teams: serde_json::from_str::<TeamsFile>(include_str!(
-                "../../../../../assets/references/teams_fr.json"
-            ))
-            .expect("teams_fr.json invalid")
-            .teams,
-
-            skills: serde_json::from_str::<SkillsFile>(include_str!(
-                "../../../../../assets/references/skills_fr.json"
-            ))
-            .expect("skills_fr.json invalid")
-            .skills,
-
-            skill_categories: serde_json::from_str::<SkillCatFile>(include_str!(
-                "../../../../../assets/references/skill_cat_fr.json"
-            ))
-            .expect("skill_cat_fr.json invalid")
-            .skill_categories,
-
-            special_rules: serde_json::from_str::<SpecialRulesFile>(include_str!(
-                "../../../../../assets/references/special_rules_fr.json"
-            ))
-            .expect("special_rules_fr.json invalid")
-            .special_rules,
-
-            staff: serde_json::from_str::<StaffFile>(include_str!(
-                "../../../../../assets/references/staff_fr.json"
-            ))
-            .expect("staff_fr.json invalid")
-            .staff,
-
-            leagues: serde_json::from_str::<LeaguesFile>(include_str!(
-                "../../../../../assets/references/leagues_fr.json"
-            ))
-            .expect("leagues_fr.json invalid")
-            .leagues,
-
-            skill_cost_matrix: serde_json::from_str::<SkillCostFile>(include_str!(
-                "../../../../../assets/references/skill_cost.json"
-            ))
-            .expect("skill_cost.json invalid"),
-        }
+    /// Charge l'intégralité des données de référence depuis `dir`, une fois,
+    /// au démarrage. Tout est ensuite servi depuis la mémoire.
+    pub fn load_from_dir(dir: &Path) -> Result<Self, ReferenceDataError> {
+        Ok(Self {
+            inducements:       read_json::<InducementsFile>(dir, "inducements_fr.json")?.inducements,
+            star_players:      read_json::<StarPlayersFile>(dir, "star_players_fr.json")?.star_players,
+            teams:             read_json::<TeamsFile>(dir, "teams_fr.json")?.teams,
+            skills:            read_json::<SkillsFile>(dir, "skills_fr.json")?.skills,
+            skill_categories:  read_json::<SkillCatFile>(dir, "skill_cat_fr.json")?.skill_categories,
+            special_rules:     read_json::<SpecialRulesFile>(dir, "special_rules_fr.json")?.special_rules,
+            staff:             read_json::<StaffFile>(dir, "staff_fr.json")?.staff,
+            leagues:           read_json::<LeaguesFile>(dir, "leagues_fr.json")?.leagues,
+            skill_cost_matrix: read_json::<SkillCostFile>(dir, "skill_cost.json")?,
+        })
     }
+
+    /// Jeu de données utilisé par les tests unitaires. Résolu depuis la racine
+    /// de la crate pour rester indépendant du répertoire courant.
+    #[cfg(test)]
+    pub fn load_for_tests() -> Self {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/references");
+        Self::load_from_dir(&dir).expect("données de référence de test invalides")
+    }
+}
+
+fn read_json<T: DeserializeOwned>(dir: &Path, file: &str) -> Result<T, ReferenceDataError> {
+    let path = dir.join(file);
+    let raw = std::fs::read_to_string(&path).map_err(|e| ReferenceDataError::FileUnreadable {
+        file:  path.display().to_string(),
+        cause: e.to_string(),
+    })?;
+    serde_json::from_str(&raw).map_err(|e| ReferenceDataError::InvalidJson {
+        file:  path.display().to_string(),
+        cause: e.to_string(),
+    })
 }
 
 impl IReferenceRepository for InMemoryReferenceRepository {
@@ -210,9 +192,57 @@ impl IReferenceRepository for InMemoryReferenceRepository {
 mod tests {
     use super::*;
 
+    fn fixture_dir(name: &str) -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures").join(name)
+    }
+
+    #[test]
+    fn load_from_dir_populates_every_collection() {
+        let repo = InMemoryReferenceRepository::load_for_tests();
+        assert!(!repo.list_teams().is_empty());
+        assert!(!repo.list_star_players().is_empty());
+        assert!(!repo.list_skills().is_empty());
+        assert!(!repo.list_skill_categories().is_empty());
+        assert!(!repo.list_special_rules().is_empty());
+        assert!(!repo.list_staff().is_empty());
+        assert!(!repo.list_leagues().is_empty());
+        assert!(!repo.list_inducements().is_empty());
+        assert!(!repo.skill_cost_matrix().is_empty());
+    }
+
+    /// `expect_err` exigerait `Debug` sur le repository — on déstructure à la main.
+    fn expect_load_error(dir: &str, context: &str) -> ReferenceDataError {
+        match InMemoryReferenceRepository::load_from_dir(&fixture_dir(dir)) {
+            Err(e) => e,
+            Ok(_) => panic!("{context}"),
+        }
+    }
+
+    #[test]
+    fn missing_directory_names_the_faulty_file() {
+        let err = expect_load_error("references_empty", "un répertoire vide doit échouer");
+        match err {
+            ReferenceDataError::FileUnreadable { file, .. } => {
+                assert!(file.ends_with("inducements_fr.json"), "fichier signalé : {file}")
+            }
+            other => panic!("erreur inattendue : {other}"),
+        }
+    }
+
+    #[test]
+    fn malformed_json_names_the_faulty_file() {
+        let err = expect_load_error("references_invalid", "un JSON malformé doit échouer");
+        match err {
+            ReferenceDataError::InvalidJson { file, .. } => {
+                assert!(file.ends_with("inducements_fr.json"), "fichier signalé : {file}")
+            }
+            other => panic!("erreur inattendue : {other}"),
+        }
+    }
+
     #[test]
     fn spp_scale_matches_blood_bowl_standard_barème() {
-        let repo = InMemoryReferenceRepository::load();
+        let repo = InMemoryReferenceRepository::load_for_tests();
         assert_eq!(repo.touchdown_spp(), 3);
         assert_eq!(repo.pass_spp(), 1);
         assert_eq!(repo.interception_spp(), 2);
@@ -222,7 +252,7 @@ mod tests {
 
     #[test]
     fn improvement_value_delta_matches_official_table() {
-        let repo = InMemoryReferenceRepository::load();
+        let repo = InMemoryReferenceRepository::load_for_tests();
         assert_eq!(repo.improvement_skill_value_delta(false), 20_000);
         assert_eq!(repo.improvement_skill_value_delta(true), 40_000);
         assert_eq!(repo.improvement_stat_value_delta_ma(), 20_000);

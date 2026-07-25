@@ -181,7 +181,7 @@ mod tests {
     use std::sync::Arc;
 
     fn test_catalog() -> SkillCatalogAdapter {
-        SkillCatalogAdapter::new(Arc::new(InMemoryReferenceRepository::load()))
+        SkillCatalogAdapter::new(Arc::new(InMemoryReferenceRepository::load_for_tests()))
     }
 
     fn sample_context_payload(player_id: &str) -> PlayerMatchContextPayload {

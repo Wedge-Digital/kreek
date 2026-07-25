@@ -192,7 +192,7 @@ mod tests {
                 article_repository: Arc::new(FakeNewsRepository),
                 comment_repository: Arc::new(FakeCommentRepository),
             },
-            references:    crate::app::references::context::ReferencesContext::new(),
+            references:    crate::app::references::context::ReferencesContext::for_tests(),
             team_creation: {
                 struct FakeCompetitionRules;
                 #[async_trait::async_trait]

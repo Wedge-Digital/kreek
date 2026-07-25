@@ -229,7 +229,7 @@ mod tests {
     #[test]
     fn build_vm_wires_spp_remaining_level_and_urls() {
         let player = sample_player();
-        let catalog = SkillCatalogAdapter::new(std::sync::Arc::new(InMemoryReferenceRepository::load()));
+        let catalog = SkillCatalogAdapter::new(std::sync::Arc::new(InMemoryReferenceRepository::load_for_tests()));
         let routes = AppRoutes::default();
 
         let vm = build_vm(&player, &routes, "space1", &catalog).unwrap();
@@ -252,7 +252,7 @@ mod tests {
             spp_cost: SppCost::try_new(6).unwrap(),
             value_delta: ValueKpo(20_000),
         });
-        let catalog = SkillCatalogAdapter::new(std::sync::Arc::new(InMemoryReferenceRepository::load()));
+        let catalog = SkillCatalogAdapter::new(std::sync::Arc::new(InMemoryReferenceRepository::load_for_tests()));
         let routes = AppRoutes::default();
 
         let vm = build_vm(&player, &routes, "space1", &catalog).unwrap();
@@ -266,7 +266,7 @@ mod tests {
     fn build_vm_returns_none_for_unknown_position() {
         let mut player = sample_player();
         player.roster_line_id = RosterLineId::try_new("UNKNOWN".to_string()).unwrap();
-        let catalog = SkillCatalogAdapter::new(std::sync::Arc::new(InMemoryReferenceRepository::load()));
+        let catalog = SkillCatalogAdapter::new(std::sync::Arc::new(InMemoryReferenceRepository::load_for_tests()));
         let routes = AppRoutes::default();
 
         assert!(build_vm(&player, &routes, "space1", &catalog).is_none());
