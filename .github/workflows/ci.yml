@@ -1,7 +1,10 @@
 name: CI
 
 on:
+  # `push:` sans valeur était accepté à l'enregistrement du workflow mais ne
+  # déclenchait aucun run — les branches sont désormais explicites.
   push:
+    branches: [main]
   pull_request:
     branches: [main]
   # Permet de relancer le pipeline sans commit, depuis l'onglet Actions
