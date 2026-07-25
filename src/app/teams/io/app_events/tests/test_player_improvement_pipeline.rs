@@ -73,8 +73,8 @@ async fn seed_player(player_repo: &dyn IPlayerRepository, player_id: &str, team_
         player_id: DomainPlayerId(player_id.into()),
         team_id: crate::app::players::domain::player::TeamId(team_id.into()),
         space_id: SpaceId::new(),
-        position_name: PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
-        roster_line_id: RosterLineId::try_new("HUMAN__HUMAN_LINEMAN".to_string()).unwrap(),
+        position_name: PositionNameVo::try_new("Piétaille des Carrières".to_string()).unwrap(),
+        roster_line_id: RosterLineId::try_new("DEMO_GRANIT__PIETAILLE".to_string()).unwrap(),
         jersey: None,
         base_skills: vec![],
         starting_spp: crate::app::players::domain::player::Spp(50),
@@ -107,7 +107,7 @@ async fn purchasing_a_skill_credits_team_value_via_app_event(pool: PgPool) {
 
     let cmd = PurchaseSkillCommand {
         player_id: DomainPlayerId(player_id.clone()),
-        skill_id: SkillId::try_new("BLOCK").unwrap(),
+        skill_id: SkillId::try_new("APPUI_FERME").unwrap(),
         mode: AcquisitionMode::Chosen,
     };
     if let Err(e) = purchase_skill_use_case::execute(cmd, player_repo.as_ref(), &catalog, &internal_bus).await {
@@ -136,6 +136,6 @@ async fn purchasing_a_skill_credits_team_value_via_app_event(pool: PgPool) {
     .await;
 
     let team_after = team_repo.find_by_id(&team_id).await.unwrap().unwrap();
-    // BLOCK est primary (GENERAL) pour HUMAN_LINEMAN → +20 kPo (table officielle)
+    // APPUI_FERME est GENERAL, primary pour la Piétaille → +20 kPo
     assert_eq!(team_after.team_value.0, team_before.team_value.0 + 20);
 }
