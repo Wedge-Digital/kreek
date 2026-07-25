@@ -48,7 +48,7 @@ chargé** par le moteur : c'est une préparation pour une évolution à venir.
 | `specialRules` | string[] | non (défaut `[]`) | uids de `special_rules_fr.json` |
 | `allowedStaff` | string[] | non (défaut `[]`) | uids de `staff_fr.json` |
 | `availablePlayers` | objet[] | non (défaut `[]`) | postes, voir ci-dessous |
-| `leagues` | string[] | non (défaut `[]`) | uids de `leagues_fr.json` |
+| `leagues` | string[] | **de fait requis** | uids de `leagues_fr.json` — voir ci-dessous |
 | `logo` | string \| null | non | nom de fichier d'illustration |
 
 ### Poste (`availablePlayers[]`)
@@ -64,6 +64,12 @@ chargé** par le moteur : c'est une préparation pour une évolution à venir.
 | `secondaryAccess` | string[] | non (défaut `[]`) | ids de `skill_cat_fr.json` |
 | `max_quantity` | entier | oui | plafond par équipe (noté en snake_case, contrairement aux autres champs) |
 | `is_journeyman` | booléen | non (défaut `false`) | poste servant de remplaçant temporaire |
+
+> **`leagues` est optionnel pour le parseur, obligatoire en pratique.** Une
+> équipe ne peut pas être soumise sans ligue, et la ligue n'est assignée
+> automatiquement que si le roster en déclare **exactement une**. Un roster qui
+> n'en déclare aucune produit des équipes impossibles à soumettre ; un roster qui
+> en déclare plusieurs impose un choix explicite à l'utilisateur.
 
 ---
 

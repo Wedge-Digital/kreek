@@ -294,7 +294,20 @@ mod tests {
         let teams = repo.list_teams();
         assert!(teams.iter().any(|t| t.logo.is_some()), "aucun logo renseigné");
         assert!(teams.iter().any(|t| t.logo.is_none()), "aucun logo omis");
-        assert!(teams.iter().any(|t| !t.leagues.is_empty()), "aucune ligue renseignée");
+
+        // `leagues` est optionnel au sens du schéma, mais de fait obligatoire :
+        // une équipe ne peut pas être soumise sans ligue (LeagueNotSelected), et
+        // l'auto-assignation n'opère que sur une entrée unique
+        // (player_table_widget.rs). Un roster de démo sans ligue serait
+        // injouable — c'est arrivé, l'e2e l'a détecté.
+        for team in teams {
+            assert_eq!(
+                team.leagues.len(),
+                1,
+                "le roster {} doit déclarer exactement une ligue",
+                team.uid
+            );
+        }
 
         let positions: Vec<_> = teams.iter().flat_map(|t| t.available_players.iter()).collect();
         assert!(positions.iter().any(|p| p.is_journeyman), "aucun journeyman");

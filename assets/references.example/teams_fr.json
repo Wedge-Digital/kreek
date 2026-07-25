@@ -66,6 +66,7 @@
       "tier": "Tier 2",
       "specialRules": [],
       "allowedStaff": ["APOTHECARY", "CHEERLEADERS", "COACH_ASSISTANTS"],
+      "leagues": ["COUPE_DES_SABLES"],
       "availablePlayers": [
         {
           "uid": "DEMO_ZEPHYR__PIETAILLE",
@@ -121,6 +122,7 @@
       "tier": "Tier 3",
       "specialRules": ["FAVOURED_OF_CHOOSE_ANY"],
       "allowedStaff": ["CHEERLEADERS", "COACH_ASSISTANTS"],
+      "leagues": ["CHALLENGE_SOUTERRAIN"],
       "availablePlayers": [
         {
           "uid": "DEMO_LANTERNE__PIETAILLE",
