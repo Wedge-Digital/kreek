@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
     branches: [main]
+  # Permet de relancer le pipeline sans commit, depuis l'onglet Actions
+  # ou via `gh workflow run ci.yml`.
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
