@@ -8,6 +8,14 @@ use crate::app::shared_kernel::common_types::{CompetitionId, MatchReportId, Roun
 use crate::app::shared_kernel::team::TeamId;
 use chrono::{DateTime, Utc};
 
+/// Stats d'une équipe sur un match. Regroupées pour que le croisement
+/// home/away se lise d'un coup d'œil : une inversion entre deux champs à
+/// préfixe (`home_score` utilisé pour l'équipe away) compile sans broncher.
+pub struct TeamMatchStats {
+    pub score: MatchScore,
+    pub casualties: CasualtiesInflicted,
+}
+
 pub struct RecordMatchRankingCommand {
     pub competition_id: CompetitionId,
     pub season_id: SeasonId,
@@ -15,10 +23,8 @@ pub struct RecordMatchRankingCommand {
     pub match_report_id: MatchReportId,
     pub home_team_id: TeamId,
     pub away_team_id: TeamId,
-    pub home_score: MatchScore,
-    pub away_score: MatchScore,
-    pub home_casualties_inflicted: CasualtiesInflicted,
-    pub away_casualties_inflicted: CasualtiesInflicted,
+    pub home: TeamMatchStats,
+    pub away: TeamMatchStats,
     pub published_at: DateTime<Utc>,
 }
 
@@ -58,10 +64,12 @@ fn record_home(
     rules: &RankingRules,
 ) -> RankingLine {
     let ctx = context_for(cmd, cmd.home_team_id.clone());
+    // Les TD se croisent entre les deux équipes ; les sorties non — elles sont
+    // propres à l'équipe qui les a infligées.
     let stats = MatchStats {
-        own_td: cmd.home_score,
-        opponent_td: cmd.away_score,
-        casualties_inflicted: cmd.home_casualties_inflicted,
+        own_td: cmd.home.score,
+        opponent_td: cmd.away.score,
+        casualties_inflicted: cmd.home.casualties,
     };
     RankingLine::record_match(previous, ctx, stats, rules)
 }
@@ -73,9 +81,9 @@ fn record_away(
 ) -> RankingLine {
     let ctx = context_for(cmd, cmd.away_team_id.clone());
     let stats = MatchStats {
-        own_td: cmd.away_score,
-        opponent_td: cmd.home_score,
-        casualties_inflicted: cmd.away_casualties_inflicted,
+        own_td: cmd.away.score,
+        opponent_td: cmd.home.score,
+        casualties_inflicted: cmd.away.casualties,
     };
     RankingLine::record_match(previous, ctx, stats, rules)
 }
@@ -217,10 +225,8 @@ mod tests {
             match_report_id: MatchReportId::new(),
             home_team_id,
             away_team_id,
-            home_score: MatchScore(2),
-            away_score: MatchScore(1),
-            home_casualties_inflicted: CasualtiesInflicted(0),
-            away_casualties_inflicted: CasualtiesInflicted(0),
+            home: TeamMatchStats { score: MatchScore(2), casualties: CasualtiesInflicted(0) },
+            away: TeamMatchStats { score: MatchScore(1), casualties: CasualtiesInflicted(0) },
             published_at: Utc::now(),
         }
     }
@@ -287,7 +293,7 @@ mod tests {
         let home = TeamId::new();
         let away = TeamId::new();
         let mut cmd = sample_cmd(home.clone(), away.clone());
-        cmd.home_casualties_inflicted = CasualtiesInflicted(3); // > 1 → bonus agressif
+        cmd.home.casualties = CasualtiesInflicted(3); // > 1 → bonus agressif
 
         execute(cmd, &repo, &port).await.unwrap();
 
@@ -296,5 +302,38 @@ mod tests {
         let away_line = lines.iter().find(|l| l.team_id == away).unwrap();
         assert_eq!(home_line.ranking_points.0, 5); // victoire 2-1 (3) + bonus (2)
         assert_eq!(away_line.ranking_points.0, 0); // défaite, aucune sortie
+    }
+
+    /// Verrou du croisement `home`/`away` : les TD s'échangent entre les deux
+    /// équipes, les sorties **non** — elles restent celles de l'équipe qui les a
+    /// infligées. Une inversion compile sans broncher et produit des lignes
+    /// plausibles ; ce test est le seul filet.
+    #[tokio::test]
+    async fn team_stats_cross_over_for_touchdowns_but_not_for_casualties() {
+        let repo = FakeRepo::default();
+        // Bonus agressif à seuil 2 : seule une équipe à 3 sorties le décroche.
+        let mut info = rules_info(3, 1, 0);
+        info.aggressive = BonusRuleInfo { activated: true, threshold: 2, points: 7 };
+        let port = FakeCompetitionPort { rules: Some(info) };
+
+        let home = TeamId::new();
+        let away = TeamId::new();
+        let mut cmd = sample_cmd(home.clone(), away.clone()); // 2-1 pour home
+        cmd.home.casualties = CasualtiesInflicted(3); // > 2 → bonus pour home
+        cmd.away.casualties = CasualtiesInflicted(0); // aucun bonus pour away
+
+        execute(cmd, &repo, &port).await.unwrap();
+
+        let lines = repo.lines.lock().unwrap();
+        let home_line = lines.iter().find(|l| l.team_id == home).unwrap();
+        let away_line = lines.iter().find(|l| l.team_id == away).unwrap();
+
+        // Les TD se croisent : home gagne, away perd.
+        assert_eq!(home_line.wins.0, 1);
+        assert_eq!(away_line.losses.0, 1);
+        // Les sorties ne se croisent pas : le bonus va à home seule. Inversées,
+        // les 7 points atterriraient sur away.
+        assert_eq!(home_line.bonus_points.0, 7);
+        assert_eq!(away_line.bonus_points.0, 0);
     }
 }

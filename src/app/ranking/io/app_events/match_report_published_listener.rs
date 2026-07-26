@@ -1,7 +1,7 @@
 use crate::app::ranking::domain::ranking_line::{CasualtiesInflicted, MatchScore};
 use crate::app::ranking::ports::IRankingCompetitionPort;
 use crate::app::ranking::use_cases::record_match_ranking_use_case::{
-    self, RecordMatchRankingCommand,
+    self, RecordMatchRankingCommand, TeamMatchStats,
 };
 use crate::app::shared_kernel::app_events::match_report_app_events::{
     ActionTypePayload, MatchActionPublishedPayload, MatchReportAppEvent,
@@ -59,10 +59,14 @@ async fn handle_published(
         match_report_id: match_report_id.clone(),
         home_team_id,
         away_team_id,
-        home_score: MatchScore(payload.home_score),
-        away_score: MatchScore(payload.away_score),
-        home_casualties_inflicted: count_sorties(&payload.home_actions),
-        away_casualties_inflicted: count_sorties(&payload.away_actions),
+        home: TeamMatchStats {
+            score: MatchScore(payload.home_score),
+            casualties: count_sorties(&payload.home_actions),
+        },
+        away: TeamMatchStats {
+            score: MatchScore(payload.away_score),
+            casualties: count_sorties(&payload.away_actions),
+        },
         published_at: payload.published_at,
     };
 
