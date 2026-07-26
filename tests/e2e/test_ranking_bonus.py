@@ -26,7 +26,6 @@ import re
 import time
 
 import pytest
-import requests
 from playwright.sync_api import Page, expect
 
 from competition_lifecycle import (
@@ -37,8 +36,7 @@ from competition_lifecycle import (
     sync_and_generate_schedule,
 )
 from db_helpers import query_db
-
-_ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
+from match_report_helpers import play_match, wait_ranking_points
 
 AGG_POINTS = 5  # valeur distinctive pour le bonus agressif
 AGG_MIN_CAS = 1  # bonus si strictement > 1 sortie
@@ -98,135 +96,6 @@ def _create_competition_with_aggressive_bonus(page: Page, competition_create_url
     return {"competition_id": competition_id, "season_id": season_id, "name": competition_name}
 
 
-# ── Helpers de publication de rapport (calqués sur test_match_report_recap) ────
-
-
-def _create_draft(space_id, ctx, round_id, home_idx, away_idx):
-    resp = requests.post(
-        f"{BASE_URL}/app/{space_id}/match-report/new",
-        data={
-            "competition_id": ctx["competition_id"],
-            "season_id": ctx["season_id"],
-            "round_id": round_id,
-            "home_team_id": ctx["teams"][home_idx],
-            "away_team_id": ctx["teams"][away_idx],
-        },
-        allow_redirects=False,
-    )
-    assert resp.status_code in (302, 303), f"create: {resp.status_code}\n{resp.text[:200]}"
-    m = _ULID_RE.search(resp.headers.get("Location", ""))
-    assert m, f"match_report_id introuvable dans Location: {resp.headers.get('Location')!r}"
-    return m.group(1)
-
-
-def _ensure_pre_match(space_id, mr_id, ctx, round_id, home_idx, away_idx):
-    check = requests.get(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step2", allow_redirects=False)
-    if check.status_code == 200:
-        return
-    resp = requests.post(
-        f"{BASE_URL}/app/{space_id}/match-report/{mr_id}",
-        data={
-            "competition_id": ctx["competition_id"],
-            "season_id": ctx["season_id"],
-            "round_id": round_id,
-            "home_team_id": ctx["teams"][home_idx],
-            "away_team_id": ctx["teams"][away_idx],
-        },
-        allow_redirects=False,
-    )
-    assert resp.status_code in (302, 303), f"confirm: {resp.status_code}\n{resp.text[:200]}"
-
-
-def _ensure_inducements(space_id, mr_id):
-    resp = requests.post(
-        f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step2",
-        data={"home_fan_roll": "2", "away_fan_roll": "3"},
-        allow_redirects=False,
-    )
-    assert resp.status_code in (302, 303), f"fan factor: {resp.status_code}"
-    location = resp.headers.get("Location", "")
-    for _ in range(3):
-        if not location or "/inducements/" not in location:
-            break
-        resp = requests.post(f"{BASE_URL}{location}", data={"selection": ""}, allow_redirects=False)
-        if resp.status_code not in (302, 303):
-            break
-        location = resp.headers.get("Location", "")
-
-
-def _record_action_api(space_id, mr_id, side, player_id, turn, action_type):
-    endpoint = "step3" if side == "home" else "step4"
-    resp = requests.post(
-        f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/{endpoint}/actions",
-        data={"turn": str(turn), "player_id": player_id, "player_type": "regular", "action_type": action_type},
-    )
-    assert resp.status_code == 200, f"record_action {action_type}: {resp.status_code}\n{resp.text[:200]}"
-
-
-def _first_player_id(mr_id, side):
-    rows = _query_side_team(mr_id, side)
-    assert rows, f"match report {mr_id} introuvable en DB"
-    player_rows = query_db(f"SELECT player_id FROM players_proj WHERE team_id = '{rows[0]}' LIMIT 1")
-    assert player_rows, f"aucun joueur trouvé pour l'équipe {rows[0]}"
-    return player_rows[0]
-
-
-def _query_side_team(mr_id, side):
-    return query_db(f"SELECT {side}_team_id FROM match_report_proj WHERE match_report_id = '{mr_id}'")
-
-
-def _post_step5(space_id, mr_id):
-    resp = requests.post(
-        f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step5",
-        data={
-            "home_gain": "50000",
-            "away_gain": "40000",
-            "home_fan_mod": "1",
-            "away_fan_mod": "-1",
-            "summary_title": "Match E2E bonus ranking",
-            "summary_body": "Compte-rendu automatique.",
-        },
-        allow_redirects=False,
-    )
-    assert resp.status_code in (302, 303), f"step5: {resp.status_code}\n{resp.text[:200]}"
-
-
-def _publish(space_id, mr_id):
-    resp = requests.post(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/recap/publish", allow_redirects=False)
-    assert resp.status_code in (302, 303), f"publish: {resp.status_code}\n{resp.text[:200]}"
-
-
-def _play_match(space_id, ctx, round_id, home_idx, away_idx, home_sorties):
-    """Joue et publie un match : home marque 1 TD (victoire) + `home_sorties` sorties."""
-    mr_id = _create_draft(space_id, ctx, round_id, home_idx, away_idx)
-    _ensure_pre_match(space_id, mr_id, ctx, round_id, home_idx, away_idx)
-    _ensure_inducements(space_id, mr_id)
-
-    home_player = _first_player_id(mr_id, "home")
-    _record_action_api(space_id, mr_id, "home", home_player, turn=1, action_type="TOUCHDOWN")
-    for i in range(home_sorties):
-        _record_action_api(space_id, mr_id, "home", home_player, turn=2 + i, action_type="SORTIE")
-
-    _post_step5(space_id, mr_id)
-    _publish(space_id, mr_id)
-    return mr_id
-
-
-def _wait_ranking_points(season_id, team_id, timeout_s=20):
-    """Attend que la projection ranking (asynchrone via app event) soit peuplée."""
-    deadline = time.time() + timeout_s
-    while time.time() < deadline:
-        rows = query_db(
-            f"SELECT ranking_points FROM ranking_lines "
-            f"WHERE season_id = '{season_id}' AND team_id = '{team_id}' "
-            f"ORDER BY sequence DESC LIMIT 1"
-        )
-        if rows:
-            return int(rows[0])
-        time.sleep(0.3)
-    raise AssertionError(f"aucune ligne de classement pour team={team_id} après {timeout_s}s")
-
-
 # ── Fixture ───────────────────────────────────────────────────────────────────
 
 
@@ -264,12 +133,13 @@ def test_aggressive_bonus_reflected_in_standings(page: Page, bonus_ctx, console_
     season_id = bonus_ctx["season_id"]
 
     # Match A : home (team 0) gagne 1-0 ET inflige 2 sorties (> 1) → bonus agressif.
-    _play_match(space_id, bonus_ctx, bonus_ctx["round_ids"][0], home_idx=0, away_idx=1, home_sorties=2)
+    teams = bonus_ctx["teams"]
+    play_match(space_id, bonus_ctx, bonus_ctx["round_ids"][0], teams[0], teams[1], home_sorties=2)
     # Match B : home (team 2) gagne 1-0 sans aucune sortie → pas de bonus.
-    _play_match(space_id, bonus_ctx, bonus_ctx["round_ids"][1], home_idx=2, away_idx=3, home_sorties=0)
+    play_match(space_id, bonus_ctx, bonus_ctx["round_ids"][1], teams[2], teams[3], home_sorties=0)
 
-    points_with_bonus = _wait_ranking_points(season_id, bonus_ctx["teams"][0])
-    points_without_bonus = _wait_ranking_points(season_id, bonus_ctx["teams"][2])
+    points_with_bonus = wait_ranking_points(season_id, bonus_ctx["teams"][0])
+    points_without_bonus = wait_ranking_points(season_id, bonus_ctx["teams"][2])
 
     # Le seul écart entre deux vainqueurs 1-0 est le bonus agressif.
     assert points_with_bonus - points_without_bonus == AGG_POINTS, (

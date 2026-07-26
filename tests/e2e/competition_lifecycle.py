@@ -39,10 +39,22 @@ ROSTERS = [
 ]
 
 
-def create_full_competition(page: Page, competition_create_url: str, *, num_rounds: int = 7, tier_xp: int = 6) -> dict:
+def create_full_competition(
+    page: Page,
+    competition_create_url: str,
+    *,
+    num_rounds: int = 7,
+    tier_xp: int = 6,
+    with_default_bonuses: bool = True,
+) -> dict:
     """Phases 1 à 5 : crée une compétition publiée, avec `num_rounds` journées
     programmées et acceptation automatique des inscriptions
-    (requires_validation=false). Retourne {competition_id, season_id, name}."""
+    (requires_validation=false). Retourne {competition_id, season_id, name}.
+
+    `with_default_bonuses=False` décoche les bonus offensif et défensif, cochés
+    par défaut dans le formulaire. Nécessaire dès qu'un test veut des équipes à
+    **égalité de points** : avec les bonus, un vainqueur 3-0 et un vainqueur 1-0
+    ne totalisent pas la même chose, et toute égalité recherchée est illusoire."""
     competition_name = f"Ligue E2E Lifecycle {time.time_ns()}"
 
     # ── Phase 1 : infos + admin ──────────────────────────────────────────
@@ -74,6 +86,9 @@ def create_full_competition(page: Page, competition_create_url: str, *, num_roun
     xp_input.fill(str(tier_xp))
     xp_input.dispatch_event("change")
     page.fill("#season_name", f"Saison E2E Lifecycle {time.time_ns()}")
+    if not with_default_bonuses:
+        page.uncheck("#off_activated")
+        page.uncheck("#def_activated")
     page.click("button[onclick='submitRules()']")
     page.wait_for_selector("#groups-config", timeout=10000)
 
@@ -206,7 +221,9 @@ def sync_and_generate_schedule(page: Page, space_id: str, competition_id: str, s
     assert resp.ok, f"generate-all a échoué : {resp.status} {resp.text()[:300]}"
 
 
-def build_full_competition(browser, space_id: str, num_teams: int, num_rounds: int = 7) -> dict:
+def build_full_competition(
+    browser, space_id: str, num_teams: int, num_rounds: int = 7, *, with_default_bonuses: bool = True
+) -> dict:
     """Construit une compétition dédiée (pas partagée entre fichiers de test —
     cf. docstring du module) avec `num_teams` équipes auto-enrôlées et
     `num_rounds` journées programmées et pairées.
@@ -220,7 +237,12 @@ def build_full_competition(browser, space_id: str, num_teams: int, num_rounds: i
     page = browser.new_page()
     try:
         competition_create_url = f"{BASE_URL}/app/{space_id}/competitions/create"
-        competition = create_full_competition(page, competition_create_url, num_rounds=num_rounds)
+        competition = create_full_competition(
+            page,
+            competition_create_url,
+            num_rounds=num_rounds,
+            with_default_bonuses=with_default_bonuses,
+        )
         team_ids = [
             build_and_submit_team(page, space_id, competition["name"], coach_option_index=i, roster_index=i)
             for i in range(num_teams)
