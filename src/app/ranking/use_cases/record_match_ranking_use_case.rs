@@ -159,6 +159,8 @@ mod tests {
             offensive: no_bonus(),
             defensive: no_bonus(),
             aggressive: no_bonus(),
+            // Aucun départage configuré : le calcul des points n'en dépend pas.
+            tiebreakers: vec![],
         }
     }
 

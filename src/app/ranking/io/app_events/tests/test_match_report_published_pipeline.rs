@@ -37,6 +37,7 @@ impl IRankingCompetitionPort for FakeCompetitionPort {
             defensive: disabled_bonus(),
             // Bonus agressif activé : +1 point si > 1 sortie infligée.
             aggressive: BonusRuleInfo { activated: true, threshold: 1, points: 1 },
+            tiebreakers: vec![],
         })
     }
     async fn find_enrolled_teams(&self, _: &str) -> Vec<EnrolledTeamInfo> {

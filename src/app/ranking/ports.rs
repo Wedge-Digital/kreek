@@ -76,6 +76,17 @@ pub struct RankingRulesInfo {
     pub offensive: BonusRuleInfo,
     pub defensive: BonusRuleInfo,
     pub aggressive: BonusRuleInfo,
+    /// Critères de départage tels que configurés pour la compétition. **L'ordre
+    /// du vecteur porte la priorité** — aucun champ de rang.
+    pub tiebreakers: Vec<TiebreakSettingInfo>,
+}
+
+/// Un critère de départage et son activation, vus du BC `ranking`. Le code est
+/// résolu contre le catalogue par `TiebreakCriterion::from_code`.
+#[derive(Clone)]
+pub struct TiebreakSettingInfo {
+    pub code: String,
+    pub activated: bool,
 }
 
 #[derive(Clone)]
