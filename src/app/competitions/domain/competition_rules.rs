@@ -2,7 +2,7 @@ use crate::app::competitions::domain::error::DomainError;
 use crate::app::shared_kernel::tier::{CreationBudget, StartingXp, TierName};
 use nutype::nutype;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -133,7 +133,10 @@ pub struct RankingRules {
     pub defensive_bonus: DefensiveBonus,
     #[serde(default = "default_aggressive_bonus")]
     pub aggressive_bonus: AggressiveBonus,
-    pub additionnal_ranking_points: HashMap<String, u32>,
+    /// Critères de départage, ordonnés par priorité décroissante. Remplace
+    /// l'ancien `additionnal_ranking_points: HashMap<String, u32>`, qui ne
+    /// portait que l'ordre et pas l'activation.
+    pub tiebreakers: TiebreakConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -324,12 +327,14 @@ mod tests {
 
     #[test]
     fn legacy_rules_without_new_fields_deserialize_with_defaults() {
-        // JSON antérieur à la feature : pas de max_td_conceded ni aggressive_bonus.
+        // JSON antérieur à la feature bonus : pas de max_td_conceded ni
+        // aggressive_bonus. `tiebreakers` est en revanche requis — le champ n'a
+        // pas de valeur par défaut, le domaine ne connaissant pas le catalogue.
         let json = r#"{
             "win_points": 3, "draw_points": 1, "lose_points": 0,
             "offensive_bonus": { "activated": true, "diff_td": 3, "points": 1 },
             "defensive_bonus": { "activated": true, "points": 2 },
-            "additionnal_ranking_points": {}
+            "tiebreakers": [{ "code": "diff_td", "activated": true }]
         }"#;
 
         let rr: RankingRules = serde_json::from_str(json).unwrap();

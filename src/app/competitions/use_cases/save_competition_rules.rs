@@ -1,9 +1,10 @@
-use crate::app::competitions::domain::competition_rules::CompetitionRules;
+use crate::app::competitions::domain::competition_rules::{CompetitionRules, TiebreakConfig};
 use crate::app::competitions::domain::season_repository_port::{
     ISeasonRepository, SeasonRepositoryError,
 };
+use crate::app::competitions::ports::ITiebreakCatalogPort;
 use crate::app::shared_kernel::common_types::SeasonId;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub struct SaveCompetitionRulesCommand {
     pub season_id: SeasonId,
@@ -16,6 +17,10 @@ pub enum SaveCompetitionRulesError {
     RosterInMultipleTiers {
         roster: String,
         tiers: (String, String),
+    },
+    /// Code de départage absent du catalogue possédé par le BC `ranking`.
+    UnknownTiebreakCriterion {
+        code: String,
     },
     Database(String),
     SeasonNotFound,
@@ -33,9 +38,19 @@ impl From<SeasonRepositoryError> for SaveCompetitionRulesError {
 pub async fn execute(
     cmd: SaveCompetitionRulesCommand,
     repo: &dyn ISeasonRepository,
+    catalog: &dyn ITiebreakCatalogPort,
 ) -> Result<(), SaveCompetitionRulesError> {
+    ensure_roster_unicity(&cmd.rules)?;
+    ensure_known_tiebreak_codes(&cmd.rules.ranking_rules.tiebreakers, catalog)?;
+
+    repo.save_rules(&cmd.season_id, &cmd.season_name, &cmd.rules)
+        .await?;
+    Ok(())
+}
+
+fn ensure_roster_unicity(rules: &CompetitionRules) -> Result<(), SaveCompetitionRulesError> {
     let mut seen: HashMap<&str, &str> = HashMap::new();
-    for tier in &cmd.rules.tiers {
+    for tier in &rules.tiers {
         for roster in &tier.rosters {
             if let Some(prev) = seen.insert(roster.as_str(), tier.name.as_ref()) {
                 return Err(SaveCompetitionRulesError::RosterInMultipleTiers {
@@ -45,9 +60,25 @@ pub async fn execute(
             }
         }
     }
+    Ok(())
+}
 
-    repo.save_rules(&cmd.season_id, &cmd.season_name, &cmd.rules)
-        .await?;
+/// Vérifie que chaque code soumis existe au catalogue, possédé par le BC
+/// `ranking`. L'exhaustivité n'est **pas** exigée : une configuration qui omet un
+/// critère du catalogue est valide, le formulaire la complétera à l'hydratation.
+fn ensure_known_tiebreak_codes(
+    config: &TiebreakConfig,
+    catalog: &dyn ITiebreakCatalogPort,
+) -> Result<(), SaveCompetitionRulesError> {
+    let known: HashSet<String> = catalog.all().into_iter().map(|c| c.code).collect();
+    for setting in config.settings() {
+        let code = setting.code.as_ref();
+        if !known.contains(code) {
+            return Err(SaveCompetitionRulesError::UnknownTiebreakCriterion {
+                code: code.to_string(),
+            });
+        }
+    }
     Ok(())
 }
 
@@ -57,8 +88,9 @@ mod tests {
     use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
     use crate::app::competitions::domain::competition_rules::{
         Activated, AggressiveBonus, DefensiveBonus, MaxTdConceded, MinCasualties, MinTd,
-        OffensiveBonus, RankingPoints, RankingRules, TierRule,
+        OffensiveBonus, RankingPoints, RankingRules, TiebreakCode, TierRule,
     };
+    use crate::app::competitions::ports::TiebreakCriterionDto;
     use crate::app::shared_kernel::tier::{CreationBudget, StartingXp, TierName};
     use crate::app::competitions::domain::competition_season::CompetitionSeason;
     use crate::app::competitions::domain::competition_structure::CompetitionStructure;
@@ -168,9 +200,40 @@ mod tests {
                     points: RankingPoints::try_new(1).unwrap(),
                     min_casualties: MinCasualties::try_new(2).unwrap(),
                 },
-                additionnal_ranking_points: HashMap::new(),
+                tiebreakers: tiebreakers(&["diff_td", "nb_td"]),
             },
             tiers,
+        }
+    }
+
+    fn tiebreakers(codes: &[&str]) -> TiebreakConfig {
+        let codes = codes
+            .iter()
+            .map(|c| TiebreakCode::try_new(*c).unwrap())
+            .collect();
+        TiebreakConfig::all_active(codes).unwrap()
+    }
+
+    /// Catalogue de test : les 7 codes réels, comme les expose l'adapter.
+    struct FakeCatalog;
+
+    impl ITiebreakCatalogPort for FakeCatalog {
+        fn all(&self) -> Vec<TiebreakCriterionDto> {
+            [
+                "diff_td",
+                "nb_td",
+                "nb_td_conceded",
+                "nb_cas",
+                "nb_wins",
+                "nb_fouls",
+                "nb_reu",
+            ]
+            .into_iter()
+            .map(|code| TiebreakCriterionDto {
+                code: code.to_string(),
+                label: format!("libellé {code}"),
+            })
+            .collect()
         }
     }
 
@@ -198,6 +261,7 @@ mod tests {
                 rules,
             },
             &FakeRepo { fail: false },
+            &FakeCatalog,
         )
         .await;
         assert!(result.is_ok());
@@ -216,12 +280,45 @@ mod tests {
                 rules,
             },
             &FakeRepo { fail: false },
+            &FakeCatalog,
         )
         .await;
         assert!(matches!(
             result,
             Err(SaveCompetitionRulesError::RosterInMultipleTiers { roster, .. }) if roster == "HUMAN"
         ));
+    }
+
+    /// Enregistre des règles dont seule la configuration de départage varie.
+    async fn save_with_tiebreakers(codes: &[&str]) -> Result<(), SaveCompetitionRulesError> {
+        let mut rules = base_rules(vec![tier("Tier 1", vec!["HUMAN"])]);
+        rules.ranking_rules.tiebreakers = tiebreakers(codes);
+        execute(
+            SaveCompetitionRulesCommand {
+                season_id: SeasonId::new(),
+                season_name: "Saison 1".into(),
+                rules,
+            },
+            &FakeRepo { fail: false },
+            &FakeCatalog,
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn code_de_departage_hors_catalogue_retourne_erreur() {
+        let result = save_with_tiebreakers(&["diff_td", "nb_cartons_rouges"]).await;
+        assert!(matches!(
+            result,
+            Err(SaveCompetitionRulesError::UnknownTiebreakCriterion { code })
+                if code == "nb_cartons_rouges"
+        ));
+    }
+
+    /// L'exhaustivité n'est pas exigée : une configuration partielle est valide.
+    #[tokio::test]
+    async fn configuration_partielle_du_catalogue_est_acceptee() {
+        assert!(save_with_tiebreakers(&["nb_cas"]).await.is_ok());
     }
 
     #[tokio::test]
@@ -234,6 +331,7 @@ mod tests {
                 rules,
             },
             &FakeRepo { fail: true },
+            &FakeCatalog,
         )
         .await;
         assert!(matches!(

@@ -37,9 +37,9 @@ fn format_aggressive(b: &AggressiveBonus) -> Option<String> {
 mod tests {
     use super::*;
     use crate::app::competitions::domain::competition_rules::{
-        Activated, MaxTdConceded, MinCasualties, MinTd, RankingPoints,
+        Activated, MaxTdConceded, MinCasualties, MinTd, RankingPoints, TiebreakCode,
+        TiebreakConfig,
     };
-    use std::collections::HashMap;
 
     fn rules(off: bool, def: bool, agg: bool) -> RankingRules {
         RankingRules {
@@ -61,7 +61,9 @@ mod tests {
                 points: RankingPoints::try_new(1).unwrap(),
                 min_casualties: MinCasualties::try_new(2).unwrap(),
             },
-            additionnal_ranking_points: HashMap::new(),
+            tiebreakers: TiebreakConfig::all_active(vec![TiebreakCode::try_new("diff_td")
+                .expect("code non vide")])
+            .expect("liste non vide"),
         }
     }
 

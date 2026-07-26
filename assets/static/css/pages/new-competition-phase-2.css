@@ -68,8 +68,11 @@
 .tiebreak-rank { width: 24px; height: 24px; border-radius: 50%; background: var(--main-blue); color: var(--white); display: flex; align-items: center; justify-content: center; font-size: var(--text-tiny); font-weight: 700; flex-shrink: 0; }
 .tiebreak-drag { color: var(--dark-4); font-size: 18px; cursor: grab; flex-shrink: 0; }
 .tiebreak-label { flex: 1; font-size: var(--text-small); color: var(--dark-1); }
-.tiebreak-remove { color: var(--dark-4); cursor: pointer; font-size: 16px; background: none; border: none; }
-.tiebreak-remove:hover { color: var(--red); }
+.tiebreak-check { width: 18px; height: 18px; cursor: pointer; accent-color: var(--main-blue); flex-shrink: 0; }
+/* Critère décoché : reste à sa place, grisé, rang remplacé par un tiret.
+   Seuls les critères actifs sont numérotés — la numérotation se recalcule au décochage. */
+.tiebreak-row.is-off { opacity: 0.55; }
+.tiebreak-row.is-off .tiebreak-rank { background: none; border: 1px solid var(--dark-4); color: var(--dark-3); }
 
 
 

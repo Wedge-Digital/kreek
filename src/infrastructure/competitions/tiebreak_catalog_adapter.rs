@@ -61,7 +61,11 @@ mod tests {
     #[test]
     fn every_entry_carries_a_label() {
         for entry in TiebreakCatalogAdapter::new().all() {
-            assert!(!entry.label.is_empty(), "libellé manquant pour {}", entry.code);
+            assert!(
+                !entry.label.is_empty(),
+                "libellé manquant pour {}",
+                entry.code
+            );
         }
     }
 

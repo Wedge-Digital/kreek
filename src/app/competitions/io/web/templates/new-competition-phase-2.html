@@ -105,9 +105,12 @@
   <div class="rules-section">
     <div class="rules-section-title">Ordre des critères de départage</div>
     <div class="info-note mb-1">
-      📌 Faites glisser les critères pour définir leur priorité. Le critère en tête est appliqué en premier en cas d'égalité de points.
+      📌 Décochez un critère pour l'exclure du départage. Faites glisser les critères pour définir leur priorité : seuls les critères cochés sont numérotés, dans leur ordre d'application.
     </div>
     <div class="tiebreak-list" id="tiebreak-list"></div>
+    <div id="tiebreak-warning" class="form-error-banner mt-1" hidden>
+      Au moins un critère de départage doit être actif.
+    </div>
   </div>
 
   <div class="separator"></div>
@@ -138,6 +141,7 @@
     </button>
     <span hidden id="season-id-value">{{ season_id }}</span>
     <button class="btn btn-primary btn-action-wide"
+            id="rules-submit-btn"
             onclick="submitRules()">
       Enregistrer &amp; continuer →
     </button>
@@ -161,27 +165,41 @@
     { head: "rgba(255,215,0,0.12)",   badge: "var(--gold)" },
   ];
 
-  const TIEBREAK_CRITERIA = [
-    { id: 'diff_td',      label: 'Différence de touchdowns (marqués − encaissés)' },
-    { id: 'nb_td',        label: 'Nombre de touchdowns marqués' },
-    { id: 'nb_cas',       label: 'Nombre de blessures infligées' },
-    { id: 'nb_wins',      label: 'Nombre de victoires' },
-    { id: 'nb_fouls',     label: 'Nombre de fautes commises' },
-    { id: 'nb_reu',       label: 'Nombre de réussites' },
-    { id: 'nb_red_cards', label: 'Nombre de cartons rouges' },
-  ];
+  // Catalogue fourni par le BC ranking, injecté par le handler via
+  // ITiebreakCatalogPort — aucun libellé n'est codé en dur ici.
+  const TIEBREAK_CATALOGUE = {{ tiebreak_catalog_json|safe }};
 
-  let criteriaOrder = [...TIEBREAK_CRITERIA];
+  // L'ordre de la liste porte la priorité ; `activated` porte l'activation.
+  let criteriaOrder = TIEBREAK_CATALOGUE.map(c => ({ ...c, activated: true }));
   let dragSrc = null;
 
   function renderTiebreaks() {
     const list = document.getElementById('tiebreak-list');
-    list.innerHTML = criteriaOrder.map((c, idx) => `
-      <div class="tiebreak-row" draggable="true" data-id="${c.id}">
-        <div class="tiebreak-rank">${idx + 1}</div>
+    let rank = 0;
+    list.innerHTML = criteriaOrder.map(c => {
+      // Seuls les critères actifs sont numérotés : le rang affiché est l'ordre
+      // d'application réel.
+      const badge = c.activated ? ++rank : '—';
+      return `
+      <label class="tiebreak-row${c.activated ? '' : ' is-off'}" draggable="true" data-id="${c.code}">
+        <input type="checkbox" class="tiebreak-check"${c.activated ? ' checked' : ''}>
+        <div class="tiebreak-rank">${badge}</div>
         <span class="tiebreak-drag">⠿</span>
         <span class="tiebreak-label">${c.label}</span>
-      </div>`).join('');
+      </label>`;
+    }).join('');
+
+    list.querySelectorAll('.tiebreak-check').forEach(box => {
+      box.addEventListener('change', () => {
+        // Bascule sur place : la position dans la liste n'est pas touchée, donc
+        // l'ordre d'un critère décoché est conservé.
+        const code = box.closest('.tiebreak-row').dataset.id;
+        const criterion = criteriaOrder.find(c => c.code === code);
+        criterion.activated = box.checked;
+        renderTiebreaks();
+        refreshTiebreakGuard();
+      });
+    });
 
     list.querySelectorAll('.tiebreak-row').forEach(row => {
       row.addEventListener('dragstart', e => {
@@ -205,13 +223,23 @@
       row.addEventListener('drop', e => {
         e.preventDefault();
         if (!dragSrc || dragSrc === row) return;
-        const srcIdx = criteriaOrder.findIndex(c => c.id === dragSrc.dataset.id);
-        const dstIdx = criteriaOrder.findIndex(c => c.id === row.dataset.id);
+        const srcIdx = criteriaOrder.findIndex(c => c.code === dragSrc.dataset.id);
+        const dstIdx = criteriaOrder.findIndex(c => c.code === row.dataset.id);
         const [moved] = criteriaOrder.splice(srcIdx, 1);
         criteriaOrder.splice(dstIdx, 0, moved);
         renderTiebreaks();
       });
     });
+  }
+
+  /// Règle 1 : au moins un critère actif. Garde-fou de confort — la validation
+  /// autoritaire est dans le domaine, qui rejette la configuration en 422.
+  function refreshTiebreakGuard() {
+    const noneActive = !criteriaOrder.some(c => c.activated);
+    const btn = document.getElementById('rules-submit-btn');
+    if (btn) btn.disabled = noneActive;
+    const warning = document.getElementById('tiebreak-warning');
+    if (warning) warning.hidden = !noneActive;
   }
 
   // ── Pickers ──────────────────────────────────────────────────────────────────
@@ -370,9 +398,8 @@
         draw_points: +document.getElementById('draw_points').value,
         lose_points: +document.getElementById('lose_points').value,
         ...buildBonusRules(),
-        additionnal_ranking_points: Object.fromEntries(
-          criteriaOrder.map((c, idx) => [c.id, idx + 1])
-        ),
+        // L'ordre du tableau porte la priorité — pas de champ « priority ».
+        tiebreakers: criteriaOrder.map(c => ({ code: c.code, activated: c.activated })),
       },
       tiers: tiers.map(tier => ({
         name:        tier.name,
@@ -388,7 +415,7 @@
   window.addTier = addTier;
 
   window.submitRules = function () {
-    const btn = document.querySelector('[onclick="submitRules()"]');
+    const btn = document.getElementById('rules-submit-btn');
     if (btn) { btn.disabled = true; btn.textContent = 'Enregistrement…'; }
 
     const payload = buildJSON();
@@ -441,17 +468,23 @@
 
     hydrateBonuses(rr);
 
-    // Critères de départage : reconstruction depuis la map {id: priorité}
-    const pts = rr.additionnal_ranking_points;
-    criteriaOrder = Object.entries(pts)
-      .sort(([, a], [, b]) => a - b)
-      .map(([id]) => TIEBREAK_CRITERIA.find(c => c.id === id))
+    // Critères de départage : l'ordre du tableau sauvegardé EST la priorité.
+    // Le catalogue reste la source de vérité des libellés et de la liste.
+    criteriaOrder = (rr.tiebreakers || [])
+      .map(saved => {
+        const known = TIEBREAK_CATALOGUE.find(c => c.code === saved.code);
+        return known ? { ...known, activated: saved.activated } : null;
+      })
       .filter(Boolean);
-    // Ajouter les critères absents de la sauvegarde (ajouts futurs)
-    TIEBREAK_CRITERIA.forEach(c => {
-      if (!criteriaOrder.find(x => x.id === c.id)) criteriaOrder.push(c);
+    // Un critère du catalogue absent de la sauvegarde est ajouté en fin de liste,
+    // actif (règle 3).
+    TIEBREAK_CATALOGUE.forEach(c => {
+      if (!criteriaOrder.find(x => x.code === c.code)) {
+        criteriaOrder.push({ ...c, activated: true });
+      }
     });
     renderTiebreaks();
+    refreshTiebreakGuard();
 
     // Tiers
     tiers = rules.tiers.map(t => ({
@@ -467,6 +500,7 @@
   }
 
   renderTiebreaks();
+  refreshTiebreakGuard();
   if (INITIAL_RULES) {
     initFromExistingRules(INITIAL_RULES);
   } else {

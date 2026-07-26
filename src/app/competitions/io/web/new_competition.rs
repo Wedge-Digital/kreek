@@ -1,5 +1,9 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::domain::competition_rules::CompetitionRules;
+use crate::app::competitions::domain::season_repository_port::{
+    SeasonBaseInfo, SeasonRepositoryError,
+};
+use crate::app::competitions::ports::ITiebreakCatalogPort;
 use crate::app::competitions::use_cases::create_draft_competition::{
     execute, CreateDraftCompetitionCommand, CreateDraftCompetitionError,
 };
@@ -34,6 +38,9 @@ pub struct NewCompetitionPhase2Template {
     pub season_id: String,
     pub season_name_value: String,
     pub existing_rules_json: String,
+    /// Catalogue des critères de départage, sérialisé pour amorcer l'état JS.
+    /// Fourni par le BC `ranking` via `ITiebreakCatalogPort`.
+    pub tiebreak_catalog_json: String,
 }
 
 impl IntoResponse for NewCompetitionPhase2Template {
@@ -54,34 +61,62 @@ pub async fn get_new_competition_phase_2(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let season_repo = state.competitions.season_repository.as_ref();
+    build_phase_2_template(&state, space_id, competition_id, season_id, sid)
+        .await
+        .into_response()
+}
 
-    let (rules_result, base_result) = tokio::join!(
-        season_repo.find_rules(&sid),
-        season_repo.find_base_info(&sid),
-    );
-
-    let existing_rules_json = rules_result
-        .ok()
-        .flatten()
-        .and_then(|r| serde_json::to_string(&r).ok())
-        .unwrap_or_else(|| "null".to_string());
-
-    let season_name_value = base_result
-        .ok()
-        .flatten()
-        .map(|b| b.name)
-        .unwrap_or_else(|| "Saison 1".to_string());
-
+async fn build_phase_2_template(
+    state: &AppState,
+    space_id: String,
+    competition_id: String,
+    season_id: String,
+    sid: SeasonId,
+) -> NewCompetitionPhase2Template {
+    let repo = state.competitions.season_repository.as_ref();
+    let (rules, base) = tokio::join!(repo.find_rules(&sid), repo.find_base_info(&sid));
     NewCompetitionPhase2Template {
         app_routes: AppRoutes::default(),
         space_id,
         competition_id,
         season_id,
-        season_name_value,
-        existing_rules_json,
+        season_name_value: season_name_or_default(base),
+        existing_rules_json: rules_json_or_null(rules),
+        tiebreak_catalog_json: tiebreak_catalog_json(state.competitions.tiebreak_catalog_port.as_ref()),
     }
-    .into_response()
+}
+
+/// Règles sérialisées pour l'hydratation JS, `"null"` si la saison n'en a pas
+/// encore (ou si elles sont illisibles — le formulaire repart des défauts).
+fn rules_json_or_null(
+    result: Result<Option<CompetitionRules>, SeasonRepositoryError>,
+) -> String {
+    result
+        .ok()
+        .flatten()
+        .and_then(|r| serde_json::to_string(&r).ok())
+        .unwrap_or_else(|| "null".to_string())
+}
+
+fn season_name_or_default(
+    result: Result<Option<SeasonBaseInfo>, SeasonRepositoryError>,
+) -> String {
+    result
+        .ok()
+        .flatten()
+        .map(|b| b.name)
+        .unwrap_or_else(|| "Saison 1".to_string())
+}
+
+/// Projette le catalogue du port en JSON pour le template — le DTO de port
+/// n'atteint jamais la vue.
+fn tiebreak_catalog_json(catalog: &dyn ITiebreakCatalogPort) -> String {
+    let entries: Vec<serde_json::Value> = catalog
+        .all()
+        .into_iter()
+        .map(|c| serde_json::json!({ "code": c.code, "label": c.label }))
+        .collect();
+    serde_json::to_string(&entries).unwrap_or_else(|_| "[]".to_string())
 }
 
 // ── Phase 1 ──────────────────────────────────────────────────────────────────
@@ -420,11 +455,8 @@ pub async fn post_competition_rules(
     State(state): State<AppState>,
     Json(payload): Json<SaveRulesPayload>,
 ) -> impl IntoResponse {
-    let sid = match SeasonId::try_new(&season_id) {
-        Ok(id) => id,
-        Err(_) => {
-            return (StatusCode::BAD_REQUEST, "Identifiant de saison invalide.").into_response()
-        }
+    let Ok(sid) = SeasonId::try_new(&season_id) else {
+        return (StatusCode::BAD_REQUEST, "Identifiant de saison invalide.").into_response();
     };
 
     let cmd = SaveCompetitionRulesCommand {
@@ -432,31 +464,57 @@ pub async fn post_competition_rules(
         season_name: payload.season_name,
         rules: payload.rules,
     };
+    match save_rules(&state, cmd).await {
+        Ok(()) => hx_redirect(structure_url(&space_id, &competition_id, &season_id)),
+        Err(e) => map_save_rules_error(e),
+    }
+}
 
-    match execute_save_rules(cmd, state.competitions.season_repository.as_ref()).await {
-        Ok(()) => {
-            hx_redirect(AppRoutes::default().competitions.new_competition_structure(&space_id, &competition_id, &season_id))
-        }
+async fn save_rules(
+    state: &AppState,
+    cmd: SaveCompetitionRulesCommand,
+) -> Result<(), SaveCompetitionRulesError> {
+    execute_save_rules(
+        cmd,
+        state.competitions.season_repository.as_ref(),
+        state.competitions.tiebreak_catalog_port.as_ref(),
+    )
+    .await
+}
 
-        Err(SaveCompetitionRulesError::RosterInMultipleTiers {
+fn structure_url(space_id: &str, competition_id: &str, season_id: &str) -> String {
+    AppRoutes::default()
+        .competitions
+        .new_competition_structure(space_id, competition_id, season_id)
+}
+
+fn map_save_rules_error(error: SaveCompetitionRulesError) -> Response {
+    match error {
+        SaveCompetitionRulesError::RosterInMultipleTiers {
             roster,
             tiers: (t1, t2),
-        }) => {
-            let msg = format!(
-                "Le roster « {} » est présent dans « {} » et « {} ».",
-                roster, t1, t2
-            );
-            (StatusCode::UNPROCESSABLE_ENTITY, msg).into_response()
+        } => unprocessable(format!(
+            "Le roster « {roster} » est présent dans « {t1} » et « {t2} »."
+        )),
+        SaveCompetitionRulesError::UnknownTiebreakCriterion { code } => {
+            unprocessable(format!("Le critère de départage « {code} » est inconnu."))
         }
-
-        Err(SaveCompetitionRulesError::SeasonNotFound) => {
+        SaveCompetitionRulesError::SeasonNotFound => {
             (StatusCode::NOT_FOUND, "Saison introuvable.").into_response()
         }
-
-        Err(SaveCompetitionRulesError::Database(_)) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Erreur interne, veuillez réessayer.",
-        )
-            .into_response(),
+        SaveCompetitionRulesError::Database(_) => internal_error(),
     }
+}
+
+/// 422 + message français, affiché tel quel par la bannière du formulaire.
+fn unprocessable(message: String) -> Response {
+    (StatusCode::UNPROCESSABLE_ENTITY, message).into_response()
+}
+
+fn internal_error() -> Response {
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "Erreur interne, veuillez réessayer.",
+    )
+        .into_response()
 }
