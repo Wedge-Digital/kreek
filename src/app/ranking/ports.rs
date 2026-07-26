@@ -16,6 +16,12 @@ pub struct RankingLineRow {
     pub ranking_points: u32,
     /// Part bonus du total, déjà comprise dans `ranking_points`.
     pub bonus_points: u32,
+    /// Compteurs de départage. `diff_td` n'y figure pas : dérivé.
+    pub td_for: u32,
+    pub td_against: u32,
+    pub casualties: u32,
+    pub fouls: u32,
+    pub completions: u32,
 }
 
 #[derive(Debug)]

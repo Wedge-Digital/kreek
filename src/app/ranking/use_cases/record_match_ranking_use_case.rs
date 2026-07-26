@@ -1,7 +1,8 @@
 use crate::app::ranking::domain::ranking_line::{
-    AggressiveBonusRule, BonusActivated, CasualtiesInflicted, CumulativeTotals, DefensiveBonusRule,
-    DrawCount, LossCount, MatchContext, MatchScore, MatchStats, MatchesPlayed, MaxTdConceded,
-    MinCasualties, MinTd, OffensiveBonusRule, RankingLine, RankingPoints, RankingRules, WinCount,
+    AggressiveBonusRule, BonusActivated, CasualtiesInflicted, CasualtiesTotal, CompletionsMade,
+    CumulativeTotals, DefensiveBonusRule, DrawCount, FoulsCommitted, LossCount, MatchContext,
+    MatchScore, MatchStats, MatchesPlayed, MaxTdConceded, MinCasualties, MinTd, OffensiveBonusRule,
+    RankingLine, RankingPoints, RankingRules, TdAgainst, TdFor, WinCount,
 };
 use crate::app::ranking::ports::{IRankingCompetitionPort, IRankingRepository, RankingLineRow};
 use crate::app::shared_kernel::common_types::{CompetitionId, MatchReportId, RoundId, SeasonId};
@@ -14,6 +15,8 @@ use chrono::{DateTime, Utc};
 pub struct TeamMatchStats {
     pub score: MatchScore,
     pub casualties: CasualtiesInflicted,
+    pub fouls: FoulsCommitted,
+    pub completions: CompletionsMade,
 }
 
 pub struct RecordMatchRankingCommand {
@@ -70,6 +73,8 @@ fn record_home(
         own_td: cmd.home.score,
         opponent_td: cmd.away.score,
         casualties_inflicted: cmd.home.casualties,
+        fouls: cmd.home.fouls,
+        completions: cmd.home.completions,
     };
     RankingLine::record_match(previous, ctx, stats, rules)
 }
@@ -84,6 +89,8 @@ fn record_away(
         own_td: cmd.away.score,
         opponent_td: cmd.home.score,
         casualties_inflicted: cmd.away.casualties,
+        fouls: cmd.away.fouls,
+        completions: cmd.away.completions,
     };
     RankingLine::record_match(previous, ctx, stats, rules)
 }
@@ -120,6 +127,11 @@ fn to_totals(row: RankingLineRow) -> CumulativeTotals {
         ranking_points: RankingPoints(row.ranking_points),
         // Sans ce report, le cumul des bonus repartirait de zéro à chaque match.
         bonus_points: RankingPoints(row.bonus_points),
+        td_for: TdFor(row.td_for),
+        td_against: TdAgainst(row.td_against),
+        casualties: CasualtiesTotal(row.casualties),
+        fouls: FoulsCommitted(row.fouls),
+        completions: CompletionsMade(row.completions),
     }
 }
 
@@ -206,6 +218,11 @@ mod tests {
                 losses: l.losses.0,
                 ranking_points: l.ranking_points.0,
                 bonus_points: l.bonus_points.0,
+                td_for: l.td_for.0,
+                td_against: l.td_against.0,
+                casualties: l.casualties.0,
+                fouls: l.fouls.0,
+                completions: l.completions.0,
             }))
         }
         async fn find_latest_lines_for_season(&self, _: &str) -> Result<Vec<RankingLineRow>, RankingRepositoryError> {
@@ -217,6 +234,15 @@ mod tests {
         }
     }
 
+    fn team_stats(score: u8, casualties: u32, fouls: u32, completions: u32) -> TeamMatchStats {
+        TeamMatchStats {
+            score: MatchScore(score),
+            casualties: CasualtiesInflicted(casualties),
+            fouls: FoulsCommitted(fouls),
+            completions: CompletionsMade(completions),
+        }
+    }
+
     fn sample_cmd(home_team_id: TeamId, away_team_id: TeamId) -> RecordMatchRankingCommand {
         RecordMatchRankingCommand {
             competition_id: CompetitionId::new(),
@@ -225,8 +251,8 @@ mod tests {
             match_report_id: MatchReportId::new(),
             home_team_id,
             away_team_id,
-            home: TeamMatchStats { score: MatchScore(2), casualties: CasualtiesInflicted(0) },
-            away: TeamMatchStats { score: MatchScore(1), casualties: CasualtiesInflicted(0) },
+            home: team_stats(2, 0, 0, 0),
+            away: team_stats(1, 0, 0, 0),
             published_at: Utc::now(),
         }
     }
@@ -335,5 +361,33 @@ mod tests {
         // les 7 points atterriraient sur away.
         assert_eq!(home_line.bonus_points.0, 7);
         assert_eq!(away_line.bonus_points.0, 0);
+    }
+
+    /// Même verrou pour les cinq compteurs de départage : seuls les TD se croisent.
+    /// Une inversion de `fouls` / `completions` / `casualties` compile sans broncher
+    /// et produit des compteurs plausibles mais attribués à la mauvaise équipe.
+    #[tokio::test]
+    async fn tiebreak_counters_cross_over_only_for_touchdowns() {
+        let repo = FakeRepo::default();
+        let port = FakeCompetitionPort { rules: Some(rules_info(3, 1, 0)) };
+        let home = TeamId::new();
+        let away = TeamId::new();
+        let mut cmd = sample_cmd(home.clone(), away.clone());
+        // Match 2-1 pour home, avec des valeurs toutes distinctes des deux côtés.
+        cmd.home = team_stats(2, 3, 1, 5);
+        cmd.away = team_stats(1, 0, 4, 2);
+
+        execute(cmd, &repo, &port).await.unwrap();
+
+        let lines = repo.lines.lock().unwrap();
+        let home_line = lines.iter().find(|l| l.team_id == home).unwrap();
+        let away_line = lines.iter().find(|l| l.team_id == away).unwrap();
+
+        // Les TD se croisent : les 2 de home sont les `td_against` de away.
+        assert_eq!((home_line.td_for.0, home_line.td_against.0), (2, 1));
+        assert_eq!((away_line.td_for.0, away_line.td_against.0), (1, 2));
+        // Les trois autres restent ceux de l'équipe qui les a produits.
+        assert_eq!((home_line.casualties.0, home_line.fouls.0, home_line.completions.0), (3, 1, 5));
+        assert_eq!((away_line.casualties.0, away_line.fouls.0, away_line.completions.0), (0, 4, 2));
     }
 }

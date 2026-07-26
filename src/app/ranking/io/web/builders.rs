@@ -123,6 +123,11 @@ mod tests {
             losses: 0,
             ranking_points: points,
             bonus_points: 0,
+            td_for: 0,
+            td_against: 0,
+            casualties: 0,
+            fouls: 0,
+            completions: 0,
         }
     }
 

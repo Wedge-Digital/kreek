@@ -72,12 +72,21 @@ fn sample_payload(season_id: &str, home_team_id: &str, away_team_id: &str) -> Ma
     }
 }
 
-fn sortie() -> MatchActionPublishedPayload {
+fn action(kind: ActionTypePayload) -> MatchActionPublishedPayload {
     MatchActionPublishedPayload {
         turn: 1,
         player: PlayerRefPayload::Regular { player_id: "p1".into() },
-        action: ActionTypePayload::Sortie,
+        action: kind,
     }
+}
+
+fn sortie() -> MatchActionPublishedPayload {
+    action(ActionTypePayload::Sortie)
+}
+
+/// `n` actions du même type — pour composer un payload aux compteurs distincts.
+fn actions(kind: ActionTypePayload, n: usize) -> Vec<MatchActionPublishedPayload> {
+    (0..n).map(|_| action(kind.clone())).collect()
 }
 
 async fn wait_for<F, Fut>(mut check: F)
@@ -122,4 +131,56 @@ async fn match_report_published_creates_two_ranking_lines(pool: PgPool) {
     assert_eq!(home_row.ranking_points, 4); // victoire 2-1 (3) + bonus agressif (1)
     assert_eq!(away_row.ranking_points, 0); // défaite, aucune sortie
     assert_eq!(home_row.matches_played, 1);
+}
+
+/// Les cinq compteurs de départage traversent tout le pipeline : payload d'app
+/// event → filtrage IO des actions → domaine → base. Les actions non comptées
+/// (`Lancer`, `Interception`, `Touchdown`) sont dans le payload pour vérifier
+/// qu'elles ne gonflent ni les fautes (règle 16) ni les réussites (règle 15).
+#[sqlx::test]
+async fn match_report_published_persists_the_tiebreak_counters(pool: PgPool) {
+    let app_event_bus = new_bus();
+    let competition_port: Arc<dyn IRankingCompetitionPort> = Arc::new(FakeCompetitionPort);
+    let ranking = RankingContext::new(&pool, competition_port.clone());
+    match_report_published_listener::init(&app_event_bus, ranking.repository.clone(), competition_port);
+
+    let season_id = SeasonId::new();
+    let home = TeamId::new();
+    let away = TeamId::new();
+    let mut payload = sample_payload(&season_id.to_string(), &home.to_string(), &away.to_string());
+    // home : 2 sorties, 3 agressions, 1 passe (+ 1 lancer et 1 interception ignorés).
+    payload.home_actions = [
+        actions(ActionTypePayload::Sortie, 2),
+        actions(ActionTypePayload::Agression, 3),
+        actions(ActionTypePayload::Passe, 1),
+        actions(ActionTypePayload::Lancer, 1),
+        actions(ActionTypePayload::Interception, 1),
+    ]
+    .concat();
+    // away : 1 agression, 4 passes, aucune sortie.
+    payload.away_actions =
+        [actions(ActionTypePayload::Agression, 1), actions(ActionTypePayload::Passe, 4)].concat();
+
+    let _ = app_event_bus.send(MatchReportAppEvent::MatchReportPublished(payload).to_enveloppe());
+
+    wait_for(|| {
+        let repo = ranking.repository.clone();
+        let season = season_id.to_string();
+        let away = away.to_string();
+        async move { repo.find_latest_line(&season, &away).await.unwrap().is_some() }
+    })
+    .await;
+
+    let home_row = ranking.repository.find_latest_line(&season_id.to_string(), &home.to_string()).await.unwrap().unwrap();
+    let away_row = ranking.repository.find_latest_line(&season_id.to_string(), &away.to_string()).await.unwrap().unwrap();
+
+    // Match 2-1 : les TD se croisent, les trois autres compteurs restent par équipe.
+    assert_eq!(
+        [home_row.td_for, home_row.td_against, home_row.casualties, home_row.fouls, home_row.completions],
+        [2, 1, 2, 3, 1]
+    );
+    assert_eq!(
+        [away_row.td_for, away_row.td_against, away_row.casualties, away_row.fouls, away_row.completions],
+        [1, 2, 0, 1, 4]
+    );
 }

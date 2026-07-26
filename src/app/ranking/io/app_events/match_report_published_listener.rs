@@ -1,4 +1,6 @@
-use crate::app::ranking::domain::ranking_line::{CasualtiesInflicted, MatchScore};
+use crate::app::ranking::domain::ranking_line::{
+    CasualtiesInflicted, CompletionsMade, FoulsCommitted, MatchScore,
+};
 use crate::app::ranking::ports::IRankingCompetitionPort;
 use crate::app::ranking::use_cases::record_match_ranking_use_case::{
     self, RecordMatchRankingCommand, TeamMatchStats,
@@ -62,10 +64,14 @@ async fn handle_published(
         home: TeamMatchStats {
             score: MatchScore(payload.home_score),
             casualties: count_sorties(&payload.home_actions),
+            fouls: count_agressions(&payload.home_actions),
+            completions: count_passes(&payload.home_actions),
         },
         away: TeamMatchStats {
             score: MatchScore(payload.away_score),
             casualties: count_sorties(&payload.away_actions),
+            fouls: count_agressions(&payload.away_actions),
+            completions: count_passes(&payload.away_actions),
         },
         published_at: payload.published_at,
     };
@@ -81,9 +87,23 @@ async fn handle_published(
 /// Compte les sorties (`Sortie` seule) infligées par une équipe — filtrage IO :
 /// le domaine ne connaît pas les types du payload, il reçoit un nombre.
 fn count_sorties(actions: &[MatchActionPublishedPayload]) -> CasualtiesInflicted {
-    let count = actions
-        .iter()
-        .filter(|a| matches!(a.action, ActionTypePayload::Sortie))
-        .count();
-    CasualtiesInflicted(count as u32)
+    CasualtiesInflicted(count_matching(actions, |a| matches!(a, ActionTypePayload::Sortie)))
+}
+
+/// Fautes commises = actions `Agression` (règle 16) — en Blood Bowl, l'agression
+/// *est* la faute.
+fn count_agressions(actions: &[MatchActionPublishedPayload]) -> FoulsCommitted {
+    FoulsCommitted(count_matching(actions, |a| matches!(a, ActionTypePayload::Agression)))
+}
+
+/// Réussites = actions `Passe` uniquement (règle 15), ni `Interception` ni `Lancer`.
+fn count_passes(actions: &[MatchActionPublishedPayload]) -> CompletionsMade {
+    CompletionsMade(count_matching(actions, |a| matches!(a, ActionTypePayload::Passe)))
+}
+
+fn count_matching(
+    actions: &[MatchActionPublishedPayload],
+    is_wanted: impl Fn(&ActionTypePayload) -> bool,
+) -> u32 {
+    actions.iter().filter(|a| is_wanted(&a.action)).count() as u32
 }

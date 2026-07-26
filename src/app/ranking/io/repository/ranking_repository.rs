@@ -26,6 +26,11 @@ struct Row {
     losses: i32,
     ranking_points: i32,
     bonus_points: i32,
+    td_for: i32,
+    td_against: i32,
+    casualties: i32,
+    fouls: i32,
+    completions: i32,
 }
 
 impl From<Row> for RankingLineRow {
@@ -38,6 +43,11 @@ impl From<Row> for RankingLineRow {
             losses: r.losses as u32,
             ranking_points: r.ranking_points as u32,
             bonus_points: r.bonus_points as u32,
+            td_for: r.td_for as u32,
+            td_against: r.td_against as u32,
+            casualties: r.casualties as u32,
+            fouls: r.fouls as u32,
+            completions: r.completions as u32,
         }
     }
 }
@@ -51,7 +61,8 @@ impl IRankingRepository for PgRankingRepository {
     ) -> Result<Option<RankingLineRow>, RankingRepositoryError> {
         let row = sqlx::query_as!(
             Row,
-            r#"SELECT team_id, matches_played, wins, draws, losses, ranking_points, bonus_points
+            r#"SELECT team_id, matches_played, wins, draws, losses, ranking_points, bonus_points,
+                      td_for, td_against, casualties, fouls, completions
                FROM ranking_lines
                WHERE season_id = $1 AND team_id = $2
                ORDER BY sequence DESC
@@ -73,7 +84,8 @@ impl IRankingRepository for PgRankingRepository {
         let rows = sqlx::query_as!(
             Row,
             r#"SELECT DISTINCT ON (team_id) team_id, matches_played, wins, draws, losses,
-                      ranking_points, bonus_points
+                      ranking_points, bonus_points, td_for, td_against, casualties,
+                      fouls, completions
                FROM ranking_lines
                WHERE season_id = $1
                ORDER BY team_id, sequence DESC"#,
@@ -101,8 +113,9 @@ impl IRankingRepository for PgRankingRepository {
                 r#"INSERT INTO ranking_lines (
                     id, competition_id, season_id, round_id, match_report_id, team_id,
                     recorded_at, matches_played, wins, draws, losses, ranking_points,
-                    bonus_points
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"#,
+                    bonus_points, td_for, td_against, casualties, fouls, completions
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+                          $15, $16, $17, $18)"#,
                 id,
                 line.competition_id.to_string(),
                 line.season_id.to_string(),
@@ -116,6 +129,11 @@ impl IRankingRepository for PgRankingRepository {
                 line.losses.0 as i32,
                 line.ranking_points.0 as i32,
                 line.bonus_points.0 as i32,
+                line.td_for.0 as i32,
+                line.td_against.0 as i32,
+                line.casualties.0 as i32,
+                line.fouls.0 as i32,
+                line.completions.0 as i32,
             )
             .execute(&mut *tx)
             .await
@@ -130,7 +148,10 @@ impl IRankingRepository for PgRankingRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::ranking::domain::ranking_line::{DrawCount, LossCount, MatchesPlayed, RankingPoints, WinCount};
+    use crate::app::ranking::domain::ranking_line::{
+        CasualtiesTotal, CompletionsMade, DrawCount, FoulsCommitted, LossCount, MatchesPlayed,
+        RankingPoints, TdAgainst, TdFor, WinCount,
+    };
     use crate::app::shared_kernel::common_types::{CompetitionId, MatchReportId, RoundId, SeasonId};
     use crate::app::shared_kernel::team::TeamId;
     use chrono::Utc;
@@ -159,7 +180,24 @@ mod tests {
             losses: LossCount(losses),
             ranking_points: RankingPoints(points),
             bonus_points: RankingPoints(bonus),
+            td_for: TdFor(0),
+            td_against: TdAgainst(0),
+            casualties: CasualtiesTotal(0),
+            fouls: FoulsCommitted(0),
+            completions: CompletionsMade(0),
         }
+    }
+
+    /// Renseigne les compteurs de départage sur une ligne — séparé de
+    /// `sample_line` pour ne pas lui ajouter cinq paramètres de plus.
+    fn with_counters(mut line: RankingLine, counters: [u32; 5]) -> RankingLine {
+        let [td_for, td_against, casualties, fouls, completions] = counters;
+        line.td_for = TdFor(td_for);
+        line.td_against = TdAgainst(td_against);
+        line.casualties = CasualtiesTotal(casualties);
+        line.fouls = FoulsCommitted(fouls);
+        line.completions = CompletionsMade(completions);
+        line
     }
 
     #[sqlx::test]
@@ -224,5 +262,25 @@ mod tests {
         assert_eq!(row_a.matches_played, 2); // la dernière ligne de team_a, pas la première
         let row_b = rows.iter().find(|r| r.team_id == team_b.to_string()).unwrap();
         assert_eq!(row_b.matches_played, 1);
+    }
+
+    /// Aller-retour des cinq compteurs de départage par les deux SELECT. Cinq
+    /// valeurs distinctes : une colonne permutée à l'INSERT ou au SELECT compile
+    /// et renvoie des nombres plausibles — seul l'écart entre elles le révèle.
+    #[sqlx::test]
+    async fn tiebreak_counters_round_trip_through_both_selects(pool: PgPool) {
+        let repo = PgRankingRepository::new(pool);
+        let season_id = SeasonId::new();
+        let team_id = TeamId::new();
+
+        let line = with_counters(sample_line(&team_id, &season_id, 1, 1, 0, 0, 3, 0), [7, 3, 5, 2, 9]);
+        repo.insert_lines(&[line]).await.unwrap();
+
+        let row = repo.find_latest_line(&season_id.to_string(), &team_id.to_string()).await.unwrap().unwrap();
+        assert_eq!([row.td_for, row.td_against, row.casualties, row.fouls, row.completions], [7, 3, 5, 2, 9]);
+
+        let rows = repo.find_latest_lines_for_season(&season_id.to_string()).await.unwrap();
+        let row = rows.first().unwrap();
+        assert_eq!([row.td_for, row.td_against, row.casualties, row.fouls, row.completions], [7, 3, 5, 2, 9]);
     }
 }
