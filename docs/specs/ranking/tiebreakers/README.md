@@ -116,5 +116,5 @@ Ordre de traitement : **`competition-rules-form` d'abord**, puis `tiebreak-calc`
 
 | Unité | Mockup | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|---|
-| competition-rules-form | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | | |
+| competition-rules-form | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | |
 | tiebreak-calc | n/a | n/a | | | | | | |
