@@ -48,6 +48,39 @@
     .s-num  { text-align: center; color: var(--dark-2); }
     .s-pts  { text-align: center; font-weight: 700; color: var(--dark-0); }
 
+    /* ─── Classement détaillé ─── */
+    /* Le nombre de colonnes dépend des critères de départage actifs de la
+       compétition (1 à 7) : d'où un vrai <table> plutôt qu'une grille à
+       template fixe, dans un conteneur qui scrolle horizontalement. */
+    .sd-scroll { overflow-x: auto; background: var(--white); border-radius: 10px; }
+    .sd-table  { border-collapse: collapse; width: 100%; min-width: 720px; font-size: var(--text-tiny); }
+    .sd-table th, .sd-table td { padding: 10px 8px; text-align: center; white-space: nowrap; }
+    .sd-group-head th {
+      background: var(--dark-1); color: var(--white);
+      font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+      border-left: 1px solid var(--dark-0);
+    }
+    .sd-col-head th {
+      background: var(--dark-0); color: var(--white); position: sticky; top: 0;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    }
+    .sd-table tbody tr { border-bottom: 1px solid var(--dark-6); }
+    .sd-table tbody tr:last-child      { border-bottom: none; }
+    .sd-table tbody tr:nth-child(even) { background: var(--dark-7); }
+    .sd-rank  { color: var(--dark-3); font-weight: 700; }
+    .sd-team  { text-align: left !important; font-weight: 600; color: var(--dark-1); font-size: var(--text-small); }
+    .sd-num   { color: var(--dark-2); }
+    .sd-bonus { color: var(--dark-2); font-weight: 600; }
+    .sd-total { font-weight: 700; color: var(--dark-0); background: rgba(0,0,0,0.03); }
+    /* Bloc des départages : visuellement détaché des colonnes de points. */
+    .sd-tb        { color: var(--dark-2); background: rgba(51,102,255,0.04); }
+    .sd-tb-first  { border-left: 2px solid var(--main-blue); }
+    /* Colonne qui a effectivement départagé une égalité. */
+    .sd-decisive  { color: var(--main-blue); font-weight: 700; }
+    .sd-tied      { color: var(--dark-3); }
+    .sd-legend    { font-size: var(--text-tiny); color: var(--dark-3); margin-top: var(--p1); line-height: 1.6; }
+    .sd-legend b  { color: var(--dark-2); }
+
     /* ─── Section block (shared) ─── */
     .section-block        { background: var(--white); border-radius: 10px; overflow: hidden; margin-bottom: var(--p1); }
     .section-block-header {
@@ -185,9 +218,10 @@
       .cal-coach      { display: none; }
       .cal-team       { gap: 6px; }
 
-      /* Tabs */
-      .tabs           { gap: 0; }
-      .tab            { padding: 8px 10px; font-size: 13px; }
+      /* Tabs — 6 onglets dont un libellé long : la barre scrolle plutôt que
+         de pousser la page en débordement horizontal. */
+      .tabs           { gap: 0; flex-wrap: nowrap; overflow-x: auto; }
+      .tab            { padding: 8px 10px; font-size: 13px; white-space: nowrap; }
 
       /* Section header */
       .section-block-header { padding: 10px; }
@@ -271,6 +305,7 @@
             <!-- 5 onglets -->
             <div class="tabs" style="margin-bottom: var(--p1);">
               <div class="tab" onclick="showTab('classement', this)">Classement</div>
+              <div class="tab" onclick="showTab('classement-detaille', this)">Classement détaillé</div>
               <div class="tab active" onclick="showTab('resultats', this)">Résultats</div>
               <div class="tab" onclick="showTab('calendrier', this)">Calendrier</div>
               <div class="tab" onclick="showTab('equipes', this)">Équipes</div>
@@ -325,6 +360,164 @@
               <p class="section-label" style="margin: var(--p2) 0 var(--p1);">Classement — état d'erreur : règles de classement non configurées pour la saison</p>
               <div class="table-error-zone card-shadow" style="padding: var(--p2);">
                 <p class="table-error">Impossible d'afficher le classement : les règles de classement ne sont pas configurées pour cette saison.</p>
+              </div>
+            </div>
+
+            <!-- ── Classement détaillé ── -->
+            <!-- Onglet de vérification : chaque nombre qui compose le total est
+                 exposé, puis les compteurs de départage dans l'ordre de priorité
+                 configuré pour la compétition. Lecture de gauche à droite. -->
+            <div id="tab-classement-detaille" class="tab-content" style="display:none;">
+              <div class="sd-scroll card-shadow">
+                <table class="sd-table">
+                  <thead>
+                    <tr class="sd-group-head">
+                      <th colspan="2"></th>
+                      <th colspan="4">Matchs</th>
+                      <th colspan="2">Points</th>
+                      <th colspan="4">Départages — ordre de priorité →</th>
+                    </tr>
+                    <tr class="sd-col-head">
+                      <th>#</th>
+                      <th class="sd-team">Équipe</th>
+                      <th title="Matchs joués">MJ</th>
+                      <th title="Gagnés">G</th>
+                      <th title="Nuls">N</th>
+                      <th title="Perdus">D</th>
+                      <th title="Points bonus cumulés">Bonus</th>
+                      <th title="Total de points de classement">Total</th>
+                      <th title="1er départage — Différence de touchdowns">1 · Δ TD</th>
+                      <th title="2e départage — Touchdowns marqués">2 · TD+</th>
+                      <th title="3e départage — Blessures infligées">3 · Bl.</th>
+                      <th title="4e départage — Touchdowns encaissés">4 · TD−</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="sd-rank">1</td>
+                      <td class="sd-team">🏆 Les Korrigans FC</td>
+                      <td class="sd-num">8</td><td class="sd-num">6</td><td class="sd-num">1</td><td class="sd-num">1</td>
+                      <td class="sd-bonus">+2</td><td class="sd-total">21</td>
+                      <td class="sd-tb sd-tb-first">+14</td><td class="sd-tb">24</td><td class="sd-tb">11</td><td class="sd-tb">10</td>
+                    </tr>
+                    <!-- Égalité à 17 points, départagée par la différence de TD -->
+                    <tr>
+                      <td class="sd-rank">2</td>
+                      <td class="sd-team">Orc Boyz United</td>
+                      <td class="sd-num">8</td><td class="sd-num">5</td><td class="sd-num">2</td><td class="sd-num">1</td>
+                      <td class="sd-bonus">+0</td><td class="sd-total">17</td>
+                      <td class="sd-tb sd-tb-first sd-decisive">+9</td><td class="sd-tb">19</td><td class="sd-tb">8</td><td class="sd-tb">10</td>
+                    </tr>
+                    <tr>
+                      <td class="sd-rank">3</td>
+                      <td class="sd-team">Skaven Speedsters</td>
+                      <td class="sd-num">8</td><td class="sd-num">5</td><td class="sd-num">1</td><td class="sd-num">2</td>
+                      <td class="sd-bonus">+1</td><td class="sd-total">17</td>
+                      <td class="sd-tb sd-tb-first sd-decisive">+4</td><td class="sd-tb">18</td><td class="sd-tb">14</td><td class="sd-tb">14</td>
+                    </tr>
+                    <!-- Égalité non résolue par le 1er critère : on lit le 2e -->
+                    <tr>
+                      <td class="sd-rank">4</td>
+                      <td class="sd-team">Dwarf Ironbreakers</td>
+                      <td class="sd-num">8</td><td class="sd-num">4</td><td class="sd-num">1</td><td class="sd-num">3</td>
+                      <td class="sd-bonus">+0</td><td class="sd-total">13</td>
+                      <td class="sd-tb sd-tb-first sd-tied">+2</td><td class="sd-tb sd-decisive">16</td><td class="sd-tb">9</td><td class="sd-tb">14</td>
+                    </tr>
+                    <tr>
+                      <td class="sd-rank">5</td>
+                      <td class="sd-team">Chaos Warriors</td>
+                      <td class="sd-num">8</td><td class="sd-num">4</td><td class="sd-num">1</td><td class="sd-num">3</td>
+                      <td class="sd-bonus">+0</td><td class="sd-total">13</td>
+                      <td class="sd-tb sd-tb-first sd-tied">+2</td><td class="sd-tb sd-decisive">12</td><td class="sd-tb">6</td><td class="sd-tb">10</td>
+                    </tr>
+                    <!-- Ex æquo assumé : tous les critères actifs sont égaux -->
+                    <tr>
+                      <td class="sd-rank">6</td>
+                      <td class="sd-team">Dark Elves Ravens</td>
+                      <td class="sd-num">8</td><td class="sd-num">3</td><td class="sd-num">1</td><td class="sd-num">4</td>
+                      <td class="sd-bonus">+1</td><td class="sd-total">11</td>
+                      <td class="sd-tb sd-tb-first sd-tied">−3</td><td class="sd-tb sd-tied">10</td><td class="sd-tb sd-tied">7</td><td class="sd-tb sd-tied">13</td>
+                    </tr>
+                    <tr>
+                      <td class="sd-rank">6</td>
+                      <td class="sd-team">Wood Elves Wanderers</td>
+                      <td class="sd-num">8</td><td class="sd-num">3</td><td class="sd-num">1</td><td class="sd-num">4</td>
+                      <td class="sd-bonus">+1</td><td class="sd-total">11</td>
+                      <td class="sd-tb sd-tb-first sd-tied">−3</td><td class="sd-tb sd-tied">10</td><td class="sd-tb sd-tied">7</td><td class="sd-tb sd-tied">13</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="sd-legend">
+                <b>Bonus</b> : points bonus cumulés, déjà inclus dans le total. <b>Total</b> = points de victoire/nul/défaite + bonus.<br>
+                <b>Départages</b> : seuls les critères activés pour cette compétition sont affichés, dans leur ordre de priorité. En bleu, le critère qui a effectivement départagé une égalité de points.<br>
+                Deux équipes restent <b>ex æquo</b> (même rang) lorsque tous les critères activés donnent la même valeur.
+              </p>
+
+              <!-- ── Variante : les 7 critères de départage activés (pire cas de largeur) ── -->
+              <div style="margin-top: var(--p3);">
+                <p class="section-label" style="margin-bottom: var(--p1);">Classement détaillé — variante : 7 critères de départage activés (le tableau scrolle horizontalement)</p>
+                <div class="sd-scroll card-shadow">
+                  <table class="sd-table">
+                    <thead>
+                      <tr class="sd-group-head">
+                        <th colspan="2"></th>
+                        <th colspan="4">Matchs</th>
+                        <th colspan="2">Points</th>
+                        <th colspan="7">Départages — ordre de priorité →</th>
+                      </tr>
+                      <tr class="sd-col-head">
+                        <th>#</th>
+                        <th class="sd-team">Équipe</th>
+                        <th title="Matchs joués">MJ</th>
+                        <th title="Gagnés">G</th>
+                        <th title="Nuls">N</th>
+                        <th title="Perdus">D</th>
+                        <th title="Points bonus cumulés">Bonus</th>
+                        <th title="Total de points de classement">Total</th>
+                        <th title="1er départage — Différence de touchdowns">1 · Δ TD</th>
+                        <th title="2e départage — Touchdowns marqués">2 · TD+</th>
+                        <th title="3e départage — Touchdowns encaissés">3 · TD−</th>
+                        <th title="4e départage — Blessures infligées">4 · Bl.</th>
+                        <th title="5e départage — Victoires">5 · V</th>
+                        <th title="6e départage — Fautes commises">6 · Fa.</th>
+                        <th title="7e départage — Réussites">7 · Réu.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="sd-rank">1</td>
+                        <td class="sd-team">🏆 Les Korrigans FC</td>
+                        <td class="sd-num">8</td><td class="sd-num">6</td><td class="sd-num">1</td><td class="sd-num">1</td>
+                        <td class="sd-bonus">+2</td><td class="sd-total">21</td>
+                        <td class="sd-tb sd-tb-first">+14</td><td class="sd-tb">24</td><td class="sd-tb">10</td><td class="sd-tb">11</td><td class="sd-tb">6</td><td class="sd-tb">4</td><td class="sd-tb">9</td>
+                      </tr>
+                      <tr>
+                        <td class="sd-rank">2</td>
+                        <td class="sd-team">Orc Boyz United</td>
+                        <td class="sd-num">8</td><td class="sd-num">5</td><td class="sd-num">2</td><td class="sd-num">1</td>
+                        <td class="sd-bonus">+0</td><td class="sd-total">17</td>
+                        <td class="sd-tb sd-tb-first">+9</td><td class="sd-tb">19</td><td class="sd-tb">10</td><td class="sd-tb">8</td><td class="sd-tb">5</td><td class="sd-tb">7</td><td class="sd-tb">5</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- ── Classement détaillé — états vides et erreur (maquette de revue) ── -->
+              <div style="margin-top: var(--p3); padding-top: var(--p3); border-top: 2px dashed var(--dark-6);">
+                <p class="section-label" style="margin-bottom: var(--p1);">Classement détaillé — état vide : aucune équipe inscrite</p>
+                <div class="tab-empty-state card-shadow">
+                  Aucune équipe dans la compétition.
+                </div>
+                <p class="section-label" style="margin: var(--p2) 0 var(--p1);">Classement détaillé — état vide : équipes inscrites, aucun match joué</p>
+                <div class="tab-empty-state card-shadow">
+                  Aucun match n'a encore été joué — tous les compteurs sont à zéro.
+                </div>
+                <p class="section-label" style="margin: var(--p2) 0 var(--p1);">Classement détaillé — état d'erreur : règles de classement non configurées</p>
+                <div class="table-error-zone card-shadow" style="padding: var(--p2);">
+                  <p class="table-error">Impossible d'afficher le classement détaillé : les règles de classement ne sont pas configurées pour cette saison.</p>
+                </div>
               </div>
             </div>
 

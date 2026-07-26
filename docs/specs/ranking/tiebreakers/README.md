@@ -1,8 +1,9 @@
 # Départages — activation et calcul
 
-Départage des équipes à égalité de points de classement. Deux volets : la **saisie**
+Départage des équipes à égalité de points de classement. Trois volets : la **saisie**
 de la configuration (quels critères sont actifs, dans quel ordre) dans le formulaire
-de règles de la compétition, et le **calcul** du départage appliqué au classement.
+de règles de la compétition, le **calcul** du départage appliqué au classement, et
+l'**exposition des comptes** dans un onglet de vérification.
 
 Le départage est une fonction du BC `ranking` : le catalogue des critères et la
 logique de comparaison lui appartiennent. Le BC `competitions` ne fait que **stocker
@@ -108,9 +109,40 @@ configurations existantes sont des brouillons sans valeur à préserver.
 | Unité | Portée | UI |
 |---|---|---|
 | `competition-rules-form` | Cases à cocher dans le formulaire phase 2 + évolution du modèle persisté (ordre + activation) + règles 1 à 4 | Oui |
-| `tiebreak-calc` | Application de l'ordre de départage au classement dans le BC `ranking` (propagation ACL + comparateurs) | Non |
+| `tiebreak-calc` | Application de l'ordre de départage au classement dans le BC `ranking` (propagation ACL + comparateurs + compteurs cumulés) | Non |
+| `detailed-standings` | Onglet « Classement détaillé » de la page compétition : expose chaque nombre qui compose le total, puis les compteurs de départage dans l'ordre de priorité | Oui |
 
-Ordre de traitement : **`competition-rules-form` d'abord**, puis `tiebreak-calc`.
+Ordre de traitement : **`competition-rules-form`** (fait), puis **`tiebreak-calc`**, puis
+**`detailed-standings`** qui en dépend — l'onglet n'a rien à afficher avant que les
+compteurs existent.
+
+### Unité `detailed-standings` — état et dépendances
+
+Maquette validée : onglet ajouté dans `assets/rawpages/html/app-competition-detail.html`.
+Colonnes `# / Équipe / MJ / G / N / D / Bonus / Total / <départages actifs>`.
+
+Ce n'est **pas** une unité de pur affichage : deux des groupes de colonnes n'ont pas de
+source de données.
+
+| Colonne | Source | Manque |
+|---|---|---|
+| MJ, G, N, D, Total | `ranking_lines` (`migrations/20260723000001_create_ranking_lines.sql`) | — |
+| **Bonus** | aucune | Les bonus sont **fondus dans `ranking_points`** au calcul (feature `ranking-bonus-points`) et jamais conservés à part. Demande une colonne de projection + la séparation dans `record_match` |
+| **Départages** | aucune | Les compteurs cumulés relèvent de `tiebreak-calc` (5 à ajouter + 1 dérivé) |
+
+La séparation des points bonus n'a rien à voir avec le départage : elle fera l'objet
+d'une **carte distincte**, préalable à l'unité.
+
+Choix de maquette à confirmer à la conception de l'unité :
+
+- Les colonnes de départage sont **celles activées uniquement**, dans l'ordre de
+  priorité configuré et numérotées — la lecture de gauche à droite suit l'algorithme
+  de résolution.
+- Le critère qui a effectivement départagé est mis en évidence, les valeurs égales
+  grisées ; un cas d'ex æquo total est rendu visible (règle 19).
+- **Point ouvert** : si `nb_wins` est un critère actif, sa colonne répète la colonne
+  `G`. La maquette la conserve dans le bloc départages pour préserver la lecture par
+  priorité — à confirmer.
 
 ## Progression
 
@@ -118,3 +150,4 @@ Ordre de traitement : **`competition-rules-form` d'abord**, puis `tiebreak-calc`
 |---|---|---|---|---|---|---|---|---|
 | competition-rules-form | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | tiebreak-calc | n/a | n/a | | | | | | |
+| detailed-standings | ✅ | | | | | | | |
