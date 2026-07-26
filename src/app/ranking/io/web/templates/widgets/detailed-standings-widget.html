@@ -1,0 +1,77 @@
+<link rel="stylesheet" href="/static/css/widgets/detailed-standings-widget.css">
+<div class="ranking-detailed-standings-widget" hx-disinherit="*">
+{% if vm.rules_missing %}
+    <div class="table-error-zone">
+        <p class="table-error">Impossible d'afficher le classement détaillé : les règles de classement ne sont pas configurées pour cette saison.</p>
+    </div>
+{% else %}
+    {% for group in vm.groups %}
+    <div class="ranking-group">
+        {% if let Some(title) = group.title %}
+        <div class="ranking-group-title">{{ title }}</div>
+        {% endif %}
+        {% if !group.has_enrolled_teams %}
+        <div class="tab-empty-state card-shadow">
+            Aucune équipe dans la compétition.
+        </div>
+        {% else if group.rows.is_empty() %}
+        <div class="tab-empty-state card-shadow">
+            Aucun match n'a encore été joué — tous les compteurs sont à zéro.
+        </div>
+        {% else %}
+        <div class="sd-scroll card-shadow">
+            <table class="sd-table">
+                <thead>
+                    <tr class="sd-group-head">
+                        <th colspan="2"></th>
+                        <th colspan="4">Matchs</th>
+                        <th colspan="2">Points</th>
+                        {% if !vm.columns.is_empty() %}
+                        <th colspan="{{ vm.columns.len() }}">Départages — ordre de priorité →</th>
+                        {% endif %}
+                    </tr>
+                    <tr class="sd-col-head">
+                        <th>#</th>
+                        <th class="sd-team">Équipe</th>
+                        <th title="Matchs joués">MJ</th>
+                        <th title="Gagnés">G</th>
+                        <th title="Nuls">N</th>
+                        <th title="Perdus">D</th>
+                        <th title="Points bonus cumulés">Bonus</th>
+                        <th title="Total de points de classement">Total</th>
+                        {% for column in vm.columns %}
+                        <th title="{{ column.long_label }}">{{ column.position }} · {{ column.short_label }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in group.rows %}
+                    <tr hx-get="{{ row.team_link }}"
+                        hx-target="#app-content"
+                        hx-select="#app-content"
+                        hx-swap="outerHTML"
+                        hx-push-url="true">
+                        <td class="sd-rank">{{ row.rank }}</td>
+                        <td class="sd-team">{% if row.rank == 1 %}🏆 {% endif %}{{ row.team_name }}</td>
+                        <td class="sd-num">{{ row.played }}</td>
+                        <td class="sd-num">{{ row.wins }}</td>
+                        <td class="sd-num">{{ row.draws }}</td>
+                        <td class="sd-num">{{ row.losses }}</td>
+                        <td class="sd-bonus">{{ row.bonus }}</td>
+                        <td class="sd-total">{{ row.total }}</td>
+                        {% for cell in row.tiebreaks %}
+                        <td class="sd-tb{% if loop.first %} sd-tb-first{% endif %} {{ cell.state.css_class() }}">{{ cell.value }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="sd-legend">
+            <b>Bonus</b> : points bonus cumulés, déjà inclus dans le total. <b>Total</b> = points de victoire/nul/défaite + bonus.
+        </p>
+        {% endif %}
+    </div>
+    {% endfor %}
+{% endif %}
+</div>

@@ -1,0 +1,7 @@
+<div id="detailed-standings-widget"
+     hx-get="{{ app_routes.ranking.detailed_standings_widget(space_id, competition_id, season_id) }}"
+     hx-trigger="load"
+     hx-target="this"
+     hx-swap="outerHTML">
+  <div class="loading-placeholder">Chargement du classement détaillé…</div>
+</div>

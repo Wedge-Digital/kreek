@@ -1,5 +1,9 @@
 use crate::app::ranking::domain::standings::{Rank, TeamStanding, TiebreakOrder};
+use crate::app::ranking::domain::tiebreak::TiebreakCriterion;
 use crate::app::ranking::io::web::widgets::classement_widget::{ClassementGroupVm, ClassementRowVm};
+use crate::app::ranking::io::web::widgets::detailed_standings_widget::{
+    CellState, DetailedGroupVm, DetailedRowVm, TiebreakCellVm,
+};
 use crate::app::ranking::ports::{EnrolledTeamInfo, RankingGroupInfo, RankingLineRow};
 use crate::app::ranking::use_cases::standings_service::build_ordered_standings;
 use crate::app::routes::AppRoutes;
@@ -139,6 +143,102 @@ fn resolve_team_name(team_id: &str, teams: &[EnrolledTeamInfo]) -> String {
         .find(|t| t.team_id == team_id)
         .map(|t| t.team_name.clone())
         .unwrap_or_else(|| team_id.to_string())
+}
+
+// ── Classement détaillé ───────────────────────────────────────────────────────
+
+/// Même découpage par poule que le classement simple — les deux onglets ne
+/// peuvent pas diverger sur le périmètre d'un classement.
+pub fn build_detailed_groups(
+    space_id: &str,
+    lines: Vec<RankingLineRow>,
+    teams: &[EnrolledTeamInfo],
+    groups: &[RankingGroupInfo],
+    order: &TiebreakOrder,
+) -> Vec<DetailedGroupVm> {
+    split_into_groups(&lines, teams, groups)
+        .into_iter()
+        .map(|slice| build_detailed_group_vm(space_id, slice, order))
+        .collect()
+}
+
+fn build_detailed_group_vm(
+    space_id: &str,
+    slice: GroupSlice,
+    order: &TiebreakOrder,
+) -> DetailedGroupVm {
+    let ordered = build_ordered_standings(slice.lines, order);
+    DetailedGroupVm {
+        title: slice.title,
+        has_enrolled_teams: !slice.teams.is_empty(),
+        rows: build_detailed_rows(space_id, ordered, &slice.teams, order),
+    }
+}
+
+pub fn build_detailed_rows(
+    space_id: &str,
+    ordered: Vec<(TeamStanding, Rank)>,
+    teams: &[EnrolledTeamInfo],
+    order: &TiebreakOrder,
+) -> Vec<DetailedRowVm> {
+    ordered
+        .into_iter()
+        .map(|(standing, rank)| to_detailed_row(space_id, standing, rank, teams, order))
+        .collect()
+}
+
+fn to_detailed_row(
+    space_id: &str,
+    standing: TeamStanding,
+    rank: Rank,
+    teams: &[EnrolledTeamInfo],
+    order: &TiebreakOrder,
+) -> DetailedRowVm {
+    let team_id = standing.team_id.to_string();
+    DetailedRowVm {
+        rank: rank.0,
+        team_name: resolve_team_name(&team_id, teams),
+        team_link: AppRoutes::default().teams.team_detail(space_id, &team_id),
+        played: standing.totals.matches_played.0,
+        wins: standing.totals.wins.0,
+        draws: standing.totals.draws.0,
+        losses: standing.totals.losses.0,
+        bonus: signed(i64::from(standing.totals.bonus_points.0)),
+        total: standing.totals.ranking_points.0,
+        tiebreaks: build_tiebreak_cells(&standing, order),
+    }
+}
+
+/// Une cellule par critère actif, dans l'ordre. Toutes neutres tant que la
+/// carte 223 n'a pas branché la résolution du critère décisif.
+fn build_tiebreak_cells(standing: &TeamStanding, order: &TiebreakOrder) -> Vec<TiebreakCellVm> {
+    order
+        .criteria()
+        .iter()
+        .map(|criterion| TiebreakCellVm {
+            value: format_criterion(*criterion, criterion.value_of(&standing.totals)),
+            state: CellState::Neutral,
+        })
+        .collect()
+}
+
+/// Seule la différence de touchdowns peut être négative : elle s'affiche signée.
+/// Les autres critères sont des dénombrements, affichés bruts.
+fn format_criterion(criterion: TiebreakCriterion, value: i64) -> String {
+    match criterion {
+        TiebreakCriterion::DiffTd => signed(value),
+        _ => value.to_string(),
+    }
+}
+
+/// Signe explicite, `+0` compris : la valeur se lit comme une contribution et
+/// non comme un total autonome. Le moins est le signe **typographique** `−`
+/// (U+2212), pas le trait d'union ASCII — c'est ce qu'utilise la maquette.
+fn signed(value: i64) -> String {
+    match value < 0 {
+        true => format!("−{}", value.abs()),
+        false => format!("+{value}"),
+    }
 }
 
 #[cfg(test)]

@@ -294,6 +294,15 @@ pub struct StandingsTabTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "competition-tab-detailed-standings.html")]
+pub struct DetailedStandingsTabTemplate {
+    pub app_routes: AppRoutes,
+    pub space_id: String,
+    pub competition_id: String,
+    pub season_id: String,
+}
+
+#[derive(Template)]
 #[template(path = "competition-tab-teams.html")]
 pub struct TeamsTabTemplate {
     pub app_routes: AppRoutes,
@@ -311,6 +320,14 @@ pub struct StatsTabTemplate {
 }
 
 impl IntoResponse for StandingsTabTemplate {
+    fn into_response(self) -> Response {
+        match self.render() {
+            Ok(h) => Html(h).into_response(),
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        }
+    }
+}
+impl IntoResponse for DetailedStandingsTabTemplate {
     fn into_response(self) -> Response {
         match self.render() {
             Ok(h) => Html(h).into_response(),
@@ -505,6 +522,46 @@ pub async fn get_tab_standings(
         competition_id,
         season_id,
         "standings",
+        false,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+    )
+}
+
+pub async fn get_tab_detailed_standings(
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    if headers.contains_key("hx-request") {
+        return DetailedStandingsTabTemplate {
+            app_routes: AppRoutes::default(),
+            space_id,
+            competition_id,
+            season_id,
+        }
+        .into_response();
+    }
+    let cid = match CompetitionId::try_new(&competition_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+    let sid = match SeasonId::try_new(&season_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+    let pb = match load_page_base(&cid, &sid, &state, &competition_id).await {
+        Ok(v) => v,
+        Err(r) => return r,
+    };
+    full_page(
+        pb,
+        space_id,
+        competition_id,
+        season_id,
+        "detailed-standings",
         false,
         vec![],
         vec![],

@@ -37,6 +37,12 @@ impl TiebreakOrder {
     pub fn empty() -> Self {
         Self::default()
     }
+
+    /// Lecture seule des critères actifs, dans l'ordre de priorité — l'affichage
+    /// en a besoin pour construire une colonne par critère.
+    pub fn criteria(&self) -> &[TiebreakCriterion] {
+        &self.criteria
+    }
 }
 
 /// Règle 18 : les points de classement d'abord, puis chaque critère actif dans

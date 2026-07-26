@@ -22,7 +22,7 @@ use crate::app::competitions::io::web::admin::schedule_widgets::{
 };
 use crate::app::competitions::io::web::calendrier_tab_controller::get_calendrier_tab;
 use crate::app::competitions::io::web::competition_detail::{
-    get_competition_detail, get_tab_standings, get_tab_stats, get_tab_teams,
+    get_competition_detail, get_tab_detailed_standings, get_tab_standings, get_tab_stats, get_tab_teams,
 };
 use crate::app::competitions::io::web::resultats_tab_controller::get_resultats_tab;
 use crate::app::competitions::io::web::competition_widget::{
@@ -77,6 +77,10 @@ pub fn router() -> Router<AppState> {
             get(get_new_competition_phase_5).post(post_finalize_competition),
         )
         .route(path::COMPETITION_TAB_STANDINGS, get(get_tab_standings))
+        .route(
+            path::COMPETITION_TAB_DETAILED_STANDINGS,
+            get(get_tab_detailed_standings),
+        )
         .route(path::COMPETITION_TAB_RESULTATS, get(get_resultats_tab))
         .route(path::COMPETITION_TAB_CALENDRIER, get(get_calendrier_tab))
         .route(path::COMPETITION_TAB_TEAMS, get(get_tab_teams))
