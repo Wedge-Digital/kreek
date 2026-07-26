@@ -8,4 +8,5 @@ pub mod competition_rules;
 pub mod competition_season;
 pub mod competition_structure;
 pub mod domain_event;
+pub mod error;
 pub mod season_repository_port;
