@@ -89,6 +89,86 @@ pub fn assign_ranks(ordered: &[TeamStanding], order: &TiebreakOrder) -> Vec<Rank
     ranks
 }
 
+/// Ce qui a décidé de la position d'une équipe parmi celles qui partagent son
+/// total de points de classement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RowTiebreak {
+    /// Seule à son total : aucune égalité à résoudre.
+    Alone,
+    /// Départagée par le critère d'index donné ; tous ceux qui le précèdent
+    /// étaient égaux au sein de son sous-groupe (règle 21).
+    DecidedBy(usize),
+    /// Tous les critères actifs sont égaux — ex æquo (règles 19 et 22).
+    FullyTied,
+}
+
+/// Règle 21 : pour chaque équipe, le critère qui l'a séparée de celles **encore**
+/// à égalité avec elle. Règle 22 : `FullyTied` quand aucun n'y parvient.
+///
+/// Attend un tableau **déjà ordonné** par `order_standings` : les équipes à
+/// égalité de points y sont consécutives, les points étant la clé de tri primaire.
+pub fn tiebreak_outcomes(ordered: &[TeamStanding], order: &TiebreakOrder) -> Vec<RowTiebreak> {
+    let mut outcomes = vec![RowTiebreak::Alone; ordered.len()];
+    for (from, len) in point_runs(ordered) {
+        resolve_run(ordered, order, from, len, 0, &mut outcomes);
+    }
+    outcomes
+}
+
+/// Descente par sous-groupes : le critère `k` règle les équipes qu'il isole, et
+/// celles qu'il laisse à égalité repassent au critère suivant.
+///
+/// Marquer d'un coup tout le groupe sur le premier critère non constant
+/// désignerait ce critère comme décisif sur des lignes qu'il n'a pas départagées
+/// — deux valeurs identiques mises en évidence.
+fn resolve_run(
+    ordered: &[TeamStanding],
+    order: &TiebreakOrder,
+    from: usize,
+    len: usize,
+    k: usize,
+    outcomes: &mut [RowTiebreak],
+) {
+    let Some(criterion) = order.criteria.get(k) else {
+        outcomes[from..from + len].fill(RowTiebreak::FullyTied);
+        return;
+    };
+    for (sub_from, sub_len) in runs_by(ordered, from, len, |s| criterion.value_of(&s.totals)) {
+        match sub_len {
+            1 => outcomes[sub_from] = RowTiebreak::DecidedBy(k),
+            _ => resolve_run(ordered, order, sub_from, sub_len, k + 1, outcomes),
+        }
+    }
+}
+
+/// Suites d'équipes consécutives à égalité de points, de deux équipes ou plus —
+/// les autres n'ont rien à départager.
+fn point_runs(ordered: &[TeamStanding]) -> Vec<(usize, usize)> {
+    runs_by(ordered, 0, ordered.len(), |s| i64::from(s.totals.ranking_points.0))
+        .into_iter()
+        .filter(|(_, len)| *len >= 2)
+        .collect()
+}
+
+/// Découpe `[from, from + len)` en suites consécutives de même valeur.
+fn runs_by(
+    ordered: &[TeamStanding],
+    from: usize,
+    len: usize,
+    value: impl Fn(&TeamStanding) -> i64,
+) -> Vec<(usize, usize)> {
+    let mut runs: Vec<(usize, usize)> = Vec::new();
+    for idx in from..from + len {
+        match runs.last_mut() {
+            Some((start, run_len)) if value(&ordered[*start]) == value(&ordered[idx]) => {
+                *run_len += 1
+            }
+            _ => runs.push((idx, 1)),
+        }
+    }
+    runs
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -280,5 +360,102 @@ mod tests {
     #[test]
     fn assign_ranks_gives_rank_one_to_a_lone_team() {
         assert_eq!(ranks_of(&[standing(0)], &all_criteria()), vec![1]);
+    }
+
+    // ── Critère décisif par équipe (carte 220) ───────────────────────────────
+
+    use RowTiebreak::{Alone, DecidedBy, FullyTied};
+
+    fn outcomes(ordered: &[TeamStanding], order: &TiebreakOrder) -> Vec<RowTiebreak> {
+        tiebreak_outcomes(ordered, order)
+    }
+
+    #[test]
+    fn a_team_alone_on_its_points_total_has_nothing_to_resolve() {
+        let ordered = vec![standing(9), standing(6)];
+        assert_eq!(outcomes(&ordered, &all_criteria()), vec![Alone, Alone]);
+    }
+
+    #[test]
+    fn the_first_criterion_decides_when_it_separates() {
+        let order = TiebreakOrder::new(vec![TiebreakCriterion::NbTd]);
+        let ordered = vec![
+            standing_with(6, |t| t.td_for = TdFor(5)),
+            standing_with(6, |t| t.td_for = TdFor(2)),
+        ];
+
+        assert_eq!(outcomes(&ordered, &order), vec![DecidedBy(0), DecidedBy(0)]);
+    }
+
+    #[test]
+    fn the_second_criterion_decides_the_outcome_when_the_first_is_equal() {
+        let order = TiebreakOrder::new(vec![TiebreakCriterion::NbCas, TiebreakCriterion::NbTd]);
+        let tied_on_casualties = |td: u32| {
+            standing_with(6, move |t| {
+                t.casualties = CasualtiesTotal(3);
+                t.td_for = TdFor(td);
+            })
+        };
+        let ordered = vec![tied_on_casualties(5), tied_on_casualties(2)];
+
+        assert_eq!(outcomes(&ordered, &order), vec![DecidedBy(1), DecidedBy(1)]);
+    }
+
+    /// Règle 22 : aucun critère ne tranche, l'ex æquo est assumé.
+    #[test]
+    fn teams_equal_on_every_criterion_are_fully_tied() {
+        let identical = || standing_with(6, |t| t.td_for = TdFor(4));
+        let ordered = vec![identical(), identical()];
+
+        assert_eq!(outcomes(&ordered, &all_criteria()), vec![FullyTied, FullyTied]);
+    }
+
+    /// **Le test qui distingue la résolution par sous-groupes de la résolution à
+    /// plat.** Trois équipes à égalité de points, touchdowns 5 / 2 / 2 : le premier
+    /// critère isole la première, mais laisse les deux autres à égalité — c'est le
+    /// second qui les départage. À plat, on désignerait le premier critère comme
+    /// décisif sur les trois lignes, dont deux affichant la même valeur.
+    #[test]
+    fn a_criterion_that_leaves_a_sub_group_tied_does_not_decide_for_it() {
+        let order = TiebreakOrder::new(vec![TiebreakCriterion::NbTd, TiebreakCriterion::NbCas]);
+        let team = |td: u32, cas: u32| {
+            standing_with(6, move |t| {
+                t.td_for = TdFor(td);
+                t.casualties = CasualtiesTotal(cas);
+            })
+        };
+        let ordered = vec![team(5, 0), team(2, 4), team(2, 1)];
+
+        assert_eq!(outcomes(&ordered, &order), vec![DecidedBy(0), DecidedBy(1), DecidedBy(1)]);
+    }
+
+    #[test]
+    fn an_empty_order_leaves_teams_tied_on_points_fully_tied() {
+        let ordered = vec![
+            standing_with(6, |t| t.td_for = TdFor(9)),
+            standing_with(6, |t| t.td_for = TdFor(0)),
+        ];
+
+        assert_eq!(outcomes(&ordered, &TiebreakOrder::empty()), vec![FullyTied, FullyTied]);
+    }
+
+    /// Deux totaux de points distincts sont deux problèmes distincts : le critère
+    /// qui tranche l'un n'a pas à trancher l'autre.
+    #[test]
+    fn groups_on_different_points_totals_are_resolved_independently() {
+        let order = TiebreakOrder::new(vec![TiebreakCriterion::NbTd, TiebreakCriterion::NbCas]);
+        let team = |points: u32, td: u32, cas: u32| {
+            standing_with(points, move |t| {
+                t.td_for = TdFor(td);
+                t.casualties = CasualtiesTotal(cas);
+            })
+        };
+        // 9 pts : départagées par les TD. 6 pts : TD égaux, départagées par les sorties.
+        let ordered = vec![team(9, 4, 0), team(9, 1, 0), team(6, 3, 5), team(6, 3, 2)];
+
+        assert_eq!(
+            outcomes(&ordered, &order),
+            vec![DecidedBy(0), DecidedBy(0), DecidedBy(1), DecidedBy(1)]
+        );
     }
 }
