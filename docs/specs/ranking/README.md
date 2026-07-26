@@ -19,3 +19,9 @@ Les règles de calcul (points victoire/nul/défaite, bonus offensif/défensif) s
 | Page / onglet | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
 | classement | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+## Fonctionnalités rattachées
+
+- [`tiebreakers/`](tiebreakers/README.md) — départages : activation des critères
+  (formulaire compétition) puis application de l'ordre au classement. Reprend le
+  « scores de départage » sorti du périmètre de la feature 1.

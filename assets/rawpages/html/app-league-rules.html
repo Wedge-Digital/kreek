@@ -86,8 +86,11 @@
     .tiebreak-rank { width: 24px; height: 24px; border-radius: 50%; background: var(--main-blue); color: var(--white); display: flex; align-items: center; justify-content: center; font-size: var(--text-tiny); font-weight: 700; flex-shrink: 0; }
     .tiebreak-drag { color: var(--dark-4); font-size: 18px; cursor: grab; flex-shrink: 0; }
     .tiebreak-label { flex: 1; font-size: var(--text-small); color: var(--dark-1); }
-    .tiebreak-remove { color: var(--dark-4); cursor: pointer; font-size: 16px; background: none; border: none; }
-    .tiebreak-remove:hover { color: var(--red); }
+    .tiebreak-check { width: 18px; height: 18px; cursor: pointer; accent-color: var(--main-blue); flex-shrink: 0; }
+    /* Critère décoché : reste à sa place, grisé, rang remplacé par un tiret.
+       Seuls les critères actifs sont numérotés — la numérotation se recalcule au décochage. */
+    .tiebreak-row.is-off { opacity: 0.55; }
+    .tiebreak-row.is-off .tiebreak-rank { background: none; border: 1px solid var(--dark-4); color: var(--dark-3); }
 
     /* Rosters grid */
     .roster-grid { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -408,31 +411,57 @@
               <div class="sub-section-title">Ordre des départages (en cas d'égalité de points)</div>
               <div class="tiebreak-list">
                 <div class="tiebreak-row">
+                  <input type="checkbox" class="tiebreak-check" checked>
                   <div class="tiebreak-rank">1</div>
                   <span class="tiebreak-drag">⠿</span>
                   <span class="tiebreak-label">Différence de touchdowns (marqués − encaissés)</span>
-                  <button class="tiebreak-remove">✕</button>
                 </div>
-                <div class="tiebreak-row">
-                  <div class="tiebreak-rank">2</div>
+                <div class="tiebreak-row is-off">
+                  <input type="checkbox" class="tiebreak-check">
+                  <div class="tiebreak-rank">—</div>
                   <span class="tiebreak-drag">⠿</span>
                   <span class="tiebreak-label">Nombre de touchdowns marqués</span>
-                  <button class="tiebreak-remove">✕</button>
                 </div>
                 <div class="tiebreak-row">
+                  <input type="checkbox" class="tiebreak-check" checked>
+                  <div class="tiebreak-rank">2</div>
+                  <span class="tiebreak-drag">⠿</span>
+                  <span class="tiebreak-label">Nombre de touchdowns encaissés</span>
+                </div>
+                <div class="tiebreak-row">
+                  <input type="checkbox" class="tiebreak-check" checked>
                   <div class="tiebreak-rank">3</div>
                   <span class="tiebreak-drag">⠿</span>
                   <span class="tiebreak-label">Nombre de blessures infligées</span>
-                  <button class="tiebreak-remove">✕</button>
                 </div>
                 <div class="tiebreak-row">
+                  <input type="checkbox" class="tiebreak-check" checked>
                   <div class="tiebreak-rank">4</div>
                   <span class="tiebreak-drag">⠿</span>
-                  <span class="tiebreak-label">Tirage au sort</span>
-                  <button class="tiebreak-remove">✕</button>
+                  <span class="tiebreak-label">Nombre de victoires</span>
+                </div>
+                <div class="tiebreak-row is-off">
+                  <input type="checkbox" class="tiebreak-check">
+                  <div class="tiebreak-rank">—</div>
+                  <span class="tiebreak-drag">⠿</span>
+                  <span class="tiebreak-label">Nombre de fautes commises</span>
+                </div>
+                <div class="tiebreak-row">
+                  <input type="checkbox" class="tiebreak-check" checked>
+                  <div class="tiebreak-rank">5</div>
+                  <span class="tiebreak-drag">⠿</span>
+                  <span class="tiebreak-label">Nombre de réussites</span>
+                </div>
+                <div class="tiebreak-row is-off">
+                  <input type="checkbox" class="tiebreak-check">
+                  <div class="tiebreak-rank">—</div>
+                  <span class="tiebreak-drag">⠿</span>
+                  <span class="tiebreak-label">Nombre de cartons rouges</span>
                 </div>
               </div>
-              <button class="btn btn-outline" style="width: auto; padding: var(--p05) var(--p2); font-size: var(--text-tiny); margin-top: var(--p1);">+ Ajouter un critère</button>
+              <div class="info-note">
+                📌 Décochez un critère pour l'exclure du départage. Faites glisser les critères pour définir leur priorité : seuls les critères cochés sont numérotés, dans leur ordre d'application.
+              </div>
             </div>
           </div>
 
