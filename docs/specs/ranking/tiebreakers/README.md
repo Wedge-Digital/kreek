@@ -116,37 +116,37 @@ configurations existantes sont des brouillons sans valeur à préserver.
 | `tiebreak-calc` | Application de l'ordre de départage au classement dans le BC `ranking` (propagation ACL + comparateurs + compteurs cumulés) | Non |
 | `detailed-standings` | Onglet « Classement détaillé » de la page compétition : expose chaque nombre qui compose le total, puis les compteurs de départage dans l'ordre de priorité | Oui |
 
-Ordre de traitement : **`competition-rules-form`** (fait), puis **`tiebreak-calc`**, puis
-**`detailed-standings`** qui en dépend — l'onglet n'a rien à afficher avant que les
-compteurs existent.
+Ordre de traitement : **`competition-rules-form`** (fait), puis **`tiebreak-calc`**
+(fait), puis **`detailed-standings`** qui en dépend — l'onglet n'avait rien à afficher
+avant que les compteurs existent.
 
 ### Unité `detailed-standings` — état et dépendances
 
 Maquette validée : onglet ajouté dans `assets/rawpages/html/app-competition-detail.html`.
 Colonnes `# / Équipe / MJ / G / N / D / Bonus / Total / <départages actifs>`.
 
-Ce n'est **pas** une unité de pur affichage : deux des groupes de colonnes n'ont pas de
-source de données.
+**Toutes les sources de données existent désormais.** Ce point a changé : l'unité était
+décrite ici comme n'étant « pas de pur affichage », deux groupes de colonnes n'ayant
+alors aucune source. Les deux trous ont été comblés depuis.
 
-| Colonne | Source | Manque |
+| Colonne | Source | Comblé par |
 |---|---|---|
-| MJ, G, N, D, Total | `ranking_lines` (`migrations/20260723000001_create_ranking_lines.sql`) | — |
-| **Bonus** | aucune | Les bonus sont **fondus dans `ranking_points`** au calcul (feature `ranking-bonus-points`) et jamais conservés à part. Demande une colonne de projection + la séparation dans `record_match` |
-| **Départages** | aucune | Les compteurs cumulés relèvent de `tiebreak-calc` (5 à ajouter + 1 dérivé) |
+| MJ, G, N, D, Total | `ranking_lines` (`migrations/20260723000001_create_ranking_lines.sql`) | — (existait) |
+| **Bonus** | `ranking_lines.bonus_points` (`migrations/20260726000001`) | Carte 213 — les bonus étaient fondus dans `ranking_points` et jamais conservés à part |
+| **Départages** | `ranking_lines.{td_for, td_against, casualties, fouls, completions}` (`migrations/20260726000002`), `diff_td` dérivé | Carte 216 (compteurs), cartes 217/218 (comparaison et câblage) |
 
-La séparation des points bonus n'a rien à voir avec le départage : elle fera l'objet
-d'une **carte distincte**, préalable à l'unité.
-
-Choix de maquette à confirmer à la conception de l'unité :
+Choix de maquette **tranchés en phase 2** (cf. `detailed-standings/02-front.md`) :
 
 - Les colonnes de départage sont **celles activées uniquement**, dans l'ordre de
   priorité configuré et numérotées — la lecture de gauche à droite suit l'algorithme
   de résolution.
 - Le critère qui a effectivement départagé est mis en évidence, les valeurs égales
-  grisées ; un cas d'ex æquo total est rendu visible (règle 19).
-- **Point ouvert** : si `nb_wins` est un critère actif, sa colonne répète la colonne
-  `G`. La maquette la conserve dans le bloc départages pour préserver la lecture par
-  priorité — à confirmer.
+  grisées ; un cas d'ex æquo total est rendu visible (règle 19). Formalisé en
+  **règles 21 et 22**.
+- Le découpage **par poule** du classement simple est repris à l'identique.
+- ~~Point ouvert sur `nb_wins`~~ — **tranché** : la colonne est conservée dans le bloc
+  départages malgré la redondance avec `G`, sa position dans l'ordre de priorité étant
+  une information que `G` ne porte pas.
 
 ## Progression
 
@@ -154,4 +154,4 @@ Choix de maquette à confirmer à la conception de l'unité :
 |---|---|---|---|---|---|---|---|---|
 | competition-rules-form | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | tiebreak-calc | n/a | n/a | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| detailed-standings | ✅ | | | | | | | |
+| detailed-standings | ✅ | ✅ | | | | | | |
