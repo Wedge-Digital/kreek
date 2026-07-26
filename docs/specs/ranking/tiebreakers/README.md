@@ -154,4 +154,4 @@ Choix de maquette **tranchés en phase 2** (cf. `detailed-standings/02-front.md`
 |---|---|---|---|---|---|---|---|---|
 | competition-rules-form | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | tiebreak-calc | n/a | n/a | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| detailed-standings | ✅ | ✅ | | | | | | |
+| detailed-standings | ✅ | ✅ | ✅ | ✅ | | | | |
