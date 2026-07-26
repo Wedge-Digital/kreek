@@ -5,43 +5,45 @@ use crate::app::ranking::use_cases::standings_service::build_ordered_standings;
 use crate::app::routes::AppRoutes;
 use std::collections::HashSet;
 
+/// Une poule et les données qui la concernent — le **découpage seul**, sans rendu.
+/// Partagé par les deux onglets de classement : sans lui, la règle « chaque poule
+/// est un classement autonome » serait implémentée deux fois et pourrait diverger.
+struct GroupSlice {
+    title: Option<String>,
+    lines: Vec<RankingLineRow>,
+    teams: Vec<EnrolledTeamInfo>,
+}
+
 /// Un classement par poule si la saison en compte 2 ou plus (BR : chaque
 /// poule a son propre classement, un tri global n'aurait pas de sens dès
 /// qu'il y a plusieurs groupes) ; sinon un classement unique sur toute la
 /// saison, comportement inchangé. Les équipes enrôlées non assignées à une
 /// poule sont regroupées à part plutôt que de disparaître silencieusement.
-pub fn build_classement_groups(
-    space_id: &str,
-    lines: Vec<RankingLineRow>,
+fn split_into_groups(
+    lines: &[RankingLineRow],
     teams: &[EnrolledTeamInfo],
     groups: &[RankingGroupInfo],
-    order: &TiebreakOrder,
-) -> Vec<ClassementGroupVm> {
+) -> Vec<GroupSlice> {
     if groups.len() <= 1 {
-        return vec![build_group_vm(space_id, None, None, &lines, teams, order)];
+        return vec![slice_for(None, None, lines, teams)];
     }
 
-    let mut result: Vec<ClassementGroupVm> = groups
+    let mut result: Vec<GroupSlice> = groups
         .iter()
-        .map(|g| {
-            let title = Some(g.group_name.clone());
-            build_group_vm(space_id, title, Some(&g.team_ids), &lines, teams, order)
-        })
+        .map(|g| slice_for(Some(g.group_name.clone()), Some(&g.team_ids), lines, teams))
         .collect();
 
-    if let Some(unassigned) = build_unassigned_group(space_id, &lines, teams, groups, order) {
+    if let Some(unassigned) = unassigned_slice(lines, teams, groups) {
         result.push(unassigned);
     }
     result
 }
 
-fn build_unassigned_group(
-    space_id: &str,
+fn unassigned_slice(
     lines: &[RankingLineRow],
     teams: &[EnrolledTeamInfo],
     groups: &[RankingGroupInfo],
-    order: &TiebreakOrder,
-) -> Option<ClassementGroupVm> {
+) -> Option<GroupSlice> {
     let assigned: HashSet<&str> =
         groups.iter().flat_map(|g| g.team_ids.iter().map(String::as_str)).collect();
     let unassigned_ids: Vec<String> = teams
@@ -53,36 +55,53 @@ fn build_unassigned_group(
         return None;
     }
     let title = Some("Non assignées".to_string());
-    Some(build_group_vm(space_id, title, Some(&unassigned_ids), lines, teams, order))
+    Some(slice_for(title, Some(&unassigned_ids), lines, teams))
 }
 
 /// `team_ids: None` = pas de filtrage (classement à plat, saison sans poule).
-///
-/// Le filtrage précède l'ordonnancement : chaque poule est un classement
-/// autonome dont les rangs repartent à 1. Ordonner avant de découper donnerait
-/// des rangs globaux — le leader de la poule 2 pourrait afficher un rang 3.
-fn build_group_vm(
-    space_id: &str,
+fn slice_for(
     title: Option<String>,
     team_ids: Option<&[String]>,
     lines: &[RankingLineRow],
     teams: &[EnrolledTeamInfo],
-    order: &TiebreakOrder,
-) -> ClassementGroupVm {
-    let group_teams: Vec<EnrolledTeamInfo> = teams
-        .iter()
-        .filter(|t| team_ids.is_none_or(|ids| ids.contains(&t.team_id)))
-        .cloned()
-        .collect();
-    let group_lines: Vec<RankingLineRow> = lines
-        .iter()
-        .filter(|l| team_ids.is_none_or(|ids| ids.contains(&l.team_id.to_string())))
-        .cloned()
-        .collect();
-    ClassementGroupVm {
+) -> GroupSlice {
+    GroupSlice {
         title,
-        has_enrolled_teams: !group_teams.is_empty(),
-        rows: build_classement_rows(space_id, build_ordered_standings(group_lines, order), &group_teams),
+        teams: teams
+            .iter()
+            .filter(|t| team_ids.is_none_or(|ids| ids.contains(&t.team_id)))
+            .cloned()
+            .collect(),
+        lines: lines
+            .iter()
+            .filter(|l| team_ids.is_none_or(|ids| ids.contains(&l.team_id.to_string())))
+            .cloned()
+            .collect(),
+    }
+}
+
+pub fn build_classement_groups(
+    space_id: &str,
+    lines: Vec<RankingLineRow>,
+    teams: &[EnrolledTeamInfo],
+    groups: &[RankingGroupInfo],
+    order: &TiebreakOrder,
+) -> Vec<ClassementGroupVm> {
+    split_into_groups(&lines, teams, groups)
+        .into_iter()
+        .map(|slice| build_group_vm(space_id, slice, order))
+        .collect()
+}
+
+/// Le découpage précède l'ordonnancement : chaque poule est un classement
+/// autonome dont les rangs repartent à 1. Ordonner avant de découper donnerait
+/// des rangs globaux — le leader de la poule 2 pourrait afficher un rang 3.
+fn build_group_vm(space_id: &str, slice: GroupSlice, order: &TiebreakOrder) -> ClassementGroupVm {
+    let ordered = build_ordered_standings(slice.lines, order);
+    ClassementGroupVm {
+        title: slice.title,
+        has_enrolled_teams: !slice.teams.is_empty(),
+        rows: build_classement_rows(space_id, ordered, &slice.teams),
     }
 }
 

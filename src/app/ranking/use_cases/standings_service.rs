@@ -14,7 +14,7 @@ use crate::app::ranking::domain::standings::{
     assign_ranks, order_standings, Rank, TeamStanding, TiebreakOrder,
 };
 use crate::app::ranking::domain::tiebreak::TiebreakCriterion;
-use crate::app::ranking::ports::{RankingLineRow, TiebreakSettingInfo};
+use crate::app::ranking::ports::{RankingLineRow, RankingRulesInfo, TiebreakSettingInfo};
 
 /// Configuration du port → ordre de départage du domaine. Ne peut vivre ni dans
 /// le domaine (il ignore les types du port) ni dans le seul use case d'écriture
@@ -60,6 +60,15 @@ fn to_standing(row: RankingLineRow) -> TeamStanding {
     TeamStanding { team_id: row.team_id, totals: to_totals(row) }
 }
 
+/// Sans règles configurées, l'ordre est vide — le classement n'est de toute
+/// façon pas affiché, mais l'ordre reste un état valide plutôt qu'une absence.
+pub fn tiebreak_order_of(rules: &Option<RankingRulesInfo>) -> TiebreakOrder {
+    rules
+        .as_ref()
+        .map(|r| to_tiebreak_order(&r.tiebreakers))
+        .unwrap_or_else(TiebreakOrder::empty)
+}
+
 pub fn to_totals(row: RankingLineRow) -> CumulativeTotals {
     CumulativeTotals {
         matches_played: MatchesPlayed(row.matches_played),
@@ -80,6 +89,7 @@ pub fn to_totals(row: RankingLineRow) -> CumulativeTotals {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::ranking::ports::BonusRuleInfo;
     use crate::app::shared_kernel::team::TeamId;
 
     fn setting(code: &str, activated: bool) -> TiebreakSettingInfo {
@@ -188,5 +198,49 @@ mod tests {
         let ordered = build_ordered_standings(lines, &TiebreakOrder::empty());
 
         assert_eq!(ordered.iter().map(|(_, r)| r.0).collect::<Vec<_>>(), vec![1, 2, 2, 4]);
+    }
+
+    // ── `tiebreak_order_of`, déplacé depuis `classement_widget` (carte 221) ──
+
+    fn rules_with(tiebreakers: Vec<TiebreakSettingInfo>) -> RankingRulesInfo {
+        let no_bonus = || BonusRuleInfo { activated: false, threshold: 0, points: 0 };
+        RankingRulesInfo {
+            win_points: 3,
+            draw_points: 1,
+            lose_points: 0,
+            offensive: no_bonus(),
+            defensive: no_bonus(),
+            aggressive: no_bonus(),
+            tiebreakers,
+        }
+    }
+
+    /// Jonction entre la configuration de la compétition et le chemin de lecture :
+    /// si l'ordre n'était pas construit ici, le classement se réduirait
+    /// silencieusement aux points et le départage n'aurait aucun effet visible.
+    #[test]
+    fn tiebreak_order_of_builds_the_configured_order() {
+        let rules = Some(rules_with(vec![setting("nb_cas", true), setting("nb_td", true)]));
+
+        let order = tiebreak_order_of(&rules);
+
+        assert_eq!(
+            order,
+            TiebreakOrder::new(vec![TiebreakCriterion::NbCas, TiebreakCriterion::NbTd])
+        );
+    }
+
+    #[test]
+    fn tiebreak_order_of_drops_deactivated_criteria() {
+        let rules = Some(rules_with(vec![setting("nb_cas", false), setting("nb_td", true)]));
+
+        assert_eq!(tiebreak_order_of(&rules), TiebreakOrder::new(vec![TiebreakCriterion::NbTd]));
+    }
+
+    /// Sans règles configurées, le classement n'est pas affiché — l'ordre reste
+    /// un état valide plutôt qu'une absence à traiter en aval.
+    #[test]
+    fn tiebreak_order_of_none_is_empty() {
+        assert_eq!(tiebreak_order_of(&None), TiebreakOrder::empty());
     }
 }
