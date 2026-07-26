@@ -79,7 +79,8 @@ def test_s1_classement_actif_par_defaut(page: Page, competition_ids, console_err
     base = "http://localhost:3210"
     page.goto(_detail_url(base, competition_ids), wait_until="load")
 
-    tab_classement = page.locator(".tabs .tab", has_text="Classement")
+    # Texte exact : « Classement détaillé » répondrait aussi à une sous-chaîne.
+    tab_classement = page.locator(".tabs .tab", has_text=re.compile(r"^Classement$"))
     expect(tab_classement).to_have_class(re.compile(r"\bactive\b"))
 
     tab_resultats = page.locator(".tabs .tab", has_text="Résultats")
@@ -100,7 +101,7 @@ def test_s2_switch_vers_resultats_desactive_classement(page: Page, competition_i
     expect(page.locator(".tabs .tab", has_text="Résultats")).to_have_class(
         re.compile(r"\bactive\b")
     )
-    expect(page.locator(".tabs .tab", has_text="Classement")).not_to_have_class(
+    expect(page.locator(".tabs .tab", has_text=re.compile(r"^Classement$"))).not_to_have_class(
         re.compile(r"\bactive\b")
     )
 

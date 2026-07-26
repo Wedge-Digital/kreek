@@ -46,10 +46,16 @@ def create_full_competition(
     num_rounds: int = 7,
     tier_xp: int = 6,
     with_default_bonuses: bool = True,
+    deactivated_tiebreaks: list[str] | None = None,
 ) -> dict:
     """Phases 1 à 5 : crée une compétition publiée, avec `num_rounds` journées
     programmées et acceptation automatique des inscriptions
     (requires_validation=false). Retourne {competition_id, season_id, name}.
+
+    `deactivated_tiebreaks` décoche les critères de départage dont le libellé est
+    donné — les sept sont actifs par défaut. Décocher suffit à tester la sélection
+    des colonnes : les critères restants gardent l'ordre canonique, et le
+    glisser-déposer HTML5 du formulaire est trop fragile pour un test E2E.
 
     `with_default_bonuses=False` décoche les bonus offensif et défensif, cochés
     par défaut dans le formulaire. Nécessaire dès qu'un test veut des équipes à
@@ -89,6 +95,9 @@ def create_full_competition(
     if not with_default_bonuses:
         page.uncheck("#off_activated")
         page.uncheck("#def_activated")
+    for label in deactivated_tiebreaks or []:
+        row = page.locator("#tiebreak-list .tiebreak-row").filter(has_text=label)
+        row.locator(".tiebreak-check").uncheck()
     page.click("button[onclick='submitRules()']")
     page.wait_for_selector("#groups-config", timeout=10000)
 
@@ -222,7 +231,13 @@ def sync_and_generate_schedule(page: Page, space_id: str, competition_id: str, s
 
 
 def build_full_competition(
-    browser, space_id: str, num_teams: int, num_rounds: int = 7, *, with_default_bonuses: bool = True
+    browser,
+    space_id: str,
+    num_teams: int,
+    num_rounds: int = 7,
+    *,
+    with_default_bonuses: bool = True,
+    deactivated_tiebreaks: list[str] | None = None,
 ) -> dict:
     """Construit une compétition dédiée (pas partagée entre fichiers de test —
     cf. docstring du module) avec `num_teams` équipes auto-enrôlées et
@@ -242,6 +257,7 @@ def build_full_competition(
             competition_create_url,
             num_rounds=num_rounds,
             with_default_bonuses=with_default_bonuses,
+            deactivated_tiebreaks=deactivated_tiebreaks,
         )
         team_ids = [
             build_and_submit_team(page, space_id, competition["name"], coach_option_index=i, roster_index=i)
