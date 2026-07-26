@@ -70,6 +70,13 @@ leur ordre d'affichage est donc identique par construction, et non par coïncide
 
 ### A — R21 et R22 vivent dans le domaine
 
+> ⚠️ **L'API décrite ci-dessous a été remplacée en phase 6** — voir `06-domaine.md`.
+> `TiedGroup` attache le résultat à un groupe, ce qui désigne un critère décisif sur des
+> lignes qu'il n'a pas départagées dès qu'un groupe de trois équipes en compte deux
+> encore à égalité. `RowTiebreak`, attaché à **chaque ligne**, lui succède. Seule la
+> décision de placer ces règles **dans le domaine** reste valide — c'est l'objet de cette
+> section, l'esquisse d'API qui l'illustre ne l'est plus.
+
 « Quel critère départage ce groupe ? » est une question métier, au même titre que « qui
 est devant ? ». Elle ne descend ni dans le builder ni dans le service.
 

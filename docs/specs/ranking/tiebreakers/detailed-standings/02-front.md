@@ -88,6 +88,12 @@ onglet :
 | **21** | Le critère mis en évidence est le **premier**, dans l'ordre de priorité, dont les valeurs ne sont pas toutes égales au sein d'un groupe d'équipes à égalité de points. Les critères qui le précèdent sont marqués « égaux », ceux qui le suivent sont neutres. |
 | **22** | Lorsque tous les critères actifs sont égaux au sein du groupe, **aucun** n'est mis en évidence et l'ex æquo est signalé comme tel (règle 19 rendue visible). |
 
+> ⚠️ **R21 a été révisée en phase 6** — voir `06-domaine.md`. La formulation ci-dessus
+> décrit une résolution **à plat** ; elle désigne un critère décisif sur des lignes qu'il
+> n'a pas départagées dès qu'un groupe de trois équipes en compte deux encore à égalité.
+> La version qui fait foi résout **par sous-groupes successifs**. Formulation conservée
+> ici telle qu'elle a été validée à cette phase.
+
 Ces deux règles ne touchent **pas** au calcul du classement. Les équipes à égalité de
 points sont déjà consécutives dans la liste ordonnée (les points sont la clé de tri
 primaire) : il s'agit d'un parcours de groupes sur des données déjà produites, appuyé sur
