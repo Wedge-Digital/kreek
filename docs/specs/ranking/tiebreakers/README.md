@@ -66,6 +66,10 @@ compteurs des critères actifs sont comparés dans l'ordre de priorité configur
 jusqu'à ce que l'un départage. Si tous donnent l'égalité, les équipes restent ex æquo
 (règle 5).
 
+**Règle 20 (validée en phase 3 de `tiebreak-calc`)** : la numérotation après un ex æquo
+suit la **convention standard** — deux équipes au rang 2 sont suivies d'une 4ᵉ, pas
+d'une 3ᵉ. Le rang d'une équipe vaut `1 + le nombre d'équipes strictement devant elle`.
+
 **Décision (phase 3)** : les compteurs sont accumulés **pour tous les critères,
 toujours**, indépendamment de la configuration. L'activation ne joue qu'au moment
 d'ordonner. Le calcul est ainsi découplé de la configuration, la projection reste
@@ -149,5 +153,5 @@ Choix de maquette à confirmer à la conception de l'unité :
 | Unité | Mockup | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|---|
 | competition-rules-form | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| tiebreak-calc | n/a | n/a | | | | | | |
+| tiebreak-calc | n/a | n/a | ✅ | | | | | |
 | detailed-standings | ✅ | | | | | | | |
