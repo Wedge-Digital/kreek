@@ -37,3 +37,33 @@
 .type-passing         { background: rgba(255,215,0,0.18);  color: #9A7800; }
 .type-mutation        { background: rgba(111,53,165,0.10); color: #6f35a5; }
 .player-skill  { background: var(--dark-5); color: var(--dark-1); border-radius: 4px; padding: 2px 6px; font-size: 11px; margin-right: 4px; display: inline-block; }
+
+/* ── Classes reprises des styles inline du fragment ────────────────────────────
+   Le CLAUDE.md interdit les attributs `style` dans les templates : les règles
+   qui y étaient dispersées vivent ici. */
+
+.players-widget-empty { padding: var(--p2); color: var(--dark-3); font-style: italic; }
+
+/* Douze colonnes avec les caractéristiques : le tableau défile dans son propre
+   conteneur plutôt que de pousser la page en débordement horizontal. */
+.player-table-scroll { overflow-x: auto; }
+
+.player-col-jersey { text-align: center; width: 40px; }
+.player-col-skills { min-width: 180px; }
+.player-col-num    { text-align: center; }
+/* Caractéristiques : un chiffre ou un seuil de dé, donc un padding resserré —
+   les 24px horizontaux du reste de la table faisaient déborder les douze
+   colonnes de 59px, y compris en desktop. */
+.player-table th.player-col-stat,
+.player-table td.player-stat { padding-left: 4px; padding-right: 4px; }
+.player-col-stat   { text-align: center; width: 30px; }
+
+.player-jersey   { text-align: center; color: var(--dark-3); font-family: monospace; }
+.player-position { color: var(--dark-2); }
+.player-stat     { text-align: center; font-variant-numeric: tabular-nums; }
+.player-spp      { text-align: center; font-weight: 600; }
+.player-value    { text-align: center; }
+/* Absence de donnée — distinct d'une valeur nulle. */
+.player-none     { color: var(--dark-4); font-style: italic; }
+
+.player-skill-list { display: flex; flex-wrap: wrap; gap: 4px; }

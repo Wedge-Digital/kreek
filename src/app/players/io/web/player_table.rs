@@ -1,11 +1,13 @@
 use crate::app::players::domain::player::TeamId;
 use crate::app::players::ports::{AcquiredSkillProjection, ISkillCatalogPort, PlayerProjection};
+use crate::app::players::use_cases::player_stats_service::{self, ResolvedPlayerStats};
 use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
+use std::collections::HashMap;
 
 // ── View models ───────────────────────────────────────────────────────────────
 
@@ -29,6 +31,10 @@ pub struct PlayerRowVm {
     pub acquired_skills: Vec<AcquiredSkillProjection>,
     pub spp:             i32,
     pub value_kpo:       i32,
+    /// Caractéristiques résolues — base du poste, moins les malus de séquelles,
+    /// plus les augmentations achetées en SPP. `None` si le poste est introuvable
+    /// au catalogue : la table affiche alors un tiret plutôt qu'une valeur fausse.
+    pub stats:           Option<ResolvedPlayerStats>,
 }
 
 fn skill_category_css(category: &str) -> &'static str {
@@ -86,17 +92,20 @@ pub async fn player_table_widget(
     Path((space_id, team_id)): Path<(String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
+    let team = TeamId(team_id);
     let projections = state
         .players
         .projection_repository
-        .find_by_team_id(&TeamId(team_id))
+        .find_by_team_id(&team)
         .await
         .unwrap_or_default();
 
     let catalog = state.players.skill_catalog.as_ref();
+    let stats = resolve_team_stats(&state, &team, catalog).await;
 
     let players = projections.into_iter().map(|p| {
         let base_skills = build_base_skills(&p, catalog);
+        let resolved = stats.get(&p.player_id).copied();
         PlayerRowVm {
             player_id:       p.player_id,
             jersey:          p.jersey,
@@ -106,8 +115,35 @@ pub async fn player_table_widget(
             acquired_skills: p.acquired_skills,
             spp:             p.spp,
             value_kpo:       p.value_kpo,
+            stats:           resolved,
         }
     }).collect();
 
     PlayerTableTemplate { app_routes: AppRoutes::default(), space_id, players }.into_response()
+}
+
+/// Caractéristiques résolues de tout l'effectif, indexées par joueur.
+///
+/// La projection ne porte ni les malus de séquelles ni les augmentations
+/// achetées : elle n'enregistre de `PlayerStatIncreased` que son coût en valeur
+/// d'équipe. Les caractéristiques sont donc résolues depuis les agrégats — une
+/// seule requête pour toute l'équipe, `find_by_team_id` lisant les événements
+/// d'un coup et hydratant en mémoire.
+async fn resolve_team_stats(
+    state: &AppState,
+    team: &TeamId,
+    catalog: &dyn ISkillCatalogPort,
+) -> HashMap<String, ResolvedPlayerStats> {
+    state
+        .players
+        .repository
+        .find_by_team_id(team)
+        .await
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|player| {
+            player_stats_service::resolve_stats(player, catalog)
+                .map(|stats| (player.id.0.clone(), stats))
+        })
+        .collect()
 }

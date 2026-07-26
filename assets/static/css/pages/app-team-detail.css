@@ -104,3 +104,24 @@
   margin-bottom: var(--p1);
 }
 .staff-table td { color: var(--dark-1); }
+/* ── Classes reprises des styles inline du template ────────────────────────────
+   Le CLAUDE.md interdit les attributs `style` dans les templates : les règles
+   qui y étaient dispersées vivent ici. */
+
+.team-back-nav  { margin-bottom: var(--p1); }
+.team-back-link { color: var(--dark-3); font-size: var(--text-tiny); cursor: pointer; }
+
+.team-header-logo-img { object-fit: cover; display: block; }
+
+.team-tabs {
+  background: var(--white); padding: 0 var(--p2);
+  border-bottom: 1px solid var(--dark-5);
+}
+
+.team-players-loading { padding: var(--p2); color: var(--dark-3); }
+
+/* Table du staff — colonnes numériques centrées, sous-total aligné à droite
+   contre la colonne de son montant. */
+.staff-col-num          { text-align: center; }
+.staff-num              { text-align: center; }
+.staff-subtotal-label   { text-align: right; }
