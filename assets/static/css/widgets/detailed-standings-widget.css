@@ -38,6 +38,10 @@
 /* Bloc des départages : visuellement détaché des colonnes de points. */
 .sd-tb       { color: var(--dark-2); background: rgba(51,102,255,0.04); }
 .sd-tb-first { border-left: 2px solid var(--main-blue); }
+/* Le critère qui a effectivement départagé une égalité de points, et ceux de
+   priorité supérieure qui n'y sont pas parvenus. */
+.sd-decisive { color: var(--main-blue); font-weight: 700; }
+.sd-tied     { color: var(--dark-3); }
 
 .sd-legend   { font-size: var(--text-tiny); color: var(--dark-3); margin-top: var(--p1); line-height: 1.6; }
 .sd-legend b { color: var(--dark-2); }

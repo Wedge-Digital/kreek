@@ -1,4 +1,6 @@
-use crate::app::ranking::domain::standings::{Rank, TeamStanding, TiebreakOrder};
+use crate::app::ranking::domain::standings::{
+    tiebreak_outcomes, Rank, RowTiebreak, TeamStanding, TiebreakOrder,
+};
 use crate::app::ranking::domain::tiebreak::TiebreakCriterion;
 use crate::app::ranking::io::web::widgets::classement_widget::{ClassementGroupVm, ClassementRowVm};
 use crate::app::ranking::io::web::widgets::detailed_standings_widget::{
@@ -181,9 +183,16 @@ pub fn build_detailed_rows(
     teams: &[EnrolledTeamInfo],
     order: &TiebreakOrder,
 ) -> Vec<DetailedRowVm> {
+    // La résolution porte sur le classement **de cette poule** : chaque poule est
+    // autonome, deux poules aux mêmes totaux ne s'influencent pas.
+    let standings: Vec<TeamStanding> = ordered.iter().map(|(s, _)| s.clone()).collect();
+    let outcomes = tiebreak_outcomes(&standings, order);
     ordered
         .into_iter()
-        .map(|(standing, rank)| to_detailed_row(space_id, standing, rank, teams, order))
+        .zip(outcomes)
+        .map(|((standing, rank), outcome)| {
+            to_detailed_row(space_id, standing, rank, teams, order, outcome)
+        })
         .collect()
 }
 
@@ -193,6 +202,7 @@ fn to_detailed_row(
     rank: Rank,
     teams: &[EnrolledTeamInfo],
     order: &TiebreakOrder,
+    outcome: RowTiebreak,
 ) -> DetailedRowVm {
     let team_id = standing.team_id.to_string();
     DetailedRowVm {
@@ -205,21 +215,37 @@ fn to_detailed_row(
         losses: standing.totals.losses.0,
         bonus: signed(i64::from(standing.totals.bonus_points.0)),
         total: standing.totals.ranking_points.0,
-        tiebreaks: build_tiebreak_cells(&standing, order),
+        tiebreaks: build_tiebreak_cells(&standing, order, outcome),
     }
 }
 
-/// Une cellule par critère actif, dans l'ordre. Toutes neutres tant que la
-/// carte 223 n'a pas branché la résolution du critère décisif.
-fn build_tiebreak_cells(standing: &TeamStanding, order: &TiebreakOrder) -> Vec<TiebreakCellVm> {
+/// Une cellule par critère actif, dans l'ordre.
+fn build_tiebreak_cells(
+    standing: &TeamStanding,
+    order: &TiebreakOrder,
+    outcome: RowTiebreak,
+) -> Vec<TiebreakCellVm> {
     order
         .criteria()
         .iter()
-        .map(|criterion| TiebreakCellVm {
+        .enumerate()
+        .map(|(idx, criterion)| TiebreakCellVm {
             value: format_criterion(*criterion, criterion.value_of(&standing.totals)),
-            state: CellState::Neutral,
+            state: cell_state(outcome, idx),
         })
         .collect()
+}
+
+/// Règles 21 et 22 rendues visibles : les critères de priorité supérieure au
+/// décisif étaient égaux, ceux qui le suivent n'ont pas eu à se prononcer.
+fn cell_state(outcome: RowTiebreak, idx: usize) -> CellState {
+    match outcome {
+        RowTiebreak::Alone => CellState::Neutral,
+        RowTiebreak::FullyTied => CellState::Tied,
+        RowTiebreak::DecidedBy(k) if idx < k => CellState::Tied,
+        RowTiebreak::DecidedBy(k) if idx == k => CellState::Decisive,
+        RowTiebreak::DecidedBy(_) => CellState::Neutral,
+    }
 }
 
 /// Seule la différence de touchdowns peut être négative : elle s'affiche signée.
@@ -244,6 +270,7 @@ fn signed(value: i64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::ranking::io::web::widgets::detailed_standings_widget::DetailedRowVm;
     use crate::app::ranking::domain::ranking_line::{CumulativeTotals, MatchesPlayed, RankingPoints};
     use crate::app::ranking::domain::tiebreak::TiebreakCriterion;
     use crate::app::shared_kernel::team::TeamId;
@@ -416,6 +443,105 @@ mod tests {
         assert_eq!(result[2].title, Some("Non assignées".to_string()));
         assert!(result[2].has_enrolled_teams);
         assert_eq!(result[2].rows.len(), 0);
+    }
+
+
+    // ── Mise en évidence du critère décisif (carte 223) ──────────────────────
+
+    fn states_of(row: &DetailedRowVm) -> Vec<&'static str> {
+        row.tiebreaks.iter().map(|c| c.state.css_class()).collect()
+    }
+
+    /// `DecidedBy(1)` : le critère 0 était égal, le 1 a tranché, le 2 n'a pas eu
+    /// à se prononcer.
+    #[test]
+    fn the_decisive_criterion_is_highlighted_and_the_previous_ones_are_greyed() {
+        let (t1, t2) = (TeamId::new(), TeamId::new());
+        let order = TiebreakOrder::new(vec![
+            TiebreakCriterion::NbCas,
+            TiebreakCriterion::NbTd,
+            TiebreakCriterion::NbFouls,
+        ]);
+        // Égalité de points, sorties égales, touchdowns différents.
+        let mut lines = vec![line(&t1, 6), line(&t2, 6)];
+        for l in lines.iter_mut() {
+            l.casualties = 3;
+        }
+        lines[0].td_for = 7;
+        lines[1].td_for = 2;
+
+        let groups = build_detailed_groups("sp1", lines, &[team(&t1, "A"), team(&t2, "B")], &[], &order);
+        let rows = &groups[0].rows;
+
+        assert_eq!(states_of(&rows[0]), vec!["sd-tied", "sd-decisive", ""]);
+        assert_eq!(states_of(&rows[1]), vec!["sd-tied", "sd-decisive", ""]);
+    }
+
+    /// Règle 22 : aucune mise en évidence, tout est marqué égal.
+    #[test]
+    fn a_full_tie_highlights_nothing() {
+        let (t1, t2) = (TeamId::new(), TeamId::new());
+        let order = TiebreakOrder::new(vec![TiebreakCriterion::NbTd, TiebreakCriterion::NbCas]);
+        let lines = vec![line(&t1, 6), line(&t2, 6)];
+
+        let groups = build_detailed_groups("sp1", lines, &[team(&t1, "A"), team(&t2, "B")], &[], &order);
+
+        for row in &groups[0].rows {
+            assert_eq!(states_of(row), vec!["sd-tied", "sd-tied"]);
+        }
+    }
+
+    /// Une équipe seule à son total n'a rien à départager : aucune cellule marquée.
+    #[test]
+    fn a_team_alone_on_its_total_has_no_marked_cell() {
+        let (t1, t2) = (TeamId::new(), TeamId::new());
+        let order = TiebreakOrder::new(vec![TiebreakCriterion::NbTd]);
+        let lines = vec![line(&t1, 9), line(&t2, 6)];
+
+        let groups = build_detailed_groups("sp1", lines, &[team(&t1, "A"), team(&t2, "B")], &[], &order);
+
+        for row in &groups[0].rows {
+            assert_eq!(states_of(row), vec![""]);
+        }
+    }
+
+    /// La résolution porte sur le classement **de chaque poule** : deux poules
+    /// aux mêmes totaux de points ne s'influencent pas. Résolue globalement, la
+    /// poule 2 verrait ses deux équipes séparées par le critère alors qu'elles y
+    /// sont à égalité.
+    #[test]
+    fn the_decisive_criterion_is_resolved_within_each_group() {
+        let (a1, a2, b1, b2) = (TeamId::new(), TeamId::new(), TeamId::new(), TeamId::new());
+        let order = TiebreakOrder::new(vec![TiebreakCriterion::NbTd]);
+        let mut lines = vec![line(&a1, 6), line(&a2, 6), line(&b1, 6), line(&b2, 6)];
+        // Poule 1 : départagée par les touchdowns. Poule 2 : strictement ex æquo.
+        lines[0].td_for = 5;
+        lines[1].td_for = 1;
+        let teams = vec![team(&a1, "A1"), team(&a2, "A2"), team(&b1, "B1"), team(&b2, "B2")];
+        let groups = vec![group("g1", "Poule 1", &[&a1, &a2]), group("g2", "Poule 2", &[&b1, &b2])];
+
+        let result = build_detailed_groups("sp1", lines, &teams, &groups, &order);
+
+        assert_eq!(states_of(&result[0].rows[0]), vec!["sd-decisive"]);
+        assert_eq!(states_of(&result[1].rows[0]), vec!["sd-tied"]);
+    }
+
+    /// Le formatage est celui arrêté en phase 4 : bonus toujours signé, `+0`
+    /// compris ; différence de touchdowns signée ; dénombrements bruts.
+    #[test]
+    fn values_are_formatted_with_an_explicit_sign_only_where_it_is_meaningful() {
+        let t1 = TeamId::new();
+        let order = TiebreakOrder::new(vec![TiebreakCriterion::DiffTd, TiebreakCriterion::NbTd]);
+        let mut lines = vec![line(&t1, 6)];
+        lines[0].td_for = 2;
+        lines[0].td_against = 6;
+
+        let groups = build_detailed_groups("sp1", lines, &[team(&t1, "A")], &[], &order);
+        let row = &groups[0].rows[0];
+
+        assert_eq!(row.bonus, "+0");
+        assert_eq!(row.tiebreaks[0].value, "\u{2212}4", "différence de TD signée, moins typographique");
+        assert_eq!(row.tiebreaks[1].value, "2", "dénombrement brut");
     }
 
     #[test]
