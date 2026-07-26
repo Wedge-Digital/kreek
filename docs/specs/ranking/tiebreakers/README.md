@@ -153,5 +153,5 @@ Choix de maquette à confirmer à la conception de l'unité :
 | Unité | Mockup | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|---|
 | competition-rules-form | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| tiebreak-calc | n/a | n/a | ✅ | ✅ | ✅ | ✅ | | |
+| tiebreak-calc | n/a | n/a | ✅ | ✅ | ✅ | ✅ | ✅ | |
 | detailed-standings | ✅ | | | | | | | |
