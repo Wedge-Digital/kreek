@@ -24,22 +24,55 @@ ACL déjà en place (`competition_info_adapter`).
 - Aucun garde-fou de démarrage n'existe : `save_competition_rules::execute` ne
   vérifie que `RosterInMultipleTiers`.
 
-## Catalogue des critères (8)
+## Catalogue des critères (7)
 
-| Critère | Libellé formulaire |
-|---|---|
-| `diff_td` | Différence de touchdowns (marqués − encaissés) |
-| `nb_td` | Nombre de touchdowns marqués |
-| `nb_td_conceded` | Nombre de touchdowns encaissés |
-| `nb_cas` | Nombre de blessures infligées |
-| `nb_wins` | Nombre de victoires |
-| `nb_fouls` | Nombre de fautes commises |
-| `nb_reu` | Nombre de réussites |
-| `nb_red_cards` | Nombre de cartons rouges |
+| Critère | Libellé formulaire | Compteur | Sens |
+|---|---|---|---|
+| `diff_td` | Différence de touchdowns (marqués − encaissés) | dérivé (`nb_td − nb_td_conceded`) | décroissant |
+| `nb_td` | Nombre de touchdowns marqués | cumul des `own_td` | décroissant |
+| `nb_td_conceded` | Nombre de touchdowns encaissés | cumul des `opponent_td` | **croissant** — le moins est le mieux |
+| `nb_cas` | Nombre de blessures infligées | cumul des actions `Sortie` **uniquement** | décroissant |
+| `nb_wins` | Nombre de victoires | **existe déjà** (`WinCount`) | décroissant |
+| `nb_fouls` | Nombre de fautes commises | cumul des actions `Agression` | décroissant — le plus est le mieux |
+| `nb_reu` | Nombre de réussites | cumul des actions `Passe` **uniquement** (ni `Interception`, ni `Lancer`) | décroissant |
 
-`nb_td_conceded` est **nouveau** (ajouté en phase 1) ; les 7 autres existent déjà
-côté formulaire. Le sens de comparaison de chaque critère (croissant / décroissant)
-reste à préciser — traité avec l'unité `tiebreak-calc`.
+`nb_cas` compte les `Sortie` **strictement**, pas les `Blesse` — même définition que le
+bonus agressif livré par la feature `ranking-bonus-points`. Une seule sémantique de
+« blessure infligée » dans toute l'application.
+
+`nb_fouls` est comparé en **décroissant** : une équipe qui agresse davantage est
+avantagée au départage. Choix de ligue assumé.
+
+`nb_td_conceded` est **nouveau** (ajouté en phase 1).
+
+`nb_red_cards` (« Nombre de cartons rouges ») a été **retiré du catalogue en phase 3** :
+`MatchActionType` (`match_report/domain/value_objects.rs:151`) n'expose ni carton
+rouge ni expulsion — le critère vaudrait 0 pour toutes les équipes. À réintroduire le
+jour où les expulsions seront saisies dans le rapport de match.
+
+Sémantique des compteurs et sens de comparaison **validés en phase 3** (colonnes
+ci-dessus).
+
+## Mécanisme de départage (unité `tiebreak-calc`)
+
+Chaque critère du catalogue a un **compteur cumulé par équipe**, mis à jour à chaque
+match publié et porté par la ranking line (`CumulativeTotals`). Au classement, les
+lignes sont d'abord ordonnées par `ranking_points` ; **à égalité de points**, les
+compteurs des critères actifs sont comparés dans l'ordre de priorité configuré,
+jusqu'à ce que l'un départage. Si tous donnent l'égalité, les équipes restent ex æquo
+(règle 5).
+
+**Décision (phase 3)** : les compteurs sont accumulés **pour tous les critères,
+toujours**, indépendamment de la configuration. L'activation ne joue qu'au moment
+d'ordonner. Le calcul est ainsi découplé de la configuration, la projection reste
+rejouable sans connaître l'historique des règles, et un changement de configuration
+ne produirait pas de compteur définitivement faux.
+
+État de l'existant : `CumulativeTotals` (`ranking/domain/ranking_line.rs:59`) accumule
+`matches_played`, `wins`, `draws`, `losses`, `ranking_points`. Les TD et blessures
+existent par match dans `MatchStats` (introduit par la feature bonus) mais ne sont pas
+cumulés. Il reste donc **5 compteurs à ajouter** (`nb_td`, `nb_td_conceded`, `nb_cas`,
+`nb_fouls`, `nb_reu`) et **un dérivé** (`diff_td`).
 
 ## Règles métier validées (phase 1)
 
@@ -48,7 +81,7 @@ reste à préciser — traité avec l'unité `tiebreak-calc`.
 2. **L'ordre d'un critère décoché est conservé** — le recocher le remet à sa place.
    Conséquence : un critère inactif reste présent dans la configuration persistée,
    avec sa priorité, plus un flag d'activation.
-3. **Défaut à la création d'une compétition** : les 8 critères actifs, dans l'ordre
+3. **Défaut à la création d'une compétition** : les 7 critères actifs, dans l'ordre
    du catalogue ci-dessus. À matérialiser côté domaine, pas côté front.
 4. **Activation et ordre sont figés après le démarrage de la compétition.**
 5. **Les ex æquo résiduels sont assumés** — si tous les critères actifs donnent
@@ -61,7 +94,8 @@ reste à préciser — traité avec l'unité `tiebreak-calc`.
   Le formulaire de règles n'existe que dans le parcours de création, il n'y a pas de
   route d'édition après création. La règle est déjà vraie de fait ; elle devient une
   contrainte pour la future page d'admin des règles. Pas de carte séparée.
-- **Sens et sémantique de chaque critère** : à détailler avec l'unité `tiebreak-calc`.
+Aucun point ouvert : la sémantique des compteurs et le sens de comparaison ont été
+tranchés en phase 3.
 
 Le projet n'étant pas en production, aucune reprise de données n'est à prévoir : les
 configurations existantes sont des brouillons sans valeur à préserver.
@@ -79,5 +113,5 @@ Ordre de traitement : **`competition-rules-form` d'abord**, puis `tiebreak-calc`
 
 | Unité | Mockup | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|---|
-| competition-rules-form | ✅ | ✅ | | | | | | |
+| competition-rules-form | ✅ | ✅ | ✅ | | | | | |
 | tiebreak-calc | n/a | n/a | | | | | | |

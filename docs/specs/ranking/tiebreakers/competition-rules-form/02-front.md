@@ -29,7 +29,7 @@ rien ne traite d'une liste ordonnable ni d'un catalogue de critères.
 
 ### D2 — Catalogue servi par `ranking` via port + adapter
 
-Le catalogue des 8 critères (id + libellé + ordre canonique) appartient au BC
+Le catalogue des 7 critères (id + libellé + ordre canonique) appartient au BC
 `ranking`. `competitions` le consulte en lecture synchrone :
 
 ```
