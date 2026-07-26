@@ -37,3 +37,18 @@ pub trait ICompetitionSpaceMemberPort: Send + Sync {
         space_id: &crate::app::shared_kernel::common_types::SpaceId,
     ) -> Option<crate::app::shared_kernel::authorization::SpaceProfile>;
 }
+
+// ── ACL vers le BC `ranking` (catalogue des critères de départage) ─────────────
+
+/// Un critère de départage tel que le formulaire de règles a besoin de le
+/// connaître. DTO de lecture : primitives assumées, aucun invariant à protéger.
+pub struct TiebreakCriterionDto {
+    pub code: String,
+    pub label: String,
+}
+
+pub trait ITiebreakCatalogPort: Send + Sync {
+    /// Catalogue complet, dans l'ordre canonique. Synchrone : le catalogue est
+    /// statique, sa consultation ne fait aucun IO.
+    fn all(&self) -> Vec<TiebreakCriterionDto>;
+}

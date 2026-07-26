@@ -177,6 +177,10 @@ mod tests {
                         _: &crate::app::shared_kernel::common_types::SpaceId,
                     ) -> Option<crate::app::shared_kernel::authorization::SpaceProfile> { None }
                 }
+                struct FakeTiebreakCatalogPort;
+                impl crate::app::competitions::ports::ITiebreakCatalogPort for FakeTiebreakCatalogPort {
+                    fn all(&self) -> Vec<crate::app::competitions::ports::TiebreakCriterionDto> { vec![] }
+                }
                 CompetitionsContext {
                     competition_repository: Arc::new(FakeCompetitionRepository),
                     season_repository:      Arc::new(FakeSeasonRepository),
@@ -185,6 +189,7 @@ mod tests {
                     team_info_port:         Arc::new(FakeTeamInfoPort),
                     reference_port:         Arc::new(FakeReferencePort),
                     space_member_port:      Arc::new(FakeCompSpaceMemberPort),
+                    tiebreak_catalog_port:  Arc::new(FakeTiebreakCatalogPort),
                     event_bus:              event_bus.clone(),
                 }
             },
