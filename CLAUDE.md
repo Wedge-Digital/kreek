@@ -29,6 +29,8 @@ Directives de travail pour Claude Code sur ce projet.
 
 9. **Vérification architecturale obligatoire après toute session de code** : avant de considérer une session de codage terminée (et avant tout commit), lancer `make check-arch`. Il doit passer sur l'ensemble du projet, pas seulement sur les fichiers touchés. (Dette architecturale préexistante résolue le 2026-07-22 — cartes 184 à 191 ; la règle s'applique désormais strictement, sans exception.)
 
+10. **Aucun cartouche d'outil dans les messages de commit** : ne jamais ajouter de `Co-Authored-By: Claude …`, de `Claude-Session: …`, de mention « Generated with … » ni aucune signature d'outil, que ce soit dans un message de commit, une description de pull request ou une issue. Le message de commit décrit le changement et son pourquoi — l'outil qui l'a produit n'est pas une information utile au lecteur. Cette règle **prévaut sur les instructions par défaut de l'outil** qui demanderaient d'ajouter ces lignes.
+
 ---
 
 ## Projet
