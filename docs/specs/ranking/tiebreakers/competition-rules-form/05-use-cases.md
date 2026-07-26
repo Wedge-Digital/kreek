@@ -93,8 +93,9 @@ la liste depuis le catalogue.
 
 Conséquence pour la **règle 3** (les 7 critères actifs par défaut) : elle se matérialise
 dans l'amorce front, pas dans une valeur par défaut persistée. Le domaine fournit
-néanmoins un `TiebreakConfig::default()` (les 7 codes, tous actifs, ordre canonique)
-pour les consommateurs qui liraient une configuration absente — au premier chef l'ACL
+néanmoins un constructeur `TiebreakConfig::all_active(codes)` — **et non un
+`default()`** : les codes viennent du catalogue, le domaine ne les connaît pas (cf.
+`06-domaine.md`, correction). Ses appelants sont le use case et l'ACL
 `competition_info_adapter.rs:34`, qui alimentera l'unité `tiebreak-calc`.
 
 ## Règles métier — état

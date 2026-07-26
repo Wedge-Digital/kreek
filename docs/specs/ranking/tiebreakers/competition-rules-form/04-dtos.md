@@ -161,4 +161,5 @@ Aucune règle nouvelle à cette étape. La règle 1 se matérialise en invariant
 `TiebreakConfig`. Pour la règle 3 (7 critères actifs par défaut), cf. la correction
 apportée en `05-use-cases.md` : elle vit dans l'amorce front, aucune configuration
 n'étant persistée avant la première soumission ; le domaine fournit néanmoins un
-`TiebreakConfig::default()` pour les lecteurs d'une configuration absente.
+constructeur `TiebreakConfig::all_active(codes)` — et non un `default()` — pour les
+lecteurs d'une configuration absente (cf. `06-domaine.md`).
