@@ -1,0 +1,192 @@
+//! Conversion des DTOs du port `ranking` vers le domaine, et ordonnancement du
+//! classement.
+//!
+//! Ce service est le **seul** point de passage : ni les handlers ni les widgets ne
+//! manipulent `RankingLineRow` ou `TiebreakSettingInfo` pour en tirer des objets
+//! du domaine. Il ne contient aucune logique de comparaison — « qui est devant ? »
+//! vit dans `domain/standings.rs`.
+
+use crate::app::ranking::domain::ranking_line::{
+    CasualtiesTotal, CompletionsMade, CumulativeTotals, DrawCount, FoulsCommitted, LossCount,
+    MatchesPlayed, RankingPoints, TdAgainst, TdFor, WinCount,
+};
+use crate::app::ranking::domain::standings::{
+    assign_ranks, order_standings, Rank, TeamStanding, TiebreakOrder,
+};
+use crate::app::ranking::domain::tiebreak::TiebreakCriterion;
+use crate::app::ranking::ports::{RankingLineRow, TiebreakSettingInfo};
+
+/// Configuration du port → ordre de départage du domaine. Ne peut vivre ni dans
+/// le domaine (il ignore les types du port) ni dans le seul use case d'écriture
+/// (la lecture en a besoin aussi).
+///
+/// L'ordre du vecteur d'entrée est préservé : c'est lui qui porte la priorité.
+pub fn to_tiebreak_order(settings: &[TiebreakSettingInfo]) -> TiebreakOrder {
+    let criteria = settings
+        .iter()
+        .filter(|setting| setting.activated)
+        .filter_map(|setting| resolve_criterion(&setting.code))
+        .collect();
+    TiebreakOrder::new(criteria)
+}
+
+/// Un code inconnu est **sauté**, pas remonté en erreur (décision D2) : la
+/// configuration persistée peut référencer un critère retiré du catalogue, et le
+/// classement doit rester affichable. Le `warn!` porte le code fautif, sans quoi
+/// un départage disparu resterait introuvable.
+fn resolve_criterion(code: &str) -> Option<TiebreakCriterion> {
+    let criterion = TiebreakCriterion::from_code(code);
+    if criterion.is_none() {
+        tracing::warn!("critère de départage inconnu, ignoré : « {code} »");
+    }
+    criterion
+}
+
+/// Lignes de classement → équipes ordonnées, chacune avec son rang.
+///
+/// Appelé **par groupe** : chaque poule est un classement autonome dont les rangs
+/// repartent à 1.
+pub fn build_ordered_standings(
+    lines: Vec<RankingLineRow>,
+    order: &TiebreakOrder,
+) -> Vec<(TeamStanding, Rank)> {
+    let mut standings: Vec<TeamStanding> = lines.into_iter().map(to_standing).collect();
+    order_standings(&mut standings, order);
+    let ranks = assign_ranks(&standings, order);
+    standings.into_iter().zip(ranks).collect()
+}
+
+fn to_standing(row: RankingLineRow) -> TeamStanding {
+    TeamStanding { team_id: row.team_id, totals: to_totals(row) }
+}
+
+pub fn to_totals(row: RankingLineRow) -> CumulativeTotals {
+    CumulativeTotals {
+        matches_played: MatchesPlayed(row.matches_played),
+        wins: WinCount(row.wins),
+        draws: DrawCount(row.draws),
+        losses: LossCount(row.losses),
+        ranking_points: RankingPoints(row.ranking_points),
+        // Sans ce report, le cumul des bonus repartirait de zéro à chaque match.
+        bonus_points: RankingPoints(row.bonus_points),
+        td_for: TdFor(row.td_for),
+        td_against: TdAgainst(row.td_against),
+        casualties: CasualtiesTotal(row.casualties),
+        fouls: FoulsCommitted(row.fouls),
+        completions: CompletionsMade(row.completions),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::shared_kernel::team::TeamId;
+
+    fn setting(code: &str, activated: bool) -> TiebreakSettingInfo {
+        TiebreakSettingInfo { code: code.into(), activated }
+    }
+
+    fn row(points: u32, td_for: u32) -> RankingLineRow {
+        RankingLineRow {
+            team_id: TeamId::new(),
+            matches_played: 1,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            ranking_points: points,
+            bonus_points: 0,
+            td_for,
+            td_against: 0,
+            casualties: 0,
+            fouls: 0,
+            completions: 0,
+        }
+    }
+
+    #[test]
+    fn to_tiebreak_order_keeps_only_activated_criteria() {
+        let settings =
+            vec![setting("nb_cas", false), setting("nb_td", true), setting("diff_td", false)];
+
+        let order = to_tiebreak_order(&settings);
+
+        assert_eq!(order, TiebreakOrder::new(vec![TiebreakCriterion::NbTd]));
+    }
+
+    /// L'ordre du vecteur porte la priorité : un tri ou un détour par une table
+    /// de hachage la détruirait sans que rien ne le signale. L'ordre choisi ici
+    /// est volontairement l'inverse de l'ordre canonique du catalogue.
+    #[test]
+    fn to_tiebreak_order_preserves_the_configured_priority() {
+        let settings = vec![setting("nb_reu", true), setting("nb_cas", true), setting("diff_td", true)];
+
+        let order = to_tiebreak_order(&settings);
+
+        assert_eq!(
+            order,
+            TiebreakOrder::new(vec![
+                TiebreakCriterion::NbReu,
+                TiebreakCriterion::NbCas,
+                TiebreakCriterion::DiffTd
+            ])
+        );
+    }
+
+    /// Décision D2 : un critère retiré du catalogue (ici les cartons rouges) ne
+    /// fait pas échouer la lecture, il disparaît de l'ordre — et les critères
+    /// **suivants** conservent leur priorité relative.
+    #[test]
+    fn to_tiebreak_order_skips_an_unknown_code_without_dropping_the_rest() {
+        let settings =
+            vec![setting("nb_cas", true), setting("nb_red_cards", true), setting("nb_td", true)];
+
+        let order = to_tiebreak_order(&settings);
+
+        assert_eq!(
+            order,
+            TiebreakOrder::new(vec![TiebreakCriterion::NbCas, TiebreakCriterion::NbTd])
+        );
+    }
+
+    #[test]
+    fn to_tiebreak_order_of_an_empty_configuration_is_empty() {
+        assert_eq!(to_tiebreak_order(&[]), TiebreakOrder::empty());
+    }
+
+    #[test]
+    fn build_ordered_standings_orders_by_points_and_numbers_from_one() {
+        let (last, first, middle) = (row(3, 0), row(9, 0), row(6, 0));
+        let expected_order = [first.team_id, middle.team_id, last.team_id];
+
+        let ordered = build_ordered_standings(vec![last, first, middle], &TiebreakOrder::empty());
+
+        let team_ids: Vec<TeamId> = ordered.iter().map(|(s, _)| s.team_id).collect();
+        assert_eq!(team_ids, expected_order);
+        assert_eq!(ordered.iter().map(|(_, r)| r.0).collect::<Vec<_>>(), vec![1, 2, 3]);
+    }
+
+    /// Le critère actif départage deux équipes à égalité de points — c'est la
+    /// jonction entre la configuration du port et la comparaison du domaine.
+    #[test]
+    fn build_ordered_standings_applies_the_configured_criterion() {
+        let (poor, prolific) = (row(6, 1), row(6, 7));
+        let expected_first = prolific.team_id;
+
+        let order = to_tiebreak_order(&[setting("nb_td", true)]);
+        let ordered = build_ordered_standings(vec![poor, prolific], &order);
+
+        assert_eq!(ordered[0].0.team_id, expected_first);
+        assert_eq!(ordered[0].1 .0, 1);
+    }
+
+    /// Sans critère actif, deux équipes à égalité de points sont ex æquo : même
+    /// rang, et le rang suivant saute (règle 20).
+    #[test]
+    fn build_ordered_standings_gives_the_same_rank_to_tied_teams() {
+        let lines = vec![row(9, 0), row(6, 5), row(6, 2), row(1, 0)];
+
+        let ordered = build_ordered_standings(lines, &TiebreakOrder::empty());
+
+        assert_eq!(ordered.iter().map(|(_, r)| r.0).collect::<Vec<_>>(), vec![1, 2, 2, 4]);
+    }
+}

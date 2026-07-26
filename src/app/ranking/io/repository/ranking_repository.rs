@@ -1,6 +1,7 @@
 use crate::app::ranking::domain::ranking_line::RankingLine;
 use crate::app::ranking::ports::{IRankingRepository, RankingLineRow, RankingRepositoryError};
 use crate::app::shared_kernel::sulid::SUlid;
+use crate::app::shared_kernel::team::TeamId;
 use async_trait::async_trait;
 use sqlx::PgPool;
 
@@ -33,10 +34,17 @@ struct Row {
     completions: i32,
 }
 
-impl From<Row> for RankingLineRow {
-    fn from(r: Row) -> Self {
-        RankingLineRow {
-            team_id: r.team_id,
+/// Faillible, contrairement à un `From` : `team_id` est stocké en `TEXT` et doit
+/// être décodé vers un ULID. Une ligne illisible fait échouer la lecture entière
+/// plutôt que de disparaître du classement — cf. `MalformedRow`.
+impl TryFrom<Row> for RankingLineRow {
+    type Error = RankingRepositoryError;
+
+    fn try_from(r: Row) -> Result<Self, Self::Error> {
+        Ok(RankingLineRow {
+            team_id: TeamId::try_new(&r.team_id).map_err(|e| {
+                RankingRepositoryError::MalformedRow(format!("team_id « {} » : {e}", r.team_id))
+            })?,
             matches_played: r.matches_played as u32,
             wins: r.wins as u32,
             draws: r.draws as u32,
@@ -48,7 +56,7 @@ impl From<Row> for RankingLineRow {
             casualties: r.casualties as u32,
             fouls: r.fouls as u32,
             completions: r.completions as u32,
-        }
+        })
     }
 }
 
@@ -74,7 +82,7 @@ impl IRankingRepository for PgRankingRepository {
         .await
         .map_err(db_err)?;
 
-        Ok(row.map(RankingLineRow::from))
+        row.map(RankingLineRow::try_from).transpose()
     }
 
     async fn find_latest_lines_for_season(
@@ -95,7 +103,7 @@ impl IRankingRepository for PgRankingRepository {
         .await
         .map_err(db_err)?;
 
-        Ok(rows.into_iter().map(RankingLineRow::from).collect())
+        rows.into_iter().map(RankingLineRow::try_from).collect()
     }
 
     async fn insert_lines(&self, lines: &[RankingLine]) -> Result<(), RankingRepositoryError> {
@@ -258,9 +266,9 @@ mod tests {
         let rows = repo.find_latest_lines_for_season(&season_id.to_string()).await.unwrap();
 
         assert_eq!(rows.len(), 2);
-        let row_a = rows.iter().find(|r| r.team_id == team_a.to_string()).unwrap();
+        let row_a = rows.iter().find(|r| r.team_id == team_a).unwrap();
         assert_eq!(row_a.matches_played, 2); // la dernière ligne de team_a, pas la première
-        let row_b = rows.iter().find(|r| r.team_id == team_b.to_string()).unwrap();
+        let row_b = rows.iter().find(|r| r.team_id == team_b).unwrap();
         assert_eq!(row_b.matches_played, 1);
     }
 

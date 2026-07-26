@@ -1,10 +1,10 @@
 use crate::app::ranking::domain::ranking_line::{
-    AggressiveBonusRule, BonusActivated, CasualtiesInflicted, CasualtiesTotal, CompletionsMade,
-    CumulativeTotals, DefensiveBonusRule, DrawCount, FoulsCommitted, LossCount, MatchContext,
-    MatchScore, MatchStats, MatchesPlayed, MaxTdConceded, MinCasualties, MinTd, OffensiveBonusRule,
-    RankingLine, RankingPoints, RankingRules, TdAgainst, TdFor, WinCount,
+    AggressiveBonusRule, BonusActivated, CasualtiesInflicted, CompletionsMade, CumulativeTotals,
+    DefensiveBonusRule, FoulsCommitted, MatchContext, MatchScore, MatchStats, MaxTdConceded,
+    MinCasualties, MinTd, OffensiveBonusRule, RankingLine, RankingPoints, RankingRules,
 };
-use crate::app::ranking::ports::{IRankingCompetitionPort, IRankingRepository, RankingLineRow};
+use crate::app::ranking::ports::{IRankingCompetitionPort, IRankingRepository};
+use crate::app::ranking::use_cases::standings_service::to_totals;
 use crate::app::shared_kernel::common_types::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::team::TeamId;
 use chrono::{DateTime, Utc};
@@ -118,23 +118,6 @@ async fn load_previous(
     Ok(row.map(to_totals))
 }
 
-fn to_totals(row: RankingLineRow) -> CumulativeTotals {
-    CumulativeTotals {
-        matches_played: MatchesPlayed(row.matches_played),
-        wins: WinCount(row.wins),
-        draws: DrawCount(row.draws),
-        losses: LossCount(row.losses),
-        ranking_points: RankingPoints(row.ranking_points),
-        // Sans ce report, le cumul des bonus repartirait de zéro à chaque match.
-        bonus_points: RankingPoints(row.bonus_points),
-        td_for: TdFor(row.td_for),
-        td_against: TdAgainst(row.td_against),
-        casualties: CasualtiesTotal(row.casualties),
-        fouls: FoulsCommitted(row.fouls),
-        completions: CompletionsMade(row.completions),
-    }
-}
-
 fn to_domain_rules(info: crate::app::ranking::ports::RankingRulesInfo) -> RankingRules {
     RankingRules {
         win_points: RankingPoints(info.win_points),
@@ -162,7 +145,7 @@ fn to_domain_rules(info: crate::app::ranking::ports::RankingRulesInfo) -> Rankin
 mod tests {
     use super::*;
     use crate::app::ranking::ports::{
-        BonusRuleInfo, EnrolledTeamInfo, RankingRepositoryError, RankingRulesInfo,
+        BonusRuleInfo, EnrolledTeamInfo, RankingLineRow, RankingRepositoryError, RankingRulesInfo,
     };
     use async_trait::async_trait;
     use std::sync::Mutex;
@@ -211,7 +194,7 @@ mod tests {
         async fn find_latest_line(&self, _: &str, team_id: &str) -> Result<Option<RankingLineRow>, RankingRepositoryError> {
             let lines = self.lines.lock().unwrap();
             Ok(lines.iter().rev().find(|l| l.team_id.to_string() == team_id).map(|l| RankingLineRow {
-                team_id: l.team_id.to_string(),
+                team_id: l.team_id,
                 matches_played: l.matches_played.0,
                 wins: l.wins.0,
                 draws: l.draws.0,

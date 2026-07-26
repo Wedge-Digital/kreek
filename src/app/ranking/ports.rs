@@ -1,4 +1,5 @@
 use crate::app::ranking::domain::ranking_line::RankingLine;
+use crate::app::shared_kernel::team::TeamId;
 use async_trait::async_trait;
 
 // ── Repository interne (event-sourcing/projection du BC, table append-only) ────
@@ -8,7 +9,12 @@ use async_trait::async_trait;
 /// lecture (query), primitifs acceptés (règle CQRS du CLAUDE.md).
 #[derive(Clone)]
 pub struct RankingLineRow {
-    pub team_id: String,
+    /// Typé et non `String`, contrairement aux autres champs : c'est le seul qui
+    /// doit franchir la frontière du domaine (`TeamStanding`). Le décodage a lieu
+    /// une fois, au repository, plutôt qu'à chaque lecture — et un id illisible y
+    /// devient une erreur bruyante au lieu d'une équipe qui disparaît du
+    /// classement sans que personne ne le remarque.
+    pub team_id: TeamId,
     pub matches_played: u32,
     pub wins: u32,
     pub draws: u32,
@@ -27,12 +33,18 @@ pub struct RankingLineRow {
 #[derive(Debug)]
 pub enum RankingRepositoryError {
     Database(String),
+    /// Une colonne d'une ligne lue n'est pas décodable vers son type de domaine
+    /// (id d'équipe qui n'est pas un ULID). Distinct de `Database` : la requête
+    /// a réussi, c'est la donnée stockée qui est incohérente — l'étiquette
+    /// « base de données » enverrait sur une fausse piste.
+    MalformedRow(String),
 }
 
 impl std::fmt::Display for RankingRepositoryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Database(e) => write!(f, "erreur base de données : {e}"),
+            Self::MalformedRow(e) => write!(f, "ligne de classement illisible : {e}"),
         }
     }
 }

@@ -24,7 +24,7 @@ pub struct TeamStanding {
 ///
 /// Vide est un état valide : l'ordre se réduit alors aux points de classement et
 /// toute égalité de points devient un ex æquo.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TiebreakOrder {
     criteria: Vec<TiebreakCriterion>,
 }
