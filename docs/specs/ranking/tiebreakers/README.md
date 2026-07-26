@@ -17,8 +17,11 @@ ACL déjà en place (`competition_info_adapter`).
   (`competitions/domain/competition_rules.rs:52`) — une map `id → priorité`. Elle
   exprime l'ordre, **pas** l'activation, et est stringly-typée (`String`/`u32` nus,
   en infraction avec la règle « pas de primitives nues dans les agrégats »).
-- Le défaut à la création est une map **vide** (`save_competition_rules.rs:171`,
-  `rules_labels.rs:64`) ; c'est le JS qui retombe sur la liste complète à l'affichage.
+- **Aucun défaut n'existe** : `create_draft_competition` n'écrit pas de règles et
+  `find_rules` renvoie `None` jusqu'à la première soumission de la phase 2. Le handler
+  GET produit alors `existing_rules_json = "null"` et c'est le JS qui amorce la liste
+  complète. (Les `HashMap::new()` de `save_competition_rules.rs:171` et
+  `rules_labels.rs:64` sont des helpers de test, pas des défauts de production.)
 - Le calcul du départage **n'existe pas** : explicitement hors scope de la feature 1
   du BC `ranking` (cf. `../README.md`, « Périmètre feature 1 »).
 - Aucun garde-fou de démarrage n'existe : `save_competition_rules::execute` ne
@@ -113,5 +116,5 @@ Ordre de traitement : **`competition-rules-form` d'abord**, puis `tiebreak-calc`
 
 | Unité | Mockup | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|---|
-| competition-rules-form | ✅ | ✅ | ✅ | ✅ | | | | |
+| competition-rules-form | ✅ | ✅ | ✅ | ✅ | ✅ | | | |
 | tiebreak-calc | n/a | n/a | | | | | | |

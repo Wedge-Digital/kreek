@@ -158,5 +158,7 @@ phrase française explicite, pas un code).
 ## Règles métier — état
 
 Aucune règle nouvelle à cette étape. La règle 1 se matérialise en invariant du VO
-`TiebreakConfig` ; la règle 3 (7 critères actifs par défaut) se matérialise dans la
-valeur par défaut du domaine, spécifiée en phase 6.
+`TiebreakConfig`. Pour la règle 3 (7 critères actifs par défaut), cf. la correction
+apportée en `05-use-cases.md` : elle vit dans l'amorce front, aucune configuration
+n'étant persistée avant la première soumission ; le domaine fournit néanmoins un
+`TiebreakConfig::default()` pour les lecteurs d'une configuration absente.
