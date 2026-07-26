@@ -5,75 +5,94 @@
     Aucun joueur enregistré pour cette équipe.
   </div>
   {% else %}
-  <div class="player-table-scroll">
-    <table class="player-table">
-      <thead>
-        <tr>
-          <th class="player-col-jersey">#</th>
-          <th>Nom</th>
-          <th>Poste</th>
-          <th class="player-col-stat" title="Mouvement">MV</th>
-          <th class="player-col-stat" title="Force">FO</th>
-          <th class="player-col-stat" title="Agilité">AG</th>
-          <th class="player-col-stat" title="Passe">PA</th>
-          <th class="player-col-stat" title="Armure">AR</th>
-          <th class="player-col-skills">Compétences de base</th>
-          <th class="player-col-skills">Compétences acquises</th>
-          <th class="player-col-num">SPP</th>
-          <th class="player-col-num">Valeur</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for p in players %}
-        <tr class="player-table-row" onclick="window.location.href='{{ app_routes.players.player_detail(space_id, p.player_id) }}'">
-          <td class="player-jersey">
-            {% if let Some(j) = p.jersey %}{{ j }}{% else %}—{% endif %}
-          </td>
-          <td>
-            <strong>
-              {% if p.personal_name.is_empty() %}{{ p.position_name }}{% else %}{{ p.personal_name }}{% endif %}
-            </strong>
-          </td>
-          <td class="player-position">{{ p.position_name }}</td>
-          {% if let Some(s) = p.stats %}
-          {# AG, PA et AR sont des seuils de dé : ils s'affichent suivis d'un « + », comme sur la fiche joueur. #}
-          <td class="player-stat">{{ s.ma }}</td>
-          <td class="player-stat">{{ s.st }}</td>
-          <td class="player-stat">{{ s.ag }}+</td>
-          <td class="player-stat">{{ s.pa }}+</td>
-          <td class="player-stat">{{ s.av }}+</td>
-          {% else %}
-          {# Poste introuvable au catalogue : un tiret plutôt qu'une valeur fausse. #}
-          <td class="player-stat player-none" colspan="5">—</td>
-          {% endif %}
-          <td>
-            {% if p.base_skills.is_empty() %}
-            <span class="player-none">—</span>
+  <div class="player-table-frame">
+    <div class="player-table-scroll">
+      <table class="player-table">
+        <thead>
+          <tr>
+            <th class="player-col-jersey">#</th>
+            <th>Nom</th>
+            <th>Poste</th>
+            <th class="player-col-stat" title="Mouvement">MV</th>
+            <th class="player-col-stat" title="Force">FO</th>
+            <th class="player-col-stat" title="Agilité">AG</th>
+            <th class="player-col-stat" title="Passe">PA</th>
+            <th class="player-col-stat" title="Armure">AR</th>
+            <th class="player-col-skills">Compétences de base</th>
+            <th class="player-col-skills">Compétences acquises</th>
+            <th class="player-col-num">SPP</th>
+            <th class="player-col-num">Valeur</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in players %}
+          <tr class="player-table-row" onclick="window.location.href='{{ app_routes.players.player_detail(space_id, p.player_id) }}'">
+            <td class="player-jersey">
+              {% if let Some(j) = p.jersey %}{{ j }}{% else %}—{% endif %}
+            </td>
+            <td>
+              <strong>
+                {% if p.personal_name.is_empty() %}{{ p.position_name }}{% else %}{{ p.personal_name }}{% endif %}
+              </strong>
+            </td>
+            <td class="player-position">{{ p.position_name }}</td>
+            {% if let Some(s) = p.stats %}
+            {# AG, PA et AR sont des seuils de dé : ils s'affichent suivis d'un « + », comme sur la fiche joueur. #}
+            <td class="player-stat">{{ s.ma }}</td>
+            <td class="player-stat">{{ s.st }}</td>
+            <td class="player-stat">{{ s.ag }}+</td>
+            <td class="player-stat">{{ s.pa }}+</td>
+            <td class="player-stat">{{ s.av }}+</td>
             {% else %}
-            <div class="player-skill-list">
-              {% for skill in p.base_skills %}
-              <span class="skill-tag {{ skill.category_css }}">{{ skill.name }}</span>
-              {% endfor %}
-            </div>
+            {# Poste introuvable au catalogue : un tiret plutôt qu'une valeur fausse. #}
+            <td class="player-stat player-none" colspan="5">—</td>
             {% endif %}
-          </td>
-          <td>
-            {% if p.acquired_skills.is_empty() %}
-            <span class="player-none">—</span>
-            {% else %}
-            <div class="player-skill-list">
-              {% for acq in p.acquired_skills %}
-              <span class="skill-tag {{ acq.category_css }}">{{ acq.skill_name }}</span>
-              {% endfor %}
-            </div>
-            {% endif %}
-          </td>
-          <td class="player-spp">{{ p.spp }}</td>
-          <td class="player-value">{{ p.value_kpo }} kPo</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+            <td>
+              {% if p.base_skills.is_empty() %}
+              <span class="player-none">—</span>
+              {% else %}
+              <div class="player-skill-list">
+                {% for skill in p.base_skills %}
+                <span class="skill-tag {{ skill.category_css }}">{{ skill.name }}</span>
+                {% endfor %}
+              </div>
+              {% endif %}
+            </td>
+            <td>
+              {% if p.acquired_skills.is_empty() %}
+              <span class="player-none">—</span>
+              {% else %}
+              <div class="player-skill-list">
+                {% for acq in p.acquired_skills %}
+                <span class="skill-tag {{ acq.category_css }}">{{ acq.skill_name }}</span>
+                {% endfor %}
+              </div>
+              {% endif %}
+            </td>
+            <td class="player-spp">{{ p.spp }}</td>
+            <td class="player-value">{{ p.value_kpo }} kPo</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {# Le dégradé de bord ne s'affiche que s'il reste réellement du contenu hors
+       champ : un dégradé permanent annoncerait du caché là où le tableau tient
+       entièrement. Conteneur retrouvé via `currentScript`, sans id global. #}
+    <script>
+    (function () {
+      var box = document.currentScript.previousElementSibling;
+      var frame = box.parentElement;
+      function majBords() {
+        var reste = box.scrollWidth - box.clientWidth - box.scrollLeft;
+        frame.classList.toggle('has-more-right', reste > 1);
+        frame.classList.toggle('has-more-left', box.scrollLeft > 1);
+      }
+      box.addEventListener('scroll', majBords, { passive: true });
+      window.addEventListener('resize', majBords);
+      majBords();
+    })();
+    </script>
   </div>
   {% endif %}
 </div>

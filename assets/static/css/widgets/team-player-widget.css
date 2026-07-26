@@ -48,6 +48,23 @@
    conteneur plutôt que de pousser la page en débordement horizontal. */
 .player-table-scroll { overflow-x: auto; }
 
+/* Cadre porteur des dégradés de bord : le conteneur défilant ne peut pas les
+   afficher lui-même, ses pseudo-éléments défileraient avec le contenu. Les
+   cellules du tableau ayant un fond opaque, la technique du dégradé posé sur le
+   fond du conteneur ne fonctionne pas non plus — d'où ce cadre par-dessus.
+   Les classes sont posées par le script du fragment, uniquement quand du
+   contenu reste réellement hors champ. */
+.player-table-frame { position: relative; }
+.player-table-frame::before,
+.player-table-frame::after {
+  content: ''; position: absolute; top: 0; bottom: 0; width: 28px;
+  pointer-events: none; opacity: 0; transition: opacity 0.15s;
+}
+.player-table-frame::before { left: 0;  background: linear-gradient(to left,  rgba(255,255,255,0), var(--white)); }
+.player-table-frame::after  { right: 0; background: linear-gradient(to right, rgba(255,255,255,0), var(--white)); }
+.player-table-frame.has-more-left::before { opacity: 1; }
+.player-table-frame.has-more-right::after { opacity: 1; }
+
 .player-col-jersey { text-align: center; width: 40px; }
 .player-col-skills { min-width: 180px; }
 .player-col-num    { text-align: center; }
@@ -67,3 +84,24 @@
 .player-none     { color: var(--dark-4); font-style: italic; }
 
 .player-skill-list { display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* ─── Responsive ─── */
+@media (max-width: 768px) {
+  /* Le tableau défile déjà dans son conteneur ; on resserre les cellules pour
+     que douze colonnes n'imposent pas un défilement démesuré, et pour que les
+     noms de poste cessent de se replier sur trois lignes. */
+  .players-widget { padding: 0; }
+  .player-table th { padding: 8px; }
+  .player-table td { padding: 8px; }
+  .player-table th.player-col-stat,
+  .player-table td.player-stat { padding-left: 3px; padding-right: 3px; }
+  .player-col-skills { min-width: 140px; }
+  /* Nom et poste tronqués plutôt que repliés : sur trois lignes chacun, quatre
+     joueurs remplissaient un tiers de l'écran. Bornés en largeur et non
+     seulement en `nowrap` — sans le `max-width`, ils prenaient toute la place et
+     repoussaient les caractéristiques hors de l'écran. */
+  .player-table tbody td:nth-child(2),
+  .player-table tbody td:nth-child(3) {
+    max-width: 78px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+}
