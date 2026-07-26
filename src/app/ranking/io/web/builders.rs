@@ -115,7 +115,15 @@ mod tests {
     use super::*;
 
     fn line(team_id: &str, points: u32) -> RankingLineRow {
-        RankingLineRow { team_id: team_id.into(), matches_played: 1, wins: 0, draws: 0, losses: 0, ranking_points: points }
+        RankingLineRow {
+            team_id: team_id.into(),
+            matches_played: 1,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            ranking_points: points,
+            bonus_points: 0,
+        }
     }
 
     fn team(team_id: &str, name: &str) -> EnrolledTeamInfo {

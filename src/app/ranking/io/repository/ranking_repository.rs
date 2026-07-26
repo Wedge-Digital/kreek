@@ -25,6 +25,7 @@ struct Row {
     draws: i32,
     losses: i32,
     ranking_points: i32,
+    bonus_points: i32,
 }
 
 impl From<Row> for RankingLineRow {
@@ -36,6 +37,7 @@ impl From<Row> for RankingLineRow {
             draws: r.draws as u32,
             losses: r.losses as u32,
             ranking_points: r.ranking_points as u32,
+            bonus_points: r.bonus_points as u32,
         }
     }
 }
@@ -49,7 +51,7 @@ impl IRankingRepository for PgRankingRepository {
     ) -> Result<Option<RankingLineRow>, RankingRepositoryError> {
         let row = sqlx::query_as!(
             Row,
-            r#"SELECT team_id, matches_played, wins, draws, losses, ranking_points
+            r#"SELECT team_id, matches_played, wins, draws, losses, ranking_points, bonus_points
                FROM ranking_lines
                WHERE season_id = $1 AND team_id = $2
                ORDER BY sequence DESC
@@ -70,7 +72,8 @@ impl IRankingRepository for PgRankingRepository {
     ) -> Result<Vec<RankingLineRow>, RankingRepositoryError> {
         let rows = sqlx::query_as!(
             Row,
-            r#"SELECT DISTINCT ON (team_id) team_id, matches_played, wins, draws, losses, ranking_points
+            r#"SELECT DISTINCT ON (team_id) team_id, matches_played, wins, draws, losses,
+                      ranking_points, bonus_points
                FROM ranking_lines
                WHERE season_id = $1
                ORDER BY team_id, sequence DESC"#,
@@ -97,8 +100,9 @@ impl IRankingRepository for PgRankingRepository {
             sqlx::query!(
                 r#"INSERT INTO ranking_lines (
                     id, competition_id, season_id, round_id, match_report_id, team_id,
-                    recorded_at, matches_played, wins, draws, losses, ranking_points
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"#,
+                    recorded_at, matches_played, wins, draws, losses, ranking_points,
+                    bonus_points
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"#,
                 id,
                 line.competition_id.to_string(),
                 line.season_id.to_string(),
@@ -111,6 +115,7 @@ impl IRankingRepository for PgRankingRepository {
                 line.draws.0 as i32,
                 line.losses.0 as i32,
                 line.ranking_points.0 as i32,
+                line.bonus_points.0 as i32,
             )
             .execute(&mut *tx)
             .await
@@ -139,6 +144,7 @@ mod tests {
         draws: u32,
         losses: u32,
         points: u32,
+        bonus: u32,
     ) -> RankingLine {
         RankingLine {
             team_id: team_id.clone(),
@@ -152,6 +158,7 @@ mod tests {
             draws: DrawCount(draws),
             losses: LossCount(losses),
             ranking_points: RankingPoints(points),
+            bonus_points: RankingPoints(bonus),
         }
     }
 
@@ -162,15 +169,20 @@ mod tests {
         let home = TeamId::new();
         let away = TeamId::new();
 
-        let home_line = sample_line(&home, &season_id, 1, 1, 0, 0, 3);
-        let away_line = sample_line(&away, &season_id, 1, 0, 0, 1, 0);
+        let home_line = sample_line(&home, &season_id, 1, 1, 0, 0, 4, 1);
+        let away_line = sample_line(&away, &season_id, 1, 0, 0, 1, 0, 0);
         repo.insert_lines(&[home_line, away_line]).await.unwrap();
 
         let home_row = repo.find_latest_line(&season_id.to_string(), &home.to_string()).await.unwrap();
         let away_row = repo.find_latest_line(&season_id.to_string(), &away.to_string()).await.unwrap();
 
-        assert_eq!(home_row.unwrap().ranking_points, 3);
-        assert_eq!(away_row.unwrap().ranking_points, 0);
+        // La part bonus fait l'aller-retour en base, distincte du total qui la contient.
+        let home_row = home_row.unwrap();
+        assert_eq!(home_row.ranking_points, 4);
+        assert_eq!(home_row.bonus_points, 1);
+        let away_row = away_row.unwrap();
+        assert_eq!(away_row.ranking_points, 0);
+        assert_eq!(away_row.bonus_points, 0);
     }
 
     #[sqlx::test]
@@ -179,11 +191,11 @@ mod tests {
         let season_id = SeasonId::new();
         let team_id = TeamId::new();
 
-        let mut first = sample_line(&team_id, &season_id, 1, 1, 0, 0, 3);
+        let mut first = sample_line(&team_id, &season_id, 1, 1, 0, 0, 3, 0);
         first.recorded_at = Utc::now() + chrono::Duration::hours(1); // horodatage "futur"
         repo.insert_lines(&[first]).await.unwrap();
 
-        let mut second = sample_line(&team_id, &season_id, 2, 1, 0, 1, 3);
+        let mut second = sample_line(&team_id, &season_id, 2, 1, 0, 1, 3, 0);
         second.recorded_at = Utc::now() - chrono::Duration::hours(1); // horodatage "passé", inséré après
         repo.insert_lines(&[second]).await.unwrap();
 
@@ -201,9 +213,9 @@ mod tests {
         let team_a = TeamId::new();
         let team_b = TeamId::new();
 
-        repo.insert_lines(&[sample_line(&team_a, &season_id, 1, 1, 0, 0, 3)]).await.unwrap();
-        repo.insert_lines(&[sample_line(&team_a, &season_id, 2, 1, 1, 0, 4)]).await.unwrap();
-        repo.insert_lines(&[sample_line(&team_b, &season_id, 1, 0, 0, 1, 0)]).await.unwrap();
+        repo.insert_lines(&[sample_line(&team_a, &season_id, 1, 1, 0, 0, 3, 0)]).await.unwrap();
+        repo.insert_lines(&[sample_line(&team_a, &season_id, 2, 1, 1, 0, 4, 0)]).await.unwrap();
+        repo.insert_lines(&[sample_line(&team_b, &season_id, 1, 0, 0, 1, 0, 0)]).await.unwrap();
 
         let rows = repo.find_latest_lines_for_season(&season_id.to_string()).await.unwrap();
 

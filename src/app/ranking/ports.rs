@@ -14,6 +14,8 @@ pub struct RankingLineRow {
     pub draws: u32,
     pub losses: u32,
     pub ranking_points: u32,
+    /// Part bonus du total, déjà comprise dans `ranking_points`.
+    pub bonus_points: u32,
 }
 
 #[derive(Debug)]

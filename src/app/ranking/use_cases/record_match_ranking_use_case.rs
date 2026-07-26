@@ -110,6 +110,8 @@ fn to_totals(row: RankingLineRow) -> CumulativeTotals {
         draws: DrawCount(row.draws),
         losses: LossCount(row.losses),
         ranking_points: RankingPoints(row.ranking_points),
+        // Sans ce report, le cumul des bonus repartirait de zéro à chaque match.
+        bonus_points: RankingPoints(row.bonus_points),
     }
 }
 
@@ -193,6 +195,7 @@ mod tests {
                 draws: l.draws.0,
                 losses: l.losses.0,
                 ranking_points: l.ranking_points.0,
+                bonus_points: l.bonus_points.0,
             }))
         }
         async fn find_latest_lines_for_season(&self, _: &str) -> Result<Vec<RankingLineRow>, RankingRepositoryError> {

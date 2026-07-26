@@ -62,6 +62,9 @@ pub struct CumulativeTotals {
     pub draws: DrawCount,
     pub losses: LossCount,
     pub ranking_points: RankingPoints,
+    /// Points bonus cumulés. **Déjà comptés dans `ranking_points`** — conservés à
+    /// part pour que l'onglet « Classement détaillé » puisse détailler le total.
+    pub bonus_points: RankingPoints,
 }
 
 impl CumulativeTotals {
@@ -71,6 +74,7 @@ impl CumulativeTotals {
         draws: DrawCount(0),
         losses: LossCount(0),
         ranking_points: RankingPoints(0),
+        bonus_points: RankingPoints(0),
     };
 }
 
@@ -186,6 +190,8 @@ pub struct RankingLine {
     pub draws: DrawCount,
     pub losses: LossCount,
     pub ranking_points: RankingPoints,
+    /// Part bonus du total ci-dessus, cumulée depuis le début de la saison.
+    pub bonus_points: RankingPoints,
 }
 
 /// Identité d'une ligne de classement à enregistrer — regroupe les champs
@@ -224,14 +230,23 @@ impl RankingLine {
         rules: &RankingRules,
     ) -> RankingLine {
         let outcome = Self::derive_outcome(stats.own_td, stats.opponent_td);
-        let CumulativeTotals { matches_played, wins, draws, losses, ranking_points: points } =
-            previous.unwrap_or(CumulativeTotals::ZERO);
+        let CumulativeTotals {
+            matches_played,
+            wins,
+            draws,
+            losses,
+            ranking_points: points,
+            bonus_points: bonus_total,
+        } = previous.unwrap_or(CumulativeTotals::ZERO);
 
         let match_points = match outcome {
             MatchOutcome::Win => rules.win_points,
             MatchOutcome::Draw => rules.draw_points,
             MatchOutcome::Loss => rules.lose_points,
         };
+        // Calculé une seule fois, utilisé deux fois : le total et sa part bonus ne
+        // peuvent pas divergier.
+        let bonus = rules.bonus_points(&stats);
 
         RankingLine {
             team_id: ctx.team_id,
@@ -244,7 +259,8 @@ impl RankingLine {
             wins: WinCount(wins.0 + u32::from(outcome == MatchOutcome::Win)),
             draws: DrawCount(draws.0 + u32::from(outcome == MatchOutcome::Draw)),
             losses: LossCount(losses.0 + u32::from(outcome == MatchOutcome::Loss)),
-            ranking_points: points + match_points + rules.bonus_points(&stats),
+            ranking_points: points + match_points + bonus,
+            bonus_points: bonus_total + bonus,
         }
     }
 }
@@ -264,6 +280,7 @@ mod tests {
             draws: line.draws,
             losses: line.losses,
             ranking_points: line.ranking_points,
+            bonus_points: line.bonus_points,
         }
     }
 
@@ -438,6 +455,43 @@ mod tests {
             activated: BonusActivated(activated), min_casualties: MinCasualties(min_casualties), points: RankingPoints(points),
         };
         r
+    }
+
+    // ── Part bonus du total (carte 213) ──────────────────────────────────────
+
+    #[test]
+    fn bonus_points_are_accumulated_across_matches_and_stay_a_subset_of_the_total() {
+        let r = with_aggressive(true, 1, 2);
+
+        // Match 1 : victoire 2-1 avec 3 sorties → 3 pts de victoire + 2 de bonus.
+        let first = RankingLine::record_match(None, ctx(), stats(2, 1, 3), &r);
+        assert_eq!(first.ranking_points.0, 5);
+        assert_eq!(first.bonus_points.0, 2);
+
+        // Match 2 : nul 1-1 avec 3 sorties → +1 pt de nul, +2 de bonus.
+        let second = RankingLine::record_match(Some(totals_of(&first)), ctx(), stats(1, 1, 3), &r);
+        assert_eq!(second.ranking_points.0, 8);
+        assert_eq!(second.bonus_points.0, 4);
+        assert!(second.bonus_points.0 <= second.ranking_points.0);
+    }
+
+    #[test]
+    fn bonus_points_stay_at_zero_when_no_bonus_is_activated() {
+        // `rules()` a les trois bonus désactivés : le total est purement V/N/D.
+        let line = RankingLine::record_match(None, ctx(), stats(4, 0, 5), &rules());
+        assert_eq!(line.ranking_points.0, 3);
+        assert_eq!(line.bonus_points.0, 0);
+    }
+
+    #[test]
+    fn bonus_points_are_carried_over_when_a_match_earns_none() {
+        let r = with_aggressive(true, 1, 2);
+        let first = RankingLine::record_match(None, ctx(), stats(2, 1, 3), &r);
+
+        // Match sans sortie : aucun bonus gagné, mais le cumul acquis est conservé.
+        let second = RankingLine::record_match(Some(totals_of(&first)), ctx(), stats(2, 1, 0), &r);
+        assert_eq!(second.bonus_points.0, 2);
+        assert_eq!(second.ranking_points.0, 8);
     }
 
     #[test]
