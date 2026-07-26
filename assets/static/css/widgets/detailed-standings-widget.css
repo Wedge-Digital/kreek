@@ -56,3 +56,12 @@
   margin: 0; padding: 8px 12px; border-radius: 6px; font-size: var(--text-small);
   color: #c0392b; background: #fdf0ee; border: 1px solid #f5c6c0;
 }
+
+/* ─── Responsive ─── */
+@media (max-width: 768px) {
+  /* Toutes les colonnes sont conservées : c'est un onglet de vérification, en
+     amputer une le viderait de son sens. Le tableau défile dans `.sd-scroll`,
+     jamais le body. */
+  .sd-table { font-size: 10px; min-width: 640px; }
+  .sd-table th, .sd-table td { padding: 8px 6px; }
+}

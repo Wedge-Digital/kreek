@@ -174,12 +174,15 @@
     padding-top: 52px;
     padding-bottom: 68px;
   }
+  /* `.page-content` porte déjà le décalage du chrome fixe — en-tête de 52px et
+     tabbar de 57px — et `.page-content-wide` est imbriquée dedans : le répéter
+     ici le doublait, soit 104px de vide en haut et 136px en bas.
+     Il ne reste qu'un retrait uniforme, qui donne aussi au contenu la marge
+     latérale qu'il n'avait nulle part : il touchait les deux bords de l'écran. */
   .page-content-wide {
-    padding: 0;
+    padding: var(--p1);
     height: auto;
     overflow: visible;
-    padding-top: 52px;
-    padding-bottom: 68px;
   }
 
   /* ── Mobile header ── */

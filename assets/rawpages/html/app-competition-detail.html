@@ -27,6 +27,19 @@
     .league-meta-label { color: var(--dark-3); }
     .league-meta-value { color: var(--dark-1); font-weight: 500; }
 
+    /* ─── Navigation d'onglets mobile ─── */
+    /* Masquée par défaut : le desktop garde la barre d'onglets classique. */
+    .tab-select { display: none; }
+    .tab-select-label {
+      font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase;
+      letter-spacing: 0.5px; font-weight: 700;
+    }
+    .tab-select-input {
+      width: 100%; padding: 10px var(--p1); border-radius: 8px;
+      border: 1px solid var(--dark-5); background: var(--white);
+      font-family: inherit; font-size: var(--text-small); font-weight: 600; color: var(--dark-0);
+    }
+
     /* ─── Standings ─── */
     .standings-table { background: var(--white); border-radius: 10px; overflow: hidden; margin-bottom: var(--p1); }
     .standings-head  {
@@ -44,7 +57,17 @@
     .standings-row:nth-child(even) { background: var(--dark-7); }
     .standings-row:hover           { background: var(--dark-6); cursor: pointer; }
     .s-rank { color: var(--dark-3); font-weight: 700; text-align: center; }
-    .s-team { font-weight: 600; color: var(--dark-1); font-size: var(--text-small); }
+    /* Variante à colonne Bonus — une colonne de plus, déclarée ici plutôt qu'en
+       style inline : un style inline ne peut pas être surchargé par une media
+       query, et le CLAUDE.md les interdit dans les templates. */
+    .standings-table--bonus .standings-head,
+    .standings-table--bonus .standings-row {
+      grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px;
+    }
+    .s-team {
+      font-weight: 600; color: var(--dark-1); font-size: var(--text-small);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
     .s-num  { text-align: center; color: var(--dark-2); }
     .s-pts  { text-align: center; font-weight: 700; color: var(--dark-0); }
 
@@ -179,61 +202,115 @@
     .tab-placeholder { background: var(--white); border-radius: 10px; padding: var(--p2); color: var(--dark-3); font-size: var(--text-small); text-align: center; }
     .text-center     { text-align: center; }
 
-    /* ─── Responsive — tablette (≤ 900px) ─── */
-    @media (max-width: 900px) {
-      .match-row        { grid-template-columns: 1fr 110px 1fr; padding: 10px var(--p1); }
-      .team-logo        { width: 48px; height: 48px; border-radius: 8px; }
-      .team-logo-initials { font-size: 13px; }
-      .score-num        { font-size: 16px; }
+    /* ─── Responsive ───────────────────────────────────────────────────────
+       Un seul breakpoint de référence : 768px, conformément au CLAUDE.md.
+       Les valeurs 900px et 640px de la version précédente de cette maquette
+       ont été fondues ici — elles introduisaient un palier intermédiaire que
+       le reste de l'application ne connaît pas.
+       Le palier 400px est conservé pour les seules lignes de match, dont la
+       densité ne tient plus sur les très petits écrans. */
 
-      .cal-row          { padding: 8px var(--p1); gap: 8px; }
-      .cal-logo         { width: 32px; height: 32px; border-radius: 6px; }
-      .cal-logo-initials { font-size: 9px; }
-    }
+    @media (max-width: 768px) {
+      /* Chrome global — repris de `layout-app.css`, qui masque déjà la barre
+         latérale et le menu sous 768px. Dupliqué ici uniquement pour que
+         l'aperçu de la maquette soit fidèle : en production, aucune page de
+         contenu n'a à s'en occuper (CLAUDE.md, « Chrome global »). */
+      .sidebar  { display: none !important; }
+      .menu-bar { display: none !important; }
+      .app-layout { display: block; height: auto; overflow: visible; }
+      .main-area  { margin-left: 0; width: 100%; }
 
-    /* ─── Responsive — mobile (≤ 640px) ─── */
-    @media (max-width: 640px) {
-      .detail-layout  { flex-direction: column; }
-      .detail-left    { display: none; }
-      .detail-right   { overflow-y: visible; }
+      /* Le panneau de gauche passe au-dessus du contenu, en bandeau compact :
+         l'information reste lisible d'un coup d'œil, sans interaction ni
+         défilement supplémentaire. La masquer la rendrait inatteignable sur
+         mobile. */
+      .detail-layout { flex-direction: column; gap: var(--p1); }
+      .detail-left   { flex: none; }
+      .detail-right  { flex: none; overflow-y: visible; }
 
-      /* Match rows */
-      .match-row      { grid-template-columns: 1fr 80px 1fr; padding: 8px 10px; gap: 4px; }
-      .team-logo      { width: 36px; height: 36px; border-radius: 6px; }
+      .left-panel {
+        position: static; flex-direction: row; flex-wrap: wrap;
+        align-items: center; gap: var(--p1); padding: var(--p1);
+      }
+      .league-banner    { height: 44px; width: 44px; flex-shrink: 0; font-size: 14px; }
+      .league-meta      { flex-direction: row; width: 100%; gap: 0; }
+      .league-meta-item {
+        flex: 1; flex-direction: column; align-items: center; gap: 2px;
+        border-left: 1px solid var(--dark-6);
+      }
+      .league-meta-item:first-child { border-left: none; }
+
+      /* La barre d'onglets cède la place au sélecteur : 6 onglets dont un
+         libellé long ne tiennent pas, et une barre défilante cacherait les
+         quatre derniers. */
+      .tabs       { display: none; }
+      .tab-select { display: flex; flex-direction: column; gap: 4px; margin-bottom: var(--p1); }
+
+      /* Match en attente de saisie : le badge et le lien font 110px à eux deux
+         et venaient se coller au nom de l'équipe adverse. Ils passent sur leur
+         propre ligne, sous les deux équipes. */
+      /* `.match-row.in-progress-row` et non `.in-progress-row` seul : à
+         spécificité égale, la règle `.match-row` qui suit l'emporterait. */
+      .match-row.in-progress-row {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas: "home away" "status status";
+        row-gap: 8px;
+      }
+      .in-progress-row .team-side              { grid-area: home; }
+      .in-progress-row .team-side-away         { grid-area: away; }
+      .in-progress-row .score-block            { grid-area: status; }
+      .in-progress-row .in-progress-block      { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px; }
+
+      /* Lignes de match et de calendrier */
+      .match-row        { grid-template-columns: 1fr 80px 1fr; padding: 8px 10px; gap: 4px; }
+      .team-logo        { width: 36px; height: 36px; border-radius: 6px; }
       .team-logo-initials { font-size: 10px; }
-      .team-name      { font-size: 13px; }
-      .team-sub       { display: none; }
-      .team-side      { gap: 6px; }
-      .score-num      { font-size: 15px; min-width: 14px; }
-      .score-cas      { display: none; }
-      .match-date     { font-size: 10px; }
-      .status-badge   { font-size: 9px; padding: 2px 7px; }
-      .report-link    { font-size: 10px; padding: 2px 7px; }
+      .team-name        { font-size: 13px; }
+      .team-sub         { display: none; }
+      .team-side        { gap: 6px; }
+      .score-num        { font-size: 15px; min-width: 14px; }
+      .score-cas        { display: none; }
+      .match-date       { font-size: 10px; }
+      .status-badge     { font-size: 9px; padding: 2px 7px; }
+      .report-link      { font-size: 10px; padding: 2px 7px; }
 
-      /* Cal rows */
-      .cal-row        { padding: 7px 10px; gap: 6px; }
-      .cal-logo       { width: 28px; height: 28px; border-radius: 5px; }
+      .cal-row          { padding: 7px 10px; gap: 6px; }
+      .cal-logo         { width: 28px; height: 28px; border-radius: 5px; }
       .cal-logo-initials { font-size: 8px; }
-      .cal-name       { font-size: 13px; }
-      .cal-coach      { display: none; }
-      .cal-team       { gap: 6px; }
+      .cal-name         { font-size: 13px; }
+      .cal-coach        { display: none; }
+      .cal-team         { gap: 6px; }
 
-      /* Tabs — 6 onglets dont un libellé long : la barre scrolle plutôt que
-         de pousser la page en débordement horizontal. */
-      .tabs           { gap: 0; flex-wrap: nowrap; overflow-x: auto; }
-      .tab            { padding: 8px 10px; font-size: 13px; white-space: nowrap; }
+      /* Classement simple : colonnes numériques resserrées et nom tronqué
+         plutôt que replié sur trois lignes. Toutes les colonnes tiennent — les
+         masquer priverait le lecteur de la décomposition du total. */
+      .standings-head, .standings-row {
+        grid-template-columns: 22px 1fr 28px 28px 28px 28px 34px;
+        padding: 10px var(--p1); gap: 4px;
+      }
+      /* La colonne Bonus reçoit 40px : son en-tête est le plus long des huit
+         et débordait sur PTS à 30px. */
+      .standings-table--bonus .standings-head,
+      .standings-table--bonus .standings-row {
+        grid-template-columns: 20px 1fr 24px 22px 22px 22px 40px 30px;
+      }
+      .s-team { font-size: 13px; }
 
-      /* Section header */
+      /* Le classement détaillé garde toutes ses colonnes : c'est un onglet de
+         vérification, en amputer une le viderait de son sens. Il défile dans
+         son propre conteneur — jamais le body. */
+      .sd-table { font-size: 10px; min-width: 640px; }
+      .sd-table th, .sd-table td { padding: 8px 6px; }
+
       .section-block-header { padding: 10px; }
     }
 
-    /* ─── Responsive — très petit (≤ 400px) ─── */
+    /* ─── Très petits écrans (≤ 400px) ─── */
     @media (max-width: 400px) {
-      .match-row      { grid-template-columns: 1fr 70px 1fr; }
-      .team-logo      { display: none; }
-      .team-name      { font-size: 12px; }
-      .cal-name       { font-size: 12px; }
-      .tab            { padding: 7px 8px; font-size: 12px; }
+      .match-row { grid-template-columns: 1fr 70px 1fr; }
+      .team-logo { display: none; }
+      .team-name { font-size: 12px; }
+      .cal-name  { font-size: 12px; }
     }
   </style>
 </head>
@@ -304,12 +381,32 @@
 
             <!-- 5 onglets -->
             <div class="tabs" style="margin-bottom: var(--p1);">
-              <div class="tab" onclick="showTab('classement', this)">Classement</div>
-              <div class="tab" onclick="showTab('classement-detaille', this)">Classement détaillé</div>
-              <div class="tab active" onclick="showTab('resultats', this)">Résultats</div>
-              <div class="tab" onclick="showTab('calendrier', this)">Calendrier</div>
-              <div class="tab" onclick="showTab('equipes', this)">Équipes</div>
-              <div class="tab" onclick="showTab('stats', this)">Statistiques</div>
+              <div class="tab" data-tab="classement" onclick="showTab('classement', this)">Classement</div>
+              <div class="tab" data-tab="classement-detaille" onclick="showTab('classement-detaille', this)">Classement détaillé</div>
+              <div class="tab active" data-tab="resultats" onclick="showTab('resultats', this)">Résultats</div>
+              <div class="tab" data-tab="calendrier" onclick="showTab('calendrier', this)">Calendrier</div>
+              <div class="tab" data-tab="equipes" onclick="showTab('equipes', this)">Équipes</div>
+              <div class="tab" data-tab="stats" onclick="showTab('stats', this)">Statistiques</div>
+            </div>
+
+            <!-- Navigation d'onglets — mobile uniquement (≤ 768px).
+                 En production ce sera un <kreek-select>, composant imposé par le
+                 CLAUDE.md pour tout sélecteur. Ici un <select> natif : les
+                 maquettes sont explicitement autorisées à valider le rendu avec
+                 les contrôles natifs.
+                 Choisi plutôt qu'une barre défilante : avec 6 onglets dont un
+                 libellé long, on ne verrait que deux onglets sur un écran de
+                 375px, et le défilement horizontal passe largement inaperçu. -->
+            <div class="tab-select">
+              <span class="tab-select-label">Onglet</span>
+              <select class="tab-select-input" id="tab-nav" onchange="showTabFromSelect(this)">
+                <option value="classement">Classement</option>
+                <option value="classement-detaille">Classement détaillé</option>
+                <option value="resultats" selected>Résultats</option>
+                <option value="calendrier">Calendrier</option>
+                <option value="equipes">Équipes</option>
+                <option value="stats">Statistiques</option>
+              </select>
             </div>
 
             <!-- ── Classement ── -->
@@ -333,17 +430,17 @@
             <!-- ── Classement — variante avec colonne Bonus (si la compétition définit des points bonus ; maquette de revue) ── -->
             <div style="margin-top: var(--p3);">
               <p class="section-label" style="margin-bottom: var(--p1);">Classement — variante avec points bonus (colonne conditionnelle, seulement si la compétition en définit)</p>
-              <div class="standings-table card-shadow">
-                <div class="standings-head" style="grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px;">
+              <div class="standings-table standings-table--bonus card-shadow">
+                <div class="standings-head">
                   <div>#</div><div>Équipe</div>
                   <div class="text-center">MJ</div><div class="text-center">V</div>
                   <div class="text-center">N</div><div class="text-center">D</div>
                   <div class="text-center">Bonus</div>
                   <div class="text-center">Pts</div>
                 </div>
-                <div class="standings-row" style="grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px;"><div class="s-rank">1</div><div class="s-team">🏆 Les Korrigans FC</div><div class="s-num">8</div><div class="s-num">6</div><div class="s-num">1</div><div class="s-num">1</div><div class="s-num">2</div><div class="s-pts">19</div></div>
-                <div class="standings-row" style="grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px;"><div class="s-rank">2</div><div class="s-team">Orc Boyz United</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">2</div><div class="s-num">1</div><div class="s-num">0</div><div class="s-pts">17</div></div>
-                <div class="standings-row" style="grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px;"><div class="s-rank">3</div><div class="s-team">Skaven Speedsters</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">1</div><div class="s-num">2</div><div class="s-num">1</div><div class="s-pts">16</div></div>
+                <div class="standings-row"><div class="s-rank">1</div><div class="s-team">🏆 Les Korrigans FC</div><div class="s-num">8</div><div class="s-num">6</div><div class="s-num">1</div><div class="s-num">1</div><div class="s-num">2</div><div class="s-pts">19</div></div>
+                <div class="standings-row"><div class="s-rank">2</div><div class="s-team">Orc Boyz United</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">2</div><div class="s-num">1</div><div class="s-num">0</div><div class="s-pts">17</div></div>
+                <div class="standings-row"><div class="s-rank">3</div><div class="s-team">Skaven Speedsters</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">1</div><div class="s-num">2</div><div class="s-num">1</div><div class="s-pts">16</div></div>
               </div>
             </div>
 
@@ -800,6 +897,13 @@
       document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
       document.getElementById('tab-' + name).style.display = '';
       el.classList.add('active');
+      // Les deux navigations coexistent dans le DOM ; celle qui est masquée doit
+      // rester juste, sinon une rotation d'écran afficherait un onglet faux.
+      document.getElementById('tab-nav').value = name;
+    }
+
+    function showTabFromSelect(select) {
+      showTab(select.value, document.querySelector('.tab[data-tab="' + select.value + '"]'));
     }
   </script>
 </body>

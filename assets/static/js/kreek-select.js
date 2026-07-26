@@ -20,6 +20,18 @@
  *   listen-query   — nom du query param envoyé à l'URL (défaut: même valeur que listen-param)
  *   auto-select-first — sélectionne automatiquement le premier item après un fetch cascade
  *
+ * Options statiques — alternative à `url`, pour une liste figée qui ne justifie
+ * pas un endpoint JSON. Se déclare en enfants `<option>`, comme un select natif :
+ *
+ *   <kreek-select name="onglet">
+ *     <option value="standings" selected>Classement</option>
+ *     <option value="resultats">Résultats</option>
+ *   </kreek-select>
+ *
+ * `value` est facultatif (le texte fait alors office de valeur) et `selected`
+ * équivaut à l'attribut `selected-value`. Si des `<option>` sont présentes,
+ * `url` est ignorée.
+ *
  * Les templates utilisent %field% comme placeholders, remplacés par les valeurs JSON.
  */
 (function () {
@@ -52,9 +64,50 @@
       this._listenQuery = this.getAttribute('listen-query') || this._listenParam;
       this._autoSelectFirst = this.hasAttribute('auto-select-first');
 
-      this._render();
-      if (this._url && !this._listenEvent) this._fetchData();
-      this._setupListener();
+      var self = this;
+      var start = function () {
+        // Lues **avant** `_render()`, qui vide le contenu de l'élément.
+        var inlineItems = self._readInlineOptions();
+
+        self._render();
+        if (inlineItems.length) {
+          self._items = inlineItems;
+          self._renderOptions();
+          if (self._selectedValue) self._preselectValue(self._selectedValue);
+        } else if (self._url && !self._listenEvent) {
+          self._fetchData();
+        }
+        self._setupListener();
+      };
+
+      // Pendant l'analyse initiale du document, `connectedCallback` se déclenche
+      // dès la balise ouvrante : les `<option>` enfants n'existent pas encore, et
+      // les lire donnerait une liste vide. On attend alors la fin de l'analyse.
+      // Sur un fragment injecté par HTMX, les enfants sont déjà là — et un select
+      // alimenté par `url` n'a de toute façon rien à attendre.
+      if (document.readyState === 'loading' && !this._url && !this.querySelector('option')) {
+        document.addEventListener('DOMContentLoaded', start, { once: true });
+      } else {
+        start();
+      }
+    }
+
+    /**
+     * Options statiques déclarées en enfants `<option>` — voir l'en-tête du
+     * fichier. Retourne un tableau vide s'il n'y en a pas, auquel cas le
+     * composant retombe sur son chargement par `url`.
+     */
+    _readInlineOptions() {
+      var self = this;
+      return Array.prototype.map.call(this.querySelectorAll('option'), function (opt) {
+        var label = opt.textContent.trim();
+        var value = opt.hasAttribute('value') ? opt.getAttribute('value') : label;
+        if (opt.hasAttribute('selected') && !self._selectedValue) self._selectedValue = value;
+        var item = {};
+        item[self._valueField] = value;
+        item[self._labelField] = label;
+        return item;
+      });
     }
 
     disconnectedCallback() {

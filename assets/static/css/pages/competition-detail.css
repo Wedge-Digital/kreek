@@ -2,6 +2,9 @@
 .detail-left   { flex: 1; }
 .detail-right  { flex: 4; overflow-y: auto; }
 .detail-right .tabs { margin-bottom: var(--p1); }
+/* Navigation d'onglets mobile — masquée par défaut, le desktop gardant la
+   barre d'onglets classique. */
+.tab-select { display: none; }
 
 /* Panneau gauche */
 .left-panel {
@@ -208,3 +211,119 @@
 
 /* Sentinel infinite scroll */
 .scroll-sentinel { height: 1px; }
+
+/* ─── Responsive ──────────────────────────────────────────────────────────────
+   Un seul breakpoint : 768px, celui de référence du projet. Le chrome global
+   (barre latérale, menu, tabbar mobile) est géré par `layout-app.css` — cette
+   page n'a à s'occuper que de son propre contenu. */
+
+@media (max-width: 768px) {
+  /* Le panneau de gauche passe au-dessus du contenu, en bandeau compact plutôt
+     que masqué : sinon la bannière, le nom de la ligue et ses métadonnées
+     deviennent inatteignables sur mobile. */
+  .detail-layout { flex-direction: column; gap: var(--p1); height: auto; }
+  .detail-left   { flex: none; }
+  .detail-right  { flex: none; overflow-y: visible; }
+
+  .left-panel {
+    position: static; flex-direction: row; flex-wrap: wrap;
+    align-items: center; gap: 8px; padding: var(--p1);
+  }
+  .league-banner        { height: 44px; width: 44px; flex-shrink: 0; font-size: 14px; }
+  .league-banner--logo  { height: 44px; width: 44px; }
+  .league-meta          { width: 100%; gap: 4px; }
+  .league-meta-item     { justify-content: flex-start; gap: 6px; }
+
+  /* Le titre de compétition prend deux lignes en `--h5` dès que le nom est un
+     peu long : il redescend à la taille du corps de texte. */
+  .left-panel .h5-gras { font-size: var(--text-small); line-height: 1.3; }
+
+  /* Le nom de saison sous le titre répète mot pour mot le contenu du sélecteur
+     placé juste en dessous. */
+  .detail-season-name { display: none; }
+
+  /* Le séparateur coûte 25px de haut avec ses marges, pour une frontière que le
+     bandeau compact ne demande plus. */
+  .left-panel .separator { display: none; }
+
+  /* Intitulé et sélecteur de saison sur une seule ligne. */
+  .filter-section        { flex-direction: row; align-items: center; gap: 8px; width: 100%; }
+  .filter-section .filter-title { flex-shrink: 0; font-size: var(--text-small); }
+  .filter-section .picker       { flex: 1; min-width: 0; }
+
+  /* La saisie d'un match est une action de bureau : le parcours de rapport de
+     match n'est pas pensé pour un écran de téléphone. Le bouton est retiré du
+     bandeau replié plutôt que de l'encombrer. */
+  .left-panel-new-match { display: none; }
+
+  /* Les six onglets ne tiennent pas sur une ligne : `Calendrier`, `Équipes` et
+     `Statistiques` sortaient de l'écran, sans barre de défilement pour le
+     signaler — trois onglets sur six étaient inatteignables. La barre cède donc
+     la place au sélecteur, qui les montre tous d'un coup à l'ouverture.
+     Les deux restent dans le DOM : les onglets portent les `hx-get`, le
+     sélecteur ne fait que relayer le clic. */
+  .detail-right .tabs { display: none; }
+  .tab-select { display: block; margin-bottom: var(--p1); }
+
+  /* Lignes de match — Résultats */
+  .match-widget       { grid-template-columns: 1fr 80px 1fr; padding: 8px 10px; }
+  .match-team-logo-sm { width: 36px; height: 36px; border-radius: 6px; }
+  .match-team-logo-sm--initials { font-size: 11px; }
+  .match-team-name    { font-size: 13px; }
+  .match-team-sub     { display: none; }
+  .match-side         { gap: 6px; }
+  .match-score-num    { font-size: 15px; min-width: 14px; }
+  .match-score-cas    { display: none; }
+  .match-date         { font-size: 10px; }
+  .match-status-badge { font-size: 9px; padding: 2px 7px; }
+
+  /* Match en cours de saisie : le badge et le lien font une bonne centaine de
+     pixels à eux deux et viendraient se coller au nom de l'équipe adverse. Ils
+     passent sur leur propre ligne, sous les deux équipes.
+     Sélecteur à deux classes : à spécificité égale, la règle `.match-widget`
+     ci-dessus l'emporterait sur l'ordre. */
+  .match-widget.match-widget--in-progress {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: "home away" "status status";
+    row-gap: 8px;
+  }
+  .match-widget--in-progress .match-side        { grid-area: home; }
+  .match-widget--in-progress .match-side--away  { grid-area: away; }
+  .match-widget--in-progress .match-score-block { grid-area: status; }
+  .match-widget--in-progress .match-in-progress-block {
+    flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px;
+  }
+
+  /* Lignes de match — Calendrier */
+  .cal-row            { grid-template-columns: 1fr 48px 1fr; padding: 8px 10px; }
+  .cal-logo           { width: 28px; height: 28px; border-radius: 5px; }
+  .cal-logo--initials { font-size: 9px; }
+  .cal-team-name      { font-size: 13px; }
+  .cal-team           { gap: 6px; }
+
+  /* En-têtes de journée et de liste */
+  .matches-list-header, .cal-journee-header { padding: 10px var(--p1); }
+  .cal-journee-meta { gap: 8px; }
+
+  /* Équipes : des cartes plus étroites pour en garder deux par ligne. */
+  .teams-grid     { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+  .team-card      { padding: var(--p1); }
+  .team-card-logo { width: 64px; height: 64px; }
+
+  /* Statistiques : les deux tableaux côte à côte ne tiennent pas, ils
+     s'empilent. */
+  .stats-grid         { grid-template-columns: 1fr; }
+  .stats-row          { grid-template-columns: 24px 1fr 1fr 40px; padding: 8px 10px; gap: 6px; }
+  .stats-table-header { padding: 10px var(--p1); }
+
+  .comp-header { padding: var(--p1); gap: var(--p1); }
+}
+
+/* ─── Très petits écrans (≤ 400px) ─── */
+@media (max-width: 400px) {
+  .match-widget       { grid-template-columns: 1fr 70px 1fr; }
+  .match-team-logo-sm { display: none; }
+  .match-team-name    { font-size: 12px; }
+  .cal-team-name      { font-size: 12px; }
+  .teams-grid         { grid-template-columns: 1fr 1fr; }
+}

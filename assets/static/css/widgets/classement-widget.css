@@ -40,3 +40,18 @@
   margin: 0; padding: 8px 12px; border-radius: 6px; font-size: var(--text-small);
   color: #c0392b; background: #fdf0ee; border: 1px solid #f5c6c0;
 }
+
+/* ─── Responsive ─── */
+@media (max-width: 768px) {
+  /* Colonnes numériques resserrées et nom d'équipe tronqué en fin de ligne
+     plutôt que replié sur trois lignes. Toutes les colonnes sont conservées :
+     les masquer priverait le lecteur de la décomposition du total. */
+  .standings-header, .standings-row {
+    grid-template-columns: 22px 1fr 28px 28px 28px 28px 34px;
+    padding: 10px var(--p1); gap: 4px;
+  }
+  .standings-team {
+    font-size: 13px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+}
