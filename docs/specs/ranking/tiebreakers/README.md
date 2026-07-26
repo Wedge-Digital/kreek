@@ -57,11 +57,14 @@ reste à préciser — traité avec l'unité `tiebreak-calc`.
 
 ## Points ouverts
 
-- **Périmètre du gel (règle 4)** : geler les départages sans geler les points V/N/D
-  ni les bonus serait incohérent — la règle est transverse au formulaire de règles.
-  Proposition : la spécifier ici, l'implémenter dans une carte séparée pour ne pas
-  élargir le périmètre de cette feature.
+- ~~**Périmètre du gel (règle 4)**~~ — **tranché en phase 2** : aucun travail requis.
+  Le formulaire de règles n'existe que dans le parcours de création, il n'y a pas de
+  route d'édition après création. La règle est déjà vraie de fait ; elle devient une
+  contrainte pour la future page d'admin des règles. Pas de carte séparée.
 - **Sens et sémantique de chaque critère** : à détailler avec l'unité `tiebreak-calc`.
+
+Le projet n'étant pas en production, aucune reprise de données n'est à prévoir : les
+configurations existantes sont des brouillons sans valeur à préserver.
 
 ## Découpage en unités
 
@@ -76,5 +79,5 @@ Ordre de traitement : **`competition-rules-form` d'abord**, puis `tiebreak-calc`
 
 | Unité | Mockup | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|---|
-| competition-rules-form | ✅ | | | | | | | |
+| competition-rules-form | ✅ | ✅ | | | | | | |
 | tiebreak-calc | n/a | n/a | | | | | | |
