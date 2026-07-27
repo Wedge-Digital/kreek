@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rapport de match — Zone de correction</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ═══════════════════════════════════════════════════════════════
+       Maquette ciblée : zone de correction du recap d'un rapport publié.
+       Seule la fin de `ms-main` change — le reste de la page (hero,
+       timeline, sidebar) est inchangé et n'est pas remaquetté.
+
+       Les classes .ms-cta-row / .ms-btn-* sont reprises telles quelles
+       de assets/static/css/pages/match-report-recap.css (l.430-465)
+       pour que la nouvelle zone soit jugée dans son vrai contexte.
+       ═══════════════════════════════════════════════════════════════ */
+
+    body {
+      font-family: var(--font-body);
+      background: var(--dark-6);
+      padding: var(--p2);
+      margin: 0;
+    }
+    .demo-wrap { max-width: 760px; margin: 0 auto; }
+    .demo-label {
+      font-family: var(--font-accent);
+      font-size: var(--text-tiny);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--dark-3);
+      margin: var(--p3) 0 var(--p1);
+    }
+    .demo-label:first-child { margin-top: 0; }
+    .demo-frame {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p2);
+    }
+
+    /* ── Existant : ligne de CTA (copie conforme) ───────────────── */
+    .ms-cta-row { display: flex; gap: var(--p1); }
+    .ms-btn-primary {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px;
+      background: var(--main-blue);
+      color: var(--white);
+      border-radius: 8px;
+      font-size: var(--text-small);
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      border: none;
+      text-decoration: none;
+      width: 100%;
+    }
+    .ms-btn-primary:hover { opacity: 0.85; }
+    .ms-btn-outline {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px;
+      background: transparent;
+      color: var(--dark-2);
+      border-radius: 8px;
+      font-size: var(--text-small);
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--dark-4);
+      transition: background 0.15s;
+      text-decoration: none;
+    }
+    .ms-btn-outline:hover { background: var(--dark-6); }
+
+    /* ── Nouveau : zone de correction ──────────────────────────── */
+    .ms-correct-zone {
+      margin-top: var(--p2);
+      padding-top: var(--p2);
+      border-top: 1px solid var(--dark-5);
+      display: flex;
+      flex-direction: column;
+      gap: var(--p05);
+    }
+
+    .ms-correct-btn {
+      align-self: flex-start;
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px;
+      background: transparent;
+      color: var(--dark-2);
+      border: 1px solid var(--dark-4);
+      border-radius: 8px;
+      font-family: var(--font-body);
+      font-size: var(--text-small);
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .ms-correct-btn:hover { background: var(--dark-6); border-color: var(--dark-3); }
+
+    .ms-correct-btn:disabled,
+    .ms-correct-btn[disabled] {
+      color: var(--dark-4);
+      border-color: var(--dark-5);
+      background: transparent;
+      cursor: not-allowed;
+    }
+    .ms-correct-btn:disabled:hover { background: transparent; border-color: var(--dark-5); }
+
+    .ms-correct-hint {
+      font-size: var(--text-tiny);
+      color: var(--dark-3);
+      line-height: 1.5;
+      max-width: 52ch;
+    }
+
+    .ms-correct-blocked {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: var(--text-tiny);
+      color: var(--dark-2);
+      line-height: 1.5;
+      max-width: 52ch;
+      background: var(--dark-6);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .ms-correct-blocked-icon { flex-shrink: 0; line-height: 1.4; }
+
+    /* ── Bandeau : rapport dépublié en attente de re-publication ── */
+    .ms-unpublished-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: rgba(255,107,53,0.10);
+      border-left: 3px solid var(--orange);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: var(--p2);
+    }
+    .ms-unpublished-banner-icon { flex-shrink: 0; }
+    .ms-unpublished-banner-text {
+      font-size: var(--text-tiny);
+      color: var(--dark-1);
+      line-height: 1.5;
+    }
+    .ms-unpublished-banner-text strong { font-weight: 700; }
+
+    @media (max-width: 768px) {
+      body { padding: var(--p1); }
+      .ms-cta-row { flex-direction: column; }
+      .ms-correct-btn { align-self: stretch; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+<div class="demo-wrap">
+
+  <!-- ══════════════════════════════════════════════════════════════
+       ÉTAT 1 — Corrigeable
+       Les 2 équipes sont en phase Amélioration, aucun SPP dépensé.
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="demo-label">État 1 — Rapport publié, corrigeable</div>
+  <div class="demo-frame">
+
+    <div class="ms-cta-row">
+      <a class="ms-btn-outline" href="#">&#8592; Retour aux r&eacute;sultats</a>
+      <a class="ms-btn-primary" href="#">Voir la fiche Orcs de Karak &#8594;</a>
+    </div>
+
+    <div class="ms-correct-zone">
+      <button type="button" class="ms-correct-btn">
+        <span>&#9998;</span> Corriger le rapport
+      </button>
+      <p class="ms-correct-hint">
+        Le rapport sera d&eacute;publi&eacute; et ses effets annul&eacute;s sur les deux &eacute;quipes :
+        tr&eacute;sorerie, fans, SPP des joueurs et classement.
+      </p>
+    </div>
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════
+       ÉTAT 2 — Bloqué : SPP déjà dépensés par l'adversaire
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="demo-label">État 2 — Bloqu&eacute; : l'adversaire a d&eacute;pens&eacute; ses SPP</div>
+  <div class="demo-frame">
+
+    <div class="ms-cta-row">
+      <a class="ms-btn-outline" href="#">&#8592; Retour aux r&eacute;sultats</a>
+      <a class="ms-btn-primary" href="#">Voir la fiche Orcs de Karak &#8594;</a>
+    </div>
+
+    <div class="ms-correct-zone">
+      <button type="button" class="ms-correct-btn" disabled>
+        <span>&#9998;</span> Corriger le rapport
+      </button>
+      <div class="ms-correct-blocked">
+        <span class="ms-correct-blocked-icon">&#9432;</span>
+        <span>
+          <strong>Bone Crushers</strong> a d&eacute;j&agrave; utilis&eacute; les SPP de ses joueurs.
+          Le rapport n'est plus corrigeable.
+        </span>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════
+       ÉTAT 3 — Bloqué : SPP déjà dépensés par sa propre équipe
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="demo-label">État 3 — Bloqu&eacute; : votre &eacute;quipe a d&eacute;pens&eacute; ses SPP</div>
+  <div class="demo-frame">
+
+    <div class="ms-cta-row">
+      <a class="ms-btn-outline" href="#">&#8592; Retour aux r&eacute;sultats</a>
+      <a class="ms-btn-primary" href="#">Voir la fiche Orcs de Karak &#8594;</a>
+    </div>
+
+    <div class="ms-correct-zone">
+      <button type="button" class="ms-correct-btn" disabled>
+        <span>&#9998;</span> Corriger le rapport
+      </button>
+      <div class="ms-correct-blocked">
+        <span class="ms-correct-blocked-icon">&#9432;</span>
+        <span>
+          <strong>Orcs de Karak</strong> a d&eacute;j&agrave; utilis&eacute; les SPP de ses joueurs.
+          Le rapport n'est plus corrigeable.
+        </span>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════
+       ÉTAT 4 — Bloqué : une équipe a quitté la phase Amélioration
+       (phase validée, recrutement engagé, ou match suivant démarré)
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="demo-label">État 4 — Bloqu&eacute; : une &eacute;quipe a quitt&eacute; la phase Am&eacute;lioration</div>
+  <div class="demo-frame">
+
+    <div class="ms-cta-row">
+      <a class="ms-btn-outline" href="#">&#8592; Retour aux r&eacute;sultats</a>
+      <a class="ms-btn-primary" href="#">Voir la fiche Orcs de Karak &#8594;</a>
+    </div>
+
+    <div class="ms-correct-zone">
+      <button type="button" class="ms-correct-btn" disabled>
+        <span>&#9998;</span> Corriger le rapport
+      </button>
+      <div class="ms-correct-blocked">
+        <span class="ms-correct-blocked-icon">&#9432;</span>
+        <span>
+          <strong>Bone Crushers</strong> a valid&eacute; sa phase d'am&eacute;lioration.
+          Le rapport n'est plus corrigeable.
+        </span>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════
+       ÉTAT 5 — Après correction : le rapport est revenu en
+       ReadyToPublish. Bandeau + CTA de re-publication existants.
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="demo-label">État 5 — Rapport d&eacute;publi&eacute;, en cours de correction</div>
+  <div class="demo-frame">
+
+    <div class="ms-unpublished-banner">
+      <span class="ms-unpublished-banner-icon">&#9998;</span>
+      <span class="ms-unpublished-banner-text">
+        <strong>Ce rapport est en cours de correction.</strong>
+        Il a &eacute;t&eacute; d&eacute;publi&eacute; et ses effets ont &eacute;t&eacute; annul&eacute;s.
+        Ils seront r&eacute;appliqu&eacute;s &agrave; la re-publication.
+      </span>
+    </div>
+
+    <div class="ms-cta-row">
+      <a class="ms-btn-outline" href="#">&#8592; Modifier &eacute;tape 5</a>
+      <form class="ms-cta-form" method="post" action="#">
+        <button type="submit" class="ms-btn-primary">Publier &#8594;</button>
+      </form>
+    </div>
+
+  </div>
+
+</div>
+</body>
+</html>
