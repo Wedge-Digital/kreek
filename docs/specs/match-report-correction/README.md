@@ -13,7 +13,7 @@ re-publication rejoue ensuite le flux nominal **inchangé**.
 
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| Recap (`recap.html`) | ✅ | ✅ | ✅ | ✅ | | | |
+| Recap (`recap.html`) | ✅ | ✅ | ✅ | ✅ | ✅ | | |
 
 Maquette : `assets/rawpages/html/app-match-report-recap-correction.html` (5 états).
 
@@ -100,6 +100,20 @@ propagation d'effet entre BCs »).
 - **Match report** : le retour arrière existe déjà. Tous les use cases d'édition
   font `MatchReportState::ReadyToPublish(rtp) => rtp.into_pre_match()`. Il ne
   manque qu'une arête `Published → ReadyToPublish`.
+
+13. `rehydrate()` supporte **N alternances** publier / dépublier (corollaire de
+    la règle 8). Satisfait par construction — `rehydrate` est un `fold` — donc à
+    couvrir par un test, pas par du code.
+14. Les **fans se restaurent par instantané, jamais par soustraction**.
+    `PostMatchSequenceStarted` ne stocke que la valeur post-clamp : si `+2` a été
+    écrêté à 20, retrancher 2 donnerait 18 au lieu de 20.
+15. Le **statut de participation du joueur se restaure** aussi. Un joueur
+    `MissingNextGame` avant le match a été rendu `Available` par
+    `MatchConcluded` ; la compensation doit l'y remettre. Voir la réserve du
+    point ouvert dans `recap/06-domaine.md`.
+16. **Équipe retirée ou dissoute** (`TeamDismissed` → `game_phase = None`) :
+    l'imprécision du libellé est acceptée. Le blocage reste correct sur le fond,
+    et une équipe dissoute rend la correction sans objet.
 
 ## Dettes préexistantes à traiter dans cette feature
 
