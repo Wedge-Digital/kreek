@@ -45,6 +45,17 @@ pub enum PlayerMatchImpactAppEvent {
         team_score:         u8,
         opponent_score:     u8,
     },
+    /// Le rapport a été dépublié pour correction : défaire l'impact de ce match
+    /// sur tout l'effectif de cette équipe.
+    ///
+    /// Un seul événement par équipe, et non un par action : chaque agrégat
+    /// joueur porte son propre instantané de ce que le dernier match lui a
+    /// apporté. Symétrique de `TeamMatchConcluded`, qui itère déjà sur tout
+    /// l'effectif.
+    TeamMatchImpactReverted {
+        team_id:         String,
+        match_report_id: String,
+    },
 }
 
 impl PlayerMatchImpactAppEvent {
@@ -56,6 +67,7 @@ impl PlayerMatchImpactAppEvent {
     pub const PLAYER_PERFORMED_FOUL:        &'static str = "PlayerPerformedFoul";
     pub const PLAYER_INJURED:               &'static str = "PlayerInjured";
     pub const TEAM_MATCH_CONCLUDED:         &'static str = "TeamMatchConcluded";
+    pub const TEAM_MATCH_IMPACT_REVERTED:   &'static str = "TeamMatchImpactReverted";
 
     pub fn event_type(&self) -> &'static str {
         match self {
@@ -67,6 +79,7 @@ impl PlayerMatchImpactAppEvent {
             Self::PlayerPerformedFoul(_)        => Self::PLAYER_PERFORMED_FOUL,
             Self::PlayerInjured { .. }          => Self::PLAYER_INJURED,
             Self::TeamMatchConcluded { .. }     => Self::TEAM_MATCH_CONCLUDED,
+            Self::TeamMatchImpactReverted { .. } => Self::TEAM_MATCH_IMPACT_REVERTED,
         }
     }
 
@@ -80,6 +93,7 @@ impl PlayerMatchImpactAppEvent {
             | Self::PlayerPerformedFoul(c) => &c.match_report_id,
             Self::PlayerInjured { context, .. } => &context.match_report_id,
             Self::TeamMatchConcluded { match_report_id, .. } => match_report_id,
+            Self::TeamMatchImpactReverted { match_report_id, .. } => match_report_id,
         }
     }
 

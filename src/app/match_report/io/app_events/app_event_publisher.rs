@@ -6,10 +6,12 @@ use crate::app::match_report::domain::value_objects::{
     ActionPlayer, InjuryType, MatchAction, MatchActionType, SequelStat, TempPlayer, TempPlayerKind,
 };
 use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
+use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::shared_kernel::app_events::match_report_app_events::{
     ActionTypePayload, MatchActionPublishedPayload, MatchReportAppEvent,
-    MatchReportPublishedPayload, PlayerRefPayload, TempPlayerPayload,
+    MatchReportPublishedPayload, MatchReportUnpublishedPayload, PlayerRefPayload, TempPlayerPayload,
 };
+use crate::common::event_envelope::EventEnvelope;
 use crate::app::shared_kernel::app_events::player_match_impact_app_events::{
     InjuryTypePayload, PlayerMatchContextPayload, PlayerMatchImpactAppEvent,
 };
@@ -31,40 +33,14 @@ pub fn match_report_app_event_publisher(
         loop {
             match rx.recv().await {
                 Ok(envelope) => {
-                    let Ok(event) =
-                        serde_json::from_value::<MatchReportDomainEvent>(envelope.payload.clone())
-                    else {
-                        continue;
-                    };
-                    if !matches!(event, MatchReportDomainEvent::MatchReportPublished { .. }) {
-                        continue;
-                    }
-                    let match_report_id = envelope.emitter.clone();
-                    match repo.find_by_id(&match_report_id).await {
-                        Ok(Some(MatchReportState::Published(p))) => {
-                            let payload = build_published_payload(&p);
-                            let _ = app_event_bus
-                                .send(MatchReportAppEvent::MatchReportPublished(payload).to_enveloppe());
-
-                            publish_player_impact_events(
-                                &p,
-                                &app_event_bus,
-                                competition_data.as_ref(),
-                                team_data.as_ref(),
-                            )
-                            .await;
-                        }
-                        Ok(_) => {
-                            tracing::warn!(
-                                "match_report_app_event_publisher: {match_report_id} pas en état Published après MatchReportPublished"
-                            );
-                        }
-                        Err(e) => {
-                            tracing::error!(
-                                "match_report_app_event_publisher: find_by_id {match_report_id}: {e}"
-                            );
-                        }
-                    }
+                    handle_envelope(
+                        envelope,
+                        &app_event_bus,
+                        repo.as_ref(),
+                        competition_data.as_ref(),
+                        team_data.as_ref(),
+                    )
+                    .await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("match_report_app_event_publisher: lagged by {n}");
@@ -73,6 +49,80 @@ pub fn match_report_app_event_publisher(
             }
         }
     });
+}
+
+/// Aiguille sur les deux seuls événements qui franchissent la frontière du BC.
+async fn handle_envelope(
+    envelope:         crate::common::event_envelope::EventEnvelope,
+    app_event_bus:    &EventBus,
+    repo:             &dyn IMatchReportRepository,
+    competition_data: &dyn ICompetitionDataPort,
+    team_data:        &dyn ITeamDataPort,
+) {
+    let Ok(event) = serde_json::from_value::<MatchReportDomainEvent>(envelope.payload.clone())
+    else {
+        return;
+    };
+    let match_report_id = envelope.emitter;
+    match event {
+        MatchReportDomainEvent::MatchReportPublished { .. } => {
+            handle_published(&match_report_id, app_event_bus, repo, competition_data, team_data).await
+        }
+        MatchReportDomainEvent::MatchReportUnpublished { .. } => {
+            handle_unpublished(&match_report_id, app_event_bus, repo).await
+        }
+        _ => {}
+    }
+}
+
+async fn handle_published(
+    match_report_id:  &str,
+    app_event_bus:    &EventBus,
+    repo:             &dyn IMatchReportRepository,
+    competition_data: &dyn ICompetitionDataPort,
+    team_data:        &dyn ITeamDataPort,
+) {
+    match repo.find_by_id(match_report_id).await {
+        Ok(Some(MatchReportState::Published(p))) => {
+            let payload = build_published_payload(&p);
+            let _ = app_event_bus
+                .send(MatchReportAppEvent::MatchReportPublished(payload).to_enveloppe());
+            publish_player_impact_events(&p, app_event_bus, competition_data, team_data).await;
+        }
+        Ok(_) => log_unexpected_state(match_report_id, "Published"),
+        Err(e) => log_reread_error(match_report_id, e),
+    }
+}
+
+/// La relecture attend ici `ReadyToPublish` et non `Published` : c'est l'état
+/// dans lequel la dépublication vient de laisser le rapport. Exiger `Published`
+/// ferait échouer toutes les compensations en silence, avec un simple `warn!`.
+async fn handle_unpublished(
+    match_report_id: &str,
+    app_event_bus:   &EventBus,
+    repo:            &dyn IMatchReportRepository,
+) {
+    match repo.find_by_id(match_report_id).await {
+        Ok(Some(MatchReportState::ReadyToPublish(rtp))) => {
+            for event in build_unpublished_events(&rtp) {
+                let _ = app_event_bus.send(event);
+            }
+        }
+        Ok(_) => log_unexpected_state(match_report_id, "ReadyToPublish"),
+        Err(e) => log_reread_error(match_report_id, e),
+    }
+}
+
+/// Un état inattendu signifie qu'aucun app event ne partira : sans cette trace,
+/// la compensation échouerait sans laisser d'indice.
+fn log_unexpected_state(match_report_id: &str, expected: &str) {
+    tracing::warn!(
+        "match_report_app_event_publisher: {match_report_id} n'est pas en état {expected}"
+    );
+}
+
+fn log_reread_error(match_report_id: &str, e: impl std::fmt::Display) {
+    tracing::error!("match_report_app_event_publisher: find_by_id {match_report_id}: {e}");
 }
 
 // ── Player report events (impact sur les joueurs) ────────────────────────────────
@@ -232,6 +282,50 @@ fn map_sequel_stat(stat: SequelStat) -> &'static str {
     }
 }
 
+// ── Compensation d'une dépublication ─────────────────────────────────────────
+
+/// Les trois enveloppes à publier : le fait lui-même, puis un ordre de
+/// compensation par équipe.
+///
+/// Un seul événement par équipe et non un par action : chaque agrégat joueur
+/// porte son propre instantané de ce que le match lui a apporté. Fonction pure,
+/// donc testable sans bus ni repository.
+fn build_unpublished_events(rtp: &MatchReportReadyToPublish) -> Vec<EventEnvelope> {
+    let match_report_id = rtp.id.to_string();
+    let home_team_id = rtp.home_team_id.to_string();
+    let away_team_id = rtp.away_team_id.to_string();
+
+    let mut events = vec![MatchReportAppEvent::MatchReportUnpublished(
+        build_unpublished_payload(rtp),
+    )
+    .to_enveloppe()];
+
+    for team_id in [home_team_id, away_team_id] {
+        events.push(
+            PlayerMatchImpactAppEvent::TeamMatchImpactReverted {
+                team_id,
+                match_report_id: match_report_id.clone(),
+            }
+            .to_enveloppe(),
+        );
+    }
+    events
+}
+
+fn build_unpublished_payload(rtp: &MatchReportReadyToPublish) -> MatchReportUnpublishedPayload {
+    MatchReportUnpublishedPayload {
+        match_report_id: rtp.id.to_string(),
+        space_id:        rtp.space_id.to_string(),
+        competition_id:  rtp.competition_id.to_string(),
+        season_id:       rtp.season_id.to_string(),
+        round_id:        rtp.round_id.to_string(),
+        pairing_id:      rtp.pairing_id.clone(),
+        home_team_id:    rtp.home_team_id.to_string(),
+        away_team_id:    rtp.away_team_id.to_string(),
+        unpublished_at:  chrono::Utc::now(),
+    }
+}
+
 fn build_published_payload(p: &MatchReportPublished) -> MatchReportPublishedPayload {
     MatchReportPublishedPayload {
         match_report_id: p.id.to_string(),
@@ -327,6 +421,118 @@ fn build_temp_player_payload(t: &TempPlayer) -> TempPlayerPayload {
         id: t.id.0.clone(),
         kind: kind.to_string(),
         display_name: t.display_name.clone(),
+    }
+}
+
+#[cfg(test)]
+mod unpublished_events_tests {
+    use super::*;
+    use crate::app::match_report::domain::value_objects::{
+        ActionId, DedicatedFans, FanFactorMod, MatchGain, MatchReportOrigin, TurnNumber,
+    };
+    use crate::app::shared_kernel::common_types::{
+        CoachId, CompetitionId, MatchReportId, PlayerId, RoundId, SeasonId, SpaceId,
+    };
+    use crate::app::shared_kernel::team::TeamId;
+
+    /// Une action quelconque, pour vérifier qu'elle **ne** se retrouve **pas**
+    /// dans le payload de compensation.
+    fn une_action() -> MatchAction {
+        MatchAction {
+            id: ActionId("a1".into()),
+            turn: TurnNumber::try_new(1).unwrap(),
+            player: ActionPlayer::Regular(PlayerId::new()),
+            action: MatchActionType::Touchdown,
+            player_display_name: "Tyrandel".into(),
+            player_position: "Frappeur".into(),
+        }
+    }
+
+    fn rtp() -> MatchReportReadyToPublish {
+        MatchReportReadyToPublish {
+            id: MatchReportId::new(),
+            space_id: SpaceId::new(),
+            competition_id: CompetitionId::new(),
+            season_id: SeasonId::new(),
+            round_id: RoundId::new(),
+            home_team_id: TeamId::new(),
+            away_team_id: TeamId::new(),
+            created_by: CoachId::new(),
+            origin: MatchReportOrigin::Manual,
+            pairing_id: Some("pairing-1".to_string()),
+            home_fan_roll: None,
+            away_fan_roll: None,
+            home_dedicated_fans: DedicatedFans::default(),
+            away_dedicated_fans: DedicatedFans::default(),
+            home_inducements: None,
+            away_inducements: None,
+            star_engagements: vec![],
+            home_temp_players: vec![],
+            away_temp_players: vec![],
+            home_actions: vec![une_action()],
+            away_actions: vec![],
+            version: 8,
+            home_gain: MatchGain::try_new(10_000).unwrap(),
+            away_gain: MatchGain::try_new(5_000).unwrap(),
+            home_fan_mod: FanFactorMod::try_new(1).unwrap(),
+            away_fan_mod: FanFactorMod::try_new(-1).unwrap(),
+            summary_title: None,
+            summary_body: None,
+            was_published_before: true,
+        }
+    }
+
+    #[test]
+    fn trois_evenements_sont_produits_un_fait_et_deux_compensations() {
+        let events = build_unpublished_events(&rtp());
+        assert_eq!(events.len(), 3);
+        assert_eq!(events[0].event_type, "MatchReportUnpublished");
+        assert_eq!(events[1].event_type, "TeamMatchImpactReverted");
+        assert_eq!(events[2].event_type, "TeamMatchImpactReverted");
+    }
+
+    /// Les deux compensations visent bien les deux équipes distinctes, dans
+    /// l'ordre home puis away — jamais deux fois la même.
+    fn team_id_of(envelope: &EventEnvelope) -> String {
+        envelope.payload["TeamMatchImpactReverted"]["team_id"]
+            .as_str()
+            .unwrap()
+            .to_string()
+    }
+
+    #[test]
+    fn une_compensation_par_equipe_sans_croisement() {
+        let rtp = rtp();
+        let events = build_unpublished_events(&rtp);
+
+        assert_eq!(team_id_of(&events[1]), rtp.home_team_id.to_string());
+        assert_eq!(team_id_of(&events[2]), rtp.away_team_id.to_string());
+    }
+
+    #[test]
+    fn le_payload_porte_les_identifiants_du_rapport() {
+        let rtp = rtp();
+        let payload = build_unpublished_payload(&rtp);
+
+        assert_eq!(payload.match_report_id, rtp.id.to_string());
+        assert_eq!(payload.competition_id, rtp.competition_id.to_string());
+        assert_eq!(payload.season_id, rtp.season_id.to_string());
+        assert_eq!(payload.round_id, rtp.round_id.to_string());
+        assert_eq!(payload.pairing_id, Some("pairing-1".to_string()));
+        assert_eq!(payload.home_team_id, rtp.home_team_id.to_string());
+        assert_eq!(payload.away_team_id, rtp.away_team_id.to_string());
+    }
+
+    /// Le rapport porte une action, mais le payload de compensation n'en
+    /// transporte aucune : chaque BC défait ce qu'il a enregistré lui-même.
+    #[test]
+    fn le_payload_ne_transporte_aucune_action() {
+        let events = build_unpublished_events(&rtp());
+        let payload = &events[0].payload["MatchReportUnpublished"];
+
+        assert!(payload.get("home_actions").is_none());
+        assert!(payload.get("away_actions").is_none());
+        assert!(payload.get("home_score").is_none());
     }
 }
 

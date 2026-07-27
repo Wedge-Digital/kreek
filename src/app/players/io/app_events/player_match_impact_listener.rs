@@ -47,6 +47,20 @@ async fn handle_event(
         return dispatch_team_match_concluded(app_event, player_repo).await;
     }
 
+    // La compensation d'une dépublication relève de la carte 235. Émise dès à
+    // présent par le publisher, elle est ignorée ici en attendant — sans ce
+    // filtre explicite, elle tomberait dans le chargement de joueur ci-dessous,
+    // qui n'a aucun sens pour un événement portant sur toute une équipe.
+    if let PlayerMatchImpactAppEvent::TeamMatchImpactReverted { match_report_id, team_id } =
+        &app_event
+    {
+        tracing::debug!(
+            "player_match_impact_listener: TeamMatchImpactReverted ignoré \
+             (équipe {team_id}, rapport {match_report_id}) — compensation non implémentée"
+        );
+        return;
+    }
+
     let (context_payload, player) = match &app_event {
         PlayerMatchImpactAppEvent::PlayerPerformedTouchdown(c)
         | PlayerMatchImpactAppEvent::PlayerPerformedPass(c)
@@ -57,7 +71,10 @@ async fn handle_event(
         PlayerMatchImpactAppEvent::PlayerInjured { context, .. } => {
             (context.clone(), load_player(player_repo, &context.player_id).await)
         }
-        PlayerMatchImpactAppEvent::TeamMatchConcluded { .. } => unreachable!("traité plus haut"),
+        PlayerMatchImpactAppEvent::TeamMatchConcluded { .. }
+        | PlayerMatchImpactAppEvent::TeamMatchImpactReverted { .. } => {
+            unreachable!("traités plus haut")
+        }
     };
 
     let Some(player) = player else {
@@ -90,7 +107,8 @@ async fn handle_event(
         PlayerMatchImpactAppEvent::PlayerInjured { injury_type, .. } => {
             player.record_injury(context, to_injury_type(&injury_type))
         }
-        PlayerMatchImpactAppEvent::TeamMatchConcluded { .. } => unreachable!(),
+        PlayerMatchImpactAppEvent::TeamMatchConcluded { .. }
+        | PlayerMatchImpactAppEvent::TeamMatchImpactReverted { .. } => unreachable!(),
     };
 
     let next_version = player.version + 1;
