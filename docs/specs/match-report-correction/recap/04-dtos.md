@@ -53,8 +53,14 @@ pub enum CorrectionBlocker {
     SppAlreadySpent { side: TeamSide },
     /// Ce camp a quitté la phase `PlayerImprovement` (règle 1).
     PhaseAdvanced { side: TeamSide },
+    /// Un port du garde-fou n'a pas pu répondre — on échoue fermé (règle 12).
+    /// Sans `side` : l'échec ne désigne aucun camp.
+    EligibilityUnknown,
 }
 ```
+
+> Le variant `EligibilityUnknown` est un **amendement issu de la phase 5**, où la
+> gestion d'échec des ports a été tranchée. Voir `05-use-cases.md`.
 
 ### Le blocker porte un `TeamSide`, pas un nom d'équipe
 

@@ -13,7 +13,7 @@ re-publication rejoue ensuite le flux nominal **inchangé**.
 
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| Recap (`recap.html`) | ✅ | ✅ | ✅ | | | | |
+| Recap (`recap.html`) | ✅ | ✅ | ✅ | ✅ | | | |
 
 Maquette : `assets/rawpages/html/app-match-report-recap-correction.html` (5 états).
 
@@ -60,6 +60,12 @@ touché — on ajoute une compensation symétrique, pas une variante de propagat
     ordonnancement par criticité, ni compensation synchrone dans le use case —
     cette dernière violerait la souveraineté des données entre BCs. C'est le
     seul endroit où la feature peut laisser la base incohérente, et c'est assumé.
+12. **Échec d'un port du garde-fou** — si `is_team_in_player_improvement` ou
+    `has_spent_spp_since_match` ne peut pas répondre, on **échoue fermé** : le
+    rapport est déclaré non corrigeable. Un garde-fou échouant ouvert
+    autoriserait une correction qui aurait dû être refusée — c'est la direction
+    dangereuse. Échouer fermé empêche temporairement une correction légitime :
+    gênant, jamais destructeur.
 
 ## Le garde-fou « à chaud »
 
