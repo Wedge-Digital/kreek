@@ -13,7 +13,7 @@ re-publication rejoue ensuite le flux nominal **inchangé**.
 
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| Recap (`recap.html`) | ✅ | | | | | | |
+| Recap (`recap.html`) | ✅ | ✅ | | | | | |
 
 Maquette : `assets/rawpages/html/app-match-report-recap-correction.html` (5 états).
 
@@ -53,6 +53,13 @@ touché — on ajoute une compensation symétrique, pas une variante de propagat
    instant, y compris pendant que la page est ouverte.
 10. Les notifications (prévenir l'adversaire qu'un match qu'il a joué vient
     d'être corrigé) sont **hors scope**, à traiter dans un second temps.
+11. **Échec partiel de la compensation** — le bus étant best-effort, une
+    compensation peut réussir dans un BC et échouer dans un autre. Posture
+    retenue : on l'accepte, en s'appuyant sur l'idempotence de chaque
+    compensation et sur une resynchronisation manuelle si nécessaire. Ni
+    ordonnancement par criticité, ni compensation synchrone dans le use case —
+    cette dernière violerait la souveraineté des données entre BCs. C'est le
+    seul endroit où la feature peut laisser la base incohérente, et c'est assumé.
 
 ## Le garde-fou « à chaud »
 
