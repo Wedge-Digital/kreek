@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id FROM competition_match_day_pairings\n         WHERE match_day_id = $1 AND home_team_id = $2 AND away_team_id = $3\n         LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c7372b7cb721c2d0d55494f13175e241240f3f52e7cfaa6dd556120adb35696e"
+}

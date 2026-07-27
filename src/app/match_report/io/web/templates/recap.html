@@ -155,6 +155,17 @@
         </div>
       </div>
 
+      {% if under_correction %}
+      <div class="ms-unpublished-banner">
+        <span class="ms-unpublished-banner-icon">&#9998;</span>
+        <span class="ms-unpublished-banner-text">
+          <strong>Ce rapport est en cours de correction.</strong>
+          Il a &eacute;t&eacute; d&eacute;publi&eacute; et ses effets ont &eacute;t&eacute; annul&eacute;s.
+          Ils seront r&eacute;appliqu&eacute;s &agrave; la re-publication.
+        </span>
+      </div>
+      {% endif %}
+
       <div class="ms-cta-row">
         {% if is_published %}
         <a class="ms-btn-outline" href="{{ competition_url }}">&#8592; Retour aux r&eacute;sultats</a>
@@ -166,6 +177,30 @@
         </form>
         {% endif %}
       </div>
+
+      {% if let Some(correction) = correction.as_ref() %}
+      <div class="ms-correct-zone">
+        {% if correction.can_correct %}
+        <button type="button" class="ms-correct-btn"
+                hx-post="{{ correction.unpublish_url }}"
+                hx-confirm="D&eacute;publier ce rapport pour le corriger ? Ses effets seront annul&eacute;s sur les deux &eacute;quipes.">
+          <span>&#9998;</span> Corriger le rapport
+        </button>
+        <p class="ms-correct-hint">
+          Le rapport sera d&eacute;publi&eacute; et ses effets annul&eacute;s sur les deux &eacute;quipes :
+          tr&eacute;sorerie, fans, SPP des joueurs et classement.
+        </p>
+        {% else %}
+        <button type="button" class="ms-correct-btn" disabled>
+          <span>&#9998;</span> Corriger le rapport
+        </button>
+        <div class="ms-correct-blocked">
+          <span class="ms-correct-blocked-icon">&#9432;</span>
+          <span>{{ correction.blocked_reason.as_deref().unwrap_or("") }}</span>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
 
     </div>
     <!-- fin ms-main -->

@@ -3,10 +3,14 @@ use crate::app::match_report::domain::match_report_published::MatchReportPublish
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::MatchAction;
+use crate::app::match_report::domain::value_objects::{CorrectionBlocker, CorrectionEligibility};
 use crate::app::match_report::io::web::builders::{
-    build_performance_rows, build_round_context_vm, build_submitted_by, build_team_banner,
-    PerformanceRowVm, RoundContextVm, TeamBannerVm,
+    build_correction_zone, build_performance_rows, build_round_context_vm, build_submitted_by,
+    build_team_banner, CorrectionZoneVm, PerformanceRowVm, RoundContextVm, TeamBannerVm,
 };
+use crate::app::match_report::ports::TeamInfoDto;
+use crate::app::match_report::use_cases::correction_eligibility_service;
+use crate::app::shared_kernel::team::TeamId;
 use crate::app::match_report::io::web::view_models::{
     GainsFanVm, HalfTimelineVm, InjuryRowVm, MatchResultVm, MvpRowVm,
 };
@@ -45,6 +49,8 @@ pub struct RecapTemplate {
     pub mvps: Vec<MvpRowVm>,
     pub injuries: Vec<InjuryRowVm>,
     pub performances: Vec<PerformanceRowVm>,
+    pub correction: Option<CorrectionZoneVm>,
+    pub under_correction: bool,
     pub publish_url: String,
     pub back_to_step5_url: String,
     pub competition_url: String,
@@ -77,6 +83,7 @@ struct RecapSource<'a> {
     away_fan_mod: i8,
     summary_title: Option<String>,
     summary_body: Option<String>,
+    was_published_before: bool,
 }
 
 impl<'a> RecapSource<'a> {
@@ -96,6 +103,7 @@ impl<'a> RecapSource<'a> {
             away_fan_mod: rtp.away_fan_mod.into_inner(),
             summary_title: rtp.summary_title.clone(),
             summary_body: rtp.summary_body.clone(),
+            was_published_before: rtp.was_published_before,
         }
     }
 
@@ -115,6 +123,9 @@ impl<'a> RecapSource<'a> {
             away_fan_mod: p.away_fan_mod.into_inner(),
             summary_title: p.summary_title.clone(),
             summary_body: p.summary_body.clone(),
+            // Sans objet sur un rapport publié : le bandeau ne concerne que
+            // l'état corrigeable.
+            was_published_before: false,
         }
     }
 }
@@ -289,6 +300,13 @@ async fn build_recap_template(
         build_submitted_by(state.match_report.coach_data.as_ref(), &source.created_by),
     );
 
+    // Le garde-fou ne se calcule que pour un rapport publié : quatre
+    // consultations inter-BC, dont une requête sur l'historique par équipe.
+    let correction = match is_published {
+        true => Some(build_correction_zone_for(&source, space_id, match_report_id, state).await),
+        false => None,
+    };
+
     let routes = AppRoutes::default();
     RecapTemplate {
         app_routes: routes,
@@ -314,12 +332,59 @@ async fn build_recap_template(
         ),
         injuries: InjuryRowVm::all_from_domain(source.home_actions, source.away_actions),
         performances,
+        correction,
+        under_correction: !is_published && source.was_published_before,
         publish_url: routes.match_report.recap_publish(space_id, match_report_id),
         back_to_step5_url: routes.match_report.step5(space_id, match_report_id),
         competition_url: routes.competitions.competition_detail(space_id, &source.competition_id, &source.season_id),
         home_team_detail_url: routes.teams.team_detail(space_id, &source.home_team_id),
         result,
     }
+}
+
+async fn build_correction_zone_for(
+    source:          &RecapSource<'_>,
+    space_id:        &str,
+    match_report_id: &str,
+    state:           &AppState,
+) -> CorrectionZoneVm {
+    let (Ok(home_id), Ok(away_id), Ok(mr_id)) = (
+        TeamId::try_new(&source.home_team_id),
+        TeamId::try_new(&source.away_team_id),
+        MatchReportId::try_new(match_report_id),
+    ) else {
+        return blocked_zone(space_id, match_report_id);
+    };
+
+    let eligibility = correction_eligibility_service::evaluate(
+        &home_id,
+        &away_id,
+        &mr_id,
+        state.match_report.team_data.as_ref(),
+        state.match_report.player_data.as_ref(),
+    )
+    .await;
+
+    let (home_info, away_info) = tokio::join!(
+        state.match_report.team_data.find_team_info(&source.home_team_id),
+        state.match_report.team_data.find_team_info(&source.away_team_id),
+    );
+    build_correction_zone(
+        &eligibility,
+        &home_info.unwrap_or_default(),
+        &away_info.unwrap_or_default(),
+        AppRoutes::default().match_report.recap_unpublish(space_id, match_report_id),
+    )
+}
+
+/// Un identifiant illisible interdit toute vérification : on échoue fermé.
+fn blocked_zone(space_id: &str, match_report_id: &str) -> CorrectionZoneVm {
+    build_correction_zone(
+        &CorrectionEligibility::Blocked(CorrectionBlocker::EligibilityUnknown),
+        &TeamInfoDto::default(),
+        &TeamInfoDto::default(),
+        AppRoutes::default().match_report.recap_unpublish(space_id, match_report_id),
+    )
 }
 
 // ── POST ──────────────────────────────────────────────────────────────────────

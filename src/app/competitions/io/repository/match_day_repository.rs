@@ -177,6 +177,25 @@ impl IMatchDayRepository for MatchDayRepository {
         Ok(())
     }
 
+    async fn find_pairing_id(
+        &self,
+        match_day_id: &str,
+        home_team_id: &str,
+        away_team_id: &str,
+    ) -> Result<Option<String>, MatchDayRepositoryError> {
+        sqlx::query_scalar(
+            "SELECT id FROM competition_match_day_pairings
+             WHERE match_day_id = $1 AND home_team_id = $2 AND away_team_id = $3
+             LIMIT 1",
+        )
+        .bind(match_day_id)
+        .bind(home_team_id)
+        .bind(away_team_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(db_err)
+    }
+
     async fn save_pairing(
         &self,
         match_day_id: &str,

@@ -1,4 +1,6 @@
-use crate::app::match_report::domain::value_objects::MatchAction;
+use crate::app::match_report::domain::value_objects::{
+    CorrectionBlocker, CorrectionEligibility, MatchAction, TeamSide,
+};
 use crate::app::match_report::io::web::view_models::action_player_key;
 use crate::app::match_report::ports::{
     ICoachDataPort, ICompetitionDataPort, ISppCalculatorPort, TeamInfoDto,
@@ -100,4 +102,118 @@ fn find_action_display(
 
 pub async fn build_submitted_by(coach_data: &dyn ICoachDataPort, created_by: &str) -> Option<String> {
     coach_data.find_coach_name(created_by).await
+}
+
+// ── Zone de correction d'un rapport publié ────────────────────────────────────
+
+pub struct CorrectionZoneVm {
+    pub can_correct:    bool,
+    /// Phrase complète, prête à afficher — le template n'assemble aucun message.
+    pub blocked_reason: Option<String>,
+    pub unpublish_url:  String,
+}
+
+/// Résout le camp bloquant en nom d'équipe.
+///
+/// Le `CorrectionBlocker` du domaine ne porte qu'un `TeamSide` : le domaine
+/// ignore les chaînes d'affichage, et faire descendre un nom d'équipe y aurait
+/// imposé un value object de nom pour rien.
+pub fn build_correction_zone(
+    eligibility:   &CorrectionEligibility,
+    home_info:     &TeamInfoDto,
+    away_info:     &TeamInfoDto,
+    unpublish_url: String,
+) -> CorrectionZoneVm {
+    let blocked_reason = match eligibility {
+        CorrectionEligibility::Eligible => None,
+        CorrectionEligibility::Blocked(blocker) => {
+            Some(blocked_reason_for(blocker, home_info, away_info))
+        }
+    };
+    CorrectionZoneVm {
+        can_correct: blocked_reason.is_none(),
+        blocked_reason,
+        unpublish_url,
+    }
+}
+
+fn blocked_reason_for(
+    blocker:   &CorrectionBlocker,
+    home_info: &TeamInfoDto,
+    away_info: &TeamInfoDto,
+) -> String {
+    let team_name = |side: &TeamSide| match side {
+        TeamSide::Home => home_info.team_name.as_str(),
+        TeamSide::Away => away_info.team_name.as_str(),
+    };
+    match blocker {
+        CorrectionBlocker::SppAlreadySpent { side } => format!(
+            "{} a déjà utilisé les SPP de ses joueurs. Le rapport n'est plus corrigeable.",
+            team_name(side)
+        ),
+        CorrectionBlocker::PhaseAdvanced { side } => format!(
+            "{} a validé sa phase d'amélioration. Le rapport n'est plus corrigeable.",
+            team_name(side)
+        ),
+        // Aucun camp désigné : la vérification elle-même n'a pas abouti.
+        CorrectionBlocker::EligibilityUnknown => {
+            "Impossible de vérifier si ce rapport est corrigeable pour le moment.".to_string()
+        }
+    }
+}
+
+#[cfg(test)]
+mod correction_zone_tests {
+    use super::*;
+
+    fn team(name: &str) -> TeamInfoDto {
+        TeamInfoDto { team_name: name.to_string(), ..Default::default() }
+    }
+
+    fn build(eligibility: CorrectionEligibility) -> CorrectionZoneVm {
+        build_correction_zone(
+            &eligibility,
+            &team("Orcs de Karak"),
+            &team("Bone Crushers"),
+            "/unpublish".to_string(),
+        )
+    }
+
+    #[test]
+    fn eligible_donne_un_bouton_actif_sans_raison() {
+        let vm = build(CorrectionEligibility::Eligible);
+        assert!(vm.can_correct);
+        assert!(vm.blocked_reason.is_none());
+    }
+
+    #[test]
+    fn le_message_nomme_l_equipe_du_camp_bloquant() {
+        let vm = build(CorrectionEligibility::Blocked(CorrectionBlocker::SppAlreadySpent {
+            side: TeamSide::Away,
+        }));
+        assert!(!vm.can_correct);
+        let reason = vm.blocked_reason.unwrap();
+        assert!(reason.starts_with("Bone Crushers"), "obtenu : {reason}");
+        assert!(reason.contains("SPP"));
+    }
+
+    #[test]
+    fn le_camp_domicile_est_nomme_correctement() {
+        let vm = build(CorrectionEligibility::Blocked(CorrectionBlocker::PhaseAdvanced {
+            side: TeamSide::Home,
+        }));
+        let reason = vm.blocked_reason.unwrap();
+        assert!(reason.starts_with("Orcs de Karak"), "obtenu : {reason}");
+        assert!(reason.contains("phase d'amélioration"));
+    }
+
+    /// Une éligibilité indéterminée ne désigne aucun camp : le message ne doit
+    /// nommer ni l'une ni l'autre équipe.
+    #[test]
+    fn l_eligibilite_inconnue_ne_nomme_aucune_equipe() {
+        let vm = build(CorrectionEligibility::Blocked(CorrectionBlocker::EligibilityUnknown));
+        let reason = vm.blocked_reason.unwrap();
+        assert!(!reason.contains("Orcs"));
+        assert!(!reason.contains("Bone Crushers"));
+    }
 }

@@ -490,3 +490,83 @@
 
   .ms-cta-row { flex-direction: column; }
 }
+
+/* ── Zone de correction d'un rapport publié ──────────────────────────────── */
+
+.ms-correct-zone {
+  margin-top: var(--p2);
+  padding-top: var(--p2);
+  border-top: 1px solid var(--dark-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--p05);
+}
+
+.ms-correct-btn {
+  align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 18px;
+  background: transparent;
+  color: var(--dark-2);
+  border: 1px solid var(--dark-4);
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: var(--text-small);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ms-correct-btn:hover { background: var(--dark-6); border-color: var(--dark-3); }
+
+.ms-correct-btn:disabled {
+  color: var(--dark-4);
+  border-color: var(--dark-5);
+  background: transparent;
+  cursor: not-allowed;
+}
+.ms-correct-btn:disabled:hover { background: transparent; border-color: var(--dark-5); }
+
+.ms-correct-hint {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  line-height: 1.5;
+  max-width: 52ch;
+}
+
+.ms-correct-blocked {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: var(--text-tiny);
+  color: var(--dark-2);
+  line-height: 1.5;
+  max-width: 52ch;
+  background: var(--dark-6);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.ms-correct-blocked-icon { flex-shrink: 0; line-height: 1.4; }
+
+/* ── Bandeau : rapport dépublié en attente de re-publication ─────────────── */
+
+.ms-unpublished-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(255,107,53,0.10);
+  border-left: 3px solid var(--orange);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: var(--p2);
+}
+.ms-unpublished-banner-icon { flex-shrink: 0; }
+.ms-unpublished-banner-text {
+  font-size: var(--text-tiny);
+  color: var(--dark-1);
+  line-height: 1.5;
+}
+.ms-unpublished-banner-text strong { font-weight: 700; }
+
+@media (max-width: 768px) {
+  .ms-correct-btn { align-self: stretch; justify-content: center; }
+}

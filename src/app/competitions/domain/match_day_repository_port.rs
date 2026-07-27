@@ -93,6 +93,20 @@ pub trait IMatchDayRepository: Send + Sync {
         projection: &NewPairingProjection,
     ) -> Result<(), MatchDayRepositoryError>;
 
+    /// Pairing déjà programmé pour ces deux équipes dans cette journée, s'il
+    /// existe.
+    ///
+    /// Sert à ne pas en recréer un lors de la publication d'un rapport
+    /// **manuel** : l'agrégat du rapport n'apprend jamais l'identifiant du
+    /// pairing créé pour lui, donc une republication après correction en
+    /// créerait un second, et le match apparaîtrait deux fois au calendrier.
+    async fn find_pairing_id(
+        &self,
+        match_day_id: &str,
+        home_team_id: &str,
+        away_team_id: &str,
+    ) -> Result<Option<String>, MatchDayRepositoryError>;
+
     async fn delete_pairing(
         &self,
         pairing_id: &str,

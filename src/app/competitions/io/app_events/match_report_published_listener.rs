@@ -92,6 +92,21 @@ async fn resolve_pairing_id(
         return Some(pairing_id.clone());
     }
 
+    // Un rapport manuel republié après correction retomberait ici : sans cette
+    // recherche, on créerait un second pairing pour le même match, qui
+    // apparaîtrait alors deux fois au calendrier.
+    match match_day_repo
+        .find_pairing_id(&payload.round_id, &payload.home_team_id, &payload.away_team_id)
+        .await
+    {
+        Ok(Some(existing)) => return Some(existing),
+        Ok(None) => {}
+        Err(e) => {
+            tracing::error!("match_report_published_listener: recherche du pairing existant : {e}");
+            return None;
+        }
+    }
+
     let match_day = match match_day_repo.find_by_id(&payload.round_id).await {
         Ok(Some(d)) => d,
         Ok(None) => {
@@ -281,6 +296,7 @@ mod tests {
         async fn save_match_day(&self, _: &MatchDay) -> Result<(), MatchDayRepositoryError> { Ok(()) }
         async fn delete_match_day(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
         async fn save_pairing(&self, _: &str, _: &Pairing, _: &NewPairingProjection) -> Result<(), MatchDayRepositoryError> { Ok(()) }
+        async fn find_pairing_id(&self, _: &str, _: &str, _: &str) -> Result<Option<String>, MatchDayRepositoryError> { Ok(None) }
         async fn delete_pairing(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
         async fn clear_pairings(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
         async fn clear_all_pairings(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
@@ -374,5 +390,42 @@ mod tests {
         let pairing_id = resolve_pairing_id(&payload, &match_day_repo, &team_port, &event_bus).await;
 
         assert_eq!(pairing_id, Some("existing-pairing".to_string()));
+    }
+    /// Régression : republier un rapport **manuel** après correction ne doit pas
+    /// recréer un pairing. Sans cette garde, le match apparaissait deux fois au
+    /// calendrier dès le second cycle publier / corriger / republier.
+    #[sqlx::test]
+    async fn republier_un_rapport_manuel_reutilise_le_pairing_existant(pool: PgPool) {
+        let home = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
+        let away = "01ARZ3NDEKTSV4RRFFQ69G5FAW";
+        let match_day = MatchDay {
+            id: MatchId::new(), season_id: SeasonId::new(),
+            name: MatchDayName::try_new("Journée 9".to_string()).unwrap(),
+            day_type: MatchDayType::FixedDate, date_start: None, date_end: None,
+            position: MatchDayPosition::try_new(5).unwrap(), pairings: vec![],
+        };
+        let repo = crate::app::competitions::io::repository::match_day_repository::MatchDayRepository::new(pool.clone());
+        repo.save_match_day(&match_day).await.expect("insertion de la journée de test");
+        let team_port = FakeTeamInfoPort(vec![
+            TeamInfoDto { team_id: home.into(), team_name: "Home".into(), coach_id: "coach1".into(), coach_name: "C1".into(), roster_name: "R1".into(), logo_url: None },
+            TeamInfoDto { team_id: away.into(), team_name: "Away".into(), coach_id: "coach2".into(), coach_name: "C2".into(), roster_name: "R2".into(), logo_url: None },
+        ]);
+        let event_bus = crate::common::services::event_bus::event_bus::new_bus();
+        let mut payload = sample_payload(home, away, None);
+        payload.round_id = match_day.id.to_string();
+
+        let premier = resolve_pairing_id(&payload, &repo, &team_port, &event_bus).await.unwrap();
+        let second = resolve_pairing_id(&payload, &repo, &team_port, &event_bus).await.unwrap();
+
+        assert_eq!(premier, second, "la republication doit réutiliser le pairing existant");
+
+        let count: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM competition_match_day_pairings WHERE match_day_id = $1",
+        )
+        .bind(match_day.id.to_string())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(count, 1, "un seul pairing, pas deux");
     }
 }

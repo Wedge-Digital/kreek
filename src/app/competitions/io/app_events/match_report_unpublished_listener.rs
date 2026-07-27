@@ -31,10 +31,12 @@ pub fn init(app_event_bus: &EventBus, pool: PgPool) {
 }
 
 async fn handle_unpublished(payload: &MatchReportUnpublishedPayload, pool: &PgPool) {
-    // Sans pairing, il n'y a pas de ligne de projection à compenser. Le cas ne
-    // devrait pas survenir — la publication en crée un pour les rapports
-    // manuels — mais il n'appelle aucune alerte.
-    let Some(pairing_id) = payload.pairing_id.as_deref() else {
+    let Some(pairing_id) = resolve_pairing_id(payload, pool).await else {
+        tracing::warn!(
+            "competitions::match_report_unpublished_listener: aucun pairing pour {} — \
+             ligne de calendrier non compensée",
+            payload.match_report_id
+        );
         return;
     };
 
@@ -42,11 +44,45 @@ async fn handle_unpublished(payload: &MatchReportUnpublishedPayload, pool: &PgPo
         .match_report
         .edit_match_report(&payload.space_id, &payload.match_report_id);
 
-    if let Err(e) = reset_projection(pool, pairing_id, &report_url).await {
+    if let Err(e) = reset_projection(pool, &pairing_id, &report_url).await {
         tracing::error!(
             "competitions::match_report_unpublished_listener: update {pairing_id}: {e}"
         );
     }
+}
+
+/// Retrouve le pairing dont la ligne de calendrier doit être compensée.
+///
+/// Un rapport **manuel** n'en porte pas : c'est la publication qui en a créé un
+/// (cf. `resolve_pairing_id` du listener de publication), sans que l'agrégat du
+/// rapport en soit informé. Son identifiant n'est donc pas dans le payload, et
+/// s'arrêter là laisserait le match affiché « terminé » avec un lien vers le
+/// récapitulatif d'un rapport qui n'est plus publié.
+///
+/// On le retrouve par la même clé que celle qui a servi à le créer : journée et
+/// équipes.
+async fn resolve_pairing_id(
+    payload: &MatchReportUnpublishedPayload,
+    pool:    &PgPool,
+) -> Option<String> {
+    if let Some(pairing_id) = payload.pairing_id.clone() {
+        return Some(pairing_id);
+    }
+
+    sqlx::query_scalar!(
+        "SELECT id FROM competition_match_day_pairings
+         WHERE match_day_id = $1 AND home_team_id = $2 AND away_team_id = $3
+         LIMIT 1",
+        payload.round_id,
+        payload.home_team_id,
+        payload.away_team_id,
+    )
+    .fetch_optional(pool)
+    .await
+    .unwrap_or_else(|e| {
+        tracing::error!("competitions::match_report_unpublished_listener: résolution du pairing : {e}");
+        None
+    })
 }
 
 /// **Ne recrée aucun pairing**, contrairement au listener de publication qui en
@@ -120,6 +156,28 @@ mod tests {
         .expect("insertion de la ligne de test");
     }
 
+    /// Le pairing tel que la publication d'un rapport manuel l'aurait créé —
+    /// mêmes journée et équipes que le payload.
+    async fn seed_pairing(pool: &PgPool) {
+        sqlx::query(
+            "INSERT INTO competition_match_days (id, season_id, name, day_type, position)
+             VALUES ('r1', 's1', 'Journée 1', 'FixedDate', 0)
+             ON CONFLICT (id) DO NOTHING",
+        )
+        .execute(pool)
+        .await
+        .expect("insertion de la journée de test");
+
+        sqlx::query(
+            "INSERT INTO competition_match_day_pairings (id, match_day_id, home_team_id, away_team_id)
+             VALUES ($1, 'r1', 'home', 'away')",
+        )
+        .bind(PAIRING)
+        .execute(pool)
+        .await
+        .expect("insertion du pairing de test");
+    }
+
     async fn row_status(pool: &PgPool) -> (String, Option<i32>, Option<i32>, Option<String>) {
         let row = sqlx::query(
             "SELECT match_status, home_score, home_casualties, match_report_url
@@ -188,8 +246,27 @@ mod tests {
         assert_eq!(before, after);
     }
 
+    /// Régression trouvée en exerçant la feature pour de vrai : un rapport
+    /// **manuel** ne porte pas de `pairing_id` — c'est la publication qui a créé
+    /// le pairing, sans en informer l'agrégat du rapport. S'arrêter au payload
+    /// laissait le match affiché « terminé » avec un lien vers le récapitulatif
+    /// d'un rapport qui n'était plus publié.
     #[sqlx::test]
-    async fn sans_pairing_rien_n_est_touche(pool: PgPool) {
+    async fn un_rapport_manuel_est_compense_via_le_pairing_retrouve(pool: PgPool) {
+        seed_completed_row(&pool).await;
+        seed_pairing(&pool).await;
+
+        // payload sans pairing_id, comme pour un rapport créé hors calendrier
+        handle_unpublished(&payload(None), &pool).await;
+
+        let (status, score, _, url) = row_status(&pool).await;
+        assert_eq!(status, "in_progress");
+        assert_eq!(score, None);
+        assert!(url.unwrap().ends_with("/match-report/mr1"));
+    }
+
+    #[sqlx::test]
+    async fn sans_pairing_retrouvable_rien_n_est_touche(pool: PgPool) {
         seed_completed_row(&pool).await;
 
         handle_unpublished(&payload(None), &pool).await;
