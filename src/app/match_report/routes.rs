@@ -39,6 +39,8 @@ pub mod path {
         "/app/{space_id}/match-report/{match_report_id}/recap";
     pub const MATCH_REPORT_RECAP_PUBLISH: &str =
         "/app/{space_id}/match-report/{match_report_id}/recap/publish";
+    pub const MATCH_REPORT_RECAP_UNPUBLISH: &str =
+        "/app/{space_id}/match-report/{match_report_id}/recap/unpublish";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -179,6 +181,12 @@ impl Routes {
 
     pub fn recap_publish(&self, space_id: &str, match_report_id: &str) -> String {
         path::MATCH_REPORT_RECAP_PUBLISH
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+    }
+
+    pub fn recap_unpublish(&self, space_id: &str, match_report_id: &str) -> String {
+        path::MATCH_REPORT_RECAP_UNPUBLISH
             .replace("{space_id}", space_id)
             .replace("{match_report_id}", match_report_id)
     }

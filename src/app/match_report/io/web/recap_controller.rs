@@ -13,6 +13,9 @@ use crate::app::match_report::io::web::view_models::{
 use crate::app::match_report::use_cases::publish_match_report_use_case::{
     self, PublishMatchReportCommand, PublishMatchReportError,
 };
+use crate::app::match_report::use_cases::unpublish_match_report_use_case::{
+    self, UnpublishMatchReportCommand, UnpublishMatchReportError,
+};
 use crate::app::match_report::ports::{ICompetitionDataPort, ISpaceAdminPort, ITeamDataPort};
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::common_types::MatchReportId;
@@ -333,32 +336,33 @@ pub async fn post_publish(
         return StatusCode::BAD_REQUEST.into_response();
     };
 
-    if let Err(status) = authorize_publish(&state, &user, &space_id, &match_report_id).await {
+    if let Err(status) = authorize_recap_action(&state, &user, &space_id, &match_report_id).await {
         return status.into_response();
     }
     let cmd = PublishMatchReportCommand { match_report_id: mr_id, published_by: user.id };
     publish_response(execute_publish(&state, cmd).await, &space_id, &match_report_id)
 }
 
-/// Charge le rapport et vérifie que l'utilisateur a le droit de le publier.
+/// Charge le rapport et vérifie que l'utilisateur a le droit d'agir dessus —
+/// publier comme corriger, la règle est la même.
 ///
 /// Mêmes droits que la consultation du recap : sans ce contrôle, tout
 /// utilisateur connecté connaissant un `match_report_id` pouvait publier le
 /// rapport d'autrui.
-async fn authorize_publish(
+async fn authorize_recap_action(
     state:           &AppState,
     user:            &User,
     space_id:        &str,
     match_report_id: &str,
 ) -> Result<(), StatusCode> {
-    let scope = load_publish_scope(state, match_report_id).await?;
+    let scope = load_recap_scope(state, match_report_id).await?;
     match is_authorized(&RecapAuthDeps::from_state(state), user, space_id, &scope).await {
         true => Ok(()),
         false => Err(StatusCode::FORBIDDEN),
     }
 }
 
-async fn load_publish_scope(
+async fn load_recap_scope(
     state:           &AppState,
     match_report_id: &str,
 ) -> Result<RecapScope, StatusCode> {
@@ -405,6 +409,62 @@ fn publish_response(
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
+}
+
+// ── POST /recap/unpublish — correction ────────────────────────────────────────
+
+pub async fn post_unpublish(
+    auth_session: AuthSession,
+    Path((space_id, match_report_id)): Path<(String, String)>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    let Some(user) = auth_session.user else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
+    let Ok(mr_id) = MatchReportId::try_new(&match_report_id) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    if let Err(status) = authorize_recap_action(&state, &user, &space_id, &match_report_id).await {
+        return status.into_response();
+    }
+    let cmd = UnpublishMatchReportCommand { match_report_id: mr_id, unpublished_by: user.id };
+    unpublish_response(execute_unpublish(&state, cmd).await)
+}
+
+async fn execute_unpublish(
+    state: &AppState,
+    cmd:   UnpublishMatchReportCommand,
+) -> Result<(), UnpublishMatchReportError> {
+    unpublish_match_report_use_case::execute(
+        cmd,
+        state.match_report.match_report_repo.as_ref(),
+        state.match_report.team_data.as_ref(),
+        state.match_report.player_data.as_ref(),
+        &state.match_report.event_bus,
+    )
+    .await
+}
+
+fn unpublish_response(result: Result<(), UnpublishMatchReportError>) -> Response {
+    match result {
+        // Un garde-fou devenu bloquant entre l'affichage et le clic n'est pas une
+        // erreur : la page se recharge et montre la raison recalculée, à jour.
+        Ok(()) | Err(UnpublishMatchReportError::NotEligible(_)) => refresh(),
+        Err(UnpublishMatchReportError::NotFound)
+        | Err(UnpublishMatchReportError::NotPublished) => StatusCode::NOT_FOUND.into_response(),
+        Err(UnpublishMatchReportError::Repository(e)) => {
+            tracing::error!("post_unpublish: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+/// L'URL ne change pas — seul l'état du rapport change.
+fn refresh() -> Response {
+    axum::response::Response::builder()
+        .header("HX-Refresh", "true")
+        .body(axum::body::Body::empty())
+        .unwrap()
 }
 
 #[cfg(test)]

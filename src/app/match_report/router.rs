@@ -6,7 +6,9 @@ use crate::app::match_report::io::web::match_selection_controller::{
     update_match_selection,
 };
 use crate::app::match_report::io::web::pre_match_controller::{get_pre_match, post_pre_match};
-use crate::app::match_report::io::web::recap_controller::{get_recap, post_publish};
+use crate::app::match_report::io::web::recap_controller::{
+    get_recap, post_publish, post_unpublish,
+};
 use crate::app::match_report::io::web::record_action_controller::{
     delete_action, post_action_step3, post_action_step4,
 };
@@ -54,4 +56,5 @@ pub fn router() -> Router<AppState> {
         .route(path::MATCH_REPORT_MERCENARY_SELECTOR, get(get_mercenary_selector))
         .route(path::MATCH_REPORT_RECAP, get(get_recap))
         .route(path::MATCH_REPORT_RECAP_PUBLISH, post(post_publish))
+        .route(path::MATCH_REPORT_RECAP_UNPUBLISH, post(post_unpublish))
 }
