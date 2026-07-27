@@ -110,6 +110,19 @@ pub enum PlayerDomainEvent {
         team_score:     u8,
         opponent_score: u8,
     },
+
+    /// L'impact de ce match sur ce joueur a été annulé — le rapport a été
+    /// dépublié pour correction.
+    ///
+    /// Événement **mince** à dessein : il énonce un fait, pas les montants à
+    /// retrancher. Ceux-ci vivent dans l'instantané `last_match` de l'agrégat,
+    /// lui-même reconstruit par les événements qui précèdent. Au rejeu, `apply`
+    /// dispose donc exactement des mêmes valeurs qu'au moment de l'émission.
+    MatchImpactReverted {
+        player_id:       PlayerId,
+        team_id:         TeamId,
+        match_report_id: MatchReportId,
+    },
 }
 
 impl PlayerDomainEvent {
@@ -128,6 +141,7 @@ impl PlayerDomainEvent {
             Self::InjurySustained { .. } => "InjurySustained",
             Self::PlayerAvailabilityRestored { .. } => "PlayerAvailabilityRestored",
             Self::MatchConcluded { .. } => "MatchConcluded",
+            Self::MatchImpactReverted { .. } => "MatchImpactReverted",
         }
     }
 

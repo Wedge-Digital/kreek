@@ -311,3 +311,39 @@ async fn un_match_inconnu_ne_bloque_pas(pool: PgPool) {
 
     assert!(!repo.has_spent_spp_since_match(&team_id, "mr-inconnu").await.unwrap());
 }
+
+// ── MatchImpactReverted — projection ─────────────────────────────────────────
+
+/// La projection doit suivre l'agrégat après compensation. L'événement étant
+/// mince, `upsert_player_projection` relit le flux dans sa transaction : ce test
+/// vérifie que le résultat est bien celui de l'agrégat rejoué.
+#[sqlx::test]
+async fn la_compensation_met_a_jour_spp_et_statut_dans_la_projection(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool);
+    let (player_id, team_id) = (PlayerId("p1".into()), TeamId("t1".into()));
+    let player = seed_player(&repo, &player_id, &team_id).await;
+
+    let td = player.record_touchdown(context_for("mr-1"), SppEarned::try_new(3).unwrap());
+    repo.append(&player_id, &team_id, &td, 2).await.unwrap();
+    let player = repo.find_by_id(&player_id).await.unwrap().unwrap();
+    let blessure = player.record_injury(context_for("mr-1"), InjuryType::Amoche);
+    repo.append(&player_id, &team_id, &blessure, 3).await.unwrap();
+
+    let avant = proj.find_by_id(&player_id.0).await.unwrap().unwrap();
+    assert_eq!(avant.spp, 3);
+    assert_eq!(avant.participation_status, "MissingNextGame");
+
+    let player = repo.find_by_id(&player_id).await.unwrap().unwrap();
+    let compensation = player
+        .revert_match_impact(&MatchReportId("mr-1".into()))
+        .expect("le dernier match doit être compensable");
+    repo.append(&player_id, &team_id, &compensation, 4).await.unwrap();
+
+    let apres = proj.find_by_id(&player_id.0).await.unwrap().unwrap();
+    assert_eq!(apres.spp, 0, "les SPP du match doivent être retirés de la projection");
+    assert_eq!(
+        apres.participation_status, "Available",
+        "le statut projeté doit suivre l'agrégat"
+    );
+}

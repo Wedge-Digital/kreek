@@ -47,18 +47,12 @@ async fn handle_event(
         return dispatch_team_match_concluded(app_event, player_repo).await;
     }
 
-    // La compensation d'une dépublication relève de la carte 235. Émise dès à
-    // présent par le publisher, elle est ignorée ici en attendant — sans ce
-    // filtre explicite, elle tomberait dans le chargement de joueur ci-dessous,
-    // qui n'a aucun sens pour un événement portant sur toute une équipe.
-    if let PlayerMatchImpactAppEvent::TeamMatchImpactReverted { match_report_id, team_id } =
+    // Comme `TeamMatchConcluded`, cet événement porte sur toute une équipe et
+    // non sur un joueur : il est traité à part, dans la même tâche séquentielle.
+    if let PlayerMatchImpactAppEvent::TeamMatchImpactReverted { team_id, match_report_id } =
         &app_event
     {
-        tracing::debug!(
-            "player_match_impact_listener: TeamMatchImpactReverted ignoré \
-             (équipe {team_id}, rapport {match_report_id}) — compensation non implémentée"
-        );
-        return;
+        return revert_team_match_impact(player_repo, team_id, match_report_id).await;
     }
 
     let (context_payload, player) = match &app_event {
@@ -139,6 +133,55 @@ async fn dispatch_team_match_concluded(
         opponent_team_name,
     };
     handle_team_match_concluded(player_repo, &team_id, context, team_score, opponent_score).await;
+}
+
+/// Défait l'impact d'un match sur tout l'effectif d'une équipe.
+///
+/// Itère sans se soucier de qui a joué : le domaine renvoie `None` pour les
+/// joueurs dont le dernier match n'est pas celui-ci, ce qui vaut aussi
+/// idempotence si la compensation est rejouée.
+async fn revert_team_match_impact(
+    player_repo:     &dyn IPlayerRepository,
+    team_id:         &str,
+    match_report_id: &str,
+) {
+    let Some(players) = load_roster(player_repo, team_id).await else {
+        return;
+    };
+    let target = MatchReportId(match_report_id.to_string());
+    for player in &players {
+        revert_one_player(player_repo, player, &target).await;
+    }
+}
+
+async fn revert_one_player(
+    player_repo: &dyn IPlayerRepository,
+    player:      &Player,
+    target:      &MatchReportId,
+) {
+    // `None` : ce joueur n'a rien à défaire pour ce match.
+    let Some(event) = player.revert_match_impact(target) else {
+        return;
+    };
+    if let Err(e) = player_repo
+        .append(&player.id, &player.team_id, &event, player.version + 1)
+        .await
+    {
+        tracing::error!(
+            "player_match_impact_listener: append MatchImpactReverted {}: {e}",
+            player.id.0
+        );
+    }
+}
+
+async fn load_roster(player_repo: &dyn IPlayerRepository, team_id: &str) -> Option<Vec<Player>> {
+    match player_repo.find_by_team_id(&TeamId(team_id.to_string())).await {
+        Ok(players) => Some(players),
+        Err(e) => {
+            tracing::error!("player_match_impact_listener: find_by_team_id {team_id}: {e}");
+            None
+        }
+    }
 }
 
 async fn load_player(player_repo: &dyn IPlayerRepository, player_id: &str) -> Option<Player> {

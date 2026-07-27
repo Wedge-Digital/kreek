@@ -41,6 +41,14 @@ pub fn build_match_history(events: &[PlayerDomainEvent]) -> Vec<MatchHistoryEntr
     let mut entries: HashMap<String, MatchHistoryEntry> = HashMap::new();
 
     for event in events {
+        // Le match a été dépublié pour correction : sa carte disparaît de
+        // l'historique. Elle réapparaîtra au rejeu de la re-publication.
+        if let PlayerDomainEvent::MatchImpactReverted { match_report_id, .. } = event {
+            entries.remove(&match_report_id.0);
+            order.retain(|id| id != &match_report_id.0);
+            continue;
+        }
+
         let Some(match_report_id) = event_match_report_id(event) else { continue };
 
         entries.entry(match_report_id.clone()).or_insert_with(|| {
@@ -78,7 +86,10 @@ fn event_match_report_id(event: &PlayerDomainEvent) -> Option<String> {
         | PlayerDomainEvent::InitialSkillEarned { .. }
         | PlayerDomainEvent::PlayerAvailabilityRestored { .. }
         | PlayerDomainEvent::PlayerSkillPurchased { .. }
-        | PlayerDomainEvent::PlayerStatIncreased { .. } => None,
+        | PlayerDomainEvent::PlayerStatIncreased { .. }
+        // Traité en amont de la boucle : il retire une entrée au lieu d'en
+        // alimenter une.
+        | PlayerDomainEvent::MatchImpactReverted { .. } => None,
     }
 }
 
@@ -101,7 +112,8 @@ fn apply_event(entry: &mut MatchHistoryEntry, event: &PlayerDomainEvent) {
         | PlayerDomainEvent::InitialSkillEarned { .. }
         | PlayerDomainEvent::PlayerAvailabilityRestored { .. }
         | PlayerDomainEvent::PlayerSkillPurchased { .. }
-        | PlayerDomainEvent::PlayerStatIncreased { .. } => {}
+        | PlayerDomainEvent::PlayerStatIncreased { .. }
+        | PlayerDomainEvent::MatchImpactReverted { .. } => {}
     }
 }
 

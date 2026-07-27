@@ -80,10 +80,66 @@ pub struct Player {
     pub stat_adjustments:           Vec<StatAdjustment>,
     pub matches_played:             MatchesPlayedCount,
 
+    /// Ce que le dernier match a apporté à ce joueur, pour pouvoir le défaire
+    /// si le rapport est dépublié pour correction.
+    ///
+    /// État **dérivé**, reconstruit à chaque rejeu : aucune migration. Seul le
+    /// dernier match est corrigible (garde-fou « à chaud »), donc un seul
+    /// accumulateur suffit.
+    pub last_match: Option<LastMatchContribution>,
+
     /// Version courante de l'agrégat (nombre d'events déjà appliqués) — permet à
     /// l'appelant de connaître la prochaine version à utiliser pour `append()`,
     /// même pattern que `teams::Team::version`.
     pub version: i32, // arch:ok compteur technique d'event-sourcing, pas un concept domaine
+}
+
+/// Contributions d'un match à l'état du joueur — tout ce qu'une compensation
+/// doit retrancher.
+#[derive(Debug, Clone)]
+pub struct LastMatchContribution {
+    pub match_report_id: MatchReportId,
+    pub spp_earned:      Spp,
+    pub touchdowns:      u16,
+    pub passes:          u16,
+    pub interceptions:   u16,
+    pub casualties:      u16,
+    pub mvps:            u16,
+    pub fouls:           u16,
+    pub matches_played:  u16,
+    pub injuries_added:  usize,
+    /// Compté explicitement plutôt que dérivé de `injuries` : `stat_adjustments`
+    /// ne porte pas de `match_report_id`, et raisonner « les N derniers » ne
+    /// serait vrai que tant qu'on ne défait que le dernier match.
+    pub stat_adjustments_added:   usize,
+    pub persistent_injuries_added: u16,
+    /// Statut **avant** tout événement de ce match. Sa définition n'est stable
+    /// que depuis la carte 225 : une blessure subie en match n'est plus annulée
+    /// par la conclusion de ce même match.
+    pub participation_status_before: PlayerParticipationStatus,
+}
+
+impl LastMatchContribution {
+    fn starting_from(
+        match_report_id: MatchReportId,
+        status_before:   PlayerParticipationStatus,
+    ) -> Self {
+        Self {
+            match_report_id,
+            spp_earned: Spp(0),
+            touchdowns: 0,
+            passes: 0,
+            interceptions: 0,
+            casualties: 0,
+            mvps: 0,
+            fouls: 0,
+            matches_played: 0,
+            injuries_added: 0,
+            stat_adjustments_added: 0,
+            persistent_injuries_added: 0,
+            participation_status_before: status_before,
+        }
+    }
 }
 
 impl Player {
@@ -128,6 +184,7 @@ impl Player {
                     career_persistent_injuries: PersistentInjuryCount::default(),
                     injuries:                   vec![],
                     stat_adjustments:           vec![],
+                    last_match:                 None,
                     matches_played:             MatchesPlayedCount::default(),
                     version:                    1,
                 })
@@ -174,49 +231,73 @@ impl Player {
                 Some(player)
             }
 
-            PlayerDomainEvent::TouchdownScored { spp_earned, .. } => {
+            PlayerDomainEvent::TouchdownScored { context, spp_earned, .. } => {
                 let mut player = current?;
+                player.begin_match(&context.match_report_id);
                 player.spp = Spp(player.spp.0 + spp_earned.into_inner());
                 player.career_touchdowns.0 += 1;
+                let c = player.contribution();
+                c.spp_earned = Spp(c.spp_earned.0 + spp_earned.into_inner());
+                c.touchdowns += 1;
                 player.version += 1;
                 Some(player)
             }
-            PlayerDomainEvent::PassCompleted { spp_earned, .. } => {
+            PlayerDomainEvent::PassCompleted { context, spp_earned, .. } => {
                 let mut player = current?;
+                player.begin_match(&context.match_report_id);
                 player.spp = Spp(player.spp.0 + spp_earned.into_inner());
                 player.career_passes.0 += 1;
+                let c = player.contribution();
+                c.spp_earned = Spp(c.spp_earned.0 + spp_earned.into_inner());
+                c.passes += 1;
                 player.version += 1;
                 Some(player)
             }
-            PlayerDomainEvent::InterceptionMade { spp_earned, .. } => {
+            PlayerDomainEvent::InterceptionMade { context, spp_earned, .. } => {
                 let mut player = current?;
+                player.begin_match(&context.match_report_id);
                 player.spp = Spp(player.spp.0 + spp_earned.into_inner());
                 player.career_interceptions.0 += 1;
+                let c = player.contribution();
+                c.spp_earned = Spp(c.spp_earned.0 + spp_earned.into_inner());
+                c.interceptions += 1;
                 player.version += 1;
                 Some(player)
             }
-            PlayerDomainEvent::CasualtyInflicted { spp_earned, .. } => {
+            PlayerDomainEvent::CasualtyInflicted { context, spp_earned, .. } => {
                 let mut player = current?;
+                player.begin_match(&context.match_report_id);
                 player.spp = Spp(player.spp.0 + spp_earned.into_inner());
                 player.career_casualties.0 += 1;
+                let c = player.contribution();
+                c.spp_earned = Spp(c.spp_earned.0 + spp_earned.into_inner());
+                c.casualties += 1;
                 player.version += 1;
                 Some(player)
             }
-            PlayerDomainEvent::MatchMvpNamed { spp_earned, .. } => {
+            PlayerDomainEvent::MatchMvpNamed { context, spp_earned, .. } => {
                 let mut player = current?;
+                player.begin_match(&context.match_report_id);
                 player.spp = Spp(player.spp.0 + spp_earned.into_inner());
                 player.career_mvps.0 += 1;
+                let c = player.contribution();
+                c.spp_earned = Spp(c.spp_earned.0 + spp_earned.into_inner());
+                c.mvps += 1;
                 player.version += 1;
                 Some(player)
             }
-            PlayerDomainEvent::FoulCommitted { .. } => {
+            PlayerDomainEvent::FoulCommitted { context, .. } => {
                 let mut player = current?;
+                player.begin_match(&context.match_report_id);
                 player.career_fouls.0 += 1;
+                player.contribution().fouls += 1;
                 player.version += 1;
                 Some(player)
             }
             PlayerDomainEvent::InjurySustained { context, injury_type, .. } => {
                 let mut player = current?;
+                player.begin_match(&context.match_report_id);
+                player.contribution().injuries_added += 1;
                 player.injuries.push(PlayerInjuryRecord {
                     injury_type: injury_type.clone(),
                     context:     context.clone(),
@@ -229,6 +310,7 @@ impl Player {
                     InjuryType::BlessureSerieuse => {
                         player.participation_status = PlayerParticipationStatus::MissingNextGame;
                         player.career_persistent_injuries.0 += 1;
+                        player.contribution().persistent_injuries_added += 1;
                     }
                     InjuryType::Amoche => {
                         player.participation_status = PlayerParticipationStatus::MissingNextGame;
@@ -236,26 +318,90 @@ impl Player {
                     InjuryType::Sequel { stat } => {
                         player.participation_status = PlayerParticipationStatus::MissingNextGame;
                         player.stat_adjustments.push(StatAdjustment { stat: *stat, malus: StatMalus::try_new(1).unwrap() });
+                        player.contribution().stat_adjustments_added += 1;
                     }
                 }
                 player.version += 1;
                 Some(player)
             }
-            PlayerDomainEvent::PlayerAvailabilityRestored { .. } => {
+            PlayerDomainEvent::PlayerAvailabilityRestored { match_report_id, .. } => {
                 let mut player = current?;
+                player.begin_match(match_report_id);
                 if player.participation_status == PlayerParticipationStatus::MissingNextGame {
                     player.participation_status = PlayerParticipationStatus::Available;
                 }
                 player.version += 1;
                 Some(player)
             }
-            PlayerDomainEvent::MatchConcluded { .. } => {
+            PlayerDomainEvent::MatchConcluded { context, .. } => {
                 let mut player = current?;
+                player.begin_match(&context.match_report_id);
                 player.matches_played.0 += 1;
+                player.contribution().matches_played += 1;
+                player.version += 1;
+                Some(player)
+            }
+            PlayerDomainEvent::MatchImpactReverted { match_report_id, .. } => {
+                let mut player = current?;
+                player.revert_last_match(match_report_id);
                 player.version += 1;
                 Some(player)
             }
         }
+    }
+
+    /// Ouvre l'accumulateur si cet événement appartient à un autre match que
+    /// celui en cours. Appelé **avant** toute mutation, sans quoi
+    /// `participation_status_before` capturerait l'état d'après.
+    fn begin_match(&mut self, match_report_id: &MatchReportId) {
+        let already_current =
+            self.last_match.as_ref().map(|m| &m.match_report_id) == Some(match_report_id);
+        if !already_current {
+            self.last_match = Some(LastMatchContribution::starting_from(
+                match_report_id.clone(),
+                self.participation_status,
+            ));
+        }
+    }
+
+    fn contribution(&mut self) -> &mut LastMatchContribution {
+        self.last_match
+            .as_mut()
+            .expect("begin_match doit être appelé avant toute accumulation")
+    }
+
+    /// Retranche l'impact du dernier match. Sans effet si l'instantané concerne
+    /// un autre match — c'est ce qui rend la compensation idempotente.
+    fn revert_last_match(&mut self, match_report_id: &MatchReportId) {
+        let Some(c) = self.last_match.take() else { return };
+        if &c.match_report_id != match_report_id {
+            self.last_match = Some(c);
+            return;
+        }
+
+        self.subtract_counters(&c);
+
+        // Les blessures de ce match sont les dernières ajoutées, donc en fin de
+        // liste — on ne défait que le dernier match.
+        truncate_by(&mut self.injuries, c.injuries_added);
+        truncate_by(&mut self.stat_adjustments, c.stat_adjustments_added);
+
+        self.participation_status = c.participation_status_before;
+    }
+
+    fn subtract_counters(&mut self, c: &LastMatchContribution) {
+        self.spp = Spp(self.spp.0.saturating_sub(c.spp_earned.0));
+        self.career_touchdowns.0 = self.career_touchdowns.0.saturating_sub(c.touchdowns);
+        self.career_passes.0 = self.career_passes.0.saturating_sub(c.passes);
+        self.career_interceptions.0 = self.career_interceptions.0.saturating_sub(c.interceptions);
+        self.career_casualties.0 = self.career_casualties.0.saturating_sub(c.casualties);
+        self.career_mvps.0 = self.career_mvps.0.saturating_sub(c.mvps);
+        self.career_fouls.0 = self.career_fouls.0.saturating_sub(c.fouls);
+        self.matches_played.0 = self.matches_played.0.saturating_sub(c.matches_played);
+        self.career_persistent_injuries.0 = self
+            .career_persistent_injuries
+            .0
+            .saturating_sub(c.persistent_injuries_added);
     }
 
     // ── Méthodes de commande — infaillibles, aucune garde métier (BR14) ─────────
@@ -305,6 +451,23 @@ impl Player {
         PlayerDomainEvent::MatchConcluded {
             player_id: self.id.clone(), team_id: self.team_id.clone(), context, team_score, opponent_score,
         }
+    }
+
+    /// Annule l'impact de ce match sur ce joueur.
+    ///
+    /// `None` si le dernier match enregistré n'est pas celui-ci : le joueur n'a
+    /// rien à défaire. C'est à la fois l'idempotence et ce qui permet au
+    /// listener d'itérer sur tout l'effectif sans savoir qui a joué.
+    pub fn revert_match_impact(&self, match_report_id: &MatchReportId) -> Option<PlayerDomainEvent> {
+        let last = self.last_match.as_ref()?;
+        if &last.match_report_id != match_report_id {
+            return None;
+        }
+        Some(PlayerDomainEvent::MatchImpactReverted {
+            player_id:       self.id.clone(),
+            team_id:         self.team_id.clone(),
+            match_report_id: match_report_id.clone(),
+        })
     }
 
     // ── Dépense de SPP (phase PlayerImprovement) — méthodes faillibles ──────────
@@ -633,5 +796,226 @@ mod improvement_tests {
         let stat_event = player.increase_stat(StatKind::Ag, SppCost::try_new(14).unwrap(), ValueKpo(0)).unwrap();
         let player = Player::apply(Some(player), &stat_event).unwrap();
         assert_eq!(player.spp_remaining(), 80);
+    }
+}
+
+/// Retire les `count` derniers éléments — les contributions du dernier match
+/// sont toujours en fin de liste.
+fn truncate_by<T>(items: &mut Vec<T>, count: usize) {
+    let keep = items.len().saturating_sub(count);
+    items.truncate(keep);
+}
+
+#[cfg(test)]
+mod revert_match_impact_tests {
+    use super::*;
+    use crate::app::players::domain::match_impact::RoundId;
+
+    fn context(match_report_id: &str) -> MatchContext {
+        MatchContext {
+            match_report_id:    MatchReportId(match_report_id.into()),
+            round_id:           RoundId("r1".into()),
+            round_label:        "Journée 5".into(),
+            opponent_team_id:   TeamId("adversaire".into()),
+            opponent_team_name: "Bone Crushers".into(),
+        }
+    }
+
+    fn created() -> PlayerDomainEvent {
+        PlayerDomainEvent::PlayerCreated {
+            player_id:      PlayerId("p1".into()),
+            team_id:        TeamId("t1".into()),
+            space_id:       SpaceId::new(),
+            position_name:  PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
+            roster_line_id: RosterLineId::try_new("BLITZER".to_string()).unwrap(),
+            jersey:         None,
+            base_skills:    vec![],
+            starting_spp:   Spp(0),
+            starting_value: ValueKpo(100_000),
+        }
+    }
+
+    fn spp(n: u32) -> SppEarned {
+        SppEarned::try_new(n).unwrap()
+    }
+
+    /// Un match complet : essai, passe, sortie, faute, MVP, puis conclusion.
+    fn match_events(mr: &str) -> Vec<PlayerDomainEvent> {
+        let p = || PlayerId("p1".into());
+        let t = || TeamId("t1".into());
+        vec![
+            PlayerDomainEvent::TouchdownScored { player_id: p(), team_id: t(), context: context(mr), spp_earned: spp(3) },
+            PlayerDomainEvent::PassCompleted { player_id: p(), team_id: t(), context: context(mr), spp_earned: spp(1) },
+            PlayerDomainEvent::CasualtyInflicted { player_id: p(), team_id: t(), context: context(mr), spp_earned: spp(2) },
+            PlayerDomainEvent::FoulCommitted { player_id: p(), team_id: t(), context: context(mr) },
+            PlayerDomainEvent::MatchMvpNamed { player_id: p(), team_id: t(), context: context(mr), spp_earned: spp(4) },
+            PlayerDomainEvent::MatchConcluded { player_id: p(), team_id: t(), context: context(mr), team_score: 2, opponent_score: 1 },
+        ]
+    }
+
+    fn revert(mr: &str) -> PlayerDomainEvent {
+        PlayerDomainEvent::MatchImpactReverted {
+            player_id:       PlayerId("p1".into()),
+            team_id:         TeamId("t1".into()),
+            match_report_id: MatchReportId(mr.into()),
+        }
+    }
+
+    fn hydrate(events: Vec<PlayerDomainEvent>) -> Player {
+        Player::from_events(&events).unwrap()
+    }
+
+    #[test]
+    fn revert_retire_les_spp_et_les_compteurs_du_match() {
+        let mut events = vec![created()];
+        events.extend(match_events("mr1"));
+        let avant = hydrate(events.clone());
+        assert_eq!(avant.spp.0, 10);
+
+        events.push(revert("mr1"));
+        let apres = hydrate(events);
+
+        assert_eq!(apres.spp.0, 0);
+        assert_eq!(apres.career_touchdowns.0, 0);
+        assert_eq!(apres.career_passes.0, 0);
+        assert_eq!(apres.career_casualties.0, 0);
+        assert_eq!(apres.career_fouls.0, 0);
+        assert_eq!(apres.career_mvps.0, 0);
+        assert_eq!(apres.matches_played.0, 0);
+    }
+
+    #[test]
+    fn revert_ne_touche_pas_les_matchs_anterieurs() {
+        let mut events = vec![created()];
+        events.extend(match_events("mr1"));
+        events.extend(match_events("mr2"));
+        events.push(revert("mr2"));
+
+        let apres = hydrate(events);
+
+        // il reste exactement la contribution de mr1
+        assert_eq!(apres.spp.0, 10);
+        assert_eq!(apres.career_touchdowns.0, 1);
+        assert_eq!(apres.matches_played.0, 1);
+    }
+
+    #[test]
+    fn revert_retire_la_blessure_et_le_malus_de_sequelle() {
+        let mut events = vec![created()];
+        events.push(PlayerDomainEvent::InjurySustained {
+            player_id: PlayerId("p1".into()), team_id: TeamId("t1".into()),
+            context: context("mr1"),
+            injury_type: InjuryType::Sequel { stat: StatKind::Ag },
+        });
+        let avant = hydrate(events.clone());
+        assert_eq!(avant.injuries.len(), 1);
+        assert_eq!(avant.stat_adjustments.len(), 1);
+
+        events.push(revert("mr1"));
+        let apres = hydrate(events);
+
+        assert!(apres.injuries.is_empty());
+        assert!(apres.stat_adjustments.is_empty(), "le malus de séquelle doit disparaître");
+    }
+
+    #[test]
+    fn revert_retire_le_compteur_de_blessures_persistantes() {
+        let mut events = vec![created()];
+        events.push(PlayerDomainEvent::InjurySustained {
+            player_id: PlayerId("p1".into()), team_id: TeamId("t1".into()),
+            context: context("mr1"),
+            injury_type: InjuryType::BlessureSerieuse,
+        });
+        events.push(revert("mr1"));
+
+        assert_eq!(hydrate(events).career_persistent_injuries.0, 0);
+    }
+
+    /// Règle 15 : le statut retrouve sa valeur d'avant le match, pas `Available`
+    /// par défaut.
+    #[test]
+    fn revert_restaure_le_statut_de_participation() {
+        let mut events = vec![created()];
+        events.push(PlayerDomainEvent::InjurySustained {
+            player_id: PlayerId("p1".into()), team_id: TeamId("t1".into()),
+            context: context("mr1"),
+            injury_type: InjuryType::Amoche,
+        });
+        assert_eq!(hydrate(events.clone()).participation_status, PlayerParticipationStatus::MissingNextGame);
+
+        events.push(revert("mr1"));
+
+        assert_eq!(hydrate(events).participation_status, PlayerParticipationStatus::Available);
+    }
+
+    /// Un joueur déjà absent avant le match doit le redevenir : la conclusion du
+    /// match l'avait rendu disponible, la compensation défait aussi cela.
+    #[test]
+    fn revert_remet_un_joueur_deja_absent_dans_son_absence() {
+        let mut events = vec![created()];
+        // absence héritée du match mr0
+        events.push(PlayerDomainEvent::InjurySustained {
+            player_id: PlayerId("p1".into()), team_id: TeamId("t1".into()),
+            context: context("mr0"),
+            injury_type: InjuryType::Amoche,
+        });
+        // mr1 : le joueur ne se blesse pas, la conclusion le restaure
+        events.push(PlayerDomainEvent::MatchConcluded {
+            player_id: PlayerId("p1".into()), team_id: TeamId("t1".into()),
+            context: context("mr1"), team_score: 1, opponent_score: 0,
+        });
+        events.push(PlayerDomainEvent::PlayerAvailabilityRestored {
+            player_id: PlayerId("p1".into()), team_id: TeamId("t1".into()),
+            match_report_id: MatchReportId("mr1".into()),
+        });
+        assert_eq!(hydrate(events.clone()).participation_status, PlayerParticipationStatus::Available);
+
+        events.push(revert("mr1"));
+
+        assert_eq!(
+            hydrate(events).participation_status,
+            PlayerParticipationStatus::MissingNextGame,
+            "la restauration de disponibilité doit être défaite elle aussi"
+        );
+    }
+
+    #[test]
+    fn revert_d_un_autre_match_ne_produit_rien() {
+        let mut events = vec![created()];
+        events.extend(match_events("mr1"));
+        let player = hydrate(events);
+
+        assert!(player.revert_match_impact(&MatchReportId("mr-autre".into())).is_none());
+    }
+
+    /// Règle 11 : rejouer la compensation ne retranche rien de plus.
+    #[test]
+    fn un_second_revert_ne_produit_rien() {
+        let mut events = vec![created()];
+        events.extend(match_events("mr1"));
+        events.push(revert("mr1"));
+        let player = hydrate(events);
+
+        assert!(player.revert_match_impact(&MatchReportId("mr1".into())).is_none());
+        assert_eq!(player.spp.0, 0);
+    }
+
+    /// Règle 8 : le cycle doit converger, sans quoi corriger deux fois dériverait.
+    #[test]
+    fn publier_depublier_republier_converge_vers_le_meme_etat() {
+        let mut nominal = vec![created()];
+        nominal.extend(match_events("mr1"));
+        let attendu = hydrate(nominal.clone());
+
+        let mut corrige = vec![created()];
+        corrige.extend(match_events("mr1"));
+        corrige.push(revert("mr1"));
+        corrige.extend(match_events("mr1"));
+        let obtenu = hydrate(corrige);
+
+        assert_eq!(obtenu.spp.0, attendu.spp.0);
+        assert_eq!(obtenu.career_touchdowns.0, attendu.career_touchdowns.0);
+        assert_eq!(obtenu.matches_played.0, attendu.matches_played.0);
+        assert_eq!(obtenu.participation_status, attendu.participation_status);
     }
 }

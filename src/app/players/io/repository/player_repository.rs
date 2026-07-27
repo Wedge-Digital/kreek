@@ -34,6 +34,7 @@ fn player_and_team_id(event: &PlayerDomainEvent) -> (&str, &str) {
         PlayerDomainEvent::MatchConcluded { player_id, team_id, .. } => (&player_id.0, &team_id.0),
         PlayerDomainEvent::PlayerSkillPurchased { player_id, team_id, .. } => (&player_id.0, &team_id.0),
         PlayerDomainEvent::PlayerStatIncreased { player_id, team_id, .. } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::MatchImpactReverted { player_id, team_id, .. } => (&player_id.0, &team_id.0),
     }
 }
 
@@ -236,6 +237,28 @@ pub async fn upsert_player_projection(
             .await
             .map_err(RepositoryError::Database)?;
         }
+
+        // Compensation d'une dépublication. La projection ne porte que `spp` et
+        // `participation_status` parmi les champs touchés : les deux sont relus
+        // depuis l'agrégat rejoué, seul endroit où l'instantané du dernier match
+        // est connu.
+        PlayerDomainEvent::MatchImpactReverted { player_id, .. } => {
+            let events = load_events_in_tx(tx, &player_id.0).await?;
+            let Some(player) = Player::from_events(&events) else {
+                return Ok(());
+            };
+            sqlx::query(
+                "UPDATE players_proj
+                 SET spp = $1, participation_status = $2, version = version + 1
+                 WHERE player_id = $3",
+            )
+            .bind(player.spp.0 as i32)
+            .bind(participation_status_label(player.participation_status))
+            .bind(&player_id.0)
+            .execute(&mut **tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+        }
     }
 
     Ok(())
@@ -252,6 +275,41 @@ fn injury_status_label(injury: &crate::app::players::domain::match_impact::Injur
         InjuryType::BlessureSerieuse | InjuryType::Amoche | InjuryType::Sequel { .. } => {
             Some("MissingNextGame")
         }
+    }
+}
+
+/// Relit le flux du joueur **dans la transaction en cours**, pour recalculer les
+/// champs projetés après une compensation.
+///
+/// L'événement de compensation est volontairement mince : il n'énonce que le
+/// fait. Les montants retranchés vivent dans l'instantané de l'agrégat, seul
+/// endroit où ils sont connus — d'où ce rejeu, borné à un joueur et à une
+/// opération rare.
+async fn load_events_in_tx(
+    tx:        &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    player_id: &str,
+) -> Result<Vec<PlayerDomainEvent>, RepositoryError> {
+    let rows = sqlx::query("SELECT payload FROM players_events WHERE player_id = $1 ORDER BY version ASC")
+        .bind(player_id)
+        .fetch_all(&mut **tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+
+    rows.iter()
+        .map(|r| serde_json::from_value(r.get::<serde_json::Value, _>("payload")))
+        .collect::<Result<_, _>>()
+        .map_err(RepositoryError::Deserialization)
+}
+
+fn participation_status_label(
+    status: crate::app::players::domain::match_impact::PlayerParticipationStatus,
+) -> &'static str {
+    use crate::app::players::domain::match_impact::PlayerParticipationStatus as S;
+    match status {
+        S::Available => "Available",
+        S::MissingNextGame => "MissingNextGame",
+        S::Retired => "Retired",
+        S::Dead => "Dead",
     }
 }
 
