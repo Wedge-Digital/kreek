@@ -219,3 +219,70 @@ async fn action_and_team_match_concluded_sent_back_to_back_both_land_in_history(
     assert_eq!(mr3.opponent_team_name, "Bone Crushers");
     assert_eq!(mr3.actions.len(), 1);
 }
+
+/// Reproduction du scénario **réel** de publication (carte 225).
+///
+/// Le test ci-dessus conclut `mr2` après une blessure subie en `mr1` — deux
+/// matchs différents, ce qui correspond à l'intention de BR12 : restaurer au
+/// match suivant. Mais en production, `app_event_publisher` émet les events
+/// d'action **et** `TeamMatchConcluded` avec le **même** `match_report_id`, dos
+/// à dos, traités par la même tâche séquentielle.
+///
+/// La question : un joueur blessé pendant le match N est-il encore absent au
+/// match N+1, ou la conclusion du match N le rend-elle immédiatement disponible ?
+#[sqlx::test]
+async fn un_joueur_blesse_pendant_le_match_reste_absent_au_suivant(pool: PgPool) {
+    let player_repo: Arc<dyn IPlayerRepository> = Arc::new(PgPlayerRepository::new(pool));
+    let skill_catalog: Arc<dyn crate::app::players::ports::ISkillCatalogPort> = Arc::new(crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter::new(Arc::new(InMemoryReferenceRepository::load_for_tests())));
+    let app_event_bus = new_bus();
+
+    player_match_impact_listener::init(&app_event_bus, player_repo.clone(), skill_catalog);
+    seed_player(player_repo.as_ref(), "blesse", "t1").await;
+
+    // Ordre exact du publisher : les actions du match, puis sa conclusion —
+    // tous deux portant `mr1`.
+    let _ = app_event_bus.send(
+        PlayerMatchImpactAppEvent::PlayerInjured {
+            context:     context("blesse"),
+            injury_type: InjuryTypePayload::BlessureSerieuse,
+        }
+        .to_enveloppe(),
+    );
+    let _ = app_event_bus.send(
+        PlayerMatchImpactAppEvent::TeamMatchConcluded {
+            team_id:            "t1".into(),
+            match_report_id:    "mr1".into(),
+            round_id:           "r1".into(),
+            round_label:        "Journée 5".into(),
+            opponent_team_id:   "opponent".into(),
+            opponent_team_name: "Bone Crushers".into(),
+            team_score:         1,
+            opponent_score:     0,
+        }
+        .to_enveloppe(),
+    );
+
+    // On attend que le match soit conclu (compteur de matchs joués), pour être
+    // sûr que les deux events ont été traités avant d'observer le statut.
+    wait_for(|| {
+        let player_repo = player_repo.clone();
+        async move {
+            player_repo
+                .find_by_id(&PlayerId("blesse".into()))
+                .await
+                .ok()
+                .flatten()
+                .map(|p| p.matches_played.0 == 1)
+                .unwrap_or(false)
+        }
+    })
+    .await;
+
+    let joueur = player_repo.find_by_id(&PlayerId("blesse".into())).await.unwrap().unwrap();
+    assert_eq!(
+        joueur.participation_status,
+        PlayerParticipationStatus::MissingNextGame,
+        "une blessure subie pendant ce match doit faire manquer le match suivant, \
+         pas être annulée par la conclusion du match où elle a eu lieu"
+    );
+}

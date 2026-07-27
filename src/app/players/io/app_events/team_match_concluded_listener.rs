@@ -1,11 +1,20 @@
-use crate::app::players::domain::match_impact::{MatchContext, PlayerParticipationStatus};
-use crate::app::players::domain::player::TeamId;
+use crate::app::players::domain::match_impact::{
+    MatchContext, MatchReportId, PlayerParticipationStatus,
+};
+use crate::app::players::domain::player::{Player, TeamId};
 use crate::app::players::ports::IPlayerRepository;
 
 /// Pour chaque joueur d'une équipe dont le rapport de match vient de se
 /// conclure : enregistre toujours `MatchConcluded` (compteur de matchs joués +
 /// ancre d'historique), et en plus lève `MissingNextGame` → `Available` (BR12)
-/// pour ceux qui l'étaient — peu importe que le joueur ait vraiment joué ou non.
+/// pour ceux qui l'étaient **avant** ce match — peu importe que le joueur ait
+/// vraiment joué ou non.
+///
+/// La restriction « avant ce match » est essentielle : le publisher émet les
+/// events d'action et `TeamMatchConcluded` avec le même `match_report_id`, dans
+/// la même tâche séquentielle. Restaurer sans distinction annulerait la
+/// blessure subie pendant ce match-là, au moment même où elle vient d'être
+/// enregistrée (carte 225).
 ///
 /// Appelé depuis `player_match_impact_listener` (même tâche séquentielle que les
 /// events d'action) plutôt que depuis un listener à part : les deux catégories
@@ -35,13 +44,31 @@ pub(crate) async fn handle_team_match_concluded(
             continue;
         }
 
-        if player.participation_status == PlayerParticipationStatus::MissingNextGame {
+        if is_restorable(player, &context.match_report_id) {
             let restored = player.restore_availability(context.match_report_id.clone());
             if let Err(e) = player_repo.append(&player.id, &player.team_id, &restored, next_version + 1).await {
                 tracing::error!("team_match_concluded_listener: append PlayerAvailabilityRestored {}: {e}", player.id.0);
             }
         }
     }
+}
+
+/// Le joueur était-il absent **avant** ce match ?
+///
+/// `injuries` porte le `match_report_id` de chaque blessure : il suffit de
+/// regarder si celle qui l'a rendu indisponible vient de ce match-ci. Aucune
+/// donnée supplémentaire à stocker.
+///
+/// Un joueur mort ou retiré n'est pas concerné — seul `MissingNextGame` se
+/// restaure.
+fn is_restorable(player: &Player, current_match: &MatchReportId) -> bool {
+    if player.participation_status != PlayerParticipationStatus::MissingNextGame {
+        return false;
+    }
+    !player
+        .injuries
+        .iter()
+        .any(|i| &i.context.match_report_id == current_match)
 }
 
 #[cfg(test)]
@@ -139,5 +166,61 @@ mod tests {
         let healthy_after = repo.find_by_id(&PlayerId("healthy".into())).await.unwrap().unwrap();
         assert_eq!(healthy_after.matches_played.0, 1);
         assert_eq!(healthy_after.version, 2); // MatchConcluded seulement, pas de restauration inutile
+    }
+    /// Carte 225 : la blessure subie **pendant** le match qui se conclut ne doit
+    /// pas être annulée par cette conclusion. Le publisher émet les deux events
+    /// avec le même `match_report_id`, dos à dos.
+    #[sqlx::test]
+    async fn une_blessure_subie_pendant_ce_match_n_est_pas_restauree(pool: PgPool) {
+        let repo = PgPlayerRepository::new(pool);
+        let joueur = seed_player(&repo, "blesse", "t1").await;
+        // blessure portant le MÊME match que la conclusion qui suit
+        let blessure = joueur.record_injury(sample_context(), InjuryType::BlessureSerieuse);
+        repo.append(&joueur.id, &joueur.team_id, &blessure, 2).await.unwrap();
+
+        handle_team_match_concluded(&repo, "t1", sample_context(), 1, 0).await;
+
+        let apres = repo.find_by_id(&PlayerId("blesse".into())).await.unwrap().unwrap();
+        assert_eq!(
+            apres.participation_status,
+            PlayerParticipationStatus::MissingNextGame,
+            "le joueur doit rester absent au prochain match"
+        );
+    }
+
+    /// Le pendant du test ci-dessus : une blessure d'un match **antérieur** se
+    /// restaure bien, c'est l'objet même de BR12.
+    #[sqlx::test]
+    async fn une_blessure_d_un_match_anterieur_est_restauree(pool: PgPool) {
+        let repo = PgPlayerRepository::new(pool);
+        let joueur = seed_player(&repo, "blesse", "t1").await;
+        let blessure = joueur.record_injury(sample_context(), InjuryType::BlessureSerieuse);
+        repo.append(&joueur.id, &joueur.team_id, &blessure, 2).await.unwrap();
+
+        // conclusion d'un match différent (mr2), soit le match suivant
+        handle_team_match_concluded(&repo, "t1", concluded_context(), 1, 0).await;
+
+        let apres = repo.find_by_id(&PlayerId("blesse".into())).await.unwrap().unwrap();
+        assert_eq!(apres.participation_status, PlayerParticipationStatus::Available);
+    }
+
+    /// Un joueur blessé au match N puis de nouveau au match N+1 doit rester
+    /// absent : la conclusion de N+1 restaure la blessure de N, mais celle de
+    /// N+1 vient d'être posée.
+    #[sqlx::test]
+    async fn une_nouvelle_blessure_prime_sur_la_restauration_de_l_ancienne(pool: PgPool) {
+        let repo = PgPlayerRepository::new(pool);
+        let joueur = seed_player(&repo, "blesse", "t1").await;
+        let ancienne = joueur.record_injury(sample_context(), InjuryType::Amoche);
+        repo.append(&joueur.id, &joueur.team_id, &ancienne, 2).await.unwrap();
+
+        let joueur = repo.find_by_id(&PlayerId("blesse".into())).await.unwrap().unwrap();
+        let nouvelle = joueur.record_injury(concluded_context(), InjuryType::Amoche);
+        repo.append(&joueur.id, &joueur.team_id, &nouvelle, 3).await.unwrap();
+
+        handle_team_match_concluded(&repo, "t1", concluded_context(), 1, 0).await;
+
+        let apres = repo.find_by_id(&PlayerId("blesse".into())).await.unwrap().unwrap();
+        assert_eq!(apres.participation_status, PlayerParticipationStatus::MissingNextGame);
     }
 }
