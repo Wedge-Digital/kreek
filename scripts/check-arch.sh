@@ -26,7 +26,16 @@ RESET='\033[0m'
 
 EXIT_CODE=0
 
-BCS="auth competitions news players references spaces team_creation teams"
+# Dérivée du contenu de src/app/ plutôt qu'écrite à la main : une liste figée
+# laissait match_report, ranking et spp_calculator hors de l'axe 3, créés après
+# l'écriture de ce script sans que personne ne pense à les y ajouter. La boucle
+# parcourant cette liste dans les deux sens, un BC absent était doublement
+# invisible — ni ses propres références croisées, ni celles qui le visaient.
+# `shared_kernel` en est exclu : il est partagé par construction.
+BCS=$(find src/app -mindepth 1 -maxdepth 1 -type d -printf '%f\n' \
+    | grep -v '^shared_kernel$' \
+    | sort \
+    | tr '\n' ' ')
 
 print_pass() { echo -e "  ${GREEN}✓ PASS${RESET}"; }
 print_fail() {

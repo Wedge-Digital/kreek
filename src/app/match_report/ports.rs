@@ -127,8 +127,8 @@ pub trait ICoachDataPort: Send + Sync {
 ///
 /// Le BC `match_report` ne connaît pas le BC propriétaire des espaces : il pose
 /// la seule question dont il a besoin. Sans ce port, le contrôle d'accès du
-/// recap devrait atteindre `state.spaces` directement — une référence croisée
-/// entre BCs, et un contrôle non testable puisque `AppState` n'est pas
+/// recap devrait atteindre le contexte de ce BC directement — une référence
+/// croisée entre BCs, et un contrôle non testable puisque `AppState` n'est pas
 /// constructible en test unitaire.
 #[async_trait]
 pub trait ISpaceAdminPort: Send + Sync {
