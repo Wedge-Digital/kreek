@@ -1,15 +1,21 @@
 use crate::app::match_report::ports::{IPlayerDataPort, PositionCountDto};
-use crate::app::players::ports::IPlayerProjectionRepository;
+use crate::app::players::ports::{IPlayerProjectionRepository, IPlayerRepository};
 use async_trait::async_trait;
 use std::sync::Arc;
 
 pub struct PlayerDataAdapter {
     player_projection_repo: Arc<dyn IPlayerProjectionRepository>,
+    /// L'historique des SPP dépensés ne vit que dans le flux d'événements — la
+    /// projection ne le porte pas.
+    player_repo: Arc<dyn IPlayerRepository>,
 }
 
 impl PlayerDataAdapter {
-    pub fn new(player_projection_repo: Arc<dyn IPlayerProjectionRepository>) -> Self {
-        Self { player_projection_repo }
+    pub fn new(
+        player_projection_repo: Arc<dyn IPlayerProjectionRepository>,
+        player_repo: Arc<dyn IPlayerRepository>,
+    ) -> Self {
+        Self { player_projection_repo, player_repo }
     }
 }
 
@@ -36,6 +42,18 @@ impl IPlayerDataPort for PlayerDataAdapter {
     async fn find_player_position(&self, player_id: &str) -> Option<String> {
         let player = self.player_projection_repo.find_by_id(player_id).await.ok()??;
         Some(player.position_name)
+    }
+
+    async fn has_spent_spp_since_match(
+        &self,
+        team_id:         &str,
+        match_report_id: &str,
+    ) -> Result<bool, String> {
+        use crate::app::players::domain::player::TeamId;
+        self.player_repo
+            .has_spent_spp_since_match(&TeamId(team_id.to_string()), match_report_id)
+            .await
+            .map_err(|e| e.to_string())
     }
 
     async fn find_player_counts_by_position(&self, team_id: &str) -> Vec<PositionCountDto> {

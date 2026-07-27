@@ -238,6 +238,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             let player_data = Arc::new(
                 crate::infrastructure::match_report::player_data_adapter::PlayerDataAdapter::new(
                     Arc::new(crate::app::players::io::repository::projection_repository::PgPlayerProjectionRepository::new(pool.clone())),
+                    Arc::new(crate::app::players::io::repository::player_repository::PgPlayerRepository::new(pool.clone())),
                 ),
             );
             let coach_data = Arc::new(

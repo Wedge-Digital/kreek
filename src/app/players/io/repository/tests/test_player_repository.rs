@@ -155,3 +155,159 @@ async fn find_events_by_id_returns_raw_events_in_order(pool: PgPool) {
     assert!(matches!(events[1], PlayerDomainEvent::TouchdownScored { .. }));
     assert!(matches!(events[2], PlayerDomainEvent::MatchConcluded { .. }));
 }
+
+// ── has_spent_spp_since_match — garde-fou de correction ───────────────────────
+
+fn context_for(match_report_id: &str) -> MatchContext {
+    MatchContext {
+        match_report_id:    MatchReportId(match_report_id.into()),
+        round_id:           RoundId("r1".into()),
+        round_label:        "Journée 5".into(),
+        opponent_team_id:   TeamId("opponent".into()),
+        opponent_team_name: "Bone Crushers".into(),
+    }
+}
+
+/// Épingle le couplage entre la requête SQL et la représentation serde de
+/// `PlayerDomainEvent`. La requête navigue le payload par
+/// `payload -> 'MatchConcluded' -> 'context' ->> 'match_report_id'` : si l'enum
+/// gagnait un jour un `#[serde(tag = ...)]`, le SQL cesserait de trouver quoi
+/// que ce soit **sans erreur**, et le garde-fou laisserait tout passer.
+#[test]
+fn la_forme_json_de_match_concluded_expose_le_match_report_id() {
+    let event = PlayerDomainEvent::MatchConcluded {
+        player_id:      PlayerId("p1".into()),
+        team_id:        TeamId("t1".into()),
+        context:        context_for("mr-42"),
+        team_score:     2,
+        opponent_score: 1,
+    };
+
+    let payload = serde_json::to_value(&event).unwrap();
+
+    assert_eq!(
+        payload["MatchConcluded"]["context"]["match_report_id"],
+        serde_json::json!("mr-42"),
+        "la requête SQL de has_spent_spp_since_match dépend de ce chemin exact"
+    );
+}
+
+/// `seed_player` crée un joueur à 0 SPP, ce qui ferait refuser tout achat par le
+/// domaine. Ces tests ont besoin d'un pool dépensable.
+async fn seed_player_with_spp(
+    repo:      &PgPlayerRepository,
+    player_id: &PlayerId,
+    team_id:   &TeamId,
+) -> Player {
+    let created = PlayerDomainEvent::PlayerCreated {
+        player_id:      player_id.clone(),
+        team_id:        team_id.clone(),
+        space_id:       SpaceId::new(),
+        position_name:  PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
+        roster_line_id: RosterLineId::try_new("BLITZER".to_string()).unwrap(),
+        jersey:         None,
+        base_skills:    vec![],
+        starting_spp:   Spp(20),
+        starting_value: ValueKpo(100_000),
+    };
+    repo.append(player_id, team_id, &created, 1).await.unwrap();
+    Player::from_events(&[created]).unwrap()
+}
+
+async fn purchase_skill(
+    repo:      &PgPlayerRepository,
+    player:    &Player,
+    version:   i32,
+) {
+    use crate::app::players::domain::player::AcquisitionMode;
+    use crate::app::players::domain::value_objects::{SkillId, SkillName, SppCost};
+    let event = player
+        .purchase_skill(
+            SkillId::try_new("BLOCK".to_string()).unwrap(),
+            SkillName::try_new("Blocage".to_string()).unwrap(),
+            "general".to_string(),
+            AcquisitionMode::Chosen,
+            SppCost::try_new(3).unwrap(),
+            ValueKpo(20_000),
+        )
+        .unwrap();
+    repo.append(&player.id, &player.team_id, &event, version).await.unwrap();
+}
+
+#[sqlx::test]
+async fn has_spent_spp_since_match_est_faux_sans_achat(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool);
+    let (player_id, team_id) = (PlayerId("p1".into()), TeamId("t1".into()));
+    let player = seed_player_with_spp(&repo, &player_id, &team_id).await;
+
+    let concluded = player.record_match_concluded(context_for("mr-1"), 1, 0);
+    repo.append(&player_id, &team_id, &concluded, 2).await.unwrap();
+
+    assert!(!repo.has_spent_spp_since_match(&team_id, "mr-1").await.unwrap());
+}
+
+#[sqlx::test]
+async fn has_spent_spp_since_match_est_vrai_apres_un_achat(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool);
+    let (player_id, team_id) = (PlayerId("p1".into()), TeamId("t1".into()));
+    let player = seed_player_with_spp(&repo, &player_id, &team_id).await;
+
+    let concluded = player.record_match_concluded(context_for("mr-1"), 1, 0);
+    repo.append(&player_id, &team_id, &concluded, 2).await.unwrap();
+    let player = repo.find_by_id(&player_id).await.unwrap().unwrap();
+    purchase_skill(&repo, &player, 3).await;
+
+    assert!(repo.has_spent_spp_since_match(&team_id, "mr-1").await.unwrap());
+}
+
+/// Le test décisif : un achat **antérieur** au match ne doit pas bloquer sa
+/// correction. C'est ce qui justifie la sous-requête sur le match demandé,
+/// plutôt qu'un simple « cette équipe a-t-elle déjà dépensé des SPP ».
+#[sqlx::test]
+async fn un_achat_anterieur_au_match_ne_bloque_pas_sa_correction(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool);
+    let (player_id, team_id) = (PlayerId("p1".into()), TeamId("t1".into()));
+    let player = seed_player_with_spp(&repo, &player_id, &team_id).await;
+
+    // achat après un match précédent…
+    let previous = player.record_match_concluded(context_for("mr-0"), 1, 0);
+    repo.append(&player_id, &team_id, &previous, 2).await.unwrap();
+    let player = repo.find_by_id(&player_id).await.unwrap().unwrap();
+    purchase_skill(&repo, &player, 3).await;
+
+    // …puis le match qu'on veut corriger, sans achat depuis
+    let player = repo.find_by_id(&player_id).await.unwrap().unwrap();
+    let current = player.record_match_concluded(context_for("mr-1"), 2, 2);
+    repo.append(&player_id, &team_id, &current, 4).await.unwrap();
+
+    assert!(!repo.has_spent_spp_since_match(&team_id, "mr-1").await.unwrap());
+    // le match précédent, lui, n'est plus corrigeable
+    assert!(repo.has_spent_spp_since_match(&team_id, "mr-0").await.unwrap());
+}
+
+#[sqlx::test]
+async fn l_achat_d_une_autre_equipe_ne_compte_pas(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool);
+    let (mine, other) = (TeamId("t1".into()), TeamId("t2".into()));
+    let my_player = seed_player_with_spp(&repo, &PlayerId("p1".into()), &mine).await;
+    let their_player = seed_player_with_spp(&repo, &PlayerId("p2".into()), &other).await;
+
+    for (player, team) in [(&my_player, &mine), (&their_player, &other)] {
+        let concluded = player.record_match_concluded(context_for("mr-1"), 1, 0);
+        repo.append(&player.id, team, &concluded, 2).await.unwrap();
+    }
+    let their_player = repo.find_by_id(&PlayerId("p2".into())).await.unwrap().unwrap();
+    purchase_skill(&repo, &their_player, 3).await;
+
+    assert!(!repo.has_spent_spp_since_match(&mine, "mr-1").await.unwrap());
+    assert!(repo.has_spent_spp_since_match(&other, "mr-1").await.unwrap());
+}
+
+#[sqlx::test]
+async fn un_match_inconnu_ne_bloque_pas(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool);
+    let (player_id, team_id) = (PlayerId("p1".into()), TeamId("t1".into()));
+    seed_player_with_spp(&repo, &player_id, &team_id).await;
+
+    assert!(!repo.has_spent_spp_since_match(&team_id, "mr-inconnu").await.unwrap());
+}

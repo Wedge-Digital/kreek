@@ -7,6 +7,15 @@ pub trait IPlayerDataPort: Send + Sync {
     async fn find_player_display(&self, player_id: &str) -> Option<String>;
     async fn find_player_position(&self, player_id: &str) -> Option<String>;
     async fn find_player_counts_by_position(&self, team_id: &str) -> Vec<PositionCountDto>;
+
+    /// Un joueur de cette équipe a-t-il dépensé des SPP depuis ce match ?
+    /// Garde-fou de la correction : une correction rétroactive ne doit pas
+    /// retirer des SPP déjà convertis en amélioration.
+    async fn has_spent_spp_since_match(
+        &self,
+        team_id:         &str,
+        match_report_id: &str,
+    ) -> Result<bool, String>;
 }
 
 #[async_trait]
@@ -63,6 +72,16 @@ pub struct TeamInfoDto {
 #[async_trait]
 pub trait ITeamDataPort: Send + Sync {
     async fn is_team_ready_to_play(
+        &self,
+        team_id: &str,
+    ) -> Result<bool, String>;
+
+    /// L'équipe est-elle encore en phase d'amélioration des joueurs ?
+    ///
+    /// Question du garde-fou de correction. Toutes les actions qui rendraient la
+    /// correction impossible — recrutement, staff, match suivant — exigent une
+    /// phase ultérieure : cette seule réponse suffit à les exclure toutes.
+    async fn is_team_in_player_improvement(
         &self,
         team_id: &str,
     ) -> Result<bool, String>;

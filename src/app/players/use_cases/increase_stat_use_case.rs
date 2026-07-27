@@ -84,6 +84,7 @@ mod tests {
         }
         async fn find_by_team_id(&self, _: &TeamId) -> Result<Vec<Player>, RepositoryError> { Ok(vec![]) }
         async fn find_events_by_id(&self, _: &PlayerId) -> Result<Vec<PlayerDomainEvent>, RepositoryError> { Ok(vec![]) }
+        async fn has_spent_spp_since_match(&self, _: &TeamId, _: &str) -> Result<bool, RepositoryError> { Ok(false) }
     }
 
     fn created_event() -> PlayerDomainEvent {

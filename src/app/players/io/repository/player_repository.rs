@@ -316,6 +316,44 @@ impl IPlayerRepository for PgPlayerRepository {
             .map_err(RepositoryError::Deserialization)
     }
 
+    /// `id` étant un `BIGSERIAL` monotone sur toute la table, « depuis ce match »
+    /// se traduit par « appendé après le premier `MatchConcluded` de ce match ».
+    ///
+    /// La sous-requête cible **le match demandé** et non le dernier en date :
+    /// un `MAX(id)` global répondrait sur le mauvais match si l'appelant
+    /// interrogeait un rapport antérieur, et échouerait ouvert.
+    ///
+    /// Le chemin JSON dépend de la représentation serde de `PlayerDomainEvent`
+    /// (enum *externally tagged*, `MatchReportId` étant un newtype transparent).
+    /// Le test `la_forme_json_de_match_concluded_expose_le_match_report_id`
+    /// épingle ce couplage.
+    async fn has_spent_spp_since_match(
+        &self,
+        team_id:         &TeamId,
+        match_report_id: &str,
+    ) -> Result<bool, RepositoryError> {
+        let spent: bool = sqlx::query_scalar(
+            "SELECT EXISTS (
+               SELECT 1 FROM players_events
+               WHERE team_id = $1
+                 AND event_type IN ('PlayerSkillPurchased', 'PlayerStatIncreased')
+                 AND id > (
+                   SELECT MIN(id) FROM players_events
+                   WHERE team_id = $1
+                     AND event_type = 'MatchConcluded'
+                     AND payload -> 'MatchConcluded' -> 'context' ->> 'match_report_id' = $2
+                 )
+             )",
+        )
+        .bind(&team_id.0)
+        .bind(match_report_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+
+        Ok(spent)
+    }
+
     async fn find_by_team_id(
         &self,
         team_id: &TeamId,

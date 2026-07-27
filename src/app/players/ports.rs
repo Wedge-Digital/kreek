@@ -92,6 +92,20 @@ pub trait IPlayerRepository: Send + Sync {
         &self,
         player_id: &PlayerId,
     ) -> Result<Vec<PlayerDomainEvent>, RepositoryError>;
+
+    /// Un joueur de cette équipe a-t-il dépensé des SPP **depuis** ce match ?
+    ///
+    /// Question posée par le garde-fou de correction d'un rapport publié : une
+    /// correction rétroactive ne doit pas retirer des SPP déjà convertis en
+    /// compétence ou en caractéristique.
+    ///
+    /// Répond sur l'ensemble de l'effectif, la projection ne portant pas
+    /// l'historique nécessaire.
+    async fn has_spent_spp_since_match(
+        &self,
+        team_id:         &TeamId,
+        match_report_id: &str,
+    ) -> Result<bool, RepositoryError>;
 }
 
 // ── ACL vers le BC `references` (catalogue de compétences, matrice de coût) ────

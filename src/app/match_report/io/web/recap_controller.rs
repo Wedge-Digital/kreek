@@ -460,6 +460,9 @@ mod authorization_tests {
         async fn is_team_ready_to_play(&self, _: &str) -> Result<bool, String> {
             Ok(true)
         }
+        async fn is_team_in_player_improvement(&self, _: &str) -> Result<bool, String> {
+            Ok(false)
+        }
         async fn find_team_info(&self, _: &str) -> Option<TeamInfoDto> {
             None
         }

@@ -264,6 +264,8 @@ mod tests {
                         -> Result<Vec<crate::app::players::domain::player::Player>, crate::app::players::ports::RepositoryError> { Ok(vec![]) }
                     async fn find_events_by_id(&self, _: &crate::app::players::domain::player::PlayerId)
                         -> Result<Vec<crate::app::players::domain::events::PlayerDomainEvent>, crate::app::players::ports::RepositoryError> { Ok(vec![]) }
+                    async fn has_spent_spp_since_match(&self, _: &crate::app::players::domain::player::TeamId, _: &str)
+                        -> Result<bool, crate::app::players::ports::RepositoryError> { Ok(false) }
                 }
                 struct FakePlayerProjectionRepo;
                 #[async_trait::async_trait]
@@ -364,6 +366,7 @@ mod tests {
                 #[async_trait::async_trait]
                 impl crate::app::match_report::ports::ITeamDataPort for FakeTeamDataPort {
                     async fn is_team_ready_to_play(&self, _: &str) -> Result<bool, String> { Ok(true) }
+                    async fn is_team_in_player_improvement(&self, _: &str) -> Result<bool, String> { Ok(false) }
                     async fn is_coach_of_team(&self, _: &str, _: &str) -> Result<bool, String> { Ok(false) }
                     async fn find_team_info(&self, _: &str) -> Option<crate::app::match_report::ports::TeamInfoDto> { None }
                     async fn find_team_value(&self, _: &str) -> Option<u32> { None }
@@ -378,6 +381,7 @@ mod tests {
                     async fn find_player_display(&self, _: &str) -> Option<String> { None }
                     async fn find_player_position(&self, _: &str) -> Option<String> { None }
                     async fn find_player_counts_by_position(&self, _: &str) -> Vec<crate::app::match_report::ports::PositionCountDto> { vec![] }
+                    async fn has_spent_spp_since_match(&self, _: &str, _: &str) -> Result<bool, String> { Ok(false) }
                 }
                 struct FakeCoachDataPort;
                 #[async_trait::async_trait]

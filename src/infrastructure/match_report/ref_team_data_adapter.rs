@@ -34,6 +34,23 @@ impl ITeamDataPort for RefTeamDataAdapter {
         }
     }
 
+    /// Une équipe introuvable ou dissoute (`game_phase == None`) répond `false`,
+    /// donc bloque la correction : un garde-fou échoue fermé.
+    async fn is_team_in_player_improvement(&self, team_id: &str) -> Result<bool, String> {
+        let team = self
+            .team_repo
+            .find_by_id(team_id)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(team
+            .map(|t| {
+                t.game_phase
+                    == Some(crate::app::teams::domain::team::GamePhase::PlayerImprovement)
+            })
+            .unwrap_or(false))
+    }
+
     async fn is_coach_of_team(&self, team_id: &str, user_id: &str) -> Result<bool, String> {
         let team = self
             .team_repo
