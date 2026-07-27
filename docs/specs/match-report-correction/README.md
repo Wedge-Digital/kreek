@@ -13,7 +13,7 @@ re-publication rejoue ensuite le flux nominal **inchangé**.
 
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| Recap (`recap.html`) | ✅ | ✅ | | | | | |
+| Recap (`recap.html`) | ✅ | ✅ | ✅ | | | | |
 
 Maquette : `assets/rawpages/html/app-match-report-recap-correction.html` (5 états).
 
