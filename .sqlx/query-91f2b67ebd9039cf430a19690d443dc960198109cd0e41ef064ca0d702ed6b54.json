@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM ranking_lines WHERE match_report_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "91f2b67ebd9039cf430a19690d443dc960198109cd0e41ef064ca0d702ed6b54"
+}

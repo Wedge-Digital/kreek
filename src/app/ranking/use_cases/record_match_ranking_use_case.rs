@@ -215,6 +215,10 @@ mod tests {
             self.lines.lock().unwrap().extend_from_slice(new_lines);
             Ok(())
         }
+        async fn delete_lines_for_match(&self, match_report_id: &str) -> Result<(), RankingRepositoryError> {
+            self.lines.lock().unwrap().retain(|l| l.match_report_id.to_string() != match_report_id);
+            Ok(())
+        }
     }
 
     fn team_stats(score: u8, casualties: u32, fouls: u32, completions: u32) -> TeamMatchStats {

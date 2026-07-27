@@ -106,6 +106,20 @@ impl IRankingRepository for PgRankingRepository {
         rows.into_iter().map(RankingLineRow::try_from).collect()
     }
 
+    async fn delete_lines_for_match(
+        &self,
+        match_report_id: &str,
+    ) -> Result<(), RankingRepositoryError> {
+        sqlx::query!(
+            "DELETE FROM ranking_lines WHERE match_report_id = $1",
+            match_report_id,
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(db_err)?;
+        Ok(())
+    }
+
     async fn insert_lines(&self, lines: &[RankingLine]) -> Result<(), RankingRepositoryError> {
         let mut tx = self.pool.begin().await.map_err(db_err)?;
 
@@ -290,5 +304,139 @@ mod tests {
         let rows = repo.find_latest_lines_for_season(&season_id.to_string()).await.unwrap();
         let row = rows.first().unwrap();
         assert_eq!([row.td_for, row.td_against, row.casualties, row.fouls, row.completions], [7, 3, 5, 2, 9]);
+    }
+    // ── delete_lines_for_match — compensation d'une dépublication ────────────
+
+    /// Force le `match_report_id` d'une ligne, `sample_line` en tirant un
+    /// aléatoire à chaque appel.
+    fn for_match(mut line: RankingLine, match_report_id: MatchReportId) -> RankingLine {
+        line.match_report_id = match_report_id;
+        line
+    }
+
+    #[sqlx::test]
+    async fn delete_lines_for_match_supprime_les_deux_lignes_du_match(pool: PgPool) {
+        let repo = PgRankingRepository::new(pool);
+        let (season_id, home, away) = (SeasonId::new(), TeamId::new(), TeamId::new());
+        let mr = MatchReportId::new();
+        repo.insert_lines(&[
+            for_match(sample_line(&home, &season_id, 1, 1, 0, 0, 4, 1), mr),
+            for_match(sample_line(&away, &season_id, 1, 0, 0, 1, 0, 0), mr),
+        ])
+        .await
+        .unwrap();
+
+        repo.delete_lines_for_match(&mr.to_string()).await.unwrap();
+
+        assert!(repo.find_latest_line(&season_id.to_string(), &home.to_string()).await.unwrap().is_none());
+        assert!(repo.find_latest_line(&season_id.to_string(), &away.to_string()).await.unwrap().is_none());
+    }
+
+    /// Le cœur du raisonnement de la compensation : les lignes portant des
+    /// **cumuls**, supprimer celles du dernier match fait remonter celles du
+    /// précédent, qui portent déjà l'état d'avant. Aucun recalcul nécessaire.
+    #[sqlx::test]
+    async fn supprimer_le_dernier_match_fait_remonter_les_cumuls_du_precedent(pool: PgPool) {
+        let repo = PgRankingRepository::new(pool);
+        let (season_id, team) = (SeasonId::new(), TeamId::new());
+        let (premier, second) = (MatchReportId::new(), MatchReportId::new());
+
+        // Journée 1 : victoire — 1 match, 3 points.
+        repo.insert_lines(&[for_match(
+            sample_line(&team, &season_id, 1, 1, 0, 0, 3, 0),
+            premier,
+        )])
+        .await
+        .unwrap();
+        // Journée 2 : seconde victoire — cumul à 2 matchs, 6 points.
+        repo.insert_lines(&[for_match(
+            sample_line(&team, &season_id, 2, 2, 0, 0, 6, 0),
+            second,
+        )])
+        .await
+        .unwrap();
+
+        repo.delete_lines_for_match(&second.to_string()).await.unwrap();
+
+        let latest = repo
+            .find_latest_line(&season_id.to_string(), &team.to_string())
+            .await
+            .unwrap()
+            .expect("la ligne de la journée 1 doit redevenir la dernière");
+        assert_eq!(latest.matches_played, 1);
+        assert_eq!(latest.wins, 1);
+        assert_eq!(latest.ranking_points, 3);
+    }
+
+    /// Règle 11 : la compensation doit pouvoir être rejouée.
+    #[sqlx::test]
+    async fn un_second_appel_ne_supprime_rien_et_n_echoue_pas(pool: PgPool) {
+        let repo = PgRankingRepository::new(pool);
+        let (season_id, team) = (SeasonId::new(), TeamId::new());
+        let mr = MatchReportId::new();
+        repo.insert_lines(&[for_match(sample_line(&team, &season_id, 1, 1, 0, 0, 3, 0), mr)])
+            .await
+            .unwrap();
+
+        repo.delete_lines_for_match(&mr.to_string()).await.unwrap();
+        repo.delete_lines_for_match(&mr.to_string()).await.unwrap();
+
+        assert!(repo.find_latest_line(&season_id.to_string(), &team.to_string()).await.unwrap().is_none());
+    }
+
+    #[sqlx::test]
+    async fn les_lignes_d_un_autre_match_ne_sont_pas_touchees(pool: PgPool) {
+        let repo = PgRankingRepository::new(pool);
+        let (season_id, team) = (SeasonId::new(), TeamId::new());
+        let (garde, cible) = (MatchReportId::new(), MatchReportId::new());
+        repo.insert_lines(&[for_match(sample_line(&team, &season_id, 1, 1, 0, 0, 3, 0), garde)])
+            .await
+            .unwrap();
+        repo.insert_lines(&[for_match(sample_line(&team, &season_id, 2, 2, 0, 0, 6, 0), cible)])
+            .await
+            .unwrap();
+
+        repo.delete_lines_for_match(&cible.to_string()).await.unwrap();
+
+        let latest = repo.find_latest_line(&season_id.to_string(), &team.to_string()).await.unwrap();
+        assert!(latest.is_some(), "la ligne de l'autre match doit subsister");
+    }
+
+    /// L'index unique posé par cette carte : sans suppression préalable, un
+    /// rejeu doublerait les points de l'équipe. Il échoue désormais bruyamment.
+    #[sqlx::test]
+    async fn reinserer_le_meme_match_sans_supprimer_est_rejete(pool: PgPool) {
+        let repo = PgRankingRepository::new(pool);
+        let (season_id, team) = (SeasonId::new(), TeamId::new());
+        let mr = MatchReportId::new();
+        let line = || for_match(sample_line(&team, &season_id, 1, 1, 0, 0, 3, 0), mr);
+
+        repo.insert_lines(&[line()]).await.unwrap();
+        assert!(
+            repo.insert_lines(&[line()]).await.is_err(),
+            "l'index unique doit refuser un doublon (match_report_id, team_id)"
+        );
+    }
+
+    /// Le cycle complet : dépublier puis republier laisse une seule paire de
+    /// lignes, pas deux.
+    #[sqlx::test]
+    async fn depublier_puis_republier_ne_laisse_qu_une_paire(pool: PgPool) {
+        let repo = PgRankingRepository::new(pool);
+        let (season_id, home, away) = (SeasonId::new(), TeamId::new(), TeamId::new());
+        let mr = MatchReportId::new();
+        let pair = || {
+            vec![
+                for_match(sample_line(&home, &season_id, 1, 1, 0, 0, 3, 0), mr),
+                for_match(sample_line(&away, &season_id, 1, 0, 0, 1, 0, 0), mr),
+            ]
+        };
+
+        repo.insert_lines(&pair()).await.unwrap();
+        repo.delete_lines_for_match(&mr.to_string()).await.unwrap();
+        repo.insert_lines(&pair()).await.unwrap();
+
+        let lines = repo.find_latest_lines_for_season(&season_id.to_string()).await.unwrap();
+        assert_eq!(lines.len(), 2, "une ligne par équipe, pas quatre");
     }
 }

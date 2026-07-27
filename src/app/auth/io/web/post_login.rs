@@ -325,6 +325,7 @@ mod tests {
                     async fn find_latest_line(&self, _: &str, _: &str) -> Result<Option<crate::app::ranking::ports::RankingLineRow>, crate::app::ranking::ports::RankingRepositoryError> { Ok(None) }
                     async fn find_latest_lines_for_season(&self, _: &str) -> Result<Vec<crate::app::ranking::ports::RankingLineRow>, crate::app::ranking::ports::RankingRepositoryError> { Ok(vec![]) }
                     async fn insert_lines(&self, _: &[crate::app::ranking::domain::ranking_line::RankingLine]) -> Result<(), crate::app::ranking::ports::RankingRepositoryError> { Ok(()) }
+                    async fn delete_lines_for_match(&self, _: &str) -> Result<(), crate::app::ranking::ports::RankingRepositoryError> { Ok(()) }
                 }
                 struct FakeRankingCompetitionPort;
                 #[async_trait::async_trait]

@@ -68,6 +68,19 @@ pub trait IRankingRepository: Send + Sync {
     /// Insère plusieurs lignes dans une seule transaction — utilisé pour les
     /// 2 lignes d'un même match (jamais l'une sans l'autre).
     async fn insert_lines(&self, lines: &[RankingLine]) -> Result<(), RankingRepositoryError>;
+
+    /// Supprime les lignes d'un match — les 2 à la fois, jamais l'une sans
+    /// l'autre.
+    ///
+    /// Appelé quand un rapport est dépublié pour correction. Aucun recalcul
+    /// n'est nécessaire : le garde-fou « à chaud » garantit qu'aucune des deux
+    /// équipes n'a rejoué depuis, donc que ces lignes sont les dernières. Les
+    /// lignes du match précédent redeviennent mécaniquement les dernières, et
+    /// elles portent déjà les cumuls d'avant ce match.
+    async fn delete_lines_for_match(
+        &self,
+        match_report_id: &str,
+    ) -> Result<(), RankingRepositoryError>;
 }
 
 // ── ACL vers le BC `competitions` (règles de classement + équipes inscrites) ───
