@@ -13,9 +13,11 @@ re-publication rejoue ensuite le flux nominal **inchangé**.
 
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| Recap (`recap.html`) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | |
+| Recap (`recap.html`) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 Maquette : `assets/rawpages/html/app-match-report-recap-correction.html` (5 états).
+Cartes : `recap/08-cards.md` — 11 cartes (226 à 236), plus la carte de bug 225.
+Conception terminée, implémentation à démarrer par les cartes 225, 226 et 227.
 
 ## Pourquoi pas une propagation par deltas
 
