@@ -54,13 +54,13 @@ reconstruit depuis `self`, avec `was_published_before: true`.
 
 ### Drapeau `was_published_before`
 
-Champ **sur les deux états** `MatchReportPreMatch` et
-`MatchReportReadyToPublish`. Le parcours de correction repasse par `PreMatch`
-dès la première modification d'action (`into_pre_match()`) : un drapeau porté
-par le seul `ReadyToPublish` serait perdu à ce moment-là.
+Champ sur `MatchReportReadyToPublish` **seul**, positionné par `unpublish()`,
+mis à `false` par `from_pre_match()`.
 
-Propagé par `into_pre_match()` **et** par la transition retour vers
-`ReadyToPublish`.
+`into_pre_match()` est une conversion transitoire interne aux use cases, jamais
+persistée : dans `rehydrate()`, un rapport en `ReadyToPublish` y reste et est
+muté en place pour tous les événements d'édition. Aucun événement ne le ramène
+vers `PreMatch`.
 
 ### Machine à états
 
@@ -76,13 +76,15 @@ particulier (règle 13) — à démontrer par un test, pas par du code.
 - [ ] `DomainError::CorrectionNotAllowed` + `Display`
 - [ ] Événement `MatchReportUnpublished` + `type_name()`
 - [ ] `MatchReportPublished::unpublish()`
-- [ ] `was_published_before` sur `PreMatch` et `ReadyToPublish`, propagé dans les 2 sens
+- [ ] `was_published_before` sur `ReadyToPublish`, `false` via `from_pre_match()`
 - [ ] Arête dans `rehydrate()`
+- [ ] Projection `match_report_proj` remise en `ReadyToPublish` par le repository,
+      dans la transaction de l'append (le `match` exhaustif du repository l'impose)
 - [ ] Test : refus si `SppAlreadySpent`
 - [ ] Test : refus si `PhaseAdvanced`
 - [ ] Test : refus si `EligibilityUnknown`
 - [ ] Test : succès → `ReadyToPublish` avec le drapeau à `true`
 - [ ] Test : 3 cycles publier/dépublier successifs rejoués correctement
-- [ ] Test : le drapeau survit à `into_pre_match()` puis au retour
+- [ ] Test : le drapeau survit à une édition après dépublication
 - [ ] `make test` passe
 - [ ] `make check-arch` passe

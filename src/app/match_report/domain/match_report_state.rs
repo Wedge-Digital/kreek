@@ -4,6 +4,7 @@ use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
 use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
+use crate::app::match_report::domain::value_objects::CorrectionEligibility;
 use crate::app::shared_kernel::common_types::MatchReportId;
 
 #[derive(Debug)]
@@ -314,6 +315,18 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             ) => MatchReportState::Published(
                 MatchReportPublished::from_ready_to_publish(&rtp, *published_by, *published_at),
             ),
+            // Correction : retour en état corrigeable. Le couple avec l'arête
+            // ci-dessus suffit à rejouer un nombre quelconque d'allers-retours,
+            // `rehydrate` n'étant qu'un pli sur le flux.
+            (
+                Some(MatchReportState::Published(published)),
+                MatchReportDomainEvent::MatchReportUnpublished { unpublished_by, .. },
+            ) => {
+                let (rtp, _) = published
+                    .unpublish(*unpublished_by, CorrectionEligibility::Eligible)
+                    .map_err(|_| DomainError::InvalidEventSequence)?;
+                MatchReportState::ReadyToPublish(rtp)
+            }
             _ => return Err(DomainError::InvalidEventSequence),
         });
     }
@@ -696,5 +709,133 @@ mod tests {
             }
             _ => panic!("attendu Published"),
         }
+    }
+
+    // ── correction : dépublication ───────────────────────────────────────
+
+    fn post_match_event(coach_id: CoachId) -> MatchReportDomainEvent {
+        use crate::app::match_report::domain::value_objects::{FanFactorMod, MatchGain};
+        MatchReportDomainEvent::PostMatchRecorded {
+            home_gain: MatchGain::try_new(10_000).unwrap(),
+            away_gain: MatchGain::try_new(5_000).unwrap(),
+            home_fan_mod: FanFactorMod::try_new(1).unwrap(),
+            away_fan_mod: FanFactorMod::try_new(-1).unwrap(),
+            summary_title: None,
+            summary_body: None,
+            recorded_by: coach_id,
+        }
+    }
+
+    fn published_event(coach_id: CoachId) -> MatchReportDomainEvent {
+        MatchReportDomainEvent::MatchReportPublished {
+            published_by: coach_id,
+            published_at: chrono::Utc::now(),
+        }
+    }
+
+    fn unpublished_event(coach_id: CoachId) -> MatchReportDomainEvent {
+        MatchReportDomainEvent::MatchReportUnpublished {
+            unpublished_by: coach_id,
+            unpublished_at: chrono::Utc::now(),
+        }
+    }
+
+    #[test]
+    fn rehydrate_published_then_unpublished_yields_ready_to_publish_with_flag() {
+        let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
+            test_ids();
+        let events = vec![
+            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
+            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+            post_match_event(coach_id),
+            published_event(coach_id),
+            unpublished_event(coach_id),
+        ];
+
+        match rehydrate(events).unwrap() {
+            MatchReportState::ReadyToPublish(rtp) => {
+                assert_eq!(rtp.id, mr_id);
+                assert!(rtp.was_published_before);
+            }
+            _ => panic!("attendu ReadyToPublish"),
+        }
+    }
+
+    /// Le nombre de corrections n'est pas limité : `rehydrate` n'étant qu'un pli
+    /// sur le flux, l'alternance doit se rejouer sans cas particulier.
+    #[test]
+    fn rehydrate_supporte_trois_cycles_publier_depublier() {
+        let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
+            test_ids();
+        let mut events = vec![
+            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
+            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+            post_match_event(coach_id),
+        ];
+        for _ in 0..3 {
+            events.push(published_event(coach_id));
+            events.push(unpublished_event(coach_id));
+        }
+
+        match rehydrate(events).unwrap() {
+            MatchReportState::ReadyToPublish(rtp) => assert!(rtp.was_published_before),
+            _ => panic!("attendu ReadyToPublish"),
+        }
+    }
+
+    /// Le drapeau doit survivre à l'édition qui suit la dépublication. Il vit sur
+    /// `ReadyToPublish` seul : `rehydrate` y mute l'état en place, sans jamais
+    /// repasser par `PreMatch`.
+    #[test]
+    fn le_drapeau_survit_a_l_edition_apres_depublication() {
+        let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
+            test_ids();
+        let events = vec![
+            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
+            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+            post_match_event(coach_id),
+            published_event(coach_id),
+            unpublished_event(coach_id),
+            // le coach corrige les gains, puis resaisit l'après-match
+            post_match_event(coach_id),
+        ];
+
+        match rehydrate(events).unwrap() {
+            MatchReportState::ReadyToPublish(rtp) => assert!(rtp.was_published_before),
+            _ => panic!("attendu ReadyToPublish"),
+        }
+    }
+
+    #[test]
+    fn un_rapport_jamais_publie_ne_porte_pas_le_drapeau() {
+        let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
+            test_ids();
+        let events = vec![
+            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
+            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+            post_match_event(coach_id),
+        ];
+
+        match rehydrate(events).unwrap() {
+            MatchReportState::ReadyToPublish(rtp) => assert!(!rtp.was_published_before),
+            _ => panic!("attendu ReadyToPublish"),
+        }
+    }
+
+    #[test]
+    fn depublier_un_rapport_non_publie_est_une_sequence_invalide() {
+        let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
+            test_ids();
+        let events = vec![
+            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
+            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+            post_match_event(coach_id),
+            unpublished_event(coach_id),
+        ];
+
+        assert!(matches!(
+            rehydrate(events),
+            Err(DomainError::InvalidEventSequence)
+        ));
     }
 }

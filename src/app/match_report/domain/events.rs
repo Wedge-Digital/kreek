@@ -98,6 +98,12 @@ pub enum MatchReportDomainEvent {
         published_by: CoachId,
         published_at: DateTime<Utc>,
     },
+    /// Ramène un rapport publié en état corrigeable. Sans motif : la correction
+    /// n'en exige pas.
+    MatchReportUnpublished {
+        unpublished_by: CoachId,
+        unpublished_at: DateTime<Utc>,
+    },
 }
 
 impl MatchReportDomainEvent {
@@ -117,6 +123,7 @@ impl MatchReportDomainEvent {
             Self::ActionDeleted { .. } => "ActionDeleted",
             Self::PostMatchRecorded { .. } => "PostMatchRecorded",
             Self::MatchReportPublished { .. } => "MatchReportPublished",
+            Self::MatchReportUnpublished { .. } => "MatchReportUnpublished",
         }
     }
 

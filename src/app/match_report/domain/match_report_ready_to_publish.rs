@@ -43,6 +43,13 @@ pub struct MatchReportReadyToPublish {
     pub away_fan_mod: FanFactorMod,
     pub summary_title: Option<String>,
     pub summary_body: Option<String>,
+    /// Vrai quand ce rapport a déjà été publié puis dépublié pour correction.
+    ///
+    /// N'existe pas sur `MatchReportPreMatch` : `into_pre_match()` est une
+    /// conversion transitoire interne aux use cases, jamais persistée. Une fois
+    /// en `ReadyToPublish`, le rapport y reste — `rehydrate` mute l'état en
+    /// place pour tous les événements d'édition.
+    pub was_published_before: bool, // arch:ok fait booléen sans invariant à protéger
 }
 
 impl MatchReportReadyToPublish {
@@ -84,6 +91,9 @@ impl MatchReportReadyToPublish {
             away_fan_mod,
             summary_title,
             summary_body,
+            // Un rapport qui atteint cet état pour la première fois n'a jamais
+            // été publié. Seul `unpublish()` positionne ce drapeau.
+            was_published_before: false,
         }
     }
 
@@ -193,6 +203,7 @@ mod tests {
             away_fan_mod: FanFactorMod::try_new(-1).unwrap(),
             summary_title,
             summary_body,
+            was_published_before: false,
         }
     }
 

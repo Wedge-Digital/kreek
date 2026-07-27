@@ -1,3 +1,4 @@
+use crate::app::match_report::domain::value_objects::CorrectionBlocker;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -14,6 +15,7 @@ pub enum DomainError {
     InvalidTurn(u8),
     ActionNotFound(String),
     TooManyMercenaries { requested: u8, max: u8 },
+    CorrectionNotAllowed(CorrectionBlocker),
 }
 
 impl fmt::Display for DomainError {
@@ -39,6 +41,18 @@ impl fmt::Display for DomainError {
             Self::TooManyMercenaries { requested, max } => {
                 write!(f, "trop de mercenaires : {requested} demandés, max {max}")
             }
+            // Sans nom d'équipe : le domaine ne connaît que le camp concerné.
+            Self::CorrectionNotAllowed(blocker) => match blocker {
+                CorrectionBlocker::SppAlreadySpent { .. } => {
+                    write!(f, "correction impossible : des SPP ont déjà été dépensés")
+                }
+                CorrectionBlocker::PhaseAdvanced { .. } => {
+                    write!(f, "correction impossible : une équipe a quitté la phase d'amélioration")
+                }
+                CorrectionBlocker::EligibilityUnknown => {
+                    write!(f, "correction impossible : l'éligibilité n'a pas pu être vérifiée")
+                }
+            },
         }
     }
 }

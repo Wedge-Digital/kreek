@@ -126,34 +126,38 @@ Symétrique de `MatchReportPublished`. Pas de motif : règle 5.
 
 ## G. État — le drapeau de correction
 
-`MatchReportPreMatch` et `MatchReportReadyToPublish` portent un champ
-supplémentaire :
+`MatchReportReadyToPublish` porte un champ supplémentaire :
 
 ```rust
 pub was_published_before: bool,
 ```
 
-Positionné par `rehydrate()` sur `MatchReportUnpublished`, il enregistre un
-**fait** — « ce rapport a déjà été publié au moins une fois » — plutôt qu'un
-mode.
+Positionné par `unpublish()`, il enregistre un **fait** — « ce rapport a déjà été
+publié au moins une fois » — plutôt qu'un mode. `from_pre_match()` le met à
+`false` : un rapport qui atteint cet état pour la première fois n'a jamais été
+publié.
 
 Condition d'affichage du bandeau de l'état 5 : `!is_published && was_published_before`.
 
-### Le drapeau doit survivre au passage par `PreMatch`
+### Pourquoi il ne vit pas sur `MatchReportPreMatch`
 
-Point subtil, découvert en typant. Le parcours de correction est :
+> **Correction apportée en phase 6.** Cette section affirmait l'inverse : que le
+> drapeau devait exister sur les deux états, parce que l'édition d'une action
+> ferait repasser le rapport par `PreMatch`. C'est faux.
 
-```
-Published ──unpublish──► ReadyToPublish ──édition──► PreMatch ──step5──► ReadyToPublish ──publish──► Published
-```
+`into_pre_match()` est une **conversion transitoire interne aux use cases**,
+destinée à réutiliser les méthodes de commande de `MatchReportPreMatch`. Son
+résultat n'est jamais persisté.
 
-Tous les use cases d'édition font `rtp.into_pre_match()`. Si le drapeau ne vivait
-que sur `ReadyToPublish`, il serait **perdu dès la première modification
-d'action** — et le bandeau disparaîtrait au milieu de la correction, exactement
-au moment où il est le plus utile.
+Dans `rehydrate()`, un rapport en `ReadyToPublish` qui reçoit `ActionRecorded`,
+`ActionDeleted`, `PostMatchRecorded` ou tout autre événement d'édition **reste en
+`ReadyToPublish` et voit son état muté en place**
+(`match_report_state.rs`, arms `(ReadyToPublish(rtp), …)`). Aucun événement ne
+ramène `ReadyToPublish` vers `PreMatch`.
 
-D'où : le champ existe sur les **deux** états, `into_pre_match()` le propage, et
-la transition retour le repropage.
+Le drapeau survit donc à toute la séquence de correction en n'existant que sur
+`ReadyToPublish`. Couvert par le test
+`le_drapeau_survit_a_l_edition_apres_depublication`.
 
 ## H. View model
 

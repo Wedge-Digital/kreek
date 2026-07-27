@@ -76,9 +76,15 @@ est infaillible alors que `unpublish()` porte une garde.
 
 ### État — `was_published_before`
 
-Champ ajouté sur `MatchReportPreMatch` **et** `MatchReportReadyToPublish`
-(phase 4). Propagé par `into_pre_match()` et par la transition retour vers
-`ReadyToPublish`.
+Champ ajouté sur `MatchReportReadyToPublish` **seul**, positionné par
+`unpublish()` et mis à `false` par `from_pre_match()`.
+
+> **Correction de la phase 4**, qui l'annonçait sur les deux états.
+> `into_pre_match()` est une conversion transitoire interne aux use cases,
+> jamais persistée : dans `rehydrate()`, un rapport en `ReadyToPublish` reste en
+> `ReadyToPublish` et est muté en place pour tous les événements d'édition.
+> Aucun événement ne le ramène vers `PreMatch`, donc le drapeau n'a rien à y
+> faire.
 
 ### Machine à états — règle 13
 
@@ -277,7 +283,9 @@ préexistant, indépendant de cette feature, mais bloquant pour la règle 15.
 | `unpublish_refuse_si_eligibilite_inconnue` | 12 |
 | `unpublish_produit_ready_to_publish_avec_le_drapeau` | — |
 | `rehydrate_traite_trois_cycles_publier_depublier` | 13 |
-| `le_drapeau_survit_au_passage_par_pre_match` | phase 4 |
+| `le_drapeau_survit_a_l_edition_apres_depublication` | phase 4 |
+| `un_rapport_jamais_publie_ne_porte_pas_le_drapeau` | — |
+| `depublier_un_rapport_non_publie_est_une_sequence_invalide` | — |
 | `verdict_from_retient_home_avant_away` | 3a |
 | `verdict_from_retient_spp_avant_phase` | 3b |
 

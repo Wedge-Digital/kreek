@@ -141,6 +141,32 @@ pub enum TeamSide {
     Away,
 }
 
+/// Verdict sur la possibilité de corriger un rapport déjà publié.
+///
+/// Calculé hors du domaine — il dépend de l'état d'autres BCs (phase de jeu des
+/// équipes, SPP déjà dépensés) — puis remis au domaine, seul habilité à décider
+/// si la dépublication est permise.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CorrectionEligibility {
+    Eligible,
+    Blocked(CorrectionBlocker),
+}
+
+/// Ce qui empêche la correction. Porte un `TeamSide` et non un nom d'équipe :
+/// le domaine ignore les chaînes d'affichage, la résolution du nom appartient à
+/// la couche de présentation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CorrectionBlocker {
+    /// Un joueur de ce camp a dépensé des SPP depuis le match.
+    SppAlreadySpent { side: TeamSide },
+    /// Ce camp a quitté la phase d'amélioration des joueurs.
+    PhaseAdvanced { side: TeamSide },
+    /// Une des consultations nécessaires au verdict n'a pas abouti. On échoue
+    /// fermé : autoriser une correction qui aurait dû être refusée laisserait
+    /// des données incohérentes, alors qu'un refus indu ne fait que retarder.
+    EligibilityUnknown,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ActionPlayer {
     Regular(PlayerId),

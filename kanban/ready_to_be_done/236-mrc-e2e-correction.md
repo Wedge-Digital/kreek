@@ -25,15 +25,20 @@ BCs, et le rendu HTMX de la zone.
    re-publication → « terminé »
 6. Correction → trésorerie et fans de l'équipe restaurés sur sa fiche (règle 14)
 7. Deux corrections successives sur le même rapport aboutissent (règle 8)
-8. Le bandeau reste visible après modification d'une action, donc après passage
-   par `PreMatch`
+8. Le bandeau reste visible après modification d'une action puis resaisie de
+   l'après-match, sur le parcours réel du navigateur
 
 ## Notes
 
-Le **scénario 8 est le plus important** : c'est le seul qu'un test unitaire ne
-peut pas attraper. Il emprunte le parcours réel
-`ReadyToPublish → PreMatch → ReadyToPublish` et met en défaut toute
-implémentation où le drapeau `was_published_before` ne se propage pas.
+Le **scénario 8** vérifie de bout en bout que le drapeau `was_published_before`
+survit à la séquence d'édition qui suit une dépublication.
+
+Sa justification a changé en phase 6 : on croyait que l'édition faisait repasser
+le rapport par `PreMatch`, ce qui aurait perdu un drapeau porté par le seul
+`ReadyToPublish`. C'est faux — `into_pre_match()` est transitoire et jamais
+persistée. Le scénario reste utile, mais il n'est plus le seul filet : le test
+unitaire `le_drapeau_survit_a_l_edition_apres_depublication` couvre déjà la
+mécanique de rejeu.
 
 Les tests d'écrêtage des fans à 0 et 20 (règle 14) restent **unitaires**, dans la
 carte 234 : les provoquer en navigateur demanderait de construire un historique
