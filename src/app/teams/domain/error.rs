@@ -13,6 +13,8 @@ pub enum DomainError {
     StaffTypeNotBuyable,
     StaffTypeNotDismissable,
     InsufficientStaff,
+    /// Aucune séquence d'après-match à défaire pour ce rapport.
+    NoPostMatchToRevert,
     InsufficientTreasury,
 }
 
@@ -31,6 +33,9 @@ impl fmt::Display for DomainError {
             ),
             Self::StaffTypeNotDismissable => write!(f, "ce type de staff ne peut pas être renvoyé"),
             Self::InsufficientStaff => write!(f, "quantité insuffisante de ce staff"),
+            Self::NoPostMatchToRevert => {
+                write!(f, "aucune séquence d'après-match à défaire pour ce rapport")
+            }
             Self::InsufficientTreasury => write!(f, "trésorerie insuffisante"),
         }
     }

@@ -84,6 +84,14 @@ pub enum TeamDomainEvent {
         treasury_income: Kpo,
         spp_gains: Vec<SppGain>,
     },
+    /// Défait la séquence d'après-match — le rapport a été dépublié pour
+    /// correction. `dedicated_fans` est la valeur **absolue** restaurée, pas un
+    /// delta : l'écrêtage à 0..20 n'est pas inversible.
+    PostMatchSequenceReverted {
+        match_report_id: MatchReportId,
+        dedicated_fans: DedicatedFans,
+        treasury_refund: Kpo,
+    },
     PlayerImprovementApplied {
         player_id: PlayerId,
         improvement: PlayerImprovement,
@@ -169,6 +177,7 @@ impl TeamDomainEvent {
             Self::TeamEnrollmentRejected { .. } => "TeamEnrollmentRejected",
             Self::MatchReportingStarted { .. } => "MatchReportingStarted",
             Self::PostMatchSequenceStarted { .. } => "PostMatchSequenceStarted",
+            Self::PostMatchSequenceReverted { .. } => "PostMatchSequenceReverted",
             Self::PlayerImprovementApplied { .. } => "PlayerImprovementApplied",
             Self::PlayerImprovementPhaseValidated => "PlayerImprovementPhaseValidated",
             Self::PlayerRecruited { .. } => "PlayerRecruited",
@@ -224,7 +233,25 @@ pub struct Team {
     pub assistants: AssistantCount,
     pub cheerleaders: CheerleaderCount,
     pub current_match_report_id: Option<MatchReportId>,
+    /// Ce que la dernière séquence d'après-match a changé, pour pouvoir la
+    /// défaire si le rapport est dépublié pour correction.
+    ///
+    /// État **dérivé** : reconstruit à chaque `hydrate()` depuis les événements
+    /// existants, jamais persisté. C'est ce qui évite toute migration — les
+    /// deux informations qu'il capture sont encore lisibles au moment précis où
+    /// `apply(PostMatchSequenceStarted)` s'exécute, et perdues juste après.
+    pub last_post_match: Option<LastPostMatch>,
     pub version: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct LastPostMatch {
+    pub match_report_id: MatchReportId,
+    /// Les fans **d'avant** le match. L'événement ne stocke que la valeur
+    /// post-écrêtage : `clamp(0, 20)` n'étant pas inversible, la restauration
+    /// ne peut pas se faire par soustraction du modificateur.
+    pub dedicated_fans_before: DedicatedFans,
+    pub treasury_income: Kpo,
 }
 
 impl Default for Team {
@@ -253,6 +280,7 @@ impl Default for Team {
             assistants: AssistantCount::default(),
             cheerleaders: CheerleaderCount::default(),
             current_match_report_id: None,
+            last_post_match: None,
             version: 0,
         }
     }
@@ -333,10 +361,35 @@ impl Team {
                 treasury_income,
                 ..
             } => {
+                // Capturé AVANT les affectations qui suivent : `dedicated_fans`
+                // va être écrasé et `current_match_report_id` remis à None.
+                // Passé cet instant, ni l'un ni l'autre n'est reconstructible.
+                self.last_post_match = self.current_match_report_id.map(|match_report_id| {
+                    LastPostMatch {
+                        match_report_id,
+                        dedicated_fans_before: self.dedicated_fans,
+                        treasury_income: *treasury_income,
+                    }
+                });
                 self.dedicated_fans = *dedicated_fans;
                 self.treasury.0 += treasury_income.0;
                 self.game_phase = Some(GamePhase::PlayerImprovement);
                 self.current_match_report_id = None;
+            }
+            TeamDomainEvent::PostMatchSequenceReverted {
+                match_report_id,
+                dedicated_fans,
+                treasury_refund,
+            } => {
+                self.dedicated_fans = *dedicated_fans;
+                self.treasury.0 = self.treasury.0.saturating_sub(treasury_refund.0);
+                self.game_phase = Some(GamePhase::MatchReporting);
+                // Restauré car `start_post_match_sequence` exige cette phase, et
+                // la re-publication en dépend.
+                self.current_match_report_id = Some(*match_report_id);
+                // C'est ici que se joue l'idempotence : une seconde compensation
+                // ne trouvera plus de dernier après-match et sera refusée.
+                self.last_post_match = None;
             }
             TeamDomainEvent::PlayerImprovementPhaseValidated => {
                 self.game_phase = Some(GamePhase::Recruitment);
@@ -549,6 +602,30 @@ impl Team {
             dedicated_fans,
             treasury_income,
             spp_gains,
+        })
+    }
+
+    /// Défait la séquence d'après-match d'un rapport dépublié pour correction.
+    ///
+    /// Refuse si l'équipe a quitté la phase d'amélioration — elle aurait alors
+    /// pu recruter ou acheter du staff, et la trésorerie ne serait plus celle
+    /// qu'on croit défaire. Refuse aussi si le dernier après-match ne concerne
+    /// pas ce rapport, ce qui rend l'opération idempotente.
+    pub fn revert_post_match_sequence(
+        &self,
+        match_report_id: MatchReportId,
+    ) -> Result<TeamDomainEvent, DomainError> {
+        self.expect_phase(GamePhase::PlayerImprovement)?;
+        let last = self
+            .last_post_match
+            .as_ref()
+            .filter(|l| l.match_report_id == match_report_id)
+            .ok_or(DomainError::NoPostMatchToRevert)?;
+
+        Ok(TeamDomainEvent::PostMatchSequenceReverted {
+            match_report_id,
+            dedicated_fans: last.dedicated_fans_before,
+            treasury_refund: last.treasury_income,
         })
     }
 
@@ -1201,5 +1278,125 @@ mod tests {
         assert_eq!(team.participation_status, ParticipationStatus::Dismissed);
         assert_eq!(team.game_phase, None);
         assert_eq!(team.version, 3);
+    }
+    // ── revert_post_match_sequence — compensation d'une dépublication ────────
+
+    /// Équipe en phase Amélioration après un après-match, prête à être
+    /// compensée. `fan_mod` et `gain` sont ceux du rapport.
+    fn team_after_post_match(fan_mod: i8, gain: Kpo) -> Team {
+        let events = vec![
+            created_event(),
+            enrolled_event(),
+            TeamDomainEvent::MatchReportingStarted { match_report_id: match_report_id() },
+        ];
+        let team = Team::hydrate(&events).unwrap();
+        let started = team
+            .start_post_match_sequence(MatchResult::Win, fan_mod, gain, vec![])
+            .unwrap();
+        Team::hydrate(&[
+            created_event(),
+            enrolled_event(),
+            TeamDomainEvent::MatchReportingStarted { match_report_id: match_report_id() },
+            started,
+        ])
+        .unwrap()
+    }
+
+    fn revert(team: &Team) -> Team {
+        let event = team.revert_post_match_sequence(match_report_id()).unwrap();
+        team.clone().apply(&event)
+    }
+
+    /// Le test décisif de la feature : l'équipe part de 2 fans, le rapport
+    /// donne +100, l'écrêtage plafonne à 20. Restaurer par soustraction
+    /// donnerait -80 ; seul l'instantané rend les 2 fans d'origine.
+    #[test]
+    fn revert_restaure_les_fans_ecretes_a_vingt() {
+        let team = team_after_post_match(100, Kpo(0));
+        assert_eq!(team.dedicated_fans.into_inner(), 20, "précondition : écrêtage atteint");
+
+        let reverted = revert(&team);
+
+        assert_eq!(reverted.dedicated_fans.into_inner(), 2);
+    }
+
+    /// Symétrique au plancher : -100 écrête à 0, et retrancher -100 donnerait
+    /// 100 au lieu des 2 fans d'origine.
+    #[test]
+    fn revert_restaure_les_fans_apres_plancher_a_zero() {
+        let team = team_after_post_match(-100, Kpo(0));
+        assert_eq!(team.dedicated_fans.into_inner(), 0, "précondition : plancher atteint");
+
+        let reverted = revert(&team);
+
+        assert_eq!(reverted.dedicated_fans.into_inner(), 2);
+    }
+
+    #[test]
+    fn revert_soustrait_le_gain_de_tresorerie() {
+        let team = team_after_post_match(0, Kpo(150));
+        assert_eq!(team.treasury.0, 1150);
+
+        let reverted = revert(&team);
+
+        assert_eq!(reverted.treasury.0, 1000);
+    }
+
+    #[test]
+    fn revert_repasse_en_match_reporting_avec_le_rapport_courant() {
+        let reverted = revert(&team_after_post_match(1, Kpo(100)));
+
+        assert_eq!(reverted.game_phase, Some(GamePhase::MatchReporting));
+        assert_eq!(reverted.current_match_report_id, Some(match_report_id()));
+    }
+
+    #[test]
+    fn revert_refuse_si_la_phase_a_deja_avance() {
+        let team = team_after_post_match(1, Kpo(100))
+            .apply(&TeamDomainEvent::PlayerImprovementPhaseValidated);
+
+        assert!(matches!(
+            team.revert_post_match_sequence(match_report_id()),
+            Err(DomainError::WrongGamePhase(_))
+        ));
+    }
+
+    #[test]
+    fn revert_refuse_un_autre_match_report_id() {
+        let team = team_after_post_match(1, Kpo(100));
+        let autre = MatchReportId::try_new("00000000000000000000000099").unwrap();
+
+        assert!(matches!(
+            team.revert_post_match_sequence(autre),
+            Err(DomainError::NoPostMatchToRevert)
+        ));
+    }
+
+    /// Règle 11 : rejouer la compensation ne doit rien produire de plus.
+    #[test]
+    fn un_second_revert_est_refuse() {
+        let reverted = revert(&team_after_post_match(1, Kpo(100)));
+
+        assert!(matches!(
+            reverted.revert_post_match_sequence(match_report_id()),
+            Err(DomainError::WrongGamePhase(_))
+        ));
+    }
+
+    /// Règle 8 : le nombre de corrections n'est pas limité, donc le cycle doit
+    /// converger — republier après avoir dépublié doit rendre exactement l'état
+    /// de la première publication.
+    #[test]
+    fn publier_depublier_republier_converge_vers_le_meme_etat() {
+        let apres_publication = team_after_post_match(2, Kpo(150));
+        let reverted = revert(&apres_publication);
+
+        let republie = reverted
+            .clone()
+            .apply(&reverted.start_post_match_sequence(MatchResult::Win, 2, Kpo(150), vec![]).unwrap());
+
+        assert_eq!(republie.dedicated_fans, apres_publication.dedicated_fans);
+        assert_eq!(republie.treasury, apres_publication.treasury);
+        assert_eq!(republie.game_phase, apres_publication.game_phase);
     }
 }

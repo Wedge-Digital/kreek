@@ -140,6 +140,20 @@ impl TeamRepository {
                 .await
                 .map_err(RepositoryError::Database)?;
             }
+            // Retour en arrière : le rapport a été dépublié pour correction.
+            // Sans cet arm, l'agrégat repasserait en MatchReporting pendant que
+            // la projection resterait bloquée sur PlayerImprovement — le `_ =>`
+            // ci-dessous compile sans broncher, c'est exactement le bug de la
+            // carte 175.
+            TeamDomainEvent::PostMatchSequenceReverted { .. } => {
+                sqlx::query(
+                    "UPDATE team_proj SET game_phase = 'MatchReporting', updated_at = now() WHERE team_id = $1",
+                )
+                .bind(team_id)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
             // Autres événements (retraite temporaire, off-season, override admin) : pas encore
             // produits par aucun use case (cartes 39/40/43/46 à faire) — quand l'un d'eux sera
             // implémenté, ajouter ici l'arm correspondant, sous peine de reproduire le bug de
@@ -403,5 +417,88 @@ mod tests {
             .execute(&repo.pool)
             .await
             .ok();
+    }
+    /// Garde-fou contre le bug de la carte 175 : le `match` de projection se
+    /// termine par un `_ => {}`, donc l'oubli d'un arm **compile sans
+    /// broncher**. L'agrégat repasserait en MatchReporting pendant que la
+    /// projection resterait bloquée sur PlayerImprovement, sans erreur nulle
+    /// part.
+    #[tokio::test]
+    async fn revert_post_match_met_a_jour_la_phase_dans_la_projection() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = TeamRepository::new(pool);
+        let team_id = ulid::Ulid::new().to_string();
+        let mr_id = crate::app::shared_kernel::common_types::MatchReportId::try_new(
+            "00000000000000000000000007",
+        )
+        .unwrap();
+
+        repo.append(&team_id, &created_event(&team_id), 0).await.unwrap();
+        repo.append(
+            &team_id,
+            &TeamDomainEvent::TeamEnrolled {
+                competition_id: CompetitionId::try_new("00000000000000000000000002").unwrap(),
+                competition_name: "Ligue de Condate".to_string(),
+                season_id: SeasonId::try_new("00000000000000000000000003").unwrap(),
+                season_name: "Saison 2025".to_string(),
+            },
+            1,
+        )
+        .await
+        .unwrap();
+        repo.append(
+            &team_id,
+            &TeamDomainEvent::MatchReportingStarted { match_report_id: mr_id },
+            2,
+        )
+        .await
+        .unwrap();
+
+        let team = repo.find_by_id(&team_id).await.unwrap().unwrap();
+        let started = team
+            .start_post_match_sequence(
+                crate::app::teams::domain::value_objects::MatchResult::Win,
+                1,
+                crate::app::teams::domain::value_objects::Kpo(150),
+                vec![],
+            )
+            .unwrap();
+        repo.append(&team_id, &started, 3).await.unwrap();
+        assert_eq!(projected_phase(&repo, &team_id).await, Some("PlayerImprovement".to_string()));
+
+        let team = repo.find_by_id(&team_id).await.unwrap().unwrap();
+        let reverted = team.revert_post_match_sequence(mr_id).unwrap();
+        repo.append(&team_id, &reverted, 4).await.unwrap();
+
+        assert_eq!(
+            projected_phase(&repo, &team_id).await,
+            Some("MatchReporting".to_string()),
+            "la projection doit suivre l'agrégat"
+        );
+        let team = repo.find_by_id(&team_id).await.unwrap().unwrap();
+        assert_eq!(team.treasury.0, 1000, "le gain doit être retiré de l'agrégat");
+
+        sqlx::query("DELETE FROM team_event_store WHERE team_id = $1")
+            .bind(&team_id)
+            .execute(&repo.pool)
+            .await
+            .ok();
+        sqlx::query("DELETE FROM team_proj WHERE team_id = $1")
+            .bind(&team_id)
+            .execute(&repo.pool)
+            .await
+            .ok();
+    }
+
+    async fn projected_phase(repo: &TeamRepository, team_id: &str) -> Option<String> {
+        sqlx::query_scalar::<_, Option<String>>(
+            "SELECT game_phase FROM team_proj WHERE team_id = $1",
+        )
+        .bind(team_id)
+        .fetch_one(&repo.pool)
+        .await
+        .unwrap()
     }
 }
