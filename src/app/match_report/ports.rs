@@ -104,6 +104,18 @@ pub trait ICoachDataPort: Send + Sync {
     async fn find_coach_name(&self, coach_id: &str) -> Option<String>;
 }
 
+/// Consultation du profil d'un membre d'espace, pour les contrôles d'accès.
+///
+/// Le BC `match_report` ne connaît pas le BC propriétaire des espaces : il pose
+/// la seule question dont il a besoin. Sans ce port, le contrôle d'accès du
+/// recap devrait atteindre `state.spaces` directement — une référence croisée
+/// entre BCs, et un contrôle non testable puisque `AppState` n'est pas
+/// constructible en test unitaire.
+#[async_trait]
+pub trait ISpaceAdminPort: Send + Sync {
+    async fn is_space_admin(&self, user_id: &str, space_id: &str) -> bool;
+}
+
 #[async_trait]
 pub trait ISppCalculatorPort: Send + Sync {
     async fn calculate_match_spp(

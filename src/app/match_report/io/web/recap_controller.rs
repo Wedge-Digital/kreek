@@ -13,9 +13,9 @@ use crate::app::match_report::io::web::view_models::{
 use crate::app::match_report::use_cases::publish_match_report_use_case::{
     self, PublishMatchReportCommand, PublishMatchReportError,
 };
+use crate::app::match_report::ports::{ICompetitionDataPort, ISpaceAdminPort, ITeamDataPort};
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::authorization::SpaceProfile;
-use crate::app::shared_kernel::common_types::{MatchReportId, SpaceId};
+use crate::app::shared_kernel::common_types::MatchReportId;
 use crate::app::shared_kernel::user::User;
 use crate::state::AppState;
 use askama::Template;
@@ -145,7 +145,8 @@ pub async fn get_recap(
         MatchReportState::Cancelled(_) => return StatusCode::GONE.into_response(),
     };
 
-    if !is_authorized(&state, &user, &space_id, &source).await {
+    let scope = RecapScope::from_source(&source);
+    if !is_authorized(&RecapAuthDeps::from_state(&state), &user, &space_id, &scope).await {
         return StatusCode::FORBIDDEN.into_response();
     }
 
@@ -154,46 +155,100 @@ pub async fn get_recap(
         .into_response()
 }
 
+// ── Autorisation ──────────────────────────────────────────────────────────────
+
+/// Dépendances du contrôle d'accès : les trois ports réellement consultés,
+/// plutôt que `AppState` entier. C'est ce qui rend la règle testable — `AppState`
+/// n'est pas constructible en test unitaire.
+struct RecapAuthDeps<'a> {
+    space_admin:      &'a dyn ISpaceAdminPort,
+    competition_data: &'a dyn ICompetitionDataPort,
+    team_data:        &'a dyn ITeamDataPort,
+}
+
+impl<'a> RecapAuthDeps<'a> {
+    fn from_state(state: &'a AppState) -> Self {
+        Self {
+            space_admin:      state.match_report.space_admin.as_ref(),
+            competition_data: state.match_report.competition_data.as_ref(),
+            team_data:        state.match_report.team_data.as_ref(),
+        }
+    }
+}
+
+/// Ce sur quoi porte l'autorisation. Extrait de `RecapSource`, qui emprunte les
+/// actions du match et serait pénible à fabriquer en test.
+struct RecapScope {
+    competition_id: String,
+    home_team_id:   String,
+    away_team_id:   String,
+}
+
+impl RecapScope {
+    fn from_source(source: &RecapSource<'_>) -> Self {
+        Self {
+            competition_id: source.competition_id.clone(),
+            home_team_id:   source.home_team_id.clone(),
+            away_team_id:   source.away_team_id.clone(),
+        }
+    }
+
+    /// Les états sans recap consultable sont traduits en statut HTTP, avec les
+    /// mêmes codes que ceux produits par le use case de publication.
+    fn from_report_state(state: &MatchReportState) -> Result<Self, StatusCode> {
+        match state {
+            MatchReportState::ReadyToPublish(rtp) => {
+                Ok(Self::from_source(&RecapSource::from_rtp(rtp)))
+            }
+            MatchReportState::Published(p) => Ok(Self::from_source(&RecapSource::from_published(p))),
+            MatchReportState::Draft(_) | MatchReportState::PreMatch(_) => {
+                Err(StatusCode::NOT_FOUND)
+            }
+            MatchReportState::Cancelled(_) => Err(StatusCode::GONE),
+        }
+    }
+}
+
 /// Autorisé si l'utilisateur est admin d'espace, admin de la compétition du
 /// rapport, ou coach de l'une des deux équipes concernées.
-async fn is_authorized(state: &AppState, user: &User, space_id: &str, source: &RecapSource<'_>) -> bool {
+async fn is_authorized(
+    deps:     &RecapAuthDeps<'_>,
+    user:     &User,
+    space_id: &str,
+    scope:    &RecapScope,
+) -> bool {
     let user_id = user.id.to_string();
-
-    let is_space_admin = match SpaceId::try_new(space_id) {
-        Ok(sid) => matches!(
-            state.spaces.space_repository.find_member_profile(&user.id, &sid).await,
-            Ok(Some(SpaceProfile::SpaceAdmin))
-        ),
-        Err(_) => false,
-    };
-    if is_space_admin {
+    if deps.space_admin.is_space_admin(&user_id, space_id).await {
         return true;
     }
-
-    let is_comp_admin = state
-        .match_report
-        .competition_data
-        .is_competition_admin(&source.competition_id, &user_id)
-        .await
-        .unwrap_or(false);
-    if is_comp_admin {
+    if is_competition_admin(deps, &scope.competition_id, &user_id).await {
         return true;
     }
+    is_coach_of_either_team(deps, scope, &user_id).await
+}
 
-    let is_home_coach = state
-        .match_report
-        .team_data
-        .is_coach_of_team(&source.home_team_id, &user_id)
+async fn is_competition_admin(
+    deps:           &RecapAuthDeps<'_>,
+    competition_id: &str,
+    user_id:        &str,
+) -> bool {
+    deps.competition_data
+        .is_competition_admin(competition_id, user_id)
         .await
-        .unwrap_or(false);
-    let is_away_coach = state
-        .match_report
-        .team_data
-        .is_coach_of_team(&source.away_team_id, &user_id)
-        .await
-        .unwrap_or(false);
+        .unwrap_or(false)
+}
 
-    is_home_coach || is_away_coach
+/// Une erreur de port vaut « pas coach » : un contrôle d'accès échoue fermé.
+async fn is_coach_of_either_team(
+    deps:    &RecapAuthDeps<'_>,
+    scope:   &RecapScope,
+    user_id: &str,
+) -> bool {
+    let (home, away) = tokio::join!(
+        deps.team_data.is_coach_of_team(&scope.home_team_id, user_id),
+        deps.team_data.is_coach_of_team(&scope.away_team_id, user_id),
+    );
+    home.unwrap_or(false) || away.unwrap_or(false)
 }
 
 async fn build_recap_template(
@@ -278,17 +333,68 @@ pub async fn post_publish(
         return StatusCode::BAD_REQUEST.into_response();
     };
 
+    if let Err(status) = authorize_publish(&state, &user, &space_id, &match_report_id).await {
+        return status.into_response();
+    }
     let cmd = PublishMatchReportCommand { match_report_id: mr_id, published_by: user.id };
+    publish_response(execute_publish(&state, cmd).await, &space_id, &match_report_id)
+}
 
-    match publish_match_report_use_case::execute(
+/// Charge le rapport et vérifie que l'utilisateur a le droit de le publier.
+///
+/// Mêmes droits que la consultation du recap : sans ce contrôle, tout
+/// utilisateur connecté connaissant un `match_report_id` pouvait publier le
+/// rapport d'autrui.
+async fn authorize_publish(
+    state:           &AppState,
+    user:            &User,
+    space_id:        &str,
+    match_report_id: &str,
+) -> Result<(), StatusCode> {
+    let scope = load_publish_scope(state, match_report_id).await?;
+    match is_authorized(&RecapAuthDeps::from_state(state), user, space_id, &scope).await {
+        true => Ok(()),
+        false => Err(StatusCode::FORBIDDEN),
+    }
+}
+
+async fn load_publish_scope(
+    state:           &AppState,
+    match_report_id: &str,
+) -> Result<RecapScope, StatusCode> {
+    let mr_state = state
+        .match_report
+        .match_report_repo
+        .find_by_id(match_report_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("authorize_publish find_by_id {match_report_id}: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or(StatusCode::NOT_FOUND)?;
+    RecapScope::from_report_state(&mr_state)
+}
+
+async fn execute_publish(
+    state: &AppState,
+    cmd:   PublishMatchReportCommand,
+) -> Result<(), PublishMatchReportError> {
+    publish_match_report_use_case::execute(
         cmd,
         state.match_report.match_report_repo.as_ref(),
         &state.match_report.event_bus,
     )
     .await
-    {
+}
+
+fn publish_response(
+    result:          Result<(), PublishMatchReportError>,
+    space_id:        &str,
+    match_report_id: &str,
+) -> Response {
+    match result {
         Ok(()) => {
-            let url = AppRoutes::default().match_report.recap(&space_id, &match_report_id);
+            let url = AppRoutes::default().match_report.recap(space_id, match_report_id);
             Redirect::to(&url).into_response()
         }
         Err(PublishMatchReportError::NotFound) => StatusCode::NOT_FOUND.into_response(),
@@ -298,5 +404,151 @@ pub async fn post_publish(
             tracing::error!("post_publish: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
+    }
+}
+
+#[cfg(test)]
+mod authorization_tests {
+    use super::*;
+    use crate::app::match_report::ports::{
+        JourneymanPositionDto, RosterPositionDto, RoundContextDto, TeamInfoDto, TierRulesDto,
+    };
+    use crate::app::shared_kernel::coach_name::CoachName;
+    use crate::app::shared_kernel::common_types::UserId;
+    use crate::app::shared_kernel::email::Email;
+
+    const HOME: &str = "home-team";
+    const AWAY: &str = "away-team";
+    const SPACE: &str = "space-1";
+
+    struct FakeSpaceAdmin(bool);
+    #[async_trait::async_trait]
+    impl ISpaceAdminPort for FakeSpaceAdmin {
+        async fn is_space_admin(&self, _: &str, _: &str) -> bool {
+            self.0
+        }
+    }
+
+    struct FakeCompetitionData(Result<bool, String>);
+    #[async_trait::async_trait]
+    impl ICompetitionDataPort for FakeCompetitionData {
+        async fn is_competition_admin(&self, _: &str, _: &str) -> Result<bool, String> {
+            self.0.clone()
+        }
+        async fn find_tier_rules_for_roster(&self, _: &str, _: &str) -> Option<TierRulesDto> {
+            None
+        }
+        async fn find_round_context(&self, _: &str, _: &str) -> Option<RoundContextDto> {
+            None
+        }
+    }
+
+    /// `coached` liste les équipes dont l'utilisateur est coach. `fails` simule
+    /// une indisponibilité du port, pour vérifier qu'on échoue fermé.
+    struct FakeTeamData {
+        coached: Vec<&'static str>,
+        fails:   bool,
+    }
+    #[async_trait::async_trait]
+    impl ITeamDataPort for FakeTeamData {
+        async fn is_coach_of_team(&self, team_id: &str, _: &str) -> Result<bool, String> {
+            if self.fails {
+                return Err("port indisponible".to_string());
+            }
+            Ok(self.coached.contains(&team_id))
+        }
+        async fn is_team_ready_to_play(&self, _: &str) -> Result<bool, String> {
+            Ok(true)
+        }
+        async fn find_team_info(&self, _: &str) -> Option<TeamInfoDto> {
+            None
+        }
+        async fn find_team_value(&self, _: &str) -> Option<u32> {
+            None
+        }
+        async fn find_team_treasury(&self, _: &str) -> Option<u32> {
+            None
+        }
+        async fn find_journeyman_position(&self, _: &str) -> Option<JourneymanPositionDto> {
+            None
+        }
+        async fn find_roster_positions(&self, _: &str) -> Vec<RosterPositionDto> {
+            vec![]
+        }
+    }
+
+    fn user() -> User {
+        User::new(
+            UserId::new(),
+            CoachName::try_new("Testeur".to_string()).unwrap(),
+            None,
+            Email::try_new("testeur@example.com".to_string()).unwrap(),
+            String::new(),
+        )
+    }
+
+    fn scope() -> RecapScope {
+        RecapScope {
+            competition_id: "comp-1".to_string(),
+            home_team_id:   HOME.to_string(),
+            away_team_id:   AWAY.to_string(),
+        }
+    }
+
+    async fn authorize(
+        space_admin: bool,
+        comp_admin:  Result<bool, String>,
+        team_data:   FakeTeamData,
+    ) -> bool {
+        let space_admin = FakeSpaceAdmin(space_admin);
+        let competition_data = FakeCompetitionData(comp_admin);
+        let deps = RecapAuthDeps {
+            space_admin:      &space_admin,
+            competition_data: &competition_data,
+            team_data:        &team_data,
+        };
+        is_authorized(&deps, &user(), SPACE, &scope()).await
+    }
+
+    fn coaching(teams: Vec<&'static str>) -> FakeTeamData {
+        FakeTeamData { coached: teams, fails: false }
+    }
+
+    #[tokio::test]
+    async fn admin_d_espace_est_autorise() {
+        assert!(authorize(true, Ok(false), coaching(vec![])).await);
+    }
+
+    #[tokio::test]
+    async fn admin_de_competition_est_autorise() {
+        assert!(authorize(false, Ok(true), coaching(vec![])).await);
+    }
+
+    #[tokio::test]
+    async fn coach_de_l_equipe_domicile_est_autorise() {
+        assert!(authorize(false, Ok(false), coaching(vec![HOME])).await);
+    }
+
+    #[tokio::test]
+    async fn coach_de_l_equipe_exterieure_est_autorise() {
+        assert!(authorize(false, Ok(false), coaching(vec![AWAY])).await);
+    }
+
+    /// Le trou de sécurité que cette carte ferme : un utilisateur connecté mais
+    /// étranger aux deux équipes ne doit pas pouvoir publier.
+    #[tokio::test]
+    async fn utilisateur_etranger_aux_deux_equipes_est_refuse() {
+        assert!(!authorize(false, Ok(false), coaching(vec!["autre-equipe"])).await);
+    }
+
+    #[tokio::test]
+    async fn erreur_du_port_competition_ne_donne_pas_l_acces() {
+        assert!(!authorize(false, Err("indisponible".into()), coaching(vec![])).await);
+    }
+
+    #[tokio::test]
+    async fn erreur_du_port_equipe_ne_donne_pas_l_acces() {
+        let failing = FakeTeamData { coached: vec![HOME], fails: true };
+        assert!(!authorize(false, Ok(false), failing).await);
     }
 }

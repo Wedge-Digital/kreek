@@ -245,10 +245,15 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
                     Arc::new(crate::app::spaces::io::repository::user_cache_repository::SpaceUserCacheRepository::new(pool.clone())),
                 ),
             );
+            let space_admin = Arc::new(
+                crate::infrastructure::match_report::space_admin_adapter::SpaceAdminAdapter::new(
+                    Arc::new(crate::app::spaces::io::repository::space_repository::SpaceRepository::new(pool.clone())),
+                ),
+            );
             let spp_calculator = Arc::new(
                 crate::infrastructure::match_report::spp_calculator_adapter::SppCalculatorAdapter,
             );
-            match_report::context::MatchReportContext::new(&pool, comp_data, team_data, player_data, coach_data, spp_calculator, event_bus.clone())
+            match_report::context::MatchReportContext::new(&pool, comp_data, team_data, player_data, coach_data, space_admin, spp_calculator, event_bus.clone())
         },
         teams: {
             let player_count = Arc::new(

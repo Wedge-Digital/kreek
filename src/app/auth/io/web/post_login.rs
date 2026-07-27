@@ -384,6 +384,11 @@ mod tests {
                 impl crate::app::match_report::ports::ICoachDataPort for FakeCoachDataPort {
                     async fn find_coach_name(&self, _: &str) -> Option<String> { None }
                 }
+                struct FakeSpaceAdminPort;
+                #[async_trait::async_trait]
+                impl crate::app::match_report::ports::ISpaceAdminPort for FakeSpaceAdminPort {
+                    async fn is_space_admin(&self, _: &str, _: &str) -> bool { false }
+                }
                 struct FakeSppCalculatorPort;
                 #[async_trait::async_trait]
                 impl crate::app::match_report::ports::ISppCalculatorPort for FakeSppCalculatorPort {
@@ -403,6 +408,7 @@ mod tests {
                     team_data: Arc::new(FakeTeamDataPort),
                     player_data: Arc::new(FakePlayerDataPort),
                     coach_data: Arc::new(FakeCoachDataPort),
+                    space_admin: Arc::new(FakeSpaceAdminPort),
                     spp_calculator: Arc::new(FakeSppCalculatorPort),
                     event_bus: crate::common::services::event_bus::event_bus::new_bus(),
                 }
