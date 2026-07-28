@@ -16,6 +16,18 @@ inscrites) n'était produite par aucun script reproductible — seulement
 accumulée à la main dans la base de dev au fil du temps. Rien ne vérifiait
 que ce pipeline applicatif fonctionnait, et rien ne permettait de la
 reconstruire après un reset de base.
+
+Deux constructions d'équipe cohabitent, et ce n'est pas un doublon :
+
+- `build_and_submit_team` passe par le navigateur. C'est le parcours réel,
+  exercé par `test_competition_full_lifecycle`, `test_build_and_finalize_team`
+  et `test_special_rule_selector`.
+- `build_and_submit_team_http` appelle les mêmes routes en HTTP direct. C'est
+  ce que `build_full_competition` utilise pour les fixtures des autres
+  fichiers : rejouer le parcours au clic n'y teste rien de plus et coûtait
+  ~2,4 s par équipe (dont 1,65 s de `wait_for_timeout` fixes) contre quelques
+  dizaines de millisecondes. Même raisonnement que `match_report_helpers`,
+  qui pilote les rapports en HTTP pour la même raison.
 """
 
 import re
@@ -33,6 +45,11 @@ BYPASS_AUTH_COACH_NAME = "DevCoach"
 # DEMO_LANTERNE en est donc exclu — c'est le seul roster à choix du jeu, et il
 # est couvert par test_special_rule_selector.py.
 # Consommé en modulo (cf. build_and_submit_team), la longueur est libre.
+# Marqueur d'un refus métier rendu en fragment HTMX. Ne pas tester la simple
+# sous-chaîne « table-error » : tout fragment de succès embarque le conteneur
+# `class="table-error-zone"` en swap-oob, qui la contient.
+ERREUR_FRAGMENT = 'class="table-error"'
+
 ROSTERS = [
     ("DEMO_GRANIT", "Granitiers"),
     ("DEMO_ZEPHYR", "Zéphyriens"),
@@ -219,6 +236,128 @@ def build_and_submit_team(page: Page, space_id: str, competition_name: str, coac
     return team_id
 
 
+def _space_coach_ids(space_id: str) -> list[str]:
+    """Coachs membres du space, dans le même ordre que le sélecteur de l'UI —
+    c'est cette liste que `build_and_submit_team` parcourt par index."""
+    from db_helpers import query_db
+
+    return query_db(
+        "SELECT DISTINCT u.id, u.coach_name FROM spaces__user_space us "
+        "JOIN auth__users u ON u.id = us.coach_id "
+        f"WHERE us.space_id = '{space_id}' ORDER BY u.coach_name"
+    )
+
+
+def build_and_submit_team_http(
+    page: Page, space_id: str, competition_id: str, season_id: str,
+    coach_id: str, roster_index: int,
+) -> str:
+    """Même parcours que `build_and_submit_team`, en HTTP direct au lieu du clic.
+
+    Même justification que `match_report_helpers` : le parcours au navigateur
+    est déjà couvert par `test_build_and_finalize_team`,
+    `test_special_rule_selector` et `test_draft_team_errors` — le rejouer au
+    clic dans les fixtures des autres fichiers ne teste rien de plus et coûte
+    ~2,4 s par équipe, dont 1,65 s de `wait_for_timeout` fixes.
+
+    Ce sont bien les vraies routes qui sont appelées, pas des écritures en
+    base : la chaîne draft → roster → recrutement → soumission → enrôlement
+    reste exercée de bout en bout.
+    """
+    roster_uid, roster_name = ROSTERS[roster_index % len(ROSTERS)]
+    api = page.request
+
+    # `post_draft_team` attend du JSON (Json<DraftTeamForm>), pas de
+    # l'urlencoded : côté UI c'est l'extension htmx json-enc qui s'en charge.
+    resp = api.post(
+        f"{BASE_URL}/app/{space_id}/team/create",
+        data={
+            "team_name": f"Team HTTP {roster_name} {time.time_ns()}",
+            "coach_id": coach_id,
+            "coach_name": "",
+            "logo_url": FAKE_LOGO_URL,
+            "competition_id": competition_id,
+            "season_id": season_id,
+        },
+        headers={"HX-Request": "true"},
+    )
+    assert resp.ok, f"création du draft : {resp.status} {resp.text()[:300]}"
+    location = resp.headers.get("hx-redirect", "")
+    m = re.search(r"/team/([0-9A-Za-z]+)/build", location)
+    assert m, f"team_id introuvable dans HX-Redirect : {location!r}"
+    team_id = m.group(1)
+
+    # Le widget de table des joueurs persiste le choix du roster au passage
+    # (choose_roster + save) : c'est lui qui joue le rôle de l'événement
+    # `rosterSelected` côté UI.
+    table = api.get(
+        f"{BASE_URL}/app/{space_id}/team/{team_id}/widgets/player-table",
+        params={"roster_uid": roster_uid},
+    )
+    assert table.ok, f"widget player-table : {table.status}"
+    positions = re.findall(r'"player_id":"([^"]+)"', table.text())
+    assert positions, f"aucune position recrutable pour {roster_uid}"
+
+    # Un recrutement refusé (quota de poste atteint) répond 200 avec un
+    # fragment d'erreur, pas un statut d'échec : c'est le corps qu'il faut
+    # regarder. L'UI, elle, voit le bouton « + » passer en disabled.
+    # Même composition que l'UI, qui reclique le premier « + » encore actif :
+    # on épuise chaque poste dans l'ordre du tableau avant de passer au
+    # suivant. Un round-robin donnerait une autre valeur d'équipe, donc
+    # d'autres calculs de tiers et d'outsider.
+    hired = 0
+    for player_id in positions:
+        while hired < 11:
+            hire = api.post(
+                f"{BASE_URL}/app/{space_id}/team/{team_id}/players/hire",
+                data={"player_id": player_id},
+                headers={"HX-Request": "true"},
+            )
+            assert hire.ok, f"recrutement : {hire.status} {hire.text()[:200]}"
+            # Un refus (quota de poste atteint) répond 200 avec un fragment
+            # d'erreur, pas un statut d'échec : c'est le corps qu'il faut lire.
+            if ERREUR_FRAGMENT in hire.text():
+                break
+            hired += 1
+        if hired == 11:
+            break
+    assert hired == 11, f"seulement {hired} joueurs recrutés pour {roster_uid}"
+
+    submit = api.post(
+        f"{BASE_URL}/app/{space_id}/team/{team_id}/finalize",
+        headers={"HX-Request": "true"},
+    )
+    # Idem : la soumission refusée répond 200 avec le fragment d'erreur, le
+    # succès répond par un HX-Redirect vers la fiche d'équipe.
+    assert submit.ok, f"soumission : {submit.status}"
+    assert ERREUR_FRAGMENT not in submit.text(), f"soumission refusée : {submit.text()[:200]}"
+    return team_id
+
+
+def _wait_teams_enrolled(team_ids: list[str], timeout_s: int = 20) -> None:
+    """L'enrôlement suit la soumission par app event : il est asynchrone.
+
+    Au clic, les ~2,4 s de construction de l'équipe suivante masquaient ce
+    délai ; en HTTP il ne reste plus rien entre la dernière soumission et la
+    génération des appariements, qui ne verrait alors aucune équipe inscrite.
+    """
+    from db_helpers import query_db
+
+    liste = "','".join(team_ids)
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        n = query_db(
+            f"SELECT count(*) FROM team_proj WHERE team_id IN ('{liste}') "
+            "AND status = 'Enrolled'"
+        )
+        if n and int(n[0]) == len(team_ids):
+            return
+        time.sleep(0.2)
+    raise AssertionError(
+        f"toutes les équipes ne sont pas enrôlées après {timeout_s}s : {n}/{len(team_ids)}"
+    )
+
+
 def sync_and_generate_schedule(page: Page, space_id: str, competition_id: str, season_id: str) -> None:
     """Synchronise `competition_match_days` depuis la structure postée en
     phase 3, puis génère les pairings de toutes les journées non-repos."""
@@ -259,10 +398,19 @@ def build_full_competition(
             with_default_bonuses=with_default_bonuses,
             deactivated_tiebreaks=deactivated_tiebreaks,
         )
+        coachs = [ligne.split("|")[0] for ligne in _space_coach_ids(space_id)]
+        assert len(coachs) >= num_teams, (
+            f"{num_teams} équipes demandées mais {len(coachs)} coachs dans "
+            f"le space (make seed_e2e)"
+        )
         team_ids = [
-            build_and_submit_team(page, space_id, competition["name"], coach_option_index=i, roster_index=i)
+            build_and_submit_team_http(
+                page, space_id, competition["competition_id"],
+                competition["season_id"], coachs[i], roster_index=i,
+            )
             for i in range(num_teams)
         ]
+        _wait_teams_enrolled(team_ids)
         sync_and_generate_schedule(page, space_id, competition["competition_id"], competition["season_id"])
         round_ids = query_db(
             f"SELECT id FROM competition_match_days WHERE season_id = '{competition['season_id']}' ORDER BY position;"
