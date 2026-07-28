@@ -1,7 +1,10 @@
+use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::domain::match_day_repository_port::PairingDisplayDto;
 use crate::app::competitions::io::web::competition_detail::{load_page_base, full_page};
+use crate::app::competitions::io::web::resultats_view::{compute_authorization, ResultAuthorization};
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId};
+use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId, SpaceId};
+use crate::app::shared_kernel::user::User;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, Query, State};
@@ -22,6 +25,9 @@ pub struct MatchCalendrierVm {
     pub away_name: String,
     pub away_logo: Option<String>,
     pub away_initials: String,
+    /// Lien vers la saisie du rapport de match du pairing, quand l'utilisateur
+    /// est autorisé à le démarrer (mêmes règles que l'onglet résultats).
+    pub report_url: Option<String>,
 }
 
 pub struct JourneeCalendrierVm {
@@ -53,33 +59,70 @@ impl IntoResponse for CalendrierTabTemplate {
 }
 
 pub async fn get_calendrier_tab(
+    auth_session: AuthSession,
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     Query(query): Query<TabCursorQuery>,
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
+    let Some(user) = auth_session.user else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
+
     let rows = match load_calendrier(&state, &season_id, query.cursor).await {
         Ok(r) => r,
         Err(r) => return r,
     };
 
-    let (journees, next_cursor) = build_journees(rows, 3);
-    let is_htmx = headers.contains_key("hx-request");
+    let authz =
+        match build_authorization(&state, &user, &space_id, &competition_id, &season_id).await {
+            Ok(a) => a,
+            Err(r) => return r,
+        };
 
-    if is_htmx {
-        return CalendrierTabTemplate {
-            app_routes: AppRoutes::default(),
-            space_id,
-            competition_id,
-            season_id,
-            journees,
-            next_cursor,
-            is_initial: query.cursor.is_none(),
-        }
-        .into_response();
+    let (journees, next_cursor) = build_journees(rows, 3, &space_id, &authz);
+
+    if headers.contains_key("hx-request") {
+        let is_initial = query.cursor.is_none();
+        return fragment(space_id, competition_id, season_id, journees, next_cursor, is_initial);
     }
 
     render_full_page(space_id, competition_id, season_id, journees, next_cursor, &state).await
+}
+
+async fn build_authorization(
+    state: &AppState,
+    user: &User,
+    space_id: &str,
+    competition_id: &str,
+    season_id: &str,
+) -> Result<ResultAuthorization, Response> {
+    let space = SpaceId::try_new(space_id)
+        .map_err(|_| StatusCode::BAD_REQUEST.into_response())?;
+    let competition = CompetitionId::try_new(competition_id)
+        .map_err(|_| StatusCode::BAD_REQUEST.into_response())?;
+
+    Ok(compute_authorization(state, user, &space, &competition, season_id).await)
+}
+
+fn fragment(
+    space_id: String,
+    competition_id: String,
+    season_id: String,
+    journees: Vec<JourneeCalendrierVm>,
+    next_cursor: Option<i32>,
+    is_initial: bool,
+) -> Response {
+    CalendrierTabTemplate {
+        app_routes: AppRoutes::default(),
+        space_id,
+        competition_id,
+        season_id,
+        journees,
+        next_cursor,
+        is_initial,
+    }
+    .into_response()
 }
 
 async fn load_calendrier(
@@ -101,6 +144,8 @@ async fn load_calendrier(
 fn build_journees(
     rows: Vec<PairingDisplayDto>,
     max_rounds: usize,
+    space_id: &str,
+    authz: &ResultAuthorization,
 ) -> (Vec<JourneeCalendrierVm>, Option<i32>) {
     let mut by_round: BTreeMap<i32, (String, String, String, Vec<MatchCalendrierVm>)> =
         BTreeMap::new();
@@ -109,7 +154,7 @@ fn build_journees(
         let entry = by_round
             .entry(row.round_position)
             .or_insert_with(|| (row.round_name.clone(), date_range, row.round_day_type.clone(), Vec::new()));
-        entry.3.push(to_calendrier_vm(row));
+        entry.3.push(to_calendrier_vm(row, space_id, authz));
     }
 
     let mut journees: Vec<(i32, JourneeCalendrierVm)> = by_round
@@ -144,8 +189,26 @@ fn format_date_range(day_type: &str, start: Option<&str>, end: Option<&str>) -> 
     }
 }
 
-fn to_calendrier_vm(row: PairingDisplayDto) -> MatchCalendrierVm {
+/// Le rapport de match d'un pairing existe dès la création de celui-ci
+/// (`pairing_created_listener` du BC match_report) — la ligne du calendrier
+/// pointe donc directement vers sa saisie, qui reprend là où elle en est.
+fn to_calendrier_vm(
+    row: PairingDisplayDto,
+    space_id: &str,
+    authz: &ResultAuthorization,
+) -> MatchCalendrierVm {
+    let report_url = if authz.allows(&row.home_team_id, &row.away_team_id) {
+        Some(
+            AppRoutes::default()
+                .match_report
+                .from_pairing(space_id, &row.pairing_id),
+        )
+    } else {
+        None
+    };
+
     MatchCalendrierVm {
+        report_url,
         home_name: row.home_team_name,
         home_logo: row.home_logo_url,
         home_initials: row.home_initials,
@@ -183,6 +246,71 @@ async fn render_full_page(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashSet;
+
+    fn sample_row() -> PairingDisplayDto {
+        PairingDisplayDto {
+            pairing_id: "pairing-1".to_string(),
+            round_id: "round-1".to_string(),
+            round_name: "Journée 1".to_string(),
+            round_position: 1,
+            round_date_start: None,
+            round_date_end: None,
+            round_day_type: "rest".to_string(),
+            home_team_id: "team-a".to_string(),
+            home_team_name: "Les A".to_string(),
+            home_roster_name: "Humains".to_string(),
+            home_coach_name: "Alice".to_string(),
+            home_logo_url: None,
+            home_initials: "LA".to_string(),
+            away_team_id: "team-b".to_string(),
+            away_team_name: "Les B".to_string(),
+            away_roster_name: "Orques".to_string(),
+            away_coach_name: "Bob".to_string(),
+            away_logo_url: None,
+            away_initials: "LB".to_string(),
+            match_status: "upcoming".to_string(),
+            home_score: None,
+            away_score: None,
+            home_casualties: None,
+            away_casualties: None,
+            match_report_url: None,
+        }
+    }
+
+    fn coach_of(team_ids: &[&str]) -> ResultAuthorization {
+        ResultAuthorization {
+            is_admin: false,
+            my_team_ids: team_ids.iter().map(|t| t.to_string()).collect::<HashSet<_>>(),
+        }
+    }
+
+    #[test]
+    fn admin_gets_a_link_to_the_match_report() {
+        let vm = to_calendrier_vm(sample_row(), "space-1", &ResultAuthorization::unrestricted());
+
+        assert_eq!(
+            vm.report_url.as_deref(),
+            Some("/app/space-1/match-report/pairing/pairing-1")
+        );
+    }
+
+    #[test]
+    fn coach_of_one_of_the_two_teams_gets_a_link() {
+        let vm = to_calendrier_vm(sample_row(), "space-1", &coach_of(&["team-b"]));
+
+        assert_eq!(
+            vm.report_url.as_deref(),
+            Some("/app/space-1/match-report/pairing/pairing-1")
+        );
+    }
+
+    #[test]
+    fn coach_of_neither_team_gets_no_link() {
+        let vm = to_calendrier_vm(sample_row(), "space-1", &coach_of(&["team-c"]));
+
+        assert_eq!(vm.report_url, None);
+    }
 
     #[test]
     fn format_fixed_date() {

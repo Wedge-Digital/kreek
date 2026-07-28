@@ -188,6 +188,11 @@
 }
 .cal-row:last-child { border-bottom: none; }
 
+/* Ligne menant à la saisie du rapport de match */
+.cal-row--clickable        { position: relative; cursor: pointer; }
+.cal-row--clickable:hover  { background: var(--dark-7); }
+.cal-row-link              { position: absolute; inset: 0; }
+
 .cal-team       { display: flex; align-items: center; gap: 8px; }
 .cal-team-home  { justify-content: flex-start; }
 .cal-team-away  { justify-content: flex-end; }

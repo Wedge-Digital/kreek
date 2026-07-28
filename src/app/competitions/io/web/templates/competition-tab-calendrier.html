@@ -13,7 +13,12 @@
     </div>
 
     {% for m in journee.matches %}
-    <div class="cal-row">
+    <div class="cal-row {% if m.report_url.is_some() %}cal-row--clickable{% endif %}">
+
+        {% if let Some(url) = m.report_url %}
+        <a href="{{ url }}" class="cal-row-link" aria-label="Saisir le rapport de match"></a>
+        {% endif %}
+
         <div class="cal-team cal-team-home">
             {% if let Some(logo) = m.home_logo %}
             <img src="{{ logo }}" class="cal-logo cal-logo--img" alt="{{ m.home_name }}">

@@ -52,7 +52,7 @@ impl ResultAuthorization {
         }
     }
 
-    fn allows(&self, home_team_id: &str, away_team_id: &str) -> bool {
+    pub fn allows(&self, home_team_id: &str, away_team_id: &str) -> bool {
         self.is_admin
             || self.my_team_ids.contains(home_team_id)
             || self.my_team_ids.contains(away_team_id)

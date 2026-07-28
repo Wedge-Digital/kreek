@@ -221,3 +221,41 @@ def test_c1_etat_vide_calendrier_sans_matchs(page: Page, competition_ids, consol
     has_empty = empty_state.count() > 0
 
     assert has_list or has_empty, "Ni #calendrier-list ni .tab-empty-state trouvé"
+
+
+# ── Onglet Calendrier — démarrage d'un rapport de match ───────────────────────
+
+
+@pytest.fixture(scope="module")
+def paired_competition(browser, space_id):
+    """Compétition avec équipes inscrites et pairings générés — nécessaire pour
+    avoir des lignes de calendrier (les autres tests du module se contentent
+    d'une compétition vide)."""
+    from competition_lifecycle import build_full_competition
+
+    full = build_full_competition(browser, space_id, num_teams=4, num_rounds=2)
+    return {
+        "space_id": space_id,
+        "competition_id": full["competition_id"],
+        "season_id": full["season_id"],
+    }
+
+
+def test_c7_clic_ligne_calendrier_ouvre_la_saisie_du_rapport(
+    page: Page, paired_competition, console_errors
+):
+    """C7 — Une ligne de calendrier mène à la phase 1 de la saisie du rapport."""
+    base = "http://localhost:3210"
+    url = f"{_detail_url(base, paired_competition)}/calendrier"
+    page.goto(url, wait_until="load")
+
+    row_link = page.locator(".cal-row--clickable .cal-row-link").first
+    expect(row_link).to_have_count(1)
+
+    with page.expect_navigation(wait_until="load"):
+        row_link.click()
+
+    # /match-report/pairing/<id> redirige vers l'édition du rapport…
+    expect(page).to_have_url(re.compile(r"/match-report/[^/]+$"))
+    # …dont l'étape 1 est active.
+    expect(page.locator(".mr-step--active")).to_have_text("1")
