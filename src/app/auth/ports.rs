@@ -1,4 +1,4 @@
-use crate::app::shared_kernel::user::User;
+use crate::app::auth::domain::user::User;
 use async_trait::async_trait;
 use std::fmt;
 

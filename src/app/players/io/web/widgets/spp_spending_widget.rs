@@ -179,7 +179,7 @@ pub async fn spp_spending_widget(
     }
 }
 
-async fn is_eligible(state: &AppState, user: &crate::app::shared_kernel::user::User, space_id: &str, player: &Player) -> bool {
+async fn is_eligible(state: &AppState, user: &crate::app::auth::domain::user::User, space_id: &str, player: &Player) -> bool {
     let Some(team) = state.players.roster_port.find_team_info(&player.team_id.0).await else { return false; };
     let Ok(space_id_vo) = SpaceId::try_new(space_id) else { return false; };
     team.in_player_improvement_phase && can_spend_spp(state, user, &space_id_vo, &team).await

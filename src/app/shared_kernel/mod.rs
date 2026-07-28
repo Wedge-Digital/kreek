@@ -17,7 +17,6 @@ pub mod staff_counts;
 pub mod sulid;
 pub mod team;
 mod tests;
-pub mod user;
 pub mod date_string;
 pub mod name_vo;
 pub mod ranking_group_id;

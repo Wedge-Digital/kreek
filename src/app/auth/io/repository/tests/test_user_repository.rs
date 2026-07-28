@@ -3,7 +3,7 @@ use crate::app::auth::ports::{IUserRepository, RepositoryError};
 use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::shared_kernel::common_types::UserId;
 use crate::app::shared_kernel::email::Email;
-use crate::app::shared_kernel::user::User;
+use crate::app::auth::domain::user::User;
 use sqlx::PgPool;
 
 fn make_user(coach_name: &str, email: &str) -> User {

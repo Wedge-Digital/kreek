@@ -1,8 +1,22 @@
 use crate::app::auth::ports::{IUserRepository, RepositoryError};
 use crate::app::auth::use_cases::perform_login::PerformLoginCommand;
-use crate::app::shared_kernel::user::User;
+use crate::app::auth::domain::user::User;
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use std::sync::Arc;
+
+// `AuthUser` est un trait d'axum-login : son implémentation ne peut pas vivre
+// dans `domain/`, que le CLAUDE.md veut sans dépendance framework. Elle est
+// donc ici, dans la couche io du BC propriétaire du type — à quelques lignes
+// de `AuthnBackend`, son unique consommateur.
+impl axum_login::AuthUser for User {
+    type Id = String;
+    fn id(&self) -> Self::Id {
+        self.id.to_string()
+    }
+    fn session_auth_hash(&self) -> &[u8] {
+        self.password_hash.as_bytes()
+    }
+}
 
 #[derive(Clone)]
 pub struct AuthBackend {

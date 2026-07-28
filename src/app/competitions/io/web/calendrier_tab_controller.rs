@@ -4,7 +4,7 @@ use crate::app::competitions::io::web::competition_detail::{load_page_base, full
 use crate::app::competitions::io::web::resultats_view::{compute_authorization, ResultAuthorization};
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId, SpaceId};
-use crate::app::shared_kernel::user::User;
+use crate::app::auth::domain::user::User;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, Query, State};

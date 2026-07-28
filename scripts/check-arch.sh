@@ -81,7 +81,13 @@ for bc in $BCS; do
         prod_code="$(strip_test_code "$f")"
         for other in $BCS; do
             [ "$other" = "$bc" ] && continue
-            hits=$(printf '%s\n' "$prod_code" | grep -nE "use crate::app::${other}::" | grep -vE "::routes::|auth_backend::AuthSession" || true)
+            # Exemptions : la surface publique d'auth. Dans une extraction, tout
+            # le monde dépend du fournisseur d'identité — c'en est la
+            # définition. `AuthSession` était déjà exempté ; `User` le rejoint
+            # depuis qu'il a quitté `shared_kernel` pour son BC propriétaire
+            # (carte 243), sans quoi ses cinq consommateurs hors auth
+            # deviendraient des violations alors que rien n'a changé pour eux.
+            hits=$(printf '%s\n' "$prod_code" | grep -nE "use crate::app::${other}::" | grep -vE "::routes::|auth_backend::AuthSession|auth::domain::user::User" || true)
             [ -n "$hits" ] && axe3+="$(printf '%s\n' "$hits" | sed "s|^|$f:|")"$'\n'
             hits=$(printf '%s\n' "$prod_code" | grep -nE "\bstate\.${other}\b" || true)
             [ -n "$hits" ] && axe3+="$(printf '%s\n' "$hits" | sed "s|^|$f:|")"$'\n'

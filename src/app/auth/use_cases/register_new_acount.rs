@@ -4,7 +4,7 @@ use crate::app::auth::domain::domain_event::AuthDomainEvent::AccountCreated;
 use crate::app::shared_kernel::coach_name::CoachName;
 use crate::app::shared_kernel::common_types::{EventId, UserId};
 use crate::app::shared_kernel::email::Email;
-use crate::app::shared_kernel::user::User;
+use crate::app::auth::domain::user::User;
 use crate::common::services::event_bus::event_bus::EventBus;
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
@@ -131,7 +131,7 @@ pub async fn execute(
 mod tests {
     use super::*;
     use crate::app::auth::ports::RepositoryError;
-    use crate::app::shared_kernel::user::User;
+    use crate::app::auth::domain::user::User;
     use crate::common::services::event_bus::event_bus::new_bus;
     use async_trait::async_trait;
 

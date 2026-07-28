@@ -1,4 +1,3 @@
-use crate::app::auth::domain::error::AuthDomainError;
 use nutype::nutype;
 
 #[nutype(
@@ -11,15 +10,6 @@ pub struct Email(String);
 impl Email {
     pub fn value(&self) -> &str {
         self.as_ref()
-    }
-}
-
-impl From<EmailError> for AuthDomainError {
-    fn from(e: EmailError) -> Self {
-        match e {
-            EmailError::LenCharMaxViolated => AuthDomainError::EmailTooLong,
-            EmailError::RegexViolated => AuthDomainError::EmailInvalid,
-        }
     }
 }
 

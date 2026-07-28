@@ -87,7 +87,7 @@ pub async fn post_purchase_skill(
 /// que `check_admin_rights` de `player_detail_controller.rs`, étendu au coach.
 pub async fn can_spend_spp(
     state: &AppState,
-    user: &crate::app::shared_kernel::user::User,
+    user: &crate::app::auth::domain::user::User,
     space_id: &SpaceId,
     team: &TeamRosterInfoDto,
 ) -> bool {
