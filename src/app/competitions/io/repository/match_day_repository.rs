@@ -283,47 +283,6 @@ impl IMatchDayRepository for MatchDayRepository {
         Ok(())
     }
 
-    async fn clear_pairings(
-        &self,
-        match_day_id: &str,
-    ) -> Result<(), MatchDayRepositoryError> {
-        let mut tx = self.pool.begin().await.map_err(db_err)?;
-        sqlx::query("DELETE FROM competition_match_day_pairings WHERE match_day_id = $1")
-            .bind(match_day_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(db_err)?;
-        sqlx::query("DELETE FROM competition_match_display_proj WHERE round_id = $1")
-            .bind(match_day_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(db_err)?;
-        tx.commit().await.map_err(db_err)?;
-        Ok(())
-    }
-
-    async fn clear_all_pairings(
-        &self,
-        season_id: &str,
-    ) -> Result<(), MatchDayRepositoryError> {
-        let mut tx = self.pool.begin().await.map_err(db_err)?;
-        sqlx::query(
-            "DELETE FROM competition_match_day_pairings
-             WHERE match_day_id IN (SELECT id FROM competition_match_days WHERE season_id = $1)",
-        )
-        .bind(season_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(db_err)?;
-        sqlx::query("DELETE FROM competition_match_display_proj WHERE season_id = $1")
-            .bind(season_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(db_err)?;
-        tx.commit().await.map_err(db_err)?;
-        Ok(())
-    }
-
     async fn list_resultats(
         &self,
         season_id: &str,

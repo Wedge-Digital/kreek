@@ -112,16 +112,6 @@ pub trait IMatchDayRepository: Send + Sync {
         pairing_id: &str,
     ) -> Result<(), MatchDayRepositoryError>;
 
-    async fn clear_pairings(
-        &self,
-        match_day_id: &str,
-    ) -> Result<(), MatchDayRepositoryError>;
-
-    async fn clear_all_pairings(
-        &self,
-        season_id: &str,
-    ) -> Result<(), MatchDayRepositoryError>;
-
     async fn ensure_match_days_from_structure(
         &self,
         season_id: &str,
