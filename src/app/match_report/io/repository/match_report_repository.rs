@@ -397,6 +397,25 @@ impl IMatchReportRepository for MatchReportRepository {
         Ok(row.map(|r| r.get("match_report_id")))
     }
 
+    async fn find_phases_by_pairings(
+        &self,
+        pairing_ids: &[String],
+    ) -> Result<Vec<(String, String)>, RepositoryError> {
+        let rows = sqlx::query(
+            "SELECT pairing_id, phase FROM match_report_proj
+             WHERE pairing_id = ANY($1)",
+        )
+        .bind(pairing_ids)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| (r.get("pairing_id"), r.get("phase")))
+            .collect())
+    }
+
     async fn find_id_by_round_and_teams(
         &self,
         round_id: &str,

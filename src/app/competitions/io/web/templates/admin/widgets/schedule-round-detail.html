@@ -160,14 +160,23 @@
       {% if !f.group_name.is_empty() %}
       <span class="match-row-group">{{ f.group_name }}</span>
       {% endif %}
+      {% if f.is_deletable %}
       <button class="match-row-delete"
               onclick="(function(btn){
                 fetch('{{ app_routes.competitions.admin_schedule_delete_match(space_id, competition_id, season_id) }}', {
                   method: 'DELETE',
                   headers: {'Content-Type':'application/json','HX-Request':'true'},
                   body: JSON.stringify({pairing_id:'{{ f.fixture_id }}'})
-                }).then(function(){ htmx.trigger(document.body,'scheduleChanged'); });
+                }).then(function(r){
+                  return r.text().then(function(t){ return {status: r.status, responseText: t}; });
+                }).then(function(res){
+                  if (window.handleScheduleActionResponse(res)) htmx.trigger(document.body,'scheduleChanged');
+                });
               })(this)" title="Supprimer ce match">&#10005;</button>
+      {% else %}
+      <span class="match-row-locked"
+            title="Rapport de match publié — dépubliez-le pour pouvoir supprimer la rencontre">&#128274;</span>
+      {% endif %}
     </div>
     {% endfor %}
 

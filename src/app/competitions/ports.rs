@@ -20,6 +20,19 @@ pub trait ITeamInfoPort: Send + Sync {
     async fn find_team_names(&self, team_ids: &[String]) -> Result<Vec<TeamInfoDto>, String>;
 }
 
+// ── ACL vers le BC `match_report` (garde-fou de suppression d'un pairing) ─────
+
+/// Consultation, pas propagation : la question « ce rapport est-il publié
+/// **maintenant** ? » conditionne une action bloquante, sa fraîcheur est
+/// critique. Une projection locale alimentée par event laisserait passer une
+/// suppression rendue invalide entre-temps.
+#[async_trait]
+pub trait IMatchReportStatusPort: Send + Sync {
+    /// Parmi ces pairings, ceux dont le rapport de match est publié — donc
+    /// ceux dont la rencontre ne peut plus être supprimée.
+    async fn find_published_pairings(&self, pairing_ids: &[String]) -> Result<Vec<String>, String>;
+}
+
 // ── ACL vers le BC `references` (résolution de noms pour l'onglet résumé) ──────
 
 pub trait ICompetitionReferencePort: Send + Sync {

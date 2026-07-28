@@ -3,7 +3,8 @@ use crate::app::competitions::domain::group_repository_port::IGroupRepository;
 use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
 use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
 use crate::app::competitions::ports::{
-    ICompetitionReferencePort, ICompetitionSpaceMemberPort, ITeamInfoPort, ITiebreakCatalogPort,
+    ICompetitionReferencePort, ICompetitionSpaceMemberPort, IMatchReportStatusPort, ITeamInfoPort,
+    ITiebreakCatalogPort,
 };
 use crate::app::competitions::io::app_events::app_event_publisher::competitions_app_event_publisher;
 use crate::app::competitions::io::app_events::match_report_confirmed_listener;
@@ -27,6 +28,7 @@ pub struct CompetitionsContext {
     pub reference_port: Arc<dyn ICompetitionReferencePort>,
     pub space_member_port: Arc<dyn ICompetitionSpaceMemberPort>,
     pub tiebreak_catalog_port: Arc<dyn ITiebreakCatalogPort>,
+    pub match_report_status_port: Arc<dyn IMatchReportStatusPort>,
     pub event_bus: EventBus,
 }
 
@@ -51,6 +53,7 @@ impl CompetitionsContext {
         reference_port: Arc<dyn ICompetitionReferencePort>,
         space_member_port: Arc<dyn ICompetitionSpaceMemberPort>,
         tiebreak_catalog_port: Arc<dyn ITiebreakCatalogPort>,
+        match_report_status_port: Arc<dyn IMatchReportStatusPort>,
     ) -> Self {
         Self {
             competition_repository: Arc::new(CompetitionRepository::new(pool.clone())),
@@ -61,6 +64,7 @@ impl CompetitionsContext {
             reference_port,
             space_member_port,
             tiebreak_catalog_port,
+            match_report_status_port,
             event_bus,
         }
     }

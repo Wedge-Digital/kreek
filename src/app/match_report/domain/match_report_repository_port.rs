@@ -62,6 +62,16 @@ pub trait IMatchReportRepository: Send + Sync {
         pairing_id: &str,
     ) -> Result<Option<String>, RepositoryError>;
 
+    /// Phase courante des rapports rattachés à ces pairings, pour ceux qui en
+    /// ont un. DTO de lecture : `(pairing_id, phase)`.
+    ///
+    /// En lot, et non un appel par pairing : l'appelant interroge parfois toute
+    /// une saison d'un coup (vidage du calendrier).
+    async fn find_phases_by_pairings(
+        &self,
+        pairing_ids: &[String],
+    ) -> Result<Vec<(String, String)>, RepositoryError>;
+
     async fn find_id_by_round_and_teams(
         &self,
         round_id: &str,

@@ -1,10 +1,14 @@
-"""Test E2E — supprimer un pairing dont le rapport est engagé libère les équipes.
+"""Tests E2E — suppression d'un pairing depuis l'administration du calendrier.
 
-Le point vérifié ici est invisible en test unitaire de bout en bout : confirmer
-la sélection d'un rapport verrouille les deux équipes en `MatchReporting`
-(BC `teams`), et la seule autre sortie de cette phase est la publication du
-rapport. Supprimer le pairing annule le rapport — sans compensation, les deux
-équipes resteraient définitivement indisponibles.
+Deux règles y sont vérifiées :
+
+- un rapport **engagé** (sélection confirmée) n'empêche pas la suppression, mais
+  celle-ci doit libérer les deux équipes. Le point est invisible en test
+  unitaire de bout en bout : la confirmation les verrouille en
+  `MatchReporting` (BC `teams`), et la seule autre sortie de cette phase est la
+  publication du rapport ;
+- un rapport **publié** interdit la suppression — le match resterait au
+  classement tout en disparaissant du calendrier.
 
 Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true).
 """
@@ -16,7 +20,7 @@ import requests
 
 from competition_lifecycle import BASE_URL, build_full_competition
 from db_helpers import query_db
-from match_report_helpers import create_draft, ensure_pre_match
+from match_report_helpers import create_draft, ensure_pre_match, play_match
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -37,7 +41,8 @@ def _first_pairing(season_id: str, round_id: str) -> dict:
     rows = query_db(
         "SELECT pairing_id, home_team_id, away_team_id "
         "FROM competition_match_display_proj "
-        f"WHERE season_id = '{season_id}' AND round_id = '{round_id}' LIMIT 1"
+        f"WHERE season_id = '{season_id}' AND round_id = '{round_id}' "
+        "ORDER BY pairing_id LIMIT 1"
     )
     assert rows, f"aucun pairing projeté pour la journée {round_id}"
     pairing_id, home_team_id, away_team_id = rows[0].split("|")
@@ -86,6 +91,21 @@ def deletion_ctx(browser, space_id):
     }
 
 
+@pytest.fixture(scope="module")
+def published_ctx(browser, space_id):
+    """Compétition dédiée au scénario « rapport publié ».
+
+    Séparée de `deletion_ctx` : le premier test y verrouille des équipes sur un
+    nouveau rapport, et jouer un match avec elles échouerait — les deux
+    scénarios doivent rester indépendants de leur ordre d'exécution."""
+    full = build_full_competition(browser, space_id, num_teams=2, num_rounds=1)
+    return {
+        "competition_id": full["competition_id"],
+        "season_id": full["season_id"],
+        "round_ids": full["round_ids"],
+    }
+
+
 # ── Test ──────────────────────────────────────────────────────────────────────
 
 
@@ -126,3 +146,31 @@ def test_suppression_pairing_annule_le_rapport_et_libere_les_equipes(space_id, d
     ensure_pre_match(
         space_id, nouveau_mr, deletion_ctx, autre_journee, pairing["home"], pairing["away"]
     )
+
+
+def test_un_rapport_publie_interdit_la_suppression_du_pairing(space_id, published_ctx):
+    round_id = published_ctx["round_ids"][0]
+    pairing = _first_pairing(published_ctx["season_id"], round_id)
+
+    mr_id = play_match(space_id, published_ctx, round_id, pairing["home"], pairing["away"])
+    _wait(lambda: _phase(mr_id) == "Published", "le rapport doit être publié")
+
+    resp = _delete_pairing(space_id, published_ctx, pairing["pairing_id"])
+    assert resp.status_code == 422, f"la suppression doit être refusée : {resp.status_code}"
+    assert "publié" in resp.json()["error"]
+
+    reste = query_db(
+        f"SELECT count(*) FROM competition_match_day_pairings WHERE id = '{pairing['pairing_id']}'"
+    )
+    assert reste == ["1"], "le pairing doit toujours exister"
+
+    # Et le bouton de suppression n'est pas rendu pour cette rencontre.
+    detail = requests.get(
+        f"{BASE_URL}/app/{space_id}/competitions/{published_ctx['competition_id']}"
+        f"/{published_ctx['season_id']}/admin/schedule/round",
+        params={"round_id": round_id},
+        headers={"HX-Request": "true"},
+    )
+    assert detail.status_code == 200, f"widget round-detail : {detail.status_code}"
+    assert "match-row-locked" in detail.text
+    assert "match-row-delete" not in detail.text

@@ -1,6 +1,8 @@
 use crate::app::competitions::domain::domain_event::CompetitionsDomainEvent;
 use crate::app::competitions::domain::match_day::{MatchDay, MatchDayName, MatchDayPosition, MatchDayType};
-use crate::app::competitions::use_cases::admin::{add_match_use_case, generate_all_pairings, generate_pairings};
+use crate::app::competitions::use_cases::admin::{
+    add_match_use_case, delete_pairing_use_case, generate_all_pairings, generate_pairings,
+};
 use crate::app::shared_kernel::common_types::{EventId, MatchId, SeasonId};
 use crate::app::shared_kernel::date_string::DateString;
 use crate::common::services::event_bus::event_bus::EventBus;
@@ -451,20 +453,29 @@ pub struct DeleteMatchBody {
     pub pairing_id: String,
 }
 
+fn delete_match_refused() -> Response {
+    let message = "Match non supprimé : son rapport est publié. Dépubliez-le depuis son \
+                   récapitulatif avant de supprimer la rencontre."
+        .to_string();
+    (StatusCode::UNPROCESSABLE_ENTITY, Json(ErrorResult { error: message })).into_response()
+}
+
 pub async fn delete_match(
     Path((_space_id, _competition_id, _season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
     axum::Json(body): axum::Json<DeleteMatchBody>,
 ) -> Response {
-    match state
-        .competitions
-        .match_day_repository
-        .delete_pairing(&body.pairing_id)
-        .await
+    match delete_pairing_use_case::execute(
+        &body.pairing_id,
+        state.competitions.match_day_repository.as_ref(),
+        state.competitions.match_report_status_port.as_ref(),
+        &state.competitions.event_bus,
+    )
+    .await
     {
-        Ok(()) => {
-            emit_pairing_deleted_events(&state.competitions.event_bus, &[body.pairing_id]);
-            schedule_changed()
+        Ok(()) => schedule_changed(),
+        Err(delete_pairing_use_case::DeletePairingError::ReportPublished) => {
+            delete_match_refused()
         }
         Err(e) => {
             tracing::error!("delete_match: {e:?}");

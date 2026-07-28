@@ -1,5 +1,5 @@
 use crate::app::competitions::domain::competition_structure::ScheduledDate;
-use crate::app::competitions::domain::match_day::MatchDayType;
+use crate::app::competitions::domain::match_day::{MatchDay, MatchDayType};
 use crate::app::shared_kernel::date_string::DateString;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::common_types::SeasonId;
@@ -167,6 +167,28 @@ pub struct FixtureVm {
     pub home_team_name: String,
     pub away_team_name: String,
     pub group_name: String,
+    /// Rapport publié : la rencontre n'est plus supprimable, le bouton n'est
+    /// pas rendu. Le refus côté serveur reste la ceinture — la page peut être
+    /// obsolète au moment du clic.
+    pub is_deletable: bool,
+}
+
+/// En cas d'échec de la consultation, on considère les rencontres comme
+/// supprimables : le bouton reste affiché et c'est le refus serveur qui
+/// tranchera. L'inverse masquerait des boutons parfaitement légitimes sur une
+/// simple erreur transitoire.
+async fn load_published_pairings(state: &AppState, match_day: &MatchDay) -> Vec<String> {
+    let pairing_ids: Vec<String> = match_day.pairings.iter().map(|p| p.id.to_string()).collect();
+
+    state
+        .competitions
+        .match_report_status_port
+        .find_published_pairings(&pairing_ids)
+        .await
+        .unwrap_or_else(|e| {
+            tracing::error!("round_detail published pairings: {e}");
+            vec![]
+        })
 }
 
 pub struct TeamOptionVm {
@@ -275,6 +297,8 @@ pub async fn schedule_round_detail_widget(
         })
         .collect();
 
+    let published_pairings = load_published_pairings(&state, &match_day).await;
+
     let fixtures = match_day
         .pairings
         .iter()
@@ -293,8 +317,10 @@ pub async fn schedule_round_detail_widget(
                 .get(home_id.as_str())
                 .copied()
                 .unwrap_or("");
+            let fixture_id = p.id.to_string();
             FixtureVm {
-                fixture_id: p.id.to_string(),
+                is_deletable: !published_pairings.contains(&fixture_id),
+                fixture_id,
                 home_team_name: home_name,
                 away_team_name: away_name,
                 group_name: gn.to_string(),

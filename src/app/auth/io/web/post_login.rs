@@ -182,6 +182,11 @@ mod tests {
                 impl crate::app::competitions::ports::ITiebreakCatalogPort for FakeTiebreakCatalogPort {
                     fn all(&self) -> Vec<crate::app::competitions::ports::TiebreakCriterionDto> { vec![] }
                 }
+                struct FakeMatchReportStatusPort;
+                #[async_trait::async_trait]
+                impl crate::app::competitions::ports::IMatchReportStatusPort for FakeMatchReportStatusPort {
+                    async fn find_published_pairings(&self, _: &[String]) -> Result<Vec<String>, String> { Ok(vec![]) }
+                }
                 CompetitionsContext {
                     competition_repository: Arc::new(FakeCompetitionRepository),
                     season_repository:      Arc::new(FakeSeasonRepository),
@@ -191,6 +196,7 @@ mod tests {
                     reference_port:         Arc::new(FakeReferencePort),
                     space_member_port:      Arc::new(FakeCompSpaceMemberPort),
                     tiebreak_catalog_port:  Arc::new(FakeTiebreakCatalogPort),
+                    match_report_status_port: Arc::new(FakeMatchReportStatusPort),
                     event_bus:              event_bus.clone(),
                 }
             },
@@ -352,6 +358,8 @@ mod tests {
                         -> Result<Option<crate::app::match_report::domain::match_report_state::MatchReportState>, crate::app::match_report::domain::match_report_repository_port::RepositoryError> { Ok(None) }
                     async fn find_id_by_pairing(&self, _: &str)
                         -> Result<Option<String>, crate::app::match_report::domain::match_report_repository_port::RepositoryError> { Ok(None) }
+                    async fn find_phases_by_pairings(&self, _: &[String])
+                        -> Result<Vec<(String, String)>, crate::app::match_report::domain::match_report_repository_port::RepositoryError> { Ok(vec![]) }
                     async fn find_id_by_round_and_teams(&self, _: &str, _: &str, _: &str)
                         -> Result<Option<String>, crate::app::match_report::domain::match_report_repository_port::RepositoryError> { Ok(None) }
                     async fn find_actions_by_match_and_side(&self, _: &str, _: crate::app::match_report::domain::value_objects::TeamSide)

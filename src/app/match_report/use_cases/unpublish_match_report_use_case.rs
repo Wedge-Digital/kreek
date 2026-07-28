@@ -170,6 +170,12 @@ mod tests {
         async fn find_id_by_pairing(&self, _: &str) -> Result<Option<String>, RepositoryError> {
             Ok(None)
         }
+        async fn find_phases_by_pairings(
+            &self,
+            _: &[String],
+        ) -> Result<Vec<(String, String)>, RepositoryError> {
+            Ok(vec![])
+        }
         async fn find_id_by_round_and_teams(
             &self,
             _: &str,

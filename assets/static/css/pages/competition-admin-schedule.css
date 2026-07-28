@@ -293,6 +293,14 @@
   color: var(--red); background: rgba(224,32,32,0.06);
 }
 
+/* Rencontre à rapport publié : non supprimable, l'emplacement du bouton reste
+   occupé pour ne pas décaler les lignes voisines. */
+.match-row-locked {
+  color: var(--dark-4); font-size: 14px;
+  padding: 4px 6px;
+  flex-shrink: 0; cursor: help;
+}
+
 /* ── Footer ── */
 .round-detail-footer {
   display: flex; justify-content: flex-end;

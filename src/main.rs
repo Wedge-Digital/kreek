@@ -217,6 +217,9 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
                 Arc::new(crate::app::spaces::io::repository::space_repository::SpaceRepository::new(pool.clone())),
             )),
             Arc::new(crate::infrastructure::competitions::tiebreak_catalog_adapter::TiebreakCatalogAdapter::new()),
+            Arc::new(crate::infrastructure::competitions::match_report_status_adapter::MatchReportStatusAdapter::new(
+                Arc::new(crate::app::match_report::io::repository::match_report_repository::MatchReportRepository::new(pool.clone())),
+            )),
         ),
         news: NewsContext::new(&pool),
         references: references.clone(),
