@@ -1,0 +1,180 @@
+# Carte d'impact tests e2e ↔ bounded contexts.
+#
+# Consommée par le skill `test-impact` pour sélectionner, en local, le
+# sous-ensemble de tests e2e susceptible d'être cassé par le diff courant.
+# La CI exécute TOUJOURS la suite complète : cette carte n'a aucune autorité
+# sur elle.
+#
+# ── Comment lire une entrée ──────────────────────────────────────────────────
+#
+# Clé   : nom du fichier de test sans `.py` (identique au jeton `@test:<nom>`
+#         émis par scripts/impact/changed_bcs.sh).
+# Valeur: les BCs que le test traverse réellement — pas ceux qu'il *vérifie*.
+#         Un test qui construit une équipe pour arriver à son scénario dépend
+#         de `team_creation` même s'il n'y assert rien : si ce BC casse, le
+#         test casse. C'est le biais conservateur, assumé.
+#
+# `"all"` = test transverse, toujours exécuté.
+#
+# ── Pourquoi les entrées sont si denses ──────────────────────────────────────
+#
+# 22 des 29 tests s'appuient sur `build_full_competition()` /
+# `create_full_competition()` (tests/e2e/competition_lifecycle.py), qui
+# traverse à lui seul competitions, references, ranking, spaces,
+# team_creation, teams, players et match_report : création de compétition
+# (phases 1→5), construction de N équipes par l'UI, enrôlement, génération des
+# appariements. Ces BCs figurent donc dans presque toutes les entrées, marqués
+# « fixture » en commentaire quand le test n'y assert rien.
+#
+# Conséquence à connaître : la sélectivité est réelle pour un diff limité à
+# `match_report`, `ranking` ou `news`, faible pour `references`, `teams` ou
+# `competitions`. Ce n'est pas un défaut de la carte mais la mesure du couplage
+# réel de la suite.
+#
+# ── Maintenance ──────────────────────────────────────────────────────────────
+#
+# Tout nouveau test e2e s'ajoute ici dans le même commit. Un test absent de la
+# carte est traité comme `"all"` par le skill, jamais ignoré. On n'ampute
+# jamais une entrée pour gagner du temps : elle ne se réduit que si le test
+# lui-même a changé de périmètre.
+
+[tests]
+
+# ── Création de compétition (aucune équipe, aucun match) ─────────────────────
+# Phase 1 → recherche de coachs (widget du BC spaces).
+# Phase 2 → pickers roster/star/inducement (BC references) et catalogue des
+#           départages injecté par `new_competition.rs` (BC ranking).
+"test_coach_selector"               = ["competitions", "spaces"]
+"test_full_competition_creation_flow" = ["competitions", "spaces", "references", "ranking"]
+"test_phase2_pickers"               = ["competitions", "references", "ranking", "spaces"]
+"test_phase4_invitations"           = ["competitions", "spaces", "references", "ranking"]
+"test_competition_rules_bonus"      = ["competitions", "references", "ranking", "spaces"]
+"test_competition_rules_tiebreakers" = ["competitions", "references", "ranking", "spaces"]
+"test_competition_two_tiers"        = ["competitions", "references", "ranking", "spaces"]
+
+# ── Administration de compétition (équipes enrôlées lues via le port teams) ──
+"test_competition_admin_dashboard"   = ["competitions", "teams", "spaces", "references", "ranking"]
+"test_competition_admin_enrollments" = ["competitions", "teams", "spaces", "references", "ranking"]
+
+# ── Construction d'équipe ────────────────────────────────────────────────────
+# `players` : la soumission émet TeamCreated, projeté par le BC players.
+"test_draft_team_errors"       = ["team_creation", "competitions", "spaces"]
+"test_special_rule_selector"   = ["team_creation", "references", "competitions", "spaces", "ranking"]
+"test_build_and_finalize_team" = ["team_creation", "references", "teams", "players",
+                                  "competitions", "spaces", "ranking"]
+
+# ── Pipeline complet (le garde-fou de la fixture elle-même) ──────────────────
+# Ce test existe pour vérifier que create → build → enrol → schedule fonctionne.
+# Il est sélectionné dès que l'un de ces BCs bouge : c'est lui qui vire au
+# rouge en premier quand la fixture des autres tests est cassée.
+"test_competition_full_lifecycle" = ["competitions", "team_creation", "teams", "players",
+                                     "references", "ranking", "spaces", "match_report"]
+
+# ── Onglets de la page compétition ───────────────────────────────────────────
+# match_report : la ligne de calendrier ouvre la saisie du rapport.
+"test_competition_matchs" = ["competitions", "match_report", "teams", "players",
+                             "team_creation", "references", "ranking", "spaces"]
+
+# ── Saisie d'un rapport de match ─────────────────────────────────────────────
+# references : inducements, mercenaires, joueurs vedettes.
+# teams : verrou de saisie posé à la confirmation de la sélection.
+# competitions, team_creation, ranking, spaces : fixture.
+"test_match_report_step2" = ["match_report", "references", "teams",
+                             "competitions", "team_creation", "players", "ranking", "spaces"]
+"test_match_report_step2_mercenaires" = ["match_report", "references", "teams",
+                                         "competitions", "team_creation", "players", "ranking", "spaces"]
+"test_match_report_inducements" = ["match_report", "references", "teams",
+                                   "competitions", "team_creation", "players", "ranking", "spaces"]
+"test_match_report_step3_4_actions" = ["match_report", "players", "references", "teams",
+                                       "competitions", "team_creation", "ranking", "spaces"]
+"test_match_report_step5" = ["match_report", "teams", "players", "references",
+                             "competitions", "team_creation", "ranking", "spaces"]
+
+# ── Publication et correction (toute la chaîne d'app events) ─────────────────
+# spp_calculator : coût des compétences calculé au récapitulatif.
+"test_match_report_recap" = ["match_report", "players", "teams", "spp_calculator",
+                             "competitions", "references", "ranking", "team_creation", "spaces"]
+"test_match_report_correction" = ["match_report", "competitions", "teams", "players",
+                                  "ranking", "spp_calculator", "references", "team_creation", "spaces"]
+"test_pairing_deletion" = ["competitions", "match_report", "teams", "players",
+                           "references", "ranking", "team_creation", "spaces", "spp_calculator"]
+
+# ── Joueurs ──────────────────────────────────────────────────────────────────
+"test_player_detail" = ["players", "match_report", "teams", "spp_calculator",
+                        "competitions", "references", "ranking", "team_creation", "spaces"]
+"test_player_spp_spending" = ["players", "spp_calculator", "teams", "match_report",
+                              "competitions", "references", "ranking", "team_creation", "spaces"]
+"test_player_availability_after_injury" = ["players", "match_report", "teams", "spp_calculator",
+                                           "competitions", "references", "ranking",
+                                           "team_creation", "spaces"]
+
+# ── Équipes ──────────────────────────────────────────────────────────────────
+"test_team_detail_state_banner" = ["teams", "match_report", "players", "spp_calculator",
+                                   "competitions", "references", "ranking",
+                                   "team_creation", "spaces"]
+
+# ── Classement ───────────────────────────────────────────────────────────────
+"test_ranking_bonus" = ["ranking", "competitions", "match_report", "teams", "players",
+                        "references", "team_creation", "spaces", "spp_calculator"]
+"test_ranking_tiebreak" = ["ranking", "competitions", "match_report", "teams", "players",
+                           "references", "team_creation", "spaces", "spp_calculator"]
+"test_detailed_standings" = ["ranking", "competitions", "match_report", "teams", "players",
+                             "references", "team_creation", "spaces", "spp_calculator"]
+
+# ── Trou de couverture connu ─────────────────────────────────────────────────
+# Le BC `news` (articles, commentaires, fil d'accueil) n'a AUCUN test e2e.
+# Un diff limité à `news` ne sélectionnera donc rien : le skill doit le dire
+# explicitement plutôt que d'afficher « 0 test impacté » comme un succès.
+
+# ═════════════════════════════════════════════════════════════════════════════
+# [deps] — couplage inter-BC.
+#
+# `"X" = ["Y"]` signifie « Y dépend de X » : si X change, les tests de Y
+# doivent tourner. Deux sources, fusionnées ici :
+#
+#   1. Adapters ACL (`src/infrastructure/<consommateur>/`) : le consommateur
+#      lit le BC source en synchrone via un port.
+#   2. App events : le consommateur réagit à un événement émis par la source.
+#
+# Dérivé du code, pas de l'intention — cf. les listeners dans
+# `src/app/*/io/app_events/` et les imports des adapters.
+# ═════════════════════════════════════════════════════════════════════════════
+
+[deps]
+
+# auth émet AccountCreated, projeté par spaces (cache utilisateur).
+"auth" = ["spaces"]
+
+# competitions émet PairingCreated / PairingDeleted (consommés par
+# match_report) ; il est lu par ranking, players et team_creation via leurs
+# adapters.
+"competitions" = ["match_report", "players", "ranking", "team_creation"]
+
+# match_report émet MatchReportConfirmed / Published / Unpublished / Cancelled
+# et les PlayerMatchImpact* ; il est aussi lu par competitions via un port.
+"match_report" = ["competitions", "players", "ranking", "teams"]
+
+# players émet SkillPurchased / StatIncreased, consommés par teams ; il est lu
+# par match_report via un port.
+"players" = ["match_report", "teams"]
+
+# ranking expose le catalogue des critères de départage à competitions.
+"ranking" = ["competitions"]
+
+# references est le référentiel de règles : tout le monde le lit.
+"references" = ["competitions", "match_report", "players", "team_creation", "teams"]
+
+# spaces expose la recherche de coachs et les profils de membres.
+"spaces" = ["competitions", "match_report", "players"]
+
+# spp_calculator calcule les coûts de compétences pour le récapitulatif.
+"spp_calculator" = ["match_report"]
+
+# team_creation émet TeamCreated, projeté par players et teams.
+"team_creation" = ["players", "teams"]
+
+# teams expose les équipes enrôlées et leur état de jeu.
+"teams" = ["competitions", "match_report", "players"]
+
+# news n'est consommé par personne.
+"news" = []
