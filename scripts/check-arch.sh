@@ -178,6 +178,45 @@ count7=$(printf '%s\n' "$axe7" | sed '/^$/d' | wc -l | tr -d ' ')
 if [ "$count7" -gt 0 ]; then print_warn "$axe7" "$count7"; else print_pass; fi
 echo ""
 
+# ── Axe 8 : intégrité de la carte d'impact e2e ──────────────────────────────
+# La carte n'est utile que si elle est exhaustive : un test absent est traité
+# comme transverse (donc toujours exécuté, sélection inutile), une entrée
+# orpheline ou un BC inexistant signalent une carte qui a décroché du code.
+echo -e "${BOLD}Axe 8 · Carte d'impact e2e — exhaustive et sans entrée morte${RESET}"
+axe8=$(python3 - <<'PY' 2>/dev/null || true
+import pathlib, sys, tomllib
+root = pathlib.Path(".")
+carte = root / "tests/impact-map.toml"
+if not carte.exists():
+    print("tests/impact-map.toml: fichier absent"); sys.exit()
+try:
+    data = tomllib.loads(carte.read_text())
+except Exception as e:
+    print(f"tests/impact-map.toml: TOML invalide — {e}"); sys.exit()
+
+tests = data.get("tests", {})
+deps = data.get("deps", {})
+sur_disque = {p.stem for p in (root / "tests/e2e").glob("test_*.py")}
+bcs = {p.name for p in (root / "src/app").iterdir() if p.is_dir() and p.name != "shared_kernel"}
+
+for t in sorted(sur_disque - set(tests)):
+    print(f"tests/e2e/{t}.py: test e2e sans entrée dans impact-map.toml")
+for t in sorted(set(tests) - sur_disque):
+    print(f"tests/impact-map.toml: entrée orpheline « {t} » (fichier de test inexistant)")
+for t, declares in sorted(tests.items()):
+    for bc in sorted(set(declares) - bcs - {"all"}):
+        print(f"tests/impact-map.toml: « {t} » référence un BC inconnu « {bc} »")
+for src, dependants in sorted(deps.items()):
+    for bc in sorted({src} | set(dependants) - bcs):
+        if bc not in bcs:
+            print(f"tests/impact-map.toml: [deps] référence un BC inconnu « {bc} »")
+PY
+)
+axe8="$(printf '%s' "$axe8" | sed '/^$/d')"
+count8=$([ -z "$axe8" ] && echo 0 || printf '%s\n' "$axe8" | wc -l | tr -d ' ')
+if [ "$count8" -gt 0 ]; then print_fail "$axe8"; else print_pass; fi
+echo ""
+
 if [ "$EXIT_CODE" -eq 0 ]; then
     echo -e "${GREEN}${BOLD}✓ Toutes les vérifications bloquantes passent${RESET}"
 else

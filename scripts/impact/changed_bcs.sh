@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # changed_bcs.sh — résolution mécanique fichiers modifiés -> bounded contexts.
 #
-# Usage : scripts/impact/changed_bcs.sh [<ref>]
-#   sans ref : diff working tree + index vs HEAD, fichiers non suivis inclus
-#   avec ref : diff de la branche courante vs <ref> (ex: main), + working tree
+# Usage : scripts/impact/changed_bcs.sh [<ref>|<intervalle>]
+#   sans argument : working tree + index vs HEAD, fichiers non suivis inclus
+#   avec ref      : diff de la branche courante vs <ref> (ex: main), + working tree
+#   avec A..B     : ce seul intervalle, sans working tree ni fichiers non suivis
+#                   (sert au backtest : rejouer un commit passé à l'identique)
 #
 # Sortie : un jeton par ligne, dédupliqué.
 #
@@ -29,6 +31,12 @@ set -euo pipefail
 REF="${1:-}"
 
 collect_files() {
+  # Intervalle explicite : on rejoue exactement ce diff-là, sans y mêler
+  # l'état courant du working tree.
+  if [[ "$REF" == *".."* ]]; then
+    git diff --name-only "$REF"
+    return
+  fi
   if [[ -n "$REF" ]]; then
     # Trois points : ce que la branche a apporté depuis la divergence, sans
     # rejouer ce que `ref` a avancé de son côté.

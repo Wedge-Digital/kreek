@@ -10,7 +10,7 @@ DATABASE_URL := $(if $(DATABASE_URL),$(DATABASE_URL),$(shell grep -E '^DATABASE_
 # `export DATABASE_URL=…dev…` local ne fasse cibler la base dev par `make test`.
 TEST_DB_URL := $(if $(DATABASE_URL_TEST),$(DATABASE_URL_TEST),$(shell grep -E '^DATABASE__URL=' .env.test 2>/dev/null | cut -d= -f2-))
 
-.PHONY: dev dev-demo test e2e all_tests migrate migration prepare_db reset_db reset_test_db init_db \
+.PHONY: dev dev-demo test e2e test-impacted all_tests migrate migration prepare_db reset_db reset_test_db init_db \
         seed_accounts seed_e2e lint check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
@@ -22,6 +22,7 @@ help:
 	@echo "  dev-demo      Idem, mais servant le jeu de démo (assets/references.example) — requis par e2e"
 	@echo "  test          Lance les tests (utilise .env.test)"
 	@echo "  e2e           Lance les tests E2E Playwright (nécessite \`make dev-demo\` lancé)"
+	@echo "  test-impacted Idem, mais uniquement les e2e impactés par le diff courant"
 	@echo "  all_tests     test + e2e — garde-fou obligatoire avant tout commit (cf. CLAUDE.md)"
 	@echo "  migrate       Échappatoire manuelle (le binaire applique déjà les migrations au boot)"
 	@echo "  migration     Crée une migration (ex: make migration desc=create_teams)"
@@ -59,6 +60,25 @@ test: reset_test_db
 
 e2e:
 	cd tests/e2e && uv run pytest -v
+
+# Filtre LOCAL de productivité : n'exécute que les tests e2e susceptibles
+# d'être cassés par le diff courant (cf. .claude/skills/test-impact/SKILL.md).
+# La CI exécute toujours la suite complète — ne jamais la restreindre à ça.
+# Code 10 = une règle « run all » s'est déclenchée, on bascule sur make e2e.
+# Code 11 = des BCs touchés n'ont aucune couverture e2e : on le dit, on ne
+#           fait pas passer une sélection vide pour un succès.
+test-impacted:
+	@tests=$$(./scripts/impact/changed_bcs.sh $(REF) | ./scripts/impact/select_tests.py); \
+	rc=$$?; \
+	if [ $$rc -eq 10 ]; then \
+	    echo ""; echo "  → suite complète"; echo ""; \
+	    $(MAKE) --no-print-directory e2e; \
+	elif [ $$rc -eq 11 ]; then \
+	    exit 1; \
+	elif [ -n "$$tests" ]; then \
+	    echo ""; \
+	    cd tests/e2e && uv run pytest -v $$tests; \
+	fi
 
 # Garde-fou avant commit (cf. CLAUDE.md, règle de collaboration obligatoire) :
 # make ne continue à e2e que si test a réussi (prérequis Make standard).

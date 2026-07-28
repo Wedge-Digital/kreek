@@ -41,12 +41,14 @@ Vérifier qu'il répond, sinon demander à l'utilisateur de le lancer.
 ## Étape 1 — Résolution mécanique
 
 ```bash
-scripts/impact/changed_bcs.sh [<ref>]
+scripts/impact/changed_bcs.sh [<ref>|<intervalle>]
 ```
 
 - Sans argument : working tree + index vs HEAD, **fichiers non suivis inclus**.
 - Avec ref (ex. `main`) : ce que la branche a apporté depuis la divergence,
   plus le working tree.
+- Avec `A..B` : ce seul intervalle, sans working tree — sert à rejouer un
+  commit passé à l'identique (backtest, revue d'une PR).
 
 Jetons émis, un par ligne :
 
@@ -129,19 +131,40 @@ Lire `tests/impact-map.toml`. Un test est retenu si :
 - son nom apparaît en `@test:<nom>`, **ou**
 - il n'a **aucune entrée** dans la carte (traité comme `"all"` + signalement).
 
-Exécution du sous-ensemble :
+### Chemin normal : la cible Make
 
 ```bash
-cd tests/e2e && uv run pytest test_a.py test_b.py -v
+make test-impacted              # diff courant
+make test-impacted REF=main     # tout ce que la branche a apporté
 ```
 
-Exécution complète (dès qu'une règle « run all » se déclenche) :
+Elle enchaîne script → sélection → exécution et imprime le rapport. La
+sélection mécanique est figée dans `scripts/impact/select_tests.py`, dont les
+codes de sortie pilotent la cible :
+
+| Code | Sens | Effet |
+|---|---|---|
+| 0 | sélection partielle, ou diff entièrement neutre | pytest sur les tests retenus, ou rien |
+| 10 | une règle « run all » s'est déclenchée | bascule sur `make e2e` |
+| 11 | des BCs touchés, mais aucun test ne les couvre | échec — trou de couverture à signaler |
+
+Ce programme ne remplace pas ce skill : il en fige la partie mécanique. Le
+jugement reste ici — grep d'un type d'événement quand `[deps]` paraît
+incomplet, diagnostic de drift, rédaction d'une entrée manquante. Les deux
+doivent toujours donner le même résultat ; une divergence est un bug de l'un
+des deux, à corriger avant de continuer.
+
+### Chemin manuel
+
+Utile pour expliquer une sélection ou en tester une variante :
 
 ```bash
-make e2e
+scripts/impact/changed_bcs.sh | scripts/impact/select_tests.py
+cd tests/e2e && uv run pytest -v test_a.py test_b.py
+make e2e                       # suite complète
 ```
 
-Puis produire un rapport court, toujours dans ce format :
+Format du rapport, à reproduire tel quel quand la sélection est faite à la main :
 
 ```
 Jetons          : competitions, @templates:competitions, @test:test_pairing_deletion
@@ -151,8 +174,9 @@ Tests ignorés   : 0
 Rappel          : la CI exécutera la suite complète.
 ```
 
-Quand la sélection est vide, ne jamais l'afficher comme un succès : dire
-explicitement quel BC n'a aucune couverture e2e.
+Quand la sélection est vide, distinguer les deux cas : aucun BC touché (diff
+neutre, rien à lancer) versus BC touché sans couverture e2e — ce second cas
+n'est jamais un succès, il se dit.
 
 ## Trous de couverture connus (au 2026-07-28)
 
@@ -167,6 +191,38 @@ explicitement quel BC n'a aucune couverture e2e.
   `kreek-histoire-export.txt`) sortent en `@unknown` et forcent un run all
   tant qu'ils sont là. Ce n'est pas un bug du script : un fichier non classable
   à la racine ne peut pas être déclaré sans impact.
+
+## Garde-fou automatique
+
+`make check-arch` (axe 8, bloquant) vérifie que la carte n'a pas décroché du
+code : tout test e2e a une entrée, aucune entrée n'est orpheline, aucun BC
+référencé n'est inconnu. Une carte incomplète fait échouer la vérification
+d'architecture, au même titre qu'une violation de couche.
+
+Ce garde-fou couvre l'exhaustivité, **pas la justesse** : il ne peut pas voir
+qu'une entrée déclare trop peu de BCs. Cette justesse-là ne se vérifie que par
+le backtest et par la détection de drift.
+
+## Backtest — critère d'acceptation
+
+Rejouer les derniers commits et vérifier que la sélection aurait retenu les
+tests concernés :
+
+```bash
+for i in $(seq 1 10); do
+  c=$(git rev-parse --short HEAD~$((i-1)))
+  ./scripts/impact/changed_bcs.sh "$c^..$c" | ./scripts/impact/select_tests.py >/dev/null
+done
+```
+
+Critère objectif : **tout test modifié par un commit doit figurer dans la
+sélection de ce commit**. Un faux négatif se corrige dans la carte ou dans les
+règles, puis on rejoue — jamais en ajustant le test.
+
+Résultat au 2026-07-28 sur les 10 derniers commits : aucun faux négatif. Les
+deux régressions réellement rencontrées pendant le développement de la
+suppression de pairing (équipes non libérées ; compte-rendu JS non branché)
+auraient toutes deux été sélectionnées.
 
 ## Maintenance de la carte — obligations
 
@@ -189,6 +245,15 @@ potentiel. Règles :
 5. `[deps]` se dérive du code, pas de l'intention : listeners dans
    `src/app/*/io/app_events/`, imports des adapters dans
    `src/infrastructure/<consommateur>/`.
+6. Après toute modification du script, de la carte ou des règles : rejouer le
+   backtest avant de conclure.
+
+## Évolution prévue (v2, pas maintenant)
+
+Remplacer le bash par un `cargo xtask impact` qui génère `[deps]`
+mécaniquement, par analyse des références de types d'événements entre modules —
+au lieu de la dérivation manuelle actuelle, qui reste un point de mensonge
+possible.
 
 ## Anti-patterns (refuser explicitement)
 
@@ -196,5 +261,7 @@ potentiel. Règles :
 - « Le diff est petit, inutile de lancer quoi que ce soit. »
 - Déclarer un test sur moins de BCs qu'il n'en traverse pour gagner du temps.
 - Compenser un `@unknown` par une intuition au lieu de corriger le script.
+- Ignorer un test absent de la carte : il est traité comme `"all"` et signalé,
+  jamais écarté en silence.
 - Présenter une sélection vide comme un succès alors qu'elle révèle un BC sans
   couverture e2e.
