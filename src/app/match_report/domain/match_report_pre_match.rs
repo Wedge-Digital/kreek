@@ -43,6 +43,17 @@ pub struct MatchReportPreMatch {
 }
 
 impl MatchReportPreMatch {
+    /// Annule un rapport dont la sélection est déjà confirmée — les deux
+    /// équipes sont verrouillées en saisie, le listener `teams` les libère à
+    /// partir des ids portés par l'événement.
+    pub fn cancel(self, reason: String) -> MatchReportDomainEvent {
+        MatchReportDomainEvent::MatchReportCancelled {
+            reason,
+            home_team_id: Some(self.home_team_id),
+            away_team_id: Some(self.away_team_id),
+        }
+    }
+
     pub fn record_fan_factor(
         &self,
         home_fan_roll: D3Roll,

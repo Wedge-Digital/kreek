@@ -183,6 +183,13 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             ),
             (
                 Some(MatchReportState::ReadyToPublish(rtp)),
+                MatchReportDomainEvent::MatchReportCancelled { reason, .. },
+            ) => MatchReportState::Cancelled(MatchReportCancelled {
+                id: rtp.id,
+                reason: reason.clone(),
+            }),
+            (
+                Some(MatchReportState::ReadyToPublish(rtp)),
                 MatchReportDomainEvent::FanFactorRecorded {
                     home_fan_roll,
                     away_fan_roll,
@@ -837,5 +844,142 @@ mod tests {
             rehydrate(events),
             Err(DomainError::InvalidEventSequence)
         ));
+    }
+
+    // ── annulation : pairing supprimé ────────────────────────────────────
+
+    /// Les trois états non publiés doivent produire un événement d'annulation
+    /// portant les deux équipes — c'est la seule source d'information du
+    /// listener `teams`, l'état `Cancelled` ne retenant qu'un id et une raison.
+    #[test]
+    fn annuler_un_brouillon_porte_les_deux_equipes() {
+        let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
+            test_ids();
+        let events = vec![created_event(
+            mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
+        )];
+
+        let MatchReportState::Draft(draft) = rehydrate(events).unwrap() else {
+            panic!("attendu Draft");
+        };
+
+        assert!(matches!(
+            draft.cancel("Pairing supprimé".to_string()),
+            MatchReportDomainEvent::MatchReportCancelled {
+                home_team_id: Some(h),
+                away_team_id: Some(a),
+                ..
+            } if h == home_id && a == away_id
+        ));
+    }
+
+    #[test]
+    fn annuler_un_rapport_confirme_porte_les_deux_equipes() {
+        let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
+            test_ids();
+        let events = vec![
+            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
+            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+        ];
+
+        let MatchReportState::PreMatch(pm) = rehydrate(events).unwrap() else {
+            panic!("attendu PreMatch");
+        };
+
+        assert!(matches!(
+            pm.cancel("Pairing supprimé".to_string()),
+            MatchReportDomainEvent::MatchReportCancelled {
+                home_team_id: Some(h),
+                away_team_id: Some(a),
+                ..
+            } if h == home_id && a == away_id
+        ));
+    }
+
+    #[test]
+    fn annuler_un_rapport_pret_a_publier_porte_les_deux_equipes() {
+        let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
+            test_ids();
+        let events = vec![
+            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
+            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+            post_match_event(coach_id),
+        ];
+
+        let MatchReportState::ReadyToPublish(rtp) = rehydrate(events).unwrap() else {
+            panic!("attendu ReadyToPublish");
+        };
+
+        assert!(matches!(
+            rtp.cancel("Pairing supprimé".to_string()),
+            MatchReportDomainEvent::MatchReportCancelled {
+                home_team_id: Some(h),
+                away_team_id: Some(a),
+                ..
+            } if h == home_id && a == away_id
+        ));
+    }
+
+    fn cancelled_event(home_id: TeamId, away_id: TeamId) -> MatchReportDomainEvent {
+        MatchReportDomainEvent::MatchReportCancelled {
+            reason: "Pairing supprimé".to_string(),
+            home_team_id: Some(home_id),
+            away_team_id: Some(away_id),
+        }
+    }
+
+    #[test]
+    fn rehydrate_annulation_depuis_les_trois_etats_non_publies() {
+        let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
+            test_ids();
+        let created =
+            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id);
+        let confirmed = MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id };
+
+        let flux_par_etat = vec![
+            ("Draft", vec![created.clone(), cancelled_event(home_id, away_id)]),
+            (
+                "PreMatch",
+                vec![created.clone(), confirmed.clone(), cancelled_event(home_id, away_id)],
+            ),
+            (
+                "ReadyToPublish",
+                vec![
+                    created,
+                    confirmed,
+                    post_match_event(coach_id),
+                    cancelled_event(home_id, away_id),
+                ],
+            ),
+        ];
+
+        for (etat, events) in flux_par_etat {
+            match rehydrate(events) {
+                Ok(MatchReportState::Cancelled(c)) => assert_eq!(c.id, mr_id),
+                _ => panic!("annulation depuis {etat} : attendu Cancelled"),
+            }
+        }
+    }
+
+    /// Les annulations persistées avant l'ajout des ids d'équipes n'ont pas ces
+    /// champs : la rehydratation de l'existant ne doit pas casser.
+    #[test]
+    fn rehydrate_une_annulation_a_l_ancien_format() {
+        let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
+            test_ids();
+        let created =
+            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id);
+        let ancien_format = serde_json::json!({
+            "type": "MatchReportCancelled",
+            "reason": "Pairing supprimé",
+        });
+
+        let cancelled: MatchReportDomainEvent =
+            serde_json::from_value(ancien_format).expect("ancien format désérialisable");
+
+        match rehydrate(vec![created, cancelled]) {
+            Ok(MatchReportState::Cancelled(c)) => assert_eq!(c.id, mr_id),
+            _ => panic!("attendu Cancelled"),
+        }
     }
 }

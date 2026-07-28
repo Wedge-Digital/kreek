@@ -4,7 +4,44 @@ use crate::app::shared_kernel::app_events::competitions_app_events::Competitions
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
 
-pub fn init(app_event_bus: &EventBus, repo: Arc<dyn IMatchReportRepository>) {
+/// Annule un rapport dont le pairing vient d'être supprimé, quel que soit son
+/// avancement — tant qu'il n'est pas publié.
+///
+/// `Published` est un cas **anormal** : la suppression d'un pairing dont le
+/// rapport est publié est refusée en amont (use case de suppression). S'il
+/// arrive ici, c'est que le garde-fou a été contourné, et le match est
+/// désormais absent du calendrier tout en comptant encore au classement — d'où
+/// le niveau `error`.
+fn cancel(
+    state: MatchReportState,
+    mr_id: &str,
+) -> Option<(u64, crate::app::match_report::domain::events::MatchReportDomainEvent)> {
+    let reason = "Pairing supprimé".to_string();
+    match state {
+        MatchReportState::Draft(d) => Some((d.version, d.cancel(reason))),
+        MatchReportState::PreMatch(pm) => Some((pm.version, pm.cancel(reason))),
+        MatchReportState::ReadyToPublish(rtp) => Some((rtp.version, rtp.cancel(reason))),
+        MatchReportState::Cancelled(_) => None,
+        MatchReportState::Published(_) => {
+            tracing::error!(
+                "pairing_deleted_listener: rapport {mr_id} publié, pairing pourtant supprimé — \
+                 le match reste au classement alors qu'il a disparu du calendrier"
+            );
+            None
+        }
+    }
+}
+
+/// `event_bus` est le bus **interne** du BC : l'annulation y est publiée après
+/// son append, pour que le publisher la convertisse en app event. Sans ça, le
+/// rapport serait annulé sans que personne ne l'apprenne — et les équipes
+/// resteraient verrouillées en saisie.
+pub fn init(
+    app_event_bus: &EventBus,
+    event_bus: &EventBus,
+    repo: Arc<dyn IMatchReportRepository>,
+) {
+    let bus = event_bus.clone();
     let mut rx = app_event_bus.subscribe();
     tokio::spawn(async move {
         loop {
@@ -41,14 +78,8 @@ pub fn init(app_event_bus: &EventBus, repo: Arc<dyn IMatchReportRepository>) {
                         }
                     };
 
-                    let (version, cancel_event) = match state {
-                        MatchReportState::Draft(draft) => {
-                            let v = draft.version;
-                            let event = draft.cancel("Pairing supprimé".to_string());
-                            (v, event)
-                        }
-                        MatchReportState::Cancelled(_) => continue,
-                        _ => continue,
+                    let Some((version, cancel_event)) = cancel(state, &mr_id) else {
+                        continue;
                     };
 
                     match repo.append(&mr_id, &cancel_event, version).await {
@@ -56,6 +87,7 @@ pub fn init(app_event_bus: &EventBus, repo: Arc<dyn IMatchReportRepository>) {
                             tracing::info!(
                                 "pairing_deleted_listener: cancelled match report {mr_id}"
                             );
+                            let _ = bus.send(cancel_event.to_enveloppe(&mr_id));
                         }
                         Err(e) => {
                             tracing::error!(

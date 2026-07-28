@@ -46,6 +46,18 @@ pub enum MatchReportDomainEvent {
     },
     MatchReportCancelled {
         reason: String,
+        /// Équipes du rapport annulé. Le BC `teams` en a besoin pour libérer le
+        /// verrou de saisie posé à la confirmation de la sélection — et l'état
+        /// `Cancelled` ne retient qu'un id et une raison, donc l'information ne
+        /// serait plus lisible après coup.
+        ///
+        /// `None` sur les événements persistés avant l'ajout de ces champs :
+        /// seuls des brouillons étaient annulables à l'époque, sans verrou à
+        /// défaire.
+        #[serde(default)]
+        home_team_id: Option<TeamId>,
+        #[serde(default)]
+        away_team_id: Option<TeamId>,
     },
     TeamValuesRecorded {
         home_team_value: TeamValue,

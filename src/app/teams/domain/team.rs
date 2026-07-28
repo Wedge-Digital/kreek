@@ -75,6 +75,13 @@ pub enum TeamDomainEvent {
     MatchReportingStarted {
         match_report_id: MatchReportId,
     },
+    /// Libère l'équipe : le rapport qu'elle saisissait a été annulé, son
+    /// pairing ayant été supprimé. Sans cet événement l'équipe resterait en
+    /// `MatchReporting` sans espoir d'en sortir — la seule autre issue est la
+    /// publication du rapport, qui n'aura jamais lieu.
+    MatchReportingCancelled {
+        match_report_id: MatchReportId,
+    },
 
     // Séquence post-match
     // Nommé en termes domaine — déclenché par l'app event MatchPlayed (IO layer)
@@ -176,6 +183,7 @@ impl TeamDomainEvent {
             Self::TeamDismissed => "TeamDismissed",
             Self::TeamEnrollmentRejected { .. } => "TeamEnrollmentRejected",
             Self::MatchReportingStarted { .. } => "MatchReportingStarted",
+            Self::MatchReportingCancelled { .. } => "MatchReportingCancelled",
             Self::PostMatchSequenceStarted { .. } => "PostMatchSequenceStarted",
             Self::PostMatchSequenceReverted { .. } => "PostMatchSequenceReverted",
             Self::PlayerImprovementApplied { .. } => "PlayerImprovementApplied",
@@ -355,6 +363,12 @@ impl Team {
             TeamDomainEvent::MatchReportingStarted { match_report_id } => {
                 self.game_phase = Some(GamePhase::MatchReporting);
                 self.current_match_report_id = Some(*match_report_id);
+            }
+            TeamDomainEvent::MatchReportingCancelled { .. } => {
+                // Retour exact à l'état d'avant `MatchReportingStarted` :
+                // l'équipe redevient disponible pour un autre rapport.
+                self.game_phase = Some(GamePhase::ReadyToPlay);
+                self.current_match_report_id = None;
             }
             TeamDomainEvent::PostMatchSequenceStarted {
                 dedicated_fans,
@@ -583,6 +597,23 @@ impl Team {
         Ok(TeamDomainEvent::MatchReportingStarted { match_report_id })
     }
 
+    /// Libère l'équipe du rapport `match_report_id`, annulé faute de pairing.
+    ///
+    /// La seconde garde n'est pas cosmétique : sans elle, l'annulation tardive
+    /// d'un vieux rapport libérerait une équipe déjà repartie sur un autre
+    /// match. Elle assure aussi l'idempotence — un événement rejoué ne trouve
+    /// plus l'équipe en saisie sur ce rapport.
+    pub fn cancel_match_reporting(
+        &self,
+        match_report_id: MatchReportId,
+    ) -> Result<TeamDomainEvent, DomainError> {
+        self.expect_phase(GamePhase::MatchReporting)?;
+        if self.current_match_report_id != Some(match_report_id) {
+            return Err(DomainError::NotReportingThisMatch);
+        }
+        Ok(TeamDomainEvent::MatchReportingCancelled { match_report_id })
+    }
+
     pub fn start_post_match_sequence(
         &self,
         result: MatchResult,
@@ -761,6 +792,7 @@ mod tests {
     fn roster_id() -> RosterId { RosterId::try_new("00000000000000000000000005").unwrap() }
     fn coach_id() -> CoachId { CoachId::try_new("00000000000000000000000006").unwrap() }
     fn match_report_id() -> MatchReportId { MatchReportId::try_new("00000000000000000000000007").unwrap() }
+    fn other_match_report_id() -> MatchReportId { MatchReportId::try_new("00000000000000000000000008").unwrap() }
 
     fn created_event() -> TeamDomainEvent {
         TeamDomainEvent::TeamCreated {
@@ -1194,6 +1226,89 @@ mod tests {
         let event = team.start_match_reporting(match_report_id()).unwrap();
         let team = team.apply(&event);
         assert_eq!(team.current_match_report_id, Some(match_report_id()));
+    }
+
+    #[test]
+    fn cancel_match_reporting_frees_the_team() {
+        let events = vec![
+            created_event(),
+            enrolled_event(),
+            TeamDomainEvent::MatchReportingStarted {
+                match_report_id: match_report_id(),
+            },
+        ];
+        let team = Team::hydrate(&events).unwrap();
+
+        let event = team.cancel_match_reporting(match_report_id()).unwrap();
+        let team = team.apply(&event);
+
+        assert_eq!(team.game_phase, Some(GamePhase::ReadyToPlay));
+        assert_eq!(team.current_match_report_id, None);
+    }
+
+    #[test]
+    fn cancel_match_reporting_allows_starting_another_report() {
+        let events = vec![
+            created_event(),
+            enrolled_event(),
+            TeamDomainEvent::MatchReportingStarted {
+                match_report_id: match_report_id(),
+            },
+            TeamDomainEvent::MatchReportingCancelled {
+                match_report_id: match_report_id(),
+            },
+        ];
+        let team = Team::hydrate(&events).unwrap();
+
+        // Le cœur de la carte : sans libération, l'équipe resterait bloquée.
+        assert!(team.start_match_reporting(other_match_report_id()).is_ok());
+    }
+
+    #[test]
+    fn cancel_match_reporting_wrong_phase_fails() {
+        let events = vec![created_event(), enrolled_event()];
+        let team = Team::hydrate(&events).unwrap();
+
+        assert!(matches!(
+            team.cancel_match_reporting(match_report_id()),
+            Err(DomainError::WrongGamePhase(Some(GamePhase::ReadyToPlay)))
+        ));
+    }
+
+    #[test]
+    fn cancel_match_reporting_other_report_fails() {
+        let events = vec![
+            created_event(),
+            enrolled_event(),
+            TeamDomainEvent::MatchReportingStarted {
+                match_report_id: match_report_id(),
+            },
+        ];
+        let team = Team::hydrate(&events).unwrap();
+
+        // L'équipe est repartie sur un autre match : l'annulation tardive du
+        // premier ne doit pas la libérer du second.
+        assert!(matches!(
+            team.cancel_match_reporting(other_match_report_id()),
+            Err(DomainError::NotReportingThisMatch)
+        ));
+    }
+
+    #[test]
+    fn cancel_match_reporting_twice_does_nothing() {
+        let events = vec![
+            created_event(),
+            enrolled_event(),
+            TeamDomainEvent::MatchReportingStarted {
+                match_report_id: match_report_id(),
+            },
+            TeamDomainEvent::MatchReportingCancelled {
+                match_report_id: match_report_id(),
+            },
+        ];
+        let team = Team::hydrate(&events).unwrap();
+
+        assert!(team.cancel_match_reporting(match_report_id()).is_err());
     }
 
     #[test]

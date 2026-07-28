@@ -15,6 +15,9 @@ pub enum DomainError {
     InsufficientStaff,
     /// Aucune séquence d'après-match à défaire pour ce rapport.
     NoPostMatchToRevert,
+    /// L'équipe n'est pas en saisie sur ce rapport — soit elle n'en saisit
+    /// aucun, soit elle en saisit un autre.
+    NotReportingThisMatch,
     InsufficientTreasury,
 }
 
@@ -35,6 +38,9 @@ impl fmt::Display for DomainError {
             Self::InsufficientStaff => write!(f, "quantité insuffisante de ce staff"),
             Self::NoPostMatchToRevert => {
                 write!(f, "aucune séquence d'après-match à défaire pour ce rapport")
+            }
+            Self::NotReportingThisMatch => {
+                write!(f, "l'équipe n'est pas en saisie sur ce rapport de match")
             }
             Self::InsufficientTreasury => write!(f, "trésorerie insuffisante"),
         }

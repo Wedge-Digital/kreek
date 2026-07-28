@@ -32,7 +32,7 @@ pub fn init_listeners(
 ) {
     let repo = Arc::new(MatchReportRepository::new(pool));
     pairing_created_listener::init(app_event_bus, repo.clone());
-    pairing_deleted_listener::init(app_event_bus, repo.clone());
+    pairing_deleted_listener::init(app_event_bus, event_bus, repo.clone());
     app_event_publisher::match_report_app_event_publisher(
         event_bus,
         app_event_bus.clone(),

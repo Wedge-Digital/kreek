@@ -53,6 +53,17 @@ pub struct MatchReportReadyToPublish {
 }
 
 impl MatchReportReadyToPublish {
+    /// Annule un rapport intégralement saisi mais non publié : rien n'est
+    /// encore sorti du BC (classement, joueurs, trésorerie), seul le verrou de
+    /// saisie des deux équipes est à défaire.
+    pub fn cancel(self, reason: String) -> MatchReportDomainEvent {
+        MatchReportDomainEvent::MatchReportCancelled {
+            reason,
+            home_team_id: Some(self.home_team_id),
+            away_team_id: Some(self.away_team_id),
+        }
+    }
+
     pub fn from_pre_match(
         pm: &MatchReportPreMatch,
         home_gain: MatchGain,

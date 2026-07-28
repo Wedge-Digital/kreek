@@ -86,6 +86,15 @@ impl TeamRepository {
                 .await
                 .map_err(RepositoryError::Database)?;
             }
+            TeamDomainEvent::MatchReportingCancelled { .. } => {
+                sqlx::query(
+                    "UPDATE team_proj SET game_phase = 'ReadyToPlay', updated_at = now() WHERE team_id = $1",
+                )
+                .bind(team_id)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
             TeamDomainEvent::TeamDismissed => {
                 sqlx::query(
                     "UPDATE team_proj SET status = 'Dismissed', updated_at = now() WHERE team_id = $1",
@@ -479,6 +488,66 @@ mod tests {
         );
         let team = repo.find_by_id(&team_id).await.unwrap().unwrap();
         assert_eq!(team.treasury.0, 1000, "le gain doit être retiré de l'agrégat");
+
+        sqlx::query("DELETE FROM team_event_store WHERE team_id = $1")
+            .bind(&team_id)
+            .execute(&repo.pool)
+            .await
+            .ok();
+        sqlx::query("DELETE FROM team_proj WHERE team_id = $1")
+            .bind(&team_id)
+            .execute(&repo.pool)
+            .await
+            .ok();
+    }
+
+    /// Même garde-fou que le test précédent, pour l'annulation : un arm de
+    /// projection oublié laisserait la projection sur « MatchReporting » —
+    /// l'équipe redeviendrait jouable côté agrégat mais afficherait encore un
+    /// match en cours.
+    #[tokio::test]
+    async fn annulation_de_saisie_met_a_jour_la_phase_dans_la_projection() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = TeamRepository::new(pool);
+        let team_id = ulid::Ulid::new().to_string();
+        let mr_id = crate::app::shared_kernel::common_types::MatchReportId::try_new(
+            "00000000000000000000000007",
+        )
+        .unwrap();
+
+        repo.append(&team_id, &created_event(&team_id), 0).await.unwrap();
+        repo.append(
+            &team_id,
+            &TeamDomainEvent::TeamEnrolled {
+                competition_id: CompetitionId::try_new("00000000000000000000000002").unwrap(),
+                competition_name: "Ligue de Condate".to_string(),
+                season_id: SeasonId::try_new("00000000000000000000000003").unwrap(),
+                season_name: "Saison 2025".to_string(),
+            },
+            1,
+        )
+        .await
+        .unwrap();
+        repo.append(
+            &team_id,
+            &TeamDomainEvent::MatchReportingStarted { match_report_id: mr_id },
+            2,
+        )
+        .await
+        .unwrap();
+        assert_eq!(projected_phase(&repo, &team_id).await, Some("MatchReporting".to_string()));
+
+        let team = repo.find_by_id(&team_id).await.unwrap().unwrap();
+        let cancelled = team.cancel_match_reporting(mr_id).unwrap();
+        repo.append(&team_id, &cancelled, 3).await.unwrap();
+
+        assert_eq!(
+            projected_phase(&repo, &team_id).await,
+            Some("ReadyToPlay".to_string()),
+            "la projection doit suivre l'agrégat"
+        );
 
         sqlx::query("DELETE FROM team_event_store WHERE team_id = $1")
             .bind(&team_id)

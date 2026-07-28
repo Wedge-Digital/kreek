@@ -13,6 +13,14 @@ pub enum MatchReportAppEvent {
         space_id: String,
         pairing_id: Option<String>,
     },
+    /// Le rapport est annulé — son pairing a été supprimé. Les BCs qui avaient
+    /// réagi à `MatchReportConfirmed` doivent défaire leur réaction.
+    MatchReportCancelled {
+        event_id: EventId,
+        match_report_id: String,
+        home_team_id: String,
+        away_team_id: String,
+    },
     MatchReportPublished(MatchReportPublishedPayload),
     /// Le rapport repasse en état corrigeable : les BCs qui en avaient tiré des
     /// conséquences doivent les défaire.
@@ -95,12 +103,14 @@ pub struct TempPlayerPayload {
 
 impl MatchReportAppEvent {
     pub const MATCH_REPORT_CONFIRMED: &'static str = "MatchReportConfirmed";
+    pub const MATCH_REPORT_CANCELLED: &'static str = "MatchReportCancelled";
     pub const MATCH_REPORT_PUBLISHED: &'static str = "MatchReportPublished";
     pub const MATCH_REPORT_UNPUBLISHED: &'static str = "MatchReportUnpublished";
 
     pub fn event_type(&self) -> &'static str {
         match self {
             Self::MatchReportConfirmed { .. } => Self::MATCH_REPORT_CONFIRMED,
+            Self::MatchReportCancelled { .. } => Self::MATCH_REPORT_CANCELLED,
             Self::MatchReportPublished(_) => Self::MATCH_REPORT_PUBLISHED,
             Self::MatchReportUnpublished(_) => Self::MATCH_REPORT_UNPUBLISHED,
         }
@@ -109,6 +119,7 @@ impl MatchReportAppEvent {
     pub fn to_enveloppe(&self) -> EventEnvelope {
         let emitter = match self {
             Self::MatchReportConfirmed { match_report_id, .. } => match_report_id.clone(),
+            Self::MatchReportCancelled { match_report_id, .. } => match_report_id.clone(),
             Self::MatchReportPublished(payload) => payload.match_report_id.clone(),
             Self::MatchReportUnpublished(payload) => payload.match_report_id.clone(),
         };

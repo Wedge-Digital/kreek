@@ -11,6 +11,8 @@ use crate::app::shared_kernel::app_events::match_report_app_events::{
     ActionTypePayload, MatchActionPublishedPayload, MatchReportAppEvent,
     MatchReportPublishedPayload, MatchReportUnpublishedPayload, PlayerRefPayload, TempPlayerPayload,
 };
+use crate::app::shared_kernel::common_types::EventId;
+use crate::app::shared_kernel::team::TeamId;
 use crate::common::event_envelope::EventEnvelope;
 use crate::app::shared_kernel::app_events::player_match_impact_app_events::{
     InjuryTypePayload, PlayerMatchContextPayload, PlayerMatchImpactAppEvent,
@@ -51,7 +53,7 @@ pub fn match_report_app_event_publisher(
     });
 }
 
-/// Aiguille sur les deux seuls événements qui franchissent la frontière du BC.
+/// Aiguille sur les seuls événements qui franchissent la frontière du BC.
 async fn handle_envelope(
     envelope:         crate::common::event_envelope::EventEnvelope,
     app_event_bus:    &EventBus,
@@ -71,8 +73,45 @@ async fn handle_envelope(
         MatchReportDomainEvent::MatchReportUnpublished { .. } => {
             handle_unpublished(&match_report_id, app_event_bus, repo).await
         }
+        MatchReportDomainEvent::MatchReportCancelled {
+            home_team_id,
+            away_team_id,
+            ..
+        } => handle_cancelled(&match_report_id, home_team_id, away_team_id, app_event_bus),
         _ => {}
     }
+}
+
+/// Contrairement aux deux autres, cet app event se construit depuis
+/// l'événement lui-même : relire l'agrégat ne donnerait qu'un état `Cancelled`,
+/// qui ne retient plus les équipes.
+///
+/// Les annulations persistées avant l'ajout des ids d'équipes ne portent aucun
+/// verrou à défaire — elles venaient toutes d'un brouillon — donc rien à
+/// publier.
+fn handle_cancelled(
+    match_report_id: &str,
+    home_team_id: Option<TeamId>,
+    away_team_id: Option<TeamId>,
+    app_event_bus: &EventBus,
+) {
+    let (Some(home), Some(away)) = (home_team_id, away_team_id) else {
+        tracing::debug!(
+            "app_event_publisher: MatchReportCancelled sans équipes ({match_report_id}), \
+             ancien format — aucun app event publié"
+        );
+        return;
+    };
+
+    let _ = app_event_bus.send(
+        MatchReportAppEvent::MatchReportCancelled {
+            event_id: EventId::new(),
+            match_report_id: match_report_id.to_string(),
+            home_team_id: home.to_string(),
+            away_team_id: away.to_string(),
+        }
+        .to_enveloppe(),
+    );
 }
 
 async fn handle_published(

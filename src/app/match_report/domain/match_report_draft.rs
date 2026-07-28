@@ -73,7 +73,11 @@ impl MatchReportDraft {
     }
 
     pub fn cancel(self, reason: String) -> MatchReportDomainEvent {
-        MatchReportDomainEvent::MatchReportCancelled { reason }
+        MatchReportDomainEvent::MatchReportCancelled {
+            reason,
+            home_team_id: Some(self.home_team_id),
+            away_team_id: Some(self.away_team_id),
+        }
     }
 
     pub fn confirm_selection(
