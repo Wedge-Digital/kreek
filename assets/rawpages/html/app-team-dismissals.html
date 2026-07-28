@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase de renvois — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ── Rôles de couleur ────────────────────────────────────────────────────
+       Mêmes rôles que la page de recrutement, mais c'est ici `risk` qui domine :
+       tout ce qu'on fait sur cet écran retire quelque chose sans contrepartie.
+       Chaque valeur est vérifiée ≥ 4,5:1 sur blanc, sur sa teinte et sur les
+       lignes paires. */
+    :root {
+      --role-action:  #003049;  /* action réversible : annuler un renvoi */
+      --role-cost:    #7A5210;  /* argent : valeur du joueur, du staff */
+      --role-risk:    #A61B1B;  /* perte définitive */
+      --role-caution: #8F4116;  /* indisponibilité temporaire */
+      --tint-action:  rgba(0,48,73,0.06);
+      --tint-risk:    rgba(166,27,27,0.08);
+      --tint-caution: rgba(143,65,22,0.10);
+    }
+
+    /* ── Layout ──────────────────────────────────────────────────────────── */
+    .dis-page  { display: flex; flex-direction: column; gap: var(--p1); }
+    .dis-grid  { display: flex; gap: var(--p2); align-items: flex-start; width: 100%; }
+    .dis-main  { flex: 3; display: flex; flex-direction: column; gap: var(--p1); min-width: 0; }
+    .dis-side  { flex: 1; position: sticky; top: var(--p2); display: flex; flex-direction: column; gap: var(--p1); }
+
+    /* ── En-tête ─────────────────────────────────────────────────────────── */
+    /* Le liseré haut dit dans quelle phase on est — ici, celle où tout est perdu. */
+    .dis-header {
+      background: var(--white); border-radius: 10px; padding: var(--p2);
+      border-top: 3px solid var(--role-risk);
+      display: flex; gap: var(--p2); align-items: center; flex-wrap: wrap;
+    }
+    .dis-header-logo {
+      width: 64px; height: 64px; border-radius: 10px; background: var(--role-action);
+      color: var(--white); font-family: var(--font-title); font-size: var(--h4);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .dis-header-info { flex: 1; min-width: 240px; }
+    .dis-header-top  { display: flex; align-items: center; gap: var(--p1); margin-bottom: var(--p05); flex-wrap: wrap; }
+    .dis-header-name { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-1); }
+    .dis-phase-badge {
+      background: var(--tint-risk); color: var(--role-risk); border-radius: 20px;
+      padding: 4px 12px; font-size: var(--text-tiny); font-weight: 600;
+    }
+    .dis-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
+    .meta-item  { display: flex; flex-direction: column; gap: 2px; }
+    .meta-label { font-size: var(--text-tiny); color: var(--dark-3); }
+    .meta-value { font-size: var(--text-small); color: var(--dark-1); font-weight: 600; }
+    .meta-value--alert { color: var(--role-risk); }
+
+    /* ── Panneaux ────────────────────────────────────────────────────────── */
+    .dis-page { min-width: 0; }
+    .panel { background: var(--white); border-radius: 10px; padding: var(--p2); min-width: 0; }
+    .panel-title {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+      color: var(--dark-1); margin-bottom: var(--p05);
+    }
+    .panel-sub { font-size: var(--text-tiny); color: var(--dark-3); margin-bottom: var(--p1); }
+
+    /* ── Tableaux ────────────────────────────────────────────────────────── */
+    .dis-table { width: 100%; border-collapse: collapse; }
+    .dis-table th {
+      background: var(--dark-6); border-bottom: 2px solid var(--dark-5);
+      padding: 10px 8px; font-size: var(--text-tiny); font-weight: 600;
+      color: var(--dark-2); text-align: center;
+    }
+    .dis-table th.col-left, .dis-table td.col-left { text-align: left; }
+    .dis-table td {
+      border-bottom: 1px solid var(--dark-5); padding: 10px 8px;
+      font-size: var(--text-tiny); color: var(--dark-1); text-align: center;
+    }
+    .dis-table tbody tr:nth-child(even) td { background: var(--dark-7); }
+    /* Estompé par la couleur, jamais par l'opacité : un renvoi doit rester lisible
+       après coup, c'est la trace de ce qu'on vient de faire. */
+    .dis-table tr.is-gone td,
+    .dis-table tr.is-gone .pl-name,
+    .dis-table tr.is-gone .pl-pos { color: var(--dark-3); text-decoration: line-through; }
+    .dis-table tr.is-gone .pl-status { opacity: 0.55; text-decoration: none; }
+    .dis-table tr.is-blocked td,
+    .dis-table tr.is-blocked .pl-name { color: var(--dark-3); }
+
+    .pl-name  { font-weight: 600; }
+    .pl-pos   { color: var(--dark-2); }
+    /* Repli mobile du poste sous le nom : la colonne dédiée disparaît sous
+       768px, l'information non. */
+    .pl-inline { display: none; font-size: 11px; }
+    .pl-status {
+      display: inline-block; border-radius: 4px; padding: 2px 8px;
+      font-size: 11px; font-weight: 600;
+    }
+    .pl-status--ok   { background: rgba(27,107,74,0.12); color: #1B6B4A; }
+    .pl-status--miss { background: var(--tint-caution); color: var(--role-caution); }
+    .quota      { font-family: monospace; color: var(--dark-2); }
+    .quota--zero { color: var(--dark-2); }
+    /* La valeur d'un joueur est de l'argent : même rôle que les prix côté recrutement. */
+    .pl-value   { font-weight: 700; color: var(--role-cost); }
+
+    .fire-btn {
+      border: 1px solid var(--dark-4); border-radius: 6px; background: var(--white);
+      padding: 5px 12px; font-size: var(--text-tiny); color: var(--dark-2);
+      cursor: pointer;
+    }
+    .fire-btn:hover:not(:disabled) {
+      border-color: var(--role-risk); color: var(--role-risk); background: var(--tint-risk);
+    }
+    /* Comme côté recrutement : le libellé désactivé porte une information. */
+    .fire-btn:disabled { color: var(--dark-2); border-color: var(--dark-5); cursor: not-allowed; }
+    /* Annuler est la seule action réversible de l'écran : elle prend le bleu. */
+    .fire-btn--undo { border-color: var(--role-action); color: var(--role-action); }
+    .fire-btn--undo:hover { background: var(--tint-action); border-color: var(--role-action); color: var(--role-action); }
+    .quota-sub { margin-left: 5px; color: var(--role-risk); font-weight: 700; }
+    .recap-end { display: flex; align-items: center; gap: 6px; }
+    .cart-remove {
+      width: 22px; height: 22px; flex-shrink: 0; border: 1px solid var(--dark-4);
+      border-radius: 50%; background: var(--white); color: var(--dark-3);
+      font-size: 14px; line-height: 1; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .cart-remove:hover { border-color: var(--role-action); color: var(--role-action); background: var(--white); }
+    :focus-visible { outline: 2px solid var(--role-action); outline-offset: 2px; }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+    }
+    .table-scroll { overflow-x: auto; max-width: 100%; }
+
+    /* Seul moment animé de la page : le renvoi vient d'être enregistré. */
+    @keyframes dismissal-in {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: none; }
+    }
+    .recap-row--fresh { animation: dismissal-in 0.28s cubic-bezier(0.16, 1, 0.3, 1); }
+    @media (prefers-reduced-motion: reduce) { .recap-row--fresh { animation: none; } }
+
+    /* ── Panneau latéral ─────────────────────────────────────────────────────
+       Surface de décision, teintée comme le panier du recrutement — mais dans
+       la couleur de ce qu'on y met : de la perte. */
+    .recap {
+      background: var(--tint-risk); border-radius: 10px; padding: var(--p2);
+      border-top: 3px solid var(--role-risk);
+    }
+    .recap-row { display: flex; justify-content: space-between; gap: 8px; font-size: var(--text-tiny); color: var(--dark-2); padding: 6px 0; }
+    .recap-row span:last-child { color: var(--dark-3); white-space: nowrap; }
+    .recap-empty { font-size: var(--text-tiny); color: var(--dark-2); font-style: italic; padding: var(--p1) 0; text-align: center; }
+    .recap-total {
+      border-top: 2px solid rgba(166,27,27,0.22); margin-top: var(--p05); padding-top: var(--p1);
+      display: flex; justify-content: space-between; font-size: var(--text-small);
+      font-weight: 700; color: var(--dark-1);
+    }
+    .recap-total.is-alert { color: var(--role-risk); }
+
+    .alert {
+      border-radius: 8px; padding: var(--p1); font-size: var(--text-tiny);
+      line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;
+    }
+    .alert--info  { background: var(--tint-action); color: var(--dark-2); }
+    .alert--warn  { background: var(--tint-caution); color: var(--dark-1); }
+    .alert--error { background: var(--tint-risk); color: var(--dark-1); }
+
+    .cta-primary {
+      width: 100%; border: none; border-radius: 8px; padding: 14px;
+      background: var(--role-action); color: var(--white); font-size: var(--text-small);
+      font-weight: 600; cursor: pointer; transition: background 0.15s;
+    }
+    .cta-primary:hover { background: var(--dark-1); }
+    /* Le bouton ne devient rouge que lorsqu'il va réellement détruire quelque
+       chose : la couleur suit l'état, elle ne décore pas la phase. */
+    .cta-primary--destructive { background: var(--role-risk); }
+    .cta-primary--destructive:hover { background: #8C1616; }
+
+    /* ── Sélecteur de maquette ───────────────────────────────────────────── */
+    .demo-switcher {
+      background: var(--dark-6); border: 1px dashed var(--dark-4); border-radius: 8px;
+      padding: var(--p05) var(--p1); margin-bottom: var(--p1);
+      display: flex; gap: var(--p05); align-items: center; flex-wrap: wrap;
+    }
+    .demo-switcher-label { font-size: var(--text-tiny); color: var(--dark-3); margin-right: var(--p05); }
+    .state-pill {
+      border: 1px solid var(--dark-4); background: var(--white); border-radius: 20px;
+      padding: 4px 12px; font-size: var(--text-tiny); color: var(--dark-2); cursor: pointer;
+    }
+    .state-pill.active { background: var(--main-blue); color: var(--white); border-color: var(--main-blue); }
+
+    /* ── Chrome mobile ───────────────────────────────────────────────────────
+       `shared.css` (maquettes) n'a aucune media query : la bascule vit dans
+       `assets/static/css/layout-app.css`, reprise telle quelle ici. En-tête
+       fixe de 52px, tabbar de 57px. */
+    .mobile-header, .mobile-tabbar { display: none; }
+
+    /* Panier de renvois — panneau ordinaire au desktop. */
+    .side-actions {
+      background: var(--tint-risk); border-radius: 10px;
+      border-top: 3px solid var(--role-risk);
+      padding: var(--p2);
+      display: flex; flex-direction: column; gap: var(--p05);
+    }
+    .cart-head {
+      background: none; border: none; padding: 0; width: 100%;
+      display: flex; align-items: center; justify-content: space-between;
+      text-align: left; cursor: default; font: inherit; color: inherit;
+    }
+    .cart-head .panel-title { margin-bottom: 0; }
+    .cart-count { color: var(--role-risk); }
+    .cart-chevron { display: none; }
+    /* Version courte de l'avertissement, réservée au mobile. */
+    .warn-short { display: none; }
+
+    @media (max-width: 768px) {
+      /* Chrome — masquage du desktop, apparition du mobile */
+      .sidebar   { display: none !important; }
+      .menu-bar  { display: none !important; }
+      .app-layout { display: block; height: auto; overflow: visible; }
+      .main-area  { margin-left: 0; width: 100%; }
+      .page-content {
+        padding: var(--p1); height: auto; overflow: visible;
+        padding-top: calc(52px + var(--p1));
+        /* 57px de tabbar + la barre d'actions fixe + une marge de respiration */
+        padding-bottom: 190px;
+      }
+
+      .mobile-header {
+        display: flex; position: fixed; top: 0; left: 0; right: 0; z-index: 500;
+        background: var(--dark-0); align-items: center;
+        padding: 0 var(--p1); height: 52px;
+      }
+      .mobile-header-space { display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1; }
+      .mobile-header-space-logo {
+        width: 32px; height: 32px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--font-title); font-weight: 700; font-size: 11px;
+        color: var(--white); flex-shrink: 0;
+        background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+      }
+      .mobile-header-space-name {
+        font-family: var(--font-title); font-size: var(--text-tiny);
+        font-weight: 700; color: var(--white);
+      }
+      .mobile-header-space-chevron { font-size: 10px; color: rgba(255,255,255,0.5); margin-left: 2px; }
+      .mobile-header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+      .mobile-header-btn {
+        width: 36px; height: 36px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 18px; background: none; border: none; cursor: pointer;
+        color: rgba(255,255,255,0.7);
+      }
+
+      .mobile-tabbar {
+        display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 500;
+        background: var(--dark-0); padding: 4px 0;
+        padding-bottom: max(4px, env(safe-area-inset-bottom));
+      }
+      .mobile-tab {
+        flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+        padding: 6px 0; cursor: pointer; text-decoration: none; background: none; border: none;
+      }
+      .mobile-tab-icon { font-size: 20px; }
+      .mobile-tab-label { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.45); }
+      .mobile-tab.active .mobile-tab-label { color: var(--white); }
+
+      /* ── Contenu ── */
+      .demo-switcher { font-size: 11px; }
+      .dis-grid   { flex-direction: column; }
+      .dis-side   { position: static; width: 100%; }
+      .dis-header { padding: var(--p1); gap: var(--p1); }
+      .dis-header-logo { width: 44px; height: 44px; font-size: var(--h5); }
+      .dis-header-meta { gap: var(--p1) var(--p2); }
+      .panel { padding: var(--p1); }
+
+      /* Numéro et poste retirés — exception « masquage progressif de colonnes »
+         déjà admise dans le projet. Le poste se replie sous le nom, il n'est
+         pas perdu ; le numéro de maillot ne sert à rien pour décider. */
+      .dis-table th:nth-child(1), .dis-table td:nth-child(1),
+      .dis-table th:nth-child(3), .dis-table td:nth-child(3) { display: none; }
+      .dis-table th, .dis-table td { padding: 8px 4px; }
+      .pl-inline { display: block; margin-top: 3px; color: var(--dark-2); }
+      .pl-value, .quota { white-space: nowrap; }
+      .fire-btn { white-space: nowrap; }
+      .pl-status { font-size: 10px; padding: 2px 6px; }
+
+      /* Le panier quitte le flux et devient la barre du bas : l'effectif restant
+         et la validation restent sous les yeux pendant qu'on parcourt la liste.
+         Replié par défaut, déployable à la demande. */
+      .side-actions {
+        position: fixed; left: 0; right: 0; bottom: 57px; z-index: 400;
+        border-radius: 0; padding: var(--p05) var(--p1) var(--p1);
+        background: var(--white);
+        border-top: 2px solid var(--role-risk);
+        box-shadow: 0 -6px 18px rgba(0,48,73,0.10);
+      }
+      /* ── Cibles tactiles ──────────────────────────────────────────────────
+         Toutes les commandes de la page passent à 44px minimum. Le × du panier
+         garde sa taille visuelle mais gagne une zone de clic étendue par
+         pseudo-élément : à 22px il était visible mais invisable au doigt. */
+      .fire-btn { min-height: 44px; padding: 5px 14px; }
+      .cta-primary { min-height: 48px; }
+      .cart-remove { width: 30px; height: 30px; position: relative; font-size: 16px; }
+      .cart-remove::after {
+        content: ''; position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%); width: 44px; height: 44px;
+      }
+      .recap-row { padding: 8px 0; }
+
+      .cart-head { cursor: pointer; padding: 4px 0; min-height: 44px; }
+      .cart-chevron {
+        display: inline-block; color: var(--role-risk); font-size: 14px;
+        transition: transform 0.2s;
+      }
+      .cart-body { display: none; max-height: 32vh; overflow-y: auto; }
+      .side-actions.is-open .cart-body { display: block; }
+      .side-actions.is-open .cart-chevron { transform: rotate(180deg); }
+      .side-actions .recap-total { border-top: none; margin-top: 0; padding-top: 4px; }
+      .cta-primary { padding: 12px; }
+
+      /* L'avertissement passe en version courte : il occupait un quart du
+         premier écran avant qu'on voie le moindre joueur. */
+      .warn-long  { display: none; }
+      .warn-short { display: inline; }
+
+      @media (prefers-reduced-motion: reduce) { .cart-chevron { transition: none; } }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══ Chrome mobile — repris de app-layout-mobile.html, masqué au-dessus de 768px ══ -->
+  <div class="mobile-header">
+    <div class="mobile-header-space">
+      <div class="mobile-header-space-logo">TC</div>
+      <span class="mobile-header-space-name">Tribu Celtique</span>
+      <span class="mobile-header-space-chevron">▼</span>
+    </div>
+    <div class="mobile-header-actions">
+      <button class="mobile-header-btn">🔔</button>
+      <button class="mobile-header-btn">👤</button>
+    </div>
+  </div>
+
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active">Équipes</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+
+        <!-- Sélecteur de démonstration — outil de maquette, n'existe pas en prod -->
+        <div class="demo-switcher">
+          <span class="demo-switcher-label">Aperçu maquette :</span>
+          <button class="state-pill active" data-state="nominal" onclick="setState('nominal')">Aucun renvoi</button>
+          <button class="state-pill" data-state="thin" onclick="setState('thin')">Effectif limite (11)</button>
+          <button class="state-pill" data-state="noapo" onclick="setState('noapo')">Roster sans apothicaire</button>
+        </div>
+
+        <div style="margin-bottom: var(--p1);">
+          <a href="app-team-detail.html" style="color: var(--dark-3); font-size: var(--text-tiny);">← Fiche de l'équipe</a>
+        </div>
+
+        <div class="dis-page">
+
+          <!-- ── En-tête ──────────────────────────────────────────────── -->
+          <div class="dis-header">
+            <div class="dis-header-logo">KF</div>
+            <div class="dis-header-info">
+              <div class="dis-header-top">
+                <div class="dis-header-name">Les Korrigans FC</div>
+                <span class="dis-phase-badge">🚪 Phase de renvois</span>
+              </div>
+              <div class="dis-header-meta">
+                <div class="meta-item">
+                  <div class="meta-label">Roster</div>
+                  <div class="meta-value" id="hdr-roster">Elfe Sylvain</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Trésorerie</div>
+                  <div class="meta-value">40 kPo</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Effectif</div>
+                  <div class="meta-value" id="hdr-squad">14</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Disponibles au prochain match</div>
+                  <div class="meta-value" id="hdr-avail">11</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="alert alert--error">
+            <span>⚠️</span>
+            <span>
+              <strong>Une fois la phase validée, un renvoi est définitif et ne rembourse rien.</strong>
+              <span class="warn-long">
+                Ni un joueur ni un membre du staff renvoyé ne rendent de kPo à la trésorerie,
+                et un joueur renvoyé perd ses SPP et ses compétences acquises.
+                La phase de recrutement est déjà passée : la place libérée ne pourra être
+                utilisée qu'à la séquence d'après-match suivante.
+              </span>
+              <span class="warn-short">
+                Le joueur perd ses SPP, et la place libérée ne servira qu'à la séquence suivante.
+              </span>
+            </span>
+          </div>
+
+          <div class="dis-grid">
+            <div class="dis-main">
+
+              <!-- ── Joueurs ────────────────────────────────────────── -->
+              <div class="panel">
+                <div class="panel-title">Effectif</div>
+                <div class="panel-sub">
+                  La colonne « Prochain match » indique qui sera indisponible — un joueur blessé
+                  reste dans l'effectif et redeviendra disponible ensuite.
+                </div>
+                <div class="table-scroll">
+                  <table class="dis-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 40px;" scope="col">#</th>
+                        <th class="col-left" scope="col">Nom</th>
+                        <th class="col-left" scope="col">Poste</th>
+                        <th scope="col">SPP</th>
+                        <th scope="col">Valeur</th>
+                        <th scope="col">Prochain match</th>
+                        <th><span class="sr-only">Action</span></th>
+                      </tr>
+                    </thead>
+                    <tbody id="players-body"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- ── Staff ──────────────────────────────────────────── -->
+              <div class="panel">
+                <div class="panel-title">Staff</div>
+                <div class="panel-sub">
+                  Les fans dévoués ne se renvoient pas — ils évoluent au fil des matchs.
+                </div>
+                <div class="table-scroll">
+                  <table class="dis-table">
+                    <thead>
+                      <tr>
+                        <th class="col-left" scope="col">Fonction</th>
+                        <th scope="col">Effectif</th>
+                        <th scope="col">Valeur unitaire</th>
+                        <th><span class="sr-only">Action</span></th>
+                      </tr>
+                    </thead>
+                    <tbody id="staff-body"></tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- ── Panneau latéral ──────────────────────────────────── -->
+            <div class="dis-side">
+
+              <!-- Panier de renvois : panneau dans le flux au desktop, barre
+                   fixe et repliable au mobile. -->
+              <div class="side-actions" id="cart">
+                <button class="cart-head" onclick="toggleCart()" aria-expanded="true">
+                  <span class="panel-title">Renvois en attente<span class="cart-count" id="cart-count"></span></span>
+                  <span class="cart-chevron">▾</span>
+                </button>
+                <div class="cart-body">
+                  <div class="panel-sub">Annulez une ligne tant que la phase n'est pas validée.</div>
+                  <div id="recap-list"></div>
+                </div>
+                <div class="recap-total" id="recap-total">
+                  <span>Effectif après renvois</span>
+                  <span id="recap-squad">14</span>
+                </div>
+                <button class="cta-primary" id="cta"
+                        onclick="alert('Maquette : renvois appliqués, équipe déclarée prête à jouer.')">
+                  Valider les renvois →
+                </button>
+              </div>
+
+              <div id="journeymen-alert" class="alert alert--warn" style="display:none;">
+                <span>🧑‍🌾</span>
+                <span>
+                  <strong>Moins de 11 joueurs disponibles.</strong>
+                  L'équipe sera complétée au prochain match par <strong id="jm-count">1</strong>
+                  <span id="jm-word">journalier, compté</span> dans la valeur d'équipe.
+                </span>
+              </div>
+
+              <div class="alert alert--info">
+                <span>💡</span>
+                <span>
+                  Rien n'est retiré de l'effectif tant que la phase n'est pas validée.
+                  La valider applique tous les renvois d'un coup, déclare l'équipe prête
+                  à jouer et recalcule sa valeur.
+                </span>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Tabbar mobile ══ -->
+  <div class="mobile-tabbar">
+    <a class="mobile-tab" href="app-home.html">
+      <span class="mobile-tab-icon">🏠</span><span class="mobile-tab-label">Accueil</span>
+    </a>
+    <a class="mobile-tab" href="#">
+      <span class="mobile-tab-icon">🏆</span><span class="mobile-tab-label">Compétitions</span>
+    </a>
+    <a class="mobile-tab" href="#">
+      <span class="mobile-tab-icon">📋</span><span class="mobile-tab-label">Match</span>
+    </a>
+    <a class="mobile-tab active" href="app-my-teams.html">
+      <span class="mobile-tab-icon">🛡️</span><span class="mobile-tab-label">Équipes</span>
+    </a>
+    <a class="mobile-tab" href="#">
+      <span class="mobile-tab-icon">👤</span><span class="mobile-tab-label">Compte</span>
+    </a>
+  </div>
+
+<script>
+  // ── Données de maquette ────────────────────────────────────────────────
+  const PLAYERS = [
+    { n: 1,  name: 'Aerindel',   pos: 'Lanceur',           spp: 18, value: 95,  avail: true },
+    { n: 2,  name: 'Sylvara',    pos: 'Receveur',          spp: 24, value: 110, avail: true },
+    { n: 3,  name: 'Maerindel',  pos: 'Receveur',          spp: 11, value: 90,  avail: true },
+    { n: 4,  name: 'Tyrandel',   pos: 'Danseur de Guerre', spp: 13, value: 170, avail: false },
+    { n: 5,  name: 'Corandel',   pos: 'Danseur de Guerre', spp: 6,  value: 130, avail: true },
+    { n: 6,  name: 'Findas',     pos: 'Trois-quart',       spp: 9,  value: 65,  avail: true },
+    { n: 7,  name: 'Nelluin',    pos: 'Trois-quart',       spp: 2,  value: 65,  avail: true },
+    { n: 8,  name: 'Galathil',   pos: 'Trois-quart',       spp: 0,  value: 65,  avail: true },
+    { n: 9,  name: 'Erevan',     pos: 'Trois-quart',       spp: 4,  value: 65,  avail: false },
+    { n: 10, name: 'Thalion',    pos: 'Trois-quart',       spp: 1,  value: 65,  avail: true },
+    { n: 11, name: 'Miriel',     pos: 'Trois-quart',       spp: 0,  value: 65,  avail: true },
+    { n: 12, name: 'Aegnor',     pos: 'Trois-quart',       spp: 7,  value: 65,  avail: true },
+    { n: 13, name: 'Vieux Chêne',pos: 'Homme-Arbre',       spp: 3,  value: 120, avail: true },
+    { n: 14, name: 'Beleg',      pos: 'Trois-quart',       spp: 5,  value: 65,  avail: true },
+  ];
+  const STAFF = [
+    { uid: 'REROLL',      name: 'Relance',              unit: 50, owned: 2 },
+    { uid: 'APOTHECARY',  name: 'Apothicaire',          unit: 50, owned: 1 },
+    { uid: 'ASSISTANT',   name: 'Assistant entraîneur', unit: 10, owned: 2 },
+    { uid: 'CHEERLEADER', name: 'Pom-pom girl',         unit: 10, owned: 3 },
+  ];
+
+  let state = { cart: [], allowApothecary: true, squadCap: 14 };
+
+  // ── Rendu ──────────────────────────────────────────────────────────────
+  // Le panier est la seule source de vérité des renvois en attente : rien
+  // n'est retiré de l'effectif tant que la phase n'est pas validée.
+  function queued(staffIdx) {
+    return state.cart.filter(c => c.kind === 'staff' && c.idx === staffIdx).length;
+  }
+
+  // L'effectif ne peut pas descendre sous 11 joueurs éligibles au prochain
+  // match. Un joueur absent ne compte pas parmi les éligibles : le renvoyer
+  // n'entame pas ce plancher, il reste donc toujours renvoyable.
+  function canFire(p) {
+    return !p.avail || availableCount() > 11;
+  }
+
+  function playerRow(p) {
+    const gone = state.cart.some(c => c.kind === 'player' && c.n === p.n);
+    const status = p.avail
+      ? '<span class="pl-status pl-status--ok">Disponible</span>'
+      : '<span class="pl-status pl-status--miss">Absent</span>';
+    const action = gone
+      ? `<button class="fire-btn fire-btn--undo" onclick="undoPlayer(${p.n})" aria-label="Annuler le renvoi de ${p.name}">Annuler</button>`
+      : canFire(p)
+        ? `<button class="fire-btn" onclick="firePlayer(${p.n})" aria-label="Renvoyer ${p.name}">Renvoyer</button>`
+        : '<button class="fire-btn" disabled>Minimum 11</button>';
+    return `<tr class="${gone ? 'is-gone' : ''}">
+      <td style="color: var(--dark-3); font-family: monospace;">${p.n}</td>
+      <td class="col-left">
+        <span class="pl-name">${p.name}</span>
+        <span class="pl-inline">${p.pos}</span>
+      </td>
+      <td class="col-left"><span class="pl-pos">${p.pos}</span></td>
+      <td style="font-weight:600;">${p.spp}</td>
+      <td><span class="pl-value">${p.value} kPo</span></td>
+      <td>${status}</td>
+      <td>${action}</td>
+    </tr>`;
+  }
+
+  function staffRow(s, i) {
+    if (s.uid === 'APOTHECARY' && !state.allowApothecary) return '';
+    const pending = queued(i);
+    const left = s.owned - pending;
+    const mark = pending ? `<span class="quota-sub">−${pending}</span>` : '';
+    return `<tr class="${left === 0 ? 'is-blocked' : ''}">
+      <td class="col-left"><span class="pl-name">${s.name}</span></td>
+      <td><span class="quota ${left === 0 ? 'quota--zero' : ''}">${left}</span>${mark}</td>
+      <td><span class="pl-value">${s.unit} kPo</span></td>
+      <td>${left === 0
+        ? '<button class="fire-btn" disabled>Aucun</button>'
+        : `<button class="fire-btn" onclick="fireStaff(${i})" aria-label="Renvoyer un(e) ${s.name}">Renvoyer</button>`}</td>
+    </tr>`;
+  }
+
+  function recapLine(c, i, isLast) {
+    return `<div class="recap-row ${isLast ? 'recap-row--fresh' : ''}">
+      <span>${c.label}</span>
+      <span class="recap-end">
+        <span>${c.detail}</span>
+        <button class="cart-remove" onclick="removeLine(${i})"
+                aria-label="Annuler le renvoi de ${c.label}" title="Annuler ce renvoi">×</button>
+      </span>
+    </div>`;
+  }
+
+  function renderRecap() {
+    const el = document.getElementById('recap-list');
+    if (!state.cart.length) {
+      el.innerHTML = '<div class="recap-empty">Aucun renvoi en attente.</div>';
+      return;
+    }
+    const last = state.cart.length - 1;
+    el.innerHTML = state.cart.map((c, i) => recapLine(c, i, i === last)).join('');
+  }
+
+  function renderCta() {
+    const n = state.cart.length;
+    const cta = document.getElementById('cta');
+    cta.textContent = n ? `Valider ${n} renvoi${n > 1 ? 's' : ''} →` : 'Valider sans renvoyer personne →';
+    cta.className = 'cta-primary' + (n ? ' cta-primary--destructive' : '');
+    document.getElementById('cart-count').textContent = n ? ` · ${n}` : '';
+  }
+
+  // Repli du panier — n'a d'effet que sous 768px, où il est la barre du bas.
+  function toggleCart() {
+    const cart = document.getElementById('cart');
+    const open = cart.classList.toggle('is-open');
+    cart.querySelector('.cart-head').setAttribute('aria-expanded', String(open));
+  }
+
+  // Ne compte que les joueurs réellement affichés : `squadCap` borne l'effectif,
+  // et compter sur le jeu de données complet faisait mentir l'en-tête.
+  function availableCount() {
+    const fired = state.cart.filter(c => c.kind === 'player').map(c => c.n);
+    return PLAYERS.slice(0, state.squadCap)
+      .filter(p => p.avail && !fired.includes(p.n)).length;
+  }
+
+  function renderHeader() {
+    const squad = state.squadCap - state.cart.filter(c => c.kind === 'player').length;
+    const avail = availableCount();
+    const missing = Math.max(0, 11 - avail);
+    document.getElementById('hdr-squad').textContent = String(squad);
+    document.getElementById('hdr-avail').textContent = String(avail);
+    document.getElementById('hdr-avail').className = 'meta-value' + (missing > 0 ? ' meta-value--alert' : '');
+    document.getElementById('recap-squad').textContent = String(squad);
+    document.getElementById('recap-total').className = 'recap-total' + (missing > 0 ? ' is-alert' : '');
+    document.getElementById('journeymen-alert').style.display = missing > 0 ? 'flex' : 'none';
+    document.getElementById('jm-count').textContent = String(missing);
+    document.getElementById('jm-word').textContent =
+      missing > 1 ? 'journaliers, comptés' : 'journalier, compté';
+  }
+
+  function render() {
+    const visible = PLAYERS.slice(0, state.squadCap);
+    document.getElementById('players-body').innerHTML = visible.map(playerRow).join('');
+    document.getElementById('staff-body').innerHTML = STAFF.map(staffRow).join('');
+    renderRecap();
+    renderCta();
+    renderHeader();
+  }
+
+  // ── Actions ────────────────────────────────────────────────────────────
+  // Pas de confirmation : la ligne est annulable jusqu'à la validation de phase.
+  function firePlayer(n) {
+    const p = PLAYERS.find(x => x.n === n);
+    state.cart.push({ kind: 'player', n, label: p.name, detail: p.pos });
+    render();
+  }
+
+  function undoPlayer(n) {
+    state.cart = state.cart.filter(c => !(c.kind === 'player' && c.n === n));
+    render();
+  }
+
+  function fireStaff(i) {
+    state.cart.push({ kind: 'staff', idx: i, label: STAFF[i].name, detail: 'staff' });
+    render();
+  }
+
+  function removeLine(i) {
+    state.cart.splice(i, 1);
+    render();
+  }
+
+  // ── États de maquette ──────────────────────────────────────────────────
+  const PRESETS = {
+    nominal: { squadCap: 14, allowApothecary: true },
+    thin:    { squadCap: 11, allowApothecary: true },
+    noapo:   { squadCap: 14, allowApothecary: false },
+  };
+
+  function setState(name) {
+    document.querySelectorAll('.state-pill').forEach(b =>
+      b.classList.toggle('active', b.dataset.state === name));
+    state = Object.assign({ cart: [] }, PRESETS[name]);
+    document.getElementById('hdr-roster').textContent = name === 'noapo' ? 'Nurgle' : 'Elfe Sylvain';
+    render();
+  }
+
+  render();
+</script>
+</body>
+</html>

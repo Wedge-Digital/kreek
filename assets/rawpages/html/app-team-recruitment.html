@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase de recrutement — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ── Rôles de couleur ────────────────────────────────────────────────────
+       La couleur encode l'état et la hiérarchie, jamais la décoration.
+       Chaque valeur est vérifiée ≥ 4,5:1 sur blanc, sur sa propre teinte et sur
+       les lignes paires du tableau. À remonter dans les tokens du design system
+       au passage aux vrais templates. */
+    :root {
+      --role-action:  #003049;  /* action affirmative, structure, sélection */
+      --role-pending: #1B6B4A;  /* en attente d'ajout au roster */
+      --role-cost:    #7A5210;  /* argent : prix, trésorerie */
+      --role-risk:    #A61B1B;  /* quota saturé, perte définitive */
+      --tint-action:  rgba(0,48,73,0.06);
+      --tint-pending: rgba(27,107,74,0.10);
+      --tint-cost:    rgba(122,82,16,0.08);
+    }
+
+    /* ── Layout ──────────────────────────────────────────────────────────── */
+    .rec-page  { display: flex; flex-direction: column; gap: var(--p1); }
+    .rec-grid  { display: flex; gap: var(--p2); align-items: flex-start; width: 100%; }
+    .rec-main  { flex: 3; display: flex; flex-direction: column; gap: var(--p1); min-width: 0; }
+    .rec-side  { flex: 1; position: sticky; top: var(--p2); display: flex; flex-direction: column; gap: var(--p1); }
+
+    /* ── En-tête ─────────────────────────────────────────────────────────── */
+    /* Le liseré haut dit dans quelle phase on est — la seule information dont
+       dépend le fait qu'un clic soit réversible ou non. */
+    .rec-header {
+      background: var(--white); border-radius: 10px; padding: var(--p2);
+      border-top: 3px solid var(--role-action);
+      display: flex; gap: var(--p2); align-items: center; flex-wrap: wrap;
+    }
+    .rec-header-logo {
+      width: 64px; height: 64px; border-radius: 10px; background: var(--role-action);
+      color: var(--white); font-family: var(--font-title); font-size: var(--h4);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .rec-header-info { flex: 1; min-width: 240px; }
+    .rec-header-top  { display: flex; align-items: center; gap: var(--p1); margin-bottom: var(--p05); flex-wrap: wrap; }
+    .rec-header-name { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-1); }
+    .rec-phase-badge {
+      background: var(--tint-action); color: var(--role-action); border-radius: 20px;
+      padding: 4px 12px; font-size: var(--text-tiny); font-weight: 600;
+    }
+    .rec-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
+    .meta-item  { display: flex; flex-direction: column; gap: 2px; }
+    .meta-label { font-size: var(--text-tiny); color: var(--dark-3); }
+    .meta-value { font-size: var(--text-small); color: var(--dark-1); font-weight: 600; }
+    .meta-value--alert { color: var(--role-risk); }
+
+    /* ── Panneaux ────────────────────────────────────────────────────────── */
+    .rec-page { min-width: 0; }
+    .panel { background: var(--white); border-radius: 10px; padding: var(--p2); min-width: 0; }
+    .panel-title {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+      color: var(--dark-1); margin-bottom: var(--p05);
+    }
+    .panel-sub { font-size: var(--text-tiny); color: var(--dark-3); margin-bottom: var(--p1); }
+
+    /* ── Tableaux ────────────────────────────────────────────────────────── */
+    .buy-table { width: 100%; border-collapse: collapse; }
+    .buy-table th {
+      background: var(--dark-6); border-bottom: 2px solid var(--dark-5);
+      padding: 10px 8px; font-size: var(--text-tiny); font-weight: 600;
+      color: var(--dark-2); text-align: center;
+    }
+    .buy-table th.col-left, .buy-table td.col-left { text-align: left; }
+    .buy-table td {
+      border-bottom: 1px solid var(--dark-5); padding: 10px 8px;
+      font-size: var(--text-tiny); color: var(--dark-1); text-align: center;
+    }
+    .buy-table tbody tr:nth-child(even) td { background: var(--dark-7); }
+    /* Une ligne indisponible reste lisible : on l'estompe par la couleur,
+       jamais par l'opacité, qui écrase le contraste sous le seuil. */
+    .buy-table tr.is-blocked td,
+    .buy-table tr.is-blocked .pos-name,
+    .buy-table tr.is-blocked .pos-stats { color: var(--dark-3); }
+    .buy-table tr.is-blocked .skill-tag { color: var(--dark-3); background: var(--dark-7); }
+
+    .pos-name  { font-weight: 600; }
+    /* Repli mobile des compétences sous le nom du poste : la colonne dédiée
+       disparaît sous 768px, l'information non. */
+    .pos-inline { display: none; }
+    .pos-stats { font-family: monospace; color: var(--dark-2); letter-spacing: 1px; }
+    .skill-tag {
+      display: inline-block; background: var(--dark-6); border-radius: 4px;
+      padding: 2px 6px; font-size: 11px; color: var(--dark-2); margin: 1px;
+    }
+    .quota      { font-family: monospace; color: var(--dark-2); }
+    .quota--full { color: var(--role-risk); font-weight: 700; }
+    .quota-add  { margin-left: 5px; color: var(--role-pending); font-weight: 700; }
+    /* L'argent porte sa propre couleur : c'est le nombre qui décide de tout ici. */
+    .price      { font-weight: 700; color: var(--role-cost); }
+    .price-note {
+      display: block; margin-top: 3px; font-size: 11px; line-height: 1.4;
+      color: var(--role-cost); font-weight: 600; opacity: 0.85;
+    }
+    .reason { color: var(--dark-2); font-style: italic; }
+
+    /* Boutons d'action — libellés, alignés sur la page des renvois. */
+    .act-btn {
+      border: 1px solid var(--dark-4); border-radius: 6px; background: var(--white);
+      padding: 5px 12px; font-size: var(--text-tiny); color: var(--dark-2);
+      cursor: pointer;
+    }
+    .act-btn:hover:not(:disabled) {
+      border-color: var(--role-action); color: var(--role-action); background: var(--tint-action);
+    }
+    /* Le libellé désactivé porte la raison du blocage : il doit rester lisible,
+       donc dark-2 (7:1) et pas dark-3, qui échoue à 3,1:1. */
+    .act-btn:disabled { color: var(--dark-2); border-color: var(--dark-5); cursor: not-allowed; }
+    :focus-visible { outline: 2px solid var(--role-action); outline-offset: 2px; }
+
+    /* ── Composition de l'effectif ───────────────────────────────────────── */
+    .comp-list { display: flex; flex-direction: column; gap: 6px; }
+    .comp-row {
+      display: grid; grid-template-columns: 1fr 68px 96px; align-items: center;
+      gap: var(--p1); font-size: var(--text-tiny); color: var(--dark-1);
+    }
+    .comp-count { font-family: monospace; color: var(--dark-2); text-align: right; }
+    .comp-bar   { display: flex; background: var(--dark-6); border-radius: 3px; height: 6px; overflow: hidden; }
+    .comp-fill  { background: var(--role-action); height: 100%; }
+    .comp-fill--new { background: var(--role-pending); }
+
+    /* Seul moment animé de la page : l'achat vient d'être débité, on le montre. */
+    @keyframes purchase-in {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: none; }
+    }
+    .purse-row--fresh { animation: purchase-in 0.28s cubic-bezier(0.16, 1, 0.3, 1); }
+    @media (prefers-reduced-motion: reduce) { .purse-row--fresh { animation: none; } }
+
+    /* ── Panneau latéral ─────────────────────────────────────────────────────
+       Le panier est la surface de décision : c'est la seule région à qui on
+       donne une teinte pleine, pour qu'elle se détache du mur de tableaux. */
+    .purse {
+      background: var(--tint-pending); border-radius: 10px; padding: var(--p2);
+      border-top: 3px solid var(--role-pending);
+    }
+    .purse-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: var(--text-tiny); color: var(--dark-2); padding: 4px 0; }
+    .purse-end { display: flex; align-items: center; gap: 6px; }
+    .cart-remove {
+      width: 22px; height: 22px; flex-shrink: 0; border: 1px solid var(--dark-4);
+      border-radius: 50%; background: var(--white); color: var(--dark-3);
+      font-size: 14px; line-height: 1; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .cart-remove:hover { border-color: var(--role-risk); color: var(--role-risk); background: var(--white); }
+    .purse-row--total {
+      border-top: 2px solid rgba(27,107,74,0.25); margin-top: var(--p05); padding-top: var(--p1);
+      font-size: var(--text-small); font-weight: 700; color: var(--dark-1);
+    }
+    .purse-row--total .purse-amount { color: var(--role-cost); }
+    .purse-row--total.is-low, .purse-row--total.is-low .purse-amount { color: var(--role-risk); }
+    .purse-amount { white-space: nowrap; }
+    .purse-empty { font-size: var(--text-tiny); color: var(--dark-2); font-style: italic; padding: var(--p1) 0; text-align: center; }
+
+    .alert {
+      border-radius: 8px; padding: var(--p1); font-size: var(--text-tiny);
+      line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;
+    }
+    .alert--info { background: var(--tint-action); color: var(--dark-2); }
+    .alert--warn { background: var(--tint-cost); color: var(--dark-1); }
+
+    .cta-primary {
+      width: 100%; border: none; border-radius: 8px; padding: 14px;
+      background: var(--role-action); color: var(--white); font-size: var(--text-small);
+      font-weight: 600; cursor: pointer; transition: background 0.15s;
+    }
+    .cta-primary:hover { background: var(--dark-1); }
+
+    /* ── Sélecteur de maquette ───────────────────────────────────────────── */
+    .demo-switcher {
+      background: var(--dark-6); border: 1px dashed var(--dark-4); border-radius: 8px;
+      padding: var(--p05) var(--p1); margin-bottom: var(--p1);
+      display: flex; gap: var(--p05); align-items: center; flex-wrap: wrap;
+    }
+    .demo-switcher-label { font-size: var(--text-tiny); color: var(--dark-3); margin-right: var(--p05); }
+    .state-pill {
+      border: 1px solid var(--dark-4); background: var(--white); border-radius: 20px;
+      padding: 4px 12px; font-size: var(--text-tiny); color: var(--dark-2); cursor: pointer;
+    }
+    .state-pill.active { background: var(--main-blue); color: var(--white); border-color: var(--main-blue); }
+
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+    }
+    .table-scroll { overflow-x: auto; max-width: 100%; }
+
+    /* ── Chrome mobile ───────────────────────────────────────────────────────
+       `shared.css` (maquettes) n'a aucune media query : la bascule vit dans
+       `assets/static/css/layout-app.css`, reprise telle quelle ici. En-tête
+       fixe de 52px, tabbar de 57px. */
+    .mobile-header, .mobile-tabbar { display: none; }
+
+    /* Panier — panneau ordinaire au desktop. */
+    .side-actions {
+      background: var(--tint-pending); border-radius: 10px;
+      border-top: 3px solid var(--role-pending);
+      padding: var(--p2);
+      display: flex; flex-direction: column; gap: var(--p05);
+    }
+    .cart-head {
+      background: none; border: none; padding: 0; width: 100%;
+      display: flex; align-items: center; justify-content: space-between;
+      text-align: left; cursor: default; font: inherit; color: inherit;
+    }
+    .cart-head .panel-title { margin-bottom: 0; }
+    .cart-count { color: var(--role-pending); }
+    .cart-chevron { display: none; }
+
+    @media (max-width: 768px) {
+      /* Chrome — masquage du desktop, apparition du mobile */
+      .sidebar   { display: none !important; }
+      .menu-bar  { display: none !important; }
+      .app-layout { display: block; height: auto; overflow: visible; }
+      .main-area  { margin-left: 0; width: 100%; }
+      .page-content {
+        padding: var(--p1); height: auto; overflow: visible;
+        padding-top: calc(52px + var(--p1));
+        /* 57px de tabbar + la barre d'actions fixe + une marge de respiration */
+        padding-bottom: 190px;
+      }
+
+      .mobile-header {
+        display: flex; position: fixed; top: 0; left: 0; right: 0; z-index: 500;
+        background: var(--dark-0); align-items: center;
+        padding: 0 var(--p1); height: 52px;
+      }
+      .mobile-header-space { display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1; }
+      .mobile-header-space-logo {
+        width: 32px; height: 32px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--font-title); font-weight: 700; font-size: 11px;
+        color: var(--white); flex-shrink: 0;
+        background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+      }
+      .mobile-header-space-name {
+        font-family: var(--font-title); font-size: var(--text-tiny);
+        font-weight: 700; color: var(--white);
+      }
+      .mobile-header-space-chevron { font-size: 10px; color: rgba(255,255,255,0.5); margin-left: 2px; }
+      .mobile-header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+      .mobile-header-btn {
+        width: 36px; height: 36px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 18px; background: none; border: none; cursor: pointer;
+        color: rgba(255,255,255,0.7);
+      }
+
+      .mobile-tabbar {
+        display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 500;
+        background: var(--dark-0); padding: 4px 0;
+        padding-bottom: max(4px, env(safe-area-inset-bottom));
+      }
+      .mobile-tab {
+        flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+        padding: 6px 0; cursor: pointer; text-decoration: none; background: none; border: none;
+      }
+      .mobile-tab-icon { font-size: 20px; }
+      .mobile-tab-label { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.45); }
+      .mobile-tab.active .mobile-tab-label { color: var(--white); }
+
+      /* ── Contenu ── */
+      .demo-switcher { font-size: 11px; }
+      .rec-grid   { flex-direction: column; }
+      .rec-side   { position: static; width: 100%; }
+      .rec-header { padding: var(--p1); gap: var(--p1); }
+      .rec-header-logo { width: 44px; height: 44px; font-size: var(--h5); }
+      .rec-header-meta { gap: var(--p1) var(--p2); }
+      .panel { padding: var(--p1); }
+
+      /* Colonnes secondaires retirées — exception « masquage progressif de
+         colonnes » déjà admise dans le projet. Le poste, l'effectif, le prix et
+         l'action suffisent à décider ; les caractéristiques restent au desktop. */
+      .buy-table th:nth-child(2), .buy-table td:nth-child(2),
+      .buy-table th:nth-child(3), .buy-table td:nth-child(3) { display: none; }
+      .buy-table th, .buy-table td { padding: 8px 4px; }
+      .skill-tag { font-size: 10px; padding: 1px 4px; }
+      .pos-inline { display: block; margin-top: 4px; }
+      .price, .quota { white-space: nowrap; }
+      .act-btn { white-space: nowrap; }
+
+      .comp-row { grid-template-columns: 1fr 60px 72px; gap: var(--p05); }
+
+      /* Le panier quitte le flux et devient la barre du bas : le total et la
+         validation restent sous les yeux pendant qu'on parcourt les tableaux,
+         calés au-dessus de la tabbar comme le panier du rapport de match.
+         Replié par défaut — les lignes se déploient à la demande, pour qu'un
+         panier qui grossit ne mange pas l'écran. */
+      .side-actions {
+        position: fixed; left: 0; right: 0; bottom: 57px; z-index: 400;
+        border-radius: 0; padding: var(--p05) var(--p1) var(--p1);
+        background: var(--white);
+        border-top: 2px solid var(--role-pending);
+        box-shadow: 0 -6px 18px rgba(0,48,73,0.10);
+      }
+      /* ── Cibles tactiles ──────────────────────────────────────────────────
+         Toutes les commandes de la page passent à 44px minimum. Le × du panier
+         garde sa taille visuelle mais gagne une zone de clic étendue par
+         pseudo-élément : à 22px il était visible mais invisable au doigt. */
+      .act-btn { min-height: 44px; padding: 5px 14px; }
+      .cta-primary { min-height: 48px; }
+      .cart-remove { width: 30px; height: 30px; position: relative; font-size: 16px; }
+      .cart-remove::after {
+        content: ''; position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%); width: 44px; height: 44px;
+      }
+      .purse-row { padding: 8px 0; }
+
+      .cart-head { cursor: pointer; padding: 4px 0; min-height: 44px; }
+      .cart-chevron {
+        display: inline-block; color: var(--role-pending); font-size: 14px;
+        transition: transform 0.2s;
+      }
+      .cart-body { display: none; max-height: 32vh; overflow-y: auto; }
+      .side-actions.is-open .cart-body { display: block; }
+      .side-actions.is-open .cart-chevron { transform: rotate(180deg); }
+      .side-actions .purse-row--total { border-top: none; margin-top: 0; padding-top: 4px; }
+      .cta-primary { padding: 12px; }
+      @media (prefers-reduced-motion: reduce) { .cart-chevron { transition: none; } }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══ Chrome mobile — repris de app-layout-mobile.html, masqué au-dessus de 768px ══ -->
+  <div class="mobile-header">
+    <div class="mobile-header-space">
+      <div class="mobile-header-space-logo">TC</div>
+      <span class="mobile-header-space-name">Tribu Celtique</span>
+      <span class="mobile-header-space-chevron">▼</span>
+    </div>
+    <div class="mobile-header-actions">
+      <button class="mobile-header-btn">🔔</button>
+      <button class="mobile-header-btn">👤</button>
+    </div>
+  </div>
+
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active">Équipes</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+
+        <!-- Sélecteur de démonstration — outil de maquette, n'existe pas en prod -->
+        <div class="demo-switcher">
+          <span class="demo-switcher-label">Aperçu maquette :</span>
+          <button class="state-pill active" data-state="nominal" onclick="setState('nominal')">Nominal</button>
+          <button class="state-pill" data-state="poor" onclick="setState('poor')">Trésorerie insuffisante</button>
+          <button class="state-pill" data-state="full" onclick="setState('full')">Effectif complet (16)</button>
+          <button class="state-pill" data-state="noapo" onclick="setState('noapo')">Roster sans apothicaire</button>
+        </div>
+
+        <div style="margin-bottom: var(--p1);">
+          <a href="app-team-detail.html" style="color: var(--dark-3); font-size: var(--text-tiny);">← Fiche de l'équipe</a>
+        </div>
+
+        <div class="rec-page">
+
+          <!-- ── En-tête ──────────────────────────────────────────────── -->
+          <div class="rec-header">
+            <div class="rec-header-logo">KF</div>
+            <div class="rec-header-info">
+              <div class="rec-header-top">
+                <div class="rec-header-name">Les Korrigans FC</div>
+                <span class="rec-phase-badge">🛒 Phase de recrutement</span>
+              </div>
+              <div class="rec-header-meta">
+                <div class="meta-item">
+                  <div class="meta-label">Roster</div>
+                  <div class="meta-value" id="hdr-roster">Elfe Sylvain</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Trésorerie</div>
+                  <div class="meta-value" id="hdr-purse">240 kPo</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Effectif</div>
+                  <div class="meta-value" id="hdr-squad">12 / 16</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Valeur d'équipe</div>
+                  <div class="meta-value">873 kPo</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="rec-grid">
+            <div class="rec-main">
+
+              <!-- ── Recruter un joueur ─────────────────────────────── -->
+              <div class="panel">
+                <div class="panel-title">Recruter un joueur</div>
+                <div class="panel-sub">
+                  Postes disponibles dans le roster Elfe Sylvain. Le quota indique les joueurs
+                  déjà présents dans l'effectif.
+                </div>
+
+                <div id="squad-full-alert" class="alert alert--warn" style="display:none; margin-bottom: var(--p1);">
+                  <span>🚫</span>
+                  <span>
+                    <strong>Effectif complet.</strong> Une équipe ne peut pas dépasser 16 joueurs.
+                    Pour faire de la place, renvoyez un joueur en phase de renvois — le recrutement
+                    ne sera possible qu'à la séquence d'après-match suivante.
+                  </span>
+                </div>
+
+                <div class="table-scroll">
+                  <table class="buy-table">
+                    <thead>
+                      <tr>
+                        <th class="col-left" scope="col">Poste</th>
+                        <th scope="col">MA / ST / AG / PA / AV</th>
+                        <th class="col-left" scope="col">Compétences</th>
+                        <th scope="col">Effectif</th>
+                        <th scope="col">Prix</th>
+                        <th><span class="sr-only">Action</span></th>
+                      </tr>
+                    </thead>
+                    <tbody id="positions-body">
+                      <!-- rempli par le script -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- ── Staff ──────────────────────────────────────────── -->
+              <div class="panel">
+                <div class="panel-title">Recruter du staff</div>
+                <div class="panel-sub">
+                  Les fans dévoués ne s'achètent pas — ils évoluent au fil des matchs.
+                </div>
+                <div class="table-scroll">
+                  <table class="buy-table">
+                    <thead>
+                      <tr>
+                        <th class="col-left" scope="col">Fonction</th>
+                        <th scope="col">Effectif</th>
+                        <th scope="col">Prix</th>
+                        <th><span class="sr-only">Action</span></th>
+                      </tr>
+                    </thead>
+                    <tbody id="staff-body">
+                      <!-- rempli par le script -->
+                    </tbody>
+                  </table>
+                </div>
+                <div class="alert alert--info" style="margin-top: var(--p1);">
+                  <span>ℹ️</span>
+                  <span>
+                    Une relance achetée après la création de l'équipe coûte <strong>le double</strong>
+                    de son prix de base (50 kPo pour ce roster, donc <strong>100 kPo</strong>).
+                    Elle compte malgré tout dans la valeur d'équipe à son prix de base.
+                  </span>
+                </div>
+              </div>
+
+              <!-- ── Composition de l'effectif ──────────────────────── -->
+              <div class="panel">
+                <div class="panel-title">Composition de l'effectif</div>
+                <div class="panel-sub">
+                  Répartition par poste, rapportée au quota du roster. La part verte
+                  correspond aux joueurs en attente dans le panier.
+                </div>
+                <div class="comp-list" id="comp-list"></div>
+              </div>
+
+            </div>
+
+            <!-- ── Panneau latéral ──────────────────────────────────── -->
+            <div class="rec-side">
+              <!-- Panier : panneau dans le flux au desktop, barre fixe et
+                   repliable au mobile — le total reste toujours visible. -->
+              <div class="side-actions" id="cart">
+                <button class="cart-head" onclick="toggleCart()" aria-expanded="true">
+                  <span class="panel-title">Panier<span class="cart-count" id="cart-count"></span></span>
+                  <span class="cart-chevron">▾</span>
+                </button>
+                <div class="cart-body">
+                  <div class="panel-sub">Retirez une ligne tant que la phase n'est pas validée.</div>
+                  <div id="purchases"></div>
+                </div>
+                <div class="purse-row purse-row--total" id="purse-total">
+                  <span>Reste après achats</span>
+                  <span id="purse-left" class="purse-amount">240 kPo</span>
+                </div>
+                <button class="cta-primary" id="cta"
+                        onclick="alert('Maquette : achats validés, passage à la phase de renvois.')">
+                  Terminer les achats →
+                </button>
+              </div>
+
+              <div class="alert alert--info">
+                <span>💡</span>
+                <span>
+                  Rien n'est débité tant que la phase n'est pas validée : le panier reste
+                  modifiable. <strong>Une fois validé, aucun retour en arrière</strong> —
+                  renvoyer un joueur ne rembourse rien.
+                </span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Tabbar mobile ══ -->
+  <div class="mobile-tabbar">
+    <a class="mobile-tab" href="app-home.html">
+      <span class="mobile-tab-icon">🏠</span><span class="mobile-tab-label">Accueil</span>
+    </a>
+    <a class="mobile-tab" href="#">
+      <span class="mobile-tab-icon">🏆</span><span class="mobile-tab-label">Compétitions</span>
+    </a>
+    <a class="mobile-tab" href="#">
+      <span class="mobile-tab-icon">📋</span><span class="mobile-tab-label">Match</span>
+    </a>
+    <a class="mobile-tab active" href="app-my-teams.html">
+      <span class="mobile-tab-icon">🛡️</span><span class="mobile-tab-label">Équipes</span>
+    </a>
+    <a class="mobile-tab" href="#">
+      <span class="mobile-tab-icon">👤</span><span class="mobile-tab-label">Compte</span>
+    </a>
+  </div>
+
+<script>
+  // ── Données de maquette ────────────────────────────────────────────────
+  const POSITIONS = [
+    { name: 'Trois-quart',      stats: '7/3/2+/4+/8+',  skills: [],                                   max: 16, price: 65,  owned: 7 },
+    { name: 'Lanceur',          stats: '7/3/2+/3+/8+',  skills: ['Passe', 'Sûr'],                     max: 2,  price: 85,  owned: 1 },
+    { name: 'Receveur',         stats: '8/2/2+/4+/8+',  skills: ['Attraper', 'Esquiver', 'Sprint'],   max: 2,  price: 90,  owned: 2 },
+    { name: 'Danseur de Guerre',stats: '8/3/2+/4+/8+',  skills: ['Bloc', 'Esquiver', 'Bond'],         max: 2,  price: 130, owned: 1 },
+    { name: 'Homme-Arbre',      stats: '2/6/5+/5+/11+', skills: ['Solitaire (4+)', 'Châtaigne'],      max: 1,  price: 120, owned: 1 },
+  ];
+  const STAFF = [
+    { uid: 'REROLL',      name: 'Relance',              max: 8, price: 100, base: 50, owned: 2, doubled: true },
+    { uid: 'APOTHECARY',  name: 'Apothicaire',          max: 1, price: 50,  owned: 1 },
+    { uid: 'ASSISTANT',   name: 'Assistant entraîneur', max: 6, price: 10,  owned: 2 },
+    { uid: 'CHEERLEADER', name: 'Pom-pom girl',         max: 6, price: 10,  owned: 3 },
+  ];
+
+  // `owned` décrit le roster réel et n'est jamais muté : tout ce qui est en
+  // attente vit dans le panier, ce qui rend chaque ligne annulable.
+  let state = { purse: 240, squad: 12, allowApothecary: true, cart: [] };
+
+  // ── Panier ─────────────────────────────────────────────────────────────
+  function queued(kind, idx) {
+    return state.cart.filter(c => c.kind === kind && c.idx === idx).length;
+  }
+  function cartTotal() {
+    return state.cart.reduce((sum, c) => sum + c.price, 0);
+  }
+  function remaining() {
+    return state.purse - cartTotal();
+  }
+  function squadTotal() {
+    return state.squad + state.cart.filter(c => c.kind === 'player').length;
+  }
+
+  // ── Rendu ──────────────────────────────────────────────────────────────
+  // Raison du blocage, affichée sur le bouton plutôt que devinée par le coach.
+  function blockReason(full, broke, squadFull) {
+    if (squadFull) return 'Effectif complet';
+    if (full)      return 'Quota atteint';
+    if (broke)     return 'Trésorerie';
+    return null;
+  }
+
+  function quotaCell(count, max, pending) {
+    const add = pending ? `<span class="quota-add">+${pending}</span>` : '';
+    return `<span class="quota ${count >= max ? 'quota--full' : ''}">${count} / ${max}</span>${add}`;
+  }
+
+  function positionRow(p, i) {
+    const pending = queued('player', i);
+    const count = p.owned + pending;
+    const reason = blockReason(count >= p.max, p.price > remaining(), squadTotal() >= 16);
+    const tags = p.skills.map(s => `<span class="skill-tag">${s}</span>`).join(' ');
+    const skills = tags || '—';
+    return `<tr class="${reason ? 'is-blocked' : ''}">
+      <td class="col-left">
+        <span class="pos-name">${p.name}</span>
+        ${tags ? `<span class="pos-inline">${tags}</span>` : ''}
+      </td>
+      <td><span class="pos-stats">${p.stats}</span></td>
+      <td class="col-left">${skills}</td>
+      <td>${quotaCell(count, p.max, pending)}</td>
+      <td><span class="price">${p.price} kPo</span></td>
+      <td>${actionCell(reason, `hire(${i})`, 'Recruter', p.name)}</td>
+    </tr>`;
+  }
+
+  function actionCell(reason, call, label, subject) {
+    if (reason) return `<button class="act-btn" disabled>${reason}</button>`;
+    return `<button class="act-btn" onclick="${call}" aria-label="${label} — ${subject}">${label}</button>`;
+  }
+
+  function staffRow(s, i) {
+    if (s.uid === 'APOTHECARY' && !state.allowApothecary) return staffForbiddenRow(s);
+    const pending = queued('staff', i);
+    const count = s.owned + pending;
+    const reason = blockReason(count >= s.max, s.price > remaining(), false);
+    const note = s.doubled ? `<span class="price-note">prix de saison — base ${s.base} kPo</span>` : '';
+    return `<tr class="${reason ? 'is-blocked' : ''}">
+      <td class="col-left"><span class="pos-name">${s.name}</span></td>
+      <td>${quotaCell(count, s.max, pending)}</td>
+      <td><span class="price">${s.price} kPo</span>${note}</td>
+      <td>${actionCell(reason, `buyStaff(${i})`, 'Acheter', s.name)}</td>
+    </tr>`;
+  }
+
+  function staffForbiddenRow(s) {
+    return `<tr class="is-blocked">
+      <td class="col-left"><span class="pos-name">${s.name}</span></td>
+      <td colspan="2" class="col-left reason">Ce roster n'a pas droit à un apothicaire.</td>
+      <td><button class="act-btn" disabled>Indisponible</button></td>
+    </tr>`;
+  }
+
+  function compRow(p, i) {
+    const pending = queued('player', i);
+    const pct = n => Math.round((n / p.max) * 100);
+    return `<div class="comp-row">
+      <span>${p.name}</span>
+      <span class="comp-count">${p.owned + pending} / ${p.max}</span>
+      <span class="comp-bar">
+        <span class="comp-fill" style="width:${pct(p.owned)}%"></span>
+        <span class="comp-fill comp-fill--new" style="width:${pct(pending)}%"></span>
+      </span>
+    </div>`;
+  }
+
+  function renderComposition() {
+    document.getElementById('comp-list').innerHTML = POSITIONS.map(compRow).join('');
+  }
+
+  function cartLine(c, i, isLast) {
+    return `<div class="purse-row ${isLast ? 'purse-row--fresh' : ''}">
+      <span>${c.label}</span>
+      <span class="purse-end">
+        <span>− ${c.price} kPo</span>
+        <button class="cart-remove" onclick="removeLine(${i})"
+                aria-label="Retirer ${c.label} du panier" title="Retirer du panier">×</button>
+      </span>
+    </div>`;
+  }
+
+  function renderPurchases() {
+    const el = document.getElementById('purchases');
+    if (!state.cart.length) {
+      el.innerHTML = '<div class="purse-empty">Panier vide — rien ne sera débité.</div>';
+      return;
+    }
+    const last = state.cart.length - 1;
+    el.innerHTML = state.cart.map((c, i) => cartLine(c, i, i === last)).join('');
+  }
+
+  function renderCta() {
+    const n = state.cart.length;
+    document.getElementById('cta').textContent =
+      n ? `Valider ${n} achat${n > 1 ? 's' : ''} →` : 'Terminer les achats sans rien acheter →';
+    document.getElementById('cart-count').textContent = n ? ` · ${n}` : '';
+  }
+
+  // Repli du panier — n'a d'effet que sous 768px, où il est la barre du bas.
+  function toggleCart() {
+    const cart = document.getElementById('cart');
+    const open = cart.classList.toggle('is-open');
+    cart.querySelector('.cart-head').setAttribute('aria-expanded', String(open));
+  }
+
+  function renderHeader() {
+    const total = squadTotal();
+    const left = remaining();
+    // L'en-tête montre la trésorerie réelle, le panier ce qu'il en restera :
+    // deux nombres distincts, chacun sous son propre libellé.
+    document.getElementById('hdr-purse').textContent = state.purse + ' kPo';
+    document.getElementById('hdr-squad').textContent = total + ' / 16';
+    document.getElementById('hdr-squad').className = 'meta-value' + (total >= 16 ? ' meta-value--alert' : '');
+    document.getElementById('purse-left').textContent = left + ' kPo';
+    document.getElementById('purse-total').className = 'purse-row purse-row--total' + (left < 50 ? ' is-low' : '');
+    document.getElementById('squad-full-alert').style.display = total >= 16 ? 'flex' : 'none';
+  }
+
+  function render() {
+    document.getElementById('positions-body').innerHTML = POSITIONS.map(positionRow).join('');
+    document.getElementById('staff-body').innerHTML = STAFF.map(staffRow).join('');
+    renderComposition();
+    renderPurchases();
+    renderCta();
+    renderHeader();
+  }
+
+  // ── Actions ────────────────────────────────────────────────────────────
+  function hire(i) {
+    const p = POSITIONS[i];
+    state.cart.push({ kind: 'player', idx: i, label: p.name, price: p.price });
+    render();
+  }
+
+  function buyStaff(i) {
+    const s = STAFF[i];
+    state.cart.push({ kind: 'staff', idx: i, label: s.name, price: s.price });
+    render();
+  }
+
+  function removeLine(i) {
+    state.cart.splice(i, 1);
+    render();
+  }
+
+  // ── États de maquette ──────────────────────────────────────────────────
+  const PRESETS = {
+    nominal: { purse: 240, squad: 12, allowApothecary: true },
+    poor:    { purse: 30,  squad: 12, allowApothecary: true },
+    full:    { purse: 240, squad: 16, allowApothecary: true },
+    noapo:   { purse: 240, squad: 12, allowApothecary: false },
+  };
+
+  function setState(name) {
+    document.querySelectorAll('.state-pill').forEach(b =>
+      b.classList.toggle('active', b.dataset.state === name));
+    state = Object.assign({ cart: [] }, PRESETS[name]);
+    document.getElementById('hdr-roster').textContent = name === 'noapo' ? 'Nurgle' : 'Elfe Sylvain';
+    render();
+  }
+
+  render();
+</script>
+</body>
+</html>
