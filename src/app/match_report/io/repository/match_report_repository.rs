@@ -384,9 +384,14 @@ impl IMatchReportRepository for MatchReportRepository {
         &self,
         pairing_id: &str,
     ) -> Result<Option<String>, RepositoryError> {
+        // `phase != 'Cancelled'` : un rapport annulé ne doit plus être
+        // rattaché à son pairing, par symétrie avec
+        // `find_id_by_round_and_teams`. Sans ce filtre, `from_pairing` répond
+        // 410 GONE là où le pairing n'a en réalité plus de rapport à ouvrir.
         let row = sqlx::query(
             "SELECT match_report_id FROM match_report_proj
              WHERE pairing_id = $1
+               AND phase != 'Cancelled'
              LIMIT 1",
         )
         .bind(pairing_id)
@@ -530,6 +535,50 @@ mod tests {
 
         let state = repo.find_by_id(&mr_id).await.unwrap().unwrap();
         assert!(matches!(state, MatchReportState::PreMatch(_)));
+
+        sqlx::query("DELETE FROM match_report_event_store WHERE match_report_id = $1")
+            .bind(&mr_id)
+            .execute(&pool)
+            .await
+            .ok();
+        sqlx::query("DELETE FROM match_report_proj WHERE match_report_id = $1")
+            .bind(&mr_id)
+            .execute(&pool)
+            .await
+            .ok();
+    }
+
+    /// Un rapport annulé n'est plus rattaché à son pairing : sans ce filtre,
+    /// `/match-report/pairing/{id}` répondrait 410 GONE au lieu de 404, et le
+    /// pairing paraîtrait encore porter un rapport ouvrable.
+    #[tokio::test]
+    async fn un_rapport_annule_n_est_plus_retrouve_par_son_pairing() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = MatchReportRepository::new(pool.clone());
+        let mr_id = format!("{}", MatchReportId::new());
+        let pairing_id = format!("{}", MatchReportId::new());
+
+        let mut created = test_created_event(&mr_id);
+        if let MatchReportDomainEvent::MatchReportCreated { pairing_id: p, .. } = &mut created {
+            *p = Some(pairing_id.clone());
+        }
+        repo.append(&mr_id, &created, 0).await.unwrap();
+        assert_eq!(
+            repo.find_id_by_pairing(&pairing_id).await.unwrap(),
+            Some(mr_id.clone()),
+            "le brouillon doit être retrouvé tant qu'il est vivant"
+        );
+
+        let cancelled = MatchReportDomainEvent::MatchReportCancelled {
+            reason: "Pairing supprimé".to_string(),
+            home_team_id: Some(TeamId::new()),
+            away_team_id: Some(TeamId::new()),
+        };
+        repo.append(&mr_id, &cancelled, 1).await.unwrap();
+
+        assert_eq!(repo.find_id_by_pairing(&pairing_id).await.unwrap(), None);
 
         sqlx::query("DELETE FROM match_report_event_store WHERE match_report_id = $1")
             .bind(&mr_id)
