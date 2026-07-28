@@ -1,5 +1,5 @@
-use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId};
-use crate::app::shared_kernel::season_name::SeasonName;
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::season_name::SeasonName;
 
 pub struct CompetitionSeason {
     pub id: SeasonId,

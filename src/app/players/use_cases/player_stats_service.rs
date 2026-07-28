@@ -68,7 +68,7 @@ mod tests {
     use crate::app::players::domain::player::{PlayerId, Spp, StatIncrease, TeamId, ValueKpo};
     use crate::app::players::domain::value_objects::{PositionNameVo, RosterLineId, SppCost};
     use crate::app::players::ports::{PositionAccessDto, PositionCatalogEntryDto, SkillCatalogEntryDto, SkillCostLevelDto};
-    use crate::app::shared_kernel::common_types::SpaceId;
+    use crate::app::shared_kernel::identity::ids::SpaceId;
 
     struct FakeSkillCatalog;
 

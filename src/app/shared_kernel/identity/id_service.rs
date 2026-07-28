@@ -1,5 +1,5 @@
-use crate::app::shared_kernel::common_types::EntityId;
-use crate::app::shared_kernel::sulid::SUlid;
+use crate::app::shared_kernel::identity::ids::EntityId;
+use crate::app::shared_kernel::identity::sulid::SUlid;
 
 pub trait IdService {
     fn generate_id(&self) -> EntityId;

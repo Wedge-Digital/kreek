@@ -5,7 +5,7 @@ use crate::app::match_report::domain::match_report_published::MatchReportPublish
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::value_objects::CorrectionEligibility;
-use crate::app::shared_kernel::common_types::MatchReportId;
+use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 
 #[derive(Debug)]
 pub struct MatchReportCancelled {
@@ -345,10 +345,9 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
 mod tests {
     use super::*;
     use crate::app::match_report::domain::value_objects::{D3Roll, DedicatedFans, MatchReportOrigin};
-    use crate::app::shared_kernel::common_types::{
-        CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
-    };
-    use crate::app::shared_kernel::team::TeamId;
+    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
+    use crate::app::shared_kernel::bloodbowl::team::TeamId;
 
     fn test_ids() -> (
         MatchReportId,

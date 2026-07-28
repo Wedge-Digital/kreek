@@ -1,7 +1,7 @@
-use crate::app::shared_kernel::authorization::SpaceProfile;
-use crate::app::shared_kernel::coach_icon::CoachIcon;
-use crate::app::shared_kernel::coach_name::CoachName;
-use crate::app::shared_kernel::common_types::CoachId;
+use crate::app::shared_kernel::identity::authorization::SpaceProfile;
+use crate::app::shared_kernel::identity::coach_icon::CoachIcon;
+use crate::app::shared_kernel::identity::coach_name::CoachName;
+use crate::app::shared_kernel::identity::ids::CoachId;
 
 pub struct Coach {
     pub id: CoachId,

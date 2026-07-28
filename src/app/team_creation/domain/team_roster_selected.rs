@@ -1,6 +1,6 @@
-use crate::app::shared_kernel::common_types::Entity;
-use crate::app::shared_kernel::staff::StaffKind;
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::identity::ids::Entity;
+use crate::app::shared_kernel::bloodbowl::staff::StaffKind;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::team_creation::domain::error::DomainError;
 use crate::app::team_creation::domain::roster::{
     AcquiredSkill, AcquisitionMode, HiredPlayer, JerseyNumber, LeagueId, PlayerDefinition,
@@ -54,7 +54,7 @@ impl RosterSelectedTeam {
         self.special_rule_id = Some(rule_id);
     }
 
-    pub fn base_infos(&self) -> &crate::app::shared_kernel::team::BaseTeamInfo {
+    pub fn base_infos(&self) -> &crate::app::shared_kernel::bloodbowl::team::BaseTeamInfo {
         self.team.base_infos()
     }
 

@@ -1,6 +1,6 @@
-use crate::app::shared_kernel::coach_initials::CoachInitials;
-use crate::app::shared_kernel::coach_name::CoachName;
-use crate::app::shared_kernel::common_types::CoachId;
+use crate::app::shared_kernel::identity::coach_initials::CoachInitials;
+use crate::app::shared_kernel::identity::coach_name::CoachName;
+use crate::app::shared_kernel::identity::ids::CoachId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

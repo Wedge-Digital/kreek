@@ -1,10 +1,10 @@
 use crate::app::shared_kernel::app_events::team_creation_app_events::{
     AcquiredSkillPayload, PlayerPayload,
 };
-use crate::app::shared_kernel::common_types::Entity;
-use crate::app::shared_kernel::common_types::EventId;
-use crate::app::shared_kernel::staff::StaffKind;
-use crate::app::shared_kernel::staff_counts::{
+use crate::app::shared_kernel::identity::ids::Entity;
+use crate::app::shared_kernel::identity::ids::EventId;
+use crate::app::shared_kernel::bloodbowl::staff::StaffKind;
+use crate::app::shared_kernel::bloodbowl::staff_counts::{
     ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
 };
 use crate::app::team_creation::domain::error::DomainError;

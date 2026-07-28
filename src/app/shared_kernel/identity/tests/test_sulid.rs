@@ -1,4 +1,4 @@
-use crate::app::shared_kernel::sulid::SUlid;
+use crate::app::shared_kernel::identity::sulid::SUlid;
 
 #[test]
 pub fn assert_sulid_can_be_deserialized_from_valid_str() {

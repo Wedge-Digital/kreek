@@ -4,9 +4,9 @@ use crate::app::competitions::domain::match_day::{
 use crate::app::competitions::domain::match_day_repository_port::{
     IMatchDayRepository, MatchDayRepositoryError, NewPairingProjection, PairingDisplayDto,
 };
-use crate::app::shared_kernel::common_types::{MatchId, PairingId, SeasonId};
-use crate::app::shared_kernel::date_string::DateString;
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::bloodbowl::ids::{MatchId, PairingId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::date_string::DateString;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::common::initials::initials;
 use async_trait::async_trait;
 use sqlx::PgPool;

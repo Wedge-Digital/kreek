@@ -1,6 +1,6 @@
 use crate::app::competitions::domain::competition_repository_port::ICompetitionRepository;
 use crate::app::players::ports::{CompetitionAdminInfoDto, IPlayerCompetitionPort};
-use crate::app::shared_kernel::common_types::CompetitionId;
+use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
 use async_trait::async_trait;
 use std::sync::Arc;
 

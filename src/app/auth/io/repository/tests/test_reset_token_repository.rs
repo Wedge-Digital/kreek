@@ -2,7 +2,7 @@ use crate::app::auth::domain::reset_token::Token;
 use crate::app::auth::io::repository::reset_token_repository::{
     IResetTokenRepository, ResetTokenRepository,
 };
-use crate::app::shared_kernel::coach_name::CoachName;
+use crate::app::shared_kernel::identity::coach_name::CoachName;
 use sqlx::PgPool;
 
 fn make_token() -> Token {

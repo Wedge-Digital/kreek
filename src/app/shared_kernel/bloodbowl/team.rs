@@ -1,5 +1,5 @@
-use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, EntityId};
-use crate::app::shared_kernel::name_vo::NameVo;
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, EntityId};
+use crate::app::shared_kernel::identity::name_vo::NameVo;
 use serde::{Deserialize, Serialize};
 
 pub type TeamName = NameVo;

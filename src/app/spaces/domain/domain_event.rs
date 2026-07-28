@@ -1,7 +1,7 @@
-use crate::app::shared_kernel::app_events::spaces_app_events::SpacesAppEvent;
-use crate::app::shared_kernel::authorization::SpaceProfile;
-use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, EventId, SpaceId};
-use crate::app::shared_kernel::space_name::SpaceName;
+use crate::app::shared_kernel::identity::spaces_app_events::SpacesAppEvent;
+use crate::app::shared_kernel::identity::authorization::SpaceProfile;
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, EventId, SpaceId};
+use crate::app::shared_kernel::identity::space_name::SpaceName;
 use crate::common::event_envelope::EventEnvelope;
 use crate::common::services::event_bus::event_tags::EventTag;
 use crate::common::services::event_bus::event_tags::EventTagName;

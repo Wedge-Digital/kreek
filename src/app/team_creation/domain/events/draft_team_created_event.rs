@@ -1,5 +1,5 @@
 use crate::app::shared_kernel::domain_event::DomainEvent;
-use crate::app::shared_kernel::team::BaseTeamInfo;
+use crate::app::shared_kernel::bloodbowl::team::BaseTeamInfo;
 use crate::app::team_creation::domain::ruleset::Ruleset;
 use serde::{Deserialize, Serialize};
 

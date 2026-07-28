@@ -3,7 +3,8 @@ use crate::app::match_report::domain::match_report_repository_port::IMatchReport
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{ActionId, ActionPlayer, MatchActionType, TeamSide, TempPlayerId, TurnNumber};
 use crate::app::match_report::ports::IPlayerDataPort;
-use crate::app::shared_kernel::common_types::{CoachId, MatchReportId};
+use crate::app::shared_kernel::identity::ids::CoachId;
+use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 
 pub struct RecordActionCommand {
     pub match_report_id: MatchReportId,
@@ -90,8 +91,9 @@ mod tests {
     use super::*;
     use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
     use crate::app::match_report::domain::value_objects::{DedicatedFans, MatchReportOrigin, TeamValue, TempPlayer, TempPlayerKind};
-    use crate::app::shared_kernel::common_types::{CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId};
-    use crate::app::shared_kernel::team::TeamId;
+    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
+    use crate::app::shared_kernel::bloodbowl::team::TeamId;
 
     fn make_pm() -> MatchReportPreMatch {
         MatchReportPreMatch {

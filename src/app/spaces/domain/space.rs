@@ -1,5 +1,5 @@
-use crate::app::shared_kernel::common_types::{CloudinaryImage, SpaceId};
-use crate::app::shared_kernel::space_name::SpaceName;
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, SpaceId};
+use crate::app::shared_kernel::identity::space_name::SpaceName;
 use crate::app::spaces::domain::coach::Coach;
 
 pub struct Space {

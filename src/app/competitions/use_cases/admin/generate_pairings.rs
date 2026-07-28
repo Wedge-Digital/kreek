@@ -7,8 +7,9 @@ use crate::app::competitions::ports::{ITeamInfoPort, TeamInfoDto};
 use crate::app::competitions::use_cases::admin::team_enrollment::{
     build_new_pairing_projection, filter_enrolled_team_ids, load_enrolled_teams, resolve_team_names,
 };
-use crate::app::shared_kernel::common_types::{EventId, PairingId};
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::identity::ids::EventId;
+use crate::app::shared_kernel::bloodbowl::ids::PairingId;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::collections::{HashMap, HashSet};
 
@@ -215,7 +216,7 @@ mod tests {
     use crate::app::competitions::domain::group_repository_port::GroupRepositoryError;
     use crate::app::competitions::domain::match_day::{MatchDayName, MatchDayPosition, MatchDayType};
     use crate::app::competitions::domain::match_day_repository_port::{MatchDayRepositoryError, PairingDisplayDto};
-    use crate::app::shared_kernel::common_types::{MatchId, SeasonId};
+    use crate::app::shared_kernel::bloodbowl::ids::{MatchId, SeasonId};
     use async_trait::async_trait;
 
     struct FakeMatchDayRepo(MatchDay);

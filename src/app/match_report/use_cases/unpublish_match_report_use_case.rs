@@ -6,7 +6,8 @@ use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{CorrectionBlocker, CorrectionEligibility};
 use crate::app::match_report::ports::{IPlayerDataPort, ITeamDataPort};
 use crate::app::match_report::use_cases::correction_eligibility_service;
-use crate::app::shared_kernel::common_types::{CoachId, MatchReportId};
+use crate::app::shared_kernel::identity::ids::CoachId;
+use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::common::services::event_bus::event_bus::EventBus;
 
 pub struct UnpublishMatchReportCommand {
@@ -117,8 +118,9 @@ mod tests {
     use crate::app::match_report::ports::{
         JourneymanPositionDto, PositionCountDto, RosterPositionDto, TeamInfoDto,
     };
-    use crate::app::shared_kernel::common_types::{CompetitionId, RoundId, SeasonId, SpaceId};
-    use crate::app::shared_kernel::team::TeamId;
+    use crate::app::shared_kernel::identity::ids::SpaceId;
+    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RoundId, SeasonId};
+    use crate::app::shared_kernel::bloodbowl::team::TeamId;
     use crate::common::services::event_bus::event_bus::new_bus;
     use std::sync::Mutex;
 

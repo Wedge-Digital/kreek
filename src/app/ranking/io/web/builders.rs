@@ -273,7 +273,7 @@ mod tests {
     use crate::app::ranking::io::web::widgets::detailed_standings_widget::DetailedRowVm;
     use crate::app::ranking::domain::ranking_line::{CumulativeTotals, MatchesPlayed, RankingPoints};
     use crate::app::ranking::domain::tiebreak::TiebreakCriterion;
-    use crate::app::shared_kernel::team::TeamId;
+    use crate::app::shared_kernel::bloodbowl::team::TeamId;
 
     /// Les ids d'équipe sont désormais des ULID côté ligne de classement : les
     /// tests les génèrent au lieu d'écrire « t1 », et les DTOs du port

@@ -1,8 +1,7 @@
 use crate::app::shared_kernel::app_events::competitions_app_events::CompetitionsAppEvent;
-use crate::app::shared_kernel::common_types::{
-    CloudinaryImage, CoachId, CompetitionId, EventId, SpaceId,
-};
-use crate::app::shared_kernel::competition_name::CompetitionName;
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, EventId, SpaceId};
+use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
+use crate::app::shared_kernel::bloodbowl::competition_name::CompetitionName;
 use crate::common::event_envelope::EventEnvelope;
 use crate::common::services::event_bus::event_tags::{EventTag, EventTagName};
 use serde::{Deserialize, Serialize};

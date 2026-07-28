@@ -7,7 +7,7 @@ use crate::app::players::domain::value_objects::{PositionNameVo, RosterLineId};
 use crate::app::players::io::repository::player_repository::PgPlayerRepository;
 use crate::app::players::io::repository::projection_repository::PgPlayerProjectionRepository;
 use crate::app::players::ports::{IPlayerProjectionRepository, IPlayerRepository};
-use crate::app::shared_kernel::common_types::SpaceId;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use sqlx::PgPool;
 
 fn sample_context() -> MatchContext {

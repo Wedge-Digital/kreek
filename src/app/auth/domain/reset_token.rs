@@ -1,5 +1,5 @@
-use crate::app::shared_kernel::coach_name::CoachName;
-use crate::app::shared_kernel::sulid::SUlid;
+use crate::app::shared_kernel::identity::coach_name::CoachName;
+use crate::app::shared_kernel::identity::sulid::SUlid;
 
 pub type Token = SUlid;
 

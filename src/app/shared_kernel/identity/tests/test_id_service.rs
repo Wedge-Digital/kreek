@@ -1,4 +1,4 @@
-use crate::app::shared_kernel::id_service::{FakeIdService, IdService};
+use crate::app::shared_kernel::identity::id_service::{FakeIdService, IdService};
 
 #[test]
 pub fn assert_fake_id_service_returns_always_the_same_id() {

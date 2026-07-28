@@ -1,4 +1,4 @@
-use crate::app::shared_kernel::common_types::EntityId;
+use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};

@@ -1,10 +1,9 @@
-use crate::app::shared_kernel::common_types::{
-    CoachId, CompetitionId, MatchReportId, PlayerId, PositionId, RosterId, SeasonId, SpaceId,
-};
-use crate::app::shared_kernel::staff_counts::{
+use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, PlayerId, PositionId, RosterId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::staff_counts::{
     ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
 };
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::teams::domain::error::DomainError;
 use crate::app::teams::domain::value_objects::{
     DedicatedFans, IncidentType, Kpo, KpoDelta, MatchResult, PlayerImprovement, RosterName,
@@ -776,13 +775,12 @@ fn initials_from(name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::shared_kernel::common_types::{
-        CompetitionId, CoachId, RosterId, SeasonId, SpaceId,
-    };
-    use crate::app::shared_kernel::staff_counts::{
+    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RosterId, SeasonId};
+    use crate::app::shared_kernel::bloodbowl::staff_counts::{
         ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
     };
-    use crate::app::shared_kernel::team::TeamId;
+    use crate::app::shared_kernel::bloodbowl::team::TeamId;
     use crate::app::teams::domain::value_objects::{DedicatedFans, RosterName, TeamName};
 
     fn team_id() -> TeamId { TeamId::try_new("00000000000000000000000001").unwrap() }

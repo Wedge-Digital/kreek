@@ -1,8 +1,8 @@
 use crate::app::auth::ports::{IUserRepository, RepositoryError};
-use crate::app::shared_kernel::coach_icon::CoachIcon;
-use crate::app::shared_kernel::coach_name::CoachName;
-use crate::app::shared_kernel::common_types::UserId;
-use crate::app::shared_kernel::email::Email;
+use crate::app::shared_kernel::identity::coach_icon::CoachIcon;
+use crate::app::shared_kernel::identity::coach_name::CoachName;
+use crate::app::shared_kernel::identity::ids::UserId;
+use crate::app::shared_kernel::identity::email::Email;
 use crate::app::auth::domain::user::User;
 use async_trait::async_trait;
 use sqlx::PgPool;

@@ -90,7 +90,7 @@ pub fn to_totals(row: RankingLineRow) -> CumulativeTotals {
 mod tests {
     use super::*;
     use crate::app::ranking::ports::BonusRuleInfo;
-    use crate::app::shared_kernel::team::TeamId;
+    use crate::app::shared_kernel::bloodbowl::team::TeamId;
 
     fn setting(code: &str, activated: bool) -> TiebreakSettingInfo {
         TiebreakSettingInfo { code: code.into(), activated }

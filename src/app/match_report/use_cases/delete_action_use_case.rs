@@ -2,7 +2,8 @@ use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::ActionId;
-use crate::app::shared_kernel::common_types::{CoachId, MatchReportId};
+use crate::app::shared_kernel::identity::ids::CoachId;
+use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 
 pub struct DeleteActionCommand {
     pub match_report_id: MatchReportId,
@@ -44,8 +45,9 @@ mod tests {
     use crate::app::match_report::domain::value_objects::{
         ActionPlayer, DedicatedFans, MatchActionType, MatchReportOrigin, TeamSide, TeamValue, TurnNumber,
     };
-    use crate::app::shared_kernel::common_types::{CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId};
-    use crate::app::shared_kernel::team::TeamId;
+    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
+    use crate::app::shared_kernel::bloodbowl::team::TeamId;
 
     fn make_pm_with_action() -> (MatchReportPreMatch, ActionId) {
         let home_id = TeamId::new();
@@ -69,7 +71,7 @@ mod tests {
         let (updated, _) = pm.record_action(
             TeamSide::Home,
             TurnNumber::try_new(1).unwrap(),
-            ActionPlayer::Regular(crate::app::shared_kernel::common_types::PlayerId::new()),
+            ActionPlayer::Regular(crate::app::shared_kernel::bloodbowl::ids::PlayerId::new()),
             MatchActionType::Touchdown,
             "Player Name".into(),
             String::new(),

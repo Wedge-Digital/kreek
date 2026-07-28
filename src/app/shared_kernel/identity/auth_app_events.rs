@@ -1,6 +1,6 @@
-use crate::app::shared_kernel::coach_name::CoachName;
-use crate::app::shared_kernel::common_types::{EventId, UserId};
-use crate::app::shared_kernel::email::Email;
+use crate::app::shared_kernel::identity::coach_name::CoachName;
+use crate::app::shared_kernel::identity::ids::{EventId, UserId};
+use crate::app::shared_kernel::identity::email::Email;
 use crate::common::event_envelope::EventEnvelope;
 use serde::{Deserialize, Serialize};
 

@@ -1,7 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::auth::routes::path as auth_path;
-use crate::app::shared_kernel::common_types::CloudinaryImage;
-use crate::app::shared_kernel::space_name::SpaceName;
+use crate::app::shared_kernel::identity::ids::CloudinaryImage;
+use crate::app::shared_kernel::identity::space_name::SpaceName;
 use crate::app::spaces::routes::path;
 use crate::app::spaces::uses_cases::register_new_space::{
     execute, RegisterNewSpaceCommand, RegisterSpaceError,

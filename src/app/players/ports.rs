@@ -214,7 +214,7 @@ pub trait IPlayerCompetitionPort: Send + Sync {
 pub trait IPlayerSpaceMemberPort: Send + Sync {
     async fn find_member_profile(
         &self,
-        coach_id: &crate::app::shared_kernel::common_types::CoachId,
-        space_id: &crate::app::shared_kernel::common_types::SpaceId,
-    ) -> Option<crate::app::shared_kernel::authorization::SpaceProfile>;
+        coach_id: &crate::app::shared_kernel::identity::ids::CoachId,
+        space_id: &crate::app::shared_kernel::identity::ids::SpaceId,
+    ) -> Option<crate::app::shared_kernel::identity::authorization::SpaceProfile>;
 }

@@ -3,7 +3,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::EntityId;
+use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::team_creation::io::web::view_models::RulesTierVm;
 use crate::state::AppState;
 

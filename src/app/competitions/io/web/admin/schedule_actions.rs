@@ -2,8 +2,8 @@ use crate::app::competitions::domain::match_day::{MatchDay, MatchDayName, MatchD
 use crate::app::competitions::use_cases::admin::{
     add_match_use_case, delete_pairing_use_case, generate_all_pairings, generate_pairings,
 };
-use crate::app::shared_kernel::common_types::{MatchId, SeasonId};
-use crate::app::shared_kernel::date_string::DateString;
+use crate::app::shared_kernel::bloodbowl::ids::{MatchId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::date_string::DateString;
 use crate::state::AppState;
 use axum::body::Body;
 use axum::extract::{Path, State};

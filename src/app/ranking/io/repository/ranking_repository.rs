@@ -1,7 +1,7 @@
 use crate::app::ranking::domain::ranking_line::RankingLine;
 use crate::app::ranking::ports::{IRankingRepository, RankingLineRow, RankingRepositoryError};
-use crate::app::shared_kernel::sulid::SUlid;
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::identity::sulid::SUlid;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use async_trait::async_trait;
 use sqlx::PgPool;
 
@@ -174,8 +174,8 @@ mod tests {
         CasualtiesTotal, CompletionsMade, DrawCount, FoulsCommitted, LossCount, MatchesPlayed,
         RankingPoints, TdAgainst, TdFor, WinCount,
     };
-    use crate::app::shared_kernel::common_types::{CompetitionId, MatchReportId, RoundId, SeasonId};
-    use crate::app::shared_kernel::team::TeamId;
+    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
+    use crate::app::shared_kernel::bloodbowl::team::TeamId;
     use chrono::Utc;
 
     #[allow(clippy::too_many_arguments)]

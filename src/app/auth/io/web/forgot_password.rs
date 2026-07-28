@@ -3,7 +3,7 @@ use crate::app::auth::routes::{path, Routes};
 use crate::app::auth::use_cases::send_reset_password_email::{
     execute, SendResetPasswordEmailCommand, SendResetPasswordEmailError,
 };
-use crate::app::shared_kernel::coach_name::CoachName;
+use crate::app::shared_kernel::identity::coach_name::CoachName;
 use crate::app::auth::context::AuthContext;
 use askama::Template;
 use axum::body::Body;

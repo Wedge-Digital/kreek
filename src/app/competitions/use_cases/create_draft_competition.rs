@@ -7,11 +7,10 @@ use crate::app::competitions::domain::domain_event::CompetitionsDomainEvent;
 use crate::app::competitions::domain::season_repository_port::{
     ISeasonRepository, SeasonRepositoryError,
 };
-use crate::app::shared_kernel::common_types::{
-    CloudinaryImage, CoachId, CompetitionId, EventId, SeasonId, SpaceId,
-};
-use crate::app::shared_kernel::competition_name::CompetitionName;
-use crate::app::shared_kernel::season_name::SeasonName;
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, EventId, SpaceId};
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::competition_name::CompetitionName;
+use crate::app::shared_kernel::bloodbowl::season_name::SeasonName;
 use crate::common::services::event_bus::event_bus::EventBus;
 
 pub struct CreateDraftCompetitionCommand {
@@ -101,7 +100,7 @@ mod tests {
     use crate::app::competitions::domain::season_repository_port::{
         ISeasonRepository, SeasonBaseInfo, SeasonRepositoryError,
     };
-    use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, SpaceId};
+    use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, SpaceId};
     use crate::common::services::event_bus::event_bus::new_bus;
     use async_trait::async_trait;
 

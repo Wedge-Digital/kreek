@@ -92,7 +92,7 @@ mod tests {
         FakeUserRepository, FindResult,
     };
     use crate::app::auth::ports::RepositoryError;
-    use crate::app::shared_kernel::coach_name::CoachName;
+    use crate::app::shared_kernel::identity::coach_name::CoachName;
     use async_trait::async_trait;
     use tokio::sync::Mutex;
 

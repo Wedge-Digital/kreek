@@ -483,10 +483,9 @@ impl IMatchReportRepository for MatchReportRepository {
 mod tests {
     use super::*;
     use crate::app::match_report::domain::value_objects::MatchReportOrigin;
-    use crate::app::shared_kernel::common_types::{
-        CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
-    };
-    use crate::app::shared_kernel::team::TeamId;
+    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
+    use crate::app::shared_kernel::bloodbowl::team::TeamId;
 
     async fn test_pool() -> Option<PgPool> {
         dotenvy::dotenv().ok();

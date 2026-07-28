@@ -5,7 +5,8 @@ use crate::app::competitions::use_cases::finalize_competition::{
 };
 use crate::app::competitions::io::web::rules_labels::format_bonus_label;
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId, SpaceId};
+use crate::app::shared_kernel::identity::ids::SpaceId;
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::state::AppState;
 use askama::Template;
 use axum::body::Body;

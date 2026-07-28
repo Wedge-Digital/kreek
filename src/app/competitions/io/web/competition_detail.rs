@@ -1,13 +1,13 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 
-use crate::app::shared_kernel::cloudinary;
+use crate::app::shared_kernel::identity::cloudinary;
 use crate::common::initials::initials;
 // ── Mock data structs ─────────────────────────────────────────────────────────
 

@@ -3,7 +3,8 @@ use crate::app::competitions::domain::match_day_repository_port::PairingDisplayD
 use crate::app::competitions::io::web::competition_detail::{load_page_base, full_page};
 use crate::app::competitions::io::web::resultats_view::{compute_authorization, ResultAuthorization};
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId, SpaceId};
+use crate::app::shared_kernel::identity::ids::SpaceId;
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::app::auth::domain::user::User;
 use crate::state::AppState;
 use askama::Template;

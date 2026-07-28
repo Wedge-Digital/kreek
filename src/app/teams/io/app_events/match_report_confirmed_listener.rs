@@ -1,5 +1,5 @@
 use crate::app::shared_kernel::app_events::match_report_app_events::MatchReportAppEvent;
-use crate::app::shared_kernel::common_types::MatchReportId;
+use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::teams::ports::ITeamRepository;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;

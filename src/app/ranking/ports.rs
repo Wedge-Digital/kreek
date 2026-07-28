@@ -1,5 +1,5 @@
 use crate::app::ranking::domain::ranking_line::RankingLine;
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use async_trait::async_trait;
 
 // ── Repository interne (event-sourcing/projection du BC, table append-only) ────

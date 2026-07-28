@@ -2,8 +2,8 @@ use crate::app::competitions::domain::domain_event::CompetitionsDomainEvent;
 use crate::app::competitions::domain::match_day::MatchDay;
 use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
 use crate::app::competitions::ports::{IMatchReportStatusPort, ITeamInfoPort};
-use crate::app::shared_kernel::common_types::EventId;
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::identity::ids::EventId;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::collections::HashMap;
 
@@ -300,7 +300,7 @@ mod tests {
 
     fn a_pairing() -> Pairing {
         Pairing {
-            id: crate::app::shared_kernel::common_types::PairingId::new(),
+            id: crate::app::shared_kernel::bloodbowl::ids::PairingId::new(),
             home_team_id: TeamId::new(),
             away_team_id: TeamId::new(),
         }
@@ -308,7 +308,7 @@ mod tests {
 
     fn a_day(name: &str, pairings: Vec<Pairing>) -> MatchDay {
         use crate::app::competitions::domain::match_day::{MatchDayPosition, MatchDayType};
-        use crate::app::shared_kernel::common_types::{MatchId, SeasonId};
+        use crate::app::shared_kernel::bloodbowl::ids::{MatchId, SeasonId};
         MatchDay {
             id: MatchId::new(),
             season_id: SeasonId::new(),

@@ -49,7 +49,7 @@ mod tests {
     use crate::app::players::ports::{
         PositionAccessDto, PositionCatalogEntryDto, RepositoryError, SkillCatalogEntryDto, SkillCostLevelDto,
     };
-    use crate::app::shared_kernel::common_types::SpaceId;
+    use crate::app::shared_kernel::identity::ids::SpaceId;
     use std::sync::Mutex;
 
     struct FakeCatalog;

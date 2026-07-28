@@ -3,7 +3,7 @@ use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{D3Roll, DedicatedFans};
 use crate::app::match_report::use_cases::record_fan_factor_use_case;
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::MatchReportId;
+use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};

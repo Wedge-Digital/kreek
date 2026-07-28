@@ -1,7 +1,7 @@
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::SpaceId;
-use crate::app::shared_kernel::space_definition::SpaceDefinition;
-use crate::app::shared_kernel::space_name::SpaceName;
+use crate::app::shared_kernel::identity::ids::SpaceId;
+use crate::app::shared_kernel::identity::space_definition::SpaceDefinition;
+use crate::app::shared_kernel::identity::space_name::SpaceName;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::State;

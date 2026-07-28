@@ -1,5 +1,5 @@
-use crate::app::shared_kernel::tier::{CreationBudget, StartingXp, TierName};
-use crate::app::shared_kernel::common_types::RosterId;
+use crate::app::shared_kernel::bloodbowl::tier::{CreationBudget, StartingXp, TierName};
+use crate::app::shared_kernel::bloodbowl::ids::RosterId;
 use crate::app::team_creation::domain::ruleset::{RosterTier, Ruleset, RulesetId, RulesetName, TierId};
 use serde::{Deserialize, Serialize};
 

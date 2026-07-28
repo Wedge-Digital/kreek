@@ -1,5 +1,5 @@
 use crate::app::competitions::domain::error::DomainError;
-use crate::app::shared_kernel::tier::{CreationBudget, StartingXp, TierName};
+use crate::app::shared_kernel::bloodbowl::tier::{CreationBudget, StartingXp, TierName};
 use nutype::nutype;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;

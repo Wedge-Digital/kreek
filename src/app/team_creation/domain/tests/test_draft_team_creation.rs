@@ -1,7 +1,7 @@
-use crate::app::shared_kernel::common_types::{CoachId, Entity, EntityId};
-use crate::app::shared_kernel::id_service::{FakeIdService, IdService};
-use crate::app::shared_kernel::team::{BaseTeamInfo, TeamName};
-use crate::app::shared_kernel::tier::{CreationBudget, StartingXp, TierName};
+use crate::app::shared_kernel::identity::ids::{CoachId, Entity, EntityId};
+use crate::app::shared_kernel::identity::id_service::{FakeIdService, IdService};
+use crate::app::shared_kernel::bloodbowl::team::{BaseTeamInfo, TeamName};
+use crate::app::shared_kernel::bloodbowl::tier::{CreationBudget, StartingXp, TierName};
 use crate::app::team_creation::domain::creation_rules::{CreationRules, CreationTier};
 use crate::app::team_creation::domain::team_draft::DraftTeam;
 use crate::app::team_creation::use_cases::create_draft_team::create_draft_team;

@@ -4,7 +4,7 @@ use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
-use crate::app::shared_kernel::roster_definition::RosterDefinition;
+use crate::app::shared_kernel::bloodbowl::roster_definition::RosterDefinition;
 use crate::state::AppState;
 
 #[derive(Deserialize)]

@@ -1,7 +1,8 @@
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{FanFactorMod, MatchGain};
-use crate::app::shared_kernel::common_types::{CoachId, MatchReportId};
+use crate::app::shared_kernel::identity::ids::CoachId;
+use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 
 pub struct RecordPostMatchCommand {
     pub match_report_id: MatchReportId,

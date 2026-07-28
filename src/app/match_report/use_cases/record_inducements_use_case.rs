@@ -8,9 +8,10 @@ use crate::app::match_report::ports::{
     TierRulesDto,
 };
 use crate::app::match_report::use_cases::init_temp_players_use_case::{self, InitTempPlayersCommand};
-use crate::app::shared_kernel::common_types::{CoachId, MatchReportId};
-use crate::app::shared_kernel::inducement_definition::InducementId;
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::identity::ids::CoachId;
+use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
+use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use std::collections::HashMap;
 
 // ── Commande ──────────────────────────────────────────────────────────────────
@@ -351,7 +352,8 @@ fn route_outcome(pm: &MatchReportPreMatch, team_id: &TeamId) -> RecordInducement
 mod tests {
     use super::*;
     use crate::app::match_report::domain::value_objects::{DedicatedFans, MatchReportOrigin};
-    use crate::app::shared_kernel::common_types::{CompetitionId, RoundId, SeasonId, SpaceId};
+    use crate::app::shared_kernel::identity::ids::SpaceId;
+    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RoundId, SeasonId};
 
     fn make_pm(home_tv: u32, away_tv: u32) -> MatchReportPreMatch {
         MatchReportPreMatch {

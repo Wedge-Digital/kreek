@@ -1,17 +1,17 @@
 #[cfg(test)]
 mod tests {
-    use crate::app::shared_kernel::id_service::{FakeIdService, IdService};
-    use crate::app::shared_kernel::staff::{
+    use crate::app::shared_kernel::identity::id_service::{FakeIdService, IdService};
+    use crate::app::shared_kernel::bloodbowl::staff::{
         StaffId, StaffKind, StaffMaxQuantity, StaffName, StaffPrice,
     };
-    use crate::app::shared_kernel::team::{BaseTeamInfo, TeamName};
+    use crate::app::shared_kernel::bloodbowl::team::{BaseTeamInfo, TeamName};
     use crate::app::team_creation::domain::error::DomainError;
-    use crate::app::shared_kernel::common_types::RosterId;
+    use crate::app::shared_kernel::bloodbowl::ids::RosterId;
     use crate::app::team_creation::domain::roster::{
         CrossLimit, PlayerDefinition, PlayerId, PlayerMaxQuantity, PlayerName, PlayerPrice,
         RerollBasePrice, Roster, RosterName,
     };
-    use crate::app::shared_kernel::tier::{CreationBudget, TierName};
+    use crate::app::shared_kernel::bloodbowl::tier::{CreationBudget, TierName};
     use crate::app::team_creation::domain::ruleset::{
         RosterTier, Ruleset, RulesetId, RulesetName, TierId,
     };
@@ -74,7 +74,7 @@ mod tests {
     }
 
     fn make_roster_selected(roster: Roster, ruleset: Ruleset) -> RosterSelectedTeam {
-        use crate::app::shared_kernel::common_types::CoachId;
+        use crate::app::shared_kernel::identity::ids::CoachId;
         use crate::app::team_creation::domain::creation_rules::CreationRules;
         let id_service = FakeIdService::new();
         let creator_id = id_service.generate_id();

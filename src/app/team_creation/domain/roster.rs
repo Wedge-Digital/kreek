@@ -1,4 +1,4 @@
-use crate::app::shared_kernel::common_types::RosterId;
+use crate::app::shared_kernel::bloodbowl::ids::RosterId;
 use crate::app::team_creation::domain::team_staff::TeamStaff;
 use nutype::nutype;
 use serde::{Deserialize, Serialize};

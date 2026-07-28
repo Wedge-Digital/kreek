@@ -1,7 +1,7 @@
-use crate::app::shared_kernel::coach_icon::CoachIcon;
-use crate::app::shared_kernel::coach_name::CoachName;
-use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
-use crate::app::shared_kernel::email::Email;
+use crate::app::shared_kernel::identity::coach_icon::CoachIcon;
+use crate::app::shared_kernel::identity::coach_name::CoachName;
+use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+use crate::app::shared_kernel::identity::email::Email;
 use crate::app::spaces::domain::space_repository_port::user_cache_repository_port::{
     ISpaceUserCacheRepository, SpaceUserCacheRepositoryError,
 };

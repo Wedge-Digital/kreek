@@ -1,6 +1,6 @@
 use crate::app::competitions::domain::competition_repository_port::ICompetitionRepository;
 use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
-use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 
 pub struct DashboardSummary {
     pub enrolled_count: usize,

@@ -1,5 +1,5 @@
 use crate::app::match_report::ports::ICoachDataPort;
-use crate::app::shared_kernel::common_types::CoachId;
+use crate::app::shared_kernel::identity::ids::CoachId;
 use crate::app::spaces::domain::space_repository_port::user_cache_repository_port::ISpaceUserCacheRepository;
 use async_trait::async_trait;
 use std::sync::Arc;

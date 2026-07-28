@@ -5,11 +5,10 @@ use crate::app::match_report::domain::value_objects::{
     CorrectionEligibility, D3Roll, DedicatedFans, FanFactorMod, InducementPurchase, MatchAction,
     MatchGain, MatchReportOrigin, TempPlayer,
 };
-use crate::app::shared_kernel::inducement_definition::InducementId;
-use crate::app::shared_kernel::common_types::{
-    CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
-};
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
+use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use chrono::{DateTime, Utc};
 
 
@@ -147,7 +146,8 @@ impl MatchReportPublished {
 mod unpublish_tests {
     use super::*;
     use crate::app::match_report::domain::value_objects::{CorrectionBlocker, TeamSide};
-    use crate::app::shared_kernel::common_types::{CompetitionId, RoundId, SeasonId, SpaceId};
+    use crate::app::shared_kernel::identity::ids::SpaceId;
+    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RoundId, SeasonId};
 
     fn published() -> MatchReportPublished {
         MatchReportPublished {

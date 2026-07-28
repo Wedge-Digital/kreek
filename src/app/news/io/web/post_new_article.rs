@@ -5,7 +5,7 @@ use crate::app::news::domain::article_title::ArticleTitle;
 use crate::app::news::io::web::new_article::NewArticleTemplate;
 use crate::app::news::routes::path;
 use crate::app::news::use_cases::create_article::{self, CreateArticleCommand, CreateArticleError};
-use crate::app::shared_kernel::common_types::SpaceId;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use axum::body::Body;
 use axum::extract::{Path, State};

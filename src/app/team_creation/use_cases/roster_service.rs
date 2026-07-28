@@ -1,7 +1,7 @@
-use crate::app::shared_kernel::staff::{
+use crate::app::shared_kernel::bloodbowl::staff::{
     StaffId, StaffKind, StaffMaxQuantity, StaffName, StaffPrice,
 };
-use crate::app::shared_kernel::common_types::RosterId;
+use crate::app::shared_kernel::bloodbowl::ids::RosterId;
 use crate::app::team_creation::domain::roster::{
     PlayerDefinition, PlayerId, PlayerMaxQuantity, PlayerName, PlayerPrice, RerollBasePrice, Roster,
     RosterName,

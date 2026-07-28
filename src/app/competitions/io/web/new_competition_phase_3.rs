@@ -3,7 +3,7 @@ use crate::app::competitions::use_cases::save_competition_structure::{
     execute, SaveCompetitionStructureCommand, SaveCompetitionStructureError,
 };
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::SeasonId;
+use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
 use crate::state::AppState;
 use askama::Template;
 use axum::body::Body;

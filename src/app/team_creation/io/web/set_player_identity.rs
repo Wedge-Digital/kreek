@@ -2,7 +2,7 @@ use crate::app::auth::auth_backend::AuthSession;
 use crate::app::team_creation::domain::roster::{JerseyNumber, PlayerId};
 use crate::app::team_creation::use_cases::set_player_identity as uc;
 use crate::app::team_creation::use_cases::set_player_identity::SetPlayerIdentityCommand;
-use crate::app::shared_kernel::common_types::EntityId;
+use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::state::AppState;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;

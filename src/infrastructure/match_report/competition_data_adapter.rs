@@ -5,7 +5,7 @@ use crate::app::match_report::ports::{
     ICompetitionDataPort, InducementSpecDto, RoundContextDto, TierRulesDto,
 };
 use crate::app::references::domain::port::IReferenceRepository;
-use crate::app::shared_kernel::common_types::SeasonId;
+use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -35,7 +35,7 @@ impl ICompetitionDataPort for CompetitionDataAdapter {
         coach_id: &str,
     ) -> Result<bool, String> {
         let comp_id =
-            crate::app::shared_kernel::common_types::CompetitionId::try_new(competition_id)
+            crate::app::shared_kernel::bloodbowl::ids::CompetitionId::try_new(competition_id)
                 .map_err(|e| e.to_string())?;
         let info = self
             .competition_repo

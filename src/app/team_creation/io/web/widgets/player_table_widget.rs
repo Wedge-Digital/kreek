@@ -1,4 +1,4 @@
-use crate::app::shared_kernel::common_types::EntityId;
+use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::team_creation::domain::roster::{LeagueId, PlayerId, SpecialRuleId};
 use crate::app::team_creation::domain::team_roster_selected::{RosterSelectedTeam, SppPool};
 use crate::app::team_creation::io::web::builders::{build_hired_rows, build_player_positions};

@@ -1,6 +1,6 @@
-use crate::app::shared_kernel::common_types::Entity;
-use crate::app::shared_kernel::common_types::{CoachId, UserId};
-use crate::app::shared_kernel::team::{BaseTeamInfo, TeamId, TeamName};
+use crate::app::shared_kernel::identity::ids::Entity;
+use crate::app::shared_kernel::identity::ids::{CoachId, UserId};
+use crate::app::shared_kernel::bloodbowl::team::{BaseTeamInfo, TeamId, TeamName};
 use crate::app::team_creation::domain::creation_rules::CreationRules;
 use crate::app::team_creation::domain::team_draft::DraftTeam;
 use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
@@ -89,7 +89,7 @@ impl ITeamDraftRepository for TeamDraftRepository {
         let coach_id = CoachId::try_new(&r.coach_id).map_err(db_err)?;
         let team_name = TeamName::try_new(r.name).map_err(db_err)?;
         let logo = r.logo.as_deref().and_then(|u| {
-            crate::app::shared_kernel::common_types::CloudinaryImage::try_new(u).ok()
+            crate::app::shared_kernel::identity::ids::CloudinaryImage::try_new(u).ok()
         });
         let creation_rules: CreationRules = serde_json::from_value(r.creation_rules)
             .map_err(|e| RepositoryError::PersistenceError(e.to_string()))?;
@@ -144,7 +144,7 @@ impl ITeamDraftRepository for TeamDraftRepository {
                 let coach_id_val = CoachId::try_new(&r.coach_id).map_err(db_err)?;
                 let team_name = TeamName::try_new(r.name).map_err(db_err)?;
                 let logo = r.logo.as_deref().and_then(|u| {
-                    crate::app::shared_kernel::common_types::CloudinaryImage::try_new(u).ok()
+                    crate::app::shared_kernel::identity::ids::CloudinaryImage::try_new(u).ok()
                 });
                 let creation_rules: CreationRules = serde_json::from_value(r.creation_rules)
                     .map_err(|e| RepositoryError::PersistenceError(e.to_string()))?;

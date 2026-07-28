@@ -1,7 +1,8 @@
 use crate::app::news::domain::article_tag::ArticleTag;
 use crate::app::news::domain::article_title::ArticleTitle;
 use crate::app::news::domain::paragraph_type::ParagraphType;
-use crate::app::shared_kernel::common_types::{ArticleId, SpaceId, UserId};
+use crate::app::shared_kernel::identity::ids::{SpaceId, UserId};
+use crate::app::shared_kernel::bloodbowl::ids::ArticleId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

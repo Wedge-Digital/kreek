@@ -1,4 +1,5 @@
-use crate::app::shared_kernel::common_types::{ArticleId, CommentId, UserId};
+use crate::app::shared_kernel::identity::ids::UserId;
+use crate::app::shared_kernel::bloodbowl::ids::{ArticleId, CommentId};
 
 #[derive(Debug, Clone)]
 pub struct Comment {

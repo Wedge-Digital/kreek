@@ -2,11 +2,10 @@ use crate::app::match_report::domain::value_objects::{
     ActionId, ActionPlayer, D3Roll, DedicatedFans, FanFactorMod, InducementPurchase,
     MatchActionType, MatchGain, MatchReportOrigin, TeamSide, TeamValue, TempPlayer,
 };
-use crate::app::shared_kernel::inducement_definition::InducementId;
-use crate::app::shared_kernel::common_types::{
-    CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
-};
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
+use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::match_report::domain::value_objects::TurnNumber;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -147,7 +146,7 @@ impl MatchReportDomainEvent {
     /// par l'appelant (déjà connu du use case) plutôt que dupliqué dans chaque variant.
     pub fn to_enveloppe(&self, match_report_id: &str) -> crate::common::event_envelope::EventEnvelope {
         crate::common::event_envelope::EventEnvelope {
-            event_id: crate::app::shared_kernel::common_types::EventId::new().to_string(),
+            event_id: crate::app::shared_kernel::identity::ids::EventId::new().to_string(),
             emitter: match_report_id.to_string(),
             event_type: self.type_name().to_string(),
             tags: serde_json::json!([]),

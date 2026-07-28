@@ -14,10 +14,9 @@ use crate::app::competitions::use_cases::update_draft_competition::{
     execute as execute_update, UpdateDraftCompetitionCommand, UpdateDraftCompetitionError,
 };
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::{
-    CloudinaryImage, CoachId, CompetitionId, SeasonId, SpaceId,
-};
-use crate::app::shared_kernel::competition_name::CompetitionName;
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, SpaceId};
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::competition_name::CompetitionName;
 use crate::state::AppState;
 use askama::Template;
 use axum::body::Body;

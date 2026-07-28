@@ -1,6 +1,6 @@
 use crate::app::teams::domain::error::DomainError;
 use crate::app::teams::ports::{ITeamRepository, RepositoryError};
-use crate::app::shared_kernel::common_types::EntityId;
+use crate::app::shared_kernel::identity::ids::EntityId;
 
 #[derive(Debug)]
 pub enum ApproveEnrollmentError {

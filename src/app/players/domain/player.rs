@@ -8,7 +8,7 @@ use crate::app::players::domain::match_impact::{
 use crate::app::players::domain::value_objects::{
     JerseyVo, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
 };
-use crate::app::shared_kernel::common_types::SpaceId;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use serde::{Deserialize, Serialize};
 
 // ── Value objects ──────────────────────────────────────────────────────────────

@@ -13,8 +13,8 @@ use crate::app::shared_kernel::app_events::match_report_app_events::{
     ActionTypePayload, MatchActionPublishedPayload, MatchReportAppEvent, MatchReportPublishedPayload,
     PlayerRefPayload,
 };
-use crate::app::shared_kernel::common_types::SeasonId;
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::common::services::event_bus::event_bus::new_bus;
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -50,11 +50,11 @@ impl IRankingCompetitionPort for FakeCompetitionPort {
 
 fn sample_payload(season_id: &str, home_team_id: &str, away_team_id: &str) -> MatchReportPublishedPayload {
     MatchReportPublishedPayload {
-        match_report_id: crate::app::shared_kernel::common_types::MatchReportId::new().to_string(),
+        match_report_id: crate::app::shared_kernel::bloodbowl::ids::MatchReportId::new().to_string(),
         space_id: "sp1".into(),
-        competition_id: crate::app::shared_kernel::common_types::CompetitionId::new().to_string(),
+        competition_id: crate::app::shared_kernel::bloodbowl::ids::CompetitionId::new().to_string(),
         season_id: season_id.to_string(),
-        round_id: crate::app::shared_kernel::common_types::RoundId::new().to_string(),
+        round_id: crate::app::shared_kernel::bloodbowl::ids::RoundId::new().to_string(),
         pairing_id: None,
         published_at: chrono::Utc::now(),
         home_team_id: home_team_id.to_string(),

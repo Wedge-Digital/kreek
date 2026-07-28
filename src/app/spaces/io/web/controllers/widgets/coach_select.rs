@@ -1,4 +1,4 @@
-use crate::app::shared_kernel::common_types::{SpaceId};
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::common::initials::initials;
 use crate::app::spaces::context::SpacesContext;
 use askama::Template;
@@ -6,7 +6,7 @@ use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
-use crate::app::shared_kernel::coach_definition::CoachDefinition;
+use crate::app::shared_kernel::identity::coach_definition::CoachDefinition;
 
 #[derive(Deserialize)]
 pub struct CoachSelectorQueryParams {

@@ -327,8 +327,9 @@ impl ITeamRepository for TeamRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::shared_kernel::common_types::{CoachId, CompetitionId, RosterId, SeasonId, SpaceId};
-    use crate::app::shared_kernel::team::TeamId;
+    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RosterId, SeasonId};
+    use crate::app::shared_kernel::bloodbowl::team::TeamId;
     use crate::app::teams::domain::value_objects::{DedicatedFans, Kpo, RosterName, TeamName};
     use sqlx::postgres::PgPoolOptions;
 
@@ -342,7 +343,7 @@ mod tests {
     }
 
     fn created_event(team_id: &str) -> TeamDomainEvent {
-        use crate::app::shared_kernel::staff_counts::{
+        use crate::app::shared_kernel::bloodbowl::staff_counts::{
             ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
         };
         TeamDomainEvent::TeamCreated {
@@ -439,7 +440,7 @@ mod tests {
         };
         let repo = TeamRepository::new(pool);
         let team_id = ulid::Ulid::new().to_string();
-        let mr_id = crate::app::shared_kernel::common_types::MatchReportId::try_new(
+        let mr_id = crate::app::shared_kernel::bloodbowl::ids::MatchReportId::try_new(
             "00000000000000000000000007",
         )
         .unwrap();
@@ -512,7 +513,7 @@ mod tests {
         };
         let repo = TeamRepository::new(pool);
         let team_id = ulid::Ulid::new().to_string();
-        let mr_id = crate::app::shared_kernel::common_types::MatchReportId::try_new(
+        let mr_id = crate::app::shared_kernel::bloodbowl::ids::MatchReportId::try_new(
             "00000000000000000000000007",
         )
         .unwrap();

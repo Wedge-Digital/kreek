@@ -5,7 +5,7 @@
 
 use crate::app::ranking::domain::ranking_line::CumulativeTotals;
 use crate::app::ranking::domain::tiebreak::{Direction, TiebreakCriterion};
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use std::cmp::Ordering;
 
 /// Rang au classement — 1 pour la tête.

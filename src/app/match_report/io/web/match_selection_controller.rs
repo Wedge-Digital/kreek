@@ -5,10 +5,9 @@ use crate::app::match_report::use_cases::{
     create_match_report_use_case, update_match_selection_use_case,
 };
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::{
-    CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
-};
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::identity::ids::SpaceId;
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};

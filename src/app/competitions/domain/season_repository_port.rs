@@ -2,7 +2,7 @@ use crate::app::competitions::domain::competition_invitations::CompetitionInvita
 use crate::app::competitions::domain::competition_rules::CompetitionRules;
 use crate::app::competitions::domain::competition_season::CompetitionSeason;
 use crate::app::competitions::domain::competition_structure::CompetitionStructure;
-use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use async_trait::async_trait;
 
 pub struct SeasonBaseInfo {

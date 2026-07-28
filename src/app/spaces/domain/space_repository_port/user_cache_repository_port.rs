@@ -1,4 +1,4 @@
-use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
+use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::spaces::domain::user::User;
 use async_trait::async_trait;
 use std::fmt;

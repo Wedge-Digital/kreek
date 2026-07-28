@@ -5,7 +5,7 @@ use crate::app::players::domain::match_impact::{
 use crate::app::players::domain::value_objects::{
     JerseyVo, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
 };
-use crate::app::shared_kernel::common_types::SpaceId;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -151,7 +151,7 @@ impl PlayerDomainEvent {
     /// publient sur ce bus.
     pub fn to_enveloppe(&self, player_id: &str) -> crate::common::event_envelope::EventEnvelope {
         crate::common::event_envelope::EventEnvelope {
-            event_id: crate::app::shared_kernel::common_types::EventId::new().to_string(),
+            event_id: crate::app::shared_kernel::identity::ids::EventId::new().to_string(),
             emitter: player_id.to_string(),
             event_type: self.type_name().to_string(),
             tags: serde_json::json!([]),

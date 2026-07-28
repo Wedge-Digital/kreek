@@ -1,4 +1,4 @@
-use crate::app::shared_kernel::common_types::EntityId;
+use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::team_creation::io::web::builders::build_roster_items_with_tiers;
 use crate::app::team_creation::io::web::view_models::RosterPickerItemWithTier;
 use crate::state::AppState;

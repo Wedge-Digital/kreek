@@ -4,8 +4,9 @@ use crate::app::competitions::io::web::admin::summary_tab::build_summary_fragmen
 use crate::app::competitions::domain::competition_repository_port::CompetitionBaseInfo;
 use crate::app::competitions::use_cases::admin::dashboard_query;
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::authorization::SpaceProfile;
-use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId, SpaceId};
+use crate::app::shared_kernel::identity::authorization::SpaceProfile;
+use crate::app::shared_kernel::identity::ids::SpaceId;
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};

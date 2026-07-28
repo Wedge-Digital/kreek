@@ -1,7 +1,7 @@
 use crate::app::match_report::domain::error::DomainError;
-use crate::app::shared_kernel::common_types::PlayerId;
-use crate::app::shared_kernel::inducement_definition::InducementId;
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use nutype::nutype;
 use serde::{Deserialize, Serialize};
 use std::fmt;

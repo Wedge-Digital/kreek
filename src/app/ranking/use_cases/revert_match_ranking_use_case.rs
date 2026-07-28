@@ -1,5 +1,5 @@
 use crate::app::ranking::ports::IRankingRepository;
-use crate::app::shared_kernel::common_types::MatchReportId;
+use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 
 #[derive(Debug)]
 pub enum RevertMatchRankingError {

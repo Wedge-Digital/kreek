@@ -1,6 +1,6 @@
-use crate::app::shared_kernel::common_types::{Entity, UserId};
-use crate::app::shared_kernel::id_service::IdService;
-use crate::app::shared_kernel::team::{BaseTeamInfo, TeamId};
+use crate::app::shared_kernel::identity::ids::{Entity, UserId};
+use crate::app::shared_kernel::identity::id_service::IdService;
+use crate::app::shared_kernel::bloodbowl::team::{BaseTeamInfo, TeamId};
 use crate::app::team_creation::domain::creation_rules::CreationRules;
 use crate::app::team_creation::domain::ruleset::Ruleset;
 use crate::app::team_creation::domain::team_ruleset_selected::RulesetSelectedTeam;

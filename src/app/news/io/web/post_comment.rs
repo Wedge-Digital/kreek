@@ -1,7 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::news::domain::comment::Comment;
 use crate::app::news::routes::path;
-use crate::app::shared_kernel::common_types::{ArticleId, CommentId};
+use crate::app::shared_kernel::bloodbowl::ids::{ArticleId, CommentId};
 use crate::state::AppState;
 use axum::body::Body;
 use axum::extract::{Path, State};

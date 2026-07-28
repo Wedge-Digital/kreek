@@ -1,4 +1,5 @@
-use crate::app::shared_kernel::common_types::{CompetitionId, EventId, SpaceId};
+use crate::app::shared_kernel::identity::ids::{EventId, SpaceId};
+use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
 use crate::common::event_envelope::EventEnvelope;
 use serde::{Deserialize, Serialize};
 

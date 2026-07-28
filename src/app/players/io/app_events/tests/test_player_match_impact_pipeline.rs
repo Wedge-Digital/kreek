@@ -29,7 +29,7 @@ use crate::app::references::io::repository::in_memory_reference_repository::InMe
 use crate::app::shared_kernel::app_events::player_match_impact_app_events::{
     InjuryTypePayload, PlayerMatchContextPayload, PlayerMatchImpactAppEvent,
 };
-use crate::app::shared_kernel::common_types::SpaceId;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::common::services::event_bus::event_bus::new_bus;
 use sqlx::PgPool;
 use std::sync::Arc;

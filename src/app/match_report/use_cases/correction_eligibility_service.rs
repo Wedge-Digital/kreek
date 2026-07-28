@@ -9,8 +9,8 @@ use crate::app::match_report::domain::value_objects::{
     CorrectionBlocker, CorrectionEligibility, TeamSide,
 };
 use crate::app::match_report::ports::{IPlayerDataPort, ITeamDataPort};
-use crate::app::shared_kernel::common_types::MatchReportId;
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 
 /// Réponses des ports pour un camp. Regroupées pour que le verdict se lise sans
 /// suivre quatre variables parallèles, et se teste sans mock de port.

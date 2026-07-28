@@ -3,10 +3,9 @@ use crate::app::match_report::domain::match_report_repository_port::IMatchReport
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::MatchReportOrigin;
 use crate::app::shared_kernel::app_events::match_report_app_events::MatchReportAppEvent;
-use crate::app::shared_kernel::common_types::{
-    CoachId, CompetitionId, EventId, MatchReportId, RoundId, SeasonId, SpaceId,
-};
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::identity::ids::{CoachId, EventId, SpaceId};
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::common::services::event_bus::event_bus::EventBus;
 
 pub struct CreateMatchReportCommand {

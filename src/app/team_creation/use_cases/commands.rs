@@ -1,6 +1,6 @@
-use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, UserId};
-use crate::app::shared_kernel::staff::StaffId;
-use crate::app::shared_kernel::team::{TeamId, TeamName};
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, UserId};
+use crate::app::shared_kernel::bloodbowl::staff::StaffId;
+use crate::app::shared_kernel::bloodbowl::team::{TeamId, TeamName};
 use crate::app::team_creation::domain::creation_rules::CreationRules;
 use crate::app::team_creation::domain::roster::{PlayerId, Roster};
 use crate::app::team_creation::domain::ruleset::Ruleset;

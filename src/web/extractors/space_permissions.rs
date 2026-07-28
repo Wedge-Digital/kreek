@@ -1,6 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::shared_kernel::authorization::SpaceProfile;
-use crate::app::shared_kernel::common_types::SpaceId;
+use crate::app::shared_kernel::identity::authorization::SpaceProfile;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use axum::extract::{FromRef, FromRequestParts, Path};
 use axum::http::request::Parts;
@@ -62,7 +62,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::shared_kernel::common_types::SpaceId;
+    use crate::app::shared_kernel::identity::ids::SpaceId;
 
     fn perms(role: SpaceProfile) -> SpacePermissions {
         SpacePermissions {

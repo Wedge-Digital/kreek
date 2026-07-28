@@ -3,7 +3,7 @@ use crate::app::players::domain::player::{AcquisitionMode, PlayerId, Spp, TeamId
 use crate::app::players::domain::value_objects::{
     JerseyVo, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
 };
-use crate::app::shared_kernel::common_types::SpaceId;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::app::players::io::repository::player_repository::{
     insert_player_event, upsert_player_projection,
 };

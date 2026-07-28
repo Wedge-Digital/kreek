@@ -3,7 +3,7 @@ use crate::app::competitions::domain::season_repository_port::{
     ISeasonRepository, SeasonRepositoryError,
 };
 use crate::app::competitions::ports::ITiebreakCatalogPort;
-use crate::app::shared_kernel::common_types::SeasonId;
+use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
 use std::collections::{HashMap, HashSet};
 
 pub struct SaveCompetitionRulesCommand {
@@ -91,13 +91,13 @@ mod tests {
         OffensiveBonus, RankingPoints, RankingRules, TiebreakCode, TierRule,
     };
     use crate::app::competitions::ports::TiebreakCriterionDto;
-    use crate::app::shared_kernel::tier::{CreationBudget, StartingXp, TierName};
+    use crate::app::shared_kernel::bloodbowl::tier::{CreationBudget, StartingXp, TierName};
     use crate::app::competitions::domain::competition_season::CompetitionSeason;
     use crate::app::competitions::domain::competition_structure::CompetitionStructure;
     use crate::app::competitions::domain::season_repository_port::{
         SeasonBaseInfo, SeasonRepositoryError,
     };
-    use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId};
+    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
     use async_trait::async_trait;
 
     struct FakeRepo {

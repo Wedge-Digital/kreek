@@ -1,4 +1,4 @@
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::team_creation::domain::creation_rules::CreationRules;
 use crate::app::team_creation::domain::ruleset::Ruleset;
 use crate::app::team_creation::domain::team_draft::DraftTeam;

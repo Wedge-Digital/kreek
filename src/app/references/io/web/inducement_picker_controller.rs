@@ -4,7 +4,7 @@ use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
-use crate::app::shared_kernel::inducement_definition::InducementDefinition;
+use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementDefinition;
 use crate::state::AppState;
 
 #[derive(Deserialize)]

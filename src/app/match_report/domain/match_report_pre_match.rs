@@ -7,11 +7,10 @@ use crate::app::match_report::domain::value_objects::{
     InducementPurchase, InducementQty, MatchAction, MatchActionType, MatchGain, MatchReportOrigin,
     TeamSide, TeamValue, TempPlayer,
 };
-use crate::app::shared_kernel::common_types::{
-    CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
-};
-use crate::app::shared_kernel::inducement_definition::InducementId;
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::match_report::domain::value_objects::TurnNumber;
 
 #[derive(Debug, Clone)]
@@ -466,9 +465,8 @@ mod tests {
     use crate::app::match_report::domain::value_objects::{
         InducementCost, InducementQty, IsStarPlayer, InjuryType, MatchReportOrigin,
     };
-    use crate::app::shared_kernel::common_types::{
-        CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
-    };
+    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 
     fn make_pm(home_tv: u32, away_tv: u32) -> MatchReportPreMatch {
         let home_id = TeamId::new();
@@ -652,7 +650,7 @@ mod tests {
     // ── step3-4 : actions ─────────────────────────────────────────────────────
 
     use crate::app::match_report::domain::value_objects::{ActionId, ActionPlayer, MatchActionType, TeamSide, TurnNumber};
-    use crate::app::shared_kernel::common_types::PlayerId;
+    use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
 
     fn make_action(pm: &MatchReportPreMatch, side: TeamSide) -> (MatchReportPreMatch, MatchReportDomainEvent) {
         pm.record_action(

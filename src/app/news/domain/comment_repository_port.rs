@@ -1,5 +1,5 @@
 use crate::app::news::domain::comment::Comment;
-use crate::app::shared_kernel::common_types::ArticleId;
+use crate::app::shared_kernel::bloodbowl::ids::ArticleId;
 use async_trait::async_trait;
 
 #[derive(Debug)]

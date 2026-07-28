@@ -1,4 +1,4 @@
-use crate::app::shared_kernel::common_types::SpaceId;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::app::spaces::context::SpacesContext;
 use askama::Template;
 use axum::extract::{Path, Query, State};

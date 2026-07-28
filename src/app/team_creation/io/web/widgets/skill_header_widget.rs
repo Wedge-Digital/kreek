@@ -1,4 +1,4 @@
-use crate::app::shared_kernel::common_types::EntityId;
+use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use askama::Template;

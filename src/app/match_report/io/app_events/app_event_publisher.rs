@@ -11,8 +11,8 @@ use crate::app::shared_kernel::app_events::match_report_app_events::{
     ActionTypePayload, MatchActionPublishedPayload, MatchReportAppEvent,
     MatchReportPublishedPayload, MatchReportUnpublishedPayload, PlayerRefPayload, TempPlayerPayload,
 };
-use crate::app::shared_kernel::common_types::EventId;
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::identity::ids::EventId;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::common::event_envelope::EventEnvelope;
 use crate::app::shared_kernel::app_events::player_match_impact_app_events::{
     InjuryTypePayload, PlayerMatchContextPayload, PlayerMatchImpactAppEvent,
@@ -469,10 +469,9 @@ mod unpublished_events_tests {
     use crate::app::match_report::domain::value_objects::{
         ActionId, DedicatedFans, FanFactorMod, MatchGain, MatchReportOrigin, TurnNumber,
     };
-    use crate::app::shared_kernel::common_types::{
-        CoachId, CompetitionId, MatchReportId, PlayerId, RoundId, SeasonId, SpaceId,
-    };
-    use crate::app::shared_kernel::team::TeamId;
+    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, PlayerId, RoundId, SeasonId};
+    use crate::app::shared_kernel::bloodbowl::team::TeamId;
 
     /// Une action quelconque, pour vérifier qu'elle **ne** se retrouve **pas**
     /// dans le payload de compensation.
@@ -579,7 +578,7 @@ mod unpublished_events_tests {
 mod player_impact_tests {
     use super::*;
     use crate::app::match_report::domain::value_objects::{ActionId, TempPlayerId, TurnNumber};
-    use crate::app::shared_kernel::common_types::PlayerId as SharedPlayerId;
+    use crate::app::shared_kernel::bloodbowl::ids::PlayerId as SharedPlayerId;
 
     fn ctx_base() -> ContextBase {
         ContextBase {

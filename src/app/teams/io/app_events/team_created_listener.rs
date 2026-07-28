@@ -1,11 +1,10 @@
 use crate::app::shared_kernel::app_events::team_creation_app_events::TeamCreationAppEvent;
-use crate::app::shared_kernel::common_types::{
-    CoachId, CompetitionId, EntityId, RosterId, SeasonId, SpaceId,
-};
-use crate::app::shared_kernel::staff_counts::{
+use crate::app::shared_kernel::identity::ids::{CoachId, EntityId, SpaceId};
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RosterId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::staff_counts::{
     ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
 };
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::teams::domain::team::TeamDomainEvent;
 use crate::app::teams::domain::value_objects::{DedicatedFans, Kpo, RosterName, TeamName};
 use crate::app::teams::ports::{ITeamRepository, RepositoryError};

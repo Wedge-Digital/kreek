@@ -1,6 +1,7 @@
 use crate::app::competitions::domain::competition::Competition;
-use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, CompetitionId, SpaceId};
-use crate::app::shared_kernel::competition_name::CompetitionName;
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, SpaceId};
+use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
+use crate::app::shared_kernel::bloodbowl::competition_name::CompetitionName;
 use async_trait::async_trait;
 
 pub struct SeasonOption {

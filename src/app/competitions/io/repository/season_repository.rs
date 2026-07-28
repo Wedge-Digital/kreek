@@ -5,7 +5,7 @@ use crate::app::competitions::domain::competition_structure::CompetitionStructur
 use crate::app::competitions::domain::season_repository_port::{
     ISeasonRepository, SeasonBaseInfo, SeasonFull, SeasonRepositoryError,
 };
-use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use async_trait::async_trait;
 use sqlx::PgPool;
 

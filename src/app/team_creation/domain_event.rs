@@ -1,8 +1,8 @@
 use crate::app::shared_kernel::app_events::team_creation_app_events::{
     PlayerPayload, TeamCreationAppEvent,
 };
-use crate::app::shared_kernel::common_types::EventId;
-use crate::app::shared_kernel::staff_counts::{
+use crate::app::shared_kernel::identity::ids::EventId;
+use crate::app::shared_kernel::bloodbowl::staff_counts::{
     ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
 };
 use crate::common::event_envelope::EventEnvelope;

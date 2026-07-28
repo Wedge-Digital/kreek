@@ -1,5 +1,5 @@
-use crate::app::shared_kernel::authorization::SpaceProfile;
-use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, SpaceId};
+use crate::app::shared_kernel::identity::authorization::SpaceProfile;
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, SpaceId};
 use crate::app::spaces::domain::space::Space;
 use async_trait::async_trait;
 use std::fmt;

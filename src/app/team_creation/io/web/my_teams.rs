@@ -1,6 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::Entity;
+use crate::app::shared_kernel::identity::ids::Entity;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};

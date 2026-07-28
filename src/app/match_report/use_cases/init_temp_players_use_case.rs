@@ -2,8 +2,8 @@ use crate::app::match_report::domain::match_report_repository_port::IMatchReport
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{TeamSide, TempPlayer, TempPlayerId, TempPlayerKind};
 use crate::app::match_report::ports::{IPlayerDataPort, ITeamDataPort};
-use crate::app::shared_kernel::common_types::MatchReportId;
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 
 pub struct InitTempPlayersCommand {
     pub match_report_id: MatchReportId,
@@ -119,11 +119,10 @@ mod tests {
     use crate::app::match_report::domain::value_objects::{
         DedicatedFans, InducementCost, InducementPurchase, InducementQty, MatchReportOrigin, TeamValue,
     };
-    use crate::app::shared_kernel::common_types::{
-        CoachId, CompetitionId, MatchReportId, RoundId, SeasonId, SpaceId,
-    };
-    use crate::app::shared_kernel::inducement_definition::InducementId;
-    use crate::app::shared_kernel::team::TeamId;
+    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
+    use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
+    use crate::app::shared_kernel::bloodbowl::team::TeamId;
 
     fn make_pm() -> MatchReportPreMatch {
         MatchReportPreMatch {

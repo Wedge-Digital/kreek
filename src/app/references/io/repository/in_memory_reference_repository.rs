@@ -7,9 +7,9 @@ use crate::app::references::io::repository::reference_data_error::ReferenceDataE
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use std::path::Path;
-use crate::app::shared_kernel::inducement_definition::{InducementCost, InducementDefinition, InducementId, InducementName};
-use crate::app::shared_kernel::roster_definition::RosterDefinition;
-use crate::app::shared_kernel::common_types::RosterId;
+use crate::app::shared_kernel::bloodbowl::inducement_definition::{InducementCost, InducementDefinition, InducementId, InducementName};
+use crate::app::shared_kernel::bloodbowl::roster_definition::RosterDefinition;
+use crate::app::shared_kernel::bloodbowl::ids::RosterId;
 // ── Raw JSON wrappers (deserialization only) ──────────────────────────────────
 
 #[derive(Deserialize)]

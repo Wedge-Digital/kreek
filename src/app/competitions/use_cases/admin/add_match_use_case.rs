@@ -5,8 +5,9 @@ use crate::app::competitions::ports::{ITeamInfoPort, TeamInfoDto};
 use crate::app::competitions::use_cases::admin::team_enrollment::{
     build_new_pairing_projection, load_enrolled_teams, resolve_team_names,
 };
-use crate::app::shared_kernel::common_types::{EventId, PairingId};
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::identity::ids::EventId;
+use crate::app::shared_kernel::bloodbowl::ids::PairingId;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::collections::HashMap;
 
@@ -128,7 +129,7 @@ fn emit_pairing_created(
 mod tests {
     use super::*;
     use crate::app::competitions::domain::match_day::{MatchDayName, MatchDayPosition, MatchDayType};
-    use crate::app::shared_kernel::common_types::MatchId;
+    use crate::app::shared_kernel::bloodbowl::ids::MatchId;
     use crate::common::services::event_bus::event_bus::new_bus;
     use async_trait::async_trait;
     use std::sync::Mutex;
@@ -168,7 +169,7 @@ mod tests {
 
     fn sample_match_day() -> MatchDay {
         MatchDay {
-            id: MatchId::new(), season_id: crate::app::shared_kernel::common_types::SeasonId::new(),
+            id: MatchId::new(), season_id: crate::app::shared_kernel::bloodbowl::ids::SeasonId::new(),
             name: MatchDayName::try_new("Journée 1".to_string()).unwrap(),
             day_type: MatchDayType::FixedDate, date_start: None, date_end: None,
             position: MatchDayPosition::try_new(0).unwrap(), pairings: vec![],

@@ -2,7 +2,7 @@ use crate::app::auth::domain::reset_token::Token;
 use crate::app::auth::io::repository::reset_token_repository::IResetTokenRepository;
 use crate::app::auth::ports::{IUserRepository, RepositoryError};
 use crate::app::auth::routes::path;
-use crate::app::shared_kernel::coach_name::CoachName;
+use crate::app::shared_kernel::identity::coach_name::CoachName;
 use crate::common::services::email::{EmailError, IEmailService};
 use askama::Template;
 use std::fmt;
@@ -100,7 +100,7 @@ mod tests {
         FakeUserRepository, FindResult,
     };
     use crate::app::auth::ports::RepositoryError;
-    use crate::app::shared_kernel::coach_name::CoachName;
+    use crate::app::shared_kernel::identity::coach_name::CoachName;
     use crate::common::services::email::fakes::console_email_service::ConsoleEmailService;
     use async_trait::async_trait;
     use tokio::sync::Mutex;

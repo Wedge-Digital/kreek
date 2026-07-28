@@ -2,7 +2,7 @@ use crate::app::team_creation::domain::error::DomainError;
 use crate::app::team_creation::domain::roster::{AcquisitionMode, PlayerId, SkillId, SppCost};
 use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
 use crate::app::team_creation::ports::{IReferenceDataPort, ITeamRosterRepository, RepositoryError};
-use crate::app::shared_kernel::common_types::EntityId;
+use crate::app::shared_kernel::identity::ids::EntityId;
 
 pub struct SpendCreationSppCommand {
     pub team_id: EntityId,

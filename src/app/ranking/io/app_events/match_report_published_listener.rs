@@ -8,8 +8,8 @@ use crate::app::ranking::use_cases::record_match_ranking_use_case::{
 use crate::app::shared_kernel::app_events::match_report_app_events::{
     ActionTypePayload, MatchActionPublishedPayload, MatchReportAppEvent,
 };
-use crate::app::shared_kernel::common_types::{CompetitionId, MatchReportId, RoundId, SeasonId};
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
 

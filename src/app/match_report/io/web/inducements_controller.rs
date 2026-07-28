@@ -7,9 +7,9 @@ use crate::app::match_report::use_cases::record_inducements_use_case::{
     RecordInducementsOutcome,
 };
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::MatchReportId;
-use crate::app::shared_kernel::inducement_definition::InducementId;
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
+use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};

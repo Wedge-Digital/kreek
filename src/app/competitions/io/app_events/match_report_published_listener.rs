@@ -8,8 +8,9 @@ use crate::app::shared_kernel::app_events::match_report_app_events::{
     ActionTypePayload, MatchActionPublishedPayload, MatchReportAppEvent,
     MatchReportPublishedPayload,
 };
-use crate::app::shared_kernel::common_types::{EventId, PairingId};
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::identity::ids::EventId;
+use crate::app::shared_kernel::bloodbowl::ids::PairingId;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -286,7 +287,7 @@ mod tests {
     use crate::app::competitions::domain::match_day::{MatchDay, MatchDayName, MatchDayPosition, MatchDayType};
     use crate::app::competitions::domain::match_day_repository_port::{MatchDayRepositoryError, PairingDisplayDto};
     use crate::app::competitions::ports::TeamInfoDto;
-    use crate::app::shared_kernel::common_types::{MatchId, SeasonId};
+    use crate::app::shared_kernel::bloodbowl::ids::{MatchId, SeasonId};
 
     struct FakeMatchDayRepo(MatchDay);
     #[async_trait::async_trait]

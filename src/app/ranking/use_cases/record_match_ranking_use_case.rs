@@ -5,8 +5,8 @@ use crate::app::ranking::domain::ranking_line::{
 };
 use crate::app::ranking::ports::{IRankingCompetitionPort, IRankingRepository};
 use crate::app::ranking::use_cases::standings_service::to_totals;
-use crate::app::shared_kernel::common_types::{CompetitionId, MatchReportId, RoundId, SeasonId};
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use chrono::{DateTime, Utc};
 
 /// Stats d'une équipe sur un match. Regroupées pour que le croisement

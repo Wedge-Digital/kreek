@@ -1,8 +1,8 @@
 use crate::app::auth::io::repository::user_repository::UserRepository;
 use crate::app::auth::ports::{IUserRepository, RepositoryError};
-use crate::app::shared_kernel::coach_name::CoachName;
-use crate::app::shared_kernel::common_types::UserId;
-use crate::app::shared_kernel::email::Email;
+use crate::app::shared_kernel::identity::coach_name::CoachName;
+use crate::app::shared_kernel::identity::ids::UserId;
+use crate::app::shared_kernel::identity::email::Email;
 use crate::app::auth::domain::user::User;
 use sqlx::PgPool;
 

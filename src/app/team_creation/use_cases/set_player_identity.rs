@@ -1,7 +1,7 @@
 use crate::app::team_creation::domain::error::DomainError;
 use crate::app::team_creation::domain::roster::{JerseyNumber, PlayerId};
 use crate::app::team_creation::ports::{ITeamRosterRepository, RepositoryError};
-use crate::app::shared_kernel::common_types::EntityId;
+use crate::app::shared_kernel::identity::ids::EntityId;
 
 pub struct SetPlayerIdentityCommand {
     pub team_id:     EntityId,

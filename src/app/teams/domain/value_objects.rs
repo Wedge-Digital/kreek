@@ -71,7 +71,7 @@ pub struct SppEarned(u8);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SppGain {
-    pub player_id: crate::app::shared_kernel::common_types::PlayerId,
+    pub player_id: crate::app::shared_kernel::bloodbowl::ids::PlayerId,
     pub spp_earned: SppEarned,
 }
 

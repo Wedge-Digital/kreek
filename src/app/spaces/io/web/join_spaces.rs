@@ -1,5 +1,5 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::shared_kernel::common_types::SpaceId;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::app::spaces::uses_cases::join_spaces::{execute, JoinSpacesCommand};
 use crate::app::spaces::context::SpacesContext;
 use axum::extract::State;

@@ -2,8 +2,8 @@ use crate::app::references::domain::models::{
     Inducement, League, PlayerPosition, Skill, SkillCategory, SkillCostLevel, SpecialRule, Staff,
     StarPlayer, Team,
 };
-use crate::app::shared_kernel::inducement_definition::InducementDefinition;
-use crate::app::shared_kernel::roster_definition::RosterDefinition;
+use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementDefinition;
+use crate::app::shared_kernel::bloodbowl::roster_definition::RosterDefinition;
 
 pub trait IReferenceRepository: Send + Sync {
     fn list_roster_definitions(&self) -> Vec<RosterDefinition>;

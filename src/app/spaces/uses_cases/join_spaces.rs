@@ -1,5 +1,5 @@
-use crate::app::shared_kernel::authorization::SpaceProfile;
-use crate::app::shared_kernel::common_types::{CoachId, EventId, SpaceId};
+use crate::app::shared_kernel::identity::authorization::SpaceProfile;
+use crate::app::shared_kernel::identity::ids::{CoachId, EventId, SpaceId};
 use crate::app::spaces::domain::domain_event::SpacesDomainEvent;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::{
     ISpaceRepository, SpaceRepositoryError,

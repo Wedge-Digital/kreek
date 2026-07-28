@@ -1,4 +1,4 @@
-use crate::app::shared_kernel::common_types::EntityId;
+use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::teams::use_cases::approve_enrollment::{self, ApproveEnrollmentError};
 use crate::app::teams::use_cases::commands::RejectEnrollmentCommand;
 use crate::app::teams::use_cases::reject_enrollment::{self, RejectEnrollmentError};

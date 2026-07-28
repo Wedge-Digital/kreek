@@ -236,7 +236,7 @@ mod tests {
     use crate::app::players::domain::value_objects::{PositionNameVo, RosterLineId};
     use crate::app::players::io::repository::player_repository::PgPlayerRepository;
     use crate::app::references::io::repository::in_memory_reference_repository::InMemoryReferenceRepository;
-    use crate::app::shared_kernel::common_types::SpaceId;
+    use crate::app::shared_kernel::identity::ids::SpaceId;
     use crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter;
     use sqlx::PgPool;
     use std::sync::Arc;

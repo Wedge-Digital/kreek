@@ -71,8 +71,8 @@ mod tests {
     use crate::app::competitions::domain::match_day::{MatchDay, MatchDayName, MatchDayPosition, MatchDayType, Pairing};
     use crate::app::competitions::domain::match_day_repository_port::{MatchDayRepositoryError, PairingDisplayDto};
     use crate::app::competitions::ports::TeamInfoDto;
-    use crate::app::shared_kernel::common_types::{MatchId, PairingId, SeasonId};
-    use crate::app::shared_kernel::team::TeamId;
+    use crate::app::shared_kernel::bloodbowl::ids::{MatchId, PairingId, SeasonId};
+    use crate::app::shared_kernel::bloodbowl::team::TeamId;
     use async_trait::async_trait;
     use std::collections::HashMap;
 

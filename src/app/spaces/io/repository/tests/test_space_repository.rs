@@ -1,6 +1,6 @@
-use crate::app::shared_kernel::authorization::SpaceProfile;
-use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, SpaceId};
-use crate::app::shared_kernel::space_name::SpaceName;
+use crate::app::shared_kernel::identity::authorization::SpaceProfile;
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, SpaceId};
+use crate::app::shared_kernel::identity::space_name::SpaceName;
 use crate::app::spaces::domain::space::Space;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::ISpaceRepository;
 use crate::app::spaces::io::repository::space_repository::SpaceRepository;

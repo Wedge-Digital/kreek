@@ -5,7 +5,7 @@ use crate::app::match_report::domain::value_objects::{
 };
 use crate::app::match_report::use_cases::delete_action_use_case::{self, DeleteActionCommand};
 use crate::app::match_report::use_cases::record_action_use_case::{self, RecordActionCommand};
-use crate::app::shared_kernel::common_types::{MatchReportId, PlayerId};
+use crate::app::shared_kernel::bloodbowl::ids::{MatchReportId, PlayerId};
 use crate::state::AppState;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;

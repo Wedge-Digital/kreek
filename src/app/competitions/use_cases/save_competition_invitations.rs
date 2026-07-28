@@ -2,7 +2,7 @@ use crate::app::competitions::domain::competition_invitations::CompetitionInvita
 use crate::app::competitions::domain::season_repository_port::{
     ISeasonRepository, SeasonRepositoryError,
 };
-use crate::app::shared_kernel::common_types::SeasonId;
+use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
 
 pub struct SaveCompetitionInvitationsCommand {
     pub season_id: SeasonId,

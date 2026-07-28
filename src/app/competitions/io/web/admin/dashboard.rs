@@ -2,7 +2,7 @@ use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::io::web::admin::admin_page::require_admin_access;
 use crate::app::competitions::use_cases::admin::dashboard_query;
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::{CompetitionId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};

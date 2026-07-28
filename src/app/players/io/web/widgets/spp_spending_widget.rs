@@ -7,7 +7,7 @@ use crate::app::players::ports::ISkillCatalogPort;
 use crate::app::players::use_cases::improvement_cost_service::resolve_stat_cost;
 use crate::app::players::use_cases::player_stats_service::{resolve_stats, ResolvedPlayerStats};
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::SpaceId;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -192,7 +192,7 @@ mod tests {
     use crate::app::players::domain::player::{AcquiredSkill, AcquisitionMode, Spp, TeamId, ValueKpo};
     use crate::app::players::domain::value_objects::{PositionNameVo, RosterLineId, SkillId, SkillName, SppCost};
     use crate::app::references::io::repository::in_memory_reference_repository::InMemoryReferenceRepository;
-    use crate::app::shared_kernel::common_types::SpaceId;
+    use crate::app::shared_kernel::identity::ids::SpaceId;
     use crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter;
 
     fn sample_player() -> Player {

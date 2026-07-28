@@ -8,7 +8,7 @@ use crate::app::ranking::ports::{
     BonusRuleInfo, EnrolledTeamInfo, IRankingCompetitionPort, RankingGroupInfo, RankingRulesInfo,
     TiebreakSettingInfo,
 };
-use crate::app::shared_kernel::common_types::SeasonId;
+use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
 use async_trait::async_trait;
 use std::sync::Arc;
 

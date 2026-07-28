@@ -1,5 +1,6 @@
 use crate::app::competitions::routes::Routes as CompetitionRoutes;
-use crate::app::shared_kernel::common_types::{SeasonId, SpaceId};
+use crate::app::shared_kernel::identity::ids::SpaceId;
+use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, Query, State};

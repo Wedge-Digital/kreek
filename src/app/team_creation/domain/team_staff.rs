@@ -1,4 +1,4 @@
-use crate::app::shared_kernel::staff::{
+use crate::app::shared_kernel::bloodbowl::staff::{
     StaffId, StaffKind, StaffMaxQuantity, StaffName, StaffPrice,
 };
 use serde::{Deserialize, Serialize};

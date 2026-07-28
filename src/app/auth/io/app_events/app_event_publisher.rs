@@ -29,9 +29,9 @@ pub fn auth_app_event_publisher(event_bus: &EventBus, app_event_bus: EventBus) {
 mod tests {
     use super::*;
     use crate::app::auth::domain::domain_event::AuthDomainEvent;
-    use crate::app::shared_kernel::coach_name::CoachName;
-    use crate::app::shared_kernel::common_types::{CoachId, EventId};
-    use crate::app::shared_kernel::email::Email;
+    use crate::app::shared_kernel::identity::coach_name::CoachName;
+    use crate::app::shared_kernel::identity::ids::{CoachId, EventId};
+    use crate::app::shared_kernel::identity::email::Email;
     use crate::common::services::event_bus::event_bus::new_bus;
 
     #[tokio::test]

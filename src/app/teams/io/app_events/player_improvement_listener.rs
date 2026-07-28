@@ -1,5 +1,5 @@
 use crate::app::shared_kernel::app_events::player_improvement_app_events::PlayerImprovementAppEvent;
-use crate::app::shared_kernel::common_types::PlayerId;
+use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
 use crate::app::teams::domain::value_objects::{Kpo, PlayerImprovement, Stat};
 use crate::app::teams::ports::ITeamRepository;
 use crate::common::services::event_bus::event_bus::EventBus;

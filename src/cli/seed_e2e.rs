@@ -5,7 +5,7 @@
 //! assez de coachs pour alimenter les sélecteurs. Tout est synthétique : ce
 //! seed remplace la dépendance historique aux extraits legacy non versionnés.
 
-use crate::app::shared_kernel::authorization::SpaceProfile;
+use crate::app::shared_kernel::identity::authorization::SpaceProfile;
 use argon2::password_hash::{rand_core::OsRng, SaltString};
 use argon2::{Argon2, PasswordHasher};
 use sqlx::PgPool;

@@ -1,5 +1,5 @@
 use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
-use crate::app::shared_kernel::common_types::SeasonId;
+use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
 use crate::app::team_creation::domain::creation_rules::{CreationRules, CreationTier};
 use crate::app::team_creation::ports::ICompetitionCreationRulesPort;
 use async_trait::async_trait;

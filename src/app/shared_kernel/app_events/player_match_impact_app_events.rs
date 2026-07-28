@@ -1,5 +1,5 @@
 use crate::common::event_envelope::EventEnvelope;
-use crate::app::shared_kernel::common_types::EventId;
+use crate::app::shared_kernel::identity::ids::EventId;
 use serde::{Deserialize, Serialize};
 
 /// Contexte commun embarqué dans chaque event — suffisant pour reconstruire

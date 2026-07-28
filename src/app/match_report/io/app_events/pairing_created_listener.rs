@@ -2,8 +2,9 @@ use crate::app::match_report::domain::match_report_repository_port::IMatchReport
 use crate::app::match_report::domain::value_objects::MatchReportOrigin;
 use crate::app::match_report::use_cases::create_match_report_use_case;
 use crate::app::shared_kernel::app_events::competitions_app_events::CompetitionsAppEvent;
-use crate::app::shared_kernel::common_types::{CompetitionId, RoundId, SeasonId, SpaceId};
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::identity::ids::SpaceId;
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RoundId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
 

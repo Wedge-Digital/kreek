@@ -1,7 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::shared_kernel::common_types::{CoachId, Entity, UserId};
-use crate::app::shared_kernel::id_service::EntityIdService;
-use crate::app::shared_kernel::team::TeamName;
+use crate::app::shared_kernel::identity::ids::{CoachId, Entity, UserId};
+use crate::app::shared_kernel::identity::id_service::EntityIdService;
+use crate::app::shared_kernel::bloodbowl::team::TeamName;
 use crate::app::team_creation::routes::Routes as TeamRoutes;
 use crate::app::team_creation::use_cases::create_draft_team::create_draft_team;
 use crate::state::AppState;
@@ -57,7 +57,7 @@ pub async fn post_draft_team(
     let logo_url = form
         .logo_url
         .filter(|s| !s.is_empty())
-        .and_then(|u| crate::app::shared_kernel::common_types::CloudinaryImage::try_new(u).ok());
+        .and_then(|u| crate::app::shared_kernel::identity::ids::CloudinaryImage::try_new(u).ok());
 
     if form.competition_id.is_empty() || form.season_id.is_empty() {
         return error_response("Sélectionnez une compétition et une saison.");

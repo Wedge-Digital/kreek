@@ -1,5 +1,5 @@
-use crate::app::shared_kernel::coach_name::CoachNameError;
-use crate::app::shared_kernel::email::EmailError;
+use crate::app::shared_kernel::identity::coach_name::CoachNameError;
+use crate::app::shared_kernel::identity::email::EmailError;
 use std::fmt;
 
 #[derive(Debug)]

@@ -189,7 +189,7 @@ impl TeamDetailVm {
         let roster_info = roster_info_port.find_roster_info(&team.roster_id.to_string());
 
         let roster_logo_url = roster_info.as_ref().and_then(|t| t.logo.as_deref()).map(|url| {
-            crate::app::shared_kernel::cloudinary::transform(
+            crate::app::shared_kernel::identity::cloudinary::transform(
                 url,
                 "c_fill,w_120,h_120,q_auto,f_auto",
             )
@@ -198,7 +198,7 @@ impl TeamDetailVm {
         let reroll_price_kpo = roster_info.map(|t| t.reroll_cost).unwrap_or(50);
 
         let logo_url = team.logo_url.as_deref().map(|url| {
-            crate::app::shared_kernel::cloudinary::transform(
+            crate::app::shared_kernel::identity::cloudinary::transform(
                 url,
                 "c_fill,w_120,h_120,q_auto,f_auto",
             )

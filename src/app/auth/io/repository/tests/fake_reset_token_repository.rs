@@ -1,7 +1,7 @@
 use crate::app::auth::domain::reset_token::{ResetToken, Token};
 use crate::app::auth::io::repository::reset_token_repository::IResetTokenRepository;
 use crate::app::auth::ports::RepositoryError;
-use crate::app::shared_kernel::coach_name::CoachName;
+use crate::app::shared_kernel::identity::coach_name::CoachName;
 use async_trait::async_trait;
 
 pub enum FindResult {

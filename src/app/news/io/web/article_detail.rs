@@ -2,7 +2,7 @@ use crate::app::auth::auth_backend::AuthSession;
 use crate::app::news::domain::article::ArticleParagraph;
 use crate::app::news::domain::comment::Comment;
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::ArticleId;
+use crate::app::shared_kernel::bloodbowl::ids::ArticleId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};

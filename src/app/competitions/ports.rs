@@ -46,9 +46,9 @@ pub trait ICompetitionReferencePort: Send + Sync {
 pub trait ICompetitionSpaceMemberPort: Send + Sync {
     async fn find_member_profile(
         &self,
-        coach_id: &crate::app::shared_kernel::common_types::CoachId,
-        space_id: &crate::app::shared_kernel::common_types::SpaceId,
-    ) -> Option<crate::app::shared_kernel::authorization::SpaceProfile>;
+        coach_id: &crate::app::shared_kernel::identity::ids::CoachId,
+        space_id: &crate::app::shared_kernel::identity::ids::SpaceId,
+    ) -> Option<crate::app::shared_kernel::identity::authorization::SpaceProfile>;
 }
 
 // ── ACL vers le BC `ranking` (catalogue des critères de départage) ─────────────

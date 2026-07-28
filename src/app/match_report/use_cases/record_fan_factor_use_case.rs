@@ -3,7 +3,8 @@ use crate::app::match_report::domain::match_report_repository_port::IMatchReport
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{D3Roll, DedicatedFans, TeamValue};
 use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
-use crate::app::shared_kernel::common_types::{CoachId, MatchReportId};
+use crate::app::shared_kernel::identity::ids::CoachId;
+use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 
 pub struct RecordFanFactorCommand {
     pub match_report_id: MatchReportId,

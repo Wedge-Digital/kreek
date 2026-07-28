@@ -1,5 +1,5 @@
-use crate::app::shared_kernel::common_types::Entity;
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::identity::ids::Entity;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::team_creation::domain::error::DomainError;
 use crate::app::team_creation::domain::roster::Roster;
 use crate::app::team_creation::domain::ruleset::Ruleset;
@@ -18,7 +18,7 @@ impl RulesetSelectedTeam {
         RulesetSelectedTeam { team, ruleset }
     }
 
-    pub fn base_infos(&self) -> &crate::app::shared_kernel::team::BaseTeamInfo {
+    pub fn base_infos(&self) -> &crate::app::shared_kernel::bloodbowl::team::BaseTeamInfo {
         self.team.base_infos()
     }
 

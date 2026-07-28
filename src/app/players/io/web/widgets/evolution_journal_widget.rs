@@ -172,7 +172,7 @@ mod tests {
     use super::*;
     use crate::app::players::domain::player::TeamId;
     use crate::app::players::domain::value_objects::{SkillId, SkillName};
-    use crate::app::shared_kernel::common_types::SpaceId;
+    use crate::app::shared_kernel::identity::ids::SpaceId;
 
     fn initial_skill_event() -> PlayerDomainEvent {
         PlayerDomainEvent::InitialSkillEarned {

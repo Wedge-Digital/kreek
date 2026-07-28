@@ -10,7 +10,7 @@ use crate::app::match_report::io::web::builders::{
 };
 use crate::app::match_report::ports::TeamInfoDto;
 use crate::app::match_report::use_cases::correction_eligibility_service;
-use crate::app::shared_kernel::team::TeamId;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::match_report::io::web::view_models::{
     GainsFanVm, HalfTimelineVm, InjuryRowVm, MatchResultVm, MvpRowVm,
 };
@@ -22,7 +22,7 @@ use crate::app::match_report::use_cases::unpublish_match_report_use_case::{
 };
 use crate::app::match_report::ports::{ICompetitionDataPort, ISpaceAdminPort, ITeamDataPort};
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::MatchReportId;
+use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::auth::domain::user::User;
 use crate::state::AppState;
 use askama::Template;
@@ -538,9 +538,9 @@ mod authorization_tests {
     use crate::app::match_report::ports::{
         JourneymanPositionDto, RosterPositionDto, RoundContextDto, TeamInfoDto, TierRulesDto,
     };
-    use crate::app::shared_kernel::coach_name::CoachName;
-    use crate::app::shared_kernel::common_types::UserId;
-    use crate::app::shared_kernel::email::Email;
+    use crate::app::shared_kernel::identity::coach_name::CoachName;
+    use crate::app::shared_kernel::identity::ids::UserId;
+    use crate::app::shared_kernel::identity::email::Email;
 
     const HOME: &str = "home-team";
     const AWAY: &str = "away-team";

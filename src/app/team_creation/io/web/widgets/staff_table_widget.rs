@@ -1,5 +1,5 @@
-use crate::app::shared_kernel::common_types::EntityId;
-use crate::app::shared_kernel::staff::StaffId;
+use crate::app::shared_kernel::identity::ids::EntityId;
+use crate::app::shared_kernel::bloodbowl::staff::StaffId;
 use crate::app::team_creation::io::web::view_models::{RerollVm, StaffRowVm};
 use crate::app::routes::AppRoutes;
 use crate::app::team_creation::use_cases::build_team::buy_reroll as buy_reroll_uc;

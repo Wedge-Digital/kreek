@@ -1,6 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::{EntityId, SeasonId};
+use crate::app::shared_kernel::identity::ids::EntityId;
+use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
 use crate::app::team_creation::use_cases::commands::SubmitTeamCommand;
 use crate::app::team_creation::use_cases::submit_team as submit_uc;
 use crate::state::AppState;

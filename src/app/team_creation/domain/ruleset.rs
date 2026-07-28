@@ -1,6 +1,6 @@
-use crate::app::shared_kernel::tier::{CreationBudget, TierName};
+use crate::app::shared_kernel::bloodbowl::tier::{CreationBudget, TierName};
 use crate::app::team_creation::domain::error::DomainError;
-use crate::app::shared_kernel::common_types::RosterId;
+use crate::app::shared_kernel::bloodbowl::ids::RosterId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

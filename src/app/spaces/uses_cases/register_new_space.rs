@@ -1,6 +1,6 @@
-use crate::app::shared_kernel::authorization::SpaceProfile;
-use crate::app::shared_kernel::common_types::{CloudinaryImage, CoachId, SpaceId, UserId};
-use crate::app::shared_kernel::space_name::SpaceName;
+use crate::app::shared_kernel::identity::authorization::SpaceProfile;
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, SpaceId, UserId};
+use crate::app::shared_kernel::identity::space_name::SpaceName;
 use crate::app::spaces::domain::domain_event::SpacesDomainEvent;
 use crate::app::spaces::domain::space::Space;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::{
@@ -121,9 +121,9 @@ mod tests {
     }
 
     fn fake_user(coach_id: &CoachId) -> SpaceUser {
-        use crate::app::shared_kernel::coach_name::CoachName;
-        use crate::app::shared_kernel::common_types::CloudinaryImage;
-        use crate::app::shared_kernel::email::Email;
+        use crate::app::shared_kernel::identity::coach_name::CoachName;
+        use crate::app::shared_kernel::identity::ids::CloudinaryImage;
+        use crate::app::shared_kernel::identity::email::Email;
         SpaceUser {
             id: coach_id.clone(),
             name: CoachName::try_new("Coach").unwrap(),

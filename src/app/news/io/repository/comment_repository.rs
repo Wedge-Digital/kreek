@@ -2,7 +2,8 @@ use crate::app::news::domain::comment::Comment;
 use crate::app::news::domain::comment_repository_port::{
     CommentRepositoryError, ICommentRepository,
 };
-use crate::app::shared_kernel::common_types::{ArticleId, CommentId, UserId};
+use crate::app::shared_kernel::identity::ids::UserId;
+use crate::app::shared_kernel::bloodbowl::ids::{ArticleId, CommentId};
 use async_trait::async_trait;
 use sqlx::PgPool;
 

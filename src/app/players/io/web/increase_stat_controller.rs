@@ -4,7 +4,7 @@ use crate::app::players::domain::player::PlayerId;
 use crate::app::players::io::web::purchase_skill_controller::can_spend_spp;
 use crate::app::players::use_cases::commands::IncreaseStatCommand;
 use crate::app::players::use_cases::increase_stat_use_case;
-use crate::app::shared_kernel::common_types::SpaceId;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use axum::body::Body;
 use axum::extract::{Path, State};

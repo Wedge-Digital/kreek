@@ -7,8 +7,8 @@ use crate::app::players::use_cases::match_history_service::{
 };
 use crate::app::players::use_cases::player_stats_service::{self, ResolvedPlayerStats};
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::authorization::SpaceProfile;
-use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
+use crate::app::shared_kernel::identity::authorization::SpaceProfile;
+use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -275,7 +275,7 @@ mod tests {
     use super::*;
     use crate::app::players::domain::player::{AcquiredSkill, AcquisitionMode, Spp, TeamId, ValueKpo};
     use crate::app::players::domain::value_objects::{PositionNameVo, RosterLineId, SkillId, SkillName, SppCost};
-    use crate::app::shared_kernel::common_types::SpaceId;
+    use crate::app::shared_kernel::identity::ids::SpaceId;
 
     fn sample_player_with_spp(spp_earned: u32, skill_costs: &[u8]) -> Player {
         let created = crate::app::players::domain::events::PlayerDomainEvent::PlayerCreated {

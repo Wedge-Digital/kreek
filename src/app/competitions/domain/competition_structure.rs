@@ -1,7 +1,7 @@
-use crate::app::shared_kernel::date_string::DateString;
-use crate::app::shared_kernel::name_vo::NameVo;
-use crate::app::shared_kernel::ranking_group_id::RankingGroupId;
-use crate::app::shared_kernel::timezone::Timezone;
+use crate::app::shared_kernel::bloodbowl::date_string::DateString;
+use crate::app::shared_kernel::identity::name_vo::NameVo;
+use crate::app::shared_kernel::bloodbowl::ranking_group_id::RankingGroupId;
+use crate::app::shared_kernel::bloodbowl::timezone::Timezone;
 use nutype::nutype;
 use serde::{Deserialize, Serialize};
 

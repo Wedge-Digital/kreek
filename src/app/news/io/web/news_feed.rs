@@ -1,6 +1,6 @@
 use crate::app::news::domain::article::Article;
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::common_types::SpaceId;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, Query, State};
