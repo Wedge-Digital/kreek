@@ -203,8 +203,19 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
     );
     ranking::context::init_listeners(&app_event_bus, pool.clone(), ranking_competition_port.clone());
 
+    let email_service = Arc::new(ResendMailService::new(
+        cfg.email.api_key,
+        cfg.email.from,
+        cfg.email.from_name,
+    ));
+
     let state = AppState {
-        auth: AuthContext::new(&pool, event_bus.clone()),
+        auth: AuthContext::new(
+            &pool,
+            event_bus.clone(),
+            email_service,
+            cfg.host_domain,
+        ),
         spaces: SpacesContext::new(&pool, event_bus.clone()),
         competitions: CompetitionsContext::new(
             &pool,
@@ -290,12 +301,6 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             event_bus.clone(),
         ),
         ranking: RankingContext::new(&pool, ranking_competition_port),
-        email_service: Arc::new(ResendMailService::new(
-            cfg.email.api_key,
-            cfg.email.from,
-            cfg.email.from_name,
-        )),
-        host_domain: cfg.host_domain,
         bypass_auth: cfg.bypass_auth,
         event_bus: event_bus.clone(),
         app_event_bus: app_event_bus.clone(),

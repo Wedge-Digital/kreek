@@ -1,6 +1,6 @@
 use crate::app::shared_kernel::common_types::{SpaceId};
 use crate::common::initials::initials;
-use crate::state::AppState;
+use crate::app::spaces::context::SpacesContext;
 use askama::Template;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
@@ -31,15 +31,14 @@ impl IntoResponse for CoachSelectorWidgetTemplate {
 
 pub async fn get_coach_selector_widget(
     Query(query): Query<CoachSelectorQueryParams>,
-    State(state): State<AppState>,
+    State(ctx): State<SpacesContext>,
 ) -> impl IntoResponse {
     let sid = match SpaceId::try_new(&query.space_id) {
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let coaches = state
-        .spaces
+    let coaches = ctx
         .user_cache_repository
         .list_members_for_space(&sid)
         .await

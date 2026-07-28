@@ -1,5 +1,5 @@
 use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
-use crate::state::AppState;
+use crate::app::spaces::context::SpacesContext;
 use askama::Template;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
@@ -37,7 +37,7 @@ impl IntoResponse for CoachSearchTemplate {
 }
 
 pub async fn search_coaches_controller(
-    State(state): State<AppState>,
+    State(ctx): State<SpacesContext>,
     Query(params): Query<CoachSearchWidgetParams>,
 ) -> impl IntoResponse {
     let space_id = match SpaceId::try_new(&params.space_id) {
@@ -48,7 +48,7 @@ pub async fn search_coaches_controller(
     let mut selected_coaches = Vec::new();
     for id_str in params.selected.split(',').filter(|s| !s.is_empty()) {
         if let Ok(coach_id) = CoachId::try_new(id_str) {
-            if let Ok(user) = state.spaces.user_cache_repository.find_user_by_id(&coach_id).await {
+            if let Ok(user) = ctx.user_cache_repository.find_user_by_id(&coach_id).await {
                 let name_str = user.name.to_string();
                 let initials_str = initials(&name_str);
                 selected_coaches.push(CoachDefinition {
@@ -67,7 +67,7 @@ pub async fn search_coaches_controller(
         .filter(|s| !s.is_empty())
         .map(|s| s.to_string())
         .collect();
-    let coaches = find_coaches(&state, &space_id, "", &excluded_set).await;
+    let coaches = find_coaches(&ctx, &space_id, "", &excluded_set).await;
 
     let excluded = params.selected.clone();
 

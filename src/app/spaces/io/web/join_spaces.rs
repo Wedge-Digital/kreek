@@ -1,7 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::shared_kernel::common_types::SpaceId;
 use crate::app::spaces::uses_cases::join_spaces::{execute, JoinSpacesCommand};
-use crate::state::AppState;
+use crate::app::spaces::context::SpacesContext;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -16,7 +16,7 @@ pub struct JoinSpacesForm {
 
 pub async fn join_spaces(
     auth_session: AuthSession,
-    State(state): State<AppState>,
+    State(ctx): State<SpacesContext>,
     Json(payload): Json<JoinSpacesForm>,
 ) -> impl IntoResponse {
     let Some(user) = auth_session.user else {
@@ -38,8 +38,8 @@ pub async fn join_spaces(
 
     if execute(
         cmd,
-        &*state.spaces.space_repository,
-        &state.spaces.event_bus,
+        &*ctx.space_repository,
+        &ctx.event_bus,
     )
     .await
     .is_err()

@@ -7,7 +7,7 @@ use crate::app::spaces::uses_cases::register_new_space::{
     execute, RegisterNewSpaceCommand, RegisterSpaceError,
 };
 use crate::app::routes::AppRoutes;
-use crate::state::AppState;
+use crate::app::spaces::context::SpacesContext;
 use askama::Template;
 use axum::body::Body;
 use axum::extract::State;
@@ -66,7 +66,7 @@ pub struct RegisterSpaceFormPayload {
 
 pub async fn register_space_submit(
     auth_session: AuthSession,
-    State(state): State<AppState>,
+    State(ctx): State<SpacesContext>,
     Form(payload): Form<RegisterSpaceFormPayload>,
 ) -> impl IntoResponse {
     let mut form = NewSpaceFormTemplate {
@@ -115,9 +115,9 @@ pub async fn register_space_submit(
 
     match execute(
         cmd,
-        state.spaces.space_repository.as_ref(),
-        state.spaces.user_cache_repository.as_ref(),
-        &state.event_bus,
+        ctx.space_repository.as_ref(),
+        ctx.user_cache_repository.as_ref(),
+        &ctx.event_bus,
     )
     .await
     {

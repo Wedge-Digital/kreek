@@ -6,7 +6,7 @@ use axum::response::{Html, IntoResponse, Response};
 use crate::app::shared_kernel::common_types::SpaceId;
 use crate::app::shared_kernel::space_definition::SpaceDefinition;
 use crate::app::shared_kernel::space_name::SpaceName;
-use crate::state::AppState;
+use crate::app::spaces::context::SpacesContext;
 
 
 #[derive(Template)]
@@ -17,9 +17,9 @@ pub struct SpacesWidgetPageTesterTemplate {
 }
 
 pub async fn get_space_widget_tester(
-    State(state): State<AppState>,
+    State(ctx): State<SpacesContext>,
 ) -> impl IntoResponse {
-    let spaces = state.spaces.space_repository.find_all()
+    let spaces = ctx.space_repository.find_all()
         .await
         .unwrap_or_default()
         .into_iter()

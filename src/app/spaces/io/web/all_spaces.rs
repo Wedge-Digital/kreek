@@ -1,6 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
-use crate::state::AppState;
+use crate::app::spaces::context::SpacesContext;
 use askama::Template;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -32,15 +32,15 @@ impl IntoResponse for SpaceAllTemplate {
 
 pub async fn space_all(
     auth_session: AuthSession,
-    State(state): State<AppState>,
+    State(ctx): State<SpacesContext>,
 ) -> impl IntoResponse {
     let Some(user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
 
     let (all, member_of) = tokio::try_join!(
-        state.spaces.space_repository.find_all(),
-        state.spaces.space_repository.find_by_coach_id(&user.id),
+        ctx.space_repository.find_all(),
+        ctx.space_repository.find_by_coach_id(&user.id),
     )
     .unwrap_or_default();
 

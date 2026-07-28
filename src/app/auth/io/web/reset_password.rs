@@ -3,7 +3,7 @@ use crate::app::auth::routes::{path, Routes};
 use crate::app::auth::use_cases::reset_password::{
     execute, ResetPasswordCommand, ResetPasswordError,
 };
-use crate::state::AppState;
+use crate::app::auth::context::AuthContext;
 use askama::Template;
 use axum::body::Body;
 use axum::extract::{Path, State};
@@ -59,7 +59,7 @@ pub struct UpdatePasswordPayload {
 }
 
 pub async fn post_reset_password(
-    State(state): State<AppState>,
+    State(ctx): State<AuthContext>,
     Path(reset_token): Path<String>,
     Form(payload): Form<UpdatePasswordPayload>,
 ) -> impl IntoResponse {
@@ -71,8 +71,8 @@ pub async fn post_reset_password(
 
     match execute(
         cmd,
-        state.auth.user_repository.as_ref(),
-        state.auth.reset_token_repository.as_ref(),
+        ctx.user_repository.as_ref(),
+        ctx.reset_token_repository.as_ref(),
     )
     .await
     {

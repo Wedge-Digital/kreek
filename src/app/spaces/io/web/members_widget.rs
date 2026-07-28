@@ -1,5 +1,5 @@
 use crate::app::shared_kernel::common_types::SpaceId;
-use crate::state::AppState;
+use crate::app::spaces::context::SpacesContext;
 use askama::Template;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
@@ -44,7 +44,7 @@ pub struct MembersWidgetQuery {
 pub async fn get_members_widget(
     Path(space_id): Path<String>,
     Query(query): Query<MembersWidgetQuery>,
-    State(state): State<AppState>,
+    State(ctx): State<SpacesContext>,
 ) -> impl IntoResponse {
     let sid = match SpaceId::try_new(&space_id) {
         Ok(id) => id,
@@ -69,8 +69,7 @@ pub async fn get_members_widget(
         .map(String::from)
         .collect();
 
-    let cached = state
-        .spaces
+    let cached = ctx
         .user_cache_repository
         .list_members_for_space(&sid)
         .await

@@ -3,14 +3,20 @@ use crate::app::spaces::io::web::join_spaces::join_spaces;
 use crate::app::spaces::io::web::widget_tester_controller::get_space_widget_tester;
 use crate::app::spaces::io::web::register_space::{register_space, register_space_submit};
 use crate::app::spaces::routes::path;
-use crate::state::AppState;
+use crate::app::spaces::context::SpacesContext;
+use axum::extract::FromRef;
 use axum::routing::{get, post};
 use axum::Router;
 use crate::app::spaces::io::web::controllers::widgets::coach_search::search_coaches_controller;
 use crate::app::spaces::io::web::controllers::widgets::coach_search_results::coaches_search_results_controller;
 use crate::app::spaces::io::web::controllers::widgets::coach_select::get_coach_selector_widget;
 
-pub fn router() -> Router<AppState> {
+/// Générique sur l'état de l'application hôte — cf. `auth::router`.
+pub fn router<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    SpacesContext: FromRef<S>,
+{
     Router::new()
         .route(
             path::NEW_SPACE,

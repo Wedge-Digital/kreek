@@ -4,7 +4,7 @@ use crate::app::auth::use_cases::send_reset_password_email::{
     execute, SendResetPasswordEmailCommand, SendResetPasswordEmailError,
 };
 use crate::app::shared_kernel::coach_name::CoachName;
-use crate::state::AppState;
+use crate::app::auth::context::AuthContext;
 use askama::Template;
 use axum::body::Body;
 use axum::extract::State;
@@ -78,7 +78,7 @@ pub struct LostPasswordPayload {
 }
 
 pub async fn post_forgot_password(
-    State(state): State<AppState>,
+    State(ctx): State<AuthContext>,
     Form(payload): Form<LostPasswordPayload>,
 ) -> impl IntoResponse {
     let coach_name = match CoachName::try_new(&payload.coach_name) {
@@ -95,11 +95,11 @@ pub async fn post_forgot_password(
     match execute(
         SendResetPasswordEmailCommand {
             coach_name,
-            host_domain: state.host_domain.clone(),
+            host_domain: ctx.host_domain.clone(),
         },
-        state.auth.user_repository.as_ref(),
-        state.auth.reset_token_repository.as_ref(),
-        state.email_service.as_ref(),
+        ctx.user_repository.as_ref(),
+        ctx.reset_token_repository.as_ref(),
+        ctx.email_service.as_ref(),
     )
     .await
     {

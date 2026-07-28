@@ -1,5 +1,5 @@
 use crate::app::shared_kernel::common_types::{CoachId, SpaceId};
-use crate::state::AppState;
+use crate::app::spaces::context::SpacesContext;
 use askama::Template;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
@@ -38,15 +38,14 @@ impl IntoResponse for CoachSearchResultsTemplate {
 }
 
 pub(crate) async fn find_coaches(
-    state: &AppState,
+    ctx: &SpacesContext,
     space_id: &SpaceId,
     query: &str,
     excluded: &std::collections::HashSet<String>,
 ) -> Vec<CoachDefinition> {
     let query = query.trim().to_lowercase();
 
-    let all_members = state
-        .spaces
+    let all_members = ctx
         .user_cache_repository
         .list_members_for_space(space_id)
         .await
@@ -74,7 +73,7 @@ pub(crate) async fn find_coaches(
 }
 
 pub async fn coaches_search_results_controller(
-    State(state): State<AppState>,
+    State(ctx): State<SpacesContext>,
     Query(params): Query<SearchParams>,
 ) -> impl IntoResponse {
     let sid = match SpaceId::try_new(&params.space_id) {
@@ -89,7 +88,7 @@ pub async fn coaches_search_results_controller(
         .map(|s| s.to_string())
         .collect();
 
-    let coaches = find_coaches(&state, &sid, &params.q, &excluded).await;
+    let coaches = find_coaches(&ctx, &sid, &params.q, &excluded).await;
 
     CoachSearchResultsTemplate {
         routes: AppRoutes::default(),

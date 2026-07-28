@@ -11,10 +11,18 @@ use crate::app::auth::io::web::post_logout::logout;
 use crate::app::auth::io::web::post_register::post_register;
 use crate::app::auth::io::web::reset_password::{display_reset_password, post_reset_password};
 use crate::app::auth::routes::path;
-use crate::state::AppState;
+use crate::app::auth::context::AuthContext;
+use axum::extract::FromRef;
 use axum::{routing::get, Router};
 
-pub fn router() -> Router<AppState> {
+/// Générique sur l'état de l'application hôte : le BC n'a pas à connaître
+/// `AppState`, il exige seulement qu'on sache en projeter son contexte. C'est
+/// ce qui rend le routeur copiable tel quel dans un autre projet.
+pub fn router<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    AuthContext: FromRef<S>,
+{
     Router::new()
         .route(path::AUTH_LAYOUT, get(auth_layout))
         .route(path::LOGIN, get(login_form).post(login_submit))

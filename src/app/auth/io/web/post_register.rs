@@ -3,14 +3,14 @@ use crate::app::auth::io::web::get_register_success::RegisterFormPayload;
 use crate::app::auth::routes::path;
 use crate::app::auth::use_cases::register_new_acount;
 use crate::app::auth::use_cases::register_new_acount::{RegisterCommand, RegisterError};
-use crate::state::AppState;
+use crate::app::auth::context::AuthContext;
 use axum::body::Body;
 use axum::extract::State;
 use axum::response::{IntoResponse, Response};
 use axum::Form;
 
 pub async fn post_register(
-    State(state): State<AppState>,
+    State(ctx): State<AuthContext>,
     Form(payload): Form<RegisterFormPayload>,
 ) -> Response {
     let cmd = RegisterCommand {
@@ -20,7 +20,7 @@ pub async fn post_register(
         password_confirm: payload.password_confirm.clone(),
     };
 
-    match register_new_acount::execute(cmd, state.auth.user_repository.as_ref(), &state.event_bus)
+    match register_new_acount::execute(cmd, ctx.user_repository.as_ref(), &ctx.event_bus)
         .await
     {
         Ok(()) => Response::builder()
