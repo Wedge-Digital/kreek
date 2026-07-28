@@ -1,11 +1,9 @@
-use crate::app::competitions::domain::domain_event::CompetitionsDomainEvent;
 use crate::app::competitions::domain::match_day::{MatchDay, MatchDayName, MatchDayPosition, MatchDayType};
 use crate::app::competitions::use_cases::admin::{
     add_match_use_case, delete_pairing_use_case, generate_all_pairings, generate_pairings,
 };
-use crate::app::shared_kernel::common_types::{EventId, MatchId, SeasonId};
+use crate::app::shared_kernel::common_types::{MatchId, SeasonId};
 use crate::app::shared_kernel::date_string::DateString;
-use crate::common::services::event_bus::event_bus::EventBus;
 use crate::state::AppState;
 use axum::body::Body;
 use axum::extract::{Path, State};
@@ -13,18 +11,6 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::{Deserialize, Serialize};
-
-fn emit_pairing_deleted_events(bus: &EventBus, pairing_ids: &[String]) {
-    for pid in pairing_ids {
-        let _ = bus.send(
-            CompetitionsDomainEvent::PairingDeleted {
-                event_id: EventId::new(),
-                pairing_id: pid.clone(),
-            }
-            .to_enveloppe(),
-        );
-    }
-}
 
 fn schedule_changed() -> Response {
     Response::builder()
@@ -41,6 +27,25 @@ struct ScheduleActionResult {
     skipped_rounds: Vec<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     skipped_groups: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    skipped_matches: Vec<String>,
+}
+
+/// Suppression en masse : les rencontres à rapport publié sont conservées, le
+/// reste est supprimé. L'admin doit savoir lesquelles ont résisté.
+fn schedule_changed_with_kept(kept: Vec<delete_pairing_use_case::KeptMatch>) -> Response {
+    let skipped_matches = kept
+        .into_iter()
+        .map(|m| format!("{} – {} ({})", m.home_team_name, m.away_team_name, m.round_name))
+        .collect();
+
+    let mut response = Json(ScheduleActionResult {
+        skipped_matches,
+        ..Default::default()
+    })
+    .into_response();
+    response.headers_mut().insert("HX-Trigger", "scheduleChanged".parse().unwrap());
+    response
 }
 
 /// Même effet que `schedule_changed()`, en signalant en plus à l'admin les
@@ -48,7 +53,13 @@ struct ScheduleActionResult {
 /// régénérées car elles avaient déjà des appariements, et/ou les poules sans
 /// effectif suffisant (< 2 équipes assignées, aucun appariement possible).
 fn schedule_changed_with_warning(skipped_teams: Vec<String>, skipped_rounds: Vec<String>, skipped_groups: Vec<String>) -> Response {
-    let mut response = Json(ScheduleActionResult { skipped_teams, skipped_rounds, skipped_groups }).into_response();
+    let mut response = Json(ScheduleActionResult {
+        skipped_teams,
+        skipped_rounds,
+        skipped_groups,
+        skipped_matches: vec![],
+    })
+    .into_response();
     response.headers_mut().insert("HX-Trigger", "scheduleChanged".parse().unwrap());
     response
 }
@@ -99,27 +110,16 @@ pub async fn post_clear_all(
     Path((_space_id, _competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> Response {
-    let all_days = state
-        .competitions
-        .match_day_repository
-        .find_by_season(&season_id)
-        .await
-        .unwrap_or_default();
-    let pairing_ids: Vec<String> = all_days
-        .iter()
-        .flat_map(|d| d.pairings.iter().map(|p| p.id.to_string()))
-        .collect();
-
-    match state
-        .competitions
-        .match_day_repository
-        .clear_all_pairings(&season_id)
-        .await
+    match delete_pairing_use_case::clear_season(
+        &season_id,
+        state.competitions.match_day_repository.as_ref(),
+        state.competitions.match_report_status_port.as_ref(),
+        state.competitions.team_info_port.as_ref(),
+        &state.competitions.event_bus,
+    )
+    .await
     {
-        Ok(()) => {
-            emit_pairing_deleted_events(&state.competitions.event_bus, &pairing_ids);
-            schedule_changed()
-        }
+        Ok(kept) => schedule_changed_with_kept(kept),
         Err(e) => {
             tracing::error!("post_clear_all: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -310,28 +310,16 @@ pub async fn delete_round(
     Path((_space_id, _competition_id, _season_id, round_id)): Path<(String, String, String, String)>,
     State(state): State<AppState>,
 ) -> Response {
-    let match_day = state
-        .competitions
-        .match_day_repository
-        .find_by_id(&round_id)
-        .await
-        .ok()
-        .flatten();
-    let pairing_ids: Vec<String> = match_day
-        .iter()
-        .flat_map(|d| d.pairings.iter().map(|p| p.id.to_string()))
-        .collect();
-
-    match state
-        .competitions
-        .match_day_repository
-        .delete_match_day(&round_id)
-        .await
+    match delete_pairing_use_case::delete_round(
+        &round_id,
+        state.competitions.match_day_repository.as_ref(),
+        state.competitions.match_report_status_port.as_ref(),
+        state.competitions.team_info_port.as_ref(),
+        &state.competitions.event_bus,
+    )
+    .await
     {
-        Ok(()) => {
-            emit_pairing_deleted_events(&state.competitions.event_bus, &pairing_ids);
-            schedule_changed()
-        }
+        Ok(kept) => schedule_changed_with_kept(kept),
         Err(e) => {
             tracing::error!("delete_round: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -379,28 +367,16 @@ pub async fn post_clear_round_pairings(
     State(state): State<AppState>,
     axum::Json(body): axum::Json<RoundIdBody>,
 ) -> Response {
-    let match_day = state
-        .competitions
-        .match_day_repository
-        .find_by_id(&body.round_id)
-        .await
-        .ok()
-        .flatten();
-    let pairing_ids: Vec<String> = match_day
-        .iter()
-        .flat_map(|d| d.pairings.iter().map(|p| p.id.to_string()))
-        .collect();
-
-    match state
-        .competitions
-        .match_day_repository
-        .clear_pairings(&body.round_id)
-        .await
+    match delete_pairing_use_case::clear_round(
+        &body.round_id,
+        state.competitions.match_day_repository.as_ref(),
+        state.competitions.match_report_status_port.as_ref(),
+        state.competitions.team_info_port.as_ref(),
+        &state.competitions.event_bus,
+    )
+    .await
     {
-        Ok(()) => {
-            emit_pairing_deleted_events(&state.competitions.event_bus, &pairing_ids);
-            schedule_changed()
-        }
+        Ok(kept) => schedule_changed_with_kept(kept),
         Err(e) => {
             tracing::error!("post_clear_round_pairings: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()

@@ -8,7 +8,9 @@ Deux règles y sont vérifiées :
   `MatchReporting` (BC `teams`), et la seule autre sortie de cette phase est la
   publication du rapport ;
 - un rapport **publié** interdit la suppression — le match resterait au
-  classement tout en disparaissant du calendrier.
+  classement tout en disparaissant du calendrier ;
+- une suppression en masse (« vider les matchs ») épargne les rencontres
+  publiées et en rend compte à l'admin.
 
 Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true).
 """
@@ -17,6 +19,7 @@ import time
 
 import pytest
 import requests
+from playwright.sync_api import Page
 
 from competition_lifecycle import BASE_URL, build_full_competition
 from db_helpers import query_db
@@ -47,6 +50,19 @@ def _first_pairing(season_id: str, round_id: str) -> dict:
     assert rows, f"aucun pairing projeté pour la journée {round_id}"
     pairing_id, home_team_id, away_team_id = rows[0].split("|")
     return {"pairing_id": pairing_id, "home": home_team_id, "away": away_team_id}
+
+
+def _pairings_of(season_id: str, round_id: str) -> list[dict]:
+    rows = query_db(
+        "SELECT pairing_id, home_team_id, away_team_id "
+        "FROM competition_match_display_proj "
+        f"WHERE season_id = '{season_id}' AND round_id = '{round_id}' "
+        "ORDER BY pairing_id"
+    )
+    return [
+        dict(zip(("pairing_id", "home", "away"), row.split("|")))
+        for row in rows
+    ]
 
 
 def _report_id_of_pairing(pairing_id: str) -> str | None:
@@ -92,6 +108,18 @@ def deletion_ctx(browser, space_id):
 
 
 @pytest.fixture(scope="module")
+def bulk_ctx(browser, space_id):
+    """Compétition dédiée au vidage d'une journée : il faut deux rencontres sur
+    la même journée, dont une seule publiée."""
+    full = build_full_competition(browser, space_id, num_teams=4, num_rounds=1)
+    return {
+        "competition_id": full["competition_id"],
+        "season_id": full["season_id"],
+        "round_ids": full["round_ids"],
+    }
+
+
+@pytest.fixture(scope="module")
 def published_ctx(browser, space_id):
     """Compétition dédiée au scénario « rapport publié ».
 
@@ -106,7 +134,7 @@ def published_ctx(browser, space_id):
     }
 
 
-# ── Test ──────────────────────────────────────────────────────────────────────
+# ── Tests ─────────────────────────────────────────────────────────────────────
 
 
 def test_suppression_pairing_annule_le_rapport_et_libere_les_equipes(space_id, deletion_ctx):
@@ -174,3 +202,45 @@ def test_un_rapport_publie_interdit_la_suppression_du_pairing(space_id, publishe
     assert detail.status_code == 200, f"widget round-detail : {detail.status_code}"
     assert "match-row-locked" in detail.text
     assert "match-row-delete" not in detail.text
+
+
+def test_vider_une_journee_conserve_les_rencontres_publiees(page: Page, space_id, bulk_ctx):
+    round_id = bulk_ctx["round_ids"][0]
+    pairings = _pairings_of(bulk_ctx["season_id"], round_id)
+    assert len(pairings) >= 2, "il faut au moins deux rencontres sur la journée"
+    publie, supprimable = pairings[0], pairings[1]
+
+    mr_id = play_match(space_id, bulk_ctx, round_id, publie["home"], publie["away"])
+    _wait(lambda: _phase(mr_id) == "Published", "le rapport doit être publié")
+
+    page.goto(
+        f"{BASE_URL}/app/{space_id}/competitions/{bulk_ctx['competition_id']}"
+        f"/{bulk_ctx['season_id']}/admin/schedule",
+        wait_until="load",
+    )
+    page.locator(".round-item").first.click()
+    page.wait_for_selector(".match-list")
+
+    # Le compte-rendu passe par un alert() : sans le branchement sur
+    # handleScheduleActionResponse, aucune boîte ne s'ouvre et rien ne signale
+    # que des rencontres ont résisté.
+    messages = []
+    page.on("dialog", lambda d: (messages.append(d.message), d.accept()))
+    page.locator(".btn-danger-sm", has_text="Vider les matchs").click()
+
+    # `page.wait_for_timeout` et non `time.sleep` : en API synchrone, les
+    # événements Playwright (dont les dialogues) ne sont dépilés que pendant un
+    # appel Playwright.
+    for _ in range(30):
+        if messages:
+            break
+        page.wait_for_timeout(300)
+
+    assert messages, "un compte-rendu doit être affiché"
+    assert "conservée(s)" in messages[0], messages[0]
+
+    reste = query_db(
+        "SELECT id FROM competition_match_day_pairings "
+        f"WHERE id IN ('{publie['pairing_id']}', '{supprimable['pairing_id']}')"
+    )
+    assert reste == [publie["pairing_id"]], "seule la rencontre publiée doit subsister"

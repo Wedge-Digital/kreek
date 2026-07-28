@@ -19,7 +19,8 @@
       <button class="btn-danger-sm"
               hx-post="{{ app_routes.competitions.admin_schedule_clear_all(space_id, competition_id, season_id) }}"
               hx-swap="none"
-              hx-confirm="Vider tous les matchs de toutes les journées ?">Vider tous les matchs</button>
+              hx-confirm="Vider tous les matchs de toutes les journées ?"
+              hx-on::after-request="window.handleScheduleActionResponse(event.detail.xhr)">Vider tous les matchs</button>
       <button class="btn-primary-sm"
               hx-post="{{ app_routes.competitions.admin_schedule_generate_all(space_id, competition_id, season_id) }}"
               hx-swap="none"
@@ -74,6 +75,9 @@ window.handleScheduleActionResponse = function (xhrLike) {
     }
     if (data.skipped_rounds && data.skipped_rounds.length) {
         messages.push("Journée(s) déjà pourvue(s) d'appariements, non régénérée(s) : " + data.skipped_rounds.join(', '));
+    }
+    if (data.skipped_matches && data.skipped_matches.length) {
+        messages.push("Rencontre(s) conservée(s), rapport de match déjà publié : " + data.skipped_matches.join(', '));
     }
     if (data.skipped_groups && data.skipped_groups.length) {
         messages.push("Poule(s) sans effectif suffisant (moins de 2 équipes assignées), aucun appariement généré : " + data.skipped_groups.join(', '));

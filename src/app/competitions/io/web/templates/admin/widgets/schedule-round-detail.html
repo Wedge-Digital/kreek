@@ -64,7 +64,7 @@
     </span>
     <div class="match-actions-right">
       <button class="btn-danger-sm"
-              onclick="fetch('{{ app_routes.competitions.admin_schedule_clear_round(space_id, competition_id, season_id) }}',{method:'POST',headers:{'Content-Type':'application/json','HX-Request':'true'},body:JSON.stringify({round_id:'{{ detail.round_id }}'})}).then(function(){htmx.trigger(document.body,'scheduleChanged')})">Vider les matchs</button>
+              onclick="fetch('{{ app_routes.competitions.admin_schedule_clear_round(space_id, competition_id, season_id) }}',{method:'POST',headers:{'Content-Type':'application/json','HX-Request':'true'},body:JSON.stringify({round_id:'{{ detail.round_id }}'})}).then(function(r){return r.text().then(function(t){return {status:r.status,responseText:t};});}).then(function(res){if(window.handleScheduleActionResponse(res))htmx.trigger(document.body,'scheduleChanged');})">Vider les matchs</button>
       <button class="btn-primary-sm"
               onclick="fetch('{{ app_routes.competitions.admin_schedule_generate_round(space_id, competition_id, season_id) }}',{method:'POST',headers:{'Content-Type':'application/json','HX-Request':'true'},body:JSON.stringify({round_id:'{{ detail.round_id }}'})}).then(function(r){return r.text().then(function(t){return {status:r.status,responseText:t};});}).then(function(res){if(window.handleScheduleActionResponse(res))htmx.trigger(document.body,'scheduleChanged');})">Générer les rencontres</button>
       <button class="btn-outline-sm"
@@ -189,7 +189,8 @@
     <button class="btn-danger-sm"
             hx-delete="{{ app_routes.competitions.admin_schedule_round(space_id, competition_id, season_id, detail.round_id) }}"
             hx-swap="none"
-            hx-confirm="Supprimer cette journée et tous ses matchs ?">Supprimer la journée</button>
+            hx-confirm="Supprimer cette journée et tous ses matchs ?"
+            hx-on::after-request="window.handleScheduleActionResponse(event.detail.xhr)">Supprimer la journée</button>
   </div>
   {% endif %}
 </div>
