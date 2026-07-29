@@ -1,22 +1,22 @@
 use crate::app::teams::domain::team::Team;
 use crate::app::teams::domain::team_value::{compute_team_value, TeamValueInputs, ValuedPlayer};
 use crate::app::teams::domain::value_objects::Kpo;
-use crate::app::teams::ports::{IJourneymanTypePort, IPlayerValuePort, IRosterCatalogPort};
+use crate::app::teams::ports::{IJourneymanTypePort, IRosterCatalogPort, ISquadPort};
 
 /// Recalcule la valeur d'une équipe à partir de son effectif réel et des prix
 /// du corpus de référence.
 ///
 /// C'est ici que s'arrête la connaissance des ports : le domaine reçoit des
 /// `TeamValueInputs`, jamais un DTO. Aucun handler, aucun template ne voit
-/// `PlayerValueDto` ni `RosterCatalogDto`.
+/// `SquadMemberDto` ni `RosterCatalogDto`.
 pub async fn resolve_team_value(
     team: &Team,
-    player_value_port: &dyn IPlayerValuePort,
+    squad_port: &dyn ISquadPort,
     roster_catalog_port: &dyn IRosterCatalogPort,
     journeyman_type_port: &dyn IJourneymanTypePort,
 ) -> Kpo {
     let roster_id = team.roster_id.0.as_str();
-    let players = load_players(team, player_value_port).await;
+    let players = load_players(team, squad_port).await;
     let journeyman = journeyman_type_port.journeyman_type_for_roster(roster_id);
     let roster = roster_catalog_port.find_catalog(roster_id);
 
@@ -24,8 +24,8 @@ pub async fn resolve_team_value(
     compute_team_value(&inputs)
 }
 
-async fn load_players(team: &Team, port: &dyn IPlayerValuePort) -> Vec<ValuedPlayer> {
-    port.find_valued_players(&team.id.to_string())
+async fn load_players(team: &Team, port: &dyn ISquadPort) -> Vec<ValuedPlayer> {
+    port.find_squad(&team.id.to_string())
         .await
         .into_iter()
         .map(|p| ValuedPlayer {

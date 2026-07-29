@@ -33,11 +33,16 @@ pub async fn get_team_match_context_json(
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
 
+    // `ISquadPort` a remplacé le port de comptage : on charge l'effectif pour
+    // en prendre la taille. Un `COUNT(*)` était plus direct, mais deux ports
+    // vers la même source coûtaient plus cher à maintenir que ce chargement —
+    // seize joueurs au plus.
     let player_count = state
         .teams
-        .player_count_port
-        .count_for_team(&query.team_id)
-        .await;
+        .squad_port
+        .find_squad(&query.team_id)
+        .await
+        .len() as u32;
 
     let journeyman_type = state
         .teams

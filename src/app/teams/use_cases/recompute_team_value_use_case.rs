@@ -1,6 +1,6 @@
 use crate::app::teams::domain::team::TeamDomainEvent;
 use crate::app::teams::ports::{
-    IJourneymanTypePort, IPlayerValuePort, IRosterCatalogPort, ITeamRepository,
+    IJourneymanTypePort, IRosterCatalogPort, ISquadPort, ITeamRepository,
 };
 use crate::app::teams::use_cases::team_value_service::resolve_team_value;
 
@@ -18,7 +18,7 @@ pub enum RecomputeTeamValueError {
 pub async fn execute(
     team_id: &str,
     repo: &dyn ITeamRepository,
-    player_value_port: &dyn IPlayerValuePort,
+    squad_port: &dyn ISquadPort,
     roster_catalog_port: &dyn IRosterCatalogPort,
     journeyman_type_port: &dyn IJourneymanTypePort,
 ) -> Result<(), RecomputeTeamValueError> {
@@ -28,13 +28,8 @@ pub async fn execute(
         .map_err(|e| RecomputeTeamValueError::Repository(e.to_string()))?
         .ok_or(RecomputeTeamValueError::TeamNotFound)?;
 
-    let value = resolve_team_value(
-        &team,
-        player_value_port,
-        roster_catalog_port,
-        journeyman_type_port,
-    )
-    .await;
+    let value =
+        resolve_team_value(&team, squad_port, roster_catalog_port, journeyman_type_port).await;
 
     let event = TeamDomainEvent::TeamValueRecomputed { value };
     repo.append(team_id, &event, team.version)

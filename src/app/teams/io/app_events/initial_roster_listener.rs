@@ -1,6 +1,6 @@
 use crate::app::shared_kernel::app_events::players_app_events::PlayersAppEvent;
 use crate::app::teams::ports::{
-    IJourneymanTypePort, IPlayerValuePort, IRosterCatalogPort, ITeamRepository,
+    IJourneymanTypePort, IRosterCatalogPort, ISquadPort, ITeamRepository,
 };
 use crate::app::teams::use_cases::recompute_team_value_use_case;
 use crate::common::services::event_bus::event_bus::EventBus;
@@ -24,7 +24,7 @@ use std::sync::Arc;
 pub fn init(
     app_event_bus: &EventBus,
     repo: Arc<dyn ITeamRepository>,
-    player_value_port: Arc<dyn IPlayerValuePort>,
+    squad_port: Arc<dyn ISquadPort>,
     roster_catalog_port: Arc<dyn IRosterCatalogPort>,
     journeyman_type_port: Arc<dyn IJourneymanTypePort>,
 ) {
@@ -41,7 +41,7 @@ pub fn init(
                     if let Err(e) = recompute_team_value_use_case::execute(
                         &team_id,
                         repo.as_ref(),
-                        player_value_port.as_ref(),
+                        squad_port.as_ref(),
                         roster_catalog_port.as_ref(),
                         journeyman_type_port.as_ref(),
                     )

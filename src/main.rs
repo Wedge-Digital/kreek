@@ -168,9 +168,6 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
     );
     team_creation::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
     let references = load_references(&cfg);
-    let teams_player_count = Arc::new(
-        crate::infrastructure::teams::player_count_adapter::PlayerCountAdapter::new(pool.clone()),
-    );
     let teams_journeyman_type = Arc::new(
         crate::infrastructure::teams::journeyman_type_adapter::JourneymanTypeAdapter::new(
             references.repository.clone(),
@@ -181,14 +178,13 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             references.repository.clone(),
         ),
     );
-    let teams_player_value = Arc::new(
-        crate::infrastructure::teams::player_value_adapter::PlayerValueAdapter::new(pool.clone()),
-    );
+    let teams_squad =
+        Arc::new(crate::infrastructure::teams::squad_adapter::SquadAdapter::new(pool.clone()));
     teams::context::init_listeners(
         &app_event_bus,
         &event_bus,
         pool.clone(),
-        teams_player_value.clone(),
+        teams_squad.clone(),
         teams_roster_catalog.clone(),
         teams_journeyman_type.clone(),
     );
@@ -327,10 +323,9 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             TeamsContext::new(
                 &pool,
                 event_bus.clone(),
-                teams_player_count,
                 teams_journeyman_type,
                 teams_roster_catalog,
-                teams_player_value,
+                teams_squad,
             )
         },
         players: PlayersContext::new(

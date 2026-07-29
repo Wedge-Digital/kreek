@@ -1,29 +1,32 @@
 use crate::app::teams::domain::team::{GamePhase, Team, TeamDomainEvent};
 use async_trait::async_trait;
 
-#[async_trait]
-pub trait IPlayerCountPort: Send + Sync {
-    async fn count_for_team(&self, team_id: &str) -> u32;
-}
-
 // ── ACL vers le BC `players` (valeur de l'effectif, pour le calcul de la TV) ───
 
-/// Un joueur, vu par `teams` : ce qu'il vaut, et s'il tiendra sa place au
-/// prochain match.
+/// Un joueur de l'effectif, vu par `teams`.
 ///
 /// `available_for_next_match` est délibérément un booléen et non le statut de
 /// `players` : traduire le vocabulaire de l'autre BC est le rôle de l'adapter.
-/// La règle « un indisponible vaut zéro et appelle un journalier » est, elle,
-/// une règle de `teams` et vit dans son domaine.
-pub struct PlayerValueDto {
+/// Les règles qui s'en déduisent — « un indisponible vaut zéro et appelle un
+/// journalier » — sont, elles, des règles de `teams` et vivent dans son domaine.
+pub struct SquadMemberDto {
     pub player_id: String,
+    pub roster_line_id: String,
+    pub personal_name: String,
+    pub position_name: String,
+    pub spp: u32,
     pub value_kpo: u32,
     pub available_for_next_match: bool,
 }
 
+/// Consultation de l'effectif. Rend l'effectif **entier**, drapeau de
+/// disponibilité compris, et laisse l'appelant filtrer : le brouillon de
+/// recrutement compte les quotas par poste sur tout l'effectif, quand le calcul
+/// de valeur d'équipe ne somme que les disponibles. Un port qui filtrerait à la
+/// source servirait l'un et trahirait l'autre.
 #[async_trait]
-pub trait IPlayerValuePort: Send + Sync {
-    async fn find_valued_players(&self, team_id: &str) -> Vec<PlayerValueDto>;
+pub trait ISquadPort: Send + Sync {
+    async fn find_squad(&self, team_id: &str) -> Vec<SquadMemberDto>;
 }
 
 // ── ACL vers le BC `references` (roster, staff, journalier) ────────────────────
