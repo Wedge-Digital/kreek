@@ -1,0 +1,69 @@
+{# Panier de recrutement. Panneau ordinaire au desktop, barre du bas repliable
+   sous 768px — le total et la validation restent sous les yeux pendant qu'on
+   parcourt les tableaux. #}
+<link rel="stylesheet" href="/static/css/widgets/recruitment.css">
+<div class="rec-cart" hx-disinherit="*">
+
+  {# Emplacement des erreurs de mutation, vidé à chaque rendu réussi. #}
+  <div id="rec-cart-error"></div>
+
+  {% if vm.concurrent_notice %}
+  <div class="alert alert--warn">
+    <span>⚠️</span>
+    <span>Le panier a été modifié ailleurs. Voici l'état à jour — refais ton
+      geste si besoin.</span>
+  </div>
+  {% endif %}
+
+  <div class="side-actions"
+       x-data="{ open: false, init() { this.open = window.innerWidth > 768 } }"
+       x-bind:class="{ 'is-open': open }">
+
+    <button class="cart-head" x-on:click="open = !open" x-bind:aria-expanded="open">
+      <span class="panel-title">Panier{% if !vm.lines.is_empty() %}<span class="cart-count"> · {{ vm.lines.len() }}</span>{% endif %}</span>
+      <span class="cart-chevron">▾</span>
+    </button>
+
+    <div class="cart-body">
+      <div class="panel-sub">Retirez une ligne tant que la phase n'est pas validée.</div>
+
+      {% if vm.lines.is_empty() %}
+      <div class="purse-empty">Panier vide — rien ne sera débité.</div>
+      {% else %}
+      {% for line in vm.lines %}
+      <div class="purse-row{% if line.is_last %} purse-row--fresh{% endif %}">
+        <span>{{ line.label }}</span>
+        <span class="purse-end">
+          <span>− {{ line.price_kpo }} kPo</span>
+          <button class="cart-remove"
+                  hx-post="{% if line.is_staff %}{{ vm.remove_staff_url() }}{% else %}{{ vm.remove_player_url() }}{% endif %}"
+                  hx-vals='{"line_id": "{{ line.line_id }}", "version": {{ vm.version }}}'
+                  hx-target="closest .rec-side"
+                  hx-swap="innerHTML"
+                  aria-label="Retirer {{ line.label }} du panier"
+                  title="Retirer du panier">×</button>
+        </span>
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+
+    <div class="purse-row purse-row--total{% if vm.is_low %} is-low{% endif %}">
+      <span>Reste après achats</span>
+      <span class="purse-amount">{{ vm.remaining_kpo }} kPo</span>
+    </div>
+
+    <button class="cta-primary"
+            hx-post="{{ vm.validate_url() }}"
+            hx-target="closest .rec-side"
+            hx-swap="none">{{ vm.cta_label }}</button>
+  </div>
+
+  <div class="alert alert--info">
+    <span>💡</span>
+    <span>Rien n'est débité tant que la phase n'est pas validée : le panier
+      reste modifiable. <strong>Une fois validé, aucun retour en arrière</strong>
+      — renvoyer un joueur ne rembourse rien.</span>
+  </div>
+
+</div>

@@ -124,16 +124,18 @@ impl BannerVm {
                         .validate_improvement_phase(space_id, &team_id),
                 }],
             }),
+            // La validation de phase vit dans le panier, pas ici : depuis la
+            // bannière, le coach clôturerait ses achats sans avoir vu ce qu'il
+            // valide — et un refus en bloc tomberait sans qu'il comprenne
+            // pourquoi.
             (Enrolled, Some(Recruitment)) => Some(Self {
                 css_variant: "phase".into(),
                 icon: "🛒".into(),
                 title: "Phase de recrutement.".into(),
                 detail: "Achetez des joueurs ou du staff avant de terminer les achats.".into(),
-                ctas: vec![BannerCtaVm::Mutate {
-                    label: "Terminer les achats".into(),
-                    post_url: app_routes
-                        .teams
-                        .validate_recruitment_phase(space_id, &team_id),
+                ctas: vec![BannerCtaVm::Navigate {
+                    label: "Recruter →".into(),
+                    href: app_routes.teams.recruitment_page(space_id, &team_id),
                 }],
             }),
             (Enrolled, Some(Dismissals)) => Some(Self {

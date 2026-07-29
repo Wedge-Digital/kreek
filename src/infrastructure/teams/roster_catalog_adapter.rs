@@ -1,6 +1,7 @@
 use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::teams::ports::{
-    CatalogPositionDto, CrossLimitDto, IRosterCatalogPort, RosterCatalogDto, StaffPriceDto,
+    CatalogPositionDto, CrossLimitDto, IRosterCatalogPort, RosterCatalogDto, SkillBadgeDto,
+    StaffPriceDto,
 };
 use std::sync::Arc;
 
@@ -11,6 +12,25 @@ pub struct RosterCatalogAdapter {
 impl RosterCatalogAdapter {
     pub fn new(refs: Arc<dyn IReferenceRepository>) -> Self {
         Self { refs }
+    }
+
+    /// Traduit les uids de compétences en badges affichables. Un uid absent du
+    /// corpus est rendu tel quel : mieux vaut « BLOODLUST_2 » à l'écran qu'une
+    /// compétence escamotée, qui ferait croire au coach que le joueur ne l'a
+    /// pas.
+    fn skill_badges(&self, uids: &[String]) -> Vec<SkillBadgeDto> {
+        uids.iter()
+            .map(|uid| match self.refs.find_skill_by_uid(uid) {
+                Some(s) => SkillBadgeDto {
+                    name: s.name.clone(),
+                    category: s.category.clone(),
+                },
+                None => SkillBadgeDto {
+                    name: uid.clone(),
+                    category: String::new(),
+                },
+            })
+            .collect()
     }
 
     fn staff_prices(&self) -> Vec<StaffPriceDto> {
@@ -42,6 +62,12 @@ impl IRosterCatalogPort for RosterCatalogAdapter {
                     cost: p.cost,
                     max_quantity: p.max_quantity,
                     is_journeyman: p.is_journeyman,
+                    ma: p.ma,
+                    st: p.st,
+                    ag: p.ag,
+                    pa: p.pa,
+                    av: p.av,
+                    skills: self.skill_badges(&p.skills),
                 })
                 .collect(),
             cross_limits: team

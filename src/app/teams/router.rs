@@ -1,4 +1,5 @@
 use crate::app::teams::io::web::dismiss_team::dismiss_team;
+use crate::app::teams::io::web::recruitment::recruitment_page;
 use crate::app::teams::io::web::team_detail::team_detail;
 use crate::app::teams::io::web::validate_phase_actions::{
     post_validate_dismissals_phase, post_validate_improvement_phase,
@@ -10,6 +11,12 @@ use crate::app::teams::io::web::widgets::enrollment_actions::{
     approve_all_enrollments, approve_enrollment, dismiss_enrollment, reject_enrollment,
 };
 use crate::app::teams::io::web::widgets::pending_enrollment_widget::pending_enrollment_widget;
+use crate::app::teams::io::web::widgets::recruitment_cart_widget::{
+    recruitment_cart, remove_player, remove_staff,
+};
+use crate::app::teams::io::web::widgets::recruitment_catalog_widget::{
+    add_player, add_staff, recruitment_catalog,
+};
 use crate::app::teams::io::web::widgets::team_match_context_widget::get_team_match_context_json;
 use crate::app::teams::io::web::widgets::team_selection_tester::get_team_selection_tester;
 use crate::app::teams::io::web::widgets::team_selection_widget::{
@@ -58,4 +65,11 @@ pub fn router() -> Router<AppState> {
             path::VALIDATE_DISMISSALS_PHASE,
             post(post_validate_dismissals_phase),
         )
+        .route(path::RECRUITMENT_PAGE, get(recruitment_page))
+        .route(path::RECRUITMENT_CATALOG_WIDGET, get(recruitment_catalog))
+        .route(path::RECRUITMENT_CART_WIDGET, get(recruitment_cart))
+        .route(path::RECRUITMENT_ADD_PLAYER, post(add_player))
+        .route(path::RECRUITMENT_REMOVE_PLAYER, post(remove_player))
+        .route(path::RECRUITMENT_ADD_STAFF, post(add_staff))
+        .route(path::RECRUITMENT_REMOVE_STAFF, post(remove_staff))
 }

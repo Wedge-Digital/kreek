@@ -31,12 +31,30 @@ pub struct BasketLineId(pub String);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct BasketVersion(pub u32);
 
+/// Une compétence de base, telle qu'elle s'affiche. Aucun invariant : elle
+/// voyage dans l'agrégat parce que le panier est la seule chose que la vue voit.
+#[derive(Debug, Clone)]
+pub struct SkillBadge {
+    pub name: String,
+    pub category: String,
+}
+
 #[derive(Debug, Clone)]
 pub struct CatalogPosition {
     pub uid: RosterLineId,
     pub position_name: String,
     pub cost: Kpo,
     pub max_quantity: u8,
+    /// Caractéristiques et compétences ne portent aucun invariant : elles ne
+    /// sont là que parce que le panier est **la seule chose que la vue voit**.
+    /// Les faire transiter autrement obligerait un handler à toucher un DTO de
+    /// port, ce que la convention interdit.
+    pub ma: u8,
+    pub st: u8,
+    pub ag: u8,
+    pub pa: u8,
+    pub av: u8,
+    pub skills: Vec<SkillBadge>,
 }
 
 /// Limite de cumul entre postes — « pas plus de 3 parmi Ogre, Troll, Minotaure ».
@@ -68,7 +86,7 @@ impl RosterCatalog {
         self.positions.iter().find(|p| &p.uid == line)
     }
 
-    fn staff_entry(&self, uid: &str) -> Option<&StaffCatalogEntry> {
+    pub fn staff_entry(&self, uid: &str) -> Option<&StaffCatalogEntry> {
         self.staff.iter().find(|s| s.uid == uid)
     }
 }
@@ -108,7 +126,7 @@ pub struct OwnedStaff {
 }
 
 impl OwnedStaff {
-    fn count_of(&self, staff: StaffType) -> u32 {
+    pub fn count_of(&self, staff: StaffType) -> u32 {
         match staff {
             StaffType::Reroll => self.rerolls,
             StaffType::Apothecary => self.apothecaries,
@@ -121,7 +139,7 @@ impl OwnedStaff {
 
 /// Identifiant du staff dans le corpus de référence. La relance n'en a pas :
 /// elle n'est pas une ligne de `staff_fr.json`.
-fn staff_uid(staff: StaffType) -> Option<&'static str> {
+pub fn staff_uid(staff: StaffType) -> Option<&'static str> {
     match staff {
         StaffType::Apothecary => Some("APOTHECARY"),
         StaffType::Assistant => Some("COACH_ASSISTANTS"),
@@ -380,6 +398,25 @@ impl RecruitmentBasket {
         Kpo(self.treasury.0.saturating_sub(self.pending_total().0))
     }
 
+    /// Le catalogue du roster, pour la vue. Immuable : l'agrégat le porte, il
+    /// ne le modifie jamais.
+    pub fn catalog(&self) -> &RosterCatalog {
+        &self.catalog
+    }
+
+    /// Effectif **déjà possédé** à ce poste, sans les lignes en attente.
+    pub fn owned_at(&self, line: &RosterLineId) -> usize {
+        self.squad.count_at(line)
+    }
+
+    pub fn owned_staff(&self) -> OwnedStaff {
+        self.owned_staff
+    }
+
+    pub fn pending_staff_count(&self, staff: StaffType) -> u32 {
+        self.pending_staff(staff)
+    }
+
     pub fn pending_for_position(&self, line: &RosterLineId) -> usize {
         self.lines
             .iter()
@@ -533,33 +570,30 @@ mod tests {
         RosterLineId(uid.to_string())
     }
 
+    /// Caractéristiques et compétences ne pèsent sur aucune garde : les tests
+    /// du panier les fixent une fois pour toutes plutôt que de les répéter.
+    fn poste(uid: &str, nom: &str, cout: u32, max: u8) -> CatalogPosition {
+        CatalogPosition {
+            uid: ligne(uid),
+            position_name: nom.into(),
+            cost: Kpo(cout),
+            max_quantity: max,
+            ma: 6,
+            st: 3,
+            ag: 3,
+            pa: 4,
+            av: 9,
+            skills: vec![],
+        }
+    }
+
     fn catalogue() -> RosterCatalog {
         RosterCatalog {
             positions: vec![
-                CatalogPosition {
-                    uid: ligne(PIETAILLE),
-                    position_name: "Piétaille".into(),
-                    cost: Kpo(50),
-                    max_quantity: 16,
-                },
-                CatalogPosition {
-                    uid: ligne(PERCUTEUR),
-                    position_name: "Percuteur".into(),
-                    cost: Kpo(90),
-                    max_quantity: 4,
-                },
-                CatalogPosition {
-                    uid: ligne(COLOSSE),
-                    position_name: "Colosse".into(),
-                    cost: Kpo(140),
-                    max_quantity: 1,
-                },
-                CatalogPosition {
-                    uid: ligne(LANCEUR),
-                    position_name: "Lanceur".into(),
-                    cost: Kpo(80),
-                    max_quantity: 4,
-                },
+                poste(PIETAILLE, "Piétaille", 50, 16),
+                poste(PERCUTEUR, "Percuteur", 90, 4),
+                poste(COLOSSE, "Colosse", 140, 1),
+                poste(LANCEUR, "Lanceur", 80, 4),
             ],
             cross_limits: vec![CrossLimit {
                 max: 2,

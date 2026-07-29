@@ -1,0 +1,14 @@
+{# Erreur de panier — partagé avec les renvois (carte 267). Le message vient du
+   domaine, formulé par la couche web ; ce template ne décide de rien. #}
+<link rel="stylesheet" href="/static/css/widgets/recruitment.css">
+<div class="alert alert--warn" role="alert" hx-disinherit="*">
+  <span>⚠️</span>
+  <span>
+    {{ vm.message }}
+    {% if !vm.lines.is_empty() %}
+    <ul class="basket-error-lines">
+      {% for line in vm.lines %}<li>{{ line }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </span>
+</div>

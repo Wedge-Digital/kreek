@@ -1,0 +1,188 @@
+{# Catalogue de recrutement — postes, staff et composition de l'effectif.
+   Un seul widget pour les trois : ils vivent dans la même colonne et dérivent
+   du même panier. Ajouter un joueur peut désactiver toutes les autres lignes,
+   donc le tableau se rafraîchit entier, jamais ligne par ligne. #}
+<link rel="stylesheet" href="/static/css/widgets/recruitment.css">
+<div class="rec-catalog" hx-disinherit="*">
+
+  {# Emplacement des erreurs de mutation, vidé à chaque rendu réussi. #}
+  <div id="rec-catalog-error"></div>
+
+  {% if vm.concurrent_notice %}
+  <div class="alert alert--warn">
+    <span>⚠️</span>
+    <span>Le panier a été modifié ailleurs. Voici l'état à jour — refais ton
+      geste si besoin.</span>
+  </div>
+  {% endif %}
+
+  <div class="rec-header">
+    <div class="rec-header-info">
+      <div class="rec-header-top">
+        <span class="rec-phase-badge">🛒 Phase de recrutement</span>
+      </div>
+      <div class="rec-header-meta">
+        <div class="meta-item">
+          <div class="meta-label">Roster</div>
+          <div class="meta-value">{{ vm.context.roster_name }}</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Trésorerie</div>
+          <div class="meta-value">{{ vm.context.treasury_kpo }} kPo</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Effectif</div>
+          <div class="meta-value{% if vm.squad_is_full %} meta-value--alert{% endif %}">
+            {{ vm.context.squad_count }} / {{ vm.context.squad_max }}
+          </div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Valeur d'équipe</div>
+          <div class="meta-value">{{ vm.context.team_value_kpo }} kPo</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Recruter un joueur</div>
+    <div class="panel-sub">
+      Postes disponibles dans le roster {{ vm.context.roster_name }}. Le quota
+      indique les joueurs déjà présents dans l'effectif.
+    </div>
+
+    {% if vm.squad_is_full %}
+    <div class="alert alert--warn">
+      <span>🚫</span>
+      <span><strong>Effectif complet.</strong> Une équipe ne peut pas dépasser
+        16 joueurs. Pour faire de la place, renvoyez un joueur en phase de
+        renvois — le recrutement ne sera possible qu'à la séquence d'après-match
+        suivante.</span>
+    </div>
+    {% endif %}
+
+    <div class="table-scroll">
+      <table class="buy-table">
+        <thead>
+          <tr>
+            <th class="col-left" scope="col">Poste</th>
+            <th scope="col">MA / ST / AG / PA / AV</th>
+            <th class="col-left" scope="col">Compétences</th>
+            <th scope="col">Effectif</th>
+            <th scope="col">Prix</th>
+            <th><span class="sr-only">Action</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in vm.positions %}
+          <tr{% if !row.action.is_enabled() %} class="is-blocked"{% endif %}>
+            <td class="col-left"><span class="pos-name">{{ row.name }}</span></td>
+            <td><span class="pos-stats">{{ row.stats }}</span></td>
+            <td class="col-left">
+              {% for skill in row.skills %}<span class="skill-tag {{ skill.category_css }}">{{ skill.name }}</span>{% endfor %}
+            </td>
+            <td>
+              <span class="quota">{{ row.owned }}{% if row.pending > 0 %}<span class="pending">+{{ row.pending }}</span>{% endif %} / {{ row.max }}</span>
+            </td>
+            <td><span class="price">{{ row.price_kpo }} kPo</span></td>
+            <td>
+              {% if row.action.is_enabled() %}
+              <button class="act-btn"
+                      hx-post="{{ vm.add_player_url() }}"
+                      hx-vals='{"roster_line_id": "{{ row.line_id }}", "version": {{ vm.version }}}'
+                      hx-target="closest .rec-main"
+                      hx-swap="innerHTML"
+                      aria-label="Recruter un {{ row.name }}">{{ row.action.label() }}</button>
+              {% else %}
+              <button class="act-btn" disabled>{{ row.action.label() }}</button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Recruter du staff</div>
+    <div class="panel-sub">
+      Les fans dévoués ne s'achètent pas — ils évoluent au fil des matchs.
+    </div>
+    <div class="table-scroll">
+      <table class="buy-table">
+        <thead>
+          <tr>
+            <th class="col-left" scope="col">Fonction</th>
+            <th scope="col">Effectif</th>
+            <th scope="col">Prix</th>
+            <th><span class="sr-only">Action</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in vm.staff %}
+          {% if row.action.is_forbidden() %}
+          <tr class="is-blocked">
+            <td class="col-left"><span class="pos-name">{{ row.name }}</span></td>
+            <td colspan="2" class="col-left reason">{{ row.action.explanation_or_empty() }}</td>
+            <td><button class="act-btn" disabled>Indisponible</button></td>
+          </tr>
+          {% else %}
+          <tr{% if !row.action.is_enabled() %} class="is-blocked"{% endif %}>
+            <td class="col-left"><span class="pos-name">{{ row.name }}</span></td>
+            <td>
+              <span class="quota">{{ row.owned }}{% if row.pending > 0 %}<span class="pending">+{{ row.pending }}</span>{% endif %} / {{ row.max }}</span>
+            </td>
+            <td>
+              <span class="price">{{ row.price_kpo }} kPo</span>
+              {% if let Some(base) = row.base_price_kpo %}
+              <span class="price-note">base {{ base }} kPo</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if row.action.is_enabled() %}
+              <button class="act-btn"
+                      hx-post="{{ vm.add_staff_url() }}"
+                      hx-vals='{"staff_uid": "{{ row.staff_uid }}", "version": {{ vm.version }}}'
+                      hx-target="closest .rec-main"
+                      hx-swap="innerHTML"
+                      aria-label="Acheter : {{ row.name }}">{{ row.action.label() }}</button>
+              {% else %}
+              <button class="act-btn" disabled>{{ row.action.label() }}</button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="alert alert--info">
+      <span>ℹ️</span>
+      <span>Une relance achetée après la création de l'équipe coûte
+        <strong>le double</strong> de son prix de base. Elle compte malgré tout
+        dans la valeur d'équipe à son prix de base.</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Composition de l'effectif</div>
+    <div class="panel-sub">
+      Répartition par poste, rapportée au quota du roster. La part verte
+      correspond aux joueurs en attente dans le panier.
+    </div>
+    <div class="comp-list">
+      {% for row in vm.composition %}
+      <div class="comp-row">
+        <span>{{ row.name }}</span>
+        <span class="comp-count">{{ row.owned + row.pending }} / {{ row.max }}</span>
+        <span class="comp-bar">
+          <span class="comp-fill comp-fill--w{{ row.owned_pct }}"></span>
+          <span class="comp-fill comp-fill--new comp-fill--w{{ row.pending_pct }}"></span>
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>

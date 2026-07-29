@@ -48,10 +48,26 @@ pub struct CatalogPositionDto {
     pub cost: u32,
     pub max_quantity: u8,
     pub is_journeyman: bool,
+    pub ma: u8,
+    pub st: u8,
+    pub ag: u8,
+    pub pa: u8,
+    pub av: u8,
+    /// Compétences de base, **déjà traduites** par l'adapter. `teams` affiche
+    /// des noms, il n'a que faire des uids du corpus de référence.
+    pub skills: Vec<SkillBadgeDto>,
 }
 
 /// Limite de cumul entre postes — « pas plus de 3 joueurs parmi Ogre, Troll,
 /// Minotaure, Rat Ogre ». Quatre rosters sur trente en ont.
+/// Une compétence telle qu'elle s'affiche : son nom traduit et sa catégorie,
+/// qui décide de sa couleur. La catégorie voyage **brute** — c'est la couche
+/// web qui choisit la classe CSS, pas l'adapter.
+pub struct SkillBadgeDto {
+    pub name: String,
+    pub category: String,
+}
+
 pub struct CrossLimitDto {
     pub max: u32,
     pub position_uids: Vec<String>,

@@ -8,8 +8,8 @@
 use crate::app::teams::domain::team::{GamePhase, Team, TeamDomainEvent};
 use crate::app::teams::ports::{
     CatalogPositionDto, CrossLimitDto, IPhaseBasketRepository, IRosterCatalogPort, ISquadPort,
-    ITeamRepository, PhaseBasketState, RepositoryError, RosterCatalogDto, SquadMemberDto,
-    StaffPriceDto, TeamCardRow, TeamEnrollmentRow,
+    ITeamRepository, PhaseBasketState, RepositoryError, RosterCatalogDto, SkillBadgeDto,
+    SquadMemberDto, StaffPriceDto, TeamCardRow, TeamEnrollmentRow,
 };
 use async_trait::async_trait;
 use std::sync::Mutex;
@@ -151,6 +151,25 @@ impl IPhaseBasketRepository for FakeBasketRepository {
 pub const PIETAILLE: &str = "DEMO_GRANIT__PIETAILLE";
 pub const PERCUTEUR: &str = "DEMO_GRANIT__PERCUTEUR";
 
+fn poste_dto(uid: &str, nom: &str, cout: u32, max: u8, journalier: bool) -> CatalogPositionDto {
+    CatalogPositionDto {
+        uid: uid.into(),
+        position_name: nom.into(),
+        cost: cout,
+        max_quantity: max,
+        is_journeyman: journalier,
+        ma: 6,
+        st: 3,
+        ag: 3,
+        pa: 4,
+        av: 9,
+        skills: vec![SkillBadgeDto {
+            name: "Blocage".into(),
+            category: "GENERAL".into(),
+        }],
+    }
+}
+
 pub struct FakeRosterCatalogPort;
 
 impl IRosterCatalogPort for FakeRosterCatalogPort {
@@ -159,20 +178,8 @@ impl IRosterCatalogPort for FakeRosterCatalogPort {
             logo: None,
             reroll_base_cost: 60,
             positions: vec![
-                CatalogPositionDto {
-                    uid: PIETAILLE.into(),
-                    position_name: "Piétaille des Carrières".into(),
-                    cost: 50,
-                    max_quantity: 16,
-                    is_journeyman: true,
-                },
-                CatalogPositionDto {
-                    uid: PERCUTEUR.into(),
-                    position_name: "Percuteur".into(),
-                    cost: 90,
-                    max_quantity: 2,
-                    is_journeyman: false,
-                },
+                poste_dto(PIETAILLE, "Piétaille des Carrières", 50, 16, true),
+                poste_dto(PERCUTEUR, "Percuteur", 90, 2, false),
             ],
             cross_limits: vec![CrossLimitDto {
                 max: 2,

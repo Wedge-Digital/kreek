@@ -18,6 +18,20 @@ pub mod path {
         "/app/{space_id}/teams/{team_id}/validate-recruitment-phase";
     pub const VALIDATE_DISMISSALS_PHASE: &str =
         "/app/{space_id}/teams/{team_id}/validate-dismissals-phase";
+
+    // ── Recrutement ───────────────────────────────────────────────────────
+    pub const RECRUITMENT_PAGE: &str = "/app/{space_id}/teams/{team_id}/recruitment";
+    pub const RECRUITMENT_CATALOG_WIDGET: &str =
+        "/app/{space_id}/teams/{team_id}/widgets/recruitment-catalog";
+    pub const RECRUITMENT_CART_WIDGET: &str =
+        "/app/{space_id}/teams/{team_id}/widgets/recruitment-cart";
+    pub const RECRUITMENT_ADD_PLAYER: &str =
+        "/app/{space_id}/teams/{team_id}/recruitment/players/add";
+    pub const RECRUITMENT_REMOVE_PLAYER: &str =
+        "/app/{space_id}/teams/{team_id}/recruitment/players/remove";
+    pub const RECRUITMENT_ADD_STAFF: &str = "/app/{space_id}/teams/{team_id}/recruitment/staff/add";
+    pub const RECRUITMENT_REMOVE_STAFF: &str =
+        "/app/{space_id}/teams/{team_id}/recruitment/staff/remove";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -90,4 +104,34 @@ impl Routes {
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
     }
+
+    // ── Recrutement ───────────────────────────────────────────────────────
+
+    pub fn recruitment_page(&self, space_id: &str, team_id: &str) -> String {
+        pour(path::RECRUITMENT_PAGE, space_id, team_id)
+    }
+    pub fn recruitment_catalog_widget(&self, space_id: &str, team_id: &str) -> String {
+        pour(path::RECRUITMENT_CATALOG_WIDGET, space_id, team_id)
+    }
+    pub fn recruitment_cart_widget(&self, space_id: &str, team_id: &str) -> String {
+        pour(path::RECRUITMENT_CART_WIDGET, space_id, team_id)
+    }
+    pub fn recruitment_add_player(&self, space_id: &str, team_id: &str) -> String {
+        pour(path::RECRUITMENT_ADD_PLAYER, space_id, team_id)
+    }
+    pub fn recruitment_remove_player(&self, space_id: &str, team_id: &str) -> String {
+        pour(path::RECRUITMENT_REMOVE_PLAYER, space_id, team_id)
+    }
+    pub fn recruitment_add_staff(&self, space_id: &str, team_id: &str) -> String {
+        pour(path::RECRUITMENT_ADD_STAFF, space_id, team_id)
+    }
+    pub fn recruitment_remove_staff(&self, space_id: &str, team_id: &str) -> String {
+        pour(path::RECRUITMENT_REMOVE_STAFF, space_id, team_id)
+    }
+}
+
+fn pour(gabarit: &str, space_id: &str, team_id: &str) -> String {
+    gabarit
+        .replace("{space_id}", space_id)
+        .replace("{team_id}", team_id)
 }

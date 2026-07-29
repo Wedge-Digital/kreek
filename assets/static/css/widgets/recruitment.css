@@ -1,0 +1,298 @@
+/* Phase de recrutement — page et widgets.
+ *
+ * Extrait de la maquette validée `assets/rawpages/html/app-team-recruitment.html`.
+ * Le chrome de l'application (sidebar, menu, en-tête et tabbar mobiles) n'y
+ * figure pas : il est géré une fois pour toutes par `layout-app.css`, et une
+ * page de contenu n'a pas à le réimplémenter.
+ */
+
+/* ── Rôles de couleur ────────────────────────────────────────────────────
+   La couleur encode l'état et la hiérarchie, jamais la décoration.
+   Chaque valeur est vérifiée ≥ 4,5:1 sur blanc, sur sa propre teinte et sur
+   les lignes paires du tableau. À remonter dans les tokens du design system
+   au passage aux vrais templates. */
+:root {
+  --role-action:  #003049;  /* action affirmative, structure, sélection */
+  --role-pending: #1B6B4A;  /* en attente d'ajout au roster */
+  --role-cost:    #7A5210;  /* argent : prix, trésorerie */
+  --role-risk:    #A61B1B;  /* quota saturé, perte définitive */
+  --tint-action:  rgba(0,48,73,0.06);
+  --tint-pending: rgba(27,107,74,0.10);
+  --tint-cost:    rgba(122,82,16,0.08);
+}
+
+/* ── Layout ──────────────────────────────────────────────────────────── */
+.rec-page  { display: flex; flex-direction: column; gap: var(--p1); }
+.rec-grid  { display: flex; gap: var(--p2); align-items: flex-start; width: 100%; }
+.rec-main  { flex: 3; display: flex; flex-direction: column; gap: var(--p1); min-width: 0; }
+.rec-side  { flex: 1; position: sticky; top: var(--p2); display: flex; flex-direction: column; gap: var(--p1); }
+
+/* ── En-tête ─────────────────────────────────────────────────────────── */
+/* Le liseré haut dit dans quelle phase on est — la seule information dont
+   dépend le fait qu'un clic soit réversible ou non. */
+.rec-header {
+  background: var(--white); border-radius: 10px; padding: var(--p2);
+  border-top: 3px solid var(--role-action);
+  display: flex; gap: var(--p2); align-items: center; flex-wrap: wrap;
+}
+.rec-header-logo {
+  width: 64px; height: 64px; border-radius: 10px; background: var(--role-action);
+  color: var(--white); font-family: var(--font-title); font-size: var(--h4);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.rec-header-info { flex: 1; min-width: 240px; }
+.rec-header-top  { display: flex; align-items: center; gap: var(--p1); margin-bottom: var(--p05); flex-wrap: wrap; }
+.rec-header-name { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-1); }
+.rec-phase-badge {
+  background: var(--tint-action); color: var(--role-action); border-radius: 20px;
+  padding: 4px 12px; font-size: var(--text-tiny); font-weight: 600;
+}
+.rec-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
+.meta-item  { display: flex; flex-direction: column; gap: 2px; }
+.meta-label { font-size: var(--text-tiny); color: var(--dark-3); }
+.meta-value { font-size: var(--text-small); color: var(--dark-1); font-weight: 600; }
+.meta-value--alert { color: var(--role-risk); }
+
+/* ── Panneaux ────────────────────────────────────────────────────────── */
+.rec-page { min-width: 0; }
+.panel { background: var(--white); border-radius: 10px; padding: var(--p2); min-width: 0; }
+.panel-title {
+  font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+  color: var(--dark-1); margin-bottom: var(--p05);
+}
+.panel-sub { font-size: var(--text-tiny); color: var(--dark-3); margin-bottom: var(--p1); }
+
+/* ── Tableaux ────────────────────────────────────────────────────────── */
+.buy-table { width: 100%; border-collapse: collapse; }
+.buy-table th {
+  background: var(--dark-6); border-bottom: 2px solid var(--dark-5);
+  padding: 10px 8px; font-size: var(--text-tiny); font-weight: 600;
+  color: var(--dark-2); text-align: center;
+}
+.buy-table th.col-left, .buy-table td.col-left { text-align: left; }
+.buy-table td {
+  border-bottom: 1px solid var(--dark-5); padding: 10px 8px;
+  font-size: var(--text-tiny); color: var(--dark-1); text-align: center;
+}
+.buy-table tbody tr:nth-child(even) td { background: var(--dark-7); }
+/* Une ligne indisponible reste lisible : on l'estompe par la couleur,
+   jamais par l'opacité, qui écrase le contraste sous le seuil. */
+.buy-table tr.is-blocked td,
+.buy-table tr.is-blocked .pos-name,
+.buy-table tr.is-blocked .pos-stats { color: var(--dark-3); }
+.buy-table tr.is-blocked .skill-tag { color: var(--dark-3); background: var(--dark-7); }
+
+.pos-name  { font-weight: 600; }
+/* Repli mobile des compétences sous le nom du poste : la colonne dédiée
+   disparaît sous 768px, l'information non. */
+.pos-inline { display: none; }
+.pos-stats { font-family: monospace; color: var(--dark-2); letter-spacing: 1px; }
+/* Pastilles de compétences — même convention que la fiche équipe
+   (`team-player-widget.css`), pour qu'un joueur se lise pareil qu'on l'achète
+   ou qu'on le possède. Les couleurs de catégorie sont reprises telles quelles,
+   plus deux que la fiche équipe ne connaît pas encore. */
+.skill-tag {
+  display: inline-block; font-size: var(--text-tiny); font-weight: 600;
+  padding: 3px 10px; border-radius: 20px;
+  background: var(--dark-5); color: var(--dark-1); margin: 1px;
+}
+.type-general  { background: rgba(0,48,73,0.08);    color: var(--main-blue); }
+.type-strength { background: rgba(224,32,32,0.08);  color: var(--red); }
+.type-agility  { background: rgba(98,149,132,0.12); color: var(--green); }
+.type-passing  { background: rgba(255,215,0,0.18);  color: #9A7800; }
+.type-mutation { background: rgba(111,53,165,0.10); color: #6f35a5; }
+.type-devious  { background: rgba(122,82,16,0.10);  color: var(--role-cost); }
+.type-trait    { background: var(--dark-5);         color: var(--dark-1); }
+.quota      { font-family: monospace; color: var(--dark-2); }
+.quota--full { color: var(--role-risk); font-weight: 700; }
+.quota-add  { margin-left: 5px; color: var(--role-pending); font-weight: 700; }
+/* L'argent porte sa propre couleur : c'est le nombre qui décide de tout ici. */
+.price      { font-weight: 700; color: var(--role-cost); }
+.price-note {
+  display: block; margin-top: 3px; font-size: 11px; line-height: 1.4;
+  color: var(--role-cost); font-weight: 600; opacity: 0.85;
+}
+.reason { color: var(--dark-2); font-style: italic; }
+
+/* Boutons d'action — libellés, alignés sur la page des renvois. */
+.act-btn {
+  border: 1px solid var(--dark-4); border-radius: 6px; background: var(--white);
+  padding: 5px 12px; font-size: var(--text-tiny); color: var(--dark-2);
+  cursor: pointer;
+}
+.act-btn:hover:not(:disabled) {
+  border-color: var(--role-action); color: var(--role-action); background: var(--tint-action);
+}
+/* Le libellé désactivé porte la raison du blocage : il doit rester lisible,
+   donc dark-2 (7:1) et pas dark-3, qui échoue à 3,1:1. */
+.act-btn:disabled { color: var(--dark-2); border-color: var(--dark-5); cursor: not-allowed; }
+:focus-visible { outline: 2px solid var(--role-action); outline-offset: 2px; }
+
+/* ── Composition de l'effectif ───────────────────────────────────────── */
+.comp-list { display: flex; flex-direction: column; gap: 6px; }
+.comp-row {
+  display: grid; grid-template-columns: 1fr 68px 96px; align-items: center;
+  gap: var(--p1); font-size: var(--text-tiny); color: var(--dark-1);
+}
+.comp-count { font-family: monospace; color: var(--dark-2); text-align: right; }
+.comp-bar   { display: flex; background: var(--dark-6); border-radius: 3px; height: 6px; overflow: hidden; }
+.comp-fill  { background: var(--role-action); height: 100%; }
+.comp-fill--new { background: var(--role-pending); }
+
+/* Seul moment animé de la page : l'achat vient d'être débité, on le montre. */
+@keyframes purchase-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+.purse-row--fresh { animation: purchase-in 0.28s cubic-bezier(0.16, 1, 0.3, 1); }
+@media (prefers-reduced-motion: reduce) { .purse-row--fresh { animation: none; } }
+
+/* ── Panneau latéral ─────────────────────────────────────────────────────
+   Le panier est la surface de décision : c'est la seule région à qui on
+   donne une teinte pleine, pour qu'elle se détache du mur de tableaux. */
+.purse {
+  background: var(--tint-pending); border-radius: 10px; padding: var(--p2);
+  border-top: 3px solid var(--role-pending);
+}
+.purse-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: var(--text-tiny); color: var(--dark-2); padding: 4px 0; }
+.purse-end { display: flex; align-items: center; gap: 6px; }
+.cart-remove {
+  width: 22px; height: 22px; flex-shrink: 0; border: 1px solid var(--dark-4);
+  border-radius: 50%; background: var(--white); color: var(--dark-3);
+  font-size: 14px; line-height: 1; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.cart-remove:hover { border-color: var(--role-risk); color: var(--role-risk); background: var(--white); }
+.purse-row--total {
+  border-top: 2px solid rgba(27,107,74,0.25); margin-top: var(--p05); padding-top: var(--p1);
+  font-size: var(--text-small); font-weight: 700; color: var(--dark-1);
+}
+.purse-row--total .purse-amount { color: var(--role-cost); }
+.purse-row--total.is-low, .purse-row--total.is-low .purse-amount { color: var(--role-risk); }
+.purse-amount { white-space: nowrap; }
+.purse-empty { font-size: var(--text-tiny); color: var(--dark-2); font-style: italic; padding: var(--p1) 0; text-align: center; }
+
+.alert {
+  border-radius: 8px; padding: var(--p1); font-size: var(--text-tiny);
+  line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;
+}
+.alert--info { background: var(--tint-action); color: var(--dark-2); }
+.alert--warn { background: var(--tint-cost); color: var(--dark-1); }
+
+.cta-primary {
+  width: 100%; border: none; border-radius: 8px; padding: 14px;
+  background: var(--role-action); color: var(--white); font-size: var(--text-small);
+  font-weight: 600; cursor: pointer; transition: background 0.15s;
+}
+.cta-primary:hover { background: var(--dark-1); }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.table-scroll { overflow-x: auto; max-width: 100%; }
+
+/* Panier — panneau ordinaire au desktop. */
+.side-actions {
+  background: var(--tint-pending); border-radius: 10px;
+  border-top: 3px solid var(--role-pending);
+  padding: var(--p2);
+  display: flex; flex-direction: column; gap: var(--p05);
+}
+.cart-head {
+  background: none; border: none; padding: 0; width: 100%;
+  display: flex; align-items: center; justify-content: space-between;
+  text-align: left; cursor: default; font: inherit; color: inherit;
+}
+.cart-head .panel-title { margin-bottom: 0; }
+.cart-count { color: var(--role-pending); }
+.cart-chevron { display: none; }
+
+
+/* Largeurs de barre par pas de 5 %. Les styles en ligne sont interdits :
+   la largeur est une classe, pas un attribut. */
+.comp-fill--w0 { width: 0%; }
+.comp-fill--w5 { width: 5%; }
+.comp-fill--w10 { width: 10%; }
+.comp-fill--w15 { width: 15%; }
+.comp-fill--w20 { width: 20%; }
+.comp-fill--w25 { width: 25%; }
+.comp-fill--w30 { width: 30%; }
+.comp-fill--w35 { width: 35%; }
+.comp-fill--w40 { width: 40%; }
+.comp-fill--w45 { width: 45%; }
+.comp-fill--w50 { width: 50%; }
+.comp-fill--w55 { width: 55%; }
+.comp-fill--w60 { width: 60%; }
+.comp-fill--w65 { width: 65%; }
+.comp-fill--w70 { width: 70%; }
+.comp-fill--w75 { width: 75%; }
+.comp-fill--w80 { width: 80%; }
+.comp-fill--w85 { width: 85%; }
+.comp-fill--w90 { width: 90%; }
+.comp-fill--w95 { width: 95%; }
+.comp-fill--w100 { width: 100%; }
+
+@media (max-width: 768px) {
+    /* Le panier quitte le flux pour devenir la barre du bas : la page se
+       réserve la hauteur qu'il occupe, plus celle de la tabbar globale. */
+    .rec-page { padding-bottom: 190px; }
+
+    .rec-grid   { flex-direction: column; }
+    .rec-side   { position: static; width: 100%; }
+    .rec-header { padding: var(--p1); gap: var(--p1); }
+    .rec-header-logo { width: 44px; height: 44px; font-size: var(--h5); }
+    .rec-header-meta { gap: var(--p1) var(--p2); }
+    .panel { padding: var(--p1); }
+
+    /* Colonnes secondaires retirées — exception « masquage progressif de
+       colonnes » déjà admise dans le projet. Le poste, l'effectif, le prix et
+       l'action suffisent à décider ; les caractéristiques restent au desktop. */
+    .buy-table th:nth-child(2), .buy-table td:nth-child(2),
+    .buy-table th:nth-child(3), .buy-table td:nth-child(3) { display: none; }
+    .buy-table th, .buy-table td { padding: 8px 4px; }
+    .skill-tag { font-size: 10px; padding: 1px 4px; }
+    .pos-inline { display: block; margin-top: 4px; }
+    .price, .quota { white-space: nowrap; }
+    .act-btn { white-space: nowrap; }
+
+    .comp-row { grid-template-columns: 1fr 60px 72px; gap: var(--p05); }
+
+    /* Le panier quitte le flux et devient la barre du bas : le total et la
+       validation restent sous les yeux pendant qu'on parcourt les tableaux,
+       calés au-dessus de la tabbar comme le panier du rapport de match.
+       Replié par défaut — les lignes se déploient à la demande, pour qu'un
+       panier qui grossit ne mange pas l'écran. */
+    .side-actions {
+      position: fixed; left: 0; right: 0; bottom: 57px; z-index: 400;
+      border-radius: 0; padding: var(--p05) var(--p1) var(--p1);
+      background: var(--white);
+      border-top: 2px solid var(--role-pending);
+      box-shadow: 0 -6px 18px rgba(0,48,73,0.10);
+    }
+    /* ── Cibles tactiles ──────────────────────────────────────────────────
+       Toutes les commandes de la page passent à 44px minimum. Le × du panier
+       garde sa taille visuelle mais gagne une zone de clic étendue par
+       pseudo-élément : à 22px il était visible mais invisable au doigt. */
+    .act-btn { min-height: 44px; padding: 5px 14px; }
+    .cta-primary { min-height: 48px; }
+    .cart-remove { width: 30px; height: 30px; position: relative; font-size: 16px; }
+    .cart-remove::after {
+      content: ''; position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%); width: 44px; height: 44px;
+    }
+    .purse-row { padding: 8px 0; }
+
+    .cart-head { cursor: pointer; padding: 4px 0; min-height: 44px; }
+    .cart-chevron {
+      display: inline-block; color: var(--role-pending); font-size: 14px;
+      transition: transform 0.2s;
+    }
+    .cart-body { display: none; max-height: 32vh; overflow-y: auto; }
+    .side-actions.is-open .cart-body { display: block; }
+    .side-actions.is-open .cart-chevron { transform: rotate(180deg); }
+    .side-actions .purse-row--total { border-top: none; margin-top: 0; padding-top: 4px; }
+    .cta-primary { padding: 12px; }
+    @media (prefers-reduced-motion: reduce) { .cart-chevron { transition: none; } }
+  }
+

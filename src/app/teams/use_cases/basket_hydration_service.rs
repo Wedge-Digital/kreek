@@ -1,6 +1,6 @@
 use crate::app::teams::domain::recruitment_basket::{
     BasketLine, BasketVersion, CatalogPosition, CrossLimit, OwnedStaff, RecruitmentBasket,
-    RosterCatalog, RosterLineId, SquadMember, SquadSnapshot, StaffCatalogEntry,
+    RosterCatalog, RosterLineId, SkillBadge, SquadMember, SquadSnapshot, StaffCatalogEntry,
 };
 use crate::app::teams::domain::team::{GamePhase, Team};
 use crate::app::teams::domain::value_objects::Kpo;
@@ -89,6 +89,19 @@ fn to_domain_catalog(dto: RosterCatalogDto) -> RosterCatalog {
                 position_name: p.position_name,
                 cost: Kpo(p.cost),
                 max_quantity: p.max_quantity,
+                ma: p.ma,
+                st: p.st,
+                ag: p.ag,
+                pa: p.pa,
+                av: p.av,
+                skills: p
+                    .skills
+                    .into_iter()
+                    .map(|s| SkillBadge {
+                        name: s.name,
+                        category: s.category,
+                    })
+                    .collect(),
             })
             .collect(),
         cross_limits: dto

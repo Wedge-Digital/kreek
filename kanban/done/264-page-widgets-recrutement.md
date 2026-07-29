@@ -88,12 +88,12 @@ Le bouton « Recruter → » pointe vers la nouvelle page au lieu du placeholder
 
 ## Checklist
 
-- [ ] Deux widgets, `basketChanged` unique, 1 POST + 1 GET par mutation
-- [ ] Version cuite dans `hx-vals` des deux widgets
-- [ ] `ConcurrentWrite` → 200 + fragment à jour + bandeau
-- [ ] Aucun `builders.rs`, tous les VMs en `from_domain()`
-- [ ] Raison du blocage affichée sur chaque bouton désactivé
-- [ ] Responsive 768px, cibles 44px, panier fixe repliable
-- [ ] Aucun `style=` inline, `hx-disinherit="*"` posé
-- [ ] Bannière de la fiche équipe recâblée
-- [ ] `make check-arch` au vert, `make test` au vert
+- [x] Deux widgets, `basketChanged` unique, 1 POST + 1 GET par mutation
+- [x] Version cuite dans `hx-vals` des deux widgets
+- [x] `ConcurrentWrite` → 200 + fragment à jour + bandeau
+- [x] Aucun `builders.rs`, tous les VMs en `from_domain()`
+- [x] Raison du blocage affichée sur chaque bouton désactivé
+- [x] Responsive 768px, cibles 44px, panier fixe repliable
+- [x] Aucun `style=` inline, `hx-disinherit="*"` posé
+- [x] Bannière de la fiche équipe recâblée
+- [x] `make check-arch` au vert, `make test` au vert
