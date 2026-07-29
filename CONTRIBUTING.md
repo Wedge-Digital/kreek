@@ -50,6 +50,13 @@ cp scripts/seed_accounts.example.json scripts/seed_accounts.json
 cargo run -- seed-accounts --input scripts/seed_accounts.json
 ```
 
+Une fois par clone, neutralisez le commit de reformatage global pour `git blame` —
+sans quoi il s'attribue chaque ligne de 297 fichiers :
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
 `BYPASS_AUTH=true` est réservé au développement local. Ne l'activez jamais dans
 une configuration destinée à un environnement exposé, et ne soumettez aucune PR
 qui en assouplit les garde-fous.
@@ -57,15 +64,23 @@ qui en assouplit les garde-fous.
 ## Architecture : les règles non négociables
 
 Kreek suit une architecture DDD / CQRS / event sourcing avec des bounded contexts
-(BC) isolés au niveau des unités de compilation (workspace Cargo). Les règles
-détaillées vivent dans `CLAUDE.md` et sont vérifiées mécaniquement.
+(BC) isolés sous `src/app/<bc>/`. Le projet est un **crate unique** : le
+découpage en workspace Cargo a été envisagé puis écarté, trop intrusif pour le
+bénéfice attendu. L'isolation n'est donc pas garantie par le compilateur mais
+par `scripts/check-arch.sh`, un ensemble de vérifications mécaniques. Les règles
+détaillées vivent dans `CLAUDE.md`.
 
 Les invariants que toute PR doit respecter :
 
 1. **Isolation des BC** — un BC ne dépend jamais directement d'un autre BC.
-   Les types partagés passent par le crate `shared_kernel`, rien d'autre.
-2. **Point d'entrée contractuel** — chaque BC expose `fn router() -> axum::Router`
-   comme unique surface HTTP.
+   Les types partagés passent par le module `shared_kernel`, rien d'autre.
+   Il est scindé en `identity` (noyau d'identité, réutilisable) et `bloodbowl`
+   (métier du jeu) : ne mélangez pas les deux.
+2. **Point d'entrée contractuel** — chaque BC expose `fn router()` comme unique
+   surface HTTP. La plupart renvoient `Router<AppState>` ; `auth` et `spaces`
+   sont génériques sur l'état de l'hôte (`router<S>()`), ce qui les rend
+   copiables dans un autre projet — statut « BC extractible », soumis à des
+   contraintes plus strictes (cf. `CLAUDE.md` et l'axe 9 de `check-arch`).
 3. **Value objects** — les types métier utilisent le pattern newtype (nutype).
    Pas de `String` ou `i64` nus dans les signatures de domaine.
 4. **Event sourcing** — l'état des agrégats dérive des événements. On n'ajoute
@@ -80,7 +95,9 @@ Le gate mécanique :
 make check-arch
 ```
 
-Une PR dont `make check-arch` échoue n'est pas revue.
+Une PR dont `make check-arch` échoue n'est pas revue. La CI l'exécute aussi,
+avec `make lint` — inutile d'espérer que ça passe en revue si ça ne passe pas
+chez vous.
 
 ## Tests
 
@@ -91,8 +108,12 @@ Une PR dont `make check-arch` échoue n'est pas revue.
 - Les tests e2e s'appuient sur le compte de seed (`legacy_id: 1`).
 
 ```bash
-cargo test
+make test          # réinitialise la base de test, puis cargo test
+make e2e           # suite Playwright — exige un serveur lancé (make dev-demo)
 ```
+
+`make test` plutôt que `cargo test` : la cible réinitialise la base de test au
+préalable, sans quoi les tests d'intégration partent d'un état arbitraire.
 
 ## Workflow de contribution
 
@@ -102,14 +123,21 @@ cargo test
    toutes les fonctionnalités pertinentes n'ont pas vocation à y entrer.
 2. Forkez, créez une branche depuis `main` (`feat/...`, `fix/...`, `docs/...`).
 3. Commits en anglais, à l'impératif, un changement logique par commit.
-4. Vérifiez localement avant de pousser :
+4. Vérifiez localement avant de pousser — ce sont exactement les cibles que la
+   CI exécute :
 
    ```bash
-   cargo fmt --check
-   cargo clippy -- -D warnings
-   make check-arch
-   cargo test
+   make lint          # cargo fmt --check + clippy + audit
+   make check-arch    # invariants d'architecture
+   make test          # tests unitaires et d'intégration
+   make e2e           # suite end-to-end
    ```
+
+   `make lint` n'échoue que sur les lints de correction (`clippy::correctness`,
+   imports inutilisés, motifs inatteignables). Le dépôt porte encore quelques
+   centaines de warnings de style non bloquants : ne lancez pas
+   `cargo clippy -- -D warnings` en croyant reproduire le gate, vous ne feriez
+   que voir cette dette.
 
 5. Ouvrez la PR vers `main`. Décrivez le *pourquoi*, pas seulement le *quoi* ;
    liez l'issue ; signalez tout choix de conception discutable plutôt que de
