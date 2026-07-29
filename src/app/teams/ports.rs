@@ -125,6 +125,16 @@ pub trait ITeamRepository: Send + Sync {
         expected_version: u64,
     ) -> Result<u64, RepositoryError>;
 
+    /// Applique un lot d'événements atomiquement — une seule transaction pour
+    /// les N événements, la projection et le grand livre. Retourne la version
+    /// du dernier. Un conflit sur n'importe lequel fait tout échouer.
+    async fn append_batch(
+        &self,
+        team_id: &str,
+        events: &[TeamDomainEvent],
+        expected_version: u64,
+    ) -> Result<u64, RepositoryError>;
+
     /// Charge tous les événements d'une équipe et hydrate l'agrégat par rejeu.
     async fn find_by_id(&self, team_id: &str) -> Result<Option<Team>, RepositoryError>;
 

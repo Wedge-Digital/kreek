@@ -191,20 +191,18 @@ impl TeamRepository {
         Ok(())
     }
 
-    /// Le mouvement de trésorerie que cet événement produira, calculé **par le
-    /// domaine** sur l'état d'avant.
+    /// Hydrate l'agrégat depuis la transaction courante.
     ///
     /// Le solde ne peut pas être reconstitué en SQL sans réécrire l'écrêtage à
     /// zéro qui vit déjà dans `TreasuryMovement::debit` — deux implémentations
     /// d'une même règle finissent toujours par diverger. On paie donc une
     /// relecture des événements, dans la transaction pour rester cohérent avec
     /// l'écriture qui suit.
-    async fn treasury_movement_in_tx(
+    async fn hydrate_in_tx(
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         team_id: &str,
-        event: &TeamDomainEvent,
-    ) -> Result<Option<TreasuryMovement>, RepositoryError> {
+    ) -> Result<Team, RepositoryError> {
         let rows = sqlx::query(
             "SELECT payload FROM team_event_store WHERE team_id = $1 ORDER BY version ASC",
         )
@@ -221,8 +219,86 @@ impl TeamRepository {
 
         // Aucun événement : l'équipe naît avec cet append, son solde de départ
         // est zéro — ce que donne `Team::default()`.
-        let team = Team::hydrate(&events).unwrap_or_default();
-        Ok(team.treasury_movement(event))
+        Ok(Team::hydrate(&events).unwrap_or_default())
+    }
+
+    /// Écrit N événements à versions croissantes, dans la transaction fournie :
+    /// event store, projection et grand livre pour chacun.
+    ///
+    /// L'agrégat est hydraté **une fois**, puis avancé en mémoire d'un
+    /// événement à l'autre. C'est ce qui permet à chaque mouvement de trésorerie
+    /// de partir du solde laissé par le précédent, sans jamais recalculer en
+    /// SQL — le point qui avait fait mettre ce calcul dans le domaine.
+    ///
+    /// `append` et `append_batch` passent tous deux par ici : un lot d'un seul
+    /// événement suit exactement le même chemin qu'un append unitaire.
+    async fn write_events_in_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        team_id: &str,
+        events: &[TeamDomainEvent],
+        expected_version: u64,
+    ) -> Result<u64, RepositoryError> {
+        let mut team = self.hydrate_in_tx(tx, team_id).await?;
+        let mut version = expected_version;
+
+        for event in events {
+            version += 1;
+            let movement = team.treasury_movement(event);
+            self.insert_event_in_tx(tx, team_id, event, version, movement.is_some())
+                .await?;
+            self.update_projection_in_tx(tx, team_id, event, version)
+                .await?;
+            if let Some(movement) = movement {
+                self.insert_ledger_entry_in_tx(tx, team_id, version, &movement)
+                    .await?;
+            }
+            // Avance l'état en mémoire : le mouvement suivant partira du solde
+            // que celui-ci vient de laisser.
+            team = team.apply(event);
+        }
+
+        Ok(version)
+    }
+
+    async fn insert_event_in_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        team_id: &str,
+        event: &TeamDomainEvent,
+        version: u64,
+        moves_treasury: bool,
+    ) -> Result<(), RepositoryError> {
+        let payload = serde_json::to_value(event).map_err(RepositoryError::Serialization)?;
+        // Le tag est **dérivé** du mouvement, jamais posé événement par
+        // événement : ce serait recréer l'endroit qu'on peut oublier.
+        let tags = if moves_treasury {
+            serde_json::json!(["treasury"])
+        } else {
+            serde_json::json!([])
+        };
+
+        sqlx::query(
+            "INSERT INTO team_event_store (team_id, event_type, event_version, payload, version, tags)
+             VALUES ($1, $2, $3, $4, $5, $6)",
+        )
+        .bind(team_id)
+        .bind(event.type_name())
+        .bind(event.schema_version())
+        .bind(&payload)
+        .bind(version as i64)
+        .bind(&tags)
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| {
+            if let sqlx::Error::Database(ref db) = e {
+                if db.constraint() == Some("team_event_store_version") {
+                    return RepositoryError::ConcurrentWrite;
+                }
+            }
+            RepositoryError::Database(e)
+        })?;
+        Ok(())
     }
 
     /// Une ligne de grand livre par mouvement, dans la transaction de l'append.
@@ -262,62 +338,45 @@ impl ITeamRepository for TeamRepository {
         event: &TeamDomainEvent,
         expected_version: u64,
     ) -> Result<u64, RepositoryError> {
-        let new_version = expected_version + 1;
-        let payload = serde_json::to_value(event).map_err(RepositoryError::Serialization)?;
-        let event_type = event.type_name();
-        let event_version = event.schema_version();
+        self.append_batch(team_id, std::slice::from_ref(event), expected_version)
+            .await
+    }
 
-        let mut tx = self.pool.begin().await.map_err(RepositoryError::Database)?;
-
-        let movement = self
-            .treasury_movement_in_tx(&mut tx, team_id, event)
-            .await?;
-        // Le tag est **dérivé** du mouvement, jamais posé événement par
-        // événement : ce serait recréer l'endroit qu'on peut oublier.
-        let tags = if movement.is_some() {
-            serde_json::json!(["treasury"])
-        } else {
-            serde_json::json!([])
-        };
-
-        sqlx::query(
-            "INSERT INTO team_event_store (team_id, event_type, event_version, payload, version, tags)
-             VALUES ($1, $2, $3, $4, $5, $6)",
-        )
-        .bind(team_id)
-        .bind(event_type)
-        .bind(event_version)
-        .bind(&payload)
-        .bind(new_version as i64)
-        .bind(&tags)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| {
-            if let sqlx::Error::Database(ref db) = e {
-                if db.constraint() == Some("team_event_store_version") {
-                    return RepositoryError::ConcurrentWrite;
-                }
-            }
-            RepositoryError::Database(e)
-        })?;
-
-        self.update_projection_in_tx(&mut tx, team_id, event, new_version)
-            .await?;
-
-        if let Some(movement) = movement {
-            self.insert_ledger_entry_in_tx(&mut tx, team_id, new_version, &movement)
-                .await?;
+    /// Applique N événements **atomiquement** : soit tout est écrit, soit rien.
+    ///
+    /// La validation d'une phase applique tout le brouillon d'un coup — N
+    /// recrutements ou N renvois, plus la transition de phase. En N appels à
+    /// `append`, une panne au milieu laisserait l'équipe à moitié servie et sa
+    /// phase non validée.
+    ///
+    /// Un lot vide de mutations reste légitime : terminer sa phase sans rien
+    /// acheter, c'est un lot d'un seul événement de transition.
+    async fn append_batch(
+        &self,
+        team_id: &str,
+        events: &[TeamDomainEvent],
+        expected_version: u64,
+    ) -> Result<u64, RepositoryError> {
+        if events.is_empty() {
+            return Ok(expected_version);
         }
 
+        let mut tx = self.pool.begin().await.map_err(RepositoryError::Database)?;
+        let derniere_version = self
+            .write_events_in_tx(&mut tx, team_id, events, expected_version)
+            .await?;
         tx.commit().await.map_err(RepositoryError::Database)?;
 
-        // Publié après le commit, et depuis l'append plutôt que depuis chaque
-        // use case : deux des quatre chemins vers `ReadyToPlay` passent par des
-        // listeners, pas par un use case. C'est le seul point qui les couvre
-        // tous. Déviation assumée du patron de `players` et `match_report`.
-        let _ = self.event_bus.send(event.to_enveloppe(team_id));
+        // Publiés après le commit, dans l'ordre, et depuis le repository plutôt
+        // que depuis chaque use case : deux des quatre chemins vers
+        // `ReadyToPlay` passent par des listeners. C'est le seul point qui les
+        // couvre tous. Déviation assumée du patron de `players` et
+        // `match_report`.
+        for event in events {
+            let _ = self.event_bus.send(event.to_enveloppe(team_id));
+        }
 
-        Ok(new_version)
+        Ok(derniere_version)
     }
 
     async fn find_by_id(&self, team_id: &str) -> Result<Option<Team>, RepositoryError> {
@@ -436,7 +495,7 @@ mod tests {
     use crate::app::shared_kernel::bloodbowl::team::TeamId;
     use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
     use crate::app::teams::domain::value_objects::{
-        DedicatedFans, IncidentType, Kpo, RosterName, TeamName,
+        DedicatedFans, IncidentType, Kpo, RosterName, StaffQuantity, StaffType, TeamName,
     };
     use crate::common::services::event_bus::event_bus::new_bus;
     use sqlx::postgres::PgPoolOptions;
@@ -780,5 +839,125 @@ mod tests {
                 .await
                 .unwrap();
         assert_eq!(n.0, 1, "seule la dotation initiale a laissé une ligne");
+    }
+
+    // ── append_batch (carte 256) ─────────────────────────────────────────
+
+    fn achat_staff(cout: u32) -> TeamDomainEvent {
+        TeamDomainEvent::StaffBought {
+            staff_type: StaffType::Assistant,
+            quantity: StaffQuantity::try_new(1).unwrap(),
+            cost_kpo: Kpo(cout),
+        }
+    }
+
+    #[tokio::test]
+    async fn append_batch_ecrit_les_n_evenements_a_versions_consecutives() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = TeamRepository::new(pool.clone(), new_bus());
+        let team_id = ulid::Ulid::new().to_string();
+
+        let lot = vec![
+            created_event(&team_id),
+            achat_staff(10),
+            TeamDomainEvent::TeamDismissed,
+        ];
+        let derniere = repo.append_batch(&team_id, &lot, 0).await.unwrap();
+        assert_eq!(derniere, 3, "la version du dernier événement du lot");
+
+        let versions: Vec<(i64,)> = sqlx::query_as(
+            "SELECT version FROM team_event_store WHERE team_id = $1 ORDER BY version",
+        )
+        .bind(&team_id)
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            versions.iter().map(|v| v.0).collect::<Vec<_>>(),
+            vec![1, 2, 3]
+        );
+
+        // Le solde du grand livre suit le lot d'un événement à l'autre :
+        // 1000 de dotation, puis 10 dépensés.
+        let soldes: Vec<(i32,)> = sqlx::query_as(
+            "SELECT balance_after_kpo FROM teams__treasury_ledger
+             WHERE team_id = $1 ORDER BY event_version",
+        )
+        .bind(&team_id)
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            soldes.iter().map(|v| v.0).collect::<Vec<_>>(),
+            vec![1000, 990]
+        );
+    }
+
+    /// L'atomicité est le point de la carte : un conflit de version sur le
+    /// deuxième événement ne doit laisser **aucun** des trois.
+    #[tokio::test]
+    async fn append_batch_ne_laisse_rien_si_un_evenement_entre_en_conflit() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = TeamRepository::new(pool.clone(), new_bus());
+        let team_id = ulid::Ulid::new().to_string();
+
+        // Version 2 déjà prise par un append antérieur.
+        repo.append(&team_id, &created_event(&team_id), 0)
+            .await
+            .unwrap();
+        repo.append(&team_id, &TeamDomainEvent::TeamDismissed, 1)
+            .await
+            .unwrap();
+
+        // Le lot repart de la version 1 : son deuxième événement voudra la 3,
+        // mais son premier tombera sur la 2, déjà occupée.
+        let lot = vec![achat_staff(10), achat_staff(20), achat_staff(30)];
+        let resultat = repo.append_batch(&team_id, &lot, 1).await;
+
+        assert!(
+            matches!(resultat, Err(RepositoryError::ConcurrentWrite)),
+            "le conflit doit être détecté"
+        );
+
+        let n: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM team_event_store WHERE team_id = $1")
+            .bind(&team_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(n.0, 2, "aucun événement du lot n'a été écrit");
+
+        let achats: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM teams__treasury_ledger
+             WHERE team_id = $1 AND reason = 'StaffPurchase'",
+        )
+        .bind(&team_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(achats.0, 0, "ni grand livre partiel");
+    }
+
+    /// Terminer une phase sans rien acheter est légitime.
+    #[tokio::test]
+    async fn append_batch_accepte_un_lot_d_un_seul_evenement() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = TeamRepository::new(pool.clone(), new_bus());
+        let team_id = ulid::Ulid::new().to_string();
+
+        repo.append(&team_id, &created_event(&team_id), 0)
+            .await
+            .unwrap();
+        let v = repo
+            .append_batch(&team_id, &[TeamDomainEvent::RecruitmentPhaseValidated], 1)
+            .await
+            .unwrap();
+
+        assert_eq!(v, 2);
     }
 }
