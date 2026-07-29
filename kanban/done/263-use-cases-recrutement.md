@@ -90,12 +90,12 @@ web formule. Une seule énumération des causes, pas deux.
 
 ## Checklist
 
-- [ ] `hydrate_recruitment_basket` est le seul consommateur des DTOs de port
-- [ ] Les 3 use cases de mutation ne contiennent aucune logique métier
-- [ ] `remove_basket_line_use_case` réutilisable par les renvois
-- [ ] Validation : refus en bloc, jamais de succès partiel
-- [ ] Un événement par ligne + transition en dernier, via `append_batch`
-- [ ] Test : revalider après succès → `WrongPhase`, aucune double application
-- [ ] Test : panier vide → seul `RecruitmentPhaseValidated` est appendu
-- [ ] Test : ligne devenue invalide → rien n'est appliqué, les lignes fautives sont nommées
-- [ ] `make check-arch` au vert, `make test` au vert
+- [x] `hydrate_recruitment_basket` est le seul consommateur des DTOs de port
+- [x] Les 3 use cases de mutation ne contiennent aucune logique métier
+- [x] `remove_basket_line_use_case` réutilisable par les renvois
+- [x] Validation : refus en bloc, jamais de succès partiel
+- [x] Un événement par ligne + transition en dernier, via `append_batch`
+- [x] Test : revalider après succès → `WrongPhase`, aucune double application
+- [x] Test : panier vide → seul `RecruitmentPhaseValidated` est appendu
+- [x] Test : ligne devenue invalide → rien n'est appliqué, les lignes fautives sont nommées
+- [x] `make check-arch` au vert, `make test` au vert

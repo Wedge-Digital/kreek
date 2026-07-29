@@ -18,6 +18,7 @@ pub struct TeamsContext {
     pub journeyman_type_port: Arc<dyn IJourneymanTypePort>,
     pub roster_catalog_port: Arc<dyn IRosterCatalogPort>,
     pub squad_port: Arc<dyn ISquadPort>,
+    pub basket_repository: Arc<dyn IPhaseBasketRepository>,
 }
 
 pub fn init_listeners(
@@ -66,6 +67,7 @@ impl TeamsContext {
             journeyman_type_port,
             roster_catalog_port,
             squad_port,
+            basket_repository: Arc::new(PhaseBasketRepository::new(pool.clone())),
         }
     }
 }

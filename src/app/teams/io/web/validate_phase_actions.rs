@@ -56,18 +56,34 @@ pub async fn post_validate_recruitment_phase(
     };
     let cmd = ValidateRecruitmentPhaseCommand { team_id };
 
-    match validate_recruitment_phase_use_case::execute(cmd, state.teams.team_repository.as_ref())
-        .await
-    {
+    let resultat = validate_recruitment_phase_use_case::execute(
+        cmd,
+        state.teams.team_repository.as_ref(),
+        state.teams.basket_repository.as_ref(),
+        state.teams.roster_catalog_port.as_ref(),
+        state.teams.squad_port.as_ref(),
+    )
+    .await;
+
+    use validate_recruitment_phase_use_case::ValidateRecruitmentPhaseError as E;
+    match resultat {
         Ok(()) => refresh_response(),
-        Err(validate_recruitment_phase_use_case::ValidateRecruitmentPhaseError::TeamNotFound) => {
-            StatusCode::NOT_FOUND.into_response()
+        Err(E::TeamNotFound) => StatusCode::NOT_FOUND.into_response(),
+        // Le panier ne passe plus contre l'état du jour. La carte 264 rendra
+        // les lignes fautives ; ici on refuse, sans rien appliquer.
+        Err(E::BasketNoLongerValid(lignes)) => {
+            tracing::warn!("panier de recrutement invalide : {lignes:?}");
+            StatusCode::UNPROCESSABLE_ENTITY.into_response()
         }
-        Err(validate_recruitment_phase_use_case::ValidateRecruitmentPhaseError::Domain(e)) => {
+        Err(E::Domain(e)) => {
             tracing::warn!("validate_recruitment_phase domaine: {e}");
             StatusCode::UNPROCESSABLE_ENTITY.into_response()
         }
-        Err(validate_recruitment_phase_use_case::ValidateRecruitmentPhaseError::Repository(e)) => {
+        Err(E::Hydration(e)) => {
+            tracing::error!("validate_recruitment_phase hydratation: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+        Err(E::Repository(e)) => {
             tracing::error!("validate_recruitment_phase repo: {e}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
