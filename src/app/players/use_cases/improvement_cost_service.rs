@@ -73,6 +73,7 @@ pub fn resolve_stat_cost(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::players::io::app_events::team_created_listener::initial_skill_value_delta;
     use crate::app::references::io::repository::in_memory_reference_repository::InMemoryReferenceRepository;
     use crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter;
     use std::sync::Arc;
@@ -94,7 +95,101 @@ mod tests {
         // APPUI_FERME est GENERAL, primary pour la Piétaille, et Standard —
         // niveau 1 : chosen.primary = 6 (le tarif Élite, lui, vaudrait 8)
         assert_eq!(cost.into_inner(), 6);
-        assert_eq!(value.0, 20_000);
+        assert_eq!(value.0, 20);
+    }
+
+    /// Vrai pour ce poste si la catégorie de la compétence est dans son accès
+    /// primaire — c'est ce que le listener de création calcule à partir de la
+    /// ligne de roster, et non une donnée de la compétence seule.
+    fn is_primary_for(
+        catalog: &dyn ISkillCatalogPort,
+        roster_line_id: &str,
+        skill_id: &str,
+    ) -> bool {
+        let skill = catalog.find_skill(skill_id).unwrap();
+        catalog
+            .position_access(roster_line_id)
+            .unwrap()
+            .primary_categories
+            .contains(&skill.category)
+    }
+
+    /// **La valeur d'une compétence dépend du couple (compétence, poste)**, pas
+    /// de la compétence seule : une même catégorie peut être primaire pour un
+    /// poste et secondaire pour un autre.
+    ///
+    /// Ici STRENGTH est primaire pour le Percuteur (`P=[GENERAL, STRENGTH]`) et
+    /// secondaire pour la Piétaille (`S=[STRENGTH]`) — deux postes de la même
+    /// équipe. POIGNE_LARGE, compétence STRENGTH, vaut donc 20 kPo sur l'un et
+    /// 40 kPo sur l'autre.
+    #[test]
+    fn la_valeur_d_une_competence_depend_du_poste_qui_l_acquiert() {
+        let catalog = catalog();
+
+        let (_, sur_percuteur) = resolve_skill_cost(
+            &catalog,
+            "DEMO_GRANIT__PERCUTEUR",
+            "POIGNE_LARGE",
+            AcquisitionMode::Chosen,
+            1,
+        )
+        .unwrap();
+        let (_, sur_pietaille) = resolve_skill_cost(
+            &catalog,
+            "DEMO_GRANIT__PIETAILLE",
+            "POIGNE_LARGE",
+            AcquisitionMode::Chosen,
+            1,
+        )
+        .unwrap();
+
+        assert_eq!(
+            sur_percuteur.0, 20,
+            "STRENGTH est primaire pour le Percuteur"
+        );
+        assert_eq!(
+            sur_pietaille.0, 40,
+            "STRENGTH est secondaire pour la Piétaille"
+        );
+        assert_ne!(
+            sur_percuteur, sur_pietaille,
+            "la valeur ne doit pas dépendre de la seule compétence"
+        );
+    }
+
+    /// Le cœur de la carte 249 : avant elle, la même compétence sur le même
+    /// joueur valait 20 kPo (ou 30 si élite) obtenue à la création et 20 000 à
+    /// l'achat en SPP — deux barèmes, deux unités. « Origine » désigne ici le
+    /// mode d'acquisition, pas le poste : la dépendance au poste, elle, est
+    /// légitime et couverte par le test ci-dessus.
+    ///
+    /// L'accès primaire est dérivé du poste, jamais codé en dur — sinon le test
+    /// passerait encore si la résolution d'accès était cassée.
+    #[test]
+    fn une_competence_vaut_le_meme_prix_a_la_creation_et_a_l_achat_en_spp() {
+        let catalog = catalog();
+
+        for (roster_line_id, skill_id) in [
+            ("DEMO_GRANIT__PIETAILLE", "APPUI_FERME"), // GENERAL, primaire
+            ("DEMO_GRANIT__PIETAILLE", "POIGNE_LARGE"), // STRENGTH, secondaire
+            ("DEMO_GRANIT__PERCUTEUR", "POIGNE_LARGE"), // STRENGTH, primaire ici
+        ] {
+            let (_, achat) = resolve_skill_cost(
+                &catalog,
+                roster_line_id,
+                skill_id,
+                AcquisitionMode::Chosen,
+                1,
+            )
+            .unwrap();
+            let is_primary = is_primary_for(&catalog, roster_line_id, skill_id);
+            let creation = initial_skill_value_delta(&catalog, is_primary);
+
+            assert_eq!(
+                creation, achat,
+                "{skill_id} sur {roster_line_id} ne vaut pas le même prix selon son mode d'acquisition"
+            );
+        }
     }
 
     #[test]
@@ -109,7 +204,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(cost.into_inner(), 10);
-        assert_eq!(value.0, 40_000);
+        assert_eq!(value.0, 40);
     }
 
     #[test]
@@ -173,7 +268,7 @@ mod tests {
     fn resolve_stat_cost_value_delta_depends_on_stat() {
         let (_, value_ma) = resolve_stat_cost(&catalog(), StatKind::Ma, 1);
         let (_, value_st) = resolve_stat_cost(&catalog(), StatKind::St, 1);
-        assert_eq!(value_ma.0, 20_000);
-        assert_eq!(value_st.0, 60_000);
+        assert_eq!(value_ma.0, 20);
+        assert_eq!(value_st.0, 60);
     }
 }

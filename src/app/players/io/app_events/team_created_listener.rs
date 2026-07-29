@@ -63,6 +63,16 @@ fn base_position_kpo(roster_line_id: &str, catalog: &dyn ISkillCatalogPort) -> u
         .unwrap_or(0)
 }
 
+/// Valeur ajoutée par une compétence obtenue **à la création** de l'équipe.
+///
+/// Même table que l'achat en SPP (`improvement_cost_service::resolve_skill_cost`) :
+/// une compétence vaut le même prix quelle que soit son origine. Ce n'était pas
+/// le cas avant la carte 249, où ce chemin appliquait un barème codé en dur,
+/// assorti d'un bonus élite que l'autre chemin ignorait.
+pub fn initial_skill_value_delta(catalog: &dyn ISkillCatalogPort, is_primary: bool) -> ValueKpo {
+    ValueKpo(catalog.skill_value_delta(!is_primary))
+}
+
 fn skill_category_css(category: &str) -> &'static str {
     match category {
         "GENERAL" => "type-general",
@@ -72,12 +82,6 @@ fn skill_category_css(category: &str) -> &'static str {
         "MUTATION" => "type-mutation",
         _ => "type-general",
     }
-}
-
-fn skill_value_delta(is_primary: bool, is_elite: bool) -> u32 {
-    let base = if is_primary { 20 } else { 40 };
-    let bonus = if is_elite { 10 } else { 0 };
-    base + bonus
 }
 
 fn parse_mode(mode: &str) -> AcquisitionMode {
@@ -157,7 +161,9 @@ async fn handle_player(
             .map(|s| s.category.as_str())
             .unwrap_or("");
         let category_css = skill_category_css(category).to_string();
-        let value_delta = ValueKpo(skill_value_delta(is_primary, is_elite));
+        // `is_elite` n'entre pas dans ce calcul — il reste dans l'événement à
+        // titre d'historique.
+        let value_delta = initial_skill_value_delta(catalog, is_primary);
 
         let skill_id_vo = SkillId::try_new(skill.skill_id.clone())
             .unwrap_or_else(|_| SkillId::try_new("unknown".to_string()).unwrap());

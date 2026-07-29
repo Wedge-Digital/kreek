@@ -79,7 +79,7 @@ mod tests {
             0
         }
         fn stat_value_delta(&self, _: StatKind) -> u32 {
-            20_000
+            20
         }
         fn touchdown_spp(&self) -> u8 {
             3
@@ -145,7 +145,7 @@ mod tests {
             jersey: None,
             base_skills: vec![],
             starting_spp: Spp(100),
-            starting_value: ValueKpo(100_000),
+            starting_value: ValueKpo(100),
         }
     }
 
@@ -164,7 +164,7 @@ mod tests {
 
         let player = Player::from_events(&repo.0.lock().unwrap()).unwrap();
         assert_eq!(player.stat_increases.len(), 1);
-        assert_eq!(player.value.0, 120_000);
+        assert_eq!(player.value.0, 120);
         assert_eq!(player.spp_remaining(), 86);
     }
 

@@ -57,6 +57,35 @@ struct LeaguesFile {
 // skill_cost.json est un tableau JSON de premier niveau, pas d'objet wrapper
 type SkillCostFile = Vec<SkillCostLevel>;
 
+#[derive(Deserialize)]
+struct ImprovementValuesFile {
+    improvement_values: ImprovementValues,
+}
+
+/// Valeur ajoutée à un joueur par une amélioration, en **kPo**, quelle que soit
+/// l'origine de l'amélioration — bonus de création ou achat en SPP. Elle vivait
+/// en dur dans deux endroits qui divergeaient (carte 249).
+#[derive(Deserialize)]
+pub struct ImprovementValues {
+    pub skill: SkillImprovementValues,
+    pub stat: StatImprovementValues,
+}
+
+#[derive(Deserialize)]
+pub struct SkillImprovementValues {
+    pub primary: u32,
+    pub secondary: u32,
+}
+
+#[derive(Deserialize)]
+pub struct StatImprovementValues {
+    pub ma: u32,
+    pub st: u32,
+    pub ag: u32,
+    pub pa: u32,
+    pub av: u32,
+}
+
 // ── In-memory repository ──────────────────────────────────────────────────────
 
 pub struct InMemoryReferenceRepository {
@@ -69,6 +98,7 @@ pub struct InMemoryReferenceRepository {
     staff: Vec<Staff>,
     leagues: Vec<League>,
     skill_cost_matrix: Vec<SkillCostLevel>,
+    improvement_values: ImprovementValues,
 }
 
 impl InMemoryReferenceRepository {
@@ -86,6 +116,8 @@ impl InMemoryReferenceRepository {
             staff: read_json::<StaffFile>(dir, "staff_fr.json")?.staff,
             leagues: read_json::<LeaguesFile>(dir, "leagues_fr.json")?.leagues,
             skill_cost_matrix: read_json::<SkillCostFile>(dir, "skill_cost.json")?,
+            improvement_values: read_json::<ImprovementValuesFile>(dir, "improvement_values.json")?
+                .improvement_values,
         })
     }
 
@@ -205,25 +237,25 @@ impl IReferenceRepository for InMemoryReferenceRepository {
 
     fn improvement_skill_value_delta(&self, is_secondary_access: bool) -> u32 {
         if is_secondary_access {
-            40_000
+            self.improvement_values.skill.secondary
         } else {
-            20_000
+            self.improvement_values.skill.primary
         }
     }
     fn improvement_stat_value_delta_ma(&self) -> u32 {
-        20_000
+        self.improvement_values.stat.ma
     }
     fn improvement_stat_value_delta_st(&self) -> u32 {
-        60_000
+        self.improvement_values.stat.st
     }
     fn improvement_stat_value_delta_ag(&self) -> u32 {
-        30_000
+        self.improvement_values.stat.ag
     }
     fn improvement_stat_value_delta_pa(&self) -> u32 {
-        20_000
+        self.improvement_values.stat.pa
     }
     fn improvement_stat_value_delta_av(&self) -> u32 {
-        10_000
+        self.improvement_values.stat.av
     }
 }
 
@@ -437,12 +469,12 @@ mod tests {
     #[test]
     fn improvement_value_delta_matches_official_table() {
         let repo = InMemoryReferenceRepository::load_for_tests();
-        assert_eq!(repo.improvement_skill_value_delta(false), 20_000);
-        assert_eq!(repo.improvement_skill_value_delta(true), 40_000);
-        assert_eq!(repo.improvement_stat_value_delta_ma(), 20_000);
-        assert_eq!(repo.improvement_stat_value_delta_st(), 60_000);
-        assert_eq!(repo.improvement_stat_value_delta_ag(), 30_000);
-        assert_eq!(repo.improvement_stat_value_delta_pa(), 20_000);
-        assert_eq!(repo.improvement_stat_value_delta_av(), 10_000);
+        assert_eq!(repo.improvement_skill_value_delta(false), 20);
+        assert_eq!(repo.improvement_skill_value_delta(true), 40);
+        assert_eq!(repo.improvement_stat_value_delta_ma(), 20);
+        assert_eq!(repo.improvement_stat_value_delta_st(), 60);
+        assert_eq!(repo.improvement_stat_value_delta_ag(), 30);
+        assert_eq!(repo.improvement_stat_value_delta_pa(), 20);
+        assert_eq!(repo.improvement_stat_value_delta_av(), 10);
     }
 }

@@ -32,7 +32,7 @@ async fn seed_player(repo: &PgPlayerRepository, player_id: &PlayerId, team_id: &
         jersey: None,
         base_skills: vec![],
         starting_spp: Spp(0),
-        starting_value: ValueKpo(100_000),
+        starting_value: ValueKpo(100),
     };
     repo.append(player_id, team_id, &created, 1).await.unwrap();
     Player::from_events(&[created]).unwrap()
@@ -224,7 +224,7 @@ async fn seed_player_with_spp(
         jersey: None,
         base_skills: vec![],
         starting_spp: Spp(20),
-        starting_value: ValueKpo(100_000),
+        starting_value: ValueKpo(100),
     };
     repo.append(player_id, team_id, &created, 1).await.unwrap();
     Player::from_events(&[created]).unwrap()
@@ -240,7 +240,7 @@ async fn purchase_skill(repo: &PgPlayerRepository, player: &Player, version: i32
             "general".to_string(),
             AcquisitionMode::Chosen,
             SppCost::try_new(3).unwrap(),
-            ValueKpo(20_000),
+            ValueKpo(20),
         )
         .unwrap();
     repo.append(&player.id, &player.team_id, &event, version)

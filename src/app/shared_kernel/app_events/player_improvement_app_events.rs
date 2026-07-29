@@ -4,10 +4,8 @@ use serde::{Deserialize, Serialize};
 
 /// Franchit la frontière `players` → `teams` quand un joueur achète une
 /// compétence ou une augmentation de caractéristique en SPP (phase
-/// PlayerImprovement). `value_delta_po` est exprimé en **Po** (cohérent avec
-/// `players::domain::player::ValueKpo`, malgré son nom) — le consommateur
-/// (`teams`) doit diviser par 1000 avant de construire son propre `Kpo`, qui
-/// lui stocke déjà des kPo.
+/// PlayerImprovement). `value_delta_kpo` est exprimé en **kPo**, comme toute
+/// valeur du back : le consommateur le passe tel quel à son propre `Kpo`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum PlayerImprovementAppEvent {
@@ -15,13 +13,13 @@ pub enum PlayerImprovementAppEvent {
         team_id: String,
         player_id: String,
         skill_name: String,
-        value_delta_po: u32,
+        value_delta_kpo: u32,
     },
     StatIncreased {
         team_id: String,
         player_id: String,
         stat: String,
-        value_delta_po: u32,
+        value_delta_kpo: u32,
     },
 }
 

@@ -31,23 +31,23 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
 }
 
 async fn handle_event(team_repo: &Arc<dyn ITeamRepository>, app_event: PlayerImprovementAppEvent) {
-    let (team_id, player_id, improvement, value_delta_po) = match app_event {
+    let (team_id, player_id, improvement, value_delta_kpo) = match app_event {
         PlayerImprovementAppEvent::SkillPurchased {
             team_id,
             player_id,
             skill_name,
-            value_delta_po,
+            value_delta_kpo,
         } => (
             team_id,
             player_id,
             PlayerImprovement::NewSkill(skill_name),
-            value_delta_po,
+            value_delta_kpo,
         ),
         PlayerImprovementAppEvent::StatIncreased {
             team_id,
             player_id,
             stat,
-            value_delta_po,
+            value_delta_kpo,
         } => {
             let Some(stat) = parse_stat(&stat) else {
                 tracing::warn!("player_improvement_listener: stat inconnu {stat}");
@@ -57,7 +57,7 @@ async fn handle_event(team_repo: &Arc<dyn ITeamRepository>, app_event: PlayerImp
                 team_id,
                 player_id,
                 PlayerImprovement::StatBoost(stat),
-                value_delta_po,
+                value_delta_kpo,
             )
         }
     };
@@ -79,9 +79,7 @@ async fn handle_event(team_repo: &Arc<dyn ITeamRepository>, app_event: PlayerImp
         return;
     };
 
-    // value_delta_po est en Po (players::ValueKpo) — teams::Kpo stocke déjà des
-    // kPo, d'où la division par 1000 (cf. shared_kernel::player_improvement_app_events).
-    let value_delta = Kpo(value_delta_po / 1000);
+    let value_delta = Kpo(value_delta_kpo);
     let event = team.apply_player_improvement(player_id, improvement, value_delta);
 
     if let Err(e) = team_repo.append(&team_id, &event, team.version).await {

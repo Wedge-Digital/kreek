@@ -81,7 +81,7 @@ async fn seed_player(player_repo: &dyn IPlayerRepository, player_id: &str, team_
         jersey: None,
         base_skills: vec![],
         starting_spp: crate::app::players::domain::player::Spp(50),
-        starting_value: crate::app::players::domain::player::ValueKpo(100_000),
+        starting_value: crate::app::players::domain::player::ValueKpo(100),
     };
     player_repo
         .append(

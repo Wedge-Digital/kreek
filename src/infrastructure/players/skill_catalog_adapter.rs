@@ -159,10 +159,10 @@ mod tests {
     #[test]
     fn stat_value_delta_matches_official_table() {
         let a = adapter();
-        assert_eq!(a.stat_value_delta(StatKind::Ma), 20_000);
-        assert_eq!(a.stat_value_delta(StatKind::St), 60_000);
-        assert_eq!(a.stat_value_delta(StatKind::Ag), 30_000);
-        assert_eq!(a.stat_value_delta(StatKind::Pa), 20_000);
-        assert_eq!(a.stat_value_delta(StatKind::Av), 10_000);
+        assert_eq!(a.stat_value_delta(StatKind::Ma), 20);
+        assert_eq!(a.stat_value_delta(StatKind::St), 60);
+        assert_eq!(a.stat_value_delta(StatKind::Ag), 30);
+        assert_eq!(a.stat_value_delta(StatKind::Pa), 20);
+        assert_eq!(a.stat_value_delta(StatKind::Av), 10);
     }
 }

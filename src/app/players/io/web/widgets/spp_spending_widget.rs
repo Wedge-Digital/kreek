@@ -34,12 +34,6 @@ pub struct SppSpendingVm {
 }
 
 /// `players::ValueKpo` (retourné par le port catalogue) exprime en réalité des
-/// Po bruts, jamais des kPo — division nécessaire pour un affichage cohérent
-/// avec la table officielle (+20 kPo, +40 kPo, …). Voir doc du port.
-fn to_kpo(raw_po: u32) -> u32 {
-    raw_po / 1000
-}
-
 fn stat_defs() -> [(StatKind, &'static str, &'static str, bool); 5] {
     // (stat, segment d'URL — cf. parse_stat(), label affiché, cible à atteindre (affichage "+"))
     [
@@ -92,7 +86,7 @@ fn build_stat_cards(
                 current_display: display_stat(current, is_target),
                 next_display: display_stat(next_stat_value(stat, current), is_target),
                 cost,
-                value_delta_kpo: to_kpo(value_delta.0),
+                value_delta_kpo: value_delta.0,
                 can_afford: spp_remaining >= cost as u32,
                 increase_url: routes.players.increase_stat(space_id, player_id, segment),
             }
@@ -254,7 +248,7 @@ mod tests {
             jersey: None,
             base_skills: vec![],
             starting_spp: Spp(30),
-            starting_value: ValueKpo(50_000),
+            starting_value: ValueKpo(50),
         };
         Player::from_events(&[created]).unwrap()
     }
@@ -272,12 +266,6 @@ mod tests {
         assert_eq!(next_stat_value(StatKind::Av, 8), 9);
         assert_eq!(next_stat_value(StatKind::Ag, 3), 2);
         assert_eq!(next_stat_value(StatKind::Pa, 5), 4);
-    }
-
-    #[test]
-    fn to_kpo_divides_raw_po_by_a_thousand() {
-        assert_eq!(to_kpo(20_000), 20);
-        assert_eq!(to_kpo(60_000), 60);
     }
 
     #[test]
@@ -308,7 +296,7 @@ mod tests {
             skill_name: SkillName::try_new("Bloc").unwrap(),
             mode: AcquisitionMode::Chosen,
             spp_cost: SppCost::try_new(6).unwrap(),
-            value_delta: ValueKpo(20_000),
+            value_delta: ValueKpo(20),
         });
         let catalog = SkillCatalogAdapter::new(std::sync::Arc::new(
             InMemoryReferenceRepository::load_for_tests(),

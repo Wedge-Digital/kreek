@@ -664,7 +664,7 @@ mod match_impact_tests {
             jersey: None,
             base_skills: vec![],
             starting_spp: Spp(0),
-            starting_value: ValueKpo(100_000),
+            starting_value: ValueKpo(100),
         };
         Player::from_events(&[created]).unwrap()
     }
@@ -843,7 +843,7 @@ mod improvement_tests {
             jersey: None,
             base_skills: vec![SkillId::try_new("existing-base").unwrap()],
             starting_spp: Spp(spp),
-            starting_value: ValueKpo(100_000),
+            starting_value: ValueKpo(100),
         };
         Player::from_events(&[created]).unwrap()
     }
@@ -865,12 +865,12 @@ mod improvement_tests {
                 "type-general".into(),
                 AcquisitionMode::Chosen,
                 SppCost::try_new(6).unwrap(),
-                ValueKpo(20_000),
+                ValueKpo(20),
             )
             .unwrap();
         let player = Player::apply(Some(player), &event).unwrap();
         assert_eq!(player.acquired_skills.len(), 1);
-        assert_eq!(player.value.0, 120_000);
+        assert_eq!(player.value.0, 120);
         assert_eq!(player.spp_remaining(), 44);
     }
 
@@ -883,7 +883,7 @@ mod improvement_tests {
             "type-general".into(),
             AcquisitionMode::Chosen,
             SppCost::try_new(6).unwrap(),
-            ValueKpo(20_000),
+            ValueKpo(20),
         );
         assert!(matches!(result, Err(DomainError::SkillAlreadyAcquired)));
     }
@@ -898,7 +898,7 @@ mod improvement_tests {
                 "type-general".into(),
                 AcquisitionMode::Chosen,
                 SppCost::try_new(6).unwrap(),
-                ValueKpo(20_000),
+                ValueKpo(20),
             )
             .unwrap();
         let player = Player::apply(Some(player), &event).unwrap();
@@ -909,7 +909,7 @@ mod improvement_tests {
             "type-general".into(),
             AcquisitionMode::Chosen,
             SppCost::try_new(6).unwrap(),
-            ValueKpo(20_000),
+            ValueKpo(20),
         );
         assert!(matches!(result, Err(DomainError::SkillAlreadyAcquired)));
     }
@@ -923,7 +923,7 @@ mod improvement_tests {
             "type-general".into(),
             AcquisitionMode::Chosen,
             SppCost::try_new(6).unwrap(),
-            ValueKpo(20_000),
+            ValueKpo(20),
         );
         assert!(matches!(result, Err(DomainError::InsufficientSpp)));
     }
@@ -932,26 +932,19 @@ mod improvement_tests {
     fn increase_stat_nominal_credits_value_and_spends_spp() {
         let player = sample_player_with_spp(20);
         let event = player
-            .increase_stat(
-                StatKind::Ma,
-                SppCost::try_new(14).unwrap(),
-                ValueKpo(20_000),
-            )
+            .increase_stat(StatKind::Ma, SppCost::try_new(14).unwrap(), ValueKpo(20))
             .unwrap();
         let player = Player::apply(Some(player), &event).unwrap();
         assert_eq!(player.stat_increases.len(), 1);
-        assert_eq!(player.value.0, 120_000);
+        assert_eq!(player.value.0, 120);
         assert_eq!(player.spp_remaining(), 6);
     }
 
     #[test]
     fn increase_stat_insufficient_spp_is_rejected() {
         let player = sample_player_with_spp(5);
-        let result = player.increase_stat(
-            StatKind::St,
-            SppCost::try_new(14).unwrap(),
-            ValueKpo(60_000),
-        );
+        let result =
+            player.increase_stat(StatKind::St, SppCost::try_new(14).unwrap(), ValueKpo(60));
         assert!(matches!(result, Err(DomainError::InsufficientSpp)));
     }
 
@@ -1035,7 +1028,7 @@ mod revert_match_impact_tests {
             jersey: None,
             base_skills: vec![],
             starting_spp: Spp(0),
-            starting_value: ValueKpo(100_000),
+            starting_value: ValueKpo(100),
         }
     }
 

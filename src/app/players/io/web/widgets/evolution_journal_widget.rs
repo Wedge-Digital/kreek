@@ -28,14 +28,6 @@ pub struct EvolutionJournalVm {
     pub spp_spending_widget_url: String,
 }
 
-/// `players::ValueKpo` exprime en réalité des Po bruts, jamais des kPo (même
-/// convention que `spp_spending_widget::to_kpo`, dupliquée ici plutôt
-/// qu'importée pour éviter une dépendance circulaire entre les deux widgets —
-/// `spp_spending_widget` importe déjà `evolution_journal_widget`).
-fn to_kpo(raw_po: u32) -> u32 {
-    raw_po / 1000
-}
-
 /// Reconstruit le journal directement depuis les events bruts (même principe
 /// que `match_history_service::build_match_history`) — c'est le seul moyen de
 /// distinguer un bonus de création (`InitialSkillEarned`) d'un achat via les
@@ -82,7 +74,7 @@ fn evolution_log_row(event: &PlayerDomainEvent) -> Option<EvolutionLogRowVm> {
             label: format!("Caractéristique : {}", stat_label(*stat)),
             mode_label: "Choisie",
             cost: format!("{} SPP", spp_cost.into_inner()),
-            value: format!("+{} kPo", to_kpo(value_delta.0)),
+            value: format!("+{} kPo", value_delta.0),
             origin: "Progression normale",
         }),
         _ => None,
@@ -104,7 +96,7 @@ fn skill_row(
         label: skill_name,
         mode_label,
         cost: format!("{} SPP", spp_cost.into_inner()),
-        value: format!("+{} kPo", to_kpo(value_delta.0)),
+        value: format!("+{} kPo", value_delta.0),
         origin,
     }
 }
@@ -233,7 +225,7 @@ mod tests {
             category_css: "type-general".into(),
             mode: AcquisitionMode::Chosen,
             spp_cost: SppCost::try_new(6).unwrap(),
-            value_delta: ValueKpo(20_000),
+            value_delta: ValueKpo(20),
         }
     }
 
@@ -243,7 +235,7 @@ mod tests {
             team_id: TeamId("t1".into()),
             stat: StatKind::St,
             spp_cost: SppCost::try_new(14).unwrap(),
-            value_delta: ValueKpo(30_000),
+            value_delta: ValueKpo(30),
         }
     }
 
@@ -273,12 +265,6 @@ mod tests {
         assert_eq!(rows[0].origin, "Progression normale");
         assert_eq!(rows[0].value, "+30 kPo");
         assert_eq!(rows[0].cost, "14 SPP");
-    }
-
-    #[test]
-    fn to_kpo_divides_raw_po_by_a_thousand() {
-        assert_eq!(to_kpo(20_000), 20);
-        assert_eq!(to_kpo(0), 0);
     }
 
     #[test]
@@ -312,7 +298,7 @@ mod tests {
             jersey: None,
             base_skills: vec![],
             starting_spp: crate::app::players::domain::player::Spp(0),
-            starting_value: ValueKpo(100_000),
+            starting_value: ValueKpo(100),
         };
         let rows = evolution_log_vm(&[unrelated]);
         assert!(rows.is_empty());

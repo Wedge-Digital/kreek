@@ -137,9 +137,9 @@ pub struct PositionCatalogEntryDto {
 
 /// Coûts en SPP pour un niveau de la matrice, déjà résolus pour le statut
 /// élite demandé (l'adaptateur applique le repli élite→standard quand la
-/// donnée élite n'est pas renseignée) — unité SPP, pas Po (cf.
-/// `ISkillCatalogPort::skill_value_delta`/`stat_value_delta` pour la valeur
-/// d'équipe ajoutée, exprimée elle en Po).
+/// donnée élite n'est pas renseignée) — unité SPP, à ne pas confondre avec
+/// `ISkillCatalogPort::skill_value_delta`/`stat_value_delta`, qui donnent la
+/// valeur d'équipe ajoutée, en kPo.
 pub struct SkillCostLevelDto {
     pub level: u8,
     pub chosen_primary: u32,
@@ -154,9 +154,9 @@ pub trait ISkillCatalogPort: Send + Sync {
     fn position_access(&self, roster_line_id: &str) -> Option<PositionAccessDto>;
     fn cost_for_level(&self, level: u8, is_elite: bool) -> Option<SkillCostLevelDto>;
 
-    /// Valeur (Po) ajoutée par l'achat d'une compétence primary/secondary.
+    /// Valeur (kPo) ajoutée par l'achat d'une compétence primary/secondary.
     fn skill_value_delta(&self, is_secondary_access: bool) -> u32;
-    /// Valeur (Po) ajoutée par une augmentation de la caractéristique donnée.
+    /// Valeur (kPo) ajoutée par une augmentation de la caractéristique donnée.
     fn stat_value_delta(&self, stat: crate::app::players::domain::match_impact::StatKind) -> u32;
 
     // ── Barème SPP par type d'action (règle Blood Bowl standard, fixe) ────────

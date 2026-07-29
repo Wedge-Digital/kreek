@@ -138,7 +138,7 @@ mod tests {
             jersey: None,
             base_skills: vec![],
             starting_spp: Spp(0),
-            starting_value: ValueKpo(90_000),
+            starting_value: ValueKpo(90),
         };
         Player::from_events(&[created]).unwrap()
     }

@@ -56,7 +56,7 @@ async fn seed_player(repo: &dyn IPlayerRepository, player_id: &str, team_id: &st
         jersey: None,
         base_skills: vec![],
         starting_spp: Spp(0),
-        starting_value: ValueKpo(100_000),
+        starting_value: ValueKpo(100),
     };
     repo.append(
         &PlayerId(player_id.into()),

@@ -179,7 +179,7 @@ impl PlayerDomainEvent {
                 team_id: team_id.0.clone(),
                 player_id: player_id.0.clone(),
                 skill_name: skill_name.to_string(),
-                value_delta_po: value_delta.0,
+                value_delta_kpo: value_delta.0,
             }),
             Self::PlayerStatIncreased {
                 team_id,
@@ -191,7 +191,7 @@ impl PlayerDomainEvent {
                 team_id: team_id.0.clone(),
                 player_id: player_id.0.clone(),
                 stat: stat_name(*stat).to_string(),
-                value_delta_po: value_delta.0,
+                value_delta_kpo: value_delta.0,
             }),
             _ => None,
         }

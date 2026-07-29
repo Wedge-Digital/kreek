@@ -65,18 +65,6 @@ pub struct PlayerDetailVm {
     pub can_spend: bool,
 }
 
-fn format_thousands(n: u32) -> String {
-    let digits = n.to_string();
-    let mut out = String::new();
-    for (i, c) in digits.chars().rev().enumerate() {
-        if i > 0 && i % 3 == 0 {
-            out.push(' ');
-        }
-        out.push(c);
-    }
-    out.chars().rev().collect()
-}
-
 fn action_line_vm(action: &MatchHistoryAction) -> MatchActionLineVm {
     let (icon, label) = match action.kind {
         MatchHistoryActionKind::Touchdown => ("🏈", "Touchdown"),
@@ -355,7 +343,7 @@ fn build_vm(
         av: stats.av,
         base_skills,
         acquired_skills,
-        value_formatted: format!("{} Po", format_thousands(player.value.0)),
+        value_formatted: format!("{} kPo", player.value.0),
         spp_earned: spp.earned,
         spp_spent: spp.spent,
         spp_reserve: spp.reserve,
@@ -394,7 +382,7 @@ mod tests {
             jersey: None,
             base_skills: vec![],
             starting_spp: Spp(0),
-            starting_value: ValueKpo(100_000),
+            starting_value: ValueKpo(100),
         };
         let mut player = Player::from_events(&[created]).unwrap();
         player.spp = Spp(spp_earned);
@@ -408,13 +396,6 @@ mod tests {
             });
         }
         player
-    }
-
-    #[test]
-    fn format_thousands_inserts_space_separators() {
-        assert_eq!(format_thousands(128000), "128 000");
-        assert_eq!(format_thousands(500), "500");
-        assert_eq!(format_thousands(1234567), "1 234 567");
     }
 
     #[test]

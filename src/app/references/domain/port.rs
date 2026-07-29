@@ -30,12 +30,11 @@ pub trait IReferenceRepository: Send + Sync {
     fn casualty_spp(&self) -> u8;
     fn mvp_spp(&self) -> u8;
 
-    // ── Valeur ajoutée par amélioration achetée en SPP (fixe) ───────────────────
-    // Unité : Po (pas kPo) — cohérent avec `players::domain::player::ValueKpo`,
-    // qui malgré son nom stocke des Po bruts (ex. ValueKpo(100_000) → "100 000
-    // Po"). Attention au pont vers `teams::domain::value_objects::Kpo`, qui LUI
-    // stocke déjà des kPo (Kpo(873) → "873 kPo") — diviser par 1000 en
-    // traversant la frontière players → teams (cf. carte 180).
+    // ── Valeur ajoutée par une amélioration ─────────────────────────────────────
+    // Unité : kPo, comme partout ailleurs dans le back. Lue dans
+    // `improvement_values.json`, et non plus codée en dur — la même table sert
+    // les deux origines d'une compétence, bonus de création et achat en SPP,
+    // qui divergeaient jusqu'à la carte 249.
     fn improvement_skill_value_delta(&self, is_secondary_access: bool) -> u32;
     fn improvement_stat_value_delta_ma(&self) -> u32;
     fn improvement_stat_value_delta_st(&self) -> u32;
