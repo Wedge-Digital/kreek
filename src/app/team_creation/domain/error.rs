@@ -47,7 +47,9 @@ impl fmt::Display for DomainError {
             DomainError::StaffNotFoundInTeam => "team_creation.staff_not_found_in_team",
             DomainError::InsufficientPlayerCount => "team_creation.insufficient_player_count",
             DomainError::PlayerNameTooLong => "Le nom ne peut pas dépasser 50 caractères.",
-            DomainError::DuplicateJerseyNumber => "Ce numéro de maillot est déjà attribué à un autre joueur.",
+            DomainError::DuplicateJerseyNumber => {
+                "Ce numéro de maillot est déjà attribué à un autre joueur."
+            }
             DomainError::LeagueNotSelected => "Veuillez sélectionner une ligue avant de soumettre.",
             DomainError::InsufficientSpp => "Budget SPP insuffisant.",
             DomainError::SkillAlreadyAcquired => "Ce joueur possède déjà cette compétence.",

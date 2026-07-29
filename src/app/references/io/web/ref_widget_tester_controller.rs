@@ -1,16 +1,15 @@
 use crate::app::routes::AppRoutes;
+use crate::state::AppState;
 use askama::Template;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
-use crate::state::AppState;
 
-pub async fn widget_tester_controller(
-    State(_state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn widget_tester_controller(State(_state): State<AppState>) -> impl IntoResponse {
     ReferencesWidgetPageTesterTemplate {
         routes: AppRoutes::default(),
-    }.into_response()
+    }
+    .into_response()
 }
 
 #[derive(Template)]

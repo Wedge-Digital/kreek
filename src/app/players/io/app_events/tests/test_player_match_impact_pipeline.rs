@@ -37,30 +37,35 @@ use std::time::Duration;
 
 fn context(player_id: &str) -> PlayerMatchContextPayload {
     PlayerMatchContextPayload {
-        match_report_id:    "mr1".into(),
-        round_id:           "r1".into(),
-        round_label:        "Journée 5".into(),
-        opponent_team_id:   "opponent".into(),
+        match_report_id: "mr1".into(),
+        round_id: "r1".into(),
+        round_label: "Journée 5".into(),
+        opponent_team_id: "opponent".into(),
         opponent_team_name: "Bone Crushers".into(),
-        player_id:          player_id.to_string(),
+        player_id: player_id.to_string(),
     }
 }
 
 async fn seed_player(repo: &dyn IPlayerRepository, player_id: &str, team_id: &str) {
     let created = PlayerDomainEvent::PlayerCreated {
-        player_id:      PlayerId(player_id.to_string()),
-        team_id:        TeamId(team_id.to_string()),
-        space_id:       SpaceId::new(),
-        position_name:  PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
+        player_id: PlayerId(player_id.to_string()),
+        team_id: TeamId(team_id.to_string()),
+        space_id: SpaceId::new(),
+        position_name: PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
         roster_line_id: RosterLineId::try_new("BLITZER".to_string()).unwrap(),
-        jersey:         None,
-        base_skills:    vec![],
-        starting_spp:   Spp(0),
+        jersey: None,
+        base_skills: vec![],
+        starting_spp: Spp(0),
         starting_value: ValueKpo(100_000),
     };
-    repo.append(&PlayerId(player_id.into()), &TeamId(team_id.into()), &created, 1)
-        .await
-        .unwrap();
+    repo.append(
+        &PlayerId(player_id.into()),
+        &TeamId(team_id.into()),
+        &created,
+        1,
+    )
+    .await
+    .unwrap();
 }
 
 async fn wait_for<F, Fut>(mut check: F)
@@ -80,7 +85,11 @@ where
 #[sqlx::test]
 async fn full_pipeline_credits_spp_and_records_injury_then_restores_availability(pool: PgPool) {
     let player_repo: Arc<dyn IPlayerRepository> = Arc::new(PgPlayerRepository::new(pool));
-    let skill_catalog: Arc<dyn crate::app::players::ports::ISkillCatalogPort> = Arc::new(crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter::new(Arc::new(InMemoryReferenceRepository::load_for_tests())));
+    let skill_catalog: Arc<dyn crate::app::players::ports::ISkillCatalogPort> = Arc::new(
+        crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter::new(Arc::new(
+            InMemoryReferenceRepository::load_for_tests(),
+        )),
+    );
     let app_event_bus = new_bus();
 
     player_match_impact_listener::init(&app_event_bus, player_repo.clone(), skill_catalog);
@@ -105,14 +114,18 @@ async fn full_pipeline_credits_spp_and_records_injury_then_restores_availability
         }
     })
     .await;
-    let scorer = player_repo.find_by_id(&PlayerId("scorer".into())).await.unwrap().unwrap();
+    let scorer = player_repo
+        .find_by_id(&PlayerId("scorer".into()))
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(scorer.spp.0, 3);
     assert_eq!(scorer.career_touchdowns.0, 1);
 
     // ── Blessure sérieuse : passe le joueur en MissingNextGame ────────────────
     let _ = app_event_bus.send(
         PlayerMatchImpactAppEvent::PlayerInjured {
-            context:     context("injured"),
+            context: context("injured"),
             injury_type: InjuryTypePayload::BlessureSerieuse,
         }
         .to_enveloppe(),
@@ -134,14 +147,14 @@ async fn full_pipeline_credits_spp_and_records_injury_then_restores_availability
     // ── TeamMatchConcluded : restaure la disponibilité du joueur blessé ───────
     let _ = app_event_bus.send(
         PlayerMatchImpactAppEvent::TeamMatchConcluded {
-            team_id:            "t1".into(),
-            match_report_id:    "mr2".into(),
-            round_id:           "r2".into(),
-            round_label:        "Journée 6".into(),
-            opponent_team_id:   "opponent2".into(),
+            team_id: "t1".into(),
+            match_report_id: "mr2".into(),
+            round_id: "r2".into(),
+            round_label: "Journée 6".into(),
+            opponent_team_id: "opponent2".into(),
             opponent_team_name: "Green Machine".into(),
-            team_score:         1,
-            opponent_score:     1,
+            team_score: 1,
+            opponent_score: 1,
         }
         .to_enveloppe(),
     );
@@ -159,8 +172,15 @@ async fn full_pipeline_credits_spp_and_records_injury_then_restores_availability
     })
     .await;
 
-    let injured = player_repo.find_by_id(&PlayerId("injured".into())).await.unwrap().unwrap();
-    assert_eq!(injured.participation_status, PlayerParticipationStatus::Available);
+    let injured = player_repo
+        .find_by_id(&PlayerId("injured".into()))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        injured.participation_status,
+        PlayerParticipationStatus::Available
+    );
     assert_eq!(injured.career_persistent_injuries.0, 1); // conservé après restauration
 }
 
@@ -173,7 +193,11 @@ async fn full_pipeline_credits_spp_and_records_injury_then_restores_availability
 #[sqlx::test]
 async fn action_and_team_match_concluded_sent_back_to_back_both_land_in_history(pool: PgPool) {
     let player_repo: Arc<dyn IPlayerRepository> = Arc::new(PgPlayerRepository::new(pool));
-    let skill_catalog: Arc<dyn crate::app::players::ports::ISkillCatalogPort> = Arc::new(crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter::new(Arc::new(InMemoryReferenceRepository::load_for_tests())));
+    let skill_catalog: Arc<dyn crate::app::players::ports::ISkillCatalogPort> = Arc::new(
+        crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter::new(Arc::new(
+            InMemoryReferenceRepository::load_for_tests(),
+        )),
+    );
     let app_event_bus = new_bus();
 
     player_match_impact_listener::init(&app_event_bus, player_repo.clone(), skill_catalog);
@@ -181,19 +205,18 @@ async fn action_and_team_match_concluded_sent_back_to_back_both_land_in_history(
 
     let mut mr3_context = context("scorer");
     mr3_context.match_report_id = "mr3".into();
-    let _ = app_event_bus.send(
-        PlayerMatchImpactAppEvent::PlayerPerformedTouchdown(mr3_context).to_enveloppe(),
-    );
+    let _ = app_event_bus
+        .send(PlayerMatchImpactAppEvent::PlayerPerformedTouchdown(mr3_context).to_enveloppe());
     let _ = app_event_bus.send(
         PlayerMatchImpactAppEvent::TeamMatchConcluded {
-            team_id:            "t1".into(),
-            match_report_id:    "mr3".into(),
-            round_id:           "r1".into(),
-            round_label:        "Journée 5".into(),
-            opponent_team_id:   "opponent".into(),
+            team_id: "t1".into(),
+            match_report_id: "mr3".into(),
+            round_id: "r1".into(),
+            round_label: "Journée 5".into(),
+            opponent_team_id: "opponent".into(),
             opponent_team_name: "Bone Crushers".into(),
-            team_score:         1,
-            opponent_score:     0,
+            team_score: 1,
+            opponent_score: 0,
         }
         .to_enveloppe(),
     );
@@ -212,7 +235,10 @@ async fn action_and_team_match_concluded_sent_back_to_back_both_land_in_history(
     })
     .await;
 
-    let events = player_repo.find_events_by_id(&PlayerId("scorer".into())).await.unwrap();
+    let events = player_repo
+        .find_events_by_id(&PlayerId("scorer".into()))
+        .await
+        .unwrap();
     let history = build_match_history(&events);
     let mr3 = history.iter().find(|m| m.match_report_id == "mr3").unwrap();
     assert_eq!(mr3.round_label, "Journée 5");
@@ -233,7 +259,11 @@ async fn action_and_team_match_concluded_sent_back_to_back_both_land_in_history(
 #[sqlx::test]
 async fn un_joueur_blesse_pendant_le_match_reste_absent_au_suivant(pool: PgPool) {
     let player_repo: Arc<dyn IPlayerRepository> = Arc::new(PgPlayerRepository::new(pool));
-    let skill_catalog: Arc<dyn crate::app::players::ports::ISkillCatalogPort> = Arc::new(crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter::new(Arc::new(InMemoryReferenceRepository::load_for_tests())));
+    let skill_catalog: Arc<dyn crate::app::players::ports::ISkillCatalogPort> = Arc::new(
+        crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter::new(Arc::new(
+            InMemoryReferenceRepository::load_for_tests(),
+        )),
+    );
     let app_event_bus = new_bus();
 
     player_match_impact_listener::init(&app_event_bus, player_repo.clone(), skill_catalog);
@@ -243,21 +273,21 @@ async fn un_joueur_blesse_pendant_le_match_reste_absent_au_suivant(pool: PgPool)
     // tous deux portant `mr1`.
     let _ = app_event_bus.send(
         PlayerMatchImpactAppEvent::PlayerInjured {
-            context:     context("blesse"),
+            context: context("blesse"),
             injury_type: InjuryTypePayload::BlessureSerieuse,
         }
         .to_enveloppe(),
     );
     let _ = app_event_bus.send(
         PlayerMatchImpactAppEvent::TeamMatchConcluded {
-            team_id:            "t1".into(),
-            match_report_id:    "mr1".into(),
-            round_id:           "r1".into(),
-            round_label:        "Journée 5".into(),
-            opponent_team_id:   "opponent".into(),
+            team_id: "t1".into(),
+            match_report_id: "mr1".into(),
+            round_id: "r1".into(),
+            round_label: "Journée 5".into(),
+            opponent_team_id: "opponent".into(),
             opponent_team_name: "Bone Crushers".into(),
-            team_score:         1,
-            opponent_score:     0,
+            team_score: 1,
+            opponent_score: 0,
         }
         .to_enveloppe(),
     );
@@ -278,7 +308,11 @@ async fn un_joueur_blesse_pendant_le_match_reste_absent_au_suivant(pool: PgPool)
     })
     .await;
 
-    let joueur = player_repo.find_by_id(&PlayerId("blesse".into())).await.unwrap().unwrap();
+    let joueur = player_repo
+        .find_by_id(&PlayerId("blesse".into()))
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(
         joueur.participation_status,
         PlayerParticipationStatus::MissingNextGame,

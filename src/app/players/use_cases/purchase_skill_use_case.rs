@@ -2,7 +2,9 @@ use crate::app::players::domain::error::DomainError;
 use crate::app::players::domain::value_objects::SkillName;
 use crate::app::players::ports::{IPlayerRepository, ISkillCatalogPort, RepositoryError};
 use crate::app::players::use_cases::commands::PurchaseSkillCommand;
-use crate::app::players::use_cases::improvement_cost_service::{resolve_skill_cost, ImprovementCostError};
+use crate::app::players::use_cases::improvement_cost_service::{
+    resolve_skill_cost, ImprovementCostError,
+};
 use crate::common::services::event_bus::event_bus::EventBus;
 
 pub enum PurchaseSkillError {
@@ -26,7 +28,9 @@ pub async fn execute(
 
     let skill = catalog
         .find_skill(cmd.skill_id.as_ref())
-        .ok_or(PurchaseSkillError::Cost(ImprovementCostError::SkillNotFound))?;
+        .ok_or(PurchaseSkillError::Cost(
+            ImprovementCostError::SkillNotFound,
+        ))?;
 
     let level = player.next_improvement_level();
     let (cost, value_delta) = resolve_skill_cost(
@@ -41,7 +45,14 @@ pub async fn execute(
     let category_css = category_css(&skill.category);
     let skill_name = SkillName::try_new(skill.name).expect("nom déjà validé côté référentiel");
     let event = player
-        .purchase_skill(cmd.skill_id, skill_name, category_css.to_string(), cmd.mode, cost, value_delta)
+        .purchase_skill(
+            cmd.skill_id,
+            skill_name,
+            category_css.to_string(),
+            cmd.mode,
+            cost,
+            value_delta,
+        )
         .map_err(PurchaseSkillError::Domain)?;
 
     player_repo
@@ -57,11 +68,11 @@ pub async fn execute(
 /// Même mapping catégorie → classe CSS que `player_table.rs`/`team_created_listener.rs`.
 fn category_css(category: &str) -> &'static str {
     match category {
-        "GENERAL"  => "type-general",
+        "GENERAL" => "type-general",
         "STRENGTH" => "type-strength",
-        "AGILITY"  => "type-agility",
-        "PASSING"  => "type-passing",
+        "AGILITY" => "type-agility",
+        "PASSING" => "type-passing",
         "MUTATION" => "type-mutation",
-        _          => "type-general",
+        _ => "type-general",
     }
 }

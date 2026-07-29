@@ -29,7 +29,12 @@ pub async fn post_purchase_skill(
         return StatusCode::UNAUTHORIZED.into_response();
     };
 
-    let player = match state.players.repository.find_by_id(&PlayerId(player_id.clone())).await {
+    let player = match state
+        .players
+        .repository
+        .find_by_id(&PlayerId(player_id.clone()))
+        .await
+    {
         Ok(Some(p)) => p,
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
@@ -38,7 +43,12 @@ pub async fn post_purchase_skill(
         }
     };
 
-    let Some(team) = state.players.roster_port.find_team_info(&player.team_id.0).await else {
+    let Some(team) = state
+        .players
+        .roster_port
+        .find_team_info(&player.team_id.0)
+        .await
+    else {
         return StatusCode::NOT_FOUND.into_response();
     };
 
@@ -63,11 +73,27 @@ pub async fn post_purchase_skill(
         _ => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let cmd = PurchaseSkillCommand { player_id: player.id.clone(), skill_id, mode };
+    let cmd = PurchaseSkillCommand {
+        player_id: player.id.clone(),
+        skill_id,
+        mode,
+    };
 
-    match purchase_skill_use_case::execute(cmd, state.players.repository.as_ref(), state.players.skill_catalog.as_ref(), &state.players.event_bus).await {
-        Ok(()) => Response::builder().header("HX-Refresh", "true").body(Body::empty()).unwrap(),
-        Err(purchase_skill_use_case::PurchaseSkillError::PlayerNotFound) => StatusCode::NOT_FOUND.into_response(),
+    match purchase_skill_use_case::execute(
+        cmd,
+        state.players.repository.as_ref(),
+        state.players.skill_catalog.as_ref(),
+        &state.players.event_bus,
+    )
+    .await
+    {
+        Ok(()) => Response::builder()
+            .header("HX-Refresh", "true")
+            .body(Body::empty())
+            .unwrap(),
+        Err(purchase_skill_use_case::PurchaseSkillError::PlayerNotFound) => {
+            StatusCode::NOT_FOUND.into_response()
+        }
         Err(purchase_skill_use_case::PurchaseSkillError::Cost(e)) => {
             tracing::warn!("post_purchase_skill cost resolution: {e:?}");
             StatusCode::UNPROCESSABLE_ENTITY.into_response()
@@ -95,7 +121,11 @@ pub async fn can_spend_spp(
         return true;
     }
     let is_space_admin = matches!(
-        state.players.space_member_port.find_member_profile(&user.id, space_id).await,
+        state
+            .players
+            .space_member_port
+            .find_member_profile(&user.id, space_id)
+            .await,
         Some(SpaceProfile::SpaceAdmin)
     );
     if is_space_admin {
@@ -106,9 +136,15 @@ pub async fn can_spend_spp(
     };
     let user_id_str = user.id.to_string();
     let coach_name_str = user.coach_name.clone().into_inner();
-    match state.players.competition_port.find_admin_info(competition_id).await {
-        Some(info) => info.admin_ids.contains(&user_id_str) || info.admin_names.contains(&coach_name_str),
+    match state
+        .players
+        .competition_port
+        .find_admin_info(competition_id)
+        .await
+    {
+        Some(info) => {
+            info.admin_ids.contains(&user_id_str) || info.admin_names.contains(&coach_name_str)
+        }
         None => false,
     }
 }
-

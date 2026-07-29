@@ -9,19 +9,49 @@ pub struct PositionNameVo(String);
 
 #[nutype(
     validate(not_empty),
-    derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Display, AsRef)
+    derive(
+        Debug,
+        Clone,
+        PartialEq,
+        Eq,
+        Hash,
+        Serialize,
+        Deserialize,
+        Display,
+        AsRef
+    )
 )]
 pub struct RosterLineId(String);
 
 #[nutype(
     validate(less_or_equal = 999),
-    derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)
+    derive(
+        Debug,
+        Clone,
+        Copy,
+        PartialEq,
+        Eq,
+        PartialOrd,
+        Ord,
+        Serialize,
+        Deserialize
+    )
 )]
 pub struct JerseyVo(u16);
 
 #[nutype(
     validate(not_empty),
-    derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Display, AsRef)
+    derive(
+        Debug,
+        Clone,
+        PartialEq,
+        Eq,
+        Hash,
+        Serialize,
+        Deserialize,
+        Display,
+        AsRef
+    )
 )]
 pub struct SkillId(String);
 

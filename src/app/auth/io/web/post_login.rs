@@ -1,9 +1,9 @@
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::auth::context::AuthContext;
 use crate::app::auth::io::web::get_login::LoginTemplate;
 use crate::app::auth::routes::path;
 use crate::app::auth::use_cases::perform_login;
 use crate::app::auth::use_cases::perform_login::{LoginError, PerformLoginCommand};
-use crate::app::auth::context::AuthContext;
 use axum::extract::State;
 use axum::http::header;
 use axum::response::{IntoResponse, Response};
@@ -14,13 +14,7 @@ pub async fn login_submit(
     State(ctx): State<AuthContext>,
     Form(payload): Form<PerformLoginCommand>,
 ) -> impl IntoResponse {
-    match perform_login::execute(
-        payload,
-        ctx.user_repository.as_ref(),
-        &ctx.event_bus,
-    )
-    .await
-    {
+    match perform_login::execute(payload, ctx.user_repository.as_ref(), &ctx.event_bus).await {
         Ok(user) => {
             if auth_session.login(&user).await.is_err() {
                 return LoginTemplate {
@@ -52,6 +46,7 @@ pub async fn login_submit(
 #[cfg(test)]
 mod tests {
     use crate::app::auth::auth_backend::AuthBackend;
+    use crate::app::auth::context::AuthContext;
     use crate::app::auth::io::repository::tests::fake_reset_token_repository::FakeResetTokenRepository;
     use crate::app::auth::io::repository::tests::fake_user_repository::{
         FakeUserRepository, FindResult,
@@ -60,7 +55,6 @@ mod tests {
     use crate::app::auth::routes::path;
     use crate::common::services::email::fakes::console_email_service::ConsoleEmailService;
     use crate::common::services::event_bus::event_bus::new_bus;
-    use crate::app::auth::context::AuthContext;
     use argon2::password_hash::{rand_core::OsRng, SaltString};
     use argon2::{Argon2, PasswordHasher};
     use axum::body::to_bytes;
@@ -84,9 +78,7 @@ mod tests {
         let mock = Arc::new(FakeUserRepository { find_result });
         let session_layer = SessionManagerLayer::new(MemoryStore::default());
         let auth_layer = AuthManagerLayerBuilder::new(
-            AuthBackend::new(
-                mock.clone() as Arc<dyn crate::app::auth::ports::IUserRepository>,
-            ),
+            AuthBackend::new(mock.clone() as Arc<dyn crate::app::auth::ports::IUserRepository>),
             session_layer,
         )
         .build();

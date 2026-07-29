@@ -9,35 +9,35 @@ use axum::response::{Html, IntoResponse, Response};
 // ── View models ───────────────────────────────────────────────────────────────
 
 pub struct InjuryRowVm {
-    pub label:               String,
-    pub round_label:         String,
-    pub opponent_team_name:  String,
+    pub label: String,
+    pub round_label: String,
+    pub opponent_team_name: String,
 }
 
 pub struct StatAdjustmentRowVm {
-    pub stat:  &'static str,
+    pub stat: &'static str,
     pub malus: u8,
 }
 
 pub struct PlayerDebugVm {
-    pub id:                          String,
-    pub team_id:                     String,
-    pub position_name:               String,
-    pub roster_line_id:              String,
-    pub jersey:                      String,
-    pub spp:                         u32,
-    pub value_kpo:                   u32,
-    pub version:                     i32,
-    pub participation_status:        &'static str,
-    pub career_touchdowns:           u16,
-    pub career_passes:               u16,
-    pub career_interceptions:        u16,
-    pub career_casualties:           u16,
-    pub career_mvps:                 u16,
-    pub career_fouls:                u16,
-    pub career_persistent_injuries:  u16,
-    pub injuries:                    Vec<InjuryRowVm>,
-    pub stat_adjustments:            Vec<StatAdjustmentRowVm>,
+    pub id: String,
+    pub team_id: String,
+    pub position_name: String,
+    pub roster_line_id: String,
+    pub jersey: String,
+    pub spp: u32,
+    pub value_kpo: u32,
+    pub version: i32,
+    pub participation_status: &'static str,
+    pub career_touchdowns: u16,
+    pub career_passes: u16,
+    pub career_interceptions: u16,
+    pub career_casualties: u16,
+    pub career_mvps: u16,
+    pub career_fouls: u16,
+    pub career_persistent_injuries: u16,
+    pub injuries: Vec<InjuryRowVm>,
+    pub stat_adjustments: Vec<StatAdjustmentRowVm>,
 }
 
 fn participation_status_label(status: PlayerParticipationStatus) -> &'static str {
@@ -71,32 +71,43 @@ fn stat_label(stat: StatKind) -> &'static str {
 
 impl From<Player> for PlayerDebugVm {
     fn from(p: Player) -> Self {
-        let injuries = p.injuries.iter().map(|r| InjuryRowVm {
-            label:              injury_label(&r.injury_type),
-            round_label:        r.context.round_label.clone(),
-            opponent_team_name: r.context.opponent_team_name.clone(),
-        }).collect();
-        let stat_adjustments = p.stat_adjustments.iter().map(|a| StatAdjustmentRowVm {
-            stat:  stat_label(a.stat),
-            malus: a.malus.into_inner(),
-        }).collect();
+        let injuries = p
+            .injuries
+            .iter()
+            .map(|r| InjuryRowVm {
+                label: injury_label(&r.injury_type),
+                round_label: r.context.round_label.clone(),
+                opponent_team_name: r.context.opponent_team_name.clone(),
+            })
+            .collect();
+        let stat_adjustments = p
+            .stat_adjustments
+            .iter()
+            .map(|a| StatAdjustmentRowVm {
+                stat: stat_label(a.stat),
+                malus: a.malus.into_inner(),
+            })
+            .collect();
 
         Self {
-            id:                         p.id.0,
-            team_id:                    p.team_id.0,
-            position_name:              p.position_name.to_string(),
-            roster_line_id:             p.roster_line_id.as_ref().to_string(),
-            jersey:                     p.jersey.map(|j| j.into_inner().to_string()).unwrap_or_else(|| "—".to_string()),
-            spp:                        p.spp.0,
-            value_kpo:                  p.value.0,
-            version:                    p.version,
-            participation_status:       participation_status_label(p.participation_status),
-            career_touchdowns:          p.career_touchdowns.0,
-            career_passes:              p.career_passes.0,
-            career_interceptions:       p.career_interceptions.0,
-            career_casualties:          p.career_casualties.0,
-            career_mvps:                p.career_mvps.0,
-            career_fouls:               p.career_fouls.0,
+            id: p.id.0,
+            team_id: p.team_id.0,
+            position_name: p.position_name.to_string(),
+            roster_line_id: p.roster_line_id.as_ref().to_string(),
+            jersey: p
+                .jersey
+                .map(|j| j.into_inner().to_string())
+                .unwrap_or_else(|| "—".to_string()),
+            spp: p.spp.0,
+            value_kpo: p.value.0,
+            version: p.version,
+            participation_status: participation_status_label(p.participation_status),
+            career_touchdowns: p.career_touchdowns.0,
+            career_passes: p.career_passes.0,
+            career_interceptions: p.career_interceptions.0,
+            career_casualties: p.career_casualties.0,
+            career_mvps: p.career_mvps.0,
+            career_fouls: p.career_fouls.0,
             career_persistent_injuries: p.career_persistent_injuries.0,
             injuries,
             stat_adjustments,
@@ -130,7 +141,11 @@ pub async fn player_debug_controller(
     Path((_space_id, player_id)): Path<(String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let player = state.players.repository.find_by_id(&PlayerId(player_id)).await;
+    let player = state
+        .players
+        .repository
+        .find_by_id(&PlayerId(player_id))
+        .await;
     match player {
         Ok(Some(p)) => PlayerDebugTemplate { vm: p.into() }.into_response(),
         Ok(None) => StatusCode::NOT_FOUND.into_response(),

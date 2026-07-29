@@ -19,8 +19,8 @@ impl IPlayerRosterPort for TeamRosterAdapter {
     async fn find_team_info(&self, team_id: &str) -> Option<TeamRosterInfoDto> {
         let team = self.team_repo.find_by_id(team_id).await.ok()??;
         Some(TeamRosterInfoDto {
-            team_name:      team.name.to_string(),
-            coach_id:       team.coach_id.to_string(),
+            team_name: team.name.to_string(),
+            coach_id: team.coach_id.to_string(),
             competition_id: team.competition_id.map(|id| id.to_string()),
             in_player_improvement_phase: team.game_phase == Some(GamePhase::PlayerImprovement),
         })

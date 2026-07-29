@@ -44,24 +44,27 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
                         .map_err(RepositoryError::Deserialization)?;
 
                 Ok(PlayerProjection {
-                    player_id:      r.get("player_id"),
-                    team_id:        r.get("team_id"),
-                    space_id:       r.get("space_id"),
-                    position_name:  r.get("position_name"),
+                    player_id: r.get("player_id"),
+                    team_id: r.get("team_id"),
+                    space_id: r.get("space_id"),
+                    position_name: r.get("position_name"),
                     roster_line_id: r.get("roster_line_id"),
-                    personal_name:  r.get("personal_name"),
-                    jersey:         r.get("jersey"),
+                    personal_name: r.get("personal_name"),
+                    jersey: r.get("jersey"),
                     base_skills,
                     acquired_skills,
-                    spp:            r.get("spp"),
-                    value_kpo:      r.get("value_kpo"),
+                    spp: r.get("spp"),
+                    value_kpo: r.get("value_kpo"),
                     participation_status: r.get("participation_status"),
                 })
             })
             .collect()
     }
 
-    async fn find_by_id(&self, player_id: &str) -> Result<Option<PlayerProjection>, RepositoryError> {
+    async fn find_by_id(
+        &self,
+        player_id: &str,
+    ) -> Result<Option<PlayerProjection>, RepositoryError> {
         let row = sqlx::query(
             "SELECT player_id, team_id, space_id, position_name, roster_line_id,
                     personal_name, jersey, base_skills, acquired_skills, spp, value_kpo,
@@ -81,17 +84,17 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
                 serde_json::from_value(r.get::<serde_json::Value, _>("acquired_skills"))
                     .map_err(RepositoryError::Deserialization)?;
             Ok(PlayerProjection {
-                player_id:      r.get("player_id"),
-                team_id:        r.get("team_id"),
-                space_id:       r.get("space_id"),
-                position_name:  r.get("position_name"),
+                player_id: r.get("player_id"),
+                team_id: r.get("team_id"),
+                space_id: r.get("space_id"),
+                position_name: r.get("position_name"),
                 roster_line_id: r.get("roster_line_id"),
-                personal_name:  r.get("personal_name"),
-                jersey:         r.get("jersey"),
+                personal_name: r.get("personal_name"),
+                jersey: r.get("jersey"),
                 base_skills,
                 acquired_skills,
-                spp:            r.get("spp"),
-                value_kpo:      r.get("value_kpo"),
+                spp: r.get("spp"),
+                value_kpo: r.get("value_kpo"),
                 participation_status: r.get("participation_status"),
             })
         })

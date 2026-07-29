@@ -47,12 +47,24 @@ async fn handle_published(
     repo: &dyn crate::app::ranking::ports::IRankingRepository,
     competition_port: &dyn IRankingCompetitionPort,
 ) {
-    let Ok(competition_id) = CompetitionId::try_new(&payload.competition_id) else { return };
-    let Ok(season_id) = SeasonId::try_new(&payload.season_id) else { return };
-    let Ok(round_id) = RoundId::try_new(&payload.round_id) else { return };
-    let Ok(match_report_id) = MatchReportId::try_new(&payload.match_report_id) else { return };
-    let Ok(home_team_id) = TeamId::try_new(&payload.home_team_id) else { return };
-    let Ok(away_team_id) = TeamId::try_new(&payload.away_team_id) else { return };
+    let Ok(competition_id) = CompetitionId::try_new(&payload.competition_id) else {
+        return;
+    };
+    let Ok(season_id) = SeasonId::try_new(&payload.season_id) else {
+        return;
+    };
+    let Ok(round_id) = RoundId::try_new(&payload.round_id) else {
+        return;
+    };
+    let Ok(match_report_id) = MatchReportId::try_new(&payload.match_report_id) else {
+        return;
+    };
+    let Ok(home_team_id) = TeamId::try_new(&payload.home_team_id) else {
+        return;
+    };
+    let Ok(away_team_id) = TeamId::try_new(&payload.away_team_id) else {
+        return;
+    };
 
     let cmd = RecordMatchRankingCommand {
         competition_id,
@@ -87,18 +99,24 @@ async fn handle_published(
 /// Compte les sorties (`Sortie` seule) infligées par une équipe — filtrage IO :
 /// le domaine ne connaît pas les types du payload, il reçoit un nombre.
 fn count_sorties(actions: &[MatchActionPublishedPayload]) -> CasualtiesInflicted {
-    CasualtiesInflicted(count_matching(actions, |a| matches!(a, ActionTypePayload::Sortie)))
+    CasualtiesInflicted(count_matching(actions, |a| {
+        matches!(a, ActionTypePayload::Sortie)
+    }))
 }
 
 /// Fautes commises = actions `Agression` (règle 16) — en Blood Bowl, l'agression
 /// *est* la faute.
 fn count_agressions(actions: &[MatchActionPublishedPayload]) -> FoulsCommitted {
-    FoulsCommitted(count_matching(actions, |a| matches!(a, ActionTypePayload::Agression)))
+    FoulsCommitted(count_matching(actions, |a| {
+        matches!(a, ActionTypePayload::Agression)
+    }))
 }
 
 /// Réussites = actions `Passe` uniquement (règle 15), ni `Interception` ni `Lancer`.
 fn count_passes(actions: &[MatchActionPublishedPayload]) -> CompletionsMade {
-    CompletionsMade(count_matching(actions, |a| matches!(a, ActionTypePayload::Passe)))
+    CompletionsMade(count_matching(actions, |a| {
+        matches!(a, ActionTypePayload::Passe)
+    }))
 }
 
 fn count_matching(

@@ -11,7 +11,8 @@ pub fn players_app_event_publisher(event_bus: &EventBus, app_event_bus: EventBus
         loop {
             match rx.recv().await {
                 Ok(envelope) => {
-                    let Ok(event) = serde_json::from_value::<PlayerDomainEvent>(envelope.payload.clone())
+                    let Ok(event) =
+                        serde_json::from_value::<PlayerDomainEvent>(envelope.payload.clone())
                     else {
                         continue;
                     };

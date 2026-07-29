@@ -35,7 +35,10 @@ impl IReferenceDataPort for ReferenceDataAdapter {
                                 .find_skill_by_uid(uid)
                                 .map(|s| s.name.clone())
                                 .unwrap_or_else(|| uid.clone());
-                            SkillDefinition { uid: uid.clone(), name }
+                            SkillDefinition {
+                                uid: uid.clone(),
+                                name,
+                            }
                         })
                         .collect();
                     PlayerPositionDefinition {
@@ -70,13 +73,21 @@ impl IReferenceDataPort for ReferenceDataAdapter {
         let is_primary = position.primary_access.iter().any(|c| c == &skill.category);
         let is_elite = skill.skill_type == "Élite";
 
-        let pricing = self.repo.skill_cost_matrix().iter().find(|l| l.level == 1)?;
+        let pricing = self
+            .repo
+            .skill_cost_matrix()
+            .iter()
+            .find(|l| l.level == 1)?;
 
         let spp_cost = match mode {
             "random" => pricing.random_for(is_elite),
             _ => {
                 let costs = pricing.chosen_for(is_elite);
-                if is_primary { costs.primary } else { costs.secondary }
+                if is_primary {
+                    costs.primary
+                } else {
+                    costs.secondary
+                }
             }
         };
 
@@ -84,7 +95,9 @@ impl IReferenceDataPort for ReferenceDataAdapter {
     }
 
     fn resolve_skill_name(&self, skill_uid: &str) -> Option<String> {
-        self.repo.find_skill_by_uid(skill_uid).map(|s| s.name.clone())
+        self.repo
+            .find_skill_by_uid(skill_uid)
+            .map(|s| s.name.clone())
     }
 
     fn resolve_base_skills(&self, roster_line_id: &str) -> Vec<String> {
@@ -99,7 +112,11 @@ impl IReferenceDataPort for ReferenceDataAdapter {
     }
 
     fn skill_pricing_level_1(&self) -> Option<SkillPricingDefinition> {
-        let pricing = self.repo.skill_cost_matrix().iter().find(|l| l.level == 1)?;
+        let pricing = self
+            .repo
+            .skill_cost_matrix()
+            .iter()
+            .find(|l| l.level == 1)?;
         Some(SkillPricingDefinition {
             chosen_primary: pricing.chosen.primary,
             chosen_secondary: pricing.chosen.secondary,
@@ -119,5 +136,4 @@ impl IReferenceDataPort for ReferenceDataAdapter {
             })
             .collect()
     }
-
 }

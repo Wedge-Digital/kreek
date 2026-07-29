@@ -1,6 +1,6 @@
-use crate::app::shared_kernel::identity::ids::Entity;
 use crate::app::shared_kernel::bloodbowl::staff::StaffKind;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::Entity;
 use crate::app::team_creation::domain::error::DomainError;
 use crate::app::team_creation::domain::roster::{
     AcquiredSkill, AcquisitionMode, HiredPlayer, JerseyNumber, LeagueId, PlayerDefinition,
@@ -78,7 +78,10 @@ impl RosterSelectedTeam {
     }
 
     fn player_budget(&self) -> u32 {
-        self.hired_players.iter().map(|p| p.definition.price.into_inner()).sum()
+        self.hired_players
+            .iter()
+            .map(|p| p.definition.price.into_inner())
+            .sum()
     }
 
     fn staff_budget(&self) -> u32 {
@@ -128,7 +131,11 @@ impl RosterSelectedTeam {
     }
 
     fn check_max_players_of_type(&self, player: &PlayerDefinition) -> Result<(), DomainError> {
-        let count = self.hired_players.iter().filter(|p| p.definition == *player).count();
+        let count = self
+            .hired_players
+            .iter()
+            .filter(|p| p.definition == *player)
+            .count();
         if count >= player.max_quantity.into_inner() as usize {
             return Err(DomainError::MaxPlayersOfTypeReached);
         }
@@ -216,7 +223,11 @@ impl RosterSelectedTeam {
             .iter_mut()
             .find(|p| p.instance_id == *instance_id)
             .ok_or(DomainError::PlayerNotFoundInTeam)?;
-        if player.acquired_skills.iter().any(|s| s.skill_id == skill_id) {
+        if player
+            .acquired_skills
+            .iter()
+            .any(|s| s.skill_id == skill_id)
+        {
             return Err(DomainError::SkillAlreadyAcquired);
         }
         player.acquired_skills.push(AcquiredSkill {

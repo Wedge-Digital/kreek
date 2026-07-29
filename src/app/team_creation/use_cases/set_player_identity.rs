@@ -1,14 +1,14 @@
+use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::team_creation::domain::error::DomainError;
 use crate::app::team_creation::domain::roster::{JerseyNumber, PlayerId};
 use crate::app::team_creation::ports::{ITeamRosterRepository, RepositoryError};
-use crate::app::shared_kernel::identity::ids::EntityId;
 
 pub struct SetPlayerIdentityCommand {
-    pub team_id:     EntityId,
-    pub space_id:    String,
+    pub team_id: EntityId,
+    pub space_id: String,
     pub instance_id: PlayerId,
-    pub name:        String,
-    pub jersey:      JerseyNumber,
+    pub name: String,
+    pub jersey: JerseyNumber,
 }
 
 pub enum SetPlayerIdentityError {

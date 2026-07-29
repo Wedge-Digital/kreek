@@ -1,8 +1,8 @@
 use super::super::ports::{IUserRepository, RepositoryError};
 use crate::app::auth::domain::domain_event::AuthDomainEvent::UserLoggedIn;
 use crate::app::auth::domain::domain_event::USER_LOGGED_IN;
-use crate::app::shared_kernel::identity::ids::{EventId, UserId};
 use crate::app::auth::domain::user::User;
+use crate::app::shared_kernel::identity::ids::{EventId, UserId};
 use crate::common::event_envelope::EventEnvelope;
 use crate::common::services::event_bus::event_bus::EventBus;
 use argon2::{Argon2, PasswordHash, PasswordVerifier};

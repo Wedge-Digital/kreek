@@ -2,8 +2,12 @@ use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::team_creation::domain::roster::{AcquisitionMode, PlayerId, SkillId};
 use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
 use crate::app::team_creation::routes::Routes as TeamCreationRoutes;
-use crate::app::team_creation::use_cases::finalize_team::cancel_creation_spp::{self, CancelCreationSppCommand};
-use crate::app::team_creation::use_cases::finalize_team::spend_creation_spp::{self, SpendCreationSppCommand};
+use crate::app::team_creation::use_cases::finalize_team::cancel_creation_spp::{
+    self, CancelCreationSppCommand,
+};
+use crate::app::team_creation::use_cases::finalize_team::spend_creation_spp::{
+    self, SpendCreationSppCommand,
+};
 use crate::state::AppState;
 use axum::body::Body;
 use axum::extract::{Path, State};
@@ -19,11 +23,24 @@ fn spp_error(msg: &str) -> Response {
         .unwrap()
 }
 
-fn skills_updated_trigger(team: &RosterSelectedTeam, player_id: &str, space_id: &str, team_id: &str) -> String {
-    let player = team.hired_players().iter().find(|p| p.instance_id.0 == player_id);
+fn skills_updated_trigger(
+    team: &RosterSelectedTeam,
+    player_id: &str,
+    space_id: &str,
+    team_id: &str,
+) -> String {
+    let player = team
+        .hired_players()
+        .iter()
+        .find(|p| p.instance_id.0 == player_id);
     let roster_line_id = player.map(|p| p.definition.id.0.as_str()).unwrap_or("");
     let acquired: Vec<&str> = player
-        .map(|p| p.acquired_skills.iter().map(|a| a.skill_id.0.as_str()).collect())
+        .map(|p| {
+            p.acquired_skills
+                .iter()
+                .map(|a| a.skill_id.0.as_str())
+                .collect()
+        })
         .unwrap_or_default();
     let acquired_csv = acquired.join(",");
     let routes = TeamCreationRoutes;
@@ -89,9 +106,7 @@ pub async fn spend_spp(
         Err(spend_creation_spp::SpendSppError::SkillCostNotFound) => {
             return spp_error("Compétence ou position introuvable dans le référentiel.")
         }
-        Err(spend_creation_spp::SpendSppError::Domain(e)) => {
-            return spp_error(&e.to_string())
-        }
+        Err(spend_creation_spp::SpendSppError::Domain(e)) => return spp_error(&e.to_string()),
         Err(spend_creation_spp::SpendSppError::Repository(e)) => {
             tracing::error!("spend_spp repo error: {e}");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
@@ -125,24 +140,22 @@ pub async fn cancel_spp(
         skill_id: SkillId(skill_id.clone()),
     };
 
-    let team = match cancel_creation_spp::execute(
-        cmd,
-        state.team_creation.roster_repository.as_ref(),
-    )
-    .await
-    {
-        Ok(t) => t,
-        Err(cancel_creation_spp::CancelSppError::TeamNotFound) => {
-            return StatusCode::NOT_FOUND.into_response()
-        }
-        Err(cancel_creation_spp::CancelSppError::Domain(e)) => {
-            return spp_error(&e.to_string())
-        }
-        Err(cancel_creation_spp::CancelSppError::Repository(e)) => {
-            tracing::error!("cancel_spp repo error: {e}");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-    };
+    let team =
+        match cancel_creation_spp::execute(cmd, state.team_creation.roster_repository.as_ref())
+            .await
+        {
+            Ok(t) => t,
+            Err(cancel_creation_spp::CancelSppError::TeamNotFound) => {
+                return StatusCode::NOT_FOUND.into_response()
+            }
+            Err(cancel_creation_spp::CancelSppError::Domain(e)) => {
+                return spp_error(&e.to_string())
+            }
+            Err(cancel_creation_spp::CancelSppError::Repository(e)) => {
+                tracing::error!("cancel_spp repo error: {e}");
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        };
 
     let trigger = skills_updated_trigger(&team, &instance_id, &space_id, &team_id);
 

@@ -1,9 +1,11 @@
-use crate::app::competitions::domain::competition_invitations::{AccessMode, CompetitionInvitations};
+use crate::app::auth::auth_backend::AuthSession;
+use crate::app::competitions::domain::competition_invitations::{
+    AccessMode, CompetitionInvitations,
+};
 use crate::app::competitions::domain::competition_repository_port::ICompetitionRepository;
 use crate::app::competitions::domain::competition_rules::CompetitionRules;
 use crate::app::competitions::domain::competition_structure::CompetitionStructure;
 use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
-use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::io::web::admin::admin_page::require_admin_access;
 use crate::app::competitions::io::web::rules_labels::format_bonus_label;
 use crate::app::competitions::ports::ICompetitionReferencePort;
@@ -72,7 +74,8 @@ pub async fn summary_tab_fragment(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    if let Err(resp) = require_admin_access(&auth_session, &space_id, &competition_id, &state).await {
+    if let Err(resp) = require_admin_access(&auth_session, &space_id, &competition_id, &state).await
+    {
         return resp;
     }
 
@@ -123,13 +126,24 @@ pub async fn build_summary_fragment(
     );
 
     let base = base_info.ok().flatten()?;
-    let season_name = season_info.ok().flatten().map(|s| s.name).unwrap_or_default();
+    let season_name = season_info
+        .ok()
+        .flatten()
+        .map(|s| s.name)
+        .unwrap_or_default();
     let rules = rules.ok().flatten();
     let structure = structure.ok().flatten();
     let invitations = invitations.ok().flatten();
 
-    let (has_rules, ranking_points_label, bonus_label, tiers_label, rosters_preview, rosters_extra, tiers_inducements) =
-        build_rules_labels(&rules, ref_port);
+    let (
+        has_rules,
+        ranking_points_label,
+        bonus_label,
+        tiers_label,
+        rosters_preview,
+        rosters_extra,
+        tiers_inducements,
+    ) = build_rules_labels(&rules, ref_port);
     let (has_structure, groups_label, playoffs_label, dates_label) =
         build_structure_labels(&structure);
     let (
@@ -181,7 +195,15 @@ pub async fn build_summary_fragment(
 fn build_rules_labels(
     rules: &Option<CompetitionRules>,
     ref_port: &dyn ICompetitionReferencePort,
-) -> (bool, String, Option<String>, Option<String>, Vec<String>, usize, Vec<TierInducementsVm>) {
+) -> (
+    bool,
+    String,
+    Option<String>,
+    Option<String>,
+    Vec<String>,
+    usize,
+    Vec<TierInducementsVm>,
+) {
     let Some(r) = rules else {
         return (false, String::new(), None, None, vec![], 0, vec![]);
     };
@@ -194,8 +216,17 @@ fn build_rules_labels(
     let tiers: Option<String> = if r.tiers.is_empty() {
         None
     } else {
-        let names = r.tiers.iter().map(|t| t.name.as_ref()).collect::<Vec<_>>().join(", ");
-        Some(format!("{} tier{} : {names}", r.tiers.len(), if r.tiers.len() > 1 { "s" } else { "" }))
+        let names = r
+            .tiers
+            .iter()
+            .map(|t| t.name.as_ref())
+            .collect::<Vec<_>>()
+            .join(", ");
+        Some(format!(
+            "{} tier{} : {names}",
+            r.tiers.len(),
+            if r.tiers.len() > 1 { "s" } else { "" }
+        ))
     };
     let all_rosters: Vec<String> = r.tiers.iter().flat_map(|t| t.rosters.clone()).collect();
     let extra = all_rosters.len().saturating_sub(12);
@@ -210,22 +241,30 @@ fn build_tiers_inducements(
     rules: &CompetitionRules,
     ref_port: &dyn ICompetitionReferencePort,
 ) -> Vec<TierInducementsVm> {
-    rules.tiers.iter().filter_map(|tier| {
-        let inducement_names: Vec<String> = tier.inducements.iter()
-            .filter_map(|uid| ref_port.find_inducement_name(uid))
-            .collect();
-        let star_player_names: Vec<String> = tier.star_players.iter()
-            .filter_map(|uid| ref_port.find_star_player_name(uid))
-            .collect();
-        if inducement_names.is_empty() && star_player_names.is_empty() {
-            return None;
-        }
-        Some(TierInducementsVm {
-            tier_name: tier.name.clone().into_inner(),
-            inducement_names,
-            star_player_names,
+    rules
+        .tiers
+        .iter()
+        .filter_map(|tier| {
+            let inducement_names: Vec<String> = tier
+                .inducements
+                .iter()
+                .filter_map(|uid| ref_port.find_inducement_name(uid))
+                .collect();
+            let star_player_names: Vec<String> = tier
+                .star_players
+                .iter()
+                .filter_map(|uid| ref_port.find_star_player_name(uid))
+                .collect();
+            if inducement_names.is_empty() && star_player_names.is_empty() {
+                return None;
+            }
+            Some(TierInducementsVm {
+                tier_name: tier.name.clone().into_inner(),
+                inducement_names,
+                star_player_names,
+            })
         })
-    }).collect()
+        .collect()
 }
 
 fn build_structure_labels(
@@ -242,13 +281,20 @@ fn build_structure_labels(
     };
     let playoffs: Option<String> = if s.play_offs_phase.use_playoffs_phase.0 {
         let q = s.play_offs_phase.qualified_team_per_pool;
-        let third = if s.play_offs_phase.final_phase_match_for_third_place.0 { " · Match 3e place" } else { "" };
+        let third = if s.play_offs_phase.final_phase_match_for_third_place.0 {
+            " · Match 3e place"
+        } else {
+            ""
+        };
         Some(format!("Top {q} par poule{third}"))
     } else {
         None
     };
     let dates: Option<String> = if s.schedule.use_schedule.0 {
-        Some(format!("{} → {}", s.schedule.schedule_start_date, s.schedule.schedule_end_date))
+        Some(format!(
+            "{} → {}",
+            s.schedule.schedule_start_date, s.schedule.schedule_end_date
+        ))
     } else {
         None
     };
@@ -257,9 +303,31 @@ fn build_structure_labels(
 
 fn build_invitations_labels(
     invitations: &Option<CompetitionInvitations>,
-) -> (bool, String, String, String, Option<String>, bool, Option<String>, bool, u32, u32) {
+) -> (
+    bool,
+    String,
+    String,
+    String,
+    Option<String>,
+    bool,
+    Option<String>,
+    bool,
+    u32,
+    u32,
+) {
     let Some(inv) = invitations else {
-        return (false, String::new(), String::new(), String::new(), None, false, None, false, 0, 0);
+        return (
+            false,
+            String::new(),
+            String::new(),
+            String::new(),
+            None,
+            false,
+            None,
+            false,
+            0,
+            0,
+        );
     };
     let mode_label = match inv.access_mode {
         AccessMode::Open => "Inscription libre",
@@ -277,10 +345,27 @@ fn build_invitations_labels(
     let (spots, spots_w, unfilled, remaining, total) = if let Some(max) = inv.max_participants {
         let c = count as u32;
         let warn = c < max;
-        (Some(format!("{count} / {max} places")), warn, warn, if warn { max - c } else { 0 }, max)
+        (
+            Some(format!("{count} / {max} places")),
+            warn,
+            warn,
+            if warn { max - c } else { 0 },
+            max,
+        )
     } else {
         (None, false, false, 0, 0)
     };
     let deadline = inv.registration_deadline.clone();
-    (true, mode_label, validation_label, inv_label, spots, spots_w, deadline, unfilled, remaining, total)
+    (
+        true,
+        mode_label,
+        validation_label,
+        inv_label,
+        spots,
+        spots_w,
+        deadline,
+        unfilled,
+        remaining,
+        total,
+    )
 }

@@ -32,21 +32,11 @@ pub trait IGroupRepository: Send + Sync {
         assignments: &[(String, String)],
     ) -> Result<(), GroupRepositoryError>;
 
-    async fn reset_assignments(
-        &self,
-        season_id: &str,
-    ) -> Result<(), GroupRepositoryError>;
+    async fn reset_assignments(&self, season_id: &str) -> Result<(), GroupRepositoryError>;
 
-    async fn assign_team(
-        &self,
-        group_id: &str,
-        team_id: &str,
-    ) -> Result<(), GroupRepositoryError>;
+    async fn assign_team(&self, group_id: &str, team_id: &str) -> Result<(), GroupRepositoryError>;
 
-    async fn unassign_team(
-        &self,
-        team_id: &str,
-    ) -> Result<(), GroupRepositoryError>;
+    async fn unassign_team(&self, team_id: &str) -> Result<(), GroupRepositoryError>;
 
     async fn ensure_groups_from_structure(
         &self,

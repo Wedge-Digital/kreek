@@ -11,7 +11,10 @@ pub async fn load_enrolled_teams(
     team_port: &dyn ITeamInfoPort,
 ) -> Result<HashMap<String, TeamInfoDto>, String> {
     let enrolled = team_port.find_enrolled_teams(season_id).await?;
-    Ok(enrolled.into_iter().map(|t| (t.team_id.clone(), t)).collect())
+    Ok(enrolled
+        .into_iter()
+        .map(|t| (t.team_id.clone(), t))
+        .collect())
 }
 
 /// Ne garde que les ids présents dans `enrolled` ; les autres sont renvoyés à
@@ -34,7 +37,10 @@ pub fn filter_enrolled_team_ids(
 
 /// Résout des noms d'affichage pour un ensemble d'ids d'équipes exclues (donc
 /// absentes de la map des enrôlées), pour construire un message d'avertissement.
-pub async fn resolve_team_names(mut team_ids: Vec<String>, team_port: &dyn ITeamInfoPort) -> Vec<String> {
+pub async fn resolve_team_names(
+    mut team_ids: Vec<String>,
+    team_port: &dyn ITeamInfoPort,
+) -> Vec<String> {
     team_ids.sort();
     team_ids.dedup();
     if team_ids.is_empty() {
@@ -60,8 +66,12 @@ pub fn build_new_pairing_projection(
     match_day: &MatchDay,
     team_display: &HashMap<String, TeamInfoDto>,
 ) -> NewPairingProjection {
-    let home_info = team_display.get(home).expect("home team vérifié enrôlé avant projection");
-    let away_info = team_display.get(away).expect("away team vérifié enrôlé avant projection");
+    let home_info = team_display
+        .get(home)
+        .expect("home team vérifié enrôlé avant projection");
+    let away_info = team_display
+        .get(away)
+        .expect("away team vérifié enrôlé avant projection");
     NewPairingProjection {
         season_id: season_id.to_string(),
         round_name: match_day.name.to_string(),
@@ -86,8 +96,12 @@ mod tests {
 
     fn dto(id: &str) -> TeamInfoDto {
         TeamInfoDto {
-            team_id: id.to_string(), team_name: format!("Team {id}"),
-            coach_id: String::new(), coach_name: String::new(), roster_name: String::new(), logo_url: None,
+            team_id: id.to_string(),
+            team_name: format!("Team {id}"),
+            coach_id: String::new(),
+            coach_name: String::new(),
+            roster_name: String::new(),
+            logo_url: None,
         }
     }
 

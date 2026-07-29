@@ -318,7 +318,13 @@ mod tests {
     use super::*;
 
     fn ids() -> (TeamId, CompetitionId, SeasonId, RoundId, MatchReportId) {
-        (TeamId::new(), CompetitionId::new(), SeasonId::new(), RoundId::new(), MatchReportId::new())
+        (
+            TeamId::new(),
+            CompetitionId::new(),
+            SeasonId::new(),
+            RoundId::new(),
+            MatchReportId::new(),
+        )
     }
 
     fn totals_of(line: &RankingLine) -> CumulativeTotals {
@@ -338,13 +344,25 @@ mod tests {
     }
 
     fn off_disabled() -> OffensiveBonusRule {
-        OffensiveBonusRule { activated: BonusActivated(false), min_td: MinTd(0), points: RankingPoints(0) }
+        OffensiveBonusRule {
+            activated: BonusActivated(false),
+            min_td: MinTd(0),
+            points: RankingPoints(0),
+        }
     }
     fn def_disabled() -> DefensiveBonusRule {
-        DefensiveBonusRule { activated: BonusActivated(false), max_td_conceded: MaxTdConceded(0), points: RankingPoints(0) }
+        DefensiveBonusRule {
+            activated: BonusActivated(false),
+            max_td_conceded: MaxTdConceded(0),
+            points: RankingPoints(0),
+        }
     }
     fn agg_disabled() -> AggressiveBonusRule {
-        AggressiveBonusRule { activated: BonusActivated(false), min_casualties: MinCasualties(0), points: RankingPoints(0) }
+        AggressiveBonusRule {
+            activated: BonusActivated(false),
+            min_casualties: MinCasualties(0),
+            points: RankingPoints(0),
+        }
     }
 
     fn rules() -> RankingRules {
@@ -381,7 +399,14 @@ mod tests {
 
     fn ctx() -> MatchContext {
         let (team_id, competition_id, season_id, round_id, match_report_id) = ids();
-        MatchContext { team_id, competition_id, season_id, round_id, match_report_id, recorded_at: Utc::now() }
+        MatchContext {
+            team_id,
+            competition_id,
+            season_id,
+            round_id,
+            match_report_id,
+            recorded_at: Utc::now(),
+        }
     }
 
     /// Stats produisant l'outcome voulu, sans sortie (pour les tests V/N/D).
@@ -438,8 +463,14 @@ mod tests {
     #[test]
     fn record_match_with_previous_line_accumulates() {
         let c = ctx();
-        let previous = RankingLine::record_match(None, c.clone(), stats_for(MatchOutcome::Win), &rules());
-        let next = RankingLine::record_match(Some(totals_of(&previous)), c, stats_for(MatchOutcome::Draw), &rules());
+        let previous =
+            RankingLine::record_match(None, c.clone(), stats_for(MatchOutcome::Win), &rules());
+        let next = RankingLine::record_match(
+            Some(totals_of(&previous)),
+            c,
+            stats_for(MatchOutcome::Draw),
+            &rules(),
+        );
 
         assert_eq!(next.matches_played.0, 2);
         assert_eq!(next.wins.0, 1);
@@ -455,7 +486,10 @@ mod tests {
 
         for outcome in [MatchOutcome::Win, MatchOutcome::Draw, MatchOutcome::Loss] {
             line = Some(RankingLine::record_match(
-                line.as_ref().map(totals_of), c.clone(), stats_for(outcome), &rules(),
+                line.as_ref().map(totals_of),
+                c.clone(),
+                stats_for(outcome),
+                &rules(),
             ));
         }
 
@@ -478,9 +512,12 @@ mod tests {
             aggressive_bonus: agg_disabled(),
         };
 
-        let win = RankingLine::record_match(None, ctx(), stats_for(MatchOutcome::Win), &custom_rules);
-        let draw = RankingLine::record_match(None, ctx(), stats_for(MatchOutcome::Draw), &custom_rules);
-        let loss = RankingLine::record_match(None, ctx(), stats_for(MatchOutcome::Loss), &custom_rules);
+        let win =
+            RankingLine::record_match(None, ctx(), stats_for(MatchOutcome::Win), &custom_rules);
+        let draw =
+            RankingLine::record_match(None, ctx(), stats_for(MatchOutcome::Draw), &custom_rules);
+        let loss =
+            RankingLine::record_match(None, ctx(), stats_for(MatchOutcome::Loss), &custom_rules);
 
         assert_eq!(win.ranking_points.0, 5);
         assert_eq!(draw.ranking_points.0, 2);
@@ -491,7 +528,9 @@ mod tests {
     fn losing_team_still_receives_bonus_via_record_match() {
         let mut r = rules();
         r.aggressive_bonus = AggressiveBonusRule {
-            activated: BonusActivated(true), min_casualties: MinCasualties(1), points: RankingPoints(2),
+            activated: BonusActivated(true),
+            min_casualties: MinCasualties(1),
+            points: RankingPoints(2),
         };
         // Défaite 0-2 mais 3 sorties infligées (>1) → lose_points(0) + bonus(2).
         let line = RankingLine::record_match(None, ctx(), stats(0, 2, 3), &r);
@@ -504,21 +543,27 @@ mod tests {
     fn with_offensive(activated: bool, min_td: u32, points: u32) -> RankingRules {
         let mut r = rules();
         r.offensive_bonus = OffensiveBonusRule {
-            activated: BonusActivated(activated), min_td: MinTd(min_td), points: RankingPoints(points),
+            activated: BonusActivated(activated),
+            min_td: MinTd(min_td),
+            points: RankingPoints(points),
         };
         r
     }
     fn with_defensive(activated: bool, max_td_conceded: u32, points: u32) -> RankingRules {
         let mut r = rules();
         r.defensive_bonus = DefensiveBonusRule {
-            activated: BonusActivated(activated), max_td_conceded: MaxTdConceded(max_td_conceded), points: RankingPoints(points),
+            activated: BonusActivated(activated),
+            max_td_conceded: MaxTdConceded(max_td_conceded),
+            points: RankingPoints(points),
         };
         r
     }
     fn with_aggressive(activated: bool, min_casualties: u32, points: u32) -> RankingRules {
         let mut r = rules();
         r.aggressive_bonus = AggressiveBonusRule {
-            activated: BonusActivated(activated), min_casualties: MinCasualties(min_casualties), points: RankingPoints(points),
+            activated: BonusActivated(activated),
+            min_casualties: MinCasualties(min_casualties),
+            points: RankingPoints(points),
         };
         r
     }
@@ -526,7 +571,13 @@ mod tests {
     // ── Compteurs de départage (carte 216) ───────────────────────────────────
 
     fn counters_of(line: &RankingLine) -> [u32; 5] {
-        [line.td_for.0, line.td_against.0, line.casualties.0, line.fouls.0, line.completions.0]
+        [
+            line.td_for.0,
+            line.td_against.0,
+            line.casualties.0,
+            line.fouls.0,
+            line.completions.0,
+        ]
     }
 
     #[test]
@@ -534,8 +585,12 @@ mod tests {
         let c = ctx();
         // 3-1 (2 sorties, 1 agression, 4 passes) puis 1-2 (0 sortie, 3 agressions, 2 passes).
         let first = RankingLine::record_match(None, c.clone(), stats_with(3, 1, 2, 1, 4), &rules());
-        let second =
-            RankingLine::record_match(Some(totals_of(&first)), c, stats_with(1, 2, 0, 3, 2), &rules());
+        let second = RankingLine::record_match(
+            Some(totals_of(&first)),
+            c,
+            stats_with(1, 2, 0, 3, 2),
+            &rules(),
+        );
 
         assert_eq!(counters_of(&first), [3, 1, 2, 1, 4]);
         assert_eq!(counters_of(&second), [4, 3, 2, 4, 6]);
@@ -656,9 +711,21 @@ mod tests {
     #[test]
     fn bonuses_are_cumulative() {
         let mut r = rules();
-        r.offensive_bonus = OffensiveBonusRule { activated: BonusActivated(true), min_td: MinTd(2), points: RankingPoints(1) };
-        r.defensive_bonus = DefensiveBonusRule { activated: BonusActivated(true), max_td_conceded: MaxTdConceded(0), points: RankingPoints(2) };
-        r.aggressive_bonus = AggressiveBonusRule { activated: BonusActivated(true), min_casualties: MinCasualties(1), points: RankingPoints(3) };
+        r.offensive_bonus = OffensiveBonusRule {
+            activated: BonusActivated(true),
+            min_td: MinTd(2),
+            points: RankingPoints(1),
+        };
+        r.defensive_bonus = DefensiveBonusRule {
+            activated: BonusActivated(true),
+            max_td_conceded: MaxTdConceded(0),
+            points: RankingPoints(2),
+        };
+        r.aggressive_bonus = AggressiveBonusRule {
+            activated: BonusActivated(true),
+            min_casualties: MinCasualties(1),
+            points: RankingPoints(3),
+        };
         // 3 TD marqués (≥2), 0 encaissé (≤0), 2 sorties (>1) → 1+2+3
         assert_eq!(r.bonus_points(&stats(3, 0, 2)).0, 6);
     }

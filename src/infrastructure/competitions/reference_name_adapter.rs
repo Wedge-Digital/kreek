@@ -14,10 +14,14 @@ impl ReferenceNameAdapter {
 
 impl ICompetitionReferencePort for ReferenceNameAdapter {
     fn find_inducement_name(&self, uid: &str) -> Option<String> {
-        self.reference_repo.find_inducement_by_uid(uid).map(|i| i.name.clone())
+        self.reference_repo
+            .find_inducement_by_uid(uid)
+            .map(|i| i.name.clone())
     }
 
     fn find_star_player_name(&self, uid: &str) -> Option<String> {
-        self.reference_repo.find_star_player_by_uid(uid).map(|s| s.name.clone())
+        self.reference_repo
+            .find_star_player_by_uid(uid)
+            .map(|s| s.name.clone())
     }
 }

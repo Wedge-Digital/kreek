@@ -54,8 +54,6 @@ async fn handle_event(event: MatchReportAppEvent, pool: &PgPool) {
     .await;
 
     if let Err(e) = result {
-        tracing::error!(
-            "competitions::match_report_confirmed_listener: update {pairing_id}: {e}"
-        );
+        tracing::error!("competitions::match_report_confirmed_listener: update {pairing_id}: {e}");
     }
 }

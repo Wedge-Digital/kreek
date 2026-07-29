@@ -34,14 +34,14 @@ pub enum MatchReportAppEvent {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct MatchReportUnpublishedPayload {
     pub match_report_id: String,
-    pub space_id:        String,
-    pub competition_id:  String,
-    pub season_id:       String,
-    pub round_id:        String,
-    pub pairing_id:      Option<String>,
-    pub home_team_id:    String,
-    pub away_team_id:    String,
-    pub unpublished_at:  DateTime<Utc>,
+    pub space_id: String,
+    pub competition_id: String,
+    pub season_id: String,
+    pub round_id: String,
+    pub pairing_id: Option<String>,
+    pub home_team_id: String,
+    pub away_team_id: String,
+    pub unpublished_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -76,8 +76,13 @@ pub struct MatchActionPublishedPayload {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum PlayerRefPayload {
-    Regular { player_id: String },
-    Star { ref_uid: String, display_name: String },
+    Regular {
+        player_id: String,
+    },
+    Star {
+        ref_uid: String,
+        display_name: String,
+    },
     Mercenary,
     Journeyman,
 }
@@ -118,8 +123,12 @@ impl MatchReportAppEvent {
 
     pub fn to_enveloppe(&self) -> EventEnvelope {
         let emitter = match self {
-            Self::MatchReportConfirmed { match_report_id, .. } => match_report_id.clone(),
-            Self::MatchReportCancelled { match_report_id, .. } => match_report_id.clone(),
+            Self::MatchReportConfirmed {
+                match_report_id, ..
+            } => match_report_id.clone(),
+            Self::MatchReportCancelled {
+                match_report_id, ..
+            } => match_report_id.clone(),
             Self::MatchReportPublished(payload) => payload.match_report_id.clone(),
             Self::MatchReportUnpublished(payload) => payload.match_report_id.clone(),
         };

@@ -2,7 +2,9 @@ use crate::app::ranking::domain::standings::{
     tiebreak_outcomes, Rank, RowTiebreak, TeamStanding, TiebreakOrder,
 };
 use crate::app::ranking::domain::tiebreak::TiebreakCriterion;
-use crate::app::ranking::io::web::widgets::classement_widget::{ClassementGroupVm, ClassementRowVm};
+use crate::app::ranking::io::web::widgets::classement_widget::{
+    ClassementGroupVm, ClassementRowVm,
+};
 use crate::app::ranking::io::web::widgets::detailed_standings_widget::{
     CellState, DetailedGroupVm, DetailedRowVm, TiebreakCellVm,
 };
@@ -50,8 +52,10 @@ fn unassigned_slice(
     teams: &[EnrolledTeamInfo],
     groups: &[RankingGroupInfo],
 ) -> Option<GroupSlice> {
-    let assigned: HashSet<&str> =
-        groups.iter().flat_map(|g| g.team_ids.iter().map(String::as_str)).collect();
+    let assigned: HashSet<&str> = groups
+        .iter()
+        .flat_map(|g| g.team_ids.iter().map(String::as_str))
+        .collect();
     let unassigned_ids: Vec<String> = teams
         .iter()
         .map(|t| t.team_id.clone())
@@ -270,9 +274,11 @@ fn signed(value: i64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::ranking::io::web::widgets::detailed_standings_widget::DetailedRowVm;
-    use crate::app::ranking::domain::ranking_line::{CumulativeTotals, MatchesPlayed, RankingPoints};
+    use crate::app::ranking::domain::ranking_line::{
+        CumulativeTotals, MatchesPlayed, RankingPoints,
+    };
     use crate::app::ranking::domain::tiebreak::TiebreakCriterion;
+    use crate::app::ranking::io::web::widgets::detailed_standings_widget::DetailedRowVm;
     use crate::app::shared_kernel::bloodbowl::team::TeamId;
 
     /// Les ids d'équipe sont désormais des ULID côté ligne de classement : les
@@ -297,7 +303,10 @@ mod tests {
     }
 
     fn team(team_id: &TeamId, name: &str) -> EnrolledTeamInfo {
-        EnrolledTeamInfo { team_id: team_id.to_string(), team_name: name.into() }
+        EnrolledTeamInfo {
+            team_id: team_id.to_string(),
+            team_name: name.into(),
+        }
     }
 
     fn group(id: &str, name: &str, team_ids: &[&TeamId]) -> RankingGroupInfo {
@@ -336,14 +345,26 @@ mod tests {
 
         let rows = build_classement_rows("sp1", ordered, &teams);
 
-        assert_eq!(rows.iter().map(|r| r.team_name.as_str()).collect::<Vec<_>>(), vec!["A", "B", "C"]);
-        assert_eq!(rows.iter().map(|r| r.rank).collect::<Vec<_>>(), vec![1, 2, 2]);
+        assert_eq!(
+            rows.iter()
+                .map(|r| r.team_name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["A", "B", "C"]
+        );
+        assert_eq!(
+            rows.iter().map(|r| r.rank).collect::<Vec<_>>(),
+            vec![1, 2, 2]
+        );
     }
 
     #[test]
     fn resolves_team_names_from_enrolled_teams() {
         let t1 = TeamId::new();
-        let rows = build_classement_rows("sp1", vec![ranked(&t1, 3, 1)], &[team(&t1, "Les Guerriers")]);
+        let rows = build_classement_rows(
+            "sp1",
+            vec![ranked(&t1, 3, 1)],
+            &[team(&t1, "Les Guerriers")],
+        );
         assert_eq!(rows[0].team_name, "Les Guerriers");
     }
 
@@ -358,7 +379,12 @@ mod tests {
     fn builds_team_detail_link_from_space_and_team_id() {
         let t1 = TeamId::new();
         let rows = build_classement_rows("sp1", vec![ranked(&t1, 3, 1)], &[team(&t1, "A")]);
-        assert_eq!(rows[0].team_link, AppRoutes::default().teams.team_detail("sp1", &t1.to_string()));
+        assert_eq!(
+            rows[0].team_link,
+            AppRoutes::default()
+                .teams
+                .team_detail("sp1", &t1.to_string())
+        );
     }
 
     #[test]
@@ -384,9 +410,17 @@ mod tests {
     #[test]
     fn multiple_groups_split_classement_and_rank_independently_per_group() {
         let (t1, t2, t3, t4) = (TeamId::new(), TeamId::new(), TeamId::new(), TeamId::new());
-        let teams = vec![team(&t1, "A"), team(&t2, "B"), team(&t3, "C"), team(&t4, "D")];
+        let teams = vec![
+            team(&t1, "A"),
+            team(&t2, "B"),
+            team(&t3, "C"),
+            team(&t4, "D"),
+        ];
         let lines = vec![line(&t1, 3), line(&t2, 9), line(&t3, 6), line(&t4, 1)];
-        let groups = vec![group("g1", "Poule 1", &[&t1, &t2]), group("g2", "Poule 2", &[&t3, &t4])];
+        let groups = vec![
+            group("g1", "Poule 1", &[&t1, &t2]),
+            group("g2", "Poule 2", &[&t3, &t4]),
+        ];
 
         let result = build_classement_groups("sp1", lines, &teams, &groups, &empty_order());
 
@@ -422,7 +456,10 @@ mod tests {
     fn empty_group_keeps_its_slot_with_no_enrolled_teams_state() {
         let (t1, t2) = (TeamId::new(), TeamId::new());
         let teams = vec![team(&t1, "A"), team(&t2, "B")];
-        let groups = vec![group("g1", "Poule 1", &[&t1, &t2]), group("g2", "Poule 2", &[])];
+        let groups = vec![
+            group("g1", "Poule 1", &[&t1, &t2]),
+            group("g2", "Poule 2", &[]),
+        ];
 
         let result = build_classement_groups("sp1", vec![], &teams, &groups, &empty_order());
 
@@ -444,7 +481,6 @@ mod tests {
         assert!(result[2].has_enrolled_teams);
         assert_eq!(result[2].rows.len(), 0);
     }
-
 
     // ── Mise en évidence du critère décisif (carte 223) ──────────────────────
 
@@ -470,7 +506,8 @@ mod tests {
         lines[0].td_for = 7;
         lines[1].td_for = 2;
 
-        let groups = build_detailed_groups("sp1", lines, &[team(&t1, "A"), team(&t2, "B")], &[], &order);
+        let groups =
+            build_detailed_groups("sp1", lines, &[team(&t1, "A"), team(&t2, "B")], &[], &order);
         let rows = &groups[0].rows;
 
         assert_eq!(states_of(&rows[0]), vec!["sd-tied", "sd-decisive", ""]);
@@ -484,7 +521,8 @@ mod tests {
         let order = TiebreakOrder::new(vec![TiebreakCriterion::NbTd, TiebreakCriterion::NbCas]);
         let lines = vec![line(&t1, 6), line(&t2, 6)];
 
-        let groups = build_detailed_groups("sp1", lines, &[team(&t1, "A"), team(&t2, "B")], &[], &order);
+        let groups =
+            build_detailed_groups("sp1", lines, &[team(&t1, "A"), team(&t2, "B")], &[], &order);
 
         for row in &groups[0].rows {
             assert_eq!(states_of(row), vec!["sd-tied", "sd-tied"]);
@@ -498,7 +536,8 @@ mod tests {
         let order = TiebreakOrder::new(vec![TiebreakCriterion::NbTd]);
         let lines = vec![line(&t1, 9), line(&t2, 6)];
 
-        let groups = build_detailed_groups("sp1", lines, &[team(&t1, "A"), team(&t2, "B")], &[], &order);
+        let groups =
+            build_detailed_groups("sp1", lines, &[team(&t1, "A"), team(&t2, "B")], &[], &order);
 
         for row in &groups[0].rows {
             assert_eq!(states_of(row), vec![""]);
@@ -517,8 +556,16 @@ mod tests {
         // Poule 1 : départagée par les touchdowns. Poule 2 : strictement ex æquo.
         lines[0].td_for = 5;
         lines[1].td_for = 1;
-        let teams = vec![team(&a1, "A1"), team(&a2, "A2"), team(&b1, "B1"), team(&b2, "B2")];
-        let groups = vec![group("g1", "Poule 1", &[&a1, &a2]), group("g2", "Poule 2", &[&b1, &b2])];
+        let teams = vec![
+            team(&a1, "A1"),
+            team(&a2, "A2"),
+            team(&b1, "B1"),
+            team(&b2, "B2"),
+        ];
+        let groups = vec![
+            group("g1", "Poule 1", &[&a1, &a2]),
+            group("g2", "Poule 2", &[&b1, &b2]),
+        ];
 
         let result = build_detailed_groups("sp1", lines, &teams, &groups, &order);
 
@@ -540,7 +587,10 @@ mod tests {
         let row = &groups[0].rows[0];
 
         assert_eq!(row.bonus, "+0");
-        assert_eq!(row.tiebreaks[0].value, "\u{2212}4", "différence de TD signée, moins typographique");
+        assert_eq!(
+            row.tiebreaks[0].value, "\u{2212}4",
+            "différence de TD signée, moins typographique"
+        );
         assert_eq!(row.tiebreaks[1].value, "2", "dénombrement brut");
     }
 

@@ -1,5 +1,5 @@
-use crate::app::shared_kernel::identity::ids::Entity;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::Entity;
 use crate::app::team_creation::domain::error::DomainError;
 use crate::app::team_creation::domain::roster::Roster;
 use crate::app::team_creation::domain::ruleset::Ruleset;

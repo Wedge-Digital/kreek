@@ -4,8 +4,8 @@ use crate::app::competitions::domain::match_day::{
 use crate::app::competitions::domain::match_day_repository_port::{
     IMatchDayRepository, MatchDayRepositoryError, NewPairingProjection, PairingDisplayDto,
 };
-use crate::app::shared_kernel::bloodbowl::ids::{MatchId, PairingId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::date_string::DateString;
+use crate::app::shared_kernel::bloodbowl::ids::{MatchId, PairingId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::common::initials::initials;
 use async_trait::async_trait;
@@ -40,8 +40,7 @@ fn parse_match_day(
         date_end: date_end
             .map(|s| DateString::try_new(s).map_err(|_| data_err("invalid date_end")))
             .transpose()?,
-        position: MatchDayPosition::try_new(position)
-            .map_err(|_| data_err("invalid position"))?,
+        position: MatchDayPosition::try_new(position).map_err(|_| data_err("invalid position"))?,
         pairings,
     })
 }
@@ -88,7 +87,13 @@ impl IMatchDayRepository for MatchDayRepository {
         for d in day_rows {
             let pairings = self.load_pairings(&d.id).await?;
             result.push(parse_match_day(
-                d.id, d.season_id, d.name, d.day_type, d.date_start, d.date_end, d.position,
+                d.id,
+                d.season_id,
+                d.name,
+                d.day_type,
+                d.date_start,
+                d.date_end,
+                d.position,
                 pairings,
             )?);
         }
@@ -124,15 +129,18 @@ impl IMatchDayRepository for MatchDayRepository {
 
         let pairings = self.load_pairings(&d.id).await?;
         Ok(Some(parse_match_day(
-            d.id, d.season_id, d.name, d.day_type, d.date_start, d.date_end, d.position,
+            d.id,
+            d.season_id,
+            d.name,
+            d.day_type,
+            d.date_start,
+            d.date_end,
+            d.position,
             pairings,
         )?))
     }
 
-    async fn save_match_day(
-        &self,
-        match_day: &MatchDay,
-    ) -> Result<(), MatchDayRepositoryError> {
+    async fn save_match_day(&self, match_day: &MatchDay) -> Result<(), MatchDayRepositoryError> {
         sqlx::query(
             "INSERT INTO competition_match_days (id, season_id, name, day_type, date_start, date_end, position)
              VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -156,10 +164,7 @@ impl IMatchDayRepository for MatchDayRepository {
         Ok(())
     }
 
-    async fn delete_match_day(
-        &self,
-        match_day_id: &str,
-    ) -> Result<(), MatchDayRepositoryError> {
+    async fn delete_match_day(&self, match_day_id: &str) -> Result<(), MatchDayRepositoryError> {
         let mut tx = self.pool.begin().await.map_err(db_err)?;
         // Cascade DB sur competition_match_day_pairings, mais pas sur la
         // projection (pas de FK) — nettoyage explicite dans la même tx.
@@ -264,10 +269,7 @@ impl IMatchDayRepository for MatchDayRepository {
         Ok(())
     }
 
-    async fn delete_pairing(
-        &self,
-        pairing_id: &str,
-    ) -> Result<(), MatchDayRepositoryError> {
+    async fn delete_pairing(&self, pairing_id: &str) -> Result<(), MatchDayRepositoryError> {
         let mut tx = self.pool.begin().await.map_err(db_err)?;
         sqlx::query("DELETE FROM competition_match_day_pairings WHERE id = $1")
             .bind(pairing_id)

@@ -1,7 +1,7 @@
-use crate::app::players::domain::player::{AcquisitionMode, PlayerId, Spp, TeamId, ValueKpo};
 use crate::app::players::domain::match_impact::{
     InjuryType, MatchContext, MatchReportId, SppEarned, StatKind,
 };
+use crate::app::players::domain::player::{AcquisitionMode, PlayerId, Spp, TeamId, ValueKpo};
 use crate::app::players::domain::value_objects::{
     JerseyVo, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
 };
@@ -11,45 +11,45 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PlayerDomainEvent {
     PlayerCreated {
-        player_id:      PlayerId,
-        team_id:        TeamId,
-        space_id:       SpaceId,
-        position_name:  PositionNameVo,
+        player_id: PlayerId,
+        team_id: TeamId,
+        space_id: SpaceId,
+        position_name: PositionNameVo,
         roster_line_id: RosterLineId,
-        jersey:         Option<JerseyVo>,
-        base_skills:    Vec<SkillId>,
-        starting_spp:   Spp,
+        jersey: Option<JerseyVo>,
+        base_skills: Vec<SkillId>,
+        starting_spp: Spp,
         starting_value: ValueKpo,
     },
     InitialSkillEarned {
-        player_id:    PlayerId,
-        team_id:      TeamId,
-        skill_id:     SkillId,
-        skill_name:   SkillName,
+        player_id: PlayerId,
+        team_id: TeamId,
+        skill_id: SkillId,
+        skill_name: SkillName,
         category_css: String,
-        mode:         AcquisitionMode,
-        spp_cost:     SppCost,
-        is_primary:   bool,
-        is_elite:     bool,
-        value_delta:  ValueKpo,
+        mode: AcquisitionMode,
+        spp_cost: SppCost,
+        is_primary: bool,
+        is_elite: bool,
+        value_delta: ValueKpo,
     },
 
     // ── Dépense de SPP post-match (phase PlayerImprovement) ────────────────────
     PlayerSkillPurchased {
-        player_id:    PlayerId,
-        team_id:      TeamId,
-        skill_id:     SkillId,
-        skill_name:   SkillName,
+        player_id: PlayerId,
+        team_id: TeamId,
+        skill_id: SkillId,
+        skill_name: SkillName,
         category_css: String,
-        mode:         AcquisitionMode,
-        spp_cost:     SppCost,
-        value_delta:  ValueKpo,
+        mode: AcquisitionMode,
+        spp_cost: SppCost,
+        value_delta: ValueKpo,
     },
     PlayerStatIncreased {
-        player_id:   PlayerId,
-        team_id:     TeamId,
-        stat:        StatKind,
-        spp_cost:    SppCost,
+        player_id: PlayerId,
+        team_id: TeamId,
+        stat: StatKind,
+        spp_cost: SppCost,
         value_delta: ValueKpo,
     },
 
@@ -58,56 +58,56 @@ pub enum PlayerDomainEvent {
     // propre flux d'events) mais nécessaires à la couche persistance, qui route
     // l'append par (player_id, team_id) — même besoin que PlayerCreated/InitialSkillEarned.
     TouchdownScored {
-        player_id:  PlayerId,
-        team_id:    TeamId,
-        context:    MatchContext,
+        player_id: PlayerId,
+        team_id: TeamId,
+        context: MatchContext,
         spp_earned: SppEarned,
     },
     PassCompleted {
-        player_id:  PlayerId,
-        team_id:    TeamId,
-        context:    MatchContext,
+        player_id: PlayerId,
+        team_id: TeamId,
+        context: MatchContext,
         spp_earned: SppEarned,
     },
     InterceptionMade {
-        player_id:  PlayerId,
-        team_id:    TeamId,
-        context:    MatchContext,
+        player_id: PlayerId,
+        team_id: TeamId,
+        context: MatchContext,
         spp_earned: SppEarned,
     },
     CasualtyInflicted {
-        player_id:  PlayerId,
-        team_id:    TeamId,
-        context:    MatchContext,
+        player_id: PlayerId,
+        team_id: TeamId,
+        context: MatchContext,
         spp_earned: SppEarned,
     },
     MatchMvpNamed {
-        player_id:  PlayerId,
-        team_id:    TeamId,
-        context:    MatchContext,
+        player_id: PlayerId,
+        team_id: TeamId,
+        context: MatchContext,
         spp_earned: SppEarned,
     },
     FoulCommitted {
         player_id: PlayerId,
-        team_id:   TeamId,
-        context:   MatchContext,
+        team_id: TeamId,
+        context: MatchContext,
     },
     InjurySustained {
-        player_id:   PlayerId,
-        team_id:     TeamId,
-        context:     MatchContext,
+        player_id: PlayerId,
+        team_id: TeamId,
+        context: MatchContext,
         injury_type: InjuryType,
     },
     PlayerAvailabilityRestored {
-        player_id:       PlayerId,
-        team_id:         TeamId,
+        player_id: PlayerId,
+        team_id: TeamId,
         match_report_id: MatchReportId,
     },
     MatchConcluded {
-        player_id:      PlayerId,
-        team_id:        TeamId,
-        context:        MatchContext,
-        team_score:     u8,
+        player_id: PlayerId,
+        team_id: TeamId,
+        context: MatchContext,
+        team_score: u8,
         opponent_score: u8,
     },
 
@@ -119,8 +119,8 @@ pub enum PlayerDomainEvent {
     /// lui-même reconstruit par les événements qui précèdent. Au rejeu, `apply`
     /// dispose donc exactement des mêmes valeurs qu'au moment de l'émission.
     MatchImpactReverted {
-        player_id:       PlayerId,
-        team_id:         TeamId,
+        player_id: PlayerId,
+        team_id: TeamId,
         match_report_id: MatchReportId,
     },
 }
@@ -166,25 +166,33 @@ impl PlayerDomainEvent {
     /// appelle cette méthode.
     pub fn to_app_event(
         &self,
-    ) -> Option<crate::app::shared_kernel::app_events::player_improvement_app_events::PlayerImprovementAppEvent> {
+    ) -> Option<crate::app::shared_kernel::app_events::player_improvement_app_events::PlayerImprovementAppEvent>{
         use crate::app::shared_kernel::app_events::player_improvement_app_events::PlayerImprovementAppEvent;
         match self {
-            Self::PlayerSkillPurchased { team_id, player_id, skill_name, value_delta, .. } => {
-                Some(PlayerImprovementAppEvent::SkillPurchased {
-                    team_id: team_id.0.clone(),
-                    player_id: player_id.0.clone(),
-                    skill_name: skill_name.to_string(),
-                    value_delta_po: value_delta.0,
-                })
-            }
-            Self::PlayerStatIncreased { team_id, player_id, stat, value_delta, .. } => {
-                Some(PlayerImprovementAppEvent::StatIncreased {
-                    team_id: team_id.0.clone(),
-                    player_id: player_id.0.clone(),
-                    stat: stat_name(*stat).to_string(),
-                    value_delta_po: value_delta.0,
-                })
-            }
+            Self::PlayerSkillPurchased {
+                team_id,
+                player_id,
+                skill_name,
+                value_delta,
+                ..
+            } => Some(PlayerImprovementAppEvent::SkillPurchased {
+                team_id: team_id.0.clone(),
+                player_id: player_id.0.clone(),
+                skill_name: skill_name.to_string(),
+                value_delta_po: value_delta.0,
+            }),
+            Self::PlayerStatIncreased {
+                team_id,
+                player_id,
+                stat,
+                value_delta,
+                ..
+            } => Some(PlayerImprovementAppEvent::StatIncreased {
+                team_id: team_id.0.clone(),
+                player_id: player_id.0.clone(),
+                stat: stat_name(*stat).to_string(),
+                value_delta_po: value_delta.0,
+            }),
             _ => None,
         }
     }

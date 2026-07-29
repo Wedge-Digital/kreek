@@ -12,13 +12,13 @@ use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct PlayersContext {
-    pub repository:            Arc<dyn IPlayerRepository>,
+    pub repository: Arc<dyn IPlayerRepository>,
     pub projection_repository: Arc<dyn IPlayerProjectionRepository>,
-    pub skill_catalog:         Arc<dyn ISkillCatalogPort>,
-    pub roster_port:           Arc<dyn IPlayerRosterPort>,
-    pub competition_port:      Arc<dyn IPlayerCompetitionPort>,
-    pub space_member_port:     Arc<dyn IPlayerSpaceMemberPort>,
-    pub event_bus:             EventBus,
+    pub skill_catalog: Arc<dyn ISkillCatalogPort>,
+    pub roster_port: Arc<dyn IPlayerRosterPort>,
+    pub competition_port: Arc<dyn IPlayerCompetitionPort>,
+    pub space_member_port: Arc<dyn IPlayerSpaceMemberPort>,
+    pub event_bus: EventBus,
 }
 
 impl PlayersContext {
@@ -32,7 +32,7 @@ impl PlayersContext {
         event_bus: EventBus,
     ) -> Self {
         Self {
-            repository:            Arc::new(PgPlayerRepository::new(pool.clone())),
+            repository: Arc::new(PgPlayerRepository::new(pool.clone())),
             projection_repository: Arc::new(PgPlayerProjectionRepository::new(pool.clone())),
             skill_catalog,
             roster_port,
@@ -44,9 +44,9 @@ impl PlayersContext {
 }
 
 pub fn init_listeners(
-    event_bus:     &EventBus,
+    event_bus: &EventBus,
     app_event_bus: &EventBus,
-    pool:          PgPool,
+    pool: PgPool,
     skill_catalog: Arc<dyn ISkillCatalogPort>,
 ) {
     let player_repo: Arc<dyn IPlayerRepository> = Arc::new(PgPlayerRepository::new(pool.clone()));

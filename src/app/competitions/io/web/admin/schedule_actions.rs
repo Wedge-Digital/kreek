@@ -1,9 +1,11 @@
-use crate::app::competitions::domain::match_day::{MatchDay, MatchDayName, MatchDayPosition, MatchDayType};
+use crate::app::competitions::domain::match_day::{
+    MatchDay, MatchDayName, MatchDayPosition, MatchDayType,
+};
 use crate::app::competitions::use_cases::admin::{
     add_match_use_case, delete_pairing_use_case, generate_all_pairings, generate_pairings,
 };
-use crate::app::shared_kernel::bloodbowl::ids::{MatchId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::date_string::DateString;
+use crate::app::shared_kernel::bloodbowl::ids::{MatchId, SeasonId};
 use crate::state::AppState;
 use axum::body::Body;
 use axum::extract::{Path, State};
@@ -36,7 +38,12 @@ struct ScheduleActionResult {
 fn schedule_changed_with_kept(kept: Vec<delete_pairing_use_case::KeptMatch>) -> Response {
     let skipped_matches = kept
         .into_iter()
-        .map(|m| format!("{} – {} ({})", m.home_team_name, m.away_team_name, m.round_name))
+        .map(|m| {
+            format!(
+                "{} – {} ({})",
+                m.home_team_name, m.away_team_name, m.round_name
+            )
+        })
         .collect();
 
     let mut response = Json(ScheduleActionResult {
@@ -44,7 +51,9 @@ fn schedule_changed_with_kept(kept: Vec<delete_pairing_use_case::KeptMatch>) -> 
         ..Default::default()
     })
     .into_response();
-    response.headers_mut().insert("HX-Trigger", "scheduleChanged".parse().unwrap());
+    response
+        .headers_mut()
+        .insert("HX-Trigger", "scheduleChanged".parse().unwrap());
     response
 }
 
@@ -52,7 +61,11 @@ fn schedule_changed_with_kept(kept: Vec<delete_pairing_use_case::KeptMatch>) -> 
 /// équipes exclues de l'appariement (non `Enrolled`), les journées non
 /// régénérées car elles avaient déjà des appariements, et/ou les poules sans
 /// effectif suffisant (< 2 équipes assignées, aucun appariement possible).
-fn schedule_changed_with_warning(skipped_teams: Vec<String>, skipped_rounds: Vec<String>, skipped_groups: Vec<String>) -> Response {
+fn schedule_changed_with_warning(
+    skipped_teams: Vec<String>,
+    skipped_rounds: Vec<String>,
+    skipped_groups: Vec<String>,
+) -> Response {
     let mut response = Json(ScheduleActionResult {
         skipped_teams,
         skipped_rounds,
@@ -60,7 +73,9 @@ fn schedule_changed_with_warning(skipped_teams: Vec<String>, skipped_rounds: Vec
         skipped_matches: vec![],
     })
     .into_response();
-    response.headers_mut().insert("HX-Trigger", "scheduleChanged".parse().unwrap());
+    response
+        .headers_mut()
+        .insert("HX-Trigger", "scheduleChanged".parse().unwrap());
     response
 }
 
@@ -70,13 +85,24 @@ struct ErrorResult {
 }
 
 fn add_match_refused(names: &[String]) -> Response {
-    let message = format!("Match non créé : équipe(s) non enrôlée(s) pour cette saison : {}", names.join(", "));
-    (StatusCode::UNPROCESSABLE_ENTITY, Json(ErrorResult { error: message })).into_response()
+    let message = format!(
+        "Match non créé : équipe(s) non enrôlée(s) pour cette saison : {}",
+        names.join(", ")
+    );
+    (
+        StatusCode::UNPROCESSABLE_ENTITY,
+        Json(ErrorResult { error: message }),
+    )
+        .into_response()
 }
 
 fn pairings_already_exist_refused() -> Response {
     let message = "Cette journée a déjà des appariements. Videz-les d'abord (\"Vider les matchs\") avant de régénérer.".to_string();
-    (StatusCode::UNPROCESSABLE_ENTITY, Json(ErrorResult { error: message })).into_response()
+    (
+        StatusCode::UNPROCESSABLE_ENTITY,
+        Json(ErrorResult { error: message }),
+    )
+        .into_response()
 }
 
 // ── Generate all pairings ────────────────────────────────────────────────────
@@ -96,7 +122,11 @@ pub async fn post_generate_all(
     )
     .await
     {
-        Ok(outcome) => schedule_changed_with_warning(outcome.skipped_team_names, outcome.skipped_round_names, outcome.skipped_group_names),
+        Ok(outcome) => schedule_changed_with_warning(
+            outcome.skipped_team_names,
+            outcome.skipped_round_names,
+            outcome.skipped_group_names,
+        ),
         Err(e) => {
             tracing::error!("post_generate_all: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -247,7 +277,12 @@ pub struct UpdateRoundBody {
 }
 
 pub async fn put_update_round(
-    Path((_space_id, _competition_id, _season_id, round_id)): Path<(String, String, String, String)>,
+    Path((_space_id, _competition_id, _season_id, round_id)): Path<(
+        String,
+        String,
+        String,
+        String,
+    )>,
     State(state): State<AppState>,
     axum::Json(body): axum::Json<UpdateRoundBody>,
 ) -> Response {
@@ -307,7 +342,12 @@ pub async fn put_update_round(
 // ── Delete round ─────────────────────────────────────────────────────────────
 
 pub async fn delete_round(
-    Path((_space_id, _competition_id, _season_id, round_id)): Path<(String, String, String, String)>,
+    Path((_space_id, _competition_id, _season_id, round_id)): Path<(
+        String,
+        String,
+        String,
+        String,
+    )>,
     State(state): State<AppState>,
 ) -> Response {
     match delete_pairing_use_case::delete_round(
@@ -351,8 +391,14 @@ pub async fn post_generate_round_pairings(
     )
     .await
     {
-        Ok(outcome) => schedule_changed_with_warning(outcome.skipped_team_names, vec![], outcome.skipped_group_names),
-        Err(generate_pairings::GenerateError::PairingsAlreadyExist) => pairings_already_exist_refused(),
+        Ok(outcome) => schedule_changed_with_warning(
+            outcome.skipped_team_names,
+            vec![],
+            outcome.skipped_group_names,
+        ),
+        Err(generate_pairings::GenerateError::PairingsAlreadyExist) => {
+            pairings_already_exist_refused()
+        }
         Err(e) => {
             tracing::error!("post_generate_round_pairings: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -412,9 +458,15 @@ pub async fn post_add_match(
     .await
     {
         Ok(()) => schedule_changed_with_warning(vec![], vec![], vec![]),
-        Err(add_match_use_case::AddMatchError::TeamsNotEnrolled(names)) => add_match_refused(&names),
-        Err(add_match_use_case::AddMatchError::RoundNotFound) => StatusCode::NOT_FOUND.into_response(),
-        Err(add_match_use_case::AddMatchError::InvalidTeamId) => StatusCode::BAD_REQUEST.into_response(),
+        Err(add_match_use_case::AddMatchError::TeamsNotEnrolled(names)) => {
+            add_match_refused(&names)
+        }
+        Err(add_match_use_case::AddMatchError::RoundNotFound) => {
+            StatusCode::NOT_FOUND.into_response()
+        }
+        Err(add_match_use_case::AddMatchError::InvalidTeamId) => {
+            StatusCode::BAD_REQUEST.into_response()
+        }
         Err(e) => {
             tracing::error!("post_add_match: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -433,7 +485,11 @@ fn delete_match_refused() -> Response {
     let message = "Match non supprimé : son rapport est publié. Dépubliez-le depuis son \
                    récapitulatif avant de supprimer la rencontre."
         .to_string();
-    (StatusCode::UNPROCESSABLE_ENTITY, Json(ErrorResult { error: message })).into_response()
+    (
+        StatusCode::UNPROCESSABLE_ENTITY,
+        Json(ErrorResult { error: message }),
+    )
+        .into_response()
 }
 
 pub async fn delete_match(
@@ -450,9 +506,7 @@ pub async fn delete_match(
     .await
     {
         Ok(()) => schedule_changed(),
-        Err(delete_pairing_use_case::DeletePairingError::ReportPublished) => {
-            delete_match_refused()
-        }
+        Err(delete_pairing_use_case::DeletePairingError::ReportPublished) => delete_match_refused(),
         Err(e) => {
             tracing::error!("delete_match: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()

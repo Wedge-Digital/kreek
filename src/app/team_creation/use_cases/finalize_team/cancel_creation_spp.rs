@@ -1,8 +1,8 @@
+use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::team_creation::domain::error::DomainError;
 use crate::app::team_creation::domain::roster::{PlayerId, SkillId};
 use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
 use crate::app::team_creation::ports::{ITeamRosterRepository, RepositoryError};
-use crate::app::shared_kernel::identity::ids::EntityId;
 
 pub struct CancelCreationSppCommand {
     pub team_id: EntityId,

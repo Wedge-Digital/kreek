@@ -101,31 +101,37 @@ pub struct Team {
 
 #[derive(Debug, Clone, Deserialize, serde::Serialize)]
 pub struct ChosenSkillCost {
-    pub primary:   u8,
+    pub primary: u8,
     pub secondary: u8,
 }
 
 #[derive(Debug, Clone, Deserialize, serde::Serialize)]
 pub struct SkillCostLevel {
-    pub level:          u8,
-    pub chosen:         ChosenSkillCost,
+    pub level: u8,
+    pub chosen: ChosenSkillCost,
     #[serde(rename = "chosenElite", default)]
-    pub chosen_elite:   Option<ChosenSkillCost>,
-    pub random:         u8,
+    pub chosen_elite: Option<ChosenSkillCost>,
+    pub random: u8,
     #[serde(rename = "randomElite", default)]
-    pub random_elite:   Option<u8>,
+    pub random_elite: Option<u8>,
     pub characteristic: u8,
 }
 
 impl SkillCostLevel {
     pub fn chosen_for(&self, is_elite: bool) -> &ChosenSkillCost {
-        if is_elite { self.chosen_elite.as_ref().unwrap_or(&self.chosen) }
-        else        { &self.chosen }
+        if is_elite {
+            self.chosen_elite.as_ref().unwrap_or(&self.chosen)
+        } else {
+            &self.chosen
+        }
     }
 
     pub fn random_for(&self, is_elite: bool) -> u8 {
-        if is_elite { self.random_elite.unwrap_or(self.random) }
-        else        { self.random }
+        if is_elite {
+            self.random_elite.unwrap_or(self.random)
+        } else {
+            self.random
+        }
     }
 }
 

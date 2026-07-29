@@ -5,12 +5,11 @@ use crate::app::match_report::domain::value_objects::{
     CorrectionEligibility, D3Roll, DedicatedFans, FanFactorMod, InducementPurchase, MatchAction,
     MatchGain, MatchReportOrigin, TempPlayer,
 };
-use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
-use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use chrono::{DateTime, Utc};
-
 
 #[derive(Debug, Clone)]
 pub struct MatchReportPublished {
@@ -146,8 +145,8 @@ impl MatchReportPublished {
 mod unpublish_tests {
     use super::*;
     use crate::app::match_report::domain::value_objects::{CorrectionBlocker, TeamSide};
-    use crate::app::shared_kernel::identity::ids::SpaceId;
     use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RoundId, SeasonId};
+    use crate::app::shared_kernel::identity::ids::SpaceId;
 
     fn published() -> MatchReportPublished {
         MatchReportPublished {
@@ -186,7 +185,9 @@ mod unpublish_tests {
 
     #[test]
     fn depublication_refusee_si_des_spp_ont_ete_depenses() {
-        let blocker = CorrectionBlocker::SppAlreadySpent { side: TeamSide::Away };
+        let blocker = CorrectionBlocker::SppAlreadySpent {
+            side: TeamSide::Away,
+        };
         let err = published()
             .unpublish(CoachId::new(), CorrectionEligibility::Blocked(blocker))
             .unwrap_err();
@@ -195,7 +196,9 @@ mod unpublish_tests {
 
     #[test]
     fn depublication_refusee_si_une_equipe_a_avance_de_phase() {
-        let blocker = CorrectionBlocker::PhaseAdvanced { side: TeamSide::Home };
+        let blocker = CorrectionBlocker::PhaseAdvanced {
+            side: TeamSide::Home,
+        };
         let err = published()
             .unpublish(CoachId::new(), CorrectionEligibility::Blocked(blocker))
             .unwrap_err();
@@ -220,7 +223,9 @@ mod unpublish_tests {
     #[test]
     fn depublication_produit_un_etat_corrigeable_portant_le_drapeau() {
         let p = published();
-        let (rtp, _) = p.unpublish(CoachId::new(), CorrectionEligibility::Eligible).unwrap();
+        let (rtp, _) = p
+            .unpublish(CoachId::new(), CorrectionEligibility::Eligible)
+            .unwrap();
 
         assert!(rtp.was_published_before);
         assert_eq!(rtp.id, p.id);
@@ -237,7 +242,9 @@ mod unpublish_tests {
             .unwrap();
 
         match event {
-            MatchReportDomainEvent::MatchReportUnpublished { unpublished_by: by, .. } => {
+            MatchReportDomainEvent::MatchReportUnpublished {
+                unpublished_by: by, ..
+            } => {
                 assert_eq!(by, unpublished_by);
             }
             other => panic!("événement inattendu : {other:?}"),

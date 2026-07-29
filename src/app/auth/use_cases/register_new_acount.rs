@@ -1,10 +1,10 @@
 use super::super::domain::error::AuthDomainError;
 use super::super::ports::{IUserRepository, RepositoryError};
 use crate::app::auth::domain::domain_event::AuthDomainEvent::AccountCreated;
-use crate::app::shared_kernel::identity::coach_name::CoachName;
-use crate::app::shared_kernel::identity::ids::{EventId, UserId};
-use crate::app::shared_kernel::identity::email::Email;
 use crate::app::auth::domain::user::User;
+use crate::app::shared_kernel::identity::coach_name::CoachName;
+use crate::app::shared_kernel::identity::email::Email;
+use crate::app::shared_kernel::identity::ids::{EventId, UserId};
 use crate::common::services::event_bus::event_bus::EventBus;
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
@@ -130,8 +130,8 @@ pub async fn execute(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::auth::ports::RepositoryError;
     use crate::app::auth::domain::user::User;
+    use crate::app::auth::ports::RepositoryError;
     use crate::common::services::event_bus::event_bus::new_bus;
     use async_trait::async_trait;
 

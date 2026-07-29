@@ -4,7 +4,6 @@ use nutype::nutype;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 
-
 pub const MAX_PLAYER_COUNT: u8 = 16;
 
 // ── IDs et plain newtypes ─────────────────────────────────────────────────────
@@ -84,7 +83,7 @@ pub enum AcquisitionMode {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcquiredSkill {
     pub skill_id: SkillId,
-    pub mode:     AcquisitionMode,
+    pub mode: AcquisitionMode,
     pub spp_cost: SppCost,
 }
 
@@ -92,10 +91,10 @@ pub struct AcquiredSkill {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerDefinition {
-    pub id:           PlayerId,
-    pub name:         PlayerName,
+    pub id: PlayerId,
+    pub name: PlayerName,
     pub max_quantity: PlayerMaxQuantity,
-    pub price:        PlayerPrice,
+    pub price: PlayerPrice,
 }
 
 impl PartialEq for PlayerDefinition {
@@ -106,12 +105,12 @@ impl PartialEq for PlayerDefinition {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HiredPlayer {
-    pub instance_id:     PlayerId,
-    pub definition:      PlayerDefinition,
+    pub instance_id: PlayerId,
+    pub definition: PlayerDefinition,
     #[serde(default)]
-    pub personal_name:   String, // arch:ok texte libre
+    pub personal_name: String, // arch:ok texte libre
     #[serde(default)]
-    pub jersey:          Option<JerseyNumber>,
+    pub jersey: Option<JerseyNumber>,
     #[serde(default)]
     pub acquired_skills: Vec<AcquiredSkill>,
 }
@@ -119,10 +118,10 @@ pub struct HiredPlayer {
 impl HiredPlayer {
     pub fn new(definition: PlayerDefinition) -> Self {
         Self {
-            instance_id:     PlayerId(Ulid::new().to_string()),
+            instance_id: PlayerId(Ulid::new().to_string()),
             definition,
-            personal_name:   String::new(),
-            jersey:          None,
+            personal_name: String::new(),
+            jersey: None,
             acquired_skills: Vec::new(),
         }
     }
@@ -140,8 +139,8 @@ impl HiredPlayer {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CrossLimit {
-    pub limit:               CrossLimitCount,
-    pub limited_player_ids:  Vec<PlayerId>,
+    pub limit: CrossLimitCount,
+    pub limited_player_ids: Vec<PlayerId>,
 }
 
 impl CrossLimit {
@@ -154,12 +153,12 @@ impl CrossLimit {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Roster {
-    pub id:                 RosterId,
-    pub name:               RosterName,
+    pub id: RosterId,
+    pub name: RosterName,
     pub player_definitions: Vec<PlayerDefinition>,
-    pub allowed_staff:      Vec<TeamStaff>,
-    pub cross_limits:       Vec<CrossLimit>,
-    pub reroll_price:       RerollBasePrice,
+    pub allowed_staff: Vec<TeamStaff>,
+    pub cross_limits: Vec<CrossLimit>,
+    pub reroll_price: RerollBasePrice,
 }
 
 impl PartialEq for Roster {
@@ -177,4 +176,3 @@ impl Roster {
         !self.cross_limits.is_empty()
     }
 }
-

@@ -1,9 +1,9 @@
 use crate::app::competitions::domain::competition_repository_port::{
     CompetitionRepositoryError, ICompetitionRepository,
 };
-use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, SpaceId};
-use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
 use crate::app::shared_kernel::bloodbowl::competition_name::CompetitionName;
+use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, SpaceId};
 
 pub struct UpdateDraftCompetitionCommand {
     pub competition_id: CompetitionId,

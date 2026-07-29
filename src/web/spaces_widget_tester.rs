@@ -1,13 +1,12 @@
 use crate::app::routes::AppRoutes;
-use askama::Template;
-use axum::extract::State;
-use axum::http::StatusCode;
-use axum::response::{Html, IntoResponse, Response};
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::app::shared_kernel::identity::space_definition::SpaceDefinition;
 use crate::app::shared_kernel::identity::space_name::SpaceName;
 use crate::app::spaces::context::SpacesContext;
-
+use askama::Template;
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum::response::{Html, IntoResponse, Response};
 
 /// Outil de développement de l'hôte : il compose les widgets exposés par
 /// `spaces` pour les essayer isolément. Il ne fait pas partie du BC extrait —
@@ -19,22 +18,24 @@ pub struct SpacesWidgetPageTesterTemplate {
     pub spaces: Vec<SpaceDefinition>,
 }
 
-pub async fn get_space_widget_tester(
-    State(ctx): State<SpacesContext>,
-) -> impl IntoResponse {
-    let spaces = ctx.space_repository.find_all()
+pub async fn get_space_widget_tester(State(ctx): State<SpacesContext>) -> impl IntoResponse {
+    let spaces = ctx
+        .space_repository
+        .find_all()
         .await
         .unwrap_or_default()
         .into_iter()
         .map(|s| SpaceDefinition {
             id: SpaceId::try_new(&s.id).expect(""),
-            name: SpaceName::try_new(&s.name).expect("") })
+            name: SpaceName::try_new(&s.name).expect(""),
+        })
         .collect();
 
     SpacesWidgetPageTesterTemplate {
         app_routes: AppRoutes::default(),
         spaces,
-    }.into_response()
+    }
+    .into_response()
 }
 
 impl IntoResponse for SpacesWidgetPageTesterTemplate {

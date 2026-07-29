@@ -85,10 +85,7 @@ impl IGroupRepository for GroupRepository {
         Ok(())
     }
 
-    async fn reset_assignments(
-        &self,
-        season_id: &str,
-    ) -> Result<(), GroupRepositoryError> {
+    async fn reset_assignments(&self, season_id: &str) -> Result<(), GroupRepositoryError> {
         sqlx::query(
             "DELETE FROM competition_group_teams
              WHERE group_id IN (SELECT id FROM competition_groups WHERE season_id = $1)",
@@ -100,35 +97,24 @@ impl IGroupRepository for GroupRepository {
         Ok(())
     }
 
-    async fn assign_team(
-        &self,
-        group_id: &str,
-        team_id: &str,
-    ) -> Result<(), GroupRepositoryError> {
-        sqlx::query(
-            "DELETE FROM competition_group_teams WHERE team_id = $1",
-        )
-        .bind(team_id)
-        .execute(&self.pool)
-        .await
-        .map_err(db_err)?;
+    async fn assign_team(&self, group_id: &str, team_id: &str) -> Result<(), GroupRepositoryError> {
+        sqlx::query("DELETE FROM competition_group_teams WHERE team_id = $1")
+            .bind(team_id)
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
 
-        sqlx::query(
-            "INSERT INTO competition_group_teams (group_id, team_id) VALUES ($1, $2)",
-        )
-        .bind(group_id)
-        .bind(team_id)
-        .execute(&self.pool)
-        .await
-        .map_err(db_err)?;
+        sqlx::query("INSERT INTO competition_group_teams (group_id, team_id) VALUES ($1, $2)")
+            .bind(group_id)
+            .bind(team_id)
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
 
         Ok(())
     }
 
-    async fn unassign_team(
-        &self,
-        team_id: &str,
-    ) -> Result<(), GroupRepositoryError> {
+    async fn unassign_team(&self, team_id: &str) -> Result<(), GroupRepositoryError> {
         sqlx::query("DELETE FROM competition_group_teams WHERE team_id = $1")
             .bind(team_id)
             .execute(&self.pool)

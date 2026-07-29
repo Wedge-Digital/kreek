@@ -1,5 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::competitions::io::web::admin::admin_page::{render_admin_page, require_admin_access};
+use crate::app::competitions::io::web::admin::admin_page::{
+    render_admin_page, require_admin_access,
+};
 use crate::app::competitions::io::web::resultats_view::{
     build_journees, load_resultats, JourneeResultatsVm, ResultAuthorization,
 };
@@ -39,7 +41,9 @@ pub async fn results_tab(
     headers: HeaderMap,
 ) -> impl IntoResponse {
     if headers.contains_key("hx-request") {
-        if let Err(resp) = require_admin_access(&auth_session, &space_id, &competition_id, &state).await {
+        if let Err(resp) =
+            require_admin_access(&auth_session, &space_id, &competition_id, &state).await
+        {
             return resp;
         }
 
@@ -62,5 +66,13 @@ pub async fn results_tab(
         .into_response();
     }
 
-    render_admin_page(auth_session, &space_id, &competition_id, &season_id, "results", &state).await
+    render_admin_page(
+        auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        "results",
+        &state,
+    )
+    .await
 }

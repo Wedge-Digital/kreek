@@ -38,7 +38,9 @@ fn to_spp_inputs(actions: &[MatchAction]) -> (Vec<SppActionInput>, HashMap<Strin
         .iter()
         .map(|a| {
             let key = actor_key(&a.player);
-            lookup.entry(key.clone()).or_insert_with(|| a.player.clone());
+            lookup
+                .entry(key.clone())
+                .or_insert_with(|| a.player.clone());
             SppActionInput {
                 actor_key: key,
                 is_injury: matches!(a.action, MatchActionType::Blesse { .. }),
@@ -55,7 +57,10 @@ fn to_player_spp_dtos(
     entries
         .into_iter()
         .filter_map(|(key, spp)| {
-            lookup.get(&key).map(|player| PlayerSppDto { action_player: player.clone(), spp })
+            lookup.get(&key).map(|player| PlayerSppDto {
+                action_player: player.clone(),
+                spp,
+            })
         })
         .collect()
 }

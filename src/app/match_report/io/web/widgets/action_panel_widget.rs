@@ -8,22 +8,22 @@ use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct ActionPanelParams {
-    pub turn:        u8,
-    pub player_id:   String,
+    pub turn: u8,
+    pub player_id: String,
     pub player_type: String,
 }
 
 #[derive(Template)]
 #[template(path = "action-panel-widget.html")]
 pub struct ActionPanelTemplate {
-    pub app_routes:      AppRoutes,
-    pub space_id:        String,
+    pub app_routes: AppRoutes,
+    pub space_id: String,
     pub match_report_id: String,
-    pub team_side:       String,
-    pub turn:            u8,
-    pub player_id:       String,
-    pub player_type:     String,
-    pub post_url:        String,
+    pub team_side: String,
+    pub turn: u8,
+    pub player_id: String,
+    pub player_type: String,
+    pub post_url: String,
 }
 
 impl IntoResponse for ActionPanelTemplate {
@@ -45,10 +45,15 @@ pub async fn get_action_panel_step3(
     let post_url = routes.match_report.step3_post_action(&space_id, &mr_id);
     ActionPanelTemplate {
         app_routes: routes,
-        space_id, match_report_id: mr_id, team_side: "home".into(),
-        turn: params.turn, player_id: params.player_id, player_type: params.player_type,
+        space_id,
+        match_report_id: mr_id,
+        team_side: "home".into(),
+        turn: params.turn,
+        player_id: params.player_id,
+        player_type: params.player_type,
         post_url,
-    }.into_response()
+    }
+    .into_response()
 }
 
 pub async fn get_action_panel_step4(
@@ -61,8 +66,13 @@ pub async fn get_action_panel_step4(
     let post_url = routes.match_report.step4_post_action(&space_id, &mr_id);
     ActionPanelTemplate {
         app_routes: routes,
-        space_id, match_report_id: mr_id, team_side: "away".into(),
-        turn: params.turn, player_id: params.player_id, player_type: params.player_type,
+        space_id,
+        match_report_id: mr_id,
+        team_side: "away".into(),
+        turn: params.turn,
+        player_id: params.player_id,
+        player_type: params.player_type,
         post_url,
-    }.into_response()
+    }
+    .into_response()
 }

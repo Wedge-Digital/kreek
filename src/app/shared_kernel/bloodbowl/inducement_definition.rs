@@ -18,5 +18,5 @@ pub struct InducementCost(u32);
 pub struct InducementDefinition {
     pub id: InducementId,
     pub name: InducementName,
-    pub cost: InducementCost
+    pub cost: InducementCost,
 }

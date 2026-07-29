@@ -109,8 +109,14 @@ pub async fn detailed_standings_widget(
 async fn build_vm(state: &AppState, space_id: &str, season_id: &str) -> DetailedStandingsVm {
     let (rules, teams, lines, groups) = tokio::join!(
         state.ranking.competition_port.find_ranking_rules(season_id),
-        state.ranking.competition_port.find_enrolled_teams(season_id),
-        state.ranking.repository.find_latest_lines_for_season(season_id),
+        state
+            .ranking
+            .competition_port
+            .find_enrolled_teams(season_id),
+        state
+            .ranking
+            .repository
+            .find_latest_lines_for_season(season_id),
         state.ranking.competition_port.find_groups(season_id),
     );
 
@@ -122,7 +128,11 @@ async fn build_vm(state: &AppState, space_id: &str, season_id: &str) -> Detailed
         build_detailed_groups(space_id, lines.unwrap_or_default(), &teams, &groups, &order)
     };
 
-    DetailedStandingsVm { rules_missing, columns: build_columns(&order), groups: groups_vm }
+    DetailedStandingsVm {
+        rules_missing,
+        columns: build_columns(&order),
+        groups: groups_vm,
+    }
 }
 
 /// Une colonne par critère **actif**, numérotée dans l'ordre de priorité : la
@@ -155,7 +165,10 @@ mod tests {
 
         let columns = build_columns(&order);
 
-        assert_eq!(columns.iter().map(|c| c.position).collect::<Vec<_>>(), vec![1, 2, 3]);
+        assert_eq!(
+            columns.iter().map(|c| c.position).collect::<Vec<_>>(),
+            vec![1, 2, 3]
+        );
         assert_eq!(
             columns.iter().map(|c| c.short_label).collect::<Vec<_>>(),
             vec!["Bl.", "Δ TD", "TD+"]

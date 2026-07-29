@@ -28,7 +28,10 @@ impl MatchResultVm {
 }
 
 fn count_touchdowns(actions: &[MatchAction]) -> u8 {
-    actions.iter().filter(|a| matches!(a.action, MatchActionType::Touchdown)).count() as u8
+    actions
+        .iter()
+        .filter(|a| matches!(a.action, MatchActionType::Touchdown))
+        .count() as u8
 }
 
 pub struct GainsFanVm {
@@ -50,7 +53,10 @@ pub struct TimelineEventVm {
 }
 
 impl TimelineEventVm {
-    pub fn all_from_domain(home_actions: &[MatchAction], away_actions: &[MatchAction]) -> Vec<Self> {
+    pub fn all_from_domain(
+        home_actions: &[MatchAction],
+        away_actions: &[MatchAction],
+    ) -> Vec<Self> {
         let mut events: Vec<Self> = home_actions
             .iter()
             .map(|a| Self::from_action(a, "home"))
@@ -63,7 +69,9 @@ impl TimelineEventVm {
     fn from_action(action: &MatchAction, side: &'static str) -> Self {
         // BR6 — injury_label/injury_badge_class jamais renseignés pour Sortie, seulement pour Blesse{injury}
         let (injury_label, injury_badge_class) = match &action.action {
-            MatchActionType::Blesse { injury } => (Some(injury_label(injury)), injury_badge_class(injury)),
+            MatchActionType::Blesse { injury } => {
+                (Some(injury_label(injury)), injury_badge_class(injury))
+            }
             _ => (None, ""),
         };
         Self {
@@ -114,14 +122,20 @@ pub struct HalfTimelineVm {
 const HALF_TURN_LIMIT: u8 = 8;
 
 impl HalfTimelineVm {
-    pub fn all_from_domain(home_actions: &[MatchAction], away_actions: &[MatchAction]) -> Vec<Self> {
+    pub fn all_from_domain(
+        home_actions: &[MatchAction],
+        away_actions: &[MatchAction],
+    ) -> Vec<Self> {
         let (first_half, second_half): (Vec<_>, Vec<_>) =
             TimelineEventVm::all_from_domain(home_actions, away_actions)
                 .into_iter()
                 .partition(|e| e.turn <= HALF_TURN_LIMIT);
         let (ht_home, ht_away) = halftime_score(home_actions, away_actions);
         vec![
-            Self { label: "1ère mi-temps".to_string(), events: first_half },
+            Self {
+                label: "1ère mi-temps".to_string(),
+                events: first_half,
+            },
             Self {
                 label: format!("2ème mi-temps · Mi-temps : {ht_home} — {ht_away}"),
                 events: second_half,
@@ -134,7 +148,9 @@ fn halftime_score(home_actions: &[MatchAction], away_actions: &[MatchAction]) ->
     let count = |actions: &[MatchAction]| {
         actions
             .iter()
-            .filter(|a| a.turn.value() <= HALF_TURN_LIMIT && matches!(a.action, MatchActionType::Touchdown))
+            .filter(|a| {
+                a.turn.value() <= HALF_TURN_LIMIT && matches!(a.action, MatchActionType::Touchdown)
+            })
             .count() as u8
     };
     (count(home_actions), count(away_actions))
@@ -172,18 +188,24 @@ impl MvpRowVm {
         home_team_name: &str,
         away_team_name: &str,
     ) -> Vec<Self> {
-        let home = home_actions.iter().filter(|a| matches!(a.action, MatchActionType::Mvp)).map(|a| Self {
-            side: "home",
-            player_display_name: a.player_display_name.clone(),
-            player_position: a.player_position.clone(),
-            team_name: home_team_name.to_string(),
-        });
-        let away = away_actions.iter().filter(|a| matches!(a.action, MatchActionType::Mvp)).map(|a| Self {
-            side: "away",
-            player_display_name: a.player_display_name.clone(),
-            player_position: a.player_position.clone(),
-            team_name: away_team_name.to_string(),
-        });
+        let home = home_actions
+            .iter()
+            .filter(|a| matches!(a.action, MatchActionType::Mvp))
+            .map(|a| Self {
+                side: "home",
+                player_display_name: a.player_display_name.clone(),
+                player_position: a.player_position.clone(),
+                team_name: home_team_name.to_string(),
+            });
+        let away = away_actions
+            .iter()
+            .filter(|a| matches!(a.action, MatchActionType::Mvp))
+            .map(|a| Self {
+                side: "away",
+                player_display_name: a.player_display_name.clone(),
+                player_position: a.player_position.clone(),
+                team_name: away_team_name.to_string(),
+            });
         home.chain(away).collect()
     }
 }
@@ -198,9 +220,16 @@ pub struct InjuryRowVm {
 }
 
 impl InjuryRowVm {
-    pub fn all_from_domain(home_actions: &[MatchAction], away_actions: &[MatchAction]) -> Vec<Self> {
-        let home = home_actions.iter().filter_map(|a| Self::from_action(a, "home"));
-        let away = away_actions.iter().filter_map(|a| Self::from_action(a, "away"));
+    pub fn all_from_domain(
+        home_actions: &[MatchAction],
+        away_actions: &[MatchAction],
+    ) -> Vec<Self> {
+        let home = home_actions
+            .iter()
+            .filter_map(|a| Self::from_action(a, "home"));
+        let away = away_actions
+            .iter()
+            .filter_map(|a| Self::from_action(a, "away"));
         home.chain(away).collect()
     }
 

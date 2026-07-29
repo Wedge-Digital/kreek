@@ -54,8 +54,8 @@ pub fn build_hired_rows(
                 .filter(|p| p.definition.id == def.id)
                 .count();
             let line_cost_kpo = quantity as u32 * def.price.into_inner();
-            let is_max =
-                quantity >= def.max_quantity.into_inner() as usize || team.hired_players().len() >= 16;
+            let is_max = quantity >= def.max_quantity.into_inner() as usize
+                || team.hired_players().len() >= 16;
 
             let pos = roster_def
                 .available_players

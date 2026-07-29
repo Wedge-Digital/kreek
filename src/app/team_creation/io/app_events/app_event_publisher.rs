@@ -13,7 +13,10 @@ pub fn team_creation_app_event_publisher(event_bus: &EventBus, app_event_bus: Ev
                         continue;
                     };
                     if let Some(app_event) = event.to_app_event() {
-                        tracing::info!("team_creation_app_event_publisher: relaying {} to app bus", event.to_event_type());
+                        tracing::info!(
+                            "team_creation_app_event_publisher: relaying {} to app bus",
+                            event.to_event_type()
+                        );
                         let _ = app_event_bus.send(app_event.to_enveloppe());
                     }
                 }

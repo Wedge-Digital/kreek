@@ -1,17 +1,17 @@
 #[cfg(test)]
 mod tests {
-    use crate::app::shared_kernel::identity::id_service::{FakeIdService, IdService};
+    use crate::app::shared_kernel::bloodbowl::ids::RosterId;
     use crate::app::shared_kernel::bloodbowl::staff::{
         StaffId, StaffKind, StaffMaxQuantity, StaffName, StaffPrice,
     };
     use crate::app::shared_kernel::bloodbowl::team::{BaseTeamInfo, TeamName};
+    use crate::app::shared_kernel::bloodbowl::tier::{CreationBudget, TierName};
+    use crate::app::shared_kernel::identity::id_service::{FakeIdService, IdService};
     use crate::app::team_creation::domain::error::DomainError;
-    use crate::app::shared_kernel::bloodbowl::ids::RosterId;
     use crate::app::team_creation::domain::roster::{
         CrossLimit, PlayerDefinition, PlayerId, PlayerMaxQuantity, PlayerName, PlayerPrice,
         RerollBasePrice, Roster, RosterName,
     };
-    use crate::app::shared_kernel::bloodbowl::tier::{CreationBudget, TierName};
     use crate::app::team_creation::domain::ruleset::{
         RosterTier, Ruleset, RulesetId, RulesetName, TierId,
     };
@@ -27,10 +27,10 @@ mod tests {
 
     fn make_player(id: &str, price: u32, max_quantity: u8) -> PlayerDefinition {
         PlayerDefinition {
-            id:           PlayerId(id.to_string()),
-            name:         PlayerName::try_new(format!("Player {id}")).unwrap(),
+            id: PlayerId(id.to_string()),
+            name: PlayerName::try_new(format!("Player {id}")).unwrap(),
             max_quantity: PlayerMaxQuantity::try_new(max_quantity).unwrap(),
-            price:        PlayerPrice::try_new(price).unwrap(),
+            price: PlayerPrice::try_new(price).unwrap(),
         }
     }
 
@@ -51,12 +51,12 @@ mod tests {
         reroll_price: u32,
     ) -> Roster {
         Roster {
-            id:                 RosterId(id.to_string()),
-            name:               RosterName::try_new(format!("Roster {id}")).unwrap(),
+            id: RosterId(id.to_string()),
+            name: RosterName::try_new(format!("Roster {id}")).unwrap(),
             player_definitions: players,
-            allowed_staff:      staff,
-            cross_limits:       vec![],
-            reroll_price:       RerollBasePrice::try_new(reroll_price).unwrap(),
+            allowed_staff: staff,
+            cross_limits: vec![],
+            reroll_price: RerollBasePrice::try_new(reroll_price).unwrap(),
         }
     }
 
@@ -176,7 +176,7 @@ mod tests {
         let mut roster = make_roster("r1", vec![p1.clone(), p2.clone()], vec![], 50);
         use crate::app::team_creation::domain::roster::CrossLimitCount;
         roster.cross_limits = vec![CrossLimit {
-            limit:              CrossLimitCount::try_new(2).unwrap(),
+            limit: CrossLimitCount::try_new(2).unwrap(),
             limited_player_ids: vec![PlayerId("p1".to_string()), PlayerId("p2".to_string())],
         }];
         let ruleset = make_ruleset("r1", 1_000);

@@ -1,9 +1,11 @@
-use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
-use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, PlayerId, PositionId, RosterId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::ids::{
+    CompetitionId, MatchReportId, PlayerId, PositionId, RosterId, SeasonId,
+};
 use crate::app::shared_kernel::bloodbowl::staff_counts::{
     ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
 };
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::teams::domain::error::DomainError;
 use crate::app::teams::domain::value_objects::{
     DedicatedFans, IncidentType, Kpo, KpoDelta, MatchResult, PlayerImprovement, RosterName,
@@ -220,12 +222,12 @@ pub struct Team {
     pub id: TeamId,
     pub space_id: SpaceId,
     pub name: TeamName,
-    pub initials: String,    // arch:ok texte libre calculé
+    pub initials: String, // arch:ok texte libre calculé
     pub logo_url: Option<String>,
     pub roster_id: RosterId,
     pub roster_name: RosterName,
     pub coach_id: CoachId,
-    pub coach_name: String,  // arch:ok texte libre dénormalisé
+    pub coach_name: String, // arch:ok texte libre dénormalisé
     pub competition_id: Option<CompetitionId>,
     pub competition_name: Option<String>,
     pub season_id: Option<SeasonId>,
@@ -377,13 +379,13 @@ impl Team {
                 // Capturé AVANT les affectations qui suivent : `dedicated_fans`
                 // va être écrasé et `current_match_report_id` remis à None.
                 // Passé cet instant, ni l'un ni l'autre n'est reconstructible.
-                self.last_post_match = self.current_match_report_id.map(|match_report_id| {
-                    LastPostMatch {
-                        match_report_id,
-                        dedicated_fans_before: self.dedicated_fans,
-                        treasury_income: *treasury_income,
-                    }
-                });
+                self.last_post_match =
+                    self.current_match_report_id
+                        .map(|match_report_id| LastPostMatch {
+                            match_report_id,
+                            dedicated_fans_before: self.dedicated_fans,
+                            treasury_income: *treasury_income,
+                        });
                 self.dedicated_fans = *dedicated_fans;
                 self.treasury.0 += treasury_income.0;
                 self.game_phase = Some(GamePhase::PlayerImprovement);
@@ -564,12 +566,10 @@ impl Team {
 
     pub fn reject_enrollment(&self) -> Result<TeamDomainEvent, DomainError> {
         match self.participation_status {
-            ParticipationStatus::PendingEnrollment => {
-                Ok(TeamDomainEvent::TeamEnrollmentRejected {
-                    competition_id: self.competition_id,
-                    season_id: self.season_id,
-                })
-            }
+            ParticipationStatus::PendingEnrollment => Ok(TeamDomainEvent::TeamEnrollmentRejected {
+                competition_id: self.competition_id,
+                season_id: self.season_id,
+            }),
             _ => Err(DomainError::InvalidTransition {
                 from: self.participation_status.clone(),
                 to: ParticipationStatus::Rejected,
@@ -625,8 +625,7 @@ impl Team {
         // de match (bornée -2..2 côté BC match_report) — appliquée telle
         // quelle, aucun recalcul via le résultat du match.
         let raw = (self.dedicated_fans.into_inner() as i16 + fan_mod as i16).max(0) as u8;
-        let dedicated_fans =
-            DedicatedFans::try_new(raw.min(20)).expect("clamped to valid range");
+        let dedicated_fans = DedicatedFans::try_new(raw.min(20)).expect("clamped to valid range");
         Ok(TeamDomainEvent::PostMatchSequenceStarted {
             result,
             dedicated_fans,
@@ -732,7 +731,11 @@ impl Team {
         improvement: PlayerImprovement,
         value_delta: Kpo,
     ) -> TeamDomainEvent {
-        TeamDomainEvent::PlayerImprovementApplied { player_id, improvement, value_delta }
+        TeamDomainEvent::PlayerImprovementApplied {
+            player_id,
+            improvement,
+            value_delta,
+        }
     }
 
     pub fn override_phase(
@@ -775,22 +778,38 @@ fn initials_from(name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
     use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RosterId, SeasonId};
     use crate::app::shared_kernel::bloodbowl::staff_counts::{
         ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
     };
     use crate::app::shared_kernel::bloodbowl::team::TeamId;
+    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
     use crate::app::teams::domain::value_objects::{DedicatedFans, RosterName, TeamName};
 
-    fn team_id() -> TeamId { TeamId::try_new("00000000000000000000000001").unwrap() }
-    fn space_id() -> SpaceId { SpaceId::try_new("00000000000000000000000002").unwrap() }
-    fn competition_id() -> CompetitionId { CompetitionId::try_new("00000000000000000000000003").unwrap() }
-    fn season_id() -> SeasonId { SeasonId::try_new("00000000000000000000000004").unwrap() }
-    fn roster_id() -> RosterId { RosterId::try_new("00000000000000000000000005").unwrap() }
-    fn coach_id() -> CoachId { CoachId::try_new("00000000000000000000000006").unwrap() }
-    fn match_report_id() -> MatchReportId { MatchReportId::try_new("00000000000000000000000007").unwrap() }
-    fn other_match_report_id() -> MatchReportId { MatchReportId::try_new("00000000000000000000000008").unwrap() }
+    fn team_id() -> TeamId {
+        TeamId::try_new("00000000000000000000000001").unwrap()
+    }
+    fn space_id() -> SpaceId {
+        SpaceId::try_new("00000000000000000000000002").unwrap()
+    }
+    fn competition_id() -> CompetitionId {
+        CompetitionId::try_new("00000000000000000000000003").unwrap()
+    }
+    fn season_id() -> SeasonId {
+        SeasonId::try_new("00000000000000000000000004").unwrap()
+    }
+    fn roster_id() -> RosterId {
+        RosterId::try_new("00000000000000000000000005").unwrap()
+    }
+    fn coach_id() -> CoachId {
+        CoachId::try_new("00000000000000000000000006").unwrap()
+    }
+    fn match_report_id() -> MatchReportId {
+        MatchReportId::try_new("00000000000000000000000007").unwrap()
+    }
+    fn other_match_report_id() -> MatchReportId {
+        MatchReportId::try_new("00000000000000000000000008").unwrap()
+    }
 
     fn created_event() -> TeamDomainEvent {
         TeamDomainEvent::TeamCreated {
@@ -1044,7 +1063,11 @@ mod tests {
         let team = Team::hydrate(&events).unwrap();
         // Phase ReadyToPlay — pas Recruitment
         assert!(matches!(
-            team.buy_staff(StaffType::Reroll, StaffQuantity::try_new(1).unwrap(), Kpo(50)),
+            team.buy_staff(
+                StaffType::Reroll,
+                StaffQuantity::try_new(1).unwrap(),
+                Kpo(50)
+            ),
             Err(DomainError::WrongGamePhase(_))
         ));
     }
@@ -1053,11 +1076,19 @@ mod tests {
     fn buy_staff_type_non_autorise_retourne_erreur() {
         let team = recruitment_phase_team();
         assert!(matches!(
-            team.buy_staff(StaffType::Apothecary, StaffQuantity::try_new(1).unwrap(), Kpo(50)),
+            team.buy_staff(
+                StaffType::Apothecary,
+                StaffQuantity::try_new(1).unwrap(),
+                Kpo(50)
+            ),
             Err(DomainError::StaffTypeNotBuyable)
         ));
         assert!(matches!(
-            team.buy_staff(StaffType::FansFactor, StaffQuantity::try_new(1).unwrap(), Kpo(50)),
+            team.buy_staff(
+                StaffType::FansFactor,
+                StaffQuantity::try_new(1).unwrap(),
+                Kpo(50)
+            ),
             Err(DomainError::StaffTypeNotBuyable)
         ));
     }
@@ -1067,7 +1098,11 @@ mod tests {
         let team = recruitment_phase_team();
         // treasury = 1150, coût = 2000
         assert!(matches!(
-            team.buy_staff(StaffType::Reroll, StaffQuantity::try_new(1).unwrap(), Kpo(2000)),
+            team.buy_staff(
+                StaffType::Reroll,
+                StaffQuantity::try_new(1).unwrap(),
+                Kpo(2000)
+            ),
             Err(DomainError::InsufficientTreasury)
         ));
     }
@@ -1079,7 +1114,11 @@ mod tests {
         assert_eq!(team.treasury.0, 1150);
 
         let event = team
-            .buy_staff(StaffType::Reroll, StaffQuantity::try_new(2).unwrap(), Kpo(100))
+            .buy_staff(
+                StaffType::Reroll,
+                StaffQuantity::try_new(2).unwrap(),
+                Kpo(100),
+            )
             .unwrap();
         let team = team.apply(&event);
 
@@ -1091,7 +1130,11 @@ mod tests {
     fn buy_assistant_met_a_jour_compteur() {
         let team = recruitment_phase_team();
         let event = team
-            .buy_staff(StaffType::Assistant, StaffQuantity::try_new(1).unwrap(), Kpo(10))
+            .buy_staff(
+                StaffType::Assistant,
+                StaffQuantity::try_new(1).unwrap(),
+                Kpo(10),
+            )
             .unwrap();
         let team = team.apply(&event);
         assert_eq!(team.assistants.0, 3); // 2 initial + 1
@@ -1400,7 +1443,9 @@ mod tests {
         let events = vec![
             created_event(),
             enrolled_event(),
-            TeamDomainEvent::MatchReportingStarted { match_report_id: match_report_id() },
+            TeamDomainEvent::MatchReportingStarted {
+                match_report_id: match_report_id(),
+            },
         ];
         let team = Team::hydrate(&events).unwrap();
         let started = team
@@ -1409,7 +1454,9 @@ mod tests {
         Team::hydrate(&[
             created_event(),
             enrolled_event(),
-            TeamDomainEvent::MatchReportingStarted { match_report_id: match_report_id() },
+            TeamDomainEvent::MatchReportingStarted {
+                match_report_id: match_report_id(),
+            },
             started,
         ])
         .unwrap()
@@ -1426,7 +1473,11 @@ mod tests {
     #[test]
     fn revert_restaure_les_fans_ecretes_a_vingt() {
         let team = team_after_post_match(100, Kpo(0));
-        assert_eq!(team.dedicated_fans.into_inner(), 20, "précondition : écrêtage atteint");
+        assert_eq!(
+            team.dedicated_fans.into_inner(),
+            20,
+            "précondition : écrêtage atteint"
+        );
 
         let reverted = revert(&team);
 
@@ -1438,7 +1489,11 @@ mod tests {
     #[test]
     fn revert_restaure_les_fans_apres_plancher_a_zero() {
         let team = team_after_post_match(-100, Kpo(0));
-        assert_eq!(team.dedicated_fans.into_inner(), 0, "précondition : plancher atteint");
+        assert_eq!(
+            team.dedicated_fans.into_inner(),
+            0,
+            "précondition : plancher atteint"
+        );
 
         let reverted = revert(&team);
 
@@ -1504,9 +1559,11 @@ mod tests {
         let apres_publication = team_after_post_match(2, Kpo(150));
         let reverted = revert(&apres_publication);
 
-        let republie = reverted
-            .clone()
-            .apply(&reverted.start_post_match_sequence(MatchResult::Win, 2, Kpo(150), vec![]).unwrap());
+        let republie = reverted.clone().apply(
+            &reverted
+                .start_post_match_sequence(MatchResult::Win, 2, Kpo(150), vec![])
+                .unwrap(),
+        );
 
         assert_eq!(republie.dedicated_fans, apres_publication.dedicated_fans);
         assert_eq!(republie.treasury, apres_publication.treasury);

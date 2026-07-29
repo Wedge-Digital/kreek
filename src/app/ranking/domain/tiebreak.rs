@@ -66,7 +66,9 @@ impl TiebreakCriterion {
     /// `None` sur un code inconnu — une configuration persistée peut référencer
     /// un critère absent du catalogue (cf. `nb_red_cards`, retiré).
     pub fn from_code(code: &str) -> Option<Self> {
-        Self::all().into_iter().find(|criterion| criterion.code() == code)
+        Self::all()
+            .into_iter()
+            .find(|criterion| criterion.code() == code)
     }
 
     /// Règle 17 : décroissant partout, sauf les TD encaissés où le moins est le
@@ -75,9 +77,12 @@ impl TiebreakCriterion {
     pub fn direction(&self) -> Direction {
         match self {
             Self::NbTdConceded => Direction::Asc,
-            Self::DiffTd | Self::NbTd | Self::NbCas | Self::NbWins | Self::NbFouls | Self::NbReu => {
-                Direction::Desc
-            }
+            Self::DiffTd
+            | Self::NbTd
+            | Self::NbCas
+            | Self::NbWins
+            | Self::NbFouls
+            | Self::NbReu => Direction::Desc,
         }
     }
 
@@ -163,7 +168,10 @@ mod tests {
     #[test]
     fn from_code_resolves_the_seven_codes_and_rejects_the_unknown() {
         for criterion in TiebreakCriterion::all() {
-            assert_eq!(TiebreakCriterion::from_code(criterion.code()), Some(criterion));
+            assert_eq!(
+                TiebreakCriterion::from_code(criterion.code()),
+                Some(criterion)
+            );
         }
         assert_eq!(TiebreakCriterion::from_code("nb_red_cards"), None);
         assert_eq!(TiebreakCriterion::from_code(""), None);
@@ -204,7 +212,11 @@ mod tests {
     /// 4 294 967 292 et placerait cette équipe en tête de la différence de TD.
     #[test]
     fn value_of_diff_td_is_negative_when_a_team_concedes_more_than_it_scores() {
-        let leaky = CumulativeTotals { td_for: TdFor(2), td_against: TdAgainst(6), ..CumulativeTotals::ZERO };
+        let leaky = CumulativeTotals {
+            td_for: TdFor(2),
+            td_against: TdAgainst(6),
+            ..CumulativeTotals::ZERO
+        };
         assert_eq!(TiebreakCriterion::DiffTd.value_of(&leaky), -4);
     }
 }

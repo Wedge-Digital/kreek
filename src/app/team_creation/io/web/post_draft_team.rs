@@ -1,7 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::shared_kernel::identity::ids::{CoachId, Entity, UserId};
-use crate::app::shared_kernel::identity::id_service::EntityIdService;
 use crate::app::shared_kernel::bloodbowl::team::TeamName;
+use crate::app::shared_kernel::identity::id_service::EntityIdService;
+use crate::app::shared_kernel::identity::ids::{CoachId, Entity, UserId};
 use crate::app::team_creation::routes::Routes as TeamRoutes;
 use crate::app::team_creation::use_cases::create_draft_team::create_draft_team;
 use crate::state::AppState;
@@ -33,7 +33,11 @@ pub async fn post_draft_team(
 
     let Json(form) = match body {
         Ok(json) => json,
-        Err(_) => return error_response("Veuillez remplir tous les champs obligatoires (compétition, saison)."),
+        Err(_) => {
+            return error_response(
+                "Veuillez remplir tous les champs obligatoires (compétition, saison).",
+            )
+        }
     };
 
     let team_name = match TeamName::try_new(form.team_name) {
@@ -70,7 +74,9 @@ pub async fn post_draft_team(
         .await
     {
         Some(r) if !r.tiers.is_empty() => r,
-        Some(_) => return error_response("La compétition sélectionnée n'a pas de règles de création."),
+        Some(_) => {
+            return error_response("La compétition sélectionnée n'a pas de règles de création.")
+        }
         None => return error_response("Saison introuvable — rechargez la page."),
     };
 
@@ -103,7 +109,10 @@ pub async fn post_draft_team(
 
     let routes = TeamRoutes;
     Response::builder()
-        .header("HX-Redirect", routes.team_build(&space_id_raw, &team.get_id().to_string()))
+        .header(
+            "HX-Redirect",
+            routes.team_build(&space_id_raw, &team.get_id().to_string()),
+        )
         .body(Body::empty())
         .unwrap()
         .into_response()

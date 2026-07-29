@@ -2,10 +2,10 @@ use crate::app::auth::auth_backend::AuthSession;
 use crate::app::ranking::io::web::builders::build_classement_groups;
 use crate::app::ranking::use_cases::standings_service::tiebreak_order_of;
 use crate::state::AppState;
+use askama::Template;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
-use askama::Template;
 
 pub struct ClassementRowVm {
     pub rank: u32,
@@ -66,8 +66,14 @@ pub async fn classement_widget(
 async fn build_vm(state: &AppState, space_id: &str, season_id: &str) -> ClassementWidgetVm {
     let (rules, teams, lines, groups) = tokio::join!(
         state.ranking.competition_port.find_ranking_rules(season_id),
-        state.ranking.competition_port.find_enrolled_teams(season_id),
-        state.ranking.repository.find_latest_lines_for_season(season_id),
+        state
+            .ranking
+            .competition_port
+            .find_enrolled_teams(season_id),
+        state
+            .ranking
+            .repository
+            .find_latest_lines_for_season(season_id),
         state.ranking.competition_port.find_groups(season_id),
     );
 
@@ -79,5 +85,8 @@ async fn build_vm(state: &AppState, space_id: &str, season_id: &str) -> Classeme
         build_classement_groups(space_id, lines.unwrap_or_default(), &teams, &groups, &order)
     };
 
-    ClassementWidgetVm { rules_missing, groups: groups_vm }
+    ClassementWidgetVm {
+        rules_missing,
+        groups: groups_vm,
+    }
 }

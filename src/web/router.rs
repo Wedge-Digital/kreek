@@ -14,6 +14,12 @@ pub fn router() -> Router<AppState> {
         .route(path::MENU, get(app_menu))
         .route(path::SPACES_WIDGET_TESTER, get(get_space_widget_tester))
         .route(path::KREEK_SELECT_TESTER, get(get_kreek_select_tester))
-        .route(path::KREEK_SELECT_TESTER_DATA, get(get_kreek_select_test_data))
-        .route(path::KREEK_SELECT_TESTER_COLORS, get(get_kreek_select_test_colors))
+        .route(
+            path::KREEK_SELECT_TESTER_DATA,
+            get(get_kreek_select_test_data),
+        )
+        .route(
+            path::KREEK_SELECT_TESTER_COLORS,
+            get(get_kreek_select_test_colors),
+        )
 }

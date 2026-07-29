@@ -1,10 +1,10 @@
 use crate::app::shared_kernel::app_events::team_creation_app_events::TeamCreationAppEvent;
-use crate::app::shared_kernel::identity::ids::{CoachId, EntityId, SpaceId};
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RosterId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::staff_counts::{
     ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
 };
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::{CoachId, EntityId, SpaceId};
 use crate::app::teams::domain::team::TeamDomainEvent;
 use crate::app::teams::domain::value_objects::{DedicatedFans, Kpo, RosterName, TeamName};
 use crate::app::teams::ports::{ITeamRepository, RepositoryError};
@@ -45,12 +45,24 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                         auto_enroll,
                         ..
                     } = app_event;
-                    let Some(tid) = TeamId::try_new(&team_id).ok() else { continue };
-                    let Some(sid) = SpaceId::try_new(&space_id).ok() else { continue };
-                    let Some(cid) = CompetitionId::try_new(&competition_id).ok() else { continue };
-                    let Some(seas_id) = SeasonId::try_new(&season_id).ok() else { continue };
-                    let Some(rid) = RosterId::try_new(&roster_id).ok() else { continue };
-                    let Some(coa_id) = CoachId::try_new(&coach_id).ok() else { continue };
+                    let Some(tid) = TeamId::try_new(&team_id).ok() else {
+                        continue;
+                    };
+                    let Some(sid) = SpaceId::try_new(&space_id).ok() else {
+                        continue;
+                    };
+                    let Some(cid) = CompetitionId::try_new(&competition_id).ok() else {
+                        continue;
+                    };
+                    let Some(seas_id) = SeasonId::try_new(&season_id).ok() else {
+                        continue;
+                    };
+                    let Some(rid) = RosterId::try_new(&roster_id).ok() else {
+                        continue;
+                    };
+                    let Some(coa_id) = CoachId::try_new(&coach_id).ok() else {
+                        continue;
+                    };
                     let tname = TeamName::try_new(team_name)
                         .unwrap_or_else(|_| TeamName::try_new("Unknown".to_string()).unwrap());
                     let rname = RosterName::try_new(roster_name)
@@ -77,7 +89,9 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                         assistants: AssistantCount::new(assistants).unwrap_or_default(),
                         cheerleaders: CheerleaderCount::new(cheerleaders).unwrap_or_default(),
                     };
-                    tracing::info!("teams team_created_listener: received TeamCreated for {team_id}");
+                    tracing::info!(
+                        "teams team_created_listener: received TeamCreated for {team_id}"
+                    );
                     if let Err(e) = team_repo.append(&team_id, &domain_event, 0).await {
                         match e {
                             RepositoryError::ConcurrentWrite => tracing::warn!(

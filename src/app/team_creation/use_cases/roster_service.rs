@@ -1,10 +1,10 @@
+use crate::app::shared_kernel::bloodbowl::ids::RosterId;
 use crate::app::shared_kernel::bloodbowl::staff::{
     StaffId, StaffKind, StaffMaxQuantity, StaffName, StaffPrice,
 };
-use crate::app::shared_kernel::bloodbowl::ids::RosterId;
 use crate::app::team_creation::domain::roster::{
-    PlayerDefinition, PlayerId, PlayerMaxQuantity, PlayerName, PlayerPrice, RerollBasePrice, Roster,
-    RosterName,
+    PlayerDefinition, PlayerId, PlayerMaxQuantity, PlayerName, PlayerPrice, RerollBasePrice,
+    Roster, RosterName,
 };
 use crate::app::team_creation::domain::team_staff::TeamStaff;
 use crate::app::team_creation::ports::IReferenceDataPort;
@@ -22,10 +22,10 @@ pub fn load_roster(roster_uid: &str, ref_data: &dyn IReferenceDataPort) -> Optio
         .iter()
         .filter_map(|p| {
             Some(PlayerDefinition {
-                id:           PlayerId(p.uid.clone()),
-                name:         PlayerName::try_new(p.position_name.clone()).ok()?,
+                id: PlayerId(p.uid.clone()),
+                name: PlayerName::try_new(p.position_name.clone()).ok()?,
                 max_quantity: PlayerMaxQuantity::try_new(p.max_quantity).ok()?,
-                price:        PlayerPrice::try_new(p.cost).ok()?,
+                price: PlayerPrice::try_new(p.cost).ok()?,
             })
         })
         .collect();
@@ -35,16 +35,13 @@ pub fn load_roster(roster_uid: &str, ref_data: &dyn IReferenceDataPort) -> Optio
         .allowed_staff_uids
         .iter()
         .filter_map(|uid| {
-            all_staff
-                .iter()
-                .find(|s| s.uid == *uid)
-                .map(|s| TeamStaff {
-                    id: StaffId(s.uid.clone()),
-                    name: StaffName(s.name.clone()),
-                    price: StaffPrice(s.price),
-                    max_quantity: StaffMaxQuantity(s.max_quantity),
-                    kind: staff_kind(&s.uid),
-                })
+            all_staff.iter().find(|s| s.uid == *uid).map(|s| TeamStaff {
+                id: StaffId(s.uid.clone()),
+                name: StaffName(s.name.clone()),
+                price: StaffPrice(s.price),
+                max_quantity: StaffMaxQuantity(s.max_quantity),
+                kind: staff_kind(&s.uid),
+            })
         })
         .collect();
 
@@ -61,8 +58,8 @@ pub fn load_roster(roster_uid: &str, ref_data: &dyn IReferenceDataPort) -> Optio
     }
 
     Some(Roster {
-        id:           RosterId(def.uid.clone()),
-        name:         RosterName::try_new(def.name.clone()).ok()?,
+        id: RosterId(def.uid.clone()),
+        name: RosterName::try_new(def.name.clone()).ok()?,
         player_definitions,
         allowed_staff,
         cross_limits: vec![],
@@ -110,7 +107,11 @@ pub fn special_rule_selection_missing(
         return false;
     }
     roster_metadata(roster_uid, ref_data)
-        .map(|m| m.special_rules.iter().any(|r| r.starts_with("FAVOURED_OF_CHOOSE_")))
+        .map(|m| {
+            m.special_rules
+                .iter()
+                .any(|r| r.starts_with("FAVOURED_OF_CHOOSE_"))
+        })
         .unwrap_or(false)
 }
 
@@ -201,19 +202,34 @@ mod tests {
             ]
         }
 
-        fn resolve_skill_cost(&self, _: &str, _: &str, _: &str) -> Option<crate::app::team_creation::ports::SkillCostResult> {
+        fn resolve_skill_cost(
+            &self,
+            _: &str,
+            _: &str,
+            _: &str,
+        ) -> Option<crate::app::team_creation::ports::SkillCostResult> {
             Some(crate::app::team_creation::ports::SkillCostResult { spp_cost: 3 })
         }
 
         fn resolve_skill_name(&self, uid: &str) -> Option<String> {
-            if uid == "DODGE" { Some("Esquive".into()) } else { None }
+            if uid == "DODGE" {
+                Some("Esquive".into())
+            } else {
+                None
+            }
         }
 
-        fn resolve_base_skills(&self, _: &str) -> Vec<String> { vec!["Esquive".into()] }
+        fn resolve_base_skills(&self, _: &str) -> Vec<String> {
+            vec!["Esquive".into()]
+        }
 
-        fn skill_pricing_level_1(&self) -> Option<crate::app::team_creation::ports::SkillPricingDefinition> {
+        fn skill_pricing_level_1(
+            &self,
+        ) -> Option<crate::app::team_creation::ports::SkillPricingDefinition> {
             Some(crate::app::team_creation::ports::SkillPricingDefinition {
-                chosen_primary: 3, chosen_secondary: 6, random: 2,
+                chosen_primary: 3,
+                chosen_secondary: 6,
+                random: 2,
             })
         }
     }
@@ -273,21 +289,37 @@ mod tests {
     #[test]
     fn special_rule_selection_missing_false_for_fixed_rule_roster() {
         // CHAOS_DWARF a une règle fixe (FAVOURED_OF_HASHUT), pas de choix : jamais bloquant.
-        assert!(!special_rule_selection_missing("CHAOS_DWARF", false, &FakeRefData));
+        assert!(!special_rule_selection_missing(
+            "CHAOS_DWARF",
+            false,
+            &FakeRefData
+        ));
     }
 
     #[test]
     fn special_rule_selection_missing_true_for_choice_roster_without_selection() {
-        assert!(special_rule_selection_missing("CHAOS_RENEGADE", false, &FakeRefData));
+        assert!(special_rule_selection_missing(
+            "CHAOS_RENEGADE",
+            false,
+            &FakeRefData
+        ));
     }
 
     #[test]
     fn special_rule_selection_missing_false_once_selected() {
-        assert!(!special_rule_selection_missing("CHAOS_RENEGADE", true, &FakeRefData));
+        assert!(!special_rule_selection_missing(
+            "CHAOS_RENEGADE",
+            true,
+            &FakeRefData
+        ));
     }
 
     #[test]
     fn special_rule_selection_missing_false_for_unknown_roster() {
-        assert!(!special_rule_selection_missing("UNKNOWN", false, &FakeRefData));
+        assert!(!special_rule_selection_missing(
+            "UNKNOWN",
+            false,
+            &FakeRefData
+        ));
     }
 }

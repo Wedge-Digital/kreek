@@ -1,6 +1,6 @@
+use crate::app::auth::domain::user::User;
 use crate::app::auth::ports::{IUserRepository, RepositoryError};
 use crate::app::auth::use_cases::perform_login::PerformLoginCommand;
-use crate::app::auth::domain::user::User;
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use std::sync::Arc;
 

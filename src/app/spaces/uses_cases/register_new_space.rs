@@ -122,8 +122,8 @@ mod tests {
 
     fn fake_user(coach_id: &CoachId) -> SpaceUser {
         use crate::app::shared_kernel::identity::coach_name::CoachName;
-        use crate::app::shared_kernel::identity::ids::CloudinaryImage;
         use crate::app::shared_kernel::identity::email::Email;
+        use crate::app::shared_kernel::identity::ids::CloudinaryImage;
         SpaceUser {
             id: coach_id.clone(),
             name: CoachName::try_new("Coach").unwrap(),

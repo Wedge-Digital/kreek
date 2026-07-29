@@ -22,7 +22,9 @@ pub fn init(app_event_bus: &EventBus, pool: PgPool) {
                     handle_unpublished(&payload, &pool).await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
-                    tracing::warn!("competitions::match_report_unpublished_listener: lagged by {n}");
+                    tracing::warn!(
+                        "competitions::match_report_unpublished_listener: lagged by {n}"
+                    );
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
             }
@@ -63,7 +65,7 @@ async fn handle_unpublished(payload: &MatchReportUnpublishedPayload, pool: &PgPo
 /// équipes.
 async fn resolve_pairing_id(
     payload: &MatchReportUnpublishedPayload,
-    pool:    &PgPool,
+    pool: &PgPool,
 ) -> Option<String> {
     if let Some(pairing_id) = payload.pairing_id.clone() {
         return Some(pairing_id);
@@ -80,7 +82,9 @@ async fn resolve_pairing_id(
     .fetch_optional(pool)
     .await
     .unwrap_or_else(|e| {
-        tracing::error!("competitions::match_report_unpublished_listener: résolution du pairing : {e}");
+        tracing::error!(
+            "competitions::match_report_unpublished_listener: résolution du pairing : {e}"
+        );
         None
     })
 }
@@ -92,7 +96,7 @@ async fn resolve_pairing_id(
 /// `UPDATE` à valeurs absolues sur une clé stable, donc naturellement
 /// idempotent — c'est ce qui rend acceptable un rejeu de la compensation.
 async fn reset_projection(
-    pool:       &PgPool,
+    pool: &PgPool,
     pairing_id: &str,
     report_url: &str,
 ) -> Result<(), sqlx::Error> {
@@ -123,14 +127,14 @@ mod tests {
     fn payload(pairing_id: Option<&str>) -> MatchReportUnpublishedPayload {
         MatchReportUnpublishedPayload {
             match_report_id: "mr1".into(),
-            space_id:        "sp1".into(),
-            competition_id:  "c1".into(),
-            season_id:       "s1".into(),
-            round_id:        "r1".into(),
-            pairing_id:      pairing_id.map(str::to_string),
-            home_team_id:    "home".into(),
-            away_team_id:    "away".into(),
-            unpublished_at:  chrono::Utc::now(),
+            space_id: "sp1".into(),
+            competition_id: "c1".into(),
+            season_id: "s1".into(),
+            round_id: "r1".into(),
+            pairing_id: pairing_id.map(str::to_string),
+            home_team_id: "home".into(),
+            away_team_id: "away".into(),
+            unpublished_at: chrono::Utc::now(),
         }
     }
 
@@ -230,19 +234,17 @@ mod tests {
     #[sqlx::test]
     async fn aucun_pairing_n_est_cree(pool: PgPool) {
         seed_completed_row(&pool).await;
-        let before: i64 =
-            sqlx::query_scalar("SELECT count(*) FROM competition_match_day_pairings")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+        let before: i64 = sqlx::query_scalar("SELECT count(*) FROM competition_match_day_pairings")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
 
         handle_unpublished(&payload(Some(PAIRING)), &pool).await;
 
-        let after: i64 =
-            sqlx::query_scalar("SELECT count(*) FROM competition_match_day_pairings")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+        let after: i64 = sqlx::query_scalar("SELECT count(*) FROM competition_match_day_pairings")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
         assert_eq!(before, after);
     }
 

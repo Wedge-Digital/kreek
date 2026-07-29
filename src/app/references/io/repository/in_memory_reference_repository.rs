@@ -4,12 +4,14 @@ use crate::app::references::domain::models::{
 };
 use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::references::io::repository::reference_data_error::ReferenceDataError;
+use crate::app::shared_kernel::bloodbowl::ids::RosterId;
+use crate::app::shared_kernel::bloodbowl::inducement_definition::{
+    InducementCost, InducementDefinition, InducementId, InducementName,
+};
+use crate::app::shared_kernel::bloodbowl::roster_definition::RosterDefinition;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use std::path::Path;
-use crate::app::shared_kernel::bloodbowl::inducement_definition::{InducementCost, InducementDefinition, InducementId, InducementName};
-use crate::app::shared_kernel::bloodbowl::roster_definition::RosterDefinition;
-use crate::app::shared_kernel::bloodbowl::ids::RosterId;
 // ── Raw JSON wrappers (deserialization only) ──────────────────────────────────
 
 #[derive(Deserialize)]
@@ -58,14 +60,14 @@ type SkillCostFile = Vec<SkillCostLevel>;
 // ── In-memory repository ──────────────────────────────────────────────────────
 
 pub struct InMemoryReferenceRepository {
-    inducements:       Vec<Inducement>,
-    star_players:      Vec<StarPlayer>,
-    teams:             Vec<Team>,
-    skills:            Vec<Skill>,
-    skill_categories:  Vec<SkillCategory>,
-    special_rules:     Vec<SpecialRule>,
-    staff:             Vec<Staff>,
-    leagues:           Vec<League>,
+    inducements: Vec<Inducement>,
+    star_players: Vec<StarPlayer>,
+    teams: Vec<Team>,
+    skills: Vec<Skill>,
+    skill_categories: Vec<SkillCategory>,
+    special_rules: Vec<SpecialRule>,
+    staff: Vec<Staff>,
+    leagues: Vec<League>,
     skill_cost_matrix: Vec<SkillCostLevel>,
 }
 
@@ -74,14 +76,15 @@ impl InMemoryReferenceRepository {
     /// au démarrage. Tout est ensuite servi depuis la mémoire.
     pub fn load_from_dir(dir: &Path) -> Result<Self, ReferenceDataError> {
         Ok(Self {
-            inducements:       read_json::<InducementsFile>(dir, "inducements_fr.json")?.inducements,
-            star_players:      read_json::<StarPlayersFile>(dir, "star_players_fr.json")?.star_players,
-            teams:             read_json::<TeamsFile>(dir, "teams_fr.json")?.teams,
-            skills:            read_json::<SkillsFile>(dir, "skills_fr.json")?.skills,
-            skill_categories:  read_json::<SkillCatFile>(dir, "skill_cat_fr.json")?.skill_categories,
-            special_rules:     read_json::<SpecialRulesFile>(dir, "special_rules_fr.json")?.special_rules,
-            staff:             read_json::<StaffFile>(dir, "staff_fr.json")?.staff,
-            leagues:           read_json::<LeaguesFile>(dir, "leagues_fr.json")?.leagues,
+            inducements: read_json::<InducementsFile>(dir, "inducements_fr.json")?.inducements,
+            star_players: read_json::<StarPlayersFile>(dir, "star_players_fr.json")?.star_players,
+            teams: read_json::<TeamsFile>(dir, "teams_fr.json")?.teams,
+            skills: read_json::<SkillsFile>(dir, "skills_fr.json")?.skills,
+            skill_categories: read_json::<SkillCatFile>(dir, "skill_cat_fr.json")?.skill_categories,
+            special_rules: read_json::<SpecialRulesFile>(dir, "special_rules_fr.json")?
+                .special_rules,
+            staff: read_json::<StaffFile>(dir, "staff_fr.json")?.staff,
+            leagues: read_json::<LeaguesFile>(dir, "leagues_fr.json")?.leagues,
             skill_cost_matrix: read_json::<SkillCostFile>(dir, "skill_cost.json")?,
         })
     }
@@ -94,38 +97,47 @@ impl InMemoryReferenceRepository {
     pub fn load_for_tests() -> Self {
         const DIR: &str = "assets/references.example";
         let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join(DIR);
-        Self::load_from_dir(&dir).unwrap_or_else(|e| panic!("jeu de données « {DIR} » invalide : {e}"))
+        Self::load_from_dir(&dir)
+            .unwrap_or_else(|e| panic!("jeu de données « {DIR} » invalide : {e}"))
     }
 }
 
 fn read_json<T: DeserializeOwned>(dir: &Path, file: &str) -> Result<T, ReferenceDataError> {
     let path = dir.join(file);
     let raw = std::fs::read_to_string(&path).map_err(|e| ReferenceDataError::FileUnreadable {
-        file:  path.display().to_string(),
+        file: path.display().to_string(),
         cause: e.to_string(),
     })?;
     serde_json::from_str(&raw).map_err(|e| ReferenceDataError::InvalidJson {
-        file:  path.display().to_string(),
+        file: path.display().to_string(),
         cause: e.to_string(),
     })
 }
 
 impl IReferenceRepository for InMemoryReferenceRepository {
     fn list_roster_definitions(&self) -> Vec<RosterDefinition> {
-        let mut rosters: Vec<RosterDefinition> = self.teams.iter().map(|team: &Team| RosterDefinition {
-            id: RosterId(team.uid.clone()),
-            name: team.name.clone(),
-        }).collect();
+        let mut rosters: Vec<RosterDefinition> = self
+            .teams
+            .iter()
+            .map(|team: &Team| RosterDefinition {
+                id: RosterId(team.uid.clone()),
+                name: team.name.clone(),
+            })
+            .collect();
         rosters.sort_unstable_by(|a, b| a.id.0.cmp(&b.id.0));
         rosters
     }
 
-    fn list_inducements(&self) -> Vec<InducementDefinition>{
-        let mut inducements: Vec<InducementDefinition> = self.inducements.iter().map(|inducement| InducementDefinition {
-            id: InducementId(inducement.uid.clone()),
-            cost: InducementCost::try_new(inducement.cost).expect("invalid inducement cost"),
-            name: InducementName(inducement.name.clone()),
-        }).collect();
+    fn list_inducements(&self) -> Vec<InducementDefinition> {
+        let mut inducements: Vec<InducementDefinition> = self
+            .inducements
+            .iter()
+            .map(|inducement| InducementDefinition {
+                id: InducementId(inducement.uid.clone()),
+                cost: InducementCost::try_new(inducement.cost).expect("invalid inducement cost"),
+                name: InducementName(inducement.name.clone()),
+            })
+            .collect();
         inducements.sort_unstable_by(|a, b| a.id.0.cmp(&b.id.0));
         inducements
     }
@@ -175,20 +187,44 @@ impl IReferenceRepository for InMemoryReferenceRepository {
         &self.skill_cost_matrix
     }
 
-    fn touchdown_spp(&self) -> u8 { 3 }
-    fn pass_spp(&self) -> u8 { 1 }
-    fn interception_spp(&self) -> u8 { 2 }
-    fn casualty_spp(&self) -> u8 { 2 }
-    fn mvp_spp(&self) -> u8 { 4 }
+    fn touchdown_spp(&self) -> u8 {
+        3
+    }
+    fn pass_spp(&self) -> u8 {
+        1
+    }
+    fn interception_spp(&self) -> u8 {
+        2
+    }
+    fn casualty_spp(&self) -> u8 {
+        2
+    }
+    fn mvp_spp(&self) -> u8 {
+        4
+    }
 
     fn improvement_skill_value_delta(&self, is_secondary_access: bool) -> u32 {
-        if is_secondary_access { 40_000 } else { 20_000 }
+        if is_secondary_access {
+            40_000
+        } else {
+            20_000
+        }
     }
-    fn improvement_stat_value_delta_ma(&self) -> u32 { 20_000 }
-    fn improvement_stat_value_delta_st(&self) -> u32 { 60_000 }
-    fn improvement_stat_value_delta_ag(&self) -> u32 { 30_000 }
-    fn improvement_stat_value_delta_pa(&self) -> u32 { 20_000 }
-    fn improvement_stat_value_delta_av(&self) -> u32 { 10_000 }
+    fn improvement_stat_value_delta_ma(&self) -> u32 {
+        20_000
+    }
+    fn improvement_stat_value_delta_st(&self) -> u32 {
+        60_000
+    }
+    fn improvement_stat_value_delta_ag(&self) -> u32 {
+        30_000
+    }
+    fn improvement_stat_value_delta_pa(&self) -> u32 {
+        20_000
+    }
+    fn improvement_stat_value_delta_av(&self) -> u32 {
+        10_000
+    }
 }
 
 #[cfg(test)]
@@ -207,7 +243,9 @@ mod tests {
     ];
 
     fn fixture_dir(name: &str) -> std::path::PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures").join(name)
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures")
+            .join(name)
     }
 
     #[test]
@@ -237,7 +275,10 @@ mod tests {
         let err = expect_load_error("references_empty", "un répertoire vide doit échouer");
         match err {
             ReferenceDataError::FileUnreadable { file, .. } => {
-                assert!(file.ends_with("inducements_fr.json"), "fichier signalé : {file}")
+                assert!(
+                    file.ends_with("inducements_fr.json"),
+                    "fichier signalé : {file}"
+                )
             }
             other => panic!("erreur inattendue : {other}"),
         }
@@ -248,7 +289,10 @@ mod tests {
         let err = expect_load_error("references_invalid", "un JSON malformé doit échouer");
         match err {
             ReferenceDataError::InvalidJson { file, .. } => {
-                assert!(file.ends_with("inducements_fr.json"), "fichier signalé : {file}")
+                assert!(
+                    file.ends_with("inducements_fr.json"),
+                    "fichier signalé : {file}"
+                )
             }
             other => panic!("erreur inattendue : {other}"),
         }
@@ -268,8 +312,16 @@ mod tests {
     #[test]
     fn example_dataset_honours_hardcoded_uids() {
         let repo = InMemoryReferenceRepository::load_for_tests();
-        for uid in ["APOTHECARY", "CHEERLEADERS", "COACH_ASSISTANTS", "FAN_FACTOR"] {
-            assert!(repo.list_staff().iter().any(|s| s.uid == uid), "staff manquant : {uid}");
+        for uid in [
+            "APOTHECARY",
+            "CHEERLEADERS",
+            "COACH_ASSISTANTS",
+            "FAN_FACTOR",
+        ] {
+            assert!(
+                repo.list_staff().iter().any(|s| s.uid == uid),
+                "staff manquant : {uid}"
+            );
         }
         for uid in CHOICE_RULE_UIDS {
             assert!(
@@ -292,7 +344,10 @@ mod tests {
         let repo = InMemoryReferenceRepository::load_for_tests();
 
         let teams = repo.list_teams();
-        assert!(teams.iter().any(|t| t.logo.is_some()), "aucun logo renseigné");
+        assert!(
+            teams.iter().any(|t| t.logo.is_some()),
+            "aucun logo renseigné"
+        );
         assert!(teams.iter().any(|t| t.logo.is_none()), "aucun logo omis");
 
         // `leagues` est optionnel au sens du schéma, mais de fait obligatoire :
@@ -309,10 +364,22 @@ mod tests {
             );
         }
 
-        let positions: Vec<_> = teams.iter().flat_map(|t| t.available_players.iter()).collect();
-        assert!(positions.iter().any(|p| p.is_journeyman), "aucun journeyman");
-        assert!(positions.iter().any(|p| p.skills.is_empty()), "aucune position sans skill");
-        assert!(positions.iter().any(|p| !p.skills.is_empty()), "aucune position avec skills");
+        let positions: Vec<_> = teams
+            .iter()
+            .flat_map(|t| t.available_players.iter())
+            .collect();
+        assert!(
+            positions.iter().any(|p| p.is_journeyman),
+            "aucun journeyman"
+        );
+        assert!(
+            positions.iter().any(|p| p.skills.is_empty()),
+            "aucune position sans skill"
+        );
+        assert!(
+            positions.iter().any(|p| !p.skills.is_empty()),
+            "aucune position avec skills"
+        );
 
         let inducements = repo.list_inducements();
         assert!(!inducements.is_empty());
@@ -320,17 +387,41 @@ mod tests {
             .iter()
             .filter_map(|i| repo.find_inducement_by_uid(&i.id.0))
             .collect();
-        assert!(raw.iter().any(|i| i.reduced_cost.is_some()), "aucun reducedCost");
-        assert!(raw.iter().any(|i| i.reduced_cost.is_none()), "aucun reducedCost nul");
-        assert!(raw.iter().any(|i| !i.restricted_to.is_empty()), "aucun restrictedTo");
+        assert!(
+            raw.iter().any(|i| i.reduced_cost.is_some()),
+            "aucun reducedCost"
+        );
+        assert!(
+            raw.iter().any(|i| i.reduced_cost.is_none()),
+            "aucun reducedCost nul"
+        );
+        assert!(
+            raw.iter().any(|i| !i.restricted_to.is_empty()),
+            "aucun restrictedTo"
+        );
 
-        assert!(repo.list_star_players().iter().any(|s| !s.plays_for.is_empty()));
-        assert!(repo.list_star_players().iter().any(|s| s.plays_for.is_empty()));
+        assert!(repo
+            .list_star_players()
+            .iter()
+            .any(|s| !s.plays_for.is_empty()));
+        assert!(repo
+            .list_star_players()
+            .iter()
+            .any(|s| s.plays_for.is_empty()));
 
         let costs = repo.skill_cost_matrix();
-        assert!(costs.iter().any(|c| c.chosen_elite.is_some()), "aucun chosenElite");
-        assert!(costs.iter().any(|c| c.chosen_elite.is_none()), "aucun chosenElite omis");
-        assert!(costs.iter().any(|c| c.random_elite.is_some()), "aucun randomElite");
+        assert!(
+            costs.iter().any(|c| c.chosen_elite.is_some()),
+            "aucun chosenElite"
+        );
+        assert!(
+            costs.iter().any(|c| c.chosen_elite.is_none()),
+            "aucun chosenElite omis"
+        );
+        assert!(
+            costs.iter().any(|c| c.random_elite.is_some()),
+            "aucun randomElite"
+        );
     }
 
     #[test]

@@ -5,9 +5,9 @@ use crate::app::competitions::ports::{ITeamInfoPort, TeamInfoDto};
 use crate::app::competitions::use_cases::admin::team_enrollment::{
     build_new_pairing_projection, load_enrolled_teams, resolve_team_names,
 };
-use crate::app::shared_kernel::identity::ids::EventId;
 use crate::app::shared_kernel::bloodbowl::ids::PairingId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::EventId;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::collections::HashMap;
 
@@ -50,14 +50,28 @@ pub async fn execute(
         home_team_id: TeamId::try_new(home_team_id).map_err(|_| AddMatchError::InvalidTeamId)?,
         away_team_id: TeamId::try_new(away_team_id).map_err(|_| AddMatchError::InvalidTeamId)?,
     };
-    let projection = build_new_pairing_projection(home_team_id, away_team_id, season_id, &match_day, &team_display);
+    let projection = build_new_pairing_projection(
+        home_team_id,
+        away_team_id,
+        season_id,
+        &match_day,
+        &team_display,
+    );
     match_day_repo
         .save_pairing(round_id, &pairing, &projection)
         .await
         .map_err(|e| AddMatchError::Repository(e.to_string()))?;
 
     emit_pairing_created(
-        home_team_id, away_team_id, &pairing, competition_id, season_id, space_id, &match_day, &team_display, event_bus,
+        home_team_id,
+        away_team_id,
+        &pairing,
+        competition_id,
+        season_id,
+        space_id,
+        &match_day,
+        &team_display,
+        event_bus,
     );
     Ok(())
 }
@@ -94,8 +108,12 @@ fn emit_pairing_created(
     team_display: &HashMap<String, TeamInfoDto>,
     event_bus: &EventBus,
 ) {
-    let home_info = team_display.get(home).expect("home team vérifié enrôlé avant émission");
-    let away_info = team_display.get(away).expect("away team vérifié enrôlé avant émission");
+    let home_info = team_display
+        .get(home)
+        .expect("home team vérifié enrôlé avant émission");
+    let away_info = team_display
+        .get(away)
+        .expect("away team vérifié enrôlé avant émission");
 
     let _ = event_bus.send(
         CompetitionsDomainEvent::PairingCreated {
@@ -128,7 +146,9 @@ fn emit_pairing_created(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::competitions::domain::match_day::{MatchDayName, MatchDayPosition, MatchDayType};
+    use crate::app::competitions::domain::match_day::{
+        MatchDayName, MatchDayPosition, MatchDayType,
+    };
     use crate::app::shared_kernel::bloodbowl::ids::MatchId;
     use crate::common::services::event_bus::event_bus::new_bus;
     use async_trait::async_trait;
@@ -137,16 +157,105 @@ mod tests {
     struct FakeMatchDayRepo(MatchDay);
     #[async_trait]
     impl IMatchDayRepository for FakeMatchDayRepo {
-        async fn find_by_season(&self, _: &str) -> Result<Vec<MatchDay>, crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(vec![]) }
-        async fn find_by_id(&self, _: &str) -> Result<Option<MatchDay>, crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(Some(self.0.clone())) }
-        async fn save_match_day(&self, _: &MatchDay) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
-        async fn delete_match_day(&self, _: &str) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
-        async fn save_pairing(&self, _: &str, _: &Pairing, _: &crate::app::competitions::domain::match_day_repository_port::NewPairingProjection) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
-        async fn find_pairing_id(&self, _: &str, _: &str, _: &str) -> Result<Option<String>, crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(None) }
-        async fn delete_pairing(&self, _: &str) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
-        async fn ensure_match_days_from_structure(&self, _: &str, _: &[(String, String, String, Option<String>, Option<String>)]) -> Result<(), crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(()) }
-        async fn list_resultats(&self, _: &str, _: Option<i32>, _: u32) -> Result<Vec<crate::app::competitions::domain::match_day_repository_port::PairingDisplayDto>, crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(vec![]) }
-        async fn list_calendrier(&self, _: &str, _: Option<i32>, _: u32) -> Result<Vec<crate::app::competitions::domain::match_day_repository_port::PairingDisplayDto>, crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError> { Ok(vec![]) }
+        async fn find_by_season(
+            &self,
+            _: &str,
+        ) -> Result<
+            Vec<MatchDay>,
+            crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError,
+        > {
+            Ok(vec![])
+        }
+        async fn find_by_id(
+            &self,
+            _: &str,
+        ) -> Result<
+            Option<MatchDay>,
+            crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError,
+        > {
+            Ok(Some(self.0.clone()))
+        }
+        async fn save_match_day(
+            &self,
+            _: &MatchDay,
+        ) -> Result<
+            (),
+            crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError,
+        > {
+            Ok(())
+        }
+        async fn delete_match_day(
+            &self,
+            _: &str,
+        ) -> Result<
+            (),
+            crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError,
+        > {
+            Ok(())
+        }
+        async fn save_pairing(
+            &self,
+            _: &str,
+            _: &Pairing,
+            _: &crate::app::competitions::domain::match_day_repository_port::NewPairingProjection,
+        ) -> Result<
+            (),
+            crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError,
+        > {
+            Ok(())
+        }
+        async fn find_pairing_id(
+            &self,
+            _: &str,
+            _: &str,
+            _: &str,
+        ) -> Result<
+            Option<String>,
+            crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError,
+        > {
+            Ok(None)
+        }
+        async fn delete_pairing(
+            &self,
+            _: &str,
+        ) -> Result<
+            (),
+            crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError,
+        > {
+            Ok(())
+        }
+        async fn ensure_match_days_from_structure(
+            &self,
+            _: &str,
+            _: &[(String, String, String, Option<String>, Option<String>)],
+        ) -> Result<
+            (),
+            crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError,
+        > {
+            Ok(())
+        }
+        async fn list_resultats(
+            &self,
+            _: &str,
+            _: Option<i32>,
+            _: u32,
+        ) -> Result<
+            Vec<crate::app::competitions::domain::match_day_repository_port::PairingDisplayDto>,
+            crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError,
+        > {
+            Ok(vec![])
+        }
+        async fn list_calendrier(
+            &self,
+            _: &str,
+            _: Option<i32>,
+            _: u32,
+        ) -> Result<
+            Vec<crate::app::competitions::domain::match_day_repository_port::PairingDisplayDto>,
+            crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError,
+        > {
+            Ok(vec![])
+        }
     }
 
     struct FakeTeamInfoPort(Mutex<Vec<TeamInfoDto>>);
@@ -157,22 +266,37 @@ mod tests {
         }
         async fn find_team_names(&self, team_ids: &[String]) -> Result<Vec<TeamInfoDto>, String> {
             Ok(vec![TeamInfoDto {
-                team_id: team_ids[0].clone(), team_name: format!("Équipe {}", team_ids[0]),
-                coach_id: String::new(), coach_name: String::new(), roster_name: String::new(), logo_url: None,
+                team_id: team_ids[0].clone(),
+                team_name: format!("Équipe {}", team_ids[0]),
+                coach_id: String::new(),
+                coach_name: String::new(),
+                roster_name: String::new(),
+                logo_url: None,
             }])
         }
     }
 
     fn dto(id: &str, name: &str) -> TeamInfoDto {
-        TeamInfoDto { team_id: id.into(), team_name: name.into(), coach_id: "coach".into(), coach_name: "Coach".into(), roster_name: "Roster".into(), logo_url: None }
+        TeamInfoDto {
+            team_id: id.into(),
+            team_name: name.into(),
+            coach_id: "coach".into(),
+            coach_name: "Coach".into(),
+            roster_name: "Roster".into(),
+            logo_url: None,
+        }
     }
 
     fn sample_match_day() -> MatchDay {
         MatchDay {
-            id: MatchId::new(), season_id: crate::app::shared_kernel::bloodbowl::ids::SeasonId::new(),
+            id: MatchId::new(),
+            season_id: crate::app::shared_kernel::bloodbowl::ids::SeasonId::new(),
             name: MatchDayName::try_new("Journée 1".to_string()).unwrap(),
-            day_type: MatchDayType::FixedDate, date_start: None, date_end: None,
-            position: MatchDayPosition::try_new(0).unwrap(), pairings: vec![],
+            day_type: MatchDayType::FixedDate,
+            date_start: None,
+            date_end: None,
+            position: MatchDayPosition::try_new(0).unwrap(),
+            pairings: vec![],
         }
     }
 
@@ -182,7 +306,18 @@ mod tests {
         let team_port = FakeTeamInfoPort(Mutex::new(vec![dto("home", "Home Team")]));
         let event_bus = new_bus();
 
-        let result = execute("r1", "s1", "c1", "sp1", "home", "away", &match_day_repo, &team_port, &event_bus).await;
+        let result = execute(
+            "r1",
+            "s1",
+            "c1",
+            "sp1",
+            "home",
+            "away",
+            &match_day_repo,
+            &team_port,
+            &event_bus,
+        )
+        .await;
 
         assert!(matches!(result, Err(AddMatchError::TeamsNotEnrolled(_))));
     }
@@ -192,16 +327,38 @@ mod tests {
         let home_id = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
         let away_id = "01ARZ3NDEKTSV4RRFFQ69G5FAW";
         let match_day_repo = FakeMatchDayRepo(sample_match_day());
-        let team_port = FakeTeamInfoPort(Mutex::new(vec![dto(home_id, "Home Team"), dto(away_id, "Away Team")]));
+        let team_port = FakeTeamInfoPort(Mutex::new(vec![
+            dto(home_id, "Home Team"),
+            dto(away_id, "Away Team"),
+        ]));
         let event_bus = new_bus();
         let mut rx = event_bus.subscribe();
 
-        let result = execute("r1", "s1", "c1", "sp1", home_id, away_id, &match_day_repo, &team_port, &event_bus).await;
+        let result = execute(
+            "r1",
+            "s1",
+            "c1",
+            "sp1",
+            home_id,
+            away_id,
+            &match_day_repo,
+            &team_port,
+            &event_bus,
+        )
+        .await;
         assert!(result.is_ok());
 
-        let envelope = rx.try_recv().expect("un event PairingCreated doit être émis");
+        let envelope = rx
+            .try_recv()
+            .expect("un event PairingCreated doit être émis");
         let event: CompetitionsDomainEvent = serde_json::from_value(envelope.payload).unwrap();
-        let CompetitionsDomainEvent::PairingCreated { home_team_name, away_team_name, round_name, .. } = event else {
+        let CompetitionsDomainEvent::PairingCreated {
+            home_team_name,
+            away_team_name,
+            round_name,
+            ..
+        } = event
+        else {
             panic!("mauvais type d'event");
         };
         assert_eq!(home_team_name, "Home Team");

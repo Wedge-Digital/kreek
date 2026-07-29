@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::app::shared_kernel::bloodbowl::ids::RosterId;
+use serde::{Deserialize, Serialize};
 
 /// DTO de lecture (query) — `shared_kernel` ne dépend d'aucun BC applicatif,
 /// donc `name` est un `String` nu plutôt que le `RosterName` validé de

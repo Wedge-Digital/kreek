@@ -5,12 +5,9 @@ pub mod path {
     pub const MATCH_REPORT_STEP2: &str = "/app/{space_id}/match-report/{match_report_id}/step2";
     pub const MATCH_REPORT_INDUCEMENTS: &str =
         "/app/{space_id}/match-report/{match_report_id}/inducements/{team_id}";
-    pub const MATCH_REPORT_STEP3: &str =
-        "/app/{space_id}/match-report/{match_report_id}/step3";
-    pub const MATCH_REPORT_STEP4: &str =
-        "/app/{space_id}/match-report/{match_report_id}/step4";
-    pub const MATCH_REPORT_STEP5: &str =
-        "/app/{space_id}/match-report/{match_report_id}/step5";
+    pub const MATCH_REPORT_STEP3: &str = "/app/{space_id}/match-report/{match_report_id}/step3";
+    pub const MATCH_REPORT_STEP4: &str = "/app/{space_id}/match-report/{match_report_id}/step4";
+    pub const MATCH_REPORT_STEP5: &str = "/app/{space_id}/match-report/{match_report_id}/step5";
     pub const MATCH_REPORT_STEP3_TURN_SELECTOR: &str =
         "/app/{space_id}/match-report/{match_report_id}/step3/turn-selector";
     pub const MATCH_REPORT_STEP4_TURN_SELECTOR: &str =
@@ -35,8 +32,7 @@ pub mod path {
         "/app/{space_id}/match-report/{match_report_id}/actions/{action_id}";
     pub const MATCH_REPORT_MERCENARY_SELECTOR: &str =
         "/app/{space_id}/match-report/{match_report_id}/step2/{team_id}/mercenaires";
-    pub const MATCH_REPORT_RECAP: &str =
-        "/app/{space_id}/match-report/{match_report_id}/recap";
+    pub const MATCH_REPORT_RECAP: &str = "/app/{space_id}/match-report/{match_report_id}/recap";
     pub const MATCH_REPORT_RECAP_PUBLISH: &str =
         "/app/{space_id}/match-report/{match_report_id}/recap/publish";
     pub const MATCH_REPORT_RECAP_UNPUBLISH: &str =

@@ -1,14 +1,14 @@
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
-use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
+use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::value_objects::{
     D3Roll, DedicatedFans, FanFactorMod, InducementPurchase, MatchAction, MatchGain,
     MatchReportOrigin, TempPlayer,
 };
-use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
-use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use chrono::Utc;
 
 #[derive(Debug, Clone)]
@@ -172,7 +172,8 @@ impl MatchReportReadyToPublish {
             published_by,
             published_at,
         };
-        let published = MatchReportPublished::from_ready_to_publish(self, published_by, published_at);
+        let published =
+            MatchReportPublished::from_ready_to_publish(self, published_by, published_at);
         (published, event)
     }
 }
@@ -181,10 +182,13 @@ impl MatchReportReadyToPublish {
 mod tests {
     use super::*;
     use crate::app::match_report::domain::value_objects::MatchReportOrigin;
-    use crate::app::shared_kernel::identity::ids::SpaceId;
     use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RoundId, SeasonId};
+    use crate::app::shared_kernel::identity::ids::SpaceId;
 
-    fn make_rtp(summary_title: Option<String>, summary_body: Option<String>) -> MatchReportReadyToPublish {
+    fn make_rtp(
+        summary_title: Option<String>,
+        summary_body: Option<String>,
+    ) -> MatchReportReadyToPublish {
         MatchReportReadyToPublish {
             id: MatchReportId::new(),
             space_id: SpaceId::new(),

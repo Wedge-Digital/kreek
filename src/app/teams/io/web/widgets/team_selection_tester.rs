@@ -24,9 +24,7 @@ impl IntoResponse for TeamSelectionTesterTemplate {
     }
 }
 
-pub async fn get_team_selection_tester(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn get_team_selection_tester(State(state): State<AppState>) -> impl IntoResponse {
     let spaces = state
         .spaces
         .space_repository

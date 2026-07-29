@@ -30,8 +30,8 @@ mod tests {
     use super::*;
     use crate::app::auth::domain::domain_event::AuthDomainEvent;
     use crate::app::shared_kernel::identity::coach_name::CoachName;
-    use crate::app::shared_kernel::identity::ids::{CoachId, EventId};
     use crate::app::shared_kernel::identity::email::Email;
+    use crate::app::shared_kernel::identity::ids::{CoachId, EventId};
     use crate::common::services::event_bus::event_bus::new_bus;
 
     #[tokio::test]

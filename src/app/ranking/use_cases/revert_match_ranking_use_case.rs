@@ -17,7 +17,7 @@ pub enum RevertMatchRankingError {
 /// Idempotent : un second appel supprime zéro ligne.
 pub async fn execute(
     match_report_id: &MatchReportId,
-    repo:            &dyn IRankingRepository,
+    repo: &dyn IRankingRepository,
 ) -> Result<(), RevertMatchRankingError> {
     repo.delete_lines_for_match(&match_report_id.to_string())
         .await

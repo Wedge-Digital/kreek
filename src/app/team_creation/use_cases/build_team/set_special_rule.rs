@@ -1,10 +1,10 @@
+use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::team_creation::domain::roster::SpecialRuleId;
 use crate::app::team_creation::ports::{ITeamRosterRepository, RepositoryError};
-use crate::app::shared_kernel::identity::ids::EntityId;
 
 pub struct SetSpecialRuleCommand {
-    pub team_id:        EntityId,
-    pub space_id:       String,
+    pub team_id: EntityId,
+    pub space_id: String,
     pub special_rule_id: SpecialRuleId,
 }
 

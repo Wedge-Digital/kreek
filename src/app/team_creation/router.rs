@@ -1,17 +1,5 @@
 use crate::app::team_creation::io::web::build_team::display_page::build_team;
 use crate::app::team_creation::io::web::build_team::submit_team::submit_team;
-use crate::app::team_creation::io::web::widgets::cart_widget::cart_widget;
-use crate::app::team_creation::io::web::widgets::player_table_widget::{
-    fire_player, hire_player, player_table_widget,
-};
-use crate::app::team_creation::io::web::widgets::player_list_widget::player_list_widget;
-use crate::app::team_creation::io::web::widgets::roster_picker_widget::roster_picker_widget;
-use crate::app::team_creation::io::web::widgets::spp_budget_widget::spp_budget_widget;
-use crate::app::team_creation::io::web::widgets::skill_header_widget::skill_header_widget;
-use crate::app::team_creation::io::web::widgets::spp_widget::{cancel_spp, spend_spp};
-use crate::app::team_creation::io::web::widgets::staff_table_widget::{
-    buy_reroll, buy_staff, remove_reroll, remove_staff, staff_table_widget,
-};
 use crate::app::team_creation::io::web::draft_team::draft_team;
 use crate::app::team_creation::io::web::finalize_team::{finalize_team, post_finalize_team};
 use crate::app::team_creation::io::web::my_teams::my_teams;
@@ -20,6 +8,18 @@ use crate::app::team_creation::io::web::set_league::set_league;
 use crate::app::team_creation::io::web::set_player_identity::set_player_identity;
 use crate::app::team_creation::io::web::set_special_rule::set_special_rule;
 use crate::app::team_creation::io::web::team_detail::team_detail;
+use crate::app::team_creation::io::web::widgets::cart_widget::cart_widget;
+use crate::app::team_creation::io::web::widgets::player_list_widget::player_list_widget;
+use crate::app::team_creation::io::web::widgets::player_table_widget::{
+    fire_player, hire_player, player_table_widget,
+};
+use crate::app::team_creation::io::web::widgets::roster_picker_widget::roster_picker_widget;
+use crate::app::team_creation::io::web::widgets::skill_header_widget::skill_header_widget;
+use crate::app::team_creation::io::web::widgets::spp_budget_widget::spp_budget_widget;
+use crate::app::team_creation::io::web::widgets::spp_widget::{cancel_spp, spend_spp};
+use crate::app::team_creation::io::web::widgets::staff_table_widget::{
+    buy_reroll, buy_staff, remove_reroll, remove_staff, staff_table_widget,
+};
 use crate::app::team_creation::routes::path;
 use crate::state::AppState;
 use axum::{routing::get, Router};
@@ -38,10 +38,19 @@ pub fn router() -> Router<AppState> {
         .route(path::REMOVE_REROLL, axum::routing::post(remove_reroll))
         .route(path::SUBMIT_TEAM, axum::routing::post(submit_team))
         .route(path::TEAM_DETAIL, get(team_detail))
-        .route(path::SET_PLAYER_IDENTITY, axum::routing::post(set_player_identity))
+        .route(
+            path::SET_PLAYER_IDENTITY,
+            axum::routing::post(set_player_identity),
+        )
         .route(path::SET_LEAGUE, axum::routing::post(set_league))
-        .route(path::SET_SPECIAL_RULE, axum::routing::post(set_special_rule))
-        .route(path::FINALIZE_TEAM, get(finalize_team).post(post_finalize_team))
+        .route(
+            path::SET_SPECIAL_RULE,
+            axum::routing::post(set_special_rule),
+        )
+        .route(
+            path::FINALIZE_TEAM,
+            get(finalize_team).post(post_finalize_team),
+        )
         .route(path::CART_WIDGET, get(cart_widget))
         .route(path::ROSTER_PICKER_WIDGET, get(roster_picker_widget))
         .route(path::STAFF_TABLE_WIDGET, get(staff_table_widget))

@@ -1,8 +1,10 @@
 #![cfg(test)]
 
 use crate::app::players::domain::events::PlayerDomainEvent;
-use crate::app::players::domain::match_impact::{InjuryType, MatchContext, MatchReportId, RoundId, SppEarned};
-use crate::app::players::domain::player::{Player, PlayerId, TeamId, Spp, ValueKpo};
+use crate::app::players::domain::match_impact::{
+    InjuryType, MatchContext, MatchReportId, RoundId, SppEarned,
+};
+use crate::app::players::domain::player::{Player, PlayerId, Spp, TeamId, ValueKpo};
 use crate::app::players::domain::value_objects::{PositionNameVo, RosterLineId};
 use crate::app::players::io::repository::player_repository::PgPlayerRepository;
 use crate::app::players::io::repository::projection_repository::PgPlayerProjectionRepository;
@@ -12,24 +14,24 @@ use sqlx::PgPool;
 
 fn sample_context() -> MatchContext {
     MatchContext {
-        match_report_id:    MatchReportId("mr1".into()),
-        round_id:           RoundId("r1".into()),
-        round_label:        "Journée 5".into(),
-        opponent_team_id:   TeamId("opponent".into()),
+        match_report_id: MatchReportId("mr1".into()),
+        round_id: RoundId("r1".into()),
+        round_label: "Journée 5".into(),
+        opponent_team_id: TeamId("opponent".into()),
         opponent_team_name: "Bone Crushers".into(),
     }
 }
 
 async fn seed_player(repo: &PgPlayerRepository, player_id: &PlayerId, team_id: &TeamId) -> Player {
     let created = PlayerDomainEvent::PlayerCreated {
-        player_id:      player_id.clone(),
-        team_id:        team_id.clone(),
-        space_id:       SpaceId::new(),
-        position_name:  PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
+        player_id: player_id.clone(),
+        team_id: team_id.clone(),
+        space_id: SpaceId::new(),
+        position_name: PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
         roster_line_id: RosterLineId::try_new("BLITZER".to_string()).unwrap(),
-        jersey:         None,
-        base_skills:    vec![],
-        starting_spp:   Spp(0),
+        jersey: None,
+        base_skills: vec![],
+        starting_spp: Spp(0),
         starting_value: ValueKpo(100_000),
     };
     repo.append(player_id, team_id, &created, 1).await.unwrap();
@@ -89,7 +91,9 @@ async fn find_by_team_id_returns_only_missing_next_game_players_for_restoration(
     let injured_id = PlayerId("injured".into());
     let injured = seed_player(&repo, &injured_id, &team_id).await;
     let injury_event = injured.record_injury(sample_context(), InjuryType::Amoche);
-    repo.append(&injured_id, &team_id, &injury_event, 2).await.unwrap();
+    repo.append(&injured_id, &team_id, &injury_event, 2)
+        .await
+        .unwrap();
 
     let healthy_id = PlayerId("healthy".into());
     seed_player(&repo, &healthy_id, &team_id).await;
@@ -108,7 +112,9 @@ async fn find_by_team_id_returns_only_missing_next_game_players_for_restoration(
     assert_eq!(missing_next_game[0].id, injured_id);
 
     let restore_event = missing_next_game[0].restore_availability(MatchReportId("mr2".into()));
-    repo.append(&injured_id, &team_id, &restore_event, 3).await.unwrap();
+    repo.append(&injured_id, &team_id, &restore_event, 3)
+        .await
+        .unwrap();
 
     let players_after = repo.find_by_team_id(&team_id).await.unwrap();
     let still_missing = players_after
@@ -144,26 +150,36 @@ async fn find_events_by_id_returns_raw_events_in_order(pool: PgPool) {
     let player = seed_player(&repo, &player_id, &team_id).await;
 
     let touchdown = player.record_touchdown(sample_context(), SppEarned::try_new(3).unwrap());
-    repo.append(&player_id, &team_id, &touchdown, 2).await.unwrap();
+    repo.append(&player_id, &team_id, &touchdown, 2)
+        .await
+        .unwrap();
     let player = Player::from_events(&repo.find_events_by_id(&player_id).await.unwrap()).unwrap();
     let concluded = player.record_match_concluded(sample_context(), 2, 1);
-    repo.append(&player_id, &team_id, &concluded, 3).await.unwrap();
+    repo.append(&player_id, &team_id, &concluded, 3)
+        .await
+        .unwrap();
 
     let events = repo.find_events_by_id(&player_id).await.unwrap();
     assert_eq!(events.len(), 3);
     assert!(matches!(events[0], PlayerDomainEvent::PlayerCreated { .. }));
-    assert!(matches!(events[1], PlayerDomainEvent::TouchdownScored { .. }));
-    assert!(matches!(events[2], PlayerDomainEvent::MatchConcluded { .. }));
+    assert!(matches!(
+        events[1],
+        PlayerDomainEvent::TouchdownScored { .. }
+    ));
+    assert!(matches!(
+        events[2],
+        PlayerDomainEvent::MatchConcluded { .. }
+    ));
 }
 
 // ── has_spent_spp_since_match — garde-fou de correction ───────────────────────
 
 fn context_for(match_report_id: &str) -> MatchContext {
     MatchContext {
-        match_report_id:    MatchReportId(match_report_id.into()),
-        round_id:           RoundId("r1".into()),
-        round_label:        "Journée 5".into(),
-        opponent_team_id:   TeamId("opponent".into()),
+        match_report_id: MatchReportId(match_report_id.into()),
+        round_id: RoundId("r1".into()),
+        round_label: "Journée 5".into(),
+        opponent_team_id: TeamId("opponent".into()),
         opponent_team_name: "Bone Crushers".into(),
     }
 }
@@ -176,10 +192,10 @@ fn context_for(match_report_id: &str) -> MatchContext {
 #[test]
 fn la_forme_json_de_match_concluded_expose_le_match_report_id() {
     let event = PlayerDomainEvent::MatchConcluded {
-        player_id:      PlayerId("p1".into()),
-        team_id:        TeamId("t1".into()),
-        context:        context_for("mr-42"),
-        team_score:     2,
+        player_id: PlayerId("p1".into()),
+        team_id: TeamId("t1".into()),
+        context: context_for("mr-42"),
+        team_score: 2,
         opponent_score: 1,
     };
 
@@ -195,30 +211,26 @@ fn la_forme_json_de_match_concluded_expose_le_match_report_id() {
 /// `seed_player` crée un joueur à 0 SPP, ce qui ferait refuser tout achat par le
 /// domaine. Ces tests ont besoin d'un pool dépensable.
 async fn seed_player_with_spp(
-    repo:      &PgPlayerRepository,
+    repo: &PgPlayerRepository,
     player_id: &PlayerId,
-    team_id:   &TeamId,
+    team_id: &TeamId,
 ) -> Player {
     let created = PlayerDomainEvent::PlayerCreated {
-        player_id:      player_id.clone(),
-        team_id:        team_id.clone(),
-        space_id:       SpaceId::new(),
-        position_name:  PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
+        player_id: player_id.clone(),
+        team_id: team_id.clone(),
+        space_id: SpaceId::new(),
+        position_name: PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
         roster_line_id: RosterLineId::try_new("BLITZER".to_string()).unwrap(),
-        jersey:         None,
-        base_skills:    vec![],
-        starting_spp:   Spp(20),
+        jersey: None,
+        base_skills: vec![],
+        starting_spp: Spp(20),
         starting_value: ValueKpo(100_000),
     };
     repo.append(player_id, team_id, &created, 1).await.unwrap();
     Player::from_events(&[created]).unwrap()
 }
 
-async fn purchase_skill(
-    repo:      &PgPlayerRepository,
-    player:    &Player,
-    version:   i32,
-) {
+async fn purchase_skill(repo: &PgPlayerRepository, player: &Player, version: i32) {
     use crate::app::players::domain::player::AcquisitionMode;
     use crate::app::players::domain::value_objects::{SkillId, SkillName, SppCost};
     let event = player
@@ -231,7 +243,9 @@ async fn purchase_skill(
             ValueKpo(20_000),
         )
         .unwrap();
-    repo.append(&player.id, &player.team_id, &event, version).await.unwrap();
+    repo.append(&player.id, &player.team_id, &event, version)
+        .await
+        .unwrap();
 }
 
 #[sqlx::test]
@@ -241,9 +255,14 @@ async fn has_spent_spp_since_match_est_faux_sans_achat(pool: PgPool) {
     let player = seed_player_with_spp(&repo, &player_id, &team_id).await;
 
     let concluded = player.record_match_concluded(context_for("mr-1"), 1, 0);
-    repo.append(&player_id, &team_id, &concluded, 2).await.unwrap();
+    repo.append(&player_id, &team_id, &concluded, 2)
+        .await
+        .unwrap();
 
-    assert!(!repo.has_spent_spp_since_match(&team_id, "mr-1").await.unwrap());
+    assert!(!repo
+        .has_spent_spp_since_match(&team_id, "mr-1")
+        .await
+        .unwrap());
 }
 
 #[sqlx::test]
@@ -253,11 +272,16 @@ async fn has_spent_spp_since_match_est_vrai_apres_un_achat(pool: PgPool) {
     let player = seed_player_with_spp(&repo, &player_id, &team_id).await;
 
     let concluded = player.record_match_concluded(context_for("mr-1"), 1, 0);
-    repo.append(&player_id, &team_id, &concluded, 2).await.unwrap();
+    repo.append(&player_id, &team_id, &concluded, 2)
+        .await
+        .unwrap();
     let player = repo.find_by_id(&player_id).await.unwrap().unwrap();
     purchase_skill(&repo, &player, 3).await;
 
-    assert!(repo.has_spent_spp_since_match(&team_id, "mr-1").await.unwrap());
+    assert!(repo
+        .has_spent_spp_since_match(&team_id, "mr-1")
+        .await
+        .unwrap());
 }
 
 /// Le test décisif : un achat **antérieur** au match ne doit pas bloquer sa
@@ -271,18 +295,28 @@ async fn un_achat_anterieur_au_match_ne_bloque_pas_sa_correction(pool: PgPool) {
 
     // achat après un match précédent…
     let previous = player.record_match_concluded(context_for("mr-0"), 1, 0);
-    repo.append(&player_id, &team_id, &previous, 2).await.unwrap();
+    repo.append(&player_id, &team_id, &previous, 2)
+        .await
+        .unwrap();
     let player = repo.find_by_id(&player_id).await.unwrap().unwrap();
     purchase_skill(&repo, &player, 3).await;
 
     // …puis le match qu'on veut corriger, sans achat depuis
     let player = repo.find_by_id(&player_id).await.unwrap().unwrap();
     let current = player.record_match_concluded(context_for("mr-1"), 2, 2);
-    repo.append(&player_id, &team_id, &current, 4).await.unwrap();
+    repo.append(&player_id, &team_id, &current, 4)
+        .await
+        .unwrap();
 
-    assert!(!repo.has_spent_spp_since_match(&team_id, "mr-1").await.unwrap());
+    assert!(!repo
+        .has_spent_spp_since_match(&team_id, "mr-1")
+        .await
+        .unwrap());
     // le match précédent, lui, n'est plus corrigeable
-    assert!(repo.has_spent_spp_since_match(&team_id, "mr-0").await.unwrap());
+    assert!(repo
+        .has_spent_spp_since_match(&team_id, "mr-0")
+        .await
+        .unwrap());
 }
 
 #[sqlx::test]
@@ -296,11 +330,18 @@ async fn l_achat_d_une_autre_equipe_ne_compte_pas(pool: PgPool) {
         let concluded = player.record_match_concluded(context_for("mr-1"), 1, 0);
         repo.append(&player.id, team, &concluded, 2).await.unwrap();
     }
-    let their_player = repo.find_by_id(&PlayerId("p2".into())).await.unwrap().unwrap();
+    let their_player = repo
+        .find_by_id(&PlayerId("p2".into()))
+        .await
+        .unwrap()
+        .unwrap();
     purchase_skill(&repo, &their_player, 3).await;
 
     assert!(!repo.has_spent_spp_since_match(&mine, "mr-1").await.unwrap());
-    assert!(repo.has_spent_spp_since_match(&other, "mr-1").await.unwrap());
+    assert!(repo
+        .has_spent_spp_since_match(&other, "mr-1")
+        .await
+        .unwrap());
 }
 
 #[sqlx::test]
@@ -309,7 +350,10 @@ async fn un_match_inconnu_ne_bloque_pas(pool: PgPool) {
     let (player_id, team_id) = (PlayerId("p1".into()), TeamId("t1".into()));
     seed_player_with_spp(&repo, &player_id, &team_id).await;
 
-    assert!(!repo.has_spent_spp_since_match(&team_id, "mr-inconnu").await.unwrap());
+    assert!(!repo
+        .has_spent_spp_since_match(&team_id, "mr-inconnu")
+        .await
+        .unwrap());
 }
 
 // ── MatchImpactReverted — projection ─────────────────────────────────────────
@@ -328,7 +372,9 @@ async fn la_compensation_met_a_jour_spp_et_statut_dans_la_projection(pool: PgPoo
     repo.append(&player_id, &team_id, &td, 2).await.unwrap();
     let player = repo.find_by_id(&player_id).await.unwrap().unwrap();
     let blessure = player.record_injury(context_for("mr-1"), InjuryType::Amoche);
-    repo.append(&player_id, &team_id, &blessure, 3).await.unwrap();
+    repo.append(&player_id, &team_id, &blessure, 3)
+        .await
+        .unwrap();
 
     let avant = proj.find_by_id(&player_id.0).await.unwrap().unwrap();
     assert_eq!(avant.spp, 3);
@@ -338,10 +384,15 @@ async fn la_compensation_met_a_jour_spp_et_statut_dans_la_projection(pool: PgPoo
     let compensation = player
         .revert_match_impact(&MatchReportId("mr-1".into()))
         .expect("le dernier match doit être compensable");
-    repo.append(&player_id, &team_id, &compensation, 4).await.unwrap();
+    repo.append(&player_id, &team_id, &compensation, 4)
+        .await
+        .unwrap();
 
     let apres = proj.find_by_id(&player_id.0).await.unwrap().unwrap();
-    assert_eq!(apres.spp, 0, "les SPP du match doivent être retirés de la projection");
+    assert_eq!(
+        apres.spp, 0,
+        "les SPP du match doivent être retirés de la projection"
+    );
     assert_eq!(
         apres.participation_status, "Available",
         "le statut projeté doit suivre l'agrégat"

@@ -28,7 +28,10 @@ pub(crate) async fn handle_team_match_concluded(
     team_score: u8,
     opponent_score: u8,
 ) {
-    let players = match player_repo.find_by_team_id(&TeamId(team_id.to_string())).await {
+    let players = match player_repo
+        .find_by_team_id(&TeamId(team_id.to_string()))
+        .await
+    {
         Ok(players) => players,
         Err(e) => {
             tracing::error!("team_match_concluded_listener: find_by_team_id {team_id}: {e}");
@@ -39,15 +42,27 @@ pub(crate) async fn handle_team_match_concluded(
     for player in &players {
         let concluded = player.record_match_concluded(context.clone(), team_score, opponent_score);
         let next_version = player.version + 1;
-        if let Err(e) = player_repo.append(&player.id, &player.team_id, &concluded, next_version).await {
-            tracing::error!("team_match_concluded_listener: append MatchConcluded {}: {e}", player.id.0);
+        if let Err(e) = player_repo
+            .append(&player.id, &player.team_id, &concluded, next_version)
+            .await
+        {
+            tracing::error!(
+                "team_match_concluded_listener: append MatchConcluded {}: {e}",
+                player.id.0
+            );
             continue;
         }
 
         if is_restorable(player, &context.match_report_id) {
             let restored = player.restore_availability(context.match_report_id.clone());
-            if let Err(e) = player_repo.append(&player.id, &player.team_id, &restored, next_version + 1).await {
-                tracing::error!("team_match_concluded_listener: append PlayerAvailabilityRestored {}: {e}", player.id.0);
+            if let Err(e) = player_repo
+                .append(&player.id, &player.team_id, &restored, next_version + 1)
+                .await
+            {
+                tracing::error!(
+                    "team_match_concluded_listener: append PlayerAvailabilityRestored {}: {e}",
+                    player.id.0
+                );
             }
         }
     }
@@ -87,38 +102,47 @@ mod tests {
 
     fn sample_context() -> MatchContext {
         MatchContext {
-            match_report_id:    MatchReportId("mr1".into()),
-            round_id:           MatchImpactRoundId("r1".into()),
-            round_label:        "Journée 5".into(),
-            opponent_team_id:   TeamId("opponent".into()),
+            match_report_id: MatchReportId("mr1".into()),
+            round_id: MatchImpactRoundId("r1".into()),
+            round_label: "Journée 5".into(),
+            opponent_team_id: TeamId("opponent".into()),
             opponent_team_name: "Bone Crushers".into(),
         }
     }
 
-    async fn seed_player(repo: &PgPlayerRepository, player_id: &str, team_id: &str) -> crate::app::players::domain::player::Player {
+    async fn seed_player(
+        repo: &PgPlayerRepository,
+        player_id: &str,
+        team_id: &str,
+    ) -> crate::app::players::domain::player::Player {
         let created = PlayerDomainEvent::PlayerCreated {
-            player_id:      PlayerId(player_id.to_string()),
-            team_id:        TeamId(team_id.to_string()),
-            space_id:       SpaceId::new(),
-            position_name:  PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
+            player_id: PlayerId(player_id.to_string()),
+            team_id: TeamId(team_id.to_string()),
+            space_id: SpaceId::new(),
+            position_name: PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
             roster_line_id: RosterLineId::try_new("BLITZER".to_string()).unwrap(),
-            jersey:         None,
-            base_skills:    vec![],
-            starting_spp:   Spp(0),
+            jersey: None,
+            base_skills: vec![],
+            starting_spp: Spp(0),
             starting_value: ValueKpo(100_000),
         };
-        repo.append(&PlayerId(player_id.into()), &TeamId(team_id.into()), &created, 1)
-            .await
-            .unwrap();
+        repo.append(
+            &PlayerId(player_id.into()),
+            &TeamId(team_id.into()),
+            &created,
+            1,
+        )
+        .await
+        .unwrap();
         crate::app::players::domain::player::Player::from_events(&[created]).unwrap()
     }
 
     fn concluded_context() -> MatchContext {
         MatchContext {
-            match_report_id:    MatchReportId("mr2".into()),
-            round_id:           MatchImpactRoundId("r2".into()),
-            round_label:        "Journée 6".into(),
-            opponent_team_id:   TeamId("opponent2".into()),
+            match_report_id: MatchReportId("mr2".into()),
+            round_id: MatchImpactRoundId("r2".into()),
+            round_label: "Journée 6".into(),
+            opponent_team_id: TeamId("opponent2".into()),
             opponent_team_name: "Green Machine".into(),
         }
     }
@@ -129,41 +153,80 @@ mod tests {
 
         let injured = seed_player(&repo, "injured", "t1").await;
         let injury_event = injured.record_injury(sample_context(), InjuryType::Amoche);
-        repo.append(&injured.id, &injured.team_id, &injury_event, 2).await.unwrap();
+        repo.append(&injured.id, &injured.team_id, &injury_event, 2)
+            .await
+            .unwrap();
 
         seed_player(&repo, "healthy", "t1").await;
         let other_team_injured = seed_player(&repo, "other_team_injured", "t2").await;
-        let other_team_injury_event = other_team_injured.record_injury(sample_context(), InjuryType::Amoche);
-        repo.append(&other_team_injured.id, &other_team_injured.team_id, &other_team_injury_event, 2).await.unwrap();
+        let other_team_injury_event =
+            other_team_injured.record_injury(sample_context(), InjuryType::Amoche);
+        repo.append(
+            &other_team_injured.id,
+            &other_team_injured.team_id,
+            &other_team_injury_event,
+            2,
+        )
+        .await
+        .unwrap();
 
         handle_team_match_concluded(&repo, "t1", concluded_context(), 2, 1).await;
 
-        let injured_after = repo.find_by_id(&PlayerId("injured".into())).await.unwrap().unwrap();
-        assert_eq!(injured_after.participation_status, PlayerParticipationStatus::Available);
+        let injured_after = repo
+            .find_by_id(&PlayerId("injured".into()))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            injured_after.participation_status,
+            PlayerParticipationStatus::Available
+        );
 
         // le joueur de l'autre équipe n'est jamais touché : ni restauré, ni MatchConcluded ajouté
-        let other_team_after = repo.find_by_id(&PlayerId("other_team_injured".into())).await.unwrap().unwrap();
-        assert_eq!(other_team_after.participation_status, PlayerParticipationStatus::MissingNextGame);
+        let other_team_after = repo
+            .find_by_id(&PlayerId("other_team_injured".into()))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            other_team_after.participation_status,
+            PlayerParticipationStatus::MissingNextGame
+        );
         assert_eq!(other_team_after.version, 2); // seulement sa blessure initiale, pas de MatchConcluded
     }
 
     #[sqlx::test]
-    async fn match_concluded_increments_matches_played_for_every_player_regardless_of_status(pool: PgPool) {
+    async fn match_concluded_increments_matches_played_for_every_player_regardless_of_status(
+        pool: PgPool,
+    ) {
         let repo = PgPlayerRepository::new(pool);
 
         let injured = seed_player(&repo, "injured", "t1").await;
         let injury_event = injured.record_injury(sample_context(), InjuryType::Amoche);
-        repo.append(&injured.id, &injured.team_id, &injury_event, 2).await.unwrap();
+        repo.append(&injured.id, &injured.team_id, &injury_event, 2)
+            .await
+            .unwrap();
 
         seed_player(&repo, "healthy", "t1").await;
 
         handle_team_match_concluded(&repo, "t1", concluded_context(), 2, 1).await;
 
-        let injured_after = repo.find_by_id(&PlayerId("injured".into())).await.unwrap().unwrap();
+        let injured_after = repo
+            .find_by_id(&PlayerId("injured".into()))
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(injured_after.matches_played.0, 1);
-        assert_eq!(injured_after.participation_status, PlayerParticipationStatus::Available);
+        assert_eq!(
+            injured_after.participation_status,
+            PlayerParticipationStatus::Available
+        );
 
-        let healthy_after = repo.find_by_id(&PlayerId("healthy".into())).await.unwrap().unwrap();
+        let healthy_after = repo
+            .find_by_id(&PlayerId("healthy".into()))
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(healthy_after.matches_played.0, 1);
         assert_eq!(healthy_after.version, 2); // MatchConcluded seulement, pas de restauration inutile
     }
@@ -176,11 +239,17 @@ mod tests {
         let joueur = seed_player(&repo, "blesse", "t1").await;
         // blessure portant le MÊME match que la conclusion qui suit
         let blessure = joueur.record_injury(sample_context(), InjuryType::BlessureSerieuse);
-        repo.append(&joueur.id, &joueur.team_id, &blessure, 2).await.unwrap();
+        repo.append(&joueur.id, &joueur.team_id, &blessure, 2)
+            .await
+            .unwrap();
 
         handle_team_match_concluded(&repo, "t1", sample_context(), 1, 0).await;
 
-        let apres = repo.find_by_id(&PlayerId("blesse".into())).await.unwrap().unwrap();
+        let apres = repo
+            .find_by_id(&PlayerId("blesse".into()))
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(
             apres.participation_status,
             PlayerParticipationStatus::MissingNextGame,
@@ -195,13 +264,22 @@ mod tests {
         let repo = PgPlayerRepository::new(pool);
         let joueur = seed_player(&repo, "blesse", "t1").await;
         let blessure = joueur.record_injury(sample_context(), InjuryType::BlessureSerieuse);
-        repo.append(&joueur.id, &joueur.team_id, &blessure, 2).await.unwrap();
+        repo.append(&joueur.id, &joueur.team_id, &blessure, 2)
+            .await
+            .unwrap();
 
         // conclusion d'un match différent (mr2), soit le match suivant
         handle_team_match_concluded(&repo, "t1", concluded_context(), 1, 0).await;
 
-        let apres = repo.find_by_id(&PlayerId("blesse".into())).await.unwrap().unwrap();
-        assert_eq!(apres.participation_status, PlayerParticipationStatus::Available);
+        let apres = repo
+            .find_by_id(&PlayerId("blesse".into()))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            apres.participation_status,
+            PlayerParticipationStatus::Available
+        );
     }
 
     /// Un joueur blessé au match N puis de nouveau au match N+1 doit rester
@@ -212,15 +290,30 @@ mod tests {
         let repo = PgPlayerRepository::new(pool);
         let joueur = seed_player(&repo, "blesse", "t1").await;
         let ancienne = joueur.record_injury(sample_context(), InjuryType::Amoche);
-        repo.append(&joueur.id, &joueur.team_id, &ancienne, 2).await.unwrap();
+        repo.append(&joueur.id, &joueur.team_id, &ancienne, 2)
+            .await
+            .unwrap();
 
-        let joueur = repo.find_by_id(&PlayerId("blesse".into())).await.unwrap().unwrap();
+        let joueur = repo
+            .find_by_id(&PlayerId("blesse".into()))
+            .await
+            .unwrap()
+            .unwrap();
         let nouvelle = joueur.record_injury(concluded_context(), InjuryType::Amoche);
-        repo.append(&joueur.id, &joueur.team_id, &nouvelle, 3).await.unwrap();
+        repo.append(&joueur.id, &joueur.team_id, &nouvelle, 3)
+            .await
+            .unwrap();
 
         handle_team_match_concluded(&repo, "t1", concluded_context(), 1, 0).await;
 
-        let apres = repo.find_by_id(&PlayerId("blesse".into())).await.unwrap().unwrap();
-        assert_eq!(apres.participation_status, PlayerParticipationStatus::MissingNextGame);
+        let apres = repo
+            .find_by_id(&PlayerId("blesse".into()))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            apres.participation_status,
+            PlayerParticipationStatus::MissingNextGame
+        );
     }
 }

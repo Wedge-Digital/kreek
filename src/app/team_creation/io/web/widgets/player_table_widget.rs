@@ -1,9 +1,9 @@
+use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::team_creation::domain::roster::{LeagueId, PlayerId, SpecialRuleId};
 use crate::app::team_creation::domain::team_roster_selected::{RosterSelectedTeam, SppPool};
 use crate::app::team_creation::io::web::builders::{build_hired_rows, build_player_positions};
 use crate::app::team_creation::io::web::view_models::{HiredPlayerRowVm, PlayerPositionVm};
-use crate::app::routes::AppRoutes;
 use crate::app::team_creation::use_cases::build_team::fire_player as fire_uc;
 use crate::app::team_creation::use_cases::build_team::hire_player as hire_uc;
 use crate::app::team_creation::use_cases::commands::{FirePlayerCommand, HirePlayerCommand};
@@ -152,8 +152,8 @@ pub async fn player_table_widget(
     // Un roster à choix (FAVOURED_OF_CHOOSE_*) a lui aussi une seule entrée
     // dans special_rules, mais c'est un placeholder — pas une vraie règle à
     // auto-assigner. Seule une règle fixe unique est auto-assignée ici.
-    let single_fixed_rule = meta.special_rules.len() == 1
-        && !meta.special_rules[0].starts_with("FAVOURED_OF_CHOOSE_");
+    let single_fixed_rule =
+        meta.special_rules.len() == 1 && !meta.special_rules[0].starts_with("FAVOURED_OF_CHOOSE_");
     if single_fixed_rule {
         roster_team.set_special_rule(SpecialRuleId(meta.special_rules[0].clone()));
     }

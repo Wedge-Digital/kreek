@@ -1,8 +1,8 @@
 pub mod error;
 pub mod events;
 pub mod match_report_draft;
-pub mod match_report_published;
 pub mod match_report_pre_match;
+pub mod match_report_published;
 pub mod match_report_ready_to_publish;
 pub mod match_report_repository_port;
 pub mod match_report_state;

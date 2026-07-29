@@ -63,7 +63,11 @@ impl IntoResponse for DashboardFragmentTemplate {
 }
 
 fn pct(current: u32, total: u32) -> u32 {
-    if total == 0 { 0 } else { (current * 100) / total }
+    if total == 0 {
+        0
+    } else {
+        (current * 100) / total
+    }
 }
 
 pub fn build_dashboard_fragment(
@@ -116,7 +120,11 @@ pub fn build_dashboard_fragment(
             icon: "⏳".into(),
             value: format!("{}", pending),
             label: "En attente".into(),
-            style: if pending > 0 { "warn".into() } else { "default".into() },
+            style: if pending > 0 {
+                "warn".into()
+            } else {
+                "default".into()
+            },
         },
         DashboardStatVm {
             icon: "⚔️".into(),
@@ -134,7 +142,11 @@ pub fn build_dashboard_fragment(
             icon: "✅".into(),
             value: format!("{} / {}", validated, total_rounds),
             label: "Journées validées".into(),
-            style: if validated == total_rounds && total_rounds > 0 { "ok".into() } else { "default".into() },
+            style: if validated == total_rounds && total_rounds > 0 {
+                "ok".into()
+            } else {
+                "default".into()
+            },
         },
     ];
 
@@ -199,7 +211,8 @@ pub async fn dashboard_fragment(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    if let Err(resp) = require_admin_access(&auth_session, &space_id, &competition_id, &state).await {
+    if let Err(resp) = require_admin_access(&auth_session, &space_id, &competition_id, &state).await
+    {
         return resp;
     }
 
@@ -229,6 +242,12 @@ pub async fn dashboard_fragment(
     };
 
     let app_routes = AppRoutes::default();
-    build_dashboard_fragment(&summary, &app_routes, &space_id, &competition_id, &season_id)
-        .into_response()
+    build_dashboard_fragment(
+        &summary,
+        &app_routes,
+        &space_id,
+        &competition_id,
+        &season_id,
+    )
+    .into_response()
 }

@@ -151,7 +151,11 @@ mod tests {
     use std::sync::Mutex;
 
     fn no_bonus() -> BonusRuleInfo {
-        BonusRuleInfo { activated: false, threshold: 0, points: 0 }
+        BonusRuleInfo {
+            activated: false,
+            threshold: 0,
+            points: 0,
+        }
     }
 
     fn rules_info(win_points: u32, draw_points: u32, lose_points: u32) -> RankingRulesInfo {
@@ -191,32 +195,52 @@ mod tests {
 
     #[async_trait]
     impl IRankingRepository for FakeRepo {
-        async fn find_latest_line(&self, _: &str, team_id: &str) -> Result<Option<RankingLineRow>, RankingRepositoryError> {
+        async fn find_latest_line(
+            &self,
+            _: &str,
+            team_id: &str,
+        ) -> Result<Option<RankingLineRow>, RankingRepositoryError> {
             let lines = self.lines.lock().unwrap();
-            Ok(lines.iter().rev().find(|l| l.team_id.to_string() == team_id).map(|l| RankingLineRow {
-                team_id: l.team_id,
-                matches_played: l.matches_played.0,
-                wins: l.wins.0,
-                draws: l.draws.0,
-                losses: l.losses.0,
-                ranking_points: l.ranking_points.0,
-                bonus_points: l.bonus_points.0,
-                td_for: l.td_for.0,
-                td_against: l.td_against.0,
-                casualties: l.casualties.0,
-                fouls: l.fouls.0,
-                completions: l.completions.0,
-            }))
+            Ok(lines
+                .iter()
+                .rev()
+                .find(|l| l.team_id.to_string() == team_id)
+                .map(|l| RankingLineRow {
+                    team_id: l.team_id,
+                    matches_played: l.matches_played.0,
+                    wins: l.wins.0,
+                    draws: l.draws.0,
+                    losses: l.losses.0,
+                    ranking_points: l.ranking_points.0,
+                    bonus_points: l.bonus_points.0,
+                    td_for: l.td_for.0,
+                    td_against: l.td_against.0,
+                    casualties: l.casualties.0,
+                    fouls: l.fouls.0,
+                    completions: l.completions.0,
+                }))
         }
-        async fn find_latest_lines_for_season(&self, _: &str) -> Result<Vec<RankingLineRow>, RankingRepositoryError> {
+        async fn find_latest_lines_for_season(
+            &self,
+            _: &str,
+        ) -> Result<Vec<RankingLineRow>, RankingRepositoryError> {
             Ok(vec![])
         }
-        async fn insert_lines(&self, new_lines: &[RankingLine]) -> Result<(), RankingRepositoryError> {
+        async fn insert_lines(
+            &self,
+            new_lines: &[RankingLine],
+        ) -> Result<(), RankingRepositoryError> {
             self.lines.lock().unwrap().extend_from_slice(new_lines);
             Ok(())
         }
-        async fn delete_lines_for_match(&self, match_report_id: &str) -> Result<(), RankingRepositoryError> {
-            self.lines.lock().unwrap().retain(|l| l.match_report_id.to_string() != match_report_id);
+        async fn delete_lines_for_match(
+            &self,
+            match_report_id: &str,
+        ) -> Result<(), RankingRepositoryError> {
+            self.lines
+                .lock()
+                .unwrap()
+                .retain(|l| l.match_report_id.to_string() != match_report_id);
             Ok(())
         }
     }
@@ -252,7 +276,10 @@ mod tests {
 
         let result = execute(cmd, &repo, &port).await;
 
-        assert!(matches!(result, Err(RecordMatchRankingError::RulesNotConfigured)));
+        assert!(matches!(
+            result,
+            Err(RecordMatchRankingError::RulesNotConfigured)
+        ));
         assert!(repo.lines.lock().unwrap().is_empty());
     }
 
@@ -286,8 +313,12 @@ mod tests {
         let home = TeamId::new();
         let away = TeamId::new();
 
-        execute(sample_cmd(home.clone(), away.clone()), &repo, &port).await.unwrap();
-        execute(sample_cmd(home.clone(), away.clone()), &repo, &port).await.unwrap();
+        execute(sample_cmd(home.clone(), away.clone()), &repo, &port)
+            .await
+            .unwrap();
+        execute(sample_cmd(home.clone(), away.clone()), &repo, &port)
+            .await
+            .unwrap();
 
         let lines = repo.lines.lock().unwrap();
         let home_lines: Vec<_> = lines.iter().filter(|l| l.team_id == home).collect();
@@ -301,7 +332,11 @@ mod tests {
     async fn activated_bonus_is_added_to_the_team_points() {
         let repo = FakeRepo::default();
         let mut info = rules_info(3, 1, 0);
-        info.aggressive = BonusRuleInfo { activated: true, threshold: 1, points: 2 };
+        info.aggressive = BonusRuleInfo {
+            activated: true,
+            threshold: 1,
+            points: 2,
+        };
         let port = FakeCompetitionPort { rules: Some(info) };
         let home = TeamId::new();
         let away = TeamId::new();
@@ -326,7 +361,11 @@ mod tests {
         let repo = FakeRepo::default();
         // Bonus agressif à seuil 2 : seule une équipe à 3 sorties le décroche.
         let mut info = rules_info(3, 1, 0);
-        info.aggressive = BonusRuleInfo { activated: true, threshold: 2, points: 7 };
+        info.aggressive = BonusRuleInfo {
+            activated: true,
+            threshold: 2,
+            points: 7,
+        };
         let port = FakeCompetitionPort { rules: Some(info) };
 
         let home = TeamId::new();
@@ -356,7 +395,9 @@ mod tests {
     #[tokio::test]
     async fn tiebreak_counters_cross_over_only_for_touchdowns() {
         let repo = FakeRepo::default();
-        let port = FakeCompetitionPort { rules: Some(rules_info(3, 1, 0)) };
+        let port = FakeCompetitionPort {
+            rules: Some(rules_info(3, 1, 0)),
+        };
         let home = TeamId::new();
         let away = TeamId::new();
         let mut cmd = sample_cmd(home.clone(), away.clone());
@@ -374,7 +415,21 @@ mod tests {
         assert_eq!((home_line.td_for.0, home_line.td_against.0), (2, 1));
         assert_eq!((away_line.td_for.0, away_line.td_against.0), (1, 2));
         // Les trois autres restent ceux de l'équipe qui les a produits.
-        assert_eq!((home_line.casualties.0, home_line.fouls.0, home_line.completions.0), (3, 1, 5));
-        assert_eq!((away_line.casualties.0, away_line.fouls.0, away_line.completions.0), (0, 4, 2));
+        assert_eq!(
+            (
+                home_line.casualties.0,
+                home_line.fouls.0,
+                home_line.completions.0
+            ),
+            (3, 1, 5)
+        );
+        assert_eq!(
+            (
+                away_line.casualties.0,
+                away_line.fouls.0,
+                away_line.completions.0
+            ),
+            (0, 4, 2)
+        );
     }
 }

@@ -88,7 +88,9 @@ pub async fn post_competition_invitations(
         Ok(()) => Response::builder()
             .header(
                 "HX-Redirect",
-                AppRoutes::default().competitions.new_competition_validation(&space_id, &competition_id, &season_id),
+                AppRoutes::default()
+                    .competitions
+                    .new_competition_validation(&space_id, &competition_id, &season_id),
             )
             .body(Body::empty())
             .unwrap(),

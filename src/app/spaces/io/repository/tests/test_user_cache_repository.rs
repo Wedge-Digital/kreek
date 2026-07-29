@@ -1,7 +1,7 @@
 use crate::app::shared_kernel::identity::authorization::SpaceProfile;
 use crate::app::shared_kernel::identity::coach_name::CoachName;
-use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::shared_kernel::identity::email::Email;
+use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::spaces::domain::space_repository_port::space_repository_port::ISpaceRepository;
 use crate::app::spaces::domain::space_repository_port::user_cache_repository_port::{
     ISpaceUserCacheRepository, SpaceUserCacheRepositoryError,

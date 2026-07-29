@@ -15,7 +15,10 @@ pub struct ResolvedPlayerStats {
 /// via le port `ISkillCatalogPort`) combinée avec les `stat_adjustments`
 /// accumulés (séquelles) et les `stat_increases` achetés en SPP. L'agrégat
 /// `Player` reste pur — il ne stocke que les deltas, jamais la valeur résolue (BR13).
-pub fn resolve_stats(player: &Player, catalog: &dyn ISkillCatalogPort) -> Option<ResolvedPlayerStats> {
+pub fn resolve_stats(
+    player: &Player,
+    catalog: &dyn ISkillCatalogPort,
+) -> Option<ResolvedPlayerStats> {
     let base = catalog.find_position(player.roster_line_id.as_ref())?;
     let mut stats = ResolvedPlayerStats {
         ma: base.ma,
@@ -67,19 +70,27 @@ mod tests {
     use crate::app::players::domain::match_impact::{StatAdjustment, StatMalus};
     use crate::app::players::domain::player::{PlayerId, Spp, StatIncrease, TeamId, ValueKpo};
     use crate::app::players::domain::value_objects::{PositionNameVo, RosterLineId, SppCost};
-    use crate::app::players::ports::{PositionAccessDto, PositionCatalogEntryDto, SkillCatalogEntryDto, SkillCostLevelDto};
+    use crate::app::players::ports::{
+        PositionAccessDto, PositionCatalogEntryDto, SkillCatalogEntryDto, SkillCostLevelDto,
+    };
     use crate::app::shared_kernel::identity::ids::SpaceId;
 
     struct FakeSkillCatalog;
 
     impl ISkillCatalogPort for FakeSkillCatalog {
-        fn find_skill(&self, _skill_id: &str) -> Option<SkillCatalogEntryDto> { None }
+        fn find_skill(&self, _skill_id: &str) -> Option<SkillCatalogEntryDto> {
+            None
+        }
         fn find_position(&self, roster_line_id: &str) -> Option<PositionCatalogEntryDto> {
             if roster_line_id == "BLITZER" {
                 Some(PositionCatalogEntryDto {
                     position_name: "Frappeur".into(),
                     cost: 90_000,
-                    ma: 7, st: 3, ag: 3, pa: 5, av: 8,
+                    ma: 7,
+                    st: 3,
+                    ag: 3,
+                    pa: 5,
+                    av: 8,
                     base_skills: vec![],
                     primary_categories: vec![],
                     secondary_categories: vec![],
@@ -88,27 +99,45 @@ mod tests {
                 None
             }
         }
-        fn position_access(&self, _roster_line_id: &str) -> Option<PositionAccessDto> { None }
-        fn cost_for_level(&self, _level: u8, _is_elite: bool) -> Option<SkillCostLevelDto> { None }
-        fn skill_value_delta(&self, _is_secondary_access: bool) -> u32 { 0 }
-        fn stat_value_delta(&self, _stat: StatKind) -> u32 { 0 }
-        fn touchdown_spp(&self) -> u8 { 3 }
-        fn pass_spp(&self) -> u8 { 1 }
-        fn interception_spp(&self) -> u8 { 2 }
-        fn casualty_spp(&self) -> u8 { 2 }
-        fn mvp_spp(&self) -> u8 { 4 }
+        fn position_access(&self, _roster_line_id: &str) -> Option<PositionAccessDto> {
+            None
+        }
+        fn cost_for_level(&self, _level: u8, _is_elite: bool) -> Option<SkillCostLevelDto> {
+            None
+        }
+        fn skill_value_delta(&self, _is_secondary_access: bool) -> u32 {
+            0
+        }
+        fn stat_value_delta(&self, _stat: StatKind) -> u32 {
+            0
+        }
+        fn touchdown_spp(&self) -> u8 {
+            3
+        }
+        fn pass_spp(&self) -> u8 {
+            1
+        }
+        fn interception_spp(&self) -> u8 {
+            2
+        }
+        fn casualty_spp(&self) -> u8 {
+            2
+        }
+        fn mvp_spp(&self) -> u8 {
+            4
+        }
     }
 
     fn sample_player() -> Player {
         let created = PlayerDomainEvent::PlayerCreated {
-            player_id:      PlayerId("p1".into()),
-            team_id:        TeamId("t1".into()),
-            space_id:       SpaceId::new(),
-            position_name:  PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            space_id: SpaceId::new(),
+            position_name: PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
             roster_line_id: RosterLineId::try_new("BLITZER".to_string()).unwrap(),
-            jersey:         None,
-            base_skills:    vec![],
-            starting_spp:   Spp(0),
+            jersey: None,
+            base_skills: vec![],
+            starting_spp: Spp(0),
             starting_value: ValueKpo(90_000),
         };
         Player::from_events(&[created]).unwrap()
@@ -118,15 +147,33 @@ mod tests {
     fn resolve_stats_returns_base_stats_when_no_adjustment() {
         let player = sample_player();
         let stats = resolve_stats(&player, &FakeSkillCatalog).unwrap();
-        assert_eq!(stats, ResolvedPlayerStats { ma: 7, st: 3, ag: 3, pa: 5, av: 8 });
+        assert_eq!(
+            stats,
+            ResolvedPlayerStats {
+                ma: 7,
+                st: 3,
+                ag: 3,
+                pa: 5,
+                av: 8
+            }
+        );
     }
 
     #[test]
     fn resolve_stats_applies_ma_st_av_malus_as_decrease() {
         let mut player = sample_player();
-        player.stat_adjustments.push(StatAdjustment { stat: StatKind::Ma, malus: StatMalus::try_new(1).unwrap() });
-        player.stat_adjustments.push(StatAdjustment { stat: StatKind::St, malus: StatMalus::try_new(1).unwrap() });
-        player.stat_adjustments.push(StatAdjustment { stat: StatKind::Av, malus: StatMalus::try_new(1).unwrap() });
+        player.stat_adjustments.push(StatAdjustment {
+            stat: StatKind::Ma,
+            malus: StatMalus::try_new(1).unwrap(),
+        });
+        player.stat_adjustments.push(StatAdjustment {
+            stat: StatKind::St,
+            malus: StatMalus::try_new(1).unwrap(),
+        });
+        player.stat_adjustments.push(StatAdjustment {
+            stat: StatKind::Av,
+            malus: StatMalus::try_new(1).unwrap(),
+        });
         let stats = resolve_stats(&player, &FakeSkillCatalog).unwrap();
         assert_eq!(stats.ma, 6);
         assert_eq!(stats.st, 2);
@@ -136,7 +183,10 @@ mod tests {
     #[test]
     fn resolve_stats_applies_ag_pa_malus_as_increase() {
         let mut player = sample_player();
-        player.stat_adjustments.push(StatAdjustment { stat: StatKind::Ag, malus: StatMalus::try_new(1).unwrap() });
+        player.stat_adjustments.push(StatAdjustment {
+            stat: StatKind::Ag,
+            malus: StatMalus::try_new(1).unwrap(),
+        });
         let stats = resolve_stats(&player, &FakeSkillCatalog).unwrap();
         assert_eq!(stats.ag, 4);
     }
@@ -151,9 +201,21 @@ mod tests {
     #[test]
     fn resolve_stats_applies_ma_st_av_increase_as_increase() {
         let mut player = sample_player();
-        player.stat_increases.push(StatIncrease { stat: StatKind::Ma, spp_cost: SppCost::try_new(1).unwrap(), value_delta: ValueKpo(0) });
-        player.stat_increases.push(StatIncrease { stat: StatKind::St, spp_cost: SppCost::try_new(1).unwrap(), value_delta: ValueKpo(0) });
-        player.stat_increases.push(StatIncrease { stat: StatKind::Av, spp_cost: SppCost::try_new(1).unwrap(), value_delta: ValueKpo(0) });
+        player.stat_increases.push(StatIncrease {
+            stat: StatKind::Ma,
+            spp_cost: SppCost::try_new(1).unwrap(),
+            value_delta: ValueKpo(0),
+        });
+        player.stat_increases.push(StatIncrease {
+            stat: StatKind::St,
+            spp_cost: SppCost::try_new(1).unwrap(),
+            value_delta: ValueKpo(0),
+        });
+        player.stat_increases.push(StatIncrease {
+            stat: StatKind::Av,
+            spp_cost: SppCost::try_new(1).unwrap(),
+            value_delta: ValueKpo(0),
+        });
         let stats = resolve_stats(&player, &FakeSkillCatalog).unwrap();
         assert_eq!(stats.ma, 8);
         assert_eq!(stats.st, 4);
@@ -163,8 +225,16 @@ mod tests {
     #[test]
     fn resolve_stats_applies_ag_pa_increase_as_decrease() {
         let mut player = sample_player();
-        player.stat_increases.push(StatIncrease { stat: StatKind::Ag, spp_cost: SppCost::try_new(1).unwrap(), value_delta: ValueKpo(0) });
-        player.stat_increases.push(StatIncrease { stat: StatKind::Pa, spp_cost: SppCost::try_new(1).unwrap(), value_delta: ValueKpo(0) });
+        player.stat_increases.push(StatIncrease {
+            stat: StatKind::Ag,
+            spp_cost: SppCost::try_new(1).unwrap(),
+            value_delta: ValueKpo(0),
+        });
+        player.stat_increases.push(StatIncrease {
+            stat: StatKind::Pa,
+            spp_cost: SppCost::try_new(1).unwrap(),
+            value_delta: ValueKpo(0),
+        });
         let stats = resolve_stats(&player, &FakeSkillCatalog).unwrap();
         assert_eq!(stats.ag, 2);
         assert_eq!(stats.pa, 4);

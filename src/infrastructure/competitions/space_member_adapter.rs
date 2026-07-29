@@ -17,7 +17,15 @@ impl SpaceMemberAdapter {
 
 #[async_trait]
 impl ICompetitionSpaceMemberPort for SpaceMemberAdapter {
-    async fn find_member_profile(&self, coach_id: &CoachId, space_id: &SpaceId) -> Option<SpaceProfile> {
-        self.space_repo.find_member_profile(coach_id, space_id).await.ok().flatten()
+    async fn find_member_profile(
+        &self,
+        coach_id: &CoachId,
+        space_id: &SpaceId,
+    ) -> Option<SpaceProfile> {
+        self.space_repo
+            .find_member_profile(coach_id, space_id)
+            .await
+            .ok()
+            .flatten()
     }
 }

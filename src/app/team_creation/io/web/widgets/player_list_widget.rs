@@ -1,6 +1,6 @@
+use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::team_creation::io::web::view_models::FinalizePlayerVm;
-use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};

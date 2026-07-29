@@ -90,14 +90,14 @@ mod tests {
         Activated, AggressiveBonus, DefensiveBonus, MaxTdConceded, MinCasualties, MinTd,
         OffensiveBonus, RankingPoints, RankingRules, TiebreakCode, TierRule,
     };
-    use crate::app::competitions::ports::TiebreakCriterionDto;
-    use crate::app::shared_kernel::bloodbowl::tier::{CreationBudget, StartingXp, TierName};
     use crate::app::competitions::domain::competition_season::CompetitionSeason;
     use crate::app::competitions::domain::competition_structure::CompetitionStructure;
     use crate::app::competitions::domain::season_repository_port::{
         SeasonBaseInfo, SeasonRepositoryError,
     };
+    use crate::app::competitions::ports::TiebreakCriterionDto;
     use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
+    use crate::app::shared_kernel::bloodbowl::tier::{CreationBudget, StartingXp, TierName};
     use async_trait::async_trait;
 
     struct FakeRepo {

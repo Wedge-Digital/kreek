@@ -13,7 +13,7 @@ pub trait IPlayerDataPort: Send + Sync {
     /// retirer des SPP déjà convertis en amélioration.
     async fn has_spent_spp_since_match(
         &self,
-        team_id:         &str,
+        team_id: &str,
         match_report_id: &str,
     ) -> Result<bool, String>;
 }
@@ -32,11 +32,7 @@ pub trait ICompetitionDataPort: Send + Sync {
         roster_id: &str,
     ) -> Option<TierRulesDto>;
 
-    async fn find_round_context(
-        &self,
-        season_id: &str,
-        round_id: &str,
-    ) -> Option<RoundContextDto>;
+    async fn find_round_context(&self, season_id: &str, round_id: &str) -> Option<RoundContextDto>;
 }
 
 #[derive(Debug, Clone)]
@@ -71,20 +67,14 @@ pub struct TeamInfoDto {
 
 #[async_trait]
 pub trait ITeamDataPort: Send + Sync {
-    async fn is_team_ready_to_play(
-        &self,
-        team_id: &str,
-    ) -> Result<bool, String>;
+    async fn is_team_ready_to_play(&self, team_id: &str) -> Result<bool, String>;
 
     /// L'équipe est-elle encore en phase d'amélioration des joueurs ?
     ///
     /// Question du garde-fou de correction. Toutes les actions qui rendraient la
     /// correction impossible — recrutement, staff, match suivant — exigent une
     /// phase ultérieure : cette seule réponse suffit à les exclure toutes.
-    async fn is_team_in_player_improvement(
-        &self,
-        team_id: &str,
-    ) -> Result<bool, String>;
+    async fn is_team_in_player_improvement(&self, team_id: &str) -> Result<bool, String>;
 
     async fn is_coach_of_team(&self, team_id: &str, user_id: &str) -> Result<bool, String>;
 
@@ -106,16 +96,16 @@ pub struct JourneymanPositionDto {
 }
 
 pub struct RosterPositionDto {
-    pub position_uid:  String,
+    pub position_uid: String,
     pub position_name: String,
-    pub base_cost:     u32,
-    pub max_qty:       u8,
+    pub base_cost: u32,
+    pub max_qty: u8,
     pub is_journeyman: bool,
 }
 
 pub struct PositionCountDto {
     pub position_uid: String,
-    pub count:        u8,
+    pub count: u8,
 }
 
 #[async_trait]

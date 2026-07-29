@@ -28,9 +28,15 @@ impl Routes {
         path::SPACES_SIDEBAR
     }
 
-    pub fn coach_select_widget(&self) -> &'static str { path::COACH_SELECT_WIDGET }
-    pub fn coach_search_widget(&self) -> &'static str { path::COACH_SEARCH_WIDGET }
-    pub fn coach_search_results(&self) -> &'static str { path::COACH_SEARCH_RESULT }
+    pub fn coach_select_widget(&self) -> &'static str {
+        path::COACH_SELECT_WIDGET
+    }
+    pub fn coach_search_widget(&self) -> &'static str {
+        path::COACH_SEARCH_WIDGET
+    }
+    pub fn coach_search_results(&self) -> &'static str {
+        path::COACH_SEARCH_RESULT
+    }
     pub fn members_widget(&self, space_id: &str) -> String {
         path::SPACE_MEMBERS_WIDGET.replace("{space_id}", space_id)
     }

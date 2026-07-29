@@ -14,10 +14,10 @@ pub enum RepositoryError {
 impl std::fmt::Display for RepositoryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::ConcurrentWrite    => write!(f, "écriture concurrente détectée"),
-            Self::Serialization(e)   => write!(f, "erreur de sérialisation : {e}"),
+            Self::ConcurrentWrite => write!(f, "écriture concurrente détectée"),
+            Self::Serialization(e) => write!(f, "erreur de sérialisation : {e}"),
             Self::Deserialization(e) => write!(f, "erreur de désérialisation : {e}"),
-            Self::Database(e)        => write!(f, "erreur base de données : {e}"),
+            Self::Database(e) => write!(f, "erreur base de données : {e}"),
         }
     }
 }
@@ -26,27 +26,27 @@ impl std::fmt::Display for RepositoryError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcquiredSkillProjection {
-    pub skill_id:                  String,
-    pub skill_name:                String,
+    pub skill_id: String,
+    pub skill_name: String,
     #[serde(default)]
-    pub category_css:              String,
-    pub mode:                      String,
-    pub spp_cost:                  i32,
+    pub category_css: String,
+    pub mode: String,
+    pub spp_cost: i32,
 }
 
 #[derive(Debug, Clone)]
 pub struct PlayerProjection {
-    pub player_id:       String,
-    pub team_id:         String,
-    pub space_id:        String,
-    pub position_name:   String,
-    pub roster_line_id:  String,
-    pub personal_name:   String,
-    pub jersey:          Option<i16>,
-    pub base_skills:     Vec<String>,
+    pub player_id: String,
+    pub team_id: String,
+    pub space_id: String,
+    pub position_name: String,
+    pub roster_line_id: String,
+    pub personal_name: String,
+    pub jersey: Option<i16>,
+    pub base_skills: Vec<String>,
     pub acquired_skills: Vec<AcquiredSkillProjection>,
-    pub spp:             i32,
-    pub value_kpo:       i32,
+    pub spp: i32,
+    pub value_kpo: i32,
     pub participation_status: String,
 }
 
@@ -70,20 +70,14 @@ pub trait IPlayerRepository: Send + Sync {
     async fn append(
         &self,
         player_id: &PlayerId,
-        team_id:   &TeamId,
-        event:     &PlayerDomainEvent,
-        version:   i32,
+        team_id: &TeamId,
+        event: &PlayerDomainEvent,
+        version: i32,
     ) -> Result<(), RepositoryError>;
 
-    async fn find_by_id(
-        &self,
-        player_id: &PlayerId,
-    ) -> Result<Option<Player>, RepositoryError>;
+    async fn find_by_id(&self, player_id: &PlayerId) -> Result<Option<Player>, RepositoryError>;
 
-    async fn find_by_team_id(
-        &self,
-        team_id: &TeamId,
-    ) -> Result<Vec<Player>, RepositoryError>;
+    async fn find_by_team_id(&self, team_id: &TeamId) -> Result<Vec<Player>, RepositoryError>;
 
     /// Events bruts d'un joueur, ordonnés (version ASC) — contrairement à
     /// `find_by_id` (agrégat hydraté final), nécessaire pour reconstruire un
@@ -103,7 +97,7 @@ pub trait IPlayerRepository: Send + Sync {
     /// l'historique nécessaire.
     async fn has_spent_spp_since_match(
         &self,
-        team_id:         &TeamId,
+        team_id: &TeamId,
         match_report_id: &str,
     ) -> Result<bool, RepositoryError>;
 }
@@ -114,13 +108,13 @@ pub trait IPlayerRepository: Send + Sync {
 
 pub struct SkillCatalogEntryDto {
     pub skill_id: String,
-    pub name:     String,
+    pub name: String,
     pub category: String,
     pub is_elite: bool,
 }
 
 pub struct PositionAccessDto {
-    pub primary_categories:   Vec<String>,
+    pub primary_categories: Vec<String>,
     pub secondary_categories: Vec<String>,
 }
 
@@ -130,14 +124,14 @@ pub struct PositionAccessDto {
 /// couvre l'affichage joueur et l'initialisation à la création d'un joueur.
 pub struct PositionCatalogEntryDto {
     pub position_name: String,
-    pub cost:           u32,
+    pub cost: u32,
     pub ma: u8,
     pub st: u8,
     pub ag: u8,
     pub pa: u8,
     pub av: u8,
-    pub base_skills:         Vec<String>,
-    pub primary_categories:   Vec<String>,
+    pub base_skills: Vec<String>,
+    pub primary_categories: Vec<String>,
     pub secondary_categories: Vec<String>,
 }
 
@@ -147,11 +141,11 @@ pub struct PositionCatalogEntryDto {
 /// `ISkillCatalogPort::skill_value_delta`/`stat_value_delta` pour la valeur
 /// d'équipe ajoutée, exprimée elle en Po).
 pub struct SkillCostLevelDto {
-    pub level:           u8,
-    pub chosen_primary:   u32,
+    pub level: u8,
+    pub chosen_primary: u32,
     pub chosen_secondary: u32,
-    pub random:           u32,
-    pub characteristic:   u32,
+    pub random: u32,
+    pub characteristic: u32,
 }
 
 pub trait ISkillCatalogPort: Send + Sync {
@@ -181,8 +175,8 @@ pub trait ISkillCatalogPort: Send + Sync {
 /// d'autorisation (achat de compétence, augmentation de stat) — jamais
 /// l'agrégat `Team` complet.
 pub struct TeamRosterInfoDto {
-    pub team_name:      String,
-    pub coach_id:       String,
+    pub team_name: String,
+    pub coach_id: String,
     pub competition_id: Option<String>,
     /// Remplace la comparaison `team.game_phase == Some(GamePhase::PlayerImprovement)`
     /// — `players` n'a pas à connaître l'énumération `GamePhase` de `teams`.
@@ -197,7 +191,7 @@ pub trait IPlayerRosterPort: Send + Sync {
 // ── ACL vers le BC `competitions` (admins, pour l'autorisation) ────────────────
 
 pub struct CompetitionAdminInfoDto {
-    pub admin_ids:   Vec<String>,
+    pub admin_ids: Vec<String>,
     pub admin_names: Vec<String>,
 }
 

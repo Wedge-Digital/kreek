@@ -1,11 +1,11 @@
 use crate::app::routes::AppRoutes;
+use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementDefinition;
+use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
-use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementDefinition;
-use crate::state::AppState;
 
 #[derive(Deserialize)]
 pub struct InducementPickerParams {
@@ -39,7 +39,8 @@ pub async fn inducement_picker_controller(
         inducements,
         instance_id: params.instance_id,
         selected_json: serde_json::to_string(&selected).unwrap_or_else(|_| "[]".to_string()),
-    }.into_response()
+    }
+    .into_response()
 }
 
 #[derive(Template)]

@@ -1,8 +1,8 @@
 use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
-use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
+use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::value_objects::CorrectionEligibility;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
@@ -69,7 +69,11 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             }
             (
                 Some(MatchReportState::PreMatch(pm)),
-                MatchReportDomainEvent::TeamValuesRecorded { home_team_value, away_team_value, .. },
+                MatchReportDomainEvent::TeamValuesRecorded {
+                    home_team_value,
+                    away_team_value,
+                    ..
+                },
             ) => {
                 let mut updated = pm;
                 updated.home_team_value = Some(*home_team_value);
@@ -79,7 +83,9 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             }
             (
                 Some(MatchReportState::PreMatch(pm)),
-                MatchReportDomainEvent::InducementsRecorded { team_id, purchases, .. },
+                MatchReportDomainEvent::InducementsRecorded {
+                    team_id, purchases, ..
+                },
             ) => {
                 let mut updated = pm;
                 updated.star_engagements.retain(|(tid, _)| tid != team_id);
@@ -93,10 +99,16 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             }
             (
                 Some(MatchReportState::PreMatch(pm)),
-                MatchReportDomainEvent::StarPlayerEngaged { team_id, star_player_uid, .. },
+                MatchReportDomainEvent::StarPlayerEngaged {
+                    team_id,
+                    star_player_uid,
+                    ..
+                },
             ) => {
                 let mut updated = pm;
-                updated.star_engagements.push((team_id.clone(), star_player_uid.clone()));
+                updated
+                    .star_engagements
+                    .push((team_id.clone(), star_player_uid.clone()));
                 updated.version += 1;
                 MatchReportState::PreMatch(updated)
             }
@@ -129,7 +141,14 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             (
                 Some(MatchReportState::PreMatch(pm)),
                 MatchReportDomainEvent::ActionRecorded {
-                    action_id, team_side, turn, player, action, player_display_name, player_position, ..
+                    action_id,
+                    team_side,
+                    turn,
+                    player,
+                    action,
+                    player_display_name,
+                    player_position,
+                    ..
                 },
             ) => {
                 use crate::app::match_report::domain::value_objects::{MatchAction, TeamSide};
@@ -151,7 +170,11 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             }
             (
                 Some(MatchReportState::PreMatch(pm)),
-                MatchReportDomainEvent::ActionDeleted { action_id, team_side, .. },
+                MatchReportDomainEvent::ActionDeleted {
+                    action_id,
+                    team_side,
+                    ..
+                },
             ) => {
                 use crate::app::match_report::domain::value_objects::TeamSide;
                 let mut updated = pm;
@@ -172,15 +195,23 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             (
                 Some(MatchReportState::PreMatch(pm)),
                 MatchReportDomainEvent::PostMatchRecorded {
-                    home_gain, away_gain, home_fan_mod, away_fan_mod,
-                    summary_title, summary_body, ..
+                    home_gain,
+                    away_gain,
+                    home_fan_mod,
+                    away_fan_mod,
+                    summary_title,
+                    summary_body,
+                    ..
                 },
-            ) => MatchReportState::ReadyToPublish(
-                MatchReportReadyToPublish::from_pre_match(
-                    &pm, *home_gain, *away_gain, *home_fan_mod, *away_fan_mod,
-                    summary_title.clone(), summary_body.clone(),
-                )
-            ),
+            ) => MatchReportState::ReadyToPublish(MatchReportReadyToPublish::from_pre_match(
+                &pm,
+                *home_gain,
+                *away_gain,
+                *home_fan_mod,
+                *away_fan_mod,
+                summary_title.clone(),
+                summary_body.clone(),
+            )),
             (
                 Some(MatchReportState::ReadyToPublish(rtp)),
                 MatchReportDomainEvent::MatchReportCancelled { reason, .. },
@@ -216,7 +247,9 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             }
             (
                 Some(MatchReportState::ReadyToPublish(rtp)),
-                MatchReportDomainEvent::InducementsRecorded { team_id, purchases, .. },
+                MatchReportDomainEvent::InducementsRecorded {
+                    team_id, purchases, ..
+                },
             ) => {
                 let mut updated = rtp;
                 updated.star_engagements.retain(|(tid, _)| tid != team_id);
@@ -230,10 +263,16 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             }
             (
                 Some(MatchReportState::ReadyToPublish(rtp)),
-                MatchReportDomainEvent::StarPlayerEngaged { team_id, star_player_uid, .. },
+                MatchReportDomainEvent::StarPlayerEngaged {
+                    team_id,
+                    star_player_uid,
+                    ..
+                },
             ) => {
                 let mut updated = rtp;
-                updated.star_engagements.push((team_id.clone(), star_player_uid.clone()));
+                updated
+                    .star_engagements
+                    .push((team_id.clone(), star_player_uid.clone()));
                 updated.version += 1;
                 MatchReportState::ReadyToPublish(updated)
             }
@@ -266,7 +305,14 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             (
                 Some(MatchReportState::ReadyToPublish(rtp)),
                 MatchReportDomainEvent::ActionRecorded {
-                    action_id, team_side, turn, player, action, player_display_name, player_position, ..
+                    action_id,
+                    team_side,
+                    turn,
+                    player,
+                    action,
+                    player_display_name,
+                    player_position,
+                    ..
                 },
             ) => {
                 use crate::app::match_report::domain::value_objects::{MatchAction, TeamSide};
@@ -288,7 +334,11 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             }
             (
                 Some(MatchReportState::ReadyToPublish(rtp)),
-                MatchReportDomainEvent::ActionDeleted { action_id, team_side, .. },
+                MatchReportDomainEvent::ActionDeleted {
+                    action_id,
+                    team_side,
+                    ..
+                },
             ) => {
                 use crate::app::match_report::domain::value_objects::TeamSide;
                 let mut updated = rtp;
@@ -302,8 +352,13 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             (
                 Some(MatchReportState::ReadyToPublish(rtp)),
                 MatchReportDomainEvent::PostMatchRecorded {
-                    home_gain, away_gain, home_fan_mod, away_fan_mod,
-                    summary_title, summary_body, ..
+                    home_gain,
+                    away_gain,
+                    home_fan_mod,
+                    away_fan_mod,
+                    summary_title,
+                    summary_body,
+                    ..
                 },
             ) => {
                 let mut updated = rtp;
@@ -318,10 +373,15 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             }
             (
                 Some(MatchReportState::ReadyToPublish(rtp)),
-                MatchReportDomainEvent::MatchReportPublished { published_by, published_at },
-            ) => MatchReportState::Published(
-                MatchReportPublished::from_ready_to_publish(&rtp, *published_by, *published_at),
-            ),
+                MatchReportDomainEvent::MatchReportPublished {
+                    published_by,
+                    published_at,
+                },
+            ) => MatchReportState::Published(MatchReportPublished::from_ready_to_publish(
+                &rtp,
+                *published_by,
+                *published_at,
+            )),
             // Correction : retour en état corrigeable. Le couple avec l'arête
             // ci-dessus suffit à rejouer un nombre quelconque d'allers-retours,
             // `rehydrate` n'étant qu'un pli sur le flux.
@@ -344,10 +404,14 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::match_report::domain::value_objects::{D3Roll, DedicatedFans, MatchReportOrigin};
-    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
-    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
+    use crate::app::match_report::domain::value_objects::{
+        D3Roll, DedicatedFans, MatchReportOrigin,
+    };
+    use crate::app::shared_kernel::bloodbowl::ids::{
+        CompetitionId, MatchReportId, RoundId, SeasonId,
+    };
     use crate::app::shared_kernel::bloodbowl::team::TeamId;
+    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 
     fn test_ids() -> (
         MatchReportId,
@@ -451,7 +515,14 @@ mod tests {
         let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
             test_ids();
         let (draft, _) = MatchReportDraft::create(
-            mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
+            mr_id,
+            space_id,
+            comp_id,
+            season_id,
+            round_id,
+            home_id,
+            away_id,
+            coach_id,
             MatchReportOrigin::Manual,
             None,
         )
@@ -467,7 +538,14 @@ mod tests {
         let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
             test_ids();
         let (draft, _) = MatchReportDraft::create(
-            mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
+            mr_id,
+            space_id,
+            comp_id,
+            season_id,
+            round_id,
+            home_id,
+            away_id,
+            coach_id,
             MatchReportOrigin::Manual,
             None,
         )
@@ -475,7 +553,9 @@ mod tests {
 
         let new_home = TeamId::new();
         let new_away = TeamId::new();
-        let (updated, event) = draft.update_selection(new_home, new_away, coach_id).unwrap();
+        let (updated, event) = draft
+            .update_selection(new_home, new_away, coach_id)
+            .unwrap();
 
         assert_eq!(updated.home_team_id, new_home);
         assert_eq!(updated.away_team_id, new_away);
@@ -493,7 +573,14 @@ mod tests {
         let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
             test_ids();
         let (draft, _) = MatchReportDraft::create(
-            mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
+            mr_id,
+            space_id,
+            comp_id,
+            season_id,
+            round_id,
+            home_id,
+            away_id,
+            coach_id,
             MatchReportOrigin::Manual,
             None,
         )
@@ -578,9 +665,18 @@ mod tests {
         let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
             test_ids();
         let (draft, _) = MatchReportDraft::create(
-            mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
-            MatchReportOrigin::Manual, None,
-        ).unwrap();
+            mr_id,
+            space_id,
+            comp_id,
+            season_id,
+            round_id,
+            home_id,
+            away_id,
+            coach_id,
+            MatchReportOrigin::Manual,
+            None,
+        )
+        .unwrap();
         let (pm, _) = draft.confirm_selection(coach_id);
         pm
     }
@@ -595,7 +691,10 @@ mod tests {
             DedicatedFans::default(),
             CoachId::new(),
         );
-        assert!(matches!(event, MatchReportDomainEvent::FanFactorRecorded { .. }));
+        assert!(matches!(
+            event,
+            MatchReportDomainEvent::FanFactorRecorded { .. }
+        ));
     }
 
     #[test]
@@ -620,8 +719,12 @@ mod tests {
         let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
             test_ids();
         let events = vec![
-            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
-            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+            created_event(
+                mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
+            ),
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: coach_id,
+            },
             MatchReportDomainEvent::FanFactorRecorded {
                 home_fan_roll: D3Roll::try_new(2).unwrap(),
                 away_fan_roll: D3Roll::try_new(3).unwrap(),
@@ -645,8 +748,12 @@ mod tests {
         let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
             test_ids();
         let events = vec![
-            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
-            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+            created_event(
+                mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
+            ),
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: coach_id,
+            },
             MatchReportDomainEvent::FanFactorRecorded {
                 home_fan_roll: D3Roll::try_new(1).unwrap(),
                 away_fan_roll: D3Roll::try_new(1).unwrap(),
@@ -691,13 +798,27 @@ mod tests {
         let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
             test_ids();
         let events = vec![
-            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
-            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+            created_event(
+                mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
+            ),
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: coach_id,
+            },
             MatchReportDomainEvent::PostMatchRecorded {
-                home_gain: crate::app::match_report::domain::value_objects::MatchGain::try_new(10_000).unwrap(),
-                away_gain: crate::app::match_report::domain::value_objects::MatchGain::try_new(5_000).unwrap(),
-                home_fan_mod: crate::app::match_report::domain::value_objects::FanFactorMod::try_new(1).unwrap(),
-                away_fan_mod: crate::app::match_report::domain::value_objects::FanFactorMod::try_new(-1).unwrap(),
+                home_gain: crate::app::match_report::domain::value_objects::MatchGain::try_new(
+                    10_000,
+                )
+                .unwrap(),
+                away_gain: crate::app::match_report::domain::value_objects::MatchGain::try_new(
+                    5_000,
+                )
+                .unwrap(),
+                home_fan_mod:
+                    crate::app::match_report::domain::value_objects::FanFactorMod::try_new(1)
+                        .unwrap(),
+                away_fan_mod:
+                    crate::app::match_report::domain::value_objects::FanFactorMod::try_new(-1)
+                        .unwrap(),
                 summary_title: None,
                 summary_body: None,
                 recorded_by: coach_id,
@@ -751,8 +872,12 @@ mod tests {
         let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
             test_ids();
         let events = vec![
-            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
-            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+            created_event(
+                mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
+            ),
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: coach_id,
+            },
             post_match_event(coach_id),
             published_event(coach_id),
             unpublished_event(coach_id),
@@ -774,8 +899,12 @@ mod tests {
         let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
             test_ids();
         let mut events = vec![
-            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
-            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+            created_event(
+                mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
+            ),
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: coach_id,
+            },
             post_match_event(coach_id),
         ];
         for _ in 0..3 {
@@ -797,8 +926,12 @@ mod tests {
         let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
             test_ids();
         let events = vec![
-            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
-            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+            created_event(
+                mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
+            ),
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: coach_id,
+            },
             post_match_event(coach_id),
             published_event(coach_id),
             unpublished_event(coach_id),
@@ -817,8 +950,12 @@ mod tests {
         let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
             test_ids();
         let events = vec![
-            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
-            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+            created_event(
+                mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
+            ),
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: coach_id,
+            },
             post_match_event(coach_id),
         ];
 
@@ -833,8 +970,12 @@ mod tests {
         let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
             test_ids();
         let events = vec![
-            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
-            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+            created_event(
+                mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
+            ),
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: coach_id,
+            },
             post_match_event(coach_id),
             unpublished_event(coach_id),
         ];
@@ -877,8 +1018,12 @@ mod tests {
         let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
             test_ids();
         let events = vec![
-            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
-            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+            created_event(
+                mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
+            ),
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: coach_id,
+            },
         ];
 
         let MatchReportState::PreMatch(pm) = rehydrate(events).unwrap() else {
@@ -900,8 +1045,12 @@ mod tests {
         let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
             test_ids();
         let events = vec![
-            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id),
-            MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id },
+            created_event(
+                mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
+            ),
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: coach_id,
+            },
             post_match_event(coach_id),
         ];
 
@@ -931,15 +1080,25 @@ mod tests {
     fn rehydrate_annulation_depuis_les_trois_etats_non_publies() {
         let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
             test_ids();
-        let created =
-            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id);
-        let confirmed = MatchReportDomainEvent::SelectionConfirmed { confirmed_by: coach_id };
+        let created = created_event(
+            mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
+        );
+        let confirmed = MatchReportDomainEvent::SelectionConfirmed {
+            confirmed_by: coach_id,
+        };
 
         let flux_par_etat = vec![
-            ("Draft", vec![created.clone(), cancelled_event(home_id, away_id)]),
+            (
+                "Draft",
+                vec![created.clone(), cancelled_event(home_id, away_id)],
+            ),
             (
                 "PreMatch",
-                vec![created.clone(), confirmed.clone(), cancelled_event(home_id, away_id)],
+                vec![
+                    created.clone(),
+                    confirmed.clone(),
+                    cancelled_event(home_id, away_id),
+                ],
             ),
             (
                 "ReadyToPublish",
@@ -966,8 +1125,9 @@ mod tests {
     fn rehydrate_une_annulation_a_l_ancien_format() {
         let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
             test_ids();
-        let created =
-            created_event(mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id);
+        let created = created_event(
+            mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
+        );
         let ancien_format = serde_json::json!({
             "type": "MatchReportCancelled",
             "reason": "Pairing supprimé",

@@ -15,16 +15,16 @@ use crate::app::shared_kernel::bloodbowl::team::TeamId;
 /// Réponses des ports pour un camp. Regroupées pour que le verdict se lise sans
 /// suivre quatre variables parallèles, et se teste sans mock de port.
 struct SideStatus {
-    spp_spent:      Result<bool, String>,
+    spp_spent: Result<bool, String>,
     in_improvement: Result<bool, String>,
 }
 
 pub async fn evaluate(
-    home_team_id:    &TeamId,
-    away_team_id:    &TeamId,
+    home_team_id: &TeamId,
+    away_team_id: &TeamId,
     match_report_id: &MatchReportId,
-    team_data:       &dyn ITeamDataPort,
-    player_data:     &dyn IPlayerDataPort,
+    team_data: &dyn ITeamDataPort,
+    player_data: &dyn IPlayerDataPort,
 ) -> CorrectionEligibility {
     // Les `join!` imbriqués gardent les quatre consultations concurrentes : les
     // enchaîner doublerait la latence d'une page déjà chargée.
@@ -36,10 +36,10 @@ pub async fn evaluate(
 }
 
 async fn status_of(
-    team_id:         &TeamId,
+    team_id: &TeamId,
     match_report_id: &MatchReportId,
-    team_data:       &dyn ITeamDataPort,
-    player_data:     &dyn IPlayerDataPort,
+    team_data: &dyn ITeamDataPort,
+    player_data: &dyn IPlayerDataPort,
 ) -> SideStatus {
     let team = team_id.to_string();
     let mr_id = match_report_id.to_string();
@@ -47,7 +47,10 @@ async fn status_of(
         player_data.has_spent_spp_since_match(&team, &mr_id),
         team_data.is_team_in_player_improvement(&team),
     );
-    SideStatus { spp_spent, in_improvement }
+    SideStatus {
+        spp_spent,
+        in_improvement,
+    }
 }
 
 /// Home avant away : un seul message est affiché, et lever le premier blocage
@@ -85,24 +88,39 @@ mod tests {
     use super::*;
 
     fn sain() -> SideStatus {
-        SideStatus { spp_spent: Ok(false), in_improvement: Ok(true) }
+        SideStatus {
+            spp_spent: Ok(false),
+            in_improvement: Ok(true),
+        }
     }
 
     fn spp_depenses() -> SideStatus {
-        SideStatus { spp_spent: Ok(true), in_improvement: Ok(true) }
+        SideStatus {
+            spp_spent: Ok(true),
+            in_improvement: Ok(true),
+        }
     }
 
     fn phase_avancee() -> SideStatus {
-        SideStatus { spp_spent: Ok(false), in_improvement: Ok(false) }
+        SideStatus {
+            spp_spent: Ok(false),
+            in_improvement: Ok(false),
+        }
     }
 
     fn port_en_erreur() -> SideStatus {
-        SideStatus { spp_spent: Err("indisponible".into()), in_improvement: Ok(true) }
+        SideStatus {
+            spp_spent: Err("indisponible".into()),
+            in_improvement: Ok(true),
+        }
     }
 
     #[test]
     fn deux_camps_sains_donnent_eligible() {
-        assert_eq!(verdict_from(sain(), sain()), CorrectionEligibility::Eligible);
+        assert_eq!(
+            verdict_from(sain(), sain()),
+            CorrectionEligibility::Eligible
+        );
     }
 
     #[test]
@@ -140,7 +158,10 @@ mod tests {
     /// cause que le coach peut relier à une action concrète.
     #[test]
     fn spp_l_emportent_sur_la_phase_pour_un_meme_camp() {
-        let les_deux = SideStatus { spp_spent: Ok(true), in_improvement: Ok(false) };
+        let les_deux = SideStatus {
+            spp_spent: Ok(true),
+            in_improvement: Ok(false),
+        };
         assert_eq!(
             verdict_from(les_deux, sain()),
             CorrectionEligibility::Blocked(CorrectionBlocker::SppAlreadySpent {
@@ -161,7 +182,7 @@ mod tests {
     #[test]
     fn un_motif_certain_l_emporte_sur_l_indetermine() {
         let certain_et_indetermine = SideStatus {
-            spp_spent:      Ok(true),
+            spp_spent: Ok(true),
             in_improvement: Err("indisponible".into()),
         };
         assert_eq!(

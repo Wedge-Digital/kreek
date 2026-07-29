@@ -26,7 +26,10 @@ impl fmt::Display for DomainError {
             Self::EmptyEventStream => write!(f, "aucun événement dans le stream"),
             Self::InvalidD3Roll(v) => write!(f, "jet de D3 invalide : {v} (attendu 1, 2 ou 3)"),
             Self::BudgetExceeded { spent, budget } => {
-                write!(f, "budget dépassé : {spent} kPo dépensés pour {budget} kPo disponibles")
+                write!(
+                    f,
+                    "budget dépassé : {spent} kPo dépensés pour {budget} kPo disponibles"
+                )
             }
             Self::MaxQtyExceeded { uid, qty, max_qty } => {
                 write!(f, "quantité invalide pour {uid} : {qty} (max {max_qty})")
@@ -35,7 +38,9 @@ impl fmt::Display for DomainError {
             Self::StarPlayerConflict { uid } => {
                 write!(f, "star player {uid} déjà recruté par l'équipe adverse")
             }
-            Self::TeamValuesNotRecorded => write!(f, "les team values ne sont pas encore enregistrées"),
+            Self::TeamValuesNotRecorded => {
+                write!(f, "les team values ne sont pas encore enregistrées")
+            }
             Self::InvalidTurn(v) => write!(f, "tour invalide : {v} (attendu 1..=16)"),
             Self::ActionNotFound(id) => write!(f, "action introuvable : {id}"),
             Self::TooManyMercenaries { requested, max } => {
@@ -47,10 +52,16 @@ impl fmt::Display for DomainError {
                     write!(f, "correction impossible : des SPP ont déjà été dépensés")
                 }
                 CorrectionBlocker::PhaseAdvanced { .. } => {
-                    write!(f, "correction impossible : une équipe a quitté la phase d'amélioration")
+                    write!(
+                        f,
+                        "correction impossible : une équipe a quitté la phase d'amélioration"
+                    )
                 }
                 CorrectionBlocker::EligibilityUnknown => {
-                    write!(f, "correction impossible : l'éligibilité n'a pas pu être vérifiée")
+                    write!(
+                        f,
+                        "correction impossible : l'éligibilité n'a pas pu être vérifiée"
+                    )
                 }
             },
         }

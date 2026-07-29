@@ -466,8 +466,7 @@ pub async fn get_competition_detail(
     let is_admin = auth_session.user.as_ref().map_or(false, |user| {
         let user_id_str = user.id.to_string();
         let coach_name_str = user.coach_name.clone().into_inner();
-        pb.admin_names.contains(&coach_name_str)
-            || pb.admin_ids.contains(&user_id_str)
+        pb.admin_names.contains(&coach_name_str) || pb.admin_ids.contains(&user_id_str)
     });
 
     CompetitionDetailTemplate {

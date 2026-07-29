@@ -76,15 +76,9 @@ pub trait IMatchDayRepository: Send + Sync {
         match_day_id: &str,
     ) -> Result<Option<MatchDay>, MatchDayRepositoryError>;
 
-    async fn save_match_day(
-        &self,
-        match_day: &MatchDay,
-    ) -> Result<(), MatchDayRepositoryError>;
+    async fn save_match_day(&self, match_day: &MatchDay) -> Result<(), MatchDayRepositoryError>;
 
-    async fn delete_match_day(
-        &self,
-        match_day_id: &str,
-    ) -> Result<(), MatchDayRepositoryError>;
+    async fn delete_match_day(&self, match_day_id: &str) -> Result<(), MatchDayRepositoryError>;
 
     async fn save_pairing(
         &self,
@@ -107,10 +101,7 @@ pub trait IMatchDayRepository: Send + Sync {
         away_team_id: &str,
     ) -> Result<Option<String>, MatchDayRepositoryError>;
 
-    async fn delete_pairing(
-        &self,
-        pairing_id: &str,
-    ) -> Result<(), MatchDayRepositoryError>;
+    async fn delete_pairing(&self, pairing_id: &str) -> Result<(), MatchDayRepositoryError>;
 
     async fn ensure_match_days_from_structure(
         &self,

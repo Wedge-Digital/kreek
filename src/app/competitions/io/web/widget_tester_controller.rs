@@ -24,9 +24,7 @@ impl IntoResponse for CompetitionsWidgetTesterTemplate {
     }
 }
 
-pub async fn get_competitions_widget_tester(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn get_competitions_widget_tester(State(state): State<AppState>) -> impl IntoResponse {
     let spaces = state
         .spaces
         .space_repository

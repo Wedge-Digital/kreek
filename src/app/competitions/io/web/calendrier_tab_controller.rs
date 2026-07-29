@@ -1,11 +1,13 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::competitions::domain::match_day_repository_port::PairingDisplayDto;
-use crate::app::competitions::io::web::competition_detail::{load_page_base, full_page};
-use crate::app::competitions::io::web::resultats_view::{compute_authorization, ResultAuthorization};
-use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::identity::ids::SpaceId;
-use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::app::auth::domain::user::User;
+use crate::app::competitions::domain::match_day_repository_port::PairingDisplayDto;
+use crate::app::competitions::io::web::competition_detail::{full_page, load_page_base};
+use crate::app::competitions::io::web::resultats_view::{
+    compute_authorization, ResultAuthorization,
+};
+use crate::app::routes::AppRoutes;
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, Query, State};
@@ -85,10 +87,25 @@ pub async fn get_calendrier_tab(
 
     if headers.contains_key("hx-request") {
         let is_initial = query.cursor.is_none();
-        return fragment(space_id, competition_id, season_id, journees, next_cursor, is_initial);
+        return fragment(
+            space_id,
+            competition_id,
+            season_id,
+            journees,
+            next_cursor,
+            is_initial,
+        );
     }
 
-    render_full_page(space_id, competition_id, season_id, journees, next_cursor, &state).await
+    render_full_page(
+        space_id,
+        competition_id,
+        season_id,
+        journees,
+        next_cursor,
+        &state,
+    )
+    .await
 }
 
 async fn build_authorization(
@@ -98,8 +115,7 @@ async fn build_authorization(
     competition_id: &str,
     season_id: &str,
 ) -> Result<ResultAuthorization, Response> {
-    let space = SpaceId::try_new(space_id)
-        .map_err(|_| StatusCode::BAD_REQUEST.into_response())?;
+    let space = SpaceId::try_new(space_id).map_err(|_| StatusCode::BAD_REQUEST.into_response())?;
     let competition = CompetitionId::try_new(competition_id)
         .map_err(|_| StatusCode::BAD_REQUEST.into_response())?;
 
@@ -151,10 +167,19 @@ fn build_journees(
     let mut by_round: BTreeMap<i32, (String, String, String, Vec<MatchCalendrierVm>)> =
         BTreeMap::new();
     for row in rows {
-        let date_range = format_date_range(&row.round_day_type, row.round_date_start.as_deref(), row.round_date_end.as_deref());
-        let entry = by_round
-            .entry(row.round_position)
-            .or_insert_with(|| (row.round_name.clone(), date_range, row.round_day_type.clone(), Vec::new()));
+        let date_range = format_date_range(
+            &row.round_day_type,
+            row.round_date_start.as_deref(),
+            row.round_date_end.as_deref(),
+        );
+        let entry = by_round.entry(row.round_position).or_insert_with(|| {
+            (
+                row.round_name.clone(),
+                date_range,
+                row.round_day_type.clone(),
+                Vec::new(),
+            )
+        });
         entry.3.push(to_calendrier_vm(row, space_id, authz));
     }
 
@@ -162,7 +187,15 @@ fn build_journees(
         .into_iter()
         .map(|(pos, (label, date_range, _, matches))| {
             let match_count = matches.len();
-            (pos, JourneeCalendrierVm { label, date_range, match_count, matches })
+            (
+                pos,
+                JourneeCalendrierVm {
+                    label,
+                    date_range,
+                    match_count,
+                    matches,
+                },
+            )
         })
         .collect();
 
@@ -240,8 +273,18 @@ async fn render_full_page(
         Err(r) => return r,
     };
     let _ = (journees, next_cursor);
-    full_page(pb, space_id, competition_id, season_id, "calendrier", false,
-        vec![], vec![], vec![], vec![])
+    full_page(
+        pb,
+        space_id,
+        competition_id,
+        season_id,
+        "calendrier",
+        false,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+    )
 }
 
 #[cfg(test)]
@@ -282,13 +325,20 @@ mod tests {
     fn coach_of(team_ids: &[&str]) -> ResultAuthorization {
         ResultAuthorization {
             is_admin: false,
-            my_team_ids: team_ids.iter().map(|t| t.to_string()).collect::<HashSet<_>>(),
+            my_team_ids: team_ids
+                .iter()
+                .map(|t| t.to_string())
+                .collect::<HashSet<_>>(),
         }
     }
 
     #[test]
     fn admin_gets_a_link_to_the_match_report() {
-        let vm = to_calendrier_vm(sample_row(), "space-1", &ResultAuthorization::unrestricted());
+        let vm = to_calendrier_vm(
+            sample_row(),
+            "space-1",
+            &ResultAuthorization::unrestricted(),
+        );
 
         assert_eq!(
             vm.report_url.as_deref(),
@@ -315,7 +365,10 @@ mod tests {
 
     #[test]
     fn format_fixed_date() {
-        assert_eq!(format_date_range("fixed_date", Some("12 juin"), None), "12 juin");
+        assert_eq!(
+            format_date_range("fixed_date", Some("12 juin"), None),
+            "12 juin"
+        );
     }
 
     #[test]
@@ -328,7 +381,10 @@ mod tests {
 
     #[test]
     fn format_time_frame_without_end() {
-        assert_eq!(format_date_range("time_frame", Some("10 juin"), None), "10 juin");
+        assert_eq!(
+            format_date_range("time_frame", Some("10 juin"), None),
+            "10 juin"
+        );
     }
 
     #[test]

@@ -20,10 +20,10 @@ fn hash_password(password: &str) -> Result<String, argon2::password_hash::Error>
 }
 
 pub async fn execute(pool: &PgPool, input: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let content = std::fs::read_to_string(input)
-        .map_err(|e| format!("Cannot read {input}: {e}"))?;
-    let accounts: Vec<SeedAccount> = serde_json::from_str(&content)
-        .map_err(|e| format!("Invalid JSON in {input}: {e}"))?;
+    let content =
+        std::fs::read_to_string(input).map_err(|e| format!("Cannot read {input}: {e}"))?;
+    let accounts: Vec<SeedAccount> =
+        serde_json::from_str(&content).map_err(|e| format!("Invalid JSON in {input}: {e}"))?;
 
     for account in &accounts {
         let hash = hash_password(&account.password)

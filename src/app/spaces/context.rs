@@ -2,9 +2,9 @@ use crate::app::spaces::domain::space_repository_port::space_repository_port::IS
 use crate::app::spaces::domain::space_repository_port::user_cache_repository_port::ISpaceUserCacheRepository;
 use crate::app::spaces::io::app_events::app_event_publisher::spaces_app_event_publisher;
 use crate::app::spaces::io::app_events::user_created_listener::user_created_listener;
-use crate::app::spaces::io::web::host_layout::ISpacesHostLayout;
 use crate::app::spaces::io::repository::space_repository::SpaceRepository;
 use crate::app::spaces::io::repository::user_cache_repository::SpaceUserCacheRepository;
+use crate::app::spaces::io::web::host_layout::ISpacesHostLayout;
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::sync::Arc;

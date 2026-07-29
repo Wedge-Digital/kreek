@@ -23,7 +23,12 @@ impl CompetitionDataAdapter {
         reference_repo: Arc<dyn IReferenceRepository>,
         match_day_repo: Arc<dyn IMatchDayRepository>,
     ) -> Self {
-        Self { competition_repo, season_repo, reference_repo, match_day_repo }
+        Self {
+            competition_repo,
+            season_repo,
+            reference_repo,
+            match_day_repo,
+        }
     }
 }
 
@@ -56,7 +61,10 @@ impl ICompetitionDataPort for CompetitionDataAdapter {
     ) -> Option<TierRulesDto> {
         let sid = SeasonId::try_new(season_id).ok()?;
         let rules = self.season_repo.find_rules(&sid).await.ok()??;
-        let tier = rules.tiers.iter().find(|t| t.rosters.contains(&roster_id.to_string()))?;
+        let tier = rules
+            .tiers
+            .iter()
+            .find(|t| t.rosters.contains(&roster_id.to_string()))?;
         let allowed_inducements = tier
             .inducements
             .iter()
@@ -67,14 +75,13 @@ impl ICompetitionDataPort for CompetitionDataAdapter {
             .iter()
             .filter_map(|uid| build_star_player_spec(uid, &*self.reference_repo))
             .collect();
-        Some(TierRulesDto { allowed_inducements, allowed_star_players })
+        Some(TierRulesDto {
+            allowed_inducements,
+            allowed_star_players,
+        })
     }
 
-    async fn find_round_context(
-        &self,
-        season_id: &str,
-        round_id: &str,
-    ) -> Option<RoundContextDto> {
+    async fn find_round_context(&self, season_id: &str, round_id: &str) -> Option<RoundContextDto> {
         let sid = SeasonId::try_new(season_id).ok()?;
         let season = self.season_repo.find_full(&sid).await.ok()??;
         let round = self.match_day_repo.find_by_id(round_id).await.ok()??;
@@ -95,10 +102,7 @@ fn build_inducement_spec(uid: &str, repo: &dyn IReferenceRepository) -> Option<I
     })
 }
 
-fn build_star_player_spec(
-    uid: &str,
-    repo: &dyn IReferenceRepository,
-) -> Option<InducementSpecDto> {
+fn build_star_player_spec(uid: &str, repo: &dyn IReferenceRepository) -> Option<InducementSpecDto> {
     let sp = repo.find_star_player_by_uid(uid)?;
     Some(InducementSpecDto {
         uid: sp.uid.clone(),

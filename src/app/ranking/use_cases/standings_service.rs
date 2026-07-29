@@ -57,7 +57,10 @@ pub fn build_ordered_standings(
 }
 
 fn to_standing(row: RankingLineRow) -> TeamStanding {
-    TeamStanding { team_id: row.team_id, totals: to_totals(row) }
+    TeamStanding {
+        team_id: row.team_id,
+        totals: to_totals(row),
+    }
 }
 
 /// Sans règles configurées, l'ordre est vide — le classement n'est de toute
@@ -93,7 +96,10 @@ mod tests {
     use crate::app::shared_kernel::bloodbowl::team::TeamId;
 
     fn setting(code: &str, activated: bool) -> TiebreakSettingInfo {
-        TiebreakSettingInfo { code: code.into(), activated }
+        TiebreakSettingInfo {
+            code: code.into(),
+            activated,
+        }
     }
 
     fn row(points: u32, td_for: u32) -> RankingLineRow {
@@ -115,8 +121,11 @@ mod tests {
 
     #[test]
     fn to_tiebreak_order_keeps_only_activated_criteria() {
-        let settings =
-            vec![setting("nb_cas", false), setting("nb_td", true), setting("diff_td", false)];
+        let settings = vec![
+            setting("nb_cas", false),
+            setting("nb_td", true),
+            setting("diff_td", false),
+        ];
 
         let order = to_tiebreak_order(&settings);
 
@@ -128,7 +137,11 @@ mod tests {
     /// est volontairement l'inverse de l'ordre canonique du catalogue.
     #[test]
     fn to_tiebreak_order_preserves_the_configured_priority() {
-        let settings = vec![setting("nb_reu", true), setting("nb_cas", true), setting("diff_td", true)];
+        let settings = vec![
+            setting("nb_reu", true),
+            setting("nb_cas", true),
+            setting("diff_td", true),
+        ];
 
         let order = to_tiebreak_order(&settings);
 
@@ -147,8 +160,11 @@ mod tests {
     /// **suivants** conservent leur priorité relative.
     #[test]
     fn to_tiebreak_order_skips_an_unknown_code_without_dropping_the_rest() {
-        let settings =
-            vec![setting("nb_cas", true), setting("nb_red_cards", true), setting("nb_td", true)];
+        let settings = vec![
+            setting("nb_cas", true),
+            setting("nb_red_cards", true),
+            setting("nb_td", true),
+        ];
 
         let order = to_tiebreak_order(&settings);
 
@@ -172,7 +188,10 @@ mod tests {
 
         let team_ids: Vec<TeamId> = ordered.iter().map(|(s, _)| s.team_id).collect();
         assert_eq!(team_ids, expected_order);
-        assert_eq!(ordered.iter().map(|(_, r)| r.0).collect::<Vec<_>>(), vec![1, 2, 3]);
+        assert_eq!(
+            ordered.iter().map(|(_, r)| r.0).collect::<Vec<_>>(),
+            vec![1, 2, 3]
+        );
     }
 
     /// Le critère actif départage deux équipes à égalité de points — c'est la
@@ -197,13 +216,20 @@ mod tests {
 
         let ordered = build_ordered_standings(lines, &TiebreakOrder::empty());
 
-        assert_eq!(ordered.iter().map(|(_, r)| r.0).collect::<Vec<_>>(), vec![1, 2, 2, 4]);
+        assert_eq!(
+            ordered.iter().map(|(_, r)| r.0).collect::<Vec<_>>(),
+            vec![1, 2, 2, 4]
+        );
     }
 
     // ── `tiebreak_order_of`, déplacé depuis `classement_widget` (carte 221) ──
 
     fn rules_with(tiebreakers: Vec<TiebreakSettingInfo>) -> RankingRulesInfo {
-        let no_bonus = || BonusRuleInfo { activated: false, threshold: 0, points: 0 };
+        let no_bonus = || BonusRuleInfo {
+            activated: false,
+            threshold: 0,
+            points: 0,
+        };
         RankingRulesInfo {
             win_points: 3,
             draw_points: 1,
@@ -220,7 +246,10 @@ mod tests {
     /// silencieusement aux points et le départage n'aurait aucun effet visible.
     #[test]
     fn tiebreak_order_of_builds_the_configured_order() {
-        let rules = Some(rules_with(vec![setting("nb_cas", true), setting("nb_td", true)]));
+        let rules = Some(rules_with(vec![
+            setting("nb_cas", true),
+            setting("nb_td", true),
+        ]));
 
         let order = tiebreak_order_of(&rules);
 
@@ -232,9 +261,15 @@ mod tests {
 
     #[test]
     fn tiebreak_order_of_drops_deactivated_criteria() {
-        let rules = Some(rules_with(vec![setting("nb_cas", false), setting("nb_td", true)]));
+        let rules = Some(rules_with(vec![
+            setting("nb_cas", false),
+            setting("nb_td", true),
+        ]));
 
-        assert_eq!(tiebreak_order_of(&rules), TiebreakOrder::new(vec![TiebreakCriterion::NbTd]));
+        assert_eq!(
+            tiebreak_order_of(&rules),
+            TiebreakOrder::new(vec![TiebreakCriterion::NbTd])
+        );
     }
 
     /// Sans règles configurées, le classement n'est pas affiché — l'ordre reste

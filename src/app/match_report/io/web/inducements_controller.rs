@@ -1,7 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
-use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
 use crate::app::match_report::domain::value_objects::{RosterPositionUid, TeamValue};
+use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
 use crate::app::match_report::use_cases::record_inducements_use_case::{
     self, InducementPurchaseCmd, MercenaryLevel, MercenaryPurchaseCmd, RecordInducementsCommand,
     RecordInducementsOutcome,
@@ -31,9 +31,9 @@ pub struct InducementsTemplate {
     pub team_initials: String,
     pub order_label: String,
     pub budget: u32,
-    pub inducement_selector_url:  String,
-    pub mercenary_selector_url:   String,
-    pub form_action:              String,
+    pub inducement_selector_url: String,
+    pub mercenary_selector_url: String,
+    pub form_action: String,
 }
 
 impl IntoResponse for InducementsTemplate {
@@ -107,13 +107,21 @@ async fn build_vm(
         .find_tier_rules_for_roster(&pm.season_id.to_string(), &team_info.roster_id)
         .await
         .unwrap_or_default();
-    let treasury = team_data.find_team_treasury(&team_id.to_string()).await.unwrap_or(0);
+    let treasury = team_data
+        .find_team_treasury(&team_id.to_string())
+        .await
+        .unwrap_or(0);
     let budget = pm.inducement_budget_for(&team_id, treasury);
     let is_topdog = pm.topdog_team_id() == &team_id;
     let selector_url = build_selector_url(routes, &tier, &team_info.roster_id);
-    let mercenary_url = routes.match_report.mercenary_selector(space_id, &mr_id.to_string(), &team_id.to_string());
+    let mercenary_url =
+        routes
+            .match_report
+            .mercenary_selector(space_id, &mr_id.to_string(), &team_id.to_string());
     let form_action =
-        routes.match_report.inducements(space_id, &mr_id.to_string(), &team_id.to_string());
+        routes
+            .match_report
+            .inducements(space_id, &mr_id.to_string(), &team_id.to_string());
     let initials = team_info
         .team_name
         .split_whitespace()
@@ -128,10 +136,14 @@ async fn build_vm(
         team_id: team_id.to_string(),
         team_name: team_info.team_name,
         team_initials: initials,
-        order_label: if is_topdog { "TopDog — achète en premier".to_string() } else { "Underdog — achète en second".to_string() },
+        order_label: if is_topdog {
+            "TopDog — achète en premier".to_string()
+        } else {
+            "Underdog — achète en second".to_string()
+        },
         budget,
-        inducement_selector_url:  selector_url,
-        mercenary_selector_url:   mercenary_url,
+        inducement_selector_url: selector_url,
+        mercenary_selector_url: mercenary_url,
         form_action,
     })
 }
@@ -158,8 +170,18 @@ fn build_selector_url(
     tier: &crate::app::match_report::ports::TierRulesDto,
     roster_id: &str,
 ) -> String {
-    let inducement_csv: String = tier.allowed_inducements.iter().map(|s| s.uid.as_str()).collect::<Vec<_>>().join(",");
-    let star_csv: String = tier.allowed_star_players.iter().map(|s| s.uid.as_str()).collect::<Vec<_>>().join(",");
+    let inducement_csv: String = tier
+        .allowed_inducements
+        .iter()
+        .map(|s| s.uid.as_str())
+        .collect::<Vec<_>>()
+        .join(",");
+    let star_csv: String = tier
+        .allowed_star_players
+        .iter()
+        .map(|s| s.uid.as_str())
+        .collect::<Vec<_>>()
+        .join(",");
     format!(
         "{}?allowed_inducement_uids={}&allowed_star_player_uids={}&roster_id={}",
         routes.references.inducement_selector(),
@@ -174,9 +196,9 @@ fn build_selector_url(
 #[derive(Deserialize)]
 pub struct InducementsForm {
     #[serde(default)]
-    pub intent:      String,
+    pub intent: String,
     #[serde(default)]
-    pub selection:   String,
+    pub selection: String,
     #[serde(default)]
     pub mercenaries: String,
 }
@@ -232,15 +254,25 @@ pub async fn post_inducements(
     .await
     {
         Ok(RecordInducementsOutcome::RedirectToInducements { next_team_id }) => {
-            let url = AppRoutes::default().match_report.inducements(&space_id, &match_report_id, &next_team_id);
+            let url = AppRoutes::default().match_report.inducements(
+                &space_id,
+                &match_report_id,
+                &next_team_id,
+            );
             Redirect::to(&url).into_response()
         }
         Ok(RecordInducementsOutcome::RedirectToStep3) => {
-            let url = AppRoutes::default().match_report.step3(&space_id, &match_report_id);
+            let url = AppRoutes::default()
+                .match_report
+                .step3(&space_id, &match_report_id);
             Redirect::to(&url).into_response()
         }
-        Err(record_inducements_use_case::RecordInducementsError::NotFound) => StatusCode::NOT_FOUND.into_response(),
-        Err(record_inducements_use_case::RecordInducementsError::NotInPreMatchPhase) => StatusCode::CONFLICT.into_response(),
+        Err(record_inducements_use_case::RecordInducementsError::NotFound) => {
+            StatusCode::NOT_FOUND.into_response()
+        }
+        Err(record_inducements_use_case::RecordInducementsError::NotInPreMatchPhase) => {
+            StatusCode::CONFLICT.into_response()
+        }
         Err(e) => {
             tracing::error!("post_inducements: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -252,8 +284,8 @@ fn parse_path_ids(
     match_report_id: &str,
     team_id: &str,
 ) -> Result<(MatchReportId, TeamId), Response> {
-    let mr_id =
-        MatchReportId::try_new(match_report_id).map_err(|_| StatusCode::BAD_REQUEST.into_response())?;
+    let mr_id = MatchReportId::try_new(match_report_id)
+        .map_err(|_| StatusCode::BAD_REQUEST.into_response())?;
     let team_id_vo =
         TeamId::try_new(team_id).map_err(|_| StatusCode::BAD_REQUEST.into_response())?;
     Ok((mr_id, team_id_vo))
@@ -262,7 +294,7 @@ fn parse_path_ids(
 #[derive(serde::Deserialize)]
 struct MercenaryItem {
     position_uid: String,
-    level:        String,
+    level: String,
 }
 
 fn parse_mercenaries(json: &str) -> Result<Vec<MercenaryPurchaseCmd>, Response> {
@@ -285,6 +317,9 @@ fn parse_purchases(selection_json: &str) -> Vec<InducementPurchaseCmd> {
         .unwrap_or_default()
         .into_iter()
         .filter(|item| !item.uid.is_empty())
-        .map(|item| InducementPurchaseCmd { uid: InducementId(item.uid), qty: item.qty })
+        .map(|item| InducementPurchaseCmd {
+            uid: InducementId(item.uid),
+            qty: item.qty,
+        })
         .collect()
 }

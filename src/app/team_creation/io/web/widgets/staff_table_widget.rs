@@ -1,14 +1,14 @@
-use crate::app::shared_kernel::identity::ids::EntityId;
-use crate::app::shared_kernel::bloodbowl::staff::StaffId;
-use crate::app::team_creation::io::web::view_models::{RerollVm, StaffRowVm};
 use crate::app::routes::AppRoutes;
+use crate::app::shared_kernel::bloodbowl::staff::StaffId;
+use crate::app::shared_kernel::identity::ids::EntityId;
+use crate::app::team_creation::io::web::view_models::{RerollVm, StaffRowVm};
 use crate::app::team_creation::use_cases::build_team::buy_reroll as buy_reroll_uc;
 use crate::app::team_creation::use_cases::build_team::buy_staff as buy_staff_uc;
+use crate::app::team_creation::use_cases::build_team::remove_reroll as remove_reroll_uc;
+use crate::app::team_creation::use_cases::build_team::remove_staff as remove_staff_uc;
 use crate::app::team_creation::use_cases::commands::{
     BuyRerollCommand, BuyStaffCommand, RemoveRerollCommand, RemoveStaffCommand,
 };
-use crate::app::team_creation::use_cases::build_team::remove_reroll as remove_reroll_uc;
-use crate::app::team_creation::use_cases::build_team::remove_staff as remove_staff_uc;
 use crate::state::AppState;
 use askama::Template;
 use axum::body::Body;

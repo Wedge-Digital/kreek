@@ -7,9 +7,9 @@ use crate::app::competitions::ports::{ITeamInfoPort, TeamInfoDto};
 use crate::app::competitions::use_cases::admin::team_enrollment::{
     build_new_pairing_projection, filter_enrolled_team_ids, load_enrolled_teams, resolve_team_names,
 };
-use crate::app::shared_kernel::identity::ids::EventId;
 use crate::app::shared_kernel::bloodbowl::ids::PairingId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::EventId;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::collections::{HashMap, HashSet};
 
@@ -79,14 +79,25 @@ pub async fn execute(
             continue;
         }
         generate_and_save_group_pairings(
-            &filtered_ids, &mut already_played, match_day_id, competition_id, season_id,
-            space_id, &match_day, &team_display, match_day_repo, event_bus,
+            &filtered_ids,
+            &mut already_played,
+            match_day_id,
+            competition_id,
+            season_id,
+            space_id,
+            &match_day,
+            &team_display,
+            match_day_repo,
+            event_bus,
         )
         .await?;
     }
 
     let skipped_team_names = resolve_team_names(skipped_team_ids, team_port).await;
-    Ok(GenerateOutcome { skipped_team_names, skipped_group_names })
+    Ok(GenerateOutcome {
+        skipped_team_names,
+        skipped_group_names,
+    })
 }
 
 async fn load_groups(
@@ -134,17 +145,30 @@ async fn generate_and_save_group_pairings(
             home_team_id: TeamId::try_new(&home).expect("valid team id"),
             away_team_id: TeamId::try_new(&away).expect("valid team id"),
         };
-        let projection = build_new_pairing_projection(&home, &away, season_id, match_day, team_display);
+        let projection =
+            build_new_pairing_projection(&home, &away, season_id, match_day, team_display);
         match_day_repo
             .save_pairing(match_day_id, &pairing, &projection)
             .await
             .map_err(|e| GenerateError::Repository(e.to_string()))?;
 
         emit_pairing_created(
-            &home, &away, &pairing, competition_id, season_id, space_id, match_day, team_display, event_bus,
+            &home,
+            &away,
+            &pairing,
+            competition_id,
+            season_id,
+            space_id,
+            match_day,
+            team_display,
+            event_bus,
         );
 
-        let norm = if home < away { (home, away) } else { (away, home) };
+        let norm = if home < away {
+            (home, away)
+        } else {
+            (away, home)
+        };
         already_played.insert(norm);
     }
     Ok(())
@@ -159,7 +183,11 @@ fn build_played_set(days: &[MatchDay], exclude_id: &str) -> HashSet<(String, Str
         for p in &day.pairings {
             let home = p.home_team_id.to_string();
             let away = p.away_team_id.to_string();
-            let pair = if home < away { (home, away) } else { (away, home) };
+            let pair = if home < away {
+                (home, away)
+            } else {
+                (away, home)
+            };
             played.insert(pair);
         }
     }
@@ -179,8 +207,12 @@ fn emit_pairing_created(
 ) {
     // Invariant garanti par le filtrage fait avant l'appel à generate_round_pairings :
     // home/away ne peuvent être ici que des ids déjà présents dans team_display.
-    let home_info = team_display.get(home).expect("home team filtré comme enrôlé avant appariement");
-    let away_info = team_display.get(away).expect("away team filtré comme enrôlé avant appariement");
+    let home_info = team_display
+        .get(home)
+        .expect("home team filtré comme enrôlé avant appariement");
+    let away_info = team_display
+        .get(away)
+        .expect("away team filtré comme enrôlé avant appariement");
 
     let _ = event_bus.send(
         CompetitionsDomainEvent::PairingCreated {
@@ -214,70 +246,171 @@ fn emit_pairing_created(
 mod tests {
     use super::*;
     use crate::app::competitions::domain::group_repository_port::GroupRepositoryError;
-    use crate::app::competitions::domain::match_day::{MatchDayName, MatchDayPosition, MatchDayType};
-    use crate::app::competitions::domain::match_day_repository_port::{MatchDayRepositoryError, PairingDisplayDto};
+    use crate::app::competitions::domain::match_day::{
+        MatchDayName, MatchDayPosition, MatchDayType,
+    };
+    use crate::app::competitions::domain::match_day_repository_port::{
+        MatchDayRepositoryError, PairingDisplayDto,
+    };
     use crate::app::shared_kernel::bloodbowl::ids::{MatchId, SeasonId};
     use async_trait::async_trait;
 
     struct FakeMatchDayRepo(MatchDay);
     #[async_trait]
     impl IMatchDayRepository for FakeMatchDayRepo {
-        async fn find_by_season(&self, _: &str) -> Result<Vec<MatchDay>, MatchDayRepositoryError> { Ok(vec![self.0.clone()]) }
-        async fn find_by_id(&self, _: &str) -> Result<Option<MatchDay>, MatchDayRepositoryError> { Ok(Some(self.0.clone())) }
-        async fn save_match_day(&self, _: &MatchDay) -> Result<(), MatchDayRepositoryError> { Ok(()) }
-        async fn delete_match_day(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
-        async fn save_pairing(&self, _: &str, _: &Pairing, _: &crate::app::competitions::domain::match_day_repository_port::NewPairingProjection) -> Result<(), MatchDayRepositoryError> { Ok(()) }
-        async fn find_pairing_id(&self, _: &str, _: &str, _: &str) -> Result<Option<String>, MatchDayRepositoryError> { Ok(None) }
-        async fn delete_pairing(&self, _: &str) -> Result<(), MatchDayRepositoryError> { Ok(()) }
-        async fn ensure_match_days_from_structure(&self, _: &str, _: &[(String, String, String, Option<String>, Option<String>)]) -> Result<(), MatchDayRepositoryError> { Ok(()) }
-        async fn list_resultats(&self, _: &str, _: Option<i32>, _: u32) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> { Ok(vec![]) }
-        async fn list_calendrier(&self, _: &str, _: Option<i32>, _: u32) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> { Ok(vec![]) }
+        async fn find_by_season(&self, _: &str) -> Result<Vec<MatchDay>, MatchDayRepositoryError> {
+            Ok(vec![self.0.clone()])
+        }
+        async fn find_by_id(&self, _: &str) -> Result<Option<MatchDay>, MatchDayRepositoryError> {
+            Ok(Some(self.0.clone()))
+        }
+        async fn save_match_day(&self, _: &MatchDay) -> Result<(), MatchDayRepositoryError> {
+            Ok(())
+        }
+        async fn delete_match_day(&self, _: &str) -> Result<(), MatchDayRepositoryError> {
+            Ok(())
+        }
+        async fn save_pairing(
+            &self,
+            _: &str,
+            _: &Pairing,
+            _: &crate::app::competitions::domain::match_day_repository_port::NewPairingProjection,
+        ) -> Result<(), MatchDayRepositoryError> {
+            Ok(())
+        }
+        async fn find_pairing_id(
+            &self,
+            _: &str,
+            _: &str,
+            _: &str,
+        ) -> Result<Option<String>, MatchDayRepositoryError> {
+            Ok(None)
+        }
+        async fn delete_pairing(&self, _: &str) -> Result<(), MatchDayRepositoryError> {
+            Ok(())
+        }
+        async fn ensure_match_days_from_structure(
+            &self,
+            _: &str,
+            _: &[(String, String, String, Option<String>, Option<String>)],
+        ) -> Result<(), MatchDayRepositoryError> {
+            Ok(())
+        }
+        async fn list_resultats(
+            &self,
+            _: &str,
+            _: Option<i32>,
+            _: u32,
+        ) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> {
+            Ok(vec![])
+        }
+        async fn list_calendrier(
+            &self,
+            _: &str,
+            _: Option<i32>,
+            _: u32,
+        ) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> {
+            Ok(vec![])
+        }
     }
 
     struct FakeGroupRepo;
     #[async_trait]
     impl IGroupRepository for FakeGroupRepo {
-        async fn find_groups(&self, _: &str) -> Result<Vec<GroupWithTeams>, GroupRepositoryError> { Ok(vec![]) }
-        async fn save_assignments(&self, _: &[(String, String)]) -> Result<(), GroupRepositoryError> { Ok(()) }
-        async fn reset_assignments(&self, _: &str) -> Result<(), GroupRepositoryError> { Ok(()) }
-        async fn assign_team(&self, _: &str, _: &str) -> Result<(), GroupRepositoryError> { Ok(()) }
-        async fn unassign_team(&self, _: &str) -> Result<(), GroupRepositoryError> { Ok(()) }
-        async fn ensure_groups_from_structure(&self, _: &str, _: &[(String, String)]) -> Result<(), GroupRepositoryError> { Ok(()) }
+        async fn find_groups(&self, _: &str) -> Result<Vec<GroupWithTeams>, GroupRepositoryError> {
+            Ok(vec![])
+        }
+        async fn save_assignments(
+            &self,
+            _: &[(String, String)],
+        ) -> Result<(), GroupRepositoryError> {
+            Ok(())
+        }
+        async fn reset_assignments(&self, _: &str) -> Result<(), GroupRepositoryError> {
+            Ok(())
+        }
+        async fn assign_team(&self, _: &str, _: &str) -> Result<(), GroupRepositoryError> {
+            Ok(())
+        }
+        async fn unassign_team(&self, _: &str) -> Result<(), GroupRepositoryError> {
+            Ok(())
+        }
+        async fn ensure_groups_from_structure(
+            &self,
+            _: &str,
+            _: &[(String, String)],
+        ) -> Result<(), GroupRepositoryError> {
+            Ok(())
+        }
     }
 
     struct FakeTeamInfoPort;
     #[async_trait]
     impl ITeamInfoPort for FakeTeamInfoPort {
-        async fn find_enrolled_teams(&self, _: &str) -> Result<Vec<TeamInfoDto>, String> { Ok(vec![]) }
-        async fn find_team_names(&self, _: &[String]) -> Result<Vec<TeamInfoDto>, String> { Ok(vec![]) }
+        async fn find_enrolled_teams(&self, _: &str) -> Result<Vec<TeamInfoDto>, String> {
+            Ok(vec![])
+        }
+        async fn find_team_names(&self, _: &[String]) -> Result<Vec<TeamInfoDto>, String> {
+            Ok(vec![])
+        }
     }
 
     struct FakeGroupRepoWithEmptyGroup(&'static str);
     #[async_trait]
     impl IGroupRepository for FakeGroupRepoWithEmptyGroup {
         async fn find_groups(&self, _: &str) -> Result<Vec<GroupWithTeams>, GroupRepositoryError> {
-            Ok(vec![GroupWithTeams { group_id: "g1".to_string(), group_name: self.0.to_string(), position: 0, team_ids: vec![] }])
+            Ok(vec![GroupWithTeams {
+                group_id: "g1".to_string(),
+                group_name: self.0.to_string(),
+                position: 0,
+                team_ids: vec![],
+            }])
         }
-        async fn save_assignments(&self, _: &[(String, String)]) -> Result<(), GroupRepositoryError> { Ok(()) }
-        async fn reset_assignments(&self, _: &str) -> Result<(), GroupRepositoryError> { Ok(()) }
-        async fn assign_team(&self, _: &str, _: &str) -> Result<(), GroupRepositoryError> { Ok(()) }
-        async fn unassign_team(&self, _: &str) -> Result<(), GroupRepositoryError> { Ok(()) }
-        async fn ensure_groups_from_structure(&self, _: &str, _: &[(String, String)]) -> Result<(), GroupRepositoryError> { Ok(()) }
+        async fn save_assignments(
+            &self,
+            _: &[(String, String)],
+        ) -> Result<(), GroupRepositoryError> {
+            Ok(())
+        }
+        async fn reset_assignments(&self, _: &str) -> Result<(), GroupRepositoryError> {
+            Ok(())
+        }
+        async fn assign_team(&self, _: &str, _: &str) -> Result<(), GroupRepositoryError> {
+            Ok(())
+        }
+        async fn unassign_team(&self, _: &str) -> Result<(), GroupRepositoryError> {
+            Ok(())
+        }
+        async fn ensure_groups_from_structure(
+            &self,
+            _: &str,
+            _: &[(String, String)],
+        ) -> Result<(), GroupRepositoryError> {
+            Ok(())
+        }
     }
 
     struct FakeTeamInfoPortWithEnrolled(Vec<TeamInfoDto>);
     #[async_trait]
     impl ITeamInfoPort for FakeTeamInfoPortWithEnrolled {
-        async fn find_enrolled_teams(&self, _: &str) -> Result<Vec<TeamInfoDto>, String> { Ok(self.0.clone()) }
-        async fn find_team_names(&self, _: &[String]) -> Result<Vec<TeamInfoDto>, String> { Ok(vec![]) }
+        async fn find_enrolled_teams(&self, _: &str) -> Result<Vec<TeamInfoDto>, String> {
+            Ok(self.0.clone())
+        }
+        async fn find_team_names(&self, _: &[String]) -> Result<Vec<TeamInfoDto>, String> {
+            Ok(vec![])
+        }
     }
 
     fn match_day_with_pairings(pairings: Vec<Pairing>) -> MatchDay {
         MatchDay {
-            id: MatchId::new(), season_id: SeasonId::new(),
+            id: MatchId::new(),
+            season_id: SeasonId::new(),
             name: MatchDayName::try_new("Journée 1".to_string()).unwrap(),
-            day_type: MatchDayType::FixedDate, date_start: None, date_end: None,
-            position: MatchDayPosition::try_new(0).unwrap(), pairings,
+            day_type: MatchDayType::FixedDate,
+            date_start: None,
+            date_end: None,
+            position: MatchDayPosition::try_new(0).unwrap(),
+            pairings,
         }
     }
 
@@ -293,7 +426,17 @@ mod tests {
         let team_port = FakeTeamInfoPort;
         let event_bus = crate::common::services::event_bus::event_bus::new_bus();
 
-        let result = execute("d1", "s1", "c1", "sp1", &match_day_repo, &group_repo, &team_port, &event_bus).await;
+        let result = execute(
+            "d1",
+            "s1",
+            "c1",
+            "sp1",
+            &match_day_repo,
+            &group_repo,
+            &team_port,
+            &event_bus,
+        )
+        .await;
 
         assert!(matches!(result, Err(GenerateError::PairingsAlreadyExist)));
     }
@@ -305,7 +448,17 @@ mod tests {
         let team_port = FakeTeamInfoPort;
         let event_bus = crate::common::services::event_bus::event_bus::new_bus();
 
-        let result = execute("d1", "s1", "c1", "sp1", &match_day_repo, &group_repo, &team_port, &event_bus).await;
+        let result = execute(
+            "d1",
+            "s1",
+            "c1",
+            "sp1",
+            &match_day_repo,
+            &group_repo,
+            &team_port,
+            &event_bus,
+        )
+        .await;
 
         // pas de groupes ni d'équipes enrôlées -> NoGroups, mais surtout PAS PairingsAlreadyExist
         assert!(matches!(result, Err(GenerateError::NoGroups)));
@@ -316,14 +469,27 @@ mod tests {
         let match_day_repo = FakeMatchDayRepo(match_day_with_pairings(vec![]));
         let group_repo = FakeGroupRepoWithEmptyGroup("Poule 1");
         let team_port = FakeTeamInfoPortWithEnrolled(vec![TeamInfoDto {
-            team_id: "t1".into(), team_name: "Team 1".into(),
-            coach_id: String::new(), coach_name: String::new(), roster_name: String::new(), logo_url: None,
+            team_id: "t1".into(),
+            team_name: "Team 1".into(),
+            coach_id: String::new(),
+            coach_name: String::new(),
+            roster_name: String::new(),
+            logo_url: None,
         }]);
         let event_bus = crate::common::services::event_bus::event_bus::new_bus();
 
-        let outcome = execute("d1", "s1", "c1", "sp1", &match_day_repo, &group_repo, &team_port, &event_bus)
-            .await
-            .expect("ne doit pas échouer, juste signaler la poule ignorée");
+        let outcome = execute(
+            "d1",
+            "s1",
+            "c1",
+            "sp1",
+            &match_day_repo,
+            &group_repo,
+            &team_port,
+            &event_bus,
+        )
+        .await
+        .expect("ne doit pas échouer, juste signaler la poule ignorée");
 
         assert_eq!(outcome.skipped_group_names, vec!["Poule 1".to_string()]);
     }

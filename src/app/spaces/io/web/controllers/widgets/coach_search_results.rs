@@ -1,14 +1,14 @@
+use crate::app::shared_kernel::identity::coach_definition::CoachDefinition;
+use crate::app::shared_kernel::identity::coach_name::CoachName;
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::spaces::context::SpacesContext;
+use crate::app::spaces::routes::Routes;
+use crate::common::initials::initials;
 use askama::Template;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
-use crate::app::spaces::routes::Routes;
-use crate::app::shared_kernel::identity::coach_definition::CoachDefinition;
-use crate::app::shared_kernel::identity::coach_name::CoachName;
-use crate::common::initials::initials;
 
 // ── Résultats de recherche ────────────────────────────────────────────────────
 #[derive(Deserialize)]
@@ -66,7 +66,7 @@ pub(crate) async fn find_coaches(
                 id: CoachId::try_new(&id).unwrap(),
                 name: CoachName::try_new(&name).unwrap(),
                 initials: initials(&name),
-                icon: u.icon.clone()
+                icon: u.icon.clone(),
             })
         })
         .collect()
@@ -94,5 +94,6 @@ pub async fn coaches_search_results_controller(
         routes: Routes,
         coaches,
         space_id: params.space_id,
-    }.into_response()
+    }
+    .into_response()
 }

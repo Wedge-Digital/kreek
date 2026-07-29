@@ -4,8 +4,8 @@ use crate::app::news::domain::article_repository_port::{
 };
 use crate::app::news::domain::article_tag::ArticleTag;
 use crate::app::news::domain::article_title::ArticleTitle;
-use crate::app::shared_kernel::identity::ids::{SpaceId, UserId};
 use crate::app::shared_kernel::bloodbowl::ids::ArticleId;
+use crate::app::shared_kernel::identity::ids::{SpaceId, UserId};
 
 #[derive(Debug)]
 pub enum CreateArticleError {

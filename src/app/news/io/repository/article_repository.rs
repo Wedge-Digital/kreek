@@ -4,8 +4,8 @@ use crate::app::news::domain::article_repository_port::{
 };
 use crate::app::news::domain::article_tag::ArticleTag;
 use crate::app::news::domain::article_title::ArticleTitle;
-use crate::app::shared_kernel::identity::ids::{SpaceId, UserId};
 use crate::app::shared_kernel::bloodbowl::ids::ArticleId;
+use crate::app::shared_kernel::identity::ids::{SpaceId, UserId};
 use async_trait::async_trait;
 use sqlx::PgPool;
 
@@ -35,7 +35,11 @@ impl TryFrom<ArticleRow> for Article {
         let paragraphs: Vec<ArticleParagraph> =
             serde_json::from_value(row.content).map_err(|e| db_err(e))?;
         let title = ArticleTitle::try_new(row.title).map_err(|e| db_err(e))?;
-        let tags = row.tags.iter().filter_map(|s| s.parse::<ArticleTag>().ok()).collect();
+        let tags = row
+            .tags
+            .iter()
+            .filter_map(|s| s.parse::<ArticleTag>().ok())
+            .collect();
         Ok(Article::new(
             ArticleId::try_new(&row.id).map_err(|e| db_err(e))?,
             SpaceId::try_new(&row.space_id).map_err(|e| db_err(e))?,

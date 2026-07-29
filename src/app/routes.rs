@@ -17,15 +17,15 @@ use crate::web::routes::Routes as WebRoutes;
 /// comme unique champ de routes dans les structs de template Askama.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct AppRoutes {
-    pub auth:          AuthRoutes,
-    pub web:           WebRoutes,
-    pub competitions:  CompetitionsRoutes,
-    pub match_report:  MatchReportRoutes,
-    pub news:          NewsRoutes,
-    pub spaces:        SpacesRoutes,
+    pub auth: AuthRoutes,
+    pub web: WebRoutes,
+    pub competitions: CompetitionsRoutes,
+    pub match_report: MatchReportRoutes,
+    pub news: NewsRoutes,
+    pub spaces: SpacesRoutes,
     pub team_creation: TeamCreationRoutes,
-    pub teams:         TeamsRoutes,
-    pub players:       PlayersRoutes,
-    pub ranking:       RankingRoutes,
-    pub references:    ReferencesRoutes,
+    pub teams: TeamsRoutes,
+    pub players: PlayersRoutes,
+    pub ranking: RankingRoutes,
+    pub references: ReferencesRoutes,
 }

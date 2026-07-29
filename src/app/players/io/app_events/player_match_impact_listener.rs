@@ -1,4 +1,6 @@
-use crate::app::players::domain::match_impact::{InjuryType, MatchContext, MatchReportId, RoundId, SppEarned, StatKind};
+use crate::app::players::domain::match_impact::{
+    InjuryType, MatchContext, MatchReportId, RoundId, SppEarned, StatKind,
+};
 use crate::app::players::domain::player::{Player, PlayerId, TeamId};
 use crate::app::players::io::app_events::team_match_concluded_listener::handle_team_match_concluded;
 use crate::app::players::ports::IPlayerRepository;
@@ -19,9 +21,9 @@ pub fn init(
         loop {
             match rx.recv().await {
                 Ok(envelope) => {
-                    let Ok(app_event) =
-                        serde_json::from_value::<PlayerMatchImpactAppEvent>(envelope.payload.clone())
-                    else {
+                    let Ok(app_event) = serde_json::from_value::<PlayerMatchImpactAppEvent>(
+                        envelope.payload.clone(),
+                    ) else {
                         continue;
                     };
                     handle_event(app_event, player_repo.as_ref(), skill_catalog.as_ref()).await;
@@ -49,8 +51,10 @@ async fn handle_event(
 
     // Comme `TeamMatchConcluded`, cet événement porte sur toute une équipe et
     // non sur un joueur : il est traité à part, dans la même tâche séquentielle.
-    if let PlayerMatchImpactAppEvent::TeamMatchImpactReverted { team_id, match_report_id } =
-        &app_event
+    if let PlayerMatchImpactAppEvent::TeamMatchImpactReverted {
+        team_id,
+        match_report_id,
+    } = &app_event
     {
         return revert_team_match_impact(player_repo, team_id, match_report_id).await;
     }
@@ -61,10 +65,13 @@ async fn handle_event(
         | PlayerMatchImpactAppEvent::PlayerPerformedInterception(c)
         | PlayerMatchImpactAppEvent::PlayerPerformedCasualty(c)
         | PlayerMatchImpactAppEvent::PlayerPerformedMvp(c)
-        | PlayerMatchImpactAppEvent::PlayerPerformedFoul(c) => (c.clone(), load_player(player_repo, &c.player_id).await),
-        PlayerMatchImpactAppEvent::PlayerInjured { context, .. } => {
-            (context.clone(), load_player(player_repo, &context.player_id).await)
+        | PlayerMatchImpactAppEvent::PlayerPerformedFoul(c) => {
+            (c.clone(), load_player(player_repo, &c.player_id).await)
         }
+        PlayerMatchImpactAppEvent::PlayerInjured { context, .. } => (
+            context.clone(),
+            load_player(player_repo, &context.player_id).await,
+        ),
         PlayerMatchImpactAppEvent::TeamMatchConcluded { .. }
         | PlayerMatchImpactAppEvent::TeamMatchImpactReverted { .. } => {
             unreachable!("traités plus haut")
@@ -106,7 +113,10 @@ async fn handle_event(
     };
 
     let next_version = player.version + 1;
-    if let Err(e) = player_repo.append(&player.id, &player.team_id, &event, next_version).await {
+    if let Err(e) = player_repo
+        .append(&player.id, &player.team_id, &event, next_version)
+        .await
+    {
         tracing::error!(
             "player_match_impact_listener: append {}: {e}",
             context_payload.player_id
@@ -119,17 +129,23 @@ async fn dispatch_team_match_concluded(
     player_repo: &dyn IPlayerRepository,
 ) {
     let PlayerMatchImpactAppEvent::TeamMatchConcluded {
-        team_id, match_report_id, round_id, round_label,
-        opponent_team_id, opponent_team_name, team_score, opponent_score,
+        team_id,
+        match_report_id,
+        round_id,
+        round_label,
+        opponent_team_id,
+        opponent_team_name,
+        team_score,
+        opponent_score,
     } = app_event
     else {
         return;
     };
     let context = MatchContext {
         match_report_id: MatchReportId(match_report_id),
-        round_id:        RoundId(round_id),
+        round_id: RoundId(round_id),
         round_label,
-        opponent_team_id:   TeamId(opponent_team_id),
+        opponent_team_id: TeamId(opponent_team_id),
         opponent_team_name,
     };
     handle_team_match_concluded(player_repo, &team_id, context, team_score, opponent_score).await;
@@ -141,8 +157,8 @@ async fn dispatch_team_match_concluded(
 /// joueurs dont le dernier match n'est pas celui-ci, ce qui vaut aussi
 /// idempotence si la compensation est rejouée.
 async fn revert_team_match_impact(
-    player_repo:     &dyn IPlayerRepository,
-    team_id:         &str,
+    player_repo: &dyn IPlayerRepository,
+    team_id: &str,
     match_report_id: &str,
 ) {
     let Some(players) = load_roster(player_repo, team_id).await else {
@@ -156,8 +172,8 @@ async fn revert_team_match_impact(
 
 async fn revert_one_player(
     player_repo: &dyn IPlayerRepository,
-    player:      &Player,
-    target:      &MatchReportId,
+    player: &Player,
+    target: &MatchReportId,
 ) {
     // `None` : ce joueur n'a rien à défaire pour ce match.
     let Some(event) = player.revert_match_impact(target) else {
@@ -175,7 +191,10 @@ async fn revert_one_player(
 }
 
 async fn load_roster(player_repo: &dyn IPlayerRepository, team_id: &str) -> Option<Vec<Player>> {
-    match player_repo.find_by_team_id(&TeamId(team_id.to_string())).await {
+    match player_repo
+        .find_by_team_id(&TeamId(team_id.to_string()))
+        .await
+    {
         Ok(players) => Some(players),
         Err(e) => {
             tracing::error!("player_match_impact_listener: find_by_team_id {team_id}: {e}");
@@ -185,7 +204,11 @@ async fn load_roster(player_repo: &dyn IPlayerRepository, team_id: &str) -> Opti
 }
 
 async fn load_player(player_repo: &dyn IPlayerRepository, player_id: &str) -> Option<Player> {
-    player_repo.find_by_id(&PlayerId(player_id.to_string())).await.ok().flatten()
+    player_repo
+        .find_by_id(&PlayerId(player_id.to_string()))
+        .await
+        .ok()
+        .flatten()
 }
 
 fn spp_earned(amount: u8) -> SppEarned {
@@ -195,10 +218,10 @@ fn spp_earned(amount: u8) -> SppEarned {
 
 fn to_match_context(c: &PlayerMatchContextPayload) -> MatchContext {
     MatchContext {
-        match_report_id:    MatchReportId(c.match_report_id.clone()),
-        round_id:           RoundId(c.round_id.clone()),
-        round_label:        c.round_label.clone(),
-        opponent_team_id:   TeamId(c.opponent_team_id.clone()),
+        match_report_id: MatchReportId(c.match_report_id.clone()),
+        round_id: RoundId(c.round_id.clone()),
+        round_label: c.round_label.clone(),
+        opponent_team_id: TeamId(c.opponent_team_id.clone()),
         opponent_team_name: c.opponent_team_name.clone(),
     }
 }
@@ -208,7 +231,9 @@ fn to_injury_type(payload: &InjuryTypePayload) -> InjuryType {
         InjuryTypePayload::Commotion => InjuryType::Commotion,
         InjuryTypePayload::Amoche => InjuryType::Amoche,
         InjuryTypePayload::BlessureSerieuse => InjuryType::BlessureSerieuse,
-        InjuryTypePayload::Sequel { stat } => InjuryType::Sequel { stat: to_stat_kind(stat) },
+        InjuryTypePayload::Sequel { stat } => InjuryType::Sequel {
+            stat: to_stat_kind(stat),
+        },
         InjuryTypePayload::Mort => InjuryType::Mort,
     }
 }
@@ -247,30 +272,35 @@ mod tests {
 
     fn sample_context_payload(player_id: &str) -> PlayerMatchContextPayload {
         PlayerMatchContextPayload {
-            match_report_id:    "mr1".into(),
-            round_id:           "r1".into(),
-            round_label:        "Journée 5".into(),
-            opponent_team_id:   "opponent".into(),
+            match_report_id: "mr1".into(),
+            round_id: "r1".into(),
+            round_label: "Journée 5".into(),
+            opponent_team_id: "opponent".into(),
             opponent_team_name: "Bone Crushers".into(),
-            player_id:          player_id.to_string(),
+            player_id: player_id.to_string(),
         }
     }
 
     async fn seed_player(repo: &PgPlayerRepository, player_id: &str, team_id: &str) {
         let created = PlayerDomainEvent::PlayerCreated {
-            player_id:      PlayerId(player_id.to_string()),
-            team_id:        TeamId(team_id.to_string()),
-            space_id:       SpaceId::new(),
-            position_name:  PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
+            player_id: PlayerId(player_id.to_string()),
+            team_id: TeamId(team_id.to_string()),
+            space_id: SpaceId::new(),
+            position_name: PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
             roster_line_id: RosterLineId::try_new("BLITZER".to_string()).unwrap(),
-            jersey:         None,
-            base_skills:    vec![],
-            starting_spp:   Spp(0),
+            jersey: None,
+            base_skills: vec![],
+            starting_spp: Spp(0),
             starting_value: ValueKpo(100_000),
         };
-        repo.append(&PlayerId(player_id.into()), &TeamId(team_id.into()), &created, 1)
-            .await
-            .unwrap();
+        repo.append(
+            &PlayerId(player_id.into()),
+            &TeamId(team_id.into()),
+            &created,
+            1,
+        )
+        .await
+        .unwrap();
     }
 
     #[sqlx::test]
@@ -286,7 +316,11 @@ mod tests {
         )
         .await;
 
-        let player = player_repo.find_by_id(&PlayerId("p1".into())).await.unwrap().unwrap();
+        let player = player_repo
+            .find_by_id(&PlayerId("p1".into()))
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(player.spp.0, 3);
         assert_eq!(player.career_touchdowns.0, 1);
         assert_eq!(player.version, 2);
@@ -300,7 +334,7 @@ mod tests {
 
         handle_event(
             PlayerMatchImpactAppEvent::PlayerInjured {
-                context:     sample_context_payload("p2"),
+                context: sample_context_payload("p2"),
                 injury_type: InjuryTypePayload::BlessureSerieuse,
             },
             &player_repo,
@@ -308,8 +342,15 @@ mod tests {
         )
         .await;
 
-        let player = player_repo.find_by_id(&PlayerId("p2".into())).await.unwrap().unwrap();
-        assert_eq!(player.participation_status, PlayerParticipationStatus::MissingNextGame);
+        let player = player_repo
+            .find_by_id(&PlayerId("p2".into()))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            player.participation_status,
+            PlayerParticipationStatus::MissingNextGame
+        );
         assert_eq!(player.career_persistent_injuries.0, 1);
     }
 

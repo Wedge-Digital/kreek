@@ -1,9 +1,9 @@
+use crate::app::auth::context::AuthContext;
 use crate::app::auth::io::web::auth_layout::AuthLayout;
 use crate::app::auth::routes::{path, Routes};
 use crate::app::auth::use_cases::reset_password::{
     execute, ResetPasswordCommand, ResetPasswordError,
 };
-use crate::app::auth::context::AuthContext;
 use askama::Template;
 use axum::body::Body;
 use axum::extract::{Path, State};

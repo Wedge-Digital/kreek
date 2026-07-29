@@ -1,6 +1,8 @@
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
-use crate::app::match_report::domain::value_objects::{TeamSide, TempPlayer, TempPlayerId, TempPlayerKind};
+use crate::app::match_report::domain::value_objects::{
+    TeamSide, TempPlayer, TempPlayerId, TempPlayerKind,
+};
 use crate::app::match_report::ports::{IPlayerDataPort, ITeamDataPort};
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
@@ -47,7 +49,10 @@ pub async fn execute(
 async fn load_pm(
     repo: &dyn IMatchReportRepository,
     mr_id: &str,
-) -> Result<crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch, InitTempPlayersError> {
+) -> Result<
+    crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch,
+    InitTempPlayersError,
+> {
     let state = repo
         .find_by_id(mr_id)
         .await
@@ -65,8 +70,15 @@ async fn reset_if_needed(
     team_id: &TeamId,
     repo: &dyn IMatchReportRepository,
     mr_id: &str,
-) -> Result<crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch, InitTempPlayersError> {
-    let side = if team_id == &pm.home_team_id { TeamSide::Home } else { TeamSide::Away };
+) -> Result<
+    crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch,
+    InitTempPlayersError,
+> {
+    let side = if team_id == &pm.home_team_id {
+        TeamSide::Home
+    } else {
+        TeamSide::Away
+    };
     if pm.temp_players_for(side).is_empty() {
         return Ok(pm);
     }
@@ -87,7 +99,10 @@ fn collect_stars(
         .map(|uid| TempPlayer {
             id: TempPlayerId(ulid::Ulid::new().to_string()),
             team_id: team_id.clone(),
-            kind: TempPlayerKind::StarPlayer { ref_uid: uid.0.clone(), position_uid: String::new() },
+            kind: TempPlayerKind::StarPlayer {
+                ref_uid: uid.0.clone(),
+                position_uid: String::new(),
+            },
             display_name: Some(uid.0),
         })
         .collect()
@@ -105,7 +120,9 @@ fn collect_mercs(
             (0..p.qty.into_inner()).map(move |_| TempPlayer {
                 id: TempPlayerId(ulid::Ulid::new().to_string()),
                 team_id: team_id.clone(),
-                kind: TempPlayerKind::Mercenary { position_uid: position_uid.clone() },
+                kind: TempPlayerKind::Mercenary {
+                    position_uid: position_uid.clone(),
+                },
                 display_name: None,
             })
         })
@@ -117,27 +134,41 @@ mod tests {
     use super::*;
     use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
     use crate::app::match_report::domain::value_objects::{
-        DedicatedFans, InducementCost, InducementPurchase, InducementQty, MatchReportOrigin, TeamValue,
+        DedicatedFans, InducementCost, InducementPurchase, InducementQty, MatchReportOrigin,
+        TeamValue,
     };
-    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
-    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
+    use crate::app::shared_kernel::bloodbowl::ids::{
+        CompetitionId, MatchReportId, RoundId, SeasonId,
+    };
     use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
     use crate::app::shared_kernel::bloodbowl::team::TeamId;
+    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 
     fn make_pm() -> MatchReportPreMatch {
         MatchReportPreMatch {
-            id: MatchReportId::new(), space_id: SpaceId::new(),
-            competition_id: CompetitionId::new(), season_id: SeasonId::new(),
-            round_id: RoundId::new(), home_team_id: TeamId::new(), away_team_id: TeamId::new(),
-            created_by: CoachId::new(), origin: MatchReportOrigin::Manual, pairing_id: None,
-            home_fan_roll: None, away_fan_roll: None,
-            home_dedicated_fans: DedicatedFans::default(), away_dedicated_fans: DedicatedFans::default(),
+            id: MatchReportId::new(),
+            space_id: SpaceId::new(),
+            competition_id: CompetitionId::new(),
+            season_id: SeasonId::new(),
+            round_id: RoundId::new(),
+            home_team_id: TeamId::new(),
+            away_team_id: TeamId::new(),
+            created_by: CoachId::new(),
+            origin: MatchReportOrigin::Manual,
+            pairing_id: None,
+            home_fan_roll: None,
+            away_fan_roll: None,
+            home_dedicated_fans: DedicatedFans::default(),
+            away_dedicated_fans: DedicatedFans::default(),
             home_team_value: Some(TeamValue::try_new(1000).unwrap()),
             away_team_value: Some(TeamValue::try_new(1000).unwrap()),
-            home_inducements: None, away_inducements: None,
+            home_inducements: None,
+            away_inducements: None,
             star_engagements: vec![],
-            home_temp_players: vec![], away_temp_players: vec![],
-            home_actions: vec![], away_actions: vec![],
+            home_temp_players: vec![],
+            away_temp_players: vec![],
+            home_actions: vec![],
+            away_actions: vec![],
             version: 1,
         }
     }
@@ -146,10 +177,13 @@ mod tests {
     fn collect_stars_creates_one_per_engagement() {
         let mut pm = make_pm();
         let uid = InducementId("MORG_N_THORG".into());
-        pm.star_engagements.push((pm.home_team_id.clone(), uid.clone()));
+        pm.star_engagements
+            .push((pm.home_team_id.clone(), uid.clone()));
         let stars = collect_stars(&pm, &pm.home_team_id.clone());
         assert_eq!(stars.len(), 1);
-        assert!(matches!(&stars[0].kind, TempPlayerKind::StarPlayer { ref_uid, .. } if ref_uid == "MORG_N_THORG"));
+        assert!(
+            matches!(&stars[0].kind, TempPlayerKind::StarPlayer { ref_uid, .. } if ref_uid == "MORG_N_THORG")
+        );
         assert_eq!(stars[0].display_name, Some("MORG_N_THORG".into()));
     }
 
@@ -163,7 +197,9 @@ mod tests {
         }]);
         let mercs = collect_mercs(&pm, &pm.home_team_id.clone());
         assert_eq!(mercs.len(), 2);
-        assert!(matches!(&mercs[0].kind, TempPlayerKind::Mercenary { position_uid } if position_uid == "blitzeur"));
+        assert!(
+            matches!(&mercs[0].kind, TempPlayerKind::Mercenary { position_uid } if position_uid == "blitzeur")
+        );
     }
 
     #[test]
@@ -176,7 +212,9 @@ mod tests {
         }]);
         let mercs = collect_mercs(&pm, &pm.home_team_id.clone());
         assert_eq!(mercs.len(), 1);
-        assert!(matches!(&mercs[0].kind, TempPlayerKind::Mercenary { position_uid } if position_uid == "witch-elf"));
+        assert!(
+            matches!(&mercs[0].kind, TempPlayerKind::Mercenary { position_uid } if position_uid == "witch-elf")
+        );
     }
 
     #[test]
@@ -213,7 +251,9 @@ async fn collect_journeymen(
         .map(|_| TempPlayer {
             id: TempPlayerId(ulid::Ulid::new().to_string()),
             team_id: team_id.clone(),
-            kind: TempPlayerKind::Journeyman { position_uid: pos.position_uid.clone() },
+            kind: TempPlayerKind::Journeyman {
+                position_uid: pos.position_uid.clone(),
+            },
             display_name: None,
         })
         .collect())

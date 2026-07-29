@@ -1,6 +1,6 @@
 use crate::app::news::domain::article::Article;
-use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::app::shared_kernel::bloodbowl::ids::ArticleId;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use async_trait::async_trait;
 
 #[derive(Debug)]

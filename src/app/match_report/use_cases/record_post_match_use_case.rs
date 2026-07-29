@@ -1,8 +1,8 @@
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{FanFactorMod, MatchGain};
-use crate::app::shared_kernel::identity::ids::CoachId;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
+use crate::app::shared_kernel::identity::ids::CoachId;
 
 pub struct RecordPostMatchCommand {
     pub match_report_id: MatchReportId,
@@ -41,18 +41,24 @@ pub async fn execute(
     let (updated_version, event) = match state {
         MatchReportState::PreMatch(pm) => {
             let (ready, ev) = pm.record_post_match(
-                cmd.home_gain, cmd.away_gain,
-                cmd.home_fan_mod, cmd.away_fan_mod,
-                cmd.summary_title, cmd.summary_body,
+                cmd.home_gain,
+                cmd.away_gain,
+                cmd.home_fan_mod,
+                cmd.away_fan_mod,
+                cmd.summary_title,
+                cmd.summary_body,
                 cmd.recorded_by,
             );
             (ready.version, ev)
         }
         MatchReportState::ReadyToPublish(rtp) => {
             let (updated, ev) = rtp.record_post_match(
-                cmd.home_gain, cmd.away_gain,
-                cmd.home_fan_mod, cmd.away_fan_mod,
-                cmd.summary_title, cmd.summary_body,
+                cmd.home_gain,
+                cmd.away_gain,
+                cmd.home_fan_mod,
+                cmd.away_fan_mod,
+                cmd.summary_title,
+                cmd.summary_body,
                 cmd.recorded_by,
             );
             (updated.version, ev)

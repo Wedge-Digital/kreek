@@ -1,6 +1,6 @@
+use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::teams::domain::error::DomainError;
 use crate::app::teams::ports::{ITeamRepository, RepositoryError};
-use crate::app::shared_kernel::identity::ids::EntityId;
 
 #[derive(Debug)]
 pub enum ApproveEnrollmentError {
@@ -19,9 +19,15 @@ pub async fn execute(
         .map_err(ApproveEnrollmentError::Repository)?
         .ok_or(ApproveEnrollmentError::TeamNotFound)?;
 
-    let competition_id = team.competition_id.clone().ok_or(ApproveEnrollmentError::TeamNotFound)?;
+    let competition_id = team
+        .competition_id
+        .clone()
+        .ok_or(ApproveEnrollmentError::TeamNotFound)?;
     let competition_name = team.competition_name.clone().unwrap_or_default();
-    let season_id = team.season_id.clone().ok_or(ApproveEnrollmentError::TeamNotFound)?;
+    let season_id = team
+        .season_id
+        .clone()
+        .ok_or(ApproveEnrollmentError::TeamNotFound)?;
     let season_name = team.season_name.clone().unwrap_or_default();
 
     let event = team

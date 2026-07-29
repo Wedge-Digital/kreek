@@ -1,6 +1,7 @@
 pub mod path {
     pub const PLAYERS_BY_TEAM_WIDGET: &str = "/app/{space_id}/players/by-team/{team_id}/widget";
-    pub const MATCH_PLAYER_SELECTOR: &str = "/app/{space_id}/players/teams/{team_id}/match-selector";
+    pub const MATCH_PLAYER_SELECTOR: &str =
+        "/app/{space_id}/players/teams/{team_id}/match-selector";
     pub const PLAYER_DEBUG: &str = "/app/{space_id}/players/{player_id}/debug";
     pub const PLAYER_DETAIL: &str = "/app/{space_id}/players/{player_id}/detail";
     pub const PLAYER_SKILLS: &str = "/app/{space_id}/players/{player_id}/skills";

@@ -14,9 +14,9 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
         loop {
             match rx.recv().await {
                 Ok(envelope) => {
-                    let Ok(app_event) =
-                        serde_json::from_value::<PlayerImprovementAppEvent>(envelope.payload.clone())
-                    else {
+                    let Ok(app_event) = serde_json::from_value::<PlayerImprovementAppEvent>(
+                        envelope.payload.clone(),
+                    ) else {
                         continue;
                     };
                     handle_event(&team_repo, app_event).await;
@@ -32,15 +32,33 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
 
 async fn handle_event(team_repo: &Arc<dyn ITeamRepository>, app_event: PlayerImprovementAppEvent) {
     let (team_id, player_id, improvement, value_delta_po) = match app_event {
-        PlayerImprovementAppEvent::SkillPurchased { team_id, player_id, skill_name, value_delta_po } => {
-            (team_id, player_id, PlayerImprovement::NewSkill(skill_name), value_delta_po)
-        }
-        PlayerImprovementAppEvent::StatIncreased { team_id, player_id, stat, value_delta_po } => {
+        PlayerImprovementAppEvent::SkillPurchased {
+            team_id,
+            player_id,
+            skill_name,
+            value_delta_po,
+        } => (
+            team_id,
+            player_id,
+            PlayerImprovement::NewSkill(skill_name),
+            value_delta_po,
+        ),
+        PlayerImprovementAppEvent::StatIncreased {
+            team_id,
+            player_id,
+            stat,
+            value_delta_po,
+        } => {
             let Some(stat) = parse_stat(&stat) else {
                 tracing::warn!("player_improvement_listener: stat inconnu {stat}");
                 return;
             };
-            (team_id, player_id, PlayerImprovement::StatBoost(stat), value_delta_po)
+            (
+                team_id,
+                player_id,
+                PlayerImprovement::StatBoost(stat),
+                value_delta_po,
+            )
         }
     };
 

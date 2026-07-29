@@ -1,14 +1,12 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::shared_kernel::identity::ids::CloudinaryImage;
 use crate::app::shared_kernel::identity::space_name::SpaceName;
+use crate::app::spaces::context::SpacesContext;
+use crate::app::spaces::io::web::host_layout::{render_page, ISpacesHostLayout, UploadField};
 use crate::app::spaces::routes::path;
+use crate::app::spaces::routes::Routes;
 use crate::app::spaces::uses_cases::register_new_space::{
     execute, RegisterNewSpaceCommand, RegisterSpaceError,
-};
-use crate::app::spaces::routes::Routes;
-use crate::app::spaces::context::SpacesContext;
-use crate::app::spaces::io::web::host_layout::{
-    render_page, ISpacesHostLayout, UploadField,
 };
 use askama::Template;
 use axum::body::Body;

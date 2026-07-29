@@ -28,7 +28,9 @@ impl ISpaceAdminPort for SpaceAdminAdapter {
             return false;
         };
         matches!(
-            self.space_repository.find_member_profile(&coach_id, &space_id).await,
+            self.space_repository
+                .find_member_profile(&coach_id, &space_id)
+                .await,
             Ok(Some(SpaceProfile::SpaceAdmin))
         )
     }

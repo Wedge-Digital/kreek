@@ -1,8 +1,8 @@
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::team_creation::domain::roster::LeagueId;
 use crate::app::team_creation::use_cases::build_team::set_league as uc;
 use crate::app::team_creation::use_cases::build_team::set_league::SetLeagueCommand;
-use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::state::AppState;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -34,9 +34,7 @@ pub async fn set_league(
 
     match uc::execute(cmd, state.team_creation.roster_repository.as_ref()).await {
         Err(uc::SetLeagueError::TeamNotFound) => StatusCode::NOT_FOUND.into_response(),
-        Err(uc::SetLeagueError::Repository(_)) => {
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
+        Err(uc::SetLeagueError::Repository(_)) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         Ok(()) => axum::http::Response::builder()
             .status(200)
             .header(

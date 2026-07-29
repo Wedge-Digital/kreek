@@ -327,9 +327,9 @@ impl ITeamRepository for TeamRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
     use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RosterId, SeasonId};
     use crate::app::shared_kernel::bloodbowl::team::TeamId;
+    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
     use crate::app::teams::domain::value_objects::{DedicatedFans, Kpo, RosterName, TeamName};
     use sqlx::postgres::PgPoolOptions;
 
@@ -445,7 +445,9 @@ mod tests {
         )
         .unwrap();
 
-        repo.append(&team_id, &created_event(&team_id), 0).await.unwrap();
+        repo.append(&team_id, &created_event(&team_id), 0)
+            .await
+            .unwrap();
         repo.append(
             &team_id,
             &TeamDomainEvent::TeamEnrolled {
@@ -460,7 +462,9 @@ mod tests {
         .unwrap();
         repo.append(
             &team_id,
-            &TeamDomainEvent::MatchReportingStarted { match_report_id: mr_id },
+            &TeamDomainEvent::MatchReportingStarted {
+                match_report_id: mr_id,
+            },
             2,
         )
         .await
@@ -476,7 +480,10 @@ mod tests {
             )
             .unwrap();
         repo.append(&team_id, &started, 3).await.unwrap();
-        assert_eq!(projected_phase(&repo, &team_id).await, Some("PlayerImprovement".to_string()));
+        assert_eq!(
+            projected_phase(&repo, &team_id).await,
+            Some("PlayerImprovement".to_string())
+        );
 
         let team = repo.find_by_id(&team_id).await.unwrap().unwrap();
         let reverted = team.revert_post_match_sequence(mr_id).unwrap();
@@ -488,7 +495,10 @@ mod tests {
             "la projection doit suivre l'agrégat"
         );
         let team = repo.find_by_id(&team_id).await.unwrap().unwrap();
-        assert_eq!(team.treasury.0, 1000, "le gain doit être retiré de l'agrégat");
+        assert_eq!(
+            team.treasury.0, 1000,
+            "le gain doit être retiré de l'agrégat"
+        );
 
         sqlx::query("DELETE FROM team_event_store WHERE team_id = $1")
             .bind(&team_id)
@@ -518,7 +528,9 @@ mod tests {
         )
         .unwrap();
 
-        repo.append(&team_id, &created_event(&team_id), 0).await.unwrap();
+        repo.append(&team_id, &created_event(&team_id), 0)
+            .await
+            .unwrap();
         repo.append(
             &team_id,
             &TeamDomainEvent::TeamEnrolled {
@@ -533,12 +545,17 @@ mod tests {
         .unwrap();
         repo.append(
             &team_id,
-            &TeamDomainEvent::MatchReportingStarted { match_report_id: mr_id },
+            &TeamDomainEvent::MatchReportingStarted {
+                match_report_id: mr_id,
+            },
             2,
         )
         .await
         .unwrap();
-        assert_eq!(projected_phase(&repo, &team_id).await, Some("MatchReporting".to_string()));
+        assert_eq!(
+            projected_phase(&repo, &team_id).await,
+            Some("MatchReporting".to_string())
+        );
 
         let team = repo.find_by_id(&team_id).await.unwrap().unwrap();
         let cancelled = team.cancel_match_reporting(mr_id).unwrap();

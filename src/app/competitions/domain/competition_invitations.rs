@@ -18,8 +18,12 @@ pub struct InvitedCoach {
     pub initials: CoachInitials,
 }
 
-fn default_notify_by_email() -> NotifyByEmail { NotifyByEmail(true) }
-fn default_requires_validation() -> RequiresValidation { RequiresValidation(true) }
+fn default_notify_by_email() -> NotifyByEmail {
+    NotifyByEmail(true)
+}
+fn default_requires_validation() -> RequiresValidation {
+    RequiresValidation(true)
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -54,7 +58,8 @@ mod tests {
 
     #[test]
     fn requires_validation_defaults_to_true_when_absent() {
-        let json = r#"{"access_mode":"invitation","max_participants":null,"registration_deadline":null}"#;
+        let json =
+            r#"{"access_mode":"invitation","max_participants":null,"registration_deadline":null}"#;
         let inv: CompetitionInvitations = serde_json::from_str(json).unwrap();
         assert!(inv.requires_validation.0);
     }

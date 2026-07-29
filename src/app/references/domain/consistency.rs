@@ -24,7 +24,9 @@ impl std::fmt::Display for ConsistencyViolation {
             ConsistencyViolation::UnknownSkill { owner, uid } => ("compétence", owner, uid),
             ConsistencyViolation::UnknownCategory { owner, uid } => ("catégorie", owner, uid),
             ConsistencyViolation::UnknownStaff { owner, uid } => ("staff", owner, uid),
-            ConsistencyViolation::UnknownSpecialRule { owner, uid } => ("règle spéciale", owner, uid),
+            ConsistencyViolation::UnknownSpecialRule { owner, uid } => {
+                ("règle spéciale", owner, uid)
+            }
             ConsistencyViolation::UnknownRoster { owner, uid } => ("roster", owner, uid),
         };
         write!(f, "{owner} référence un(e) {kind} inconnu(e) : {uid}")
@@ -60,7 +62,7 @@ fn check_star_players(repo: &dyn IReferenceRepository) -> Vec<ConsistencyViolati
             if repo.find_team_by_uid(roster).is_none() {
                 out.push(ConsistencyViolation::UnknownRoster {
                     owner: star.uid.clone(),
-                    uid:   roster.clone(),
+                    uid: roster.clone(),
                 });
             }
         }
@@ -75,7 +77,10 @@ fn missing_skills(
 ) -> Vec<ConsistencyViolation> {
     uids.iter()
         .filter(|uid| repo.find_skill_by_uid(uid).is_none())
-        .map(|uid| ConsistencyViolation::UnknownSkill { owner: owner.to_string(), uid: uid.clone() })
+        .map(|uid| ConsistencyViolation::UnknownSkill {
+            owner: owner.to_string(),
+            uid: uid.clone(),
+        })
         .collect()
 }
 
@@ -87,7 +92,10 @@ fn missing_categories(
     let known = repo.list_skill_categories();
     uids.iter()
         .filter(|uid| !known.iter().any(|c| &c.id == *uid))
-        .map(|uid| ConsistencyViolation::UnknownCategory { owner: owner.to_string(), uid: uid.clone() })
+        .map(|uid| ConsistencyViolation::UnknownCategory {
+            owner: owner.to_string(),
+            uid: uid.clone(),
+        })
         .collect()
 }
 
@@ -99,7 +107,10 @@ fn missing_staff(
     let known = repo.list_staff();
     uids.iter()
         .filter(|uid| !known.iter().any(|s| &s.uid == *uid))
-        .map(|uid| ConsistencyViolation::UnknownStaff { owner: owner.to_string(), uid: uid.clone() })
+        .map(|uid| ConsistencyViolation::UnknownStaff {
+            owner: owner.to_string(),
+            uid: uid.clone(),
+        })
         .collect()
 }
 
@@ -113,7 +124,7 @@ fn missing_special_rules(
         .filter(|uid| !known.iter().any(|r| &r.uid == *uid))
         .map(|uid| ConsistencyViolation::UnknownSpecialRule {
             owner: owner.to_string(),
-            uid:   uid.clone(),
+            uid: uid.clone(),
         })
         .collect()
 }

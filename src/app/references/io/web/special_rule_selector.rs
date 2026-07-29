@@ -25,19 +25,19 @@ pub struct SpecialRuleSelectorParams {
 }
 
 pub struct SpecialRuleVm {
-    pub uid:         String,
-    pub label:       String,
+    pub uid: String,
+    pub label: String,
     pub is_selected: bool,
 }
 
 #[derive(Template)]
 #[template(path = "special-rule-selector-fragment.html")]
 pub struct SpecialRuleSelectorTemplate {
-    pub rules:          Vec<SpecialRuleVm>,
-    pub is_choice:      bool,
-    pub selected_uid:   String,
+    pub rules: Vec<SpecialRuleVm>,
+    pub is_choice: bool,
+    pub selected_uid: String,
     pub selected_label: Option<String>,
-    pub on_select:      String,
+    pub on_select: String,
 }
 
 impl IntoResponse for SpecialRuleSelectorTemplate {
@@ -56,8 +56,8 @@ fn resolve_fixed_rules(team_rules: &[String], all_rules: &[SpecialRule]) -> Vec<
         .iter()
         .filter_map(|uid| all_rules.iter().find(|r| &r.uid == uid))
         .map(|r| SpecialRuleVm {
-            uid:         r.uid.clone(),
-            label:       r.label.clone(),
+            uid: r.uid.clone(),
+            label: r.label.clone(),
             is_selected: false,
         })
         .collect()
@@ -71,8 +71,8 @@ fn resolve_choice_rules(all_rules: &[SpecialRule], selected: &str) -> Vec<Specia
         .filter_map(|uid| all_rules.iter().find(|r| r.uid == *uid))
         .map(|r| SpecialRuleVm {
             is_selected: r.uid == selected,
-            uid:         r.uid.clone(),
-            label:       r.label.clone(),
+            uid: r.uid.clone(),
+            label: r.label.clone(),
         })
         .collect()
 }
@@ -105,7 +105,10 @@ pub async fn special_rule_selector(
         resolve_fixed_rules(&team_rules, all_rules)
     };
 
-    let selected_label = rules.iter().find(|r| r.is_selected).map(|r| r.label.clone());
+    let selected_label = rules
+        .iter()
+        .find(|r| r.is_selected)
+        .map(|r| r.label.clone());
 
     SpecialRuleSelectorTemplate {
         rules,
@@ -122,7 +125,10 @@ mod tests {
     use super::*;
 
     fn rule(uid: &str, label: &str) -> SpecialRule {
-        SpecialRule { uid: uid.into(), label: label.into() }
+        SpecialRule {
+            uid: uid.into(),
+            label: label.into(),
+        }
     }
 
     fn all_rules() -> Vec<SpecialRule> {
@@ -165,7 +171,13 @@ mod tests {
         let rules = resolve_choice_rules(&all_rules(), "FAVOURED_OF_NURGLE");
         let uids: Vec<&str> = rules.iter().map(|r| r.uid.as_str()).collect();
         assert_eq!(uids, FIVE_CHAOS_GODS.to_vec());
-        assert!(rules.iter().find(|r| r.uid == "FAVOURED_OF_NURGLE").unwrap().is_selected);
+        assert!(
+            rules
+                .iter()
+                .find(|r| r.uid == "FAVOURED_OF_NURGLE")
+                .unwrap()
+                .is_selected
+        );
         assert_eq!(rules.iter().filter(|r| r.is_selected).count(), 1);
     }
 }

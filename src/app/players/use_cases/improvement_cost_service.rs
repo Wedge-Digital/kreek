@@ -19,8 +19,12 @@ pub fn resolve_skill_cost(
     mode: AcquisitionMode,
     level: u8,
 ) -> Result<(SppCost, ValueKpo), ImprovementCostError> {
-    let skill = catalog.find_skill(skill_id).ok_or(ImprovementCostError::SkillNotFound)?;
-    let access = catalog.position_access(roster_line_id).ok_or(ImprovementCostError::PositionNotFound)?;
+    let skill = catalog
+        .find_skill(skill_id)
+        .ok_or(ImprovementCostError::SkillNotFound)?;
+    let access = catalog
+        .position_access(roster_line_id)
+        .ok_or(ImprovementCostError::PositionNotFound)?;
 
     let is_secondary = access.secondary_categories.contains(&skill.category);
     let is_primary = access.primary_categories.contains(&skill.category);
@@ -28,11 +32,18 @@ pub fn resolve_skill_cost(
         return Err(ImprovementCostError::CategoryNotAccessible);
     }
 
-    let level_cost = catalog.cost_for_level(level, skill.is_elite)
+    let level_cost = catalog
+        .cost_for_level(level, skill.is_elite)
         .expect("niveau plafonné à 6 par next_improvement_level, toujours défini dans la matrice");
 
     let cost = match mode {
-        AcquisitionMode::Chosen => if is_secondary { level_cost.chosen_secondary } else { level_cost.chosen_primary },
+        AcquisitionMode::Chosen => {
+            if is_secondary {
+                level_cost.chosen_secondary
+            } else {
+                level_cost.chosen_primary
+            }
+        }
         AcquisitionMode::Random => level_cost.random,
     };
 
@@ -46,10 +57,16 @@ pub fn resolve_skill_cost(
 
 /// Résout le coût réel (SPP) et la valeur d'équipe ajoutée pour une
 /// augmentation de caractéristique.
-pub fn resolve_stat_cost(catalog: &dyn ISkillCatalogPort, stat: StatKind, level: u8) -> (SppCost, ValueKpo) {
-    let level_cost = catalog.cost_for_level(level, false)
+pub fn resolve_stat_cost(
+    catalog: &dyn ISkillCatalogPort,
+    stat: StatKind,
+    level: u8,
+) -> (SppCost, ValueKpo) {
+    let level_cost = catalog
+        .cost_for_level(level, false)
         .expect("niveau plafonné à 6 par next_improvement_level, toujours défini dans la matrice");
-    let cost = SppCost::try_new(level_cost.characteristic as u8).expect("coût borné par la matrice de référence (<= 99)");
+    let cost = SppCost::try_new(level_cost.characteristic as u8)
+        .expect("coût borné par la matrice de référence (<= 99)");
     (cost, ValueKpo(catalog.stat_value_delta(stat)))
 }
 
@@ -67,8 +84,13 @@ mod tests {
     #[test]
     fn resolve_skill_cost_primary_access_level_1() {
         let (cost, value) = resolve_skill_cost(
-            &catalog(), "DEMO_GRANIT__PIETAILLE", "APPUI_FERME", AcquisitionMode::Chosen, 1,
-        ).unwrap();
+            &catalog(),
+            "DEMO_GRANIT__PIETAILLE",
+            "APPUI_FERME",
+            AcquisitionMode::Chosen,
+            1,
+        )
+        .unwrap();
         // APPUI_FERME est GENERAL, primary pour la Piétaille, et Standard —
         // niveau 1 : chosen.primary = 6 (le tarif Élite, lui, vaudrait 8)
         assert_eq!(cost.into_inner(), 6);
@@ -79,8 +101,13 @@ mod tests {
     fn resolve_skill_cost_secondary_access_costs_more_and_yields_more_value() {
         // STRENGTH est secondary pour la Piétaille — POIGNE_LARGE est STRENGTH/Standard
         let (cost, value) = resolve_skill_cost(
-            &catalog(), "DEMO_GRANIT__PIETAILLE", "POIGNE_LARGE", AcquisitionMode::Chosen, 1,
-        ).unwrap();
+            &catalog(),
+            "DEMO_GRANIT__PIETAILLE",
+            "POIGNE_LARGE",
+            AcquisitionMode::Chosen,
+            1,
+        )
+        .unwrap();
         assert_eq!(cost.into_inner(), 10);
         assert_eq!(value.0, 40_000);
     }
@@ -90,7 +117,11 @@ mod tests {
         // PASSING n'est ni primary ([GENERAL]) ni secondary ([STRENGTH]) pour la
         // Piétaille — LANCER_TENDU existe bien, mais dans une catégorie fermée
         let result = resolve_skill_cost(
-            &catalog(), "DEMO_GRANIT__PIETAILLE", "LANCER_TENDU", AcquisitionMode::Chosen, 1,
+            &catalog(),
+            "DEMO_GRANIT__PIETAILLE",
+            "LANCER_TENDU",
+            AcquisitionMode::Chosen,
+            1,
         );
         assert_eq!(result, Err(ImprovementCostError::CategoryNotAccessible));
     }
@@ -98,7 +129,11 @@ mod tests {
     #[test]
     fn resolve_skill_cost_unknown_skill_is_rejected() {
         let result = resolve_skill_cost(
-            &catalog(), "DEMO_GRANIT__PIETAILLE", "NOT_A_REAL_SKILL", AcquisitionMode::Chosen, 1,
+            &catalog(),
+            "DEMO_GRANIT__PIETAILLE",
+            "NOT_A_REAL_SKILL",
+            AcquisitionMode::Chosen,
+            1,
         );
         assert_eq!(result, Err(ImprovementCostError::SkillNotFound));
     }
@@ -106,8 +141,22 @@ mod tests {
     #[test]
     fn resolve_skill_cost_ignores_client_supplied_cost_always_recomputes_from_level() {
         // Même compétence, niveaux différents → coûts différents, jamais un coût "soumis"
-        let (cost_lvl1, _) = resolve_skill_cost(&catalog(), "DEMO_GRANIT__PIETAILLE", "APPUI_FERME", AcquisitionMode::Chosen, 1).unwrap();
-        let (cost_lvl3, _) = resolve_skill_cost(&catalog(), "DEMO_GRANIT__PIETAILLE", "APPUI_FERME", AcquisitionMode::Chosen, 3).unwrap();
+        let (cost_lvl1, _) = resolve_skill_cost(
+            &catalog(),
+            "DEMO_GRANIT__PIETAILLE",
+            "APPUI_FERME",
+            AcquisitionMode::Chosen,
+            1,
+        )
+        .unwrap();
+        let (cost_lvl3, _) = resolve_skill_cost(
+            &catalog(),
+            "DEMO_GRANIT__PIETAILLE",
+            "APPUI_FERME",
+            AcquisitionMode::Chosen,
+            3,
+        )
+        .unwrap();
         assert_ne!(cost_lvl1.into_inner(), cost_lvl3.into_inner());
         assert_eq!(cost_lvl3.into_inner(), 12);
     }

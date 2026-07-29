@@ -3,8 +3,8 @@ use crate::app::match_report::domain::match_report_repository_port::IMatchReport
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{D3Roll, DedicatedFans, TeamValue};
 use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
-use crate::app::shared_kernel::identity::ids::CoachId;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
+use crate::app::shared_kernel::identity::ids::CoachId;
 
 pub struct RecordFanFactorCommand {
     pub match_report_id: MatchReportId,
@@ -98,8 +98,7 @@ async fn build_events(
         cmd.recorded_by.clone(),
     );
     let (home_tv, away_tv) = fetch_team_values(&updated_ff, team_data).await?;
-    let (updated_tv, tv_event) =
-        updated_ff.record_team_values(home_tv, away_tv, cmd.recorded_by);
+    let (updated_tv, tv_event) = updated_ff.record_team_values(home_tv, away_tv, cmd.recorded_by);
     Ok((updated_tv, vec![ff_event, tv_event]))
 }
 
@@ -109,8 +108,10 @@ async fn fetch_team_values(
 ) -> Result<(TeamValue, TeamValue), RecordFanFactorError> {
     let home_id = pm.home_team_id.to_string();
     let away_id = pm.away_team_id.to_string();
-    let (home_raw, away_raw) =
-        tokio::join!(team_data.find_team_value(&home_id), team_data.find_team_value(&away_id));
+    let (home_raw, away_raw) = tokio::join!(
+        team_data.find_team_value(&home_id),
+        team_data.find_team_value(&away_id)
+    );
     let home_tv = home_raw
         .and_then(|v| TeamValue::try_new(v).ok())
         .ok_or_else(|| RecordFanFactorError::TeamValueUnavailable(home_id))?;
@@ -139,7 +140,9 @@ async fn determine_outcome(
         .map(|r| !r.allowed_inducements.is_empty() || !r.allowed_star_players.is_empty())
         .unwrap_or(false);
     if has_inducements {
-        Ok(RecordFanFactorOutcome::RedirectToInducements { topdog_team_id: topdog_id })
+        Ok(RecordFanFactorOutcome::RedirectToInducements {
+            topdog_team_id: topdog_id,
+        })
     } else {
         Ok(RecordFanFactorOutcome::RedirectToStep3)
     }

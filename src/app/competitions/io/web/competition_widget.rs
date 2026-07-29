@@ -1,6 +1,6 @@
 use crate::app::competitions::routes::Routes as CompetitionRoutes;
-use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, Query, State};
@@ -190,9 +190,7 @@ pub async fn get_json_rounds(
     let competition_id = match state
         .competitions
         .competition_repository
-        .find_with_seasons(
-            &SpaceId::try_new(&space_id_raw).unwrap_or_else(|_| SpaceId::new()),
-        )
+        .find_with_seasons(&SpaceId::try_new(&space_id_raw).unwrap_or_else(|_| SpaceId::new()))
         .await
         .unwrap_or_default()
         .into_iter()
@@ -202,10 +200,7 @@ pub async fn get_json_rounds(
         None => String::new(),
     };
 
-    let mut filtered: Vec<_> = match_days
-        .into_iter()
-        .filter(|md| !md.is_rest())
-        .collect();
+    let mut filtered: Vec<_> = match_days.into_iter().filter(|md| !md.is_rest()).collect();
     filtered.reverse();
 
     let rounds: Vec<RoundJson> = filtered
@@ -380,4 +375,3 @@ pub async fn get_competition_widget_detail(
     }
     .into_response()
 }
-

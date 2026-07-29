@@ -123,7 +123,8 @@ pub async fn approve_all_enrollments(
             Ok(id) => id,
             Err(_) => continue,
         };
-        if let Err(e) = approve_enrollment::execute(&team_id, state.teams.team_repository.as_ref()).await
+        if let Err(e) =
+            approve_enrollment::execute(&team_id, state.teams.team_repository.as_ref()).await
         {
             tracing::warn!("approve_all skip {}: {e:?}", row.team_id);
         }

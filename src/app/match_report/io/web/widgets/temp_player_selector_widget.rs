@@ -8,14 +8,14 @@ use axum::response::{Html, IntoResponse, Response};
 
 pub struct TempPlayerRowVm {
     pub temp_player_id: String,
-    pub label:          String,
+    pub label: String,
 }
 
 #[derive(Template)]
 #[template(path = "temp-player-selector-widget.html")]
 pub struct TempPlayerSelectorTemplate {
     pub journeymen: Vec<TempPlayerRowVm>,
-    pub stars:       Vec<TempPlayerRowVm>,
+    pub stars: Vec<TempPlayerRowVm>,
 }
 
 impl IntoResponse for TempPlayerSelectorTemplate {
@@ -56,7 +56,10 @@ async fn render_temp_players(mr_id: &str, side: TeamSide, state: &AppState) -> R
     for tp in pm.temp_players_for(side).iter() {
         let vm = TempPlayerRowVm {
             temp_player_id: tp.id.0.clone(),
-            label: tp.display_name.clone().unwrap_or_else(|| kind_label(&tp.kind)),
+            label: tp
+                .display_name
+                .clone()
+                .unwrap_or_else(|| kind_label(&tp.kind)),
         };
         match &tp.kind {
             TempPlayerKind::StarPlayer { .. } => stars.push(vm),

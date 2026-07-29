@@ -14,9 +14,9 @@ use crate::app::competitions::use_cases::update_draft_competition::{
     execute as execute_update, UpdateDraftCompetitionCommand, UpdateDraftCompetitionError,
 };
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, SpaceId};
-use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::competition_name::CompetitionName;
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, SpaceId};
 use crate::state::AppState;
 use askama::Template;
 use axum::body::Body;
@@ -81,15 +81,15 @@ async fn build_phase_2_template(
         season_id,
         season_name_value: season_name_or_default(base),
         existing_rules_json: rules_json_or_null(rules),
-        tiebreak_catalog_json: tiebreak_catalog_json(state.competitions.tiebreak_catalog_port.as_ref()),
+        tiebreak_catalog_json: tiebreak_catalog_json(
+            state.competitions.tiebreak_catalog_port.as_ref(),
+        ),
     }
 }
 
 /// Règles sérialisées pour l'hydratation JS, `"null"` si la saison n'en a pas
 /// encore (ou si elles sont illisibles — le formulaire repart des défauts).
-fn rules_json_or_null(
-    result: Result<Option<CompetitionRules>, SeasonRepositoryError>,
-) -> String {
+fn rules_json_or_null(result: Result<Option<CompetitionRules>, SeasonRepositoryError>) -> String {
     result
         .ok()
         .flatten()
@@ -97,9 +97,7 @@ fn rules_json_or_null(
         .unwrap_or_else(|| "null".to_string())
 }
 
-fn season_name_or_default(
-    result: Result<Option<SeasonBaseInfo>, SeasonRepositoryError>,
-) -> String {
+fn season_name_or_default(result: Result<Option<SeasonBaseInfo>, SeasonRepositoryError>) -> String {
     result
         .ok()
         .flatten()
@@ -308,11 +306,13 @@ pub async fn post_new_competition(
     )
     .await
     {
-        Ok((competition_id, season_id)) => hx_redirect(AppRoutes::default().competitions.new_competition_rules(
-            &space_id,
-            &competition_id.to_string(),
-            &season_id.to_string(),
-        )),
+        Ok((competition_id, season_id)) => {
+            hx_redirect(AppRoutes::default().competitions.new_competition_rules(
+                &space_id,
+                &competition_id.to_string(),
+                &season_id.to_string(),
+            ))
+        }
 
         Err(CreateDraftCompetitionError::CompetitionNameAlreadyTaken) => {
             tmpl.name_error =

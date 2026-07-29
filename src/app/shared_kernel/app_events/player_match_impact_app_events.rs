@@ -1,17 +1,17 @@
-use crate::common::event_envelope::EventEnvelope;
 use crate::app::shared_kernel::identity::ids::EventId;
+use crate::common::event_envelope::EventEnvelope;
 use serde::{Deserialize, Serialize};
 
 /// Contexte commun embarqué dans chaque event — suffisant pour reconstruire
 /// l'historique du joueur côté BC `players` sans aucun appel inter-BC en lecture.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct PlayerMatchContextPayload {
-    pub match_report_id:    String,
-    pub round_id:           String,
-    pub round_label:        String,
-    pub opponent_team_id:   String,
+    pub match_report_id: String,
+    pub round_id: String,
+    pub round_label: String,
+    pub opponent_team_id: String,
     pub opponent_team_name: String,
-    pub player_id:          String,
+    pub player_id: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -32,18 +32,18 @@ pub enum PlayerMatchImpactAppEvent {
     PlayerPerformedMvp(PlayerMatchContextPayload),
     PlayerPerformedFoul(PlayerMatchContextPayload),
     PlayerInjured {
-        context:     PlayerMatchContextPayload,
+        context: PlayerMatchContextPayload,
         injury_type: InjuryTypePayload,
     },
     TeamMatchConcluded {
-        team_id:            String,
-        match_report_id:    String,
-        round_id:           String,
-        round_label:        String,
-        opponent_team_id:   String,
+        team_id: String,
+        match_report_id: String,
+        round_id: String,
+        round_label: String,
+        opponent_team_id: String,
         opponent_team_name: String,
-        team_score:         u8,
-        opponent_score:     u8,
+        team_score: u8,
+        opponent_score: u8,
     },
     /// Le rapport a été dépublié pour correction : défaire l'impact de ce match
     /// sur tout l'effectif de cette équipe.
@@ -53,32 +53,32 @@ pub enum PlayerMatchImpactAppEvent {
     /// apporté. Symétrique de `TeamMatchConcluded`, qui itère déjà sur tout
     /// l'effectif.
     TeamMatchImpactReverted {
-        team_id:         String,
+        team_id: String,
         match_report_id: String,
     },
 }
 
 impl PlayerMatchImpactAppEvent {
-    pub const PLAYER_PERFORMED_TOUCHDOWN:   &'static str = "PlayerPerformedTouchdown";
-    pub const PLAYER_PERFORMED_PASS:        &'static str = "PlayerPerformedPass";
+    pub const PLAYER_PERFORMED_TOUCHDOWN: &'static str = "PlayerPerformedTouchdown";
+    pub const PLAYER_PERFORMED_PASS: &'static str = "PlayerPerformedPass";
     pub const PLAYER_PERFORMED_INTERCEPTION: &'static str = "PlayerPerformedInterception";
-    pub const PLAYER_PERFORMED_CASUALTY:    &'static str = "PlayerPerformedCasualty";
-    pub const PLAYER_PERFORMED_MVP:         &'static str = "PlayerPerformedMvp";
-    pub const PLAYER_PERFORMED_FOUL:        &'static str = "PlayerPerformedFoul";
-    pub const PLAYER_INJURED:               &'static str = "PlayerInjured";
-    pub const TEAM_MATCH_CONCLUDED:         &'static str = "TeamMatchConcluded";
-    pub const TEAM_MATCH_IMPACT_REVERTED:   &'static str = "TeamMatchImpactReverted";
+    pub const PLAYER_PERFORMED_CASUALTY: &'static str = "PlayerPerformedCasualty";
+    pub const PLAYER_PERFORMED_MVP: &'static str = "PlayerPerformedMvp";
+    pub const PLAYER_PERFORMED_FOUL: &'static str = "PlayerPerformedFoul";
+    pub const PLAYER_INJURED: &'static str = "PlayerInjured";
+    pub const TEAM_MATCH_CONCLUDED: &'static str = "TeamMatchConcluded";
+    pub const TEAM_MATCH_IMPACT_REVERTED: &'static str = "TeamMatchImpactReverted";
 
     pub fn event_type(&self) -> &'static str {
         match self {
-            Self::PlayerPerformedTouchdown(_)   => Self::PLAYER_PERFORMED_TOUCHDOWN,
-            Self::PlayerPerformedPass(_)        => Self::PLAYER_PERFORMED_PASS,
+            Self::PlayerPerformedTouchdown(_) => Self::PLAYER_PERFORMED_TOUCHDOWN,
+            Self::PlayerPerformedPass(_) => Self::PLAYER_PERFORMED_PASS,
             Self::PlayerPerformedInterception(_) => Self::PLAYER_PERFORMED_INTERCEPTION,
-            Self::PlayerPerformedCasualty(_)    => Self::PLAYER_PERFORMED_CASUALTY,
-            Self::PlayerPerformedMvp(_)         => Self::PLAYER_PERFORMED_MVP,
-            Self::PlayerPerformedFoul(_)        => Self::PLAYER_PERFORMED_FOUL,
-            Self::PlayerInjured { .. }          => Self::PLAYER_INJURED,
-            Self::TeamMatchConcluded { .. }     => Self::TEAM_MATCH_CONCLUDED,
+            Self::PlayerPerformedCasualty(_) => Self::PLAYER_PERFORMED_CASUALTY,
+            Self::PlayerPerformedMvp(_) => Self::PLAYER_PERFORMED_MVP,
+            Self::PlayerPerformedFoul(_) => Self::PLAYER_PERFORMED_FOUL,
+            Self::PlayerInjured { .. } => Self::PLAYER_INJURED,
+            Self::TeamMatchConcluded { .. } => Self::TEAM_MATCH_CONCLUDED,
             Self::TeamMatchImpactReverted { .. } => Self::TEAM_MATCH_IMPACT_REVERTED,
         }
     }
@@ -92,8 +92,12 @@ impl PlayerMatchImpactAppEvent {
             | Self::PlayerPerformedMvp(c)
             | Self::PlayerPerformedFoul(c) => &c.match_report_id,
             Self::PlayerInjured { context, .. } => &context.match_report_id,
-            Self::TeamMatchConcluded { match_report_id, .. } => match_report_id,
-            Self::TeamMatchImpactReverted { match_report_id, .. } => match_report_id,
+            Self::TeamMatchConcluded {
+                match_report_id, ..
+            } => match_report_id,
+            Self::TeamMatchImpactReverted {
+                match_report_id, ..
+            } => match_report_id,
         }
     }
 

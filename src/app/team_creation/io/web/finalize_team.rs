@@ -1,11 +1,11 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::team_creation::io::web::view_models::SppLogEntryVm;
 use crate::app::routes::AppRoutes;
-use crate::app::team_creation::use_cases::commands::SubmitTeamCommand;
-use crate::app::team_creation::use_cases::submit_team as submit_uc;
-use crate::app::team_creation::use_cases::roster_service;
-use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
+use crate::app::shared_kernel::identity::ids::EntityId;
+use crate::app::team_creation::io::web::view_models::SppLogEntryVm;
+use crate::app::team_creation::use_cases::commands::SubmitTeamCommand;
+use crate::app::team_creation::use_cases::roster_service;
+use crate::app::team_creation::use_cases::submit_team as submit_uc;
 use crate::state::AppState;
 use askama::Template;
 use axum::body::Body;
@@ -76,16 +76,26 @@ pub async fn finalize_team(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let team = match state.team_creation.roster_repository.find_by_id(&team_entity_id).await {
+    let team = match state
+        .team_creation
+        .roster_repository
+        .find_by_id(&team_entity_id)
+        .await
+    {
         Ok(Some(t)) => t,
-        Ok(None)    => return StatusCode::NOT_FOUND.into_response(),
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
             tracing::error!("finalize_team repo error: {e}");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
 
-    let draft = match state.team_creation.team_repository.find_by_id(&team_entity_id).await {
+    let draft = match state
+        .team_creation
+        .team_repository
+        .find_by_id(&team_entity_id)
+        .await
+    {
         Ok(Some(d)) => d,
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
@@ -107,11 +117,15 @@ pub async fn finalize_team(
         Err(_) => false,
     };
 
-    let draft_competition_name = state.team_creation.competition_display
+    let draft_competition_name = state
+        .team_creation
+        .competition_display
         .find_competition_name(draft.competition_id())
         .await
         .unwrap_or_default();
-    let draft_season_name = state.team_creation.competition_display
+    let draft_season_name = state
+        .team_creation
+        .competition_display
         .find_season_name(draft.season_id())
         .await
         .unwrap_or_default();
@@ -155,13 +169,13 @@ pub async fn finalize_team(
     // ── Skip si pas de finalisation nécessaire ────────────────────────────────
     if !team.needs_finalization() {
         let cmd = SubmitTeamCommand {
-            team_id:        team_entity_id,
-            space_id:       space_id.clone(),
-            competition_id:   draft.competition_id().to_string(),
+            team_id: team_entity_id,
+            space_id: space_id.clone(),
+            competition_id: draft.competition_id().to_string(),
             competition_name: draft_competition_name.clone(),
-            season_id:        draft.season_id().to_string(),
-            season_name:      draft_season_name.clone(),
-            coach_name:       draft.coach_name().to_string(),
+            season_id: draft.season_id().to_string(),
+            season_name: draft_season_name.clone(),
+            coach_name: draft.coach_name().to_string(),
             auto_enroll,
         };
         return match submit_uc::execute(
@@ -172,8 +186,14 @@ pub async fn finalize_team(
         .await
         {
             Ok(()) => Response::builder()
-                .header("HX-Redirect", AppRoutes::default().teams.team_detail(&space_id, &team_id))
-                .header("HX-Trigger", r#"{"showToast":"Équipe soumise avec succès !"}"#)
+                .header(
+                    "HX-Redirect",
+                    AppRoutes::default().teams.team_detail(&space_id, &team_id),
+                )
+                .header(
+                    "HX-Trigger",
+                    r#"{"showToast":"Équipe soumise avec succès !"}"#,
+                )
                 .body(Body::empty())
                 .unwrap()
                 .into_response(),
@@ -214,8 +234,12 @@ pub async fn finalize_team(
                     skill_id: a.skill_id.0.clone(),
                     skill_name,
                     mode_label: match a.mode {
-                        crate::app::team_creation::domain::roster::AcquisitionMode::Chosen => "Choisie".into(),
-                        crate::app::team_creation::domain::roster::AcquisitionMode::Random => "Aléatoire".into(),
+                        crate::app::team_creation::domain::roster::AcquisitionMode::Chosen => {
+                            "Choisie".into()
+                        }
+                        crate::app::team_creation::domain::roster::AcquisitionMode::Random => {
+                            "Aléatoire".into()
+                        }
                     },
                     spp_cost: a.spp_cost.into_inner(),
                 }
@@ -223,7 +247,10 @@ pub async fn finalize_team(
         })
         .collect();
 
-    let logo_url = team.base_infos().logo_url().map(|img| img.thumbnail(120, 120));
+    let logo_url = team
+        .base_infos()
+        .logo_url()
+        .map(|img| img.thumbnail(120, 120));
 
     FinalizeTeamTemplate {
         app_routes: AppRoutes::default(),
@@ -254,7 +281,12 @@ pub async fn post_finalize_team(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let post_draft = match state.team_creation.team_repository.find_by_id(&team_entity_id).await {
+    let post_draft = match state
+        .team_creation
+        .team_repository
+        .find_by_id(&team_entity_id)
+        .await
+    {
         Ok(Some(d)) => d,
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
@@ -273,24 +305,28 @@ pub async fn post_finalize_team(
         Err(_) => false,
     };
 
-    let post_comp_name = state.team_creation.competition_display
+    let post_comp_name = state
+        .team_creation
+        .competition_display
         .find_competition_name(post_draft.competition_id())
         .await
         .unwrap_or_default();
-    let post_season_name = state.team_creation.competition_display
+    let post_season_name = state
+        .team_creation
+        .competition_display
         .find_season_name(post_draft.season_id())
         .await
         .unwrap_or_default();
 
     let cmd = SubmitTeamCommand {
-        team_id:          team_entity_id,
-        space_id:         space_id.clone(),
-        competition_id:   post_draft.competition_id().to_string(),
+        team_id: team_entity_id,
+        space_id: space_id.clone(),
+        competition_id: post_draft.competition_id().to_string(),
         competition_name: post_comp_name,
-        season_id:        post_draft.season_id().to_string(),
-        season_name:      post_season_name,
-        coach_name:       post_draft.coach_name().to_string(),
-        auto_enroll:      post_auto_enroll,
+        season_id: post_draft.season_id().to_string(),
+        season_name: post_season_name,
+        coach_name: post_draft.coach_name().to_string(),
+        auto_enroll: post_auto_enroll,
     };
 
     match submit_uc::execute(
@@ -301,21 +337,27 @@ pub async fn post_finalize_team(
     .await
     {
         Ok(()) => Response::builder()
-            .header("HX-Redirect", AppRoutes::default().teams.team_detail(&space_id, &team_id))
-            .header("HX-Trigger", r#"{"showToast":"Équipe soumise avec succès !"}"#)
+            .header(
+                "HX-Redirect",
+                AppRoutes::default().teams.team_detail(&space_id, &team_id),
+            )
+            .header(
+                "HX-Trigger",
+                r#"{"showToast":"Équipe soumise avec succès !"}"#,
+            )
             .body(Body::empty())
             .unwrap()
             .into_response(),
-        Err(submit_uc::SubmitTeamError::TeamNotFound) => {
-            StatusCode::NOT_FOUND.into_response()
-        }
+        Err(submit_uc::SubmitTeamError::TeamNotFound) => StatusCode::NOT_FOUND.into_response(),
         Err(submit_uc::SubmitTeamError::Domain(ref errors)) => {
             let msgs: String = errors
                 .iter()
-                .map(|e| format!(
-                    r#"<p class="table-error">{}</p>"#,
-                    submit_uc::domain_error_message(e)
-                ))
+                .map(|e| {
+                    format!(
+                        r#"<p class="table-error">{}</p>"#,
+                        submit_uc::domain_error_message(e)
+                    )
+                })
                 .collect();
             Response::builder()
                 .header("HX-Retarget", "#submit-errors")

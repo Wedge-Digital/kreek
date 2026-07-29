@@ -2,8 +2,8 @@ use crate::app::competitions::domain::domain_event::CompetitionsDomainEvent;
 use crate::app::competitions::domain::match_day::MatchDay;
 use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
 use crate::app::competitions::ports::{IMatchReportStatusPort, ITeamInfoPort};
-use crate::app::shared_kernel::identity::ids::EventId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::EventId;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::collections::HashMap;
 
@@ -129,7 +129,11 @@ async fn delete_pairings_of(
         for pairing in &day.pairings {
             let pairing_id = pairing.id.to_string();
             if published.contains(&pairing_id) {
-                kept.push((day.name.clone(), pairing.home_team_id.clone(), pairing.away_team_id.clone()));
+                kept.push((
+                    day.name.clone(),
+                    pairing.home_team_id.clone(),
+                    pairing.away_team_id.clone(),
+                ));
                 continue;
             }
             delete_one(&pairing_id, match_day_repo, event_bus).await?;
@@ -157,7 +161,11 @@ async fn published_among(
 /// Un échec de résolution des noms ne doit pas faire échouer une suppression
 /// déjà effectuée : on retombe sur les identifiants.
 async fn resolve_kept_names(
-    kept: Vec<(crate::app::competitions::domain::match_day::MatchDayName, TeamId, TeamId)>,
+    kept: Vec<(
+        crate::app::competitions::domain::match_day::MatchDayName,
+        TeamId,
+        TeamId,
+    )>,
     team_port: &dyn ITeamInfoPort,
 ) -> Vec<KeptMatch> {
     let team_ids: Vec<String> = kept
@@ -282,16 +290,58 @@ mod tests {
         async fn find_by_id(&self, _: &str) -> Result<Option<MatchDay>, MatchDayRepositoryError> {
             Ok(self.days.first().cloned())
         }
-        async fn save_match_day(&self, _: &MatchDay) -> Result<(), MatchDayRepositoryError> { Ok(()) }
-        async fn delete_match_day(&self, match_day_id: &str) -> Result<(), MatchDayRepositoryError> {
-            self.deleted_days.lock().unwrap().push(match_day_id.to_string());
+        async fn save_match_day(&self, _: &MatchDay) -> Result<(), MatchDayRepositoryError> {
             Ok(())
         }
-        async fn save_pairing(&self, _: &str, _: &Pairing, _: &NewPairingProjection) -> Result<(), MatchDayRepositoryError> { Ok(()) }
-        async fn find_pairing_id(&self, _: &str, _: &str, _: &str) -> Result<Option<String>, MatchDayRepositoryError> { Ok(None) }
-        async fn ensure_match_days_from_structure(&self, _: &str, _: &[(String, String, String, Option<String>, Option<String>)]) -> Result<(), MatchDayRepositoryError> { Ok(()) }
-        async fn list_resultats(&self, _: &str, _: Option<i32>, _: u32) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> { Ok(vec![]) }
-        async fn list_calendrier(&self, _: &str, _: Option<i32>, _: u32) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> { Ok(vec![]) }
+        async fn delete_match_day(
+            &self,
+            match_day_id: &str,
+        ) -> Result<(), MatchDayRepositoryError> {
+            self.deleted_days
+                .lock()
+                .unwrap()
+                .push(match_day_id.to_string());
+            Ok(())
+        }
+        async fn save_pairing(
+            &self,
+            _: &str,
+            _: &Pairing,
+            _: &NewPairingProjection,
+        ) -> Result<(), MatchDayRepositoryError> {
+            Ok(())
+        }
+        async fn find_pairing_id(
+            &self,
+            _: &str,
+            _: &str,
+            _: &str,
+        ) -> Result<Option<String>, MatchDayRepositoryError> {
+            Ok(None)
+        }
+        async fn ensure_match_days_from_structure(
+            &self,
+            _: &str,
+            _: &[(String, String, String, Option<String>, Option<String>)],
+        ) -> Result<(), MatchDayRepositoryError> {
+            Ok(())
+        }
+        async fn list_resultats(
+            &self,
+            _: &str,
+            _: Option<i32>,
+            _: u32,
+        ) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> {
+            Ok(vec![])
+        }
+        async fn list_calendrier(
+            &self,
+            _: &str,
+            _: Option<i32>,
+            _: u32,
+        ) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> {
+            Ok(vec![])
+        }
     }
 
     fn bus() -> EventBus {
@@ -312,7 +362,10 @@ mod tests {
         MatchDay {
             id: MatchId::new(),
             season_id: SeasonId::new(),
-            name: crate::app::competitions::domain::match_day::MatchDayName::try_new(name.to_string()).unwrap(),
+            name: crate::app::competitions::domain::match_day::MatchDayName::try_new(
+                name.to_string(),
+            )
+            .unwrap(),
             day_type: MatchDayType::FixedDate,
             date_start: None,
             date_end: None,
@@ -322,14 +375,20 @@ mod tests {
     }
 
     fn repo_with(days: Vec<MatchDay>) -> FakeMatchDayRepo {
-        FakeMatchDayRepo { days, ..Default::default() }
+        FakeMatchDayRepo {
+            days,
+            ..Default::default()
+        }
     }
 
     #[tokio::test]
     async fn supprime_et_annonce_quand_aucun_rapport_publie() {
         let repo = FakeMatchDayRepo::default();
         let deleted = repo.deleted.clone();
-        let port = FakeStatusPort { published: vec![], fails: false };
+        let port = FakeStatusPort {
+            published: vec![],
+            fails: false,
+        };
         let bus = bus();
         let mut rx = bus.subscribe();
 
@@ -345,7 +404,10 @@ mod tests {
     async fn refuse_et_ne_supprime_rien_quand_le_rapport_est_publie() {
         let repo = FakeMatchDayRepo::default();
         let deleted = repo.deleted.clone();
-        let port = FakeStatusPort { published: vec!["pairing-1".to_string()], fails: false };
+        let port = FakeStatusPort {
+            published: vec!["pairing-1".to_string()],
+            fails: false,
+        };
         let bus = bus();
         let mut rx = bus.subscribe();
 
@@ -362,7 +424,10 @@ mod tests {
     async fn un_autre_pairing_publie_ne_bloque_pas() {
         let repo = FakeMatchDayRepo::default();
         let deleted = repo.deleted.clone();
-        let port = FakeStatusPort { published: vec!["pairing-2".to_string()], fails: false };
+        let port = FakeStatusPort {
+            published: vec!["pairing-2".to_string()],
+            fails: false,
+        };
 
         execute("pairing-1", &repo, &port, &bus()).await.unwrap();
 
@@ -373,12 +438,21 @@ mod tests {
     async fn refuse_quand_le_statut_est_inconsultable() {
         let repo = FakeMatchDayRepo::default();
         let deleted = repo.deleted.clone();
-        let port = FakeStatusPort { published: vec![], fails: true };
+        let port = FakeStatusPort {
+            published: vec![],
+            fails: true,
+        };
 
         let result = execute("pairing-1", &repo, &port, &bus()).await;
 
-        assert!(matches!(result, Err(DeletePairingError::StatusUnavailable(_))));
-        assert!(deleted.lock().unwrap().is_empty(), "pas de suppression à l'aveugle");
+        assert!(matches!(
+            result,
+            Err(DeletePairingError::StatusUnavailable(_))
+        ));
+        assert!(
+            deleted.lock().unwrap().is_empty(),
+            "pas de suppression à l'aveugle"
+        );
     }
 
     // ── Suppressions en masse ────────────────────────────────────────────
@@ -387,9 +461,15 @@ mod tests {
     async fn vider_une_journee_epargne_les_rencontres_publiees() {
         let publie = a_pairing();
         let (a, b) = (a_pairing(), a_pairing());
-        let repo = repo_with(vec![a_day("Journée 3", vec![a.clone(), publie.clone(), b.clone()])]);
+        let repo = repo_with(vec![a_day(
+            "Journée 3",
+            vec![a.clone(), publie.clone(), b.clone()],
+        )]);
         let deleted = repo.deleted.clone();
-        let port = FakeStatusPort { published: vec![publie.id.to_string()], fails: false };
+        let port = FakeStatusPort {
+            published: vec![publie.id.to_string()],
+            fails: false,
+        };
 
         let kept = clear_round("round-1", &repo, &port, &FakeTeamInfoPort, &bus())
             .await
@@ -402,7 +482,10 @@ mod tests {
         );
         assert_eq!(kept.len(), 1);
         assert_eq!(kept[0].round_name, "Journée 3");
-        assert_eq!(kept[0].home_team_name, format!("Équipe {}", publie.home_team_id));
+        assert_eq!(
+            kept[0].home_team_name,
+            format!("Équipe {}", publie.home_team_id)
+        );
     }
 
     #[tokio::test]
@@ -410,7 +493,10 @@ mod tests {
         let (a, b) = (a_pairing(), a_pairing());
         let repo = repo_with(vec![a_day("Journée 1", vec![a, b])]);
         let deleted = repo.deleted.clone();
-        let port = FakeStatusPort { published: vec![], fails: false };
+        let port = FakeStatusPort {
+            published: vec![],
+            fails: false,
+        };
 
         let kept = clear_round("round-1", &repo, &port, &FakeTeamInfoPort, &bus())
             .await
@@ -448,21 +534,30 @@ mod tests {
         let publie = a_pairing();
         let repo = repo_with(vec![a_day("Journée 2", vec![a_pairing(), publie.clone()])]);
         let deleted_days = repo.deleted_days.clone();
-        let port = FakeStatusPort { published: vec![publie.id.to_string()], fails: false };
+        let port = FakeStatusPort {
+            published: vec![publie.id.to_string()],
+            fails: false,
+        };
 
         let kept = delete_round("round-1", &repo, &port, &FakeTeamInfoPort, &bus())
             .await
             .unwrap();
 
         assert_eq!(kept.len(), 1);
-        assert!(deleted_days.lock().unwrap().is_empty(), "la journée doit survivre");
+        assert!(
+            deleted_days.lock().unwrap().is_empty(),
+            "la journée doit survivre"
+        );
     }
 
     #[tokio::test]
     async fn supprimer_une_journee_la_supprime_si_rien_ne_resiste() {
         let repo = repo_with(vec![a_day("Journée 2", vec![a_pairing()])]);
         let deleted_days = repo.deleted_days.clone();
-        let port = FakeStatusPort { published: vec![], fails: false };
+        let port = FakeStatusPort {
+            published: vec![],
+            fails: false,
+        };
 
         let kept = delete_round("round-1", &repo, &port, &FakeTeamInfoPort, &bus())
             .await
@@ -480,7 +575,10 @@ mod tests {
             a_day("Journée 2", vec![a_pairing(), publie.clone()]),
         ]);
         let deleted = repo.deleted.clone();
-        let port = FakeStatusPort { published: vec![publie.id.to_string()], fails: false };
+        let port = FakeStatusPort {
+            published: vec![publie.id.to_string()],
+            fails: false,
+        };
 
         let kept = clear_season("season-1", &repo, &port, &FakeTeamInfoPort, &bus())
             .await

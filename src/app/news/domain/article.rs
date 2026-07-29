@@ -1,8 +1,8 @@
 use crate::app::news::domain::article_tag::ArticleTag;
 use crate::app::news::domain::article_title::ArticleTitle;
 use crate::app::news::domain::paragraph_type::ParagraphType;
-use crate::app::shared_kernel::identity::ids::{SpaceId, UserId};
 use crate::app::shared_kernel::bloodbowl::ids::ArticleId;
+use crate::app::shared_kernel::identity::ids::{SpaceId, UserId};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,9 +18,9 @@ pub struct Article {
     pub id: ArticleId,
     pub space_id: SpaceId,
     pub author_id: UserId,
-    pub author_name: String,  // arch:ok texte libre dénormalisé
+    pub author_name: String, // arch:ok texte libre dénormalisé
     pub title: ArticleTitle,
-    pub abstract_: String,    // arch:ok texte libre
+    pub abstract_: String, // arch:ok texte libre
     pub tags: Vec<ArticleTag>,
     pub image: Option<String>,
     pub content: Vec<ArticleParagraph>,

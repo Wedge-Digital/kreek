@@ -1,6 +1,6 @@
+use crate::app::shared_kernel::bloodbowl::date_string::DateString;
 use crate::app::shared_kernel::bloodbowl::ids::{MatchId, PairingId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
-use crate::app::shared_kernel::bloodbowl::date_string::DateString;
 use crate::app::shared_kernel::identity::name_vo::NameVo;
 use nutype::nutype;
 use std::collections::HashSet;

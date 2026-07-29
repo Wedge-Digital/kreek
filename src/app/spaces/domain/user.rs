@@ -1,6 +1,6 @@
 use crate::app::shared_kernel::identity::coach_name::CoachName;
-use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId};
 use crate::app::shared_kernel::identity::email::Email;
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId};
 
 #[derive(Debug, Clone)]
 pub struct User {

@@ -41,7 +41,15 @@ pub struct MinCasualties(u32);
 #[nutype(
     validate(not_empty),
     derive(
-        Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Display, AsRef
+        Debug,
+        Clone,
+        PartialEq,
+        Eq,
+        Hash,
+        Serialize,
+        Deserialize,
+        Display,
+        AsRef
     )
 )]
 pub struct TiebreakCode(String);
@@ -215,7 +223,8 @@ mod tests {
 
     #[test]
     fn try_new_rejects_a_configuration_without_any_active_criterion() {
-        let config = TiebreakConfig::try_new(vec![setting("nb_td", false), setting("nb_cas", false)]);
+        let config =
+            TiebreakConfig::try_new(vec![setting("nb_td", false), setting("nb_cas", false)]);
         assert_eq!(config, Err(DomainError::NoActiveTiebreaker));
     }
 
@@ -289,8 +298,9 @@ mod tests {
 
     #[test]
     fn serializing_produces_a_json_array_in_order() {
-        let config = TiebreakConfig::try_new(vec![setting("diff_td", true), setting("nb_td", false)])
-            .expect("configuration valide");
+        let config =
+            TiebreakConfig::try_new(vec![setting("diff_td", true), setting("nb_td", false)])
+                .expect("configuration valide");
 
         let json = serde_json::to_string(&config).expect("sérialisation");
         assert_eq!(
@@ -301,8 +311,9 @@ mod tests {
 
     #[test]
     fn serialization_round_trip_is_stable() {
-        let config = TiebreakConfig::try_new(vec![setting("nb_cas", true), setting("nb_reu", false)])
-            .expect("configuration valide");
+        let config =
+            TiebreakConfig::try_new(vec![setting("nb_cas", true), setting("nb_reu", false)])
+                .expect("configuration valide");
 
         let json = serde_json::to_string(&config).expect("sérialisation");
         let back: TiebreakConfig = serde_json::from_str(&json).expect("désérialisation");
@@ -339,9 +350,15 @@ mod tests {
 
         let rr: RankingRules = serde_json::from_str(json).unwrap();
 
-        assert_eq!(rr.defensive_bonus.max_td_conceded, default_max_td_conceded());
+        assert_eq!(
+            rr.defensive_bonus.max_td_conceded,
+            default_max_td_conceded()
+        );
         assert_eq!(rr.aggressive_bonus.activated, Activated(false));
-        assert_eq!(rr.aggressive_bonus.min_casualties, MinCasualties::try_new(2).unwrap());
+        assert_eq!(
+            rr.aggressive_bonus.min_casualties,
+            MinCasualties::try_new(2).unwrap()
+        );
     }
 
     #[test]

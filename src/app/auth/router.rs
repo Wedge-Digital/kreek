@@ -1,3 +1,4 @@
+use crate::app::auth::context::AuthContext;
 use crate::app::auth::io::web::auth_layout::auth_layout;
 use crate::app::auth::io::web::forgot_password::{
     display_forgot_password, display_forgot_password_sent, post_forgot_password,
@@ -11,7 +12,6 @@ use crate::app::auth::io::web::post_logout::logout;
 use crate::app::auth::io::web::post_register::post_register;
 use crate::app::auth::io::web::reset_password::{display_reset_password, post_reset_password};
 use crate::app::auth::routes::path;
-use crate::app::auth::context::AuthContext;
 use axum::extract::FromRef;
 use axum::{routing::get, Router};
 

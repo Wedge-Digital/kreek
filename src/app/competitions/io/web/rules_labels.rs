@@ -18,7 +18,9 @@ pub fn format_bonus_label(rr: &RankingRules) -> Option<String> {
 }
 
 fn format_offensive(b: &OffensiveBonus) -> Option<String> {
-    b.activated.0.then(|| format!("+{} si ≥ {} TDs", b.points, b.min_td))
+    b.activated
+        .0
+        .then(|| format!("+{} si ≥ {} TDs", b.points, b.min_td))
 }
 
 fn format_defensive(b: &DefensiveBonus) -> Option<String> {
@@ -37,8 +39,7 @@ fn format_aggressive(b: &AggressiveBonus) -> Option<String> {
 mod tests {
     use super::*;
     use crate::app::competitions::domain::competition_rules::{
-        Activated, MaxTdConceded, MinCasualties, MinTd, RankingPoints, TiebreakCode,
-        TiebreakConfig,
+        Activated, MaxTdConceded, MinCasualties, MinTd, RankingPoints, TiebreakCode, TiebreakConfig,
     };
 
     fn rules(off: bool, def: bool, agg: bool) -> RankingRules {
@@ -61,8 +62,9 @@ mod tests {
                 points: RankingPoints::try_new(1).unwrap(),
                 min_casualties: MinCasualties::try_new(2).unwrap(),
             },
-            tiebreakers: TiebreakConfig::all_active(vec![TiebreakCode::try_new("diff_td")
-                .expect("code non vide")])
+            tiebreakers: TiebreakConfig::all_active(vec![
+                TiebreakCode::try_new("diff_td").expect("code non vide")
+            ])
             .expect("liste non vide"),
         }
     }

@@ -179,8 +179,7 @@ mod tests {
         let to =
             std::env::var("RESEND_TEST_TO").expect("RESEND_TEST_TO doit être défini pour ce test");
 
-        let service =
-            ResendMailService::new(api_key, "mailer@example.com".into(), "Kreek".into());
+        let service = ResendMailService::new(api_key, "mailer@example.com".into(), "Kreek".into());
 
         let result = service.send(
             vec![to],

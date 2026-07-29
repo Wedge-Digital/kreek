@@ -24,7 +24,12 @@ pub async fn post_increase_stat(
         return StatusCode::BAD_REQUEST.into_response();
     };
 
-    let player = match state.players.repository.find_by_id(&PlayerId(player_id.clone())).await {
+    let player = match state
+        .players
+        .repository
+        .find_by_id(&PlayerId(player_id.clone()))
+        .await
+    {
         Ok(Some(p)) => p,
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
@@ -33,7 +38,12 @@ pub async fn post_increase_stat(
         }
     };
 
-    let Some(team) = state.players.roster_port.find_team_info(&player.team_id.0).await else {
+    let Some(team) = state
+        .players
+        .roster_port
+        .find_team_info(&player.team_id.0)
+        .await
+    else {
         return StatusCode::NOT_FOUND.into_response();
     };
 
@@ -49,11 +59,26 @@ pub async fn post_increase_stat(
         return StatusCode::FORBIDDEN.into_response();
     }
 
-    let cmd = IncreaseStatCommand { player_id: player.id.clone(), stat };
+    let cmd = IncreaseStatCommand {
+        player_id: player.id.clone(),
+        stat,
+    };
 
-    match increase_stat_use_case::execute(cmd, state.players.repository.as_ref(), state.players.skill_catalog.as_ref(), &state.players.event_bus).await {
-        Ok(()) => Response::builder().header("HX-Refresh", "true").body(Body::empty()).unwrap(),
-        Err(increase_stat_use_case::IncreaseStatError::PlayerNotFound) => StatusCode::NOT_FOUND.into_response(),
+    match increase_stat_use_case::execute(
+        cmd,
+        state.players.repository.as_ref(),
+        state.players.skill_catalog.as_ref(),
+        &state.players.event_bus,
+    )
+    .await
+    {
+        Ok(()) => Response::builder()
+            .header("HX-Refresh", "true")
+            .body(Body::empty())
+            .unwrap(),
+        Err(increase_stat_use_case::IncreaseStatError::PlayerNotFound) => {
+            StatusCode::NOT_FOUND.into_response()
+        }
         Err(increase_stat_use_case::IncreaseStatError::Domain(e)) => {
             tracing::warn!("post_increase_stat domaine: {e}");
             StatusCode::UNPROCESSABLE_ENTITY.into_response()

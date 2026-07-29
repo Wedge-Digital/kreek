@@ -11,7 +11,11 @@ pub struct RosterPositionUid(pub String);
 
 impl RosterPositionUid {
     pub fn try_new(s: &str) -> Result<Self, &'static str> {
-        if s.is_empty() { Err("position uid vide") } else { Ok(Self(s.to_string())) }
+        if s.is_empty() {
+            Err("position uid vide")
+        } else {
+            Ok(Self(s.to_string()))
+        }
     }
 }
 
@@ -49,7 +53,18 @@ impl D3Roll {
 
 #[nutype(
     validate(less_or_equal = 3000),
-    derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Display)
+    derive(
+        Debug,
+        Clone,
+        Copy,
+        PartialEq,
+        Eq,
+        PartialOrd,
+        Ord,
+        Serialize,
+        Deserialize,
+        Display
+    )
 )]
 pub struct TeamValue(u32);
 
@@ -65,7 +80,17 @@ pub struct DedicatedFans(u32);
 
 #[nutype(
     validate(greater_or_equal = 1, less_or_equal = 10),
-    derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)
+    derive(
+        Debug,
+        Clone,
+        Copy,
+        PartialEq,
+        Eq,
+        PartialOrd,
+        Ord,
+        Serialize,
+        Deserialize
+    )
 )]
 pub struct InducementQty(u8);
 
@@ -213,9 +238,16 @@ pub struct TempPlayer {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TempPlayerKind {
-    StarPlayer { ref_uid: String, position_uid: String },
-    Mercenary { position_uid: String },
-    Journeyman { position_uid: String },
+    StarPlayer {
+        ref_uid: String,
+        position_uid: String,
+    },
+    Mercenary {
+        position_uid: String,
+    },
+    Journeyman {
+        position_uid: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -239,7 +271,10 @@ mod tests {
         let b = TeamValue::try_new(1100).unwrap();
         assert!(b > a);
         assert!(a < b);
-        assert_eq!(TeamValue::try_new(1000).unwrap(), TeamValue::try_new(1000).unwrap());
+        assert_eq!(
+            TeamValue::try_new(1000).unwrap(),
+            TeamValue::try_new(1000).unwrap()
+        );
     }
 
     #[test]
@@ -276,11 +311,17 @@ mod tests {
 
     #[test]
     fn turn_number_rejects_0() {
-        assert_eq!(TurnNumber::try_new(0).unwrap_err(), DomainError::InvalidTurn(0));
+        assert_eq!(
+            TurnNumber::try_new(0).unwrap_err(),
+            DomainError::InvalidTurn(0)
+        );
     }
 
     #[test]
     fn turn_number_rejects_17() {
-        assert_eq!(TurnNumber::try_new(17).unwrap_err(), DomainError::InvalidTurn(17));
+        assert_eq!(
+            TurnNumber::try_new(17).unwrap_err(),
+            DomainError::InvalidTurn(17)
+        );
     }
 }

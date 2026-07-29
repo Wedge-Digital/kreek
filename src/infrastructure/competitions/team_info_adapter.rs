@@ -40,12 +40,12 @@ impl ITeamInfoPort for TeamInfoAdapter {
         for id in team_ids {
             if let Ok(Some(team)) = self.team_repo.find_by_id(id).await {
                 out.push(TeamInfoDto {
-                    team_id:     id.clone(),
-                    team_name:   team.name.to_string(),
-                    coach_id:    team.coach_id.to_string(),
-                    coach_name:  team.coach_name.clone(),
+                    team_id: id.clone(),
+                    team_name: team.name.to_string(),
+                    coach_id: team.coach_id.to_string(),
+                    coach_name: team.coach_name.clone(),
                     roster_name: team.roster_name.to_string(),
-                    logo_url:    team.logo_url.clone(),
+                    logo_url: team.logo_url.clone(),
                 });
             }
         }

@@ -20,10 +20,18 @@ fn card_url(routes: &AppRoutes, space_id: &str, c: &CompetitionSummary) -> Strin
     let status = c.status.as_deref().unwrap_or("draft");
     match c.season_id.as_deref() {
         Some(sid) => match status {
-            "draft" => routes.competitions.new_competition_rules(space_id, &c.id, sid),
-            "rules_selected" => routes.competitions.new_competition_structure(space_id, &c.id, sid),
-            "structure_selected" => routes.competitions.new_competition_invitations(space_id, &c.id, sid),
-            "invitations_configured" => routes.competitions.new_competition_validation(space_id, &c.id, sid),
+            "draft" => routes
+                .competitions
+                .new_competition_rules(space_id, &c.id, sid),
+            "rules_selected" => routes
+                .competitions
+                .new_competition_structure(space_id, &c.id, sid),
+            "structure_selected" => routes
+                .competitions
+                .new_competition_invitations(space_id, &c.id, sid),
+            "invitations_configured" => routes
+                .competitions
+                .new_competition_validation(space_id, &c.id, sid),
             _ => routes.competitions.competition_detail(space_id, &c.id, sid),
         },
         None => routes.competitions.new_competition_info(space_id, &c.id),

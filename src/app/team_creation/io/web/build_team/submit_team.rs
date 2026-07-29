@@ -1,7 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
+use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::team_creation::use_cases::commands::SubmitTeamCommand;
 use crate::app::team_creation::use_cases::submit_team as submit_uc;
 use crate::state::AppState;
@@ -48,11 +48,15 @@ pub async fn submit_team(
         Err(_) => false,
     };
 
-    let competition_name = state.team_creation.competition_display
+    let competition_name = state
+        .team_creation
+        .competition_display
         .find_competition_name(draft.competition_id())
         .await
         .unwrap_or_default();
-    let season_name = state.team_creation.competition_display
+    let season_name = state
+        .team_creation
+        .competition_display
         .find_season_name(draft.season_id())
         .await
         .unwrap_or_default();
@@ -73,7 +77,7 @@ pub async fn submit_team(
         state.team_creation.roster_repository.as_ref(),
         &state.team_creation.event_bus,
     )
-        .await
+    .await
     {
         Ok(()) => {}
         Err(submit_uc::SubmitTeamError::TeamNotFound) => {
@@ -104,7 +108,10 @@ pub async fn submit_team(
 
     let app_routes = AppRoutes::default();
     Response::builder()
-        .header("HX-Redirect", app_routes.teams.team_detail(&space_id, &team_id))
+        .header(
+            "HX-Redirect",
+            app_routes.teams.team_detail(&space_id, &team_id),
+        )
         .header(
             "HX-Trigger",
             r#"{"showToast":"Équipe soumise avec succès !"}"#,

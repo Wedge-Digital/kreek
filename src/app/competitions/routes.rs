@@ -28,9 +28,12 @@ pub mod path {
         "/app/{space_id}/competitions/{competition_id}/{season_id}/stats";
     pub const COMPETITION_WIDGET: &str = "/app/{space_id}/competitions/widget";
     pub const COMPETITION_WIDGET_DETAIL: &str = "/app/{space_id}/competitions/widget/{season_id}";
-    pub const COMPETITION_WIDGET_JSON_COMPETITIONS: &str = "/app/{space_id}/competitions/widget/json/competitions";
-    pub const COMPETITION_WIDGET_JSON_SEASONS: &str = "/app/{space_id}/competitions/widget/json/seasons";
-    pub const COMPETITION_WIDGET_JSON_ROUNDS: &str = "/app/{space_id}/competitions/widget/json/rounds";
+    pub const COMPETITION_WIDGET_JSON_COMPETITIONS: &str =
+        "/app/{space_id}/competitions/widget/json/competitions";
+    pub const COMPETITION_WIDGET_JSON_SEASONS: &str =
+        "/app/{space_id}/competitions/widget/json/seasons";
+    pub const COMPETITION_WIDGET_JSON_ROUNDS: &str =
+        "/app/{space_id}/competitions/widget/json/rounds";
     pub const COMPETITION_WIDGET_TESTER: &str = "/competitions/widget/tester";
     pub const COMPETITION_ADMIN: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin";
@@ -131,7 +134,12 @@ impl Routes {
             .replace("{competition_id}", cid)
             .replace("{season_id}", season_id)
     }
-    pub fn competition_tab_detailed_standings(&self, sid: &str, cid: &str, season_id: &str) -> String {
+    pub fn competition_tab_detailed_standings(
+        &self,
+        sid: &str,
+        cid: &str,
+        season_id: &str,
+    ) -> String {
         path::COMPETITION_TAB_DETAILED_STANDINGS
             .replace("{space_id}", sid)
             .replace("{competition_id}", cid)
@@ -280,7 +288,13 @@ impl Routes {
             .replace("{competition_id}", cid)
             .replace("{season_id}", season_id)
     }
-    pub fn admin_schedule_round(&self, sid: &str, cid: &str, season_id: &str, round_id: &str) -> String {
+    pub fn admin_schedule_round(
+        &self,
+        sid: &str,
+        cid: &str,
+        season_id: &str,
+        round_id: &str,
+    ) -> String {
         path::COMPETITION_ADMIN_SCHEDULE_ROUND
             .replace("{space_id}", sid)
             .replace("{competition_id}", cid)

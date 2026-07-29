@@ -3,10 +3,10 @@ use crate::app::competitions::domain::competition_repository_port::{
     CompetitionBaseInfo, CompetitionRepositoryError, CompetitionSummary, CompetitionWithSeasons,
     ICompetitionRepository, SeasonOption,
 };
-use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, SpaceId};
-use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
 use crate::app::shared_kernel::bloodbowl::competition_name::CompetitionName;
 use crate::app::shared_kernel::bloodbowl::competition_profile::CompetitionProfile;
+use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, SpaceId};
 use async_trait::async_trait;
 use sqlx::PgPool;
 

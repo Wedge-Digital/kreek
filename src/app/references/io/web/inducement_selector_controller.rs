@@ -85,8 +85,20 @@ fn build_items_json(
     let all: Vec<JsItem> = common
         .iter()
         .chain(special.iter())
-        .map(|i| JsItem { uid: i.uid.clone(), name: i.name.clone(), max_qty: i.max_qty, unit_cost: i.unit_cost, qty: i.initial_qty })
-        .chain(stars.iter().map(|s| JsItem { uid: s.uid.clone(), name: s.name.clone(), max_qty: 1, unit_cost: s.cost, qty: s.initial_qty }))
+        .map(|i| JsItem {
+            uid: i.uid.clone(),
+            name: i.name.clone(),
+            max_qty: i.max_qty,
+            unit_cost: i.unit_cost,
+            qty: i.initial_qty,
+        })
+        .chain(stars.iter().map(|s| JsItem {
+            uid: s.uid.clone(),
+            name: s.name.clone(),
+            max_qty: 1,
+            unit_cost: s.cost,
+            qty: s.initial_qty,
+        }))
         .collect();
     serde_json::to_string(&all).unwrap_or_else(|_| "[]".to_string())
 }
@@ -117,7 +129,9 @@ fn build_inducement_items(
     let mut common = vec![];
     let mut special = vec![];
     for uid in &allowed {
-        let Some(ind) = repo.find_inducement_by_uid(uid) else { continue };
+        let Some(ind) = repo.find_inducement_by_uid(uid) else {
+            continue;
+        };
         if !params.roster_id.is_empty()
             && !ind.restricted_to.is_empty()
             && !ind.restricted_to.contains(&params.roster_id)
@@ -187,7 +201,10 @@ fn build_star_player_items(
 }
 
 fn is_common_category(category: &str) -> bool {
-    matches!(category, "COMMON" | "INFAMOUS_STAFF" | "WIZARD" | "BIASED_REFEREE")
+    matches!(
+        category,
+        "COMMON" | "INFAMOUS_STAFF" | "WIZARD" | "BIASED_REFEREE"
+    )
 }
 
 #[derive(Template)]

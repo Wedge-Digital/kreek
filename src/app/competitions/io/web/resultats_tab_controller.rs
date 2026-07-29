@@ -1,11 +1,11 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::competitions::io::web::competition_detail::{load_page_base, full_page};
+use crate::app::competitions::io::web::competition_detail::{full_page, load_page_base};
 use crate::app::competitions::io::web::resultats_view::{
     build_journees, compute_authorization, load_resultats, JourneeResultatsVm,
 };
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, Query, State};
@@ -63,8 +63,8 @@ pub async fn get_resultats_tab(
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
-    let authz = compute_authorization(&state, &user, &space_id_vo, &competition_id_vo, &season_id)
-        .await;
+    let authz =
+        compute_authorization(&state, &user, &space_id_vo, &competition_id_vo, &season_id).await;
 
     let (journees, next_cursor) = build_journees(rows, 3, &authz);
     let is_htmx = headers.contains_key("hx-request");
@@ -82,7 +82,15 @@ pub async fn get_resultats_tab(
         .into_response();
     }
 
-    render_full_page(space_id, competition_id, season_id, journees, next_cursor, &state).await
+    render_full_page(
+        space_id,
+        competition_id,
+        season_id,
+        journees,
+        next_cursor,
+        &state,
+    )
+    .await
 }
 
 async fn render_full_page(
@@ -106,6 +114,16 @@ async fn render_full_page(
         Err(r) => return r,
     };
     let _ = (journees, next_cursor);
-    full_page(pb, space_id, competition_id, season_id, "resultats", false,
-        vec![], vec![], vec![], vec![])
+    full_page(
+        pb,
+        space_id,
+        competition_id,
+        season_id,
+        "resultats",
+        false,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+    )
 }

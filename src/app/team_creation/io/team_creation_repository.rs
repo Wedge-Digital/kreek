@@ -1,6 +1,6 @@
+use crate::app::shared_kernel::bloodbowl::team::{BaseTeamInfo, TeamId, TeamName};
 use crate::app::shared_kernel::identity::ids::Entity;
 use crate::app::shared_kernel::identity::ids::{CoachId, UserId};
-use crate::app::shared_kernel::bloodbowl::team::{BaseTeamInfo, TeamId, TeamName};
 use crate::app::team_creation::domain::creation_rules::CreationRules;
 use crate::app::team_creation::domain::team_draft::DraftTeam;
 use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;

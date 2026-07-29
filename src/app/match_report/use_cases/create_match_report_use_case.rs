@@ -3,9 +3,9 @@ use crate::app::match_report::domain::match_report_repository_port::IMatchReport
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::MatchReportOrigin;
 use crate::app::shared_kernel::app_events::match_report_app_events::MatchReportAppEvent;
-use crate::app::shared_kernel::identity::ids::{CoachId, EventId, SpaceId};
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::{CoachId, EventId, SpaceId};
 use crate::common::services::event_bus::event_bus::EventBus;
 
 pub struct CreateMatchReportCommand {
@@ -139,7 +139,9 @@ async fn confirm_existing(
 mod tests {
     use super::*;
     use crate::app::match_report::domain::events::MatchReportDomainEvent;
-    use crate::app::match_report::domain::match_report_repository_port::{MatchActionRow, RepositoryError};
+    use crate::app::match_report::domain::match_report_repository_port::{
+        MatchActionRow, RepositoryError,
+    };
     use crate::app::match_report::domain::match_report_state::rehydrate;
     use crate::app::match_report::domain::value_objects::TeamSide;
     use crate::common::services::event_bus::event_bus::new_bus;
@@ -154,33 +156,66 @@ mod tests {
 
     #[async_trait]
     impl IMatchReportRepository for FakeMatchReportRepo {
-        async fn append(&self, match_report_id: &str, event: &MatchReportDomainEvent, _expected_version: u64) -> Result<u64, RepositoryError> {
+        async fn append(
+            &self,
+            match_report_id: &str,
+            event: &MatchReportDomainEvent,
+            _expected_version: u64,
+        ) -> Result<u64, RepositoryError> {
             let mut events = self.events.lock().unwrap();
             let entry = events.entry(match_report_id.to_string()).or_default();
             entry.push(event.clone());
             Ok(entry.len() as u64)
         }
-        async fn find_by_id(&self, match_report_id: &str) -> Result<Option<MatchReportState>, RepositoryError> {
+        async fn find_by_id(
+            &self,
+            match_report_id: &str,
+        ) -> Result<Option<MatchReportState>, RepositoryError> {
             let events = self.events.lock().unwrap();
             match events.get(match_report_id) {
                 Some(evs) => Ok(Some(rehydrate(evs.clone()).expect("rehydrate"))),
                 None => Ok(None),
             }
         }
-        async fn append_many(&self, _: &str, _: Vec<MatchReportDomainEvent>, _: u64) -> Result<u64, RepositoryError> {
+        async fn append_many(
+            &self,
+            _: &str,
+            _: Vec<MatchReportDomainEvent>,
+            _: u64,
+        ) -> Result<u64, RepositoryError> {
             unimplemented!("non utilisé par ces tests")
         }
         async fn find_id_by_pairing(&self, _: &str) -> Result<Option<String>, RepositoryError> {
             Ok(None)
         }
-        async fn find_phases_by_pairings(&self, _: &[String]) -> Result<Vec<(String, String)>, RepositoryError> {
+        async fn find_phases_by_pairings(
+            &self,
+            _: &[String],
+        ) -> Result<Vec<(String, String)>, RepositoryError> {
             Ok(vec![])
         }
-        async fn find_id_by_round_and_teams(&self, round_id: &str, team_a: &str, team_b: &str) -> Result<Option<String>, RepositoryError> {
+        async fn find_id_by_round_and_teams(
+            &self,
+            round_id: &str,
+            team_a: &str,
+            team_b: &str,
+        ) -> Result<Option<String>, RepositoryError> {
             let events = self.events.lock().unwrap();
             for (id, evs) in events.iter() {
-                let Some(MatchReportDomainEvent::MatchReportCreated { round_id: r, home_team_id, away_team_id, .. }) = evs.first() else { continue };
-                let (r, h, a) = (r.to_string(), home_team_id.to_string(), away_team_id.to_string());
+                let Some(MatchReportDomainEvent::MatchReportCreated {
+                    round_id: r,
+                    home_team_id,
+                    away_team_id,
+                    ..
+                }) = evs.first()
+                else {
+                    continue;
+                };
+                let (r, h, a) = (
+                    r.to_string(),
+                    home_team_id.to_string(),
+                    away_team_id.to_string(),
+                );
                 let same_teams = (h == team_a && a == team_b) || (h == team_b && a == team_a);
                 if r == round_id && same_teams {
                     return Ok(Some(id.clone()));
@@ -188,16 +223,26 @@ mod tests {
             }
             Ok(None)
         }
-        async fn find_actions_by_match_and_side(&self, _: &str, _: TeamSide) -> Result<Vec<MatchActionRow>, RepositoryError> {
+        async fn find_actions_by_match_and_side(
+            &self,
+            _: &str,
+            _: TeamSide,
+        ) -> Result<Vec<MatchActionRow>, RepositoryError> {
             Ok(vec![])
         }
     }
 
     fn sample_cmd(origin: MatchReportOrigin) -> CreateMatchReportCommand {
         CreateMatchReportCommand {
-            space_id: SpaceId::new(), competition_id: CompetitionId::new(), season_id: SeasonId::new(),
-            round_id: RoundId::new(), home_team_id: TeamId::new(), away_team_id: TeamId::new(),
-            created_by: CoachId::new(), origin, pairing_id: None,
+            space_id: SpaceId::new(),
+            competition_id: CompetitionId::new(),
+            season_id: SeasonId::new(),
+            round_id: RoundId::new(),
+            home_team_id: TeamId::new(),
+            away_team_id: TeamId::new(),
+            created_by: CoachId::new(),
+            origin,
+            pairing_id: None,
         }
     }
 
@@ -206,7 +251,9 @@ mod tests {
         let repo = FakeMatchReportRepo::default();
         let bus = new_bus();
 
-        let id = execute(sample_cmd(MatchReportOrigin::Manual), &repo, &bus).await.unwrap();
+        let id = execute(sample_cmd(MatchReportOrigin::Manual), &repo, &bus)
+            .await
+            .unwrap();
 
         let state = repo.find_by_id(&id.to_string()).await.unwrap().unwrap();
         assert!(matches!(state, MatchReportState::PreMatch(_)));
@@ -217,7 +264,9 @@ mod tests {
         let repo = FakeMatchReportRepo::default();
         let bus = new_bus();
 
-        let id = execute(sample_cmd(MatchReportOrigin::Pairing), &repo, &bus).await.unwrap();
+        let id = execute(sample_cmd(MatchReportOrigin::Pairing), &repo, &bus)
+            .await
+            .unwrap();
 
         let state = repo.find_by_id(&id.to_string()).await.unwrap().unwrap();
         assert!(matches!(state, MatchReportState::Draft(_)));
@@ -228,21 +277,38 @@ mod tests {
         let repo = FakeMatchReportRepo::default();
         let bus = new_bus();
         let cmd = sample_cmd(MatchReportOrigin::Pairing);
-        let round_id = cmd.round_id; let home = cmd.home_team_id; let away = cmd.away_team_id; let coach = cmd.created_by;
+        let round_id = cmd.round_id;
+        let home = cmd.home_team_id;
+        let away = cmd.away_team_id;
+        let coach = cmd.created_by;
 
         let first_id = execute(cmd, &repo, &bus).await.unwrap();
-        let state = repo.find_by_id(&first_id.to_string()).await.unwrap().unwrap();
+        let state = repo
+            .find_by_id(&first_id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
         assert!(matches!(state, MatchReportState::Draft(_)));
 
         let second_cmd = CreateMatchReportCommand {
-            space_id: SpaceId::new(), competition_id: CompetitionId::new(), season_id: SeasonId::new(),
-            round_id, home_team_id: home, away_team_id: away, created_by: coach,
-            origin: MatchReportOrigin::Pairing, pairing_id: None,
+            space_id: SpaceId::new(),
+            competition_id: CompetitionId::new(),
+            season_id: SeasonId::new(),
+            round_id,
+            home_team_id: home,
+            away_team_id: away,
+            created_by: coach,
+            origin: MatchReportOrigin::Pairing,
+            pairing_id: None,
         };
         let second_id = execute(second_cmd, &repo, &bus).await.unwrap();
 
         assert_eq!(first_id, second_id);
-        let state = repo.find_by_id(&first_id.to_string()).await.unwrap().unwrap();
+        let state = repo
+            .find_by_id(&first_id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
         assert!(matches!(state, MatchReportState::PreMatch(_)));
     }
 }

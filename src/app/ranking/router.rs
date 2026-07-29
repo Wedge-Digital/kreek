@@ -8,5 +8,8 @@ use axum::Router;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route(path::CLASSEMENT_WIDGET, get(classement_widget))
-        .route(path::DETAILED_STANDINGS_WIDGET, get(detailed_standings_widget))
+        .route(
+            path::DETAILED_STANDINGS_WIDGET,
+            get(detailed_standings_widget),
+        )
 }

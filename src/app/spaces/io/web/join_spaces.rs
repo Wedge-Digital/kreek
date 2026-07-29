@@ -1,7 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::shared_kernel::identity::ids::SpaceId;
-use crate::app::spaces::uses_cases::join_spaces::{execute, JoinSpacesCommand};
 use crate::app::spaces::context::SpacesContext;
+use crate::app::spaces::uses_cases::join_spaces::{execute, JoinSpacesCommand};
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -36,13 +36,9 @@ pub async fn join_spaces(
         space_ids,
     };
 
-    if execute(
-        cmd,
-        &*ctx.space_repository,
-        &ctx.event_bus,
-    )
-    .await
-    .is_err()
+    if execute(cmd, &*ctx.space_repository, &ctx.event_bus)
+        .await
+        .is_err()
     {
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }

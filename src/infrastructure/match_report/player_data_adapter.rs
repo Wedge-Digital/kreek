@@ -15,7 +15,10 @@ impl PlayerDataAdapter {
         player_projection_repo: Arc<dyn IPlayerProjectionRepository>,
         player_repo: Arc<dyn IPlayerRepository>,
     ) -> Self {
-        Self { player_projection_repo, player_repo }
+        Self {
+            player_projection_repo,
+            player_repo,
+        }
     }
 }
 
@@ -24,12 +27,20 @@ impl IPlayerDataPort for PlayerDataAdapter {
     async fn count_available_players(&self, team_id: &str) -> Result<usize, String> {
         use crate::app::players::domain::player::TeamId;
         let tid = TeamId(team_id.to_string());
-        let players = self.player_projection_repo.find_by_team_id(&tid).await.map_err(|e| e.to_string())?;
+        let players = self
+            .player_projection_repo
+            .find_by_team_id(&tid)
+            .await
+            .map_err(|e| e.to_string())?;
         Ok(players.len())
     }
 
     async fn find_player_display(&self, player_id: &str) -> Option<String> {
-        let player = self.player_projection_repo.find_by_id(player_id).await.ok()??;
+        let player = self
+            .player_projection_repo
+            .find_by_id(player_id)
+            .await
+            .ok()??;
         let label = if !player.personal_name.is_empty() {
             player.personal_name.clone()
         } else {
@@ -40,13 +51,17 @@ impl IPlayerDataPort for PlayerDataAdapter {
     }
 
     async fn find_player_position(&self, player_id: &str) -> Option<String> {
-        let player = self.player_projection_repo.find_by_id(player_id).await.ok()??;
+        let player = self
+            .player_projection_repo
+            .find_by_id(player_id)
+            .await
+            .ok()??;
         Some(player.position_name)
     }
 
     async fn has_spent_spp_since_match(
         &self,
-        team_id:         &str,
+        team_id: &str,
         match_report_id: &str,
     ) -> Result<bool, String> {
         use crate::app::players::domain::player::TeamId;
@@ -70,7 +85,10 @@ impl IPlayerDataPort for PlayerDataAdapter {
         }
         counts
             .into_iter()
-            .map(|(position_uid, count)| PositionCountDto { position_uid, count })
+            .map(|(position_uid, count)| PositionCountDto {
+                position_uid,
+                count,
+            })
             .collect()
     }
 }

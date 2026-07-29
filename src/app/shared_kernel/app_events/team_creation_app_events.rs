@@ -7,17 +7,17 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AcquiredSkillPayload {
     pub skill_id: String,
-    pub mode:     String, // "Chosen" | "Random"
+    pub mode: String, // "Chosen" | "Random"
     pub spp_cost: u8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerPayload {
-    pub instance_id:     String,
-    pub roster_line_id:  String,
-    pub position_name:   String,
-    pub personal_name:   String,
-    pub jersey:          Option<u8>,
+    pub instance_id: String,
+    pub roster_line_id: String,
+    pub position_name: String,
+    pub personal_name: String,
+    pub jersey: Option<u8>,
     pub acquired_skills: Vec<AcquiredSkillPayload>,
 }
 
@@ -26,30 +26,30 @@ pub struct PlayerPayload {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum TeamCreationAppEvent {
     TeamCreated {
-        event_id:       String,
-        team_id:        String,
-        space_id:       String,
-        competition_id:   String,
+        event_id: String,
+        team_id: String,
+        space_id: String,
+        competition_id: String,
         #[serde(default)]
         competition_name: String,
-        season_id:        String,
+        season_id: String,
         #[serde(default)]
-        season_name:      String,
-        team_name:        String,
-        roster_id:      String,
-        roster_name:    String,
-        coach_id:       String,
-        coach_name:     String,
-        logo_url:       Option<String>,
-        treasury:       u32,
-        rerolls:        u8,
-        apothecaries:   u8,
-        assistants:     u8,
-        cheerleaders:   u8,
-        fans_factor:    u8,
-        players:        Vec<PlayerPayload>,
+        season_name: String,
+        team_name: String,
+        roster_id: String,
+        roster_name: String,
+        coach_id: String,
+        coach_name: String,
+        logo_url: Option<String>,
+        treasury: u32,
+        rerolls: u8,
+        apothecaries: u8,
+        assistants: u8,
+        cheerleaders: u8,
+        fans_factor: u8,
+        players: Vec<PlayerPayload>,
         #[serde(default)]
-        auto_enroll:    bool,
+        auto_enroll: bool,
     },
 }
 

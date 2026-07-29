@@ -1,9 +1,9 @@
+use crate::app::auth::context::AuthContext;
 use crate::app::auth::io::web::get_register::RegisterTemplate;
 use crate::app::auth::io::web::get_register_success::RegisterFormPayload;
 use crate::app::auth::routes::path;
 use crate::app::auth::use_cases::register_new_acount;
 use crate::app::auth::use_cases::register_new_acount::{RegisterCommand, RegisterError};
-use crate::app::auth::context::AuthContext;
 use axum::body::Body;
 use axum::extract::State;
 use axum::response::{IntoResponse, Response};
@@ -20,9 +20,7 @@ pub async fn post_register(
         password_confirm: payload.password_confirm.clone(),
     };
 
-    match register_new_acount::execute(cmd, ctx.user_repository.as_ref(), &ctx.event_bus)
-        .await
-    {
+    match register_new_acount::execute(cmd, ctx.user_repository.as_ref(), &ctx.event_bus).await {
         Ok(()) => Response::builder()
             .header("HX-Redirect", path::REGISTER_SUCCESS)
             .body(Body::empty())

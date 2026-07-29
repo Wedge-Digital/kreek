@@ -1,12 +1,12 @@
 pub mod path {
-    pub const LEAGUE_SELECTOR:       &str = "/references/leagues/selector";
+    pub const LEAGUE_SELECTOR: &str = "/references/leagues/selector";
     pub const SPECIAL_RULE_SELECTOR: &str = "/references/special-rules/selector";
-    pub const SKILL_PICKER:          &str = "/references/roster-lines/skill-picker";
-    pub const REF_WIDGETS:           &str = "/test/references/widgets";
-    pub const ROSTER_PICKER:         &str = "/references/roster-picker";
-    pub const INDUCEMENT_PICKER:     &str = "/references/inducement-picker";
-    pub const INDUCEMENT_SELECTOR:   &str = "/references/inducement-selector";
-    pub const STAR_PLAYER_PICKER:    &str = "/references/star-player-picker";
+    pub const SKILL_PICKER: &str = "/references/roster-lines/skill-picker";
+    pub const REF_WIDGETS: &str = "/test/references/widgets";
+    pub const ROSTER_PICKER: &str = "/references/roster-picker";
+    pub const INDUCEMENT_PICKER: &str = "/references/inducement-picker";
+    pub const INDUCEMENT_SELECTOR: &str = "/references/inducement-selector";
+    pub const STAR_PLAYER_PICKER: &str = "/references/star-player-picker";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -22,7 +22,12 @@ impl Routes {
         )
     }
 
-    pub fn league_selector_for_roster(&self, selected: &str, on_select: &str, roster_id: &str) -> String {
+    pub fn league_selector_for_roster(
+        &self,
+        selected: &str,
+        on_select: &str,
+        roster_id: &str,
+    ) -> String {
         format!(
             "{}?selected={}&on_select={}&roster_id={}",
             path::LEAGUE_SELECTOR,
@@ -32,7 +37,12 @@ impl Routes {
         )
     }
 
-    pub fn special_rule_selector_for_roster(&self, selected: &str, on_select: &str, roster_id: &str) -> String {
+    pub fn special_rule_selector_for_roster(
+        &self,
+        selected: &str,
+        on_select: &str,
+        roster_id: &str,
+    ) -> String {
         format!(
             "{}?selected={}&on_select={}&roster_id={}",
             path::SPECIAL_RULE_SELECTOR,

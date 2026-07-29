@@ -1,7 +1,7 @@
 use crate::app::shared_kernel::identity::coach_icon::CoachIcon;
 use crate::app::shared_kernel::identity::coach_name::CoachName;
-use crate::app::shared_kernel::identity::ids::UserId;
 use crate::app::shared_kernel::identity::email::Email;
+use crate::app::shared_kernel::identity::ids::UserId;
 
 #[derive(Debug, Clone)]
 pub struct User {

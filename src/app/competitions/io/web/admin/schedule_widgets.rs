@@ -1,7 +1,7 @@
 use crate::app::competitions::domain::competition_structure::ScheduledDate;
 use crate::app::competitions::domain::match_day::{MatchDay, MatchDayType};
-use crate::app::shared_kernel::bloodbowl::date_string::DateString;
 use crate::app::routes::AppRoutes;
+use crate::app::shared_kernel::bloodbowl::date_string::DateString;
 use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
 use crate::state::AppState;
 use askama::Template;
@@ -43,11 +43,21 @@ impl IntoResponse for RoundSidebarTemplate {
     }
 }
 
-fn date_label_for(day_type: &MatchDayType, date_start: &Option<DateString>, date_end: &Option<DateString>) -> String {
+fn date_label_for(
+    day_type: &MatchDayType,
+    date_start: &Option<DateString>,
+    date_end: &Option<DateString>,
+) -> String {
     match day_type {
-        MatchDayType::FixedDate => date_start.as_ref().map(|d| d.to_string()).unwrap_or_default(),
+        MatchDayType::FixedDate => date_start
+            .as_ref()
+            .map(|d| d.to_string())
+            .unwrap_or_default(),
         MatchDayType::TimeFrame => {
-            let s = date_start.as_ref().map(|d| d.to_string()).unwrap_or_default();
+            let s = date_start
+                .as_ref()
+                .map(|d| d.to_string())
+                .unwrap_or_default();
             let e = date_end.as_ref().map(|d| d.to_string()).unwrap_or_default();
             if s.is_empty() && e.is_empty() {
                 String::new()
@@ -178,7 +188,11 @@ pub struct FixtureVm {
 /// tranchera. L'inverse masquerait des boutons parfaitement légitimes sur une
 /// simple erreur transitoire.
 async fn load_published_pairings(state: &AppState, match_day: &MatchDay) -> Vec<String> {
-    let pairing_ids: Vec<String> = match_day.pairings.iter().map(|p| p.id.to_string()).collect();
+    let pairing_ids: Vec<String> = match_day
+        .pairings
+        .iter()
+        .map(|p| p.id.to_string())
+        .collect();
 
     state
         .competitions
@@ -313,10 +327,7 @@ pub async fn schedule_round_detail_widget(
                 .get(away_id.as_str())
                 .map(|t| t.team_name.clone())
                 .unwrap_or(away_id);
-            let gn = team_to_group
-                .get(home_id.as_str())
-                .copied()
-                .unwrap_or("");
+            let gn = team_to_group.get(home_id.as_str()).copied().unwrap_or("");
             let fixture_id = p.id.to_string();
             FixtureVm {
                 is_deletable: !published_pairings.contains(&fixture_id),

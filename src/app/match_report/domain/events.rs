@@ -1,12 +1,12 @@
+use crate::app::match_report::domain::value_objects::TurnNumber;
 use crate::app::match_report::domain::value_objects::{
     ActionId, ActionPlayer, D3Roll, DedicatedFans, FanFactorMod, InducementPurchase,
     MatchActionType, MatchGain, MatchReportOrigin, TeamSide, TeamValue, TempPlayer,
 };
-use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
-use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
-use crate::app::match_report::domain::value_objects::TurnNumber;
+use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -144,7 +144,10 @@ impl MatchReportDomainEvent {
 
     /// Enveloppe pour publication sur le bus interne du BC. `match_report_id` est fourni
     /// par l'appelant (déjà connu du use case) plutôt que dupliqué dans chaque variant.
-    pub fn to_enveloppe(&self, match_report_id: &str) -> crate::common::event_envelope::EventEnvelope {
+    pub fn to_enveloppe(
+        &self,
+        match_report_id: &str,
+    ) -> crate::common::event_envelope::EventEnvelope {
         crate::common::event_envelope::EventEnvelope {
             event_id: crate::app::shared_kernel::identity::ids::EventId::new().to_string(),
             emitter: match_report_id.to_string(),

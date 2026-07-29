@@ -2,9 +2,9 @@ use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::value_objects::MatchReportOrigin;
-use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 
 #[derive(Debug, Clone)]
 pub struct MatchReportDraft {

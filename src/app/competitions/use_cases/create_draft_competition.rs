@@ -7,10 +7,10 @@ use crate::app::competitions::domain::domain_event::CompetitionsDomainEvent;
 use crate::app::competitions::domain::season_repository_port::{
     ISeasonRepository, SeasonRepositoryError,
 };
-use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, EventId, SpaceId};
-use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::competition_name::CompetitionName;
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::season_name::SeasonName;
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, EventId, SpaceId};
 use crate::common::services::event_bus::event_bus::EventBus;
 
 pub struct CreateDraftCompetitionCommand {

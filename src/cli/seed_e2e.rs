@@ -13,12 +13,12 @@ use ulid::Ulid;
 
 /// Nom et legacy_id imposés : `bypass_auth` connecte l'utilisateur legacy_id=1,
 /// et `tests/e2e/competition_lifecycle.py` le recherche par ce nom exact.
-const DEV_COACH_NAME:  &str = "DevCoach";
+const DEV_COACH_NAME: &str = "DevCoach";
 const DEV_COACH_EMAIL: &str = "dev@example.test";
 const DEV_COACH_LEGACY_ID: i32 = 1;
 
 const SEED_PASSWORD: &str = "changeme-dev-only";
-const SPACE_NAME:    &str = "Espace E2E";
+const SPACE_NAME: &str = "Espace E2E";
 
 /// `space_icon_path` est relu à travers `CloudinaryImage`, qui n'accepte qu'une
 /// URL `res.cloudinary.com` — un chemin local ferait échouer la lecture du space.
@@ -34,7 +34,13 @@ type SeedResult<T> = Result<T, Box<dyn std::error::Error>>;
 pub async fn execute(pool: &PgPool) -> SeedResult<()> {
     let space_id = upsert_space(pool).await?;
 
-    let dev_id = seed_coach(pool, DEV_COACH_NAME, DEV_COACH_EMAIL, Some(DEV_COACH_LEGACY_ID)).await?;
+    let dev_id = seed_coach(
+        pool,
+        DEV_COACH_NAME,
+        DEV_COACH_EMAIL,
+        Some(DEV_COACH_LEGACY_ID),
+    )
+    .await?;
     link_member(pool, &space_id, &dev_id, SpaceProfile::SpaceAdmin).await?;
 
     for n in 1..=EXTRA_COACHES {

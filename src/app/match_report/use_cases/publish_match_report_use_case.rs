@@ -1,7 +1,7 @@
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
-use crate::app::shared_kernel::identity::ids::CoachId;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
+use crate::app::shared_kernel::identity::ids::CoachId;
 use crate::common::services::event_bus::event_bus::EventBus;
 
 pub struct PublishMatchReportCommand {

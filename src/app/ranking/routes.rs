@@ -1,5 +1,6 @@
 pub mod path {
-    pub const CLASSEMENT_WIDGET: &str = "/app/{space_id}/ranking/{competition_id}/{season_id}/widget";
+    pub const CLASSEMENT_WIDGET: &str =
+        "/app/{space_id}/ranking/{competition_id}/{season_id}/widget";
     pub const DETAILED_STANDINGS_WIDGET: &str =
         "/app/{space_id}/ranking/{competition_id}/{season_id}/detailed-widget";
 }
@@ -8,7 +9,12 @@ pub mod path {
 pub struct Routes;
 
 impl Routes {
-    pub fn classement_widget(&self, space_id: &str, competition_id: &str, season_id: &str) -> String {
+    pub fn classement_widget(
+        &self,
+        space_id: &str,
+        competition_id: &str,
+        season_id: &str,
+    ) -> String {
         path::CLASSEMENT_WIDGET
             .replace("{space_id}", space_id)
             .replace("{competition_id}", competition_id)

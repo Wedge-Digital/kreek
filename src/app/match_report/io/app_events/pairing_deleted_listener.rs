@@ -15,7 +15,10 @@ use std::sync::Arc;
 fn cancel(
     state: MatchReportState,
     mr_id: &str,
-) -> Option<(u64, crate::app::match_report::domain::events::MatchReportDomainEvent)> {
+) -> Option<(
+    u64,
+    crate::app::match_report::domain::events::MatchReportDomainEvent,
+)> {
     let reason = "Pairing supprimé".to_string();
     match state {
         MatchReportState::Draft(d) => Some((d.version, d.cancel(reason))),
@@ -36,11 +39,7 @@ fn cancel(
 /// son append, pour que le publisher la convertisse en app event. Sans ça, le
 /// rapport serait annulé sans que personne ne l'apprenne — et les équipes
 /// resteraient verrouillées en saisie.
-pub fn init(
-    app_event_bus: &EventBus,
-    event_bus: &EventBus,
-    repo: Arc<dyn IMatchReportRepository>,
-) {
+pub fn init(app_event_bus: &EventBus, event_bus: &EventBus, repo: Arc<dyn IMatchReportRepository>) {
     let bus = event_bus.clone();
     let mut rx = app_event_bus.subscribe();
     tokio::spawn(async move {
@@ -71,9 +70,7 @@ pub fn init(
                         Ok(Some(s)) => s,
                         Ok(None) => continue,
                         Err(e) => {
-                            tracing::error!(
-                                "pairing_deleted_listener: find_by_id {mr_id}: {e}"
-                            );
+                            tracing::error!("pairing_deleted_listener: find_by_id {mr_id}: {e}");
                             continue;
                         }
                     };
@@ -90,9 +87,7 @@ pub fn init(
                             let _ = bus.send(cancel_event.to_enveloppe(&mr_id));
                         }
                         Err(e) => {
-                            tracing::error!(
-                                "pairing_deleted_listener: append cancel {mr_id}: {e}"
-                            );
+                            tracing::error!("pairing_deleted_listener: append cancel {mr_id}: {e}");
                         }
                     }
                 }

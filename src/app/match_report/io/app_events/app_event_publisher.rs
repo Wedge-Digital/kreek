@@ -1,22 +1,23 @@
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_published::MatchReportPublished;
+use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{
     ActionPlayer, InjuryType, MatchAction, MatchActionType, SequelStat, TempPlayer, TempPlayerKind,
 };
 use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
-use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::shared_kernel::app_events::match_report_app_events::{
     ActionTypePayload, MatchActionPublishedPayload, MatchReportAppEvent,
-    MatchReportPublishedPayload, MatchReportUnpublishedPayload, PlayerRefPayload, TempPlayerPayload,
+    MatchReportPublishedPayload, MatchReportUnpublishedPayload, PlayerRefPayload,
+    TempPlayerPayload,
 };
-use crate::app::shared_kernel::identity::ids::EventId;
-use crate::app::shared_kernel::bloodbowl::team::TeamId;
-use crate::common::event_envelope::EventEnvelope;
 use crate::app::shared_kernel::app_events::player_match_impact_app_events::{
     InjuryTypePayload, PlayerMatchContextPayload, PlayerMatchImpactAppEvent,
 };
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::EventId;
+use crate::common::event_envelope::EventEnvelope;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
 
@@ -55,11 +56,11 @@ pub fn match_report_app_event_publisher(
 
 /// Aiguille sur les seuls événements qui franchissent la frontière du BC.
 async fn handle_envelope(
-    envelope:         crate::common::event_envelope::EventEnvelope,
-    app_event_bus:    &EventBus,
-    repo:             &dyn IMatchReportRepository,
+    envelope: crate::common::event_envelope::EventEnvelope,
+    app_event_bus: &EventBus,
+    repo: &dyn IMatchReportRepository,
     competition_data: &dyn ICompetitionDataPort,
-    team_data:        &dyn ITeamDataPort,
+    team_data: &dyn ITeamDataPort,
 ) {
     let Ok(event) = serde_json::from_value::<MatchReportDomainEvent>(envelope.payload.clone())
     else {
@@ -68,7 +69,14 @@ async fn handle_envelope(
     let match_report_id = envelope.emitter;
     match event {
         MatchReportDomainEvent::MatchReportPublished { .. } => {
-            handle_published(&match_report_id, app_event_bus, repo, competition_data, team_data).await
+            handle_published(
+                &match_report_id,
+                app_event_bus,
+                repo,
+                competition_data,
+                team_data,
+            )
+            .await
         }
         MatchReportDomainEvent::MatchReportUnpublished { .. } => {
             handle_unpublished(&match_report_id, app_event_bus, repo).await
@@ -115,11 +123,11 @@ fn handle_cancelled(
 }
 
 async fn handle_published(
-    match_report_id:  &str,
-    app_event_bus:    &EventBus,
-    repo:             &dyn IMatchReportRepository,
+    match_report_id: &str,
+    app_event_bus: &EventBus,
+    repo: &dyn IMatchReportRepository,
     competition_data: &dyn ICompetitionDataPort,
-    team_data:        &dyn ITeamDataPort,
+    team_data: &dyn ITeamDataPort,
 ) {
     match repo.find_by_id(match_report_id).await {
         Ok(Some(MatchReportState::Published(p))) => {
@@ -138,8 +146,8 @@ async fn handle_published(
 /// ferait échouer toutes les compensations en silence, avec un simple `warn!`.
 async fn handle_unpublished(
     match_report_id: &str,
-    app_event_bus:   &EventBus,
-    repo:            &dyn IMatchReportRepository,
+    app_event_bus: &EventBus,
+    repo: &dyn IMatchReportRepository,
 ) {
     match repo.find_by_id(match_report_id).await {
         Ok(Some(MatchReportState::ReadyToPublish(rtp))) => {
@@ -189,17 +197,17 @@ async fn publish_player_impact_events(
         .unwrap_or_default();
 
     let home_ctx_base = ContextBase {
-        match_report_id:    p.id.to_string(),
-        round_id:           p.round_id.to_string(),
-        round_label:        round_label.clone(),
-        opponent_team_id:   p.away_team_id.to_string(),
+        match_report_id: p.id.to_string(),
+        round_id: p.round_id.to_string(),
+        round_label: round_label.clone(),
+        opponent_team_id: p.away_team_id.to_string(),
         opponent_team_name: away_team_name,
     };
     let away_ctx_base = ContextBase {
-        match_report_id:    p.id.to_string(),
-        round_id:           p.round_id.to_string(),
+        match_report_id: p.id.to_string(),
+        round_id: p.round_id.to_string(),
         round_label,
-        opponent_team_id:   p.home_team_id.to_string(),
+        opponent_team_id: p.home_team_id.to_string(),
         opponent_team_name: home_team_name,
     };
 
@@ -215,27 +223,27 @@ async fn publish_player_impact_events(
 
     let _ = app_event_bus.send(
         PlayerMatchImpactAppEvent::TeamMatchConcluded {
-            team_id:            p.home_team_id.to_string(),
-            match_report_id:    home_ctx_base.match_report_id.clone(),
-            round_id:           home_ctx_base.round_id.clone(),
-            round_label:        home_ctx_base.round_label.clone(),
-            opponent_team_id:   home_ctx_base.opponent_team_id.clone(),
+            team_id: p.home_team_id.to_string(),
+            match_report_id: home_ctx_base.match_report_id.clone(),
+            round_id: home_ctx_base.round_id.clone(),
+            round_label: home_ctx_base.round_label.clone(),
+            opponent_team_id: home_ctx_base.opponent_team_id.clone(),
             opponent_team_name: home_ctx_base.opponent_team_name.clone(),
-            team_score:         home_score,
-            opponent_score:     away_score,
+            team_score: home_score,
+            opponent_score: away_score,
         }
         .to_enveloppe(),
     );
     let _ = app_event_bus.send(
         PlayerMatchImpactAppEvent::TeamMatchConcluded {
-            team_id:            p.away_team_id.to_string(),
-            match_report_id:    away_ctx_base.match_report_id.clone(),
-            round_id:           away_ctx_base.round_id.clone(),
-            round_label:        away_ctx_base.round_label.clone(),
-            opponent_team_id:   away_ctx_base.opponent_team_id.clone(),
+            team_id: p.away_team_id.to_string(),
+            match_report_id: away_ctx_base.match_report_id.clone(),
+            round_id: away_ctx_base.round_id.clone(),
+            round_label: away_ctx_base.round_label.clone(),
+            opponent_team_id: away_ctx_base.opponent_team_id.clone(),
             opponent_team_name: away_ctx_base.opponent_team_name.clone(),
-            team_score:         away_score,
-            opponent_score:     home_score,
+            team_score: away_score,
+            opponent_score: home_score,
         }
         .to_enveloppe(),
     );
@@ -244,22 +252,22 @@ async fn publish_player_impact_events(
 /// Contexte commun à un camp (home ou away) — tout sauf `player_id`, résolu une
 /// seule fois par publication (pas par action).
 struct ContextBase {
-    match_report_id:    String,
-    round_id:            String,
-    round_label:         String,
-    opponent_team_id:    String,
-    opponent_team_name:  String,
+    match_report_id: String,
+    round_id: String,
+    round_label: String,
+    opponent_team_id: String,
+    opponent_team_name: String,
 }
 
 impl ContextBase {
     fn for_player(&self, player_id: &str) -> PlayerMatchContextPayload {
         PlayerMatchContextPayload {
-            match_report_id:    self.match_report_id.clone(),
-            round_id:           self.round_id.clone(),
-            round_label:        self.round_label.clone(),
-            opponent_team_id:   self.opponent_team_id.clone(),
+            match_report_id: self.match_report_id.clone(),
+            round_id: self.round_id.clone(),
+            round_label: self.round_label.clone(),
+            opponent_team_id: self.opponent_team_id.clone(),
             opponent_team_name: self.opponent_team_name.clone(),
-            player_id:          player_id.to_string(),
+            player_id: player_id.to_string(),
         }
     }
 }
@@ -290,7 +298,9 @@ fn map_action_to_impact_event(
         MatchActionType::Passe | MatchActionType::Lancer => {
             PlayerMatchImpactAppEvent::PlayerPerformedPass(context)
         }
-        MatchActionType::Interception => PlayerMatchImpactAppEvent::PlayerPerformedInterception(context),
+        MatchActionType::Interception => {
+            PlayerMatchImpactAppEvent::PlayerPerformedInterception(context)
+        }
         MatchActionType::Sortie => PlayerMatchImpactAppEvent::PlayerPerformedCasualty(context),
         MatchActionType::Mvp => PlayerMatchImpactAppEvent::PlayerPerformedMvp(context),
         MatchActionType::Agression => PlayerMatchImpactAppEvent::PlayerPerformedFoul(context),
@@ -306,7 +316,9 @@ fn map_injury_type_payload(injury: &InjuryType) -> InjuryTypePayload {
         InjuryType::Commotion => InjuryTypePayload::Commotion,
         InjuryType::Amoche => InjuryTypePayload::Amoche,
         InjuryType::BlessureSerieuse => InjuryTypePayload::BlessureSerieuse,
-        InjuryType::Sequel { stat } => InjuryTypePayload::Sequel { stat: map_sequel_stat(*stat).to_string() },
+        InjuryType::Sequel { stat } => InjuryTypePayload::Sequel {
+            stat: map_sequel_stat(*stat).to_string(),
+        },
         InjuryType::Mort => InjuryTypePayload::Mort,
     }
 }
@@ -334,10 +346,9 @@ fn build_unpublished_events(rtp: &MatchReportReadyToPublish) -> Vec<EventEnvelop
     let home_team_id = rtp.home_team_id.to_string();
     let away_team_id = rtp.away_team_id.to_string();
 
-    let mut events = vec![MatchReportAppEvent::MatchReportUnpublished(
-        build_unpublished_payload(rtp),
-    )
-    .to_enveloppe()];
+    let mut events = vec![
+        MatchReportAppEvent::MatchReportUnpublished(build_unpublished_payload(rtp)).to_enveloppe(),
+    ];
 
     for team_id in [home_team_id, away_team_id] {
         events.push(
@@ -354,14 +365,14 @@ fn build_unpublished_events(rtp: &MatchReportReadyToPublish) -> Vec<EventEnvelop
 fn build_unpublished_payload(rtp: &MatchReportReadyToPublish) -> MatchReportUnpublishedPayload {
     MatchReportUnpublishedPayload {
         match_report_id: rtp.id.to_string(),
-        space_id:        rtp.space_id.to_string(),
-        competition_id:  rtp.competition_id.to_string(),
-        season_id:       rtp.season_id.to_string(),
-        round_id:        rtp.round_id.to_string(),
-        pairing_id:      rtp.pairing_id.clone(),
-        home_team_id:    rtp.home_team_id.to_string(),
-        away_team_id:    rtp.away_team_id.to_string(),
-        unpublished_at:  chrono::Utc::now(),
+        space_id: rtp.space_id.to_string(),
+        competition_id: rtp.competition_id.to_string(),
+        season_id: rtp.season_id.to_string(),
+        round_id: rtp.round_id.to_string(),
+        pairing_id: rtp.pairing_id.clone(),
+        home_team_id: rtp.home_team_id.to_string(),
+        away_team_id: rtp.away_team_id.to_string(),
+        unpublished_at: chrono::Utc::now(),
     }
 }
 
@@ -384,13 +395,24 @@ fn build_published_payload(p: &MatchReportPublished) -> MatchReportPublishedPayl
         away_fan_mod: p.away_fan_mod.into_inner(),
         home_actions: build_action_payloads(&p.home_actions, &p.home_temp_players),
         away_actions: build_action_payloads(&p.away_actions, &p.away_temp_players),
-        home_temp_players: p.home_temp_players.iter().map(build_temp_player_payload).collect(),
-        away_temp_players: p.away_temp_players.iter().map(build_temp_player_payload).collect(),
+        home_temp_players: p
+            .home_temp_players
+            .iter()
+            .map(build_temp_player_payload)
+            .collect(),
+        away_temp_players: p
+            .away_temp_players
+            .iter()
+            .map(build_temp_player_payload)
+            .collect(),
     }
 }
 
 fn count_touchdowns(actions: &[MatchAction]) -> u8 {
-    actions.iter().filter(|a| matches!(a.action, MatchActionType::Touchdown)).count() as u8
+    actions
+        .iter()
+        .filter(|a| matches!(a.action, MatchActionType::Touchdown))
+        .count() as u8
 }
 
 fn build_action_payloads(
@@ -409,7 +431,9 @@ fn build_action_payloads(
 
 fn build_player_ref(player: &ActionPlayer, temp_players: &[TempPlayer]) -> PlayerRefPayload {
     match player {
-        ActionPlayer::Regular(player_id) => PlayerRefPayload::Regular { player_id: player_id.to_string() },
+        ActionPlayer::Regular(player_id) => PlayerRefPayload::Regular {
+            player_id: player_id.to_string(),
+        },
         ActionPlayer::Temp(temp_id) => temp_players
             .iter()
             .find(|t| &t.id == temp_id)
@@ -434,9 +458,9 @@ fn build_action_type(action: &MatchActionType) -> ActionTypePayload {
         MatchActionType::Lancer => ActionTypePayload::Lancer,
         MatchActionType::Sortie => ActionTypePayload::Sortie,
         MatchActionType::Mvp => ActionTypePayload::Mvp,
-        MatchActionType::Blesse { injury } => {
-            ActionTypePayload::Blesse { injury: injury_label(injury) }
-        }
+        MatchActionType::Blesse { injury } => ActionTypePayload::Blesse {
+            injury: injury_label(injury),
+        },
     }
 }
 
@@ -469,9 +493,11 @@ mod unpublished_events_tests {
     use crate::app::match_report::domain::value_objects::{
         ActionId, DedicatedFans, FanFactorMod, MatchGain, MatchReportOrigin, TurnNumber,
     };
-    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
-    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, PlayerId, RoundId, SeasonId};
+    use crate::app::shared_kernel::bloodbowl::ids::{
+        CompetitionId, MatchReportId, PlayerId, RoundId, SeasonId,
+    };
     use crate::app::shared_kernel::bloodbowl::team::TeamId;
+    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 
     /// Une action quelconque, pour vérifier qu'elle **ne** se retrouve **pas**
     /// dans le payload de compensation.
@@ -582,10 +608,10 @@ mod player_impact_tests {
 
     fn ctx_base() -> ContextBase {
         ContextBase {
-            match_report_id:    "mr1".into(),
-            round_id:           "r1".into(),
-            round_label:        "Journée 5".into(),
-            opponent_team_id:   "opponent".into(),
+            match_report_id: "mr1".into(),
+            round_id: "r1".into(),
+            round_label: "Journée 5".into(),
+            opponent_team_id: "opponent".into(),
             opponent_team_name: "Bone Crushers".into(),
         }
     }
@@ -614,31 +640,48 @@ mod player_impact_tests {
 
     #[test]
     fn regular_touchdown_maps_to_player_performed_touchdown() {
-        let events = build_player_impact_events(&[regular_action(MatchActionType::Touchdown)], &ctx_base());
+        let events =
+            build_player_impact_events(&[regular_action(MatchActionType::Touchdown)], &ctx_base());
         assert_eq!(events.len(), 1);
-        assert!(matches!(events[0], PlayerMatchImpactAppEvent::PlayerPerformedTouchdown(_)));
+        assert!(matches!(
+            events[0],
+            PlayerMatchImpactAppEvent::PlayerPerformedTouchdown(_)
+        ));
     }
 
     #[test]
     fn passe_and_lancer_both_map_to_player_performed_pass() {
         let events = build_player_impact_events(
-            &[regular_action(MatchActionType::Passe), regular_action(MatchActionType::Lancer)],
+            &[
+                regular_action(MatchActionType::Passe),
+                regular_action(MatchActionType::Lancer),
+            ],
             &ctx_base(),
         );
         assert_eq!(events.len(), 2);
-        assert!(events.iter().all(|e| matches!(e, PlayerMatchImpactAppEvent::PlayerPerformedPass(_))));
+        assert!(events
+            .iter()
+            .all(|e| matches!(e, PlayerMatchImpactAppEvent::PlayerPerformedPass(_))));
     }
 
     #[test]
     fn agression_maps_to_foul_without_spp_bearing_variant() {
-        let events = build_player_impact_events(&[regular_action(MatchActionType::Agression)], &ctx_base());
-        assert!(matches!(events[0], PlayerMatchImpactAppEvent::PlayerPerformedFoul(_)));
+        let events =
+            build_player_impact_events(&[regular_action(MatchActionType::Agression)], &ctx_base());
+        assert!(matches!(
+            events[0],
+            PlayerMatchImpactAppEvent::PlayerPerformedFoul(_)
+        ));
     }
 
     #[test]
     fn blesse_sequel_maps_to_player_injured_with_structured_stat() {
         let events = build_player_impact_events(
-            &[regular_action(MatchActionType::Blesse { injury: InjuryType::Sequel { stat: SequelStat::MinusAg } })],
+            &[regular_action(MatchActionType::Blesse {
+                injury: InjuryType::Sequel {
+                    stat: SequelStat::MinusAg,
+                },
+            })],
             &ctx_base(),
         );
         match &events[0] {
@@ -651,7 +694,8 @@ mod player_impact_tests {
 
     #[test]
     fn temp_player_actions_are_excluded() {
-        let events = build_player_impact_events(&[temp_action(MatchActionType::Touchdown)], &ctx_base());
+        let events =
+            build_player_impact_events(&[temp_action(MatchActionType::Touchdown)], &ctx_base());
         assert!(events.is_empty());
     }
 }

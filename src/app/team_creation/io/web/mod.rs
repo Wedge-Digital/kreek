@@ -1,3 +1,4 @@
+pub mod build_team;
 pub mod builders;
 pub mod draft_team;
 pub mod finalize_team;
@@ -9,4 +10,3 @@ pub mod set_special_rule;
 pub mod team_detail;
 pub mod view_models;
 pub mod widgets;
-pub mod build_team;

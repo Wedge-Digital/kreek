@@ -2,9 +2,9 @@ use crate::app::match_report::domain::match_report_repository_port::IMatchReport
 use crate::app::match_report::domain::value_objects::MatchReportOrigin;
 use crate::app::match_report::use_cases::create_match_report_use_case;
 use crate::app::shared_kernel::app_events::competitions_app_events::CompetitionsAppEvent;
-use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
 
@@ -34,13 +34,27 @@ pub fn init(app_event_bus: &EventBus, repo: Arc<dyn IMatchReportRepository>) {
                         continue;
                     };
 
-                    let Ok(space) = SpaceId::try_new(&space_id) else { continue };
-                    let Ok(comp) = CompetitionId::try_new(&competition_id) else { continue };
-                    let Ok(season) = SeasonId::try_new(&season_id) else { continue };
-                    let Ok(round) = RoundId::try_new(&round_id) else { continue };
-                    let Ok(home) = TeamId::try_new(&home_team_id) else { continue };
-                    let Ok(away) = TeamId::try_new(&away_team_id) else { continue };
-                    let Ok(coach) = CompetitionId::try_new(&competition_id) else { continue };
+                    let Ok(space) = SpaceId::try_new(&space_id) else {
+                        continue;
+                    };
+                    let Ok(comp) = CompetitionId::try_new(&competition_id) else {
+                        continue;
+                    };
+                    let Ok(season) = SeasonId::try_new(&season_id) else {
+                        continue;
+                    };
+                    let Ok(round) = RoundId::try_new(&round_id) else {
+                        continue;
+                    };
+                    let Ok(home) = TeamId::try_new(&home_team_id) else {
+                        continue;
+                    };
+                    let Ok(away) = TeamId::try_new(&away_team_id) else {
+                        continue;
+                    };
+                    let Ok(coach) = CompetitionId::try_new(&competition_id) else {
+                        continue;
+                    };
 
                     let cmd = create_match_report_use_case::CreateMatchReportCommand {
                         space_id: space,

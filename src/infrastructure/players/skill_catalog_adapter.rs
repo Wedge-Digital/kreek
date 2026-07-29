@@ -1,6 +1,7 @@
 use crate::app::players::domain::match_impact::StatKind;
 use crate::app::players::ports::{
-    ISkillCatalogPort, PositionAccessDto, PositionCatalogEntryDto, SkillCatalogEntryDto, SkillCostLevelDto,
+    ISkillCatalogPort, PositionAccessDto, PositionCatalogEntryDto, SkillCatalogEntryDto,
+    SkillCostLevelDto,
 };
 use crate::app::references::domain::port::IReferenceRepository;
 use std::sync::Arc;
@@ -20,7 +21,7 @@ impl ISkillCatalogPort for SkillCatalogAdapter {
         let skill = self.reference_repo.find_skill_by_uid(skill_id)?;
         Some(SkillCatalogEntryDto {
             skill_id: skill.uid.clone(),
-            name:     skill.name.clone(),
+            name: skill.name.clone(),
             category: skill.category.clone(),
             is_elite: skill.skill_type == "Élite",
         })
@@ -30,10 +31,14 @@ impl ISkillCatalogPort for SkillCatalogAdapter {
         let position = self.reference_repo.find_position_by_uid(roster_line_id)?;
         Some(PositionCatalogEntryDto {
             position_name: position.position_name.clone(),
-            cost:          position.cost,
-            ma: position.ma, st: position.st, ag: position.ag, pa: position.pa, av: position.av,
-            base_skills:          position.skills.clone(),
-            primary_categories:   position.primary_access.clone(),
+            cost: position.cost,
+            ma: position.ma,
+            st: position.st,
+            ag: position.ag,
+            pa: position.pa,
+            av: position.av,
+            base_skills: position.skills.clone(),
+            primary_categories: position.primary_access.clone(),
             secondary_categories: position.secondary_access.clone(),
         })
     }
@@ -41,25 +46,30 @@ impl ISkillCatalogPort for SkillCatalogAdapter {
     fn position_access(&self, roster_line_id: &str) -> Option<PositionAccessDto> {
         let position = self.reference_repo.find_position_by_uid(roster_line_id)?;
         Some(PositionAccessDto {
-            primary_categories:   position.primary_access.clone(),
+            primary_categories: position.primary_access.clone(),
             secondary_categories: position.secondary_access.clone(),
         })
     }
 
     fn cost_for_level(&self, level: u8, is_elite: bool) -> Option<SkillCostLevelDto> {
-        let cost = self.reference_repo.skill_cost_matrix().iter().find(|l| l.level == level)?;
+        let cost = self
+            .reference_repo
+            .skill_cost_matrix()
+            .iter()
+            .find(|l| l.level == level)?;
         let chosen = cost.chosen_for(is_elite);
         Some(SkillCostLevelDto {
-            level:            cost.level,
-            chosen_primary:   chosen.primary as u32,
+            level: cost.level,
+            chosen_primary: chosen.primary as u32,
             chosen_secondary: chosen.secondary as u32,
-            random:           cost.random_for(is_elite) as u32,
-            characteristic:   cost.characteristic as u32,
+            random: cost.random_for(is_elite) as u32,
+            characteristic: cost.characteristic as u32,
         })
     }
 
     fn skill_value_delta(&self, is_secondary_access: bool) -> u32 {
-        self.reference_repo.improvement_skill_value_delta(is_secondary_access)
+        self.reference_repo
+            .improvement_skill_value_delta(is_secondary_access)
     }
 
     fn stat_value_delta(&self, stat: StatKind) -> u32 {
@@ -72,11 +82,21 @@ impl ISkillCatalogPort for SkillCatalogAdapter {
         }
     }
 
-    fn touchdown_spp(&self) -> u8 { self.reference_repo.touchdown_spp() }
-    fn pass_spp(&self) -> u8 { self.reference_repo.pass_spp() }
-    fn interception_spp(&self) -> u8 { self.reference_repo.interception_spp() }
-    fn casualty_spp(&self) -> u8 { self.reference_repo.casualty_spp() }
-    fn mvp_spp(&self) -> u8 { self.reference_repo.mvp_spp() }
+    fn touchdown_spp(&self) -> u8 {
+        self.reference_repo.touchdown_spp()
+    }
+    fn pass_spp(&self) -> u8 {
+        self.reference_repo.pass_spp()
+    }
+    fn interception_spp(&self) -> u8 {
+        self.reference_repo.interception_spp()
+    }
+    fn casualty_spp(&self) -> u8 {
+        self.reference_repo.casualty_spp()
+    }
+    fn mvp_spp(&self) -> u8 {
+        self.reference_repo.mvp_spp()
+    }
 }
 
 #[cfg(test)]
@@ -109,7 +129,9 @@ mod tests {
             .position_access("DEMO_GRANIT__PIETAILLE")
             .expect("position doit exister");
         assert_eq!(access.primary_categories, vec!["GENERAL"]);
-        assert!(access.secondary_categories.contains(&"STRENGTH".to_string()));
+        assert!(access
+            .secondary_categories
+            .contains(&"STRENGTH".to_string()));
     }
 
     #[test]
@@ -125,7 +147,9 @@ mod tests {
 
     #[test]
     fn cost_for_level_matches_official_matrix_level_1() {
-        let cost = adapter().cost_for_level(1, false).expect("niveau 1 doit exister");
+        let cost = adapter()
+            .cost_for_level(1, false)
+            .expect("niveau 1 doit exister");
         assert_eq!(cost.chosen_primary, 6);
         assert_eq!(cost.chosen_secondary, 10);
         assert_eq!(cost.random, 3);

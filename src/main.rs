@@ -2,9 +2,9 @@ extern crate core;
 
 mod app;
 mod cli;
-mod config;
 #[allow(special_module_name)]
 pub mod common;
+mod config;
 mod infrastructure;
 mod state;
 pub mod web;
@@ -19,20 +19,22 @@ use crate::app::auth::context::AuthContext;
 use crate::app::auth::routes::path;
 use crate::app::competitions::context::CompetitionsContext;
 use crate::app::news::context::NewsContext;
+use crate::app::players::context::PlayersContext;
+use crate::app::ranking::context::RankingContext;
 use crate::app::references::context::ReferencesContext;
 use crate::app::spaces::context::SpacesContext;
 use crate::app::team_creation::context::TeamCreationContext;
-use crate::infrastructure::spaces::host_layout_adapter::KreekSpacesLayout;
-use crate::infrastructure::team_creation::competition_rules_adapter::CompetitionRulesAdapter;
-use crate::infrastructure::team_creation::reference_data_adapter::ReferenceDataAdapter;
-use crate::app::players::context::PlayersContext;
-use crate::app::ranking::context::RankingContext;
 use crate::app::teams::context::TeamsContext;
-use crate::app::{auth, competitions, match_report, players, ranking, spaces, team_creation, teams};
+use crate::app::{
+    auth, competitions, match_report, players, ranking, spaces, team_creation, teams,
+};
 use crate::common::event_listener::event_log_feeder;
 use crate::common::services::email::ResendMailService;
 use crate::common::services::event_bus::event_bus::new_bus;
 use crate::common::session_store::DashMapStore;
+use crate::infrastructure::spaces::host_layout_adapter::KreekSpacesLayout;
+use crate::infrastructure::team_creation::competition_rules_adapter::CompetitionRulesAdapter;
+use crate::infrastructure::team_creation::reference_data_adapter::ReferenceDataAdapter;
 use crate::web::middleware::bypass_auth::bypass_auth_middleware;
 use crate::web::middleware::request_log::request_log;
 use crate::web::middleware::require_auth::require_auth;
@@ -145,12 +147,14 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
     spaces::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
 
     let competitions_team_info_port = Arc::new(
-        crate::infrastructure::competitions::team_info_adapter::TeamInfoAdapter::new(
-            Arc::new(crate::app::teams::io::repository::team_repository::TeamRepository::new(pool.clone())),
-        ),
+        crate::infrastructure::competitions::team_info_adapter::TeamInfoAdapter::new(Arc::new(
+            crate::app::teams::io::repository::team_repository::TeamRepository::new(pool.clone()),
+        )),
     );
     let competitions_match_day_repository = Arc::new(
-        crate::app::competitions::io::repository::match_day_repository::MatchDayRepository::new(pool.clone()),
+        crate::app::competitions::io::repository::match_day_repository::MatchDayRepository::new(
+            pool.clone(),
+        ),
     );
     competitions::context::init_listeners(
         &event_bus,
@@ -177,7 +181,11 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
     );
     let match_report_team_data = Arc::new(
         crate::infrastructure::match_report::ref_team_data_adapter::RefTeamDataAdapter::new(
-            Arc::new(crate::app::teams::io::repository::team_repository::TeamRepository::new(pool.clone())),
+            Arc::new(
+                crate::app::teams::io::repository::team_repository::TeamRepository::new(
+                    pool.clone(),
+                ),
+            ),
             references.repository.clone(),
         ),
     );
@@ -197,12 +205,24 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
 
     let ranking_competition_port = Arc::new(
         crate::infrastructure::ranking::competition_info_adapter::RankingCompetitionAdapter::new(
-            Arc::new(crate::app::competitions::io::repository::season_repository::SeasonRepository::new(pool.clone())),
+            Arc::new(
+                crate::app::competitions::io::repository::season_repository::SeasonRepository::new(
+                    pool.clone(),
+                ),
+            ),
             competitions_team_info_port.clone(),
-            Arc::new(crate::app::competitions::io::repository::group_repository::GroupRepository::new(pool.clone())),
+            Arc::new(
+                crate::app::competitions::io::repository::group_repository::GroupRepository::new(
+                    pool.clone(),
+                ),
+            ),
         ),
     );
-    ranking::context::init_listeners(&app_event_bus, pool.clone(), ranking_competition_port.clone());
+    ranking::context::init_listeners(
+        &app_event_bus,
+        pool.clone(),
+        ranking_competition_port.clone(),
+    );
 
     let email_service = Arc::new(ResendMailService::new(
         cfg.email.api_key,

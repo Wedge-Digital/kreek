@@ -1,5 +1,5 @@
-use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::routes::AppRoutes;
+use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, Query, State};

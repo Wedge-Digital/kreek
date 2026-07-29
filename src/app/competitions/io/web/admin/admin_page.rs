@@ -1,12 +1,12 @@
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::competitions::domain::competition_repository_port::CompetitionBaseInfo;
 use crate::app::competitions::io::web::admin::dashboard::build_dashboard_fragment;
 use crate::app::competitions::io::web::admin::summary_tab::build_summary_fragment;
-use crate::app::competitions::domain::competition_repository_port::CompetitionBaseInfo;
 use crate::app::competitions::use_cases::admin::dashboard_query;
 use crate::app::routes::AppRoutes;
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::app::shared_kernel::identity::authorization::SpaceProfile;
 use crate::app::shared_kernel::identity::ids::SpaceId;
-use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -45,7 +45,15 @@ pub async fn admin_page(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    render_admin_page(auth_session, &space_id, &competition_id, &season_id, "dashboard", &state).await
+    render_admin_page(
+        auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        "dashboard",
+        &state,
+    )
+    .await
 }
 
 /// Vérifie que l'utilisateur connecté est admin d'espace ou admin de la
@@ -75,7 +83,11 @@ pub async fn require_admin_access(
     };
 
     let is_space_admin = matches!(
-        state.competitions.space_member_port.find_member_profile(&user.id, &space_entity_id).await,
+        state
+            .competitions
+            .space_member_port
+            .find_member_profile(&user.id, &space_entity_id)
+            .await,
         Some(SpaceProfile::SpaceAdmin)
     );
 
@@ -113,7 +125,8 @@ pub async fn render_admin_page(
     active_tab: &str,
     state: &AppState,
 ) -> Response {
-    let comp_info = match require_admin_access(&auth_session, space_id, competition_id, state).await {
+    let comp_info = match require_admin_access(&auth_session, space_id, competition_id, state).await
+    {
         Ok(info) => info,
         Err(resp) => return resp,
     };
@@ -187,7 +200,9 @@ pub async fn render_admin_page(
             {
                 Some(tpl) => tpl.render().unwrap_or_default(),
                 None => {
-                    tracing::error!("admin_page summary build failed for {competition_id}/{season_id}");
+                    tracing::error!(
+                        "admin_page summary build failed for {competition_id}/{season_id}"
+                    );
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
             }
@@ -248,7 +263,11 @@ pub async fn render_admin_page(
             };
 
             let dashboard = build_dashboard_fragment(
-                &summary, &app_routes, space_id, competition_id, season_id,
+                &summary,
+                &app_routes,
+                space_id,
+                competition_id,
+                season_id,
             );
             dashboard.render().unwrap_or_default()
         }

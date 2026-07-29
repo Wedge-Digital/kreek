@@ -1,8 +1,10 @@
+use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::team_creation::domain::error::DomainError;
 use crate::app::team_creation::domain::roster::{AcquisitionMode, PlayerId, SkillId, SppCost};
 use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
-use crate::app::team_creation::ports::{IReferenceDataPort, ITeamRosterRepository, RepositoryError};
-use crate::app::shared_kernel::identity::ids::EntityId;
+use crate::app::team_creation::ports::{
+    IReferenceDataPort, ITeamRosterRepository, RepositoryError,
+};
 
 pub struct SpendCreationSppCommand {
     pub team_id: EntityId,
@@ -48,8 +50,7 @@ pub async fn execute(
         .resolve_skill_cost(&roster_line_id, &cmd.skill_id.0, mode_str)
         .ok_or(SpendSppError::SkillCostNotFound)?;
 
-    let spp_cost = SppCost::try_new(cost.spp_cost)
-        .map_err(|_| SpendSppError::SkillCostNotFound)?;
+    let spp_cost = SppCost::try_new(cost.spp_cost).map_err(|_| SpendSppError::SkillCostNotFound)?;
     team.spend_spp(&cmd.instance_id, cmd.skill_id, cmd.mode, spp_cost)
         .map_err(SpendSppError::Domain)?;
 

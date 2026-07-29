@@ -1,8 +1,8 @@
+use crate::app::auth::domain::user::User;
 use crate::app::auth::ports::{IUserRepository, RepositoryError};
 use crate::app::shared_kernel::identity::coach_name::CoachName;
-use crate::app::shared_kernel::identity::ids::UserId;
 use crate::app::shared_kernel::identity::email::Email;
-use crate::app::auth::domain::user::User;
+use crate::app::shared_kernel::identity::ids::UserId;
 use async_trait::async_trait;
 
 pub enum FindResult {

@@ -6,13 +6,13 @@ use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{CorrectionBlocker, CorrectionEligibility};
 use crate::app::match_report::ports::{IPlayerDataPort, ITeamDataPort};
 use crate::app::match_report::use_cases::correction_eligibility_service;
-use crate::app::shared_kernel::identity::ids::CoachId;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
+use crate::app::shared_kernel::identity::ids::CoachId;
 use crate::common::services::event_bus::event_bus::EventBus;
 
 pub struct UnpublishMatchReportCommand {
     pub match_report_id: MatchReportId,
-    pub unpublished_by:  CoachId,
+    pub unpublished_by: CoachId,
 }
 
 #[derive(Debug)]
@@ -29,11 +29,11 @@ pub enum UnpublishMatchReportError {
 /// `version - 1` sur l'append. L'app event bus n'apparaît pas ici : le use case
 /// émet un domain event sur le bus interne, le publisher fait la conversion.
 pub async fn execute(
-    cmd:         UnpublishMatchReportCommand,
-    repo:        &dyn IMatchReportRepository,
-    team_data:   &dyn ITeamDataPort,
+    cmd: UnpublishMatchReportCommand,
+    repo: &dyn IMatchReportRepository,
+    team_data: &dyn ITeamDataPort,
     player_data: &dyn IPlayerDataPort,
-    bus:         &EventBus,
+    bus: &EventBus,
 ) -> Result<(), UnpublishMatchReportError> {
     let mr_id = cmd.match_report_id.to_string();
     let published = load_published(repo, &mr_id).await?;
@@ -51,10 +51,10 @@ pub async fn execute(
 /// publisher qui le convertira en app events — le use case ne connaît pas
 /// l'app event bus.
 async fn persist_and_announce(
-    repo:    &dyn IMatchReportRepository,
-    bus:     &EventBus,
-    mr_id:   &str,
-    event:   &MatchReportDomainEvent,
+    repo: &dyn IMatchReportRepository,
+    bus: &EventBus,
+    mr_id: &str,
+    event: &MatchReportDomainEvent,
     version: u64,
 ) -> Result<(), UnpublishMatchReportError> {
     repo.append(mr_id, event, version)
@@ -65,10 +65,10 @@ async fn persist_and_announce(
 }
 
 async fn eligibility_of(
-    published:       &MatchReportPublished,
+    published: &MatchReportPublished,
     match_report_id: &MatchReportId,
-    team_data:       &dyn ITeamDataPort,
-    player_data:     &dyn IPlayerDataPort,
+    team_data: &dyn ITeamDataPort,
+    player_data: &dyn IPlayerDataPort,
 ) -> CorrectionEligibility {
     correction_eligibility_service::evaluate(
         &published.home_team_id,
@@ -81,7 +81,7 @@ async fn eligibility_of(
 }
 
 async fn load_published(
-    repo:  &dyn IMatchReportRepository,
+    repo: &dyn IMatchReportRepository,
     mr_id: &str,
 ) -> Result<MatchReportPublished, UnpublishMatchReportError> {
     let state = repo
@@ -118,22 +118,25 @@ mod tests {
     use crate::app::match_report::ports::{
         JourneymanPositionDto, PositionCountDto, RosterPositionDto, TeamInfoDto,
     };
-    use crate::app::shared_kernel::identity::ids::SpaceId;
     use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RoundId, SeasonId};
     use crate::app::shared_kernel::bloodbowl::team::TeamId;
+    use crate::app::shared_kernel::identity::ids::SpaceId;
     use crate::common::services::event_bus::event_bus::new_bus;
     use std::sync::Mutex;
 
     // ── Fakes ─────────────────────────────────────────────────────────────
 
     struct FakeRepo {
-        state:    Option<MatchReportState>,
+        state: Option<MatchReportState>,
         appended: Mutex<Vec<MatchReportDomainEvent>>,
     }
 
     impl FakeRepo {
         fn with(state: Option<MatchReportState>) -> Self {
-            Self { state, appended: Mutex::new(vec![]) }
+            Self {
+                state,
+                appended: Mutex::new(vec![]),
+            }
         }
     }
 
@@ -288,13 +291,13 @@ mod tests {
     fn command() -> UnpublishMatchReportCommand {
         UnpublishMatchReportCommand {
             match_report_id: MatchReportId::new(),
-            unpublished_by:  CoachId::new(),
+            unpublished_by: CoachId::new(),
         }
     }
 
     async fn run(
-        state:     Option<MatchReportState>,
-        eligible:  bool,
+        state: Option<MatchReportState>,
+        eligible: bool,
         spp_spent: bool,
     ) -> (Result<(), UnpublishMatchReportError>, FakeRepo) {
         let repo = FakeRepo::with(state);
@@ -302,7 +305,9 @@ mod tests {
         let result = execute(
             command(),
             &repo,
-            &FakeTeamData { in_improvement: eligible },
+            &FakeTeamData {
+                in_improvement: eligible,
+            },
             &FakePlayerData { spp_spent },
             &bus,
         )
@@ -320,10 +325,17 @@ mod tests {
 
     #[tokio::test]
     async fn rapport_non_publie_donne_not_published() {
-        let MatchReportState::Published(p) = published_state() else { unreachable!() };
-        let (rtp, _) = p.unpublish(CoachId::new(), CorrectionEligibility::Eligible).unwrap();
+        let MatchReportState::Published(p) = published_state() else {
+            unreachable!()
+        };
+        let (rtp, _) = p
+            .unpublish(CoachId::new(), CorrectionEligibility::Eligible)
+            .unwrap();
         let (result, _) = run(Some(MatchReportState::ReadyToPublish(rtp)), true, false).await;
-        assert!(matches!(result, Err(UnpublishMatchReportError::NotPublished)));
+        assert!(matches!(
+            result,
+            Err(UnpublishMatchReportError::NotPublished)
+        ));
     }
 
     #[tokio::test]
@@ -331,11 +343,16 @@ mod tests {
         let (result, repo) = run(Some(published_state()), true, true).await;
         assert!(matches!(
             result,
-            Err(UnpublishMatchReportError::NotEligible(CorrectionBlocker::SppAlreadySpent {
-                side: TeamSide::Home
-            }))
+            Err(UnpublishMatchReportError::NotEligible(
+                CorrectionBlocker::SppAlreadySpent {
+                    side: TeamSide::Home
+                }
+            ))
         ));
-        assert!(repo.appended.lock().unwrap().is_empty(), "rien ne doit être appendé");
+        assert!(
+            repo.appended.lock().unwrap().is_empty(),
+            "rien ne doit être appendé"
+        );
     }
 
     #[tokio::test]
@@ -343,9 +360,11 @@ mod tests {
         let (result, _) = run(Some(published_state()), false, false).await;
         assert!(matches!(
             result,
-            Err(UnpublishMatchReportError::NotEligible(CorrectionBlocker::PhaseAdvanced {
-                side: TeamSide::Home
-            }))
+            Err(UnpublishMatchReportError::NotEligible(
+                CorrectionBlocker::PhaseAdvanced {
+                    side: TeamSide::Home
+                }
+            ))
         ));
     }
 
@@ -371,7 +390,9 @@ mod tests {
         execute(
             command(),
             &repo,
-            &FakeTeamData { in_improvement: true },
+            &FakeTeamData {
+                in_improvement: true,
+            },
             &FakePlayerData { spp_spent: false },
             &bus,
         )
@@ -381,5 +402,4 @@ mod tests {
         let envelope = rx.try_recv().expect("un événement doit être publié");
         assert_eq!(envelope.event_type, "MatchReportUnpublished");
     }
-
 }

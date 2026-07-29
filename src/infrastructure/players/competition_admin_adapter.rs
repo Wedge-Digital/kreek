@@ -20,7 +20,7 @@ impl IPlayerCompetitionPort for CompetitionAdminAdapter {
         let id = CompetitionId::try_new(competition_id).ok()?;
         let info = self.competition_repo.find_base_info(&id).await.ok()??;
         Some(CompetitionAdminInfoDto {
-            admin_ids:   info.admin_ids,
+            admin_ids: info.admin_ids,
             admin_names: info.admin_names,
         })
     }

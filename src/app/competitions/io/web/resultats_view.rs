@@ -1,8 +1,8 @@
+use crate::app::auth::domain::user::User;
 use crate::app::competitions::domain::match_day_repository_port::PairingDisplayDto;
+use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
 use crate::app::shared_kernel::identity::authorization::SpaceProfile;
 use crate::app::shared_kernel::identity::ids::SpaceId;
-use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
-use crate::app::auth::domain::user::User;
 use crate::state::AppState;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};

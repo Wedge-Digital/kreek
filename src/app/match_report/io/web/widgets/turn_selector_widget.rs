@@ -7,7 +7,7 @@ use axum::response::{Html, IntoResponse, Response};
 use std::collections::HashSet;
 
 pub struct TurnButtonVm {
-    pub turn:       u8,
+    pub turn: u8,
     pub has_action: bool,
 }
 
@@ -43,13 +43,21 @@ pub async fn get_turn_selector_step4(
 }
 
 async fn render_turn_selector(mr_id: &str, side: TeamSide, state: &AppState) -> Response {
-    let actions = match state.match_report.match_report_repo.find_actions_by_match_and_side(mr_id, side).await {
+    let actions = match state
+        .match_report
+        .match_report_repo
+        .find_actions_by_match_and_side(mr_id, side)
+        .await
+    {
         Ok(a) => a,
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
     let turns_with_action: HashSet<i16> = actions.iter().map(|a| a.turn_number).collect();
     let turns = (1u8..=16)
-        .map(|t| TurnButtonVm { turn: t, has_action: turns_with_action.contains(&(t as i16)) })
+        .map(|t| TurnButtonVm {
+            turn: t,
+            has_action: turns_with_action.contains(&(t as i16)),
+        })
         .collect();
     TurnSelectorTemplate { turns }.into_response()
 }

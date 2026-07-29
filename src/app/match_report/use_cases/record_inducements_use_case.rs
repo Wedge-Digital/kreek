@@ -2,16 +2,20 @@ use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
-use crate::app::match_report::domain::value_objects::{AllowedInducementSpec, IsStarPlayer, RosterPositionUid, TeamValue};
+use crate::app::match_report::domain::value_objects::{
+    AllowedInducementSpec, IsStarPlayer, RosterPositionUid, TeamValue,
+};
 use crate::app::match_report::ports::{
     ICompetitionDataPort, IPlayerDataPort, ITeamDataPort, PositionCountDto, RosterPositionDto,
     TierRulesDto,
 };
-use crate::app::match_report::use_cases::init_temp_players_use_case::{self, InitTempPlayersCommand};
-use crate::app::shared_kernel::identity::ids::CoachId;
+use crate::app::match_report::use_cases::init_temp_players_use_case::{
+    self, InitTempPlayersCommand,
+};
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::CoachId;
 use std::collections::HashMap;
 
 // ── Commande ──────────────────────────────────────────────────────────────────
@@ -29,11 +33,17 @@ pub enum MercenaryLevel {
 
 impl MercenaryLevel {
     pub fn extra_cost(&self) -> u32 {
-        match self { Self::Base => 30, Self::Lvl1 => 80 }
+        match self {
+            Self::Base => 30,
+            Self::Lvl1 => 80,
+        }
     }
 
     pub fn as_str(&self) -> &'static str {
-        match self { Self::Base => "base", Self::Lvl1 => "lvl1" }
+        match self {
+            Self::Base => "base",
+            Self::Lvl1 => "lvl1",
+        }
     }
 
     pub fn try_from_str(s: &str) -> Result<Self, &'static str> {
@@ -47,15 +57,15 @@ impl MercenaryLevel {
 
 pub struct MercenaryPurchaseCmd {
     pub position_id: RosterPositionUid,
-    pub level:       MercenaryLevel,
+    pub level: MercenaryLevel,
 }
 
 pub struct RecordInducementsCommand {
-    pub match_report_id:     MatchReportId,
-    pub team_id:             TeamId,
-    pub purchases:           Vec<InducementPurchaseCmd>,
+    pub match_report_id: MatchReportId,
+    pub team_id: TeamId,
+    pub purchases: Vec<InducementPurchaseCmd>,
     pub mercenary_purchases: Vec<MercenaryPurchaseCmd>,
-    pub recorded_by:         CoachId,
+    pub recorded_by: CoachId,
 }
 
 // ── Résultats ─────────────────────────────────────────────────────────────────
@@ -106,8 +116,11 @@ pub async fn execute(
     }
     let tier = fetch_tier_rules(&pm, &cmd.team_id, team_data, competition_data).await?;
     validate_purchase_uids(&cmd.purchases, &tier)?;
-    let roster_positions = team_data.find_roster_positions(&cmd.team_id.to_string()).await;
-    let validated_mercs = validate_mercenary_positions(&cmd.mercenary_purchases, &roster_positions)?;
+    let roster_positions = team_data
+        .find_roster_positions(&cmd.team_id.to_string())
+        .await;
+    let validated_mercs =
+        validate_mercenary_positions(&cmd.mercenary_purchases, &roster_positions)?;
     let player_counts = fetch_player_counts(&cmd.team_id, player_data).await?;
     validate_roster_availability(&validated_mercs, &player_counts)?;
     let treasury = fetch_treasury(&cmd.team_id, team_data).await?;
@@ -116,9 +129,26 @@ pub async fn execute(
         build_all_specs_and_purchases(&tier, &cmd.purchases, &validated_mercs);
     let opponent_star_uids = collect_opponent_star_uids(&pm, &cmd.team_id);
     let (updated_pm, events) = pm
-        .record_inducements(&cmd.team_id, &purchases_tuples, budget, &allowed_specs, &opponent_star_uids, cmd.recorded_by)
+        .record_inducements(
+            &cmd.team_id,
+            &purchases_tuples,
+            budget,
+            &allowed_specs,
+            &opponent_star_uids,
+            cmd.recorded_by,
+        )
         .map_err(RecordInducementsError::Domain)?;
-    persist_and_init(&mr_id, events, updated_pm.version, cmd.match_report_id, cmd.team_id, repo, team_data, player_data).await?;
+    persist_and_init(
+        &mr_id,
+        events,
+        updated_pm.version,
+        cmd.match_report_id,
+        cmd.team_id,
+        repo,
+        team_data,
+        player_data,
+    )
+    .await?;
     Ok(route_outcome(&updated_pm, &cmd.team_id))
 }
 
@@ -169,7 +199,9 @@ fn validate_purchase_uids(
         .collect();
     for p in purchases {
         if !all_allowed.contains(&p.uid.0.as_str()) {
-            return Err(RecordInducementsError::UnauthorizedInducement(p.uid.0.clone()));
+            return Err(RecordInducementsError::UnauthorizedInducement(
+                p.uid.0.clone(),
+            ));
         }
     }
     Ok(())
@@ -179,25 +211,32 @@ fn validate_mercenary_positions(
     purchases: &[MercenaryPurchaseCmd],
     roster_positions: &[RosterPositionDto],
 ) -> Result<Vec<ValidatedMercenary>, RecordInducementsError> {
-    purchases.iter().map(|cmd| {
-        let pos = roster_positions
-            .iter()
-            .find(|p| p.position_uid == cmd.position_id.to_string())
-            .ok_or_else(|| RecordInducementsError::InvalidMercenaryPosition(cmd.position_id.clone()))?;
-        Ok(ValidatedMercenary {
-            position_id: cmd.position_id.clone(),
-            level:       cmd.level.clone(),
-            cost:        pos.base_cost + cmd.level.extra_cost(),
-            max_qty:     pos.max_qty,
+    purchases
+        .iter()
+        .map(|cmd| {
+            let pos = roster_positions
+                .iter()
+                .find(|p| p.position_uid == cmd.position_id.to_string())
+                .ok_or_else(|| {
+                    RecordInducementsError::InvalidMercenaryPosition(cmd.position_id.clone())
+                })?;
+            Ok(ValidatedMercenary {
+                position_id: cmd.position_id.clone(),
+                level: cmd.level.clone(),
+                cost: pos.base_cost + cmd.level.extra_cost(),
+                max_qty: pos.max_qty,
+            })
         })
-    }).collect()
+        .collect()
 }
 
 async fn fetch_player_counts(
     team_id: &TeamId,
     player_data: &dyn IPlayerDataPort,
 ) -> Result<Vec<PositionCountDto>, RecordInducementsError> {
-    Ok(player_data.find_player_counts_by_position(&team_id.to_string()).await)
+    Ok(player_data
+        .find_player_counts_by_position(&team_id.to_string())
+        .await)
 }
 
 fn validate_roster_availability(
@@ -209,12 +248,24 @@ fn validate_roster_availability(
         *req_counts.entry(m.position_id.to_string()).or_insert(0) += 1;
     }
     for (pos_id, req_count) in &req_counts {
-        let count_in_team = player_counts.iter().find(|c| &c.position_uid == pos_id).map(|c| c.count).unwrap_or(0);
-        let max_qty = mercs.iter().find(|m| m.position_id.to_string() == *pos_id).map(|m| m.max_qty).unwrap_or(0);
+        let count_in_team = player_counts
+            .iter()
+            .find(|c| &c.position_uid == pos_id)
+            .map(|c| c.count)
+            .unwrap_or(0);
+        let max_qty = mercs
+            .iter()
+            .find(|m| m.position_id.to_string() == *pos_id)
+            .map(|m| m.max_qty)
+            .unwrap_or(0);
         if count_in_team + req_count > max_qty {
-            return Err(RecordInducementsError::Domain(DomainError::MaxQtyExceeded {
-                uid: format!("MERCO:{pos_id}:*"), qty: count_in_team + req_count, max_qty,
-            }));
+            return Err(RecordInducementsError::Domain(
+                DomainError::MaxQtyExceeded {
+                    uid: format!("MERCO:{pos_id}:*"),
+                    qty: count_in_team + req_count,
+                    max_qty,
+                },
+            ));
         }
     }
     Ok(())
@@ -234,9 +285,9 @@ async fn fetch_treasury(
 
 struct ValidatedMercenary {
     position_id: RosterPositionUid,
-    level:       MercenaryLevel,
-    cost:        u32,
-    max_qty:     u8,
+    level: MercenaryLevel,
+    cost: u32,
+    max_qty: u8,
 }
 
 fn build_all_specs_and_purchases(
@@ -245,7 +296,8 @@ fn build_all_specs_and_purchases(
     validated_mercs: &[ValidatedMercenary],
 ) -> (Vec<AllowedInducementSpec>, Vec<(InducementId, u8)>) {
     let mut specs = build_allowed_specs(tier);
-    let mut tuples: Vec<(InducementId, u8)> = purchases.iter().map(|p| (p.uid.clone(), p.qty)).collect();
+    let mut tuples: Vec<(InducementId, u8)> =
+        purchases.iter().map(|p| (p.uid.clone(), p.qty)).collect();
     let (merco_specs, merco_tuples) = build_merco_specs(validated_mercs);
     specs.extend(merco_specs);
     tuples.extend(merco_tuples);
@@ -287,8 +339,16 @@ fn build_merco_specs(
     let mut tuples = vec![];
     for (uid, (cost, qty, max_qty_for_pos)) in groups {
         let induction_id = InducementId(uid);
-        if let (Ok(mq), Ok(uc)) = (InducementQty::try_new(max_qty_for_pos), InducementCost::try_new(cost)) {
-            specs.push(AllowedInducementSpec { uid: induction_id.clone(), max_qty: mq, unit_cost: uc, is_star_player: IsStarPlayer(false) });
+        if let (Ok(mq), Ok(uc)) = (
+            InducementQty::try_new(max_qty_for_pos),
+            InducementCost::try_new(cost),
+        ) {
+            specs.push(AllowedInducementSpec {
+                uid: induction_id.clone(),
+                max_qty: mq,
+                unit_cost: uc,
+                is_star_player: IsStarPlayer(false),
+            });
         }
         tuples.push((induction_id, qty));
     }
@@ -313,7 +373,10 @@ async fn persist_and_init(
         .await
         .map_err(|e| RecordInducementsError::Repository(e.to_string()))?;
     init_temp_players_use_case::execute(
-        InitTempPlayersCommand { match_report_id, team_id },
+        InitTempPlayersCommand {
+            match_report_id,
+            team_id,
+        },
         repo,
         team_data,
         player_data,
@@ -352,23 +415,34 @@ fn route_outcome(pm: &MatchReportPreMatch, team_id: &TeamId) -> RecordInducement
 mod tests {
     use super::*;
     use crate::app::match_report::domain::value_objects::{DedicatedFans, MatchReportOrigin};
-    use crate::app::shared_kernel::identity::ids::SpaceId;
     use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RoundId, SeasonId};
+    use crate::app::shared_kernel::identity::ids::SpaceId;
 
     fn make_pm(home_tv: u32, away_tv: u32) -> MatchReportPreMatch {
         MatchReportPreMatch {
-            id: MatchReportId::new(), space_id: SpaceId::new(),
-            competition_id: CompetitionId::new(), season_id: SeasonId::new(),
-            round_id: RoundId::new(), home_team_id: TeamId::new(), away_team_id: TeamId::new(),
-            created_by: CoachId::new(), origin: MatchReportOrigin::Manual, pairing_id: None,
-            home_fan_roll: None, away_fan_roll: None,
-            home_dedicated_fans: DedicatedFans::default(), away_dedicated_fans: DedicatedFans::default(),
+            id: MatchReportId::new(),
+            space_id: SpaceId::new(),
+            competition_id: CompetitionId::new(),
+            season_id: SeasonId::new(),
+            round_id: RoundId::new(),
+            home_team_id: TeamId::new(),
+            away_team_id: TeamId::new(),
+            created_by: CoachId::new(),
+            origin: MatchReportOrigin::Manual,
+            pairing_id: None,
+            home_fan_roll: None,
+            away_fan_roll: None,
+            home_dedicated_fans: DedicatedFans::default(),
+            away_dedicated_fans: DedicatedFans::default(),
             home_team_value: Some(TeamValue::try_new(home_tv).unwrap()),
             away_team_value: Some(TeamValue::try_new(away_tv).unwrap()),
-            home_inducements: None, away_inducements: None,
+            home_inducements: None,
+            away_inducements: None,
             star_engagements: vec![],
-            home_temp_players: vec![], away_temp_players: vec![],
-            home_actions: vec![], away_actions: vec![],
+            home_temp_players: vec![],
+            away_temp_players: vec![],
+            home_actions: vec![],
+            away_actions: vec![],
             version: 1,
         }
     }
@@ -387,7 +461,10 @@ mod tests {
     #[test]
     fn route_outcome_sends_underdog_to_step3() {
         let pm = make_pm(1000, 900);
-        assert!(matches!(route_outcome(&pm, pm.underdog_team_id()), RecordInducementsOutcome::RedirectToStep3));
+        assert!(matches!(
+            route_outcome(&pm, pm.underdog_team_id()),
+            RecordInducementsOutcome::RedirectToStep3
+        ));
     }
 
     #[test]
@@ -402,7 +479,9 @@ mod tests {
             RecordInducementsOutcome::RedirectToInducements { next_team_id } => {
                 assert_eq!(next_team_id, pm.underdog_team_id().to_string());
             }
-            other => panic!("expected RedirectToInducements even with both carts recorded, got {other:?}"),
+            other => panic!(
+                "expected RedirectToInducements even with both carts recorded, got {other:?}"
+            ),
         }
     }
 }

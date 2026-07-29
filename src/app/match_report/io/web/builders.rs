@@ -77,12 +77,20 @@ pub async fn build_performance_rows(
         .await;
 
     let home = result.home.into_iter().filter_map(|dto| {
-        find_action_display(home_actions, &dto.action_player)
-            .map(|(name, pos)| PerformanceRowVm { side: "home", player_display_name: name, player_position: pos, spp_earned: dto.spp })
+        find_action_display(home_actions, &dto.action_player).map(|(name, pos)| PerformanceRowVm {
+            side: "home",
+            player_display_name: name,
+            player_position: pos,
+            spp_earned: dto.spp,
+        })
     });
     let away = result.away.into_iter().filter_map(|dto| {
-        find_action_display(away_actions, &dto.action_player)
-            .map(|(name, pos)| PerformanceRowVm { side: "away", player_display_name: name, player_position: pos, spp_earned: dto.spp })
+        find_action_display(away_actions, &dto.action_player).map(|(name, pos)| PerformanceRowVm {
+            side: "away",
+            player_display_name: name,
+            player_position: pos,
+            spp_earned: dto.spp,
+        })
     });
     let mut rows: Vec<PerformanceRowVm> = home.chain(away).collect();
     rows.sort_by(|a, b| b.spp_earned.cmp(&a.spp_earned));
@@ -100,17 +108,20 @@ fn find_action_display(
         .map(|a| (a.player_display_name.clone(), a.player_position.clone()))
 }
 
-pub async fn build_submitted_by(coach_data: &dyn ICoachDataPort, created_by: &str) -> Option<String> {
+pub async fn build_submitted_by(
+    coach_data: &dyn ICoachDataPort,
+    created_by: &str,
+) -> Option<String> {
     coach_data.find_coach_name(created_by).await
 }
 
 // ── Zone de correction d'un rapport publié ────────────────────────────────────
 
 pub struct CorrectionZoneVm {
-    pub can_correct:    bool,
+    pub can_correct: bool,
     /// Phrase complète, prête à afficher — le template n'assemble aucun message.
     pub blocked_reason: Option<String>,
-    pub unpublish_url:  String,
+    pub unpublish_url: String,
 }
 
 /// Résout le camp bloquant en nom d'équipe.
@@ -119,9 +130,9 @@ pub struct CorrectionZoneVm {
 /// ignore les chaînes d'affichage, et faire descendre un nom d'équipe y aurait
 /// imposé un value object de nom pour rien.
 pub fn build_correction_zone(
-    eligibility:   &CorrectionEligibility,
-    home_info:     &TeamInfoDto,
-    away_info:     &TeamInfoDto,
+    eligibility: &CorrectionEligibility,
+    home_info: &TeamInfoDto,
+    away_info: &TeamInfoDto,
     unpublish_url: String,
 ) -> CorrectionZoneVm {
     let blocked_reason = match eligibility {
@@ -138,7 +149,7 @@ pub fn build_correction_zone(
 }
 
 fn blocked_reason_for(
-    blocker:   &CorrectionBlocker,
+    blocker: &CorrectionBlocker,
     home_info: &TeamInfoDto,
     away_info: &TeamInfoDto,
 ) -> String {
@@ -167,7 +178,10 @@ mod correction_zone_tests {
     use super::*;
 
     fn team(name: &str) -> TeamInfoDto {
-        TeamInfoDto { team_name: name.to_string(), ..Default::default() }
+        TeamInfoDto {
+            team_name: name.to_string(),
+            ..Default::default()
+        }
     }
 
     fn build(eligibility: CorrectionEligibility) -> CorrectionZoneVm {
@@ -188,9 +202,11 @@ mod correction_zone_tests {
 
     #[test]
     fn le_message_nomme_l_equipe_du_camp_bloquant() {
-        let vm = build(CorrectionEligibility::Blocked(CorrectionBlocker::SppAlreadySpent {
-            side: TeamSide::Away,
-        }));
+        let vm = build(CorrectionEligibility::Blocked(
+            CorrectionBlocker::SppAlreadySpent {
+                side: TeamSide::Away,
+            },
+        ));
         assert!(!vm.can_correct);
         let reason = vm.blocked_reason.unwrap();
         assert!(reason.starts_with("Bone Crushers"), "obtenu : {reason}");
@@ -199,9 +215,11 @@ mod correction_zone_tests {
 
     #[test]
     fn le_camp_domicile_est_nomme_correctement() {
-        let vm = build(CorrectionEligibility::Blocked(CorrectionBlocker::PhaseAdvanced {
-            side: TeamSide::Home,
-        }));
+        let vm = build(CorrectionEligibility::Blocked(
+            CorrectionBlocker::PhaseAdvanced {
+                side: TeamSide::Home,
+            },
+        ));
         let reason = vm.blocked_reason.unwrap();
         assert!(reason.starts_with("Orcs de Karak"), "obtenu : {reason}");
         assert!(reason.contains("phase d'amélioration"));
@@ -211,7 +229,9 @@ mod correction_zone_tests {
     /// nommer ni l'une ni l'autre équipe.
     #[test]
     fn l_eligibilite_inconnue_ne_nomme_aucune_equipe() {
-        let vm = build(CorrectionEligibility::Blocked(CorrectionBlocker::EligibilityUnknown));
+        let vm = build(CorrectionEligibility::Blocked(
+            CorrectionBlocker::EligibilityUnknown,
+        ));
         let reason = vm.blocked_reason.unwrap();
         assert!(!reason.contains("Orcs"));
         assert!(!reason.contains("Bone Crushers"));

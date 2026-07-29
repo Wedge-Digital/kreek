@@ -1,5 +1,5 @@
-use crate::app::shared_kernel::identity::ids::{SpaceId, UserId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::{SpaceId, UserId};
 
 pub struct DismissTeamCommand {
     pub team_id: TeamId,

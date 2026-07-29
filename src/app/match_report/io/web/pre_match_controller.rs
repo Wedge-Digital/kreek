@@ -91,11 +91,9 @@ pub async fn get_pre_match(
             rtp.away_team_id.to_string(),
             true,
         ),
-        MatchReportState::Published(p) => (
-            p.home_team_id.to_string(),
-            p.away_team_id.to_string(),
-            true,
-        ),
+        MatchReportState::Published(p) => {
+            (p.home_team_id.to_string(), p.away_team_id.to_string(), true)
+        }
         MatchReportState::Draft(_) => {
             let url = AppRoutes::default()
                 .match_report
@@ -197,9 +195,11 @@ pub async fn post_pre_match(
         Ok(record_fan_factor_use_case::RecordFanFactorOutcome::RedirectToInducements {
             topdog_team_id,
         }) => {
-            let url = AppRoutes::default()
-                .match_report
-                .inducements(&space_id, &match_report_id, &topdog_team_id);
+            let url = AppRoutes::default().match_report.inducements(
+                &space_id,
+                &match_report_id,
+                &topdog_team_id,
+            );
             Redirect::to(&url).into_response()
         }
         Ok(record_fan_factor_use_case::RecordFanFactorOutcome::RedirectToStep3) => {

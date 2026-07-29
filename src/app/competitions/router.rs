@@ -1,4 +1,3 @@
-use crate::app::competitions::io::web::all_competition::get_all_competition;
 use crate::app::competitions::io::web::admin::admin_page::admin_page;
 use crate::app::competitions::io::web::admin::dashboard::dashboard_fragment;
 use crate::app::competitions::io::web::admin::enrollments_tab::enrollments_tab;
@@ -10,26 +9,25 @@ use crate::app::competitions::io::web::admin::groups_widgets::{
     group_cards_widget, unassigned_pool_widget,
 };
 use crate::app::competitions::io::web::admin::results_tab::results_tab;
-use crate::app::competitions::io::web::admin::summary_tab::summary_tab_fragment;
 use crate::app::competitions::io::web::admin::schedule_actions::{
-    delete_match, delete_round, post_add_match, post_add_rest, post_add_round,
-    post_clear_all, post_clear_round_pairings, post_generate_all,
-    post_generate_round_pairings, put_update_round,
+    delete_match, delete_round, post_add_match, post_add_rest, post_add_round, post_clear_all,
+    post_clear_round_pairings, post_generate_all, post_generate_round_pairings, put_update_round,
 };
 use crate::app::competitions::io::web::admin::schedule_tab::schedule_tab;
 use crate::app::competitions::io::web::admin::schedule_widgets::{
     schedule_round_detail_widget, schedule_sidebar_widget,
 };
+use crate::app::competitions::io::web::admin::summary_tab::summary_tab_fragment;
+use crate::app::competitions::io::web::all_competition::get_all_competition;
 use crate::app::competitions::io::web::calendrier_tab_controller::get_calendrier_tab;
 use crate::app::competitions::io::web::competition_detail::{
-    get_competition_detail, get_tab_detailed_standings, get_tab_standings, get_tab_stats, get_tab_teams,
+    get_competition_detail, get_tab_detailed_standings, get_tab_standings, get_tab_stats,
+    get_tab_teams,
 };
-use crate::app::competitions::io::web::resultats_tab_controller::get_resultats_tab;
 use crate::app::competitions::io::web::competition_widget::{
-    get_competition_widget, get_competition_widget_detail, get_json_competitions,
-    get_json_rounds, get_json_seasons,
+    get_competition_widget, get_competition_widget_detail, get_json_competitions, get_json_rounds,
+    get_json_seasons,
 };
-use crate::app::competitions::io::web::widget_tester_controller::get_competitions_widget_tester;
 use crate::app::competitions::io::web::new_competition::{
     get_new_competition_phase_1, get_new_competition_phase_1_edit, get_new_competition_phase_2,
     post_competition_rules, post_new_competition, post_update_competition,
@@ -43,6 +41,8 @@ use crate::app::competitions::io::web::new_competition_phase_4::{
 use crate::app::competitions::io::web::new_competition_phase_5::{
     get_new_competition_phase_5, post_finalize_competition,
 };
+use crate::app::competitions::io::web::resultats_tab_controller::get_resultats_tab;
+use crate::app::competitions::io::web::widget_tester_controller::get_competitions_widget_tester;
 use crate::app::competitions::routes::path;
 use crate::state::AppState;
 use axum::routing::{delete, get, post, put};
@@ -90,14 +90,8 @@ pub fn router() -> Router<AppState> {
             path::COMPETITION_WIDGET_JSON_COMPETITIONS,
             get(get_json_competitions),
         )
-        .route(
-            path::COMPETITION_WIDGET_JSON_SEASONS,
-            get(get_json_seasons),
-        )
-        .route(
-            path::COMPETITION_WIDGET_JSON_ROUNDS,
-            get(get_json_rounds),
-        )
+        .route(path::COMPETITION_WIDGET_JSON_SEASONS, get(get_json_seasons))
+        .route(path::COMPETITION_WIDGET_JSON_ROUNDS, get(get_json_rounds))
         .route(
             path::COMPETITION_WIDGET_DETAIL,
             get(get_competition_widget_detail),
@@ -115,7 +109,10 @@ pub fn router() -> Router<AppState> {
             path::COMPETITION_ADMIN_GROUPS_UNASSIGNED,
             get(unassigned_pool_widget),
         )
-        .route(path::COMPETITION_ADMIN_GROUPS_CARDS, get(group_cards_widget))
+        .route(
+            path::COMPETITION_ADMIN_GROUPS_CARDS,
+            get(group_cards_widget),
+        )
         .route(
             path::COMPETITION_ADMIN_GROUPS_RANDOM_DRAW,
             post(post_random_draw),

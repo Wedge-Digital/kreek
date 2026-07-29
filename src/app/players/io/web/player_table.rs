@@ -12,7 +12,7 @@ use std::collections::HashMap;
 // ── View models ───────────────────────────────────────────────────────────────
 
 pub struct SkillTagVm {
-    pub name:         String,
+    pub name: String,
     pub category_css: String,
 }
 
@@ -23,42 +23,48 @@ impl std::fmt::Display for SkillTagVm {
 }
 
 pub struct PlayerRowVm {
-    pub player_id:       String,
-    pub jersey:          Option<i16>,
-    pub personal_name:   String,
-    pub position_name:   String,
-    pub base_skills:     Vec<SkillTagVm>,
+    pub player_id: String,
+    pub jersey: Option<i16>,
+    pub personal_name: String,
+    pub position_name: String,
+    pub base_skills: Vec<SkillTagVm>,
     pub acquired_skills: Vec<AcquiredSkillProjection>,
-    pub spp:             i32,
-    pub value_kpo:       i32,
+    pub spp: i32,
+    pub value_kpo: i32,
     /// Caractéristiques résolues — base du poste, moins les malus de séquelles,
     /// plus les augmentations achetées en SPP. `None` si le poste est introuvable
     /// au catalogue : la table affiche alors un tiret plutôt qu'une valeur fausse.
-    pub stats:           Option<ResolvedPlayerStats>,
+    pub stats: Option<ResolvedPlayerStats>,
 }
 
 fn skill_category_css(category: &str) -> &'static str {
     match category {
-        "GENERAL"  => "type-general",
+        "GENERAL" => "type-general",
         "STRENGTH" => "type-strength",
-        "AGILITY"  => "type-agility",
-        "PASSING"  => "type-passing",
+        "AGILITY" => "type-agility",
+        "PASSING" => "type-passing",
         "MUTATION" => "type-mutation",
-        _          => "type-general",
+        _ => "type-general",
     }
 }
 
 fn build_base_skills(p: &PlayerProjection, catalog: &dyn ISkillCatalogPort) -> Vec<SkillTagVm> {
     let Some(position) = catalog.find_position(&p.roster_line_id) else {
-        return p.base_skills.iter().map(|n| SkillTagVm {
-            name:         n.clone(),
-            category_css: "type-general".to_string(),
-        }).collect();
+        return p
+            .base_skills
+            .iter()
+            .map(|n| SkillTagVm {
+                name: n.clone(),
+                category_css: "type-general".to_string(),
+            })
+            .collect();
     };
-    position.base_skills.iter()
+    position
+        .base_skills
+        .iter()
         .filter_map(|uid| catalog.find_skill(uid))
         .map(|s| SkillTagVm {
-            name:         s.name.clone(),
+            name: s.name.clone(),
             category_css: skill_category_css(&s.category).to_string(),
         })
         .collect()
@@ -70,8 +76,8 @@ fn build_base_skills(p: &PlayerProjection, catalog: &dyn ISkillCatalogPort) -> V
 #[template(path = "player-table-fragment.html")]
 pub struct PlayerTableTemplate {
     pub app_routes: AppRoutes,
-    pub space_id:   String,
-    pub players:    Vec<PlayerRowVm>,
+    pub space_id: String,
+    pub players: Vec<PlayerRowVm>,
 }
 
 impl IntoResponse for PlayerTableTemplate {
@@ -103,23 +109,31 @@ pub async fn player_table_widget(
     let catalog = state.players.skill_catalog.as_ref();
     let stats = resolve_team_stats(&state, &team, catalog).await;
 
-    let players = projections.into_iter().map(|p| {
-        let base_skills = build_base_skills(&p, catalog);
-        let resolved = stats.get(&p.player_id).copied();
-        PlayerRowVm {
-            player_id:       p.player_id,
-            jersey:          p.jersey,
-            personal_name:   p.personal_name,
-            position_name:   p.position_name,
-            base_skills,
-            acquired_skills: p.acquired_skills,
-            spp:             p.spp,
-            value_kpo:       p.value_kpo,
-            stats:           resolved,
-        }
-    }).collect();
+    let players = projections
+        .into_iter()
+        .map(|p| {
+            let base_skills = build_base_skills(&p, catalog);
+            let resolved = stats.get(&p.player_id).copied();
+            PlayerRowVm {
+                player_id: p.player_id,
+                jersey: p.jersey,
+                personal_name: p.personal_name,
+                position_name: p.position_name,
+                base_skills,
+                acquired_skills: p.acquired_skills,
+                spp: p.spp,
+                value_kpo: p.value_kpo,
+                stats: resolved,
+            }
+        })
+        .collect();
 
-    PlayerTableTemplate { app_routes: AppRoutes::default(), space_id, players }.into_response()
+    PlayerTableTemplate {
+        app_routes: AppRoutes::default(),
+        space_id,
+        players,
+    }
+    .into_response()
 }
 
 /// Caractéristiques résolues de tout l'effectif, indexées par joueur.

@@ -4,7 +4,9 @@ use crate::app::teams::io::app_events::{
     player_improvement_listener, team_created_listener,
 };
 use crate::app::teams::io::repository::team_repository::TeamRepository;
-use crate::app::teams::ports::{IJourneymanTypePort, IPlayerCountPort, IRosterInfoPort, ITeamRepository};
+use crate::app::teams::ports::{
+    IJourneymanTypePort, IPlayerCountPort, IRosterInfoPort, ITeamRepository,
+};
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::sync::Arc;

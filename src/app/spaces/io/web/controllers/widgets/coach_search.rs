@@ -1,14 +1,14 @@
+use crate::app::shared_kernel::identity::coach_definition::CoachDefinition;
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::spaces::context::SpacesContext;
+use crate::app::spaces::io::web::controllers::widgets::coach_search_results::find_coaches;
+use crate::app::spaces::routes::Routes;
+use crate::common::initials::initials;
 use askama::Template;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
-use crate::app::spaces::routes::Routes;
-use crate::app::shared_kernel::identity::coach_definition::CoachDefinition;
-use crate::app::spaces::io::web::controllers::widgets::coach_search_results::find_coaches;
-use crate::common::initials::initials;
 
 #[derive(Deserialize)]
 pub struct CoachSearchWidgetParams {
@@ -77,5 +77,6 @@ pub async fn search_coaches_controller(
         selected_coaches,
         coaches,
         excluded,
-    }.into_response()
+    }
+    .into_response()
 }

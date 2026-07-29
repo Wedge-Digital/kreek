@@ -12,10 +12,10 @@ pub struct RoundId(pub String);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MatchContext {
-    pub match_report_id:    MatchReportId,
-    pub round_id:           RoundId,
-    pub round_label:        String, // arch:ok texte libre dénormalisé (zéro appel inter-BC en lecture)
-    pub opponent_team_id:   TeamId,
+    pub match_report_id: MatchReportId,
+    pub round_id: RoundId,
+    pub round_label: String, // arch:ok texte libre dénormalisé (zéro appel inter-BC en lecture)
+    pub opponent_team_id: TeamId,
     pub opponent_team_name: String, // arch:ok texte libre dénormalisé (zéro appel inter-BC en lecture)
 }
 
@@ -60,7 +60,7 @@ pub enum InjuryType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerInjuryRecord {
     pub injury_type: InjuryType,
-    pub context:     MatchContext,
+    pub context: MatchContext,
 }
 
 #[nutype(
@@ -71,7 +71,7 @@ pub struct StatMalus(u8);
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct StatAdjustment {
-    pub stat:  StatKind,
+    pub stat: StatKind,
     pub malus: StatMalus,
 }
 

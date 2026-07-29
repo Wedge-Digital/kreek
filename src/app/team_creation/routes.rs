@@ -1,29 +1,31 @@
 pub mod path {
-    pub const DRAFT_TEAM:          &str = "/app/{space_id}/team/create";
-    pub const TEAM_BUILD:          &str = "/app/{space_id}/team/{team_id}/build";
-    pub const MY_TEAMS:            &str = "/app/{space_id}/team/list";
-    pub const ROSTER_PLAYERS:      &str = "/app/{space_id}/team/{team_id}/roster/{roster_uid}/players";
-    pub const HIRE_PLAYER:         &str = "/app/{space_id}/team/{team_id}/players/hire";
-    pub const FIRE_PLAYER:         &str = "/app/{space_id}/team/{team_id}/players/fire";
-    pub const BUY_STAFF:           &str = "/app/{space_id}/team/{team_id}/staff/buy";
-    pub const REMOVE_STAFF:        &str = "/app/{space_id}/team/{team_id}/staff/remove";
-    pub const BUY_REROLL:          &str = "/app/{space_id}/team/{team_id}/rerolls/buy";
-    pub const REMOVE_REROLL:       &str = "/app/{space_id}/team/{team_id}/rerolls/remove";
-    pub const SUBMIT_TEAM:         &str = "/app/{space_id}/team/{team_id}/submit";
-    pub const TEAM_DETAIL:         &str = "/app/{space_id}/team/{team_id}/detail";
-    pub const SET_PLAYER_IDENTITY: &str = "/app/{space_id}/team/{team_id}/players/{instance_id}/identity";
-    pub const SET_LEAGUE:          &str = "/app/{space_id}/team/{team_id}/league";
-    pub const SET_SPECIAL_RULE:    &str = "/app/{space_id}/team/{team_id}/special-rule";
-    pub const FINALIZE_TEAM:       &str = "/app/{space_id}/team/{team_id}/finalize";
-    pub const SPEND_SPP:           &str = "/app/{space_id}/team/{team_id}/players/{instance_id}/skills";
-    pub const CANCEL_SPP:          &str = "/app/{space_id}/team/{team_id}/players/{instance_id}/skills/{skill_id}";
-    pub const CART_WIDGET:         &str = "/app/{space_id}/team/{team_id}/widgets/cart";
+    pub const DRAFT_TEAM: &str = "/app/{space_id}/team/create";
+    pub const TEAM_BUILD: &str = "/app/{space_id}/team/{team_id}/build";
+    pub const MY_TEAMS: &str = "/app/{space_id}/team/list";
+    pub const ROSTER_PLAYERS: &str = "/app/{space_id}/team/{team_id}/roster/{roster_uid}/players";
+    pub const HIRE_PLAYER: &str = "/app/{space_id}/team/{team_id}/players/hire";
+    pub const FIRE_PLAYER: &str = "/app/{space_id}/team/{team_id}/players/fire";
+    pub const BUY_STAFF: &str = "/app/{space_id}/team/{team_id}/staff/buy";
+    pub const REMOVE_STAFF: &str = "/app/{space_id}/team/{team_id}/staff/remove";
+    pub const BUY_REROLL: &str = "/app/{space_id}/team/{team_id}/rerolls/buy";
+    pub const REMOVE_REROLL: &str = "/app/{space_id}/team/{team_id}/rerolls/remove";
+    pub const SUBMIT_TEAM: &str = "/app/{space_id}/team/{team_id}/submit";
+    pub const TEAM_DETAIL: &str = "/app/{space_id}/team/{team_id}/detail";
+    pub const SET_PLAYER_IDENTITY: &str =
+        "/app/{space_id}/team/{team_id}/players/{instance_id}/identity";
+    pub const SET_LEAGUE: &str = "/app/{space_id}/team/{team_id}/league";
+    pub const SET_SPECIAL_RULE: &str = "/app/{space_id}/team/{team_id}/special-rule";
+    pub const FINALIZE_TEAM: &str = "/app/{space_id}/team/{team_id}/finalize";
+    pub const SPEND_SPP: &str = "/app/{space_id}/team/{team_id}/players/{instance_id}/skills";
+    pub const CANCEL_SPP: &str =
+        "/app/{space_id}/team/{team_id}/players/{instance_id}/skills/{skill_id}";
+    pub const CART_WIDGET: &str = "/app/{space_id}/team/{team_id}/widgets/cart";
     pub const SKILL_HEADER_WIDGET: &str = "/app/{space_id}/team/{team_id}/widgets/skill-header";
-    pub const SPP_BUDGET_WIDGET:   &str = "/app/{space_id}/team/{team_id}/widgets/spp-budget";
-    pub const PLAYER_LIST_WIDGET:  &str = "/app/{space_id}/team/{team_id}/widgets/player-list";
+    pub const SPP_BUDGET_WIDGET: &str = "/app/{space_id}/team/{team_id}/widgets/spp-budget";
+    pub const PLAYER_LIST_WIDGET: &str = "/app/{space_id}/team/{team_id}/widgets/player-list";
     pub const ROSTER_PICKER_WIDGET: &str = "/app/{space_id}/team/{team_id}/widgets/roster-picker";
     pub const PLAYER_TABLE_WIDGET: &str = "/app/{space_id}/team/{team_id}/widgets/player-table";
-    pub const STAFF_TABLE_WIDGET:  &str = "/app/{space_id}/team/{team_id}/widgets/staff-table";
+    pub const STAFF_TABLE_WIDGET: &str = "/app/{space_id}/team/{team_id}/widgets/staff-table";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -109,7 +111,13 @@ impl Routes {
             .replace("{team_id}", team_id)
             .replace("{instance_id}", instance_id)
     }
-    pub fn cancel_spp(&self, space_id: &str, team_id: &str, instance_id: &str, skill_id: &str) -> String {
+    pub fn cancel_spp(
+        &self,
+        space_id: &str,
+        team_id: &str,
+        instance_id: &str,
+        skill_id: &str,
+    ) -> String {
         path::CANCEL_SPP
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)

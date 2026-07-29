@@ -82,7 +82,12 @@ async fn handle_team(team_repo: &Arc<dyn ITeamRepository>, effect: TeamMatchEffe
     };
 
     // spp_gains reste hors périmètre (cartes 35/145/154).
-    match team.start_post_match_sequence(effect.result, effect.fan_mod, Kpo(effect.gain_kpo), vec![]) {
+    match team.start_post_match_sequence(
+        effect.result,
+        effect.fan_mod,
+        Kpo(effect.gain_kpo),
+        vec![],
+    ) {
         Ok(event) => {
             if let Err(e) = team_repo.append(team_id, &event, team.version).await {
                 tracing::error!("match_report_published_listener: append {team_id}: {e}");
@@ -121,14 +126,25 @@ mod tests {
 
     fn sample_payload() -> MatchReportPublishedPayload {
         MatchReportPublishedPayload {
-            match_report_id: "mr1".into(), space_id: "sp1".into(), competition_id: "c1".into(),
-            season_id: "s1".into(), round_id: "r1".into(), pairing_id: None,
+            match_report_id: "mr1".into(),
+            space_id: "sp1".into(),
+            competition_id: "c1".into(),
+            season_id: "s1".into(),
+            round_id: "r1".into(),
+            pairing_id: None,
             published_at: chrono::Utc::now(),
-            home_team_id: "home-team".into(), away_team_id: "away-team".into(),
-            home_score: 2, away_score: 1,
-            home_gain_kpo: 150_000, away_gain_kpo: 90_000,
-            home_fan_mod: 1, away_fan_mod: -2,
-            home_actions: vec![], away_actions: vec![], home_temp_players: vec![], away_temp_players: vec![],
+            home_team_id: "home-team".into(),
+            away_team_id: "away-team".into(),
+            home_score: 2,
+            away_score: 1,
+            home_gain_kpo: 150_000,
+            away_gain_kpo: 90_000,
+            home_fan_mod: 1,
+            away_fan_mod: -2,
+            home_actions: vec![],
+            away_actions: vec![],
+            home_temp_players: vec![],
+            away_temp_players: vec![],
         }
     }
 

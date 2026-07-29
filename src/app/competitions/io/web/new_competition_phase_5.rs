@@ -1,12 +1,12 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::domain::competition_invitations::AccessMode;
+use crate::app::competitions::io::web::rules_labels::format_bonus_label;
 use crate::app::competitions::use_cases::finalize_competition::{
     execute as execute_finalize, FinalizeCompetitionCommand, FinalizeCompetitionError,
 };
-use crate::app::competitions::io::web::rules_labels::format_bonus_label;
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use askama::Template;
 use axum::body::Body;
@@ -242,8 +242,16 @@ pub async fn get_new_competition_phase_5(
         let deadline = inv.registration_deadline.clone();
 
         (
-            true, mode_label, validation_label, inv_label, spots, spots_w, deadline, unfilled,
-            remaining, total,
+            true,
+            mode_label,
+            validation_label,
+            inv_label,
+            spots,
+            spots_w,
+            deadline,
+            unfilled,
+            remaining,
+            total,
         )
     } else {
         (
@@ -344,7 +352,11 @@ pub async fn post_finalize_competition(
         Ok(()) => Response::builder()
             .header(
                 "HX-Redirect",
-                AppRoutes::default().competitions.competition_detail(&space_id, &competition_id, &season_id),
+                AppRoutes::default().competitions.competition_detail(
+                    &space_id,
+                    &competition_id,
+                    &season_id,
+                ),
             )
             .body(Body::empty())
             .unwrap(),

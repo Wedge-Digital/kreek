@@ -1,8 +1,8 @@
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::team_creation::domain::roster::{JerseyNumber, PlayerId};
 use crate::app::team_creation::use_cases::set_player_identity as uc;
 use crate::app::team_creation::use_cases::set_player_identity::SetPlayerIdentityCommand;
-use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::state::AppState;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -11,7 +11,7 @@ use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct SetPlayerIdentityBody {
-    pub name:   Option<String>,
+    pub name: Option<String>,
     pub jersey: u8,
 }
 
@@ -41,10 +41,10 @@ pub async fn set_player_identity(
     };
 
     let cmd = SetPlayerIdentityCommand {
-        team_id:     team_entity_id,
-        space_id:    space_id.clone(),
+        team_id: team_entity_id,
+        space_id: space_id.clone(),
         instance_id: PlayerId(instance_id.clone()),
-        name:        body.name.unwrap_or_default().trim().to_string(),
+        name: body.name.unwrap_or_default().trim().to_string(),
         jersey,
     };
 

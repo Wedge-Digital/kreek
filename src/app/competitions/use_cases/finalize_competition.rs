@@ -2,8 +2,8 @@ use crate::app::competitions::domain::domain_event::CompetitionsDomainEvent;
 use crate::app::competitions::domain::season_repository_port::{
     ISeasonRepository, SeasonRepositoryError,
 };
-use crate::app::shared_kernel::identity::ids::{CoachId, EventId, SpaceId};
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
+use crate::app::shared_kernel::identity::ids::{CoachId, EventId, SpaceId};
 use crate::common::services::event_bus::event_bus::EventBus;
 
 pub struct FinalizeCompetitionCommand {
@@ -58,8 +58,8 @@ mod tests {
     use crate::app::competitions::domain::season_repository_port::{
         SeasonBaseInfo, SeasonRepositoryError,
     };
-    use crate::app::shared_kernel::identity::ids::SpaceId;
     use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
+    use crate::app::shared_kernel::identity::ids::SpaceId;
     use crate::common::services::event_bus::event_bus::new_bus;
     use async_trait::async_trait;
 

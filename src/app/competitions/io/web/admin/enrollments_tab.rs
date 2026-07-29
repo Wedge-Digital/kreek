@@ -1,5 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::competitions::io::web::admin::admin_page::{render_admin_page, require_admin_access};
+use crate::app::competitions::io::web::admin::admin_page::{
+    render_admin_page, require_admin_access,
+};
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
 use crate::state::AppState;
@@ -37,7 +39,9 @@ pub async fn enrollments_tab(
     headers: HeaderMap,
 ) -> impl IntoResponse {
     if headers.contains_key("hx-request") {
-        if let Err(resp) = require_admin_access(&auth_session, &space_id, &competition_id, &state).await {
+        if let Err(resp) =
+            require_admin_access(&auth_session, &space_id, &competition_id, &state).await
+        {
             return resp;
         }
 
@@ -64,5 +68,13 @@ pub async fn enrollments_tab(
         .into_response();
     }
 
-    render_admin_page(auth_session, &space_id, &competition_id, &season_id, "enrollments", &state).await
+    render_admin_page(
+        auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        "enrollments",
+        &state,
+    )
+    .await
 }

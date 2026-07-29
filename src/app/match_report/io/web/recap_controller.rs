@@ -1,4 +1,5 @@
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::auth::domain::user::User;
 use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
@@ -8,22 +9,21 @@ use crate::app::match_report::io::web::builders::{
     build_correction_zone, build_performance_rows, build_round_context_vm, build_submitted_by,
     build_team_banner, CorrectionZoneVm, PerformanceRowVm, RoundContextVm, TeamBannerVm,
 };
-use crate::app::match_report::ports::TeamInfoDto;
-use crate::app::match_report::use_cases::correction_eligibility_service;
-use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::match_report::io::web::view_models::{
     GainsFanVm, HalfTimelineVm, InjuryRowVm, MatchResultVm, MvpRowVm,
 };
+use crate::app::match_report::ports::TeamInfoDto;
+use crate::app::match_report::ports::{ICompetitionDataPort, ISpaceAdminPort, ITeamDataPort};
+use crate::app::match_report::use_cases::correction_eligibility_service;
 use crate::app::match_report::use_cases::publish_match_report_use_case::{
     self, PublishMatchReportCommand, PublishMatchReportError,
 };
 use crate::app::match_report::use_cases::unpublish_match_report_use_case::{
     self, UnpublishMatchReportCommand, UnpublishMatchReportError,
 };
-use crate::app::match_report::ports::{ICompetitionDataPort, ISpaceAdminPort, ITeamDataPort};
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
-use crate::app::auth::domain::user::User;
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -141,7 +141,12 @@ pub async fn get_recap(
         return StatusCode::UNAUTHORIZED.into_response();
     };
 
-    let mr_state = match state.match_report.match_report_repo.find_by_id(&match_report_id).await {
+    let mr_state = match state
+        .match_report
+        .match_report_repo
+        .find_by_id(&match_report_id)
+        .await
+    {
         Ok(Some(s)) => s,
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
@@ -175,17 +180,17 @@ pub async fn get_recap(
 /// plutôt que `AppState` entier. C'est ce qui rend la règle testable — `AppState`
 /// n'est pas constructible en test unitaire.
 struct RecapAuthDeps<'a> {
-    space_admin:      &'a dyn ISpaceAdminPort,
+    space_admin: &'a dyn ISpaceAdminPort,
     competition_data: &'a dyn ICompetitionDataPort,
-    team_data:        &'a dyn ITeamDataPort,
+    team_data: &'a dyn ITeamDataPort,
 }
 
 impl<'a> RecapAuthDeps<'a> {
     fn from_state(state: &'a AppState) -> Self {
         Self {
-            space_admin:      state.match_report.space_admin.as_ref(),
+            space_admin: state.match_report.space_admin.as_ref(),
             competition_data: state.match_report.competition_data.as_ref(),
-            team_data:        state.match_report.team_data.as_ref(),
+            team_data: state.match_report.team_data.as_ref(),
         }
     }
 }
@@ -194,16 +199,16 @@ impl<'a> RecapAuthDeps<'a> {
 /// actions du match et serait pénible à fabriquer en test.
 struct RecapScope {
     competition_id: String,
-    home_team_id:   String,
-    away_team_id:   String,
+    home_team_id: String,
+    away_team_id: String,
 }
 
 impl RecapScope {
     fn from_source(source: &RecapSource<'_>) -> Self {
         Self {
             competition_id: source.competition_id.clone(),
-            home_team_id:   source.home_team_id.clone(),
-            away_team_id:   source.away_team_id.clone(),
+            home_team_id: source.home_team_id.clone(),
+            away_team_id: source.away_team_id.clone(),
         }
     }
 
@@ -214,7 +219,9 @@ impl RecapScope {
             MatchReportState::ReadyToPublish(rtp) => {
                 Ok(Self::from_source(&RecapSource::from_rtp(rtp)))
             }
-            MatchReportState::Published(p) => Ok(Self::from_source(&RecapSource::from_published(p))),
+            MatchReportState::Published(p) => {
+                Ok(Self::from_source(&RecapSource::from_published(p)))
+            }
             MatchReportState::Draft(_) | MatchReportState::PreMatch(_) => {
                 Err(StatusCode::NOT_FOUND)
             }
@@ -226,10 +233,10 @@ impl RecapScope {
 /// Autorisé si l'utilisateur est admin d'espace, admin de la compétition du
 /// rapport, ou coach de l'une des deux équipes concernées.
 async fn is_authorized(
-    deps:     &RecapAuthDeps<'_>,
-    user:     &User,
+    deps: &RecapAuthDeps<'_>,
+    user: &User,
     space_id: &str,
-    scope:    &RecapScope,
+    scope: &RecapScope,
 ) -> bool {
     let user_id = user.id.to_string();
     if deps.space_admin.is_space_admin(&user_id, space_id).await {
@@ -242,9 +249,9 @@ async fn is_authorized(
 }
 
 async fn is_competition_admin(
-    deps:           &RecapAuthDeps<'_>,
+    deps: &RecapAuthDeps<'_>,
     competition_id: &str,
-    user_id:        &str,
+    user_id: &str,
 ) -> bool {
     deps.competition_data
         .is_competition_admin(competition_id, user_id)
@@ -254,13 +261,15 @@ async fn is_competition_admin(
 
 /// Une erreur de port vaut « pas coach » : un contrôle d'accès échoue fermé.
 async fn is_coach_of_either_team(
-    deps:    &RecapAuthDeps<'_>,
-    scope:   &RecapScope,
+    deps: &RecapAuthDeps<'_>,
+    scope: &RecapScope,
     user_id: &str,
 ) -> bool {
     let (home, away) = tokio::join!(
-        deps.team_data.is_coach_of_team(&scope.home_team_id, user_id),
-        deps.team_data.is_coach_of_team(&scope.away_team_id, user_id),
+        deps.team_data
+            .is_coach_of_team(&scope.home_team_id, user_id),
+        deps.team_data
+            .is_coach_of_team(&scope.away_team_id, user_id),
     );
     home.unwrap_or(false) || away.unwrap_or(false)
 }
@@ -273,8 +282,14 @@ async fn build_recap_template(
     state: &AppState,
 ) -> RecapTemplate {
     let (home_info, away_info) = tokio::join!(
-        state.match_report.team_data.find_team_info(&source.home_team_id),
-        state.match_report.team_data.find_team_info(&source.away_team_id),
+        state
+            .match_report
+            .team_data
+            .find_team_info(&source.home_team_id),
+        state
+            .match_report
+            .team_data
+            .find_team_info(&source.away_team_id),
     );
     let home_info = home_info.unwrap_or_default();
     let away_info = away_info.unwrap_or_default();
@@ -289,7 +304,11 @@ async fn build_recap_template(
     );
 
     let (round_context, performances, submitted_by) = tokio::join!(
-        build_round_context_vm(state.match_report.competition_data.as_ref(), &source.season_id, &source.round_id),
+        build_round_context_vm(
+            state.match_report.competition_data.as_ref(),
+            &source.season_id,
+            &source.round_id
+        ),
         build_performance_rows(
             state.match_report.spp_calculator.as_ref(),
             source.home_actions,
@@ -336,17 +355,21 @@ async fn build_recap_template(
         under_correction: !is_published && source.was_published_before,
         publish_url: routes.match_report.recap_publish(space_id, match_report_id),
         back_to_step5_url: routes.match_report.step5(space_id, match_report_id),
-        competition_url: routes.competitions.competition_detail(space_id, &source.competition_id, &source.season_id),
+        competition_url: routes.competitions.competition_detail(
+            space_id,
+            &source.competition_id,
+            &source.season_id,
+        ),
         home_team_detail_url: routes.teams.team_detail(space_id, &source.home_team_id),
         result,
     }
 }
 
 async fn build_correction_zone_for(
-    source:          &RecapSource<'_>,
-    space_id:        &str,
+    source: &RecapSource<'_>,
+    space_id: &str,
     match_report_id: &str,
-    state:           &AppState,
+    state: &AppState,
 ) -> CorrectionZoneVm {
     let (Ok(home_id), Ok(away_id), Ok(mr_id)) = (
         TeamId::try_new(&source.home_team_id),
@@ -366,14 +389,22 @@ async fn build_correction_zone_for(
     .await;
 
     let (home_info, away_info) = tokio::join!(
-        state.match_report.team_data.find_team_info(&source.home_team_id),
-        state.match_report.team_data.find_team_info(&source.away_team_id),
+        state
+            .match_report
+            .team_data
+            .find_team_info(&source.home_team_id),
+        state
+            .match_report
+            .team_data
+            .find_team_info(&source.away_team_id),
     );
     build_correction_zone(
         &eligibility,
         &home_info.unwrap_or_default(),
         &away_info.unwrap_or_default(),
-        AppRoutes::default().match_report.recap_unpublish(space_id, match_report_id),
+        AppRoutes::default()
+            .match_report
+            .recap_unpublish(space_id, match_report_id),
     )
 }
 
@@ -383,7 +414,9 @@ fn blocked_zone(space_id: &str, match_report_id: &str) -> CorrectionZoneVm {
         &CorrectionEligibility::Blocked(CorrectionBlocker::EligibilityUnknown),
         &TeamInfoDto::default(),
         &TeamInfoDto::default(),
-        AppRoutes::default().match_report.recap_unpublish(space_id, match_report_id),
+        AppRoutes::default()
+            .match_report
+            .recap_unpublish(space_id, match_report_id),
     )
 }
 
@@ -404,8 +437,15 @@ pub async fn post_publish(
     if let Err(status) = authorize_recap_action(&state, &user, &space_id, &match_report_id).await {
         return status.into_response();
     }
-    let cmd = PublishMatchReportCommand { match_report_id: mr_id, published_by: user.id };
-    publish_response(execute_publish(&state, cmd).await, &space_id, &match_report_id)
+    let cmd = PublishMatchReportCommand {
+        match_report_id: mr_id,
+        published_by: user.id,
+    };
+    publish_response(
+        execute_publish(&state, cmd).await,
+        &space_id,
+        &match_report_id,
+    )
 }
 
 /// Charge le rapport et vérifie que l'utilisateur a le droit d'agir dessus —
@@ -415,9 +455,9 @@ pub async fn post_publish(
 /// utilisateur connecté connaissant un `match_report_id` pouvait publier le
 /// rapport d'autrui.
 async fn authorize_recap_action(
-    state:           &AppState,
-    user:            &User,
-    space_id:        &str,
+    state: &AppState,
+    user: &User,
+    space_id: &str,
     match_report_id: &str,
 ) -> Result<(), StatusCode> {
     let scope = load_recap_scope(state, match_report_id).await?;
@@ -428,7 +468,7 @@ async fn authorize_recap_action(
 }
 
 async fn load_recap_scope(
-    state:           &AppState,
+    state: &AppState,
     match_report_id: &str,
 ) -> Result<RecapScope, StatusCode> {
     let mr_state = state
@@ -446,7 +486,7 @@ async fn load_recap_scope(
 
 async fn execute_publish(
     state: &AppState,
-    cmd:   PublishMatchReportCommand,
+    cmd: PublishMatchReportCommand,
 ) -> Result<(), PublishMatchReportError> {
     publish_match_report_use_case::execute(
         cmd,
@@ -457,13 +497,15 @@ async fn execute_publish(
 }
 
 fn publish_response(
-    result:          Result<(), PublishMatchReportError>,
-    space_id:        &str,
+    result: Result<(), PublishMatchReportError>,
+    space_id: &str,
     match_report_id: &str,
 ) -> Response {
     match result {
         Ok(()) => {
-            let url = AppRoutes::default().match_report.recap(space_id, match_report_id);
+            let url = AppRoutes::default()
+                .match_report
+                .recap(space_id, match_report_id);
             Redirect::to(&url).into_response()
         }
         Err(PublishMatchReportError::NotFound) => StatusCode::NOT_FOUND.into_response(),
@@ -492,13 +534,16 @@ pub async fn post_unpublish(
     if let Err(status) = authorize_recap_action(&state, &user, &space_id, &match_report_id).await {
         return status.into_response();
     }
-    let cmd = UnpublishMatchReportCommand { match_report_id: mr_id, unpublished_by: user.id };
+    let cmd = UnpublishMatchReportCommand {
+        match_report_id: mr_id,
+        unpublished_by: user.id,
+    };
     unpublish_response(execute_unpublish(&state, cmd).await)
 }
 
 async fn execute_unpublish(
     state: &AppState,
-    cmd:   UnpublishMatchReportCommand,
+    cmd: UnpublishMatchReportCommand,
 ) -> Result<(), UnpublishMatchReportError> {
     unpublish_match_report_use_case::execute(
         cmd,
@@ -515,8 +560,9 @@ fn unpublish_response(result: Result<(), UnpublishMatchReportError>) -> Response
         // Un garde-fou devenu bloquant entre l'affichage et le clic n'est pas une
         // erreur : la page se recharge et montre la raison recalculée, à jour.
         Ok(()) | Err(UnpublishMatchReportError::NotEligible(_)) => refresh(),
-        Err(UnpublishMatchReportError::NotFound)
-        | Err(UnpublishMatchReportError::NotPublished) => StatusCode::NOT_FOUND.into_response(),
+        Err(UnpublishMatchReportError::NotFound) | Err(UnpublishMatchReportError::NotPublished) => {
+            StatusCode::NOT_FOUND.into_response()
+        }
         Err(UnpublishMatchReportError::Repository(e)) => {
             tracing::error!("post_unpublish: {e}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -539,8 +585,8 @@ mod authorization_tests {
         JourneymanPositionDto, RosterPositionDto, RoundContextDto, TeamInfoDto, TierRulesDto,
     };
     use crate::app::shared_kernel::identity::coach_name::CoachName;
-    use crate::app::shared_kernel::identity::ids::UserId;
     use crate::app::shared_kernel::identity::email::Email;
+    use crate::app::shared_kernel::identity::ids::UserId;
 
     const HOME: &str = "home-team";
     const AWAY: &str = "away-team";
@@ -572,7 +618,7 @@ mod authorization_tests {
     /// une indisponibilité du port, pour vérifier qu'on échoue fermé.
     struct FakeTeamData {
         coached: Vec<&'static str>,
-        fails:   bool,
+        fails: bool,
     }
     #[async_trait::async_trait]
     impl ITeamDataPort for FakeTeamData {
@@ -618,28 +664,31 @@ mod authorization_tests {
     fn scope() -> RecapScope {
         RecapScope {
             competition_id: "comp-1".to_string(),
-            home_team_id:   HOME.to_string(),
-            away_team_id:   AWAY.to_string(),
+            home_team_id: HOME.to_string(),
+            away_team_id: AWAY.to_string(),
         }
     }
 
     async fn authorize(
         space_admin: bool,
-        comp_admin:  Result<bool, String>,
-        team_data:   FakeTeamData,
+        comp_admin: Result<bool, String>,
+        team_data: FakeTeamData,
     ) -> bool {
         let space_admin = FakeSpaceAdmin(space_admin);
         let competition_data = FakeCompetitionData(comp_admin);
         let deps = RecapAuthDeps {
-            space_admin:      &space_admin,
+            space_admin: &space_admin,
             competition_data: &competition_data,
-            team_data:        &team_data,
+            team_data: &team_data,
         };
         is_authorized(&deps, &user(), SPACE, &scope()).await
     }
 
     fn coaching(teams: Vec<&'static str>) -> FakeTeamData {
-        FakeTeamData { coached: teams, fails: false }
+        FakeTeamData {
+            coached: teams,
+            fails: false,
+        }
     }
 
     #[tokio::test]
@@ -676,7 +725,10 @@ mod authorization_tests {
 
     #[tokio::test]
     async fn erreur_du_port_equipe_ne_donne_pas_l_acces() {
-        let failing = FakeTeamData { coached: vec![HOME], fails: true };
+        let failing = FakeTeamData {
+            coached: vec![HOME],
+            fails: true,
+        };
         assert!(!authorize(false, Ok(false), failing).await);
     }
 }

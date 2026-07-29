@@ -49,7 +49,12 @@ pub async fn unassigned_pool_widget(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let enrolled = match state.competitions.team_info_port.find_enrolled_teams(&season_id).await {
+    let enrolled = match state
+        .competitions
+        .team_info_port
+        .find_enrolled_teams(&season_id)
+        .await
+    {
         Ok(t) => t,
         Err(e) => {
             tracing::error!("unassigned_pool enrolled: {e}");
@@ -57,7 +62,12 @@ pub async fn unassigned_pool_widget(
         }
     };
 
-    let groups = match state.competitions.group_repository.find_groups(&season_id).await {
+    let groups = match state
+        .competitions
+        .group_repository
+        .find_groups(&season_id)
+        .await
+    {
         Ok(g) => g,
         Err(e) => {
             tracing::error!("unassigned_pool groups: {e}");
@@ -164,7 +174,12 @@ pub async fn group_cards_widget(
         }
     }
 
-    let enrolled = match state.competitions.team_info_port.find_enrolled_teams(&season_id).await {
+    let enrolled = match state
+        .competitions
+        .team_info_port
+        .find_enrolled_teams(&season_id)
+        .await
+    {
         Ok(t) => t,
         Err(e) => {
             tracing::error!("group_cards enrolled: {e}");
@@ -172,7 +187,12 @@ pub async fn group_cards_widget(
         }
     };
 
-    let groups_data = match state.competitions.group_repository.find_groups(&season_id).await {
+    let groups_data = match state
+        .competitions
+        .group_repository
+        .find_groups(&season_id)
+        .await
+    {
         Ok(g) => g,
         Err(e) => {
             tracing::error!("group_cards groups: {e}");

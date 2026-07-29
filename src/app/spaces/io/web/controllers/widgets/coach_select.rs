@@ -1,12 +1,12 @@
+use crate::app::shared_kernel::identity::coach_definition::CoachDefinition;
 use crate::app::shared_kernel::identity::ids::SpaceId;
-use crate::common::initials::initials;
 use crate::app::spaces::context::SpacesContext;
+use crate::common::initials::initials;
 use askama::Template;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
-use crate::app::shared_kernel::identity::coach_definition::CoachDefinition;
 
 #[derive(Deserialize)]
 pub struct CoachSelectorQueryParams {
@@ -27,7 +27,6 @@ impl IntoResponse for CoachSelectorWidgetTemplate {
         }
     }
 }
-
 
 pub async fn get_coach_selector_widget(
     Query(query): Query<CoachSelectorQueryParams>,
@@ -52,8 +51,5 @@ pub async fn get_coach_selector_widget(
         })
         .collect();
 
-    CoachSelectorWidgetTemplate {
-        coaches
-    }
-    .into_response()
+    CoachSelectorWidgetTemplate { coaches }.into_response()
 }

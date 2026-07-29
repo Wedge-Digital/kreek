@@ -1,7 +1,7 @@
 use crate::app::shared_kernel::identity::coach_icon::CoachIcon;
 use crate::app::shared_kernel::identity::coach_name::CoachName;
-use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::shared_kernel::identity::email::Email;
+use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::spaces::domain::space_repository_port::user_cache_repository_port::{
     ISpaceUserCacheRepository, SpaceUserCacheRepositoryError,
 };
@@ -115,7 +115,10 @@ impl ISpaceUserCacheRepository for SpaceUserCacheRepository {
             .into_iter()
             .map(|r| User {
                 id: CoachId::try_new(&r.coach_id).unwrap(),
-                name: CoachName::try_new(&r.coach_name).expect(&format!("CoachName invalide en base : '{}'", r.coach_name.clone())),
+                name: CoachName::try_new(&r.coach_name).expect(&format!(
+                    "CoachName invalide en base : '{}'",
+                    r.coach_name.clone()
+                )),
                 icon: r.coach_icon.map(|s| CoachIcon::try_new(s).unwrap()),
                 email: Email::try_new(r.email).unwrap(),
             })

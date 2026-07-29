@@ -14,18 +14,18 @@ pub enum MatchHistoryActionKind {
 
 #[derive(Debug, Clone)]
 pub struct MatchHistoryAction {
-    pub kind:       MatchHistoryActionKind,
+    pub kind: MatchHistoryActionKind,
     pub spp_earned: Option<u32>,
 }
 
 #[derive(Debug, Clone)]
 pub struct MatchHistoryEntry {
-    pub match_report_id:    String,
-    pub round_label:        String,
+    pub match_report_id: String,
+    pub round_label: String,
     pub opponent_team_name: String,
-    pub team_score:         u8,
-    pub opponent_score:     u8,
-    pub actions:            Vec<MatchHistoryAction>,
+    pub team_score: u8,
+    pub opponent_score: u8,
+    pub actions: Vec<MatchHistoryAction>,
 }
 
 /// Reconstruit l'historique de matchs d'un joueur à partir de ses events bruts
@@ -43,31 +43,38 @@ pub fn build_match_history(events: &[PlayerDomainEvent]) -> Vec<MatchHistoryEntr
     for event in events {
         // Le match a été dépublié pour correction : sa carte disparaît de
         // l'historique. Elle réapparaîtra au rejeu de la re-publication.
-        if let PlayerDomainEvent::MatchImpactReverted { match_report_id, .. } = event {
+        if let PlayerDomainEvent::MatchImpactReverted {
+            match_report_id, ..
+        } = event
+        {
             entries.remove(&match_report_id.0);
             order.retain(|id| id != &match_report_id.0);
             continue;
         }
 
-        let Some(match_report_id) = event_match_report_id(event) else { continue };
+        let Some(match_report_id) = event_match_report_id(event) else {
+            continue;
+        };
 
         entries.entry(match_report_id.clone()).or_insert_with(|| {
             order.push(match_report_id.clone());
             MatchHistoryEntry {
-                match_report_id:    match_report_id.clone(),
-                round_label:        String::new(),
+                match_report_id: match_report_id.clone(),
+                round_label: String::new(),
                 opponent_team_name: String::new(),
-                team_score:         0,
-                opponent_score:     0,
-                actions:            vec![],
+                team_score: 0,
+                opponent_score: 0,
+                actions: vec![],
             }
         });
         let entry = entries.get_mut(&match_report_id).expect("juste inséré");
         apply_event(entry, event);
     }
 
-    let mut result: Vec<MatchHistoryEntry> =
-        order.into_iter().filter_map(|id| entries.remove(&id)).collect();
+    let mut result: Vec<MatchHistoryEntry> = order
+        .into_iter()
+        .filter_map(|id| entries.remove(&id))
+        .collect();
     result.reverse();
     result
 }
@@ -95,19 +102,46 @@ fn event_match_report_id(event: &PlayerDomainEvent) -> Option<String> {
 
 fn apply_event(entry: &mut MatchHistoryEntry, event: &PlayerDomainEvent) {
     match event {
-        PlayerDomainEvent::MatchConcluded { context, team_score, opponent_score, .. } => {
+        PlayerDomainEvent::MatchConcluded {
+            context,
+            team_score,
+            opponent_score,
+            ..
+        } => {
             entry.round_label = context.round_label.clone();
             entry.opponent_team_name = context.opponent_team_name.clone();
             entry.team_score = *team_score;
             entry.opponent_score = *opponent_score;
         }
-        PlayerDomainEvent::TouchdownScored { spp_earned, .. } => push(entry, MatchHistoryActionKind::Touchdown, Some(spp_earned.into_inner())),
-        PlayerDomainEvent::PassCompleted { spp_earned, .. } => push(entry, MatchHistoryActionKind::Pass, Some(spp_earned.into_inner())),
-        PlayerDomainEvent::InterceptionMade { spp_earned, .. } => push(entry, MatchHistoryActionKind::Interception, Some(spp_earned.into_inner())),
-        PlayerDomainEvent::CasualtyInflicted { spp_earned, .. } => push(entry, MatchHistoryActionKind::Casualty, Some(spp_earned.into_inner())),
-        PlayerDomainEvent::MatchMvpNamed { spp_earned, .. } => push(entry, MatchHistoryActionKind::Mvp, Some(spp_earned.into_inner())),
+        PlayerDomainEvent::TouchdownScored { spp_earned, .. } => push(
+            entry,
+            MatchHistoryActionKind::Touchdown,
+            Some(spp_earned.into_inner()),
+        ),
+        PlayerDomainEvent::PassCompleted { spp_earned, .. } => push(
+            entry,
+            MatchHistoryActionKind::Pass,
+            Some(spp_earned.into_inner()),
+        ),
+        PlayerDomainEvent::InterceptionMade { spp_earned, .. } => push(
+            entry,
+            MatchHistoryActionKind::Interception,
+            Some(spp_earned.into_inner()),
+        ),
+        PlayerDomainEvent::CasualtyInflicted { spp_earned, .. } => push(
+            entry,
+            MatchHistoryActionKind::Casualty,
+            Some(spp_earned.into_inner()),
+        ),
+        PlayerDomainEvent::MatchMvpNamed { spp_earned, .. } => push(
+            entry,
+            MatchHistoryActionKind::Mvp,
+            Some(spp_earned.into_inner()),
+        ),
         PlayerDomainEvent::FoulCommitted { .. } => push(entry, MatchHistoryActionKind::Foul, None),
-        PlayerDomainEvent::InjurySustained { .. } => push(entry, MatchHistoryActionKind::Injury, None),
+        PlayerDomainEvent::InjurySustained { .. } => {
+            push(entry, MatchHistoryActionKind::Injury, None)
+        }
         PlayerDomainEvent::PlayerCreated { .. }
         | PlayerDomainEvent::InitialSkillEarned { .. }
         | PlayerDomainEvent::PlayerAvailabilityRestored { .. }
@@ -124,32 +158,43 @@ fn push(entry: &mut MatchHistoryEntry, kind: MatchHistoryActionKind, spp_earned:
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::players::domain::match_impact::{MatchContext, MatchReportId, RoundId, SppEarned};
+    use crate::app::players::domain::match_impact::{
+        MatchContext, MatchReportId, RoundId, SppEarned,
+    };
     use crate::app::players::domain::player::{PlayerId, TeamId};
 
     fn context(match_report_id: &str, round_label: &str, opponent: &str) -> MatchContext {
         MatchContext {
-            match_report_id:    MatchReportId(match_report_id.into()),
-            round_id:           RoundId("r".into()),
-            round_label:        round_label.into(),
-            opponent_team_id:   TeamId("opp".into()),
+            match_report_id: MatchReportId(match_report_id.into()),
+            round_id: RoundId("r".into()),
+            round_label: round_label.into(),
+            opponent_team_id: TeamId("opp".into()),
             opponent_team_name: opponent.into(),
         }
     }
 
     fn touchdown(match_report_id: &str) -> PlayerDomainEvent {
         PlayerDomainEvent::TouchdownScored {
-            player_id: PlayerId("p1".into()), team_id: TeamId("t1".into()),
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
             context: context(match_report_id, "Journée 1", "Bone Crushers"),
             spp_earned: SppEarned::try_new(3).unwrap(),
         }
     }
 
-    fn concluded(match_report_id: &str, round_label: &str, opponent: &str, team_score: u8, opponent_score: u8) -> PlayerDomainEvent {
+    fn concluded(
+        match_report_id: &str,
+        round_label: &str,
+        opponent: &str,
+        team_score: u8,
+        opponent_score: u8,
+    ) -> PlayerDomainEvent {
         PlayerDomainEvent::MatchConcluded {
-            player_id: PlayerId("p1".into()), team_id: TeamId("t1".into()),
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
             context: context(match_report_id, round_label, opponent),
-            team_score, opponent_score,
+            team_score,
+            opponent_score,
         }
     }
 
@@ -206,7 +251,10 @@ mod tests {
     #[test]
     fn header_populated_even_if_action_arrives_before_match_concluded() {
         // ordre réel du publisher : actions d'abord, TeamMatchConcluded ensuite
-        let events = vec![touchdown("mr1"), concluded("mr1", "Journée 1", "Bone Crushers", 2, 1)];
+        let events = vec![
+            touchdown("mr1"),
+            concluded("mr1", "Journée 1", "Bone Crushers", 2, 1),
+        ];
         let history = build_match_history(&events);
         assert_eq!(history[0].round_label, "Journée 1");
         assert_eq!(history[0].team_score, 2);

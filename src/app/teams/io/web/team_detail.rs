@@ -57,14 +57,8 @@ impl StaffVm {
 
 pub enum BannerCtaVm {
     Print,
-    Navigate {
-        label: String,
-        href: String,
-    },
-    Mutate {
-        label: String,
-        post_url: String,
-    },
+    Navigate { label: String, href: String },
+    Mutate { label: String, post_url: String },
 }
 
 pub struct BannerVm {
@@ -125,7 +119,9 @@ impl BannerVm {
                 detail: "Des joueurs ont des SPP à dépenser suite au dernier match.".into(),
                 ctas: vec![BannerCtaVm::Mutate {
                     label: "Évolutions terminées".into(),
-                    post_url: app_routes.teams.validate_improvement_phase(space_id, &team_id),
+                    post_url: app_routes
+                        .teams
+                        .validate_improvement_phase(space_id, &team_id),
                 }],
             }),
             (Enrolled, Some(Recruitment)) => Some(Self {
@@ -135,7 +131,9 @@ impl BannerVm {
                 detail: "Achetez des joueurs ou du staff avant de terminer les achats.".into(),
                 ctas: vec![BannerCtaVm::Mutate {
                     label: "Terminer les achats".into(),
-                    post_url: app_routes.teams.validate_recruitment_phase(space_id, &team_id),
+                    post_url: app_routes
+                        .teams
+                        .validate_recruitment_phase(space_id, &team_id),
                 }],
             }),
             (Enrolled, Some(Dismissals)) => Some(Self {
@@ -145,7 +143,9 @@ impl BannerVm {
                 detail: "Renvoyez les joueurs dont vous ne voulez plus avant de valider.".into(),
                 ctas: vec![BannerCtaVm::Mutate {
                     label: "Valider les renvois".into(),
-                    post_url: app_routes.teams.validate_dismissals_phase(space_id, &team_id),
+                    post_url: app_routes
+                        .teams
+                        .validate_dismissals_phase(space_id, &team_id),
                 }],
             }),
             _ => None,
@@ -188,12 +188,15 @@ impl TeamDetailVm {
 
         let roster_info = roster_info_port.find_roster_info(&team.roster_id.to_string());
 
-        let roster_logo_url = roster_info.as_ref().and_then(|t| t.logo.as_deref()).map(|url| {
-            crate::app::shared_kernel::identity::cloudinary::transform(
-                url,
-                "c_fill,w_120,h_120,q_auto,f_auto",
-            )
-        });
+        let roster_logo_url = roster_info
+            .as_ref()
+            .and_then(|t| t.logo.as_deref())
+            .map(|url| {
+                crate::app::shared_kernel::identity::cloudinary::transform(
+                    url,
+                    "c_fill,w_120,h_120,q_auto,f_auto",
+                )
+            });
 
         let reroll_price_kpo = roster_info.map(|t| t.reroll_cost).unwrap_or(50);
 
@@ -223,7 +226,9 @@ impl TeamDetailVm {
             season_name: team.season_name.clone(),
             status_label,
             status_css_class,
-            players_widget_url: app_routes.players.players_by_team_widget(space_id, &team.id.to_string()),
+            players_widget_url: app_routes
+                .players
+                .players_by_team_widget(space_id, &team.id.to_string()),
             staff: StaffVm::from(team, reroll_price_kpo),
             banner,
         }

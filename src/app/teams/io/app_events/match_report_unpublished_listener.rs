@@ -73,7 +73,9 @@ async fn load_team(repo: &dyn ITeamRepository, team_id: &str) -> Option<Team> {
     match repo.find_by_id(team_id).await {
         Ok(Some(t)) => Some(t),
         Ok(None) => {
-            tracing::warn!("teams::match_report_unpublished_listener: équipe {team_id} introuvable");
+            tracing::warn!(
+                "teams::match_report_unpublished_listener: équipe {team_id} introuvable"
+            );
             None
         }
         Err(e) => {

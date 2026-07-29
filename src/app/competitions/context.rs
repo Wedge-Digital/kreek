@@ -2,10 +2,6 @@ use crate::app::competitions::domain::competition_repository_port::ICompetitionR
 use crate::app::competitions::domain::group_repository_port::IGroupRepository;
 use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
 use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
-use crate::app::competitions::ports::{
-    ICompetitionReferencePort, ICompetitionSpaceMemberPort, IMatchReportStatusPort, ITeamInfoPort,
-    ITiebreakCatalogPort,
-};
 use crate::app::competitions::io::app_events::app_event_publisher::competitions_app_event_publisher;
 use crate::app::competitions::io::app_events::match_report_confirmed_listener;
 use crate::app::competitions::io::app_events::match_report_published_listener;
@@ -14,6 +10,10 @@ use crate::app::competitions::io::repository::competition_repository::Competitio
 use crate::app::competitions::io::repository::group_repository::GroupRepository;
 use crate::app::competitions::io::repository::match_day_repository::MatchDayRepository;
 use crate::app::competitions::io::repository::season_repository::SeasonRepository;
+use crate::app::competitions::ports::{
+    ICompetitionReferencePort, ICompetitionSpaceMemberPort, IMatchReportStatusPort, ITeamInfoPort,
+    ITiebreakCatalogPort,
+};
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -41,7 +41,13 @@ pub fn init_listeners(
 ) {
     match_report_confirmed_listener::init(&app_event_bus, pool.clone());
     match_report_unpublished_listener::init(&app_event_bus, pool.clone());
-    match_report_published_listener::init(&app_event_bus, event_bus.clone(), pool, match_day_repository, team_info_port);
+    match_report_published_listener::init(
+        &app_event_bus,
+        event_bus.clone(),
+        pool,
+        match_day_repository,
+        team_info_port,
+    );
     competitions_app_event_publisher(event_bus, app_event_bus);
 }
 

@@ -17,20 +17,20 @@ use axum::response::{Html, IntoResponse, Response};
 // ── View models ───────────────────────────────────────────────────────────────
 
 pub struct StatCardVm {
-    pub label:           &'static str,
+    pub label: &'static str,
     pub current_display: String,
-    pub next_display:    String,
-    pub cost:             u8,
-    pub value_delta_kpo:  u32,
-    pub can_afford:       bool,
-    pub increase_url:     String,
+    pub next_display: String,
+    pub cost: u8,
+    pub value_delta_kpo: u32,
+    pub can_afford: bool,
+    pub increase_url: String,
 }
 
 pub struct SppSpendingVm {
-    pub spp_remaining:      u32,
-    pub skill_picker_url:   String,
+    pub spp_remaining: u32,
+    pub skill_picker_url: String,
     pub purchase_skill_url: String,
-    pub stat_cards:         Vec<StatCardVm>,
+    pub stat_cards: Vec<StatCardVm>,
 }
 
 /// `players::ValueKpo` (retourné par le port catalogue) exprime en réalité des
@@ -52,7 +52,11 @@ fn stat_defs() -> [(StatKind, &'static str, &'static str, bool); 5] {
 }
 
 fn display_stat(value: u8, is_target: bool) -> String {
-    if is_target { format!("{value}+") } else { value.to_string() }
+    if is_target {
+        format!("{value}+")
+    } else {
+        value.to_string()
+    }
 }
 
 fn next_stat_value(stat: StatKind, current: u8) -> u8 {
@@ -71,23 +75,29 @@ fn build_stat_cards(
     space_id: &str,
     player_id: &str,
 ) -> Vec<StatCardVm> {
-    stat_defs().into_iter().map(|(stat, segment, label, is_target)| {
-        let current = match stat {
-            StatKind::Ma => stats.ma, StatKind::St => stats.st, StatKind::Ag => stats.ag,
-            StatKind::Pa => stats.pa, StatKind::Av => stats.av,
-        };
-        let (cost, value_delta) = resolve_stat_cost(catalog, stat, level);
-        let cost = cost.into_inner();
-        StatCardVm {
-            label,
-            current_display: display_stat(current, is_target),
-            next_display:     display_stat(next_stat_value(stat, current), is_target),
-            cost,
-            value_delta_kpo: to_kpo(value_delta.0),
-            can_afford:      spp_remaining >= cost as u32,
-            increase_url:    routes.players.increase_stat(space_id, player_id, segment),
-        }
-    }).collect()
+    stat_defs()
+        .into_iter()
+        .map(|(stat, segment, label, is_target)| {
+            let current = match stat {
+                StatKind::Ma => stats.ma,
+                StatKind::St => stats.st,
+                StatKind::Ag => stats.ag,
+                StatKind::Pa => stats.pa,
+                StatKind::Av => stats.av,
+            };
+            let (cost, value_delta) = resolve_stat_cost(catalog, stat, level);
+            let cost = cost.into_inner();
+            StatCardVm {
+                label,
+                current_display: display_stat(current, is_target),
+                next_display: display_stat(next_stat_value(stat, current), is_target),
+                cost,
+                value_delta_kpo: to_kpo(value_delta.0),
+                can_afford: spp_remaining >= cost as u32,
+                increase_url: routes.players.increase_stat(space_id, player_id, segment),
+            }
+        })
+        .collect()
 }
 
 fn build_vm(
@@ -101,7 +111,9 @@ fn build_vm(
     let spp_remaining = player.spp_remaining();
     let player_id = player.id.0.as_str();
 
-    let acquired_csv = player.acquired_skills.iter()
+    let acquired_csv = player
+        .acquired_skills
+        .iter()
         .map(|s| s.skill_id.as_ref().to_string())
         .collect::<Vec<_>>()
         .join(",");
@@ -119,7 +131,15 @@ fn build_vm(
         spp_remaining,
         skill_picker_url,
         purchase_skill_url: routes.players.purchase_skill(space_id, player_id),
-        stat_cards: build_stat_cards(stats, spp_remaining, level, catalog, routes, space_id, player_id),
+        stat_cards: build_stat_cards(
+            stats,
+            spp_remaining,
+            level,
+            catalog,
+            routes,
+            space_id,
+            player_id,
+        ),
     })
 }
 
@@ -154,7 +174,12 @@ pub async fn spp_spending_widget(
         return StatusCode::UNAUTHORIZED.into_response();
     };
 
-    let player = match state.players.repository.find_by_id(&PlayerId(player_id.clone())).await {
+    let player = match state
+        .players
+        .repository
+        .find_by_id(&PlayerId(player_id.clone()))
+        .await
+    {
         Ok(Some(p)) => p,
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
@@ -167,7 +192,13 @@ pub async fn spp_spending_widget(
         // Défense en profondeur : si l'URL est atteinte directement hors
         // contexte éligible, on retombe sur le journal en lecture seule.
         let params = crate::app::players::io::web::widgets::evolution_journal_widget::EvolutionJournalParams { can_spend: false };
-        return evolution_journal_widget(Path((space_id, player_id)), axum::extract::Query(params), State(state)).await.into_response();
+        return evolution_journal_widget(
+            Path((space_id, player_id)),
+            axum::extract::Query(params),
+            State(state),
+        )
+        .await
+        .into_response();
     }
 
     let app_routes = AppRoutes::default();
@@ -179,9 +210,23 @@ pub async fn spp_spending_widget(
     }
 }
 
-async fn is_eligible(state: &AppState, user: &crate::app::auth::domain::user::User, space_id: &str, player: &Player) -> bool {
-    let Some(team) = state.players.roster_port.find_team_info(&player.team_id.0).await else { return false; };
-    let Ok(space_id_vo) = SpaceId::try_new(space_id) else { return false; };
+async fn is_eligible(
+    state: &AppState,
+    user: &crate::app::auth::domain::user::User,
+    space_id: &str,
+    player: &Player,
+) -> bool {
+    let Some(team) = state
+        .players
+        .roster_port
+        .find_team_info(&player.team_id.0)
+        .await
+    else {
+        return false;
+    };
+    let Ok(space_id_vo) = SpaceId::try_new(space_id) else {
+        return false;
+    };
     team.in_player_improvement_phase && can_spend_spp(state, user, &space_id_vo, &team).await
 }
 
@@ -189,18 +234,27 @@ async fn is_eligible(state: &AppState, user: &crate::app::auth::domain::user::Us
 mod tests {
     use super::*;
     use crate::app::players::domain::events::PlayerDomainEvent;
-    use crate::app::players::domain::player::{AcquiredSkill, AcquisitionMode, Spp, TeamId, ValueKpo};
-    use crate::app::players::domain::value_objects::{PositionNameVo, RosterLineId, SkillId, SkillName, SppCost};
+    use crate::app::players::domain::player::{
+        AcquiredSkill, AcquisitionMode, Spp, TeamId, ValueKpo,
+    };
+    use crate::app::players::domain::value_objects::{
+        PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
+    };
     use crate::app::references::io::repository::in_memory_reference_repository::InMemoryReferenceRepository;
     use crate::app::shared_kernel::identity::ids::SpaceId;
     use crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter;
 
     fn sample_player() -> Player {
         let created = PlayerDomainEvent::PlayerCreated {
-            player_id: PlayerId("p1".into()), team_id: TeamId("t1".into()), space_id: SpaceId::new(),
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            space_id: SpaceId::new(),
             position_name: PositionNameVo::try_new("Piétaille des Carrières".to_string()).unwrap(),
             roster_line_id: RosterLineId::try_new("DEMO_GRANIT__PIETAILLE".to_string()).unwrap(),
-            jersey: None, base_skills: vec![], starting_spp: Spp(30), starting_value: ValueKpo(50_000),
+            jersey: None,
+            base_skills: vec![],
+            starting_spp: Spp(30),
+            starting_value: ValueKpo(50_000),
         };
         Player::from_events(&[created]).unwrap()
     }
@@ -229,14 +283,18 @@ mod tests {
     #[test]
     fn build_vm_wires_spp_remaining_level_and_urls() {
         let player = sample_player();
-        let catalog = SkillCatalogAdapter::new(std::sync::Arc::new(InMemoryReferenceRepository::load_for_tests()));
+        let catalog = SkillCatalogAdapter::new(std::sync::Arc::new(
+            InMemoryReferenceRepository::load_for_tests(),
+        ));
         let routes = AppRoutes::default();
 
         let vm = build_vm(&player, &routes, "space1", &catalog).unwrap();
 
         assert_eq!(vm.spp_remaining, 30);
         assert_eq!(vm.stat_cards.len(), 5);
-        assert!(vm.skill_picker_url.contains("roster_line_id=DEMO_GRANIT__PIETAILLE"));
+        assert!(vm
+            .skill_picker_url
+            .contains("roster_line_id=DEMO_GRANIT__PIETAILLE"));
         assert!(vm.skill_picker_url.contains("level=1"));
         assert!(vm.purchase_skill_url.contains("space1"));
         assert!(vm.purchase_skill_url.contains("p1"));
@@ -252,7 +310,9 @@ mod tests {
             spp_cost: SppCost::try_new(6).unwrap(),
             value_delta: ValueKpo(20_000),
         });
-        let catalog = SkillCatalogAdapter::new(std::sync::Arc::new(InMemoryReferenceRepository::load_for_tests()));
+        let catalog = SkillCatalogAdapter::new(std::sync::Arc::new(
+            InMemoryReferenceRepository::load_for_tests(),
+        ));
         let routes = AppRoutes::default();
 
         let vm = build_vm(&player, &routes, "space1", &catalog).unwrap();
@@ -266,7 +326,9 @@ mod tests {
     fn build_vm_returns_none_for_unknown_position() {
         let mut player = sample_player();
         player.roster_line_id = RosterLineId::try_new("UNKNOWN".to_string()).unwrap();
-        let catalog = SkillCatalogAdapter::new(std::sync::Arc::new(InMemoryReferenceRepository::load_for_tests()));
+        let catalog = SkillCatalogAdapter::new(std::sync::Arc::new(
+            InMemoryReferenceRepository::load_for_tests(),
+        ));
         let routes = AppRoutes::default();
 
         assert!(build_vm(&player, &routes, "space1", &catalog).is_none());

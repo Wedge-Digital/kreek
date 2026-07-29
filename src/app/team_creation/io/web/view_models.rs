@@ -149,7 +149,8 @@ impl CartVm {
             remaining,
             progress_pct,
             player_count: team.hired_players().len(),
-            min_players: crate::app::team_creation::domain::team_roster_selected::MIN_PLAYERS_FOR_SUBMISSION,
+            min_players:
+                crate::app::team_creation::domain::team_roster_selected::MIN_PLAYERS_FOR_SUBMISSION,
         }
     }
 }
@@ -200,8 +201,6 @@ pub struct RulesTierVm {
     pub budget: u32,
     pub start_xp: u32,
 }
-
-
 
 // ── Finalize page VMs ────────────────────────────────────────────────────────
 

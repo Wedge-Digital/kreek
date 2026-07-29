@@ -17,7 +17,10 @@ pub struct SppCalculationResult {
 /// une action non subie (home et away traités indépendamment). La vraie règle de calcul
 /// (quelles actions donnent combien de SPP, sélection de ruleset Normal/Brutal) est hors
 /// scope de cette carte — carte dédiée future.
-pub fn calculate(home_actions: &[SppActionInput], away_actions: &[SppActionInput]) -> SppCalculationResult {
+pub fn calculate(
+    home_actions: &[SppActionInput],
+    away_actions: &[SppActionInput],
+) -> SppCalculationResult {
     SppCalculationResult {
         home: distinct_non_injury_actors(home_actions),
         away: distinct_non_injury_actors(away_actions),
@@ -46,7 +49,10 @@ mod tests {
 
     #[test]
     fn calculate_stub_never_credits_spp_to_an_injury_only_actor() {
-        let actions = vec![SppActionInput { actor_key: "p1".to_string(), is_injury: true }];
+        let actions = vec![SppActionInput {
+            actor_key: "p1".to_string(),
+            is_injury: true,
+        }];
         let result = calculate(&actions, &[]);
         assert!(result.home.is_empty());
     }
@@ -54,9 +60,18 @@ mod tests {
     #[test]
     fn calculate_stub_credits_flat_spp_to_other_actors() {
         let actions = vec![
-            SppActionInput { actor_key: "p1".to_string(), is_injury: false },
-            SppActionInput { actor_key: "p1".to_string(), is_injury: true },
-            SppActionInput { actor_key: "p2".to_string(), is_injury: false },
+            SppActionInput {
+                actor_key: "p1".to_string(),
+                is_injury: false,
+            },
+            SppActionInput {
+                actor_key: "p1".to_string(),
+                is_injury: true,
+            },
+            SppActionInput {
+                actor_key: "p2".to_string(),
+                is_injury: false,
+            },
         ];
         let result = calculate(&actions, &[]);
         assert_eq!(result.home.len(), 2);

@@ -1,6 +1,6 @@
-use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, SpaceId};
-use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
 use crate::app::shared_kernel::bloodbowl::competition_name::CompetitionName;
+use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, SpaceId};
 
 pub struct Competition {
     pub id: CompetitionId,

@@ -1,5 +1,5 @@
-use crate::app::shared_kernel::identity::ids::UserId;
 use crate::app::shared_kernel::bloodbowl::ids::{ArticleId, CommentId};
+use crate::app::shared_kernel::identity::ids::UserId;
 
 #[derive(Debug, Clone)]
 pub struct Comment {

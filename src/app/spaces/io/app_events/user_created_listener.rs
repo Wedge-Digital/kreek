@@ -58,8 +58,8 @@ mod tests {
     use super::*;
     use crate::app::shared_kernel::identity::auth_app_events::AuthAppEvent;
     use crate::app::shared_kernel::identity::coach_name::CoachName;
-    use crate::app::shared_kernel::identity::ids::{CoachId, EventId, SpaceId, UserId};
     use crate::app::shared_kernel::identity::email::Email;
+    use crate::app::shared_kernel::identity::ids::{CoachId, EventId, SpaceId, UserId};
     use crate::app::spaces::domain::space_repository_port::user_cache_repository_port::SpaceUserCacheRepositoryError;
     use crate::common::event_envelope::EventEnvelope;
     use crate::common::services::event_bus::event_bus::new_bus;

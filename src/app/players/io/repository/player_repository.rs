@@ -21,28 +21,56 @@ fn event_type_name(event: &PlayerDomainEvent) -> &'static str {
 
 fn player_and_team_id(event: &PlayerDomainEvent) -> (&str, &str) {
     match event {
-        PlayerDomainEvent::PlayerCreated { player_id, team_id, .. } => (&player_id.0, &team_id.0),
-        PlayerDomainEvent::InitialSkillEarned   { player_id, team_id, .. } => (&player_id.0, &team_id.0),
-        PlayerDomainEvent::TouchdownScored            { player_id, team_id, .. } => (&player_id.0, &team_id.0),
-        PlayerDomainEvent::PassCompleted              { player_id, team_id, .. } => (&player_id.0, &team_id.0),
-        PlayerDomainEvent::InterceptionMade           { player_id, team_id, .. } => (&player_id.0, &team_id.0),
-        PlayerDomainEvent::CasualtyInflicted          { player_id, team_id, .. } => (&player_id.0, &team_id.0),
-        PlayerDomainEvent::MatchMvpNamed              { player_id, team_id, .. } => (&player_id.0, &team_id.0),
-        PlayerDomainEvent::FoulCommitted              { player_id, team_id, .. } => (&player_id.0, &team_id.0),
-        PlayerDomainEvent::InjurySustained            { player_id, team_id, .. } => (&player_id.0, &team_id.0),
-        PlayerDomainEvent::PlayerAvailabilityRestored { player_id, team_id, .. } => (&player_id.0, &team_id.0),
-        PlayerDomainEvent::MatchConcluded { player_id, team_id, .. } => (&player_id.0, &team_id.0),
-        PlayerDomainEvent::PlayerSkillPurchased { player_id, team_id, .. } => (&player_id.0, &team_id.0),
-        PlayerDomainEvent::PlayerStatIncreased { player_id, team_id, .. } => (&player_id.0, &team_id.0),
-        PlayerDomainEvent::MatchImpactReverted { player_id, team_id, .. } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::PlayerCreated {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::InitialSkillEarned {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::TouchdownScored {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::PassCompleted {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::InterceptionMade {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::CasualtyInflicted {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::MatchMvpNamed {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::FoulCommitted {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::InjurySustained {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::PlayerAvailabilityRestored {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::MatchConcluded {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::PlayerSkillPurchased {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::PlayerStatIncreased {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::MatchImpactReverted {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
     }
 }
 
 // ── Fonctions transactionnelles ───────────────────────────────────────────────
 
 pub async fn insert_player_event(
-    tx:      &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    event:   &PlayerDomainEvent,
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    event: &PlayerDomainEvent,
     version: i32,
 ) -> Result<(), RepositoryError> {
     let (player_id, team_id) = player_and_team_id(event);
@@ -72,16 +100,24 @@ pub async fn insert_player_event(
 }
 
 pub async fn upsert_player_projection(
-    tx:    &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     event: &PlayerDomainEvent,
 ) -> Result<(), RepositoryError> {
     match event {
         PlayerDomainEvent::PlayerCreated {
-            player_id, team_id, space_id, position_name, roster_line_id,
-            jersey, base_skills, starting_spp, starting_value,
+            player_id,
+            team_id,
+            space_id,
+            position_name,
+            roster_line_id,
+            jersey,
+            base_skills,
+            starting_spp,
+            starting_value,
         } => {
             let skill_ids: Vec<&str> = base_skills.iter().map(|s| s.as_ref()).collect();
-            let base_json = serde_json::to_value(&skill_ids).map_err(RepositoryError::Serialization)?;
+            let base_json =
+                serde_json::to_value(&skill_ids).map_err(RepositoryError::Serialization)?;
 
             sqlx::query(
                 "INSERT INTO players_proj
@@ -106,11 +142,18 @@ pub async fn upsert_player_projection(
         }
 
         PlayerDomainEvent::InitialSkillEarned {
-            player_id, skill_id, skill_name, category_css, mode, spp_cost, value_delta, ..
+            player_id,
+            skill_id,
+            skill_name,
+            category_css,
+            mode,
+            spp_cost,
+            value_delta,
+            ..
         } => {
             let acq = AcquiredSkillProjection {
-                skill_id:     skill_id.as_ref().to_string(),
-                skill_name:   skill_name.as_ref().to_string(),
+                skill_id: skill_id.as_ref().to_string(),
+                skill_name: skill_name.as_ref().to_string(),
                 category_css: category_css.clone(),
                 mode: match mode {
                     AcquisitionMode::Chosen => "Chosen".to_string(),
@@ -135,11 +178,31 @@ pub async fn upsert_player_projection(
             .map_err(RepositoryError::Database)?;
         }
 
-        PlayerDomainEvent::TouchdownScored { player_id, spp_earned, .. }
-        | PlayerDomainEvent::PassCompleted { player_id, spp_earned, .. }
-        | PlayerDomainEvent::InterceptionMade { player_id, spp_earned, .. }
-        | PlayerDomainEvent::CasualtyInflicted { player_id, spp_earned, .. }
-        | PlayerDomainEvent::MatchMvpNamed { player_id, spp_earned, .. } => {
+        PlayerDomainEvent::TouchdownScored {
+            player_id,
+            spp_earned,
+            ..
+        }
+        | PlayerDomainEvent::PassCompleted {
+            player_id,
+            spp_earned,
+            ..
+        }
+        | PlayerDomainEvent::InterceptionMade {
+            player_id,
+            spp_earned,
+            ..
+        }
+        | PlayerDomainEvent::CasualtyInflicted {
+            player_id,
+            spp_earned,
+            ..
+        }
+        | PlayerDomainEvent::MatchMvpNamed {
+            player_id,
+            spp_earned,
+            ..
+        } => {
             sqlx::query(
                 "UPDATE players_proj SET spp = spp + $1, version = version + 1 WHERE player_id = $2",
             )
@@ -158,10 +221,13 @@ pub async fn upsert_player_projection(
                 .map_err(RepositoryError::Database)?;
         }
 
-        PlayerDomainEvent::InjurySustained { player_id, injury_type, .. } => {
-            match injury_status_label(injury_type) {
-                Some(status) => {
-                    sqlx::query(
+        PlayerDomainEvent::InjurySustained {
+            player_id,
+            injury_type,
+            ..
+        } => match injury_status_label(injury_type) {
+            Some(status) => {
+                sqlx::query(
                         "UPDATE players_proj SET participation_status = $1, version = version + 1 WHERE player_id = $2",
                     )
                     .bind(status)
@@ -169,16 +235,15 @@ pub async fn upsert_player_projection(
                     .execute(&mut **tx)
                     .await
                     .map_err(RepositoryError::Database)?;
-                }
-                None => {
-                    sqlx::query("UPDATE players_proj SET version = version + 1 WHERE player_id = $1")
-                        .bind(&player_id.0)
-                        .execute(&mut **tx)
-                        .await
-                        .map_err(RepositoryError::Database)?;
-                }
             }
-        }
+            None => {
+                sqlx::query("UPDATE players_proj SET version = version + 1 WHERE player_id = $1")
+                    .bind(&player_id.0)
+                    .execute(&mut **tx)
+                    .await
+                    .map_err(RepositoryError::Database)?;
+            }
+        },
 
         PlayerDomainEvent::PlayerAvailabilityRestored { player_id, .. } => {
             sqlx::query(
@@ -198,11 +263,18 @@ pub async fn upsert_player_projection(
         }
 
         PlayerDomainEvent::PlayerSkillPurchased {
-            player_id, skill_id, skill_name, category_css, mode, spp_cost, value_delta, ..
+            player_id,
+            skill_id,
+            skill_name,
+            category_css,
+            mode,
+            spp_cost,
+            value_delta,
+            ..
         } => {
             let acq = AcquiredSkillProjection {
-                skill_id:     skill_id.as_ref().to_string(),
-                skill_name:   skill_name.as_ref().to_string(),
+                skill_id: skill_id.as_ref().to_string(),
+                skill_name: skill_name.as_ref().to_string(),
                 category_css: category_css.clone(),
                 mode: match mode {
                     AcquisitionMode::Chosen => "Chosen".to_string(),
@@ -227,7 +299,11 @@ pub async fn upsert_player_projection(
             .map_err(RepositoryError::Database)?;
         }
 
-        PlayerDomainEvent::PlayerStatIncreased { player_id, value_delta, .. } => {
+        PlayerDomainEvent::PlayerStatIncreased {
+            player_id,
+            value_delta,
+            ..
+        } => {
             sqlx::query(
                 "UPDATE players_proj SET value_kpo = value_kpo + $1, version = version + 1 WHERE player_id = $2",
             )
@@ -267,7 +343,9 @@ pub async fn upsert_player_projection(
 /// Statut de participation projeté pour un type de blessure, miroir de la règle
 /// domaine (`Player::apply`, branche `InjurySustained`). `None` = pas de
 /// changement de statut (Commotion).
-fn injury_status_label(injury: &crate::app::players::domain::match_impact::InjuryType) -> Option<&'static str> {
+fn injury_status_label(
+    injury: &crate::app::players::domain::match_impact::InjuryType,
+) -> Option<&'static str> {
     use crate::app::players::domain::match_impact::InjuryType;
     match injury {
         InjuryType::Commotion => None,
@@ -286,14 +364,15 @@ fn injury_status_label(injury: &crate::app::players::domain::match_impact::Injur
 /// endroit où ils sont connus — d'où ce rejeu, borné à un joueur et à une
 /// opération rare.
 async fn load_events_in_tx(
-    tx:        &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     player_id: &str,
 ) -> Result<Vec<PlayerDomainEvent>, RepositoryError> {
-    let rows = sqlx::query("SELECT payload FROM players_events WHERE player_id = $1 ORDER BY version ASC")
-        .bind(player_id)
-        .fetch_all(&mut **tx)
-        .await
-        .map_err(RepositoryError::Database)?;
+    let rows =
+        sqlx::query("SELECT payload FROM players_events WHERE player_id = $1 ORDER BY version ASC")
+            .bind(player_id)
+            .fetch_all(&mut **tx)
+            .await
+            .map_err(RepositoryError::Database)?;
 
     rows.iter()
         .map(|r| serde_json::from_value(r.get::<serde_json::Value, _>("payload")))
@@ -318,9 +397,9 @@ impl IPlayerRepository for PgPlayerRepository {
     async fn append(
         &self,
         _player_id: &PlayerId,
-        _team_id:   &TeamId,
-        event:      &PlayerDomainEvent,
-        version:    i32,
+        _team_id: &TeamId,
+        event: &PlayerDomainEvent,
+        version: i32,
     ) -> Result<(), RepositoryError> {
         let mut tx = self.pool.begin().await.map_err(RepositoryError::Database)?;
         insert_player_event(&mut tx, event, version).await?;
@@ -329,10 +408,7 @@ impl IPlayerRepository for PgPlayerRepository {
         Ok(())
     }
 
-    async fn find_by_id(
-        &self,
-        player_id: &PlayerId,
-    ) -> Result<Option<Player>, RepositoryError> {
+    async fn find_by_id(&self, player_id: &PlayerId) -> Result<Option<Player>, RepositoryError> {
         let rows = sqlx::query(
             "SELECT payload FROM players_events
              WHERE player_id = $1 ORDER BY version ASC",
@@ -387,7 +463,7 @@ impl IPlayerRepository for PgPlayerRepository {
     /// épingle ce couplage.
     async fn has_spent_spp_since_match(
         &self,
-        team_id:         &TeamId,
+        team_id: &TeamId,
         match_report_id: &str,
     ) -> Result<bool, RepositoryError> {
         let spent: bool = sqlx::query_scalar(
@@ -412,10 +488,7 @@ impl IPlayerRepository for PgPlayerRepository {
         Ok(spent)
     }
 
-    async fn find_by_team_id(
-        &self,
-        team_id: &TeamId,
-    ) -> Result<Vec<Player>, RepositoryError> {
+    async fn find_by_team_id(&self, team_id: &TeamId) -> Result<Vec<Player>, RepositoryError> {
         let rows = sqlx::query(
             "SELECT player_id, payload FROM players_events
              WHERE team_id = $1 ORDER BY player_id, version ASC",

@@ -27,12 +27,7 @@ pub async fn get_team_match_context_json(
     Query(query): Query<TeamMatchContextQuery>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let team = match state
-        .teams
-        .team_repository
-        .find_by_id(&query.team_id)
-        .await
-    {
+    let team = match state.teams.team_repository.find_by_id(&query.team_id).await {
         Ok(Some(t)) => t,
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),

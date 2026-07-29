@@ -31,9 +31,7 @@ pub fn init(app_event_bus: &EventBus, repo: Arc<dyn IRankingRepository>) {
 
 async fn handle_unpublished(match_report_id: &str, repo: &dyn IRankingRepository) {
     let Ok(mr_id) = MatchReportId::try_new(match_report_id) else {
-        tracing::warn!(
-            "ranking::match_report_unpublished_listener: id invalide {match_report_id}"
-        );
+        tracing::warn!("ranking::match_report_unpublished_listener: id invalide {match_report_id}");
         return;
     };
 

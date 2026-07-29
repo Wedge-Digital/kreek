@@ -49,14 +49,18 @@ impl TiebreakOrder {
 /// l'ordre jusqu'au premier qui départage. Règle 19 : `Equal` si tous sont
 /// égaux — l'ex æquo est assumé, il n'existe pas de départage ultime.
 pub fn compare(a: &TeamStanding, b: &TeamStanding, order: &TiebreakOrder) -> Ordering {
-    b.totals.ranking_points.0.cmp(&a.totals.ranking_points.0).then_with(|| {
-        order
-            .criteria
-            .iter()
-            .map(|criterion| compare_on(*criterion, a, b))
-            .find(|ordering| ordering.is_ne())
-            .unwrap_or(Ordering::Equal)
-    })
+    b.totals
+        .ranking_points
+        .0
+        .cmp(&a.totals.ranking_points.0)
+        .then_with(|| {
+            order
+                .criteria
+                .iter()
+                .map(|criterion| compare_on(*criterion, a, b))
+                .find(|ordering| ordering.is_ne())
+                .unwrap_or(Ordering::Equal)
+        })
 }
 
 /// Compare deux équipes sur un seul critère, dans le sens qui lui est propre
@@ -150,10 +154,12 @@ fn resolve_run(
 /// Suites d'équipes consécutives à égalité de points, de deux équipes ou plus —
 /// les autres n'ont rien à départager.
 fn point_runs(ordered: &[TeamStanding]) -> Vec<(usize, usize)> {
-    runs_by(ordered, 0, ordered.len(), |s| i64::from(s.totals.ranking_points.0))
-        .into_iter()
-        .filter(|(_, len)| *len >= 2)
-        .collect()
+    runs_by(ordered, 0, ordered.len(), |s| {
+        i64::from(s.totals.ranking_points.0)
+    })
+    .into_iter()
+    .filter(|(_, len)| *len >= 2)
+    .collect()
 }
 
 /// Découpe `[from, from + len)` en suites consécutives de même valeur.
@@ -221,7 +227,10 @@ mod tests {
         });
 
         assert_eq!(compare(&leader, &chaser, &all_criteria()), Ordering::Less);
-        assert_eq!(compare(&chaser, &leader, &all_criteria()), Ordering::Greater);
+        assert_eq!(
+            compare(&chaser, &leader, &all_criteria()),
+            Ordering::Greater
+        );
     }
 
     #[test]
@@ -270,7 +279,10 @@ mod tests {
             })
         };
 
-        assert_eq!(compare(&tied(6), &tied(6), &all_criteria()), Ordering::Equal);
+        assert_eq!(
+            compare(&tied(6), &tied(6), &all_criteria()),
+            Ordering::Equal
+        );
     }
 
     #[test]
@@ -324,7 +336,11 @@ mod tests {
         let ordered: Vec<String> = standings.iter().map(|s| s.team_id.to_string()).collect();
         assert_eq!(
             ordered,
-            vec![tied_many_td.team_id.to_string(), tied_few_td.team_id.to_string(), low.team_id.to_string()]
+            vec![
+                tied_many_td.team_id.to_string(),
+                tied_few_td.team_id.to_string(),
+                low.team_id.to_string()
+            ]
         );
     }
 
@@ -413,7 +429,10 @@ mod tests {
         let identical = || standing_with(6, |t| t.td_for = TdFor(4));
         let ordered = vec![identical(), identical()];
 
-        assert_eq!(outcomes(&ordered, &all_criteria()), vec![FullyTied, FullyTied]);
+        assert_eq!(
+            outcomes(&ordered, &all_criteria()),
+            vec![FullyTied, FullyTied]
+        );
     }
 
     /// **Le test qui distingue la résolution par sous-groupes de la résolution à
@@ -432,7 +451,10 @@ mod tests {
         };
         let ordered = vec![team(5, 0), team(2, 4), team(2, 1)];
 
-        assert_eq!(outcomes(&ordered, &order), vec![DecidedBy(0), DecidedBy(1), DecidedBy(1)]);
+        assert_eq!(
+            outcomes(&ordered, &order),
+            vec![DecidedBy(0), DecidedBy(1), DecidedBy(1)]
+        );
     }
 
     #[test]
@@ -442,7 +464,10 @@ mod tests {
             standing_with(6, |t| t.td_for = TdFor(0)),
         ];
 
-        assert_eq!(outcomes(&ordered, &TiebreakOrder::empty()), vec![FullyTied, FullyTied]);
+        assert_eq!(
+            outcomes(&ordered, &TiebreakOrder::empty()),
+            vec![FullyTied, FullyTied]
+        );
     }
 
     /// Deux totaux de points distincts sont deux problèmes distincts : le critère

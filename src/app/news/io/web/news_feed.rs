@@ -46,7 +46,12 @@ impl From<Article> for ArticleViewModel {
             id: a.id.to_string(),
             title: a.title.into_inner(),
             abstract_: a.abstract_,
-            tag: a.tags.into_iter().next().map(|t| t.to_string()).unwrap_or_default(),
+            tag: a
+                .tags
+                .into_iter()
+                .next()
+                .map(|t| t.to_string())
+                .unwrap_or_default(),
             image: a.image,
             author_name: a.author_name,
             created_at,

@@ -57,10 +57,8 @@ pub trait IMatchReportRepository: Send + Sync {
         expected_version: u64,
     ) -> Result<u64, RepositoryError>;
 
-    async fn find_id_by_pairing(
-        &self,
-        pairing_id: &str,
-    ) -> Result<Option<String>, RepositoryError>;
+    async fn find_id_by_pairing(&self, pairing_id: &str)
+        -> Result<Option<String>, RepositoryError>;
 
     /// Phase courante des rapports rattachés à ces pairings, pour ceux qui en
     /// ont un. DTO de lecture : `(pairing_id, phase)`.

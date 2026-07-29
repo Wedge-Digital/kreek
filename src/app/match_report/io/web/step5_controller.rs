@@ -113,12 +113,24 @@ pub async fn get_step5(
     let away_info = away_info.unwrap_or_default();
 
     build_template(
-        &space_id, &match_report_id,
-        &state, &home_info.team_name, &away_info.team_name,
-        home_info.logo_url, away_info.logo_url,
-        home_score, away_score, home_cas, away_cas,
-        home_gain_sug, away_gain_sug, 0, 0,
-        None, None, false,
+        &space_id,
+        &match_report_id,
+        &state,
+        &home_info.team_name,
+        &away_info.team_name,
+        home_info.logo_url,
+        away_info.logo_url,
+        home_score,
+        away_score,
+        home_cas,
+        away_cas,
+        home_gain_sug,
+        away_gain_sug,
+        0,
+        0,
+        None,
+        None,
+        false,
     )
     .into_response()
 }
@@ -142,13 +154,24 @@ async fn build_step5_from_rtp(
     let away_info = away_info.unwrap_or_default();
 
     build_template(
-        &space_id, &match_report_id,
-        state, &home_info.team_name, &away_info.team_name,
-        home_info.logo_url, away_info.logo_url,
-        home_score, away_score, home_cas, away_cas,
-        rtp.home_gain.into_inner(), rtp.away_gain.into_inner(),
-        rtp.home_fan_mod.into_inner(), rtp.away_fan_mod.into_inner(),
-        rtp.summary_title, rtp.summary_body, true,
+        &space_id,
+        &match_report_id,
+        state,
+        &home_info.team_name,
+        &away_info.team_name,
+        home_info.logo_url,
+        away_info.logo_url,
+        home_score,
+        away_score,
+        home_cas,
+        away_cas,
+        rtp.home_gain.into_inner(),
+        rtp.away_gain.into_inner(),
+        rtp.home_fan_mod.into_inner(),
+        rtp.away_fan_mod.into_inner(),
+        rtp.summary_title,
+        rtp.summary_body,
+        true,
     )
     .into_response()
 }
@@ -158,8 +181,14 @@ fn count_tds(
     away_actions: &[crate::app::match_report::domain::value_objects::MatchAction],
 ) -> (u8, u8) {
     use crate::app::match_report::domain::value_objects::MatchActionType;
-    let home = home_actions.iter().filter(|a| matches!(a.action, MatchActionType::Touchdown)).count() as u8;
-    let away = away_actions.iter().filter(|a| matches!(a.action, MatchActionType::Touchdown)).count() as u8;
+    let home = home_actions
+        .iter()
+        .filter(|a| matches!(a.action, MatchActionType::Touchdown))
+        .count() as u8;
+    let away = away_actions
+        .iter()
+        .filter(|a| matches!(a.action, MatchActionType::Touchdown))
+        .count() as u8;
     (home, away)
 }
 
@@ -168,8 +197,14 @@ fn count_cas(
     away_actions: &[crate::app::match_report::domain::value_objects::MatchAction],
 ) -> (u8, u8) {
     use crate::app::match_report::domain::value_objects::MatchActionType;
-    let home = home_actions.iter().filter(|a| matches!(a.action, MatchActionType::Sortie)).count() as u8;
-    let away = away_actions.iter().filter(|a| matches!(a.action, MatchActionType::Sortie)).count() as u8;
+    let home = home_actions
+        .iter()
+        .filter(|a| matches!(a.action, MatchActionType::Sortie))
+        .count() as u8;
+    let away = away_actions
+        .iter()
+        .filter(|a| matches!(a.action, MatchActionType::Sortie))
+        .count() as u8;
     (home, away)
 }
 
@@ -279,9 +314,13 @@ pub async fn post_step5(
         recorded_by: user.id,
     };
 
-    match record_post_match_use_case::execute(cmd, state.match_report.match_report_repo.as_ref()).await {
+    match record_post_match_use_case::execute(cmd, state.match_report.match_report_repo.as_ref())
+        .await
+    {
         Ok(record_post_match_use_case::RecordPostMatchOutcome::Success) => {
-            let url = AppRoutes::default().match_report.recap(&space_id, &match_report_id);
+            let url = AppRoutes::default()
+                .match_report
+                .recap(&space_id, &match_report_id);
             Redirect::to(&url).into_response()
         }
         Err(record_post_match_use_case::RecordPostMatchError::NotFound) => {

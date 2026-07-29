@@ -16,10 +16,12 @@ use crate::app::players::ports::IPlayerRepository;
 use crate::app::players::use_cases::commands::PurchaseSkillCommand;
 use crate::app::players::use_cases::purchase_skill_use_case;
 use crate::app::references::io::repository::in_memory_reference_repository::InMemoryReferenceRepository;
-use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RosterId, SeasonId};
-use crate::app::shared_kernel::bloodbowl::staff_counts::{ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount};
+use crate::app::shared_kernel::bloodbowl::staff_counts::{
+    ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
+};
 use crate::app::shared_kernel::bloodbowl::team::TeamId as SharedTeamId;
+use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::teams::domain::team::TeamDomainEvent;
 use crate::app::teams::domain::value_objects::{DedicatedFans, Kpo, RosterName, TeamName};
 use crate::app::teams::io::app_events::player_improvement_listener;
@@ -82,7 +84,12 @@ async fn seed_player(player_repo: &dyn IPlayerRepository, player_id: &str, team_
         starting_value: crate::app::players::domain::player::ValueKpo(100_000),
     };
     player_repo
-        .append(&DomainPlayerId(player_id.into()), &crate::app::players::domain::player::TeamId(team_id.into()), &created, 1)
+        .append(
+            &DomainPlayerId(player_id.into()),
+            &crate::app::players::domain::player::TeamId(team_id.into()),
+            &created,
+            1,
+        )
         .await
         .unwrap();
 }
@@ -111,12 +118,16 @@ async fn purchasing_a_skill_credits_team_value_via_app_event(pool: PgPool) {
         skill_id: SkillId::try_new("APPUI_FERME").unwrap(),
         mode: AcquisitionMode::Chosen,
     };
-    if let Err(e) = purchase_skill_use_case::execute(cmd, player_repo.as_ref(), &catalog, &internal_bus).await {
+    if let Err(e) =
+        purchase_skill_use_case::execute(cmd, player_repo.as_ref(), &catalog, &internal_bus).await
+    {
         match e {
             purchase_skill_use_case::PurchaseSkillError::PlayerNotFound => panic!("PlayerNotFound"),
             purchase_skill_use_case::PurchaseSkillError::Cost(ce) => panic!("Cost: {ce:?}"),
             purchase_skill_use_case::PurchaseSkillError::Domain(de) => panic!("Domain: {de}"),
-            purchase_skill_use_case::PurchaseSkillError::Repository(re) => panic!("Repository: {re}"),
+            purchase_skill_use_case::PurchaseSkillError::Repository(re) => {
+                panic!("Repository: {re}")
+            }
         }
     }
 

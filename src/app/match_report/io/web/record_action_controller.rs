@@ -15,8 +15,8 @@ use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct RecordActionForm {
-    pub turn:        u8,
-    pub player_id:   String,
+    pub turn: u8,
+    pub player_id: String,
     pub player_type: String,
     pub action_type: String,
     pub injury_type: Option<String>,
@@ -66,14 +66,34 @@ async fn post_action(
         Some(p) => p,
         None => return StatusCode::BAD_REQUEST.into_response(),
     };
-    let action = match build_action_type(&form.action_type, form.injury_type.as_deref(), form.sequel_stat.as_deref()) {
+    let action = match build_action_type(
+        &form.action_type,
+        form.injury_type.as_deref(),
+        form.sequel_stat.as_deref(),
+    ) {
         Some(a) => a,
         None => return StatusCode::BAD_REQUEST.into_response(),
     };
-    let cmd = RecordActionCommand { match_report_id: mr_id_vo, team_side: side, turn, player, action, recorded_by: user.id };
-    match record_action_use_case::execute(cmd, state.match_report.match_report_repo.as_ref(), state.match_report.player_data.as_ref()).await {
+    let cmd = RecordActionCommand {
+        match_report_id: mr_id_vo,
+        team_side: side,
+        turn,
+        player,
+        action,
+        recorded_by: user.id,
+    };
+    match record_action_use_case::execute(
+        cmd,
+        state.match_report.match_report_repo.as_ref(),
+        state.match_report.player_data.as_ref(),
+    )
+    .await
+    {
         Ok(outcome) => {
-            let trigger = format!(r#"{{"actionRecorded": {{"action_id": "{}"}}}}"#, outcome.action_id);
+            let trigger = format!(
+                r#"{{"actionRecorded": {{"action_id": "{}"}}}}"#,
+                outcome.action_id
+            );
             Response::builder()
                 .header("HX-Trigger", trigger)
                 .body(axum::body::Body::empty())
@@ -105,7 +125,8 @@ pub async fn delete_action(
         action_id: ActionId(action_id),
         deleted_by: user.id,
     };
-    match delete_action_use_case::execute(cmd, state.match_report.match_report_repo.as_ref()).await {
+    match delete_action_use_case::execute(cmd, state.match_report.match_report_repo.as_ref()).await
+    {
         Ok(_) => Response::builder()
             .header("HX-Trigger", r#"{"actionDeleted": {}}"#)
             .body(axum::body::Body::empty())
@@ -125,27 +146,35 @@ fn build_player(player_id: &str, player_type: &str) -> Option<ActionPlayer> {
     }
 }
 
-fn build_action_type(action_type: &str, injury: Option<&str>, sequel: Option<&str>) -> Option<MatchActionType> {
+fn build_action_type(
+    action_type: &str,
+    injury: Option<&str>,
+    sequel: Option<&str>,
+) -> Option<MatchActionType> {
     match action_type {
-        "TOUCHDOWN"    => Some(MatchActionType::Touchdown),
-        "PASSE"        => Some(MatchActionType::Passe),
+        "TOUCHDOWN" => Some(MatchActionType::Touchdown),
+        "PASSE" => Some(MatchActionType::Passe),
         "INTERCEPTION" => Some(MatchActionType::Interception),
-        "AGRESSION"    => Some(MatchActionType::Agression),
-        "LANCER"       => Some(MatchActionType::Lancer),
-        "SORTIE"       => Some(MatchActionType::Sortie),
-        "MVP"          => Some(MatchActionType::Mvp),
-        "BLESSE"       => Some(MatchActionType::Blesse { injury: build_injury(injury?, sequel)? }),
+        "AGRESSION" => Some(MatchActionType::Agression),
+        "LANCER" => Some(MatchActionType::Lancer),
+        "SORTIE" => Some(MatchActionType::Sortie),
+        "MVP" => Some(MatchActionType::Mvp),
+        "BLESSE" => Some(MatchActionType::Blesse {
+            injury: build_injury(injury?, sequel)?,
+        }),
         _ => None,
     }
 }
 
 fn build_injury(injury: &str, sequel: Option<&str>) -> Option<InjuryType> {
     match injury {
-        "COMMOTION"         => Some(InjuryType::Commotion),
-        "AMOCHE"            => Some(InjuryType::Amoche),
+        "COMMOTION" => Some(InjuryType::Commotion),
+        "AMOCHE" => Some(InjuryType::Amoche),
         "BLESSURE_SERIEUSE" => Some(InjuryType::BlessureSerieuse),
-        "MORT"              => Some(InjuryType::Mort),
-        "SEQUEL"            => Some(InjuryType::Sequel { stat: build_sequel(sequel?)? }),
+        "MORT" => Some(InjuryType::Mort),
+        "SEQUEL" => Some(InjuryType::Sequel {
+            stat: build_sequel(sequel?)?,
+        }),
         _ => None,
     }
 }

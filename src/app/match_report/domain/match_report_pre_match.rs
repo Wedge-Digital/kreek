@@ -2,16 +2,16 @@ use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
+use crate::app::match_report::domain::value_objects::TurnNumber;
 use crate::app::match_report::domain::value_objects::{
     ActionId, ActionPlayer, AllowedInducementSpec, D3Roll, DedicatedFans, FanFactorMod,
     InducementPurchase, InducementQty, MatchAction, MatchActionType, MatchGain, MatchReportOrigin,
     TeamSide, TeamValue, TempPlayer,
 };
-use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
-use crate::app::match_report::domain::value_objects::TurnNumber;
+use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 
 #[derive(Debug, Clone)]
 pub struct MatchReportPreMatch {
@@ -83,7 +83,11 @@ impl MatchReportPreMatch {
         away_tv: TeamValue,
         recorded_by: CoachId,
     ) -> (Self, MatchReportDomainEvent) {
-        let event = MatchReportDomainEvent::TeamValuesRecorded { home_team_value: home_tv, away_team_value: away_tv, recorded_by };
+        let event = MatchReportDomainEvent::TeamValuesRecorded {
+            home_team_value: home_tv,
+            away_team_value: away_tv,
+            recorded_by,
+        };
         let mut updated = self.clone();
         updated.home_team_value = Some(home_tv);
         updated.away_team_value = Some(away_tv);
@@ -94,11 +98,19 @@ impl MatchReportPreMatch {
     pub fn topdog_team_id(&self) -> &TeamId {
         let home_tv = self.home_team_value.as_ref().expect("TV not recorded");
         let away_tv = self.away_team_value.as_ref().expect("TV not recorded");
-        if away_tv > home_tv { &self.away_team_id } else { &self.home_team_id }
+        if away_tv > home_tv {
+            &self.away_team_id
+        } else {
+            &self.home_team_id
+        }
     }
 
     pub fn underdog_team_id(&self) -> &TeamId {
-        if self.topdog_team_id() == &self.home_team_id { &self.away_team_id } else { &self.home_team_id }
+        if self.topdog_team_id() == &self.home_team_id {
+            &self.away_team_id
+        } else {
+            &self.home_team_id
+        }
     }
 
     pub fn topdog_spending(&self) -> u32 {
@@ -108,14 +120,22 @@ impl MatchReportPreMatch {
         } else {
             self.away_inducements.as_deref()
         };
-        purchases.unwrap_or(&[]).iter().map(|p| p.total_cost()).sum()
+        purchases
+            .unwrap_or(&[])
+            .iter()
+            .map(|p| p.total_cost())
+            .sum()
     }
 
     pub fn inducement_budget_for(&self, team_id: &TeamId, treasury: u32) -> u32 {
         if team_id == self.topdog_team_id() {
             treasury
         } else {
-            let tv_diff = self.home_team_value.unwrap().into_inner().abs_diff(self.away_team_value.unwrap().into_inner());
+            let tv_diff = self
+                .home_team_value
+                .unwrap()
+                .into_inner()
+                .abs_diff(self.away_team_value.unwrap().into_inner());
             tv_diff + self.topdog_spending() + treasury.min(50)
         }
     }
@@ -139,7 +159,11 @@ impl MatchReportPreMatch {
     }
 
     fn inducements_for(&self, team_id: &TeamId) -> Option<&Vec<InducementPurchase>> {
-        if team_id == &self.home_team_id { self.home_inducements.as_ref() } else { self.away_inducements.as_ref() }
+        if team_id == &self.home_team_id {
+            self.home_inducements.as_ref()
+        } else {
+            self.away_inducements.as_ref()
+        }
     }
 
     pub fn init_temp_players(
@@ -147,7 +171,10 @@ impl MatchReportPreMatch {
         team_id: &TeamId,
         players: Vec<TempPlayer>,
     ) -> (Self, MatchReportDomainEvent) {
-        let event = MatchReportDomainEvent::TempPlayersInitialized { team_id: team_id.clone(), players: players.clone() };
+        let event = MatchReportDomainEvent::TempPlayersInitialized {
+            team_id: team_id.clone(),
+            players: players.clone(),
+        };
         let mut updated = self.clone();
         if team_id == &updated.home_team_id {
             updated.home_temp_players = players;
@@ -159,7 +186,9 @@ impl MatchReportPreMatch {
     }
 
     pub fn reset_temp_players(&self, team_id: &TeamId) -> (Self, MatchReportDomainEvent) {
-        let event = MatchReportDomainEvent::TempPlayersReset { team_id: team_id.clone() };
+        let event = MatchReportDomainEvent::TempPlayersReset {
+            team_id: team_id.clone(),
+        };
         let mut updated = self.clone();
         if team_id == &updated.home_team_id {
             updated.home_temp_players = vec![];
@@ -191,7 +220,14 @@ impl MatchReportPreMatch {
             player_position: player_position.clone(),
             recorded_by,
         };
-        let entry = MatchAction { id: action_id, turn, player, action, player_display_name, player_position };
+        let entry = MatchAction {
+            id: action_id,
+            turn,
+            player,
+            action,
+            player_display_name,
+            player_position,
+        };
         let mut updated = self.clone();
         match team_side {
             TeamSide::Home => updated.home_actions.push(entry),
@@ -235,14 +271,17 @@ impl MatchReportPreMatch {
     }
 
     pub fn star_player_uids_for(&self, team_id: &TeamId) -> Vec<InducementId> {
-        self.star_engagements.iter()
+        self.star_engagements
+            .iter()
             .filter(|(tid, _)| tid == team_id)
             .map(|(_, uid)| uid.clone())
             .collect()
     }
 
     pub fn purchases_for(&self, team_id: &TeamId) -> &[InducementPurchase] {
-        self.inducements_for(team_id).map(|v| v.as_slice()).unwrap_or(&[])
+        self.inducements_for(team_id)
+            .map(|v| v.as_slice())
+            .unwrap_or(&[])
     }
 
     pub fn actions_for(&self, side: TeamSide) -> &[MatchAction] {
@@ -253,20 +292,28 @@ impl MatchReportPreMatch {
     }
 
     pub fn compute_score(&self) -> (u8, u8) {
-        let home = self.home_actions.iter()
+        let home = self
+            .home_actions
+            .iter()
             .filter(|a| matches!(a.action, MatchActionType::Touchdown))
             .count() as u8;
-        let away = self.away_actions.iter()
+        let away = self
+            .away_actions
+            .iter()
             .filter(|a| matches!(a.action, MatchActionType::Touchdown))
             .count() as u8;
         (home, away)
     }
 
     pub fn compute_cas(&self) -> (u8, u8) {
-        let home = self.home_actions.iter()
+        let home = self
+            .home_actions
+            .iter()
             .filter(|a| matches!(a.action, MatchActionType::Sortie))
             .count() as u8;
-        let away = self.away_actions.iter()
+        let away = self
+            .away_actions
+            .iter()
             .filter(|a| matches!(a.action, MatchActionType::Sortie))
             .count() as u8;
         (home, away)
@@ -302,8 +349,13 @@ impl MatchReportPreMatch {
             recorded_by,
         };
         let ready = MatchReportReadyToPublish::from_pre_match(
-            self, home_gain, away_gain, home_fan_mod, away_fan_mod,
-            summary_title, summary_body,
+            self,
+            home_gain,
+            away_gain,
+            home_fan_mod,
+            away_fan_mod,
+            summary_title,
+            summary_body,
         );
         (ready, event)
     }
@@ -358,7 +410,10 @@ fn validate_mercenary_limit(purchases: &[(InducementId, u8)]) -> Result<(), Doma
         .map(|(_, qty)| *qty)
         .sum();
     if total > 3 {
-        Err(DomainError::TooManyMercenaries { requested: total, max: 3 })
+        Err(DomainError::TooManyMercenaries {
+            requested: total,
+            max: 3,
+        })
     } else {
         Ok(())
     }
@@ -371,7 +426,11 @@ fn validate_max_qty(
     for (uid, qty) in purchases {
         if let Some(spec) = allowed_specs.iter().find(|s| &s.uid == uid) {
             if *qty > spec.max_qty.into_inner() {
-                return Err(DomainError::MaxQtyExceeded { uid: uid.0.clone(), qty: *qty, max_qty: spec.max_qty.into_inner() });
+                return Err(DomainError::MaxQtyExceeded {
+                    uid: uid.0.clone(),
+                    qty: *qty,
+                    max_qty: spec.max_qty.into_inner(),
+                });
             }
         }
     }
@@ -382,10 +441,19 @@ fn validate_star_player_limit(
     purchases: &[(InducementId, u8)],
     allowed_specs: &[AllowedInducementSpec],
 ) -> Result<(), DomainError> {
-    let star_count = purchases.iter()
-        .filter(|(uid, _)| allowed_specs.iter().any(|s| &s.uid == uid && s.is_star_player.0))
+    let star_count = purchases
+        .iter()
+        .filter(|(uid, _)| {
+            allowed_specs
+                .iter()
+                .any(|s| &s.uid == uid && s.is_star_player.0)
+        })
         .count();
-    if star_count > 2 { Err(DomainError::StarPlayerLimitExceeded) } else { Ok(()) }
+    if star_count > 2 {
+        Err(DomainError::StarPlayerLimitExceeded)
+    } else {
+        Ok(())
+    }
 }
 
 fn validate_star_player_conflict(
@@ -394,7 +462,9 @@ fn validate_star_player_conflict(
     opponent_star_uids: &[InducementId],
 ) -> Result<(), DomainError> {
     for (uid, _) in purchases {
-        let is_star = allowed_specs.iter().any(|s| &s.uid == uid && s.is_star_player.0);
+        let is_star = allowed_specs
+            .iter()
+            .any(|s| &s.uid == uid && s.is_star_player.0);
         if is_star && opponent_star_uids.contains(uid) {
             return Err(DomainError::StarPlayerConflict { uid: uid.0.clone() });
         }
@@ -407,23 +477,37 @@ fn validate_budget(
     allowed_specs: &[AllowedInducementSpec],
     budget: u32,
 ) -> Result<(), DomainError> {
-    let spent: u32 = purchases.iter()
-        .filter_map(|(uid, qty)| allowed_specs.iter().find(|s| &s.uid == uid).map(|s| s.unit_cost.into_inner() * (*qty as u32)))
+    let spent: u32 = purchases
+        .iter()
+        .filter_map(|(uid, qty)| {
+            allowed_specs
+                .iter()
+                .find(|s| &s.uid == uid)
+                .map(|s| s.unit_cost.into_inner() * (*qty as u32))
+        })
         .sum();
-    if spent > budget { Err(DomainError::BudgetExceeded { spent, budget }) } else { Ok(()) }
+    if spent > budget {
+        Err(DomainError::BudgetExceeded { spent, budget })
+    } else {
+        Ok(())
+    }
 }
 
 fn build_purchase_list(
     purchases: &[(InducementId, u8)],
     allowed_specs: &[AllowedInducementSpec],
 ) -> Vec<InducementPurchase> {
-    purchases.iter()
+    purchases
+        .iter()
         .filter_map(|(uid, qty)| {
-            allowed_specs.iter().find(|s| &s.uid == uid).map(|spec| InducementPurchase {
-                uid: uid.clone(),
-                qty: InducementQty::try_new(*qty).expect("qty validated at IO boundary"),
-                unit_cost: spec.unit_cost,
-            })
+            allowed_specs
+                .iter()
+                .find(|s| &s.uid == uid)
+                .map(|spec| InducementPurchase {
+                    uid: uid.clone(),
+                    qty: InducementQty::try_new(*qty).expect("qty validated at IO boundary"),
+                    unit_cost: spec.unit_cost,
+                })
         })
         .collect()
 }
@@ -440,7 +524,10 @@ fn build_inducement_events(
         recorded_by: recorded_by.clone(),
     }];
     for p in purchase_list {
-        if allowed_specs.iter().any(|s| s.uid == p.uid && s.is_star_player.0) {
+        if allowed_specs
+            .iter()
+            .any(|s| s.uid == p.uid && s.is_star_player.0)
+        {
             events.push(MatchReportDomainEvent::StarPlayerEngaged {
                 team_id: team_id.clone(),
                 star_player_uid: p.uid.clone(),
@@ -451,7 +538,11 @@ fn build_inducement_events(
     events
 }
 
-fn set_inducements_for(pm: &mut MatchReportPreMatch, team_id: &TeamId, purchases: Vec<InducementPurchase>) {
+fn set_inducements_for(
+    pm: &mut MatchReportPreMatch,
+    team_id: &TeamId,
+    purchases: Vec<InducementPurchase>,
+) {
     if team_id == &pm.home_team_id {
         pm.home_inducements = Some(purchases);
     } else {
@@ -463,26 +554,40 @@ fn set_inducements_for(pm: &mut MatchReportPreMatch, team_id: &TeamId, purchases
 mod tests {
     use super::*;
     use crate::app::match_report::domain::value_objects::{
-        InducementCost, InducementQty, IsStarPlayer, InjuryType, MatchReportOrigin,
+        InducementCost, InducementQty, InjuryType, IsStarPlayer, MatchReportOrigin,
+    };
+    use crate::app::shared_kernel::bloodbowl::ids::{
+        CompetitionId, MatchReportId, RoundId, SeasonId,
     };
     use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
-    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 
     fn make_pm(home_tv: u32, away_tv: u32) -> MatchReportPreMatch {
         let home_id = TeamId::new();
         let away_id = TeamId::new();
         MatchReportPreMatch {
-            id: MatchReportId::new(), space_id: SpaceId::new(),
-            competition_id: CompetitionId::new(), season_id: SeasonId::new(),
-            round_id: RoundId::new(), home_team_id: home_id, away_team_id: away_id,
-            created_by: CoachId::new(), origin: MatchReportOrigin::Manual, pairing_id: None,
-            home_fan_roll: None, away_fan_roll: None,
-            home_dedicated_fans: DedicatedFans::default(), away_dedicated_fans: DedicatedFans::default(),
-            home_team_value: Some(TeamValue::try_new(home_tv).unwrap()), away_team_value: Some(TeamValue::try_new(away_tv).unwrap()),
-            home_inducements: None, away_inducements: None,
+            id: MatchReportId::new(),
+            space_id: SpaceId::new(),
+            competition_id: CompetitionId::new(),
+            season_id: SeasonId::new(),
+            round_id: RoundId::new(),
+            home_team_id: home_id,
+            away_team_id: away_id,
+            created_by: CoachId::new(),
+            origin: MatchReportOrigin::Manual,
+            pairing_id: None,
+            home_fan_roll: None,
+            away_fan_roll: None,
+            home_dedicated_fans: DedicatedFans::default(),
+            away_dedicated_fans: DedicatedFans::default(),
+            home_team_value: Some(TeamValue::try_new(home_tv).unwrap()),
+            away_team_value: Some(TeamValue::try_new(away_tv).unwrap()),
+            home_inducements: None,
+            away_inducements: None,
             star_engagements: vec![],
-            home_temp_players: vec![], away_temp_players: vec![],
-            home_actions: vec![], away_actions: vec![],
+            home_temp_players: vec![],
+            away_temp_players: vec![],
+            home_actions: vec![],
+            away_actions: vec![],
             version: 1,
         }
     }
@@ -552,7 +657,14 @@ mod tests {
     fn record_inducements_fails_on_budget_exceeded() {
         let pm = make_pm(1000, 1000);
         let specs = vec![spec("BRIBE", 2, 100, false)];
-        let result = pm.record_inducements(&pm.home_team_id.clone(), &[(InducementId("BRIBE".into()), 1)], 50, &specs, &[], CoachId::new());
+        let result = pm.record_inducements(
+            &pm.home_team_id.clone(),
+            &[(InducementId("BRIBE".into()), 1)],
+            50,
+            &specs,
+            &[],
+            CoachId::new(),
+        );
         assert!(matches!(result, Err(DomainError::BudgetExceeded { .. })));
     }
 
@@ -560,17 +672,37 @@ mod tests {
     fn record_inducements_fails_on_max_qty_exceeded() {
         let pm = make_pm(1000, 1000);
         let specs = vec![spec("BRIBE", 1, 10, false)];
-        let result = pm.record_inducements(&pm.home_team_id.clone(), &[(InducementId("BRIBE".into()), 2)], 100, &specs, &[], CoachId::new());
+        let result = pm.record_inducements(
+            &pm.home_team_id.clone(),
+            &[(InducementId("BRIBE".into()), 2)],
+            100,
+            &specs,
+            &[],
+            CoachId::new(),
+        );
         assert!(matches!(result, Err(DomainError::MaxQtyExceeded { .. })));
     }
 
     #[test]
     fn record_inducements_fails_when_star_player_limit_exceeded() {
         let pm = make_pm(1000, 1000);
-        let specs = vec![spec("SP1", 1, 10_000, true), spec("SP2", 1, 10_000, true), spec("SP3", 1, 10_000, true)];
-        let result = pm.record_inducements(&pm.home_team_id.clone(), &[
-            (InducementId("SP1".into()), 1), (InducementId("SP2".into()), 1), (InducementId("SP3".into()), 1),
-        ], 1_000_000, &specs, &[], CoachId::new());
+        let specs = vec![
+            spec("SP1", 1, 10_000, true),
+            spec("SP2", 1, 10_000, true),
+            spec("SP3", 1, 10_000, true),
+        ];
+        let result = pm.record_inducements(
+            &pm.home_team_id.clone(),
+            &[
+                (InducementId("SP1".into()), 1),
+                (InducementId("SP2".into()), 1),
+                (InducementId("SP3".into()), 1),
+            ],
+            1_000_000,
+            &specs,
+            &[],
+            CoachId::new(),
+        );
         assert!(matches!(result, Err(DomainError::StarPlayerLimitExceeded)));
     }
 
@@ -579,14 +711,25 @@ mod tests {
         let pm = make_pm(1000, 1000);
         let specs = vec![spec("SP1", 1, 10_000, true)];
         let opponent = vec![InducementId("SP1".into())];
-        let result = pm.record_inducements(&pm.home_team_id.clone(), &[(InducementId("SP1".into()), 1)], 1_000_000, &specs, &opponent, CoachId::new());
-        assert!(matches!(result, Err(DomainError::StarPlayerConflict { .. })));
+        let result = pm.record_inducements(
+            &pm.home_team_id.clone(),
+            &[(InducementId("SP1".into()), 1)],
+            1_000_000,
+            &specs,
+            &opponent,
+            CoachId::new(),
+        );
+        assert!(matches!(
+            result,
+            Err(DomainError::StarPlayerConflict { .. })
+        ));
     }
 
     #[test]
     fn record_inducements_with_empty_purchases_succeeds() {
         let pm = make_pm(1000, 1000);
-        let result = pm.record_inducements(&pm.home_team_id.clone(), &[], 0, &[], &[], CoachId::new());
+        let result =
+            pm.record_inducements(&pm.home_team_id.clone(), &[], 0, &[], &[], CoachId::new());
         assert!(result.is_ok());
         let (updated, events) = result.unwrap();
         assert!(updated.home_inducements.as_ref().unwrap().is_empty());
@@ -597,19 +740,44 @@ mod tests {
     fn record_inducements_emits_star_player_engaged_per_star() {
         let pm = make_pm(1000, 1000);
         let specs = vec![spec("SP1", 1, 10_000, true), spec("SP2", 1, 10_000, true)];
-        let (_, events) = pm.record_inducements(&pm.home_team_id.clone(), &[
-            (InducementId("SP1".into()), 1), (InducementId("SP2".into()), 1),
-        ], 1_000_000, &specs, &[], CoachId::new()).unwrap();
+        let (_, events) = pm
+            .record_inducements(
+                &pm.home_team_id.clone(),
+                &[
+                    (InducementId("SP1".into()), 1),
+                    (InducementId("SP2".into()), 1),
+                ],
+                1_000_000,
+                &specs,
+                &[],
+                CoachId::new(),
+            )
+            .unwrap();
         assert_eq!(events.len(), 3);
-        assert!(matches!(&events[1], MatchReportDomainEvent::StarPlayerEngaged { .. }));
-        assert!(matches!(&events[2], MatchReportDomainEvent::StarPlayerEngaged { .. }));
+        assert!(matches!(
+            &events[1],
+            MatchReportDomainEvent::StarPlayerEngaged { .. }
+        ));
+        assert!(matches!(
+            &events[2],
+            MatchReportDomainEvent::StarPlayerEngaged { .. }
+        ));
     }
 
     #[test]
     fn record_inducements_no_star_player_engaged_when_none_hired() {
         let pm = make_pm(1000, 1000);
         let specs = vec![spec("BRIBE", 2, 10_000, false)];
-        let (_, events) = pm.record_inducements(&pm.home_team_id.clone(), &[(InducementId("BRIBE".into()), 1)], 1_000_000, &specs, &[], CoachId::new()).unwrap();
+        let (_, events) = pm
+            .record_inducements(
+                &pm.home_team_id.clone(),
+                &[(InducementId("BRIBE".into()), 1)],
+                1_000_000,
+                &specs,
+                &[],
+                CoachId::new(),
+            )
+            .unwrap();
         assert_eq!(events.len(), 1);
     }
 
@@ -621,7 +789,9 @@ mod tests {
         TempPlayer {
             id: TempPlayerId("tp-01".to_string()),
             team_id: pm.home_team_id.clone(),
-            kind: TempPlayerKind::Journeyman { position_uid: "LIN".to_string() },
+            kind: TempPlayerKind::Journeyman {
+                position_uid: "LIN".to_string(),
+            },
             display_name: None,
         }
     }
@@ -633,7 +803,10 @@ mod tests {
         let (updated, event) = pm.init_temp_players(&pm.home_team_id.clone(), vec![player]);
         assert_eq!(updated.home_temp_players.len(), 1);
         assert!(updated.away_temp_players.is_empty());
-        assert!(matches!(event, MatchReportDomainEvent::TempPlayersInitialized { .. }));
+        assert!(matches!(
+            event,
+            MatchReportDomainEvent::TempPlayersInitialized { .. }
+        ));
         assert_eq!(updated.version, pm.version + 1);
     }
 
@@ -644,15 +817,23 @@ mod tests {
         let (with_players, _) = pm.init_temp_players(&pm.home_team_id.clone(), vec![player]);
         let (reset, event) = with_players.reset_temp_players(&pm.home_team_id.clone());
         assert!(reset.home_temp_players.is_empty());
-        assert!(matches!(event, MatchReportDomainEvent::TempPlayersReset { .. }));
+        assert!(matches!(
+            event,
+            MatchReportDomainEvent::TempPlayersReset { .. }
+        ));
     }
 
     // ── step3-4 : actions ─────────────────────────────────────────────────────
 
-    use crate::app::match_report::domain::value_objects::{ActionId, ActionPlayer, MatchActionType, TeamSide, TurnNumber};
+    use crate::app::match_report::domain::value_objects::{
+        ActionId, ActionPlayer, MatchActionType, TeamSide, TurnNumber,
+    };
     use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
 
-    fn make_action(pm: &MatchReportPreMatch, side: TeamSide) -> (MatchReportPreMatch, MatchReportDomainEvent) {
+    fn make_action(
+        pm: &MatchReportPreMatch,
+        side: TeamSide,
+    ) -> (MatchReportPreMatch, MatchReportDomainEvent) {
         pm.record_action(
             side,
             TurnNumber::try_new(3).unwrap(),
@@ -692,8 +873,26 @@ mod tests {
     #[test]
     fn record_two_mvp_same_team() {
         let pm = make_pm(1000, 1000);
-        let (pm2, _) = pm.record_action(TeamSide::Home, TurnNumber::try_new(1).unwrap(), ActionPlayer::Regular(PlayerId::new()), MatchActionType::Mvp, "A".to_string(), String::new(), ActionId("a1".to_string()), CoachId::new());
-        let (pm3, _) = pm2.record_action(TeamSide::Home, TurnNumber::try_new(1).unwrap(), ActionPlayer::Regular(PlayerId::new()), MatchActionType::Mvp, "B".to_string(), String::new(), ActionId("a2".to_string()), CoachId::new());
+        let (pm2, _) = pm.record_action(
+            TeamSide::Home,
+            TurnNumber::try_new(1).unwrap(),
+            ActionPlayer::Regular(PlayerId::new()),
+            MatchActionType::Mvp,
+            "A".to_string(),
+            String::new(),
+            ActionId("a1".to_string()),
+            CoachId::new(),
+        );
+        let (pm3, _) = pm2.record_action(
+            TeamSide::Home,
+            TurnNumber::try_new(1).unwrap(),
+            ActionPlayer::Regular(PlayerId::new()),
+            MatchActionType::Mvp,
+            "B".to_string(),
+            String::new(),
+            ActionId("a2".to_string()),
+            CoachId::new(),
+        );
         assert_eq!(pm3.home_actions.len(), 2);
     }
 
@@ -704,7 +903,10 @@ mod tests {
         let action_id = pm2.home_actions[0].id.clone();
         let (pm3, event) = pm2.delete_action(&action_id, CoachId::new()).unwrap();
         assert!(pm3.home_actions.is_empty());
-        assert!(matches!(event, MatchReportDomainEvent::ActionDeleted { .. }));
+        assert!(matches!(
+            event,
+            MatchReportDomainEvent::ActionDeleted { .. }
+        ));
     }
 
     #[test]
@@ -726,7 +928,8 @@ mod tests {
     fn star_player_uids_for_returns_engaged_uids() {
         let mut pm = make_pm(1000, 1000);
         let uid = InducementId("SP1".to_string());
-        pm.star_engagements.push((pm.home_team_id.clone(), uid.clone()));
+        pm.star_engagements
+            .push((pm.home_team_id.clone(), uid.clone()));
         let result = pm.star_player_uids_for(&pm.home_team_id.clone());
         assert_eq!(result, vec![uid]);
         assert!(pm.star_player_uids_for(&pm.away_team_id.clone()).is_empty());
@@ -742,8 +945,18 @@ mod tests {
 
     // ── Mercenaires ───────────────────────────────────────────────────────────
 
-    fn merco_spec(position_uid: &str, level: &str, max_qty: u8, cost: u32) -> AllowedInducementSpec {
-        spec(&format!("MERCO:{position_uid}:{level}"), max_qty, cost, false)
+    fn merco_spec(
+        position_uid: &str,
+        level: &str,
+        max_qty: u8,
+        cost: u32,
+    ) -> AllowedInducementSpec {
+        spec(
+            &format!("MERCO:{position_uid}:{level}"),
+            max_qty,
+            cost,
+            false,
+        )
     }
 
     #[test]
@@ -764,7 +977,13 @@ mod tests {
             &[],
             CoachId::new(),
         );
-        assert!(matches!(result, Err(DomainError::TooManyMercenaries { requested: 4, max: 3 })));
+        assert!(matches!(
+            result,
+            Err(DomainError::TooManyMercenaries {
+                requested: 4,
+                max: 3
+            })
+        ));
     }
 
     #[test]
@@ -800,7 +1019,13 @@ mod tests {
             &[],
             CoachId::new(),
         );
-        assert!(matches!(result, Err(DomainError::TooManyMercenaries { requested: 4, max: 3 })));
+        assert!(matches!(
+            result,
+            Err(DomainError::TooManyMercenaries {
+                requested: 4,
+                max: 3
+            })
+        ));
     }
 
     #[test]
@@ -860,37 +1085,54 @@ mod tests {
 
     fn add_td(pm: &MatchReportPreMatch, side: TeamSide) -> MatchReportPreMatch {
         pm.record_action(
-            side, TurnNumber::try_new(1).unwrap(),
+            side,
+            TurnNumber::try_new(1).unwrap(),
             ActionPlayer::Regular(PlayerId::new()),
             MatchActionType::Touchdown,
-            "A".into(), "B".into(),
-            ActionId(format!("td-{}", rand_id())), CoachId::new(),
-        ).0
+            "A".into(),
+            "B".into(),
+            ActionId(format!("td-{}", rand_id())),
+            CoachId::new(),
+        )
+        .0
     }
 
     fn add_sortie(pm: &MatchReportPreMatch, side: TeamSide) -> MatchReportPreMatch {
         pm.record_action(
-            side, TurnNumber::try_new(1).unwrap(),
+            side,
+            TurnNumber::try_new(1).unwrap(),
             ActionPlayer::Regular(PlayerId::new()),
             MatchActionType::Sortie,
-            "A".into(), "B".into(),
-            ActionId(format!("so-{}", rand_id())), CoachId::new(),
-        ).0
+            "A".into(),
+            "B".into(),
+            ActionId(format!("so-{}", rand_id())),
+            CoachId::new(),
+        )
+        .0
     }
 
     fn add_blesse(pm: &MatchReportPreMatch, side: TeamSide) -> MatchReportPreMatch {
         pm.record_action(
-            side, TurnNumber::try_new(1).unwrap(),
+            side,
+            TurnNumber::try_new(1).unwrap(),
             ActionPlayer::Regular(PlayerId::new()),
-            MatchActionType::Blesse { injury: InjuryType::Commotion },
-            "A".into(), "B".into(),
-            ActionId(format!("bl-{}", rand_id())), CoachId::new(),
-        ).0
+            MatchActionType::Blesse {
+                injury: InjuryType::Commotion,
+            },
+            "A".into(),
+            "B".into(),
+            ActionId(format!("bl-{}", rand_id())),
+            CoachId::new(),
+        )
+        .0
     }
 
     fn rand_id() -> u64 {
         use std::time::{SystemTime, UNIX_EPOCH};
-        SystemTime::now().duration_since(UNIX_EPOCH).unwrap().subsec_nanos() as u64
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .subsec_nanos() as u64
     }
 
     #[test]
@@ -929,7 +1171,12 @@ mod tests {
 
     // ── step5 : suggest_gains ────────────────────────────────────────────────
 
-    fn pm_with_fans(home_dedicated: u32, away_dedicated: u32, home_roll: u8, away_roll: u8) -> MatchReportPreMatch {
+    fn pm_with_fans(
+        home_dedicated: u32,
+        away_dedicated: u32,
+        home_roll: u8,
+        away_roll: u8,
+    ) -> MatchReportPreMatch {
         let mut pm = make_pm(1000, 1000);
         pm.home_dedicated_fans = DedicatedFans::try_new(home_dedicated).unwrap();
         pm.away_dedicated_fans = DedicatedFans::try_new(away_dedicated).unwrap();
@@ -980,13 +1227,21 @@ mod tests {
         let home_mod = FanFactorMod::try_new(1).unwrap();
         let away_mod = FanFactorMod::try_new(-1).unwrap();
         let (ready, event) = pm.record_post_match(
-            home_gain, away_gain, home_mod, away_mod,
-            Some("Titre".into()), None, CoachId::new(),
+            home_gain,
+            away_gain,
+            home_mod,
+            away_mod,
+            Some("Titre".into()),
+            None,
+            CoachId::new(),
         );
         assert_eq!(ready.home_gain, home_gain);
         assert_eq!(ready.away_gain, away_gain);
         assert_eq!(ready.home_fan_mod, home_mod);
         assert_eq!(ready.away_fan_mod, away_mod);
-        assert!(matches!(event, MatchReportDomainEvent::PostMatchRecorded { .. }));
+        assert!(matches!(
+            event,
+            MatchReportDomainEvent::PostMatchRecorded { .. }
+        ));
     }
 }

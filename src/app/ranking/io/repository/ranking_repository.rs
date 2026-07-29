@@ -1,7 +1,7 @@
 use crate::app::ranking::domain::ranking_line::RankingLine;
 use crate::app::ranking::ports::{IRankingRepository, RankingLineRow, RankingRepositoryError};
-use crate::app::shared_kernel::identity::sulid::SUlid;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::sulid::SUlid;
 use async_trait::async_trait;
 use sqlx::PgPool;
 
@@ -174,7 +174,9 @@ mod tests {
         CasualtiesTotal, CompletionsMade, DrawCount, FoulsCommitted, LossCount, MatchesPlayed,
         RankingPoints, TdAgainst, TdFor, WinCount,
     };
-    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
+    use crate::app::shared_kernel::bloodbowl::ids::{
+        CompetitionId, MatchReportId, RoundId, SeasonId,
+    };
     use crate::app::shared_kernel::bloodbowl::team::TeamId;
     use chrono::Utc;
 
@@ -233,8 +235,14 @@ mod tests {
         let away_line = sample_line(&away, &season_id, 1, 0, 0, 1, 0, 0);
         repo.insert_lines(&[home_line, away_line]).await.unwrap();
 
-        let home_row = repo.find_latest_line(&season_id.to_string(), &home.to_string()).await.unwrap();
-        let away_row = repo.find_latest_line(&season_id.to_string(), &away.to_string()).await.unwrap();
+        let home_row = repo
+            .find_latest_line(&season_id.to_string(), &home.to_string())
+            .await
+            .unwrap();
+        let away_row = repo
+            .find_latest_line(&season_id.to_string(), &away.to_string())
+            .await
+            .unwrap();
 
         // La part bonus fait l'aller-retour en base, distincte du total qui la contient.
         let home_row = home_row.unwrap();
@@ -261,7 +269,11 @@ mod tests {
 
         // La ligne insérée en second doit faire foi, même si son recorded_at est antérieur —
         // c'est l'ordre d'enregistrement (sequence) qui compte, jamais le timestamp seul.
-        let latest = repo.find_latest_line(&season_id.to_string(), &team_id.to_string()).await.unwrap().unwrap();
+        let latest = repo
+            .find_latest_line(&season_id.to_string(), &team_id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(latest.matches_played, 2);
         assert_eq!(latest.losses, 1);
     }
@@ -273,11 +285,20 @@ mod tests {
         let team_a = TeamId::new();
         let team_b = TeamId::new();
 
-        repo.insert_lines(&[sample_line(&team_a, &season_id, 1, 1, 0, 0, 3, 0)]).await.unwrap();
-        repo.insert_lines(&[sample_line(&team_a, &season_id, 2, 1, 1, 0, 4, 0)]).await.unwrap();
-        repo.insert_lines(&[sample_line(&team_b, &season_id, 1, 0, 0, 1, 0, 0)]).await.unwrap();
+        repo.insert_lines(&[sample_line(&team_a, &season_id, 1, 1, 0, 0, 3, 0)])
+            .await
+            .unwrap();
+        repo.insert_lines(&[sample_line(&team_a, &season_id, 2, 1, 1, 0, 4, 0)])
+            .await
+            .unwrap();
+        repo.insert_lines(&[sample_line(&team_b, &season_id, 1, 0, 0, 1, 0, 0)])
+            .await
+            .unwrap();
 
-        let rows = repo.find_latest_lines_for_season(&season_id.to_string()).await.unwrap();
+        let rows = repo
+            .find_latest_lines_for_season(&season_id.to_string())
+            .await
+            .unwrap();
 
         assert_eq!(rows.len(), 2);
         let row_a = rows.iter().find(|r| r.team_id == team_a).unwrap();
@@ -295,15 +316,43 @@ mod tests {
         let season_id = SeasonId::new();
         let team_id = TeamId::new();
 
-        let line = with_counters(sample_line(&team_id, &season_id, 1, 1, 0, 0, 3, 0), [7, 3, 5, 2, 9]);
+        let line = with_counters(
+            sample_line(&team_id, &season_id, 1, 1, 0, 0, 3, 0),
+            [7, 3, 5, 2, 9],
+        );
         repo.insert_lines(&[line]).await.unwrap();
 
-        let row = repo.find_latest_line(&season_id.to_string(), &team_id.to_string()).await.unwrap().unwrap();
-        assert_eq!([row.td_for, row.td_against, row.casualties, row.fouls, row.completions], [7, 3, 5, 2, 9]);
+        let row = repo
+            .find_latest_line(&season_id.to_string(), &team_id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            [
+                row.td_for,
+                row.td_against,
+                row.casualties,
+                row.fouls,
+                row.completions
+            ],
+            [7, 3, 5, 2, 9]
+        );
 
-        let rows = repo.find_latest_lines_for_season(&season_id.to_string()).await.unwrap();
+        let rows = repo
+            .find_latest_lines_for_season(&season_id.to_string())
+            .await
+            .unwrap();
         let row = rows.first().unwrap();
-        assert_eq!([row.td_for, row.td_against, row.casualties, row.fouls, row.completions], [7, 3, 5, 2, 9]);
+        assert_eq!(
+            [
+                row.td_for,
+                row.td_against,
+                row.casualties,
+                row.fouls,
+                row.completions
+            ],
+            [7, 3, 5, 2, 9]
+        );
     }
     // ── delete_lines_for_match — compensation d'une dépublication ────────────
 
@@ -328,8 +377,16 @@ mod tests {
 
         repo.delete_lines_for_match(&mr.to_string()).await.unwrap();
 
-        assert!(repo.find_latest_line(&season_id.to_string(), &home.to_string()).await.unwrap().is_none());
-        assert!(repo.find_latest_line(&season_id.to_string(), &away.to_string()).await.unwrap().is_none());
+        assert!(repo
+            .find_latest_line(&season_id.to_string(), &home.to_string())
+            .await
+            .unwrap()
+            .is_none());
+        assert!(repo
+            .find_latest_line(&season_id.to_string(), &away.to_string())
+            .await
+            .unwrap()
+            .is_none());
     }
 
     /// Le cœur du raisonnement de la compensation : les lignes portant des
@@ -356,7 +413,9 @@ mod tests {
         .await
         .unwrap();
 
-        repo.delete_lines_for_match(&second.to_string()).await.unwrap();
+        repo.delete_lines_for_match(&second.to_string())
+            .await
+            .unwrap();
 
         let latest = repo
             .find_latest_line(&season_id.to_string(), &team.to_string())
@@ -374,14 +433,21 @@ mod tests {
         let repo = PgRankingRepository::new(pool);
         let (season_id, team) = (SeasonId::new(), TeamId::new());
         let mr = MatchReportId::new();
-        repo.insert_lines(&[for_match(sample_line(&team, &season_id, 1, 1, 0, 0, 3, 0), mr)])
+        repo.insert_lines(&[for_match(
+            sample_line(&team, &season_id, 1, 1, 0, 0, 3, 0),
+            mr,
+        )])
+        .await
+        .unwrap();
+
+        repo.delete_lines_for_match(&mr.to_string()).await.unwrap();
+        repo.delete_lines_for_match(&mr.to_string()).await.unwrap();
+
+        assert!(repo
+            .find_latest_line(&season_id.to_string(), &team.to_string())
             .await
-            .unwrap();
-
-        repo.delete_lines_for_match(&mr.to_string()).await.unwrap();
-        repo.delete_lines_for_match(&mr.to_string()).await.unwrap();
-
-        assert!(repo.find_latest_line(&season_id.to_string(), &team.to_string()).await.unwrap().is_none());
+            .unwrap()
+            .is_none());
     }
 
     #[sqlx::test]
@@ -389,16 +455,27 @@ mod tests {
         let repo = PgRankingRepository::new(pool);
         let (season_id, team) = (SeasonId::new(), TeamId::new());
         let (garde, cible) = (MatchReportId::new(), MatchReportId::new());
-        repo.insert_lines(&[for_match(sample_line(&team, &season_id, 1, 1, 0, 0, 3, 0), garde)])
-            .await
-            .unwrap();
-        repo.insert_lines(&[for_match(sample_line(&team, &season_id, 2, 2, 0, 0, 6, 0), cible)])
+        repo.insert_lines(&[for_match(
+            sample_line(&team, &season_id, 1, 1, 0, 0, 3, 0),
+            garde,
+        )])
+        .await
+        .unwrap();
+        repo.insert_lines(&[for_match(
+            sample_line(&team, &season_id, 2, 2, 0, 0, 6, 0),
+            cible,
+        )])
+        .await
+        .unwrap();
+
+        repo.delete_lines_for_match(&cible.to_string())
             .await
             .unwrap();
 
-        repo.delete_lines_for_match(&cible.to_string()).await.unwrap();
-
-        let latest = repo.find_latest_line(&season_id.to_string(), &team.to_string()).await.unwrap();
+        let latest = repo
+            .find_latest_line(&season_id.to_string(), &team.to_string())
+            .await
+            .unwrap();
         assert!(latest.is_some(), "la ligne de l'autre match doit subsister");
     }
 
@@ -436,7 +513,10 @@ mod tests {
         repo.delete_lines_for_match(&mr.to_string()).await.unwrap();
         repo.insert_lines(&pair()).await.unwrap();
 
-        let lines = repo.find_latest_lines_for_season(&season_id.to_string()).await.unwrap();
+        let lines = repo
+            .find_latest_lines_for_season(&season_id.to_string())
+            .await
+            .unwrap();
         assert_eq!(lines.len(), 2, "une ligne par équipe, pas quatre");
     }
 }

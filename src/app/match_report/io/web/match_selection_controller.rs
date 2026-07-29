@@ -5,9 +5,9 @@ use crate::app::match_report::use_cases::{
     create_match_report_use_case, update_match_selection_use_case,
 };
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -56,7 +56,9 @@ fn build_widget_url_prefilled(
 ) -> String {
     format!(
         "{}?show_rounds=true&competition_id={}&season_id={}&round_id={}",
-        AppRoutes::default().competitions.competition_widget(space_id),
+        AppRoutes::default()
+            .competitions
+            .competition_widget(space_id),
         competition_id,
         season_id,
         round_id,
@@ -64,9 +66,7 @@ fn build_widget_url_prefilled(
 }
 
 fn build_team_widget_url(space_id: &str) -> String {
-    AppRoutes::default()
-        .teams
-        .team_selection_widget(space_id)
+    AppRoutes::default().teams.team_selection_widget(space_id)
 }
 
 fn build_team_widget_url_prefilled(
@@ -172,9 +172,7 @@ pub async fn edit_match_report(
 
             MatchSelectionTemplate {
                 app_routes: Default::default(),
-                widget_url: build_widget_url_prefilled(
-                    &space_id, &comp_id, &season_id, &round_id,
-                ),
+                widget_url: build_widget_url_prefilled(&space_id, &comp_id, &season_id, &round_id),
                 team_widget_url: build_team_widget_url_prefilled(
                     &space_id, &season_id, &home_id, &away_id,
                 ),
@@ -186,10 +184,7 @@ pub async fn edit_match_report(
             .into_response()
         }
         MatchReportState::PreMatch(_pm) => {
-            let url = format!(
-                "/app/{}/match-report/{}/step2",
-                space_id, match_report_id
-            );
+            let url = format!("/app/{}/match-report/{}/step2", space_id, match_report_id);
             Redirect::to(&url).into_response()
         }
         MatchReportState::ReadyToPublish(_) => {
@@ -198,12 +193,8 @@ pub async fn edit_match_report(
                 .step5(&space_id, &match_report_id);
             Redirect::to(&url).into_response()
         }
-        MatchReportState::Cancelled(_) => {
-            StatusCode::GONE.into_response()
-        }
-        MatchReportState::Published(_) => {
-            StatusCode::CONFLICT.into_response()
-        }
+        MatchReportState::Cancelled(_) => StatusCode::GONE.into_response(),
+        MatchReportState::Published(_) => StatusCode::CONFLICT.into_response(),
     }
 }
 
@@ -318,10 +309,7 @@ pub async fn update_match_selection(
     .await
     {
         Ok(_mr_id) => {
-            let url = format!(
-                "/app/{}/match-report/{}/step2",
-                space_id, match_report_id
-            );
+            let url = format!("/app/{}/match-report/{}/step2", space_id, match_report_id);
             Redirect::to(&url).into_response()
         }
         Err(update_match_selection_use_case::UpdateMatchSelectionError::SameTeam) => {

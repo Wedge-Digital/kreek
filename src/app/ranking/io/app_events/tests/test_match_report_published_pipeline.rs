@@ -10,8 +10,8 @@ use crate::app::ranking::ports::{
     BonusRuleInfo, EnrolledTeamInfo, IRankingCompetitionPort, RankingRulesInfo,
 };
 use crate::app::shared_kernel::app_events::match_report_app_events::{
-    ActionTypePayload, MatchActionPublishedPayload, MatchReportAppEvent, MatchReportPublishedPayload,
-    PlayerRefPayload,
+    ActionTypePayload, MatchActionPublishedPayload, MatchReportAppEvent,
+    MatchReportPublishedPayload, PlayerRefPayload,
 };
 use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
@@ -21,7 +21,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 fn disabled_bonus() -> BonusRuleInfo {
-    BonusRuleInfo { activated: false, threshold: 0, points: 0 }
+    BonusRuleInfo {
+        activated: false,
+        threshold: 0,
+        points: 0,
+    }
 }
 
 struct FakeCompetitionPort;
@@ -36,7 +40,11 @@ impl IRankingCompetitionPort for FakeCompetitionPort {
             offensive: disabled_bonus(),
             defensive: disabled_bonus(),
             // Bonus agressif activé : +1 point si > 1 sortie infligée.
-            aggressive: BonusRuleInfo { activated: true, threshold: 1, points: 1 },
+            aggressive: BonusRuleInfo {
+                activated: true,
+                threshold: 1,
+                points: 1,
+            },
             tiebreakers: vec![],
         })
     }
@@ -48,9 +56,14 @@ impl IRankingCompetitionPort for FakeCompetitionPort {
     }
 }
 
-fn sample_payload(season_id: &str, home_team_id: &str, away_team_id: &str) -> MatchReportPublishedPayload {
+fn sample_payload(
+    season_id: &str,
+    home_team_id: &str,
+    away_team_id: &str,
+) -> MatchReportPublishedPayload {
     MatchReportPublishedPayload {
-        match_report_id: crate::app::shared_kernel::bloodbowl::ids::MatchReportId::new().to_string(),
+        match_report_id: crate::app::shared_kernel::bloodbowl::ids::MatchReportId::new()
+            .to_string(),
         space_id: "sp1".into(),
         competition_id: crate::app::shared_kernel::bloodbowl::ids::CompetitionId::new().to_string(),
         season_id: season_id.to_string(),
@@ -75,7 +88,9 @@ fn sample_payload(season_id: &str, home_team_id: &str, away_team_id: &str) -> Ma
 fn action(kind: ActionTypePayload) -> MatchActionPublishedPayload {
     MatchActionPublishedPayload {
         turn: 1,
-        player: PlayerRefPayload::Regular { player_id: "p1".into() },
+        player: PlayerRefPayload::Regular {
+            player_id: "p1".into(),
+        },
         action: kind,
     }
 }
@@ -108,7 +123,11 @@ async fn match_report_published_creates_two_ranking_lines(pool: PgPool) {
     let app_event_bus = new_bus();
     let competition_port: Arc<dyn IRankingCompetitionPort> = Arc::new(FakeCompetitionPort);
     let ranking = RankingContext::new(&pool, competition_port.clone());
-    match_report_published_listener::init(&app_event_bus, ranking.repository.clone(), competition_port);
+    match_report_published_listener::init(
+        &app_event_bus,
+        ranking.repository.clone(),
+        competition_port,
+    );
 
     let season_id = SeasonId::new();
     let home = TeamId::new();
@@ -121,12 +140,27 @@ async fn match_report_published_creates_two_ranking_lines(pool: PgPool) {
         let repo = ranking.repository.clone();
         let season = season_id.to_string();
         let home = home.to_string();
-        async move { repo.find_latest_line(&season, &home).await.unwrap().is_some() }
+        async move {
+            repo.find_latest_line(&season, &home)
+                .await
+                .unwrap()
+                .is_some()
+        }
     })
     .await;
 
-    let home_row = ranking.repository.find_latest_line(&season_id.to_string(), &home.to_string()).await.unwrap().unwrap();
-    let away_row = ranking.repository.find_latest_line(&season_id.to_string(), &away.to_string()).await.unwrap().unwrap();
+    let home_row = ranking
+        .repository
+        .find_latest_line(&season_id.to_string(), &home.to_string())
+        .await
+        .unwrap()
+        .unwrap();
+    let away_row = ranking
+        .repository
+        .find_latest_line(&season_id.to_string(), &away.to_string())
+        .await
+        .unwrap()
+        .unwrap();
 
     assert_eq!(home_row.ranking_points, 4); // victoire 2-1 (3) + bonus agressif (1)
     assert_eq!(away_row.ranking_points, 0); // défaite, aucune sortie
@@ -142,7 +176,11 @@ async fn match_report_published_persists_the_tiebreak_counters(pool: PgPool) {
     let app_event_bus = new_bus();
     let competition_port: Arc<dyn IRankingCompetitionPort> = Arc::new(FakeCompetitionPort);
     let ranking = RankingContext::new(&pool, competition_port.clone());
-    match_report_published_listener::init(&app_event_bus, ranking.repository.clone(), competition_port);
+    match_report_published_listener::init(
+        &app_event_bus,
+        ranking.repository.clone(),
+        competition_port,
+    );
 
     let season_id = SeasonId::new();
     let home = TeamId::new();
@@ -158,8 +196,11 @@ async fn match_report_published_persists_the_tiebreak_counters(pool: PgPool) {
     ]
     .concat();
     // away : 1 agression, 4 passes, aucune sortie.
-    payload.away_actions =
-        [actions(ActionTypePayload::Agression, 1), actions(ActionTypePayload::Passe, 4)].concat();
+    payload.away_actions = [
+        actions(ActionTypePayload::Agression, 1),
+        actions(ActionTypePayload::Passe, 4),
+    ]
+    .concat();
 
     let _ = app_event_bus.send(MatchReportAppEvent::MatchReportPublished(payload).to_enveloppe());
 
@@ -167,20 +208,47 @@ async fn match_report_published_persists_the_tiebreak_counters(pool: PgPool) {
         let repo = ranking.repository.clone();
         let season = season_id.to_string();
         let away = away.to_string();
-        async move { repo.find_latest_line(&season, &away).await.unwrap().is_some() }
+        async move {
+            repo.find_latest_line(&season, &away)
+                .await
+                .unwrap()
+                .is_some()
+        }
     })
     .await;
 
-    let home_row = ranking.repository.find_latest_line(&season_id.to_string(), &home.to_string()).await.unwrap().unwrap();
-    let away_row = ranking.repository.find_latest_line(&season_id.to_string(), &away.to_string()).await.unwrap().unwrap();
+    let home_row = ranking
+        .repository
+        .find_latest_line(&season_id.to_string(), &home.to_string())
+        .await
+        .unwrap()
+        .unwrap();
+    let away_row = ranking
+        .repository
+        .find_latest_line(&season_id.to_string(), &away.to_string())
+        .await
+        .unwrap()
+        .unwrap();
 
     // Match 2-1 : les TD se croisent, les trois autres compteurs restent par équipe.
     assert_eq!(
-        [home_row.td_for, home_row.td_against, home_row.casualties, home_row.fouls, home_row.completions],
+        [
+            home_row.td_for,
+            home_row.td_against,
+            home_row.casualties,
+            home_row.fouls,
+            home_row.completions
+        ],
         [2, 1, 2, 3, 1]
     );
     assert_eq!(
-        [away_row.td_for, away_row.td_against, away_row.casualties, away_row.fouls, away_row.completions],
+        [
+            away_row.td_for,
+            away_row.td_against,
+            away_row.casualties,
+            away_row.fouls,
+            away_row.completions
+        ],
         [1, 2, 0, 1, 4]
     );
 }

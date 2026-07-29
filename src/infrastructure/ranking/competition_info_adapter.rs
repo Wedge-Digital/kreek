@@ -1,9 +1,9 @@
-use crate::app::competitions::domain::group_repository_port::IGroupRepository;
-use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
-use crate::app::competitions::ports::ITeamInfoPort;
 use crate::app::competitions::domain::competition_rules::{
     AggressiveBonus, DefensiveBonus, OffensiveBonus, TiebreakConfig,
 };
+use crate::app::competitions::domain::group_repository_port::IGroupRepository;
+use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
+use crate::app::competitions::ports::ITeamInfoPort;
 use crate::app::ranking::ports::{
     BonusRuleInfo, EnrolledTeamInfo, IRankingCompetitionPort, RankingGroupInfo, RankingRulesInfo,
     TiebreakSettingInfo,
@@ -24,7 +24,11 @@ impl RankingCompetitionAdapter {
         team_info_port: Arc<dyn ITeamInfoPort>,
         group_repo: Arc<dyn IGroupRepository>,
     ) -> Self {
-        Self { season_repo, team_info_port, group_repo }
+        Self {
+            season_repo,
+            team_info_port,
+            group_repo,
+        }
     }
 }
 
@@ -50,7 +54,10 @@ impl IRankingCompetitionPort for RankingCompetitionAdapter {
             .await
             .unwrap_or_default()
             .into_iter()
-            .map(|t| EnrolledTeamInfo { team_id: t.team_id, team_name: t.team_name })
+            .map(|t| EnrolledTeamInfo {
+                team_id: t.team_id,
+                team_name: t.team_name,
+            })
             .collect()
     }
 

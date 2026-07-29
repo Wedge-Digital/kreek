@@ -1,7 +1,7 @@
 use crate::app::shared_kernel::app_events::competitions_app_events::CompetitionsAppEvent;
-use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, EventId, SpaceId};
-use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
 use crate::app::shared_kernel::bloodbowl::competition_name::CompetitionName;
+use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, EventId, SpaceId};
 use crate::common::event_envelope::EventEnvelope;
 use crate::common::services::event_bus::event_tags::{EventTag, EventTagName};
 use serde::{Deserialize, Serialize};
@@ -131,12 +131,10 @@ impl CompetitionsDomainEvent {
                 away_team_id: away_team_id.clone(),
                 space_id: space_id.clone(),
             }),
-            Self::PairingDeleted { pairing_id, .. } => {
-                Some(CompetitionsAppEvent::PairingDeleted {
-                    event_id: EventId::new(),
-                    pairing_id: pairing_id.clone(),
-                })
-            }
+            Self::PairingDeleted { pairing_id, .. } => Some(CompetitionsAppEvent::PairingDeleted {
+                event_id: EventId::new(),
+                pairing_id: pairing_id.clone(),
+            }),
             _ => None,
         }
     }
