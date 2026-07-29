@@ -1,5 +1,5 @@
 use crate::app::teams::domain::team::{GamePhase, TeamDomainEvent};
-use crate::app::teams::ports::IPhaseDraftRepository;
+use crate::app::teams::ports::IPhaseBasketRepository;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
 
@@ -19,15 +19,15 @@ fn ends_in_ready_to_play(event: &TeamDomainEvent) -> bool {
     )
 }
 
-/// Purge les deux brouillons dès que l'équipe repasse « prête à jouer ».
+/// Purge les deux paniers dès que l'équipe repasse « prête à jouer ».
 ///
-/// Un brouillon ne survit donc jamais à un tour de séquence : le coach qui
+/// Un panier ne survit donc jamais à un tour de séquence : le coach qui
 /// revient trouve une page vierge, jamais des lignes fantômes d'un après-match
 /// précédent.
 ///
 /// Listener **intra-BC** : la signature `init(event_bus: ...)` est la convention
 /// que `check-arch` (axe 5) utilise pour le distinguer d'un listener cross-BC.
-pub fn init(event_bus: &EventBus, drafts: Arc<dyn IPhaseDraftRepository>) {
+pub fn init(event_bus: &EventBus, baskets: Arc<dyn IPhaseBasketRepository>) {
     let mut rx = event_bus.subscribe();
     tokio::spawn(async move {
         loop {
@@ -43,15 +43,15 @@ pub fn init(event_bus: &EventBus, drafts: Arc<dyn IPhaseDraftRepository>) {
                     }
                     let team_id = envelope.emitter.clone();
                     for phase in [GamePhase::Recruitment, GamePhase::Dismissals] {
-                        if let Err(e) = drafts.delete(&team_id, &phase).await {
+                        if let Err(e) = baskets.delete(&team_id, &phase).await {
                             tracing::error!(
-                                "phase_draft_purge_listener: purge {phase:?} de {team_id} : {e}"
+                                "phase_basket_purge_listener: purge {phase:?} de {team_id} : {e}"
                             );
                         }
                     }
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
-                    tracing::warn!("phase_draft_purge_listener: lagged by {n}");
+                    tracing::warn!("phase_basket_purge_listener: lagged by {n}");
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
             }
@@ -64,7 +64,7 @@ mod tests {
     use super::*;
     use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, SeasonId};
     use crate::app::teams::domain::value_objects::{IncidentType, Kpo};
-    use crate::app::teams::ports::PhaseDraftState;
+    use crate::app::teams::ports::PhaseBasketState;
 
     #[test]
     fn les_quatre_entrees_en_ready_to_play_purgent() {
@@ -92,7 +92,7 @@ mod tests {
     }
 
     /// Valider le recrutement fait passer en phase de renvois, pas en
-    /// « prête à jouer » : le brouillon de renvois qui vient d'être ouvert ne
+    /// « prête à jouer » : le panier de renvois qui vient d'être ouvert ne
     /// doit surtout pas être purgé.
     #[test]
     fn valider_le_recrutement_ne_purge_pas() {
@@ -112,8 +112,8 @@ mod tests {
             .ok()
     }
 
-    fn brouillon(team_id: &str, phase: GamePhase) -> PhaseDraftState {
-        PhaseDraftState {
+    fn panier(team_id: &str, phase: GamePhase) -> PhaseBasketState {
+        PhaseBasketState {
             team_id: team_id.to_string(),
             space_id: "space-1".to_string(),
             phase,
@@ -122,25 +122,25 @@ mod tests {
         }
     }
 
-    /// L'effet utile de la carte : un brouillon ne survit pas à un tour de
+    /// L'effet utile de la carte : un panier ne survit pas à un tour de
     /// séquence. Le coach qui revient trouve une page vierge, jamais des lignes
     /// fantômes de l'après-match précédent.
     #[tokio::test]
-    async fn une_entree_en_ready_to_play_purge_les_deux_brouillons() {
+    async fn une_entree_en_ready_to_play_purge_les_deux_paniers() {
         let Some(pool) = test_pool().await else {
             return;
         };
-        let repo: Arc<dyn IPhaseDraftRepository> = Arc::new(
-            crate::app::teams::io::repository::phase_draft_repository::PhaseDraftRepository::new(
+        let repo: Arc<dyn IPhaseBasketRepository> = Arc::new(
+            crate::app::teams::io::repository::phase_basket_repository::PhaseBasketRepository::new(
                 pool.clone(),
             ),
         );
         let team_id = ulid::Ulid::new().to_string();
 
-        repo.save(&brouillon(&team_id, GamePhase::Recruitment), 0)
+        repo.save(&panier(&team_id, GamePhase::Recruitment), 0)
             .await
             .unwrap();
-        repo.save(&brouillon(&team_id, GamePhase::Dismissals), 0)
+        repo.save(&panier(&team_id, GamePhase::Dismissals), 0)
             .await
             .unwrap();
 
@@ -173,7 +173,7 @@ mod tests {
                 .await
                 .unwrap()
                 .is_none(),
-            "les deux brouillons partent, pas seulement celui de la phase quittée"
+            "les deux paniers partent, pas seulement celui de la phase quittée"
         );
     }
 }

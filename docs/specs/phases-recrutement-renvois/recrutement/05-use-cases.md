@@ -30,46 +30,46 @@ transaction.
 
 `append` reste tel quel pour les mutations unitaires existantes.
 
-### La suppression du brouillon n'a pas besoin d'être dans la transaction
+### La suppression du panier n'a pas besoin d'être dans la transaction
 
 Elle relève d'un autre repository ; l'y inclure obligerait à faire porter la
 transaction par le use case, donc à exposer des types `sqlx` dans `ports.rs`.
 
 **Ce n'est pas nécessaire, parce que l'agrégat se protège déjà.** Le dernier événement
 du lot est `RecruitmentPhaseValidated` : l'équipe passe en `Dismissals`. Si la
-suppression du brouillon échoue et que le coach revalide,
+suppression du panier échoue et que le coach revalide,
 `validate_recruitment_phase()` appelle `expect_phase(GamePhase::Recruitment)` et
 **refuse** — la double application est impossible.
 
-Un brouillon résiduel est alors inatteignable (la page refuse hors de sa phase) et
+Un panier résiduel est alors inatteignable (la page refuse hors de sa phase) et
 sera purgé à l'entrée suivante en `ReadyToPlay`, par la décision D6.
 
 ## 2. Domain service d'hydratation
 
 ```rust
-// use_cases/draft_hydration_service.rs
-pub async fn hydrate_recruitment_draft(
+// use_cases/basket_hydration_service.rs
+pub async fn hydrate_recruitment_basket(
     team: &Team,
-    draft_repo: &dyn IPhaseDraftRepository,
+    basket_repo: &dyn IPhaseBasketRepository,
     catalog:    &dyn IRosterCatalogPort,
     squad:      &dyn ISquadPort,
-) -> Result<RecruitmentDraft, HydrationError>;
+) -> Result<RecruitmentBasket, HydrationError>;
 ```
 
 Charge les lignes persistées, le catalogue du roster et l'effectif courant, puis
 construit l'agrégat. C'est **le seul endroit** où les DTOs de port sont manipulés ;
 au-delà, tout est domaine.
 
-Appelé par les quatre use cases de la page. Un brouillon absent n'est pas une erreur :
-on hydrate un brouillon vide.
+Appelé par les quatre use cases de la page. Un panier absent n'est pas une erreur :
+on hydrate un panier vide.
 
 ## 3. Use cases de mutation
 
 Les trois ont la même forme. Exemple :
 
 ```rust
-// use_cases/add_draft_player_use_case.rs
-pub enum AddDraftPlayerError {
+// use_cases/add_basket_player_use_case.rs
+pub enum AddBasketPlayerError {
     TeamNotFound,
     WrongPhase,
     ConcurrentWrite,
@@ -78,27 +78,27 @@ pub enum AddDraftPlayerError {
 }
 
 pub async fn execute(
-    cmd:        AddDraftPlayerCommand,
+    cmd:        AddBasketPlayerCommand,
     team_repo:  &dyn ITeamRepository,
-    draft_repo: &dyn IPhaseDraftRepository,
+    basket_repo: &dyn IPhaseBasketRepository,
     catalog:    &dyn IRosterCatalogPort,
     squad:      &dyn ISquadPort,
-) -> Result<RecruitmentDraft, AddDraftPlayerError>
+) -> Result<RecruitmentBasket, AddBasketPlayerError>
 ```
 
 Orchestration :
 
 1. charger `Team`, vérifier la phase `Recruitment`
-2. hydrater le brouillon
-3. `draft.add_player(cmd.roster_line_id)?` — **toutes les gardes sont ici**, pures
-4. `draft_repo.save(&draft, cmd.expected_version)?`
-5. retourner le brouillon, que le handler transforme en VM
+2. hydrater le panier
+3. `basket.add_player(cmd.roster_line_id)?` — **toutes les gardes sont ici**, pures
+4. `basket_repo.save(&basket, cmd.expected_version)?`
+5. retourner le panier, que le handler transforme en VM
 
 Le use case ne décide de rien : il charge, appelle, persiste. Les quotas, les limites
 croisées, le plafond de 16 et la trésorerie sont évalués par l'agrégat.
 
-**`remove_draft_line_use_case` est partagé** avec les renvois : retirer une ligne d'un
-brouillon par son identifiant est la même opération, quelle que soit la phase.
+**`remove_basket_line_use_case` est partagé** avec les renvois : retirer une ligne d'un
+panier par son identifiant est la même opération, quelle que soit la phase.
 
 ## 4. Le use case de validation
 
@@ -109,7 +109,7 @@ pub enum ValidateRecruitmentPhaseError {
     TeamNotFound,
     WrongPhase,
     ConcurrentWrite,
-    DraftNoLongerValid(Vec<RejectedLine>),   // refus en bloc — décision D5
+    BasketNoLongerValid(Vec<RejectedLine>),   // refus en bloc — décision D5
     Domain(DomainError),
     Repository(RepositoryError),
 }
@@ -118,16 +118,16 @@ pub enum ValidateRecruitmentPhaseError {
 Orchestration :
 
 1. charger `Team`, vérifier la phase
-2. hydrater le brouillon **contre l'état du jour** — prix, effectif et trésorerie
-   rechargés, jamais ceux de la création du brouillon
-3. `draft.validate_all()` → `Result<Vec<AppliedLine>, Vec<RejectedLine>>`
+2. hydrater le panier **contre l'état du jour** — prix, effectif et trésorerie
+   rechargés, jamais ceux de la création du panier
+3. `basket.validate_all()` → `Result<Vec<AppliedLine>, Vec<RejectedLine>>`
    **Refus en bloc** : une seule ligne invalide et rien n'est appliqué
 4. construire le lot d'événements :
    - un `PlayerRecruited` **par joueur** — pas d'événement de lot
    - un `StaffBought` par ligne de staff
    - `RecruitmentPhaseValidated` en dernier
 5. `team_repo.append_batch(&team_id, &events, team.version)`
-6. `draft_repo.delete(&team_id, Phase::Recruitment)` — hors transaction, cf. §1
+6. `basket_repo.delete(&team_id, Phase::Recruitment)` — hors transaction, cf. §1
 7. les app events partent par le publisher, à partir des domain events du lot
 
 ### Un événement par ligne, pas un événement de lot
@@ -138,7 +138,7 @@ obligerait à déplier son contenu à chaque rejeu et à chaque projection.
 
 ### L'ordre d'application n'a pas d'importance
 
-La trésorerie est vérifiée **en total** par `draft.validate_all()` avant toute
+La trésorerie est vérifiée **en total** par `basket.validate_all()` avant toute
 émission. Aucune ligne ne peut donc échouer en cours de lot par manque d'argent, et
 l'ordre est libre.
 
@@ -181,7 +181,7 @@ plutôt qu'à dupliquer.**
 | `TeamNotFound` | 404 | — |
 | `WrongPhase` | 422 | message de phase |
 | `ConcurrentWrite` | 200 | catalogue reconstruit + bandeau de resynchronisation |
-| `DraftNoLongerValid` | 422 | lignes fautives nommées |
+| `BasketNoLongerValid` | 422 | lignes fautives nommées |
 | `Domain(_)` | 422 | message domaine |
 | `Repository(_)` | 500 | — |
 
@@ -191,8 +191,8 @@ pas appliqué mais l'utilisateur reçoit une page cohérente.
 ## 8. Règles métier identifiées à cette étape
 
 - **La garde de phase de l'agrégat rend la double application impossible**, ce qui
-  autorise à sortir la suppression du brouillon de la transaction.
-- **Le brouillon est validé contre l'état du jour**, pas celui de sa constitution.
+  autorise à sortir la suppression du panier de la transaction.
+- **Le panier est validé contre l'état du jour**, pas celui de sa constitution.
 - **La trésorerie n'est vérifiée qu'en total**, une seule fois, avant émission.
 - **`teams` ignore les numéros de maillot** et doit continuer de les ignorer.
 

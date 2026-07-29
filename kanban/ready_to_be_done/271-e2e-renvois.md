@@ -26,7 +26,7 @@ et l'absence totale de mouvement de trésorerie de bout en bout.
 | 7 | Le grand livre de trésorerie ne gagne **aucune ligne** |
 | 8 | Après validation, l'équipe est prête à jouer et la valeur d'équipe **exclut les renvoyés** |
 | 9 | Le numéro de maillot libéré est réattribué au recrutement de la séquence suivante |
-| 10 | Le brouillon survit à un aller-retour sur la fiche équipe |
+| 10 | Le panier survit à un aller-retour sur la fiche équipe |
 | 11 | Mobile 390px : panier fixe repliable, avertissement en version courte |
 
 ### Les scénarios qui portent le plus
@@ -52,7 +52,7 @@ qu'au recrutement.
 
 ## Ce qui n'est pas testé ici
 
-La purge des brouillons (carte 257) est déclenchée par les quatre entrées en
+La purge des paniers (carte 257) est déclenchée par les quatre entrées en
 `ReadyToPlay` et concerne les deux phases : son test appartient à sa propre carte.
 
 ## Checklist

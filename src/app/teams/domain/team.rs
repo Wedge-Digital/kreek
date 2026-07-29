@@ -1,5 +1,5 @@
 use crate::app::shared_kernel::bloodbowl::ids::{
-    CompetitionId, MatchReportId, PlayerId, PositionId, RosterId, SeasonId,
+    CompetitionId, MatchReportId, PlayerId, RosterId, SeasonId,
 };
 use crate::app::shared_kernel::bloodbowl::staff_counts::{
     ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
@@ -7,6 +7,7 @@ use crate::app::shared_kernel::bloodbowl::staff_counts::{
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::teams::domain::error::DomainError;
+use crate::app::teams::domain::recruitment_basket::RosterLineId;
 use crate::app::teams::domain::treasury::{MovementReason, TreasuryMovement};
 use crate::app::teams::domain::value_objects::{
     DedicatedFans, IncidentType, Kpo, MatchResult, RosterName, SppGain, StaffQuantity, StaffType,
@@ -102,8 +103,13 @@ pub enum TeamDomainEvent {
         treasury_refund: Kpo,
     },
     PlayerImprovementPhaseValidated,
+    /// `roster_line` est l'identifiant de la ligne de roster —
+    /// `DEMO_GRANIT__PIETAILLE` —, pas un ULID. C'est ce que `players` consomme
+    /// pour créer le joueur : compétences de base, valeur de départ et nom de
+    /// poste s'en déduisent. Le champ était typé `PositionId`, c'est-à-dire un
+    /// `SUlid`, qui n'aurait pas pu porter cette valeur.
     PlayerRecruited {
-        position_id: PositionId,
+        roster_line: RosterLineId,
         base_value_kpo: Kpo,
         cost_kpo: Kpo,
     },
@@ -742,15 +748,15 @@ impl Team {
     ///
     /// Ni le plafond de 16, ni les quotas de poste, ni les limites croisées ne
     /// sont vérifiés ici : `Team` ne connaît pas la composition de son effectif.
-    /// Ces gardes vivent dans le brouillon de recrutement (carte 262), qui le
+    /// Ces gardes vivent dans le panier de recrutement (carte 262), qui le
     /// porte hydraté.
     ///
-    /// Le contrôle de trésorerie fait doublon avec celui du brouillon, qui
+    /// Le contrôle de trésorerie fait doublon avec celui du panier, qui
     /// raisonne en total — mais il protège l'invariant propre à l'agrégat : sa
     /// trésorerie ne devient jamais négative. Gardé comme filet.
     pub fn recruit_player(
         &self,
-        position_id: PositionId,
+        roster_line: RosterLineId,
         base_value_kpo: Kpo,
         cost_kpo: Kpo,
     ) -> Result<TeamDomainEvent, DomainError> {
@@ -759,7 +765,7 @@ impl Team {
             return Err(DomainError::InsufficientTreasury);
         }
         Ok(TeamDomainEvent::PlayerRecruited {
-            position_id,
+            roster_line,
             base_value_kpo,
             cost_kpo,
         })
@@ -767,7 +773,7 @@ impl Team {
 
     /// Renvoie un joueur. Garde : la phase, et elle seule.
     ///
-    /// Le plancher des onze joueurs éligibles est vérifié par le brouillon de
+    /// Le plancher des onze joueurs éligibles est vérifié par le panier de
     /// renvois (carte 267), qui connaît les disponibilités. Un renvoi ne
     /// rembourse rien, donc aucun effet sur la trésorerie.
     pub fn dismiss_player(
@@ -790,7 +796,7 @@ impl Team {
     ) -> Result<TeamDomainEvent, DomainError> {
         self.expect_phase(GamePhase::Recruitment)?;
         // Le facteur fans est le seul non achetable ici. Le droit du roster à
-        // tel ou tel staff (`allowed_staff`) est vérifié par le brouillon, qui
+        // tel ou tel staff (`allowed_staff`) est vérifié par le panier, qui
         // connaît le catalogue — `Team` ne le connaît pas.
         if matches!(staff_type, StaffType::FansFactor) {
             return Err(DomainError::StaffTypeNotBuyable);
@@ -1022,12 +1028,12 @@ mod tests {
     /// `TeamValueRecomputed`.
     #[test]
     fn player_recruited_debite_la_tresorerie_sans_toucher_a_la_tv() {
-        let pos_id = PositionId::try_new("00000000000000000000000009").unwrap();
+        let pos_id = RosterLineId("DEMO_GRANIT__PIETAILLE".to_string());
         let events = vec![
             created_event(),
             enrolled_event(),
             TeamDomainEvent::PlayerRecruited {
-                position_id: pos_id,
+                roster_line: pos_id.clone(),
                 base_value_kpo: Kpo(95),
                 cost_kpo: Kpo(95),
             },
@@ -1042,7 +1048,7 @@ mod tests {
     /// — jamais la somme de ce qui a précédé.
     #[test]
     fn le_rejeu_donne_la_tv_du_dernier_recalcul() {
-        let pos_id = PositionId::try_new("00000000000000000000000009").unwrap();
+        let pos_id = RosterLineId("DEMO_GRANIT__PIETAILLE".to_string());
         let events = vec![
             created_event(),
             enrolled_event(),
@@ -1053,7 +1059,7 @@ mod tests {
                 cost_kpo: Kpo(50),
             },
             TeamDomainEvent::PlayerRecruited {
-                position_id: pos_id,
+                roster_line: pos_id.clone(),
                 base_value_kpo: Kpo(95),
                 cost_kpo: Kpo(95),
             },
@@ -1685,8 +1691,8 @@ mod tests {
 
     // ── Recruter et licencier (carte 261) ────────────────────────────────
 
-    fn position() -> PositionId {
-        PositionId::try_new("00000000000000000000000009").unwrap()
+    fn position() -> RosterLineId {
+        RosterLineId("DEMO_GRANIT__PIETAILLE".to_string())
     }
 
     /// Test 18 de `recrutement/06-domaine.md`.

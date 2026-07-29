@@ -20,7 +20,7 @@ pub struct SquadMemberDto {
 }
 
 /// Consultation de l'effectif. Rend l'effectif **entier**, drapeau de
-/// disponibilité compris, et laisse l'appelant filtrer : le brouillon de
+/// disponibilité compris, et laisse l'appelant filtrer : le panier de
 /// recrutement compte les quotas par poste sur tout l'effectif, quand le calcul
 /// de valeur d'équipe ne somme que les disponibles. Un port qui filtrerait à la
 /// source servirait l'un et trahirait l'autre.
@@ -97,9 +97,9 @@ pub trait IRosterCatalogPort: Send + Sync {
     fn find_catalog(&self, roster_id: &str) -> Option<RosterCatalogDto>;
 }
 
-// ── Brouillon de phase ────────────────────────────────────────────────────────
+// ── Panier de phase ────────────────────────────────────────────────────────
 
-/// La moitié **persistée** d'un brouillon : les lignes accumulées et leur
+/// La moitié **persistée** d'un panier : les lignes accumulées et leur
 /// version. Le use case la complète avec le catalogue du roster, l'effectif et
 /// la trésorerie pour reconstituer l'agrégat (cartes 262 et 267).
 ///
@@ -107,7 +107,7 @@ pub trait IRosterCatalogPort: Send + Sync {
 /// appartient à ces agrégats. Le repository ne connaît qu'« une équipe, une
 /// phase, un état, une version ».
 #[derive(Debug, Clone)]
-pub struct PhaseDraftState {
+pub struct PhaseBasketState {
     pub team_id: String,
     pub space_id: String,
     pub phase: GamePhase,
@@ -115,33 +115,33 @@ pub struct PhaseDraftState {
     pub version: u32,
 }
 
-/// Le nom de phase stocké en base. Seules deux phases ont un brouillon ; une
+/// Le nom de phase stocké en base. Seules deux phases ont un panier ; une
 /// autre valeur est un bug d'appelant, pas un cas nominal — d'où l'erreur
 /// explicite plutôt qu'un silence.
-pub fn draft_phase_key(phase: &GamePhase) -> Result<&'static str, RepositoryError> {
+pub fn basket_phase_key(phase: &GamePhase) -> Result<&'static str, RepositoryError> {
     match phase {
         GamePhase::Recruitment => Ok("Recruitment"),
         GamePhase::Dismissals => Ok("Dismissals"),
-        autre => Err(RepositoryError::PhaseWithoutDraft(autre.clone())),
+        autre => Err(RepositoryError::PhaseWithoutBasket(autre.clone())),
     }
 }
 
 #[async_trait]
-pub trait IPhaseDraftRepository: Send + Sync {
+pub trait IPhaseBasketRepository: Send + Sync {
     /// Le panier persisté d'une équipe pour cette phase, ou `None` si le coach
     /// n'a encore rien mis dedans.
     async fn load(
         &self,
         team_id: &str,
         phase: &GamePhase,
-    ) -> Result<Option<PhaseDraftState>, RepositoryError>;
+    ) -> Result<Option<PhaseBasketState>, RepositoryError>;
 
     /// Écriture gardée par la version. `expected_version` à zéro crée la ligne ;
     /// au-delà, elle met à jour. Les deux échouent en `ConcurrentWrite` si un
     /// autre onglet est passé avant. Retourne la nouvelle version.
     async fn save(
         &self,
-        draft: &PhaseDraftState,
+        basket: &PhaseBasketState,
         expected_version: u32,
     ) -> Result<u32, RepositoryError>;
 
@@ -154,8 +154,8 @@ pub enum RepositoryError {
     Serialization(serde_json::Error),
     Deserialization(serde_json::Error),
     Database(sqlx::Error),
-    /// Une phase sans brouillon possible a été passée à `IPhaseDraftRepository`.
-    PhaseWithoutDraft(GamePhase),
+    /// Une phase sans panier possible a été passée à `IPhaseBasketRepository`.
+    PhaseWithoutBasket(GamePhase),
 }
 
 impl std::fmt::Display for RepositoryError {
@@ -165,8 +165,8 @@ impl std::fmt::Display for RepositoryError {
             Self::Serialization(e) => write!(f, "erreur de sérialisation : {e}"),
             Self::Deserialization(e) => write!(f, "erreur de désérialisation : {e}"),
             Self::Database(e) => write!(f, "erreur base de données : {e}"),
-            Self::PhaseWithoutDraft(p) => {
-                write!(f, "aucun brouillon n'existe pour la phase {p:?}")
+            Self::PhaseWithoutBasket(p) => {
+                write!(f, "aucun panier n'existe pour la phase {p:?}")
             }
         }
     }

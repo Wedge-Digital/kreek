@@ -8,7 +8,7 @@ templates sont décrits dans `recrutement/07-integration.md`. Ce document consig
 
 ## 1. Persistance
 
-**Aucune migration en propre.** La table `teams__phase_drafts` est partagée,
+**Aucune migration en propre.** La table `teams__phase_baskets` est partagée,
 discriminée par `phase = 'Dismissals'` ; la colonne `players_proj.membership` est
 créée par la migration commune.
 
@@ -80,7 +80,7 @@ deuxième barrière.
 | `templates/dismissals.html` | page d'assemblage |
 | `templates/widgets/dismissals-roster.html` | `DismissalsRosterVm` — trois états par ligne |
 | `templates/widgets/dismissals-cart.html` | `DismissalsCartVm` |
-| `templates/widgets/draft-error.html` | **partagé** avec le recrutement |
+| `templates/widgets/basket-error.html` | **partagé** avec le recrutement |
 
 ## 5. Tests e2e prévus
 
@@ -98,7 +98,7 @@ Fichier `tests/e2e/test_dismissals_phase.py`, à déclarer dans `tests/impact-ma
 | 7 | Le grand livre de trésorerie ne gagne **aucune ligne** |
 | 8 | Après validation, l'équipe est prête à jouer et la valeur d'équipe **exclut les renvoyés** |
 | 9 | Le numéro de maillot libéré est réattribué au recrutement de la séquence suivante |
-| 10 | Le brouillon survit à un aller-retour sur la fiche équipe |
+| 10 | Le panier survit à un aller-retour sur la fiche équipe |
 | 11 | Mobile 390px : panier fixe repliable, avertissement en version courte |
 
 Les scénarios 4 et 5 couvrent le plancher, seule vraie subtilité de la page. Le 8 est
@@ -110,6 +110,6 @@ que « un renvoi ne rembourse rien » tient de bout en bout, du domaine au grand
 
 ## 6. Ce qui n'est pas testé ici
 
-La purge des brouillons (D6) est déclenchée par les quatre entrées en `ReadyToPlay` et
+La purge des paniers (D6) est déclenchée par les quatre entrées en `ReadyToPlay` et
 concerne les deux phases. Son test appartient à la carte qui l'implémente, pas à l'une
 des deux pages.

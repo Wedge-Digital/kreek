@@ -344,7 +344,7 @@ impl ITeamRepository for TeamRepository {
 
     /// Applique N événements **atomiquement** : soit tout est écrit, soit rien.
     ///
-    /// La validation d'une phase applique tout le brouillon d'un coup — N
+    /// La validation d'une phase applique tout le panier d'un coup — N
     /// recrutements ou N renvois, plus la transition de phase. En N appels à
     /// `append`, une panne au milieu laisserait l'équipe à moitié servie et sa
     /// phase non validée.

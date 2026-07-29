@@ -2,9 +2,9 @@
 
 **Entrée** : `03-back.md` validé.
 
-## Un bénéfice du brouillon-agrégat
+## Un bénéfice du panier-agrégat
 
-Comme le brouillon **porte** ses données de référence après hydratation, les VMs se
+Comme le panier **porte** ses données de référence après hydratation, les VMs se
 construisent à partir de **types domaine**, jamais de DTOs de port. Tous les
 constructeurs sont donc des `from_domain()` co-localisés dans `view_models.rs` :
 **aucun `builders.rs` n'est nécessaire** sur cette page.
@@ -47,8 +47,8 @@ pub struct ValidatePhaseBody {
 
 | DTO | Émis par | Consommé par |
 |---|---|---|
-| `AddPlayerBody` | le navigateur (`hx-vals` du bouton « Recruter ») | handler `add_draft_player` |
-| `AddStaffBody` | le navigateur (`hx-vals` du bouton « Acheter ») | handler `add_draft_staff` |
+| `AddPlayerBody` | le navigateur (`hx-vals` du bouton « Recruter ») | handler `add_basket_player` |
+| `AddStaffBody` | le navigateur (`hx-vals` du bouton « Acheter ») | handler `add_basket_staff` |
 | `RemoveLineBody` | le navigateur (`hx-vals` du bouton `×`) | handlers de retrait |
 | `ValidatePhaseBody` | le navigateur (bouton de validation) | handler `validate_recruitment_phase` |
 
@@ -58,52 +58,52 @@ Aucun type primitif nu — smart constructors appelés par le handler.
 
 ```rust
 // use_cases/commands.rs
-pub struct AddDraftPlayerCommand {
+pub struct AddBasketPlayerCommand {
     pub team_id:          TeamId,
     pub space_id:         SpaceId,
     pub roster_line_id:   RosterLineId,
-    pub expected_version: DraftVersion,
+    pub expected_version: BasketVersion,
 }
 
-pub struct AddDraftStaffCommand {
+pub struct AddBasketStaffCommand {
     pub team_id:          TeamId,
     pub space_id:         SpaceId,
     pub staff_type:       StaffType,
-    pub expected_version: DraftVersion,
+    pub expected_version: BasketVersion,
 }
 
-pub struct RemoveDraftLineCommand {
+pub struct RemoveBasketLineCommand {
     pub team_id:          TeamId,
     pub space_id:         SpaceId,
-    pub line_id:          DraftLineId,
-    pub expected_version: DraftVersion,
+    pub line_id:          BasketLineId,
+    pub expected_version: BasketVersion,
 }
 
 pub struct ValidateRecruitmentPhaseCommand {
     pub team_id:          TeamId,
-    pub expected_version: DraftVersion,
+    pub expected_version: BasketVersion,
 }
 ```
 
 | Commande | Émise par | Consommée par |
 |---|---|---|
-| `AddDraftPlayerCommand` | handler | `add_draft_player_use_case` |
-| `AddDraftStaffCommand` | handler | `add_draft_staff_use_case` |
-| `RemoveDraftLineCommand` | handler | `remove_draft_line_use_case` |
+| `AddBasketPlayerCommand` | handler | `add_basket_player_use_case` |
+| `AddBasketStaffCommand` | handler | `add_basket_staff_use_case` |
+| `RemoveBasketLineCommand` | handler | `remove_basket_line_use_case` |
 | `ValidateRecruitmentPhaseCommand` | handler | `validate_recruitment_phase_use_case` |
 
 ## 3. Value objects nouveaux
 
 ```rust
 // domain/value_objects.rs
-pub struct DraftLineId(pub String);            // ULID, généré à l'ajout
-pub struct DraftVersion(pub u32);
+pub struct BasketLineId(pub String);            // ULID, généré à l'ajout
+pub struct BasketVersion(pub u32);
 pub struct Jersey(u8);                         // smart constructor : 1..=16
 pub struct RosterLineId(String);               // smart constructor : non vide
 ```
 
 `Jersey` a son smart constructor parce que le numéro est attribué à l'application du
-lot et doit être borné ; `DraftLineId` est un identifiant technique, sans invariant.
+lot et doit être borné ; `BasketLineId` est un identifiant technique, sans invariant.
 
 ## 4. DTOs de port
 
@@ -143,7 +143,7 @@ pub struct StaffPriceDto {
 }
 
 // teams/ports.rs — vers players (port étendu, cf. carte 250)
-pub struct PlayerValueDto {
+pub struct SquadMemberDto {
     pub player_id:                String,
     pub roster_line_id:           String,
     pub value_kpo:                u32,
@@ -153,8 +153,8 @@ pub struct PlayerValueDto {
 
 | DTO | Émis par | Consommé par |
 |---|---|---|
-| `RosterCatalogDto` | `roster_catalog_adapter` (infrastructure) | `draft_hydration_service` **uniquement** |
-| `PlayerValueDto` | `player_value_adapter` (infrastructure) | `draft_hydration_service` **uniquement** |
+| `RosterCatalogDto` | `roster_catalog_adapter` (infrastructure) | `basket_hydration_service` **uniquement** |
+| `SquadMemberDto` | `squad_adapter` (infrastructure) | `basket_hydration_service` **uniquement** |
 
 **Aucun handler, aucun template ne voit ces types.** Le domain service les convertit
 en objets domaine portés par l'agrégat.
@@ -250,8 +250,8 @@ pub struct CartLineVm {
 ### Erreur
 
 ```rust
-pub struct DraftErrorVm {
-    pub kind:    DraftErrorKind,      // Domain | Concurrent
+pub struct BasketErrorVm {
+    pub kind:    BasketErrorKind,      // Domain | Concurrent
     pub message: String,
     pub lines:   Vec<String>,         // lignes fautives au refus en bloc
 }
@@ -259,10 +259,10 @@ pub struct DraftErrorVm {
 
 | VM | Émis par | Consommé par |
 |---|---|---|
-| `RecruitmentCatalogVm` | `RecruitmentCatalogVm::from_domain(&draft)` | template `recruitment-catalog.html` |
-| `RecruitmentCartVm` | `RecruitmentCartVm::from_domain(&draft)` | template `recruitment-cart.html` |
+| `RecruitmentCatalogVm` | `RecruitmentCatalogVm::from_domain(&basket)` | template `recruitment-catalog.html` |
+| `RecruitmentCartVm` | `RecruitmentCartVm::from_domain(&basket)` | template `recruitment-cart.html` |
 | `ActionVm` | calculé par le domaine, exposé par les deux VMs ci-dessus | templates, pour l'état et le libellé du bouton |
-| `DraftErrorVm` | handlers, sur erreur domaine ou `ConcurrentWrite` | template `draft-error.html` |
+| `BasketErrorVm` | handlers, sur erreur domaine ou `ConcurrentWrite` | template `basket-error.html` |
 
 ## 6. Règles métier identifiées à cette étape
 

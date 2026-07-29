@@ -1,15 +1,15 @@
 use crate::app::teams::domain::team::GamePhase;
 use crate::app::teams::ports::{
-    draft_phase_key, IPhaseDraftRepository, PhaseDraftState, RepositoryError,
+    basket_phase_key, IPhaseBasketRepository, PhaseBasketState, RepositoryError,
 };
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
 
-pub struct PhaseDraftRepository {
+pub struct PhaseBasketRepository {
     pool: PgPool,
 }
 
-impl PhaseDraftRepository {
+impl PhaseBasketRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -20,20 +20,20 @@ impl PhaseDraftRepository {
 /// store. Elle l'est par le `WHERE version = $` pour une mise à jour, et par le
 /// conflit de clé primaire pour une création — deux mécanismes, une seule erreur.
 fn est_conflit_de_cle(e: &sqlx::Error) -> bool {
-    matches!(e, sqlx::Error::Database(db) if db.constraint() == Some("teams__phase_drafts_pkey"))
+    matches!(e, sqlx::Error::Database(db) if db.constraint() == Some("teams__phase_baskets_pkey"))
 }
 
 #[async_trait]
-impl IPhaseDraftRepository for PhaseDraftRepository {
+impl IPhaseBasketRepository for PhaseBasketRepository {
     async fn load(
         &self,
         team_id: &str,
         phase: &GamePhase,
-    ) -> Result<Option<PhaseDraftState>, RepositoryError> {
-        let cle = draft_phase_key(phase)?;
+    ) -> Result<Option<PhaseBasketState>, RepositoryError> {
+        let cle = basket_phase_key(phase)?;
 
         let row = sqlx::query(
-            "SELECT space_id, state, version FROM teams__phase_drafts
+            "SELECT space_id, state, version FROM teams__phase_baskets
              WHERE team_id = $1 AND phase = $2",
         )
         .bind(team_id)
@@ -42,7 +42,7 @@ impl IPhaseDraftRepository for PhaseDraftRepository {
         .await
         .map_err(RepositoryError::Database)?;
 
-        Ok(row.map(|r| PhaseDraftState {
+        Ok(row.map(|r| PhaseBasketState {
             team_id: team_id.to_string(),
             space_id: r.get("space_id"),
             phase: phase.clone(),
@@ -53,24 +53,24 @@ impl IPhaseDraftRepository for PhaseDraftRepository {
 
     async fn save(
         &self,
-        draft: &PhaseDraftState,
+        basket: &PhaseBasketState,
         expected_version: u32,
     ) -> Result<u32, RepositoryError> {
-        let cle = draft_phase_key(&draft.phase)?;
+        let cle = basket_phase_key(&basket.phase)?;
 
-        // Version zéro : le brouillon n'existe pas encore. Deux onglets qui
+        // Version zéro : le panier n'existe pas encore. Deux onglets qui
         // ajoutent une première ligne en même temps se disputent la clé
         // primaire, et le perdant doit voir un conflit de concurrence — pas une
         // erreur base incompréhensible.
         if expected_version == 0 {
             sqlx::query(
-                "INSERT INTO teams__phase_drafts (team_id, phase, space_id, state, version)
+                "INSERT INTO teams__phase_baskets (team_id, phase, space_id, state, version)
                  VALUES ($1, $2, $3, $4, 1)",
             )
-            .bind(&draft.team_id)
+            .bind(&basket.team_id)
             .bind(cle)
-            .bind(&draft.space_id)
-            .bind(&draft.state)
+            .bind(&basket.space_id)
+            .bind(&basket.state)
             .execute(&self.pool)
             .await
             .map_err(|e| {
@@ -84,20 +84,20 @@ impl IPhaseDraftRepository for PhaseDraftRepository {
         }
 
         let resultat = sqlx::query(
-            "UPDATE teams__phase_drafts
+            "UPDATE teams__phase_baskets
                 SET state = $3, version = version + 1, updated_at = now()
               WHERE team_id = $1 AND phase = $2 AND version = $4",
         )
-        .bind(&draft.team_id)
+        .bind(&basket.team_id)
         .bind(cle)
-        .bind(&draft.state)
+        .bind(&basket.state)
         .bind(expected_version as i32)
         .execute(&self.pool)
         .await
         .map_err(RepositoryError::Database)?;
 
         // Zéro ligne touchée : soit la version a bougé sous nos pieds, soit le
-        // brouillon a été purgé entre-temps. Dans les deux cas, l'appelant
+        // panier a été purgé entre-temps. Dans les deux cas, l'appelant
         // travaillait sur un état périmé.
         if resultat.rows_affected() == 0 {
             return Err(RepositoryError::ConcurrentWrite);
@@ -106,8 +106,8 @@ impl IPhaseDraftRepository for PhaseDraftRepository {
     }
 
     async fn delete(&self, team_id: &str, phase: &GamePhase) -> Result<(), RepositoryError> {
-        let cle = draft_phase_key(phase)?;
-        sqlx::query("DELETE FROM teams__phase_drafts WHERE team_id = $1 AND phase = $2")
+        let cle = basket_phase_key(phase)?;
+        sqlx::query("DELETE FROM teams__phase_baskets WHERE team_id = $1 AND phase = $2")
             .bind(team_id)
             .bind(cle)
             .execute(&self.pool)
@@ -131,8 +131,8 @@ mod tests {
             .ok()
     }
 
-    fn brouillon(team_id: &str, lignes: serde_json::Value) -> PhaseDraftState {
-        PhaseDraftState {
+    fn panier(team_id: &str, lignes: serde_json::Value) -> PhaseBasketState {
+        PhaseBasketState {
             team_id: team_id.to_string(),
             space_id: "space-1".to_string(),
             phase: GamePhase::Recruitment,
@@ -146,7 +146,7 @@ mod tests {
         let Some(pool) = test_pool().await else {
             return;
         };
-        let repo = PhaseDraftRepository::new(pool);
+        let repo = PhaseBasketRepository::new(pool);
         let inconnu = ulid::Ulid::new().to_string();
 
         let charge = repo.load(&inconnu, &GamePhase::Recruitment).await.unwrap();
@@ -161,12 +161,12 @@ mod tests {
         let Some(pool) = test_pool().await else {
             return;
         };
-        let repo = PhaseDraftRepository::new(pool);
+        let repo = PhaseBasketRepository::new(pool);
         let team_id = ulid::Ulid::new().to_string();
         let lignes = serde_json::json!([{"line_id": "PIETAILLE", "qty": 2}]);
 
         let v = repo
-            .save(&brouillon(&team_id, lignes.clone()), 0)
+            .save(&panier(&team_id, lignes.clone()), 0)
             .await
             .unwrap();
         assert_eq!(v, 1, "la création part à la version 1");
@@ -188,18 +188,18 @@ mod tests {
         let Some(pool) = test_pool().await else {
             return;
         };
-        let repo = PhaseDraftRepository::new(pool);
+        let repo = PhaseBasketRepository::new(pool);
         let team_id = ulid::Ulid::new().to_string();
 
-        repo.save(&brouillon(&team_id, serde_json::json!([])), 0)
+        repo.save(&panier(&team_id, serde_json::json!([])), 0)
             .await
             .unwrap();
 
         let onglet_a = repo
-            .save(&brouillon(&team_id, serde_json::json!(["a"])), 1)
+            .save(&panier(&team_id, serde_json::json!(["a"])), 1)
             .await;
         let onglet_b = repo
-            .save(&brouillon(&team_id, serde_json::json!(["b"])), 1)
+            .save(&panier(&team_id, serde_json::json!(["b"])), 1)
             .await;
 
         assert_eq!(onglet_a.unwrap(), 2);
@@ -216,15 +216,13 @@ mod tests {
         let Some(pool) = test_pool().await else {
             return;
         };
-        let repo = PhaseDraftRepository::new(pool);
+        let repo = PhaseBasketRepository::new(pool);
         let team_id = ulid::Ulid::new().to_string();
 
-        repo.save(&brouillon(&team_id, serde_json::json!([])), 0)
+        repo.save(&panier(&team_id, serde_json::json!([])), 0)
             .await
             .unwrap();
-        let second = repo
-            .save(&brouillon(&team_id, serde_json::json!([])), 0)
-            .await;
+        let second = repo.save(&panier(&team_id, serde_json::json!([])), 0).await;
 
         assert!(matches!(second, Err(RepositoryError::ConcurrentWrite)));
     }
@@ -234,13 +232,13 @@ mod tests {
         let Some(pool) = test_pool().await else {
             return;
         };
-        let repo = PhaseDraftRepository::new(pool);
+        let repo = PhaseBasketRepository::new(pool);
         let team_id = ulid::Ulid::new().to_string();
 
-        repo.save(&brouillon(&team_id, serde_json::json!(["recrutement"])), 0)
+        repo.save(&panier(&team_id, serde_json::json!(["recrutement"])), 0)
             .await
             .unwrap();
-        let mut renvois = brouillon(&team_id, serde_json::json!(["renvois"]));
+        let mut renvois = panier(&team_id, serde_json::json!(["renvois"]));
         renvois.phase = GamePhase::Dismissals;
         repo.save(&renvois, 0).await.unwrap();
 
@@ -260,16 +258,16 @@ mod tests {
             .is_some());
     }
 
-    /// Une phase sans brouillon possible est un bug d'appelant : elle doit se
+    /// Une phase sans panier possible est un bug d'appelant : elle doit se
     /// voir, pas être avalée en silence.
     #[tokio::test]
-    async fn une_phase_sans_brouillon_est_rejetee() {
+    async fn une_phase_sans_panier_est_rejetee() {
         let Some(pool) = test_pool().await else {
             return;
         };
-        let repo = PhaseDraftRepository::new(pool);
+        let repo = PhaseBasketRepository::new(pool);
 
         let r = repo.load("t1", &GamePhase::OffSeason).await;
-        assert!(matches!(r, Err(RepositoryError::PhaseWithoutDraft(_))));
+        assert!(matches!(r, Err(RepositoryError::PhaseWithoutBasket(_))));
     }
 }

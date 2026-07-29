@@ -20,9 +20,9 @@ pub enum DomainError {
     NotReportingThisMatch,
     InsufficientTreasury,
 
-    // ── Levées par les brouillons de phase (cartes 262 et 267) ───────────────
+    // ── Levées par les paniers de phase (cartes 262 et 267) ───────────────
     // Déclarées ici parce que `DomainError` est l'erreur du BC, pas celle d'un
-    // agrégat : les brouillons la partagent. Elles naissent donc sans appelant.
+    // agrégat : les paniers la partagent. Elles naissent donc sans appelant.
     /// Plafond de 16 joueurs atteint.
     MaxPlayersReached,
     /// Le quota du poste dans le roster est atteint (`max_quantity`).
@@ -37,8 +37,8 @@ pub enum DomainError {
     StaffQuotaReached,
     /// Le renvoi ferait passer l'effectif sous les onze joueurs éligibles.
     EligibleFloorReached,
-    /// La ligne visée n'existe pas dans le brouillon.
-    DraftLineNotFound,
+    /// La ligne visée n'existe pas dans le panier.
+    BasketLineNotFound,
     /// Le joueur visé n'appartient pas à l'effectif de cette équipe.
     PlayerNotInSquad,
 }
@@ -79,7 +79,7 @@ impl fmt::Display for DomainError {
                 f,
                 "l'effectif ne peut pas descendre sous onze joueurs éligibles"
             ),
-            Self::DraftLineNotFound => write!(f, "ligne introuvable dans le brouillon"),
+            Self::BasketLineNotFound => write!(f, "ligne introuvable dans le panier"),
             Self::PlayerNotInSquad => write!(f, "ce joueur n'appartient pas à l'effectif"),
         }
     }

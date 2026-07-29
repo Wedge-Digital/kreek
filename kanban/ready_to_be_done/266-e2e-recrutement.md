@@ -35,11 +35,11 @@ Ici l'enjeu est particulier — c'est le seul niveau où l'on peut vérifier que
 ### Les deux scénarios qui comptent le plus
 
 **Le 9** vérifie ce que la décision D1 a acheté. Sans lui, on aurait payé une table de
-brouillon pour rien — c'est le seul test qui distingue un panier serveur d'un panier
+panier pour rien — c'est le seul test qui distingue un panier serveur d'un panier
 client.
 
 **Le 4** vérifie qu'aucun débit n'a lieu avant validation. C'est la propriété qui rend
-le brouillon sûr : un clic malheureux ne coûte rien tant que la phase n'est pas
+le panier sûr : un clic malheureux ne coûte rien tant que la phase n'est pas
 validée.
 
 ### Le scénario 10 lit la base

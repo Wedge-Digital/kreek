@@ -144,7 +144,7 @@ pub struct MarkStaffBody {
 ```
 
 Le retrait réutilise `RemoveLineBody` du recrutement — même forme, même sémantique :
-retirer une ligne du brouillon par son identifiant.
+retirer une ligne du panier par son identifiant.
 
 ## 3. Commandes
 
@@ -153,23 +153,23 @@ pub struct MarkPlayerForDismissalCommand {
     pub team_id:          TeamId,
     pub space_id:         SpaceId,
     pub player_id:        PlayerId,
-    pub expected_version: DraftVersion,
+    pub expected_version: BasketVersion,
 }
 
 pub struct MarkStaffForDismissalCommand {
     pub team_id:          TeamId,
     pub space_id:         SpaceId,
     pub staff_type:       StaffType,
-    pub expected_version: DraftVersion,
+    pub expected_version: BasketVersion,
 }
 ```
 
-`UnmarkCommand` réutilise `RemoveDraftLineCommand`.
+`UnmarkCommand` réutilise `RemoveBasketLineCommand`.
 
 ## 4. DTO de port — troisième élargissement
 
 ```rust
-pub struct PlayerValueDto {
+pub struct SquadMemberDto {
     pub player_id:                String,
     pub roster_line_id:           String,
     pub personal_name:            String,   // ← renvois
@@ -252,11 +252,11 @@ pub struct DismissalsCartVm {
 
 | VM | Émis par | Consommé par |
 |---|---|---|
-| `DismissalsRosterVm` | `from_domain(&draft)` | `dismissals-roster.html` |
-| `DismissalsCartVm` | `from_domain(&draft)` | `dismissals-cart.html` |
-| `DraftErrorVm` | handlers | `draft-error.html`, **partagé** avec le recrutement |
+| `DismissalsRosterVm` | `from_domain(&basket)` | `dismissals-roster.html` |
+| `DismissalsCartVm` | `from_domain(&basket)` | `dismissals-cart.html` |
+| `BasketErrorVm` | handlers | `basket-error.html`, **partagé** avec le recrutement |
 
-Aucun `builders.rs` ici non plus : le brouillon porte ses données après hydratation.
+Aucun `builders.rs` ici non plus : le panier porte ses données après hydratation.
 
 ## 6. Règles métier identifiées à cette étape
 

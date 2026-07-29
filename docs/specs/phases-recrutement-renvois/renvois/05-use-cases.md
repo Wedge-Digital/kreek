@@ -21,17 +21,17 @@ pub enum MarkPlayerForDismissalError {
 pub async fn execute(
     cmd:        MarkPlayerForDismissalCommand,
     team_repo:  &dyn ITeamRepository,
-    draft_repo: &dyn IPhaseDraftRepository,
+    basket_repo: &dyn IPhaseBasketRepository,
     catalog:    &dyn IRosterCatalogPort,
     squad:      &dyn ISquadPort,
-) -> Result<DismissalsDraft, MarkPlayerForDismissalError>
+) -> Result<DismissalsBasket, MarkPlayerForDismissalError>
 ```
 
 Orchestration identique au recrutement : charger `Team`, vérifier la phase
-`Dismissals`, hydrater, `draft.mark_player(player_id)?`, persister avec la version.
+`Dismissals`, hydrater, `basket.mark_player(player_id)?`, persister avec la version.
 
-**Le démarquage réutilise `remove_draft_line_use_case`** du recrutement : retirer une
-ligne d'un brouillon par son identifiant est la même opération.
+**Le démarquage réutilise `remove_basket_line_use_case`** du recrutement : retirer une
+ligne d'un panier par son identifiant est la même opération.
 
 ## 2. Le use case de validation
 
@@ -56,7 +56,7 @@ fait passer l'équipe en `ReadyToPlay`, et `validate_dismissals_phase()` exige l
 
 ### Une conséquence heureuse
 
-Ce dernier événement déclenche **aussi** la purge des brouillons (D6) et le recalcul
+Ce dernier événement déclenche **aussi** la purge des paniers (D6) et le recalcul
 de la valeur d'équipe (carte 251), tous deux abonnés aux entrées en `ReadyToPlay`. La
 valeur d'équipe est donc recalculée **après** que les renvoyés ont quitté l'effectif,
 sans qu'aucun ordonnancement explicite ne soit nécessaire.

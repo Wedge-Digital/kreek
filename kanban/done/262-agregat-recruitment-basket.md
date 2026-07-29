@@ -1,10 +1,10 @@
-# Agrégat `RecruitmentDraft` — les gardes du recrutement
+# Agrégat `RecruitmentBasket` — les gardes du recrutement
 
 **Priorité : haute**
 **Dépend de :** 257, 258, 259
 **Bloque :** 263
 **Spec :** `docs/specs/phases-recrutement-renvois/recrutement/06-domaine.md` §3
-**Fichiers :** `src/app/teams/domain/recruitment_draft.rs` (nouveau),
+**Fichiers :** `src/app/teams/domain/recruitment_basket.rs` (nouveau),
 `src/app/teams/domain/value_objects.rs`
 
 ## Problème
@@ -24,10 +24,10 @@ case hydrate, puis toutes les gardes sont **pures et synchrones** — comme
 (`team_creation/domain/team_roster_selected.rs`).
 
 ```rust
-pub struct RecruitmentDraft {
+pub struct RecruitmentBasket {
     team_id:  TeamId,
-    version:  DraftVersion,
-    lines:    Vec<DraftLine>,      // ← seul état persisté
+    version:  BasketVersion,
+    lines:    Vec<BasketLine>,      // ← seul état persisté
     catalog:  RosterCatalog,       // hydraté (carte 258)
     squad:    SquadSnapshot,       // hydraté (carte 259)
     treasury: Kpo,                 // hydraté depuis Team
@@ -41,9 +41,9 @@ pub struct RecruitmentDraft {
 ### 1. Méthodes de commande
 
 ```rust
-pub fn add_player(&mut self, line: RosterLineId) -> Result<DraftLineId, DomainError>
-pub fn add_staff(&mut self, staff: StaffType)    -> Result<DraftLineId, DomainError>
-pub fn remove_line(&mut self, id: &DraftLineId)  -> Result<(), DomainError>
+pub fn add_player(&mut self, line: RosterLineId) -> Result<BasketLineId, DomainError>
+pub fn add_staff(&mut self, staff: StaffType)    -> Result<BasketLineId, DomainError>
+pub fn remove_line(&mut self, id: &BasketLineId)  -> Result<(), DomainError>
 pub fn validate_all(&self) -> Result<Vec<AppliedLine>, Vec<RejectedLine>>
 ```
 
@@ -53,7 +53,7 @@ pub fn validate_all(&self) -> Result<Vec<AppliedLine>, Vec<RejectedLine>>
 `check_cross_limits`, `check_treasury`, `check_staff_buyable`, `check_staff_allowed`,
 `check_staff_quota`.
 
-**Chacune compte possédés + en attente.** C'est le point qui fait qu'un brouillon
+**Chacune compte possédés + en attente.** C'est le point qui fait qu'un panier
 respecte les quotas au lieu de les contourner par empilement.
 
 ### 3. Le prix du staff est une règle domaine
@@ -91,7 +91,7 @@ lignes fautives avec leur `BlockCause`. Jamais un succès partiel.
 
 ## Tests unitaires — les 17 de la spec
 
-Les plus importants sont les **2, 4 et 7** : ils vérifient que le brouillon compte ses
+Les plus importants sont les **2, 4 et 7** : ils vérifient que le panier compte ses
 propres lignes en attente. Sans eux, toutes les gardes seraient contournables.
 
 Le test 7 mérite une mention : trésorerie insuffisante **pour le total**, chaque ligne

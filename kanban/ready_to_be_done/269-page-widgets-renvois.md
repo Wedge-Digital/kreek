@@ -22,8 +22,8 @@ bouton « Valider les renvois ». Aucune interface de renvoi n'existe.
 
 | Widget | Endpoint | Trigger |
 |---|---|---|
-| `dismissals_roster` | `GET …/team/widgets/dismissals-roster` | `load, draftChanged from:body` |
-| `dismissals_cart` | `GET …/team/widgets/dismissals-cart` | `load, draftChanged from:body` |
+| `dismissals_roster` | `GET …/team/widgets/dismissals-roster` | `load, basketChanged from:body` |
+| `dismissals_cart` | `GET …/team/widgets/dismissals-cart` | `load, basketChanged from:body` |
 
 Le tableau se rafraîchit **entier** : marquer un joueur peut faire basculer tous les
 autres en « Minimum 11 » d'un seul coup.
@@ -49,7 +49,7 @@ trace de ce que le coach vient de décider.
 
 ### 4. Pas de boîte de confirmation
 
-Elle protégeait d'un geste irréversible. Le brouillon rendant chaque ligne annulable
+Elle protégeait d'un geste irréversible. Le panier rendant chaque ligne annulable
 jusqu'à la validation, elle n'a plus d'objet.
 
 ### 5. Le bouton de validation suit l'état
@@ -71,7 +71,7 @@ elle informe d'un déficit **déjà causé par les blessures**.
 ### 8. Conventions communes
 
 `hx-disinherit="*"`, CSS embarqué, aucun `style=` inline, version cuite dans
-`hx-vals`, `draft-error.html` **partagé** avec le recrutement. Responsive 768px, barre
+`hx-vals`, `basket-error.html` **partagé** avec le recrutement. Responsive 768px, barre
 du bas à `bottom: 57px`, cibles tactiles à 44px minimum.
 
 ### 9. Bannière de la fiche équipe
@@ -80,7 +80,7 @@ Le bouton « Gérer les renvois → » pointe vers la nouvelle page au lieu d'un
 
 ## Checklist
 
-- [ ] Deux widgets, `draftChanged`, 1 POST + 1 GET par mutation
+- [ ] Deux widgets, `basketChanged`, 1 POST + 1 GET par mutation
 - [ ] Routes en `mark` / `unmark`
 - [ ] Trois états par ligne, ligne marquée lisible et barrée
 - [ ] Annulation possible **depuis la ligne et depuis le panier**

@@ -118,7 +118,7 @@ mod tests {
     }
 
     /// L'effectif est rendu **entier** : un blessé y figure, drapeau à faux.
-    /// C'est ce qui permet au brouillon de recrutement de compter ses quotas
+    /// C'est ce qui permet au panier de recrutement de compter ses quotas
     /// sur tout l'effectif, quand la valeur d'équipe ne somme que les
     /// disponibles.
     #[tokio::test]

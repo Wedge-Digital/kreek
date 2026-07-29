@@ -42,11 +42,11 @@ Maquettes validées (phase 1) : `assets/rawpages/html/app-team-recruitment.html`
 | # | Décision |
 |---|---|
 | D1 | **Panier côté serveur**, pas côté client — conformité avec la construction d'équipe, et surtout règles métier écrites une seule fois, dans le domaine |
-| D2 | Un **brouillon persisté** par phase et par équipe, sur le modèle de `team_roster_selections` |
-| D3 | Le brouillon **ne touche jamais la trésorerie** : il accumule, la validation de phase émet le lot |
-| D4 | **Version optimiste** sur le brouillon — première remontée d'un `ConcurrentWrite` jusqu'à l'utilisateur dans ce projet |
-| D5 | À la validation, si le brouillon ne passe plus : **refus en bloc**, rien n'est appliqué |
-| D6 | Les brouillons orphelins sont **purgés à chaque entrée en `ReadyToPlay`** |
+| D2 | Un **panier persisté** par phase et par équipe, sur le modèle de `team_roster_selections` |
+| D3 | Le panier **ne touche jamais la trésorerie** : il accumule, la validation de phase émet le lot |
+| D4 | **Version optimiste** sur le panier — première remontée d'un `ConcurrentWrite` jusqu'à l'utilisateur dans ce projet |
+| D5 | À la validation, si le panier ne passe plus : **refus en bloc**, rien n'est appliqué |
+| D6 | Les paniers orphelins sont **purgés à chaque entrée en `ReadyToPlay`** |
 | D7 | **Trésorerie en mouvements** : événements de crédit/débit nommés, pour disposer d'un historique consultable |
 | D8 | **L'appartenance à l'effectif est un axe distinct** de la participation au match, dans le BC `players` — et la lecture par défaut exclut les renvoyés |
 
@@ -155,7 +155,7 @@ Relevés pendant les phases 1 et 2, à traiter par cette feature :
 
 | Lien | Nature |
 |---|---|
-| **Carte 251 → D6** | Elle crée le bus interne de `teams` et la publication depuis `TeamRepository::append`. Le listener de purge des brouillons s'y abonne : **sans elle, il n'y a rien à écouter**. |
+| **Carte 251 → D6** | Elle crée le bus interne de `teams` et la publication depuis `TeamRepository::append`. Le listener de purge des paniers s'y abonne : **sans elle, il n'y a rien à écouter**. |
 | **D8 → cartes 250 et 253** | D8 **change la définition de « disponible »** : ce n'est plus seulement `participation_status`, c'est participation **et** appartenance. Livrées avant, ces cartes devront être retouchées ; livrées après, elles doivent intégrer les deux axes dès le départ. |
 | **Carte 250 → ports** | Elle crée `IPlayerValuePort`. Cette feature l'élargit **deux fois** — ligne de roster au recrutement, identité et SPP aux renvois. À étendre, jamais à doubler. |
 

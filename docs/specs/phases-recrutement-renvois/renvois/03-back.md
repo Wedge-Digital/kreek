@@ -2,21 +2,21 @@
 
 **Entrée** : `02-front.md` validé.
 
-Le brouillon, la trésorerie, les ports et la persistance sont **communs aux deux
+Le panier, la trésorerie, les ports et la persistance sont **communs aux deux
 pages** et décrits dans `recrutement/03-back.md`. Ce document ne consigne que les
 écarts.
 
-## Le brouillon de renvois
+## Le panier de renvois
 
-Même agrégat hydraté, même table `teams__phase_drafts` discriminée par
+Même agrégat hydraté, même table `teams__phase_baskets` discriminée par
 `phase = 'Dismissals'`, même version optimiste.
 
 ### Ce qu'il contient
 
 | Champ | Origine |
 |---|---|
-| `team_id`, `version` | brouillon persisté |
-| `lines: Vec<DismissalLine>` | brouillon persisté — joueurs et staff marqués |
+| `team_id`, `version` | panier persisté |
+| `lines: Vec<DismissalBasketLine>` | panier persisté — joueurs et staff marqués |
 | `squad: SquadSnapshot` | port `players`, hydraté |
 | `catalog: RosterCatalog` | port `references`, hydraté — pour le staff possédé |
 
@@ -54,11 +54,11 @@ contrat du licenciement à venir. Ce point est déjà noté dans la carte 251.
 ## Ports
 
 Le besoin est **plus riche qu'au recrutement**, qui ne demandait que des compteurs par
-ligne de roster. Ici il faut la liste nominative, donc `PlayerValueDto` s'étend
+ligne de roster. Ici il faut la liste nominative, donc `SquadMemberDto` s'étend
 encore :
 
 ```rust
-pub struct PlayerValueDto {
+pub struct SquadMemberDto {
     pub player_id:                String,
     pub roster_line_id:           String,
     pub personal_name:            String,   // ← ajout renvois
@@ -83,12 +83,12 @@ dans `RosterCatalogDto`.
 
 | Fichier | Contenu |
 |---|---|
-| `domain/dismissals_draft.rs` | agrégat, garde du plancher, `DismissalLine` |
+| `domain/dismissals_basket.rs` | agrégat, garde du plancher, `DismissalBasketLine` |
 | `domain/team.rs` | méthodes produisant `PlayerDismissed` (renommage de `PlayerFired`, cf. `04-dtos.md`), retrait de `refund_kpo` de `dismiss_staff` |
 
 ### Use cases
 
-`mark_draft_player`, `unmark_draft_player`, `mark_draft_staff`, `unmark_draft_staff`,
+`mark_basket_player`, `unmark_basket_player`, `mark_basket_staff`, `unmark_basket_staff`,
 et `validate_dismissals_phase_use_case` (existant, rôle élargi à l'application du lot).
 
 ### IO — web
@@ -102,20 +102,20 @@ et `validate_dismissals_phase_use_case` (existant, rôle élargi à l'applicatio
 | `templates/widgets/dismissals-roster.html` | + fragments de ligne, trois états |
 | `templates/widgets/dismissals-cart.html` | |
 
-Le fragment d'erreur `draft-error.html` est **partagé** avec le recrutement.
+Le fragment d'erreur `basket-error.html` est **partagé** avec le recrutement.
 
 ### Migrations
 
 Aucune en propre — tout est couvert par celles du recrutement.
 
-## Purge des brouillons orphelins
+## Purge des paniers orphelins
 
 Décision D6, commune aux deux phases : un listener intra-BC abonné au bus interne de
-`teams` supprime les deux brouillons à chaque entrée en `ReadyToPlay`
+`teams` supprime les deux paniers à chaque entrée en `ReadyToPlay`
 (`TeamEnrolled`, `DismissalsPhaseValidated`, `MatchReportingCancelled`,
 `CostlyMistakesApplied`).
 
-`io/listeners/phase_draft_purge_listener.rs`, signature `init(event_bus: &EventBus, …)`
+`io/listeners/phase_basket_purge_listener.rs`, signature `init(event_bus: &EventBus, …)`
 — c'est cette convention que `check-arch` (axe 5) utilise pour reconnaître un listener
 intra-BC.
 

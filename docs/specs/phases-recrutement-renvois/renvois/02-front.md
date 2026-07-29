@@ -5,7 +5,7 @@
 
 ## Principe
 
-Même modèle que le recrutement : panier serveur, brouillon persisté, un POST par
+Même modèle que le recrutement : panier serveur, panier persisté, un POST par
 mutation qui renvoie un fragment, un événement DOM qui resynchronise l'autre widget.
 Se reporter à `recrutement/02-front.md` pour le détail du pattern — ce document ne
 consigne que **ce qui diffère**.
@@ -46,8 +46,8 @@ renvoyant des absents.
 
 | Widget | BC | Endpoint | Trigger | Émet | Mode |
 |---|---|---|---|---|---|
-| `dismissals_roster` | teams | `GET /app/{space_id}/team/widgets/dismissals-roster` | `load, draftChanged from:body` | `draftChanged` (via ses POST) | lecture + mutation |
-| `dismissals_cart` | teams | `GET /app/{space_id}/team/widgets/dismissals-cart` | `load, draftChanged from:body` | `draftChanged` (via ses POST) | lecture + annulation + validation |
+| `dismissals_roster` | teams | `GET /app/{space_id}/team/widgets/dismissals-roster` | `load, basketChanged from:body` | `basketChanged` (via ses POST) | lecture + mutation |
+| `dismissals_cart` | teams | `GET /app/{space_id}/team/widgets/dismissals-cart` | `load, basketChanged from:body` | `basketChanged` (via ses POST) | lecture + annulation + validation |
 
 ### Contenu de `dismissals_roster`
 
@@ -61,7 +61,7 @@ faire basculer tous les autres en « Minimum 11 » d'un seul coup.
 
 ### Contenu de `dismissals_cart`
 
-- Lignes du brouillon avec un bouton d'annulation
+- Lignes du panier avec un bouton d'annulation
 - Effectif après renvois
 - Alerte journaliers quand les éligibles passent sous 11
 - Bouton de validation de phase
@@ -84,10 +84,10 @@ trace de ce que le coach vient de décider.
 
 | Verbe | Route | Corps | Réponse |
 |---|---|---|---|
-| `POST` | `…/dismissals/players/mark` | `player_id`, `version` | fragment effectif + `HX-Trigger: draftChanged` |
-| `POST` | `…/dismissals/players/unmark` | `player_id`, `version` | fragment effectif + `HX-Trigger: draftChanged` |
-| `POST` | `…/dismissals/staff/mark` | `staff_uid`, `version` | fragment effectif + `HX-Trigger: draftChanged` |
-| `POST` | `…/dismissals/staff/unmark` | `line_id`, `version` | fragment panier + `HX-Trigger: draftChanged` |
+| `POST` | `…/dismissals/players/mark` | `player_id`, `version` | fragment effectif + `HX-Trigger: basketChanged` |
+| `POST` | `…/dismissals/players/unmark` | `player_id`, `version` | fragment effectif + `HX-Trigger: basketChanged` |
+| `POST` | `…/dismissals/staff/mark` | `staff_uid`, `version` | fragment effectif + `HX-Trigger: basketChanged` |
+| `POST` | `…/dismissals/staff/unmark` | `line_id`, `version` | fragment panier + `HX-Trigger: basketChanged` |
 | `POST` | `…/validate-dismissals-phase` | `version` | `HX-Refresh: true` — **route existante**, rôle élargi |
 
 **`mark` / `unmark`, et non `add` / `remove`.** Sur une page de renvois, une route
@@ -120,7 +120,7 @@ chemin, comme au recrutement.
 | Facteur fans | ❌ |
 
 Seule garde : ne pas renvoyer plus que ce que l'on possède, en tenant compte des
-lignes déjà en attente dans le brouillon.
+lignes déjà en attente dans le panier.
 
 Quand le roster n'a pas droit à l'apothicaire, la ligne **n'apparaît pas** — non
 parce que le renvoi serait interdit, mais parce que l'équipe ne peut pas en posséder.
@@ -133,7 +133,7 @@ parce que le renvoi serait interdit, mais parce que l'équipe ne peut pas en pos
 - La valeur d'un joueur reste affichée alors qu'elle ne sera pas remboursée. C'est
   volontaire : elle mesure ce que le coach s'apprête à perdre.
 - Aucune confirmation par boîte de dialogue. Elle protégeait d'un geste irréversible ;
-  le brouillon rend chaque ligne annulable jusqu'à la validation, la confirmation n'a
+  le panier rend chaque ligne annulable jusqu'à la validation, la confirmation n'a
   plus d'objet.
 
 ## Conséquence à porter en phase 3
@@ -144,7 +144,7 @@ devient un vestige, à retirer ou à assumer explicitement.
 
 ## Points ouverts pour la phase 3
 
-- Brouillon partagé avec le recrutement — table unique discriminée par phase — ou
+- Panier partagé avec le recrutement — table unique discriminée par phase — ou
   table dédiée ? La question se pose identiquement pour les deux pages.
 - Un joueur marqué puis devenu indisponible entre-temps (dépublication de rapport) :
   le plancher se recalcule, la ligne peut devenir invalide. Le refus en bloc de la

@@ -6,7 +6,7 @@
 ## Principe
 
 Panier serveur, sur le pattern déjà en place dans la construction d'équipe
-(`team_creation`). Chaque ajout ou retrait est un POST qui mute un **brouillon
+(`team_creation`). Chaque ajout ou retrait est un POST qui mute un **panier
 persisté** et renvoie un fragment HTML ; un événement DOM resynchronise le second
 widget.
 
@@ -19,13 +19,13 @@ sous 768px, qui est du pur affichage.
 
 | Widget | BC | Endpoint | Trigger | Émet | Mode |
 |---|---|---|---|---|---|
-| `recruitment_catalog` | teams | `GET /app/{space_id}/team/widgets/recruitment-catalog` | `load, draftChanged from:body` | `draftChanged` (via ses POST) | lecture + mutation |
-| `recruitment_cart` | teams | `GET /app/{space_id}/team/widgets/recruitment-cart` | `load, draftChanged from:body` | `draftChanged` (via ses POST) | lecture + retrait + validation |
+| `recruitment_catalog` | teams | `GET /app/{space_id}/team/widgets/recruitment-catalog` | `load, basketChanged from:body` | `basketChanged` (via ses POST) | lecture + mutation |
+| `recruitment_cart` | teams | `GET /app/{space_id}/team/widgets/recruitment-cart` | `load, basketChanged from:body` | `basketChanged` (via ses POST) | lecture + retrait + validation |
 
 ### Pourquoi deux widgets et pas cinq
 
 Le catalogue porte **les deux tableaux et la composition de l'effectif**. Ils vivent
-dans la même colonne, dérivent tous du même brouillon, et les séparer multiplierait
+dans la même colonne, dérivent tous du même panier, et les séparer multiplierait
 les requêtes sans rien apporter.
 
 Surtout : ajouter un joueur ne change pas que sa ligne. Ça peut désactiver **toutes**
@@ -42,7 +42,7 @@ chirurgical ligne par ligne serait donc faux ; le tableau se rafraîchit entier.
 
 ### Contenu de `recruitment_cart`
 
-- Lignes du brouillon avec leur prix et un bouton de retrait
+- Lignes du panier avec leur prix et un bouton de retrait
 - Reste après achats
 - Bouton de validation de phase
 - État vide : « Panier vide — rien ne sera débité »
@@ -51,7 +51,7 @@ chirurgical ligne par ligne serait donc faux ; le tableau se rafraîchit entier.
 
 Un seul événement DOM, sur `body` :
 
-- **`draftChanged`** — sans payload. Émis par **toutes** les mutations via l'en-tête
+- **`basketChanged`** — sans payload. Émis par **toutes** les mutations via l'en-tête
   `HX-Trigger`, écouté par les deux widgets.
 
 C'est le décalque de `teamMutated` dans la construction d'équipe
@@ -65,10 +65,10 @@ donc 1 POST + 1 GET.**
 
 | Verbe | Route | Corps | Réponse |
 |---|---|---|---|
-| `POST` | `…/recruitment/players/add` | `roster_line_id`, `version` | fragment catalogue + `HX-Trigger: draftChanged` |
-| `POST` | `…/recruitment/players/remove` | `line_id`, `version` | fragment panier + `HX-Trigger: draftChanged` |
-| `POST` | `…/recruitment/staff/add` | `staff_uid`, `version` | fragment catalogue + `HX-Trigger: draftChanged` |
-| `POST` | `…/recruitment/staff/remove` | `line_id`, `version` | fragment panier + `HX-Trigger: draftChanged` |
+| `POST` | `…/recruitment/players/add` | `roster_line_id`, `version` | fragment catalogue + `HX-Trigger: basketChanged` |
+| `POST` | `…/recruitment/players/remove` | `line_id`, `version` | fragment panier + `HX-Trigger: basketChanged` |
+| `POST` | `…/recruitment/staff/add` | `staff_uid`, `version` | fragment catalogue + `HX-Trigger: basketChanged` |
+| `POST` | `…/recruitment/staff/remove` | `line_id`, `version` | fragment panier + `HX-Trigger: basketChanged` |
 | `POST` | `…/validate-recruitment-phase` | `version` | `HX-Refresh: true` — **route existante**, dont le rôle s'élargit |
 
 Les erreurs domaine remontent en **fragment HTML**, jamais en JSON — modèle
@@ -79,7 +79,7 @@ Les erreurs domaine remontent en **fragment HTML**, jamais en JSON — modèle
 | Côté | Contenu |
 |---|---|
 | **Front (Alpine)** | Repli du panier sous 768px. Rien d'autre. |
-| **Front (HTMX)** | `hx-post` des mutations, `hx-trigger="draftChanged from:body"` des deux widgets |
+| **Front (HTMX)** | `hx-post` des mutations, `hx-trigger="basketChanged from:body"` des deux widgets |
 | **Back** | Tout : quotas, trésorerie, limites croisées, effectif maximum, prix de relance doublé, `allowed_staff`, raison de chaque bouton désactivé |
 
 **Chaque bouton désactivé porte sa raison en texte** — « Quota atteint », « Effectif
@@ -93,7 +93,7 @@ Askama dans `hx-vals` :
 
 ```html
 <button hx-post="{{ routes.add_player(space_id, team_id) }}"
-        hx-vals='{"roster_line_id": "{{ line.uid }}", "version": {{ draft.version }}}'>
+        hx-vals='{"roster_line_id": "{{ line.uid }}", "version": {{ basket.version }}}'>
   Recruter
 </button>
 ```
@@ -104,7 +104,7 @@ widget se suffise à lui-même. **Les deux widgets rendent la version courante**
 puisque tous deux portent des boutons de mutation.
 
 En cas de conflit, le handler **n'applique pas** le clic : il renvoie le fragment
-reconstruit depuis le brouillon à jour, avec `HX-Trigger: draftChanged` pour
+reconstruit depuis le panier à jour, avec `HX-Trigger: basketChanged` pour
 resynchroniser l'autre widget, et un bandeau « Le panier a été modifié ailleurs.
 Voici l'état à jour — refais ton geste si besoin. »
 
@@ -141,13 +141,13 @@ reprend le pattern et la forme des VMs (`CartVm`, `StaffRowVm`), pas le code.
 - Le prix de relance affiché est le **prix de saison** (double), avec le prix de base
   rappelé en dessous — la valeur d'équipe, elle, comptera la relance à son prix de
   base (carte 250).
-- Une ligne du brouillon est retirable **jusqu'à la validation de phase**, sans coût
+- Une ligne du panier est retirable **jusqu'à la validation de phase**, sans coût
   ni trace.
 
 ## Points ouverts pour la phase 3
 
-- Où vit le brouillon : table dédiée `teams__recruitment_drafts`, ou table unique
+- Où vit le panier : table dédiée `teams__recruitment_baskets`, ou table unique
   partagée avec les renvois et discriminée par phase ?
-- Le brouillon est-il un agrégat du domaine `teams` ou un objet applicatif ?
+- Le panier est-il un agrégat du domaine `teams` ou un objet applicatif ?
   Il porte des gardes métier (quotas, limites croisées), ce qui plaide pour le
   domaine — mais il a besoin de données d'un autre BC pour les évaluer.

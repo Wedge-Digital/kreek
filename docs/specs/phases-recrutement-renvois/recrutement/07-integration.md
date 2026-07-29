@@ -11,7 +11,7 @@ recrutement. `renvois/07-integration.md` consigne ses écarts.
 
 | Migration | Contenu |
 |---|---|
-| `teams__phase_drafts` | brouillon des deux phases, `PRIMARY KEY (team_id, phase)`, colonne `version` |
+| `teams__phase_baskets` | panier des deux phases, `PRIMARY KEY (team_id, phase)`, colonne `version` |
 | `teams__treasury_ledger` | grand livre, une ligne par mouvement |
 | `team_event_store` — `ALTER` | colonne `tags JSONB NOT NULL DEFAULT '[]'` + index GIN |
 | `players_proj` — `ALTER` | colonne `membership TEXT NOT NULL DEFAULT 'Active'` |
@@ -41,9 +41,9 @@ un événement ne duplique pas sa ligne.
 |---|---|
 | `ITeamRepository::append_batch(team_id, &[event], expected_version)` | **nouvelle** — une transaction, N événements, projection **et** grand livre |
 | `ITeamRepository::append(...)` | inchangée |
-| `IPhaseDraftRepository::load(team_id, phase)` | nouvelle |
-| `IPhaseDraftRepository::save(draft, expected_version)` | nouvelle — `UPDATE … WHERE version = $` |
-| `IPhaseDraftRepository::delete(team_id, phase)` | nouvelle |
+| `IPhaseBasketRepository::load(team_id, phase)` | nouvelle |
+| `IPhaseBasketRepository::save(basket, expected_version)` | nouvelle — `UPDATE … WHERE version = $` |
+| `IPhaseBasketRepository::delete(team_id, phase)` | nouvelle |
 | `IPlayerProjectionRepository::find_by_team_id(...)` | **modifiée** — filtre `membership = 'Active'` à la source |
 
 `append_batch` écrit dans une seule transaction : les N événements à versions
@@ -75,7 +75,7 @@ disponible. À factoriser dans une fonction partagée plutôt qu'à dupliquer.
 
 | Listener | Abonné à | Rôle |
 |---|---|---|
-| `phase_draft_purge_listener` | bus interne, 4 entrées en `ReadyToPlay` | supprime les deux brouillons (D6) |
+| `phase_basket_purge_listener` | bus interne, 4 entrées en `ReadyToPlay` | supprime les deux paniers (D6) |
 
 Signature `init(event_bus: &EventBus, …)` — convention que `check-arch` (axe 5)
 utilise pour reconnaître un listener intra-BC.
@@ -109,9 +109,9 @@ pub async fn remove_line(Path(..), State(..), Form(RemoveLineBody))  // POST
 
 | Cas | Réponse |
 |---|---|
-| mutation réussie | fragment du widget cliqué + `HX-Trigger: draftChanged` |
-| `ConcurrentWrite` | **200** + fragment reconstruit + bandeau de resynchronisation + `HX-Trigger: draftChanged` |
-| erreur domaine | 422 + `draft-error.html` |
+| mutation réussie | fragment du widget cliqué + `HX-Trigger: basketChanged` |
+| `ConcurrentWrite` | **200** + fragment reconstruit + bandeau de resynchronisation + `HX-Trigger: basketChanged` |
+| erreur domaine | 422 + `basket-error.html` |
 | phase incorrecte | 422 |
 | équipe inconnue | 404 |
 | validation de phase | `HX-Refresh: true` |
@@ -127,7 +127,7 @@ l'utilisateur reçoit une page cohérente. C'est la première fois dans ce proje
 | `templates/recruitment.html` | page d'assemblage — deux conteneurs `hx-get`, aucune logique |
 | `templates/widgets/recruitment-catalog.html` | `RecruitmentCatalogVm` |
 | `templates/widgets/recruitment-cart.html` | `RecruitmentCartVm` |
-| `templates/widgets/draft-error.html` | `DraftErrorVm` — **partagé** avec les renvois |
+| `templates/widgets/basket-error.html` | `BasketErrorVm` — **partagé** avec les renvois |
 
 Conventions à respecter, reprises des maquettes validées : `hx-disinherit="*"` sur la
 racine de chaque widget, CSS embarqué, version cuite dans les `hx-vals`, aucun
@@ -157,7 +157,7 @@ Fichier `tests/e2e/test_recruitment_phase.py`, à déclarer dans
 | 11 | Mobile 390px : le panier est la barre du bas, repliable, ses `×` sont atteignables |
 
 Le scénario 9 est le plus important : il vérifie la décision D1. Le scénario 4 vérifie
-qu'aucun débit n'a lieu avant validation — la propriété qui rend le brouillon sûr.
+qu'aucun débit n'a lieu avant validation — la propriété qui rend le panier sûr.
 
 ## 6. Points ouverts pour la phase 8
 

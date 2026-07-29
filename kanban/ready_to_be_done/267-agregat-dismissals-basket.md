@@ -1,10 +1,10 @@
-# Agrégat `DismissalsDraft` — le plancher des 11 éligibles
+# Agrégat `DismissalsBasket` — le plancher des 11 éligibles
 
 **Priorité : haute**
 **Dépend de :** 257, 259
 **Bloque :** 268
 **Spec :** `docs/specs/phases-recrutement-renvois/renvois/06-domaine.md` §1
-**Fichiers :** `src/app/teams/domain/dismissals_draft.rs` (nouveau)
+**Fichiers :** `src/app/teams/domain/dismissals_basket.rs` (nouveau)
 
 ## Problème
 
@@ -20,10 +20,10 @@ borne haute.
 ### 1. L'agrégat
 
 ```rust
-pub struct DismissalsDraft {
+pub struct DismissalsBasket {
     team_id: TeamId,
-    version: DraftVersion,
-    lines:   Vec<DismissalLine>,   // ← seul état persisté
+    version: BasketVersion,
+    lines:   Vec<DismissalBasketLine>,   // ← seul état persisté
     squad:   SquadSnapshot,        // hydraté (carte 259)
     catalog: RosterCatalog,        // hydraté — pour le staff possédé
 }
@@ -40,7 +40,7 @@ fn check_eligible_floor(&self, id: &PlayerId) -> Result<(), DomainError> {
     // Un absent ne compte pas parmi les éligibles : le renvoyer n'entame
     // pas le plancher.
     if !player.available_for_next_match { return Ok(()); }
-    if self.eligible_after_draft() <= MIN_ELIGIBLE {
+    if self.eligible_after_basket() <= MIN_ELIGIBLE {
         return Err(DomainError::EligibleFloorReached);
     }
     Ok(())
@@ -49,7 +49,7 @@ fn check_eligible_floor(&self, id: &PlayerId) -> Result<(), DomainError> {
 
 `MIN_ELIGIBLE = 11`.
 
-`eligible_after_draft()` compte les membres actifs disponibles **moins les joueurs déjà
+`eligible_after_basket()` compte les membres actifs disponibles **moins les joueurs déjà
 marqués** : c'est ce qui fait que le plancher se resserre à chaque marquage, et qu'un
 joueur marqué compte encore tant que le lot n'est pas appliqué.
 
@@ -76,7 +76,7 @@ seulement depuis le panier.
 ## Tests unitaires — les 11 de la spec
 
 Les **3, 4 et 6** sont les plus importants : ils couvrent l'interaction entre le
-plancher et le contenu du brouillon, seule vraie subtilité de la page.
+plancher et le contenu du panier, seule vraie subtilité de la page.
 
 - 3 : 12 éligibles, un marqué → le second refuse
 - 4 : 9 éligibles → marquer un **absent** passe
@@ -85,7 +85,7 @@ plancher et le contenu du brouillon, seule vraie subtilité de la page.
 ## Checklist
 
 - [ ] Agrégat sans trésorerie, sans `async`, sans port
-- [ ] `MIN_ELIGIBLE = 11`, comptage après brouillon
+- [ ] `MIN_ELIGIBLE = 11`, comptage après panier
 - [ ] Un absent reste renvoyable quel que soit le compte
 - [ ] `check_staff_owned` tient compte des lignes en attente
 - [ ] `DismissalActionState` à trois cas

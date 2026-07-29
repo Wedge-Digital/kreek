@@ -11,8 +11,8 @@ trésorerie — puis l'agrégat du recrutement. `renvois/06-domaine.md` consigne
 
 ```rust
 // domain/value_objects.rs — ajouts
-pub struct DraftLineId(String);        // ULID ; identifiant technique, sans invariant
-pub struct DraftVersion(u32);
+pub struct BasketLineId(String);        // ULID ; identifiant technique, sans invariant
+pub struct BasketVersion(u32);
 pub struct RosterLineId(String);       // smart constructor : non vide
 pub struct PositionQuota(u8);
 pub struct CrossLimit { max: u8, position_uids: Vec<RosterLineId> }
@@ -38,24 +38,24 @@ object vit dans `players`.
 | `StaffNotAllowedForRoster` | 20 |
 | `StaffQuotaReached` | 21 |
 | `EligibleFloorReached` | 24 |
-| `DraftLineNotFound` | 34 |
+| `BasketLineNotFound` | 34 |
 
-## 3. L'agrégat `RecruitmentDraft`
+## 3. L'agrégat `RecruitmentBasket`
 
 ```rust
-// domain/recruitment_draft.rs
-pub struct RecruitmentDraft {
+// domain/recruitment_basket.rs
+pub struct RecruitmentBasket {
     team_id:  TeamId,
-    version:  DraftVersion,
-    lines:    Vec<DraftLine>,      // ← seul état persisté
+    version:  BasketVersion,
+    lines:    Vec<BasketLine>,      // ← seul état persisté
     catalog:  RosterCatalog,       // hydraté à chaque chargement
     squad:    SquadSnapshot,       // hydraté
     treasury: Kpo,                 // hydraté depuis Team
 }
 
-pub enum DraftLine {
-    Player { id: DraftLineId, roster_line: RosterLineId, price: Kpo },
-    Staff  { id: DraftLineId, staff_type: StaffType,     price: Kpo },
+pub enum BasketLine {
+    Player { id: BasketLineId, roster_line: RosterLineId, price: Kpo },
+    Staff  { id: BasketLineId, staff_type: StaffType,     price: Kpo },
 }
 ```
 
@@ -65,9 +65,9 @@ synchroniquement une fois l'agrégat hydraté — c'est ce que la phase 3 a ache
 ### Méthodes de commande
 
 ```rust
-pub fn add_player(&mut self, line: RosterLineId) -> Result<DraftLineId, DomainError>
-pub fn add_staff(&mut self, staff: StaffType)    -> Result<DraftLineId, DomainError>
-pub fn remove_line(&mut self, id: &DraftLineId)  -> Result<(), DomainError>
+pub fn add_player(&mut self, line: RosterLineId) -> Result<BasketLineId, DomainError>
+pub fn add_staff(&mut self, staff: StaffType)    -> Result<BasketLineId, DomainError>
+pub fn remove_line(&mut self, id: &BasketLineId)  -> Result<(), DomainError>
 pub fn validate_all(&self) -> Result<Vec<AppliedLine>, Vec<RejectedLine>>
 ```
 
@@ -84,7 +84,7 @@ fn check_staff_allowed(&self, staff: StaffType)         -> Result<(), DomainErro
 fn check_staff_quota(&self, staff: StaffType)           -> Result<(), DomainError>  // 21
 ```
 
-Chaque garde compte **possédés + en attente** : c'est ce qui fait qu'un brouillon
+Chaque garde compte **possédés + en attente** : c'est ce qui fait qu'un panier
 respecte les quotas au lieu de les contourner.
 
 ### Le prix du staff est une règle domaine
@@ -130,12 +130,12 @@ pub fn recruit_player(&self, position: PositionId, base_value: Kpo, cost: Kpo)
 ```
 
 Garde : phase `Recruitment` et trésorerie suffisante. La vérification par ligne est
-**redondante** avec le contrôle en total du brouillon — le total garantit que les
+**redondante** avec le contrôle en total du panier — le total garantit que les
 débits successifs ne passent jamais sous zéro — mais elle protège l'invariant propre à
 `Team` : sa trésorerie n'est jamais négative. On la garde comme filet.
 
 `buy_staff` est **corrigée** : l'apothicaire devient achetable (règle 18), le facteur
-fans reste refusé (19). La condition `allowed_staff` **reste dans le brouillon** —
+fans reste refusé (19). La condition `allowed_staff` **reste dans le panier** —
 `Team` ne connaît pas son roster.
 
 `dismiss_staff` est **corrigée** : la relance devient renvoyable (règle 29), et
@@ -168,12 +168,12 @@ phase, les événements d'identité.
 Un test par règle, plus les cas limites. Tous sont des tests de domaine pur — aucune
 base, aucun HTTP.
 
-### `RecruitmentDraft`
+### `RecruitmentBasket`
 
 | # | Test | Règle |
 |---|---|---|
 | 1 | 16 joueurs possédés → `add_player` refuse | 13 |
-| 2 | 15 possédés + 1 en attente → refuse | 13, brouillon compté |
+| 2 | 15 possédés + 1 en attente → refuse | 13, panier compté |
 | 3 | quota de poste atteint par les possédés → refuse | 14 |
 | 4 | quota atteint par un mélange possédés/en attente → refuse | 14 |
 | 5 | limite croisée atteinte sur deux postes différents → refuse | 15 |
@@ -185,9 +185,9 @@ base, aucun HTTP.
 | 11 | 8 relances → la neuvième refuse | 21 |
 | 12 | prix de relance = 2 × prix de base du roster | 22 |
 | 13 | `remove_line` libère quota et trésorerie | 33, 34 |
-| 14 | `remove_line` sur un identifiant inconnu → `DraftLineNotFound` | 34 |
+| 14 | `remove_line` sur un identifiant inconnu → `BasketLineNotFound` | 34 |
 | 15 | `validate_all` : une ligne invalide → **rien** n'est appliqué | 36 |
-| 16 | `validate_all` sur brouillon vide → lot vide, pas d'erreur | — |
+| 16 | `validate_all` sur panier vide → lot vide, pas d'erreur | — |
 | 17 | `action_for_position` retourne la cause exacte du blocage | D1 |
 
 ### `Team`
@@ -204,7 +204,7 @@ base, aucun HTTP.
 | 25 | `treasury_movement` : `StaffDismissed` → `None` | 10 |
 | 26 | rejeu d'un flux complet → trésorerie et compteurs corrects | 11 |
 
-Les tests 2, 4 et 7 sont les plus importants : ils vérifient que **le brouillon compte
+Les tests 2, 4 et 7 sont les plus importants : ils vérifient que **le panier compte
 ses propres lignes en attente**, sans quoi toutes les gardes seraient contournables en
 empilant des ajouts.
 

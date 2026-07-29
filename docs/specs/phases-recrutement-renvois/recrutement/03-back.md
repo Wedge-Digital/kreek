@@ -2,18 +2,18 @@
 
 **Entrée** : `02-front.md` validé.
 
-Ce document couvre l'organisation back **commune aux deux pages** — brouillon,
+Ce document couvre l'organisation back **commune aux deux pages** — panier,
 trésorerie, ports — puis ce qui est propre au recrutement. `renvois/03-back.md` ne
 consigne que ses écarts.
 
-## 1. Le brouillon est un agrégat du domaine
+## 1. Le panier est un agrégat du domaine
 
 Il porte des invariants forts : plafond de 16, quota par poste, limites croisées,
 trésorerie suffisante. C'est donc un agrégat, pas un objet applicatif.
 
 ### La tension « le domaine n'appelle pas de port » se résout par hydratation
 
-Le brouillon **porte** les données dont ses gardes ont besoin, exactement comme
+Le panier **porte** les données dont ses gardes ont besoin, exactement comme
 `RosterSelectedTeam` porte son `roster: Roster` (avec `player_definitions`,
 `allowed_staff`, `cross_limits`). Le use case l'hydrate depuis les ports ; ensuite
 toutes les vérifications sont **pures, synchrones, sans port** — comme
@@ -24,33 +24,33 @@ toutes les vérifications sont **pures, synchrones, sans port** — comme
 Use case ──(ports)──► catalogue roster + effectif courant + trésorerie
                               │
                               ▼
-                    RecruitmentDraft::hydrate(...)
+                    RecruitmentBasket::hydrate(...)
                               │
                               ▼
-              draft.add_player(line_id)  ← gardes pures
+              basket.add_player(line_id)  ← gardes pures
 ```
 
 ### Ce que l'agrégat contient
 
 | Champ | Origine |
 |---|---|
-| `team_id`, `version` | brouillon persisté |
-| `lines: Vec<DraftLine>` | brouillon persisté — **seul état muté** |
+| `team_id`, `version` | panier persisté |
+| `lines: Vec<BasketLine>` | panier persisté — **seul état muté** |
 | `catalog: RosterCatalog` | port `references`, hydraté |
 | `squad: SquadSnapshot` | port `players`, hydraté |
 | `treasury: Kpo` | agrégat `Team`, hydraté |
 
 **Seul `lines` est sérialisé** dans la colonne `state`. Le reste est rechargé à chaque
-hydratation — c'est ce qui garantit qu'un brouillon vieux de dix minutes est évalué
+hydratation — c'est ce qui garantit qu'un panier vieux de dix minutes est évalué
 contre les prix et l'effectif d'aujourd'hui.
 
 ### Persistance
 
-Une table **unique pour les deux phases**, discriminée par phase — les deux brouillons
+Une table **unique pour les deux phases**, discriminée par phase — les deux paniers
 ne coexistent jamais, puisque les phases sont séquentielles :
 
 ```sql
-CREATE TABLE teams__phase_drafts (
+CREATE TABLE teams__phase_baskets (
     team_id    TEXT        NOT NULL,
     phase      TEXT        NOT NULL,        -- 'Recruitment' | 'Dismissals'
     space_id   TEXT        NOT NULL,
@@ -65,7 +65,7 @@ CREATE TABLE teams__phase_drafts (
 Écriture gardée par la version :
 
 ```sql
-UPDATE teams__phase_drafts
+UPDATE teams__phase_baskets
    SET state = $3, version = version + 1, updated_at = now()
  WHERE team_id = $1 AND phase = $2 AND version = $4
 ```
@@ -142,7 +142,7 @@ La carte 250 le crée pour la valeur d'équipe. Il faut y ajouter la ligne de ro
 chaque joueur, pour compter les effectifs par poste :
 
 ```rust
-pub struct PlayerValueDto {
+pub struct SquadMemberDto {
     pub player_id:                String,
     pub roster_line_id:           String,   // ← ajout
     pub value_kpo:                u32,
@@ -153,13 +153,13 @@ pub struct PlayerValueDto {
 **L'étendre, pas le doubler** : les deux features arrivent sur le même port et se
 marcheraient dessus.
 
-### `IPhaseDraftRepository` → persistance du brouillon
+### `IPhaseBasketRepository` → persistance du panier
 
-`load(team_id, phase)`, `save(draft, expected_version)`, `delete(team_id, phase)`.
+`load(team_id, phase)`, `save(basket, expected_version)`, `delete(team_id, phase)`.
 
 ## 4. Domain services
 
-`use_cases/draft_hydration_service.rs` — construit `RecruitmentDraft` à partir des
+`use_cases/basket_hydration_service.rs` — construit `RecruitmentBasket` à partir des
 DTOs des deux ports et de l'agrégat `Team`.
 
 C'est l'application stricte de la règle « domain services pour données inter-BCs » :
@@ -171,15 +171,15 @@ aucun handler, aucun template ne voit un DTO de port.
 
 | Fichier | Contenu |
 |---|---|
-| `domain/recruitment_draft.rs` | agrégat, gardes pures, `DraftLine` |
+| `domain/recruitment_basket.rs` | agrégat, gardes pures, `BasketLine` |
 | `domain/treasury.rs` | `TreasuryMovement`, `MovementDirection`, `MovementReason` |
 | `domain/team.rs` | `treasury_movement()`, retrait de `refund_kpo`, **méthodes de recrutement à créer** (`PlayerRecruited` n'est aujourd'hui jamais construit) |
-| `domain/value_objects.rs` | `DraftLineId`, `DraftVersion`, `Jersey` |
+| `domain/value_objects.rs` | `BasketLineId`, `BasketVersion`, `Jersey` |
 
 ### Use cases
 
-`add_draft_player`, `remove_draft_player`, `add_draft_staff`, `remove_draft_staff`,
-`draft_hydration_service`, et `validate_recruitment_phase_use_case` (existant, dont le
+`add_basket_player`, `remove_basket_player`, `add_basket_staff`, `remove_basket_staff`,
+`basket_hydration_service`, et `validate_recruitment_phase_use_case` (existant, dont le
 rôle s'élargit à l'application du lot).
 
 ### IO — web
@@ -194,17 +194,17 @@ rôle s'élargit à l'application du lot).
 | `templates/recruitment.html` | page d'assemblage, deux conteneurs `hx-get` |
 | `templates/widgets/recruitment-catalog.html` | + fragments de ligne |
 | `templates/widgets/recruitment-cart.html` | |
-| `templates/widgets/draft-error.html` | fragment d'erreur, y compris `ConcurrentWrite` |
+| `templates/widgets/basket-error.html` | fragment d'erreur, y compris `ConcurrentWrite` |
 
 ### IO — persistance et infrastructure
 
-`io/repository/phase_draft_repository.rs`,
+`io/repository/phase_basket_repository.rs`,
 `infrastructure/teams/roster_catalog_adapter.rs`, extension de
-`infrastructure/teams/player_value_adapter.rs`.
+`infrastructure/teams/squad_adapter.rs`.
 
 ### Migrations
 
-`teams__phase_drafts`, `teams__treasury_ledger`, `team_event_store.tags` + index GIN.
+`teams__phase_baskets`, `teams__treasury_ledger`, `team_event_store.tags` + index GIN.
 
 ## 6. Widgets existants — aucun réutilisable
 
@@ -214,14 +214,14 @@ référencer : **à réécrire**. On reprend le pattern et la forme des VMs, pas
 
 ## 7. Règles métier identifiées à cette étape
 
-- **Le brouillon est évalué contre l'état du jour, pas celui de sa création.** Seules
+- **Le panier est évalué contre l'état du jour, pas celui de sa création.** Seules
   ses lignes sont persistées ; prix, effectif et trésorerie sont rechargés à chaque
   hydratation. Une ligne ajoutée hier peut donc devenir invalide — et le refus en bloc
   de la décision D5 s'applique à la validation.
 - **Le numéro de maillot est attribué à l'application du lot**, pas à l'ajout au
-  brouillon : deux lignes en attente ne peuvent pas réserver le même numéro, puisque
-  le brouillon ne porte que des postes.
-- **La trésorerie n'est vérifiée qu'en total.** Le brouillon compare la somme de ses
+  panier : deux lignes en attente ne peuvent pas réserver le même numéro, puisque
+  le panier ne porte que des postes.
+- **La trésorerie n'est vérifiée qu'en total.** Le panier compare la somme de ses
   lignes au solde courant, jamais ligne à ligne.
 
 ## 8. Points ouverts pour la phase 4

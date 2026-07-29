@@ -9,7 +9,7 @@
 `io/web/widgets/recruitment_catalog_widget.rs`,
 `io/web/widgets/recruitment_cart_widget.rs`, `io/web/view_models.rs`,
 `templates/recruitment.html`, `templates/widgets/recruitment-catalog.html`,
-`recruitment-cart.html`, `draft-error.html`, `routes.rs`, `router.rs`
+`recruitment-cart.html`, `basket-error.html`, `routes.rs`, `router.rs`
 
 ## Problème
 
@@ -22,29 +22,29 @@ La bannière de phase promet « Achetez des joueurs ou du staff » et n'offre qu
 
 | Widget | Endpoint | Trigger |
 |---|---|---|
-| `recruitment_catalog` | `GET …/team/widgets/recruitment-catalog` | `load, draftChanged from:body` |
-| `recruitment_cart` | `GET …/team/widgets/recruitment-cart` | `load, draftChanged from:body` |
+| `recruitment_catalog` | `GET …/team/widgets/recruitment-catalog` | `load, basketChanged from:body` |
+| `recruitment_cart` | `GET …/team/widgets/recruitment-cart` | `load, basketChanged from:body` |
 
 Le catalogue porte **les deux tableaux et la composition de l'effectif** : même
-colonne, même brouillon, les séparer multiplierait les requêtes sans bénéfice.
+colonne, même panier, les séparer multiplierait les requêtes sans bénéfice.
 
 Ajouter un joueur ne change pas que sa ligne — ça peut désactiver **toutes** les autres.
 Le tableau se rafraîchit donc entier, jamais ligne par ligne.
 
-`draftChanged` est émis par chaque mutation via `HX-Trigger`, sur le modèle de
+`basketChanged` est émis par chaque mutation via `HX-Trigger`, sur le modèle de
 `teamMutated` (`team_creation/io/web/widgets/staff_table_widget.rs:101`). Une mutation
 coûte **1 POST + 1 GET**.
 
 ### 2. Quatre routes de mutation
 
 `…/recruitment/players/add`, `players/remove`, `staff/add`, `staff/remove`.
-Réponse : fragment du widget cliqué + `HX-Trigger: draftChanged`.
+Réponse : fragment du widget cliqué + `HX-Trigger: basketChanged`.
 
 ### 3. La version voyage dans `hx-vals`
 
 ```html
 <button hx-post="{{ routes.add_player(space_id, team_id) }}"
-        hx-vals='{"roster_line_id": "{{ line.uid }}", "version": {{ draft.version }}}'>
+        hx-vals='{"roster_line_id": "{{ line.uid }}", "version": {{ basket.version }}}'>
   Recruter
 </button>
 ```
@@ -56,7 +56,7 @@ deux widgets** rendent la version, tous deux portant des boutons.
 ### 4. `ConcurrentWrite` répond 200
 
 Le geste n'est pas appliqué, mais l'utilisateur reçoit une **page cohérente** :
-fragment reconstruit depuis le brouillon à jour, `HX-Trigger: draftChanged`, et un
+fragment reconstruit depuis le panier à jour, `HX-Trigger: basketChanged`, et un
 bandeau « Le panier a été modifié ailleurs. Voici l'état à jour — refais ton geste si
 besoin. » Pas de réessai automatique.
 
@@ -65,7 +65,7 @@ l'interface : le fragment d'erreur est à concevoir.
 
 ### 5. VMs — aucun `builders.rs`
 
-Le brouillon portant ses données après hydratation, **toutes les VMs se construisent
+Le panier portant ses données après hydratation, **toutes les VMs se construisent
 depuis des types domaine** : `from_domain()` co-localisés dans `view_models.rs`. Aucun
 fichier `builders.rs` n'est nécessaire.
 
@@ -88,7 +88,7 @@ Le bouton « Recruter → » pointe vers la nouvelle page au lieu du placeholder
 
 ## Checklist
 
-- [ ] Deux widgets, `draftChanged` unique, 1 POST + 1 GET par mutation
+- [ ] Deux widgets, `basketChanged` unique, 1 POST + 1 GET par mutation
 - [ ] Version cuite dans `hx-vals` des deux widgets
 - [ ] `ConcurrentWrite` → 200 + fragment à jour + bandeau
 - [ ] Aucun `builders.rs`, tous les VMs en `from_domain()`

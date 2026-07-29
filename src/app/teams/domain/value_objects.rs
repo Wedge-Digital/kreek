@@ -94,7 +94,7 @@ pub enum Stat {
 
 // ── Staff ─────────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StaffType {
     Reroll,
     Apothecary,

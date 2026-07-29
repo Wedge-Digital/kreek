@@ -9,7 +9,7 @@ sont dans `recrutement/08-cards.md`. Ce document ne reprend que le fil des renvo
 
 | # | Carte | Dépend de |
 |---|---|---|
-| 267 | Agrégat `DismissalsDraft` — plancher des 11 éligibles, 11 tests | 257, 259 |
+| 267 | Agrégat `DismissalsBasket` — plancher des 11 éligibles, 11 tests | 257, 259 |
 | 268 | Use cases — marquage, démarquage, validation en lot | 256, 261, 267 |
 | 269 | Page et widgets — trois états par ligne, routes `mark`/`unmark` | 268 |
 | 270 | App event `PlayerDismissed` + second recalcul de valeur d'équipe | 251, 260, 261 |
@@ -17,11 +17,11 @@ sont dans `recrutement/08-cards.md`. Ce document ne reprend que le fil des renvo
 
 ## Ce que les renvois réutilisent du recrutement
 
-- le brouillon (carte 257) — **même table**, discriminée par phase
+- le panier (carte 257) — **même table**, discriminée par phase
 - `append_batch` (256)
-- `remove_draft_line_use_case` (263) — retirer une ligne est la même opération
+- `remove_basket_line_use_case` (263) — retirer une ligne est la même opération
 - le domain service d'hydratation (263)
-- `draft-error.html` — fragment d'erreur partagé
+- `basket-error.html` — fragment d'erreur partagé
 - `ISquadPort` (259), élargi une troisième fois pour l'identité et les SPP
 
 Les renvois n'ajoutent **aucune migration** : tout est couvert par le socle.

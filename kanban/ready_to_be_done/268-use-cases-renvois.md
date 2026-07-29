@@ -19,13 +19,13 @@ transition de phase.
 ### 1. Les use cases de marquage
 
 Même forme qu'au recrutement : charger `Team` → vérifier la phase `Dismissals` →
-hydrater → `draft.mark_player(id)?` → persister avec la version.
+hydrater → `basket.mark_player(id)?` → persister avec la version.
 
-**Le démarquage réutilise `remove_draft_line_use_case`** (carte 263) : retirer une
-ligne d'un brouillon par son identifiant est la même opération quelle que soit la
+**Le démarquage réutilise `remove_basket_line_use_case`** (carte 263) : retirer une
+ligne d'un panier par son identifiant est la même opération quelle que soit la
 phase.
 
-L'hydratation réutilise le domain service de la carte 263, avec un brouillon de phase
+L'hydratation réutilise le domain service de la carte 263, avec un panier de phase
 `Dismissals`.
 
 ### 2. La validation — trois différences avec le recrutement
@@ -44,11 +44,11 @@ compilateur**, de « un renvoi ne rembourse rien ».
 
 `DismissalsPhaseValidated` fait passer l'équipe en `ReadyToPlay`, et
 `validate_dismissals_phase()` exige la phase `Dismissals`. Une revalidation échoue,
-donc la suppression du brouillon peut rester hors transaction.
+donc la suppression du panier peut rester hors transaction.
 
 ### 4. Une conséquence heureuse
 
-Ce dernier événement déclenche **aussi** la purge des brouillons (carte 257) et le
+Ce dernier événement déclenche **aussi** la purge des paniers (carte 257) et le
 recalcul de valeur d'équipe (carte 251), tous deux abonnés aux entrées en
 `ReadyToPlay`.
 
@@ -64,10 +64,10 @@ barrière**.
 ## Checklist
 
 - [ ] Les 2 use cases de marquage sans logique métier
-- [ ] Démarquage par `remove_draft_line_use_case`, non dupliqué
+- [ ] Démarquage par `remove_basket_line_use_case`, non dupliqué
 - [ ] Validation : aucune vérification de trésorerie
 - [ ] Lot : un événement par ligne + transition en dernier
 - [ ] Test : `treasury_movement` retourne `None` pour les deux événements
 - [ ] Test : revalider après succès → `WrongPhase`
-- [ ] Test : brouillon vide → seul `DismissalsPhaseValidated` est appendu
+- [ ] Test : panier vide → seul `DismissalsPhaseValidated` est appendu
 - [ ] `make check-arch` au vert, `make test` au vert

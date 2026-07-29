@@ -5,21 +5,21 @@
 Les value objects, les erreurs, la trésorerie et l'idiome `ActionState` sont décrits
 dans `recrutement/06-domaine.md`. Ce document consigne les écarts.
 
-## 1. L'agrégat `DismissalsDraft`
+## 1. L'agrégat `DismissalsBasket`
 
 ```rust
-// domain/dismissals_draft.rs
-pub struct DismissalsDraft {
+// domain/dismissals_basket.rs
+pub struct DismissalsBasket {
     team_id: TeamId,
-    version: DraftVersion,
-    lines:   Vec<DismissalLine>,   // ← seul état persisté
+    version: BasketVersion,
+    lines:   Vec<DismissalBasketLine>,   // ← seul état persisté
     squad:   SquadSnapshot,        // hydraté
     catalog: RosterCatalog,        // hydraté — pour le staff possédé
 }
 
-pub enum DismissalLine {
-    Player { id: DraftLineId, player_id: PlayerId },
-    Staff  { id: DraftLineId, staff_type: StaffType },
+pub enum DismissalBasketLine {
+    Player { id: BasketLineId, player_id: PlayerId },
+    Staff  { id: BasketLineId, staff_type: StaffType },
 }
 ```
 
@@ -29,9 +29,9 @@ raison de la connaître.
 ### Méthodes de commande
 
 ```rust
-pub fn mark_player(&mut self, id: PlayerId)    -> Result<DraftLineId, DomainError>
-pub fn mark_staff(&mut self, staff: StaffType) -> Result<DraftLineId, DomainError>
-pub fn remove_line(&mut self, id: &DraftLineId) -> Result<(), DomainError>
+pub fn mark_player(&mut self, id: PlayerId)    -> Result<BasketLineId, DomainError>
+pub fn mark_staff(&mut self, staff: StaffType) -> Result<BasketLineId, DomainError>
+pub fn remove_line(&mut self, id: &BasketLineId) -> Result<(), DomainError>
 pub fn validate_all(&self) -> Result<Vec<AppliedLine>, Vec<RejectedLine>>
 ```
 
@@ -54,14 +54,14 @@ fn check_eligible_floor(&self, id: &PlayerId) -> Result<(), DomainError> {
     // Un absent ne compte pas parmi les éligibles : le renvoyer n'entame
     // pas le plancher (règle 25).
     if !player.available_for_next_match { return Ok(()); }
-    if self.eligible_after_draft() <= MIN_ELIGIBLE {
+    if self.eligible_after_basket() <= MIN_ELIGIBLE {
         return Err(DomainError::EligibleFloorReached);
     }
     Ok(())
 }
 ```
 
-`MIN_ELIGIBLE = 11`. `eligible_after_draft()` compte les membres actifs disponibles
+`MIN_ELIGIBLE = 11`. `eligible_after_basket()` compte les membres actifs disponibles
 **moins** les joueurs déjà marqués — c'est ce qui fait que le plancher se resserre à
 chaque marquage (règle 28).
 
@@ -86,7 +86,7 @@ pub fn dismiss_player(&self, player: PlayerId, value_at_dismissal: Kpo)
 ```
 
 Garde : phase `Dismissals` uniquement. `Team` ne connaît ni l'effectif ni les
-éligibles — le plancher est vérifié par le brouillon, qui les porte.
+éligibles — le plancher est vérifié par le panier, qui les porte.
 
 `value_at_dismissal` est conservée dans l'événement bien qu'elle ne serve à aucun
 calcul : elle documente ce que valait le joueur au moment du renvoi, information non
@@ -126,7 +126,7 @@ encore les renvoyés.
 
 ## 5. Tests unitaires prévus
 
-### `DismissalsDraft`
+### `DismissalsBasket`
 
 | # | Test | Règle |
 |---|---|---|
@@ -140,7 +140,7 @@ encore les renvoyés.
 | 8 | staff possédé 2, un marqué → le second passe, le troisième refuse | 31 |
 | 9 | joueur absent de l'effectif → `PlayerNotInSquad` | — |
 | 10 | `validate_all` : une ligne invalide → **rien** n'est appliqué | 36 |
-| 11 | brouillon vide → lot vide, pas d'erreur | — |
+| 11 | panier vide → lot vide, pas d'erreur | — |
 
 ### `Team`
 
@@ -153,7 +153,7 @@ encore les renvoyés.
 | 16 | `dismiss_staff` décrémente le compteur sans créditer | 32 |
 
 Les tests 3, 4 et 6 sont les plus importants : ils couvrent l'interaction entre le
-plancher et le contenu du brouillon, qui est la seule vraie subtilité de cette page.
+plancher et le contenu du panier, qui est la seule vraie subtilité de cette page.
 
 ## 6. Un cas qu'on croyait ouvert, et qui ne l'est pas
 

@@ -12,7 +12,7 @@ n'en reprend que le fil des renvois.
 |---|---|---|
 | 255 | Trésorerie en mouvements — grand livre, tag dérivé, suppression de `refund_kpo` | **251** |
 | 256 | `append_batch` — appliquer un lot atomiquement | 255 |
-| 257 | Brouillon de phase — table, repository, version optimiste, purge | **251** |
+| 257 | Panier de phase — table, repository, version optimiste, purge | **251** |
 | 258 | Port catalogue de roster — et **limites croisées enfin appliquées** | — |
 | 259 | `ISquadPort` — le port de consultation de l'effectif | **250** |
 | 260 | Appartenance à l'effectif dans `players` | — |
@@ -22,7 +22,7 @@ n'en reprend que le fil des renvois.
 
 | # | Carte | Dépend de |
 |---|---|---|
-| 262 | Agrégat `RecruitmentDraft` — 8 gardes, 17 tests | 257, 258, 259 |
+| 262 | Agrégat `RecruitmentBasket` — 8 gardes, 17 tests | 257, 258, 259 |
 | 263 | Use cases — hydratation, panier, validation en lot | 256, 261, 262 |
 | 264 | Page et widgets | 263 |
 | 265 | App event `PlayerRecruited` → création du joueur | 261 |
@@ -32,7 +32,7 @@ n'en reprend que le fil des renvois.
 
 | # | Carte | Dépend de |
 |---|---|---|
-| 267 | Agrégat `DismissalsDraft` — plancher des 11, 11 tests | 257, 259 |
+| 267 | Agrégat `DismissalsBasket` — plancher des 11, 11 tests | 257, 259 |
 | 268 | Use cases | 256, 261, 267 |
 | 269 | Page et widgets | 268 |
 | 270 | App event `PlayerDismissed` + second recalcul de TV | 251, 260, 261 |
@@ -42,7 +42,7 @@ n'en reprend que le fil des renvois.
 
 **Rien ne démarre avant la carte 251**, qui crée le bus interne de `teams` et la
 publication depuis l'append. Trois cartes du socle en dépendent directement — 255, 257
-et 270 — et sans elles ni le grand livre, ni la purge des brouillons, ni le second
+et 270 — et sans elles ni le grand livre, ni la purge des paniers, ni le second
 recalcul de valeur d'équipe n'ont de support.
 
 Les cartes **258 et 260 sont indépendantes** et peuvent partir immédiatement, en
