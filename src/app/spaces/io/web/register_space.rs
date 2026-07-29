@@ -1,5 +1,4 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::auth::routes::path as auth_path;
 use crate::app::shared_kernel::identity::ids::CloudinaryImage;
 use crate::app::shared_kernel::identity::space_name::SpaceName;
 use crate::app::spaces::routes::path;
@@ -7,6 +6,7 @@ use crate::app::spaces::uses_cases::register_new_space::{
     execute, RegisterNewSpaceCommand, RegisterSpaceError,
 };
 use crate::app::routes::AppRoutes;
+use crate::app::spaces::routes::Routes;
 use crate::app::spaces::context::SpacesContext;
 use askama::Template;
 use axum::body::Body;
@@ -19,6 +19,11 @@ use serde::Deserialize;
 #[derive(Template, Default)]
 #[template(path = "new-space.html")]
 pub struct NewSpaceTemplate {
+    pub routes: Routes,
+    /// Exigé par `app-layout.html`, le chrome du host, pour ses propres
+    /// routes `web.*` — pas pour les liens de ce BC, qui passent par `routes`.
+    /// C'est le dernier lien de `spaces` vers `AppRoutes` ; il disparaît avec
+    /// la carte 247, qui détache les pages du layout de kreek.
     pub app_routes: AppRoutes,
     pub space_name_value: String,
     pub space_name_error: Option<String>,
@@ -38,7 +43,7 @@ impl IntoResponse for NewSpaceTemplate {
 #[derive(Template, Default)]
 #[template(path = "new-space-form.html")]
 pub struct NewSpaceFormTemplate {
-    pub app_routes: AppRoutes,
+    pub routes: Routes,
     pub space_name_value: String,
     pub space_name_error: Option<String>,
     pub logo_url_value: String,
@@ -101,7 +106,7 @@ pub async fn register_space_submit(
 
     let Some(user) = auth_session.user else {
         return Response::builder()
-            .header("HX-Redirect", auth_path::AUTH_LAYOUT)
+            .header("HX-Redirect", ctx.unauthenticated_redirect.as_str())
             .body(Body::empty())
             .unwrap();
     };

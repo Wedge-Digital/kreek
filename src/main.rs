@@ -216,7 +216,11 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             email_service,
             cfg.host_domain,
         ),
-        spaces: SpacesContext::new(&pool, event_bus.clone()),
+        spaces: SpacesContext::new(
+            &pool,
+            event_bus.clone(),
+            path::AUTH_LAYOUT.to_string(),
+        ),
         competitions: CompetitionsContext::new(
             &pool,
             event_bus.clone(),

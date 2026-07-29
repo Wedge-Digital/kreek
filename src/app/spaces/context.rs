@@ -13,6 +13,10 @@ pub struct SpacesContext {
     pub space_repository: Arc<dyn ISpaceRepository>,
     pub user_cache_repository: Arc<dyn ISpaceUserCacheRepository>,
     pub event_bus: EventBus,
+    /// Où renvoyer un visiteur non authentifié. Injecté par le host : le BC
+    /// n'a pas à connaître les routes de celui qui l'héberge — c'est son seul
+    /// lien sortant, et la condition pour qu'il soit extractible.
+    pub unauthenticated_redirect: String,
 }
 
 pub fn init_app_event_listeners(app_event_bus: &EventBus, pool: PgPool) {
@@ -25,11 +29,12 @@ pub fn init_app_event_publisher(event_bus: &EventBus, app_event_bus: EventBus) {
 }
 
 impl SpacesContext {
-    pub fn new(pool: &PgPool, event_bus: EventBus) -> Self {
+    pub fn new(pool: &PgPool, event_bus: EventBus, unauthenticated_redirect: String) -> Self {
         Self {
             space_repository: Arc::new(SpaceRepository::new(pool.clone())),
             user_cache_repository: Arc::new(SpaceUserCacheRepository::new(pool.clone())),
             event_bus,
+            unauthenticated_redirect,
         }
     }
 }

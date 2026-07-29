@@ -18,7 +18,7 @@
            class="form-input"
            name="q"
            placeholder="Rechercher..."
-           hx-get="{{ routes.spaces.coach_search_results() }}?space_id={{ space_id }}&excluded={{ excluded }}"
+           hx-get="{{ routes.coach_search_results() }}?space_id={{ space_id }}&excluded={{ excluded }}"
            hx-trigger="keyup changed delay:300ms"
            hx-target="#coach-search-results"
            hx-indicator="#coach-search-spinner"

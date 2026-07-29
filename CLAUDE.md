@@ -237,6 +237,38 @@ let url = AppRoutes::default().teams.team_detail(&space_id, &team_id);
 
 Un import direct de `crate::app::<autre_bc>::routes::Routes` dans un handler est une **violation architecturale**.
 
+### Exception — BC destiné à l'extraction
+
+Un BC prévu pour être réutilisé dans un autre projet (aujourd'hui `auth` et
+`spaces`, cf. carte 242) n'utilise **que ses propres `Routes`**, jamais
+`AppRoutes` :
+
+```rust
+// Dans un BC extractible
+use crate::app::spaces::routes::Routes;
+pub struct NewSpaceTemplate { pub routes: Routes, … }
+```
+
+```html
+<!-- Son template appelle ses propres routes, sans passer par l'agrégat -->
+hx-post="{{ routes.register_space() }}"
+```
+
+Ses **liens sortants sont injectés par le host** — le contexte du BC reçoit la
+destination en `String`, il ne l'importe pas :
+
+```rust
+// INTERDIT dans un BC extractible
+use crate::app::auth::routes::path as auth_path;
+.header("HX-Redirect", auth_path::AUTH_LAYOUT)
+
+// OBLIGATOIRE — le host décide, le BC applique
+.header("HX-Redirect", ctx.unauthenticated_redirect.as_str())
+```
+
+La règle générale ci-dessus reste vraie pour tous les autres BCs : c'est elle
+qui empêche les imports croisés entre BCs qui, eux, ne partiront jamais.
+
 ---
 
 ## Conventions domaine

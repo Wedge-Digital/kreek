@@ -8,7 +8,7 @@
         <label class="form-label">Espace</label>
         <select id="space-select"
                 name="space_id"
-                hx-get="{{ routes.spaces.coach_select_widget() }}"
+                hx-get="{{ routes.coach_select_widget() }}"
                 hx-trigger="change[this.value != '']"
                 hx-target="#coach-select-container"
                 hx-swap="innerHTML"
@@ -28,7 +28,7 @@
     <div>
         <div class="form-header">Moteur de recherche de coachs de l'espace</div>
         <div id="coach-search-container"
-             hx-get="{{ routes.spaces.coach_search_widget() }}"
+             hx-get="{{ routes.coach_search_widget() }}"
              hx-trigger="spaceSelected from:body"
              hx-vals="js:{ space_id: event?.detail?.spaceId ?? '' }"
              hx-target="this"

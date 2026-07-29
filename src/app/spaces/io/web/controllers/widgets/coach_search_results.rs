@@ -5,7 +5,7 @@ use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
-use crate::app::routes::AppRoutes;
+use crate::app::spaces::routes::Routes;
 use crate::app::shared_kernel::identity::coach_definition::CoachDefinition;
 use crate::app::shared_kernel::identity::coach_name::CoachName;
 use crate::common::initials::initials;
@@ -23,7 +23,7 @@ pub struct SearchParams {
 #[derive(Template)]
 #[template(path = "widgets/coach-search-results.html")]
 pub struct CoachSearchResultsTemplate {
-    pub routes: AppRoutes,
+    pub routes: Routes,
     pub coaches: Vec<CoachDefinition>,
     pub space_id: String,
 }
@@ -91,7 +91,7 @@ pub async fn coaches_search_results_controller(
     let coaches = find_coaches(&ctx, &sid, &params.q, &excluded).await;
 
     CoachSearchResultsTemplate {
-        routes: AppRoutes::default(),
+        routes: Routes,
         coaches,
         space_id: params.space_id,
     }.into_response()

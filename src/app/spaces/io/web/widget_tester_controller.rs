@@ -1,4 +1,4 @@
-use crate::app::routes::AppRoutes;
+use crate::app::spaces::routes::Routes;
 use askama::Template;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -12,7 +12,7 @@ use crate::app::spaces::context::SpacesContext;
 #[derive(Template)]
 #[template(path = "pages/spaces-widget-tester-page.html")]
 pub struct SpacesWidgetPageTesterTemplate {
-    pub routes: AppRoutes,
+    pub routes: Routes,
     pub spaces: Vec<SpaceDefinition>,
 }
 
@@ -29,7 +29,7 @@ pub async fn get_space_widget_tester(
         .collect();
 
     SpacesWidgetPageTesterTemplate {
-        routes: AppRoutes::default(),
+        routes: Routes,
         spaces,
     }.into_response()
 }

@@ -1,5 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
+use crate::app::spaces::routes::Routes;
 use crate::app::spaces::context::SpacesContext;
 use askama::Template;
 use axum::extract::State;
@@ -17,6 +18,11 @@ pub struct SpaceCard {
 #[derive(Template)]
 #[template(path = "space-all.html")]
 pub struct SpaceAllTemplate {
+    pub routes: Routes,
+    /// Exigé par `app-layout.html`, le chrome du host, pour ses propres
+    /// routes `web.*` — pas pour les liens de ce BC, qui passent par `routes`.
+    /// C'est le dernier lien de `spaces` vers `AppRoutes` ; il disparaît avec
+    /// la carte 247, qui détache les pages du layout de kreek.
     pub app_routes: AppRoutes,
     pub spaces: Vec<SpaceCard>,
 }
@@ -57,7 +63,8 @@ pub async fn space_all(
         .collect();
 
     SpaceAllTemplate {
-        app_routes: Default::default(),
+        routes: Routes,
+        app_routes: AppRoutes::default(),
         spaces,
     }
     .into_response()

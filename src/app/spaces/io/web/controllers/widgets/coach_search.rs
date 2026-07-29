@@ -5,7 +5,7 @@ use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
-use crate::app::routes::AppRoutes;
+use crate::app::spaces::routes::Routes;
 use crate::app::shared_kernel::identity::coach_definition::CoachDefinition;
 use crate::app::spaces::io::web::controllers::widgets::coach_search_results::find_coaches;
 use crate::common::initials::initials;
@@ -20,7 +20,7 @@ pub struct CoachSearchWidgetParams {
 #[derive(Template)]
 #[template(path = "widgets/coach-search.html")]
 pub struct CoachSearchTemplate {
-    pub routes: AppRoutes,
+    pub routes: Routes,
     pub space_id: String,
     pub selected_coaches: Vec<CoachDefinition>,
     pub coaches: Vec<CoachDefinition>,
@@ -72,7 +72,7 @@ pub async fn search_coaches_controller(
     let excluded = params.selected.clone();
 
     CoachSearchTemplate {
-        routes: AppRoutes::default(),
+        routes: Routes,
         space_id: params.space_id,
         selected_coaches,
         coaches,
