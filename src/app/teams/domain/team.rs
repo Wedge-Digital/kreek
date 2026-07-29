@@ -7,6 +7,7 @@ use crate::app::shared_kernel::bloodbowl::staff_counts::{
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::teams::domain::error::DomainError;
+use crate::app::teams::domain::treasury::{MovementReason, TreasuryMovement};
 use crate::app::teams::domain::value_objects::{
     DedicatedFans, IncidentType, Kpo, MatchResult, RosterName, SppGain, StaffQuantity, StaffType,
     TeamName,
@@ -111,10 +112,12 @@ pub enum TeamDomainEvent {
         quantity: StaffQuantity,
         cost_kpo: Kpo,
     },
+    /// Un renvoi ne rembourse rien — il n'a donc aucun effet sur la trésorerie.
+    /// Le champ `refund_kpo` qu'il portait ne correspondait à aucune règle : ni
+    /// la création d'équipe ni les renvois ne rendent de l'or (carte 255).
     StaffDismissed {
         staff_type: StaffType,
         quantity: StaffQuantity,
-        refund_kpo: Kpo,
     },
     RecruitmentPhaseValidated,
     PlayerFired {
@@ -305,8 +308,92 @@ impl TeamDomainEvent {
 }
 
 impl Team {
+    /// Le mouvement de trésorerie que cet événement produit **sur cet état**.
+    ///
+    /// Méthode de l'agrégat et non de l'événement : seul l'état courant permet
+    /// de connaître le montant *effectif*. Une bourde de 50 kPo sur une caisse
+    /// de 30 en retire 30 — l'événement porte le montant décidé, le mouvement
+    /// porte celui qui a eu lieu.
+    ///
+    /// **`match` exhaustif, sans `_ =>`, et il doit le rester.** Ajouter une
+    /// variante d'événement doit casser la compilation tant que son effet sur
+    /// la trésorerie n'est pas déclaré. Aucun test ne peut exprimer cette
+    /// garantie : c'est l'absence de joker qui l'assure, et le compilateur qui
+    /// la vérifie. Un `_ =>` la supprimerait en silence.
+    pub fn treasury_movement(&self, event: &TeamDomainEvent) -> Option<TreasuryMovement> {
+        let solde = self.treasury;
+        match event {
+            // ── Mouvements ──────────────────────────────────────────────────
+            TeamDomainEvent::TeamCreated { treasury, .. } => Some(TreasuryMovement::credit(
+                solde,
+                *treasury,
+                MovementReason::InitialEndowment,
+            )),
+            TeamDomainEvent::PostMatchSequenceStarted {
+                treasury_income, ..
+            } => Some(TreasuryMovement::credit(
+                solde,
+                *treasury_income,
+                MovementReason::MatchIncome,
+            )),
+            TeamDomainEvent::PostMatchSequenceReverted {
+                treasury_refund, ..
+            } => Some(TreasuryMovement::debit(
+                solde,
+                *treasury_refund,
+                MovementReason::MatchIncomeReverted,
+            )),
+            TeamDomainEvent::CostlyMistakesApplied { gp_lost, .. } => Some(
+                TreasuryMovement::debit(solde, *gp_lost, MovementReason::CostlyMistake),
+            ),
+            TeamDomainEvent::PlayerRecruited { cost_kpo, .. } => Some(TreasuryMovement::debit(
+                solde,
+                *cost_kpo,
+                MovementReason::PlayerRecruitment,
+            )),
+            TeamDomainEvent::StaffBought { cost_kpo, .. } => Some(TreasuryMovement::debit(
+                solde,
+                *cost_kpo,
+                MovementReason::StaffPurchase,
+            )),
+
+            // ── Sans effet sur la trésorerie ────────────────────────────────
+            // Énumérés un à un plutôt que balayés : c'est la liste qui rend le
+            // verrou opérant.
+            TeamDomainEvent::TeamEnrolled { .. }
+            | TeamDomainEvent::TeamDismissed
+            | TeamDomainEvent::TeamEnrollmentRejected { .. }
+            | TeamDomainEvent::MatchReportingStarted { .. }
+            | TeamDomainEvent::MatchReportingCancelled { .. }
+            | TeamDomainEvent::PlayerImprovementPhaseValidated
+            | TeamDomainEvent::StaffDismissed { .. }
+            | TeamDomainEvent::RecruitmentPhaseValidated
+            | TeamDomainEvent::PlayerFired { .. }
+            | TeamDomainEvent::DismissalsPhaseValidated
+            | TeamDomainEvent::PlayerRetiredTemporarily { .. }
+            | TeamDomainEvent::RetirementPhaseValidated
+            | TeamDomainEvent::OffSeasonStarted { .. }
+            | TeamDomainEvent::PlayerReEngaged { .. }
+            | TeamDomainEvent::PlayerNotReEngaged { .. }
+            | TeamDomainEvent::OffSeasonCompleted
+            | TeamDomainEvent::TeamValueRecomputed { .. }
+            | TeamDomainEvent::GamePhaseOverridden { .. }
+            | TeamDomainEvent::TeamRenamed { .. }
+            | TeamDomainEvent::InitialsChanged { .. }
+            | TeamDomainEvent::LogoChanged { .. } => None,
+        }
+    }
+}
+
+impl Team {
     /// Rejoue un événement sur l'agrégat — pure, sans effet de bord.
     pub fn apply(mut self, event: &TeamDomainEvent) -> Self {
+        // La trésorerie est traitée une fois pour toutes, ici : `apply` et le
+        // grand livre lisent le même `treasury_movement()`, donc ils ne peuvent
+        // pas diverger. Les bras ci-dessous ne la touchent plus.
+        if let Some(mouvement) = self.treasury_movement(event) {
+            self.treasury = mouvement.balance_after;
+        }
         match event {
             TeamDomainEvent::TeamCreated {
                 team_id,
@@ -321,12 +408,13 @@ impl Team {
                 roster_name,
                 coach_id,
                 coach_name,
-                treasury,
                 dedicated_fans,
                 rerolls,
                 apothecaries,
                 assistants,
                 cheerleaders,
+                // `treasury` est posé par `treasury_movement()` en tête d'apply.
+                ..
             } => {
                 self.id = *team_id;
                 self.space_id = *space_id;
@@ -341,7 +429,6 @@ impl Team {
                 self.roster_name = roster_name.clone();
                 self.coach_id = *coach_id;
                 self.coach_name = coach_name.clone();
-                self.treasury = *treasury;
                 self.dedicated_fans = *dedicated_fans;
                 self.rerolls = *rerolls;
                 self.apothecaries = *apothecaries;
@@ -396,17 +483,15 @@ impl Team {
                             treasury_income: *treasury_income,
                         });
                 self.dedicated_fans = *dedicated_fans;
-                self.treasury.0 += treasury_income.0;
                 self.game_phase = Some(GamePhase::PlayerImprovement);
                 self.current_match_report_id = None;
             }
             TeamDomainEvent::PostMatchSequenceReverted {
                 match_report_id,
                 dedicated_fans,
-                treasury_refund,
+                ..
             } => {
                 self.dedicated_fans = *dedicated_fans;
-                self.treasury.0 = self.treasury.0.saturating_sub(treasury_refund.0);
                 self.game_phase = Some(GamePhase::MatchReporting);
                 // Restauré car `start_post_match_sequence` exige cette phase, et
                 // la re-publication en dépend.
@@ -431,17 +516,14 @@ impl Team {
             TeamDomainEvent::RetirementPhaseValidated => {
                 self.game_phase = Some(GamePhase::OffSeason);
             }
-            TeamDomainEvent::CostlyMistakesApplied { gp_lost, .. } => {
-                self.treasury.0 = self.treasury.0.saturating_sub(gp_lost.0);
+            TeamDomainEvent::CostlyMistakesApplied { .. } => {
                 self.game_phase = Some(GamePhase::ReadyToPlay);
             }
-            TeamDomainEvent::PlayerRecruited { cost_kpo, .. } => {
-                self.treasury.0 = self.treasury.0.saturating_sub(cost_kpo.0);
-            }
+            TeamDomainEvent::PlayerRecruited { .. } => {}
             TeamDomainEvent::StaffBought {
                 staff_type,
                 quantity,
-                cost_kpo,
+                ..
             } => {
                 let qty = quantity.into_inner();
                 match staff_type {
@@ -457,12 +539,11 @@ impl Team {
                     }
                     StaffType::FansFactor => {}
                 }
-                self.treasury.0 = self.treasury.0.saturating_sub(cost_kpo.0);
             }
             TeamDomainEvent::StaffDismissed {
                 staff_type,
                 quantity,
-                refund_kpo,
+                ..
             } => {
                 let qty = quantity.into_inner();
                 match staff_type {
@@ -477,7 +558,6 @@ impl Team {
                     }
                     _ => {} // Reroll, FansFactor : non renvoyables
                 }
-                self.treasury.0 += refund_kpo.0;
             }
             // Définis et appliqués, jamais encore émis : aucune méthode de
             // l'agrégat ne les construit — recruter et licencier un joueur
@@ -673,7 +753,6 @@ impl Team {
         &self,
         staff_type: StaffType,
         quantity: StaffQuantity,
-        refund_kpo: Kpo,
     ) -> Result<TeamDomainEvent, DomainError> {
         self.expect_phase(GamePhase::Dismissals)?;
         let owned = match staff_type {
@@ -688,7 +767,6 @@ impl Team {
         Ok(TeamDomainEvent::StaffDismissed {
             staff_type,
             quantity,
-            refund_kpo,
         })
     }
 
@@ -1165,11 +1243,7 @@ mod tests {
     fn dismiss_staff_hors_phase_retourne_erreur() {
         let team = recruitment_phase_team();
         assert!(matches!(
-            team.dismiss_staff(
-                StaffType::Assistant,
-                StaffQuantity::try_new(1).unwrap(),
-                Kpo(10)
-            ),
+            team.dismiss_staff(StaffType::Assistant, StaffQuantity::try_new(1).unwrap()),
             Err(DomainError::WrongGamePhase(_))
         ));
     }
@@ -1178,11 +1252,7 @@ mod tests {
     fn dismiss_staff_reroll_retourne_erreur() {
         let team = dismissals_phase_team();
         assert!(matches!(
-            team.dismiss_staff(
-                StaffType::Reroll,
-                StaffQuantity::try_new(1).unwrap(),
-                Kpo(50)
-            ),
+            team.dismiss_staff(StaffType::Reroll, StaffQuantity::try_new(1).unwrap()),
             Err(DomainError::StaffTypeNotDismissable)
         ));
     }
@@ -1192,31 +1262,26 @@ mod tests {
         let team = dismissals_phase_team();
         // 1 apothecary initial
         assert!(matches!(
-            team.dismiss_staff(
-                StaffType::Apothecary,
-                StaffQuantity::try_new(2).unwrap(),
-                Kpo(50)
-            ),
+            team.dismiss_staff(StaffType::Apothecary, StaffQuantity::try_new(2).unwrap()),
             Err(DomainError::InsufficientStaff)
         ));
     }
 
     #[test]
-    fn dismiss_staff_met_a_jour_compteur_et_tresorerie() {
+    fn dismiss_staff_decremente_le_compteur_sans_toucher_a_la_tresorerie() {
         let team = dismissals_phase_team();
         let treasury_before = team.treasury.0;
 
         let event = team
-            .dismiss_staff(
-                StaffType::Assistant,
-                StaffQuantity::try_new(1).unwrap(),
-                Kpo(10),
-            )
+            .dismiss_staff(StaffType::Assistant, StaffQuantity::try_new(1).unwrap())
             .unwrap();
         let team = team.apply(&event);
 
         assert_eq!(team.assistants.0, 1); // 2 - 1
-        assert_eq!(team.treasury.0, treasury_before + 10);
+        assert_eq!(
+            team.treasury.0, treasury_before,
+            "un renvoi ne rembourse rien"
+        );
     }
 
     // ── reject_enrollment ────────────────────────────────────────────────

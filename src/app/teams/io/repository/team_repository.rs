@@ -1,4 +1,5 @@
 use crate::app::teams::domain::team::{Team, TeamDomainEvent};
+use crate::app::teams::domain::treasury::TreasuryMovement;
 use crate::app::teams::ports::{ITeamRepository, RepositoryError, TeamCardRow, TeamEnrollmentRow};
 use crate::common::services::event_bus::event_bus::EventBus;
 use async_trait::async_trait;
@@ -189,6 +190,68 @@ impl TeamRepository {
         }
         Ok(())
     }
+
+    /// Le mouvement de trésorerie que cet événement produira, calculé **par le
+    /// domaine** sur l'état d'avant.
+    ///
+    /// Le solde ne peut pas être reconstitué en SQL sans réécrire l'écrêtage à
+    /// zéro qui vit déjà dans `TreasuryMovement::debit` — deux implémentations
+    /// d'une même règle finissent toujours par diverger. On paie donc une
+    /// relecture des événements, dans la transaction pour rester cohérent avec
+    /// l'écriture qui suit.
+    async fn treasury_movement_in_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        team_id: &str,
+        event: &TeamDomainEvent,
+    ) -> Result<Option<TreasuryMovement>, RepositoryError> {
+        let rows = sqlx::query(
+            "SELECT payload FROM team_event_store WHERE team_id = $1 ORDER BY version ASC",
+        )
+        .bind(team_id)
+        .fetch_all(&mut **tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+
+        let events: Vec<TeamDomainEvent> = rows
+            .iter()
+            .map(|r| serde_json::from_value(r.get("payload")))
+            .collect::<Result<_, _>>()
+            .map_err(RepositoryError::Deserialization)?;
+
+        // Aucun événement : l'équipe naît avec cet append, son solde de départ
+        // est zéro — ce que donne `Team::default()`.
+        let team = Team::hydrate(&events).unwrap_or_default();
+        Ok(team.treasury_movement(event))
+    }
+
+    /// Une ligne de grand livre par mouvement, dans la transaction de l'append.
+    /// `ON CONFLICT DO NOTHING` sur `(team_id, event_version)` : rejouer un
+    /// événement ne duplique pas sa ligne.
+    async fn insert_ledger_entry_in_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        team_id: &str,
+        version: u64,
+        movement: &TreasuryMovement,
+    ) -> Result<(), RepositoryError> {
+        sqlx::query(
+            "INSERT INTO teams__treasury_ledger
+                 (team_id, event_version, direction, amount_kpo, reason, balance_after_kpo)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (team_id, event_version) DO NOTHING",
+        )
+        .bind(team_id)
+        .bind(version as i64)
+        .bind(movement.direction.as_str())
+        .bind(movement.amount.0 as i32)
+        .bind(movement.reason.as_str())
+        .bind(movement.balance_after.0 as i32)
+        .execute(&mut **tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -206,15 +269,27 @@ impl ITeamRepository for TeamRepository {
 
         let mut tx = self.pool.begin().await.map_err(RepositoryError::Database)?;
 
+        let movement = self
+            .treasury_movement_in_tx(&mut tx, team_id, event)
+            .await?;
+        // Le tag est **dérivé** du mouvement, jamais posé événement par
+        // événement : ce serait recréer l'endroit qu'on peut oublier.
+        let tags = if movement.is_some() {
+            serde_json::json!(["treasury"])
+        } else {
+            serde_json::json!([])
+        };
+
         sqlx::query(
-            "INSERT INTO team_event_store (team_id, event_type, event_version, payload, version)
-             VALUES ($1, $2, $3, $4, $5)",
+            "INSERT INTO team_event_store (team_id, event_type, event_version, payload, version, tags)
+             VALUES ($1, $2, $3, $4, $5, $6)",
         )
         .bind(team_id)
         .bind(event_type)
         .bind(event_version)
         .bind(&payload)
         .bind(new_version as i64)
+        .bind(&tags)
         .execute(&mut *tx)
         .await
         .map_err(|e| {
@@ -228,6 +303,11 @@ impl ITeamRepository for TeamRepository {
 
         self.update_projection_in_tx(&mut tx, team_id, event, new_version)
             .await?;
+
+        if let Some(movement) = movement {
+            self.insert_ledger_entry_in_tx(&mut tx, team_id, new_version, &movement)
+                .await?;
+        }
 
         tx.commit().await.map_err(RepositoryError::Database)?;
 
@@ -355,7 +435,9 @@ mod tests {
     use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RosterId, SeasonId};
     use crate::app::shared_kernel::bloodbowl::team::TeamId;
     use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
-    use crate::app::teams::domain::value_objects::{DedicatedFans, Kpo, RosterName, TeamName};
+    use crate::app::teams::domain::value_objects::{
+        DedicatedFans, IncidentType, Kpo, RosterName, TeamName,
+    };
     use crate::common::services::event_bus::event_bus::new_bus;
     use sqlx::postgres::PgPoolOptions;
 
@@ -613,5 +695,90 @@ mod tests {
         .fetch_one(&repo.pool)
         .await
         .unwrap()
+    }
+
+    /// Le grand livre suit l'agrégat pas à pas : chaque mouvement porte le
+    /// montant **effectif** et le solde qui en résulte, et le dernier solde du
+    /// livre est celui de l'équipe.
+    #[tokio::test]
+    async fn le_grand_livre_suit_la_tresorerie_de_l_agregat() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = TeamRepository::new(pool.clone(), new_bus());
+        let team_id = ulid::Ulid::new().to_string();
+
+        // 1000 de dotation, puis une bourde de 1200 : on ne perd que 1000,
+        // le solde tombe à zéro sans jamais passer en négatif.
+        repo.append(&team_id, &created_event(&team_id), 0)
+            .await
+            .unwrap();
+        let bourde = TeamDomainEvent::CostlyMistakesApplied {
+            roll: 6,
+            incident: IncidentType::None,
+            gp_lost: Kpo(1200),
+        };
+        repo.append(&team_id, &bourde, 1).await.unwrap();
+
+        let lignes: Vec<(String, i32, String, i32)> = sqlx::query_as(
+            "SELECT direction, amount_kpo, reason, balance_after_kpo
+             FROM teams__treasury_ledger WHERE team_id = $1 ORDER BY event_version",
+        )
+        .bind(&team_id)
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+
+        assert_eq!(lignes.len(), 2, "dotation puis bourde");
+        assert_eq!(
+            lignes[0],
+            ("Credit".into(), 1000, "InitialEndowment".into(), 1000)
+        );
+        assert_eq!(
+            lignes[1],
+            ("Debit".into(), 1000, "CostlyMistake".into(), 0),
+            "le montant enregistré est celui réellement retiré, pas les 1200 décidés"
+        );
+
+        let team = repo.find_by_id(&team_id).await.unwrap().unwrap();
+        assert_eq!(
+            team.treasury.0, lignes[1].3 as u32,
+            "le dernier solde du livre est celui de l'agrégat"
+        );
+    }
+
+    /// Un événement sans effet sur la trésorerie ne laisse aucune ligne, et
+    /// n'est pas tagué.
+    #[tokio::test]
+    async fn un_evenement_sans_mouvement_ne_touche_ni_livre_ni_tag() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = TeamRepository::new(pool.clone(), new_bus());
+        let team_id = ulid::Ulid::new().to_string();
+
+        repo.append(&team_id, &created_event(&team_id), 0)
+            .await
+            .unwrap();
+        repo.append(&team_id, &TeamDomainEvent::TeamDismissed, 1)
+            .await
+            .unwrap();
+
+        let tags: Vec<(serde_json::Value,)> =
+            sqlx::query_as("SELECT tags FROM team_event_store WHERE team_id = $1 ORDER BY version")
+                .bind(&team_id)
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert_eq!(tags[0].0, serde_json::json!(["treasury"]));
+        assert_eq!(tags[1].0, serde_json::json!([]));
+
+        let n: (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM teams__treasury_ledger WHERE team_id = $1")
+                .bind(&team_id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(n.0, 1, "seule la dotation initiale a laissé une ligne");
     }
 }

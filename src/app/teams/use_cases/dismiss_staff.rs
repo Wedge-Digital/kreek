@@ -1,12 +1,11 @@
 use crate::app::teams::domain::error::DomainError;
-use crate::app::teams::domain::value_objects::{Kpo, StaffQuantity, StaffType};
+use crate::app::teams::domain::value_objects::{StaffQuantity, StaffType};
 use crate::app::teams::ports::{ITeamRepository, RepositoryError};
 
 pub struct DismissStaffCommand {
     pub team_id: String,
     pub staff_type: StaffType,
     pub quantity: StaffQuantity,
-    pub refund_kpo: Kpo,
 }
 
 pub enum DismissStaffError {
@@ -26,7 +25,7 @@ pub async fn execute(
         .ok_or(DismissStaffError::TeamNotFound)?;
 
     let event = team
-        .dismiss_staff(cmd.staff_type, cmd.quantity, cmd.refund_kpo)
+        .dismiss_staff(cmd.staff_type, cmd.quantity)
         .map_err(DismissStaffError::Domain)?;
 
     team_repo
