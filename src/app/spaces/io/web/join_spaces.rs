@@ -47,8 +47,10 @@ pub async fn join_spaces(
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
 
+    // L'accueil d'un espace appartient à l'hôte : il fournit la destination,
+    // le BC ne connaît pas la forme de cette route.
     let redirect_to = match first_id {
-        Some(id) => crate::app::news::routes::path::APP_HOME.replace("{space_id}", &id),
+        Some(id) => ctx.host_layout.space_home(&id),
         None => crate::app::spaces::routes::path::SPACE_ALL.to_string(),
     };
 

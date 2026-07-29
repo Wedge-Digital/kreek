@@ -31,7 +31,7 @@
   <div class="app-layout" x-data="{ drawerOpen: false }">
     <!-- Desktop sidebar -->
     <div class="sidebar"
-         hx-get="{{ app_routes.web.spaces() }}"
+         hx-get="{{ app_routes.spaces.sidebar() }}"
          hx-trigger="load, space:changed from:body"
          hx-swap="innerHTML">
     </div>
@@ -64,7 +64,7 @@
       </div>
       <div class="space-drawer-list"
            @click="drawerOpen = false"
-           hx-get="{{ app_routes.web.spaces() }}"
+           hx-get="{{ app_routes.spaces.sidebar() }}"
            hx-trigger="load, space:changed from:body"
            hx-swap="innerHTML">
       </div>

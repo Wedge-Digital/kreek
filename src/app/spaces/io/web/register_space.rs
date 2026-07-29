@@ -5,45 +5,25 @@ use crate::app::spaces::routes::path;
 use crate::app::spaces::uses_cases::register_new_space::{
     execute, RegisterNewSpaceCommand, RegisterSpaceError,
 };
-use crate::app::routes::AppRoutes;
 use crate::app::spaces::routes::Routes;
 use crate::app::spaces::context::SpacesContext;
+use crate::app::spaces::io::web::host_layout::render_page;
 use askama::Template;
 use axum::body::Body;
 use axum::extract::State;
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 use axum::Form;
 use serde::Deserialize;
 
-#[derive(Template, Default)]
-#[template(path = "new-space.html")]
-pub struct NewSpaceTemplate {
-    pub routes: Routes,
-    /// Exigé par `app-layout.html`, le chrome du host, pour ses propres
-    /// routes `web.*` — pas pour les liens de ce BC, qui passent par `routes`.
-    /// C'est le dernier lien de `spaces` vers `AppRoutes` ; il disparaît avec
-    /// la carte 247, qui détache les pages du layout de kreek.
-    pub app_routes: AppRoutes,
-    pub space_name_value: String,
-    pub space_name_error: Option<String>,
-    pub logo_url_value: String,
-    pub logo_error: Option<String>,
-}
-
-impl IntoResponse for NewSpaceTemplate {
-    fn into_response(self) -> Response {
-        match self.render() {
-            Ok(html) => Html(html).into_response(),
-            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-        }
-    }
-}
-
+/// Le formulaire de création est à la fois la page et le fragment renvoyé
+/// après une erreur de validation : depuis que la page n'étend plus le layout
+/// du host, les deux templates rendaient exactement le même HTML.
 #[derive(Template, Default)]
 #[template(path = "new-space-form.html")]
 pub struct NewSpaceFormTemplate {
     pub routes: Routes,
+    pub content_target: String,
     pub space_name_value: String,
     pub space_name_error: Option<String>,
     pub logo_url_value: String,
@@ -59,8 +39,15 @@ impl IntoResponse for NewSpaceFormTemplate {
     }
 }
 
-pub async fn register_space() -> impl IntoResponse {
-    NewSpaceTemplate::default().into_response()
+pub async fn register_space(
+    State(ctx): State<SpacesContext>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    let page = NewSpaceFormTemplate {
+        content_target: ctx.host_layout.content_target(),
+        ..Default::default()
+    };
+    render_page(page, &headers, ctx.host_layout.as_ref())
 }
 
 #[derive(Deserialize)]
@@ -75,6 +62,7 @@ pub async fn register_space_submit(
     Form(payload): Form<RegisterSpaceFormPayload>,
 ) -> impl IntoResponse {
     let mut form = NewSpaceFormTemplate {
+        content_target: ctx.host_layout.content_target(),
         space_name_value: payload.space_name.clone(),
         logo_url_value: payload.logo_url.clone(),
         ..Default::default()
@@ -106,7 +94,7 @@ pub async fn register_space_submit(
 
     let Some(user) = auth_session.user else {
         return Response::builder()
-            .header("HX-Redirect", ctx.unauthenticated_redirect.as_str())
+            .header("HX-Redirect", ctx.host_layout.unauthenticated_redirect())
             .body(Body::empty())
             .unwrap();
     };

@@ -22,6 +22,7 @@ use crate::app::news::context::NewsContext;
 use crate::app::references::context::ReferencesContext;
 use crate::app::spaces::context::SpacesContext;
 use crate::app::team_creation::context::TeamCreationContext;
+use crate::infrastructure::spaces::host_layout_adapter::KreekSpacesLayout;
 use crate::infrastructure::team_creation::competition_rules_adapter::CompetitionRulesAdapter;
 use crate::infrastructure::team_creation::reference_data_adapter::ReferenceDataAdapter;
 use crate::app::players::context::PlayersContext;
@@ -215,11 +216,12 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             event_bus.clone(),
             email_service,
             cfg.host_domain,
+            crate::web::routes::path::APP_LAYOUT.to_string(),
         ),
         spaces: SpacesContext::new(
             &pool,
             event_bus.clone(),
-            path::AUTH_LAYOUT.to_string(),
+            Arc::new(KreekSpacesLayout),
         ),
         competitions: CompetitionsContext::new(
             &pool,

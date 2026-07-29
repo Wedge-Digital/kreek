@@ -1,4 +1,4 @@
-use crate::app::spaces::routes::Routes;
+use crate::app::routes::AppRoutes;
 use askama::Template;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -9,10 +9,13 @@ use crate::app::shared_kernel::identity::space_name::SpaceName;
 use crate::app::spaces::context::SpacesContext;
 
 
+/// Outil de développement de l'hôte : il compose les widgets exposés par
+/// `spaces` pour les essayer isolément. Il ne fait pas partie du BC extrait —
+/// c'est pourquoi il vit ici et peut, lui, passer par `AppRoutes`.
 #[derive(Template)]
-#[template(path = "pages/spaces-widget-tester-page.html")]
+#[template(path = "spaces-widget-tester-page.html")]
 pub struct SpacesWidgetPageTesterTemplate {
-    pub routes: Routes,
+    pub app_routes: AppRoutes,
     pub spaces: Vec<SpaceDefinition>,
 }
 
@@ -29,7 +32,7 @@ pub async fn get_space_widget_tester(
         .collect();
 
     SpacesWidgetPageTesterTemplate {
-        routes: Routes,
+        app_routes: AppRoutes::default(),
         spaces,
     }.into_response()
 }

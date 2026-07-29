@@ -3,7 +3,7 @@ use crate::app::shared_kernel::identity::ids::{EntityId, SpaceId, UserId};
 use crate::app::teams::use_cases::commands::DismissTeamCommand;
 use crate::app::teams::use_cases::dismiss_team as dismiss_uc;
 use crate::state::AppState;
-use crate::web::extractors::space_permissions::SpacePermissions;
+use crate::app::spaces::io::web::extractors::space_permissions::SpacePermissions;
 use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;

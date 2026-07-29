@@ -1,0 +1,32 @@
+<div class="sidebar-top"></div>
+{% for space in spaces %}
+{# La page d'accueil d'un espace appartient à l'hôte : elle renvoie un document
+   complet, dont on extrait la zone de contenu. Les deux pages de `spaces`
+   ci-dessous renvoient un fragment — elles se posent directement. #}
+<div class="league-btn{% if space.is_active %} league-btn-active{% endif %}"
+     hx-trigger="click"
+     hx-get="{{ space.home_url }}"
+     hx-target="{{ content_target }}"
+     hx-select="{{ content_target }}"
+     hx-swap="outerHTML"
+     hx-push-url="true"
+     hx-on::after-request="htmx.trigger(document.body, 'space:changed')"
+     title="{{ space.name }}">
+  <img src="{{ space.logo }}" alt="{{ space.name }}" width="100" height="100">
+  <span class="space-drawer-item-name">{{ space.name }}</span>
+</div>
+{% endfor %}
+<div class="league-btn league-btn--icon"
+     hx-trigger="click"
+     hx-get="{{ routes.register_space() }}"
+     hx-target="{{ content_target }}"
+     hx-swap="innerHTML"
+     hx-push-url="true"
+     title="Ajouter une ligue">+</div>
+<div class="find-space-btn league-btn--icon"
+     hx-trigger="click"
+     hx-get="{{ routes.space_all() }}"
+     hx-target="{{ content_target }}"
+     hx-swap="innerHTML"
+     hx-push-url="true"
+     title="Rechercher une ligue">🔍</div>

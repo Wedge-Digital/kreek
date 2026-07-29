@@ -87,7 +87,14 @@ for bc in $BCS; do
             # depuis qu'il a quitté `shared_kernel` pour son BC propriétaire
             # (carte 243), sans quoi ses cinq consommateurs hors auth
             # deviendraient des violations alors que rien n'a changé pour eux.
-            hits=$(printf '%s\n' "$prod_code" | grep -nE "use crate::app::${other}::" | grep -vE "::routes::|auth_backend::AuthSession|auth::domain::user::User" || true)
+            #
+            # `SpacePermissions` relève de la même logique côté spaces : c'est
+            # l'extracteur d'autorisation par espace (403 si non membre), le
+            # pendant d'`AuthSession` pour le fournisseur d'appartenance. Il
+            # vivait dans `src/web/` et n'était donc vu par personne ; la carte
+            # 247 le rapatrie dans son BC propriétaire, ce qui rend visible une
+            # dépendance qui existait déjà et n'a pas changé de nature.
+            hits=$(printf '%s\n' "$prod_code" | grep -nE "use crate::app::${other}::" | grep -vE "::routes::|auth_backend::AuthSession|auth::domain::user::User|space_permissions::SpacePermissions" || true)
             [ -n "$hits" ] && axe3+="$(printf '%s\n' "$hits" | sed "s|^|$f:|")"$'\n'
             hits=$(printf '%s\n' "$prod_code" | grep -nE "\bstate\.${other}\b" || true)
             [ -n "$hits" ] && axe3+="$(printf '%s\n' "$hits" | sed "s|^|$f:|")"$'\n'

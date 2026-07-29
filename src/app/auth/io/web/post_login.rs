@@ -105,6 +105,7 @@ mod tests {
             event_bus: event_bus.clone(),
             email_service: Arc::new(ConsoleEmailService),
             host_domain: "localhost".to_string(),
+            authenticated_home: "/app".to_string(),
         };
 
         Router::new()

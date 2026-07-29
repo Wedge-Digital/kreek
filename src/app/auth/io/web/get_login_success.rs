@@ -1,13 +1,14 @@
+use crate::app::auth::context::AuthContext;
 use crate::app::auth::io::web::auth_layout::AuthLayout;
-use crate::app::auth::routes::Routes;
 use askama::Template;
+use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 
 #[derive(Template, Default)]
 #[template(path = "auth-login-success.html")]
 pub struct LoginSuccessTemplate {
-    pub routes: Routes,
+    pub authenticated_home: String,
 }
 
 impl IntoResponse for LoginSuccessTemplate {
@@ -19,11 +20,18 @@ impl IntoResponse for LoginSuccessTemplate {
     }
 }
 
-pub async fn login_success(headers: HeaderMap) -> impl IntoResponse {
+pub async fn login_success(
+    State(ctx): State<AuthContext>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    let page = || LoginSuccessTemplate {
+        authenticated_home: ctx.authenticated_home.clone(),
+    };
+
     if headers.contains_key("hx-request") {
-        LoginSuccessTemplate::default().into_response()
+        page().into_response()
     } else {
-        match LoginSuccessTemplate::default().render() {
+        match page().render() {
             Ok(content) => AuthLayout { content }.into_response(),
             Err(e) => {
                 tracing::error!("render failed: {e}");

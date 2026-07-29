@@ -1,8 +1,8 @@
 /// Path constants — use in Rust code: `path::LOGIN`, router definitions, `HX-Redirect` headers.
 pub mod path {
     pub const APP_LAYOUT: &str = "/app";
-    pub const SPACES: &str = "/app/spaces";
     pub const MENU: &str = "/app/menu";
+    pub const SPACES_WIDGET_TESTER: &str = "/spaces/widget/tester";
     pub const KREEK_SELECT_TESTER: &str = "/kreek-select-tester";
     pub const KREEK_SELECT_TESTER_DATA: &str = "/kreek-select-tester/data";
     pub const KREEK_SELECT_TESTER_COLORS: &str = "/kreek-select-tester/colors";
@@ -21,9 +21,6 @@ impl Routes {
     }
     pub fn home(&self) -> &'static str {
         path::APP_LAYOUT
-    }
-    pub fn spaces(&self) -> &'static str {
-        path::SPACES
     }
     pub fn menu(&self) -> &'static str {
         path::MENU

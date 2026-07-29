@@ -1,7 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::shared_kernel::identity::authorization::SpaceProfile;
 use crate::app::shared_kernel::identity::ids::SpaceId;
-use crate::state::AppState;
+use crate::app::spaces::context::SpacesContext;
 use axum::extract::{FromRef, FromRequestParts, Path};
 use axum::http::request::Parts;
 use axum::http::StatusCode;
@@ -29,12 +29,12 @@ impl SpacePermissions {
 impl<S> FromRequestParts<S> for SpacePermissions
 where
     S: Send + Sync,
-    AppState: FromRef<S>,
+    SpacesContext: FromRef<S>,
 {
     type Rejection = StatusCode;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let app_state = AppState::from_ref(state);
+        let ctx = SpacesContext::from_ref(state);
 
         let auth_session = AuthSession::from_request_parts(parts, state)
             .await
@@ -47,8 +47,7 @@ where
         let raw_id = params.get("space_id").ok_or(StatusCode::BAD_REQUEST)?;
         let space_id = SpaceId::try_new(raw_id).map_err(|_| StatusCode::BAD_REQUEST)?;
 
-        let role = app_state
-            .spaces
+        let role = ctx
             .space_repository
             .find_member_profile(&user.id, &space_id)
             .await

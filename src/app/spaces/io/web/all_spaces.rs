@@ -1,11 +1,11 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::routes::AppRoutes;
 use crate::app::spaces::routes::Routes;
 use crate::app::spaces::context::SpacesContext;
+use crate::app::spaces::io::web::host_layout::render_page;
 use askama::Template;
 use axum::extract::State;
-use axum::http::StatusCode;
-use axum::response::{Html, IntoResponse, Response};
+use axum::http::{HeaderMap, StatusCode};
+use axum::response::IntoResponse;
 use std::collections::HashSet;
 
 pub struct SpaceCard {
@@ -19,26 +19,14 @@ pub struct SpaceCard {
 #[template(path = "space-all.html")]
 pub struct SpaceAllTemplate {
     pub routes: Routes,
-    /// Exigé par `app-layout.html`, le chrome du host, pour ses propres
-    /// routes `web.*` — pas pour les liens de ce BC, qui passent par `routes`.
-    /// C'est le dernier lien de `spaces` vers `AppRoutes` ; il disparaît avec
-    /// la carte 247, qui détache les pages du layout de kreek.
-    pub app_routes: AppRoutes,
+    pub content_target: String,
     pub spaces: Vec<SpaceCard>,
-}
-
-impl IntoResponse for SpaceAllTemplate {
-    fn into_response(self) -> Response {
-        match self.render() {
-            Ok(html) => Html(html).into_response(),
-            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-        }
-    }
 }
 
 pub async fn space_all(
     auth_session: AuthSession,
     State(ctx): State<SpacesContext>,
+    headers: HeaderMap,
 ) -> impl IntoResponse {
     let Some(user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
@@ -62,10 +50,10 @@ pub async fn space_all(
         })
         .collect();
 
-    SpaceAllTemplate {
+    let page = SpaceAllTemplate {
         routes: Routes,
-        app_routes: AppRoutes::default(),
+        content_target: ctx.host_layout.content_target(),
         spaces,
-    }
-    .into_response()
+    };
+    render_page(page, &headers, ctx.host_layout.as_ref())
 }

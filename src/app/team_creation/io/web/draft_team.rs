@@ -1,5 +1,5 @@
 use crate::app::routes::AppRoutes;
-use crate::web::extractors::space_permissions::SpacePermissions;
+use crate::app::spaces::io::web::extractors::space_permissions::SpacePermissions;
 use askama::Template;
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};

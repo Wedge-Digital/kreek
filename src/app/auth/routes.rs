@@ -25,9 +25,6 @@ impl Routes {
     pub fn auth_layout(&self) -> &'static str {
         path::AUTH_LAYOUT
     }
-    pub fn app_layout(&self) -> &'static str {
-        crate::web::routes::path::APP_LAYOUT
-    }
     pub fn login(&self) -> &'static str {
         path::LOGIN
     }
