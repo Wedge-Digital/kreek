@@ -1,0 +1,9 @@
+# Révisions à ignorer par `git blame` : elles ne changent que le formatage.
+#
+# À activer une fois par clone :
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Tout reformatage de masse ajoute son SHA ici, dans le commit qui le suit.
+
+# style: applique cargo fmt à l'ensemble du dépôt (carte 272, 297 fichiers)
+b64de5d092adb3ce6bc79b33fa5310f79575db25

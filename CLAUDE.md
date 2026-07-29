@@ -190,6 +190,37 @@ Ces conventions sont appliquées au fil de l'eau — pas de renommage massif, ma
 
 ## Règles de codage
 
+### Formatage — `rustfmt` par défaut
+
+`cargo fmt` fait foi, **sans `rustfmt.toml`** : le style par défaut est celui
+que tout Rustacé lit, et un fichier de configuration n'ouvre qu'un débat de
+goût. `make lint` et la CI le vérifient — voir « Vérifications » ci-dessous.
+
+Le dépôt a été reformaté d'un bloc (carte 272, 288 fichiers). Pour que
+`git blame` continue de désigner les vrais auteurs plutôt que ce commit, à
+faire **une fois par clone** :
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
+Tout futur reformatage de masse suit la même règle : un commit qui ne contient
+**que** du formatage, dont le SHA est ajouté à `.git-blame-ignore-revs` dans le
+commit suivant.
+
+### Vérifications — ce que la CI exécute
+
+| Commande | Contenu |
+|---|---|
+| `make lint` | `cargo fmt --check`, `cargo clippy`, `cargo audit` |
+| `make check-arch` | axes 2 à 9 (cf. `scripts/check-arch.sh`) |
+| `make test` | tests unitaires et d'intégration |
+| `make e2e` | suite Playwright complète |
+
+Les quatre tournent en CI. Ne pas ajouter de cible de vérification sans
+l'y brancher : une cible que personne n'exécute finit rouge sans que
+personne ne le sache — c'est exactement ce qui est arrivé au formatage.
+
 ### Taille des fonctions — règle obligatoire
 
 **Une fonction ne doit pas dépasser 20 lignes de code.** Au-delà, c'est une erreur de conception : la fonction fait trop de choses et doit être découpée.

@@ -18,6 +18,31 @@ permissions:
   contents: read
 
 jobs:
+  # `make lint` et `make check-arch` existaient depuis longtemps sans jamais
+  # être exécutés ici : le formatage avait dérivé sur 288 fichiers sans que rien
+  # ne le signale (carte 272). Aucune base de données n'est nécessaire — seule
+  # la compilation des macros query! l'exige, d'où SQLX_OFFLINE.
+  qualite:
+    name: Qualité (fmt, clippy, architecture)
+    runs-on: ubuntu-latest
+    env:
+      SQLX_OFFLINE: "true"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: make lint (fmt + clippy)
+        run: make lint
+
+      - name: make check-arch (axes 2 à 9)
+        run: make check-arch
+
   unit:
     name: Tests unitaires
     runs-on: ubuntu-latest
