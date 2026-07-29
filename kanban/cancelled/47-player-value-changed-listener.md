@@ -74,3 +74,16 @@ Cela implique d'exposer `get_version()` sur le port, ou de l'intégrer dans `ITe
 - [ ] `get_version()` sur `ITeamRepository` ou lecture depuis `teams_projection`
 - [ ] Gestion idempotente (doublon d'event → `ConcurrentWrite` ignoré)
 - [ ] Test d'intégration : app event → TV mise à jour en base
+
+---
+
+## Annulée — 2026-07-29 (carte 251)
+
+Cette carte décrivait le producteur de `TeamDomainEvent::PlayerValueAdjusted`,
+supprimé par la carte 251 : la TV n'est plus une accumulation de deltas mais une
+somme recalculée, appendue en valeur absolue par `TeamValueRecomputed`.
+
+Un listener qui ajusterait la TV joueur par joueur n'a donc plus d'objet — et il
+n'aurait de toute façon pas su voir un joueur devenu indisponible, puisque cet
+état vit dans `players` sans produire d'événement dans `teams`. C'est
+précisément ce qui a motivé la bascule.

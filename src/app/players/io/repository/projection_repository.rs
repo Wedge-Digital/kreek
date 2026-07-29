@@ -100,4 +100,19 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
         })
         .transpose()
     }
+
+    /// Compté en base plutôt qu'en mémoire : l'appelant ne veut qu'un nombre,
+    /// pas de quoi charger tout l'effectif pour le filtrer ensuite.
+    async fn count_available_by_team_id(&self, team_id: &TeamId) -> Result<usize, RepositoryError> {
+        let row: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM players_proj \
+             WHERE team_id = $1 AND participation_status = 'Available'",
+        )
+        .bind(&team_id.0)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+
+        Ok(row.0.max(0) as usize)
+    }
 }

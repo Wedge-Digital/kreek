@@ -8,8 +8,8 @@ use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::teams::domain::error::DomainError;
 use crate::app::teams::domain::value_objects::{
-    DedicatedFans, IncidentType, Kpo, KpoDelta, MatchResult, PlayerImprovement, RosterName,
-    SppGain, StaffQuantity, StaffType, TeamName,
+    DedicatedFans, IncidentType, Kpo, MatchResult, RosterName, SppGain, StaffQuantity, StaffType,
+    TeamName,
 };
 use serde::{Deserialize, Serialize};
 
@@ -100,11 +100,6 @@ pub enum TeamDomainEvent {
         dedicated_fans: DedicatedFans,
         treasury_refund: Kpo,
     },
-    PlayerImprovementApplied {
-        player_id: PlayerId,
-        improvement: PlayerImprovement,
-        value_delta: Kpo,
-    },
     PlayerImprovementPhaseValidated,
     PlayerRecruited {
         position_id: PositionId,
@@ -137,12 +132,6 @@ pub enum TeamDomainEvent {
         gp_lost: Kpo,
     },
 
-    // Valeur joueur — déclenché par l'app event PlayerValueChanged (IO layer)
-    PlayerValueAdjusted {
-        player_id: PlayerId,
-        delta_kpo: KpoDelta,
-    },
-
     // Off-season
     OffSeasonStarted {
         season_id: SeasonId,
@@ -155,6 +144,14 @@ pub enum TeamDomainEvent {
         value_kpo_at_release: Kpo,
     },
     OffSeasonCompleted,
+
+    /// Valeur d'équipe recalculée, en **absolu** — jamais un delta. Appendu à
+    /// chaque entrée en `ReadyToPlay`, même si la valeur n'a pas bougé : la
+    /// suite de ces événements est l'historique de progression de la TV sur la
+    /// saison, qu'on n'a nulle part ailleurs.
+    TeamValueRecomputed {
+        value: Kpo,
+    },
 
     // Administration
     GamePhaseOverridden {
@@ -187,7 +184,6 @@ impl TeamDomainEvent {
             Self::MatchReportingCancelled { .. } => "MatchReportingCancelled",
             Self::PostMatchSequenceStarted { .. } => "PostMatchSequenceStarted",
             Self::PostMatchSequenceReverted { .. } => "PostMatchSequenceReverted",
-            Self::PlayerImprovementApplied { .. } => "PlayerImprovementApplied",
             Self::PlayerImprovementPhaseValidated => "PlayerImprovementPhaseValidated",
             Self::PlayerRecruited { .. } => "PlayerRecruited",
             Self::StaffBought { .. } => "StaffBought",
@@ -198,11 +194,11 @@ impl TeamDomainEvent {
             Self::PlayerRetiredTemporarily { .. } => "PlayerRetiredTemporarily",
             Self::RetirementPhaseValidated => "RetirementPhaseValidated",
             Self::CostlyMistakesApplied { .. } => "CostlyMistakesApplied",
-            Self::PlayerValueAdjusted { .. } => "PlayerValueAdjusted",
             Self::OffSeasonStarted { .. } => "OffSeasonStarted",
             Self::PlayerReEngaged { .. } => "PlayerReEngaged",
             Self::PlayerNotReEngaged { .. } => "PlayerNotReEngaged",
             Self::OffSeasonCompleted => "OffSeasonCompleted",
+            Self::TeamValueRecomputed { .. } => "TeamValueRecomputed",
             Self::GamePhaseOverridden { .. } => "GamePhaseOverridden",
             Self::TeamRenamed { .. } => "TeamRenamed",
             Self::InitialsChanged { .. } => "InitialsChanged",
@@ -291,6 +287,19 @@ impl Default for Team {
             current_match_report_id: None,
             last_post_match: None,
             version: 0,
+        }
+    }
+}
+
+impl TeamDomainEvent {
+    pub fn to_enveloppe(&self, team_id: &str) -> crate::common::event_envelope::EventEnvelope {
+        crate::common::event_envelope::EventEnvelope {
+            event_id: crate::app::shared_kernel::identity::ids::EventId::new().to_string(),
+            emitter: team_id.to_string(),
+            event_type: self.type_name().to_string(),
+            tags: serde_json::json!([]),
+            payload: serde_json::to_value(self).unwrap(),
+            occurred_at: time::OffsetDateTime::now_utc(),
         }
     }
 }
@@ -426,12 +435,7 @@ impl Team {
                 self.treasury.0 = self.treasury.0.saturating_sub(gp_lost.0);
                 self.game_phase = Some(GamePhase::ReadyToPlay);
             }
-            TeamDomainEvent::PlayerRecruited {
-                base_value_kpo,
-                cost_kpo,
-                ..
-            } => {
-                self.team_value.0 += base_value_kpo.0;
+            TeamDomainEvent::PlayerRecruited { cost_kpo, .. } => {
                 self.treasury.0 = self.treasury.0.saturating_sub(cost_kpo.0);
             }
             TeamDomainEvent::StaffBought {
@@ -453,7 +457,6 @@ impl Team {
                     }
                     StaffType::FansFactor => {}
                 }
-                self.team_value.0 += cost_kpo.0;
                 self.treasury.0 = self.treasury.0.saturating_sub(cost_kpo.0);
             }
             TeamDomainEvent::StaffDismissed {
@@ -474,30 +477,17 @@ impl Team {
                     }
                     _ => {} // Reroll, FansFactor : non renvoyables
                 }
-                self.team_value.0 = self.team_value.0.saturating_sub(refund_kpo.0);
                 self.treasury.0 += refund_kpo.0;
             }
-            TeamDomainEvent::PlayerImprovementApplied { value_delta, .. } => {
-                self.team_value.0 += value_delta.0;
-            }
-            TeamDomainEvent::PlayerFired {
-                value_kpo_at_firing,
-                ..
-            } => {
-                self.team_value.0 = self.team_value.0.saturating_sub(value_kpo_at_firing.0);
-            }
-            TeamDomainEvent::PlayerNotReEngaged {
-                value_kpo_at_release,
-                ..
-            } => {
-                self.team_value.0 = self.team_value.0.saturating_sub(value_kpo_at_release.0);
-            }
-            TeamDomainEvent::PlayerValueAdjusted { delta_kpo, .. } => {
-                if delta_kpo.0 >= 0 {
-                    self.team_value.0 += delta_kpo.0 as u32;
-                } else {
-                    self.team_value.0 = self.team_value.0.saturating_sub((-delta_kpo.0) as u32);
-                }
+            // Définis et appliqués, jamais encore émis : aucune méthode de
+            // l'agrégat ne les construit — recruter et licencier un joueur
+            // n'existe pas dans `teams` à ce jour. Ils sont le contrat déjà
+            // écrit des phases de recrutement et de renvois (cartes 255 à 271),
+            // qui les produiront ; leur effet sur `team_value` a disparu avec
+            // l'incrémental, il ne leur en reste aucun.
+            TeamDomainEvent::PlayerFired { .. } | TeamDomainEvent::PlayerNotReEngaged { .. } => {}
+            TeamDomainEvent::TeamValueRecomputed { value } => {
+                self.team_value = *value;
             }
             TeamDomainEvent::OffSeasonStarted { .. } => {
                 self.game_phase = Some(GamePhase::OffSeason);
@@ -722,22 +712,6 @@ impl Team {
             .map(|_| TeamDomainEvent::RetirementPhaseValidated)
     }
 
-    /// Enregistre l'effet sur `team_value` d'un achat de compétence/caractéristique
-    /// déjà validé côté BC `players` (registre d'un fait déjà survenu — pas de
-    /// garde ici, `players` a déjà vérifié SPP/phase/accès au moment de l'achat).
-    pub fn apply_player_improvement(
-        &self,
-        player_id: PlayerId,
-        improvement: PlayerImprovement,
-        value_delta: Kpo,
-    ) -> TeamDomainEvent {
-        TeamDomainEvent::PlayerImprovementApplied {
-            player_id,
-            improvement,
-            value_delta,
-        }
-    }
-
     pub fn override_phase(
         &self,
         admin_id: CoachId,
@@ -908,8 +882,11 @@ mod tests {
         assert!(matches!(team.dismiss(), Err(DomainError::AlreadyDismissed)));
     }
 
+    /// Recruter débite la trésorerie et **ne touche plus à la TV** : celle-ci
+    /// n'est plus accumulée, elle est recalculée puis écrasée par
+    /// `TeamValueRecomputed`.
     #[test]
-    fn player_recruited_increases_team_value_and_decreases_treasury() {
+    fn player_recruited_debite_la_tresorerie_sans_toucher_a_la_tv() {
         let pos_id = PositionId::try_new("00000000000000000000000009").unwrap();
         let events = vec![
             created_event(),
@@ -921,8 +898,52 @@ mod tests {
             },
         ];
         let team = Team::hydrate(&events).unwrap();
-        assert_eq!(team.team_value, Kpo(95));
         assert_eq!(team.treasury, Kpo(905)); // 1000 initial - 95 coût
+        assert_eq!(team.team_value, Kpo(0), "la TV n'est plus incrémentale");
+    }
+
+    /// Rejeu d'un flux complet : achats de staff, recrutement et recalculs se
+    /// succèdent, et la TV vaut exactement le **dernier** `TeamValueRecomputed`
+    /// — jamais la somme de ce qui a précédé.
+    #[test]
+    fn le_rejeu_donne_la_tv_du_dernier_recalcul() {
+        let pos_id = PositionId::try_new("00000000000000000000000009").unwrap();
+        let events = vec![
+            created_event(),
+            enrolled_event(),
+            TeamDomainEvent::TeamValueRecomputed { value: Kpo(550) },
+            TeamDomainEvent::StaffBought {
+                staff_type: StaffType::Apothecary,
+                quantity: StaffQuantity::try_new(1).unwrap(),
+                cost_kpo: Kpo(50),
+            },
+            TeamDomainEvent::PlayerRecruited {
+                position_id: pos_id,
+                base_value_kpo: Kpo(95),
+                cost_kpo: Kpo(95),
+            },
+            TeamDomainEvent::TeamValueRecomputed { value: Kpo(695) },
+        ];
+
+        let team = Team::hydrate(&events).unwrap();
+
+        assert_eq!(team.team_value, Kpo(695));
+        // L'équipe naît avec un apothicaire, elle en achète un second
+        assert_eq!(team.apothecaries.0, 2, "les compteurs de staff suivent");
+        assert_eq!(team.treasury, Kpo(855)); // 1000 - 50 - 95
+    }
+
+    /// Une valeur en baisse doit passer telle quelle : l'événement porte un
+    /// absolu, pas un delta, donc rien ne peut la « retenir ».
+    #[test]
+    fn un_recalcul_peut_faire_baisser_la_tv() {
+        let events = vec![
+            created_event(),
+            enrolled_event(),
+            TeamDomainEvent::TeamValueRecomputed { value: Kpo(700) },
+            TeamDomainEvent::TeamValueRecomputed { value: Kpo(420) },
+        ];
+        assert_eq!(Team::hydrate(&events).unwrap().team_value, Kpo(420));
     }
 
     #[test]

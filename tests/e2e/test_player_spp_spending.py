@@ -293,7 +293,12 @@ def test_stat_increase_updates_stat_and_reserve(page: Page, space_id, spp_ctx):
     assert reserve_after < reserve_before
 
 
-def test_team_value_increases_after_a_purchase(page: Page, space_id, spp_ctx):
+def test_team_value_is_frozen_during_the_post_match_phases(page: Page, space_id, spp_ctx):
+    """La TV n'est plus une accumulation de deltas : elle est recalculée à
+    l'entrée en « Prête à jouer », et ne bouge pas pendant que le coach dépense
+    ses SPP. Ce test garde ce gel — c'est la contrepartie assumée d'une valeur
+    qui reflète l'effectif réel au moment où l'équipe se déclare prête
+    (carte 251)."""
     team_id = spp_ctx["home_team_id"]
     player_id = spp_ctx["value_player_id"]
 
@@ -309,9 +314,13 @@ def test_team_value_increases_after_a_purchase(page: Page, space_id, spp_ctx):
     with page.expect_navigation(wait_until="load"):
         choosable.first.click()
 
-    def value_increased():
-        page.goto(f"{BASE_URL}/app/{space_id}/teams/{team_id}", wait_until="load")
-        value_now = int(value_item.inner_text().replace("kPo", "").strip())
-        return value_now > value_before
+    # Laisse au pipeline d'app events le temps de ne rien faire : c'est
+    # l'absence de changement qu'on vérifie, elle ne peut pas être « attendue ».
+    import time
+    time.sleep(2)
 
-    _wait_for(value_increased)
+    page.goto(f"{BASE_URL}/app/{space_id}/teams/{team_id}", wait_until="load")
+    value_after = int(value_item.inner_text().replace("kPo", "").strip())
+    assert value_after == value_before, (
+        "la TV doit rester figée pendant la phase d'amélioration des joueurs"
+    )

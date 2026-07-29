@@ -3,6 +3,7 @@ pub mod buy_staff;
 pub mod commands;
 pub mod dismiss_staff;
 pub mod dismiss_team;
+pub mod recompute_team_value_use_case;
 pub mod reject_enrollment;
 pub mod team_value_service;
 pub mod validate_dismissals_phase_use_case;

@@ -148,7 +148,10 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
 
     let competitions_team_info_port = Arc::new(
         crate::infrastructure::competitions::team_info_adapter::TeamInfoAdapter::new(Arc::new(
-            crate::app::teams::io::repository::team_repository::TeamRepository::new(pool.clone()),
+            crate::app::teams::io::repository::team_repository::TeamRepository::new(
+                pool.clone(),
+                event_bus.clone(),
+            ),
         )),
     );
     let competitions_match_day_repository = Arc::new(
@@ -164,8 +167,31 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
         competitions_team_info_port.clone(),
     );
     team_creation::context::init_app_event_publisher(&event_bus, app_event_bus.clone());
-    teams::context::init_listeners(&app_event_bus, pool.clone());
     let references = load_references(&cfg);
+    let teams_player_count = Arc::new(
+        crate::infrastructure::teams::player_count_adapter::PlayerCountAdapter::new(pool.clone()),
+    );
+    let teams_journeyman_type = Arc::new(
+        crate::infrastructure::teams::journeyman_type_adapter::JourneymanTypeAdapter::new(
+            references.repository.clone(),
+        ),
+    );
+    let teams_roster_info = Arc::new(
+        crate::infrastructure::teams::roster_info_adapter::RosterInfoAdapter::new(
+            references.repository.clone(),
+        ),
+    );
+    let teams_player_value = Arc::new(
+        crate::infrastructure::teams::player_value_adapter::PlayerValueAdapter::new(pool.clone()),
+    );
+    teams::context::init_listeners(
+        &app_event_bus,
+        &event_bus,
+        pool.clone(),
+        teams_player_value.clone(),
+        teams_roster_info.clone(),
+        teams_journeyman_type.clone(),
+    );
     let players_skill_catalog: Arc<dyn crate::app::players::ports::ISkillCatalogPort> = Arc::new(
         crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter::new(
             references.repository.clone(),
@@ -184,6 +210,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             Arc::new(
                 crate::app::teams::io::repository::team_repository::TeamRepository::new(
                     pool.clone(),
+                    event_bus.clone(),
                 ),
             ),
             references.repository.clone(),
@@ -297,35 +324,20 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             match_report::context::MatchReportContext::new(&pool, comp_data, team_data, player_data, coach_data, space_admin, spp_calculator, event_bus.clone())
         },
         teams: {
-            let player_count = Arc::new(
-                crate::infrastructure::teams::player_count_adapter::PlayerCountAdapter::new(pool.clone()),
-            );
-            let journeyman_type = Arc::new(
-                crate::infrastructure::teams::journeyman_type_adapter::JourneymanTypeAdapter::new(
-                    references.repository.clone(),
-                ),
-            );
-            let roster_info = Arc::new(
-                crate::infrastructure::teams::roster_info_adapter::RosterInfoAdapter::new(
-                    references.repository.clone(),
-                ),
-            );
-            let player_value = Arc::new(
-                crate::infrastructure::teams::player_value_adapter::PlayerValueAdapter::new(pool.clone()),
-            );
             TeamsContext::new(
                 &pool,
-                player_count,
-                journeyman_type,
-                roster_info,
-                player_value,
+                event_bus.clone(),
+                teams_player_count,
+                teams_journeyman_type,
+                teams_roster_info,
+                teams_player_value,
             )
         },
         players: PlayersContext::new(
             &pool,
             players_skill_catalog.clone(),
             Arc::new(crate::infrastructure::players::team_roster_adapter::TeamRosterAdapter::new(
-                Arc::new(crate::app::teams::io::repository::team_repository::TeamRepository::new(pool.clone())),
+                Arc::new(crate::app::teams::io::repository::team_repository::TeamRepository::new(pool.clone(), event_bus.clone())),
             )),
             Arc::new(crate::infrastructure::players::competition_admin_adapter::CompetitionAdminAdapter::new(
                 Arc::new(crate::app::competitions::io::repository::competition_repository::CompetitionRepository::new(pool.clone())),

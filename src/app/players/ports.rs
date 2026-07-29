@@ -61,6 +61,14 @@ pub trait IPlayerProjectionRepository: Send + Sync {
         &self,
         player_id: &str,
     ) -> Result<Option<PlayerProjection>, RepositoryError>;
+
+    /// Nombre de joueurs alignables au prochain match — les indisponibles
+    /// (`MissingNextGame`, `Retired`, `Dead`) en sont exclus.
+    ///
+    /// Distinct de `find_by_team_id().len()`, qui donne l'effectif total : c'est
+    /// ce comptage-là qui détermine le nombre de journaliers, et les confondre
+    /// prive de renfort une équipe amoindrie par les blessures.
+    async fn count_available_by_team_id(&self, team_id: &TeamId) -> Result<usize, RepositoryError>;
 }
 
 // ── Event store port ───────────────────────────────────────────────────────────

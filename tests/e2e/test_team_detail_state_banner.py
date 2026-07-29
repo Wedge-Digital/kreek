@@ -220,3 +220,27 @@ def test_dismissals_banner_validates_to_ready_to_play(page: Page, space_id, matc
     ready_banner = page.locator(".state-banner--ready")
     expect(ready_banner).to_be_visible()
     expect(ready_banner.locator(".state-banner-cta--outline")).to_contain_text("Imprimer en PDF")
+
+    # L'entrée en « Prête à jouer » déclenche le recalcul de la TV (carte 251).
+    # Ce qu'on couvre ici est le câblage — listener intra-BC, use case,
+    # projection écrite dans la transaction de l'append —, pas l'arithmétique,
+    # qui relève des tests unitaires de `compute_team_value`. Sans ce câblage la
+    # fiche resterait sur la valeur d'avant la séquence d'après-match.
+    value_item = page.locator(".meta-item", has_text="Valeur d'équipe").locator(".meta-value")
+
+    def value_is_recomputed():
+        page.reload(wait_until="load")
+        texte = value_item.inner_text().replace("kPo", "").strip()
+        return texte.isdigit() and int(texte) > 0
+
+    for _ in range(30):
+        if value_is_recomputed():
+            break
+        page.wait_for_timeout(200)
+    else:
+        raise AssertionError("la TV n'a pas été recalculée à l'entrée en « Prête à jouer »")
+
+    recomputee = int(value_item.inner_text().replace("kPo", "").strip())
+    page.reload(wait_until="load")
+    stable = int(value_item.inner_text().replace("kPo", "").strip())
+    assert stable == recomputee, "la TV projetée doit être stable une fois recalculée"

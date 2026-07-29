@@ -1,4 +1,3 @@
-use crate::app::players::io::app_events::app_event_publisher::players_app_event_publisher;
 use crate::app::players::io::app_events::{player_match_impact_listener, team_created_listener};
 use crate::app::players::io::repository::player_repository::PgPlayerRepository;
 use crate::app::players::io::repository::projection_repository::PgPlayerProjectionRepository;
@@ -52,5 +51,4 @@ pub fn init_listeners(
     let player_repo: Arc<dyn IPlayerRepository> = Arc::new(PgPlayerRepository::new(pool.clone()));
     team_created_listener::init(app_event_bus, pool, skill_catalog.clone());
     player_match_impact_listener::init(app_event_bus, player_repo, skill_catalog);
-    players_app_event_publisher(event_bus, app_event_bus.clone());
 }

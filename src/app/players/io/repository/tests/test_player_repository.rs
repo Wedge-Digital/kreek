@@ -398,3 +398,33 @@ async fn la_compensation_met_a_jour_spp_et_statut_dans_la_projection(pool: PgPoo
         "le statut projeté doit suivre l'agrégat"
     );
 }
+
+/// Le comptage qui détermine le nombre de journaliers. Le confondre avec
+/// l'effectif total prive de renfort une équipe amoindrie : avec 13 joueurs
+/// dont 4 blessés, `11 - 13` donne zéro journalier alors qu'il en faut deux.
+#[sqlx::test]
+async fn count_available_by_team_id_exclut_les_indisponibles(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool);
+    let team_id = TeamId("t-blesses".into());
+
+    for i in 0..13 {
+        let player_id = PlayerId(format!("p{i}"));
+        let player = seed_player(&repo, &player_id, &team_id).await;
+        if i < 4 {
+            let injury = player.record_injury(sample_context(), InjuryType::BlessureSerieuse);
+            repo.append(&player_id, &team_id, &injury, 2).await.unwrap();
+        }
+    }
+
+    let total = proj.find_by_team_id(&team_id).await.unwrap().len();
+    let disponibles = proj.count_available_by_team_id(&team_id).await.unwrap();
+
+    assert_eq!(total, 13, "l'effectif total reste de 13");
+    assert_eq!(disponibles, 9, "4 blessés ne sont pas alignables");
+    assert_eq!(
+        11usize.saturating_sub(disponibles),
+        2,
+        "l'équipe doit recevoir 2 journaliers"
+    );
+}

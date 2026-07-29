@@ -24,15 +24,15 @@ impl PlayerDataAdapter {
 
 #[async_trait]
 impl IPlayerDataPort for PlayerDataAdapter {
+    /// Les joueurs alignables, pas l'effectif total : un blessé qui rate le
+    /// prochain match laisse une place que doit combler un journalier.
     async fn count_available_players(&self, team_id: &str) -> Result<usize, String> {
         use crate::app::players::domain::player::TeamId;
         let tid = TeamId(team_id.to_string());
-        let players = self
-            .player_projection_repo
-            .find_by_team_id(&tid)
+        self.player_projection_repo
+            .count_available_by_team_id(&tid)
             .await
-            .map_err(|e| e.to_string())?;
-        Ok(players.len())
+            .map_err(|e| e.to_string())
     }
 
     async fn find_player_display(&self, player_id: &str) -> Option<String> {

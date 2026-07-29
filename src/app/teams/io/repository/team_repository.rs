@@ -1,15 +1,20 @@
 use crate::app::teams::domain::team::{Team, TeamDomainEvent};
 use crate::app::teams::ports::{ITeamRepository, RepositoryError, TeamCardRow, TeamEnrollmentRow};
+use crate::common::services::event_bus::event_bus::EventBus;
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
 
 pub struct TeamRepository {
     pool: PgPool,
+    /// Bus interne du BC. Le passer au constructeur plutôt qu'à l'append rend
+    /// impossible un repository qui n'publierait pas — donc un chemin de
+    /// mutation que le recalcul de TV ne verrait jamais.
+    event_bus: EventBus,
 }
 
 impl TeamRepository {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(pool: PgPool, event_bus: EventBus) -> Self {
+        Self { pool, event_bus }
     }
 
     async fn update_projection_in_tx(
@@ -163,6 +168,19 @@ impl TeamRepository {
                 .await
                 .map_err(RepositoryError::Database)?;
             }
+            // La TV projetée suit l'agrégat dans la même transaction que
+            // l'append — sans quoi une projection désynchronisée afficherait
+            // une valeur périmée sur la fiche équipe.
+            TeamDomainEvent::TeamValueRecomputed { value } => {
+                sqlx::query(
+                    "UPDATE team_proj SET team_value = $2, updated_at = now() WHERE team_id = $1",
+                )
+                .bind(team_id)
+                .bind(value.0 as i32)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
             // Autres événements (retraite temporaire, off-season, override admin) : pas encore
             // produits par aucun use case (cartes 39/40/43/46 à faire) — quand l'un d'eux sera
             // implémenté, ajouter ici l'arm correspondant, sous peine de reproduire le bug de
@@ -212,6 +230,13 @@ impl ITeamRepository for TeamRepository {
             .await?;
 
         tx.commit().await.map_err(RepositoryError::Database)?;
+
+        // Publié après le commit, et depuis l'append plutôt que depuis chaque
+        // use case : deux des quatre chemins vers `ReadyToPlay` passent par des
+        // listeners, pas par un use case. C'est le seul point qui les couvre
+        // tous. Déviation assumée du patron de `players` et `match_report`.
+        let _ = self.event_bus.send(event.to_enveloppe(team_id));
+
         Ok(new_version)
     }
 
@@ -331,6 +356,7 @@ mod tests {
     use crate::app::shared_kernel::bloodbowl::team::TeamId;
     use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
     use crate::app::teams::domain::value_objects::{DedicatedFans, Kpo, RosterName, TeamName};
+    use crate::common::services::event_bus::event_bus::new_bus;
     use sqlx::postgres::PgPoolOptions;
 
     async fn test_pool() -> Option<PgPool> {
@@ -373,7 +399,7 @@ mod tests {
         let Some(pool) = test_pool().await else {
             return;
         };
-        let repo = TeamRepository::new(pool);
+        let repo = TeamRepository::new(pool, new_bus());
         let team_id = ulid::Ulid::new().to_string();
 
         let event1 = created_event(&team_id);
@@ -410,7 +436,7 @@ mod tests {
         let Some(pool) = test_pool().await else {
             return;
         };
-        let repo = TeamRepository::new(pool);
+        let repo = TeamRepository::new(pool, new_bus());
         let team_id = ulid::Ulid::new().to_string();
 
         let event = created_event(&team_id);
@@ -438,7 +464,7 @@ mod tests {
         let Some(pool) = test_pool().await else {
             return;
         };
-        let repo = TeamRepository::new(pool);
+        let repo = TeamRepository::new(pool, new_bus());
         let team_id = ulid::Ulid::new().to_string();
         let mr_id = crate::app::shared_kernel::bloodbowl::ids::MatchReportId::try_new(
             "00000000000000000000000007",
@@ -521,7 +547,7 @@ mod tests {
         let Some(pool) = test_pool().await else {
             return;
         };
-        let repo = TeamRepository::new(pool);
+        let repo = TeamRepository::new(pool, new_bus());
         let team_id = ulid::Ulid::new().to_string();
         let mr_id = crate::app::shared_kernel::bloodbowl::ids::MatchReportId::try_new(
             "00000000000000000000000007",

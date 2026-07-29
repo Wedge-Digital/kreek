@@ -79,3 +79,17 @@ Future : slots pour les widgets BC `players` (modification directe des joueurs)
 - [ ] Routes GET (panneau) + POST (appliquer)
 - [ ] Fragment UI : phase courante + sélecteur + champ raison
 - [ ] Vérification rôle admin dans le handler
+
+---
+
+## Note — 2026-07-29 (carte 251)
+
+La TV est désormais recalculée à chaque entrée en `ReadyToPlay`, par
+`teams/io/listeners/team_value_listener.rs`, qui réagit aux quatre événements
+posant cette phase : `TeamEnrolled`, `DismissalsPhaseValidated`,
+`MatchReportingCancelled`, `CostlyMistakesApplied`.
+
+`GamePhaseOverridden` **n'en fait pas partie**. Un admin qui force une équipe en
+`ReadyToPlay` la laisserait donc avec une TV périmée. Ajouter l'événement à
+`ends_in_ready_to_play()` en implémentant cette carte — en filtrant sur
+`to_phase == ReadyToPlay`, l'override pouvant viser n'importe quelle phase.
