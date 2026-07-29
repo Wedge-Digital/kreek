@@ -1,8 +1,9 @@
 use crate::app::auth::routes::path as auth_path;
 use crate::app::news::routes::Routes as NewsRoutes;
 use crate::app::routes::AppRoutes;
-use crate::app::spaces::io::web::host_layout::ISpacesHostLayout;
+use crate::app::spaces::io::web::host_layout::{ISpacesHostLayout, UploadField};
 use crate::web::app_shell::{AppShell, CONTENT_TARGET};
+use crate::web::upload_widget::render_upload_widget;
 use axum::response::{IntoResponse, Response};
 
 /// Le cadre que kreek fournit au BC `spaces` : son layout applicatif, et les
@@ -32,5 +33,15 @@ impl ISpacesHostLayout for KreekSpacesLayout {
 
     fn unauthenticated_redirect(&self) -> String {
         auth_path::AUTH_LAYOUT.to_string()
+    }
+
+    fn upload_widget(&self, field: UploadField<'_>) -> String {
+        render_upload_widget(
+            field.field_id,
+            field.initial_value,
+            field.folder,
+            field.label,
+            field.error,
+        )
     }
 }

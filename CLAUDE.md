@@ -263,11 +263,69 @@ use crate::app::auth::routes::path as auth_path;
 .header("HX-Redirect", auth_path::AUTH_LAYOUT)
 
 // OBLIGATOIRE — le host décide, le BC applique
-.header("HX-Redirect", ctx.unauthenticated_redirect.as_str())
+.header("HX-Redirect", ctx.host_layout.unauthenticated_redirect())
 ```
 
 La règle générale ci-dessus reste vraie pour tous les autres BCs : c'est elle
 qui empêche les imports croisés entre BCs qui, eux, ne partiront jamais.
+
+---
+
+## Statut « BC extractible » — règle fondamentale
+
+Certains BCs sont maintenus **copiables tels quels dans un autre projet** :
+copier `src/app/<bc>/` et le noyau d'identité doit suffire, sans démêler de
+dépendance vers le reste de kreek. Aujourd'hui : **`auth` et `spaces`**.
+
+C'est un **statut accordé et entretenu**, pas une propriété qu'on découvre. La
+liste vit en tête de `scripts/check-arch.sh` (`EXTRACTABLE_BCS`). Accorder le
+statut à un nouveau BC, c'est s'engager à tenir tout ce qui suit.
+
+### Ce qu'un BC extractible n'a pas le droit de référencer
+
+| Interdit | À la place |
+|---|---|
+| `AppState`, `crate::state::`, `state.<bc>` | son propre contexte, projeté par `FromRef` |
+| `AppRoutes` | ses propres `Routes` |
+| `crate::web::` (layout, extracteurs, middlewares) | ce que l'hôte lui injecte |
+| un autre BC — **ses `routes` comprises** | une destination injectée par l'hôte |
+| `shared_kernel::bloodbowl::` | `shared_kernel::identity::` |
+| `{% extends %}` / `{% import %}` vers un template hors du BC | un fragment rendu par l'hôte |
+
+Seule exception, dans le sens `spaces` → `auth` : les deux BCs partent en
+couple, donc `spaces` consomme `auth_backend::AuthSession` et les app events
+d'identité. Rien d'autre, et surtout pas `auth::routes`.
+
+### Comment l'hôte fournit ce qui lui appartient
+
+Le BC déclare un trait dans sa couche web, l'hôte l'implémente dans
+`src/infrastructure/<bc>/`, `main.rs` l'injecte dans le contexte du BC.
+
+```rust
+// Dans le BC — il décrit son besoin, pas la solution
+pub trait ISpacesHostLayout: Send + Sync {
+    fn wrap_page(&self, content: String) -> Response;
+    fn content_target(&self) -> String;
+    fn space_home(&self, space_id: &str) -> String;
+    fn unauthenticated_redirect(&self) -> String;
+    fn upload_widget(&self, field: UploadField<'_>) -> String;
+}
+```
+
+**Pourquoi un trait et pas un template partagé** : Askama résout `extends` et
+`import` statiquement. Un BC ne peut donc pas recevoir son layout en paramètre
+— ses pages ne rendent qu'un fragment, et c'est l'hôte qui les enveloppe.
+`askama.toml` déclarant les onze dossiers de templates dans un **seul espace de
+noms**, rien dans le template ne signale que la cible d'un `extends` vit chez
+l'hôte : le contrôle est physique, la cible doit exister dans le dossier de
+templates du BC.
+
+### Le verrou
+
+`scripts/check-arch.sh` **axe 9**, bloquant. Il ne remplace pas le compilateur
+— le découpage en crates cargo a été écarté (carte 242), ce verrou est donc un
+ensemble de `grep` qui ne voit ni les chaînes littérales ni le SQL. C'est le
+prix de cette décision, assumé tel quel.
 
 ---
 

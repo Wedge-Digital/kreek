@@ -97,6 +97,7 @@ pub async fn get_spaces_sidebar(
 mod tests {
     use super::*;
     use crate::app::shared_kernel::identity::ids::CloudinaryImage;
+    use crate::app::spaces::io::web::host_layout::UploadField;
 
     struct FakeHostLayout;
 
@@ -112,6 +113,9 @@ mod tests {
         }
         fn unauthenticated_redirect(&self) -> String {
             "/auth".to_string()
+        }
+        fn upload_widget(&self, _field: UploadField<'_>) -> String {
+            unimplemented!("le sidebar n'affiche aucun champ d'upload")
         }
     }
 

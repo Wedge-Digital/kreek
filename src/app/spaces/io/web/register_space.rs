@@ -7,7 +7,9 @@ use crate::app::spaces::uses_cases::register_new_space::{
 };
 use crate::app::spaces::routes::Routes;
 use crate::app::spaces::context::SpacesContext;
-use crate::app::spaces::io::web::host_layout::render_page;
+use crate::app::spaces::io::web::host_layout::{
+    render_page, ISpacesHostLayout, UploadField,
+};
 use askama::Template;
 use axum::body::Body;
 use axum::extract::State;
@@ -28,6 +30,24 @@ pub struct NewSpaceFormTemplate {
     pub space_name_error: Option<String>,
     pub logo_url_value: String,
     pub logo_error: Option<String>,
+    /// Rendu par l'hôte — cf. `ISpacesHostLayout::upload_widget`. Rempli au
+    /// dernier moment par `with_upload`, une fois les erreurs de validation
+    /// connues : le composant affiche l'erreur du champ.
+    pub logo_upload: String,
+}
+
+impl NewSpaceFormTemplate {
+    fn with_upload(mut self, host_layout: &dyn ISpacesHostLayout) -> Self {
+        let html = host_layout.upload_widget(UploadField {
+            field_id: "logo_url",
+            initial_value: &self.logo_url_value,
+            folder: "spaces/logos",
+            label: "Logo de votre espace",
+            error: self.logo_error.as_deref(),
+        });
+        self.logo_upload = html;
+        self
+    }
 }
 
 impl IntoResponse for NewSpaceFormTemplate {
@@ -46,7 +66,8 @@ pub async fn register_space(
     let page = NewSpaceFormTemplate {
         content_target: ctx.host_layout.content_target(),
         ..Default::default()
-    };
+    }
+    .with_upload(ctx.host_layout.as_ref());
     render_page(page, &headers, ctx.host_layout.as_ref())
 }
 
@@ -89,7 +110,7 @@ pub async fn register_space_submit(
     };
 
     let (Some(space_name), Some(space_logo)) = (space_name, space_logo) else {
-        return form.into_response();
+        return form.with_upload(ctx.host_layout.as_ref()).into_response();
     };
 
     let Some(user) = auth_session.user else {
@@ -121,18 +142,18 @@ pub async fn register_space_submit(
 
         Err(RegisterSpaceError::SpaceNameAlreadyTaken) => {
             form.space_name_error = Some("Ce nom d'espace est déjà utilisé.".into());
-            form.into_response()
+            form.with_upload(ctx.host_layout.as_ref()).into_response()
         }
 
         Err(RegisterSpaceError::CoachNotFound) => {
             form.space_name_error =
                 Some("Votre profil est introuvable, veuillez vous reconnecter.".into());
-            form.into_response()
+            form.with_upload(ctx.host_layout.as_ref()).into_response()
         }
 
         Err(RegisterSpaceError::Database(_)) => {
             form.space_name_error = Some("Erreur interne, veuillez réessayer.".into());
-            form.into_response()
+            form.with_upload(ctx.host_layout.as_ref()).into_response()
         }
     }
 }

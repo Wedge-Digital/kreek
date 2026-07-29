@@ -120,9 +120,30 @@ qu'il achète — aucune n'empêche l'extraction :
 
 ## Checklist
 
-- [ ] Cartes 243 à 248 écrites et prises dans l'ordre de la séquence
-- [ ] Critère de sortie vérifié à la main avant de poser le verrou de la 248
-- [ ] `make check-arch` au vert sur l'ensemble du projet
-- [ ] `make test` au vert
-- [ ] CLAUDE.md mis à jour là où la règle générale et le découplage divergent
+- [x] Cartes 243 à 248 écrites et prises dans l'ordre de la séquence
+- [x] Critère de sortie vérifié à la main avant de poser le verrou de la 248
+- [x] `make check-arch` au vert sur l'ensemble du projet
+- [x] `make test` au vert
+- [x] CLAUDE.md mis à jour là où la règle générale et le découplage divergent
       (cf. carte 246 sur `AppRoutes`)
+
+## Clôture — 2026-07-29
+
+Série close. Le critère de sortie est atteint et n'est plus vérifié à la main :
+l'**axe 9** de `check-arch.sh` le rejoue à chaque exécution, y compris la
+réciproque (`shared_kernel` ne référence aucun des deux BCs).
+
+Deux points sont allés plus loin que ce que la série prévoyait, parce que le
+verrou les a rendus visibles :
+
+- les pages de `spaces` ne pouvaient pas se détacher du layout du host par un
+  simple import — Askama résout `extends` statiquement. D'où le trait
+  `ISpacesHostLayout` (carte 247) : le BC rend un fragment, l'hôte l'enveloppe
+  et lui fournit les destinations qui ne lui appartiennent pas ;
+- `{% import %}` couple autant qu'`{% extends %}`. Le widget d'upload
+  Cloudinary, importé depuis le dossier du host, est passé par la même
+  injection (carte 248).
+
+Ce que le verrou ne voit toujours pas est inchangé et documenté plus haut : le
+SQL, donc le `LEFT JOIN auth__users` de `spaces`, et les adhérences entrantes
+de `news`, `competitions` et `seed_e2e`.

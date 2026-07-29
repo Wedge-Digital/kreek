@@ -6,3 +6,4 @@ pub mod middleware;
 pub mod router;
 pub mod routes;
 pub mod spaces_widget_tester;
+pub mod upload_widget;

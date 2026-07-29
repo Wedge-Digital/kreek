@@ -6,6 +6,8 @@
 #   3. Souveraineté des données entre BCs (pas de référence croisée)
 #   4. Pas de route en dur dans le front (toujours via routes.*)
 #   5. Projections event sourcing dans la même transaction
+#   8. Carte d'impact e2e — exhaustive et sans entrée morte
+#   9. BCs extractibles — aucune adhérence au host (cf. kanban/242)
 #
 # Axes en avertissement (n'affectent pas le code de sortie) :
 #   6. Value objects systématiques (CQRS) — primitifs nus côté écriture domaine
@@ -37,6 +39,12 @@ BCS=$(find src/app -mindepth 1 -maxdepth 1 -type d -printf '%f\n' \
     | sort \
     | tr '\n' ' ')
 
+# BCs maintenus copiables tels quels dans un autre projet (cf. kanban/242).
+# Contraintes plus strictes que les autres BCs : aucune adhérence au host.
+# Liste explicite et non dérivée : c'est un statut qu'on accorde et qu'on
+# entretient, pas une propriété qu'on découvre en lisant l'arborescence.
+EXTRACTABLE_BCS="auth spaces"
+
 print_pass() { echo -e "  ${GREEN}✓ PASS${RESET}"; }
 print_fail() {
     echo -e "  ${RED}✗ FAIL${RESET}"
@@ -60,6 +68,14 @@ print_warn() {
 # souveraineté des BCs.
 strip_test_code() {
     awk '/#!?\[cfg\(test\)\]/{exit} {print}' "$1"
+}
+
+# Retire les lignes de commentaire Rust. Sans ça, l'axe 9 signalerait les trois
+# commentaires d'`auth` qui décrivent précisément l'`AppState` qu'on vient d'en
+# sortir — et un verrou qui hurle sur sa propre documentation se fait désactiver
+# dans la semaine.
+strip_comments() {
+    grep -vE '^[[:space:]]*//'
 }
 
 echo ""
@@ -228,6 +244,82 @@ PY
 axe8="$(printf '%s' "$axe8" | sed '/^$/d')"
 count8=$([ -z "$axe8" ] && echo 0 || printf '%s\n' "$axe8" | wc -l | tr -d ' ')
 if [ "$count8" -gt 0 ]; then print_fail "$axe8"; else print_pass; fi
+echo ""
+
+# ── Axe 9 : BCs extractibles ────────────────────────────────────────────────
+# La carte 242 a écarté le découpage en crates cargo, qui aurait confié ce
+# contrôle au compilateur. Sans ce verrou, rien ne signale une régression : le
+# précédent est documenté carte 237, où `recap_controller.rs` a atteint
+# `state.spaces` pendant des mois sans que personne ne le voie.
+#
+# Limite assumée : ce script est un ensemble de `grep`, pas un analyseur
+# syntaxique. Il ne voit ni les chaînes littérales, ni le SQL — le
+# `LEFT JOIN auth__users` de spaces reste invisible (périmètre exclu de la 242).
+echo -e "${BOLD}Axe 9 · BCs extractibles — aucune adhérence au host${RESET}"
+axe9=""
+for bc in $EXTRACTABLE_BCS; do
+    if [ ! -d "src/app/$bc" ]; then
+        axe9+="src/app/$bc: BC déclaré extractible mais introuvable"$'\n'
+        continue
+    fi
+
+    while IFS= read -r f; do
+        prod="$(strip_test_code "$f" | strip_comments)"
+
+        add_hits() {
+            [ -n "$1" ] && axe9+="$(printf '%s\n' "$1" | sed "s|^|$f:|")"$'\n'
+        }
+
+        # 245 — l'état global du host
+        add_hits "$(printf '%s\n' "$prod" \
+            | grep -nE "crate::state::|\bAppState\b|\bstate\.[a-z_]+" || true)"
+        # 246 — l'agrégat de routes de l'application
+        add_hits "$(printf '%s\n' "$prod" | grep -nE "\bAppRoutes\b" || true)"
+        # 247 — la couche web du host : layout, extracteurs, middlewares
+        add_hits "$(printf '%s\n' "$prod" | grep -n "crate::web::" || true)"
+        # 244 — le noyau métier Blood Bowl
+        add_hits "$(printf '%s\n' "$prod" | grep -n "shared_kernel::bloodbowl" || true)"
+
+        # 246 — tout autre BC, ses routes comprises. L'exemption `::routes::`
+        # de l'axe 3 ne vaut pas ici : un lien sortant s'injecte depuis l'hôte.
+        # Seule exception, dans le sens spaces → auth : les deux BCs partent en
+        # couple (décision 242), donc `spaces` consomme la session d'`auth`.
+        # Rien d'autre — et surtout pas `auth::routes`. L'exemption est
+        # naturellement directionnelle : `auth` n'importe pas sa propre session
+        # par ce chemin, un import de soi n'étant pas un import croisé.
+        for other in $BCS; do
+            [ "$other" = "$bc" ] && continue
+            add_hits "$(printf '%s\n' "$prod" | grep -nE "use crate::app::${other}::" \
+                | grep -vE "auth::auth_backend::AuthSession" || true)"
+        done
+    done < <(find "src/app/$bc" -name "*.rs")
+
+    # 247 — le chrome et les composants du host, côté templates. `import`
+    # couple autant qu'`extends` : Askama résout les deux statiquement, et
+    # `askama.toml` déclarant les onze dossiers dans un seul espace de noms,
+    # rien ne signale qu'un template résolu vit chez le host. Le critère est
+    # donc physique : la cible doit exister dans le dossier de templates du BC.
+    while IFS= read -r t; do
+        while IFS= read -r ligne; do
+            [ -z "$ligne" ] && continue
+            cible=$(printf '%s' "$ligne" \
+                | sed -n 's/.*{%[[:space:]]*\(extends\|import\)[[:space:]]*"\([^"]*\)".*/\2/p')
+            [ -z "$cible" ] && continue
+            [ -f "src/app/$bc/io/web/templates/$cible" ] && continue
+            axe9+="$t:${ligne%%:*}: template « $cible » hors du BC"$'\n'
+        done < <(grep -nE "\{%[[:space:]]*(extends|import)" "$t" || true)
+    done < <(find "src/app/$bc" -name "*.html")
+done
+
+# Réciproque du critère de sortie de la 242 : le noyau partagé ne connaît
+# aucun BC extractible, sans quoi le copier n'emporterait pas grand-chose.
+for bc in $EXTRACTABLE_BCS; do
+    hits=$(grep -rn "crate::app::${bc}::" src/app/shared_kernel 2>/dev/null || true)
+    [ -n "$hits" ] && axe9+="$hits"$'\n'
+done
+
+axe9="$(printf '%s' "$axe9" | sed '/^$/d')"
+if [ -n "$axe9" ]; then print_fail "$axe9"; else print_pass; fi
 echo ""
 
 if [ "$EXIT_CODE" -eq 0 ]; then
