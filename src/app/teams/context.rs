@@ -5,7 +5,7 @@ use crate::app::teams::io::app_events::{
 };
 use crate::app::teams::io::repository::team_repository::TeamRepository;
 use crate::app::teams::ports::{
-    IJourneymanTypePort, IPlayerCountPort, IRosterInfoPort, ITeamRepository,
+    IJourneymanTypePort, IPlayerCountPort, IPlayerValuePort, IRosterInfoPort, ITeamRepository,
 };
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
@@ -17,6 +17,7 @@ pub struct TeamsContext {
     pub player_count_port: Arc<dyn IPlayerCountPort>,
     pub journeyman_type_port: Arc<dyn IJourneymanTypePort>,
     pub roster_info_port: Arc<dyn IRosterInfoPort>,
+    pub player_value_port: Arc<dyn IPlayerValuePort>,
 }
 
 pub fn init_listeners(app_event_bus: &EventBus, pool: PgPool) {
@@ -35,12 +36,14 @@ impl TeamsContext {
         player_count_port: Arc<dyn IPlayerCountPort>,
         journeyman_type_port: Arc<dyn IJourneymanTypePort>,
         roster_info_port: Arc<dyn IRosterInfoPort>,
+        player_value_port: Arc<dyn IPlayerValuePort>,
     ) -> Self {
         Self {
             team_repository: Arc::new(TeamRepository::new(pool.clone())),
             player_count_port,
             journeyman_type_port,
             roster_info_port,
+            player_value_port,
         }
     }
 }

@@ -6,15 +6,48 @@ pub trait IPlayerCountPort: Send + Sync {
     async fn count_for_team(&self, team_id: &str) -> u32;
 }
 
-pub trait IJourneymanTypePort: Send + Sync {
-    fn journeyman_type_for_roster(&self, roster_id: &str) -> String;
+// ── ACL vers le BC `players` (valeur de l'effectif, pour le calcul de la TV) ───
+
+/// Un joueur, vu par `teams` : ce qu'il vaut, et s'il tiendra sa place au
+/// prochain match.
+///
+/// `available_for_next_match` est délibérément un booléen et non le statut de
+/// `players` : traduire le vocabulaire de l'autre BC est le rôle de l'adapter.
+/// La règle « un indisponible vaut zéro et appelle un journalier » est, elle,
+/// une règle de `teams` et vit dans son domaine.
+pub struct PlayerValueDto {
+    pub player_id: String,
+    pub value_kpo: u32,
+    pub available_for_next_match: bool,
 }
 
-// ── ACL vers le BC `references` (affichage du roster sur la fiche équipe) ──────
+#[async_trait]
+pub trait IPlayerValuePort: Send + Sync {
+    async fn find_valued_players(&self, team_id: &str) -> Vec<PlayerValueDto>;
+}
 
+// ── ACL vers le BC `references` (roster, staff, journalier) ────────────────────
+
+/// La ligne de roster que le règlement désigne comme journalier, et son prix —
+/// un journalier vaut le prix de cette ligne.
+pub struct JourneymanTypeDto {
+    pub position_name: String,
+    pub price_kpo: u32,
+}
+
+pub trait IJourneymanTypePort: Send + Sync {
+    fn journeyman_type_for_roster(&self, roster_id: &str) -> JourneymanTypeDto;
+}
+
+/// Les prix de staff sont globaux et non propres à un roster — ils voyagent
+/// ici pour éviter un second appel de port au moment de calculer la TV, et
+/// parce que la structure conviendra le jour où un roster aura ses tarifs.
 pub struct RosterInfoDto {
     pub logo: Option<String>,
     pub reroll_cost: u32,
+    pub apothecary_price: u32,
+    pub assistant_price: u32,
+    pub cheerleader_price: u32,
 }
 
 pub trait IRosterInfoPort: Send + Sync {

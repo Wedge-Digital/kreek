@@ -4,6 +4,7 @@ pub mod commands;
 pub mod dismiss_staff;
 pub mod dismiss_team;
 pub mod reject_enrollment;
+pub mod team_value_service;
 pub mod validate_dismissals_phase_use_case;
 pub mod validate_improvement_phase_use_case;
 pub mod validate_recruitment_phase_use_case;

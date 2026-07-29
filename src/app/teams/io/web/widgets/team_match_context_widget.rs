@@ -42,7 +42,8 @@ pub async fn get_team_match_context_json(
     let journeyman_type = state
         .teams
         .journeyman_type_port
-        .journeyman_type_for_roster(&team.roster_id.to_string());
+        .journeyman_type_for_roster(&team.roster_id.to_string())
+        .position_name;
 
     Json(TeamMatchContextJson {
         team_id: team.id.to_string(),
