@@ -120,9 +120,12 @@ pub enum TeamDomainEvent {
         quantity: StaffQuantity,
     },
     RecruitmentPhaseValidated,
-    PlayerFired {
+    /// `value_at_dismissal` ne sert à aucun calcul : elle documente ce que
+    /// valait le joueur au moment du renvoi, information non reconstructible
+    /// une fois qu'il a quitté l'effectif.
+    PlayerDismissed {
         player_id: PlayerId,
-        value_kpo_at_firing: Kpo,
+        value_at_dismissal: Kpo,
     },
     DismissalsPhaseValidated,
     PlayerRetiredTemporarily {
@@ -192,7 +195,7 @@ impl TeamDomainEvent {
             Self::StaffBought { .. } => "StaffBought",
             Self::StaffDismissed { .. } => "StaffDismissed",
             Self::RecruitmentPhaseValidated => "RecruitmentPhaseValidated",
-            Self::PlayerFired { .. } => "PlayerFired",
+            Self::PlayerDismissed { .. } => "PlayerDismissed",
             Self::DismissalsPhaseValidated => "DismissalsPhaseValidated",
             Self::PlayerRetiredTemporarily { .. } => "PlayerRetiredTemporarily",
             Self::RetirementPhaseValidated => "RetirementPhaseValidated",
@@ -368,7 +371,7 @@ impl Team {
             | TeamDomainEvent::PlayerImprovementPhaseValidated
             | TeamDomainEvent::StaffDismissed { .. }
             | TeamDomainEvent::RecruitmentPhaseValidated
-            | TeamDomainEvent::PlayerFired { .. }
+            | TeamDomainEvent::PlayerDismissed { .. }
             | TeamDomainEvent::DismissalsPhaseValidated
             | TeamDomainEvent::PlayerRetiredTemporarily { .. }
             | TeamDomainEvent::RetirementPhaseValidated
@@ -547,6 +550,7 @@ impl Team {
             } => {
                 let qty = quantity.into_inner();
                 match staff_type {
+                    StaffType::Reroll => self.rerolls.0 = self.rerolls.0.saturating_sub(qty),
                     StaffType::Apothecary => {
                         self.apothecaries.0 = self.apothecaries.0.saturating_sub(qty)
                     }
@@ -556,16 +560,22 @@ impl Team {
                     StaffType::Cheerleader => {
                         self.cheerleaders.0 = self.cheerleaders.0.saturating_sub(qty)
                     }
-                    _ => {} // Reroll, FansFactor : non renvoyables
+                    // Le facteur fans n'est pas un compteur de staff : il
+                    // alimente `dedicated_fans`, et ne se renvoie pas.
+                    StaffType::FansFactor => {}
                 }
             }
-            // Définis et appliqués, jamais encore émis : aucune méthode de
-            // l'agrégat ne les construit — recruter et licencier un joueur
-            // n'existe pas dans `teams` à ce jour. Ils sont le contrat déjà
-            // écrit des phases de recrutement et de renvois (cartes 255 à 271),
-            // qui les produiront ; leur effet sur `team_value` a disparu avec
-            // l'incrémental, il ne leur en reste aucun.
-            TeamDomainEvent::PlayerFired { .. } | TeamDomainEvent::PlayerNotReEngaged { .. } => {}
+            // `PlayerDismissed` est bien émis (`dismiss_player`), mais sans
+            // effet sur l'agrégat : la valeur d'équipe est recalculée par
+            // `TeamValueRecomputed`, la trésorerie n'est pas touchée — un renvoi
+            // ne rembourse rien — et l'appartenance à l'effectif vit dans
+            // `players`.
+            //
+            // `PlayerNotReEngaged` reste, lui, jamais émis : il appartient à
+            // l'intersaison (cartes 39, 40 et 43), pas à cette série. Le
+            // supprimer reviendrait à le réécrire là-bas.
+            TeamDomainEvent::PlayerDismissed { .. }
+            | TeamDomainEvent::PlayerNotReEngaged { .. } => {}
             TeamDomainEvent::TeamValueRecomputed { value } => {
                 self.team_value = *value;
             }
@@ -728,6 +738,50 @@ impl Team {
         })
     }
 
+    /// Recrute un joueur. Gardes : phase et trésorerie, **rien d'autre**.
+    ///
+    /// Ni le plafond de 16, ni les quotas de poste, ni les limites croisées ne
+    /// sont vérifiés ici : `Team` ne connaît pas la composition de son effectif.
+    /// Ces gardes vivent dans le brouillon de recrutement (carte 262), qui le
+    /// porte hydraté.
+    ///
+    /// Le contrôle de trésorerie fait doublon avec celui du brouillon, qui
+    /// raisonne en total — mais il protège l'invariant propre à l'agrégat : sa
+    /// trésorerie ne devient jamais négative. Gardé comme filet.
+    pub fn recruit_player(
+        &self,
+        position_id: PositionId,
+        base_value_kpo: Kpo,
+        cost_kpo: Kpo,
+    ) -> Result<TeamDomainEvent, DomainError> {
+        self.expect_phase(GamePhase::Recruitment)?;
+        if self.treasury.0 < cost_kpo.0 {
+            return Err(DomainError::InsufficientTreasury);
+        }
+        Ok(TeamDomainEvent::PlayerRecruited {
+            position_id,
+            base_value_kpo,
+            cost_kpo,
+        })
+    }
+
+    /// Renvoie un joueur. Garde : la phase, et elle seule.
+    ///
+    /// Le plancher des onze joueurs éligibles est vérifié par le brouillon de
+    /// renvois (carte 267), qui connaît les disponibilités. Un renvoi ne
+    /// rembourse rien, donc aucun effet sur la trésorerie.
+    pub fn dismiss_player(
+        &self,
+        player_id: PlayerId,
+        value_at_dismissal: Kpo,
+    ) -> Result<TeamDomainEvent, DomainError> {
+        self.expect_phase(GamePhase::Dismissals)?;
+        Ok(TeamDomainEvent::PlayerDismissed {
+            player_id,
+            value_at_dismissal,
+        })
+    }
+
     pub fn buy_staff(
         &self,
         staff_type: StaffType,
@@ -735,9 +789,11 @@ impl Team {
         cost_kpo: Kpo,
     ) -> Result<TeamDomainEvent, DomainError> {
         self.expect_phase(GamePhase::Recruitment)?;
-        match staff_type {
-            StaffType::Reroll | StaffType::Assistant | StaffType::Cheerleader => {}
-            _ => return Err(DomainError::StaffTypeNotBuyable),
+        // Le facteur fans est le seul non achetable ici. Le droit du roster à
+        // tel ou tel staff (`allowed_staff`) est vérifié par le brouillon, qui
+        // connaît le catalogue — `Team` ne le connaît pas.
+        if matches!(staff_type, StaffType::FansFactor) {
+            return Err(DomainError::StaffTypeNotBuyable);
         }
         if self.treasury.0 < cost_kpo.0 {
             return Err(DomainError::InsufficientTreasury);
@@ -756,10 +812,11 @@ impl Team {
     ) -> Result<TeamDomainEvent, DomainError> {
         self.expect_phase(GamePhase::Dismissals)?;
         let owned = match staff_type {
+            StaffType::Reroll => self.rerolls.0,
             StaffType::Apothecary => self.apothecaries.0,
             StaffType::Assistant => self.assistants.0,
             StaffType::Cheerleader => self.cheerleaders.0,
-            _ => return Err(DomainError::StaffTypeNotDismissable),
+            StaffType::FansFactor => return Err(DomainError::StaffTypeNotDismissable),
         };
         if quantity.into_inner() > owned {
             return Err(DomainError::InsufficientStaff);
@@ -1172,27 +1229,6 @@ mod tests {
     }
 
     #[test]
-    fn buy_staff_type_non_autorise_retourne_erreur() {
-        let team = recruitment_phase_team();
-        assert!(matches!(
-            team.buy_staff(
-                StaffType::Apothecary,
-                StaffQuantity::try_new(1).unwrap(),
-                Kpo(50)
-            ),
-            Err(DomainError::StaffTypeNotBuyable)
-        ));
-        assert!(matches!(
-            team.buy_staff(
-                StaffType::FansFactor,
-                StaffQuantity::try_new(1).unwrap(),
-                Kpo(50)
-            ),
-            Err(DomainError::StaffTypeNotBuyable)
-        ));
-    }
-
-    #[test]
     fn buy_staff_tresorerie_insuffisante_retourne_erreur() {
         let team = recruitment_phase_team();
         // treasury = 1150, coût = 2000
@@ -1245,15 +1281,6 @@ mod tests {
         assert!(matches!(
             team.dismiss_staff(StaffType::Assistant, StaffQuantity::try_new(1).unwrap()),
             Err(DomainError::WrongGamePhase(_))
-        ));
-    }
-
-    #[test]
-    fn dismiss_staff_reroll_retourne_erreur() {
-        let team = dismissals_phase_team();
-        assert!(matches!(
-            team.dismiss_staff(StaffType::Reroll, StaffQuantity::try_new(1).unwrap()),
-            Err(DomainError::StaffTypeNotDismissable)
         ));
     }
 
@@ -1654,5 +1681,151 @@ mod tests {
         assert_eq!(republie.dedicated_fans, apres_publication.dedicated_fans);
         assert_eq!(republie.treasury, apres_publication.treasury);
         assert_eq!(republie.game_phase, apres_publication.game_phase);
+    }
+
+    // ── Recruter et licencier (carte 261) ────────────────────────────────
+
+    fn position() -> PositionId {
+        PositionId::try_new("00000000000000000000000009").unwrap()
+    }
+
+    /// Test 18 de `recrutement/06-domaine.md`.
+    #[test]
+    fn recruit_player_hors_phase_recruitment_retourne_erreur() {
+        let team = dismissals_phase_team();
+        assert!(matches!(
+            team.recruit_player(position(), Kpo(50), Kpo(50)),
+            Err(DomainError::WrongGamePhase(_))
+        ));
+    }
+
+    /// Test 19 : le recrutement débite la trésorerie du coût.
+    #[test]
+    fn recruit_player_debite_la_tresorerie_du_cout() {
+        let team = recruitment_phase_team();
+        let avant = team.treasury.0; // 1150
+
+        let event = team.recruit_player(position(), Kpo(50), Kpo(90)).unwrap();
+        let team = team.apply(&event);
+
+        assert_eq!(team.treasury.0, avant - 90);
+    }
+
+    #[test]
+    fn recruit_player_tresorerie_insuffisante_retourne_erreur() {
+        let team = recruitment_phase_team();
+        assert!(matches!(
+            team.recruit_player(position(), Kpo(50), Kpo(9_999)),
+            Err(DomainError::InsufficientTreasury)
+        ));
+    }
+
+    /// Test 12 de `renvois/06-domaine.md`.
+    #[test]
+    fn dismiss_player_hors_phase_dismissals_retourne_erreur() {
+        let team = recruitment_phase_team();
+        assert!(matches!(
+            team.dismiss_player(PlayerId::new(), Kpo(70)),
+            Err(DomainError::WrongGamePhase(_))
+        ));
+    }
+
+    /// Tests 13 et 14 : un renvoi ne touche pas la trésorerie, et son
+    /// événement ne produit aucun mouvement.
+    #[test]
+    fn dismiss_player_ne_touche_pas_la_tresorerie() {
+        let team = dismissals_phase_team();
+        let avant = team.treasury.0;
+
+        let event = team.dismiss_player(PlayerId::new(), Kpo(70)).unwrap();
+        assert!(
+            team.treasury_movement(&event).is_none(),
+            "un renvoi de joueur ne bouge pas la trésorerie"
+        );
+
+        let team = team.apply(&event);
+        assert_eq!(team.treasury.0, avant);
+    }
+
+    // ── Staff : les deux refus qui n'avaient pas lieu d'être ─────────────
+
+    /// Test 20 : l'apothicaire était renvoyable mais pas achetable.
+    #[test]
+    fn buy_staff_accepte_l_apothicaire() {
+        let team = recruitment_phase_team();
+        let event = team
+            .buy_staff(
+                StaffType::Apothecary,
+                StaffQuantity::try_new(1).unwrap(),
+                Kpo(50),
+            )
+            .unwrap();
+        let team = team.apply(&event);
+        assert_eq!(team.apothecaries.0, 2); // 1 initial + 1
+    }
+
+    /// Test 21 : le facteur fans reste le seul non achetable.
+    #[test]
+    fn buy_staff_refuse_le_facteur_fans() {
+        let team = recruitment_phase_team();
+        assert!(matches!(
+            team.buy_staff(
+                StaffType::FansFactor,
+                StaffQuantity::try_new(1).unwrap(),
+                Kpo(5)
+            ),
+            Err(DomainError::StaffTypeNotBuyable)
+        ));
+    }
+
+    /// Test 22 : la relance était achetable mais pas renvoyable — et son
+    /// compteur doit bien décroître, sans quoi le renvoi serait sans effet.
+    #[test]
+    fn dismiss_staff_accepte_la_relance_et_decremente_le_compteur() {
+        let team = dismissals_phase_team();
+        let avant = team.rerolls.0;
+
+        let event = team
+            .dismiss_staff(StaffType::Reroll, StaffQuantity::try_new(1).unwrap())
+            .unwrap();
+        let team = team.apply(&event);
+
+        assert_eq!(team.rerolls.0, avant - 1);
+    }
+
+    #[test]
+    fn dismiss_staff_refuse_le_facteur_fans() {
+        let team = dismissals_phase_team();
+        assert!(matches!(
+            team.dismiss_staff(StaffType::FansFactor, StaffQuantity::try_new(1).unwrap()),
+            Err(DomainError::StaffTypeNotDismissable)
+        ));
+    }
+
+    // ── Mouvements de trésorerie (tests 24, 25 et 15) ────────────────────
+
+    #[test]
+    fn treasury_movement_staff_bought_est_un_debit_du_cout() {
+        let team = recruitment_phase_team();
+        let event = team
+            .buy_staff(
+                StaffType::Reroll,
+                StaffQuantity::try_new(1).unwrap(),
+                Kpo(60),
+            )
+            .unwrap();
+
+        let m = team.treasury_movement(&event).expect("un achat débite");
+        assert_eq!(m.amount, Kpo(60));
+        assert_eq!(m.balance_after, Kpo(team.treasury.0 - 60));
+    }
+
+    #[test]
+    fn treasury_movement_staff_dismissed_est_none() {
+        let team = dismissals_phase_team();
+        let event = team
+            .dismiss_staff(StaffType::Assistant, StaffQuantity::try_new(1).unwrap())
+            .unwrap();
+        assert!(team.treasury_movement(&event).is_none());
     }
 }

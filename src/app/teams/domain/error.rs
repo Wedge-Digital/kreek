@@ -19,6 +19,28 @@ pub enum DomainError {
     /// aucun, soit elle en saisit un autre.
     NotReportingThisMatch,
     InsufficientTreasury,
+
+    // ── Levées par les brouillons de phase (cartes 262 et 267) ───────────────
+    // Déclarées ici parce que `DomainError` est l'erreur du BC, pas celle d'un
+    // agrégat : les brouillons la partagent. Elles naissent donc sans appelant.
+    /// Plafond de 16 joueurs atteint.
+    MaxPlayersReached,
+    /// Le quota du poste dans le roster est atteint (`max_quantity`).
+    PositionQuotaReached,
+    /// Limite de cumul entre postes dépassée — « pas plus de 3 gros joueurs ».
+    CrossLimitExceeded,
+    /// Le poste demandé n'appartient pas au roster de l'équipe.
+    PositionNotInRoster,
+    /// Le roster de l'équipe n'a pas droit à ce type de staff.
+    StaffNotAllowedForRoster,
+    /// Le quota de ce staff est atteint (`max_quantity` du catalogue).
+    StaffQuotaReached,
+    /// Le renvoi ferait passer l'effectif sous les onze joueurs éligibles.
+    EligibleFloorReached,
+    /// La ligne visée n'existe pas dans le brouillon.
+    DraftLineNotFound,
+    /// Le joueur visé n'appartient pas à l'effectif de cette équipe.
+    PlayerNotInSquad,
 }
 
 impl fmt::Display for DomainError {
@@ -43,6 +65,22 @@ impl fmt::Display for DomainError {
                 write!(f, "l'équipe n'est pas en saisie sur ce rapport de match")
             }
             Self::InsufficientTreasury => write!(f, "trésorerie insuffisante"),
+            Self::MaxPlayersReached => write!(f, "effectif complet : 16 joueurs maximum"),
+            Self::PositionQuotaReached => {
+                write!(f, "quota atteint pour ce poste dans le roster")
+            }
+            Self::CrossLimitExceeded => write!(f, "limite combinée de postes dépassée"),
+            Self::PositionNotInRoster => write!(f, "ce poste n'appartient pas au roster"),
+            Self::StaffNotAllowedForRoster => {
+                write!(f, "ce roster n'a pas droit à ce type de staff")
+            }
+            Self::StaffQuotaReached => write!(f, "quota atteint pour ce type de staff"),
+            Self::EligibleFloorReached => write!(
+                f,
+                "l'effectif ne peut pas descendre sous onze joueurs éligibles"
+            ),
+            Self::DraftLineNotFound => write!(f, "ligne introuvable dans le brouillon"),
+            Self::PlayerNotInSquad => write!(f, "ce joueur n'appartient pas à l'effectif"),
         }
     }
 }
