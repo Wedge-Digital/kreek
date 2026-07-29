@@ -8,6 +8,7 @@
       "rerollCost": 60,
       "tier": "Tier 1",
       "specialRules": ["DEMO_GENS_DE_ROCAILLE", "DEMO_MENEUR_NE"],
+      "cross_limit": [{"max": 2, "in": ["DEMO_GRANIT__PERCUTEUR", "DEMO_GRANIT__COLOSSE"]}],
       "allowedStaff": ["APOTHECARY", "CHEERLEADERS", "COACH_ASSISTANTS", "FAN_FACTOR"],
       "leagues": ["LIGUE_DES_CIMES"],
       "logo": "demo-granit.svg",

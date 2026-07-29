@@ -1,6 +1,6 @@
 use crate::app::teams::domain::team::TeamDomainEvent;
 use crate::app::teams::ports::{
-    IJourneymanTypePort, IPlayerValuePort, IRosterInfoPort, ITeamRepository,
+    IJourneymanTypePort, IPlayerValuePort, IRosterCatalogPort, ITeamRepository,
 };
 use crate::app::teams::use_cases::recompute_team_value_use_case;
 use crate::common::services::event_bus::event_bus::EventBus;
@@ -27,7 +27,7 @@ pub fn init(
     event_bus: &EventBus,
     repo: Arc<dyn ITeamRepository>,
     player_value_port: Arc<dyn IPlayerValuePort>,
-    roster_info_port: Arc<dyn IRosterInfoPort>,
+    roster_catalog_port: Arc<dyn IRosterCatalogPort>,
     journeyman_type_port: Arc<dyn IJourneymanTypePort>,
 ) {
     let mut rx = event_bus.subscribe();
@@ -51,7 +51,7 @@ pub fn init(
                         &team_id,
                         repo.as_ref(),
                         player_value_port.as_ref(),
-                        roster_info_port.as_ref(),
+                        roster_catalog_port.as_ref(),
                         journeyman_type_port.as_ref(),
                     )
                     .await

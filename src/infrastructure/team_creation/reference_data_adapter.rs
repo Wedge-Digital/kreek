@@ -1,6 +1,6 @@
 use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::team_creation::ports::{
-    IReferenceDataPort, PlayerPositionDefinition, RosterDefinition, SkillCostResult,
+    CrossLimitDto, IReferenceDataPort, PlayerPositionDefinition, RosterDefinition, SkillCostResult,
     SkillDefinition, SkillPricingDefinition, StaffDefinition,
 };
 use std::sync::Arc;
@@ -22,6 +22,14 @@ impl IReferenceDataPort for ReferenceDataAdapter {
             uid: team.uid.clone(),
             name: team.name.clone(),
             reroll_cost: team.reroll_cost,
+            cross_limits: team
+                .cross_limit
+                .iter()
+                .map(|cl| CrossLimitDto {
+                    max: cl.max,
+                    position_uids: cl.position_uids.clone(),
+                })
+                .collect(),
             available_players: team
                 .available_players
                 .iter()

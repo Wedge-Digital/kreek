@@ -1,24 +1,24 @@
 use crate::app::teams::domain::team::Team;
 use crate::app::teams::domain::team_value::{compute_team_value, TeamValueInputs, ValuedPlayer};
 use crate::app::teams::domain::value_objects::Kpo;
-use crate::app::teams::ports::{IJourneymanTypePort, IPlayerValuePort, IRosterInfoPort};
+use crate::app::teams::ports::{IJourneymanTypePort, IPlayerValuePort, IRosterCatalogPort};
 
 /// Recalcule la valeur d'une équipe à partir de son effectif réel et des prix
 /// du corpus de référence.
 ///
 /// C'est ici que s'arrête la connaissance des ports : le domaine reçoit des
 /// `TeamValueInputs`, jamais un DTO. Aucun handler, aucun template ne voit
-/// `PlayerValueDto` ni `RosterInfoDto`.
+/// `PlayerValueDto` ni `RosterCatalogDto`.
 pub async fn resolve_team_value(
     team: &Team,
     player_value_port: &dyn IPlayerValuePort,
-    roster_info_port: &dyn IRosterInfoPort,
+    roster_catalog_port: &dyn IRosterCatalogPort,
     journeyman_type_port: &dyn IJourneymanTypePort,
 ) -> Kpo {
     let roster_id = team.roster_id.0.as_str();
     let players = load_players(team, player_value_port).await;
     let journeyman = journeyman_type_port.journeyman_type_for_roster(roster_id);
-    let roster = roster_info_port.find_roster_info(roster_id);
+    let roster = roster_catalog_port.find_catalog(roster_id);
 
     let inputs = build_inputs(team, players, &journeyman, roster.as_ref());
     compute_team_value(&inputs)
@@ -41,18 +41,20 @@ fn build_inputs(
     team: &Team,
     players: Vec<ValuedPlayer>,
     journeyman: &crate::app::teams::ports::JourneymanTypeDto,
-    roster: Option<&crate::app::teams::ports::RosterInfoDto>,
+    roster: Option<&crate::app::teams::ports::RosterCatalogDto>,
 ) -> TeamValueInputs {
     TeamValueInputs {
         players,
         rerolls: team.rerolls,
-        reroll_price: Kpo(roster.map(|r| r.reroll_cost).unwrap_or(0)),
+        reroll_price: Kpo(roster.map(|r| r.reroll_base_cost).unwrap_or(0)),
         apothecaries: team.apothecaries,
-        apothecary_price: Kpo(roster.map(|r| r.apothecary_price).unwrap_or(0)),
+        apothecary_price: Kpo(roster.map(|r| r.staff_price("APOTHECARY")).unwrap_or(0)),
         assistants: team.assistants,
-        assistant_price: Kpo(roster.map(|r| r.assistant_price).unwrap_or(0)),
+        assistant_price: Kpo(roster
+            .map(|r| r.staff_price("COACH_ASSISTANTS"))
+            .unwrap_or(0)),
         cheerleaders: team.cheerleaders,
-        cheerleader_price: Kpo(roster.map(|r| r.cheerleader_price).unwrap_or(0)),
+        cheerleader_price: Kpo(roster.map(|r| r.staff_price("CHEERLEADERS")).unwrap_or(0)),
         journeyman_price: Kpo(journeyman.price_kpo),
     }
 }

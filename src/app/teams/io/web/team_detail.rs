@@ -1,6 +1,6 @@
 use crate::app::routes::AppRoutes;
 use crate::app::teams::domain::team::{GamePhase, ParticipationStatus, Team};
-use crate::app::teams::ports::IRosterInfoPort;
+use crate::app::teams::ports::IRosterCatalogPort;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -175,7 +175,7 @@ pub struct TeamDetailVm {
 }
 
 impl TeamDetailVm {
-    fn from(team: &Team, space_id: &str, roster_info_port: &dyn IRosterInfoPort) -> Self {
+    fn from(team: &Team, space_id: &str, roster_catalog_port: &dyn IRosterCatalogPort) -> Self {
         let (status_label, status_css_class) = status_display(team);
         let roster_initials = team
             .roster_name
@@ -186,7 +186,7 @@ impl TeamDetailVm {
             .collect::<String>()
             .to_uppercase();
 
-        let roster_info = roster_info_port.find_roster_info(&team.roster_id.to_string());
+        let roster_info = roster_catalog_port.find_catalog(&team.roster_id.to_string());
 
         let roster_logo_url = roster_info
             .as_ref()
@@ -198,7 +198,7 @@ impl TeamDetailVm {
                 )
             });
 
-        let reroll_price_kpo = roster_info.map(|t| t.reroll_cost).unwrap_or(50);
+        let reroll_price_kpo = roster_info.map(|t| t.reroll_base_cost).unwrap_or(50);
 
         let logo_url = team.logo_url.as_deref().map(|url| {
             crate::app::shared_kernel::identity::cloudinary::transform(
@@ -290,11 +290,11 @@ pub async fn team_detail(
     };
 
     let back_url = AppRoutes::default().team_creation.my_teams(&space_id);
-    let roster_info_port = state.teams.roster_info_port.as_ref();
+    let roster_catalog_port = state.teams.roster_catalog_port.as_ref();
 
     TeamDetailTemplate {
         app_routes: Default::default(),
-        vm: TeamDetailVm::from(&team, &space_id, roster_info_port),
+        vm: TeamDetailVm::from(&team, &space_id, roster_catalog_port),
         back_url,
     }
     .into_response()

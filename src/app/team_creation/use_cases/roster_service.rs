@@ -3,11 +3,11 @@ use crate::app::shared_kernel::bloodbowl::staff::{
     StaffId, StaffKind, StaffMaxQuantity, StaffName, StaffPrice,
 };
 use crate::app::team_creation::domain::roster::{
-    PlayerDefinition, PlayerId, PlayerMaxQuantity, PlayerName, PlayerPrice, RerollBasePrice,
-    Roster, RosterName,
+    CrossLimit, CrossLimitCount, PlayerDefinition, PlayerId, PlayerMaxQuantity, PlayerName,
+    PlayerPrice, RerollBasePrice, Roster, RosterName,
 };
 use crate::app::team_creation::domain::team_staff::TeamStaff;
-use crate::app::team_creation::ports::IReferenceDataPort;
+use crate::app::team_creation::ports::{IReferenceDataPort, RosterDefinition};
 
 pub struct RosterMetadata {
     pub leagues: Vec<String>,
@@ -62,9 +62,31 @@ pub fn load_roster(roster_uid: &str, ref_data: &dyn IReferenceDataPort) -> Optio
         name: RosterName::try_new(def.name.clone()).ok()?,
         player_definitions,
         allowed_staff,
-        cross_limits: vec![],
+        // Alimentées depuis les données de référence — elles étaient codées à
+        // vide, si bien que `check_cross_limits` court-circuitait toujours et
+        // que la règle n'a jamais été appliquée, création d'équipe comprise.
+        cross_limits: build_cross_limits(&def),
         reroll_price: RerollBasePrice::try_new(def.reroll_cost).ok()?,
     })
+}
+
+/// Une limite dont le plafond sort de la plage admise (1 à 16) ou dont la liste
+/// de postes est vide est ignorée plutôt que de faire échouer tout le roster :
+/// une donnée de référence douteuse ne doit pas rendre une équipe inconstructible.
+fn build_cross_limits(def: &RosterDefinition) -> Vec<CrossLimit> {
+    def.cross_limits
+        .iter()
+        .filter_map(|cl| {
+            let limit = CrossLimitCount::try_new(cl.max).ok()?;
+            if cl.position_uids.is_empty() {
+                return None;
+            }
+            Some(CrossLimit {
+                limit,
+                limited_player_ids: cl.position_uids.iter().cloned().map(PlayerId).collect(),
+            })
+        })
+        .collect()
 }
 
 pub fn roster_metadata(
@@ -129,7 +151,7 @@ fn staff_kind(uid: &str) -> StaffKind {
 mod tests {
     use super::*;
     use crate::app::team_creation::ports::{
-        PlayerPositionDefinition, RosterDefinition, SkillDefinition, StaffDefinition,
+        CrossLimitDto, PlayerPositionDefinition, RosterDefinition, SkillDefinition, StaffDefinition,
     };
 
     struct FakeRefData;
@@ -156,6 +178,7 @@ mod tests {
                             name: "Esquive".into(),
                         }],
                     }],
+                    cross_limits: vec![],
                     allowed_staff_uids: vec!["APOTHECARY".into()],
                     leagues: vec!["WOODLAND".into()],
                     special_rules: vec!["LUSTRIAN_SUPERLEAGUE".into()],
@@ -165,6 +188,7 @@ mod tests {
                     name: "Nain du Chaos".into(),
                     reroll_cost: 70,
                     available_players: vec![],
+                    cross_limits: vec![],
                     allowed_staff_uids: vec!["APOTHECARY".into()],
                     leagues: vec!["BADLANDS_BRAWL".into(), "CHAOS_CLASH".into()],
                     special_rules: vec!["FAVOURED_OF_HASHUT".into()],
@@ -174,6 +198,13 @@ mod tests {
                     name: "Renégats du Chaos".into(),
                     reroll_cost: 60,
                     available_players: vec![],
+                    cross_limits: vec![CrossLimitDto {
+                        max: 3,
+                        position_uids: vec![
+                            "CHAOS_RENEGADE__OGRE".into(),
+                            "CHAOS_RENEGADE__TROLL".into(),
+                        ],
+                    }],
                     allowed_staff_uids: vec![],
                     leagues: vec!["CHAOS_CLASH".into()],
                     special_rules: vec![
@@ -321,5 +352,65 @@ mod tests {
             false,
             &FakeRefData
         ));
+    }
+
+    /// Le trou que cette carte ferme : `cross_limits` était codé à vide, donc
+    /// `check_cross_limits` court-circuitait et la règle ne s'appliquait nulle
+    /// part — y compris à la création d'équipe, depuis l'origine.
+    #[test]
+    fn les_limites_croisees_remontent_des_donnees_de_reference() {
+        let roster = load_roster("CHAOS_RENEGADE", &FakeRefData).expect("roster connu");
+
+        assert_eq!(roster.cross_limits.len(), 1);
+        assert_eq!(roster.cross_limits[0].limit.into_inner(), 3);
+        assert!(roster.cross_limits[0].includes_player(&PlayerId("CHAOS_RENEGADE__OGRE".into())));
+        assert!(
+            !roster.cross_limits[0].includes_player(&PlayerId("CHAOS_RENEGADE__PIETAILLE".into()))
+        );
+    }
+
+    #[test]
+    fn un_roster_sans_limite_croisee_en_a_zero() {
+        let roster = load_roster("LIZARDMEN", &FakeRefData).expect("roster connu");
+        assert!(roster.cross_limits.is_empty());
+        assert!(!roster.has_cross_limits());
+    }
+
+    /// Une donnée de référence douteuse ne doit pas rendre un roster
+    /// inconstructible : la limite est ignorée, le reste passe.
+    #[test]
+    fn une_limite_hors_plage_ou_sans_poste_est_ignoree() {
+        let def = RosterDefinition {
+            uid: "X".into(),
+            name: "X".into(),
+            reroll_cost: 60,
+            cross_limits: vec![
+                CrossLimitDto {
+                    max: 0,
+                    position_uids: vec!["A".into()],
+                },
+                CrossLimitDto {
+                    max: 99,
+                    position_uids: vec!["B".into()],
+                },
+                CrossLimitDto {
+                    max: 2,
+                    position_uids: vec![],
+                },
+                CrossLimitDto {
+                    max: 2,
+                    position_uids: vec!["C".into()],
+                },
+            ],
+            available_players: vec![],
+            allowed_staff_uids: vec![],
+            leagues: vec![],
+            special_rules: vec![],
+        };
+
+        let limites = build_cross_limits(&def);
+
+        assert_eq!(limites.len(), 1, "seule la limite valide est retenue");
+        assert!(limites[0].includes_player(&PlayerId("C".into())));
     }
 }

@@ -7,10 +7,17 @@ use async_trait::async_trait;
 
 // ── Anti-Corruption Layer — données de référence ─────────────────────────────
 
+/// Limite de cumul entre plusieurs postes d'un même roster.
+pub struct CrossLimitDto {
+    pub max: u32,
+    pub position_uids: Vec<String>,
+}
+
 pub struct RosterDefinition {
     pub uid: String,
     pub name: String,
     pub reroll_cost: u32,
+    pub cross_limits: Vec<CrossLimitDto>,
     pub available_players: Vec<PlayerPositionDefinition>,
     pub allowed_staff_uids: Vec<String>,
     pub leagues: Vec<String>,

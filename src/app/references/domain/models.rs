@@ -78,6 +78,16 @@ pub struct PlayerPosition {
     pub is_journeyman: bool,
 }
 
+/// Un seul schéma dans le corpus : `{"max": N, "in": [uid, …]}`. Les Élus du
+/// Chaos portaient `{"limit", "limitedPlayerIds"}`, aligné par la carte 258 —
+/// la struct ne connaît donc plus qu'une forme.
+#[derive(Debug, Clone, Deserialize)]
+pub struct CrossLimitDefinition {
+    pub max: u32,
+    #[serde(rename = "in")]
+    pub position_uids: Vec<String>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct Team {
     pub uid: String,
@@ -87,6 +97,11 @@ pub struct Team {
     pub tier: String,
     #[serde(rename = "specialRules", default)]
     pub special_rules: Vec<String>,
+    /// Limites de cumul entre postes — « pas plus de 3 joueurs parmi Ogre,
+    /// Troll, Minotaure, Rat Ogre ». Quatre rosters sur trente en ont ; les
+    /// autres portent un tableau vide ou pas de champ du tout.
+    #[serde(default)]
+    pub cross_limit: Vec<CrossLimitDefinition>,
     #[serde(rename = "allowedStaff", default)]
     pub allowed_staff: Vec<String>,
     #[serde(rename = "availablePlayers", default)]

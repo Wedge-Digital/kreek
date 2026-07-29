@@ -176,8 +176,8 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             references.repository.clone(),
         ),
     );
-    let teams_roster_info = Arc::new(
-        crate::infrastructure::teams::roster_info_adapter::RosterInfoAdapter::new(
+    let teams_roster_catalog = Arc::new(
+        crate::infrastructure::teams::roster_catalog_adapter::RosterCatalogAdapter::new(
             references.repository.clone(),
         ),
     );
@@ -189,7 +189,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
         &event_bus,
         pool.clone(),
         teams_player_value.clone(),
-        teams_roster_info.clone(),
+        teams_roster_catalog.clone(),
         teams_journeyman_type.clone(),
     );
     let players_skill_catalog: Arc<dyn crate::app::players::ports::ISkillCatalogPort> = Arc::new(
@@ -329,7 +329,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
                 event_bus.clone(),
                 teams_player_count,
                 teams_journeyman_type,
-                teams_roster_info,
+                teams_roster_catalog,
                 teams_player_value,
             )
         },

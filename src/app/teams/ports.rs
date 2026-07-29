@@ -39,19 +39,59 @@ pub trait IJourneymanTypePort: Send + Sync {
     fn journeyman_type_for_roster(&self, roster_id: &str) -> JourneymanTypeDto;
 }
 
-/// Les prix de staff sont globaux et non propres à un roster — ils voyagent
-/// ici pour éviter un second appel de port au moment de calculer la TV, et
-/// parce que la structure conviendra le jour où un roster aura ses tarifs.
-pub struct RosterInfoDto {
-    pub logo: Option<String>,
-    pub reroll_cost: u32,
-    pub apothecary_price: u32,
-    pub assistant_price: u32,
-    pub cheerleader_price: u32,
+pub struct CatalogPositionDto {
+    pub uid: String,
+    pub position_name: String,
+    pub cost: u32,
+    pub max_quantity: u8,
+    pub is_journeyman: bool,
 }
 
-pub trait IRosterInfoPort: Send + Sync {
-    fn find_roster_info(&self, roster_id: &str) -> Option<RosterInfoDto>;
+/// Limite de cumul entre postes — « pas plus de 3 joueurs parmi Ogre, Troll,
+/// Minotaure, Rat Ogre ». Quatre rosters sur trente en ont.
+pub struct CrossLimitDto {
+    pub max: u32,
+    pub position_uids: Vec<String>,
+}
+
+pub struct StaffPriceDto {
+    pub uid: String,
+    pub name: String,
+    pub price: u32,
+    pub max_quantity: u32,
+}
+
+/// Tout ce que `teams` a besoin de savoir d'un roster, en un seul appel.
+///
+/// Les prix de staff sont globaux et non propres à un roster — ils voyagent ici
+/// pour éviter un second aller-retour, et parce que la structure conviendra le
+/// jour où un roster aura ses tarifs.
+///
+/// `reroll_base_cost` est le **prix de base** : le doublement hors création est
+/// une règle de saison, appliquée par le domaine, pas par le catalogue.
+pub struct RosterCatalogDto {
+    pub logo: Option<String>,
+    pub reroll_base_cost: u32,
+    pub positions: Vec<CatalogPositionDto>,
+    pub cross_limits: Vec<CrossLimitDto>,
+    pub allowed_staff: Vec<String>,
+    pub staff_prices: Vec<StaffPriceDto>,
+}
+
+impl RosterCatalogDto {
+    /// Prix d'une ligne de staff, ou zéro si le corpus ne la porte pas : mieux
+    /// vaut une TV incomplète qu'un démarrage impossible.
+    pub fn staff_price(&self, uid: &str) -> u32 {
+        self.staff_prices
+            .iter()
+            .find(|s| s.uid == uid)
+            .map(|s| s.price)
+            .unwrap_or(0)
+    }
+}
+
+pub trait IRosterCatalogPort: Send + Sync {
+    fn find_catalog(&self, roster_id: &str) -> Option<RosterCatalogDto>;
 }
 
 #[derive(Debug)]
