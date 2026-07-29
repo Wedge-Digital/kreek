@@ -2,10 +2,12 @@ use crate::app::teams::io::app_events::{
     initial_roster_listener, match_report_cancelled_listener, match_report_confirmed_listener,
     match_report_published_listener, match_report_unpublished_listener, team_created_listener,
 };
-use crate::app::teams::io::listeners::team_value_listener;
+use crate::app::teams::io::listeners::{phase_draft_purge_listener, team_value_listener};
+use crate::app::teams::io::repository::phase_draft_repository::PhaseDraftRepository;
 use crate::app::teams::io::repository::team_repository::TeamRepository;
 use crate::app::teams::ports::{
-    IJourneymanTypePort, IPlayerCountPort, IPlayerValuePort, IRosterCatalogPort, ITeamRepository,
+    IJourneymanTypePort, IPhaseDraftRepository, IPlayerCountPort, IPlayerValuePort,
+    IRosterCatalogPort, ITeamRepository,
 };
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
@@ -28,6 +30,8 @@ pub fn init_listeners(
     roster_catalog_port: Arc<dyn IRosterCatalogPort>,
     journeyman_type_port: Arc<dyn IJourneymanTypePort>,
 ) {
+    let drafts: Arc<dyn IPhaseDraftRepository> = Arc::new(PhaseDraftRepository::new(pool.clone()));
+    phase_draft_purge_listener::init(event_bus, drafts);
     let repo = Arc::new(TeamRepository::new(pool, event_bus.clone()));
     team_value_listener::init(
         event_bus,

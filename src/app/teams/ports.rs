@@ -1,4 +1,4 @@
-use crate::app::teams::domain::team::{Team, TeamDomainEvent};
+use crate::app::teams::domain::team::{GamePhase, Team, TeamDomainEvent};
 use async_trait::async_trait;
 
 #[async_trait]
@@ -94,12 +94,65 @@ pub trait IRosterCatalogPort: Send + Sync {
     fn find_catalog(&self, roster_id: &str) -> Option<RosterCatalogDto>;
 }
 
+// ── Brouillon de phase ────────────────────────────────────────────────────────
+
+/// La moitié **persistée** d'un brouillon : les lignes accumulées et leur
+/// version. Le use case la complète avec le catalogue du roster, l'effectif et
+/// la trésorerie pour reconstituer l'agrégat (cartes 262 et 267).
+///
+/// `state` est **opaque** ici : la forme des lignes diffère selon la phase, et
+/// appartient à ces agrégats. Le repository ne connaît qu'« une équipe, une
+/// phase, un état, une version ».
+#[derive(Debug, Clone)]
+pub struct PhaseDraftState {
+    pub team_id: String,
+    pub space_id: String,
+    pub phase: GamePhase,
+    pub state: serde_json::Value,
+    pub version: u32,
+}
+
+/// Le nom de phase stocké en base. Seules deux phases ont un brouillon ; une
+/// autre valeur est un bug d'appelant, pas un cas nominal — d'où l'erreur
+/// explicite plutôt qu'un silence.
+pub fn draft_phase_key(phase: &GamePhase) -> Result<&'static str, RepositoryError> {
+    match phase {
+        GamePhase::Recruitment => Ok("Recruitment"),
+        GamePhase::Dismissals => Ok("Dismissals"),
+        autre => Err(RepositoryError::PhaseWithoutDraft(autre.clone())),
+    }
+}
+
+#[async_trait]
+pub trait IPhaseDraftRepository: Send + Sync {
+    /// Le panier persisté d'une équipe pour cette phase, ou `None` si le coach
+    /// n'a encore rien mis dedans.
+    async fn load(
+        &self,
+        team_id: &str,
+        phase: &GamePhase,
+    ) -> Result<Option<PhaseDraftState>, RepositoryError>;
+
+    /// Écriture gardée par la version. `expected_version` à zéro crée la ligne ;
+    /// au-delà, elle met à jour. Les deux échouent en `ConcurrentWrite` si un
+    /// autre onglet est passé avant. Retourne la nouvelle version.
+    async fn save(
+        &self,
+        draft: &PhaseDraftState,
+        expected_version: u32,
+    ) -> Result<u32, RepositoryError>;
+
+    async fn delete(&self, team_id: &str, phase: &GamePhase) -> Result<(), RepositoryError>;
+}
+
 #[derive(Debug)]
 pub enum RepositoryError {
     ConcurrentWrite,
     Serialization(serde_json::Error),
     Deserialization(serde_json::Error),
     Database(sqlx::Error),
+    /// Une phase sans brouillon possible a été passée à `IPhaseDraftRepository`.
+    PhaseWithoutDraft(GamePhase),
 }
 
 impl std::fmt::Display for RepositoryError {
@@ -109,6 +162,9 @@ impl std::fmt::Display for RepositoryError {
             Self::Serialization(e) => write!(f, "erreur de sérialisation : {e}"),
             Self::Deserialization(e) => write!(f, "erreur de désérialisation : {e}"),
             Self::Database(e) => write!(f, "erreur base de données : {e}"),
+            Self::PhaseWithoutDraft(p) => {
+                write!(f, "aucun brouillon n'existe pour la phase {p:?}")
+            }
         }
     }
 }
