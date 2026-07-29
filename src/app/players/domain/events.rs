@@ -10,6 +10,16 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PlayerDomainEvent {
+    /// Le roster initial d'une équipe est au complet — tous ses joueurs ont été
+    /// créés et leurs compétences de départ enregistrées.
+    ///
+    /// **Jamais persisté** : aucun agrégat de `players` ne porte le roster, la
+    /// création initiale étant une boucle sur N joueurs dans un listener. Cet
+    /// événement n'existe que pour être publié, et c'est la seule concession de
+    /// la série — préférable à laisser `teams` valoriser lui-même le payload,
+    /// ce qui dupliquerait la règle de valorisation de `players` (la duplication
+    /// même qui avait produit les deux tables divergentes de la carte 249).
+    InitialRosterCompleted { team_id: TeamId, player_count: u32 },
     PlayerCreated {
         player_id: PlayerId,
         team_id: TeamId,
@@ -142,6 +152,27 @@ impl PlayerDomainEvent {
             Self::PlayerAvailabilityRestored { .. } => "PlayerAvailabilityRestored",
             Self::MatchConcluded { .. } => "MatchConcluded",
             Self::MatchImpactReverted { .. } => "MatchImpactReverted",
+            Self::InitialRosterCompleted { .. } => "InitialRosterCompleted",
+        }
+    }
+
+    /// Conversion vers l'app event franchissant la frontière vers `teams` —
+    /// `None` pour tout ce qui reste interne à `players`, c'est-à-dire presque
+    /// tout. Seul le publisher (couche IO) appelle cette méthode : un listener
+    /// n'émet jamais d'app event directement.
+    pub fn to_app_event(
+        &self,
+    ) -> Option<crate::app::shared_kernel::app_events::players_app_events::PlayersAppEvent> {
+        use crate::app::shared_kernel::app_events::players_app_events::PlayersAppEvent;
+        match self {
+            Self::InitialRosterCompleted {
+                team_id,
+                player_count,
+            } => Some(PlayersAppEvent::InitialRosterCompleted {
+                team_id: team_id.0.clone(),
+                player_count: *player_count,
+            }),
+            _ => None,
         }
     }
 

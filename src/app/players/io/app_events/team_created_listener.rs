@@ -200,16 +200,38 @@ async fn handle_team_created(
     players: &[PlayerPayload],
     pool: &PgPool,
     catalog: &dyn ISkillCatalogPort,
+    event_bus: &EventBus,
 ) -> Result<(), ListenerError> {
     for payload in players {
         handle_player(team_id, space_id, payload, pool, catalog).await?;
     }
+
+    // Émis **après** la boucle : c'est ce qui garantit qu'un recalcul de TV
+    // déclenché par cet événement voit un roster complet. `teams` et `players`
+    // s'abonnent au même `TeamCreated` dans deux tâches indépendantes — sans ce
+    // signal, `teams` peut atteindre `ReadyToPlay` avant qu'aucun joueur
+    // n'existe et figer une TV à zéro.
+    //
+    // L'émetteur de l'enveloppe est le `team_id`, pas un joueur : c'est un fait
+    // d'équipe, et c'est lui que le listener de `teams` lira pour savoir quelle
+    // équipe recalculer.
+    let completed = PlayerDomainEvent::InitialRosterCompleted {
+        team_id: TeamId(team_id.to_string()),
+        player_count: players.len() as u32,
+    };
+    let _ = event_bus.send(completed.to_enveloppe(team_id));
+
     Ok(())
 }
 
 // ── Abonnement ────────────────────────────────────────────────────────────────
 
-pub fn init(app_event_bus: &EventBus, pool: PgPool, skill_catalog: Arc<dyn ISkillCatalogPort>) {
+pub fn init(
+    app_event_bus: &EventBus,
+    event_bus: EventBus,
+    pool: PgPool,
+    skill_catalog: Arc<dyn ISkillCatalogPort>,
+) {
     let mut rx = app_event_bus.subscribe();
     tokio::spawn(async move {
         loop {
@@ -232,6 +254,7 @@ pub fn init(app_event_bus: &EventBus, pool: PgPool, skill_catalog: Arc<dyn ISkil
                         &players,
                         &pool,
                         skill_catalog.as_ref(),
+                        &event_bus,
                     )
                     .await
                     {
@@ -252,4 +275,67 @@ pub fn init(app_event_bus: &EventBus, pool: PgPool, skill_catalog: Arc<dyn ISkil
             }
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::shared_kernel::app_events::players_app_events::PlayersAppEvent;
+    use crate::common::services::event_bus::event_bus::new_bus;
+
+    fn roster_completed(team_id: &str, count: u32) -> PlayerDomainEvent {
+        PlayerDomainEvent::InitialRosterCompleted {
+            team_id: TeamId(team_id.to_string()),
+            player_count: count,
+        }
+    }
+
+    /// L'enveloppe porte le `team_id` en émetteur, et non un joueur : c'est un
+    /// fait d'équipe, et c'est cet émetteur que le listener de `teams` lit pour
+    /// savoir quelle équipe recalculer.
+    #[test]
+    fn l_evenement_de_roster_complet_a_l_equipe_pour_emetteur() {
+        let enveloppe = roster_completed("t-42", 11).to_enveloppe("t-42");
+
+        assert_eq!(enveloppe.emitter, "t-42");
+        assert_eq!(enveloppe.event_type, "InitialRosterCompleted");
+    }
+
+    /// Le domain event doit franchir la frontière — sans ce mapping, le
+    /// publisher ne produirait rien et `teams` ne recalculerait jamais.
+    #[test]
+    fn le_roster_complet_se_convertit_en_app_event() {
+        let app_event = roster_completed("t-42", 11)
+            .to_app_event()
+            .expect("InitialRosterCompleted doit franchir la frontière vers teams");
+
+        let PlayersAppEvent::InitialRosterCompleted {
+            team_id,
+            player_count,
+        } = app_event;
+        assert_eq!(team_id, "t-42");
+        assert_eq!(player_count, 11);
+    }
+
+    /// Les événements internes à `players` ne doivent pas fuir vers `teams`.
+    #[test]
+    fn les_autres_evenements_ne_franchissent_pas_la_frontiere() {
+        let touchdown = PlayerDomainEvent::MatchImpactReverted {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t-42".into()),
+            match_report_id: crate::app::players::domain::match_impact::MatchReportId("mr".into()),
+        };
+        assert!(touchdown.to_app_event().is_none());
+    }
+
+    #[tokio::test]
+    async fn le_bus_interne_recoit_l_evenement_en_fin_de_boucle() {
+        let bus = new_bus();
+        let mut rx = bus.subscribe();
+
+        let _ = bus.send(roster_completed("t-7", 12).to_enveloppe("t-7"));
+
+        let enveloppe = rx.recv().await.expect("l'événement doit être publié");
+        assert_eq!(enveloppe.emitter, "t-7");
+    }
 }

@@ -1,5 +1,5 @@
 use crate::app::teams::io::app_events::{
-    match_report_cancelled_listener, match_report_confirmed_listener,
+    initial_roster_listener, match_report_cancelled_listener, match_report_confirmed_listener,
     match_report_published_listener, match_report_unpublished_listener, team_created_listener,
 };
 use crate::app::teams::io::listeners::team_value_listener;
@@ -31,6 +31,13 @@ pub fn init_listeners(
     let repo = Arc::new(TeamRepository::new(pool, event_bus.clone()));
     team_value_listener::init(
         event_bus,
+        repo.clone(),
+        player_value_port.clone(),
+        roster_info_port.clone(),
+        journeyman_type_port.clone(),
+    );
+    initial_roster_listener::init(
+        app_event_bus,
         repo.clone(),
         player_value_port,
         roster_info_port,

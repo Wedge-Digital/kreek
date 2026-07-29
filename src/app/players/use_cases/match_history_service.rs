@@ -81,6 +81,8 @@ pub fn build_match_history(events: &[PlayerDomainEvent]) -> Vec<MatchHistoryEntr
 
 fn event_match_report_id(event: &PlayerDomainEvent) -> Option<String> {
     match event {
+        // Fait d'équipe, hors de tout historique de match.
+        PlayerDomainEvent::InitialRosterCompleted { .. } => None,
         PlayerDomainEvent::TouchdownScored { context, .. }
         | PlayerDomainEvent::PassCompleted { context, .. }
         | PlayerDomainEvent::InterceptionMade { context, .. }
@@ -102,6 +104,7 @@ fn event_match_report_id(event: &PlayerDomainEvent) -> Option<String> {
 
 fn apply_event(entry: &mut MatchHistoryEntry, event: &PlayerDomainEvent) {
     match event {
+        PlayerDomainEvent::InitialRosterCompleted { .. } => {}
         PlayerDomainEvent::MatchConcluded {
             context,
             team_score,

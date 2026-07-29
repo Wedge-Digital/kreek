@@ -21,6 +21,10 @@ fn event_type_name(event: &PlayerDomainEvent) -> &'static str {
 
 fn player_and_team_id(event: &PlayerDomainEvent) -> (&str, &str) {
     match event {
+        // Fait d'équipe, jamais persisté : il n'atteint pas ce chemin.
+        PlayerDomainEvent::InitialRosterCompleted { .. } => {
+            unreachable!("InitialRosterCompleted n'est jamais appendu")
+        }
         PlayerDomainEvent::PlayerCreated {
             player_id, team_id, ..
         } => (&player_id.0, &team_id.0),
@@ -104,6 +108,8 @@ pub async fn upsert_player_projection(
     event: &PlayerDomainEvent,
 ) -> Result<(), RepositoryError> {
     match event {
+        // Fait d'équipe, jamais persisté : aucune projection joueur à écrire.
+        PlayerDomainEvent::InitialRosterCompleted { .. } => {}
         PlayerDomainEvent::PlayerCreated {
             player_id,
             team_id,
