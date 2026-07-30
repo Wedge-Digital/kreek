@@ -1,3 +1,4 @@
+use crate::app::teams::io::app_events::app_event_publisher::teams_app_event_publisher;
 use crate::app::teams::io::app_events::{
     initial_roster_listener, match_report_cancelled_listener, match_report_confirmed_listener,
     match_report_published_listener, match_report_unpublished_listener, team_created_listener,
@@ -29,6 +30,10 @@ pub fn init_listeners(
     roster_catalog_port: Arc<dyn IRosterCatalogPort>,
     journeyman_type_port: Arc<dyn IJourneymanTypePort>,
 ) {
+    // Le publisher d'abord : il doit être abonné au bus interne avant que le
+    // moindre événement domaine y passe.
+    teams_app_event_publisher(event_bus, app_event_bus.clone(), pool.clone());
+
     let baskets: Arc<dyn IPhaseBasketRepository> =
         Arc::new(PhaseBasketRepository::new(pool.clone()));
     phase_basket_purge_listener::init(event_bus, baskets);

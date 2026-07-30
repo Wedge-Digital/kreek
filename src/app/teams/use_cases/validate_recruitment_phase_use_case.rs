@@ -1,3 +1,4 @@
+use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
 use crate::app::teams::domain::error::DomainError;
 use crate::app::teams::domain::recruitment_basket::{AppliedLine, RejectedLine};
 use crate::app::teams::domain::team::{GamePhase, TeamDomainEvent};
@@ -82,11 +83,14 @@ fn build_events(
 
     for ligne in applied {
         let event = match ligne {
+            // L'identifiant est frappé ici, pas dans l'agrégat : le domaine
+            // reste déterministe, et l'identité devient un fait persisté dès
+            // que l'événement est appendu.
             AppliedLine::Player {
                 roster_line,
                 base_value,
                 cost,
-            } => team.recruit_player(roster_line, base_value, cost),
+            } => team.recruit_player(PlayerId::new(), roster_line, base_value, cost),
             AppliedLine::Staff { staff_type, cost } => team.buy_staff(
                 staff_type,
                 StaffQuantity::try_new(1).expect("une ligne de panier vaut une unité"),

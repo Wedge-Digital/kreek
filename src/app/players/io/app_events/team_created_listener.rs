@@ -1,67 +1,17 @@
 use crate::app::players::domain::events::PlayerDomainEvent;
-use crate::app::players::domain::player::{AcquisitionMode, PlayerId, Spp, TeamId, ValueKpo};
-use crate::app::players::domain::value_objects::{
-    JerseyVo, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
-};
+use crate::app::players::domain::player::{AcquisitionMode, PlayerId, TeamId, ValueKpo};
+use crate::app::players::domain::value_objects::{SkillId, SkillName, SppCost};
+use crate::app::players::io::app_events::player_creation::{creer_joueur, ListenerError};
 use crate::app::players::io::repository::player_repository::{
     insert_player_event, upsert_player_projection,
 };
-use crate::app::players::ports::{ISkillCatalogPort, RepositoryError};
+use crate::app::players::ports::ISkillCatalogPort;
 use crate::app::shared_kernel::app_events::team_creation_app_events::{
     PlayerPayload, TeamCreationAppEvent,
 };
-use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
-use std::fmt;
 use std::sync::Arc;
-
-#[derive(Debug)]
-pub enum ListenerError {
-    AlreadyProcessed,
-    Repository(RepositoryError),
-    Database(sqlx::Error),
-}
-
-impl fmt::Display for ListenerError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::AlreadyProcessed => write!(f, "joueur déjà créé (idempotence)"),
-            Self::Repository(e) => write!(f, "repository : {e}"),
-            Self::Database(e) => write!(f, "base de données : {e}"),
-        }
-    }
-}
-
-impl From<RepositoryError> for ListenerError {
-    fn from(e: RepositoryError) -> Self {
-        match e {
-            RepositoryError::ConcurrentWrite => Self::AlreadyProcessed,
-            other => Self::Repository(other),
-        }
-    }
-}
-
-// ── Résolution depuis le référentiel ─────────────────────────────────────────
-
-fn resolve_base_skills(roster_line_id: &str, catalog: &dyn ISkillCatalogPort) -> Vec<SkillId> {
-    catalog
-        .find_position(roster_line_id)
-        .map(|pos| {
-            pos.base_skills
-                .iter()
-                .filter_map(|uid| SkillId::try_new(uid.clone()).ok())
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-fn base_position_kpo(roster_line_id: &str, catalog: &dyn ISkillCatalogPort) -> u32 {
-    catalog
-        .find_position(roster_line_id)
-        .map(|pos| pos.cost)
-        .unwrap_or(0)
-}
 
 /// Valeur ajoutée par une compétence obtenue **à la création** de l'équipe.
 ///
@@ -104,35 +54,17 @@ async fn handle_player(
     let player_id = PlayerId(payload.instance_id.clone());
     let team_id_vo = TeamId(team_id.to_string());
 
-    let base_skills = resolve_base_skills(&payload.roster_line_id, catalog);
-    let starting_value = ValueKpo(base_position_kpo(&payload.roster_line_id, catalog));
-
-    // ── Version 1 : création du joueur (sans compétences acquises) ────────────
-    let space_id_vo = SpaceId::try_new(space_id).unwrap_or_else(|_| SpaceId::new());
-    let position_name = PositionNameVo::try_new(payload.position_name.clone())
-        .unwrap_or_else(|_| PositionNameVo::try_new("Joueur".to_string()).unwrap());
-    let roster_line_id = RosterLineId::try_new(payload.roster_line_id.clone())
-        .unwrap_or_else(|_| RosterLineId::try_new("unknown".to_string()).unwrap());
-    let jersey_vo = payload
-        .jersey
-        .and_then(|j| JerseyVo::try_new(j as u16).ok());
-
-    let created = PlayerDomainEvent::PlayerCreated {
-        player_id: player_id.clone(),
-        team_id: team_id_vo.clone(),
-        space_id: space_id_vo,
-        position_name,
-        roster_line_id,
-        jersey: jersey_vo,
-        base_skills,
-        starting_spp: Spp(0),
-        starting_value,
-    };
-
-    let mut tx = pool.begin().await.map_err(ListenerError::Database)?;
-    insert_player_event(&mut tx, &created, 1).await?;
-    upsert_player_projection(&mut tx, &created).await?;
-    tx.commit().await.map_err(ListenerError::Database)?;
+    creer_joueur(
+        team_id,
+        space_id,
+        &payload.instance_id,
+        &payload.roster_line_id,
+        &payload.position_name,
+        payload.jersey.map(|j| j as u16),
+        pool,
+        catalog,
+    )
+    .await?;
 
     // ── Versions 2..n : une compétence acquise par event ─────────────────────
     let position = catalog.find_position(&payload.roster_line_id);

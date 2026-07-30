@@ -1,3 +1,4 @@
+pub mod app_event_publisher;
 pub mod initial_roster_listener;
 pub mod match_report_cancelled_listener;
 pub mod match_report_confirmed_listener;

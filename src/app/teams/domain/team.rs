@@ -109,6 +109,11 @@ pub enum TeamDomainEvent {
     /// poste s'en déduisent. Le champ était typé `PositionId`, c'est-à-dire un
     /// `SUlid`, qui n'aurait pas pu porter cette valeur.
     PlayerRecruited {
+        /// Frappé par `teams`, et non par `players` à la réception : l'event
+        /// store devient la source d'identité. Rejouer le flux redonne les
+        /// mêmes joueurs, et un app event reçu deux fois est rejeté par la
+        /// contrainte d'unicité de `players` au lieu de créer un doublon.
+        player_id: PlayerId,
         roster_line: RosterLineId,
         base_value_kpo: Kpo,
         cost_kpo: Kpo,
@@ -756,6 +761,7 @@ impl Team {
     /// trésorerie ne devient jamais négative. Gardé comme filet.
     pub fn recruit_player(
         &self,
+        player_id: PlayerId,
         roster_line: RosterLineId,
         base_value_kpo: Kpo,
         cost_kpo: Kpo,
@@ -765,6 +771,7 @@ impl Team {
             return Err(DomainError::InsufficientTreasury);
         }
         Ok(TeamDomainEvent::PlayerRecruited {
+            player_id,
             roster_line,
             base_value_kpo,
             cost_kpo,
@@ -919,6 +926,12 @@ mod tests {
     fn coach_id() -> CoachId {
         CoachId::try_new("00000000000000000000000006").unwrap()
     }
+    /// L'identifiant du joueur recruté est frappé par l'appelant : les tests le
+    /// fixent, ce qui les rend reproductibles.
+    fn recrue() -> PlayerId {
+        PlayerId::try_new("00000000000000000000000009").unwrap()
+    }
+
     fn match_report_id() -> MatchReportId {
         MatchReportId::try_new("00000000000000000000000007").unwrap()
     }
@@ -1033,6 +1046,7 @@ mod tests {
             created_event(),
             enrolled_event(),
             TeamDomainEvent::PlayerRecruited {
+                player_id: recrue(),
                 roster_line: pos_id.clone(),
                 base_value_kpo: Kpo(95),
                 cost_kpo: Kpo(95),
@@ -1059,6 +1073,7 @@ mod tests {
                 cost_kpo: Kpo(50),
             },
             TeamDomainEvent::PlayerRecruited {
+                player_id: recrue(),
                 roster_line: pos_id.clone(),
                 base_value_kpo: Kpo(95),
                 cost_kpo: Kpo(95),
@@ -1700,7 +1715,7 @@ mod tests {
     fn recruit_player_hors_phase_recruitment_retourne_erreur() {
         let team = dismissals_phase_team();
         assert!(matches!(
-            team.recruit_player(position(), Kpo(50), Kpo(50)),
+            team.recruit_player(recrue(), position(), Kpo(50), Kpo(50)),
             Err(DomainError::WrongGamePhase(_))
         ));
     }
@@ -1711,7 +1726,9 @@ mod tests {
         let team = recruitment_phase_team();
         let avant = team.treasury.0; // 1150
 
-        let event = team.recruit_player(position(), Kpo(50), Kpo(90)).unwrap();
+        let event = team
+            .recruit_player(recrue(), position(), Kpo(50), Kpo(90))
+            .unwrap();
         let team = team.apply(&event);
 
         assert_eq!(team.treasury.0, avant - 90);
@@ -1721,7 +1738,7 @@ mod tests {
     fn recruit_player_tresorerie_insuffisante_retourne_erreur() {
         let team = recruitment_phase_team();
         assert!(matches!(
-            team.recruit_player(position(), Kpo(50), Kpo(9_999)),
+            team.recruit_player(recrue(), position(), Kpo(50), Kpo(9_999)),
             Err(DomainError::InsufficientTreasury)
         ));
     }
