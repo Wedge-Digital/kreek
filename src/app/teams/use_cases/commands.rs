@@ -46,3 +46,17 @@ pub struct RemoveBasketLineCommand {
     pub line_id: String,
     pub expected_version: u32,
 }
+
+/// Marquer, et non retirer : le joueur reste dans l'effectif — et compte encore
+/// dans le plancher des éligibles — jusqu'à la validation du lot.
+pub struct MarkPlayerForDismissalCommand {
+    pub team_id: TeamId,
+    pub player_id: crate::app::shared_kernel::bloodbowl::ids::PlayerId,
+    pub expected_version: u32,
+}
+
+pub struct MarkStaffForDismissalCommand {
+    pub team_id: TeamId,
+    pub staff_type: crate::app::teams::domain::value_objects::StaffType,
+    pub expected_version: u32,
+}

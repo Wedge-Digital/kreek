@@ -3,6 +3,7 @@ use crate::app::teams::domain::basket::{
     BasketVersion, CatalogPosition, CrossLimit, OwnedStaff, Player, RosterCatalog, RosterLineId,
     SkillBadge, Squad, StaffCatalogEntry,
 };
+use crate::app::teams::domain::dismissals_basket::{DismissalBasketLine, DismissalsBasket};
 use crate::app::teams::domain::recruitment_basket::{BasketLine, RecruitmentBasket};
 use crate::app::teams::domain::team::{GamePhase, Team};
 use crate::app::teams::domain::value_objects::Kpo;
@@ -51,40 +52,81 @@ pub async fn hydrate_recruitment_basket(
     squad_port: &dyn ISquadPort,
 ) -> Result<RecruitmentBasket, HydrationError> {
     let team_id = team.id.to_string();
-    let roster_id = team.roster_id.to_string();
-
-    let persiste = basket_repo
-        .load(&team_id, &GamePhase::Recruitment)
-        .await
-        .map_err(HydrationError::Repository)?;
-
-    // Un panier absent n'est pas une erreur : le coach n'a simplement rien mis
-    // dedans. On hydrate un panier vide, à la version zéro — celle que `save`
-    // attend pour créer la ligne.
-    let (version, lines) = match persiste {
-        Some(etat) => (
-            BasketVersion(etat.version),
-            serde_json::from_value::<Vec<BasketLine>>(etat.state)
-                .map_err(|e| HydrationError::CorruptedBasket(e.to_string()))?,
-        ),
-        None => (BasketVersion(0), Vec::new()),
-    };
-
-    let catalogue = catalog_port
-        .find_catalog(&roster_id)
-        .ok_or(HydrationError::RosterNotFound)?;
-
+    let (version, lines) =
+        charger_lignes::<BasketLine>(&team_id, &GamePhase::Recruitment, basket_repo).await?;
+    let catalogue = charger_catalogue(team, catalog_port)?;
     let effectif = squad_port.find_squad(&team_id).await;
 
     Ok(RecruitmentBasket::hydrate(
         team_id,
         version,
         lines,
-        to_domain_catalog(catalogue),
+        catalogue,
         to_domain_squad(effectif)?,
         owned_staff_of(team),
         team.treasury,
     ))
+}
+
+/// Le pendant pour les renvois. Mêmes sources, moins la trésorerie : un renvoi
+/// ne rembourse rien, l'agrégat n'a aucune raison de la connaître.
+pub async fn hydrate_dismissals_basket(
+    team: &Team,
+    basket_repo: &dyn IPhaseBasketRepository,
+    catalog_port: &dyn IRosterCatalogPort,
+    squad_port: &dyn ISquadPort,
+) -> Result<DismissalsBasket, HydrationError> {
+    let team_id = team.id.to_string();
+    let (version, lines) =
+        charger_lignes::<DismissalBasketLine>(&team_id, &GamePhase::Dismissals, basket_repo)
+            .await?;
+    let catalogue = charger_catalogue(team, catalog_port)?;
+    let effectif = squad_port.find_squad(&team_id).await;
+
+    Ok(DismissalsBasket::hydrate(
+        team_id,
+        version,
+        lines,
+        to_domain_squad(effectif)?,
+        catalogue,
+        owned_staff_of(team),
+    ))
+}
+
+/// Les lignes persistées d'un panier de phase, quel que soit leur type.
+///
+/// Un panier absent n'est pas une erreur : le coach n'a simplement rien mis
+/// dedans. On rend un panier vide, à la version zéro — celle que `save` attend
+/// pour créer la ligne. Cette règle n'a qu'une écriture, partagée par les deux
+/// phases.
+async fn charger_lignes<L: serde::de::DeserializeOwned>(
+    team_id: &str,
+    phase: &GamePhase,
+    basket_repo: &dyn IPhaseBasketRepository,
+) -> Result<(BasketVersion, Vec<L>), HydrationError> {
+    let persiste = basket_repo
+        .load(team_id, phase)
+        .await
+        .map_err(HydrationError::Repository)?;
+
+    match persiste {
+        Some(etat) => Ok((
+            BasketVersion(etat.version),
+            serde_json::from_value::<Vec<L>>(etat.state)
+                .map_err(|e| HydrationError::CorruptedBasket(e.to_string()))?,
+        )),
+        None => Ok((BasketVersion(0), Vec::new())),
+    }
+}
+
+fn charger_catalogue(
+    team: &Team,
+    catalog_port: &dyn IRosterCatalogPort,
+) -> Result<RosterCatalog, HydrationError> {
+    catalog_port
+        .find_catalog(&team.roster_id.to_string())
+        .map(to_domain_catalog)
+        .ok_or(HydrationError::RosterNotFound)
 }
 
 fn to_domain_catalog(dto: RosterCatalogDto) -> RosterCatalog {

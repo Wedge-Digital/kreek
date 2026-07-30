@@ -115,18 +115,42 @@ pub async fn post_validate_dismissals_phase(
     };
     let cmd = ValidateDismissalsPhaseCommand { team_id };
 
-    match validate_dismissals_phase_use_case::execute(cmd, state.teams.team_repository.as_ref())
-        .await
-    {
+    let resultat = validate_dismissals_phase_use_case::execute(
+        cmd,
+        state.teams.team_repository.as_ref(),
+        state.teams.basket_repository.as_ref(),
+        state.teams.roster_catalog_port.as_ref(),
+        state.teams.squad_port.as_ref(),
+    )
+    .await;
+
+    use validate_dismissals_phase_use_case::ValidateDismissalsPhaseError as E;
+    match resultat {
+        // Un simple rafraîchissement : la validation part de la feuille
+        // d'équipe, où le bandeau doit maintenant annoncer « Prête à jouer ».
+        // La page de renvois de la carte 269 changera cette réponse, comme la
+        // 264 l'a fait pour le recrutement.
         Ok(()) => refresh_response(),
-        Err(validate_dismissals_phase_use_case::ValidateDismissalsPhaseError::TeamNotFound) => {
-            StatusCode::NOT_FOUND.into_response()
+        Err(E::TeamNotFound) => StatusCode::NOT_FOUND.into_response(),
+        // Le panier ne passe plus contre l'effectif du jour. Tant que la 269 n'a
+        // pas de fragment où le dire, on refuse en 422 sans rien appliquer —
+        // c'est déjà la garantie qui compte.
+        Err(E::BasketNoLongerValid(lignes)) => {
+            tracing::warn!(
+                "validate_dismissals_phase : {} ligne(s) refusée(s)",
+                lignes.len()
+            );
+            StatusCode::UNPROCESSABLE_ENTITY.into_response()
         }
-        Err(validate_dismissals_phase_use_case::ValidateDismissalsPhaseError::Domain(e)) => {
+        Err(E::Domain(e)) => {
             tracing::warn!("validate_dismissals_phase domaine: {e}");
             StatusCode::UNPROCESSABLE_ENTITY.into_response()
         }
-        Err(validate_dismissals_phase_use_case::ValidateDismissalsPhaseError::Repository(e)) => {
+        Err(E::Hydration(e)) => {
+            tracing::error!("validate_dismissals_phase hydratation: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+        Err(E::Repository(e)) => {
             tracing::error!("validate_dismissals_phase repo: {e}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
