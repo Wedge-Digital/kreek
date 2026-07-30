@@ -1,6 +1,6 @@
 use crate::app::references::domain::models::{
-    Inducement, League, PlayerPosition, Skill, SkillCategory, SkillCostLevel, SpecialRule, Staff,
-    StarPlayer, Team,
+    Inducement, League, PlayerPosition, Skill, SkillCategory, SkillCostLevel, SpecialRule,
+    SppScale, Staff, StarPlayer, Team,
 };
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementDefinition;
 use crate::app::shared_kernel::bloodbowl::roster_definition::RosterDefinition;
@@ -23,12 +23,16 @@ pub trait IReferenceRepository: Send + Sync {
     fn find_position_by_uid(&self, uid: &str) -> Option<&PlayerPosition>;
     fn skill_cost_matrix(&self) -> &[SkillCostLevel];
 
-    // ── Barème SPP par type d'action (règle Blood Bowl standard, fixe) ──────────
-    fn touchdown_spp(&self) -> u8;
-    fn pass_spp(&self) -> u8;
-    fn interception_spp(&self) -> u8;
-    fn casualty_spp(&self) -> u8;
-    fn mvp_spp(&self) -> u8;
+    // ── Barème SPP ─────────────────────────────────────────────────────────────
+    /// Le barème d'acquisition de SPP de l'équipe à laquelle ce poste appartient.
+    ///
+    /// Il n'est **pas** fixe : la règle spéciale `BRAWLIN_BRUTES` inverse la
+    /// valeur du touchdown et de la sortie. C'est `references` qui résout le
+    /// roster depuis la ligne de poste, parce que le corpus lui appartient.
+    ///
+    /// Rendu entier plutôt qu'action par action : une seule résolution, et un
+    /// match ne peut pas mélanger deux barèmes.
+    fn spp_scale_for_roster_line(&self, roster_line_id: &str) -> SppScale;
 
     // ── Valeur ajoutée par une amélioration ─────────────────────────────────────
     // Unité : kPo, comme partout ailleurs dans le back. Lue dans

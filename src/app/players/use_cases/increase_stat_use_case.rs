@@ -50,7 +50,7 @@ mod tests {
     };
     use crate::app::players::ports::{
         PositionAccessDto, PositionCatalogEntryDto, RepositoryError, SkillCatalogEntryDto,
-        SkillCostLevelDto,
+        SkillCostLevelDto, SppScaleDto,
     };
     use crate::app::shared_kernel::identity::ids::SpaceId;
     use std::sync::Mutex;
@@ -81,20 +81,14 @@ mod tests {
         fn stat_value_delta(&self, _: StatKind) -> u32 {
             20
         }
-        fn touchdown_spp(&self) -> u8 {
-            3
-        }
-        fn pass_spp(&self) -> u8 {
-            1
-        }
-        fn interception_spp(&self) -> u8 {
-            2
-        }
-        fn casualty_spp(&self) -> u8 {
-            2
-        }
-        fn mvp_spp(&self) -> u8 {
-            4
+        fn spp_scale_for_roster_line(&self, _roster_line_id: &str) -> SppScaleDto {
+            SppScaleDto {
+                touchdown: 3,
+                pass: 1,
+                interception: 2,
+                casualty: 2,
+                mvp: 4,
+            }
         }
     }
 

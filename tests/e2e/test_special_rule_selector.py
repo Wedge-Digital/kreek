@@ -121,10 +121,15 @@ def test_fixed_rules_display_as_chips(page: Page, space_id, competition_create_u
 
     _select_roster(page, "DEMO_GRANIT", "Granitiers")
 
+    # Trois règles depuis la carte 275 : « Brutes Bagarreuses » a été ajoutée au
+    # corpus de démo pour que le barème SPP inversé soit exerçable — c'est le
+    # seul roster de démo qui le porte. Les Zéphyriens ne pouvaient pas
+    # l'accueillir : ce fichier a besoin d'eux comme roster sans aucune règle.
     zone = page.locator("#special-rule-selector-zone")
-    expect(zone.locator(".special-rule-chip")).to_have_count(2)
+    expect(zone.locator(".special-rule-chip")).to_have_count(3)
     expect(zone.locator(".special-rule-chip").nth(0)).to_have_text("Gens de Rocaille")
     expect(zone.locator(".special-rule-chip").nth(1)).to_have_text("Meneur Né")
+    expect(zone.locator(".special-rule-chip").nth(2)).to_have_text("Brutes Bagarreuses")
     expect(zone.locator("select")).to_have_count(0)
 
 

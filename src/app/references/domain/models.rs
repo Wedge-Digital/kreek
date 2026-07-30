@@ -179,6 +179,69 @@ pub struct SpecialRule {
     pub label: String,
 }
 
+// ── Barème SPP ────────────────────────────────────────────────────────────────
+
+/// Une ligne de `spp_rules.json` : combien de SPP rapporte un type d'action.
+///
+/// `action` porte les codes du corpus — `TD`, `CAS`, `REU`, `MVP`, `INT`,
+/// `TTM`. `TTM` (passe à un coéquipier) n'a pas encore d'action correspondante
+/// dans le jeu : il est chargé et ignoré, plutôt que d'être omis du fichier.
+#[derive(Debug, Clone, Deserialize)]
+pub struct SppRule {
+    pub action: String,
+    pub spp: u8,
+}
+
+/// Le barème d'une équipe, résolu depuis sa règle spéciale.
+///
+/// Rendu **entier** plutôt qu'action par action : une seule résolution par
+/// joueur, et la garantie qu'un même match ne mélange pas deux barèmes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SppScale {
+    pub touchdown: u8,
+    pub pass: u8,
+    pub interception: u8,
+    pub casualty: u8,
+    pub mvp: u8,
+}
+
+/// Le barème par défaut, celui de la très grande majorité des rosters.
+///
+/// Ces valeurs ne servent que si `spp_rules.json` est illisible ou incomplet —
+/// un corpus tiers pourrait ne déclarer aucune table. Elles reproduisent le
+/// `normal` du corpus de référence.
+impl Default for SppScale {
+    fn default() -> Self {
+        Self {
+            touchdown: 3,
+            pass: 1,
+            interception: 2,
+            casualty: 2,
+            mvp: 4,
+        }
+    }
+}
+
+impl SppScale {
+    /// Construit le barème depuis les lignes du corpus. Un code d'action absent
+    /// garde la valeur par défaut : mieux vaut un barème partiel qu'un panic au
+    /// démarrage sur un corpus qu'on ne maîtrise pas.
+    pub fn from_rules(rules: &[SppRule]) -> Self {
+        let mut scale = Self::default();
+        for r in rules {
+            match r.action.as_str() {
+                "TD" => scale.touchdown = r.spp,
+                "REU" => scale.pass = r.spp,
+                "INT" => scale.interception = r.spp,
+                "CAS" => scale.casualty = r.spp,
+                "MVP" => scale.mvp = r.spp,
+                _ => {}
+            }
+        }
+        scale
+    }
+}
+
 // ── Staff ─────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Deserialize)]

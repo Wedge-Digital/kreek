@@ -7,10 +7,29 @@
       "name": "Granitiers",
       "rerollCost": 60,
       "tier": "Tier 1",
-      "specialRules": ["DEMO_GENS_DE_ROCAILLE", "DEMO_MENEUR_NE"],
-      "cross_limit": [{"max": 2, "in": ["DEMO_GRANIT__PERCUTEUR", "DEMO_GRANIT__COLOSSE"]}],
-      "allowedStaff": ["APOTHECARY", "CHEERLEADERS", "COACH_ASSISTANTS", "FAN_FACTOR"],
-      "leagues": ["LIGUE_DES_CIMES"],
+      "specialRules": [
+        "DEMO_GENS_DE_ROCAILLE",
+        "DEMO_MENEUR_NE",
+        "BRAWLIN_BRUTES"
+      ],
+      "cross_limit": [
+        {
+          "max": 2,
+          "in": [
+            "DEMO_GRANIT__PERCUTEUR",
+            "DEMO_GRANIT__COLOSSE"
+          ]
+        }
+      ],
+      "allowedStaff": [
+        "APOTHECARY",
+        "CHEERLEADERS",
+        "COACH_ASSISTANTS",
+        "FAN_FACTOR"
+      ],
+      "leagues": [
+        "LIGUE_DES_CIMES"
+      ],
       "logo": "demo-granit.svg",
       "availablePlayers": [
         {
@@ -23,8 +42,12 @@
           "PA": 5,
           "AV": 10,
           "skills": [],
-          "primaryAccess": ["GENERAL"],
-          "secondaryAccess": ["STRENGTH"],
+          "primaryAccess": [
+            "GENERAL"
+          ],
+          "secondaryAccess": [
+            "STRENGTH"
+          ],
           "max_quantity": 16,
           "is_journeyman": true
         },
@@ -37,9 +60,16 @@
           "AG": 5,
           "PA": 6,
           "AV": 10,
-          "skills": ["APPUI_FERME"],
-          "primaryAccess": ["GENERAL", "STRENGTH"],
-          "secondaryAccess": ["AGILITY"],
+          "skills": [
+            "APPUI_FERME"
+          ],
+          "primaryAccess": [
+            "GENERAL",
+            "STRENGTH"
+          ],
+          "secondaryAccess": [
+            "AGILITY"
+          ],
           "max_quantity": 4,
           "is_journeyman": false
         },
@@ -52,9 +82,16 @@
           "AG": 5,
           "PA": 6,
           "AV": 11,
-          "skills": ["MASSE_INEBRANLABLE", "LOURDAUD"],
-          "primaryAccess": ["STRENGTH"],
-          "secondaryAccess": ["GENERAL"],
+          "skills": [
+            "MASSE_INEBRANLABLE",
+            "LOURDAUD"
+          ],
+          "primaryAccess": [
+            "STRENGTH"
+          ],
+          "secondaryAccess": [
+            "GENERAL"
+          ],
           "max_quantity": 1,
           "is_journeyman": false
         }
@@ -66,8 +103,14 @@
       "rerollCost": 50,
       "tier": "Tier 2",
       "specialRules": [],
-      "allowedStaff": ["APOTHECARY", "CHEERLEADERS", "COACH_ASSISTANTS"],
-      "leagues": ["COUPE_DES_SABLES"],
+      "allowedStaff": [
+        "APOTHECARY",
+        "CHEERLEADERS",
+        "COACH_ASSISTANTS"
+      ],
+      "leagues": [
+        "COUPE_DES_SABLES"
+      ],
       "availablePlayers": [
         {
           "uid": "DEMO_ZEPHYR__PIETAILLE",
@@ -79,8 +122,12 @@
           "PA": 4,
           "AV": 8,
           "skills": [],
-          "primaryAccess": ["AGILITY"],
-          "secondaryAccess": ["GENERAL"],
+          "primaryAccess": [
+            "AGILITY"
+          ],
+          "secondaryAccess": [
+            "GENERAL"
+          ],
           "max_quantity": 16,
           "is_journeyman": true
         },
@@ -93,9 +140,17 @@
           "AG": 2,
           "PA": 4,
           "AV": 8,
-          "skills": ["RECEPTION_SURE", "PAS_DE_COTE"],
-          "primaryAccess": ["AGILITY", "GENERAL"],
-          "secondaryAccess": ["PASSING"],
+          "skills": [
+            "RECEPTION_SURE",
+            "PAS_DE_COTE"
+          ],
+          "primaryAccess": [
+            "AGILITY",
+            "GENERAL"
+          ],
+          "secondaryAccess": [
+            "PASSING"
+          ],
           "max_quantity": 4,
           "is_journeyman": false
         },
@@ -108,9 +163,16 @@
           "AG": 3,
           "PA": 2,
           "AV": 8,
-          "skills": ["LANCER_TENDU"],
-          "primaryAccess": ["PASSING"],
-          "secondaryAccess": ["AGILITY", "GENERAL"],
+          "skills": [
+            "LANCER_TENDU"
+          ],
+          "primaryAccess": [
+            "PASSING"
+          ],
+          "secondaryAccess": [
+            "AGILITY",
+            "GENERAL"
+          ],
           "max_quantity": 2,
           "is_journeyman": false
         }
@@ -121,9 +183,16 @@
       "name": "Lanterniers",
       "rerollCost": 70,
       "tier": "Tier 3",
-      "specialRules": ["FAVOURED_OF_CHOOSE_ANY"],
-      "allowedStaff": ["CHEERLEADERS", "COACH_ASSISTANTS"],
-      "leagues": ["CHALLENGE_SOUTERRAIN"],
+      "specialRules": [
+        "FAVOURED_OF_CHOOSE_ANY"
+      ],
+      "allowedStaff": [
+        "CHEERLEADERS",
+        "COACH_ASSISTANTS"
+      ],
+      "leagues": [
+        "CHALLENGE_SOUTERRAIN"
+      ],
       "availablePlayers": [
         {
           "uid": "DEMO_LANTERNE__PIETAILLE",
@@ -135,8 +204,12 @@
           "PA": 5,
           "AV": 9,
           "skills": [],
-          "primaryAccess": ["GENERAL"],
-          "secondaryAccess": ["DEVIOUS"],
+          "primaryAccess": [
+            "GENERAL"
+          ],
+          "secondaryAccess": [
+            "DEVIOUS"
+          ],
           "max_quantity": 16,
           "is_journeyman": true
         },
@@ -149,9 +222,16 @@
           "AG": 3,
           "PA": 5,
           "AV": 9,
-          "skills": ["COUP_BAS"],
-          "primaryAccess": ["DEVIOUS", "GENERAL"],
-          "secondaryAccess": ["AGILITY"],
+          "skills": [
+            "COUP_BAS"
+          ],
+          "primaryAccess": [
+            "DEVIOUS",
+            "GENERAL"
+          ],
+          "secondaryAccess": [
+            "AGILITY"
+          ],
           "max_quantity": 2,
           "is_journeyman": false
         },
@@ -164,9 +244,16 @@
           "AG": 4,
           "PA": 5,
           "AV": 9,
-          "skills": ["ECAILLES_DURES"],
-          "primaryAccess": ["MUTATIONS"],
-          "secondaryAccess": ["GENERAL", "STRENGTH"],
+          "skills": [
+            "ECAILLES_DURES"
+          ],
+          "primaryAccess": [
+            "MUTATIONS"
+          ],
+          "secondaryAccess": [
+            "GENERAL",
+            "STRENGTH"
+          ],
           "max_quantity": 2,
           "is_journeyman": false
         }

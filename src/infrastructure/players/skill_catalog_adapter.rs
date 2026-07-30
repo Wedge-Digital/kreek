@@ -1,7 +1,7 @@
 use crate::app::players::domain::match_impact::StatKind;
 use crate::app::players::ports::{
     ISkillCatalogPort, PositionAccessDto, PositionCatalogEntryDto, SkillCatalogEntryDto,
-    SkillCostLevelDto,
+    SkillCostLevelDto, SppScaleDto,
 };
 use crate::app::references::domain::port::IReferenceRepository;
 use std::sync::Arc;
@@ -82,20 +82,17 @@ impl ISkillCatalogPort for SkillCatalogAdapter {
         }
     }
 
-    fn touchdown_spp(&self) -> u8 {
-        self.reference_repo.touchdown_spp()
-    }
-    fn pass_spp(&self) -> u8 {
-        self.reference_repo.pass_spp()
-    }
-    fn interception_spp(&self) -> u8 {
-        self.reference_repo.interception_spp()
-    }
-    fn casualty_spp(&self) -> u8 {
-        self.reference_repo.casualty_spp()
-    }
-    fn mvp_spp(&self) -> u8 {
-        self.reference_repo.mvp_spp()
+    fn spp_scale_for_roster_line(&self, roster_line_id: &str) -> SppScaleDto {
+        let scale = self
+            .reference_repo
+            .spp_scale_for_roster_line(roster_line_id);
+        SppScaleDto {
+            touchdown: scale.touchdown,
+            pass: scale.pass,
+            interception: scale.interception,
+            casualty: scale.casualty,
+            mvp: scale.mvp,
+        }
     }
 }
 

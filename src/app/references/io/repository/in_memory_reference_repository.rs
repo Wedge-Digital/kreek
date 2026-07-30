@@ -1,6 +1,6 @@
 use crate::app::references::domain::models::{
-    Inducement, League, PlayerPosition, Skill, SkillCategory, SkillCostLevel, SpecialRule, Staff,
-    StarPlayer, Team,
+    Inducement, League, PlayerPosition, Skill, SkillCategory, SkillCostLevel, SpecialRule, SppRule,
+    SppScale, Staff, StarPlayer, Team,
 };
 use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::references::io::repository::reference_data_error::ReferenceDataError;
@@ -57,6 +57,11 @@ struct LeaguesFile {
 // skill_cost.json est un tableau JSON de premier niveau, pas d'objet wrapper
 type SkillCostFile = Vec<SkillCostLevel>;
 
+/// `spp_rules.json` est un objet dont **les clés sont les noms de barème** —
+/// `normal`, `brawlin_brutes` —, et non une liste : c'est ce qui permet d'en
+/// ajouter un sans toucher au code.
+type SppRulesFile = std::collections::HashMap<String, Vec<SppRule>>;
+
 #[derive(Deserialize)]
 struct ImprovementValuesFile {
     improvement_values: ImprovementValues,
@@ -99,9 +104,35 @@ pub struct InMemoryReferenceRepository {
     leagues: Vec<League>,
     skill_cost_matrix: Vec<SkillCostLevel>,
     improvement_values: ImprovementValues,
+    spp_rules: SppRulesFile,
 }
 
+/// L'identifiant de la règle spéciale, en minuscules, **est** le nom du barème.
+///
+/// L'association est mécanique et non tabulée : `BRAWLIN_BRUTES` donne
+/// `brawlin_brutes`. Elle ne l'était pas — la clé du corpus portait un `G` que
+/// l'identifiant n'a pas — et cette incohérence a été corrigée dans le corpus
+/// plutôt que contournée ici. Ne pas réintroduire de correspondance codée : il
+/// n'y a plus deux orthographes à réconcilier.
+const BAREME_PAR_DEFAUT: &str = "normal";
+
 impl InMemoryReferenceRepository {
+    /// Le barème d'un roster : sa première règle spéciale qui nomme une table
+    /// du corpus l'emporte, sinon `normal`.
+    ///
+    /// Un roster dont la règle ne correspond à aucune table — cas d'un corpus
+    /// tiers — retombe sur `normal` sans bruit : c'est le comportement juste,
+    /// une règle spéciale sans barème n'en change pas.
+    fn resoudre_bareme(&self, team: &Team) -> SppScale {
+        team.special_rules
+            .iter()
+            .map(|r| r.to_lowercase())
+            .find_map(|nom| self.spp_rules.get(&nom))
+            .or_else(|| self.spp_rules.get(BAREME_PAR_DEFAUT))
+            .map(|regles| SppScale::from_rules(regles))
+            .unwrap_or_default()
+    }
+
     /// Charge l'intégralité des données de référence depuis `dir`, une fois,
     /// au démarrage. Tout est ensuite servi depuis la mémoire.
     pub fn load_from_dir(dir: &Path) -> Result<Self, ReferenceDataError> {
@@ -118,6 +149,7 @@ impl InMemoryReferenceRepository {
             skill_cost_matrix: read_json::<SkillCostFile>(dir, "skill_cost.json")?,
             improvement_values: read_json::<ImprovementValuesFile>(dir, "improvement_values.json")?
                 .improvement_values,
+            spp_rules: read_json::<SppRulesFile>(dir, "spp_rules.json")?,
         })
     }
 
@@ -219,20 +251,18 @@ impl IReferenceRepository for InMemoryReferenceRepository {
         &self.skill_cost_matrix
     }
 
-    fn touchdown_spp(&self) -> u8 {
-        3
-    }
-    fn pass_spp(&self) -> u8 {
-        1
-    }
-    fn interception_spp(&self) -> u8 {
-        2
-    }
-    fn casualty_spp(&self) -> u8 {
-        2
-    }
-    fn mvp_spp(&self) -> u8 {
-        4
+    /// Le barème de l'équipe à laquelle appartient ce poste.
+    ///
+    /// C'est **`references` qui résout le roster**, pas l'appelant : le corpus
+    /// lui appartient, et le nommage `<ROSTER>__<POSTE>` est une convention
+    /// interne qu'aucun autre BC n'a à connaître — même si elle se vérifie sur
+    /// les trente rosters.
+    fn spp_scale_for_roster_line(&self, roster_line_id: &str) -> SppScale {
+        self.teams
+            .iter()
+            .find(|t| t.available_players.iter().any(|p| p.uid == roster_line_id))
+            .map(|t| self.resoudre_bareme(t))
+            .unwrap_or_default()
     }
 
     fn improvement_skill_value_delta(&self, is_secondary_access: bool) -> u32 {
@@ -456,14 +486,63 @@ mod tests {
         );
     }
 
+    /// Le barème vient du corpus, plus d'une constante Rust.
+    ///
+    /// Ce test affirmait 3 SPP par touchdown — la valeur du corpus réel — tout
+    /// en chargeant le corpus de démonstration, qui en donne 4. Il ne pouvait
+    /// passer que tant que les valeurs étaient codées en dur : c'est
+    /// exactement ce que cette carte corrige, et ce que les nombres ci-dessous
+    /// démontrent.
     #[test]
-    fn spp_scale_matches_blood_bowl_standard_barème() {
+    fn le_bareme_est_lu_dans_le_corpus_et_non_code_en_dur() {
         let repo = InMemoryReferenceRepository::load_for_tests();
-        assert_eq!(repo.touchdown_spp(), 3);
-        assert_eq!(repo.pass_spp(), 1);
-        assert_eq!(repo.interception_spp(), 2);
-        assert_eq!(repo.casualty_spp(), 2);
-        assert_eq!(repo.mvp_spp(), 4);
+        let normal = repo.spp_scale_for_roster_line("DEMO_ZEPHYR__PIETAILLE");
+        assert_eq!(normal.touchdown, 4, "valeur du corpus de démo, pas du réel");
+        assert_eq!(normal.casualty, 2);
+        assert_eq!(normal.pass, 1);
+        assert_eq!(normal.interception, 3);
+        assert_eq!(normal.mvp, 5);
+    }
+
+    /// La règle spéciale renverse le barème, et c'est tout l'objet de la carte :
+    /// chez les Brutes Bagarreuses, la sortie vaut plus que le touchdown.
+    #[test]
+    fn brawlin_brutes_inverse_touchdown_et_sortie() {
+        let repo = InMemoryReferenceRepository::load_for_tests();
+        let brutes = repo.spp_scale_for_roster_line("DEMO_GRANIT__PIETAILLE");
+        let normal = repo.spp_scale_for_roster_line("DEMO_ZEPHYR__PIETAILLE");
+
+        assert_eq!(brutes.touchdown, 2);
+        assert_eq!(brutes.casualty, 4);
+        assert!(
+            brutes.casualty > brutes.touchdown,
+            "chez les Brutes, la sortie rapporte plus que l'essai"
+        );
+        // Le contraste : sans lui, un barème unique rendu partout passerait
+        // pour une confirmation.
+        assert!(normal.touchdown > normal.casualty);
+    }
+
+    /// Ce qui n'est pas une règle de barème n'en change aucun : les Granitiers
+    /// portent trois règles spéciales, une seule nomme une table.
+    #[test]
+    fn une_regle_speciale_sans_bareme_ne_change_rien() {
+        let repo = InMemoryReferenceRepository::load_for_tests();
+        let lanterniers = repo.spp_scale_for_roster_line("DEMO_LANTERNE__PIETAILLE");
+        assert_eq!(
+            lanterniers.touchdown, 4,
+            "FAVOURED_OF_CHOOSE_ANY ne nomme aucune table"
+        );
+    }
+
+    /// Un poste inconnu du corpus ne fait pas paniquer : il retombe sur le
+    /// barème par défaut. Le cas se produirait avec un corpus tiers ou une
+    /// projection plus ancienne que le catalogue.
+    #[test]
+    fn un_poste_inconnu_retombe_sur_le_bareme_par_defaut() {
+        let repo = InMemoryReferenceRepository::load_for_tests();
+        let inconnu = repo.spp_scale_for_roster_line("ROSTER_QUI_N_EXISTE_PAS__POSTE");
+        assert_eq!(inconnu, SppScale::default());
     }
 
     #[test]

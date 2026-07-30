@@ -106,6 +106,13 @@
                               "competitions", "ranking", "team_creation", "spaces",
                               "spp_calculator"]
 
+# Barème SPP : le seul test qui vérifie que la règle spéciale du roster change
+# les SPP crédités. `references` y est vérifié — c'est lui qui résout le barème —
+# et `players` aussi, puisque c'est là que les SPP atterrissent.
+"test_spp_scale" = ["references", "players", "match_report", "teams",
+                    "competitions", "ranking", "team_creation", "spaces",
+                    "spp_calculator"]
+
 # ── Joueurs ──────────────────────────────────────────────────────────────────
 "test_player_detail" = ["players", "match_report", "teams", "spp_calculator",
                         "competitions", "references", "ranking", "team_creation", "spaces"]

@@ -168,9 +168,14 @@ def spp_ctx(browser, space_id):
     _record_action_api(space_id, mr_id, "home", value_player, turn=1, action_type="TOUCHDOWN")
     _record_action_api(space_id, mr_id, "home", value_player, turn=2, action_type="MVP")
     # Joueur dédié au scénario d'augmentation de caractéristique — indépendant
-    # de rich_player, budget confortable (15 SPP) pour couvrir le coût niveau 1
-    # d'une caractéristique (14), quel que soit l'ordre d'exécution des tests.
-    for turn in range(1, 6):
+    # de rich_player, budget confortable pour couvrir le coût niveau 1 d'une
+    # caractéristique (14), quel que soit l'ordre d'exécution des tests.
+    #
+    # Le nombre d'essais dépend du **roster** depuis la carte 275 : l'équipe
+    # domicile est Granitiers, qui porte `BRAWLIN_BRUTES` et ne compte l'essai
+    # que 2 SPP au lieu de 4. Cinq essais donnaient 20 SPP avant, 10 depuis —
+    # sous le seuil. Huit en donnent 16, et le test redevient confortable.
+    for turn in range(1, 9):
         _record_action_api(space_id, mr_id, "home", stat_player, turn=turn, action_type="TOUCHDOWN")
 
     resp = _post_step5(space_id, mr_id, summary_title="Match E2E dépense SPP", summary_body="Généré par les tests.")

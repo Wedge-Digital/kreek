@@ -88,21 +88,27 @@ async fn handle_event(
 
     let context = to_match_context(&context_payload);
 
+    // Le barème dépend du roster : `BRAWLIN_BRUTES` inverse touchdown et
+    // sortie. Résolu une fois, depuis la ligne de poste que le joueur porte —
+    // `players` ne sait pas à quel roster elle appartient, et n'a pas à le
+    // savoir.
+    let bareme = catalog.spp_scale_for_roster_line(player.roster_line_id.as_ref());
+
     let event = match app_event {
         PlayerMatchImpactAppEvent::PlayerPerformedTouchdown(_) => {
-            player.record_touchdown(context, spp_earned(catalog.touchdown_spp()))
+            player.record_touchdown(context, spp_earned(bareme.touchdown))
         }
         PlayerMatchImpactAppEvent::PlayerPerformedPass(_) => {
-            player.record_pass(context, spp_earned(catalog.pass_spp()))
+            player.record_pass(context, spp_earned(bareme.pass))
         }
         PlayerMatchImpactAppEvent::PlayerPerformedInterception(_) => {
-            player.record_interception(context, spp_earned(catalog.interception_spp()))
+            player.record_interception(context, spp_earned(bareme.interception))
         }
         PlayerMatchImpactAppEvent::PlayerPerformedCasualty(_) => {
-            player.record_casualty(context, spp_earned(catalog.casualty_spp()))
+            player.record_casualty(context, spp_earned(bareme.casualty))
         }
         PlayerMatchImpactAppEvent::PlayerPerformedMvp(_) => {
-            player.record_mvp(context, spp_earned(catalog.mvp_spp()))
+            player.record_mvp(context, spp_earned(bareme.mvp))
         }
         PlayerMatchImpactAppEvent::PlayerPerformedFoul(_) => player.record_foul(context),
         PlayerMatchImpactAppEvent::PlayerInjured { injury_type, .. } => {

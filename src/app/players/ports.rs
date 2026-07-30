@@ -176,12 +176,25 @@ pub trait ISkillCatalogPort: Send + Sync {
     /// Valeur (kPo) ajoutée par une augmentation de la caractéristique donnée.
     fn stat_value_delta(&self, stat: crate::app::players::domain::match_impact::StatKind) -> u32;
 
-    // ── Barème SPP par type d'action (règle Blood Bowl standard, fixe) ────────
-    fn touchdown_spp(&self) -> u8;
-    fn pass_spp(&self) -> u8;
-    fn interception_spp(&self) -> u8;
-    fn casualty_spp(&self) -> u8;
-    fn mvp_spp(&self) -> u8;
+    // ── Barème SPP ─────────────────────────────────────────────────────────────
+    /// Le barème du joueur, résolu depuis sa ligne de roster.
+    ///
+    /// Il n'est pas le même pour tous : la règle spéciale `BRAWLIN_BRUTES`
+    /// inverse touchdown et sortie. `players` passe la ligne de poste qu'il
+    /// porte déjà et ne résout rien lui-même — le corpus appartient à
+    /// `references`.
+    fn spp_scale_for_roster_line(&self, roster_line_id: &str) -> SppScaleDto;
+}
+
+/// Le barème SPP vu par `players` — DTO propre, jamais le modèle de
+/// `references` (règle « Adapters inter-BCs »).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SppScaleDto {
+    pub touchdown: u8,
+    pub pass: u8,
+    pub interception: u8,
+    pub casualty: u8,
+    pub mvp: u8,
 }
 
 // ── ACL vers le BC `teams` (état de l'équipe pour l'autorisation) ──────────────
