@@ -55,6 +55,18 @@ ROSTERS = [
     ("DEMO_ZEPHYR", "Zéphyriens"),
 ]
 
+# Rosters joignables par `roster_uid=` sans entrer dans le cycle de `ROSTERS`.
+# Les Lanterniers y figurent pour ce qu'ils n'ont pas — seul roster de démo sans
+# apothicaire, donc le seul où `test_recruitment_phase` peut voir une ligne de
+# staff interdite par le roster.
+ROSTER_NAMES = dict(ROSTERS) | {"DEMO_LANTERNE": "Lanterniers"}
+
+# Rosters portant FAVOURED_OF_CHOOSE_* : leur construction exige de choisir une
+# règle spéciale, sans quoi `finalize` refuse (cf. test_special_rule_selector).
+# C'est cette étape que `ROSTERS` évitait en excluant les Lanterniers ; la poser
+# ici la rend franchissable au lieu d'interdire le roster.
+SPECIAL_RULE_CHOICES = {"DEMO_LANTERNE": "FAVOURED_OF_KHORNE"}
+
 
 def create_full_competition(
     page: Page,
@@ -250,7 +262,7 @@ def _space_coach_ids(space_id: str) -> list[str]:
 
 def build_and_submit_team_http(
     page: Page, space_id: str, competition_id: str, season_id: str,
-    coach_id: str, roster_index: int,
+    coach_id: str, roster_index: int, roster_uid: str | None = None,
 ) -> str:
     """Même parcours que `build_and_submit_team`, en HTTP direct au lieu du clic.
 
@@ -263,8 +275,20 @@ def build_and_submit_team_http(
     Ce sont bien les vraies routes qui sont appelées, pas des écritures en
     base : la chaîne draft → roster → recrutement → soumission → enrôlement
     reste exercée de bout en bout.
+
+    `roster_uid` force le roster au lieu de le déduire de `roster_index`. Sert
+    aux tests qui ont besoin d'un roster précis pour ce qu'il **n'a pas** —
+    `test_recruitment_phase` demande les Lanterniers, seul roster de démo sans
+    apothicaire. Ajouter ce roster à `ROSTERS` aurait été la solution évidente
+    et la mauvaise : `% len(ROSTERS)` passant de 2 à 3, toutes les équipes
+    d'indice ≥ 2 auraient changé de roster, donc de valeur — et avec elles les
+    tiers et l'outsider que `test_ranking_tiebreak` et `test_detailed_standings`
+    vérifient.
     """
-    roster_uid, roster_name = ROSTERS[roster_index % len(ROSTERS)]
+    if roster_uid is None:
+        roster_uid, roster_name = ROSTERS[roster_index % len(ROSTERS)]
+    else:
+        roster_name = ROSTER_NAMES.get(roster_uid, roster_uid)
     api = page.request
 
     # `post_draft_team` attend du JSON (Json<DraftTeamForm>), pas de
@@ -297,6 +321,17 @@ def build_and_submit_team_http(
     assert table.ok, f"widget player-table : {table.status}"
     positions = re.findall(r'"player_id":"([^"]+)"', table.text())
     assert positions, f"aucune position recrutable pour {roster_uid}"
+
+    # Roster à choix : poser la règle spéciale, sinon `finalize` refuse. Le
+    # select de l'UI poste exactement ce corps JSON.
+    regle = SPECIAL_RULE_CHOICES.get(roster_uid)
+    if regle:
+        choix = api.post(
+            f"{BASE_URL}/app/{space_id}/team/{team_id}/special-rule",
+            data={"special_rule_id": regle},
+            headers={"HX-Request": "true"},
+        )
+        assert choix.ok, f"choix de règle spéciale : {choix.status} {choix.text()[:200]}"
 
     # Un recrutement refusé (quota de poste atteint) répond 200 avec un
     # fragment d'erreur, pas un statut d'échec : c'est le corps qu'il faut
@@ -377,6 +412,7 @@ def build_full_competition(
     *,
     with_default_bonuses: bool = True,
     deactivated_tiebreaks: list[str] | None = None,
+    roster_uids: list[str] | None = None,
 ) -> dict:
     """Construit une compétition dédiée (pas partagée entre fichiers de test —
     cf. docstring du module) avec `num_teams` équipes auto-enrôlées et
@@ -385,6 +421,9 @@ def build_full_competition(
     `page` (fixture pytest-playwright) n'est pas réutilisable dans une
     fixture de portée module/session (scope function par défaut) — on ouvre
     notre propre page depuis `browser` (scope session), fermée à la fin.
+
+    `roster_uids` impose le roster équipe par équipe, au lieu du cycle sur
+    `ROSTERS`. Une entrée `None` laisse le cycle décider pour cette équipe-là.
     """
     from db_helpers import query_db
 
@@ -403,10 +442,12 @@ def build_full_competition(
             f"{num_teams} équipes demandées mais {len(coachs)} coachs dans "
             f"le space (make seed_e2e)"
         )
+        imposes = roster_uids or []
         team_ids = [
             build_and_submit_team_http(
                 page, space_id, competition["competition_id"],
                 competition["season_id"], coachs[i], roster_index=i,
+                roster_uid=imposes[i] if i < len(imposes) else None,
             )
             for i in range(num_teams)
         ]

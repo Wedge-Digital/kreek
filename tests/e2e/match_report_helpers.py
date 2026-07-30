@@ -101,12 +101,20 @@ def _query_side_team(mr_id, side):
     return query_db(f"SELECT {side}_team_id FROM match_report_proj WHERE match_report_id = '{mr_id}'")
 
 
-def post_step5(space_id, mr_id):
+def post_step5(space_id, mr_id, *, home_gain=50000, away_gain=40000):
+    """Les gains sont en **kPo** (cf. l'unité affichée par step5.html).
+
+    Les valeurs par défaut sont celles d'origine, conservées telles quelles pour
+    ne rien changer aux tests existants — mais elles sont absurdes à l'échelle du
+    jeu : 50 000 kPo, soit cinquante fois le budget de création d'une équipe.
+    Sans incidence tant qu'on regarde le classement ; à paramétrer dès qu'un test
+    observe la trésorerie, qu'elles rendraient sinon inépuisable.
+    """
     resp = requests.post(
         f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step5",
         data={
-            "home_gain": "50000",
-            "away_gain": "40000",
+            "home_gain": str(home_gain),
+            "away_gain": str(away_gain),
             "home_fan_mod": "1",
             "away_fan_mod": "-1",
             "summary_title": "Match E2E",
@@ -132,6 +140,8 @@ def play_match(
     home_td=1,
     away_td=0,
     home_sorties=0,
+    home_gain=50000,
+    away_gain=40000,
 ):
     """Joue et publie un match au score voulu.
 
@@ -153,7 +163,7 @@ def play_match(
         for turn in range(away_td):
             record_action_api(space_id, mr_id, "away", away_player, turn=turn + 1, action_type="TOUCHDOWN")
 
-    post_step5(space_id, mr_id)
+    post_step5(space_id, mr_id, home_gain=home_gain, away_gain=away_gain)
     publish(space_id, mr_id)
     return mr_id
 
