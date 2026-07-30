@@ -1,3 +1,18 @@
+//! Le recalcul de la valeur d'équipe, et **tout** ce qui le déclenche.
+//!
+//! La règle tenait dans deux fichiers — quatre événements domaine ici, un app
+//! event dans `io/app_events/initial_roster_listener.rs` — et la carte 270 en
+//! aurait ajouté un troisième. Trois endroits pour une règle dont aucun ne
+//! portait la liste entière.
+//!
+//! Elle est donc rassemblée ici, ce qui laisse **deux** fonctions d'abonnement
+//! plutôt qu'une : la convention `init(event_bus: …)` / `init(app_event_bus: …)`
+//! est ce dont l'axe 5 de `check-arch` se sert pour distinguer un listener
+//! intra-BC d'un listener cross-BC, et les fondre en une seule signature
+//! brouillerait ce verrou pour un gain d'écriture. Le fichier est rangé par ce
+//! qu'il entretient — la valeur d'équipe — et non par le bus qui l'alimente.
+
+use crate::app::shared_kernel::app_events::players_app_events::PlayersAppEvent;
 use crate::app::teams::domain::team::TeamDomainEvent;
 use crate::app::teams::ports::{
     IJourneymanTypePort, IRosterCatalogPort, ISquadPort, ITeamRepository,
@@ -19,17 +34,50 @@ fn ends_in_ready_to_play(event: &TeamDomainEvent) -> bool {
     )
 }
 
+/// Les faits que `players` annonce et qui changent l'effectif **une fois écrits**.
+///
+/// Ce sont les seuls moments où un recalcul lit un effectif à jour. Les deux
+/// existent pour la même raison : `teams` et `players` réagissent au même
+/// événement dans deux tâches indépendantes, et la lecture de `teams` arrive
+/// systématiquement avant l'écriture de `players`. Sans ces annonces, une équipe
+/// se figerait à une TV de zéro à la création, et compterait ses renvoyés après
+/// la validation des renvois.
+fn changes_squad(event: &PlayersAppEvent) -> Option<&str> {
+    match event {
+        PlayersAppEvent::InitialRosterCompleted { team_id, .. }
+        | PlayersAppEvent::PlayerDismissed { team_id, .. } => Some(team_id),
+    }
+}
+
+/// Les quatre ports dont le recalcul a besoin, portés ensemble pour que les deux
+/// abonnements ne dupliquent pas la même liste de paramètres.
+#[derive(Clone)]
+pub struct TeamValueDeps {
+    pub repo: Arc<dyn ITeamRepository>,
+    pub squad_port: Arc<dyn ISquadPort>,
+    pub roster_catalog_port: Arc<dyn IRosterCatalogPort>,
+    pub journeyman_type_port: Arc<dyn IJourneymanTypePort>,
+}
+
+async fn recalculer(team_id: &str, deps: &TeamValueDeps, source: &str) {
+    if let Err(e) = recompute_team_value_use_case::execute(
+        team_id,
+        deps.repo.as_ref(),
+        deps.squad_port.as_ref(),
+        deps.roster_catalog_port.as_ref(),
+        deps.journeyman_type_port.as_ref(),
+    )
+    .await
+    {
+        tracing::error!("team_value_listener [{source}] : recalcul de {team_id} : {e:?}");
+    }
+}
+
 /// Listener **intra-BC** : il écoute le bus interne de `teams`, alimenté par
 /// `TeamRepository::append`. La signature `init(event_bus: ...)` est la
 /// convention que `check-arch` (axe 5) utilise pour le distinguer d'un listener
 /// cross-BC — ne pas la renommer sans lire cet axe.
-pub fn init(
-    event_bus: &EventBus,
-    repo: Arc<dyn ITeamRepository>,
-    squad_port: Arc<dyn ISquadPort>,
-    roster_catalog_port: Arc<dyn IRosterCatalogPort>,
-    journeyman_type_port: Arc<dyn IJourneymanTypePort>,
-) {
+pub fn init(event_bus: &EventBus, deps: TeamValueDeps) {
     let mut rx = event_bus.subscribe();
     tokio::spawn(async move {
         loop {
@@ -46,21 +94,44 @@ pub fn init(
                     if !ends_in_ready_to_play(&event) {
                         continue;
                     }
-                    let team_id = envelope.emitter.clone();
-                    if let Err(e) = recompute_team_value_use_case::execute(
-                        &team_id,
-                        repo.as_ref(),
-                        squad_port.as_ref(),
-                        roster_catalog_port.as_ref(),
-                        journeyman_type_port.as_ref(),
-                    )
-                    .await
-                    {
-                        tracing::error!("team_value_listener: recalcul de {team_id} : {e:?}");
-                    }
+                    recalculer(&envelope.emitter.clone(), &deps, "domaine").await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("team_value_listener: lagged by {n}");
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+            }
+        }
+    });
+}
+
+/// Listener **cross-BC** : il écoute ce que `players` annonce une fois son
+/// effectif écrit. La signature `init_from_app_events(app_event_bus: ...)` porte
+/// la même convention que `init`, et l'exempte de la règle de transaction unique
+/// — l'événement vient d'un commit déjà passé dans un autre BC.
+///
+/// Aucun ordre n'est à garantir vis-à-vis de l'autre abonnement :
+/// `TeamValueRecomputed` porte une valeur **absolue**, donc un recalcul
+/// prématuré est écrasé par celui-ci. C'est ce qui rend inoffensif le recalcul
+/// que `DismissalsPhaseValidated` déclenche trop tôt.
+pub fn init_from_app_events(app_event_bus: &EventBus, deps: TeamValueDeps) {
+    let mut rx = app_event_bus.subscribe();
+    tokio::spawn(async move {
+        loop {
+            match rx.recv().await {
+                Ok(envelope) => {
+                    let Ok(event) =
+                        serde_json::from_value::<PlayersAppEvent>(envelope.payload.clone())
+                    else {
+                        continue;
+                    };
+                    let Some(team_id) = changes_squad(&event) else {
+                        continue;
+                    };
+                    recalculer(&team_id.to_string(), &deps, "players").await;
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                    tracing::warn!("team_value_listener [players]: lagged by {n}");
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
             }
@@ -114,5 +185,25 @@ mod tests {
             &TeamDomainEvent::RecruitmentPhaseValidated
         ));
         assert!(!ends_in_ready_to_play(&TeamDomainEvent::TeamDismissed));
+    }
+
+    /// Les deux annonces de `players` recalculent, et nomment l'équipe — pas le
+    /// joueur : c'est l'équipe dont la valeur bouge.
+    #[test]
+    fn les_deux_annonces_de_players_declenchent_le_recalcul() {
+        assert_eq!(
+            changes_squad(&PlayersAppEvent::InitialRosterCompleted {
+                team_id: "t-1".into(),
+                player_count: 11,
+            }),
+            Some("t-1")
+        );
+        assert_eq!(
+            changes_squad(&PlayersAppEvent::PlayerDismissed {
+                team_id: "t-2".into(),
+                player_id: "p-9".into(),
+            }),
+            Some("t-2")
+        );
     }
 }

@@ -1,8 +1,9 @@
 use crate::app::teams::io::app_events::app_event_publisher::teams_app_event_publisher;
 use crate::app::teams::io::app_events::{
-    initial_roster_listener, match_report_cancelled_listener, match_report_confirmed_listener,
+    match_report_cancelled_listener, match_report_confirmed_listener,
     match_report_published_listener, match_report_unpublished_listener, team_created_listener,
 };
+use crate::app::teams::io::listeners::team_value_listener::TeamValueDeps;
 use crate::app::teams::io::listeners::{phase_basket_purge_listener, team_value_listener};
 use crate::app::teams::io::repository::phase_basket_repository::PhaseBasketRepository;
 use crate::app::teams::io::repository::team_repository::TeamRepository;
@@ -38,20 +39,17 @@ pub fn init_listeners(
         Arc::new(PhaseBasketRepository::new(pool.clone()));
     phase_basket_purge_listener::init(event_bus, baskets);
     let repo = Arc::new(TeamRepository::new(pool, event_bus.clone()));
-    team_value_listener::init(
-        event_bus,
-        repo.clone(),
-        squad_port.clone(),
-        roster_catalog_port.clone(),
-        journeyman_type_port.clone(),
-    );
-    initial_roster_listener::init(
-        app_event_bus,
-        repo.clone(),
+    // Un seul jeu de dépendances pour les deux abonnements : la valeur d'équipe
+    // se recalcule à l'identique, que le déclencheur vienne du bus interne ou de
+    // l'annonce de `players`.
+    let valeur = TeamValueDeps {
+        repo: repo.clone(),
         squad_port,
         roster_catalog_port,
         journeyman_type_port,
-    );
+    };
+    team_value_listener::init(event_bus, valeur.clone());
+    team_value_listener::init_from_app_events(app_event_bus, valeur);
     team_created_listener::init(app_event_bus, repo.clone());
     match_report_confirmed_listener::init(app_event_bus, repo.clone());
     match_report_cancelled_listener::init(app_event_bus, repo.clone());

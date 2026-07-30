@@ -28,14 +28,26 @@ pub enum TeamsAppEvent {
         roster_line_id: String,
         base_value_kpo: u32,
     },
+    /// Le coach a renvoyé ce joueur. `players` le sort de son effectif.
+    ///
+    /// Rien d'autre à transporter : ni valeur ni motif. `players` possède le
+    /// joueur, il sait tout de lui ; ce qu'il ignorait, c'est la décision.
+    PlayerDismissed {
+        event_id: EventId,
+        team_id: TeamId,
+        space_id: SpaceId,
+        player_id: PlayerId,
+    },
 }
 
 impl TeamsAppEvent {
     pub const PLAYER_RECRUITED: &'static str = "TeamsPlayerRecruited";
+    pub const PLAYER_DISMISSED: &'static str = "TeamsPlayerDismissed";
 
     pub fn event_type(&self) -> &'static str {
         match self {
             Self::PlayerRecruited { .. } => Self::PLAYER_RECRUITED,
+            Self::PlayerDismissed { .. } => Self::PLAYER_DISMISSED,
         }
     }
 
@@ -43,7 +55,9 @@ impl TeamsAppEvent {
     /// c'est par elle que le listener retrouve le contexte.
     pub fn to_enveloppe(&self) -> EventEnvelope {
         let emitter = match self {
-            Self::PlayerRecruited { team_id, .. } => team_id.to_string(),
+            Self::PlayerRecruited { team_id, .. } | Self::PlayerDismissed { team_id, .. } => {
+                team_id.to_string()
+            }
         };
         EventEnvelope {
             event_id: EventId::new().to_string(),

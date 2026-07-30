@@ -60,6 +60,18 @@ async fn to_app_event(
             roster_line_id: roster_line.0.clone(),
             base_value_kpo: base_value_kpo.0,
         }),
+        TeamDomainEvent::PlayerDismissed { player_id, .. } => {
+            Some(TeamsAppEvent::PlayerDismissed {
+                event_id: EventId::new(),
+                team_id: TeamId::try_new(team_id).ok()?,
+                space_id: space_id_de(team_id, pool).await?,
+                player_id: PlayerId::try_new(&player_id.to_string()).ok()?,
+            })
+        }
+        // Le seul `match` de la série où le compilateur ne protège de rien : ce
+        // joker avale silencieusement tout événement domaine qu'on oublierait de
+        // faire sortir du BC. Y ajouter un bras est un geste délibéré, jamais
+        // une correction d'erreur de compilation.
         _ => None,
     }
 }

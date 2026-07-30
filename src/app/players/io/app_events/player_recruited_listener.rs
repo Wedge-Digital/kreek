@@ -59,13 +59,18 @@ pub fn init(
                     else {
                         continue;
                     };
+                    // `TeamsAppEvent` a désormais plusieurs variantes : ce
+                    // listener ne traite que le recrutement, le renvoi a le sien.
                     let TeamsAppEvent::PlayerRecruited {
                         team_id,
                         space_id,
                         player_id,
                         roster_line_id,
                         ..
-                    } = app_event;
+                    } = app_event
+                    else {
+                        continue;
+                    };
                     if let Err(e) = handle_player_recruited(
                         &team_id.to_string(),
                         &space_id.to_string(),

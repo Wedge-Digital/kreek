@@ -184,6 +184,14 @@ impl PlayerDomainEvent {
                 team_id: team_id.0.clone(),
                 player_count: *player_count,
             }),
+            Self::PlayerDismissed { player_id, team_id } => {
+                Some(PlayersAppEvent::PlayerDismissed {
+                    team_id: team_id.0.clone(),
+                    player_id: player_id.0.clone(),
+                })
+            }
+            // Joker : le compilateur ne signalera pas un événement qu'on
+            // oublierait de faire sortir du BC. Ajouter un bras est délibéré.
             _ => None,
         }
     }

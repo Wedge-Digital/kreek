@@ -244,7 +244,10 @@ mod tests {
         let PlayersAppEvent::InitialRosterCompleted {
             team_id,
             player_count,
-        } = app_event;
+        } = app_event
+        else {
+            panic!("variante inattendue");
+        };
         assert_eq!(team_id, "t-42");
         assert_eq!(player_count, 11);
     }
