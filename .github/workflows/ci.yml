@@ -43,6 +43,35 @@ jobs:
       - name: make check-arch (axes 2 à 9)
         run: make check-arch
 
+  # Job distinct de `qualite`, et c'est délibéré : RustSec publie en continu,
+  # donc un avis paru cette nuit peut faire rougir la CI sans que personne
+  # n'ait touché au code. Mélangé à `fmt` et `clippy`, l'échec se lirait
+  # « Qualité » et enverrait chercher au mauvais endroit.
+  #
+  # Bloquant, en revanche : une vérification non bloquante finit ignorée —
+  # c'est la leçon de la carte 272, et `make lint` affichait justement une
+  # étape d'audit qui ne s'exécutait jamais.
+  audit:
+    name: Audit des dépendances
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # Binaire précompilé, comme pour sqlx-cli : compiler cargo-audit sur le
+      # runner coûterait plusieurs minutes à chaque exécution.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
+      # `CI` est posée à `true` par GitHub Actions : c'est elle qui transforme
+      # le SKIP tolérant en échec, pour que la disparition du binaire ne
+      # ramène pas le vert silencieux.
+      - name: make audit (cargo audit --deny warnings)
+        run: make audit
+
   unit:
     name: Tests unitaires
     runs-on: ubuntu-latest

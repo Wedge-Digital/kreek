@@ -10,7 +10,7 @@ DATABASE_URL := $(if $(DATABASE_URL),$(DATABASE_URL),$(shell grep -E '^DATABASE_
 # `export DATABASE_URL=…dev…` local ne fasse cibler la base dev par `make test`.
 TEST_DB_URL := $(if $(DATABASE_URL_TEST),$(DATABASE_URL_TEST),$(shell grep -E '^DATABASE__URL=' .env.test 2>/dev/null | cut -d= -f2-))
 
-.PHONY: dev dev-demo test e2e test-impacted all_tests migrate migration prepare_db reset_db reset_test_db init_db \
+.PHONY: dev dev-demo test e2e test-impacted all_tests audit migrate migration prepare_db reset_db reset_test_db init_db \
         seed_accounts seed_e2e lint check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
@@ -156,15 +156,44 @@ lint:
 	@WARN_COUNT=$$(cargo clippy 2>&1 | grep -c "^warning:" || true); \
 		echo "  \033[33m⚠\033[0m  $$WARN_COUNT warning(s) de style non-bloquants — \`cargo clippy\` pour le détail"
 	@echo ""
+
+# ── Vérifications architecturales (axes 2–6) ──────────────────────────────────
+# Audit des dépendances — cible dédiée, branchée sur le job `audit` de la CI.
+#
+# Sortie de `make lint` volontairement : un avis publié cette nuit par RustSec
+# ferait échouer `fmt` et `clippy`, dont il ne dit rien, sous un titre
+# « Qualité » qui induirait en erreur. Un échec d'audit doit se lire comme tel.
+#
+# `--deny warnings` n'est pas du zèle : les avis `unmaintained` et `unsound` ne
+# sont pas des vulnérabilités et ne bloqueraient pas sans lui. Or au moment
+# d'écrire cette cible, le seul avis portant sur une crate **réellement
+# compilée** était de ce type (`atty`), quand la seule « vulnérabilité »
+# signalée portait sur une crate absente du binaire. Sans `--deny warnings`,
+# l'audit criait sur ce qui ne nous concernait pas et se taisait sur le reste.
+#
+# En local, l'absence du binaire est tolérée : on n'impose pas une installation
+# à qui lance `make lint` pour vérifier un formatage. En CI elle échoue — sans
+# quoi il suffirait que le binaire disparaisse du runner pour retrouver le vert
+# silencieux que cette cible existe pour supprimer (cf. carte 272).
+#
+# Pour débloquer un échec : `cargo tree -i <crate> -e all --target all`. Rien
+# n'est imprimé → entrée de verrou jamais compilée, à ignorer dans
+# `.cargo/audit.toml` avec son motif. Un chemin est imprimé → exposition réelle,
+# à corriger par une montée de version ou un remplacement.
+audit:
+	@echo ""
+	@echo "\033[1m\033[34m┌─ Audit des dépendances\033[0m"
+	@echo ""
 	@if command -v cargo-audit >/dev/null 2>&1; then \
-		echo "  \033[1mAudit des dépendances...\033[0m"; \
-		cargo audit && echo "  \033[32m✓ PASS\033[0m  cargo audit"; \
+		cargo audit --deny warnings && echo "  \033[32m✓ PASS\033[0m  cargo audit"; \
+	elif [ -n "$$CI" ]; then \
+		echo "  \033[31m✗ FAIL\033[0m  cargo-audit absent du runner — l'étape ne peut pas être sautée en CI"; \
+		exit 1; \
 	else \
-		echo "  \033[33m⚠ SKIP\033[0m  cargo audit non installé (cargo install cargo-audit)"; \
+		echo "  \033[33m⚠ SKIP\033[0m  cargo-audit non installé (cargo install cargo-audit --locked)"; \
 	fi
 	@echo ""
 
-# ── Vérifications architecturales (axes 2–6) ──────────────────────────────────
 check-arch:
 	@./scripts/check-arch.sh all
 

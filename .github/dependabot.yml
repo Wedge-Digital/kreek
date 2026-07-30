@@ -1,0 +1,38 @@
+# Mises à jour de version proposées par Dependabot.
+#
+# À ne pas confondre avec les **alertes** Dependabot, qui signalent les
+# vulnérabilités connues : celles-là sont un réglage du dépôt, pas un fichier.
+# Ce fichier-ci ne fait qu'ouvrir des pull requests de montée de version, et son
+# absence expliquait qu'aucune n'ait jamais été proposée.
+#
+# `cargo audit` (job `audit` de la CI) est le troisième mécanisme, indépendant
+# des deux autres : même base d'avis, mais exécutée par nous, en local comme en
+# intégration.
+version: 2
+
+updates:
+  # 27 dépendances directes, 383 dans le verrou. Le risque est essentiellement
+  # transitif — on ne choisit pas ce qu'`axum`, `sqlx` et `tokio` tirent
+  # derrière eux —, donc l'intérêt est surtout de ne pas laisser vieillir les
+  # directes au point que la montée devienne un chantier.
+  - package-ecosystem: cargo
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    # Assez pour ne pas noyer la revue, assez pour que la file avance.
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+
+  # Les cinq actions du workflow — checkout, rust-toolchain, rust-cache,
+  # install-action, setup-uv — n'étaient suivies par rien. Une action épinglée
+  # sur une majeure obsolète casse un jour sans prévenir.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(ci)"

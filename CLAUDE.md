@@ -210,16 +210,37 @@ commit suivant.
 
 ### Vérifications — ce que la CI exécute
 
-| Commande | Contenu |
-|---|---|
-| `make lint` | `cargo fmt --check`, `cargo clippy`, `cargo audit` |
-| `make check-arch` | axes 2 à 9 (cf. `scripts/check-arch.sh`) |
-| `make test` | tests unitaires et d'intégration |
-| `make e2e` | suite Playwright complète |
+| Commande | Contenu | Job CI |
+|---|---|---|
+| `make lint` | `cargo fmt --check`, `cargo clippy` | `qualite` |
+| `make check-arch` | axes 2 à 9 (cf. `scripts/check-arch.sh`) | `qualite` |
+| `make audit` | `cargo audit --deny warnings` | `audit` |
+| `make test` | tests unitaires et d'intégration | `unit` |
+| `make e2e` | suite Playwright complète | `e2e` |
 
-Les quatre tournent en CI. Ne pas ajouter de cible de vérification sans
+Les cinq tournent en CI. Ne pas ajouter de cible de vérification sans
 l'y brancher : une cible que personne n'exécute finit rouge sans que
 personne ne le sache — c'est exactement ce qui est arrivé au formatage.
+
+**Une étape sautée doit échouer, pas rassurer.** `make lint` affichait une
+étape « Audit des dépendances » qui ne s'exécutait jamais, faute de binaire
+installé, et son `else` n'échouait pas : le job était vert *en ayant sauté
+l'étape*. Pire qu'une cible non branchée, qui au moins ne prétend rien.
+`make audit` tolère l'absence du binaire **en local** — on n'impose pas une
+installation à qui vérifie un formatage — mais échoue dès que `CI` est posée.
+
+L'audit a son **job séparé** parce que RustSec publie en continu : un avis paru
+cette nuit peut faire rougir la CI sans qu'on ait touché au code, et cet échec
+ne doit pas se déguiser en « Qualité ». Pour débloquer, une seule question :
+
+```bash
+cargo tree -i <crate> -e all --target all
+```
+
+Rien n'est imprimé → la crate est une entrée de `Cargo.lock` jamais compilée,
+à ignorer dans `.cargo/audit.toml` **avec son motif et sa date**. Un chemin est
+imprimé → l'exposition est réelle : monter la version, remplacer la dépendance,
+ou assumer par écrit. Un avis ignoré sans motif est un avis oublié.
 
 ### Taille des fonctions — règle obligatoire
 

@@ -1,0 +1,36 @@
+# Avis RustSec ignorés — et pourquoi (carte 273).
+#
+# `cargo audit` lit `Cargo.lock`, pas le graphe de compilation. Le verrou
+# conserve les dépendances optionnelles jamais activées : les trois avis
+# ci-dessous portent sur des crates que le binaire **ne contient pas**.
+#
+# Vérification, avant d'ajouter ou de retirer une ligne d'ici :
+#
+#     cargo tree -i <crate> -e all --target all
+#
+# Si la commande n'imprime rien, la crate n'est dans aucun graphe de
+# compilation, sur aucune plateforme. Si elle imprime un chemin, l'avis est
+# réel : il faut monter la dépendance, la remplacer, ou assumer l'exposition
+# par écrit — pas l'ajouter ici.
+#
+# Un avis ignoré sans motif est un avis oublié : chaque ligne porte le sien et
+# la date de sa constatation.
+
+[advisories]
+ignore = [
+    # rsa 0.9.10 — attaque Marvin, canal temporel (5.9). Aucun correctif publié.
+    # Tirée par `sqlx-mysql`, que le verrou garde parce que `sqlx-macros-core`
+    # en dépend, alors que nous n'utilisons que PostgreSQL. Désactiver la
+    # feature `any` de sqlx ne la retire pas du verrou : `macros`, qui nous est
+    # indispensable, la ramène. Constaté le 2026-07-30.
+    "RUSTSEC-2023-0071",
+
+    # anyhow 1.0.102 — `Error::downcast_mut()` unsound. Tirée par les crates
+    # `wit-*` et `wasm-metadata`, absentes du graphe. Constaté le 2026-07-30.
+    "RUSTSEC-2026-0190",
+]
+
+# `spin` 0.9.8 était *yanked* — ce qui n'est pas un avis et n'a donc pas
+# d'identifiant à ignorer. Corrigée plutôt que contournée : `cargo update -p
+# spin` la passe en 0.9.9. `--no-yanked` l'aurait fait taire, mais aurait aussi
+# fait taire une crate retirée qui entrerait réellement dans le binaire.
