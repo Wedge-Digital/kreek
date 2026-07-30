@@ -225,6 +225,43 @@ pub enum MatchActionType {
     Blesse { injury: InjuryType },
 }
 
+/// La catégorie de SPP que vaut une action, quand elle en vaut une.
+///
+/// Elle nomme les cinq lignes du barème du corpus — le barème dit *combien*,
+/// cette énumération dit *de quoi*. Les deux sont séparés parce que le premier
+/// change d'un roster à l'autre (`BRAWLIN_BRUTES`) et le second jamais.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SppCategory {
+    Touchdown,
+    Pass,
+    Interception,
+    Casualty,
+    Mvp,
+}
+
+impl MatchActionType {
+    /// `None` pour les actions qui ne rapportent rien : l'agression, et la
+    /// blessure — qui est **subie**, et ne saurait créditer sa victime.
+    ///
+    /// Cette correspondance n'existe qu'ici. Le récapitulatif la lit pour
+    /// calculer ce qu'il affiche, avant publication ; après publication, c'est
+    /// `app_event_publisher` qui achemine les mêmes actions vers `players`. Les
+    /// deux chemins décrivent le même match et doivent en dire autant — les
+    /// figer dans un seul tableau est le seul moyen de s'en assurer.
+    pub fn spp_category(&self) -> Option<SppCategory> {
+        match self {
+            MatchActionType::Touchdown => Some(SppCategory::Touchdown),
+            // BR2 — Passe et Lancer sont la même notion domaine
+            MatchActionType::Passe | MatchActionType::Lancer => Some(SppCategory::Pass),
+            MatchActionType::Interception => Some(SppCategory::Interception),
+            MatchActionType::Sortie => Some(SppCategory::Casualty),
+            MatchActionType::Mvp => Some(SppCategory::Mvp),
+            MatchActionType::Agression => None,
+            MatchActionType::Blesse { .. } => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum InjuryType {
     Commotion,

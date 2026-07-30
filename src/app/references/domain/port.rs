@@ -34,6 +34,13 @@ pub trait IReferenceRepository: Send + Sync {
     /// match ne peut pas mélanger deux barèmes.
     fn spp_scale_for_roster_line(&self, roster_line_id: &str) -> SppScale;
 
+    /// Le même barème, désigné cette fois par le roster lui-même.
+    ///
+    /// Le récapitulatif de match raisonne par équipe, pas par joueur : il
+    /// connaît le roster des deux camps et rien de leurs lignes de poste.
+    /// Un barème absent retombe sur `normal`, comme pour la ligne de poste.
+    fn spp_scale_for_roster(&self, roster_uid: &str) -> SppScale;
+
     // ── Valeur ajoutée par une amélioration ─────────────────────────────────────
     // Unité : kPo, comme partout ailleurs dans le back. Lue dans
     // `improvement_values.json`, et non plus codée en dur — la même table sert

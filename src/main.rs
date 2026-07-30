@@ -315,7 +315,9 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
                 ),
             );
             let spp_calculator = Arc::new(
-                crate::infrastructure::match_report::spp_calculator_adapter::SppCalculatorAdapter,
+                crate::infrastructure::match_report::spp_calculator_adapter::SppCalculatorAdapter::new(
+                    references.repository.clone(),
+                ),
             );
             match_report::context::MatchReportContext::new(&pool, comp_data, team_data, player_data, coach_data, space_admin, spp_calculator, event_bus.clone())
         },

@@ -113,6 +113,13 @@
                     "competitions", "ranking", "team_creation", "spaces",
                     "spp_calculator"]
 
+# Le pendant du précédent, côté écran : les SPP que le récapitulatif calcule
+# avant publication, quand rien n'a encore été crédité à personne. Même barème,
+# autre chemin — d'où `spp_calculator` et `match_report` en tête.
+"test_match_report_recap_spp" = ["spp_calculator", "match_report", "references",
+                                 "players", "teams", "competitions", "ranking",
+                                 "team_creation", "spaces"]
+
 # ── Joueurs ──────────────────────────────────────────────────────────────────
 "test_player_detail" = ["players", "match_report", "teams", "spp_calculator",
                         "competitions", "references", "ranking", "team_creation", "spaces"]

@@ -265,6 +265,14 @@ impl IReferenceRepository for InMemoryReferenceRepository {
             .unwrap_or_default()
     }
 
+    fn spp_scale_for_roster(&self, roster_uid: &str) -> SppScale {
+        self.teams
+            .iter()
+            .find(|t| t.uid == roster_uid)
+            .map(|t| self.resoudre_bareme(t))
+            .unwrap_or_default()
+    }
+
     fn improvement_skill_value_delta(&self, is_secondary_access: bool) -> u32 {
         if is_secondary_access {
             self.improvement_values.skill.secondary
