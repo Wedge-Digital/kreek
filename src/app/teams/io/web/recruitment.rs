@@ -135,7 +135,7 @@ pub struct BasketErrorTemplate {
     pub vm: BasketErrorVm,
 }
 
-fn fragment_erreur(vm: &BasketErrorVm, cible: &str) -> Response {
+pub(crate) fn fragment_erreur(vm: &BasketErrorVm, cible: &str) -> Response {
     let rendu = BasketErrorTemplate {
         vm: BasketErrorVm {
             message: vm.message.clone(),

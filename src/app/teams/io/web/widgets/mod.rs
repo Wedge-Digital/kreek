@@ -1,4 +1,6 @@
 pub mod competition_teams_widget;
+pub mod dismissals_cart_widget;
+pub mod dismissals_roster_widget;
 pub mod enrolled_teams_widget;
 pub mod enrollment_actions;
 pub mod pending_enrollment_widget;

@@ -513,6 +513,7 @@ mod tests {
                 members.push(Player {
                     player_id: identifiant(rang),
                     roster_line: ligne(uid),
+                    jersey: Some(rang as u8 + 1),
                     personal_name: String::new(),
                     position_name: String::new(),
                     spp: 0,

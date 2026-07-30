@@ -1,6 +1,6 @@
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::identity::ids::EntityId;
-use crate::app::teams::io::web::recruitment;
+use crate::app::teams::io::web::{dismissals, recruitment};
 use crate::app::teams::use_cases::commands::{
     ValidateDismissalsPhaseCommand, ValidateImprovementPhaseCommand,
     ValidateRecruitmentPhaseCommand,
@@ -15,10 +15,10 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 
-/// La validation du recrutement se fait depuis sa propre page, qui n'a plus
+/// Recrutement et renvois se valident depuis leur propre page, qui n'a plus
 /// lieu d'être une fois la phase close : on ramène le coach à sa feuille
-/// d'équipe. Les deux autres validations sont déclenchées depuis cette feuille,
-/// où un simple rafraîchissement suffit.
+/// d'équipe. La validation des évolutions, elle, part de cette feuille, où un
+/// simple rafraîchissement suffit.
 fn redirect_response(url: String) -> Response {
     Response::builder()
         .header("HX-Redirect", url)
@@ -126,21 +126,20 @@ pub async fn post_validate_dismissals_phase(
 
     use validate_dismissals_phase_use_case::ValidateDismissalsPhaseError as E;
     match resultat {
-        // Un simple rafraîchissement : la validation part de la feuille
-        // d'équipe, où le bandeau doit maintenant annoncer « Prête à jouer ».
-        // La page de renvois de la carte 269 changera cette réponse, comme la
-        // 264 l'a fait pour le recrutement.
-        Ok(()) => refresh_response(),
+        // Depuis la carte 269, la validation part de la page de renvois — qui
+        // n'a plus lieu d'être une fois la phase close. Un rafraîchissement y
+        // rechargerait un écran dont la phase vient de changer, donc vide : on
+        // ramène le coach à sa feuille d'équipe.
+        Ok(()) => redirect_response(
+            AppRoutes::default()
+                .teams
+                .team_detail(&_space_id, &team_id.to_string()),
+        ),
         Err(E::TeamNotFound) => StatusCode::NOT_FOUND.into_response(),
-        // Le panier ne passe plus contre l'effectif du jour. Tant que la 269 n'a
-        // pas de fragment où le dire, on refuse en 422 sans rien appliquer —
-        // c'est déjà la garantie qui compte.
+        // Le panier ne passe plus contre l'effectif du jour : rien n'est appliqué
+        // et les lignes fautives sont nommées dans le panier.
         Err(E::BasketNoLongerValid(lignes)) => {
-            tracing::warn!(
-                "validate_dismissals_phase : {} ligne(s) refusée(s)",
-                lignes.len()
-            );
-            StatusCode::UNPROCESSABLE_ENTITY.into_response()
+            dismissals::refus_en_bloc(&state, &team_id.to_string(), lignes).await
         }
         Err(E::Domain(e)) => {
             tracing::warn!("validate_dismissals_phase domaine: {e}");

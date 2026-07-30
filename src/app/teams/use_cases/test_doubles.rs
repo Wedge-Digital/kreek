@@ -228,6 +228,7 @@ impl ISquadPort for FakeSquadPort {
                 // doublure qui n'en produit pas ferait échouer tout use case
                 // consommant l'effectif.
                 player_id: format!("{i:0>26}"),
+                jersey: Some(i as u8 + 1),
                 roster_line_id: (*ligne).to_string(),
                 personal_name: format!("Joueur {i}"),
                 position_name: "Poste".into(),

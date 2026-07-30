@@ -15,8 +15,18 @@
   </div>
   {% endif %}
 
+  {# Le repli mémorise le choix du coach sur `document.body`, qui survit aux
+     swaps HTMX. Sans cette mémoire, chaque achat remontait le composant et
+     l'`init()` refermait le panier que le coach venait d'ouvrir. #}
   <div class="side-actions"
-       x-data="{ open: false, init() { this.open = window.innerWidth > 768 } }"
+       x-data="{
+         open: false,
+         init() {
+           const memo = document.body.dataset.basketCartOpen;
+           this.open = memo === undefined ? window.innerWidth > 768 : memo === 'true';
+           this.$watch('open', v => document.body.dataset.basketCartOpen = v);
+         }
+       }"
        x-bind:class="{ 'is-open': open }">
 
     <button class="cart-head" x-on:click="open = !open" x-bind:aria-expanded="open">

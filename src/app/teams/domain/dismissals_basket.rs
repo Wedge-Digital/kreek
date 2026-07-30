@@ -254,6 +254,16 @@ impl DismissalsBasket {
         )
     }
 
+    /// La ligne qui marque ce joueur, s'il l'est. La vue en a besoin pour que le
+    /// bouton « Annuler » de sa ligne poste le même `line_id` que le panier :
+    /// une seule façon de retirer une ligne, celle de la carte 268.
+    pub fn line_id_for(&self, player_id: &PlayerId) -> Option<&BasketLineId> {
+        self.lines.iter().find_map(|l| match l {
+            DismissalBasketLine::Player { id, player_id: p } if p == player_id => Some(id),
+            _ => None,
+        })
+    }
+
     pub fn pending_staff_count(&self, staff: StaffType) -> u32 {
         self.lines
             .iter()
@@ -354,6 +364,7 @@ mod tests {
         Player {
             player_id: id_de(n),
             roster_line: RosterLineId("DEMO_GRANIT__PIETAILLE".into()),
+            jersey: Some(n + 1),
             personal_name: format!("Joueur {n}"),
             position_name: "Piétaille des Carrières".into(),
             spp: 0,

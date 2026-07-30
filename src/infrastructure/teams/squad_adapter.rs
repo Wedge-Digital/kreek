@@ -22,13 +22,22 @@ fn is_available(participation_status: &str) -> bool {
     participation_status == "Available"
 }
 
-type LigneEffectif = (String, String, String, String, i32, i32, String);
+type LigneEffectif = (
+    String,
+    String,
+    Option<i16>,
+    String,
+    String,
+    i32,
+    i32,
+    String,
+);
 
 #[async_trait]
 impl ISquadPort for SquadAdapter {
     async fn find_squad(&self, team_id: &str) -> Vec<SquadMemberDto> {
         let rows: Vec<LigneEffectif> = sqlx::query_as(
-            "SELECT player_id, roster_line_id, personal_name, position_name,
+            "SELECT player_id, roster_line_id, jersey, personal_name, position_name,
                     spp, value_kpo, participation_status
              FROM players_proj WHERE team_id = $1
              ORDER BY jersey NULLS LAST, player_id",
@@ -40,10 +49,22 @@ impl ISquadPort for SquadAdapter {
 
         rows.into_iter()
             .map(
-                |(player_id, roster_line_id, personal_name, position_name, spp, value, statut)| {
+                |(
+                    player_id,
+                    roster_line_id,
+                    jersey,
+                    personal_name,
+                    position_name,
+                    spp,
+                    value,
+                    statut,
+                )| {
                     SquadMemberDto {
                         player_id,
                         roster_line_id,
+                        // Un numéro hors bornes n'est pas un numéro : mieux vaut
+                        // n'en afficher aucun que d'en inventer un.
+                        jersey: jersey.filter(|j| (1..=99).contains(j)).map(|j| j as u8),
                         personal_name,
                         position_name,
                         spp: spp.max(0) as u32,
@@ -114,6 +135,7 @@ mod tests {
         assert_eq!(m.position_name, "Piétaille des Carrières");
         assert_eq!(m.spp, 7);
         assert_eq!(m.value_kpo, 50);
+        assert_eq!(m.jersey, Some(3));
         assert!(m.available_for_next_match);
     }
 

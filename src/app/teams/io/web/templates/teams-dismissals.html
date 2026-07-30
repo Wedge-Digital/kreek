@@ -1,0 +1,25 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+{# Page d'assemblage : aucun view model, aucune logique. Deux conteneurs qui
+   chargent leur widget et se resynchronisent sur `basketChanged`. #}
+<link rel="stylesheet" href="/static/css/widgets/dismissals.css">
+
+<div class="dis-page">
+  <div class="dis-grid">
+
+    <div class="dis-main"
+         hx-get="{{ roster_url }}"
+         hx-trigger="load, basketChanged from:body"
+         hx-target="this"
+         hx-swap="innerHTML"></div>
+
+    <div class="dis-side"
+         hx-get="{{ cart_url }}"
+         hx-trigger="load, basketChanged from:body"
+         hx-target="this"
+         hx-swap="innerHTML"></div>
+
+  </div>
+</div>
+{% endblock %}

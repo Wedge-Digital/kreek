@@ -1,0 +1,90 @@
+{# Panier de renvois. Aucun montant : un renvoi ne rembourse rien, il n'y a pas
+   de total à tenir. Ce que le panier tient, c'est l'effectif après renvois. #}
+<link rel="stylesheet" href="/static/css/widgets/dismissals.css">
+<div class="dis-cart" hx-disinherit="*">
+
+  {# Emplacement des erreurs de mutation, vidé à chaque rendu réussi. #}
+  <div id="dis-cart-error"></div>
+
+  {% if vm.concurrent_notice %}
+  <div class="alert alert--warn">
+    <span>⚠️</span>
+    <span>Le panier a été modifié ailleurs. Voici l'état à jour — refais ton
+      geste si besoin.</span>
+  </div>
+  {% endif %}
+
+  {# Le repli mémorise le choix du coach sur `document.body`, qui survit aux
+     swaps HTMX. Sans cette mémoire, chaque marquage remonterait le composant et
+     l'`init()` refermerait le panier que le coach venait d'ouvrir. #}
+  <div class="side-actions"
+       x-data="{
+         open: false,
+         init() {
+           const memo = document.body.dataset.basketCartOpen;
+           this.open = memo === undefined ? window.innerWidth > 768 : memo === 'true';
+           this.$watch('open', v => document.body.dataset.basketCartOpen = v);
+         }
+       }"
+       x-bind:class="{ 'is-open': open }">
+
+    <button class="cart-head" x-on:click="open = !open" x-bind:aria-expanded="open">
+      <span class="panel-title">Renvois en attente{% if !vm.lines.is_empty() %}<span class="cart-count"> · {{ vm.lines.len() }}</span>{% endif %}</span>
+      <span class="cart-chevron">▾</span>
+    </button>
+
+    <div class="cart-body">
+      <div class="panel-sub">Annulez une ligne tant que la phase n'est pas validée.</div>
+
+      {% if vm.lines.is_empty() %}
+      <div class="recap-empty">Aucun renvoi en attente.</div>
+      {% else %}
+      {% for line in vm.lines %}
+      <div class="recap-row{% if line.is_last %} recap-row--fresh{% endif %}">
+        <span>{{ line.label }}</span>
+        <span class="recap-end">
+          <span class="recap-detail">{{ line.detail }}</span>
+          <button class="cart-remove"
+                  hx-post="{% if line.is_staff %}{{ vm.unmark_staff_url() }}{% else %}{{ vm.unmark_player_url() }}{% endif %}"
+                  hx-vals='{"line_id": "{{ line.line_id }}", "version": {{ vm.version }}}'
+                  hx-target="closest .dis-side"
+                  hx-swap="innerHTML"
+                  aria-label="Annuler le renvoi de {{ line.label }}"
+                  title="Annuler ce renvoi">×</button>
+        </span>
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+
+    <div class="recap-total{% if vm.journeymen_needed > 0 %} is-alert{% endif %}">
+      <span>Effectif après renvois</span>
+      <span class="recap-amount">{{ vm.squad_after }}</span>
+    </div>
+
+    <button class="cta-primary{% if vm.cta_destructive %} cta-primary--destructive{% endif %}"
+            hx-post="{{ vm.validate_url() }}"
+            hx-target="closest .dis-side"
+            hx-swap="none">{{ vm.cta_label }}</button>
+  </div>
+
+  {% if vm.journeymen_needed > 0 %}
+  <div class="alert alert--warn">
+    <span>🧑‍🌾</span>
+    <span>
+      <strong>Moins de 11 joueurs disponibles.</strong>
+      L'équipe sera complétée au prochain match par <strong>{{ vm.journeymen_needed }}</strong>
+      {% if vm.journeymen_needed > 1 %}journaliers, comptés{% else %}journalier, compté{% endif %}
+      dans la valeur d'équipe.
+    </span>
+  </div>
+  {% endif %}
+
+  <div class="alert alert--info">
+    <span>💡</span>
+    <span>Rien n'est retiré de l'effectif tant que la phase n'est pas validée.
+      <strong>Une fois validée, aucun retour en arrière</strong> — un renvoi ne
+      rembourse rien.</span>
+  </div>
+
+</div>

@@ -1,4 +1,5 @@
 use crate::app::teams::io::web::dismiss_team::dismiss_team;
+use crate::app::teams::io::web::dismissals::dismissals_page;
 use crate::app::teams::io::web::recruitment::recruitment_page;
 use crate::app::teams::io::web::team_detail::team_detail;
 use crate::app::teams::io::web::validate_phase_actions::{
@@ -6,6 +7,10 @@ use crate::app::teams::io::web::validate_phase_actions::{
     post_validate_recruitment_phase,
 };
 use crate::app::teams::io::web::widgets::competition_teams_widget::competition_teams_widget;
+use crate::app::teams::io::web::widgets::dismissals_cart_widget::{dismissals_cart, unmark_staff};
+use crate::app::teams::io::web::widgets::dismissals_roster_widget::{
+    dismissals_roster, mark_player, mark_staff, unmark_player,
+};
 use crate::app::teams::io::web::widgets::enrolled_teams_widget::enrolled_teams_widget;
 use crate::app::teams::io::web::widgets::enrollment_actions::{
     approve_all_enrollments, approve_enrollment, dismiss_enrollment, reject_enrollment,
@@ -72,4 +77,11 @@ pub fn router() -> Router<AppState> {
         .route(path::RECRUITMENT_REMOVE_PLAYER, post(remove_player))
         .route(path::RECRUITMENT_ADD_STAFF, post(add_staff))
         .route(path::RECRUITMENT_REMOVE_STAFF, post(remove_staff))
+        .route(path::DISMISSALS_PAGE, get(dismissals_page))
+        .route(path::DISMISSALS_ROSTER_WIDGET, get(dismissals_roster))
+        .route(path::DISMISSALS_CART_WIDGET, get(dismissals_cart))
+        .route(path::DISMISSALS_MARK_PLAYER, post(mark_player))
+        .route(path::DISMISSALS_UNMARK_PLAYER, post(unmark_player))
+        .route(path::DISMISSALS_MARK_STAFF, post(mark_staff))
+        .route(path::DISMISSALS_UNMARK_STAFF, post(unmark_staff))
 }

@@ -102,6 +102,7 @@ impl RosterCatalog {
 pub struct Player {
     pub player_id: PlayerId,
     pub roster_line: RosterLineId,
+    pub jersey: Option<u8>,
     pub personal_name: String,
     pub position_name: String,
     pub spp: u32,

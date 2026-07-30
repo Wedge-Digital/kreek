@@ -192,6 +192,7 @@ fn to_domain_squad(membres: Vec<SquadMemberDto>) -> Result<Squad, HydrationError
             player_id: PlayerId::try_new(&m.player_id)
                 .map_err(|e| HydrationError::CorruptedSquad(format!("{} : {e}", m.player_id)))?,
             roster_line: RosterLineId(m.roster_line_id),
+            jersey: m.jersey,
             personal_name: m.personal_name,
             position_name: m.position_name,
             spp: m.spp,

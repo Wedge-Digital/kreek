@@ -1,0 +1,255 @@
+/* Phase de renvois — page et widgets (carte 269).
+ *
+ * Dérivé de la maquette validée `assets/rawpages/html/app-team-dismissals.html`.
+ * Le chrome mobile et le sélecteur d'états de la maquette n'y figurent pas :
+ * le premier est géré une fois pour toutes par `layout-app.css`, le second
+ * n'existait que pour la maquette.
+ */
+
+/* ── Rôles de couleur ────────────────────────────────────────────────────
+   Mêmes rôles que la page de recrutement, mais c'est ici `risk` qui domine :
+   tout ce qu'on fait sur cet écran retire quelque chose sans contrepartie.
+   Chaque valeur est vérifiée ≥ 4,5:1 sur blanc, sur sa teinte et sur les
+   lignes paires. */
+:root {
+  --role-action:  #003049;  /* action réversible : annuler un renvoi */
+  --role-cost:    #7A5210;  /* argent : valeur du joueur, du staff */
+  --role-risk:    #A61B1B;  /* perte définitive */
+  --role-caution: #8F4116;  /* indisponibilité temporaire */
+  --tint-action:  rgba(0,48,73,0.06);
+  --tint-risk:    rgba(166,27,27,0.08);
+  --tint-caution: rgba(143,65,22,0.10);
+}
+
+/* ── Layout ──────────────────────────────────────────────────────────── */
+.dis-page  { display: flex; flex-direction: column; gap: var(--p1); }
+.dis-grid  { display: flex; gap: var(--p2); align-items: flex-start; width: 100%; }
+.dis-main  { flex: 3; display: flex; flex-direction: column; gap: var(--p1); min-width: 0; }
+.dis-side  { flex: 1; position: sticky; top: var(--p2); display: flex; flex-direction: column; gap: var(--p1); }
+
+/* ── En-tête ─────────────────────────────────────────────────────────── */
+/* Le liseré haut dit dans quelle phase on est — ici, celle où tout est perdu. */
+.dis-header {
+  background: var(--white); border-radius: 10px; padding: var(--p2);
+  border-top: 3px solid var(--role-risk);
+  display: flex; gap: var(--p2); align-items: center; flex-wrap: wrap;
+}
+.dis-header-logo {
+  width: 64px; height: 64px; border-radius: 10px; background: var(--role-action);
+  color: var(--white); font-family: var(--font-title); font-size: var(--h4);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.dis-header-info { flex: 1; min-width: 240px; }
+.dis-header-top  { display: flex; align-items: center; gap: var(--p1); margin-bottom: var(--p05); flex-wrap: wrap; }
+.dis-header-name { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-1); }
+.dis-phase-badge {
+  background: var(--tint-risk); color: var(--role-risk); border-radius: 20px;
+  padding: 4px 12px; font-size: var(--text-tiny); font-weight: 600;
+}
+.dis-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
+.meta-item  { display: flex; flex-direction: column; gap: 2px; }
+.meta-label { font-size: var(--text-tiny); color: var(--dark-3); }
+.meta-value { font-size: var(--text-small); color: var(--dark-1); font-weight: 600; }
+.meta-value--alert { color: var(--role-risk); }
+
+/* ── Panneaux ────────────────────────────────────────────────────────── */
+.dis-page { min-width: 0; }
+.panel { background: var(--white); border-radius: 10px; padding: var(--p2); min-width: 0; }
+.panel-title {
+  font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+  color: var(--dark-1); margin-bottom: var(--p05);
+}
+.panel-sub { font-size: var(--text-tiny); color: var(--dark-3); margin-bottom: var(--p1); }
+
+/* ── Tableaux ────────────────────────────────────────────────────────── */
+.dis-table { width: 100%; border-collapse: collapse; }
+.dis-table th {
+  background: var(--dark-6); border-bottom: 2px solid var(--dark-5);
+  padding: 10px 8px; font-size: var(--text-tiny); font-weight: 600;
+  color: var(--dark-2); text-align: center;
+}
+.dis-table th.col-left, .dis-table td.col-left { text-align: left; }
+.dis-table td {
+  border-bottom: 1px solid var(--dark-5); padding: 10px 8px;
+  font-size: var(--text-tiny); color: var(--dark-1); text-align: center;
+}
+.dis-table tbody tr:nth-child(even) td { background: var(--dark-7); }
+/* Estompé par la couleur, jamais par l'opacité : un renvoi doit rester lisible
+   après coup, c'est la trace de ce qu'on vient de faire. */
+.dis-table tr.is-gone td,
+.dis-table tr.is-gone .pl-name,
+.dis-table tr.is-gone .pl-pos { color: var(--dark-3); text-decoration: line-through; }
+.dis-table tr.is-gone .pl-status { opacity: 0.55; text-decoration: none; }
+.dis-table tr.is-blocked td,
+.dis-table tr.is-blocked .pl-name { color: var(--dark-3); }
+
+.pl-name  { font-weight: 600; }
+.pl-pos   { color: var(--dark-2); }
+/* Repli mobile du poste sous le nom : la colonne dédiée disparaît sous
+   768px, l'information non. */
+.pl-inline { display: none; font-size: 11px; }
+.pl-status {
+  display: inline-block; border-radius: 4px; padding: 2px 8px;
+  font-size: 11px; font-weight: 600;
+}
+.pl-status--ok   { background: rgba(27,107,74,0.12); color: #1B6B4A; }
+.pl-status--miss { background: var(--tint-caution); color: var(--role-caution); }
+.quota      { font-family: monospace; color: var(--dark-2); }
+.quota--zero { color: var(--dark-2); }
+/* La valeur d'un joueur est de l'argent : même rôle que les prix côté recrutement. */
+.pl-value   { font-weight: 700; color: var(--role-cost); }
+
+.fire-btn {
+  border: 1px solid var(--dark-4); border-radius: 6px; background: var(--white);
+  padding: 5px 12px; font-size: var(--text-tiny); color: var(--dark-2);
+  cursor: pointer;
+}
+.fire-btn:hover:not(:disabled) {
+  border-color: var(--role-risk); color: var(--role-risk); background: var(--tint-risk);
+}
+/* Comme côté recrutement : le libellé désactivé porte une information. */
+.fire-btn:disabled { color: var(--dark-2); border-color: var(--dark-5); cursor: not-allowed; }
+/* Annuler est la seule action réversible de l'écran : elle prend le bleu. */
+.fire-btn--undo { border-color: var(--role-action); color: var(--role-action); }
+.fire-btn--undo:hover { background: var(--tint-action); border-color: var(--role-action); color: var(--role-action); }
+.quota-sub { margin-left: 5px; color: var(--role-risk); font-weight: 700; }
+.recap-end { display: flex; align-items: center; gap: 6px; }
+.cart-remove {
+  width: 22px; height: 22px; flex-shrink: 0; border: 1px solid var(--dark-4);
+  border-radius: 50%; background: var(--white); color: var(--dark-3);
+  font-size: 14px; line-height: 1; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.cart-remove:hover { border-color: var(--role-action); color: var(--role-action); background: var(--white); }
+:focus-visible { outline: 2px solid var(--role-action); outline-offset: 2px; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.table-scroll { overflow-x: auto; max-width: 100%; }
+
+/* Seul moment animé de la page : le renvoi vient d'être enregistré. */
+@keyframes dismissal-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+.recap-row--fresh { animation: dismissal-in 0.28s cubic-bezier(0.16, 1, 0.3, 1); }
+@media (prefers-reduced-motion: reduce) { .recap-row--fresh { animation: none; } }
+
+/* ── Panneau latéral ─────────────────────────────────────────────────────
+   Surface de décision, teintée comme le panier du recrutement — mais dans
+   la couleur de ce qu'on y met : de la perte. */
+.recap-row { display: flex; justify-content: space-between; gap: 8px; font-size: var(--text-tiny); color: var(--dark-2); padding: 6px 0; }
+.recap-row span:last-child { color: var(--dark-3); white-space: nowrap; }
+.recap-empty { font-size: var(--text-tiny); color: var(--dark-2); font-style: italic; padding: var(--p1) 0; text-align: center; }
+.recap-total {
+  border-top: 2px solid rgba(166,27,27,0.22); margin-top: var(--p05); padding-top: var(--p1);
+  display: flex; justify-content: space-between; gap: var(--p1);
+  font-size: var(--text-small); font-weight: 700; color: var(--dark-1);
+}
+/* Sans cet écart, le libellé et le nombre se touchent dès que la colonne se
+   resserre : `space-between` ne sépare que ce qui a de la place en trop. */
+.recap-total .recap-amount { white-space: nowrap; }
+.recap-total.is-alert { color: var(--role-risk); }
+
+.alert {
+  border-radius: 8px; padding: var(--p1); font-size: var(--text-tiny);
+  line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;
+}
+.alert--info  { background: var(--tint-action); color: var(--dark-2); }
+.alert--warn  { background: var(--tint-caution); color: var(--dark-1); }
+.alert--error { background: var(--tint-risk); color: var(--dark-1); }
+
+.cta-primary {
+  width: 100%; border: none; border-radius: 8px; padding: 14px;
+  background: var(--role-action); color: var(--white); font-size: var(--text-small);
+  font-weight: 600; cursor: pointer; transition: background 0.15s;
+}
+.cta-primary:hover { background: var(--dark-1); }
+/* Le bouton ne devient rouge que lorsqu'il va réellement détruire quelque
+   chose : la couleur suit l'état, elle ne décore pas la phase. */
+.cta-primary--destructive { background: var(--role-risk); }
+.cta-primary--destructive:hover { background: #8C1616; }
+
+/* Panier de renvois — panneau ordinaire au desktop. */
+.side-actions {
+  background: var(--tint-risk); border-radius: 10px;
+  border-top: 3px solid var(--role-risk);
+  padding: var(--p2);
+  display: flex; flex-direction: column; gap: var(--p05);
+}
+.cart-head {
+  background: none; border: none; padding: 0; width: 100%;
+  display: flex; align-items: center; justify-content: space-between;
+  text-align: left; cursor: default; font: inherit; color: inherit;
+}
+.cart-head .panel-title { margin-bottom: 0; }
+.cart-count { color: var(--role-risk); }
+.cart-chevron { display: none; }
+/* Version courte de l'avertissement, réservée au mobile. */
+.warn-short { display: none; }
+
+@media (max-width: 768px) {
+  /* Le panier quitte le flux pour devenir la barre du bas : la page se réserve
+     la hauteur qu'il occupe, plus celle de la tabbar globale. */
+  .dis-page { padding-bottom: 190px; }
+
+  .dis-grid   { flex-direction: column; }
+  .dis-side   { position: static; width: 100%; }
+  .dis-header { padding: var(--p1); gap: var(--p1); }
+  .dis-header-logo { width: 44px; height: 44px; font-size: var(--h5); }
+  .dis-header-meta { gap: var(--p1) var(--p2); }
+  .panel { padding: var(--p1); }
+
+  /* Numéro et poste retirés — exception « masquage progressif de colonnes »
+     déjà admise dans le projet. Le poste se replie sous le nom, il n'est
+     pas perdu ; le numéro de maillot ne sert à rien pour décider. */
+  .dis-table th:nth-child(1), .dis-table td:nth-child(1),
+  .dis-table th:nth-child(3), .dis-table td:nth-child(3) { display: none; }
+  .dis-table th, .dis-table td { padding: 8px 4px; }
+  .pl-inline { display: block; margin-top: 3px; color: var(--dark-2); }
+  .pl-value, .quota { white-space: nowrap; }
+  .fire-btn { white-space: nowrap; }
+  .pl-status { font-size: 10px; padding: 2px 6px; }
+
+  /* Le panier quitte le flux et devient la barre du bas : l'effectif restant
+     et la validation restent sous les yeux pendant qu'on parcourt la liste.
+     Replié par défaut, déployable à la demande. */
+  .side-actions {
+    position: fixed; left: 0; right: 0; bottom: 57px; z-index: 400;
+    border-radius: 0; padding: var(--p05) var(--p1) var(--p1);
+    background: var(--white);
+    border-top: 2px solid var(--role-risk);
+    box-shadow: 0 -6px 18px rgba(0,48,73,0.10);
+  }
+  /* ── Cibles tactiles ──────────────────────────────────────────────────
+     Toutes les commandes de la page passent à 44px minimum. Le × du panier
+     garde sa taille visuelle mais gagne une zone de clic étendue par
+     pseudo-élément : à 22px il était visible mais invisable au doigt. */
+  .fire-btn { min-height: 44px; padding: 5px 14px; }
+  .cta-primary { min-height: 48px; }
+  .cart-remove { width: 30px; height: 30px; position: relative; font-size: 16px; }
+  .cart-remove::after {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%); width: 44px; height: 44px;
+  }
+  .recap-row { padding: 8px 0; }
+
+  .cart-head { cursor: pointer; padding: 4px 0; min-height: 44px; }
+  .cart-chevron {
+    display: inline-block; color: var(--role-risk); font-size: 14px;
+    transition: transform 0.2s;
+  }
+  .cart-body { display: none; max-height: 32vh; overflow-y: auto; }
+  .side-actions.is-open .cart-body { display: block; }
+  .side-actions.is-open .cart-chevron { transform: rotate(180deg); }
+  .side-actions .recap-total { border-top: none; margin-top: 0; padding-top: 4px; }
+  .cta-primary { padding: 12px; }
+
+  /* L'avertissement passe en version courte : il occupait un quart du
+     premier écran avant qu'on voie le moindre joueur. */
+  .warn-long  { display: none; }
+  .warn-short { display: inline; }
+
+  @media (prefers-reduced-motion: reduce) { .cart-chevron { transition: none; } }
+}

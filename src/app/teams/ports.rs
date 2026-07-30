@@ -12,6 +12,10 @@ use async_trait::async_trait;
 pub struct SquadMemberDto {
     pub player_id: String,
     pub roster_line_id: String,
+    /// Le numéro de maillot, que `players` attribue et possède. `None` tant
+    /// qu'aucun ne lui a été donné — la page de renvois affiche alors un tiret
+    /// plutôt qu'un zéro, qui se lirait comme un numéro.
+    pub jersey: Option<u8>,
     pub personal_name: String,
     pub position_name: String,
     pub spp: u32,

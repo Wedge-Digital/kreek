@@ -1,0 +1,169 @@
+{# Effectif de la phase de renvois — joueurs et staff dans un seul widget.
+   Marquer un joueur peut faire basculer tous les autres en « Minimum 11 » :
+   le tableau se rafraîchit entier, jamais ligne par ligne. #}
+<link rel="stylesheet" href="/static/css/widgets/dismissals.css">
+<div class="dis-roster" hx-disinherit="*">
+
+  {# Emplacement des erreurs de mutation, vidé à chaque rendu réussi. #}
+  <div id="dis-roster-error"></div>
+
+  {% if vm.concurrent_notice %}
+  <div class="alert alert--warn">
+    <span>⚠️</span>
+    <span>Le panier a été modifié ailleurs. Voici l'état à jour — refais ton
+      geste si besoin.</span>
+  </div>
+  {% endif %}
+
+  <div class="dis-header">
+    <div class="dis-header-info">
+      <div class="dis-header-top">
+        <div class="dis-header-name">{{ vm.team_name }}</div>
+        <span class="dis-phase-badge">🚪 Phase de renvois</span>
+      </div>
+      <div class="dis-header-meta">
+        <div class="meta-item">
+          <div class="meta-label">Roster</div>
+          <div class="meta-value">{{ vm.context.roster_name }}</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Trésorerie</div>
+          <div class="meta-value">{{ vm.context.treasury_kpo }} kPo</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Effectif</div>
+          <div class="meta-value">{{ vm.context.squad_count }}</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Disponibles au prochain match</div>
+          <div class="meta-value{% if vm.context.eligible_is_low %} meta-value--alert{% endif %}">
+            {{ vm.context.eligible_count }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert--error">
+    <span>⚠️</span>
+    <span>
+      <strong>Une fois la phase validée, un renvoi est définitif et ne rembourse rien.</strong>
+      <span class="warn-long">
+        Ni un joueur ni un membre du staff renvoyé ne rendent de kPo à la trésorerie,
+        et un joueur renvoyé perd ses SPP et ses compétences acquises.
+        La phase de recrutement est déjà passée : la place libérée ne pourra être
+        utilisée qu'à la séquence d'après-match suivante.
+      </span>
+      <span class="warn-short">
+        Le joueur perd ses SPP, et la place libérée ne servira qu'à la séquence suivante.
+      </span>
+    </span>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Effectif</div>
+    <div class="panel-sub">
+      La colonne « Prochain match » indique qui sera indisponible — un joueur
+      blessé reste dans l'effectif et redeviendra disponible ensuite.
+    </div>
+    <div class="table-scroll">
+      <table class="dis-table">
+        <thead>
+          <tr>
+            <th class="col-num" scope="col">#</th>
+            <th class="col-left" scope="col">Nom</th>
+            <th class="col-left" scope="col">Poste</th>
+            <th scope="col">SPP</th>
+            <th scope="col">Valeur</th>
+            <th scope="col">Prochain match</th>
+            <th><span class="sr-only">Action</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in vm.players %}
+          <tr{% if row.is_marked %} class="is-gone"{% endif %}>
+            <td class="col-num">{% if let Some(n) = row.number %}{{ n }}{% else %}—{% endif %}</td>
+            <td class="col-left">
+              <span class="pl-name">{{ row.name }}</span>
+              <span class="pl-inline">{{ row.position }}</span>
+            </td>
+            <td class="col-left"><span class="pl-pos">{{ row.position }}</span></td>
+            <td class="pl-spp">{{ row.spp }}</td>
+            <td><span class="pl-value">{{ row.value_kpo }} kPo</span></td>
+            <td>
+              <span class="pl-status{% if row.is_available %} pl-status--ok{% else %} pl-status--miss{% endif %}">
+                {{ row.status_label() }}
+              </span>
+            </td>
+            <td>
+              {% if row.action.is_marked() %}
+              <button class="fire-btn fire-btn--undo"
+                      hx-post="{{ vm.unmark_player_url() }}"
+                      hx-vals='{"line_id": "{{ row.action.line_id_or_empty() }}", "version": {{ vm.version }}}'
+                      hx-target="closest .dis-main"
+                      hx-swap="innerHTML"
+                      aria-label="Annuler le renvoi de {{ row.name }}">{{ row.action.label() }}</button>
+              {% else if row.action.is_removable() %}
+              <button class="fire-btn"
+                      hx-post="{{ vm.mark_player_url() }}"
+                      hx-vals='{"player_id": "{{ row.player_id }}", "version": {{ vm.version }}}'
+                      hx-target="closest .dis-main"
+                      hx-swap="innerHTML"
+                      aria-label="Renvoyer {{ row.name }}">{{ row.action.label() }}</button>
+              {% else %}
+              <button class="fire-btn" disabled>{{ row.action.label() }}</button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if !vm.staff.is_empty() %}
+  <div class="panel">
+    <div class="panel-title">Staff</div>
+    <div class="panel-sub">
+      Les fans dévoués ne se renvoient pas — ils évoluent au fil des matchs.
+    </div>
+    <div class="table-scroll">
+      <table class="dis-table">
+        <thead>
+          <tr>
+            <th class="col-left" scope="col">Fonction</th>
+            <th scope="col">Effectif</th>
+            <th scope="col">Valeur unitaire</th>
+            <th><span class="sr-only">Action</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in vm.staff %}
+          <tr{% if row.remaining == 0 %} class="is-blocked"{% endif %}>
+            <td class="col-left"><span class="pl-name">{{ row.name }}</span></td>
+            <td>
+              <span class="quota{% if row.remaining == 0 %} quota--zero{% endif %}">{{ row.remaining }}</span>
+              {% if row.pending > 0 %}<span class="quota-sub">−{{ row.pending }}</span>{% endif %}
+            </td>
+            <td><span class="pl-value">{{ row.unit_value_kpo }} kPo</span></td>
+            <td>
+              {% if row.action.is_removable() %}
+              <button class="fire-btn"
+                      hx-post="{{ vm.mark_staff_url() }}"
+                      hx-vals='{"staff_uid": "{{ row.staff_uid }}", "version": {{ vm.version }}}'
+                      hx-target="closest .dis-main"
+                      hx-swap="innerHTML"
+                      aria-label="Renvoyer : {{ row.name }}">{{ row.action.label() }}</button>
+              {% else %}
+              <button class="fire-btn" disabled>{{ row.action.label() }}</button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</div>

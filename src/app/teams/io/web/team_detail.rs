@@ -138,16 +138,18 @@ impl BannerVm {
                     href: app_routes.teams.recruitment_page(space_id, &team_id),
                 }],
             }),
+            // Même raison qu'au recrutement : la validation vit dans le panier,
+            // pas ici. Depuis la fiche d'équipe, le coach clôturerait la phase
+            // sans avoir vu qui il renvoie — et un refus en bloc tomberait sans
+            // qu'il comprenne pourquoi.
             (Enrolled, Some(Dismissals)) => Some(Self {
                 css_variant: "phase".into(),
                 icon: "🚪".into(),
                 title: "Phase de renvois.".into(),
                 detail: "Renvoyez les joueurs dont vous ne voulez plus avant de valider.".into(),
-                ctas: vec![BannerCtaVm::Mutate {
-                    label: "Valider les renvois".into(),
-                    post_url: app_routes
-                        .teams
-                        .validate_dismissals_phase(space_id, &team_id),
+                ctas: vec![BannerCtaVm::Navigate {
+                    label: "Gérer les renvois →".into(),
+                    href: app_routes.teams.dismissals_page(space_id, &team_id),
                 }],
             }),
             _ => None,

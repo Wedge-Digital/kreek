@@ -8,8 +8,10 @@ Scénarios couverts :
 - Phase de recrutement (Recruitment) : bandeau "Recruter →" → clic → page de
   recrutement, dont le panier valide la phase → passage réel en renvois.
   Seule phase à ne pas se clore depuis son bandeau (carte 264).
-- Phase de renvois (Dismissals) : bandeau "Valider les renvois" → clic →
-  retour réel en "Prête à jouer" (bandeau impression visible à ce stade).
+- Phase de renvois (Dismissals) : bandeau "Gérer les renvois →" → clic → page
+  de renvois, dont le panier valide la phase → retour réel en "Prête à jouer"
+  (bandeau impression visible à ce stade). Comme le recrutement, cette phase ne
+  se clôt pas depuis son bandeau (carte 269).
 
 Toute la séquence MatchReporting → PlayerImprovement → Recruitment →
 Dismissals → ReadyToPlay est pilotée par de vraies actions applicatives
@@ -227,16 +229,33 @@ def test_recruitment_banner_leads_to_the_recruitment_page(page: Page, space_id, 
 
 # ── Scénario : phase de renvois → prête à jouer ───────────────────────────────
 
-def test_dismissals_banner_validates_to_ready_to_play(page: Page, space_id, match_report_in_progress):
+def test_dismissals_banner_leads_to_the_dismissals_page(page: Page, space_id, match_report_in_progress):
+    """Depuis la carte 269, cette bannière **navigue** au lieu de valider.
+
+    Comme le recrutement avant elle : valider depuis la fiche d'équipe
+    clôturerait la phase sans que le coach ait vu qui il renvoie. La validation
+    vit dans le panier, et c'est lui qui déclare l'équipe prête à jouer — ce que
+    ce test suit jusqu'au bout pour que la séquence de phases reste continue.
+
+    Le détail de la page de renvois viendra avec la carte 271.
+    """
     team_id = match_report_in_progress["home_team_id"]
     page.goto(f"{BASE_URL}/app/{space_id}/teams/{team_id}", wait_until="load")
 
     banner = page.locator(".state-banner--phase")
     expect(banner).to_contain_text("Phase de renvois")
-    with page.expect_navigation(wait_until="load"):
-        banner.locator(".state-banner-cta").click()
 
-    expect(page.locator(".team-status-badge")).to_contain_text("Prête à jouer")
+    # `<a hx-get hx-push-url>` : HTMX échange `#app-content`, il n'y a pas de
+    # navigation du navigateur à attendre.
+    banner.locator(".state-banner-cta").click()
+    expect(page.locator(".dis-roster")).to_be_visible(timeout=10000)
+
+    # Panier vide : le CTA clôt la phase sans renvoyer personne.
+    cta = page.locator(".dis-cart .cta-primary")
+    expect(cta).to_contain_text("Valider sans renvoyer personne")
+    cta.click()
+
+    expect(page.locator(".team-status-badge")).to_contain_text("Prête à jouer", timeout=15000)
     ready_banner = page.locator(".state-banner--ready")
     expect(ready_banner).to_be_visible()
     expect(ready_banner.locator(".state-banner-cta--outline")).to_contain_text("Imprimer en PDF")

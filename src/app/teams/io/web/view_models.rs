@@ -21,7 +21,7 @@ const SQUAD_MAX: u8 = 16;
 
 /// Les quatre personnels achetables, dans l'ordre de la maquette. Le facteur
 /// fans n'en est pas : il ne s'achète pas.
-const STAFF_ORDER: [StaffType; 4] = [
+pub(crate) const STAFF_ORDER: [StaffType; 4] = [
     StaffType::Reroll,
     StaffType::Apothecary,
     StaffType::Assistant,
@@ -299,7 +299,7 @@ fn quota_staff(basket: &RecruitmentBasket, staff: StaffType) -> u8 {
 
 /// L'identifiant que le formulaire renvoie. Il désigne un `StaffType`, pas une
 /// ligne de `staff_fr.json` : la relance n'a pas d'uid dans le corpus.
-fn form_uid(staff: StaffType) -> &'static str {
+pub(crate) fn form_uid(staff: StaffType) -> &'static str {
     match staff {
         StaffType::Reroll => "REROLL",
         StaffType::Apothecary => "APOTHECARY",
@@ -319,7 +319,7 @@ pub fn staff_type_from_form(uid: &str) -> Option<StaffType> {
     }
 }
 
-fn nom_staff(staff: StaffType) -> &'static str {
+pub(crate) fn nom_staff(staff: StaffType) -> &'static str {
     match staff {
         StaffType::Reroll => "Relance",
         StaffType::Apothecary => "Apothicaire",
@@ -601,6 +601,7 @@ mod tests {
                     .map(|(rang, l)| Player {
                         player_id: PlayerId::try_new(&format!("{rang:0>26}")).unwrap(),
                         roster_line: RosterLineId((*l).into()),
+                        jersey: Some(rang as u8 + 1),
                         personal_name: String::new(),
                         position_name: String::new(),
                         spp: 0,
