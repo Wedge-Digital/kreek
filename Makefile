@@ -44,8 +44,15 @@ help:
 	@echo ""
 
 # ── Développement ─────────────────────────────────────────────────────────────
+# `-w Cargo.toml` : sans lui, un changement de dépendance laissait le serveur
+# tourner sur l'ancien binaire, **en silence** — découvert carte 273, où une
+# vérification e2e attendait une reconstruction qui ne venait jamais.
+#
+# `Cargo.lock` n'est pas surveillé : un `cargo update -p <crate>` seul échappe
+# donc encore au rechargement. Cas plus rare, et l'ajouter fait courir le risque
+# qu'un `cargo run` qui retouche le verrou relance la boucle indéfiniment.
 dev:
-	cargo watch -x run -w src -w assets/templates -w assets/static/css
+	cargo watch -x run -w src -w Cargo.toml -w assets/templates -w assets/static/css
 
 # Force le jeu de démonstration versionné, quelle que soit la configuration
 # locale. Utile quand `.env.dev` surcharge REFERENCES__DIR vers un jeu de
@@ -53,7 +60,7 @@ dev:
 # (Granitiers, Zéphyriens, Lanterniers). Sans surcharge locale, `make dev`
 # sert déjà ce jeu — c'est le défaut de config/default.toml.
 dev-demo:
-	REFERENCES__DIR=assets/references.example cargo watch -x run -w src -w assets/templates -w assets/static/css
+	REFERENCES__DIR=assets/references.example cargo watch -x run -w src -w Cargo.toml -w assets/templates -w assets/static/css
 
 test: reset_test_db
 	DATABASE_URL=$(TEST_DB_URL) cargo test
