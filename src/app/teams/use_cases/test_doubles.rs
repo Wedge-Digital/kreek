@@ -223,7 +223,11 @@ impl ISquadPort for FakeSquadPort {
             .iter()
             .enumerate()
             .map(|(i, ligne)| SquadMemberDto {
-                player_id: format!("player-{i}"),
+                // Un ULID valide, pas un `player-{i}` : l'hydratation refuse un
+                // identifiant illisible plutôt que de sauter le membre, et une
+                // doublure qui n'en produit pas ferait échouer tout use case
+                // consommant l'effectif.
+                player_id: format!("{i:0>26}"),
                 roster_line_id: (*ligne).to_string(),
                 personal_name: format!("Joueur {i}"),
                 position_name: "Poste".into(),

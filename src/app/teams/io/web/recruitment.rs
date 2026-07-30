@@ -7,7 +7,8 @@
 //! sinon dans les `hx-vals` du prochain clic.
 
 use crate::app::routes::AppRoutes;
-use crate::app::teams::domain::recruitment_basket::{RecruitmentBasket, RejectedLine};
+use crate::app::teams::domain::basket::RejectedLine;
+use crate::app::teams::domain::recruitment_basket::RecruitmentBasket;
 use crate::app::teams::domain::team::{GamePhase, Team};
 use crate::app::teams::io::web::view_models::{BasketErrorVm, CartLineVm};
 use crate::app::teams::routes::Routes;

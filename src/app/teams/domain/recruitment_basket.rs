@@ -7,6 +7,10 @@
 //! hydrate, puis tout est **pur et synchrone** — aucun `async`, aucun port,
 //! aucune dépendance framework.
 
+use crate::app::teams::domain::basket::{
+    staff_uid, BasketLineId, BasketVersion, OwnedStaff, RejectedLine, RosterCatalog, RosterLineId,
+    Squad,
+};
 use crate::app::teams::domain::error::DomainError;
 use crate::app::teams::domain::value_objects::{Kpo, StaffType};
 
@@ -18,136 +22,6 @@ const MAX_SQUAD: usize = 16;
 /// fans. La relance est tarifée par `reroll_base_cost` du roster et plafonnée
 /// par cette constante.
 const MAX_REROLLS: u32 = 8;
-
-// ── Identifiants et types portés ──────────────────────────────────────────────
-
-/// Identifiant d'une ligne de roster — `DEMO_GRANIT__PIETAILLE`, pas un ULID.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
-pub struct RosterLineId(pub String);
-
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct BasketLineId(pub String);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct BasketVersion(pub u32);
-
-/// Une compétence de base, telle qu'elle s'affiche. Aucun invariant : elle
-/// voyage dans l'agrégat parce que le panier est la seule chose que la vue voit.
-#[derive(Debug, Clone)]
-pub struct SkillBadge {
-    pub name: String,
-    pub category: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct CatalogPosition {
-    pub uid: RosterLineId,
-    pub position_name: String,
-    pub cost: Kpo,
-    pub max_quantity: u8,
-    /// Caractéristiques et compétences ne portent aucun invariant : elles ne
-    /// sont là que parce que le panier est **la seule chose que la vue voit**.
-    /// Les faire transiter autrement obligerait un handler à toucher un DTO de
-    /// port, ce que la convention interdit.
-    pub ma: u8,
-    pub st: u8,
-    pub ag: u8,
-    pub pa: u8,
-    pub av: u8,
-    pub skills: Vec<SkillBadge>,
-}
-
-/// Limite de cumul entre postes — « pas plus de 3 parmi Ogre, Troll, Minotaure ».
-#[derive(Debug, Clone)]
-pub struct CrossLimit {
-    pub max: u32,
-    pub position_uids: Vec<RosterLineId>,
-}
-
-#[derive(Debug, Clone)]
-pub struct StaffCatalogEntry {
-    pub uid: String,
-    pub price: Kpo,
-    pub max_quantity: u32,
-}
-
-/// Le catalogue du roster, hydraté depuis `IRosterCatalogPort`.
-#[derive(Debug, Clone)]
-pub struct RosterCatalog {
-    pub positions: Vec<CatalogPosition>,
-    pub cross_limits: Vec<CrossLimit>,
-    pub allowed_staff: Vec<String>,
-    pub staff: Vec<StaffCatalogEntry>,
-    pub reroll_base_cost: Kpo,
-}
-
-impl RosterCatalog {
-    pub fn position(&self, line: &RosterLineId) -> Option<&CatalogPosition> {
-        self.positions.iter().find(|p| &p.uid == line)
-    }
-
-    pub fn staff_entry(&self, uid: &str) -> Option<&StaffCatalogEntry> {
-        self.staff.iter().find(|s| s.uid == uid)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct SquadMember {
-    pub roster_line: RosterLineId,
-}
-
-/// L'effectif possédé, hydraté depuis `ISquadPort`. Tous les joueurs comptent
-/// pour les quotas, disponibles ou non : un blessé occupe toujours sa place.
-#[derive(Debug, Clone, Default)]
-pub struct SquadSnapshot {
-    pub members: Vec<SquadMember>,
-}
-
-impl SquadSnapshot {
-    fn size(&self) -> usize {
-        self.members.len()
-    }
-
-    fn count_at(&self, line: &RosterLineId) -> usize {
-        self.members
-            .iter()
-            .filter(|m| &m.roster_line == line)
-            .count()
-    }
-}
-
-/// Le staff déjà possédé par l'équipe, hydraté depuis l'agrégat `Team`.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct OwnedStaff {
-    pub rerolls: u32,
-    pub apothecaries: u32,
-    pub assistants: u32,
-    pub cheerleaders: u32,
-}
-
-impl OwnedStaff {
-    pub fn count_of(&self, staff: StaffType) -> u32 {
-        match staff {
-            StaffType::Reroll => self.rerolls,
-            StaffType::Apothecary => self.apothecaries,
-            StaffType::Assistant => self.assistants,
-            StaffType::Cheerleader => self.cheerleaders,
-            StaffType::FansFactor => 0,
-        }
-    }
-}
-
-/// Identifiant du staff dans le corpus de référence. La relance n'en a pas :
-/// elle n'est pas une ligne de `staff_fr.json`.
-pub fn staff_uid(staff: StaffType) -> Option<&'static str> {
-    match staff {
-        StaffType::Apothecary => Some("APOTHECARY"),
-        StaffType::Assistant => Some("COACH_ASSISTANTS"),
-        StaffType::Cheerleader => Some("CHEERLEADERS"),
-        StaffType::FansFactor => Some("FAN_FACTOR"),
-        StaffType::Reroll => None,
-    }
-}
 
 // ── Lignes du panier ──────────────────────────────────────────────────────────
 
@@ -196,12 +70,6 @@ pub enum AppliedLine {
     },
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct RejectedLine {
-    pub id: BasketLineId,
-    pub cause: DomainError,
-}
-
 // ── État d'une action, décidé par le domaine ──────────────────────────────────
 
 /// `Blocked` et `Forbidden` sont distincts parce qu'un quota se libère et qu'un
@@ -222,7 +90,7 @@ pub struct RecruitmentBasket {
     version: BasketVersion,
     lines: Vec<BasketLine>,
     catalog: RosterCatalog,
-    squad: SquadSnapshot,
+    squad: Squad,
     owned_staff: OwnedStaff,
     treasury: Kpo,
 }
@@ -233,7 +101,7 @@ impl RecruitmentBasket {
         version: BasketVersion,
         lines: Vec<BasketLine>,
         catalog: RosterCatalog,
-        squad: SquadSnapshot,
+        squad: Squad,
         owned_staff: OwnedStaff,
         treasury: Kpo,
     ) -> Self {
@@ -558,6 +426,10 @@ impl RecruitmentBasket {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+    use crate::app::teams::domain::basket::{
+        CatalogPosition, CrossLimit, Player, StaffCatalogEntry,
+    };
 
     const PIETAILLE: &str = "DEMO_GRANIT__PIETAILLE";
     const PERCUTEUR: &str = "DEMO_GRANIT__PERCUTEUR";
@@ -630,19 +502,33 @@ mod tests {
         }
     }
 
-    fn effectif(lignes: &[(&str, usize)]) -> SquadSnapshot {
+    /// Le recrutement ne lit que la ligne de roster de chaque membre : le reste
+    /// est rempli de valeurs neutres. Les identifiants restent distincts, sans
+    /// quoi l'effectif ne représenterait qu'un seul joueur répété.
+    fn effectif(lignes: &[(&str, usize)]) -> Squad {
         let mut members = Vec::new();
         for (uid, n) in lignes {
             for _ in 0..*n {
-                members.push(SquadMember {
+                let rang = members.len();
+                members.push(Player {
+                    player_id: identifiant(rang),
                     roster_line: ligne(uid),
+                    personal_name: String::new(),
+                    position_name: String::new(),
+                    spp: 0,
+                    value_kpo: Kpo(0),
+                    available_for_next_match: true,
                 });
             }
         }
-        SquadSnapshot { members }
+        Squad { members }
     }
 
-    fn panier(squad: SquadSnapshot, treasury: u32) -> RecruitmentBasket {
+    fn identifiant(n: usize) -> PlayerId {
+        PlayerId::try_new(&format!("{n:0>26}")).unwrap()
+    }
+
+    fn panier(squad: Squad, treasury: u32) -> RecruitmentBasket {
         RecruitmentBasket::hydrate(
             "t1".into(),
             BasketVersion(1),
@@ -716,7 +602,7 @@ mod tests {
 
     #[test]
     fn t06_poste_absent_du_roster_refuse() {
-        let mut p = panier(SquadSnapshot::default(), 10_000);
+        let mut p = panier(Squad::default(), 10_000);
         assert_eq!(
             p.add_player(ligne("AUTRE_ROSTER__TROLL")),
             Err(DomainError::PositionNotInRoster)
@@ -729,7 +615,7 @@ mod tests {
     /// C'est la vérification **en total**, pas ligne par ligne.
     #[test]
     fn t07_tresorerie_insuffisante_pour_le_total_refuse() {
-        let mut p = panier(SquadSnapshot::default(), 120);
+        let mut p = panier(Squad::default(), 120);
         p.add_player(ligne(PIETAILLE)).unwrap();
         p.add_player(ligne(PIETAILLE)).unwrap();
         assert_eq!(
@@ -743,7 +629,7 @@ mod tests {
 
     #[test]
     fn t08_facteur_fans_non_achetable() {
-        let mut p = panier(SquadSnapshot::default(), 10_000);
+        let mut p = panier(Squad::default(), 10_000);
         assert_eq!(
             p.add_staff(StaffType::FansFactor),
             Err(DomainError::StaffTypeNotBuyable)
@@ -759,7 +645,7 @@ mod tests {
             BasketVersion(1),
             vec![],
             catalogue,
-            SquadSnapshot::default(),
+            Squad::default(),
             OwnedStaff::default(),
             Kpo(10_000),
         );
@@ -771,13 +657,13 @@ mod tests {
 
     #[test]
     fn t10_apothicaire_sur_roster_autorise_accepte() {
-        let mut p = panier(SquadSnapshot::default(), 10_000);
+        let mut p = panier(Squad::default(), 10_000);
         assert!(p.add_staff(StaffType::Apothecary).is_ok());
     }
 
     #[test]
     fn t11_la_neuvieme_relance_refuse() {
-        let mut p = panier(SquadSnapshot::default(), 10_000);
+        let mut p = panier(Squad::default(), 10_000);
         for _ in 0..8 {
             p.add_staff(StaffType::Reroll).unwrap();
         }
@@ -791,7 +677,7 @@ mod tests {
 
     #[test]
     fn t12_prix_de_relance_double_le_prix_de_base_du_roster() {
-        let p = panier(SquadSnapshot::default(), 10_000);
+        let p = panier(Squad::default(), 10_000);
         assert_eq!(
             p.price_for(StaffType::Reroll),
             Kpo(120),
@@ -819,7 +705,7 @@ mod tests {
 
     #[test]
     fn t14_remove_line_sur_identifiant_inconnu_refuse() {
-        let mut p = panier(SquadSnapshot::default(), 200);
+        let mut p = panier(Squad::default(), 200);
         assert_eq!(
             p.remove_line(&BasketLineId("inconnu".into())),
             Err(DomainError::BasketLineNotFound)
@@ -832,7 +718,7 @@ mod tests {
     /// appliqué, pas même les lignes saines.
     #[test]
     fn t15_une_ligne_invalide_et_rien_n_est_applique() {
-        let mut p = panier(SquadSnapshot::default(), 200);
+        let mut p = panier(Squad::default(), 200);
         p.add_player(ligne(PIETAILLE)).unwrap();
         p.add_player(ligne(PIETAILLE)).unwrap();
 
@@ -847,13 +733,13 @@ mod tests {
 
     #[test]
     fn t16_un_panier_vide_donne_un_lot_vide_sans_erreur() {
-        let p = panier(SquadSnapshot::default(), 200);
+        let p = panier(Squad::default(), 200);
         assert_eq!(p.validate_all(), Ok(vec![]));
     }
 
     #[test]
     fn validate_all_rend_les_lignes_applicables() {
-        let mut p = panier(SquadSnapshot::default(), 500);
+        let mut p = panier(Squad::default(), 500);
         p.add_player(ligne(PIETAILLE)).unwrap();
         p.add_staff(StaffType::Apothecary).unwrap();
 
@@ -887,7 +773,7 @@ mod tests {
             }
         );
 
-        let pauvre = panier(SquadSnapshot::default(), 10);
+        let pauvre = panier(Squad::default(), 10);
         assert_eq!(
             pauvre.action_for_position(&ligne(PIETAILLE)),
             ActionState::Blocked {
@@ -912,7 +798,7 @@ mod tests {
     /// apothicaire : les deux états ne se confondent pas.
     #[test]
     fn action_for_staff_distingue_bloque_et_interdit() {
-        let mut p = panier(SquadSnapshot::default(), 10_000);
+        let mut p = panier(Squad::default(), 10_000);
         assert_eq!(
             p.action_for_staff(StaffType::FansFactor),
             ActionState::Forbidden {

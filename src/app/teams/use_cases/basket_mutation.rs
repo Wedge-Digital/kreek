@@ -6,10 +6,9 @@
 //! version. Quotas, limites croisées, plafond d'effectif et trésorerie sont
 //! évalués par l'agrégat, jamais ici.
 
+use crate::app::teams::domain::basket::{BasketLineId, RosterLineId};
 use crate::app::teams::domain::error::DomainError;
-use crate::app::teams::domain::recruitment_basket::{
-    BasketLineId, RecruitmentBasket, RosterLineId,
-};
+use crate::app::teams::domain::recruitment_basket::RecruitmentBasket;
 use crate::app::teams::domain::team::GamePhase;
 use crate::app::teams::ports::{
     IPhaseBasketRepository, IRosterCatalogPort, ISquadPort, ITeamRepository, PhaseBasketState,

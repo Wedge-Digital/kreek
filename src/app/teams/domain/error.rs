@@ -41,6 +41,10 @@ pub enum DomainError {
     BasketLineNotFound,
     /// Le joueur visé n'appartient pas à l'effectif de cette équipe.
     PlayerNotInSquad,
+    /// Le joueur est déjà marqué pour renvoi. Sans cette garde, une seconde
+    /// ligne le compterait deux fois dans le plancher des éligibles, et le lot
+    /// émettrait deux `PlayerDismissed` pour un même joueur.
+    PlayerAlreadyMarked,
 }
 
 impl fmt::Display for DomainError {
@@ -81,6 +85,7 @@ impl fmt::Display for DomainError {
             ),
             Self::BasketLineNotFound => write!(f, "ligne introuvable dans le panier"),
             Self::PlayerNotInSquad => write!(f, "ce joueur n'appartient pas à l'effectif"),
+            Self::PlayerAlreadyMarked => write!(f, "ce joueur est déjà marqué pour renvoi"),
         }
     }
 }

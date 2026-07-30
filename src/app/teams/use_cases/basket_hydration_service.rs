@@ -1,7 +1,9 @@
-use crate::app::teams::domain::recruitment_basket::{
-    BasketLine, BasketVersion, CatalogPosition, CrossLimit, OwnedStaff, RecruitmentBasket,
-    RosterCatalog, RosterLineId, SkillBadge, SquadMember, SquadSnapshot, StaffCatalogEntry,
+use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+use crate::app::teams::domain::basket::{
+    BasketVersion, CatalogPosition, CrossLimit, OwnedStaff, Player, RosterCatalog, RosterLineId,
+    SkillBadge, Squad, StaffCatalogEntry,
 };
+use crate::app::teams::domain::recruitment_basket::{BasketLine, RecruitmentBasket};
 use crate::app::teams::domain::team::{GamePhase, Team};
 use crate::app::teams::domain::value_objects::Kpo;
 use crate::app::teams::ports::{
@@ -13,6 +15,11 @@ use crate::app::teams::ports::{
 pub enum HydrationError {
     RosterNotFound,
     CorruptedBasket(String),
+    /// Un identifiant de joueur illisible. L'hydratation échoue au lieu de
+    /// sauter le membre : un effectif amputé compterait un éligible de moins,
+    /// et le plancher des renvois autoriserait un renvoi qu'il doit refuser.
+    /// Mieux vaut ne rien afficher qu'afficher un effectif faux.
+    CorruptedSquad(String),
     Repository(RepositoryError),
 }
 
@@ -21,6 +28,7 @@ impl std::fmt::Display for HydrationError {
         match self {
             Self::RosterNotFound => write!(f, "roster introuvable dans le catalogue"),
             Self::CorruptedBasket(e) => write!(f, "panier illisible : {e}"),
+            Self::CorruptedSquad(e) => write!(f, "effectif illisible : {e}"),
             Self::Repository(e) => write!(f, "{e}"),
         }
     }
@@ -73,7 +81,7 @@ pub async fn hydrate_recruitment_basket(
         version,
         lines,
         to_domain_catalog(catalogue),
-        to_domain_squad(effectif),
+        to_domain_squad(effectif)?,
         owned_staff_of(team),
         team.treasury,
     ))
@@ -127,17 +135,29 @@ fn to_domain_catalog(dto: RosterCatalogDto) -> RosterCatalog {
 }
 
 /// Tous les joueurs comptent pour les quotas, disponibles ou non : un blessé
-/// occupe toujours sa place dans l'effectif. `available_for_next_match` sert au
-/// calcul de valeur d'équipe, pas au recrutement.
-fn to_domain_squad(membres: Vec<SquadMemberDto>) -> SquadSnapshot {
-    SquadSnapshot {
-        members: membres
-            .into_iter()
-            .map(|m| SquadMember {
-                roster_line: RosterLineId(m.roster_line_id),
-            })
-            .collect(),
+/// occupe toujours sa place dans l'effectif. `available_for_next_match` ne sert
+/// ni au recrutement ni au calcul de valeur d'équipe — c'est le plancher des
+/// renvois qui le lit.
+///
+/// L'effectif est rapporté **entier**. Un identifiant illisible fait échouer
+/// l'hydratation plutôt que de sauter le membre : un effectif amputé compterait
+/// un éligible de moins, et le plancher laisserait passer un renvoi qu'il doit
+/// refuser.
+fn to_domain_squad(membres: Vec<SquadMemberDto>) -> Result<Squad, HydrationError> {
+    let mut members = Vec::with_capacity(membres.len());
+    for m in membres {
+        members.push(Player {
+            player_id: PlayerId::try_new(&m.player_id)
+                .map_err(|e| HydrationError::CorruptedSquad(format!("{} : {e}", m.player_id)))?,
+            roster_line: RosterLineId(m.roster_line_id),
+            personal_name: m.personal_name,
+            position_name: m.position_name,
+            spp: m.spp,
+            value_kpo: Kpo(m.value_kpo),
+            available_for_next_match: m.available_for_next_match,
+        });
     }
+    Ok(Squad { members })
 }
 
 fn owned_staff_of(team: &Team) -> OwnedStaff {

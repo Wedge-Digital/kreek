@@ -1,6 +1,7 @@
 use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+use crate::app::teams::domain::basket::RejectedLine;
 use crate::app::teams::domain::error::DomainError;
-use crate::app::teams::domain::recruitment_basket::{AppliedLine, RejectedLine};
+use crate::app::teams::domain::recruitment_basket::AppliedLine;
 use crate::app::teams::domain::team::{GamePhase, TeamDomainEvent};
 use crate::app::teams::domain::value_objects::StaffQuantity;
 use crate::app::teams::ports::{
@@ -116,7 +117,8 @@ mod tests {
     };
     use crate::app::shared_kernel::bloodbowl::team::TeamId;
     use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
-    use crate::app::teams::domain::recruitment_basket::{BasketLine, BasketLineId, RosterLineId};
+    use crate::app::teams::domain::basket::{BasketLineId, RosterLineId};
+    use crate::app::teams::domain::recruitment_basket::BasketLine;
     use crate::app::teams::domain::value_objects::{DedicatedFans, Kpo, RosterName, TeamName};
     use crate::app::teams::ports::PhaseBasketState;
     use crate::app::teams::use_cases::test_doubles::{

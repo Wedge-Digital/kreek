@@ -8,10 +8,9 @@
 //! contente de le formuler. C'est ce qui permet de n'écrire chaque règle
 //! qu'une fois.
 
+use crate::app::teams::domain::basket::{RosterLineId, SkillBadge};
 use crate::app::teams::domain::error::DomainError;
-use crate::app::teams::domain::recruitment_basket::{
-    ActionState, BasketLine, RecruitmentBasket, RosterLineId, SkillBadge,
-};
+use crate::app::teams::domain::recruitment_basket::{ActionState, BasketLine, RecruitmentBasket};
 use crate::app::teams::domain::team::Team;
 use crate::app::teams::domain::value_objects::StaffType;
 use crate::app::teams::routes::Routes;
@@ -291,7 +290,7 @@ impl StaffRowVm {
 fn quota_staff(basket: &RecruitmentBasket, staff: StaffType) -> u8 {
     match staff {
         StaffType::Reroll => 8,
-        autre => crate::app::teams::domain::recruitment_basket::staff_uid(autre)
+        autre => crate::app::teams::domain::basket::staff_uid(autre)
             .and_then(|uid| basket.catalog().staff_entry(uid))
             .map(|e| e.max_quantity as u8)
             .unwrap_or(0),
@@ -542,9 +541,10 @@ fn explication_longue_ou_courte(cause: &DomainError) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::teams::domain::recruitment_basket::{
-        BasketLineId, BasketVersion, CatalogPosition, OwnedStaff, RosterCatalog, SquadMember,
-        SquadSnapshot, StaffCatalogEntry,
+    use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+    use crate::app::teams::domain::basket::{
+        BasketLineId, BasketVersion, CatalogPosition, OwnedStaff, Player, RosterCatalog, Squad,
+        StaffCatalogEntry,
     };
     use crate::app::teams::domain::value_objects::Kpo;
 
@@ -594,11 +594,18 @@ mod tests {
             BasketVersion(3),
             lignes,
             catalogue(),
-            SquadSnapshot {
+            Squad {
                 members: effectif
                     .iter()
-                    .map(|l| SquadMember {
+                    .enumerate()
+                    .map(|(rang, l)| Player {
+                        player_id: PlayerId::try_new(&format!("{rang:0>26}")).unwrap(),
                         roster_line: RosterLineId((*l).into()),
+                        personal_name: String::new(),
+                        position_name: String::new(),
+                        spp: 0,
+                        value_kpo: Kpo(0),
+                        available_for_next_match: true,
                     })
                     .collect(),
             },
