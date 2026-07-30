@@ -119,6 +119,15 @@
 "test_recruitment_phase" = ["teams", "players", "match_report", "spp_calculator",
                             "competitions", "references", "ranking",
                             "team_creation", "spaces"]
+# Même périmètre que le recrutement, pour les mêmes raisons — plus une blessure
+# infligée en match, qui fait de `match_report` une dépendance doublement dure :
+# c'est le seul chemin vers la phase, et le seul moyen de rendre un joueur
+# absent. `players` y est vérifié et non traversé : le scénario 8 contrôle que
+# la valeur d'équipe exclut les renvoyés, ce qui met à l'épreuve toute la
+# chaîne teams → players → teams.
+"test_dismissals_phase" = ["teams", "players", "match_report", "spp_calculator",
+                           "competitions", "references", "ranking",
+                           "team_creation", "spaces"]
 
 # ── Classement ───────────────────────────────────────────────────────────────
 "test_ranking_bonus" = ["ranking", "competitions", "match_report", "teams", "players",
