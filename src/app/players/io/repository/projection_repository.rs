@@ -26,7 +26,7 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
                     personal_name, jersey, base_skills, acquired_skills, spp, value_kpo,
                     participation_status
              FROM players_proj
-             WHERE team_id = $1
+             WHERE team_id = $1 AND membership = 'Active'
              ORDER BY jersey NULLS LAST, player_id",
         )
         .bind(&team_id.0)
@@ -103,10 +103,28 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
 
     /// Compté en base plutôt qu'en mémoire : l'appelant ne veut qu'un nombre,
     /// pas de quoi charger tout l'effectif pour le filtrer ensuite.
+    async fn jerseys_by_team_id(&self, team_id: &TeamId) -> Result<Vec<u16>, RepositoryError> {
+        let lignes: Vec<(Option<i16>,)> = sqlx::query_as(
+            "SELECT jersey FROM players_proj WHERE team_id = $1 AND membership = 'Active'",
+        )
+        .bind(&team_id.0)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+
+        Ok(lignes
+            .into_iter()
+            .filter_map(|(j,)| j)
+            .filter(|j| *j > 0)
+            .map(|j| j as u16)
+            .collect())
+    }
+
     async fn count_available_by_team_id(&self, team_id: &TeamId) -> Result<usize, RepositoryError> {
         let row: (i64,) = sqlx::query_as(
             "SELECT COUNT(*) FROM players_proj \
-             WHERE team_id = $1 AND participation_status = 'Available'",
+             WHERE team_id = $1 AND membership = 'Active' \
+               AND participation_status = 'Available'",
         )
         .bind(&team_id.0)
         .fetch_one(&self.pool)

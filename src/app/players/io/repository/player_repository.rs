@@ -67,6 +67,9 @@ fn player_and_team_id(event: &PlayerDomainEvent) -> (&str, &str) {
         PlayerDomainEvent::MatchImpactReverted {
             player_id, team_id, ..
         } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::PlayerDismissed {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
     }
 }
 
@@ -341,6 +344,21 @@ pub async fn upsert_player_projection(
             .await
             .map_err(RepositoryError::Database)?;
         }
+
+        // Le joueur sort de l'effectif sans rien perdre : SPP, compétences et
+        // historique restent en place. Seule l'appartenance change, et c'est
+        // elle que toutes les lectures d'effectif filtrent désormais.
+        PlayerDomainEvent::PlayerDismissed { player_id, .. } => {
+            sqlx::query(
+                "UPDATE players_proj
+                 SET membership = 'Dismissed', version = version + 1
+                 WHERE player_id = $1",
+            )
+            .bind(&player_id.0)
+            .execute(&mut **tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+        }
     }
 
     Ok(())
@@ -522,6 +540,13 @@ impl IPlayerRepository for PgPlayerRepository {
         let players = order
             .iter()
             .filter_map(|pid| Player::from_events(groups.get(pid)?))
+            // Les renvoyés ne font plus partie de l'effectif. Le filtre est ici
+            // plutôt que dans le SQL, parce que l'appartenance se déduit des
+            // événements et non d'une colonne de l'event store — et il n'existe
+            // pas de variante « avec les renvoyés » : aucun appelant n'a de
+            // filtre à écrire, donc aucun ne peut l'oublier. `find_by_id` reste
+            // ouvert : un renvoyé n'est pas effacé.
+            .filter(|p| p.membership.is_active())
             .collect();
 
         Ok(players)

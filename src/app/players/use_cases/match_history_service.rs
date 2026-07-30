@@ -98,7 +98,9 @@ fn event_match_report_id(event: &PlayerDomainEvent) -> Option<String> {
         | PlayerDomainEvent::PlayerStatIncreased { .. }
         // Traité en amont de la boucle : il retire une entrée au lieu d'en
         // alimenter une.
-        | PlayerDomainEvent::MatchImpactReverted { .. } => None,
+        | PlayerDomainEvent::MatchImpactReverted { .. }
+        // Décision de coach, hors de tout match : rien à rattacher.
+        | PlayerDomainEvent::PlayerDismissed { .. } => None,
     }
 }
 
@@ -150,7 +152,8 @@ fn apply_event(entry: &mut MatchHistoryEntry, event: &PlayerDomainEvent) {
         | PlayerDomainEvent::PlayerAvailabilityRestored { .. }
         | PlayerDomainEvent::PlayerSkillPurchased { .. }
         | PlayerDomainEvent::PlayerStatIncreased { .. }
-        | PlayerDomainEvent::MatchImpactReverted { .. } => {}
+        | PlayerDomainEvent::MatchImpactReverted { .. }
+        | PlayerDomainEvent::PlayerDismissed { .. } => {}
     }
 }
 

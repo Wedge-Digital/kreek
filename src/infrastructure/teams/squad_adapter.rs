@@ -16,8 +16,12 @@ impl SquadAdapter {
 /// `Dead` ne le sont pas. C'est ici, et nulle part ailleurs, que le vocabulaire
 /// de `players` est traduit — `teams` ne connaît que le booléen.
 ///
-/// **Carte 260** : un joueur devra aussi être *membre actif* de l'effectif. La
-/// conjonction se pose ici, dès que `players_proj.membership` existe.
+/// La carte 259 attendait ici une conjonction avec « membre actif ». La carte
+/// 260 l'a résolue autrement, et mieux : l'appartenance filtre **la requête**,
+/// pas ce prédicat. Un renvoyé n'est pas un joueur indisponible de plus — il
+/// n'est plus de l'effectif, donc sa ligne n'existe pas. La conjonction
+/// l'aurait laissé occuper sa place dans les quotas de poste et le plafond de
+/// seize, et l'aurait affiché renvoyable une seconde fois.
 fn is_available(participation_status: &str) -> bool {
     participation_status == "Available"
 }
@@ -39,7 +43,8 @@ impl ISquadPort for SquadAdapter {
         let rows: Vec<LigneEffectif> = sqlx::query_as(
             "SELECT player_id, roster_line_id, jersey, personal_name, position_name,
                     spp, value_kpo, participation_status
-             FROM players_proj WHERE team_id = $1
+             FROM players_proj
+             WHERE team_id = $1 AND membership = 'Active'
              ORDER BY jersey NULLS LAST, player_id",
         )
         .bind(team_id)
@@ -137,6 +142,32 @@ mod tests {
         assert_eq!(m.value_kpo, 50);
         assert_eq!(m.jersey, Some(3));
         assert!(m.available_for_next_match);
+    }
+
+    /// Un renvoyé, lui, n'y figure plus du tout — et c'est ce qui le distingue
+    /// d'un blessé. Sans cette exclusion il continuerait d'occuper sa place
+    /// dans les quotas de poste, dans le plafond de seize, et dans la valeur
+    /// d'équipe.
+    #[tokio::test]
+    async fn un_renvoye_ne_fait_plus_partie_de_l_effectif() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let team_id = ulid::Ulid::new().to_string();
+        let renvoye = ulid::Ulid::new().to_string();
+        seed(&pool, &team_id, &renvoye, "Available").await;
+        seed(&pool, &team_id, &ulid::Ulid::new().to_string(), "Available").await;
+
+        sqlx::query("UPDATE players_proj SET membership = 'Dismissed' WHERE player_id = $1")
+            .bind(&renvoye)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let effectif = SquadAdapter::new(pool).find_squad(&team_id).await;
+
+        assert_eq!(effectif.len(), 1, "un seul appartient encore à l'effectif");
+        assert_ne!(effectif[0].player_id, renvoye);
     }
 
     /// L'effectif est rendu **entier** : un blessé y figure, drapeau à faux.

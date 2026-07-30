@@ -5,7 +5,7 @@ use crate::app::players::domain::match_impact::{
     InjuryType, MatchContext, MatchReportId, RoundId, SppEarned,
 };
 use crate::app::players::domain::player::{Player, PlayerId, Spp, TeamId, ValueKpo};
-use crate::app::players::domain::value_objects::{PositionNameVo, RosterLineId};
+use crate::app::players::domain::value_objects::{JerseyVo, PositionNameVo, RosterLineId};
 use crate::app::players::io::repository::player_repository::PgPlayerRepository;
 use crate::app::players::io::repository::projection_repository::PgPlayerProjectionRepository;
 use crate::app::players::ports::{IPlayerProjectionRepository, IPlayerRepository};
@@ -36,6 +36,106 @@ async fn seed_player(repo: &PgPlayerRepository, player_id: &PlayerId, team_id: &
     };
     repo.append(player_id, team_id, &created, 1).await.unwrap();
     Player::from_events(&[created]).unwrap()
+}
+
+async fn seed_player_with_jersey(
+    repo: &PgPlayerRepository,
+    player_id: &PlayerId,
+    team_id: &TeamId,
+    jersey: u16,
+) {
+    let created = PlayerDomainEvent::PlayerCreated {
+        player_id: player_id.clone(),
+        team_id: team_id.clone(),
+        space_id: SpaceId::new(),
+        position_name: PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
+        roster_line_id: RosterLineId::try_new("BLITZER".to_string()).unwrap(),
+        jersey: Some(JerseyVo::try_new(jersey).unwrap()),
+        base_skills: vec![],
+        starting_spp: Spp(0),
+        starting_value: ValueKpo(100),
+    };
+    repo.append(player_id, team_id, &created, 1).await.unwrap();
+}
+
+// ── Appartenance à l'effectif (carte 260) ────────────────────────────────────
+
+/// Un renvoyé sort de l'effectif sans être effacé : c'est toute la différence
+/// entre `find_by_team_id` et `find_by_id`, et c'est ce qui permet à ses SPP et
+/// à son historique de survivre.
+#[sqlx::test]
+async fn un_renvoye_quitte_l_effectif_mais_reste_lisible(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let team_id = TeamId("t-renvois".into());
+    let renvoye = PlayerId("parti".into());
+    let reste = PlayerId("reste".into());
+
+    seed_player(&repo, &renvoye, &team_id).await;
+    seed_player(&repo, &reste, &team_id).await;
+    assert_eq!(repo.find_by_team_id(&team_id).await.unwrap().len(), 2);
+
+    let renvoi = PlayerDomainEvent::PlayerDismissed {
+        player_id: renvoye.clone(),
+        team_id: team_id.clone(),
+    };
+    repo.append(&renvoye, &team_id, &renvoi, 2).await.unwrap();
+
+    let effectif = repo.find_by_team_id(&team_id).await.unwrap();
+    assert_eq!(effectif.len(), 1, "le renvoyé a quitté l'effectif");
+    assert_eq!(effectif[0].id, reste);
+
+    let toujours_la = repo.find_by_id(&renvoye).await.unwrap().unwrap();
+    assert!(!toujours_la.membership.is_active());
+    assert_eq!(toujours_la.value, ValueKpo(100), "il garde sa valeur");
+}
+
+#[sqlx::test]
+async fn un_renvoye_disparait_aussi_de_la_projection(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool);
+    let team_id = TeamId("t-proj-renvois".into());
+    let renvoye = PlayerId("parti-proj".into());
+
+    seed_player(&repo, &renvoye, &team_id).await;
+    let renvoi = PlayerDomainEvent::PlayerDismissed {
+        player_id: renvoye.clone(),
+        team_id: team_id.clone(),
+    };
+    repo.append(&renvoye, &team_id, &renvoi, 2).await.unwrap();
+
+    assert!(proj.find_by_team_id(&team_id).await.unwrap().is_empty());
+    assert_eq!(proj.count_available_by_team_id(&team_id).await.unwrap(), 0);
+    // Non effacé pour autant : la fiche du joueur reste consultable.
+    assert!(proj.find_by_id(&renvoye.0).await.unwrap().is_some());
+}
+
+/// La promesse de la carte 265, enfin vraie : le numéro d'un renvoyé redevient
+/// attribuable. Elle ne l'était pas tant que la recherche de maillot lisait
+/// `players_proj` par elle-même.
+#[sqlx::test]
+async fn le_maillot_d_un_renvoye_redevient_attribuable(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool);
+    let team_id = TeamId("t-maillots".into());
+    let porteur = PlayerId("porteur-du-3".into());
+
+    seed_player_with_jersey(&repo, &PlayerId("un".into()), &team_id, 1).await;
+    seed_player_with_jersey(&repo, &PlayerId("deux".into()), &team_id, 2).await;
+    seed_player_with_jersey(&repo, &porteur, &team_id, 3).await;
+
+    let mut pris = proj.jerseys_by_team_id(&team_id).await.unwrap();
+    pris.sort_unstable();
+    assert_eq!(pris, vec![1, 2, 3]);
+
+    let renvoi = PlayerDomainEvent::PlayerDismissed {
+        player_id: porteur.clone(),
+        team_id: team_id.clone(),
+    };
+    repo.append(&porteur, &team_id, &renvoi, 2).await.unwrap();
+
+    let mut apres = proj.jerseys_by_team_id(&team_id).await.unwrap();
+    apres.sort_unstable();
+    assert_eq!(apres, vec![1, 2], "le 3 est libéré");
 }
 
 #[sqlx::test]

@@ -10,7 +10,7 @@
 use crate::app::players::io::app_events::player_creation::{
     creer_joueur, nom_de_poste, prochain_maillot_libre, ListenerError,
 };
-use crate::app::players::ports::ISkillCatalogPort;
+use crate::app::players::ports::{IPlayerProjectionRepository, ISkillCatalogPort};
 use crate::app::shared_kernel::app_events::teams_app_events::TeamsAppEvent;
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
@@ -26,9 +26,10 @@ async fn handle_player_recruited(
     player_id: &str,
     roster_line_id: &str,
     pool: &PgPool,
+    projections: &dyn IPlayerProjectionRepository,
     catalog: &dyn ISkillCatalogPort,
 ) -> Result<(), ListenerError> {
-    let jersey = prochain_maillot_libre(team_id, pool).await;
+    let jersey = prochain_maillot_libre(team_id, projections).await;
     creer_joueur(
         team_id,
         space_id,
@@ -42,7 +43,12 @@ async fn handle_player_recruited(
     .await
 }
 
-pub fn init(app_event_bus: &EventBus, pool: PgPool, skill_catalog: Arc<dyn ISkillCatalogPort>) {
+pub fn init(
+    app_event_bus: &EventBus,
+    pool: PgPool,
+    projections: Arc<dyn IPlayerProjectionRepository>,
+    skill_catalog: Arc<dyn ISkillCatalogPort>,
+) {
     let mut rx = app_event_bus.subscribe();
     tokio::spawn(async move {
         loop {
@@ -66,6 +72,7 @@ pub fn init(app_event_bus: &EventBus, pool: PgPool, skill_catalog: Arc<dyn ISkil
                         &player_id.to_string(),
                         &roster_line_id,
                         &pool,
+                        projections.as_ref(),
                         skill_catalog.as_ref(),
                     )
                     .await

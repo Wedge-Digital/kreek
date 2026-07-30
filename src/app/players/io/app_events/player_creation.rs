@@ -13,7 +13,7 @@ use crate::app::players::domain::value_objects::{JerseyVo, PositionNameVo, Roste
 use crate::app::players::io::repository::player_repository::{
     insert_player_event, upsert_player_projection,
 };
-use crate::app::players::ports::{ISkillCatalogPort, RepositoryError};
+use crate::app::players::ports::{IPlayerProjectionRepository, ISkillCatalogPort, RepositoryError};
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use sqlx::PgPool;
 use std::fmt;
@@ -119,19 +119,21 @@ pub async fn creer_joueur(
 /// Un trou laissé par un départ est donc rebouché, ce qui est le comportement
 /// attendu : les numéros sont une ressource de seize places, pas une suite
 /// chronologique.
-pub async fn prochain_maillot_libre(team_id: &str, pool: &PgPool) -> Option<u16> {
-    let lignes: Vec<(Option<i16>,)> =
-        sqlx::query_as("SELECT jersey FROM players_proj WHERE team_id = $1")
-            .bind(team_id)
-            .fetch_all(pool)
-            .await
-            .ok()?;
-    let pris: Vec<u16> = lignes
-        .into_iter()
-        .filter_map(|(j,)| j)
-        .filter(|j| *j > 0)
-        .map(|j| j as u16)
-        .collect();
+///
+/// Les numéros portés viennent du repository et non d'une requête écrite ici.
+/// La carte 265 promettait qu'un maillot libéré par un renvoi redeviendrait
+/// disponible « d'office, puisque le joueur `Dismissed` n'est plus lu par
+/// `find_by_team_id` » — c'était faux tant que cette fonction lisait
+/// `players_proj` par elle-même. Le filtre d'appartenance ne vaut que là où
+/// toutes les lectures passent.
+pub async fn prochain_maillot_libre(
+    team_id: &str,
+    projections: &dyn IPlayerProjectionRepository,
+) -> Option<u16> {
+    let pris = projections
+        .jerseys_by_team_id(&TeamId(team_id.to_string()))
+        .await
+        .ok()?;
     premier_libre(&pris)
 }
 

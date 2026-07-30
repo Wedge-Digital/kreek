@@ -53,6 +53,43 @@ pub struct StatIncrease {
 
 // ── Agrégat Player ─────────────────────────────────────────────────────────────
 
+/// Appartenance à l'effectif — un axe **distinct** de la participation.
+///
+/// `PlayerParticipationStatus` vit dans `match_impact.rs` et décrit ce qu'un
+/// match a fait au joueur : disponible, absent, mort. L'appartenance, elle,
+/// répond à une décision de coach — « ce joueur est-il encore de l'équipe ? »
+/// — et c'est elle qui décide si le joueur figure dans l'effectif.
+///
+/// Les mêler reviendrait à faire d'un renvoyé un blessé de plus, qui
+/// continuerait d'occuper sa place dans les quotas et le plafond de seize.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RosterMembership {
+    Active,
+    Dismissed,
+}
+
+impl RosterMembership {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Active => "Active",
+            Self::Dismissed => "Dismissed",
+        }
+    }
+
+    /// Tout ce qui n'est pas explicitement un renvoi est une appartenance :
+    /// c'est le défaut de la colonne, et celui d'un agrégat rejoué.
+    pub fn from_str(valeur: &str) -> Self {
+        match valeur {
+            "Dismissed" => Self::Dismissed,
+            _ => Self::Active,
+        }
+    }
+
+    pub fn is_active(&self) -> bool {
+        matches!(self, Self::Active)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Player {
     pub id: PlayerId,
@@ -66,6 +103,10 @@ pub struct Player {
     pub stat_increases: Vec<StatIncrease>,
     pub spp: Spp,
     pub value: ValueKpo,
+
+    /// Hors du bloc ci-dessous, et c'est le sujet de la carte 260 : un renvoi
+    /// est une décision de coach, pas une conséquence de match.
+    pub membership: RosterMembership,
 
     // ── Impact des rapports de match ───────────────────────────────────────────
     pub participation_status: PlayerParticipationStatus,
@@ -175,6 +216,7 @@ impl Player {
                 Some(Self {
                     id: player_id.clone(),
                     team_id: team_id.clone(),
+                    membership: RosterMembership::Active,
                     space_id: space_id.clone(),
                     position_name: position_name.clone(),
                     roster_line_id: roster_line_id.clone(),
@@ -400,6 +442,15 @@ impl Player {
             } => {
                 let mut player = current?;
                 player.revert_last_match(match_report_id);
+                player.version += 1;
+                Some(player)
+            }
+            // Le joueur n'est pas effacé : il garde ses SPP, ses compétences et
+            // son historique. Seule son appartenance change, et c'est elle que
+            // les lectures d'effectif regardent.
+            PlayerDomainEvent::PlayerDismissed { .. } => {
+                let mut player = current?;
+                player.membership = RosterMembership::Dismissed;
                 player.version += 1;
                 Some(player)
             }

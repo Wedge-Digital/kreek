@@ -133,6 +133,17 @@ pub enum PlayerDomainEvent {
         team_id: TeamId,
         match_report_id: MatchReportId,
     },
+    /// Le coach a renvoyé ce joueur. Il cesse d'appartenir à l'effectif ; il
+    /// n'est pas effacé — `players` est event-sourcé, et le joueur garde ses
+    /// SPP, ses compétences et son historique.
+    ///
+    /// Homonyme de l'événement domaine de `teams` et de l'app event qui les
+    /// relie : nommer le même fait pareil des deux côtés n'est pas nommer un
+    /// événement d'après son origine externe, que le CLAUDE.md interdit.
+    PlayerDismissed {
+        player_id: PlayerId,
+        team_id: TeamId,
+    },
 }
 
 impl PlayerDomainEvent {
@@ -152,6 +163,7 @@ impl PlayerDomainEvent {
             Self::PlayerAvailabilityRestored { .. } => "PlayerAvailabilityRestored",
             Self::MatchConcluded { .. } => "MatchConcluded",
             Self::MatchImpactReverted { .. } => "MatchImpactReverted",
+            Self::PlayerDismissed { .. } => "PlayerDismissed",
             Self::InitialRosterCompleted { .. } => "InitialRosterCompleted",
         }
     }

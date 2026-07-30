@@ -62,6 +62,15 @@ pub trait IPlayerProjectionRepository: Send + Sync {
         player_id: &str,
     ) -> Result<Option<PlayerProjection>, RepositoryError>;
 
+    /// Les numéros de maillot **portés** dans l'équipe.
+    ///
+    /// Sert à attribuer le premier libre à un nouveau venu. Passe par le
+    /// repository, et non par une requête à part, pour que le filtre
+    /// d'appartenance vive au même endroit que celui des autres lectures : un
+    /// maillot laissé par un renvoyé doit redevenir attribuable, et c'est
+    /// exactement ce qu'une seconde requête avait déjà failli manquer.
+    async fn jerseys_by_team_id(&self, team_id: &TeamId) -> Result<Vec<u16>, RepositoryError>;
+
     /// Nombre de joueurs alignables au prochain match — les indisponibles
     /// (`MissingNextGame`, `Retired`, `Dead`) en sont exclus.
     ///

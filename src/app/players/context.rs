@@ -53,12 +53,14 @@ pub fn init_listeners(
 ) {
     players_app_event_publisher(event_bus, app_event_bus.clone());
     let player_repo: Arc<dyn IPlayerRepository> = Arc::new(PgPlayerRepository::new(pool.clone()));
+    let projections: Arc<dyn IPlayerProjectionRepository> =
+        Arc::new(PgPlayerProjectionRepository::new(pool.clone()));
     team_created_listener::init(
         app_event_bus,
         event_bus.clone(),
         pool.clone(),
         skill_catalog.clone(),
     );
-    player_recruited_listener::init(app_event_bus, pool, skill_catalog.clone());
+    player_recruited_listener::init(app_event_bus, pool, projections, skill_catalog.clone());
     player_match_impact_listener::init(app_event_bus, player_repo, skill_catalog);
 }
