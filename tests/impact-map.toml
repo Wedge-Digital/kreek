@@ -99,6 +99,13 @@
 "test_pairing_deletion" = ["competitions", "match_report", "teams", "players",
                            "references", "ranking", "team_creation", "spaces", "spp_calculator"]
 
+# Coups de pouce et trésorerie : le seul test qui achète réellement des
+# inducements. `teams` y est vérifié, pas traversé — c'est sa trésorerie et son
+# grand livre qui sont contrôlés, des deux côtés du match.
+"test_inducement_treasury" = ["match_report", "teams", "references", "players",
+                              "competitions", "ranking", "team_creation", "spaces",
+                              "spp_calculator"]
+
 # ── Joueurs ──────────────────────────────────────────────────────────────────
 "test_player_detail" = ["players", "match_report", "teams", "spp_calculator",
                         "competitions", "references", "ranking", "team_creation", "spaces"]

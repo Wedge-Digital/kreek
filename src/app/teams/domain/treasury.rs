@@ -27,6 +27,12 @@ pub enum MovementReason {
     MatchIncomeReverted,
     /// Bourde coûteuse de la séquence d'après-match.
     CostlyMistake,
+    /// Coups de pouce achetés pour un match. Ce qui sort de la caisse, pas ce
+    /// qui a été acheté : la petite monnaie de l'underdog n'en fait pas partie.
+    InducementPurchase,
+    /// Rendu à la dépublication d'un rapport, pour que la correction ne laisse
+    /// pas l'équipe payer un match qui n'a plus eu lieu.
+    InducementRefunded,
     PlayerRecruitment,
     StaffPurchase,
 }
@@ -38,6 +44,8 @@ impl MovementReason {
             Self::MatchIncome => "MatchIncome",
             Self::MatchIncomeReverted => "MatchIncomeReverted",
             Self::CostlyMistake => "CostlyMistake",
+            Self::InducementPurchase => "InducementPurchase",
+            Self::InducementRefunded => "InducementRefunded",
             Self::PlayerRecruitment => "PlayerRecruitment",
             Self::StaffPurchase => "StaffPurchase",
         }

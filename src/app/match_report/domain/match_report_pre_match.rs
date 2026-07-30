@@ -10,6 +10,10 @@ use crate::app::match_report::domain::value_objects::{
 };
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
+
+/// Ce que l'underdog peut ajouter à sa petite monnaie, pris à sa trésorerie.
+/// Plafond de règlement, pas de configuration.
+const MAX_TREASURY_TOP_UP: u32 = 50;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 
@@ -127,16 +131,63 @@ impl MatchReportPreMatch {
             .sum()
     }
 
+    /// La petite monnaie de l'underdog : l'écart de valeur d'équipe, plus ce que
+    /// le top dog a lui-même dépensé.
+    ///
+    /// Elle est **dynamique** — un achat de plus côté top dog l'augmente, et
+    /// c'est voulu : elle compense l'écart au moment où il se creuse.
+    pub fn petty_cash(&self) -> u32 {
+        let tv_diff = self
+            .home_team_value
+            .unwrap()
+            .into_inner()
+            .abs_diff(self.away_team_value.unwrap().into_inner());
+        tv_diff + self.topdog_spending()
+    }
+
+    /// Ce qu'une équipe a le droit de dépenser en coups de pouce.
+    ///
+    /// Le top dog n'achète qu'avec sa trésorerie. L'underdog dépense d'abord sa
+    /// petite monnaie, puis complète avec **50 kPo au plus** pris à sa caisse —
+    /// et seulement s'il les a.
     pub fn inducement_budget_for(&self, team_id: &TeamId, treasury: u32) -> u32 {
         if team_id == self.topdog_team_id() {
             treasury
         } else {
-            let tv_diff = self
-                .home_team_value
-                .unwrap()
-                .into_inner()
-                .abs_diff(self.away_team_value.unwrap().into_inner());
-            tv_diff + self.topdog_spending() + treasury.min(50)
+            self.petty_cash() + treasury.min(MAX_TREASURY_TOP_UP)
+        }
+    }
+
+    /// Ce que ces achats retirent réellement à la trésorerie — qui n'est pas le
+    /// montant acheté.
+    ///
+    /// Le top dog paie tout. L'underdog puise d'abord dans sa petite monnaie,
+    /// qui ne vient de nulle part et ne coûte rien : seul le dépassement sort de
+    /// sa caisse.
+    ///
+    /// Le plafond de 50 kPo n'est pas réappliqué ici : `inducement_budget_for`
+    /// l'a déjà imposé en amont, donc la différence ne peut pas le dépasser.
+    /// L'écrire une seconde fois donnerait deux endroits à corriger le jour où
+    /// il change.
+    pub fn treasury_spending_for(&self, team_id: &TeamId) -> u32 {
+        // Sans valeurs d'équipe, il n'y a ni top dog ni petite monnaie — et il
+        // ne peut pas y avoir d'achats non plus : `record_inducements_use_case`
+        // les exige et refuse par `TeamValuesNotRecorded` sans elles. Rendre
+        // zéro garde la méthode **totale**, y compris pour un rapport publié
+        // sans jamais passer par l'étape des coups de pouce, qui est le cas le
+        // plus courant.
+        if self.home_team_value.is_none() || self.away_team_value.is_none() {
+            return 0;
+        }
+        let depense: u32 = self
+            .purchases_for(team_id)
+            .iter()
+            .map(|p| p.total_cost())
+            .sum();
+        if team_id == self.topdog_team_id() {
+            depense
+        } else {
+            depense.saturating_sub(self.petty_cash())
         }
     }
 
@@ -624,6 +675,82 @@ mod tests {
         // diff = 100 kPo, treasury = 0
         let pm = make_pm(1100, 1000);
         assert_eq!(pm.inducement_budget_for(&pm.away_team_id, 0), 100);
+    }
+
+    // ── Ce qui sort réellement de la caisse ───────────────────────────────
+    //
+    // Le montant acheté n'est pas le montant payé : la petite monnaie de
+    // l'underdog ne vient d'aucune trésorerie. Ces tests sont ceux du bug —
+    // aucun débit n'avait lieu avant qu'ils existent.
+
+    fn achat(cout: u32, qty: u8) -> InducementPurchase {
+        InducementPurchase {
+            uid: InducementId("BLOODWEISER".into()),
+            qty: InducementQty::try_new(qty).unwrap(),
+            unit_cost: InducementCost::try_new(cout).unwrap(),
+        }
+    }
+
+    #[test]
+    fn le_topdog_paie_l_integralite_de_ses_achats() {
+        let mut pm = make_pm(1100, 1000);
+        pm.home_inducements = Some(vec![achat(50, 2)]);
+        assert_eq!(pm.treasury_spending_for(&pm.home_team_id), 100);
+    }
+
+    /// La petite monnaie couvre tout : rien ne sort de la trésorerie. C'est le
+    /// cas le plus courant, et celui qu'un débit naïf du montant acheté aurait
+    /// facturé à tort.
+    #[test]
+    fn l_underdog_ne_paie_rien_sous_sa_petite_monnaie() {
+        let mut pm = make_pm(1100, 1000); // écart de 100
+        pm.away_inducements = Some(vec![achat(30, 2)]); // 60 acheté
+        assert_eq!(pm.petty_cash(), 100);
+        assert_eq!(pm.treasury_spending_for(&pm.away_team_id), 0);
+    }
+
+    #[test]
+    fn l_underdog_ne_paie_que_le_depassement() {
+        let mut pm = make_pm(1100, 1000); // écart de 100
+        pm.away_inducements = Some(vec![achat(50, 3)]); // 150 acheté
+        assert_eq!(pm.treasury_spending_for(&pm.away_team_id), 50);
+    }
+
+    /// La petite monnaie grandit avec les achats du top dog : ce que l'underdog
+    /// paie de sa poche diminue d'autant. Sans ce lien, il paierait un écart
+    /// que le top dog vient lui-même de creuser.
+    #[test]
+    fn les_achats_du_topdog_reduisent_ce_que_paie_l_underdog() {
+        let mut pm = make_pm(1100, 1000);
+        pm.away_inducements = Some(vec![achat(50, 3)]); // 150 acheté
+        assert_eq!(pm.treasury_spending_for(&pm.away_team_id), 50);
+
+        pm.home_inducements = Some(vec![achat(40, 1)]); // le top dog dépense 40
+        assert_eq!(pm.petty_cash(), 140);
+        assert_eq!(pm.treasury_spending_for(&pm.away_team_id), 10);
+    }
+
+    /// Conséquence du garde-fou, vérifiée plutôt que supposée : le budget
+    /// plafonne l'appoint à 50 kPo, donc le dépassement ne peut jamais aller
+    /// au-delà. C'est pour ça que `treasury_spending_for` ne réapplique pas le
+    /// plafond — il serait alors écrit à deux endroits.
+    #[test]
+    fn le_depassement_ne_peut_pas_exceder_le_plafond_de_50() {
+        let pm = make_pm(1100, 1000);
+        let budget = pm.inducement_budget_for(&pm.away_team_id, 500);
+        assert_eq!(budget, 150, "petite monnaie 100 + 50 au plus");
+        assert_eq!(budget - pm.petty_cash(), 50);
+    }
+
+    /// Un rapport publié sans jamais passer par l'étape des coups de pouce n'a
+    /// pas de valeurs d'équipe. La méthode doit rester totale : c'est ce qui
+    /// l'a fait paniquer sur six tests avant d'être gardée.
+    #[test]
+    fn sans_valeurs_d_equipe_la_depense_est_nulle() {
+        let mut pm = make_pm(1100, 1000);
+        pm.home_team_value = None;
+        pm.away_team_value = None;
+        assert_eq!(pm.treasury_spending_for(&pm.home_team_id), 0);
     }
 
     #[test]

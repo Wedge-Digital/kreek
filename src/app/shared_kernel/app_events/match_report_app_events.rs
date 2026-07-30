@@ -59,6 +59,14 @@ pub struct MatchReportPublishedPayload {
     pub away_score: u8,
     pub home_gain_kpo: u32,
     pub away_gain_kpo: u32,
+    /// Ce que les coups de pouce retirent à chaque trésorerie — le montant
+    /// **effectivement payé**, pas le montant acheté : la petite monnaie de
+    /// l'underdog ne sort d'aucune caisse. Calculé par `match_report`, qui seul
+    /// connaît l'écart de valeur d'équipe au moment de l'achat.
+    #[serde(default)]
+    pub home_inducement_spending_kpo: u32,
+    #[serde(default)]
+    pub away_inducement_spending_kpo: u32,
     pub home_fan_mod: i8,
     pub away_fan_mod: i8,
     pub home_actions: Vec<MatchActionPublishedPayload>,

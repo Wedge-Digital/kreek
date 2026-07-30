@@ -129,6 +129,21 @@ pub struct AllowedInducementSpec {
 )]
 pub struct MatchGain(u32);
 
+/// Ce que les coups de pouce retirent réellement à la trésorerie d'une équipe.
+///
+/// Zéro est un cas courant — et même le plus courant côté underdog, dont la
+/// petite monnaie couvre souvent tout —, d'où l'absence de la borne `> 0` que
+/// porte `MatchGain`.
+///
+/// Calculé au pré-match, quand les valeurs d'équipe et les achats des deux
+/// camps sont encore connus : après la publication, l'écart de TV est perdu et
+/// le montant ne serait plus reconstructible.
+#[nutype(
+    default = 0,
+    derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)
+)]
+pub struct InducementSpending(u32);
+
 #[nutype(
     validate(greater_or_equal = -2, less_or_equal = 2),
     derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)

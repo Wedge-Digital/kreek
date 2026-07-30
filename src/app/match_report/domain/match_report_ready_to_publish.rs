@@ -2,8 +2,8 @@ use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::value_objects::{
-    D3Roll, DedicatedFans, FanFactorMod, InducementPurchase, MatchAction, MatchGain,
-    MatchReportOrigin, TempPlayer,
+    D3Roll, DedicatedFans, FanFactorMod, InducementPurchase, InducementSpending, MatchAction,
+    MatchGain, MatchReportOrigin, TempPlayer,
 };
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
@@ -29,6 +29,11 @@ pub struct MatchReportReadyToPublish {
     pub away_dedicated_fans: DedicatedFans,
     pub home_inducements: Option<Vec<InducementPurchase>>,
     pub away_inducements: Option<Vec<InducementPurchase>>,
+    /// Ce que les coups de pouce coûtent à chaque trésorerie. Figé ici, parce
+    /// que l'écart de valeur d'équipe qui sert à le calculer ne survit pas au
+    /// pré-match.
+    pub home_inducement_spending: InducementSpending,
+    pub away_inducement_spending: InducementSpending,
     pub star_engagements: Vec<(TeamId, InducementId)>,
     pub home_temp_players: Vec<TempPlayer>,
     pub away_temp_players: Vec<TempPlayer>,
@@ -89,6 +94,12 @@ impl MatchReportReadyToPublish {
             away_dedicated_fans: pm.away_dedicated_fans,
             home_inducements: pm.home_inducements.clone(),
             away_inducements: pm.away_inducements.clone(),
+            home_inducement_spending: InducementSpending::new(
+                pm.treasury_spending_for(&pm.home_team_id),
+            ),
+            away_inducement_spending: InducementSpending::new(
+                pm.treasury_spending_for(&pm.away_team_id),
+            ),
             star_engagements: pm.star_engagements.clone(),
             home_temp_players: pm.home_temp_players.clone(),
             away_temp_players: pm.away_temp_players.clone(),
@@ -191,6 +202,8 @@ mod tests {
     ) -> MatchReportReadyToPublish {
         MatchReportReadyToPublish {
             id: MatchReportId::new(),
+            home_inducement_spending: InducementSpending::default(),
+            away_inducement_spending: InducementSpending::default(),
             space_id: SpaceId::new(),
             competition_id: CompetitionId::new(),
             season_id: SeasonId::new(),

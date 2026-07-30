@@ -411,6 +411,8 @@ mod tests {
             home_score: 1,
             away_score: 0,
             home_gain_kpo: 0,
+            home_inducement_spending_kpo: 0,
+            away_inducement_spending_kpo: 0,
             away_gain_kpo: 0,
             home_fan_mod: 0,
             away_fan_mod: 0,

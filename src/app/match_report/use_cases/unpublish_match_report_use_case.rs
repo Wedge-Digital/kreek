@@ -255,6 +255,8 @@ mod tests {
 
     fn published_state() -> MatchReportState {
         MatchReportState::Published(MatchReportPublished {
+            home_inducement_spending: Default::default(),
+            away_inducement_spending: Default::default(),
             id: MatchReportId::new(),
             space_id: SpaceId::new(),
             competition_id: CompetitionId::new(),

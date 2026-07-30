@@ -654,7 +654,7 @@ mod tests {
 
         let team = repo.find_by_id(&team_id).await.unwrap().unwrap();
         let reverted = team.revert_post_match_sequence(mr_id).unwrap();
-        repo.append(&team_id, &reverted, 4).await.unwrap();
+        repo.append_batch(&team_id, &reverted, 4).await.unwrap();
 
         assert_eq!(
             projected_phase(&repo, &team_id).await,

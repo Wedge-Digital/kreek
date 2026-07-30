@@ -2,8 +2,8 @@ use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::value_objects::{
-    CorrectionEligibility, D3Roll, DedicatedFans, FanFactorMod, InducementPurchase, MatchAction,
-    MatchGain, MatchReportOrigin, TempPlayer,
+    CorrectionEligibility, D3Roll, DedicatedFans, FanFactorMod, InducementPurchase,
+    InducementSpending, MatchAction, MatchGain, MatchReportOrigin, TempPlayer,
 };
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
@@ -29,6 +29,10 @@ pub struct MatchReportPublished {
     pub away_dedicated_fans: DedicatedFans,
     pub home_inducements: Option<Vec<InducementPurchase>>,
     pub away_inducements: Option<Vec<InducementPurchase>>,
+    /// Figés au pré-match : l'écart de valeur d'équipe qui les détermine n'est
+    /// plus connu à ce stade.
+    pub home_inducement_spending: InducementSpending,
+    pub away_inducement_spending: InducementSpending,
     pub star_engagements: Vec<(TeamId, InducementId)>,
     pub home_temp_players: Vec<TempPlayer>,
     pub away_temp_players: Vec<TempPlayer>,
@@ -85,6 +89,8 @@ impl MatchReportPublished {
             away_dedicated_fans: self.away_dedicated_fans,
             home_inducements: self.home_inducements.clone(),
             away_inducements: self.away_inducements.clone(),
+            home_inducement_spending: self.home_inducement_spending,
+            away_inducement_spending: self.away_inducement_spending,
             star_engagements: self.star_engagements.clone(),
             home_temp_players: self.home_temp_players.clone(),
             away_temp_players: self.away_temp_players.clone(),
@@ -123,6 +129,8 @@ impl MatchReportPublished {
             away_dedicated_fans: rtp.away_dedicated_fans,
             home_inducements: rtp.home_inducements.clone(),
             away_inducements: rtp.away_inducements.clone(),
+            home_inducement_spending: rtp.home_inducement_spending,
+            away_inducement_spending: rtp.away_inducement_spending,
             star_engagements: rtp.star_engagements.clone(),
             home_temp_players: rtp.home_temp_players.clone(),
             away_temp_players: rtp.away_temp_players.clone(),
@@ -151,6 +159,8 @@ mod unpublish_tests {
     fn published() -> MatchReportPublished {
         MatchReportPublished {
             id: MatchReportId::new(),
+            home_inducement_spending: InducementSpending::default(),
+            away_inducement_spending: InducementSpending::default(),
             space_id: SpaceId::new(),
             competition_id: CompetitionId::new(),
             season_id: SeasonId::new(),

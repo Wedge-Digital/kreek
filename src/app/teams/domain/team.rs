@@ -102,6 +102,20 @@ pub enum TeamDomainEvent {
         dedicated_fans: DedicatedFans,
         treasury_refund: Kpo,
     },
+    /// Les coups de pouce d'un match sont payés. Événement distinct du revenu de
+    /// match, et non un montant net : le grand livre porte une ligne par
+    /// événement, et « MatchIncome 40 » masquerait un « +50 de gains, −10 de
+    /// coups de pouce » que ce livre existe pour raconter.
+    InducementsPaid {
+        match_report_id: MatchReportId,
+        amount_kpo: Kpo,
+    },
+    /// Le pendant, à la dépublication : sans lui, corriger un rapport rendrait
+    /// les gains mais garderait l'argent des coups de pouce.
+    InducementsRefunded {
+        match_report_id: MatchReportId,
+        amount_kpo: Kpo,
+    },
     PlayerImprovementPhaseValidated,
     /// `roster_line` est l'identifiant de la ligne de roster —
     /// `DEMO_GRANIT__PIETAILLE` —, pas un ULID. C'est ce que `players` consomme
@@ -201,6 +215,8 @@ impl TeamDomainEvent {
             Self::MatchReportingCancelled { .. } => "MatchReportingCancelled",
             Self::PostMatchSequenceStarted { .. } => "PostMatchSequenceStarted",
             Self::PostMatchSequenceReverted { .. } => "PostMatchSequenceReverted",
+            Self::InducementsPaid { .. } => "InducementsPaid",
+            Self::InducementsRefunded { .. } => "InducementsRefunded",
             Self::PlayerImprovementPhaseValidated => "PlayerImprovementPhaseValidated",
             Self::PlayerRecruited { .. } => "PlayerRecruited",
             Self::StaffBought { .. } => "StaffBought",
@@ -274,6 +290,10 @@ pub struct LastPostMatch {
     /// ne peut pas se faire par soustraction du modificateur.
     pub dedicated_fans_before: DedicatedFans,
     pub treasury_income: Kpo,
+    /// Ce que les coups de pouce ont coûté à la caisse. Renseigné par
+    /// `InducementsPaid`, qui suit `PostMatchSequenceStarted` dans le même lot :
+    /// sans lui, dépublier rendrait les gains et garderait cet argent.
+    pub inducement_spending: Kpo,
 }
 
 impl Default for Team {
@@ -370,6 +390,14 @@ impl Team {
                 *cost_kpo,
                 MovementReason::StaffPurchase,
             )),
+            TeamDomainEvent::InducementsPaid { amount_kpo, .. } => Some(TreasuryMovement::debit(
+                solde,
+                *amount_kpo,
+                MovementReason::InducementPurchase,
+            )),
+            TeamDomainEvent::InducementsRefunded { amount_kpo, .. } => Some(
+                TreasuryMovement::credit(solde, *amount_kpo, MovementReason::InducementRefunded),
+            ),
 
             // ── Sans effet sur la trésorerie ────────────────────────────────
             // Énumérés un à un plutôt que balayés : c'est la liste qui rend le
@@ -495,11 +523,33 @@ impl Team {
                             match_report_id,
                             dedicated_fans_before: self.dedicated_fans,
                             treasury_income: *treasury_income,
+                            // Complété par `InducementsPaid` juste après, s'il
+                            // y a eu des achats.
+                            inducement_spending: Kpo(0),
                         });
                 self.dedicated_fans = *dedicated_fans;
                 self.game_phase = Some(GamePhase::PlayerImprovement);
                 self.current_match_report_id = None;
             }
+            // Suit `PostMatchSequenceStarted` dans le même lot, et enrichit
+            // l'instantané qu'il vient de poser. L'identifiant est vérifié :
+            // rejouer un événement d'un autre match ne doit pas contaminer la
+            // compensation en cours.
+            TeamDomainEvent::InducementsPaid {
+                match_report_id,
+                amount_kpo,
+            } => {
+                if let Some(last) = self
+                    .last_post_match
+                    .as_mut()
+                    .filter(|l| l.match_report_id == *match_report_id)
+                {
+                    last.inducement_spending = *amount_kpo;
+                }
+            }
+            // Rien à retenir : le remboursement clôt l'affaire, et la trésorerie
+            // a déjà été créditée en tête d'`apply`.
+            TeamDomainEvent::InducementsRefunded { .. } => {}
             TeamDomainEvent::PostMatchSequenceReverted {
                 match_report_id,
                 dedicated_fans,
@@ -731,22 +781,56 @@ impl Team {
     /// pu recruter ou acheter du staff, et la trésorerie ne serait plus celle
     /// qu'on croit défaire. Refuse aussi si le dernier après-match ne concerne
     /// pas ce rapport, ce qui rend l'opération idempotente.
+    /// Paie les coups de pouce du match. Appelé **après**
+    /// `start_post_match_sequence`, dont il complète l'instantané.
+    ///
+    /// Aucune garde de trésorerie : le budget a été vérifié par `match_report`
+    /// au moment de l'achat, contre cette même caisse. Si le montant la
+    /// dépassait malgré tout, `treasury_movement` écrête à zéro — le listener
+    /// le signale plutôt que de le laisser passer sous silence.
+    pub fn pay_inducements(
+        &self,
+        match_report_id: MatchReportId,
+        amount_kpo: Kpo,
+    ) -> TeamDomainEvent {
+        TeamDomainEvent::InducementsPaid {
+            match_report_id,
+            amount_kpo,
+        }
+    }
+
+    /// Défait la séquence d'après-match, coups de pouce compris.
+    ///
+    /// Rend un **lot** : rembourser les coups de pouce sans rendre les gains, ou
+    /// l'inverse, laisserait la trésorerie fausse. Les deux montants sont lus
+    /// sur le même instantané, avant toute application, donc leur ordre dans le
+    /// lot n'a pas d'importance.
     pub fn revert_post_match_sequence(
         &self,
         match_report_id: MatchReportId,
-    ) -> Result<TeamDomainEvent, DomainError> {
+    ) -> Result<Vec<TeamDomainEvent>, DomainError> {
         self.expect_phase(GamePhase::PlayerImprovement)?;
         let last = self
             .last_post_match
             .as_ref()
             .filter(|l| l.match_report_id == match_report_id)
             .ok_or(DomainError::NoPostMatchToRevert)?;
+        let coups_de_pouce = last.inducement_spending;
 
-        Ok(TeamDomainEvent::PostMatchSequenceReverted {
+        let mut lot = vec![TeamDomainEvent::PostMatchSequenceReverted {
             match_report_id,
             dedicated_fans: last.dedicated_fans_before,
             treasury_refund: last.treasury_income,
-        })
+        }];
+        // Aucun événement si rien n'a été dépensé : une ligne de grand livre à
+        // zéro ne raconterait rien.
+        if coups_de_pouce.0 > 0 {
+            lot.push(TeamDomainEvent::InducementsRefunded {
+                match_report_id,
+                amount_kpo: coups_de_pouce,
+            });
+        }
+        Ok(lot)
     }
 
     /// Recrute un joueur. Gardes : phase et trésorerie, **rien d'autre**.
@@ -1596,9 +1680,100 @@ mod tests {
         .unwrap()
     }
 
+    // ── Coups de pouce ────────────────────────────────────────────────────
+    //
+    // Le montant est déjà net de la petite monnaie quand il arrive ici :
+    // `teams` ne connaît ni l'écart de valeur d'équipe ni les achats de
+    // l'adversaire. Il débite ce que `match_report` a calculé, rien de plus.
+
+    fn team_avec_coups_de_pouce(gain: Kpo, coups_de_pouce: Kpo) -> Team {
+        let base = team_after_post_match(0, gain);
+        base.clone()
+            .apply(&base.pay_inducements(match_report_id(), coups_de_pouce))
+    }
+
+    #[test]
+    fn payer_les_coups_de_pouce_debite_la_tresorerie() {
+        let avant = team_after_post_match(0, Kpo(100)).treasury.0;
+        let apres = team_avec_coups_de_pouce(Kpo(100), Kpo(30));
+        assert_eq!(apres.treasury.0, avant - 30);
+    }
+
+    /// Le grand livre porte une ligne par événement : le débit des coups de
+    /// pouce doit avoir son motif propre, pas se fondre dans le revenu du
+    /// match. « MatchIncome 70 » masquerait « +100 de gains, −30 de coups de
+    /// pouce ».
+    #[test]
+    fn le_motif_distingue_les_coups_de_pouce_du_revenu_de_match() {
+        let team = team_after_post_match(0, Kpo(100));
+        let paiement = team.pay_inducements(match_report_id(), Kpo(30));
+        let mouvement = team
+            .treasury_movement(&paiement)
+            .expect("un paiement débite");
+        assert_eq!(mouvement.reason, MovementReason::InducementPurchase);
+
+        // Le contraste : sans lui, un `treasury_movement` qui rendrait le même
+        // motif partout passerait pour une confirmation.
+        let revenu = TeamDomainEvent::PostMatchSequenceStarted {
+            result: MatchResult::Win,
+            dedicated_fans: DedicatedFans::try_new(2).unwrap(),
+            treasury_income: Kpo(100),
+            spp_gains: vec![],
+        };
+        assert_eq!(
+            team.treasury_movement(&revenu).unwrap().reason,
+            MovementReason::MatchIncome
+        );
+    }
+
+    /// Sans ce remboursement, corriger un rapport rendrait les gains du match
+    /// mais garderait l'argent des coups de pouce — un trou de trésorerie à
+    /// chaque dépublication.
+    #[test]
+    fn depublier_rembourse_les_coups_de_pouce() {
+        let team = team_avec_coups_de_pouce(Kpo(100), Kpo(30));
+        let depart = team_after_post_match(0, Kpo(100)).treasury.0 - 30;
+        assert_eq!(team.treasury.0, depart);
+
+        let apres = revert(&team);
+        // Les gains repartent, les coups de pouce reviennent : on retrouve la
+        // caisse d'avant le match.
+        assert_eq!(apres.treasury.0, depart + 30 - 100);
+    }
+
+    /// Aucun achat, aucun événement : une ligne de grand livre à zéro ne
+    /// raconterait rien.
+    #[test]
+    fn sans_achat_le_lot_de_depublication_ne_porte_qu_un_evenement() {
+        let team = team_after_post_match(0, Kpo(100));
+        let lot = team.revert_post_match_sequence(match_report_id()).unwrap();
+        assert_eq!(lot.len(), 1);
+
+        let team = team_avec_coups_de_pouce(Kpo(100), Kpo(30));
+        let lot = team.revert_post_match_sequence(match_report_id()).unwrap();
+        assert_eq!(lot.len(), 2, "les gains et les coups de pouce");
+    }
+
+    /// L'instantané est posé par `PostMatchSequenceStarted` et complété par
+    /// `InducementsPaid` : dans l'autre ordre, la dépublication ne saurait pas
+    /// quoi rembourser.
+    #[test]
+    fn un_paiement_d_un_autre_rapport_ne_contamine_pas_l_instantane() {
+        let team = team_after_post_match(0, Kpo(100));
+        let autre = MatchReportId::try_new("00000000000000000000000099").unwrap();
+        let egare = team.pay_inducements(autre, Kpo(30));
+        let team = team.apply(&egare);
+
+        assert_eq!(
+            team.last_post_match.as_ref().unwrap().inducement_spending,
+            Kpo(0),
+            "l'instantané ne retient que son propre rapport"
+        );
+    }
+
     fn revert(team: &Team) -> Team {
-        let event = team.revert_post_match_sequence(match_report_id()).unwrap();
-        team.clone().apply(&event)
+        let lot = team.revert_post_match_sequence(match_report_id()).unwrap();
+        lot.iter().fold(team.clone(), |t, e| t.apply(e))
     }
 
     /// Le test décisif de la feature : l'équipe part de 2 fans, le rapport

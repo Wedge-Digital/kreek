@@ -4,7 +4,8 @@ use crate::app::match_report::domain::match_report_ready_to_publish::MatchReport
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{
-    ActionPlayer, InjuryType, MatchAction, MatchActionType, SequelStat, TempPlayer, TempPlayerKind,
+    ActionPlayer, InducementSpending, InjuryType, MatchAction, MatchActionType, SequelStat,
+    TempPlayer, TempPlayerKind,
 };
 use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
 use crate::app::shared_kernel::app_events::match_report_app_events::{
@@ -391,6 +392,8 @@ fn build_published_payload(p: &MatchReportPublished) -> MatchReportPublishedPayl
         away_score: count_touchdowns(&p.away_actions),
         home_gain_kpo: p.home_gain.into_inner(),
         away_gain_kpo: p.away_gain.into_inner(),
+        home_inducement_spending_kpo: p.home_inducement_spending.into_inner(),
+        away_inducement_spending_kpo: p.away_inducement_spending.into_inner(),
         home_fan_mod: p.home_fan_mod.into_inner(),
         away_fan_mod: p.away_fan_mod.into_inner(),
         home_actions: build_action_payloads(&p.home_actions, &p.home_temp_players),
@@ -515,6 +518,8 @@ mod unpublished_events_tests {
     fn rtp() -> MatchReportReadyToPublish {
         MatchReportReadyToPublish {
             id: MatchReportId::new(),
+            home_inducement_spending: InducementSpending::default(),
+            away_inducement_spending: InducementSpending::default(),
             space_id: SpaceId::new(),
             competition_id: CompetitionId::new(),
             season_id: SeasonId::new(),

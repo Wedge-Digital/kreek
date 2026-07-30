@@ -54,7 +54,7 @@ async fn revert_team(repo: &dyn ITeamRepository, team_id: &str, mr_id: MatchRepo
 
     // Un refus du domaine n'est pas une anomalie : c'est aussi ce qui rend la
     // compensation idempotente quand elle est rejouée.
-    let event = match team.revert_post_match_sequence(mr_id) {
+    let lot = match team.revert_post_match_sequence(mr_id) {
         Ok(e) => e,
         Err(e) => {
             tracing::warn!(
@@ -64,7 +64,10 @@ async fn revert_team(repo: &dyn ITeamRepository, team_id: &str, mr_id: MatchRepo
         }
     };
 
-    if let Err(e) = repo.append(team_id, &event, team.version).await {
+    // Un lot : les gains rendus et les coups de pouce remboursés doivent
+    // atterrir ensemble, sans quoi une panne entre les deux laisserait la
+    // trésorerie à mi-chemin.
+    if let Err(e) = repo.append_batch(team_id, &lot, team.version).await {
         tracing::error!("teams::match_report_unpublished_listener: append {team_id}: {e}");
     }
 }
