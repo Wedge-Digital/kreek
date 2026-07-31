@@ -10,8 +10,12 @@ DATABASE_URL := $(if $(DATABASE_URL),$(DATABASE_URL),$(shell grep -E '^DATABASE_
 # `export DATABASE_URL=…dev…` local ne fasse cibler la base dev par `make test`.
 TEST_DB_URL := $(if $(DATABASE_URL_TEST),$(DATABASE_URL_TEST),$(shell grep -E '^DATABASE__URL=' .env.test 2>/dev/null | cut -d= -f2-))
 
+# Profil de la base de démo, cible de `init_demo_db`.
+DEMO_PROFILE  := demo
+DEMO_ENV_FILE := .env.$(DEMO_PROFILE)
+
 .PHONY: dev dev-demo test e2e test-impacted all_tests audit migrate migration prepare_db reset_db reset_test_db init_db \
-        seed_accounts seed_e2e lint check-arch coverage analyze help
+        init_demo_db seed_accounts seed_e2e lint check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
 help:
@@ -30,6 +34,7 @@ help:
 	@echo "  reset_db      Remet la base à zéro (sqlx database reset)"
 	@echo "  reset_test_db Remet la base de test à zéro (.env.test)"
 	@echo "  init_db       reset_db + import des données legacy + seed comptes dev (WITH_SEED=1 pour aussi affecter les coachs aux spaces)"
+	@echo "  init_demo_db  Idem sur la base de démo (.env.demo) — DROP DATABASE, double confirmation exigée"
 	@echo "  seed_accounts Seed les comptes dev (scripts/seed_accounts.json)"
 	@echo "  seed_e2e      Seed synthétique requis par la suite e2e (space + 12 coachs, idempotent)"
 	@echo ""
@@ -137,6 +142,58 @@ endif
 	@echo ""
 	@echo "  ✓ Base initialisée"
 	@echo ""
+
+# Même chose, mais sur la base de démo (.env.demo) — donc potentiellement
+# distante et partagée. `sqlx database reset` y fait un DROP DATABASE : la
+# double confirmation est là parce qu'une faute de profil est irrattrapable.
+#
+# DATABASE_URL est relu depuis .env.demo et passé explicitement au sous-make :
+# sans ça, un `export DATABASE_URL=…dev…` dans le shell appelant l'emporterait
+# (cf. le `$(if $(DATABASE_URL),…)` en tête de fichier) et on réinitialiserait
+# la base dev tout en important dans la démo.
+init_demo_db:
+	@[ -f $(DEMO_ENV_FILE) ] || { \
+	    echo ""; \
+	    echo "  Erreur : $(DEMO_ENV_FILE) introuvable."; \
+	    echo "  Créez-le avec DATABASE__URL et DATABASE__HOST/PORT/USER/PWD/NAME"; \
+	    echo "  (les deux représentations sont nécessaires : l'URL pour sqlx,"; \
+	    echo "   les cinq variables pour les scripts d'import)."; \
+	    echo ""; \
+	    exit 1; \
+	}
+	@url=$$(grep -E '^DATABASE__URL='  $(DEMO_ENV_FILE) | cut -d= -f2-); \
+	 host=$$(grep -E '^DATABASE__HOST=' $(DEMO_ENV_FILE) | cut -d= -f2-); \
+	 name=$$(grep -E '^DATABASE__NAME=' $(DEMO_ENV_FILE) | cut -d= -f2-); \
+	 [ -n "$$url" ] && [ -n "$$host" ] && [ -n "$$name" ] || { \
+	     echo "  Erreur : DATABASE__URL, DATABASE__HOST ou DATABASE__NAME manquant dans $(DEMO_ENV_FILE)."; exit 1; }; \
+	 case "$$url" in \
+	     *"$$host"*) ;; \
+	     *) echo "  Erreur : DATABASE__URL ne pointe pas sur DATABASE__HOST ($$host) dans $(DEMO_ENV_FILE)."; \
+	        echo "  Refus : sqlx et les scripts d'import viseraient deux bases différentes."; exit 1 ;; \
+	 esac; \
+	 case "$$url" in \
+	     *"$$name"*) ;; \
+	     *) echo "  Erreur : DATABASE__URL ne pointe pas sur DATABASE__NAME ($$name) dans $(DEMO_ENV_FILE)."; \
+	        echo "  Refus : sqlx et les scripts d'import viseraient deux bases différentes."; exit 1 ;; \
+	 esac; \
+	 echo ""; \
+	 echo "  \033[1m\033[31m/!\\  DESTRUCTION COMPLÈTE DE LA BASE DE DÉMO\033[0m"; \
+	 echo ""; \
+	 echo "     Profil : $(DEMO_PROFILE)   ($(DEMO_ENV_FILE))"; \
+	 echo "     Hôte   : $$host"; \
+	 echo "     Base   : $$name"; \
+	 echo ""; \
+	 echo "  sqlx va faire un DROP DATABASE puis tout réimporter."; \
+	 echo "  Les comptes, espaces et articles existants seront perdus."; \
+	 echo ""; \
+	 printf "  Confirmation 1/2 — tapez \033[1moui\033[0m pour continuer : "; \
+	 read -r answer; \
+	 [ "$$answer" = "oui" ] || { echo "  Annulé."; exit 1; }; \
+	 printf "  Confirmation 2/2 — retapez le nom de la base (\033[1m%s\033[0m) : " "$$name"; \
+	 read -r confirm; \
+	 [ "$$confirm" = "$$name" ] || { echo "  Annulé — le nom saisi ne correspond pas."; exit 1; }; \
+	 echo ""; \
+	 $(MAKE) init_db EXEC_PROFILE=$(DEMO_PROFILE) DATABASE_URL="$$url"
 
 # ── Qualité Rust standard (axe 1) ────────────────────────────────────────────
 lint:

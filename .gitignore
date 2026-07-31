@@ -13,6 +13,7 @@
 .env.test
 .env.local
 .env.legacy
+.env.demo
 .env.*.local
 
 # OS

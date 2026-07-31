@@ -9,11 +9,11 @@ set -a; source "$ENV_FILE"; set +a
 
 cd "$SCRIPTS_DIR"
 
-uv run python extract_articles.py \
+uv run python extract_users.py \
     --host     "${LEGACY_DB_HOST}" \
     --port     "${LEGACY_DB_PORT}" \
     --user     "${LEGACY_DB_USER}" \
     --password "${LEGACY_DB_PASSWORD}" \
     --database "${LEGACY_DB_NAME}" \
-    --output   "${SCRIPTS_DIR}/extracted_articles.json" \
+    --output   "${SCRIPTS_DIR}/extracted_users.json" \
     "$@"

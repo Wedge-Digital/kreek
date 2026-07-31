@@ -43,7 +43,7 @@ def parse_args():
     p.add_argument("--user",     required=True)
     p.add_argument("--password", required=True)
     p.add_argument("--database", required=True)
-    p.add_argument("--output",   default=os.path.join(_SCRIPTS_DIR, "space.json"))
+    p.add_argument("--output",   default=os.path.join(_SCRIPTS_DIR, "extracted_spaces.json"))
     return p.parse_args()
 
 

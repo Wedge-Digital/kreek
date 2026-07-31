@@ -11,12 +11,17 @@ Usage :
     python scripts/extract_users.py \
         --host localhost --port 3306 \
         --user root --password secret --database bbclub_db \
-        --output scripts/users_export.json
+        --output scripts/extracted_users.json
+
+En pratique, passer par le wrapper `extract_users.sh`, qui lit `.env.legacy`.
 """
 
 import argparse
 import json
+import os
 import sys
+
+_SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 try:
     import mysql.connector
@@ -53,7 +58,7 @@ def parse_args():
     p.add_argument("--user",     required=True)
     p.add_argument("--password", required=True)
     p.add_argument("--database", required=True)
-    p.add_argument("--output",   default="scripts/users_export.json")
+    p.add_argument("--output",   default=os.path.join(_SCRIPTS_DIR, "extracted_users.json"))
     return p.parse_args()
 
 

@@ -1,1 +1,0 @@
-uv run migrate_spaces_images.py  --cloud-name bloodbowlclub-com --api-key 755485769817655 --api-secret uAp2w__RvEf0XbeHZIqc99yNz4c     --host localhost --port 4326     --user root --password root --database kreek_db     --input extracted_spaces.json

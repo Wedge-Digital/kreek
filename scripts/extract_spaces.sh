@@ -7,8 +7,6 @@ ENV_FILE="${SCRIPTS_DIR}/../.env.legacy"
 [ -f "$ENV_FILE" ] || { echo "Erreur : $ENV_FILE introuvable" >&2; exit 1; }
 set -a; source "$ENV_FILE"; set +a
 
-OUTPUT="${OUTPUT:-${SCRIPTS_DIR}/extracted_spaces.json}"
-
 cd "$SCRIPTS_DIR"
 
 uv run python extract_spaces.py \
@@ -17,5 +15,5 @@ uv run python extract_spaces.py \
     --user     "${LEGACY_DB_USER}" \
     --password "${LEGACY_DB_PASSWORD}" \
     --database "${LEGACY_DB_NAME}" \
-    --output   "$OUTPUT" \
+    --output   "${SCRIPTS_DIR}/extracted_spaces.json" \
     "$@"
