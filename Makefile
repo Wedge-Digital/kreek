@@ -1,14 +1,20 @@
 EXEC_PROFILE ?= dev
 
+# Retire les guillemets encadrants d'une valeur lue dans un .env. Ils y sont
+# nécessaires dès que le mot de passe contient &, ! ou ^ — sans eux, le
+# `set -a; source` des scripts d'import casse la ligne et laisse la variable
+# vide — mais ils n'ont rien à faire dans l'URL passée à sqlx.
+unquote = sed -e "s/^['\"]//" -e "s/['\"]$$//"
+
 # URL de la base par défaut (profil dev/legacy) : variable d'environnement
 # DATABASE_URL si elle est fournie (CI, convention sqlx), sinon .env.<profile>.
 # Le fallback fichier est silencieux si le .env est absent (2>/dev/null).
-DATABASE_URL := $(if $(DATABASE_URL),$(DATABASE_URL),$(shell grep -E '^DATABASE__URL=' .env.$(EXEC_PROFILE) 2>/dev/null | cut -d= -f2-))
+DATABASE_URL := $(if $(DATABASE_URL),$(DATABASE_URL),$(shell grep -E '^DATABASE__URL=' .env.$(EXEC_PROFILE) 2>/dev/null | cut -d= -f2- | $(unquote)))
 
 # URL de la base de test : variable d'environnement DATABASE_URL_TEST si fournie
 # (CI), sinon .env.test. Variable dédiée (pas DATABASE_URL) pour éviter qu'un
 # `export DATABASE_URL=…dev…` local ne fasse cibler la base dev par `make test`.
-TEST_DB_URL := $(if $(DATABASE_URL_TEST),$(DATABASE_URL_TEST),$(shell grep -E '^DATABASE__URL=' .env.test 2>/dev/null | cut -d= -f2-))
+TEST_DB_URL := $(if $(DATABASE_URL_TEST),$(DATABASE_URL_TEST),$(shell grep -E '^DATABASE__URL=' .env.test 2>/dev/null | cut -d= -f2- | $(unquote)))
 
 # Profil de la base de démo, cible de `init_demo_db`.
 DEMO_PROFILE  := demo
@@ -68,7 +74,7 @@ dev-demo:
 	REFERENCES__DIR=assets/references.example cargo watch -x run -w src -w Cargo.toml -w assets/templates -w assets/static/css
 
 test: reset_test_db
-	DATABASE_URL=$(TEST_DB_URL) cargo test
+	DATABASE_URL="$(TEST_DB_URL)" cargo test
 
 e2e:
 	cd tests/e2e && uv run pytest -v
@@ -104,28 +110,28 @@ all_tests: test e2e
 # target reste utile pour du troubleshooting ponctuel (appliquer une
 # migration sans redémarrer le service).
 migrate:
-	DATABASE_URL=$(DATABASE_URL) sqlx migrate run
+	DATABASE_URL="$(DATABASE_URL)" sqlx migrate run
 
 migration:
 	@test -n "$(desc)" || (echo "Usage : make migration desc=<description>"; exit 1)
-	DATABASE_URL=$(DATABASE_URL) sqlx migrate add $(desc)
+	DATABASE_URL="$(DATABASE_URL)" sqlx migrate add $(desc)
 
 prepare_db:
-	DATABASE_URL=$(DATABASE_URL) cargo sqlx prepare
+	DATABASE_URL="$(DATABASE_URL)" cargo sqlx prepare
 
 reset_db:
-	DATABASE_URL=$(DATABASE_URL) sqlx database reset -y -f
+	DATABASE_URL="$(DATABASE_URL)" sqlx database reset -y -f
 
 reset_test_db:
-	DATABASE_URL=$(TEST_DB_URL) sqlx database reset -y -f
+	DATABASE_URL="$(TEST_DB_URL)" sqlx database reset -y -f
 
 seed_accounts:
-	DATABASE_URL=$(DATABASE_URL) cargo run -- seed-accounts
+	DATABASE_URL="$(DATABASE_URL)" cargo run -- seed-accounts
 
 # Seed synthétique de la suite e2e : un space, DevCoach (legacy_id=1, connecté
 # par BYPASS_AUTH) et onze autres coachs. Idempotent — rejouable sans risque.
 seed_e2e:
-	DATABASE_URL=$(DATABASE_URL) cargo run -- seed-e2e
+	DATABASE_URL="$(DATABASE_URL)" cargo run -- seed-e2e
 
 init_db: reset_db
 	@echo ""
@@ -133,7 +139,7 @@ init_db: reset_db
 	@./scripts/import_all.sh
 	@echo ""
 	@echo "  Seed des comptes dev…"
-	@DATABASE_URL=$(DATABASE_URL) cargo run -- seed-accounts
+	@DATABASE_URL="$(DATABASE_URL)" cargo run -- seed-accounts
 ifeq ($(WITH_SEED),1)
 	@echo ""
 	@echo "  Affectation des coachs aux spaces…"
@@ -161,9 +167,9 @@ init_demo_db:
 	    echo ""; \
 	    exit 1; \
 	}
-	@url=$$(grep -E '^DATABASE__URL='  $(DEMO_ENV_FILE) | cut -d= -f2-); \
-	 host=$$(grep -E '^DATABASE__HOST=' $(DEMO_ENV_FILE) | cut -d= -f2-); \
-	 name=$$(grep -E '^DATABASE__NAME=' $(DEMO_ENV_FILE) | cut -d= -f2-); \
+	@url=$$(grep -E '^DATABASE__URL='  $(DEMO_ENV_FILE) | cut -d= -f2- | $(unquote)); \
+	 host=$$(grep -E '^DATABASE__HOST=' $(DEMO_ENV_FILE) | cut -d= -f2- | $(unquote)); \
+	 name=$$(grep -E '^DATABASE__NAME=' $(DEMO_ENV_FILE) | cut -d= -f2- | $(unquote)); \
 	 [ -n "$$url" ] && [ -n "$$host" ] && [ -n "$$name" ] || { \
 	     echo "  Erreur : DATABASE__URL, DATABASE__HOST ou DATABASE__NAME manquant dans $(DEMO_ENV_FILE)."; exit 1; }; \
 	 case "$$url" in \
@@ -274,7 +280,7 @@ coverage:
 	@echo ""
 	@echo "\033[1m\033[34m┌─ Axe 7 · Couverture de tests\033[0m"
 	@echo ""
-	DATABASE_URL=$(TEST_DB_URL) \
+	DATABASE_URL="$(TEST_DB_URL)" \
 		cargo llvm-cov \
 		--ignore-filename-regex="(tests|io/web|io/repository|main\.rs)" \
 		--summary-only
