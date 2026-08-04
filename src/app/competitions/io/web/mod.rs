@@ -12,3 +12,4 @@ pub mod resultats_tab_controller;
 pub mod resultats_view;
 pub mod rules_labels;
 pub mod widget_tester_controller;
+pub mod widgets;

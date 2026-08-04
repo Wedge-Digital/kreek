@@ -127,6 +127,7 @@
   font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1);
   padding-bottom: var(--p1); border-bottom: 2px solid var(--dark-5);
 }
+.matches-panel-empty { padding: var(--p2) 0; }
 .match-result {
   display: flex; flex-direction: column; gap: 8px; padding: var(--p1) 0;
   border-bottom: 1px solid var(--dark-6);

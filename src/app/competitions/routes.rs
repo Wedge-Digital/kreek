@@ -35,6 +35,8 @@ pub mod path {
     pub const COMPETITION_WIDGET_JSON_ROUNDS: &str =
         "/app/{space_id}/competitions/widget/json/rounds";
     pub const COMPETITION_WIDGET_TESTER: &str = "/competitions/widget/tester";
+    pub const COMPETITION_LATEST_RESULTS_WIDGET: &str =
+        "/app/{space_id}/competitions/widget/latest-results";
     pub const COMPETITION_ADMIN: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin";
     pub const COMPETITION_ADMIN_DASHBOARD: &str =
@@ -177,6 +179,9 @@ impl Routes {
     }
     pub fn competition_widget(&self, sid: &str) -> String {
         path::COMPETITION_WIDGET.replace("{space_id}", sid)
+    }
+    pub fn latest_results_widget(&self, sid: &str) -> String {
+        path::COMPETITION_LATEST_RESULTS_WIDGET.replace("{space_id}", sid)
     }
     pub fn competition_widget_json_competitions(&self, sid: &str) -> String {
         path::COMPETITION_WIDGET_JSON_COMPETITIONS.replace("{space_id}", sid)

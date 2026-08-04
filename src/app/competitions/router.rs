@@ -43,6 +43,7 @@ use crate::app::competitions::io::web::new_competition_phase_5::{
 };
 use crate::app::competitions::io::web::resultats_tab_controller::get_resultats_tab;
 use crate::app::competitions::io::web::widget_tester_controller::get_competitions_widget_tester;
+use crate::app::competitions::io::web::widgets::latest_results_widget::latest_results_widget;
 use crate::app::competitions::routes::path;
 use crate::state::AppState;
 use axum::routing::{delete, get, post, put};
@@ -86,6 +87,10 @@ pub fn router() -> Router<AppState> {
         .route(path::COMPETITION_TAB_TEAMS, get(get_tab_teams))
         .route(path::COMPETITION_TAB_STATS, get(get_tab_stats))
         .route(path::COMPETITION_WIDGET, get(get_competition_widget))
+        .route(
+            path::COMPETITION_LATEST_RESULTS_WIDGET,
+            get(latest_results_widget),
+        )
         .route(
             path::COMPETITION_WIDGET_JSON_COMPETITIONS,
             get(get_json_competitions),
