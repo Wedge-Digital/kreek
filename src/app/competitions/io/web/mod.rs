@@ -3,6 +3,7 @@ pub mod all_competition;
 pub mod calendrier_tab_controller;
 pub mod competition_detail;
 pub mod competition_widget;
+pub mod latest_results_view;
 pub mod new_competition;
 pub mod new_competition_phase_3;
 pub mod new_competition_phase_4;
