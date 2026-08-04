@@ -312,6 +312,16 @@ mod tests {
         ) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> {
             Ok(vec![])
         }
+        async fn list_latest_completed_results(
+            &self,
+            _: &str,
+            _: i64,
+        ) -> Result<
+            Vec<crate::app::competitions::domain::match_day_repository_port::LatestResultDto>,
+            MatchDayRepositoryError,
+        > {
+            Ok(vec![])
+        }
     }
 
     struct FakeGroupRepo;

@@ -29,6 +29,26 @@ pub struct PairingDisplayDto {
     pub match_report_url: Option<String>,
 }
 
+/// Un résultat de match, toutes compétitions/saisons d'un espace confondues —
+/// pour le widget "Derniers résultats" de la page d'accueil. `season_id`,
+/// `competition_id`, `home_team_id` et `away_team_id` ne sont pas affichés :
+/// ils servent uniquement au calcul d'autorisation du lien vers le rapport.
+pub struct LatestResultDto {
+    pub pairing_id: String,
+    pub season_id: String,
+    pub competition_id: String,
+    pub competition_name: String,
+    pub round_name: String,
+    pub home_team_id: String,
+    pub home_team_name: String,
+    pub home_score: Option<i32>,
+    pub away_team_id: String,
+    pub away_team_name: String,
+    pub away_score: Option<i32>,
+    pub match_report_url: Option<String>,
+    pub published_at: Option<time::OffsetDateTime>,
+}
+
 /// Données d'affichage nécessaires pour projeter un pairing nouvellement créé
 /// dans `competition_match_display_proj`, en plus de son id et des ids
 /// d'équipes déjà portés par `Pairing`. Construit par l'appelant à partir de
@@ -122,4 +142,12 @@ pub trait IMatchDayRepository: Send + Sync {
         cursor_position: Option<i32>,
         limit_rounds: u32,
     ) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError>;
+
+    /// Derniers matchs `completed` d'un espace, toutes compétitions/saisons
+    /// confondues, triés par date réelle de publication décroissante.
+    async fn list_latest_completed_results(
+        &self,
+        space_id: &str,
+        limit: i64,
+    ) -> Result<Vec<LatestResultDto>, MatchDayRepositoryError>;
 }

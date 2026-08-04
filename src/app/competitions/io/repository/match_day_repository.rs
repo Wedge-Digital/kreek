@@ -2,7 +2,8 @@ use crate::app::competitions::domain::match_day::{
     MatchDay, MatchDayName, MatchDayPosition, MatchDayType, Pairing,
 };
 use crate::app::competitions::domain::match_day_repository_port::{
-    IMatchDayRepository, MatchDayRepositoryError, NewPairingProjection, PairingDisplayDto,
+    IMatchDayRepository, LatestResultDto, MatchDayRepositoryError, NewPairingProjection,
+    PairingDisplayDto,
 };
 use crate::app::shared_kernel::bloodbowl::date_string::DateString;
 use crate::app::shared_kernel::bloodbowl::ids::{MatchId, PairingId, SeasonId};
@@ -317,6 +318,23 @@ impl IMatchDayRepository for MatchDayRepository {
         .await
     }
 
+    async fn list_latest_completed_results(
+        &self,
+        space_id: &str,
+        limit: i64,
+    ) -> Result<Vec<LatestResultDto>, MatchDayRepositoryError> {
+        let rows = sqlx::query_as::<_, LatestResultRow>(include_str!(
+            "sql/match_days/list_latest_results.sql"
+        ))
+        .bind(space_id)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(db_err)?;
+
+        Ok(rows.into_iter().map(Into::into).collect())
+    }
+
     async fn ensure_match_days_from_structure(
         &self,
         season_id: &str,
@@ -408,6 +426,43 @@ impl From<ProjectionRow> for PairingDisplayDto {
     }
 }
 
+#[derive(sqlx::FromRow)]
+struct LatestResultRow {
+    pairing_id: String,
+    season_id: String,
+    competition_id: String,
+    competition_name: String,
+    round_name: String,
+    home_team_id: String,
+    home_team_name: String,
+    home_score: Option<i32>,
+    away_team_id: String,
+    away_team_name: String,
+    away_score: Option<i32>,
+    match_report_url: Option<String>,
+    published_at: Option<time::OffsetDateTime>,
+}
+
+impl From<LatestResultRow> for LatestResultDto {
+    fn from(r: LatestResultRow) -> Self {
+        Self {
+            pairing_id: r.pairing_id,
+            season_id: r.season_id,
+            competition_id: r.competition_id,
+            competition_name: r.competition_name,
+            round_name: r.round_name,
+            home_team_id: r.home_team_id,
+            home_team_name: r.home_team_name,
+            home_score: r.home_score,
+            away_team_id: r.away_team_id,
+            away_team_name: r.away_team_name,
+            away_score: r.away_score,
+            match_report_url: r.match_report_url,
+            published_at: r.published_at,
+        }
+    }
+}
+
 async fn list_from_projection(
     pool: &PgPool,
     season_id: &str,
@@ -458,5 +513,128 @@ impl MatchDayRepository {
             });
         }
         Ok(pairings)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    async fn insert_competition(pool: &PgPool, id: &str, space_id: &str, name: &str) {
+        sqlx::query(
+            "INSERT INTO competitions (id, space_id, name, logo) VALUES ($1, $2, $3, 'logo.png')",
+        )
+        .bind(id)
+        .bind(space_id)
+        .bind(name)
+        .execute(pool)
+        .await
+        .expect("insertion de la compétition de test");
+    }
+
+    async fn insert_season(pool: &PgPool, id: &str, competition_id: &str) {
+        sqlx::query(
+            "INSERT INTO competition_seasons (id, competition_id, name) VALUES ($1, $2, 'Saison 1')",
+        )
+        .bind(id)
+        .bind(competition_id)
+        .execute(pool)
+        .await
+        .expect("insertion de la saison de test");
+    }
+
+    /// Insère une ligne `completed` minimale dans la projection — les champs
+    /// d'affichage hors du périmètre de `list_latest_completed_results`
+    /// (roster, coach, initiales…) sont bouchés, seuls comptent `season_id`
+    /// et `published_at` pour ce test.
+    async fn insert_completed_result(
+        pool: &PgPool,
+        pairing_id: &str,
+        season_id: &str,
+        published_at: Option<time::OffsetDateTime>,
+    ) {
+        sqlx::query(
+            "INSERT INTO competition_match_display_proj (
+                pairing_id, season_id, round_id, round_name, round_position, round_day_type,
+                home_team_id, home_team_name, home_roster_name, home_coach_name, home_initials,
+                away_team_id, away_team_name, away_roster_name, away_coach_name, away_initials,
+                match_status, home_score, away_score, published_at
+            ) VALUES ($1, $2, 'r1', 'Journée 1', 1, 'fixed_date',
+                'home', 'Home', 'Roster', 'Coach', 'HO',
+                'away', 'Away', 'Roster', 'Coach', 'AW',
+                'completed', 2, 1, $3)",
+        )
+        .bind(pairing_id)
+        .bind(season_id)
+        .bind(published_at)
+        .execute(pool)
+        .await
+        .expect("insertion du résultat de test");
+    }
+
+    #[sqlx::test]
+    async fn list_latest_completed_results_orders_across_competitions_and_respects_limit(
+        pool: PgPool,
+    ) {
+        insert_competition(&pool, "comp-a", "space-1", "Ligue A").await;
+        insert_competition(&pool, "comp-b", "space-1", "Ligue B").await;
+        insert_season(&pool, "season-a", "comp-a").await;
+        insert_season(&pool, "season-b", "comp-b").await;
+
+        let older = time::OffsetDateTime::from_unix_timestamp(1_754_000_000).unwrap();
+        let newer = time::OffsetDateTime::from_unix_timestamp(1_754_100_000).unwrap();
+        insert_completed_result(&pool, "p-old", "season-a", Some(older)).await;
+        insert_completed_result(&pool, "p-new", "season-b", Some(newer)).await;
+        insert_completed_result(&pool, "p-null", "season-a", None).await;
+
+        let repo = MatchDayRepository::new(pool.clone());
+        let results = repo
+            .list_latest_completed_results("space-1", 2)
+            .await
+            .unwrap();
+
+        assert_eq!(results.len(), 2, "limit doit être respecté");
+        assert_eq!(results[0].pairing_id, "p-new", "le plus récent d'abord");
+        assert_eq!(results[0].competition_name, "Ligue B");
+        assert_eq!(results[1].pairing_id, "p-old");
+    }
+
+    #[sqlx::test]
+    async fn list_latest_completed_results_puts_null_published_at_last(pool: PgPool) {
+        insert_competition(&pool, "comp-a", "space-1", "Ligue A").await;
+        insert_season(&pool, "season-a", "comp-a").await;
+
+        let dated = time::OffsetDateTime::from_unix_timestamp(1_754_000_000).unwrap();
+        insert_completed_result(&pool, "p-dated", "season-a", Some(dated)).await;
+        insert_completed_result(&pool, "p-null", "season-a", None).await;
+
+        let repo = MatchDayRepository::new(pool.clone());
+        let results = repo
+            .list_latest_completed_results("space-1", 10)
+            .await
+            .unwrap();
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].pairing_id, "p-dated");
+        assert_eq!(results[1].pairing_id, "p-null");
+    }
+
+    #[sqlx::test]
+    async fn list_latest_completed_results_only_includes_the_given_space(pool: PgPool) {
+        insert_competition(&pool, "comp-a", "space-1", "Ligue A").await;
+        insert_competition(&pool, "comp-b", "space-2", "Ligue B").await;
+        insert_season(&pool, "season-a", "comp-a").await;
+        insert_season(&pool, "season-b", "comp-b").await;
+        insert_completed_result(&pool, "p-a", "season-a", None).await;
+        insert_completed_result(&pool, "p-b", "season-b", None).await;
+
+        let repo = MatchDayRepository::new(pool.clone());
+        let results = repo
+            .list_latest_completed_results("space-1", 10)
+            .await
+            .unwrap();
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].pairing_id, "p-a");
     }
 }

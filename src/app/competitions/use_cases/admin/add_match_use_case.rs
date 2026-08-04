@@ -256,6 +256,16 @@ mod tests {
         > {
             Ok(vec![])
         }
+        async fn list_latest_completed_results(
+            &self,
+            _: &str,
+            _: i64,
+        ) -> Result<
+            Vec<crate::app::competitions::domain::match_day_repository_port::LatestResultDto>,
+            crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError,
+        > {
+            Ok(vec![])
+        }
     }
 
     struct FakeTeamInfoPort(Mutex<Vec<TeamInfoDto>>);
