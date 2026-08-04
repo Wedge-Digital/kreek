@@ -135,69 +135,10 @@
 </div>
 
 <div class="home-side">
-  <div class="matches-panel">
-    <div class="matches-panel-title">Derniers résultats</div>
-
-    <div class="match-result">
-      <div class="match-league">Ligue de Condate · J14</div>
-      <div class="match-teams">
-        <div class="match-team-row">
-          <div class="match-team-name">Les Korrigans FC</div>
-          <div class="match-score winner">3</div>
-        </div>
-        <div class="match-team-row">
-          <div class="match-team-name">Nantes Undead</div>
-          <div class="match-score">1</div>
-        </div>
-      </div>
-      <div class="match-date">24 août 2024</div>
-    </div>
-
-    <div class="match-result">
-      <div class="match-league">Ligue de Condate · J14</div>
-      <div class="match-teams">
-        <div class="match-team-row">
-          <div class="match-team-name">Chaos Warriors</div>
-          <div class="match-score">2</div>
-        </div>
-        <div class="match-team-row">
-          <div class="match-team-name">Skaven Speedsters</div>
-          <div class="match-score winner">2</div>
-        </div>
-      </div>
-      <div class="match-date">23 août 2024</div>
-    </div>
-
-    <div class="match-result">
-      <div class="match-league">Korrigane Cup · Phase de groupes</div>
-      <div class="match-teams">
-        <div class="match-team-row">
-          <div class="match-team-name">Orc Boyz United</div>
-          <div class="match-score winner">4</div>
-        </div>
-        <div class="match-team-row">
-          <div class="match-team-name">High Elf Nobles</div>
-          <div class="match-score">0</div>
-        </div>
-      </div>
-      <div class="match-date">22 août 2024</div>
-    </div>
-
-    <div class="match-result">
-      <div class="match-league">Ligue de Condate · J14</div>
-      <div class="match-teams">
-        <div class="match-team-row">
-          <div class="match-team-name">Dwarf Ironbreakers</div>
-          <div class="match-score winner">1</div>
-        </div>
-        <div class="match-team-row">
-          <div class="match-team-name">Dark Elves Ravens</div>
-          <div class="match-score">0</div>
-        </div>
-      </div>
-      <div class="match-date">21 août 2024</div>
-    </div>
-
+  <div id="latest-results-widget"
+       hx-get="{{ app_routes.competitions.latest_results_widget(space_id) }}"
+       hx-trigger="load"
+       hx-swap="innerHTML">
   </div>
 </div>
 {% endblock %}
