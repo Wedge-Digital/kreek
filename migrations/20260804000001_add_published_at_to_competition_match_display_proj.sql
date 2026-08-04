@@ -1,0 +1,1 @@
+ALTER TABLE competition_match_display_proj ADD COLUMN published_at TIMESTAMPTZ;

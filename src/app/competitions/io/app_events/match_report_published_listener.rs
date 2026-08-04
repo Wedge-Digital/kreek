@@ -239,6 +239,13 @@ async fn update_projection(
     away_cas: i32,
     report_url: &str,
 ) -> Result<(), sqlx::Error> {
+    // sqlx est compilé avec la feature `time`, pas `chrono` — conversion
+    // nécessaire au point de persistance (l'app event reste en chrono::DateTime<Utc>).
+    let published_at = time::OffsetDateTime::from_unix_timestamp_nanos(
+        payload.published_at.timestamp_nanos_opt().unwrap_or(0) as i128,
+    )
+    .expect("date de publication dans la plage représentable par OffsetDateTime");
+
     sqlx::query!(
         "UPDATE competition_match_display_proj
          SET match_status = 'completed',
@@ -246,7 +253,8 @@ async fn update_projection(
              away_score = $3,
              home_casualties = $4,
              away_casualties = $5,
-             match_report_url = $6
+             match_report_url = $6,
+             published_at = $7
          WHERE pairing_id = $1",
         pairing_id,
         payload.home_score as i32,
@@ -254,6 +262,7 @@ async fn update_projection(
         home_cas,
         away_cas,
         report_url,
+        published_at,
     )
     .execute(pool)
     .await?;
@@ -591,5 +600,78 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(count, 1, "un seul pairing, pas deux");
+    }
+
+    /// La date réelle de publication doit être stockée en projection — c'est
+    /// elle qui permettra de trier des résultats de compétitions différentes
+    /// par ordre chronologique (widget "Derniers résultats" de l'accueil).
+    #[sqlx::test]
+    async fn update_projection_stores_published_at(pool: PgPool) {
+        let home = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
+        let away = "01ARZ3NDEKTSV4RRFFQ69G5FAW";
+        let match_day = MatchDay {
+            id: MatchId::new(),
+            season_id: SeasonId::new(),
+            name: MatchDayName::try_new("Journée 4".to_string()).unwrap(),
+            day_type: MatchDayType::FixedDate,
+            date_start: None,
+            date_end: None,
+            position: MatchDayPosition::try_new(1).unwrap(),
+            pairings: vec![],
+        };
+        let repo =
+            crate::app::competitions::io::repository::match_day_repository::MatchDayRepository::new(
+                pool.clone(),
+            );
+        repo.save_match_day(&match_day)
+            .await
+            .expect("insertion de la journée de test");
+        let team_port = FakeTeamInfoPort(vec![
+            TeamInfoDto {
+                team_id: home.into(),
+                team_name: "Home".into(),
+                coach_id: "coach1".into(),
+                coach_name: "C1".into(),
+                roster_name: "R1".into(),
+                logo_url: None,
+            },
+            TeamInfoDto {
+                team_id: away.into(),
+                team_name: "Away".into(),
+                coach_id: "coach2".into(),
+                coach_name: "C2".into(),
+                roster_name: "R2".into(),
+                logo_url: None,
+            },
+        ]);
+        let event_bus = crate::common::services::event_bus::event_bus::new_bus();
+        let mut payload = sample_payload(home, away, None);
+        payload.round_id = match_day.id.to_string();
+        // Seconde ronde (pas de sous-seconde) pour comparer sans souci de
+        // précision entre chrono (nanos) et la colonne TIMESTAMPTZ (micros).
+        payload.published_at = chrono::DateTime::from_timestamp(1_754_000_000, 0).unwrap();
+
+        let pairing_id = resolve_pairing_id(&payload, &repo, &team_port, &event_bus)
+            .await
+            .expect("un pairing doit être créé pour un rapport manuel");
+
+        update_projection(&pool, &pairing_id, &payload, 0, 0, "http://example/report")
+            .await
+            .expect("l'update de la projection doit réussir");
+
+        let stored: Option<time::OffsetDateTime> = sqlx::query_scalar(
+            "SELECT published_at FROM competition_match_display_proj WHERE pairing_id = $1",
+        )
+        .bind(&pairing_id)
+        .fetch_one(&pool)
+        .await
+        .expect("la ligne de projection doit exister");
+
+        assert_eq!(
+            stored
+                .expect("published_at doit être renseigné")
+                .unix_timestamp(),
+            payload.published_at.timestamp(),
+        );
     }
 }
