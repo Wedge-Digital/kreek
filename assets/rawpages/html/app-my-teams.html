@@ -38,8 +38,6 @@
       font-size: var(--text-tiny); font-weight: 600;
       background: rgba(255,140,0,0.1); color: var(--orange);
     }
-    .draft-budget { font-size: var(--text-small); color: var(--dark-2); white-space: nowrap; }
-    .draft-budget span { color: var(--dark-0); font-weight: 600; }
     .btn-draft-continue {
       background: var(--dark-6); border: 1px solid var(--dark-5); border-radius: 6px;
       padding: 6px 16px; font-size: var(--text-small); font-weight: 600; color: var(--dark-1);
@@ -48,24 +46,11 @@
     .btn-draft-continue:hover { background: var(--dark-5); }
 
     /* ── Active teams grid ──────────────────────────────────── */
-    .teams-layout { display: flex; gap: var(--p2); }
-    .filters-col { flex: 2; }
-    .teams-col { flex: 8; display: flex; flex-direction: column; gap: var(--p1); }
-
-    .filters-panel {
-      background: var(--white); border-radius: 10px; padding: var(--p2);
-      display: flex; flex-direction: column; gap: var(--p2); position: sticky; top: 0;
-    }
-    .filter-group { display: flex; flex-direction: column; gap: var(--p1); }
-    .filter-label { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
-    .filter-label-text { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-2); }
-    .filter-arrow { color: var(--dark-4); font-size: 12px; }
-
-    .teams-row { display: flex; gap: var(--p1); }
+    .active-teams-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--p1); }
     .team-card {
       background: var(--white); border-radius: 10px; border: 1px solid var(--dark-5);
       padding: var(--p2); display: flex; flex-direction: column; align-items: center; gap: var(--p1);
-      min-height: 360px; cursor: pointer; flex: 1;
+      min-height: 220px; cursor: pointer;
       transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
       position: relative;
     }
@@ -80,6 +65,7 @@
     .status-pending    { background: rgba(255,140,0,0.1);  color: var(--orange); }
     .status-post-match { background: rgba(33,150,243,0.1); color: #1976D2; }
     .status-dismissed  { background: rgba(200,0,0,0.1);    color: var(--red); }
+    .status-rejected   { background: rgba(230,57,70,0.1);  color: var(--red-badge); }
 
     .team-logo {
       width: 90px; height: 90px; border-radius: 50%; margin-top: var(--p1);
@@ -91,16 +77,28 @@
       background: var(--dark-6); border-radius: 20px; padding: 4px 12px;
       font-size: var(--text-tiny); color: var(--dark-2); font-weight: 500;
     }
-    .team-value { font-size: var(--text-small); color: var(--dark-2); font-weight: 500; }
-    .team-record { display: flex; gap: var(--p1); margin-top: var(--p05); }
-    .record-item { text-align: center; }
-    .record-val { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; }
-    .record-val.win { color: var(--green); }
-    .record-val.draw { color: var(--dark-2); }
-    .record-val.loss { color: var(--red); }
-    .record-label { font-size: 10px; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
-    .team-coach { font-size: var(--text-tiny); color: var(--dark-3); margin-top: auto; }
-    .team-coach span { color: var(--main-blue); font-weight: 500; }
+
+    /* ── Archived teams ─────────────────────────────────────── */
+    .archived-list { display: flex; flex-direction: column; gap: var(--p05); }
+    .archived-card {
+      background: var(--dark-7); border-radius: 8px; border: 1px solid var(--dark-5);
+      padding: var(--p1) var(--p2);
+      display: flex; align-items: center; gap: var(--p2);
+      cursor: pointer; opacity: 0.85;
+    }
+    .archived-card:hover { opacity: 1; }
+    .archived-logo {
+      width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+      background: var(--dark-5);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 800; font-size: 12px; color: var(--dark-3);
+    }
+    .archived-info { flex: 1; }
+    .archived-name { font-weight: 600; font-size: var(--text-small); color: var(--dark-2); }
+    .archived-roster { font-size: var(--text-tiny); color: var(--dark-4); margin-top: 2px; }
+    .archived-tag {
+      font-size: var(--text-tiny); color: var(--dark-3); white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -161,7 +159,6 @@
               <div class="draft-roster">Elfes Sylvestres</div>
             </div>
             <span class="draft-status">Brouillon</span>
-            <div class="draft-budget">Budget utilisé : <span>850 / 1 100 kPo</span></div>
             <button class="btn-draft-continue">Continuer →</button>
           </div>
           <div class="draft-card">
@@ -171,7 +168,6 @@
               <div class="draft-roster">Skavens</div>
             </div>
             <span class="draft-status">Brouillon</span>
-            <div class="draft-budget">Budget utilisé : <span>0 / 1 000 kPo</span></div>
             <button class="btn-draft-continue">Continuer →</button>
           </div>
         </div>
@@ -187,109 +183,89 @@
 
         <div class="section-title">
           Mes équipes actives
-          <span class="section-count">6</span>
+          <span class="section-count">4</span>
         </div>
 
-        <div class="teams-layout">
+        <div class="active-teams-grid">
 
-          <!-- Filtres -->
-          <div class="filters-col">
-            <div class="filters-panel">
-              <div class="h3-gras">Filtres</div>
-              <div class="separator"></div>
-              <div class="filter-group">
-                <div class="filter-label">
-                  <span class="filter-label-text">Statut</span>
-                  <span class="filter-arrow">▼</span>
-                </div>
-                <select class="picker">
-                  <option>Tous les statuts...</option>
-                  <option>Prête à jouer</option>
-                  <option>En attente d'inscription</option>
-                  <option>Phase post-match</option>
-                  <option>Renvoyée</option>
-                </select>
-              </div>
-              <div class="filter-group">
-                <div class="filter-label">
-                  <span class="filter-label-text">Compétition</span>
-                  <span class="filter-arrow">▼</span>
-                </div>
-                <select class="picker">
-                  <option>Toutes les compétitions...</option>
-                  <option>Ligue de Condate — Saison 2024</option>
-                  <option>Korrigane Cup 2024</option>
-                </select>
-              </div>
-            </div>
+          <!-- Équipe prête à jouer -->
+          <div class="team-card" onclick="window.location.href='app-team-detail.html'">
+            <span class="team-status-badge status-ready">Prête à jouer</span>
+            <div class="team-logo" style="background: linear-gradient(135deg, #003049, #555770);">KF</div>
+            <div class="team-name">Les Korrigans FC</div>
+            <div class="team-roster-tag">Elfes Sylvestres</div>
           </div>
 
-          <!-- Grille d'équipes actives -->
-          <div class="teams-col">
+          <!-- Équipe en phase post-match (amélioration joueurs) -->
+          <div class="team-card" onclick="window.location.href='app-team-detail.html'">
+            <span class="team-status-badge status-post-match">Amélioration joueurs</span>
+            <div class="team-logo" style="background: linear-gradient(135deg, #E02020, #1C1C29);">NU</div>
+            <div class="team-name">Nantes Undead</div>
+            <div class="team-roster-tag">Morts-vivants</div>
+          </div>
 
-            <div class="teams-row">
+          <!-- Équipe en attente d'inscription -->
+          <div class="team-card" onclick="window.location.href='app-team-detail.html'">
+            <span class="team-status-badge status-pending">En attente d'inscription</span>
+            <div class="team-logo" style="background: linear-gradient(135deg, #629584, #003049);">SS</div>
+            <div class="team-name">Skaven Speedsters</div>
+            <div class="team-roster-tag">Skavens</div>
+          </div>
 
-              <!-- Équipe prête à jouer -->
-              <div class="team-card" onclick="window.location.href='app-team-detail.html'">
-                <span class="team-status-badge status-ready">Prête à jouer</span>
-                <div class="team-logo" style="background: linear-gradient(135deg, #003049, #555770);">KF</div>
-                <div class="team-name">Les Korrigans FC</div>
-                <div class="team-roster-tag">Elfes Sylvestres</div>
-                <div class="team-value">1 250 kPo</div>
-                <div class="team-record">
-                  <div class="record-item"><div class="record-val win">8</div><div class="record-label">V</div></div>
-                  <div class="record-item"><div class="record-val draw">2</div><div class="record-label">N</div></div>
-                  <div class="record-item"><div class="record-val loss">1</div><div class="record-label">D</div></div>
-                </div>
-                <div class="team-coach">Coach : <span>Colonel Castor</span></div>
-              </div>
+          <!-- Équipe prête à jouer -->
+          <div class="team-card" onclick="window.location.href='app-team-detail.html'">
+            <span class="team-status-badge status-ready">Prête à jouer</span>
+            <div class="team-logo" style="background: linear-gradient(135deg, #FFD700, #003049);">OB</div>
+            <div class="team-name">Orc Boyz United</div>
+            <div class="team-roster-tag">Orques</div>
+          </div>
 
-              <!-- Équipe en phase post-match (amélioration joueurs) -->
-              <div class="team-card" onclick="window.location.href='app-team-detail.html'">
-                <span class="team-status-badge status-post-match">Amélioration joueurs</span>
-                <div class="team-logo" style="background: linear-gradient(135deg, #E02020, #1C1C29);">NU</div>
-                <div class="team-name">Nantes Undead</div>
-                <div class="team-roster-tag">Morts-vivants</div>
-                <div class="team-value">980 kPo</div>
-                <div class="team-record">
-                  <div class="record-item"><div class="record-val win">3</div><div class="record-label">V</div></div>
-                  <div class="record-item"><div class="record-val draw">2</div><div class="record-label">N</div></div>
-                  <div class="record-item"><div class="record-val loss">6</div><div class="record-label">D</div></div>
-                </div>
-                <div class="team-coach">Coach : <span>Le Nécroman</span></div>
-              </div>
+        </div>
 
-              <!-- Équipe en attente d'inscription -->
-              <div class="team-card" onclick="window.location.href='app-team-detail.html'">
-                <span class="team-status-badge status-pending">En attente d'inscription</span>
-                <div class="team-logo" style="background: linear-gradient(135deg, #629584, #003049);">SS</div>
-                <div class="team-name">Skaven Speedsters</div>
-                <div class="team-roster-tag">Skavens</div>
-                <div class="team-value">1 100 kPo</div>
-                <div class="team-record">
-                  <div class="record-item"><div class="record-val win">—</div><div class="record-label">V</div></div>
-                  <div class="record-item"><div class="record-val draw">—</div><div class="record-label">N</div></div>
-                  <div class="record-item"><div class="record-val loss">—</div><div class="record-label">D</div></div>
-                </div>
-                <div class="team-coach">Coach : <span>Whiskers</span></div>
-              </div>
+        <!-- ══ Section équipes archivées — statut terminal (Rejected/Dismissed) ═ -->
+        <!--
+          Règle validée (phase 3) : "archivée" = statut ParticipationStatus
+          terminal (Rejected ou Dismissed). PendingEnrollment et Enrolled
+          (tous game_phase) restent dans "actives".
+        -->
+        <div class="section-title" style="margin-top: var(--p3);">
+          Mes équipes archivées
+          <span class="section-count">4</span>
+        </div>
 
-              <!-- Équipe prête à jouer -->
-              <div class="team-card" onclick="window.location.href='app-team-detail.html'">
-                <span class="team-status-badge status-ready">Prête à jouer</span>
-                <div class="team-logo" style="background: linear-gradient(135deg, #FFD700, #003049);">OB</div>
-                <div class="team-name">Orc Boyz United</div>
-                <div class="team-roster-tag">Orques</div>
-                <div class="team-value">1 340 kPo</div>
-                <div class="team-record">
-                  <div class="record-item"><div class="record-val win">7</div><div class="record-label">V</div></div>
-                  <div class="record-item"><div class="record-val draw">2</div><div class="record-label">N</div></div>
-                  <div class="record-item"><div class="record-val loss">2</div><div class="record-label">D</div></div>
-                </div>
-                <div class="team-coach">Coach : <span>Grognash</span></div>
-              </div>
-
+        <div class="archived-list">
+          <!-- Équipe dont l'inscription a été refusée par l'admin -->
+          <div class="archived-card" onclick="window.location.href='app-team-detail.html'">
+            <div class="archived-logo">CR</div>
+            <div class="archived-info">
+              <div class="archived-name">Chaos Reavers</div>
+              <div class="archived-roster">Chaos</div>
             </div>
+            <span class="archived-tag">Refusée</span>
+          </div>
+          <div class="archived-card" onclick="window.location.href='app-team-detail.html'">
+            <div class="archived-logo">GB</div>
+            <div class="archived-info">
+              <div class="archived-name">Gobbo Brigade</div>
+              <div class="archived-roster">Gobelins</div>
+            </div>
+            <span class="archived-tag">Renvoyée</span>
+          </div>
+          <div class="archived-card" onclick="window.location.href='app-team-detail.html'">
+            <div class="archived-logo">HD</div>
+            <div class="archived-info">
+              <div class="archived-name">Highport Dwarves</div>
+              <div class="archived-roster">Nains</div>
+            </div>
+            <span class="archived-tag">Renvoyée</span>
+          </div>
+          <div class="archived-card" onclick="window.location.href='app-team-detail.html'">
+            <div class="archived-logo">VP</div>
+            <div class="archived-info">
+              <div class="archived-name">Vampire Pact</div>
+              <div class="archived-roster">Vampires</div>
+            </div>
+            <span class="archived-tag">Renvoyée</span>
           </div>
         </div>
 

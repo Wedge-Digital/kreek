@@ -68,4 +68,4 @@ Exposer un fragment HTML affichant le bilan victoires / nuls / défaites d'une �
 - [ ] Endpoint `GET /app/{space_id}/match-report/teams/{team_id}/vnd-widget`
 - [ ] Fragment template minimal (V/N/D + styles CSS existants)
 - [ ] Intégrer le slot `hx-get` dans `team-detail.html` (carte 34)
-- [ ] Intégrer le slot `hx-get` dans `my-teams-widget.html` (carte 44)
+- [x] ~~Intégrer le slot `hx-get` dans `my-teams-widget.html` (carte 44)~~ — abandonné : la page "Mes équipes" a été simplifiée (cf. `docs/specs/my-teams/`), le V/N/D n'y apparaît plus. La carte 44 a été remplacée par les cartes du dossier `docs/specs/my-teams/mes-equipes/08-cards.md`.

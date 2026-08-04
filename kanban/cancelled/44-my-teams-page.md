@@ -1,3 +1,10 @@
+> **Annulée — remplacée par un découpage.** Cette carte datait d'avant le
+> passage par le workflow "nouvelle fonctionnalité" complet. Le design a
+> depuis évolué (section "archivées" ajoutée, filtres et budget retirés,
+> statut "Refusée" pris en compte, bug du roster non affiché découvert et
+> corrigé) — voir `docs/specs/my-teams/` pour la spec complète et les
+> cartes `285` à `289` qui la remplacent.
+
 # Page "Mes équipes" — deux sections BC `team_creation` + BC `teams`
 
 **Priorité : haute**
