@@ -119,6 +119,41 @@
     .state-banner--phase   { background: rgba(0,48,73,0.05); }
     .state-banner--phase .state-banner-cta:not(.state-banner-cta--outline) { background: var(--main-blue); color: var(--white); }
 
+    /* ── NOUVEAU — mode édition de l'effectif (à discuter) ────────────────
+       Maquette de : réordonnancement libre par glisser-déposer, renommage et
+       renumérotation des joueurs. Implique côté back un champ display_order
+       persisté par joueur + des événements domaine PlayerRenamed /
+       PlayerJerseyChanged / PlayerReordered — rien de tout ça n'existe
+       aujourd'hui (jersey figé à la création, personal_name toujours vide,
+       tri actuel = ORDER BY jersey). Aucune de ces mutations n'est réelle
+       ici : Enregistrer ne fait que rafraîchir l'affichage local. */
+    .drag-handle-cell { display: none; width: 28px; text-align: center; color: var(--dark-3); }
+    .player-table.edit-mode .drag-handle-cell { display: table-cell; }
+    td.drag-handle-cell { cursor: grab; font-size: 16px; }
+    tr.player-row.dragging { opacity: 0.4; }
+
+    .cell-jersey .edit-value, .cell-name .edit-value { display: none; }
+    .player-table.edit-mode .cell-jersey .display-value,
+    .player-table.edit-mode .cell-name .display-value { display: none; }
+    .player-table.edit-mode .cell-jersey .edit-value,
+    .player-table.edit-mode .cell-name .edit-value { display: inline-block; }
+    .edit-value {
+      box-sizing: border-box; padding: 6px 8px; border: 1.5px solid var(--dark-4);
+      border-radius: 4px; font: inherit; color: var(--dark-1);
+    }
+    .jersey-input { width: 52px; text-align: center; }
+    .name-input { width: 100%; min-width: 140px; }
+    .cell-jersey.has-duplicate .jersey-input { border-color: var(--red); background: rgba(224,32,32,0.06); }
+
+    .player-table.edit-mode tbody tr.player-row td.cell-readonly { opacity: 0.5; }
+    .player-table.edit-mode tbody tr.player-row:hover td { background: inherit; cursor: default; }
+
+    /* Annuler/Enregistrer prennent la place de « Modifier l'effectif » dans le
+       bandeau d'état — pas de barre séparée sous le tableau. */
+    .roster-edit-warning-inline { font-size: var(--text-tiny); color: var(--red); font-weight: 600; }
+    .roster-edit-save-btn { background: var(--main-blue); color: var(--white); }
+    .roster-edit-save-btn:disabled { background: var(--dark-4); cursor: not-allowed; }
+
     /* ── NOUVEAU — sélecteur de démonstration (n'existe pas en prod) ─────── */
     .demo-switcher {
       background: rgba(255,215,0,0.08); border: 1px dashed rgba(154,120,0,0.4);
@@ -240,6 +275,10 @@
             <span class="state-banner-icon">✅</span>
             <span class="state-banner-text"><strong>Équipe prête à jouer.</strong> Aucune action requise avant le prochain match.</span>
             <button class="state-banner-cta state-banner-cta--outline" onclick="window.print()">Imprimer en PDF</button>
+            <button class="state-banner-cta state-banner-cta--outline roster-edit-trigger-btn" onclick="toggleRosterEdit()">✎ Modifier l'effectif</button>
+            <span class="state-banner-cta roster-edit-warning-inline" style="display:none;">Deux joueurs ne peuvent pas porter le même numéro.</span>
+            <button class="state-banner-cta state-banner-cta--outline roster-edit-cancel-btn" style="display:none;" onclick="cancelRosterEdit()">Annuler</button>
+            <button class="state-banner-cta roster-edit-save-btn" style="display:none;" onclick="saveRosterEdit()">Enregistrer</button>
           </div>
           <div class="state-banner state-banner--phase" data-state="match" style="display:none;">
             <span class="state-banner-icon">📝</span>
@@ -276,6 +315,7 @@
             <table class="player-table">
               <thead>
                 <tr>
+                  <th class="drag-handle-cell"></th>
                   <th style="text-align: center; width: 40px;">#</th>
                   <th style="text-align: left;">Nom</th>
                   <th style="text-align: left;">Poste</th>
@@ -285,78 +325,134 @@
                   <th style="text-align: center;">Valeur</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr onclick="openPlayer()">
-                  <td style="text-align: center; color: var(--dark-3); font-family: monospace;">1</td>
-                  <td><strong>Aerindel</strong></td>
-                  <td><span class="player-pos pos-thrower">Lanceur</span></td>
-                  <td><span class="skill-tag type-passing">Passe</span> <span class="skill-tag type-general">Sûr</span></td>
-                  <td><span style="color: var(--dark-4); font-style: italic;">—</span></td>
-                  <td style="text-align: center; font-weight: 600;">18</td>
-                  <td style="text-align: center;">95 kPo</td>
+              <tbody id="roster-tbody">
+                <tr class="player-row" data-jersey="1" onclick="openPlayer()">
+                  <td class="drag-handle-cell">⠿</td>
+                  <td class="cell-jersey" style="text-align: center;">
+                    <span class="display-value" style="color: var(--dark-3); font-family: monospace;">1</span>
+                    <input class="edit-value jersey-input" type="number" min="1" max="16" value="1" oninput="onJerseyInput()">
+                  </td>
+                  <td class="cell-name">
+                    <span class="display-value"><strong>Aerindel</strong></span>
+                    <input class="edit-value name-input" type="text" value="Aerindel" placeholder="Lanceur">
+                  </td>
+                  <td class="cell-readonly"><span class="player-pos pos-thrower">Lanceur</span></td>
+                  <td class="cell-readonly"><span class="skill-tag type-passing">Passe</span> <span class="skill-tag type-general">Sûr</span></td>
+                  <td class="cell-readonly"><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td class="cell-readonly" style="text-align: center; font-weight: 600;">18</td>
+                  <td class="cell-readonly" style="text-align: center;">95 kPo</td>
                 </tr>
-                <tr onclick="openPlayer()">
-                  <td style="text-align: center; color: var(--dark-3); font-family: monospace;">2</td>
-                  <td><strong>Sylvara</strong></td>
-                  <td><span class="player-pos pos-catcher">Receveur</span></td>
-                  <td><span class="skill-tag type-agility">Attraper</span> <span class="skill-tag type-general">Esquiver</span></td>
-                  <td><span style="color: var(--dark-4); font-style: italic;">—</span></td>
-                  <td style="text-align: center; font-weight: 600;">24</td>
-                  <td style="text-align: center;">65 kPo</td>
+                <tr class="player-row" data-jersey="2" onclick="openPlayer()">
+                  <td class="drag-handle-cell">⠿</td>
+                  <td class="cell-jersey" style="text-align: center;">
+                    <span class="display-value" style="color: var(--dark-3); font-family: monospace;">2</span>
+                    <input class="edit-value jersey-input" type="number" min="1" max="16" value="2" oninput="onJerseyInput()">
+                  </td>
+                  <td class="cell-name">
+                    <span class="display-value"><strong>Sylvara</strong></span>
+                    <input class="edit-value name-input" type="text" value="Sylvara" placeholder="Receveur">
+                  </td>
+                  <td class="cell-readonly"><span class="player-pos pos-catcher">Receveur</span></td>
+                  <td class="cell-readonly"><span class="skill-tag type-agility">Attraper</span> <span class="skill-tag type-general">Esquiver</span></td>
+                  <td class="cell-readonly"><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td class="cell-readonly" style="text-align: center; font-weight: 600;">24</td>
+                  <td class="cell-readonly" style="text-align: center;">65 kPo</td>
                 </tr>
-                <tr onclick="openPlayer()">
-                  <td style="text-align: center; color: var(--dark-3); font-family: monospace;">3</td>
-                  <td><strong>Maerindel</strong></td>
-                  <td><span class="player-pos pos-catcher">Receveur</span></td>
-                  <td><span class="skill-tag type-agility">Attraper</span> <span class="skill-tag type-general">Esquiver</span></td>
-                  <td><span style="color: var(--dark-4); font-style: italic;">—</span></td>
-                  <td style="text-align: center; font-weight: 600;">11</td>
-                  <td style="text-align: center;">65 kPo</td>
+                <tr class="player-row" data-jersey="3" onclick="openPlayer()">
+                  <td class="drag-handle-cell">⠿</td>
+                  <td class="cell-jersey" style="text-align: center;">
+                    <span class="display-value" style="color: var(--dark-3); font-family: monospace;">3</span>
+                    <input class="edit-value jersey-input" type="number" min="1" max="16" value="3" oninput="onJerseyInput()">
+                  </td>
+                  <td class="cell-name">
+                    <span class="display-value"><strong>Maerindel</strong></span>
+                    <input class="edit-value name-input" type="text" value="Maerindel" placeholder="Receveur">
+                  </td>
+                  <td class="cell-readonly"><span class="player-pos pos-catcher">Receveur</span></td>
+                  <td class="cell-readonly"><span class="skill-tag type-agility">Attraper</span> <span class="skill-tag type-general">Esquiver</span></td>
+                  <td class="cell-readonly"><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td class="cell-readonly" style="text-align: center; font-weight: 600;">11</td>
+                  <td class="cell-readonly" style="text-align: center;">65 kPo</td>
                 </tr>
-                <tr onclick="openPlayer()">
-                  <td style="text-align: center; color: var(--dark-3); font-family: monospace;">4</td>
-                  <td><strong>Tyrandel</strong></td>
-                  <td><span class="player-pos pos-blitzer">Frappeur</span></td>
-                  <td><span class="skill-tag type-general">Esquiver</span></td>
-                  <td><span class="skill-tag type-general">Bloc</span> <span class="skill-tag type-strength">Garde</span></td>
-                  <td style="text-align: center; font-weight: 600;">13</td>
-                  <td style="text-align: center;">128 kPo</td>
+                <tr class="player-row" data-jersey="4" onclick="openPlayer()">
+                  <td class="drag-handle-cell">⠿</td>
+                  <td class="cell-jersey" style="text-align: center;">
+                    <span class="display-value" style="color: var(--dark-3); font-family: monospace;">4</span>
+                    <input class="edit-value jersey-input" type="number" min="1" max="16" value="4" oninput="onJerseyInput()">
+                  </td>
+                  <td class="cell-name">
+                    <span class="display-value"><strong>Tyrandel</strong></span>
+                    <input class="edit-value name-input" type="text" value="Tyrandel" placeholder="Frappeur">
+                  </td>
+                  <td class="cell-readonly"><span class="player-pos pos-blitzer">Frappeur</span></td>
+                  <td class="cell-readonly"><span class="skill-tag type-general">Esquiver</span></td>
+                  <td class="cell-readonly"><span class="skill-tag type-general">Bloc</span> <span class="skill-tag type-strength">Garde</span></td>
+                  <td class="cell-readonly" style="text-align: center; font-weight: 600;">13</td>
+                  <td class="cell-readonly" style="text-align: center;">128 kPo</td>
                 </tr>
-                <tr onclick="openPlayer()">
-                  <td style="text-align: center; color: var(--dark-3); font-family: monospace;">5</td>
-                  <td><strong>Corandel</strong></td>
-                  <td><span class="player-pos pos-blitzer">Frappeur</span></td>
-                  <td><span class="skill-tag type-general">Esquiver</span></td>
-                  <td><span style="color: var(--dark-4); font-style: italic;">—</span></td>
-                  <td style="text-align: center; font-weight: 600;">6</td>
-                  <td style="text-align: center;">110 kPo</td>
+                <tr class="player-row" data-jersey="5" onclick="openPlayer()">
+                  <td class="drag-handle-cell">⠿</td>
+                  <td class="cell-jersey" style="text-align: center;">
+                    <span class="display-value" style="color: var(--dark-3); font-family: monospace;">5</span>
+                    <input class="edit-value jersey-input" type="number" min="1" max="16" value="5" oninput="onJerseyInput()">
+                  </td>
+                  <td class="cell-name">
+                    <span class="display-value"><strong>Corandel</strong></span>
+                    <input class="edit-value name-input" type="text" value="Corandel" placeholder="Frappeur">
+                  </td>
+                  <td class="cell-readonly"><span class="player-pos pos-blitzer">Frappeur</span></td>
+                  <td class="cell-readonly"><span class="skill-tag type-general">Esquiver</span></td>
+                  <td class="cell-readonly"><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td class="cell-readonly" style="text-align: center; font-weight: 600;">6</td>
+                  <td class="cell-readonly" style="text-align: center;">110 kPo</td>
                 </tr>
-                <tr onclick="openPlayer()">
-                  <td style="text-align: center; color: var(--dark-3); font-family: monospace;">6</td>
-                  <td><strong>Findas</strong></td>
-                  <td><span class="player-pos pos-lineman">Défenseur</span></td>
-                  <td><span class="skill-tag type-general">Esquiver</span></td>
-                  <td><span style="color: var(--dark-4); font-style: italic;">—</span></td>
-                  <td style="text-align: center; font-weight: 600;">9</td>
-                  <td style="text-align: center;">70 kPo</td>
+                <tr class="player-row" data-jersey="6" onclick="openPlayer()">
+                  <td class="drag-handle-cell">⠿</td>
+                  <td class="cell-jersey" style="text-align: center;">
+                    <span class="display-value" style="color: var(--dark-3); font-family: monospace;">6</span>
+                    <input class="edit-value jersey-input" type="number" min="1" max="16" value="6" oninput="onJerseyInput()">
+                  </td>
+                  <td class="cell-name">
+                    <span class="display-value"><strong>Findas</strong></span>
+                    <input class="edit-value name-input" type="text" value="Findas" placeholder="Défenseur">
+                  </td>
+                  <td class="cell-readonly"><span class="player-pos pos-lineman">Défenseur</span></td>
+                  <td class="cell-readonly"><span class="skill-tag type-general">Esquiver</span></td>
+                  <td class="cell-readonly"><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td class="cell-readonly" style="text-align: center; font-weight: 600;">9</td>
+                  <td class="cell-readonly" style="text-align: center;">70 kPo</td>
                 </tr>
-                <tr onclick="openPlayer()">
-                  <td style="text-align: center; color: var(--dark-3); font-family: monospace;">7</td>
-                  <td><strong>Galadras</strong></td>
-                  <td><span class="player-pos pos-lineman">Défenseur</span></td>
-                  <td><span style="color: var(--dark-4); font-style: italic;">—</span></td>
-                  <td><span style="color: var(--dark-4); font-style: italic;">—</span></td>
-                  <td style="text-align: center; font-weight: 600;">3</td>
-                  <td style="text-align: center;">70 kPo</td>
+                <tr class="player-row" data-jersey="7" onclick="openPlayer()">
+                  <td class="drag-handle-cell">⠿</td>
+                  <td class="cell-jersey" style="text-align: center;">
+                    <span class="display-value" style="color: var(--dark-3); font-family: monospace;">7</span>
+                    <input class="edit-value jersey-input" type="number" min="1" max="16" value="7" oninput="onJerseyInput()">
+                  </td>
+                  <td class="cell-name">
+                    <span class="display-value"><strong>Galadras</strong></span>
+                    <input class="edit-value name-input" type="text" value="Galadras" placeholder="Défenseur">
+                  </td>
+                  <td class="cell-readonly"><span class="player-pos pos-lineman">Défenseur</span></td>
+                  <td class="cell-readonly"><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td class="cell-readonly"><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td class="cell-readonly" style="text-align: center; font-weight: 600;">3</td>
+                  <td class="cell-readonly" style="text-align: center;">70 kPo</td>
                 </tr>
-                <tr onclick="openPlayer()">
-                  <td style="text-align: center; color: var(--dark-3); font-family: monospace;">8</td>
-                  <td><strong>Mirindel</strong></td>
-                  <td><span class="player-pos pos-lineman">Défenseur</span></td>
-                  <td><span style="color: var(--dark-4); font-style: italic;">—</span></td>
-                  <td><span style="color: var(--dark-4); font-style: italic;">—</span></td>
-                  <td style="text-align: center; font-weight: 600;">0</td>
-                  <td style="text-align: center;">70 kPo</td>
+                <tr class="player-row" data-jersey="8" onclick="openPlayer()">
+                  <td class="drag-handle-cell">⠿</td>
+                  <td class="cell-jersey" style="text-align: center;">
+                    <span class="display-value" style="color: var(--dark-3); font-family: monospace;">8</span>
+                    <input class="edit-value jersey-input" type="number" min="1" max="16" value="8" oninput="onJerseyInput()">
+                  </td>
+                  <td class="cell-name">
+                    <span class="display-value"><strong>Mirindel</strong></span>
+                    <input class="edit-value name-input" type="text" value="Mirindel" placeholder="Défenseur">
+                  </td>
+                  <td class="cell-readonly"><span class="player-pos pos-lineman">Défenseur</span></td>
+                  <td class="cell-readonly"><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td class="cell-readonly"><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td class="cell-readonly" style="text-align: center; font-weight: 600;">0</td>
+                  <td class="cell-readonly" style="text-align: center;">70 kPo</td>
                 </tr>
               </tbody>
             </table>
@@ -423,6 +519,13 @@
   };
 
   function setTeamState(state) {
+    // Modifier l'effectif n'existe que dans le bandeau « Prête à jouer » —
+    // quitter un état en cours d'édition doit annuler proprement, sinon
+    // Annuler/Enregistrer disparaissent avec le bandeau sans qu'on ait pu
+    // s'en servir.
+    if (state !== 'ready' && document.querySelector('.player-table').classList.contains('edit-mode')) {
+      cancelRosterEdit();
+    }
     document.querySelectorAll('.state-pill').forEach(function (el) {
       el.classList.toggle('active', el.dataset.state === state);
     });
@@ -436,8 +539,99 @@
   }
 
   function openPlayer() {
+    if (document.querySelector('.player-table').classList.contains('edit-mode')) return;
     var editable = window.currentTeamState === 'improvement';
     window.location.href = editable ? 'app-player-detail.html' : 'app-player-detail-readonly.html';
+  }
+
+  // ── Mode édition de l'effectif (maquette — rien n'est persisté) ────────
+  var rosterEditSnapshot = null;
+
+  function toggleRosterEdit() {
+    rosterEditSnapshot = document.getElementById('roster-tbody').innerHTML;
+    document.querySelector('.player-table').classList.add('edit-mode');
+    document.querySelectorAll('.player-row').forEach(function (row) {
+      row.setAttribute('draggable', 'true');
+    });
+    setRosterEditButtonsVisible(true);
+    enableRosterDragAndDrop();
+  }
+
+  function exitRosterEdit() {
+    document.querySelector('.player-table').classList.remove('edit-mode');
+    setRosterEditButtonsVisible(false);
+    document.querySelectorAll('.roster-edit-warning-inline').forEach(function (el) { el.style.display = 'none'; });
+    document.querySelectorAll('.roster-edit-save-btn').forEach(function (btn) { btn.disabled = false; });
+  }
+
+  // Dans le bandeau d'état actif, Annuler/Enregistrer prennent la place de
+  // « Modifier l'effectif » — même bouton, pas une barre séparée.
+  function setRosterEditButtonsVisible(editing) {
+    document.querySelectorAll('.roster-edit-trigger-btn').forEach(function (btn) { btn.style.display = editing ? 'none' : ''; });
+    document.querySelectorAll('.roster-edit-cancel-btn').forEach(function (btn) { btn.style.display = editing ? '' : 'none'; });
+    document.querySelectorAll('.roster-edit-save-btn').forEach(function (btn) { btn.style.display = editing ? '' : 'none'; });
+  }
+
+  function cancelRosterEdit() {
+    document.getElementById('roster-tbody').innerHTML = rosterEditSnapshot;
+    exitRosterEdit();
+  }
+
+  // En prod : POST vers le BC players (un événement domaine par joueur
+  // renommé/renuméroté + un événement d'ordre pour la liste) — ici, on se
+  // contente de recopier les valeurs des champs dans l'affichage.
+  function saveRosterEdit() {
+    document.querySelectorAll('.player-row').forEach(function (row) {
+      var jerseyInput = row.querySelector('.jersey-input');
+      var nameInput   = row.querySelector('.name-input');
+      row.querySelector('.cell-jersey .display-value').textContent = jerseyInput.value || '—';
+      row.querySelector('.cell-name .display-value').innerHTML =
+        '<strong>' + (nameInput.value || nameInput.placeholder) + '</strong>';
+      row.dataset.jersey = jerseyInput.value;
+    });
+    exitRosterEdit();
+  }
+
+  function onJerseyInput() {
+    var seen = {};
+    var duplicate = false;
+    document.querySelectorAll('.cell-jersey').forEach(function (cell) {
+      cell.classList.remove('has-duplicate');
+    });
+    document.querySelectorAll('.jersey-input').forEach(function (input) {
+      var v = input.value;
+      if (!v) return;
+      if (seen[v]) {
+        duplicate = true;
+        input.closest('.cell-jersey').classList.add('has-duplicate');
+        seen[v].closest('.cell-jersey').classList.add('has-duplicate');
+      }
+      seen[v] = input;
+    });
+    document.querySelectorAll('.roster-edit-warning-inline').forEach(function (el) { el.style.display = duplicate ? 'inline-flex' : 'none'; });
+    document.querySelectorAll('.roster-edit-save-btn').forEach(function (btn) { btn.disabled = duplicate; });
+  }
+
+  // Glisser-déposer minimal : réordonne les <tr> selon la position du curseur.
+  function enableRosterDragAndDrop() {
+    var dragEl = null;
+    document.querySelectorAll('.player-row').forEach(function (row) {
+      row.addEventListener('dragstart', function () {
+        dragEl = row;
+        row.classList.add('dragging');
+      });
+      row.addEventListener('dragend', function () {
+        row.classList.remove('dragging');
+        dragEl = null;
+      });
+      row.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        if (!dragEl || dragEl === row) return;
+        var rect = row.getBoundingClientRect();
+        var before = (e.clientY - rect.top) < rect.height / 2;
+        row.parentElement.insertBefore(dragEl, before ? row : row.nextSibling);
+      });
+    });
   }
 
   // Valide la phase d'amélioration (validate-improvement) → GamePhase::Recruitment
