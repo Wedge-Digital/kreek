@@ -17,7 +17,7 @@ indépendante du numéro de maillot.
 
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| team-detail | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | |
+| team-detail | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (6 cartes créées : 290-295) |
 
 ## Règles métier transverses (identifiées phase 1)
 
