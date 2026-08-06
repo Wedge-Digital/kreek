@@ -73,11 +73,11 @@ pub async fn compute_authorization(
 ) -> ResultAuthorization {
     let is_space_admin = matches!(
         state
-            .spaces
-            .space_repository
+            .competitions
+            .space_member_port
             .find_member_profile(&user.id, space_id)
             .await,
-        Ok(Some(SpaceProfile::SpaceAdmin))
+        Some(SpaceProfile::SpaceAdmin)
     );
 
     let is_comp_admin = match state
