@@ -17,7 +17,7 @@ indépendante du numéro de maillot.
 
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| team-detail | ✅ | ✅ | | | | | |
+| team-detail | ✅ | ✅ | ✅ | | | | |
 
 ## Règles métier transverses (identifiées phase 1)
 

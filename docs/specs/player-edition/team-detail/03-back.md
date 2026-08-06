@@ -26,6 +26,12 @@ n'existe ailleurs dans le projet (vérifié Phase 1 : `personal_name` toujours
 | `players/use_cases/update_roster_use_case.rs` | **Nouveau** | Orchestration : charge les joueurs actifs de l'équipe, vérifie l'unicité des numéros sur le batch soumis, appelle les méthodes de domaine par joueur (Phase 6), persiste, agrège succès/erreurs |
 | `players/routes.rs` | Modifié | Nouvelle constante `PLAYERS_ROSTER_UPDATE` + méthode `Routes::update_roster()` |
 | `players/router.rs` | Modifié | Câblage de la nouvelle route, import mis à jour vers le nouveau chemin du widget |
+| `migrations/<timestamp>_add_display_order_to_players_proj.sql` | **Nouveau** | Colonne `display_order` (nullable) sur `players_proj` — l'ordre libre (glisser-déposer) est indépendant du numéro de maillot (cf. 02-front.md), il lui faut son propre champ persisté. Nullable : les joueurs jamais réordonnés n'ont pas de valeur |
+
+*Oubli corrigé après coup : cette colonne et la migration associée n'avaient pas été listées à l'écriture initiale de cette phase — nécessaire pour que la Phase 4 (DTOs) sache où lire/écrire l'ordre.*
+
+`find_by_team_id` (`projection_repository.rs:30`) change d'ordre de tri :
+`ORDER BY jersey NULLS LAST, player_id` → `ORDER BY display_order NULLS LAST, jersey NULLS LAST, player_id`. Rétrocompatible : un joueur jamais réordonné (colonne `NULL`) garde le tri par numéro de maillot actuel.
 
 ## Routes
 
