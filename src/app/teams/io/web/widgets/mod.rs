@@ -3,6 +3,7 @@ pub mod dismissals_cart_widget;
 pub mod dismissals_roster_widget;
 pub mod enrolled_teams_widget;
 pub mod enrollment_actions;
+pub mod my_teams_widget;
 pub mod pending_enrollment_widget;
 pub mod recruitment_cart_widget;
 pub mod recruitment_catalog_widget;

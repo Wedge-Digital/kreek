@@ -3,6 +3,7 @@ pub mod path {
     pub const DISMISS_TEAM: &str = "/app/{space_id}/teams/{team_id}/dismiss";
     pub const PENDING_ENROLLMENT_WIDGET: &str = "/app/{space_id}/team/widgets/pending";
     pub const ENROLLED_TEAMS_WIDGET: &str = "/app/{space_id}/team/widgets/enrolled";
+    pub const MY_TEAMS_WIDGET: &str = "/app/{space_id}/team/widgets/my-teams";
     pub const APPROVE_ENROLLMENT: &str = "/app/{space_id}/team/{team_id}/enrollment/approve";
     pub const REJECT_ENROLLMENT: &str = "/app/{space_id}/team/{team_id}/enrollment/reject";
     pub const DISMISS_ENROLLMENT: &str = "/app/{space_id}/team/{team_id}/enrollment/dismiss";
@@ -71,6 +72,9 @@ impl Routes {
     }
     pub fn enrolled_teams_widget(&self, space_id: &str) -> String {
         path::ENROLLED_TEAMS_WIDGET.replace("{space_id}", space_id)
+    }
+    pub fn my_teams_widget(&self, space_id: &str) -> String {
+        path::MY_TEAMS_WIDGET.replace("{space_id}", space_id)
     }
     pub fn approve_enrollment(&self, space_id: &str, team_id: &str) -> String {
         path::APPROVE_ENROLLMENT

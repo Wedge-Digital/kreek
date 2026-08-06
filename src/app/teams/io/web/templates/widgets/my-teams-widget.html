@@ -1,0 +1,42 @@
+{% import "components/team-card.html" as card_cmp %}
+<link rel="stylesheet" href="/static/css/components/team-card.css">
+<link rel="stylesheet" href="/static/css/widgets/my-teams-widget.css">
+<div hx-disinherit="*">
+
+    {% if !active_teams.is_empty() %}
+    <div class="section-title">
+        Mes équipes actives
+        <span class="section-count">{{ active_teams.len() }}</span>
+    </div>
+    <div class="active-teams-grid">
+        {% for team in active_teams %}
+        {% call card_cmp::card(team.team_name, team.logo, team.roster_name, "", 0, team.initials, team.status_class, team.status_label, team.link) %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if !archived_teams.is_empty() %}
+    <div class="section-title section-title--archived">
+        Mes équipes archivées
+        <span class="section-count">{{ archived_teams.len() }}</span>
+    </div>
+    <div class="archived-list">
+        {% for team in archived_teams %}
+        <div class="archived-card"
+             hx-get="{{ team.link }}"
+             hx-target="#app-content"
+             hx-select="#app-content"
+             hx-swap="outerHTML"
+             hx-push-url="true">
+            <div class="archived-logo">{{ team.initials }}</div>
+            <div class="archived-info">
+                <div class="archived-name">{{ team.team_name }}</div>
+                <div class="archived-roster">{{ team.roster_name }}</div>
+            </div>
+            <span class="archived-tag">{{ team.status_label }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+</div>

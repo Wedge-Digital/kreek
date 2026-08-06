@@ -15,6 +15,7 @@ use crate::app::teams::io::web::widgets::enrolled_teams_widget::enrolled_teams_w
 use crate::app::teams::io::web::widgets::enrollment_actions::{
     approve_all_enrollments, approve_enrollment, dismiss_enrollment, reject_enrollment,
 };
+use crate::app::teams::io::web::widgets::my_teams_widget::my_teams_widget;
 use crate::app::teams::io::web::widgets::pending_enrollment_widget::pending_enrollment_widget;
 use crate::app::teams::io::web::widgets::recruitment_cart_widget::{
     recruitment_cart, remove_player, remove_staff,
@@ -43,6 +44,7 @@ pub fn router() -> Router<AppState> {
             get(pending_enrollment_widget),
         )
         .route(path::ENROLLED_TEAMS_WIDGET, get(enrolled_teams_widget))
+        .route(path::MY_TEAMS_WIDGET, get(my_teams_widget))
         .route(path::APPROVE_ENROLLMENT, post(approve_enrollment))
         .route(path::REJECT_ENROLLMENT, post(reject_enrollment))
         .route(path::DISMISS_ENROLLMENT, post(dismiss_enrollment))
