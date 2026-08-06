@@ -14,12 +14,21 @@ pub struct Params {
 
 pub struct CompetitionTeamCardVm {
     pub team_id: String,
+    pub initials: String,
     pub name: String,
     pub logo: Option<String>,
     pub roster: String,
     pub coach: String,
     pub tv: u32,
     pub link: String,
+}
+
+fn initials(name: &str) -> String {
+    name.split_whitespace()
+        .filter_map(|w| w.chars().next())
+        .take(2)
+        .collect::<String>()
+        .to_uppercase()
 }
 
 #[derive(Template)]
@@ -62,6 +71,7 @@ pub async fn competition_teams_widget(
         .into_iter()
         .map(|r| CompetitionTeamCardVm {
             link: app_routes.teams.team_detail(&params.space_id, &r.team_id),
+            initials: initials(&r.team_name),
             team_id: r.team_id,
             name: r.team_name,
             logo: r.logo_url,

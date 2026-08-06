@@ -1,4 +1,4 @@
-{% macro card(name, logo, roster, coach, tv, status, status_label, link) %}
+{% macro card(name, logo, roster, coach, tv, initials, status, status_label, link) %}
 <div class="team-card card-shadow"
      {% if !link.is_empty() %}
      hx-get="{{ link }}"
@@ -10,6 +10,8 @@
     <div class="team-card-logo">
         {% if let Some(url) = logo %}
         <img src="{{ url }}" alt="{{ name }}">
+        {% else %}
+        <span class="team-card-initials">{{ initials }}</span>
         {% endif %}
     </div>
     <div class="team-card-name h6-gras">{{ name }}</div>
