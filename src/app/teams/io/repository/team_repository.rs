@@ -1,6 +1,8 @@
 use crate::app::teams::domain::team::{Team, TeamDomainEvent};
 use crate::app::teams::domain::treasury::TreasuryMovement;
-use crate::app::teams::ports::{ITeamRepository, RepositoryError, TeamCardRow, TeamEnrollmentRow};
+use crate::app::teams::ports::{
+    ITeamRepository, MyTeamRow, RepositoryError, TeamCardRow, TeamEnrollmentRow,
+};
 use crate::common::services::event_bus::event_bus::EventBus;
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
@@ -484,6 +486,46 @@ impl ITeamRepository for TeamRepository {
             })
             .collect())
     }
+
+    async fn find_by_coach_and_space(
+        &self,
+        coach_id: &str,
+        space_id: &str,
+    ) -> Result<Vec<MyTeamRow>, RepositoryError> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            team_id: String,
+            team_name: String,
+            roster_name: String,
+            logo_url: Option<String>,
+            status: String,
+            game_phase: Option<String>,
+        }
+
+        let rows = sqlx::query_as::<_, Row>(
+            "SELECT team_id, team_name, roster_name, logo_url, status, game_phase
+             FROM team_proj
+             WHERE coach_id = $1 AND space_id = $2
+             ORDER BY updated_at DESC",
+        )
+        .bind(coach_id)
+        .bind(space_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| MyTeamRow {
+                team_id: r.team_id,
+                team_name: r.team_name,
+                roster_name: r.roster_name,
+                logo_url: r.logo_url,
+                status: r.status,
+                game_phase: r.game_phase,
+            })
+            .collect())
+    }
 }
 
 // ── Tests d'intégration ───────────────────────────────────────────────────────
@@ -959,5 +1001,103 @@ mod tests {
             .unwrap();
 
         assert_eq!(v, 2);
+    }
+
+    #[tokio::test]
+    async fn find_by_coach_and_space_liste_toutes_les_equipes_tous_statuts() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = TeamRepository::new(pool, new_bus());
+        let team_a = ulid::Ulid::new().to_string();
+        let team_b = ulid::Ulid::new().to_string();
+        let team_c = ulid::Ulid::new().to_string();
+
+        repo.append(&team_a, &created_event(&team_a), 0)
+            .await
+            .unwrap();
+        repo.append(
+            &team_a,
+            &TeamDomainEvent::TeamEnrolled {
+                competition_id: CompetitionId::try_new("00000000000000000000000002").unwrap(),
+                competition_name: "Ligue de Condate".to_string(),
+                season_id: SeasonId::try_new("00000000000000000000000003").unwrap(),
+                season_name: "Saison 2025".to_string(),
+            },
+            1,
+        )
+        .await
+        .unwrap();
+
+        repo.append(&team_b, &created_event(&team_b), 0)
+            .await
+            .unwrap();
+        repo.append(&team_b, &TeamDomainEvent::TeamDismissed, 1)
+            .await
+            .unwrap();
+
+        // Équipe d'un autre space — ne doit pas apparaître dans la requête ci-dessous.
+        use crate::app::shared_kernel::bloodbowl::staff_counts::{
+            ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
+        };
+        let autre_space = TeamDomainEvent::TeamCreated {
+            team_id: TeamId::try_new(&team_c).unwrap(),
+            space_id: SpaceId::try_new("00000000000000000000000099").unwrap(),
+            competition_id: CompetitionId::try_new("00000000000000000000000002").unwrap(),
+            competition_name: "Ligue de Condate".to_string(),
+            season_id: SeasonId::try_new("00000000000000000000000003").unwrap(),
+            season_name: "Saison 2025".to_string(),
+            name: TeamName::try_new("Autre Space FC").unwrap(),
+            logo_url: None,
+            roster_id: RosterId::try_new("00000000000000000000000004").unwrap(),
+            roster_name: RosterName::try_new("Elfes Sylvestres").unwrap(),
+            coach_id: CoachId::try_new("00000000000000000000000005").unwrap(),
+            coach_name: "Colonel Castor".to_string(),
+            treasury: Kpo(1000),
+            dedicated_fans: DedicatedFans::try_new(2).unwrap(),
+            rerolls: RerollCount(3),
+            apothecaries: ApothecaryCount(1),
+            assistants: AssistantCount(2),
+            cheerleaders: CheerleaderCount(3),
+        };
+        repo.append(&team_c, &autre_space, 0).await.unwrap();
+
+        let coach_id = "00000000000000000000000005";
+        let space_id = "00000000000000000000000001";
+        let rows = repo
+            .find_by_coach_and_space(coach_id, space_id)
+            .await
+            .unwrap();
+
+        let row_a = rows
+            .iter()
+            .find(|r| r.team_id == team_a)
+            .expect("team_a doit apparaître");
+        assert_eq!(row_a.status, "Enrolled");
+        assert_eq!(row_a.game_phase.as_deref(), Some("ReadyToPlay"));
+
+        let row_b = rows
+            .iter()
+            .find(|r| r.team_id == team_b)
+            .expect("team_b doit apparaître");
+        assert_eq!(row_b.status, "Dismissed");
+
+        assert!(
+            !rows.iter().any(|r| r.team_id == team_c),
+            "une équipe d'un autre space ne doit pas apparaître"
+        );
+
+        for id in [&team_a, &team_b, &team_c] {
+            sqlx::query("DELETE FROM team_event_store WHERE team_id = $1")
+                .bind(id)
+                .execute(&repo.pool)
+                .await
+                .ok();
+            sqlx::query("DELETE FROM team_proj WHERE team_id = $1")
+                .bind(id)
+                .execute(&repo.pool)
+                .await
+                .ok();
+        }
     }
 }

@@ -8,7 +8,7 @@
 use crate::app::teams::domain::team::{GamePhase, Team, TeamDomainEvent};
 use crate::app::teams::ports::{
     CatalogPositionDto, CrossLimitDto, IPhaseBasketRepository, IRosterCatalogPort, ISquadPort,
-    ITeamRepository, PhaseBasketState, RepositoryError, RosterCatalogDto, SkillBadgeDto,
+    ITeamRepository, MyTeamRow, PhaseBasketState, RepositoryError, RosterCatalogDto, SkillBadgeDto,
     SquadMemberDto, StaffPriceDto, TeamCardRow, TeamEnrollmentRow,
 };
 use async_trait::async_trait;
@@ -86,6 +86,14 @@ impl ITeamRepository for FakeTeamRepository {
         &self,
         _season_id: &str,
     ) -> Result<Vec<TeamCardRow>, RepositoryError> {
+        Ok(Vec::new())
+    }
+
+    async fn find_by_coach_and_space(
+        &self,
+        _coach_id: &str,
+        _space_id: &str,
+    ) -> Result<Vec<MyTeamRow>, RepositoryError> {
         Ok(Vec::new())
     }
 }

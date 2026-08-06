@@ -228,6 +228,13 @@ pub trait ITeamRepository: Send + Sync {
         &self,
         season_id: &str,
     ) -> Result<Vec<TeamCardRow>, RepositoryError>;
+
+    /// Liste toutes les équipes d'un coach dans un space, tous statuts confondus.
+    async fn find_by_coach_and_space(
+        &self,
+        coach_id: &str,
+        space_id: &str,
+    ) -> Result<Vec<MyTeamRow>, RepositoryError>;
 }
 
 pub struct TeamEnrollmentRow {
@@ -246,5 +253,14 @@ pub struct TeamCardRow {
     pub roster_name: String,
     pub logo_url: Option<String>,
     pub team_value: u32,
+    pub game_phase: Option<String>,
+}
+
+pub struct MyTeamRow {
+    pub team_id: String,
+    pub team_name: String,
+    pub roster_name: String,
+    pub logo_url: Option<String>,
+    pub status: String,
     pub game_phase: Option<String>,
 }

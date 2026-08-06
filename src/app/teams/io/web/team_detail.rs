@@ -344,7 +344,7 @@ mod tests {
     use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
     use crate::app::teams::domain::team::TeamDomainEvent;
     use crate::app::teams::domain::value_objects::{DedicatedFans, Kpo, RosterName, TeamName};
-    use crate::app::teams::ports::{TeamCardRow, TeamEnrollmentRow};
+    use crate::app::teams::ports::{MyTeamRow, TeamCardRow, TeamEnrollmentRow};
     use async_trait::async_trait;
     use std::sync::Mutex;
 
@@ -420,6 +420,14 @@ mod tests {
             &self,
             _season_id: &str,
         ) -> Result<Vec<TeamCardRow>, RepositoryError> {
+            unimplemented!("non exercé par find_team_with_retry")
+        }
+
+        async fn find_by_coach_and_space(
+            &self,
+            _coach_id: &str,
+            _space_id: &str,
+        ) -> Result<Vec<MyTeamRow>, RepositoryError> {
             unimplemented!("non exercé par find_team_with_retry")
         }
     }
