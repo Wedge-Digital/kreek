@@ -37,8 +37,10 @@ unique enveloppant tous les inserts (mêmes fonctions déjà existantes
 pub enum UpdateRosterError {
     /// Un player_id soumis ne correspond à aucun joueur Active de l'équipe.
     UnknownOrInactivePlayer,
-    /// Deux lignes du batch soumis portent le même numéro de maillot.
+    /// Deux joueurs actifs (batch + non soumis confondus) porteraient le même numéro.
     DuplicateJersey,
+    /// Deux joueurs actifs (batch + non soumis confondus) porteraient le même display_order.
+    DuplicateDisplayOrder,
     Domain(DomainError),
     Repository(RepositoryError),
 }
@@ -57,7 +59,7 @@ pour reconstruire `PlayerTableTemplate` sans second aller-retour repository.
 
 1. **Charger** l'effectif actif de l'équipe : `player_repo.find_by_team_id(&cmd.team_id)`, filtré `membership == Active`.
 2. **Valider l'appartenance** : chaque `row.player_id` du batch doit correspondre à un joueur de cet effectif — sinon `UnknownOrInactivePlayer`, tout le batch est rejeté (rien n'est persisté).
-3. **Valider l'unicité** des numéros de maillot **au sein du batch soumis** (niveau use case, cf. 03-back.md) — sinon `DuplicateJersey`, tout le batch est rejeté.
+3. **Valider l'unicité** (numéro de maillot **et** display_order) sur l'**état résultant complet de l'effectif actif** — pas seulement le batch soumis brut : pour chaque joueur actif, sa valeur soumise si présente dans le batch, sinon sa valeur actuelle inchangée. Nécessaire pour couvrir un batch partiel (règle 10 ci-dessous) sans risque de collision avec un joueur non touché. Un joueur `Dismissed` n'entre jamais dans ce calcul (ni son numéro ni son display_order ne bloquent quoi que ce soit). Conflit → `DuplicateJersey`/`DuplicateDisplayOrder`, tout le batch est rejeté (niveau use case, cf. 03-back.md).
 4. **Diff par joueur** : pour chaque ligne du batch, comparer `personal_name`/`jersey`/`display_order` soumis à l'état actuel de l'agrégat. N'appeler la méthode de domaine correspondante (Phase 6) que pour les champs réellement différents — un joueur inchangé ne produit aucun événement.
 5. **Persister** : accumuler tous les événements produits (potentiellement plusieurs par joueur) dans un seul appel `append_batch`, avec version incrémentée localement par joueur (`player.version + 1`, `+2`, ... selon le nombre de champs modifiés pour ce joueur).
 6. **Émettre** chaque événement sur l'`event_bus` (même pattern que `increase_stat_use_case`), après le succès de la persistance.
@@ -66,3 +68,5 @@ pour reconstruire `PlayerTableTemplate` sans second aller-retour repository.
 ## Règle métier assumée à cette étape
 
 **Un joueur actif absent du batch soumis est laissé inchangé, ce n'est pas une erreur.** Le batch n'est pas comparé à l'effectif complet pour détecter des lignes manquantes — seules les lignes présentes sont traitées. Cohérent avec la maquette (toute la grille est toujours soumise en pratique, puisque le formulaire encadre tout `#roster-tbody`), mais le use case ne l'impose pas strictement.
+
+*Confirmé et affiné en Phase 6 : c'est précisément parce que cette règle autorise les batchs partiels que la vérification d'unicité (étape 3) doit porter sur l'effectif actif complet, pas sur le seul batch soumis.*
