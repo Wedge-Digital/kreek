@@ -61,8 +61,8 @@ Section brouillons masquée entièrement si vide (pas de placeholder "0").
 
 ## Checklist
 
-- [ ] `DraftTeamCardVm` avec `roster: Option<String>`
-- [ ] Handler `my_teams` réécrit (exclusion des soumis + enrichissement roster)
-- [ ] Template `my-teams.html` restructuré (draft-card inline + slot widget)
-- [ ] CSS page mise à jour
-- [ ] Section brouillons masquée si vide
+- [x] `DraftTeamCardVm` avec `roster: Option<String>`
+- [x] Handler `my_teams` réécrit (exclusion des soumis + enrichissement roster)
+- [x] Template `my-teams.html` restructuré (draft-card inline + slot widget)
+- [x] CSS page mise à jour
+- [x] Section brouillons masquée si vide
