@@ -1,8 +1,6 @@
 {% extends "app-layout.html" %}
-{% import "components/team-card.html" as card_cmp %}
 
 {% block content %}
-<link rel="stylesheet" href="/static/css/components/team-card.css">
 <link rel="stylesheet" href="/static/css/pages/app-my-teams.css">
 
 <div class="my-teams-container">
@@ -16,15 +14,43 @@
          hx-push-url="true">+ Nouvelle équipe</a>
   </div>
 
-  <div class="teams-grid">
-      {% for team in teams %}
-      {% call card_cmp::card(team.name, team.logo, team.roster, "", team.tv, "", team.status, team.status_label, team.link) %}
-      {% endfor %}
-      {% if teams.is_empty() %}
-      <div class="empty-state">
-          Vous n'avez pas encore d'équipe dans cet espace.
+  {% if !drafts.is_empty() %}
+  <div class="section-title">
+      En cours de création
+      <span class="section-count">{{ drafts.len() }}</span>
+  </div>
+  <div class="drafts-list">
+      {% for draft in drafts %}
+      <div class="draft-card"
+           hx-get="{{ draft.link }}"
+           hx-target="#app-content"
+           hx-select="#app-content"
+           hx-swap="outerHTML"
+           hx-push-url="true">
+          <div class="draft-logo">
+              {% if let Some(url) = draft.logo %}
+              <img src="{{ url }}" alt="{{ draft.name }}">
+              {% else %}
+              <span>{{ draft.initials }}</span>
+              {% endif %}
+          </div>
+          <div class="draft-info">
+              <div class="draft-name">{{ draft.name }}</div>
+              {% if let Some(roster) = draft.roster %}
+              <div class="draft-roster">{{ roster }}</div>
+              {% endif %}
+          </div>
+          <span class="draft-status">Brouillon</span>
+          <button class="btn-draft-continue">Continuer →</button>
       </div>
-      {% endif %}
+      {% endfor %}
+  </div>
+  {% endif %}
+
+  <div hx-get="{{ app_routes.teams.my_teams_widget(space_id) }}"
+       hx-trigger="load"
+       hx-target="this"
+       hx-swap="innerHTML">
   </div>
 </div>
 {% endblock %}
