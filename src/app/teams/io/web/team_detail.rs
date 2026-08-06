@@ -1,11 +1,12 @@
 use crate::app::routes::AppRoutes;
 use crate::app::teams::domain::team::{GamePhase, ParticipationStatus, Team};
-use crate::app::teams::ports::IRosterCatalogPort;
+use crate::app::teams::ports::{IRosterCatalogPort, ITeamRepository, RepositoryError};
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
+use std::time::Duration;
 
 // ── View models ───────────────────────────────────────────────────────────────
 
@@ -280,13 +281,39 @@ impl IntoResponse for TeamDetailTemplate {
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 
+/// Retente la lecture avant d'abandonner : la création d'une équipe redirige
+/// ici avant que le listener cross-BC `teams` ait forcément commité la
+/// projection issue de l'app event émis par `team_creation`. Seul le cas
+/// « pas encore trouvée » est retenté — une vraie erreur repository remonte
+/// immédiatement.
+async fn find_team_with_retry(
+    repo: &dyn ITeamRepository,
+    team_id: &str,
+) -> Result<Option<Team>, RepositoryError> {
+    const MAX_ATTEMPTS: u32 = 3;
+    const BACKOFF: Duration = Duration::from_millis(50);
+
+    for attempt in 0..MAX_ATTEMPTS {
+        if let Some(team) = repo.find_by_id(team_id).await? {
+            return Ok(Some(team));
+        }
+        if attempt + 1 < MAX_ATTEMPTS {
+            tokio::time::sleep(BACKOFF).await;
+        }
+    }
+    Ok(None)
+}
+
 pub async fn team_detail(
     Path((space_id, team_id)): Path<(String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let team = match state.teams.team_repository.find_by_id(&team_id).await {
+    let team = match find_team_with_retry(state.teams.team_repository.as_ref(), &team_id).await {
         Ok(Some(t)) => t,
-        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Ok(None) => {
+            tracing::warn!("team_detail: team {team_id} introuvable après plusieurs tentatives");
+            return StatusCode::NOT_FOUND.into_response();
+        }
         Err(e) => {
             tracing::error!("team_detail find_by_id {team_id}: {e}");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
@@ -302,4 +329,124 @@ pub async fn team_detail(
         back_url,
     }
     .into_response()
+}
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RosterId, SeasonId};
+    use crate::app::shared_kernel::bloodbowl::staff_counts::{
+        ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
+    };
+    use crate::app::shared_kernel::bloodbowl::team::TeamId;
+    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+    use crate::app::teams::domain::team::TeamDomainEvent;
+    use crate::app::teams::domain::value_objects::{DedicatedFans, Kpo, RosterName, TeamName};
+    use crate::app::teams::ports::{TeamCardRow, TeamEnrollmentRow};
+    use async_trait::async_trait;
+    use std::sync::Mutex;
+
+    fn created_event() -> TeamDomainEvent {
+        TeamDomainEvent::TeamCreated {
+            team_id: TeamId::try_new("00000000000000000000000001").unwrap(),
+            space_id: SpaceId::try_new("00000000000000000000000002").unwrap(),
+            competition_id: CompetitionId::try_new("00000000000000000000000003").unwrap(),
+            competition_name: "Ligue de Condate".to_string(),
+            season_id: SeasonId::try_new("00000000000000000000000004").unwrap(),
+            season_name: "Saison 2025".to_string(),
+            name: TeamName::try_new("Les Korrigans FC".to_string()).unwrap(),
+            logo_url: None,
+            roster_id: RosterId::try_new("00000000000000000000000005").unwrap(),
+            roster_name: RosterName::try_new("Elfes Sylvestres".to_string()).unwrap(),
+            coach_id: CoachId::try_new("00000000000000000000000006").unwrap(),
+            coach_name: "Colonel Castor".to_string(),
+            treasury: Kpo(1000),
+            dedicated_fans: DedicatedFans::try_new(2).unwrap(),
+            rerolls: RerollCount(3),
+            apothecaries: ApothecaryCount(1),
+            assistants: AssistantCount(2),
+            cheerleaders: CheerleaderCount(3),
+        }
+    }
+
+    /// Double qui ne trouve la team qu'à partir de la Nème lecture — imite le
+    /// délai d'écriture asynchrone de la projection cross-BC après création.
+    struct CountingRepo {
+        found_at_attempt: u32,
+        calls: Mutex<u32>,
+    }
+
+    #[async_trait]
+    impl ITeamRepository for CountingRepo {
+        async fn append(
+            &self,
+            _team_id: &str,
+            _event: &TeamDomainEvent,
+            _expected_version: u64,
+        ) -> Result<u64, RepositoryError> {
+            unimplemented!("non exercé par find_team_with_retry")
+        }
+
+        async fn append_batch(
+            &self,
+            _team_id: &str,
+            _events: &[TeamDomainEvent],
+            _expected_version: u64,
+        ) -> Result<u64, RepositoryError> {
+            unimplemented!("non exercé par find_team_with_retry")
+        }
+
+        async fn find_by_id(&self, _team_id: &str) -> Result<Option<Team>, RepositoryError> {
+            let mut calls = self.calls.lock().unwrap();
+            *calls += 1;
+            if *calls >= self.found_at_attempt {
+                Ok(Team::hydrate(&[created_event()]))
+            } else {
+                Ok(None)
+            }
+        }
+
+        async fn find_by_season_and_status(
+            &self,
+            _season_id: &str,
+            _status: &str,
+        ) -> Result<Vec<TeamEnrollmentRow>, RepositoryError> {
+            unimplemented!("non exercé par find_team_with_retry")
+        }
+
+        async fn find_enrolled_for_season(
+            &self,
+            _season_id: &str,
+        ) -> Result<Vec<TeamCardRow>, RepositoryError> {
+            unimplemented!("non exercé par find_team_with_retry")
+        }
+    }
+
+    #[tokio::test]
+    async fn retries_until_found() {
+        let repo = CountingRepo {
+            found_at_attempt: 3,
+            calls: Mutex::new(0),
+        };
+
+        let team = find_team_with_retry(&repo, "whatever").await.unwrap();
+
+        assert!(team.is_some());
+        assert_eq!(*repo.calls.lock().unwrap(), 3);
+    }
+
+    #[tokio::test]
+    async fn gives_up_after_max_attempts() {
+        let repo = CountingRepo {
+            found_at_attempt: 99,
+            calls: Mutex::new(0),
+        };
+
+        let team = find_team_with_retry(&repo, "whatever").await.unwrap();
+
+        assert!(team.is_none());
+        assert_eq!(*repo.calls.lock().unwrap(), 3);
+    }
 }

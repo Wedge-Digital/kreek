@@ -244,6 +244,11 @@ def build_and_submit_team(page: Page, space_id: str, competition_name: str, coac
         # wait_for_timeout fixe qui pariait sur la durée de la chaîne
         # soumission + auto-enrôlement (asynchrone, plus lente sous charge).
         page.wait_for_url(re.compile(r".*/teams/.*"), timeout=10000)
+        # La ligne team_proj lue par cette page est écrite par un listener
+        # cross-BC asynchrone (team_creation -> teams), déclenché après ce
+        # redirect : sans ce garde-fou, une régression du retry côté
+        # team_detail se traduirait par un 404 silencieux ici.
+        page.wait_for_selector(".team-page", timeout=10000)
 
     return team_id
 
