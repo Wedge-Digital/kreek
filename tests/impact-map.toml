@@ -158,10 +158,21 @@
 "test_detailed_standings" = ["ranking", "competitions", "match_report", "teams", "players",
                              "references", "team_creation", "spaces", "spp_calculator"]
 
+# ── Accueil d'espace ─────────────────────────────────────────────────────────
+# Widget "Derniers résultats" (BC competitions) chargé sur la page d'accueil
+# (BC news) — même traversée de fixtures que les tests de classement
+# ci-dessus (deux compétitions, deux matchs publiés), moins `ranking` que ce
+# test n'exerce pas.
+"test_accueil_derniers_resultats" = ["news", "competitions", "match_report", "teams", "players",
+                                     "references", "team_creation", "spaces", "spp_calculator"]
+
 # ── Trou de couverture connu ─────────────────────────────────────────────────
-# Le BC `news` (articles, commentaires, fil d'accueil) n'a AUCUN test e2e.
-# Un diff limité à `news` ne sélectionnera donc rien : le skill doit le dire
-# explicitement plutôt que d'afficher « 0 test impacté » comme un succès.
+# Le BC `news` n'a qu'une seule couverture e2e, partielle : le widget
+# "Derniers résultats" de l'accueil (`test_accueil_derniers_resultats`, fourni
+# par `competitions`). Le reste du BC (articles, commentaires) n'a AUCUN test
+# e2e. Un diff limité à `news` sélectionnera donc ce seul test, jamais « 0 test
+# impacté » comme un succès trompeur — mais la couverture réelle du BC reste
+# très partielle.
 
 # ═════════════════════════════════════════════════════════════════════════════
 # [deps] — couplage inter-BC.
@@ -184,8 +195,10 @@
 
 # competitions émet PairingCreated / PairingDeleted (consommés par
 # match_report) ; il est lu par ranking, players et team_creation via leurs
-# adapters.
-"competitions" = ["match_report", "players", "ranking", "team_creation"]
+# adapters. Son widget "Derniers résultats" est aussi chargé (hx-get, pas un
+# import Rust) par la page d'accueil de news — couplage HTTP réel, pas un
+# port, mais le test de news casse si ce widget casse.
+"competitions" = ["match_report", "players", "ranking", "team_creation", "news"]
 
 # match_report émet MatchReportConfirmed / Published / Unpublished / Cancelled
 # et les PlayerMatchImpact* ; il est aussi lu par competitions via un port.
