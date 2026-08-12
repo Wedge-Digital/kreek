@@ -130,6 +130,13 @@
                                            "team_creation", "spaces"]
 
 # ── Équipes ──────────────────────────────────────────────────────────────────
+# `team_creation` et `teams` sont tous les deux vérifiés (pas seulement
+# traversés) : brouillons rendus par le premier, sections actives/archivées
+# par le widget du second (carte 287/288/289). `match_report` : seul chemin
+# applicatif vers `MatchReporting`, même raison que le bandeau d'équipe.
+"test_my_teams_page" = ["team_creation", "teams", "match_report", "players",
+                        "spp_calculator", "competitions", "references",
+                        "ranking", "spaces"]
 "test_team_detail_state_banner" = ["teams", "match_report", "players", "spp_calculator",
                                    "competitions", "references", "ranking",
                                    "team_creation", "spaces"]

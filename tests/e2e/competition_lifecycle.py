@@ -76,10 +76,16 @@ def create_full_competition(
     tier_xp: int = 6,
     with_default_bonuses: bool = True,
     deactivated_tiebreaks: list[str] | None = None,
+    requires_validation: bool = False,
 ) -> dict:
     """Phases 1 à 5 : crée une compétition publiée, avec `num_rounds` journées
     programmées et acceptation automatique des inscriptions
     (requires_validation=false). Retourne {competition_id, season_id, name}.
+
+    `requires_validation=True` laisse le mode de validation à son défaut
+    (`data-val="true"` déjà sélectionné dans `new-competition-phase-4.html`) au
+    lieu de basculer sur l'acceptation automatique : une équipe soumise y reste
+    `PendingEnrollment` jusqu'à validation ou rejet explicite d'un admin.
 
     `deactivated_tiebreaks` décoche les critères de départage dont le libellé est
     donné — les sept sont actifs par défaut. Décocher suffit à tester la sélection
@@ -138,8 +144,10 @@ def create_full_competition(
     page.click("button[onclick='submitStructure()']")
     page.wait_for_selector("#access-mode-btns", timeout=10000)
 
-    # ── Phase 4 : invitations — acceptation automatique ──────────────────
-    page.click("#validation-mode-btns .choice-btn[data-val='false']")
+    # ── Phase 4 : invitations — acceptation automatique, sauf demande explicite
+    # de garder la validation manuelle (défaut du formulaire) ────────────────
+    if not requires_validation:
+        page.click("#validation-mode-btns .choice-btn[data-val='false']")
     page.click("button[onclick='submitInvitations()']")
     page.wait_for_selector(".recap-row", timeout=10000)
 
