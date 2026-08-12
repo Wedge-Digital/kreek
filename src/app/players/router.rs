@@ -2,6 +2,7 @@ use crate::app::players::io::web::increase_stat_controller::post_increase_stat;
 use crate::app::players::io::web::player_debug_controller::player_debug_controller;
 use crate::app::players::io::web::player_detail_controller::player_detail_controller;
 use crate::app::players::io::web::purchase_skill_controller::post_purchase_skill;
+use crate::app::players::io::web::roster_edition_controller::post_update_roster;
 use crate::app::players::io::web::widgets::evolution_journal_widget::evolution_journal_widget;
 use crate::app::players::io::web::widgets::match_player_selector_widget::match_player_selector_widget;
 use crate::app::players::io::web::widgets::player_table_widget::player_table_widget;
@@ -16,6 +17,7 @@ use axum::{
 pub fn router() -> Router<AppState> {
     Router::new()
         .route(path::PLAYERS_BY_TEAM_WIDGET, get(player_table_widget))
+        .route(path::PLAYERS_ROSTER_UPDATE, post(post_update_roster))
         .route(
             path::MATCH_PLAYER_SELECTOR,
             get(match_player_selector_widget),

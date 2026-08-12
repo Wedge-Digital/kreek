@@ -104,17 +104,33 @@ pub async fn player_table_widget(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let team = TeamId(team_id);
+    let players = build_player_rows(&state, &team).await;
+
+    PlayerTableTemplate {
+        app_routes: AppRoutes::default(),
+        space_id,
+        team_id: team.0,
+        players,
+        save_error: None,
+    }
+    .into_response()
+}
+
+/// Lignes de l'effectif actif, prêtes à rendre. Extrait du handler pour que
+/// l'endpoint de sauvegarde (carte 294) rende le même tableau sans dupliquer la
+/// résolution des caractéristiques ni celle des compétences.
+pub async fn build_player_rows(state: &AppState, team: &TeamId) -> Vec<PlayerRowVm> {
     let projections = state
         .players
         .projection_repository
-        .find_by_team_id(&team)
+        .find_by_team_id(team)
         .await
         .unwrap_or_default();
 
     let catalog = state.players.skill_catalog.as_ref();
-    let stats = resolve_team_stats(&state, &team, catalog).await;
+    let stats = resolve_team_stats(state, team, catalog).await;
 
-    let players = projections
+    projections
         .into_iter()
         .map(|p| {
             let base_skills = build_base_skills(&p, catalog);
@@ -131,16 +147,7 @@ pub async fn player_table_widget(
                 stats: resolved,
             }
         })
-        .collect();
-
-    PlayerTableTemplate {
-        app_routes: AppRoutes::default(),
-        space_id,
-        team_id: team.0,
-        players,
-        save_error: None,
-    }
-    .into_response()
+        .collect()
 }
 
 /// Caractéristiques résolues de tout l'effectif, indexées par joueur.
