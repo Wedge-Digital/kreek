@@ -31,6 +31,15 @@ fn player_and_team_id(event: &PlayerDomainEvent) -> (&str, &str) {
         PlayerDomainEvent::InitialSkillEarned {
             player_id, team_id, ..
         } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::PlayerRenamed {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::PlayerJerseyChanged {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::PlayerReordered {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
         PlayerDomainEvent::TouchdownScored {
             player_id, team_id, ..
         } => (&player_id.0, &team_id.0),
@@ -358,6 +367,18 @@ pub async fn upsert_player_projection(
             .execute(&mut **tx)
             .await
             .map_err(RepositoryError::Database)?;
+        }
+
+        // Projection câblée en carte 291, avec la migration qui ajoute
+        // `display_order`. Rien ne peut émettre ces trois événements avant la
+        // carte 292, elle-même dépendante de la 291 : ce chemin est donc mort
+        // aujourd'hui. `unreachable!` plutôt qu'un no-op silencieux — une
+        // projection qui avale une écriture sans rien dire est précisément le
+        // genre d'étape sautée qui rassure au lieu d'échouer.
+        PlayerDomainEvent::PlayerRenamed { .. }
+        | PlayerDomainEvent::PlayerJerseyChanged { .. }
+        | PlayerDomainEvent::PlayerReordered { .. } => {
+            unreachable!("édition d'effectif : projection à câbler en carte 291")
         }
     }
 

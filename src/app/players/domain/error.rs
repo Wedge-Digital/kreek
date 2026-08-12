@@ -4,6 +4,7 @@ use std::fmt;
 pub enum DomainError {
     SkillAlreadyAcquired,
     InsufficientSpp,
+    PlayerNotActive,
 }
 
 impl fmt::Display for DomainError {
@@ -11,6 +12,7 @@ impl fmt::Display for DomainError {
         match self {
             Self::SkillAlreadyAcquired => write!(f, "compétence déjà possédée"),
             Self::InsufficientSpp => write!(f, "SPP insuffisants"),
+            Self::PlayerNotActive => write!(f, "joueur non actif"),
         }
     }
 }

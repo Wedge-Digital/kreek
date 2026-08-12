@@ -6,7 +6,7 @@ use crate::app::players::domain::match_impact::{
     PlayerParticipationStatus, SppEarned, StatAdjustment, StatKind, StatMalus, TouchdownCount,
 };
 use crate::app::players::domain::value_objects::{
-    JerseyVo, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
+    DisplayOrder, JerseyVo, PersonalName, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
 };
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use serde::{Deserialize, Serialize};
@@ -97,7 +97,15 @@ pub struct Player {
     pub space_id: SpaceId,
     pub position_name: PositionNameVo,
     pub roster_line_id: RosterLineId,
+
+    /// Nom donné par le coach, distinct du nom de poste. `None` tant qu'il n'a
+    /// pas été saisi — la lecture retombe alors sur `position_name`.
+    pub personal_name: Option<PersonalName>,
     pub jersey: Option<JerseyVo>,
+
+    /// Rang libre dans l'effectif, posé par glisser-déposer. `None` tant que le
+    /// joueur n'a jamais été réordonné : le tri retombe sur le maillot.
+    pub display_order: Option<DisplayOrder>,
     pub base_skills: Vec<SkillId>,
     pub acquired_skills: Vec<AcquiredSkill>,
     pub stat_increases: Vec<StatIncrease>,
@@ -220,7 +228,9 @@ impl Player {
                     space_id: space_id.clone(),
                     position_name: position_name.clone(),
                     roster_line_id: roster_line_id.clone(),
+                    personal_name: None,
                     jersey: *jersey,
+                    display_order: None,
                     base_skills: base_skills.clone(),
                     acquired_skills: vec![],
                     stat_increases: vec![],
@@ -451,6 +461,27 @@ impl Player {
             PlayerDomainEvent::PlayerDismissed { .. } => {
                 let mut player = current?;
                 player.membership = RosterMembership::Dismissed;
+                player.version += 1;
+                Some(player)
+            }
+
+            // Les trois éditions du coach. `None` n'est pas un « pas de
+            // changement » mais un effacement demandé : on écrase sans condition.
+            PlayerDomainEvent::PlayerRenamed { personal_name, .. } => {
+                let mut player = current?;
+                player.personal_name = personal_name.clone();
+                player.version += 1;
+                Some(player)
+            }
+            PlayerDomainEvent::PlayerJerseyChanged { jersey, .. } => {
+                let mut player = current?;
+                player.jersey = *jersey;
+                player.version += 1;
+                Some(player)
+            }
+            PlayerDomainEvent::PlayerReordered { display_order, .. } => {
+                let mut player = current?;
+                player.display_order = Some(*display_order);
                 player.version += 1;
                 Some(player)
             }
@@ -700,6 +731,52 @@ impl Player {
             spp_cost,
             value_delta,
         })
+    }
+
+    // ── Édition de l'effectif par le coach ─────────────────────────────────────
+    // Un joueur renvoyé n'est plus modifiable : il a quitté l'effectif, et son
+    // maillot doit pouvoir être réattribué sans qu'il le dispute. C'est la seule
+    // règle des trois — l'unicité du numéro et de l'ordre porte sur l'effectif
+    // entier, qu'un agrégat isolé ne connaît pas ; elle revient au use case.
+
+    pub fn rename(
+        &self,
+        personal_name: Option<PersonalName>,
+    ) -> Result<PlayerDomainEvent, DomainError> {
+        self.guard_active()?;
+        Ok(PlayerDomainEvent::PlayerRenamed {
+            player_id: self.id.clone(),
+            team_id: self.team_id.clone(),
+            personal_name,
+        })
+    }
+
+    pub fn change_jersey(
+        &self,
+        jersey: Option<JerseyVo>,
+    ) -> Result<PlayerDomainEvent, DomainError> {
+        self.guard_active()?;
+        Ok(PlayerDomainEvent::PlayerJerseyChanged {
+            player_id: self.id.clone(),
+            team_id: self.team_id.clone(),
+            jersey,
+        })
+    }
+
+    pub fn reorder(&self, display_order: DisplayOrder) -> Result<PlayerDomainEvent, DomainError> {
+        self.guard_active()?;
+        Ok(PlayerDomainEvent::PlayerReordered {
+            player_id: self.id.clone(),
+            team_id: self.team_id.clone(),
+            display_order,
+        })
+    }
+
+    fn guard_active(&self) -> Result<(), DomainError> {
+        match self.membership {
+            RosterMembership::Active => Ok(()),
+            RosterMembership::Dismissed => Err(DomainError::PlayerNotActive),
+        }
     }
 }
 
@@ -1322,5 +1399,148 @@ mod revert_match_impact_tests {
         assert_eq!(obtenu.career_touchdowns.0, attendu.career_touchdowns.0);
         assert_eq!(obtenu.matches_played.0, attendu.matches_played.0);
         assert_eq!(obtenu.participation_status, attendu.participation_status);
+    }
+}
+
+#[cfg(test)]
+mod roster_edition_tests {
+    use super::*;
+
+    fn active_player() -> Player {
+        let created = PlayerDomainEvent::PlayerCreated {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            space_id: SpaceId::new(),
+            position_name: PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
+            roster_line_id: RosterLineId::try_new("BLITZER".to_string()).unwrap(),
+            jersey: Some(JerseyVo::try_new(7).unwrap()),
+            base_skills: vec![],
+            starting_spp: Spp(0),
+            starting_value: ValueKpo(100),
+        };
+        Player::from_events(&[created]).unwrap()
+    }
+
+    fn dismissed_player() -> Player {
+        let player = active_player();
+        let dismissed = PlayerDomainEvent::PlayerDismissed {
+            player_id: player.id.clone(),
+            team_id: player.team_id.clone(),
+        };
+        Player::apply(Some(player), &dismissed).unwrap()
+    }
+
+    fn name(value: &str) -> PersonalName {
+        PersonalName::try_new(value.to_string()).unwrap()
+    }
+
+    #[test]
+    fn rename_produces_player_renamed_event_with_new_name() {
+        let player = active_player();
+        let event = player.rename(Some(name("Grok Fracasse"))).unwrap();
+
+        match &event {
+            PlayerDomainEvent::PlayerRenamed { personal_name, .. } => {
+                assert_eq!(personal_name.as_ref().unwrap().as_ref(), "Grok Fracasse");
+            }
+            autre => panic!("événement inattendu : {autre:?}"),
+        }
+
+        let player = Player::apply(Some(player), &event).unwrap();
+        assert_eq!(player.personal_name.unwrap().as_ref(), "Grok Fracasse");
+    }
+
+    #[test]
+    fn rename_allows_clearing_to_none() {
+        let player = active_player();
+        let player = Player::apply(
+            Some(player.clone()),
+            &player.rename(Some(name("Grok"))).unwrap(),
+        )
+        .unwrap();
+        assert!(player.personal_name.is_some());
+
+        // `None` efface : ce n'est pas un « champ non fourni », c'est un retrait
+        // demandé. La lecture retombe alors sur le nom de poste.
+        let player = Player::apply(Some(player.clone()), &player.rename(None).unwrap()).unwrap();
+        assert!(player.personal_name.is_none());
+    }
+
+    #[test]
+    fn change_jersey_produces_player_jersey_changed_event() {
+        let player = active_player();
+        let event = player
+            .change_jersey(Some(JerseyVo::try_new(12).unwrap()))
+            .unwrap();
+        let player = Player::apply(Some(player), &event).unwrap();
+        assert_eq!(player.jersey.unwrap().into_inner(), 12);
+    }
+
+    #[test]
+    fn change_jersey_allows_clearing_to_none() {
+        let player = active_player();
+        assert!(player.jersey.is_some());
+
+        let event = player.change_jersey(None).unwrap();
+        let player = Player::apply(Some(player), &event).unwrap();
+        assert!(player.jersey.is_none());
+    }
+
+    #[test]
+    fn reorder_produces_player_reordered_event() {
+        let player = active_player();
+        assert!(player.display_order.is_none());
+
+        let event = player.reorder(DisplayOrder::new(3)).unwrap();
+        let player = Player::apply(Some(player), &event).unwrap();
+        assert_eq!(player.display_order.unwrap().into_inner(), 3);
+    }
+
+    #[test]
+    fn rename_change_jersey_reorder_reject_dismissed_player() {
+        let player = dismissed_player();
+
+        assert_eq!(
+            player.rename(Some(name("Grok"))).unwrap_err(),
+            DomainError::PlayerNotActive
+        );
+        assert_eq!(
+            player
+                .change_jersey(Some(JerseyVo::try_new(12).unwrap()))
+                .unwrap_err(),
+            DomainError::PlayerNotActive
+        );
+        assert_eq!(
+            player.reorder(DisplayOrder::new(1)).unwrap_err(),
+            DomainError::PlayerNotActive
+        );
+    }
+
+    #[test]
+    fn personal_name_rejects_over_50_chars() {
+        assert!(PersonalName::try_new("a".repeat(50)).is_ok());
+        assert!(PersonalName::try_new("a".repeat(51)).is_err());
+    }
+
+    #[test]
+    fn personal_name_allows_apostrophe() {
+        // Beaucoup de patronymes en portent une — c'est la seule différence
+        // admise avec `PositionNameVo`, dont les valeurs viennent du corpus.
+        assert!(PersonalName::try_new("Sean O'Malley".to_string()).is_ok());
+    }
+
+    #[test]
+    fn personal_name_rejects_empty_string() {
+        assert!(PersonalName::try_new(String::new()).is_err());
+        // `trim` s'applique avant la validation : des espaces seuls sont vides.
+        assert!(PersonalName::try_new("   ".to_string()).is_err());
+    }
+
+    #[test]
+    fn jersey_vo_rejects_zero_and_above_99() {
+        assert!(JerseyVo::try_new(0).is_err());
+        assert!(JerseyVo::try_new(1).is_ok());
+        assert!(JerseyVo::try_new(99).is_ok());
+        assert!(JerseyVo::try_new(100).is_err());
     }
 }

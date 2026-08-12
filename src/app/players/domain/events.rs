@@ -3,7 +3,7 @@ use crate::app::players::domain::match_impact::{
 };
 use crate::app::players::domain::player::{AcquisitionMode, PlayerId, Spp, TeamId, ValueKpo};
 use crate::app::players::domain::value_objects::{
-    JerseyVo, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
+    DisplayOrder, JerseyVo, PersonalName, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
 };
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use serde::{Deserialize, Serialize};
@@ -144,6 +144,26 @@ pub enum PlayerDomainEvent {
         player_id: PlayerId,
         team_id: TeamId,
     },
+
+    // ── Édition de l'effectif par le coach ─────────────────────────────────────
+    // Trois événements distincts plutôt qu'un `PlayerEdited` fourre-tout : ce
+    // sont trois gestes différents, et le use case n'émet que ceux dont le champ
+    // a réellement changé. Le `Option::None` est signifiant — il efface la valeur.
+    PlayerRenamed {
+        player_id: PlayerId,
+        team_id: TeamId,
+        personal_name: Option<PersonalName>,
+    },
+    PlayerJerseyChanged {
+        player_id: PlayerId,
+        team_id: TeamId,
+        jersey: Option<JerseyVo>,
+    },
+    PlayerReordered {
+        player_id: PlayerId,
+        team_id: TeamId,
+        display_order: DisplayOrder,
+    },
 }
 
 impl PlayerDomainEvent {
@@ -165,6 +185,9 @@ impl PlayerDomainEvent {
             Self::MatchImpactReverted { .. } => "MatchImpactReverted",
             Self::PlayerDismissed { .. } => "PlayerDismissed",
             Self::InitialRosterCompleted { .. } => "InitialRosterCompleted",
+            Self::PlayerRenamed { .. } => "PlayerRenamed",
+            Self::PlayerJerseyChanged { .. } => "PlayerJerseyChanged",
+            Self::PlayerReordered { .. } => "PlayerReordered",
         }
     }
 
