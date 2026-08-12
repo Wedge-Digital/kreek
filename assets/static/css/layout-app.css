@@ -172,10 +172,11 @@
     height: auto;
     overflow: visible;
     padding-top: 52px;
-    padding-bottom: 68px;
+    padding-bottom: calc(var(--mobile-tabbar-clearance) + var(--p05));
   }
   /* `.page-content` porte déjà le décalage du chrome fixe — en-tête de 52px et
-     tabbar de 57px — et `.page-content-wide` est imbriquée dedans : le répéter
+     tabbar de `--mobile-tabbar-h`, plus une respiration de `--p05` — et
+     `.page-content-wide` est imbriquée dedans : le répéter
      ici le doublait, soit 104px de vide en haut et 136px en bas.
      Il ne reste qu'un retrait uniforme, qui donne aussi au contenu la marge
      latérale qu'il n'avait nulle part : il touchait les deux bords de l'écran. */
@@ -229,11 +230,16 @@
   .mobile-header-btn:hover { background: rgba(255,255,255,0.1); }
 
   /* ── Mobile tab bar ── */
+  /* `height` explicite, et non plus une hauteur déduite du contenu : c'est
+     elle qui rend `--mobile-tabbar-h` vraie. Sans encoche, le rendu est
+     inchangé (62px, 4px de retrait haut et bas) ; avec encoche, la barre
+     grandit d'autant et `--mobile-tabbar-clearance` suit. */
   .mobile-tabbar {
     display: flex;
     position: fixed; bottom: 0; left: 0; right: 0;
     z-index: 500;
     background: var(--dark-0);
+    height: var(--mobile-tabbar-clearance);
     padding: 4px 0;
     padding-bottom: max(4px, env(safe-area-inset-bottom));
   }

@@ -68,6 +68,18 @@
   --sidebar-width:   90px;
   --menubar-height:  60px;
   --layout-gutter:   140px;
+
+  /* Chrome mobile — hauteur de contenu de la tabbar, hors encoche. C'est la
+     valeur nue, lisible et modifiable seule ; elle est imposée par un `height`
+     sur `.mobile-tabbar` pour ne plus pouvoir dériver de ce qu'on en déclare
+     ici (elle valait 62px pour 57px annoncés, cf. carte 298). */
+  --mobile-tabbar-h: 62px;
+
+  /* Ce que doit dégager tout élément `position: fixed; bottom: 0` sous 768px
+     pour ne pas passer sous la tabbar. `env(safe-area-inset-bottom)` n'apparaît
+     qu'ici : aucun consommateur ne le réécrit. Attention, le Chrome de
+     Playwright a un inset nul — aucun test ne couvre le cas de l'encoche. */
+  --mobile-tabbar-clearance: calc(var(--mobile-tabbar-h) + env(safe-area-inset-bottom));
 }
 
 /* ─── Reset ─── */
