@@ -369,16 +369,58 @@ pub async fn upsert_player_projection(
             .map_err(RepositoryError::Database)?;
         }
 
-        // Projection câblée en carte 291, avec la migration qui ajoute
-        // `display_order`. Rien ne peut émettre ces trois événements avant la
-        // carte 292, elle-même dépendante de la 291 : ce chemin est donc mort
-        // aujourd'hui. `unreachable!` plutôt qu'un no-op silencieux — une
-        // projection qui avale une écriture sans rien dire est précisément le
-        // genre d'étape sautée qui rassure au lieu d'échouer.
-        PlayerDomainEvent::PlayerRenamed { .. }
-        | PlayerDomainEvent::PlayerJerseyChanged { .. }
-        | PlayerDomainEvent::PlayerReordered { .. } => {
-            unreachable!("édition d'effectif : projection à câbler en carte 291")
+        // Les trois éditions du coach. `None` est une valeur à écrire, pas une
+        // absence de changement : elle efface bien ce qui était là.
+        //
+        // Le domaine porte `Option<PersonalName>`, la projection une colonne
+        // `TEXT NOT NULL DEFAULT ''` : l'absence de nom s'y écrit `''`, comme le
+        // fait déjà la création de joueur. Y binder `NULL` violerait la
+        // contrainte — et ne se verrait qu'au premier effacement en production.
+        PlayerDomainEvent::PlayerRenamed {
+            player_id,
+            personal_name,
+            ..
+        } => {
+            sqlx::query(
+                "UPDATE players_proj
+                 SET personal_name = $2, version = version + 1
+                 WHERE player_id = $1",
+            )
+            .bind(&player_id.0)
+            .bind(personal_name.as_ref().map(|n| n.as_ref()).unwrap_or(""))
+            .execute(&mut **tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+        }
+        PlayerDomainEvent::PlayerJerseyChanged {
+            player_id, jersey, ..
+        } => {
+            sqlx::query(
+                "UPDATE players_proj
+                 SET jersey = $2, version = version + 1
+                 WHERE player_id = $1",
+            )
+            .bind(&player_id.0)
+            .bind(jersey.map(|j| j.into_inner() as i16))
+            .execute(&mut **tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+        }
+        PlayerDomainEvent::PlayerReordered {
+            player_id,
+            display_order,
+            ..
+        } => {
+            sqlx::query(
+                "UPDATE players_proj
+                 SET display_order = $2, version = version + 1
+                 WHERE player_id = $1",
+            )
+            .bind(&player_id.0)
+            .bind(display_order.into_inner() as i32)
+            .execute(&mut **tx)
+            .await
+            .map_err(RepositoryError::Database)?;
         }
     }
 
@@ -449,6 +491,23 @@ impl IPlayerRepository for PgPlayerRepository {
         let mut tx = self.pool.begin().await.map_err(RepositoryError::Database)?;
         insert_player_event(&mut tx, event, version).await?;
         upsert_player_projection(&mut tx, event).await?;
+        tx.commit().await.map_err(RepositoryError::Database)?;
+        Ok(())
+    }
+
+    /// Une seule transaction pour tout le lot — c'est ici que se tient la
+    /// promesse d'atomicité du port. Un échec en cours de lot annule aussi les
+    /// événements déjà insérés : l'effectif ne peut pas se retrouver avec deux
+    /// joueurs portant le même numéro parce que la moitié du lot est passée.
+    async fn append_batch(
+        &self,
+        entries: Vec<(PlayerId, TeamId, PlayerDomainEvent, i32)>,
+    ) -> Result<(), RepositoryError> {
+        let mut tx = self.pool.begin().await.map_err(RepositoryError::Database)?;
+        for (_player_id, _team_id, event, version) in &entries {
+            insert_player_event(&mut tx, event, *version).await?;
+            upsert_player_projection(&mut tx, event).await?;
+        }
         tx.commit().await.map_err(RepositoryError::Database)?;
         Ok(())
     }

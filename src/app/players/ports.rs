@@ -92,6 +92,24 @@ pub trait IPlayerRepository: Send + Sync {
         version: i32,
     ) -> Result<(), RepositoryError>;
 
+    /// Appende plusieurs événements, potentiellement sur des joueurs différents.
+    ///
+    /// L'édition d'effectif touche tout un lot de joueurs d'un coup : soit le
+    /// lot entier passe, soit rien, sans quoi un doublon de maillot pourrait
+    /// exister le temps d'un échec partiel. L'implémentation par défaut est
+    /// séquentielle — correcte mais non atomique — pour que les doublures de
+    /// test n'aient rien à écrire ; c'est l'implémentation Postgres qui tient
+    /// la promesse d'atomicité.
+    async fn append_batch(
+        &self,
+        entries: Vec<(PlayerId, TeamId, PlayerDomainEvent, i32)>,
+    ) -> Result<(), RepositoryError> {
+        for (player_id, team_id, event, version) in entries {
+            self.append(&player_id, &team_id, &event, version).await?;
+        }
+        Ok(())
+    }
+
     async fn find_by_id(&self, player_id: &PlayerId) -> Result<Option<Player>, RepositoryError>;
 
     async fn find_by_team_id(&self, team_id: &TeamId) -> Result<Vec<Player>, RepositoryError>;

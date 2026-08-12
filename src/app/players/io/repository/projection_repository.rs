@@ -27,7 +27,9 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
                     participation_status
              FROM players_proj
              WHERE team_id = $1 AND membership = 'Active'
-             ORDER BY jersey NULLS LAST, player_id",
+             -- L'ordre choisi par le coach prime ; un joueur jamais réordonné
+             -- (`display_order` nul) retombe derrière, trié par maillot.
+             ORDER BY display_order NULLS LAST, jersey NULLS LAST, player_id",
         )
         .bind(&team_id.0)
         .fetch_all(&self.pool)

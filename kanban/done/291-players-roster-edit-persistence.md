@@ -74,14 +74,34 @@ ORDER BY display_order NULLS LAST, jersey NULLS LAST, player_id
 
 ## Checklist
 
-- [ ] Migration `add_display_order_to_players_proj`
-- [ ] `IPlayerRepository::append_batch` (implémentation par défaut)
-- [ ] `PgPlayerRepository::append_batch` (transaction unique)
-- [ ] `event_type_name()` : 3 branches
-- [ ] `player_and_team_id()` : 3 branches
-- [ ] `upsert_player_projection()` : 3 branches
-- [ ] `find_by_team_id` (projection) : `ORDER BY` mis à jour
-- [ ] Test repository : `append_batch` persiste plusieurs événements de
+- [x] Migration `add_display_order_to_players_proj`
+- [x] `IPlayerRepository::append_batch` (implémentation par défaut)
+- [x] `PgPlayerRepository::append_batch` (transaction unique)
+- [x] `event_type_name()` : 3 branches
+- [x] `player_and_team_id()` : 3 branches
+- [x] `upsert_player_projection()` : 3 branches
+- [x] `find_by_team_id` (projection) : `ORDER BY` mis à jour
+- [x] Test repository : `append_batch` persiste plusieurs événements de
       joueurs différents dans une seule transaction
-- [ ] Test repository : un joueur avec `display_order` défini passe avant un
+- [x] Test repository : un joueur avec `display_order` défini passe avant un
       joueur sans (`NULLS LAST`)
+
+---
+
+## Notes d'implémentation
+
+**Deux items étaient déjà sans objet.** `event_type_name()` ne fait que
+déléguer à `event.type_name()`, dont les trois branches ont été ajoutées avec
+l'enum en carte 290 ; et `player_and_team_id()` avait reçu ses trois branches
+dans la même carte, par nécessité de compilation.
+
+**Un bug attrapé par les tests.** `players_proj.personal_name` est
+`TEXT NOT NULL DEFAULT ''`. La première version bindait un `Option<&str>` :
+effacer un nom aurait tenté d'écrire `NULL` et violé la contrainte — à
+l'exécution, pas à la compilation, donc invisible jusqu'au premier coach qui
+vide un nom. Le domaine porte `Option<PersonalName>`, la projection encode
+l'absence par `''`, comme le fait déjà la création de joueur. Le test couvre
+l'aller-retour complet : projection à `''`, agrégat rejoué à `None`.
+
+**Conséquence pour la carte 293** : le view model devra traiter `""` comme
+« pas de nom » et retomber sur le nom de poste.

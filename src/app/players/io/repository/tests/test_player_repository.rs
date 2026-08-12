@@ -528,3 +528,139 @@ async fn count_available_by_team_id_exclut_les_indisponibles(pool: PgPool) {
         "l'équipe doit recevoir 2 journaliers"
     );
 }
+
+// ── Édition de l'effectif (carte 291) ────────────────────────────────────────
+
+/// `append_batch` doit committer tout le lot d'un coup, même quand il touche
+/// plusieurs joueurs : c'est ce qui empêche un doublon de maillot d'exister le
+/// temps d'un échec partiel.
+#[sqlx::test]
+async fn append_batch_persiste_plusieurs_joueurs_en_une_transaction(pool: PgPool) {
+    use crate::app::players::domain::value_objects::{DisplayOrder, PersonalName};
+
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool.clone());
+    let team_id = TeamId("t-batch".into());
+    let un = PlayerId("un".into());
+    let deux = PlayerId("deux".into());
+
+    seed_player_with_jersey(&repo, &un, &team_id, 1).await;
+    seed_player_with_jersey(&repo, &deux, &team_id, 2).await;
+
+    repo.append_batch(vec![
+        (
+            un.clone(),
+            team_id.clone(),
+            PlayerDomainEvent::PlayerRenamed {
+                player_id: un.clone(),
+                team_id: team_id.clone(),
+                personal_name: Some(PersonalName::try_new("Grok".to_string()).unwrap()),
+            },
+            2,
+        ),
+        (
+            deux.clone(),
+            team_id.clone(),
+            PlayerDomainEvent::PlayerJerseyChanged {
+                player_id: deux.clone(),
+                team_id: team_id.clone(),
+                jersey: Some(JerseyVo::try_new(42).unwrap()),
+            },
+            2,
+        ),
+    ])
+    .await
+    .unwrap();
+
+    let effectif = proj.find_by_team_id(&team_id).await.unwrap();
+    let ligne_un = effectif.iter().find(|p| p.player_id == un.0).unwrap();
+    let ligne_deux = effectif.iter().find(|p| p.player_id == deux.0).unwrap();
+
+    assert_eq!(ligne_un.personal_name, "Grok");
+    assert_eq!(ligne_deux.jersey, Some(42));
+
+    // L'agrégat se rejoue : l'événement est bien dans l'event store, pas
+    // seulement dans la projection.
+    let recharge = repo.find_by_id(&un).await.unwrap().unwrap();
+    assert_eq!(recharge.personal_name.unwrap().as_ref(), "Grok");
+
+    // L'effacement : le domaine dit `None`, la colonne est NOT NULL, la
+    // projection doit donc y écrire `''` — et non planter sur la contrainte.
+    repo.append_batch(vec![(
+        un.clone(),
+        team_id.clone(),
+        PlayerDomainEvent::PlayerRenamed {
+            player_id: un.clone(),
+            team_id: team_id.clone(),
+            personal_name: None,
+        },
+        3,
+    )])
+    .await
+    .unwrap();
+    let effectif = proj.find_by_team_id(&team_id).await.unwrap();
+    let ligne_un = effectif.iter().find(|p| p.player_id == un.0).unwrap();
+    assert_eq!(ligne_un.personal_name, "");
+    assert!(repo
+        .find_by_id(&un)
+        .await
+        .unwrap()
+        .unwrap()
+        .personal_name
+        .is_none());
+
+    // Et l'ordre libre suit le même chemin.
+    repo.append_batch(vec![(
+        deux.clone(),
+        team_id.clone(),
+        PlayerDomainEvent::PlayerReordered {
+            player_id: deux.clone(),
+            team_id: team_id.clone(),
+            display_order: DisplayOrder::new(7),
+        },
+        3,
+    )])
+    .await
+    .unwrap();
+    let recharge = repo.find_by_id(&deux).await.unwrap().unwrap();
+    assert_eq!(recharge.display_order.unwrap().into_inner(), 7);
+}
+
+/// Le tri de l'effectif : l'ordre posé par le coach prime, et un joueur jamais
+/// réordonné passe derrière — quel que soit son numéro de maillot.
+#[sqlx::test]
+async fn un_joueur_ordonne_passe_avant_un_joueur_sans_ordre(pool: PgPool) {
+    use crate::app::players::domain::value_objects::DisplayOrder;
+
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool.clone());
+    let team_id = TeamId("t-tri".into());
+    let sans_ordre = PlayerId("sans".into());
+    let avec_ordre = PlayerId("avec".into());
+
+    // `sans_ordre` porte le plus petit maillot : sans la nouvelle clé de tri,
+    // c'est lui qui sortirait en tête.
+    seed_player_with_jersey(&repo, &sans_ordre, &team_id, 1).await;
+    seed_player_with_jersey(&repo, &avec_ordre, &team_id, 2).await;
+
+    repo.append_batch(vec![(
+        avec_ordre.clone(),
+        team_id.clone(),
+        PlayerDomainEvent::PlayerReordered {
+            player_id: avec_ordre.clone(),
+            team_id: team_id.clone(),
+            display_order: DisplayOrder::new(0),
+        },
+        2,
+    )])
+    .await
+    .unwrap();
+
+    let effectif = proj.find_by_team_id(&team_id).await.unwrap();
+    let ordre: Vec<&str> = effectif.iter().map(|p| p.player_id.as_str()).collect();
+    assert_eq!(
+        ordre,
+        vec!["avec", "sans"],
+        "le joueur réordonné doit précéder celui qui n'a pas d'ordre"
+    );
+}
