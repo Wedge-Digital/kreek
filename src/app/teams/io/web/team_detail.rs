@@ -58,8 +58,19 @@ impl StaffVm {
 
 pub enum BannerCtaVm {
     Print,
-    Navigate { label: String, href: String },
-    Mutate { label: String, post_url: String },
+    Navigate {
+        label: String,
+        href: String,
+    },
+    Mutate {
+        label: String,
+        post_url: String,
+    },
+    /// Déclencheur de l'édition d'effectif. Aucune URL : le bandeau ne connaît
+    /// pas le widget joueurs, qui appartient à un autre BC. Il publie trois
+    /// événements DOM sur `body`, le widget s'y abonne — c'est la règle 2 des
+    /// widgets, et c'est ce qui permet aux deux BCs de s'ignorer.
+    RosterEdit,
 }
 
 pub struct BannerVm {
@@ -90,7 +101,7 @@ impl BannerVm {
                 icon: "✅".into(),
                 title: "Équipe prête à jouer.".into(),
                 detail: "Aucune action requise avant le prochain match.".into(),
-                ctas: vec![BannerCtaVm::Print],
+                ctas: vec![BannerCtaVm::RosterEdit, BannerCtaVm::Print],
             }),
             (Enrolled, Some(MatchReporting)) => {
                 let href = team

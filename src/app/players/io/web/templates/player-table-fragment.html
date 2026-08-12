@@ -1,15 +1,37 @@
-<link rel="stylesheet" href="/static/css/widgets/team-player-widget.css">
-<div class="players-widget">
+{# Le `<link>` est **dans** la racine : le formulaire remplace `.players-widget`
+   en `outerHTML` à chaque enregistrement, et une feuille laissée en dehors
+   s'accumulerait à chaque aller-retour. #}
+<div class="players-widget" hx-disinherit="*">
+  <link rel="stylesheet" href="/static/css/widgets/team-player-widget.css">
   {% if players.is_empty() %}
   <div class="players-widget-empty">
     Aucun joueur enregistré pour cette équipe.
   </div>
   {% else %}
+  {% if let Some(message) = save_error %}
+  <div class="roster-save-error" role="alert">
+    <span>⚠</span><span>Impossible d'enregistrer : {{ message }}</span>
+  </div>
+  {% endif %}
+  {# `<form>` autour du tableau entier, et non du seul `<tbody>` : un `<form>`
+     enfant direct de `<table>` est du HTML invalide que les navigateurs
+     déplacent hors du tableau, emportant les champs avec lui. Les inputs des
+     cellules appartiennent au formulaire de la même façon.
+
+     `closest .players-widget` plutôt qu'un id : le widget ne doit rien savoir
+     du DOM de la page hôte (règle 4 des widgets). #}
+  <form hx-post="{{ app_routes.players.update_roster(space_id, team_id) }}"
+        hx-trigger="rosterEditSaveRequested from:body"
+        hx-target="closest .players-widget"
+        hx-swap="outerHTML">
   <div class="player-table-frame">
     <div class="player-table-scroll">
-      <table class="player-table">
+      {# Déjà en édition si l'on revient d'un refus : la saisie est réaffichée
+         telle qu'elle a été soumise, à corriger sur place. #}
+      <table class="player-table{% if save_error.is_some() %} edit-mode{% endif %}">
         <thead>
           <tr>
+            <th class="drag-handle-cell"></th>
             <th class="player-col-jersey">#</th>
             <th>Nom</th>
             <th>Poste</th>
@@ -24,30 +46,42 @@
             <th class="player-col-num">Valeur</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="roster-tbody">
           {% for p in players %}
-          <tr class="player-table-row" onclick="window.location.href='{{ app_routes.players.player_detail(space_id, p.player_id) }}'">
-            <td class="player-jersey">
-              {% if let Some(j) = p.jersey %}{{ j }}{% else %}—{% endif %}
+          {# Pas de `display_order` soumis : l'ordre est celui des lignes, que le
+             glisser-déposer réordonne dans le DOM, et le use case assigne
+             `display_order = index`. #}
+          <tr class="player-table-row" data-player-detail="{{ app_routes.players.player_detail(space_id, p.player_id) }}">
+            <td class="drag-handle-cell">⠿</td>
+            <td class="player-jersey cell-jersey">
+              <span class="display-value">{% if let Some(j) = p.jersey %}{{ j }}{% else %}—{% endif %}</span>
+              <input class="edit-value jersey-input" type="number" name="jersey" min="1" max="99"
+                     value="{% if let Some(j) = p.jersey %}{{ j }}{% endif %}">
+              <input type="hidden" name="player_id" value="{{ p.player_id }}">
             </td>
-            <td>
-              <strong>
-                {% if p.personal_name.is_empty() %}{{ p.position_name }}{% else %}{{ p.personal_name }}{% endif %}
-              </strong>
+            <td class="cell-name">
+              <span class="display-value">
+                <strong>{% if p.personal_name.is_empty() %}{{ p.position_name }}{% else %}{{ p.personal_name }}{% endif %}</strong>
+              </span>
+              {# `placeholder` = nom de poste : c'est ce que la lecture affiche
+                 quand le coach n'a pas donné de nom, un champ vide n'est donc
+                 pas une case oubliée. #}
+              <input class="edit-value name-input" type="text" name="personal_name"
+                     value="{{ p.personal_name }}" placeholder="{{ p.position_name }}">
             </td>
-            <td class="player-position">{{ p.position_name }}</td>
+            <td class="player-position cell-readonly">{{ p.position_name }}</td>
             {% if let Some(s) = p.stats %}
             {# AG, PA et AR sont des seuils de dé : ils s'affichent suivis d'un « + », comme sur la fiche joueur. #}
-            <td class="player-stat">{{ s.ma }}</td>
-            <td class="player-stat">{{ s.st }}</td>
-            <td class="player-stat">{{ s.ag }}+</td>
-            <td class="player-stat">{{ s.pa }}+</td>
-            <td class="player-stat">{{ s.av }}+</td>
+            <td class="player-stat cell-readonly">{{ s.ma }}</td>
+            <td class="player-stat cell-readonly">{{ s.st }}</td>
+            <td class="player-stat cell-readonly">{{ s.ag }}+</td>
+            <td class="player-stat cell-readonly">{{ s.pa }}+</td>
+            <td class="player-stat cell-readonly">{{ s.av }}+</td>
             {% else %}
             {# Poste introuvable au catalogue : un tiret plutôt qu'une valeur fausse. #}
-            <td class="player-stat player-none" colspan="5">—</td>
+            <td class="player-stat player-none cell-readonly" colspan="5">—</td>
             {% endif %}
-            <td>
+            <td class="cell-readonly">
               {% if p.base_skills.is_empty() %}
               <span class="player-none">—</span>
               {% else %}
@@ -58,7 +92,7 @@
               </div>
               {% endif %}
             </td>
-            <td>
+            <td class="cell-readonly">
               {% if p.acquired_skills.is_empty() %}
               <span class="player-none">—</span>
               {% else %}
@@ -69,8 +103,8 @@
               </div>
               {% endif %}
             </td>
-            <td class="player-spp">{{ p.spp }}</td>
-            <td class="player-value">{{ p.value_kpo }} kPo</td>
+            <td class="player-spp cell-readonly">{{ p.spp }}</td>
+            <td class="player-value cell-readonly">{{ p.value_kpo }} kPo</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -94,5 +128,121 @@
     })();
     </script>
   </div>
+  </form>
   {% endif %}
 </div>
+{# Comportement du mode édition — repris de la maquette validée, branché sur les
+   événements DOM du bandeau (BC `teams`) au lieu de ses fonctions globales.
+   Racine retrouvée via `currentScript`, sans id global : le même widget peut
+   apparaître deux fois dans une page sans que les deux se marchent dessus. #}
+<script>
+(function () {
+  var widget = document.currentScript.previousElementSibling;
+  var table = widget.querySelector('.player-table');
+  if (!table) return;
+  var tbody = widget.querySelector('#roster-tbody');
+  var snapshot = null;
+
+  function enEdition() { return table.classList.contains('edit-mode'); }
+
+  function entrer() {
+    snapshot = tbody.innerHTML;
+    table.classList.add('edit-mode');
+    widget.querySelectorAll('.player-table-row').forEach(function (row) {
+      row.setAttribute('draggable', 'true');
+    });
+    activerGlisserDeposer();
+    verifierDoublons();
+  }
+
+  function sortir() {
+    table.classList.remove('edit-mode');
+    widget.querySelectorAll('.player-table-row').forEach(function (row) {
+      row.removeAttribute('draggable');
+    });
+  }
+
+  function annuler() {
+    if (snapshot !== null) tbody.innerHTML = snapshot;
+    sortir();
+    // La restauration a remplacé les lignes : le bandeau doit repartir d'un
+    // état valide, sinon « Enregistrer » resterait grisé au prochain passage.
+    publierValidite(true);
+  }
+
+  function publierValidite(valide) {
+    htmx.trigger(document.body, 'rosterEditValidityChanged', { valid: valide });
+  }
+
+  // Doublon de numéro détecté côté front : retour immédiat, sans aller-retour.
+  // Le serveur revérifie — deux onglets peuvent se contredire.
+  function verifierDoublons() {
+    var vus = {};
+    var doublon = false;
+    widget.querySelectorAll('.cell-jersey').forEach(function (cell) {
+      cell.classList.remove('has-duplicate');
+    });
+    widget.querySelectorAll('.jersey-input').forEach(function (input) {
+      var v = input.value;
+      if (!v) return;
+      if (vus[v]) {
+        doublon = true;
+        input.closest('.cell-jersey').classList.add('has-duplicate');
+        vus[v].closest('.cell-jersey').classList.add('has-duplicate');
+      }
+      vus[v] = input;
+    });
+    publierValidite(!doublon);
+  }
+
+  // Glisser-déposer minimal : réordonne les <tr> selon la position du curseur.
+  function activerGlisserDeposer() {
+    var drague = null;
+    widget.querySelectorAll('.player-table-row').forEach(function (row) {
+      if (row.dataset.dndPret) return;
+      row.dataset.dndPret = '1';
+      row.addEventListener('dragstart', function () {
+        drague = row;
+        row.classList.add('dragging');
+      });
+      row.addEventListener('dragend', function () {
+        row.classList.remove('dragging');
+        drague = null;
+      });
+      row.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        if (!drague || drague === row) return;
+        var rect = row.getBoundingClientRect();
+        var avant = (e.clientY - rect.top) < rect.height / 2;
+        row.parentElement.insertBefore(drague, avant ? row : row.nextSibling);
+      });
+    });
+  }
+
+  widget.addEventListener('input', function (e) {
+    if (e.target.classList.contains('jersey-input')) verifierDoublons();
+  });
+
+  // La ligne n'ouvre la fiche joueur qu'en lecture : en édition, cliquer dans
+  // un champ ne doit pas quitter la page.
+  widget.addEventListener('click', function (e) {
+    var row = e.target.closest('.player-table-row');
+    if (!row || enEdition()) return;
+    window.location.href = row.dataset.playerDetail;
+  });
+
+  document.body.addEventListener('rosterEditRequested', entrer);
+  document.body.addEventListener('rosterEditCancelRequested', annuler);
+
+  // Rendu déjà en édition après un refus : le glisser-déposer et la détection
+  // de doublon doivent être armés sans attendre un clic sur « Modifier ».
+  if (enEdition()) {
+    snapshot = tbody.innerHTML;
+    widget.querySelectorAll('.player-table-row').forEach(function (row) {
+      row.setAttribute('draggable', 'true');
+    });
+    activerGlisserDeposer();
+    verifierDoublons();
+  }
+})();
+</script>

@@ -1,10 +1,10 @@
 use crate::app::players::io::web::increase_stat_controller::post_increase_stat;
 use crate::app::players::io::web::player_debug_controller::player_debug_controller;
 use crate::app::players::io::web::player_detail_controller::player_detail_controller;
-use crate::app::players::io::web::player_table::player_table_widget;
 use crate::app::players::io::web::purchase_skill_controller::post_purchase_skill;
 use crate::app::players::io::web::widgets::evolution_journal_widget::evolution_journal_widget;
 use crate::app::players::io::web::widgets::match_player_selector_widget::match_player_selector_widget;
+use crate::app::players::io::web::widgets::player_table_widget::player_table_widget;
 use crate::app::players::io::web::widgets::spp_spending_widget::spp_spending_widget;
 use crate::app::players::routes::path;
 use crate::state::AppState;

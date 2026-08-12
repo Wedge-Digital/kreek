@@ -89,9 +89,57 @@
           <a class="state-banner-cta" hx-get="{{ href }}" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML" hx-push-url="true">{{ label }}</a>
         {% when BannerCtaVm::Mutate { label, post_url } %}
           <button class="state-banner-cta" hx-post="{{ post_url }}">{{ label }}</button>
+        {% when BannerCtaVm::RosterEdit %}
+          {# Annuler/Enregistrer prennent la place de « Modifier l'effectif » —
+             pas de barre séparée sous le tableau (maquette validée). #}
+          <button type="button" class="state-banner-cta state-banner-cta--outline roster-edit-trigger-btn">✎ Modifier l'effectif</button>
+          <button type="button" class="state-banner-cta state-banner-cta--outline roster-edit-cancel-btn">Annuler</button>
+          <button type="button" class="state-banner-cta roster-edit-save-btn">Enregistrer</button>
       {% endmatch %}
     {% endfor %}
   </div>
+  {# Le bandeau ne connaît ni l'URL ni le DOM du widget joueurs : il publie sur
+     `body` et écoute ce que le widget y publie en retour. Les deux BCs ne se
+     référencent jamais. #}
+  <script>
+  (function () {
+    var banner = document.currentScript.previousElementSibling;
+    var declencher = banner.querySelector('.roster-edit-trigger-btn');
+    if (!declencher) return;
+    var annuler = banner.querySelector('.roster-edit-cancel-btn');
+    var enregistrer = banner.querySelector('.roster-edit-save-btn');
+
+    function afficherBoutons(enEdition) {
+      declencher.style.display = enEdition ? 'none' : '';
+      annuler.style.display = enEdition ? '' : 'none';
+      enregistrer.style.display = enEdition ? '' : 'none';
+    }
+
+    declencher.addEventListener('click', function () {
+      afficherBoutons(true);
+      htmx.trigger(document.body, 'rosterEditRequested', {});
+    });
+    annuler.addEventListener('click', function () {
+      afficherBoutons(false);
+      htmx.trigger(document.body, 'rosterEditCancelRequested', {});
+    });
+    enregistrer.addEventListener('click', function () {
+      htmx.trigger(document.body, 'rosterEditSaveRequested', {});
+    });
+
+    // Doublon repéré par le widget : « Enregistrer » se ferme tant qu'il dure.
+    document.body.addEventListener('rosterEditValidityChanged', function (e) {
+      enregistrer.disabled = !(e.detail && e.detail.valid);
+    });
+    // Succès : retour à l'état de lecture. Échec métier : on reste en édition,
+    // le widget réaffiche la saisie et son motif de refus.
+    document.body.addEventListener('rosterEditSaved', function () {
+      afficherBoutons(false);
+    });
+
+    afficherBoutons(false);
+  })();
+  </script>
   {% endif %}
 
   <!-- Onglets -->

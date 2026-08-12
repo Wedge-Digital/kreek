@@ -67,11 +67,50 @@ pas de réécriture de mémoire), adapté au binding Askama :
 
 ## Checklist
 
-- [ ] Renommage `player_table.rs` → `widgets/player_table_widget.rs` (import `router.rs` mis à jour)
-- [ ] `PlayerTableTemplate` : `team_id` + `save_error`
-- [ ] `PLAYERS_ROSTER_UPDATE` + `Routes::update_roster()`
-- [ ] Template : formulaire + listeners `hx-trigger` DOM
-- [ ] Template : classe `edit-mode` conditionnelle sur `save_error`
-- [ ] Template : bandeau d'erreur inline
-- [ ] Template : glisser-déposer, inputs nom/numéro (repris maquette)
-- [ ] Vérifier au navigateur : mode édition identique à la maquette validée
+- [x] Renommage `player_table.rs` → `widgets/player_table_widget.rs` (import `router.rs` mis à jour)
+- [x] `PlayerTableTemplate` : `team_id` + `save_error`
+- [x] `PLAYERS_ROSTER_UPDATE` + `Routes::update_roster()`
+- [x] Template : formulaire + listeners `hx-trigger` DOM
+- [x] Template : classe `edit-mode` conditionnelle sur `save_error`
+- [x] Template : bandeau d'erreur inline
+- [x] Template : glisser-déposer, inputs nom/numéro (repris maquette)
+- [x] Vérifier au navigateur : mode édition identique à la maquette validée
+- [x] **Hors carte initiale** — bandeau d'état (BC `teams`) : boutons
+      Modifier/Annuler/Enregistrer et publication des trois événements DOM
+
+---
+
+## Notes d'implémentation
+
+**Le bandeau d'état a été fait dans cette carte.** Il n'était couvert par aucune
+des six cartes 290-295 ni par `08-cards.md`, alors que `02-front.md` lui confie
+l'émission des trois déclencheurs. Sans lui, le widget savait écouter mais
+personne ne parlait : le mode édition était inatteignable. Nouveau variant
+`BannerCtaVm::RosterEdit`, sans URL — le bandeau ne connaît ni la route ni le
+DOM du widget, il publie sur `body` et écoute ce que le widget y publie en
+retour. Les deux BCs ne se référencent jamais.
+
+**Les `style="…"` de la maquette sont devenus des classes CSS.** La règle 5
+impose le copier-coller depuis la maquette, mais le CLAUDE.md interdit
+totalement les styles inline dans les templates. Les deux règles se
+contredisaient ; l'interdiction l'emporte, et le rendu est identique.
+
+**Le `<form>` enveloppe le tableau entier, pas le seul `<tbody>`** comme le
+disait la spec : un `<form>` enfant direct de `<table>` est du HTML invalide
+que les navigateurs déplacent hors du tableau, emportant les champs avec lui.
+Les inputs des cellules appartiennent au formulaire de la même façon.
+
+**`hx-target="closest .players-widget"`** plutôt qu'un id : le widget ne doit
+rien savoir du DOM de la page hôte (règle 4 des widgets). Le `<link>` CSS est
+passé **à l'intérieur** de la racine, faute de quoi il s'accumulerait à chaque
+échange `outerHTML`.
+
+## Vérification navigateur
+
+Faite sur une équipe « Prête à jouer » de l'espace E2E : bascule lecture ↔
+édition, poignées et champs conformes à la maquette, doublon de numéro signalé
+en rouge sur les deux lignes concernées avec « Enregistrer » désactivé,
+correction rétablissant l'état valide, et annulation restaurant la saisie
+d'origine en sortant du mode édition.
+
+L'enregistrement lui-même n'a pas été exercé : l'endpoint POST est la carte 294.

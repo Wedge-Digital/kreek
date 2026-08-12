@@ -1,5 +1,6 @@
 pub mod path {
     pub const PLAYERS_BY_TEAM_WIDGET: &str = "/app/{space_id}/players/by-team/{team_id}/widget";
+    pub const PLAYERS_ROSTER_UPDATE: &str = "/app/{space_id}/players/by-team/{team_id}/roster";
     pub const MATCH_PLAYER_SELECTOR: &str =
         "/app/{space_id}/players/teams/{team_id}/match-selector";
     pub const PLAYER_DEBUG: &str = "/app/{space_id}/players/{player_id}/debug";
@@ -18,6 +19,12 @@ pub struct Routes;
 impl Routes {
     pub fn players_by_team_widget(&self, space_id: &str, team_id: &str) -> String {
         path::PLAYERS_BY_TEAM_WIDGET
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+
+    pub fn update_roster(&self, space_id: &str, team_id: &str) -> String {
+        path::PLAYERS_ROSTER_UPDATE
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
     }

@@ -77,7 +77,12 @@ fn build_base_skills(p: &PlayerProjection, catalog: &dyn ISkillCatalogPort) -> V
 pub struct PlayerTableTemplate {
     pub app_routes: AppRoutes,
     pub space_id: String,
+    pub team_id: String,
     pub players: Vec<PlayerRowVm>,
+    /// Motif d'un enregistrement refusé. Sa présence fait rendre le fragment
+    /// **déjà en mode édition** : le coach revient à sa saisie pour la corriger,
+    /// au lieu de la perdre et de tout recommencer.
+    pub save_error: Option<String>,
 }
 
 impl IntoResponse for PlayerTableTemplate {
@@ -131,7 +136,9 @@ pub async fn player_table_widget(
     PlayerTableTemplate {
         app_routes: AppRoutes::default(),
         space_id,
+        team_id: team.0,
         players,
+        save_error: None,
     }
     .into_response()
 }
