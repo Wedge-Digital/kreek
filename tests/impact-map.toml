@@ -40,6 +40,11 @@
 
 [tests]
 
+# ── Comptes et authentification ──────────────────────────────────────────────
+# `spaces` : l'inscription émet AccountCreated, dont le cache utilisateur du BC
+# spaces est la projection — le test la nettoie, donc en dépend.
+"test_auth_coach_name_casse" = ["auth", "spaces"]
+
 # ── Création de compétition (aucune équipe, aucun match) ─────────────────────
 # Phase 1 → recherche de coachs (widget du BC spaces).
 # Phase 2 → pickers roster/star/inducement (BC references) et catalogue des

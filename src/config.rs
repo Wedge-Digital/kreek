@@ -35,9 +35,23 @@ pub struct AuthConfig {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct EmailConfig {
+    pub provider: EmailProvider,
+    /// Optionnelle : `provider = "console"` n'en a pas besoin. Son absence
+    /// avec `provider = "resend"` est rattrapée au démarrage, pas à l'envoi.
+    #[serde(default)]
     pub api_key: String,
     pub from: String,
     pub from_name: String,
+}
+
+/// Qui expédie réellement les emails. `Console` écrit sur la sortie standard :
+/// c'est ce que veut la suite e2e, dont le parcours « mot de passe oublié »
+/// appellerait sinon l'API Resend à chaque exécution.
+#[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum EmailProvider {
+    Console,
+    Resend,
 }
 
 /// Répertoire des données de référence (règles de jeu), lu au démarrage.

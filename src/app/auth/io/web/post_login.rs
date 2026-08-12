@@ -53,7 +53,7 @@ mod tests {
     };
     use crate::app::auth::io::web::post_login::login_submit;
     use crate::app::auth::routes::path;
-    use crate::common::services::email::fakes::console_email_service::ConsoleEmailService;
+    use crate::common::services::email::ConsoleEmailService;
     use crate::common::services::event_bus::event_bus::new_bus;
     use argon2::password_hash::{rand_core::OsRng, SaltString};
     use argon2::{Argon2, PasswordHasher};

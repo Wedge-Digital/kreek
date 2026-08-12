@@ -97,14 +97,56 @@ async fn find_by_coach_name_preserves_id(pool: PgPool) {
     assert_eq!(found.id.to_string(), id_original);
 }
 
+/// Un coach qui ne se souvient plus de la casse de son nom doit pouvoir se
+/// connecter et demander la réinitialisation de son mot de passe : les deux
+/// parcours passent par cette recherche.
 #[sqlx::test]
-async fn find_by_coach_name_est_sensible_a_la_casse(pool: PgPool) {
+async fn find_by_coach_name_est_insensible_a_la_casse(pool: PgPool) {
     let repo = UserRepository::new(pool);
     repo.create(&make_user("Bagouze", "bagouze@example.com"))
         .await
         .unwrap();
 
-    let result = repo.find_by_coach_name("bagouze").await.unwrap();
+    for saisie in ["bagouze", "BAGOUZE", "bAgOuZe"] {
+        let found = repo.find_by_coach_name(saisie).await.unwrap();
 
-    assert!(result.is_none());
+        let found = found.unwrap_or_else(|| panic!("'{saisie}' aurait dû retrouver le compte"));
+        assert_eq!(found.coach_name.into_inner(), "Bagouze");
+    }
+}
+
+/// Corollaire de la recherche insensible à la casse : deux comptes ne
+/// différant que par la casse rendraient le résultat ambigu. L'index unique
+/// fonctionnel les interdit, et l'erreur reste bien attribuée au nom de coach.
+#[sqlx::test]
+async fn create_refuse_un_nom_deja_pris_dans_une_autre_casse(pool: PgPool) {
+    let repo = UserRepository::new(pool);
+    repo.create(&make_user("Bagouze", "premier@example.com"))
+        .await
+        .unwrap();
+
+    let result = repo
+        .create(&make_user("bagouze", "second@example.com"))
+        .await;
+
+    assert!(matches!(
+        result,
+        Err(RepositoryError::CoachNameAlreadyTaken)
+    ));
+}
+
+/// La mise à jour vise le compte, pas la casse exacte du nom transmis.
+#[sqlx::test]
+async fn update_password_hash_est_insensible_a_la_casse(pool: PgPool) {
+    let repo = UserRepository::new(pool);
+    repo.create(&make_user("Bagouze", "bagouze@example.com"))
+        .await
+        .unwrap();
+
+    repo.update_password_hash("BAGOUZE", "nouveau_hash")
+        .await
+        .unwrap();
+
+    let found = repo.find_by_coach_name("Bagouze").await.unwrap().unwrap();
+    assert_eq!(found.password_hash, "nouveau_hash");
 }

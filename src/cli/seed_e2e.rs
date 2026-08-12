@@ -98,7 +98,7 @@ async fn upsert_user(
         r#"
         INSERT INTO auth__users (id, coach_name, email, password_hash, legacy_id, created_at)
         VALUES ($1, $2, $3, $4, $5, now())
-        ON CONFLICT (coach_name)
+        ON CONFLICT (lower(coach_name))
         DO UPDATE SET email = EXCLUDED.email, legacy_id = EXCLUDED.legacy_id
         RETURNING id
         "#,

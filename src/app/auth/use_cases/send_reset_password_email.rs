@@ -101,7 +101,7 @@ mod tests {
     };
     use crate::app::auth::ports::RepositoryError;
     use crate::app::shared_kernel::identity::coach_name::CoachName;
-    use crate::common::services::email::fakes::console_email_service::ConsoleEmailService;
+    use crate::common::services::email::ConsoleEmailService;
     use async_trait::async_trait;
     use tokio::sync::Mutex;
 

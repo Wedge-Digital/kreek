@@ -154,8 +154,9 @@ jobs:
       # Les scripts d'import (import_*.sh) et l'app (AppConfig::load via dotenvy)
       # lisent tous .env.dev, gitignored donc absent en CI. On le matérialise avec
       # les creds du service Postgres ci-dessus. BYPASS_AUTH=true : les e2e passent
-      # par le coach seedé DevCoach, sans login. EMAIL__API_KEY factice (aucun e2e
-      # n'envoie de vrai mail).
+      # par le coach seedé DevCoach, sans login. EMAIL__PROVIDER=console : le
+      # parcours « mot de passe oublié » est couvert par la suite, et appellerait
+      # sinon l'API Resend à chaque exécution.
       - name: Générer .env.dev (config CI)
         run: |
           cat > .env.dev <<'EOF'
@@ -170,8 +171,8 @@ jobs:
           SERVER__HOST=0.0.0.0
           SERVER__PORT=3210
           SQLX_OFFLINE=true
+          EMAIL__PROVIDER=console
           EMAIL__FROM=mailer@example.test
-          EMAIL__API_KEY=dummy-key-ci
           EMAIL__FROM_NAME=KreekCI
           HOST_DOMAIN=localhost:3210
           BYPASS_AUTH=true

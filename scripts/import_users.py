@@ -5,7 +5,7 @@ Importe les utilisateurs depuis users_export.json vers la base PostgreSQL kreek.
 Comportement :
   - Génère un ULID pour chaque utilisateur (id kreek)
   - legacy_id   ← legacy_id (stocké en base pour les imports suivants)
-  - coach_name  ← username  (dédupliqué avec suffixe _N si collision)
+  - coach_name  ← username  (dédupliqué avec suffixe _N si collision, casse ignorée)
   - email       ← email     (ignoré si déjà présent dans la DB)
   - coach_icon  ← NULL      (les URLs BBC ne sont pas Cloudinary — à migrer séparément)
   - password_hash ← hash Django PBKDF2 tel quel
@@ -54,7 +54,10 @@ INSERT_CACHE_SQL = """
 """
 
 CHECK_EMAIL_SQL      = "SELECT id FROM auth__users WHERE email = %s"
-CHECK_COACH_NAME_SQL = "SELECT id FROM auth__users WHERE coach_name = %s"
+# Insensible à la casse, comme l'index unique users_coach_name_lower_uq :
+# une comparaison exacte laisserait passer « bagouze » face à « Bagouze »,
+# et l'INSERT échouerait ensuite au lieu de déclencher le suffixe _N.
+CHECK_COACH_NAME_SQL = "SELECT id FROM auth__users WHERE lower(coach_name) = lower(%s)"
 
 
 def parse_args():

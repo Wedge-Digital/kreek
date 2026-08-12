@@ -9,7 +9,7 @@ mod infrastructure;
 mod state;
 pub mod web;
 
-use config::AppConfig;
+use config::{AppConfig, EmailConfig, EmailProvider};
 use state::AppState;
 use std::path::Path;
 use std::time::Duration;
@@ -29,7 +29,7 @@ use crate::app::{
     auth, competitions, match_report, players, ranking, spaces, team_creation, teams,
 };
 use crate::common::event_listener::event_log_feeder;
-use crate::common::services::email::ResendMailService;
+use crate::common::services::email::{ConsoleEmailService, IEmailService, ResendMailService};
 use crate::common::services::event_bus::event_bus::new_bus;
 use crate::common::session_store::DashMapStore;
 use crate::infrastructure::spaces::host_layout_adapter::KreekSpacesLayout;
@@ -132,6 +132,28 @@ fn load_references(cfg: &AppConfig) -> ReferencesContext {
             cfg.references.dir
         )
     })
+}
+
+/// Choisit l'expéditeur d'emails déclaré par la configuration. La clé d'API
+/// est vérifiée ici plutôt qu'au premier envoi : un déploiement mal configuré
+/// doit refuser de démarrer, pas avaler les réinitialisations de mot de passe.
+fn build_email_service(cfg: EmailConfig) -> Arc<dyn IEmailService> {
+    match cfg.provider {
+        EmailProvider::Console => {
+            tracing::warn!(
+                "EMAIL__PROVIDER=console — les emails sont écrits sur la sortie \
+                 standard, aucun envoi réel"
+            );
+            Arc::new(ConsoleEmailService)
+        }
+        EmailProvider::Resend => {
+            assert!(
+                !cfg.api_key.is_empty(),
+                "EMAIL__PROVIDER=resend exige EMAIL__API_KEY"
+            );
+            Arc::new(ResendMailService::new(cfg.api_key, cfg.from, cfg.from_name))
+        }
+    }
 }
 
 async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
@@ -247,11 +269,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
         ranking_competition_port.clone(),
     );
 
-    let email_service = Arc::new(ResendMailService::new(
-        cfg.email.api_key,
-        cfg.email.from,
-        cfg.email.from_name,
-    ));
+    let email_service = build_email_service(cfg.email);
 
     let state = AppState {
         auth: AuthContext::new(
@@ -405,4 +423,36 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
         .await
         .unwrap();
     axum::serve(listener, app).await.unwrap();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn email_cfg(provider: EmailProvider, api_key: &str) -> EmailConfig {
+        EmailConfig {
+            provider,
+            api_key: api_key.to_string(),
+            from: "mailer@example.test".into(),
+            from_name: "Kreek".into(),
+        }
+    }
+
+    #[test]
+    fn console_ne_reclame_aucune_cle_d_api() {
+        let _ = build_email_service(email_cfg(EmailProvider::Console, ""));
+    }
+
+    #[test]
+    fn resend_avec_sa_cle_est_accepte() {
+        let _ = build_email_service(email_cfg(EmailProvider::Resend, "re_xxx"));
+    }
+
+    /// Le démarrage échoue plutôt que de découvrir la clé manquante au premier
+    /// envoi — c'est-à-dire au moment où un coach attend son mot de passe.
+    #[test]
+    #[should_panic(expected = "EMAIL__API_KEY")]
+    fn resend_sans_cle_refuse_de_demarrer() {
+        let _ = build_email_service(email_cfg(EmailProvider::Resend, ""));
+    }
 }

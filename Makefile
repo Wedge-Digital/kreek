@@ -71,7 +71,7 @@ dev:
 # (Granitiers, Zéphyriens, Lanterniers). Sans surcharge locale, `make dev`
 # sert déjà ce jeu — c'est le défaut de config/default.toml.
 dev-demo:
-	REFERENCES__DIR=assets/references.example cargo watch -x run -w src -w Cargo.toml -w assets/templates -w assets/static/css
+	REFERENCES__DIR=assets/references.example EMAIL__PROVIDER=console cargo watch -x run -w src -w Cargo.toml -w assets/templates -w assets/static/css
 
 test: reset_test_db
 	DATABASE_URL="$(TEST_DB_URL)" cargo test

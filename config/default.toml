@@ -12,6 +12,13 @@ idle_timeout_seconds = 600
 [auth]
 token_ttl_seconds = 3600
 
+[email]
+# « resend » par défaut : un déploiement qui oublierait de se prononcer envoie
+# ses emails plutôt que de les perdre en silence. Les contextes qui ne doivent
+# rien expédier posent EMAIL__PROVIDER=console — cf. la cible `dev-demo` du
+# Makefile et le job e2e de la CI.
+provider = "resend"
+
 [references]
 # Répertoire des données de référence (règles de jeu), relatif au répertoire
 # de lancement. Le défaut est le jeu de démonstration versionné, pour qu'un

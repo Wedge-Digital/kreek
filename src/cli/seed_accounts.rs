@@ -35,7 +35,7 @@ pub async fn execute(pool: &PgPool, input: &str) -> Result<(), Box<dyn std::erro
             r#"
             INSERT INTO auth__users (id, coach_name, email, password_hash, legacy_id, created_at)
             VALUES ($1, $2, $3, $4, $5, now())
-            ON CONFLICT (coach_name)
+            ON CONFLICT (lower(coach_name))
             DO UPDATE SET password_hash = EXCLUDED.password_hash,
                           email         = EXCLUDED.email,
                           legacy_id     = EXCLUDED.legacy_id
