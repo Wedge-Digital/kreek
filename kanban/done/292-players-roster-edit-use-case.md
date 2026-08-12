@@ -74,12 +74,41 @@ pub async fn execute(
 
 ## Checklist
 
-- [ ] `UpdateRosterCommand` / `RosterRowCommand` dans `commands.rs`
-- [ ] `update_roster_use_case::execute()`
-- [ ] Test : `update_roster_rejects_unknown_or_inactive_player_and_persists_nothing`
-- [ ] Test : `update_roster_rejects_duplicate_jersey_against_untouched_active_player`
-- [ ] Test : `update_roster_rejects_duplicate_display_order_against_untouched_active_player`
-- [ ] Test : `update_roster_ignores_dismissed_player_when_checking_uniqueness`
-- [ ] Test : `update_roster_only_emits_events_for_changed_fields`
-- [ ] Test : `update_roster_leaves_players_absent_from_batch_untouched`
-- [ ] Test : `update_roster_propagates_concurrent_write_as_is`
+- [x] `UpdateRosterCommand` / `RosterRowCommand` dans `commands.rs`
+- [x] `update_roster_use_case::execute()`
+- [x] Test : `update_roster_rejects_unknown_or_inactive_player_and_persists_nothing`
+- [x] Test : `update_roster_rejects_duplicate_jersey_against_untouched_active_player`
+- [x] Test : `update_roster_rejects_duplicate_display_order_against_untouched_active_player`
+- [x] Test : `update_roster_ignores_dismissed_player_when_checking_uniqueness`
+- [x] Test : `update_roster_only_emits_events_for_changed_fields`
+- [x] Test : `update_roster_leaves_players_absent_from_batch_untouched`
+- [x] Test : `update_roster_propagates_concurrent_write_as_is`
+
+---
+
+## Notes d'implémentation
+
+**`space_id` retiré de la commande.** Aucune des sept étapes ne s'en servait :
+l'autorisation de la carte 294 se fait dans le handler à partir du `Path`, pas
+depuis la commande. Le garder n'aurait produit qu'un champ mort.
+
+**L'absence n'est pas une valeur qu'on se dispute.** Seuls les `Some`
+alimentent les ensembles d'unicité : deux joueurs sans numéro ne sont pas en
+conflit. La carte ne tranchait pas ce cas.
+
+**Le use case filtre lui-même sur `Active`.** Le `find_by_team_id` du
+repository rejoue tous les joueurs de l'équipe, renvoyés compris —
+contrairement à son homonyme de la projection, qui filtre en SQL. Les deux
+méthodes portent le même nom pour des sémantiques différentes : c'est commenté
+sur place.
+
+**L'effectif retourné est rechargé depuis le repository**, plutôt que
+reconstruit en mémoire — une seule source de vérité, au prix d'un aller-retour.
+
+## Limite du test `propagates_concurrent_write_as_is`
+
+La doublure échoue à l'`append`, et l'implémentation par défaut du trait étant
+séquentielle, elle échoue sur la première entrée. Ce test vérifie donc la
+**remontée** de l'erreur, pas l'annulation du lot : contre Postgres, c'est
+`append_batch` qui rollbacke. L'atomicité réelle est couverte par le test
+repository de la carte 291, qui frappe une vraie base.
