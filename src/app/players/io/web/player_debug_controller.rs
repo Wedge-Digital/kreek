@@ -1,6 +1,6 @@
 use crate::app::players::domain::match_impact::{InjuryType, PlayerParticipationStatus, StatKind};
 use crate::app::players::domain::player::Player;
-use crate::app::players::io::web::space_scope::charger_joueur_de_l_espace;
+use crate::app::players::io::web::player_loader::charger_joueur;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -144,7 +144,7 @@ pub async fn player_debug_controller(
 ) -> impl IntoResponse {
     // `space_id` était ignoré (`_space_id`) : la page de débogage servait
     // l'intégralité d'un joueur depuis n'importe quel espace.
-    match charger_joueur_de_l_espace(&state, &space_id, &player_id).await {
+    match charger_joueur(&state, &player_id).await {
         Ok(p) => PlayerDebugTemplate { vm: p.into() }.into_response(),
         Err(refus) => refus,
     }

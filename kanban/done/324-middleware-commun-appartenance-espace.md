@@ -101,12 +101,12 @@ c'est la meilleure preuve que la migration ne change rien au comportement.
 
 ## Checklist
 
-- [ ] `ISpaceOwnership` et le middleware, dans `src/web/middleware/space_scope.rs`
-- [ ] Sémantique figée : `400` / `404` / laisser passer
-- [ ] Enregistrement des résolveurs dans `main.rs`
-- [ ] Résolveur `players`, et suppression de son garde sur mesure
-- [ ] **Les tests de `test_space_scope.rs` passent sans être modifiés**
-- [ ] Tests de handler du mécanisme lui-même : paramètre inconnu → passe,
+- [x] `ISpaceOwnership` et le middleware, dans `src/web/middleware/space_scope.rs`
+- [x] Sémantique figée : `400` / `404` / laisser passer
+- [x] Enregistrement des résolveurs dans `main.rs`
+- [x] Résolveur `players`, et suppression de son garde sur mesure
+- [x] **Les tests de `test_space_scope.rs` passent sans être modifiés**
+- [x] Tests de handler du mécanisme lui-même : paramètre inconnu → passe,
       ressource absente → `404`, espace mal formé → `400`
 
 ## Point de vigilance
@@ -118,3 +118,46 @@ appris ça à ses dépens : une couche posée par-dessus le routeur s'exécute
 
 Ici la session n'est pas nécessaire — le contrôle ne dépend pas de l'identité —
 mais l'ordre reste à choisir consciemment, et non par défaut.
+
+## Réalisé
+
+Le middleware est posé en `route_layer` sur le routeur protégé, à côté de
+`bypass_auth` — donc à l'intérieur d'`AuthManagerLayer`.
+
+`AppState` porte `space_ownership: Arc<Vec<Arc<dyn ISpaceOwnership>>>`, une
+**liste plate de résolveurs par ressource** et non un dictionnaire par BC :
+`competitions` en fournira deux, et le middleware n'a pas à connaître la notion
+de BC.
+
+### Le résolveur lit la projection, pas l'event store
+
+`find_by_id` reconstruit l'agrégat depuis `players_events` — inacceptable sur
+chaque requête. `IPlayerProjectionRepository::find_space_id` fait un `SELECT`
+d'une colonne.
+
+Conséquence assumée : le contrôle porte sur une donnée dérivée. La projection
+étant écrite dans la même transaction que l'événement, le risque est nul — mais
+il est nommé plutôt que découvert.
+
+### Une erreur de base vaut un refus
+
+`space_of` rend `None` sur erreur, donc `404`. Refuser sur incertitude est le
+seul comportement défendable pour un contrôle d'accès : laisser passer parce
+que la base a hoqueté ouvrirait la porte au moment précis où l'on est le moins
+capable de surveiller.
+
+### La preuve que la migration ne change rien
+
+Le garde sur mesure de `players` a été **supprimé** — plus aucune trace de
+`charger_joueur_de_l_espace` — et `space_scope.rs` est devenu `player_loader.rs`,
+un simple chargeur sans contrôle.
+
+Les trois tests de la carte 315 passent **sans une seule modification**. C'était
+le critère : tant que l'ancien garde était en place, leur vert ne prouvait rien.
+
+### Ce que les cartes suivantes n'ont plus à faire
+
+La sémantique est testée ici, une fois : chemin sans ressource connue → passe,
+ressource inexistante → `404` identique à l'étrangère, espace mal formé →
+`400`, refus valable en écriture. Les cartes 318 à 322 n'apportent qu'un
+résolveur.

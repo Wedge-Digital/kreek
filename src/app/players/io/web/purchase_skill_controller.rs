@@ -1,7 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::players::domain::player::AcquisitionMode;
 use crate::app::players::domain::value_objects::SkillId;
-use crate::app::players::io::web::space_scope::charger_joueur_de_l_espace;
+use crate::app::players::io::web::player_loader::charger_joueur;
 use crate::app::players::ports::TeamRosterInfoDto;
 use crate::app::players::use_cases::commands::PurchaseSkillCommand;
 use crate::app::players::use_cases::purchase_skill_use_case;
@@ -30,7 +30,7 @@ pub async fn post_purchase_skill(
         return StatusCode::UNAUTHORIZED.into_response();
     };
 
-    let player = match charger_joueur_de_l_espace(&state, &space_id, &player_id).await {
+    let player = match charger_joueur(&state, &player_id).await {
         Ok(p) => p,
         Err(refus) => return refus,
     };

@@ -2,7 +2,7 @@ use crate::app::players::domain::events::PlayerDomainEvent;
 use crate::app::players::domain::match_impact::StatKind;
 use crate::app::players::domain::player::{AcquisitionMode, PlayerId, ValueKpo};
 use crate::app::players::domain::value_objects::SppCost;
-use crate::app::players::io::web::space_scope::charger_joueur_de_l_espace;
+use crate::app::players::io::web::player_loader::charger_joueur;
 use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use askama::Template;
@@ -216,7 +216,7 @@ pub async fn evolution_journal_widget(
     Query(params): Query<EvolutionJournalParams>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let player = match charger_joueur_de_l_espace(&state, &space_id, &player_id).await {
+    let player = match charger_joueur(&state, &player_id).await {
         Ok(p) => p,
         Err(resp) => return resp,
     };

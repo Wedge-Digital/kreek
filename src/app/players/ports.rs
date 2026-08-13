@@ -62,6 +62,14 @@ pub struct PlayerProjection {
 
 #[async_trait]
 pub trait IPlayerProjectionRepository: Send + Sync {
+    /// L'espace auquel appartient ce joueur, ou `None` s'il n'existe pas.
+    ///
+    /// Lue depuis la **projection** et non reconstruite depuis l'event store :
+    /// le contrôle d'appartenance s'exécute sur chaque requête, et rejouer un
+    /// agrégat à chaque fois serait hors de prix. La projection est écrite dans
+    /// la même transaction que l'événement, donc la donnée est fiable.
+    async fn find_space_id(&self, player_id: &str) -> Result<Option<String>, RepositoryError>;
+
     async fn find_by_team_id(
         &self,
         team_id: &TeamId,

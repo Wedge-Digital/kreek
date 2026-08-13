@@ -9,7 +9,9 @@ use crate::app::spaces::context::SpacesContext;
 use crate::app::team_creation::context::TeamCreationContext;
 use crate::app::teams::context::TeamsContext;
 use crate::common::services::event_bus::event_bus::EventBus;
+use crate::web::middleware::space_scope::ISpaceOwnership;
 use axum::extract::FromRef;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -23,6 +25,10 @@ pub struct AppState {
     pub teams: TeamsContext,
     pub players: PlayersContext,
     pub ranking: RankingContext,
+    /// Les résolveurs d'appartenance, un par ressource identifiable dans un
+    /// chemin (carte 324). Le middleware `space_scope` les interroge ; chacun
+    /// répond sur les ressources de son BC, via son propre repository.
+    pub space_ownership: Arc<Vec<Arc<dyn ISpaceOwnership>>>,
     pub bypass_auth: bool,
     pub event_bus: EventBus,
     pub app_event_bus: EventBus,

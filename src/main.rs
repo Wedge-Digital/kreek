@@ -401,6 +401,16 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
             event_bus.clone(),
         ),
         ranking: RankingContext::new(&pool, ranking_competition_port),
+        // Un résolveur par ressource identifiable dans un chemin. Les six
+        // autres BCs arrivent avec les cartes 318 à 322 ; un paramètre sans
+        // résolveur passe, faute de quoi la migration devrait être atomique.
+        space_ownership: Arc::new(vec![Arc::new(
+            crate::infrastructure::players::space_ownership::PlayerSpaceOwnership::new(Arc::new(
+                crate::app::players::io::repository::projection_repository::PgPlayerProjectionRepository::new(
+                    pool.clone(),
+                ),
+            )),
+        )]),
         bypass_auth: cfg.bypass_auth,
         event_bus: event_bus.clone(),
         app_event_bus: app_event_bus.clone(),
@@ -432,7 +442,15 @@ pub fn build_router(state: AppState) -> Router {
         .merge(app::spaces::router::router())
         .merge(web::router::router())
         .route_layer(from_fn(require_auth))
-        .route_layer(from_fn_with_state(state.clone(), bypass_auth_middleware));
+        .route_layer(from_fn_with_state(state.clone(), bypass_auth_middleware))
+        // Posé au même endroit que `bypass_auth` — à l'intérieur
+        // d'`AuthManagerLayer`. Le contrôle ne dépend pas de l'identité, mais
+        // l'ordre se choisit consciemment : la carte 311 a appris qu'une couche
+        // posée par-dessus le routeur s'exécute avant l'authentification.
+        .route_layer(from_fn_with_state(
+            state.clone(),
+            crate::web::middleware::space_scope::space_scope_middleware,
+        ));
 
     let auth_app = Router::new()
         .route("/", get(|| async { Redirect::to(path::AUTH_LAYOUT) }))

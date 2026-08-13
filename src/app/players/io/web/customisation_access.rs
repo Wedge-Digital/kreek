@@ -10,7 +10,7 @@
 
 use crate::app::auth::domain::user::User;
 use crate::app::players::io::web::player_detail_controller::can_customise;
-use crate::app::players::io::web::space_scope::charger_joueur_de_l_espace;
+use crate::app::players::io::web::player_loader::charger_joueur;
 use crate::app::players::ports::TeamRosterInfoDto;
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
@@ -43,7 +43,7 @@ async fn charger_equipe(
     space_id: &str,
     player_id: &str,
 ) -> Result<TeamRosterInfoDto, Response> {
-    let player = charger_joueur_de_l_espace(state, space_id, player_id).await?;
+    let player = charger_joueur(state, player_id).await?;
     state
         .players
         .roster_port

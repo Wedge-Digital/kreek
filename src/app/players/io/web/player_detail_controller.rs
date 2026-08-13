@@ -1,8 +1,8 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::players::domain::customisation_basket::is_expired;
 use crate::app::players::domain::player::{Player, PlayerId};
+use crate::app::players::io::web::player_loader::charger_joueur;
 use crate::app::players::io::web::purchase_skill_controller::can_spend_spp;
-use crate::app::players::io::web::space_scope::charger_joueur_de_l_espace;
 use crate::app::players::ports::{
     CustomisationBasketState, ICustomisationBasketRepository, TeamRosterInfoDto,
 };
@@ -183,7 +183,7 @@ pub async fn player_detail_controller(
         return StatusCode::UNAUTHORIZED.into_response();
     };
 
-    let player = match charger_joueur_de_l_espace(&state, &space_id, &player_id).await {
+    let player = match charger_joueur(&state, &player_id).await {
         Ok(p) => p,
         Err(resp) => return resp,
     };
