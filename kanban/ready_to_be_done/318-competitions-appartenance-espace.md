@@ -1,7 +1,7 @@
 # BC `competitions` et `ranking` — cloisonnement des espaces
 
 **Priorité : haute** — fuite prouvée, données de jeu
-**Dépend de :** `316` (audit)
+**Dépend de :** `324` (le middleware commun)
 **Contexte :** `competitions` (44 routes), `ranking` (2 routes)
 
 ---
@@ -37,54 +37,51 @@ même saut, et `ranking_lines` n'a pas non plus de `space_id`. Le migrer
 séparément voudrait dire écrire deux fois le même saut.
 
 
-## Le patron
 
-`src/app/competitions/io/web/space_scope.rs`, sur le modèle exact de la carte 315 :
+## Ce que cette carte apporte
+
+Le mécanisme est commun (carte **324**) : un middleware unique lit les
+paramètres du chemin, interroge un résolveur, compare, et rend `404` sur
+divergence. Cette carte n'apporte que **la réponse de ce BC sur ses propres
+ressources**.
 
 ```rust
-pub async fn charger_competition_de_l_espace(
-    state: &AppState, space_id: &str, id: &str,
-) -> Result<Competition, Response>
+impl ISpaceOwnership for … {
+    fn param(&self) -> &'static str { "…_id" }
+    async fn space_of(&self, id: &str) -> Option<SpaceId> { … }
+}
 ```
 
-Charge, compare l'espace de la ressource à celui du chemin, rend **`404`** en
-cas de divergence — jamais `403`, qui confirmerait l'existence d'une ressource
-d'un autre espace à qui l'énumère.
+Chaque BC répond via **son propre repository** : le middleware n'interroge
+aucune table, ce qui préserve la souveraineté des données.
 
-Le contrôle vient **avant** l'autorisation : il ne s'agit pas de savoir qui a le
-droit, mais de quoi on parle.
+### Les ressources, et leurs sauts
 
-## La règle qui fait la solidité
+| Ressource | Espace |
+|---|---|
+| `competitions` | colonne `space_id` — direct |
+| `competition_seasons` | **saut** par `competition_id` → `competitions.space_id`, en une jointure |
+| `ranking_lines` | même saut : `ranking` réutilise le résolveur saison, il n'écrit rien |
 
-Le garde doit devenir le **seul** moyen d'obtenir la ressource depuis
-`io/web/` du BC. La carte 315 a montré que c'est vérifiable : après migration,
-plus aucun chargement direct par identifiant ne doit subsister dans cette
-couche. C'est cette vérification, et non le nombre de handlers migrés, qui dit
-que la carte est finie.
+Un saut est préféré à l'ajout d'une colonne `space_id` : la ressource n'a pas
+d'espace en propre, elle en hérite, et dénormaliser créerait une seconde source
+de vérité qui divergerait.
 
 ## Tests — plus de report
 
-Le harnais de la carte 311 existe : `web::test_harness::Harnais` monte le
-routeur de production, se connecte par le vrai parcours, et rejoue son cookie.
-Le patron est celui de `players/io/web/tests/test_space_scope.rs`.
-
-**Tests de handler, obligatoires :**
+Le harnais de la carte 311 existe. Le patron est
+`players/io/web/tests/test_space_scope.rs`.
 
 - lecture croisée → `404`, **et** lecture nominale → `200`. C'est l'écart qui
-  prouve, pas le `404` seul : une assertion qui ne vérifierait que le refus
-  passerait tout aussi bien si la ressource n'existait pas ;
+  prouve : une assertion qui ne vérifierait que le refus passerait tout aussi
+  bien si la ressource n'existait pas ;
 - écriture croisée → `404`, écriture nominale → autre chose que `404` ;
 - identifiant d'espace mal formé → `400`.
 
-**Un scénario e2e**, et un seul : le parcours de bout en bout en navigateur. La
-matrice d'autorisation n'y a plus sa place — elle coûte des minutes là où elle
-coûte des millisecondes ici.
+La sémantique elle-même est testée une fois, en carte 324 — pas ici.
 
 ## Checklist
 
-- [ ] `space_scope.rs` : garde compétition (direct) et garde saison (saut)
-- [ ] Les 44 routes de `competitions` migrées
-- [ ] Les 2 routes de `ranking` migrées
-- [ ] Vérifié : plus aucun chargement direct par identifiant dans `io/web/` des deux BCs
-- [ ] Tests de handler : matrice d'appartenance (croisé/nominal, lecture/écriture)
+- [ ] `ISpaceOwnership` pour ce BC, enregistré dans `main.rs`
+- [ ] Tests de handler : matrice d'appartenance, lecture et écriture
 - [ ] Un scénario e2e de bout en bout

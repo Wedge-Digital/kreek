@@ -106,11 +106,21 @@ L'ajout au panier de recrutement d'une équipe étrangère a rendu `422` — mai
 l'équipe était en `ReadyToPlay`, donc c'est vraisemblablement le garde de phase
 qui a parlé, pas l'autorisation. **`teams` n'est prouvé qu'en lecture.**
 
-## Conception retenue : un garde par BC
+## Conception retenue : un middleware commun, un résolveur par BC
 
-Extracteur partagé **écarté** : il imposerait de toucher 146 signatures de
-handler d'un coup, et les ressources ne se factorisent pas derrière une
-signature unique (voir les deux familles ci-dessous).
+**Corrigé en préparant la carte 318.** Cette section affirmait d'abord qu'un
+mécanisme partagé imposerait de toucher 146 signatures de handler. **C'était
+faux** : un middleware n'en touche aucune — il lit les paramètres du chemin dans
+la requête, comme le fait déjà
+`spaces/io/web/extractors/space_permissions.rs`.
+
+Le découpage « un garde par BC » avait été tranché sur cette erreur. La forme
+retenue est finalement un **middleware commun** (carte 324) alimenté par un
+`ISpaceOwnership` par BC : chaque BC répond sur ses propres ressources, via son
+propre repository, ce qui préserve la souveraineté des données.
+
+Ce qui suit décrit l'ancienne forme, conservé pour mémoire — les deux familles
+de ressources, elles, restent exactes et alimentent les résolveurs.
 
 Chaque BC reçoit `io/web/space_scope.rs`, sur le modèle de la carte 315 :
 
