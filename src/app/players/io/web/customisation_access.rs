@@ -9,8 +9,8 @@
 //! chacun des sept endpoints, et pas seulement à l'ouverture du panneau.
 
 use crate::app::auth::domain::user::User;
-use crate::app::players::domain::player::PlayerId;
 use crate::app::players::io::web::player_detail_controller::can_customise;
+use crate::app::players::io::web::space_scope::charger_joueur_de_l_espace;
 use crate::app::players::ports::TeamRosterInfoDto;
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
@@ -31,27 +31,19 @@ pub async fn autoriser(
     let Ok(space_id_vo) = SpaceId::try_new(space_id) else {
         return Err(StatusCode::BAD_REQUEST.into_response());
     };
-    let team = charger_equipe(state, player_id).await?;
+    let team = charger_equipe(state, space_id, player_id).await?;
     let coach_name = user.coach_name.clone().into_inner();
     Ok(can_customise(state, &user.id, &coach_name, &space_id_vo, &team).await)
 }
 
 /// L'équipe du joueur — c'est elle qui porte la compétition, donc l'admin
 /// susceptible d'autoriser la customisation.
-async fn charger_equipe(state: &AppState, player_id: &str) -> Result<TeamRosterInfoDto, Response> {
-    let player = match state
-        .players
-        .repository
-        .find_by_id(&PlayerId(player_id.to_string()))
-        .await
-    {
-        Ok(Some(p)) => p,
-        Ok(None) => return Err(StatusCode::NOT_FOUND.into_response()),
-        Err(e) => {
-            tracing::error!("customisation_access find_by_id {player_id}: {e}");
-            return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
-        }
-    };
+async fn charger_equipe(
+    state: &AppState,
+    space_id: &str,
+    player_id: &str,
+) -> Result<TeamRosterInfoDto, Response> {
+    let player = charger_joueur_de_l_espace(state, space_id, player_id).await?;
     state
         .players
         .roster_port

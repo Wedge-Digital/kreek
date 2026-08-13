@@ -2,6 +2,7 @@ use crate::app::auth::auth_backend::AuthSession;
 use crate::app::players::domain::customisation_basket::is_expired;
 use crate::app::players::domain::player::{Player, PlayerId};
 use crate::app::players::io::web::purchase_skill_controller::can_spend_spp;
+use crate::app::players::io::web::space_scope::charger_joueur_de_l_espace;
 use crate::app::players::ports::{
     CustomisationBasketState, ICustomisationBasketRepository, TeamRosterInfoDto,
 };
@@ -182,7 +183,7 @@ pub async fn player_detail_controller(
         return StatusCode::UNAUTHORIZED.into_response();
     };
 
-    let player = match load_player(&state, &player_id).await {
+    let player = match charger_joueur_de_l_espace(&state, &space_id, &player_id).await {
         Ok(p) => p,
         Err(resp) => return resp,
     };
@@ -312,22 +313,6 @@ fn url_du_panneau(
 async fn purger_panier(repo: &dyn ICustomisationBasketRepository, player_id: &str) {
     if let Err(e) = repo.delete(player_id).await {
         tracing::error!("player_detail_controller purge panier {player_id}: {e:?}");
-    }
-}
-
-async fn load_player(state: &AppState, player_id: &str) -> Result<Player, Response> {
-    match state
-        .players
-        .repository
-        .find_by_id(&PlayerId(player_id.to_string()))
-        .await
-    {
-        Ok(Some(p)) => Ok(p),
-        Ok(None) => Err(StatusCode::NOT_FOUND.into_response()),
-        Err(e) => {
-            tracing::error!("player_detail_controller find_by_id: {e}");
-            Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
-        }
     }
 }
 

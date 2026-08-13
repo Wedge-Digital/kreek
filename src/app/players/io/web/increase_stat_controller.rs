@@ -1,7 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::players::domain::match_impact::StatKind;
-use crate::app::players::domain::player::PlayerId;
 use crate::app::players::io::web::purchase_skill_controller::can_spend_spp;
+use crate::app::players::io::web::space_scope::charger_joueur_de_l_espace;
 use crate::app::players::use_cases::commands::IncreaseStatCommand;
 use crate::app::players::use_cases::increase_stat_use_case;
 use crate::app::shared_kernel::identity::ids::SpaceId;
@@ -24,18 +24,9 @@ pub async fn post_increase_stat(
         return StatusCode::BAD_REQUEST.into_response();
     };
 
-    let player = match state
-        .players
-        .repository
-        .find_by_id(&PlayerId(player_id.clone()))
-        .await
-    {
-        Ok(Some(p)) => p,
-        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
-        Err(e) => {
-            tracing::error!("post_increase_stat find player {player_id}: {e}");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
+    let player = match charger_joueur_de_l_espace(&state, &space_id, &player_id).await {
+        Ok(p) => p,
+        Err(refus) => return refus,
     };
 
     let Some(team) = state

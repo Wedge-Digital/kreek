@@ -40,6 +40,11 @@ introduite en carte 295, c'est exactement son cas d'usage.
 10. **Panier périmé** — `updated_at` reculé de plus de 24 h → la fiche retombe
     sur le journal, le panier a disparu, le message d'abandon s'affiche.
 
+11. **Espace étranger** — le même joueur, appelé depuis un espace dont
+    l'utilisateur est admin mais auquel le joueur n'appartient pas → `404` sur
+    la fiche, sur le panneau **et** sur un `POST` de mutation. Jamais `403` :
+    rien ne doit confirmer l'existence d'un joueur d'un autre espace.
+
 Le **scénario 6** est celui qui protège la règle la plus contre-intuitive de la
 fonctionnalité — la seule qu'un lecteur de bonne foi prendrait pour un bug.
 
@@ -61,4 +66,5 @@ directions passerait tous les tests unitaires.
 - [ ] Scénario 8 — persistance du panier
 - [ ] Scénario 9 — prix plancher
 - [ ] Scénario 10 — péremption
+- [ ] Scénario 11 — cloisonnement des espaces (carte 315)
 - [ ] Entrée ajoutée à `tests/impact-map.toml` (skill `test-impact`)

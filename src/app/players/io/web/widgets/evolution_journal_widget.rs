@@ -1,7 +1,8 @@
 use crate::app::players::domain::events::PlayerDomainEvent;
 use crate::app::players::domain::match_impact::StatKind;
-use crate::app::players::domain::player::{AcquisitionMode, Player, PlayerId, ValueKpo};
+use crate::app::players::domain::player::{AcquisitionMode, PlayerId, ValueKpo};
 use crate::app::players::domain::value_objects::SppCost;
+use crate::app::players::io::web::space_scope::charger_joueur_de_l_espace;
 use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use askama::Template;
@@ -215,7 +216,7 @@ pub async fn evolution_journal_widget(
     Query(params): Query<EvolutionJournalParams>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let player = match load_player(&state, &player_id).await {
+    let player = match charger_joueur_de_l_espace(&state, &space_id, &player_id).await {
         Ok(p) => p,
         Err(resp) => return resp,
     };
@@ -248,22 +249,6 @@ pub async fn evolution_journal_widget(
     };
 
     EvolutionJournalTemplate { vm }.into_response()
-}
-
-async fn load_player(state: &AppState, player_id: &str) -> Result<Player, Response> {
-    match state
-        .players
-        .repository
-        .find_by_id(&PlayerId(player_id.to_string()))
-        .await
-    {
-        Ok(Some(p)) => Ok(p),
-        Ok(None) => Err(StatusCode::NOT_FOUND.into_response()),
-        Err(e) => {
-            tracing::error!("evolution_journal_widget find_by_id {player_id}: {e}");
-            Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
-        }
-    }
 }
 
 #[cfg(test)]
