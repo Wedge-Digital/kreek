@@ -147,6 +147,14 @@
 # phases nécessaire pour obtenir un renvoyé. `auth` y est vérifié, et nulle part
 # ailleurs dans la suite : le scénario d'autorisation dépend de `bypass_auth` et
 # de sa seconde identité, sans laquelle le refus serait inobservable.
+# Mode customisation (cartes 302-315). Traverse : la résolution de l'espace
+# (spaces), l'identité bypass (auth), la création de compétition et la
+# programmation (competitions), la construction d'équipe (team_creation,
+# references), l'enrôlement et le recalcul de valeur d'équipe (teams), et tout
+# le BC players. Aucun match n'est joué : ni match_report, ni spp_calculator,
+# ni ranking ne sont sollicités.
+"test_player_customisation" = ["players", "teams", "team_creation", "competitions",
+                               "references", "spaces", "auth"]
 "test_roster_edition" = ["players", "teams", "auth", "match_report", "spp_calculator",
                          "competitions", "references", "ranking",
                          "team_creation", "spaces"]

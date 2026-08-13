@@ -218,10 +218,17 @@ def test_match_history_card_shows_opponent_and_actions(page: Page, space_id, pub
     expect(first_card.locator(".pd-log-entry")).to_have_count(3)  # touchdown + sortie + mvp
 
 
-def test_customise_button_present_but_disabled(page: Page, space_id, published_match):
+def test_customise_button_is_active_for_a_commissioner(page: Page, space_id, published_match):
+    """Le bouton n'est plus « à venir » : la carte 307 l'a branché.
+
+    Il est aussi devenu **absent** pour qui n'a pas le droit, au lieu d'être
+    grisé — masquer plutôt que désactiver, la phase 1 posant qu'un coach ne
+    doit pas même voir le mode. Le refus côté membre simple est couvert par
+    `test_player_customisation.py`.
+    """
     player_id = published_match["home_player_id"]
     page.goto(f"{BASE_URL}/app/{space_id}/players/{player_id}/detail", wait_until="load")
-    expect(page.locator(".btn-customise")).to_be_disabled()
+    expect(page.locator(".btn-customise")).to_be_enabled()
 
 
 def test_activate_spp_spending_button_visible_and_enabled_in_player_improvement(page: Page, space_id, published_match):
