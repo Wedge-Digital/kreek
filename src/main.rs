@@ -418,6 +418,11 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                 ),
             ),
             Arc::new(
+                crate::infrastructure::match_report::space_ownership::MatchReportSpaceOwnership::new(
+                    Arc::new(crate::app::match_report::io::repository::match_report_repository::MatchReportRepository::new(pool.clone())),
+                ),
+            ),
+            Arc::new(
                 crate::infrastructure::competitions::space_ownership::SeasonSpaceOwnership::new(
                     Arc::new(crate::app::competitions::io::repository::season_repository::SeasonRepository::new(pool.clone())),
                 ),

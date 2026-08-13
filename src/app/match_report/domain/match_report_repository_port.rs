@@ -45,6 +45,15 @@ pub trait IMatchReportRepository: Send + Sync {
         expected_version: u64,
     ) -> Result<u64, RepositoryError>;
 
+    /// L'espace auquel appartient ce rapport, ou `None` s'il n'existe pas
+    /// (carte 324).
+    ///
+    /// Lue depuis la projection : `find_by_id` rejoue l'agrégat depuis l'event
+    /// store, ce qui est hors de prix pour un contrôle exécuté à chaque
+    /// requête.
+    async fn find_space_id(&self, match_report_id: &str)
+        -> Result<Option<String>, RepositoryError>;
+
     async fn find_by_id(
         &self,
         match_report_id: &str,

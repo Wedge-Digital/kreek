@@ -66,7 +66,45 @@ La sémantique elle-même est testée une fois, en carte 324 — pas ici.
 
 ## Checklist
 
-- [ ] `ISpaceOwnership` pour ce BC, enregistré dans `main.rs`
-- [ ] Tests de handler : matrice d'appartenance, lecture et écriture
-- [ ] Sonde de lecture préalable, pour confirmer la déduction du code
-- [ ] Un scénario e2e de bout en bout
+- [x] `ISpaceOwnership` pour ce BC, enregistré dans `main.rs`
+- [x] Tests de handler : matrice d'appartenance, lecture et écriture
+- [x] Sonde de lecture préalable, pour confirmer la déduction du code
+- [ ] Un scénario e2e de bout en bout — **non écrit**, même raison qu'en carte 318 : un `404` ne produit aucun rendu
+
+## Réalisé
+
+**La sonde a confirmé la déduction.** Ce BC n'avait pas été sondé pendant
+l'audit ; son rang reposait sur la lecture du code. Avant correctif :
+
+```
+GET /app/<espace étranger>/match-report/<rapport de l'espace E2E>  → 200, page servie
+```
+
+Après :
+
+```
+espace étranger → 404       espace réel → 200
+```
+
+Un seul résolveur : `match_report_proj` porte `space_id`, comparaison directe.
+
+`{pairing_id}` et `{action_id}` n'en reçoivent pas — ils n'apparaissent jamais
+seuls, toujours accompagnés du `{match_report_id}` qui est contrôlé. Les quatre
+routes portant `{team_id}` seront couvertes par la carte 320 sans rien changer
+ici : la liste du middleware étant plate, un BC bénéficie des résolveurs des
+autres sans les connaître.
+
+## Le test d'écart vit au niveau du résolveur, pas en HTTP
+
+Les handlers de ce BC chargent l'agrégat depuis l'**event store**. Un rapport
+semé en projection seule leur rend `404` quel que soit l'espace : l'assertion
+nominale en HTTP aurait été `404 != 404`, donc verte sans rien prouver.
+
+Semer l'event store aurait lié le test au format des événements — cassant à
+chaque évolution du domaine — pour vérifier une appartenance qui n'en dépend
+pas. L'écart est donc prouvé sur le résolveur (`Some(espace)` contre `None`), et
+le refus en HTTP.
+
+**L'écart en HTTP a tout de même été vérifié**, à la main, sur les données
+réelles du serveur de développement — ligne ci-dessus. C'est la sonde qui joue
+ce rôle ici.

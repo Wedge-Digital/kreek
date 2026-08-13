@@ -343,6 +343,19 @@ impl IMatchReportRepository for MatchReportRepository {
         Ok(new_version)
     }
 
+    async fn find_space_id(
+        &self,
+        match_report_id: &str,
+    ) -> Result<Option<String>, RepositoryError> {
+        let row: Option<(String,)> =
+            sqlx::query_as("SELECT space_id FROM match_report_proj WHERE match_report_id = $1")
+                .bind(match_report_id)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(RepositoryError::Database)?;
+        Ok(row.map(|r| r.0))
+    }
+
     async fn find_by_id(
         &self,
         match_report_id: &str,
