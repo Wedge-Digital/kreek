@@ -381,6 +381,16 @@ impl ITeamRepository for TeamRepository {
         Ok(derniere_version)
     }
 
+    async fn find_space_id(&self, team_id: &str) -> Result<Option<String>, RepositoryError> {
+        let row: Option<(String,)> =
+            sqlx::query_as("SELECT space_id FROM team_proj WHERE team_id = $1")
+                .bind(team_id)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(RepositoryError::Database)?;
+        Ok(row.map(|r| r.0))
+    }
+
     async fn find_by_id(&self, team_id: &str) -> Result<Option<Team>, RepositoryError> {
         let rows = sqlx::query(
             "SELECT payload FROM team_event_store

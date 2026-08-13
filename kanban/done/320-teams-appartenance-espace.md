@@ -77,7 +77,50 @@ La sémantique elle-même est testée une fois, en carte 324 — pas ici.
 
 ## Checklist
 
-- [ ] `ISpaceOwnership` pour ce BC, enregistré dans `main.rs`
-- [ ] Tests de handler : matrice d'appartenance, lecture et écriture
-- [ ] Sonde d'écriture sur une équipe en phase de recrutement, pour lever le doute du `422`
-- [ ] Un scénario e2e de bout en bout
+- [x] `ISpaceOwnership` pour ce BC, enregistré dans `main.rs`
+- [x] Tests de handler : matrice d'appartenance, lecture et écriture
+- [x] Sonde d'écriture sur une équipe en phase de recrutement, pour lever le doute du `422`
+- [ ] Un scénario e2e de bout en bout — **non écrit**, même raison qu'en cartes 318 et 319
+
+## La sonde a levé le doute — et le résultat est pire que la lecture
+
+L'audit n'avait prouvé qu'une fuite en lecture ; sa sonde d'écriture avait rendu
+`422`, mais sur une équipe en `ReadyToPlay`. Refaite sur une équipe **en phase
+de recrutement** :
+
+```
+POST /app/<espace étranger>/teams/<équipe>/recruitment/players/add
+→ 200, ligne écrite
+teams__phase_baskets.space_id = l'espace de l'ATTAQUANT
+```
+
+Un admin d'un espace quelconque recrutait dans l'équipe d'un autre, touchant
+**effectif et trésorerie**. Le `422` venait bien du garde de phase, pas de
+l'autorisation — ne jamais conclure d'un refus qu'il vient de celui qu'on
+soupçonne.
+
+Troisième preuve d'écriture croisée après `players` et `news`, et la plus
+lourde. Panier de sonde supprimé, base rendue à son état.
+
+Après correctif :
+
+```
+lecture,  espace étranger → 404      espace réel → 200
+écriture, espace étranger → 404      aucun panier créé
+```
+
+## Un résolveur qui en couvre deux
+
+`team_proj` porte `space_id` : comparaison directe. Ce résolveur couvre aussi
+les **quatre routes de `match_report`** portant `{team_id}` — la liste du
+middleware étant plate, un BC bénéficie des résolveurs des autres sans les
+connaître.
+
+## Le test d'écart vit au niveau du résolveur
+
+Deuxième BC dans ce cas après `match_report`, et pour la même raison :
+`team_detail` charge l'agrégat depuis l'event store, donc une équipe semée en
+projection seule rend `404` quel que soit l'espace, et l'assertion nominale en
+HTTP serait verte sans rien prouver.
+
+L'écart en HTTP est vérifié par la sonde ci-dessus, sur données réelles.

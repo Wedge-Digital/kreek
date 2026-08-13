@@ -215,6 +215,13 @@ pub trait ITeamRepository: Send + Sync {
     ) -> Result<u64, RepositoryError>;
 
     /// Charge tous les événements d'une équipe et hydrate l'agrégat par rejeu.
+    /// L'espace auquel appartient cette équipe, ou `None` si elle n'existe pas
+    /// (carte 324).
+    ///
+    /// Lue depuis la projection : `find_by_id` rejoue l'agrégat depuis l'event
+    /// store, hors de prix pour un contrôle exécuté à chaque requête.
+    async fn find_space_id(&self, team_id: &str) -> Result<Option<String>, RepositoryError>;
+
     async fn find_by_id(&self, team_id: &str) -> Result<Option<Team>, RepositoryError>;
 
     /// Liste les équipes inscrites à une saison par statut.
