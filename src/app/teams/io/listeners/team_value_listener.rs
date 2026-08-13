@@ -45,7 +45,12 @@ fn ends_in_ready_to_play(event: &TeamDomainEvent) -> bool {
 fn changes_squad(event: &PlayersAppEvent) -> Option<&str> {
     match event {
         PlayersAppEvent::InitialRosterCompleted { team_id, .. }
-        | PlayersAppEvent::PlayerDismissed { team_id, .. } => Some(team_id),
+        | PlayersAppEvent::PlayerDismissed { team_id, .. }
+        // Un commissaire a posé la valeur d'un joueur hors barème. L'effectif
+        // ne change pas, sa valeur si — et c'est bien la TV qu'il faut relire.
+        // `players` n'annonce que le **prix** : compétence et caractéristique
+        // customisées ne déplacent pas la valeur d'équipe.
+        | PlayersAppEvent::PlayerValueCustomised { team_id, .. } => Some(team_id),
     }
 }
 
@@ -187,10 +192,10 @@ mod tests {
         assert!(!ends_in_ready_to_play(&TeamDomainEvent::TeamDismissed));
     }
 
-    /// Les deux annonces de `players` recalculent, et nomment l'équipe — pas le
+    /// Les annonces de `players` recalculent, et nomment l'équipe — pas le
     /// joueur : c'est l'équipe dont la valeur bouge.
     #[test]
-    fn les_deux_annonces_de_players_declenchent_le_recalcul() {
+    fn les_annonces_de_players_declenchent_le_recalcul() {
         assert_eq!(
             changes_squad(&PlayersAppEvent::InitialRosterCompleted {
                 team_id: "t-1".into(),
@@ -204,6 +209,23 @@ mod tests {
                 player_id: "p-9".into(),
             }),
             Some("t-2")
+        );
+    }
+
+    /// Un prix posé par un commissaire ne change pas l'effectif, mais change sa
+    /// valeur — et c'est bien la TV qu'il faut relire.
+    ///
+    /// `players` ne fait sortir **que** le prix : compétence et caractéristique
+    /// customisées n'ont pas d'app event, donc rien à filtrer ici. C'est le
+    /// test du publisher, côté `players`, qui tient cette moitié de la règle.
+    #[test]
+    fn une_customisation_de_prix_declenche_le_recalcul() {
+        assert_eq!(
+            changes_squad(&PlayersAppEvent::PlayerValueCustomised {
+                team_id: "t-3".into(),
+                player_id: "p-7".into(),
+            }),
+            Some("t-3")
         );
     }
 }

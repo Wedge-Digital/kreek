@@ -33,15 +33,32 @@ pub enum PlayersAppEvent {
         team_id: String,
         player_id: String,
     },
+    /// Un commissaire a **posé** la valeur d'un joueur, hors barème.
+    ///
+    /// Ne porte ni le montant ni le delta, volontairement : `teams` recalcule
+    /// depuis `players_proj` via son port d'effectif. Un app event qui
+    /// transporterait la valeur créerait une seconde source de vérité, qui
+    /// divergerait au premier événement perdu ou rejoué.
+    ///
+    /// **Seul le prix sort du BC.** Une compétence ou une caractéristique
+    /// customisée ne déplace pas la valeur d'équipe — la customisation pose une
+    /// valeur, elle ne la dérive pas d'un barème comme le fait la progression
+    /// normale. L'asymétrie est la règle, pas un oubli.
+    PlayerValueCustomised {
+        team_id: String,
+        player_id: String,
+    },
 }
 
 impl PlayersAppEvent {
     pub const INITIAL_ROSTER_COMPLETED: &'static str = "PlayersInitialRosterCompleted";
     pub const PLAYER_DISMISSED: &'static str = "PlayersPlayerDismissed";
+    pub const PLAYER_VALUE_CUSTOMISED: &'static str = "PlayersPlayerValueCustomised";
 
     pub fn event_type(&self) -> &'static str {
         match self {
             Self::InitialRosterCompleted { .. } => Self::INITIAL_ROSTER_COMPLETED,
+            Self::PlayerValueCustomised { .. } => Self::PLAYER_VALUE_CUSTOMISED,
             Self::PlayerDismissed { .. } => Self::PLAYER_DISMISSED,
         }
     }
@@ -51,7 +68,8 @@ impl PlayersAppEvent {
             // L'émetteur est l'équipe : c'est elle que le listener de `teams`
             // recalculera, pas le joueur.
             Self::InitialRosterCompleted { team_id, .. }
-            | Self::PlayerDismissed { team_id, .. } => team_id.clone(),
+            | Self::PlayerDismissed { team_id, .. }
+            | Self::PlayerValueCustomised { team_id, .. } => team_id.clone(),
         };
         EventEnvelope {
             event_id: EventId::new().to_string(),

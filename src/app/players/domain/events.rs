@@ -268,6 +268,15 @@ impl PlayerDomainEvent {
                     player_id: player_id.0.clone(),
                 })
             }
+            // Seule la customisation de **prix** franchit la frontière : c'est
+            // la seule qui déplace la valeur d'équipe. Compétence,
+            // caractéristique et SPP customisés restent dans le BC.
+            Self::PlayerValueCustomised {
+                player_id, team_id, ..
+            } => Some(PlayersAppEvent::PlayerValueCustomised {
+                team_id: team_id.0.clone(),
+                player_id: player_id.0.clone(),
+            }),
             // Joker : le compilateur ne signalera pas un événement qu'on
             // oublierait de faire sortir du BC. Ajouter un bras est délibéré.
             _ => None,
@@ -287,5 +296,103 @@ impl PlayerDomainEvent {
             payload: serde_json::to_value(self).unwrap(),
             occurred_at: time::OffsetDateTime::now_utc(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::players::domain::value_objects::SkillName;
+    use crate::app::shared_kernel::app_events::players_app_events::PlayersAppEvent;
+
+    fn ids() -> (PlayerId, TeamId, CustomisationId) {
+        (
+            PlayerId("p1".into()),
+            TeamId("t1".into()),
+            CustomisationId::try_new("c1".to_string()).unwrap(),
+        )
+    }
+
+    /// La règle la plus contre-intuitive de la fonctionnalité, et la seule
+    /// qu'un lecteur de bonne foi prendrait pour un bug : **seul le prix
+    /// franchit la frontière du BC**.
+    ///
+    /// Dans la progression normale, une compétence achetée en SPP augmente la
+    /// valeur du joueur. La customisation, elle, **pose** une valeur au lieu de
+    /// la dériver d'un barème — une compétence offerte par un commissaire ne
+    /// déplace donc pas la valeur d'équipe.
+    ///
+    /// Ce test est ce qui tient l'asymétrie : le code, lui, se contenterait
+    /// d'un bras de plus.
+    #[test]
+    fn seule_la_customisation_de_prix_sort_du_bc() {
+        let (player_id, team_id, customisation_id) = ids();
+
+        let prix = PlayerDomainEvent::PlayerValueCustomised {
+            player_id: player_id.clone(),
+            team_id: team_id.clone(),
+            customisation_id: customisation_id.clone(),
+            delta: KpoDelta::try_new(-15).unwrap(),
+            author: "Bagouze".into(),
+        };
+        assert!(matches!(
+            prix.to_app_event(),
+            Some(PlayersAppEvent::PlayerValueCustomised { .. })
+        ));
+
+        let competence = PlayerDomainEvent::PlayerSkillCustomised {
+            player_id: player_id.clone(),
+            team_id: team_id.clone(),
+            customisation_id: customisation_id.clone(),
+            skill_id: SkillId::try_new("BLOCK".to_string()).unwrap(),
+            skill_name: SkillName::try_new("Bloc".to_string()).unwrap(),
+            author: "Bagouze".into(),
+        };
+        assert!(
+            competence.to_app_event().is_none(),
+            "une compétence customisée ne déplace pas la valeur d'équipe"
+        );
+
+        let caracteristique = PlayerDomainEvent::PlayerStatCustomised {
+            player_id: player_id.clone(),
+            team_id: team_id.clone(),
+            customisation_id: customisation_id.clone(),
+            stat: StatKind::Ag,
+            offset: -1,
+            author: "Bagouze".into(),
+        };
+        assert!(
+            caracteristique.to_app_event().is_none(),
+            "une caractéristique customisée ne déplace pas la valeur d'équipe"
+        );
+
+        let spp = PlayerDomainEvent::PlayerSppCustomised {
+            player_id,
+            team_id,
+            customisation_id,
+            amount: SppAmount::try_new(5).unwrap(),
+            author: "Bagouze".into(),
+        };
+        assert!(spp.to_app_event().is_none());
+    }
+
+    /// L'émetteur est l'**équipe**, pas le joueur : c'est elle que le listener
+    /// de `teams` recalculera.
+    #[test]
+    fn l_app_event_de_prix_est_emis_au_nom_de_l_equipe() {
+        let (player_id, team_id, customisation_id) = ids();
+        let app_event = PlayerDomainEvent::PlayerValueCustomised {
+            player_id,
+            team_id,
+            customisation_id,
+            delta: KpoDelta::try_new(10).unwrap(),
+            author: "Bagouze".into(),
+        }
+        .to_app_event()
+        .unwrap();
+
+        let enveloppe = app_event.to_enveloppe();
+        assert_eq!(enveloppe.emitter, "t1");
+        assert_eq!(enveloppe.event_type, "PlayersPlayerValueCustomised");
     }
 }
