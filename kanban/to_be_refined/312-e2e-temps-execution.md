@@ -76,5 +76,13 @@ l'autre empêche ce qui viendra de s'ajouter au mauvais étage.
 ## Bénéfice attendu au-delà du chronomètre
 
 Des fixtures plus rapides réduisent la pression sur la base, à laquelle la
-flakiness observée avait été tracée. C'est peut-être le gain le plus utile des
-deux.
+flakiness observée avait été tracée.
+
+**Correction, carte 317** : cette attribution était fausse. La flakiness vient
+de **transactions fantômes** — une connexion laissée `idle in transaction` par
+l'annulation d'une requête, qui bloque les suivantes pendant des minutes. La
+charge n'est que le déclencheur, pas la cause.
+
+La 317 est donc prioritaire sur celle-ci. Réduire les temps reste utile — moins
+de requêtes lentes, donc moins de timeouts, donc moins d'annulations — mais
+c'est traiter le symptôme.
