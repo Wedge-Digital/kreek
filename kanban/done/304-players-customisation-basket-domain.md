@@ -75,16 +75,39 @@ lignes en attente, qui se libère si on en retire une.
 
 ## Checklist
 
-- [ ] `CustomisationLine` et `CustomisationBasket`
-- [ ] `hydrate()`
-- [ ] Les cinq mutations avec leurs gardes
-- [ ] `validate_all()` — rejeu sur panier vidé
-- [ ] `action_for_stat()` / `action_for_skill()`
-- [ ] `effective_stat()` / `effective_value()` / `effective_spp()`
-- [ ] Test : deux améliorations d'AG depuis `2+` — la seconde est refusée
-- [ ] Test : une compétence déjà au panier est refusée en doublon
-- [ ] Test : une compétence possédée **de base** est `Forbidden`, pas `Blocked`
-- [ ] Test : une borne atteinte par le panier est `Blocked`, et se libère au
+- [x] `CustomisationLine` et `CustomisationBasket`
+- [x] `hydrate()`
+- [x] Les cinq mutations avec leurs gardes
+- [x] `validate_all()` — rejeu sur panier vidé
+- [x] `action_for_stat()` / `action_for_skill()`
+- [x] `effective_stat()` / `effective_value()` / `effective_spp()`
+- [x] Test : deux améliorations d'AG depuis `2+` — la seconde est refusée
+- [x] Test : une compétence déjà au panier est refusée en doublon
+- [x] Test : une compétence possédée **de base** est `Forbidden`, pas `Blocked`
+- [x] Test : une borne atteinte par le panier est `Blocked`, et se libère au
       retrait de la ligne
-- [ ] Test : prix cumulé sous zéro refusé
-- [ ] Test : `validate_all` rejette tout si une seule ligne tombe
+- [x] Test : prix cumulé sous zéro refusé
+- [x] Test : `validate_all` rejette tout si une seule ligne tombe
+
+---
+
+## Notes d'implémentation
+
+**`validate_all` réutilise les mutations elles-mêmes** — cloner, vider,
+ré-ajouter ligne par ligne. Les gardes du rejeu sont donc exactement celles de
+l'ajout : une seconde implémentation des règles pour la validation aurait fini
+par diverger de la première.
+
+**Les identifiants de ligne sont protégés contre la réattribution.** Un simple
+`len() + 1` redonnerait l'identifiant d'une ligne retirée, et un retrait
+supprimerait alors deux lignes. La boucle qui cherche un identifiant libre
+existe pour ça, et un test la garde.
+
+**`add_spp` n'a aucune garde**, délibérément : le plafond de 100 est **par
+opération**, donc entièrement porté par `SppAmount`. Le total du joueur n'est
+pas borné — un test le dit explicitement, sans quoi quelqu'un ajouterait un
+plafond de total en croyant corriger un oubli.
+
+**`ActionState` est un type propre à `players`**, alors que `teams` en a un
+homonyme : les BCs ne partagent pas leurs types. Duplication assumée, imposée
+par la souveraineté.
