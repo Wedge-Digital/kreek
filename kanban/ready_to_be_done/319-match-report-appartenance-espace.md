@@ -48,17 +48,23 @@ plus aucun chargement direct par identifiant ne doit subsister dans cette
 couche. C'est cette vérification, et non le nombre de handlers migrés, qui dit
 que la carte est finie.
 
-## Tests
+## Tests — plus de report
 
-Le contrôle porte sur un `AppState` : **pas de test unitaire possible** faute du
-harnais de la carte 311. C'est le troisième report du même genre après les
-cartes 308 et 315.
+Le harnais de la carte 311 existe : `web::test_harness::Harnais` monte le
+routeur de production, se connecte par le vrai parcours, et rejoue son cookie.
+Le patron est celui de `players/io/web/tests/test_space_scope.rs`.
 
-Couverture attendue :
+**Tests de handler, obligatoires :**
 
-- une sonde manuelle consignée dans la carte, comme en 315 ;
-- un scénario e2e : lecture **et** écriture croisées → `404`, cas nominal
-  inchangé.
+- lecture croisée → `404`, **et** lecture nominale → `200`. C'est l'écart qui
+  prouve, pas le `404` seul : une assertion qui ne vérifierait que le refus
+  passerait tout aussi bien si la ressource n'existait pas ;
+- écriture croisée → `404`, écriture nominale → autre chose que `404` ;
+- identifiant d'espace mal formé → `400`.
+
+**Un scénario e2e**, et un seul : le parcours de bout en bout en navigateur. La
+matrice d'autorisation n'y a plus sa place — elle coûte des minutes là où elle
+coûte des millisecondes ici.
 
 ## Checklist
 
@@ -66,5 +72,5 @@ Couverture attendue :
 - [ ] `space_scope.rs` : garde rapport de match (direct)
 - [ ] Les 23 routes migrées
 - [ ] Vérifié : plus aucun chargement direct par identifiant dans `io/web/`
-- [ ] Sonde consignée : lecture croisée → `404`, nominal → `200`
-- [ ] Scénario e2e
+- [ ] Tests de handler : matrice d'appartenance (croisé/nominal, lecture/écriture)
+- [ ] Un scénario e2e de bout en bout

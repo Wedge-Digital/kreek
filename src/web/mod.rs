@@ -6,4 +6,6 @@ pub mod middleware;
 pub mod router;
 pub mod routes;
 pub mod spaces_widget_tester;
+#[cfg(test)]
+pub mod test_harness;
 pub mod upload_widget;

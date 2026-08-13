@@ -28,7 +28,7 @@ const DEV_COACH_LEGACY_ID: i32 = 1;
 /// base ayant reçu les données legacy.
 pub const SIMPLE_COACH_NAME: &str = "E2E Coach 01";
 
-const SEED_PASSWORD: &str = "changeme-dev-only";
+pub const SEED_PASSWORD: &str = "changeme-dev-only";
 const SPACE_NAME: &str = "Espace E2E";
 
 /// `space_icon_path` est relu à travers `CloudinaryImage`, qui n'accepte qu'une

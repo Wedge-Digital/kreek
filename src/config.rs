@@ -75,6 +75,48 @@ pub struct ReferencesConfig {
 }
 
 impl AppConfig {
+    /// Configuration du harnais de test de handler (carte 311).
+    ///
+    /// Écrite à la main plutôt que chargée : `load()` lit `.env.<profil>` et
+    /// l'environnement, donc un test dépendrait de la machine qui l'exécute.
+    ///
+    /// `bypass_auth` est **faux** : le harnais pose sa propre couche
+    /// d'identité, et laisser le bypass actif ferait passer des tests
+    /// d'autorisation en connectant un utilisateur que le test n'a pas choisi.
+    #[cfg(test)]
+    pub fn for_tests() -> Self {
+        Self {
+            server: ServerConfig {
+                host: "127.0.0.1".into(),
+                port: 0,
+                request_timeout_ms: 30_000,
+            },
+            database: DatabaseConfig {
+                // Inutilisée : `compose()` reçoit la `PgPool` de `#[sqlx::test]`.
+                url: String::new(),
+                max_connections: 5,
+                min_connections: 1,
+                acquire_timeout_seconds: 5,
+                idle_timeout_seconds: 600,
+                idle_in_transaction_timeout_seconds: 15,
+            },
+            auth: AuthConfig {
+                token_ttl_seconds: 3600,
+            },
+            email: EmailConfig {
+                provider: EmailProvider::Console,
+                api_key: String::new(),
+                from: "test@example.test".into(),
+                from_name: "Kreek".into(),
+            },
+            references: ReferencesConfig {
+                dir: "assets/references.example".into(),
+            },
+            host_domain: "http://localhost".into(),
+            bypass_auth: false,
+        }
+    }
+
     pub fn load() -> Result<Self, config::ConfigError> {
         // 1. Charge le fichier .env (ignoré silencieusement s'il n'existe pas)
         let env = env::var("EXEC_PROFILE").unwrap_or_else(|_| "dev".to_string());

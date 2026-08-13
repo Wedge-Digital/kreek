@@ -126,3 +126,8 @@ ci-dessus**, et un scénario 11 est ajouté à la carte 309 pour la figer.
 
 C'est le deuxième report du même genre après la carte 308. Le manque coûte
 maintenant deux fois.
+
+**Rattrapé depuis, carte 311.** Les cinq sondes `curl` ci-dessus sont devenues
+des tests : `players/io/web/tests/test_space_scope.rs`. Elles vérifient l'écart
+— `200` depuis l'espace du joueur, `404` depuis un autre — sur une lecture et
+sur une écriture, plus le `400` d'un identifiant mal formé.

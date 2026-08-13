@@ -6,4 +6,6 @@ pub mod player_detail_controller;
 pub mod purchase_skill_controller;
 pub mod roster_edition_controller;
 pub mod space_scope;
+#[cfg(test)]
+pub mod tests;
 pub mod widgets;

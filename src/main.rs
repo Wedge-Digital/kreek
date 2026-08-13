@@ -190,9 +190,13 @@ fn build_email_service(cfg: EmailConfig) -> Arc<dyn IEmailService> {
     }
 }
 
-async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
-    let server_address = cfg.server_addr();
-
+/// Assemble l'application : bus, listeners, adapters, les dix contextes.
+///
+/// Extraite de `run_server` pour que les tests de handler construisent **le**
+/// câblage de production, et non une réplique. Un constructeur `for_tests`
+/// distinct donnerait un harnais vert sur un montage que la production n'a
+/// pas — c'est la seule chose qui rende ce niveau de test digne de confiance.
+pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
     let event_bus = new_bus();
     let app_event_bus = new_bus();
 
@@ -305,7 +309,7 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
 
     let email_service = build_email_service(cfg.email);
 
-    let state = AppState {
+    AppState {
         auth: AuthContext::new(
             &pool,
             event_bus.clone(),
@@ -400,8 +404,15 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
         bypass_auth: cfg.bypass_auth,
         event_bus: event_bus.clone(),
         app_event_bus: app_event_bus.clone(),
-    };
+    }
+}
 
+/// Le routeur complet, sans la socket : c'est ce que `oneshot` prend en test.
+///
+/// `bypass_auth` est posé en `route_layer` — le harnais peut donc poser sa
+/// propre couche d'identité à la place, sans que le code de production ait à
+/// connaître les besoins des tests.
+pub fn build_router(state: AppState) -> Router {
     let session_layer = SessionManagerLayer::new(DashMapStore::new());
     let auth_layer = AuthManagerLayerBuilder::new(
         AuthBackend::new(state.auth.user_repository.clone()),
@@ -452,6 +463,14 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
             .layer(from_fn(request_log))
             .layer(LiveReloadLayer::new().request_predicate(NotHtmxRequest))
     };
+
+    app
+}
+
+async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
+    let server_address = cfg.server_addr();
+    let state = compose(cfg, pool).await;
+    let app = build_router(state);
 
     let listener = tokio::net::TcpListener::bind(&server_address)
         .await

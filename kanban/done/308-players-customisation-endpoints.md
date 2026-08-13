@@ -109,6 +109,10 @@ suite e2e, c'est-à-dire la carte 309, qui possède déjà les scénarios.
 La carte 311 propose de combler ce manque ; ces trois vérifications sont son
 meilleur premier cas.
 
+**Le harnais existe depuis la carte 311** — `web::test_harness::Harnais`. Les
+trois vérifications restent à écrire, mais elles ont désormais un foyer, et
+n'ont plus à passer par le navigateur.
+
 ## Ce qui est couvert ici, en tests unitaires
 
 - `parse_stat` accepte exactement les cinq clés, et **celles que le panneau

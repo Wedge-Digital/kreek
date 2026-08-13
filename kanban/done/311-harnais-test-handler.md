@@ -107,3 +107,50 @@ les ajoutera, pas de la raccourcir.
   teste en fonctions pures, comme `choose_right_panel` en carte 307. Le
   harnais ne se justifie que pour ce qui **est** la composition : autorisation
   et en-têtes.
+
+---
+
+## Réalisé
+
+`run_server` est scindé en trois : `compose(cfg, pool) -> AppState`,
+`build_router(state) -> Router`, et `run_server` qui les enchaîne avant de lier
+la socket. **`main` et les tests appellent les mêmes fonctions** — c'est la
+contrainte que cette carte posait, et la seule qui rende le niveau digne de
+confiance.
+
+`AppConfig::for_tests()` est écrite à la main plutôt que chargée : `load()` lit
+`.env.<profil>` et l'environnement, donc un test aurait dépendu de la machine
+qui l'exécute. `bypass_auth` y est **faux** — le laisser actif ferait passer
+des tests d'autorisation en connectant un utilisateur que le test n'a pas
+choisi.
+
+### L'identité : la troisième voie, après deux échecs
+
+Le §2 hésitait entre élargir `bypass_auth` et poser un middleware de test. Les
+deux ont été écartées, la seconde par la pratique :
+
+**Un middleware maison ne peut pas marcher là où on peut le poser.** Appliqué
+par-dessus le routeur rendu par `build_router`, il s'exécute *avant*
+`AuthManagerLayer` — « Can't extract auth session. Is `AuthManagerLayer`
+enabled? ». Le poser au bon endroit aurait demandé de paramétrer
+`build_router`, c'est-à-dire d'y faire entrer les tests.
+
+**Le harnais se connecte donc pour de vrai** : `POST /auth/login` avec le mot de
+passe que `seed_e2e` pose sur tous ses comptes, puis il rejoue le cookie de
+session. Aucune ligne de production ajoutée, et le chemin d'authentification est
+exercé au passage. C'est mieux que ce que la carte envisageait.
+
+### Prouvé sur le cas prévu
+
+`players/io/web/tests/test_space_scope.rs` — les cinq sondes `curl` de la carte
+315 sont devenues trois tests, en 3 s.
+
+**L'assertion qui compte est l'écart** : `200` depuis l'espace du joueur, `404`
+depuis un autre. Un test qui ne vérifierait que le `404` croisé passerait tout
+aussi bien si la ressource n'existait pas — il ne prouverait rien.
+
+### Reste à faire
+
+- L'inscrire dans le `CLAUDE.md` comme troisième étage — **pas fait**, à
+  joindre à la première carte qui s'en servira vraiment (318).
+- Les trois vérifications de la carte 308, qui ont maintenant un foyer.
