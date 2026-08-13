@@ -40,6 +40,26 @@ Directives de travail pour Claude Code sur ce projet.
     `ready_to_be_done/`. Préférer `git mv` à `mv`, et traiter son échec comme
     fatal.
 
+12. **`git reset --hard` est interdit quand l'arbre porte du travail non
+    commité.** Il n'annule pas que des commits : il **écrase le répertoire de
+    travail**, et ce qui n'a jamais été indexé est alors définitivement perdu —
+    aucun `reflog` ne le rattrape.
+
+    Pour annuler un commit en gardant les fichiers : `git reset --soft HEAD~1`
+    (les modifications restent indexées) ou `git reset --mixed HEAD~1` (elles
+    reviennent dans l'arbre). `--hard` ne se justifie que sur un arbre dont on
+    a vérifié qu'il est propre, et cette vérification se fait *avant*, pas en
+    espérant.
+
+    Vécu : deux commits d'essai annulés au `--hard` ont effacé le chantier non
+    commité de la base de démonstration — 131 lignes sur quatre fichiers. Elles
+    n'ont été récupérées que parce qu'un `git stash` du matin traînait encore
+    dans les objets orphelins. Sans lui, elles n'existaient plus.
+
+    Corollaire : **le travail non commité est du travail en sursis.** Un
+    chantier qui vaut la peine d'être gardé vaut un commit, quitte à ce qu'il
+    soit provisoire.
+
 ---
 
 ## Vérifications à l'installation — une fois par clone
