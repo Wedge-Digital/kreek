@@ -60,6 +60,9 @@ mod tests {
         fn find_skill(&self, _: &str) -> Option<SkillCatalogEntryDto> {
             None
         }
+        fn list_all_skills(&self) -> Vec<SkillCatalogEntryDto> {
+            vec![]
+        }
         fn find_position(&self, _: &str) -> Option<PositionCatalogEntryDto> {
             None
         }

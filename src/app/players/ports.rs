@@ -232,6 +232,15 @@ pub trait ICustomisationBasketRepository: Send + Sync {
 
 pub trait ISkillCatalogPort: Send + Sync {
     fn find_skill(&self, skill_id: &str) -> Option<SkillCatalogEntryDto>;
+
+    /// Le catalogue **complet**, sans filtre d'accès de poste.
+    ///
+    /// Élargissement assumé du contrat : jusqu'ici `players` ne consultait le
+    /// catalogue que pour des compétences dont il avait déjà l'identifiant. La
+    /// customisation en a besoin entier, puisqu'elle ignore par définition les
+    /// règles d'accès du poste — c'est ce qui la distingue du `skill-picker` de
+    /// `references`, qui filtre et tarife.
+    fn list_all_skills(&self) -> Vec<SkillCatalogEntryDto>;
     fn find_position(&self, roster_line_id: &str) -> Option<PositionCatalogEntryDto>;
     fn position_access(&self, roster_line_id: &str) -> Option<PositionAccessDto>;
     fn cost_for_level(&self, level: u8, is_elite: bool) -> Option<SkillCostLevelDto>;

@@ -99,6 +99,9 @@ mod tests {
         fn find_skill(&self, _skill_id: &str) -> Option<SkillCatalogEntryDto> {
             None
         }
+        fn list_all_skills(&self) -> Vec<SkillCatalogEntryDto> {
+            vec![]
+        }
         fn find_position(&self, roster_line_id: &str) -> Option<PositionCatalogEntryDto> {
             if roster_line_id == "BLITZER" {
                 Some(PositionCatalogEntryDto {

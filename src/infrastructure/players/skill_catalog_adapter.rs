@@ -27,6 +27,19 @@ impl ISkillCatalogPort for SkillCatalogAdapter {
         })
     }
 
+    fn list_all_skills(&self) -> Vec<SkillCatalogEntryDto> {
+        self.reference_repo
+            .list_skills()
+            .iter()
+            .map(|skill| SkillCatalogEntryDto {
+                skill_id: skill.uid.clone(),
+                name: skill.name.clone(),
+                category: skill.category.clone(),
+                is_elite: skill.skill_type == "Élite",
+            })
+            .collect()
+    }
+
     fn find_position(&self, roster_line_id: &str) -> Option<PositionCatalogEntryDto> {
         let position = self.reference_repo.find_position_by_uid(roster_line_id)?;
         Some(PositionCatalogEntryDto {
