@@ -1,0 +1,54 @@
+#!/bin/sh
+# Verrou de commit — deux erreurs réellement commises, deux règles.
+#
+# Activation, une fois par clone :
+#     git config core.hooksPath .githooks
+#
+# Il ne remplace pas la lecture de `git diff --cached --stat` avant de
+# commiter : aucune règle mécanique ne sait quels fichiers *appartiennent* à un
+# changement, donc un commit partiellement complet — cinq fichiers sur six —
+# passera toujours. Le hook attrape les deux formes qu'on a vues, pas le cas
+# général.
+
+echec=0
+
+# `commit-msg` et non `pre-commit` : seul le premier reçoit le fichier de
+# message en argument. Écrit d'abord en `pre-commit`, le hook laissait passer
+# la règle 1 en silence — `$1` y étant vide, le `case` ne correspondait à rien.
+# Une règle qui ne se déclenche jamais est pire qu'une règle absente.
+
+# ── Règle 1 : un commit de code qui ne contient pas de code ──────────────────
+#
+# Vécu : `git add a b c` abandonne **tout** si un seul chemin ne correspond à
+# rien. Un `git mv` avait échoué juste avant, le chemin nommé n'existait pas,
+# et les trois fichiers source n'ont jamais été indexés. Le commit a été poussé
+# en affirmant un comportement dont le code était resté dans le répertoire de
+# travail.
+message=$(head -1 "$1")
+case "$message" in
+    feat*|fix*|refactor*|perf*)
+        code=$(git diff --cached --name-only | grep -vE '^(kanban|docs)/' | head -1)
+        if [ -z "$code" ]; then
+            echo "commit-msg : « $message » n'indexe aucun fichier hors kanban/ et docs/." >&2
+            echo "             Un commit de code sans code — vérifiez que le \`git add\`" >&2
+            echo "             n'a pas échoué sur un chemin inexistant." >&2
+            echo "             Contournement délibéré : git commit --no-verify" >&2
+            echec=1
+        fi
+        ;;
+esac
+
+# ── Règle 2 : une carte kanban présente dans deux dossiers ──────────────────
+#
+# Vécu : `mv` puis `git add` de la seule destination. La suppression de la
+# source n'étant pas indexée, la carte s'est retrouvée dans `done/` **et** dans
+# `ready_to_be_done/`. Aucun message d'erreur, rien d'anormal à la lecture.
+doublons=$(git ls-files kanban | sed 's#kanban/[^/]*/##' | sort | uniq -d)
+if [ -n "$doublons" ]; then
+    echo "commit-msg : carte(s) présente(s) dans deux dossiers kanban :" >&2
+    echo "$doublons" | sed 's/^/             /' >&2
+    echo "             Un déplacement dont la suppression n'a pas été indexée." >&2
+    echec=1
+fi
+
+exit $echec

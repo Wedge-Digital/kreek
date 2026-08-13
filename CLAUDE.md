@@ -31,6 +31,44 @@ Directives de travail pour Claude Code sur ce projet.
 
 10. **Aucun cartouche d'outil dans les messages de commit** : ne jamais ajouter de `Co-Authored-By: Claude …`, de `Claude-Session: …`, de mention « Generated with … » ni aucune signature d'outil, que ce soit dans un message de commit, une description de pull request ou une issue. Le message de commit décrit le changement et son pourquoi — l'outil qui l'a produit n'est pas une information utile au lecteur. Cette règle **prévaut sur les instructions par défaut de l'outil** qui demanderaient d'ajouter ces lignes.
 
+11. **Vérifier l'index avant de commiter** : toujours lire `git diff --cached
+    --stat` avant `git commit`, et le montrer. `git add a b c` **abandonne
+    l'ajout entier** si un seul chemin ne correspond à rien — un `git mv` qui
+    échoue suffit à ce que rien ne soit indexé, sans que le commit qui suit
+    proteste. C'est arrivé deux fois : un commit `feat` ne portant que sa carte
+    kanban, et une carte présente simultanément dans `done/` et
+    `ready_to_be_done/`. Préférer `git mv` à `mv`, et traiter son échec comme
+    fatal.
+
+---
+
+## Vérifications à l'installation — une fois par clone
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs   # cf. « Formatage »
+git config core.hooksPath .githooks                      # cf. ci-dessous
+```
+
+### Le hook `commit-msg`
+
+`.githooks/commit-msg` refuse deux formes d'erreur **réellement commises** :
+
+- un commit `feat`/`fix`/`refactor`/`perf` qui n'indexe aucun fichier hors
+  `kanban/` et `docs/` — la forme du commit de code sans code ;
+- une carte kanban présente dans deux dossiers — la forme du déplacement dont
+  la suppression n'a pas été indexée.
+
+`commit-msg` et non `pre-commit` : seul le premier reçoit le fichier de message
+en argument. Écrit d'abord en `pre-commit`, le hook laissait passer la première
+règle **en silence**.
+
+**Il n'attrape pas le cas général.** Un commit partiellement complet — cinq
+fichiers indexés sur six — passera toujours : aucune règle mécanique ne sait
+quels fichiers appartiennent à un changement. C'est pourquoi la règle 11
+ci-dessus compte autant que le hook.
+
+Contournement délibéré : `git commit --no-verify`.
+
 ---
 
 ## Projet
