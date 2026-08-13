@@ -146,3 +146,14 @@
   .custo-action-card { flex-direction: column; align-items: stretch; }
   .custo-action-form { flex-wrap: wrap; }
 }
+
+/* Motif de refus — affiché là où l'on a cliqué, jamais en tête de panneau : un
+   bandeau global obligerait à deviner laquelle des quatre actions a échoué. */
+.custo-refusal {
+  margin: var(--p1) var(--p2) 0; padding: 8px var(--p1);
+  background: rgba(224,32,32,0.06); border: 1px solid rgba(224,32,32,0.25);
+  border-radius: 6px; font-size: var(--text-tiny); color: var(--red); font-weight: 600;
+}
+/* Dans une carte de caractéristique, l'espace est compté : pas de marge
+   latérale, le texte tient sous les boutons. */
+.custo-stat-card .custo-refusal { margin: 4px 0 0; padding: 6px; text-align: center; }

@@ -1,3 +1,7 @@
+use crate::app::players::io::web::customisation_controller::{
+    post_add_skill, post_add_spp, post_add_stat, post_adjust_price, post_cancel, post_remove_line,
+    post_validate,
+};
 use crate::app::players::io::web::increase_stat_controller::post_increase_stat;
 use crate::app::players::io::web::player_debug_controller::player_debug_controller;
 use crate::app::players::io::web::player_detail_controller::player_detail_controller;
@@ -32,10 +36,21 @@ pub fn router() -> Router<AppState> {
             get(evolution_journal_widget),
         )
         .route(path::PLAYER_SPP_SPENDING_WIDGET, get(spp_spending_widget))
-        // Les sept `POST` de customisation sont branchés par la carte 308 ;
-        // seul le panneau est servi ici.
         .route(
             path::PLAYER_CUSTOMISATION_WIDGET,
             get(player_customisation_widget),
         )
+        .route(path::PLAYER_CUSTOMISATION_SKILL_ADD, post(post_add_skill))
+        .route(path::PLAYER_CUSTOMISATION_STAT_ADD, post(post_add_stat))
+        .route(
+            path::PLAYER_CUSTOMISATION_PRICE_ADJUST,
+            post(post_adjust_price),
+        )
+        .route(path::PLAYER_CUSTOMISATION_SPP_ADD, post(post_add_spp))
+        .route(
+            path::PLAYER_CUSTOMISATION_LINE_REMOVE,
+            post(post_remove_line),
+        )
+        .route(path::PLAYER_CUSTOMISATION_VALIDATE, post(post_validate))
+        .route(path::PLAYER_CUSTOMISATION_CANCEL, post(post_cancel))
 }

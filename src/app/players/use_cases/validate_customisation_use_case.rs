@@ -20,6 +20,9 @@ use crate::common::services::event_bus::event_bus::EventBus;
 pub enum ValidateCustomisationError {
     PlayerNotFound,
     NothingToApply,
+    /// Le panier a changé entre le rendu du panneau et la validation. Ni une
+    /// faute d'utilisateur, ni un bug : le panneau re-rendu porte l'état réel.
+    ConcurrentWrite,
     /// Une ou plusieurs lignes ne sont plus applicables — **rien** n'est
     /// appliqué.
     LinesRejected(Vec<RejectedLine>),
@@ -54,6 +57,15 @@ pub async fn execute(
     event_bus: &EventBus,
 ) -> Result<(), ValidateCustomisationError> {
     let (basket, player) = hydrate(&cmd.player_id, player_repo, basket_repo, catalog).await?;
+
+    // Avant toute chose : le panier est-il bien celui que l'appelant a vu ?
+    // Il a compté ses lignes sur une lecture antérieure pour engendrer un
+    // identifiant par ligne ; si le contenu a bougé depuis, ses identifiants ne
+    // correspondent plus à rien.
+    if basket.version().0 != cmd.expected_version {
+        return Err(ValidateCustomisationError::ConcurrentWrite);
+    }
+
     if basket.is_empty() {
         return Err(ValidateCustomisationError::NothingToApply);
     }
@@ -438,6 +450,7 @@ mod tests {
                 player_id: joueur(),
                 author: "Bagouze".into(),
                 customisation_ids: vec![],
+                expected_version: 0,
             },
             &repo,
             &panier,
@@ -476,6 +489,7 @@ mod tests {
                 player_id: joueur(),
                 author: "Bagouze".into(),
                 customisation_ids: ids(2),
+                expected_version: 2,
             },
             &repo,
             &panier,
@@ -508,6 +522,7 @@ mod tests {
                 player_id: joueur(),
                 author: "Bagouze".into(),
                 customisation_ids: ids(1),
+                expected_version: 1,
             },
             &repo,
             &panier,
@@ -518,6 +533,45 @@ mod tests {
         .unwrap();
 
         assert!(panier.load("p1").await.unwrap().is_none());
+    }
+
+    /// La garde qui rend le comptage d'identifiants sûr. Le handler compte les
+    /// lignes sur une lecture antérieure à celle du use case ; sans elle, un
+    /// panier modifié entre les deux ferait sortir `IdentifiantsManquants`,
+    /// code qui annonce un bug d'appelant pour une simple écriture concurrente.
+    ///
+    /// Ici le panier est à la version 2 et l'appelant en attendait 1 : refus,
+    /// et **rien n'est appliqué** — le panier survit à la tentative.
+    #[tokio::test]
+    async fn une_validation_sur_une_version_perimee_est_un_conflit_pas_un_bug() {
+        let repo = FakePlayerRepo::neuf();
+        let panier = FakeBasketRepo::default();
+        ajouter_stat(&repo, &panier, 1, 0).await.unwrap();
+        ajouter_stat(&repo, &panier, 1, 1).await.unwrap();
+
+        let erreur = execute(
+            ValidateCustomisationCommand {
+                player_id: joueur(),
+                author: "Bagouze".into(),
+                customisation_ids: ids(1),
+                expected_version: 1,
+            },
+            &repo,
+            &panier,
+            &FakeCatalog,
+            &bus(),
+        )
+        .await
+        .unwrap_err();
+
+        assert!(
+            matches!(erreur, ValidateCustomisationError::ConcurrentWrite),
+            "obtenu {erreur:?}"
+        );
+        assert!(
+            panier.load("p1").await.unwrap().is_some(),
+            "un conflit ne doit rien consommer"
+        );
     }
 
     /// Tout ou rien : une ligne devenue invalide fait tout échouer, et **rien**
@@ -561,6 +615,7 @@ mod tests {
                 player_id: joueur(),
                 author: "Bagouze".into(),
                 customisation_ids: ids(1),
+                expected_version: 1,
             },
             &repo,
             &panier,
@@ -618,6 +673,7 @@ mod tests {
                 player_id: joueur(),
                 author: "Bagouze".into(),
                 customisation_ids: ids(1),
+                expected_version: 1,
             },
             &repo,
             &panier,

@@ -16,7 +16,7 @@ use crate::app::players::domain::customisation_basket::{
 };
 use crate::app::players::domain::match_impact::StatKind;
 use crate::app::players::domain::player::{Player, PlayerId};
-use crate::app::players::io::web::player_detail_controller::can_customise;
+use crate::app::players::io::web::customisation_access::autoriser;
 use crate::app::players::io::web::widgets::evolution_journal_widget::{
     evolution_journal_widget, EvolutionJournalParams,
 };
@@ -43,6 +43,26 @@ pub struct AddableSkillVm {
     pub category_label: String,
 }
 
+/// Ce qu'une action refusée visait. Le refus s'affiche **là où l'on a
+/// cliqué** : un bandeau en tête de panneau obligerait à deviner laquelle des
+/// quatre actions a échoué.
+#[derive(Debug, Clone, PartialEq)]
+pub enum RefusalTarget {
+    Skills,
+    /// Clé de la caractéristique visée — « ma », « ag », …
+    Stat(String),
+    Price,
+    Spp,
+    /// Refus non rattaché à un clic : la revalidation d'ensemble à la
+    /// validation, qui juge des lignes ajoutées bien plus tôt.
+    Pending,
+}
+
+pub struct RefusalVm {
+    pub message: String,
+    pub target: RefusalTarget,
+}
+
 pub struct StatCardVm {
     pub key: &'static str,
     pub label: &'static str,
@@ -55,12 +75,41 @@ pub struct StatCardVm {
     /// sens. `None` quand la borne est atteinte — le bouton est alors grisé.
     pub preview_up: Option<String>,
     pub preview_down: Option<String>,
+    /// Motif de refus visant **cette** caractéristique, réparti par le VM.
+    pub refusal: Option<String>,
 }
 
 pub struct PendingLineVm {
     pub line_id: String,
     pub label: String,
     pub family: &'static str,
+}
+
+/// Les sept destinations du panneau. Groupées parce qu'elles se construisent
+/// ensemble, depuis les deux mêmes identifiants.
+pub struct CustomisationUrlsVm {
+    pub add_skill: String,
+    pub add_stat: String,
+    pub adjust_price: String,
+    pub add_spp: String,
+    pub remove_line: String,
+    pub validate: String,
+    pub cancel: String,
+}
+
+impl CustomisationUrlsVm {
+    fn from_routes(routes: &AppRoutes, space_id: &str, player_id: &str) -> Self {
+        let c = &routes.players;
+        Self {
+            add_skill: c.customisation_add_skill(space_id, player_id),
+            add_stat: c.customisation_add_stat(space_id, player_id),
+            adjust_price: c.customisation_adjust_price(space_id, player_id),
+            add_spp: c.customisation_add_spp(space_id, player_id),
+            remove_line: c.customisation_remove_line(space_id, player_id),
+            validate: c.customisation_validate(space_id, player_id),
+            cancel: c.customisation_cancel(space_id, player_id),
+        }
+    }
 }
 
 pub struct CustomisationVm {
@@ -71,13 +120,13 @@ pub struct CustomisationVm {
     pub price_kpo: u32,
     pub spp_earned: u32,
     pub pending: Vec<PendingLineVm>,
-    pub add_skill_url: String,
-    pub add_stat_url: String,
-    pub adjust_price_url: String,
-    pub add_spp_url: String,
-    pub remove_line_url: String,
-    pub validate_url: String,
-    pub cancel_url: String,
+    /// Le refus est **réparti** ici plutôt que porté tel quel : le template
+    /// affiche du texte, il ne fait pas correspondre une cible à une carte.
+    pub refusal_skills: Option<String>,
+    pub refusal_price: Option<String>,
+    pub refusal_spp: Option<String>,
+    pub refusal_pending: Option<String>,
+    pub urls: CustomisationUrlsVm,
     /// Version du panier, embarquée dans chaque geste : c'est la garde
     /// d'écriture concurrente, et le panneau est re-rendu à chaque action —
     /// elle repart donc toujours à jour.
@@ -94,6 +143,7 @@ pub struct CustomisationVm {
 /// silencieusement sur la pastille « général ». Le défaut vit toujours dans
 /// `references::skill_picker`, `player_table_widget` et `team_created_listener`
 /// — il déborde de cette carte, mais il est réel.
+///
 /// `None` pour une catégorie inconnue de la table — distinct de « connue et
 /// générale ». Sans cette distinction, un test de couverture ne peut pas voir
 /// qu'une catégorie est tombée dans le repli : `GENERAL` et l'inconnu rendent
@@ -147,7 +197,7 @@ fn est_ajoutable(basket: &CustomisationBasket, skill_id: &str) -> bool {
     }
 }
 
-fn build_stats(basket: &CustomisationBasket) -> Vec<StatCardVm> {
+fn build_stats(basket: &CustomisationBasket, refus: Option<&RefusalVm>) -> Vec<StatCardVm> {
     stat_display::ALL
         .iter()
         .map(|d| {
@@ -161,9 +211,17 @@ fn build_stats(basket: &CustomisationBasket) -> Vec<StatCardVm> {
                 pending_offset: (offset != 0).then_some(offset),
                 preview_up: apercu(basket, d.stat, 1, d.is_target),
                 preview_down: apercu(basket, d.stat, -1, d.is_target),
+                refusal: message_si(refus, &RefusalTarget::Stat(d.key.to_string())),
             }
         })
         .collect()
+}
+
+/// Le message si — et seulement si — le refus visait cette cible-là.
+fn message_si(refus: Option<&RefusalVm>, cible: &RefusalTarget) -> Option<String> {
+    refus
+        .filter(|r| r.target == *cible)
+        .map(|r| r.message.clone())
 }
 
 /// L'aperçu et le grisage ne font qu'un : une borne atteinte se voit à l'absence
@@ -263,24 +321,23 @@ fn build_vm(
     catalog: &dyn ISkillCatalogPort,
     routes: &AppRoutes,
     space_id: &str,
+    refus: Option<RefusalVm>,
 ) -> CustomisationVm {
     let player_id = player.id.0.as_str();
-    let c = &routes.players;
+    let r = refus.as_ref();
     CustomisationVm {
         player_name: player.position_name.to_string(),
         spp_reserve: reserve_effective(player, basket),
         skills: build_skills(basket, catalog),
-        stats: build_stats(basket),
+        stats: build_stats(basket, r),
         price_kpo: basket.effective_value().0,
         spp_earned: basket.effective_spp().0,
         pending: build_pending(basket, catalog),
-        add_skill_url: c.customisation_add_skill(space_id, player_id),
-        add_stat_url: c.customisation_add_stat(space_id, player_id),
-        adjust_price_url: c.customisation_adjust_price(space_id, player_id),
-        add_spp_url: c.customisation_add_spp(space_id, player_id),
-        remove_line_url: c.customisation_remove_line(space_id, player_id),
-        validate_url: c.customisation_validate(space_id, player_id),
-        cancel_url: c.customisation_cancel(space_id, player_id),
+        refusal_skills: message_si(r, &RefusalTarget::Skills),
+        refusal_price: message_si(r, &RefusalTarget::Price),
+        refusal_spp: message_si(r, &RefusalTarget::Spp),
+        refusal_pending: message_si(r, &RefusalTarget::Pending),
+        urls: CustomisationUrlsVm::from_routes(routes, space_id, player_id),
         version: basket.version().0,
     }
 }
@@ -330,7 +387,7 @@ pub async fn player_customisation_widget(
         // droit retombe sur le journal, jamais sur le mode.
         Ok(false) => journal(space_id, player_id, state).await,
         Ok(true) => match ouvrir_panier(&state, &space_id, &player_id).await {
-            Ok(()) => rendre_panneau(&state, &space_id, &player_id).await,
+            Ok(()) => rendre_panneau(&state, &space_id, &player_id, None).await,
             Err(e) => {
                 tracing::error!("player_customisation_widget ouverture panier {player_id}: {e:?}");
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -339,64 +396,26 @@ pub async fn player_customisation_widget(
     }
 }
 
-/// `Err` porte la réponse d'échec (joueur ou équipe introuvable, espace mal
-/// formé), `Ok(false)` un refus de droit — les deux ne se traitent pas de la
-/// même façon : le premier est une erreur, le second une retombée sur le
-/// journal.
-async fn autoriser(
+/// Rendu du panneau depuis l'état persisté. `refus` est le motif de la dernière
+/// action rejetée, `None` quand il n'y en a pas — les sept `POST` le
+/// renseignent, le `GET` jamais.
+pub(crate) async fn rendre_panneau(
     state: &AppState,
-    user: &crate::app::auth::domain::user::User,
     space_id: &str,
     player_id: &str,
-) -> Result<bool, Response> {
-    let Ok(space_id_vo) = SpaceId::try_new(space_id) else {
-        return Err(StatusCode::BAD_REQUEST.into_response());
-    };
-    let team = charger_equipe(state, player_id).await?;
-    let coach_name = user.coach_name.clone().into_inner();
-    Ok(can_customise(state, &user.id, &coach_name, &space_id_vo, &team).await)
-}
-
-/// L'équipe du joueur — c'est elle qui porte la compétition, donc l'admin
-/// susceptible d'autoriser la customisation.
-async fn charger_equipe(
-    state: &AppState,
-    player_id: &str,
-) -> Result<crate::app::players::ports::TeamRosterInfoDto, Response> {
-    let player = match state
-        .players
-        .repository
-        .find_by_id(&PlayerId(player_id.to_string()))
-        .await
-    {
-        Ok(Some(p)) => p,
-        Ok(None) => return Err(StatusCode::NOT_FOUND.into_response()),
-        Err(e) => {
-            tracing::error!("player_customisation_widget find_by_id {player_id}: {e}");
-            return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
-        }
-    };
-    state
-        .players
-        .roster_port
-        .find_team_info(&player.team_id.0)
-        .await
-        .ok_or_else(|| StatusCode::NOT_FOUND.into_response())
-}
-
-async fn rendre_panneau(state: &AppState, space_id: &str, player_id: &str) -> Response {
+    refus: Option<RefusalVm>,
+) -> Response {
     let catalog = state.players.skill_catalog.as_ref();
-    let hydrate = hydrate(
-        &PlayerId(player_id.to_string()),
-        state.players.repository.as_ref(),
-        state.players.customisation_basket_repository.as_ref(),
-        catalog,
-    )
-    .await;
-
-    match hydrate {
+    match hydrater(state, player_id, catalog).await {
         Ok((basket, player)) => PlayerCustomisationTemplate {
-            vm: build_vm(&player, &basket, catalog, &AppRoutes::default(), space_id),
+            vm: build_vm(
+                &player,
+                &basket,
+                catalog,
+                &AppRoutes::default(),
+                space_id,
+                refus,
+            ),
         }
         .into_response(),
         Err(e) => {
@@ -413,7 +432,24 @@ async fn rendre_panneau(state: &AppState, space_id: &str, player_id: &str) -> Re
 /// Un panier périmé est supprimé au passage plutôt que rouvert : le
 /// commissaire qui revient repart d'une page blanche, pas d'une saisie de la
 /// veille dont il ne se souvient plus.
-async fn ouvrir_panier(
+async fn hydrater<'a>(
+    state: &'a AppState,
+    player_id: &str,
+    catalog: &'a dyn ISkillCatalogPort,
+) -> Result<
+    (CustomisationBasket, Player),
+    crate::app::players::use_cases::customisation_basket_hydration_service::HydrationError,
+> {
+    hydrate(
+        &PlayerId(player_id.to_string()),
+        state.players.repository.as_ref(),
+        state.players.customisation_basket_repository.as_ref(),
+        catalog,
+    )
+    .await
+}
+
+pub(crate) async fn ouvrir_panier(
     state: &AppState,
     space_id: &str,
     player_id: &str,
@@ -448,7 +484,7 @@ async fn creer_panier_vide(
     .map(|_| ())
 }
 
-async fn journal(space_id: String, player_id: String, state: AppState) -> Response {
+pub(crate) async fn journal(space_id: String, player_id: String, state: AppState) -> Response {
     evolution_journal_widget(
         Path((space_id, player_id)),
         axum::extract::Query(EvolutionJournalParams::default()),
@@ -557,7 +593,7 @@ mod tests {
         let mut p = panier(&catalog, vec![]);
         p.add_stat(StatKind::Ag, crans(1)).unwrap();
 
-        let cartes = build_stats(&p);
+        let cartes = build_stats(&p, None);
         let ag = cartes.iter().find(|c| c.key == "ag").unwrap();
 
         assert_eq!(ag.current, "2+");
@@ -575,7 +611,7 @@ mod tests {
         let mut p = panier(&catalog, vec![]);
         p.add_stat(StatKind::Ag, crans(2)).unwrap();
 
-        let cartes = build_stats(&p);
+        let cartes = build_stats(&p, None);
         let ag = cartes.iter().find(|c| c.key == "ag").unwrap();
 
         assert_eq!(ag.current, "1+");
@@ -587,7 +623,7 @@ mod tests {
     fn les_cinq_caracteristiques_sont_presentes_dans_l_ordre() {
         let catalog = catalogue();
         let p = panier(&catalog, vec![]);
-        let cartes = build_stats(&p);
+        let cartes = build_stats(&p, None);
         let cles: Vec<_> = cartes.iter().map(|c| c.key).collect();
         assert_eq!(cles, vec!["ma", "st", "ag", "pa", "av"]);
     }
@@ -669,10 +705,86 @@ mod tests {
     fn le_vm_reporte_la_version_du_panier_pour_la_garde_de_concurrence() {
         let catalog = catalogue();
         let p = panier(&catalog, vec![]);
-        let vm = build_vm(&joueur(), &p, &catalog, &AppRoutes::default(), "space1");
+        let vm = build_vm(
+            &joueur(),
+            &p,
+            &catalog,
+            &AppRoutes::default(),
+            "space1",
+            None,
+        );
         assert_eq!(vm.version, 3);
         assert_eq!(vm.price_kpo, 50);
         assert!(vm.pending.is_empty());
+    }
+
+    // ── Répartition du refus ──────────────────────────────────────────────────
+
+    fn refus(cible: RefusalTarget) -> RefusalVm {
+        RefusalVm {
+            message: "motif de test".into(),
+            target: cible,
+        }
+    }
+
+    /// Le refus atterrit sur **une seule** carte : celle qu'on a cliquée. Un
+    /// message qui déborderait sur les quatre autres ferait croire à quatre
+    /// échecs.
+    #[test]
+    fn un_refus_de_caracteristique_ne_touche_que_la_carte_visee() {
+        let catalog = catalogue();
+        let p = panier(&catalog, vec![]);
+        let cartes = build_stats(&p, Some(&refus(RefusalTarget::Stat("ag".into()))));
+
+        let ag = cartes.iter().find(|c| c.key == "ag").unwrap();
+        assert_eq!(ag.refusal.as_deref(), Some("motif de test"));
+        assert!(
+            cartes.iter().filter(|c| c.refusal.is_some()).count() == 1,
+            "une seule carte doit porter le motif"
+        );
+    }
+
+    /// Et il ne déborde pas non plus sur les autres zones du panneau.
+    #[test]
+    fn un_refus_de_prix_ne_touche_ni_les_competences_ni_les_spp() {
+        let catalog = catalogue();
+        let p = panier(&catalog, vec![]);
+        let vm = build_vm(
+            &joueur(),
+            &p,
+            &catalog,
+            &AppRoutes::default(),
+            "space1",
+            Some(refus(RefusalTarget::Price)),
+        );
+
+        assert_eq!(vm.refusal_price.as_deref(), Some("motif de test"));
+        assert!(vm.refusal_skills.is_none());
+        assert!(vm.refusal_spp.is_none());
+        assert!(vm.refusal_pending.is_none());
+        assert!(vm.stats.iter().all(|c| c.refusal.is_none()));
+    }
+
+    /// Sans refus, aucune zone n'en porte — le cas nominal des sept `POST`
+    /// réussis et du `GET`.
+    #[test]
+    fn sans_refus_aucune_zone_n_affiche_de_motif() {
+        let catalog = catalogue();
+        let p = panier(&catalog, vec![]);
+        let vm = build_vm(
+            &joueur(),
+            &p,
+            &catalog,
+            &AppRoutes::default(),
+            "space1",
+            None,
+        );
+
+        assert!(vm.refusal_price.is_none());
+        assert!(vm.refusal_skills.is_none());
+        assert!(vm.refusal_spp.is_none());
+        assert!(vm.refusal_pending.is_none());
+        assert!(vm.stats.iter().all(|c| c.refusal.is_none()));
     }
 
     // ── Rendu ─────────────────────────────────────────────────────────────────
@@ -702,7 +814,14 @@ mod tests {
     fn le_panneau_rend_ses_quatre_onglets_et_son_panier() {
         let catalog = catalogue();
         let p = panier_garni(&catalog);
-        let vm = build_vm(&joueur(), &p, &catalog, &AppRoutes::default(), "space1");
+        let vm = build_vm(
+            &joueur(),
+            &p,
+            &catalog,
+            &AppRoutes::default(),
+            "space1",
+            None,
+        );
         let html = PlayerCustomisationTemplate { vm }.render().unwrap();
 
         if std::env::var("KREEK_DUMP_CUSTOMISATION_PREVIEW").is_ok() {

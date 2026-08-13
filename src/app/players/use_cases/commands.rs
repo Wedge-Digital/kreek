@@ -82,10 +82,22 @@ pub struct RemoveCustomisationLineCommand {
 /// Les identifiants de customisation sont **portés par la commande**, engendrés
 /// par le handler : ni le domaine ni le use case ne doivent tirer d'aléatoire,
 /// sous peine de devenir intestables. Un par ligne à appliquer.
+///
+/// D'où `expected_version`, que la validation porte comme les cinq mutations.
+/// Le handler doit compter les lignes pour savoir combien d'identifiants
+/// engendrer, et il les compte sur une lecture antérieure à celle du use case.
+/// Sans garde de version, un panier modifié entre les deux lectures ferait
+/// diverger les comptes et sortir `IdentifiantsManquants` — un code qui annonce
+/// un bug d'appelant pour ce qui n'est qu'une écriture concurrente.
+///
+/// Avec la garde, le contenu ne peut plus changer sans que la version change :
+/// la course retombe sur `ConcurrentWrite`, chemin déjà silencieux et déjà
+/// compris, et `IdentifiantsManquants` redevient ce qu'il prétend être.
 pub struct ValidateCustomisationCommand {
     pub player_id: PlayerId,
     pub author: String, // arch:ok nom d'affichage du commissaire
     pub customisation_ids: Vec<CustomisationId>,
+    pub expected_version: u32,
 }
 
 pub struct CancelCustomisationCommand {

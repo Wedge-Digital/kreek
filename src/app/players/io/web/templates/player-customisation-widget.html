@@ -42,6 +42,9 @@
          Seules les ajoutables sont listées — possédées et déjà au panier ont
          disparu côté serveur. #}
     <div x-show="activeTab === 'skills'">
+      {% if let Some(motif) = vm.refusal_skills %}
+      <div class="custo-refusal">{{ motif }}</div>
+      {% endif %}
       <div class="custo-skill-controls">
         <input class="custo-skill-search" type="text"
                placeholder="Rechercher une compétence…" x-model="skillSearch">
@@ -68,7 +71,7 @@
               <td><span class="skill-type-pill {{ skill.category_css }}">{{ skill.category_label }}</span></td>
               <td>
                 <button class="btn-add-skill"
-                        hx-post="{{ vm.add_skill_url }}"
+                        hx-post="{{ vm.urls.add_skill }}"
                         hx-vals='{"skill_id": "{{ skill.skill_id }}", "expected_version": "{{ vm.version }}"}'
                         hx-target="#pd-right-panel"
                         hx-swap="outerHTML">+ Ajouter</button>
@@ -105,7 +108,7 @@
           <div class="custo-stat-actions">
             {% if stat.preview_up.is_some() %}
             <button class="custo-stat-add-btn"
-                    hx-post="{{ vm.add_stat_url }}"
+                    hx-post="{{ vm.urls.add_stat }}"
                     hx-vals='{"stat": "{{ stat.key }}", "crans": "1", "expected_version": "{{ vm.version }}"}'
                     hx-target="#pd-right-panel"
                     hx-swap="outerHTML">Améliorer</button>
@@ -115,7 +118,7 @@
 
             {% if stat.preview_down.is_some() %}
             <button class="custo-stat-add-btn custo-stat-add-btn--degrade"
-                    hx-post="{{ vm.add_stat_url }}"
+                    hx-post="{{ vm.urls.add_stat }}"
                     hx-vals='{"stat": "{{ stat.key }}", "crans": "-1", "expected_version": "{{ vm.version }}"}'
                     hx-target="#pd-right-panel"
                     hx-swap="outerHTML">Dégrader</button>
@@ -123,6 +126,10 @@
             <button class="custo-stat-add-btn custo-stat-add-btn--degrade" disabled title="Borne atteinte">Dégrader</button>
             {% endif %}
           </div>
+
+          {% if let Some(motif) = stat.refusal %}
+          <div class="custo-refusal">{{ motif }}</div>
+          {% endif %}
         </div>
         {% endfor %}
       </div>
@@ -137,7 +144,7 @@
           <div class="custo-action-current">{{ vm.price_kpo }} kPo</div>
         </div>
         <form class="custo-action-form"
-              hx-post="{{ vm.adjust_price_url }}"
+              hx-post="{{ vm.urls.adjust_price }}"
               hx-target="#pd-right-panel"
               hx-swap="outerHTML">
           <input type="hidden" name="expected_version" value="{{ vm.version }}">
@@ -146,6 +153,9 @@
           <span class="custo-action-unit">kPo</span>
           <button class="custo-action-btn" type="submit">Ajuster</button>
         </form>
+        {% if let Some(motif) = vm.refusal_price %}
+        <div class="custo-refusal">{{ motif }}</div>
+        {% endif %}
       </div>
     </div>
 
@@ -157,7 +167,7 @@
           <div class="custo-action-current">{{ vm.spp_earned }}</div>
         </div>
         <form class="custo-action-form"
-              hx-post="{{ vm.add_spp_url }}"
+              hx-post="{{ vm.urls.add_spp }}"
               hx-target="#pd-right-panel"
               hx-swap="outerHTML">
           <input type="hidden" name="expected_version" value="{{ vm.version }}">
@@ -165,6 +175,9 @@
                  placeholder="Ex. 5" required>
           <button class="custo-action-btn" type="submit">Ajouter</button>
         </form>
+        {% if let Some(motif) = vm.refusal_spp %}
+        <div class="custo-refusal">{{ motif }}</div>
+        {% endif %}
       </div>
     </div>
 
@@ -173,6 +186,9 @@
       <div class="spp-summary-header">
         <div class="spp-summary-title">Modifications en attente</div>
       </div>
+      {% if let Some(motif) = vm.refusal_pending %}
+      <div class="custo-refusal">{{ motif }}</div>
+      {% endif %}
       {% if vm.pending.is_empty() %}
       <div class="spp-empty-state">
         Aucune modification en attente — choisissez une action dans les onglets ci-dessus.
@@ -193,7 +209,7 @@
             </td>
             <td>
               <button class="btn-cancel-entry"
-                      hx-post="{{ vm.remove_line_url }}"
+                      hx-post="{{ vm.urls.remove_line }}"
                       hx-vals='{"line_id": "{{ line.line_id }}", "expected_version": "{{ vm.version }}"}'
                       hx-target="#pd-right-panel"
                       hx-swap="outerHTML">Annuler</button>
@@ -208,11 +224,11 @@
     <div class="spend-panel-footer">
       <button class="btn-submit"
               {% if vm.pending.is_empty() %}disabled{% endif %}
-              hx-post="{{ vm.validate_url }}"
+              hx-post="{{ vm.urls.validate }}"
               hx-vals='{"expected_version": "{{ vm.version }}"}'
               hx-swap="none">Enregistrer les modifications</button>
       <button class="btn-cancel-all"
-              hx-post="{{ vm.cancel_url }}"
+              hx-post="{{ vm.urls.cancel }}"
               hx-target="#pd-right-panel"
               hx-swap="outerHTML">Annuler</button>
     </div>

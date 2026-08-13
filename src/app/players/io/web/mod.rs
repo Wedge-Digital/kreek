@@ -1,3 +1,5 @@
+pub mod customisation_access;
+pub mod customisation_controller;
 pub mod increase_stat_controller;
 pub mod player_debug_controller;
 pub mod player_detail_controller;
