@@ -64,7 +64,7 @@
     }
     .badge-admin {
       font-size: var(--text-tiny); font-weight: 700; padding: 3px 10px;
-      border-radius: 20px; background: rgba(111,53,165,0.12); color: var(--light-1);
+      border-radius: 20px; background: rgba(0,48,73,0.12); color: var(--main-blue);
       display: inline-flex; align-items: center; gap: 4px;
     }
     .spp-budget-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
@@ -202,7 +202,7 @@
     .lock-banner-icon { font-size: 20px; flex-shrink: 0; }
     .lock-banner-text { font-size: var(--text-tiny); color: var(--dark-2); line-height: 1.4; }
     .lock-banner-text strong { color: var(--dark-1); }
-    .lock-banner--admin { background: rgba(111,53,165,0.05); border-color: rgba(111,53,165,0.2); }
+    .lock-banner--admin { background: rgba(0,48,73,0.05); border-color: rgba(0,48,73,0.2); }
 
     /* ── Zone de customisation ────────────────────────────────────────────── */
     .custo-zone { border-bottom: 2px solid var(--dark-5); }
@@ -214,7 +214,7 @@
       transition: color 0.15s, border-color 0.15s;
     }
     .tab:hover { color: var(--dark-1); }
-    .tab.active { color: var(--light-1); border-bottom-color: var(--light-1); }
+    .tab.active { color: var(--main-blue); border-bottom-color: var(--main-blue); }
 
     /* Onglet compétences (ajout libre) */
     .custo-skill-controls { padding: var(--p1) var(--p2); border-bottom: 1px solid var(--dark-5); }
@@ -222,7 +222,7 @@
       width: 100%; max-width: 320px; padding: 8px 12px; border: 1.5px solid var(--dark-4);
       border-radius: 6px; font-size: var(--text-small); font-family: var(--font-body);
     }
-    .custo-skill-search:focus { outline: none; border-color: var(--light-1); }
+    .custo-skill-search:focus { outline: none; border-color: var(--main-blue); }
     .skill-list { max-height: 320px; overflow-y: auto; }
     .skill-list-table { width: 100%; border-collapse: collapse; }
     .skill-list-table th {
@@ -244,11 +244,11 @@
     .type-mutation { background: rgba(111,53,165,0.10);  color: var(--light-1); }
 
     .btn-add-skill {
-      padding: 6px 16px; border-radius: 6px; border: 1.5px solid var(--light-1);
-      background: var(--white); color: var(--light-1); font-size: var(--text-tiny); font-weight: 700;
+      padding: 6px 16px; border-radius: 6px; border: 1.5px solid var(--main-blue);
+      background: var(--white); color: var(--main-blue); font-size: var(--text-tiny); font-weight: 700;
       cursor: pointer; white-space: nowrap; transition: all 0.12s;
     }
-    .btn-add-skill:hover { background: var(--light-1); color: var(--white); }
+    .btn-add-skill:hover { background: var(--main-blue); color: var(--white); }
 
     /* Onglet caractéristiques (actions dédiées, pas d'édition inline) */
     .custo-stat-grid-wrap { padding: var(--p2); }
@@ -263,14 +263,27 @@
       width: 100%; text-align: center; padding: 6px; border: 1.5px solid var(--dark-4);
       border-radius: 6px; font-size: var(--text-small); font-weight: 700;
     }
-    .custo-stat-input:focus { outline: none; border-color: var(--light-1); }
-    .custo-stat-preview { font-size: var(--text-tiny); color: var(--light-1); font-weight: 600; }
+    .custo-stat-input:focus { outline: none; border-color: var(--main-blue); }
+    .custo-stat-preview {
+      font-size: var(--text-tiny); color: var(--main-blue); font-weight: 600;
+      display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap;
+    }
+    .custo-stat-preview-sep  { color: var(--dark-4); }
+    .custo-stat-preview-up   { color: var(--green); }
+    .custo-stat-preview-down { color: var(--dark-3); }
+    .custo-stat-actions { width: 100%; display: flex; flex-direction: column; gap: 4px; }
     .custo-stat-add-btn {
-      width: 100%; padding: 6px; border-radius: 6px; border: 1.5px solid var(--light-1);
-      background: var(--white); color: var(--light-1); font-size: var(--text-tiny); font-weight: 700;
+      width: 100%; padding: 6px; border-radius: 6px; border: 1.5px solid var(--main-blue);
+      background: var(--white); color: var(--main-blue); font-size: var(--text-tiny); font-weight: 700;
       cursor: pointer; transition: all 0.12s;
     }
-    .custo-stat-add-btn:hover { background: var(--light-1); color: var(--white); }
+    .custo-stat-add-btn:hover:not(:disabled) { background: var(--main-blue); color: var(--white); }
+    .custo-stat-add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    /* Dégrader reste secondaire : même famille, moins d'insistance — retirer
+       une caractéristique n'est pas le geste courant. */
+    .custo-stat-add-btn--degrade { border-color: var(--dark-4); color: var(--dark-2); }
+    .custo-stat-add-btn--degrade:hover:not(:disabled) { background: var(--dark-2); border-color: var(--dark-2); color: var(--white); }
+    .custo-stat-pending { font-size: 10px; color: var(--main-blue); font-weight: 700; }
 
     /* Onglets prix / SPP (actions dédiées) */
     .custo-action-panel { padding: var(--p2); display: flex; flex-direction: column; gap: var(--p2); }
@@ -286,13 +299,21 @@
       width: 150px; padding: 8px 12px; border: 1.5px solid var(--dark-4);
       border-radius: 6px; font-size: var(--text-small); font-family: var(--font-body);
     }
-    .custo-action-input:focus { outline: none; border-color: var(--light-1); }
+    .custo-action-input:focus { outline: none; border-color: var(--main-blue); }
+    .custo-action-unit { font-size: var(--text-tiny); color: var(--dark-3); }
+    .custo-price-step {
+      width: 38px; padding: 8px 0; border-radius: 6px; border: 1.5px solid var(--dark-4);
+      background: var(--white); color: var(--dark-2); font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer; transition: all 0.12s;
+    }
+    .custo-price-step:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .custo-action-hint { font-size: var(--text-tiny); color: var(--red); font-weight: 600; }
     .custo-action-btn {
-      padding: 8px 18px; border-radius: 6px; border: 1.5px solid var(--light-1);
-      background: var(--white); color: var(--light-1); font-size: var(--text-tiny); font-weight: 700;
+      padding: 8px 18px; border-radius: 6px; border: 1.5px solid var(--main-blue);
+      background: var(--white); color: var(--main-blue); font-size: var(--text-tiny); font-weight: 700;
       cursor: pointer; white-space: nowrap; transition: all 0.12s;
     }
-    .custo-action-btn:hover:not(:disabled) { background: var(--light-1); color: var(--white); }
+    .custo-action-btn:hover:not(:disabled) { background: var(--main-blue); color: var(--white); }
     .custo-action-btn:disabled { border-color: var(--dark-4); color: var(--dark-4); cursor: default; }
 
     /* Modifications en attente (repris du panneau de dépense SPP) */
@@ -313,7 +334,7 @@
     .mode-chip-icon { display: inline-flex; align-items: center; line-height: 1; }
     .mode-chip-chosen { background: rgba(0,48,73,0.08); color: var(--main-blue); }
     .mode-chip-random { background: rgba(154,120,0,0.10); color: #9A7800; }
-    .mode-chip-custom { background: rgba(111,53,165,0.10); color: var(--light-1); }
+    .mode-chip-custom { background: rgba(0,48,73,0.10); color: var(--main-blue); }
     .summary-cost  { font-weight: 700; color: #9A7800; }
     .summary-value { font-weight: 700; color: var(--green); }
     .summary-ref   { font-size: var(--text-tiny); color: var(--dark-3); }
@@ -326,7 +347,7 @@
 
     .spend-panel-footer { padding: var(--p1) var(--p2); border-top: 2px solid var(--dark-5); display: flex; gap: var(--p1); }
     .btn-submit {
-      flex: 1; padding: 12px var(--p1); background: var(--light-1); color: var(--white);
+      flex: 1; padding: 12px var(--p1); background: var(--main-blue); color: var(--white);
       border-radius: 8px; font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
       cursor: pointer; border: none; text-align: center; transition: opacity 0.15s;
     }
@@ -432,7 +453,7 @@
                 <span class="jersey-chip">#4</span>
                 <span class="player-pos pos-blitzer">Frappeur</span>
                 <span class="badge-locked" x-show="mode === 'view'">🔒 Hors phase d'amélioration</span>
-                <span class="badge-admin" x-show="mode === 'customise'" x-cloak>🛠️ Mode administration</span>
+                <span class="badge-admin" x-show="mode === 'customise'" x-cloak>🛠️ Mode customisation</span>
               </div>
               <div class="player-header-meta">
                 <div class="meta-item">
@@ -628,7 +649,7 @@
               <div class="lock-banner lock-banner--admin" x-show="mode === 'customise'" x-cloak>
                 <span class="lock-banner-icon">🛠️</span>
                 <span class="lock-banner-text">
-                  <strong>Mode administration.</strong> Les modifications ci-dessous sont appliquées directement au joueur, sans passer par les règles du jeu. Chaque action est journalisée avec le nom du commissaire.
+                  <strong>Mode customisation.</strong> Les modifications ci-dessous sont appliquées directement au joueur, sans passer par les règles du jeu. Chaque action est journalisée avec le nom du commissaire.
                 </span>
               </div>
 
@@ -675,17 +696,43 @@
                     </div>
                   </template>
 
-                  <!-- Onglet caractéristiques : actions dédiées +x, pas d'édition inline -->
+                  <!-- Onglet caractéristiques : actions dédiées, pas d'édition
+                       inline. La saisie est une **amplitude** positive, et ce
+                       sont les deux boutons qui portent le sens : un champ
+                       signé obligeait à taper « -1 » pour dégrader, ce que rien
+                       n'annonçait. L'aperçu montre les deux issues, faute de
+                       quoi il faudrait deviner laquelle le champ décrit.
+                       « Améliorer » / « Dégrader » plutôt qu'augmenter et
+                       diminuer : le sens est la **qualité du joueur**, et pour
+                       AG et PA une amélioration fait descendre le chiffre. -->
                   <template x-if="activeTab === 'stats'">
                     <div class="custo-stat-grid-wrap">
                       <div class="custo-stat-grid">
                         <template x-for="stat in statDefs" :key="stat.key">
                           <div class="custo-stat-card">
                             <div class="custo-stat-name" x-text="stat.label"></div>
-                            <div class="custo-stat-current" x-text="stat.display(stat.current)"></div>
-                            <input class="custo-stat-input" type="number" x-model.number="statAmount[stat.key]">
-                            <div class="custo-stat-preview" x-show="statAmount[stat.key]" x-text="'→ ' + stat.display(stat.current + (statAmount[stat.key] || 0))"></div>
-                            <button class="custo-stat-add-btn" :disabled="!statAmount[stat.key]" @click="queueStat(stat)">Ajouter</button>
+                            <!-- Valeur **effective** : celle du joueur une fois
+                                 le panier appliqué. Sans ça, deux modifications
+                                 chaînées sur la même caractéristique partiraient
+                                 toutes deux de la valeur d'origine. -->
+                            <div class="custo-stat-current" x-text="stat.display(statEffective(stat))"></div>
+                            <div class="custo-stat-pending" x-show="pendingCrans(stat.key)" x-cloak
+                                 x-text="'dont ' + (pendingCrans(stat.key) > 0 ? '+' : '−') + Math.abs(pendingCrans(stat.key)) + ' en attente'"></div>
+                            <input class="custo-stat-input" type="number" min="1" step="1"
+                                   x-model.number="statAmount[stat.key]">
+                            <div class="custo-stat-preview" x-show="statAmount[stat.key]">
+                              <span class="custo-stat-preview-up"
+                                    x-text="'▲ ' + stat.display(statAfter(stat, Math.abs(statAmount[stat.key] || 0)))"></span>
+                              <span class="custo-stat-preview-sep">·</span>
+                              <span class="custo-stat-preview-down"
+                                    x-text="'▼ ' + stat.display(statAfter(stat, -Math.abs(statAmount[stat.key] || 0)))"></span>
+                            </div>
+                            <div class="custo-stat-actions">
+                              <button class="custo-stat-add-btn" :disabled="!statAmount[stat.key]"
+                                      @click="queueStat(stat, 1)">Améliorer</button>
+                              <button class="custo-stat-add-btn custo-stat-add-btn--degrade" :disabled="!statAmount[stat.key]"
+                                      @click="queueStat(stat, -1)">Dégrader</button>
+                            </div>
                           </div>
                         </template>
                       </div>
@@ -700,10 +747,20 @@
                           <div class="custo-action-label">Prix actuel</div>
                           <div class="custo-action-current" x-text="formattedValueKpo"></div>
                         </div>
+                        <!-- Pas de 5 kPo : c'est le grain des prix du jeu, et
+                             la saisie libre invitait à des montants qui n'y
+                             correspondent pas. Les deux boutons donnent le
+                             réglage courant sans passer par le clavier. -->
                         <div class="custo-action-form">
-                          <input class="custo-action-input" type="number" placeholder="Ex. 5 ou -5" x-model.number="priceDelta">
-                          <span style="font-size: var(--text-tiny); color: var(--dark-3);">kPo</span>
+                          <input class="custo-action-input" type="number" step="5" placeholder="Ex. 10 ou -15"
+                                 x-model.number="priceDelta">
+                          <span class="custo-action-unit">kPo</span>
+                          <button class="custo-price-step" @click="stepPrice(-5)" title="Retirer 5 kPo">−5</button>
+                          <button class="custo-price-step" @click="stepPrice(5)" title="Ajouter 5 kPo">+5</button>
                           <button class="custo-action-btn" :disabled="!priceDelta" @click="queuePrice()">Ajuster</button>
+                        </div>
+                        <div class="custo-action-hint" x-show="priceDelta % 5 !== 0" x-cloak>
+                          Les prix se règlent par pas de 5 kPo.
                         </div>
                       </div>
                     </div>
@@ -917,27 +974,86 @@ function playerDetail() {
     },
 
     /* ── Caractéristiques ───────────────────────────────────────────────────── */
+    // `step` = ce qu'un cran d'**amélioration** fait à la valeur brute.
+    //
+    // MV, FO et AR montent quand le joueur s'améliore ; AG et PA sont des
+    // nombres cibles à atteindre au dé, donc ils *descendent*. AR s'affiche
+    // avec un « + » comme AG et PA mais se comporte à l'inverse : en règles
+    // 2020 l'adversaire doit atteindre la cible pour blesser, donc une armure
+    // haute protège mieux. Le suffixe « + » ne dit rien de la direction — seule
+    // cette table fait foi.
+    //
+    // Miroir de `apply_increase()` dans
+    // `src/app/players/use_cases/player_stats_service.rs`, qui est la source de
+    // vérité côté domaine. Toute divergence installerait une seconde
+    // convention à côté d'elle.
     get statDefs() {
       return [
-        { key: 'ma', label: 'MV', current: this.player.ma, display: v => v },
-        { key: 'ag', label: 'AG', current: this.player.ag, display: v => v + '+' },
-        { key: 'st', label: 'FO', current: this.player.st, display: v => v },
-        { key: 'pa', label: 'PA', current: this.player.pa, display: v => v + '+' },
-        { key: 'av', label: 'AR', current: this.player.av, display: v => v + '+' },
+        { key: 'ma', label: 'MV', name: 'Mouvement', current: this.player.ma, step: +1, display: v => v },
+        { key: 'ag', label: 'AG', name: 'Agilité',   current: this.player.ag, step: -1, display: v => v + '+' },
+        { key: 'st', label: 'FO', name: 'Force',     current: this.player.st, step: +1, display: v => v },
+        { key: 'pa', label: 'PA', name: 'Passe',     current: this.player.pa, step: -1, display: v => v + '+' },
+        { key: 'av', label: 'AR', name: 'Armure',    current: this.player.av, step: +1, display: v => v + '+' },
       ];
     },
-    queueStat(stat) {
-      const amount = this.statAmount[stat.key];
-      if (!amount) return;
-      const sign = amount > 0 ? '+' : '';
+    // Crans déjà empilés dans le panier pour cette caractéristique. C'est ce
+    // qui permet d'enchaîner deux modifications sur la même stat sans que la
+    // seconde reparte de la valeur d'origine.
+    pendingCrans(statKey) {
+      return this.pendingChanges
+        .filter(c => c.type === 'stat' && c.statKey === statKey)
+        .reduce((total, c) => total + c.crans, 0);
+    },
+    // Valeur du joueur une fois le panier appliqué — le point de départ réel de
+    // toute nouvelle modification.
+    statEffective(stat) {
+      return stat.current + this.pendingCrans(stat.key) * stat.step;
+    },
+    // Valeur brute obtenue en appliquant `crans` d'amélioration (négatif pour
+    // une dégradation) **à partir de la valeur effective**, panier compris.
+    statAfter(stat, crans) {
+      return this.statEffective(stat) + crans * stat.step;
+    },
+    // `sens` vaut +1 (Améliorer) ou -1 (Dégrader) — en **qualité du joueur**,
+    // pas en valeur brute. Le champ ne porte qu'une amplitude, le sens vient du
+    // bouton cliqué, et `statAfter` traduit en valeur brute selon la stat.
+    //
+    // Le libellé décrit **l'offset demandé**, pas un état intermédiaire :
+    // « Amélioration de Force +1 ». Afficher un « 3+ → 2+ » ferait dépendre
+    // chaque ligne de celles qui la précèdent — annuler la première rendrait
+    // les suivantes fausses, alors que l'offset, lui, reste vrai.
+    //
+    // Le mot dit l'intention, le nombre dit l'offset **réellement appliqué à la
+    // valeur stockée**. Les deux ne vont pas toujours dans le même sens :
+    // améliorer l'agilité, c'est « -1 », le seuil de dé descendant quand le
+    // joueur progresse. « Amélioration d'Agilité -1 » n'est donc pas une
+    // contradiction — c'est ce qui évite d'avoir à deviner la convention.
+    queueStat(stat, sens) {
+      const crans = Math.abs(this.statAmount[stat.key] || 0) * sens;
+      if (!crans) return;
+      const offset = crans * stat.step;
       this.pendingChanges.push({
-        id: this.nextChangeId++, type: 'stat', statKey: stat.key, amount,
-        label: stat.label + ' ' + sign + amount, typeName: 'Statistique',
+        id: this.nextChangeId++, type: 'stat', statKey: stat.key,
+        crans, offset, rawValue: this.statAfter(stat, crans),
+        label: (crans > 0 ? 'Amélioration' : 'Dégradation')
+             + ' ' + this.elision(stat.name)
+             + ' ' + (offset > 0 ? '+' : '') + offset,
+        typeName: 'Caractéristique',
         valueLabel: null,
       });
     },
+    elision(nom) {
+      return /^[AEIOUYÉÈ]/i.test(nom) ? "d'" + nom : 'de ' + nom;
+    },
 
     /* ── Prix ────────────────────────────────────────────────────────────────── */
+    // Incrémente par pas de 5 en repartant du multiple de 5 le plus proche :
+    // une saisie clavier hors grille est ainsi ramenée dans la grille au
+    // premier clic, plutôt que de la propager.
+    stepPrice(pas) {
+      const base = Math.round((this.priceDelta || 0) / 5) * 5;
+      this.priceDelta = base + pas;
+    },
     queuePrice() {
       if (!this.priceDelta) return;
       const sign = this.priceDelta > 0 ? '+' : '';
