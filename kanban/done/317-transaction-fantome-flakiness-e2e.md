@@ -112,14 +112,77 @@ timeout mais une assertion — « Vous devez recruter au moins 11 joueurs ». Au
 mode de panne, autre cause : de l'état accumulé dans l'espace partagé, ce qui
 relève de la carte 312.
 
-## Ce qui reste — le levier 3
+## Le levier 3 est abandonné — il cherchait ce qui n'existe pas
 
-Le handler qui fuit n'est **pas identifié**. Le garde-fou n'a fired sur aucun
-run vert, ce qui est cohérent : le timeout à 15 s tue les fuites, mais elles se
-produisent peut-être encore sous le seuil de 5 s du garde-fou.
+La carte prévoyait de « nommer le handler qui fuit » par un `tracing` au `BEGIN`
+et au `COMMIT`. **Cette tâche n'a pas de réponse**, et la lecture de la source
+de sqlx 0.8.6 le démontre.
 
-Reste donc à faire, si la flakiness revient : un `tracing` au `BEGIN` et au
-`COMMIT` portant la route, pour nommer le coupable au lieu de le contenir.
+### La mécanique exacte
+
+`sqlx-core/src/transaction.rs` — `Transaction::drop` :
+
+```rust
+fn drop(&mut self) {
+    if self.open {
+        DB::TransactionManager::start_rollback(&mut self.connection);
+    }
+}
+```
+
+`sqlx-postgres/src/transaction.rs` — `start_rollback` appelle
+`queue_simple_query(...)`, dont la documentation dit : *« Queue a simple query
+to execute **the next time this connection is used** »*. Elle écrit dans le
+tampon d'écriture. **Rien n'est envoyé.**
+
+`sqlx-core/src/pool/connection.rs` — `PoolConnection::drop` fait
+`crate::rt::spawn(self.return_to_pool())`, et c'est `return_to_pool` qui, tout
+en bas, appelle `self.raw.ping()` sous ce commentaire :
+
+```
+// test the connection on-release to ensure it is still viable,
+// and flush anything time-sensitive like transaction rollbacks
+```
+
+Le `ROLLBACK` ne part donc qu'au moment où cette **tâche** est réellement
+exécutée. Retardée, affamée, ou lancée dans un runtime qui s'arrête, elle ne
+part pas — et la connexion reste `idle in transaction`.
+
+sqlx le reconnaît deux lignes plus haut :
+
+> this is simply a band-aid as SQLx-next connections should be able to recover
+> from cancellations
+
+### Ce que ça implique
+
+**N'importe lequel des treize sites `.begin()` produit cette fuite si son future
+est annulé.** Il n'y a pas de handler fautif : il y a une propriété de la
+bibliothèque, rencontrée par celui qui a eu la malchance d'être annulé.
+
+Un `tracing` au `BEGIN` aurait produit treize suspects et aucune conclusion.
+
+## Ce qui traite réellement le problème
+
+**1. Le filet est le traitement, pas un aveu.**
+`idle_in_transaction_session_timeout` ferme la fenêtre à 15 s quel que soit le
+handler. Contre une propriété structurelle d'une bibliothèque, un garde côté
+base est une réponse correcte. C'est l'état stable retenu.
+
+**2. Réduire la source des annulations** — carte 312. Elles viennent des
+timeouts clients, donc des requêtes lentes. Le lien entre les deux cartes
+s'inverse : 312 ne traite plus un symptôme, elle réduit le déclencheur.
+
+**3. Rendre les transactions non annulables — écarté.** Exécuter les sections
+transactionnelles dans un `tokio::spawn` détaché les mettrait hors de portée de
+l'abandon du client. Mais cela change la sémantique de treize sites : le client
+ne saurait plus si son écriture a abouti. Le remède coûterait plus que le mal,
+désormais borné à quinze secondes.
+
+## Carte close
+
+Une dette qu'on décide de ne pas payer, en sachant pourquoi, n'est plus une
+dette : c'est un choix. Ce qui serait malsain serait de laisser au backlog une
+ligne « trouver le handler qui fuit » que personne ne pourra jamais cocher.
 
 ## Écartés, et pourquoi
 

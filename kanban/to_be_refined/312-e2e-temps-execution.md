@@ -83,6 +83,14 @@ de **transactions fantômes** — une connexion laissée `idle in transaction` p
 l'annulation d'une requête, qui bloque les suivantes pendant des minutes. La
 charge n'est que le déclencheur, pas la cause.
 
-La 317 est donc prioritaire sur celle-ci. Réduire les temps reste utile — moins
-de requêtes lentes, donc moins de timeouts, donc moins d'annulations — mais
-c'est traiter le symptôme.
+La 317 est donc prioritaire sur celle-ci.
+
+**Second retournement, à la clôture de la 317** : il n'y a pas de handler
+fautif à corriger — `sqlx` ne garantit pas l'envoi du `ROLLBACK` quand un future
+est annulé, c'est une propriété de la bibliothèque, et le filet posé côté base
+est le traitement définitif.
+
+Du coup **cette carte n'est plus le symptôme, elle est le levier restant** :
+moins de requêtes lentes, moins de timeouts clients, donc moins d'annulations et
+moins de fuites. Elle passe de « confort » à « seule action encore utile sur la
+flakiness ».
