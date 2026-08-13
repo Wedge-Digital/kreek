@@ -193,6 +193,43 @@ pub struct SkillCostLevelDto {
     pub characteristic: u32,
 }
 
+// ── Panier de customisation ───────────────────────────────────────────────────
+
+/// Le panier persisté, tel que la base le rend. `state` ne porte **que les
+/// lignes** — le reste est rechargé à chaque hydratation.
+#[derive(Debug, Clone)]
+pub struct CustomisationBasketState {
+    pub player_id: String,
+    pub space_id: String,
+    pub state: serde_json::Value,
+    pub version: u32,
+    /// Dernière modification. Porté jusqu'ici parce que la **péremption est une
+    /// règle métier** : le repository expose l'horodatage, le domaine décide.
+    pub updated_at: time::OffsetDateTime,
+}
+
+#[async_trait]
+pub trait ICustomisationBasketRepository: Send + Sync {
+    /// Le panier d'un joueur, ou `None` si personne n'a encore rien mis dedans.
+    async fn load(
+        &self,
+        player_id: &str,
+    ) -> Result<Option<CustomisationBasketState>, RepositoryError>;
+
+    /// Écriture gardée par la version. `expected_version` à zéro crée la ligne ;
+    /// au-delà, elle met à jour. Les deux échouent en `ConcurrentWrite` si un
+    /// autre onglet est passé avant. Retourne la nouvelle version.
+    async fn save(
+        &self,
+        basket: &CustomisationBasketState,
+        expected_version: u32,
+    ) -> Result<u32, RepositoryError>;
+
+    /// **Idempotent** : un panier déjà absent n'est pas une erreur. L'annulation
+    /// se clique deux fois sans produire de message d'échec.
+    async fn delete(&self, player_id: &str) -> Result<(), RepositoryError>;
+}
+
 pub trait ISkillCatalogPort: Send + Sync {
     fn find_skill(&self, skill_id: &str) -> Option<SkillCatalogEntryDto>;
     fn find_position(&self, roster_line_id: &str) -> Option<PositionCatalogEntryDto>;

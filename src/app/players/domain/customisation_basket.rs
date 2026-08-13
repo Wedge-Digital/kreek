@@ -20,6 +20,26 @@ use crate::app::players::domain::value_objects::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BasketVersion(pub u32);
 
+/// Un panier abandonné vit **24 h après sa dernière modification**.
+///
+/// La fenêtre glisse sur l'inactivité, pas sur l'ancienneté : un panier
+/// commencé il y a 23 h mais travaillé à l'instant ne doit pas mourir en pleine
+/// session.
+///
+/// La constante vit **ici**, dans le domaine, et non dans un `WHERE` — sans
+/// quoi personne ne la trouverait le jour où il faudrait la changer.
+pub const BASKET_LIFETIME_HOURS: i64 = 24;
+
+/// Un panier modifié pour la dernière fois à `updated_at` est-il périmé à
+/// l'instant `now` ?
+///
+/// L'instant présent est **reçu**, jamais lu ici : un domaine qui interroge
+/// l'horloge devient intestable, et cette règle-ci mérite d'être testée aux
+/// deux bords de sa fenêtre.
+pub fn is_expired(updated_at: time::OffsetDateTime, now: time::OffsetDateTime) -> bool {
+    now - updated_at > time::Duration::hours(BASKET_LIFETIME_HOURS)
+}
+
 /// Caractéristiques **résolues** du joueur — base du poste, séquelles et
 /// augmentations comprises. L'agrégat reçoit un point de départ et raisonne en
 /// deltas : il n'a pas à connaître le catalogue de postes.
@@ -643,5 +663,34 @@ mod tests {
             b, c,
             "un identifiant réattribué écraserait une ligne vivante"
         );
+    }
+
+    // ── Péremption ────────────────────────────────────────────────────────────
+
+    /// Les deux bords de la fenêtre. L'instant présent étant reçu et non lu, la
+    /// règle se teste sans horloge ni attente.
+    #[test]
+    fn un_panier_perime_apres_vingt_quatre_heures_d_inactivite() {
+        let maintenant = time::OffsetDateTime::UNIX_EPOCH + time::Duration::days(10);
+
+        let frais = maintenant - time::Duration::hours(23);
+        assert!(!is_expired(frais, maintenant));
+
+        // Exactement 24 h : pas encore périmé, la comparaison est stricte.
+        let pile = maintenant - time::Duration::hours(24);
+        assert!(!is_expired(pile, maintenant));
+
+        let depasse = maintenant - time::Duration::hours(24) - time::Duration::seconds(1);
+        assert!(is_expired(depasse, maintenant));
+    }
+
+    /// La fenêtre glisse sur l'activité : c'est `updated_at` qui compte, jamais
+    /// la date de création. Un panier commencé il y a trois jours mais touché à
+    /// l'instant reste vivant.
+    #[test]
+    fn la_fenetre_glisse_sur_la_derniere_modification() {
+        let maintenant = time::OffsetDateTime::UNIX_EPOCH + time::Duration::days(10);
+        let touche_a_l_instant = maintenant - time::Duration::minutes(1);
+        assert!(!is_expired(touche_a_l_instant, maintenant));
     }
 }

@@ -58,11 +58,32 @@ pas par le repository : celui-ci expose `updated_at`, le domaine décide.
 
 ## Checklist
 
-- [ ] Migration `players__customisation_baskets`
-- [ ] `CustomisationBasketState` + `ICustomisationBasketRepository` dans `ports.rs`
-- [ ] Implémentation Pg avec garde de version
-- [ ] Constante de péremption dans le domaine du panier
-- [ ] Test repository : `save` puis `load` rend les mêmes lignes
-- [ ] Test repository : `save` avec une version périmée → `ConcurrentWrite`
-- [ ] Test repository : `delete` sur un panier absent réussit
-- [ ] Test : un panier dont `updated_at` a plus de 24 h est jugé périmé
+- [x] Migration `players__customisation_baskets`
+- [x] `CustomisationBasketState` + `ICustomisationBasketRepository` dans `ports.rs`
+- [x] Implémentation Pg avec garde de version
+- [x] Constante de péremption dans le domaine du panier
+- [x] Test repository : `save` puis `load` rend les mêmes lignes
+- [x] Test repository : `save` avec une version périmée → `ConcurrentWrite`
+- [x] Test repository : `delete` sur un panier absent réussit
+- [x] Test : un panier dont `updated_at` a plus de 24 h est jugé périmé
+
+---
+
+## Notes d'implémentation
+
+**`is_expired(updated_at, now)` reçoit l'instant présent** au lieu de le lire :
+un domaine qui interroge l'horloge devient intestable, et cette règle méritait
+d'être vérifiée aux deux bords de sa fenêtre — sans attendre 24 heures.
+
+**Le port expose `updated_at`, il ne le juge pas.** La péremption est une règle
+métier : le repository rend l'horodatage, le domaine décide.
+
+## Deux erreurs commises et corrigées
+
+Un trait d'extension inexistant, inventé en écrivant — signalé aussitôt par le
+compilateur.
+
+Plus sérieux : un tri automatique de `mod.rs` a déplacé un `#[cfg(test)]`, qui
+s'est retrouvé à qualifier le module du repository. Celui-ci aurait disparu de
+la compilation en release sans que rien ne le signale tant que personne ne
+l'utilise. Un tri aveugle de lignes est dangereux sur des attributs.
