@@ -94,17 +94,43 @@ quelle que soit l'origine.
 
 ## Checklist
 
-- [ ] `StatKind::improvement_step()` et `StatKind::bounds()`
-- [ ] `player_stats_service` consomme ces méthodes, ne porte plus la table
-- [ ] Les cinq value objects
-- [ ] Les quatre événements + `type_name()`
-- [ ] `apply()` : quatre branches
-- [ ] Les quatre méthodes `customise_*`
-- [ ] Les quatre nouvelles `DomainError`
-- [ ] Test : améliorer AG **descend** la valeur brute, améliorer AR la monte
-- [ ] Test : `bounds()` couvre les cinq caractéristiques
-- [ ] Test : un joueur `Dismissed` reste customisable
-- [ ] Test : `apply()` de `PlayerSkillCustomised` ne touche pas `value`
-- [ ] Test : `apply()` de `PlayerValueCustomised` déplace `value`
-- [ ] Test de non-régression : `resolve_stats` rend les mêmes valeurs qu'avant
+- [x] `StatKind::improvement_step()` et `StatKind::bounds()`
+- [x] `player_stats_service` consomme ces méthodes, ne porte plus la table
+- [x] Les cinq value objects
+- [x] Les quatre événements + `type_name()`
+- [x] `apply()` : quatre branches
+- [x] Les quatre méthodes `customise_*`
+- [x] Les quatre nouvelles `DomainError`
+- [x] Test : améliorer AG **descend** la valeur brute, améliorer AR la monte
+- [x] Test : `bounds()` couvre les cinq caractéristiques
+- [x] Test : un joueur `Dismissed` reste customisable
+- [x] Test : `apply()` de `PlayerSkillCustomised` ne touche pas `value`
+- [x] Test : `apply()` de `PlayerValueCustomised` déplace `value`
+- [x] Test de non-régression : `resolve_stats` rend les mêmes valeurs qu'avant
       le déplacement de la table
+
+---
+
+## Notes d'implémentation
+
+**L'événement de compétence porte `skill_name`.** Oubli de la conception :
+`AcquiredSkill` l'exige, et le domaine ne sait pas résoudre un nom depuis un
+identifiant, le catalogue appartenant à `references`. C'est précisément pour
+cette raison que `PlayerSkillPurchased` le porte déjà.
+
+**`AcquisitionMode` gagne `Customised`.** Nécessaire pour que le journal des
+évolutions affiche sa pastille sans interroger l'event store. Trois `match`
+exhaustifs l'ont réclamé, dont `improvement_cost_service` — coût nul plutôt
+qu'un `unreachable!`, ce chemin servant aussi à réafficher le coût d'une
+compétence déjà acquise.
+
+**`stat_customisations` est un champ à part** sur `Player`, ni `StatIncrease`
+ni `StatAdjustment` : une troisième source, tenue distincte pour que l'origine
+reste lisible. `resolve_stats` la compose avec les deux autres.
+
+**`apply_crans` refuse hors bornes plutôt que d'écrêter.** Rendre `Some(1)` là
+où l'on demandait `0+` ferait croire à une application réussie.
+
+**Quatre `match` exhaustifs cassés** par l'extension de l'enum, complétés par
+nécessité de compilation. La projection reçoit un `unreachable!()` renvoyant à
+la carte 303 — pas un no-op silencieux.

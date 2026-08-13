@@ -45,6 +45,12 @@ pub fn resolve_skill_cost(
             }
         }
         AcquisitionMode::Random => level_cost.random,
+        // Une customisation ne passe jamais par ce service : elle ne coûte rien
+        // et n'ajoute aucune valeur, c'est sa définition. Zéro plutôt qu'un
+        // `unreachable!` — ce chemin sert aussi à recalculer le coût d'une
+        // compétence déjà acquise pour l'afficher, et un panic y serait
+        // disproportionné.
+        AcquisitionMode::Customised => 0,
     };
 
     let value_delta = catalog.skill_value_delta(is_secondary);

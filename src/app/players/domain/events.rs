@@ -3,7 +3,8 @@ use crate::app::players::domain::match_impact::{
 };
 use crate::app::players::domain::player::{AcquisitionMode, PlayerId, Spp, TeamId, ValueKpo};
 use crate::app::players::domain::value_objects::{
-    DisplayOrder, JerseyVo, PersonalName, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
+    CustomisationId, DisplayOrder, JerseyVo, KpoDelta, PersonalName, PositionNameVo, RosterLineId,
+    SkillId, SkillName, SppAmount, SppCost,
 };
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use serde::{Deserialize, Serialize};
@@ -164,6 +165,56 @@ pub enum PlayerDomainEvent {
         team_id: TeamId,
         display_order: DisplayOrder,
     },
+
+    // ── Customisation par un commissaire ──────────────────────────────────────
+    // Quatre événements distincts, un par famille, délibérément séparés des
+    // événements d'évolution normale : c'est ce qui permet à l'historique du
+    // joueur de distinguer ce qu'il a gagné de ce qu'on lui a donné.
+    //
+    // `author` est le nom du commissaire qui valide. Le panier étant propre au
+    // joueur et non à son auteur, c'est le validateur qui endosse tout un lot —
+    // écart connu à la traçabilité, la concurrence entre commissaires ayant été
+    // jugée improbable au niveau métier.
+    //
+    // Ni la compétence ni la caractéristique ne portent de `value_delta` : seul
+    // le prix déplace la valeur d'équipe. Il n'existe pas, il ne vaut pas zéro —
+    // un champ à zéro inviterait quelqu'un à le remplir.
+    /// `skill_name` est porté par l'événement comme il l'est par
+    /// `PlayerSkillPurchased` : le domaine ne sait pas résoudre un nom depuis un
+    /// identifiant, le catalogue appartenant à `references`.
+    PlayerSkillCustomised {
+        player_id: PlayerId,
+        team_id: TeamId,
+        customisation_id: CustomisationId,
+        skill_id: SkillId,
+        skill_name: SkillName,
+        author: String, // arch:ok nom d'affichage, aucun invariant à protéger
+    },
+    /// `offset` est **brut**, pas en crans : le domaine a traduit, et
+    /// l'événement enregistre ce qui a été réellement appliqué. Un rejeu ne
+    /// doit dépendre d'aucune convention externe.
+    PlayerStatCustomised {
+        player_id: PlayerId,
+        team_id: TeamId,
+        customisation_id: CustomisationId,
+        stat: StatKind,
+        offset: i8,     // arch:ok offset brut déjà validé par les bornes du domaine
+        author: String, // arch:ok
+    },
+    PlayerValueCustomised {
+        player_id: PlayerId,
+        team_id: TeamId,
+        customisation_id: CustomisationId,
+        delta: KpoDelta,
+        author: String, // arch:ok
+    },
+    PlayerSppCustomised {
+        player_id: PlayerId,
+        team_id: TeamId,
+        customisation_id: CustomisationId,
+        amount: SppAmount,
+        author: String, // arch:ok
+    },
 }
 
 impl PlayerDomainEvent {
@@ -188,6 +239,10 @@ impl PlayerDomainEvent {
             Self::PlayerRenamed { .. } => "PlayerRenamed",
             Self::PlayerJerseyChanged { .. } => "PlayerJerseyChanged",
             Self::PlayerReordered { .. } => "PlayerReordered",
+            Self::PlayerSkillCustomised { .. } => "PlayerSkillCustomised",
+            Self::PlayerStatCustomised { .. } => "PlayerStatCustomised",
+            Self::PlayerValueCustomised { .. } => "PlayerValueCustomised",
+            Self::PlayerSppCustomised { .. } => "PlayerSppCustomised",
         }
     }
 

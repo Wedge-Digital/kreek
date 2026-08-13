@@ -33,34 +33,49 @@ pub fn resolve_stats(
     for increase in &player.stat_increases {
         apply_increase(&mut stats, increase.stat);
     }
+    // Troisième source, après les séquelles et les augmentations : les
+    // ajustements donnés par un commissaire. Leur offset est déjà brut et
+    // signé — le domaine a traduit au moment de la commande.
+    for custo in &player.stat_customisations {
+        apply_offset(&mut stats, custo.stat, custo.offset as i16);
+    }
     Some(stats)
 }
 
+/// Un malus va toujours dans le sens de la dégradation — soit l'inverse d'un
+/// cran d'amélioration, dont `StatKind::improvement_step()` détient le sens.
+///
+/// La table des directions vivait ici ; elle est descendue dans le domaine
+/// (`StatKind`) parce que le panier de customisation en a besoin lui aussi, et
+/// que deux tables auraient fini par diverger. Ce service **compose** — base,
+/// séquelles, augmentations — le domaine dit dans quel sens.
 fn apply_malus(stats: &mut ResolvedPlayerStats, stat: StatKind, malus: u8) {
-    match stat {
-        // MA/ST/AV : plus haut = meilleur (AV 2020 : le adversaire doit ATTEINDRE
-        // la cible pour blesser, donc plus haut = plus dur à blesser) → le malus DIMINUE la valeur.
-        // Cohérent avec le nommage `SequelStat::MinusAv` côté match_report.
-        StatKind::Ma => stats.ma = stats.ma.saturating_sub(malus),
-        StatKind::St => stats.st = stats.st.saturating_sub(malus),
-        StatKind::Av => stats.av = stats.av.saturating_sub(malus),
-        // AG/PA : nombres cibles de dé à atteindre pour réussir une action,
-        // plus bas = meilleur → le malus AUGMENTE la valeur.
-        StatKind::Ag => stats.ag = stats.ag.saturating_add(malus),
-        StatKind::Pa => stats.pa = stats.pa.saturating_add(malus),
-    }
+    apply_offset(
+        stats,
+        stat,
+        -(stat.improvement_step() as i16) * malus as i16,
+    );
 }
 
-/// Une augmentation SPP va toujours dans le sens de l'amélioration —
-/// inverse de `apply_malus` pour AG/PA (nombres cibles : plus bas = meilleur).
+/// Une augmentation SPP va toujours dans le sens de l'amélioration.
 fn apply_increase(stats: &mut ResolvedPlayerStats, stat: StatKind) {
-    match stat {
-        StatKind::Ma => stats.ma = stats.ma.saturating_add(1),
-        StatKind::St => stats.st = stats.st.saturating_add(1),
-        StatKind::Av => stats.av = stats.av.saturating_add(1),
-        StatKind::Ag => stats.ag = stats.ag.saturating_sub(1),
-        StatKind::Pa => stats.pa = stats.pa.saturating_sub(1),
-    }
+    apply_offset(stats, stat, stat.improvement_step() as i16);
+}
+
+/// Applique un offset **brut** à la caractéristique, en saturant à zéro comme
+/// le faisaient les deux fonctions d'origine. Les bornes de `StatKind` ne sont
+/// pas appliquées ici : ce service **résout** ce que les événements ont
+/// produit, il ne les juge pas. Le refus hors bornes appartient au panier, en
+/// amont de l'écriture.
+fn apply_offset(stats: &mut ResolvedPlayerStats, stat: StatKind, offset: i16) {
+    let champ = match stat {
+        StatKind::Ma => &mut stats.ma,
+        StatKind::St => &mut stats.st,
+        StatKind::Ag => &mut stats.ag,
+        StatKind::Pa => &mut stats.pa,
+        StatKind::Av => &mut stats.av,
+    };
+    *champ = (*champ as i16 + offset).max(0) as u8;
 }
 
 #[cfg(test)]
@@ -68,7 +83,9 @@ mod tests {
     use super::*;
     use crate::app::players::domain::events::PlayerDomainEvent;
     use crate::app::players::domain::match_impact::{StatAdjustment, StatMalus};
-    use crate::app::players::domain::player::{PlayerId, Spp, StatIncrease, TeamId, ValueKpo};
+    use crate::app::players::domain::player::{
+        PlayerId, Spp, StatCustomisation, StatIncrease, TeamId, ValueKpo,
+    };
     use crate::app::players::domain::value_objects::{PositionNameVo, RosterLineId, SppCost};
     use crate::app::players::ports::{
         PositionAccessDto, PositionCatalogEntryDto, SkillCatalogEntryDto, SkillCostLevelDto,
@@ -233,5 +250,97 @@ mod tests {
         let stats = resolve_stats(&player, &FakeSkillCatalog).unwrap();
         assert_eq!(stats.ag, 2);
         assert_eq!(stats.pa, 4);
+    }
+
+    /// Non-régression du déplacement de la table des directions vers `StatKind`
+    /// (carte 302). Les valeurs résolues doivent être **exactement** celles
+    /// d'avant : c'est le seul test qui prouve que le déplacement n'a rien
+    /// changé, le compilateur ne pouvant rien en dire.
+    ///
+    /// Base du poste BLITZER : MV 7, FO 3, AG 3+, PA 5+, AR 8+.
+    #[test]
+    fn le_deplacement_de_la_table_ne_change_aucune_valeur_resolue() {
+        // Base nue.
+        let joueur = joueur_avec(vec![], vec![]);
+        let s = resolve_stats(&joueur, &FakeSkillCatalog).unwrap();
+        assert_eq!((s.ma, s.st, s.ag, s.pa, s.av), (7, 3, 3, 5, 8));
+
+        // Une augmentation par caractéristique : MV/FO/AR montent, AG/PA descendent.
+        let joueur = joueur_avec(
+            vec![
+                StatKind::Ma,
+                StatKind::St,
+                StatKind::Ag,
+                StatKind::Pa,
+                StatKind::Av,
+            ],
+            vec![],
+        );
+        let s = resolve_stats(&joueur, &FakeSkillCatalog).unwrap();
+        assert_eq!((s.ma, s.st, s.ag, s.pa, s.av), (8, 4, 2, 4, 9));
+
+        // Une séquelle par caractéristique : l'exact inverse.
+        let joueur = joueur_avec(
+            vec![],
+            vec![
+                StatKind::Ma,
+                StatKind::St,
+                StatKind::Ag,
+                StatKind::Pa,
+                StatKind::Av,
+            ],
+        );
+        let s = resolve_stats(&joueur, &FakeSkillCatalog).unwrap();
+        assert_eq!((s.ma, s.st, s.ag, s.pa, s.av), (6, 2, 4, 6, 7));
+    }
+
+    /// La troisième source : les customisations se composent avec les deux
+    /// autres, sans les remplacer.
+    #[test]
+    fn les_customisations_se_cumulent_avec_les_autres_sources() {
+        let mut joueur = joueur_avec(vec![StatKind::Ag], vec![StatKind::Ma]);
+        joueur.stat_customisations.push(StatCustomisation {
+            stat: StatKind::Ag,
+            offset: -1,
+        });
+        joueur.stat_customisations.push(StatCustomisation {
+            stat: StatKind::Ma,
+            offset: 2,
+        });
+
+        let s = resolve_stats(&joueur, &FakeSkillCatalog).unwrap();
+        // AG : 3 base, -1 augmentation, -1 customisation → 1+
+        assert_eq!(s.ag, 1);
+        // MV : 7 base, -1 séquelle, +2 customisation → 8
+        assert_eq!(s.ma, 8);
+    }
+
+    fn joueur_avec(augmentations: Vec<StatKind>, sequelles: Vec<StatKind>) -> Player {
+        let created = PlayerDomainEvent::PlayerCreated {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            space_id: SpaceId::new(),
+            position_name: PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
+            roster_line_id: RosterLineId::try_new("BLITZER".to_string()).unwrap(),
+            jersey: None,
+            base_skills: vec![],
+            starting_spp: Spp(0),
+            starting_value: ValueKpo(100),
+        };
+        let mut joueur = Player::from_events(&[created]).unwrap();
+        for stat in augmentations {
+            joueur.stat_increases.push(StatIncrease {
+                stat,
+                spp_cost: SppCost::try_new(0).unwrap(),
+                value_delta: ValueKpo(0),
+            });
+        }
+        for stat in sequelles {
+            joueur.stat_adjustments.push(StatAdjustment {
+                stat,
+                malus: StatMalus::try_new(1).unwrap(),
+            });
+        }
+        joueur
     }
 }

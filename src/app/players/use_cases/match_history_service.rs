@@ -103,7 +103,12 @@ fn event_match_report_id(event: &PlayerDomainEvent) -> Option<String> {
         | PlayerDomainEvent::PlayerDismissed { .. }
         | PlayerDomainEvent::PlayerRenamed { .. }
         | PlayerDomainEvent::PlayerJerseyChanged { .. }
-        | PlayerDomainEvent::PlayerReordered { .. } => None,
+        | PlayerDomainEvent::PlayerReordered { .. }
+        // Décision de commissaire, hors de tout match.
+        | PlayerDomainEvent::PlayerSkillCustomised { .. }
+        | PlayerDomainEvent::PlayerStatCustomised { .. }
+        | PlayerDomainEvent::PlayerValueCustomised { .. }
+        | PlayerDomainEvent::PlayerSppCustomised { .. } => None,
     }
 }
 
@@ -159,7 +164,11 @@ fn apply_event(entry: &mut MatchHistoryEntry, event: &PlayerDomainEvent) {
         | PlayerDomainEvent::PlayerDismissed { .. }
         | PlayerDomainEvent::PlayerRenamed { .. }
         | PlayerDomainEvent::PlayerJerseyChanged { .. }
-        | PlayerDomainEvent::PlayerReordered { .. } => {}
+        | PlayerDomainEvent::PlayerReordered { .. }
+        | PlayerDomainEvent::PlayerSkillCustomised { .. }
+        | PlayerDomainEvent::PlayerStatCustomised { .. }
+        | PlayerDomainEvent::PlayerValueCustomised { .. }
+        | PlayerDomainEvent::PlayerSppCustomised { .. } => {}
     }
 }
 

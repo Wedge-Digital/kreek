@@ -40,6 +40,18 @@ fn player_and_team_id(event: &PlayerDomainEvent) -> (&str, &str) {
         PlayerDomainEvent::PlayerReordered {
             player_id, team_id, ..
         } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::PlayerSkillCustomised {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::PlayerStatCustomised {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::PlayerValueCustomised {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::PlayerSppCustomised {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
         PlayerDomainEvent::TouchdownScored {
             player_id, team_id, ..
         } => (&player_id.0, &team_id.0),
@@ -176,6 +188,7 @@ pub async fn upsert_player_projection(
                 mode: match mode {
                     AcquisitionMode::Chosen => "Chosen".to_string(),
                     AcquisitionMode::Random => "Random".to_string(),
+                    AcquisitionMode::Customised => "Customised".to_string(),
                 },
                 spp_cost: spp_cost.into_inner() as i32,
             };
@@ -297,6 +310,7 @@ pub async fn upsert_player_projection(
                 mode: match mode {
                     AcquisitionMode::Chosen => "Chosen".to_string(),
                     AcquisitionMode::Random => "Random".to_string(),
+                    AcquisitionMode::Customised => "Customised".to_string(),
                 },
                 spp_cost: spp_cost.into_inner() as i32,
             };
@@ -405,6 +419,18 @@ pub async fn upsert_player_projection(
             .execute(&mut **tx)
             .await
             .map_err(RepositoryError::Database)?;
+        }
+        // Projection câblée en carte 303, avec les colonnes de deltas et le
+        // recalcul depuis l'agrégat. Rien ne peut émettre ces quatre événements
+        // avant la carte 306 (use cases), elle-même dépendante de la 303 : ce
+        // chemin est mort aujourd'hui. `unreachable!` plutôt qu'un no-op
+        // silencieux — une projection qui avale une écriture sans rien dire est
+        // l'étape sautée qui rassure au lieu d'échouer.
+        PlayerDomainEvent::PlayerSkillCustomised { .. }
+        | PlayerDomainEvent::PlayerStatCustomised { .. }
+        | PlayerDomainEvent::PlayerValueCustomised { .. }
+        | PlayerDomainEvent::PlayerSppCustomised { .. } => {
+            unreachable!("customisation : projection à câbler en carte 303")
         }
         PlayerDomainEvent::PlayerReordered {
             player_id,

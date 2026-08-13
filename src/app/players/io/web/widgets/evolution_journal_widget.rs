@@ -91,6 +91,7 @@ fn skill_row(
     let mode_label = match mode {
         AcquisitionMode::Chosen => "Choisie",
         AcquisitionMode::Random => "Aléatoire",
+        AcquisitionMode::Customised => "Customisation",
     };
     EvolutionLogRowVm {
         label: skill_name,

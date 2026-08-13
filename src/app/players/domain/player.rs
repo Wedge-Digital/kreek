@@ -6,7 +6,8 @@ use crate::app::players::domain::match_impact::{
     PlayerParticipationStatus, SppEarned, StatAdjustment, StatKind, StatMalus, TouchdownCount,
 };
 use crate::app::players::domain::value_objects::{
-    DisplayOrder, JerseyVo, PersonalName, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
+    CustomisationId, DisplayOrder, JerseyVo, KpoDelta, PersonalName, PositionNameVo, RosterLineId,
+    SkillId, SkillName, SppAmount, SppCost, StatCrans,
 };
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use serde::{Deserialize, Serialize};
@@ -40,6 +41,10 @@ pub struct AcquiredSkill {
 pub enum AcquisitionMode {
     Chosen,
     Random,
+    /// Donnée par un commissaire, hors des règles du jeu. C'est ce mode qui
+    /// permet au journal des évolutions d'afficher sa pastille de customisation
+    /// sans interroger l'event store.
+    Customised,
 }
 
 // ── Augmentations de caractéristiques ───────────────────────────────────────────
@@ -49,6 +54,18 @@ pub struct StatIncrease {
     pub stat: StatKind,
     pub spp_cost: SppCost,
     pub value_delta: ValueKpo,
+}
+
+/// Ajustement de caractéristique donné par un commissaire.
+///
+/// Séparé de `StatIncrease` et de `StatAdjustment` : ni un achat en SPP, ni une
+/// séquelle de match. `offset` est **brut** et signé — il porte déjà le sens de
+/// la caractéristique, traduit par `StatKind::improvement_step()` au moment de
+/// la commande.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct StatCustomisation {
+    pub stat: StatKind,
+    pub offset: i8, // arch:ok offset brut, déjà borné par le panier
 }
 
 // ── Agrégat Player ─────────────────────────────────────────────────────────────
@@ -109,6 +126,11 @@ pub struct Player {
     pub base_skills: Vec<SkillId>,
     pub acquired_skills: Vec<AcquiredSkill>,
     pub stat_increases: Vec<StatIncrease>,
+
+    /// Ajustements donnés par un commissaire, hors règles du jeu. Troisième
+    /// source de caractéristiques après la base du poste et les deux
+    /// précédentes — tenue à part pour que l'origine reste lisible.
+    pub stat_customisations: Vec<StatCustomisation>,
     pub spp: Spp,
     pub value: ValueKpo,
 
@@ -234,6 +256,7 @@ impl Player {
                     base_skills: base_skills.clone(),
                     acquired_skills: vec![],
                     stat_increases: vec![],
+                    stat_customisations: vec![],
                     spp: *starting_spp,
                     value: *starting_value,
                     participation_status: PlayerParticipationStatus::Available,
@@ -482,6 +505,54 @@ impl Player {
             PlayerDomainEvent::PlayerReordered { display_order, .. } => {
                 let mut player = current?;
                 player.display_order = Some(*display_order);
+                player.version += 1;
+                Some(player)
+            }
+
+            // ── Customisation ─────────────────────────────────────────────────
+            // La compétence rejoint les acquises, mais **sans valeur** : seul le
+            // prix déplace la valeur d'équipe. Une compétence donnée par un
+            // commissaire ne renchérit pas le joueur, contrairement à la même
+            // achetée en SPP.
+            PlayerDomainEvent::PlayerSkillCustomised {
+                skill_id,
+                skill_name,
+                ..
+            } => {
+                let mut player = current?;
+                player.acquired_skills.push(AcquiredSkill {
+                    skill_id: skill_id.clone(),
+                    skill_name: skill_name.clone(),
+                    mode: AcquisitionMode::Customised,
+                    // Ni coût ni valeur : une compétence donnée par un
+                    // commissaire ne se paie pas et ne renchérit pas le joueur.
+                    spp_cost: SppCost::try_new(0).unwrap(),
+                    value_delta: ValueKpo(0),
+                });
+                player.version += 1;
+                Some(player)
+            }
+            // L'offset est déjà brut et déjà borné : le panier l'a validé avant
+            // que l'événement n'existe. `apply` enregistre, il ne juge pas.
+            PlayerDomainEvent::PlayerStatCustomised { stat, offset, .. } => {
+                let mut player = current?;
+                player.stat_customisations.push(StatCustomisation {
+                    stat: *stat,
+                    offset: *offset,
+                });
+                player.version += 1;
+                Some(player)
+            }
+            PlayerDomainEvent::PlayerValueCustomised { delta, .. } => {
+                let mut player = current?;
+                let resultat = player.value.0 as i64 + delta.into_inner() as i64;
+                player.value = ValueKpo(resultat.max(0) as u32);
+                player.version += 1;
+                Some(player)
+            }
+            PlayerDomainEvent::PlayerSppCustomised { amount, .. } => {
+                let mut player = current?;
+                player.spp = Spp(player.spp.0 + amount.into_inner() as u32);
                 player.version += 1;
                 Some(player)
             }
@@ -777,6 +848,86 @@ impl Player {
             RosterMembership::Active => Ok(()),
             RosterMembership::Dismissed => Err(DomainError::PlayerNotActive),
         }
+    }
+
+    // ── Customisation par un commissaire ───────────────────────────────────────
+    //
+    // **Aucune garde.** Ni de phase, ni d'appartenance : les customisations
+    // s'appliquent toujours, un joueur renvoyé reste customisable. C'est ce qui
+    // les distingue de `rename`, qui exige `membership == Active`.
+    //
+    // Les invariants de validité — bornes, doublon de compétence, prix plancher,
+    // plafond de SPP — ont déjà été joués par l'agrégat panier. Le panier est le
+    // gardien, `Player` est le greffier : revérifier ici dédoublerait la règle
+    // et la ferait diverger.
+
+    pub fn customise_skill(
+        &self,
+        customisation_id: CustomisationId,
+        skill_id: SkillId,
+        skill_name: SkillName,
+        author: String,
+    ) -> Result<PlayerDomainEvent, DomainError> {
+        Ok(PlayerDomainEvent::PlayerSkillCustomised {
+            player_id: self.id.clone(),
+            team_id: self.team_id.clone(),
+            customisation_id,
+            skill_id,
+            skill_name,
+            author,
+        })
+    }
+
+    /// `crans` porte le sens en **qualité du joueur** ; la traduction en offset
+    /// brut est faite ici, seul endroit qui détient la table des directions.
+    /// C'est l'offset qui part dans l'événement : un rejeu ne doit dépendre
+    /// d'aucune convention externe.
+    pub fn customise_stat(
+        &self,
+        customisation_id: CustomisationId,
+        stat: StatKind,
+        crans: StatCrans,
+        author: String,
+    ) -> Result<PlayerDomainEvent, DomainError> {
+        let offset = crans.into_inner() * stat.improvement_step();
+        Ok(PlayerDomainEvent::PlayerStatCustomised {
+            player_id: self.id.clone(),
+            team_id: self.team_id.clone(),
+            customisation_id,
+            stat,
+            offset,
+            author,
+        })
+    }
+
+    pub fn customise_value(
+        &self,
+        customisation_id: CustomisationId,
+        delta: KpoDelta,
+        author: String,
+    ) -> Result<PlayerDomainEvent, DomainError> {
+        Ok(PlayerDomainEvent::PlayerValueCustomised {
+            player_id: self.id.clone(),
+            team_id: self.team_id.clone(),
+            customisation_id,
+            delta,
+            author,
+        })
+    }
+
+    pub fn customise_spp(
+        &self,
+        customisation_id: CustomisationId,
+        amount: SppAmount,
+        author: String,
+    ) -> Result<PlayerDomainEvent, DomainError> {
+        Ok(PlayerDomainEvent::PlayerSppCustomised {
+            player_id: self.id.clone(),
+            team_id: self.team_id.clone(),
+            customisation_id,
+            amount,
+            author,
+        })
     }
 }
 
@@ -1542,5 +1693,196 @@ mod roster_edition_tests {
         assert!(JerseyVo::try_new(1).is_ok());
         assert!(JerseyVo::try_new(99).is_ok());
         assert!(JerseyVo::try_new(100).is_err());
+    }
+}
+
+#[cfg(test)]
+mod customisation_tests {
+    use super::*;
+    use crate::app::players::domain::value_objects::BasketLineId;
+
+    fn joueur() -> Player {
+        let created = PlayerDomainEvent::PlayerCreated {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            space_id: SpaceId::new(),
+            position_name: PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
+            roster_line_id: RosterLineId::try_new("BLITZER".to_string()).unwrap(),
+            jersey: Some(JerseyVo::try_new(7).unwrap()),
+            base_skills: vec![],
+            starting_spp: Spp(4),
+            starting_value: ValueKpo(100),
+        };
+        Player::from_events(&[created]).unwrap()
+    }
+
+    fn renvoye() -> Player {
+        let j = joueur();
+        let event = PlayerDomainEvent::PlayerDismissed {
+            player_id: j.id.clone(),
+            team_id: j.team_id.clone(),
+        };
+        Player::apply(Some(j), &event).unwrap()
+    }
+
+    fn id() -> CustomisationId {
+        CustomisationId::try_new("c1".to_string()).unwrap()
+    }
+
+    fn nom(v: &str) -> SkillName {
+        SkillName::try_new(v.to_string()).unwrap()
+    }
+
+    fn competence(v: &str) -> SkillId {
+        SkillId::try_new(v.to_string()).unwrap()
+    }
+
+    /// Le cœur : la commande reçoit des **crans** en qualité du joueur,
+    /// l'événement porte l'**offset brut**. Améliorer l'agilité donne -1.
+    #[test]
+    fn customise_stat_traduit_les_crans_en_offset_brut() {
+        let j = joueur();
+        let crans = StatCrans::try_new(1).unwrap();
+
+        let event = j
+            .customise_stat(id(), StatKind::Ag, crans, "Bagouze".into())
+            .unwrap();
+        match &event {
+            PlayerDomainEvent::PlayerStatCustomised { offset, .. } => assert_eq!(*offset, -1),
+            autre => panic!("événement inattendu : {autre:?}"),
+        }
+
+        // Et l'armure, qui partage le suffixe « + » mais pas la direction.
+        let event = j
+            .customise_stat(id(), StatKind::Av, crans, "Bagouze".into())
+            .unwrap();
+        match &event {
+            PlayerDomainEvent::PlayerStatCustomised { offset, .. } => assert_eq!(*offset, 1),
+            autre => panic!("événement inattendu : {autre:?}"),
+        }
+    }
+
+    #[test]
+    fn customise_stat_accumule_dans_stat_customisations() {
+        let j = joueur();
+        let event = j
+            .customise_stat(
+                id(),
+                StatKind::Ma,
+                StatCrans::try_new(2).unwrap(),
+                "Bagouze".into(),
+            )
+            .unwrap();
+        let j = Player::apply(Some(j), &event).unwrap();
+
+        assert_eq!(j.stat_customisations.len(), 1);
+        assert_eq!(j.stat_customisations[0].offset, 2);
+    }
+
+    /// La règle la plus contre-intuitive de la fonctionnalité : une compétence
+    /// donnée par un commissaire ne renchérit pas le joueur, contrairement à la
+    /// même achetée en SPP.
+    #[test]
+    fn une_competence_customisee_n_ajoute_aucune_valeur() {
+        let j = joueur();
+        let avant = j.value.0;
+
+        let event = j
+            .customise_skill(id(), competence("BLOCK"), nom("Bloc"), "Bagouze".into())
+            .unwrap();
+        let j = Player::apply(Some(j), &event).unwrap();
+
+        assert_eq!(j.value.0, avant, "la valeur ne doit pas bouger");
+        assert_eq!(j.acquired_skills.len(), 1);
+        assert_eq!(j.acquired_skills[0].mode, AcquisitionMode::Customised);
+        assert_eq!(j.acquired_skills[0].value_delta.0, 0);
+    }
+
+    #[test]
+    fn une_caracteristique_customisee_n_ajoute_aucune_valeur() {
+        let j = joueur();
+        let avant = j.value.0;
+        let event = j
+            .customise_stat(
+                id(),
+                StatKind::St,
+                StatCrans::try_new(1).unwrap(),
+                "Bagouze".into(),
+            )
+            .unwrap();
+        let j = Player::apply(Some(j), &event).unwrap();
+        assert_eq!(j.value.0, avant);
+    }
+
+    /// Le prix, lui, déplace bien la valeur — c'est le seul levier du mode.
+    #[test]
+    fn le_prix_customise_deplace_la_valeur() {
+        let j = joueur();
+        let event = j
+            .customise_value(id(), KpoDelta::try_new(-30).unwrap(), "Bagouze".into())
+            .unwrap();
+        let j = Player::apply(Some(j), &event).unwrap();
+        assert_eq!(j.value.0, 70);
+    }
+
+    /// Le plancher est une règle du panier, mais `apply` ne doit pas produire
+    /// d'underflow si un événement historique le franchissait.
+    #[test]
+    fn le_prix_ne_passe_pas_sous_zero_a_l_application() {
+        let j = joueur();
+        let event = j
+            .customise_value(id(), KpoDelta::try_new(-500).unwrap(), "Bagouze".into())
+            .unwrap();
+        let j = Player::apply(Some(j), &event).unwrap();
+        assert_eq!(j.value.0, 0);
+    }
+
+    #[test]
+    fn les_spp_customises_s_ajoutent_au_total() {
+        let j = joueur();
+        let event = j
+            .customise_spp(id(), SppAmount::try_new(10).unwrap(), "Bagouze".into())
+            .unwrap();
+        let j = Player::apply(Some(j), &event).unwrap();
+        assert_eq!(j.spp.0, 14);
+    }
+
+    /// Contrairement à `rename`, aucune garde d'appartenance : la phase 1 pose
+    /// que les customisations s'appliquent toujours.
+    #[test]
+    fn un_joueur_renvoye_reste_customisable() {
+        let j = renvoye();
+
+        assert!(j
+            .customise_skill(id(), competence("BLOCK"), nom("Bloc"), "B".into())
+            .is_ok());
+        assert!(j
+            .customise_stat(
+                id(),
+                StatKind::Ma,
+                StatCrans::try_new(1).unwrap(),
+                "B".into()
+            )
+            .is_ok());
+        assert!(j
+            .customise_value(id(), KpoDelta::try_new(10).unwrap(), "B".into())
+            .is_ok());
+        assert!(j
+            .customise_spp(id(), SppAmount::try_new(5).unwrap(), "B".into())
+            .is_ok());
+
+        // Le contraste : renommer reste interdit.
+        assert_eq!(j.rename(None).unwrap_err(), DomainError::PlayerNotActive);
+    }
+
+    #[test]
+    fn les_value_objects_bornent_ce_qu_ils_doivent() {
+        assert!(StatCrans::try_new(0).is_err());
+        assert!(KpoDelta::try_new(0).is_err());
+        assert!(SppAmount::try_new(0).is_err());
+        assert!(SppAmount::try_new(100).is_ok());
+        assert!(SppAmount::try_new(101).is_err());
+        assert!(CustomisationId::try_new(String::new()).is_err());
+        assert!(BasketLineId::try_new(String::new()).is_err());
     }
 }
