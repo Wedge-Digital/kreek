@@ -21,7 +21,7 @@ DEMO_PROFILE  := demo
 DEMO_ENV_FILE := .env.$(DEMO_PROFILE)
 
 .PHONY: dev dev-demo test e2e test-impacted all_tests audit migrate migration prepare_db reset_db reset_test_db init_db \
-        init_demo_db seed_accounts seed_e2e lint check-arch coverage analyze help
+        load_data create_demo_db init_demo_data init_demo_db seed_accounts seed_e2e lint check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
 help:
@@ -40,7 +40,7 @@ help:
 	@echo "  reset_db      Remet la base à zéro (sqlx database reset)"
 	@echo "  reset_test_db Remet la base de test à zéro (.env.test)"
 	@echo "  init_db       reset_db + import des données legacy + seed comptes dev (WITH_SEED=1 pour aussi affecter les coachs aux spaces)"
-	@echo "  init_demo_db  Idem sur la base de démo (.env.demo) — DROP DATABASE, double confirmation exigée"
+	@echo "  init_demo_db  Idem sur la base de démo (.env.demo) — DROP+CREATE...OWNER via un accès admin séparé, double confirmation exigée"
 	@echo "  seed_accounts Seed les comptes dev (scripts/seed_accounts.json)"
 	@echo "  seed_e2e      Seed synthétique requis par la suite e2e (space + 12 coachs, idempotent)"
 	@echo ""
@@ -134,6 +134,13 @@ seed_e2e:
 	DATABASE_URL="$(DATABASE_URL)" cargo run -- seed-e2e
 
 init_db: reset_db
+	@$(MAKE) --no-print-directory load_data
+
+# Import legacy + seed comptes dev (+ affectation coachs aux spaces si
+# WITH_SEED=1). Partagé par init_db (après reset_db) et init_demo_db (après
+# create_demo_db + migrate) — seule la création de la base diffère entre les
+# deux, le chargement des données est identique.
+load_data:
 	@echo ""
 	@echo "  Import des données legacy…"
 	@./scripts/import_all.sh
@@ -149,11 +156,38 @@ endif
 	@echo "  ✓ Base initialisée"
 	@echo ""
 
-# Même chose, mais sur la base de démo (.env.demo) — donc potentiellement
-# distante et partagée. `sqlx database reset` y fait un DROP DATABASE : la
-# double confirmation est là parce qu'une faute de profil est irrattrapable.
+# DROP + CREATE explicite avec OWNER — n'est appelé que par init_demo_db.
+# `sqlx database reset` (utilisé par reset_db/init_db) DROP+CREATE+migrate en
+# une seule connexion : la base est alors possédée par qui l'exécute. Pour la
+# démo, distante et partagée, DATABASE__USER doit rester un compte restreint,
+# pas un compte avec droit CREATEDB. ADMIN_URL (droits admin, connecté sur une
+# base de maintenance) fait donc le DROP + CREATE ... OWNER, et DB_OWNER
+# devient propriétaire dès la création — aucun droit d'administration ne lui
+# est nécessaire ensuite pour migrer ou importer.
 #
-# DATABASE_URL est relu depuis .env.demo et passé explicitement au sous-make :
+# WITH (FORCE) (PG13+) coupe les connexions actives sans prévenir : accepté
+# ici car la base de démo est jetable par construction (double confirmation
+# déjà exigée par init_demo_db) — ne pas généraliser ce comportement ailleurs.
+create_demo_db:
+	@psql "$(ADMIN_URL)" -v ON_ERROR_STOP=1 \
+	    -c "DROP DATABASE IF EXISTS \"$(DB_NAME)\" WITH (FORCE);" \
+	    -c "CREATE DATABASE \"$(DB_NAME)\" OWNER \"$(DB_OWNER)\" ENCODING 'UTF8';"
+
+# Migrations + chargement des données sur la base de démo, une fois
+# create_demo_db passé. Migre avec l'accès applicatif (DATABASE_URL) : il est
+# déjà propriétaire de la base fraîchement créée, donc habilité à créer les
+# objets des migrations sans droit admin.
+init_demo_data: migrate
+	@$(MAKE) --no-print-directory load_data
+
+# Même chose que init_db, mais sur la base de démo (.env.demo) — donc
+# potentiellement distante et partagée. Contrairement à init_db, la base
+# n'est pas recréée par le compte applicatif : create_demo_db sépare l'accès
+# admin (DROP/CREATE ... OWNER) de l'accès applicatif restreint (migrations,
+# import). La double confirmation reste là parce qu'une faute de profil est
+# irrattrapable.
+#
+# DATABASE_URL est relu depuis .env.demo et passé explicitement aux sous-make :
 # sans ça, un `export DATABASE_URL=…dev…` dans le shell appelant l'emporterait
 # (cf. le `$(if $(DATABASE_URL),…)` en tête de fichier) et on réinitialiserait
 # la base dev tout en important dans la démo.
@@ -161,17 +195,24 @@ init_demo_db:
 	@[ -f $(DEMO_ENV_FILE) ] || { \
 	    echo ""; \
 	    echo "  Erreur : $(DEMO_ENV_FILE) introuvable."; \
-	    echo "  Créez-le avec DATABASE__URL et DATABASE__HOST/PORT/USER/PWD/NAME"; \
-	    echo "  (les deux représentations sont nécessaires : l'URL pour sqlx,"; \
-	    echo "   les cinq variables pour les scripts d'import)."; \
+	    echo "  Créez-le avec DATABASE__URL, DATABASE__ADMIN_URL et"; \
+	    echo "  DATABASE__HOST/PORT/USER/PWD/NAME"; \
+	    echo "  (DATABASE__ADMIN_URL : accès admin distinct, connecté sur la"; \
+	    echo "   base de maintenance 'postgres', droits CREATEDB — utilisé"; \
+	    echo "   uniquement pour DROP/CREATE DATABASE. DATABASE__URL reste"; \
+	    echo "   l'accès applicatif restreint, propriétaire de la base dès sa"; \
+	    echo "   création. Les cinq variables DATABASE__* restent nécessaires"; \
+	    echo "   pour les scripts d'import)."; \
 	    echo ""; \
 	    exit 1; \
 	}
-	@url=$$(grep -E '^DATABASE__URL='  $(DEMO_ENV_FILE) | cut -d= -f2- | $(unquote)); \
+	@url=$$(grep -E '^DATABASE__URL='       $(DEMO_ENV_FILE) | cut -d= -f2- | $(unquote)); \
+	 admin_url=$$(grep -E '^DATABASE__ADMIN_URL=' $(DEMO_ENV_FILE) | cut -d= -f2- | $(unquote)); \
 	 host=$$(grep -E '^DATABASE__HOST=' $(DEMO_ENV_FILE) | cut -d= -f2- | $(unquote)); \
+	 user=$$(grep -E '^DATABASE__USER=' $(DEMO_ENV_FILE) | cut -d= -f2- | $(unquote)); \
 	 name=$$(grep -E '^DATABASE__NAME=' $(DEMO_ENV_FILE) | cut -d= -f2- | $(unquote)); \
-	 [ -n "$$url" ] && [ -n "$$host" ] && [ -n "$$name" ] || { \
-	     echo "  Erreur : DATABASE__URL, DATABASE__HOST ou DATABASE__NAME manquant dans $(DEMO_ENV_FILE)."; exit 1; }; \
+	 [ -n "$$url" ] && [ -n "$$admin_url" ] && [ -n "$$host" ] && [ -n "$$user" ] && [ -n "$$name" ] || { \
+	     echo "  Erreur : DATABASE__URL, DATABASE__ADMIN_URL, DATABASE__HOST, DATABASE__USER ou DATABASE__NAME manquant dans $(DEMO_ENV_FILE)."; exit 1; }; \
 	 case "$$url" in \
 	     *"$$host"*) ;; \
 	     *) echo "  Erreur : DATABASE__URL ne pointe pas sur DATABASE__HOST ($$host) dans $(DEMO_ENV_FILE)."; \
@@ -182,14 +223,28 @@ init_demo_db:
 	     *) echo "  Erreur : DATABASE__URL ne pointe pas sur DATABASE__NAME ($$name) dans $(DEMO_ENV_FILE)."; \
 	        echo "  Refus : sqlx et les scripts d'import viseraient deux bases différentes."; exit 1 ;; \
 	 esac; \
+	 case "$$url" in \
+	     *"$$user"*) ;; \
+	     *) echo "  Erreur : DATABASE__URL n'utilise pas DATABASE__USER ($$user) dans $(DEMO_ENV_FILE)."; \
+	        echo "  Refus : la base serait créée avec ce compte comme OWNER, mais migrée/importée avec un autre."; exit 1 ;; \
+	 esac; \
+	 case "$$admin_url" in \
+	     *"$$host"*) ;; \
+	     *) echo "  Erreur : DATABASE__ADMIN_URL ne pointe pas sur DATABASE__HOST ($$host) dans $(DEMO_ENV_FILE)."; exit 1 ;; \
+	 esac; \
+	 admin_db=$${admin_url##*/}; admin_db=$${admin_db%%\?*}; \
+	 [ "$$admin_db" != "$$name" ] || { \
+	     echo "  Erreur : DATABASE__ADMIN_URL pointe sur DATABASE__NAME ($$name)."; \
+	     echo "  Refus : impossible de DROP une base à laquelle on est connecté — DATABASE__ADMIN_URL doit viser une base de maintenance (ex. 'postgres')."; exit 1; }; \
 	 echo ""; \
 	 echo "  \033[1m\033[31m/!\\  DESTRUCTION COMPLÈTE DE LA BASE DE DÉMO\033[0m"; \
 	 echo ""; \
 	 echo "     Profil : $(DEMO_PROFILE)   ($(DEMO_ENV_FILE))"; \
 	 echo "     Hôte   : $$host"; \
-	 echo "     Base   : $$name"; \
+	 echo "     Base   : $$name  (owner : $$user)"; \
 	 echo ""; \
-	 echo "  sqlx va faire un DROP DATABASE puis tout réimporter."; \
+	 echo "  DROP DATABASE (WITH FORCE) puis CREATE DATABASE ... OWNER $$user,"; \
+	 echo "  migrations et réimport complet."; \
 	 echo "  Les comptes, espaces et articles existants seront perdus."; \
 	 echo ""; \
 	 printf "  Confirmation 1/2 — tapez \033[1moui\033[0m pour continuer : "; \
@@ -199,7 +254,8 @@ init_demo_db:
 	 read -r confirm; \
 	 [ "$$confirm" = "$$name" ] || { echo "  Annulé — le nom saisi ne correspond pas."; exit 1; }; \
 	 echo ""; \
-	 $(MAKE) init_db EXEC_PROFILE=$(DEMO_PROFILE) DATABASE_URL="$$url"
+	 $(MAKE) --no-print-directory create_demo_db ADMIN_URL="$$admin_url" DB_NAME="$$name" DB_OWNER="$$user" && \
+	 $(MAKE) --no-print-directory init_demo_data EXEC_PROFILE=$(DEMO_PROFILE) DATABASE_URL="$$url"
 
 # ── Qualité Rust standard (axe 1) ────────────────────────────────────────────
 lint:

@@ -5,7 +5,7 @@
 #   3. users            (pas de dépendance)
 #   4. spaces           (pas de dépendance)
 #   5. articles         (dépend de users + spaces)
-#   6. competitions     (dépend de spaces ; sauté si le fichier extrait manque)
+#   6. competitions     (dépend de spaces ; désactivé par défaut, cf. --with-competitions)
 #
 # Les deux migrations d'images passent d'abord : elles corrigent les JSON
 # extraits, que les imports recopient ensuite tels quels en base. Sans elles,
@@ -17,7 +17,13 @@
 # aucun appel réseau, et un `public_id` déterministe plus un test d'existence
 # garantissent qu'aucune image n'est dupliquée sur Cloudinary.
 #
-# Passe tous les arguments reçus à chaque script (ex : --dry-run).
+# Usage :
+#   ./scripts/import_all.sh [profil] [--with-competitions] [args…]
+#
+#   --with-competitions  importe aussi les compétitions legacy, désactivé par
+#                        défaut — non intégrées pour le moment.
+#
+# Les autres arguments sont passés tels quels à chaque script d'import (ex : --dry-run).
 set -euo pipefail
 
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -31,28 +37,46 @@ else
 fi
 export EXEC_PROFILE
 
-echo "=== [1/6] Migration des logos d'espaces vers Cloudinary ==="
+WITH_COMPETITIONS=0
+ARGS=()
+for arg in "$@"; do
+    case "$arg" in
+        --with-competitions) WITH_COMPETITIONS=1 ;;
+        *)                   ARGS+=("$arg") ;;
+    esac
+done
+set -- ${ARGS[@]+"${ARGS[@]}"}
+
+TOTAL=5
+[ "$WITH_COMPETITIONS" -eq 1 ] && TOTAL=6
+
+echo "=== [1/${TOTAL}] Migration des logos d'espaces vers Cloudinary ==="
 "${SCRIPTS_DIR}/migrate_spaces_images.sh" "$@"
 
 echo ""
-echo "=== [2/6] Migration des images d'articles vers Cloudinary ==="
+echo "=== [2/${TOTAL}] Migration des images d'articles vers Cloudinary ==="
 "${SCRIPTS_DIR}/migrate_articles_images.sh" "$@"
 
 echo ""
-echo "=== [3/6] Import users ==="
+echo "=== [3/${TOTAL}] Import users ==="
 "${SCRIPTS_DIR}/import_users.sh" "$@"
 
 echo ""
-echo "=== [4/6] Import spaces ==="
+echo "=== [4/${TOTAL}] Import spaces ==="
 "${SCRIPTS_DIR}/import_spaces.sh" "$@"
 
 echo ""
-echo "=== [5/6] Import articles ==="
+echo "=== [5/${TOTAL}] Import articles ==="
 "${SCRIPTS_DIR}/import_articles.sh" "$@"
 
-echo ""
-echo "=== [6/6] Import competitions ==="
-"${SCRIPTS_DIR}/import_competitions.sh" "$@"
+if [ "$WITH_COMPETITIONS" -eq 1 ]; then
+    echo ""
+    echo "=== [6/${TOTAL}] Import competitions ==="
+    "${SCRIPTS_DIR}/import_competitions.sh" "$@"
+else
+    echo ""
+    echo "Compétitions legacy non intégrées pour le moment (utiliser --with-competitions pour les importer)."
+fi
 
 echo ""
 echo "Import terminé."

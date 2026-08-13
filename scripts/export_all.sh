@@ -11,17 +11,32 @@
 # La première extraction qui échoue interrompt tout (set -e), pour ne jamais
 # importer un jeu de données partiel.
 #
+# Chaque extraction est sautée — sans connexion à la base legacy — si son
+# `extracted_<domaine>.json` existe déjà. Supprimer le fichier concerné pour
+# forcer une réextraction.
+#
 # Usage :
 #   ./scripts/export_all.sh [--with-competitions] [args…]
 #
 #   --with-competitions  ajoute l'extraction des compétitions, désactivée par
-#                        défaut. Sans elle, import_competitions.sh se contente
-#                        de sauter l'étape (fichier absent).
+#                        défaut. Sans elle, import_all.sh se contente de
+#                        sauter l'étape.
 #
 # Les autres arguments sont passés tels quels à chaque script d'extraction.
 set -euo pipefail
 
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+skip_or_run() {
+    local output="$1" script="$2"
+    shift 2
+    if [ -f "$output" ]; then
+        echo "SKIP : $output existe déjà — pas de connexion à la base legacy."
+        echo "       (supprimer ce fichier pour forcer une réextraction)"
+        return
+    fi
+    "$script" "$@"
+}
 
 WITH_COMPETITIONS=0
 ARGS=()
@@ -37,20 +52,20 @@ TOTAL=3
 [ "$WITH_COMPETITIONS" -eq 1 ] && TOTAL=4
 
 echo "=== [1/${TOTAL}] Extraction users ==="
-"${SCRIPTS_DIR}/extract_users.sh" "$@"
+skip_or_run "${SCRIPTS_DIR}/extracted_users.json" "${SCRIPTS_DIR}/extract_users.sh" "$@"
 
 echo ""
 echo "=== [2/${TOTAL}] Extraction spaces ==="
-"${SCRIPTS_DIR}/extract_spaces.sh" "$@"
+skip_or_run "${SCRIPTS_DIR}/extracted_spaces.json" "${SCRIPTS_DIR}/extract_spaces.sh" "$@"
 
 echo ""
 echo "=== [3/${TOTAL}] Extraction articles ==="
-"${SCRIPTS_DIR}/extract_articles.sh" "$@"
+skip_or_run "${SCRIPTS_DIR}/extracted_articles.json" "${SCRIPTS_DIR}/extract_articles.sh" "$@"
 
 if [ "$WITH_COMPETITIONS" -eq 1 ]; then
     echo ""
     echo "=== [4/${TOTAL}] Extraction competitions ==="
-    "${SCRIPTS_DIR}/extract_competitions.sh" "$@"
+    skip_or_run "${SCRIPTS_DIR}/extracted_competitions.json" "${SCRIPTS_DIR}/extract_competitions.sh" "$@"
 else
     echo ""
     echo "Compétitions ignorées (utiliser --with-competitions pour les extraire)."
