@@ -11,6 +11,27 @@ pub mod path {
         "/app/{space_id}/players/{player_id}/widgets/evolution-journal";
     pub const PLAYER_SPP_SPENDING_WIDGET: &str =
         "/app/{space_id}/players/{player_id}/widgets/spp-spending";
+
+    // ── Customisation ─────────────────────────────────────────────────────────
+    // Le panneau (GET) est servi par la carte 307 ; les sept mutations qui
+    // suivent sont **déclarées ici et branchées par la carte 308**. Les URLs
+    // vivent dès maintenant parce que le panneau les rend dans ses boutons.
+    pub const PLAYER_CUSTOMISATION_WIDGET: &str =
+        "/app/{space_id}/players/{player_id}/widgets/customisation";
+    pub const PLAYER_CUSTOMISATION_SKILL_ADD: &str =
+        "/app/{space_id}/players/{player_id}/customisation/skills/add";
+    pub const PLAYER_CUSTOMISATION_STAT_ADD: &str =
+        "/app/{space_id}/players/{player_id}/customisation/stats/add";
+    pub const PLAYER_CUSTOMISATION_PRICE_ADJUST: &str =
+        "/app/{space_id}/players/{player_id}/customisation/price/adjust";
+    pub const PLAYER_CUSTOMISATION_SPP_ADD: &str =
+        "/app/{space_id}/players/{player_id}/customisation/spp/add";
+    pub const PLAYER_CUSTOMISATION_LINE_REMOVE: &str =
+        "/app/{space_id}/players/{player_id}/customisation/lines/remove";
+    pub const PLAYER_CUSTOMISATION_VALIDATE: &str =
+        "/app/{space_id}/players/{player_id}/customisation/validate";
+    pub const PLAYER_CUSTOMISATION_CANCEL: &str =
+        "/app/{space_id}/players/{player_id}/customisation/cancel";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -68,6 +89,48 @@ impl Routes {
 
     pub fn spp_spending_widget(&self, space_id: &str, player_id: &str) -> String {
         path::PLAYER_SPP_SPENDING_WIDGET
+            .replace("{space_id}", space_id)
+            .replace("{player_id}", player_id)
+    }
+
+    // ── Customisation ─────────────────────────────────────────────────────────
+    // Huit routes de même forme : un gabarit, un espace, un joueur. Le
+    // substituteur est factorisé plutôt que recopié huit fois.
+
+    pub fn customisation_widget(&self, space_id: &str, player_id: &str) -> String {
+        Self::pour_joueur(path::PLAYER_CUSTOMISATION_WIDGET, space_id, player_id)
+    }
+
+    pub fn customisation_add_skill(&self, space_id: &str, player_id: &str) -> String {
+        Self::pour_joueur(path::PLAYER_CUSTOMISATION_SKILL_ADD, space_id, player_id)
+    }
+
+    pub fn customisation_add_stat(&self, space_id: &str, player_id: &str) -> String {
+        Self::pour_joueur(path::PLAYER_CUSTOMISATION_STAT_ADD, space_id, player_id)
+    }
+
+    pub fn customisation_adjust_price(&self, space_id: &str, player_id: &str) -> String {
+        Self::pour_joueur(path::PLAYER_CUSTOMISATION_PRICE_ADJUST, space_id, player_id)
+    }
+
+    pub fn customisation_add_spp(&self, space_id: &str, player_id: &str) -> String {
+        Self::pour_joueur(path::PLAYER_CUSTOMISATION_SPP_ADD, space_id, player_id)
+    }
+
+    pub fn customisation_remove_line(&self, space_id: &str, player_id: &str) -> String {
+        Self::pour_joueur(path::PLAYER_CUSTOMISATION_LINE_REMOVE, space_id, player_id)
+    }
+
+    pub fn customisation_validate(&self, space_id: &str, player_id: &str) -> String {
+        Self::pour_joueur(path::PLAYER_CUSTOMISATION_VALIDATE, space_id, player_id)
+    }
+
+    pub fn customisation_cancel(&self, space_id: &str, player_id: &str) -> String {
+        Self::pour_joueur(path::PLAYER_CUSTOMISATION_CANCEL, space_id, player_id)
+    }
+
+    fn pour_joueur(gabarit: &str, space_id: &str, player_id: &str) -> String {
+        gabarit
             .replace("{space_id}", space_id)
             .replace("{player_id}", player_id)
     }

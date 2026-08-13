@@ -269,19 +269,24 @@ impl CustomisationBasket {
 
     // ── Lecture, pour les view models ─────────────────────────────────────────
 
-    /// La caractéristique telle qu'elle sera si le panier est validé.
-    pub fn effective_stat(&self, stat: StatKind) -> u8 {
-        let cumul: i16 = self
-            .lines
+    /// L'offset **brut** déjà accumulé au panier pour cette caractéristique —
+    /// exactement l'écart entre la valeur du joueur et sa valeur effective.
+    /// C'est lui que le panneau affiche en « dont −1 en attente ».
+    pub fn pending_offset(&self, stat: StatKind) -> i16 {
+        self.lines
             .iter()
             .filter_map(|l| match l {
                 CustomisationLine::Stat { stat: s, crans, .. } if *s == stat => {
-                    Some(crans.into_inner() as i16 * stat.improvement_step() as i16)
+                    Some(stat.raw_offset(crans.into_inner()) as i16)
                 }
                 _ => None,
             })
-            .sum();
-        (self.base_stats.get(stat) as i16 + cumul).max(0) as u8
+            .sum()
+    }
+
+    /// La caractéristique telle qu'elle sera si le panier est validé.
+    pub fn effective_stat(&self, stat: StatKind) -> u8 {
+        (self.base_stats.get(stat) as i16 + self.pending_offset(stat)).max(0) as u8
     }
 
     pub fn effective_value(&self) -> ValueKpo {
@@ -495,6 +500,20 @@ mod tests {
         p.remove_line(&l1).unwrap();
         assert_eq!(p.effective_stat(StatKind::Ag), 3);
         assert!(p.add_stat(StatKind::Ag, crans(1)).is_ok());
+    }
+
+    /// L'offset en attente est **brut** : améliorer l'agilité la fait
+    /// descendre, et c'est bien `−1` qu'il faut annoncer.
+    #[test]
+    fn l_offset_en_attente_est_brut_et_signe_comme_la_valeur() {
+        let mut p = panier(vec![]);
+        p.add_stat(StatKind::Ag, crans(2)).unwrap();
+        assert_eq!(p.pending_offset(StatKind::Ag), -2);
+        assert_eq!(p.effective_stat(StatKind::Ag), 1);
+
+        p.add_stat(StatKind::Ma, crans(-1)).unwrap();
+        assert_eq!(p.pending_offset(StatKind::Ma), -1);
+        assert_eq!(p.pending_offset(StatKind::St), 0);
     }
 
     #[test]

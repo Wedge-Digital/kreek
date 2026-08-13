@@ -1,0 +1,220 @@
+{# Panneau de customisation — troisième occupant de #pd-right-panel.
+
+   Le fragment porte l'id du conteneur : le swap est `outerHTML`, donc le
+   fragment *est* le conteneur. L'interdiction de répéter l'id vise `innerHTML`.
+
+   Alpine ne sert plus qu'à deux choses : la bascule d'onglets et le filtre de
+   recherche. Valeurs effectives, aperçus, lignes en attente et grisage des
+   boutons viennent du serveur — le panier vit en base, la vue n'a rien à
+   simuler.
+
+   `version` est embarquée dans chaque geste : c'est la garde d'écriture
+   concurrente, et le panneau étant re-rendu à chaque action, elle repart
+   toujours à jour. #}
+<div class="pd-right" id="pd-right-panel" hx-disinherit="*"
+     x-data="{ activeTab: 'skills', skillSearch: '' }">
+  <link rel="stylesheet" href="/static/css/widgets/player-customisation.css">
+
+  <div class="spend-panel-header">
+    <div class="spend-panel-title">Mode customisation</div>
+    <div class="spend-panel-remaining">
+      <div class="spend-panel-remaining-val">{{ vm.spp_reserve }}</div>
+      <div class="spend-panel-remaining-label">SPP en réserve</div>
+    </div>
+  </div>
+
+  <div class="lock-banner lock-banner--admin">
+    <span class="lock-banner-icon">🛠️</span>
+    <span class="lock-banner-text">
+      <strong>Mode customisation.</strong> Les modifications ci-dessous sont appliquées directement au joueur, sans passer par les règles du jeu. Chaque action est journalisée avec le nom du commissaire.
+    </span>
+  </div>
+
+  <div class="custo-zone">
+    <div class="tabs">
+      <div class="tab" :class="activeTab === 'skills' ? 'active' : ''" @click="activeTab = 'skills'">Compétences</div>
+      <div class="tab" :class="activeTab === 'stats' ? 'active' : ''" @click="activeTab = 'stats'">Caractéristiques</div>
+      <div class="tab" :class="activeTab === 'price' ? 'active' : ''" @click="activeTab = 'price'">Prix</div>
+      <div class="tab" :class="activeTab === 'spp' ? 'active' : ''" @click="activeTab = 'spp'">SPP</div>
+    </div>
+
+    {# ── Compétences : ajout libre, sans coût ni règle d'accès de poste.
+         Seules les ajoutables sont listées — possédées et déjà au panier ont
+         disparu côté serveur. #}
+    <div x-show="activeTab === 'skills'">
+      <div class="custo-skill-controls">
+        <input class="custo-skill-search" type="text"
+               placeholder="Rechercher une compétence…" x-model="skillSearch">
+      </div>
+      <div class="skill-list">
+        {% if vm.skills.is_empty() %}
+        <div class="spp-empty-state">Ce joueur possède déjà toutes les compétences du référentiel.</div>
+        {% else %}
+        <table class="skill-list-table">
+          <thead>
+            <tr><th class="skill-col-name">Compétence</th><th>Type</th><th></th></tr>
+          </thead>
+          <tbody>
+            {# Le nom cherché passe par un attribut plutôt que par une chaîne JS
+               interpolée : une apostrophe dans un nom de compétence casserait
+               l'expression Alpine, et il y en a. #}
+            {% for skill in vm.skills %}
+            <tr data-skill-name="{{ skill.name|lower }}"
+                x-show="skillSearch === '' || $el.dataset.skillName.includes(skillSearch.toLowerCase())">
+              <td>
+                <div class="skill-name">{{ skill.name }}</div>
+                <div class="skill-desc">{{ skill.description }}</div>
+              </td>
+              <td><span class="skill-type-pill {{ skill.category_css }}">{{ skill.category_label }}</span></td>
+              <td>
+                <button class="btn-add-skill"
+                        hx-post="{{ vm.add_skill_url }}"
+                        hx-vals='{"skill_id": "{{ skill.skill_id }}", "expected_version": "{{ vm.version }}"}'
+                        hx-target="#pd-right-panel"
+                        hx-swap="outerHTML">+ Ajouter</button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+    </div>
+
+    {# ── Caractéristiques : un cran par clic, dans le sens porté par le bouton.
+         « Améliorer » / « Dégrader » et non augmenter/diminuer : le sens est la
+         **qualité du joueur**, et pour AG comme pour PA une amélioration fait
+         descendre le chiffre. L'aperçu absent est le grisage — la borne
+         atteinte n'a rien à montrer. #}
+    <div x-show="activeTab === 'stats'" class="custo-stat-grid-wrap">
+      <div class="custo-stat-grid">
+        {% for stat in vm.stats %}
+        <div class="custo-stat-card">
+          <div class="custo-stat-name">{{ stat.label }}</div>
+          <div class="custo-stat-current">{{ stat.current }}</div>
+          {% if let Some(offset) = stat.pending_offset %}
+          <div class="custo-stat-pending">dont {{ offset }} en attente</div>
+          {% endif %}
+
+          <div class="custo-stat-preview">
+            <span class="custo-stat-preview-up">▲ {% match stat.preview_up %}{% when Some with (v) %}{{ v }}{% when None %}—{% endmatch %}</span>
+            <span class="custo-stat-preview-sep">·</span>
+            <span class="custo-stat-preview-down">▼ {% match stat.preview_down %}{% when Some with (v) %}{{ v }}{% when None %}—{% endmatch %}</span>
+          </div>
+
+          <div class="custo-stat-actions">
+            {% if stat.preview_up.is_some() %}
+            <button class="custo-stat-add-btn"
+                    hx-post="{{ vm.add_stat_url }}"
+                    hx-vals='{"stat": "{{ stat.key }}", "crans": "1", "expected_version": "{{ vm.version }}"}'
+                    hx-target="#pd-right-panel"
+                    hx-swap="outerHTML">Améliorer</button>
+            {% else %}
+            <button class="custo-stat-add-btn" disabled title="Borne atteinte">Améliorer</button>
+            {% endif %}
+
+            {% if stat.preview_down.is_some() %}
+            <button class="custo-stat-add-btn custo-stat-add-btn--degrade"
+                    hx-post="{{ vm.add_stat_url }}"
+                    hx-vals='{"stat": "{{ stat.key }}", "crans": "-1", "expected_version": "{{ vm.version }}"}'
+                    hx-target="#pd-right-panel"
+                    hx-swap="outerHTML">Dégrader</button>
+            {% else %}
+            <button class="custo-stat-add-btn custo-stat-add-btn--degrade" disabled title="Borne atteinte">Dégrader</button>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# ── Prix : pas de 5 kPo, c'est le grain des prix du jeu. Les flèches
+         natives du champ number suffisent à le tenir. #}
+    <div x-show="activeTab === 'price'" class="custo-action-panel">
+      <div class="custo-action-card">
+        <div class="custo-action-info">
+          <div class="custo-action-label">Prix actuel</div>
+          <div class="custo-action-current">{{ vm.price_kpo }} kPo</div>
+        </div>
+        <form class="custo-action-form"
+              hx-post="{{ vm.adjust_price_url }}"
+              hx-target="#pd-right-panel"
+              hx-swap="outerHTML">
+          <input type="hidden" name="expected_version" value="{{ vm.version }}">
+          <input class="custo-action-input" type="number" step="5" name="delta_kpo"
+                 placeholder="Ex. 10 ou -15" required>
+          <span class="custo-action-unit">kPo</span>
+          <button class="custo-action-btn" type="submit">Ajuster</button>
+        </form>
+      </div>
+    </div>
+
+    {# ── SPP : ajout seul, plafonné à 100 par opération. #}
+    <div x-show="activeTab === 'spp'" class="custo-action-panel">
+      <div class="custo-action-card">
+        <div class="custo-action-info">
+          <div class="custo-action-label">SPP gagnés (total carrière)</div>
+          <div class="custo-action-current">{{ vm.spp_earned }}</div>
+        </div>
+        <form class="custo-action-form"
+              hx-post="{{ vm.add_spp_url }}"
+              hx-target="#pd-right-panel"
+              hx-swap="outerHTML">
+          <input type="hidden" name="expected_version" value="{{ vm.version }}">
+          <input class="custo-action-input" type="number" min="1" max="100" name="amount"
+                 placeholder="Ex. 5" required>
+          <button class="custo-action-btn" type="submit">Ajouter</button>
+        </form>
+      </div>
+    </div>
+
+    {# ── Modifications en attente ── #}
+    <div class="spp-summary">
+      <div class="spp-summary-header">
+        <div class="spp-summary-title">Modifications en attente</div>
+      </div>
+      {% if vm.pending.is_empty() %}
+      <div class="spp-empty-state">
+        Aucune modification en attente — choisissez une action dans les onglets ci-dessus.
+      </div>
+      {% else %}
+      <table class="spp-summary-table">
+        <thead>
+          <tr><th>Modification</th><th>Type</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for line in vm.pending %}
+          <tr>
+            <td>{{ line.label }}</td>
+            <td>
+              <span class="mode-chip mode-chip-custom">
+                <span class="mode-chip-icon">🛠️</span>{{ line.family }}
+              </span>
+            </td>
+            <td>
+              <button class="btn-cancel-entry"
+                      hx-post="{{ vm.remove_line_url }}"
+                      hx-vals='{"line_id": "{{ line.line_id }}", "expected_version": "{{ vm.version }}"}'
+                      hx-target="#pd-right-panel"
+                      hx-swap="outerHTML">Annuler</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    </div>
+
+    <div class="spend-panel-footer">
+      <button class="btn-submit"
+              {% if vm.pending.is_empty() %}disabled{% endif %}
+              hx-post="{{ vm.validate_url }}"
+              hx-vals='{"expected_version": "{{ vm.version }}"}'
+              hx-swap="none">Enregistrer les modifications</button>
+      <button class="btn-cancel-all"
+              hx-post="{{ vm.cancel_url }}"
+              hx-target="#pd-right-panel"
+              hx-swap="outerHTML">Annuler</button>
+    </div>
+  </div>
+</div>

@@ -72,9 +72,16 @@
         <span>Gagnés sur {{ vm.matches_played }} matchs</span>
         <span>{{ vm.spp_reserve }} SPP en réserve</span>
       </div>
+      {# Le bouton n'existe que pour qui a le droit : la phase 1 pose qu'un
+         coach ne doit pas même voir le mode. #}
+      {% if vm.can_customise %}
       <div class="spp-budget-actions">
-        <button class="btn-customise" disabled title="Fonctionnalité à venir">✏️ Customiser</button>
+        <button class="btn-customise"
+                hx-get="{{ app_routes.players.customisation_widget(space_id, vm.player_id) }}"
+                hx-target="#pd-right-panel"
+                hx-swap="outerHTML">✏️ Customiser</button>
       </div>
+      {% endif %}
     </div>
   </div>
 

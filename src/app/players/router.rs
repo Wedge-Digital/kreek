@@ -5,6 +5,7 @@ use crate::app::players::io::web::purchase_skill_controller::post_purchase_skill
 use crate::app::players::io::web::roster_edition_controller::post_update_roster;
 use crate::app::players::io::web::widgets::evolution_journal_widget::evolution_journal_widget;
 use crate::app::players::io::web::widgets::match_player_selector_widget::match_player_selector_widget;
+use crate::app::players::io::web::widgets::player_customisation_widget::player_customisation_widget;
 use crate::app::players::io::web::widgets::player_table_widget::player_table_widget;
 use crate::app::players::io::web::widgets::spp_spending_widget::spp_spending_widget;
 use crate::app::players::routes::path;
@@ -31,4 +32,10 @@ pub fn router() -> Router<AppState> {
             get(evolution_journal_widget),
         )
         .route(path::PLAYER_SPP_SPENDING_WIDGET, get(spp_spending_widget))
+        // Les sept `POST` de customisation sont branchés par la carte 308 ;
+        // seul le panneau est servi ici.
+        .route(
+            path::PLAYER_CUSTOMISATION_WIDGET,
+            get(player_customisation_widget),
+        )
 }

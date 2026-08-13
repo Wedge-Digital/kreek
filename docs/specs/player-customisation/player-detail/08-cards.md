@@ -23,14 +23,15 @@ commit, ses propres tests, un `git revert` propre si elle tourne mal.
 Elle ne dépend que des événements de la 302, donc elle peut partir tôt, avant
 même que le panier existe.
 
-**La 307 regroupe tout le chemin de lecture** : le widget, le resserrement de
-`can_customise` et le choix de l'occupant du slot. Les trois se testent
-ensemble et n'ont pas de sens séparément — un widget qu'on ne peut pas
-atteindre ne prouve rien.
+**La 307 regroupe tout le chemin de lecture** : le widget, l'autorisation et le
+choix de l'occupant du slot. Les trois se testent ensemble et n'ont pas de sens
+séparément — un widget qu'on ne peut pas atteindre ne prouve rien.
 
-C'est aussi elle qui porte le changement invisible signalé en phase 4 :
-`can_customise` change de valeur, pas de type. Rien ne cassera à la
-compilation, un coach perdra simplement un droit. Sa checklist l'exige en test.
+`can_customise` vaut **déjà** ce qu'il faut : `check_admin_rights` exclut le
+coach. Une rédaction antérieure de cette spec annonçait un resserrement, par
+confusion avec `can_spend_spp`. Il n'y a rien à changer, mais la règle mérite
+un test — elle ne tient qu'à la composition d'une fonction que rien n'empêche
+d'élargir.
 
 ## Ce qui n'est pas découpé
 

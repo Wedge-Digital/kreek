@@ -187,6 +187,14 @@
 .summary-ref   { font-size: var(--text-tiny); color: var(--dark-3); }
 .spp-empty-state { padding: var(--p3); text-align: center; color: var(--dark-3); font-size: var(--text-small); font-style: italic; }
 
+/* Note discrète du journal — saisie de customisation périmée supprimée. Elle
+   informe sans alarmer : rien n'est cassé, une saisie oubliée a expiré. */
+.journal-note {
+  margin: var(--p2) var(--p2) 0; padding: var(--p1) var(--p2);
+  background: var(--dark-6); border-radius: 8px;
+  font-size: var(--text-tiny); color: var(--dark-3); font-style: italic;
+}
+
 /* ── Onglets compétences / caractéristiques (widget spp_spending) ────── */
 .tabs { display: flex; border-bottom: 2px solid var(--dark-5); gap: 4px; padding: 0 var(--p2); }
 .tab {

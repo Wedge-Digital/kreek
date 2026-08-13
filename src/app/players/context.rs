@@ -3,11 +3,12 @@ use crate::app::players::io::app_events::{
     player_dismissed_listener, player_match_impact_listener, player_recruited_listener,
     team_created_listener,
 };
+use crate::app::players::io::repository::customisation_basket_repository::PgCustomisationBasketRepository;
 use crate::app::players::io::repository::player_repository::PgPlayerRepository;
 use crate::app::players::io::repository::projection_repository::PgPlayerProjectionRepository;
 use crate::app::players::ports::{
-    IPlayerCompetitionPort, IPlayerProjectionRepository, IPlayerRepository, IPlayerRosterPort,
-    IPlayerSpaceMemberPort, ISkillCatalogPort,
+    ICustomisationBasketRepository, IPlayerCompetitionPort, IPlayerProjectionRepository,
+    IPlayerRepository, IPlayerRosterPort, IPlayerSpaceMemberPort, ISkillCatalogPort,
 };
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
@@ -17,6 +18,7 @@ use std::sync::Arc;
 pub struct PlayersContext {
     pub repository: Arc<dyn IPlayerRepository>,
     pub projection_repository: Arc<dyn IPlayerProjectionRepository>,
+    pub customisation_basket_repository: Arc<dyn ICustomisationBasketRepository>,
     pub skill_catalog: Arc<dyn ISkillCatalogPort>,
     pub roster_port: Arc<dyn IPlayerRosterPort>,
     pub competition_port: Arc<dyn IPlayerCompetitionPort>,
@@ -37,6 +39,9 @@ impl PlayersContext {
         Self {
             repository: Arc::new(PgPlayerRepository::new(pool.clone())),
             projection_repository: Arc::new(PgPlayerProjectionRepository::new(pool.clone())),
+            customisation_basket_repository: Arc::new(PgCustomisationBasketRepository::new(
+                pool.clone(),
+            )),
             skill_catalog,
             roster_port,
             competition_port,

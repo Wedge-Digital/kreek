@@ -215,13 +215,16 @@ donc de quoi le décider :
 ```rust
 pub struct PlayerDetailVm {
     // … existant …
-    pub can_customise: bool,          // resserré : plus le coach de l'équipe
+    pub can_customise: bool,          // inchangé : déjà admin d'espace ou de compétition
     pub right_panel_widget_url: String, // pointe la customisation si panier + droit
 }
 ```
 
-`can_customise` existe déjà mais s'appuie sur `check_admin_rights`, qui inclut
-le coach. La phase 1 l'exclut : **la valeur change, pas le type**.
+`can_customise` existe déjà **et vaut déjà ce qu'il faut** :
+`check_admin_rights` vérifie admin d'espace puis admin de compétition, sans le
+coach. Correction d'une affirmation antérieure de cette spec, qui le confondait
+avec `can_spend_spp` — lui explicitement « étendu au coach ». Ni la valeur ni le
+type ne changent.
 
 ---
 

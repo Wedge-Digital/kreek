@@ -70,6 +70,16 @@ impl StatKind {
         }
     }
 
+    /// L'offset **brut** que valent `crans` d'amélioration. C'est ce que le
+    /// joueur voit écrit (« Amélioration d'Agilité −1 ») : l'affichage annonce
+    /// l'effet sur la valeur, pas l'intention.
+    ///
+    /// Ici et pas dans la vue, sans quoi la table des directions se
+    /// retrouverait multipliée à la main dans chaque libellé.
+    pub fn raw_offset(self, crans: i8) -> i8 {
+        crans * self.improvement_step()
+    }
+
     /// Bornes **inclusives** de la valeur brute résolue. Une modification qui
     /// en sortirait est refusée.
     pub fn bounds(self) -> (u8, u8) {

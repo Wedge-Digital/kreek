@@ -1,7 +1,10 @@
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::players::domain::customisation_basket::is_expired;
 use crate::app::players::domain::player::{Player, PlayerId};
 use crate::app::players::io::web::purchase_skill_controller::can_spend_spp;
-use crate::app::players::ports::TeamRosterInfoDto;
+use crate::app::players::ports::{
+    CustomisationBasketState, ICustomisationBasketRepository, TeamRosterInfoDto,
+};
 use crate::app::players::use_cases::match_history_service::{
     build_match_history, MatchHistoryAction, MatchHistoryActionKind, MatchHistoryEntry,
 };
@@ -101,7 +104,16 @@ fn match_history_card_vm(entry: MatchHistoryEntry) -> MatchHistoryCardVm {
     }
 }
 
-async fn check_admin_rights(
+/// Qui a le droit de customiser un joueur : **admin d'espace ou admin de la
+/// compétition**, et personne d'autre. Le coach de l'équipe en est exclu — un
+/// coach qui s'ajouterait des compétences gratuitement ne serait pas la même
+/// fonctionnalité.
+///
+/// C'est `can_spend_spp` qui, lui, est explicitement « étendu au coach ». Les
+/// deux fonctions se ressemblent assez pour qu'on les confonde ; celle-ci
+/// portait auparavant le nom générique `check_admin_rights`, qui ne disait pas
+/// ce qu'il autorisait.
+pub async fn can_customise(
     state: &AppState,
     coach_id: &CoachId,
     coach_name: &str,
@@ -188,29 +200,20 @@ pub async fn player_detail_controller(
     };
 
     let coach_name = user.coach_name.clone().into_inner();
-    let can_customise =
-        check_admin_rights(&state, &user.id, &coach_name, &space_id_vo, &team).await;
+    let customisable = can_customise(&state, &user.id, &coach_name, &space_id_vo, &team).await;
 
     let can_spend =
         team.in_player_improvement_phase && can_spend_spp(&state, &user, &space_id_vo, &team).await;
     let app_routes = AppRoutes::default();
-    // Le panneau droit charge toujours le journal par défaut — c'est le bouton
-    // "Activer la dépense de SPP" (rendu par le journal lui-même si can_spend,
-    // à la place du bandeau verrouillé) qui bascule vers le mode dépense.
-    let right_panel_widget_url = format!(
-        "{}?can_spend={}",
-        app_routes
-            .players
-            .evolution_journal_widget(&space_id, &player_id),
-        can_spend,
-    );
+    let right_panel_widget_url =
+        right_panel_url(&state, &space_id, &player_id, customisable, can_spend).await;
 
     let vm = build_vm(
         &state,
         &player,
         &events,
         &team,
-        can_customise,
+        customisable,
         right_panel_widget_url,
         can_spend,
     );
@@ -221,6 +224,95 @@ pub async fn player_detail_controller(
         vm,
     }
     .into_response()
+}
+
+// ── Choix de l'occupant du slot droit ─────────────────────────────────────────
+
+/// Ce que la fiche installe dans `#pd-right-panel` à son ouverture.
+#[derive(Debug, PartialEq)]
+pub enum RightPanel {
+    /// Le journal des évolutions — cas par défaut. `abandoned` signale une
+    /// saisie périmée supprimée au passage, que le journal annonce discrètement.
+    Journal { abandoned: bool },
+    /// Le mode customisation, parce qu'un panier est ouvert sur ce joueur.
+    Customisation,
+}
+
+/// **Panier existant *et* droit de customiser**, jamais l'un sans l'autre.
+///
+/// Le panier est propre au *joueur*, pas à son auteur : sans la seconde
+/// condition, un panier laissé ouvert par un commissaire ferait apparaître le
+/// mode administration au coach qui ouvrirait la même fiche.
+///
+/// La péremption se juge ici et pas dans un `WHERE` : c'est la seule lecture du
+/// panier sur le chemin d'ouverture, et un panier de la veille qui rouvrirait
+/// le mode serait pire qu'un panier perdu.
+pub fn choose_right_panel(
+    can_customise: bool,
+    basket: Option<&CustomisationBasketState>,
+    now: time::OffsetDateTime,
+) -> RightPanel {
+    if !can_customise {
+        return RightPanel::Journal { abandoned: false };
+    }
+    match basket {
+        None => RightPanel::Journal { abandoned: false },
+        Some(etat) if is_expired(etat.updated_at, now) => RightPanel::Journal { abandoned: true },
+        Some(_) => RightPanel::Customisation,
+    }
+}
+
+/// Traduit la décision en URL de widget, en supprimant au passage le panier
+/// périmé. Un `GET` qui écrit, assumé : la suppression est idempotente, et la
+/// seule alternative serait une tâche de ménage pour un état qui ne gêne que
+/// l'utilisateur qui le rencontre.
+async fn right_panel_url(
+    state: &AppState,
+    space_id: &str,
+    player_id: &str,
+    can_customise: bool,
+    can_spend: bool,
+) -> String {
+    let repo = state.players.customisation_basket_repository.as_ref();
+    // Inutile d'interroger la base pour un utilisateur qui n'y a pas droit.
+    let panier = match can_customise {
+        true => repo.load(player_id).await.unwrap_or(None),
+        false => None,
+    };
+    let decision = choose_right_panel(
+        can_customise,
+        panier.as_ref(),
+        time::OffsetDateTime::now_utc(),
+    );
+    if let RightPanel::Journal { abandoned: true } = decision {
+        purger_panier(repo, player_id).await;
+    }
+    url_du_panneau(decision, space_id, player_id, can_spend)
+}
+
+fn url_du_panneau(
+    decision: RightPanel,
+    space_id: &str,
+    player_id: &str,
+    can_spend: bool,
+) -> String {
+    let routes = AppRoutes::default();
+    match decision {
+        RightPanel::Customisation => routes.players.customisation_widget(space_id, player_id),
+        RightPanel::Journal { abandoned } => format!(
+            "{}?can_spend={can_spend}&abandoned={abandoned}",
+            routes.players.evolution_journal_widget(space_id, player_id),
+        ),
+    }
+}
+
+/// L'échec de purge n'interrompt rien : la fiche s'ouvre, le panier périmé sera
+/// revu au prochain passage. Refuser d'afficher la page pour ça serait pire que
+/// le mal.
+async fn purger_panier(repo: &dyn ICustomisationBasketRepository, player_id: &str) {
+    if let Err(e) = repo.delete(player_id).await {
+        tracing::error!("player_detail_controller purge panier {player_id}: {e:?}");
+    }
 }
 
 async fn load_player(state: &AppState, player_id: &str) -> Result<Player, Response> {
@@ -396,6 +488,65 @@ mod tests {
             });
         }
         player
+    }
+
+    // ── Choix de l'occupant du slot droit ─────────────────────────────────────
+
+    fn maintenant() -> time::OffsetDateTime {
+        time::OffsetDateTime::UNIX_EPOCH + time::Duration::days(100)
+    }
+
+    fn panier(age_heures: i64) -> CustomisationBasketState {
+        CustomisationBasketState {
+            player_id: "p1".into(),
+            space_id: "s1".into(),
+            state: serde_json::json!([]),
+            version: 1,
+            updated_at: maintenant() - time::Duration::hours(age_heures),
+        }
+    }
+
+    /// Un panier ouvert rouvre le mode pour qui a le droit — c'est ce qui rend
+    /// la customisation reprenable après un rechargement complet.
+    #[test]
+    fn un_panier_ouvert_rouvre_le_mode_pour_un_commissaire() {
+        assert_eq!(
+            choose_right_panel(true, Some(&panier(1)), maintenant()),
+            RightPanel::Customisation
+        );
+    }
+
+    /// Le même panier, vu par un coach : fiche classique. Le panier est propre
+    /// au joueur, pas à son auteur — sans cette condition le mode
+    /// administration apparaîtrait à qui n'a pas le droit de le voir.
+    #[test]
+    fn le_meme_panier_laisse_la_fiche_classique_a_un_coach() {
+        assert_eq!(
+            choose_right_panel(false, Some(&panier(1)), maintenant()),
+            RightPanel::Journal { abandoned: false }
+        );
+    }
+
+    /// Un panier de plus de 24 h ne rouvre rien : il est abandonné, et dit.
+    #[test]
+    fn un_panier_perime_est_abandonne_avec_son_message() {
+        assert_eq!(
+            choose_right_panel(true, Some(&panier(25)), maintenant()),
+            RightPanel::Journal { abandoned: true }
+        );
+        assert_eq!(
+            choose_right_panel(true, Some(&panier(23)), maintenant()),
+            RightPanel::Customisation
+        );
+    }
+
+    /// Pas de panier, pas de message d'abandon : il n'y avait rien à perdre.
+    #[test]
+    fn sans_panier_le_journal_ne_signale_rien() {
+        assert_eq!(
+            choose_right_panel(true, None, maintenant()),
+            RightPanel::Journal { abandoned: false }
+        );
     }
 
     #[test]

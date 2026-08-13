@@ -25,6 +25,9 @@ pub struct EvolutionJournalVm {
     pub spp_reserve: u32,
     pub evolution_log: Vec<EvolutionLogRowVm>,
     pub can_spend: bool,
+    /// Une saisie de customisation périmée vient d'être supprimée. Le dire
+    /// discrètement plutôt que de laisser croire qu'elle n'a jamais existé.
+    pub abandoned: bool,
     pub spp_spending_widget_url: String,
 }
 
@@ -132,10 +135,12 @@ impl IntoResponse for EvolutionJournalTemplate {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 pub struct EvolutionJournalParams {
     #[serde(default)]
     pub can_spend: bool,
+    #[serde(default)]
+    pub abandoned: bool,
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
@@ -171,6 +176,7 @@ pub async fn evolution_journal_widget(
         spp_reserve: player.spp_remaining(),
         evolution_log: evolution_log_vm(&events),
         can_spend: params.can_spend,
+        abandoned: params.abandoned,
         spp_spending_widget_url: AppRoutes::default()
             .players
             .spp_spending_widget(&space_id, &player_id),

@@ -3,6 +3,7 @@ use crate::app::players::ports::{
     ISkillCatalogPort, PositionAccessDto, PositionCatalogEntryDto, SkillCatalogEntryDto,
     SkillCostLevelDto, SppScaleDto,
 };
+use crate::app::references::domain::models::Skill;
 use crate::app::references::domain::port::IReferenceRepository;
 use std::sync::Arc;
 
@@ -16,27 +17,41 @@ impl SkillCatalogAdapter {
     }
 }
 
-impl ISkillCatalogPort for SkillCatalogAdapter {
-    fn find_skill(&self, skill_id: &str) -> Option<SkillCatalogEntryDto> {
-        let skill = self.reference_repo.find_skill_by_uid(skill_id)?;
-        Some(SkillCatalogEntryDto {
+impl SkillCatalogAdapter {
+    /// Le libellé humain de la catégorie, ou son identifiant à défaut — une
+    /// catégorie absente du référentiel doit rester lisible plutôt que vide.
+    fn category_label(&self, category_id: &str) -> String {
+        self.reference_repo
+            .list_skill_categories()
+            .iter()
+            .find(|c| c.id == category_id)
+            .map(|c| c.label.clone())
+            .unwrap_or_else(|| category_id.to_string())
+    }
+
+    fn to_dto(&self, skill: &Skill) -> SkillCatalogEntryDto {
+        SkillCatalogEntryDto {
             skill_id: skill.uid.clone(),
             name: skill.name.clone(),
             category: skill.category.clone(),
+            category_label: self.category_label(&skill.category),
+            description: skill.description.clone(),
             is_elite: skill.skill_type == "Élite",
-        })
+        }
+    }
+}
+
+impl ISkillCatalogPort for SkillCatalogAdapter {
+    fn find_skill(&self, skill_id: &str) -> Option<SkillCatalogEntryDto> {
+        let skill = self.reference_repo.find_skill_by_uid(skill_id)?;
+        Some(self.to_dto(skill))
     }
 
     fn list_all_skills(&self) -> Vec<SkillCatalogEntryDto> {
         self.reference_repo
             .list_skills()
             .iter()
-            .map(|skill| SkillCatalogEntryDto {
-                skill_id: skill.uid.clone(),
-                name: skill.name.clone(),
-                category: skill.category.clone(),
-                is_elite: skill.skill_type == "Élite",
-            })
+            .map(|skill| self.to_dto(skill))
             .collect()
     }
 

@@ -3,6 +3,7 @@ use crate::app::players::domain::match_impact::StatKind;
 use crate::app::players::domain::player::{Player, PlayerId};
 use crate::app::players::io::web::purchase_skill_controller::can_spend_spp;
 use crate::app::players::io::web::widgets::evolution_journal_widget::evolution_journal_widget;
+use crate::app::players::io::web::widgets::stat_display;
 use crate::app::players::ports::ISkillCatalogPort;
 use crate::app::players::use_cases::improvement_cost_service::resolve_stat_cost;
 use crate::app::players::use_cases::player_stats_service::{resolve_stats, ResolvedPlayerStats};
@@ -33,26 +34,6 @@ pub struct SppSpendingVm {
     pub stat_cards: Vec<StatCardVm>,
 }
 
-/// `players::ValueKpo` (retourné par le port catalogue) exprime en réalité des
-fn stat_defs() -> [(StatKind, &'static str, &'static str, bool); 5] {
-    // (stat, segment d'URL — cf. parse_stat(), label affiché, cible à atteindre (affichage "+"))
-    [
-        (StatKind::Ma, "ma", "MA", false),
-        (StatKind::St, "st", "ST", false),
-        (StatKind::Ag, "ag", "AG", true),
-        (StatKind::Pa, "pa", "PA", true),
-        (StatKind::Av, "av", "AV", true),
-    ]
-}
-
-fn display_stat(value: u8, is_target: bool) -> String {
-    if is_target {
-        format!("{value}+")
-    } else {
-        value.to_string()
-    }
-}
-
 fn next_stat_value(stat: StatKind, current: u8) -> u8 {
     match stat {
         StatKind::Ma | StatKind::St | StatKind::Av => current.saturating_add(1),
@@ -69,26 +50,26 @@ fn build_stat_cards(
     space_id: &str,
     player_id: &str,
 ) -> Vec<StatCardVm> {
-    stat_defs()
-        .into_iter()
-        .map(|(stat, segment, label, is_target)| {
-            let current = match stat {
+    stat_display::ALL
+        .iter()
+        .map(|d| {
+            let current = match d.stat {
                 StatKind::Ma => stats.ma,
                 StatKind::St => stats.st,
                 StatKind::Ag => stats.ag,
                 StatKind::Pa => stats.pa,
                 StatKind::Av => stats.av,
             };
-            let (cost, value_delta) = resolve_stat_cost(catalog, stat, level);
+            let (cost, value_delta) = resolve_stat_cost(catalog, d.stat, level);
             let cost = cost.into_inner();
             StatCardVm {
-                label,
-                current_display: display_stat(current, is_target),
-                next_display: display_stat(next_stat_value(stat, current), is_target),
+                label: d.label,
+                current_display: stat_display::format(current, d.is_target),
+                next_display: stat_display::format(next_stat_value(d.stat, current), d.is_target),
                 cost,
                 value_delta_kpo: value_delta.0,
                 can_afford: spp_remaining >= cost as u32,
-                increase_url: routes.players.increase_stat(space_id, player_id, segment),
+                increase_url: routes.players.increase_stat(space_id, player_id, d.key),
             }
         })
         .collect()
@@ -185,7 +166,7 @@ pub async fn spp_spending_widget(
     if !is_eligible(&state, &user, &space_id, &player).await {
         // Défense en profondeur : si l'URL est atteinte directement hors
         // contexte éligible, on retombe sur le journal en lecture seule.
-        let params = crate::app::players::io::web::widgets::evolution_journal_widget::EvolutionJournalParams { can_spend: false };
+        let params = crate::app::players::io::web::widgets::evolution_journal_widget::EvolutionJournalParams::default();
         return evolution_journal_widget(
             Path((space_id, player_id)),
             axum::extract::Query(params),
@@ -251,12 +232,6 @@ mod tests {
             starting_value: ValueKpo(50),
         };
         Player::from_events(&[created]).unwrap()
-    }
-
-    #[test]
-    fn display_stat_appends_plus_only_for_target_stats() {
-        assert_eq!(display_stat(7, false), "7");
-        assert_eq!(display_stat(3, true), "3+");
     }
 
     #[test]

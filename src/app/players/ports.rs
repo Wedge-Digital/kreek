@@ -155,6 +155,12 @@ pub struct SkillCatalogEntryDto {
     pub skill_id: String,
     pub name: String,
     pub category: String,
+    /// Libellé humain de la catégorie (« Général », « Force », …). Il vit dans
+    /// les données de `references` : le dériver ici obligerait `players` à
+    /// tenir sa propre table de traduction, qui divergerait au premier
+    /// référentiel ajouté.
+    pub category_label: String,
+    pub description: String,
     pub is_elite: bool,
 }
 

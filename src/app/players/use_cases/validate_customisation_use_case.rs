@@ -192,6 +192,8 @@ mod tests {
                     skill_id: uid.to_string(),
                     name: format!("Compétence {uid}"),
                     category: "GENERAL".into(),
+                    category_label: "Général".into(),
+                    description: format!("Description de {uid}"),
                     is_elite: false,
                 })
                 .collect()

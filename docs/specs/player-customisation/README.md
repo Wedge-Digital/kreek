@@ -7,8 +7,9 @@ commit `8d060e8`).
 
 Contexte : le bouton « ✎ Customiser » existe déjà dans `player-detail.html`,
 `disabled`, avec l'infobulle « Fonctionnalité à venir ». `can_customise` est
-déjà calculé par `player_detail_controller.rs`, mais sur un périmètre plus
-large que celui retenu ici.
+déjà calculé par `player_detail_controller.rs`, **et sur le bon périmètre** —
+`check_admin_rights` vérifie admin d'espace puis admin de compétition, sans le
+coach. Il n'y a donc rien à resserrer.
 
 ## Pages
 
@@ -97,9 +98,12 @@ parce que quelqu'un le prendra pour un bug s'il ne l'est pas.
 **Commissaire de ligue et admin d'espace uniquement.** Le coach de l'équipe ne
 peut ni soumettre, ni **voir** le mode.
 
-Resserrement par rapport à `can_customise` aujourd'hui, qui s'appuie sur
-`check_admin_rights` et inclut le coach — un coach pouvant s'ajouter des
-compétences gratuitement, ce ne serait pas la même fonctionnalité.
+`can_customise` le fait déjà : `check_admin_rights` vérifie admin d'espace puis
+admin de compétition, sans le coach. Une première rédaction de cette spec
+affirmait le contraire — confusion avec `can_spend_spp`, qui lui est
+explicitement « étendu au coach ». Rien n'est donc à resserrer, mais la règle
+mérite un test : elle ne tient aujourd'hui qu'à la composition d'une fonction
+que rien n'empêche d'élargir.
 
 **Traçabilité nominative** — chaque action est journalisée avec le nom du
 commissaire, comme l'annonce le bandeau du mode.

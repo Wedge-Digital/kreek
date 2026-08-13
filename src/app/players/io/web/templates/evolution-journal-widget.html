@@ -7,6 +7,12 @@
     </div>
   </div>
 
+  {% if vm.abandoned %}
+  <div class="journal-note">
+    Votre saisie de customisation de plus de 24 h a été abandonnée.
+  </div>
+  {% endif %}
+
   {% if vm.can_spend %}
   <button class="btn-toggle-spp"
           hx-get="{{ vm.spp_spending_widget_url }}"
