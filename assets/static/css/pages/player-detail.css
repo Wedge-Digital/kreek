@@ -182,6 +182,10 @@
 .mode-chip { display: inline-flex; align-items: center; gap: 4px; font-size: var(--text-tiny); font-weight: 700; padding: 2px 10px; border-radius: 20px; }
 .mode-chip-chosen { background: rgba(0,48,73,0.08); color: var(--main-blue); }
 .mode-chip-random { background: rgba(154,120,0,0.10); color: #9A7800; }
+/* Sert au journal des évolutions comme au panneau de customisation : elle vit
+   donc ici, avec les autres pastilles, et non dans le CSS du widget — que le
+   journal ne charge pas. */
+.mode-chip-custom { background: rgba(0,48,73,0.10); color: var(--main-blue); }
 .summary-cost  { font-weight: 700; color: #9A7800; }
 .summary-value { font-weight: 700; color: var(--green); }
 .summary-ref   { font-size: var(--text-tiny); color: var(--dark-3); }

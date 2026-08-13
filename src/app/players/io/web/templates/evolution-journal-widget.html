@@ -40,7 +40,7 @@
         {% for row in vm.evolution_log %}
         <tr>
           <td>{{ row.label }}</td>
-          <td><span class="mode-chip mode-chip-chosen">{{ row.mode_label }}</span></td>
+          <td><span class="mode-chip {{ row.mode_css }}">{{ row.mode_label }}</span></td>
           <td class="summary-cost">{{ row.cost }}</td>
           <td class="summary-value">{{ row.value }}</td>
           <td class="summary-ref">{{ row.origin }}</td>

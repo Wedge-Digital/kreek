@@ -15,9 +15,17 @@ use serde::Deserialize;
 pub struct EvolutionLogRowVm {
     pub label: String,
     pub mode_label: &'static str,
+    /// Classe de la pastille : la customisation ne se confond pas visuellement
+    /// avec une progression normale.
+    pub mode_css: &'static str,
+    /// Vides — et non « 0 » — là où la notion n'existe pas : une compétence
+    /// customisée ne coûte aucun SPP et n'ajoute aucune valeur. Un zéro
+    /// laisserait croire à un calcul là où il n'y en a pas.
     pub cost: String,
     pub value: String,
-    pub origin: &'static str,
+    /// Dynamique depuis la customisation : l'origine nomme le commissaire, ce
+    /// qui est toute la raison d'être de la traçabilité posée en phase 1.
+    pub origin: String,
 }
 
 pub struct EvolutionJournalVm {
@@ -76,11 +84,63 @@ fn evolution_log_row(event: &PlayerDomainEvent) -> Option<EvolutionLogRowVm> {
         } => Some(EvolutionLogRowVm {
             label: format!("Caractéristique : {}", stat_label(*stat)),
             mode_label: "Choisie",
+            mode_css: "mode-chip-chosen",
             cost: format!("{} SPP", spp_cost.into_inner()),
             value: format!("+{} kPo", value_delta.0),
-            origin: "Progression normale",
+            origin: "Progression normale".to_string(),
+        }),
+        PlayerDomainEvent::PlayerSkillCustomised {
+            skill_name, author, ..
+        } => Some(ligne_customisee(skill_name.to_string(), author)),
+        PlayerDomainEvent::PlayerStatCustomised {
+            stat,
+            offset,
+            author,
+            ..
+        } => Some(EvolutionLogRowVm {
+            label: format!(
+                "Caractéristique : {} {}",
+                stat_label(*stat),
+                signe(*offset as i32)
+            ),
+            ..ligne_customisee(String::new(), author)
+        }),
+        PlayerDomainEvent::PlayerValueCustomised { delta, author, .. } => Some(EvolutionLogRowVm {
+            label: "Prix ajusté".to_string(),
+            value: format!("{} kPo", signe(delta.into_inner())),
+            ..ligne_customisee(String::new(), author)
+        }),
+        PlayerDomainEvent::PlayerSppCustomised { amount, author, .. } => Some(EvolutionLogRowVm {
+            label: "SPP crédités".to_string(),
+            cost: format!("+{} SPP", amount.into_inner()),
+            ..ligne_customisee(String::new(), author)
         }),
         _ => None,
+    }
+}
+
+/// Le socle commun des quatre familles : colonnes vides, mode « Customisation »,
+/// et l'auteur nommé. Chaque famille ne surcharge que ce qui la distingue.
+fn ligne_customisee(label: String, author: &str) -> EvolutionLogRowVm {
+    EvolutionLogRowVm {
+        label,
+        mode_label: "🛠️ Customisation",
+        mode_css: "mode-chip-custom",
+        cost: String::new(),
+        value: String::new(),
+        origin: format!("Customisation par {author}"),
+    }
+}
+
+/// Signe explicite dans les deux sens : « +10 » se lit comme un ajout, « 10 »
+/// se lirait comme une valeur.
+///
+/// Prend un `i32` : `KpoDelta` en est un, et le réduire en `i8` ferait d'un
+/// −300 un +212 sans que rien ne proteste.
+fn signe(v: i32) -> String {
+    match v >= 0 {
+        true => format!("+{v}"),
+        false => v.to_string(),
     }
 }
 
@@ -96,12 +156,17 @@ fn skill_row(
         AcquisitionMode::Random => "Aléatoire",
         AcquisitionMode::Customised => "Customisation",
     };
+    let mode_css = match mode {
+        AcquisitionMode::Random => "mode-chip-random",
+        _ => "mode-chip-chosen",
+    };
     EvolutionLogRowVm {
         label: skill_name,
         mode_label,
+        mode_css,
         cost: format!("{} SPP", spp_cost.into_inner()),
         value: format!("+{} kPo", value_delta.0),
-        origin,
+        origin: origin.to_string(),
     }
 }
 
@@ -205,7 +270,7 @@ async fn load_player(state: &AppState, player_id: &str) -> Result<Player, Respon
 mod tests {
     use super::*;
     use crate::app::players::domain::player::TeamId;
-    use crate::app::players::domain::value_objects::{SkillId, SkillName};
+    use crate::app::players::domain::value_objects::{CustomisationId, SkillId, SkillName};
     use crate::app::shared_kernel::identity::ids::SpaceId;
 
     fn initial_skill_event() -> PlayerDomainEvent {
@@ -285,6 +350,101 @@ mod tests {
         assert_eq!(rows[0].origin, "Compétence initiale bonus");
         assert_eq!(rows[1].origin, "Progression normale");
         assert_eq!(rows[2].label, "Caractéristique : Force");
+    }
+
+    // ── Customisations ────────────────────────────────────────────────────────
+
+    fn ids() -> (PlayerId, TeamId, CustomisationId) {
+        (
+            PlayerId("p1".into()),
+            TeamId("t1".into()),
+            CustomisationId::try_new("c1".to_string()).unwrap(),
+        )
+    }
+
+    /// Chaque famille produit sa ligne, et **nomme son commissaire** : c'est
+    /// toute la raison d'être de la traçabilité posée en phase 1.
+    #[test]
+    fn chaque_famille_de_customisation_produit_sa_ligne_avec_son_auteur() {
+        let (player_id, team_id, customisation_id) = ids();
+        let lignes = evolution_log_vm(&[
+            PlayerDomainEvent::PlayerSkillCustomised {
+                player_id: player_id.clone(),
+                team_id: team_id.clone(),
+                customisation_id: customisation_id.clone(),
+                skill_id: SkillId::try_new("BLOCK".to_string()).unwrap(),
+                skill_name: SkillName::try_new("Bloc".to_string()).unwrap(),
+                author: "Bagouze".into(),
+            },
+            PlayerDomainEvent::PlayerStatCustomised {
+                player_id: player_id.clone(),
+                team_id: team_id.clone(),
+                customisation_id: customisation_id.clone(),
+                stat: StatKind::Ag,
+                offset: -1,
+                author: "Bagouze".into(),
+            },
+            PlayerDomainEvent::PlayerValueCustomised {
+                player_id: player_id.clone(),
+                team_id: team_id.clone(),
+                customisation_id: customisation_id.clone(),
+                delta: crate::app::players::domain::value_objects::KpoDelta::try_new(-15).unwrap(),
+                author: "Bagouze".into(),
+            },
+            PlayerDomainEvent::PlayerSppCustomised {
+                player_id,
+                team_id,
+                customisation_id,
+                amount: crate::app::players::domain::value_objects::SppAmount::try_new(5).unwrap(),
+                author: "Bagouze".into(),
+            },
+        ]);
+
+        assert_eq!(lignes.len(), 4);
+        assert_eq!(lignes[0].label, "Bloc");
+        assert_eq!(lignes[1].label, "Caractéristique : Agilité -1");
+        assert_eq!(lignes[2].label, "Prix ajusté");
+        assert_eq!(lignes[3].label, "SPP crédités");
+
+        for ligne in &lignes {
+            assert_eq!(ligne.origin, "Customisation par Bagouze");
+            assert_eq!(ligne.mode_css, "mode-chip-custom");
+        }
+    }
+
+    /// Une colonne vide, jamais un zéro : une compétence customisée ne coûte
+    /// aucun SPP et n'ajoute aucune valeur. Un « 0 » laisserait croire à un
+    /// calcul là où il n'y en a pas.
+    #[test]
+    fn les_colonnes_sans_notion_restent_vides() {
+        let (player_id, team_id, customisation_id) = ids();
+        let lignes = evolution_log_vm(&[PlayerDomainEvent::PlayerSkillCustomised {
+            player_id,
+            team_id,
+            customisation_id,
+            skill_id: SkillId::try_new("BLOCK".to_string()).unwrap(),
+            skill_name: SkillName::try_new("Bloc".to_string()).unwrap(),
+            author: "Bagouze".into(),
+        }]);
+
+        assert_eq!(lignes[0].cost, "");
+        assert_eq!(lignes[0].value, "");
+    }
+
+    /// `KpoDelta` est un `i32`. Le réduire en `i8` pour formater son signe
+    /// ferait d'un −300 un +212, sans que rien ne proteste.
+    #[test]
+    fn un_gros_ajustement_de_prix_ne_deborde_pas() {
+        let (player_id, team_id, customisation_id) = ids();
+        let lignes = evolution_log_vm(&[PlayerDomainEvent::PlayerValueCustomised {
+            player_id,
+            team_id,
+            customisation_id,
+            delta: crate::app::players::domain::value_objects::KpoDelta::try_new(-300).unwrap(),
+            author: "Bagouze".into(),
+        }]);
+
+        assert_eq!(lignes[0].value, "-300 kPo");
     }
 
     #[test]

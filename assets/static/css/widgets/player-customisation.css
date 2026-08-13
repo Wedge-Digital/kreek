@@ -114,7 +114,6 @@
   margin-bottom: var(--p1);
 }
 .spp-summary-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); }
-.mode-chip-custom { background: rgba(0,48,73,0.10); color: var(--main-blue); }
 .mode-chip-icon { display: inline-flex; align-items: center; line-height: 1; }
 .btn-cancel-entry {
   font-size: var(--text-tiny); color: var(--dark-3); cursor: pointer; background: none;
