@@ -73,14 +73,43 @@ désormais le lire en SQL.
 
 ## Checklist
 
-- [ ] Migration des cinq colonnes
-- [ ] Recalcul du cumul dans `upsert_player_projection`, dans la transaction
-- [ ] Les cinq deltas exposés par `projection_repository`
-- [ ] Test repository : une augmentation SPP écrit le delta attendu
-- [ ] Test repository : une séquelle écrit un delta **négatif**
-- [ ] Test repository : `MatchImpactReverted` **ramène** le delta à sa valeur
+- [x] Migration des cinq colonnes
+- [x] Recalcul du cumul dans `upsert_player_projection`, dans la transaction
+- [x] Les cinq deltas exposés par `projection_repository`
+- [x] Test repository : une augmentation SPP écrit le delta attendu
+- [x] Test repository : une séquelle écrit un delta **négatif**
+- [x] Test repository : `MatchImpactReverted` **ramène** le delta à sa valeur
       d'avant match — le test qui justifie le recalcul
-- [ ] Test repository : une customisation de caractéristique écrit son offset
-- [ ] Test repository : deux sources cumulent (séquelle + augmentation SPP)
-- [ ] Test : la projection est identique après rejeu complet des événements
-- [ ] `make test` complet — la carte touche des chemins existants
+- [x] Test repository : une customisation de caractéristique écrit son offset
+- [x] Test repository : deux sources cumulent (séquelle + augmentation SPP)
+- [x] Test : la projection est identique après rejeu complet des événements
+- [x] `make test` complet — la carte touche des chemins existants
+
+---
+
+## Notes d'implémentation
+
+**`load_events_in_tx` existait déjà**, introduit pour la compensation de match
+et documenté précisément pour ce besoin — « relit le flux du joueur dans la
+transaction en cours, pour recalculer les champs projetés après une
+compensation ». Le recalcul n'a eu qu'à le réutiliser.
+
+**Le recalcul est déclenché sélectivement** par `event_touches_stats()` : un
+renommage ou un changement de maillot ne relit pas le flux. Quatre événements
+le déclenchent — augmentation SPP, customisation de caractéristique, blessure,
+et compensation de match.
+
+**Collision de migration évitée de justesse** : `20260813000001` était déjà pris
+par la migration `display_order` de la carte 291. Repérée en listant le dossier,
+pas par un garde-fou — rien dans le projet n'empêche de recommencer. Ça
+mériterait un contrôle dans `check-arch`.
+
+**Les tests construisent l'événement d'augmentation directement**, sans passer
+par `increase_stat` : le joueur seedé n'a aucun SPP, et la garde de solde
+ajoutait une précondition sans rapport avec ce que ces tests vérifient.
+
+## Non fait, sciemment
+
+Le recalcul se répète par entrée dans `append_batch` — sur un lot de
+customisations d'un même joueur, c'est N relectures pour un résultat identique.
+Mesurable seulement sur de gros lots ; la simplicité a primé.

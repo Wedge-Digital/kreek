@@ -420,17 +420,81 @@ pub async fn upsert_player_projection(
             .await
             .map_err(RepositoryError::Database)?;
         }
-        // Projection câblée en carte 303, avec les colonnes de deltas et le
-        // recalcul depuis l'agrégat. Rien ne peut émettre ces quatre événements
-        // avant la carte 306 (use cases), elle-même dépendante de la 303 : ce
-        // chemin est mort aujourd'hui. `unreachable!` plutôt qu'un no-op
-        // silencieux — une projection qui avale une écriture sans rien dire est
-        // l'étape sautée qui rassure au lieu d'échouer.
-        PlayerDomainEvent::PlayerSkillCustomised { .. }
-        | PlayerDomainEvent::PlayerStatCustomised { .. }
-        | PlayerDomainEvent::PlayerValueCustomised { .. }
-        | PlayerDomainEvent::PlayerSppCustomised { .. } => {
-            unreachable!("customisation : projection à câbler en carte 303")
+        // ── Customisation ─────────────────────────────────────────────────
+        // La compétence rejoint les acquises **sans valeur** : seul le prix
+        // déplace la valeur d'équipe. `value_kpo` n'est donc pas touché ici,
+        // contrairement à `PlayerSkillPurchased`.
+        PlayerDomainEvent::PlayerSkillCustomised {
+            player_id,
+            skill_id,
+            skill_name,
+            ..
+        } => {
+            let acq = AcquiredSkillProjection {
+                skill_id: skill_id.as_ref().to_string(),
+                skill_name: skill_name.as_ref().to_string(),
+                category_css: String::new(),
+                mode: "Customised".to_string(),
+                spp_cost: 0,
+            };
+            let acq_json = serde_json::to_value(&acq).map_err(RepositoryError::Serialization)?;
+
+            sqlx::query(
+                "UPDATE players_proj
+                 SET acquired_skills = acquired_skills || jsonb_build_array($1::jsonb),
+                     version = version + 1
+                 WHERE player_id = $2",
+            )
+            .bind(&acq_json)
+            .bind(&player_id.0)
+            .execute(&mut **tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+        }
+
+        // Rien à écrire directement : le cumul des caractéristiques est reposé
+        // en fin de fonction, par recalcul depuis l'agrégat.
+        PlayerDomainEvent::PlayerStatCustomised { player_id, .. } => {
+            sqlx::query("UPDATE players_proj SET version = version + 1 WHERE player_id = $1")
+                .bind(&player_id.0)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+        }
+
+        // `GREATEST(…, 0)` : le plancher est une règle du panier, mais la
+        // projection ne doit pas pouvoir devenir négative si un événement
+        // historique le franchissait — `value_kpo` est un entier non signé côté
+        // domaine.
+        PlayerDomainEvent::PlayerValueCustomised {
+            player_id, delta, ..
+        } => {
+            sqlx::query(
+                "UPDATE players_proj
+                 SET value_kpo = GREATEST(value_kpo + $2, 0),
+                     version = version + 1
+                 WHERE player_id = $1",
+            )
+            .bind(&player_id.0)
+            .bind(delta.into_inner())
+            .execute(&mut **tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+        }
+
+        PlayerDomainEvent::PlayerSppCustomised {
+            player_id, amount, ..
+        } => {
+            sqlx::query(
+                "UPDATE players_proj
+                 SET spp = spp + $2, version = version + 1
+                 WHERE player_id = $1",
+            )
+            .bind(&player_id.0)
+            .bind(amount.into_inner() as i32)
+            .execute(&mut **tx)
+            .await
+            .map_err(RepositoryError::Database)?;
         }
         PlayerDomainEvent::PlayerReordered {
             player_id,
@@ -450,7 +514,92 @@ pub async fn upsert_player_projection(
         }
     }
 
+    if event_touches_stats(event) {
+        let (player_id, _) = player_and_team_id(event);
+        let player_id = player_id.to_string();
+        recompute_stat_deltas(tx, &player_id).await?;
+    }
+
     Ok(())
+}
+
+/// Les événements qui peuvent déplacer une caractéristique. Le recalcul n'est
+/// déclenché que par eux : il coûte une relecture du flux du joueur, inutile
+/// pour un renommage ou un changement de maillot.
+///
+/// `MatchImpactReverted` en fait partie, et c'est tout l'enjeu — il défait des
+/// séquelles sans dire lesquelles.
+fn event_touches_stats(event: &PlayerDomainEvent) -> bool {
+    matches!(
+        event,
+        PlayerDomainEvent::PlayerStatIncreased { .. }
+            | PlayerDomainEvent::PlayerStatCustomised { .. }
+            | PlayerDomainEvent::InjurySustained { .. }
+            | PlayerDomainEvent::MatchImpactReverted { .. }
+    )
+}
+
+/// Repose le cumul des ajustements de caractéristiques, **recalculé** depuis
+/// l'agrégat plutôt qu'incrémenté.
+///
+/// Le recalcul est ce qui rend la projection insensible à l'ordre, aux rejeux
+/// et aux corrections de match : un cumul incrémenté aurait exigé que
+/// `MatchImpactReverted` porte les montants à retrancher, alors qu'il est mince
+/// à dessein. `Player::from_events` sait déjà le défaire — c'est sa raison
+/// d'être.
+///
+/// Aucun port n'entre ici : le cumul est un **delta**, il ne dépend que des
+/// événements du joueur. Une valeur absolue aurait exigé la base du poste, donc
+/// `references`.
+async fn recompute_stat_deltas(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    player_id: &str,
+) -> Result<(), RepositoryError> {
+    let events = load_events_in_tx(tx, player_id).await?;
+    let Some(player) = Player::from_events(&events) else {
+        return Ok(());
+    };
+
+    let mut deltas: HashMap<&'static str, i16> = HashMap::new();
+    for adj in &player.stat_adjustments {
+        // Un malus va dans le sens inverse d'un cran d'amélioration.
+        *deltas.entry(stat_column(adj.stat)).or_default() -=
+            adj.stat.improvement_step() as i16 * adj.malus.into_inner() as i16;
+    }
+    for inc in &player.stat_increases {
+        *deltas.entry(stat_column(inc.stat)).or_default() += inc.stat.improvement_step() as i16;
+    }
+    for custo in &player.stat_customisations {
+        *deltas.entry(stat_column(custo.stat)).or_default() += custo.offset as i16;
+    }
+
+    sqlx::query(
+        "UPDATE players_proj
+         SET ma_delta = $2, st_delta = $3, ag_delta = $4, pa_delta = $5, av_delta = $6
+         WHERE player_id = $1",
+    )
+    .bind(player_id)
+    .bind(deltas.get("ma").copied().unwrap_or(0))
+    .bind(deltas.get("st").copied().unwrap_or(0))
+    .bind(deltas.get("ag").copied().unwrap_or(0))
+    .bind(deltas.get("pa").copied().unwrap_or(0))
+    .bind(deltas.get("av").copied().unwrap_or(0))
+    .execute(&mut **tx)
+    .await
+    .map_err(RepositoryError::Database)?;
+
+    Ok(())
+}
+
+fn stat_column(stat: crate::app::players::domain::match_impact::StatKind) -> &'static str {
+    use crate::app::players::domain::match_impact::StatKind;
+    match stat {
+        StatKind::Ma => "ma",
+        StatKind::St => "st",
+        StatKind::Ag => "ag",
+        StatKind::Pa => "pa",
+        StatKind::Av => "av",
+    }
 }
 
 /// Statut de participation projeté pour un type de blessure, miroir de la règle

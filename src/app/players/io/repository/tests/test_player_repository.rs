@@ -2,10 +2,12 @@
 
 use crate::app::players::domain::events::PlayerDomainEvent;
 use crate::app::players::domain::match_impact::{
-    InjuryType, MatchContext, MatchReportId, RoundId, SppEarned,
+    InjuryType, MatchContext, MatchReportId, RoundId, SppEarned, StatKind,
 };
 use crate::app::players::domain::player::{Player, PlayerId, Spp, TeamId, ValueKpo};
-use crate::app::players::domain::value_objects::{JerseyVo, PositionNameVo, RosterLineId};
+use crate::app::players::domain::value_objects::{
+    JerseyVo, PositionNameVo, RosterLineId, SkillId, SkillName,
+};
 use crate::app::players::io::repository::player_repository::PgPlayerRepository;
 use crate::app::players::io::repository::projection_repository::PgPlayerProjectionRepository;
 use crate::app::players::ports::{IPlayerProjectionRepository, IPlayerRepository};
@@ -663,4 +665,296 @@ async fn un_joueur_ordonne_passe_avant_un_joueur_sans_ordre(pool: PgPool) {
         vec!["avec", "sans"],
         "le joueur réordonné doit précéder celui qui n'a pas d'ordre"
     );
+}
+
+// ── Deltas de caractéristiques en projection (carte 303) ─────────────────────
+
+use crate::app::players::domain::value_objects::{
+    CustomisationId, KpoDelta, SppAmount, SppCost, StatCrans,
+};
+
+async fn deltas(pool: &PgPool, player_id: &str) -> (i16, i16, i16, i16, i16) {
+    sqlx::query_as(
+        "SELECT ma_delta, st_delta, ag_delta, pa_delta, av_delta
+         FROM players_proj WHERE player_id = $1",
+    )
+    .bind(player_id)
+    .fetch_one(pool)
+    .await
+    .unwrap()
+}
+
+/// Construit l'événement d'augmentation **sans passer par la garde de solde** :
+/// ces tests portent sur la projection, et exiger un solde suffisant y
+/// ajouterait une précondition sans rapport avec ce qu'ils vérifient.
+fn augmentation(joueur: &PlayerId, team_id: &TeamId, stat: StatKind) -> PlayerDomainEvent {
+    PlayerDomainEvent::PlayerStatIncreased {
+        player_id: joueur.clone(),
+        team_id: team_id.clone(),
+        stat,
+        spp_cost: SppCost::try_new(6).unwrap(),
+        value_delta: ValueKpo(0),
+    }
+}
+
+fn custo_id(v: &str) -> CustomisationId {
+    CustomisationId::try_new(v.to_string()).unwrap()
+}
+
+/// Une augmentation SPP écrit son cran dans le sens de la caractéristique :
+/// MV monte, AG descend.
+#[sqlx::test]
+async fn une_augmentation_spp_ecrit_le_delta_dans_le_bon_sens(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let team_id = TeamId("t-delta".into());
+    let joueur = PlayerId("p".into());
+    let p = seed_player(&repo, &joueur, &team_id).await;
+
+    let event = augmentation(&joueur, &team_id, StatKind::Ma);
+    repo.append(&joueur, &team_id, &event, 2).await.unwrap();
+    assert_eq!(deltas(&pool, &joueur.0).await.0, 1, "MV monte");
+
+    let p = repo.find_by_id(&joueur).await.unwrap().unwrap();
+    let event = augmentation(&joueur, &team_id, StatKind::Ag);
+    repo.append(&joueur, &team_id, &event, 3).await.unwrap();
+    assert_eq!(deltas(&pool, &joueur.0).await.2, -1, "AG descend");
+}
+
+/// Une séquelle est l'exact inverse d'un cran d'amélioration.
+#[sqlx::test]
+async fn une_sequelle_ecrit_un_delta_negatif(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let team_id = TeamId("t-sequelle".into());
+    let joueur = PlayerId("p".into());
+    seed_player(&repo, &joueur, &team_id).await;
+
+    let event = PlayerDomainEvent::InjurySustained {
+        player_id: joueur.clone(),
+        team_id: team_id.clone(),
+        context: sample_context(),
+        injury_type: InjuryType::Sequel { stat: StatKind::Ma },
+    };
+    repo.append(&joueur, &team_id, &event, 2).await.unwrap();
+
+    // MV perd un point : le malus va dans le sens inverse de l'amélioration.
+    assert_eq!(deltas(&pool, &joueur.0).await.0, -1);
+}
+
+/// **Le test qui justifie le recalcul.** Une compensation de match ramène le
+/// delta à sa valeur d'avant, alors que l'événement ne porte aucun montant à
+/// retrancher — il est mince à dessein.
+#[sqlx::test]
+async fn une_compensation_de_match_ramene_le_delta_a_sa_valeur_d_avant(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let team_id = TeamId("t-revert".into());
+    let joueur = PlayerId("p".into());
+    let p = seed_player(&repo, &joueur, &team_id).await;
+
+    // Une augmentation achetée avant le match : elle doit survivre à la
+    // compensation, contrairement à la séquelle.
+    let event = augmentation(&joueur, &team_id, StatKind::St);
+    repo.append(&joueur, &team_id, &event, 2).await.unwrap();
+    assert_eq!(deltas(&pool, &joueur.0).await.1, 1);
+
+    let event = PlayerDomainEvent::InjurySustained {
+        player_id: joueur.clone(),
+        team_id: team_id.clone(),
+        context: sample_context(),
+        injury_type: InjuryType::Sequel { stat: StatKind::St },
+    };
+    repo.append(&joueur, &team_id, &event, 3).await.unwrap();
+    assert_eq!(
+        deltas(&pool, &joueur.0).await.1,
+        0,
+        "la séquelle annule le cran"
+    );
+
+    let event = PlayerDomainEvent::MatchImpactReverted {
+        player_id: joueur.clone(),
+        team_id: team_id.clone(),
+        match_report_id: MatchReportId("mr1".into()),
+    };
+    repo.append(&joueur, &team_id, &event, 4).await.unwrap();
+
+    assert_eq!(
+        deltas(&pool, &joueur.0).await.1,
+        1,
+        "la compensation défait la séquelle, pas l'augmentation"
+    );
+}
+
+#[sqlx::test]
+async fn une_customisation_de_caracteristique_ecrit_son_offset(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let team_id = TeamId("t-custo".into());
+    let joueur = PlayerId("p".into());
+    let p = seed_player(&repo, &joueur, &team_id).await;
+
+    // Améliorer l'agilité de deux crans : offset brut de -2.
+    let event = p
+        .customise_stat(
+            custo_id("c1"),
+            StatKind::Ag,
+            StatCrans::try_new(2).unwrap(),
+            "Bagouze".into(),
+        )
+        .unwrap();
+    repo.append(&joueur, &team_id, &event, 2).await.unwrap();
+
+    assert_eq!(deltas(&pool, &joueur.0).await.2, -2);
+}
+
+/// Les trois sources se cumulent sur la même caractéristique.
+#[sqlx::test]
+async fn les_trois_sources_se_cumulent(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let team_id = TeamId("t-cumul".into());
+    let joueur = PlayerId("p".into());
+    let p = seed_player(&repo, &joueur, &team_id).await;
+
+    let event = augmentation(&joueur, &team_id, StatKind::Ma);
+    repo.append(&joueur, &team_id, &event, 2).await.unwrap();
+
+    let event = PlayerDomainEvent::InjurySustained {
+        player_id: joueur.clone(),
+        team_id: team_id.clone(),
+        context: sample_context(),
+        injury_type: InjuryType::Sequel { stat: StatKind::Ma },
+    };
+    repo.append(&joueur, &team_id, &event, 3).await.unwrap();
+
+    let p = repo.find_by_id(&joueur).await.unwrap().unwrap();
+    let event = p
+        .customise_stat(
+            custo_id("c2"),
+            StatKind::Ma,
+            StatCrans::try_new(3).unwrap(),
+            "Bagouze".into(),
+        )
+        .unwrap();
+    repo.append(&joueur, &team_id, &event, 4).await.unwrap();
+
+    // +1 (augmentation) -1 (séquelle) +3 (customisation) = +3
+    assert_eq!(deltas(&pool, &joueur.0).await.0, 3);
+}
+
+/// Une compétence customisée rejoint les acquises **sans** déplacer la valeur —
+/// c'est la règle la plus contre-intuitive de la fonctionnalité.
+#[sqlx::test]
+async fn une_competence_customisee_ne_deplace_pas_la_valeur(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool.clone());
+    let team_id = TeamId("t-skill".into());
+    let joueur = PlayerId("p".into());
+    let p = seed_player(&repo, &joueur, &team_id).await;
+
+    let avant = proj.find_by_id(&joueur.0).await.unwrap().unwrap().value_kpo;
+
+    let event = p
+        .customise_skill(
+            custo_id("c3"),
+            SkillId::try_new("BLOCK".to_string()).unwrap(),
+            SkillName::try_new("Bloc".to_string()).unwrap(),
+            "Bagouze".into(),
+        )
+        .unwrap();
+    repo.append(&joueur, &team_id, &event, 2).await.unwrap();
+
+    let apres = proj.find_by_id(&joueur.0).await.unwrap().unwrap();
+    assert_eq!(apres.value_kpo, avant, "la valeur ne doit pas bouger");
+    assert_eq!(apres.acquired_skills.len(), 1);
+    assert_eq!(apres.acquired_skills[0].mode, "Customised");
+}
+
+/// Le prix, lui, la déplace — et ne peut pas passer sous zéro en projection.
+#[sqlx::test]
+async fn le_prix_customise_deplace_la_valeur_sans_passer_sous_zero(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool.clone());
+    let team_id = TeamId("t-prix".into());
+    let joueur = PlayerId("p".into());
+    let p = seed_player(&repo, &joueur, &team_id).await;
+
+    let event = p
+        .customise_value(
+            custo_id("c4"),
+            KpoDelta::try_new(-40).unwrap(),
+            "Bagouze".into(),
+        )
+        .unwrap();
+    repo.append(&joueur, &team_id, &event, 2).await.unwrap();
+    assert_eq!(
+        proj.find_by_id(&joueur.0).await.unwrap().unwrap().value_kpo,
+        60
+    );
+
+    let p = repo.find_by_id(&joueur).await.unwrap().unwrap();
+    let event = p
+        .customise_value(
+            custo_id("c5"),
+            KpoDelta::try_new(-500).unwrap(),
+            "Bagouze".into(),
+        )
+        .unwrap();
+    repo.append(&joueur, &team_id, &event, 3).await.unwrap();
+    assert_eq!(
+        proj.find_by_id(&joueur.0).await.unwrap().unwrap().value_kpo,
+        0
+    );
+}
+
+#[sqlx::test]
+async fn les_spp_customises_s_ajoutent_en_projection(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool.clone());
+    let team_id = TeamId("t-spp".into());
+    let joueur = PlayerId("p".into());
+    let p = seed_player(&repo, &joueur, &team_id).await;
+
+    let event = p
+        .customise_spp(custo_id("c6"), SppAmount::try_new(15).unwrap(), "B".into())
+        .unwrap();
+    repo.append(&joueur, &team_id, &event, 2).await.unwrap();
+
+    assert_eq!(proj.find_by_id(&joueur.0).await.unwrap().unwrap().spp, 15);
+}
+
+/// Le recalcul rend la projection insensible à l'ordre : appendre les mêmes
+/// événements dans un ordre différent donne le même cumul.
+#[sqlx::test]
+async fn le_cumul_est_insensible_a_l_ordre(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let team_id = TeamId("t-ordre".into());
+
+    let a = PlayerId("a".into());
+    seed_player(&repo, &a, &team_id).await;
+    let e = augmentation(&a, &team_id, StatKind::Pa);
+    repo.append(&a, &team_id, &e, 2).await.unwrap();
+    let pa = repo.find_by_id(&a).await.unwrap().unwrap();
+    let e = pa
+        .customise_stat(
+            custo_id("x"),
+            StatKind::Pa,
+            StatCrans::try_new(1).unwrap(),
+            "B".into(),
+        )
+        .unwrap();
+    repo.append(&a, &team_id, &e, 3).await.unwrap();
+
+    let b = PlayerId("b".into());
+    let pb = seed_player(&repo, &b, &team_id).await;
+    let e = pb
+        .customise_stat(
+            custo_id("y"),
+            StatKind::Pa,
+            StatCrans::try_new(1).unwrap(),
+            "B".into(),
+        )
+        .unwrap();
+    repo.append(&b, &team_id, &e, 2).await.unwrap();
+    let e = augmentation(&b, &team_id, StatKind::Pa);
+    repo.append(&b, &team_id, &e, 3).await.unwrap();
+
+    assert_eq!(deltas(&pool, &a.0).await.3, deltas(&pool, &b.0).await.3);
+    assert_eq!(deltas(&pool, &a.0).await.3, -2);
 }

@@ -48,6 +48,16 @@ pub struct PlayerProjection {
     pub spp: i32,
     pub value_kpo: i32,
     pub participation_status: String,
+
+    /// Cumul des ajustements de caractéristiques, toutes sources confondues —
+    /// séquelles, augmentations SPP, customisations. Ce sont des **deltas** :
+    /// la base du poste vit dans `references`, et c'est ce qui permet à la
+    /// projection de s'écrire sans interroger ce BC.
+    pub ma_delta: i16,
+    pub st_delta: i16,
+    pub ag_delta: i16,
+    pub pa_delta: i16,
+    pub av_delta: i16,
 }
 
 #[async_trait]

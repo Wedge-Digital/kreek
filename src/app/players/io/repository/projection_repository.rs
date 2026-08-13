@@ -24,7 +24,7 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
         let rows = sqlx::query(
             "SELECT player_id, team_id, space_id, position_name, roster_line_id,
                     personal_name, jersey, base_skills, acquired_skills, spp, value_kpo,
-                    participation_status
+                    participation_status, ma_delta, st_delta, ag_delta, pa_delta, av_delta
              FROM players_proj
              WHERE team_id = $1 AND membership = 'Active'
              -- L'ordre choisi par le coach prime ; un joueur jamais réordonné
@@ -52,6 +52,11 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
                     position_name: r.get("position_name"),
                     roster_line_id: r.get("roster_line_id"),
                     personal_name: r.get("personal_name"),
+                    ma_delta: r.get("ma_delta"),
+                    st_delta: r.get("st_delta"),
+                    ag_delta: r.get("ag_delta"),
+                    pa_delta: r.get("pa_delta"),
+                    av_delta: r.get("av_delta"),
                     jersey: r.get("jersey"),
                     base_skills,
                     acquired_skills,
@@ -70,7 +75,7 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
         let row = sqlx::query(
             "SELECT player_id, team_id, space_id, position_name, roster_line_id,
                     personal_name, jersey, base_skills, acquired_skills, spp, value_kpo,
-                    participation_status
+                    participation_status, ma_delta, st_delta, ag_delta, pa_delta, av_delta
              FROM players_proj WHERE player_id = $1",
         )
         .bind(player_id)
@@ -92,6 +97,11 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
                 position_name: r.get("position_name"),
                 roster_line_id: r.get("roster_line_id"),
                 personal_name: r.get("personal_name"),
+                ma_delta: r.get("ma_delta"),
+                st_delta: r.get("st_delta"),
+                ag_delta: r.get("ag_delta"),
+                pa_delta: r.get("pa_delta"),
+                av_delta: r.get("av_delta"),
                 jersey: r.get("jersey"),
                 base_skills,
                 acquired_skills,
