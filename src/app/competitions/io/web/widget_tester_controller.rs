@@ -1,7 +1,5 @@
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::app::shared_kernel::identity::space_definition::SpaceDefinition;
-use crate::app::shared_kernel::identity::space_name::SpaceName;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::State;
@@ -25,18 +23,9 @@ impl IntoResponse for CompetitionsWidgetTesterTemplate {
 }
 
 pub async fn get_competitions_widget_tester(State(state): State<AppState>) -> impl IntoResponse {
-    let spaces = state
-        .spaces
-        .space_repository
-        .find_all()
-        .await
-        .unwrap_or_default()
-        .into_iter()
-        .map(|s| SpaceDefinition {
-            id: SpaceId::try_new(&s.id).expect(""),
-            name: SpaceName::try_new(&s.name).expect(""),
-        })
-        .collect();
+    // Via le port ACL, et non `state.spaces` : `competitions` n'a pas à lire le
+    // repository d'un autre BC, fût-ce depuis une page de test (carte 296).
+    let spaces = state.competitions.space_member_port.find_all_spaces().await;
 
     CompetitionsWidgetTesterTemplate {
         routes: AppRoutes::default(),

@@ -49,6 +49,16 @@ pub trait ICompetitionSpaceMemberPort: Send + Sync {
         coach_id: &crate::app::shared_kernel::identity::ids::CoachId,
         space_id: &crate::app::shared_kernel::identity::ids::SpaceId,
     ) -> Option<crate::app::shared_kernel::identity::authorization::SpaceProfile>;
+
+    /// Tous les espaces, pour le sélecteur de la page de test des widgets.
+    ///
+    /// Le nom du port parle d'appartenance et cette méthode n'en relève pas :
+    /// dette de nommage assumée plutôt qu'un second port pour un appelant
+    /// unique. Retourne des `SpaceDefinition` — un type d'identité partagé,
+    /// déjà connu des deux côtés — pour éviter un DTO de plus.
+    async fn find_all_spaces(
+        &self,
+    ) -> Vec<crate::app::shared_kernel::identity::space_definition::SpaceDefinition>;
 }
 
 // ── ACL vers le BC `ranking` (catalogue des critères de départage) ─────────────

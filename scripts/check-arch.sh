@@ -34,10 +34,19 @@ EXIT_CODE=0
 # parcourant cette liste dans les deux sens, un BC absent était doublement
 # invisible — ni ses propres références croisées, ni celles qui le visaient.
 # `shared_kernel` en est exclu : il est partagé par construction.
-BCS=$(find src/app -mindepth 1 -maxdepth 1 -type d -printf '%f\n' \
+# Glob shell plutôt que `find -printf` : `-printf` est une extension GNU que le
+# `find` de macOS ignore. La liste y était donc **vide**, et les axes 3 et 9 ne
+# parcouraient rien tout en affichant « PASS » — un verrou qui rassure sans
+# jamais regarder. La CI tournant sous Linux, l'écart ne se voyait qu'en local.
+BCS=$(for d in src/app/*/; do basename "$d"; done \
     | grep -v '^shared_kernel$' \
     | sort \
     | tr '\n' ' ')
+
+if [ -z "$BCS" ]; then
+    echo "check-arch : aucun bounded context trouvé sous src/app/ — arrêt." >&2
+    exit 1
+fi
 
 # BCs maintenus copiables tels quels dans un autre projet (cf. kanban/242).
 # Contraintes plus strictes que les autres BCs : aucune adhérence au host.
@@ -78,6 +87,25 @@ strip_comments() {
     grep -vE '^[[:space:]]*//'
 }
 
+# Recolle les lignes de continuation d'un chaînage rustfmt (celles qui
+# commencent par `.`) sur la ligne précédente. Sans ça, `state\n.spaces\n…` — la
+# mise en forme par défaut d'un appel trop long — ne matche jamais
+# `\bstate\.<bc>\b` : la sous-chaîne littérale n'existe sur aucune ligne prise
+# isolément. C'est ce seul retour à la ligne qui a rendu invisibles les
+# violations des cartes 277 et 296.
+#
+# Contrepartie assumée : le numéro rapporté devient celui du **début** du
+# chaînage, pas la position exacte de l'appel fautif. L'axe désigne un repère à
+# vérifier à la main, pas une position cliquable.
+join_chains() {
+    awk '{
+        if ($0 ~ /^[[:space:]]*\./) { gsub(/^[[:space:]]+/, ""); line = line $0; next }
+        if (line != "") print line
+        line = $0
+    }
+    END { if (line != "") print line }'
+}
+
 echo ""
 echo -e "${BOLD}\033[34m┌─ Vérifications architecturales (CLAUDE.md)${RESET}"
 echo ""
@@ -89,12 +117,34 @@ if [ -n "$axe2" ]; then print_fail "$axe2"; else print_pass; fi
 echo ""
 
 # ── Axe 3 : souveraineté des données entre BCs ──────────────────────────────
+#
+# Ligne de base — violations connues, tolérées le temps qu'une carte les traite.
+#
+# Elle n'existe que parce que la réparation de l'axe (carte 297) a découvert
+# d'un coup six violations que le verrou n'avait jamais pu voir : `find -printf`
+# vidait la liste des BCs sur macOS, et les chaînages coupés par rustfmt
+# échappaient au grep. Les corriger toutes d'un bloc aurait mêlé la réparation
+# du verrou à un chantier d'ACL sans rapport.
+#
+# Chaque entrée porte le fichier et la carte qui la traitera. Toute violation
+# **nouvelle** fait toujours échouer l'axe : c'est là tout l'intérêt d'une
+# ligne de base explicite plutôt que d'un axe rendu non bloquant.
+#
+# Posée le 2026-08-13. Une entrée dont la carte est faite doit disparaître d'ici.
+AXE3_BASELINE_REGEX='src/app/team_creation/io/web/finalize_team\.rs|src/app/team_creation/io/web/build_team/submit_team\.rs|src/app/team_creation/io/web/build_team/display_page\.rs|src/app/teams/io/web/widgets/team_selection_tester\.rs'
+# ↑ team_creation → competitions (5 occurrences) ................... carte 300
+#   teams → spaces, page de test des widgets (1 occurrence) ........ carte 301
+
 echo -e "${BOLD}Axe 3 · Souveraineté des données entre BCs (pas de référence croisée)${RESET}"
 axe3=""
 for bc in $BCS; do
     [ -d "src/app/$bc" ] || continue
     while IFS= read -r f; do
-        prod_code="$(strip_test_code "$f")"
+        # `strip_comments` comme à l'axe 9 : sans lui, le commentaire qui
+        # explique *pourquoi* on ne fait plus `state.<bc>` déclenche l'axe qu'il
+        # documente. Un verrou qui hurle sur sa propre documentation se fait
+        # désactiver dans la semaine.
+        prod_code="$(strip_test_code "$f" | strip_comments | join_chains)"
         for other in $BCS; do
             [ "$other" = "$bc" ] && continue
             # Exemptions : la surface publique d'auth. Dans une extraction, tout
@@ -117,7 +167,7 @@ for bc in $BCS; do
         done
     done < <(find "src/app/$bc" -name "*.rs")
 done
-axe3="$(printf '%s' "$axe3" | sed '/^$/d')"
+axe3="$(printf '%s' "$axe3" | sed '/^$/d' | grep -vE "^($AXE3_BASELINE_REGEX):" || true)"
 if [ -n "$axe3" ]; then print_fail "$axe3"; else print_pass; fi
 echo ""
 
