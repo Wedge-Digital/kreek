@@ -17,6 +17,17 @@ const DEV_COACH_NAME: &str = "DevCoach";
 const DEV_COACH_EMAIL: &str = "dev@example.test";
 const DEV_COACH_LEGACY_ID: i32 = 1;
 
+/// Second utilisateur joignable par `bypass_auth`, membre **simple** du space.
+/// Il existe pour que la suite e2e puisse exercer un refus d'autorisation :
+/// `DevCoach` étant admin d'espace, aucun garde-fou ne se déclenche sous son
+/// identité, et un 403 y serait intestable.
+///
+/// Repéré par son **nom**, et non par un `legacy_id` : cet espace
+/// d'identifiants appartient au système legacy, dont l'import occupe déjà les
+/// premières valeurs. Y planter une constante ferait échouer le seed sur toute
+/// base ayant reçu les données legacy.
+pub const SIMPLE_COACH_NAME: &str = "E2E Coach 01";
+
 const SEED_PASSWORD: &str = "changeme-dev-only";
 const SPACE_NAME: &str = "Espace E2E";
 
@@ -223,6 +234,25 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(profile, SpaceProfile::SpaceAdmin.as_str());
+    }
+
+    /// La seconde identité de `bypass_auth` n'a d'intérêt que si elle est
+    /// **membre simple** : c'est son absence de droits qui rend un 403
+    /// observable en e2e. Un jour où elle deviendrait admin, le test
+    /// d'autorisation passerait au vert sans plus rien vérifier.
+    #[sqlx::test]
+    async fn simple_coach_is_a_plain_member(pool: PgPool) {
+        execute(&pool).await.unwrap();
+        let profile: String = sqlx::query_scalar(
+            "select us.profile from spaces__user_space us
+             join auth__users u on u.id = us.coach_id
+             where u.coach_name = $1",
+        )
+        .bind(SIMPLE_COACH_NAME)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(profile, SpaceProfile::SpaceUser.as_str());
     }
 
     /// L'invariant que protège le `RETURNING id` : rejouer le seed ne doit ni

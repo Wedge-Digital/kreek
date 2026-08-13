@@ -258,7 +258,10 @@ def test_dismissals_banner_leads_to_the_dismissals_page(page: Page, space_id, ma
     expect(page.locator(".team-status-badge")).to_contain_text("Prête à jouer", timeout=15000)
     ready_banner = page.locator(".state-banner--ready")
     expect(ready_banner).to_be_visible()
-    expect(ready_banner.locator(".state-banner-cta--outline")).to_contain_text("Imprimer en PDF")
+    # Bouton désigné par son libellé, et non par sa classe : le bandeau « Prête
+    # à jouer » porte désormais trois CTA `--outline` (carte 293 y a ajouté
+    # « Modifier l'effectif » et « Annuler »), et la classe seule est ambiguë.
+    expect(ready_banner.get_by_role("button", name="Imprimer en PDF")).to_be_visible()
 
     # L'entrée en « Prête à jouer » déclenche le recalcul de la TV (carte 251).
     # Ce qu'on couvre ici est le câblage — listener intra-BC, use case,

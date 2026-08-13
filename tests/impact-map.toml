@@ -142,6 +142,14 @@
 "test_my_teams_page" = ["team_creation", "teams", "match_report", "players",
                         "spp_calculator", "competitions", "references",
                         "ranking", "spaces"]
+# Édition d'effectif : `players` porte le widget, le use case et l'endpoint ;
+# `teams` porte le bandeau qui déclenche l'édition et toute la traversée de
+# phases nécessaire pour obtenir un renvoyé. `auth` y est vérifié, et nulle part
+# ailleurs dans la suite : le scénario d'autorisation dépend de `bypass_auth` et
+# de sa seconde identité, sans laquelle le refus serait inobservable.
+"test_roster_edition" = ["players", "teams", "auth", "match_report", "spp_calculator",
+                         "competitions", "references", "ranking",
+                         "team_creation", "spaces"]
 "test_team_detail_state_banner" = ["teams", "match_report", "players", "spp_calculator",
                                    "competitions", "references", "ranking",
                                    "team_creation", "spaces"]
