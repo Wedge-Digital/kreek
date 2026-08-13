@@ -77,20 +77,56 @@ ni max_lifetime, ni test_before_acquire
 `idle in transaction` peut donc rester dix minutes à bloquer les autres — ce qui
 a été observé.
 
-## Trois leviers, du plus sûr au plus profond
+## Réalisé — leviers 1 et 2, et le garde-fou
 
-1. **Pool** — `max_lifetime` et `test_before_acquire`. Atténue : la connexion
-   empoisonnée finit par être recyclée. Ne corrige pas la fuite.
-2. **Postgres** — `idle_in_transaction_session_timeout` (et éventuellement
-   `statement_timeout`) sur le rôle applicatif. Tue ces sessions
-   automatiquement, sans toucher au code. C'est le filet, et il est solide.
-3. **Trouver le coupable** — un `tracing` au `BEGIN` et au `COMMIT` portant la
-   route, puis reproduire une annulation en vol. Donne le handler exact au lieu
-   d'une hypothèse.
+`init_pool` pose `SET idle_in_transaction_session_timeout = '15s'` via
+`after_connect`, plus `max_lifetime` à 30 min. Le réglage vit dans le dépôt et
+vaut pour dev, test et production, au lieu d'un `ALTER ROLE` qui n'existerait
+que sur une base.
 
-Les trois ne s'excluent pas. Le 2 devrait venir en premier : il transforme un
-blocage de dix minutes en erreur immédiate et lisible, ce qui rend le 3
-observable au lieu d'être noyé.
+`test_before_acquire` avait été ajouté puis **retiré** : c'est déjà le défaut de
+sqlx 0.8, et son ping réussit parfaitement sur une connexion oisive dans une
+transaction — il détecte une connexion morte, pas empoisonnée. Le laisser aurait
+donné l'illusion d'un second garde-fou.
+
+`conftest.py` gagne `_fail_on_leaked_transactions`, bloquant : il échoue sur le
+test **qui a fui**, pas sur celui qui en paie le prix. C'est ce décalage qui
+rendait la flakiness illisible.
+
+### Mesures
+
+| Run | Résultat |
+|---|---|
+| avant, avec le nouveau fichier | 4 échecs, 14 erreurs |
+| avant, sans | 2 échecs |
+| après, run 1 | 1 échec, 10 erreurs |
+| après, run 2 | **182 passés, 0 échec** |
+| après, run 3 | **182 passés, 0 échec** |
+
+Deux runs verts consécutifs après deux runs rouges — mais le run 1 d'après
+correctif était encore rouge. **Le correctif améliore nettement sans être
+prouvé suffisant.**
+
+Détail qui compte : l'échec du run 1 d'après correctif n'était **pas** un
+timeout mais une assertion — « Vous devez recruter au moins 11 joueurs ». Autre
+mode de panne, autre cause : de l'état accumulé dans l'espace partagé, ce qui
+relève de la carte 312.
+
+## Ce qui reste — le levier 3
+
+Le handler qui fuit n'est **pas identifié**. Le garde-fou n'a fired sur aucun
+run vert, ce qui est cohérent : le timeout à 15 s tue les fuites, mais elles se
+produisent peut-être encore sous le seuil de 5 s du garde-fou.
+
+Reste donc à faire, si la flakiness revient : un `tracing` au `BEGIN` et au
+`COMMIT` portant la route, pour nommer le coupable au lieu de le contenir.
+
+## Écartés, et pourquoi
+
+`statement_timeout` et `transaction_timeout` (ce dernier nouveau en PG 17)
+frappent aussi les transactions **actives** : une migration longue au démarrage
+en mourrait. `idle_in_transaction_session_timeout` ne touche que l'oisiveté
+*dans* une transaction — exactement le mode de panne, et rien d'autre.
 
 ## Ce que cette carte n'est pas
 
@@ -99,8 +135,8 @@ optimise des fixtures ; celle-là répare une fuite. Mais elle la **précède en
 priorité** : 312 attribuait la flakiness à la charge, et la charge n'en est que
 le déclencheur.
 
-## Reproduction non tentée
+## Reproduction : rendue inutile pour l'instant
 
-Abandonner une requête d'écriture en vol et observer le pool écrirait dans la
-base de développement. À faire avec l'accord de l'utilisateur, ou sur une base
-jetable.
+Abandonner une requête en vol pour observer le pool aurait écrit dans la base de
+développement. Le garde-fou de `conftest.py` rend le geste superflu : il suffit
+de relancer la suite pour que la fuite se nomme elle-même, si elle revient.

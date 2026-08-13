@@ -151,3 +151,43 @@ def console_errors(page):
 def _fail_on_console_errors(console_errors):
     yield
     assert not console_errors, f"Erreurs JS détectées dans la console : {console_errors}"
+
+
+# ── Garde-fou : aucune transaction fantôme ne survit à un test ────────────────
+#
+# Carte 317. Une requête annulée en vol laisse une connexion `idle in
+# transaction` : `sqlx::Transaction::drop` ne peut pas `await` son `ROLLBACK`,
+# et la connexion retourne au pool encore dans sa transaction. Ses verrous
+# bloquent alors tout ce qui les demande — jusqu'à trois minutes observées.
+#
+# Le dégât est *décalé* : la fuite d'un test fait tomber un test **suivant**,
+# souvent dans un autre fichier, en `Timeout 30000ms`. C'est ce décalage qui
+# rendait la flakiness illisible et la faisait attribuer à la charge.
+#
+# Ce garde-fou supprime le décalage. Il échoue sur le test qui a fui, pas sur
+# celui qui en paie le prix.
+
+_FUITE_TOLEREE_S = 5
+
+
+def _transactions_fantomes() -> list[str]:
+    from db_helpers import query_db
+
+    return query_db(
+        "SELECT pid || ' — ouverte depuis ' || (now() - xact_start)::text "
+        "    || ' — ' || left(regexp_replace(query, '\\s+', ' ', 'g'), 90) "
+        "FROM pg_stat_activity "
+        "WHERE datname = current_database() "
+        "  AND state = 'idle in transaction' "
+        f" AND now() - xact_start > interval '{_FUITE_TOLEREE_S} seconds'"
+    )
+
+
+@pytest.fixture(autouse=True)
+def _fail_on_leaked_transactions():
+    yield
+    fuites = _transactions_fantomes()
+    assert not fuites, (
+        "Transaction laissée ouverte par ce test — elle bloquera les suivants "
+        "(carte 317) :\n  " + "\n  ".join(fuites)
+    )

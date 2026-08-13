@@ -26,6 +26,18 @@ pub struct DatabaseConfig {
     pub min_connections: u32,
     pub acquire_timeout_seconds: u64,
     pub idle_timeout_seconds: u64,
+    /// Délai au bout duquel Postgres tue une session restée **oisive dans une
+    /// transaction**.
+    ///
+    /// Sans lui, une transaction que personne ne referme — le cas d'une requête
+    /// annulée en vol, cf. carte 317 — garde ses verrous jusqu'au redémarrage du
+    /// serveur et bloque tout ce qui les demande.
+    ///
+    /// Ne frappe que l'oisiveté **dans** une transaction : une migration longue
+    /// au démarrage, elle, est active et ne risque rien. C'est ce qui distingue
+    /// ce réglage de `statement_timeout` et de `transaction_timeout`, écartés
+    /// pour cette raison.
+    pub idle_in_transaction_timeout_seconds: u64,
 }
 
 #[derive(Debug, Deserialize, Clone)]

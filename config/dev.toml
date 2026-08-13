@@ -8,6 +8,11 @@ max_connections = 20
 min_connections = 1
 acquire_timeout_seconds = 5
 idle_timeout_seconds = 600
+# Tue une session restée oisive dans une transaction (carte 317). 15 s : les
+# transactions du projet sont courtes — aucune ne traverse un appel de port ou
+# de bus — donc la marge est énorme, et une fuite meurt avant de bloquer quoi
+# que ce soit.
+idle_in_transaction_timeout_seconds = 15
 
 [auth]
 token_ttl_seconds = 3600

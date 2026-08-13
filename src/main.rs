@@ -67,12 +67,46 @@ enum Command {
     SeedE2e,
 }
 
+/// Le pool, et les deux garde-fous contre les transactions fantômes (carte 317).
+///
+/// **`idle_in_transaction_session_timeout`**, posé ici et non par un
+/// `ALTER ROLE` : le réglage voyage alors avec le dépôt et vaut pour dev, test
+/// et production, au lieu de vivre dans une base et pas dans les autres.
+///
+/// Il répond à un mode de panne précis : une requête annulée en vol — un client
+/// qui abandonne — fait *dropper* le future du handler entre le `BEGIN` et le
+/// `COMMIT`. `sqlx::Transaction::drop` ne peut pas `await` son `ROLLBACK`, la
+/// connexion retourne au pool encore dans sa transaction, et ses verrous
+/// bloquent tout le monde jusqu'au redémarrage. Observé : trois minutes de
+/// blocage sur trois connexions.
+///
+/// **`max_lifetime`** n'empêche pas la fuite, il en borne la durée de vie : une
+/// connexion empoisonnée finit par être recyclée au lieu de rester dans le pool
+/// jusqu'au prochain déploiement.
+///
+/// `test_before_acquire` n'a **pas** été ajouté : il vaut déjà `true` par
+/// défaut, et son ping réussit parfaitement sur une connexion oisive dans une
+/// transaction — il détecte une connexion morte, pas une connexion empoisonnée.
+/// L'inscrire aurait donné l'illusion d'un second garde-fou.
 async fn init_pool(cfg: &AppConfig) -> sqlx::PgPool {
+    let idle_in_tx = cfg.database.idle_in_transaction_timeout_seconds;
     sqlx::postgres::PgPoolOptions::new()
         .max_connections(cfg.database.max_connections)
         .min_connections(cfg.database.min_connections)
         .acquire_timeout(Duration::from_secs(cfg.database.acquire_timeout_seconds))
         .idle_timeout(Duration::from_secs(cfg.database.idle_timeout_seconds))
+        .max_lifetime(Duration::from_secs(30 * 60))
+        .after_connect(move |conn, _meta| {
+            Box::pin(async move {
+                sqlx::query(&format!(
+                    "SET idle_in_transaction_session_timeout = '{}s'",
+                    idle_in_tx
+                ))
+                .execute(conn)
+                .await?;
+                Ok(())
+            })
+        })
         .connect(&cfg.database.url)
         .await
         .expect("Impossible de se connecter à la base de données")
