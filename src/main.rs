@@ -404,13 +404,25 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
         // Un résolveur par ressource identifiable dans un chemin. Les six
         // autres BCs arrivent avec les cartes 318 à 322 ; un paramètre sans
         // résolveur passe, faute de quoi la migration devrait être atomique.
-        space_ownership: Arc::new(vec![Arc::new(
-            crate::infrastructure::players::space_ownership::PlayerSpaceOwnership::new(Arc::new(
-                crate::app::players::io::repository::projection_repository::PgPlayerProjectionRepository::new(
-                    pool.clone(),
+        space_ownership: Arc::new(vec![
+            Arc::new(
+                crate::infrastructure::players::space_ownership::PlayerSpaceOwnership::new(Arc::new(
+                    crate::app::players::io::repository::projection_repository::PgPlayerProjectionRepository::new(
+                        pool.clone(),
+                    ),
+                )),
+            ),
+            Arc::new(
+                crate::infrastructure::competitions::space_ownership::CompetitionSpaceOwnership::new(
+                    Arc::new(crate::app::competitions::io::repository::competition_repository::CompetitionRepository::new(pool.clone())),
                 ),
-            )),
-        )]),
+            ),
+            Arc::new(
+                crate::infrastructure::competitions::space_ownership::SeasonSpaceOwnership::new(
+                    Arc::new(crate::app::competitions::io::repository::season_repository::SeasonRepository::new(pool.clone())),
+                ),
+            ),
+        ]),
         bypass_auth: cfg.bypass_auth,
         event_bus: event_bus.clone(),
         app_event_bus: app_event_bus.clone(),

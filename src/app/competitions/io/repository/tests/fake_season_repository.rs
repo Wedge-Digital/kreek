@@ -12,6 +12,12 @@ pub struct FakeSeasonRepository;
 
 #[async_trait]
 impl ISeasonRepository for FakeSeasonRepository {
+    /// Les doublures ne portent pas d'espace : ce sont les tests de handler,
+    /// sur une vraie base, qui exercent le contrôle d'appartenance.
+    async fn find_space_id(&self, _: &SeasonId) -> Result<Option<String>, SeasonRepositoryError> {
+        Ok(None)
+    }
+
     async fn save(&self, _: &CompetitionSeason) -> Result<(), SeasonRepositoryError> {
         Ok(())
     }

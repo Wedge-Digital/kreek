@@ -41,6 +41,18 @@ pub trait ISeasonRepository: Send + Sync {
         &self,
         competition_id: &CompetitionId,
     ) -> Result<Option<SeasonId>, SeasonRepositoryError>;
+    /// L'espace auquel appartient cette saison, ou `None` si elle n'existe pas
+    /// (carte 324).
+    ///
+    /// Une saison n'a **pas d'espace en propre** : elle en hérite de sa
+    /// compétition. Le saut se fait en une jointure plutôt qu'en dénormalisant
+    /// une colonne `space_id`, qui créerait une seconde source de vérité —
+    /// vouée à diverger, comme la carte 313 l'a rappelé.
+    async fn find_space_id(
+        &self,
+        season_id: &SeasonId,
+    ) -> Result<Option<String>, SeasonRepositoryError>;
+
     async fn find_base_info(
         &self,
         season_id: &SeasonId,

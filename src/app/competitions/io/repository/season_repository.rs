@@ -51,6 +51,25 @@ impl ISeasonRepository for SeasonRepository {
         Ok(id.and_then(|s| SeasonId::try_new(&s).ok()))
     }
 
+    async fn find_space_id(
+        &self,
+        season_id: &SeasonId,
+    ) -> Result<Option<String>, SeasonRepositoryError> {
+        // Le saut, en une jointure : la saison hérite de l'espace de sa
+        // compétition et n'en porte pas.
+        let row: Option<(String,)> = sqlx::query_as(
+            "SELECT c.space_id
+               FROM competition_seasons s
+               JOIN competitions c ON c.id = s.competition_id
+              WHERE s.id = $1",
+        )
+        .bind(season_id.to_string())
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| SeasonRepositoryError::Database(e.to_string()))?;
+        Ok(row.map(|r| r.0))
+    }
+
     async fn find_base_info(
         &self,
         season_id: &SeasonId,

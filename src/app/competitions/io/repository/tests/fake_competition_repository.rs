@@ -12,6 +12,15 @@ pub struct FakeCompetitionRepository;
 
 #[async_trait]
 impl ICompetitionRepository for FakeCompetitionRepository {
+    /// Les doublures ne portent pas d'espace : ce sont les tests de handler,
+    /// sur une vraie base, qui exercent le contrôle d'appartenance.
+    async fn find_space_id(
+        &self,
+        _: &CompetitionId,
+    ) -> Result<Option<String>, CompetitionRepositoryError> {
+        Ok(None)
+    }
+
     async fn name_exists_in_space(
         &self,
         _: &CompetitionName,

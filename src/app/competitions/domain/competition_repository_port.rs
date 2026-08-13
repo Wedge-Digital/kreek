@@ -67,6 +67,17 @@ pub trait ICompetitionRepository: Send + Sync {
         &self,
         space_id: &SpaceId,
     ) -> Result<Vec<CompetitionWithSeasons>, CompetitionRepositoryError>;
+    /// L'espace auquel appartient cette compétition, ou `None` si elle
+    /// n'existe pas (carte 324).
+    ///
+    /// Méthode dédiée plutôt qu'un champ ajouté à `CompetitionBaseInfo` : c'est
+    /// la question que pose le contrôle d'appartenance, pas une donnée dont les
+    /// douze appelants de `find_base_info` ont besoin.
+    async fn find_space_id(
+        &self,
+        competition_id: &CompetitionId,
+    ) -> Result<Option<String>, CompetitionRepositoryError>;
+
     async fn find_base_info(
         &self,
         competition_id: &CompetitionId,

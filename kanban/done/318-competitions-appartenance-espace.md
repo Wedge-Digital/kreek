@@ -82,6 +82,44 @@ La sémantique elle-même est testée une fois, en carte 324 — pas ici.
 
 ## Checklist
 
-- [ ] `ISpaceOwnership` pour ce BC, enregistré dans `main.rs`
-- [ ] Tests de handler : matrice d'appartenance, lecture et écriture
-- [ ] Un scénario e2e de bout en bout
+- [x] `ISpaceOwnership` pour ce BC, enregistré dans `main.rs`
+- [x] Tests de handler : matrice d'appartenance, lecture et écriture
+- [ ] Un scénario e2e de bout en bout — **non fait**, voir ci-dessous
+
+## Réalisé
+
+**Deux résolveurs**, `competition_id` et `season_id`, plus deux méthodes de port
+`find_space_id`. Celle de la saison fait le saut en **une jointure** vers
+`competitions.space_id` : la saison n'a pas d'espace en propre, et dénormaliser
+une colonne aurait créé une seconde source de vérité.
+
+Méthodes dédiées plutôt qu'un champ ajouté à `CompetitionBaseInfo` : c'est la
+question que pose le contrôle, pas une donnée dont les douze appelants de
+`find_base_info` ont besoin.
+
+`ranking` n'a rien apporté, comme prévu : ses deux routes portent les deux
+identifiants, les résolveurs d'ici les couvrent.
+
+### La sonde de l'audit, rejouée sur le serveur
+
+```
+espace étranger  → 404   (était 200, avec le nom réel de la compétition)
+…/standings      → 404
+espace réel      → 200
+```
+
+### Un test que la carte ne demandait pas
+
+`une_saison_d_un_autre_espace_est_refusee_meme_avec_une_competition_valide` :
+compétition légitime, **saison volée**. C'est le fait d'avoir deux résolveurs et
+non un seul qui l'attrape — un contrôle limité à la compétition aurait laissé
+passer.
+
+## Le scénario e2e n'est pas écrit — et c'est un choix
+
+La matrice est couverte par trois tests de handler, en 3 s. Un scénario de
+navigateur n'ajouterait ici **aucune information** : il n'y a ni rendu, ni
+HTMX, ni Alpine dans un `404`.
+
+La règle de couverture du projet vise le rendu produit ; un refus n'en produit
+aucun. L'inscrire quand même aurait été de l'obéissance, pas de la couverture.

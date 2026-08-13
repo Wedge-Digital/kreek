@@ -103,6 +103,19 @@ impl ICompetitionRepository for CompetitionRepository {
             .collect())
     }
 
+    async fn find_space_id(
+        &self,
+        competition_id: &CompetitionId,
+    ) -> Result<Option<String>, CompetitionRepositoryError> {
+        let row: Option<(String,)> =
+            sqlx::query_as("SELECT space_id FROM competitions WHERE id = $1")
+                .bind(competition_id.to_string())
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|e| CompetitionRepositoryError::Database(e.to_string()))?;
+        Ok(row.map(|r| r.0))
+    }
+
     async fn find_base_info(
         &self,
         competition_id: &CompetitionId,

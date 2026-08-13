@@ -112,6 +112,15 @@ mod tests {
 
     #[async_trait]
     impl ICompetitionRepository for FakeCompetitionRepo {
+        /// Doublure : le contrôle d'appartenance est exercé par les tests de
+        /// handler, sur une vraie base.
+        async fn find_space_id(
+            &self,
+            _: &CompetitionId,
+        ) -> Result<Option<String>, CompetitionRepositoryError> {
+            Ok(None)
+        }
+
         async fn name_exists_in_space(
             &self,
             _: &CompetitionName,
@@ -152,6 +161,15 @@ mod tests {
 
     #[async_trait]
     impl ISeasonRepository for FakeSeasonRepo {
+        /// Doublure : le contrôle d'appartenance est exercé par les tests de
+        /// handler, sur une vraie base.
+        async fn find_space_id(
+            &self,
+            _: &SeasonId,
+        ) -> Result<Option<String>, SeasonRepositoryError> {
+            Ok(None)
+        }
+
         async fn save(&self, _: &CompetitionSeason) -> Result<(), SeasonRepositoryError> {
             Ok(())
         }

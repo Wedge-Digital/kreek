@@ -11,5 +11,7 @@ pub mod new_competition_phase_5;
 pub mod resultats_tab_controller;
 pub mod resultats_view;
 pub mod rules_labels;
+#[cfg(test)]
+pub mod tests;
 pub mod widget_tester_controller;
 pub mod widgets;
