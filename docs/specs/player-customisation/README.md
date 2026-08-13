@@ -14,7 +14,7 @@ large que celui retenu ici.
 
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| player-detail | ✅ | | | | | | |
+| player-detail | ✅ | ✅ | | | | | |
 
 ## Règles métier (identifiées phase 1)
 
