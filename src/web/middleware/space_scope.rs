@@ -37,6 +37,7 @@ use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use axum::RequestPartsExt;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// La question que le middleware pose, et qu'un seul BC sait résoudre.
 #[async_trait]
@@ -72,6 +73,30 @@ pub async fn space_scope_middleware(
         return refus;
     }
     next.run(Request::from_parts(parts, corps)).await
+}
+
+/// Deux résolveurs pour le même paramètre : le second ne serait jamais
+/// consulté, et le premier déciderait pour un BC qui ne le sait pas.
+///
+/// Vécu (cartes 320 et 321) : `{team_id}` est revendiqué par `teams` et par
+/// `team_creation`. Un résolveur lisant la seule projection a rendu `404` sur
+/// tous les brouillons non soumis, cassant la création d'équipe — sans qu'aucun
+/// test unitaire ne bronche.
+///
+/// Un doublon est donc une **erreur de démarrage**, et non un arbitrage
+/// silencieux. La bonne réponse est un résolveur qui consulte les deux sources,
+/// comme `TeamSpaceOwnership` le fait désormais.
+pub fn verifier_unicite_des_parametres(resolveurs: &[Arc<dyn ISpaceOwnership>]) {
+    let mut vus: Vec<&str> = resolveurs.iter().map(|r| r.param()).collect();
+    vus.sort_unstable();
+    let total = vus.len();
+    vus.dedup();
+    assert_eq!(
+        vus.len(),
+        total,
+        "deux résolveurs revendiquent le même paramètre de chemin — l'un d'eux \
+         ne serait jamais consulté"
+    );
 }
 
 async fn verifier(state: &AppState, params: &HashMap<String, String>) -> Result<(), Response> {

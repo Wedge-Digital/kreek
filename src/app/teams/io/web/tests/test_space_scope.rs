@@ -66,9 +66,12 @@ async fn le_resolveur_rend_l_espace_de_l_equipe_et_rien_pour_une_inconnue(pool: 
     let resolveur = crate::infrastructure::teams::space_ownership::TeamSpaceOwnership::new(
         std::sync::Arc::new(
             crate::app::teams::io::repository::team_repository::TeamRepository::new(
-                pool,
+                pool.clone(),
                 crate::common::services::event_bus::event_bus::new_bus(),
             ),
+        ),
+        std::sync::Arc::new(
+            crate::app::team_creation::io::team_creation_repository::TeamDraftRepository::new(pool),
         ),
     );
 
@@ -82,6 +85,61 @@ async fn le_resolveur_rend_l_espace_de_l_equipe_et_rien_pour_une_inconnue(pool: 
         resolveur.space_of("01JZZZZZZZZZZZZZZZZZZZZZZZ").await,
         None,
         "une équipe inconnue ne rend aucun espace, donc un refus"
+    );
+}
+
+/// Un **brouillon** n'est pas encore une équipe : il vit dans `team_drafts` et
+/// n'apparaît dans `team_proj` qu'à sa soumission.
+///
+/// Ce test existe parce que le résolveur de la carte 320, qui ne lisait que la
+/// projection, a rendu `404` sur tous les brouillons — cassant la création
+/// d'équipe pour 47 d'entre eux, sans qu'aucun test unitaire ne bronche. Seule
+/// la suite e2e l'aurait vu, et elle n'avait pas été lancée.
+#[sqlx::test]
+async fn un_brouillon_non_soumis_reste_atteignable(pool: sqlx::PgPool) {
+    use crate::app::shared_kernel::identity::ids::SpaceId;
+    use crate::web::middleware::space_scope::ISpaceOwnership;
+
+    crate::cli::seed_e2e::execute(&pool)
+        .await
+        .expect("seed e2e");
+    let (space_id,): (String,) =
+        sqlx::query_as("SELECT id FROM spaces WHERE space_name = 'Espace E2E'")
+            .fetch_one(&pool)
+            .await
+            .expect("espace E2E seedé");
+
+    // Un brouillon, et lui seul : rien dans `team_proj`.
+    let draft_id = crate::app::shared_kernel::identity::sulid::SUlid::new().to_string();
+    sqlx::query(
+        "INSERT INTO team_drafts
+            (id, space_id, competition_id, season_id, name, coach_id, coach_name,
+             creation_rules, status)
+         VALUES ($1, $2, 'c', 's', 'Brouillon', 'coach', 'DevCoach', '{}', 'draft')",
+    )
+    .bind(&draft_id)
+    .bind(&space_id)
+    .execute(&pool)
+    .await
+    .expect("brouillon de test");
+
+    let resolveur = crate::infrastructure::teams::space_ownership::TeamSpaceOwnership::new(
+        std::sync::Arc::new(
+            crate::app::teams::io::repository::team_repository::TeamRepository::new(
+                pool.clone(),
+                crate::common::services::event_bus::event_bus::new_bus(),
+            ),
+        ),
+        std::sync::Arc::new(
+            crate::app::team_creation::io::team_creation_repository::TeamDraftRepository::new(pool),
+        ),
+    );
+
+    assert_eq!(
+        resolveur.space_of(&draft_id).await,
+        Some(SpaceId::try_new(&space_id).unwrap()),
+        "un brouillon absent de team_proj doit rendre son espace, sans quoi la \
+         création d'équipe est cassée"
     );
 }
 

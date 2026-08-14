@@ -58,6 +58,16 @@ impl ITeamDraftRepository for TeamDraftRepository {
         Ok(())
     }
 
+    async fn find_space_id(&self, id: &TeamId) -> Result<Option<String>, RepositoryError> {
+        let row: Option<(String,)> =
+            sqlx::query_as("SELECT space_id FROM team_drafts WHERE id = $1")
+                .bind(id.to_string())
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(db_err)?;
+        Ok(row.map(|r| r.0))
+    }
+
     async fn find_by_id(&self, id: &TeamId) -> Result<Option<DraftTeam>, RepositoryError> {
         #[derive(sqlx::FromRow)]
         struct Row {

@@ -1,4 +1,5 @@
 import os
+import uuid
 import re
 import urllib.error
 import urllib.request
@@ -121,9 +122,36 @@ def competition_create_url(space_id):
 
 @pytest.fixture
 def competition_rules_url(space_id):
-    competition_id = os.environ.get("E2E_COMPETITION_ID", space_id)
-    season_id = os.environ.get("E2E_SEASON_ID", space_id)
-    return f"{BASE_URL}/app/{space_id}/competitions/create/{competition_id}/{season_id}/rules"
+    """Page de règles d'une compétition **qui existe**.
+
+    Elle repliait auparavant `competition_id` et `season_id` sur le `space_id`,
+    faute de mieux : l'URL désignait donc une compétition qui n'existait nulle
+    part, et la page se rendait quand même. Les tests vérifiaient le rendu des
+    pickers sur une compétition fantôme.
+
+    Le contrôle d'appartenance (carte 324) a mis fin à cette tolérance — servir
+    une page de configuration pour une compétition inexistante n'a pas de sens.
+    La fixture crée donc un vrai brouillon.
+
+    Écrit en base plutôt que joué au clic : le parcours du magicien est déjà
+    couvert par `test_full_competition_creation_flow`, et le rejouer ici
+    passerait par la page même qu'on veut tester.
+    """
+    from db_helpers import execute_db
+
+    competition_id = f"01TEST{uuid.uuid4().hex[:20].upper()}"
+    season_id = f"01TEST{uuid.uuid4().hex[:20].upper()}"
+    execute_db(
+        f"INSERT INTO competitions (id, space_id, name, logo) "
+        f"VALUES ('{competition_id}', '{space_id}', 'Compétition de test pickers', '')"
+    )
+    execute_db(
+        f"INSERT INTO competition_seasons (id, competition_id, name, status) "
+        f"VALUES ('{season_id}', '{competition_id}', 'Saison 1', 'draft')"
+    )
+    yield f"{BASE_URL}/app/{space_id}/competitions/create/{competition_id}/{season_id}/rules"
+    execute_db(f"DELETE FROM competition_seasons WHERE id = '{season_id}'")
+    execute_db(f"DELETE FROM competitions WHERE id = '{competition_id}'")
 
 
 # Chrome logge automatiquement un message de type "error" en console pour

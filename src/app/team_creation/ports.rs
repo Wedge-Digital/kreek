@@ -91,6 +91,14 @@ impl std::fmt::Display for RepositoryError {
 #[async_trait]
 pub trait ITeamDraftRepository: Send + Sync {
     async fn save(&self, team: &DraftTeam, space_id: &str) -> Result<(), RepositoryError>;
+    /// L'espace d'un brouillon, ou `None` s'il n'existe pas (carte 321).
+    ///
+    /// Un brouillon **n'est pas encore une équipe** : il vit dans
+    /// `team_drafts` et n'apparaît dans `team_proj` qu'à la soumission. C'est
+    /// ce décalage qui a fait qu'un résolveur `team_id` lisant la seule
+    /// projection a cassé la création d'équipe.
+    async fn find_space_id(&self, id: &TeamId) -> Result<Option<String>, RepositoryError>;
+
     async fn find_by_id(&self, id: &TeamId) -> Result<Option<DraftTeam>, RepositoryError>;
     async fn find_by_coach_and_space(
         &self,

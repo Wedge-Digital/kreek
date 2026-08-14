@@ -418,12 +418,17 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                 ),
             ),
             Arc::new(
-                crate::infrastructure::teams::space_ownership::TeamSpaceOwnership::new(Arc::new(
-                    crate::app::teams::io::repository::team_repository::TeamRepository::new(
-                        pool.clone(),
-                        event_bus.clone(),
+                crate::infrastructure::teams::space_ownership::TeamSpaceOwnership::new(
+                    Arc::new(
+                        crate::app::teams::io::repository::team_repository::TeamRepository::new(
+                            pool.clone(),
+                            event_bus.clone(),
+                        ),
                     ),
-                )),
+                    Arc::new(
+                        crate::app::team_creation::io::team_creation_repository::TeamDraftRepository::new(pool.clone()),
+                    ),
+                ),
             ),
             Arc::new(
                 crate::infrastructure::match_report::space_ownership::MatchReportSpaceOwnership::new(
@@ -448,6 +453,10 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
 /// propre couche d'identité à la place, sans que le code de production ait à
 /// connaître les besoins des tests.
 pub fn build_router(state: AppState) -> Router {
+    // Un doublon de paramètre est une erreur de câblage : mieux vaut un
+    // démarrage qui échoue qu'un résolveur silencieusement ignoré.
+    crate::web::middleware::space_scope::verifier_unicite_des_parametres(&state.space_ownership);
+
     let session_layer = SessionManagerLayer::new(DashMapStore::new());
     let auth_layer = AuthManagerLayerBuilder::new(
         AuthBackend::new(state.auth.user_repository.clone()),
