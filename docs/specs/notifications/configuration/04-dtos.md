@@ -105,9 +105,14 @@ pub struct NotificationSettingsPayload {
 }
 ```
 
-**Émis par** : l'Alpine du widget en mode auto-save. **Consommé par** : le
-handler du POST, qui bâtit `CompetitionNotifications` — donc les value objects —
-avant d'appeler le use case.
+**Émis par** : le widget en mode auto-save. **Consommé par** : le handler du
+POST, qui bâtit `CompetitionNotifications` — donc les value objects — avant
+d'appeler le use case.
+
+> **Corrigé en phase 7** : ce DTO arrive en **encodage de formulaire**, pas en
+> JSON — `hx-post` poste un formulaire. Une case non cochée n'étant alors pas
+> envoyée du tout, ses quatre champs portent `#[serde(default)]` et l'extracteur
+> est `Form`. Détail et symptôme dans `07-integration.md`.
 
 **Un DTO de transport, et non la struct de domaine.** L'étape 4 actuelle fait
 `Json(invitations): Json<CompetitionInvitations>` : la struct de domaine *est* le
