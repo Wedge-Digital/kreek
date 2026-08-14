@@ -127,10 +127,18 @@ aurait fait quatre fois les phases 3 à 7 pour un seul mécanisme.
 
 | Unité | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| configuration | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🚧 |
-| envoi | — | | | | | | |
+| configuration | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏸ |
+| envoi | — | ✅ | 🚧 | | | | |
 
-`—` : sans objet, cf. ci-dessus.
+`—` : sans objet, cf. ci-dessus. `⏸` : les cartes des **deux** unités sont
+produites ensemble, à la fin de `envoi/`.
+
+**Pourquoi les cartes attendent.** `configuration/` livrée seule n'enverrait
+aucun email : personne ne lirait la colonne. Ce serait un **troisième
+interrupteur email mort**, mieux dessiné que les deux qu'il remplace et tout
+aussi inerte — précisément le défaut que cette fonctionnalité corrige. Les
+cartes des deux unités sortiront donc en une fois, ordonnées de sorte que rien
+ne soit livrable tant que la chaîne n'est pas complète.
 
 ## Règles métier — tranchées en phase 1
 
@@ -288,6 +296,25 @@ décision indépendante : ne pas rattraper, c'est ne pas regarder en arrière.
 contrairement aux trois autres — elle se déclenche sur un fait, la saison
 s'ouvre. Quelle que soit la manière dont `envoi/` la câblera, cocher la case
 trois semaines plus tard ne doit pas la faire partir : l'ouverture a eu lieu.
+
+### R10 — Le fuseau retenu est celui du serveur, et le sélecteur disparaît
+
+Apparue en phase 3 de `envoi/`. `ScheduleConfig` porte un `schedule_timezone`,
+saisi à l'étape 3 du magicien avec son sélecteur et `Europe/Paris` par défaut,
+**stocké et lu par personne** — un troisième réglage mort, après les deux
+interrupteurs email.
+
+La phase 1 avait décidé que le cron tournerait dans le fuseau du serveur. Les
+deux ne pouvaient pas être vrais ensemble : soit on honore le fuseau déclaré,
+soit on retire le réglage. **Le sélecteur disparaît**, comme les deux autres.
+
+Ce que cela coûte : les ligues à cheval sur plusieurs fuseaux n'auront pas de
+réglage. Ce que cela évite : un réglage que l'interface propose et que rien
+n'applique — le défaut même que cette fonctionnalité corrige ailleurs.
+
+**À ne pas laisser derrière** : le VO `Timezone`
+(`shared_kernel/bloodbowl/timezone.rs`) n'a aucun autre utilisateur. Il devient
+orphelin le jour où le champ disparaît.
 
 ## Ce que ces règles impliquent pour les phases suivantes
 
