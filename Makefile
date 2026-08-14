@@ -16,12 +16,17 @@ DATABASE_URL := $(if $(DATABASE_URL),$(DATABASE_URL),$(shell grep -E '^DATABASE_
 # `export DATABASE_URL=…dev…` local ne fasse cibler la base dev par `make test`.
 TEST_DB_URL := $(if $(DATABASE_URL_TEST),$(DATABASE_URL_TEST),$(shell grep -E '^DATABASE__URL=' .env.test 2>/dev/null | cut -d= -f2- | $(unquote)))
 
-# Profil de la base de démo, cible de `init_demo_db`.
-DEMO_PROFILE  := demo
+# Profil de la base de démo, cible de `init_remote_demo_db`.
+#
+# Nommé `remote.demo` et non `demo` : c'est le seul profil dont la base vit
+# ailleurs que sur la machine, et rien dans « demo » ne le disait. La confusion
+# a coûté plusieurs allers-retours pendant la carte 307, où `make dev-demo` —
+# qui ne choisit que le référentiel — a été pris pour ce profil-ci.
+DEMO_PROFILE  := remote.demo
 DEMO_ENV_FILE := .env.$(DEMO_PROFILE)
 
 .PHONY: dev dev-demo test e2e test-impacted all_tests audit migrate migration prepare_db reset_db reset_test_db init_db \
-        load_data create_demo_db init_demo_data init_demo_db seed_accounts seed_e2e lint check-arch coverage analyze help
+        load_data create_demo_db init_demo_data init_remote_demo_db seed_accounts seed_e2e lint check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
 help:
@@ -40,7 +45,7 @@ help:
 	@echo "  reset_db      Remet la base à zéro (sqlx database reset)"
 	@echo "  reset_test_db Remet la base de test à zéro (.env.test)"
 	@echo "  init_db       reset_db + import des données legacy + seed comptes dev (WITH_SEED=1 pour aussi affecter les coachs aux spaces)"
-	@echo "  init_demo_db  Idem sur la base de démo (.env.demo) — DROP+CREATE...OWNER via un accès admin séparé, double confirmation exigée"
+	@echo "  init_remote_demo_db  Idem sur la base de démo distante ($(DEMO_ENV_FILE)) — DROP+CREATE...OWNER via un accès admin séparé, double confirmation exigée"
 	@echo "  seed_accounts Seed les comptes dev (scripts/seed_accounts.json)"
 	@echo "  seed_e2e      Seed synthétique requis par la suite e2e (space + 12 coachs, idempotent)"
 	@echo ""
@@ -109,6 +114,43 @@ all_tests: test e2e
 # automatiquement au démarrage (cf. run_migrations() dans main.rs). Cette
 # target reste utile pour du troubleshooting ponctuel (appliquer une
 # migration sans redémarrer le service).
+
+# ── Garde-fou : une cible destructrice ne vise pas une base distante ──────────
+#
+# `reset_db` fait `sqlx database reset -y -f` : DROP + CREATE + migrate, sans
+# la moindre confirmation. Il travaille sur `DATABASE_URL`, résolu depuis
+# `.env.$(EXEC_PROFILE)` — donc `make reset_db EXEC_PROFILE=remote.demo`
+# détruisait la base distante en silence, et un `export DATABASE_URL=…distant…`
+# oublié dans le shell suffisait aussi.
+#
+# La garde refuse tout hôte qui n'est pas local. Elle se contourne
+# explicitement, ce que fait `init_remote_demo_db` — lui vise une base distante
+# par construction, et porte déjà ses propres vérifications et sa double
+# confirmation.
+#
+# Elle protège quel que soit le nom du profil : c'est ce qui la rend plus utile
+# que le renommage de `.env.remote.demo`, lequel n'informe qu'au moment où on
+# écrit la commande, pas quand on la relance depuis l'historique.
+define refuser_si_distant
+	@url="$(1)"; \
+	if [ "$$I_KNOW_THIS_IS_REMOTE" != "1" ]; then \
+	    hote=$$(printf '%s' "$$url" | sed -E 's#^[^:]+://([^/]*@)?([^:/?]+).*#\2#'); \
+	    case "$$hote" in \
+	        localhost|127.0.0.1|::1|"") ;; \
+	        *) echo ""; \
+	           echo "  \033[1m\033[31m/!\\  Refus : cible destructrice sur un hôte distant\033[0m"; \
+	           echo ""; \
+	           echo "     Hôte   : $$hote"; \
+	           echo "     Profil : $(EXEC_PROFILE)"; \
+	           echo ""; \
+	           echo "  Cette cible détruit la base sans confirmation. Si c'est"; \
+	           echo "  délibéré : I_KNOW_THIS_IS_REMOTE=1 make <cible>"; \
+	           echo ""; \
+	           exit 1 ;; \
+	    esac; \
+	fi
+endef
+
 migrate:
 	DATABASE_URL="$(DATABASE_URL)" sqlx migrate run
 
@@ -120,9 +162,11 @@ prepare_db:
 	DATABASE_URL="$(DATABASE_URL)" cargo sqlx prepare
 
 reset_db:
+	$(call refuser_si_distant,$(DATABASE_URL))
 	DATABASE_URL="$(DATABASE_URL)" sqlx database reset -y -f
 
 reset_test_db:
+	$(call refuser_si_distant,$(TEST_DB_URL))
 	DATABASE_URL="$(TEST_DB_URL)" sqlx database reset -y -f
 
 seed_accounts:
@@ -137,7 +181,7 @@ init_db: reset_db
 	@$(MAKE) --no-print-directory load_data
 
 # Import legacy + seed comptes dev (+ affectation coachs aux spaces si
-# WITH_SEED=1). Partagé par init_db (après reset_db) et init_demo_db (après
+# WITH_SEED=1). Partagé par init_db (après reset_db) et init_remote_demo_db (après
 # create_demo_db + migrate) — seule la création de la base diffère entre les
 # deux, le chargement des données est identique.
 load_data:
@@ -156,7 +200,7 @@ endif
 	@echo "  ✓ Base initialisée"
 	@echo ""
 
-# DROP + CREATE explicite avec OWNER — n'est appelé que par init_demo_db.
+# DROP + CREATE explicite avec OWNER — n'est appelé que par init_remote_demo_db.
 # `sqlx database reset` (utilisé par reset_db/init_db) DROP+CREATE+migrate en
 # une seule connexion : la base est alors possédée par qui l'exécute. Pour la
 # démo, distante et partagée, DATABASE__USER doit rester un compte restreint,
@@ -167,7 +211,7 @@ endif
 #
 # WITH (FORCE) (PG13+) coupe les connexions actives sans prévenir : accepté
 # ici car la base de démo est jetable par construction (double confirmation
-# déjà exigée par init_demo_db) — ne pas généraliser ce comportement ailleurs.
+# déjà exigée par init_remote_demo_db) — ne pas généraliser ce comportement ailleurs.
 create_demo_db:
 	@psql "$(ADMIN_URL)" -v ON_ERROR_STOP=1 \
 	    -c "DROP DATABASE IF EXISTS \"$(DB_NAME)\" WITH (FORCE);" \
@@ -180,18 +224,19 @@ create_demo_db:
 init_demo_data: migrate
 	@$(MAKE) --no-print-directory load_data
 
-# Même chose que init_db, mais sur la base de démo (.env.demo) — donc
-# potentiellement distante et partagée. Contrairement à init_db, la base
+# Même chose que init_db, mais sur la base de démo — distante et partagée par
+# construction, d'où le préfixe `remote.` de son profil. Contrairement à init_db, la base
 # n'est pas recréée par le compte applicatif : create_demo_db sépare l'accès
 # admin (DROP/CREATE ... OWNER) de l'accès applicatif restreint (migrations,
 # import). La double confirmation reste là parce qu'une faute de profil est
 # irrattrapable.
 #
-# DATABASE_URL est relu depuis .env.demo et passé explicitement aux sous-make :
+# DATABASE_URL est relu depuis $(DEMO_ENV_FILE) et passé explicitement aux
+# sous-make :
 # sans ça, un `export DATABASE_URL=…dev…` dans le shell appelant l'emporterait
 # (cf. le `$(if $(DATABASE_URL),…)` en tête de fichier) et on réinitialiserait
 # la base dev tout en important dans la démo.
-init_demo_db:
+init_remote_demo_db:
 	@[ -f $(DEMO_ENV_FILE) ] || { \
 	    echo ""; \
 	    echo "  Erreur : $(DEMO_ENV_FILE) introuvable."; \
