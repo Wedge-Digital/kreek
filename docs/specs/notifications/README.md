@@ -10,7 +10,7 @@ limite d'inscription approchante.
 |---|---|
 | Réglage | **Un réglage par notification** — quatre cases indépendantes. Le modèle actuel (`notify_by_email`, un booléen) doit donc changer. |
 | Destinataires des emails de journée | **Tous les coachs inscrits**, qu'ils jouent ou non. Ceux qui ont un match y trouvent leur adversaire. |
-| Ordonnancement | **Une tâche cron quotidienne**, à heure fixe, dans le fuseau du serveur. |
+| Ordonnancement | **Une tâche cron quotidienne**, à heure fixe, dans le fuseau du serveur, déclenchant une **sous-commande de la CLI kreek** (cf. ci-dessous). |
 | Langue | **Français seul.** `emails/en_EN/` a été supprimé — jamais référencé, et sa structure avait divergé sans que personne le voie. |
 
 ## Ce que l'investigation a trouvé, et qui change le périmètre
@@ -34,6 +34,44 @@ celle qui porte les questions difficiles — idempotence, rattrapage, fuseau.
 
 **`CompetitionsAppEvent` ne porte pas la création de saison** — seulement
 `CompetitionCreated`, `PairingCreated`, `PairingDeleted`.
+
+## L'ordonnanceur — une sous-commande de la CLI embarquée
+
+`main.rs` porte déjà un `clap` avec `Serve`, `SeedAccounts` et `SeedE2e` ; une
+quatrième sous-commande s'y ajoute, appelée par le cron système.
+
+**Ce qui rend ce choix presque gratuit :**
+
+- `main()` charge la configuration, ouvre le pool **et joue les migrations**
+  avant de dispatcher : la commande ne peut pas tourner sur un schéma périmé.
+- `compose(cfg, pool) -> AppState` existe — extrait de `run_server` pour le
+  harnais de test de la carte 311 — et donne à la CLI tout le câblage
+  (repositories, `IEmailService`, ports) sans dupliquer une ligne de `main.rs`.
+- Les deux seeds sortent en `exit(1)` sur échec, ce qui rend **R1 observable** :
+  une journée manquée devient un code de retour non nul dans les logs du cron,
+  au lieu d'un silence.
+
+Même binaire, même configuration, mêmes migrations que le serveur web : aucune
+dérive possible entre ce qui sert les pages et ce qui envoie les emails.
+
+**Articulation avec R3** : si le déploiement compte plusieurs instances et que le
+cron part sur chacune, c'est la contrainte d'unicité par destinataire qui empêche
+les doublons — pas l'ordonnanceur. C'est la troisième fois que cette contrainte
+paie, après le décalage de date (R2) et la reprise après panne.
+
+## Le composant d'envoi existe déjà
+
+`src/common/services/email/` expose `IEmailService` — `send(to, subject, html)` —
+avec `ResendMailService` (API Resend) et `ConsoleEmailService` pour le dev,
+choisis par configuration. C'est un **service partagé, pas un BC** ; `auth` s'en
+sert pour le mot de passe oublié. `competitions` n'a qu'à se le faire injecter
+dans son contexte.
+
+**Piège dans sa signature** : `to: Vec<String>` invite à expédier une
+notification de journée en un seul appel pour trente coachs. Ce serait mettre les
+trente adresses en clair dans l'en-tête que chacun reçoit — un annuaire de
+l'espace distribué à tout le monde. R4 impose de toute façon un corps
+personnalisé : **un envoi par destinataire**, jamais groupé.
 
 ## Maquettes — phase 1 validée
 
@@ -89,7 +127,7 @@ aurait fait quatre fois les phases 3 à 7 pour un seul mécanisme.
 
 | Unité | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| configuration | ✅ | ✅ | ✅ | 🚧 | | | |
+| configuration | ✅ | ✅ | ✅ | ✅ | ✅ | 🚧 | |
 | envoi | — | | | | | | |
 
 `—` : sans objet, cf. ci-dessus.
@@ -227,6 +265,30 @@ bien une saison abandonnée en cours de magicien qu'une saison d'avant la
 migration. Une fois les lignes remplies, `NULL` veut dire « créée après », et
 rien d'autre.
 
+### R9 — L'activation n'est jamais rétroactive
+
+Les réglages sont modifiables sur une compétition démarrée — c'est l'objet même
+du mode auto-save de l'écran d'admin. **Activer une notification ne déclenche
+aucun envoi passé.** Cocher « veille de journée » en octobre ne rejoue pas les
+six journées de septembre.
+
+**Cela ne va pas de soi, c'est même le contraire.** R3 crée un journal des
+envois, et un journal des envois appelle naturellement l'implémentation
+« cherche ce qui aurait dû partir et n'est pas parti, puis envoie-le » — qui est
+exactement rétroactive.
+
+La règle qui l'empêche : **le cron ne regarde jamais en arrière.** Il calcule les
+fenêtres dues *aujourd'hui*, et le journal ne sert **qu'à empêcher les doublons,
+jamais à détecter des trous**.
+
+R1 — une journée manquée est perdue — en devient un cas particulier, et non une
+décision indépendante : ne pas rattraper, c'est ne pas regarder en arrière.
+
+**Cas à signaler** : l'ouverture des inscriptions n'est pas une fenêtre de date,
+contrairement aux trois autres — elle se déclenche sur un fait, la saison
+s'ouvre. Quelle que soit la manière dont `envoi/` la câblera, cocher la case
+trois semaines plus tard ne doit pas la faire partir : l'ouverture a eu lieu.
+
 ## Ce que ces règles impliquent pour les phases suivantes
 
 - **R3 crée une table et un agrégat** — c'est la décision la plus structurante,
@@ -236,6 +298,9 @@ rien d'autre.
 - **R2 ne coûte rien** tant que la clé d'idempotence porte la date. Si elle ne la
   portait pas, il faudrait une règle entière — c'est un choix de clé qui décide
   d'un comportement.
+- **R9 interdit une implémentation naturelle du journal de R3.** Le journal
+  répond à « celui-ci a-t-il déjà reçu ? », jamais à « qu'est-ce qui manque ? ».
+  Les deux questions se posent sur la même table et donnent des systèmes opposés.
 - **R7 fait de la résolution des destinataires un travail à part entière**, avec
   son port et ses quatre cas. Ce n'est pas « lire une liste » : deux des quatre
   notifications s'adressent à des gens qui ne sont *pas* inscrits.
