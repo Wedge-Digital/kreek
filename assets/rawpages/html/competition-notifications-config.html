@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Réglage des notifications — création de compétition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700&family=Roboto+Slab:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../static/css/common.css">
+  <style>
+    body { background: var(--dark-7); padding: var(--p3); }
+    .maquette-note {
+      max-width: 680px; margin: 0 auto var(--p2);
+      font-size: var(--text-tiny); color: var(--dark-3); line-height: 1.5;
+    }
+    .create-card {
+      max-width: 680px; margin: 0 auto;
+      background: var(--white); border-radius: var(--card-radius); padding: var(--p3);
+    }
+    .section-title {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+      color: var(--dark-0); margin-bottom: 4px;
+    }
+    .section-sub {
+      font-size: var(--text-tiny); color: var(--dark-3);
+      margin-bottom: var(--p2); line-height: 1.5;
+    }
+    .separator { border-top: 1px solid var(--dark-5); margin: var(--p3) 0; }
+
+    /* ── La liste des notifications ── */
+    .notif-list { display: flex; flex-direction: column; gap: 2px; }
+    .notif-row {
+      display: flex; align-items: flex-start; gap: var(--p1);
+      padding: 14px var(--p1);
+      border-radius: 8px;
+      transition: background 0.12s;
+    }
+    .notif-row:hover { background: var(--dark-7); }
+    .notif-row input { margin-top: 3px; flex-shrink: 0; width: 16px; height: 16px; }
+    .notif-body { flex: 1; min-width: 0; }
+    .notif-label { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+    .notif-desc { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 3px; line-height: 1.5; }
+    .notif-when {
+      display: inline-block; margin-top: 6px;
+      font-size: 11px; font-weight: 700;
+      background: rgba(0,48,73,0.08); color: var(--main-blue);
+      padding: 2px 8px; border-radius: 4px;
+    }
+
+    /* Une notification que la configuration rend inapplicable — grisée, et
+       elle dit pourquoi plutôt que de disparaître. */
+    .notif-row--inactive { opacity: 0.5; }
+    .notif-row--inactive input { pointer-events: none; }
+    .notif-why {
+      display: block; margin-top: 6px;
+      font-size: 11px; color: var(--dark-3); font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="maquette-note">
+    <strong>Maquette — réglage des notifications.</strong> S'insère dans l'étape 4
+    du magicien de création (« Invitations »), à la place de l'unique case
+    « Notifier les coachs par email quand la compétition est ouverte ».
+  </div>
+
+  <div class="create-card">
+    <div class="section-title">Notifications par email</div>
+    <div class="section-sub">
+      Chaque notification s'active indépendamment. Elles partent automatiquement,
+      une fois par jour ; aucun envoi n'a lieu si la case est décochée.
+    </div>
+
+    <div class="notif-list">
+
+      <label class="notif-row">
+        <input type="checkbox" checked>
+        <span class="notif-body">
+          <span class="notif-label">Ouverture des inscriptions</span>
+          <span class="notif-desc">
+            Prévient les coachs de l'espace que la compétition est créée et qu'ils
+            peuvent y engager une équipe.
+          </span>
+          <span class="notif-when">à la création de la saison</span>
+        </span>
+      </label>
+
+      <label class="notif-row">
+        <input type="checkbox" checked>
+        <span class="notif-body">
+          <span class="notif-label">Veille de journée</span>
+          <span class="notif-desc">
+            Rappelle à tous les coachs inscrits que la journée démarre le lendemain.
+            Ceux qui ont un match y trouvent leur adversaire.
+          </span>
+          <span class="notif-when">la veille du début de chaque journée</span>
+        </span>
+      </label>
+
+      <label class="notif-row">
+        <input type="checkbox" checked>
+        <span class="notif-body">
+          <span class="notif-label">Fin de journée imminente</span>
+          <span class="notif-desc">
+            Alerte que la fenêtre de jeu se referme, pour que les matchs en retard
+            soient joués à temps.
+          </span>
+          <span class="notif-when">deux jours avant la clôture d'une journée</span>
+        </span>
+      </label>
+
+      <label class="notif-row">
+        <input type="checkbox" checked>
+        <span class="notif-body">
+          <span class="notif-label">Date limite d'inscription</span>
+          <span class="notif-desc">
+            Relance les coachs invités qui n'ont pas encore engagé d'équipe.
+            Les inscrits ne le reçoivent pas.
+          </span>
+          <span class="notif-when">trois jours avant la date limite</span>
+        </span>
+      </label>
+
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="section-title">Variante — réglages inapplicables</div>
+    <div class="section-sub">
+      Deux notifications dépendent de choix faits ailleurs dans le magicien. Plutôt
+      que de les masquer, on les grise et on dit pourquoi : une case absente laisse
+      croire à un oubli, une case grisée explique.
+    </div>
+
+    <div class="notif-list">
+      <label class="notif-row notif-row--inactive">
+        <input type="checkbox" disabled>
+        <span class="notif-body">
+          <span class="notif-label">Fin de journée imminente</span>
+          <span class="notif-desc">
+            Alerte que la fenêtre de jeu se referme.
+          </span>
+          <span class="notif-why">
+            Indisponible : les journées de cette compétition sont à date fixe, il
+            n'y a pas de fenêtre à clôturer.
+          </span>
+        </span>
+      </label>
+
+      <label class="notif-row notif-row--inactive">
+        <input type="checkbox" disabled>
+        <span class="notif-body">
+          <span class="notif-label">Date limite d'inscription</span>
+          <span class="notif-desc">
+            Relance les coachs invités qui n'ont pas encore engagé d'équipe.
+          </span>
+          <span class="notif-why">
+            Indisponible : aucune date limite d'inscription n'est renseignée
+            ci-dessus.
+          </span>
+        </span>
+      </label>
+    </div>
+
+  </div>
+
+</body>
+</html>

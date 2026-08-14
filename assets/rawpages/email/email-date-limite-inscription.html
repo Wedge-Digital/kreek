@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Invitation — Blood Bowl Club</title>
+  <title>Plus que trois jours pour t'inscrire — Blood Bowl Club</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700&family=Roboto+Slab:wght@500;700&display=swap" rel="stylesheet">
   <style>
@@ -141,19 +141,26 @@
         <img src="{{app_url}}/static/img/email-logo.png"
              width="200" height="81" alt="Blood Bowl Club">
       </div>
-      <div class="header-title">Tu es invité à rejoindre une compétition !</div>
-      <div class="header-sub">Prépare ton roster, c'est l'heure de cogner.</div>
+      <div class="header-title">Plus que trois jours pour rejoindre {{competition_name}}</div>
+      <div class="header-sub">Après, les portes se ferment.</div>
     </div>
 
     <!-- Body -->
     <div class="body">
       <div class="greeting">Salut <strong>{{coach_name}}</strong>,</div>
 
-      <div class="text">
-        <strong>{{admin_name}}</strong> t'invite à participer à une nouvelle compétition sur Blood Bowl Club. Les inscriptions sont ouvertes — monte ton équipe et viens en découdre sur le terrain !
+      <div class="deadline">
+        Les inscriptions à <strong>{{competition_name}}</strong> ferment le
+        <strong>{{registration_deadline}}</strong>. Il te reste
+        <strong>trois jours</strong> pour engager une équipe.
       </div>
 
-      <!-- Info card -->
+      <div class="text">
+        Tu as été invité par <strong>{{admin_name}}</strong> mais tu n'as pas
+        encore inscrit d'équipe. Cet email ne part qu'aux coachs invités et non
+        inscrits — si tu viens de t'engager, ignore-le.
+      </div>
+
       <div class="info-card">
         <div class="info-row">
           <span class="info-label">Compétition</span>
@@ -166,22 +173,18 @@
         </div>
         <hr class="info-sep">
         <div class="info-row">
-          <span class="info-label">Espace</span>
-          <span class="info-value">{{space_name}}</span>
-        </div>
-        <!-- Si date limite définie -->
-        <!--
-        <hr class="info-sep">
-        <div class="info-row">
           <span class="info-label">Date limite</span>
           <span class="info-value">{{registration_deadline}}</span>
         </div>
-        -->
+        <hr class="info-sep">
+        <div class="info-row">
+          <span class="info-label">Places restantes</span>
+          <span class="info-value">{{remaining_slots}}</span>
+        </div>
       </div>
 
-      <!-- CTA -->
       <div class="cta-wrapper">
-        <a href="{{competition_url}}" class="cta-btn">Voir la compétition →</a>
+        <a href="{{competition_url}}" class="cta-btn">Inscrire mon équipe →</a>
       </div>
 
     </div>
@@ -189,7 +192,7 @@
     <!-- Footer -->
     <div class="footer">
       Cet email a été envoyé par <a href="{{app_url}}">Blood Bowl Club</a>
-      <br>parce que tu es membre de l'espace <strong>{{space_name}}</strong>.
+      <br>parce que tu as été invité à <strong>{{competition_name}}</strong> et que tu n'y es pas encore inscrit.
     </div>
 
   </div>
