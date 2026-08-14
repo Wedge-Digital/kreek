@@ -15,10 +15,14 @@ limite d'inscription approchante.
 
 ## Ce que l'investigation a trouvé, et qui change le périmètre
 
-**`notify_by_email` existe déjà** dans `CompetitionInvitations`, avec sa case en
-étape 4 du magicien : « Notifier les coachs par email quand la compétition est
-ouverte ». Elle est **stockée et jamais lue**. Le choix du créateur est donc
-déjà modélisé — il ne fait rien.
+**Deux interrupteurs email morts, pas un** (le second trouvé en phase 2).
+`notify_by_email` est en étape 4 — « Notifier les coachs par email quand la
+compétition est ouverte » —, et `use_mail_notification` en étape 3, sous la note
+« Des rappels seront envoyés aux équipes à l'ouverture et à la fermeture de la
+phase » : mot pour mot les notifications 2 et 3. Les deux sont **stockés et
+jamais lus**. Le magicien promettait donc déjà cette fonctionnalité à deux
+endroits sans la rendre nulle part ; les quatre réglages les absorbent et les
+remplacent.
 
 **`registration_deadline` existe déjà**, de même que les deux types de journée
 (`FixedDate` / `TimeFrame`) avec `date_start` et `date_end` : ils correspondent
@@ -50,22 +54,45 @@ jamais une surface d'action. Toutes les couleurs sont des tokens de
 `invitation-competition.html` préexistait et a été harmonisée : laisser deux
 styles aurait fait un univers à deux vitesses.
 
-## Découpage proposé pour les phases 2 à 8 — **à valider**
+## Découpage des phases 2 à 8 — validé
 
-La fonctionnalité ne se découpe pas en pages, comme le workflow le suppose :
-il n'y a qu'un écran, et le reste est un mécanisme d'envoi. Découpage proposé :
+La fonctionnalité ne se découpe pas en pages, comme le workflow le suppose : il
+n'y a qu'un écran, et le reste est un mécanisme d'envoi.
 
-| Unité | Contenu |
-|---|---|
-| `configuration/` | l'écran de réglage dans l'étape 4 du magicien |
-| `envoi/` | le service de notification, le cron, les quatre gabarits |
+| Unité | Contenu | Phase 2 |
+|---|---|---|
+| `configuration/` | l'écran de réglage dans l'étape 4 du magicien | oui |
+| `envoi/` | service de notification, cron, journal d'envois, quatre gabarits | **sans objet** |
+
+**`envoi/` n'a pas de phase 2, et ce n'est pas un oubli.** Un email n'a pas
+d'architecture front : ni composition HTMX, ni événements DOM, ni swap. C'est
+inscrit dans le tableau plutôt que laissé vide, pour la raison même qui a fait
+trancher R5 — une case vide laisse croire à un trou, une case renseignée
+explique.
+
+**`configuration/` passe en premier, parce que `envoi/` lit ce qu'elle écrit.**
+Le modèle actuel est un booléen unique (`notify_by_email`, stocké et jamais lu)
+qui devient quatre réglages indépendants. Tant qu'il n'existe pas, le service
+d'envoi n'a rien à interroger pour savoir s'il doit envoyer ; l'ordre inverse
+obligerait à inventer une forme provisoire puis à la refaire.
+
+**Le journal d'envois de R3 appartient à `envoi/`**, en phase 7 : c'est une
+persistance du mécanisme, pas un réglage, et la contrainte d'unicité qui le
+garantit se conçoit avec les tables, pas avec l'écran.
+
+Découpage écarté : **une unité par notification.** Les quatre partagent le
+mécanisme entier — cron, journal, résolution des destinataires, expédition — et
+ne diffèrent que par leur déclencheur temporel et leur gabarit. Les séparer
+aurait fait quatre fois les phases 3 à 7 pour un seul mécanisme.
 
 ## Progression
 
 | Unité | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| configuration | | | | | | | |
-| envoi | | | | | | | |
+| configuration | ✅ | 🚧 | | | | | |
+| envoi | — | | | | | | |
+
+`—` : sans objet, cf. ci-dessus.
 
 ## Règles métier — tranchées en phase 1
 
@@ -121,6 +148,19 @@ adversaire, les autres une ligne de calendrier. Un seul gabarit, deux corps.
 Pas de fenêtre temporelle, pas de date limite : la case reste visible, désactivée,
 et dit pourquoi. **Une case absente laisse croire à un oubli ; une case grisée
 explique.**
+
+### R6 — Une notification cochée puis rendue inapplicable reste cochée
+
+Apparue en phase 2 (`configuration/02-front.md`). L'organisateur coche « date
+limite d'inscription » puis efface la date : la case reste **cochée et grisée**,
+la valeur stockée intacte.
+
+Décocher détruirait un choix explicite en réaction à un geste qui n'a rien à
+voir, sans que l'organisateur le voie. Le grisage dit déjà « sans effet
+aujourd'hui », et l'intention est conservée pour le jour où une date reviendra.
+
+Même préférence que R1 : ne rien faire silencieusement plutôt qu'agir à côté de
+ce qui a été demandé.
 
 ## Ce que ces règles impliquent pour les phases suivantes
 
