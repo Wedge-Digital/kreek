@@ -89,7 +89,7 @@ aurait fait quatre fois les phases 3 à 7 pour un seul mécanisme.
 
 | Unité | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| configuration | ✅ | 🚧 | | | | | |
+| configuration | ✅ | ✅ | 🚧 | | | | |
 | envoi | — | | | | | | |
 
 `—` : sans objet, cf. ci-dessus.
@@ -162,6 +162,48 @@ aujourd'hui », et l'intention est conservée pour le jour où une date reviendr
 Même préférence que R1 : ne rien faire silencieusement plutôt qu'agir à côté de
 ce qui a été demandé.
 
+### R7 — Le périmètre des destinataires est toujours borné par l'espace
+
+Sans cette borne, « tous ceux qui peuvent s'inscrire » désigne **la plateforme
+entière** : chaque compétition créée dans un espace notifierait tous les coachs
+de tous les espaces. Ce n'est jamais l'intention.
+
+| Notification | Destinataires |
+|---|---|
+| Ouverture des inscriptions | mode `invitation` : les coachs invités. Mode `open` : **les membres de l'espace**, jamais au-delà |
+| Veille de journée | les coachs inscrits à la compétition |
+| Fin de journée imminente | les coachs inscrits à la compétition |
+| Date limite d'inscription | ceux qui peuvent encore s'inscrire et ne l'ont pas fait : invités non inscrits, ou membres de l'espace non inscrits |
+
+Les notifications 2 et 3 sont bornées par construction — on ne peut être inscrit
+à une compétition sans être dans son espace. **Le risque porte sur 1 et 4 en mode
+`open`**, les deux seuls cas où le périmètre se déduit d'une règle d'accès plutôt
+que d'une liste nominative.
+
+#### Ce qu'il faut pour la tenir, et où c'est
+
+L'appartenance vit dans `spaces__user_space`, les adresses dans
+`spaces__user_cache`, et `list_members_for_space.sql` fait déjà exactement la
+jointure voulue — le tout **possédé par `spaces`**. `competitions` y accède donc
+par le port `ICompetitionSpaceMemberPort`, qui existe avec son adapter, augmenté
+d'une méthode de listing. Jamais par une requête directe.
+
+#### Le piège à connaître avant `envoi/`
+
+Une migration a créé `competitions__user_cache`, `competitions__space_cache` et
+`competitions__user_space_cache` — avec les emails et l'appartenance, dans le BC
+`competitions`. **Ces trois tables ne sont ni lues ni écrites nulle part.**
+
+C'est exactement ce qu'on trouve en cherchant « où sont les emails », et qu'on
+branche sans voir qu'elles sont vides : aucune notification ne partirait, et
+aucune erreur ne le dirait.
+
+#### Entorse existante, signalée et non traitée
+
+`src/app/competitions/io/repository/sql/competitions/find_competition_by_id.sql`
+fait `LEFT JOIN spaces__user_cache` : un BC qui requête la table d'un autre,
+contre la règle de souveraineté des données. Hors sujet ici, mérite sa carte.
+
 ## Ce que ces règles impliquent pour les phases suivantes
 
 - **R3 crée une table et un agrégat** — c'est la décision la plus structurante,
@@ -171,3 +213,6 @@ ce qui a été demandé.
 - **R2 ne coûte rien** tant que la clé d'idempotence porte la date. Si elle ne la
   portait pas, il faudrait une règle entière — c'est un choix de clé qui décide
   d'un comportement.
+- **R7 fait de la résolution des destinataires un travail à part entière**, avec
+  son port et ses quatre cas. Ce n'est pas « lire une liste » : deux des quatre
+  notifications s'adressent à des gens qui ne sont *pas* inscrits.
