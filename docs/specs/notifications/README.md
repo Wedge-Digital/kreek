@@ -67,19 +67,67 @@ il n'y a qu'un écran, et le reste est un mécanisme d'envoi. Découpage propos�
 | configuration | | | | | | | |
 | envoi | | | | | | | |
 
-## Règles métier — identifiées en phase 1, **non tranchées**
+## Règles métier — tranchées en phase 1
 
-1. **Le cron ne tourne pas un jour.** Une veille de journée manquée se
-   rattrape-t-elle le lendemain — donc le jour même du début — ou est-elle
-   perdue ? Envoyer « la journée démarre demain » le jour du début serait pire
-   que se taire.
-2. **Une journée décalée après l'envoi.** L'organisateur repousse une date après
-   que l'email est parti : on renvoie, on annonce le décalage, on ne fait rien ?
-3. **Idempotence.** Deux exécutions du cron le même jour ne doivent pas produire
-   deux emails. Il faut une trace de ce qui a été envoyé, à quel coach, pour
-   quelle journée.
-4. **Un coach inscrit sans match.** La maquette prévoit une variante de corps —
-   à confirmer comme règle.
-5. **Notifications inapplicables.** Pas de fenêtre temporelle, pas de date
-   limite : la maquette les grise en disant pourquoi, plutôt que de les masquer.
-   Une case absente laisse croire à un oubli ; une case grisée explique.
+### R1 — Une notification manquée est perdue, et journalisée
+
+Si le cron n'a pas tourné, la fenêtre est passée : on n'envoie rien, et
+l'incident est tracé. Envoyer « la journée démarre demain » le jour même du
+début serait **faux** ; se taire est moins grave que mentir.
+
+Écarté : le rattrapage avec un texte adapté (« démarre aujourd'hui »), qui
+doublerait chaque gabarit et obligerait le service à savoir de combien il est en
+retard.
+
+### R2 — Un décalage de date réarme la notification, sans règle supplémentaire
+
+La trace d'envoi est clée sur la **date visée**, pas seulement sur la journée.
+Une date qui change produit donc une clé nouvelle : la veille de la nouvelle
+date, l'email repart de lui-même.
+
+C'est le bénéfice le moins évident de R3 — l'idempotence règle le décalage sans
+qu'on écrive quoi que ce soit pour lui. Écarté : un email « la date a changé »,
+qui aurait été une cinquième notification, avec son gabarit, son réglage et ses
+tests.
+
+### R3 — L'idempotence est garantie **par destinataire**, et par la base
+
+```sql
+notification_deliveries
+    notification_type
+    competition_id / round_id
+    target_date
+    coach_id
+    sent_at
+    UNIQUE (notification_type, round_id, target_date, coach_id)
+```
+
+**C'est la contrainte d'unicité qui garantit, pas le code applicatif.** Une
+relance manuelle, un redémarrage ou un second serveur ne doivent pas produire un
+second email — et aucune logique applicative ne tient cette promesse aussi bien
+qu'un index unique.
+
+Le grain par destinataire, et non par lot : un coach inscrit tardivement reçoit
+encore son email, et une panne au milieu d'un envoi ne laisse pas le lot marqué
+« fait » alors que la moitié des coachs n'a rien reçu.
+
+### R4 — Tous les coachs inscrits reçoivent l'email de journée, avec deux corps
+
+Conséquence de la décision de destinataires : celui qui a un match y trouve son
+adversaire, les autres une ligne de calendrier. Un seul gabarit, deux corps.
+
+### R5 — Une notification inapplicable est grisée, avec son motif
+
+Pas de fenêtre temporelle, pas de date limite : la case reste visible, désactivée,
+et dit pourquoi. **Une case absente laisse croire à un oubli ; une case grisée
+explique.**
+
+## Ce que ces règles impliquent pour les phases suivantes
+
+- **R3 crée une table et un agrégat** — c'est la décision la plus structurante,
+  et elle tombe en phase 7 (persistance) autant qu'en phase 6 (domaine).
+- **R1 impose une journalisation**, donc une observabilité : une notification
+  perdue en silence serait indétectable.
+- **R2 ne coûte rien** tant que la clé d'idempotence porte la date. Si elle ne la
+  portait pas, il faudrait une règle entière — c'est un choix de clé qui décide
+  d'un comportement.
