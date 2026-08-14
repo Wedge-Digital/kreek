@@ -89,7 +89,7 @@ aurait fait quatre fois les phases 3 à 7 pour un seul mécanisme.
 
 | Unité | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| configuration | ✅ | ✅ | 🚧 | | | | |
+| configuration | ✅ | ✅ | ✅ | 🚧 | | | |
 | envoi | — | | | | | | |
 
 `—` : sans objet, cf. ci-dessus.
@@ -203,6 +203,29 @@ aucune erreur ne le dirait.
 `src/app/competitions/io/repository/sql/competitions/find_competition_by_id.sql`
 fait `LEFT JOIN spaces__user_cache` : un BC qui requête la table d'un autre,
 contre la règle de souveraineté des données. Hors sujet ici, mérite sa carte.
+
+### R8 — Les saisons existantes démarrent éteintes, les nouvelles allumées
+
+Apparue en phase 4 (`configuration/04-dtos.md`). Aucune compétition déjà créée ne
+se met à envoyer des emails sans que son organisateur l'ait demandé ; toute
+saison créée après la livraison arrive avec les quatre notifications actives, que
+le magicien montre et qu'on peut décocher.
+
+Écarté : reprendre les deux interrupteurs morts comme valeur de départ. L'argument
+était sérieux — l'UI promettait les emails et proposait « Activées » par défaut,
+donc les honorer aurait tenu une parole donnée. Mais cette parole n'a jamais été
+tenue, et personne n'a jamais vu un seul de ces emails : la réactiver
+rétroactivement sur ~399 saisons ferait partir des messages que plus personne
+n'attend.
+
+**Conséquence technique, à ne pas perdre :** la migration doit **écrire
+explicitement** les quatre `false` sur toutes les lignes existantes. Si l'absence
+de valeur servait de défaut, `NULL` signifierait à la fois « ancienne saison,
+donc éteint » et « saison neuve, donc allumé », sans rien dans la ligne pour les
+distinguer — le `status` n'y suffit pas, `invitations_configured` désignant aussi
+bien une saison abandonnée en cours de magicien qu'une saison d'avant la
+migration. Une fois les lignes remplies, `NULL` veut dire « créée après », et
+rien d'autre.
 
 ## Ce que ces règles impliquent pour les phases suivantes
 
