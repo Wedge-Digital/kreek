@@ -80,6 +80,35 @@ La sémantique elle-même est testée une fois, en carte 324 — pas ici.
 
 ## Checklist
 
-- [ ] `ISpaceOwnership` pour ce BC, enregistré dans `main.rs`
-- [ ] Tests de handler : matrice d'appartenance, lecture et écriture
-- [ ] Un scénario e2e de bout en bout
+- [x] `ISpaceOwnership` pour ce BC, enregistré dans `main.rs`
+- [x] Tests de handler : matrice d'appartenance, lecture et écriture
+- [x] Suite e2e complète verte — 182 passés
+
+## Réalisé
+
+**Un seul résolveur, et non deux.** La carte prévoyait un saut
+`comments` → `articles`, par symétrie avec les saisons. Il est **inutile** :
+aucune route de ce BC ne porte d'identifiant de commentaire. Les commentaires
+s'atteignent par `/home/articles/{article_id}/comments`, donc contrôler
+l'article suffit.
+
+La carte avait sur-spécifié en généralisant depuis `competitions` sans regarder
+les routes. Vérifier avant d'écrire aurait coûté une commande.
+
+### La sonde qui a lancé la série, rejouée
+
+```
+lecture croisée  → 404   (était 200, titre réel servi)
+écriture croisée → 404   (était 200, ligne écrite)
+commentaires : 2 avant, 2 après
+```
+
+C'est ici que l'audit de la carte 316 avait prouvé l'écriture croisée. Le geste
+est désormais refusé, et un test le fige — il vérifie aussi qu'**aucune ligne
+n'est écrite**, un `404` seul ne prouvant pas que rien n'a été fait.
+
+### L'écart est prouvable en HTTP
+
+Troisième BC seulement dans ce cas, avec `competitions` et `players` :
+l'article se sert depuis sa table, sans event store. `match_report` et `teams`
+avaient dû faire prouver l'écart au niveau du résolveur.

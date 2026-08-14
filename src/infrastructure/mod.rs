@@ -1,5 +1,6 @@
 pub mod competitions;
 pub mod match_report;
+pub mod news;
 pub mod players;
 pub mod ranking;
 pub mod spaces;

@@ -27,6 +27,16 @@ pub trait IArticleRepository: Send + Sync {
         per_page: i64,
     ) -> Result<(Vec<Article>, i64), ArticleRepositoryError>;
 
+    /// L'espace auquel appartient cet article, ou `None` s'il n'existe pas
+    /// (carte 324).
+    ///
+    /// Une seule colonne plutôt que l'article entier : le contrôle s'exécute
+    /// sur chaque requête, et il n'a besoin que de ça.
+    async fn find_space_id(
+        &self,
+        article_id: &ArticleId,
+    ) -> Result<Option<String>, ArticleRepositoryError>;
+
     async fn find_by_id(
         &self,
         article_id: &ArticleId,

@@ -119,6 +119,18 @@ impl IArticleRepository for ArticleRepository {
         Ok((articles, total))
     }
 
+    async fn find_space_id(
+        &self,
+        article_id: &ArticleId,
+    ) -> Result<Option<String>, ArticleRepositoryError> {
+        let row: Option<(String,)> = sqlx::query_as("SELECT space_id FROM articles WHERE id = $1")
+            .bind(article_id.to_string())
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| ArticleRepositoryError::Database(e.to_string()))?;
+        Ok(row.map(|r| r.0))
+    }
+
     async fn find_by_id(
         &self,
         article_id: &ArticleId,
