@@ -137,6 +137,29 @@ un sous-objet :
 
 `notify_by_email` **disparaît** de ce corps : les quatre réglages le remplacent.
 
+### La page hôte doit réhydrater son `state`, comme elle le fait déjà
+
+Le gabarit de l'étape 4 reçoit un `existing_notifications_json` en plus de
+`existing_invitations_json`, et en initialise `state.notifications`.
+
+**Ce n'est pas un ajout, c'est le maintien de ce que la page fait déjà** —
+`state.notifyByEmail = INITIAL.notify_by_email …`. Déplacer la case dans un
+widget déplace son rendu, pas la réhydratation de l'hôte : le widget affiche
+alors les valeurs sauvegardées pendant que `state` porte le défaut, et une
+re-validation sans toucher aux cases écrase les réglages.
+
+Ce JSON **et** l'émission à l'`init()` du widget (phase 2) ont deux rôles
+distincts, et aucun ne remplace l'autre :
+
+| Mécanisme | Ce qu'il garantit |
+|---|---|
+| `existing_notifications_json` | `state` est juste **dès la première peinture**, sans dépendre du `hx-get` du widget |
+| émission à l'`init()` | l'hôte suit le widget si celui-ci a lu plus tard, et le contrat reste « voici l'état » |
+
+Sans le premier, valider pendant que le widget charge encore rejouerait le
+défaut. Sans le second, l'hôte dépendrait d'un JSON que seul le magicien reçoit,
+et le widget ne serait plus autonome.
+
 `SaveCompetitionInvitationsCommand` gagne un champ `notifications:
 CompetitionNotifications`, et son use case écrit **les deux colonnes**. Un seul
 use case pour un seul handler, plutôt que deux appels à orchestrer — et les deux

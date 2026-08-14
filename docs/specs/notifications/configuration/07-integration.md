@@ -94,6 +94,10 @@ Le GET charge trois choses — les réglages, la structure, les invitations —,
 appelle `applicability()`, et bâtit le VM par `from_domain()`. Il ne calcule
 rien lui-même.
 
+**Le handler de l'étape 4 lit lui aussi les réglages** et les sérialise en
+`existing_notifications_json`, à côté de `existing_invitations_json`. Sans quoi
+la page hôte repart sur son défaut au retour arrière — cf. phase 4.
+
 Le POST bâtit les quatre value objects, la commande, appelle le use case, rend
 `204`. Pas de fragment en retour : re-rendre le widget à chaque clic ferait
 clignoter les cases et perdrait le focus clavier, pour réafficher ce qui est
@@ -122,7 +126,7 @@ du corps.
 |---|---|
 | `templates/widgets/notification-settings-widget.html` | **créé** — racine en `hx-disinherit="*"`, Alpine avec `init()`/`destroy()`, `<link>` vers son CSS |
 | `assets/static/css/widgets/notification-settings.css` | **créé** — CSS embarqué, aucune dépendance au layout de l'hôte |
-| `new-competition-phase-4.html` | **modifié** — la case `notify_by_email` cède la place au conteneur du widget ; la section 4 émet `registrationDeadlineChanged` à la frappe |
+| `new-competition-phase-4.html` | **modifié** — la case `notify_by_email` cède la place au conteneur du widget ; la section 4 émet `registrationDeadlineChanged` à la frappe ; `state.notifications` est réhydraté depuis `existing_notifications_json` |
 | `new-competition-phase-3.html` | **modifié** — retrait du bloc « Notifications e-mail », de `setMailNotif`, et des trois références à `state.useMailNotification` |
 | `admin/summary.html` | **modifié** — conteneur du widget en mode auto-save |
 
@@ -154,15 +158,43 @@ réellement — la couverture unitaire de la phase 6 ne dit rien du rendu.
 | Scénario | Ce qu'il garde |
 |---|---|
 | Étape 4 d'une saison neuve : les quatre cases présentes et cochées | R8, côté neuf |
-| Décocher, continuer, revenir : l'état est persisté | la voie différée de bout en bout |
+| Décocher, continuer, revenir : les cases affichent l'état sauvegardé | le rendu serveur du widget |
+| Décocher, continuer, revenir, **re-valider sans toucher aux cases**, revenir : l'état a tenu | la réhydratation de l'hôte — le seul scénario qui attrape l'écrasement silencieux |
 | Compétition sans calendrier : les deux lignes de journée grisées, avec leur motif | R5 et les motifs serveur |
 | Effacer la date limite : la quatrième ligne grise **sans rechargement** | le grisage vivant — invisible à tout test unitaire |
 | Cocher la date limite puis effacer la date : la case **reste cochée** et grisée | R6 |
 | Admin : basculer un réglage sur une compétition démarrée, recharger, il a tenu | la voie auto-save |
 | Admin : après cette bascule, la carte de la compétition mène **toujours au détail** | la non-régression du statut trouvée en phase 3 |
 
-Le dernier est le plus important et le moins évident : il ne teste pas la
-fonctionnalité mais le défaut qu'elle a failli introduire. Sans lui, un futur
+Deux de ces scénarios ne testent pas la fonctionnalité mais des défauts qu'elle
+a failli introduire, et ce sont les moins évidents des sept.
+
+**Le re-passage sans toucher aux cases.** Le scénario voisin — décocher, revenir,
+regarder — passe même quand l'hôte n'est pas réhydraté : le widget est rendu par
+le serveur, donc l'affichage est juste. C'est la **re-validation** qui révèle
+l'écart, parce qu'elle envoie le `state` de la page et non ce qui est à l'écran.
+Un test qui se contente de regarder ne verra jamais ce défaut.
+
+Le pas à pas, dont l'ordre fait tout :
+
+1. Étape 4 d'une saison neuve — les quatre cases sont cochées.
+2. **Décocher « veille de journée »**, laisser les trois autres.
+3. « Enregistrer & continuer » → étape 5.
+4. « ← Retour » → étape 4. *La case décochée l'est toujours : le widget est
+   rendu par le serveur, et cette assertion passe même si le défaut est présent.*
+5. **« Enregistrer & continuer » sans toucher à quoi que ce soit.**
+6. « ← Retour » à nouveau.
+7. **Assertion** : « veille de journée » est toujours décochée.
+
+Sans réhydratation de l'hôte, l'étape 5 envoie le défaut de la page — quatre
+`true` — et l'étape 7 trouve la case recochée. L'organisateur, lui, n'aurait rien
+vu : il regardait un écran juste pendant qu'une autre valeur partait.
+
+C'est aussi la raison pour laquelle ce test ne peut pas être un test de handler
+(carte 311) : l'écart naît de l'état JavaScript de la page, que seul un
+navigateur porte.
+
+**La carte qui mène toujours au détail.** Sans lui, un futur
 `update_notifications.sql` qui reprendrait par mégarde la ligne `status` de son
 voisin passerait tous les autres tests.
 

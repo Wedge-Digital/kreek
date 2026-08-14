@@ -63,12 +63,20 @@ comptent aucun composant de réglages.
 ## Événements
 
 - **`notificationSettingsChanged`** : `{ registration_open, round_eve,
-  round_closing, deadline }` — quatre booléens. Émis par le widget à chaque
-  bascule. Écouté par la page du magicien, qui le fusionne dans son objet
-  `state` existant ; et, en mode auto-save, **par le widget lui-même**, dont la
-  racine porte `hx-post` sur `hx-trigger="notificationSettingsChanged from:body"`.
+  round_closing, deadline }` — quatre booléens. Émis par le widget **à son
+  `init()` puis à chaque bascule**. Écouté par la page du magicien, qui le
+  fusionne dans son objet `state` existant ; et, en mode auto-save, **par le
+  widget lui-même**, dont la racine porte `hx-post` sur
+  `hx-trigger="notificationSettingsChanged from:body"`.
 
   Les noms de champs sont provisoires — la phase 4 les fixe.
+
+  **L'émission à l'`init()` n'est pas une précaution : elle change ce que
+  l'événement veut dire.** « Quelque chose a bougé » n'est pas consommable par un
+  hôte qui doit connaître l'état même quand rien n'a bougé ; « voici l'état
+  courant » l'est. Sans elle, revenir sur l'étape 4 et re-valider sans toucher
+  une case écraserait les réglages sauvegardés par le défaut de la page — les
+  cases affichant une chose pendant qu'une autre part au serveur.
 
 - **`registrationDeadlineChanged`** : `{ value: string|null }` — émis par la
   section 4 de l'étape 4 à la frappe, écouté par le widget pour griser ou
