@@ -1,8 +1,31 @@
 # Axe `check-arch` — le cloisonnement des espaces ne doit pas se reperdre
 
 **Priorité : moyenne**
-**À faire après :** la carte `324` et la première migration (`318`)
+**Reportée** — décision du 14 août 2026, motif ci-dessous
+**Prête à faire :** les six migrations sont livrées, la baseline serait **vide**
 **Contexte :** `scripts/check-arch.sh`
+
+## Pourquoi elle est reportée
+
+Le trou actuel est **fermé** : six résolveurs couvrent les 146 routes, et trois
+écritures croisées prouvées ont été refermées. Cet axe ne protège que du
+**futur** — le jour où quelqu'un ajoutera un nouveau type de ressource, donc un
+nouveau paramètre de chemin sans résolveur, que le middleware laisserait passer
+en silence.
+
+Le risque est réel mais **rare** : il ne se matérialise qu'à la création d'un
+type de ressource, deux ou trois fois par an. Le coût de l'axe est faible, une
+heure environ. Mais **rien ne se dégrade si l'on attend** — contrairement à ce
+qui restait ouvert avant les cartes 315 à 322.
+
+À reprendre quand un nouveau BC ou un nouveau type de ressource pointe : c'est
+le moment où l'axe cesse d'être théorique.
+
+### Ce qui a changé en sa faveur pendant l'attente
+
+Elle devait naître avec cinq exceptions décroissantes. Les six migrations étant
+faites, **sa baseline serait vide** — le meilleur cas possible pour un verrou,
+et une raison de moins de la repousser encore quand elle reviendra.
 
 ## Ce qu'il doit attraper
 
