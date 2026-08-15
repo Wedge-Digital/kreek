@@ -104,10 +104,8 @@ pub struct Recipient {
     pub coach_id:   CoachId,
     pub coach_name: CoachName,
     pub email:      Email,
-    /// Le match de ce coach cette journée, s'il en a un. `None` porte la
-    /// variante « tu ne joues pas » de R4 — ce n'est pas une absence de
-    /// donnée, c'est une information.
-    pub fixture:    Option<Fixture>,
+    /// Ce que ce coach joue cette journée. Cf. la correction ci-dessous.
+    pub participation: RoundParticipation,
 }
 
 pub struct Fixture {
@@ -121,9 +119,15 @@ pub struct Fixture {
 **Émis par** : `notification_recipients::resolve()`. **Consommé par** : le use
 case, qui en tire le contexte de rendu.
 
-`fixture: Option<…>` est le point où R4 cesse d'être une règle écrite pour
-devenir une forme de type : le gabarit ne peut pas oublier le cas « inscrit sans
-match », le compilateur l'oblige à le traiter.
+> **Corrigé en phase 5** : ce champ était un `Option<Fixture>`. Or rien
+> n'empêche un coach d'inscrire **deux équipes** dans la même saison, et la clé
+> d'idempotence ne portant pas d'équipe, il reçoit un seul email — le second
+> match aurait donc disparu en silence. Le type devient un enum
+> `RoundParticipation { NotPlaying, Playing(Vec<Fixture>) }`.
+
+Le type — `Option` hier, enum aujourd'hui — est le point où R4 cesse d'être une
+règle écrite pour devenir une forme : le gabarit ne peut pas oublier le cas
+« inscrit sans match », le compilateur l'oblige à traiter les deux branches.
 
 ## Sortie — les contextes de rendu des quatre gabarits
 
@@ -141,8 +145,16 @@ pub struct RoundEveEmail {
     pub date_start:       String,
     /// `None` pour une journée à date fixe — la ligne « clôture » disparaît.
     pub date_end:         Option<String>,
-    /// `None` pour un coach inscrit sans match cette journée (R4).
-    pub fixture:          Option<FixtureVm>,
+    /// Corrigé en phase 5 : un enum et non un `Option`, pour que le gabarit
+    /// doive traiter les deux branches jusqu'au dernier mètre. Un `Vec` vide
+    /// se rendrait silencieusement, et la ligne « tu ne joues pas » de R4
+    /// disparaîtrait sans que rien ne proteste.
+    pub participation:    ParticipationVm,
+}
+
+pub enum ParticipationVm {
+    NotPlaying,
+    Playing(Vec<FixtureVm>),
 }
 
 pub struct FixtureVm {
@@ -160,7 +172,7 @@ maquettes :
 |---|---|
 | `competition_registration_open` | `app_url`, `coach_name`, `admin_name`, `space_name`, `competition_name`, `season_name`, `competition_url`, `registration_deadline` |
 | `competition_round_eve` | ci-dessus |
-| `competition_round_closing` | `app_url`, `coach_name`, `competition_name`, `round_name`, `date_end`, `fixture`, `match_url` |
+| `competition_round_closing` | `app_url`, `coach_name`, `competition_name`, `round_name`, `date_end`, `participation` |
 | `competition_registration_deadline` | `app_url`, `coach_name`, `admin_name`, `space_name`, `competition_name`, `season_name`, `competition_url`, `registration_deadline`, `remaining_slots` |
 
 ### Deux axes de variation dans la veille de journée, pas un
@@ -171,7 +183,7 @@ confondre :
 | Axe | Ce qui change | Piloté par |
 |---|---|---|
 | type de journée | la ligne « clôture » apparaît ou non | `date_end: Option<String>` |
-| coach avec ou sans match | le bloc du match, ou « tu ne joues pas » | `fixture: Option<FixtureVm>` |
+| coach avec ou sans match | le bloc des matchs, ou « tu ne joues pas » | `participation: ParticipationVm` |
 
 Quatre combinaisons, donc, et les quatre sont atteignables : une journée à date
 fixe pour un coach qui ne joue pas est un cas parfaitement ordinaire.
