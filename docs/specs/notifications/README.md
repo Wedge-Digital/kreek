@@ -128,7 +128,7 @@ aurait fait quatre fois les phases 3 à 7 pour un seul mécanisme.
 | Unité | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
 | configuration | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏸ |
-| envoi | — | ✅ | 🚧 | | | | |
+| envoi | — | ✅ | ✅ | 🚧 | | | |
 
 `—` : sans objet, cf. ci-dessus. `⏸` : les cartes des **deux** unités sont
 produites ensemble, à la fin de `envoi/`.
@@ -315,6 +315,29 @@ n'applique — le défaut même que cette fonctionnalité corrige ailleurs.
 **À ne pas laisser derrière** : le VO `Timezone`
 (`shared_kernel/bloodbowl/timezone.rs`) n'a aucun autre utilisateur. Il devient
 orphelin le jour où le champ disparaît.
+
+### R11 — L'ouverture des inscriptions part à la validation, pas au cron
+
+Apparue en phase 4 de `envoi/`, et elle **corrige une lacune de la phase 3** :
+l'orchestration décrite là-bas bornait tout sur les dates du jour, ce qui ne peut
+pas marcher pour une notification déclenchée par un **fait** — la saison s'ouvre
+— et non par une date.
+
+L'email part donc à la validation de l'étape 5, en tâche détachée. Les trois
+autres restent pilotées par le cron.
+
+Écarté : une colonne `opened_at` et un envoi par le cron. Un seul mécanisme pour
+les quatre aurait été plus propre, mais laissait passer **jusqu'à 24 h** avant que
+les invitations ne partent — un organisateur qui ouvre ses inscriptions les
+attend maintenant.
+
+Écarté aussi : envoi immédiat **plus** rattrapage par le cron. C'est exactement le
+« cherche ce qui n'est pas parti et envoie-le » que R9 interdit ; ça rouvrirait la
+porte que la phase 3 vient de fermer.
+
+Ce que les deux chemins partagent, et qui rend la scission acceptable : le même
+use case d'expédition, le même journal, le même service de destinataires, les
+mêmes gabarits. **Seul le déclencheur diffère.**
 
 ## Ce que ces règles impliquent pour les phases suivantes
 
