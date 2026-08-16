@@ -175,10 +175,15 @@ pub struct SendRegistrationOpenCommand {
 }
 ```
 
-Appelé depuis la validation de l'étape 5 (R11), **en tâche détachée** : la
-réponse HTTP ne doit pas attendre trente envois, et un échec d'expédition ne doit
-pas faire échouer la création de la compétition. L'organisateur a terminé son
-magicien ; ce qui se passe ensuite est du ressort du journal, pas de sa page.
+Appelé à la validation de l'étape 5 (R11). La réponse HTTP ne doit pas attendre
+trente envois, et un échec d'expédition ne doit pas faire échouer la création de
+la compétition : l'organisateur a terminé son magicien, et ce qui se passe
+ensuite est du ressort du journal, pas de sa page.
+
+> **Précisé en phase 7** : pas une tâche détachée lancée depuis le handler, mais
+> un **listener sur le bus interne**. `execute_finalize` émet déjà
+> `CompetitionsDomainEvent::CompetitionReady` ; le handler reste alors un
+> traducteur HTTP pur, et le détachement est acquis par le bus.
 
 `target_date` vaut ici la date du jour — l'ouverture n'ayant pas de date propre.
 La clé reste unique : deux validations successives de la même saison le même jour
