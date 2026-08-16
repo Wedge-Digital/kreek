@@ -128,7 +128,7 @@ aurait fait quatre fois les phases 3 à 7 pour un seul mécanisme.
 | Unité | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
 | configuration | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏸ |
-| envoi | — | ✅ | ✅ | ✅ | 🚧 | | |
+| envoi | — | ✅ | ✅ | ✅ | ✅ | 🚧 | |
 
 `—` : sans objet, cf. ci-dessus. `⏸` : les cartes des **deux** unités sont
 produites ensemble, à la fin de `envoi/`.
