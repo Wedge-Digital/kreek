@@ -1,10 +1,10 @@
 # CSS — solder les 79 collisions de sélecteurs, à rendu constant
 
 **Priorité : haute** — rien n'est cassé aujourd'hui, mais tant que ces
-collisions existent la carte 331 est impossible, et c'est elle qui supprime le
+collisions existent la carte 342 est impossible, et c'est elle qui supprime le
 clignotement au chargement des pages
 **Dépend de :** rien
-**Bloque :** carte 331 (fusion du CSS en fichier unique chargé dans le `<head>`)
+**Bloque :** carte 342 (fusion du CSS en fichier unique chargé dans le `<head>`)
 **Fichiers :** `assets/static/css/{pages,widgets,components}/*.css`,
 `src/app/competitions/io/web/templates/admin/schedule.html`,
 `scripts/check-css-collisions.sh` (nouveau), `Makefile`,
@@ -42,7 +42,7 @@ différentes. `.side-actions` est bordé de rouge chez l'un, de vert chez
 l'autre. Ils ne cohabitent pas aujourd'hui ; rien ne l'empêche demain, et le
 premier qui les réunira n'aura aucun message d'erreur.
 
-## Pourquoi cette carte existe séparément de la 331
+## Pourquoi cette carte existe séparément de la 342
 
 Le clignotement mesuré sur la démo vient du `<link>` transporté par chaque
 fragment : au premier passage sur une page, le contenu reste **50 à 200 ms
@@ -284,7 +284,7 @@ ce défaut dans le projet.
 
 ## Le verrou — pour que la dette ne se reforme pas
 
-Sans lui, un copier-coller suffit à recréer une collision, et la carte 331
+Sans lui, un copier-coller suffit à recréer une collision, et la carte 342
 redevient impossible dans six mois sans que personne ne l'ait vu venir.
 
 `scripts/check-css-collisions.sh` échoue si un même sélecteur est défini avec
@@ -297,11 +297,11 @@ d'un suivi.
 
 ## Hors périmètre
 
-- **La fusion en fichier unique** — carte 331. Elle devra garantir que
+- **La fusion en fichier unique** — carte 342. Elle devra garantir que
   `components/` est concaténé **avant** `pages/`, sans quoi l'override du lot 3
   s'inverse.
 - **Les 137 paires à déclarations identiques** — dédoublonnables sans aucun
-  risque, mais ça ne se justifie que dans le bundle. Carte 331.
+  risque, mais ça ne se justifie que dans le bundle. Carte 342.
 - **Les 13 feuilles mortes** (`pages/index.css`, `widgets/turn-selector.css`,
   `components/match-report.css`…) référencées seulement par les maquettes
   `assets/templates/` — carte de nettoyage séparée.
