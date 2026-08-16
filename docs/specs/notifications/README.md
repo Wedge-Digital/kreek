@@ -127,11 +127,12 @@ aurait fait quatre fois les phases 3 à 7 pour un seul mécanisme.
 
 | Unité | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| configuration | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏸ |
-| envoi | — | ✅ | ✅ | ✅ | ✅ | ✅ | 🚧 |
+| configuration | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| envoi | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-`—` : sans objet, cf. ci-dessus. `⏸` : les cartes des **deux** unités sont
-produites ensemble, à la fin de `envoi/`.
+`—` : sans objet, cf. ci-dessus. Les cartes des **deux** unités ont été produites
+ensemble, à la fin de `envoi/` : **331 à 340**, dans `kanban/ready_to_be_done/`.
+Détail et chemin critique dans `envoi/08-cards.md`.
 
 **Pourquoi les cartes attendent.** `configuration/` livrée seule n'enverrait
 aucun email : personne ne lirait la colonne. Ce serait un **troisième
