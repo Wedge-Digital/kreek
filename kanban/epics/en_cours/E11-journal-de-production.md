@@ -1,6 +1,6 @@
 # E11 — Savoir ce qui se passe en production
 
-**État :** 6 cartes · 1 faite — la 344 est livrée et vérifiée
+**État :** 8 cartes · 2 faites — 344 et 345 livrées et vérifiées
 
 ## La fonction
 
@@ -44,25 +44,39 @@ L'épic rend le journal capable de raconter une requête de bout en bout, dans
 | 347 | `Debug` sur les commandes, et trois secrets à masquer | prérequis de la 348, et suppression d'une fuite déjà possible |
 | 348 | Chaque use case dit ce qu'on lui a demandé | le chemin nominal existe enfin dans le journal |
 | 349 | Un panic ne doit pas être l'incident le moins renseigné | un `500` propre et une ligne de journal dans le contexte de la requête |
+| 350 | Le versant émission des app events entre dans le journal | un `grep event_id=` rend l'émission **et** toutes les réactions |
+| 351 | Remonter d'une réaction à la requête qui l'a causée | *à raffiner* — le `rid` ne franchit pas le `tokio::spawn` |
+
+Les deux dernières sont nées de la 345 : instrumenter les 19 listeners a montré
+ce qui manquait de l'autre côté du bus.
 
 ## Ce qui commande l'ordre
 
-**344 d'abord, seule.** C'est le seul correctif du lot, il tient en quelques
-lignes de `main.rs`, et il rétablit à lui seul le plus grand écart. Livrable
-immédiatement.
+**344 puis 345 — faites.** La première était le seul correctif du lot ; la
+seconde apportait le plus de valeur par unité d'effort, un span de requête
+faisant hériter le contexte aux **198 `error!` existants sans en modifier un
+seul**.
 
-**345 ensuite**, parce que tout le reste en dépend pour être exploitable : sans
-`rid`, les lignes des cartes suivantes ne se rattachent à rien. C'est aussi la
-carte qui apporte le plus de valeur par unité d'effort — un span de requête fait
-hériter le contexte aux **198 `error!` existants sans en modifier un seul**.
+L'ordre des six restantes, du moins cher au plus engageant :
 
-**347 avant 348, impérativement.** La 348 journalise la commande reçue par
-chaque use case ; trois commandes de `auth` portent un mot de passe ou un jeton
-en clair. Prendre les cartes dans le mauvais ordre publie des secrets dans
-`docker logs`.
+**346 et 349 d'abord** — petites, indépendantes l'une de l'autre, et toutes
+deux à effet immédiat en production. La 346 rend le niveau réglable et ouvre
+enfin `sqlx` ; la 349 supprime le pire angle mort, l'incident qui produit le
+moins d'information alors qu'il en demande le plus.
 
-**346 et 349 sont indépendantes** et peuvent s'intercaler n'importe où après la
-344.
+**347 ensuite, puis 348 — dans cet ordre, impérativement.** La 348 journalise la
+commande reçue par chaque use case ; trois commandes de `auth` portent un mot de
+passe ou un jeton en clair. Prendre les cartes à l'envers publie des secrets
+dans `docker logs`. La 348 est le gros morceau de l'épic et sa raison d'être :
+c'est elle qui fait exister le chemin nominal.
+
+**350 après la 348**, pas avant : elle complète le tableau des app events, mais
+tant que les use cases sont muets, la moitié de ce qu'elle relie n'existe pas.
+
+**351 en dernier, et seulement après raffinage.** C'est la plus invasive — elle
+touche `shared_kernel` — et sa valeur croît avec le nombre de spans à relier :
+la faire tôt reviendrait à câbler une corrélation entre deux points dont l'un
+est encore vide.
 
 Vérification préalable, sans code : la rotation du pilote de logs Docker
 (`max-size`, `max-file`). Elle est portée par la 346. Sans elle, tout le reste
