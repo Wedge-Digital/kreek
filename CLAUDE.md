@@ -1080,3 +1080,31 @@ to_be_refined → ready_to_be_done → done
 | `cancelled/` | Cartes abandonnées (remplacées par un découpage, devenues obsolètes, scope abandonné) |
 
 **Règle** : une carte est déplacée dans `done/` dans le **même commit** que le code qui la termine, ou dans le commit immédiatement suivant. Ne jamais laisser une carte en `ready_to_be_done/` après que son code a été pushé.
+
+### Épics — la vue de haut niveau
+
+`kanban/epics/` regroupe les cartes en **grandes fonctions**. L'épic dit
+*pourquoi* et *quand c'est fini* ; les cartes disent *comment*. Sans elles, le
+backlog n'est qu'une liste plate où l'on ne voit plus les chantiers.
+
+```
+to_be_refined → ready_to_be_done → en_cours → done
+```
+
+Mêmes noms de dossiers que les cartes, plus `en_cours/` — une épic est
+commencée bien avant d'être close, et cet état-là n'existe pas pour une carte.
+
+| Règle | |
+|---|---|
+| Nommage | `E<NN>-<slug>.md`, le préfixe `E` évitant toute collision avec la numérotation des cartes |
+| Appartenance | une carte est dans **une seule** épic, ou dans aucune |
+| État | l'épic suit **la plus en amont** de ses cartes : neuf prêtes et une à raffiner ⇒ l'épic reste en `to_be_refined/` |
+| Sections | *La fonction* · *État* · *Les cartes* · *Ce qui commande l'ordre* · *Ce que l'épic ne couvre pas* · *Terminé quand* |
+
+**« Terminé quand » est un critère observable**, jamais « toutes les cartes sont
+dans `done/` ». Une épic close se constate à l'écran ou à la mesure — sinon
+c'est la liste des cartes qui se relit elle-même, et l'épic n'apprend rien.
+
+Pas d'épic « Divers » : les cartes sans épic sont **listées dans
+`kanban/epics/README.md`**. Un sac simule une vue de haut niveau au lieu d'en
+donner une.

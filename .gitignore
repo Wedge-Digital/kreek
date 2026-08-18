@@ -35,6 +35,12 @@ scripts/extracted_*.json
 scripts/seed_accounts.json
 assets/articles.json
 
+# Exports de base. Volumineux (plusieurs Mo) et porteurs de données réelles —
+# adresses, noms de coachs. Le dossier est versionné pour que le chemin existe
+# au clone ; son contenu ne l'est jamais.
+/dumps/*
+!/dumps/.gitkeep
+
 # Données de règles fournies par l'exploitant (cf. docs/reference-data-schema.md).
 # Le slash final est nécessaire : il ne faut pas attraper assets/references.example/,
 # le jeu de démonstration, lui versionné.
