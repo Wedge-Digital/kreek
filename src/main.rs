@@ -43,7 +43,7 @@ use axum::{response::Redirect, routing::get, Router};
 use axum_login::AuthManagerLayerBuilder;
 use clap::Parser;
 use std::sync::Arc;
-use tower_http::{services::ServeDir, trace::TraceLayer};
+use tower_http::services::ServeDir;
 use tower_livereload::LiveReloadLayer;
 use tower_sessions::SessionManagerLayer;
 
@@ -498,7 +498,14 @@ pub fn build_router(state: AppState) -> Router {
         .merge(app::auth::router::router())
         .merge(protected)
         .layer(auth_layer)
-        .layer(TraceLayer::new_for_http())
+        // Couche la plus extérieure de l'application, et posée **ici** plutôt
+        // que sur le routeur externe. Deux effets voulus : elle enveloppe
+        // `auth_layer` et les `route_layer` de `protected`, donc elle voit les
+        // requêtes rejetées par `require_auth` et `space_scope` — celles qu'on
+        // cherche justement à comprendre ; et elle ne voit pas `/static`, monté
+        // à côté, dont chaque fichier produirait une ligne sans valeur de
+        // diagnostic.
+        .layer(from_fn(request_log))
         .with_state(state);
 
     let app = Router::new()
@@ -519,7 +526,6 @@ pub fn build_router(state: AppState) -> Router {
         Router::new()
             .nest_service("/ui", ServeDir::new("assets/templates"))
             .merge(app)
-            .layer(from_fn(request_log))
             .layer(LiveReloadLayer::new().request_predicate(NotHtmxRequest))
     };
 

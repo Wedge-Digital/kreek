@@ -1,6 +1,6 @@
 # E11 — Savoir ce qui se passe en production
 
-**État :** 6 cartes · 0 faite
+**État :** 6 cartes · 1 faite — la 344 est livrée et vérifiée
 
 ## La fonction
 

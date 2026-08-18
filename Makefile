@@ -67,8 +67,13 @@ help:
 # `Cargo.lock` n'est pas surveillé : un `cargo update -p <crate>` seul échappe
 # donc encore au rechargement. Cas plus rare, et l'ajouter fait courir le risque
 # qu'un `cargo run` qui retouche le verrou relance la boucle indéfiniment.
+#
+# `RUST_LOG=kreek=info` : le même niveau qu'en production, pour que ce qu'on
+# lit en développement soit ce qu'on lira en incident. Le défaut du code est
+# `kreek=debug` — ouvrir un BC le temps d'une investigation se fait à la main,
+# `RUST_LOG=kreek::app::players=debug make dev`.
 dev:
-	cargo watch -x run -w src -w Cargo.toml -w assets/templates -w assets/static/css
+	RUST_LOG=kreek=info cargo watch -x run -w src -w Cargo.toml -w assets/templates -w assets/static/css
 
 # Force le jeu de démonstration versionné, quelle que soit la configuration
 # locale. Utile quand `.env.dev` surcharge REFERENCES__DIR vers un jeu de
@@ -76,7 +81,7 @@ dev:
 # (Granitiers, Zéphyriens, Lanterniers). Sans surcharge locale, `make dev`
 # sert déjà ce jeu — c'est le défaut de config/default.toml.
 dev-demo:
-	REFERENCES__DIR=assets/references.example EMAIL__PROVIDER=console cargo watch -x run -w src -w Cargo.toml -w assets/templates -w assets/static/css
+	RUST_LOG=kreek=info REFERENCES__DIR=assets/references.example EMAIL__PROVIDER=console cargo watch -x run -w src -w Cargo.toml -w assets/templates -w assets/static/css
 
 test: reset_test_db
 	DATABASE_URL="$(TEST_DB_URL)" cargo test
