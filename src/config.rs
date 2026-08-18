@@ -8,8 +8,22 @@ pub struct AppConfig {
     pub auth: AuthConfig,
     pub email: EmailConfig,
     pub references: ReferencesConfig,
+    pub log: LogConfig,
     pub host_domain: String,
     pub bypass_auth: bool,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct LogConfig {
+    /// Niveau de l'application — `error`, `warn`, `info`, `debug`, `trace` — et
+    /// **rien d'autre** : il devient le niveau de la cible `kreek`. Une
+    /// directive entière (`kreek::app::players=debug`) donnerait
+    /// `kreek=kreek::app::players=debug`, que le filtre refuse.
+    ///
+    /// Le ciblage fin passe par `RUST_LOG`, qui supplante ce réglage quand il
+    /// est posé — c'est l'échappatoire d'investigation, qui ouvre un BC le
+    /// temps d'un incident sans toucher à la configuration déployée.
+    pub level: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -103,6 +117,10 @@ impl AppConfig {
             auth: AuthConfig {
                 token_ttl_seconds: 3600,
             },
+            // Inutilisé : le harnais n'installe pas de souscripteur.
+            log: LogConfig {
+                level: "info".into(),
+            },
             email: EmailConfig {
                 provider: EmailProvider::Console,
                 api_key: String::new(),
@@ -132,8 +150,14 @@ impl AppConfig {
             // Couche 2 — surcharge par environnement (optionnelle)
             .add_source(config::File::with_name(&format!("config/{}", env)).required(false))
             // Couche 3 — variables d'environnement (priorité maximale)
-            // APP__DATABASE__URL → database.url
-            // APP__SERVER__PORT  → server.port
+            //
+            // **Sans préfixe** : `Environment::default()` n'en pose aucun, donc
+            // la clé est la section elle-même. Un `APP__DATABASE__URL` se
+            // lirait `app.database.url`, chemin qui n'existe pas — et serait
+            // ignoré en silence.
+            //   DATABASE__URL → database.url
+            //   SERVER__PORT  → server.port
+            //   LOG__LEVEL    → log.level
             .add_source(
                 config::Environment::default()
                     .separator("__") // double underscore pour les niveaux imbriqués

@@ -24,13 +24,26 @@ rien de `tower_http`, rien d'aucune dépendance ne passe. On est **aveugle sur
 la couche SQL**, y compris sur les erreurs de connexion et les requêtes lentes.
 
 Et le réglage n'est atteignable que par `RUST_LOG`, alors que **tout le reste
-de la configuration passe par `AppConfig`** au format `APP__<SECTION>__<CLÉ>`.
+de la configuration passe par `AppConfig`** au format `<SECTION>__<CLÉ>`.
 Changer le niveau en production suppose donc de connaître une variable qui ne
 ressemble à aucune autre.
 
+> **Corrigé à l'implémentation.** Cette carte annonçait `APP__LOG__LEVEL`, et
+> `CLAUDE.md` documentait la même forme préfixée. Elle est **inopérante** :
+> `config::Environment::default()` ne pose aucun préfixe, donc `APP__…` se lit
+> `app.…`, chemin qui n'existe pas dans `AppConfig`, et la variable est ignorée
+> en silence. La convention réelle — celle de `.env.dev` et du `Makefile`
+> depuis toujours — est `<SECTION>__<CLÉ>`. `CLAUDE.md` et le commentaire de
+> `config.rs` ont été corrigés avec cette carte.
+>
+> Second écart : `LOG__LEVEL` porte un **niveau**, pas une directive. La valeur
+> devient le niveau de la cible `kreek`, donc `kreek::app::players=debug`
+> produirait `kreek=kreek::app::players=debug`, refusé par le filtre. Le
+> ciblage fin reste l'affaire de `RUST_LOG`. Un test le verrouille.
+
 ## Ce qu'il faut faire
 
-Un `APP__LOG__LEVEL` dans `AppConfig`, valeur par défaut `info`, qui construit
+Un `LOG__LEVEL` dans `AppConfig`, valeur par défaut `info`, qui construit
 le filtre au démarrage.
 
 **`RUST_LOG` garde la priorité quand il est posé.** C'est l'échappatoire
@@ -60,7 +73,7 @@ Ce n'est pas du code, mais c'est le préalable sans lequel toute l'épic ne sert
 
 ## Checklist
 
-- [ ] `APP__LOG__LEVEL` dans `AppConfig`, défaut `info`
+- [ ] `LOG__LEVEL` dans `AppConfig`, défaut `info`
 - [ ] `RUST_LOG` prime quand il est posé
 - [ ] `sqlx` ouvert au moins en `warn`
 - [ ] Le fichier `.env` d'exemple et la documentation de configuration

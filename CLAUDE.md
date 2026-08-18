@@ -992,13 +992,24 @@ Les handlers HTMX reçoivent un fragment HTML d'erreur, pas du JSON.
 
 ## Configuration
 
-Variables d'environnement au format `APP__<SECTION>__<CLÉ>` (double underscore comme séparateur).
+Variables d'environnement au format `<SECTION>__<CLÉ>`, double underscore comme
+séparateur — **sans préfixe**. `config::Environment::default()` n'en pose aucun :
+un `APP__DATABASE__URL` se lirait `app.database.url`, chemin qui n'existe pas
+dans `AppConfig`, et serait **ignoré en silence**. Cette section a documenté la
+forme préfixée pendant des mois ; personne ne s'en est aperçu parce que les
+fichiers `.env` et le `Makefile`, eux, ont toujours utilisé la bonne.
 
 ```bash
-APP__DATABASE__URL=postgres://user:pass@localhost/kreek_dev
-APP__AUTH__SESSION_SECRET=<min_32_chars>
-APP__SERVER__PORT=3000
+DATABASE__URL=postgres://user:pass@localhost/kreek_dev
+SERVER__PORT=3210
+LOG__LEVEL=info
 ```
+
+Les valeurs par défaut vivent dans `config/default.toml`, surchargeables par
+`config/<APP_ENV>.toml` puis par l'environnement. Cas particulier du niveau de
+journalisation : **`RUST_LOG` supplante `LOG__LEVEL`** quand il est posé, pour
+ouvrir un BC le temps d'une investigation sans toucher à la configuration
+déployée.
 
 ---
 

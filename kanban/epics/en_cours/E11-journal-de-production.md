@@ -1,6 +1,6 @@
 # E11 — Savoir ce qui se passe en production
 
-**État :** 8 cartes · 2 faites — 344 et 345 livrées et vérifiées
+**État :** 8 cartes · 3 faites — 344, 345 et 346 livrées et vérifiées
 
 ## La fonction
 
@@ -40,7 +40,7 @@ L'épic rend le journal capable de raconter une requête de bout en bout, dans
 |---|---|---|
 | 344 | Le journal de production n'existe pas | un journal de requêtes, toujours actif, sans doublon ni champ trompeur |
 | 345 | Un identifiant sur chaque ligne, et de quoi le retrouver | `rid` hérité par toutes les lignes, écho en `x-request-id`, durées |
-| 346 | Le niveau rejoint la configuration | `APP__LOG__LEVEL`, défaut `info`, `sqlx` enfin audible |
+| 346 | Le niveau rejoint la configuration | `LOG__LEVEL`, défaut `info`, `sqlx` enfin audible |
 | 347 | `Debug` sur les commandes, et trois secrets à masquer | prérequis de la 348, et suppression d'une fuite déjà possible |
 | 348 | Chaque use case dit ce qu'on lui a demandé | le chemin nominal existe enfin dans le journal |
 | 349 | Un panic ne doit pas être l'incident le moins renseigné | un `500` propre et une ligne de journal dans le contexte de la requête |
@@ -57,12 +57,15 @@ seconde apportait le plus de valeur par unité d'effort, un span de requête
 faisant hériter le contexte aux **198 `error!` existants sans en modifier un
 seul**.
 
-L'ordre des six restantes, du moins cher au plus engageant :
+**346 — faite** aussi. Elle a révélé au passage que la forme `APP__<SECTION>__<CLÉ>`
+documentée dans `CLAUDE.md` était **inopérante** : `config::Environment::default()`
+ne pose aucun préfixe, et une variable ainsi nommée était ignorée en silence.
 
-**346 et 349 d'abord** — petites, indépendantes l'une de l'autre, et toutes
-deux à effet immédiat en production. La 346 rend le niveau réglable et ouvre
-enfin `sqlx` ; la 349 supprime le pire angle mort, l'incident qui produit le
-moins d'information alors qu'il en demande le plus.
+L'ordre des cinq restantes, du moins cher au plus engageant :
+
+**349 d'abord** — petite, indépendante, à effet immédiat en production : elle
+supprime le pire angle mort, l'incident qui produit le moins d'information
+alors qu'il en demande le plus.
 
 **347 ensuite, puis 348 — dans cet ordre, impérativement.** La 348 journalise la
 commande reçue par chaque use case ; trois commandes de `auth` portent un mot de

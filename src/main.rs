@@ -123,19 +123,64 @@ async fn run_migrations(pool: &sqlx::PgPool) {
     }
 }
 
+/// Le repli quand le niveau configuré est illisible, et le socle des
+/// directives : `sqlx` reste à `warn` quel que soit le niveau de l'application.
+/// En `debug` il déverserait chaque requête, alors que `warn` donne exactement
+/// ce qui manquait — les échecs et les requêtes lentes.
+const JOURNAL_REPLI: &str = "kreek=info,sqlx=warn";
+
+/// Construit le filtre, et rend le niveau refusé s'il y en a un — la mise en
+/// garde ne peut pas être émise ici, le souscripteur n'existant pas encore.
+fn filtre_de_journalisation(niveau: &str) -> (tracing_subscriber::EnvFilter, Option<String>) {
+    // `RUST_LOG` prime : c'est l'échappatoire d'investigation, qui ouvre un BC
+    // le temps d'un incident sans toucher à la configuration déployée.
+    if let Ok(filtre) = tracing_subscriber::EnvFilter::try_from_default_env() {
+        return (filtre, None);
+    }
+    filtre_depuis_config(niveau)
+}
+
+/// Séparée de la lecture de `RUST_LOG` pour être testable : manipuler une
+/// variable d'environnement dans un test la partagerait avec tous les autres,
+/// qui tournent en parallèle.
+fn filtre_depuis_config(niveau: &str) -> (tracing_subscriber::EnvFilter, Option<String>) {
+    // Une valeur vide est un `.env` recopié du modèle sans être renseigné :
+    // c'est une absence de choix, pas une erreur de saisie.
+    if niveau.trim().is_empty() {
+        return (tracing_subscriber::EnvFilter::new(JOURNAL_REPLI), None);
+    }
+    match tracing_subscriber::EnvFilter::try_new(format!("kreek={niveau},sqlx=warn")) {
+        Ok(filtre) => (filtre, None),
+        // Un niveau mal orthographié ne doit pas empêcher un serveur de
+        // démarrer — mais il ne doit pas non plus passer inaperçu.
+        Err(_) => (
+            tracing_subscriber::EnvFilter::new(JOURNAL_REPLI),
+            Some(niveau.to_string()),
+        ),
+    }
+}
+
+fn init_journal(cfg: &AppConfig) {
+    let (filtre, refuse) = filtre_de_journalisation(&cfg.log.level);
+    tracing_subscriber::fmt().with_env_filter(filtre).init();
+    if let Some(niveau) = refuse {
+        tracing::warn!(
+            niveau,
+            "niveau de journalisation illisible — repli sur « info »"
+        );
+    }
+}
+
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "kreek=debug".into()),
-        )
-        .init();
-
     let cli = Cli::parse();
 
+    // La configuration précède le journal, puisqu'elle en porte le niveau.
+    // Rien ne journalise entre les deux : un échec de chargement passe par le
+    // gestionnaire de panique, pas par `tracing`.
     let cfg =
         AppConfig::load().expect("Configuration invalide — vérifiez vos variables d'environnement");
+    init_journal(&cfg);
 
     let pool = init_pool(&cfg).await;
     run_migrations(&pool).await;
@@ -553,6 +598,49 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn un_niveau_valide_est_repris_tel_quel() {
+        let (filtre, refuse) = filtre_depuis_config("debug");
+        assert!(refuse.is_none());
+        assert!(filtre.to_string().contains("kreek=debug"));
+    }
+
+    #[test]
+    fn une_directive_complete_n_est_pas_un_niveau() {
+        // `LOG__LEVEL` porte un niveau, qui devient celui de la cible `kreek`.
+        // Y mettre une directive entière donne `kreek=kreek::app::…=debug`,
+        // que le filtre refuse — et c'est tant mieux : le repli signalé vaut
+        // mieux qu'une directive silencieusement inopérante. Le ciblage fin
+        // passe par `RUST_LOG`, qui prime.
+        let (filtre, refuse) = filtre_depuis_config("kreek::app::players=debug");
+        assert!(refuse.is_some());
+        assert_eq!(filtre.to_string(), JOURNAL_REPLI);
+    }
+
+    #[test]
+    fn sqlx_est_epingle_a_warn_quel_que_soit_le_niveau() {
+        // En `debug`, `sqlx` déverserait chaque requête. C'est le seul réglage
+        // du filtre qui ne suive pas le niveau de l'application.
+        let (filtre, _) = filtre_depuis_config("debug");
+        assert!(filtre.to_string().contains("sqlx=warn"));
+    }
+
+    #[test]
+    fn un_niveau_illisible_se_replie_en_le_signalant() {
+        let (filtre, refuse) = filtre_depuis_config("verbeux");
+        assert_eq!(refuse.as_deref(), Some("verbeux"));
+        assert_eq!(filtre.to_string(), JOURNAL_REPLI);
+    }
+
+    #[test]
+    fn un_niveau_vide_se_replie_sans_rien_signaler() {
+        // Un `.env` recopié du modèle sans être renseigné : une absence de
+        // choix, pas une faute de frappe — donc pas d'avertissement.
+        let (filtre, refuse) = filtre_depuis_config("   ");
+        assert!(refuse.is_none());
+        assert_eq!(filtre.to_string(), JOURNAL_REPLI);
+    }
 
     fn email_cfg(provider: EmailProvider, api_key: &str) -> EmailConfig {
         EmailConfig {

@@ -17,6 +17,17 @@ idle_in_transaction_timeout_seconds = 15
 [auth]
 token_ttl_seconds = 3600
 
+[log]
+# Niveau de l'application — un niveau seul, pas une directive. `info` est le
+# défaut d'un déploiement : `debug` expédierait dans `docker logs` tout ce que
+# le projet journalise pour ses développeurs. `sqlx` est épinglé à `warn` dans
+# le code quel que soit ce niveau — c'est ce qui rend enfin visibles les échecs
+# de requête et les requêtes lentes.
+#
+# Le ciblage fin passe par RUST_LOG, qui supplante ce réglage :
+# RUST_LOG=kreek::app::players=debug
+level = "info"
+
 [email]
 # « resend » par défaut : un déploiement qui oublierait de se prononcer envoie
 # ses emails plutôt que de les perdre en silence. Les contextes qui ne doivent
