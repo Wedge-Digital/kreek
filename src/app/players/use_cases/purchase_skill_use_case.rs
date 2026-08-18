@@ -5,6 +5,7 @@ use crate::app::players::use_cases::commands::PurchaseSkillCommand;
 use crate::app::players::use_cases::improvement_cost_service::{
     resolve_skill_cost, ImprovementCostError,
 };
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 
 pub enum PurchaseSkillError {
@@ -61,7 +62,7 @@ pub async fn execute(
         .await
         .map_err(PurchaseSkillError::Repository)?;
 
-    let _ = event_bus.send(event.to_enveloppe(&player.id.0));
+    emettre(event_bus, event.to_enveloppe(&player.id.0));
 
     Ok(())
 }

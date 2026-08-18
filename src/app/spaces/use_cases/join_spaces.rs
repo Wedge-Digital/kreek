@@ -4,6 +4,7 @@ use crate::app::spaces::domain::domain_event::SpacesDomainEvent;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::{
     ISpaceRepository, SpaceRepositoryError,
 };
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 
 #[derive(Debug)]
@@ -44,7 +45,7 @@ pub async fn execute(
             space_id: *space_id,
             space_profile: SpaceProfile::SpaceUser,
         };
-        let _ = bus.send(event.to_enveloppe());
+        emettre(bus, event.to_enveloppe());
     }
 
     Ok(())

@@ -1,6 +1,8 @@
 # E11 — Savoir ce qui se passe en production
 
-**État :** 8 cartes · 7 faites — 344 à 350 livrées et vérifiées ; reste 351, raffinée et prête
+**État :** 8 cartes · 8 faites — 344 à 351 livrées et vérifiées.
+L'épic reste ouverte : son critère de clôture porte sur un incident réel, pas
+sur la liste des cartes. Voir « Terminé quand ».
 
 ## La fonction
 
@@ -104,9 +106,9 @@ signale. Après quatre cartes passées à débusquer des mécanismes qui ressemb
 à du travail fait sans rien livrer, payer ça pour économiser deux `grep` sur une
 carte classée « confort de diagnostic » était un mauvais échange.
 
-Sa valeur croît toujours avec le nombre de lignes à relier : la faire tôt
-reviendrait à chaîner deux points dont l'un est encore vide. D'où sa place en
-dernier, inchangée.
+Sa valeur croissait avec le nombre de lignes à relier : la faire tôt serait
+revenu à chaîner deux points dont l'un était encore vide. D'où sa place en
+dernier, tenue jusqu'au bout.
 
 Vérification préalable, sans code : la rotation du pilote de logs Docker
 (`max-size`, `max-file`). Elle est portée par la 346. Sans elle, tout le reste

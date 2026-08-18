@@ -10,6 +10,7 @@ use crate::app::competitions::use_cases::admin::team_enrollment::{
 use crate::app::shared_kernel::bloodbowl::ids::PairingId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::EventId;
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::collections::{HashMap, HashSet};
 
@@ -215,7 +216,8 @@ fn emit_pairing_created(
         .get(away)
         .expect("away team filtré comme enrôlé avant appariement");
 
-    let _ = event_bus.send(
+    emettre(
+        event_bus,
         CompetitionsDomainEvent::PairingCreated {
             event_id: EventId::new(),
             pairing_id: pairing.id.to_string(),

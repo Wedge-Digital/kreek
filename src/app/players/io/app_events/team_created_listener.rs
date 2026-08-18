@@ -9,6 +9,7 @@ use crate::app::players::ports::ISkillCatalogPort;
 use crate::app::shared_kernel::app_events::team_creation_app_events::{
     PlayerPayload, TeamCreationAppEvent,
 };
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 use crate::common::services::event_bus::supervision::spawn_listener;
 use sqlx::PgPool;
@@ -153,7 +154,7 @@ async fn handle_team_created(
         team_id: TeamId(team_id.to_string()),
         player_count: players.len() as u32,
     };
-    let _ = event_bus.send(completed.to_enveloppe(team_id));
+    emettre(event_bus, completed.to_enveloppe(team_id));
 
     Ok(())
 }

@@ -4,6 +4,7 @@ use crate::app::competitions::domain::season_repository_port::{
 };
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::app::shared_kernel::identity::ids::{CoachId, EventId, SpaceId};
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 
 #[derive(Debug)]
@@ -37,7 +38,8 @@ pub async fn execute(
 ) -> Result<(), FinalizeCompetitionError> {
     season_repo.set_ready(&cmd.season_id).await?;
 
-    let _ = bus.send(
+    emettre(
+        bus,
         CompetitionsDomainEvent::CompetitionReady {
             event_id: EventId::new(),
             competition_id: cmd.competition_id,

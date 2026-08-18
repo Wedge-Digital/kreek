@@ -4,6 +4,7 @@ use crate::app::competitions::domain::match_day_repository_port::IMatchDayReposi
 use crate::app::competitions::ports::{IMatchReportStatusPort, ITeamInfoPort};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::EventId;
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::collections::HashMap;
 
@@ -209,7 +210,8 @@ async fn delete_one(
         .await
         .map_err(|e| DeletePairingError::Repository(e.to_string()))?;
 
-    let _ = event_bus.send(
+    emettre(
+        event_bus,
         CompetitionsDomainEvent::PairingDeleted {
             event_id: EventId::new(),
             pairing_id: pairing_id.to_string(),

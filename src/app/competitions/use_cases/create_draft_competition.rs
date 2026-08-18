@@ -11,6 +11,7 @@ use crate::app::shared_kernel::bloodbowl::competition_name::CompetitionName;
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::season_name::SeasonName;
 use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, EventId, SpaceId};
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 
 #[derive(Debug)]
@@ -73,7 +74,8 @@ pub async fn execute(
     let season_id = season.id;
     season_repo.save(&season).await?;
 
-    let _ = bus.send(
+    emettre(
+        bus,
         CompetitionsDomainEvent::CompetitionCreated {
             event_id: EventId::new(),
             competition_id: competition.id,

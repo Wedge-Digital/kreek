@@ -3,6 +3,7 @@ use crate::app::teams::domain::treasury::TreasuryMovement;
 use crate::app::teams::ports::{
     ITeamRepository, MyTeamRow, RepositoryError, TeamCardRow, TeamEnrollmentRow,
 };
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
@@ -375,7 +376,7 @@ impl ITeamRepository for TeamRepository {
         // couvre tous. Déviation assumée du patron de `players` et
         // `match_report`.
         for event in events {
-            let _ = self.event_bus.send(event.to_enveloppe(team_id));
+            emettre(&self.event_bus, event.to_enveloppe(team_id));
         }
 
         Ok(derniere_version)

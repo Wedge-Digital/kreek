@@ -3,6 +3,7 @@ use crate::app::players::domain::events::PlayerDomainEvent;
 use crate::app::players::domain::player::{Player, PlayerId, RosterMembership, TeamId};
 use crate::app::players::ports::{IPlayerRepository, RepositoryError};
 use crate::app::players::use_cases::commands::{RosterRowCommand, UpdateRosterCommand};
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::collections::{BTreeSet, HashMap};
 
@@ -41,7 +42,7 @@ pub async fn execute(
         .map_err(UpdateRosterError::Repository)?;
 
     for (player_id, event) in to_publish {
-        let _ = event_bus.send(event.to_enveloppe(&player_id));
+        emettre(event_bus, event.to_enveloppe(&player_id));
     }
 
     load_active_roster(player_repo, &cmd.team_id).await

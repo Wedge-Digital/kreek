@@ -4,7 +4,7 @@
 **Dépend de :** cartes 345, 348 et 350 (sans lignes des deux côtés, il n'y a
 rien à relier)
 **Fichiers :** `src/common/services/event_bus/domain_event_publication.rs`
-(nouveau), les 25 sites d'émission sur bus interne, les sept publishers,
+(nouveau), les 21 sites d'émission sur bus interne, les sept publishers,
 `scripts/check-arch.sh`
 
 ## Le problème
@@ -65,9 +65,13 @@ en-tête classe « confort de diagnostic », est un mauvais échange.
 
 ## Trois faits établis au raffinage
 
-**Le domaine construit l'enveloppe mais ne l'émet jamais.** Les 25 émissions sur
-bus interne vivent dans `use_cases/` (17) et `io/` (8), **zéro dans `domain/`**.
+**Le domaine construit l'enveloppe mais ne l'émet jamais.** Les 21 émissions de
+production vivent dans `use_cases/` (16) et `io/` (5), **zéro dans `domain/`**.
 C'est ce qui rend le point d'accroche disponible sans toucher au domaine.
+
+Le premier inventaire en annonçait 25 : il excluait les chemins `tests/` mais
+pas les modules `#[cfg(test)]` en fin de fichier, où quatre sites fabriquent des
+événements pour amorcer un pipeline. L'axe 13 exempte les deux formes.
 
 **`tags` n'est pas mort** — la version précédente de cette carte l'affirmait, et
 proposait d'y loger la causalité ou de le supprimer. C'est vrai des app events
@@ -167,14 +171,17 @@ est hors périmètre de l'épic : l'event store le donne déjà.
 
 ## Checklist
 
-- [ ] `emettre()` journalise `event` et `event_id` au niveau `info`, et les
-      25 sites d'émission sur bus interne passent par lui
-- [ ] Les sept spans de publisher portent `cause = %envelope.event_id`
-- [ ] Axe 13 `check-arch` bloquant, **vérifié sur un cas volontairement
-      fautif** — l'axe 11 ne détectait rien à sa première écriture
-- [ ] Test : `emettre()` journalise l'identifiant de l'enveloppe envoyée, et
+- [x] `emettre()` journalise `event` et `event_id` au niveau `info`, et les
+      21 sites d'émission de production passent par lui
+- [x] Les sept spans de publisher portent `cause = %envelope.event_id`
+- [x] Axe 13 `check-arch` bloquant, **vérifié sur un cas volontairement
+      fautif** — et le premier essai de vérification était vide, la
+      substitution de test n'ayant pas pris : un axe qu'on croit éprouvé sur un
+      cas qui n'en est pas un ne vaut pas mieux que l'axe 11 à sa première
+      écriture
+- [x] Test : `emettre()` journalise l'identifiant de l'enveloppe envoyée, et
       l'enveloppe part bien sur le bus
-- [ ] Vérifié en conditions réelles sur une création d'équipe : les trois
+- [x] Vérifié en conditions réelles sur une création d'équipe : les trois
       `grep` enchaînés mènent du `x-request-id` aux réactions de `teams` et
       `players`
-- [ ] `make lint`, `make test` et `make check-arch` passent
+- [x] `make lint`, `make test` et `make check-arch` passent

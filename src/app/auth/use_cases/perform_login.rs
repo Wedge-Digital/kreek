@@ -5,6 +5,7 @@ use crate::app::auth::domain::user::User;
 use crate::app::shared_kernel::identity::ids::{EventId, UserId};
 use crate::app::shared_kernel::identity::secret::Secret;
 use crate::common::event_envelope::EventEnvelope;
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use serde::Deserialize;
@@ -77,14 +78,17 @@ pub async fn execute(
         user_id: user_id.clone(),
     };
 
-    let _ = bus.send(EventEnvelope {
-        event_id: UserId::new().to_string(),
-        emitter: user_id.to_string(),
-        event_type: USER_LOGGED_IN.into(),
-        tags: serde_json::json!({ "user_id": user_id }),
-        payload: serde_json::json!(event_payload),
-        occurred_at: OffsetDateTime::now_utc(),
-    });
+    emettre(
+        bus,
+        EventEnvelope {
+            event_id: UserId::new().to_string(),
+            emitter: user_id.to_string(),
+            event_type: USER_LOGGED_IN.into(),
+            tags: serde_json::json!({ "user_id": user_id }),
+            payload: serde_json::json!(event_payload),
+            occurred_at: OffsetDateTime::now_utc(),
+        },
+    );
 
     Ok(user)
 }

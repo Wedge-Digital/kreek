@@ -13,6 +13,7 @@ use crate::app::shared_kernel::app_events::match_report_app_events::{
 use crate::app::shared_kernel::bloodbowl::ids::PairingId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::EventId;
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 use crate::common::services::event_bus::supervision::spawn_listener;
 use sqlx::PgPool;
@@ -208,7 +209,8 @@ async fn resolve_pairing_id(
 
     let pairing_id = pairing.id.to_string();
 
-    let _ = event_bus.send(
+    emettre(
+        event_bus,
         CompetitionsDomainEvent::PairingCreated {
             event_id: EventId::new(),
             pairing_id: pairing_id.clone(),

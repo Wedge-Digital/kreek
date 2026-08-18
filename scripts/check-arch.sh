@@ -11,6 +11,7 @@
 #  10. Génération d'URLs — aucun placeholder substitué par un littéral
 #  11. Use cases à commande — tous instrumentés (cf. kanban/348)
 #  12. Émission d'app events — toujours via publier() (cf. kanban/350)
+#  13. Émission de domain events — toujours via emettre() (cf. kanban/351)
 #
 # Axes en avertissement (n'affectent pas le code de sortie) :
 #   6. Value objects systématiques (CQRS) — primitifs nus côté écriture domaine
@@ -457,6 +458,38 @@ echo -e "${BOLD}Axe 12 · Émission d'app events — toujours via publier()${RES
 axe12=$(grep -rn 'app_event_bus\.send(' --include="*.rs" src/ 2>/dev/null | grep -v '/tests/' || true)
 axe12="$(printf '%s' "$axe12" | sed '/^$/d')"
 if [ -n "$axe12" ]; then print_fail "$axe12"; else print_pass; fi
+echo ""
+
+# ── Axe 13 : émission de domain events ──────────────────────────────────────
+#
+# Pendant de l'axe 12, un cran plus tôt dans la chaîne. `emettre()` pose la
+# ligne qui porte le `rid` de la requête **et** l'identifiant de l'événement
+# émis : c'est le seul endroit du système où les deux se rencontrent, la suite
+# se passant dans d'autres tâches. Une émission qui le contourne coupe la piste
+# à cet endroit précis, sans que rien ne le signale.
+#
+# Les tests sont exemptés — ils fabriquent des événements pour amorcer un
+# pipeline, et n'ont rien à journaliser. L'exemption vaut pour les fichiers de
+# `tests/` comme pour les modules `#[cfg(test)]`, ce second cas ayant échappé
+# au premier inventaire de la carte : quatre des vingt-cinq sites annoncés
+# étaient du test.
+echo -e "${BOLD}Axe 13 · Émission de domain events — toujours via emettre()${RESET}"
+axe13=$(
+  for fichier in $(grep -rlE '(bus|event_bus)\.send\(' --include="*.rs" src/ 2>/dev/null); do
+    if [[ "$fichier" == */tests/* ]] \
+      || [[ "$fichier" == *domain_event_publication.rs ]] \
+      || [[ "$fichier" == *app_event_publication.rs ]]; then
+      continue
+    fi
+    awk -v f="$fichier" '
+      /^#\[cfg\(test\)\]/ { dans_test = 1 }
+      dans_test { next }
+      /(bus|event_bus)\.send\(/ && !/app_event_bus/ { print f ":" NR ": " $0 }
+    ' "$fichier"
+  done
+)
+axe13="$(printf '%s' "$axe13" | sed '/^$/d')"
+if [ -n "$axe13" ]; then print_fail "$axe13"; else print_pass; fi
 echo ""
 
 if [ "$EXIT_CODE" -eq 0 ]; then

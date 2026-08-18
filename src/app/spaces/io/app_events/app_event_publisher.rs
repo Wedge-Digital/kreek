@@ -17,7 +17,8 @@ pub fn spaces_app_event_publisher(event_bus: &EventBus, app_event_bus: EventBus)
                     if let Some(app_event) = event.to_app_event() {
                         let span = tracing::info_span!(
                             "app_event_publication",
-                            domain_event = %envelope.event_type
+                            domain_event = %envelope.event_type,
+                            cause = %envelope.event_id
                         );
                         let _garde = span.enter();
                         publier(&app_event_bus, app_event.to_enveloppe());

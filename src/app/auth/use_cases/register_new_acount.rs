@@ -6,6 +6,7 @@ use crate::app::shared_kernel::identity::coach_name::CoachName;
 use crate::app::shared_kernel::identity::email::Email;
 use crate::app::shared_kernel::identity::ids::{EventId, UserId};
 use crate::app::shared_kernel::identity::secret::Secret;
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
@@ -125,7 +126,7 @@ pub async fn execute(
         user_name: user.coach_name.clone(),
         email: user.email.clone(),
     };
-    let _ = bus.send(event.to_enveloppe());
+    emettre(bus, event.to_enveloppe());
 
     Ok(())
 }

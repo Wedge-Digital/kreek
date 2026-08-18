@@ -18,6 +18,7 @@ use crate::app::players::domain::events::PlayerDomainEvent;
 use crate::app::players::domain::player::{PlayerId, TeamId};
 use crate::app::players::ports::{IPlayerRepository, RepositoryError};
 use crate::app::shared_kernel::app_events::teams_app_events::TeamsAppEvent;
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 use crate::common::services::event_bus::supervision::spawn_listener;
 use std::sync::Arc;
@@ -103,7 +104,7 @@ pub fn init(app_event_bus: &EventBus, event_bus: EventBus, repo: Arc<dyn IPlayer
                         // qu'un recalcul de valeur d'équipe déclenché par cet
                         // événement voit un effectif à jour.
                         Ok(event) => {
-                            let _ = event_bus.send(event.to_enveloppe(&joueur));
+                            emettre(&event_bus, event.to_enveloppe(&joueur));
                         }
                         Err(DismissalError::DejaSorti) => tracing::warn!(
                             "players player_dismissed_listener: joueur {joueur} déjà sorti"

@@ -9,6 +9,7 @@ use crate::app::spaces::domain::space_repository_port::space_repository_port::{
 use crate::app::spaces::domain::space_repository_port::user_cache_repository_port::{
     ISpaceUserCacheRepository, SpaceUserCacheRepositoryError,
 };
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 
 #[derive(Debug)]
@@ -76,7 +77,7 @@ pub async fn execute(
         space_logo: space.logo.clone(),
     };
 
-    let _ = bus.send(space_created_payload.to_enveloppe());
+    emettre(bus, space_created_payload.to_enveloppe());
 
     Ok(())
 }

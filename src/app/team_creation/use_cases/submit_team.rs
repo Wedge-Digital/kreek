@@ -13,6 +13,7 @@ use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
 use crate::app::team_creation::domain_event::TeamCreationDomainEvent;
 use crate::app::team_creation::ports::{ITeamRosterRepository, RepositoryError};
 use crate::app::team_creation::use_cases::commands::SubmitTeamCommand;
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 
 pub enum SubmitTeamError {
@@ -104,7 +105,7 @@ pub async fn execute(
         players,
         auto_enroll: cmd.auto_enroll,
     };
-    let _ = bus.send(event.to_enveloppe());
+    emettre(bus, event.to_enveloppe());
 
     Ok(())
 }

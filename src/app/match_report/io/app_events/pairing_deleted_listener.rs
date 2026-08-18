@@ -1,6 +1,7 @@
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::shared_kernel::app_events::competitions_app_events::CompetitionsAppEvent;
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 use crate::common::services::event_bus::supervision::spawn_listener;
 use std::sync::Arc;
@@ -98,7 +99,7 @@ pub fn init(app_event_bus: &EventBus, event_bus: &EventBus, repo: Arc<dyn IMatch
                                 tracing::info!(
                                     "pairing_deleted_listener: cancelled match report {mr_id}"
                                 );
-                                let _ = bus.send(cancel_event.to_enveloppe(&mr_id));
+                                emettre(&bus, cancel_event.to_enveloppe(&mr_id));
                             }
                             Err(e) => {
                                 tracing::error!(

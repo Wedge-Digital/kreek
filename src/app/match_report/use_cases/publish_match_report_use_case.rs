@@ -2,6 +2,7 @@ use crate::app::match_report::domain::match_report_repository_port::IMatchReport
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::identity::ids::CoachId;
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 
 #[derive(Debug)]
@@ -51,7 +52,7 @@ pub async fn execute(
         .await
         .map_err(|e| PublishMatchReportError::Repository(e.to_string()))?;
 
-    let _ = bus.send(event.to_enveloppe(&mr_id_str));
+    emettre(bus, event.to_enveloppe(&mr_id_str));
 
     Ok(())
 }

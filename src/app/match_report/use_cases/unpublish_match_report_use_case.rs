@@ -8,6 +8,7 @@ use crate::app::match_report::ports::{IPlayerDataPort, ITeamDataPort};
 use crate::app::match_report::use_cases::correction_eligibility_service;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::identity::ids::CoachId;
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 
 #[derive(Debug)]
@@ -62,7 +63,7 @@ async fn persist_and_announce(
     repo.append(mr_id, event, version)
         .await
         .map_err(|e| UnpublishMatchReportError::Repository(e.to_string()))?;
-    let _ = bus.send(event.to_enveloppe(mr_id));
+    emettre(bus, event.to_enveloppe(mr_id));
     Ok(())
 }
 

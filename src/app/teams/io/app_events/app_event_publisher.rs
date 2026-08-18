@@ -33,7 +33,8 @@ pub fn teams_app_event_publisher(event_bus: &EventBus, app_event_bus: EventBus, 
                     // la mauvaise tâche.
                     let span = tracing::info_span!(
                         "app_event_publication",
-                        domain_event = %envelope.event_type
+                        domain_event = %envelope.event_type,
+                        cause = %envelope.event_id
                     );
                     async {
                         if let Some(app_event) =

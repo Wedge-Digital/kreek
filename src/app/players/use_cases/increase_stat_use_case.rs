@@ -2,6 +2,7 @@ use crate::app::players::domain::error::DomainError;
 use crate::app::players::ports::{IPlayerRepository, ISkillCatalogPort, RepositoryError};
 use crate::app::players::use_cases::commands::IncreaseStatCommand;
 use crate::app::players::use_cases::improvement_cost_service::resolve_stat_cost;
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 
 pub enum IncreaseStatError {
@@ -35,7 +36,7 @@ pub async fn execute(
         .await
         .map_err(IncreaseStatError::Repository)?;
 
-    let _ = event_bus.send(event.to_enveloppe(&player.id.0));
+    emettre(event_bus, event.to_enveloppe(&player.id.0));
 
     Ok(())
 }

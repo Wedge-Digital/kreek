@@ -73,7 +73,8 @@ async fn handle_envelope(
     let match_report_id = envelope.emitter;
     let span = tracing::info_span!(
         "app_event_publication",
-        domain_event = %envelope.event_type
+        domain_event = %envelope.event_type,
+        cause = %envelope.event_id
     );
     aiguiller(
         event,

@@ -14,6 +14,7 @@ use crate::app::players::use_cases::commands::{
 use crate::app::players::use_cases::customisation_basket_hydration_service::{
     hydrate, HydrationError,
 };
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 
 #[derive(Debug)]
@@ -105,7 +106,7 @@ pub async fn execute(
     player_repo.append_batch(entrees).await?;
 
     for event in &events {
-        let _ = event_bus.send(event.to_enveloppe(&player.id.0));
+        emettre(event_bus, event.to_enveloppe(&player.id.0));
     }
 
     Ok(())
