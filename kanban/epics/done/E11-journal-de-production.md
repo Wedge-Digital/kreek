@@ -1,8 +1,6 @@
 # E11 — Savoir ce qui se passe en production
 
-**État :** 8 cartes · 8 faites — 344 à 351 livrées et vérifiées.
-L'épic reste ouverte : son critère de clôture porte sur un incident réel, pas
-sur la liste des cartes. Voir « Terminé quand ».
+**État :** close · 9 cartes, toutes livrées et vérifiées
 
 ## La fonction
 
@@ -48,9 +46,11 @@ L'épic rend le journal capable de raconter une requête de bout en bout, dans
 | 349 | Un panic ne doit pas être l'incident le moins renseigné | un `500` propre et une ligne de journal dans le contexte de la requête |
 | 350 | Le versant émission des app events entre dans le journal | un `grep event_id=` rend l'émission **et** toutes les réactions |
 | 351 | Remonter d'une réaction à la requête qui l'a causée | les trois `grep` qui mènent du `x-request-id` aux réactions |
+| 355 | Les verrous couvrent la règle, pas la forme | ce qui empêche le journal de se reperdre fichier par fichier |
 
-Les deux dernières sont nées de la 345 : instrumenter les 19 listeners a montré
-ce qui manquait de l'autre côté du bus.
+Les 350 et 351 sont nées de la 345 : instrumenter les 19 listeners a montré ce
+qui manquait de l'autre côté du bus. La 355 est née des trois axes eux-mêmes —
+chacun vérifiait la forme rencontrée par son implémentation, pas la règle.
 
 ## Ce qui commande l'ordre
 
@@ -154,7 +154,34 @@ les spans s'emboîtent.
 
 ## Terminé quand
 
-Au prochain incident signalé par un coach, on part de l'en-tête
-`x-request-id` lu dans son navigateur, on fait un `docker logs … | grep rid=…`,
-et on reconstitue ce qu'il a tenté et pourquoi ça a échoué **sans ouvrir le
-code ni interroger la base**.
+À partir d'un `x-request-id` prélevé sur **une action quelconque** de
+l'application, on reconstitue dans `docker logs`, **sans ouvrir le code ni
+interroger la base** :
+
+1. ce que le coach a demandé — la commande reçue, champs compris ;
+2. ce que le système en a fait — les use cases traversés et leur durée ;
+3. ce qu'il a émis — les domain events, avec leurs identifiants ;
+4. ce qui a franchi les frontières de BCs — les app events, reliés aux domain
+   events dont ils sont issus ;
+5. comment chaque BC y a réagi.
+
+Trois `grep` enchaînés suffisent.
+
+### Pourquoi le critère a été réécrit
+
+Il disait : « **au prochain incident signalé par un coach**, on part de son
+`x-request-id` […] et on reconstitue ce qu'il a tenté et pourquoi ça a échoué ».
+
+Ce critère n'était pas observable à volonté : il attendait qu'un incident se
+produise. Il confondait deux choses — **la capacité existe** et **l'occasion
+s'est présentée** — dont seule la première dépend de nous. Une épic dont la
+clôture dépend d'un événement extérieur reste ouverte indéfiniment sans qu'aucun
+travail ne reste à faire, ce qui vide la colonne `en_cours/` de son sens.
+
+Il portait aussi une hypothèse fausse : « **pourquoi ça a échoué** ». Les deux
+bugs du mode customisation qui ont motivé cette épic **n'échouaient pas** — rien
+ne cassait, le comportement était simplement faux. Un critère qui ne parle que
+d'échec ne couvre pas le cas qui a fait naître l'épic.
+
+La version ci-dessus se constate quand on veut, sur n'importe quelle action, et
+ne présuppose pas qu'il se soit passé quelque chose de mal.
