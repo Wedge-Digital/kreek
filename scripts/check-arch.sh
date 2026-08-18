@@ -372,6 +372,25 @@ axe9="$(printf '%s' "$axe9" | sed '/^$/d')"
 if [ -n "$axe9" ]; then print_fail "$axe9"; else print_pass; fi
 echo ""
 
+# ── Axe 10 : génération d'URLs ──────────────────────────────────────────────
+#
+# Un placeholder de route substitué par un **littéral** produit une URL qui
+# compile, qui ne contient plus d'accolade, et qui est fausse. Vécu :
+# `APPROVE_ALL_ENROLLMENTS.replace("{space_id}", "_")` — le handler n'avait pas
+# besoin du `space_id`, le bouche-trou a tenu jusqu'au jour où
+# `space_scope_middleware` s'est mis à exiger un ULID. Deux mois plus tard, un
+# `400` muet, dans tous les espaces.
+#
+# La règle est étroite et sans faux positif : la valeur d'un placeholder vient
+# d'un paramètre, jamais d'une constante écrite sur place. Le cas « placeholder
+# oublié » n'est pas couvert ici — il l'est par les tests unitaires de `Routes`,
+# qui appellent chaque constructeur et refusent une accolade survivante.
+echo -e "${BOLD}Axe 10 · Génération d'URLs — aucun placeholder substitué par un littéral${RESET}"
+axe10=$(grep -rnE 'replace\("\{[a-z_]+\}",[[:space:]]*"' --include="routes.rs" src/ 2>/dev/null || true)
+axe10="$(printf '%s' "$axe10" | sed '/^$/d')"
+if [ -n "$axe10" ]; then print_fail "$axe10"; else print_pass; fi
+echo ""
+
 if [ "$EXIT_CODE" -eq 0 ]; then
     echo -e "${GREEN}${BOLD}✓ Toutes les vérifications bloquantes passent${RESET}"
 else

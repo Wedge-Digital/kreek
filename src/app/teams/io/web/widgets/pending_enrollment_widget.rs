@@ -1,7 +1,7 @@
 use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use askama::Template;
-use axum::extract::{Query, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
@@ -50,24 +50,44 @@ fn initials(name: &str) -> String {
         .to_uppercase()
 }
 
+/// `space_id` vient du chemin, et **doit** en venir : c'est lui que le template
+/// place dans l'URL des actions. Rendu vide, il produisait `/app//team/…`, que
+/// `space_scope_middleware` refuse par un `400` sans trace.
 pub async fn pending_enrollment_widget(
+    Path(space_id): Path<String>,
     Query(params): Query<Params>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let rows = match state
-        .teams
-        .team_repository
-        .find_by_season_and_status(&params.season_id, "PendingEnrollment")
-        .await
-    {
-        Ok(r) => r,
-        Err(e) => {
-            tracing::error!("pending_enrollment_widget: {e}");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
+    let teams = match load_pending_teams(&state, &params.season_id).await {
+        Ok(t) => t,
+        Err(reponse) => return reponse,
     };
 
-    let teams = rows
+    PendingEnrollmentWidgetTemplate {
+        app_routes: AppRoutes::default(),
+        space_id,
+        competition_id: params.competition_id,
+        season_id: params.season_id,
+        teams,
+    }
+    .into_response()
+}
+
+async fn load_pending_teams(
+    state: &AppState,
+    season_id: &str,
+) -> Result<Vec<PendingTeamVm>, Response> {
+    let rows = state
+        .teams
+        .team_repository
+        .find_by_season_and_status(season_id, "PendingEnrollment")
+        .await
+        .map_err(|e| {
+            tracing::error!("pending_enrollment_widget: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        })?;
+
+    Ok(rows
         .into_iter()
         .map(|r| PendingTeamVm {
             team_initials: initials(&r.team_name),
@@ -76,14 +96,5 @@ pub async fn pending_enrollment_widget(
             coach_name: r.coach_name,
             roster_name: r.roster_name,
         })
-        .collect();
-
-    PendingEnrollmentWidgetTemplate {
-        app_routes: AppRoutes::default(),
-        space_id: String::new(),
-        competition_id: params.competition_id,
-        season_id: params.season_id,
-        teams,
-    }
-    .into_response()
+        .collect())
 }

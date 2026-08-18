@@ -9,7 +9,7 @@
     <div class="actions-bar-left"></div>
     <div class="actions-bar-right">
       <button class="btn-primary-sm"
-              hx-post="{{ app_routes.teams.approve_all_enrollments() }}?competition_id={{ competition_id }}&season_id={{ season_id }}"
+              hx-post="{{ app_routes.teams.approve_all_enrollments(space_id) }}?competition_id={{ competition_id }}&season_id={{ season_id }}"
               hx-swap="none">✅ Tout valider</button>
     </div>
   </div>
