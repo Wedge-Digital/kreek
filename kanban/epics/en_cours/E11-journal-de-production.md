@@ -1,6 +1,6 @@
 # E11 — Savoir ce qui se passe en production
 
-**État :** 8 cartes · 7 faites — 344 à 350 livrées et vérifiées ; reste 351
+**État :** 8 cartes · 7 faites — 344 à 350 livrées et vérifiées ; reste 351, raffinée et prête
 
 ## La fonction
 
@@ -45,7 +45,7 @@ L'épic rend le journal capable de raconter une requête de bout en bout, dans
 | 348 | Chaque use case dit ce qu'on lui a demandé | le chemin nominal existe enfin dans le journal |
 | 349 | Un panic ne doit pas être l'incident le moins renseigné | un `500` propre et une ligne de journal dans le contexte de la requête |
 | 350 | Le versant émission des app events entre dans le journal | un `grep event_id=` rend l'émission **et** toutes les réactions |
-| 351 | Remonter d'une réaction à la requête qui l'a causée | *à raffiner* — le `rid` ne franchit pas le `tokio::spawn` |
+| 351 | Remonter d'une réaction à la requête qui l'a causée | les trois `grep` qui mènent du `x-request-id` aux réactions |
 
 Les deux dernières sont nées de la 345 : instrumenter les 19 listeners a montré
 ce qui manquait de l'autre côté du bus.
@@ -92,10 +92,21 @@ relie n'existait pas. Elle a fait naître la carte 352 — deux use cases de
 `match_report` émettent un app event directement, le publisher ne traitant pas
 `MatchReportConfirmed`.
 
-**351 en dernier, et seulement après raffinage.** C'est la plus invasive — elle
-touche `shared_kernel` — et sa valeur croît avec le nombre de spans à relier :
-la faire tôt reviendrait à câbler une corrélation entre deux points dont l'un
-est encore vide.
+**351 en dernier**, et le raffinage lui a fait changer de moyen. Elle devait
+faire voyager le `rid` jusqu'aux enveloppes via un état ambiant posé par la
+couche web — la plus invasive de l'épic, et la seule à toucher `shared_kernel`.
+
+Elle ne le fait plus. Journaliser les identifiants aux deux points de passage
+donne la même chaîne en trois `grep` au lieu d'un, sans toucher ni l'enveloppe
+ni le domaine, et **sans mode de panne silencieux** : un ambiant oublié à une
+frontière de tâche aurait produit un `rid` faux ou absent sans que rien ne le
+signale. Après quatre cartes passées à débusquer des mécanismes qui ressemblent
+à du travail fait sans rien livrer, payer ça pour économiser deux `grep` sur une
+carte classée « confort de diagnostic » était un mauvais échange.
+
+Sa valeur croît toujours avec le nombre de lignes à relier : la faire tôt
+reviendrait à chaîner deux points dont l'un est encore vide. D'où sa place en
+dernier, inchangée.
 
 Vérification préalable, sans code : la rotation du pilote de logs Docker
 (`max-size`, `max-file`). Elle est portée par la 346. Sans elle, tout le reste
