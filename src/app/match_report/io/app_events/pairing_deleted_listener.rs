@@ -2,6 +2,7 @@ use crate::app::match_report::domain::match_report_repository_port::IMatchReport
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::shared_kernel::app_events::competitions_app_events::CompetitionsAppEvent;
 use crate::common::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::supervision::spawn_listener;
 use std::sync::Arc;
 use tracing::Instrument;
 
@@ -43,7 +44,7 @@ fn cancel(
 pub fn init(app_event_bus: &EventBus, event_bus: &EventBus, repo: Arc<dyn IMatchReportRepository>) {
     let bus = event_bus.clone();
     let mut rx = app_event_bus.subscribe();
-    tokio::spawn(async move {
+    spawn_listener(module_path!(), async move {
         loop {
             match rx.recv().await {
                 Ok(envelope) => {

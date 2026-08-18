@@ -11,6 +11,7 @@ use crate::app::shared_kernel::app_events::match_report_app_events::{
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::common::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::supervision::spawn_listener;
 use std::sync::Arc;
 use tracing::Instrument;
 
@@ -20,7 +21,7 @@ pub fn init(
     competition_port: Arc<dyn IRankingCompetitionPort>,
 ) {
     let mut rx = app_event_bus.subscribe();
-    tokio::spawn(async move {
+    spawn_listener(module_path!(), async move {
         loop {
             match rx.recv().await {
                 Ok(envelope) => {

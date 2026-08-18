@@ -9,6 +9,7 @@ use crate::app::shared_kernel::app_events::player_match_impact_app_events::{
     InjuryTypePayload, PlayerMatchContextPayload, PlayerMatchImpactAppEvent,
 };
 use crate::common::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::supervision::spawn_listener;
 use std::sync::Arc;
 use tracing::Instrument;
 
@@ -18,7 +19,7 @@ pub fn init(
     skill_catalog: Arc<dyn ISkillCatalogPort>,
 ) {
     let mut rx = app_event_bus.subscribe();
-    tokio::spawn(async move {
+    spawn_listener(module_path!(), async move {
         loop {
             match rx.recv().await {
                 Ok(envelope) => {

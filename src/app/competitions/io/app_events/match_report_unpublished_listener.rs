@@ -3,6 +3,7 @@ use crate::app::shared_kernel::app_events::match_report_app_events::{
     MatchReportAppEvent, MatchReportUnpublishedPayload,
 };
 use crate::common::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::supervision::spawn_listener;
 use sqlx::PgPool;
 use tracing::Instrument;
 
@@ -11,7 +12,7 @@ use tracing::Instrument;
 /// score, avec un lien vers la saisie.
 pub fn init(app_event_bus: &EventBus, pool: PgPool) {
     let mut rx = app_event_bus.subscribe();
-    tokio::spawn(async move {
+    spawn_listener(module_path!(), async move {
         loop {
             match rx.recv().await {
                 Ok(envelope) => {

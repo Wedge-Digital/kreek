@@ -6,13 +6,14 @@ use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RoundId, SeasonId
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::common::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::supervision::spawn_listener;
 use std::sync::Arc;
 use tracing::Instrument;
 
 pub fn init(app_event_bus: &EventBus, repo: Arc<dyn IMatchReportRepository>) {
     let bus = app_event_bus.clone();
     let mut rx = app_event_bus.subscribe();
-    tokio::spawn(async move {
+    spawn_listener(module_path!(), async move {
         loop {
             match rx.recv().await {
                 Ok(envelope) => {

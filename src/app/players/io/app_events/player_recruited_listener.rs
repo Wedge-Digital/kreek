@@ -13,6 +13,7 @@ use crate::app::players::io::app_events::player_creation::{
 use crate::app::players::ports::{IPlayerProjectionRepository, ISkillCatalogPort};
 use crate::app::shared_kernel::app_events::teams_app_events::TeamsAppEvent;
 use crate::common::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::supervision::spawn_listener;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tracing::Instrument;
@@ -51,7 +52,7 @@ pub fn init(
     skill_catalog: Arc<dyn ISkillCatalogPort>,
 ) {
     let mut rx = app_event_bus.subscribe();
-    tokio::spawn(async move {
+    spawn_listener(module_path!(), async move {
         loop {
             match rx.recv().await {
                 Ok(envelope) => {

@@ -36,6 +36,7 @@ use crate::infrastructure::spaces::host_layout_adapter::KreekSpacesLayout;
 use crate::infrastructure::team_creation::competition_rules_adapter::CompetitionRulesAdapter;
 use crate::infrastructure::team_creation::reference_data_adapter::ReferenceDataAdapter;
 use crate::web::middleware::bypass_auth::bypass_auth_middleware;
+use crate::web::middleware::panic_response::JournalDePanic;
 use crate::web::middleware::request_log::request_log;
 use crate::web::middleware::require_auth::require_auth;
 use axum::middleware::{from_fn, from_fn_with_state};
@@ -43,6 +44,7 @@ use axum::{response::Redirect, routing::get, Router};
 use axum_login::AuthManagerLayerBuilder;
 use clap::Parser;
 use std::sync::Arc;
+use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::services::ServeDir;
 use tower_livereload::LiveReloadLayer;
 use tower_sessions::SessionManagerLayer;
@@ -143,7 +145,9 @@ fn filtre_de_journalisation(niveau: &str) -> (tracing_subscriber::EnvFilter, Opt
 /// Séparée de la lecture de `RUST_LOG` pour être testable : manipuler une
 /// variable d'environnement dans un test la partagerait avec tous les autres,
 /// qui tournent en parallèle.
-fn filtre_depuis_config(niveau: &str) -> (tracing_subscriber::EnvFilter, Option<String>) {
+pub(crate) fn filtre_depuis_config(
+    niveau: &str,
+) -> (tracing_subscriber::EnvFilter, Option<String>) {
     // Une valeur vide est un `.env` recopié du modèle sans être renseigné :
     // c'est une absence de choix, pas une erreur de saisie.
     if niveau.trim().is_empty() {
@@ -542,6 +546,18 @@ pub fn build_router(state: AppState) -> Router {
         .route("/", get(|| async { Redirect::to(path::AUTH_LAYOUT) }))
         .merge(app::auth::router::router())
         .merge(protected)
+        // **Sous le journal**, donc à l'intérieur du span de requête : la ligne
+        // `ERROR` qu'émet la couche porte alors le `rid` et le chemin. Posée
+        // au-dessus, elle sortirait orpheline — l'incident qu'on cherche
+        // justement à documenter, documenté à moitié. Bénéfice second :
+        // `request_log` voit passer le `500` et journalise sa ligne de fin, là
+        // où un panic ne produisait aucune réponse du tout.
+        //
+        // `custom` et non `new` : le gestionnaire par défaut journalise sur la
+        // cible `tower_http::catch_panic`, que le filtre `kreek=…` n'active
+        // pas — la ligne n'existerait tout simplement pas. Voir
+        // `web::middleware::panic_response`.
+        .layer(CatchPanicLayer::custom(JournalDePanic))
         // Sous `auth_layer` et non par-dessus : le journal nomme le coach, or
         // `AuthSession` n'existe qu'une fois la session chargée. Rien de perdu
         // pour autant — `AuthManagerLayer` ne rejette personne, et les refus de
@@ -598,6 +614,44 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Le harnais de la carte 311 passe par le vrai `build_router()`, donc il
+    /// ne peut atteindre que des routes réelles — et aucune ne panique. Ce
+    /// mini-routeur vérifie donc ce qui est vérifiable sans ajouter de code de
+    /// production : qu'un panic devient une réponse plutôt qu'une connexion
+    /// coupée. Le **placement** de la couche sous le span, lui, se constate à
+    /// la lecture du journal.
+    /// Nommée plutôt qu'anonyme : une fermeture `async { panic!(…) }` a pour
+    /// type de retour `!`, que le compilateur refuse désormais de résoudre en
+    /// `()` pour satisfaire `IntoResponse`. Un type de retour explicite lève
+    /// l'ambiguïté.
+    async fn route_qui_panique() -> String {
+        panic!("boum — panic volontaire de test")
+    }
+
+    #[tokio::test]
+    async fn un_panic_devient_une_reponse_500() {
+        use tower::ServiceExt;
+
+        let app = Router::new()
+            .route("/panique", get(route_qui_panique))
+            .layer(CatchPanicLayer::custom(JournalDePanic));
+
+        let reponse = app
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/panique")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(
+            reponse.status(),
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR
+        );
+    }
 
     #[test]
     fn un_niveau_valide_est_repris_tel_quel() {

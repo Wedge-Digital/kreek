@@ -1,12 +1,13 @@
 use crate::common::persistance::event_log_repository::{EventLogRepository, IEventLogRepository};
 use crate::common::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::supervision::spawn_listener;
 use sqlx::PgPool;
 use std::sync::Arc;
 
 pub fn init(bus: &EventBus, pool: PgPool) {
     let repo = Arc::new(EventLogRepository::new(pool));
     let mut rx = bus.subscribe();
-    tokio::spawn(async move {
+    spawn_listener(module_path!(), async move {
         loop {
             match rx.recv().await {
                 Ok(event) => {

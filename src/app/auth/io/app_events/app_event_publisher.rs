@@ -1,9 +1,10 @@
 use crate::app::auth::domain::domain_event::AuthDomainEvent;
 use crate::common::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::supervision::spawn_listener;
 
 pub fn auth_app_event_publisher(event_bus: &EventBus, app_event_bus: EventBus) {
     let mut rx = event_bus.subscribe();
-    tokio::spawn(async move {
+    spawn_listener(module_path!(), async move {
         loop {
             match rx.recv().await {
                 Ok(envelope) => {

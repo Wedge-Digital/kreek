@@ -1,6 +1,6 @@
 # E11 — Savoir ce qui se passe en production
 
-**État :** 8 cartes · 3 faites — 344, 345 et 346 livrées et vérifiées
+**État :** 8 cartes · 4 faites — 344, 345, 346 et 349 livrées et vérifiées
 
 ## La fonction
 
@@ -63,9 +63,13 @@ ne pose aucun préfixe, et une variable ainsi nommée était ignorée en silence
 
 L'ordre des cinq restantes, du moins cher au plus engageant :
 
-**349 d'abord** — petite, indépendante, à effet immédiat en production : elle
+**349 — faite.** Petite, indépendante, à effet immédiat en production : elle
 supprime le pire angle mort, l'incident qui produit le moins d'information
-alors qu'il en demande le plus.
+alors qu'il en demande le plus. Elle a été élargie au versant bus — un listener
+qui panique mourait en silence, et le BC cessait de réagir sans qu'aucune ligne
+ne le signale. Elle a aussi retrouvé le piège de la 344 sous une autre forme :
+`CatchPanicLayer::new()` journalise sur `tower_http::catch_panic`, cible que le
+filtre `kreek=…` n'active pas — la couche aurait été livrée muette.
 
 **347 ensuite, puis 348 — dans cet ordre, impérativement.** La 348 journalise la
 commande reçue par chaque use case ; trois commandes de `auth` portent un mot de

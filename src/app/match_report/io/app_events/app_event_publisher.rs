@@ -20,6 +20,7 @@ use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::EventId;
 use crate::common::event_envelope::EventEnvelope;
 use crate::common::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::supervision::spawn_listener;
 use std::sync::Arc;
 
 /// Souscrit au bus interne du BC match_report, convertit les domain events pertinents
@@ -33,7 +34,7 @@ pub fn match_report_app_event_publisher(
     team_data: Arc<dyn ITeamDataPort>,
 ) {
     let mut rx = event_bus.subscribe();
-    tokio::spawn(async move {
+    spawn_listener(module_path!(), async move {
         loop {
             match rx.recv().await {
                 Ok(envelope) => {

@@ -19,6 +19,7 @@ use crate::app::players::domain::player::{PlayerId, TeamId};
 use crate::app::players::ports::{IPlayerRepository, RepositoryError};
 use crate::app::shared_kernel::app_events::teams_app_events::TeamsAppEvent;
 use crate::common::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::supervision::spawn_listener;
 use std::sync::Arc;
 use tracing::Instrument;
 
@@ -71,7 +72,7 @@ async fn sortir_de_l_effectif(
 
 pub fn init(app_event_bus: &EventBus, event_bus: EventBus, repo: Arc<dyn IPlayerRepository>) {
     let mut rx = app_event_bus.subscribe();
-    tokio::spawn(async move {
+    spawn_listener(module_path!(), async move {
         loop {
             match rx.recv().await {
                 Ok(envelope) => {

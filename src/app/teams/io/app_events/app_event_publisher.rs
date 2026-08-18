@@ -11,11 +11,12 @@ use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::{EventId, SpaceId};
 use crate::app::teams::domain::team::TeamDomainEvent;
 use crate::common::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::supervision::spawn_listener;
 use sqlx::PgPool;
 
 pub fn teams_app_event_publisher(event_bus: &EventBus, app_event_bus: EventBus, pool: PgPool) {
     let mut rx = event_bus.subscribe();
-    tokio::spawn(async move {
+    spawn_listener(module_path!(), async move {
         loop {
             match rx.recv().await {
                 Ok(envelope) => {

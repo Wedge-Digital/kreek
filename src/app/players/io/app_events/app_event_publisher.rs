@@ -1,5 +1,6 @@
 use crate::app::players::domain::events::PlayerDomainEvent;
 use crate::common::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::supervision::spawn_listener;
 
 /// Publisher du BC `players` — souscrit au bus interne (événements domaine),
 /// convertit vers l'app event correspondant via
@@ -10,7 +11,7 @@ use crate::common::services::event_bus::event_bus::EventBus;
 /// listener n'émet jamais d'app event directement.
 pub fn players_app_event_publisher(event_bus: &EventBus, app_event_bus: EventBus) {
     let mut rx = event_bus.subscribe();
-    tokio::spawn(async move {
+    spawn_listener(module_path!(), async move {
         loop {
             match rx.recv().await {
                 Ok(envelope) => {

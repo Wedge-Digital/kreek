@@ -1,6 +1,7 @@
 use crate::app::teams::domain::team::{GamePhase, TeamDomainEvent};
 use crate::app::teams::ports::IPhaseBasketRepository;
 use crate::common::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::supervision::spawn_listener;
 use std::sync::Arc;
 use tracing::Instrument;
 
@@ -30,7 +31,7 @@ fn ends_in_ready_to_play(event: &TeamDomainEvent) -> bool {
 /// que `check-arch` (axe 5) utilise pour le distinguer d'un listener cross-BC.
 pub fn init(event_bus: &EventBus, baskets: Arc<dyn IPhaseBasketRepository>) {
     let mut rx = event_bus.subscribe();
-    tokio::spawn(async move {
+    spawn_listener(module_path!(), async move {
         loop {
             match rx.recv().await {
                 Ok(envelope) => {

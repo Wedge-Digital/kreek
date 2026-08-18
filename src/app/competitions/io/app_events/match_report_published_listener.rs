@@ -14,6 +14,7 @@ use crate::app::shared_kernel::bloodbowl::ids::PairingId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::EventId;
 use crate::common::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::supervision::spawn_listener;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tracing::Instrument;
@@ -26,7 +27,7 @@ pub fn init(
     team_port: Arc<dyn ITeamInfoPort>,
 ) {
     let mut rx = app_event_bus.subscribe();
-    tokio::spawn(async move {
+    spawn_listener(module_path!(), async move {
         loop {
             match rx.recv().await {
                 Ok(envelope) => {

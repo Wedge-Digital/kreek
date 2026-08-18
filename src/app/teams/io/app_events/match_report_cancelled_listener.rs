@@ -3,6 +3,7 @@ use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::teams::domain::team::Team;
 use crate::app::teams::ports::ITeamRepository;
 use crate::common::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::supervision::spawn_listener;
 use std::sync::Arc;
 use tracing::Instrument;
 
@@ -14,7 +15,7 @@ use tracing::Instrument;
 /// équipes resteraient définitivement indisponibles pour tout autre match.
 pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
     let mut rx = app_event_bus.subscribe();
-    tokio::spawn(async move {
+    spawn_listener(module_path!(), async move {
         loop {
             match rx.recv().await {
                 Ok(envelope) => {

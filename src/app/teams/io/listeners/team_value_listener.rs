@@ -19,6 +19,7 @@ use crate::app::teams::ports::{
 };
 use crate::app::teams::use_cases::recompute_team_value_use_case;
 use crate::common::services::event_bus::event_bus::EventBus;
+use crate::common::services::event_bus::supervision::spawn_listener;
 use std::sync::Arc;
 use tracing::Instrument;
 
@@ -85,7 +86,7 @@ async fn recalculer(team_id: &str, deps: &TeamValueDeps, source: &str) {
 /// cross-BC — ne pas la renommer sans lire cet axe.
 pub fn init(event_bus: &EventBus, deps: TeamValueDeps) {
     let mut rx = event_bus.subscribe();
-    tokio::spawn(async move {
+    spawn_listener(module_path!(), async move {
         loop {
             match rx.recv().await {
                 Ok(envelope) => {
@@ -129,7 +130,7 @@ pub fn init(event_bus: &EventBus, deps: TeamValueDeps) {
 /// que `DismissalsPhaseValidated` déclenche trop tôt.
 pub fn init_from_app_events(app_event_bus: &EventBus, deps: TeamValueDeps) {
     let mut rx = app_event_bus.subscribe();
-    tokio::spawn(async move {
+    spawn_listener(module_path!(), async move {
         loop {
             match rx.recv().await {
                 Ok(envelope) => {

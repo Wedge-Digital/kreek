@@ -1433,6 +1433,7 @@ dependencies = [
  "dashmap",
  "derive_more",
  "dotenvy",
+ "futures-util",
  "mockito",
  "nutype",
  "rand 0.9.4",
