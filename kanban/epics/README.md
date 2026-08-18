@@ -48,6 +48,7 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 | [E08 — Mode customisation : finir la livraison](ready_to_be_done/E08-mode-customisation.md) | `ready` | 2 |
 | [E09 — BC `news`](to_be_refined/E09-bc-news.md) | `to_be_refined` | 2 |
 | [E10 — Référentiels éditables](to_be_refined/E10-referentiels-editables.md) | `to_be_refined` | 2 |
+| [E11 — Savoir ce qui se passe en production](ready_to_be_done/E11-journal-de-production.md) | `ready` | 6 |
 
 ## Les cartes sans épic
 
