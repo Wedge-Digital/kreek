@@ -5,6 +5,7 @@ pub enum AssignError {
     Repository(String),
 }
 
+#[tracing::instrument(skip_all, fields(team_id = ?team_id))]
 pub async fn execute(
     team_id: &str,
     group_id: &str,

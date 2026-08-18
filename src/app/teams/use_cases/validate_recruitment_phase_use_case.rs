@@ -29,6 +29,7 @@ pub enum ValidateRecruitmentPhaseError {
 /// Le panier est réévalué **contre l'état du jour** — prix, effectif et
 /// trésorerie rechargés — et refusé **en bloc** : une seule ligne devenue
 /// invalide et rien n'est appliqué, pas même les lignes saines.
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: ValidateRecruitmentPhaseCommand,
     team_repo: &dyn ITeamRepository,

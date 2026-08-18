@@ -32,6 +32,7 @@ pub struct KeptMatch {
 /// L'annulation du rapport de match rattaché est la conséquence de l'événement
 /// `PairingDeleted`, traitée par le BC `match_report` — ce use case ne connaît
 /// pas les rapports, il vérifie seulement qu'aucun n'est publié.
+#[tracing::instrument(skip_all, fields(pairing_id = ?pairing_id))]
 pub async fn execute(
     pairing_id: &str,
     match_day_repo: &dyn IMatchDayRepository,
@@ -51,6 +52,7 @@ pub async fn execute(
 }
 
 /// Vide les rencontres d'une journée.
+#[tracing::instrument(skip_all, fields(round_id = ?round_id))]
 pub async fn clear_round(
     round_id: &str,
     match_day_repo: &dyn IMatchDayRepository,
@@ -63,6 +65,7 @@ pub async fn clear_round(
 }
 
 /// Vide les rencontres de toute la saison.
+#[tracing::instrument(skip_all, fields(season_id = ?season_id))]
 pub async fn clear_season(
     season_id: &str,
     match_day_repo: &dyn IMatchDayRepository,
@@ -81,6 +84,7 @@ pub async fn clear_season(
 /// Supprime une journée — mais seulement si aucune de ses rencontres n'est
 /// conservée : la suppression de la journée cascade en base sur ses pairings,
 /// ce qui contournerait le garde-fou.
+#[tracing::instrument(skip_all, fields(round_id = ?round_id))]
 pub async fn delete_round(
     round_id: &str,
     match_day_repo: &dyn IMatchDayRepository,

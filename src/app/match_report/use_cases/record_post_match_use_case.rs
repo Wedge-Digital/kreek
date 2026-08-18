@@ -27,6 +27,7 @@ pub enum RecordPostMatchError {
     Internal(String),
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: RecordPostMatchCommand,
     repo: &dyn IMatchReportRepository,

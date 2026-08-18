@@ -9,6 +9,7 @@ pub enum BuyRerollError {
     Repository(RepositoryError),
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: BuyRerollCommand,
     team_repo: &dyn ITeamRosterRepository,

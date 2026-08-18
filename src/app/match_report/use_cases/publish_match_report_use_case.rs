@@ -18,6 +18,7 @@ pub enum PublishMatchReportError {
     Repository(String),
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: PublishMatchReportCommand,
     repo: &dyn IMatchReportRepository,

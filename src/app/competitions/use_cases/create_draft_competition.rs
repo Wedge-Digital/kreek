@@ -48,6 +48,7 @@ impl From<SeasonRepositoryError> for CreateDraftCompetitionError {
     }
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: CreateDraftCompetitionCommand,
     repo: &dyn ICompetitionRepository,

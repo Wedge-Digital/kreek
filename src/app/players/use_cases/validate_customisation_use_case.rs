@@ -49,6 +49,7 @@ impl From<HydrationError> for ValidateCustomisationError {
     }
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: ValidateCustomisationCommand,
     player_repo: &dyn IPlayerRepository,
@@ -162,6 +163,7 @@ fn evenement_pour(
 ///
 /// **Idempotente** — un panier déjà absent n'est pas une erreur, et deux clics
 /// ne doivent pas produire un message d'échec.
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn cancel(
     cmd: CancelCustomisationCommand,
     basket_repo: &dyn ICustomisationBasketRepository,

@@ -95,6 +95,7 @@ pub enum RecordInducementsError {
 
 // ── Execute ───────────────────────────────────────────────────────────────────
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: RecordInducementsCommand,
     repo: &dyn IMatchReportRepository,

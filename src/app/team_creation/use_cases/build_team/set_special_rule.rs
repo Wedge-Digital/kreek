@@ -14,6 +14,7 @@ pub enum SetSpecialRuleError {
     Repository(RepositoryError),
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: SetSpecialRuleCommand,
     team_repo: &dyn ITeamRosterRepository,

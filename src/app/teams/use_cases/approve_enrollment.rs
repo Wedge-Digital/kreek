@@ -9,6 +9,7 @@ pub enum ApproveEnrollmentError {
     Repository(RepositoryError),
 }
 
+#[tracing::instrument(skip_all, fields(team_id = ?team_id))]
 pub async fn execute(
     team_id: &EntityId,
     team_repo: &dyn ITeamRepository,

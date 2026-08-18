@@ -51,6 +51,7 @@ impl From<EmailError> for SendResetPasswordEmailError {
     }
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: SendResetPasswordEmailCommand,
     user_repo: &dyn IUserRepository,

@@ -23,6 +23,7 @@ impl From<SpaceRepositoryError> for JoinSpacesError {
     }
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: JoinSpacesCommand,
     repo: &dyn ISpaceRepository,

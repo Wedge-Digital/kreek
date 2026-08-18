@@ -46,6 +46,7 @@ pub struct CreateArticleCommand {
     pub paragraphs: Vec<ArticleParagraph>,
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: CreateArticleCommand,
     repo: &dyn IArticleRepository,

@@ -10,6 +10,7 @@ pub enum FirePlayerError {
     Repository(RepositoryError),
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: FirePlayerCommand,
     team_repo: &dyn ITeamRosterRepository,

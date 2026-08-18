@@ -25,6 +25,7 @@ fn count_staff(team: &RosterSelectedTeam, kind: StaffKind) -> u8 {
     team.hired_staff().iter().filter(|s| s.kind == kind).count() as u8
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: SubmitTeamCommand,
     team_repo: &dyn ITeamRosterRepository,

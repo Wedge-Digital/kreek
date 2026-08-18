@@ -53,6 +53,7 @@ impl From<HydrationError> for CustomisationBasketError {
     }
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn add_skill(
     cmd: AddCustomisationSkillCommand,
     space_id: &str,
@@ -67,6 +68,7 @@ pub async fn add_skill(
     persister(&basket, space_id, basket_repo, cmd.expected_version).await
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn add_stat(
     cmd: AddCustomisationStatCommand,
     space_id: &str,
@@ -81,6 +83,7 @@ pub async fn add_stat(
     persister(&basket, space_id, basket_repo, cmd.expected_version).await
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn adjust_price(
     cmd: AdjustCustomisationPriceCommand,
     space_id: &str,
@@ -95,6 +98,7 @@ pub async fn adjust_price(
     persister(&basket, space_id, basket_repo, cmd.expected_version).await
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn add_spp(
     cmd: AddCustomisationSppCommand,
     space_id: &str,
@@ -109,6 +113,7 @@ pub async fn add_spp(
     persister(&basket, space_id, basket_repo, cmd.expected_version).await
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn remove_line(
     cmd: RemoveCustomisationLineCommand,
     space_id: &str,

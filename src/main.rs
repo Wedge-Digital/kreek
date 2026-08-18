@@ -31,6 +31,7 @@ use crate::app::{
 use crate::common::event_listener::event_log_feeder;
 use crate::common::services::email::{ConsoleEmailService, IEmailService, ResendMailService};
 use crate::common::services::event_bus::event_bus::new_bus;
+use crate::common::services::observability::use_case_journal::UseCaseJournal;
 use crate::common::session_store::DashMapStore;
 use crate::infrastructure::spaces::host_layout_adapter::KreekSpacesLayout;
 use crate::infrastructure::team_creation::competition_rules_adapter::CompetitionRulesAdapter;
@@ -164,9 +165,20 @@ pub(crate) fn filtre_depuis_config(
     }
 }
 
+/// Composition de couches et non `fmt().init()` : la ligne du chemin nominal
+/// est produite par `UseCaseJournal`, qui a besoin d'un `registry` sous lui
+/// pour ranger l'état d'un span entre son ouverture et sa fermeture. Le filtre
+/// est posé en premier, donc la couche est muette dès que `kreek` l'est.
 fn init_journal(cfg: &AppConfig) {
+    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::util::SubscriberInitExt;
+
     let (filtre, refuse) = filtre_de_journalisation(&cfg.log.level);
-    tracing_subscriber::fmt().with_env_filter(filtre).init();
+    tracing_subscriber::registry()
+        .with(filtre)
+        .with(tracing_subscriber::fmt::layer())
+        .with(UseCaseJournal)
+        .init();
     if let Some(niveau) = refuse {
         tracing::warn!(
             niveau,

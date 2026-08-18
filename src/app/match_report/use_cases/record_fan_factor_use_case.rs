@@ -30,6 +30,7 @@ pub enum RecordFanFactorError {
     Repository(String),
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     mut cmd: RecordFanFactorCommand,
     repo: &dyn IMatchReportRepository,

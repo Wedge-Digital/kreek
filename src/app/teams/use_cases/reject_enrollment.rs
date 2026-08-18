@@ -9,6 +9,7 @@ pub enum RejectEnrollmentError {
     Repository(RepositoryError),
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: RejectEnrollmentCommand,
     team_repo: &dyn ITeamRepository,

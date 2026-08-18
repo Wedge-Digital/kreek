@@ -1,6 +1,6 @@
 # E11 — Savoir ce qui se passe en production
 
-**État :** 8 cartes · 5 faites — 344, 345, 346, 347 et 349 livrées et vérifiées
+**État :** 8 cartes · 6 faites — 344 à 349 livrées et vérifiées ; restent 350 et 351
 
 ## La fonction
 
@@ -79,8 +79,12 @@ manuel ne protège que les champs auxquels on a pensé le jour où on l'a écrit
 Elle a aussi montré que `spaces` avait son dossier de use cases mal
 orthographié, angle mort de tout script visant `use_cases/`.
 
-**348 ensuite** — le gros morceau de l'épic et sa raison d'être : c'est elle
-qui fait exister le chemin nominal.
+**348 — faite.** Le gros morceau de l'épic et sa raison d'être : c'est elle qui
+fait exister le chemin nominal. Elle a failli ne rien livrer du tout —
+`#[instrument]` crée un span mais n'émet aucun événement, et sur des use cases
+muets il n'aurait produit aucune ligne. La ligne vient d'une couche dédiée aux
+spans de `use_cases/`, ce qui laisse intact le choix de la 345 de ne pas
+activer `FmtSpan` globalement.
 
 **350 après la 348**, pas avant : elle complète le tableau des app events, mais
 tant que les use cases sont muets, la moitié de ce qu'elle relie n'existe pas.

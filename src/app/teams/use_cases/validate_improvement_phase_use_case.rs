@@ -8,6 +8,7 @@ pub enum ValidateImprovementPhaseError {
     Repository(RepositoryError),
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: ValidateImprovementPhaseCommand,
     team_repo: &dyn ITeamRepository,

@@ -19,6 +19,7 @@ type Entry = (PlayerId, TeamId, PlayerDomainEvent, i32);
 
 /// Met à jour l'effectif en un lot : rien n'est persisté si une seule ligne est
 /// refusée. Retourne l'effectif actif à jour.
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: UpdateRosterCommand,
     player_repo: &dyn IPlayerRepository,

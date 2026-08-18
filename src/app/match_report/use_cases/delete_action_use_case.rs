@@ -20,6 +20,7 @@ pub enum DeleteActionError {
     Repository(String),
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: DeleteActionCommand,
     repo: &dyn IMatchReportRepository,

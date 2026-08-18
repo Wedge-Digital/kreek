@@ -48,6 +48,7 @@ impl From<RepositoryError> for ResetPasswordError {
     }
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: ResetPasswordCommand,
     user_repo: &dyn IUserRepository,

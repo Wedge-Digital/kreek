@@ -39,6 +39,7 @@ pub enum ValidateDismissalsPhaseError {
     Repository(RepositoryError),
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: ValidateDismissalsPhaseCommand,
     team_repo: &dyn ITeamRepository,

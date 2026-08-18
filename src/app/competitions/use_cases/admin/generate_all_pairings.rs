@@ -23,6 +23,7 @@ pub struct GenerateAllOutcome {
     pub skipped_group_names: Vec<String>,
 }
 
+#[tracing::instrument(skip_all, fields(season_id = ?season_id))]
 pub async fn execute(
     season_id: &str,
     competition_id: &str,

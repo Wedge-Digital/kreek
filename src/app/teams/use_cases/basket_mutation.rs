@@ -122,6 +122,7 @@ async fn persister<L: serde::Serialize>(
     Ok(())
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn add_player(
     cmd: AddBasketPlayerCommand,
     space_id: &str,
@@ -149,6 +150,7 @@ pub async fn add_player(
     .await
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn add_staff(
     cmd: AddBasketStaffCommand,
     space_id: &str,
@@ -181,6 +183,7 @@ pub async fn add_staff(
 /// Marquer, et non retirer : le joueur reste dans l'effectif et compte encore
 /// dans le plancher des éligibles jusqu'à la validation du lot. C'est ce qui
 /// rend l'annulation gratuite.
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn mark_player(
     cmd: MarkPlayerForDismissalCommand,
     space_id: &str,
@@ -208,6 +211,7 @@ pub async fn mark_player(
     .await
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn mark_staff(
     cmd: MarkStaffForDismissalCommand,
     space_id: &str,
@@ -241,6 +245,7 @@ pub async fn mark_staff(
 /// la même. Le retrait passe par l'agrégat plutôt que par un filtrage du JSON
 /// persisté, pour qu'il n'existe qu'une seule expression de cette règle et de
 /// son erreur.
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn remove_line(
     cmd: RemoveBasketLineCommand,
     space_id: &str,

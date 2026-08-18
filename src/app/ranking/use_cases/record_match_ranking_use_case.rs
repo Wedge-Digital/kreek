@@ -39,6 +39,7 @@ pub enum RecordMatchRankingError {
     Repository(String),
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: RecordMatchRankingCommand,
     repo: &dyn IRankingRepository,

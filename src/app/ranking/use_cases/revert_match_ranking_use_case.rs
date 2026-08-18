@@ -15,6 +15,7 @@ pub enum RevertMatchRankingError {
 /// les cumuls d'avant, redeviennent les dernières d'elles-mêmes.
 ///
 /// Idempotent : un second appel supprime zéro ligne.
+#[tracing::instrument(skip_all, fields(match_report_id = ?match_report_id))]
 pub async fn execute(
     match_report_id: &MatchReportId,
     repo: &dyn IRankingRepository,

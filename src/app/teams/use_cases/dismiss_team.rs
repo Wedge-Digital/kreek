@@ -8,6 +8,7 @@ pub enum DismissTeamError {
     Repository(RepositoryError),
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: DismissTeamCommand,
     team_repo: &dyn ITeamRepository,

@@ -29,6 +29,7 @@ pub enum UnpublishMatchReportError {
 /// Symétrique de `publish_match_report_use_case`, y compris la convention
 /// `version - 1` sur l'append. L'app event bus n'apparaît pas ici : le use case
 /// émet un domain event sur le bus interne, le publisher fait la conversion.
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: UnpublishMatchReportCommand,
     repo: &dyn IMatchReportRepository,

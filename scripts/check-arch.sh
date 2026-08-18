@@ -8,6 +8,8 @@
 #   5. Projections event sourcing dans la même transaction
 #   8. Carte d'impact e2e — exhaustive et sans entrée morte
 #   9. BCs extractibles — aucune adhérence au host (cf. kanban/242)
+#  10. Génération d'URLs — aucun placeholder substitué par un littéral
+#  11. Use cases à commande — tous instrumentés (cf. kanban/348)
 #
 # Axes en avertissement (n'affectent pas le code de sortie) :
 #   6. Value objects systématiques (CQRS) — primitifs nus côté écriture domaine
@@ -389,6 +391,52 @@ echo -e "${BOLD}Axe 10 · Génération d'URLs — aucun placeholder substitué p
 axe10=$(grep -rnE 'replace\("\{[a-z_]+\}",[[:space:]]*"' --include="routes.rs" src/ 2>/dev/null || true)
 axe10="$(printf '%s' "$axe10" | sed '/^$/d')"
 if [ -n "$axe10" ]; then print_fail "$axe10"; else print_pass; fi
+echo ""
+
+# ── Axe 11 : instrumentation des use cases ──────────────────────────────────
+#
+# Un use case non instrumenté est un trou dans le journal, et il ne se voit
+# nulle part : le code compile, les tests passent, et la seule conséquence est
+# qu'une action utilisateur ne laisse aucune trace en production. C'est
+# exactement le manque qui a motivé l'épic E11 — les deux bugs du mode
+# customisation n'échouaient pas, ils se trompaient, et rien ne les racontait.
+#
+# La vérification tient parce que l'attribut décore **l'appelé** : un seul
+# dossier à parcourir, une adjacence de deux lignes, et tout appel est couvert
+# — qu'il vienne d'un handler, d'un listener, d'un autre use case ou d'un test.
+# Un dispositif posé sur les sites d'appel n'aurait offert ni l'une ni l'autre
+# de ces garanties.
+#
+# La règle ne vise que les fonctions à commande : c'est la forme qui se
+# reconnaît sans ambiguïté. Les use cases à paramètres scalaires sont
+# instrumentés eux aussi, mais leurs champs se nomment un par un — les
+# contrôler ici demanderait de distinguer une mutation d'une lecture, ce
+# qu'aucun grep ne sait faire.
+echo -e "${BOLD}Axe 11 · Use cases à commande — tous instrumentés${RESET}"
+axe11=$(
+  for fichier in $(find src/app -path '*/use_cases/*' -name '*.rs' 2>/dev/null); do
+    awk -v f="$fichier" '
+      { ligne[NR] = $0 }
+      END {
+        for (i = 1; i <= NR; i++) {
+          if (ligne[i] !~ /^pub async fn /) continue
+          # Le premier paramètre suit la parenthèse, ou tient sur la ligne
+          # suivante — les deux formes existent dans le dépôt, et ne regarder
+          # que la première laissait passer la moitié des cas en silence.
+          p = ligne[i]
+          sub(/^pub async fn [a-zA-Z0-9_]+\(/, "", p)
+          gsub(/^[ \t]+/, "", p)
+          if (p == "") { p = ligne[i + 1]; gsub(/^[ \t]+/, "", p) }
+          if (p ~ /^(mut )?cmd:[ \t]*[A-Za-z0-9_]*Command/ && ligne[i - 1] !~ /instrument/) {
+            print f ":" i ": " ligne[i]
+          }
+        }
+      }
+    ' "$fichier"
+  done
+)
+axe11="$(printf '%s' "$axe11" | sed '/^$/d')"
+if [ -n "$axe11" ]; then print_fail "$axe11"; else print_pass; fi
 echo ""
 
 if [ "$EXIT_CODE" -eq 0 ]; then

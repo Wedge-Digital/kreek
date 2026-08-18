@@ -15,6 +15,7 @@ pub enum RecomputeTeamValueError {
 /// L'événement est appendu **même si la valeur n'a pas changé** : la suite des
 /// `TeamValueRecomputed` est l'historique de progression de la TV sur la saison,
 /// information qu'aucune autre trace ne porte.
+#[tracing::instrument(skip_all, fields(team_id = ?team_id))]
 pub async fn execute(
     team_id: &str,
     repo: &dyn ITeamRepository,

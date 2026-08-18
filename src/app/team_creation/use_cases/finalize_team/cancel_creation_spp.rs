@@ -18,6 +18,7 @@ pub enum CancelSppError {
     Repository(RepositoryError),
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: CancelCreationSppCommand,
     team_repo: &dyn ITeamRosterRepository,

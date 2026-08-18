@@ -10,6 +10,7 @@ pub enum IncreaseStatError {
     Repository(RepositoryError),
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: IncreaseStatCommand,
     player_repo: &dyn IPlayerRepository,

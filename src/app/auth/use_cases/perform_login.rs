@@ -45,6 +45,7 @@ pub struct PerformLoginCommand {
     pub password: Secret<String>,
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: PerformLoginCommand,
     repo: &dyn IUserRepository,

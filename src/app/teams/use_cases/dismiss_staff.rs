@@ -15,6 +15,7 @@ pub enum DismissStaffError {
     Repository(RepositoryError),
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: DismissStaffCommand,
     team_repo: &dyn ITeamRepository,

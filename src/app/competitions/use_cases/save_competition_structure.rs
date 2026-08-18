@@ -25,6 +25,7 @@ impl From<SeasonRepositoryError> for SaveCompetitionStructureError {
     }
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: SaveCompetitionStructureCommand,
     repo: &dyn ISeasonRepository,

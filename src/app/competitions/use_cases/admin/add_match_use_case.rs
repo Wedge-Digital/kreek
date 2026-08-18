@@ -22,6 +22,7 @@ pub enum AddMatchError {
 /// Crée un pairing manuel — refuse (BR : pas de pairing pour une équipe non
 /// enrôlée, donc pas d'event `PairingCreated`) si l'une des deux équipes n'est
 /// pas `Enrolled` pour la saison, plutôt que d'émettre un event à métadonnées vides.
+#[tracing::instrument(skip_all, fields(round_id = ?round_id))]
 pub async fn execute(
     round_id: &str,
     season_id: &str,

@@ -51,6 +51,7 @@ impl From<SpaceRepositoryError> for RegisterSpaceError {
     }
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: RegisterNewSpaceCommand,
     repo: &dyn ISpaceRepository,

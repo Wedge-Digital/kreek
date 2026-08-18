@@ -25,6 +25,7 @@ impl From<SeasonRepositoryError> for SaveCompetitionInvitationsError {
     }
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: SaveCompetitionInvitationsCommand,
     repo: &dyn ISeasonRepository,

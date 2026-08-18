@@ -14,6 +14,7 @@ pub enum PurchaseSkillError {
     Repository(RepositoryError),
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: PurchaseSkillCommand,
     player_repo: &dyn IPlayerRepository,

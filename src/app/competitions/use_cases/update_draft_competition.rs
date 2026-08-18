@@ -35,6 +35,7 @@ impl From<CompetitionRepositoryError> for UpdateDraftCompetitionError {
     }
 }
 
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: UpdateDraftCompetitionCommand,
     repo: &dyn ICompetitionRepository,
