@@ -1,7 +1,7 @@
 # `web` — Un identifiant sur chaque ligne, et de quoi le retrouver
 
 **Priorité : haute** — c'est ce qui transforme des cris isolés en récits
-**Dépend de :** carte 329 (le journal doit exister avant qu'on l'enrichisse)
+**Dépend de :** carte 344 (le journal doit exister avant qu'on l'enrichisse)
 **Fichiers :** `src/main.rs`, `src/web/middleware/request_log.rs`, les cinq
 listeners d'app events qui déclenchent un use case
 
@@ -51,7 +51,7 @@ développeur lit l'identifiant dans l'onglet réseau du navigateur, et
 **4. Les durées.** Elles ne viennent pas du span mais du souscripteur, en une
 ligne dans `main.rs` : `with_span_events(FmtSpan::CLOSE)` fait émettre une
 ligne à la fermeture de chaque span, temps passé compris. Réglage global, qui
-servira aussi aux spans de use cases de la carte 333.
+servira aussi aux spans de use cases de la carte 348.
 
 ## Le point de vigilance : les champs doivent s'imprimer
 

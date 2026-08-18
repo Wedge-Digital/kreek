@@ -1,7 +1,7 @@
 # `web` — Un panic ne doit pas être l'incident le moins renseigné
 
 **Priorité : moyenne**
-**Dépend de :** carte 330 (le span de requête, sans quoi la ligne de panic reste
+**Dépend de :** carte 345 (le span de requête, sans quoi la ligne de panic reste
 orpheline)
 **Fichiers :** `Cargo.toml`, `src/main.rs`
 

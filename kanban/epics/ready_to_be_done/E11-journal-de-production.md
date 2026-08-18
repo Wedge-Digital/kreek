@@ -38,34 +38,34 @@ L'épic rend le journal capable de raconter une requête de bout en bout, dans
 
 | # | Intitulé | Apport |
 |---|---|---|
-| 329 | Le journal de production n'existe pas | un journal de requêtes, toujours actif, sans doublon ni champ trompeur |
-| 330 | Un identifiant sur chaque ligne, et de quoi le retrouver | `rid` hérité par toutes les lignes, écho en `x-request-id`, durées |
-| 331 | Le niveau rejoint la configuration | `APP__LOG__LEVEL`, défaut `info`, `sqlx` enfin audible |
-| 332 | `Debug` sur les commandes, et trois secrets à masquer | prérequis de la 333, et suppression d'une fuite déjà possible |
-| 333 | Chaque use case dit ce qu'on lui a demandé | le chemin nominal existe enfin dans le journal |
-| 334 | Un panic ne doit pas être l'incident le moins renseigné | un `500` propre et une ligne de journal dans le contexte de la requête |
+| 344 | Le journal de production n'existe pas | un journal de requêtes, toujours actif, sans doublon ni champ trompeur |
+| 345 | Un identifiant sur chaque ligne, et de quoi le retrouver | `rid` hérité par toutes les lignes, écho en `x-request-id`, durées |
+| 346 | Le niveau rejoint la configuration | `APP__LOG__LEVEL`, défaut `info`, `sqlx` enfin audible |
+| 347 | `Debug` sur les commandes, et trois secrets à masquer | prérequis de la 348, et suppression d'une fuite déjà possible |
+| 348 | Chaque use case dit ce qu'on lui a demandé | le chemin nominal existe enfin dans le journal |
+| 349 | Un panic ne doit pas être l'incident le moins renseigné | un `500` propre et une ligne de journal dans le contexte de la requête |
 
 ## Ce qui commande l'ordre
 
-**329 d'abord, seule.** C'est le seul correctif du lot, il tient en quelques
+**344 d'abord, seule.** C'est le seul correctif du lot, il tient en quelques
 lignes de `main.rs`, et il rétablit à lui seul le plus grand écart. Livrable
 immédiatement.
 
-**330 ensuite**, parce que tout le reste en dépend pour être exploitable : sans
+**345 ensuite**, parce que tout le reste en dépend pour être exploitable : sans
 `rid`, les lignes des cartes suivantes ne se rattachent à rien. C'est aussi la
 carte qui apporte le plus de valeur par unité d'effort — un span de requête fait
 hériter le contexte aux **198 `error!` existants sans en modifier un seul**.
 
-**332 avant 333, impérativement.** La 333 journalise la commande reçue par
+**347 avant 348, impérativement.** La 348 journalise la commande reçue par
 chaque use case ; trois commandes de `auth` portent un mot de passe ou un jeton
 en clair. Prendre les cartes dans le mauvais ordre publie des secrets dans
 `docker logs`.
 
-**331 et 334 sont indépendantes** et peuvent s'intercaler n'importe où après la
-329.
+**346 et 349 sont indépendantes** et peuvent s'intercaler n'importe où après la
+344.
 
 Vérification préalable, sans code : la rotation du pilote de logs Docker
-(`max-size`, `max-file`). Elle est portée par la 331. Sans elle, tout le reste
+(`max-size`, `max-file`). Elle est portée par la 346. Sans elle, tout le reste
 est vain — le meilleur journal du monde ne vaut rien s'il s'évapore à la
 recréation du conteneur.
 

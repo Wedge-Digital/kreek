@@ -47,7 +47,7 @@ une.
   `tower_http` dans le filtre pour obtenir un doublon de ce que `request_log`
   produit déjà, en moins bien : notre middleware sait ce qu'on veut y mettre.
 - Retirer `?thread`. Son remplaçant — un identifiant de requête — arrive avec
-  la carte 330 ; d'ici là, mieux vaut aucun champ de corrélation qu'un champ
+  la carte 345 ; d'ici là, mieux vaut aucun champ de corrélation qu'un champ
   qui ment.
 
 Attention à l'ordre des couches : `request_log` doit envelopper le traitement
@@ -57,8 +57,8 @@ précisément celle qu'on cherche à comprendre.
 
 ## Ce que cette carte ne fait pas
 
-Elle ne change ni le contenu ni le niveau des lignes. Pas de `rid` (carte 330),
-pas de durée (carte 330), pas de reclassement des 198 `error!`. Elle rétablit
+Elle ne change ni le contenu ni le niveau des lignes. Pas de `rid` (carte 345),
+pas de durée (carte 345), pas de reclassement des 198 `error!`. Elle rétablit
 l'existence du journal, rien de plus — et c'est déjà l'écart le plus grand du
 lot.
 

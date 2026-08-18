@@ -1,7 +1,7 @@
 # `app` — Chaque use case dit ce qu'on lui a demandé
 
 **Priorité : haute** — c'est la carte qui répond au symptôme d'origine
-**Dépend de :** carte 332 (`Debug` requis), carte 330 (sans `rid`, les lignes
+**Dépend de :** carte 347 (`Debug` requis), carte 345 (sans `rid`, les lignes
 ne se rattachent à rien)
 **Fichiers :** les 45 fonctions de `src/app/*/use_cases/` prenant une commande,
 `scripts/check-arch.sh`
@@ -89,7 +89,7 @@ ni l'une ni l'autre de ces garanties.
 ## Ce que ça donnera
 
 Aujourd'hui, en production, une validation de customisation réussie ne
-journalise **rien**. Après les cartes 330 et 333 :
+journalise **rien**. Après les cartes 345 et 348 :
 
 ```
 INFO req{rid=01J8QF method=POST path=/spaces/S1/players/P123/customisation/validate coach=Bagouze}
@@ -110,6 +110,6 @@ BCs confondus.
 - [ ] Axe `check-arch` bloquant, vérifié sur un cas volontairement fautif
 - [ ] Vérifié sur une sortie réelle qu'une exécution produit bien sa ligne, avec
       le `rid` de la requête et la durée
-- [ ] Vérifié qu'aucune commande de `auth` n'imprime de secret — la carte 332
+- [ ] Vérifié qu'aucune commande de `auth` n'imprime de secret — la carte 347
       doit être faite avant
 - [ ] `make test` et `make check-arch` passent

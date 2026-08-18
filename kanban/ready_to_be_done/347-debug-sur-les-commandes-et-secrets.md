@@ -1,6 +1,6 @@
 # `app` — `Debug` sur les commandes, et trois secrets à masquer
 
-**Priorité : haute** — la carte 333 en dépend, et la revue de secrets vaut par
+**Priorité : haute** — la carte 348 en dépend, et la revue de secrets vaut par
 elle-même
 **Dépend de :** rien
 **Fichiers :** les 56 structures `…Command` de `src/app/*/use_cases/`, dont
@@ -9,7 +9,7 @@ trois dans `auth`
 ## Le problème
 
 **Aucune des 56 commandes ne dérive `Debug`.** Zéro sur 56 — elles n'ont aucune
-dérivation du tout. Or la carte 333 journalise la commande reçue par chaque use
+dérivation du tout. Or la carte 348 journalise la commande reçue par chaque use
 case, ce qui l'exige.
 
 Ajouter `#[derive(Debug)]` partout est mécanique. Le faire sans regarder ce

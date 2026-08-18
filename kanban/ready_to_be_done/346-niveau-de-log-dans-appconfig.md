@@ -1,7 +1,7 @@
 # `config` — Le niveau de journalisation rejoint la configuration
 
 **Priorité : moyenne**
-**Dépend de :** rien (mais n'a d'intérêt qu'avec un journal qui existe — cf. 329)
+**Dépend de :** rien (mais n'a d'intérêt qu'avec un journal qui existe — cf. 344)
 **Fichiers :** `src/main.rs`, `src/config.rs`
 
 ## Le problème
