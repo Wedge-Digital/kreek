@@ -10,6 +10,7 @@ use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::identity::ids::CoachId;
 use crate::common::services::event_bus::event_bus::EventBus;
 
+#[derive(Debug)]
 pub struct UnpublishMatchReportCommand {
     pub match_report_id: MatchReportId,
     pub unpublished_by: CoachId,

@@ -3,6 +3,7 @@ use crate::app::auth::domain::domain_event::AuthDomainEvent::UserLoggedIn;
 use crate::app::auth::domain::domain_event::USER_LOGGED_IN;
 use crate::app::auth::domain::user::User;
 use crate::app::shared_kernel::identity::ids::{EventId, UserId};
+use crate::app::shared_kernel::identity::secret::Secret;
 use crate::common::event_envelope::EventEnvelope;
 use crate::common::services::event_bus::event_bus::EventBus;
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
@@ -38,10 +39,10 @@ impl From<RepositoryError> for LoginError {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct PerformLoginCommand {
     pub coach_name: String,
-    pub password: String,
+    pub password: Secret<String>,
 }
 
 pub async fn execute(
@@ -56,7 +57,7 @@ pub async fn execute(
         .ok_or(LoginError::CoachNameNotFound)?;
 
     let password_hash = user.password_hash.clone();
-    let password = cmd.password.clone();
+    let password = cmd.password.expose().clone();
     let verified = tokio::task::spawn_blocking(move || {
         let parsed = PasswordHash::new(&password_hash)
             .map_err(|_| LoginError::Database("hash corrompu".into()))?;
@@ -89,7 +90,7 @@ pub async fn execute(
 
 #[cfg(test)]
 mod tests {
-    use super::{execute, LoginError, PerformLoginCommand, USER_LOGGED_IN};
+    use super::{execute, LoginError, PerformLoginCommand, Secret, USER_LOGGED_IN};
     use crate::app::auth::io::repository::tests::fake_user_repository::{
         FakeUserRepository, FindResult,
     };
@@ -108,8 +109,20 @@ mod tests {
     fn cmd(coach_name: &str, password: &str) -> PerformLoginCommand {
         PerformLoginCommand {
             coach_name: coach_name.into(),
-            password: password.into(),
+            password: Secret::new(password.into()),
         }
+    }
+
+    /// Le seul garde-fou contre un `#[derive(Debug)]` qui redeviendrait naïf.
+    /// La carte 348 journalise la commande reçue par chaque use case : sans ce
+    /// test, un champ repassé en `String` mettrait les mots de passe des coachs
+    /// dans `docker logs` sans que rien ne le signale.
+    #[test]
+    fn le_debug_ne_laisse_pas_fuir_le_mot_de_passe() {
+        let rendu = format!("{:?}", cmd("Bagouze", "hunter2-le-mot-de-passe"));
+
+        assert!(!rendu.contains("hunter2"), "mot de passe fuité : {rendu}");
+        assert!(rendu.contains("Bagouze"), "le diagnostic reste lisible");
     }
 
     #[tokio::test]

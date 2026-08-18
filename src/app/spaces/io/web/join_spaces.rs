@@ -1,7 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::app::spaces::context::SpacesContext;
-use crate::app::spaces::uses_cases::join_spaces::{execute, JoinSpacesCommand};
+use crate::app::spaces::use_cases::join_spaces::{execute, JoinSpacesCommand};
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};

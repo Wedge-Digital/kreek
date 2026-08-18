@@ -34,6 +34,7 @@ impl From<ArticleRepositoryError> for CreateArticleError {
     }
 }
 
+#[derive(Debug)]
 pub struct CreateArticleCommand {
     pub space_id: SpaceId,
     pub author_id: UserId,

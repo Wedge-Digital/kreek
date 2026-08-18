@@ -6,6 +6,7 @@ use crate::app::competitions::ports::ITiebreakCatalogPort;
 use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
 use std::collections::{HashMap, HashSet};
 
+#[derive(Debug)]
 pub struct SaveCompetitionRulesCommand {
     pub season_id: SeasonId,
     pub season_name: String,

@@ -5,12 +5,14 @@ use crate::app::players::domain::value_objects::{
     SppAmount, StatCrans,
 };
 
+#[derive(Debug)]
 pub struct PurchaseSkillCommand {
     pub player_id: PlayerId,
     pub skill_id: SkillId,
     pub mode: AcquisitionMode,
 }
 
+#[derive(Debug)]
 pub struct IncreaseStatCommand {
     pub player_id: PlayerId,
     pub stat: StatKind,
@@ -19,11 +21,13 @@ pub struct IncreaseStatCommand {
 /// Édition de l'effectif en un lot. Les lignes absentes du lot ne sont pas
 /// touchées — mais elles comptent quand même pour l'unicité du numéro et de
 /// l'ordre, qui porte sur l'effectif actif entier.
+#[derive(Debug)]
 pub struct UpdateRosterCommand {
     pub team_id: TeamId,
     pub rows: Vec<RosterRowCommand>,
 }
 
+#[derive(Debug)]
 pub struct RosterRowCommand {
     pub player_id: PlayerId,
     /// `None` efface le nom : la lecture retombe alors sur le nom de poste.
@@ -45,12 +49,14 @@ pub struct RosterRowCommand {
 // Le piège de la carte 264 n'est pas de faire circuler la version, c'est de
 // reposer sur l'agrégat celle que `save` vient de rendre.
 
+#[derive(Debug)]
 pub struct AddCustomisationSkillCommand {
     pub player_id: PlayerId,
     pub skill_id: SkillId,
     pub expected_version: u32,
 }
 
+#[derive(Debug)]
 pub struct AddCustomisationStatCommand {
     pub player_id: PlayerId,
     pub stat: StatKind,
@@ -61,18 +67,21 @@ pub struct AddCustomisationStatCommand {
     pub expected_version: u32,
 }
 
+#[derive(Debug)]
 pub struct AdjustCustomisationPriceCommand {
     pub player_id: PlayerId,
     pub delta: KpoDelta,
     pub expected_version: u32,
 }
 
+#[derive(Debug)]
 pub struct AddCustomisationSppCommand {
     pub player_id: PlayerId,
     pub amount: SppAmount,
     pub expected_version: u32,
 }
 
+#[derive(Debug)]
 pub struct RemoveCustomisationLineCommand {
     pub player_id: PlayerId,
     pub line_id: BasketLineId,
@@ -93,6 +102,7 @@ pub struct RemoveCustomisationLineCommand {
 /// Avec la garde, le contenu ne peut plus changer sans que la version change :
 /// la course retombe sur `ConcurrentWrite`, chemin déjà silencieux et déjà
 /// compris, et `IdentifiantsManquants` redevient ce qu'il prétend être.
+#[derive(Debug)]
 pub struct ValidateCustomisationCommand {
     pub player_id: PlayerId,
     pub author: String, // arch:ok nom d'affichage du commissaire
@@ -100,6 +110,7 @@ pub struct ValidateCustomisationCommand {
     pub expected_version: u32,
 }
 
+#[derive(Debug)]
 pub struct CancelCustomisationCommand {
     pub player_id: PlayerId,
 }

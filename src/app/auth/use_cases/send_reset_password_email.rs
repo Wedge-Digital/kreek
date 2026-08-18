@@ -14,6 +14,7 @@ struct LostLoginEmail {
     reset_url: String,
 }
 
+#[derive(Debug)]
 pub struct SendResetPasswordEmailCommand {
     pub coach_name: CoachName,
     pub host_domain: String,

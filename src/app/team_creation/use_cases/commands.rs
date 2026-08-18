@@ -5,6 +5,7 @@ use crate::app::team_creation::domain::creation_rules::CreationRules;
 use crate::app::team_creation::domain::roster::{PlayerId, Roster};
 use crate::app::team_creation::domain::ruleset::Ruleset;
 
+#[derive(Debug)]
 pub struct RegisterNewTeamCommand {
     pub team_name: TeamName,
     pub coach_id: CoachId,
@@ -15,50 +16,59 @@ pub struct RegisterNewTeamCommand {
     pub creation_rules: CreationRules,
 }
 
+#[derive(Debug)]
 pub struct SelectRulesetCommand {
     pub team_id: TeamId,
     pub ruleset: Ruleset,
 }
 
+#[derive(Debug)]
 pub struct ChooseRosterCommand {
     pub team_id: TeamId,
     pub roster: Roster,
 }
 
+#[derive(Debug)]
 pub struct HirePlayerCommand {
     pub team_id: TeamId,
     pub space_id: String,
     pub player_id: PlayerId,
 }
 
+#[derive(Debug)]
 pub struct FirePlayerCommand {
     pub team_id: TeamId,
     pub space_id: String,
     pub player_id: PlayerId,
 }
 
+#[derive(Debug)]
 pub struct BuyStaffCommand {
     pub team_id: TeamId,
     pub space_id: String,
     pub staff_id: StaffId,
 }
 
+#[derive(Debug)]
 pub struct RemoveStaffCommand {
     pub team_id: TeamId,
     pub space_id: String,
     pub staff_id: StaffId,
 }
 
+#[derive(Debug)]
 pub struct BuyRerollCommand {
     pub team_id: TeamId,
     pub space_id: String,
 }
 
+#[derive(Debug)]
 pub struct RemoveRerollCommand {
     pub team_id: TeamId,
     pub space_id: String,
 }
 
+#[derive(Debug)]
 pub struct SubmitTeamCommand {
     pub team_id: TeamId,
     pub space_id: String,

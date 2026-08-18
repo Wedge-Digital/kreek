@@ -1,5 +1,6 @@
 use crate::app::auth::io::repository::reset_token_repository::IResetTokenRepository;
 use crate::app::auth::ports::{IUserRepository, RepositoryError};
+use crate::app::shared_kernel::identity::secret::Secret;
 use argon2::password_hash::{rand_core::OsRng, SaltString};
 use argon2::{Argon2, PasswordHasher};
 use std::fmt;
@@ -7,10 +8,11 @@ use time::OffsetDateTime;
 
 const TOKEN_TTL_HOURS: i64 = 1;
 
+#[derive(Debug)]
 pub struct ResetPasswordCommand {
-    pub token: String,
-    pub password: String,
-    pub password_confirm: String,
+    pub token: Secret<String>,
+    pub password: Secret<String>,
+    pub password_confirm: Secret<String>,
 }
 
 #[derive(Debug)]
@@ -52,7 +54,7 @@ pub async fn execute(
     token_repo: &dyn IResetTokenRepository,
 ) -> Result<(), ResetPasswordError> {
     let reset_token = token_repo
-        .find_by_token(&cmd.token)
+        .find_by_token(cmd.token.expose())
         .await?
         .ok_or(ResetPasswordError::TokenNotFound)?;
 
@@ -61,7 +63,7 @@ pub async fn execute(
         return Err(ResetPasswordError::TokenExpired);
     }
 
-    if cmd.password.len() < 8 {
+    if cmd.password.expose().len() < 8 {
         return Err(ResetPasswordError::PasswordTooShort);
     }
     if cmd.password != cmd.password_confirm {
@@ -70,7 +72,7 @@ pub async fn execute(
 
     let salt = SaltString::generate(&mut OsRng);
     let hash = Argon2::default()
-        .hash_password(cmd.password.as_bytes(), &salt)
+        .hash_password(cmd.password.expose().as_bytes(), &salt)
         .map_err(|_| ResetPasswordError::PasswordHashError)?
         .to_string();
 
@@ -78,7 +80,7 @@ pub async fn execute(
     user_repo
         .update_password_hash(&coach_name_str, &hash)
         .await?;
-    token_repo.delete_by_token(&cmd.token).await?;
+    token_repo.delete_by_token(cmd.token.expose()).await?;
 
     Ok(())
 }
@@ -148,6 +150,26 @@ mod tests {
                 password_hash: "old_hash".into(),
             },
         }
+    }
+
+    /// Le jeton n'est pas moins grave que le mot de passe : il autorise la
+    /// réinitialisation, c'est un identifiant de connexion à durée de vie
+    /// limitée. Cette commande ne porte donc **rien** de lisible — ce qu'on
+    /// apprend d'elle, c'est qu'une réinitialisation a été tentée, et la carte
+    /// 348 le dira par le nom du use case.
+    #[test]
+    fn le_debug_ne_laisse_fuir_ni_jeton_ni_mot_de_passe() {
+        let rendu = format!(
+            "{:?}",
+            ResetPasswordCommand {
+                token: "jeton-temoin-01M0".into(),
+                password: "hunter2-le-mot-de-passe".into(),
+                password_confirm: "hunter2-le-mot-de-passe".into(),
+            }
+        );
+
+        assert!(!rendu.contains("jeton-temoin"), "jeton fuité : {rendu}");
+        assert!(!rendu.contains("hunter2"), "mot de passe fuité : {rendu}");
     }
 
     fn cmd(password: &str, confirm: &str) -> ResetPasswordCommand {

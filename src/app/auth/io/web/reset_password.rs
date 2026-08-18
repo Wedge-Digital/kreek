@@ -4,6 +4,7 @@ use crate::app::auth::routes::{path, Routes};
 use crate::app::auth::use_cases::reset_password::{
     execute, ResetPasswordCommand, ResetPasswordError,
 };
+use crate::app::shared_kernel::identity::secret::Secret;
 use askama::Template;
 use axum::body::Body;
 use axum::extract::{Path, State};
@@ -64,9 +65,9 @@ pub async fn post_reset_password(
     Form(payload): Form<UpdatePasswordPayload>,
 ) -> impl IntoResponse {
     let cmd = ResetPasswordCommand {
-        token: reset_token.clone(),
-        password: payload.password,
-        password_confirm: payload.password_confirm,
+        token: Secret::new(reset_token.clone()),
+        password: Secret::new(payload.password),
+        password_confirm: Secret::new(payload.password_confirm),
     };
 
     match execute(

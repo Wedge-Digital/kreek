@@ -6,6 +6,7 @@ use crate::app::team_creation::ports::{
     IReferenceDataPort, ITeamRosterRepository, RepositoryError,
 };
 
+#[derive(Debug)]
 pub struct SpendCreationSppCommand {
     pub team_id: EntityId,
     pub space_id: String,

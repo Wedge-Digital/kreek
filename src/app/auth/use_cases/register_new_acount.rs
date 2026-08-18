@@ -5,6 +5,7 @@ use crate::app::auth::domain::user::User;
 use crate::app::shared_kernel::identity::coach_name::CoachName;
 use crate::app::shared_kernel::identity::email::Email;
 use crate::app::shared_kernel::identity::ids::{EventId, UserId};
+use crate::app::shared_kernel::identity::secret::Secret;
 use crate::common::services::event_bus::event_bus::EventBus;
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
@@ -24,11 +25,12 @@ pub enum RegisterError {
     Database(String),
 }
 
+#[derive(Debug)]
 pub struct RegisterCommand {
     pub coach_name: String,
-    pub email: String,
-    pub password: String,
-    pub password_confirm: String,
+    pub email: Secret<String>,
+    pub password: Secret<String>,
+    pub password_confirm: Secret<String>,
 }
 
 impl fmt::Display for RegisterError {
@@ -70,7 +72,7 @@ pub async fn execute(
     if cmd.password != cmd.password_confirm {
         errors.push(RegisterError::PasswordMismatch);
     }
-    if cmd.password.len() < 8 {
+    if cmd.password.expose().len() < 8 {
         errors.push(RegisterError::PasswordTooShort);
     }
 
@@ -81,7 +83,7 @@ pub async fn execute(
             None
         }
     };
-    let email = match Email::try_new(&cmd.email) {
+    let email = match Email::try_new(cmd.email.expose()) {
         Ok(v) => Some(v),
         Err(e) => {
             errors.push(RegisterError::InvalidEmail(e.into()));
@@ -93,7 +95,7 @@ pub async fn execute(
         return Err(errors);
     }
 
-    let password = cmd.password.clone();
+    let password = cmd.password.expose().clone();
     let password_hash = tokio::task::spawn_blocking(move || {
         let salt = SaltString::generate(&mut OsRng);
         Argon2::default()
@@ -160,6 +162,25 @@ mod tests {
         async fn update_password_hash(&self, _: &str, _: &str) -> Result<(), RepositoryError> {
             Ok(())
         }
+    }
+
+    /// Cf. `perform_login` : e-mail compris, l'adresse est une donnée
+    /// personnelle qui n'a rien à faire dans un journal de diagnostic.
+    #[test]
+    fn le_debug_ne_laisse_fuir_ni_mot_de_passe_ni_email() {
+        let rendu = format!(
+            "{:?}",
+            RegisterCommand {
+                coach_name: "Bagouze".into(),
+                email: "adresse-temoin@example.com".into(),
+                password: "hunter2-le-mot-de-passe".into(),
+                password_confirm: "hunter2-le-mot-de-passe".into(),
+            }
+        );
+
+        assert!(!rendu.contains("hunter2"), "mot de passe fuité : {rendu}");
+        assert!(!rendu.contains("adresse-temoin"), "e-mail fuité : {rendu}");
+        assert!(rendu.contains("Bagouze"), "le diagnostic reste lisible");
     }
 
     fn valid_command() -> RegisterCommand {

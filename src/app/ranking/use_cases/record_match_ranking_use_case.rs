@@ -12,6 +12,7 @@ use chrono::{DateTime, Utc};
 /// Stats d'une équipe sur un match. Regroupées pour que le croisement
 /// home/away se lise d'un coup d'œil : une inversion entre deux champs à
 /// préfixe (`home_score` utilisé pour l'équipe away) compile sans broncher.
+#[derive(Debug)]
 pub struct TeamMatchStats {
     pub score: MatchScore,
     pub casualties: CasualtiesInflicted,
@@ -19,6 +20,7 @@ pub struct TeamMatchStats {
     pub completions: CompletionsMade,
 }
 
+#[derive(Debug)]
 pub struct RecordMatchRankingCommand {
     pub competition_id: CompetitionId,
     pub season_id: SeasonId,

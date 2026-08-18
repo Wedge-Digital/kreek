@@ -4,6 +4,7 @@ use crate::app::team_creation::domain::roster::{PlayerId, SkillId};
 use crate::app::team_creation::domain::team_roster_selected::RosterSelectedTeam;
 use crate::app::team_creation::ports::{ITeamRosterRepository, RepositoryError};
 
+#[derive(Debug)]
 pub struct CancelCreationSppCommand {
     pub team_id: EntityId,
     pub space_id: String,

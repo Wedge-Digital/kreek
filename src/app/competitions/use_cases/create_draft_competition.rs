@@ -13,6 +13,7 @@ use crate::app::shared_kernel::bloodbowl::season_name::SeasonName;
 use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, EventId, SpaceId};
 use crate::common::services::event_bus::event_bus::EventBus;
 
+#[derive(Debug)]
 pub struct CreateDraftCompetitionCommand {
     pub space_id: SpaceId,
     pub created_by: CoachId,

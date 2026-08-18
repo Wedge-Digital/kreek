@@ -11,6 +11,7 @@ use crate::app::spaces::domain::space_repository_port::user_cache_repository_por
 };
 use crate::common::services::event_bus::event_bus::EventBus;
 
+#[derive(Debug)]
 pub struct RegisterNewSpaceCommand {
     pub coach_id: CoachId,
     pub space_name: SpaceName,

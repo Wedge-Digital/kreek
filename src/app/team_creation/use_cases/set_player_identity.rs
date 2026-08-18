@@ -3,6 +3,7 @@ use crate::app::team_creation::domain::error::DomainError;
 use crate::app::team_creation::domain::roster::{JerseyNumber, PlayerId};
 use crate::app::team_creation::ports::{ITeamRosterRepository, RepositoryError};
 
+#[derive(Debug)]
 pub struct SetPlayerIdentityCommand {
     pub team_id: EntityId,
     pub space_id: String,

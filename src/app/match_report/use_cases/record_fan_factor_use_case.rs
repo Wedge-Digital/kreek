@@ -6,6 +6,7 @@ use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::identity::ids::CoachId;
 
+#[derive(Debug)]
 pub struct RecordFanFactorCommand {
     pub match_report_id: MatchReportId,
     pub home_fan_roll: D3Roll,

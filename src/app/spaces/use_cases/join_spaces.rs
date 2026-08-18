@@ -6,6 +6,7 @@ use crate::app::spaces::domain::space_repository_port::space_repository_port::{
 };
 use crate::common::services::event_bus::event_bus::EventBus;
 
+#[derive(Debug)]
 pub struct JoinSpacesCommand {
     pub coach_id: CoachId,
     pub space_ids: Vec<SpaceId>,

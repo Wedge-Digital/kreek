@@ -4,6 +4,7 @@ use crate::app::match_report::domain::value_objects::{FanFactorMod, MatchGain};
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::identity::ids::CoachId;
 
+#[derive(Debug)]
 pub struct RecordPostMatchCommand {
     pub match_report_id: MatchReportId,
     pub home_gain: MatchGain,

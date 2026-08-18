@@ -7,6 +7,7 @@ use crate::app::match_report::ports::{IPlayerDataPort, ITeamDataPort};
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 
+#[derive(Debug)]
 pub struct InitTempPlayersCommand {
     pub match_report_id: MatchReportId,
     pub team_id: TeamId,

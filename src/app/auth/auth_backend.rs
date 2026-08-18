@@ -48,7 +48,7 @@ impl axum_login::AuthnBackend for AuthBackend {
         let hash = PasswordHash::new(&user.password_hash)
             .map_err(|_| RepositoryError::Database("hash corrompu".into()))?;
         if Argon2::default()
-            .verify_password(creds.password.as_bytes(), &hash)
+            .verify_password(creds.password.expose().as_bytes(), &hash)
             .is_ok()
         {
             Ok(Some(user))

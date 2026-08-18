@@ -4,6 +4,7 @@ use crate::app::competitions::domain::season_repository_port::{
 };
 use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
 
+#[derive(Debug)]
 pub struct SaveCompetitionInvitationsCommand {
     pub season_id: SeasonId,
     pub invitations: CompetitionInvitations,

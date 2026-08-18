@@ -4,6 +4,7 @@ use crate::app::auth::io::web::get_register_success::RegisterFormPayload;
 use crate::app::auth::routes::path;
 use crate::app::auth::use_cases::register_new_acount;
 use crate::app::auth::use_cases::register_new_acount::{RegisterCommand, RegisterError};
+use crate::app::shared_kernel::identity::secret::Secret;
 use axum::body::Body;
 use axum::extract::State;
 use axum::response::{IntoResponse, Response};
@@ -15,9 +16,9 @@ pub async fn post_register(
 ) -> Response {
     let cmd = RegisterCommand {
         coach_name: payload.coach_name.clone(),
-        email: payload.email.clone(),
-        password: payload.password.clone(),
-        password_confirm: payload.password_confirm.clone(),
+        email: Secret::new(payload.email.clone()),
+        password: Secret::new(payload.password.clone()),
+        password_confirm: Secret::new(payload.password_confirm.clone()),
     };
 
     match register_new_acount::execute(cmd, ctx.user_repository.as_ref(), &ctx.event_bus).await {

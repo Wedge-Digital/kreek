@@ -8,6 +8,7 @@ use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::{CoachId, EventId, SpaceId};
 use crate::common::services::event_bus::event_bus::EventBus;
 
+#[derive(Debug)]
 pub struct CreateMatchReportCommand {
     pub space_id: SpaceId,
     pub competition_id: CompetitionId,

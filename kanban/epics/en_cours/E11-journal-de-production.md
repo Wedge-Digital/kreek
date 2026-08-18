@@ -1,6 +1,6 @@
 # E11 — Savoir ce qui se passe en production
 
-**État :** 8 cartes · 4 faites — 344, 345, 346 et 349 livrées et vérifiées
+**État :** 8 cartes · 5 faites — 344, 345, 346, 347 et 349 livrées et vérifiées
 
 ## La fonction
 
@@ -71,11 +71,16 @@ ne le signale. Elle a aussi retrouvé le piège de la 344 sous une autre forme :
 `CatchPanicLayer::new()` journalise sur `tower_http::catch_panic`, cible que le
 filtre `kreek=…` n'active pas — la couche aurait été livrée muette.
 
-**347 ensuite, puis 348 — dans cet ordre, impérativement.** La 348 journalise la
-commande reçue par chaque use case ; trois commandes de `auth` portent un mot de
-passe ou un jeton en clair. Prendre les cartes à l'envers publie des secrets
-dans `docker logs`. La 348 est le gros morceau de l'épic et sa raison d'être :
-c'est elle qui fait exister le chemin nominal.
+**347 — faite.** Elle devait précéder la 348 impérativement : celle-ci
+journalise la commande reçue par chaque use case, et trois commandes de `auth`
+portaient un mot de passe ou un jeton en clair. Le masquage s'est fait par un
+newtype `Secret<T>` plutôt que par des `Debug` écrits à la main — un `Debug`
+manuel ne protège que les champs auxquels on a pensé le jour où on l'a écrit.
+Elle a aussi montré que `spaces` avait son dossier de use cases mal
+orthographié, angle mort de tout script visant `use_cases/`.
+
+**348 ensuite** — le gros morceau de l'épic et sa raison d'être : c'est elle
+qui fait exister le chemin nominal.
 
 **350 après la 348**, pas avant : elle complète le tableau des app events, mais
 tant que les use cases sont muets, la moitié de ce qu'elle relie n'existe pas.

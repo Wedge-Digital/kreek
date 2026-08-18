@@ -8,6 +8,7 @@ use crate::app::match_report::ports::IPlayerDataPort;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::identity::ids::CoachId;
 
+#[derive(Debug)]
 pub struct RecordActionCommand {
     pub match_report_id: MatchReportId,
     pub team_side: TeamSide,

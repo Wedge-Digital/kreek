@@ -2,6 +2,7 @@ use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::team_creation::domain::roster::LeagueId;
 use crate::app::team_creation::ports::{ITeamRosterRepository, RepositoryError};
 
+#[derive(Debug)]
 pub struct SetLeagueCommand {
     pub team_id: EntityId,
     pub space_id: String,

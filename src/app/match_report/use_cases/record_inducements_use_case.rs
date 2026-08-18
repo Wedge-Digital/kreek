@@ -20,6 +20,7 @@ use std::collections::HashMap;
 
 // ── Commande ──────────────────────────────────────────────────────────────────
 
+#[derive(Debug)]
 pub struct InducementPurchaseCmd {
     pub uid: InducementId,
     pub qty: u8,
@@ -55,11 +56,13 @@ impl MercenaryLevel {
     }
 }
 
+#[derive(Debug)]
 pub struct MercenaryPurchaseCmd {
     pub position_id: RosterPositionUid,
     pub level: MercenaryLevel,
 }
 
+#[derive(Debug)]
 pub struct RecordInducementsCommand {
     pub match_report_id: MatchReportId,
     pub team_id: TeamId,

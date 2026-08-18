@@ -11,6 +11,7 @@ pub mod email;
 pub mod id_service;
 pub mod ids;
 pub mod name_vo;
+pub mod secret;
 pub mod space_definition;
 pub mod space_name;
 pub mod spaces_app_events;

@@ -5,6 +5,7 @@ use crate::app::shared_kernel::bloodbowl::competition_name::CompetitionName;
 use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
 use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, SpaceId};
 
+#[derive(Debug)]
 pub struct UpdateDraftCompetitionCommand {
     pub competition_id: CompetitionId,
     pub space_id: SpaceId,

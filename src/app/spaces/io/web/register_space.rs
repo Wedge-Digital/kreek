@@ -5,7 +5,7 @@ use crate::app::spaces::context::SpacesContext;
 use crate::app::spaces::io::web::host_layout::{render_page, ISpacesHostLayout, UploadField};
 use crate::app::spaces::routes::path;
 use crate::app::spaces::routes::Routes;
-use crate::app::spaces::uses_cases::register_new_space::{
+use crate::app::spaces::use_cases::register_new_space::{
     execute, RegisterNewSpaceCommand, RegisterSpaceError,
 };
 use askama::Template;
