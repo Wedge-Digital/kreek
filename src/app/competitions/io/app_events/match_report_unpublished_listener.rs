@@ -4,6 +4,7 @@ use crate::app::shared_kernel::app_events::match_report_app_events::{
 };
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
+use tracing::Instrument;
 
 /// Remet la ligne de résultats/calendrier dans l'état où
 /// `match_report_confirmed_listener` l'avait laissée : match en cours, sans
@@ -19,7 +20,12 @@ pub fn init(app_event_bus: &EventBus, pool: PgPool) {
                     else {
                         continue;
                     };
-                    handle_unpublished(&payload, &pool).await;
+                    let span = tracing::info_span!(
+                        "app_event",
+                        event = %envelope.event_type,
+                        event_id = %envelope.event_id
+                    );
+                    handle_unpublished(&payload, &pool).instrument(span).await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!(

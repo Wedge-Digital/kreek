@@ -2,6 +2,7 @@ use crate::app::teams::domain::team::{GamePhase, TeamDomainEvent};
 use crate::app::teams::ports::IPhaseBasketRepository;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
+use tracing::Instrument;
 
 /// Les quatre événements dont `apply()` pose `game_phase = ReadyToPlay`.
 ///
@@ -41,14 +42,23 @@ pub fn init(event_bus: &EventBus, baskets: Arc<dyn IPhaseBasketRepository>) {
                     if !ends_in_ready_to_play(&event) {
                         continue;
                     }
+                    let span = tracing::info_span!(
+                        "app_event",
+                        event = %envelope.event_type,
+                        event_id = %envelope.event_id
+                    );
                     let team_id = envelope.emitter.clone();
-                    for phase in [GamePhase::Recruitment, GamePhase::Dismissals] {
-                        if let Err(e) = baskets.delete(&team_id, &phase).await {
-                            tracing::error!(
-                                "phase_basket_purge_listener: purge {phase:?} de {team_id} : {e}"
-                            );
+                    async {
+                        for phase in [GamePhase::Recruitment, GamePhase::Dismissals] {
+                            if let Err(e) = baskets.delete(&team_id, &phase).await {
+                                tracing::error!(
+                                    "phase_basket_purge_listener: purge {phase:?} de {team_id} : {e}"
+                                );
+                            }
                         }
                     }
+                    .instrument(span)
+                    .await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("phase_basket_purge_listener: lagged by {n}");

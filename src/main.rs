@@ -497,15 +497,15 @@ pub fn build_router(state: AppState) -> Router {
         .route("/", get(|| async { Redirect::to(path::AUTH_LAYOUT) }))
         .merge(app::auth::router::router())
         .merge(protected)
-        .layer(auth_layer)
-        // Couche la plus extérieure de l'application, et posée **ici** plutôt
-        // que sur le routeur externe. Deux effets voulus : elle enveloppe
-        // `auth_layer` et les `route_layer` de `protected`, donc elle voit les
-        // requêtes rejetées par `require_auth` et `space_scope` — celles qu'on
-        // cherche justement à comprendre ; et elle ne voit pas `/static`, monté
-        // à côté, dont chaque fichier produirait une ligne sans valeur de
-        // diagnostic.
+        // Sous `auth_layer` et non par-dessus : le journal nomme le coach, or
+        // `AuthSession` n'existe qu'une fois la session chargée. Rien de perdu
+        // pour autant — `AuthManagerLayer` ne rejette personne, et les refus de
+        // `require_auth` et `space_scope`, posés en `route_layer` plus profond,
+        // restent enveloppés. Posée ici plutôt que sur le routeur externe, la
+        // couche ignore aussi `/static`, dont chaque fichier produirait une
+        // ligne sans valeur de diagnostic.
         .layer(from_fn(request_log))
+        .layer(auth_layer)
         .with_state(state);
 
     let app = Router::new()
@@ -540,6 +540,13 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
     let listener = tokio::net::TcpListener::bind(&server_address)
         .await
         .unwrap();
+
+    // Sans cette ligne, un démarrage réussi n'affiche rien du tout : « serveur
+    // muet » et « serveur planté » se ressemblent. Deux instances ont ainsi pu
+    // écouter le même port sur deux piles différentes — l'une en IPv4, l'autre
+    // en IPv6 — sans que rien ne le signale.
+    tracing::info!(adresse = %server_address, "serveur démarré");
+
     axum::serve(listener, app).await.unwrap();
 }
 

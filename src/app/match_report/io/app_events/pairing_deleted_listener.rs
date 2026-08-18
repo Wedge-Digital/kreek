@@ -3,6 +3,7 @@ use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::shared_kernel::app_events::competitions_app_events::CompetitionsAppEvent;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
+use tracing::Instrument;
 
 /// Annule un rapport dont le pairing vient d'être supprimé, quel que soit son
 /// avancement — tant qu'il n'est pas publié.
@@ -55,41 +56,58 @@ pub fn init(app_event_bus: &EventBus, event_bus: &EventBus, repo: Arc<dyn IMatch
                         continue;
                     };
 
-                    let mr_id = match repo.find_id_by_pairing(&pairing_id).await {
-                        Ok(Some(id)) => id,
-                        Ok(None) => continue,
-                        Err(e) => {
-                            tracing::error!(
-                                "pairing_deleted_listener: find_id_by_pairing {pairing_id}: {e}"
-                            );
-                            continue;
-                        }
-                    };
+                    let span = tracing::info_span!(
+                        "app_event",
+                        event = %envelope.event_type,
+                        event_id = %envelope.event_id
+                    );
+                    // Le span couvre aussi les deux recherches : leurs erreurs
+                    // sont précisément ce qu'on veut pouvoir rattacher à
+                    // l'événement. Les `continue` deviennent des `return` — ils
+                    // n'abandonnaient que cet événement, pas la souscription.
+                    async {
+                        let mr_id = match repo.find_id_by_pairing(&pairing_id).await {
+                            Ok(Some(id)) => id,
+                            Ok(None) => return,
+                            Err(e) => {
+                                tracing::error!(
+                                    "pairing_deleted_listener: find_id_by_pairing {pairing_id}: {e}"
+                                );
+                                return;
+                            }
+                        };
 
-                    let state = match repo.find_by_id(&mr_id).await {
-                        Ok(Some(s)) => s,
-                        Ok(None) => continue,
-                        Err(e) => {
-                            tracing::error!("pairing_deleted_listener: find_by_id {mr_id}: {e}");
-                            continue;
-                        }
-                    };
+                        let state = match repo.find_by_id(&mr_id).await {
+                            Ok(Some(s)) => s,
+                            Ok(None) => return,
+                            Err(e) => {
+                                tracing::error!(
+                                    "pairing_deleted_listener: find_by_id {mr_id}: {e}"
+                                );
+                                return;
+                            }
+                        };
 
-                    let Some((version, cancel_event)) = cancel(state, &mr_id) else {
-                        continue;
-                    };
+                        let Some((version, cancel_event)) = cancel(state, &mr_id) else {
+                            return;
+                        };
 
-                    match repo.append(&mr_id, &cancel_event, version).await {
-                        Ok(_) => {
-                            tracing::info!(
-                                "pairing_deleted_listener: cancelled match report {mr_id}"
-                            );
-                            let _ = bus.send(cancel_event.to_enveloppe(&mr_id));
-                        }
-                        Err(e) => {
-                            tracing::error!("pairing_deleted_listener: append cancel {mr_id}: {e}");
+                        match repo.append(&mr_id, &cancel_event, version).await {
+                            Ok(_) => {
+                                tracing::info!(
+                                    "pairing_deleted_listener: cancelled match report {mr_id}"
+                                );
+                                let _ = bus.send(cancel_event.to_enveloppe(&mr_id));
+                            }
+                            Err(e) => {
+                                tracing::error!(
+                                    "pairing_deleted_listener: append cancel {mr_id}: {e}"
+                                );
+                            }
                         }
                     }
+                    .instrument(span)
+                    .await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("pairing_deleted_listener: lagged by {n}");

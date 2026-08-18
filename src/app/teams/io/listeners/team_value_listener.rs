@@ -20,6 +20,7 @@ use crate::app::teams::ports::{
 use crate::app::teams::use_cases::recompute_team_value_use_case;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
+use tracing::Instrument;
 
 /// Les quatre événements dont `apply()` pose `game_phase = ReadyToPlay`.
 /// L'équipe est alors dans l'état où sa valeur doit refléter son effectif réel —
@@ -99,7 +100,14 @@ pub fn init(event_bus: &EventBus, deps: TeamValueDeps) {
                     if !ends_in_ready_to_play(&event) {
                         continue;
                     }
-                    recalculer(&envelope.emitter.clone(), &deps, "domaine").await;
+                    let span = tracing::info_span!(
+                        "app_event",
+                        event = %envelope.event_type,
+                        event_id = %envelope.event_id
+                    );
+                    recalculer(&envelope.emitter.clone(), &deps, "domaine")
+                        .instrument(span)
+                        .await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("team_value_listener: lagged by {n}");
@@ -133,7 +141,14 @@ pub fn init_from_app_events(app_event_bus: &EventBus, deps: TeamValueDeps) {
                     let Some(team_id) = changes_squad(&event) else {
                         continue;
                     };
-                    recalculer(&team_id.to_string(), &deps, "players").await;
+                    let span = tracing::info_span!(
+                        "app_event",
+                        event = %envelope.event_type,
+                        event_id = %envelope.event_id
+                    );
+                    recalculer(&team_id.to_string(), &deps, "players")
+                        .instrument(span)
+                        .await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("team_value_listener [players]: lagged by {n}");

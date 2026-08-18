@@ -3,6 +3,7 @@ use crate::app::spaces::domain::space_repository_port::user_cache_repository_por
 use crate::app::spaces::domain::user::User;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
+use tracing::Instrument;
 
 pub fn user_created_listener(bus: &EventBus, repo: Arc<dyn ISpaceUserCacheRepository>) {
     let mut rx = bus.subscribe();
@@ -14,35 +15,43 @@ pub fn user_created_listener(bus: &EventBus, repo: Arc<dyn ISpaceUserCacheReposi
                         continue;
                     }
                     let repo = Arc::clone(&repo);
-                    tokio::spawn(async move {
-                        let sub = match serde_json::from_value::<AuthAppEvent>(event.payload) {
-                            Ok(s) => s,
-                            Err(e) => {
-                                tracing::error!("user_created: payload invalide: {e}");
-                                return;
-                            }
-                        };
-                        let AuthAppEvent::AccountCreated {
-                            user_id,
-                            user_name,
-                            email,
-                            ..
-                        } = sub
-                        else {
-                            return;
-                        };
-                        if let Err(e) = repo
-                            .add_user(&User {
-                                id: user_id,
-                                name: user_name,
+                    let span = tracing::info_span!(
+                        "app_event",
+                        event = %event.event_type,
+                        event_id = %event.event_id
+                    );
+                    tokio::spawn(
+                        async move {
+                            let sub = match serde_json::from_value::<AuthAppEvent>(event.payload) {
+                                Ok(s) => s,
+                                Err(e) => {
+                                    tracing::error!("user_created: payload invalide: {e}");
+                                    return;
+                                }
+                            };
+                            let AuthAppEvent::AccountCreated {
+                                user_id,
+                                user_name,
                                 email,
-                                icon: None,
-                            })
-                            .await
-                        {
-                            tracing::error!("user_created: failed to persist: {e}");
+                                ..
+                            } = sub
+                            else {
+                                return;
+                            };
+                            if let Err(e) = repo
+                                .add_user(&User {
+                                    id: user_id,
+                                    name: user_name,
+                                    email,
+                                    icon: None,
+                                })
+                                .await
+                            {
+                                tracing::error!("user_created: failed to persist: {e}");
+                            }
                         }
-                    });
+                        .instrument(span),
+                    );
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("spaces::user_created_listener: lagged by {n}");

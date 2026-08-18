@@ -20,6 +20,7 @@ use crate::app::players::ports::{IPlayerRepository, RepositoryError};
 use crate::app::shared_kernel::app_events::teams_app_events::TeamsAppEvent;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
+use tracing::Instrument;
 
 #[derive(Debug)]
 enum DismissalError {
@@ -88,7 +89,15 @@ pub fn init(app_event_bus: &EventBus, event_bus: EventBus, repo: Arc<dyn IPlayer
 
                     let team = team_id.to_string();
                     let joueur = player_id.to_string();
-                    match sortir_de_l_effectif(&joueur, &team, repo.as_ref()).await {
+                    let span = tracing::info_span!(
+                        "app_event",
+                        event = %envelope.event_type,
+                        event_id = %envelope.event_id
+                    );
+                    match sortir_de_l_effectif(&joueur, &team, repo.as_ref())
+                        .instrument(span)
+                        .await
+                    {
                         // Émis **après** l'écriture : c'est ce qui garantit
                         // qu'un recalcul de valeur d'équipe déclenché par cet
                         // événement voit un effectif à jour.

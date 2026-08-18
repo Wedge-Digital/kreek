@@ -8,6 +8,7 @@ use crate::app::teams::ports::ITeamRepository;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::cmp::Ordering;
 use std::sync::Arc;
+use tracing::Instrument;
 
 /// Conséquences du rapport publié pour une équipe — jamais construit en
 /// mélangeant les champs home/away (cf. `derive_team_effects`).
@@ -35,9 +36,18 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                         continue;
                     };
 
+                    let span = tracing::info_span!(
+                        "app_event",
+                        event = %envelope.event_type,
+                        event_id = %envelope.event_id
+                    );
                     let (home, away) = derive_team_effects(&payload);
-                    handle_team(&team_repo, home).await;
-                    handle_team(&team_repo, away).await;
+                    async {
+                        handle_team(&team_repo, home).await;
+                        handle_team(&team_repo, away).await;
+                    }
+                    .instrument(span)
+                    .await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("match_report_published_listener: lagged by {n}");

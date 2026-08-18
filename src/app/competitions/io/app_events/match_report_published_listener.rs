@@ -16,6 +16,7 @@ use crate::app::shared_kernel::identity::ids::EventId;
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::sync::Arc;
+use tracing::Instrument;
 
 pub fn init(
     app_event_bus: &EventBus,
@@ -34,6 +35,11 @@ pub fn init(
                     else {
                         continue;
                     };
+                    let span = tracing::info_span!(
+                        "app_event",
+                        event = %envelope.event_type,
+                        event_id = %envelope.event_id
+                    );
                     handle_event(
                         event,
                         &pool,
@@ -41,6 +47,7 @@ pub fn init(
                         match_day_repo.as_ref(),
                         team_port.as_ref(),
                     )
+                    .instrument(span)
                     .await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {

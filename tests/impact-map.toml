@@ -45,6 +45,12 @@
 # spaces est la projection — le test la nettoie, donc en dépend.
 "test_auth_coach_name_casse" = ["auth", "spaces"]
 
+# ── Journal de requêtes ──────────────────────────────────────────────────────
+# Transverse : la couche vit dans `src/web/middleware`, hors de tout BC, et
+# elle enveloppe toutes les requêtes de l'application. Un diff qui touche le
+# routeur ou une couche la met en jeu, quel que soit le BC concerné.
+"test_journal_identifiant_requete" = ["all"]
+
 # ── Création de compétition (aucune équipe, aucun match) ─────────────────────
 # Phase 1 → recherche de coachs (widget du BC spaces).
 # Phase 2 → pickers roster/star/inducement (BC references) et catalogue des

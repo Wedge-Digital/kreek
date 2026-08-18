@@ -6,6 +6,7 @@ use crate::app::teams::domain::team::Team;
 use crate::app::teams::ports::ITeamRepository;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
+use tracing::Instrument;
 
 /// Défait la séquence d'après-match sur les 2 équipes d'un rapport dépublié :
 /// trésorerie, fans et phase de jeu retrouvent leur état d'avant publication.
@@ -20,7 +21,14 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                     else {
                         continue;
                     };
-                    handle_unpublished(&payload, team_repo.as_ref()).await;
+                    let span = tracing::info_span!(
+                        "app_event",
+                        event = %envelope.event_type,
+                        event_id = %envelope.event_id
+                    );
+                    handle_unpublished(&payload, team_repo.as_ref())
+                        .instrument(span)
+                        .await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("teams::match_report_unpublished_listener: lagged by {n}");

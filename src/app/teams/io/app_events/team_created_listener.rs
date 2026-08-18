@@ -11,6 +11,7 @@ use crate::app::teams::ports::{ITeamRepository, RepositoryError};
 use crate::app::teams::use_cases::approve_enrollment;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
+use tracing::Instrument;
 
 pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
     let mut rx = app_event_bus.subscribe();
@@ -89,35 +90,48 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                         assistants: AssistantCount::new(assistants).unwrap_or_default(),
                         cheerleaders: CheerleaderCount::new(cheerleaders).unwrap_or_default(),
                     };
-                    tracing::info!(
-                        "teams team_created_listener: received TeamCreated for {team_id}"
+                    let span = tracing::info_span!(
+                        "app_event",
+                        event = %envelope.event_type,
+                        event_id = %envelope.event_id
                     );
-                    if let Err(e) = team_repo.append(&team_id, &domain_event, 0).await {
-                        match e {
-                            RepositoryError::ConcurrentWrite => tracing::warn!(
-                                "teams team_created_listener: TeamCreated déjà persisté pour {team_id}"
-                            ),
-                            other => {
-                                tracing::error!(
-                                    "teams team_created_listener: échec append pour {team_id}: {other}"
-                                );
-                                continue;
+                    // Tout le traitement est enveloppé, pas seulement l'écriture :
+                    // la ligne « received » sortait du span et ne se rattachait à
+                    // rien. Le `continue` d'origine devient un `return` — il
+                    // n'abandonnait que cet événement, pas la souscription.
+                    async {
+                        tracing::info!(
+                            "teams team_created_listener: received TeamCreated for {team_id}"
+                        );
+                        if let Err(e) = team_repo.append(&team_id, &domain_event, 0).await {
+                            match e {
+                                RepositoryError::ConcurrentWrite => tracing::warn!(
+                                    "teams team_created_listener: TeamCreated déjà persisté pour {team_id}"
+                                ),
+                                other => {
+                                    tracing::error!(
+                                        "teams team_created_listener: échec append pour {team_id}: {other}"
+                                    );
+                                    return;
+                                }
                             }
                         }
-                    }
 
-                    if auto_enroll {
-                        tracing::info!("teams team_created_listener: auto-enrolling {team_id}");
-                        if let Ok(eid) = EntityId::try_new(&team_id) {
-                            if let Err(e) =
-                                approve_enrollment::execute(&eid, team_repo.as_ref()).await
-                            {
-                                tracing::error!(
-                                    "teams team_created_listener: auto-enroll failed for {team_id}: {e:?}"
-                                );
+                        if auto_enroll {
+                            tracing::info!("teams team_created_listener: auto-enrolling {team_id}");
+                            if let Ok(eid) = EntityId::try_new(&team_id) {
+                                if let Err(e) =
+                                    approve_enrollment::execute(&eid, team_repo.as_ref()).await
+                                {
+                                    tracing::error!(
+                                        "teams team_created_listener: auto-enroll failed for {team_id}: {e:?}"
+                                    );
+                                }
                             }
                         }
                     }
+                    .instrument(span)
+                    .await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("teams team_created_listener: lagged by {n}");

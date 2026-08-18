@@ -10,6 +10,7 @@ use crate::app::shared_kernel::app_events::player_match_impact_app_events::{
 };
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
+use tracing::Instrument;
 
 pub fn init(
     app_event_bus: &EventBus,
@@ -26,7 +27,14 @@ pub fn init(
                     ) else {
                         continue;
                     };
-                    handle_event(app_event, player_repo.as_ref(), skill_catalog.as_ref()).await;
+                    let span = tracing::info_span!(
+                        "app_event",
+                        event = %envelope.event_type,
+                        event_id = %envelope.event_id
+                    );
+                    handle_event(app_event, player_repo.as_ref(), skill_catalog.as_ref())
+                        .instrument(span)
+                        .await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("player_match_impact_listener: lagged by {n}");

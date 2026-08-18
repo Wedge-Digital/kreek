@@ -7,6 +7,7 @@ use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
+use tracing::Instrument;
 
 pub fn init(app_event_bus: &EventBus, repo: Arc<dyn IMatchReportRepository>) {
     let bus = app_event_bus.clone();
@@ -56,6 +57,12 @@ pub fn init(app_event_bus: &EventBus, repo: Arc<dyn IMatchReportRepository>) {
                         continue;
                     };
 
+                    let span = tracing::info_span!(
+                        "app_event",
+                        event = %envelope.event_type,
+                        event_id = %envelope.event_id
+                    );
+
                     let cmd = create_match_report_use_case::CreateMatchReportCommand {
                         space_id: space,
                         competition_id: comp,
@@ -68,7 +75,10 @@ pub fn init(app_event_bus: &EventBus, repo: Arc<dyn IMatchReportRepository>) {
                         pairing_id: Some(pairing_id),
                     };
 
-                    match create_match_report_use_case::execute(cmd, repo.as_ref(), &bus).await {
+                    match create_match_report_use_case::execute(cmd, repo.as_ref(), &bus)
+                        .instrument(span)
+                        .await
+                    {
                         Ok(mr_id) => {
                             tracing::info!(
                                 "pairing_created_listener: created match report {mr_id} for pairing"

@@ -12,6 +12,7 @@ use crate::app::shared_kernel::app_events::team_creation_app_events::{
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::sync::Arc;
+use tracing::Instrument;
 
 /// Valeur ajoutée par une compétence obtenue **à la création** de l'équipe.
 ///
@@ -180,6 +181,11 @@ pub fn init(
                         players,
                         ..
                     } = app_event;
+                    let span = tracing::info_span!(
+                        "app_event",
+                        event = %envelope.event_type,
+                        event_id = %envelope.event_id
+                    );
                     if let Err(e) = handle_team_created(
                         &team_id,
                         &space_id,
@@ -188,6 +194,7 @@ pub fn init(
                         skill_catalog.as_ref(),
                         &event_bus,
                     )
+                    .instrument(span)
                     .await
                     {
                         match e {

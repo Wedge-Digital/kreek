@@ -4,6 +4,7 @@ use crate::app::shared_kernel::app_events::match_report_app_events::MatchReportA
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
+use tracing::Instrument;
 
 /// Retire du classement les lignes d'un rapport dépublié pour correction. Le
 /// rejeu à la re-publication réinsérera les lignes recalculées.
@@ -18,7 +19,14 @@ pub fn init(app_event_bus: &EventBus, repo: Arc<dyn IRankingRepository>) {
                     else {
                         continue;
                     };
-                    handle_unpublished(&payload.match_report_id, repo.as_ref()).await;
+                    let span = tracing::info_span!(
+                        "app_event",
+                        event = %envelope.event_type,
+                        event_id = %envelope.event_id
+                    );
+                    handle_unpublished(&payload.match_report_id, repo.as_ref())
+                        .instrument(span)
+                        .await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("ranking::match_report_unpublished_listener: lagged by {n}");

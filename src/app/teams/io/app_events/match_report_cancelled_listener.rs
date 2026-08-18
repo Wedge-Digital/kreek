@@ -4,6 +4,7 @@ use crate::app::teams::domain::team::Team;
 use crate::app::teams::ports::ITeamRepository;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
+use tracing::Instrument;
 
 /// Libère les 2 équipes d'un rapport annulé.
 ///
@@ -26,12 +27,18 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                     else {
                         continue;
                     };
+                    let span = tracing::info_span!(
+                        "app_event",
+                        event = %envelope.event_type,
+                        event_id = %envelope.event_id
+                    );
                     handle_cancelled(
                         &match_report_id,
                         &home_team_id,
                         &away_team_id,
                         team_repo.as_ref(),
                     )
+                    .instrument(span)
                     .await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {

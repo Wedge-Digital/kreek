@@ -3,6 +3,7 @@ use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::teams::ports::ITeamRepository;
 use crate::common::services::event_bus::event_bus::EventBus;
 use std::sync::Arc;
+use tracing::Instrument;
 
 pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
     let mut rx = app_event_bus.subscribe();
@@ -25,13 +26,24 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                         continue;
                     };
 
+                    let span = tracing::info_span!(
+                        "app_event",
+                        event = %envelope.event_type,
+                        event_id = %envelope.event_id
+                    );
+                    // Le contrôle de l'identifiant est dans le span, sans quoi
+                    // son avertissement — le seul signe qu'un événement a été
+                    // écarté — ne se rattacherait à rien. Le `for`, lui, est
+                    // enveloppé en entier : ses `continue` visent la boucle
+                    // interne, jamais celle de la souscription.
+                    async {
                     let mr_id = match MatchReportId::try_new(&match_report_id) {
                         Ok(id) => id,
                         Err(e) => {
                             tracing::warn!(
                                 "match_report_confirmed_listener: invalid match_report_id {match_report_id}: {e}"
                             );
-                            continue;
+                            return;
                         }
                     };
 
@@ -72,6 +84,9 @@ pub fn init(app_event_bus: &EventBus, team_repo: Arc<dyn ITeamRepository>) {
                             );
                         }
                     }
+                    }
+                    .instrument(span)
+                    .await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("match_report_confirmed_listener: lagged by {n}");

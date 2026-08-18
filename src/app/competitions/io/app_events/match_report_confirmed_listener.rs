@@ -2,6 +2,7 @@ use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::app_events::match_report_app_events::MatchReportAppEvent;
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
+use tracing::Instrument;
 
 pub fn init(app_event_bus: &EventBus, pool: PgPool) {
     let mut rx = app_event_bus.subscribe();
@@ -14,7 +15,12 @@ pub fn init(app_event_bus: &EventBus, pool: PgPool) {
                     else {
                         continue;
                     };
-                    handle_event(event, &pool).await;
+                    let span = tracing::info_span!(
+                        "app_event",
+                        event = %envelope.event_type,
+                        event_id = %envelope.event_id
+                    );
+                    handle_event(event, &pool).instrument(span).await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("competitions::match_report_confirmed_listener: lagged by {n}");

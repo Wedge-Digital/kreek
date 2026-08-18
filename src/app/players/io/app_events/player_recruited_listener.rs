@@ -15,6 +15,7 @@ use crate::app::shared_kernel::app_events::teams_app_events::TeamsAppEvent;
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::sync::Arc;
+use tracing::Instrument;
 
 /// Le maillot est attribué **ici**, pas par `teams`, qui n'a aucune raison de
 /// connaître les numéros. Les recrutements d'un même lot sont traités
@@ -71,6 +72,11 @@ pub fn init(
                     else {
                         continue;
                     };
+                    let span = tracing::info_span!(
+                        "app_event",
+                        event = %envelope.event_type,
+                        event_id = %envelope.event_id
+                    );
                     if let Err(e) = handle_player_recruited(
                         &team_id.to_string(),
                         &space_id.to_string(),
@@ -80,6 +86,7 @@ pub fn init(
                         projections.as_ref(),
                         skill_catalog.as_ref(),
                     )
+                    .instrument(span)
                     .await
                     {
                         match e {
