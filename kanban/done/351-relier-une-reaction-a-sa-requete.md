@@ -148,6 +148,13 @@ réellement.
 émission ajoutée sera muette et personne ne le saura. Les tests sont exemptés,
 et le fichier des deux helpers aussi.
 
+## Suite
+
+L'axe 13 posé ici a été fusionné dans l'axe 12 par la carte 355 : chercher les
+noms `bus` et `event_bus` laissait passer tout récepteur nommé autrement. Le
+numéro 13 sert désormais à vérifier que les cibles de journalisation relèvent de
+`kreek::`.
+
 ## Ce que la carte ne fait pas
 
 **Elle ne fait toujours pas voyager d'identifiant de causalité.** Si le besoin

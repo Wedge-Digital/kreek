@@ -19,6 +19,7 @@ struct SideStatus {
     in_improvement: Result<bool, String>,
 }
 
+// arch:no-instrument — service : évalue une éligibilité, ne décide de rien et ne mute rien
 pub async fn evaluate(
     home_team_id: &TeamId,
     away_team_id: &TeamId,

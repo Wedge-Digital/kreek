@@ -9,9 +9,9 @@
 #   8. Carte d'impact e2e — exhaustive et sans entrée morte
 #   9. BCs extractibles — aucune adhérence au host (cf. kanban/242)
 #  10. Génération d'URLs — aucun placeholder substitué par un littéral
-#  11. Use cases à commande — tous instrumentés (cf. kanban/348)
-#  12. Émission d'app events — toujours via publier() (cf. kanban/350)
-#  13. Émission de domain events — toujours via emettre() (cf. kanban/351)
+#  11. Use cases async — instrumentés ou motivés (cf. kanban/348, 355)
+#  12. Émission d'événements — via emettre()/publier() (cf. kanban/350, 351, 355)
+#  13. Cible de journalisation — toujours sous kreek:: (cf. kanban/355)
 #
 # Axes en avertissement (n'affectent pas le code de sortie) :
 #   6. Value objects systématiques (CQRS) — primitifs nus côté écriture domaine
@@ -399,41 +399,36 @@ echo ""
 #
 # Un use case non instrumenté est un trou dans le journal, et il ne se voit
 # nulle part : le code compile, les tests passent, et la seule conséquence est
-# qu'une action utilisateur ne laisse aucune trace en production. C'est
-# exactement le manque qui a motivé l'épic E11 — les deux bugs du mode
-# customisation n'échouaient pas, ils se trompaient, et rien ne les racontait.
+# qu'une action utilisateur ne laisse aucune trace en production. C'est le
+# manque qui a motivé l'épic E11 — les deux bugs du mode customisation
+# n'échouaient pas, ils se trompaient, et rien ne les racontait.
 #
-# La vérification tient parce que l'attribut décore **l'appelé** : un seul
-# dossier à parcourir, une adjacence de deux lignes, et tout appel est couvert
-# — qu'il vienne d'un handler, d'un listener, d'un autre use case ou d'un test.
-# Un dispositif posé sur les sites d'appel n'aurait offert ni l'une ni l'autre
-# de ces garanties.
+# **La première version de cet axe ne visait que les fonctions dont le premier
+# paramètre est `cmd: …Command`.** Elle vérifiait donc la forme rencontrée, pas
+# la règle : les treize use cases de `competitions/admin/`, qui travaillent par
+# identifiants nus, lui échappaient déjà — et un quatorzième serait passé muet.
 #
-# La règle ne vise que les fonctions à commande : c'est la forme qui se
-# reconnaît sans ambiguïté. Les use cases à paramètres scalaires sont
-# instrumentés eux aussi, mais leurs champs se nomment un par un — les
-# contrôler ici demanderait de distinguer une mutation d'une lecture, ce
-# qu'aucun grep ne sait faire.
-echo -e "${BOLD}Axe 11 · Use cases à commande — tous instrumentés${RESET}"
+# Le critère est maintenant « toute `pub async fn` de `use_cases/` ». Une
+# fonction async y touche un dépôt, un port ou un bus : elle a une intention à
+# raconter. Les helpers purs (`domain_error_message`, `resolve_skill_cost`) sont
+# `pub fn` et restent hors périmètre — les instrumenter serait du bruit.
+#
+# L'exception se déclare **dans le code**, par `// arch:no-instrument — motif`,
+# comme l'axe 6 le fait déjà avec `arch:ok`. Une liste tenue dans ce script
+# aurait dérivé ; un marqueur adjacent à la fonction ne le peut pas, et il
+# oblige à écrire pourquoi.
+echo -e "${BOLD}Axe 11 · Use cases async — instrumentés ou motivés${RESET}"
 axe11=$(
   for fichier in $(find src/app -path '*/use_cases/*' -name '*.rs' 2>/dev/null); do
     awk -v f="$fichier" '
-      { ligne[NR] = $0 }
-      END {
-        for (i = 1; i <= NR; i++) {
-          if (ligne[i] !~ /^pub async fn /) continue
-          # Le premier paramètre suit la parenthèse, ou tient sur la ligne
-          # suivante — les deux formes existent dans le dépôt, et ne regarder
-          # que la première laissait passer la moitié des cas en silence.
-          p = ligne[i]
-          sub(/^pub async fn [a-zA-Z0-9_]+\(/, "", p)
-          gsub(/^[ \t]+/, "", p)
-          if (p == "") { p = ligne[i + 1]; gsub(/^[ \t]+/, "", p) }
-          if (p ~ /^(mut )?cmd:[ \t]*[A-Za-z0-9_]*Command/ && ligne[i - 1] !~ /instrument/) {
-            print f ":" i ": " ligne[i]
-          }
+      /^#\[cfg\(test\)\]/ { dans_test = 1 }
+      dans_test { next }
+      /^pub async fn / {
+        if (precedente !~ /instrument/ && precedente !~ /arch:no-instrument/) {
+          print f ":" NR ": " $0
         }
       }
+      { precedente = $0 }
     ' "$fichier"
   done
 )
@@ -441,41 +436,23 @@ axe11="$(printf '%s' "$axe11" | sed '/^$/d')"
 if [ -n "$axe11" ]; then print_fail "$axe11"; else print_pass; fi
 echo ""
 
-# ── Axe 12 : émission d'app events ──────────────────────────────────────────
+# ── Axe 12 : émission d'événements ──────────────────────────────────────────
 #
 # `to_enveloppe()` engendre un **nouvel** identifiant : l'app event n'a pas
-# celui du domain event dont il est issu. Une ligne de journal écrite à la main
-# au-dessus du `send` a donc toutes les chances de reprendre l'identifiant reçu
-# — et de produire une trace qui a l'air correcte et ne corrèle rien.
+# celui du domain event dont il est issu. Une ligne écrite à la main au-dessus
+# d'un `send` a donc toutes les chances de reprendre l'identifiant reçu, et de
+# produire une trace qui a l'air correcte et ne corrèle rien. `emettre()` et
+# `publier()` ne voient que l'enveloppe produite : le piège est fermé par
+# construction.
 #
-# `publier()` ne voit que l'enveloppe produite : le piège est fermé par
-# construction. L'axe garantit qu'aucune émission ne le contourne, faute de
-# quoi le prochain app event ajouté serait muet sans que personne ne le sache.
-#
-# Les tests sont exemptés : ils simulent un BC amont qui émet, et n'ont rien à
-# journaliser.
-echo -e "${BOLD}Axe 12 · Émission d'app events — toujours via publier()${RESET}"
-axe12=$(grep -rn 'app_event_bus\.send(' --include="*.rs" src/ 2>/dev/null | grep -v '/tests/' || true)
-axe12="$(printf '%s' "$axe12" | sed '/^$/d')"
-if [ -n "$axe12" ]; then print_fail "$axe12"; else print_pass; fi
-echo ""
-
-# ── Axe 13 : émission de domain events ──────────────────────────────────────
-#
-# Pendant de l'axe 12, un cran plus tôt dans la chaîne. `emettre()` pose la
-# ligne qui porte le `rid` de la requête **et** l'identifiant de l'événement
-# émis : c'est le seul endroit du système où les deux se rencontrent, la suite
-# se passant dans d'autres tâches. Une émission qui le contourne coupe la piste
-# à cet endroit précis, sans que rien ne le signale.
-#
-# Les tests sont exemptés — ils fabriquent des événements pour amorcer un
-# pipeline, et n'ont rien à journaliser. L'exemption vaut pour les fichiers de
-# `tests/` comme pour les modules `#[cfg(test)]`, ce second cas ayant échappé
-# au premier inventaire de la carte : quatre des vingt-cinq sites annoncés
-# étaient du test.
-echo -e "${BOLD}Axe 13 · Émission de domain events — toujours via emettre()${RESET}"
-axe13=$(
-  for fichier in $(grep -rlE '(bus|event_bus)\.send\(' --include="*.rs" src/ 2>/dev/null); do
+# **Les deux premières versions de cet axe cherchaient des noms de variables**
+# — `app_event_bus`, puis `bus` et `event_bus`. Un bus nommé autrement serait
+# passé, et rien ne l'aurait signalé. Le critère porte maintenant sur `.send(`
+# quel que soit le récepteur ; ce qui n'est pas un bus se déclare par
+# `// arch:ok`, comme partout ailleurs dans ce script.
+echo -e "${BOLD}Axe 12 · Émission d'événements — toujours via emettre() ou publier()${RESET}"
+axe12=$(
+  for fichier in $(grep -rl '\.send(' --include="*.rs" src/ 2>/dev/null); do
     if [[ "$fichier" == */tests/* ]] \
       || [[ "$fichier" == *domain_event_publication.rs ]] \
       || [[ "$fichier" == *app_event_publication.rs ]]; then
@@ -484,7 +461,40 @@ axe13=$(
     awk -v f="$fichier" '
       /^#\[cfg\(test\)\]/ { dans_test = 1 }
       dans_test { next }
-      /(bus|event_bus)\.send\(/ && !/app_event_bus/ { print f ":" NR ": " $0 }
+      # `arch:ok` accepté sur la ligne ou juste au-dessus : un `.send(` qui
+      # ouvre un appel multi-lignes ne laisse pas de place pour un commentaire
+      # de fin de ligne que `rustfmt` ne déplacerait pas.
+      /\.send\(/ && !/arch:ok/ && precedente !~ /arch:ok/ { print f ":" NR ": " $0 }
+      { precedente = $0 }
+    ' "$fichier"
+  done
+)
+axe12="$(printf '%s' "$axe12" | sed '/^$/d')"
+if [ -n "$axe12" ]; then print_fail "$axe12"; else print_pass; fi
+echo ""
+
+# ── Axe 13 : cible de journalisation ────────────────────────────────────────
+#
+# Le filtre vaut `kreek=<niveau>,sqlx=warn`. Une cible qui n'en relève pas
+# n'est activée par aucune directive : **la ligne n'existe pas**, et rien ne le
+# signale — ni à la compilation, ni aux tests, ni au démarrage.
+#
+# Le piège a coûté deux cartes. La 344 a trouvé le `TraceLayer` muet sur
+# `tower_http::trace`. La 349 a failli livrer un `CatchPanicLayer` muet sur
+# `tower_http::catch_panic`, avec un `500` propre et zéro ligne de journal —
+# c'est-à-dire l'apparence exacte du travail fait.
+#
+# Il reparaîtra à chaque couche tierce branchée en comptant sur sa
+# journalisation intégrée : une bibliothèque journalise sur son propre nom, et
+# notre filtre ne connaît que le nôtre.
+echo -e "${BOLD}Axe 13 · Cible de journalisation — toujours sous kreek::${RESET}"
+axe13=$(
+  for fichier in $(grep -rl 'target: *"' --include="*.rs" src/ 2>/dev/null); do
+    [[ "$fichier" == */tests/* ]] && continue
+    awk -v f="$fichier" '
+      /^#\[cfg\(test\)\]/ { dans_test = 1 }
+      dans_test { next }
+      /target: *"/ && !/target: *"kreek/ { print f ":" NR ": " $0 }
     ' "$fichier"
   done
 )

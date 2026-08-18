@@ -98,6 +98,13 @@ n'ont rien à journaliser.
 Vérifié sur un cas volontairement fautif, comme l'axe 11 dont la première
 écriture ne détectait rien.
 
+## Suite
+
+L'axe 12 posé ici cherchait le **nom de variable** `app_event_bus`. La carte 355
+l'a élargi à tout `.send(` — et a trouvé du premier coup une émission que cette
+carte avait manquée : `MatchReportPublished` partait sur deux lignes, récepteur
+et `.send(` séparés, donc sans ligne de journal.
+
 ## Ce que ça permet
 
 ```

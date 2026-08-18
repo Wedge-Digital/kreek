@@ -33,6 +33,7 @@ pub enum QueryError {
     Repository(String),
 }
 
+// arch:no-instrument — lecture : répond à « qu'affiche-t-on », pas à « qu'a-t-on demandé »
 pub async fn execute(
     competition_id: &CompetitionId,
     season_id: &SeasonId,

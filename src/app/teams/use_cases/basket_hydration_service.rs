@@ -45,6 +45,7 @@ impl std::fmt::Display for HydrationError {
 /// trésorerie rechargés à chaque fois, jamais ceux de la constitution du panier.
 /// C'est ce qui fait qu'un panier vieux de dix minutes est évalué contre les
 /// données d'aujourd'hui.
+// arch:no-instrument — service d'hydratation : assemble une vue, sans intention métier
 pub async fn hydrate_recruitment_basket(
     team: &Team,
     basket_repo: &dyn IPhaseBasketRepository,
@@ -70,6 +71,7 @@ pub async fn hydrate_recruitment_basket(
 
 /// Le pendant pour les renvois. Mêmes sources, moins la trésorerie : un renvoi
 /// ne rembourse rien, l'agrégat n'a aucune raison de la connaître.
+// arch:no-instrument — service d'hydratation : assemble une vue, sans intention métier
 pub async fn hydrate_dismissals_basket(
     team: &Team,
     basket_repo: &dyn IPhaseBasketRepository,

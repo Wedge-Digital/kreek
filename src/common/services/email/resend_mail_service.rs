@@ -62,6 +62,7 @@ impl IEmailService for ResendMailService {
             .post(&self.api_url)
             .bearer_auth(&self.api_key)
             .json(&payload)
+            // arch:ok requête HTTP sortante, pas d'événement
             .send()
             .await
             .map_err(|e| EmailError::Network(e.to_string()))?;

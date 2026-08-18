@@ -271,7 +271,7 @@ commit suivant.
 | Commande | Contenu | Job CI |
 |---|---|---|
 | `make lint` | `cargo fmt --check`, `cargo clippy` | `qualite` |
-| `make check-arch` | axes 2 à 9 (cf. `scripts/check-arch.sh`) | `qualite` |
+| `make check-arch` | axes 2 à 13 (cf. `scripts/check-arch.sh`) | `qualite` |
 | `make audit` | `cargo audit --deny warnings` | `audit` |
 | `make test` | tests unitaires et d'intégration | `unit` |
 | `make e2e` | suite Playwright complète | `e2e` |
@@ -979,6 +979,89 @@ Pour une grille dont le nombre de colonnes doit croître avec l'espace disponibl
 - Pas de `clamp()` ni d'unités `vw`/`vh` fluides pour le texte — les ajustements de taille se font en dur par breakpoint.
 - Pas de système de grille type Bootstrap (`.col-*`, `.row`).
 - Pas de classes utilitaires responsive transverses (`.hide-mobile`, `.d-md-*`).
+
+---
+
+## Observabilité — règles obligatoires
+
+En production, le journal est le seul organe de sens. L'épic E11 l'a construit ;
+ces règles existent pour qu'il ne se reperde pas fichier par fichier. Les quatre
+axes qui les tiennent sont bloquants — voir « Vérifications ».
+
+### La règle qui prime sur les autres
+
+**Une ligne de journal n'existe en production que si sa cible relève de
+`kreek::` et que son niveau vaut au moins `info`.** Le filtre est
+`kreek=<niveau>,sqlx=warn` ; une cible qui n'en relève pas n'est activée par
+aucune directive, et la ligne n'est **pas** émise — sans que rien ne le
+signale, ni à la compilation, ni aux tests, ni au démarrage.
+
+Ce piège s'est présenté trois fois sous trois formes :
+
+| Où | Ce qu'on croyait | Ce qui se passait |
+|---|---|---|
+| `TraceLayer` (carte 344) | le journal de requêtes existe | il émet sur `tower_http::trace`, hors filtre |
+| `CatchPanicLayer` (carte 349) | un panic est journalisé | il émet sur `tower_http::catch_panic`, hors filtre |
+| `#[instrument]` (carte 348) | le use case dit ce qu'on lui a demandé | un span n'émet **aucun** événement sans `FmtSpan` |
+
+Il reparaîtra à chaque couche tierce branchée en comptant sur sa
+journalisation intégrée : **une bibliothèque journalise sur son propre nom, et
+notre filtre ne connaît que le nôtre.** Poser un gestionnaire maison qui émet
+depuis un module `kreek::` règle le problème par construction.
+
+### Les trois règles de couverture
+
+**Tout use case async est instrumenté.** `#[tracing::instrument(skip_all,
+fields(cmd = ?cmd))]` sur toute `pub async fn` de `use_cases/`. `skip_all` est
+indispensable — sans lui l'attribut tente d'enregistrer les dépôts, qui
+n'implémentent pas `Debug`. Un use case à identifiants nus nomme ses champs :
+`fields(season_id = ?season_id)`.
+
+Les fonctions async de `use_cases/` qui ne sont **pas** des use cases —
+services d'hydratation, lectures — se déclarent sur place :
+
+```rust
+// arch:no-instrument — service d'hydratation : assemble une vue, sans intention métier
+pub async fn hydrate(…)
+```
+
+Le motif est obligatoire. Une liste d'exceptions tenue dans `check-arch.sh`
+aurait dérivé ; un marqueur adjacent à la fonction ne le peut pas.
+
+**Toute émission d'événement passe par un helper.** `emettre()` pour un domain
+event sur le bus interne, `publier()` pour un app event sur le bus applicatif.
+Jamais de `.send(` direct.
+
+Ce n'est pas une préférence de style : `to_enveloppe()` **engendre un nouvel
+identifiant**, donc une ligne écrite à la main au-dessus d'un `send` reprendrait
+celui de l'enveloppe reçue et produirait une trace qui a l'air correcte et ne
+corrèle rien. Les helpers ne voient que l'enveloppe produite.
+
+Un `.send(` qui n'est pas une émission d'événement — envoi d'e-mail, requête
+HTTP — se déclare par `// arch:ok <motif>`, sur la ligne ou juste au-dessus.
+
+**Les commandes ne journalisent pas de secrets.** Les champs sensibles d'une
+commande sont des `Secret<T>` (`shared_kernel/identity/secret.rs`), dont le
+`Debug` rend `[masqué]`. Le use case étant instrumenté avec `?cmd`, un champ
+repassé en `String` mettrait des mots de passe dans `docker logs`.
+
+### Ce que ça donne, et comment on s'en sert
+
+```
+grep rid=01M0AB   → la requête, ses use cases, les événements qu'elle a émis
+grep <event_id>   → le publisher : cause=<reçu> event_id=<produit>
+grep <event_id>   → toutes les réactions, tous BCs confondus
+```
+
+Le `rid` est repris dans l'en-tête `x-request-id` de la réponse : on part du
+symptôme constaté par un coach, pas du code.
+
+### Le réflexe à avoir
+
+Devant une nouvelle couche, un nouveau bus, un nouveau point d'émission, la
+question n'est pas « est-ce que ça journalise ? » mais **« sous quelle cible, à
+quel niveau, et qu'est-ce qui le vérifie ? »**. Les trois fois où l'épic s'est
+fait prendre, le code journalisait — dans le vide.
 
 ---
 

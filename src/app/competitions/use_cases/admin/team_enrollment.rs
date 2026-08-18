@@ -6,6 +6,7 @@ use std::collections::HashMap;
 /// Charge les équipes réellement `Enrolled` d'une saison, indexées par id —
 /// seule source de vérité pour savoir si une équipe peut être appariée (BR :
 /// un pairing n'est jamais créé pour une équipe non enrôlée).
+// arch:no-instrument — lecture appelée depuis d'autres use cases, déjà instrumentés
 pub async fn load_enrolled_teams(
     season_id: &str,
     team_port: &dyn ITeamInfoPort,
@@ -37,6 +38,7 @@ pub fn filter_enrolled_team_ids(
 
 /// Résout des noms d'affichage pour un ensemble d'ids d'équipes exclues (donc
 /// absentes de la map des enrôlées), pour construire un message d'avertissement.
+// arch:no-instrument — lecture de noms d'affichage pour un message d'avertissement
 pub async fn resolve_team_names(
     mut team_ids: Vec<String>,
     team_port: &dyn ITeamInfoPort,

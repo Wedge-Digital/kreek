@@ -164,8 +164,10 @@ async fn handle_published(
     match repo.find_by_id(match_report_id).await {
         Ok(Some(MatchReportState::Published(p))) => {
             let payload = build_published_payload(&p);
-            let _ = app_event_bus
-                .send(MatchReportAppEvent::MatchReportPublished(payload).to_enveloppe());
+            publier(
+                app_event_bus,
+                MatchReportAppEvent::MatchReportPublished(payload).to_enveloppe(),
+            );
             publish_player_impact_events(&p, app_event_bus, competition_data, team_data).await;
         }
         Ok(_) => log_unexpected_state(match_report_id, "Published"),

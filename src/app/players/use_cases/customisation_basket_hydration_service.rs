@@ -39,6 +39,7 @@ impl From<RepositoryError> for HydrationError {
 /// Charge et hydrate le panier d'un joueur. **Un panier absent donne un panier
 /// vide en version zéro** — c'est ainsi que le premier geste du commissaire
 /// l'ouvre, sans endpoint dédié.
+// arch:no-instrument — service d'hydratation : assemble une vue, sans intention métier
 pub async fn hydrate(
     player_id: &PlayerId,
     player_repo: &dyn IPlayerRepository,

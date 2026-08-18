@@ -83,6 +83,7 @@ pub async fn execute(
     .map_err(|e| SendResetPasswordEmailError::EmailSendFailed(e.to_string()))?;
 
     email_service
+        // arch:ok envoi d'e-mail, pas d'événement
         .send(
             vec![user.email.value().to_string()],
             "Réinitialisation de ton mot de passe BloodbowlClub".to_string(),

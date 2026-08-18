@@ -9,6 +9,7 @@ use crate::app::teams::ports::{IJourneymanTypePort, IRosterCatalogPort, ISquadPo
 /// C'est ici que s'arrête la connaissance des ports : le domaine reçoit des
 /// `TeamValueInputs`, jamais un DTO. Aucun handler, aucun template ne voit
 /// `SquadMemberDto` ni `RosterCatalogDto`.
+// arch:no-instrument — service : recalcule une valeur, appelé par le use case qui la persiste
 pub async fn resolve_team_value(
     team: &Team,
     squad_port: &dyn ISquadPort,
