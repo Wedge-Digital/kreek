@@ -83,5 +83,6 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 |---|---|
 | `13-mock-data-competition-detail` | Les onglets Équipes et Stats servent de la donnée fictive **en production**. C'est la seule dette visible par un utilisateur |
 | `60-jersey-numbers-at-submission` | Attribution des numéros de maillot à la soumission |
+| `352-match-report-confirmed-passe-par-le-publisher` | Deux use cases émettent un app event directement, ce que `CLAUDE.md` interdit. Trouvée par la carte 350. Débloque un axe « pas d'`app_event_bus` dans `use_cases/` » |
 | `61-rendre-accessible-un-espace-publiquement` | **Fichier vide, sans extension `.md`** — à écrire ou à supprimer |
 | `TBD-63-implémenter-les-notifications-email` | **Vraisemblablement caduque** : remplacée par les dix cartes de E02. À vérifier puis déplacer en `cancelled/` |

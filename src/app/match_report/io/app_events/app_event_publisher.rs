@@ -19,9 +19,11 @@ use crate::app::shared_kernel::app_events::player_match_impact_app_events::{
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::EventId;
 use crate::common::event_envelope::EventEnvelope;
+use crate::common::services::event_bus::app_event_publication::publier;
 use crate::common::services::event_bus::event_bus::EventBus;
 use crate::common::services::event_bus::supervision::spawn_listener;
 use std::sync::Arc;
+use tracing::Instrument;
 
 /// Souscrit au bus interne du BC match_report, convertit les domain events pertinents
 /// en app events, et les republie sur l'app event bus. Même pattern que
@@ -69,10 +71,36 @@ async fn handle_envelope(
         return;
     };
     let match_report_id = envelope.emitter;
+    let span = tracing::info_span!(
+        "app_event_publication",
+        domain_event = %envelope.event_type
+    );
+    aiguiller(
+        event,
+        &match_report_id,
+        app_event_bus,
+        repo,
+        competition_data,
+        team_data,
+    )
+    .instrument(span)
+    .await;
+}
+
+/// Séparée de `handle_envelope` pour que le span enveloppe un futur entier
+/// plutôt qu'une garde tenue au travers de plusieurs `await`.
+async fn aiguiller(
+    event: MatchReportDomainEvent,
+    match_report_id: &str,
+    app_event_bus: &EventBus,
+    repo: &dyn IMatchReportRepository,
+    competition_data: &dyn ICompetitionDataPort,
+    team_data: &dyn ITeamDataPort,
+) {
     match event {
         MatchReportDomainEvent::MatchReportPublished { .. } => {
             handle_published(
-                &match_report_id,
+                match_report_id,
                 app_event_bus,
                 repo,
                 competition_data,
@@ -81,13 +109,13 @@ async fn handle_envelope(
             .await
         }
         MatchReportDomainEvent::MatchReportUnpublished { .. } => {
-            handle_unpublished(&match_report_id, app_event_bus, repo).await
+            handle_unpublished(match_report_id, app_event_bus, repo).await
         }
         MatchReportDomainEvent::MatchReportCancelled {
             home_team_id,
             away_team_id,
             ..
-        } => handle_cancelled(&match_report_id, home_team_id, away_team_id, app_event_bus),
+        } => handle_cancelled(match_report_id, home_team_id, away_team_id, app_event_bus),
         _ => {}
     }
 }
@@ -113,7 +141,8 @@ fn handle_cancelled(
         return;
     };
 
-    let _ = app_event_bus.send(
+    publier(
+        app_event_bus,
         MatchReportAppEvent::MatchReportCancelled {
             event_id: EventId::new(),
             match_report_id: match_report_id.to_string(),
@@ -154,7 +183,7 @@ async fn handle_unpublished(
     match repo.find_by_id(match_report_id).await {
         Ok(Some(MatchReportState::ReadyToPublish(rtp))) => {
             for event in build_unpublished_events(&rtp) {
-                let _ = app_event_bus.send(event);
+                publier(app_event_bus, event);
             }
         }
         Ok(_) => log_unexpected_state(match_report_id, "ReadyToPublish"),
@@ -217,13 +246,14 @@ async fn publish_player_impact_events(
         .into_iter()
         .chain(build_player_impact_events(&p.away_actions, &away_ctx_base))
     {
-        let _ = app_event_bus.send(event.to_enveloppe());
+        publier(app_event_bus, event.to_enveloppe());
     }
 
     let home_score = count_touchdowns(&p.home_actions);
     let away_score = count_touchdowns(&p.away_actions);
 
-    let _ = app_event_bus.send(
+    publier(
+        app_event_bus,
         PlayerMatchImpactAppEvent::TeamMatchConcluded {
             team_id: p.home_team_id.to_string(),
             match_report_id: home_ctx_base.match_report_id.clone(),
@@ -236,7 +266,8 @@ async fn publish_player_impact_events(
         }
         .to_enveloppe(),
     );
-    let _ = app_event_bus.send(
+    publier(
+        app_event_bus,
         PlayerMatchImpactAppEvent::TeamMatchConcluded {
             team_id: p.away_team_id.to_string(),
             match_report_id: away_ctx_base.match_report_id.clone(),

@@ -10,9 +10,11 @@ use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::{EventId, SpaceId};
 use crate::app::teams::domain::team::TeamDomainEvent;
+use crate::common::services::event_bus::app_event_publication::publier;
 use crate::common::services::event_bus::event_bus::EventBus;
 use crate::common::services::event_bus::supervision::spawn_listener;
 use sqlx::PgPool;
+use tracing::Instrument;
 
 pub fn teams_app_event_publisher(event_bus: &EventBus, app_event_bus: EventBus, pool: PgPool) {
     let mut rx = event_bus.subscribe();
@@ -25,9 +27,23 @@ pub fn teams_app_event_publisher(event_bus: &EventBus, app_event_bus: EventBus, 
                     else {
                         continue;
                     };
-                    if let Some(app_event) = to_app_event(&event, &envelope.emitter, &pool).await {
-                        let _ = app_event_bus.send(app_event.to_enveloppe());
+                    // `.instrument()` et non `span.enter()` : la résolution du
+                    // `space_id` traverse un `await`, et une garde de span tenue
+                    // au travers d'un point de suspension attribue le contexte à
+                    // la mauvaise tâche.
+                    let span = tracing::info_span!(
+                        "app_event_publication",
+                        domain_event = %envelope.event_type
+                    );
+                    async {
+                        if let Some(app_event) =
+                            to_app_event(&event, &envelope.emitter, &pool).await
+                        {
+                            publier(&app_event_bus, app_event.to_enveloppe());
+                        }
                     }
+                    .instrument(span)
+                    .await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("teams_app_event_publisher: lagged by {n}");

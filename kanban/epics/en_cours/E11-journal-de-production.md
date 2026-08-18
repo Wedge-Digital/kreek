@@ -1,6 +1,6 @@
 # E11 — Savoir ce qui se passe en production
 
-**État :** 8 cartes · 6 faites — 344 à 349 livrées et vérifiées ; restent 350 et 351
+**État :** 8 cartes · 7 faites — 344 à 350 livrées et vérifiées ; reste 351
 
 ## La fonction
 
@@ -86,8 +86,11 @@ muets il n'aurait produit aucune ligne. La ligne vient d'une couche dédiée aux
 spans de `use_cases/`, ce qui laisse intact le choix de la 345 de ne pas
 activer `FmtSpan` globalement.
 
-**350 après la 348**, pas avant : elle complète le tableau des app events, mais
-tant que les use cases sont muets, la moitié de ce qu'elle relie n'existe pas.
+**350 — faite.** Elle complétait le tableau des app events, et ne pouvait pas
+précéder la 348 : tant que les use cases étaient muets, la moitié de ce qu'elle
+relie n'existait pas. Elle a fait naître la carte 352 — deux use cases de
+`match_report` émettent un app event directement, le publisher ne traitant pas
+`MatchReportConfirmed`.
 
 **351 en dernier, et seulement après raffinage.** C'est la plus invasive — elle
 touche `shared_kernel` — et sa valeur croît avec le nombre de spans à relier :

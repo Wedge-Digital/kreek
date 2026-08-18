@@ -1,4 +1,5 @@
 use crate::app::team_creation::domain_event::TeamCreationDomainEvent;
+use crate::common::services::event_bus::app_event_publication::publier;
 use crate::common::services::event_bus::event_bus::EventBus;
 use crate::common::services::event_bus::supervision::spawn_listener;
 
@@ -14,11 +15,12 @@ pub fn team_creation_app_event_publisher(event_bus: &EventBus, app_event_bus: Ev
                         continue;
                     };
                     if let Some(app_event) = event.to_app_event() {
-                        tracing::info!(
-                            "team_creation_app_event_publisher: relaying {} to app bus",
-                            event.to_event_type()
+                        let span = tracing::info_span!(
+                            "app_event_publication",
+                            domain_event = %envelope.event_type
                         );
-                        let _ = app_event_bus.send(app_event.to_enveloppe());
+                        let _garde = span.enter();
+                        publier(&app_event_bus, app_event.to_enveloppe());
                     }
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {

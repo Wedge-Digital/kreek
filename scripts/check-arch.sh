@@ -10,6 +10,7 @@
 #   9. BCs extractibles — aucune adhérence au host (cf. kanban/242)
 #  10. Génération d'URLs — aucun placeholder substitué par un littéral
 #  11. Use cases à commande — tous instrumentés (cf. kanban/348)
+#  12. Émission d'app events — toujours via publier() (cf. kanban/350)
 #
 # Axes en avertissement (n'affectent pas le code de sortie) :
 #   6. Value objects systématiques (CQRS) — primitifs nus côté écriture domaine
@@ -437,6 +438,25 @@ axe11=$(
 )
 axe11="$(printf '%s' "$axe11" | sed '/^$/d')"
 if [ -n "$axe11" ]; then print_fail "$axe11"; else print_pass; fi
+echo ""
+
+# ── Axe 12 : émission d'app events ──────────────────────────────────────────
+#
+# `to_enveloppe()` engendre un **nouvel** identifiant : l'app event n'a pas
+# celui du domain event dont il est issu. Une ligne de journal écrite à la main
+# au-dessus du `send` a donc toutes les chances de reprendre l'identifiant reçu
+# — et de produire une trace qui a l'air correcte et ne corrèle rien.
+#
+# `publier()` ne voit que l'enveloppe produite : le piège est fermé par
+# construction. L'axe garantit qu'aucune émission ne le contourne, faute de
+# quoi le prochain app event ajouté serait muet sans que personne ne le sache.
+#
+# Les tests sont exemptés : ils simulent un BC amont qui émet, et n'ont rien à
+# journaliser.
+echo -e "${BOLD}Axe 12 · Émission d'app events — toujours via publier()${RESET}"
+axe12=$(grep -rn 'app_event_bus\.send(' --include="*.rs" src/ 2>/dev/null | grep -v '/tests/' || true)
+axe12="$(printf '%s' "$axe12" | sed '/^$/d')"
+if [ -n "$axe12" ]; then print_fail "$axe12"; else print_pass; fi
 echo ""
 
 if [ "$EXIT_CODE" -eq 0 ]; then

@@ -5,6 +5,7 @@ use crate::app::shared_kernel::app_events::match_report_app_events::MatchReportA
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::{CoachId, EventId};
+use crate::common::services::event_bus::app_event_publication::publier;
 use crate::common::services::event_bus::event_bus::EventBus;
 
 #[derive(Debug)]
@@ -90,7 +91,13 @@ pub async fn execute(
         .await
         .map_err(|e| UpdateMatchSelectionError::Repository(e.to_string()))?;
 
-    let _ = app_event_bus.send(
+    // Émission directe depuis un use case — `CLAUDE.md` l'interdit : un app
+    // event doit naître d'un domain event, converti par le publisher. Le
+    // publisher de `match_report` ne traite pas `MatchReportConfirmed`, d'où ce
+    // court-circuit. Il passe par `publier` pour au moins entrer dans le
+    // journal ; le correctif architectural fait l'objet de la carte 352.
+    publier(
+        app_event_bus,
         MatchReportAppEvent::MatchReportConfirmed {
             event_id: EventId::new(),
             match_report_id: mr_id_str,
