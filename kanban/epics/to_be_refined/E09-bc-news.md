@@ -13,8 +13,8 @@ article, et **épingler** celui qui doit rester en tête.
 
 | # | Intitulé | État |
 |---|---|---|
-| 50-NEWS-BC-submit-article | Soumission d'un article | **« contenu à définir »** |
-| 50-NEWS-BC-pin-article | Épinglage d'un article | **« contenu à définir »** |
+| 353-NEWS-BC-submit-article | Soumission d'un article | **« contenu à définir »** |
+| 354-NEWS-BC-pin-article | Épinglage d'un article | **« contenu à définir »** |
 
 Les deux fiches sont des marque-pages : elles portent un titre et la mention
 « contenu à définir », rien d'autre.

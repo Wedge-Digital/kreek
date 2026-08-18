@@ -1092,6 +1092,20 @@ to_be_refined → ready_to_be_done → done
 
 **Règle** : une carte est déplacée dans `done/` dans le **même commit** que le code qui la termine, ou dans le commit immédiatement suivant. Ne jamais laisser une carte en `ready_to_be_done/` après que son code a été pushé.
 
+**Numérotation** : un numéro par carte, jamais réutilisé. Le prochain numéro
+libre se lit ainsi :
+
+```bash
+find kanban -name "*.md" | sed 's|.*/||' | grep -oE "^[0-9]+" | sort -n | tail -1
+```
+
+Trois cartes ont porté le numéro 50 pendant deux mois et demi — créées le même
+jour, sans que rien ne le signale. Un doublon ne se voit qu'en le cherchant :
+
+```bash
+find kanban -name "*.md" | sed 's|.*/||' | grep -oE "^[0-9]+" | sort -n | uniq -d
+```
+
 ### Épics — la vue de haut niveau
 
 `kanban/epics/` regroupe les cartes en **grandes fonctions**. L'épic dit
