@@ -1,6 +1,6 @@
 # E04 — Les verrous architecturaux
 
-**État :** 5 cartes · 0 faite
+**État :** 6 cartes · 0 faite
 
 ## La fonction
 
@@ -25,6 +25,7 @@ espaces à tous les BCs.
 | 07 | Port structs stringly-typés dans le domaine | les ports parlent le langage du domaine, pas celui de la DB |
 | 316 | Audit — l'appartenance à l'espace est-elle vérifiée dans les autres BCs ? | l'inventaire, prérequis de 323 |
 | 323 | Axe `check-arch` — le cloisonnement des espaces ne doit pas se reperdre | le verrou qui empêche la rechute |
+| 356 | L'axe 2 tient moins que la règle qu'il annonce | `tokio` et l'async entrent dans le périmètre de la pureté du domaine |
 
 ## Ce qui commande l'ordre
 
@@ -43,6 +44,14 @@ violation sans créer ni port ni adapter. C'est la seule issue qui ne laisse
 aucune dette, et elle se regarde en premier.
 
 **07 est indépendante** des quatre autres.
+
+**356 aussi, et c'est la moins chère du lot** : aucun fichier à corriger, le
+domaine étant déjà conforme à la règle élargie. Elle est arrivée par le
+raffinage de la carte 351, qui voulait lire un `tokio::task_local!` depuis
+`domain/` — l'axe 2 ne l'aurait pas signalé, `tokio` ne figurant pas dans son
+`grep`. Elle appartient à cette épic pour la raison qui la fonde : **un verrou
+qui annonce plus qu'il ne tient est un verrou qui ment**, au même titre que
+celui qui tolère.
 
 ## Ce que l'épic ne couvre pas
 

@@ -167,12 +167,13 @@ est hors périmètre de l'épic : l'event store le donne déjà.
 
 ## Trouvés en chemin, hors périmètre
 
-- **Le champ `tags` a quatre formes différentes** : `json!([])`, `json!({})`,
-  `json!({ "user_id": … })`, et un tableau d'`EventTag`. Un champ d'indexation
-  dont la forme dépend de l'émetteur ne s'interroge pas de façon fiable.
-- **L'axe 2 est plus étroit que la règle qu'il tient.** Son `grep` n'interdit au
-  domaine que `axum|sqlx|tower|askama`, alors que `CLAUDE.md` lui interdit tout
-  appel async — `tokio` n'y figure pas. La version précédente de cette carte
+- **Le champ `tags` a quatre formes différentes** → **carte 357**, qui a trouvé
+  plus grave : il est écrit par quatre chemins et **lu par personne**,
+  `find_by_tag()` n'ayant aucun appelant.
+- **L'axe 2 est plus étroit que la règle qu'il tient** → **carte 356**, versée
+  dans l'épic E04. Son `grep` n'interdit au domaine que
+  `axum|sqlx|tower|askama`, alors que `CLAUDE.md` lui interdit tout appel
+  async — `tokio` n'y figure pas. La version précédente de cette carte
   proposait de lire un `task_local` depuis `domain/` : le verrou l'aurait
   laissée passer.
 
