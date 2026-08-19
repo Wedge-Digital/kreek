@@ -97,3 +97,30 @@ Ou depuis la racine : `make e2e`.
   `players → teams`). Utilisateur non autorisé non testé ici : `bypass_auth`
   connecte toujours le même coach, incompatible avec ce scénario sans
   fabriquer un état dans l'event store (cf. docstring du fichier).
+
+## Harnais visuel — `visual/`
+
+Vérifie qu'une modification de CSS **ne change aucune valeur calculée**, ce
+qu'exige la carte 341 avant de scoper les feuilles de style.
+
+```bash
+uv run python visual/releve.py avant     # avant de toucher au CSS
+#  … modification …
+uv run python visual/releve.py apres
+uv run python visual/comparer.py avant apres
+```
+
+Le relevé couvre **43 pages × 2 largeurs**, soit les 49 feuilles de `pages/` et
+`widgets/` chargées par l'application — couverture mesurée, pas supposée : une
+page qui ne charge pas la feuille attendue est signalée, une page dont l'entité
+manque en base aussi.
+
+Il compare des **styles calculés** et non des captures d'écran. Un harnais par
+images a été écrit d'abord puis abandonné : après trois corrections successives
+il variait encore de 5 à 12 % d'un passage à l'autre sans qu'aucun CSS n'ait
+changé. Les styles calculés sont déterministes ici — deux relevés consécutifs
+donnent 0 écart sur 79 680 relevés — et un écart nomme l'élément et la
+propriété au lieu de dire « cette page a changé ».
+
+Les relevés vivent dans `visual/releves/`, hors dépôt : ils valent le temps
+d'un lot, pas d'un commit.
