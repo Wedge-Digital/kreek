@@ -1,0 +1,150 @@
+.players-widget .player-table  { width: 100%; border-collapse: collapse; padding: var(--p1)}
+.players-widget {
+    padding: var(--p2);
+    background: var(--white);
+}
+.players-widget .player-table th {
+    text-align: left; padding: 10px 12px;
+    font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--dark-5); background: var(--dark-6);
+}
+.players-widget .player-table td                          { padding: 12px; font-size: var(--text-small); }
+.players-widget .player-table tbody tr:nth-child(odd) td { background: var(--white); }
+.players-widget .player-table tbody tr:nth-child(even) td { background: var(--dark-6); }
+.players-widget .player-table tbody tr:hover td { background: var(--dark-5); cursor: pointer; }
+.players-widget .player-table tbody.no-hover tr:nth-child(odd):hover td { background: var(--white);  cursor: default; }
+.players-widget .player-table tbody.no-hover tr:nth-child(even):hover td { background: var(--dark-6); cursor: default; }
+.players-widget .player-table tr:last-child td { border-bottom: none; }
+.players-widget .player-table tr.subtotal-row td {
+    border-top: 2px solid var(--dark-4); border-bottom: none;
+    background: var(--dark-6); font-weight: 700; color: var(--dark-0);
+    font-size: var(--text-small);
+}
+
+.players-widget .player-pos    { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: var(--text-tiny); font-weight: 700; }
+.players-widget .pos-lineman   { background: rgba(0,48,73,0.1);       color: var(--main-blue); }
+.players-widget .pos-blitzer   { background: rgba(224,32,32,0.1);     color: var(--red); }
+.players-widget .pos-thrower   { background: rgba(98,149,132,0.1);    color: var(--green); }
+.players-widget .pos-catcher   { background: rgba(255,215,0,0.15);    color: #9A7800; }
+
+.players-widget .skill-tag            { display: inline-block; font-size: var(--text-tiny); font-weight: 600; padding: 3px 10px; border-radius: 20px; background: var(--dark-5); color: var(--dark-1); }
+.players-widget .skill-tag--chosen    { background: rgba(0,48,73,0.08);    color: var(--main-blue); }
+.players-widget .skill-tag--random    { background: rgba(255,215,0,0.18);  color: #9A7800; }
+.players-widget .type-general         { background: rgba(0,48,73,0.08);    color: var(--main-blue); }
+.players-widget .type-strength        { background: rgba(224,32,32,0.08);  color: var(--red); }
+.players-widget .type-agility         { background: rgba(98,149,132,0.12); color: var(--green); }
+.players-widget .type-passing         { background: rgba(255,215,0,0.18);  color: #9A7800; }
+.players-widget .type-mutation        { background: rgba(111,53,165,0.10); color: #6f35a5; }
+.players-widget .player-skill  { background: var(--dark-5); color: var(--dark-1); border-radius: 4px; padding: 2px 6px; font-size: 11px; margin-right: 4px; display: inline-block; }
+
+/* ── Classes reprises des styles inline du fragment ────────────────────────────
+   Le CLAUDE.md interdit les attributs `style` dans les templates : les règles
+   qui y étaient dispersées vivent ici. */
+
+.players-widget .players-widget-empty { padding: var(--p2); color: var(--dark-3); font-style: italic; }
+
+/* Douze colonnes avec les caractéristiques : le tableau défile dans son propre
+   conteneur plutôt que de pousser la page en débordement horizontal. */
+.players-widget .player-table-scroll { overflow-x: auto; }
+
+/* Cadre porteur des dégradés de bord : le conteneur défilant ne peut pas les
+   afficher lui-même, ses pseudo-éléments défileraient avec le contenu. Les
+   cellules du tableau ayant un fond opaque, la technique du dégradé posé sur le
+   fond du conteneur ne fonctionne pas non plus — d'où ce cadre par-dessus.
+   Les classes sont posées par le script du fragment, uniquement quand du
+   contenu reste réellement hors champ. */
+.players-widget .player-table-frame { position: relative; }
+.players-widget .player-table-frame::before,
+.players-widget .player-table-frame::after {
+  content: ''; position: absolute; top: 0; bottom: 0; width: 28px;
+  pointer-events: none; opacity: 0; transition: opacity 0.15s;
+}
+.players-widget .player-table-frame::before { left: 0;  background: linear-gradient(to left,  rgba(255,255,255,0), var(--white)); }
+.players-widget .player-table-frame::after  { right: 0; background: linear-gradient(to right, rgba(255,255,255,0), var(--white)); }
+.players-widget .player-table-frame.has-more-left::before { opacity: 1; }
+.players-widget .player-table-frame.has-more-right::after { opacity: 1; }
+
+.players-widget .player-col-jersey { text-align: center; width: 40px; }
+.players-widget .player-col-skills { min-width: 180px; }
+.players-widget .player-col-num    { text-align: center; }
+/* Caractéristiques : un chiffre ou un seuil de dé, donc un padding resserré —
+   les 24px horizontaux du reste de la table faisaient déborder les douze
+   colonnes de 59px, y compris en desktop. */
+.players-widget .player-table th.player-col-stat,
+.players-widget .player-table td.player-stat { padding-left: 4px; padding-right: 4px; }
+.players-widget .player-col-stat   { text-align: center; width: 30px; }
+
+.players-widget .player-jersey   { text-align: center; color: var(--dark-3); font-family: monospace; }
+.players-widget .player-position { color: var(--dark-2); }
+.players-widget .player-stat     { text-align: center; font-variant-numeric: tabular-nums; }
+.players-widget .player-spp      { text-align: center; font-weight: 600; }
+.players-widget .player-value    { text-align: center; }
+/* Absence de donnée — distinct d'une valeur nulle. */
+.players-widget .player-none     { color: var(--dark-4); font-style: italic; }
+
+.players-widget .player-skill-list { display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* ─── Responsive ─── */
+@media (max-width: 768px) {
+  /* Le tableau défile déjà dans son conteneur ; on resserre les cellules pour
+     que douze colonnes n'imposent pas un défilement démesuré, et pour que les
+     noms de poste cessent de se replier sur trois lignes. */
+  .players-widget { padding: 0; }
+  .players-widget .player-table th { padding: 8px; }
+  .players-widget .player-table td { padding: 8px; }
+  .players-widget .player-table th.player-col-stat,
+.players-widget .player-table td.player-stat { padding-left: 3px; padding-right: 3px; }
+  .players-widget .player-col-skills { min-width: 140px; }
+  /* Nom et poste tronqués plutôt que repliés : sur trois lignes chacun, quatre
+     joueurs remplissaient un tiers de l'écran. Bornés en largeur et non
+     seulement en `nowrap` — sans le `max-width`, ils prenaient toute la place et
+     repoussaient les caractéristiques hors de l'écran. */
+  .players-widget .player-table tbody td:nth-child(2),
+.players-widget .player-table tbody td:nth-child(3) {
+    max-width: 78px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+}
+
+/* ── Mode édition de l'effectif (carte 293) ──────────────────────────────────
+   Repris de la maquette validée `assets/rawpages/html/app-team-detail.html`.
+   Les `style="…"` qu'elle portait en ligne sont devenus des classes : le
+   CLAUDE.md interdit les styles inline dans les templates, et cette règle-là
+   l'emporte sur la consigne de copie conforme. Le rendu est identique. */
+.players-widget .drag-handle-cell { display: none; width: 28px; text-align: center; color: var(--dark-3); }
+.players-widget .player-table.edit-mode .drag-handle-cell { display: table-cell; }
+.players-widget td.drag-handle-cell { cursor: grab; font-size: 16px; }
+.players-widget tr.player-table-row.dragging { opacity: 0.4; }
+
+.players-widget .cell-jersey .edit-value,
+.players-widget .cell-name .edit-value { display: none; }
+.players-widget .player-table.edit-mode .cell-jersey .display-value,
+.players-widget .player-table.edit-mode .cell-name .display-value { display: none; }
+.players-widget .player-table.edit-mode .cell-jersey .edit-value,
+.players-widget .player-table.edit-mode .cell-name .edit-value { display: inline-block; }
+.players-widget .edit-value {
+  box-sizing: border-box; padding: 6px 8px; border: 1.5px solid var(--dark-4);
+  border-radius: 4px; font: inherit; color: var(--dark-1);
+}
+.players-widget .jersey-input { width: 52px; text-align: center; }
+.players-widget .name-input { width: 100%; min-width: 140px; }
+.players-widget .cell-jersey.has-duplicate .jersey-input { border-color: var(--red); background: rgba(224,32,32,0.06); }
+
+/* En édition, la ligne cesse d'être un lien vers la fiche joueur : le curseur
+   et le survol doivent cesser de le promettre. */
+.players-widget .player-table.edit-mode tbody tr.player-table-row td.cell-readonly { opacity: 0.5; }
+.players-widget .player-table.edit-mode tbody tr.player-table-row:hover td { background: inherit; cursor: default; }
+
+/* Classes issues des `style` inline de la maquette. */
+.players-widget .cell-jersey .display-value { color: var(--dark-3); font-family: monospace; }
+
+/* Erreur de sauvegarde — pas de maquette dédiée (le cas de concurrence a été
+   jugé rare) : un bandeau discret au-dessus du tableau, le mode édition n'étant
+   pas quitté pour que la saisie ne soit pas perdue. */
+.players-widget .roster-save-error {
+  display: flex; align-items: center; gap: var(--p05);
+  margin-bottom: var(--p1); padding: var(--p05) var(--p1);
+  border: 1px solid var(--red); border-radius: var(--radius-sm);
+  background: rgba(224, 32, 32, 0.06);
+  color: var(--red); font-size: var(--text-xs); font-weight: 600;
+}

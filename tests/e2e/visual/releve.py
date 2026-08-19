@@ -130,24 +130,35 @@ def main(libelle: str) -> int:
         navigateur = p.chromium.launch()
         for nom, url in pages.items():
             for etiquette, largeur in LARGEURS.items():
-                page = navigateur.new_page(viewport={"width": largeur, "height": 900})
-                _neutraliser_le_reseau_externe(page)
-                try:
-                    page.goto(url, wait_until="load", timeout=20000)
-                    page.wait_for_timeout(1500)
-                    page.wait_for_function(PAGE_STABLE, timeout=10000, polling=200)
-                    page.add_style_tag(content=GELER_LES_ANIMATIONS)
-                    page.wait_for_timeout(100)
-                    tout[f"{nom}.{etiquette}"] = page.evaluate(RELEVE)
-                    if etiquette == "desktop":
-                        couverture[nom] = page.eval_on_selector_all(
-                            "link[rel=stylesheet]",
-                            "els => els.map(e => e.getAttribute('href'))",
-                        )
-                except Exception as exc:  # noqa: BLE001 — on veut la liste complète
-                    echecs.append(f"{nom}.{etiquette} — {type(exc).__name__}")
-                finally:
-                    page.close()
+                # Deux tentatives. Sur 86 vues enchaînées, une poignée échouait
+                # au hasard — la page suivante passait, la même vue passait au
+                # relevé d'après. Un dépassement de délai isolé sous charge, pas
+                # un défaut de la page. Un harnais qui rate au hasard finit
+                # ignoré, et c'est un harnais qui ne sert plus à rien.
+                for tentative in (1, 2):
+                    page = navigateur.new_page(
+                        viewport={"width": largeur, "height": 900})
+                    _neutraliser_le_reseau_externe(page)
+                    try:
+                        page.goto(url, wait_until="load", timeout=20000)
+                        page.wait_for_timeout(1500)
+                        page.wait_for_function(PAGE_STABLE, timeout=10000,
+                                               polling=200)
+                        page.add_style_tag(content=GELER_LES_ANIMATIONS)
+                        page.wait_for_timeout(100)
+                        tout[f"{nom}.{etiquette}"] = page.evaluate(RELEVE)
+                        if etiquette == "desktop":
+                            couverture[nom] = page.eval_on_selector_all(
+                                "link[rel=stylesheet]",
+                                "els => els.map(e => e.getAttribute('href'))",
+                            )
+                        break
+                    except Exception as exc:  # noqa: BLE001 — on veut la liste
+                        if tentative == 2:
+                            echecs.append(
+                                f"{nom}.{etiquette} — {type(exc).__name__}")
+                    finally:
+                        page.close()
             print(f"  {nom}")
         navigateur.close()
 

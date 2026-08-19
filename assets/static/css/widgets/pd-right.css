@@ -1,0 +1,158 @@
+/* Panneau de customisation — repris de la maquette
+   assets/rawpages/html/app-player-detail-readonly.html, mode `customise`.
+
+   Ne portent ici que les classes propres au panneau. Le chrome partagé du slot
+   droit (.pd-right, .spend-panel-*, .lock-banner, .tabs, .spp-summary,
+   .mode-chip) vit dans pages/player-detail.css, où le panneau de dépense de SPP
+   le trouve déjà — le dupliquer ferait diverger deux panneaux qui doivent se
+   ressembler. */
+
+.pd-right .custo-zone { border-bottom: 2px solid var(--dark-5); }
+
+.pd-right .lock-banner--admin { background: rgba(0,48,73,0.05); border-color: rgba(0,48,73,0.2); }
+
+/* ── Onglet compétences (ajout libre) ─────────────────────────────────────── */
+.pd-right .custo-skill-controls { padding: var(--p1) var(--p2); border-bottom: 1px solid var(--dark-5); }
+.pd-right .custo-skill-search {
+  width: 100%; max-width: 320px; padding: 8px 12px; border: 1.5px solid var(--dark-4);
+  border-radius: 6px; font-size: var(--text-small); font-family: var(--font-body);
+}
+.pd-right .custo-skill-search:focus { outline: none; border-color: var(--main-blue); }
+
+.pd-right .skill-list { max-height: 320px; overflow-y: auto; }
+.pd-right .skill-list-table { width: 100%; border-collapse: collapse; }
+.pd-right .skill-list-table th {
+  text-align: left; padding: 8px var(--p2); font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+  text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid var(--dark-5);
+  background: var(--dark-6); position: sticky; top: 0; z-index: 1;
+}
+.pd-right .skill-list-table td { padding: 12px var(--p2); font-size: var(--text-small); border-bottom: 1px solid var(--dark-6); vertical-align: middle; }
+.pd-right .skill-list-table tr:last-child td { border-bottom: none; }
+.pd-right .skill-list-table tr:hover td { background: var(--dark-7); }
+.pd-right .skill-col-name { min-width: 220px; }
+.pd-right .skill-name { font-weight: 600; color: var(--dark-1); }
+.pd-right .skill-desc { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; max-width: 320px; }
+
+.pd-right .skill-type-pill { display: inline-block; font-size: var(--text-tiny); font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+.pd-right .type-general  { background: rgba(0,48,73,0.08);     color: var(--main-blue); }
+.pd-right .type-strength { background: rgba(224,32,32,0.08);   color: var(--red); }
+.pd-right .type-agility  { background: rgba(98,149,132,0.12);  color: var(--green); }
+.pd-right .type-passing  { background: rgba(255,215,0,0.18);   color: #9A7800; }
+/* Violet en dur, comme team-player-widget.css : la maquette et skill-picker.css
+   pointent un `--light-1` qui n'existe pas dans common.css — leur pastille
+   mutation retombe donc sur la couleur héritée. */
+.pd-right .type-mutation { background: rgba(111,53,165,0.10);  color: #6f35a5; }
+/* Deux catégories que le référentiel porte et qu'aucune pastille existante ne
+   couvrait — elles retombaient toutes deux sur « général ». */
+.pd-right .type-devious  { background: rgba(255,107,53,0.12);  color: var(--orange); }
+.pd-right .type-traits   { background: var(--dark-6);          color: var(--dark-2); }
+
+.pd-right .btn-add-skill {
+  padding: 6px 16px; border-radius: 6px; border: 1.5px solid var(--main-blue);
+  background: var(--white); color: var(--main-blue); font-size: var(--text-tiny); font-weight: 700;
+  cursor: pointer; white-space: nowrap; transition: all 0.12s;
+}
+.pd-right .btn-add-skill:hover { background: var(--main-blue); color: var(--white); }
+
+/* ── Onglet caractéristiques ──────────────────────────────────────────────── */
+.pd-right .custo-stat-grid-wrap { padding: var(--p2); }
+.pd-right .custo-stat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--p1); }
+.pd-right .custo-stat-card {
+  border: 1.5px solid var(--dark-5); border-radius: 10px; padding: var(--p1);
+  display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+}
+.pd-right .custo-stat-name { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.4px; }
+.pd-right .custo-stat-current { font-family: var(--font-title); font-size: var(--h5); font-weight: 800; color: var(--dark-1); }
+.pd-right .custo-stat-preview {
+  font-size: var(--text-tiny); font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap;
+}
+.pd-right .custo-stat-preview-sep  { color: var(--dark-4); }
+.pd-right .custo-stat-preview-up   { color: var(--green); }
+.pd-right .custo-stat-preview-down { color: var(--dark-3); }
+.pd-right .custo-stat-actions { width: 100%; display: flex; flex-direction: column; gap: 4px; }
+.pd-right .custo-stat-add-btn {
+  width: 100%; padding: 6px; border-radius: 6px; border: 1.5px solid var(--main-blue);
+  background: var(--white); color: var(--main-blue); font-size: var(--text-tiny); font-weight: 700;
+  cursor: pointer; transition: all 0.12s;
+}
+.pd-right .custo-stat-add-btn:hover:not(:disabled) { background: var(--main-blue); color: var(--white); }
+.pd-right .custo-stat-add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+/* Dégrader reste secondaire : même famille, moins d'insistance — retirer une
+   caractéristique n'est pas le geste courant. */
+.pd-right .custo-stat-add-btn--degrade { border-color: var(--dark-4); color: var(--dark-2); }
+.pd-right .custo-stat-add-btn--degrade:hover:not(:disabled) { background: var(--dark-2); border-color: var(--dark-2); color: var(--white); }
+.pd-right .custo-stat-pending { font-size: 10px; color: var(--main-blue); font-weight: 700; }
+
+/* ── Onglets prix / SPP ───────────────────────────────────────────────────── */
+.pd-right .custo-action-panel { padding: var(--p2); display: flex; flex-direction: column; gap: var(--p2); }
+.pd-right .custo-action-card {
+  border: 1.5px solid var(--dark-5); border-radius: 10px; padding: var(--p2);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--p2); flex-wrap: wrap;
+}
+.pd-right .custo-action-info { display: flex; flex-direction: column; gap: 2px; }
+.pd-right .custo-action-label { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.4px; }
+.pd-right .custo-action-current { font-family: var(--font-title); font-size: var(--h5); font-weight: 800; color: var(--dark-1); }
+.pd-right .custo-action-form { display: flex; align-items: center; gap: 8px; }
+.pd-right .custo-action-input {
+  width: 150px; padding: 8px 12px; border: 1.5px solid var(--dark-4);
+  border-radius: 6px; font-size: var(--text-small); font-family: var(--font-body);
+}
+.pd-right .custo-action-input:focus { outline: none; border-color: var(--main-blue); }
+.pd-right .custo-action-unit { font-size: var(--text-tiny); color: var(--dark-3); }
+.pd-right .custo-action-btn {
+  padding: 8px 18px; border-radius: 6px; border: 1.5px solid var(--main-blue);
+  background: var(--white); color: var(--main-blue); font-size: var(--text-tiny); font-weight: 700;
+  cursor: pointer; white-space: nowrap; transition: all 0.12s;
+}
+.pd-right .custo-action-btn:hover:not(:disabled) { background: var(--main-blue); color: var(--white); }
+.pd-right .custo-action-btn:disabled { border-color: var(--dark-4); color: var(--dark-4); cursor: default; }
+
+/* ── Modifications en attente et pied de panneau ──────────────────────────── */
+.pd-right .spp-summary-header {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--p2); flex-wrap: wrap;
+  margin-bottom: var(--p1);
+}
+.pd-right .spp-summary-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); }
+.pd-right .mode-chip-icon { display: inline-flex; align-items: center; line-height: 1; }
+.pd-right .btn-cancel-entry {
+  font-size: var(--text-tiny); color: var(--dark-3); cursor: pointer; background: none;
+  border: 1px solid var(--dark-5); padding: 4px 10px; border-radius: 5px; transition: all 0.12s;
+}
+.pd-right .btn-cancel-entry:hover { color: var(--red); border-color: var(--red); }
+
+.pd-right .spend-panel-footer { padding: var(--p1) var(--p2); border-top: 2px solid var(--dark-5); display: flex; gap: var(--p1); }
+.pd-right .btn-submit {
+  flex: 1; padding: 12px var(--p1); background: var(--main-blue); color: var(--white);
+  border-radius: 8px; font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
+  cursor: pointer; border: none; text-align: center; transition: opacity 0.15s;
+}
+.pd-right .btn-submit:hover:not(:disabled) { opacity: 0.9; }
+.pd-right .btn-submit:disabled { opacity: 0.4; cursor: default; }
+.pd-right .btn-cancel-all {
+  padding: 12px var(--p2); background: var(--white); color: var(--dark-3);
+  border-radius: 8px; font-size: var(--text-small); font-weight: 700;
+  cursor: pointer; border: 1.5px solid var(--dark-4); text-align: center; transition: all 0.15s;
+}
+.pd-right .btn-cancel-all:hover { border-color: var(--red); color: var(--red); }
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 960px) {
+  .pd-right .custo-stat-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+  .pd-right .custo-stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .pd-right .custo-action-card { flex-direction: column; align-items: stretch; }
+  .pd-right .custo-action-form { flex-wrap: wrap; }
+}
+
+/* Motif de refus — affiché là où l'on a cliqué, jamais en tête de panneau : un
+   bandeau global obligerait à deviner laquelle des quatre actions a échoué. */
+.pd-right .custo-refusal {
+  margin: var(--p1) var(--p2) 0; padding: 8px var(--p1);
+  background: rgba(224,32,32,0.06); border: 1px solid rgba(224,32,32,0.25);
+  border-radius: 6px; font-size: var(--text-tiny); color: var(--red); font-weight: 600;
+}
+/* Dans une carte de caractéristique, l'espace est compté : pas de marge
+   latérale, le texte tient sous les boutons. */
+.pd-right .custo-stat-card .custo-refusal { margin: 4px 0 0; padding: 6px; text-align: center; }

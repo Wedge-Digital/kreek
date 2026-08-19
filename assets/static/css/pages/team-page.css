@@ -1,0 +1,215 @@
+.team-page { max-width: 1400px; margin: 0 auto; }
+
+/* En-tête équipe */
+.team-page .team-header {
+  background: var(--white); border-radius: 10px 10px 0 0; padding: var(--p2);
+  display: flex; align-items: flex-start; gap: var(--p3);
+  border-bottom: 2px solid var(--dark-5);
+}
+.team-page .team-header-logo {
+  width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, #003049, #555770);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-weight: 900; font-size: 36px; color: var(--white);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  overflow: hidden;
+}
+.team-page .team-header-info { flex: 1; display: flex; flex-direction: column; gap: var(--p1); }
+.team-page .team-header-name { font-family: var(--font-title); font-size: var(--h2); font-weight: 800; color: var(--dark-0); }
+.team-page .team-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
+.team-page .meta-item   { display: flex; flex-direction: column; gap: 2px; }
+.team-page .meta-label  { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
+.team-page .meta-value  { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+
+/* En-tête — ligne nom + badge */
+.team-page .team-header-top  { display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap; }
+
+/* Badge état */
+.team-page .team-status-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 20px;
+  font-size: var(--text-tiny); font-weight: 700; white-space: nowrap;
+}
+.team-page .team-status-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.team-page .team-status-badge--pending    { background: rgba(255,107,53,0.12);  color: var(--orange); }
+.team-page .team-status-badge--ready      { background: rgba(98,149,132,0.15); color: var(--green); }
+.team-page .team-status-badge--phase      { background: rgba(0,48,73,0.10);    color: var(--main-blue); }
+.team-page .team-status-badge--offseason  { background: var(--dark-6);         color: var(--dark-3); }
+.team-page .team-status-badge--dismissed  { background: rgba(224,32,32,0.10);  color: var(--red); }
+
+/* Icône roster (droite du header) */
+.team-page .team-header-roster { display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
+.team-page .roster-icon {
+  width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, #629584, #3a6655);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-weight: 900; font-size: 28px; color: var(--white);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+.team-page .roster-icon--img { background: transparent; box-shadow: none; padding: 4px; object-fit: contain; }
+.team-page .roster-icon-label { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; text-align: center; max-width: 120px; }
+
+/* Bandeau d'état contextuel */
+.team-page .state-banner {
+  border-radius: 0; padding: var(--p1) var(--p2);
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  border-bottom: 2px solid var(--dark-5);
+}
+.team-page .state-banner-icon { font-size: 22px; flex-shrink: 0; }
+.team-page .state-banner-text { flex: 1; font-size: var(--text-small); color: var(--dark-2); min-width: 220px; }
+.team-page .state-banner-text strong { color: var(--dark-1); }
+.team-page .state-banner-cta {
+  padding: 8px 16px; border-radius: 6px; font-size: var(--text-tiny); font-weight: 700;
+  white-space: nowrap; border: none; cursor: pointer; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+  font-family: inherit; background: var(--main-blue); color: var(--white);
+}
+.team-page .state-banner-cta--outline {
+  background: transparent; border: 1.5px solid var(--dark-3); color: var(--dark-2);
+}
+.team-page .state-banner-cta--outline:hover { border-color: var(--main-blue); color: var(--main-blue); }
+.team-page .state-banner--pending { background: rgba(255,107,53,0.06); }
+.team-page .state-banner--ready   { background: rgba(98,149,132,0.06); }
+.team-page .state-banner--phase   { background: rgba(0,48,73,0.05); }
+
+/* Barre d'actions */
+.team-page .team-actions {
+  background: var(--white); padding: 10px var(--p2);
+  display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid var(--dark-5);
+}
+.team-page .team-actions .btn-team-action {
+  padding: 7px 16px; border-radius: 6px; font-size: var(--text-small);
+  border: none; background: var(--main-blue); color: var(--white);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.team-page .team-actions .btn-team-action:hover { opacity: 0.85; }
+.team-page .team-actions .btn-team-delete {
+  padding: 7px 16px; border-radius: 6px; font-size: var(--text-small); font-weight: 600;
+  border: none; background: var(--red); color: var(--white);
+  cursor: pointer; margin-left: auto;
+  transition: opacity 0.15s;
+}
+.team-page .team-actions .btn-team-delete:hover { opacity: 0.85; }
+
+/* Tableau joueurs */
+.team-page .players-panel { background: var(--white); padding: var(--p2); border-bottom: 1px solid var(--dark-5); }
+
+/* Tableau staff */
+.team-page .staff-panel { background: var(--white); border-radius: 0 0 10px 10px; padding: var(--p2); }
+.team-page .staff-panel-title {
+  font-size: var(--text-small); font-weight: 700; color: var(--dark-2);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: var(--p1);
+}
+.team-page .staff-table td { color: var(--dark-1); }
+/* ── Classes reprises des styles inline du template ────────────────────────────
+   Le CLAUDE.md interdit les attributs `style` dans les templates : les règles
+   qui y étaient dispersées vivent ici. */
+
+.team-page .team-back-nav  { margin-bottom: var(--p1); }
+.team-page .team-back-link { color: var(--dark-3); font-size: var(--text-tiny); cursor: pointer; }
+
+.team-page .team-header-logo-img { object-fit: cover; display: block; }
+
+.team-page .team-tabs {
+  background: var(--white); padding: 0 var(--p2);
+  border-bottom: 1px solid var(--dark-5);
+}
+
+.team-page .team-players-loading { padding: var(--p2); color: var(--dark-3); }
+
+/* ── Table de staff ───────────────────────────────────────────────────────
+   Copie des règles de `widgets/players-widget.css`, déclarations inchangées.
+
+   La fiche d'équipe affiche une table `.player-table staff-table` mais ne
+   charge que cette feuille, qui n'en définissait aucune règle : le style venait
+   de la feuille du widget roster, injecté dans la même page. Dépendance
+   accidentelle — sans ce widget, la table de staff serait nue — et elle a cassé
+   dès que la feuille du widget a reçu sa portée.
+
+   Copier plutôt qu'extraire un composant : `.player-table` a deux définitions
+   divergentes dans le dépôt, celle du widget et celle de `team-build.css`. En
+   extraire une seule reviendrait à choisir un gagnant, ce que la carte 341
+   interdit — c'est un changement de rendu, et il lui faut sa propre carte.
+
+   Une fois les portées posées, la duplication est inoffensive : deux règles
+   sous des préfixes distincts ne peuvent plus se rencontrer. C'est l'absence de
+   portée qui produit les collisions, pas la répétition. */
+.team-page .player-table  { width: 100%; border-collapse: collapse; padding: var(--p1)}
+.team-page .player-table th {
+    text-align: left; padding: 10px 12px;
+    font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--dark-5); background: var(--dark-6);
+}
+.team-page .player-table td                          { padding: 12px; font-size: var(--text-small); }
+.team-page .player-table tbody tr:nth-child(odd) td { background: var(--white); }
+.team-page .player-table tbody tr:nth-child(even) td { background: var(--dark-6); }
+.team-page .player-table tbody tr:hover td { background: var(--dark-5); cursor: pointer; }
+.team-page .player-table tbody.no-hover tr:nth-child(odd):hover td { background: var(--white);  cursor: default; }
+.team-page .player-table tbody.no-hover tr:nth-child(even):hover td { background: var(--dark-6); cursor: default; }
+.team-page .player-table tr:last-child td { border-bottom: none; }
+.team-page .player-table tr.subtotal-row td {
+    border-top: 2px solid var(--dark-4); border-bottom: none;
+    background: var(--dark-6); font-weight: 700; color: var(--dark-0);
+    font-size: var(--text-small);
+}
+
+@media (max-width: 768px) {
+  .team-page .player-table th { padding: 8px; }
+  .team-page .player-table td { padding: 8px; }
+  .team-page .player-table th.player-col-stat,
+  .team-page .player-table td.player-stat { padding-left: 3px; padding-right: 3px; }
+  .team-page .player-table tbody td:nth-child(2),
+  .team-page .player-table tbody td:nth-child(3) {
+    max-width: 78px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+}
+
+/* Table du staff — colonnes numériques centrées, sous-total aligné à droite
+   contre la colonne de son montant. */
+.team-page .staff-col-num          { text-align: center; }
+.team-page .staff-num              { text-align: center; }
+.team-page .staff-subtotal-label   { text-align: right; }
+
+/* ─── Responsive ──────────────────────────────────────────────────────────────
+   Un seul breakpoint : 768px, celui de référence du projet. Le chrome global
+   (en-tête et tabbar mobiles) est géré par `layout-app.css`. */
+
+@media (max-width: 768px) {
+  /* `.page-content` ne pose aucun retrait horizontal sur mobile : sans ça, les
+     panneaux de la page viennent coller aux deux bords de l'écran. */
+  .team-page { padding: 0 var(--p1); }
+
+  /* L'en-tête empile au lieu de juxtaposer : le logo de 120px laissait moins de
+     220px au texte, et le nom de l'équipe comme les métadonnées sortaient de
+     l'écran sans que rien ne le signale. */
+  .team-page .team-header {
+    flex-direction: column; align-items: flex-start;
+    gap: var(--p1); padding: var(--p1);
+  }
+  .team-page .team-header-logo { width: 72px; height: 72px; font-size: 24px; }
+  .team-page .team-header-name { font-size: var(--h4); overflow-wrap: anywhere; }
+  .team-page .team-header-meta { gap: var(--p1); }
+  /* Sans `min-width: 0`, un élément flex refuse de descendre sous la largeur de
+     son contenu et déborde au lieu de se replier. */
+  .team-page .meta-item  { min-width: 0; }
+  .team-page .meta-value { overflow-wrap: anywhere; }
+
+  /* Le bloc roster passe en ligne : deux lignes gagnées en hauteur. */
+  .team-page .team-header-roster { flex-direction: row; align-items: center; gap: 8px; }
+  .team-page .roster-icon        { width: 40px; height: 40px; }
+  .team-page .roster-icon-label  { max-width: none; text-align: left; }
+
+  .team-page .state-banner      { padding: var(--p1); gap: 8px; }
+  /* Le texte prend toute la ligne et le bouton passe dessous : côte à côte, le
+     message se tassait sur six lignes dans une colonne de 150px. */
+  .team-page .state-banner-text { min-width: 0; flex: 1 1 100%; }
+
+  .team-page .team-actions  { padding: 8px var(--p1); flex-wrap: wrap; }
+  .team-page .team-tabs     { padding: 0 var(--p1); }
+  .team-page .players-panel { padding: var(--p1); }
+  .team-page .staff-panel   { padding: var(--p1); }
+}
