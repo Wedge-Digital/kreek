@@ -1,3 +1,7 @@
+/* css:global — chargée par dix templates de rapport de match : c'est une
+   feuille partagée, malgré son dossier `pages/`. La scoper sous un nom de page
+   la ferait disparaître de neuf pages sur dix, sans erreur ni avertissement. */
+
 /* ══════════════════════════════════════════════════════════════════════════════
    Match Report — Shared CSS
    ══════════════════════════════════════════════════════════════════════════════ */
