@@ -95,12 +95,24 @@ RELEVE = """
     for (let i = 0; i < s.length; i++) vals.push(s[i] + ':' + s.getPropertyValue(s[i]));
     sortie[chemin + (pseudo || '')] = el.tagName + '§' + (el.className || '') + '§' + vals.join(';');
   };
+  // Les éléments qui ne rendent rien sont **ignorés, et ne consomment pas
+  // d'indice** : la clé d'un élément est son chemin dans l'arbre, donc retirer
+  // un `<link>` décalerait tous ses frères suivants et produirait des milliers
+  // d'écarts qui ne sont que du désalignement.
+  //
+  // Ce n'est pas un détail de confort : la carte 342 supprime 146 `<link>` d'un
+  // coup, et sans cette exclusion le harnais serait inutilisable là où il sert
+  // le plus.
+  const INVISIBLES = new Set(['LINK', 'SCRIPT', 'STYLE', 'META', 'TITLE', 'TEMPLATE']);
   const parcours = (el, chemin) => {
     lire(el, chemin, null);
     lire(el, chemin, '::before');
     lire(el, chemin, '::after');
     let i = 0;
-    for (const enfant of el.children) parcours(enfant, chemin + '/' + (i++));
+    for (const enfant of el.children) {
+      if (INVISIBLES.has(enfant.tagName)) continue;
+      parcours(enfant, chemin + '/' + (i++));
+    }
   };
   parcours(document.body, '0');
   return sortie;
