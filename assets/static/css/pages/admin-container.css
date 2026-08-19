@@ -9,7 +9,8 @@
 }
 
 /* ── Banner ── */
-.admin-banner {
+.admin-container .admin-banner,
+.admin-container.admin-banner {
   background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
   border-radius: 12px;
   padding: var(--p2);
@@ -17,24 +18,31 @@
   align-items: center;
   gap: var(--p2);
 }
-.admin-banner-icon {
+.admin-container .admin-banner-icon,
+.admin-container.admin-banner-icon {
   width: 56px; height: 56px; border-radius: 12px;
   background: rgba(255,255,255,0.12);
   display: flex; align-items: center; justify-content: center;
   font-size: 28px; flex-shrink: 0;
 }
-.admin-banner-info { flex: 1; }
-.admin-banner-title {
+.admin-container .admin-banner-info,
+.admin-container.admin-banner-info { flex: 1; }
+.admin-container .admin-banner-title,
+.admin-container.admin-banner-title {
   font-family: var(--font-title); font-size: var(--h4); font-weight: 700;
   color: var(--white);
 }
-.admin-banner-sub { font-size: var(--text-tiny); color: rgba(255,255,255,0.65); margin-top: 4px; }
-.admin-banner-back {
+.admin-container .admin-banner-sub,
+.admin-container.admin-banner-sub { font-size: var(--text-tiny); color: rgba(255,255,255,0.65); margin-top: 4px; }
+.admin-container .admin-banner-back,
+.admin-container.admin-banner-back {
   font-size: var(--text-tiny); color: rgba(255,255,255,0.5);
   text-decoration: none; margin-top: 4px; display: inline-block;
 }
-.admin-banner-back:hover { color: rgba(255,255,255,0.8); }
-.admin-banner-badge {
+.admin-container .admin-banner-back:hover,
+.admin-container.admin-banner-back:hover { color: rgba(255,255,255,0.8); }
+.admin-container .admin-banner-badge,
+.admin-container.admin-banner-badge {
   background: rgba(255,107,53,0.25); color: var(--orange);
   font-size: var(--text-tiny); font-weight: 700;
   padding: 4px 12px; border-radius: 20px;
@@ -42,7 +50,8 @@
 }
 
 /* ── Tabs ── */
-.admin-tabs {
+.admin-container .admin-tabs,
+.admin-container.admin-tabs {
   display: flex;
   gap: 4px;
   background: var(--white);
@@ -50,7 +59,8 @@
   padding: 6px;
   border: 1px solid var(--dark-5);
 }
-.admin-tab {
+.admin-container .admin-tab,
+.admin-container.admin-tab {
   flex: 1; text-align: center;
   padding: 8px var(--p1);
   border-radius: 7px;
@@ -59,11 +69,14 @@
   transition: all 0.15s;
   text-decoration: none;
 }
-.admin-tab:hover  { background: var(--dark-6); color: var(--dark-1); }
-.admin-tab.active { background: var(--main-blue); color: var(--white); }
+.admin-container .admin-tab:hover,
+.admin-container.admin-tab:hover  { background: var(--dark-6); color: var(--dark-1); }
+.admin-container .admin-tab.active,
+.admin-container.admin-tab.active { background: var(--main-blue); color: var(--white); }
 
 /* ── Panel card (shared) ── */
-.admin-panel {
+.admin-container .admin-panel,
+.admin-container.admin-panel {
   background: var(--white);
   border-radius: 12px;
   padding: var(--p2);
@@ -72,51 +85,63 @@
   gap: var(--p2);
   margin: var(--p1) 0;
 }
-.panel-header {
+.admin-container .panel-header,
+.admin-container.panel-header {
   display: flex; align-items: center; justify-content: space-between;
 }
-.panel-title {
+.admin-container .panel-title,
+.admin-container.panel-title {
   font-family: var(--font-title); font-size: var(--h5);
   font-weight: 700; color: var(--dark-1);
 }
 
 /* ── Actions bar (shared) ── */
-.actions-bar {
+.admin-container .actions-bar,
+.admin-container.actions-bar {
   display: flex; align-items: center; justify-content: space-between;
   gap: var(--p1);
 }
-.actions-bar-left { display: flex; gap: var(--p1); align-items: center; }
-.actions-bar-right { display: flex; gap: 8px; }
+.admin-container .actions-bar-left,
+.admin-container.actions-bar-left { display: flex; gap: var(--p1); align-items: center; }
+.admin-container .actions-bar-right,
+.admin-container.actions-bar-right { display: flex; gap: 8px; }
 
 /* ── Buttons (shared) ── */
-.btn-primary-sm {
+.admin-container .btn-primary-sm,
+.admin-container.btn-primary-sm {
   padding: 8px 16px; border-radius: 7px;
   background: var(--main-blue); color: var(--white);
   font-size: var(--text-tiny); font-weight: 700;
   cursor: pointer; border: none; transition: opacity 0.15s;
 }
-.btn-primary-sm:hover { opacity: 0.9; }
+.admin-container .btn-primary-sm:hover,
+.admin-container.btn-primary-sm:hover { opacity: 0.9; }
 
-.btn-outline-sm {
+.admin-container .btn-outline-sm,
+.admin-container.btn-outline-sm {
   padding: 8px 16px; border-radius: 7px;
   background: var(--white); color: var(--dark-2);
   font-size: var(--text-tiny); font-weight: 600;
   cursor: pointer; border: 1px solid var(--dark-5);
   transition: all 0.15s;
 }
-.btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
+.admin-container .btn-outline-sm:hover,
+.admin-container.btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
 
-.btn-danger-sm {
+.admin-container .btn-danger-sm,
+.admin-container.btn-danger-sm {
   padding: 8px 16px; border-radius: 7px;
   background: var(--white); color: var(--dark-3);
   font-size: var(--text-tiny); font-weight: 600;
   cursor: pointer; border: 1px solid var(--dark-5);
   transition: all 0.15s;
 }
-.btn-danger-sm:hover { border-color: var(--red); color: var(--red); background: rgba(224,32,32,0.04); }
+.admin-container .btn-danger-sm:hover,
+.admin-container.btn-danger-sm:hover { border-color: var(--red); color: var(--red); background: rgba(224,32,32,0.04); }
 
 /* ── Summary tab ── */
-.admin-summary {
+.admin-container .admin-summary,
+.admin-container.admin-summary {
   display: flex;
   flex-direction: column;
   gap: var(--p1);
@@ -124,7 +149,8 @@
 }
 
 /* ── Placeholder ── */
-.admin-placeholder {
+.admin-container .admin-placeholder,
+.admin-container.admin-placeholder {
   text-align: center;
   padding: var(--p4);
   color: var(--dark-3);

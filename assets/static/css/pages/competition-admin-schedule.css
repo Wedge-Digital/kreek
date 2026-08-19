@@ -1,5 +1,6 @@
 /* ── Schedule layout (split) ── */
-.schedule-layout {
+.competition-admin-schedule .schedule-layout,
+.competition-admin-schedule.schedule-layout {
   display: grid;
   grid-template-columns: 280px 1fr;
   gap: var(--p2);
@@ -7,7 +8,8 @@
 }
 
 /* ── Round sidebar ── */
-.round-sidebar {
+.competition-admin-schedule .round-sidebar,
+.competition-admin-schedule.round-sidebar {
   background: var(--white);
   border: 1px solid var(--dark-5);
   border-radius: 10px;
@@ -15,77 +17,98 @@
   flex-direction: column;
   overflow: hidden;
 }
-.round-sidebar-header {
+.competition-admin-schedule .round-sidebar-header,
+.competition-admin-schedule.round-sidebar-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px var(--p2);
   border-bottom: 1px solid var(--dark-6);
 }
-.round-sidebar-title {
+.competition-admin-schedule .round-sidebar-title,
+.competition-admin-schedule.round-sidebar-title {
   font-family: var(--font-title); font-size: var(--text-small);
   font-weight: 700; color: var(--dark-1);
 }
-.round-sidebar-count {
+.competition-admin-schedule .round-sidebar-count,
+.competition-admin-schedule.round-sidebar-count {
   font-size: var(--text-tiny); font-weight: 700;
   padding: 2px 10px; border-radius: 20px;
   background: rgba(0,48,73,0.08); color: var(--main-blue);
 }
-.round-sidebar-list {
+.competition-admin-schedule .round-sidebar-list,
+.competition-admin-schedule.round-sidebar-list {
   flex: 1;
   overflow-y: auto;
   max-height: 480px;
 }
-.round-sidebar-empty {
+.competition-admin-schedule .round-sidebar-empty,
+.competition-admin-schedule.round-sidebar-empty {
   padding: var(--p2);
   text-align: center;
   font-size: var(--text-tiny); color: var(--dark-4); font-style: italic;
 }
-.round-sidebar-actions {
+.competition-admin-schedule .round-sidebar-actions,
+.competition-admin-schedule.round-sidebar-actions {
   padding: var(--p1);
   border-top: 1px solid var(--dark-6);
   display: flex; flex-direction: column; gap: 6px;
 }
-.round-sidebar-actions .btn-outline-sm {
+.competition-admin-schedule .round-sidebar-actions .btn-outline-sm,
+.competition-admin-schedule.round-sidebar-actions .btn-outline-sm {
   width: 100%; text-align: center;
 }
 
 /* ── Round item ── */
-.round-item {
+.competition-admin-schedule .round-item,
+.competition-admin-schedule.round-item {
   display: flex; align-items: center; gap: 10px;
   padding: 10px var(--p2);
   cursor: pointer;
   transition: all 0.15s;
   border-bottom: 1px solid var(--dark-6);
 }
-.round-item:last-child { border-bottom: none; }
-.round-item:hover { background: var(--dark-7); }
-.round-item.active { background: rgba(0,48,73,0.06); border-left: 3px solid var(--main-blue); }
-.round-item-icon {
+.competition-admin-schedule .round-item:last-child,
+.competition-admin-schedule.round-item:last-child { border-bottom: none; }
+.competition-admin-schedule .round-item:hover,
+.competition-admin-schedule.round-item:hover { background: var(--dark-7); }
+.competition-admin-schedule .round-item.active,
+.competition-admin-schedule.round-item.active { background: rgba(0,48,73,0.06); border-left: 3px solid var(--main-blue); }
+.competition-admin-schedule .round-item-icon,
+.competition-admin-schedule.round-item-icon {
   width: 28px; height: 28px; border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
   font-size: 12px; font-weight: 700; color: var(--white); flex-shrink: 0;
   background: var(--main-blue);
 }
-.round-item--rest .round-item-icon {
+.competition-admin-schedule .round-item--rest .round-item-icon,
+.competition-admin-schedule.round-item--rest .round-item-icon {
   background: var(--orange);
   font-size: 14px;
 }
-.round-item-info { flex: 1; min-width: 0; }
-.round-item-name {
+.competition-admin-schedule .round-item-info,
+.competition-admin-schedule.round-item-info { flex: 1; min-width: 0; }
+.competition-admin-schedule .round-item-name,
+.competition-admin-schedule.round-item-name {
   font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.round-item-date {
+.competition-admin-schedule .round-item-date,
+.competition-admin-schedule.round-item-date {
   font-size: 11px; color: var(--dark-4); margin-top: 2px;
 }
-.round-item-status {
+.competition-admin-schedule .round-item-status,
+.competition-admin-schedule.round-item-status {
   width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
 }
-.round-item-status--upcoming { background: var(--dark-5); }
-.round-item-status--completed { background: var(--green); }
-.round-item-status--in_progress { background: var(--orange); }
+.competition-admin-schedule .round-item-status--upcoming,
+.competition-admin-schedule.round-item-status--upcoming { background: var(--dark-5); }
+.competition-admin-schedule .round-item-status--completed,
+.competition-admin-schedule.round-item-status--completed { background: var(--green); }
+.competition-admin-schedule .round-item-status--in_progress,
+.competition-admin-schedule.round-item-status--in_progress { background: var(--orange); }
 
 /* ── Round detail ── */
-.round-detail {
+.competition-admin-schedule .round-detail,
+.competition-admin-schedule.round-detail {
   background: var(--white);
   border: 1px solid var(--dark-5);
   border-radius: 10px;
@@ -93,7 +116,8 @@
   gap: var(--p2);
   padding: var(--p2);
 }
-.round-detail-empty {
+.competition-admin-schedule .round-detail-empty,
+.competition-admin-schedule.round-detail-empty {
   background: var(--white);
   border: 1px solid var(--dark-5);
   border-radius: 10px;
@@ -101,67 +125,86 @@
   text-align: center;
   color: var(--dark-3);
 }
-.round-detail-empty .empty-state-icon { font-size: 36px; margin-bottom: 8px; }
-.round-detail-empty .empty-state-text { font-size: var(--text-small); }
-.round-detail-header {
+.competition-admin-schedule .round-detail-empty .empty-state-icon,
+.competition-admin-schedule.round-detail-empty .empty-state-icon { font-size: 36px; margin-bottom: 8px; }
+.competition-admin-schedule .round-detail-empty .empty-state-text,
+.competition-admin-schedule.round-detail-empty .empty-state-text { font-size: var(--text-small); }
+.competition-admin-schedule .round-detail-header,
+.competition-admin-schedule.round-detail-header {
   display: flex; align-items: center; justify-content: space-between;
 }
-.round-detail-title {
+.competition-admin-schedule .round-detail-title,
+.competition-admin-schedule.round-detail-title {
   font-family: var(--font-title); font-size: var(--h5);
   font-weight: 700; color: var(--dark-1);
 }
-.round-detail-badge {
+.competition-admin-schedule .round-detail-badge,
+.competition-admin-schedule.round-detail-badge {
   font-size: var(--text-tiny); font-weight: 700;
   padding: 3px 10px; border-radius: 20px;
 }
-.round-detail-badge--fixed_date {
+.competition-admin-schedule .round-detail-badge--fixed_date,
+.competition-admin-schedule.round-detail-badge--fixed_date {
   background: rgba(0,48,73,0.08); color: var(--main-blue);
 }
-.round-detail-badge--time_frame {
+.competition-admin-schedule .round-detail-badge--time_frame,
+.competition-admin-schedule.round-detail-badge--time_frame {
   background: rgba(68,160,141,0.12); color: var(--green);
 }
-.round-detail-badge--rest {
+.competition-admin-schedule .round-detail-badge--rest,
+.competition-admin-schedule.round-detail-badge--rest {
   background: rgba(255,107,53,0.12); color: var(--orange);
 }
 
 /* ── Rest day ── */
-.round-detail-rest {
+.competition-admin-schedule .round-detail-rest,
+.competition-admin-schedule.round-detail-rest {
   text-align: center; padding: var(--p4);
 }
-.round-detail-rest-icon { font-size: 48px; margin-bottom: 8px; }
-.round-detail-rest-text { font-size: var(--text-small); color: var(--dark-3); }
+.competition-admin-schedule .round-detail-rest-icon,
+.competition-admin-schedule.round-detail-rest-icon { font-size: 48px; margin-bottom: 8px; }
+.competition-admin-schedule .round-detail-rest-text,
+.competition-admin-schedule.round-detail-rest-text { font-size: var(--text-small); color: var(--dark-3); }
 
 /* ── Date config ── */
-.round-date-config {
+.competition-admin-schedule .round-date-config,
+.competition-admin-schedule.round-date-config {
   background: var(--dark-7);
   border-radius: 8px;
   padding: var(--p1) var(--p2);
   display: flex; align-items: center; gap: var(--p2);
 }
-.date-config-label {
+.competition-admin-schedule .date-config-label,
+.competition-admin-schedule.date-config-label {
   font-size: var(--text-tiny); font-weight: 600; color: var(--dark-2);
   flex-shrink: 0;
 }
-.date-config-mode {
+.competition-admin-schedule .date-config-mode,
+.competition-admin-schedule.date-config-mode {
   display: flex; gap: 4px;
 }
-.date-mode-btn {
+.competition-admin-schedule .date-mode-btn,
+.competition-admin-schedule.date-mode-btn {
   padding: 5px 14px; border-radius: 6px;
   font-size: var(--text-tiny); font-weight: 600;
   border: 1px solid var(--dark-5);
   background: var(--white); color: var(--dark-3);
   cursor: pointer; transition: all 0.12s;
 }
-.date-mode-btn.active {
+.competition-admin-schedule .date-mode-btn.active,
+.competition-admin-schedule.date-mode-btn.active {
   background: var(--main-blue); color: var(--white); border-color: var(--main-blue);
 }
-.date-mode-btn:hover:not(.active) {
+.competition-admin-schedule .date-mode-btn:hover:not(.active),
+.competition-admin-schedule.date-mode-btn:hover:not(.active) {
   border-color: var(--dark-4); color: var(--dark-1);
 }
-.date-config-inputs {
+.competition-admin-schedule .date-config-inputs,
+.competition-admin-schedule.date-config-inputs {
   display: flex; align-items: center; gap: 8px;
 }
-.date-input {
+.competition-admin-schedule .date-input,
+.competition-admin-schedule.date-input {
   padding: 6px 10px;
   border: 1px solid var(--dark-5);
   border-radius: 6px;
@@ -172,34 +215,43 @@
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.date-input:focus {
+.competition-admin-schedule .date-input:focus,
+.competition-admin-schedule.date-input:focus {
   border-color: var(--main-blue);
   box-shadow: 0 0 0 3px rgba(0,48,73,0.08);
 }
-.date-sep { color: var(--dark-4); font-weight: 600; }
+.competition-admin-schedule .date-sep,
+.competition-admin-schedule.date-sep { color: var(--dark-4); font-weight: 600; }
 
 /* ── Match actions bar ── */
-.match-actions-bar {
+.competition-admin-schedule .match-actions-bar,
+.competition-admin-schedule.match-actions-bar {
   display: flex; align-items: center; justify-content: space-between;
   padding: 8px 0;
   border-bottom: 1px solid var(--dark-6);
 }
-.match-actions-right { display: flex; gap: 8px; }
+.competition-admin-schedule .match-actions-right,
+.competition-admin-schedule.match-actions-right { display: flex; gap: 8px; }
 
 /* ── Add match form ── */
-.add-match-form {
+.competition-admin-schedule .add-match-form,
+.competition-admin-schedule.add-match-form {
   background: var(--dark-7);
   border-radius: 8px;
   padding: var(--p2);
 }
-.add-match-form.hidden { display: none; }
-.add-match-form-inner {
+.competition-admin-schedule .add-match-form.hidden,
+.competition-admin-schedule.add-match-form.hidden { display: none; }
+.competition-admin-schedule .add-match-form-inner,
+.competition-admin-schedule.add-match-form-inner {
   display: flex; flex-direction: column; gap: var(--p1);
 }
-.add-match-selects {
+.competition-admin-schedule .add-match-selects,
+.competition-admin-schedule.add-match-selects {
   display: flex; align-items: center; gap: 8px;
 }
-.add-match-select {
+.competition-admin-schedule .add-match-select,
+.competition-admin-schedule.add-match-select {
   flex: 1;
   padding: 8px 10px;
   border: 1px solid var(--dark-5);
@@ -207,25 +259,33 @@
   font-size: var(--text-tiny);
   background: var(--white);
 }
-.add-match-vs {
+.competition-admin-schedule .add-match-vs,
+.competition-admin-schedule.add-match-vs {
   font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
   flex-shrink: 0;
 }
-.add-match-buttons {
+.competition-admin-schedule .add-match-buttons,
+.competition-admin-schedule.add-match-buttons {
   display: flex; gap: 8px; justify-content: flex-end;
 }
 
 /* ── TomSelect team options ── */
-.ts-team-option { padding: 4px 0; }
-.ts-team-name { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); }
-.ts-team-meta { font-size: 11px; color: var(--dark-3); margin-top: 1px; }
+.competition-admin-schedule .ts-team-option,
+.competition-admin-schedule.ts-team-option { padding: 4px 0; }
+.competition-admin-schedule .ts-team-name,
+.competition-admin-schedule.ts-team-name { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); }
+.competition-admin-schedule .ts-team-meta,
+.competition-admin-schedule.ts-team-meta { font-size: 11px; color: var(--dark-3); margin-top: 1px; }
 
-.add-match-field { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-.add-match-label {
+.competition-admin-schedule .add-match-field,
+.competition-admin-schedule.add-match-field { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.competition-admin-schedule .add-match-label,
+.competition-admin-schedule.add-match-label {
   font-size: 11px; font-weight: 600; color: var(--dark-3);
   text-transform: uppercase; letter-spacing: 0.3px;
 }
-.btn-add-match {
+.competition-admin-schedule .btn-add-match,
+.competition-admin-schedule.btn-add-match {
   flex-shrink: 0;
   padding: 10px 20px; border-radius: 7px;
   background: var(--main-blue); color: var(--white);
@@ -234,18 +294,22 @@
   border: 2px solid var(--main-blue);
   transition: opacity 0.15s;
 }
-.btn-add-match:hover { opacity: 0.9; }
+.competition-admin-schedule .btn-add-match:hover,
+.competition-admin-schedule.btn-add-match:hover { opacity: 0.9; }
 
 /* ── Match list ── */
-.match-list {
+.competition-admin-schedule .match-list,
+.competition-admin-schedule.match-list {
   display: flex; flex-direction: column; gap: 4px;
 }
-.match-list-empty {
+.competition-admin-schedule .match-list-empty,
+.competition-admin-schedule.match-list-empty {
   padding: var(--p2);
   text-align: center;
   font-size: var(--text-tiny); color: var(--dark-4); font-style: italic;
 }
-.match-row {
+.competition-admin-schedule .match-row,
+.competition-admin-schedule.match-row {
   display: flex; align-items: center; gap: 10px;
   padding: 8px 12px;
   border: 1px solid var(--dark-6);
@@ -253,56 +317,70 @@
   background: var(--white);
   transition: all 0.15s;
 }
-.match-row:hover {
+.competition-admin-schedule .match-row:hover,
+.competition-admin-schedule.match-row:hover {
   border-color: var(--dark-4);
   box-shadow: 0 2px 6px rgba(0,0,0,0.06);
 }
-.match-row-teams {
+.competition-admin-schedule .match-row-teams,
+.competition-admin-schedule.match-row-teams {
   flex: 1; display: flex; align-items: center; gap: 8px;
   min-width: 0;
 }
-.match-row-link {
+.competition-admin-schedule .match-row-link,
+.competition-admin-schedule.match-row-link {
   text-decoration: none; cursor: pointer;
 }
-.match-row-link:hover .match-row-home,
-.match-row-link:hover .match-row-away {
+.competition-admin-schedule .match-row-link:hover .match-row-home,
+.competition-admin-schedule.match-row-link:hover .match-row-home,
+.competition-admin-schedule .match-row-link:hover .match-row-away,
+.competition-admin-schedule.match-row-link:hover .match-row-away {
   color: var(--main-blue);
 }
-.match-row-home, .match-row-away {
+.competition-admin-schedule .match-row-home,
+.competition-admin-schedule.match-row-home,
+.competition-admin-schedule .match-row-away,
+.competition-admin-schedule.match-row-away {
   font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.match-row-vs {
+.competition-admin-schedule .match-row-vs,
+.competition-admin-schedule.match-row-vs {
   font-size: 11px; font-weight: 700; color: var(--dark-4);
   flex-shrink: 0;
 }
-.match-row-group {
+.competition-admin-schedule .match-row-group,
+.competition-admin-schedule.match-row-group {
   font-size: 11px; font-weight: 600;
   padding: 2px 8px; border-radius: 12px;
   background: rgba(0,48,73,0.06); color: var(--main-blue);
   flex-shrink: 0;
 }
-.match-row-delete {
+.competition-admin-schedule .match-row-delete,
+.competition-admin-schedule.match-row-delete {
   background: none; border: none; cursor: pointer;
   color: var(--dark-4); font-size: 14px;
   padding: 4px 6px; border-radius: 4px;
   transition: all 0.15s;
   flex-shrink: 0;
 }
-.match-row-delete:hover {
+.competition-admin-schedule .match-row-delete:hover,
+.competition-admin-schedule.match-row-delete:hover {
   color: var(--red); background: rgba(224,32,32,0.06);
 }
 
 /* Rencontre à rapport publié : non supprimable, l'emplacement du bouton reste
    occupé pour ne pas décaler les lignes voisines. */
-.match-row-locked {
+.competition-admin-schedule .match-row-locked,
+.competition-admin-schedule.match-row-locked {
   color: var(--dark-4); font-size: 14px;
   padding: 4px 6px;
   flex-shrink: 0; cursor: help;
 }
 
 /* ── Footer ── */
-.round-detail-footer {
+.competition-admin-schedule .round-detail-footer,
+.competition-admin-schedule.round-detail-footer {
   display: flex; justify-content: flex-end;
   padding-top: var(--p1);
   border-top: 1px solid var(--dark-6);
@@ -310,8 +388,10 @@
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
-  .schedule-layout {
+  .competition-admin-schedule .schedule-layout,
+.competition-admin-schedule.schedule-layout {
     grid-template-columns: 1fr;
   }
-  .round-sidebar-list { max-height: 240px; }
+  .competition-admin-schedule .round-sidebar-list,
+.competition-admin-schedule.round-sidebar-list { max-height: 240px; }
 }

@@ -1,119 +1,178 @@
-.detail-layout { display: flex; gap: var(--p1); height: 100%; }
-.detail-left   { flex: 1; }
-.detail-right  { flex: 4; overflow-y: auto; }
-.detail-right .tabs { margin-bottom: var(--p1); }
+.competition-detail .detail-layout,
+.competition-detail.detail-layout { display: flex; gap: var(--p1); height: 100%; }
+.competition-detail .detail-left,
+.competition-detail.detail-left   { flex: 1; }
+.competition-detail .detail-right,
+.competition-detail.detail-right  { flex: 4; overflow-y: auto; }
+.competition-detail .detail-right .tabs,
+.competition-detail.detail-right .tabs { margin-bottom: var(--p1); }
 /* Navigation d'onglets mobile — masquée par défaut, le desktop gardant la
    barre d'onglets classique. */
-.tab-select { display: none; }
+.competition-detail .tab-select,
+.competition-detail.tab-select { display: none; }
 
 /* Panneau gauche */
-.left-panel {
+.competition-detail .left-panel,
+.competition-detail.left-panel {
   background: var(--white); border-radius: 10px; padding: var(--p2);
   display: flex; flex-direction: column; gap: var(--p2); position: sticky; top: 0;
 }
-.league-banner {
+.competition-detail .league-banner,
+.competition-detail.league-banner {
   border-radius: 8px; height: 120px;
   background: linear-gradient(135deg, #003049 0%, #555770 100%);
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-title); font-size: 36px; font-weight: 900; color: var(--white);
 }
-.league-banner--logo { background: none; padding: 0; height: 200px; }
-.league-banner-img   { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
-.detail-season-name  { margin-top: 4px; }
-.league-meta       { display: flex; flex-direction: column; gap: 8px; }
-.league-meta-item  { display: flex; justify-content: space-between; font-size: var(--text-tiny); }
-.league-meta-label { color: var(--dark-3); }
-.league-meta-value { color: var(--dark-1); font-weight: 500; }
-.filter-section    { display: flex; flex-direction: column; gap: var(--p1); }
-.filter-title      { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-2); }
+.competition-detail .league-banner--logo,
+.competition-detail.league-banner--logo { background: none; padding: 0; height: 200px; }
+.competition-detail .league-banner-img,
+.competition-detail.league-banner-img   { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+.competition-detail .detail-season-name,
+.competition-detail.detail-season-name  { margin-top: 4px; }
+.competition-detail .league-meta,
+.competition-detail.league-meta       { display: flex; flex-direction: column; gap: 8px; }
+.competition-detail .league-meta-item,
+.competition-detail.league-meta-item  { display: flex; justify-content: space-between; font-size: var(--text-tiny); }
+.competition-detail .league-meta-label,
+.competition-detail.league-meta-label { color: var(--dark-3); }
+.competition-detail .league-meta-value,
+.competition-detail.league-meta-value { color: var(--dark-1); font-weight: 500; }
+.competition-detail .filter-section,
+.competition-detail.filter-section    { display: flex; flex-direction: column; gap: var(--p1); }
+.competition-detail .filter-title,
+.competition-detail.filter-title      { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-2); }
 
 /* Panneau droit */
-.comp-header { background: var(--white); border-radius: 10px; padding: var(--p2); margin-bottom: var(--p1); display: flex; align-items: center; gap: var(--p2); }
-.comp-title-block { flex: 1; }
+.competition-detail .comp-header,
+.competition-detail.comp-header { background: var(--white); border-radius: 10px; padding: var(--p2); margin-bottom: var(--p1); display: flex; align-items: center; gap: var(--p2); }
+.competition-detail .comp-title-block,
+.competition-detail.comp-title-block { flex: 1; }
 
 /* Standings */
-.standings-table  { background: var(--white); border-radius: 10px; overflow: hidden; margin-bottom: var(--p1); }
-.standings-header {
+.competition-detail .standings-table,
+.competition-detail.standings-table  { background: var(--white); border-radius: 10px; overflow: hidden; margin-bottom: var(--p1); }
+.competition-detail .standings-header,
+.competition-detail.standings-header {
   display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px;
   padding: 12px 16px; gap: 8px; align-items: center;
   background: var(--dark-0); color: var(--white);
   font-size: var(--text-tiny); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
 }
-.standings-header-num { text-align: center; }
-.standings-row {
+.competition-detail .standings-header-num,
+.competition-detail.standings-header-num { text-align: center; }
+.competition-detail .standings-row,
+.competition-detail.standings-row {
   display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px;
   padding: 12px 16px; gap: 8px; align-items: center;
   border-bottom: 1px solid var(--dark-6); font-size: var(--text-small);
 }
-.standings-row:last-child        { border-bottom: none; }
-.standings-row:nth-child(even)   { background: var(--dark-7); }
-.standings-row:hover             { background: var(--dark-6); }
-.standings-row.top3              { background: rgba(0,48,73,0.04); }
-.standings-rank { color: var(--dark-3); font-weight: 700; text-align: center; }
-.standings-team { font-weight: 500; color: var(--dark-1); }
-.standings-num  { text-align: center; color: var(--dark-2); }
-.standings-pts  { text-align: center; font-weight: 700; color: var(--dark-0); }
-.standings-empty {
+.competition-detail .standings-row:last-child,
+.competition-detail.standings-row:last-child        { border-bottom: none; }
+.competition-detail .standings-row:nth-child(even),
+.competition-detail.standings-row:nth-child(even)   { background: var(--dark-7); }
+.competition-detail .standings-row:hover,
+.competition-detail.standings-row:hover             { background: var(--dark-6); }
+.competition-detail .standings-row.top3,
+.competition-detail.standings-row.top3              { background: rgba(0,48,73,0.04); }
+.competition-detail .standings-rank,
+.competition-detail.standings-rank { color: var(--dark-3); font-weight: 700; text-align: center; }
+.competition-detail .standings-team,
+.competition-detail.standings-team { font-weight: 500; color: var(--dark-1); }
+.competition-detail .standings-num,
+.competition-detail.standings-num  { text-align: center; color: var(--dark-2); }
+.competition-detail .standings-pts,
+.competition-detail.standings-pts  { text-align: center; font-weight: 700; color: var(--dark-0); }
+.competition-detail .standings-empty,
+.competition-detail.standings-empty {
   padding: var(--p2); color: var(--dark-3); font-size: var(--text-small);
   grid-column: 1 / -1; display: flex; justify-content: center;
 }
 
 /* Matches list */
-.matches-list        { background: var(--white); border-radius: 10px; overflow: hidden; margin-bottom: var(--p1); }
-.matches-list-header { padding: var(--p2); border-bottom: 2px solid var(--dark-5); display: flex; align-items: center; justify-content: space-between; }
+.competition-detail .matches-list,
+.competition-detail.matches-list        { background: var(--white); border-radius: 10px; overflow: hidden; margin-bottom: var(--p1); }
+.competition-detail .matches-list-header,
+.competition-detail.matches-list-header { padding: var(--p2); border-bottom: 2px solid var(--dark-5); display: flex; align-items: center; justify-content: space-between; }
 
 /* Match widget */
-.match-widget {
+.competition-detail .match-widget,
+.competition-detail.match-widget {
   position: relative;
   display: grid; grid-template-columns: 1fr 120px 1fr;
   align-items: center; gap: 0;
   padding: 12px var(--p2); border-bottom: 1px solid var(--dark-6);
   transition: background 0.1s;
 }
-.match-widget:last-child { border-bottom: none; }
-.match-widget--clickable { cursor: pointer; }
-.match-widget--clickable:hover { background: var(--dark-7); }
+.competition-detail .match-widget:last-child,
+.competition-detail.match-widget:last-child { border-bottom: none; }
+.competition-detail .match-widget--clickable,
+.competition-detail.match-widget--clickable { cursor: pointer; }
+.competition-detail .match-widget--clickable:hover,
+.competition-detail.match-widget--clickable:hover { background: var(--dark-7); }
 
-.match-widget-link {
+.competition-detail .match-widget-link,
+.competition-detail.match-widget-link {
   position: absolute; inset: 0;
 }
 
-.match-side         { display: flex; align-items: center; gap: 10px; }
-.match-side--away   { justify-content: flex-end; }
+.competition-detail .match-side,
+.competition-detail.match-side         { display: flex; align-items: center; gap: 10px; }
+.competition-detail .match-side--away,
+.competition-detail.match-side--away   { justify-content: flex-end; }
 
-.match-team-logo-sm { width: 72px; height: 72px; border-radius: 10px; background: var(--dark-5); flex-shrink: 0; overflow: hidden; }
-.match-team-logo-sm--img { object-fit: cover; display: block; }
-.match-team-logo-sm--initials {
+.competition-detail .match-team-logo-sm,
+.competition-detail.match-team-logo-sm { width: 72px; height: 72px; border-radius: 10px; background: var(--dark-5); flex-shrink: 0; overflow: hidden; }
+.competition-detail .match-team-logo-sm--img,
+.competition-detail.match-team-logo-sm--img { object-fit: cover; display: block; }
+.competition-detail .match-team-logo-sm--initials,
+.competition-detail.match-team-logo-sm--initials {
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-title); font-size: 18px; font-weight: 900; color: var(--white);
   background: linear-gradient(135deg, var(--dark-2) 0%, var(--dark-3) 100%);
 }
 
-.match-team-info         { display: flex; flex-direction: column; gap: 2px; }
-.match-team-info--right  { text-align: right; }
-.match-team-name         { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
-.match-team-sub          { font-size: var(--text-tiny); color: var(--dark-3); }
+.competition-detail .match-team-info,
+.competition-detail.match-team-info         { display: flex; flex-direction: column; gap: 2px; }
+.competition-detail .match-team-info--right,
+.competition-detail.match-team-info--right  { text-align: right; }
+.competition-detail .match-team-name,
+.competition-detail.match-team-name         { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+.competition-detail .match-team-sub,
+.competition-detail.match-team-sub          { font-size: var(--text-tiny); color: var(--dark-3); }
 
-.match-score-block { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.match-score-tds   { display: flex; align-items: center; gap: 6px; }
-.match-score-num   { font-family: var(--font-title); font-size: var(--h5); font-weight: 900; color: var(--dark-0); min-width: 18px; text-align: center; }
-.match-score-sep   { color: var(--dark-3); font-weight: 400; }
-.match-score-cas   { display: flex; align-items: center; gap: 4px; }
-.match-cas-num     { font-size: var(--text-tiny); color: var(--dark-3); min-width: 14px; text-align: center; }
-.match-cas-sep     { font-size: var(--text-tiny); color: var(--dark-4); }
-.match-date        { font-size: var(--text-tiny); color: var(--dark-4); margin-top: 2px; }
+.competition-detail .match-score-block,
+.competition-detail.match-score-block { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.competition-detail .match-score-tds,
+.competition-detail.match-score-tds   { display: flex; align-items: center; gap: 6px; }
+.competition-detail .match-score-num,
+.competition-detail.match-score-num   { font-family: var(--font-title); font-size: var(--h5); font-weight: 900; color: var(--dark-0); min-width: 18px; text-align: center; }
+.competition-detail .match-score-sep,
+.competition-detail.match-score-sep   { color: var(--dark-3); font-weight: 400; }
+.competition-detail .match-score-cas,
+.competition-detail.match-score-cas   { display: flex; align-items: center; gap: 4px; }
+.competition-detail .match-cas-num,
+.competition-detail.match-cas-num     { font-size: var(--text-tiny); color: var(--dark-3); min-width: 14px; text-align: center; }
+.competition-detail .match-cas-sep,
+.competition-detail.match-cas-sep     { font-size: var(--text-tiny); color: var(--dark-4); }
+.competition-detail .match-date,
+.competition-detail.match-date        { font-size: var(--text-tiny); color: var(--dark-4); margin-top: 2px; }
 
 /* Match statuts */
-.match-widget--in-progress { background: rgba(0, 48, 73, 0.02); }
+.competition-detail .match-widget--in-progress,
+.competition-detail.match-widget--in-progress { background: rgba(0, 48, 73, 0.02); }
 
-.match-status-badge {
+.competition-detail .match-status-badge,
+.competition-detail.match-status-badge {
   font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
   border-radius: 6px; padding: 3px 10px;
 }
-.match-status-badge--upcoming {
+.competition-detail .match-status-badge--upcoming,
+.competition-detail.match-status-badge--upcoming {
   color: var(--dark-3); background: var(--dark-6); border: 1px solid var(--dark-5);
 }
-.match-status-badge--in-progress {
+.competition-detail .match-status-badge--in-progress,
+.competition-detail.match-status-badge--in-progress {
   color: var(--white); background: var(--main-blue);
   animation: match-pulse 2s ease-in-out infinite;
 }
@@ -122,100 +181,147 @@
   50%       { opacity: 0.7; }
 }
 
-.match-in-progress-block { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.competition-detail .match-in-progress-block,
+.competition-detail.match-in-progress-block { display: flex; flex-direction: column; align-items: center; gap: 5px; }
 
 /* Teams grid */
-.teams-grid {
+.competition-detail .teams-grid,
+.competition-detail.teams-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--p1);
 }
-.team-card {
+.competition-detail .team-card,
+.competition-detail.team-card {
   background: var(--white); border-radius: 10px; padding: var(--p2);
   display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
   cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s;
   border: 1.5px solid transparent;
 }
-.team-card:hover  { box-shadow: 0 4px 16px rgba(0,0,0,0.10); border-color: var(--dark-3); }
-.team-card-logo   { width: 84px; height: 84px; border-radius: 50%; background: linear-gradient(135deg, var(--dark-4) 0%, var(--dark-5) 100%); }
-.team-card-name   { font-size: var(--text-small); word-break: break-word; overflow-wrap: break-word; }
-.team-card-roster { }
-.team-card-coach  { }
-.team-card-tv     { font-weight: 600; color: var(--dark-1); margin-top: 4px; }
+.competition-detail .team-card:hover,
+.competition-detail.team-card:hover  { box-shadow: 0 4px 16px rgba(0,0,0,0.10); border-color: var(--dark-3); }
+.competition-detail .team-card-logo,
+.competition-detail.team-card-logo   { width: 84px; height: 84px; border-radius: 50%; background: linear-gradient(135deg, var(--dark-4) 0%, var(--dark-5) 100%); }
+.competition-detail .team-card-name,
+.competition-detail.team-card-name   { font-size: var(--text-small); word-break: break-word; overflow-wrap: break-word; }
+.competition-detail .team-card-roster,
+.competition-detail.team-card-roster { }
+.competition-detail .team-card-coach,
+.competition-detail.team-card-coach  { }
+.competition-detail .team-card-tv,
+.competition-detail.team-card-tv     { font-weight: 600; color: var(--dark-1); margin-top: 4px; }
 
 /* Stats grid */
-.stats-grid        { display: grid; grid-template-columns: 1fr 1fr; gap: var(--p1); }
-.stats-table       { background: var(--white); border-radius: 10px; overflow: hidden; }
-.stats-table-header { padding: var(--p2); border-bottom: 2px solid var(--dark-5); display: flex; align-items: baseline; gap: 8px; }
-.stats-table-header--flop { background: rgba(180,30,30,0.04); }
-.stats-row {
+.competition-detail .stats-grid,
+.competition-detail.stats-grid        { display: grid; grid-template-columns: 1fr 1fr; gap: var(--p1); }
+.competition-detail .stats-table,
+.competition-detail.stats-table       { background: var(--white); border-radius: 10px; overflow: hidden; }
+.competition-detail .stats-table-header,
+.competition-detail.stats-table-header { padding: var(--p2); border-bottom: 2px solid var(--dark-5); display: flex; align-items: baseline; gap: 8px; }
+.competition-detail .stats-table-header--flop,
+.competition-detail.stats-table-header--flop { background: rgba(180,30,30,0.04); }
+.competition-detail .stats-row,
+.competition-detail.stats-row {
   display: grid; grid-template-columns: 28px 1fr 1fr 50px;
   padding: 10px 16px; gap: 8px; align-items: center;
   border-bottom: 1px solid var(--dark-6); font-size: var(--text-small);
 }
-.stats-row:last-child  { border-bottom: none; }
-.stats-row:hover       { background: var(--dark-7); }
-.stats-row--head {
+.competition-detail .stats-row:last-child,
+.competition-detail.stats-row:last-child  { border-bottom: none; }
+.competition-detail .stats-row:hover,
+.competition-detail.stats-row:hover       { background: var(--dark-7); }
+.competition-detail .stats-row--head,
+.competition-detail.stats-row--head {
   background: var(--dark-0); color: var(--white);
   font-size: var(--text-tiny); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
 }
-.stats-row--head:hover { background: var(--dark-0); }
-.stats-rank       { color: var(--dark-3); font-weight: 700; text-align: center; }
-.stats-coach      { font-weight: 500; color: var(--dark-1); }
-.stats-team       { font-size: var(--text-tiny); }
-.stats-val        { text-align: center; font-weight: 700; color: var(--dark-0); }
-.stats-val--flop  { color: #b41e1e; }
-.stats-col-center { text-align: center; }
+.competition-detail .stats-row--head:hover,
+.competition-detail.stats-row--head:hover { background: var(--dark-0); }
+.competition-detail .stats-rank,
+.competition-detail.stats-rank       { color: var(--dark-3); font-weight: 700; text-align: center; }
+.competition-detail .stats-coach,
+.competition-detail.stats-coach      { font-weight: 500; color: var(--dark-1); }
+.competition-detail .stats-team,
+.competition-detail.stats-team       { font-size: var(--text-tiny); }
+.competition-detail .stats-val,
+.competition-detail.stats-val        { text-align: center; font-weight: 700; color: var(--dark-0); }
+.competition-detail .stats-val--flop,
+.competition-detail.stats-val--flop  { color: #b41e1e; }
+.competition-detail .stats-col-center,
+.competition-detail.stats-col-center { text-align: center; }
 
 /* Empty states */
-.tab-empty-state {
+.competition-detail .tab-empty-state,
+.competition-detail.tab-empty-state {
   background: var(--white); border-radius: 10px; padding: var(--p2);
   color: var(--dark-3); font-size: var(--text-small); text-align: center;
 }
-.teams-empty { grid-column: 1 / -1; }
+.competition-detail .teams-empty,
+.competition-detail.teams-empty { grid-column: 1 / -1; }
 
 /* Calendrier & Résultats — journée */
-.cal-journee        { background: var(--white); border-radius: 10px; overflow: hidden; margin-bottom: var(--p1); }
-.cal-journee-header {
+.competition-detail .cal-journee,
+.competition-detail.cal-journee        { background: var(--white); border-radius: 10px; overflow: hidden; margin-bottom: var(--p1); }
+.competition-detail .cal-journee-header,
+.competition-detail.cal-journee-header {
   padding: 12px var(--p2); border-bottom: 2px solid var(--dark-5);
   display: flex; align-items: center; justify-content: space-between;
 }
-.cal-journee-meta   { display: flex; align-items: center; gap: 12px; }
+.competition-detail .cal-journee-meta,
+.competition-detail.cal-journee-meta   { display: flex; align-items: center; gap: 12px; }
 
 /* Calendrier — ligne de match */
-.cal-row {
+.competition-detail .cal-row,
+.competition-detail.cal-row {
   display: grid; grid-template-columns: 1fr 60px 1fr;
   align-items: center; gap: 0;
   padding: 10px var(--p2); border-bottom: 1px solid var(--dark-6);
 }
-.cal-row:last-child { border-bottom: none; }
+.competition-detail .cal-row:last-child,
+.competition-detail.cal-row:last-child { border-bottom: none; }
 
 /* Ligne menant à la saisie du rapport de match */
-.cal-row--clickable        { position: relative; cursor: pointer; }
-.cal-row--clickable:hover  { background: var(--dark-7); }
-.cal-row-link              { position: absolute; inset: 0; }
+.competition-detail .cal-row--clickable,
+.competition-detail.cal-row--clickable        { position: relative; cursor: pointer; }
+.competition-detail .cal-row--clickable:hover,
+.competition-detail.cal-row--clickable:hover  { background: var(--dark-7); }
+.competition-detail .cal-row-link,
+.competition-detail.cal-row-link              { position: absolute; inset: 0; }
 
-.cal-team       { display: flex; align-items: center; gap: 8px; }
-.cal-team-home  { justify-content: flex-start; }
-.cal-team-away  { justify-content: flex-end; }
-.cal-team-name  { font-size: var(--text-small); font-weight: 500; color: var(--dark-1); }
-.cal-team-away .cal-team-name { text-align: right; }
+.competition-detail .cal-team,
+.competition-detail.cal-team       { display: flex; align-items: center; gap: 8px; }
+.competition-detail .cal-team-home,
+.competition-detail.cal-team-home  { justify-content: flex-start; }
+.competition-detail .cal-team-away,
+.competition-detail.cal-team-away  { justify-content: flex-end; }
+.competition-detail .cal-team-name,
+.competition-detail.cal-team-name  { font-size: var(--text-small); font-weight: 500; color: var(--dark-1); }
+.competition-detail .cal-team-away .cal-team-name,
+.competition-detail.cal-team-away .cal-team-name { text-align: right; }
 
-.cal-logo           { width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0; }
-.cal-logo--img      { object-fit: cover; }
-.cal-logo--initials {
+.competition-detail .cal-logo,
+.competition-detail.cal-logo           { width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0; }
+.competition-detail .cal-logo--img,
+.competition-detail.cal-logo--img      { object-fit: cover; }
+.competition-detail .cal-logo--initials,
+.competition-detail.cal-logo--initials {
   background: linear-gradient(135deg, var(--dark-2) 0%, var(--dark-3) 100%);
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-title); font-size: 11px; font-weight: 900; color: var(--white);
 }
 
-.cal-center { display: flex; justify-content: center; }
-.cal-vs     { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-4); letter-spacing: 1px; }
+.competition-detail .cal-center,
+.competition-detail.cal-center { display: flex; justify-content: center; }
+.competition-detail .cal-vs,
+.competition-detail.cal-vs     { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-4); letter-spacing: 1px; }
 
 /* Résultats — journées groupées */
-#resultats-list   { display: flex; flex-direction: column; }
-#calendrier-list  { display: flex; flex-direction: column; }
+.competition-detail #resultats-list,
+.competition-detail#resultats-list   { display: flex; flex-direction: column; }
+.competition-detail #calendrier-list,
+.competition-detail#calendrier-list  { display: flex; flex-direction: column; }
 
 /* Sentinel infinite scroll */
-.scroll-sentinel { height: 1px; }
+.competition-detail .scroll-sentinel,
+.competition-detail.scroll-sentinel { height: 1px; }
 
 /* ─── Responsive ──────────────────────────────────────────────────────────────
    Un seul breakpoint : 768px, celui de référence du projet. Le chrome global
@@ -226,40 +332,55 @@
   /* Le panneau de gauche passe au-dessus du contenu, en bandeau compact plutôt
      que masqué : sinon la bannière, le nom de la ligue et ses métadonnées
      deviennent inatteignables sur mobile. */
-  .detail-layout { flex-direction: column; gap: var(--p1); height: auto; }
-  .detail-left   { flex: none; }
-  .detail-right  { flex: none; overflow-y: visible; }
+  .competition-detail .detail-layout,
+.competition-detail.detail-layout { flex-direction: column; gap: var(--p1); height: auto; }
+  .competition-detail .detail-left,
+.competition-detail.detail-left   { flex: none; }
+  .competition-detail .detail-right,
+.competition-detail.detail-right  { flex: none; overflow-y: visible; }
 
-  .left-panel {
+  .competition-detail .left-panel,
+.competition-detail.left-panel {
     position: static; flex-direction: row; flex-wrap: wrap;
     align-items: center; gap: 8px; padding: var(--p1);
   }
-  .league-banner        { height: 44px; width: 44px; flex-shrink: 0; font-size: 14px; }
-  .league-banner--logo  { height: 44px; width: 44px; }
-  .league-meta          { width: 100%; gap: 4px; }
-  .league-meta-item     { justify-content: flex-start; gap: 6px; }
+  .competition-detail .league-banner,
+.competition-detail.league-banner        { height: 44px; width: 44px; flex-shrink: 0; font-size: 14px; }
+  .competition-detail .league-banner--logo,
+.competition-detail.league-banner--logo  { height: 44px; width: 44px; }
+  .competition-detail .league-meta,
+.competition-detail.league-meta          { width: 100%; gap: 4px; }
+  .competition-detail .league-meta-item,
+.competition-detail.league-meta-item     { justify-content: flex-start; gap: 6px; }
 
   /* Le titre de compétition prend deux lignes en `--h5` dès que le nom est un
      peu long : il redescend à la taille du corps de texte. */
-  .left-panel .h5-gras { font-size: var(--text-small); line-height: 1.3; }
+  .competition-detail .left-panel .h5-gras,
+.competition-detail.left-panel .h5-gras { font-size: var(--text-small); line-height: 1.3; }
 
   /* Le nom de saison sous le titre répète mot pour mot le contenu du sélecteur
      placé juste en dessous. */
-  .detail-season-name { display: none; }
+  .competition-detail .detail-season-name,
+.competition-detail.detail-season-name { display: none; }
 
   /* Le séparateur coûte 25px de haut avec ses marges, pour une frontière que le
      bandeau compact ne demande plus. */
-  .left-panel .separator { display: none; }
+  .competition-detail .left-panel .separator,
+.competition-detail.left-panel .separator { display: none; }
 
   /* Intitulé et sélecteur de saison sur une seule ligne. */
-  .filter-section        { flex-direction: row; align-items: center; gap: 8px; width: 100%; }
-  .filter-section .filter-title { flex-shrink: 0; font-size: var(--text-small); }
-  .filter-section .picker       { flex: 1; min-width: 0; }
+  .competition-detail .filter-section,
+.competition-detail.filter-section        { flex-direction: row; align-items: center; gap: 8px; width: 100%; }
+  .competition-detail .filter-section .filter-title,
+.competition-detail.filter-section .filter-title { flex-shrink: 0; font-size: var(--text-small); }
+  .competition-detail .filter-section .picker,
+.competition-detail.filter-section .picker       { flex: 1; min-width: 0; }
 
   /* La saisie d'un match est une action de bureau : le parcours de rapport de
      match n'est pas pensé pour un écran de téléphone. Le bouton est retiré du
      bandeau replié plutôt que de l'encombrer. */
-  .left-panel-new-match { display: none; }
+  .competition-detail .left-panel-new-match,
+.competition-detail.left-panel-new-match { display: none; }
 
   /* Les six onglets ne tiennent pas sur une ligne : `Calendrier`, `Équipes` et
      `Statistiques` sortaient de l'écran, sans barre de défilement pour le
@@ -267,68 +388,106 @@
      la place au sélecteur, qui les montre tous d'un coup à l'ouverture.
      Les deux restent dans le DOM : les onglets portent les `hx-get`, le
      sélecteur ne fait que relayer le clic. */
-  .detail-right .tabs { display: none; }
-  .tab-select { display: block; margin-bottom: var(--p1); }
+  .competition-detail .detail-right .tabs,
+.competition-detail.detail-right .tabs { display: none; }
+  .competition-detail .tab-select,
+.competition-detail.tab-select { display: block; margin-bottom: var(--p1); }
 
   /* Lignes de match — Résultats */
-  .match-widget       { grid-template-columns: 1fr 80px 1fr; padding: 8px 10px; }
-  .match-team-logo-sm { width: 36px; height: 36px; border-radius: 6px; }
-  .match-team-logo-sm--initials { font-size: 11px; }
-  .match-team-name    { font-size: 13px; }
-  .match-team-sub     { display: none; }
-  .match-side         { gap: 6px; }
-  .match-score-num    { font-size: 15px; min-width: 14px; }
-  .match-score-cas    { display: none; }
-  .match-date         { font-size: 10px; }
-  .match-status-badge { font-size: 9px; padding: 2px 7px; }
+  .competition-detail .match-widget,
+.competition-detail.match-widget       { grid-template-columns: 1fr 80px 1fr; padding: 8px 10px; }
+  .competition-detail .match-team-logo-sm,
+.competition-detail.match-team-logo-sm { width: 36px; height: 36px; border-radius: 6px; }
+  .competition-detail .match-team-logo-sm--initials,
+.competition-detail.match-team-logo-sm--initials { font-size: 11px; }
+  .competition-detail .match-team-name,
+.competition-detail.match-team-name    { font-size: 13px; }
+  .competition-detail .match-team-sub,
+.competition-detail.match-team-sub     { display: none; }
+  .competition-detail .match-side,
+.competition-detail.match-side         { gap: 6px; }
+  .competition-detail .match-score-num,
+.competition-detail.match-score-num    { font-size: 15px; min-width: 14px; }
+  .competition-detail .match-score-cas,
+.competition-detail.match-score-cas    { display: none; }
+  .competition-detail .match-date,
+.competition-detail.match-date         { font-size: 10px; }
+  .competition-detail .match-status-badge,
+.competition-detail.match-status-badge { font-size: 9px; padding: 2px 7px; }
 
   /* Match en cours de saisie : le badge et le lien font une bonne centaine de
      pixels à eux deux et viendraient se coller au nom de l'équipe adverse. Ils
      passent sur leur propre ligne, sous les deux équipes.
      Sélecteur à deux classes : à spécificité égale, la règle `.match-widget`
      ci-dessus l'emporterait sur l'ordre. */
-  .match-widget.match-widget--in-progress {
+  .competition-detail .match-widget.match-widget--in-progress,
+.competition-detail.match-widget.match-widget--in-progress {
     grid-template-columns: 1fr 1fr;
     grid-template-areas: "home away" "status status";
     row-gap: 8px;
   }
-  .match-widget--in-progress .match-side        { grid-area: home; }
-  .match-widget--in-progress .match-side--away  { grid-area: away; }
-  .match-widget--in-progress .match-score-block { grid-area: status; }
-  .match-widget--in-progress .match-in-progress-block {
+  .competition-detail .match-widget--in-progress .match-side,
+.competition-detail.match-widget--in-progress .match-side        { grid-area: home; }
+  .competition-detail .match-widget--in-progress .match-side--away,
+.competition-detail.match-widget--in-progress .match-side--away  { grid-area: away; }
+  .competition-detail .match-widget--in-progress .match-score-block,
+.competition-detail.match-widget--in-progress .match-score-block { grid-area: status; }
+  .competition-detail .match-widget--in-progress .match-in-progress-block,
+.competition-detail.match-widget--in-progress .match-in-progress-block {
     flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px;
   }
 
   /* Lignes de match — Calendrier */
-  .cal-row            { grid-template-columns: 1fr 48px 1fr; padding: 8px 10px; }
-  .cal-logo           { width: 28px; height: 28px; border-radius: 5px; }
-  .cal-logo--initials { font-size: 9px; }
-  .cal-team-name      { font-size: 13px; }
-  .cal-team           { gap: 6px; }
+  .competition-detail .cal-row,
+.competition-detail.cal-row            { grid-template-columns: 1fr 48px 1fr; padding: 8px 10px; }
+  .competition-detail .cal-logo,
+.competition-detail.cal-logo           { width: 28px; height: 28px; border-radius: 5px; }
+  .competition-detail .cal-logo--initials,
+.competition-detail.cal-logo--initials { font-size: 9px; }
+  .competition-detail .cal-team-name,
+.competition-detail.cal-team-name      { font-size: 13px; }
+  .competition-detail .cal-team,
+.competition-detail.cal-team           { gap: 6px; }
 
   /* En-têtes de journée et de liste */
-  .matches-list-header, .cal-journee-header { padding: 10px var(--p1); }
-  .cal-journee-meta { gap: 8px; }
+  .competition-detail .matches-list-header,
+.competition-detail.matches-list-header,
+.competition-detail .cal-journee-header,
+.competition-detail.cal-journee-header { padding: 10px var(--p1); }
+  .competition-detail .cal-journee-meta,
+.competition-detail.cal-journee-meta { gap: 8px; }
 
   /* Équipes : des cartes plus étroites pour en garder deux par ligne. */
-  .teams-grid     { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
-  .team-card      { padding: var(--p1); }
-  .team-card-logo { width: 64px; height: 64px; }
+  .competition-detail .teams-grid,
+.competition-detail.teams-grid     { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+  .competition-detail .team-card,
+.competition-detail.team-card      { padding: var(--p1); }
+  .competition-detail .team-card-logo,
+.competition-detail.team-card-logo { width: 64px; height: 64px; }
 
   /* Statistiques : les deux tableaux côte à côte ne tiennent pas, ils
      s'empilent. */
-  .stats-grid         { grid-template-columns: 1fr; }
-  .stats-row          { grid-template-columns: 24px 1fr 1fr 40px; padding: 8px 10px; gap: 6px; }
-  .stats-table-header { padding: 10px var(--p1); }
+  .competition-detail .stats-grid,
+.competition-detail.stats-grid         { grid-template-columns: 1fr; }
+  .competition-detail .stats-row,
+.competition-detail.stats-row          { grid-template-columns: 24px 1fr 1fr 40px; padding: 8px 10px; gap: 6px; }
+  .competition-detail .stats-table-header,
+.competition-detail.stats-table-header { padding: 10px var(--p1); }
 
-  .comp-header { padding: var(--p1); gap: var(--p1); }
+  .competition-detail .comp-header,
+.competition-detail.comp-header { padding: var(--p1); gap: var(--p1); }
 }
 
 /* ─── Très petits écrans (≤ 400px) ─── */
 @media (max-width: 400px) {
-  .match-widget       { grid-template-columns: 1fr 70px 1fr; }
-  .match-team-logo-sm { display: none; }
-  .match-team-name    { font-size: 12px; }
-  .cal-team-name      { font-size: 12px; }
-  .teams-grid         { grid-template-columns: 1fr 1fr; }
+  .competition-detail .match-widget,
+.competition-detail.match-widget       { grid-template-columns: 1fr 70px 1fr; }
+  .competition-detail .match-team-logo-sm,
+.competition-detail.match-team-logo-sm { display: none; }
+  .competition-detail .match-team-name,
+.competition-detail.match-team-name    { font-size: 12px; }
+  .competition-detail .cal-team-name,
+.competition-detail.cal-team-name      { font-size: 12px; }
+  .competition-detail .teams-grid,
+.competition-detail.teams-grid         { grid-template-columns: 1fr 1fr; }
 }

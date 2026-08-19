@@ -74,7 +74,7 @@ FEUILLE_ATTENDUE = {
     "competition-structure": "pages/new-competition-phase-3.css",
     "competition-regles": "pages/new-competition-phase-2.css",
     "competition-invitations": "pages/new-competition-phase-4.css",
-    "classement-detaille": "widgets/detailed-standings-widget.css",
+    "classement-detaille": "widgets/ranking-detailed-standings-widget.css",
     "widget-roster-picker": "widgets/roster-picker.css",
     "widget-skill-picker": "widgets/skill-picker.css",
     "widget-inducement-picker": "widgets/inducement-picker.css",

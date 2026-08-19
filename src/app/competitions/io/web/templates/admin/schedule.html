@@ -1,6 +1,6 @@
 <link rel="stylesheet" href="/static/css/pages/competition-admin-schedule.css">
 
-<div class="admin-panel" class="schedule-actions-panel">
+<div class="admin-panel competition-admin-schedule" class="schedule-actions-panel">
   <div class="actions-bar">
     <div class="actions-bar-left">
       <span class="info-note">
@@ -29,7 +29,7 @@
   </div>
 </div>
 
-<div class="schedule-layout">
+<div class="schedule-layout competition-admin-schedule">
   <div id="schedule-sidebar"
        hx-get="{{ app_routes.competitions.admin_schedule_rounds(space_id, competition_id, season_id) }}"
        hx-trigger="load, scheduleChanged from:body"

@@ -1,0 +1,99 @@
+/* Widget Classement détaillé — autonome, pas de dépendance à competition-detail.css */
+
+.ranking-detailed-standings-widget .ranking-group + .ranking-group,
+.ranking-detailed-standings-widget.ranking-group + .ranking-group { margin-top: var(--p3); }
+.ranking-detailed-standings-widget .ranking-group-title,
+.ranking-detailed-standings-widget.ranking-group-title {
+  font-family: var(--font-title); font-size: var(--h4); font-weight: 700;
+  color: var(--dark-2); margin-bottom: var(--p1);
+}
+
+/* Le nombre de colonnes dépend des critères de départage actifs de la
+   compétition (1 à 7) : d'où un vrai <table> plutôt qu'une grille à template
+   fixe, dans un conteneur qui scrolle horizontalement. */
+.ranking-detailed-standings-widget .sd-scroll,
+.ranking-detailed-standings-widget.sd-scroll { overflow-x: auto; background: var(--white); border-radius: 10px; }
+.ranking-detailed-standings-widget .sd-table,
+.ranking-detailed-standings-widget.sd-table  { border-collapse: collapse; width: 100%; min-width: 720px; font-size: var(--text-tiny); }
+.ranking-detailed-standings-widget .sd-table th,
+.ranking-detailed-standings-widget.sd-table th,
+.ranking-detailed-standings-widget .sd-table td,
+.ranking-detailed-standings-widget.sd-table td { padding: 10px 8px; text-align: center; white-space: nowrap; }
+
+.ranking-detailed-standings-widget .sd-group-head th,
+.ranking-detailed-standings-widget.sd-group-head th {
+  background: var(--dark-1); color: var(--white);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  border-left: 1px solid var(--dark-0);
+}
+.ranking-detailed-standings-widget .sd-col-head th,
+.ranking-detailed-standings-widget.sd-col-head th {
+  background: var(--dark-0); color: var(--white); position: sticky; top: 0;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+}
+
+.ranking-detailed-standings-widget .sd-table tbody tr,
+.ranking-detailed-standings-widget.sd-table tbody tr { border-bottom: 1px solid var(--dark-6); }
+.ranking-detailed-standings-widget .sd-table tbody tr:last-child,
+.ranking-detailed-standings-widget.sd-table tbody tr:last-child      { border-bottom: none; }
+.ranking-detailed-standings-widget .sd-table tbody tr:nth-child(even),
+.ranking-detailed-standings-widget.sd-table tbody tr:nth-child(even) { background: var(--dark-7); }
+.ranking-detailed-standings-widget .sd-table tbody tr,
+.ranking-detailed-standings-widget.sd-table tbody tr { cursor: pointer; }
+.ranking-detailed-standings-widget .sd-table tbody tr:hover,
+.ranking-detailed-standings-widget.sd-table tbody tr:hover { background: var(--dark-6); }
+
+.ranking-detailed-standings-widget .sd-rank,
+.ranking-detailed-standings-widget.sd-rank  { color: var(--dark-3); font-weight: 700; }
+.ranking-detailed-standings-widget .sd-team,
+.ranking-detailed-standings-widget.sd-team  { text-align: left !important; font-weight: 600; color: var(--dark-1); font-size: var(--text-small); }
+.ranking-detailed-standings-widget .sd-num,
+.ranking-detailed-standings-widget.sd-num   { color: var(--dark-2); }
+.ranking-detailed-standings-widget .sd-bonus,
+.ranking-detailed-standings-widget.sd-bonus { color: var(--dark-2); font-weight: 600; }
+.ranking-detailed-standings-widget .sd-total,
+.ranking-detailed-standings-widget.sd-total { font-weight: 700; color: var(--dark-0); background: rgba(0,0,0,0.03); }
+
+/* Bloc des départages : visuellement détaché des colonnes de points. */
+.ranking-detailed-standings-widget .sd-tb,
+.ranking-detailed-standings-widget.sd-tb       { color: var(--dark-2); background: rgba(51,102,255,0.04); }
+.ranking-detailed-standings-widget .sd-tb-first,
+.ranking-detailed-standings-widget.sd-tb-first { border-left: 2px solid var(--main-blue); }
+/* Le critère qui a effectivement départagé une égalité de points, et ceux de
+   priorité supérieure qui n'y sont pas parvenus. */
+.ranking-detailed-standings-widget .sd-decisive,
+.ranking-detailed-standings-widget.sd-decisive { color: var(--main-blue); font-weight: 700; }
+.ranking-detailed-standings-widget .sd-tied,
+.ranking-detailed-standings-widget.sd-tied     { color: var(--dark-3); }
+
+.ranking-detailed-standings-widget .sd-legend,
+.ranking-detailed-standings-widget.sd-legend   { font-size: var(--text-tiny); color: var(--dark-3); margin-top: var(--p1); line-height: 1.6; }
+.ranking-detailed-standings-widget .sd-legend b,
+.ranking-detailed-standings-widget.sd-legend b { color: var(--dark-2); }
+
+.ranking-detailed-standings-widget .tab-empty-state,
+.ranking-detailed-standings-widget.tab-empty-state {
+  color: var(--dark-3); font-size: var(--text-small); font-style: italic;
+  padding: var(--p4); text-align: center;
+}
+
+.ranking-detailed-standings-widget .table-error-zone,
+.ranking-detailed-standings-widget.table-error-zone { min-height: 0; }
+.ranking-detailed-standings-widget .table-error,
+.ranking-detailed-standings-widget.table-error {
+  margin: 0; padding: 8px 12px; border-radius: 6px; font-size: var(--text-small);
+  color: #c0392b; background: #fdf0ee; border: 1px solid #f5c6c0;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 768px) {
+  /* Toutes les colonnes sont conservées : c'est un onglet de vérification, en
+     amputer une le viderait de son sens. Le tableau défile dans `.sd-scroll`,
+     jamais le body. */
+  .ranking-detailed-standings-widget .sd-table,
+.ranking-detailed-standings-widget.sd-table { font-size: 10px; min-width: 640px; }
+  .ranking-detailed-standings-widget .sd-table th,
+.ranking-detailed-standings-widget.sd-table th,
+.ranking-detailed-standings-widget .sd-table td,
+.ranking-detailed-standings-widget.sd-table td { padding: 8px 6px; }
+}
