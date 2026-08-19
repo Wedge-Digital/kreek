@@ -21,6 +21,17 @@
 # commentaire `css:global` portant son motif, plutôt que dans une liste tenue
 # ici. Une liste dérive ; un marqueur adjacent au fichier ne le peut pas.
 #
+# ── Ce qui est hors périmètre, et déduit plutôt que listé ────────────────────
+#
+# Une feuille que **aucun template de `src/` ne charge** n'est pas dans
+# l'application : soit elle ne sert qu'aux maquettes de `assets/templates/`,
+# soit elle ne sert à rien. La scoper ne protégerait rien, et la carte 342
+# l'exclut de toute façon du bundle.
+#
+# Le script le déduit du dépôt, il ne le tient pas en liste — mais il les
+# **compte et les nomme**, pour qu'une feuille sortie du périmètre reste
+# visible plutôt que d'être oubliée.
+#
 # ── Pourquoi ─────────────────────────────────────────────────────────────────
 #
 # Les feuilles ont été écrites en isolation totale — chaque page charge la
@@ -63,6 +74,10 @@ import pathlib
 from collections import defaultdict
 
 RACINE = pathlib.Path('assets/static/css')
+TEMPLATES_SRC = set()
+for _t in pathlib.Path('src').rglob('*.html'):
+    for _m in re.finditer(r'href="/static/css/([^"]+\.css)"', _t.read_text()):
+        TEMPLATES_SRC.add(_m.group(1).rsplit('/', 1)[-1])
 SCOPES = ('pages', 'widgets')          # doivent être scopés
 GLOBAUX = ('components',)              # partagés par conception
 
@@ -120,16 +135,27 @@ def porte_le_scope(selecteur, scope):
 
 
 # ── Contrôle A : portée ─────────────────────────────────────────────────────
+def chargee_par_l_application(chemin):
+    """Vrai si un template de `src/` pose un `<link>` vers cette feuille.
+
+    Les maquettes de `assets/templates/` ne comptent pas : elles ne sont pas
+    l'application, et la carte 342 les exclut du bundle.
+    """
+    return chemin.name in TEMPLATES_SRC
+
+
 def est_declaree_globale(chemin):
     """Un fichier de `pages/` ou `widgets/` peut être partagé par conception.
     Il le dit dans son en-tête, avec son motif."""
     return 'css:global' in chemin.read_text()[:800]
 
 
-a_scoper = sorted(f for d in SCOPES for f in (RACINE / d).rglob('*.css')
-                  if not est_declaree_globale(f))
-globales_declarees = sorted(f for d in SCOPES for f in (RACINE / d).rglob('*.css')
-                            if est_declaree_globale(f))
+toutes = sorted(f for d in SCOPES for f in (RACINE / d).rglob('*.css'))
+hors_application = [f for f in toutes if not chargee_par_l_application(f)]
+globales_declarees = [f for f in toutes
+                      if chargee_par_l_application(f) and est_declaree_globale(f)]
+a_scoper = [f for f in toutes
+            if chargee_par_l_application(f) and not est_declaree_globale(f)]
 fautifs = {}
 conformes = 0
 vides = []
@@ -153,6 +179,9 @@ print(f"  {conformes}/{len(a_scoper) - len(vides)} feuilles conformes")
 if vides:
     print(f"  · {len(vides)} feuilles sans aucune règle, non comptées : "
           + ', '.join(f.stem for f in vides))
+if hors_application:
+    print(f"  · {len(hors_application)} feuilles qu'aucun template de `src/` ne charge, "
+          "hors périmètre : " + ', '.join(f.stem for f in hors_application))
 for f in globales_declarees:
     print(f"  · {f.as_posix()} — déclarée globale (css:global), hors périmètre")
 if fautifs:
