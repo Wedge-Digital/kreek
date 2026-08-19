@@ -43,7 +43,7 @@ def _un(sql: str) -> str | None:
 # `step2` et `step5`, qui ont rendu la liste des équipes en chargeant huit
 # feuilles. Une couverture qui monte sans rien couvrir est le pire des états.
 FEUILLE_ATTENDUE = {
-    "auth-login": "pages/auth-login.css",
+    "auth-login": "pages/auth-layout.css",
     "espaces-tous": "pages/all-spaces.css",
     "espace-nouveau": "pages/new-space.css",
     "accueil": "pages/app-news-feed.css",
@@ -81,7 +81,7 @@ FEUILLE_ATTENDUE = {
     "widget-inducement-selector": "widgets/inducement-selector.css",
     "widget-customisation": "widgets/pd-right.css",
     "rapport-inducements": "pages/match-report-inducements.css",
-    "rapport-mercenaires": "widgets/mercenary-selector.css",
+    "rapport-mercenaires": "widgets/merco-selector.css",
 }
 
 

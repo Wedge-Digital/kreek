@@ -5,18 +5,21 @@
     padding: var(--p2);
 }
 
-.test-roster-picker {
+.widget-tester-layout .test-roster-picker,
+.widget-tester-layout.test-roster-picker {
     display: flex;
     flex-direction: column;
     gap: var(--p1);
     max-width: 900px;
 }
 
-.form-btn {
+.widget-tester-layout .form-btn,
+.widget-tester-layout.form-btn {
     max-width: 300px;
     border: 1px solid var(--dark-4);
     text-align: center;
     padding: var(--p1);
 }
 
-.form-header { font-size: var(--h3); font-weight: 700; }
+.widget-tester-layout .form-header,
+.widget-tester-layout.form-header { font-size: var(--h3); font-weight: 700; }

@@ -1,0 +1,44 @@
+/* Fusion des trois feuilles d'authentification.
+
+   Elles étaient chargées **ensemble** par `auth-layout.html`, sur la même
+   racine, à chaque page d'authentification — donc jamais isolées, et déjà
+   arbitrées par la cascade. Elles ne partagent aucun sélecteur : la
+   concaténation dans l'ordre de chargement rend exactement le même résultat.
+
+   Trois feuilles pour une seule racine rendaient la convention « le nom du
+   fichier est le sélecteur » inapplicable ; une seule feuille la rétablit. */
+
+
+/* ── venu de auth-login.css ── */
+.auth-layout .logo-img,
+.auth-layout.logo-img {
+  width: 60px; height: 60px; border-radius: 14px;
+  background: var(--dark-0); display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-weight: 900; font-size: 20px; color: var(--white);
+  margin: 0 auto var(--p2);
+}
+
+
+/* ── venu de auth-register-success.css ── */
+.auth-layout .success-icon,
+.auth-layout.success-icon {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: rgba(98,149,132,0.15); display: flex; align-items: center; justify-content: center;
+  font-size: 32px; margin: 0 auto var(--p2);
+}
+
+
+/* ── venu de auth-login-success.css ── */
+.auth-layout .wave-icon,
+.auth-layout.wave-icon {
+  font-size: 48px; text-align: center; margin-bottom: var(--p1);
+  animation: wave 1.5s ease-in-out infinite;
+  transform-origin: 70% 70%;
+  display: inline-block;
+}
+@keyframes wave {
+  0%, 100% { transform: rotate(0deg); }
+  20%       { transform: rotate(20deg); }
+  40%       { transform: rotate(-10deg); }
+  60%       { transform: rotate(15deg); }
+}

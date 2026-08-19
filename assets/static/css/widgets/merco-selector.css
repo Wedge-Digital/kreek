@@ -5,14 +5,16 @@
 }
 
 /* ── Section ── */
-.merco-section {
+.merco-selector .merco-section,
+.merco-selector.merco-section {
     background: var(--white);
     border-radius: 12px;
     border: 1px solid var(--dark-5);
     overflow: hidden;
 }
 
-.merco-section-header {
+.merco-selector .merco-section-header,
+.merco-selector.merco-section-header {
     padding: 12px 14px 10px;
     display: flex;
     align-items: center;
@@ -20,41 +22,48 @@
     border-bottom: 1px solid var(--dark-6);
 }
 
-.merco-section-title {
+.merco-selector .merco-section-title,
+.merco-selector.merco-section-title {
     font-size: var(--text-tiny);
     font-weight: 700;
     color: var(--dark-1);
 }
 
-.merco-section-body {
+.merco-selector .merco-section-body,
+.merco-selector.merco-section-body {
     padding: 12px 14px;
 }
 
 /* ── Dots compteur ── */
-.merco-dots {
+.merco-selector .merco-dots,
+.merco-selector.merco-dots {
     display: flex;
     gap: 6px;
     align-items: center;
 }
 
-.merco-dot {
+.merco-selector .merco-dot,
+.merco-selector.merco-dot {
     width: 10px;
     height: 10px;
     border-radius: 50%;
     flex-shrink: 0;
 }
 
-.merco-dot--filled {
+.merco-selector .merco-dot--filled,
+.merco-selector.merco-dot--filled {
     background: var(--main-blue);
     border: 2px solid var(--main-blue);
 }
 
-.merco-dot--empty {
+.merco-selector .merco-dot--empty,
+.merco-selector.merco-dot--empty {
     background: transparent;
     border: 2px dashed var(--dark-4);
 }
 
-.merco-dot-label {
+.merco-selector .merco-dot-label,
+.merco-selector.merco-dot-label {
     font-family: var(--font-title);
     font-size: 11px;
     font-weight: 700;
@@ -63,13 +72,15 @@
 }
 
 /* ── Grille positions ── */
-.merco-position-grid {
+.merco-selector .merco-position-grid,
+.merco-selector.merco-position-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
 }
 
-.merco-position-card {
+.merco-selector .merco-position-card,
+.merco-selector.merco-position-card {
     border: 2px solid var(--dark-5);
     border-radius: 10px;
     padding: 11px 10px;
@@ -80,43 +91,50 @@
     gap: 3px;
 }
 
-.merco-position-card:not(.disabled):hover {
+.merco-selector .merco-position-card:not(.disabled):hover,
+.merco-selector.merco-position-card:not(.disabled):hover {
     border-color: var(--main-blue);
     box-shadow: 0 2px 8px rgba(0, 48, 73, 0.1);
 }
 
-.merco-position-card.selected {
+.merco-selector .merco-position-card.selected,
+.merco-selector.merco-position-card.selected {
     border-color: var(--main-blue);
     background: rgba(0, 48, 73, 0.04);
 }
 
-.merco-position-card.disabled {
+.merco-selector .merco-position-card.disabled,
+.merco-selector.merco-position-card.disabled {
     opacity: 0.4;
     cursor: not-allowed;
     pointer-events: none;
 }
 
-.merco-position-name {
+.merco-selector .merco-position-name,
+.merco-selector.merco-position-name {
     font-size: 12px;
     font-weight: 700;
     color: var(--dark-1);
     line-height: 1.2;
 }
 
-.merco-position-price {
+.merco-selector .merco-position-price,
+.merco-selector.merco-position-price {
     font-family: var(--font-title);
     font-size: 13px;
     font-weight: 700;
     color: var(--main-blue);
 }
 
-.merco-position-count {
+.merco-selector .merco-position-count,
+.merco-selector.merco-position-count {
     font-size: 10px;
     color: var(--dark-3);
     margin-top: 1px;
 }
 
-.merco-position-full {
+.merco-selector .merco-position-full,
+.merco-selector.merco-position-full {
     display: inline-block;
     font-size: 9px;
     font-weight: 700;
@@ -130,14 +148,16 @@
 }
 
 /* ── Hire panel ── */
-.merco-hire-panel {
+.merco-selector .merco-hire-panel,
+.merco-selector.merco-hire-panel {
     background: var(--white);
     border-radius: 12px;
     border: 2px solid var(--main-blue);
     overflow: hidden;
 }
 
-.merco-hire-panel-header {
+.merco-selector .merco-hire-panel-header,
+.merco-selector.merco-hire-panel-header {
     padding: 10px 14px;
     background: var(--main-blue);
     display: flex;
@@ -145,28 +165,33 @@
     gap: 8px;
 }
 
-.merco-hire-panel-icon {
+.merco-selector .merco-hire-panel-icon,
+.merco-selector.merco-hire-panel-icon {
     font-size: 16px;
 }
 
-.merco-hire-panel-title {
+.merco-selector .merco-hire-panel-title,
+.merco-selector.merco-hire-panel-title {
     font-size: var(--text-tiny);
     font-weight: 700;
     color: var(--white);
 }
 
-.merco-hire-panel-pos {
+.merco-selector .merco-hire-panel-pos,
+.merco-selector.merco-hire-panel-pos {
     font-size: 11px;
     color: rgba(255, 255, 255, 0.75);
     font-weight: 400;
 }
 
-.merco-hire-options {
+.merco-selector .merco-hire-options,
+.merco-selector.merco-hire-options {
     display: grid;
     grid-template-columns: 1fr 1fr;
 }
 
-.merco-hire-option {
+.merco-selector .merco-hire-option,
+.merco-selector.merco-hire-option {
     padding: 14px 12px;
     display: flex;
     flex-direction: column;
@@ -176,34 +201,40 @@
     border-right: 1px solid var(--dark-6);
 }
 
-.merco-hire-option:last-child {
+.merco-selector .merco-hire-option:last-child,
+.merco-selector.merco-hire-option:last-child {
     border-right: none;
 }
 
-.merco-hire-option:hover {
+.merco-selector .merco-hire-option:hover,
+.merco-selector.merco-hire-option:hover {
     background: var(--dark-7);
 }
 
-.merco-hire-option-title {
+.merco-selector .merco-hire-option-title,
+.merco-selector.merco-hire-option-title {
     font-size: 12px;
     font-weight: 700;
     color: var(--dark-1);
 }
 
-.merco-hire-option-price {
+.merco-selector .merco-hire-option-price,
+.merco-selector.merco-hire-option-price {
     font-family: var(--font-title);
     font-size: var(--h5);
     font-weight: 700;
     color: var(--main-blue);
 }
 
-.merco-hire-option-detail {
+.merco-selector .merco-hire-option-detail,
+.merco-selector.merco-hire-option-detail {
     font-size: 10px;
     color: var(--dark-3);
     line-height: 1.4;
 }
 
-.merco-hire-option-badge {
+.merco-selector .merco-hire-option-badge,
+.merco-selector.merco-hire-option-badge {
     display: inline-block;
     font-size: 10px;
     font-weight: 700;
@@ -215,7 +246,8 @@
     border: 1px solid rgba(0, 48, 73, 0.15);
 }
 
-.merco-hire-btn {
+.merco-selector .merco-hire-btn,
+.merco-selector.merco-hire-btn {
     margin-top: 4px;
     padding: 8px 10px;
     border-radius: 8px;
@@ -228,20 +260,24 @@
     width: 100%;
 }
 
-.merco-hire-btn--base {
+.merco-selector .merco-hire-btn--base,
+.merco-selector.merco-hire-btn--base {
     background: var(--dark-6);
     color: var(--dark-1);
 }
 
-.merco-hire-btn--base:hover {
+.merco-selector .merco-hire-btn--base:hover,
+.merco-selector.merco-hire-btn--base:hover {
     background: var(--dark-5);
 }
 
-.merco-hire-btn--lvl1 {
+.merco-selector .merco-hire-btn--lvl1,
+.merco-selector.merco-hire-btn--lvl1 {
     background: var(--main-blue);
     color: var(--white);
 }
 
-.merco-hire-btn--lvl1:hover {
+.merco-selector .merco-hire-btn--lvl1:hover,
+.merco-selector.merco-hire-btn--lvl1:hover {
     opacity: 0.9;
 }
