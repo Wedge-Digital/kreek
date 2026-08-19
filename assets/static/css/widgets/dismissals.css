@@ -11,7 +11,19 @@
    tout ce qu'on fait sur cet écran retire quelque chose sans contrepartie.
    Chaque valeur est vérifiée ≥ 4,5:1 sur blanc, sur sa teinte et sur les
    lignes paires. */
-:root {
+/* Les variables sont portées par la racine de la page et non par `:root`.
+   `:root` est le seul sélecteur que le scoping ne peut pas atteindre, et deux
+   widgets qui le redéfinissent chacun de leur côté produisent, une fois les
+   feuilles réunies, un `:root` divergent que la cascade tranche au hasard de
+   l'ordre de chargement.
+
+   Les porter sur la racine suffit : les propriétés personnalisées héritent, et
+   tous les fragments de ce widget — panier, catalogue, erreur de panier — sont
+   injectés à l'intérieur de cette racine. Vérifié avant d'y toucher : les
+   cibles de réinjection sont des identifiants situés dans ces fragments.
+
+   Aucune valeur n'est modifiée, aucun nom de variable non plus. */
+.dis-page {
   --role-action:  #003049;  /* action réversible : annuler un renvoi */
   --role-cost:    #7A5210;  /* argent : valeur du joueur, du staff */
   --role-risk:    #A61B1B;  /* perte définitive */
