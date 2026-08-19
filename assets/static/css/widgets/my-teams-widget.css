@@ -1,35 +1,35 @@
-.section-title {
+.my-teams-widget .section-title {
   font-family: var(--font-title); font-size: var(--h4); font-weight: 700;
   color: var(--dark-1); margin-bottom: var(--p1);
   display: flex; align-items: center; gap: var(--p1);
 }
-.section-title--archived { margin-top: var(--p3); }
-.section-count {
+.my-teams-widget .section-title--archived { margin-top: var(--p3); }
+.my-teams-widget .section-count {
   background: var(--dark-5); border-radius: 20px;
   padding: 2px 10px; font-size: var(--text-tiny); color: var(--dark-2); font-weight: 600;
 }
 
-.active-teams-grid {
+.my-teams-widget .active-teams-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--p1);
 }
 
-.archived-list { display: flex; flex-direction: column; gap: var(--p05); }
-.archived-card {
+.my-teams-widget .archived-list { display: flex; flex-direction: column; gap: var(--p05); }
+.my-teams-widget .archived-card {
   background: var(--dark-7); border-radius: 8px; border: 1px solid var(--dark-5);
   padding: var(--p1) var(--p2);
   display: flex; align-items: center; gap: var(--p2);
   cursor: pointer; opacity: 0.85;
 }
-.archived-card:hover { opacity: 1; }
-.archived-logo {
+.my-teams-widget .archived-card:hover { opacity: 1; }
+.my-teams-widget .archived-logo {
   width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
   background: var(--dark-5);
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-title); font-weight: 800; font-size: 12px; color: var(--dark-3);
 }
-.archived-info { flex: 1; }
-.archived-name { font-weight: 600; font-size: var(--text-small); color: var(--dark-2); }
-.archived-roster { font-size: var(--text-tiny); color: var(--dark-4); margin-top: 2px; }
-.archived-tag {
+.my-teams-widget .archived-info { flex: 1; }
+.my-teams-widget .archived-name { font-weight: 600; font-size: var(--text-small); color: var(--dark-2); }
+.my-teams-widget .archived-roster { font-size: var(--text-tiny); color: var(--dark-4); margin-top: 2px; }
+.my-teams-widget .archived-tag {
   font-size: var(--text-tiny); color: var(--dark-3); white-space: nowrap;
 }

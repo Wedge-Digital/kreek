@@ -43,6 +43,9 @@ ailleurs.
 
 import base64
 import gzip
+import time
+import urllib.error
+import urllib.request
 import json
 import sys
 from pathlib import Path
@@ -117,7 +120,31 @@ def _neutraliser_le_reseau_externe(page):
     page.route("**/*", router)
 
 
+def attendre_le_serveur(base: str, limite: int = 180) -> None:
+    """Attend que le serveur réponde avant de relever.
+
+    `make dev` tourne sous `cargo watch -w src -w assets/static/css` : **chaque
+    modification de CSS reconstruit le binaire et redémarre le serveur**. Un
+    relevé lancé dans cette fenêtre échoue en bloc, ou pire, à moitié — ce qui
+    s'est produit trois fois avant qu'on en trouve la cause, et donnait
+    l'apparence d'un harnais instable.
+    """
+    debut = time.monotonic()
+    while time.monotonic() - debut < limite:
+        try:
+            urllib.request.urlopen(base, timeout=3)
+            return
+        except (urllib.error.URLError, TimeoutError, OSError):
+            time.sleep(2)
+    raise SystemExit(
+        f"serveur injoignable sur {base} après {limite}s — reconstruction en cours ?"
+    )
+
+
 def main(libelle: str) -> int:
+    from urls import BASE
+
+    attendre_le_serveur(BASE)
     pages, manquantes = collecter()
     sortie = Path(__file__).parent / "releves"
     sortie.mkdir(parents=True, exist_ok=True)

@@ -1,7 +1,7 @@
 {% import "components/team-card.html" as card_cmp %}
 <link rel="stylesheet" href="/static/css/components/team-card.css">
 <link rel="stylesheet" href="/static/css/widgets/my-teams-widget.css">
-<div hx-disinherit="*">
+<div class="my-teams-widget" hx-disinherit="*">
 
     {% if !active_teams.is_empty() %}
     <div class="section-title">

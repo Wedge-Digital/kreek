@@ -1,0 +1,277 @@
+.finalize-page [x-cloak] { display: none !important; }
+
+/* ── Page layout ──────────────────────────────────────────────────────── */
+.finalize-page {
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--p2);
+}
+
+/* ── Breadcrumb ───────────────────────────────────────────────────────── */
+.finalize-page .breadcrumb { font-size: var(--text-tiny); color: var(--dark-3); }
+.finalize-page .breadcrumb a { color: var(--dark-3); text-decoration: none; }
+.finalize-page .breadcrumb a:hover { color: var(--main-blue); }
+
+/* ── Team header ──────────────────────────────────────────────────────── */
+.finalize-page .team-header {
+  background: var(--white);
+  border-radius: var(--card-radius);
+  padding: var(--p2);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--p3);
+}
+.finalize-page .team-header-logo {
+  width: 72px; height: 72px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, #629584, #3a6655);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-weight: 900; font-size: 22px; color: var(--white);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+.finalize-page .team-header-body { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.finalize-page .team-header-top  { display: flex; align-items: center; gap: var(--p1); }
+.finalize-page .team-header-name { font-family: var(--font-title); font-size: var(--h3); font-weight: 800; color: var(--dark-0); }
+.finalize-page .team-status-badge { font-size: var(--text-tiny); font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+.finalize-page .badge-draft { background: rgba(255,107,53,0.12); color: var(--orange); }
+.finalize-page .team-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
+.finalize-page .meta-item  { display: flex; flex-direction: column; gap: 2px; }
+.finalize-page .meta-label { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
+.finalize-page .meta-value { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+
+/* SPP budget bar */
+.finalize-page .spp-budget {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 14px 18px;
+  background: rgba(255,215,0,0.07);
+  border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 8px;
+  min-width: 260px;
+}
+.finalize-page .spp-budget-top    { display: flex; justify-content: space-between; align-items: baseline; gap: var(--p1); }
+.finalize-page .spp-budget-label  { font-size: var(--text-tiny); font-weight: 700; color: #9A7800; text-transform: uppercase; letter-spacing: 0.4px; }
+.finalize-page .spp-budget-numbers { font-family: var(--font-title); font-size: var(--h5); font-weight: 800; color: #9A7800; white-space: nowrap; }
+.finalize-page .spp-budget-bar    { height: 8px; background: rgba(154,120,0,0.15); border-radius: 4px; overflow: hidden; }
+.finalize-page .spp-budget-bar-inner { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #9A7800, #FFD700); transition: width 0.4s ease; }
+.finalize-page .spp-budget-bottom { display: flex; justify-content: space-between; font-size: var(--text-tiny); color: rgba(154,120,0,0.75); }
+
+/* ── Section wrapper ──────────────────────────────────────────────────── */
+.finalize-page .finalize-section {
+  background: var(--white); border-radius: var(--card-radius); padding: var(--p2);
+}
+
+/* ── Split layout ─────────────────────────────────────────────────────── */
+.finalize-page .split-layout { display: flex; gap: var(--p2); align-items: flex-start; }
+.finalize-page .finalize-split { display: flex; gap: var(--p2); align-items: flex-start; }
+.finalize-page .finalize-left {
+  width: 320px; flex-shrink: 0;
+  background: var(--white); border-radius: var(--card-radius); overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.finalize-page .finalize-right {
+  flex: 1; background: var(--white); border-radius: var(--card-radius); overflow: hidden;
+  display: flex; flex-direction: column; min-height: 560px;
+}
+
+/* ── Left panel: player list ──────────────────────────────────────────── */
+.finalize-page .player-list { overflow-y: auto; max-height: 500px; scrollbar-color: var(--dark-4) var(--white); }
+.finalize-page .player-list-panel {
+  width: 300px; flex-shrink: 0;
+  background: var(--white); border-radius: var(--card-radius); overflow: hidden;
+}
+.finalize-page .player-list-header {
+  padding: 10px var(--p2); border-bottom: 2px solid var(--dark-5);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.finalize-page .player-list-title   { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); }
+.finalize-page .player-count-badge  { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; }
+
+.finalize-page .player-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px var(--p2); border-bottom: 1px solid var(--dark-6);
+  cursor: pointer; transition: background 0.1s; position: relative;
+}
+.finalize-page .player-row:hover { background: var(--dark-7); }
+.finalize-page .player-row.selected { background: rgba(0,48,73,0.04); border-left: 3px solid var(--main-blue); padding-left: calc(var(--p2) - 3px); }
+.finalize-page .player-row:last-child { border-bottom: none; }
+
+.finalize-page .jersey-badge {
+  width: 36px; height: 30px; border: 1.5px solid var(--dark-5); border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--text-tiny); font-weight: 800; color: var(--dark-3);
+  background: var(--dark-6); flex-shrink: 0; font-family: var(--font-title);
+}
+.finalize-page .player-row.selected .jersey-badge { border-color: var(--main-blue); color: var(--main-blue); background: rgba(0,48,73,0.06); }
+
+.finalize-page .player-row-info   { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.finalize-page .player-row-name   { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+.finalize-page .player-row-pos    { font-size: var(--text-tiny); color: var(--dark-3); }
+.finalize-page .player-row-skills { font-size: 11px; color: var(--dark-4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.finalize-page .skills-assigned-badge {
+  flex-shrink: 0; font-size: var(--text-tiny); font-weight: 700;
+  padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+  background: rgba(98,149,132,0.15); color: #3a6655;
+}
+
+.finalize-page .player-list-footer {
+  padding: var(--p1) var(--p2); border-top: 2px solid var(--dark-5);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.finalize-page .btn-submit {
+  width: 100%; padding: 12px var(--p1);
+  background: var(--main-blue); color: var(--white);
+  border-radius: 8px; font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
+  cursor: pointer; border: none; text-align: center; transition: opacity 0.15s;
+}
+.finalize-page .btn-submit:hover { opacity: 0.9; }
+.finalize-page .submit-hint { font-size: var(--text-tiny); color: var(--dark-3); text-align: center; }
+
+/* ── Right panel: skill panel ─────────────────────────────────────────── */
+.finalize-page .skill-panel {
+  flex: 1; background: var(--white); border-radius: var(--card-radius); overflow: hidden;
+  display: flex; flex-direction: column; min-height: 560px;
+}
+.finalize-page .skill-panel-empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--p1); color: var(--dark-3); font-size: var(--text-small); padding: var(--p4);
+}
+.finalize-page .skill-panel-empty-icon { font-size: 42px; opacity: 0.25; }
+
+/* Player header in skill panel */
+.finalize-page .skill-player-header {
+  padding: var(--p2); border-bottom: 2px solid var(--dark-5);
+  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--p2);
+}
+.finalize-page .skill-player-info   { display: flex; flex-direction: column; gap: 6px; }
+.finalize-page .skill-player-name   { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-0); }
+.finalize-page .skill-player-pos    { font-size: var(--text-small); color: var(--dark-3); }
+.finalize-page .skill-player-base   { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 2px; }
+.finalize-page .base-skill-label    { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.4px; }
+.finalize-page .skill-tag           { font-size: var(--text-tiny); font-weight: 600; padding: 3px 10px; border-radius: 20px; background: var(--dark-5); color: var(--dark-1); }
+
+/* Description de compétence (finalize uniquement — pas dans le fragment skill_picker) */
+.finalize-page .skill-desc { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; max-width: 280px; }
+
+/* Les styles du fragment skill_picker (contrôles, tableau, pills, boutons)
+   vivent désormais dans widgets/skill-picker.css, embarqué par le widget
+   lui-même (carte 182 — voir docs/specs/player-spp-spending). */
+
+/* ── SPP Summary ──────────────────────────────────────────────────────── */
+.finalize-page .spp-summary { background: var(--white); border-radius: var(--card-radius); overflow: hidden; }
+.finalize-page .spp-summary-header {
+  padding: 10px var(--p2); border-bottom: 2px solid var(--dark-5);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--p2);
+}
+.finalize-page .spp-summary-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); }
+.finalize-page .spp-summary-meta  { font-size: var(--text-tiny); color: var(--dark-3); }
+.finalize-page .spp-summary-meta strong { color: #9A7800; }
+
+.finalize-page .spp-summary-table { width: 100%; border-collapse: collapse; }
+.finalize-page .spp-summary-table th {
+  text-align: left; padding: 8px var(--p2);
+  font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+  text-transform: uppercase; letter-spacing: 0.4px;
+  background: var(--dark-6); border-bottom: 1px solid var(--dark-5);
+}
+.finalize-page .spp-summary-table td { padding: 10px var(--p2); font-size: var(--text-small); border-bottom: 1px solid var(--dark-6); vertical-align: middle; }
+.finalize-page .spp-summary-table tr:last-child td { border-bottom: none; }
+.finalize-page .spp-summary-table tr:hover td { background: var(--dark-7); }
+.finalize-page .summary-player    { font-weight: 600; color: var(--dark-1); }
+.finalize-page .summary-pos       { font-size: var(--text-tiny); color: var(--dark-3); }
+.finalize-page .summary-cost      { font-weight: 700; color: #9A7800; }
+.finalize-page .mode-chip         { display: inline-block; font-size: var(--text-tiny); font-weight: 700; padding: 2px 10px; border-radius: 20px; }
+.finalize-page .mode-chip-chosen  { background: rgba(0,48,73,0.08); color: var(--main-blue); }
+.finalize-page .mode-chip-random  { background: rgba(154,120,0,0.10); color: #9A7800; }
+.finalize-page .btn-cancel-entry {
+  font-size: var(--text-tiny); color: var(--dark-3); cursor: pointer;
+  background: none; border: 1px solid var(--dark-5); padding: 4px 10px; border-radius: 5px; transition: all 0.12s;
+}
+.finalize-page .btn-cancel-entry:hover { color: var(--red); border-color: var(--red); }
+
+/* ── Team header info (new template) ─────────────────────────────────── */
+.finalize-page .team-header-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.finalize-page .team-header-logo img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; }
+.finalize-page .team-header-logo--placeholder {
+  width: 72px; height: 72px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, #629584, #3a6655);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-weight: 900; font-size: 22px; color: var(--white);
+}
+.finalize-page .team-header-roster { font-size: var(--text-small); color: var(--dark-3); }
+.finalize-page .team-header-budget { font-size: var(--text-small); color: var(--dark-2); font-weight: 600; }
+.finalize-page .team-header-spp { font-size: var(--text-small); color: #9A7800; }
+.finalize-page .spp-badge {
+  display: inline-block; font-weight: 800; padding: 2px 10px;
+  border-radius: 20px; background: rgba(255,215,0,0.15); color: #9A7800;
+  font-size: var(--text-tiny);
+}
+
+/* ── Player row jersey & badge ───────────────────────────────────────── */
+.finalize-page .player-row-jersey {
+  width: 36px; height: 30px; border: 1.5px solid var(--dark-5); border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--text-tiny); font-weight: 800; color: var(--dark-3);
+  background: var(--dark-6); flex-shrink: 0; font-family: var(--font-title);
+}
+.finalize-page .player-row.selected .player-row-jersey { border-color: var(--main-blue); color: var(--main-blue); background: rgba(0,48,73,0.06); }
+.finalize-page .player-row-badge {
+  flex-shrink: 0; font-size: var(--text-tiny); font-weight: 700;
+  padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+  background: rgba(98,149,132,0.15); color: #3a6655;
+}
+
+/* ── Submit bar ──────────────────────────────────────────────────────── */
+.finalize-page .submit-bar {
+  padding: var(--p2); border-top: 2px solid var(--dark-5);
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+/* ── Skill header widget ─────────────────────────────────────────────── */
+.finalize-page .skill-header-widget { padding: var(--p2); display: flex; flex-direction: column; gap: 12px; }
+.finalize-page .skill-header-identity { display: flex; align-items: center; gap: 10px; }
+.finalize-page .skill-header-identity .jersey-input {
+  width: 50px; padding: 8px; border: 1.5px solid var(--dark-4); border-radius: 6px;
+  font-family: var(--font-title); font-weight: 800; font-size: var(--text-small);
+  text-align: center; color: var(--dark-1);
+}
+.finalize-page .skill-header-identity .player-name-input {
+  flex: 1; padding: 8px 12px; border: 1.5px solid var(--dark-4); border-radius: 6px;
+  font-size: var(--text-small); color: var(--dark-1); font-weight: 600;
+}
+.finalize-page .skill-header-meta { font-size: var(--text-small); color: var(--dark-3); }
+.finalize-page .skill-header-sep { margin: 0 6px; }
+.finalize-page .skill-header-spp { font-size: var(--text-small); color: #9A7800; }
+.finalize-page .skill-header-acquired { display: flex; flex-direction: column; gap: 6px; }
+.finalize-page .acquired-label { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3); text-transform: uppercase; }
+.finalize-page .acquired-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.finalize-page .acquired-tag {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 6px;
+  background: rgba(98,149,132,0.10); font-size: var(--text-tiny);
+}
+.finalize-page .acquired-tag-name { font-weight: 700; color: #3a6655; }
+.finalize-page .acquired-tag-meta { color: var(--dark-3); }
+.finalize-page .acquired-tag-cancel {
+  background: none; border: none; cursor: pointer; color: var(--dark-4);
+  font-size: 14px; line-height: 1; padding: 0 2px;
+}
+.finalize-page .acquired-tag-cancel:hover { color: var(--red); }
+
+/* ── SPP summary player cell ─────────────────────────────────────────── */
+.finalize-page .spp-summary-player { display: flex; align-items: center; gap: 10px; }
+.finalize-page .summary-player-name { font-weight: 600; color: var(--dark-1); }
+.finalize-page .summary-player-pos { font-size: var(--text-tiny); color: var(--dark-3); }
+.finalize-page .btn-cancel-spp {
+  font-size: var(--text-tiny); color: var(--dark-3); cursor: pointer;
+  background: none; border: 1px solid var(--dark-5); padding: 4px 10px; border-radius: 5px;
+}
+.finalize-page .btn-cancel-spp:hover { color: var(--red); border-color: var(--red); }
+
+/* ── Section label (shared) ──────────────────────────────────────────── */
+.finalize-page .section-label {
+  font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+  color: var(--dark-1); padding: 10px var(--p2); border-bottom: 2px solid var(--dark-5);
+}
