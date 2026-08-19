@@ -62,7 +62,7 @@ jobs:
 
       # Binaire précompilé, comme pour sqlx-cli : compiler cargo-audit sur le
       # runner coûterait plusieurs minutes à chaque exécution.
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@v2.85.5
         with:
           tool: cargo-audit
 
@@ -105,7 +105,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Installer sqlx-cli (binaire précompilé)
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@v2.85.5
         with:
           tool: sqlx-cli
 
@@ -142,7 +142,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Installer sqlx-cli (binaire précompilé)
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@v2.85.5
         with:
           tool: sqlx-cli
 
