@@ -30,6 +30,30 @@ from pathlib import Path
 
 INSCOPABLES = {"html", "body", ":root", "*", "html body"}
 
+COMBINATEURS = re.compile(r"[\s>+~]")
+
+
+def forme_composee(selecteur: str, portee: str) -> str:
+    """Rend la variante où la portée est **collée** au premier compound.
+
+    `.mr-container` ⇒ `.scope.mr-container`, et non `.scope .mr-container`.
+
+    Sans elle, une feuille qui style son propre élément racine cesse de
+    s'appliquer dès que la portée est une classe **ajoutée à cet élément** :
+    `<div class="mr-container match-report-inducements">` n'est pas *à
+    l'intérieur* de `.match-report-inducements`, il l'est. Le sélecteur
+    descendant l'exclut, et la feuille globale reprend la main — mesuré, un
+    `padding-bottom` de 120 px retombé à 24 px.
+
+    Le cas n'apparaît pas tant que la portée **est** la classe racine ; il
+    surgit dès qu'une racine porte deux classes dont une seule est la portée.
+    """
+    m = COMBINATEURS.search(selecteur)
+    premier, reste = (selecteur[:m.start()], selecteur[m.start():]) if m else (selecteur, "")
+    nom = re.match(r"^[a-zA-Z][a-zA-Z0-9-]*", premier)
+    coupe = nom.end() if nom else 0
+    return premier[:coupe] + portee + premier[coupe:] + reste
+
 
 def masquer_les_commentaires(texte: str) -> str:
     """Rend le texte avec le **contenu** des commentaires remplacé par des
@@ -118,7 +142,10 @@ def scoper(texte: str, portee: str) -> tuple[str, list[str]]:
                     or nu.startswith(portee + ".") or nu.startswith(portee + ">"):
                 nouveaux.append(nu)
             else:
+                # Deux formes : descendante pour ce qui est sous la racine,
+                # composée pour la racine elle-même.
                 nouveaux.append(f"{portee} {nu}")
+                nouveaux.append(forme_composee(nu, portee))
         sortie.append(avant + ",\n".join(nouveaux) + apres)
         precedent = b
     sortie.append(texte[precedent:])

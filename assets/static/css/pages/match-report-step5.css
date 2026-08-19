@@ -1,12 +1,14 @@
 /* ── Score banner ── */
-.mr-score-banner {
+.match-report-step5 .mr-score-banner,
+.match-report-step5.mr-score-banner {
   background: var(--white);
   border-radius: 12px;
   padding: var(--p2);
   display: flex;
   align-items: center;
 }
-.mr-score-team {
+.match-report-step5 .mr-score-team,
+.match-report-step5.mr-score-team {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -15,7 +17,8 @@
   gap: 4px;
   text-align: center;
 }
-.mr-score-logo {
+.match-report-step5 .mr-score-logo,
+.match-report-step5.mr-score-logo {
   width: 44px;
   height: 44px;
   border-radius: 10px;
@@ -28,17 +31,20 @@
   color: var(--white);
   background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
 }
-.mr-score-logo--img {
+.match-report-step5 .mr-score-logo--img,
+.match-report-step5.mr-score-logo--img {
   object-fit: cover;
   background: none;
   border-radius: 10px;
 }
-.mr-score-name {
+.match-report-step5 .mr-score-name,
+.match-report-step5.mr-score-name {
   font-size: var(--text-tiny);
   font-weight: 600;
   color: var(--dark-1);
 }
-.mr-score-center {
+.match-report-step5 .mr-score-center,
+.match-report-step5.mr-score-center {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -46,23 +52,27 @@
   flex-shrink: 0;
   padding: 0 var(--p1);
 }
-.mr-score-nums {
+.match-report-step5 .mr-score-nums,
+.match-report-step5.mr-score-nums {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.mr-score-value {
+.match-report-step5 .mr-score-value,
+.match-report-step5.mr-score-value {
   font-family: var(--font-title);
   font-size: var(--h3);
   font-weight: 700;
   color: var(--dark-0);
 }
-.mr-score-sep {
+.match-report-step5 .mr-score-sep,
+.match-report-step5.mr-score-sep {
   font-size: var(--h4);
   color: var(--dark-4);
   font-weight: 700;
 }
-.mr-score-cas {
+.match-report-step5 .mr-score-cas,
+.match-report-step5.mr-score-cas {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -70,23 +80,27 @@
   font-size: 11px;
   color: var(--dark-4);
 }
-.mr-score-cas-label {
+.match-report-step5 .mr-score-cas-label,
+.match-report-step5.mr-score-cas-label {
   letter-spacing: 0.3px;
   text-transform: uppercase;
   font-weight: 600;
 }
-.mr-score-cas-num {
+.match-report-step5 .mr-score-cas-num,
+.match-report-step5.mr-score-cas-num {
   font-family: var(--font-title);
   font-size: 13px;
   font-weight: 700;
   color: var(--dark-3);
 }
-.mr-score-cas-sep {
+.match-report-step5 .mr-score-cas-sep,
+.match-report-step5.mr-score-cas-sep {
   color: var(--dark-5);
 }
 
 /* ── Team row shared ── */
-.mr-team-row {
+.match-report-step5 .mr-team-row,
+.match-report-step5.mr-team-row {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -94,12 +108,14 @@
   background: var(--dark-7);
   border-radius: 8px;
 }
-.mr-team-row-header {
+.match-report-step5 .mr-team-row-header,
+.match-report-step5.mr-team-row-header {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.mr-team-row-logo {
+.match-report-step5 .mr-team-row-logo,
+.match-report-step5.mr-team-row-logo {
   width: 32px;
   height: 32px;
   border-radius: 6px;
@@ -113,7 +129,8 @@
   flex-shrink: 0;
   background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
 }
-.mr-team-row-name {
+.match-report-step5 .mr-team-row-name,
+.match-report-step5.mr-team-row-name {
   font-size: var(--text-tiny);
   font-weight: 600;
   color: var(--dark-1);
@@ -121,7 +138,8 @@
 }
 
 /* ── Gains ── */
-.mr-gains-team-row {
+.match-report-step5 .mr-gains-team-row,
+.match-report-step5.mr-gains-team-row {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -129,20 +147,23 @@
   background: var(--dark-7);
   border-radius: 8px;
 }
-.mr-gains-team-info {
+.match-report-step5 .mr-gains-team-info,
+.match-report-step5.mr-gains-team-info {
   flex: 1;
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
 }
-.mr-gains-team-text {
+.match-report-step5 .mr-gains-team-text,
+.match-report-step5.mr-gains-team-text {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
 }
-.mr-gains-detail {
+.match-report-step5 .mr-gains-detail,
+.match-report-step5.mr-gains-detail {
   font-size: 11px;
   color: var(--dark-4);
   font-style: italic;
@@ -150,13 +171,15 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.mr-gains-input-group {
+.match-report-step5 .mr-gains-input-group,
+.match-report-step5.mr-gains-input-group {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
 }
-.mr-gains-input {
+.match-report-step5 .mr-gains-input,
+.match-report-step5.mr-gains-input {
   width: 90px;
   height: 36px;
   text-align: right;
@@ -170,32 +193,38 @@
   background: var(--white);
   outline: none;
 }
-.mr-gains-input:focus {
+.match-report-step5 .mr-gains-input:focus,
+.match-report-step5.mr-gains-input:focus {
   border-color: var(--main-blue);
   box-shadow: 0 0 0 3px rgba(0, 48, 73, 0.1);
 }
-.mr-gains-unit {
+.match-report-step5 .mr-gains-unit,
+.match-report-step5.mr-gains-unit {
   font-size: var(--text-tiny);
   color: var(--dark-3);
 }
 
 /* ── Fan factor modifier ── */
-.mr-fan-mod-row {
+.match-report-step5 .mr-fan-mod-row,
+.match-report-step5.mr-fan-mod-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.mr-fan-mod-label {
+.match-report-step5 .mr-fan-mod-label,
+.match-report-step5.mr-fan-mod-label {
   font-size: var(--text-tiny);
   color: var(--dark-3);
   flex: 1;
 }
-.mr-fan-mod-btns {
+.match-report-step5 .mr-fan-mod-btns,
+.match-report-step5.mr-fan-mod-btns {
   display: flex;
   align-items: center;
   gap: 4px;
 }
-.mr-fan-mod-btn {
+.match-report-step5 .mr-fan-mod-btn,
+.match-report-step5.mr-fan-mod-btn {
   width: 36px;
   height: 36px;
   border-radius: 6px;
@@ -210,26 +239,31 @@
   cursor: pointer;
   transition: all 0.12s;
 }
-.mr-fan-mod-btn:hover {
+.match-report-step5 .mr-fan-mod-btn:hover,
+.match-report-step5.mr-fan-mod-btn:hover {
   border-color: var(--main-blue);
   color: var(--main-blue);
 }
-.mr-fan-mod-btn.active {
+.match-report-step5 .mr-fan-mod-btn.active,
+.match-report-step5.mr-fan-mod-btn.active {
   background: var(--main-blue);
   color: var(--white);
   border-color: var(--main-blue);
 }
-.mr-fan-mod-btn.active.negative {
+.match-report-step5 .mr-fan-mod-btn.active.negative,
+.match-report-step5.mr-fan-mod-btn.active.negative {
   background: var(--red);
   border-color: var(--red);
 }
-.mr-fan-mod-btn.active.positive {
+.match-report-step5 .mr-fan-mod-btn.active.positive,
+.match-report-step5.mr-fan-mod-btn.active.positive {
   background: var(--green);
   border-color: var(--green);
 }
 
 /* Logo image dans mr-team-row-logo */
-.mr-team-row-logo.mr-score-logo--img {
+.match-report-step5 .mr-team-row-logo.mr-score-logo--img,
+.match-report-step5.mr-team-row-logo.mr-score-logo--img {
   width: 32px;
   height: 32px;
   border-radius: 6px;
@@ -238,23 +272,27 @@
 }
 
 /* ── Résumé ── */
-.mr-resume-field {
+.match-report-step5 .mr-resume-field,
+.match-report-step5.mr-resume-field {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
-.mr-resume-label {
+.match-report-step5 .mr-resume-label,
+.match-report-step5.mr-resume-label {
   font-size: var(--text-tiny);
   font-weight: 600;
   color: var(--dark-2);
 }
-.mr-resume-optional {
+.match-report-step5 .mr-resume-optional,
+.match-report-step5.mr-resume-optional {
   font-size: 11px;
   color: var(--dark-4);
   font-weight: 400;
   margin-left: 6px;
 }
-.mr-resume-input {
+.match-report-step5 .mr-resume-input,
+.match-report-step5.mr-resume-input {
   width: 100%;
   height: 38px;
   padding: 0 10px;
@@ -267,11 +305,13 @@
   background: var(--white);
   outline: none;
 }
-.mr-resume-input:focus {
+.match-report-step5 .mr-resume-input:focus,
+.match-report-step5.mr-resume-input:focus {
   border-color: var(--main-blue);
   box-shadow: 0 0 0 3px rgba(0, 48, 73, 0.1);
 }
-.mr-resume-textarea {
+.match-report-step5 .mr-resume-textarea,
+.match-report-step5.mr-resume-textarea {
   width: 100%;
   min-height: 120px;
   padding: 10px;
@@ -286,11 +326,13 @@
   resize: vertical;
   line-height: 1.6;
 }
-.mr-resume-textarea:focus {
+.match-report-step5 .mr-resume-textarea:focus,
+.match-report-step5.mr-resume-textarea:focus {
   border-color: var(--main-blue);
   box-shadow: 0 0 0 3px rgba(0, 48, 73, 0.1);
 }
-.mr-resume-hint {
+.match-report-step5 .mr-resume-hint,
+.match-report-step5.mr-resume-hint {
   font-size: 11px;
   color: var(--dark-4);
   font-style: italic;

@@ -1,0 +1,710 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+   Match Report — Récap (page publique, style article)
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Layout global ── */
+.ms-page {
+  max-width: 980px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--p2);
+  padding-bottom: var(--p5);
+}
+
+/* ── Hero banner ── */
+.ms-page .ms-hero,
+.ms-page.ms-hero {
+  background: var(--white);
+  border-radius: 12px;
+  border: 1px solid var(--dark-5);
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+}
+
+.ms-page .ms-hero-header,
+.ms-page.ms-hero-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px var(--p3);
+  background: var(--dark-1);
+}
+.ms-page .ms-hero-context,
+.ms-page.ms-hero-context {
+  font-size: var(--text-tiny);
+  font-family: var(--font-accent);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.55);
+}
+
+.ms-page .ms-scoreboard,
+.ms-page.ms-scoreboard {
+  display: flex;
+  align-items: center;
+  padding: var(--p2) var(--p3) var(--p2);
+  gap: 0;
+}
+
+.ms-page .ms-hero-team,
+.ms-page.ms-hero-team {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--p1);
+}
+.ms-page .ms-hero-team--away,
+.ms-page.ms-hero-team--away {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+.ms-page .ms-hero-logo,
+.ms-page.ms-hero-logo {
+  width: 56px; height: 56px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-weight: 800; font-size: 18px;
+  color: var(--white); flex-shrink: 0;
+  background: linear-gradient(135deg, var(--main-blue) 0%, #0a4a6a 100%);
+}
+.ms-page .ms-hero-logo--away,
+.ms-page.ms-hero-logo--away {
+  background: linear-gradient(135deg, #8B1A1A 0%, #3A1A1A 100%);
+}
+.ms-page .ms-hero-logo--img,
+.ms-page.ms-hero-logo--img {
+  object-fit: cover;
+}
+.ms-page .ms-hero-team-info,
+.ms-page.ms-hero-team-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ms-page .ms-hero-team-name,
+.ms-page.ms-hero-team-name {
+  font-family: var(--font-title);
+  font-size: var(--h5);
+  font-weight: 700;
+  color: var(--dark-0);
+  line-height: 1.1;
+}
+.ms-page .ms-hero-coach,
+.ms-page.ms-hero-coach {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+}
+.ms-page .ms-result-badge,
+.ms-page.ms-result-badge {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-accent);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  width: fit-content;
+}
+.ms-page .ms-result-win,
+.ms-page.ms-result-win  { background: rgba(98,149,132,0.1);  color: var(--green); }
+.ms-page .ms-result-lose,
+.ms-page.ms-result-lose { background: rgba(224,32,32,0.07);  color: var(--red);   }
+.ms-page .ms-result-draw,
+.ms-page.ms-result-draw { background: var(--dark-6);          color: var(--dark-3); }
+
+.ms-page .ms-score-center,
+.ms-page.ms-score-center {
+  flex-shrink: 0;
+  padding: 0 var(--p2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+.ms-page .ms-score-display,
+.ms-page.ms-score-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ms-page .ms-score-num,
+.ms-page.ms-score-num {
+  font-family: var(--font-title);
+  font-size: 88px;
+  font-weight: 900;
+  color: var(--dark-0);
+  line-height: 1;
+  letter-spacing: -6px;
+}
+.ms-page .ms-score-sep,
+.ms-page.ms-score-sep {
+  font-family: var(--font-title);
+  font-size: 40px;
+  font-weight: 300;
+  color: var(--dark-4);
+  line-height: 1;
+}
+
+.ms-page .ms-hero-stats,
+.ms-page.ms-hero-stats {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  background: var(--dark-0);
+}
+.ms-page .ms-hero-stat,
+.ms-page.ms-hero-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 12px var(--p1);
+  border-right: 1px solid rgba(255,255,255,0.07);
+}
+.ms-page .ms-hero-stat:last-child,
+.ms-page.ms-hero-stat:last-child { border-right: none; }
+.ms-page .ms-hero-stat-value,
+.ms-page.ms-hero-stat-value {
+  font-family: var(--font-title);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--white);
+}
+.ms-page .ms-hero-stat-value--orange,
+.ms-page.ms-hero-stat-value--orange { color: var(--orange); }
+.ms-page .ms-hero-stat-label,
+.ms-page.ms-hero-stat-label {
+  font-size: 10px;
+  color: rgba(255,255,255,0.4);
+  font-family: var(--font-accent);
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* ── 2-column body ── */
+.ms-page .ms-body,
+.ms-page.ms-body {
+  display: flex;
+  gap: var(--p2);
+  align-items: flex-start;
+}
+.ms-page .ms-main,
+.ms-page.ms-main  { flex: 3; display: flex; flex-direction: column; gap: var(--p2); min-width: 0; }
+.ms-page .ms-aside,
+.ms-page.ms-aside { flex: 2; display: flex; flex-direction: column; gap: var(--p2); min-width: 0; }
+
+/* ── Cards ── */
+.ms-page .ms-card,
+.ms-page.ms-card {
+  background: var(--white);
+  border-radius: 12px;
+  border: 1px solid var(--dark-5);
+  overflow: hidden;
+}
+.ms-page .ms-card-header,
+.ms-page.ms-card-header {
+  padding: 14px var(--p2);
+  border-bottom: 1px solid var(--dark-5);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ms-page .ms-card-header-icon,
+.ms-page.ms-card-header-icon { font-size: 16px; }
+.ms-page .ms-card-header-title,
+.ms-page.ms-card-header-title {
+  font-family: var(--font-title);
+  font-size: var(--text-small);
+  font-weight: 700;
+  color: var(--dark-1);
+  flex: 1;
+}
+.ms-page .ms-card-header-byline,
+.ms-page.ms-card-header-byline {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+}
+.ms-page .ms-card-body,
+.ms-page.ms-card-body {
+  padding: var(--p2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--p1);
+}
+.ms-page .ms-card-body--tight,
+.ms-page.ms-card-body--tight {
+  gap: 0;
+  padding: var(--p1) var(--p2);
+}
+.ms-page .ms-card-subheader,
+.ms-page.ms-card-subheader {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--dark-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 0 6px;
+}
+.ms-page .ms-divider,
+.ms-page.ms-divider {
+  height: 1px;
+  background: var(--dark-5);
+  margin: 8px 0;
+}
+
+/* ── Article ── */
+.ms-page .ms-article-headline,
+.ms-page.ms-article-headline {
+  font-family: var(--font-title);
+  font-size: var(--h4);
+  font-weight: 700;
+  color: var(--dark-0);
+  line-height: 1.2;
+}
+.ms-page .ms-article-body,
+.ms-page.ms-article-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ms-page .ms-article-p,
+.ms-page.ms-article-p {
+  font-size: var(--text-small);
+  color: var(--dark-1);
+  line-height: 1.7;
+  white-space: pre-line;
+}
+.ms-page .ms-article-p strong,
+.ms-page.ms-article-p strong { font-weight: 600; color: var(--dark-0); }
+
+/* ── Key moments (timeline) ── */
+.ms-page .ms-timeline,
+.ms-page.ms-timeline { display: flex; flex-direction: column; gap: 0; }
+.ms-page .ms-half-label,
+.ms-page.ms-half-label {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-accent);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--dark-3);
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ms-page .ms-half-label::after,
+.ms-page.ms-half-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--dark-5);
+}
+
+.ms-page .ms-event,
+.ms-page.ms-event {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--dark-6);
+}
+.ms-page .ms-event:last-child,
+.ms-page.ms-event:last-child { border-bottom: none; }
+
+.ms-page .ms-event-turn,
+.ms-page.ms-event-turn {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800;
+  font-family: var(--font-accent);
+  flex-shrink: 0;
+}
+.ms-page .ms-event-turn--home,
+.ms-page.ms-event-turn--home { background: var(--main-blue); color: var(--white); }
+.ms-page .ms-event-turn--away,
+.ms-page.ms-event-turn--away { background: rgba(139,26,26,0.12); color: #8B1A1A; border: 1px solid rgba(139,26,26,0.2); }
+.ms-page .ms-event-turn--mvp,
+.ms-page.ms-event-turn--mvp  { background: rgba(255,215,0,0.15); color: #9A7800; border: 1px solid rgba(255,215,0,0.3); font-size: 16px; }
+.ms-page .ms-event-turn--mvp--away,
+.ms-page.ms-event-turn--mvp--away { background: rgba(139,26,26,0.08); color: #8B1A1A; border-color: rgba(139,26,26,0.25); }
+
+.ms-page .ms-event-icon,
+.ms-page.ms-event-icon {
+  font-size: 18px;
+  line-height: 36px;
+  flex-shrink: 0;
+}
+
+.ms-page .ms-event-body,
+.ms-page.ms-event-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ms-page .ms-event-title,
+.ms-page.ms-event-title {
+  font-size: var(--text-small);
+  color: var(--dark-1);
+  font-weight: 500;
+}
+.ms-page .ms-event-title strong,
+.ms-page.ms-event-title strong { font-weight: 700; color: var(--dark-0); }
+.ms-page .ms-event-injury,
+.ms-page.ms-event-injury {
+  font-size: var(--text-tiny);
+  font-weight: 600;
+  color: var(--orange);
+  background: rgba(255,107,53,0.07);
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  width: fit-content;
+}
+.ms-page .ms-event-injury--commo,
+.ms-page.ms-event-injury--commo   { color: var(--orange);   background: rgba(255,107,53,0.07); }
+.ms-page .ms-event-injury--serious,
+.ms-page.ms-event-injury--serious { color: var(--red);      background: rgba(224,32,32,0.07);  }
+.ms-page .ms-event-injury--death,
+.ms-page.ms-event-injury--death   { color: var(--dark-2);   background: rgba(0,0,0,0.07);      }
+.ms-page .ms-event-injury--out,
+.ms-page.ms-event-injury--out     { color: #8B1A1A;         background: rgba(139,26,26,0.07);  }
+
+/* ── Sidebar — MVP card ── */
+.ms-page .ms-mvp-row,
+.ms-page.ms-mvp-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+.ms-page .ms-mvp-row + .ms-mvp-row,
+.ms-page.ms-mvp-row + .ms-mvp-row { border-top: 1px solid var(--dark-6); }
+.ms-page .ms-mvp-team-badge,
+.ms-page.ms-mvp-team-badge {
+  width: 36px; height: 36px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-weight: 700; font-size: 12px;
+  color: var(--white); flex-shrink: 0;
+}
+.ms-page .ms-mvp-team-badge--home,
+.ms-page.ms-mvp-team-badge--home { background: linear-gradient(135deg, var(--main-blue), #0a4a6a); }
+.ms-page .ms-mvp-team-badge--away,
+.ms-page.ms-mvp-team-badge--away { background: linear-gradient(135deg, #8B1A1A, #3A1A1A); }
+.ms-page .ms-mvp-info,
+.ms-page.ms-mvp-info { flex: 1; }
+.ms-page .ms-mvp-name,
+.ms-page.ms-mvp-name {
+  font-size: var(--text-small);
+  font-weight: 700;
+  color: var(--dark-0);
+}
+.ms-page .ms-mvp-detail,
+.ms-page.ms-mvp-detail {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  margin-top: 2px;
+}
+.ms-page .ms-mvp-star,
+.ms-page.ms-mvp-star {
+  font-size: 22px;
+}
+
+/* ── Sidebar — Performances ── */
+.ms-page .ms-perf-row,
+.ms-page.ms-perf-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--dark-6);
+}
+.ms-page .ms-perf-row:last-child,
+.ms-page.ms-perf-row:last-child { border-bottom: none; }
+.ms-page .ms-perf-jersey,
+.ms-page.ms-perf-jersey {
+  width: 28px; height: 28px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: var(--white);
+  flex-shrink: 0;
+}
+.ms-page .ms-perf-jersey--home,
+.ms-page.ms-perf-jersey--home { background: var(--main-blue); }
+.ms-page .ms-perf-jersey--away,
+.ms-page.ms-perf-jersey--away { background: #8B1A1A; }
+.ms-page .ms-perf-info,
+.ms-page.ms-perf-info { flex: 1; min-width: 0; }
+.ms-page .ms-perf-name,
+.ms-page.ms-perf-name { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+.ms-page .ms-perf-pos,
+.ms-page.ms-perf-pos  { font-size: var(--text-tiny); color: var(--dark-3); }
+.ms-page .ms-perf-spp,
+.ms-page.ms-perf-spp  {
+  font-family: var(--font-title);
+  font-size: var(--text-small);
+  font-weight: 700;
+  color: var(--main-blue);
+  text-align: right;
+  flex-shrink: 0;
+}
+.ms-page .ms-perf-spp-label,
+.ms-page.ms-perf-spp-label { font-size: 10px; color: var(--dark-4); font-weight: 400; }
+
+/* ── Sidebar — Gains / Fan factor ── */
+.ms-page .ms-stat-row,
+.ms-page.ms-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--dark-6);
+}
+.ms-page .ms-stat-row:last-child,
+.ms-page.ms-stat-row:last-child { border-bottom: none; }
+.ms-page .ms-stat-team,
+.ms-page.ms-stat-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ms-page .ms-stat-logo,
+.ms-page.ms-stat-logo {
+  width: 24px; height: 24px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-weight: 700; font-size: 9px;
+  color: var(--white);
+}
+.ms-page .ms-stat-logo--home,
+.ms-page.ms-stat-logo--home { background: linear-gradient(135deg, var(--main-blue), #0a4a6a); }
+.ms-page .ms-stat-logo--away,
+.ms-page.ms-stat-logo--away { background: linear-gradient(135deg, #8B1A1A, #3A1A1A); }
+.ms-page .ms-stat-name,
+.ms-page.ms-stat-name { font-size: var(--text-small); color: var(--dark-1); }
+.ms-page .ms-stat-value,
+.ms-page.ms-stat-value {
+  font-family: var(--font-title);
+  font-size: var(--text-small);
+  font-weight: 700;
+}
+.ms-page .ms-stat-value--gain,
+.ms-page.ms-stat-value--gain { color: var(--green); }
+.ms-page .ms-stat-value--pos,
+.ms-page.ms-stat-value--pos  { color: var(--green); }
+.ms-page .ms-stat-value--neg,
+.ms-page.ms-stat-value--neg  { color: var(--red); }
+.ms-page .ms-stat-value--neu,
+.ms-page.ms-stat-value--neu  { color: var(--dark-3); }
+
+/* ── Sidebar — Bilan sanitaire ── */
+.ms-page .ms-injury-row,
+.ms-page.ms-injury-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--dark-6);
+}
+.ms-page .ms-injury-row:last-child,
+.ms-page.ms-injury-row:last-child { border-bottom: none; }
+.ms-page .ms-injury-icon,
+.ms-page.ms-injury-icon { font-size: 16px; flex-shrink: 0; }
+.ms-page .ms-injury-info,
+.ms-page.ms-injury-info { flex: 1; min-width: 0; }
+.ms-page .ms-injury-player,
+.ms-page.ms-injury-player { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+.ms-page .ms-injury-detail,
+.ms-page.ms-injury-detail { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 1px; }
+.ms-page .ms-injury-badge,
+.ms-page.ms-injury-badge {
+  font-size: 10px; font-weight: 700;
+  padding: 3px 8px; border-radius: 4px;
+  white-space: nowrap;
+}
+.ms-page .ms-injury-badge--commo,
+.ms-page.ms-injury-badge--commo   { background: rgba(255,107,53,0.1);  color: var(--orange); }
+.ms-page .ms-injury-badge--serious,
+.ms-page.ms-injury-badge--serious { background: rgba(224,32,32,0.08);  color: var(--red); }
+.ms-page .ms-injury-badge--death,
+.ms-page.ms-injury-badge--death   { background: rgba(0,0,0,0.07);      color: var(--dark-2); }
+
+/* ── CTA ── */
+.ms-page .ms-cta-row,
+.ms-page.ms-cta-row {
+  display: flex;
+  gap: var(--p1);
+}
+.ms-page .ms-cta-form,
+.ms-page.ms-cta-form { flex: 1; display: flex; }
+.ms-page .ms-btn-primary,
+.ms-page.ms-btn-primary {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px;
+  background: var(--main-blue);
+  color: var(--white);
+  border-radius: 8px;
+  font-size: var(--text-small);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  border: none;
+  text-decoration: none;
+  width: 100%;
+}
+.ms-page .ms-btn-primary:hover,
+.ms-page.ms-btn-primary:hover { opacity: 0.85; }
+.ms-page .ms-btn-outline,
+.ms-page.ms-btn-outline {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px;
+  background: transparent;
+  color: var(--dark-2);
+  border-radius: 8px;
+  font-size: var(--text-small);
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--dark-4);
+  transition: background 0.15s;
+  text-decoration: none;
+}
+.ms-page .ms-btn-outline:hover,
+.ms-page.ms-btn-outline:hover { background: var(--dark-6); }
+
+/* ── Responsive — mobile ── */
+@media (max-width: 768px) {
+
+  .ms-page .ms-hero-header,
+.ms-page.ms-hero-header { padding: 8px var(--p1); flex-wrap: wrap; gap: 4px; }
+  .ms-page .ms-hero-context,
+.ms-page.ms-hero-context { font-size: 9px; }
+
+  .ms-page .ms-scoreboard,
+.ms-page.ms-scoreboard { padding: var(--p1); }
+  .ms-page .ms-hero-logo,
+.ms-page.ms-hero-logo { width: 40px; height: 40px; font-size: 13px; }
+  .ms-page .ms-hero-team-name,
+.ms-page.ms-hero-team-name { font-size: var(--text-small); }
+  .ms-page .ms-hero-coach,
+.ms-page.ms-hero-coach { display: none; }
+  .ms-page .ms-result-badge,
+.ms-page.ms-result-badge { font-size: 9px; padding: 2px 6px; }
+  .ms-page .ms-score-num,
+.ms-page.ms-score-num { font-size: 60px; letter-spacing: -3px; }
+  .ms-page .ms-score-sep,
+.ms-page.ms-score-sep { font-size: 32px; }
+  .ms-page .ms-score-center,
+.ms-page.ms-score-center { padding: 0 var(--p1); }
+
+  .ms-page .ms-hero-stats,
+.ms-page.ms-hero-stats { flex-wrap: wrap; }
+  .ms-page .ms-hero-stat,
+.ms-page.ms-hero-stat { flex: 1 1 30%; min-width: 0; padding: 8px 4px; }
+  .ms-page .ms-hero-stat-value,
+.ms-page.ms-hero-stat-value { font-size: 15px; }
+  .ms-page .ms-hero-stat-label,
+.ms-page.ms-hero-stat-label { font-size: 9px; }
+
+  .ms-page .ms-body,
+.ms-page.ms-body { flex-direction: column; }
+
+  .ms-page .ms-article-headline,
+.ms-page.ms-article-headline { font-size: var(--text-medium); }
+
+  .ms-page .ms-cta-row,
+.ms-page.ms-cta-row { flex-direction: column; }
+}
+
+/* ── Zone de correction d'un rapport publié ──────────────────────────────── */
+
+.ms-page .ms-correct-zone,
+.ms-page.ms-correct-zone {
+  margin-top: var(--p2);
+  padding-top: var(--p2);
+  border-top: 1px solid var(--dark-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--p05);
+}
+
+.ms-page .ms-correct-btn,
+.ms-page.ms-correct-btn {
+  align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 18px;
+  background: transparent;
+  color: var(--dark-2);
+  border: 1px solid var(--dark-4);
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: var(--text-small);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ms-page .ms-correct-btn:hover,
+.ms-page.ms-correct-btn:hover { background: var(--dark-6); border-color: var(--dark-3); }
+
+.ms-page .ms-correct-btn:disabled,
+.ms-page.ms-correct-btn:disabled {
+  color: var(--dark-4);
+  border-color: var(--dark-5);
+  background: transparent;
+  cursor: not-allowed;
+}
+.ms-page .ms-correct-btn:disabled:hover,
+.ms-page.ms-correct-btn:disabled:hover { background: transparent; border-color: var(--dark-5); }
+
+.ms-page .ms-correct-hint,
+.ms-page.ms-correct-hint {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  line-height: 1.5;
+  max-width: 52ch;
+}
+
+.ms-page .ms-correct-blocked,
+.ms-page.ms-correct-blocked {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: var(--text-tiny);
+  color: var(--dark-2);
+  line-height: 1.5;
+  max-width: 52ch;
+  background: var(--dark-6);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.ms-page .ms-correct-blocked-icon,
+.ms-page.ms-correct-blocked-icon { flex-shrink: 0; line-height: 1.4; }
+
+/* ── Bandeau : rapport dépublié en attente de re-publication ─────────────── */
+
+.ms-page .ms-unpublished-banner,
+.ms-page.ms-unpublished-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(255,107,53,0.10);
+  border-left: 3px solid var(--orange);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: var(--p2);
+}
+.ms-page .ms-unpublished-banner-icon,
+.ms-page.ms-unpublished-banner-icon { flex-shrink: 0; }
+.ms-page .ms-unpublished-banner-text,
+.ms-page.ms-unpublished-banner-text {
+  font-size: var(--text-tiny);
+  color: var(--dark-1);
+  line-height: 1.5;
+}
+.ms-page .ms-unpublished-banner-text strong,
+.ms-page.ms-unpublished-banner-text strong { font-weight: 700; }
+
+@media (max-width: 768px) {
+  .ms-page .ms-correct-btn,
+.ms-page.ms-correct-btn { align-self: stretch; justify-content: center; }
+}

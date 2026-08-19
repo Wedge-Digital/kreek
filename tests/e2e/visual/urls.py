@@ -70,7 +70,7 @@ FEUILLE_ATTENDUE = {
     "rapport-prematch": "pages/match-report-pre-match.css",
     "rapport-actions": "pages/match-report-actions.css",
     "rapport-step5": "pages/match-report-step5.css",
-    "rapport-recap": "pages/match-report-recap.css",
+    "rapport-recap": "pages/ms-page.css",
     "competition-structure": "pages/new-competition-phase-3.css",
     "competition-regles": "pages/new-competition-phase-2.css",
     "competition-invitations": "pages/new-competition-phase-4.css",

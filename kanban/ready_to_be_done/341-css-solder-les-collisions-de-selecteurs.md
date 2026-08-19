@@ -111,6 +111,30 @@ plus, et le style disparaît silencieusement — sans erreur, sans avertissement
 D'où l'ordre imposé plus bas : le harnais de captures **avant** le premier
 scoping. C'est le seul dispositif qui attrape ce défaut.
 
+## L'exception au rendu constant — deux valeurs, mesurées
+
+La contrainte « aucune valeur calculée ne change » a tenu sur toutes les feuilles
+sauf deux, et l'écart y est **de même nature dans les deux cas** : une feuille de
+page portait une règle que la cascade étouffait, et lui donner sa portée la rend
+effective.
+
+| Page | Élément | Avant | Après | Ce qui étouffait la règle |
+|---|---|---|---|---|
+| Actions de match | `div.mr-card` | `gap: 24px` | `gap: 12px` | `match-report-shared.css` chargée **une seconde fois**, après la feuille de page, par le sélecteur de joueurs du BC `players` (carte 358) |
+| Inducements | `div.mr-tab` | `padding: 8px 6px` | `padding: 8px 4px` | `widgets/inducement-selector.css` stylait des onglets situés **hors de sa racine**, et gagnait par l'ordre de chargement |
+
+Dans les deux cas, la valeur « après » est celle que l'auteur a écrite dans la
+feuille de la page. La valeur « avant » est le produit d'un accident : un
+`<link>` en double pour l'une, une feuille de widget qui déborde de son
+périmètre pour l'autre.
+
+**Pourquoi assumer plutôt que préserver.** Préserver aurait demandé d'inscrire
+dans les feuilles de page les valeurs que la cascade imposait — `gap: var(--p2)`
+et `padding: 8px 6px` — c'est-à-dire d'y graver une intention que personne n'a
+eue. Ouvrir une carte de changement visuel pour deux propriétés sur deux pages
+aurait coûté plus cher que la traçabilité qu'elle apporte. Les deux valeurs sont
+donc notées ici, mesurées au harnais, et c'est la seule exception du lot.
+
 ## Le harnais de captures — à écrire en premier
 
 Les tests e2e vérifient des comportements, pas des pixels. Or l'exigence ici

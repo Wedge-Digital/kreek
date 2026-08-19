@@ -2,6 +2,7 @@
    Ce fichier contient uniquement les overrides spécifiques à la page d'actions. */
 
 /* Réduit le gap entre le tour et les sections joueurs à l'intérieur de la card */
-.mr-players-card {
+.match-report-actions .mr-players-card,
+.match-report-actions.mr-players-card {
   gap: var(--p1);
 }
