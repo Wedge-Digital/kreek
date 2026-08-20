@@ -90,3 +90,21 @@
   .competition-container .section-header.competitions { flex-direction: column; align-items: flex-start; gap: var(--p1); }
   .competition-container .section-header.competitions .btn { width: 100%; }
 }
+
+/* Déplacée depuis `components/competition-card.css`, déclarations inchangées.
+
+   Le composant y stylait le conteneur **de la page**, hors de son propre
+   périmètre — il ne pouvait donc pas recevoir de portée sans faire mourir la
+   règle. Elle appartient à cette feuille, qui est celle de ce conteneur.
+
+   Posée après la règle existante : le composant était chargé après la page et
+   gagnait l'arbitrage, cet ordre-là est conservé. */
+.competition-container {
+  border-radius: 12px;
+  margin: 0 auto;
+  display: flex; flex-direction: column;
+  gap: var(--p1);
+  scrollbar-width: none;
+  height: fit-content;
+  width : 100%;
+}

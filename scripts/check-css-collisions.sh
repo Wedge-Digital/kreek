@@ -196,8 +196,22 @@ else:
 print()
 
 # ── Contrôle B : collisions divergentes ─────────────────────────────────────
+# Même périmètre que le contrôle A : une feuille qu'aucun template de `src/`
+# ne charge n'est pas dans l'application, la carte 342 l'exclut du bundle, et
+# une collision avec elle est **inerte**. La compter ferait rougir le verrou sur
+# du code mort, ce qui est le meilleur moyen qu'on cesse de le regarder.
+#
+# Les feuilles de `components/` et les globales de la racine, elles, comptent :
+# elles sont bien dans l'application, et c'est entre elles que se joue ce qui
+# reste.
+def dans_l_application(chemin):
+    return (chemin.parent.name not in SCOPES) or chargee_par_l_application(chemin)
+
+
 par_selecteur = defaultdict(dict)
 for f in sorted(RACINE.rglob('*.css')):
+    if not dans_l_application(f):
+        continue
     for sel, decls in regles(f):
         par_selecteur[sel][f.as_posix()] = decls
 
