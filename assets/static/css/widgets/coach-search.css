@@ -1,4 +1,5 @@
-.coaches-search-panel {
+.coach-search .coaches-search-panel,
+.coach-search.coaches-search-panel {
     top: 100%;
     left: 0;
     right: 0;
@@ -8,15 +9,18 @@
     margin-top: 4px;
     overflow: hidden;
 }
-.coaches-search-panel:empty { display: none; }
+.coach-search .coaches-search-panel:empty,
+.coach-search.coaches-search-panel:empty { display: none; }
 
-.coach-search-results-wrapper {
+.coach-search .coach-search-results-wrapper,
+.coach-search.coach-search-results-wrapper {
     position: relative;
     min-height: 300px;
     max-height: 300px;
 }
 
-.coach-search-results {
+.coach-search .coach-search-results,
+.coach-search.coach-search-results {
     overflow-y: auto;
     height: 300px;
     flex: 1;
@@ -26,7 +30,8 @@
     padding: var(--p1);
 }
 
-.coach-search-spinner {
+.coach-search .coach-search-spinner,
+.coach-search.coach-search-spinner {
     position: absolute;
     inset: 0;
     display: flex;
@@ -37,9 +42,11 @@
     pointer-events: none;
     transition: opacity 150ms ease-in;
 }
-.coach-search-spinner.htmx-request { opacity: 1; }
+.coach-search .coach-search-spinner.htmx-request,
+.coach-search.coach-search-spinner.htmx-request { opacity: 1; }
 
-.coach-search-spinner__circle {
+.coach-search .coach-search-spinner__circle,
+.coach-search.coach-search-spinner__circle {
     width: 22px;
     height: 22px;
     border: 3px solid var(--dark-5);
@@ -52,7 +59,8 @@
     to { transform: rotate(360deg); }
 }
 
-.coach-result-row {
+.coach-search .coach-result-row,
+.coach-search.coach-result-row {
     display: flex;
     align-items: center;
     gap: var(--p1);
@@ -61,32 +69,44 @@
     cursor: default;
     transition: background 0.1s;
 }
-.coach-result-row:last-child { border-bottom: none; }
-.coach-result-row:hover { background: var(--dark-6); cursor: pointer;}
+.coach-search .coach-result-row:last-child,
+.coach-search.coach-result-row:last-child { border-bottom: none; }
+.coach-search .coach-result-row:hover,
+.coach-search.coach-result-row:hover { background: var(--dark-6); cursor: pointer;}
 
-.search-row { display: flex; gap: var(--p1); margin-bottom: var(--p1); align-items: center; flex-shrink: 0; }
-.search-row .form-input { margin: 0; }
+.coach-search .search-row,
+.coach-search.search-row { display: flex; gap: var(--p1); margin-bottom: var(--p1); align-items: center; flex-shrink: 0; }
+.coach-search .search-row .form-input,
+.coach-search.search-row .form-input { margin: 0; }
 
-.invited-list { display: flex; flex-direction: column; gap: 8px; }
-.invited-row {
+.coach-search .invited-list,
+.coach-search.invited-list { display: flex; flex-direction: column; gap: 8px; }
+.coach-search .invited-row,
+.coach-search.invited-row {
     display: flex; align-items: center; gap: var(--p1);
     padding: 10px 16px; background: var(--white);
     border: 1px solid var(--dark-5); border-radius: 8px;
 }
-.invited-avatar {
+.coach-search .invited-avatar,
+.coach-search.invited-avatar {
     width: 36px; height: 36px; border-radius: 50%; background: var(--dark-2);
     display: flex; align-items: center; justify-content: center;
     color: var(--white); font-weight: 700; font-size: var(--text-tiny); flex-shrink: 0;
 }
-.invited-info { flex: 1; }
-.invited-name { font-size: var(--text-small); font-weight: 500; color: var(--dark-1); }
-.invited-meta { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; }
-.invited-status-badge {
+.coach-search .invited-info,
+.coach-search.invited-info { flex: 1; }
+.coach-search .invited-name,
+.coach-search.invited-name { font-size: var(--text-small); font-weight: 500; color: var(--dark-1); }
+.coach-search .invited-meta,
+.coach-search.invited-meta { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; }
+.coach-search .invited-status-badge,
+.coach-search.invited-status-badge {
     font-size: var(--text-tiny); font-weight: 700; padding: 3px 10px; border-radius: 4px;
     flex-shrink: 0;
 }
 
-.btn-add-coach {
+.coach-search .btn-add-coach,
+.coach-search.btn-add-coach {
     background: none;
     border: 1px solid var(--main-blue);
     color: var(--main-blue);
@@ -99,26 +119,32 @@
     white-space: nowrap;
     transition: background 0.15s, color 0.15s;
 }
-.btn-add-coach:hover { background: var(--main-blue); color: var(--white); }
+.coach-search .btn-add-coach:hover,
+.coach-search.btn-add-coach:hover { background: var(--main-blue); color: var(--white); }
 
-.coach-search-empty {
+.coach-search .coach-search-empty,
+.coach-search.coach-search-empty {
     padding: 16px;
     text-align: center;
     color: var(--dark-3);
     font-size: var(--text-small);
 }
 
-.search-container { position: relative; }
-.search-row .form-input { flex: 1; margin: 0; }
+.coach-search .search-container,
+.coach-search.search-container { position: relative; }
+.coach-search .search-row .form-input,
+.coach-search.search-row .form-input { flex: 1; margin: 0; }
 
-.coach-selected-list {
+.coach-search .coach-selected-list,
+.coach-search.coach-selected-list {
     display: flex;
     flex-wrap: wrap;
     gap: var(--p1);
     margin-bottom: var(--p1);
 }
 
-.coach-selected-badge {
+.coach-search .coach-selected-badge,
+.coach-search.coach-selected-badge {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -128,7 +154,8 @@
     padding: 4px 8px 4px 4px;
 }
 
-.coach-selected-badge__initials {
+.coach-search .coach-selected-badge__initials,
+.coach-search.coach-selected-badge__initials {
     width: 24px;
     height: 24px;
     border-radius: 50%;
@@ -142,13 +169,15 @@
     flex-shrink: 0;
 }
 
-.coach-selected-badge__name {
+.coach-search .coach-selected-badge__name,
+.coach-search.coach-selected-badge__name {
     font-size: var(--text-small);
     font-weight: 500;
     color: var(--dark-1);
 }
 
-.coach-selected-badge__remove {
+.coach-search .coach-selected-badge__remove,
+.coach-search.coach-selected-badge__remove {
     background: none;
     border: none;
     color: var(--dark-3);
@@ -158,4 +187,5 @@
     line-height: 1;
     border-radius: 50%;
 }
-.coach-selected-badge__remove:hover { color: var(--dark-1); background: var(--dark-5); }
+.coach-search .coach-selected-badge__remove:hover,
+.coach-search.coach-selected-badge__remove:hover { color: var(--dark-1); background: var(--dark-5); }

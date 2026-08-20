@@ -2,7 +2,7 @@
 
 {% block content %}
 <link rel="stylesheet" href="/static/css/widgets/roster-picker.css">
-<div class="test-roster-picker" x-data>
+<div class="test-roster-picker roster-picker" x-data>
     <div class="form-header">Test for roster picker </div>
     <div>Roster roster picker is just a way to enable or disable roster selection</div>
     <div>
@@ -19,7 +19,7 @@
     <div class="btn-outline form-btn" @click="$store.pageTesterStore.selectRosters($refs.rosterPicker.getSelected())">choisir les rosters</div>
     <span x-text="$store.pageTesterStore.getSelectedRoster().join(', ')"></span>
 </div>
-<div class="test-roster-picker" x-data>
+<div class="test-roster-picker roster-picker" x-data>
     <div class="form-header">Test for inducement picker</div>
     <div>Inducement picker for competition setting</div>
     <div>

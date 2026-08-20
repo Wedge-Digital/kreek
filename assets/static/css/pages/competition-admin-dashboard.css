@@ -1,86 +1,114 @@
 /* ── Alert banners ── */
-.alert-banner {
+.competition-admin-dashboard .alert-banner,
+.competition-admin-dashboard.alert-banner {
   display: flex; align-items: center; gap: 12px;
   padding: 12px var(--p2);
   border-radius: 8px;
   font-size: var(--text-tiny);
 }
-.alert-banner--warn {
+.competition-admin-dashboard .alert-banner--warn,
+.competition-admin-dashboard.alert-banner--warn {
   background: rgba(255,107,53,0.08);
   border: 1px solid rgba(255,107,53,0.2);
   color: #9A5000;
 }
-.alert-banner--info {
+.competition-admin-dashboard .alert-banner--info,
+.competition-admin-dashboard.alert-banner--info {
   background: rgba(0,48,73,0.04);
   border: 1px solid rgba(0,48,73,0.12);
   color: var(--main-blue);
 }
-.alert-banner-icon { font-size: 18px; flex-shrink: 0; }
-.alert-banner-text { flex: 1; }
-.alert-banner-action {
+.competition-admin-dashboard .alert-banner-icon,
+.competition-admin-dashboard.alert-banner-icon { font-size: 18px; flex-shrink: 0; }
+.competition-admin-dashboard .alert-banner-text,
+.competition-admin-dashboard.alert-banner-text { flex: 1; }
+.competition-admin-dashboard .alert-banner-action,
+.competition-admin-dashboard.alert-banner-action {
   font-weight: 700; cursor: pointer; white-space: nowrap;
   padding: 4px 12px; border-radius: 6px;
   transition: background 0.15s;
   text-decoration: none; color: inherit;
 }
-.alert-banner--warn .alert-banner-action:hover { background: rgba(255,107,53,0.1); }
-.alert-banner--info .alert-banner-action:hover { background: rgba(0,48,73,0.06); }
+.competition-admin-dashboard .alert-banner--warn .alert-banner-action:hover,
+.competition-admin-dashboard.alert-banner--warn .alert-banner-action:hover { background: rgba(255,107,53,0.1); }
+.competition-admin-dashboard .alert-banner--info .alert-banner-action:hover,
+.competition-admin-dashboard.alert-banner--info .alert-banner-action:hover { background: rgba(0,48,73,0.06); }
 
 /* ── Stats bar ── */
-.stats-bar {
+.competition-admin-dashboard .stats-bar,
+.competition-admin-dashboard.stats-bar {
   display: flex;
   gap: var(--p1);
 }
-.stat-chip {
+.competition-admin-dashboard .stat-chip,
+.competition-admin-dashboard.stat-chip {
   display: flex; align-items: center; gap: 8px;
   background: var(--dark-6); border-radius: 8px;
   padding: 10px var(--p2); flex: 1;
 }
-.stat-chip-icon { font-size: 18px; }
-.stat-chip-value {
+.competition-admin-dashboard .stat-chip-icon,
+.competition-admin-dashboard.stat-chip-icon { font-size: 18px; }
+.competition-admin-dashboard .stat-chip-value,
+.competition-admin-dashboard.stat-chip-value {
   font-family: var(--font-title); font-size: var(--h5);
   font-weight: 700; color: var(--main-blue);
 }
-.stat-chip-label { font-size: var(--text-tiny); color: var(--dark-3); }
-.stat-chip--warn .stat-chip-value { color: var(--orange); }
-.stat-chip--ok .stat-chip-value { color: var(--green); }
+.competition-admin-dashboard .stat-chip-label,
+.competition-admin-dashboard.stat-chip-label { font-size: var(--text-tiny); color: var(--dark-3); }
+.competition-admin-dashboard .stat-chip--warn .stat-chip-value,
+.competition-admin-dashboard.stat-chip--warn .stat-chip-value { color: var(--orange); }
+.competition-admin-dashboard .stat-chip--ok .stat-chip-value,
+.competition-admin-dashboard.stat-chip--ok .stat-chip-value { color: var(--green); }
 
 /* ── Two column layout ── */
-.two-col { display: flex; gap: var(--p2); }
-.two-col > * { flex: 1; }
+.competition-admin-dashboard .two-col,
+.competition-admin-dashboard.two-col { display: flex; gap: var(--p2); }
+.competition-admin-dashboard .two-col > *,
+.competition-admin-dashboard.two-col > * { flex: 1; }
 
 /* ── Progress section ── */
-.progress-section {
+.competition-admin-dashboard .progress-section,
+.competition-admin-dashboard.progress-section {
   display: flex; flex-direction: column; gap: 12px;
 }
-.progress-row {
+.competition-admin-dashboard .progress-row,
+.competition-admin-dashboard.progress-row {
   display: flex; align-items: center; gap: var(--p1);
 }
-.progress-label {
+.competition-admin-dashboard .progress-label,
+.competition-admin-dashboard.progress-label {
   font-size: var(--text-tiny); font-weight: 600; color: var(--dark-2);
   min-width: 140px;
 }
-.progress-bar-wrap {
+.competition-admin-dashboard .progress-bar-wrap,
+.competition-admin-dashboard.progress-bar-wrap {
   flex: 1; height: 8px; background: var(--dark-5);
   border-radius: 4px; overflow: hidden;
 }
-.progress-bar-inner {
+.competition-admin-dashboard .progress-bar-inner,
+.competition-admin-dashboard.progress-bar-inner {
   height: 100%; border-radius: 4px;
   transition: width 0.4s ease;
 }
-.progress-bar-inner--blue { background: var(--main-blue); }
-.progress-bar-inner--green { background: var(--green); }
-.progress-bar-inner--orange { background: var(--orange); }
-.progress-value {
+.competition-admin-dashboard .progress-bar-inner--blue,
+.competition-admin-dashboard.progress-bar-inner--blue { background: var(--main-blue); }
+.competition-admin-dashboard .progress-bar-inner--green,
+.competition-admin-dashboard.progress-bar-inner--green { background: var(--green); }
+.competition-admin-dashboard .progress-bar-inner--orange,
+.competition-admin-dashboard.progress-bar-inner--orange { background: var(--orange); }
+.competition-admin-dashboard .progress-value,
+.competition-admin-dashboard.progress-value {
   font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2);
   min-width: 50px; text-align: right;
 }
 
 /* ── Quick actions ── */
-.quick-actions {
+.competition-admin-dashboard .quick-actions,
+.competition-admin-dashboard.quick-actions {
   display: flex; gap: var(--p1); flex-wrap: wrap;
 }
-.quick-action-btn {
+.competition-admin-dashboard .quick-action-btn,
+.competition-admin-dashboard.quick-action-btn {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 18px;
   border: 1px solid var(--dark-5); border-radius: 8px;
@@ -89,36 +117,51 @@
   background: var(--white);
   transition: all 0.15s;
 }
-.quick-action-btn:hover {
+.competition-admin-dashboard .quick-action-btn:hover,
+.competition-admin-dashboard.quick-action-btn:hover {
   background: rgba(0,48,73,0.04); border-color: var(--main-blue); color: var(--main-blue);
 }
-.quick-action-icon { font-size: 16px; }
+.competition-admin-dashboard .quick-action-icon,
+.competition-admin-dashboard.quick-action-icon { font-size: 16px; }
 
 /* ── Activity feed ── */
-.activity-list { display: flex; flex-direction: column; gap: 8px; }
-.activity-row {
+.competition-admin-dashboard .activity-list,
+.competition-admin-dashboard.activity-list { display: flex; flex-direction: column; gap: 8px; }
+.competition-admin-dashboard .activity-row,
+.competition-admin-dashboard.activity-row {
   display: flex; align-items: center; gap: 12px;
   padding: 10px var(--p1);
   border-radius: 8px;
   transition: background 0.1s;
 }
-.activity-row:hover { background: var(--dark-7); }
-.activity-icon {
+.competition-admin-dashboard .activity-row:hover,
+.competition-admin-dashboard.activity-row:hover { background: var(--dark-7); }
+.competition-admin-dashboard .activity-icon,
+.competition-admin-dashboard.activity-icon {
   width: 32px; height: 32px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
   font-size: 14px; flex-shrink: 0;
 }
-.activity-icon--enroll { background: rgba(98,149,132,0.12); }
-.activity-icon--match  { background: rgba(0,48,73,0.08); }
-.activity-icon--warn   { background: rgba(255,107,53,0.10); }
-.activity-info { flex: 1; }
-.activity-text { font-size: var(--text-tiny); color: var(--dark-1); }
-.activity-time { font-size: 11px; color: var(--dark-4); margin-top: 2px; }
+.competition-admin-dashboard .activity-icon--enroll,
+.competition-admin-dashboard.activity-icon--enroll { background: rgba(98,149,132,0.12); }
+.competition-admin-dashboard .activity-icon--match,
+.competition-admin-dashboard.activity-icon--match  { background: rgba(0,48,73,0.08); }
+.competition-admin-dashboard .activity-icon--warn,
+.competition-admin-dashboard.activity-icon--warn   { background: rgba(255,107,53,0.10); }
+.competition-admin-dashboard .activity-info,
+.competition-admin-dashboard.activity-info { flex: 1; }
+.competition-admin-dashboard .activity-text,
+.competition-admin-dashboard.activity-text { font-size: var(--text-tiny); color: var(--dark-1); }
+.competition-admin-dashboard .activity-time,
+.competition-admin-dashboard.activity-time { font-size: 11px; color: var(--dark-4); margin-top: 2px; }
 
 /* ── Empty state ── */
-.empty-state {
+.competition-admin-dashboard .empty-state,
+.competition-admin-dashboard.empty-state {
   text-align: center; padding: var(--p3) var(--p2);
   color: var(--dark-3);
 }
-.empty-state-icon { font-size: 40px; margin-bottom: var(--p1); opacity: 0.4; }
-.empty-state-text { font-size: var(--text-tiny); }
+.competition-admin-dashboard .empty-state-icon,
+.competition-admin-dashboard.empty-state-icon { font-size: 40px; margin-bottom: var(--p1); opacity: 0.4; }
+.competition-admin-dashboard .empty-state-text,
+.competition-admin-dashboard.empty-state-text { font-size: var(--text-tiny); }

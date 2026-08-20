@@ -1,14 +1,14 @@
 <link rel="stylesheet" href="/static/css/pages/competition-admin-enrollments.css">
 
 {% if requires_validation %}
-<div id="pending-container"
+<div class="competition-admin-enrollments" id="pending-container"
      hx-get="{{ app_routes.teams.pending_enrollment_widget(space_id) }}?competition_id={{ competition_id }}&season_id={{ season_id }}"
      hx-trigger="load, enrollmentChanged from:body"
      hx-swap="innerHTML">
 </div>
 {% endif %}
 
-<div id="enrolled-container"
+<div class="competition-admin-enrollments" id="enrolled-container"
      hx-get="{{ app_routes.teams.enrolled_teams_widget(space_id) }}?competition_id={{ competition_id }}&season_id={{ season_id }}"
      hx-trigger="load, enrollmentChanged from:body"
      hx-swap="innerHTML">

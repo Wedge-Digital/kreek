@@ -3,7 +3,7 @@
 {% block content %}
 <link rel="stylesheet" href="/static/css/components/create-card.css">
 <link rel="stylesheet" href="/static/css/pages/new-competition-phase-2.css">
-<div class="create-card create-card--wide">
+<div class="create-card create-card--wide new-competition-phase-2">
   <div class="create-header">
     <div class="create-header-icon">📋</div>
     <div class="create-header-text">
@@ -183,7 +183,7 @@
       return `
       <label class="tiebreak-row${c.activated ? '' : ' is-off'}" draggable="true" data-id="${c.code}">
         <input type="checkbox" class="tiebreak-check"${c.activated ? ' checked' : ''}>
-        <div class="tiebreak-rank">${badge}</div>
+        <div class="tiebreak-rank new-competition-phase-2">${badge}</div>
         <span class="tiebreak-drag">⠿</span>
         <span class="tiebreak-label">${c.label}</span>
       </label>`;
@@ -312,7 +312,7 @@
     el.className = 'tier-block';
 
     el.innerHTML = `
-      <div class="tier-head" style="background:${color.head};">
+      <div class="tier-head new-competition-phase-2" style="background:${color.head};">
         <div class="tier-head-left">
           <input type="text" class="tier-name-input" value="${escHtml(tier.name)}">
           <span class="tier-head-controls">
@@ -327,7 +327,7 @@
           <button class="tier-remove-btn" title="Supprimer">✕</button>
         </div>
       </div>
-      <div class="tier-body-inner">
+      <div class="tier-body-inner new-competition-phase-2">
         <div class="sub-section mb-1">
           <div class="sub-section-title">Rosters autorisés</div>
           <div data-slot="roster"></div>

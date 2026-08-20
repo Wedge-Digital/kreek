@@ -1,9 +1,13 @@
 /* ─── Roster picker — chip grid (BC references, phase 2 compétition) ─── */
-.roster-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-.roster-chip {
+.roster-picker .roster-grid,
+.roster-picker.roster-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.roster-picker .roster-chip,
+.roster-picker.roster-chip {
     padding: 6px 14px; border: 2px solid var(--dark-5); border-radius: 20px;
     font-size: var(--text-tiny); font-weight: 500; cursor: pointer;
     background: var(--white); color: var(--dark-2); transition: all 0.12s;
 }
-.roster-chip:hover { border-color: var(--dark-4); color: var(--dark-1); }
-.roster-chip.selected { border-color: var(--green); color: var(--green); background: rgba(98,149,132,0.08); }
+.roster-picker .roster-chip:hover,
+.roster-picker.roster-chip:hover { border-color: var(--dark-4); color: var(--dark-1); }
+.roster-picker .roster-chip.selected,
+.roster-picker.roster-chip.selected { border-color: var(--green); color: var(--green); background: rgba(98,149,132,0.08); }

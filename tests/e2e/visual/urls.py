@@ -77,7 +77,7 @@ FEUILLE_ATTENDUE = {
     "classement-detaille": "widgets/ranking-detailed-standings-widget.css",
     "widget-roster-picker": "widgets/roster-picker.css",
     "widget-skill-picker": "widgets/skill-picker.css",
-    "widget-inducement-picker": "widgets/inducement-picker.css",
+    "widget-inducement-picker": "widgets/inducement-grid.css",
     "widget-inducement-selector": "widgets/inducement-selector.css",
     "widget-customisation": "widgets/pd-right.css",
     "rapport-inducements": "pages/match-report-inducements.css",

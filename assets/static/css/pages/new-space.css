@@ -1,4 +1,5 @@
-.create-card .new-space {
+.new-space .create-card .new-space,
+.new-space.create-card .new-space {
     display: flex;
     flex-direction: column;
     align-items: center;

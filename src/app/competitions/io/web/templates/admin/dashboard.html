@@ -1,14 +1,14 @@
 <link rel="stylesheet" href="/static/css/pages/competition-admin-dashboard.css">
 
 {% for alert in alerts %}
-<div class="alert-banner alert-banner--{{ alert.level }}">
+<div class="alert-banner alert-banner--{{ alert.level }} competition-admin-dashboard">
   <span class="alert-banner-icon">{% if alert.level == "warn" %}⚠️{% else %}📅{% endif %}</span>
   <span class="alert-banner-text">{{ alert.message|safe }}</span>
   <a class="alert-banner-action" href="{{ alert.action_url }}">{{ alert.action_label }}</a>
 </div>
 {% endfor %}
 
-<div class="stats-bar">
+<div class="stats-bar competition-admin-dashboard">
   {% for stat in stats %}
   <div class="stat-chip{% if stat.style == "warn" %} stat-chip--warn{% endif %}{% if stat.style == "ok" %} stat-chip--ok{% endif %}">
     <span class="stat-chip-icon">{{ stat.icon }}</span>
@@ -20,7 +20,7 @@
   {% endfor %}
 </div>
 
-<div class="two-col">
+<div class="two-col competition-admin-dashboard">
 
   <div class="admin-panel">
     <div class="panel-title">Progression de la saison</div>
@@ -61,7 +61,7 @@
 
 </div>
 
-<div class="admin-panel">
+<div class="admin-panel competition-admin-dashboard">
   <div class="panel-title">Activité récente</div>
   {% if activity.is_empty() %}
   <div class="empty-state">

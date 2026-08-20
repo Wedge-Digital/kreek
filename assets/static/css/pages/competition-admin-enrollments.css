@@ -1,17 +1,22 @@
 /* ── Enrollment rows ── */
-.enrollment-list { display: flex; flex-direction: column; gap: 8px; }
+.competition-admin-enrollments .enrollment-list,
+.competition-admin-enrollments.enrollment-list { display: flex; flex-direction: column; gap: 8px; }
 
-.enrollment-row {
+.competition-admin-enrollments .enrollment-row,
+.competition-admin-enrollments.enrollment-row {
   display: flex; align-items: center; gap: var(--p1);
   padding: 12px var(--p2);
   border: 1px solid var(--dark-5); border-radius: 10px;
   background: var(--white);
   transition: box-shadow 0.15s;
 }
-.enrollment-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-.enrollment-row--pending { border-left: 3px solid var(--orange); }
+.competition-admin-enrollments .enrollment-row:hover,
+.competition-admin-enrollments.enrollment-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.competition-admin-enrollments .enrollment-row--pending,
+.competition-admin-enrollments.enrollment-row--pending { border-left: 3px solid var(--orange); }
 
-.enrollment-logo {
+.competition-admin-enrollments .enrollment-logo,
+.competition-admin-enrollments.enrollment-logo {
   width: 40px; height: 40px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-title); font-weight: 700; font-size: 14px;
@@ -19,24 +24,32 @@
   background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
 }
 
-.enrollment-info { flex: 1; min-width: 0; }
-.enrollment-name { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
-.enrollment-meta {
+.competition-admin-enrollments .enrollment-info,
+.competition-admin-enrollments.enrollment-info { flex: 1; min-width: 0; }
+.competition-admin-enrollments .enrollment-name,
+.competition-admin-enrollments.enrollment-name { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+.competition-admin-enrollments .enrollment-meta,
+.competition-admin-enrollments.enrollment-meta {
   font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px;
   display: flex; gap: var(--p1);
 }
 
-.enrollment-status {
+.competition-admin-enrollments .enrollment-status,
+.competition-admin-enrollments.enrollment-status {
   font-size: var(--text-tiny); font-weight: 700;
   padding: 3px 10px; border-radius: 20px; flex-shrink: 0;
 }
-.status--enrolled { background: rgba(98,149,132,0.12); color: var(--green); }
-.status--pending  { background: rgba(255,107,53,0.12); color: var(--orange); }
+.competition-admin-enrollments .status--enrolled,
+.competition-admin-enrollments.status--enrolled { background: rgba(98,149,132,0.12); color: var(--green); }
+.competition-admin-enrollments .status--pending,
+.competition-admin-enrollments.status--pending  { background: rgba(255,107,53,0.12); color: var(--orange); }
 
-.enrollment-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.competition-admin-enrollments .enrollment-actions,
+.competition-admin-enrollments.enrollment-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
 /* ── Action buttons ── */
-.action-btn {
+.competition-admin-enrollments .action-btn,
+.competition-admin-enrollments.action-btn {
   display: flex; align-items: center; gap: 6px;
   padding: 7px 12px;
   border: 1px solid var(--dark-5); border-radius: 7px;
@@ -44,17 +57,26 @@
   color: var(--dark-2); cursor: pointer;
   transition: all 0.15s; white-space: nowrap;
 }
-.action-btn:hover { background: var(--dark-6); border-color: var(--dark-4); }
-.action-btn--approve { color: var(--green); border-color: rgba(98,149,132,0.3); }
-.action-btn--approve:hover { background: rgba(98,149,132,0.08); border-color: var(--green); }
-.action-btn--danger { color: var(--dark-3); }
-.action-btn--danger:hover { background: rgba(224,32,32,0.06); border-color: var(--red); color: var(--red); }
-.action-btn-icon { font-size: 14px; }
+.competition-admin-enrollments .action-btn:hover,
+.competition-admin-enrollments.action-btn:hover { background: var(--dark-6); border-color: var(--dark-4); }
+.competition-admin-enrollments .action-btn--approve,
+.competition-admin-enrollments.action-btn--approve { color: var(--green); border-color: rgba(98,149,132,0.3); }
+.competition-admin-enrollments .action-btn--approve:hover,
+.competition-admin-enrollments.action-btn--approve:hover { background: rgba(98,149,132,0.08); border-color: var(--green); }
+.competition-admin-enrollments .action-btn--danger,
+.competition-admin-enrollments.action-btn--danger { color: var(--dark-3); }
+.competition-admin-enrollments .action-btn--danger:hover,
+.competition-admin-enrollments.action-btn--danger:hover { background: rgba(224,32,32,0.06); border-color: var(--red); color: var(--red); }
+.competition-admin-enrollments .action-btn-icon,
+.competition-admin-enrollments.action-btn-icon { font-size: 14px; }
 
 /* ── Panel count badges ── */
-.panel-count {
+.competition-admin-enrollments .panel-count,
+.competition-admin-enrollments.panel-count {
   font-size: var(--text-tiny); font-weight: 700;
   padding: 2px 10px; border-radius: 20px;
 }
-.panel-count--pending { background: rgba(255,107,53,0.12); color: var(--orange); }
-.panel-count--enrolled { background: rgba(98,149,132,0.12); color: var(--green); }
+.competition-admin-enrollments .panel-count--pending,
+.competition-admin-enrollments.panel-count--pending { background: rgba(255,107,53,0.12); color: var(--orange); }
+.competition-admin-enrollments .panel-count--enrolled,
+.competition-admin-enrollments.panel-count--enrolled { background: rgba(98,149,132,0.12); color: var(--green); }

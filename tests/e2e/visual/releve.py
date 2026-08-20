@@ -76,11 +76,26 @@ GELER_LES_ANIMATIONS = """
 }
 """
 
-PAGE_STABLE = (
-    "() => document.fonts.status === 'loaded'"
-    " && !document.querySelector('.htmx-request')"
-    " && Array.from(document.images).every(i => i.complete)"
-)
+# Trois conditions ne suffisaient pas. Un fragment déclenché par
+# `hx-trigger="load"` peut n'avoir **pas encore émis sa requête** au moment du
+# contrôle : la page ne porte alors aucun `.htmx-request`, paraît stable, et se
+# relève amputée. Vécu sur la fiche joueur — 433 éléments en direct, 223 dans le
+# relevé, sans qu'aucune des trois conditions ne bronche.
+#
+# On exige donc en plus que le **nombre d'éléments cesse de bouger** sur deux
+# relevés consécutifs espacés d'un tour de scrutation. Une page qui attend
+# encore un fragment grandit encore.
+PAGE_STABLE = """
+() => {
+  if (document.fonts.status !== 'loaded') return false;
+  if (document.querySelector('.htmx-request')) return false;
+  if (!Array.from(document.images).every(i => i.complete)) return false;
+  const n = document.querySelectorAll('*').length;
+  const stable = window.__n === n;
+  window.__n = n;
+  return stable;
+}
+"""
 
 # La clé d'un élément est son **chemin dans l'arbre** — `0/3/1/2` — et non un
 # identifiant tiré de son contenu. Le DOM étant identique d'un passage à
@@ -181,8 +196,8 @@ def main(libelle: str) -> int:
                     try:
                         page.goto(url, wait_until="load", timeout=20000)
                         page.wait_for_timeout(1500)
-                        page.wait_for_function(PAGE_STABLE, timeout=10000,
-                                               polling=200)
+                        page.wait_for_function(PAGE_STABLE, timeout=15000,
+                                               polling=600)
                         page.add_style_tag(content=GELER_LES_ANIMATIONS)
                         page.wait_for_timeout(100)
                         tout[f"{nom}.{etiquette}"] = page.evaluate(RELEVE)
