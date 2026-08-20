@@ -44,7 +44,7 @@ def _un(sql: str) -> str | None:
 # feuilles. Une couverture qui monte sans rien couvrir est le pire des états.
 FEUILLE_ATTENDUE = {
     "auth-login": "pages/auth-layout.css",
-    "espaces-tous": "pages/all-spaces.css",
+    "espaces-tous": "pages/allspace-home-grid.css",
     "espace-nouveau": "pages/new-space.css",
     "accueil": "pages/app-news-feed.css",
     "article-nouveau": "pages/editor-container.css",

@@ -1,43 +1,57 @@
-.section-label { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-2); margin-bottom: var(--p1); }
+.team-build .section-label,
+.team-build.section-label { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-2); margin-bottom: var(--p1); }
 
 /* ── Player / Staff table ────────────────────────────────────────────── */
-.player-table { width: 100%; border-collapse: collapse; }
-.player-table th {
+.team-build .player-table,
+.team-build.player-table { width: 100%; border-collapse: collapse; }
+.team-build .player-table th,
+.team-build.player-table th {
   background: var(--dark-6); border: 1px solid var(--dark-5);
   padding: 10px 8px; font-size: var(--text-tiny); font-weight: 600;
   color: var(--dark-2); text-align: center;
 }
-.player-table td {
+.team-build .player-table td,
+.team-build.player-table td {
   border: 1px solid var(--dark-5); padding: 10px 8px;
   font-size: var(--text-tiny); color: var(--dark-1); text-align: center;
 }
-.player-table tr:nth-child(odd) td  { background: var(--dark-7); }
-.player-table tr:nth-child(even) td { background: var(--white); }
-.player-table td.player-name   { text-align: left; font-weight: 500; }
-.player-table td.player-skills { text-align: left; }
-.player-table tfoot td { background: var(--dark-6); font-weight: 600; color: var(--dark-1); border-top: 2px solid var(--dark-4); }
+.team-build .player-table tr:nth-child(odd) td,
+.team-build.player-table tr:nth-child(odd) td  { background: var(--dark-7); }
+.team-build .player-table tr:nth-child(even) td,
+.team-build.player-table tr:nth-child(even) td { background: var(--white); }
+.team-build .player-table td.player-name,
+.team-build.player-table td.player-name   { text-align: left; font-weight: 500; }
+.team-build .player-table td.player-skills,
+.team-build.player-table td.player-skills { text-align: left; }
+.team-build .player-table tfoot td,
+.team-build.player-table tfoot td { background: var(--dark-6); font-weight: 600; color: var(--dark-1); border-top: 2px solid var(--dark-4); }
 
-.tbl-btn {
+.team-build .tbl-btn,
+.team-build.tbl-btn {
   width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--dark-4);
   background: var(--white); font-size: 16px; cursor: pointer; color: var(--dark-2);
   display: inline-flex; align-items: center; justify-content: center;
 }
-.tbl-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
+.team-build .tbl-btn:hover,
+.team-build.tbl-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
 
 /* ── Roster + League côte à côte ─────────────────────────────────────── */
-.roster-league-row {
+.team-build .roster-league-row,
+.team-build.roster-league-row {
   display: flex;
   gap: var(--p2);
   align-items: stretch;
 }
-.roster-league-col {
+.team-build .roster-league-col,
+.team-build.roster-league-col {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-width: 0;
 }
 
-.create-team-body {
+.team-build .create-team-body,
+.team-build.create-team-body {
   width: 100%;
   padding: var(--p2);
   display: flex;
@@ -46,91 +60,157 @@
 }
 
 /* ── Sidebar rules panel ─────────────────────────────────────────────── */
-.rules-panel { background: var(--white); border-radius: 10px; padding: var(--p2); display: flex; flex-direction: column; gap: var(--p1); }
-.rules-panel-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); padding-bottom: var(--p1); border-bottom: 2px solid var(--dark-5); }
-.rules-comp-name { font-size: var(--text-small); font-weight: 700; color: var(--dark-0); }
-.league-summary { font-size: var(--text-tiny); color: var(--dark-3); display: flex; align-items: start; gap: var(--p1); flex-direction: column}
-.rules-season { font-size: var(--text-tiny); color: var(--dark-3); font-style: italic; margin-top: -6px; }
-.rules-section { display: flex; flex-direction: column; gap: 6px; padding-top: var(--p1); border-top: 1px solid var(--dark-6); }
-.rules-section-title { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2); text-transform: uppercase; letter-spacing: 0.5px; }
-.rules-tier { background: var(--dark-6); border: 1px solid var(--dark-5); border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 3px; }
-.rules-tier-name { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-1); }
-.rules-tier-meta { font-size: 11px; color: var(--dark-1); }
+.team-build .rules-panel,
+.team-build.rules-panel { background: var(--white); border-radius: 10px; padding: var(--p2); display: flex; flex-direction: column; gap: var(--p1); }
+.team-build .rules-panel-title,
+.team-build.rules-panel-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); padding-bottom: var(--p1); border-bottom: 2px solid var(--dark-5); }
+.team-build .rules-comp-name,
+.team-build.rules-comp-name { font-size: var(--text-small); font-weight: 700; color: var(--dark-0); }
+.team-build .league-summary,
+.team-build.league-summary { font-size: var(--text-tiny); color: var(--dark-3); display: flex; align-items: start; gap: var(--p1); flex-direction: column}
+.team-build .rules-season,
+.team-build.rules-season { font-size: var(--text-tiny); color: var(--dark-3); font-style: italic; margin-top: -6px; }
+.team-build .rules-section,
+.team-build.rules-section { display: flex; flex-direction: column; gap: 6px; padding-top: var(--p1); border-top: 1px solid var(--dark-6); }
+.team-build .rules-section-title,
+.team-build.rules-section-title { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2); text-transform: uppercase; letter-spacing: 0.5px; }
+.team-build .rules-tier,
+.team-build.rules-tier { background: var(--dark-6); border: 1px solid var(--dark-5); border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 3px; }
+.team-build .rules-tier-name,
+.team-build.rules-tier-name { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-1); }
+.team-build .rules-tier-meta,
+.team-build.rules-tier-meta { font-size: 11px; color: var(--dark-1); }
 
 /* ── Cart ────────────────────────────────────────────────────────────── */
-.cart { background: var(--white); border: 1px solid var(--dark-5); border-radius: 12px; padding: var(--p2); display: flex; flex-direction: column; gap: var(--p1); margin-top: var(--p2);}
-.cart-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); padding-bottom: var(--p1); border-bottom: 2px solid var(--dark-4); }
-.cart-section-label { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
-.cart-line { display: flex; align-items: baseline; justify-content: space-between; gap: var(--p1); font-size: var(--text-small); color: var(--dark-1); }
-.cart-line-name  { flex: 1; }
-.cart-line-qty   { color: var(--dark-3); min-width: 28px; text-align: right; }
-.cart-line-price { font-weight: 600; min-width: 80px; text-align: right; }
-.cart-separator  { border: none; border-top: 1px solid var(--dark-5); margin: 4px 0; }
-.cart-subtotal { display: flex; justify-content: space-between; font-size: var(--text-small); color: var(--dark-2); font-weight: 600; }
-.cart-total { display: flex; justify-content: space-between; align-items: center; padding-top: var(--p1); border-top: 2px solid var(--dark-4); }
-.cart-total-label  { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); }
-.cart-total-amount { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--main-blue); }
-.cart-budget-bar { display: flex; flex-direction: column; gap: 4px; }
-.cart-budget-meta { display: flex; justify-content: space-between; font-size: var(--text-tiny); color: var(--dark-3); }
-.cart-progress { height: 6px; background: var(--dark-5); border-radius: 3px; }
-.cart-progress-inner { height: 100%; border-radius: 3px; background: var(--main-blue); transition: width 0.3s; }
-.cart-player-count {
+.team-build .cart,
+.team-build.cart { background: var(--white); border: 1px solid var(--dark-5); border-radius: 12px; padding: var(--p2); display: flex; flex-direction: column; gap: var(--p1); margin-top: var(--p2);}
+.team-build .cart-title,
+.team-build.cart-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); padding-bottom: var(--p1); border-bottom: 2px solid var(--dark-4); }
+.team-build .cart-section-label,
+.team-build.cart-section-label { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+.team-build .cart-line,
+.team-build.cart-line { display: flex; align-items: baseline; justify-content: space-between; gap: var(--p1); font-size: var(--text-small); color: var(--dark-1); }
+.team-build .cart-line-name,
+.team-build.cart-line-name  { flex: 1; }
+.team-build .cart-line-qty,
+.team-build.cart-line-qty   { color: var(--dark-3); min-width: 28px; text-align: right; }
+.team-build .cart-line-price,
+.team-build.cart-line-price { font-weight: 600; min-width: 80px; text-align: right; }
+.team-build .cart-separator,
+.team-build.cart-separator  { border: none; border-top: 1px solid var(--dark-5); margin: 4px 0; }
+.team-build .cart-subtotal,
+.team-build.cart-subtotal { display: flex; justify-content: space-between; font-size: var(--text-small); color: var(--dark-2); font-weight: 600; }
+.team-build .cart-total,
+.team-build.cart-total { display: flex; justify-content: space-between; align-items: center; padding-top: var(--p1); border-top: 2px solid var(--dark-4); }
+.team-build .cart-total-label,
+.team-build.cart-total-label  { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); }
+.team-build .cart-total-amount,
+.team-build.cart-total-amount { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--main-blue); }
+.team-build .cart-budget-bar,
+.team-build.cart-budget-bar { display: flex; flex-direction: column; gap: 4px; }
+.team-build .cart-budget-meta,
+.team-build.cart-budget-meta { display: flex; justify-content: space-between; font-size: var(--text-tiny); color: var(--dark-3); }
+.team-build .cart-progress,
+.team-build.cart-progress { height: 6px; background: var(--dark-5); border-radius: 3px; }
+.team-build .cart-progress-inner,
+.team-build.cart-progress-inner { height: 100%; border-radius: 3px; background: var(--main-blue); transition: width 0.3s; }
+.team-build .cart-player-count,
+.team-build.cart-player-count {
   font-size: var(--text-tiny); font-weight: 700; text-align: center;
   padding: 6px; border-radius: 6px; margin-top: 4px;
 }
-.cart-player-count--ok { color: var(--green); background: rgba(98,149,132,0.10); }
-.cart-player-count--missing { color: #c0392b; background: rgba(192,57,43,0.08); }
-.cart-actions { display: flex; flex-direction: column; gap: var(--p1); padding-top: 4px; margin-top: var(--p1); }
+.team-build .cart-player-count--ok,
+.team-build.cart-player-count--ok { color: var(--green); background: rgba(98,149,132,0.10); }
+.team-build .cart-player-count--missing,
+.team-build.cart-player-count--missing { color: #c0392b; background: rgba(192,57,43,0.08); }
+.team-build .cart-actions,
+.team-build.cart-actions { display: flex; flex-direction: column; gap: var(--p1); padding-top: 4px; margin-top: var(--p1); }
 
 /* ── Staff table ─────────────────────────────────────────────────────── */
-.staff-table { max-width: 600px; }
+.team-build .staff-table,
+.team-build.staff-table { max-width: 600px; }
 
 /* ── Bouton retour ───────────────────────────────────────────────────── */
-.btn-back-wrapper { display: flex; justify-content: center; }
+.team-build .btn-back-wrapper,
+.team-build.btn-back-wrapper { display: flex; justify-content: center; }
 
 /* ── Responsive ──────────────────────────────────────────────────────── */
 
 /* Sidebar (panier) toujours visible sur la page de construction */
 @media (max-width: 768px) {
-  .home-grid--with-cart .home-side { display: block; }
+  .team-build .home-grid--with-cart .home-side,
+.team-build.home-grid--with-cart .home-side { display: block; }
 }
 
 /* Roster / Ligue / Règle spéciale : 3 col → 2 col → 1 col */
 @media (max-width: 900px) {
-  .roster-league-row { flex-wrap: wrap; }
-  .roster-league-col { flex: 1 1 200px; }
-  .roster-league-col:first-child { flex: 1 1 100%; }
+  .team-build .roster-league-row,
+.team-build.roster-league-row { flex-wrap: wrap; }
+  .team-build .roster-league-col,
+.team-build.roster-league-col { flex: 1 1 200px; }
+  .team-build .roster-league-col:first-child,
+.team-build.roster-league-col:first-child { flex: 1 1 100%; }
 }
 @media (max-width: 640px) {
-  .roster-league-col { flex: 1 1 100%; }
+  .team-build .roster-league-col,
+.team-build.roster-league-col { flex: 1 1 100%; }
 }
 
 /* Tableau joueurs — colonnes stats (M/F/Ag/Cp/Av) masquées sur tablette.
    Exclut .staff-table : mêmes colonnes 4-8 y sont Qté/Coût total/+/- (les
    boutons d'ajout/retrait de staff disparaissaient sur cette largeur). */
 @media (max-width: 900px) {
-  .player-table:not(.staff-table) th:nth-child(4), .player-table:not(.staff-table) th:nth-child(5),
-  .player-table:not(.staff-table) th:nth-child(6), .player-table:not(.staff-table) th:nth-child(7),
-  .player-table:not(.staff-table) th:nth-child(8),
-  .player-table:not(.staff-table) td:nth-child(4), .player-table:not(.staff-table) td:nth-child(5),
-  .player-table:not(.staff-table) td:nth-child(6), .player-table:not(.staff-table) td:nth-child(7),
-  .player-table:not(.staff-table) td:nth-child(8) { display: none; }
+  .team-build .player-table:not(.staff-table) th:nth-child(4),
+.team-build.player-table:not(.staff-table) th:nth-child(4),
+.team-build .player-table:not(.staff-table) th:nth-child(5),
+.team-build.player-table:not(.staff-table) th:nth-child(5),
+.team-build .player-table:not(.staff-table) th:nth-child(6),
+.team-build.player-table:not(.staff-table) th:nth-child(6),
+.team-build .player-table:not(.staff-table) th:nth-child(7),
+.team-build.player-table:not(.staff-table) th:nth-child(7),
+.team-build .player-table:not(.staff-table) th:nth-child(8),
+.team-build.player-table:not(.staff-table) th:nth-child(8),
+.team-build .player-table:not(.staff-table) td:nth-child(4),
+.team-build.player-table:not(.staff-table) td:nth-child(4),
+.team-build .player-table:not(.staff-table) td:nth-child(5),
+.team-build.player-table:not(.staff-table) td:nth-child(5),
+.team-build .player-table:not(.staff-table) td:nth-child(6),
+.team-build.player-table:not(.staff-table) td:nth-child(6),
+.team-build .player-table:not(.staff-table) td:nth-child(7),
+.team-build.player-table:not(.staff-table) td:nth-child(7),
+.team-build .player-table:not(.staff-table) td:nth-child(8),
+.team-build.player-table:not(.staff-table) td:nth-child(8) { display: none; }
 }
 
 /* Tableau joueurs — Qté max (col 1) + Coût total (col 11) masqués sur mobile */
 @media (max-width: 640px) {
-  .player-table:not(.staff-table) th:nth-child(1), .player-table:not(.staff-table) th:nth-child(11),
-  .player-table:not(.staff-table) td:nth-child(1), .player-table:not(.staff-table) td:nth-child(11) { display: none; }
+  .team-build .player-table:not(.staff-table) th:nth-child(1),
+.team-build.player-table:not(.staff-table) th:nth-child(1),
+.team-build .player-table:not(.staff-table) th:nth-child(11),
+.team-build.player-table:not(.staff-table) th:nth-child(11),
+.team-build .player-table:not(.staff-table) td:nth-child(1),
+.team-build.player-table:not(.staff-table) td:nth-child(1),
+.team-build .player-table:not(.staff-table) td:nth-child(11),
+.team-build.player-table:not(.staff-table) td:nth-child(11) { display: none; }
 }
 
 /* Tableau staff — colonnes propres (Qté max/Poste/Prix/Qté/Coût total/+/-) :
    masque Qté max (1) + Coût total (5) sur mobile, jamais les boutons. */
 @media (max-width: 640px) {
-  .staff-table th:nth-child(1), .staff-table th:nth-child(5),
-  .staff-table td:nth-child(1), .staff-table td:nth-child(5) { display: none; }
+  .team-build .staff-table th:nth-child(1),
+.team-build.staff-table th:nth-child(1),
+.team-build .staff-table th:nth-child(5),
+.team-build.staff-table th:nth-child(5),
+.team-build .staff-table td:nth-child(1),
+.team-build.staff-table td:nth-child(1),
+.team-build .staff-table td:nth-child(5),
+.team-build.staff-table td:nth-child(5) { display: none; }
 }
 
 /* ── Zones d'erreur sous les tableaux ────────────────────────────────── */
-.table-error-zone { min-height: 0; }
-.table-error-zone:not(:empty) { margin-top: var(--p1); }
-.table-error { margin: 0; padding: 8px 12px; border-radius: 6px; font-size: var(--text-small); color: #c0392b; background: #fdf0ee; border: 1px solid #f5c6c0; }
+.team-build .table-error-zone,
+.team-build.table-error-zone { min-height: 0; }
+.team-build .table-error-zone:not(:empty),
+.team-build.table-error-zone:not(:empty) { margin-top: var(--p1); }
+.team-build .table-error,
+.team-build.table-error { margin: 0; padding: 8px 12px; border-radius: 6px; font-size: var(--text-small); color: #c0392b; background: #fdf0ee; border: 1px solid #f5c6c0; }

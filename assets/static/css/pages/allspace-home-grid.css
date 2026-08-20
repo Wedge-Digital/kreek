@@ -5,20 +5,23 @@
   gap: var(--p2);
 }
 
-.spaces-header {
+.allspace-home-grid .spaces-header,
+.allspace-home-grid.spaces-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--p2);
 }
 
-.spaces-grid {
+.allspace-home-grid .spaces-grid,
+.allspace-home-grid.spaces-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: var(--p1);
 }
 
-.space-card {
+.allspace-home-grid .space-card,
+.allspace-home-grid.space-card {
   background: var(--white);
   border-radius: var(--card-radius);
   padding: var(--p2);
@@ -31,39 +34,46 @@
   transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
   user-select: none;
 }
-.space-card:hover {
+.allspace-home-grid .space-card:hover,
+.allspace-home-grid.space-card:hover {
   border-color: var(--dark-3);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   transform: translateY(-2px);
 }
 
 /* Sélectionné (checkbox coché) */
-.space-card:has(input:checked) {
+.allspace-home-grid .space-card:has(input:checked),
+.allspace-home-grid.space-card:has(input:checked) {
   border-color: var(--gold);
   background: color-mix(in srgb, var(--orange) 6%, var(--white));
 }
-.space-card:has(input:checked):hover {
+.allspace-home-grid .space-card:has(input:checked):hover,
+.allspace-home-grid.space-card:has(input:checked):hover {
   border-color: var(--gold);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
-.space-card:has(input:checked) .space-card-badge {
+.allspace-home-grid .space-card:has(input:checked) .space-card-badge,
+.allspace-home-grid.space-card:has(input:checked) .space-card-badge {
   background: color-mix(in srgb, var(--orange) 15%, var(--white));
   color: var(--gold);
 }
 
 /* Déjà membre */
-.space-card--member {
+.allspace-home-grid .space-card--member,
+.allspace-home-grid.space-card--member {
   border-color: var(--blue);
   background: color-mix(in srgb, var(--blue) 6%, var(--white));
   cursor: default;
 }
-.space-card--member:hover {
+.allspace-home-grid .space-card--member:hover,
+.allspace-home-grid.space-card--member:hover {
   border-color: var(--blue);
   box-shadow: none;
   transform: none;
 }
 
-.space-card-logo {
+.allspace-home-grid .space-card-logo,
+.allspace-home-grid.space-card-logo {
   width: 80px;
   height: 80px;
   border-radius: 50%;
@@ -74,13 +84,15 @@
   justify-content: center;
   flex-shrink: 0;
 }
-.space-card-logo img {
+.allspace-home-grid .space-card-logo img,
+.allspace-home-grid.space-card-logo img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.space-card-name {
+.allspace-home-grid .space-card-name,
+.allspace-home-grid.space-card-name {
   font-family: var(--font-title);
   font-size: var(--h5);
   font-weight: 700;
@@ -89,7 +101,8 @@
   line-height: 1.3;
 }
 
-.space-card-badge {
+.allspace-home-grid .space-card-badge,
+.allspace-home-grid.space-card-badge {
   font-size: var(--text-tiny);
   font-weight: 600;
   padding: 3px 10px;
@@ -98,12 +111,14 @@
   color: var(--dark-2);
   transition: background 0.2s, color 0.2s;
 }
-.space-card-badge--member {
+.allspace-home-grid .space-card-badge--member,
+.allspace-home-grid.space-card-badge--member {
   background: color-mix(in srgb, var(--blue) 15%, var(--white));
   color: var(--blue);
 }
 
-.spaces-empty {
+.allspace-home-grid .spaces-empty,
+.allspace-home-grid.spaces-empty {
   grid-column: 1 / -1;
   padding: var(--p4);
   text-align: center;
@@ -111,7 +126,8 @@
   font-size: var(--text-sm);
 }
 
-.spaces-actions {
+.allspace-home-grid .spaces-actions,
+.allspace-home-grid.spaces-actions {
   margin-top: var(--p2);
   display: flex;
   gap: var(--p1);
@@ -119,7 +135,8 @@
 }
 
 /* Bouton désactivé quand rien n'est sélectionné */
-#join-spaces-form:not(:has(input:checked)) .join-btn {
+.allspace-home-grid #join-spaces-form:not(:has(input:checked)) .join-btn,
+.allspace-home-grid#join-spaces-form:not(:has(input:checked)) .join-btn {
   opacity: 0.4;
   pointer-events: none;
 }

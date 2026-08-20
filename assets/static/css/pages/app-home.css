@@ -1,3 +1,13 @@
+/* css:global — chargée par trois pages sans lien entre elles : le fil
+   d'actualités, la liste des espaces et la construction d'équipe. C'est une
+   feuille partagée malgré son dossier `pages/`, au même titre que
+   `match-report-shared.css`.
+
+   La scoper sous un nom de page la ferait disparaître des deux autres, sans
+   erreur ni avertissement. Les quatorze sélecteurs qu'elle partage avec
+   `app-news-feed.css` restent arbitrés comme aujourd'hui : celle-ci est
+   chargée après elle, et sa portée la fera gagner de la même façon. */
+
 .home-grid { display: flex; gap: var(--p2); height: 100%; align-items: stretch; width: 100%; }
 .home-main { flex: 3; display: flex; flex-direction: column; gap: var(--p1); overflow-y: auto; scrollbar-width: none; }
 .home-main::-webkit-scrollbar {

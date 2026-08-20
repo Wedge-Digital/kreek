@@ -3,7 +3,7 @@
 {% block content %}
 <link rel="stylesheet" href="/static/css/pages/app-home.css">
 <link rel="stylesheet" href="/static/css/pages/app-news-feed.css">
-<div class="home-main">
+<div class="home-main app-news-feed">
   <div class="feed-header">
     <div class="h3-gras">Actualités</div>
     <div class="feed-header-actions">
@@ -134,7 +134,7 @@
   {% endif %}
 </div>
 
-<div class="home-side">
+<div class="home-side app-news-feed">
   <div id="latest-results-widget"
        hx-get="{{ app_routes.competitions.latest_results_widget(space_id) }}"
        hx-trigger="load"
