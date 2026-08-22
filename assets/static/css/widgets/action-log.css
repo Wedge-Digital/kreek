@@ -1,1 +1,5 @@
+/* css:mort — vide — les styles vivent dans `pages/match-report-shared.css`.
+   Hors du bundle de la carte 342 ; sa suppression relève de la carte de
+   nettoyage prévue par l'épic E03. */
+
 /* Styles définis dans match-report-shared.css : .mr-log, .mr-log-entry */

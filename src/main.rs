@@ -582,6 +582,9 @@ pub fn build_router(state: AppState) -> Router {
         .with_state(state);
 
     let app = Router::new()
+        // Avant `/static` : le bundle n'existe qu'en mémoire, `ServeDir` ne
+        // saurait pas le trouver sur le disque.
+        .route("/css/{fichier}", get(web::css_bundle::servir))
         .nest_service("/static", ServeDir::new("assets/static"))
         .merge(auth_app);
 
@@ -606,6 +609,16 @@ pub fn build_router(state: AppState) -> Router {
 }
 
 async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
+    // Avant tout le reste : un échec ici est fatal, et vaut mieux qu'un serveur
+    // qui démarre sans styles.
+    let debut = std::time::Instant::now();
+    web::css_bundle::construire();
+    tracing::info!(
+        duree_ms = debut.elapsed().as_millis(),
+        app = %web::css_bundle::bundle("app").chemin,
+        "bundles CSS construits"
+    );
+
     let server_address = cfg.server_addr();
     let state = compose(cfg, pool).await;
     let app = build_router(state);

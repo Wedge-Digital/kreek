@@ -1,3 +1,7 @@
+/* css:mort — maquette seule — aucun template de `src/` ne la charge.
+   Hors du bundle de la carte 342 ; sa suppression relève de la carte de
+   nettoyage prévue par l'épic E03. */
+
 body { background: var(--dark-0); min-height: 100vh; padding: var(--p4); }
 
 .index-title {

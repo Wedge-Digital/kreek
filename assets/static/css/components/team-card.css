@@ -26,7 +26,8 @@
 .team-card-status--phase     { background: rgba(0,48,73,0.10);    color: var(--main-blue); }
 .team-card-status--offseason { background: var(--dark-6);         color: var(--dark-3); }
 
-.tab-empty-state {
-  color: var(--dark-3); font-size: var(--text-small); font-style: italic;
-  padding: var(--p4); text-align: center;
-}
+
+/* `.tab-empty-state` retirée : règle morte. La seule page qui chargeait cette
+   feuille — mes équipes — n'emploie pas la classe, et les quatre templates qui
+   l'emploient ne chargeaient pas cette feuille. Une fois les feuilles réunies,
+   elle se serait mise à s'appliquer sur trois pages. */

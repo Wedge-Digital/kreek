@@ -1,3 +1,7 @@
+/* css:mort — maquette seule.
+   Hors du bundle de la carte 342 ; sa suppression relève de la carte de
+   nettoyage prévue par l'épic E03. */
+
 .create-header { background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%); }
 
 .rules-section       { margin-bottom: var(--p3); }

@@ -74,8 +74,19 @@ import pathlib
 from collections import defaultdict
 
 RACINE = pathlib.Path('assets/static/css')
-TEMPLATES_SRC = set()
-for _t in pathlib.Path('src').rglob('*.html'):
+# Le périmètre se lisait dans les `<link>` des templates. La carte 342 les a
+# tous supprimés — les feuilles sont désormais réunies en un fichier unique — et
+# le verrou s'est retrouvé à ne surveiller qu'une feuille sur quarante-six, sans
+# rien signaler.
+#
+# La source de vérité est donc la **liste du bundle**, dans
+# `src/web/css_bundle.rs`, augmentée des feuilles que le BC `auth` charge encore
+# lui-même. Une feuille absente des deux n'est pas dans l'application.
+_MOD = pathlib.Path('src/web/css_bundle.rs').read_text()
+_LISTE = _MOD.split('FEUILLES_APP: &[&str] = &[', 1)[1].split('];', 1)[0]
+TEMPLATES_SRC = {m.group(1).rsplit('/', 1)[-1]
+                 for m in re.finditer(r'"([^"]+\.css)"', _LISTE)}
+for _t in pathlib.Path('src/app/auth').rglob('*.html'):
     for _m in re.finditer(r'href="/static/css/([^"]+\.css)"', _t.read_text()):
         TEMPLATES_SRC.add(_m.group(1).rsplit('/', 1)[-1])
 SCOPES = ('pages', 'widgets')          # doivent être scopés

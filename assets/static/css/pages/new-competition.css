@@ -1,1 +1,5 @@
+/* css:mort — sa seule règle cible `.new-competition`, classe qu'aucun template ne porte.
+   Hors du bundle de la carte 342 ; sa suppression relève de la carte de
+   nettoyage prévue par l'épic E03. */
+
 .new-competition { display: flex; flex-direction: column; padding: var(--p4); gap: var(--p1); }

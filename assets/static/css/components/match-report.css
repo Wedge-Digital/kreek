@@ -1,3 +1,7 @@
+/* css:mort — référencée par rien.
+   Hors du bundle de la carte 342 ; sa suppression relève de la carte de
+   nettoyage prévue par l'épic E03. */
+
 .report-card { background: var(--white); border-radius: var(--radius-lg); padding: var(--p4); max-width: 860px; margin: 0 auto; }
 .report-header {
   background: linear-gradient(135deg, #E02020 0%, var(--dark-0) 100%);

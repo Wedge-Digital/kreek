@@ -12,6 +12,7 @@
 #  11. Use cases async — instrumentés ou motivés (cf. kanban/348, 355)
 #  12. Émission d'événements — via emettre()/publier() (cf. kanban/350, 351, 355)
 #  13. Cible de journalisation — toujours sous kreek:: (cf. kanban/355)
+#  14. Bundle CSS — aucune feuille orpheline (cf. kanban/342)
 #
 # Axes en avertissement (n'affectent pas le code de sortie) :
 #   6. Value objects systématiques (CQRS) — primitifs nus côté écriture domaine
@@ -500,6 +501,31 @@ axe13=$(
 )
 axe13="$(printf '%s' "$axe13" | sed '/^$/d')"
 if [ -n "$axe13" ]; then print_fail "$axe13"; else print_pass; fi
+echo ""
+
+# ── Axe 14 : exhaustivité du bundle CSS ─────────────────────────────────────
+#
+# Depuis la carte 342, les feuilles ne sont plus liées par les templates : elles
+# sont réunies en un fichier unique dont la **liste vit dans le code**. Une
+# feuille ajoutée sans y être inscrite ne serait servie nulle part, et rien ne
+# le dirait — la page s'afficherait simplement sans ses styles.
+#
+# Une feuille qui n'a pas vocation à être servie le déclare dans son en-tête par
+# `css:mort`, avec son motif, comme `css:global` déclare une feuille partagée.
+# Le marqueur vit dans le fichier et non dans une liste tenue ici : une liste
+# dérive, un marqueur adjacent ne le peut pas.
+echo -e "${BOLD}Axe 14 · Bundle CSS — aucune feuille orpheline${RESET}"
+axe14=$(
+  liste=$(sed -n '/FEUILLES_APP: &\[&str\] = &\[/,/^\];/p' src/web/css_bundle.rs)
+  for f in $(find assets/static/css -name '*.css' | sed 's|assets/static/css/||' | sort); do
+    grep -q "\"$f\"" <<< "$liste" && continue
+    grep -q 'css:mort' "assets/static/css/$f" && continue
+    grep -rq "href=\"/static/css/$f\"" src/app/auth 2>/dev/null && continue
+    echo "assets/static/css/$f : ni dans le bundle, ni déclarée morte, ni chargée par auth"
+  done
+)
+axe14="$(printf '%s' "$axe14" | sed '/^$/d')"
+if [ -n "$axe14" ]; then print_fail "$axe14"; else print_pass; fi
 echo ""
 
 if [ "$EXIT_CODE" -eq 0 ]; then

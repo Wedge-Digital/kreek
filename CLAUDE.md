@@ -271,7 +271,7 @@ commit suivant.
 | Commande | Contenu | Job CI |
 |---|---|---|
 | `make lint` | `cargo fmt --check`, `cargo clippy` | `qualite` |
-| `make check-arch` | axes 2 à 13 (cf. `scripts/check-arch.sh`) | `qualite` |
+| `make check-arch` | axes 2 à 14 (cf. `scripts/check-arch.sh`) | `qualite` |
 | `make audit` | `cargo audit --deny warnings` | `audit` |
 | `make test` | tests unitaires et d'intégration | `unit` |
 | `make e2e` | suite Playwright complète | `e2e` |
@@ -757,14 +757,44 @@ hx-params="q"
 hx-include="[name='space_id']"
 ```
 
-### Règle 5 — CSS embarqué, pas de dépendance au layout
+### Règle 5 — CSS scopé, servi par le bundle
 
-Chaque widget embarque son propre `<link rel="stylesheet">`. Il n'assume pas que la page hôte charge ses styles.
+**Aucun template ne porte de `<link rel="stylesheet">`.** Toutes les feuilles
+sont réunies en un fichier unique, construit au démarrage et chargé une seule
+fois dans le `<head>` du layout (carte 342).
 
-```html
-<link rel="stylesheet" href="/static/css/widgets/coach-search.css">
-<div class="coaches-search-panel" hx-disinherit="*">…</div>
+La règle disait l'inverse jusque-là — « chaque widget embarque son propre
+`<link>` ». C'était la cause du clignotement : un `<link>` inséré dans un DOM
+déjà vivant, ce que fait chaque swap HTMX, ne bloque pas le rendu. Le markup
+était peint sans ses styles pendant 50 à 200 ms.
+
+Ce qu'un widget doit faire à la place :
+
+**Nommer sa feuille d'après sa racine.** Le nom du fichier **est** le sélecteur
+de portée : `widgets/coach-search.css` ⇒ toute règle sous `.coach-search`. Si le
+template n'a pas de racine unique, il reçoit une classe nommée d'après sa
+feuille.
+
+```css
+/* widgets/coach-search.css */
+.coach-search .coaches-search-panel { … }
+.coach-search.coaches-search-panel { … }   /* si la racine est stylée elle-même */
 ```
+
+**S'inscrire dans le bundle.** La liste vit dans `src/web/css_bundle.rs`, dans
+un ordre imposé — global, layouts, composants, pages, widgets. L'axe 14 de
+`check-arch` refuse toute feuille qui n'y figure pas, sauf à porter `css:mort`
+dans son en-tête avec son motif.
+
+**Ne pas déborder de sa racine.** Une règle qui style du markup situé hors de la
+portée du widget mourra en silence. `scripts/check-css-collisions.sh` vérifie la
+portée ; `tests/e2e/visual/debordements.py` vérifie qu'aucune feuille ne trouve
+du markup sur une page qui ne la concerne pas.
+
+Exception : le BC `auth`, extractible, charge encore ses trois feuilles
+lui-même. Ses pages sont des chargements complets sans swap, donc sans
+clignotement, et lui câbler le bundle créerait l'adhérence que son statut
+proscrit.
 
 ### Règle 6 — Scripts sans ID globaux
 

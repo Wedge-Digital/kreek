@@ -8,7 +8,25 @@
    `app-news-feed.css` restent arbitrés comme aujourd'hui : celle-ci est
    chargée après elle, et sa portée la fera gagner de la même façon. */
 
-.home-grid { display: flex; gap: var(--p2); height: 100%; align-items: stretch; width: 100%; }
+/* Le conteneur de contenu du layout — `#app-content` dans `app-layout.html` —
+   est présent sur **toutes** les pages, mais seules trois chargeaient cette
+   feuille. Une fois les feuilles réunies en un fichier unique (carte 342), la
+   règle s'appliquerait partout : 28 pages verraient leur conteneur passer de
+   `block` à `flex`.
+
+   Un marqueur posé par le template ne marcherait pas : 46 templates ciblent
+   `#app-content` en swap HTMX, donc le conteneur persiste d'une navigation à
+   l'autre et sa classe resterait celle de la page précédente.
+
+   La règle est donc conditionnée au **contenu** du conteneur. Elle s'applique
+   exactement quand il porte l'une des trois racines concernées, c'est-à-dire
+   exactement quand cette feuille était chargée. Rien à tenir synchronisé, et le
+   swap HTMX ne peut pas la mettre en défaut puisque c'est le contenu qui
+   décide. */
+.home-grid:has(> .home-main),
+.home-grid:has(> .allspace-home-grid),
+.home-grid:has(> .home-grid--with-cart)
+  { display: flex; gap: var(--p2); height: 100%; align-items: stretch; width: 100%; }
 .home-main { flex: 3; display: flex; flex-direction: column; gap: var(--p1); overflow-y: auto; scrollbar-width: none; }
 .home-main::-webkit-scrollbar {
   display: none; /* Chrome/Safari */
@@ -16,7 +34,10 @@
 .home-side  { flex: 1; }
 
 @media (max-width: 768px) {
-  .home-grid { flex-direction: column; height: auto; }
+  .home-grid:has(> .home-main),
+  .home-grid:has(> .allspace-home-grid),
+  .home-grid:has(> .home-grid--with-cart)
+    { flex-direction: column; height: auto; }
   .home-main { flex: none; overflow-y: visible; }
   .home-side  { display: none; }
 }

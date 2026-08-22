@@ -34,6 +34,7 @@ chrono = { version = "0.4.44", features = ["serde"] }
 clap = { version = "4", features = ["derive"] }
 derive_more = { version = "2.1.1", features = ["display"] }
 axum-extra = { version = "0.12.6", features = ["form"] }
+lightningcss = "1.0.0-alpha.72"
 
 [dev-dependencies]
 mockito = "1"

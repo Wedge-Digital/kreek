@@ -1,5 +1,4 @@
 {% import "components/team-card.html" as card_cmp %}
-<link rel="stylesheet" href="/static/css/components/team-card.css">
 <div class="teams-grid" hx-disinherit="*">
     {% for team in teams %}
     {% call card_cmp::card(team.name, team.logo, team.roster, team.coach, team.tv, team.initials, "", "", team.link) %}

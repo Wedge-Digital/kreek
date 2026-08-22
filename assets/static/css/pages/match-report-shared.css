@@ -161,17 +161,21 @@
 .mr-actions .btn-outline-sm { flex: 1; text-align: center; }
 .mr-actions .btn-primary-sm { flex: 2; text-align: center; }
 
-.btn-primary-sm {
+/* Les deux seules classes de cette feuille qui ne portent pas un préfixe
+   `mr-`/`ms-`/`ts-` — 85 des 87 autres s'y tiennent. Sans portée, elles
+   habilleraient les boutons des pages d'administration une fois les feuilles
+   réunies, alors qu'ils sont nus aujourd'hui. */
+.mr-container .btn-primary-sm {
   padding: 12px 20px; border-radius: 8px;
   background: var(--main-blue); color: var(--white);
   font-size: var(--text-small); font-weight: 700;
   cursor: pointer; border: none; transition: opacity 0.15s;
   text-decoration: none; display: inline-flex; align-items: center; justify-content: center;
 }
-.btn-primary-sm:hover { opacity: 0.9; }
-.btn-primary-sm:disabled { opacity: 0.4; cursor: not-allowed; }
+.mr-container .btn-primary-sm:hover { opacity: 0.9; }
+.mr-container .btn-primary-sm:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.btn-outline-sm {
+.mr-container .btn-outline-sm {
   padding: 12px 20px; border-radius: 8px;
   background: var(--white); color: var(--dark-2);
   font-size: var(--text-small); font-weight: 600;
@@ -179,7 +183,7 @@
   transition: all 0.15s;
   text-decoration: none; display: inline-flex; align-items: center; justify-content: center;
 }
-.btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
+.mr-container .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
 
 /* ── TomSelect custom rendering ── */
 .ts-team-option { padding: 4px 0; }
