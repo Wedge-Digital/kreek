@@ -248,8 +248,13 @@ def test_reordonnancement_persiste(page: Page, roster_ctx):
     _entrer_en_edition(page)
 
     lignes = page.locator(".players-widget .player-table-row")
-    premier = lignes.nth(0).locator(".name-input").input_value()
-    second = lignes.nth(1).locator(".name-input").input_value()
+    # Les deux noms sont posés par le test, jamais lus dans le DOM : la fixture
+    # est de portée module, et rien ne garantit que les deux premières lignes
+    # soient distinguables — sans le scénario 1, elles sont vides toutes deux,
+    # et l'assertion du glissement devient vraie sans rien vérifier.
+    premier, second = "Grish Un", "Nobbla Deux"
+    lignes.nth(0).locator(".name-input").fill(premier)
+    lignes.nth(1).locator(".name-input").fill(second)
 
     # Glisser la deuxième ligne au-dessus de la première.
     source = lignes.nth(1).locator(".drag-handle-cell")
@@ -259,11 +264,17 @@ def test_reordonnancement_persiste(page: Page, roster_ctx):
     expect(lignes.nth(0).locator(".name-input")).to_have_value(second)
     page.locator(".roster-edit-save-btn").click()
 
+    # Attendre la persistance avant de rouvrir : sans cela le GET du widget
+    # double le POST encore en vol, la page est peinte sur l'ancien ordre et
+    # HTMX ne la rafraîchit plus. Le formulaire poste les noms avec l'ordre,
+    # donc les deux persistent ensemble.
+    _attendre_valeur(
+        page, team_id, lambda e: e[0].split("|")[1] == second, f"« {second} » passé en tête"
+    )
     _ouvrir(page, space_id, team_id)
     expect(page.locator(".players-widget .player-table-row").nth(0).locator(".cell-name")).to_contain_text(
-        second or ""
+        second
     )
-    assert premier != second, "les deux premières lignes doivent être distinguables"
 
 
 # ── Scénario 5 — doublon bloqué côté front, sans requête ─────────────────────
@@ -277,10 +288,16 @@ def test_doublon_bloque_sans_requete_reseau(page: Page, roster_ctx):
     appels: list[str] = []
     page.on("request", lambda r: appels.append(r.url) if "/roster" in r.url else None)
 
+    # Les deux numéros sont posés par le test, jamais lus dans le DOM : la
+    # fixture est de portée module, et le scénario 3 vide un maillot que le
+    # scénario 4 déplace en deuxième position. Lire cette ligne rendait le
+    # doublon vide — or deux vides n'en sont pas un, à dessein (cf. scénario 3).
+    # Le maillot libéré par le renvoi est libre par construction.
+    numero = str(roster_ctx["maillot_libere"])
     maillots = page.locator(".players-widget .jersey-input")
-    second = maillots.nth(1).input_value()
-    maillots.nth(0).fill(second)
-    maillots.nth(0).dispatch_event("input")
+    for rang in (1, 0):
+        maillots.nth(rang).fill(numero)
+        maillots.nth(rang).dispatch_event("input")
 
     expect(page.locator(".players-widget .cell-jersey.has-duplicate")).to_have_count(2)
     expect(page.locator(".roster-edit-save-btn")).to_be_disabled()
