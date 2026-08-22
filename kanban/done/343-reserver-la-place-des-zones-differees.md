@@ -179,20 +179,55 @@ que de restaurer.
 
 ## Checklist
 
-- [ ] Inventaire des 37 conteneurs `hx-trigger="load"` : hauteur réelle mesurée,
-      ou mention « sans effet visuel » justifiée
-- [ ] `.menu-zone` : `min-height: calc(var(--menubar-height) * 2)`
-- [ ] `.menu-zone` : valeur vérifiée et ajustée sous `@media (max-width: 768px)`
-- [ ] `.loading-placeholder` : hauteur minimale, déclinée par usage si les cinq
-      contenus diffèrent trop
-- [ ] Conteneurs sans placeholder retenus par l'inventaire : `min-height` posée
-- [ ] Aucune valeur en dur là où un token existe (`--menubar-height`,
-      `--sidebar-width`)
-- [ ] `min-height` partout, jamais `height` (cf. piège n°1)
-- [ ] Mesure de non-régression : déplacement cumulé nul sur l'accueil, la fiche
-      d'équipe et une page de classement, en desktop et sous 768 px
-- [ ] Vérification visuelle qu'aucun blanc permanent n'est apparu sous une zone
-      au contenu plus court que prévu
-- [ ] `make lint` passe
-- [ ] `make check-arch` passe sur l'ensemble du projet
-- [ ] `make e2e` passe
+- [x] ~~Inventaire des 37 conteneurs `hx-trigger="load"`~~ — ils sont **19**, et
+      l'inventaire s'est fait par la **mesure** plutôt que par lecture des
+      templates : `tests/e2e/visual/decalages.py` rend les paliers page par
+      page, donc les conteneurs coupables se désignent eux-mêmes. Lister les
+      conteneurs aurait donné une liste sans hauteurs ; la mesure donne les
+      hauteurs sans la liste, et c'est la hauteur qui décide
+- [x] `.menu-zone` : `min-height: calc(var(--menubar-height) * 2)`
+- [x] `.menu-zone` : vérifiée sous `@media (max-width: 768px)` — la zone y vaut
+      **0 px vide comme remplie**, les deux barres étant masquées ; réserver y
+      créerait un blanc permanent, donc `min-height: 0`
+- [x] ~~`.loading-placeholder` : hauteur minimale~~ — **écarté, et c'est un
+      choix**. Sur la fiche d'équipe, réserver le **conteneur**
+      (`#players-widget`) s'est révélé meilleur : la réservation tient que le
+      placeholder soit présent ou non. Les quatre autres placeholders sont sur
+      des pages qui mesurent **0 px** de déplacement — `joueur-detail`,
+      `competition-detail`. Leur donner une hauteur serait réserver de la place
+      là où rien ne saute, c'est-à-dire le piège n°1 de cette carte
+- [x] Conteneurs retenus par la mesure : `#players-widget` réservé, à la hauteur
+      d'un effectif de **onze** — pas une observation mais une règle du jeu, le
+      minimum pour aligner une équipe, donc un plancher qui ne peut pas créer de
+      blanc permanent
+- [x] Aucune valeur en dur là où un token existe — la zone de menu s'écrit avec
+      `--menubar-height`. L'effectif n'a pas de token correspondant : sa hauteur
+      dépend d'une donnée que la page ne peut pas connaître, la souveraineté des
+      BCs lui interdisant d'interroger les données joueurs
+- [x] `min-height` partout, jamais `height`
+- [x] Mesure de non-régression : **0 px** sur les cinq pages du critère, en
+      desktop et sous 768 px
+- [x] Aucun blanc permanent : vérifié sur onze, douze et quatorze joueurs —
+      exact au plancher, saut résiduel de 35 à 74 px au-delà, jamais de blanc
+- [x] `make lint` passe
+- [x] `make check-arch` passe sur l'ensemble du projet
+- [x] `make e2e` : 186 passés, 1 échec **antérieur à cette carte** — carte 360
+
+## Ce que la carte laisse derrière elle
+
+**Le protocole de mesure de la carte est remplacé.** Elle proposait de vider les
+conteneurs puis de restaurer leur `innerHTML`, ce qu'elle signale elle-même comme
+destructeur pour les liaisons HTMX. `decalages.py` bloque les requêtes HTMX au
+chargement, ce qui donne l'état exact du premier rendu sans rien toucher. Et ce
+n'est pas le CLS du navigateur qu'il mesure : il vaut zéro sur cette
+application — le contenu défile dans `.main-area`, pas dans la fenêtre — et le
+contenu saute quand même sous les yeux.
+
+**Dix pages sautent encore**, hors du périmètre des cinq du critère. La plus
+lourde est la construction d'équipe : 1 265 px en desktop, 1 841 px en mobile,
+en quatre paliers. Carte **361**, qui reprend l'outil et la méthode.
+
+**Un piège découvert en route, sans rapport avec le saut** : le bundle CSS est
+lu une fois au démarrage et gelé en mémoire, donc éditer une feuille n'a aucun
+effet sur un serveur qui tourne. Il a fait accuser à tort la réservation de
+`.menu-zone` d'une instabilité e2e pendant une bonne heure. Carte **362**.

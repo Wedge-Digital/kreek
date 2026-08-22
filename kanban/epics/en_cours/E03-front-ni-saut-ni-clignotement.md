@@ -1,7 +1,9 @@
 # E03 — Front : ni saut, ni clignotement
 
-**État :** 5 cartes · 2 faites — 341 et 342 livrées et vérifiées.
-Le **clignotement est supprimé** ; restent le saut (343) et deux cartes de dette (17, 18).
+**État :** 5 cartes · 3 faites — 341, 342 et 343 livrées et vérifiées.
+Le **clignotement est supprimé** et le **saut aussi**, sur le périmètre nommé.
+Restent les deux cartes de dette (17, 18). L'épic a engendré deux cartes hors
+périmètre : 361 (le saut des dix autres pages) et 362 (le bundle gelé).
 
 ## La fonction
 
@@ -26,7 +28,7 @@ layout.
 |---|---|---|
 | 341 | Donner sa portée à chaque feuille, à rendu constant | **faite** — 116 collisions ramenées à 2 ; rend la fusion possible |
 | 342 | Les feuilles réunies en un fichier unique dans le `<head>` | **faite** — 0 `<link>` et 0 requête CSS au swap |
-| 343 | Réserver la place des zones remplies en différé | **supprime le saut** |
+| 343 | Réserver la place des zones remplies en différé | **faite** — 0 px sur les cinq pages du critère, desktop et mobile |
 | 17 | Dépendances CDN en production | TomSelect et le widget Cloudinary servis depuis `/static` |
 | 18 | Scripts inline dans les fragments HTMX | init par `htmx:afterSwap`, plus de `<script>` par fragment |
 
@@ -50,9 +52,17 @@ troisième contrôle, `tests/e2e/visual/debordements.py`, pour poser la question
 que le verrou ne savait pas poser : *ce sélecteur trouve-t-il du markup sur une
 page qui ne chargeait pas sa feuille ?*
 
-**343 est indépendante** des deux autres et peut se faire à tout moment, avant
-comme après. Elle survivrait à 341 et 342 : le saut n'est pas un problème de
-CSS mais de hauteur non réservée.
+**343 était indépendante** des deux autres, et l'est restée : le saut n'est pas
+un problème de CSS mais de hauteur non réservée.
+
+**Elle a soldé deux zones, pas toutes.** La zone de menu se réserve avec un
+token, sa hauteur étant connue d'avance. L'effectif est d'une autre nature : sa
+hauteur dépend d'une donnée que la page ne peut pas connaître, et ce qui a rendu
+la réservation sûre est qu'**onze joueurs est une règle du jeu** — aucune fiche
+n'en affiche moins, donc jamais de blanc permanent. C'est le critère que la
+carte 361 devra appliquer zone par zone : *existe-t-il un plancher aussi solide
+qu'une règle du domaine ?* Sans lui, réserver au jugé remplace un saut de 100 ms
+par un blanc permanent, ce qui est pire.
 
 **17 et 18** sont indépendantes de tout le reste.
 
@@ -69,6 +79,13 @@ CSS mais de hauteur non réservée.
   menu, pas la requête. La rendre côté serveur dans le layout est plus lourd —
   il faut que chaque page dispose du contexte du menu — et fait une carte à
   part.
+- **Le saut des dix pages hors critère** — 343 mesure zéro sur les cinq pages
+  qu'elle nomme, et la mesure élargie en trouve dix autres, jusqu'à 1 841 px sur
+  la construction d'équipe. Carte 361, qui reprend l'outil et la méthode.
+- **Le bundle CSS gelé au démarrage** — effet de bord de 342 : une feuille
+  éditée n'a aucun effet sur un serveur qui tourne, et rien ne le signale. C'est
+  de l'ergonomie de développement, pas du rendu ; l'épic se constate sur la
+  démo, où le défaut n'existe pas. Carte 362.
 - **L'appel dupliqué à `/app/spaces`** — la sidebar figure deux fois dans
   `app-layout.html`, desktop et drawer mobile, chacune en `hx-trigger="load"`.
   Réel et mesuré, mais c'est un problème de requêtes, pas de mise en page.
