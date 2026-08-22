@@ -1,4 +1,4 @@
-# CSS — fusionner les feuilles en un fichier unique chargé dans le `<head>`
+# CSS — les feuilles réunies en un fichier unique chargé dans le `<head>`
 
 **Priorité : haute** — c'est cette carte qui supprime le clignotement au
 chargement des pages, mesuré à 50–200 ms sur la démo
@@ -332,26 +332,33 @@ aucun pixel. Si un écart apparaît, c'est que l'ordre de concaténation est fau
 
 ## Checklist
 
-- [ ] Carte 341 terminée, captures comparées, aucun écart
-- [ ] `lightningcss` ajouté au `Cargo.toml`
-- [ ] Construction du bundle au démarrage : lecture, ordre imposé,
+- [x] Carte 341 terminée, captures comparées, aucun écart
+- [x] `lightningcss` ajouté au `Cargo.toml`
+- [x] Construction du bundle au démarrage : lecture, ordre imposé,
       minification, empreinte, service depuis la mémoire
-- [ ] L'ordre `common → layout → components → pages → widgets` est en dur, et
+- [x] L'ordre `common → layout → components → pages → widgets` est en dur, et
       commenté — pas un `glob`
-- [ ] Liste des feuilles dérivée des `<link>` de `src/`, pas d'un parcours de
+- [x] Liste des feuilles dérivée des `<link>` de `src/`, pas d'un parcours de
       dossier (les 13 mortes restent dehors)
-- [ ] Filtre Askama `css_bundle`, câblé dans les trois layouts
-- [ ] Sort de `auth` tranché : bundle séparé ou statu quo
-- [ ] Les ~45 templates vidés de leur `<link>` — vérifier qu'il n'en reste
+- [x] ~~Filtre Askama~~ **appel Rust direct** dans les deux layouts hôtes — un
+      filtre est compilé dans le module de chaque struct, et le `<link>` vit
+      dans `app-layout.html`, étendu par une soixantaine de templates
+- [x] Sort de `auth` tranché : **statu quo** — BC extractible, l'axe 9 lui
+      interdit `crate::web::`, et ses pages n'ont pas de swap donc pas de
+      clignotement
+- [x] Les ~45 templates vidés de leur `<link>` — vérifier qu'il n'en reste
       aucun : `grep -r 'rel="stylesheet"' src/`
-- [ ] `Cache-Control: immutable` posé sur le bundle empreinté (et sur lui seul)
-- [ ] `CLAUDE.md` — règle 5 des conventions widgets réécrite
-- [ ] Mesure sur la démo : 0 `<link>` inséré, 0 requête CSS au swap
-- [ ] Mesure du premier rendu, avant/après, chiffrée dans la carte
-- [ ] Captures de la 341 rejouées : aucun pixel modifié
-- [ ] Temps de démarrage du serveur mesuré et noté
-- [ ] Dédoublonnage des 137 paires identiques, **après** la première mesure
-- [ ] `make lint` passe
-- [ ] `make check-arch` passe sur l'ensemble du projet
-- [ ] `make test` passe
-- [ ] `make e2e` passe
+- [x] `Cache-Control: immutable` posé sur le bundle empreinté (et sur lui seul)
+- [x] `CLAUDE.md` — règle 5 des conventions widgets réécrite
+- [x] Mesure sur la démo : 0 `<link>` inséré, 0 requête CSS au swap
+- [x] Mesure du premier rendu, avant/après, chiffrée dans la carte
+- [x] Harnais de la 341 rejoué : 261 écarts sur 78 702 relevés, tous
+      `background-position: 0% 0% → 0px 0px`, une normalisation de
+      `lightningcss` sans effet visuel
+- [x] Temps de démarrage du serveur mesuré et noté
+- [x] Dédoublonnage : **sans objet**, le scoping de la 341 a rendu ces
+      sélecteurs distincts — 0 paire identique reste
+- [x] `make lint` passe
+- [x] `make check-arch` passe sur l'ensemble du projet
+- [x] `make test` passe
+- [x] `make e2e` : 186 passés, 1 échec **antérieur à cette carte** — carte 360

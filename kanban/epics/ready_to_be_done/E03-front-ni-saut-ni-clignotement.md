@@ -1,6 +1,7 @@
 # E03 — Front : ni saut, ni clignotement
 
-**État :** 5 cartes · 1 faite — 341 livrée et vérifiée
+**État :** 5 cartes · 2 faites — 341 et 342 livrées et vérifiées.
+Le **clignotement est supprimé** ; restent le saut (343) et deux cartes de dette (17, 18).
 
 ## La fonction
 
@@ -24,7 +25,7 @@ layout.
 | # | Intitulé | Apport |
 |---|---|---|
 | 341 | Donner sa portée à chaque feuille, à rendu constant | **faite** — 116 collisions ramenées à 2 ; rend la fusion possible |
-| 342 | Fusionner les feuilles en un fichier unique dans le `<head>` | **supprime le clignotement** |
+| 342 | Les feuilles réunies en un fichier unique dans le `<head>` | **faite** — 0 `<link>` et 0 requête CSS au swap |
 | 343 | Réserver la place des zones remplies en différé | **supprime le saut** |
 | 17 | Dépendances CDN en production | TomSelect et le widget Cloudinary servis depuis `/static` |
 | 18 | Scripts inline dans les fragments HTMX | init par `htmx:afterSwap`, plus de `<script>` par fragment |
@@ -36,13 +37,18 @@ collisions produit des régressions visuelles silencieuses : tant que les
 feuilles sont isolées les divergences sont invisibles, et le bundle ne les
 neutralise pas — il les active.
 
-**341 est faite.** Elles étaient 116 et non 79 ; il en reste 2, renvoyées à la
-carte 359 parce que les solder est un changement de rendu. Le harnais qu'elle a
-produit compare des **styles calculés** et non des captures d'écran — celles-ci
-variaient de 5 à 12 % d'un passage à l'autre sans qu'aucun CSS n'ait changé. Il
-sert directement à la 342 : c'est lui qui dira si la fusion change quelque
-chose, et il a été corrigé pour survivre à la suppression des 146 `<link>`
-qu'elle emporte.
+**341 et 342 sont faites, et le clignotement a disparu.** Mesuré sur une
+navigation HTMX : **0 `<link>` inséré, 0 requête CSS**, contenu stylé à
+l'arrivée. Le premier rendu, seule contrepartie redoutée, ne bouge pas — +12 ms
+sur une page, −8 ms sur l'autre, dans le bruit.
+
+**La 341 était nécessaire et pas suffisante**, ce que seule la fusion a montré :
+elle a d'abord modifié 13 853 valeurs calculées sur 32 pages. L'isolation des
+feuilles **globales** ne venait pas de leurs sélecteurs mais du fait qu'on ne
+les chargeait pas — et c'est exactement ce que le bundle supprime. Il a fallu un
+troisième contrôle, `tests/e2e/visual/debordements.py`, pour poser la question
+que le verrou ne savait pas poser : *ce sélecteur trouve-t-il du markup sur une
+page qui ne chargeait pas sa feuille ?*
 
 **343 est indépendante** des deux autres et peut se faire à tout moment, avant
 comme après. Elle survivrait à 341 et 342 : le saut n'est pas un problème de

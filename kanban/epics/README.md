@@ -40,7 +40,7 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 |---|---|---|
 | [E01 — Saison de jeu : le cycle de vie d'une équipe](done/E01-saison-de-jeu.md) | `done` | 10 |
 | [E02 — Notifications e-mail de compétition](ready_to_be_done/E02-notifications-email.md) | `ready` | 11 |
-| [E03 — Front : ni saut, ni clignotement](ready_to_be_done/E03-front-ni-saut-ni-clignotement.md) | `ready` | 5 |
+| [E03 — Front : ni saut, ni clignotement](ready_to_be_done/E03-front-ni-saut-ni-clignotement.md) | `ready` · 2/5 | 5 |
 | [E04 — Les verrous architecturaux](ready_to_be_done/E04-verrous-architecturaux.md) | `ready` | 6 |
 | [E05 — Couverture e2e du déjà livré](ready_to_be_done/E05-couverture-e2e.md) | `ready` | 4 |
 | [E06 — La fiche d'équipe complétée](to_be_refined/E06-fiche-equipe-completee.md) | `to_be_refined` | 3 |
