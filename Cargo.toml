@@ -34,7 +34,12 @@ chrono = { version = "0.4.44", features = ["serde"] }
 clap = { version = "4", features = ["derive"] }
 derive_more = { version = "2.1.1", features = ["display"] }
 axum-extra = { version = "0.12.6", features = ["form"] }
-lightningcss = "1.0.0-alpha.72"
+# `default-features = false` écarte `bundler`, `nodejs` et `sourcemap`, dont
+# aucun n'est utilisé : on concatène les feuilles nous-mêmes et on n'émet pas de
+# source map. C'est `sourcemap` qui tirait `parcel_sourcemap`, donc `rkyv` 0.7 et
+# son avis RUSTSEC-2026-0235 — bloqué en 0.7 tant que `parcel_sourcemap` n'y
+# passe pas, donc impossible à corriger par une montée de version.
+lightningcss = { version = "1.0.0-alpha.72", default-features = false }
 
 [dev-dependencies]
 mockito = "1"
