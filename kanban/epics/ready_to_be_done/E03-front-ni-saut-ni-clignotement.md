@@ -1,6 +1,6 @@
 # E03 — Front : ni saut, ni clignotement
 
-**État :** 5 cartes · 0 faite
+**État :** 5 cartes · 1 faite — 341 livrée et vérifiée
 
 ## La fonction
 
@@ -23,7 +23,7 @@ layout.
 
 | # | Intitulé | Apport |
 |---|---|---|
-| 341 | Solder les 79 collisions de sélecteurs, à rendu constant | rend la fusion possible ; **ne supprime rien de visible** |
+| 341 | Donner sa portée à chaque feuille, à rendu constant | **faite** — 116 collisions ramenées à 2 ; rend la fusion possible |
 | 342 | Fusionner les feuilles en un fichier unique dans le `<head>` | **supprime le clignotement** |
 | 343 | Réserver la place des zones remplies en différé | **supprime le saut** |
 | 17 | Dépendances CDN en production | TomSelect et le widget Cloudinary servis depuis `/static` |
@@ -31,14 +31,18 @@ layout.
 
 ## Ce qui commande l'ordre
 
-**342 dépend de 341 terminée *et vérifiée par les captures*.** Fusionner avant
-d'avoir soldé les collisions produit des régressions visuelles silencieuses :
-tant que les feuilles sont isolées les 79 divergences sont invisibles, et le
-bundle ne les neutralise pas — il les active.
+**342 dépend de 341 terminée *et vérifiée*.** Fusionner avant d'avoir soldé les
+collisions produit des régressions visuelles silencieuses : tant que les
+feuilles sont isolées les divergences sont invisibles, et le bundle ne les
+neutralise pas — il les active.
 
-Le harnais de captures de la 341 s'écrit **avant** le premier scoping, et les
-références se prennent sur `main` avant la première modification de CSS. Une
-référence prise après coup ne prouve rien.
+**341 est faite.** Elles étaient 116 et non 79 ; il en reste 2, renvoyées à la
+carte 359 parce que les solder est un changement de rendu. Le harnais qu'elle a
+produit compare des **styles calculés** et non des captures d'écran — celles-ci
+variaient de 5 à 12 % d'un passage à l'autre sans qu'aucun CSS n'ait changé. Il
+sert directement à la 342 : c'est lui qui dira si la fusion change quelque
+chose, et il a été corrigé pour survivre à la suppression des 146 `<link>`
+qu'elle emporte.
 
 **343 est indépendante** des deux autres et peut se faire à tout moment, avant
 comme après. Elle survivrait à 341 et 342 : le saut n'est pas un problème de
