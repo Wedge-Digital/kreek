@@ -70,6 +70,24 @@
 }
 
 /* ─── Menu Bar ─── */
+/* ── Zone de menu — la place est réservée avant d'être remplie ─────────────
+   Le menu arrive par un aller-retour HTMX au chargement de chaque page. Sans
+   réservation, la zone vaut zéro jusqu'à son arrivée et tout le contenu descend
+   de 120 px quand elle se remplit — mesuré sur toutes les pages desktop.
+
+   La hauteur est connue d'avance : les deux barres sont rendues
+   inconditionnellement par `app-menu.html`, et chacune fait `--menubar-height`.
+   Aucune valeur en dur, donc rien à resynchroniser si le token change.
+
+   `min-height` et non `height` : la zone doit pouvoir grandir si son contenu
+   l'exige ; elle ne doit simplement pas être plus petite que sa taille attendue.
+
+   Le navigateur ne compte pas ce saut comme un décalage de mise en page : le
+   contenu défile à l'intérieur de `.main-area`, pas dans la fenêtre. Le CLS de
+   l'application est nul et le contenu saute quand même — les deux sont vrais,
+   et c'est pourquoi la mesure est géométrique (`tests/e2e/visual/decalages.py`). */
+.menu-zone { min-height: calc(var(--menubar-height) * 2); }
+
 .menu-bar { background: var(--dark-0); flex-shrink: 0; }
 .menu-bar-inner {
   display: flex;
@@ -158,6 +176,9 @@
   /* Hide desktop chrome */
   .sidebar { display: none !important; }
   .menu-bar { display: none !important; }
+  /* Mesuré : la zone vaut 0 px vide comme remplie sous ce seuil, les deux
+     barres étant masquées. Réserver y créerait un blanc permanent. */
+  .menu-zone { min-height: 0; }
   .app-layout {
     display: block;
     height: auto;

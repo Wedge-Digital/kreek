@@ -120,6 +120,29 @@
 
 .team-page .team-players-loading { padding: var(--p2); color: var(--dark-3); }
 
+/* ── Effectif — la place est réservée avant d'être remplie ─────────────────
+   Le widget joueurs arrive par un aller-retour HTMX. Sans réservation, son
+   conteneur vaut zéro et le panneau Staff qui le suit descend de 700 à 800 px
+   quand il se remplit.
+
+   Contrairement à la zone de menu, cette hauteur **dépend d'une donnée** :
+   l'effectif. Et la page ne peut pas le connaître — la souveraineté des BCs lui
+   interdit d'interroger les données joueurs, ce qui est précisément la raison
+   d'être de ce widget.
+
+   La valeur retenue est la hauteur d'un effectif de **onze**, mesurée. Onze
+   n'est pas une observation mais une règle du jeu : c'est le minimum pour
+   aligner une équipe, donc aucune fiche n'affiche moins. La réservation ne peut
+   donc jamais créer de blanc permanent — au pire un saut résiduel de 60 à 70 px
+   pour les effectifs plus fournis, contre 700 sans elle.
+
+   Mobile plus haut que desktop : les lignes du tableau s'y replient.
+
+   Sur le conteneur seul, jamais sur le widget : le swap est en `outerHTML`,
+   donc `#players-widget` disparaît à l'arrivée du fragment, et la hauteur
+   réelle prend le relais. */
+.team-page #players-widget { min-height: 766px; }
+
 /* ── Table de staff ───────────────────────────────────────────────────────
    Copie des règles de `widgets/players-widget.css`, déclarations inchangées.
 
@@ -158,6 +181,9 @@
 }
 
 @media (max-width: 768px) {
+  /* Mesuré : 849 px pour onze joueurs sous ce seuil, les lignes se repliant. */
+  .team-page #players-widget { min-height: 849px; }
+
   .team-page .player-table th { padding: 8px; }
   .team-page .player-table td { padding: 8px; }
   .team-page .player-table th.player-col-stat,
