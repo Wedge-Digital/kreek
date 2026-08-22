@@ -95,6 +95,7 @@ pub async fn execute(
 mod tests {
     use super::*;
     use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
+    use crate::app::competitions::domain::competition_notifications::CompetitionNotifications;
     use crate::app::competitions::domain::competition_repository_port::{
         CompetitionBaseInfo, CompetitionRepositoryError, CompetitionSummary, ICompetitionRepository,
     };
@@ -226,6 +227,19 @@ mod tests {
             &self,
             _: &SeasonId,
             _: &CompetitionInvitations,
+        ) -> Result<(), SeasonRepositoryError> {
+            Ok(())
+        }
+        async fn find_notifications(
+            &self,
+            _: &SeasonId,
+        ) -> Result<Option<CompetitionNotifications>, SeasonRepositoryError> {
+            Ok(None)
+        }
+        async fn save_notifications(
+            &self,
+            _: &SeasonId,
+            _: &CompetitionNotifications,
         ) -> Result<(), SeasonRepositoryError> {
             Ok(())
         }

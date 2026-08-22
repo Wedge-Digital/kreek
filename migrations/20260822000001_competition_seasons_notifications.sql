@@ -1,0 +1,18 @@
+-- Réglages de notification par saison (carte 331, épic E02).
+--
+-- Une quatrième colonne JSONB à côté de `rules`, `structure` et `invitations`,
+-- et non quatre booléens glissés dans `invitations`. L'argument décisif est
+-- l'écriture concurrente : le blob `invitations` se lit-modifie-réécrit en
+-- entier, donc y ajouter les réglages ferait écraser une invitation faite au
+-- même moment dans un autre onglet.
+--
+-- Les lignes existantes ne sont **pas** remplies — décision prise à
+-- l'implémentation, contre ce que proposait la carte. Conséquence à connaître :
+-- `NULL` sera lu comme « absent », donc rendu par le défaut serde, qui vaut
+-- **allumé**. Les saisons d'avant cette migration démarrent donc actives, et
+-- non éteintes comme R8 le prévoyait pour elles.
+--
+-- C'est sans effet tant que rien n'envoie — aucune carte avant la 340 ne fait
+-- partir un e-mail. Ce sera à trancher avant celle-là : assumer, ou corriger la
+-- donnée par une migration de rattrapage.
+ALTER TABLE competition_seasons ADD COLUMN IF NOT EXISTS notifications JSONB;

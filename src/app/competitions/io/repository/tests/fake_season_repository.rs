@@ -1,4 +1,5 @@
 use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
+use crate::app::competitions::domain::competition_notifications::CompetitionNotifications;
 use crate::app::competitions::domain::competition_rules::CompetitionRules;
 use crate::app::competitions::domain::competition_season::CompetitionSeason;
 use crate::app::competitions::domain::competition_structure::CompetitionStructure;
@@ -70,6 +71,19 @@ impl ISeasonRepository for FakeSeasonRepository {
         &self,
         _: &SeasonId,
         _: &CompetitionInvitations,
+    ) -> Result<(), SeasonRepositoryError> {
+        Ok(())
+    }
+    async fn find_notifications(
+        &self,
+        _: &SeasonId,
+    ) -> Result<Option<CompetitionNotifications>, SeasonRepositoryError> {
+        Ok(None)
+    }
+    async fn save_notifications(
+        &self,
+        _: &SeasonId,
+        _: &CompetitionNotifications,
     ) -> Result<(), SeasonRepositoryError> {
         Ok(())
     }

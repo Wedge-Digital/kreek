@@ -1,4 +1,5 @@
 use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
+use crate::app::competitions::domain::competition_notifications::CompetitionNotifications;
 use crate::app::competitions::domain::competition_rules::CompetitionRules;
 use crate::app::competitions::domain::competition_season::CompetitionSeason;
 use crate::app::competitions::domain::competition_structure::CompetitionStructure;
@@ -220,6 +221,56 @@ impl ISeasonRepository for SeasonRepository {
 
         let found: Option<String> =
             sqlx::query_scalar(include_str!("sql/seasons/update_invitations.sql"))
+                .bind(json)
+                .bind(season_id.to_string())
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(db_err)?;
+
+        if found.is_none() {
+            return Err(SeasonRepositoryError::SeasonNotFound);
+        }
+        Ok(())
+    }
+
+    async fn find_notifications(
+        &self,
+        season_id: &SeasonId,
+    ) -> Result<Option<CompetitionNotifications>, SeasonRepositoryError> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            notifications: Option<String>,
+        }
+
+        let row: Option<Row> =
+            sqlx::query_as::<_, Row>(include_str!("sql/seasons/select_notifications.sql"))
+                .bind(season_id.to_string())
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(db_err)?;
+
+        // Saison inconnue et colonne `NULL` se répondent pareil : dans les deux
+        // cas il n'y a pas de réglage enregistré, et c'est au domaine de dire
+        // ce que vaut son absence.
+        let Some(Some(json)) = row.map(|r| r.notifications) else {
+            return Ok(None);
+        };
+
+        serde_json::from_str(&json)
+            .map(Some)
+            .map_err(|e| SeasonRepositoryError::Database(e.to_string()))
+    }
+
+    async fn save_notifications(
+        &self,
+        season_id: &SeasonId,
+        notifications: &CompetitionNotifications,
+    ) -> Result<(), SeasonRepositoryError> {
+        let json = serde_json::to_string(notifications)
+            .map_err(|e| SeasonRepositoryError::Database(e.to_string()))?;
+
+        let found: Option<String> =
+            sqlx::query_scalar(include_str!("sql/seasons/update_notifications.sql"))
                 .bind(json)
                 .bind(season_id.to_string())
                 .fetch_optional(&self.pool)

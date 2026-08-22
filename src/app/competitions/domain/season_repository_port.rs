@@ -1,4 +1,5 @@
 use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
+use crate::app::competitions::domain::competition_notifications::CompetitionNotifications;
 use crate::app::competitions::domain::competition_rules::CompetitionRules;
 use crate::app::competitions::domain::competition_season::CompetitionSeason;
 use crate::app::competitions::domain::competition_structure::CompetitionStructure;
@@ -84,6 +85,17 @@ pub trait ISeasonRepository: Send + Sync {
         &self,
         season_id: &SeasonId,
         invitations: &CompetitionInvitations,
+    ) -> Result<(), SeasonRepositoryError>;
+    /// `None` quand la colonne est `NULL` — une saison qui n'a jamais été
+    /// réglée. L'appelant y applique le défaut du domaine, qui vaut allumé.
+    async fn find_notifications(
+        &self,
+        season_id: &SeasonId,
+    ) -> Result<Option<CompetitionNotifications>, SeasonRepositoryError>;
+    async fn save_notifications(
+        &self,
+        season_id: &SeasonId,
+        notifications: &CompetitionNotifications,
     ) -> Result<(), SeasonRepositoryError>;
     async fn set_ready(&self, season_id: &SeasonId) -> Result<(), SeasonRepositoryError>;
     async fn find_full(

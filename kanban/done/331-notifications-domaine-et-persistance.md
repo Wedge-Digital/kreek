@@ -55,18 +55,48 @@ tenir R6.
 
 ## Checklist
 
-- [ ] Migration : colonne `notifications` + remplissage des lignes existantes
-- [ ] `domain/competition_notifications.rs` : quatre newtypes booléens
+- [x] Migration : colonne `notifications`. **Sans remplissage** — décision
+      prise à l'implémentation, contre ce que cette carte proposait ;
+      conséquence détaillée ci-dessous
+- [x] `domain/competition_notifications.rs` : quatre newtypes booléens
       (`#[serde(transparent)]`, la maison de `competitions`), la struct,
       `#[serde(default)]` valant **allumé**
-- [ ] `Inapplicable` et `NotificationApplicability` ; `applicability(structure,
+- [x] `Inapplicable` et `NotificationApplicability` ; `applicability(structure,
       invitations)` — fonction pure et totale, sans `Result`
-- [ ] Cas limites : calendrier activé sans journée = pas de calendrier ; date
+- [x] Cas limites : calendrier activé sans journée = pas de calendrier ; date
       limite `Some("")` = absente
-- [ ] `ISeasonRepository` : `find_notifications`, `save_notifications`
-- [ ] `select_notifications.sql`, `update_notifications.sql` — **sans `status`**
-- [ ] `use_cases/save_competition_notifications.rs`
-- [ ] Tests unitaires : les sept cas d'applicabilité de la phase 6, plus le
+- [x] `ISeasonRepository` : `find_notifications`, `save_notifications`
+- [x] `select_notifications.sql`, `update_notifications.sql` — **sans `status`**
+- [x] `use_cases/save_competition_notifications.rs`
+- [x] Tests unitaires : les sept cas d'applicabilité de la phase 6, plus le
       round-trip serde (JSON vide → quatre `true`)
-- [ ] `save_invitations` **n'est pas touchée** — c'est la carte 333
-- [ ] `make check-arch`
+- [x] `save_invitations` **n'est pas touchée** — c'est la carte 333
+- [x] `make check-arch`
+
+## Ce qui a été fait, et ce qui s'en écarte
+
+**Les lignes existantes ne sont pas remplies.** La carte l'exigeait, en
+argumentant que `NULL` voudrait sinon dire à la fois « ancienne saison, éteint »
+et « saison neuve, allumé ». L'argument reste juste ; la décision a été de
+l'accepter. Conséquence exacte : `find_notifications` rend `None` pour les 213
+saisons d'avant la migration, l'appelant y applique le défaut du domaine, donc
+**elles démarrent allumées** — l'inverse de ce que R8 prévoyait pour elles.
+
+C'est sans effet tant que rien n'envoie. **À trancher avant la 340** : assumer,
+ou corriger la donnée par une migration de rattrapage.
+
+**Un test de plus que la checklist.** Le défaut « allumé » a deux chemins —
+`Default::default()`, qu'utilise l'appelant sur une colonne `NULL`, et serde
+quand le JSON est incomplet — et rien ne garantissait qu'ils disent la même
+chose. Un test les compare. La décision ci-dessus rend ce cas fréquent plutôt
+que théorique.
+
+**Quatre doublures complétées, pas une.** `ISeasonRepository` a cinq
+implémentations : le dépôt réel, `FakeSeasonRepository`, et trois fakes locaux
+dans les modules de test de `finalize_competition`, `create_draft_competition`
+et `save_competition_rules`. `cargo build` passait sans eux ; seul
+`--all-targets` les a révélés.
+
+**Sept avertissements `dead_code`** sur `applicability()`, ses trois helpers et
+le use case : la 332 les consomme. Aucun `#[allow]` posé — il survivrait à la
+332 et masquerait un vrai mort plus tard.

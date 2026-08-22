@@ -1,6 +1,7 @@
 # E02 — Notifications e-mail de compétition
 
-**État :** 11 cartes · 0 faite
+**État :** en cours — 11 cartes · 1 faite. Démarrée le 2026-08-22.
+La 331 pose le modèle et la colonne ; rien n'est visible, et c'est attendu.
 **Spec :** `docs/specs/notifications/` (`configuration/` et `envoi/`)
 
 ## La fonction
@@ -19,7 +20,7 @@ réglage qui fait réellement partir des e-mails — et retire les deux morts.
 
 | # | Intitulé | Apport |
 |---|---|---|
-| 331 | Domaine et persistance des réglages | colonne JSONB `notifications`, `applicability()` |
+| 331 | Domaine et persistance des réglages | **faite** — colonne JSONB `notifications`, `applicability()` |
 | 332 | Widget de réglage + hôte admin | premier chemin d'édition, mode auto-save |
 | 333 | Le même widget dans le magicien | mode différé, retrait de `notify_by_email` |
 | 334 | Retrait des trois réglages morts | `use_mail_notification`, `schedule_timezone`, VO `Timezone` |
@@ -51,6 +52,15 @@ corrige.
 
 La 325 est indépendante des dix autres : elle ne dépend que des maquettes
 validées en phase 1, et peut se faire à tout moment.
+
+## À trancher avant la 340
+
+Les saisons antérieures à la migration de la 331 ont `notifications` à `NULL`,
+donc **démarrent allumées** — la carte prévoyait de les remplir à `false`, et il
+a été décidé de ne pas le faire. Sans effet tant que rien n'envoie ; le jour où
+la 340 allume la fonctionnalité, 213 saisons deviennent notifiantes d'un coup.
+Assumer, ou rattraper la donnée : la question se pose avant cette carte-là, pas
+après.
 
 ## Ce que l'épic ne couvre pas
 
