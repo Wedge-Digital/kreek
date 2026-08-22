@@ -40,7 +40,7 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 |---|---|---|
 | [E01 — Saison de jeu : le cycle de vie d'une équipe](done/E01-saison-de-jeu.md) | `done` | 10 |
 | [E02 — Notifications e-mail de compétition](ready_to_be_done/E02-notifications-email.md) | `ready` | 11 |
-| [E03 — Front : ni saut, ni clignotement](en_cours/E03-front-ni-saut-ni-clignotement.md) | `en_cours` · 4/5 | 5 |
+| [E03 — Front : ni saut, ni clignotement](done/E03-front-ni-saut-ni-clignotement.md) | `done` | 4 |
 | [E04 — Les verrous architecturaux](ready_to_be_done/E04-verrous-architecturaux.md) | `ready` | 6 |
 | [E05 — Couverture e2e du déjà livré](ready_to_be_done/E05-couverture-e2e.md) | `ready` | 4 |
 | [E06 — La fiche d'équipe complétée](to_be_refined/E06-fiche-equipe-completee.md) | `to_be_refined` | 3 |
@@ -81,6 +81,7 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 
 | Carte | Note |
 |---|---|
+| `18-script-inline-htmx-fragments` | Sortie de l'épic E03 à sa clôture : un `<script>` d'init dans un fragment ne peint rien sans ses styles et ne déplace rien, donc le critère de l'épic ne la mesurait pas |
 | `13-mock-data-competition-detail` | Les onglets Équipes et Stats servent de la donnée fictive **en production**. C'est la seule dette visible par un utilisateur |
 | `60-jersey-numbers-at-submission` | Attribution des numéros de maillot à la soumission |
 | `362-le-bundle-css-est-gele-au-demarrage` | Une feuille éditée n'a aucun effet sur un serveur qui tourne, et rien ne le signale. A fait accuser à tort la carte 343 pendant une heure |
