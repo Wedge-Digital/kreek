@@ -38,50 +38,61 @@ def _un(sql: str) -> str | None:
     return lignes[0] if lignes else None
 
 
-# La feuille que chaque page **doit** charger. Sans cette attente, une URL qui
-# redirige capture une autre page et compte quand même : c'est arrivé sur
-# `step2` et `step5`, qui ont rendu la liste des équipes en chargeant huit
-# feuilles. Une couverture qui monte sans rien couvrir est le pire des états.
-FEUILLE_ATTENDUE = {
-    "auth-login": "pages/auth-layout.css",
-    "espaces-tous": "pages/allspace-home-grid.css",
-    "espace-nouveau": "pages/new-space.css",
-    "accueil": "pages/app-news-feed.css",
-    "article-nouveau": "pages/editor-container.css",
-    "article-detail": "pages/article-container.css",
-    "equipes-mes": "pages/my-teams-container.css",
-    "equipe-brouillon": "pages/app-new-team.css",
-    "equipe-detail": "pages/team-page.css",
-    "equipe-recrutement": "widgets/rec-page.css",
-    "equipe-renvois": "widgets/dis-page.css",
-    "equipe-construction": "pages/team-build.css",
-    "equipe-finalisation": "pages/finalize-page.css",
-    "joueur-detail": "pages/player-page.css",
-    "joueur-debug": "pages/player-debug.css",
-    "competitions-liste": "pages/competition-container.css",
-    "competition-nouvelle": "pages/new-competition.css",
-    "competition-detail": "pages/competition-detail.css",
-    "admin-dashboard": "pages/competition-admin-dashboard.css",
-    "admin-inscriptions": "pages/competition-admin-enrollments.css",
-    "admin-groupes": "pages/competition-admin-groups.css",
-    "admin-calendrier": "pages/competition-admin-schedule.css",
-    "admin-resume": "pages/new-competition-phase-5.css",
-    "rapport-selection": "pages/match-report-step1.css",
-    "rapport-prematch": "pages/match-report-pre-match.css",
-    "rapport-actions": "pages/match-report-actions.css",
-    "rapport-step5": "pages/match-report-step5.css",
-    "rapport-recap": "pages/ms-page.css",
-    "competition-structure": "pages/new-competition-phase-3.css",
-    "competition-regles": "pages/new-competition-phase-2.css",
-    "competition-invitations": "pages/new-competition-phase-4.css",
-    "classement-detaille": "widgets/ranking-detailed-standings-widget.css",
-    "widget-roster-picker": "widgets/roster-picker.css",
-    "widget-skill-picker": "widgets/skill-picker.css",
-    "widget-inducement-picker": "widgets/inducement-grid.css",
-    "widget-inducement-selector": "widgets/inducement-selector.css",
-    "widget-customisation": "widgets/pd-right.css",
-    "rapport-inducements": "pages/match-report-inducements.css",
-    "rapport-mercenaires": "widgets/merco-selector.css",
+# La **classe de portée** que chaque page doit porter dans son DOM.
+#
+# Sans ce contrôle, une URL qui redirige capture une autre page et compte quand
+# même : c'est arrivé sur `step2` et `step5`, qui ont rendu la liste des équipes.
+# Une couverture qui monte sans rien couvrir est le pire des états.
+#
+# Le contrôle portait sur la **feuille chargée** jusqu'à la carte 342, qui
+# réunit toutes les feuilles en un fichier unique : il n'y aurait plus qu'un
+# `<link>`, et le contrôle dirait « aucune page n'a chargé sa feuille » sur les
+# 43 pages. Porter le contrôle sur la classe est plus juste de toute façon — il
+# vérifie que la page a rendu **son** contenu, indépendamment de la façon dont
+# le CSS est livré.
+#
+# La correspondance est mécanique depuis la carte 341 : le nom du fichier **est**
+# la classe de portée.
+CLASSE_ATTENDUE = {
+    "auth-login": ".auth-layout",
+    "espaces-tous": ".allspace-home-grid",
+    "espace-nouveau": ".new-space",
+    "accueil": ".app-news-feed",
+    "article-nouveau": ".editor-container",
+    "article-detail": ".article-container",
+    "equipes-mes": ".my-teams-container",
+    "equipe-brouillon": ".app-new-team",
+    "equipe-detail": ".team-page",
+    "equipe-recrutement": ".rec-page",
+    "equipe-renvois": ".dis-page",
+    "equipe-construction": ".team-build",
+    "equipe-finalisation": ".finalize-page",
+    "joueur-detail": ".player-page",
+    "joueur-debug": ".player-debug",
+    "competitions-liste": ".competition-container",
+    "competition-nouvelle": ".new-competition",
+    "competition-detail": ".competition-detail",
+    "admin-dashboard": ".competition-admin-dashboard",
+    "admin-inscriptions": ".competition-admin-enrollments",
+    "admin-groupes": ".competition-admin-groups",
+    "admin-calendrier": ".competition-admin-schedule",
+    "admin-resume": ".new-competition-phase-5",
+    "rapport-selection": ".match-report-step1",
+    "rapport-prematch": ".match-report-pre-match",
+    "rapport-actions": ".match-report-actions",
+    "rapport-step5": ".match-report-step5",
+    "rapport-recap": ".ms-page",
+    "competition-structure": ".new-competition-phase-3",
+    "competition-regles": ".new-competition-phase-2",
+    "competition-invitations": ".new-competition-phase-4",
+    "classement-detaille": ".ranking-detailed-standings-widget",
+    "widget-roster-picker": ".roster-picker",
+    "widget-skill-picker": ".skill-picker",
+    "widget-inducement-picker": ".inducement-grid",
+    "widget-inducement-selector": ".inducement-selector",
+    "widget-customisation": ".pd-right",
+    "rapport-inducements": ".match-report-inducements",
+    "rapport-mercenaires": ".merco-selector",
 }
 
 

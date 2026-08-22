@@ -52,7 +52,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-from urls import FEUILLE_ATTENDUE, collecter
+from urls import CLASSE_ATTENDUE, collecter
 
 LARGEURS = {"desktop": 1440, "mobile": 390}
 
@@ -91,9 +91,13 @@ PAGE_STABLE = """
   if (document.querySelector('.htmx-request')) return false;
   if (!Array.from(document.images).every(i => i.complete)) return false;
   const n = document.querySelectorAll('*').length;
-  const stable = window.__n === n;
+  // Trois relevés identiques et non deux. Un fragment différé peut arriver
+  // entre deux scrutations et laisser croire à la stabilité au relevé suivant :
+  // la fiche joueur est ressortie deux fois amputée de moitié — 1 230 relevés
+  // attendus, 669 obtenus — avec deux relevés seulement.
+  window.__stables = (window.__n === n) ? (window.__stables || 0) + 1 : 0;
   window.__n = n;
-  return stable;
+  return window.__stables >= 2;
 }
 """
 
@@ -178,6 +182,7 @@ def main(libelle: str) -> int:
 
     tout: dict[str, dict[str, str]] = {}
     couverture: dict[str, list[str]] = {}
+    presente: dict[str, bool] = {}
     echecs: list[str] = []
 
     with sync_playwright() as p:
@@ -195,7 +200,7 @@ def main(libelle: str) -> int:
                     _neutraliser_le_reseau_externe(page)
                     try:
                         page.goto(url, wait_until="load", timeout=20000)
-                        page.wait_for_timeout(1500)
+                        page.wait_for_timeout(2500)
                         page.wait_for_function(PAGE_STABLE, timeout=15000,
                                                polling=600)
                         page.add_style_tag(content=GELER_LES_ANIMATIONS)
@@ -206,6 +211,11 @@ def main(libelle: str) -> int:
                                 "link[rel=stylesheet]",
                                 "els => els.map(e => e.getAttribute('href'))",
                             )
+                            attendue = CLASSE_ATTENDUE.get(nom)
+                            if attendue is not None:
+                                presente[nom] = page.evaluate(
+                                    "s => !!document.querySelector(s)", attendue
+                                )
                         break
                     except Exception as exc:  # noqa: BLE001 — on veut la liste
                         if tentative == 2:
@@ -217,10 +227,9 @@ def main(libelle: str) -> int:
         navigateur.close()
 
     trompeuses = [
-        f"{nom} — attendait {FEUILLE_ATTENDUE[nom]}"
-        for nom, liens in couverture.items()
-        if nom in FEUILLE_ATTENDUE
-        and not any(FEUILLE_ATTENDUE[nom] in (h or "") for h in liens or [])
+        f"{nom} — attendait un élément {CLASSE_ATTENDUE[nom]}"
+        for nom, ok in presente.items()
+        if not ok
     ]
 
     fichier = sortie / f"{libelle}.json.gz"
@@ -238,7 +247,7 @@ def main(libelle: str) -> int:
         for e in echecs:
             print(f"       {e}")
     if trompeuses:
-        print(f"  · {len(trompeuses)} pages n'ont pas chargé la feuille attendue :")
+        print(f"  · {len(trompeuses)} pages ne portent pas leur classe de portée :")
         for t in trompeuses:
             print(f"       {t}")
     return 1 if (echecs or trompeuses) else 0
