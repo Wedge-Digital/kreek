@@ -55,6 +55,9 @@ pub struct SummaryTabTemplate {
     pub spots_label: Option<String>,
     pub spots_warn: bool,
     pub deadline_label: Option<String>,
+    /// L'URL du widget de réglage, mode `autosave` : c'est l'onglet qui
+    /// choisit le mode, pas le widget.
+    pub notification_settings_widget_url: String,
 }
 
 impl IntoResponse for SummaryTabTemplate {
@@ -189,6 +192,9 @@ pub async fn build_summary_fragment(
         spots_label,
         spots_warn,
         deadline_label,
+        notification_settings_widget_url: AppRoutes::default()
+            .competitions
+            .notification_settings_widget(space_id, competition_id, season_id_str, "autosave"),
     })
 }
 

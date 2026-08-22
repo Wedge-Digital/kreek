@@ -1,7 +1,9 @@
 # E02 — Notifications e-mail de compétition
 
-**État :** en cours — 11 cartes · 1 faite. Démarrée le 2026-08-22.
-La 331 pose le modèle et la colonne ; rien n'est visible, et c'est attendu.
+**État :** en cours — 11 cartes · 2 faites. Démarrée le 2026-08-22.
+La 331 pose le modèle et la colonne ; la 332 donne le premier chemin
+d'édition — un organisateur peut régler les notifications d'une compétition
+déjà démarrée, ce qu'aucun écran ne permettait.
 **Spec :** `docs/specs/notifications/` (`configuration/` et `envoi/`)
 
 ## La fonction
@@ -21,7 +23,7 @@ réglage qui fait réellement partir des e-mails — et retire les deux morts.
 | # | Intitulé | Apport |
 |---|---|---|
 | 331 | Domaine et persistance des réglages | **faite** — colonne JSONB `notifications`, `applicability()` |
-| 332 | Widget de réglage + hôte admin | premier chemin d'édition, mode auto-save |
+| 332 | Widget de réglage + hôte admin | **faite** — premier chemin d'édition, mode auto-save |
 | 333 | Le même widget dans le magicien | mode différé, retrait de `notify_by_email` |
 | 334 | Retrait des trois réglages morts | `use_mail_notification`, `schedule_timezone`, VO `Timezone` |
 | 335 | Journal d'envois — table et repository | `claim`/`confirm`, l'idempotence de R3 |

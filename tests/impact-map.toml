@@ -66,6 +66,8 @@
 # ── Administration de compétition (équipes enrôlées lues via le port teams) ──
 "test_competition_admin_dashboard"   = ["competitions", "teams", "spaces", "references", "ranking"]
 "test_competition_admin_enrollments" = ["competitions", "teams", "spaces", "references", "ranking"]
+# Le widget de réglage des notifications, monté dans l'onglet Synthèse.
+"test_notification_settings"   = ["competitions", "teams", "spaces", "references", "ranking"]
 
 # ── Construction d'équipe ────────────────────────────────────────────────────
 # `players` : la soumission émet TeamCreated, projeté par le BC players.

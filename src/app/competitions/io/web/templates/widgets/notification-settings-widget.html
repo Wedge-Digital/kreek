@@ -1,0 +1,108 @@
+{# Réglage des quatre notifications de compétition.
+
+   Pas de `<link>` : la carte 342 a réuni les feuilles en un fichier unique servi
+   depuis le `<head>`. `widgets/notification-settings.css` est déclarée dans
+   `css_bundle.rs`, et l'axe 14 de check-arch refuse une feuille qui n'y serait
+   pas.
+
+   `hx-disinherit="*"` : la page hôte — l'onglet Synthèse, puis l'étape 4 du
+   magicien — porte ses propres `hx-vals` et `hx-headers`, qui s'injecteraient
+   sinon dans le POST de ce widget.
+
+   Les motifs voyagent en `data-` plutôt qu'en JSON dans le script : `askama`
+   est déclaré sans sa feature `serde-json`, donc sans filtre `|json`, et un
+   littéral construit à la main casserait au premier libellé contenant une
+   apostrophe. Un attribut est échappé par le moteur. #}
+<div class="notification-settings" hx-disinherit="*"
+     data-deadline-cleared-reason="{{ deadline_cleared_reason }}"
+     {% if mode == "autosave" %}
+     hx-post="{{ post_url }}"
+     hx-trigger="notificationSettingsChanged from:body"
+     hx-swap="none"
+     {# Sans `hx-include`, HTMX poste un corps **vide** : il ne sérialise les
+        champs d'un élément que si celui-ci est un formulaire ou un champ.
+        Le corps vide passerait inaperçu — les quatre `#[serde(default)]` le
+        liraient comme « tout éteint », et l'écran afficherait pourtant les
+        cases telles que l'utilisateur les a laissées.
+
+        `this` et non `find .ns-check` : `find` ne renvoie que le **premier**
+        descendant trouvé, donc une seule case sur quatre. Le symptôme est le
+        même que le corps vide, en plus discret encore. #}
+     hx-include="this"
+     {% endif %}
+     x-data="notificationSettings()">
+
+  {# Les champs sont dans la racine et non dans un `<form>` : c'est `hx-post`
+     qui sérialise, et il prend les champs de son propre élément. #}
+  {% for row in rows %}
+  <label class="ns-row" data-cle="{{ row.key }}"
+         data-motif="{% match row.inapplicable_reason %}{% when Some with (r) %}{{ r }}{% when None %}{% endmatch %}"
+         :class="{ 'ns-row--inapplicable': motif('{{ row.key }}') }">
+    <input class="ns-check" type="checkbox" name="{{ row.key }}"
+           {% if row.checked %}checked{% endif %}
+           @change="publier()">
+    <span class="ns-texte">
+      <span class="ns-label">{{ row.label }}</span>
+      <span class="ns-description">{{ row.description }}</span>
+      <span class="ns-quand">Envoyé {{ row.when }}</span>
+      {# R6 : la case reste cochée et la valeur intacte ; seul ce motif dit que
+         le réglage est sans effet aujourd'hui. La classe `--cache` évite que la
+         ligne apparaisse le temps qu'Alpine s'initialise ; ensuite `x-show`
+         commande. #}
+      <span class="ns-motif{% if row.inapplicable_reason.is_none() %} ns-motif--cache{% endif %}"
+            x-show="motif('{{ row.key }}')"
+            x-text="motif('{{ row.key }}')"></span>
+    </span>
+  </label>
+  {% endfor %}
+</div>
+<script>
+(function () {
+    // Racine retrouvée par `currentScript`, sans id global : le même widget peut
+    // apparaître deux fois dans une page sans que les deux se marchent dessus.
+    const racine = document.currentScript.previousElementSibling;
+
+    window.notificationSettings = function () {
+        return {
+            motifs: {},
+
+            init() {
+                racine.querySelectorAll('.ns-row').forEach(function (l) {
+                    this.motifs[l.dataset.cle] = l.dataset.motif || null;
+                }, this);
+                // « Voici l'état », et non « ça a bougé » : un hôte qui doit
+                // connaître les réglages même quand rien n'a bougé ne peut rien
+                // faire du second. C'est ce qui permettra au magicien (carte
+                // 333) de réhydrater son `state` sans lire dans ce DOM.
+                this.publier();
+                this._surDate = (e) => this.majDateLimite(e.detail);
+                document.body.addEventListener('registrationDeadlineChanged', this._surDate);
+            },
+
+            destroy() {
+                document.body.removeEventListener('registrationDeadlineChanged', this._surDate);
+            },
+
+            motif(cle) {
+                return this.motifs[cle];
+            },
+
+            // Seul endroit où le magicien parle au widget, et il passe par
+            // `body` : aucun appel direct (règle 2 des conventions widgets).
+            majDateLimite(detail) {
+                const vide = !detail || !detail.value || !String(detail.value).trim();
+                this.motifs.registration_deadline =
+                    vide ? racine.dataset.deadlineClearedReason : null;
+            },
+
+            publier() {
+                const etat = {};
+                racine.querySelectorAll('.ns-check').forEach(function (c) {
+                    etat[c.name] = c.checked;
+                });
+                htmx.trigger(document.body, 'notificationSettingsChanged', etat);
+            },
+        };
+    };
+})();
+</script>

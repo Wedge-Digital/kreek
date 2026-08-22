@@ -83,6 +83,10 @@ pub mod path {
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/summary";
     pub const COMPETITION_ADMIN_RESULTS: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/results";
+    pub const NOTIFICATION_SETTINGS_WIDGET: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/notifications-widget";
+    pub const NOTIFICATION_SETTINGS: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/notifications";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -332,6 +336,29 @@ impl Routes {
     }
     pub fn admin_summary(&self, sid: &str, cid: &str, season_id: &str) -> String {
         path::COMPETITION_ADMIN_SUMMARY
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    /// Le `mode` est porté par la query : `deferred` pour le magicien,
+    /// `autosave` pour l'onglet Synthèse. Un mode inconnu vaut 400.
+    pub fn notification_settings_widget(
+        &self,
+        sid: &str,
+        cid: &str,
+        season_id: &str,
+        mode: &str,
+    ) -> String {
+        format!(
+            "{}?mode={mode}",
+            path::NOTIFICATION_SETTINGS_WIDGET
+                .replace("{space_id}", sid)
+                .replace("{competition_id}", cid)
+                .replace("{season_id}", season_id)
+        )
+    }
+    pub fn notification_settings(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::NOTIFICATION_SETTINGS
             .replace("{space_id}", sid)
             .replace("{competition_id}", cid)
             .replace("{season_id}", season_id)

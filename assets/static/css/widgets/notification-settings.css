@@ -1,0 +1,80 @@
+/* ── Réglage des notifications de compétition ─────────────────────────────────
+   Toutes les règles sous `.notification-settings`, le nom du fichier : c'est la
+   portée que la carte 341 impose et que `check-css-collisions.sh` vérifie.
+
+   Le widget n'assume rien du layout de son hôte — il est monté dans l'onglet
+   Synthèse de l'admin, et le sera dans l'étape 4 du magicien, deux contextes
+   qui n'ont ni la même largeur ni le même fond. */
+
+.notification-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p1);
+}
+
+.notification-settings .ns-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--p1);
+  padding: var(--p1);
+  border: 1px solid var(--dark-5);
+  border-radius: 8px;
+  background: var(--white);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.notification-settings .ns-row:hover { border-color: var(--main-blue); }
+
+/* Grisée, mais **pas** décochée ni désactivée — R6. La case reste actionnable :
+   l'organisateur doit pouvoir régler aujourd'hui une notification qui ne
+   s'appliquera qu'une fois le calendrier posé. */
+.notification-settings .ns-row--inapplicable { background: var(--dark-6); }
+.notification-settings .ns-row--inapplicable .ns-label,
+.notification-settings .ns-row--inapplicable .ns-description,
+.notification-settings .ns-row--inapplicable .ns-quand { color: var(--dark-3); }
+
+.notification-settings .ns-check {
+  margin-top: 2px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.notification-settings .ns-texte {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notification-settings .ns-label {
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--dark-1);
+}
+
+.notification-settings .ns-description {
+  font-size: var(--text-tiny);
+  color: var(--dark-2);
+}
+
+.notification-settings .ns-quand {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  font-style: italic;
+}
+
+.notification-settings .ns-motif {
+  margin-top: 4px;
+  font-size: var(--text-tiny);
+  font-weight: 600;
+  color: var(--role-cost, var(--dark-2));
+}
+
+/* Avant qu'Alpine ne prenne la main : sans elle, la ligne de motif apparaîtrait
+   le temps d'une image sur les lignes applicables. */
+.notification-settings .ns-motif--cache { display: none; }
+
+@media (max-width: 768px) {
+  .notification-settings .ns-row { padding: var(--p05); }
+}

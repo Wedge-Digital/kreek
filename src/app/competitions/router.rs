@@ -44,6 +44,9 @@ use crate::app::competitions::io::web::new_competition_phase_5::{
 use crate::app::competitions::io::web::resultats_tab_controller::get_resultats_tab;
 use crate::app::competitions::io::web::widget_tester_controller::get_competitions_widget_tester;
 use crate::app::competitions::io::web::widgets::latest_results_widget::latest_results_widget;
+use crate::app::competitions::io::web::widgets::notification_settings_widget::{
+    get_notification_settings_widget, post_notification_settings,
+};
 use crate::app::competitions::routes::path;
 use crate::state::AppState;
 use axum::routing::{delete, get, post, put};
@@ -108,6 +111,14 @@ pub fn router() -> Router<AppState> {
         .route(path::COMPETITION_ADMIN, get(admin_page))
         .route(path::COMPETITION_ADMIN_DASHBOARD, get(dashboard_fragment))
         .route(path::COMPETITION_ADMIN_SUMMARY, get(summary_tab_fragment))
+        .route(
+            path::NOTIFICATION_SETTINGS_WIDGET,
+            get(get_notification_settings_widget),
+        )
+        .route(
+            path::NOTIFICATION_SETTINGS,
+            axum::routing::post(post_notification_settings),
+        )
         .route(path::COMPETITION_ADMIN_ENROLLMENTS, get(enrollments_tab))
         .route(path::COMPETITION_ADMIN_GROUPS, get(groups_tab))
         .route(

@@ -25,31 +25,31 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct RegistrationOpen(pub bool);
+pub struct NotifyRegistrationOpen(pub bool);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct RoundEve(pub bool);
+pub struct NotifyRoundEve(pub bool);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct RoundClosing(pub bool);
+pub struct NotifyRoundClosing(pub bool);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct RegistrationDeadline(pub bool);
+pub struct NotifyRegistrationDeadline(pub bool);
 
-fn allume_registration_open() -> RegistrationOpen {
-    RegistrationOpen(true)
+fn allume_registration_open() -> NotifyRegistrationOpen {
+    NotifyRegistrationOpen(true)
 }
-fn allume_round_eve() -> RoundEve {
-    RoundEve(true)
+fn allume_round_eve() -> NotifyRoundEve {
+    NotifyRoundEve(true)
 }
-fn allume_round_closing() -> RoundClosing {
-    RoundClosing(true)
+fn allume_round_closing() -> NotifyRoundClosing {
+    NotifyRoundClosing(true)
 }
-fn allume_registration_deadline() -> RegistrationDeadline {
-    RegistrationDeadline(true)
+fn allume_registration_deadline() -> NotifyRegistrationDeadline {
+    NotifyRegistrationDeadline(true)
 }
 
 /// Un champ absent vaut **allumé** : c'est le défaut d'une saison neuve (R8),
@@ -57,13 +57,13 @@ fn allume_registration_deadline() -> RegistrationDeadline {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompetitionNotifications {
     #[serde(default = "allume_registration_open")]
-    pub registration_open: RegistrationOpen,
+    pub registration_open: NotifyRegistrationOpen,
     #[serde(default = "allume_round_eve")]
-    pub round_eve: RoundEve,
+    pub round_eve: NotifyRoundEve,
     #[serde(default = "allume_round_closing")]
-    pub round_closing: RoundClosing,
+    pub round_closing: NotifyRoundClosing,
     #[serde(default = "allume_registration_deadline")]
-    pub registration_deadline: RegistrationDeadline,
+    pub registration_deadline: NotifyRegistrationDeadline,
 }
 
 impl Default for CompetitionNotifications {
@@ -248,10 +248,10 @@ mod tests {
     fn un_json_vide_allume_les_quatre_notifications() {
         let n: CompetitionNotifications = serde_json::from_str("{}").unwrap();
 
-        assert_eq!(n.registration_open, RegistrationOpen(true));
-        assert_eq!(n.round_eve, RoundEve(true));
-        assert_eq!(n.round_closing, RoundClosing(true));
-        assert_eq!(n.registration_deadline, RegistrationDeadline(true));
+        assert_eq!(n.registration_open, NotifyRegistrationOpen(true));
+        assert_eq!(n.round_eve, NotifyRoundEve(true));
+        assert_eq!(n.round_closing, NotifyRoundClosing(true));
+        assert_eq!(n.registration_deadline, NotifyRegistrationDeadline(true));
     }
 
     /// Deux chemins mènent au défaut : `Default`, qu'utilisera l'appelant quand
@@ -273,9 +273,12 @@ mod tests {
         let relu: CompetitionNotifications =
             serde_json::from_str(&serde_json::to_string(&n).unwrap()).unwrap();
 
-        assert_eq!(relu.registration_open, RegistrationOpen(false));
-        assert_eq!(relu.round_eve, RoundEve(false));
-        assert_eq!(relu.round_closing, RoundClosing(false));
-        assert_eq!(relu.registration_deadline, RegistrationDeadline(false));
+        assert_eq!(relu.registration_open, NotifyRegistrationOpen(false));
+        assert_eq!(relu.round_eve, NotifyRoundEve(false));
+        assert_eq!(relu.round_closing, NotifyRoundClosing(false));
+        assert_eq!(
+            relu.registration_deadline,
+            NotifyRegistrationDeadline(false)
+        );
     }
 }

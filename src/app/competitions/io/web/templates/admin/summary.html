@@ -194,4 +194,25 @@
 </div>
 {% endif %}
 
+{# Recap 5 : Notifications — la seule carte éditable de cet onglet.
+
+   Assumé : la Synthèse n'était qu'en lecture. Un onglet entier pour quatre
+   cases serait disproportionné, et aucun chemin ne permettait jusqu'ici de
+   régler les notifications d'une compétition déjà démarrée — le POST du
+   magicien était le seul appelant.
+
+   En `autosave` : le widget POSTe lui-même sur sa propre racine. #}
+<div class="recap-card">
+    <div class="recap-card-header">
+        <div class="recap-card-icon">🔔</div>
+        <div class="recap-card-title">Notifications par e-mail</div>
+    </div>
+    <div class="recap-card-body">
+        <div hx-get="{{ notification_settings_widget_url }}"
+             hx-trigger="load"
+             hx-target="this"
+             hx-swap="innerHTML"></div>
+    </div>
+</div>
+
 </div>
