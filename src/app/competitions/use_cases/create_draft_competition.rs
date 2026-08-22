@@ -227,6 +227,7 @@ mod tests {
             &self,
             _: &SeasonId,
             _: &CompetitionInvitations,
+            _: &CompetitionNotifications,
         ) -> Result<(), SeasonRepositoryError> {
             Ok(())
         }

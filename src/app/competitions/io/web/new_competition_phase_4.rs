@@ -1,4 +1,5 @@
 use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
+use crate::app::competitions::domain::competition_notifications::CompetitionNotifications;
 use crate::app::competitions::use_cases::save_competition_invitations::{
     execute, SaveCompetitionInvitationsCommand, SaveCompetitionInvitationsError,
 };
@@ -20,6 +21,26 @@ pub struct NewCompetitionPhase4Template {
     pub competition_id: String,
     pub season_id: String,
     pub existing_invitations_json: String,
+    /// Rendu à côté du précédent, et pour la même raison : sans lui, `state`
+    /// repart sur son défaut au retour arrière, et une re-validation sans
+    /// toucher aux cases écraserait les réglages sauvegardés — pendant que le
+    /// widget, lui, affiche les bonnes valeurs.
+    pub existing_notifications_json: String,
+}
+
+/// Le corps de l'étape 4, qui n'est plus la struct de domaine seule.
+///
+/// `flatten` conserve la forme historique — les champs d'invitation à plat — et
+/// y ajoute le sous-objet des notifications. `notify_by_email` en a disparu :
+/// les quatre réglages l'absorbent.
+#[derive(serde::Deserialize)]
+pub struct InvitationsPayload {
+    #[serde(flatten)]
+    pub invitations: CompetitionInvitations,
+    /// Absent d'un corps ancien : le défaut du domaine s'applique alors, tout
+    /// allumé, ce qui est le comportement d'une saison neuve.
+    #[serde(default)]
+    pub notifications: CompetitionNotifications,
 }
 
 impl IntoResponse for NewCompetitionPhase4Template {
@@ -57,12 +78,33 @@ pub async fn get_new_competition_phase_4(
         }
     };
 
+    let existing_notifications_json = match state
+        .competitions
+        .season_repository
+        .find_notifications(&sid)
+        .await
+    {
+        Ok(Some(n)) => serde_json::to_string(&n).unwrap_or_else(|e| {
+            tracing::error!("phase 4 serialize notifications error for {season_id}: {e}");
+            "null".to_string()
+        }),
+        // `null` et non le défaut sérialisé : la page distingue « rien
+        // d'enregistré » de « enregistré tout éteint », et applique elle-même
+        // son défaut dans le premier cas.
+        Ok(None) => "null".to_string(),
+        Err(e) => {
+            tracing::error!("phase 4 find_notifications error for {season_id}: {e}");
+            "null".to_string()
+        }
+    };
+
     NewCompetitionPhase4Template {
         app_routes: AppRoutes::default(),
         space_id,
         competition_id,
         season_id,
         existing_invitations_json,
+        existing_notifications_json,
     }
     .into_response()
 }
@@ -70,7 +112,7 @@ pub async fn get_new_competition_phase_4(
 pub async fn post_competition_invitations(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
-    Json(invitations): Json<CompetitionInvitations>,
+    Json(payload): Json<InvitationsPayload>,
 ) -> impl IntoResponse {
     let sid = match SeasonId::try_new(&season_id) {
         Ok(id) => id,
@@ -81,7 +123,8 @@ pub async fn post_competition_invitations(
 
     let cmd = SaveCompetitionInvitationsCommand {
         season_id: sid,
-        invitations,
+        invitations: payload.invitations,
+        notifications: payload.notifications,
     };
 
     match execute(cmd, state.competitions.season_repository.as_ref()).await {

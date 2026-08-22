@@ -95,17 +95,25 @@
             </div>
             <div class="form-group">
                 <label class="form-label" for="registration-deadline">Date limite d'inscription</label>
+                {# Le widget grise sa quatrième ligne à la frappe, sans
+                   aller-retour serveur. Par `body`, jamais en appelant le
+                   widget : c'est la règle 2 des conventions widgets, et le seul
+                   endroit où cette page lui parle. #}
                 <input type="date" id="registration-deadline" class="form-input"
-                       oninput="state.registrationDeadline = this.value || null">
+                       oninput="state.registrationDeadline = this.value || null;
+                                htmx.trigger(document.body, 'registrationDeadlineChanged',
+                                             { value: this.value || null })">
             </div>
         </div>
-        <div class="mt-1">
-            <label class="checkbox-label">
-                <input type="checkbox" id="notify-email" class="checkbox-notify" checked
-                       onchange="state.notifyByEmail = this.checked">
-                Notifier les coachs par email quand la compétition est ouverte
-            </label>
-        </div>
+        {# Le widget remplace la case `notify_by_email`, qui promettait des
+           e-mails que rien n'envoyait. En mode `deferred` : il n'enregistre pas
+           lui-même, il émet, et c'est `submitInvitations()` qui persiste — comme
+           tout le reste de cette étape, qui s'enregistre d'un bloc. #}
+        <div class="mt-1"
+             hx-get="{{ app_routes.competitions.notification_settings_widget(space_id, competition_id, season_id, "deferred") }}"
+             hx-trigger="load"
+             hx-target="this"
+             hx-swap="innerHTML"></div>
     </div>
 
     <div id="invitations-error-banner" class="form-error-banner" hidden></div>
@@ -133,6 +141,7 @@
 <script>
 (function () {
     const INITIAL = {{ existing_invitations_json|safe }};
+    const INITIAL_NOTIFICATIONS = {{ existing_notifications_json|safe }};
     const SPACE_ID = "{{ space_id }}";
     const COACH_SEARCH_WIDGET_URL = "{{ app_routes.spaces.coach_search_widget() }}";
 
@@ -147,7 +156,14 @@
         invitedCoaches:       [],
         maxParticipants:      null,
         registrationDeadline: null,
-        notifyByEmail:        true,
+        // Le défaut d'une saison neuve : tout allumé (R8). Écrasé par
+        // `INITIAL_NOTIFICATIONS` dès qu'il y a des réglages enregistrés.
+        notifications: {
+            registration_open:     true,
+            round_eve:             true,
+            round_closing:         true,
+            registration_deadline: true,
+        },
     };
     window.state = state;
 
@@ -244,7 +260,7 @@
             }),
             max_participants:      state.maxParticipants,
             registration_deadline: state.registrationDeadline,
-            notify_by_email:       state.notifyByEmail,
+            notifications:         state.notifications,
         };
 
         fetch(window.location.pathname, {
@@ -284,9 +300,6 @@
         const deadlineEl = document.getElementById('registration-deadline');
         if (deadlineEl) deadlineEl.value = state.registrationDeadline || '';
 
-        const notifyEl = document.getElementById('notify-email');
-        if (notifyEl) notifyEl.checked = state.notifyByEmail;
-
         renderInvitedCount();
         reloadCoachWidget();
     }
@@ -297,8 +310,22 @@
         state.invitedCoaches       = Array.isArray(INITIAL.invited_coaches) ? INITIAL.invited_coaches : [];
         state.maxParticipants      = INITIAL.max_participants       != null ? INITIAL.max_participants : null;
         state.registrationDeadline = INITIAL.registration_deadline  || null;
-        state.notifyByEmail        = INITIAL.notify_by_email        != null ? INITIAL.notify_by_email : true;
+
     }
+
+    // Deux mécanismes, deux rôles, et aucun ne remplace l'autre. Ce JSON rend
+    // `state` juste **dès la première peinture**, sans attendre le `hx-get` du
+    // widget : sans lui, valider pendant que le widget charge encore rejouerait
+    // le défaut. L'écoute ci-dessous, elle, suit le widget s'il a lu plus tard,
+    // et à chaque bascule.
+    if (INITIAL_NOTIFICATIONS) state.notifications = INITIAL_NOTIFICATIONS;
+
+    // « Voici l'état », pas « ça a bougé » : le widget émet aussi à son `init()`,
+    // ce qui rend cette écoute suffisante même quand l'utilisateur ne touche à
+    // rien.
+    document.body.addEventListener('notificationSettingsChanged', function (e) {
+        if (e.detail) state.notifications = Object.assign({}, state.notifications, e.detail);
+    });
 
     applyState();
 })();

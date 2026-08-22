@@ -71,6 +71,7 @@ impl ISeasonRepository for FakeSeasonRepository {
         &self,
         _: &SeasonId,
         _: &CompetitionInvitations,
+        _: &CompetitionNotifications,
     ) -> Result<(), SeasonRepositoryError> {
         Ok(())
     }

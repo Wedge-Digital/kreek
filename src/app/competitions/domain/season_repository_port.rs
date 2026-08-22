@@ -81,10 +81,14 @@ pub trait ISeasonRepository: Send + Sync {
         &self,
         season_id: &SeasonId,
     ) -> Result<Option<CompetitionInvitations>, SeasonRepositoryError>;
+    /// Écrit les deux colonnes en une instruction. L'étape 4 du magicien
+    /// enregistre d'un bloc — invitations **et** réglages de notification —, et
+    /// deux appels laisseraient une fenêtre où l'un a réussi et l'autre non.
     async fn save_invitations(
         &self,
         season_id: &SeasonId,
         invitations: &CompetitionInvitations,
+        notifications: &CompetitionNotifications,
     ) -> Result<(), SeasonRepositoryError>;
     /// `None` quand la colonne est `NULL` — une saison qui n'a jamais été
     /// réglée. L'appelant y applique le défaut du domaine, qui vaut allumé.

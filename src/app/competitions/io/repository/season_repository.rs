@@ -215,13 +215,17 @@ impl ISeasonRepository for SeasonRepository {
         &self,
         season_id: &SeasonId,
         invitations: &CompetitionInvitations,
+        notifications: &CompetitionNotifications,
     ) -> Result<(), SeasonRepositoryError> {
         let json = serde_json::to_string(invitations)
+            .map_err(|e| SeasonRepositoryError::Database(e.to_string()))?;
+        let json_notifs = serde_json::to_string(notifications)
             .map_err(|e| SeasonRepositoryError::Database(e.to_string()))?;
 
         let found: Option<String> =
             sqlx::query_scalar(include_str!("sql/seasons/update_invitations.sql"))
                 .bind(json)
+                .bind(json_notifs)
                 .bind(season_id.to_string())
                 .fetch_optional(&self.pool)
                 .await

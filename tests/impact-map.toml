@@ -59,6 +59,8 @@
 "test_full_competition_creation_flow" = ["competitions", "spaces", "references", "ranking"]
 "test_phase2_pickers"               = ["competitions", "references", "ranking", "spaces"]
 "test_phase4_invitations"           = ["competitions", "spaces", "references", "ranking"]
+# Le widget de notifications à l'étape 4, en mode différé.
+"test_phase4_notifications"         = ["competitions", "spaces", "references", "ranking"]
 "test_competition_rules_bonus"      = ["competitions", "references", "ranking", "spaces"]
 "test_competition_rules_tiebreakers" = ["competitions", "references", "ranking", "spaces"]
 "test_competition_two_tiers"        = ["competitions", "references", "ranking", "spaces"]

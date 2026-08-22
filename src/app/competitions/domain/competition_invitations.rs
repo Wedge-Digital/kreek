@@ -3,13 +3,15 @@ use crate::app::shared_kernel::identity::coach_name::CoachName;
 use crate::app::shared_kernel::identity::ids::CoachId;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(transparent)]
-pub struct RequiresValidation(pub bool);
+// `notify_by_email` a vécu ici jusqu'à la carte 333. C'était l'un des deux
+// interrupteurs e-mail qui ne branchaient rien ; les quatre réglages de
+// `competition_notifications` l'absorbent. Retirer un champ d'une struct serde
+// ne casse pas la lecture des blobs déjà écrits — les clés inconnues sont
+// ignorées — donc aucune réécriture des saisons existantes.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct NotifyByEmail(pub bool);
+pub struct RequiresValidation(pub bool);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InvitedCoach {
@@ -18,9 +20,6 @@ pub struct InvitedCoach {
     pub initials: CoachInitials,
 }
 
-fn default_notify_by_email() -> NotifyByEmail {
-    NotifyByEmail(true)
-}
 fn default_requires_validation() -> RequiresValidation {
     RequiresValidation(true)
 }
@@ -48,8 +47,6 @@ pub struct CompetitionInvitations {
     pub invited_coaches: Vec<InvitedCoach>,
     pub max_participants: Option<u32>,
     pub registration_deadline: Option<String>,
-    #[serde(default = "default_notify_by_email")]
-    pub notify_by_email: NotifyByEmail,
 }
 
 #[cfg(test)]
