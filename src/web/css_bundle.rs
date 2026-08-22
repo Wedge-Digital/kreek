@@ -63,6 +63,10 @@ const RACINE: &str = "assets/static/css";
 /// suffit pas à être vivante, et du CSS mort dans un fichier bloquant au rendu
 /// est exactement ce que cette carte cherche à éviter.
 const FEUILLES_APP: &[&str] = &[
+    // Les `@font-face` d'abord : une police déclarée après son usage fonctionne,
+    // mais la déclaration ouvre le fichier là où l'`@import` qu'elle remplace
+    // l'ouvrait déjà.
+    "fonts.css",
     "common.css",
     "layout-app.css",
     "components/competition-card.css",
@@ -120,6 +124,15 @@ const FEUILLES_APP: &[&str] = &[
     "widgets/roster-picker-widget.css",
     "widgets/roster-picker.css",
     "widgets/skill-picker.css",
+    // En **dernier**, et c'est délibéré : la feuille amont de Tom Select était
+    // un `<link>` posé après celui du bundle, donc elle gagnait les égalités de
+    // spécificité contre tout ce qu'il contient — `components/tom-select.css`
+    // compris, dont `.ts-dropdown` est à (0,1,0) comme le sien. La placer avant
+    // nos surcharges serait plus logique et **changerait le rendu**, ce que la
+    // carte 341 interdit : on déplace la portée, jamais le résultat. Le jour où
+    // l'on veut que nos surcharges gagnent, c'est une carte qui s'assume comme
+    // un changement visuel.
+    "vendor/tom-select.min.css",
 ];
 
 pub struct Bundle {
@@ -237,6 +250,37 @@ mod tests {
             app.contenu.len()
         );
         println!("  app : {} → {} octets", brut, app.contenu.len());
+    }
+
+    /// Les deux positions imposées de la liste, qui ne se déduisent d'aucun tri
+    /// et qu'un ajout inséré « au bon endroit alphabétique » casserait en
+    /// silence : le rendu changerait sans qu'aucune compilation ne bronche.
+    ///
+    /// `vendor/tom-select.min.css` **en dernier** reproduit la cascade d'avant
+    /// la carte 17, où elle était un `<link>` posé après celui du bundle et
+    /// gagnait donc les égalités de spécificité contre `components/`.
+    /// `fonts.css` **en premier** met les `@font-face` là où se trouvait
+    /// l'`@import` qu'ils remplacent.
+    #[test]
+    fn l_ordre_impose_de_la_liste_est_tenu() {
+        assert_eq!(
+            FEUILLES_APP.first(),
+            Some(&"fonts.css"),
+            "les @font-face ouvrent le bundle"
+        );
+        assert_eq!(
+            FEUILLES_APP.last(),
+            Some(&"vendor/tom-select.min.css"),
+            "la feuille amont de Tom Select ferme le bundle"
+        );
+        let vendor = FEUILLES_APP.iter().position(|f| f.starts_with("vendor/"));
+        let surcouche = FEUILLES_APP
+            .iter()
+            .position(|f| *f == "components/tom-select.css");
+        assert!(
+            vendor > surcouche,
+            "nos surcharges Tom Select doivent précéder la feuille amont"
+        );
     }
 
     /// L'empreinte doit suivre le contenu, sinon `immutable` sur le cache est un

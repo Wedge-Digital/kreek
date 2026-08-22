@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,800;1,400&family=Roboto+Slab:wght@200;300;400;500;700;800;900&family=Montserrat:ital,wght@0,400;0,700;0,800;1,700&display=swap');
+/* Les `@font-face` vivent dans `fonts.css`, placée avant celle-ci dans le
+   bundle. Quatre-vingts lignes d'`unicode-range` au-dessus des tokens les
+   auraient enterrés. */
 
 /* ─── Design Tokens ─── */
 :root {
