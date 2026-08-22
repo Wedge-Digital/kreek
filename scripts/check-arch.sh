@@ -528,6 +528,27 @@ axe14="$(printf '%s' "$axe14" | sed '/^$/d')"
 if [ -n "$axe14" ]; then print_fail "$axe14"; else print_pass; fi
 echo ""
 
+# ── Axe 15 : portée du CSS ──────────────────────────────────────────────────
+#
+# Délégué à `scripts/check-css-collisions.sh`, et non recopié ici : il porte
+# deux contrôles, sa propre documentation et ses messages, et les absorber
+# dupliquerait deux cents lignes de Python sans rien resserrer.
+#
+# Il existait depuis la carte 341 et n'était **branché nulle part** — ni ici, ni
+# dans `make lint`, ni dans un job de CI. Il était rouge depuis la carte 17, et
+# personne ne l'a su : c'est exactement ce que le CLAUDE.md décrit à propos du
+# formatage, une cible que personne n'exécute finit rouge en silence. Le verrou
+# de la 341 n'avait donc jamais rien gardé.
+echo -e "${BOLD}Axe 15 · Portée du CSS — délégué à check-css-collisions.sh${RESET}"
+if axe15=$(bash "$(dirname "$0")/check-css-collisions.sh" 2>&1); then
+  print_pass
+else
+  # La sortie complète est réaffichée : savoir que ça échoue ne sert à rien sans
+  # savoir quels sélecteurs divergent.
+  print_fail "$axe15"
+fi
+echo ""
+
 if [ "$EXIT_CODE" -eq 0 ]; then
     echo -e "${GREEN}${BOLD}✓ Toutes les vérifications bloquantes passent${RESET}"
 else

@@ -40,7 +40,7 @@ jobs:
       - name: make lint (fmt + clippy)
         run: make lint
 
-      - name: make check-arch (axes 2 à 9)
+      - name: make check-arch (axes 2 à 15)
         run: make check-arch
 
   # Job distinct de `qualite`, et c'est délibéré : RustSec publie en continu,

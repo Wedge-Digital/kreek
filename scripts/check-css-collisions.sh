@@ -91,6 +91,7 @@ for _t in pathlib.Path('src/app/auth').rglob('*.html'):
         TEMPLATES_SRC.add(_m.group(1).rsplit('/', 1)[-1])
 SCOPES = ('pages', 'widgets')          # doivent être scopés
 GLOBAUX = ('components',)              # partagés par conception
+AMONT = ('vendor',)                    # feuilles tierces, non réécrites
 
 BOLD = '\033[1m'; RESET = '\033[0m'
 GREEN = '\033[32m'; RED = '\033[31m'
@@ -215,12 +216,31 @@ print()
 # Les feuilles de `components/` et les globales de la racine, elles, comptent :
 # elles sont bien dans l'application, et c'est entre elles que se joue ce qui
 # reste.
+#
+# `vendor/` en est écarté, et c'est d'une autre nature que les exclusions
+# ci-dessus : une feuille amont **n'est pas réécrivable**. La scoper serait la
+# réécrire, et la prochaine montée de version écraserait le travail sans que
+# rien ne le signale. Ses collisions avec nos surcharges ne sont d'ailleurs pas
+# des divergences accidentelles : `components/tom-select.css` existe
+# précisément pour redéfinir ce que `vendor/tom-select.min.css` pose.
+#
+# Le hors-périmètre est porté par le **dossier** et non par un marqueur
+# `css:global` en tête de fichier : une feuille minifiée sur une ligne n'a pas
+# d'en-tête commode, et lui en ajouter un reviendrait à modifier le fichier
+# qu'on veut pouvoir remplacer à l'identique. Un dossier reste une information
+# adjacente au fichier, pas une liste tenue ailleurs.
 def dans_l_application(chemin):
+    if chemin.parent.name in AMONT:
+        return False
     return (chemin.parent.name not in SCOPES) or chargee_par_l_application(chemin)
 
 
 par_selecteur = defaultdict(dict)
+amont = []
 for f in sorted(RACINE.rglob('*.css')):
+    if f.parent.name in AMONT:
+        amont.append(f)
+        continue
     if not dans_l_application(f):
         continue
     for sel, decls in regles(f):
@@ -230,6 +250,9 @@ divergents = {s: v for s, v in par_selecteur.items()
               if len(v) > 1 and len(set(v.values())) > 1}
 
 print(f"{BOLD}Contrôle B · Collisions — aucun sélecteur divergent entre feuilles{RESET}")
+# Nommées et non tues : une exclusion muette est une tolérance qui s'installe.
+for f in amont:
+    print(f"  · {f.as_posix()} — feuille amont, hors périmètre (non réécrivable)")
 if divergents:
     print(f"  {RED}✗ FAIL{RESET}  {len(divergents)} sélecteurs définis différemment dans plusieurs feuilles")
     for s, v in sorted(divergents.items(), key=lambda kv: -len(kv[1]))[:10]:

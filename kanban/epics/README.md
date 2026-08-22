@@ -84,7 +84,6 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 | `18-script-inline-htmx-fragments` | Sortie de l'épic E03 à sa clôture : un `<script>` d'init dans un fragment ne peint rien sans ses styles et ne déplace rien, donc le critère de l'épic ne la mesurait pas |
 | `13-mock-data-competition-detail` | Les onglets Équipes et Stats servent de la donnée fictive **en production**. C'est la seule dette visible par un utilisateur |
 | `60-jersey-numbers-at-submission` | Attribution des numéros de maillot à la soumission |
-| `363-verrou-de-portee-css-non-execute` | Le verrou de la carte 341 n'est branché ni dans `make lint`, ni dans `check-arch`, ni en CI — et il est rouge. Dépend de la 359. Parent de l'épic E04 par le sujet (« un verrou qui tolère est pire qu'un verrou absent »), hors d'elle par le périmètre : E04 ne traite que les axes de `check-arch.sh` |
 | `362-le-bundle-css-est-gele-au-demarrage` | Une feuille éditée n'a aucun effet sur un serveur qui tourne, et rien ne le signale. A fait accuser à tort la carte 343 pendant une heure |
 | `361-reserver-la-place-sur-la-construction-d-equipe` | 1 265 px de saut en desktop, 1 841 en mobile — la plus grosse zone non réservée, hors périmètre de la 343 |
 | `360-bandeau-d-inscription-en-attente-inexistant` | Un test e2e attend une classe qui n'a jamais été rendue. La suite est rouge en permanence |

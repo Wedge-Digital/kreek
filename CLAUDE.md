@@ -271,7 +271,7 @@ commit suivant.
 | Commande | Contenu | Job CI |
 |---|---|---|
 | `make lint` | `cargo fmt --check`, `cargo clippy` | `qualite` |
-| `make check-arch` | axes 2 à 14 (cf. `scripts/check-arch.sh`) | `qualite` |
+| `make check-arch` | axes 2 à 15 (cf. `scripts/check-arch.sh`) | `qualite` |
 | `make audit` | `cargo audit --deny warnings` | `audit` |
 | `make test` | tests unitaires et d'intégration | `unit` |
 | `make e2e` | suite Playwright complète | `e2e` |

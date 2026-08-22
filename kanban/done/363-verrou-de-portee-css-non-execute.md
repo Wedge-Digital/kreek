@@ -75,16 +75,53 @@ c'est le genre de tolérance que l'épic E04 passe son temps à retirer ailleurs
 
 ## Checklist
 
-- [ ] 359 close et le contrôle B vert sur `.ts-team-*`
-- [ ] `vendor/` exclu du contrôle B, déduit du chemin, avec son motif en
+- [x] 359 close et le contrôle B vert sur `.ts-team-*`
+- [x] `vendor/` exclu du contrôle B, déduit du chemin, avec son motif en
       commentaire dans le script
-- [ ] `bash scripts/check-css-collisions.sh` vert, contrôles A **et** B
-- [ ] Appel depuis `scripts/check-arch.sh`, bloquant comme les autres axes
-- [ ] Vérifié en le faisant échouer exprès : une règle non scopée ajoutée à une
+- [x] `bash scripts/check-css-collisions.sh` vert, contrôles A **et** B
+- [x] Appel depuis `scripts/check-arch.sh`, bloquant comme les autres axes
+- [x] Vérifié en le faisant échouer exprès : une règle non scopée ajoutée à une
       feuille de `widgets/` doit faire rougir `make check-arch`
-- [ ] `make check-arch` vert sur l'ensemble du projet
+- [x] `make check-arch` vert sur l'ensemble du projet
 
 ## Ce que la carte ne couvre pas
 
 L'arbitrage visuel de `.ts-team-name` / `.ts-team-meta` — c'est la 359, et elle
 a sa propre discussion.
+
+## Ce qui a été fait
+
+`AMONT = ('vendor',)` rejoint `SCOPES` et `GLOBAUX` en tête du script, et le
+prédicat du contrôle B écarte ces feuilles. Le contrôle A n'a rien demandé : il
+ne regarde que `pages/` et `widgets/`.
+
+Les feuilles écartées sont **nommées dans la sortie**, comme le script le fait
+déjà pour les feuilles hors application et les `css:global` — sa propre note dit
+qu'il les compte et les nomme « pour qu'une feuille sortie du périmètre reste
+visible plutôt que d'être oubliée ». Une exclusion muette est une tolérance qui
+s'installe.
+
+L'axe 15 de `check-arch.sh` **appelle** le script au lieu de le recopier, et
+réaffiche sa sortie complète en cas d'échec : savoir que ça échoue ne sert à
+rien sans savoir quels sélecteurs divergent.
+
+### Le verrou mord — vérifié dans les deux sens
+
+| Faute introduite exprès | Résultat |
+|---|---|
+| Une règle non scopée dans `widgets/notification-settings.css` | contrôle A à 45/46, `make check-arch` sort en **2** |
+| `.upload-preview` redéfini dans `components/team-card.css` | contrôle B à 1 sélecteur divergent, sortie **2** |
+
+Les deux fautes retirées, `make check-arch` repasse vert. Un verrou branché mais
+inopérant aurait été le défaut d'origine avec une couche de peinture en plus.
+
+### Deux libellés qui mentaient, corrigés au passage
+
+`.github/workflows/ci.yml` annonçait « axes 2 à 9 » et le `CLAUDE.md` « axes 2 à
+14 ». Les deux disent maintenant 15. C'est du détail, mais c'est la maladie même
+que cette carte traite : un contrôle qui se décrit mal finit par ne plus être lu.
+
+### Rien de plus à brancher en CI
+
+Le job `qualite` exécute déjà `make check-arch`. L'axe 15 y entre sans qu'on
+ajoute d'étape — et sans nouvelle dépendance : l'axe 8 utilise déjà Python 3.
