@@ -185,10 +185,9 @@
 }
 .mr-container .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
 
-/* ── TomSelect custom rendering ── */
-.ts-team-option { padding: 4px 0; }
-.ts-team-name { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); }
-.ts-team-meta { font-size: 11px; color: var(--dark-3); margin-top: 1px; }
+/* Le rendu TomSelect est parti dans `components/team-selection.css`, qui possède
+   ces classes (carte 359). Il était ici en double, à des tailles différentes, et
+   c'était la seule divergence de sélecteurs restante du dépôt. */
 
 /* ══════════════════════════════════════════════════════════════
    Step 3 / Step 4 — Actions

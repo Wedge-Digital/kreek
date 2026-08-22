@@ -53,5 +53,18 @@
 .ts-team-logo--sm { width: 28px; height: 28px; font-size: 9px; }
 
 .ts-team-info { flex: 1; min-width: 0; }
-.ts-team-name { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
-.ts-team-meta { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 1px; }
+
+/* ── Rendu TomSelect ──────────────────────────────────────────────────────────
+   Ces trois règles vivaient en double, ici et dans `pages/match-report-shared`,
+   avec des tailles différentes. Depuis la carte 342 les deux feuilles sont dans
+   le même bundle, à spécificité égale, et `match-report-shared` vient après :
+   **c'est elle qui gagnait, sur toutes les pages**. Les valeurs ci-dessous sont
+   les siennes, donc le rendu à l'écran aujourd'hui — la consolidation ne
+   choisit pas un gagnant, elle constate celui que la fusion avait déjà désigné.
+
+   Le `11px` est sous `--text-tiny` (12px), et c'est délibéré : passer la ligne
+   secondaire au token la mettrait à la taille du nom, et la hiérarchie ne
+   tiendrait plus que par la graisse et la couleur. */
+.ts-team-option { padding: 4px 0; }
+.ts-team-name { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); }
+.ts-team-meta { font-size: 11px; color: var(--dark-3); margin-top: 1px; }

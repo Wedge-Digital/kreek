@@ -88,7 +88,6 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 | `362-le-bundle-css-est-gele-au-demarrage` | Une feuille éditée n'a aucun effet sur un serveur qui tourne, et rien ne le signale. A fait accuser à tort la carte 343 pendant une heure |
 | `361-reserver-la-place-sur-la-construction-d-equipe` | 1 265 px de saut en desktop, 1 841 en mobile — la plus grosse zone non réservée, hors périmètre de la 343 |
 | `360-bandeau-d-inscription-en-attente-inexistant` | Un test e2e attend une classe qui n'a jamais été rendue. La suite est rouge en permanence |
-| `359-ts-team-deux-tailles-de-police` | Les deux derniers sélecteurs divergents du CSS. Arbitrage visuel, pas opération de portée — débloque le verrou de l'épic E03 |
 | `357-le-champ-tags-est-en-ecriture-seule` | Quatre formes écrites, aucun lecteur : `find_by_tag()` n'a pas d'appelant. À trancher — compléter l'abstraction ou la supprimer |
 | `352-match-report-confirmed-passe-par-le-publisher` | Deux use cases émettent un app event directement, ce que `CLAUDE.md` interdit. Trouvée par la carte 350. Débloque un axe « pas d'`app_event_bus` dans `use_cases/` » |
 | `61-rendre-accessible-un-espace-publiquement` | **Fichier vide, sans extension `.md`** — à écrire ou à supprimer |

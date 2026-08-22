@@ -3,7 +3,7 @@
 **Priorité : basse** — écart invisible à l'œil nu, mais il bloque le dernier
 verrou du CSS
 **Trouvée par :** le lot 3 de la carte 341
-**État : à raffiner** — c'est un arbitrage visuel, pas une opération de portée
+**État : faite** — l'arbitrage visuel n'a pas eu lieu : il avait déjà été tranché
 **Fichiers :** `assets/static/css/components/team-selection.css`,
 `assets/static/css/pages/match-report-shared.css`
 
@@ -55,12 +55,50 @@ Le contrôle B de `scripts/check-css-collisions.sh` — « aucun sélecteur dive
 entre feuilles » — passe de 2 à 0. Le verrou peut alors être branché sur
 `make lint` et la CI, ce que l'épic E03 prévoit à sa fin.
 
-## Checklist — à compléter au raffinage
+## Checklist
 
-- [ ] La valeur retenue pour chacune des deux classes est décidée, en regardant
+- [x] La valeur retenue pour chacune des deux classes est décidée, en regardant
       le rendu
-- [ ] Le sort du `11px` en dur est tranché
-- [ ] Le débordement de `team-selection.css` hors de sa racine est traité, ou
-      renvoyé à sa propre carte avec son motif
-- [ ] `check-css-collisions.sh` passe ses deux contrôles
-- [ ] Vérifié au harnais visuel : les seuls écarts sont ceux qu'on a décidés
+- [x] Le sort du `11px` en dur est tranché — **gardé**
+- [x] Le débordement de `team-selection.css` hors de sa racine est traité — il
+      cesse d'être un problème, cf. ci-dessous
+- [x] `check-css-collisions.sh` : contrôle B de 6 à 4 sélecteurs, les quatre
+      restants venant de la feuille amont de Tom Select (carte 363)
+- [x] Vérifié au harnais visuel : **0 écart sur 86 vues**
+
+## Ce qui a été fait
+
+**La prémisse de la carte n'était plus vraie.** Elle posait qu'un choix de
+valeur serait un changement de rendu. Ce n'était vrai qu'avant la carte 342 :
+`match-report-shared.css` est déclarée `css:global`, elle est donc dans le
+bundle servi à **toutes** les pages, et elle y vient après
+`components/team-selection.css` à spécificité égale. Elle gagnait déjà partout.
+
+Mesuré avant toute modification, sur la page de sélection de match :
+
+```
+.ts-team-name → 12px        .ts-team-meta → 11px
+```
+
+L'arbitrage avait donc déjà eu lieu, silencieusement, à la fusion des feuilles.
+Il ne restait qu'à faire dire à la source ce que l'écran montrait : les deux
+règles sont consolidées dans `components/team-selection.css`, aux valeurs de
+`match-report-shared`, et supprimées de cette dernière.
+
+**`.ts-team-option` a suivi**, bien qu'il ne fût en collision avec rien : les
+trois règles forment un bloc, et laisser un tiers du rendu TomSelect dans une
+feuille de rapport de match reproduirait la scission qui a créé cette carte.
+
+**Le `11px` est gardé**, avec son motif écrit sur place : au token
+`--text-tiny` (12px), la ligne secondaire prendrait la taille du nom et la
+hiérarchie ne tiendrait plus que par la graisse et la couleur.
+
+**Le débordement du composant ne demande pas de carte.**
+`schedule-round-detail.html` emploie ces classes sans porter `.team-selection`,
+ce qui interdisait de scoper le composant — mais `components/` est **global par
+conception**, et le contrôle A ne vérifie la portée que de `pages/` et
+`widgets/`. Un composant global n'a pas à être scopé ; la question tombe.
+
+**Preuve du rendu inchangé** : relevé complet avant et après, 86 vues, 47 040
+éléments et pseudo-éléments — **0 différence**. Ce n'est pas un raisonnement sur
+la cascade, c'est une mesure.
