@@ -83,7 +83,9 @@ def _effectif(team_id: str) -> list[str]:
 
 def _ouvrir(page: Page, space_id: str, team_id: str) -> None:
     page.goto(f"{BASE_URL}/app/{space_id}/teams/{team_id}", wait_until="load")
-    page.wait_for_selector('link[href*="team-player-widget.css"]', state="attached", timeout=10000)
+    # La racine du widget, et non plus son `<link>` : la carte 342 a réuni les
+    # feuilles en un fichier unique, aucun fragment n'en porte plus.
+    page.wait_for_selector(".players-widget", state="attached", timeout=10000)
 
 
 # Le tableau du staff porte lui aussi la classe `player-table` : toutes les

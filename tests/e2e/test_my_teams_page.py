@@ -218,12 +218,14 @@ def _goto_my_teams(page: Page, space_id: str) -> None:
     #
     # Pas `networkidle` : les logos d'équipe sont distants (Cloudinary), le
     # réseau ne retombe donc jamais au calme et l'attente expire — c'est aussi
-    # le seul endroit de la suite qui l'utilisait. Le repère est le `<link>` du
-    # widget, injecté par son seul fragment, et présent même quand les deux
-    # listes sont vides (indispensable pour l'espace sans équipe du scénario 4).
-    page.wait_for_selector(
-        'link[href*="my-teams-widget.css"]', state="attached", timeout=10000
-    )
+    # le seul endroit de la suite qui l'utilisait.
+    #
+    # Le repère était le `<link>` du widget. La carte 342 a réuni les feuilles
+    # en un fichier unique : plus aucun fragment n'en porte. C'est désormais la
+    # **racine du widget** qu'on attend — plus juste, puisqu'elle atteste que le
+    # fragment est arrivé et non qu'une feuille l'accompagnait. Elle est présente
+    # même quand les deux listes sont vides, ce dont le scénario 4 a besoin.
+    page.wait_for_selector(".my-teams-widget", state="attached", timeout=10000)
 
 
 def _card_by_team_id(page: Page, css_class: str, team_id: str):

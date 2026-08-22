@@ -76,6 +76,106 @@ L'arbitrage est favorable et il faut le dire explicitement : on paie une fois
 si le premier rendu se dégradait au-delà du raisonnable, la mesure d'après-coup
 doit pouvoir le dire — d'où le protocole de vérification plus bas.
 
+## Les mesures — faites, pas supposées
+
+**Le swap.** Navigation HTMX `team/list` → `teams/<id>`, observée au
+`MutationObserver` et au journal réseau :
+
+| Attendu | Mesuré |
+|---|---|
+| `<link>` insérés | **0** |
+| Requêtes CSS | **0** |
+| Contenu stylé à l'arrivée | oui — `.team-page` rend `max-width: 1400px` immédiatement |
+
+**Le premier rendu**, cinq chargements à cache vide par page, médiane :
+
+| Page | Avant | Après |
+|---|---|---|
+| Accueil | 488 ms, 8 requêtes CSS, 56 Ko | 500 ms, 2 requêtes, 308 Ko |
+| Fiche d'équipe | 364 ms, 8 requêtes, 56 Ko | 356 ms, 2 requêtes, 308 Ko |
+
+**La contrepartie annoncée ne se matérialise pas** : +12 ms sur une page, −8 ms
+sur l'autre, dans le bruit de mesure. Et les 308 Ko sont **non compressés** —
+le serveur de développement ne gzippe pas, là où Cloudflare le fait déjà en
+production (`cf-cache-status: HIT`, gzip). Le bundle y pèsera ~40 Ko.
+
+À noter : les 56 Ko de l'avant ne valent que pour la **première** page. Chaque
+navigation en ajoutait, et c'est précisément ce que la carte supprime.
+
+**Le démarrage du serveur** : construction du bundle en **70 ms**, 403 Ko lus,
+313 Ko produits. Négligeable devant la compilation.
+
+**Le dédoublonnage est sans objet.** La carte annonçait 137 paires à
+déclarations identiques. Elles n'existent plus : le scoping de la carte 341 a
+rendu ces sélecteurs distincts — `.team-page .x` et `.players-widget .x` ne sont
+plus le même sélecteur. Il reste 2 sélecteurs présents dans deux feuilles, tous
+deux divergents, et c'est la carte 359.
+
+## Ce que la carte n'avait pas prévu
+
+**La carte 341 était nécessaire et pas suffisante.** La première fusion a
+modifié **13 853 valeurs calculées sur 32 pages**. L'isolation des feuilles
+**globales** ne venait pas de leurs sélecteurs mais du fait qu'on ne les
+chargeait pas, et le bundle supprime exactement cela.
+
+Le cas d'école : `pages/app-home.css` style `.home-grid`, déclarée dans
+`app-layout.html` — donc présente sur **toutes** les pages, alors que trois
+seulement chargeaient la feuille.
+
+Le verrou de la 341 ne pouvait pas le voir : son contrôle B compare les feuilles
+deux à deux et signale les sélecteurs *divergents*. Un sélecteur défini une
+seule fois n'est pas une collision, et c'est pourtant lui qui déborde.
+
+D'où un **contrôle C** — `tests/e2e/visual/debordements.py` — qui pose la
+question manquante : *ce sélecteur trouve-t-il du markup sur une page qui ne
+chargeait pas sa feuille ?* Quatre cas dans le bundle, tous traités :
+
+| Feuille | Sélecteur | Traitement |
+|---|---|---|
+| `pages/app-home.css` | `.home-grid`, 28 pages | conditionnée à son contenu par `:has()` — un marqueur de template ne marcherait pas, 46 templates ciblant `#app-content` en swap |
+| `components/competition-card.css` | `.create-header-text .title/.sub`, 7 pages | doublon exact de `create-card.css` supprimé |
+| `components/team-card.css` | `.tab-empty-state`, 3 pages | règle morte supprimée |
+| `pages/match-report-shared.css` | `.btn-*-sm`, 2 pages | scopés sous `.mr-container` — seules 2 de ses 87 classes n'étaient pas préfixées |
+
+Il reste **261 écarts** sur les 31 pages qui portent le bundle, tous identiques
+et sans effet visuel : `lightningcss` normalise `background-position: 0% 0%` en
+`0px 0px`.
+
+**Le `<link>` est posé par un appel Rust direct**, pas par un filtre Askama.
+La carte annonçait « trois modules à équiper » ; en réalité Askama compile un
+filtre **dans le module de la struct**, et le `<link>` vit dans
+`app-layout.html`, étendu par une soixantaine de templates. `{{
+crate::web::css_bundle::chemin_app() }}` ne demande rien.
+
+**Deux ruptures d'outillage.** Le verrou de la 341 s'est retrouvé à surveiller
+une feuille sur quarante-six : son périmètre se lisait dans les `<link>`, que
+cette carte supprime. Il le lit désormais dans la liste du bundle. Et le harnais
+visuel vérifiait qu'une page charge sa feuille — contrôle devenu impossible ; il
+vérifie maintenant qu'elle porte sa **classe de portée**.
+
+**Une conséquence assumée.** Huit endpoints de fragment — les `widget-*`, plus
+le tableau de bord et le résumé d'administration — perdent leurs styles quand on
+visite leur URL directement. Ils ne sont jamais atteints autrement que par swap
+HTMX, mais un signet sur l'un d'eux donnerait du contenu nu au lieu de contenu
+stylé sans layout.
+
+**Les tests e2e attendaient des `<link>`.** Deux d'entre eux utilisaient
+l'apparition de la feuille d'un widget comme signal d'arrivée du fragment :
+
+```python
+page.wait_for_selector('link[href*="my-teams-widget.css"]')
+```
+
+Quatorze tests échouaient de ce fait. Ils attendent désormais la **racine du
+widget** — plus juste, puisqu'elle atteste que le fragment est là, et non
+qu'une feuille l'accompagnait.
+
+Un quinzième échec est **antérieur à cette carte** et le reste :
+`test_pending_enrollment_banner_is_informational` cherche `.state-banner--pending`,
+une classe qui n'a **jamais** existé dans un template — aucun commit ne l'y a
+ajoutée, et le CSS qui la style n'a donc jamais trouvé de markup. Le test ne peut
+pas passer, et ce n'est pas le sujet ici.
+
 ## Le mécanisme recommandé — construire au démarrage, pas au build
 
 Le projet n'a **ni `build.rs`, ni `package.json`, ni node**. Plutôt que d'y
