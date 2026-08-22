@@ -70,10 +70,12 @@
 # ── Construction d'équipe ────────────────────────────────────────────────────
 # `players` : la soumission émet TeamCreated, projeté par le BC players.
 "test_draft_team_errors"       = ["team_creation", "competitions", "spaces"]
-# Le champ d'upload est un composant de `src/web/`, mais il n'existe dans aucune
-# page seul : on l'atteint par le formulaire de création d'équipe, d'où les BCs
-# ci-dessous — traversés en fixture, sans rien y asserter.
-"test_upload_widget"           = ["team_creation", "competitions", "spaces"]
+# Vérifie le réseau, pas le comportement : les deux pages visitées ne sont qu'un
+# support, d'où des BCs traversés en fixture sans rien y asserter. `all` serait
+# plus juste sur le fond — le layout est commun à toutes les pages — mais ferait
+# exécuter ce test à chaque diff, pour un garde-fou qui ne casse que si un
+# `<script src="https://…">` réapparaît dans un layout.
+"test_ressources_locales"      = ["team_creation", "competitions", "spaces"]
 "test_special_rule_selector"   = ["team_creation", "references", "competitions", "spaces", "ranking"]
 "test_build_and_finalize_team" = ["team_creation", "references", "teams", "players",
                                   "competitions", "spaces", "ranking"]

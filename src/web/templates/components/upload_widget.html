@@ -1,29 +1,9 @@
-{# Envoi d'image vers Cloudinary, sans le widget maison de Cloudinary.
-
-   Le script `widget.cloudinary.com/v2.0/global/all.js` a été retiré (carte 17) :
-   c'était un chargeur tiers qui allait chercher sa propre feuille de style sur
-   son domaine, au moment d'ouvrir la boîte de dialogue. Cette requête CSS
-   arrivait donc **pendant** une navigation HTMX, ce qui contredisait le critère
-   de l'épic E03.
-
-   Le modèle de confiance ne change pas. `uploadPreset` était déjà un preset
-   **non signé** — aucune clé Cloudinary n'existe dans la configuration du
-   projet — donc un `POST` direct depuis le navigateur fait exactement ce que
-   faisait le widget, avec les mêmes droits. Ce qui disparaît est le script et
-   sa feuille, pas le fournisseur : les images restent servies par
-   `res.cloudinary.com`, via `shared_kernel::identity::cloudinary::transform`.
-
-   Le champ caché garde son `name` et sa valeur : aucun handler Rust, aucun des
-   appelants de cette macro n'a à changer. #}
 {% macro cloudinary_upload(field_id, initial_value, folder, label, error) %}
 <div class="upload-widget">
 <div class="upload-title">{{ label }}</div>
 <input type="hidden" id="{{ field_id }}" name="{{ field_id }}" value="{{ initial_value }}">
-{# `hidden` et non masqué en CSS : le champ n'est jamais montré, c'est la zone
-   d'aperçu qui l'ouvre. #}
-<input type="file" id="fichier-{{ field_id }}" accept="image/jpeg,image/png,image/webp" hidden>
 <div class="upload-preview" id="zone-{{ field_id }}">
-    <img class="upload-preview-img" id="preview-{{ field_id }}" src="{{ initial_value }}" alt="{{ label }}"
+    <img id="preview-{{ field_id }}" src="{{ initial_value }}" alt="{{ label }}"
          {% if initial_value.is_empty() %}hidden{% endif %}>
     <div id="placeholder-{{ field_id }}" {% if !initial_value.is_empty() %}hidden{% endif %}>
         <div class="upload-placeholder-icon">🖼️</div>
@@ -32,81 +12,57 @@
     {% if let Some(err) = error %}
     <div class="form-error">{{ err }}</div>
     {% endif %}
+    <script>
+        (function () {
+            // Le chargeur de Cloudinary vit ici et non dans le layout : il tire
+            // de lui-même Google Tag Manager, GA4 et Rollbar, et il n'y a
+            // aucune raison que ces trois-là suivent un coach sur toutes les
+            // pages de l'application pour un champ qui n'existe que sur deux.
+            //
+            // Conséquence à tenir : `all.js` n'est plus là au moment où ce
+            // script s'exécute. Le corps ci-dessous est donc différé jusqu'à ce
+            // que `cloudinary` existe — inchangé par ailleurs.
+            const SRC = 'https://widget.cloudinary.com/v2.0/global/all.js';
+
+            function quandPret(suite) {
+                if (window.cloudinary) return suite();
+                let s = document.getElementById('cloudinary-loader');
+                if (!s) {
+                    s = document.createElement('script');
+                    s.id = 'cloudinary-loader';
+                    s.src = SRC;
+                    document.head.appendChild(s);
+                }
+                // Deux champs sur la même page partagent le chargeur : chacun
+                // pose son écouteur, `all.js` n'est téléchargé qu'une fois.
+                s.addEventListener('load', suite);
+            }
+
+            quandPret(function () {
+            const widget = cloudinary.createUploadWidget({
+                cloudName: 'bloodbowlclub-com',
+                uploadPreset: 'fvqrusn5',
+                sources: ['local', 'url'],
+                multiple: false,
+                maxFileSize: 2000000,
+                clientAllowedFormats: ['jpg', 'png', 'webp'],
+                folder: '{{ folder }}'
+            }, function (error, result) {
+                if (!error && result && result.event === 'success') {
+                    const url = result.info.secure_url;
+                    document.getElementById('{{ field_id }}').value = url;
+                    const preview = document.getElementById('preview-{{ field_id }}');
+                    preview.src = url;
+                    preview.style.display = 'block';
+                    document.getElementById('placeholder-{{ field_id }}').style.display = 'none';
+                }
+            });
+            document.getElementById('zone-{{ field_id }}').addEventListener('click', function () {
+                widget.open();
+            });
+            });
+        })();
+    </script>
 </div>
-<div class="upload-statut" id="statut-{{ field_id }}" role="status" hidden></div>
-<script>
-(function () {
-    const CLOUD = 'bloodbowlclub-com';
-    const PRESET = 'fvqrusn5';
-    const TAILLE_MAX = 2000000;
-    const FORMATS = ['image/jpeg', 'image/png', 'image/webp'];
-
-    const champ = document.getElementById('{{ field_id }}');
-    const fichier = document.getElementById('fichier-{{ field_id }}');
-    const zone = document.getElementById('zone-{{ field_id }}');
-    const image = document.getElementById('preview-{{ field_id }}');
-    const marque = document.getElementById('placeholder-{{ field_id }}');
-    const statut = document.getElementById('statut-{{ field_id }}');
-
-    function dire(texte, enErreur) {
-        statut.textContent = texte || '';
-        statut.hidden = !texte;
-        statut.classList.toggle('upload-statut--erreur', !!enErreur);
-    }
-
-    // Les mêmes contraintes que celles passées au widget retiré, vérifiées ici
-    // parce que plus personne ne les vérifie avant l'envoi.
-    function refus(f) {
-        if (!FORMATS.includes(f.type)) return 'Format accepté : JPG, PNG ou WebP.';
-        if (f.size > TAILLE_MAX) return 'Image trop lourde (2 Mo maximum).';
-        return null;
-    }
-
-    function afficher(url) {
-        champ.value = url;
-        image.src = url;
-        image.hidden = false;
-        marque.hidden = true;
-    }
-
-    function envoyer(f) {
-        const corps = new FormData();
-        corps.append('file', f);
-        corps.append('upload_preset', PRESET);
-        corps.append('folder', '{{ folder }}');
-        const requete = new XMLHttpRequest();
-        requete.open('POST', 'https://api.cloudinary.com/v1_1/' + CLOUD + '/image/upload');
-        requete.upload.addEventListener('progress', function (e) {
-            if (e.lengthComputable) dire('Envoi… ' + Math.round(e.loaded / e.total * 100) + ' %');
-        });
-        requete.addEventListener('load', function () { terminer(requete); });
-        requete.addEventListener('error', function () { dire('Envoi impossible : réseau injoignable.', true); });
-        dire('Envoi…');
-        requete.send(corps);
-    }
-
-    function terminer(requete) {
-        if (requete.status < 200 || requete.status >= 300) {
-            return dire('Envoi refusé par le serveur d\'images (' + requete.status + ').', true);
-        }
-        let url = null;
-        try { url = JSON.parse(requete.responseText).secure_url; } catch (e) { url = null; }
-        if (!url) return dire('Réponse inattendue du serveur d\'images.', true);
-        afficher(url);
-        dire('');
-    }
-
-    zone.addEventListener('click', function () { fichier.click(); });
-    fichier.addEventListener('change', function () {
-        const f = fichier.files && fichier.files[0];
-        if (!f) return;
-        const probleme = refus(f);
-        // Le champ est remis à zéro pour que resélectionner le même fichier
-        // après un refus déclenche bien un nouvel évènement `change`.
-        fichier.value = '';
-        return probleme ? dire(probleme, true) : envoyer(f);
-    });
-})();
-</script>
 </div>
 {% endmacro %}

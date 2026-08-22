@@ -54,21 +54,3 @@
 }
 
 .upload-placeholder-icon { font-size: 36px; color: var(--dark-3); text-align: center; margin-bottom: 6px; }
-
-/* L'aperçu par sa classe et non par son `id` : `#preview-logo_url` ci-dessus ne
-   vaut que pour le seul champ nommé `logo_url`, et la macro en accepte
-   d'autres. Mêmes déclarations, donc rien ne bouge pour `logo_url`. */
-.upload-preview-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  border-radius: 8px;
-}
-
-/* Progression et refus de l'envoi. Le widget tiers affichait les siens dans sa
-   propre boîte de dialogue ; sans lui, il faut un endroit où le dire. */
-.upload-statut {
-  font-size: var(--text-tiny);
-  color: var(--dark-2);
-}
-.upload-statut--erreur { color: var(--red); }

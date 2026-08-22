@@ -19,6 +19,10 @@
   <script src="/static/js/htmx-ext-json-enc.js"></script>
   <script defer src="/static/js/alpine.min.js"></script>
   <script src="/static/js/tom-select.complete.min.js"></script>
+  {# Cloudinary n'est plus ici : son chargeur est posé par la macro
+     `components/upload_widget.html`, sur les deux seules pages qui portent un
+     champ d'upload. `all.js` tire de lui-même GTM, GA4 et Rollbar — les laisser
+     dans le layout, c'était les faire suivre le coach partout. #}
   <script src="/static/js/kreek-select.js"></script>
 </head>
 <body>

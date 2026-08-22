@@ -1,9 +1,18 @@
 # E03 — Front : ni saut, ni clignotement
 
-**État :** 5 cartes · 3 faites — 341, 342 et 343 livrées et vérifiées.
+**État :** 5 cartes · 4 faites — 341, 342, 343 et 17 livrées et vérifiées.
 Le **clignotement est supprimé** et le **saut aussi**, sur le périmètre nommé.
-Restent les deux cartes de dette (17, 18). L'épic a engendré deux cartes hors
-périmètre : 361 (le saut des dix autres pages) et 362 (le bundle gelé).
+Reste la carte 18. L'épic a engendré deux cartes hors périmètre : 361 (le saut
+des dix autres pages) et 362 (le bundle gelé).
+
+La 17 a déplacé le critère sans le contredire. Elle devait supprimer la dernière
+requête CSS d'une navigation HTMX, celle du widget Cloudinary ; on a constaté en
+la traitant que cette feuille ne stylait que l'iframe du widget, jamais notre
+markup — donc qu'elle ne pouvait pas produire le clignotement que l'épic
+combat. Le widget est conservé pour ses fonctions, son chargeur cantonné aux
+deux pages qui l'utilisent. Le « Terminé quand » ci-dessous demande donc plus
+que ce que l'épic voulait dire, et devra être reformulé avant clôture : « aucun
+contenu peint sans ses styles » plutôt que « aucune requête CSS ».
 
 ## La fonction
 
@@ -29,7 +38,7 @@ layout.
 | 341 | Donner sa portée à chaque feuille, à rendu constant | **faite** — 116 collisions ramenées à 2 ; rend la fusion possible |
 | 342 | Les feuilles réunies en un fichier unique dans le `<head>` | **faite** — 0 `<link>` et 0 requête CSS au swap |
 | 343 | Réserver la place des zones remplies en différé | **faite** — 0 px sur les cinq pages du critère, desktop et mobile |
-| 17 | Dépendances CDN en production | TomSelect et le widget Cloudinary servis depuis `/static` |
+| 17 | Dépendances CDN en production | **faite** — 3 origines externes supprimées ; la 4e, Cloudinary, cantonnée aux 2 pages d'upload |
 | 18 | Scripts inline dans les fragments HTMX | init par `htmx:afterSwap`, plus de `<script>` par fragment |
 
 ## Ce qui commande l'ordre
