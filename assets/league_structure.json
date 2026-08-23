@@ -27,8 +27,6 @@
     "play_off_start_date": "",
     "play_off_end_date": "",
     "schedule_end_date": "",
-    "schedule_timezone": "Europe/Paris",
-    "use_mail_notification": true,
     "scheduled_dates": [
       {
         "name":"J1",

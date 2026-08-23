@@ -166,7 +166,6 @@ mod tests {
                                      "qualified_team_per_pool":0,
                                      "final_phase_match_for_third_place":false}},
                  "schedule":{{"use_schedule":{use_schedule},
-                              "use_mail_notification":false,
                               "scheduled_dates":[{journees}]}}}}"#
         );
         serde_json::from_str(&json).expect("structure de test invalide")

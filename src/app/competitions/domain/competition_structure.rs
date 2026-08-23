@@ -1,6 +1,5 @@
 use crate::app::shared_kernel::bloodbowl::date_string::DateString;
 use crate::app::shared_kernel::bloodbowl::ranking_group_id::RankingGroupId;
-use crate::app::shared_kernel::bloodbowl::timezone::Timezone;
 use crate::app::shared_kernel::identity::name_vo::NameVo;
 use nutype::nutype;
 use serde::{Deserialize, Serialize};
@@ -20,10 +19,6 @@ pub struct FinalPhaseMatchForThirdPlace(pub bool);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct UseSchedule(pub bool);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(transparent)]
-pub struct UseMailNotification(pub bool);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompetitionStructure {
@@ -98,9 +93,6 @@ pub struct ScheduleConfig {
     pub play_off_end_date: DateString,
     #[serde(default)]
     pub schedule_end_date: DateString,
-    #[serde(default)]
-    pub schedule_timezone: Timezone,
-    pub use_mail_notification: UseMailNotification,
     pub scheduled_dates: Vec<ScheduledDate>,
 }
 

@@ -133,23 +133,6 @@
                  oninput="state.playOffEndDate = this.value">
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Fuseau horaire</label>
-        <select id="schedule-timezone" class="picker" onchange="state.scheduleTimezone = this.value">
-          <option value="Europe/Paris" selected>Europe/Paris</option>
-          <option value="Europe/London">Europe/London</option>
-          <option value="America/New_York">America/New_York</option>
-          <option value="UTC">UTC</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Notifications e-mail</label>
-        <div class="choice-group" id="mail-notif-btns">
-          <div class="choice-btn selected" data-val="true" onclick="setMailNotif(true)">Activées</div>
-          <div class="choice-btn" data-val="false" onclick="setMailNotif(false)">Désactivées</div>
-        </div>
-        <div class="info-note">📌 Des rappels seront envoyés aux équipes à l'ouverture et à la fermeture de la phase, ou pour confirmer la participation au multiplexe.</div>
-      </div>
 
     </div>
   </div>
@@ -209,8 +192,6 @@
     scheduleEndDate:      '',
     playOffStartDate:     '',
     playOffEndDate:       '',
-    scheduleTimezone:     'Europe/Paris',
-    useMailNotification:  true,
     scheduledDates:       [],
   };
   window.state = state;
@@ -289,11 +270,7 @@
 
   // ── Section 3: Schedule ─────────────────────────────────────────────────────
 
-  window.setMailNotif = function (on) {
-    state.useMailNotification = on;
-    activateBtn('mail-notif-btns', on);
-  };
-
+  
   window.addDate = function (type) {
     const id = nextId++;
     const name = 'J' + (state.scheduledDates.length + 1);
@@ -362,8 +339,6 @@
         schedule_end_date:     state.scheduleEndDate,
         play_off_start_date:   state.playOffStartDate,
         play_off_end_date:     state.playOffEndDate,
-        schedule_timezone:     state.scheduleTimezone,
-        use_mail_notification: state.useMailNotification,
         scheduled_dates: state.scheduledDates.map(function (d) {
           if (d.type === 'fixed_date') {
             return { name: d.name, type: 'fixed_date', multiplexe_date: d.multiplexe_date };
@@ -427,9 +402,6 @@
     document.getElementById('schedule-end-date').value   = state.scheduleEndDate;
     document.getElementById('playoff-start-date').value  = state.playOffStartDate;
     document.getElementById('playoff-end-date').value    = state.playOffEndDate;
-    const tz = document.getElementById('schedule-timezone');
-    if (tz) tz.value = state.scheduleTimezone;
-    activateBtn('mail-notif-btns', state.useMailNotification);
 
     renderDates();
   }
@@ -451,8 +423,6 @@
     state.scheduleEndDate      = sc.schedule_end_date;
     state.playOffStartDate     = sc.play_off_start_date;
     state.playOffEndDate       = sc.play_off_end_date;
-    state.scheduleTimezone     = sc.schedule_timezone;
-    state.useMailNotification  = sc.use_mail_notification;
     state.scheduledDates     = sc.scheduled_dates.map(function (d) {
       return Object.assign({ _id: nextId++ }, d);
     });
