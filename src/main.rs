@@ -369,12 +369,13 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
     );
 
     let email_service = build_email_service(cfg.email);
+    let host_domain = cfg.host_domain.clone();
 
     AppState {
         auth: AuthContext::new(
             &pool,
             event_bus.clone(),
-            email_service,
+            email_service.clone(),
             cfg.host_domain,
             crate::web::routes::path::APP_LAYOUT.to_string(),
         ),
@@ -398,6 +399,10 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
             Arc::new(crate::infrastructure::competitions::match_report_status_adapter::MatchReportStatusAdapter::new(
                 Arc::new(crate::app::match_report::io::repository::match_report_repository::MatchReportRepository::new(pool.clone())),
             )),
+            email_service.clone(),
+            // Même construction que `send_reset_password_email` : `host_domain`
+            // ne porte pas son schéma.
+            format!("http://{}", host_domain),
         ),
         news: NewsContext::new(&pool),
         references: references.clone(),

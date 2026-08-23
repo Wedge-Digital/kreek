@@ -14,6 +14,7 @@ use crate::app::competitions::ports::{
     ICompetitionReferencePort, ICompetitionSpaceMemberPort, IMatchReportStatusPort, ITeamInfoPort,
     ITiebreakCatalogPort,
 };
+use crate::common::services::email::IEmailService;
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -29,6 +30,15 @@ pub struct CompetitionsContext {
     pub space_member_port: Arc<dyn ICompetitionSpaceMemberPort>,
     pub tiebreak_catalog_port: Arc<dyn ITiebreakCatalogPort>,
     pub match_report_status_port: Arc<dyn IMatchReportStatusPort>,
+    pub email_service: Arc<dyn IEmailService>,
+    /// L'URL publique, schéma compris, pour les liens des e-mails.
+    ///
+    /// Construite comme le fait déjà `send_reset_password_email` — le schéma
+    /// recollé à `host_domain`, qui n'en porte pas. C'est une dette **partagée**
+    /// avec lui : le jour d'un déploiement HTTPS, les deux se corrigent
+    /// ensemble. Ouvrir ici une seconde voie aurait mis deux conventions dans
+    /// le projet plutôt qu'une à réparer.
+    pub app_url: String,
     pub event_bus: EventBus,
 }
 
@@ -60,6 +70,8 @@ impl CompetitionsContext {
         space_member_port: Arc<dyn ICompetitionSpaceMemberPort>,
         tiebreak_catalog_port: Arc<dyn ITiebreakCatalogPort>,
         match_report_status_port: Arc<dyn IMatchReportStatusPort>,
+        email_service: Arc<dyn IEmailService>,
+        app_url: String,
     ) -> Self {
         Self {
             competition_repository: Arc::new(CompetitionRepository::new(pool.clone())),
@@ -71,6 +83,8 @@ impl CompetitionsContext {
             space_member_port,
             tiebreak_catalog_port,
             match_report_status_port,
+            email_service,
+            app_url,
             event_bus,
         }
     }
