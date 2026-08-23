@@ -39,8 +39,27 @@ pub enum SpacesDomainEvent {
 }
 
 pub const SPACE_CREATED: &str = "SpaceCreated";
+
+/// Discordant avec le nom de sa variante, et **volontairement conservé**.
+///
+/// Cette chaîne est dans le journal d'événements depuis l'origine. La changer
+/// ne renommerait pas les lignes déjà écrites : elle en ferait des orphelines
+/// qu'aucune constante ne désigne plus, et couperait en deux l'historique d'un
+/// même fait.
+///
+/// Un type d'événement persisté est un identifiant public, pas un nom de
+/// variable — on ne le corrige pas parce qu'il a mal vieilli.
 pub const USER_SUBSCRIBED_TO_SPACE: &str = "UserRegisteredInSpace";
-pub const USER_INVITED_IN_SPACE: &str = "UserRegisteredInSpace";
+
+/// Valait `"UserRegisteredInSpace"` — la **même chaîne** que
+/// `USER_SUBSCRIBED_TO_SPACE`. Deux événements distincts partageaient donc leur
+/// type : tout listener qui filtre dessus les attrapait tous les deux.
+///
+/// Le défaut est resté latent parce que `UserInvitedInSpace` n'est émis nulle
+/// part. Changer cette valeur-ci ne coupe aucun historique, pour la même
+/// raison : aucune ligne n'a jamais été écrite sous ce nom.
+pub const USER_INVITED_IN_SPACE: &str = "UserInvitedInSpace";
+
 pub const USER_PROMOTED_TO_SPACE_ADMIN: &str = "UserPromotedToSpaceAdmin";
 pub const SPACE_ARCHIVED: &str = "SpaceArchived";
 
@@ -145,5 +164,93 @@ impl SpacesDomainEvent {
             payload: serde_json::to_value(self).unwrap(),
             occurred_at: time::OffsetDateTime::now_utc(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::shared_kernel::identity::ids::UserId;
+
+    /// Les cinq variantes, chacune construite une fois.
+    fn toutes() -> Vec<SpacesDomainEvent> {
+        let space_id = SpaceId::new();
+        let user_id = UserId::new();
+        vec![
+            SpacesDomainEvent::SpaceCreated {
+                event_id: EventId::new(),
+                created_by: user_id,
+                space_name: SpaceName::try_new("Tribu Celtique").unwrap(),
+                space_logo: CloudinaryImage::try_new(
+                    "https://res.cloudinary.com/demo/kreek/tribu.png".to_string(),
+                )
+                .unwrap(),
+                space_id,
+            },
+            SpacesDomainEvent::UserInvitedInSpace {
+                event_id: EventId::new(),
+                user_id,
+                space_id,
+            },
+            SpacesDomainEvent::UserSubscribedToSpace {
+                event_id: EventId::new(),
+                user_id,
+                space_id,
+                space_profile: SpaceProfile::SpaceUser,
+            },
+            SpacesDomainEvent::UserPromotedToSpaceAdmin {
+                event_id: EventId::new(),
+                user_id,
+                space_id,
+            },
+            SpacesDomainEvent::SpaceArchived {
+                event_id: EventId::new(),
+                space_id,
+            },
+        ]
+    }
+
+    /// Le test qui aurait attrapé le défaut, et qui attrapera le prochain.
+    ///
+    /// Vérifier qu'une variante rend *sa* chaîne ne suffit pas : `UserInvited`
+    /// et `UserSubscribed` rendaient chacune la sienne, et c'était la même. Ce
+    /// qu'il faut vérifier est une propriété de l'ensemble — un type par fait.
+    #[test]
+    fn les_cinq_variantes_rendent_cinq_types_distincts() {
+        let types: Vec<&str> = toutes().iter().map(|e| e.to_event_type()).collect();
+        let distincts: std::collections::HashSet<&str> = types.iter().copied().collect();
+
+        assert_eq!(
+            distincts.len(),
+            types.len(),
+            "deux variantes partagent leur type d'événement : {types:?}"
+        );
+    }
+
+    /// Ce que le journal contient déjà ne doit pas changer de nom.
+    ///
+    /// Cinq lignes y sont écrites sous `UserRegisteredInSpace`, toutes des
+    /// souscriptions. Renommer cette valeur les rendrait orphelines.
+    #[test]
+    fn la_souscription_garde_le_type_present_dans_le_journal() {
+        let event = SpacesDomainEvent::UserSubscribedToSpace {
+            event_id: EventId::new(),
+            user_id: UserId::new(),
+            space_id: SpaceId::new(),
+            space_profile: SpaceProfile::SpaceUser,
+        };
+        assert_eq!(event.to_event_type(), "UserRegisteredInSpace");
+    }
+
+    /// L'invitation prend le nom qu'elle aurait toujours dû avoir. Aucune ligne
+    /// n'a jamais été écrite sous l'ancien, l'événement n'étant émis nulle part.
+    #[test]
+    fn l_invitation_a_son_propre_type() {
+        let event = SpacesDomainEvent::UserInvitedInSpace {
+            event_id: EventId::new(),
+            user_id: UserId::new(),
+            space_id: SpaceId::new(),
+        };
+        assert_eq!(event.to_event_type(), "UserInvitedInSpace");
     }
 }
