@@ -186,7 +186,9 @@
     }
     .invite-header {
       display: flex; align-items: center; justify-content: space-between;
+      gap: var(--p2);
     }
+    .invite-header .btn-outline-sm { white-space: nowrap; }
     .invite-sub {
       font-size: var(--text-tiny); color: var(--dark-3); margin-top: 4px;
     }
@@ -224,6 +226,281 @@
     }
     .empty-state-icon { font-size: 40px; margin-bottom: var(--p1); }
     .empty-state-text { font-size: var(--text-small); }
+
+    /* ── Ajout direct ── */
+    #tab-direct-add { display: flex; flex-direction: column; gap: var(--p2); }
+
+    .direct-warning {
+      display: flex; align-items: flex-start; gap: var(--p1);
+      background: rgba(255,107,53,0.08);
+      border: 1px solid rgba(255,107,53,0.35);
+      border-radius: 12px; padding: var(--p2);
+    }
+    .direct-warning-icon { font-size: 20px; line-height: 1.2; flex-shrink: 0; }
+    .direct-warning-title {
+      font-size: var(--text-small); font-weight: 700; color: var(--dark-1);
+    }
+    .direct-warning-text {
+      font-size: var(--text-tiny); color: var(--dark-2);
+      margin-top: 4px; line-height: 1.5;
+    }
+
+    .panel-heading { display: flex; flex-direction: column; gap: 4px; }
+
+    .member-row.is-member { opacity: 0.55; }
+    .member-badge {
+      font-size: var(--text-tiny); font-weight: 700;
+      padding: 3px 10px; border-radius: 4px; flex-shrink: 0;
+    }
+    .member-badge--muted { background: var(--dark-6); color: var(--dark-3); }
+    .member-badge--new   { background: rgba(98,149,132,0.15); color: var(--green); }
+
+    .action-btn--add {
+      border-color: var(--main-blue); color: var(--main-blue); font-weight: 600;
+    }
+    .action-btn--add:hover { background: rgba(0,48,73,0.08); }
+
+    .create-coach-grid {
+      display: grid; grid-template-columns: 1fr 1fr 170px; gap: var(--p1);
+    }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field-label {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-2);
+    }
+    .field-select {
+      padding: 10px 12px;
+      border: 1px solid var(--dark-4); border-radius: 8px;
+      font-size: var(--text-small); font-family: inherit;
+      color: var(--dark-1); background: var(--white);
+      cursor: pointer; outline: none;
+      transition: border-color 0.15s;
+    }
+    .field-select:focus { border-color: var(--main-blue); }
+
+    .direct-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--p1);
+    }
+    .notify-check {
+      display: flex; align-items: center; gap: 8px;
+      font-size: var(--text-tiny); color: var(--dark-2); cursor: pointer;
+    }
+    .notify-check input {
+      width: 15px; height: 15px; accent-color: var(--main-blue); cursor: pointer;
+    }
+    .btn-add { white-space: nowrap; padding: 10px 20px; }
+
+    @media (max-width: 768px) {
+      /* les deux pastilles passent sous le titre : à deux, elles débordaient du bandeau */
+      .admin-banner { flex-wrap: wrap; }
+      .admin-banner-info { min-width: 0; }
+      .admin-banner-badges { width: 100%; justify-content: flex-start; }
+
+      /* Barre de stats : trois chips en ligne débordaient, la troisième était coupée. */
+      .stats-bar { flex-wrap: wrap; }
+      .stat-chip { flex: 1 1 45%; padding: 10px var(--p1); }
+
+      /* Ligne de membre : identité sur la première ligne, rôle et actions sur la
+         seconde. Sans ça le pseudo était réduit à une lettre par l'ellipse, le
+         sélecteur et les boutons gardant leur pleine largeur. */
+      .member-row { flex-wrap: wrap; row-gap: 10px; }
+      .member-info { min-width: calc(100% - 52px); }
+      .member-name { white-space: normal; overflow: visible; }
+      .member-profile-select { flex: 0 0 auto; }
+      .member-actions { flex: 1; justify-content: flex-end; }
+      .member-badge { margin-left: auto; }
+
+      /* Champ + bouton d'invitation : le bouton débordait du panneau. */
+      .search-invite-row { flex-direction: column; align-items: stretch; }
+
+      .create-coach-grid { grid-template-columns: 1fr; }
+      .direct-footer { flex-direction: column; align-items: stretch; }
+      .admin-tabs { flex-wrap: wrap; }
+      .admin-tab { flex: 1 1 45%; }
+    }
+
+    /* ── Paramètres ─────────────────────────────────────────────────────────
+       Blocs .settings-panel / .form-row / .logo-* / .btn-*-sm / .danger-zone
+       repris tels quels de app-competition-admin-settings.html.            */
+    #tab-settings { display: flex; flex-direction: column; gap: var(--p2); }
+
+    .settings-panel {
+      background: var(--white);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .settings-panel-head {
+      padding: var(--p2);
+      border-bottom: 2px solid var(--dark-5);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .settings-panel-title {
+      font-family: var(--font-title); font-size: var(--h5);
+      font-weight: 700; color: var(--dark-1);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .settings-panel-title-icon { font-size: 18px; }
+    .settings-panel-body {
+      padding: var(--p2);
+      display: flex; flex-direction: column; gap: var(--p2);
+    }
+
+    .form-row {
+      display: flex; align-items: flex-start; gap: var(--p2);
+    }
+    .form-row-label {
+      min-width: 160px; flex-shrink: 0;
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-2);
+      padding-top: 10px;
+    }
+    .form-row-content { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .form-row-hint { font-size: 11px; color: var(--dark-4); }
+
+    .form-input {
+      padding: 10px 14px;
+      border: 1px solid var(--dark-4); border-radius: 7px;
+      font-size: var(--text-small); color: var(--dark-1);
+      font-family: inherit; outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      width: 100%;
+    }
+    .form-input:focus {
+      border-color: var(--main-blue);
+      box-shadow: 0 0 0 3px rgba(0,48,73,0.08);
+    }
+
+    .logo-row {
+      display: flex; align-items: center; gap: var(--p2);
+    }
+    .logo-preview {
+      width: 80px; height: 80px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: 24px;
+      color: var(--white); flex-shrink: 0;
+    }
+    .logo-preview--image { background-size: cover; background-position: center; }
+    .logo-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+
+    .btn-primary-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--main-blue); color: var(--white);
+      font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer; border: none; transition: opacity 0.15s;
+    }
+    .btn-primary-sm:hover { opacity: 0.9; }
+
+    .btn-outline-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--white); color: var(--dark-2);
+      font-size: var(--text-tiny); font-weight: 600;
+      cursor: pointer; border: 1px solid var(--dark-5);
+      transition: all 0.15s;
+    }
+    .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    label.btn-outline-sm { display: inline-block; text-align: center; }
+
+    .btn-danger-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--white); color: var(--dark-3);
+      font-size: var(--text-tiny); font-weight: 600;
+      cursor: pointer; border: 1px solid var(--dark-5);
+      transition: all 0.15s;
+    }
+    .btn-danger-sm:hover { border-color: var(--red); color: var(--red); background: rgba(224,32,32,0.04); }
+
+    .danger-zone {
+      border: 1px solid rgba(224,32,32,0.2);
+      border-radius: 12px;
+      padding: var(--p2);
+      background: rgba(224,32,32,0.02);
+    }
+    .danger-zone-title {
+      font-family: var(--font-title); font-size: var(--h5);
+      font-weight: 700; color: var(--red);
+      margin-bottom: var(--p1);
+    }
+    .danger-zone-item {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--p2);
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(224,32,32,0.1);
+    }
+    .danger-zone-item:last-child { border-bottom: none; }
+    .danger-zone-item-info { flex: 1; }
+    .danger-zone-item-label { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); }
+    .danger-zone-item-desc { font-size: 11px; color: var(--dark-3); margin-top: 2px; }
+
+    /* ── Visibilité ── */
+    .visibility-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--p1); }
+    .visibility-card {
+      display: flex; align-items: flex-start; gap: var(--p1);
+      padding: var(--p2);
+      border: 2px solid var(--dark-5); border-radius: 10px;
+      background: var(--white); cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .visibility-card:hover { border-color: var(--dark-4); }
+    .visibility-card.selected {
+      border-color: var(--main-blue); background: rgba(0,48,73,0.04);
+    }
+    .visibility-card-icon { font-size: 22px; line-height: 1.1; flex-shrink: 0; }
+    .visibility-card-body { flex: 1; }
+    .visibility-card-title {
+      font-size: var(--text-small); font-weight: 700; color: var(--dark-1);
+    }
+    .visibility-card-desc {
+      font-size: var(--text-tiny); color: var(--dark-3);
+      margin-top: 4px; line-height: 1.5;
+    }
+    .visibility-card-mark {
+      width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+      background: var(--main-blue); color: var(--white);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700;
+      opacity: 0; transition: opacity 0.15s;
+    }
+    .visibility-card.selected .visibility-card-mark { opacity: 1; }
+
+    .visibility-note {
+      display: flex; align-items: flex-start; gap: 10px;
+      border-radius: 8px; padding: 12px 16px;
+      font-size: var(--text-tiny); color: var(--dark-2); line-height: 1.5;
+    }
+    .visibility-note--private {
+      background: rgba(0,48,73,0.05); border: 1px solid rgba(0,48,73,0.15);
+    }
+    .visibility-note--public {
+      background: rgba(255,107,53,0.08); border: 1px solid rgba(255,107,53,0.3);
+    }
+
+    /* ── Badge de visibilité dans le bandeau ── */
+    .admin-banner-badges { display: flex; align-items: center; gap: 8px; }
+    .admin-banner-badge--private {
+      background: rgba(255,255,255,0.14); color: var(--white);
+      border-color: rgba(255,255,255,0.3);
+    }
+    .admin-banner-badge--public {
+      background: rgba(98,149,132,0.3); color: #A8D5C6;
+      border-color: rgba(98,149,132,0.55);
+    }
+
+    .invite-visibility-note {
+      font-size: var(--text-tiny); color: var(--dark-3);
+      display: flex; align-items: center; gap: 6px; line-height: 1.5;
+    }
+
+    .visually-hidden {
+      position: absolute; width: 1px; height: 1px;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+    }
+
+    @media (max-width: 768px) {
+      .visibility-grid { grid-template-columns: 1fr; }
+      .form-row { flex-direction: column; gap: 8px; }
+      .form-row-label { padding-top: 0; }
+      .danger-zone-item { flex-direction: column; align-items: stretch; gap: 8px; }
+    }
   </style>
 </head>
 <body>
@@ -263,15 +540,19 @@
           <div class="admin-banner">
             <div class="admin-banner-icon">🛡️</div>
             <div class="admin-banner-info">
-              <div class="admin-banner-title">Administration — Tribu Celtique</div>
+              <div class="admin-banner-title" id="banner-title">Administration — Tribu Celtique</div>
               <div class="admin-banner-sub">Gestion des membres, invitations et paramètres de l'espace</div>
             </div>
-            <div class="admin-banner-badge">Admin</div>
+            <div class="admin-banner-badges">
+              <div class="admin-banner-badge admin-banner-badge--private" id="visibility-badge">🔒 Privé</div>
+              <div class="admin-banner-badge">Admin</div>
+            </div>
           </div>
 
           <!-- Tabs -->
           <div class="admin-tabs">
             <div class="admin-tab active" onclick="showTab('members', this)">👥 Membres</div>
+            <div class="admin-tab" onclick="showTab('direct-add', this)">➕ Ajout direct</div>
             <div class="admin-tab" onclick="showTab('invitations', this)">📩 Invitations</div>
             <div class="admin-tab" onclick="showTab('settings', this)">⚙️ Paramètres</div>
           </div>
@@ -286,7 +567,7 @@
                 <div class="stat-chip">
                   <div class="stat-chip-icon">👥</div>
                   <div>
-                    <div class="stat-chip-value">8</div>
+                    <div class="stat-chip-value" id="stat-members">8</div>
                     <div class="stat-chip-label">Membres</div>
                   </div>
                 </div>
@@ -422,6 +703,168 @@
 
           </div><!-- /tab-members -->
 
+          <!-- ══ TAB : AJOUT DIRECT ══════════════════════════════════ -->
+          <div id="tab-direct-add" style="display:none;">
+
+            <!-- Avertissement -->
+            <div class="direct-warning">
+              <div class="direct-warning-icon">⚠️</div>
+              <div>
+                <div class="direct-warning-title">L'ajout direct se passe du consentement du coach</div>
+                <div class="direct-warning-text">
+                  Le coach devient membre de l'espace immédiatement, sans invitation à accepter.
+                  À réserver aux coachs de votre ligue que vous connaissez — pour les autres, passez par l'onglet Invitations.
+                </div>
+              </div>
+            </div>
+
+            <!-- Coach déjà inscrit sur la plateforme -->
+            <div class="admin-panel">
+              <div class="panel-heading">
+                <div class="section-label">Ajouter un coach qui a déjà un compte</div>
+                <div class="invite-sub">Recherche par pseudo ou par email dans l'annuaire des coachs de la plateforme.</div>
+              </div>
+
+              <div class="search-row">
+                <input class="search-input" type="text" id="direct-search"
+                       placeholder="Pseudo ou email du coach…"
+                       oninput="filterCandidates(this.value)">
+              </div>
+
+              <div class="member-list" id="candidate-list">
+
+                <div class="member-row" data-search="whiskers whiskers@bb.club">
+                  <div class="member-avatar av--blue">W</div>
+                  <div class="member-info">
+                    <div class="member-name">Whiskers</div>
+                    <div class="member-email">whiskers@bb.club</div>
+                  </div>
+                  <select class="member-profile-select">
+                    <option value="member" selected>Membre</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <div class="member-actions">
+                    <button class="action-btn action-btn--add" onclick="addExisting(this, 'Whiskers', 'W', 'av--blue')">
+                      <span class="action-btn-icon">➕</span> Ajouter
+                    </button>
+                  </div>
+                </div>
+
+                <div class="member-row" data-search="grimfang grimfang@orcs.net">
+                  <div class="member-avatar av--green">G</div>
+                  <div class="member-info">
+                    <div class="member-name">GrimFang</div>
+                    <div class="member-email">grimfang@orcs.net</div>
+                  </div>
+                  <select class="member-profile-select">
+                    <option value="member" selected>Membre</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <div class="member-actions">
+                    <button class="action-btn action-btn--add" onclick="addExisting(this, 'GrimFang', 'G', 'av--green')">
+                      <span class="action-btn-icon">➕</span> Ajouter
+                    </button>
+                  </div>
+                </div>
+
+                <div class="member-row" data-search="skavenlord skaven@clan13.fr">
+                  <div class="member-avatar av--purple">S</div>
+                  <div class="member-info">
+                    <div class="member-name">SkavenLord</div>
+                    <div class="member-email">skaven@clan13.fr</div>
+                  </div>
+                  <select class="member-profile-select">
+                    <option value="member" selected>Membre</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <div class="member-actions">
+                    <button class="action-btn action-btn--add" onclick="addExisting(this, 'SkavenLord', 'S', 'av--purple')">
+                      <span class="action-btn-icon">➕</span> Ajouter
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Déjà dans l'espace : proposé mais non ajoutable -->
+                <div class="member-row is-member" data-search="letacticien tacticien@bb.club">
+                  <div class="member-avatar av--green">L</div>
+                  <div class="member-info">
+                    <div class="member-name">LeTacticien</div>
+                    <div class="member-email">tacticien@bb.club</div>
+                  </div>
+                  <span class="member-badge member-badge--muted">Déjà membre</span>
+                </div>
+
+              </div><!-- /candidate-list -->
+
+              <div class="empty-state" id="candidate-empty" style="display:none;">
+                <div class="empty-state-icon">🔍</div>
+                <div class="empty-state-text">
+                  Aucun coach ne correspond à « <span id="candidate-query"></span> ».<br>
+                  Créez-lui un compte ci-dessous.
+                </div>
+              </div>
+
+              <div class="direct-footer">
+                <label class="notify-check">
+                  <input type="checkbox" id="notify-existing" checked>
+                  Prévenir le coach par email qu'il a rejoint l'espace
+                </label>
+              </div>
+            </div><!-- /admin-panel -->
+
+            <!-- Création de compte à la volée -->
+            <div class="admin-panel">
+              <div class="panel-heading">
+                <div class="section-label">Le coach n'a pas de compte ?</div>
+                <div class="invite-sub">Le compte est créé et rattaché à l'espace dans la foulée. Un email lui demande de définir son mot de passe.</div>
+              </div>
+
+              <div class="create-coach-grid">
+                <div class="field">
+                  <label class="field-label" for="new-coach-pseudo">Pseudo</label>
+                  <input class="search-input" type="text" id="new-coach-pseudo" placeholder="Ex. NurgleFan">
+                </div>
+                <div class="field">
+                  <label class="field-label" for="new-coach-email">Email</label>
+                  <input class="search-input" type="email" id="new-coach-email" placeholder="coach@example.com">
+                </div>
+                <div class="field">
+                  <label class="field-label" for="new-coach-role">Profil</label>
+                  <select class="field-select" id="new-coach-role">
+                    <option value="member" selected>Membre</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="direct-footer">
+                <label class="notify-check">
+                  <input type="checkbox" id="notify-new" checked>
+                  Envoyer l'email de définition du mot de passe
+                </label>
+                <button class="btn btn-primary-blue btn-sm btn-add" onclick="createAndAdd()">
+                  ➕ Créer le compte et ajouter
+                </button>
+              </div>
+            </div><!-- /admin-panel -->
+
+            <!-- Journal de session -->
+            <div class="admin-panel">
+              <div class="panel-heading">
+                <div class="section-label">Ajoutés pendant cette session</div>
+                <div class="invite-sub">Une erreur ? Retirez le coach de l'espace d'un clic.</div>
+              </div>
+
+              <div class="member-list" id="added-list"></div>
+
+              <div class="empty-state" id="added-empty">
+                <div class="empty-state-icon">📋</div>
+                <div class="empty-state-text">Aucun coach ajouté pour le moment.</div>
+              </div>
+            </div><!-- /admin-panel -->
+
+          </div><!-- /tab-direct-add -->
+
           <!-- ══ TAB : INVITATIONS ═══════════════════════════════════ -->
           <div id="tab-invitations" style="display:none;">
 
@@ -432,7 +875,7 @@
                   <div class="section-label">Lien d'invitation à l'espace</div>
                   <div class="invite-sub">Toute personne possédant ce lien peut rejoindre l'espace comme membre.</div>
                 </div>
-                <button class="btn btn-outline btn-sm" onclick="regenerateLink()" style="white-space:nowrap;">🔄 Régénérer</button>
+                <button class="btn-outline-sm" onclick="regenerateLink()">🔄 Régénérer</button>
               </div>
               <div class="link-box">
                 <span class="link-url" id="invite-link">https://app.bloodbowlclub.fr/join/TriBuCeltique?token=abc123xyz</span>
@@ -442,6 +885,9 @@
               </div>
               <div style="font-size:var(--text-tiny); color:var(--dark-3); display:flex; align-items:center; gap:6px;">
                 📌 Ce lien est valide 7 jours. Régénérer le lien révoque l'ancien.
+              </div>
+              <div class="invite-visibility-note" id="link-visibility-note">
+                🔒 L'espace est privé : ce lien est l'une des trois seules façons d'y entrer, avec l'invitation nominative et l'ajout direct.
               </div>
             </div>
 
@@ -520,13 +966,124 @@
 
           <!-- ══ TAB : PARAMÈTRES ════════════════════════════════════ -->
           <div id="tab-settings" style="display:none;">
-            <div class="admin-panel">
-              <div class="section-label">Paramètres de l'espace</div>
-              <div style="color:var(--dark-3); font-size:var(--text-small); padding: var(--p2) 0;">
-                Les paramètres de l'espace seront disponibles ici (nom, logo, visibilité, etc.)
+
+            <!-- Informations générales -->
+            <div class="settings-panel">
+              <div class="settings-panel-head">
+                <div class="settings-panel-title">
+                  <span class="settings-panel-title-icon">📝</span>
+                  Informations générales
+                </div>
+                <button class="btn-primary-sm" onclick="saveSpaceInfo()">💾 Enregistrer</button>
+              </div>
+              <div class="settings-panel-body">
+
+                <div class="form-row">
+                  <div class="form-row-label">Nom de l'espace</div>
+                  <div class="form-row-content">
+                    <input type="text" class="form-input" id="space-name" value="Tribu Celtique">
+                    <div class="form-row-hint">Affiché dans le menu, la barre latérale et les invitations envoyées.</div>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-row-label">Logo</div>
+                  <div class="form-row-content">
+                    <div class="logo-row">
+                      <div class="logo-preview" id="space-logo">TC</div>
+                      <div class="logo-actions">
+                        <label class="btn-outline-sm" for="logo-file">🖼️ Changer le logo</label>
+                        <input type="file" id="logo-file" class="visually-hidden"
+                               accept="image/png,image/jpeg,image/webp" onchange="previewLogo(this)">
+                        <button class="btn-danger-sm" onclick="removeLogo()">✕ Retirer</button>
+                        <div class="form-row-hint">JPG, PNG ou WebP · 2 Mo max. Sans logo, les initiales du nom prennent la place.</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
-          </div>
+
+            <!-- Visibilité -->
+            <div class="settings-panel">
+              <div class="settings-panel-head">
+                <div class="settings-panel-title">
+                  <span class="settings-panel-title-icon">🔐</span>
+                  Visibilité
+                </div>
+                <button class="btn-primary-sm" onclick="saveVisibility()">💾 Enregistrer</button>
+              </div>
+              <div class="settings-panel-body">
+
+                <div class="visibility-grid">
+                  <div class="visibility-card" id="card-public" onclick="setVisibility('public')">
+                    <div class="visibility-card-icon">🌐</div>
+                    <div class="visibility-card-body">
+                      <div class="visibility-card-title">Public</div>
+                      <div class="visibility-card-desc">
+                        L'espace apparaît dans l'annuaire. N'importe quel coach peut le rejoindre de lui-même,
+                        sans invitation ni validation.
+                      </div>
+                    </div>
+                    <div class="visibility-card-mark">✓</div>
+                  </div>
+
+                  <div class="visibility-card selected" id="card-private" onclick="setVisibility('private')">
+                    <div class="visibility-card-icon">🔒</div>
+                    <div class="visibility-card-body">
+                      <div class="visibility-card-title">Privé</div>
+                      <div class="visibility-card-desc">
+                        L'espace n'apparaît nulle part. On n'y entre que sur invitation
+                        ou par un ajout direct fait par un administrateur.
+                      </div>
+                    </div>
+                    <div class="visibility-card-mark">✓</div>
+                  </div>
+                </div>
+
+                <div class="visibility-note visibility-note--private" id="visibility-note">
+                  <span id="visibility-note-icon">🔒</span>
+                  <span id="visibility-note-text">
+                    Espace privé : les seules portes d'entrée sont le lien d'invitation, une invitation
+                    nominative et l'ajout direct. Aucun coach ne peut trouver l'espace ni demander à le rejoindre.
+                  </span>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Zone de danger -->
+            <div class="danger-zone">
+              <div class="danger-zone-title">⚠️ Zone de danger</div>
+
+              <div class="danger-zone-item">
+                <div class="danger-zone-item-info">
+                  <div class="danger-zone-item-label">Transférer la propriété</div>
+                  <div class="danger-zone-item-desc">Un autre administrateur devient propriétaire de l'espace. Vous restez administrateur.</div>
+                </div>
+                <button class="btn-danger-sm" onclick="dangerAction('Transférer la propriété de l\'espace ?', 'Propriété transférée')">Transférer</button>
+              </div>
+
+              <div class="danger-zone-item">
+                <div class="danger-zone-item-info">
+                  <div class="danger-zone-item-label">Archiver l'espace</div>
+                  <div class="danger-zone-item-desc">L'espace passe en lecture seule : compétitions et équipes restent consultables, plus rien ne peut être modifié.</div>
+                </div>
+                <button class="btn-danger-sm" onclick="dangerAction('Archiver l\'espace ? Il passera en lecture seule.', 'Espace archivé')">Archiver</button>
+              </div>
+
+              <div class="danger-zone-item">
+                <div class="danger-zone-item-info">
+                  <div class="danger-zone-item-label">Supprimer l'espace</div>
+                  <div class="danger-zone-item-desc">Supprime définitivement l'espace, ses membres, ses équipes et ses compétitions. Action irréversible.</div>
+                </div>
+                <button class="btn-danger-sm" onclick="dangerAction('Supprimer définitivement l\'espace et toutes ses données ?', 'Espace supprimé')">Supprimer</button>
+              </div>
+
+            </div>
+
+          </div><!-- /tab-settings -->
 
         </div><!-- /admin-container -->
       </div><!-- /page-content -->
@@ -542,7 +1099,7 @@
   <script>
   // ── Tab switching ──────────────────────────────────────────────────────────
   function showTab(name, el) {
-    ['members', 'invitations', 'settings'].forEach(t => {
+    ['members', 'direct-add', 'invitations', 'settings'].forEach(t => {
       document.getElementById('tab-' + t).style.display = 'none';
     });
     document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
@@ -607,6 +1164,196 @@
 
   function cancelInvite(name) {
     showToast('Invitation de ' + name + ' annulée', '✓');
+  }
+
+  // ── Ajout direct : recherche dans l'annuaire ───────────────────────────────
+  function filterCandidates(query) {
+    var q = query.trim().toLowerCase();
+    var visible = 0;
+    document.querySelectorAll('#candidate-list .member-row').forEach(row => {
+      var match = row.dataset.search.includes(q);
+      row.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+    document.getElementById('candidate-query').textContent = query.trim();
+    document.getElementById('candidate-empty').style.display =
+      (visible === 0 && q !== '') ? '' : 'none';
+  }
+
+  // ── Ajout direct : coach existant ──────────────────────────────────────────
+  function addExisting(btn, name, initial, avatarClass) {
+    var row  = btn.closest('.member-row');
+    var role = row.querySelector('.member-profile-select').value;
+
+    row.classList.add('is-member');
+    row.querySelector('.member-profile-select').remove();
+    row.querySelector('.member-actions').outerHTML =
+      '<span class="member-badge member-badge--muted">Déjà membre</span>';
+
+    pushAdded(name, initial, avatarClass, role);
+    bumpMemberCount(1);
+
+    var notified = document.getElementById('notify-existing').checked;
+    showToast(name + ' a rejoint l\'espace' + (notified ? ' — email envoyé' : ''), '➕');
+  }
+
+  // ── Ajout direct : création de compte ──────────────────────────────────────
+  function createAndAdd() {
+    var pseudo = document.getElementById('new-coach-pseudo').value.trim();
+    var email  = document.getElementById('new-coach-email').value.trim();
+    var role   = document.getElementById('new-coach-role').value;
+
+    if (!pseudo || !email) {
+      showToast('Pseudo et email sont obligatoires', '⚠️');
+      return;
+    }
+
+    var palette = ['av--blue', 'av--green', 'av--orange', 'av--purple', 'av--red'];
+    pushAdded(pseudo, pseudo[0].toUpperCase(), palette[addedCount % palette.length], role, email);
+    bumpMemberCount(1);
+
+    document.getElementById('new-coach-pseudo').value = '';
+    document.getElementById('new-coach-email').value  = '';
+
+    var notified = document.getElementById('notify-new').checked;
+    showToast('Compte créé pour ' + pseudo + (notified ? ' — email de mot de passe envoyé' : ''), '✓');
+  }
+
+  // ── Ajout direct : journal de session ──────────────────────────────────────
+  var addedCount = 0;
+
+  function pushAdded(name, initial, avatarClass, role, email) {
+    var list = document.getElementById('added-list');
+    var row  = document.createElement('div');
+    row.className = 'member-row';
+    row.innerHTML =
+      '<div class="member-avatar ' + avatarClass + '">' + initial + '</div>' +
+      '<div class="member-info">' +
+        '<div class="member-name">' + name + '</div>' +
+        '<div class="member-email">' + (email || (role === 'admin' ? 'Ajouté comme administrateur' : 'Ajouté comme membre')) + '</div>' +
+      '</div>' +
+      '<span class="member-badge member-badge--new">Ajouté</span>' +
+      '<div class="member-actions">' +
+        '<button class="action-btn action-btn--danger">' +
+          '<span class="action-btn-icon">↩</span> Annuler' +
+        '</button>' +
+      '</div>';
+    row.querySelector('button').onclick = function () { undoAdd(row, name); };
+    list.prepend(row);
+
+    addedCount++;
+    document.getElementById('added-empty').style.display = 'none';
+  }
+
+  function undoAdd(row, name) {
+    row.remove();
+    addedCount--;
+    bumpMemberCount(-1);
+    if (addedCount === 0) document.getElementById('added-empty').style.display = '';
+    showToast(name + ' a été retiré de l\'espace', '↩');
+  }
+
+  function bumpMemberCount(delta) {
+    var el = document.getElementById('stat-members');
+    el.textContent = parseInt(el.textContent, 10) + delta;
+  }
+
+  // ── Paramètres : informations générales ────────────────────────────────────
+  function initialsOf(name) {
+    return name.trim().split(/\s+/).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+  }
+
+  function saveSpaceInfo() {
+    var name = document.getElementById('space-name').value.trim();
+    if (!name) {
+      showToast('Le nom de l\'espace est obligatoire', '⚠️');
+      return;
+    }
+    document.getElementById('banner-title').textContent = 'Administration — ' + name;
+    var logo = document.getElementById('space-logo');
+    if (!logo.classList.contains('logo-preview--image')) logo.textContent = initialsOf(name);
+    showToast('Informations de l\'espace enregistrées', '✓');
+  }
+
+  function previewLogo(input) {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var logo = document.getElementById('space-logo');
+      logo.classList.add('logo-preview--image');
+      logo.style.backgroundImage = 'url(' + e.target.result + ')';
+      logo.textContent = '';
+      showToast('Logo chargé — pensez à enregistrer', '🖼️');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeLogo() {
+    var logo = document.getElementById('space-logo');
+    logo.classList.remove('logo-preview--image');
+    logo.style.backgroundImage = '';
+    logo.textContent = initialsOf(document.getElementById('space-name').value || 'Espace');
+    document.getElementById('logo-file').value = '';
+    showToast('Logo retiré — les initiales reprennent la main', '✓');
+  }
+
+  // ── Paramètres : visibilité ────────────────────────────────────────────────
+  var VISIBILITY = {
+    'public': {
+      label:    'Public',
+      badge:    '🌐 Public',
+      badgeCls: 'admin-banner-badge--public',
+      icon:     '🌐',
+      noteCls:  'visibility-note--public',
+      note:     'Espace public : n\'importe quel coach peut trouver l\'espace dans l\'annuaire et le '
+              + 'rejoindre sans invitation. Le lien d\'invitation et l\'ajout direct restent utiles pour '
+              + 'faire entrer quelqu\'un vous-même, pas pour l\'autoriser.',
+      linkNote: '🌐 L\'espace est public : ce lien fait gagner du temps, mais n\'importe quel coach peut '
+              + 'rejoindre l\'espace sans lui.'
+    },
+    'private': {
+      label:    'Privé',
+      badge:    '🔒 Privé',
+      badgeCls: 'admin-banner-badge--private',
+      icon:     '🔒',
+      noteCls:  'visibility-note--private',
+      note:     'Espace privé : les seules portes d\'entrée sont le lien d\'invitation, une invitation '
+              + 'nominative et l\'ajout direct. Aucun coach ne peut trouver l\'espace ni demander à le rejoindre.',
+      linkNote: '🔒 L\'espace est privé : ce lien est l\'une des trois seules façons d\'y entrer, avec '
+              + 'l\'invitation nominative et l\'ajout direct.'
+    }
+  };
+
+  var currentVisibility = 'private';
+
+  function setVisibility(mode) {
+    var cfg = VISIBILITY[mode];
+    currentVisibility = mode;
+
+    document.getElementById('card-public').classList.toggle('selected', mode === 'public');
+    document.getElementById('card-private').classList.toggle('selected', mode === 'private');
+
+    var note = document.getElementById('visibility-note');
+    note.className = 'visibility-note ' + cfg.noteCls;
+    document.getElementById('visibility-note-icon').textContent = cfg.icon;
+    document.getElementById('visibility-note-text').textContent = cfg.note;
+
+    var badge = document.getElementById('visibility-badge');
+    badge.className = 'admin-banner-badge ' + cfg.badgeCls;
+    badge.textContent = cfg.badge;
+
+    document.getElementById('link-visibility-note').textContent = cfg.linkNote;
+  }
+
+  function saveVisibility() {
+    showToast('Visibilité enregistrée : espace ' + VISIBILITY[currentVisibility].label.toLowerCase(),
+              VISIBILITY[currentVisibility].icon);
+  }
+
+  // ── Paramètres : zone de danger ────────────────────────────────────────────
+  function dangerAction(question, done) {
+    if (confirm(question)) showToast(done, '⚠️');
   }
   </script>
 </body>
