@@ -39,13 +39,13 @@ async fn find_by_id_retourne_none_si_absent(pool: PgPool) {
 async fn find_by_id_retourne_espace_avec_coaches(pool: PgPool) {
     let repo = SpaceRepository::new(pool);
     let space = make_space("LigueOmega");
-    let space_id = space.id;
+    let space_id = *space.id();
 
     repo.save(&space).await.unwrap();
 
     let found = repo.find_by_id(&space_id).await.unwrap().unwrap();
-    assert_eq!(found.name.as_ref(), "LigueOmega");
-    assert!(found.coaches.is_empty());
+    assert_eq!(found.name().as_ref(), "LigueOmega");
+    assert!(found.coaches().is_empty());
 }
 
 #[sqlx::test]
@@ -54,8 +54,8 @@ async fn join_spaces_insere_plusieurs_membres_en_une_requete(pool: PgPool) {
     let space1 = make_space("AlphaTeam");
     let space2 = make_space("BetaTeam");
     let coach_id = CoachId::new();
-    let id1 = space1.id;
-    let id2 = space2.id;
+    let id1 = *space1.id();
+    let id2 = *space2.id();
 
     repo.save(&space1).await.unwrap();
     repo.save(&space2).await.unwrap();
@@ -74,7 +74,7 @@ async fn join_spaces_ignore_les_doublons(pool: PgPool) {
     let repo = SpaceRepository::new(pool);
     let space = make_space("GammaTeam");
     let coach_id = CoachId::new();
-    let id = space.id;
+    let id = *space.id();
 
     repo.save(&space).await.unwrap();
     repo.join_spaces(&[id], &coach_id).await.unwrap();
@@ -120,20 +120,20 @@ async fn semer_coach(pool: &PgPool, nom: &str, avatar: Option<&str>) -> CoachId 
 async fn un_espace_sans_membre_rend_un_agregat_a_coaches_vide(pool: PgPool) {
     let repo = SpaceRepository::new(pool);
     let space = make_space("LigueVide");
-    let space_id = space.id;
+    let space_id = *space.id();
     repo.save(&space).await.unwrap();
 
     let found = repo.find_by_id(&space_id).await.unwrap().unwrap();
 
     // `None` dirait « cet espace n'existe pas », ce qui est faux.
-    assert!(found.coaches.is_empty());
+    assert!(found.coaches().is_empty());
 }
 
 #[sqlx::test]
 async fn un_membre_sans_avatar_est_present_dans_l_agregat(pool: PgPool) {
     let repo = SpaceRepository::new(pool.clone());
     let space = make_space("LigueSansAvatar");
-    let space_id = space.id;
+    let space_id = *space.id();
     repo.save(&space).await.unwrap();
 
     let coach = semer_coach(&pool, "CoachNu", None).await;
@@ -144,17 +144,17 @@ async fn un_membre_sans_avatar_est_present_dans_l_agregat(pool: PgPool) {
     let found = repo.find_by_id(&space_id).await.unwrap().unwrap();
 
     // Le test qui aurait attrapé le défaut : il rendait zéro coach.
-    assert_eq!(found.coaches.len(), 1, "un membre sans avatar a disparu");
-    assert_eq!(found.coaches[0].id, coach);
-    assert!(found.coaches[0].icon.is_none());
-    assert_eq!(found.coaches[0].profile, SpaceProfile::SpaceAdmin);
+    assert_eq!(found.coaches().len(), 1, "un membre sans avatar a disparu");
+    assert_eq!(found.coaches()[0].id, coach);
+    assert!(found.coaches()[0].icon.is_none());
+    assert_eq!(found.coaches()[0].profile, SpaceProfile::SpaceAdmin);
 }
 
 #[sqlx::test]
 async fn trois_membres_dont_un_sans_avatar_en_rendent_trois(pool: PgPool) {
     let repo = SpaceRepository::new(pool.clone());
     let space = make_space("LigueMixte");
-    let space_id = space.id;
+    let space_id = *space.id();
     repo.save(&space).await.unwrap();
 
     let avatar = "https://res.cloudinary.com/demo/image/upload/coach.jpg";
@@ -171,6 +171,9 @@ async fn trois_membres_dont_un_sans_avatar_en_rendent_trois(pool: PgPool) {
 
     let found = repo.find_by_id(&space_id).await.unwrap().unwrap();
 
-    assert_eq!(found.coaches.len(), 3);
-    assert_eq!(found.coaches.iter().filter(|c| c.icon.is_none()).count(), 1);
+    assert_eq!(found.coaches().len(), 3);
+    assert_eq!(
+        found.coaches().iter().filter(|c| c.icon.is_none()).count(),
+        1
+    );
 }

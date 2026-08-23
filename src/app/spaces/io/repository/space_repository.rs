@@ -41,9 +41,9 @@ impl SpaceRepository {
 impl ISpaceRepository for SpaceRepository {
     async fn save(&self, space: &Space) -> Result<(), SpaceRepositoryError> {
         sqlx::query(include_str!("sql/space/insert_space.sql"))
-            .bind(space.id.to_string())
-            .bind(space.name.as_ref())
-            .bind(space.logo.as_ref())
+            .bind(space.id().to_string())
+            .bind(space.name().as_ref())
+            .bind(space.logo().as_ref())
             .execute(&self.pool)
             .await
             .map_err(|e| {

@@ -1,4 +1,5 @@
 pub mod coach;
+pub mod membership;
 pub mod space;
 pub mod space_repository_port;
 
