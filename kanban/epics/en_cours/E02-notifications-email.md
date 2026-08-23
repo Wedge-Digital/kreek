@@ -1,6 +1,6 @@
 # E02 — Notifications e-mail de compétition
 
-**État :** en cours — 11 cartes · 4 faites. Démarrée le 2026-08-22.
+**État :** en cours — 11 cartes · 5 faites. Démarrée le 2026-08-22.
 La 331 pose le modèle et la colonne ; la 332 donne le premier chemin
 d'édition — un organisateur peut régler les notifications d'une compétition
 déjà démarrée, ce qu'aucun écran ne permettait.
@@ -26,7 +26,7 @@ réglage qui fait réellement partir des e-mails — et retire les deux morts.
 | 332 | Widget de réglage + hôte admin | **faite** — premier chemin d'édition, mode auto-save |
 | 333 | Le même widget dans le magicien | **faite** — mode différé, `notify_by_email` retiré |
 | 334 | Retrait des trois réglages morts | **faite** — le volet `configuration/` est clos |
-| 335 | Journal d'envois — table et repository | `claim`/`confirm`, l'idempotence de R3 |
+| 335 | Journal d'envois — table et repository | **faite** — `claim`/`confirm`, l'idempotence de R3 |
 | 336 | Domaine de l'ordonnancement — `due_today()` | ce qui part aujourd'hui, pur et testable |
 | 337 | Résolution des destinataires | qui reçoit quoi, borné par l'espace (R7) |
 | 338 | Les quatre gabarits d'e-mail | les maquettes validées, en Askama |
