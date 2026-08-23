@@ -495,6 +495,176 @@
       overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
     }
 
+    /* ── Chrome mobile ───────────────────────────────────────────────────
+       Header, tiroir d'espaces et tabbar repris tels quels de
+       app-layout-mobile.html. Les deux chromes coexistent dans la page et
+       c'est le CSS qui bascule à 768 px — même principe que app-layout.html
+       côté application, où le markup desktop et mobile vivent ensemble.   */
+    .mobile-header, .mobile-tabbar { display: none; }
+
+    .mobile-header {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 500;
+      background: var(--dark-0);
+      border-bottom: none;
+      align-items: center;
+      padding: 0 var(--p1);
+      height: 52px;
+    }
+    .mobile-header-space {
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer;
+      flex: 1;
+    }
+    .mobile-header-space-logo {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 11px;
+      color: var(--white); flex-shrink: 0;
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+    }
+    .mobile-header-space-logo--image { background-size: cover; background-position: center; }
+    .mobile-header-space-name {
+      font-family: var(--font-title); font-size: var(--text-tiny); font-weight: 700;
+      color: var(--white);
+    }
+    .mobile-header-space-chevron {
+      font-size: 10px; color: rgba(255,255,255,0.5);
+      margin-left: 2px;
+    }
+    .mobile-header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .mobile-header-btn {
+      width: 36px; height: 36px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      background: none; border: none; cursor: pointer;
+      color: rgba(255,255,255,0.7);
+      transition: background 0.12s;
+    }
+    .mobile-header-btn:hover { background: rgba(255,255,255,0.1); }
+    .mobile-header-btn--notif { position: relative; }
+    .mobile-header-notif-dot {
+      position: absolute; top: 6px; right: 6px;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--red);
+      border: 2px solid var(--white);
+    }
+
+    .space-drawer-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 600;
+      display: none;
+    }
+    .space-drawer-overlay.open { display: block; }
+
+    .space-drawer {
+      position: fixed; top: 0; left: 0; bottom: 0;
+      width: 280px;
+      background: var(--white);
+      z-index: 700;
+      display: flex; flex-direction: column;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.1);
+    }
+    .space-drawer.open { transform: translateX(0); }
+    .space-drawer-header {
+      padding: var(--p2);
+      border-bottom: 1px solid var(--dark-5);
+    }
+    .space-drawer-title {
+      font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
+      color: var(--dark-1);
+    }
+    .space-drawer-sub { font-size: 11px; color: var(--dark-3); margin-top: 2px; }
+    .space-drawer-list {
+      flex: 1; overflow-y: auto; padding: var(--p1);
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .space-drawer-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .space-drawer-item:hover { background: var(--dark-7); }
+    .space-drawer-item.active {
+      background: rgba(0,48,73,0.06);
+      border: 1px solid rgba(0,48,73,0.1);
+    }
+    .space-drawer-item-logo {
+      width: 36px; height: 36px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 12px;
+      color: var(--white); flex-shrink: 0;
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+    }
+    .space-drawer-item-info { flex: 1; }
+    .space-drawer-item-name {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
+    }
+    .space-drawer-item-meta { font-size: 11px; color: var(--dark-3); }
+    .space-drawer-item-check { color: var(--green); font-size: 16px; flex-shrink: 0; }
+    .space-drawer-footer {
+      padding: var(--p1);
+      border-top: 1px solid var(--dark-5);
+    }
+    .space-drawer-add {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: var(--text-tiny); font-weight: 600;
+      color: var(--dark-3);
+      border: 1px dashed var(--dark-5);
+      cursor: pointer;
+      transition: all 0.12s;
+      background: none;
+      width: 100%;
+    }
+    .space-drawer-add:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    .mobile-tabbar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      z-index: 500;
+      background: var(--dark-0);
+      border-top: none;
+      padding: 4px 0;
+      padding-bottom: max(4px, env(safe-area-inset-bottom));
+    }
+    .mobile-tab {
+      flex: 1;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      padding: 6px 0;
+      cursor: pointer;
+      transition: color 0.12s;
+      text-decoration: none;
+      background: none; border: none;
+    }
+    .mobile-tab-icon { font-size: 20px; }
+    .mobile-tab-label {
+      font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.45);
+    }
+    .mobile-tab:hover .mobile-tab-label { color: rgba(255,255,255,0.7); }
+    .mobile-tab.active .mobile-tab-label { color: var(--white); }
+
+    /* La bascule elle-même : sous 768 px, le chrome desktop s'efface et le
+       chrome mobile prend sa place. */
+    @media (max-width: 768px) {
+      .sidebar, .menu-bar { display: none; }
+      .app-layout { display: block; height: auto; overflow: visible; }
+      .main-area { width: 100%; }
+      .page-content {
+        padding: var(--p1);
+        padding-top: calc(52px + var(--p1));
+        padding-bottom: 80px;
+        height: auto; overflow: visible;
+      }
+      .mobile-header { display: flex; }
+      .mobile-tabbar { display: flex; }
+    }
+
     @media (max-width: 768px) {
       .visibility-grid { grid-template-columns: 1fr; }
       .form-row { flex-direction: column; gap: 8px; }
@@ -504,6 +674,57 @@
   </style>
 </head>
 <body>
+  <!-- ══ Chrome mobile — visible sous 768 px ═══════════════════════════ -->
+  <div class="mobile-header">
+    <div class="mobile-header-space" onclick="toggleDrawer()">
+      <div class="mobile-header-space-logo" id="mobile-space-logo">TC</div>
+      <span class="mobile-header-space-name" id="mobile-space-name">Tribu Celtique</span>
+      <span class="mobile-header-space-chevron">▼</span>
+    </div>
+    <div class="mobile-header-actions">
+      <button class="mobile-header-btn mobile-header-btn--notif">
+        🔔
+        <span class="mobile-header-notif-dot"></span>
+      </button>
+      <button class="mobile-header-btn">👤</button>
+    </div>
+  </div>
+
+  <div class="space-drawer-overlay" id="drawer-overlay" onclick="toggleDrawer()"></div>
+  <div class="space-drawer" id="space-drawer">
+    <div class="space-drawer-header">
+      <div class="space-drawer-title">Mes espaces</div>
+      <div class="space-drawer-sub">Sélectionnez un espace</div>
+    </div>
+    <div class="space-drawer-list">
+      <div class="space-drawer-item active" onclick="toggleDrawer()">
+        <div class="space-drawer-item-logo">TC</div>
+        <div class="space-drawer-item-info">
+          <div class="space-drawer-item-name">Tribu Celtique</div>
+          <div class="space-drawer-item-meta">8 membres · 3 compétitions</div>
+        </div>
+        <span class="space-drawer-item-check">✓</span>
+      </div>
+      <div class="space-drawer-item" onclick="toggleDrawer()">
+        <div class="space-drawer-item-logo">KC</div>
+        <div class="space-drawer-item-info">
+          <div class="space-drawer-item-name">Korrigans Cup</div>
+          <div class="space-drawer-item-meta">24 membres · 1 compétition</div>
+        </div>
+      </div>
+      <div class="space-drawer-item" onclick="toggleDrawer()">
+        <div class="space-drawer-item-logo">LM</div>
+        <div class="space-drawer-item-info">
+          <div class="space-drawer-item-name">Ligue de Morlaix</div>
+          <div class="space-drawer-item-meta">6 membres · 2 compétitions</div>
+        </div>
+      </div>
+    </div>
+    <div class="space-drawer-footer">
+      <button class="space-drawer-add">+ Rejoindre un espace</button>
+    </div>
+  </div>
+
   <div class="app-layout">
     <div class="sidebar">
       <div class="sidebar-top"></div>
@@ -1090,6 +1311,29 @@
     </div><!-- /main-area -->
   </div><!-- /app-layout -->
 
+  <div class="mobile-tabbar">
+    <a class="mobile-tab" href="app-home.html">
+      <span class="mobile-tab-icon">🏠</span>
+      <span class="mobile-tab-label">Accueil</span>
+    </a>
+    <a class="mobile-tab" href="app-competition-list.html">
+      <span class="mobile-tab-icon">🏆</span>
+      <span class="mobile-tab-label">Compétitions</span>
+    </a>
+    <a class="mobile-tab" href="#">
+      <span class="mobile-tab-icon">📋</span>
+      <span class="mobile-tab-label">Match</span>
+    </a>
+    <a class="mobile-tab" href="app-my-teams.html">
+      <span class="mobile-tab-icon">🛡️</span>
+      <span class="mobile-tab-label">Équipes</span>
+    </a>
+    <a class="mobile-tab active" href="#">
+      <span class="mobile-tab-icon">🛠️</span>
+      <span class="mobile-tab-label">Admin</span>
+    </a>
+  </div>
+
   <!-- Toast notification -->
   <div class="toast" id="toast">
     <span id="toast-icon">✓</span>
@@ -1105,6 +1349,12 @@
     document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
     document.getElementById('tab-' + name).style.display = '';
     el.classList.add('active');
+  }
+
+  // ── Tiroir des espaces (mobile) ────────────────────────────────────────────
+  function toggleDrawer() {
+    document.getElementById('space-drawer').classList.toggle('open');
+    document.getElementById('drawer-overlay').classList.toggle('open');
   }
 
   // ── Toast ──────────────────────────────────────────────────────────────────
@@ -1270,8 +1520,13 @@
       return;
     }
     document.getElementById('banner-title').textContent = 'Administration — ' + name;
+    document.getElementById('mobile-space-name').textContent = name;
     var logo = document.getElementById('space-logo');
-    if (!logo.classList.contains('logo-preview--image')) logo.textContent = initialsOf(name);
+    var small = document.getElementById('mobile-space-logo');
+    if (!logo.classList.contains('logo-preview--image')) {
+      logo.textContent = initialsOf(name);
+      small.textContent = initialsOf(name);
+    }
     showToast('Informations de l\'espace enregistrées', '✓');
   }
 
@@ -1284,6 +1539,10 @@
       logo.classList.add('logo-preview--image');
       logo.style.backgroundImage = 'url(' + e.target.result + ')';
       logo.textContent = '';
+      var small = document.getElementById('mobile-space-logo');
+      small.classList.add('mobile-header-space-logo--image');
+      small.style.backgroundImage = 'url(' + e.target.result + ')';
+      small.textContent = '';
       showToast('Logo chargé — pensez à enregistrer', '🖼️');
     };
     reader.readAsDataURL(file);
@@ -1294,6 +1553,10 @@
     logo.classList.remove('logo-preview--image');
     logo.style.backgroundImage = '';
     logo.textContent = initialsOf(document.getElementById('space-name').value || 'Espace');
+    var small = document.getElementById('mobile-space-logo');
+    small.classList.remove('mobile-header-space-logo--image');
+    small.style.backgroundImage = '';
+    small.textContent = logo.textContent;
     document.getElementById('logo-file').value = '';
     showToast('Logo retiré — les initiales reprennent la main', '✓');
   }
