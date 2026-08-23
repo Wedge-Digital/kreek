@@ -6,13 +6,22 @@ use crate::app::shared_kernel::identity::space_name::SpaceName;
 use crate::app::spaces::domain::coach::Coach;
 use crate::app::spaces::domain::space::Space;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::{
-    ISpaceRepository, SpaceRepositoryError, SpaceSummary,
+    ISpaceRepository, SpaceMemberRow, SpaceRepositoryError, SpaceSummary,
 };
 use async_trait::async_trait;
 use sqlx::PgPool;
 
 fn db_err(e: impl std::fmt::Display) -> SpaceRepositoryError {
     SpaceRepositoryError::Database(e.to_string())
+}
+
+#[derive(sqlx::FromRow)]
+struct MemberRow {
+    coach_id: String,
+    coach_name: String,
+    email: String,
+    icon: Option<String>,
+    profile: String,
 }
 
 #[derive(sqlx::FromRow)]
@@ -225,5 +234,58 @@ impl ISpaceRepository for SpaceRepository {
         }
 
         Ok(Some(Space::new(space_id, space_name, logo, coaches)))
+    }
+
+    async fn list_members_with_profile(
+        &self,
+        space_id: &SpaceId,
+    ) -> Result<Vec<SpaceMemberRow>, SpaceRepositoryError> {
+        let rows =
+            sqlx::query_as::<_, MemberRow>(include_str!("sql/space/list_members_with_profile.sql"))
+                .bind(space_id.to_string())
+                .fetch_all(&self.pool)
+                .await
+                .map_err(db_err)?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| SpaceMemberRow {
+                coach_id: r.coach_id,
+                coach_name: r.coach_name,
+                email: r.email,
+                icon: r.icon,
+                profile: r.profile,
+            })
+            .collect())
+    }
+
+    async fn update_member_profile(
+        &self,
+        space_id: &SpaceId,
+        coach_id: &CoachId,
+        profile: &SpaceProfile,
+    ) -> Result<(), SpaceRepositoryError> {
+        sqlx::query(include_str!("sql/space/update_member_profile.sql"))
+            .bind(space_id.to_string())
+            .bind(coach_id.to_string())
+            .bind(profile.as_str())
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
+        Ok(())
+    }
+
+    async fn delete_member(
+        &self,
+        space_id: &SpaceId,
+        coach_id: &CoachId,
+    ) -> Result<(), SpaceRepositoryError> {
+        sqlx::query(include_str!("sql/space/delete_member.sql"))
+            .bind(space_id.to_string())
+            .bind(coach_id.to_string())
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
+        Ok(())
     }
 }
