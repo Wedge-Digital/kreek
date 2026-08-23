@@ -392,6 +392,7 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
             )),
             Arc::new(crate::infrastructure::competitions::space_member_adapter::SpaceMemberAdapter::new(
                 Arc::new(crate::app::spaces::io::repository::space_repository::SpaceRepository::new(pool.clone())),
+                Arc::new(crate::app::spaces::io::repository::user_cache_repository::SpaceUserCacheRepository::new(pool.clone())),
             )),
             Arc::new(crate::infrastructure::competitions::tiebreak_catalog_adapter::TiebreakCatalogAdapter::new()),
             Arc::new(crate::infrastructure::competitions::match_report_status_adapter::MatchReportStatusAdapter::new(

@@ -38,7 +38,7 @@ impl MatchDayType {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Pairing {
     pub id: PairingId,
     pub home_team_id: TeamId,

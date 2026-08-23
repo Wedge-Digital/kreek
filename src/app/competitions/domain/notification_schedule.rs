@@ -24,7 +24,7 @@
 
 use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
 use crate::app::competitions::domain::competition_notifications::CompetitionNotifications;
-use crate::app::competitions::domain::match_day::{MatchDay, MatchDayName, MatchDayType};
+use crate::app::competitions::domain::match_day::{MatchDay, MatchDayName, MatchDayType, Pairing};
 use crate::app::shared_kernel::bloodbowl::date_string::DateString;
 use crate::app::shared_kernel::bloodbowl::ids::MatchId;
 use time::macros::format_description;
@@ -59,6 +59,12 @@ pub enum DueNotification {
 /// `day_type` voyage parce que le gabarit en dépend : une journée à date fixe
 /// n'a pas de ligne « clôture ». `MatchDayType::Rest` ne peut pas y apparaître,
 /// `due_today()` l'ignorant.
+///
+/// `pairings` voyage aussi, et ce n'est pas dans la spec d'origine : la
+/// résolution des destinataires (carte 337) doit croiser les appariements de la
+/// journée avec les équipes du coach, et rien ne les lui apportait. Ils sont
+/// **déjà chargés** ici — `MatchDay` les porte — donc les recopier coûte moins
+/// qu'un port de lecture supplémentaire pour une donnée déjà en main.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RoundRef {
     pub round_id: MatchId,
@@ -66,6 +72,7 @@ pub struct RoundRef {
     pub date_start: DateString,
     pub date_end: Option<DateString>,
     pub day_type: MatchDayType,
+    pub pairings: Vec<Pairing>,
 }
 
 /// Ne retourne pas de `Result` : une date illisible ne peut pas venir du
@@ -161,6 +168,7 @@ fn reference(j: &MatchDay, debut: &DateString) -> RoundRef {
         date_start: debut.clone(),
         date_end: date_utile(j.date_end.as_ref()).cloned(),
         day_type: j.day_type.clone(),
+        pairings: j.pairings.clone(),
     }
 }
 

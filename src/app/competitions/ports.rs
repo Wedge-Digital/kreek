@@ -42,8 +42,31 @@ pub trait ICompetitionReferencePort: Send + Sync {
 
 // ── ACL vers le BC `spaces` (profil membre, pour l'autorisation admin) ─────────
 
+/// Un membre de l'espace, tel que la résolution des destinataires a besoin de le
+/// connaître. DTO de lecture : primitives assumées, aucun invariant à protéger.
+///
+/// **C'est le seul chemin vers une adresse e-mail.** Ni `invited_coaches` ni
+/// `find_enrolled_teams` n'en portent : l'intersection avec cet ensemble n'est
+/// donc pas un contrôle ajouté, c'est la seule façon d'obtenir de quoi écrire à
+/// quelqu'un. R7 en découle sans qu'aucune ligne ne la vérifie.
+#[derive(Clone, Debug)]
+pub struct SpaceMemberDto {
+    pub coach_id: String,
+    pub coach_name: String,
+    pub email: String,
+}
+
 #[async_trait]
 pub trait ICompetitionSpaceMemberPort: Send + Sync {
+    /// Les membres de l'espace, avec leur adresse.
+    ///
+    /// Ajoutée à ce port plutôt qu'à un second vers le même BC : c'est bien
+    /// d'appartenance qu'il s'agit, et le port en porte déjà le nom.
+    async fn list_space_members(
+        &self,
+        space_id: &crate::app::shared_kernel::identity::ids::SpaceId,
+    ) -> Vec<SpaceMemberDto>;
+
     async fn find_member_profile(
         &self,
         coach_id: &crate::app::shared_kernel::identity::ids::CoachId,
