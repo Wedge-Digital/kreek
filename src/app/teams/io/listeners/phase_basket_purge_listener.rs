@@ -114,15 +114,6 @@ mod tests {
 
     // ── Purge de bout en bout ────────────────────────────────────────────
 
-    async fn test_pool() -> Option<sqlx::PgPool> {
-        let url = std::env::var("DATABASE_URL").ok()?;
-        sqlx::postgres::PgPoolOptions::new()
-            .max_connections(2)
-            .connect(&url)
-            .await
-            .ok()
-    }
-
     fn panier(team_id: &str, phase: GamePhase) -> PhaseBasketState {
         PhaseBasketState {
             team_id: team_id.to_string(),
@@ -136,11 +127,13 @@ mod tests {
     /// L'effet utile de la carte : un panier ne survit pas à un tour de
     /// séquence. Le coach qui revient trouve une page vierge, jamais des lignes
     /// fantômes de l'après-match précédent.
-    #[tokio::test]
-    async fn une_entree_en_ready_to_play_purge_les_deux_paniers() {
-        let Some(pool) = test_pool().await else {
-            return;
-        };
+    /// `#[sqlx::test]` plutôt qu'un pool monté à la main sur `DATABASE_URL`.
+    /// L'ancienne forme rendait `None` quand la variable manquait, et le test
+    /// **passait alors sans rien vérifier** — un vert qui ne prouve rien est
+    /// pire qu'un rouge. Elle partageait par ailleurs la base des autres tests
+    /// avec deux connexions pour le test *et* le listener.
+    #[sqlx::test]
+    async fn une_entree_en_ready_to_play_purge_les_deux_paniers(pool: sqlx::PgPool) {
         let repo: Arc<dyn IPhaseBasketRepository> = Arc::new(
             crate::app::teams::io::repository::phase_basket_repository::PhaseBasketRepository::new(
                 pool.clone(),
@@ -162,12 +155,25 @@ mod tests {
 
         // Le listener travaille dans sa propre tâche : on attend qu'il ait fini
         // plutôt que de supposer un ordonnancement.
-        for _ in 0..40 {
+        //
+        // Et on attend **les deux** paniers, jamais le premier seul. Le
+        // listener les supprime en deux `await` successifs ; observer le
+        // premier faisait sortir de cette boucle **entre les deux
+        // suppressions**, et l'assertion sur le second tombait sur un panier
+        // qui allait disparaître un instant plus tard. Environ un échec sur dix
+        // en suite complète, aucun en isolation — la charge n'était pas la
+        // cause mais l'amplificateur.
+        for _ in 0..80 {
             let reste = repo
                 .load(&team_id, &GamePhase::Recruitment)
                 .await
                 .unwrap()
-                .is_some();
+                .is_some()
+                || repo
+                    .load(&team_id, &GamePhase::Dismissals)
+                    .await
+                    .unwrap()
+                    .is_some();
             if !reste {
                 break;
             }
