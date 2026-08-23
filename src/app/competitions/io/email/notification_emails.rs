@@ -87,7 +87,10 @@ pub struct RegistrationDeadlineEmail {
     pub app_url: String,
     pub coach_name: String,
     pub admin_name: String,
-    pub space_name: String,
+    // Pas de `space_name` : la maquette de la relance ne nomme pas l'espace,
+    // contrairement à celle de l'ouverture. La phase 4 de la spec le listait —
+    // la maquette, validée en phase 1, fait foi. Un champ qu'aucun gabarit ne
+    // lit se remplit sans fin de valeurs que personne ne voit.
     pub competition_name: String,
     pub season_name: String,
     pub competition_url: String,
@@ -237,6 +240,96 @@ mod tests {
         manquantes
     }
 
+    /// **Le test qui manquait, et dont l'absence a coûté cher.**
+    ///
+    /// Trois variables partaient vides — `admin_name`, `space_name`,
+    /// `remaining_slots` — parce que le use case les câblait en `String::new()`
+    /// en attendant de les remplir. L'e-mail d'ouverture disait
+    /// « **** t'invite à participer », et il est parti comme ça.
+    ///
+    /// Les autres tests vérifiaient qu'une donnée **présente** s'affiche ;
+    /// aucun ne vérifiait qu'aucune donnée ne manque. C'est le pendant, côté
+    /// données, du contrôle des classes orphelines.
+    #[test]
+    fn aucune_variable_ne_se_rend_vide() {
+        // Chaque champ porte une valeur reconnaissable : si l'une n'apparaît
+        // pas dans le rendu, c'est que le gabarit ne la lit pas — ou qu'un
+        // appelant la laisserait vide sans qu'on le voie.
+        let ouverture = RegistrationOpenEmail {
+            app_url: "https://kreek.example".into(),
+            coach_name: "VAL-coach".into(),
+            admin_name: "VAL-admin".into(),
+            space_name: "VAL-espace".into(),
+            competition_name: "VAL-competition".into(),
+            season_name: "VAL-saison".into(),
+            competition_url: "https://kreek.example/VAL-url".into(),
+            registration_deadline: "VAL-deadline".into(),
+        }
+        .render()
+        .unwrap();
+        for attendu in [
+            "VAL-coach",
+            "VAL-admin",
+            "VAL-espace",
+            "VAL-competition",
+            "VAL-url",
+        ] {
+            assert!(ouverture.contains(attendu), "ouverture : {attendu} absent");
+        }
+
+        let limite = RegistrationDeadlineEmail {
+            app_url: "https://kreek.example".into(),
+            coach_name: "VAL-coach".into(),
+            admin_name: "VAL-admin".into(),
+            competition_name: "VAL-competition".into(),
+            season_name: "VAL-saison".into(),
+            competition_url: "https://kreek.example/VAL-url".into(),
+            registration_deadline: "VAL-deadline".into(),
+            remaining_slots: "VAL-places".into(),
+        }
+        .render()
+        .unwrap();
+        for attendu in [
+            "VAL-coach",
+            "VAL-admin",
+            "VAL-competition",
+            "VAL-deadline",
+            "VAL-places",
+        ] {
+            assert!(limite.contains(attendu), "date limite : {attendu} absent");
+        }
+
+        let veille = RoundEveEmail {
+            app_url: "https://kreek.example".into(),
+            coach_name: "VAL-coach".into(),
+            competition_name: "VAL-competition".into(),
+            competition_url: "https://kreek.example/VAL-url".into(),
+            round_name: "VAL-journee".into(),
+            date_start: "VAL-debut".into(),
+            date_end: Some("VAL-fin".into()),
+            participation: ParticipationVm::Playing(vec![FixtureVm {
+                team_name: "VAL-mon-equipe".into(),
+                home_team: "VAL-domicile".into(),
+                away_team: "VAL-exterieur".into(),
+            }]),
+        }
+        .render()
+        .unwrap();
+        for attendu in [
+            "VAL-coach",
+            "VAL-competition",
+            "VAL-url",
+            "VAL-journee",
+            "VAL-debut",
+            "VAL-fin",
+            "VAL-mon-equipe",
+            "VAL-domicile",
+            "VAL-exterieur",
+        ] {
+            assert!(veille.contains(attendu), "veille : {attendu} absent");
+        }
+    }
+
     #[test]
     fn aucune_classe_utilisee_n_a_perdu_sa_regle() {
         let rendus = [
@@ -272,7 +365,6 @@ mod tests {
                 app_url: "https://kreek.example".into(),
                 coach_name: "Alice".into(),
                 admin_name: "Bob".into(),
-                space_name: "Espace".into(),
                 competition_name: "Ligue de Fer".into(),
                 season_name: "Saison 1".into(),
                 competition_url: "https://kreek.example/x".into(),

@@ -46,7 +46,9 @@ fn db_err(e: impl std::fmt::Display) -> DeliveryError {
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct SeasonCandidate {
     pub season_id: String,
+    pub competition_id: String,
     pub space_id: String,
+    pub space_name: String,
     pub competition_name: String,
     pub season_name: String,
 }

@@ -13,8 +13,10 @@
 //! signature pour distinguer un listener intra-BC — qui pourrait partager une
 //! transaction — d'un listener cross-BC, qui ne le peut pas.
 
+use crate::app::competitions::domain::competition_repository_port::ICompetitionRepository;
 use crate::app::competitions::domain::domain_event::CompetitionsDomainEvent;
 use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
+use crate::app::competitions::io::repository::competition_repository::CompetitionRepository;
 use crate::app::competitions::io::repository::notification_delivery_repository::NotificationDeliveryRepository;
 use crate::app::competitions::io::repository::season_repository::SeasonRepository;
 use crate::app::competitions::ports::{ICompetitionSpaceMemberPort, ITeamInfoPort};
@@ -23,7 +25,7 @@ use crate::app::competitions::use_cases::send_registration_open_use_case::{
     self, SendRegistrationOpenCommand,
 };
 use crate::app::shared_kernel::bloodbowl::date_string::DateString;
-use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::common::services::email::IEmailService;
 use crate::common::services::event_bus::event_bus::EventBus;
 use crate::common::services::event_bus::supervision::spawn_listener;
@@ -83,12 +85,20 @@ async fn handle_event(event: CompetitionsDomainEvent, deps: &RegistrationOpenDep
         tracing::warn!(competition = %competition_id, "aucune saison à annoncer");
         return;
     };
-    annoncer(&seasons, &season_id, &space_id.to_string(), deps).await;
+    annoncer(
+        &seasons,
+        &season_id,
+        &competition_id,
+        &space_id.to_string(),
+        deps,
+    )
+    .await;
 }
 
 async fn annoncer(
     seasons: &SeasonRepository,
     season_id: &SeasonId,
+    competition_id: &CompetitionId,
     space_id: &str,
     deps: &RegistrationOpenDeps,
 ) {
@@ -114,11 +124,36 @@ async fn annoncer(
         email: deps.email.as_ref(),
         app_url: &deps.app_url,
     };
+    // `find_base_info` de `seasons` rend le nom de la **saison** ; celui de la
+    // compétition vient du dépôt des compétitions, qui porte aussi ses
+    // administrateurs. Les deux ont été confondus entre la carte 340 et sa
+    // correction, et l'e-mail annonçait le nom de la saison comme celui de la
+    // compétition.
+    let competitions = CompetitionRepository::new(deps.pool.clone());
+    let comp = competitions
+        .find_base_info(competition_id)
+        .await
+        .ok()
+        .flatten();
+    let espace = deps
+        .members
+        .find_all_spaces()
+        .await
+        .into_iter()
+        .find(|s| s.id.to_string() == space_id)
+        .map(|s| s.name.to_string())
+        .unwrap_or_default();
+
     let cmd = SendRegistrationOpenCommand {
         season_id: season_id.to_string(),
         space_id: space_id.to_string(),
-        competition_name: base.as_ref().map(|b| b.name.clone()).unwrap_or_default(),
+        competition_id: competition_id.to_string(),
+        competition_name: comp.as_ref().map(|c| c.name.clone()).unwrap_or_default(),
         season_name: base.map(|b| b.name).unwrap_or_default(),
+        space_name: espace,
+        admin_name: comp
+            .and_then(|c| c.admin_names.first().cloned())
+            .unwrap_or_default(),
         opened_on: DateString::try_new(&aujourdhui()).unwrap_or_default(),
     };
     send_registration_open_use_case::execute(cmd, invitations.as_ref(), &dispatch_deps).await;

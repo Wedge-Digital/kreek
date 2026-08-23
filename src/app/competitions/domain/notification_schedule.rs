@@ -199,7 +199,19 @@ fn reference(j: &MatchDay, debut: &DateString) -> RoundRef {
         round_id: j.id.clone(),
         round_name: j.name.clone(),
         date_start: debut.clone(),
-        date_end: date_utile(j.date_end.as_ref()).cloned(),
+        // `date_end` **seulement** pour une fenêtre temporelle, et c'est le
+        // `day_type` qui commande — pas la présence d'une date en base.
+        //
+        // Le magicien persiste `date_end = date_start` pour une journée à date
+        // fixe. S'y fier ferait afficher une ligne « Clôture » sur une journée
+        // qui n'a rien à clore, et le libellé « Ouverture » là où la maquette
+        // dit « Se tient le ». C'est la même règle que pour `RoundClosing` :
+        // une décision d'affichage ne se déduit pas d'un artefact de
+        // persistance.
+        date_end: match j.day_type {
+            MatchDayType::TimeFrame => date_utile(j.date_end.as_ref()).cloned(),
+            _ => None,
+        },
         day_type: j.day_type.clone(),
         pairings: j.pairings.clone(),
     }
@@ -398,6 +410,46 @@ mod tests {
         let inv = invitations(Some(""));
 
         assert!(du(&[], Some(&inv)).is_empty());
+    }
+
+    /// Le magicien persiste `date_end = date_start` sur une journée à date fixe.
+    /// Si l'e-mail s'y fiait, il annoncerait une clôture à une journée qui n'a
+    /// rien à clore — constaté en lisant un envoi réel, pas en relisant le code.
+    #[test]
+    fn une_date_fixe_ne_porte_pas_de_date_de_fin_meme_si_la_base_en_a_une() {
+        let j = journee(
+            MatchDayType::FixedDate,
+            Some("2026-09-11"),
+            Some("2026-09-11"),
+        );
+
+        let dues = du(&[j], None);
+
+        match dues.as_slice() {
+            [DueNotification::RoundEve { round }] => assert_eq!(round.date_end, None),
+            autre => panic!("attendu une veille, reçu {autre:?}"),
+        }
+    }
+
+    #[test]
+    fn une_fenetre_temporelle_garde_sa_date_de_fin() {
+        let j = journee(
+            MatchDayType::TimeFrame,
+            Some("2026-09-11"),
+            Some("2026-09-18"),
+        );
+
+        let dues = du(&[j], None);
+
+        match dues.as_slice() {
+            [DueNotification::RoundEve { round }] => {
+                assert_eq!(
+                    round.date_end.as_ref().map(|d| d.as_ref()),
+                    Some("2026-09-18")
+                )
+            }
+            autre => panic!("attendu une veille, reçu {autre:?}"),
+        }
     }
 
     // ── Les fenêtres du cron ─────────────────────────────────────────────────

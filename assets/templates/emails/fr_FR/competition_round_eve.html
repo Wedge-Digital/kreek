@@ -192,6 +192,10 @@
       <div class="info-card">
         {% for f in fixtures %}
         <div class="match-row">
+          {# Le nom de **son** équipe : un coach qui en aligne deux voit deux
+             lignes, et sans lui rien ne dit laquelle est la sienne dans
+             chacune. #}
+          <span class="info-label">{{ f.team_name }}</span>
           <span class="match-teams">{{ f.home_team }}<span class="match-vs">contre</span>{{ f.away_team }}</span>
         </div>
         {% endfor %}

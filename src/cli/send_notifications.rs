@@ -60,6 +60,7 @@ pub async fn execute(
     // construire pour les jeter allongerait le démarrage d'une tâche censée
     // être brève.
     let seasons = SeasonRepository::new(pool.clone());
+    let competitions = crate::app::competitions::io::repository::competition_repository::CompetitionRepository::new(pool.clone());
     let match_days = MatchDayRepository::new(pool.clone());
     let journal = NotificationDeliveryRepository::new(pool.clone());
     // Le dépôt d'équipes exige un bus d'évènements ; le cron n'en émet aucun, et
@@ -81,6 +82,7 @@ pub async fn execute(
 
     let deps = CronDeps {
         seasons: &seasons,
+        competitions: &competitions,
         match_days: &match_days,
         journal: &journal,
         dispatch: DispatchDeps {

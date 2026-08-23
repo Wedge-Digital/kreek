@@ -296,7 +296,6 @@ fn date_limite(l: &DispatchLabels, app_url: &str, d: &Recipient) -> (String, Str
             app_url: app_url.to_string(),
             coach_name: d.coach_name.clone(),
             admin_name: l.admin_name.clone(),
-            space_name: l.space_name.clone(),
             competition_name: l.competition_name.clone(),
             season_name: l.season_name.clone(),
             competition_url: l.competition_url.clone(),

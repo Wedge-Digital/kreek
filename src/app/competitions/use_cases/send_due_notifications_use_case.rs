@@ -26,7 +26,7 @@ use crate::app::competitions::use_cases::notification_dispatch::{
 };
 use crate::app::competitions::use_cases::notification_recipients::SeasonContext;
 use crate::app::shared_kernel::bloodbowl::date_string::DateString;
-use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use std::collections::HashMap;
 
@@ -52,6 +52,9 @@ pub struct SendDueNotificationsReport {
 
 pub struct CronDeps<'a> {
     pub seasons: &'a dyn ISeasonRepository,
+    /// Pour le nom de l'administrateur, que les deux e-mails d'inscription
+    /// nomment en toutes lettres — « **X** t'invite à participer ».
+    pub competitions: &'a dyn crate::app::competitions::domain::competition_repository_port::ICompetitionRepository,
     pub match_days:
         &'a dyn crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository,
     pub journal: &'a NotificationDeliveryRepository,
@@ -157,8 +160,9 @@ async fn traiter_saison(
         season_id: &c.season_id,
         invitations: invitations.as_ref(),
     };
+    let etiquettes = etiquettes(c, &season, deps).await;
     for due in dues {
-        let bilan = expedier(&due, c, &season, cmd, deps).await;
+        let bilan = expedier(&due, &season, cmd, deps, &etiquettes).await;
         rapport.sent += bilan.sent;
         rapport.skipped_already_sent += bilan.skipped_already_sent;
         rapport.failed += bilan.failed;
@@ -167,10 +171,10 @@ async fn traiter_saison(
 
 async fn expedier(
     due: &DueNotification,
-    c: &SeasonCandidate,
     season: &SeasonContext<'_>,
     cmd: &SendDueNotificationsCommand,
     deps: &CronDeps<'_>,
+    etiquettes: &DispatchLabels,
 ) -> DispatchOutcome {
     let (notification, round) = match due {
         DueNotification::RoundEve { round } => (NotificationType::RoundEve, Some(round)),
@@ -184,23 +188,61 @@ async fn expedier(
         season,
         round,
         &cmd.today,
-        &labels(c, season, deps.dispatch.app_url),
+        etiquettes,
         &deps.dispatch,
     )
     .await
 }
 
-fn labels(c: &SeasonCandidate, season: &SeasonContext<'_>, app_url: &str) -> DispatchLabels {
+/// Tout ce que les gabarits nomment. Chaque champ vaut une phrase visible : un
+/// `String::new()` ici rend « **** t'invite à participer », ce qui est arrivé
+/// entre la carte 340 et sa correction.
+async fn etiquettes(
+    c: &SeasonCandidate,
+    season: &SeasonContext<'_>,
+    deps: &CronDeps<'_>,
+) -> DispatchLabels {
+    let admin = CompetitionId::try_new(&c.competition_id)
+        .ok()
+        .map(|id| async move { deps.competitions.find_base_info(&id).await.ok().flatten() });
+    let admin_name = match admin {
+        Some(f) => f
+            .await
+            .and_then(|b| b.admin_names.first().cloned())
+            .unwrap_or_default(),
+        None => String::new(),
+    };
+
     DispatchLabels {
         competition_name: c.competition_name.clone(),
         season_name: c.season_name.clone(),
-        space_name: String::new(),
-        admin_name: String::new(),
-        competition_url: format!("{app_url}/app/{}/competitions", c.space_id),
+        space_name: c.space_name.clone(),
+        admin_name,
+        competition_url: format!(
+            "{}/app/{}/competitions/{}/{}",
+            deps.dispatch.app_url, c.space_id, c.competition_id, c.season_id
+        ),
         registration_deadline: season
             .invitations
             .and_then(|i| i.registration_deadline.clone())
             .unwrap_or_default(),
-        remaining_slots: String::new(),
+        remaining_slots: places_restantes(season, deps).await,
     }
+}
+
+/// « Il reste N places ». Sans plafond déclaré, la phrase n'a pas de valeur à
+/// afficher : on rend une chaîne vide **et** le gabarit ne montre alors pas la
+/// ligne — c'est mieux que d'annoncer « il reste  places ».
+async fn places_restantes(season: &SeasonContext<'_>, deps: &CronDeps<'_>) -> String {
+    let Some(max) = season.invitations.and_then(|i| i.max_participants) else {
+        return String::new();
+    };
+    let inscrits = deps
+        .dispatch
+        .teams
+        .find_enrolled_teams(season.season_id)
+        .await
+        .map(|v| v.len())
+        .unwrap_or(0);
+    max.saturating_sub(inscrits as u32).to_string()
 }
