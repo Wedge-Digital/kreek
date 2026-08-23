@@ -10,3 +10,6 @@ pub mod spaces_widget_tester;
 #[cfg(test)]
 pub mod test_harness;
 pub mod upload_widget;
+
+#[cfg(test)]
+mod tests;

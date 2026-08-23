@@ -58,6 +58,7 @@ CLASSE_ATTENDUE = {
     "espaces-tous": ".allspace-home-grid",
     "espace-nouveau": ".new-space",
     "accueil": ".app-news-feed",
+    "espace-admin": ".space-admin",
     "article-nouveau": ".editor-container",
     "article-detail": ".article-container",
     "equipes-mes": ".my-teams-container",
@@ -169,6 +170,7 @@ def collecter() -> tuple[dict[str, str], list[str]]:
         "espace-nouveau":        f"{BASE}/app/space/create",
         # ── espace ───────────────────────────────────────────────────────
         "accueil":               f"{a}/home",
+        "espace-admin":          f"{a}/admin",
         "article-nouveau":       f"{a}/home/articles/new",
         "article-detail":        f"{BASE}/app/{espace_article}/home/articles/{article}" if article else None,
         # ── équipes ──────────────────────────────────────────────────────

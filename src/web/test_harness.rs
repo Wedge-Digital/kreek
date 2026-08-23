@@ -101,6 +101,21 @@ impl Harnais {
         .await
     }
 
+    /// `GET` avec des en-têtes supplémentaires.
+    ///
+    /// Existe pour les fragments qui se situent depuis l'URL courante du
+    /// navigateur plutôt que depuis leur propre chemin — le menu applicatif en
+    /// est un : il déduit l'espace affiché de `hx-current-url`, et sans cet
+    /// en-tête il ne rend qu'un menu vide, ce qui ferait passer n'importe quelle
+    /// assertion d'absence.
+    pub async fn get_avec(&self, uri: &str, entetes: &[(&str, &str)]) -> Reponse {
+        let mut requete = Request::builder().uri(uri).header("cookie", &self.cookie);
+        for (nom, valeur) in entetes {
+            requete = requete.header(*nom, *valeur);
+        }
+        self.envoyer(requete.body(Body::empty()).unwrap()).await
+    }
+
     /// `POST` de formulaire, avec l'en-tête `HX-Request` que le middleware CSRF
     /// exige.
     ///

@@ -107,6 +107,7 @@ const FEUILLES_APP: &[&str] = &[
     "pages/new-space.css",
     "pages/player-debug.css",
     "pages/player-page.css",
+    "pages/space-admin.css",
     "pages/team-build.css",
     "pages/team-page.css",
     "pages/widget-tester-layout.css",
