@@ -1,60 +1,192 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Demande de Réinitialisation de Mot de Passe </title>
-    <style>
-        /* CSS Inline pour la compatibilité Email */
-        body { font-family: Arial, sans-serif; background-color: #f0f0f0; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
-        .header { background-color: #6B0000; padding: 20px; text-align: center; }
-        .logo-text { color: #FFFFFF; font-size: 28px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
-        .logo-text span { background-color: #000000; padding: 2px 5px; border-radius: 3px; margin-right: 3px; }
-        .content { padding: 30px; color: #333333; line-height: 1.6; }
-        h1 { color: #6B0000; font-size: 24px; margin-top: 0; }
-        .button-container { text-align: center; margin: 30px 0; }
-        .button { background-color: #6B0000; color: #FFFFFF !important; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px; border: 1px solid #CC0000; transition: background-color 0.3s; }
-        .button:hover { background-color: #990000; border-color: #990000; }
-        .disclaimer { margin-top: 40px; font-size: 12px; color: #777777; border-top: 1px solid #eee; padding-top: 15px; }
-        .footer { background-color: #1a1a1a; color: #aaaaaa; text-align: center; padding: 15px; font-size: 11px; }
-        a { color: #6B0000; text-decoration: none; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Réinitialisation de votre mot de passe — Blood Bowl Club</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700&family=Roboto+Slab:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    /* Palette et typographie : les tokens de assets/static/css/common.css.
+       Valeurs en dur — les variables CSS sont mal supportées par les clients
+       mail — mais chaque valeur porte le nom de son token.
+
+       Polices : Roboto et Roboto Slab, celles du site. Le <link> ci-dessus les
+       charge pour les clients qui l'honorent (Apple Mail, Thunderbird) ; les
+       autres (Outlook, Gmail selon les cas) retombent sur la pile de secours,
+       qui reprend celle de common.css — Georgia pour les titres, sans-serif
+       système pour le texte. */
+    body {
+      margin: 0; padding: 0;
+      font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      font-size: 16px;                            /* --text-small */
+      color: #26263D;                             /* --dark-1 */
+      background: #EFF2F5;                        /* --dark-7 */
+      -webkit-text-size-adjust: 100%;
+    }
+    .wrapper { max-width: 560px; margin: 0 auto; padding: 32px 16px; }
+
+    /* ── En-tête ──
+       Le même dégradé que les quatre e-mails de notification. C'est tout
+       l'objet de cette carte : un coach qui demande un mot de passe puis reçoit
+       une notification de journée ne doit pas croire à deux produits. */
+    .header {
+      background: linear-gradient(135deg, #003049 0%, #555770 100%);
+      border-radius: 12px 12px 0 0;
+      padding: 32px 28px;
+      text-align: center;
+    }
+    /* ── Logo ──
+       `logo.png`, la marque horizontale : « BLOODBOWL CLUB » y est en clair et
+       le sigle cerné d'un liseré crème, donc dessinée pour un fond sombre —
+       elle se détache du bandeau. L'emblème rond, lui, apporte son propre fond
+       clair et jurerait sur le dégradé.
+
+       Servi en 400×162 pour un affichage en 200×81 : le double, pour les
+       écrans à haute densité. `width` et `height` sont des attributs HTML et
+       pas seulement du CSS — Outlook ignore le second et déformerait l'image.
+
+       Le texte alternatif compte autant que l'image : beaucoup de clients les
+       bloquent par défaut, et c'est alors « Blood Bowl Club » qui tient lieu
+       d'en-tête. */
+    .header-logo { margin-bottom: 20px; }
+    .header-logo img {
+      display: block; margin: 0 auto; border: 0;
+      width: 200px; height: 81px;
+    }
+    .header-title {
+      font-family: 'Roboto Slab', Georgia, 'Times New Roman', serif;
+      font-size: 24px;                            /* --h4 */
+      font-weight: 700; color: #FFFFFF; line-height: 1.3;
+      letter-spacing: -0.3px;
+    }
+    .header-sub {
+      font-size: 14px;                            /* --text-xs */
+      color: rgba(255,255,255,0.65); margin-top: 8px;
+    }
+
+    /* ── Corps ── */
+    .body { background: #FFFFFF; padding: 28px; }
+    .greeting { font-size: 16px; color: #26263D; margin-bottom: 16px; }
+    .text {
+      font-size: 16px;                            /* --text-small */
+      color: #555770;                             /* --dark-2 */
+      line-height: 1.6; margin-bottom: 20px;
+    }
+    .subtitle {
+      font-family: 'Roboto Slab', Georgia, 'Times New Roman', serif;
+      font-size: 18px;                            /* --h5 */
+      font-weight: 500; color: #26263D;
+      margin: 0 0 12px;
+    }
+
+    /* ── Carte d'information ── */
+    .info-card { background: #F0F2F4; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
+    .info-row {
+      display: flex; justify-content: space-between; padding: 6px 0;
+      font-size: 14px;                            /* --text-xs */
+    }
+    .info-label { color: #8F90A6; flex-shrink: 0; }        /* --dark-3 */
+    .info-value { color: #26263D; font-weight: 600; text-align: right; }
+    .info-sep { border: none; border-top: 1px solid #E5E6EF; margin: 8px 0; }
+
+    /* ── Action ──
+       Bleu plein, comme .btn-primary-blue. L'orange n'est jamais une surface
+       d'action dans le site : il y est pastille et accent. */
+    .cta-wrapper { text-align: center; margin: 28px 0; }
+    .cta-btn {
+      display: inline-block;
+      background: #003049;                        /* --main-blue */
+      color: #FFFFFF;
+      font-size: 16px; font-weight: 700; text-decoration: none;
+      padding: 14px 36px; border-radius: 8px; letter-spacing: 0.3px;
+    }
+
+    /* ── Échéance ──
+       Teinte et filet orange, le patron de .team-card-status--pending. */
+    .deadline {
+      background: rgba(255,107,53,0.10);
+      border-left: 3px solid #FF6B35;             /* --orange */
+      border-radius: 6px; padding: 14px 18px; margin-bottom: 24px;
+      font-size: 14px; color: #26263D; line-height: 1.5;
+    }
+    .deadline strong { color: #FF6B35; }
+
+    /* ── Liste de matchs ── */
+    .match-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0; font-size: 14px; border-bottom: 1px solid #E5E6EF;
+    }
+    .match-row:last-child { border-bottom: none; }
+    .match-teams { color: #26263D; font-weight: 600; }
+    .match-vs { color: #8F90A6; font-weight: 400; padding: 0 6px; }
+
+    /* ── Pied ── */
+    .footer {
+      background: #F0F2F4; border-radius: 0 0 12px 12px;
+      padding: 20px 28px; text-align: center;
+      font-size: 12px;                            /* --text-tiny */
+      color: #8F90A6; line-height: 1.6;
+    }
+    .footer a { color: #003049; text-decoration: none; font-weight: 600; }
+  </style>
 </head>
 <body>
+  <div class="wrapper">
 
-<div class="container">
     <div class="header">
-        <p class="logo-text">Bloodbowl Club</p>
+      <div class="header-logo">
+        <img src="{{ app_url }}/static/img/email-logo.png"
+             width="200" height="81" alt="Blood Bowl Club">
+      </div>
+      <div class="header-title">Réinitialisation de votre mot de passe</div>
+      <div class="header-sub">Un lien, valable vingt-quatre heures.</div>
     </div>
 
-    <div class="content">
-        <h1>Réinitialisation de votre mot de passe</h1>
+    <div class="body">
+      <div class="greeting">Bonjour <strong>{{ coach_name }}</strong>,</div>
 
-        <p>Cher(ère) {{ coach_name }},</p>
+      <div class="text">
+        Nous avons reçu une demande de réinitialisation de mot de passe pour
+        votre compte Blood Bowl Club.
+      </div>
 
-        <p>Nous avons reçu une demande de réinitialisation de mot de passe pour votre compte Bloodbowl Club.</p>
+      <div class="text">
+        Si vous êtes à l'origine de cette demande, le bouton ci-dessous vous
+        mènera à la création d'un nouveau mot de passe.
+      </div>
 
-        <p>Si vous êtes à l'origine de cette demande, veuillez cliquer sur le bouton rouge ci-dessous pour créer un nouveau mot de passe sécurisé :</p>
+      <div class="cta-wrapper">
+        <a href="{{ reset_url }}" class="cta-btn">Réinitialiser mon mot de passe →</a>
+      </div>
 
-        <div class="button-container">
-            <a href="{{ reset_url }}" class="button">
-                RÉINITIALISER MON MOT DE PASSE
-            </a>
+      <div class="info-card">
+        <div class="info-row">
+          <span class="info-label">Validité du lien</span>
+          <span class="info-value">24 heures</span>
         </div>
+        <hr class="info-sep">
+        <div class="info-row">
+          <span class="info-label">Passé ce délai</span>
+          <span class="info-value">une nouvelle demande</span>
+        </div>
+      </div>
 
-        <p>Ce lien de réinitialisation expirera dans 24 heures par mesure de sécurité. Si vous ne réinitialisez pas votre mot de passe avant cela, vous devrez soumettre une nouvelle demande.</p>
+      <div class="text">
+        <strong>Vous n'avez pas demandé cette réinitialisation ?</strong>
+        Vous pouvez ignorer cet e-mail : votre mot de passe actuel reste
+        inchangé. Si vous craignez qu'une personne non autorisée accède à votre
+        compte, écrivez-nous à
+        <a href="mailto:support@example.com">support@example.com</a>.
+      </div>
 
-        <p class="disclaimer">
-            **Vous n'avez pas demandé cette réinitialisation ?**<br>
-            Vous pouvez ignorer cet e-mail en toute sécurité. Votre mot de passe actuel restera inchangé. Cependant, si vous craignez qu'une personne non autorisée ait accès à votre compte, veuillez nous contacter immédiatement à <a href="mailto:support@example.com">support@example.com</a>.
-        </p>
     </div>
 
     <div class="footer">
-        <p>&copy; 2025 BloodbowlClub. Tous droits réservés.<br>
+      Cet e-mail a été envoyé par <a href="{{ app_url }}">Blood Bowl Club</a>
+      <br>parce qu'une réinitialisation a été demandée pour votre compte.
     </div>
-</div>
 
+  </div>
 </body>
 </html>

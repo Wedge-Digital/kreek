@@ -33,16 +33,16 @@ la demande de réinitialisation, le lien, la durée de validité.
 **Le contenu ne change pas.** Cette carte est une mise au même standard, pas une
 réécriture du message.
 
-- [ ] `lost_login.html` refondu sur la structure des maquettes
-- [ ] Toutes les couleurs sont des tokens de `common.css`, chacune commentée
-- [ ] Logo `email-logo.png`, en `{{app_url}}/static/img/…` — jamais un `data:`
+- [x] `lost_login.html` refondu sur la structure des maquettes
+- [x] Toutes les couleurs sont des tokens de `common.css`, chacune commentée
+- [x] Logo `email-logo.png`, en `{{app_url}}/static/img/…` — jamais un `data:`
       URI, que Gmail retire
-- [ ] `width` et `height` en **attributs HTML** sur l'image : Outlook ignore le
+- [x] `width` et `height` en **attributs HTML** sur l'image : Outlook ignore le
       CSS de dimension
-- [ ] Vérifier qu'aucune classe utilisée n'a perdu sa règle — le contrôle qui a
+- [x] Vérifier qu'aucune classe utilisée n'a perdu sa règle — le contrôle qui a
       manqué quand `.header-title` a disparu d'une maquette et laissé un texte
       sombre sur fond sombre
-- [ ] Le test existant de `send_reset_password_email` passe sans modification
+- [x] Le test existant de `send_reset_password_email` passe sans modification
 
 ## Ce que cette carte a déjà emporté
 
@@ -61,3 +61,47 @@ il faudra d'abord une préférence de langue par coach, que ni `auth__users` ni
 Ce n'est pas une nouvelle fonctionnalité mais une harmonisation. Elle dépend des
 maquettes validées en phase 1, et se fait après elles — mais elle n'a ni spec,
 ni phases, ni cartes filles.
+
+## Ce qui a été fait
+
+La structure est **copiée** d'un des quatre gabarits de la carte 338, jamais
+réécrite de mémoire, et le contenu existant y est coulé. La palette est
+exactement celle du site : les neuf couleurs correspondent une à une à des
+tokens de `common.css`, chacune commentée de son nom. Elles restent en littéral
+— un e-mail ne lit pas de feuille externe — mais on sait d'où elles viennent.
+
+Les trois tests existants de `send_reset_password_email` passent **sans
+modification**, comme la carte l'exigeait : ajouter `app_url` à la struct de
+gabarit ne les touche pas.
+
+`app_url` est construit comme `reset_url` juste à côté, à partir de
+`host_domain`. Les deux partagent donc la même limite — un déploiement HTTPS les
+casserait ensemble, et une seule correction les réparera. C'est délibéré :
+ouvrir ici une seconde convention aurait mis deux mécanismes dans le projet au
+lieu d'un à réparer.
+
+## Quatre tests, dont celui qui avait manqué
+
+Le contrôle des classes orphelines existait pour les quatre e-mails de
+notification depuis la 338 ; ce gabarit-ci le méritait autant — c'est le seul
+que les coachs reçoivent depuis toujours. Vérifié en supprimant `.header-sub` :
+il tombe.
+
+Un test interdit aussi le retour de `#6B0000`, l'ancienne couleur maîtresse
+qu'aucun token ne portait. C'est tout l'objet de la carte, et rien d'autre ne
+l'aurait signalé.
+
+## Deux choses retirées au passage
+
+Le pied portait « © 2025 BloodbowlClub » — une année en dur, **déjà fausse**.
+Retirée plutôt que corrigée : une date figée dans un gabarit redevient fausse
+tous les ans.
+
+Et un `<p>` y était refermé par un `</div>`. Le genre de chose qui casse un
+client e-mail strict, disparu avec la refonte.
+
+## Choix éditorial
+
+Le titre passe du `<h1>` du corps à l'en-tête bleu, avec « Un lien, valable
+vingt-quatre heures. » en sous-titre — la forme des quatre autres. Validé à
+l'écran avant commit.
