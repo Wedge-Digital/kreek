@@ -223,15 +223,19 @@ Fichier `<page>/05-use-cases.md` avec les signatures, orchestration, erreurs.
 
 1. **Récapituler toutes les règles métier** identifiées aux phases précédentes (phases 1 à 5) — les lister exhaustivement et les présenter à l'utilisateur pour validation avant de poursuivre
 2. Poser la question : « **Voici les règles métier identifiées. Vois-tu des règles métier manquantes ou à corriger ?** »
-3. Implémenter les méthodes domaine sur les agrégats (appelées par les use cases)
-4. Créer les value objects nécessaires avec smart constructors
-5. Définir les erreurs domaine (`DomainError`)
-6. Écrire les tests unitaires pour chaque règle métier
+3. **Présenter l'agrégat avant de l'écrire** — sa forme complète *après* la page en cours, pas seulement ce qu'elle ajoute : champs, encapsulation, signatures publiques, aides privées. Poser la question : « **Voici l'agrégat et ses méthodes. Est-ce la bonne forme ?** » et attendre la validation.
+
+   Un agrégat se conçoit d'un bloc, pas page par page : la troisième méthode qu'on lui greffe révèle souvent que les deux premières avaient la mauvaise signature, et il est alors trop tard pour le dire sans réécrire. Vérifier au passage qu'il ne laisse fuir aucune référence mutable vers son état interne — un invariant gardé par des méthodes reste contournable tant que le champ qu'elles protègent est `pub`.
+4. Implémenter les méthodes domaine sur les agrégats (appelées par les use cases)
+5. Créer les value objects nécessaires avec smart constructors
+6. Définir les erreurs domaine (`DomainError`)
+7. Écrire les tests unitaires pour chaque règle métier
 
 ### Sortie
 
 Fichier `<page>/06-domaine.md` avec :
 - **Récapitulatif exhaustif des règles métier** (validé par l'utilisateur)
+- **La forme de l'agrégat** (validée par l'utilisateur) : champs, encapsulation, signatures
 - Méthodes domaine, value objects, erreurs
 - Tests prévus couvrant chaque règle métier
 
