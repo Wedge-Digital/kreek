@@ -41,7 +41,7 @@ impl NotificationType {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DeliveryKey {
     pub notification_type: NotificationType,
     pub season_id: SeasonId,
@@ -71,6 +71,44 @@ mod tests {
         assert_eq!(
             NotificationType::RegistrationDeadline.as_str(),
             "registration_deadline"
+        );
+    }
+
+    // ── Deux tests de **forme**, pas de code ─────────────────────────────────
+    //
+    // Ils rougiront le jour où quelqu'un retirera un champ de la clé en croyant
+    // simplifier. Ce retrait casserait R2 ou R3 sans qu'aucun autre test ne
+    // bouge : la clé continuerait de compiler, l'index continuerait d'exister,
+    // et des coachs recevraient deux fois le même e-mail.
+
+    fn cle(target_date: &str, coach: &str) -> DeliveryKey {
+        DeliveryKey {
+            notification_type: NotificationType::RoundEve,
+            season_id: SeasonId::try_new("01KZVCKDG19DXZHJA295WSJGMV").unwrap(),
+            round_id: Some(MatchId::try_new("01KZVCKDG19DXZHJA295WSJGMX").unwrap()),
+            target_date: DateString::try_new(target_date).unwrap(),
+            coach_id: CoachId::try_new(coach).unwrap(),
+        }
+    }
+
+    /// R2 — un décalage de date réarme la notification, et c'est `target_date`
+    /// qui le porte. Sans ce champ, une journée repoussée ne serait jamais
+    /// réannoncée.
+    #[test]
+    fn deux_cles_ne_differant_que_par_la_date_visee_sont_distinctes() {
+        assert_ne!(
+            cle("2026-09-11", "01KZVCKDG19DXZHJA295WSJGMW"),
+            cle("2026-09-18", "01KZVCKDG19DXZHJA295WSJGMW")
+        );
+    }
+
+    /// R3 — l'idempotence est **par destinataire**. Sans `coach_id`, le premier
+    /// coach servi bloquerait l'envoi pour toute la compétition.
+    #[test]
+    fn deux_cles_ne_differant_que_par_le_coach_sont_distinctes() {
+        assert_ne!(
+            cle("2026-09-11", "01KZVCKDG19DXZHJA295WSJGMW"),
+            cle("2026-09-11", "01KZVCKDG19DXZHJA295WSJGMZ")
         );
     }
 }

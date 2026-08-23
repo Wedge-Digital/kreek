@@ -39,7 +39,7 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 | Épic | État | Cartes |
 |---|---|---|
 | [E01 — Saison de jeu : le cycle de vie d'une équipe](done/E01-saison-de-jeu.md) | `done` | 10 |
-| [E02 — Notifications e-mail de compétition](en_cours/E02-notifications-email.md) | `en_cours` · 5/11 | 11 |
+| [E02 — Notifications e-mail de compétition](en_cours/E02-notifications-email.md) | `en_cours` · 6/11 | 11 |
 | [E03 — Front : ni saut, ni clignotement](done/E03-front-ni-saut-ni-clignotement.md) | `done` | 4 |
 | [E04 — Les verrous architecturaux](ready_to_be_done/E04-verrous-architecturaux.md) | `ready` | 6 |
 | [E05 — Couverture e2e du déjà livré](ready_to_be_done/E05-couverture-e2e.md) | `ready` | 4 |
