@@ -8,13 +8,20 @@
 *.iml
 
 # Environment
-.env
-.env.dev
-.env.test
-.env.local
-.env.legacy
-.env.remote.demo
-.env.*.local
+#
+# Tout `.env*` est ignoré **par défaut**, et seul `.env.example` est repris.
+#
+# La liste était énumérative jusqu'ici, et il fallait penser à l'allonger à
+# chaque nouveau profil. `.env.remote.prod` y a échappé : il portait le mot de
+# passe de la base de production et deux clés d'API, en attente qu'un
+# `git add -A` le ramasse. Il n'a jamais été commité, mais rien ne l'en
+# empêchait.
+#
+# Une règle qui ignore par défaut ne peut pas oublier un fichier ; une liste,
+# si. Le prix est qu'un fichier d'environnement destiné au dépôt doit être
+# repris explicitement, ce qui est le bon sens de la précaution.
+.env*
+!.env.example
 
 # OS
 .DS_Store
