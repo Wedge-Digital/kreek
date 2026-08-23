@@ -86,6 +86,7 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 | `13-mock-data-competition-detail` | Les onglets Équipes et Stats servent de la donnée fictive **en production**. C'est la seule dette visible par un utilisateur |
 | `60-jersey-numbers-at-submission` | Attribution des numéros de maillot à la soumission |
 | `362-le-bundle-css-est-gele-au-demarrage` | Une feuille éditée n'a aucun effet sur un serveur qui tourne, et rien ne le signale. A fait accuser à tort la carte 343 pendant une heure |
+| `385-l-avatar-d-un-coach-n-existe-nulle-part` | Zéro utilisateur sur 864 en a un, aucun écran n'en pose, et le cache écrase la colonne. Trois tables entretiennent l'illusion |
 | `361-reserver-la-place-sur-la-construction-d-equipe` | 1 265 px de saut en desktop, 1 841 en mobile — la plus grosse zone non réservée, hors périmètre de la 343 |
 | `360-bandeau-d-inscription-en-attente-inexistant` | Un test e2e attend une classe qui n'a jamais été rendue. La suite est rouge en permanence |
 | `357-le-champ-tags-est-en-ecriture-seule` | Quatre formes écrites, aucun lecteur : `find_by_tag()` n'a pas d'appelant. À trancher — compléter l'abstraction ou la supprimer |

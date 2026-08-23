@@ -79,14 +79,41 @@ doit être vérifié : si le value object refuse la chaîne vide, il faut un
 
 ## Checklist
 
-- [ ] Le SQL joint `spaces__user_cache`, plus `auth__users`
-- [ ] `grep -r auth__users src/app/spaces/` ne rend rien
-- [ ] Le discriminant du `LEFT JOIN` est `us.coach_id`, pas l'icône
-- [ ] Sort de l'icône manquante tranché : `CoachIcon` optionnel, ou valeur vide
-      acceptée par le smart constructor
-- [ ] Tests d'intégration sur une vraie `PgPool` :
-  - [ ] un espace **sans membre** rend un `Space` à `coaches` vide — pas `None`
-  - [ ] un membre **sans avatar** est **présent** dans `coaches` — le test qui
-        aurait attrapé le défaut
-  - [ ] un espace à trois membres dont un sans avatar en rend trois
-- [ ] `make lint`, `make check-arch`, `make test` passent
+- [x] Le SQL joint `spaces__user_cache`, plus la table des comptes du BC voisin
+- [x] `grep -r auth__users src/app/spaces/` ne rend rien
+- [x] Le discriminant du `LEFT JOIN` est `us.coach_id`, pas l'icône
+- [x] Sort de l'icône manquante tranché : **`Option<CoachIcon>`**, et le type
+      l'imposait — `CoachIcon` est un alias de `CloudinaryImage`, dont la
+      validation exige une URL Cloudinary. La chaîne vide étant refusée, il
+      n'existait pas de « valeur neutre » à inventer
+- [x] Une icône **illisible** rend le coach sans avatar plutôt que de le faire
+      disparaître — c'est exactement le défaut qu'on corrige, et il aurait pu
+      revenir par cette porte
+- [x] Tests d'intégration sur une vraie `PgPool` :
+  - [x] un espace **sans membre** rend un `Space` à `coaches` vide, pas `None`
+  - [x] un membre **sans avatar** est **présent** — vu échouer sur l'ancien
+        filtre, avec « un membre sans avatar a disparu »
+  - [x] un espace à trois membres dont un sans avatar en rend trois
+- [x] `make lint`, `make check-arch`, `make test` passent — 1093 tests
+
+## Ce qu'on a appris en la faisant
+
+**Le défaut était le cas général, pas un cas limite.** La carte annonçait « un
+membre sans avatar disparaît ». Mesuré : **aucun** des 38 membres n'a d'icône,
+donc `find_by_id` rendait `coaches` **vide pour les 26 espaces**. L'agrégat
+n'était pas incomplet, il était systématiquement amputé de tous ses membres.
+
+**Basculer la jointure était sans risque**, ce qui n'allait pas de soi : le
+cache est complet — 864 lignes de part et d'autre, **zéro** membre absent.
+Vérifié avant d'écrire une ligne.
+
+**Un troisième défaut est apparu en route**, et il a fait échouer un test dont
+la prémisse était fausse : `insert_user.sql` écrit `coach_icon` en `NULL` en dur
+et ignore le champ qu'on lui passe. Le cache ne peut donc **jamais** stocker
+d'avatar. En cherchant plus loin : **zéro utilisateur sur 864** en a un dans
+`auth__users` non plus, et aucun écran ne permet d'en poser. La chaîne est morte
+de bout en bout. Carte **385**.
+
+Le semis du test insère donc en SQL direct, avec le motif en commentaire — le
+test porte sur `find_by_id`, pas sur l'alimentation du cache, et il a le droit
+de poser l'état qu'il veut lire.
