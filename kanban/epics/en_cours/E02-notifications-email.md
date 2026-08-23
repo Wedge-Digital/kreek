@@ -1,10 +1,9 @@
 # E02 — Notifications e-mail de compétition
 
-**État :** en cours — 13 cartes · 10 faites. Démarrée le 2026-08-22.
-Restent la 338 (vérification en client réel), la **366** (R8 jamais tranchée) et
-la **367** (le chemin du cron sans test). Les deux dernières sont nées de la
-revue de déploiement du 2026-08-24 : l'épic les nommait déjà dans son corps sans
-les avoir inscrites au tableau.
+**État :** en cours — 13 cartes · 12 faites. Démarrée le 2026-08-22.
+Ne reste que la **338**, dont seule la vérification en client de messagerie réel
+manque. Les 366 et 367, nées de la revue de déploiement du 2026-08-24, sont
+faites : le critère de clôture ci-dessous est désormais **constaté**.
 La 331 pose le modèle et la colonne ; la 332 donne le premier chemin
 d'édition — un organisateur peut régler les notifications d'une compétition
 déjà démarrée, ce qu'aucun écran ne permettait.
@@ -37,8 +36,8 @@ réglage qui fait réellement partir des e-mails — et retire les deux morts.
 | 339 | Le cœur d'expédition | **faite** — réserver, rendre, envoyer, confirmer |
 | 340 | Les deux déclencheurs — CLI du cron et listener d'ouverture | **faite — la fonctionnalité est allumée** |
 | 325 | L'e-mail de mot de passe au nouveau standard visuel | **faite** — harmonisation, pas une réécriture |
-| 366 | Éteindre les saisons antérieures à la migration | R8, restée en suspens alors que la 340 est passée |
-| 367 | Tests du chemin du cron | trois notifications sur quatre, sans aucun filet |
+| 366 | Éteindre les saisons antérieures à la migration | **faite** — 318 saisons éteintes, colonne `NOT NULL` avec défaut « neuve » |
+| 367 | Tests du chemin du cron | **faite** — 5 unitaires sur le vrai SQL, 3 e2e à travers le binaire |
 
 ## Ce qui commande l'ordre
 
@@ -61,7 +60,13 @@ corrige.
 La 325 est indépendante des dix autres : elle ne dépend que des maquettes
 validées en phase 1, et peut se faire à tout moment.
 
-## Ce que l'épic a laissé passer
+## Ce que l'épic a laissé passer, et comment
+
+Les deux manques ci-dessous se lisaient dans ce document depuis la carte 340,
+sans figurer à son tableau. **Aucun ne s'est vu avant qu'on prépare un
+déploiement** — un état écrit dans le corps d'une épic mais absent de sa liste de
+cartes n'est pas un état suivi. C'est la leçon à retenir de l'épic, plus que les
+deux corrections elles-mêmes.
 
 **La question posée « avant la 340 » ne l'a pas été.** Les saisons antérieures à
 la migration de la 331 ont `notifications` à `NULL`, donc démarrent **allumées**,
@@ -69,17 +74,17 @@ contre R8. La 331 comptait les remplir à `false` ; il a été décidé de ne pa
 faire, en renvoyant la décision avant la 340. La 340 est passée sans que
 personne ne la reprenne.
 
-Elles sont 318 sur 471 — l'épic annonçait 213, la spec ~399. Les trois chiffres
-diffèrent, ce qui dit assez que la question a dormi. C'est la **carte 366**.
+Elles étaient 318 sur 471 — l'épic annonçait 213, la spec ~399. Les trois
+chiffres diffèrent, ce qui dit assez que la question a dormi. Tranchée par la
+**carte 366** : éteintes, et la colonne passe `NOT NULL` avec un défaut « tout
+allumé » pour les neuves, de sorte que le cas ne puisse plus réapparaître.
 
-**Le chemin du cron n'a jamais reçu de test.** Les deux extrémités en ont — 17
-sur `due_today()`, 6 sur l'expédition — mais les 180 lignes qui les cousent,
-aucune, ni unitaire ni e2e. Elles portent trois des quatre notifications, et le
-critère de clôture ci-dessous parle précisément d'elles. C'est la **carte 367**.
-
-Les deux se voient à la lecture de cette épic depuis le jour de la 340. Aucune ne
-s'est vue avant qu'on prépare un déploiement — un état écrit dans le corps d'une
-épic mais absent de son tableau n'est pas un état suivi.
+**Le chemin du cron n'avait aucun test.** Les deux extrémités en avaient — 17 sur
+`due_today()`, 6 sur l'expédition — mais les 180 lignes qui les cousent, aucune,
+ni unitaire ni e2e. Elles portent trois des quatre notifications. Couvert par la
+**carte 367**, qui a au passage mis au jour un mode d'échec de plus :
+`traiter_saison()` avale l'erreur du dépôt de journées par `unwrap_or_default()`,
+transformant une panne en « rien à envoyer », sans une ligne de journal.
 
 ## Ce que l'épic ne couvre pas
 
@@ -100,6 +105,11 @@ Un coach inscrit à une compétition reçoit, la veille d'une journée, un e-mai
 listant ses matchs — sans que personne n'ait lancé de commande à la main, et
 sans qu'une seconde exécution du cron le même jour lui en envoie un second.
 
-**Ce critère vise le chemin du cron, que rien n'exerce aujourd'hui** (carte 367).
-Tant qu'il n'est pas couvert, l'épic ne peut pas se déclarer close : on le
-supposerait atteint sans l'avoir constaté, ce que la règle des épics interdit.
+**Constaté** par `tests/e2e/test_notification_cron.py`, qui construit deux
+équipes inscrites, programme une journée au lendemain, invoque le binaire, et lit
+la table du journal. Les trois tests échouent si la journée est décalée d'un
+jour — vérifié, et c'est ce qui distingue un critère atteint d'un critère
+supposé.
+
+Reste la 338 : ce que ces e-mails **donnent à voir** dans un vrai client de
+messagerie. C'est la seule chose qu'aucun test ne peut dire.

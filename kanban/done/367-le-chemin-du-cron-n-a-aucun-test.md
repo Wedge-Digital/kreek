@@ -105,12 +105,37 @@ vérifiable en CI et ne relève pas du code. La commande est documentée
 
 ## Checklist
 
-- [ ] Tests unitaires sur `execute()` — les cinq cas du tableau
-- [ ] `tests/e2e/test_notification_cron.py` — la veille d'une journée, et la
-      seconde exécution qui n'envoie rien
-- [ ] `tests/impact-map.toml` mis à jour dans le même commit
-- [ ] L'épic E02 peut alors se clore sur son critère, constaté et non supposé
-- [ ] `make check-arch`, `make test`, `make e2e`
+- [x] Tests unitaires sur `execute()` — les cinq cas du tableau
+- [x] `tests/e2e/test_notification_cron.py` — la veille d'une journée, la seconde
+      exécution qui n'envoie rien, et le `--dry-run` qui ne réserve rien
+- [x] `tests/impact-map.toml` mis à jour dans le même commit
+- [x] L'épic E02 peut se clore sur son critère, constaté et non supposé
+- [x] `make check-arch`, `make test`, e2e du fichier
+
+## Ce que l'écriture a appris
+
+**Les tests unitaires ne doublent que les deux ports inter-BC.** Saisons,
+compétitions, journées et journal sont les **vrais** dépôts sur une vraie base :
+c'est précisément la couture entre le SQL et `due_today()` qu'ils existent pour
+tenir, et la doubler l'aurait dissoute.
+
+**Le désaccord d'un jour a été falsifié.** En décalant `fenetres()` de `+1` sans
+toucher à `veille()`, quatre des cinq tests tombent. C'était le mode d'échec que
+le code nommait sans que rien ne le garde.
+
+**Un mode d'échec de plus, découvert en écrivant.** `traiter_saison()` appelle
+`find_by_season(…).unwrap_or_default()` : une erreur du dépôt de journées devient
+« aucune journée », donc « rien à envoyer », **sans une ligne de journal**. Le
+premier jet des tests s'y est fait prendre — un identifiant d'appariement à 27
+caractères au lieu de 26 rendait la lecture en erreur, et le rapport annonçait
+sereinement `notifications_due: 0`. Mérite sa carte : ce `unwrap_or_default()`
+transforme une panne en silence.
+
+**Ce que l'e2e ajoute aux unitaires.** Les doublures des deux ports sont
+justement ce que la CLI câble pour de vrai. Un adapter mal branché dans
+`src/cli/send_notifications.rs` passerait les cinq tests unitaires — et le
+premier jet de l'e2e l'a montré en creux : sans équipe inscrite, le journal
+restait vide, parce que la veille de journée ne s'adresse qu'aux inscrits.
 
 ## Ce que la carte ne couvre pas
 

@@ -59,6 +59,10 @@
 "test_full_competition_creation_flow" = ["competitions", "spaces", "references", "ranking"]
 # Le déclencheur d'ouverture : il lit le journal d'envois après publication.
 "test_notification_ouverture"        = ["competitions", "spaces", "references", "ranking"]
+# Le déclencheur périodique. `teams` en plus des autres : la veille de journée ne
+# s'adresse qu'aux **inscrits**, donc le test construit de vraies équipes là où
+# l'ouverture se contente des membres de l'espace.
+"test_notification_cron"            = ["competitions", "spaces", "references", "ranking", "teams"]
 "test_phase2_pickers"               = ["competitions", "references", "ranking", "spaces"]
 "test_phase4_invitations"           = ["competitions", "spaces", "references", "ranking"]
 # Le widget de notifications à l'étape 4, en mode différé.

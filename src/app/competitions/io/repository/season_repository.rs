@@ -349,3 +349,78 @@ impl ISeasonRepository for SeasonRepository {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::shared_kernel::bloodbowl::season_name::SeasonName;
+
+    /// Les saisons de test naissent par le vrai dépôt, donc par
+    /// `insert_season.sql` — celui qui n'écrit que trois colonnes. C'est tout
+    /// l'intérêt : un test qui poserait `notifications` lui-même ne dirait rien
+    /// du chemin réel.
+    async fn semer_saison(pool: &PgPool) -> SeasonId {
+        let competition_id = CompetitionId::new();
+        sqlx::query(
+            "INSERT INTO competitions (id, space_id, name, logo) VALUES ($1, $2, 'Coupe', '')",
+        )
+        .bind(competition_id.to_string())
+        .bind(crate::app::shared_kernel::identity::ids::SpaceId::new().to_string())
+        .execute(pool)
+        .await
+        .expect("insertion de la compétition");
+
+        let saison = CompetitionSeason::new(
+            competition_id,
+            SeasonName::try_new("Saison 1").expect("nom de saison"),
+        );
+        SeasonRepository::new(pool.clone())
+            .save(&saison)
+            .await
+            .expect("insertion de la saison");
+        saison.id
+    }
+
+    /// **La seconde moitié de R8**, et la preuve que le `NOT NULL` de la carte
+    /// 366 ne casse pas la création : `insert_season.sql` n'écrit toujours que
+    /// `(id, competition_id, name)`, c'est le `DEFAULT` qui remplit le reste.
+    #[sqlx::test]
+    async fn une_saison_neuve_naît_avec_les_quatre_notifications_allumées(pool: PgPool) {
+        let season_id = semer_saison(&pool).await;
+
+        let reglages = SeasonRepository::new(pool)
+            .find_notifications(&season_id)
+            .await
+            .expect("lecture des réglages")
+            .expect("une saison neuve porte des réglages, jamais NULL");
+
+        assert_eq!(reglages, CompetitionNotifications::default());
+        assert!(
+            reglages.registration_open.0
+                && reglages.round_eve.0
+                && reglages.round_closing.0
+                && reglages.registration_deadline.0,
+            "les quatre doivent être allumées : {reglages:?}"
+        );
+    }
+
+    /// **Le verrou.** Sans lui, la correction de la 366 ne serait qu'un
+    /// nettoyage ponctuel : un futur `INSERT` oubliant la colonne recreuserait
+    /// le trou, et le test de sérialisation continuerait de passer — ce qu'il a
+    /// fait pendant que 318 saisons devenaient notifiantes.
+    #[sqlx::test]
+    async fn la_colonne_ne_peut_plus_retomber_à_null(pool: PgPool) {
+        let season_id = semer_saison(&pool).await;
+
+        let echec =
+            sqlx::query("UPDATE competition_seasons SET notifications = NULL WHERE id = $1")
+                .bind(season_id.to_string())
+                .execute(&pool)
+                .await;
+
+        assert!(
+            echec.is_err(),
+            "la base a accepté un NULL : la contrainte NOT NULL manque"
+        );
+    }
+}

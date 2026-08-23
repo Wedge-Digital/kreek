@@ -85,19 +85,40 @@ la colonne devient `NOT NULL` pour que le cas ne puisse plus réapparaître.
 Poser la contrainte est ce qui fait la différence entre une correction et un
 verrou : sans elle, un `INSERT` qui oublie la colonne recrée le trou en silence.
 
-**À vérifier avant :** que le chemin de création de saison écrit bien la colonne.
-Si ce n'est pas le cas, `NOT NULL` casserait la création — poser alors un
-`DEFAULT` avec les quatre à `true`, qui est justement le défaut « saison neuve ».
+**Vérifié à l'implémentation : `insert_season.sql` n'écrit que
+`(id, competition_id, name)`.** Un `NOT NULL` nu aurait donc cassé toute création
+de saison. Le `DEFAULT` posé vaut les quatre à `true` — c'est-à-dire exactement
+la seconde moitié de R8, « les nouvelles allumées », obtenue par la contrainte
+plutôt que par du code.
 
 ## Checklist
 
-- [ ] Migration de rattrapage — les quatre à `false` où `NULL`
-- [ ] `NOT NULL` sur la colonne, avec le `DEFAULT` « neuve » si la création ne
-      l'écrit pas
-- [ ] Un test d'intégration : après migration, aucune ligne à `NULL`
-- [ ] L'épic E02 corrige sa section « À trancher avant la 340 » — la décision est
-      prise, elle cesse d'être une question
-- [ ] `make check-arch`, `make test`
+- [x] Migration de rattrapage — les quatre à `false` où `NULL`
+- [x] `NOT NULL` sur la colonne, avec le `DEFAULT` « neuve » : la création ne
+      l'écrit pas, il était indispensable
+- [x] Deux tests d'intégration sur le vrai dépôt — cf. ci-dessous
+- [x] L'épic E02 corrige sa section — la décision est prise, elle cesse d'être
+      une question
+- [x] `make check-arch`, `make test`
+
+## Ce que les tests vérifient, et pourquoi pas ce que la carte disait
+
+La carte demandait « après migration, aucune ligne à `NULL` ». **Sur une base de
+test neuve, cette assertion est vide** : il n'y a aucune saison. Le harnais
+`#[sqlx::test]` ne peut pas voir le rattrapage des 318 lignes, qui n'existent que
+sur les bases réelles.
+
+Ce qu'il peut voir est l'invariant qui en résulte, et deux tests le tiennent dans
+`season_repository.rs` :
+
+| Test | Ce qu'il garde |
+|---|---|
+| `une_saison_neuve_naît_avec_les_quatre_notifications_allumées` | le `DEFAULT` s'applique, et le `NOT NULL` ne casse pas la création |
+| `la_colonne_ne_peut_plus_retomber_à_null` | la contrainte existe |
+
+Le premier passe par `SeasonRepository::save()`, donc par le vrai
+`insert_season.sql` — un test qui poserait `notifications` lui-même ne dirait
+rien du chemin réel. Les deux échouent si l'on retire la migration ; vérifié.
 
 ## Ce que la carte ne couvre pas
 
