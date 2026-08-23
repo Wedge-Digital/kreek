@@ -52,7 +52,7 @@ help:
 	@echo "  reset_test_db Remet la base de test à zéro (.env.test)"
 	@echo "  init_db       reset_db + import des données legacy + seed comptes dev (WITH_SEED=1 pour aussi affecter les coachs aux spaces)"
 	@echo "  init_remote_demo_db  Idem sur la base de démo distante ($(DEMO_ENV_FILE)) — DROP+CREATE...OWNER via un accès admin séparé, double confirmation exigée"
-	@echo "  init_remote_prod_db  Première mise en service de la production ($(PROD_ENV_FILE)) — refuse une base déjà peuplée, sans seed de comptes, triple confirmation"
+	@echo "  init_remote_prod_db  Première mise en service de la production ($(PROD_ENV_FILE)) — DROP+CREATE...OWNER, refuse une base déjà peuplée, sans seed de comptes, triple confirmation"
 	@echo "  seed_accounts Seed les comptes dev (scripts/seed_accounts.json)"
 	@echo "  seed_e2e      Seed synthétique requis par la suite e2e (space + 12 coachs, idempotent)"
 	@echo ""
@@ -227,20 +227,22 @@ endif
 # WITH (FORCE) (PG13+) coupe les connexions actives sans prévenir : accepté
 # ici car la base de démo est jetable par construction (double confirmation
 # déjà exigée par init_remote_demo_db) — ne pas généraliser ce comportement ailleurs.
-# `WITH (FORCE)` n'est posé que si FORCE_DROP=1, c'est-à-dire pour la démo. Sur
-# une base qui n'est pas jetable, un DROP qui échoue parce que quelqu'un y est
-# connecté est un bon échec : il signale une activité qu'on n'avait pas prévue,
-# là où FORCE la supprimerait en silence.
+# `WITH (FORCE)` coupe les connexions actives sans prévenir, pour les deux
+# profils.
+#
+# Un temps réservé à la démo, jetable par construction. Étendu à la production
+# parce qu'une **première** mise en service se fait serveur arrêté ou presque, et
+# qu'un DROP qui échoue faute d'avoir fermé une session oubliée n'apprend rien —
+# il oblige seulement à recommencer. La protection qui compte n'est pas là :
+# c'est `REFUS_SI_PEUPLEE`, qui arrête la commande sur une base qui a déjà des
+# comptes.
+#
+# Le comportement n'est pas paramétré : les deux appelants veulent le même, et
+# une branche que personne n'emprunte rassure sans jamais être exercée.
 create_remote_db:
-	@if [ "$(FORCE_DROP)" = "1" ]; then \
-	    psql "$(ADMIN_URL)" -v ON_ERROR_STOP=1 \
-	        -c "DROP DATABASE IF EXISTS \"$(DB_NAME)\" WITH (FORCE);" \
-	        -c "CREATE DATABASE \"$(DB_NAME)\" OWNER \"$(DB_OWNER)\" ENCODING 'UTF8';"; \
-	else \
-	    psql "$(ADMIN_URL)" -v ON_ERROR_STOP=1 \
-	        -c "DROP DATABASE IF EXISTS \"$(DB_NAME)\";" \
-	        -c "CREATE DATABASE \"$(DB_NAME)\" OWNER \"$(DB_OWNER)\" ENCODING 'UTF8';"; \
-	fi
+	@psql "$(ADMIN_URL)" -v ON_ERROR_STOP=1 \
+	    -c "DROP DATABASE IF EXISTS \"$(DB_NAME)\" WITH (FORCE);" \
+	    -c "CREATE DATABASE \"$(DB_NAME)\" OWNER \"$(DB_OWNER)\" ENCODING 'UTF8';"
 
 # Migrations + chargement des données sur la base de démo, une fois
 # create_demo_db passé. Migre avec l'accès applicatif (DATABASE_URL) : il est
@@ -345,11 +347,7 @@ init_remote_db:
 	 echo "     Hôte   : $$host"; \
 	 echo "     Base   : $$name  (owner : $$user)"; \
 	 echo ""; \
-	 if [ "$(FORCE_DROP)" = "1" ]; then \
-	     echo "  DROP DATABASE (WITH FORCE — les connexions actives seront coupées)"; \
-	 else \
-	     echo "  DROP DATABASE (sans FORCE — échouera si quelqu'un est connecté)"; \
-	 fi; \
+	 echo "  DROP DATABASE (WITH FORCE — les connexions actives seront coupées)"; \
 	 echo "  puis CREATE DATABASE ... OWNER $$user,"; \
 	 echo "  migrations et réimport complet."; \
 	 echo "  Les comptes, espaces et articles existants seront perdus."; \
@@ -366,7 +364,7 @@ init_remote_db:
 	     [ "$$prod" = "$(LIBELLE)" ] || { echo "  Annulé."; exit 1; }; \
 	 fi; \
 	 echo ""; \
-	 $(MAKE) --no-print-directory create_remote_db ADMIN_URL="$$admin_url" DB_NAME="$$name" DB_OWNER="$$user" FORCE_DROP=$(FORCE_DROP) && \
+	 $(MAKE) --no-print-directory create_remote_db ADMIN_URL="$$admin_url" DB_NAME="$$name" DB_OWNER="$$user" && \
 	 $(MAKE) --no-print-directory init_remote_data EXEC_PROFILE=$(PROFILE) DATABASE_URL="$$url" WITH_ACCOUNTS=$(WITH_ACCOUNTS)
 
 # ── Les deux mises en service distantes ──────────────────────────────────────
@@ -376,7 +374,6 @@ init_remote_db:
 # des avertissements, et trois drapeaux.
 #
 #                        démo          production
-#   FORCE_DROP           1             0    DROP échoue si quelqu'un est connecté
 #   WITH_ACCOUNTS        1             0    pas de seed de comptes en production
 #   REFUS_SI_PEUPLEE     0             1    refuse une base qui a déjà des comptes
 #   CONFIRMER_LIBELLE    0             1    troisième confirmation
@@ -389,7 +386,7 @@ init_remote_db:
 init_remote_demo_db:
 	@$(MAKE) --no-print-directory init_remote_db \
 	    PROFILE=$(DEMO_PROFILE) ENV_FILE=$(DEMO_ENV_FILE) LIBELLE="DE DÉMO" \
-	    FORCE_DROP=1 WITH_ACCOUNTS=1 REFUS_SI_PEUPLEE=0 CONFIRMER_LIBELLE=0 NB_CONFIRMATIONS=2
+	    WITH_ACCOUNTS=1 REFUS_SI_PEUPLEE=0 CONFIRMER_LIBELLE=0 NB_CONFIRMATIONS=2
 
 # Première mise en service : elle crée la base de production et y verse les
 # données legacy. Elle **refuse** de s'exécuter sur une base qui contient déjà
@@ -398,7 +395,7 @@ init_remote_demo_db:
 init_remote_prod_db:
 	@$(MAKE) --no-print-directory init_remote_db \
 	    PROFILE=$(PROD_PROFILE) ENV_FILE=$(PROD_ENV_FILE) LIBELLE="DE PRODUCTION" \
-	    FORCE_DROP=0 WITH_ACCOUNTS=0 REFUS_SI_PEUPLEE=1 CONFIRMER_LIBELLE=1 NB_CONFIRMATIONS=3
+	    WITH_ACCOUNTS=0 REFUS_SI_PEUPLEE=1 CONFIRMER_LIBELLE=1 NB_CONFIRMATIONS=3
 
 # ── Qualité Rust standard (axe 1) ────────────────────────────────────────────
 lint:
