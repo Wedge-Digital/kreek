@@ -192,22 +192,34 @@ impl ISpaceRepository for SpaceRepository {
         let space_name = SpaceName::try_new(&first.space_name).map_err(db_err)?;
         let logo = CloudinaryImage::try_new(first.space_icon_path.clone()).map_err(db_err)?;
 
+        // Le `LEFT JOIN` rend une ligne à colonnes nulles pour un espace sans
+        // membre. C'est `coach_id` qui distingue ce cas — jamais l'icône, qui
+        // est nullable pour un membre bien réel.
+        //
+        // Les deux étaient confondus : le filtre exigeait les quatre colonnes,
+        // et tout coach sans avatar était sauté. Sur la base de démonstration
+        // où aucun des trente-huit membres n'en a, l'agrégat se chargeait
+        // systématiquement vide.
         let mut coaches = Vec::new();
         for row in &rows {
-            let (Some(ref raw_id), Some(ref raw_name), Some(ref raw_icon), Some(ref raw_profile)) = (
-                &row.coach_id,
-                &row.coach_name,
-                &row.coach_icon,
-                &row.profile,
-            ) else {
+            let (Some(ref raw_id), Some(ref raw_name), Some(ref raw_profile)) =
+                (&row.coach_id, &row.coach_name, &row.profile)
+            else {
                 continue;
             };
 
             let coach_id = CoachId::try_new(raw_id).map_err(db_err)?;
             let coach_name = CoachName::try_new(raw_name.clone()).map_err(db_err)?;
-            let coach_icon = CoachIcon::try_new(raw_icon.clone()).map_err(db_err)?;
             let profile = SpaceProfile::try_from(raw_profile.as_str())
                 .map_err(SpaceRepositoryError::Database)?;
+
+            // Une icône illisible n'est pas un membre illisible : on rend le
+            // coach sans son avatar plutôt que de le faire disparaître, ce qui
+            // est exactement le défaut qu'on vient de corriger.
+            let coach_icon = match &row.coach_icon {
+                Some(raw) => CoachIcon::try_new(raw.clone()).ok(),
+                None => None,
+            };
 
             coaches.push(Coach::new(coach_id, coach_name, profile, coach_icon));
         }
