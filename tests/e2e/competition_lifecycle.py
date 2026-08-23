@@ -77,6 +77,7 @@ def create_full_competition(
     with_default_bonuses: bool = True,
     deactivated_tiebreaks: list[str] | None = None,
     requires_validation: bool = False,
+    access_mode: str = "invitation",
 ) -> dict:
     """Phases 1 à 5 : crée une compétition publiée, avec `num_rounds` journées
     programmées et acceptation automatique des inscriptions
@@ -91,6 +92,10 @@ def create_full_competition(
     donné — les sept sont actifs par défaut. Décocher suffit à tester la sélection
     des colonnes : les critères restants gardent l'ordre canonique, et le
     glisser-déposer HTML5 du formulaire est trop fragile pour un test E2E.
+
+    `access_mode="open"` bascule l'accès en libre : tous les membres de l'espace
+    peuvent s'inscrire, et deviennent donc destinataires de l'annonce
+    d'ouverture. Le défaut `invitation` **sans invité** ne désigne personne.
 
     `with_default_bonuses=False` décoche les bonus offensif et défensif, cochés
     par défaut dans le formulaire. Nécessaire dès qu'un test veut des équipes à
@@ -148,6 +153,11 @@ def create_full_competition(
     # de garder la validation manuelle (défaut du formulaire) ────────────────
     if not requires_validation:
         page.click("#validation-mode-btns .choice-btn[data-val='false']")
+    # `open` rend tous les membres de l'espace candidats. Le défaut
+    # `invitation` sans invité ne désigne **personne** — correct, mais un test
+    # qui veut des destinataires doit le dire.
+    if access_mode != "invitation":
+        page.click(f"#access-mode-btns .choice-btn[data-val='{access_mode}']")
     page.click("button[onclick='submitInvitations()']")
     page.wait_for_selector(".recap-row", timeout=10000)
 

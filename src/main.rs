@@ -68,6 +68,16 @@ enum Command {
     },
     /// Seed synthétique minimal pour la suite e2e (space + coachs + adhésions)
     SeedE2e,
+    /// Expédie les notifications dues aujourd'hui (cron quotidien)
+    SendNotifications {
+        /// Vise une autre date que le jour même. Réservé à l'exploitation :
+        /// R9 interdit au cron de regarder en arrière, pas à un humain.
+        #[arg(long)]
+        date: Option<String>,
+        /// Compte ce qui partirait, sans rien réserver ni envoyer.
+        #[arg(long)]
+        dry_run: bool,
+    },
 }
 
 /// Le pool, et les deux garde-fous contre les transactions fantômes (carte 317).
@@ -213,6 +223,23 @@ async fn main() {
             if let Err(e) = cli::seed_e2e::execute(&pool).await {
                 tracing::error!("seed-e2e failed: {e}");
                 std::process::exit(1);
+            }
+        }
+        Command::SendNotifications { date, dry_run } => {
+            let email = build_email_service(cfg.email.clone());
+            match cli::send_notifications::execute(&cfg, &pool, date, dry_run, email).await {
+                // `exit(1)` dès qu'un envoi a échoué : c'est ce qui rend R1
+                // observable. Une exécution parfaite et une exécution ayant
+                // perdu douze e-mails ne doivent pas se ressembler.
+                Ok(r) if r.failed > 0 => {
+                    tracing::error!(failed = r.failed, "des notifications ont échoué");
+                    std::process::exit(1);
+                }
+                Ok(_) => {}
+                Err(e) => {
+                    tracing::error!("send-notifications failed: {e}");
+                    std::process::exit(1);
+                }
             }
         }
     }
@@ -370,6 +397,25 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
 
     let email_service = build_email_service(cfg.email);
     let host_domain = cfg.host_domain.clone();
+
+    // Le second déclencheur de R11 : l'ouverture des inscriptions part sur un
+    // **fait** — la saison s'ouvre — et non sur une date à comparer au jour.
+    // Attendre le cron du lendemain ferait arriver l'annonce un jour trop tard.
+    competitions::context::init_registration_open_listener(
+        &event_bus,
+        Arc::new(
+            crate::app::competitions::io::app_events::competition_ready_listener::RegistrationOpenDeps {
+                pool: pool.clone(),
+                teams: competitions_team_info_port.clone(),
+                members: Arc::new(crate::infrastructure::competitions::space_member_adapter::SpaceMemberAdapter::new(
+                    Arc::new(crate::app::spaces::io::repository::space_repository::SpaceRepository::new(pool.clone())),
+                    Arc::new(crate::app::spaces::io::repository::user_cache_repository::SpaceUserCacheRepository::new(pool.clone())),
+                )),
+                email: email_service.clone(),
+                app_url: format!("http://{host_domain}"),
+            },
+        ),
+    );
 
     AppState {
         auth: AuthContext::new(

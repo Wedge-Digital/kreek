@@ -41,7 +41,66 @@ fn db_err(e: impl std::fmt::Display) -> DeliveryError {
     DeliveryError::Database(e.to_string())
 }
 
+/// Une saison candidate à une notification, avec ce que les gabarits en
+/// demandent. DTO de lecture : primitives assumées.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct SeasonCandidate {
+    pub season_id: String,
+    pub space_id: String,
+    pub competition_name: String,
+    pub season_name: String,
+}
+
 impl NotificationDeliveryRepository {
+    /// Les saisons dont une journée démarre à cette date. Les journées `rest`
+    /// sont exclues par la requête — une journée de repos n'a rien à annoncer.
+    pub async fn seasons_with_round_starting(
+        &self,
+        date: &str,
+    ) -> Result<Vec<SeasonCandidate>, DeliveryError> {
+        self.candidates(
+            include_str!("sql/notifications/list_seasons_with_round_starting.sql"),
+            date,
+        )
+        .await
+    }
+
+    /// Les saisons dont une journée à fenêtre temporelle clôt à cette date.
+    pub async fn seasons_with_round_closing(
+        &self,
+        date: &str,
+    ) -> Result<Vec<SeasonCandidate>, DeliveryError> {
+        self.candidates(
+            include_str!("sql/notifications/list_seasons_with_round_closing.sql"),
+            date,
+        )
+        .await
+    }
+
+    /// Les saisons dont la date limite d'inscription vaut cette date.
+    pub async fn seasons_with_deadline(
+        &self,
+        date: &str,
+    ) -> Result<Vec<SeasonCandidate>, DeliveryError> {
+        self.candidates(
+            include_str!("sql/notifications/list_seasons_with_deadline.sql"),
+            date,
+        )
+        .await
+    }
+
+    async fn candidates(
+        &self,
+        sql: &str,
+        date: &str,
+    ) -> Result<Vec<SeasonCandidate>, DeliveryError> {
+        sqlx::query_as::<_, SeasonCandidate>(sql)
+            .bind(date)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(db_err)
+    }
+
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }

@@ -57,6 +57,8 @@
 #           départages injecté par `new_competition.rs` (BC ranking).
 "test_coach_selector"               = ["competitions", "spaces"]
 "test_full_competition_creation_flow" = ["competitions", "spaces", "references", "ranking"]
+# Le déclencheur d'ouverture : il lit le journal d'envois après publication.
+"test_notification_ouverture"        = ["competitions", "spaces", "references", "ranking"]
 "test_phase2_pickers"               = ["competitions", "references", "ranking", "spaces"]
 "test_phase4_invitations"           = ["competitions", "spaces", "references", "ranking"]
 # Le widget de notifications à l'étape 4, en mode différé.

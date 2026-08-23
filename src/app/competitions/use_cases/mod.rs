@@ -7,4 +7,6 @@ pub mod save_competition_invitations;
 pub mod save_competition_notifications;
 pub mod save_competition_rules;
 pub mod save_competition_structure;
+pub mod send_due_notifications_use_case;
+pub mod send_registration_open_use_case;
 pub mod update_draft_competition;

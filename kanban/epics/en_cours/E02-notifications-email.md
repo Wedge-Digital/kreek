@@ -1,6 +1,6 @@
 # E02 — Notifications e-mail de compétition
 
-**État :** en cours — 11 cartes · 8 faites. Démarrée le 2026-08-22.
+**État :** en cours — 11 cartes · 9 faites. Démarrée le 2026-08-22.
 La 331 pose le modèle et la colonne ; la 332 donne le premier chemin
 d'édition — un organisateur peut régler les notifications d'une compétition
 déjà démarrée, ce qu'aucun écran ne permettait.
@@ -31,7 +31,7 @@ réglage qui fait réellement partir des e-mails — et retire les deux morts.
 | 337 | Résolution des destinataires | **faite** — qui reçoit quoi, borné par l'espace (R7) |
 | 338 | Les quatre gabarits d'e-mail | les maquettes validées, en Askama |
 | 339 | Le cœur d'expédition | **faite** — réserver, rendre, envoyer, confirmer |
-| 340 | Les deux déclencheurs — CLI du cron et listener d'ouverture | **c'est elle qui allume la fonctionnalité** |
+| 340 | Les deux déclencheurs — CLI du cron et listener d'ouverture | **faite — la fonctionnalité est allumée** |
 | 325 | L'e-mail de mot de passe au nouveau standard visuel | harmonisation, pas une réécriture |
 
 ## Ce qui commande l'ordre

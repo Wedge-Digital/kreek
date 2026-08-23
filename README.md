@@ -53,6 +53,34 @@ droit de les utiliser.
 
 Projet non officiel, sans affiliation avec Games Workshop.
 
+## Notifications par e-mail — le cron
+
+Trois des quatre notifications de compétition sont pilotées par une tâche
+quotidienne. La quatrième — l'ouverture des inscriptions — part à la publication
+de la compétition, sans passer par ici.
+
+```cron
+# Tous les jours à 8 h. L'heure n'a pas d'importance métier : la commande
+# regarde la date, pas l'instant.
+0 8 * * *  cd /srv/kreek && ./kreek send-notifications >> /var/log/kreek-notifications.log 2>&1
+```
+
+La commande **sort en `1` dès qu'un envoi a échoué**, ce qui permet à
+`cron` ou au superviseur de le signaler. Une exécution parfaite et une exécution
+ayant perdu douze e-mails ne doivent pas se ressembler.
+
+Deux options :
+
+| | |
+|---|---|
+| `--dry-run` | compte ce qui partirait, n'écrit rien et n'envoie rien |
+| `--date YYYY-MM-DD` | vise une autre date que le jour même |
+
+`--date` est réservé à l'exploitation : le cron ne regarde jamais en arrière —
+une notification manquée est perdue, jamais rattrapée le lendemain. La commande
+journalise donc bruyamment quand la date fournie n'est pas celle du jour, pour
+qu'un `--date` resté dans une crontab finisse par se voir.
+
 ## License
 
 Kreek is licensed under **AGPL-3.0-or-later**. See [`LICENSE`](LICENSE).

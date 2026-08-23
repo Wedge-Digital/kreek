@@ -3,6 +3,7 @@ use crate::app::competitions::domain::group_repository_port::IGroupRepository;
 use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
 use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
 use crate::app::competitions::io::app_events::app_event_publisher::competitions_app_event_publisher;
+use crate::app::competitions::io::app_events::competition_ready_listener;
 use crate::app::competitions::io::app_events::match_report_confirmed_listener;
 use crate::app::competitions::io::app_events::match_report_published_listener;
 use crate::app::competitions::io::app_events::match_report_unpublished_listener;
@@ -59,6 +60,19 @@ pub fn init_listeners(
         team_info_port,
     );
     competitions_app_event_publisher(event_bus, app_event_bus);
+}
+
+/// Le listener d'ouverture, monté à part : il a besoin du service d'e-mail et de
+/// l'URL publique, que `init_listeners` n'a pas.
+///
+/// `init(event_bus: …)` **sans** préfixe `app_` — c'est le bus interne du BC, et
+/// l'axe 5 de `check-arch` lit cette signature pour distinguer un listener
+/// intra-BC d'un listener cross-BC.
+pub fn init_registration_open_listener(
+    event_bus: &EventBus,
+    deps: Arc<competition_ready_listener::RegistrationOpenDeps>,
+) {
+    competition_ready_listener::init(event_bus, deps);
 }
 
 impl CompetitionsContext {

@@ -75,6 +75,39 @@ pub struct RoundRef {
     pub pairings: Vec<Pairing>,
 }
 
+/// Les trois dates que le cron doit interroger pour un jour donné.
+///
+/// **Elle existe pour que les décalages n'aient qu'une source.** Le SQL du cron
+/// sélectionne les saisons « ayant une journée à la date donnée » ; `due_today()`
+/// compare, elle, à `today + n`. Si l'appelant calculait ces dates lui-même, les
+/// deux finiraient par diverger — et le symptôme serait un cron qui ne trouve
+/// jamais rien, sans la moindre erreur.
+///
+/// C'est exactement ce qui s'est produit à l'écriture de la carte 340.
+pub struct Fenetres {
+    /// Les journées qui démarrent, pour la veille.
+    pub round_eve: DateString,
+    /// Les journées à fenêtre qui closent, pour l'alerte de clôture.
+    pub round_closing: DateString,
+    /// Les dates limites d'inscription approchant.
+    pub registration_deadline: DateString,
+}
+
+pub fn fenetres(today: &DateString) -> Option<Fenetres> {
+    let jour = analyser(today)?;
+    let vers = |n| {
+        decale(jour, n)
+            .format(format_description!("[year]-[month]-[day]"))
+            .ok()
+            .and_then(|s| DateString::try_new(&s).ok())
+    };
+    Some(Fenetres {
+        round_eve: vers(EVE_OFFSET_DAYS)?,
+        round_closing: vers(CLOSING_OFFSET_DAYS)?,
+        registration_deadline: vers(DEADLINE_OFFSET_DAYS)?,
+    })
+}
+
 /// Ne retourne pas de `Result` : une date illisible ne peut pas venir du
 /// domaine, `DateString` validant son format à la construction. Le seul point de
 /// défaillance est l'analyse de `today`, fourni par la CLI — traité au bord du
@@ -365,6 +398,44 @@ mod tests {
         let inv = invitations(Some(""));
 
         assert!(du(&[], Some(&inv)).is_empty());
+    }
+
+    // ── Les fenêtres du cron ─────────────────────────────────────────────────
+
+    /// **Le test qui manquait.** Le SQL du cron sélectionne les saisons ayant
+    /// une journée **à la date donnée** ; `due_today()` compare à `today + n`.
+    /// Passer `today` aux deux fait que le cron ne trouve **jamais rien**, sans
+    /// la moindre erreur — c'est le défaut qui n'est apparu qu'en lançant la
+    /// commande à la main, à l'écriture de la carte 340.
+    ///
+    /// Ce test lie les deux : si un décalage change ici, il change partout.
+    #[test]
+    fn les_fenetres_du_cron_suivent_les_memes_decalages_que_due_today() {
+        let f = fenetres(&d(AUJOURDHUI)).expect("2026-09-10 est lisible");
+
+        assert_eq!(f.round_eve.as_ref(), "2026-09-11");
+        assert_eq!(f.round_closing.as_ref(), "2026-09-12");
+        assert_eq!(f.registration_deadline.as_ref(), "2026-09-13");
+    }
+
+    /// La cohérence, prouvée plutôt qu'affirmée : la journée trouvée par la
+    /// fenêtre de la veille est bien celle que `due_today()` annonce.
+    #[test]
+    fn une_journee_a_la_date_de_la_fenetre_est_bien_annoncee() {
+        let f = fenetres(&d(AUJOURDHUI)).unwrap();
+        let j = journee(MatchDayType::FixedDate, Some(f.round_eve.as_ref()), None);
+
+        let dues = du(&[j], None);
+
+        assert!(matches!(
+            dues.as_slice(),
+            [DueNotification::RoundEve { .. }]
+        ));
+    }
+
+    #[test]
+    fn une_date_illisible_ne_donne_aucune_fenetre() {
+        assert!(fenetres(&d("")).is_none());
     }
 
     // ── Deux notifications le même jour ──────────────────────────────────────
