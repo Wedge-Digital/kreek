@@ -49,7 +49,20 @@
                hx-push-url="true">Mes équipes</div>
       </div>
       <div class="right-menu">
-          <div class="sub-menu-btn"><span class="sub-menu-btn-icon">⚙️</span><span>Espace</span></div>
+          {# Seule entrée de menu qui n'est pas offerte à tous : administrateur
+             de cet espace, ou compte d'exploitation. Le drapeau est recalculé à
+             chaque rendu du menu, jamais mis en cache — une rétrogradation doit
+             faire disparaître l'entrée au rafraîchissement suivant.
+
+             Le masquage est une politesse : la page elle-même rend 403. #}
+          {% if peut_administrer %}
+          <div class="sub-menu-btn"
+               hx-get="{{ app_routes.spaces.space_admin(sid) }}"
+               hx-target="#app-content"
+               hx-select="#app-content"
+               hx-swap="outerHTML"
+               hx-push-url="true"><span class="sub-menu-btn-icon">⚙️</span><span>Espace</span></div>
+          {% endif %}
       </div>
       </div>
     {% endif %}

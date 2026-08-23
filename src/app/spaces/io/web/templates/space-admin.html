@@ -1,0 +1,81 @@
+{#
+  Page d'administration d'un espace — cadre seul.
+
+  Racine `.space-admin`, et non `.admin-container` de la maquette : cette classe
+  appartient déjà à la page d'administration de compétition, avec une largeur
+  différente. Depuis que les feuilles sont réunies en un bundle unique, deux
+  pages qui partagent une classe partagent son style — la carte 342 l'a appris
+  en activant des divergences que l'isolement cachait.
+
+  Pas de badge de visibilité : la visibilité n'existe pas encore, elle arrive
+  avec l'onglet Paramètres.
+#}
+<div class="space-admin" x-data="{ onglet: 'membres', vus: ['membres'] }">
+
+  <div class="space-admin-banner">
+    <div class="space-admin-banner-icon">🛡️</div>
+    <div class="space-admin-banner-info">
+      <div class="space-admin-banner-title">Administration — {{ space_name }}</div>
+      <div class="space-admin-banner-sub">
+        Gestion des membres, invitations et paramètres de l'espace
+      </div>
+    </div>
+    <div class="space-admin-banner-badge">Admin</div>
+  </div>
+
+  <div class="space-admin-tabs">
+    <button type="button" class="space-admin-tab"
+            :class="{ 'is-active': onglet === 'membres' }"
+            @click="onglet = 'membres'; vus.includes('membres') || vus.push('membres')">
+      👥 Membres
+    </button>
+    <button type="button" class="space-admin-tab"
+            :class="{ 'is-active': onglet === 'ajout' }"
+            @click="onglet = 'ajout'; vus.includes('ajout') || vus.push('ajout')">
+      ➕ Ajout direct
+    </button>
+    <button type="button" class="space-admin-tab"
+            :class="{ 'is-active': onglet === 'invitations' }"
+            @click="onglet = 'invitations'; vus.includes('invitations') || vus.push('invitations')">
+      📩 Invitations
+    </button>
+    <button type="button" class="space-admin-tab"
+            :class="{ 'is-active': onglet === 'parametres' }"
+            @click="onglet = 'parametres'; vus.includes('parametres') || vus.push('parametres')">
+      ⚙️ Paramètres
+    </button>
+  </div>
+
+  {#
+    `vus` retient les onglets déjà ouverts : le contenu est monté à la première
+    activation et **reste** dans le DOM ensuite. Rebasculer dessus ne redéclenche
+    aucune requête, et n'efface pas ce qui y a été saisi.
+  #}
+  <div class="space-admin-zone">
+
+    <div x-show="onglet === 'membres'" class="space-admin-panneau">
+      <template x-if="vus.includes('membres')">
+        <div class="space-admin-attente">Onglet Membres — à venir.</div>
+      </template>
+    </div>
+
+    <div x-show="onglet === 'ajout'" class="space-admin-panneau">
+      <template x-if="vus.includes('ajout')">
+        <div class="space-admin-attente">Onglet Ajout direct — à venir.</div>
+      </template>
+    </div>
+
+    <div x-show="onglet === 'invitations'" class="space-admin-panneau">
+      <template x-if="vus.includes('invitations')">
+        <div class="space-admin-attente">Onglet Invitations — à venir.</div>
+      </template>
+    </div>
+
+    <div x-show="onglet === 'parametres'" class="space-admin-panneau">
+      <template x-if="vus.includes('parametres')">
+        <div class="space-admin-attente">Onglet Paramètres — à venir.</div>
+      </template>
+    </div>
+
+  </div>
+</div>

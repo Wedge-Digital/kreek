@@ -1,5 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
+use crate::app::shared_kernel::identity::authorization::SpaceProfile;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::State;
@@ -22,7 +24,17 @@ pub struct AppMenu {
     pub space_id: Option<String>,
     pub space_logo: Option<String>,
     pub active_section: Option<ActiveSection>,
+    /// Gouverne la seule entrée de menu qui n'est pas offerte à tous.
+    pub peut_administrer: bool,
 }
+
+/// Le compte qui administre tous les espaces, quel que soit son profil.
+///
+/// Codé en dur, et dans la couche hôte : c'est une notion d'exploitation de
+/// kreek, pas une règle du BC `spaces`, qui est extractible et n'a pas à
+/// connaître de compte privilégié. Si la valeur devait varier d'un
+/// environnement à l'autre, elle passerait en configuration — pas avant.
+const COMPTE_EXPLOITANT: &str = "Bagouze";
 
 impl AppMenu {
     fn competitions_active(&self) -> bool {
@@ -94,8 +106,8 @@ pub async fn app_menu(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    let (space_name, space_id, active_section, space_logo) = {
-        let result: Option<(String, String, Option<ActiveSection>, String)> = async {
+    let (space_name, space_id, active_section, space_logo, peut_administrer) = {
+        let result: Option<(String, String, Option<ActiveSection>, String, bool)> = async {
             let user = auth_session.user?;
             let current_url = headers
                 .get("hx-current-url")
@@ -110,12 +122,28 @@ pub async fn app_menu(
                 .ok()?;
             let space = spaces.into_iter().find(|s| s.id == sid)?;
             let logo = space.logo.thumbnail(64, 64);
-            Some((space.name, sid, section, logo))
+
+            // Le profil est relu à chaque rendu du menu, jamais mis en cache :
+            // une rétrogradation doit faire disparaître l'entrée au
+            // rafraîchissement suivant, pas à la reconnexion.
+            let space_id_vo = SpaceId::try_new(&sid).ok()?;
+            let profil = state
+                .spaces
+                .space_repository
+                .find_member_profile(&user.id, &space_id_vo)
+                .await
+                .ok()?;
+            let peut_administrer = profil == Some(SpaceProfile::SpaceAdmin)
+                || user.coach_name.clone().into_inner() == COMPTE_EXPLOITANT;
+
+            Some((space.name, sid, section, logo, peut_administrer))
         }
         .await;
         match result {
-            Some((name, id, section, logo)) => (Some(name), Some(id), section, Some(logo)),
-            None => (None, None, None, None),
+            Some((name, id, section, logo, admin)) => {
+                (Some(name), Some(id), section, Some(logo), admin)
+            }
+            None => (None, None, None, None, false),
         }
     };
 
@@ -124,6 +152,7 @@ pub async fn app_menu(
         space_id,
         space_logo,
         active_section,
+        peut_administrer,
         ..Default::default()
     }
     .into_response()

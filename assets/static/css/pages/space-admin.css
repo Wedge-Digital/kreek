@@ -1,0 +1,135 @@
+/* ── Page d'administration d'un espace ──────────────────────────────────────
+   Toute règle est sous `.space-admin`, qui est la racine du gabarit et le nom
+   de cette feuille.
+
+   La maquette porte `.admin-container` : cette classe appartient déjà à la page
+   d'administration de compétition, avec une autre largeur. Depuis que les
+   feuilles sont réunies en un bundle unique, deux pages qui partagent une
+   classe partagent son style. */
+
+.space-admin {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--p2);
+  padding-bottom: var(--p4);
+}
+
+/* ── Bannière ── */
+.space-admin .space-admin-banner {
+  background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+  border-radius: 12px;
+  padding: var(--p2);
+  display: flex;
+  align-items: center;
+  gap: var(--p2);
+}
+.space-admin .space-admin-banner-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  flex-shrink: 0;
+}
+.space-admin .space-admin-banner-info { flex: 1; }
+.space-admin .space-admin-banner-title {
+  font-family: var(--font-title);
+  font-size: var(--h4);
+  font-weight: 700;
+  color: var(--white);
+}
+.space-admin .space-admin-banner-sub {
+  font-size: var(--text-tiny);
+  color: rgba(255, 255, 255, 0.65);
+  margin-top: 4px;
+}
+.space-admin .space-admin-banner-badge {
+  background: rgba(255, 107, 53, 0.25);
+  color: var(--orange);
+  font-size: var(--text-tiny);
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 107, 53, 0.4);
+}
+
+/* ── Barre d'onglets ── */
+.space-admin .space-admin-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--white);
+  border-radius: 10px;
+  padding: 6px;
+  border: 1px solid var(--dark-5);
+}
+.space-admin .space-admin-tab {
+  flex: 1;
+  text-align: center;
+  padding: 8px var(--p1);
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: var(--text-tiny);
+  font-weight: 600;
+  color: var(--dark-3);
+  cursor: pointer;
+}
+.space-admin .space-admin-tab:hover { background: var(--dark-6); }
+.space-admin .space-admin-tab.is-active {
+  background: var(--main-blue);
+  color: var(--white);
+}
+
+/* ── Zone d'onglet — la place est réservée avant d'être remplie ─────────────
+   Chaque onglet est chargé en différé. Sans réservation, la zone vaut zéro
+   jusqu'à l'arrivée de son fragment et pousse tout ce qui est en dessous —
+   le défaut des cartes 343 et 361.
+
+   Le plancher vient d'une **règle du domaine**, pas d'une estimation : un
+   espace a toujours au moins un administrateur (carte 365), donc la liste des
+   membres a toujours au moins une ligne. Réserver au-delà créerait un blanc
+   permanent sur les petits espaces, ce qui est un défaut pire puisqu'il dure.
+
+   La composition est auditable, chaque terme venant du dessin de la maquette :
+
+       barre de statistiques   64 px   (chip : 40 px + 2 × 10 px de padding)
+       champ de recherche      44 px
+       une ligne de membre     64 px   (avatar 40 px + 2 × 12 px de padding)
+       padding du panneau      2 × --p2
+       espacements internes    2 × --p1
+
+   `min-height` et jamais `height` : la zone doit pouvoir grandir avec son
+   contenu, elle ne doit simplement pas être plus petite que sa taille attendue.
+
+   Le total reste à **confirmer par la mesure** — `tests/e2e/visual/decalages.py`
+   — lorsque le premier widget différé existera (carte 369). Ici il n'y a encore
+   rien à charger : mesurer maintenant rendrait zéro sans rien prouver. */
+.space-admin .space-admin-zone {
+  min-height: calc(64px + 44px + 64px + 2 * var(--p2) + 2 * var(--p1));
+}
+
+.space-admin .space-admin-attente {
+  color: var(--dark-3);
+  font-size: var(--text-tiny);
+  padding: var(--p2);
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .space-admin .space-admin-banner { flex-wrap: wrap; }
+  .space-admin .space-admin-tabs { flex-wrap: wrap; }
+  .space-admin .space-admin-tab { flex: 1 1 45%; }
+
+  /* La barre de statistiques passe sur deux lignes et les onglets aussi : la
+     zone est plus haute qu'en desktop, pas moins. Valeur à confirmer par la
+     même mesure que ci-dessus. */
+  .space-admin .space-admin-zone {
+    min-height: calc(128px + 44px + 64px + 2 * var(--p2) + 2 * var(--p1));
+  }
+}
