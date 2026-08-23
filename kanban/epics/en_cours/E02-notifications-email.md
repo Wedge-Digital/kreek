@@ -1,6 +1,10 @@
 # E02 — Notifications e-mail de compétition
 
-**État :** en cours — 11 cartes · 10 faites. Reste la 338, dont seule la vérification en client réel manque. Démarrée le 2026-08-22.
+**État :** en cours — 13 cartes · 10 faites. Démarrée le 2026-08-22.
+Restent la 338 (vérification en client réel), la **366** (R8 jamais tranchée) et
+la **367** (le chemin du cron sans test). Les deux dernières sont nées de la
+revue de déploiement du 2026-08-24 : l'épic les nommait déjà dans son corps sans
+les avoir inscrites au tableau.
 La 331 pose le modèle et la colonne ; la 332 donne le premier chemin
 d'édition — un organisateur peut régler les notifications d'une compétition
 déjà démarrée, ce qu'aucun écran ne permettait.
@@ -33,6 +37,8 @@ réglage qui fait réellement partir des e-mails — et retire les deux morts.
 | 339 | Le cœur d'expédition | **faite** — réserver, rendre, envoyer, confirmer |
 | 340 | Les deux déclencheurs — CLI du cron et listener d'ouverture | **faite — la fonctionnalité est allumée** |
 | 325 | L'e-mail de mot de passe au nouveau standard visuel | **faite** — harmonisation, pas une réécriture |
+| 366 | Éteindre les saisons antérieures à la migration | R8, restée en suspens alors que la 340 est passée |
+| 367 | Tests du chemin du cron | trois notifications sur quatre, sans aucun filet |
 
 ## Ce qui commande l'ordre
 
@@ -55,14 +61,25 @@ corrige.
 La 325 est indépendante des dix autres : elle ne dépend que des maquettes
 validées en phase 1, et peut se faire à tout moment.
 
-## À trancher avant la 340
+## Ce que l'épic a laissé passer
 
-Les saisons antérieures à la migration de la 331 ont `notifications` à `NULL`,
-donc **démarrent allumées** — la carte prévoyait de les remplir à `false`, et il
-a été décidé de ne pas le faire. Sans effet tant que rien n'envoie ; le jour où
-la 340 allume la fonctionnalité, 213 saisons deviennent notifiantes d'un coup.
-Assumer, ou rattraper la donnée : la question se pose avant cette carte-là, pas
-après.
+**La question posée « avant la 340 » ne l'a pas été.** Les saisons antérieures à
+la migration de la 331 ont `notifications` à `NULL`, donc démarrent **allumées**,
+contre R8. La 331 comptait les remplir à `false` ; il a été décidé de ne pas le
+faire, en renvoyant la décision avant la 340. La 340 est passée sans que
+personne ne la reprenne.
+
+Elles sont 318 sur 471 — l'épic annonçait 213, la spec ~399. Les trois chiffres
+diffèrent, ce qui dit assez que la question a dormi. C'est la **carte 366**.
+
+**Le chemin du cron n'a jamais reçu de test.** Les deux extrémités en ont — 17
+sur `due_today()`, 6 sur l'expédition — mais les 180 lignes qui les cousent,
+aucune, ni unitaire ni e2e. Elles portent trois des quatre notifications, et le
+critère de clôture ci-dessous parle précisément d'elles. C'est la **carte 367**.
+
+Les deux se voient à la lecture de cette épic depuis le jour de la 340. Aucune ne
+s'est vue avant qu'on prépare un déploiement — un état écrit dans le corps d'une
+épic mais absent de son tableau n'est pas un état suivi.
 
 ## Ce que l'épic ne couvre pas
 
@@ -82,3 +99,7 @@ après.
 Un coach inscrit à une compétition reçoit, la veille d'une journée, un e-mail
 listant ses matchs — sans que personne n'ait lancé de commande à la main, et
 sans qu'une seconde exécution du cron le même jour lui en envoie un second.
+
+**Ce critère vise le chemin du cron, que rien n'exerce aujourd'hui** (carte 367).
+Tant qu'il n'est pas couvert, l'épic ne peut pas se déclarer close : on le
+supposerait atteint sans l'avoir constaté, ce que la règle des épics interdit.
