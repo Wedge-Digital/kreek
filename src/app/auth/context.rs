@@ -15,10 +15,17 @@ pub struct AuthContext {
     pub reset_token_repository: Arc<dyn IResetTokenRepository>,
     pub event_bus: EventBus,
     /// Vivaient dans `AppState` alors qu'aucun autre BC ne les consomme :
-    /// l'envoi de mail et le domaine public ne servent qu'au parcours de mot
-    /// de passe oublié.
+    /// l'envoi de mail et l'URL publique ne servent qu'au parcours de mot de
+    /// passe oublié.
     pub email_service: Arc<dyn IEmailService>,
-    pub host_domain: String,
+    /// L'URL publique, **schéma compris**, injectée par l'hôte.
+    ///
+    /// Elle l'est déjà normalisée (`AppConfig::app_url()`) : ce BC est
+    /// extractible, il ne lit pas la configuration de l'hôte. Le champ s'est
+    /// appelé `host_domain` et ne portait pas de schéma — cinq endroits le lui
+    /// recollaient alors à la main, et `HOST_DOMAIN=https://…` produisait
+    /// `http://https://…`.
+    pub app_url: String,
     /// Où entrer dans l'application une fois connecté. Injecté par l'hôte :
     /// `auth` ne connaît pas la page d'accueil de celui qui l'héberge — c'est
     /// son seul lien sortant, et la condition pour qu'il soit extractible.
@@ -36,7 +43,7 @@ impl AuthContext {
         pool: &PgPool,
         event_bus: EventBus,
         email_service: Arc<dyn IEmailService>,
-        host_domain: String,
+        app_url: String,
         authenticated_home: String,
     ) -> Self {
         Self {
@@ -44,7 +51,7 @@ impl AuthContext {
             reset_token_repository: Arc::new(ResetTokenRepository::new(pool.clone())),
             event_bus,
             email_service,
-            host_domain,
+            app_url,
             authenticated_home,
         }
     }

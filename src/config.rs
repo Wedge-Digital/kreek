@@ -130,8 +130,29 @@ impl AppConfig {
             references: ReferencesConfig {
                 dir: "assets/references.example".into(),
             },
-            host_domain: "http://localhost".into(),
+            host_domain: "http://localhost:3210".into(),
             bypass_auth: false,
+        }
+    }
+
+    /// L'URL publique de l'application, **schéma compris**.
+    ///
+    /// `host_domain` peut porter son schéma (`https://kreek.example`) ou non
+    /// (`localhost:3210`) : les deux formes existent dans les déploiements, et
+    /// imposer l'une exigerait de les mettre à jour toutes au moment même où
+    /// l'on bascule — un `.env` oublié produirait alors des liens cassés sans
+    /// rien signaler.
+    ///
+    /// Avant cette méthode, cinq endroits recollaient `http://` en dur. Poser
+    /// `HOST_DOMAIN=https://kreek.example` produisait donc
+    /// `http://https://kreek.example/…`, et **tous les liens des e-mails
+    /// cassaient** le jour d'un passage en HTTPS.
+    pub fn app_url(&self) -> String {
+        let d = self.host_domain.trim().trim_end_matches('/');
+        if d.contains("://") {
+            d.to_string()
+        } else {
+            format!("http://{d}")
         }
     }
 
@@ -171,5 +192,94 @@ impl AppConfig {
     /// Adresse complète pour le binding du serveur
     pub fn server_addr(&self) -> String {
         format!("{}:{}", self.server.host, self.server.port)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn avec(host_domain: &str) -> AppConfig {
+        AppConfig {
+            host_domain: host_domain.into(),
+            ..AppConfig::for_tests()
+        }
+    }
+
+    #[test]
+    fn sans_schema_on_prefixe_http() {
+        assert_eq!(avec("localhost:3210").app_url(), "http://localhost:3210");
+    }
+
+    #[test]
+    fn avec_un_schema_on_ne_touche_a_rien() {
+        assert_eq!(
+            avec("http://kreek.example").app_url(),
+            "http://kreek.example"
+        );
+    }
+
+    /// Le cas qui a motivé la carte 365. Avant, cinq endroits recollaient
+    /// `http://` et produisaient `http://https://kreek.example/…` — tous les
+    /// liens des e-mails cassés le jour d'un déploiement en HTTPS.
+    #[test]
+    fn https_survit_intact() {
+        assert_eq!(
+            avec("https://kreek.example").app_url(),
+            "https://kreek.example"
+        );
+    }
+
+    /// Le harnais de test a porté `http://localhost` pendant que `.env.dev`
+    /// portait `localhost:3210` : deux formes cohabitaient sans que rien ne
+    /// puisse les confronter. Elles le sont désormais toutes deux ici.
+    #[test]
+    fn le_harnais_porte_deja_une_url_complete() {
+        assert_eq!(AppConfig::for_tests().app_url(), "http://localhost:3210");
+    }
+
+    #[test]
+    fn la_barre_finale_ne_se_duplique_pas() {
+        // Les appelants concatènent « /app/… » derrière.
+        assert_eq!(
+            avec("https://kreek.example/").app_url(),
+            "https://kreek.example"
+        );
+    }
+
+    /// **Le garde-fou.** Recoller un schéma à la main a été recopié trois fois
+    /// en deux jours, chaque fois en signalant la dette sans la traiter. Un
+    /// quatrième copieur trouvera ce test plutôt qu'un e-mail cassé en
+    /// production.
+    #[test]
+    fn personne_ne_recolle_un_schema_a_la_main() {
+        let mut fautifs = Vec::new();
+        let mut a_visiter = vec![std::path::PathBuf::from("src")];
+        while let Some(dir) = a_visiter.pop() {
+            for entree in std::fs::read_dir(&dir).expect("lecture de src/").flatten() {
+                let chemin = entree.path();
+                if chemin.is_dir() {
+                    a_visiter.push(chemin);
+                    continue;
+                }
+                // `config.rs` est le seul endroit autorisé : c'est lui qui
+                // normalise, et le motif y est sa propre implémentation.
+                if chemin.extension().is_none_or(|e| e != "rs") || chemin.ends_with("config.rs") {
+                    continue;
+                }
+                let contenu = std::fs::read_to_string(&chemin).unwrap_or_default();
+                for (n, ligne) in contenu.lines().enumerate() {
+                    if ligne.contains(r#"format!("http://{"#)
+                        || ligne.contains(r#"format!("https://{"#)
+                    {
+                        fautifs.push(format!("{}:{}", chemin.display(), n + 1));
+                    }
+                }
+            }
+        }
+        assert!(
+            fautifs.is_empty(),
+            "un schéma est recollé à la main — passer par `AppConfig::app_url()` : {fautifs:?}"
+        );
     }
 }

@@ -12,17 +12,15 @@ use std::fmt;
 struct LostLoginEmail {
     coach_name: String,
     reset_url: String,
-    /// Pour le logo en URL absolue. Construit comme `reset_url` juste à côté :
-    /// `host_domain` ne porte pas son schéma. Les deux partagent donc la même
-    /// limite — un déploiement HTTPS les casserait ensemble, et une seule
-    /// correction les réparera.
+    /// Pour le logo en URL absolue, tirée de la même valeur que `reset_url`.
     app_url: String,
 }
 
 #[derive(Debug)]
 pub struct SendResetPasswordEmailCommand {
     pub coach_name: CoachName,
-    pub host_domain: String,
+    /// L'URL publique, schéma compris — cf. `AuthContext::app_url`.
+    pub app_url: String,
 }
 
 #[derive(Debug)]
@@ -74,16 +72,17 @@ pub async fn execute(
 
     token_repo.create(&token, &user.coach_name).await?;
 
+    // Rien à recoller : l'hôte injecte l'URL déjà normalisée.
     let reset_url = format!(
-        "http://{}{}/{}",
-        cmd.host_domain,
+        "{}{}/{}",
+        cmd.app_url,
         path::RESET_PASSWORD_BASE,
         token.to_string()
     );
     let html = LostLoginEmail {
         coach_name: coach_name_str.clone(),
         reset_url,
-        app_url: format!("http://{}", cmd.host_domain),
+        app_url: cmd.app_url.clone(),
     }
     .render()
     .map_err(|e| SendResetPasswordEmailError::EmailSendFailed(e.to_string()))?;
@@ -135,7 +134,7 @@ mod tests {
     fn cmd(coach_name: &str) -> SendResetPasswordEmailCommand {
         SendResetPasswordEmailCommand {
             coach_name: CoachName::try_new(coach_name).unwrap(),
-            host_domain: "localhost:8080".into(),
+            app_url: "http://localhost:8080".into(),
         }
     }
 

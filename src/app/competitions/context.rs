@@ -34,11 +34,8 @@ pub struct CompetitionsContext {
     pub email_service: Arc<dyn IEmailService>,
     /// L'URL publique, schéma compris, pour les liens des e-mails.
     ///
-    /// Construite comme le fait déjà `send_reset_password_email` — le schéma
-    /// recollé à `host_domain`, qui n'en porte pas. C'est une dette **partagée**
-    /// avec lui : le jour d'un déploiement HTTPS, les deux se corrigent
-    /// ensemble. Ouvrir ici une seconde voie aurait mis deux conventions dans
-    /// le projet plutôt qu'une à réparer.
+    /// Normalisée une fois par `AppConfig::app_url()` et injectée telle quelle,
+    /// ici comme dans `auth`. Personne ne recolle plus de schéma.
     pub app_url: String,
     pub event_bus: EventBus,
 }

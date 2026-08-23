@@ -78,7 +78,7 @@ pub async fn execute(
         Arc::new(crate::app::spaces::io::repository::space_repository::SpaceRepository::new(pool.clone())),
         Arc::new(crate::app::spaces::io::repository::user_cache_repository::SpaceUserCacheRepository::new(pool.clone())),
     );
-    let app_url = format!("http://{}", cfg.host_domain);
+    let app_url = cfg.app_url();
 
     let deps = CronDeps {
         seasons: &seasons,

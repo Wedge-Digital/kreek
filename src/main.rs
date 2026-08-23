@@ -395,8 +395,10 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
         ranking_competition_port.clone(),
     );
 
+    // Une seule construction, normalisée : `host_domain` peut porter son
+    // schéma ou non, et cinq endroits le lui recollaient à la main.
+    let app_url = cfg.app_url();
     let email_service = build_email_service(cfg.email);
-    let host_domain = cfg.host_domain.clone();
 
     // Le second déclencheur de R11 : l'ouverture des inscriptions part sur un
     // **fait** — la saison s'ouvre — et non sur une date à comparer au jour.
@@ -412,7 +414,7 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                     Arc::new(crate::app::spaces::io::repository::user_cache_repository::SpaceUserCacheRepository::new(pool.clone())),
                 )),
                 email: email_service.clone(),
-                app_url: format!("http://{host_domain}"),
+                app_url: app_url.clone(),
             },
         ),
     );
@@ -422,7 +424,7 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
             &pool,
             event_bus.clone(),
             email_service.clone(),
-            cfg.host_domain,
+            app_url.clone(),
             crate::web::routes::path::APP_LAYOUT.to_string(),
         ),
         spaces: SpacesContext::new(
@@ -446,9 +448,7 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                 Arc::new(crate::app::match_report::io::repository::match_report_repository::MatchReportRepository::new(pool.clone())),
             )),
             email_service.clone(),
-            // Même construction que `send_reset_password_email` : `host_domain`
-            // ne porte pas son schéma.
-            format!("http://{}", host_domain),
+            app_url.clone(),
         ),
         news: NewsContext::new(&pool),
         references: references.clone(),

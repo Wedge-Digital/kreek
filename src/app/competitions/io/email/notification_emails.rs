@@ -11,9 +11,8 @@
 //! - `width` et `height` sont des **attributs HTML** : Outlook ignore le CSS de
 //!   dimension ;
 //! - aucune feuille externe, tout le style est en ligne ;
-//! - `app_url` **porte son schéma**. Ne pas reprendre le pli de
-//!   `send_reset_password_email`, qui recolle un `http://` en dur à
-//!   `host_domain` : un déploiement en HTTPS y produirait des liens cassés.
+//! - `app_url` **porte son schéma**, et arrive déjà normalisé par
+//!   `AppConfig::app_url()` : rien n'est à recoller ici.
 
 use askama::Template;
 

@@ -95,7 +95,7 @@ pub async fn post_forgot_password(
     match execute(
         SendResetPasswordEmailCommand {
             coach_name,
-            host_domain: ctx.host_domain.clone(),
+            app_url: ctx.app_url.clone(),
         },
         ctx.user_repository.as_ref(),
         ctx.reset_token_repository.as_ref(),
