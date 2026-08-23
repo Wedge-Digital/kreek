@@ -32,6 +32,25 @@ pub enum SpacesDomainEvent {
         user_id: CoachId,
         space_id: SpaceId,
     },
+    /// Symétrique de la promotion. Deux événements plutôt qu'un portant le rôle
+    /// cible : `grep UserDemotedToSpaceUser` répond à une question, tandis
+    /// qu'un `UserRoleChanged` unique obligerait à lire les charges utiles.
+    UserDemotedToSpaceUser {
+        event_id: EventId,
+        user_id: CoachId,
+        space_id: SpaceId,
+    },
+    /// Le retrait d'un membre par un administrateur.
+    ///
+    /// Seul des trois événements d'appartenance à **franchir la frontière** :
+    /// un coach retiré peut être administrateur d'une compétition de l'espace.
+    /// Promotion et rétrogradation restent internes, le rôle étant relu en
+    /// direct par `SpacePermissions` à chaque requête.
+    UserUnsubscribedFromSpace {
+        event_id: EventId,
+        user_id: CoachId,
+        space_id: SpaceId,
+    },
     SpaceArchived {
         event_id: EventId,
         space_id: SpaceId,
@@ -61,6 +80,8 @@ pub const USER_SUBSCRIBED_TO_SPACE: &str = "UserRegisteredInSpace";
 pub const USER_INVITED_IN_SPACE: &str = "UserInvitedInSpace";
 
 pub const USER_PROMOTED_TO_SPACE_ADMIN: &str = "UserPromotedToSpaceAdmin";
+pub const USER_DEMOTED_TO_SPACE_USER: &str = "UserDemotedToSpaceUser";
+pub const USER_UNSUBSCRIBED_FROM_SPACE: &str = "UserUnsubscribedFromSpace";
 pub const SPACE_ARCHIVED: &str = "SpaceArchived";
 
 impl SpacesDomainEvent {
@@ -90,6 +111,19 @@ impl SpacesDomainEvent {
                 space_id: space_id.clone(),
                 space_profile: space_profile.clone(),
             }),
+            // Le retrait franchit la frontière : un coach retiré peut être
+            // administrateur d'une compétition de l'espace. L'app event existait
+            // déjà dans l'enum, sans émetteur ni auditeur — on le réveille.
+            SpacesDomainEvent::UserUnsubscribedFromSpace {
+                user_id, space_id, ..
+            } => Some(SpacesAppEvent::UserUnsubscribed {
+                event_id: EventId::new(),
+                user_id: *user_id,
+                space_id: *space_id,
+            }),
+            // Promotion et rétrogradation ne franchissent pas : le rôle d'espace
+            // est relu en direct par `SpacePermissions` à chaque requête, aucun
+            // BC n'en cache de copie.
             _ => None,
         }
     }
@@ -100,6 +134,8 @@ impl SpacesDomainEvent {
             Self::UserInvitedInSpace { .. } => USER_INVITED_IN_SPACE,
             Self::UserSubscribedToSpace { .. } => USER_SUBSCRIBED_TO_SPACE,
             Self::UserPromotedToSpaceAdmin { .. } => USER_PROMOTED_TO_SPACE_ADMIN,
+            Self::UserDemotedToSpaceUser { .. } => USER_DEMOTED_TO_SPACE_USER,
+            Self::UserUnsubscribedFromSpace { .. } => USER_UNSUBSCRIBED_FROM_SPACE,
             Self::SpaceArchived { .. } => SPACE_ARCHIVED,
         }
     }
@@ -110,6 +146,8 @@ impl SpacesDomainEvent {
             Self::UserInvitedInSpace { space_id, .. } => *space_id,
             Self::UserSubscribedToSpace { space_id, .. } => *space_id,
             Self::UserPromotedToSpaceAdmin { space_id, .. } => *space_id,
+            Self::UserDemotedToSpaceUser { space_id, .. } => *space_id,
+            Self::UserUnsubscribedFromSpace { space_id, .. } => *space_id,
             Self::SpaceArchived { space_id, .. } => *space_id,
         }
     }
@@ -144,10 +182,24 @@ impl SpacesDomainEvent {
                     value: user_id.to_string(),
                 },
             ],
-            Self::UserPromotedToSpaceAdmin { space_id, .. } => vec![EventTag {
-                name: EventTagName::Space,
-                value: space_id.to_string(),
-            }],
+            Self::UserPromotedToSpaceAdmin {
+                space_id, user_id, ..
+            }
+            | Self::UserDemotedToSpaceUser {
+                space_id, user_id, ..
+            }
+            | Self::UserUnsubscribedFromSpace {
+                space_id, user_id, ..
+            } => vec![
+                EventTag {
+                    name: EventTagName::Space,
+                    value: space_id.to_string(),
+                },
+                EventTag {
+                    name: EventTagName::User,
+                    value: user_id.to_string(),
+                },
+            ],
             Self::SpaceArchived { space_id, .. } => vec![EventTag {
                 name: EventTagName::Space,
                 value: space_id.to_string(),

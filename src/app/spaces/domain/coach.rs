@@ -3,6 +3,7 @@ use crate::app::shared_kernel::identity::coach_icon::CoachIcon;
 use crate::app::shared_kernel::identity::coach_name::CoachName;
 use crate::app::shared_kernel::identity::ids::CoachId;
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Coach {
     pub id: CoachId,
     pub name: CoachName,

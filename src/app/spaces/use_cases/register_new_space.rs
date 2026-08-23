@@ -65,16 +65,16 @@ pub async fn execute(
 
     repo.save(&space).await.map_err(RegisterSpaceError::from)?;
 
-    repo.add_member(&space.id, &cmd.coach_id, &SpaceProfile::SpaceAdmin)
+    repo.add_member(&space.id(), &cmd.coach_id, &SpaceProfile::SpaceAdmin)
         .await
         .map_err(RegisterSpaceError::from)?;
 
     let space_created_payload = SpacesDomainEvent::SpaceCreated {
         event_id: UserId::new(),
         created_by: cmd.coach_id.clone(),
-        space_id: space.id.clone(),
-        space_name: space.name.clone(),
-        space_logo: space.logo.clone(),
+        space_id: *space.id(),
+        space_name: space.name().clone(),
+        space_logo: space.logo().clone(),
     };
 
     emettre(bus, space_created_payload.to_enveloppe());
