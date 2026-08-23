@@ -4,6 +4,19 @@ use crate::app::spaces::domain::space::Space;
 use async_trait::async_trait;
 use std::fmt;
 
+/// Une ligne de la liste des membres, pour l'administration d'un espace.
+///
+/// DTO de **lecture** : primitives assumées, aucun invariant à protéger. Il ne
+/// remonte jamais jusqu'à un gabarit — les VMs sont bâtis à partir de lui.
+pub struct SpaceMemberRow {
+    pub coach_id: String,
+    pub coach_name: String,
+    pub email: String,
+    pub icon: Option<String>,
+    /// « SpaceAdmin » ou « SpaceUser ». Converti par le consommateur.
+    pub profile: String,
+}
+
 pub struct SpaceSummary {
     pub id: String,
     pub name: String,
@@ -58,4 +71,27 @@ pub trait ISpaceRepository: Send + Sync {
         space_id: &SpaceId,
     ) -> Result<Option<SpaceProfile>, SpaceRepositoryError>;
     async fn find_all(&self) -> Result<Vec<SpaceSummary>, SpaceRepositoryError>;
+
+    /// Les membres d'un espace **avec leur profil**.
+    ///
+    /// Distincte de `list_members_for_space` du cache, qui rend des `User` sans
+    /// profil : l'élargir ferait porter une colonne inutile à son appelant
+    /// actuel, le sélecteur de coachs.
+    async fn list_members_with_profile(
+        &self,
+        space_id: &SpaceId,
+    ) -> Result<Vec<SpaceMemberRow>, SpaceRepositoryError>;
+
+    async fn update_member_profile(
+        &self,
+        space_id: &SpaceId,
+        coach_id: &CoachId,
+        profile: &SpaceProfile,
+    ) -> Result<(), SpaceRepositoryError>;
+
+    async fn delete_member(
+        &self,
+        space_id: &SpaceId,
+        coach_id: &CoachId,
+    ) -> Result<(), SpaceRepositoryError>;
 }

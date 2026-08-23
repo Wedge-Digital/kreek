@@ -177,3 +177,151 @@ async fn trois_membres_dont_un_sans_avatar_en_rendent_trois(pool: PgPool) {
         1
     );
 }
+
+// ── Lire, modifier et retirer une appartenance (carte 366) ───────────────────
+//
+// `spaces__user_space` a pour clé primaire `(space_id, coach_id)`. Une écriture
+// qui omettrait `space_id` toucherait le même coach dans **tous** ses espaces,
+// sans erreur — et passerait tout test qui n'utilise qu'un seul espace. D'où les
+// deux tests « dans un autre espace », qui sont la raison d'être des cinq.
+
+#[sqlx::test]
+async fn list_members_with_profile_rend_le_profil_de_chaque_membre(pool: PgPool) {
+    let repo = SpaceRepository::new(pool.clone());
+    let space = make_space("LigueProfils");
+    let space_id = *space.id();
+    repo.save(&space).await.unwrap();
+
+    let patron = semer_coach(&pool, "Patron", None).await;
+    let simple = semer_coach(&pool, "Simple", None).await;
+    repo.add_member(&space_id, &patron, &SpaceProfile::SpaceAdmin)
+        .await
+        .unwrap();
+    repo.add_member(&space_id, &simple, &SpaceProfile::SpaceUser)
+        .await
+        .unwrap();
+
+    let membres = repo.list_members_with_profile(&space_id).await.unwrap();
+
+    assert_eq!(membres.len(), 2);
+    let profils: Vec<&str> = membres.iter().map(|m| m.profile.as_str()).collect();
+    assert!(profils.contains(&"SpaceAdmin"));
+    assert!(profils.contains(&"SpaceUser"));
+    assert!(membres.iter().all(|m| m.email.ends_with("@example.com")));
+}
+
+#[sqlx::test]
+async fn list_members_with_profile_trie_par_pseudo(pool: PgPool) {
+    let repo = SpaceRepository::new(pool.clone());
+    let space = make_space("LigueTri");
+    let space_id = *space.id();
+    repo.save(&space).await.unwrap();
+
+    // Insérés dans le désordre : le tri ne doit rien devoir à l'ordre d'entrée.
+    for nom in ["Zoltan", "Alpha", "Melchior"] {
+        let id = semer_coach(&pool, nom, None).await;
+        repo.add_member(&space_id, &id, &SpaceProfile::SpaceUser)
+            .await
+            .unwrap();
+    }
+
+    let noms: Vec<String> = repo
+        .list_members_with_profile(&space_id)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|m| m.coach_name)
+        .collect();
+
+    assert_eq!(noms, vec!["Alpha", "Melchior", "Zoltan"]);
+}
+
+#[sqlx::test]
+async fn list_members_with_profile_ne_rend_que_les_membres_de_l_espace_demande(pool: PgPool) {
+    let repo = SpaceRepository::new(pool.clone());
+    let ici = make_space("LigueIci");
+    let ailleurs = make_space("LigueAilleurs");
+    let (id_ici, id_ailleurs) = (*ici.id(), *ailleurs.id());
+    repo.save(&ici).await.unwrap();
+    repo.save(&ailleurs).await.unwrap();
+
+    let coach = semer_coach(&pool, "Nomade", None).await;
+    repo.add_member(&id_ici, &coach, &SpaceProfile::SpaceUser)
+        .await
+        .unwrap();
+    let autre = semer_coach(&pool, "Sedentaire", None).await;
+    repo.add_member(&id_ailleurs, &autre, &SpaceProfile::SpaceAdmin)
+        .await
+        .unwrap();
+
+    let membres = repo.list_members_with_profile(&id_ici).await.unwrap();
+
+    assert_eq!(membres.len(), 1);
+    assert_eq!(membres[0].coach_name, "Nomade");
+}
+
+#[sqlx::test]
+async fn update_member_profile_ne_touche_pas_le_meme_coach_dans_un_autre_espace(pool: PgPool) {
+    let repo = SpaceRepository::new(pool.clone());
+    let cible = make_space("LigueCible");
+    let temoin = make_space("LigueTemoin");
+    let (id_cible, id_temoin) = (*cible.id(), *temoin.id());
+    repo.save(&cible).await.unwrap();
+    repo.save(&temoin).await.unwrap();
+
+    // Le **même** coach, membre des deux espaces avec le même profil.
+    let coach = semer_coach(&pool, "Bilocalise", None).await;
+    repo.add_member(&id_cible, &coach, &SpaceProfile::SpaceUser)
+        .await
+        .unwrap();
+    repo.add_member(&id_temoin, &coach, &SpaceProfile::SpaceUser)
+        .await
+        .unwrap();
+
+    repo.update_member_profile(&id_cible, &coach, &SpaceProfile::SpaceAdmin)
+        .await
+        .unwrap();
+
+    let dans_cible = repo.list_members_with_profile(&id_cible).await.unwrap();
+    let dans_temoin = repo.list_members_with_profile(&id_temoin).await.unwrap();
+
+    assert_eq!(dans_cible[0].profile, "SpaceAdmin");
+    assert_eq!(
+        dans_temoin[0].profile, "SpaceUser",
+        "l'écriture a débordé sur un autre espace — `space_id` manque au WHERE"
+    );
+}
+
+#[sqlx::test]
+async fn delete_member_ne_retire_pas_le_meme_coach_d_un_autre_espace(pool: PgPool) {
+    let repo = SpaceRepository::new(pool.clone());
+    let cible = make_space("LigueCibleD");
+    let temoin = make_space("LigueTemoinD");
+    let (id_cible, id_temoin) = (*cible.id(), *temoin.id());
+    repo.save(&cible).await.unwrap();
+    repo.save(&temoin).await.unwrap();
+
+    let coach = semer_coach(&pool, "Bilocalise", None).await;
+    repo.add_member(&id_cible, &coach, &SpaceProfile::SpaceUser)
+        .await
+        .unwrap();
+    repo.add_member(&id_temoin, &coach, &SpaceProfile::SpaceUser)
+        .await
+        .unwrap();
+
+    repo.delete_member(&id_cible, &coach).await.unwrap();
+
+    assert!(repo
+        .list_members_with_profile(&id_cible)
+        .await
+        .unwrap()
+        .is_empty());
+    assert_eq!(
+        repo.list_members_with_profile(&id_temoin)
+            .await
+            .unwrap()
+            .len(),
+        1,
+        "le retrait a débordé sur un autre espace — `space_id` manque au WHERE"
+    );
+}

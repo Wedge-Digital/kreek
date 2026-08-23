@@ -4,7 +4,7 @@ use crate::app::shared_kernel::identity::space_name::SpaceName;
 use crate::app::spaces::domain::domain_event::SpacesDomainEvent;
 use crate::app::spaces::domain::space::Space;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::{
-    ISpaceRepository, SpaceRepositoryError,
+    ISpaceRepository, SpaceMemberRow, SpaceRepositoryError,
 };
 use crate::app::spaces::domain::space_repository_port::user_cache_repository_port::{
     ISpaceUserCacheRepository, SpaceUserCacheRepositoryError,
@@ -184,6 +184,27 @@ mod tests {
         async fn find_all(&self) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
             Ok(vec![])
         }
+        async fn list_members_with_profile(
+            &self,
+            _: &SpaceId,
+        ) -> Result<Vec<SpaceMemberRow>, SpaceRepositoryError> {
+            Ok(vec![])
+        }
+        async fn update_member_profile(
+            &self,
+            _: &SpaceId,
+            _: &CoachId,
+            _: &SpaceProfile,
+        ) -> Result<(), SpaceRepositoryError> {
+            Ok(())
+        }
+        async fn delete_member(
+            &self,
+            _: &SpaceId,
+            _: &CoachId,
+        ) -> Result<(), SpaceRepositoryError> {
+            Ok(())
+        }
     }
 
     struct SpaceRepoNameTaken;
@@ -231,6 +252,27 @@ mod tests {
 
         async fn find_all(&self) -> Result<Vec<SpaceSummary>, SpaceRepositoryError> {
             Ok(vec![])
+        }
+        async fn list_members_with_profile(
+            &self,
+            _: &SpaceId,
+        ) -> Result<Vec<SpaceMemberRow>, SpaceRepositoryError> {
+            Ok(vec![])
+        }
+        async fn update_member_profile(
+            &self,
+            _: &SpaceId,
+            _: &CoachId,
+            _: &SpaceProfile,
+        ) -> Result<(), SpaceRepositoryError> {
+            Ok(())
+        }
+        async fn delete_member(
+            &self,
+            _: &SpaceId,
+            _: &CoachId,
+        ) -> Result<(), SpaceRepositoryError> {
+            Ok(())
         }
     }
 
