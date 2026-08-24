@@ -24,6 +24,11 @@
                 {% if membre.role_locked %}disabled{% else %}
                 hx-post="{{ routes.space_admin_member_role(space_id, membre.coach_id) }}"
                 hx-trigger="change"
+                {# Sans `hx-include`, **aucune valeur ne part** : l'input qui
+                   porte le profil vit à l'intérieur du composant, et HTMX
+                   n'inclut pas les champs d'un élément qui n'en est pas un.
+                   Le serveur rendait 422, en silence côté écran. #}
+                hx-include="closest .sam-row"
                 hx-target="closest .sam-row"
                 hx-swap="outerHTML"
                 {% endif %}>

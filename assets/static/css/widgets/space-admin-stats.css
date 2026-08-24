@@ -1,0 +1,43 @@
+/* ── Widget « statistiques de l'espace » ────────────────────────────────────
+   Portée : `.space-admin-stats`, racine du widget — le nom de la feuille **est**
+   le sélecteur de portée, et l'axe 15 le vérifie. Les enfants gardent un préfixe
+   court `sas-`.
+
+   La hauteur d'une puce — 40 px de contenu et 2 × 10 px — est le terme « barre
+   de statistiques » de la réservation posée par la page. La changer oblige à
+   revoir cette réservation. */
+
+.space-admin-stats {
+  display: flex;
+  gap: var(--p1);
+  margin-bottom: var(--p1);
+}
+
+.space-admin-stats .sas-chip {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px var(--p1);
+  border: 1px solid var(--dark-5);
+  border-radius: 10px;
+  background: var(--white);
+}
+
+.space-admin-stats .sas-chip-icone { font-size: 20px; flex-shrink: 0; }
+.space-admin-stats .sas-chip-valeur {
+  font-family: var(--font-title);
+  font-size: var(--h4);
+  font-weight: 700;
+  color: var(--dark-1);
+  line-height: 1.1;
+}
+.space-admin-stats .sas-chip-libelle {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+}
+
+@media (max-width: 768px) {
+  .space-admin-stats { flex-wrap: wrap; }
+  .space-admin-stats .sas-chip { flex: 1 1 45%; }
+}
