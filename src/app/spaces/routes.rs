@@ -10,6 +10,7 @@ pub mod path {
     pub const COACH_SEARCH_RESULT: &str = "/app/coaches/widget/search/results";
     pub const SPACE_MEMBERS_WIDGET: &str = "/app/{space_id}/members-widget";
     pub const SPACE_ADMIN: &str = "/app/{space_id}/admin";
+    pub const SPACE_ADMIN_MEMBERS_WIDGET: &str = "/app/{space_id}/admin/widgets/members";
 }
 
 #[derive(Debug, Clone, Copy, Default, Deserialize, Serialize)]
@@ -40,6 +41,9 @@ impl Routes {
     }
     pub fn space_admin(&self, space_id: &str) -> String {
         path::SPACE_ADMIN.replace("{space_id}", space_id)
+    }
+    pub fn space_admin_members_widget(&self, space_id: &str) -> String {
+        path::SPACE_ADMIN_MEMBERS_WIDGET.replace("{space_id}", space_id)
     }
     pub fn members_widget(&self, space_id: &str) -> String {
         path::SPACE_MEMBERS_WIDGET.replace("{space_id}", space_id)
