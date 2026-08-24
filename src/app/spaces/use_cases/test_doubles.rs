@@ -45,6 +45,7 @@ pub struct FakeSpaceRepo {
     pub space: Option<Space>,
     pub profils_ecrits: AtomicUsize,
     pub membres_supprimes: AtomicUsize,
+    pub membres_ajoutes: AtomicUsize,
 }
 
 impl FakeSpaceRepo {
@@ -53,6 +54,7 @@ impl FakeSpaceRepo {
             space: Some(space),
             profils_ecrits: AtomicUsize::new(0),
             membres_supprimes: AtomicUsize::new(0),
+            membres_ajoutes: AtomicUsize::new(0),
         }
     }
 
@@ -61,11 +63,14 @@ impl FakeSpaceRepo {
             space: None,
             profils_ecrits: AtomicUsize::new(0),
             membres_supprimes: AtomicUsize::new(0),
+            membres_ajoutes: AtomicUsize::new(0),
         }
     }
 
     pub fn ecritures(&self) -> usize {
-        self.profils_ecrits.load(Ordering::SeqCst) + self.membres_supprimes.load(Ordering::SeqCst)
+        self.profils_ecrits.load(Ordering::SeqCst)
+            + self.membres_supprimes.load(Ordering::SeqCst)
+            + self.membres_ajoutes.load(Ordering::SeqCst)
     }
 }
 
@@ -80,6 +85,7 @@ impl ISpaceRepository for FakeSpaceRepo {
         _: &CoachId,
         _: &SpaceProfile,
     ) -> Result<(), SpaceRepositoryError> {
+        self.membres_ajoutes.fetch_add(1, Ordering::SeqCst);
         Ok(())
     }
     async fn join_spaces(&self, _: &[SpaceId], _: &CoachId) -> Result<(), SpaceRepositoryError> {
@@ -137,5 +143,95 @@ impl ISpaceRepository for FakeSpaceRepo {
         _: i64,
     ) -> Result<Vec<CandidateRow>, SpaceRepositoryError> {
         Ok(vec![])
+    }
+}
+
+// ── Le cache d'utilisateurs, et le service d'email ───────────────────────────
+
+use crate::app::shared_kernel::identity::email::Email;
+use crate::app::spaces::domain::space_repository_port::user_cache_repository_port::{
+    ISpaceUserCacheRepository, SpaceUserCacheRepositoryError,
+};
+use crate::app::spaces::domain::user::User;
+use crate::common::services::email::{EmailError, IEmailService};
+
+pub struct FakeUserCache {
+    pub users: Vec<User>,
+}
+
+impl FakeUserCache {
+    pub fn avec(users: Vec<User>) -> Self {
+        Self { users }
+    }
+}
+
+pub fn user(id: CoachId, nom: &str) -> User {
+    User {
+        id,
+        name: CoachName::try_new(nom).unwrap(),
+        email: Email::try_new(&format!("{nom}@bb.club")).unwrap(),
+        icon: None,
+    }
+}
+
+#[async_trait]
+impl ISpaceUserCacheRepository for FakeUserCache {
+    async fn add_user(&self, _: &User) -> Result<(), SpaceUserCacheRepositoryError> {
+        Ok(())
+    }
+    async fn find_user_by_id(&self, id: &CoachId) -> Result<User, SpaceUserCacheRepositoryError> {
+        self.users
+            .iter()
+            .find(|u| &u.id == id)
+            .cloned()
+            .ok_or(SpaceUserCacheRepositoryError::UserNotFoundInCache)
+    }
+    async fn find_all_users(&self) -> Result<Vec<User>, SpaceUserCacheRepositoryError> {
+        Ok(self.users.clone())
+    }
+    async fn list_members_for_space(
+        &self,
+        _: &SpaceId,
+    ) -> Result<Vec<User>, SpaceUserCacheRepositoryError> {
+        Ok(vec![])
+    }
+}
+
+/// Compte les envois, et sait échouer sur commande.
+///
+/// L'échec est la moitié utile : il sert au seul test qui vérifie que la
+/// courtoisie ne gouverne pas l'appartenance.
+pub struct FakeEmail {
+    pub envois: AtomicUsize,
+    pub echoue: bool,
+}
+
+impl FakeEmail {
+    pub fn qui_marche() -> Self {
+        Self {
+            envois: AtomicUsize::new(0),
+            echoue: false,
+        }
+    }
+    pub fn en_panne() -> Self {
+        Self {
+            envois: AtomicUsize::new(0),
+            echoue: true,
+        }
+    }
+    pub fn envoyes(&self) -> usize {
+        self.envois.load(Ordering::SeqCst)
+    }
+}
+
+#[async_trait]
+impl IEmailService for FakeEmail {
+    async fn send(&self, _: Vec<String>, _: String, _: String) -> Result<(), EmailError> {
+        self.envois.fetch_add(1, Ordering::SeqCst);
+        if self.echoue {
+            Err(EmailError::Network("panne simulée".into()))
+        } else {
+            Ok(())
+        }
     }
 }

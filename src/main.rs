@@ -383,6 +383,7 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
             &pool,
             event_bus.clone(),
             Arc::new(KreekSpacesLayout),
+            email_service.clone(),
         ),
         competitions: CompetitionsContext::new(
             &pool,

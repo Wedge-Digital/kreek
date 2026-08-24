@@ -48,6 +48,27 @@ pub struct ChangementDAppartenance {
     pub administrateurs: NombreAdministrateurs,
 }
 
+/// Prévenir ou non le coach qu'il a rejoint l'espace.
+///
+/// Un value object et non un `bool` nu : un booléen dans une commande est un
+/// drapeau dont on ne sait plus, six mois après, ce que `true` veut dire.
+/// `Envoyer` et `Taire` se lisent à l'appel comme dans le journal.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Notification {
+    Envoyer,
+    Taire,
+}
+
+impl From<bool> for Notification {
+    fn from(coche: bool) -> Self {
+        if coche {
+            Notification::Envoyer
+        } else {
+            Notification::Taire
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SpaceMembershipError {
     /// L'invariant : un espace a toujours au moins un administrateur.
