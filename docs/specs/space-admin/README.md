@@ -9,8 +9,8 @@ et commitée (`cfe938e`).
 
 | Onglet | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| Page hôte + Membres | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (364-374) |
-| Ajout direct | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (376-384) |
+| Page hôte + Membres | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ **livrées** (364-375) |
+| Ajout direct | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ **livrées** (376-384) |
 | Invitations | | | | | | | |
 | Paramètres | | | | | | | |
 
