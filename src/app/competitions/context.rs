@@ -6,6 +6,7 @@ use crate::app::competitions::io::app_events::app_event_publisher::competitions_
 use crate::app::competitions::io::app_events::match_report_confirmed_listener;
 use crate::app::competitions::io::app_events::match_report_published_listener;
 use crate::app::competitions::io::app_events::match_report_unpublished_listener;
+use crate::app::competitions::io::app_events::user_unsubscribed_listener;
 use crate::app::competitions::io::repository::competition_repository::CompetitionRepository;
 use crate::app::competitions::io::repository::group_repository::GroupRepository;
 use crate::app::competitions::io::repository::match_day_repository::MatchDayRepository;
@@ -50,6 +51,7 @@ pub fn init_listeners(
     team_info_port: Arc<dyn ITeamInfoPort>,
 ) {
     match_report_confirmed_listener::init(&app_event_bus, pool.clone());
+    user_unsubscribed_listener::init(&app_event_bus, pool.clone());
     match_report_unpublished_listener::init(&app_event_bus, pool.clone());
     match_report_published_listener::init(
         &app_event_bus,
