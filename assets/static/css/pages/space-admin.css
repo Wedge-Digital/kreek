@@ -156,6 +156,53 @@
   border-color: var(--main-blue);
 }
 
+/* ── Panneau de création de compte ──────────────────────────────────────────
+   La ligne réunit deux propriétaires : le formulaire vient de l'hôte, le
+   sélecteur de profil appartient à ce BC. Les deux moitiés doivent se lire
+   comme une seule ligne — d'où le `flex-end`, qui aligne les champs sur leur
+   base quelle que soit la hauteur de leurs libellés. */
+.space-admin .space-admin-creation {
+  margin-top: var(--p2);
+  padding-top: var(--p1);
+  border-top: 1px solid var(--dark-5);
+}
+.space-admin .space-admin-creation-titre {
+  font-size: var(--text-small);
+  font-weight: 700;
+  color: var(--dark-1);
+}
+.space-admin .space-admin-creation-sous-titre {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  margin: 4px 0 var(--p1);
+  line-height: 1.5;
+}
+.space-admin .space-admin-creation-ligne {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--p1);
+}
+.space-admin .space-admin-creation-hote { flex: 1; }
+.space-admin .space-admin-creation-profil {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 130px;
+  flex-shrink: 0;
+}
+.space-admin .space-admin-creation-profil-label {
+  font-size: var(--text-tiny);
+  font-weight: 600;
+  color: var(--dark-3);
+}
+.space-admin .space-admin-creation-retour:empty { display: none; }
+.space-admin .space-admin-creation-retour { margin-top: var(--p1); }
+
+@media (max-width: 768px) {
+  .space-admin .space-admin-creation-ligne { flex-direction: column; align-items: stretch; }
+  .space-admin .space-admin-creation-profil { width: 100%; }
+}
+
 /* ── Journal de session de l'ajout direct ── */
 .space-admin .space-admin-journal {
   margin-top: var(--p2);

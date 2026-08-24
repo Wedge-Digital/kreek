@@ -230,3 +230,91 @@ async fn un_membre_simple_ne_peut_pas_ajouter(pool: sqlx::PgPool) {
 
     assert_eq!(r.statut, StatusCode::FORBIDDEN);
 }
+
+// ── Le panneau de création de compte (carte 383) ────────────────────────────
+
+/// Le fragment de l'hôte est bien injecté dans le panneau.
+///
+/// Ce BC ne sait pas ce qu'il contient — il vérifie seulement qu'il est là, et
+/// qu'il y a joint ce qui lui appartient : le sélecteur de profil.
+#[sqlx::test]
+async fn le_panneau_injecte_le_formulaire_de_l_hote_et_son_selecteur(pool: sqlx::PgPool) {
+    let space = contexte(&pool).await;
+    let app = Harnais::connecte_en_tant_que(pool, "DevCoach").await;
+
+    let r = app
+        .get(&format!("/app/{space}/admin/widgets/create-coach"))
+        .await;
+
+    assert_eq!(r.statut, StatusCode::OK);
+    assert!(
+        r.corps.contains(r#"name="coach_name""#),
+        "le formulaire de l'hôte doit être injecté : {}",
+        r.corps
+    );
+    assert!(
+        r.corps.contains("space-admin-creation-profil"),
+        "et le sélecteur de profil, qui appartient à ce BC : {}",
+        r.corps
+    );
+}
+
+/// La répartition du terme cherché est décidée **ici**.
+#[sqlx::test]
+async fn le_terme_cherche_est_reparti_selon_la_presence_d_un_arobase(pool: sqlx::PgPool) {
+    let space = contexte(&pool).await;
+    let app = Harnais::connecte_en_tant_que(pool, "DevCoach").await;
+
+    let pseudo = app
+        .get(&format!(
+            "/app/{space}/admin/widgets/create-coach?q=NurgleFan"
+        ))
+        .await;
+    assert!(pseudo.corps.contains(r#"value="NurgleFan""#));
+
+    let adresse = app
+        .get(&format!(
+            "/app/{space}/admin/widgets/create-coach?q=nurgle%40bb.club"
+        ))
+        .await;
+    assert!(
+        adresse.corps.contains(r#"value="nurgle@bb.club""#),
+        "une saisie contenant un @ part dans le champ e-mail : {}",
+        adresse.corps
+    );
+}
+
+/// L'écoute du contrat, côté récepteur.
+///
+/// Le harnais ne peut pas vérifier que les deux bords s'accordent — seul un test
+/// de bout en bout le peut. Il vérifie que ce bord-ci écoute bien le nom convenu
+/// et lit les deux clés attendues.
+#[sqlx::test]
+async fn le_panneau_ecoute_l_evenement_et_poste_l_appartenance(pool: sqlx::PgPool) {
+    let space = contexte(&pool).await;
+    let app = Harnais::connecte_en_tant_que(pool, "DevCoach").await;
+
+    let r = app
+        .get(&format!("/app/{space}/admin/widgets/create-coach"))
+        .await;
+
+    assert!(r.corps.contains("account-created.window"), "{}", r.corps);
+    assert!(r.corps.contains("$event.detail.coach_id"), "{}", r.corps);
+    assert!(
+        r.corps.contains(&format!("/app/{space}/admin/members/add")),
+        "et poste vers l'ajout : {}",
+        r.corps
+    );
+}
+
+#[sqlx::test]
+async fn un_membre_simple_n_atteint_pas_le_panneau_de_creation(pool: sqlx::PgPool) {
+    let space = contexte(&pool).await;
+    let app = Harnais::connecte_en_tant_que(pool, SIMPLE_COACH_NAME).await;
+
+    let r = app
+        .get(&format!("/app/{space}/admin/widgets/create-coach"))
+        .await;
+
+    assert_eq!(r.statut, StatusCode::FORBIDDEN);
+}

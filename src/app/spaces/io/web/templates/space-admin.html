@@ -92,7 +92,8 @@
                    hx-trigger="input changed delay:300ms"
                    hx-target="next .space-admin-candidats"
                    hx-swap="innerHTML"
-                   hx-params="q">
+                   hx-params="q"
+                   hx-on::after-request="htmx.trigger(document.body, 'rechercheChangee')">
           </div>
 
           {# Chargé une première fois pour rendre l'état sous-seuil, puis
@@ -100,6 +101,15 @@
           <div class="space-admin-candidats"
                hx-get="{{ routes.space_admin_candidates_widget(space_id) }}"
                hx-trigger="load"
+               hx-swap="innerHTML"></div>
+
+          {# Le panneau de création : rechargé après chaque recherche, pour que
+             le pré-remplissage suive ce qui a été tapé. Un fragment rendu une
+             fois avec la page ne pourrait pas en tenir compte. #}
+          <div class="space-admin-creation-zone"
+               hx-get="{{ routes.space_admin_create_coach_panel(space_id) }}"
+               hx-trigger="load, rechercheChangee from:body"
+               hx-include="[name='q']"
                hx-swap="innerHTML"></div>
 
           {# ── Journal de session ──────────────────────────────────────────
