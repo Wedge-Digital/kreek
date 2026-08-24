@@ -1,9 +1,10 @@
+use crate::app::shared_kernel::identity::charset::TEXTE_SAISI;
 use nutype::nutype;
 use std::fmt::Display;
 
 #[nutype(
     sanitize(trim),
-    validate(len_char_max = 100, regex = r"^[\p{L}0-9_\-'. ]+$"),
+    validate(len_char_max = 100, regex = TEXTE_SAISI),
     derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, AsRef)
 )]
 pub struct SpaceName(String);
@@ -60,10 +61,19 @@ mod tests {
         assert!(SpaceName::try_new("Équipe Étoilée").is_ok());
     }
 
+    /// La ponctuation courante est passée dans le charset commun ; ce qui
+    /// reste dehors, ce sont les caractères qu'aucun nom n'a de raison de
+    /// porter.
+    #[test]
+    fn accepts_common_punctuation() {
+        assert!(SpaceName::try_new("my@space!").is_ok());
+        assert!(SpaceName::try_new("L'Académie « des Champions »").is_ok());
+    }
+
     #[test]
     fn rejects_special_chars() {
         assert_eq!(
-            SpaceName::try_new("my@space!").unwrap_err(),
+            SpaceName::try_new("my|space").unwrap_err(),
             SpaceNameError::RegexViolated
         );
     }

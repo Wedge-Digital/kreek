@@ -97,6 +97,14 @@
       "type": "Trait",
       "activation": "Passive",
       "description": "Ce joueur ne peut pas effectuer d'action de course deux tours de suite."
+    },
+    {
+      "uid": "CAPITAINE_EQUIPE",
+      "name": "Capitaine d'équipe",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Une fois par match, ce joueur permet de conserver une relance dépensée sur un 6+."
     }
   ]
 }

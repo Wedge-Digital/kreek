@@ -1,4 +1,5 @@
 use crate::app::shared_kernel::bloodbowl::ids::RosterId;
+use crate::app::shared_kernel::identity::charset::TEXTE_SAISI;
 use crate::app::team_creation::domain::team_staff::TeamStaff;
 use nutype::nutype;
 use serde::{Deserialize, Serialize};
@@ -24,7 +25,7 @@ pub struct SkillId(pub String);
 
 #[nutype(
     sanitize(trim),
-    validate(not_empty, len_char_max = 50, regex = r"^[\p{L}0-9 -]+$"),
+    validate(not_empty, len_char_max = 50, regex = TEXTE_SAISI),
     derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Display, AsRef)
 )]
 pub struct PlayerName(String);
@@ -49,7 +50,7 @@ pub struct RerollBasePrice(u32);
 
 #[nutype(
     sanitize(trim),
-    validate(not_empty, len_char_max = 50, regex = r"^[\p{L}0-9 -]+$"),
+    validate(not_empty, len_char_max = 50, regex = TEXTE_SAISI),
     derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Display, AsRef)
 )]
 pub struct RosterName(String);
