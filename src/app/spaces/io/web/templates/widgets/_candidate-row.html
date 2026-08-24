@@ -7,9 +7,13 @@
   `est_membre` décide de tout : un badge, ou un sélecteur de profil et un bouton.
   Le gabarit ne tranche rien de lui-même.
 
-  Le sélecteur et le bouton sont rendus mais **inertes** — la carte 382 leur
-  donnera leur `hx-post`. Ils sont là dès maintenant parce qu'une ligne sans eux
-  n'a pas la hauteur d'une vraie ligne, et le dessin se jugerait sur un faux.
+  La ligne s'échange **elle-même** : l'ajout la remplace par sa version portant
+  le badge « Déjà membre ». Elle ne disparaît pas — le coach existe toujours dans
+  l'annuaire, il est simplement devenu membre, et le faire disparaître laisserait
+  croire à une suppression.
+
+  Le sélecteur de profil et la case de notification sont **inclus dans le POST**
+  par `hx-include` : ils vivent dans la ligne, pas dans un formulaire.
 #}
 <div class="sac-row" data-coach="{{ candidat.coach_id }}">
   <div class="sac-avatar">{{ candidat.initials }}</div>
@@ -25,7 +29,16 @@
     <option value="SpaceUser" selected>Membre</option>
     <option value="SpaceAdmin">Admin</option>
   </kreek-select>
-  <button type="button" class="sac-btn">
+  <label class="sac-notif" title="Prévenir le coach par email qu'il a rejoint l'espace">
+    <input type="checkbox" name="notifier" value="true" checked>
+    <span>Prévenir</span>
+  </label>
+  <button type="button" class="sac-btn"
+          hx-post="{{ routes.space_admin_member_add(space_id) }}"
+          hx-vals='{"coach_id": "{{ candidat.coach_id }}"}'
+          hx-include="closest .sac-row"
+          hx-target="closest .sac-row"
+          hx-swap="outerHTML">
     <span class="sac-btn-icon">➕</span> Ajouter
   </button>
   {% endif %}

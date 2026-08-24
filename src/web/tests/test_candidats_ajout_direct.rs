@@ -7,6 +7,13 @@ use crate::cli::seed_e2e::SIMPLE_COACH_NAME;
 use crate::web::test_harness::Harnais;
 use axum::http::StatusCode;
 
+/// Identifiants de test valides au sens ULID.
+///
+/// L'alphabet de Crockford exclut `I`, `L`, `O` et `U` — un identifiant
+/// « parlant » comme `01JSOLITAIRE…` est donc refusé par le value object, et le
+/// contrôleur rend 400. Un test d'autorisation passerait quand même, la garde
+/// répondant avant la validation : il passerait **pour la mauvaise raison**.
+
 async fn contexte(pool: &sqlx::PgPool) -> String {
     crate::cli::seed_e2e::execute(pool).await.expect("seed e2e");
     sqlx::query_scalar(
@@ -89,7 +96,7 @@ async fn un_non_membre_est_rendu_avec_son_selecteur_et_son_bouton(pool: sqlx::Pg
     // Un coach de la plateforme qui n'est membre d'aucun espace.
     sqlx::query(
         "INSERT INTO spaces__user_cache (id, coach_name, coach_icon, email)
-         VALUES ('01JSOLITAIRE00000000000000', 'Solitaire', NULL, 'solitaire@bb.club')",
+         VALUES ('01JEEEEEEEEEEEEEEEEEEEEEEE', 'Solitaire', NULL, 'solitaire@bb.club')",
     )
     .execute(&pool)
     .await
@@ -114,6 +121,111 @@ async fn un_membre_simple_n_atteint_pas_la_liste_des_candidats(pool: sqlx::PgPoo
 
     let r = app
         .get(&format!("/app/{space}/admin/widgets/candidates?q=Dev"))
+        .await;
+
+    assert_eq!(r.statut, StatusCode::FORBIDDEN);
+}
+
+// ── L'ajout d'un coach déjà inscrit (carte 382) ─────────────────────────────
+
+async fn coach_libre(pool: &sqlx::PgPool, id: &str, nom: &str) {
+    sqlx::query(
+        "INSERT INTO spaces__user_cache (id, coach_name, coach_icon, email)
+         VALUES ($1, $2, NULL, $3)",
+    )
+    .bind(id)
+    .bind(nom)
+    .bind(format!("{nom}@bb.club"))
+    .execute(pool)
+    .await
+    .unwrap();
+}
+
+/// La ligne est **re-rendue avec son badge**, pas retirée.
+///
+/// Le coach existe toujours dans l'annuaire ; le faire disparaître laisserait
+/// croire à une suppression.
+#[sqlx::test]
+async fn ajouter_un_coach_rerend_sa_ligne_avec_le_badge(pool: sqlx::PgPool) {
+    let space = contexte(&pool).await;
+    coach_libre(&pool, "01JBBBBBBBBBBBBBBBBBBBBBBB", "Ajoute").await;
+    let app = Harnais::connecte_en_tant_que(pool, "DevCoach").await;
+
+    let r = app
+        .post_htmx(
+            &format!("/app/{space}/admin/members/add"),
+            "coach_id=01JBBBBBBBBBBBBBBBBBBBBBBB&profile=SpaceUser",
+        )
+        .await;
+
+    assert_eq!(r.statut, StatusCode::OK);
+    assert!(r.corps.contains("Déjà membre"), "{}", r.corps);
+    assert!(
+        !r.corps.contains("sac-btn"),
+        "la ligne ne propose plus d'ajouter"
+    );
+}
+
+/// Le contrat du journal de session.
+///
+/// Le `name` voyage dans l'événement pour une seule raison : le journal affiche
+/// depuis ce payload, sans relire. Sans lui, il retomberait dans la course du
+/// cache d'utilisateurs qu'il est là pour masquer.
+#[sqlx::test]
+async fn l_ajout_declenche_member_added_avec_le_pseudo(pool: sqlx::PgPool) {
+    let space = contexte(&pool).await;
+    coach_libre(&pool, "01JCCCCCCCCCCCCCCCCCCCCCCC", "Payload").await;
+    let app = Harnais::connecte_en_tant_que(pool, "DevCoach").await;
+
+    let r = app
+        .post_htmx(
+            &format!("/app/{space}/admin/members/add"),
+            "coach_id=01JCCCCCCCCCCCCCCCCCCCCCCC&profile=SpaceUser",
+        )
+        .await;
+
+    let entete = r.entete("hx-trigger").expect("l'en-tête doit être posé");
+    assert!(entete.contains("memberAdded"), "{entete}");
+    assert!(entete.contains("01JCCCCCCCCCCCCCCCCCCCCCCC"), "{entete}");
+    assert!(
+        entete.contains(r#""name":"Payload""#),
+        "le pseudo doit voyager : {entete}"
+    );
+}
+
+#[sqlx::test]
+async fn ajouter_un_coach_deja_membre_rend_409(pool: sqlx::PgPool) {
+    let space = contexte(&pool).await;
+    let deja: String = sqlx::query_scalar("SELECT id FROM auth__users WHERE coach_name = $1")
+        .bind(SIMPLE_COACH_NAME)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let app = Harnais::connecte_en_tant_que(pool, "DevCoach").await;
+
+    let r = app
+        .post_htmx(
+            &format!("/app/{space}/admin/members/add"),
+            &format!("coach_id={deja}&profile=SpaceUser"),
+        )
+        .await;
+
+    assert_eq!(r.statut, StatusCode::CONFLICT);
+    assert!(r.corps.contains("déjà membre"), "{}", r.corps);
+}
+
+/// Le grisage de la liste des candidats est une politesse, pas une garde.
+#[sqlx::test]
+async fn un_membre_simple_ne_peut_pas_ajouter(pool: sqlx::PgPool) {
+    let space = contexte(&pool).await;
+    coach_libre(&pool, "01JDDDDDDDDDDDDDDDDDDDDDDD", "Interdit").await;
+    let app = Harnais::connecte_en_tant_que(pool, SIMPLE_COACH_NAME).await;
+
+    let r = app
+        .post_htmx(
+            &format!("/app/{space}/admin/members/add"),
+            "coach_id=01JDDDDDDDDDDDDDDDDDDDDDDD&profile=SpaceAdmin",
+        )
         .await;
 
     assert_eq!(r.statut, StatusCode::FORBIDDEN);

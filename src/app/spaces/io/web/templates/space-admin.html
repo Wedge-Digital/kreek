@@ -102,6 +102,42 @@
                hx-trigger="load"
                hx-swap="innerHTML"></div>
 
+          {# ── Journal de session ──────────────────────────────────────────
+             Purement client : une liste Alpine alimentée par `memberAdded`,
+             perdue au rechargement — c'est le sens exact de « ajoutés pendant
+             cette session ». Aucun endpoint, aucune vue serveur.
+
+             Il affiche **depuis le payload**, jamais d'une relecture. C'est ce
+             qui masque le délai d'alimentation du cache d'utilisateurs, nourri
+             par un app event asynchrone : un coach tout juste ajouté peut être
+             membre sans encore apparaître dans la liste des membres. Le `name`
+             voyage dans l'événement pour cette seule raison.
+
+             Son bouton « Retirer » appelle la route de la carte 371 : retirer
+             quelqu'un qu'on vient d'ajouter et retirer un membre de longue date
+             sont la même opération. #}
+          <div class="space-admin-journal"
+               x-data="{ ajoutes: [] }"
+               @member-added.window="ajoutes.push($event.detail)"
+               @member-removed.window="ajoutes = ajoutes.filter(a => a.coach_id !== $event.detail.coach_id)">
+
+            <div class="space-admin-journal-titre">Ajoutés pendant cette session</div>
+
+            <template x-if="ajoutes.length === 0">
+              <div class="space-admin-journal-vide">Aucun coach ajouté pour le moment.</div>
+            </template>
+
+            <template x-for="a in ajoutes" :key="a.coach_id">
+              <div class="space-admin-journal-ligne">
+                <span x-text="a.name"></span>
+                <button type="button" class="space-admin-journal-retrait"
+                        :hx-post="'/app/{{ space_id }}/admin/members/' + a.coach_id + '/remove'"
+                        hx-swap="none"
+                        x-init="htmx.process($el)">✕ Retirer</button>
+              </div>
+            </template>
+          </div>
+
         </div>
       </template>
     </div>

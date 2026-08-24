@@ -102,6 +102,12 @@ mod tests {
     struct FakeHostLayout;
 
     impl ISpacesHostLayout for FakeHostLayout {
+        fn space_url(&self, space_id: &str) -> String {
+            format!("https://hote.test/espace/{space_id}")
+        }
+        fn app_url(&self) -> String {
+            "https://hote.test".to_string()
+        }
         fn password_reset_action(&self) -> String {
             // Volontairement quelconque : ce BC ne connaît pas la vraie
             // destination, il rend la chaîne que l'hôte lui donne.

@@ -45,14 +45,52 @@ vaut le même prix qu'une Élite choisie, comme le coût en SPP l'est déjà par
 
 ## Le barème complet vit dans le corpus
 
-`improvement_values.json` porte les quatre valeurs, sans rien à additionner :
+`improvement_values.json` porte les quatre valeurs, sans rien à additionner.
+Le fichier entier, dans sa forme cible :
 
 ```json
-"skill": {
-  "primary": 20,
-  "primary_elite": 30,
-  "secondary": 40,
-  "secondary_elite": 50
+{
+  "bloodbowl_version": "2025",
+  "edition": "Third Season Edition",
+  "improvement_values": {
+    "skill": {
+      "primary": 20,
+      "primary_elite": 30,
+      "secondary": 40,
+      "secondary_elite": 50
+    },
+    "stat": { "ma": 20, "st": 60, "ag": 30, "pa": 20, "av": 10 }
+  }
+}
+```
+
+Deux clés ajoutées, aucune renommée, aucune supprimée : `primary` et
+`secondary` gardent leur sens — le barème Standard — et le bloc `stat` ne bouge
+pas, les caractéristiques n'ayant pas d'Élite.
+
+La struct qui le lit, dans `in_memory_reference_repository.rs` :
+
+```rust
+#[derive(Debug, Clone, Deserialize)]
+pub struct SkillImprovementValues {
+    pub primary: u32,
+    pub primary_elite: u32,
+    pub secondary: u32,
+    pub secondary_elite: u32,
+}
+```
+
+Et la lecture devient un choix parmi quatre, au lieu d'un parmi deux :
+
+```rust
+fn improvement_skill_value_delta(&self, is_secondary_access: bool, is_elite: bool) -> u32 {
+    let s = &self.improvement_values.skill;
+    match (is_secondary_access, is_elite) {
+        (false, false) => s.primary,
+        (false, true)  => s.primary_elite,
+        (true,  false) => s.secondary,
+        (true,  true)  => s.secondary_elite,
+    }
 }
 ```
 

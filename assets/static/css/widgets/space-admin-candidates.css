@@ -70,6 +70,16 @@
 
 .space-admin-candidates .sac-role { width: 130px; flex-shrink: 0; }
 
+.space-admin-candidates .sac-notif {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  cursor: pointer;
+}
+
 .space-admin-candidates .sac-btn {
   flex-shrink: 0;
   display: inline-flex;
@@ -94,5 +104,15 @@
   .space-admin-candidates .sac-row { flex-wrap: wrap; }
   .space-admin-candidates .sac-info { flex: 1 1 60%; }
   .space-admin-candidates .sac-role { width: 100%; order: 3; }
-  .space-admin-candidates .sac-btn { order: 4; }
+  .space-admin-candidates .sac-notif {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  cursor: pointer;
+}
+
+.space-admin-candidates .sac-btn { order: 4; }
 }
