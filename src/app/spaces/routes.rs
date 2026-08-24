@@ -14,6 +14,7 @@ pub mod path {
     pub const SPACE_ADMIN_MEMBER_ROLE: &str = "/app/{space_id}/admin/members/{coach_id}/role";
     pub const SPACE_ADMIN_MEMBER_REMOVE: &str = "/app/{space_id}/admin/members/{coach_id}/remove";
     pub const SPACE_ADMIN_CANDIDATES_WIDGET: &str = "/app/{space_id}/admin/widgets/candidates";
+    pub const SPACE_ADMIN_MEMBER_ADD: &str = "/app/{space_id}/admin/members/add";
 }
 
 #[derive(Debug, Clone, Copy, Default, Deserialize, Serialize)]
@@ -50,6 +51,9 @@ impl Routes {
     }
     pub fn space_admin_candidates_widget(&self, space_id: &str) -> String {
         path::SPACE_ADMIN_CANDIDATES_WIDGET.replace("{space_id}", space_id)
+    }
+    pub fn space_admin_member_add(&self, space_id: &str) -> String {
+        path::SPACE_ADMIN_MEMBER_ADD.replace("{space_id}", space_id)
     }
     pub fn space_admin_member_role(&self, space_id: &str, coach_id: &str) -> String {
         path::SPACE_ADMIN_MEMBER_ROLE

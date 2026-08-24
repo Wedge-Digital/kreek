@@ -12,7 +12,11 @@ use axum::response::{IntoResponse, Response};
 ///
 /// Un autre hôte fournirait sa propre implémentation ; c'est le seul point du
 /// projet qui relie `spaces` au reste de kreek.
-pub struct KreekSpacesLayout;
+pub struct KreekSpacesLayout {
+    /// Racine absolue de l'application, `http://domaine` — la même construction
+    /// que `send_reset_password_email`.
+    pub app_url: String,
+}
 
 impl ISpacesHostLayout for KreekSpacesLayout {
     fn wrap_page(&self, content: String) -> Response {
@@ -29,6 +33,14 @@ impl ISpacesHostLayout for KreekSpacesLayout {
 
     fn space_home(&self, space_id: &str) -> String {
         NewsRoutes::default().space_home(space_id)
+    }
+
+    fn space_url(&self, space_id: &str) -> String {
+        format!("{}{}", self.app_url, self.space_home(space_id))
+    }
+
+    fn app_url(&self) -> String {
+        self.app_url.clone()
     }
 
     fn unauthenticated_redirect(&self) -> String {

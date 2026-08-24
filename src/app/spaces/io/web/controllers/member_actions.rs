@@ -11,8 +11,9 @@ use crate::app::shared_kernel::identity::authorization::SpaceProfile;
 use crate::app::shared_kernel::identity::ids::CoachId;
 use crate::app::spaces::context::SpacesContext;
 use crate::app::spaces::domain::membership::SpaceMembershipError;
-use crate::app::spaces::io::web::builders::build_member_rows;
+use crate::app::spaces::io::web::builders::{build_member_rows, CandidateRowVm};
 use crate::app::spaces::io::web::extractors::space_permissions::SpacePermissions;
+use crate::app::spaces::use_cases::add_member_use_case::{self, AddMemberCommand, AddMemberError};
 use crate::app::spaces::use_cases::change_member_role_use_case::{
     self, ChangeMemberRoleCommand, ChangeMemberRoleError,
 };
@@ -32,6 +33,14 @@ pub struct ChangeRoleForm {
     /// `SpaceProfile::as_str()`. Primitive assumée : c'est la frontière HTTP,
     /// où rien n'est encore validé.
     pub profile: String,
+}
+
+#[derive(Template)]
+#[template(path = "widgets/_candidate-row.html")]
+struct LigneCandidateTemplate {
+    routes: crate::app::spaces::routes::Routes,
+    space_id: String,
+    candidat: CandidateRowVm,
 }
 
 #[derive(Template)]
@@ -103,6 +112,112 @@ pub async fn change_member_role_controller(
         }
         Err(ChangeMemberRoleError::Database(m)) => {
             tracing::error!("change_member_role: {m}");
+            erreur(StatusCode::INTERNAL_SERVER_ERROR, "Erreur interne.")
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct AddMemberForm {
+    pub coach_id: String,
+    pub profile: String,
+    /// Une case décochée **n'est pas envoyée** par un formulaire HTML : absent
+    /// vaut donc « ne pas prévenir », ce qui est le comportement voulu.
+    #[serde(default)]
+    pub notifier: bool,
+}
+
+/// Ajoute un coach déjà inscrit sur la plateforme.
+///
+/// Rend la **ligne candidate** re-rendue en « Déjà membre », plutôt que de la
+/// retirer : le coach existe toujours dans l'annuaire, il est simplement devenu
+/// membre. La faire disparaître laisserait croire à une suppression.
+pub async fn add_member_controller(
+    auth_session: AuthSession,
+    perms: SpacePermissions,
+    State(ctx): State<SpacesContext>,
+    Form(form): Form<AddMemberForm>,
+) -> Response {
+    let Some(acteur) = garde(&perms, auth_session) else {
+        return StatusCode::FORBIDDEN.into_response();
+    };
+    let nouveau = match cible(&form.coach_id) {
+        Ok(id) => id,
+        Err(r) => return r,
+    };
+    let Ok(profil) = SpaceProfile::try_from(form.profile.as_str()) else {
+        return erreur(StatusCode::BAD_REQUEST, "Profil inconnu.");
+    };
+
+    let cmd = AddMemberCommand {
+        space_id: perms.space_id,
+        acteur,
+        nouveau,
+        profil,
+        notifier: form.notifier.into(),
+        space_url: ctx.host_layout.space_url(&perms.space_id.to_string()),
+        app_url: ctx.host_layout.app_url(),
+    };
+    match add_member_use_case::execute(
+        cmd,
+        ctx.space_repository.as_ref(),
+        ctx.user_cache_repository.as_ref(),
+        ctx.email_service.as_ref(),
+        &ctx.event_bus,
+    )
+    .await
+    {
+        Ok(_) => ligne_candidate_re_rendue(&ctx, &perms, &nouveau).await,
+        Err(AddMemberError::Metier(e)) => erreur(statut_metier(&e), &libelle(&e)),
+        Err(AddMemberError::EspaceInconnu) => erreur(StatusCode::NOT_FOUND, "Espace introuvable."),
+        Err(AddMemberError::CoachInconnu) => {
+            erreur(StatusCode::NOT_FOUND, "Ce coach est introuvable.")
+        }
+        Err(AddMemberError::Database(m)) => {
+            tracing::error!("add_member: {m}");
+            erreur(StatusCode::INTERNAL_SERVER_ERROR, "Erreur interne.")
+        }
+    }
+}
+
+/// Re-rend la ligne candidate, qui porte désormais son badge.
+///
+/// Le `name` voyage dans `memberAdded` **pour une seule raison** : le journal de
+/// session l'affiche depuis ce payload, sans relire. C'est ce qui masque le délai
+/// d'alimentation du cache d'utilisateurs, alimenté par un app event asynchrone.
+async fn ligne_candidate_re_rendue(
+    ctx: &SpacesContext,
+    perms: &SpacePermissions,
+    nouveau: &CoachId,
+) -> Response {
+    let Ok(user) = ctx.user_cache_repository.find_user_by_id(nouveau).await else {
+        return erreur(StatusCode::NOT_FOUND, "Ce coach est introuvable.");
+    };
+    let ligne = LigneCandidateTemplate {
+        candidat: CandidateRowVm {
+            coach_id: nouveau.to_string(),
+            initials: crate::common::initials::initials(&user.name.to_string()),
+            name: user.name.to_string(),
+            email: user.email.as_ref().to_string(),
+            est_membre: true,
+        },
+        routes: crate::app::spaces::routes::Routes::default(),
+        space_id: perms.space_id.to_string(),
+    };
+    match ligne.render() {
+        Ok(html) => (
+            [(
+                "HX-Trigger",
+                format!(
+                    r#"{{"memberAdded":{{"coach_id":"{}","name":"{}"}}}}"#,
+                    nouveau, user.name
+                ),
+            )],
+            Html(html),
+        )
+            .into_response(),
+        Err(e) => {
+            tracing::error!("re-rendu de ligne candidate impossible: {e}");
             erreur(StatusCode::INTERNAL_SERVER_ERROR, "Erreur interne.")
         }
     }

@@ -156,6 +156,44 @@
   border-color: var(--main-blue);
 }
 
+/* ── Journal de session de l'ajout direct ── */
+.space-admin .space-admin-journal {
+  margin-top: var(--p2);
+  padding-top: var(--p1);
+  border-top: 1px solid var(--dark-5);
+}
+.space-admin .space-admin-journal-titre {
+  font-size: var(--text-tiny);
+  font-weight: 700;
+  color: var(--dark-2);
+  margin-bottom: 6px;
+}
+.space-admin .space-admin-journal-vide {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+}
+.space-admin .space-admin-journal-ligne {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: var(--text-small);
+}
+.space-admin .space-admin-journal-retrait {
+  border: 1px solid var(--dark-5);
+  border-radius: 6px;
+  background: var(--white);
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: var(--text-tiny);
+  color: var(--dark-2);
+  cursor: pointer;
+}
+.space-admin .space-admin-journal-retrait:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
 .space-admin .space-admin-attente {
   color: var(--dark-3);
   font-size: var(--text-tiny);
