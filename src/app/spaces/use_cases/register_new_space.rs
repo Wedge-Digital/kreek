@@ -4,7 +4,7 @@ use crate::app::shared_kernel::identity::space_name::SpaceName;
 use crate::app::spaces::domain::domain_event::SpacesDomainEvent;
 use crate::app::spaces::domain::space::Space;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::{
-    ISpaceRepository, SpaceMemberRow, SpaceRepositoryError,
+    CandidateRow, ISpaceRepository, SpaceMemberRow, SpaceRepositoryError,
 };
 use crate::app::spaces::domain::space_repository_port::user_cache_repository_port::{
     ISpaceUserCacheRepository, SpaceUserCacheRepositoryError,
@@ -205,6 +205,14 @@ mod tests {
         ) -> Result<(), SpaceRepositoryError> {
             Ok(())
         }
+        async fn search_platform_coaches(
+            &self,
+            _: &SpaceId,
+            _: &str,
+            _: i64,
+        ) -> Result<Vec<CandidateRow>, SpaceRepositoryError> {
+            Ok(vec![])
+        }
     }
 
     struct SpaceRepoNameTaken;
@@ -273,6 +281,14 @@ mod tests {
             _: &CoachId,
         ) -> Result<(), SpaceRepositoryError> {
             Ok(())
+        }
+        async fn search_platform_coaches(
+            &self,
+            _: &SpaceId,
+            _: &str,
+            _: i64,
+        ) -> Result<Vec<CandidateRow>, SpaceRepositoryError> {
+            Ok(vec![])
         }
     }
 

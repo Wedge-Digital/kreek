@@ -2,7 +2,7 @@ use crate::app::shared_kernel::identity::authorization::SpaceProfile;
 use crate::app::shared_kernel::identity::ids::{CoachId, EventId, SpaceId};
 use crate::app::spaces::domain::domain_event::SpacesDomainEvent;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::{
-    ISpaceRepository, SpaceMemberRow, SpaceRepositoryError,
+    CandidateRow, ISpaceRepository, SpaceMemberRow, SpaceRepositoryError,
 };
 use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
@@ -128,6 +128,14 @@ mod tests {
             _: &CoachId,
         ) -> Result<(), SpaceRepositoryError> {
             Ok(())
+        }
+        async fn search_platform_coaches(
+            &self,
+            _: &SpaceId,
+            _: &str,
+            _: i64,
+        ) -> Result<Vec<CandidateRow>, SpaceRepositoryError> {
+            Ok(vec![])
         }
     }
 

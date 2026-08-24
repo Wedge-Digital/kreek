@@ -15,7 +15,7 @@ use crate::app::shared_kernel::identity::space_name::SpaceName;
 use crate::app::spaces::domain::coach::Coach;
 use crate::app::spaces::domain::space::Space;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::{
-    ISpaceRepository, SpaceMemberRow, SpaceRepositoryError, SpaceSummary,
+    CandidateRow, ISpaceRepository, SpaceMemberRow, SpaceRepositoryError, SpaceSummary,
 };
 use async_trait::async_trait;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -129,5 +129,13 @@ impl ISpaceRepository for FakeSpaceRepo {
     async fn delete_member(&self, _: &SpaceId, _: &CoachId) -> Result<(), SpaceRepositoryError> {
         self.membres_supprimes.fetch_add(1, Ordering::SeqCst);
         Ok(())
+    }
+    async fn search_platform_coaches(
+        &self,
+        _: &SpaceId,
+        _: &str,
+        _: i64,
+    ) -> Result<Vec<CandidateRow>, SpaceRepositoryError> {
+        Ok(vec![])
     }
 }

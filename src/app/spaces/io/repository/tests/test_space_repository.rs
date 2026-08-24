@@ -325,3 +325,127 @@ async fn delete_member_ne_retire_pas_le_meme_coach_d_un_autre_espace(pool: PgPoo
         "le retrait a débordé sur un autre espace — `space_id` manque au WHERE"
     );
 }
+
+// ── Recherche dans l'annuaire de la plateforme (carte 377) ───────────────────
+//
+// Le piège est dans la jointure. `m.space_id = $1` vit dans la condition de
+// jointure ; l'y retirer transforme la jointure externe en interne, et la
+// recherche ne rend plus que les membres — l'exact inverse du besoin, sans
+// erreur et avec une liste plausible. Le test « membre d'un autre espace » est
+// le seul qui l'attrape.
+
+const PLAFOND: i64 = 20;
+
+#[sqlx::test]
+async fn la_recherche_marque_les_membres_de_l_espace(pool: PgPool) {
+    let repo = SpaceRepository::new(pool.clone());
+    let space = make_space("LigueRecherche");
+    let space_id = *space.id();
+    repo.save(&space).await.unwrap();
+
+    let dedans = semer_coach(&pool, "Dedans", None).await;
+    semer_coach(&pool, "Dehors", None).await;
+    repo.add_member(&space_id, &dedans, &SpaceProfile::SpaceUser)
+        .await
+        .unwrap();
+
+    let trouves = repo
+        .search_platform_coaches(&space_id, "De", PLAFOND)
+        .await
+        .unwrap();
+
+    let dedans_row = trouves.iter().find(|c| c.coach_name == "Dedans").unwrap();
+    let dehors_row = trouves.iter().find(|c| c.coach_name == "Dehors").unwrap();
+    assert!(dedans_row.est_membre, "un membre est rendu, et marqué");
+    assert!(!dehors_row.est_membre);
+}
+
+/// Le test qui attrape le piège.
+///
+/// Un coach membre d'un **autre** espace doit apparaître comme non-membre de
+/// celui-ci. Si `space_id` glissait dans le `WHERE`, il n'apparaîtrait pas du
+/// tout — et les deux autres tests passeraient quand même.
+#[sqlx::test]
+async fn un_membre_d_un_autre_espace_est_rendu_comme_non_membre(pool: PgPool) {
+    let repo = SpaceRepository::new(pool.clone());
+    let ici = make_space("LigueIciR");
+    let ailleurs = make_space("LigueAilleursR");
+    let (id_ici, id_ailleurs) = (*ici.id(), *ailleurs.id());
+    repo.save(&ici).await.unwrap();
+    repo.save(&ailleurs).await.unwrap();
+
+    let nomade = semer_coach(&pool, "Nomade", None).await;
+    repo.add_member(&id_ailleurs, &nomade, &SpaceProfile::SpaceAdmin)
+        .await
+        .unwrap();
+
+    let trouves = repo
+        .search_platform_coaches(&id_ici, "Nomade", PLAFOND)
+        .await
+        .unwrap();
+
+    assert_eq!(
+        trouves.len(),
+        1,
+        "il doit être trouvé : une jointure interne l'aurait fait disparaître"
+    );
+    assert!(
+        !trouves[0].est_membre,
+        "et rendu comme non-membre de l'espace courant"
+    );
+}
+
+#[sqlx::test]
+async fn la_recherche_porte_aussi_sur_l_email(pool: PgPool) {
+    let repo = SpaceRepository::new(pool.clone());
+    let space = make_space("LigueEmail");
+    let space_id = *space.id();
+    repo.save(&space).await.unwrap();
+    semer_coach(&pool, "Anonyme", None).await;
+
+    let trouves = repo
+        .search_platform_coaches(&space_id, "Anonyme@example", PLAFOND)
+        .await
+        .unwrap();
+
+    assert_eq!(trouves.len(), 1, "l'email est cherché comme le pseudo");
+}
+
+#[sqlx::test]
+async fn le_plafond_borne_le_nombre_de_resultats(pool: PgPool) {
+    let repo = SpaceRepository::new(pool.clone());
+    let space = make_space("LiguePlafond");
+    let space_id = *space.id();
+    repo.save(&space).await.unwrap();
+    for i in 0..25 {
+        semer_coach(&pool, &format!("Foule{i:02}"), None).await;
+    }
+
+    let trouves = repo
+        .search_platform_coaches(&space_id, "Foule", PLAFOND)
+        .await
+        .unwrap();
+
+    assert_eq!(trouves.len(), PLAFOND as usize);
+}
+
+#[sqlx::test]
+async fn les_resultats_sont_tries_par_pseudo(pool: PgPool) {
+    let repo = SpaceRepository::new(pool.clone());
+    let space = make_space("LigueTriR");
+    let space_id = *space.id();
+    repo.save(&space).await.unwrap();
+    for nom in ["TriZoltan", "TriAlpha", "TriMelchior"] {
+        semer_coach(&pool, nom, None).await;
+    }
+
+    let noms: Vec<String> = repo
+        .search_platform_coaches(&space_id, "Tri", PLAFOND)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|c| c.coach_name)
+        .collect();
+
+    assert_eq!(noms, vec!["TriAlpha", "TriMelchior", "TriZoltan"]);
+}
