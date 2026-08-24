@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Les Korrigans FC — Présentation — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ── Repris tel quel de assets/rawpages/html/app-team-detail.html ─────
+       L'en-tête d'équipe et les onglets ne changent pas : cette page est un
+       quatrième onglet de la fiche, pas une page à part. ─────────────────── */
+    .team-page { max-width: 1400px; margin: 0 auto; }
+
+    .team-header {
+      background: var(--white); border-radius: 10px 10px 0 0; padding: var(--p2);
+      display: flex; align-items: flex-start; gap: var(--p3);
+      border-bottom: 2px solid var(--dark-5);
+    }
+    .team-header-logo {
+      width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, #003049, #555770);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: 36px; color: var(--white);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      overflow: hidden;
+    }
+    .team-header-info { flex: 1; display: flex; flex-direction: column; gap: var(--p1); }
+    .team-header-name { font-family: var(--font-title); font-size: var(--h2); font-weight: 800; color: var(--dark-0); }
+    .team-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
+    .meta-item   { display: flex; flex-direction: column; gap: 2px; }
+    .meta-label  { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-value  { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+    .team-header-top  { display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap; }
+
+    .team-status-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 20px;
+      font-size: var(--text-tiny); font-weight: 700; white-space: nowrap;
+    }
+    .team-status-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    .team-status-badge--ready { background: rgba(98,149,132,0.15); color: var(--green); }
+
+    .team-header-roster { display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
+    .roster-icon {
+      width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, #629584, #3a6655);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: 28px; color: var(--white);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .roster-icon-label { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; text-align: center; max-width: 120px; }
+
+    .team-tabs { background: var(--white); padding: 0 var(--p2); border-bottom: 1px solid var(--dark-5); }
+
+    /* ── Sélecteur de démonstration — n'existe pas en prod ───────────────── */
+    .demo-switcher {
+      background: rgba(255,215,0,0.08); border: 1px dashed rgba(154,120,0,0.4);
+      border-radius: 8px; padding: 10px var(--p2); margin-bottom: var(--p1);
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .demo-switcher-label { font-size: var(--text-tiny); font-weight: 700; color: #9A7800; text-transform: uppercase; letter-spacing: 0.4px; }
+    .state-pill {
+      font-size: var(--text-tiny); font-weight: 600; padding: 5px 14px; border-radius: 20px;
+      border: 1.5px solid var(--dark-4); background: var(--white); color: var(--dark-2);
+      cursor: pointer; transition: all 0.12s; font-family: inherit;
+    }
+    .state-pill:hover  { border-color: var(--main-blue); color: var(--main-blue); }
+    .state-pill.active { background: var(--main-blue); border-color: var(--main-blue); color: var(--white); }
+
+    /* ── NOUVEAU — page de présentation (fluff) ──────────────────────────── */
+    .tf-page {
+      background: var(--white); border-radius: 0 0 10px 10px;
+      padding: var(--p2); display: flex; flex-direction: column; gap: var(--p3);
+    }
+
+    /* Bandeau de visibilité : ne s'affiche qu'au propriétaire, pour qu'il sache
+       devant qui il écrit. */
+    .tf-visibility {
+      display: none; align-items: center; gap: 10px;
+      background: rgba(0,48,73,0.05); border-radius: 8px;
+      padding: 10px var(--p1); font-size: var(--text-tiny); color: var(--dark-2);
+    }
+    body.role-owner .tf-visibility, body.role-empty .tf-visibility { display: flex; }
+    .tf-visibility strong { color: var(--dark-1); }
+
+    .tf-section { display: flex; flex-direction: column; gap: var(--p1); }
+    .tf-section-head { display: flex; align-items: baseline; gap: var(--p1); flex-wrap: wrap; }
+    .tf-section-title {
+      font-family: var(--font-title); font-size: var(--text-medium); font-weight: 800;
+      color: var(--dark-0); flex: 1; min-width: 200px;
+    }
+    .tf-section-hint { font-size: var(--text-tiny); color: var(--dark-3); }
+
+    /* Le déclencheur d'édition : réservé au propriétaire, comme « Modifier
+       l'effectif » de l'onglet Joueurs (cf. carte 389). */
+    .tf-edit-btn {
+      display: none; padding: 6px 14px; border-radius: 6px;
+      font-size: var(--text-tiny); font-weight: 700; font-family: inherit;
+      background: transparent; border: 1.5px solid var(--dark-3); color: var(--dark-2);
+      cursor: pointer; white-space: nowrap;
+    }
+    .tf-edit-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    body.role-owner .tf-section:not(.editing) .tf-edit-btn,
+    body.role-empty .tf-section:not(.editing) .tf-edit-btn { display: inline-block; }
+
+    .tf-edit-actions { display: none; gap: 8px; }
+    .tf-section.editing .tf-edit-actions { display: inline-flex; }
+    .tf-btn {
+      padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer;
+      font-size: var(--text-tiny); font-weight: 700; font-family: inherit;
+    }
+    .tf-btn--save   { background: var(--main-blue); color: var(--white); }
+    .tf-btn--cancel { background: transparent; border: 1.5px solid var(--dark-4); color: var(--dark-2); }
+    .tf-btn--ghost {
+      background: transparent; border: 1.5px dashed var(--dark-4); color: var(--dark-2);
+      padding: 8px 14px; border-radius: 6px; cursor: pointer;
+      font-size: var(--text-tiny); font-weight: 700; font-family: inherit;
+    }
+    .tf-btn--ghost:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    /* Lecture / édition : un seul des deux volets est monté à la fois. */
+    .tf-section .tf-edit { display: none; }
+    .tf-section.editing .tf-read { display: none; }
+    .tf-section.editing .tf-edit { display: flex; flex-direction: column; gap: 10px; }
+
+    .tf-input, .tf-textarea {
+      box-sizing: border-box; width: 100%; padding: 10px 12px;
+      border: 1.5px solid var(--dark-4); border-radius: 6px;
+      font: inherit; font-size: var(--text-small); color: var(--dark-1); background: var(--white);
+    }
+    .tf-input:focus, .tf-textarea:focus { outline: none; border-color: var(--main-blue); }
+    .tf-textarea { min-height: 220px; resize: vertical; line-height: 1.7; }
+    .tf-field-label { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .tf-counter { font-size: var(--text-tiny); color: var(--dark-3); text-align: right; }
+
+    /* État vide — ce que voit un coach qui n'a rien écrit. */
+    .tf-empty {
+      border: 1.5px dashed var(--dark-4); border-radius: 8px;
+      padding: var(--p2); text-align: center; color: var(--dark-3);
+      font-size: var(--text-small);
+    }
+    .tf-empty strong { display: block; color: var(--dark-2); margin-bottom: 6px; }
+
+    /* 1 — Histoire */
+    .tf-lore { font-size: var(--text-small); line-height: 1.75; color: var(--dark-1); }
+    .tf-lore p { margin: 0 0 var(--p1); }
+    .tf-lore p:last-child { margin-bottom: 0; }
+    .tf-pullquote {
+      border-left: 3px solid var(--green); padding: 4px 0 4px var(--p1);
+      margin: var(--p1) 0; font-family: var(--font-title); font-style: italic;
+      color: var(--dark-2); font-size: 18px; line-height: 1.6;
+    }
+    .tf-pullquote cite { display: block; margin-top: 6px; font-size: var(--text-tiny); font-style: normal; color: var(--dark-3); }
+
+    /* 2 — Galerie */
+    .tf-gallery { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--p1); }
+    .tf-shot { position: relative; display: flex; flex-direction: column; gap: 6px; }
+    .tf-shot-frame {
+      aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden;
+      background: linear-gradient(135deg, var(--dark-6), var(--dark-5));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 34px; color: var(--dark-3);
+    }
+    .tf-shot-caption { font-size: var(--text-tiny); color: var(--dark-3); text-align: center; }
+    .tf-shot-remove {
+      display: none; position: absolute; top: 6px; right: 6px;
+      width: 26px; height: 26px; border-radius: 50%; border: none; cursor: pointer;
+      background: rgba(224,32,32,0.9); color: var(--white); font-size: 14px; line-height: 1;
+    }
+    .tf-section.editing .tf-shot-remove { display: block; }
+    .tf-shot-add {
+      aspect-ratio: 4 / 3; border-radius: 8px; cursor: pointer;
+      border: 1.5px dashed var(--dark-4); background: transparent; color: var(--dark-3);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+      font-size: var(--text-tiny); font-weight: 600; font-family: inherit;
+    }
+    .tf-shot-add:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .tf-shot-add-icon { font-size: 26px; }
+
+    /* 3 — Palmarès */
+    .tf-record { display: flex; flex-direction: column; }
+    .tf-record-row {
+      display: grid; grid-template-columns: 92px 1fr auto; gap: var(--p1);
+      align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--dark-5);
+    }
+    .tf-record-row:last-child { border-bottom: none; }
+    .tf-record-year {
+      font-family: var(--font-title); font-weight: 800; color: var(--main-blue);
+      font-size: var(--text-small);
+    }
+    .tf-record-title { font-weight: 700; color: var(--dark-1); font-size: var(--text-small); }
+    .tf-record-detail { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; }
+    .tf-record-medal { font-size: 20px; }
+    .tf-record-edit-row {
+      display: grid; grid-template-columns: 92px 1fr 1fr 36px; gap: 8px;
+      align-items: center; margin-bottom: 8px;
+    }
+    .tf-row-remove {
+      width: 32px; height: 32px; border-radius: 6px; border: 1.5px solid var(--dark-4);
+      background: transparent; color: var(--dark-3); cursor: pointer; font-size: 15px;
+    }
+    .tf-row-remove:hover { border-color: var(--red); color: var(--red); }
+
+    /* 4 — Stade, supporters, rivalités */
+    .tf-columns { display: flex; gap: var(--p2); }
+    .tf-col { flex: 1; display: flex; flex-direction: column; gap: var(--p1); }
+    .tf-facts { display: flex; flex-direction: column; gap: 10px; }
+    .tf-fact { display: flex; justify-content: space-between; gap: var(--p1); padding-bottom: 8px; border-bottom: 1px solid var(--dark-5); }
+    .tf-fact:last-child { border-bottom: none; }
+    .tf-fact-label { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .tf-fact-value { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); text-align: right; }
+    .tf-chant {
+      background: var(--dark-6); border-radius: 8px; padding: var(--p1);
+      font-family: var(--font-title); font-size: 18px; color: var(--dark-1);
+      text-align: center; line-height: 1.6;
+    }
+    .tf-rivals { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tf-rival {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 20px; background: rgba(224,32,32,0.08);
+      color: var(--red); font-size: var(--text-tiny); font-weight: 700;
+    }
+    .tf-rival-remove { display: none; border: none; background: transparent; color: inherit; cursor: pointer; font-size: 13px; padding: 0; }
+    .tf-section.editing .tf-rival-remove { display: inline; }
+
+    /* ── Responsive — même breakpoint que partout ────────────────────────── */
+    @media (max-width: 768px) {
+      .team-header { flex-direction: column; align-items: center; text-align: center; }
+      .team-header-meta { justify-content: center; }
+      .tf-gallery { grid-template-columns: repeat(2, 1fr); }
+      .tf-columns { flex-direction: column; }
+      .tf-record-row { grid-template-columns: 70px 1fr auto; }
+      .tf-record-edit-row { grid-template-columns: 1fr; }
+      .tf-section-title { font-size: 22px; }
+    }
+  </style>
+</head>
+<body class="role-owner">
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active">Équipes</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+
+        <!-- Sélecteur de démonstration — outil de maquette, n'existe pas en prod -->
+        <div class="demo-switcher">
+          <span class="demo-switcher-label">Aperçu maquette — qui regarde :</span>
+          <button class="state-pill active" data-role="owner" onclick="setRole('owner')">Le coach propriétaire</button>
+          <button class="state-pill" data-role="visitor" onclick="setRole('visitor')">Un autre coach</button>
+          <button class="state-pill" data-role="empty" onclick="setRole('empty')">Propriétaire, page vierge</button>
+        </div>
+
+        <div class="team-back-nav">
+          <a class="team-back-link" href="app-my-teams.html">← Mes équipes</a>
+        </div>
+
+        <div class="team-page">
+
+          <!-- En-tête — identique aux trois autres onglets -->
+          <div class="team-header">
+            <div class="team-header-logo">KF</div>
+
+            <div class="team-header-info">
+              <div class="team-header-top">
+                <div class="team-header-name">Les Korrigans FC</div>
+                <span class="team-status-badge team-status-badge--ready">Prête à jouer</span>
+              </div>
+              <div class="team-header-meta">
+                <div class="meta-item">
+                  <div class="meta-label">Roster</div>
+                  <div class="meta-value">Elfes Sylvestres</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Coach</div>
+                  <div class="meta-value">Colonel Castor</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Ligue</div>
+                  <div class="meta-value">Ligue de Condate</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Saison</div>
+                  <div class="meta-value">Saison 2026</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Valeur d'équipe</div>
+                  <div class="meta-value">1 250 kPo</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Trésorerie</div>
+                  <div class="meta-value">70 kPo</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="team-header-roster">
+              <div class="roster-icon">ES</div>
+              <div class="roster-icon-label">Elfes Sylvestres</div>
+            </div>
+          </div>
+
+          <!-- Onglets — « Présentation » est le quatrième -->
+          <div class="tabs team-tabs">
+            <div class="tab">Joueurs &amp; Staff</div>
+            <div class="tab">Matchs</div>
+            <div class="tab">Trésorerie</div>
+            <div class="tab active">Présentation</div>
+          </div>
+
+          <div class="tf-page">
+
+            <div class="tf-visibility">
+              <span>👁</span>
+              <span><strong>Cette page est visible par tous les membres de l'espace.</strong>
+                    Ce que vous écrivez ici n'a aucun effet sur le jeu — c'est la vitrine de votre franchise.</span>
+            </div>
+
+            <!-- ── 1. Histoire ─────────────────────────────────────────── -->
+            <section class="tf-section" id="sec-lore">
+              <div class="tf-section-head">
+                <h2 class="tf-section-title">L'histoire de la franchise</h2>
+                <button class="tf-edit-btn" onclick="startEdit('sec-lore')">✎ Modifier</button>
+                <span class="tf-edit-actions">
+                  <button class="tf-btn tf-btn--cancel" onclick="cancelEdit('sec-lore')">Annuler</button>
+                  <button class="tf-btn tf-btn--save" onclick="saveLore()">Enregistrer</button>
+                </span>
+              </div>
+
+              <div class="tf-read">
+                <div class="tf-lore" id="lore-read">
+                  <p>Personne ne sait vraiment quand les Korrigans ont commencé à jouer. Les
+                     anciens de Condate racontent qu'un matin de brume, le champ communal était
+                     piétiné, les buts déplacés de trois pas vers l'est, et qu'une chaussure à
+                     crampons — taille enfant, cuir de bouleau — avait été oubliée près de la
+                     ligne médiane. Depuis, chaque défaite de la franchise est mise sur le compte du
+                     brouillard, et chaque victoire sur celui de la lune.</p>
+                  <p>La franchise s'est structurée en 2019 autour de trois frères Sylvestres et d'un
+                     lanceur qui prétendait descendre d'une lignée royale, ce que personne n'a
+                     jamais vérifié ni contesté. La devise a été choisie un soir de beuverie et
+                     n'a jamais été révisée, faute d'un vote valide.</p>
+                </div>
+                <blockquote class="tf-pullquote">
+                  « On ne court pas plus vite que les autres. On court juste là où ils ne sont
+                  pas encore. »
+                  <cite>Devise de la franchise, attribuée à un korrigan resté anonyme</cite>
+                </blockquote>
+                <div class="tf-empty" id="lore-empty" hidden>
+                  <strong>Aucune histoire pour l'instant.</strong>
+                  Racontez d'où vient votre équipe, qui la mène, ce qu'elle vaut vraiment.
+                </div>
+              </div>
+
+              <div class="tf-edit">
+                <label class="tf-field-label" for="lore-input">Histoire de la franchise</label>
+                <textarea class="tf-textarea" id="lore-input"></textarea>
+                <div class="tf-counter"><span id="lore-count">0</span> / 4000 caractères</div>
+                <label class="tf-field-label" for="quote-input">Devise ou citation mise en exergue</label>
+                <input class="tf-input" id="quote-input" type="text"
+                       value="On ne court pas plus vite que les autres. On court juste là où ils ne sont pas encore.">
+              </div>
+            </section>
+
+            <!-- ── 2. Galerie ──────────────────────────────────────────── -->
+            <section class="tf-section" id="sec-gallery">
+              <div class="tf-section-head">
+                <h2 class="tf-section-title">Galerie</h2>
+                <span class="tf-section-hint">Blason, figurines peintes, photos de table</span>
+                <button class="tf-edit-btn" onclick="startEdit('sec-gallery')">✎ Modifier</button>
+                <span class="tf-edit-actions">
+                  <button class="tf-btn tf-btn--cancel" onclick="cancelEdit('sec-gallery')">Annuler</button>
+                  <button class="tf-btn tf-btn--save" onclick="cancelEdit('sec-gallery')">Enregistrer</button>
+                </span>
+              </div>
+
+              <div class="tf-gallery" id="gallery-grid">
+                <figure class="tf-shot">
+                  <div class="tf-shot-frame">🛡</div>
+                  <figcaption class="tf-shot-caption">Le blason</figcaption>
+                  <button class="tf-shot-remove" title="Retirer">×</button>
+                </figure>
+                <figure class="tf-shot">
+                  <div class="tf-shot-frame">🌲</div>
+                  <figcaption class="tf-shot-caption">L'équipe au complet</figcaption>
+                  <button class="tf-shot-remove" title="Retirer">×</button>
+                </figure>
+                <figure class="tf-shot">
+                  <div class="tf-shot-frame">🏆</div>
+                  <figcaption class="tf-shot-caption">Finale 2024</figcaption>
+                  <button class="tf-shot-remove" title="Retirer">×</button>
+                </figure>
+                <figure class="tf-shot">
+                  <div class="tf-shot-frame">🎨</div>
+                  <figcaption class="tf-shot-caption">Peinture du capitaine</figcaption>
+                  <button class="tf-shot-remove" title="Retirer">×</button>
+                </figure>
+                <button class="tf-shot-add" id="gallery-add" hidden>
+                  <span class="tf-shot-add-icon">＋</span>
+                  Ajouter une image
+                </button>
+              </div>
+              <div class="tf-empty" id="gallery-empty" hidden>
+                <strong>Aucune image.</strong>
+                Ajoutez le blason de la franchise, vos figurines peintes, une photo de table.
+              </div>
+            </section>
+
+            <!-- ── 3. Palmarès ─────────────────────────────────────────── -->
+            <section class="tf-section" id="sec-record">
+              <div class="tf-section-head">
+                <h2 class="tf-section-title">Palmarès &amp; faits d'armes</h2>
+                <span class="tf-section-hint">Saisi à la main — rien n'est calculé depuis les matchs</span>
+                <button class="tf-edit-btn" onclick="startEdit('sec-record')">✎ Modifier</button>
+                <span class="tf-edit-actions">
+                  <button class="tf-btn tf-btn--cancel" onclick="cancelEdit('sec-record')">Annuler</button>
+                  <button class="tf-btn tf-btn--save" onclick="cancelEdit('sec-record')">Enregistrer</button>
+                </span>
+              </div>
+
+              <div class="tf-read">
+                <div class="tf-record">
+                  <div class="tf-record-row">
+                    <div class="tf-record-year">2024</div>
+                    <div>
+                      <div class="tf-record-title">Vainqueur de la Coupe des Brumes</div>
+                      <div class="tf-record-detail">3–2 en finale contre les Marteaux de Vitré, après prolongation</div>
+                    </div>
+                    <div class="tf-record-medal">🏆</div>
+                  </div>
+                  <div class="tf-record-row">
+                    <div class="tf-record-year">2023</div>
+                    <div>
+                      <div class="tf-record-title">Demi-finaliste de la Ligue de Condate</div>
+                      <div class="tf-record-detail">Éliminés par les Ogres de Fougères, sans blessé pour la première fois de la saison</div>
+                    </div>
+                    <div class="tf-record-medal">🥈</div>
+                  </div>
+                  <div class="tf-record-row">
+                    <div class="tf-record-year">2022</div>
+                    <div>
+                      <div class="tf-record-title">Record de la franchise : 6 touchdowns en un match</div>
+                      <div class="tf-record-detail">Dont quatre par le même coureur, jamais retrouvé depuis</div>
+                    </div>
+                    <div class="tf-record-medal">⚡</div>
+                  </div>
+                </div>
+                <div class="tf-empty" id="record-empty" hidden>
+                  <strong>Aucun fait d'armes.</strong>
+                  Titres, records, défaites mémorables : tout ce qui mérite d'être raconté.
+                </div>
+              </div>
+
+              <div class="tf-edit">
+                <div id="record-rows">
+                  <div class="tf-record-edit-row">
+                    <input class="tf-input" type="text" value="2024" aria-label="Année">
+                    <input class="tf-input" type="text" value="Vainqueur de la Coupe des Brumes" aria-label="Titre">
+                    <input class="tf-input" type="text" value="3–2 en finale contre les Marteaux de Vitré" aria-label="Détail">
+                    <button class="tf-row-remove" title="Supprimer la ligne">×</button>
+                  </div>
+                  <div class="tf-record-edit-row">
+                    <input class="tf-input" type="text" value="2023" aria-label="Année">
+                    <input class="tf-input" type="text" value="Demi-finaliste de la Ligue de Condate" aria-label="Titre">
+                    <input class="tf-input" type="text" value="Éliminés par les Ogres de Fougères" aria-label="Détail">
+                    <button class="tf-row-remove" title="Supprimer la ligne">×</button>
+                  </div>
+                </div>
+                <button class="tf-btn--ghost" type="button">＋ Ajouter une ligne</button>
+              </div>
+            </section>
+
+            <!-- ── 4. Stade, supporters, rivalités ─────────────────────── -->
+            <section class="tf-section" id="sec-stadium">
+              <div class="tf-section-head">
+                <h2 class="tf-section-title">Stade, supporters &amp; rivalités</h2>
+                <button class="tf-edit-btn" onclick="startEdit('sec-stadium')">✎ Modifier</button>
+                <span class="tf-edit-actions">
+                  <button class="tf-btn tf-btn--cancel" onclick="cancelEdit('sec-stadium')">Annuler</button>
+                  <button class="tf-btn tf-btn--save" onclick="cancelEdit('sec-stadium')">Enregistrer</button>
+                </span>
+              </div>
+
+              <div class="tf-read">
+                <div class="tf-columns">
+                  <div class="tf-col">
+                    <div class="tf-facts">
+                      <div class="tf-fact">
+                        <span class="tf-fact-label">Stade</span>
+                        <span class="tf-fact-value">La Clairière Hurlante</span>
+                      </div>
+                      <div class="tf-fact">
+                        <span class="tf-fact-label">Capacité</span>
+                        <span class="tf-fact-value">12 000 places, dont 400 dans les arbres</span>
+                      </div>
+                      <div class="tf-fact">
+                        <span class="tf-fact-label">Terrain</span>
+                        <span class="tf-fact-value">Mousse tassée, drainage naturel</span>
+                      </div>
+                      <div class="tf-fact">
+                        <span class="tf-fact-label">Couleurs</span>
+                        <span class="tf-fact-value">Vert mousse &amp; or pâle</span>
+                      </div>
+                      <div class="tf-fact">
+                        <span class="tf-fact-label">Fondé en</span>
+                        <span class="tf-fact-value">2019</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="tf-col">
+                    <div class="tf-field-label">Cri de guerre</div>
+                    <div class="tf-chant">« Sous la mousse, personne ne nous entend courir ! »</div>
+                    <div class="tf-field-label">Rivalités</div>
+                    <div class="tf-rivals">
+                      <span class="tf-rival">Les Marteaux de Vitré <button class="tf-rival-remove" title="Retirer">×</button></span>
+                      <span class="tf-rival">Ogres de Fougères <button class="tf-rival-remove" title="Retirer">×</button></span>
+                      <span class="tf-rival">Rats du Vieux Port <button class="tf-rival-remove" title="Retirer">×</button></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tf-edit">
+                <div class="tf-columns">
+                  <div class="tf-col">
+                    <label class="tf-field-label" for="stadium-name">Nom du stade</label>
+                    <input class="tf-input" id="stadium-name" type="text" value="La Clairière Hurlante">
+                    <label class="tf-field-label" for="stadium-cap">Capacité</label>
+                    <input class="tf-input" id="stadium-cap" type="text" value="12 000 places, dont 400 dans les arbres">
+                    <label class="tf-field-label" for="stadium-ground">Terrain</label>
+                    <input class="tf-input" id="stadium-ground" type="text" value="Mousse tassée, drainage naturel">
+                  </div>
+                  <div class="tf-col">
+                    <label class="tf-field-label" for="stadium-colors">Couleurs</label>
+                    <input class="tf-input" id="stadium-colors" type="text" value="Vert mousse & or pâle">
+                    <label class="tf-field-label" for="stadium-chant">Cri de guerre</label>
+                    <input class="tf-input" id="stadium-chant" type="text" value="Sous la mousse, personne ne nous entend courir !">
+                    <label class="tf-field-label" for="stadium-rivals">Rivalités</label>
+                    <input class="tf-input" id="stadium-rivals" type="text"
+                           value="Les Marteaux de Vitré, Ogres de Fougères, Rats du Vieux Port">
+                    <span class="tf-section-hint">Séparées par des virgules</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* Comportement de maquette uniquement — aucune donnée n'est enregistrée. */
+
+var LORE_TEXTE =
+  "Personne ne sait vraiment quand les Korrigans ont commencé à jouer. Les anciens de " +
+  "Condate racontent qu'un matin de brume, le champ communal était piétiné, les buts " +
+  "déplacés de trois pas vers l'est.\n\n" +
+  "La franchise s'est structurée en 2019 autour de trois frères Sylvestres et d'un lanceur qui " +
+  "prétendait descendre d'une lignée royale, ce que personne n'a jamais vérifié ni contesté.";
+
+function setRole(role) {
+  document.body.className = 'role-' + role;
+  document.querySelectorAll('.state-pill').forEach(function (p) {
+    p.classList.toggle('active', p.dataset.role === role);
+  });
+  document.querySelectorAll('.tf-section.editing').forEach(function (s) {
+    s.classList.remove('editing');
+  });
+
+  // La page vierge : ce que voit un coach qui n'a rien rempli.
+  var vide = role === 'empty';
+  document.getElementById('lore-read').hidden = vide;
+  document.querySelector('#sec-lore .tf-pullquote').hidden = vide;
+  document.getElementById('lore-empty').hidden = !vide;
+  document.getElementById('gallery-grid').hidden = vide;
+  document.getElementById('gallery-empty').hidden = !vide;
+  document.querySelector('#sec-record .tf-record').hidden = vide;
+  document.getElementById('record-empty').hidden = !vide;
+  document.querySelector('#sec-stadium .tf-read .tf-columns').hidden = vide;
+}
+
+function startEdit(id) {
+  var section = document.getElementById(id);
+  if (id === 'sec-lore') {
+    var champ = document.getElementById('lore-input');
+    champ.value = LORE_TEXTE;
+    majCompteur();
+  }
+  document.getElementById('gallery-add').hidden = (id !== 'sec-gallery');
+  section.classList.add('editing');
+}
+
+function cancelEdit(id) {
+  document.getElementById(id).classList.remove('editing');
+  document.getElementById('gallery-add').hidden = true;
+}
+
+function saveLore() {
+  var texte = document.getElementById('lore-input').value.trim();
+  var lecture = document.getElementById('lore-read');
+  lecture.innerHTML = '';
+  texte.split(/\n{2,}/).forEach(function (paragraphe) {
+    var p = document.createElement('p');
+    p.textContent = paragraphe;
+    lecture.appendChild(p);
+  });
+  document.querySelector('#sec-lore .tf-pullquote').firstChild.textContent =
+    '« ' + document.getElementById('quote-input').value + ' »';
+  cancelEdit('sec-lore');
+}
+
+function majCompteur() {
+  document.getElementById('lore-count').textContent =
+    document.getElementById('lore-input').value.length;
+}
+
+document.getElementById('lore-input').addEventListener('input', majCompteur);
+</script>
+</body>
+</html>
