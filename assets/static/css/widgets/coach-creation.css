@@ -1,0 +1,77 @@
+/* ── Widget « création de compte », fourni par le BC d'authentification ──────
+   Portée : `.coach-creation`, racine du widget — le nom de la feuille **est**
+   le sélecteur de portée, et l'axe 15 le vérifie.
+
+   Cette feuille est au bundle de l'hôte, alors que le BC qui la porte en est
+   exclu par ailleurs. Ce n'est pas une entorse : l'exclusion vise **ses pages**,
+   qui sont des chargements complets sans swap et chargent leurs feuilles par
+   `<link>`. Ce fragment-ci est affiché dans une page de l'hôte, déjà stylée par
+   le bundle ; un `<link>` inséré au swap ne bloquerait pas le rendu et
+   produirait exactement le clignotement que la carte 342 a supprimé.
+
+   Elle n'utilise que des tokens globaux — aucune classe d'un autre BC. C'est ce
+   qui garde le couplage à zéro : le widget s'accorde au reste sans rien savoir
+   de qui l'affiche. */
+
+.coach-creation { display: flex; flex-direction: column; gap: var(--p1); }
+
+.coach-creation .coach-creation-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--p1);
+}
+
+.coach-creation .coach-creation-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.coach-creation .coach-creation-label {
+  font-size: var(--text-tiny);
+  font-weight: 600;
+  color: var(--dark-3);
+}
+
+.coach-creation .coach-creation-input {
+  padding: 10px var(--p1);
+  border: 1px solid var(--dark-5);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: var(--text-small);
+}
+.coach-creation .coach-creation-input:focus {
+  outline: none;
+  border-color: var(--main-blue);
+}
+
+.coach-creation .coach-creation-erreur {
+  font-size: var(--text-tiny);
+  color: var(--red);
+  padding: 8px var(--p1);
+  border: 1px solid var(--red);
+  border-radius: 8px;
+}
+
+.coach-creation .coach-creation-submit {
+  align-self: flex-start;
+  padding: 10px var(--p2);
+  border: none;
+  border-radius: 8px;
+  background: var(--main-blue);
+  color: var(--white);
+  font-family: inherit;
+  font-size: var(--text-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.coach-creation .coach-creation-note {
+  margin: 0;
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+}
+
+@media (max-width: 768px) {
+  .coach-creation .coach-creation-grid { grid-template-columns: 1fr; }
+}

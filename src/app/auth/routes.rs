@@ -9,6 +9,8 @@ pub mod path {
     pub const FORGOT_PASSWORD_SENT: &str = "/auth/forgot-password/sent";
     /// Même opération que `FORGOT_PASSWORD`, sans page ni redirection.
     pub const RESET_PASSWORD_REQUEST: &str = "/auth/password/request";
+    /// Fragment de création de compte, destiné à être affiché par un hôte.
+    pub const COACH_CREATION_WIDGET: &str = "/auth/widgets/coach-creation";
     // Route pattern for Axum — parameter in braces
     pub const LOGOUT: &str = "/auth/logout";
     pub const RESET_PASSWORD_PATTERN: &str = "/auth/password/update/{reset_token}";
