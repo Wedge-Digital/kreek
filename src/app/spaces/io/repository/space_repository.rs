@@ -6,7 +6,7 @@ use crate::app::shared_kernel::identity::space_name::SpaceName;
 use crate::app::spaces::domain::coach::Coach;
 use crate::app::spaces::domain::space::Space;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::{
-    ISpaceRepository, SpaceMemberRow, SpaceRepositoryError, SpaceSummary,
+    CandidateRow, ISpaceRepository, SpaceMemberRow, SpaceRepositoryError, SpaceSummary,
 };
 use async_trait::async_trait;
 use sqlx::PgPool;
@@ -22,6 +22,15 @@ struct MemberRow {
     email: String,
     icon: Option<String>,
     profile: String,
+}
+
+#[derive(sqlx::FromRow)]
+struct CandidateSqlRow {
+    coach_id: String,
+    coach_name: String,
+    email: String,
+    icon: Option<String>,
+    est_membre: bool,
 }
 
 #[derive(sqlx::FromRow)]
@@ -287,5 +296,34 @@ impl ISpaceRepository for SpaceRepository {
             .await
             .map_err(db_err)?;
         Ok(())
+    }
+
+    async fn search_platform_coaches(
+        &self,
+        space_id: &SpaceId,
+        q: &str,
+        limite: i64,
+    ) -> Result<Vec<CandidateRow>, SpaceRepositoryError> {
+        let motif = format!("%{}%", q.trim());
+        let rows = sqlx::query_as::<_, CandidateSqlRow>(include_str!(
+            "sql/space/search_platform_coaches.sql"
+        ))
+        .bind(space_id.to_string())
+        .bind(&motif)
+        .bind(limite)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(db_err)?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| CandidateRow {
+                coach_id: r.coach_id,
+                coach_name: r.coach_name,
+                email: r.email,
+                icon: r.icon,
+                est_membre: r.est_membre,
+            })
+            .collect())
     }
 }

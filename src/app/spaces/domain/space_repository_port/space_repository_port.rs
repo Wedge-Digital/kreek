@@ -17,6 +17,19 @@ pub struct SpaceMemberRow {
     pub profile: String,
 }
 
+/// Un coach de l'annuaire de la plateforme, vu depuis un espace donné.
+///
+/// DTO de **lecture** : primitives assumées. `est_membre` vient d'une jointure
+/// externe — les membres sont **rendus, pas exclus**, pour ne pas laisser croire
+/// qu'un coach n'existe pas alors qu'il est déjà là.
+pub struct CandidateRow {
+    pub coach_id: String,
+    pub coach_name: String,
+    pub email: String,
+    pub icon: Option<String>,
+    pub est_membre: bool,
+}
+
 pub struct SpaceSummary {
     pub id: String,
     pub name: String,
@@ -94,4 +107,15 @@ pub trait ISpaceRepository: Send + Sync {
         space_id: &SpaceId,
         coach_id: &CoachId,
     ) -> Result<(), SpaceRepositoryError>;
+
+    /// Cherche des coachs dans l'annuaire de la plateforme, en marquant ceux
+    /// qui sont déjà membres de l'espace.
+    ///
+    /// `limite` est décidée par l'appelant côté serveur, jamais reçue du client.
+    async fn search_platform_coaches(
+        &self,
+        space_id: &SpaceId,
+        q: &str,
+        limite: i64,
+    ) -> Result<Vec<CandidateRow>, SpaceRepositoryError>;
 }
