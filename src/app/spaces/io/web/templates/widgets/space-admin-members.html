@@ -1,0 +1,26 @@
+{#
+  Widget « liste des membres ».
+
+  `hx-disinherit="*"` : aucun attribut HTMX de la page hôte ne descend ici.
+
+  La recherche est **au front** — filtre Alpine sur les lignes déjà rendues. La
+  liste des membres d'un espace tient dans un écran ; un aller-retour par frappe
+  n'achèterait rien. C'est l'inverse du choix de `coach-search`, qui interroge
+  l'annuaire de la plateforme, dont la taille croît sans rapport avec l'espace.
+#}
+<div class="space-admin-members" hx-disinherit="*" x-data="{ q: '' }">
+
+  <div class="sam-search">
+    <input class="sam-search-input" type="text" x-model="q"
+           placeholder="Rechercher un membre par pseudo…">
+  </div>
+
+  <div class="sam-list">
+    {% for membre in membres %}
+      <div x-show="q === '' || $el.firstElementChild.dataset.recherche.includes(q.toLowerCase())">
+        {% include "widgets/_member-row.html" %}
+      </div>
+    {% endfor %}
+  </div>
+
+</div>

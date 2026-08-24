@@ -54,8 +54,12 @@
   <div class="space-admin-zone">
 
     <div x-show="onglet === 'membres'" class="space-admin-panneau">
+      {# Chargé à la première activation — `vus` empêche le remontage, donc la
+         requête ne part qu'une fois. #}
       <template x-if="vus.includes('membres')">
-        <div class="space-admin-attente">Onglet Membres — à venir.</div>
+        <div hx-get="{{ routes.space_admin_members_widget(space_id) }}"
+             hx-trigger="load"
+             hx-swap="innerHTML"></div>
       </template>
     </div>
 

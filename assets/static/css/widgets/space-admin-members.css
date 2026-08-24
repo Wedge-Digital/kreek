@@ -1,0 +1,92 @@
+/* ── Widget « liste des membres » ───────────────────────────────────────────
+   Portée : `.space-admin-members`, racine du widget et nom de sa feuille. Aucune règle ne
+   déborde de cette racine — `scripts/check-css-collisions.sh` le vérifie, et
+   `tests/e2e/visual/debordements.py` vérifie qu'elle ne trouve pas de markup
+   ailleurs.
+
+   Les classes de la maquette — `.member-row`, `.member-avatar`, `.search-input`
+   — ne sont pas reprises : plusieurs appartiennent déjà à d'autres écrans, et
+   depuis le bundle unique deux pages qui partagent une classe partagent son
+   style. */
+
+.space-admin-members { display: flex; flex-direction: column; gap: var(--p1); }
+
+.space-admin-members .sam-search-input {
+  width: 100%;
+  padding: 10px var(--p2);
+  border: 1px solid var(--dark-5);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: var(--text-small);
+}
+.space-admin-members .sam-search-input:focus {
+  outline: none;
+  border-color: var(--main-blue);
+}
+
+.space-admin-members .sam-list { display: flex; flex-direction: column; }
+
+/* 40 px d'avatar + 2 × 12 px : c'est le terme « une ligne de membre » de la
+   réservation de hauteur posée par la page hôte. Le changer oblige à la revoir. */
+.space-admin-members .sam-row {
+  display: flex;
+  align-items: center;
+  gap: var(--p1);
+  padding: 12px var(--p2);
+  border-bottom: 1px solid var(--dark-6);
+}
+.space-admin-members .sam-row:last-child { border-bottom: none; }
+
+.space-admin-members .sam-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--main-blue);
+  color: var(--white);
+  font-weight: 700;
+  font-size: var(--text-tiny);
+}
+
+.space-admin-members .sam-info { flex: 1; min-width: 0; }
+.space-admin-members .sam-name { font-weight: 600; font-size: var(--text-small); }
+.space-admin-members .sam-vous { font-size: 11px; color: var(--dark-4); font-weight: 400; }
+.space-admin-members .sam-email {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.space-admin-members .sam-role { width: 130px; flex-shrink: 0; }
+
+.space-admin-members .sam-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.space-admin-members .sam-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 1px solid var(--dark-5);
+  border-radius: 6px;
+  background: var(--white);
+  font-family: inherit;
+  font-size: var(--text-tiny);
+  font-weight: 600;
+  color: var(--dark-2);
+  cursor: pointer;
+}
+.space-admin-members .sam-btn:hover { background: var(--dark-6); }
+.space-admin-members .sam-btn--primary:hover { border-color: var(--main-blue); color: var(--main-blue); }
+.space-admin-members .sam-btn--danger:hover { border-color: var(--red); color: var(--red); }
+.space-admin-members .sam-btn-icon { font-size: var(--text-tiny); }
+
+@media (max-width: 768px) {
+  .space-admin-members .sam-row { flex-wrap: wrap; }
+  .space-admin-members .sam-info { flex: 1 1 60%; }
+  .space-admin-members .sam-role { width: 100%; order: 3; }
+  .space-admin-members .sam-actions { order: 4; width: 100%; }
+}

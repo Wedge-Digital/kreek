@@ -56,11 +56,19 @@
 
              Le masquage est une politesse : la page elle-même rend 403. #}
           {% if peut_administrer %}
+          {# Ni `hx-select`, ni `outerHTML` — contrairement aux autres entrées de
+             ce menu. Elles visent des pages qui rendent le layout entier, dont
+             HTMX extrait `#app-content` ; `spaces` est extractible et ne peut
+             pas étendre le gabarit de l'hôte, donc sa page **est** le contenu.
+             Un `hx-select` ne trouverait rien dans le fragment, et HTMX
+             n'échangerait rien — l'écran restait blanc.
+
+             C'est la convention des liens internes du BC : cibler la zone de
+             contenu et remplacer son intérieur. #}
           <div class="sub-menu-btn"
                hx-get="{{ app_routes.spaces.space_admin(sid) }}"
                hx-target="#app-content"
-               hx-select="#app-content"
-               hx-swap="outerHTML"
+               hx-swap="innerHTML"
                hx-push-url="true"><span class="sub-menu-btn-icon">⚙️</span><span>Espace</span></div>
           {% endif %}
       </div>

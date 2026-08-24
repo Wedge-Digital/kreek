@@ -86,17 +86,26 @@
   color: var(--white);
 }
 
-/* ── Zone d'onglet — la place est réservée avant d'être remplie ─────────────
-   Chaque onglet est chargé en différé. Sans réservation, la zone vaut zéro
-   jusqu'à l'arrivée de son fragment et pousse tout ce qui est en dessous —
-   le défaut des cartes 343 et 361.
+/* ── Zone d'onglet — hauteur réservée ───────────────────────────────────────
+   Chaque onglet est chargé en différé. La réservation évite que la zone vaille
+   zéro jusqu'à l'arrivée de son fragment.
 
-   Le plancher vient d'une **règle du domaine**, pas d'une estimation : un
-   espace a toujours au moins un administrateur (carte 365), donc la liste des
-   membres a toujours au moins une ligne. Réserver au-delà créerait un blanc
-   permanent sur les petits espaces, ce qui est un défaut pire puisqu'il dure.
+   **Elle ne corrige pas un décalage de contenu**, contrairement à ce que la
+   carte 368 supposait. Mesuré : `tests/e2e/visual/decalages.py` rend 0 px sur
+   cette page, et le rendrait tout autant sans réservation — rien du flux normal
+   ne se trouve sous la zone. Le document se termine par le tiroir mobile et la
+   tabbar, tous deux en `position: fixed`. La zone grandit vers le bas, et il
+   n'y a rien à pousser.
 
-   La composition est auditable, chaque terme venant du dessin de la maquette :
+   Ce qu'elle apporte réellement : la hauteur de la page ne s'effondre pas entre
+   deux onglets de tailles très différentes. Sous une fenêtre déjà défilée, un
+   panneau plus court ferait remonter la vue d'un coup. C'est un effet que cet
+   outil ne mesure pas — il compare des positions à l'intérieur de la page, pas
+   la position de défilement.
+
+   Le plancher vient d'une règle du domaine : un espace a toujours au moins un
+   administrateur (carte 365), donc la liste a toujours au moins une ligne.
+   Chaque terme vient du dessin de la maquette :
 
        barre de statistiques   64 px   (chip : 40 px + 2 × 10 px de padding)
        champ de recherche      44 px
@@ -105,11 +114,7 @@
        espacements internes    2 × --p1
 
    `min-height` et jamais `height` : la zone doit pouvoir grandir avec son
-   contenu, elle ne doit simplement pas être plus petite que sa taille attendue.
-
-   Le total reste à **confirmer par la mesure** — `tests/e2e/visual/decalages.py`
-   — lorsque le premier widget différé existera (carte 369). Ici il n'y a encore
-   rien à charger : mesurer maintenant rendrait zéro sans rien prouver. */
+   contenu, elle ne doit simplement pas être plus petite que sa taille attendue. */
 .space-admin .space-admin-zone {
   min-height: calc(64px + 44px + 64px + 2 * var(--p2) + 2 * var(--p1));
 }
