@@ -62,15 +62,25 @@
            L'onglet Membres fonctionnait par accident — monté dès l'init, il
            était encore là quand HTMX a parcouru la page. Les autres, montés au
            clic, arrivent trop tard. #}
-        <div x-init="htmx.process($el)"
-             hx-get="{{ routes.space_admin_members_widget(space_id) }}"
+        <div x-init="htmx.process($el)">
+
+          {# Les compteurs, au-dessus de la liste. Mêmes déclencheurs qu'elle,
+             plus le changement de rôle : promouvoir ou rétrograder ne change pas
+             le nombre de membres mais change celui des administrateurs. #}
+          <div hx-get="{{ routes.space_admin_stats_widget(space_id) }}"
+               hx-trigger="load, memberAdded from:body, memberRemoved from:body, memberRoleChanged from:body"
+               hx-swap="innerHTML"></div>
+
+          <div
              {# `memberAdded` vient de l'onglet Ajout direct. Sans lui, la liste
                 reste périmée : rebasculer sur cet onglet ne la recharge pas — le
                 contenu est monté une fois et conservé, ce qui est voulu. Le
                 contrat était posé dès la conception de l'onglet Membres ; il
                 manquait, et seul un test de bout en bout pouvait le dire. #}
-             hx-trigger="load, memberAdded from:body, memberRemoved from:body"
-             hx-swap="innerHTML"></div>
+               hx-get="{{ routes.space_admin_members_widget(space_id) }}"
+               hx-trigger="load, memberAdded from:body, memberRemoved from:body"
+               hx-swap="innerHTML"></div>
+        </div>
       </template>
     </div>
 

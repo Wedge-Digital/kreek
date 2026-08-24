@@ -431,6 +431,21 @@
         }
         this._emit(this._eventName, payload);
       }
+
+      // Un `change` sur le composant lui-même, comme tout contrôle de
+      // formulaire. Il n'était pas émis, et `hx-trigger="change"` posé sur un
+      // `<kreek-select>` ne partait donc jamais — sans que rien ne le signale.
+      //
+      // Le piège est vicieux : l'affichage est mis à jour localement, si bien
+      // qu'un test qui vérifie ce qu'on lit à l'écran passe alors même
+      // qu'aucune requête n'est partie. C'est ce qui a laissé passer le
+      // changement de rôle de l'administration d'espace.
+      //
+      // `_emit` vise `document.body` : ce `change`-ci vise le composant, et
+      // remonte par bulle jusqu'à ceux qui l'écoutent — dont HTMX.
+      if (!isPreselect) {
+        this.dispatchEvent(new Event('change', { bubbles: true }));
+      }
     }
 
     _toggle() {

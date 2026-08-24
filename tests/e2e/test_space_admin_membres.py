@@ -199,6 +199,38 @@ def test_le_bouton_de_reinitialisation_bascule_apres_envoi(page: Page, espace_je
     expect(bouton).to_contain_text("Envoyé", timeout=10000)
 
 
+# ── Les compteurs ─────────────────────────────────────────────────────────────
+
+def _compteur(page: Page, nom: str):
+    return page.locator(f'.sas-chip-valeur[data-compteur="{nom}"]')
+
+
+def test_les_compteurs_suivent_une_promotion_sans_rechargement(page: Page, espace_jetable: str):
+    """Le seul test qui vérifie que les compteurs se **rafraîchissent**.
+
+    Le harnais vérifie ce qu'ils comptent, jamais qu'ils réagissent : cela dépend
+    d'événements DOM. C'est exactement l'omission qui avait laissé la liste des
+    membres périmée, et que seul un test de bout en bout pouvait dire.
+    """
+    _ouvrir(page, espace_jetable)
+    expect(_compteur(page, "membres")).to_have_text("2", timeout=10000)
+    expect(_compteur(page, "administrateurs")).to_have_text("1")
+
+    _promouvoir(page, MEMBRE_SIMPLE)
+
+    expect(_compteur(page, "administrateurs")).to_have_text("2", timeout=10000)
+    # Le total de membres ne bouge pas : promouvoir n'ajoute personne.
+    expect(_compteur(page, "membres")).to_have_text("2")
+
+    _retrograder(page, MEMBRE_SIMPLE)
+    expect(_compteur(page, "administrateurs")).to_have_text("1", timeout=10000)
+
+
+def test_les_invitations_en_attente_valent_zero(page: Page, espace_jetable: str):
+    _ouvrir(page, espace_jetable)
+    expect(_compteur(page, "invitations")).to_have_text("0", timeout=10000)
+
+
 # ── Autorisation ──────────────────────────────────────────────────────────────
 
 def test_un_membre_simple_ne_peut_pas_ouvrir_la_page(espace_jetable: str):
@@ -236,6 +268,17 @@ def _choisir_role(page: Page, pseudo: str, libelle: str) -> None:
     select = _ligne(page, pseudo).locator("kreek-select")
     select.click()
     select.locator(".ks-option", has_text=libelle).first.click()
+
+    # Attendre **la fin de l'échange**, pas seulement l'affichage. Le composant
+    # met son libellé à jour localement, donc le lire ne prouve rien : c'était
+    # exactement ce qui masquait l'absence de requête avant que `kreek-select`
+    # n'émette son `change`.
+    #
+    # Et la ligne entière est remplacée par le serveur : rendre la main trop tôt
+    # fait tomber le clic suivant sur un élément en cours de remplacement, que
+    # Playwright attend indéfiniment. C'est le défaut qui avait rendu
+    # `test_dismissals_phase` instable.
+    expect(_ligne(page, pseudo).locator(".htmx-request")).to_have_count(0, timeout=10000)
     expect(_ligne(page, pseudo).locator(".ks-display")).to_contain_text(
         libelle, timeout=10000
     )

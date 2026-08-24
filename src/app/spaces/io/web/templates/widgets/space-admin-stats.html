@@ -1,0 +1,29 @@
+{#
+  Les trois compteurs de l'onglet Membres.
+
+  Le troisième vaut zéro jusqu'à l'onglet Invitations — il n'y a effectivement
+  aucune invitation en attente, faute d'invitations tout court.
+#}
+<div class="space-admin-stats" hx-disinherit="*">
+  <div class="sas-chip">
+    <div class="sas-chip-icone">👥</div>
+    <div>
+      <div class="sas-chip-valeur" data-compteur="membres">{{ membres }}</div>
+      <div class="sas-chip-libelle">Membres</div>
+    </div>
+  </div>
+  <div class="sas-chip">
+    <div class="sas-chip-icone">🛡️</div>
+    <div>
+      <div class="sas-chip-valeur" data-compteur="administrateurs">{{ administrateurs }}</div>
+      <div class="sas-chip-libelle">Administrateurs</div>
+    </div>
+  </div>
+  <div class="sas-chip">
+    <div class="sas-chip-icone">⏳</div>
+    <div>
+      <div class="sas-chip-valeur" data-compteur="invitations">{{ invitations_en_attente }}</div>
+      <div class="sas-chip-libelle">Invitations en attente</div>
+    </div>
+  </div>
+</div>

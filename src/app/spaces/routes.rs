@@ -11,6 +11,7 @@ pub mod path {
     pub const SPACE_MEMBERS_WIDGET: &str = "/app/{space_id}/members-widget";
     pub const SPACE_ADMIN: &str = "/app/{space_id}/admin";
     pub const SPACE_ADMIN_MEMBERS_WIDGET: &str = "/app/{space_id}/admin/widgets/members";
+    pub const SPACE_ADMIN_STATS_WIDGET: &str = "/app/{space_id}/admin/widgets/stats";
     pub const SPACE_ADMIN_MEMBER_ROLE: &str = "/app/{space_id}/admin/members/{coach_id}/role";
     pub const SPACE_ADMIN_MEMBER_REMOVE: &str = "/app/{space_id}/admin/members/{coach_id}/remove";
     pub const SPACE_ADMIN_CANDIDATES_WIDGET: &str = "/app/{space_id}/admin/widgets/candidates";
@@ -46,6 +47,9 @@ impl Routes {
     }
     pub fn space_admin(&self, space_id: &str) -> String {
         path::SPACE_ADMIN.replace("{space_id}", space_id)
+    }
+    pub fn space_admin_stats_widget(&self, space_id: &str) -> String {
+        path::SPACE_ADMIN_STATS_WIDGET.replace("{space_id}", space_id)
     }
     pub fn space_admin_members_widget(&self, space_id: &str) -> String {
         path::SPACE_ADMIN_MEMBERS_WIDGET.replace("{space_id}", space_id)
