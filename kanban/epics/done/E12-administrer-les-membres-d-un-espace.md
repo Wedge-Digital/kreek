@@ -1,8 +1,15 @@
 # E12 — Administrer les membres d'un espace
 
-**État :** 21 cartes · 0 faite. Conception close — les sept phases du workflow
-« Nouvelle fonctionnalité » sont écrites pour les deux onglets, dans
-`docs/specs/space-admin/`.
+**État :** 21 cartes · **21 faites**. Les deux onglets sont livrés et couverts —
+onze scénarios Playwright pour Membres, huit pour Ajout direct, chacun lancé
+plusieurs fois sans échec.
+
+**Un maillon du critère reste à constater à la main** : que l'e-mail de
+définition de mot de passe parte réellement, et que le coach parvienne à se
+connecter par son lien. Le profil de développement utilise
+`EMAIL__PROVIDER=console`, qui écrit sur la sortie standard sans rien envoyer :
+la vérification demande la démo, avec Resend configuré. Tout le reste du critère
+est couvert par les tests.
 
 ## La fonction
 
@@ -112,6 +119,38 @@ une vérification, `spaces` ne bouge pas. Le seul filet est la carte 384.
 **Trois violations trouvées sans les chercher** : le doublon de type
 d'événement, le chargement amputé, et la requête de `spaces` sur `auth__users`.
 Les trois dormaient dans du code qui compilait et dont les tests passaient.
+
+## Ce que les cartes ont trouvé
+
+Aucune de ces découvertes n'a été cherchée : toutes sont sorties en spécifiant ou
+en testant ce qui allait s'appuyer dessus.
+
+**Trois défauts préexistants**, dans du code qui compilait et dont les tests
+passaient. Deux événements du BC partageaient leur type (364). L'agrégat `Space`
+se chargeait systématiquement vide de ses membres, et par une requête franchissant
+la frontière d'un autre BC (375) — personne ne s'en était aperçu parce qu'il
+n'était chargé nulle part. Et l'invariant « au moins un administrateur » était
+**déjà violé** sur quatre espaces peuplés, que plus personne ne pouvait
+administrer.
+
+**Deux défauts introduits et rattrapés par les tests de bout en bout.** HTMX ne
+traite pas le markup inséré par Alpine : le contenu d'un onglet monté au clic
+n'était jamais processé. Et le changement de rôle n'a **jamais** fonctionné dans
+un navigateur — `kreek-select` n'émettait aucun `change`, puis, ce point corrigé,
+le profil ne partait pas faute d'un `hx-include`.
+
+**Une leçon sur les tests eux-mêmes**, apparue trois fois. Un test peut passer
+pour la mauvaise raison : en observant un libellé que le composant met à jour
+localement, en visant une cible qui déclenche une autre règle que celle qu'on
+croit, ou en cherchant un mot que le décor contient déjà. Chaque fois, c'est en
+**faisant échouer le test exprès** qu'on l'a vu.
+
+**Et trois raisonnements convergents** sur le dernier administrateur :
+`DernierAdministrateur` est inatteignable depuis le web, la clause correspondante
+de `role_locked` ne s'applique jamais qu'à sa propre ligne, et le compte
+d'administrateurs rendu par les use cases n'est employé par aucun contrôleur. La
+garde et « on n'agit pas sur soi-même » ferment la porte avant que la règle du
+domaine ait à jouer ; ce qui est bâti dessus relève de la défense en profondeur.
 
 ## Terminé quand
 

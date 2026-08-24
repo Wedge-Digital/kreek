@@ -49,7 +49,7 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 | [E09 — BC `news`](to_be_refined/E09-bc-news.md) | `to_be_refined` | 2 |
 | [E10 — Référentiels éditables](to_be_refined/E10-referentiels-editables.md) | `to_be_refined` | 2 |
 | [E11 — Savoir ce qui se passe en production](done/E11-journal-de-production.md) | `done` | 9 |
-| [E12 — Administrer les membres d'un espace](ready_to_be_done/E12-administrer-les-membres-d-un-espace.md) | `ready` · 0/21 | 21 |
+| [E12 — Administrer les membres d'un espace](done/E12-administrer-les-membres-d-un-espace.md) | `done` · 21/21 | 21 |
 
 ## Les cartes sans épic
 
