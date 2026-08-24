@@ -11,9 +11,10 @@ use crate::app::auth::io::web::post_login::login_submit;
 use crate::app::auth::io::web::post_logout::logout;
 use crate::app::auth::io::web::post_register::post_register;
 use crate::app::auth::io::web::reset_password::{display_reset_password, post_reset_password};
+use crate::app::auth::io::web::reset_password_request::post_reset_password_request;
 use crate::app::auth::routes::path;
 use axum::extract::FromRef;
-use axum::{routing::get, Router};
+use axum::{routing::get, routing::post, Router};
 
 /// Générique sur l'état de l'application hôte : le BC n'a pas à connaître
 /// `AppState`, il exige seulement qu'on sache en projeter son contexte. C'est
@@ -33,6 +34,10 @@ where
         .route(
             path::FORGOT_PASSWORD,
             get(display_forgot_password).post(post_forgot_password),
+        )
+        .route(
+            path::RESET_PASSWORD_REQUEST,
+            post(post_reset_password_request),
         )
         .route(
             path::FORGOT_PASSWORD_SENT,

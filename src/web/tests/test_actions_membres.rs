@@ -241,3 +241,71 @@ async fn un_coach_id_malforme_est_refuse(pool: sqlx::PgPool) {
 
     assert_eq!(r.statut, StatusCode::BAD_REQUEST);
 }
+
+// ── Le bouton de réinitialisation (carte 372) ───────────────────────────────
+
+/// La destination est celle du BC d'authentification, injectée par l'hôte.
+/// `spaces` ne la connaît pas : il rend la chaîne qu'on lui donne.
+#[sqlx::test]
+async fn la_ligne_porte_la_destination_de_reinitialisation(pool: sqlx::PgPool) {
+    let (space, _, _) = contexte(&pool).await;
+    let app = Harnais::connecte_en_tant_que(pool, "DevCoach").await;
+
+    let r = app
+        .get(&format!("/app/{space}/admin/widgets/members"))
+        .await;
+
+    assert_eq!(r.statut, StatusCode::OK);
+    assert!(
+        r.corps.contains("/auth/password/request"),
+        "le bouton doit poster vers l'endpoint injecté : {}",
+        r.corps
+    );
+    assert!(
+        r.corps.contains(r#"hx-vals='{"coach_name": "DevCoach"}'"#),
+        "et transmettre le pseudo de la ligne : {}",
+        r.corps
+    );
+}
+
+/// L'endpoint d'`auth` rend **204**, sans corps ni redirection.
+///
+/// L'endpoint public, lui, rend `HX-Redirect` vers la page « consultez vos
+/// emails » — ce qui ferait quitter l'application à un appelant qui l'invoque
+/// depuis une ligne de tableau. C'est toute la raison d'être de cette variante.
+#[sqlx::test]
+async fn la_demande_de_reinitialisation_rend_204_sans_corps(pool: sqlx::PgPool) {
+    crate::cli::seed_e2e::execute(&pool)
+        .await
+        .expect("seed e2e");
+    let app = Harnais::connecte_en_tant_que(pool, "DevCoach").await;
+
+    let r = app
+        .post_htmx("/auth/password/request", "coach_name=DevCoach")
+        .await;
+
+    assert_eq!(r.statut, StatusCode::NO_CONTENT);
+    assert!(r.corps.is_empty());
+    assert!(
+        r.entete("hx-redirect").is_none(),
+        "aucune redirection : l'appelant reste où il est"
+    );
+}
+
+/// Un pseudo inconnu rend `204` comme un pseudo connu.
+///
+/// Distinguer les deux dirait à n'importe qui si un compte existe. C'est le
+/// choix déjà fait par l'endpoint public, repris tel quel.
+#[sqlx::test]
+async fn un_pseudo_inconnu_ne_se_distingue_pas_d_un_pseudo_connu(pool: sqlx::PgPool) {
+    crate::cli::seed_e2e::execute(&pool)
+        .await
+        .expect("seed e2e");
+    let app = Harnais::connecte_en_tant_que(pool, "DevCoach").await;
+
+    let r = app
+        .post_htmx("/auth/password/request", "coach_name=PersonneIci")
+        .await;
+
+    assert_eq!(r.statut, StatusCode::NO_CONTENT);
+}

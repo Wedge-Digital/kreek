@@ -32,6 +32,18 @@ pub trait ISpacesHostLayout: Send + Sync {
     /// Où renvoyer un visiteur non authentifié.
     fn unauthenticated_redirect(&self) -> String;
 
+    /// Où poster pour qu'un lien de réinitialisation de mot de passe parte chez
+    /// ce coach.
+    ///
+    /// L'URL et non le markup, contrairement à `upload_widget` : un bouton de
+    /// réinitialisation est un élément du dessin de la ligne, et le faire rendre
+    /// par l'hôte l'obligerait à connaître les classes CSS de ce BC. On
+    /// déplacerait le couplage au lieu de le supprimer.
+    ///
+    /// L'appelant gère son propre retour visuel — la destination répond sans
+    /// contenu.
+    fn password_reset_action(&self) -> String;
+
     /// Rend un champ d'upload d'image. Le composant, son service de stockage
     /// et le compte associé appartiennent à l'hôte — le BC décrit seulement le
     /// champ qu'il veut voir.

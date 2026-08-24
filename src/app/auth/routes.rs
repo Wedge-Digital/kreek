@@ -7,6 +7,8 @@ pub mod path {
     pub const REGISTER_SUCCESS: &str = "/auth/register/success";
     pub const FORGOT_PASSWORD: &str = "/auth/forgot-password";
     pub const FORGOT_PASSWORD_SENT: &str = "/auth/forgot-password/sent";
+    /// Même opération que `FORGOT_PASSWORD`, sans page ni redirection.
+    pub const RESET_PASSWORD_REQUEST: &str = "/auth/password/request";
     // Route pattern for Axum — parameter in braces
     pub const LOGOUT: &str = "/auth/logout";
     pub const RESET_PASSWORD_PATTERN: &str = "/auth/password/update/{reset_token}";
@@ -42,6 +44,11 @@ impl Routes {
     }
     pub fn forgot_password(&self) -> &'static str {
         path::FORGOT_PASSWORD
+    }
+    /// Demande d'envoi d'un lien de réinitialisation, pour un appelant qui
+    /// gère lui-même son retour visuel. Rend 204.
+    pub fn reset_password_request(&self) -> &'static str {
+        path::RESET_PASSWORD_REQUEST
     }
     pub fn forgot_password_sent(&self) -> &'static str {
         path::FORGOT_PASSWORD_SENT

@@ -14,6 +14,9 @@ pub struct SpaceAdminMembersTemplate {
     pub routes: Routes,
     pub space_id: String,
     pub membres: Vec<MemberRowVm>,
+    /// Injectée par l'hôte : identique pour toutes les lignes, donc portée par
+    /// le gabarit et non recopiée dans chaque VM.
+    pub reset_action: String,
 }
 
 impl IntoResponse for SpaceAdminMembersTemplate {
@@ -55,6 +58,7 @@ pub async fn space_admin_members_widget(
         routes: Routes::default(),
         space_id: perms.space_id.to_string(),
         membres: build_member_rows(lignes, &moi.id),
+        reset_action: ctx.host_layout.password_reset_action(),
     }
     .into_response()
 }

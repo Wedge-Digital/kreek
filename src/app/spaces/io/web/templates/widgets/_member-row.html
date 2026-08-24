@@ -32,11 +32,23 @@
   </kreek-select>
 
   <div class="sam-actions">
-    {# Inerte encore : la carte 372 lui donnera sa destination, injectée par
-       l'hôte — `spaces` est extractible et ne connaît pas `auth`. #}
+    {# La destination est injectée par l'hôte : ce BC est extractible et ne
+       connaît pas celui qui gère les comptes. Elle répond sans contenu, d'où
+       `hx-swap="none"` et un retour visuel entièrement local.
+
+       Le libellé ne bascule que si la requête a **réussi** : pas d'optimisme,
+       `event.detail.successful` fait foi. #}
     <button type="button" class="sam-btn sam-btn--primary"
+            x-data="{ envoye: false }"
+            :class="{ 'is-envoye': envoye }"
+            :disabled="envoye"
+            hx-post="{{ reset_action }}"
+            hx-vals='{"coach_name": "{{ membre.name }}"}'
+            hx-swap="none"
+            hx-on::after-request="if (event.detail.successful) envoye = true"
             title="Envoyer un lien de réinitialisation de mot de passe">
-      <span class="sam-btn-icon">🔑</span> Réinit. mdp
+      <span class="sam-btn-icon" x-text="envoye ? '✓' : '🔑'">🔑</span>
+      <span x-text="envoye ? 'Envoyé' : 'Réinit. mdp'">Réinit. mdp</span>
     </button>
     {% if membre.removable %}
     <button type="button" class="sam-btn sam-btn--danger" title="Retirer de l'espace"
