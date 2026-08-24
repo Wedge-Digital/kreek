@@ -32,6 +32,22 @@ pub struct MemberRowVm {
 ///
 /// C'est la répartition qu'impose le projet — le front grise, le domaine refuse
 /// — et elle se vérifie par un POST direct, sans passer par l'interface.
+///
+/// # La clause « dernier administrateur » est redondante à l'écran
+///
+/// Elle ne s'applique jamais qu'à sa propre ligne, que `is_self` fige déjà.
+/// Pour qu'elle joue seule il faudrait une cible seule administratrice, un
+/// spectateur distinct d'elle, et ce spectateur administrateur — sinon la page
+/// rend 403. Le spectateur serait donc un second administrateur, et la cible ne
+/// serait plus seule.
+///
+/// Constaté en écrivant le test e2e qui devait l'observer (carte 374). C'est le
+/// même raisonnement qui a montré, en carte 371, que `DernierAdministrateur`
+/// est inatteignable depuis le web.
+///
+/// La clause reste, et sa place est ici : elle décrit la règle, pas le seul cas
+/// où elle mord aujourd'hui. Si la page s'ouvrait un jour à un profil non
+/// administrateur — un compte d'exploitation, par exemple — elle jouerait.
 pub fn build_member_rows(lignes: Vec<SpaceMemberRow>, moi: &CoachId) -> Vec<MemberRowVm> {
     let admins = lignes
         .iter()

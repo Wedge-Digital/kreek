@@ -45,7 +45,11 @@
             hx-post="{{ reset_action }}"
             hx-vals='{"coach_name": "{{ membre.name }}"}'
             hx-swap="none"
-            hx-on::after-request="if (event.detail.successful) envoye = true"
+            {# `@htmx:after-request` et non `hx-on::after-request` : ce dernier
+               est évalué par HTMX dans un scope où l'état Alpine n'existe pas,
+               et `envoye` y est simplement inconnu. Alpine, lui, écoute
+               n'importe quel événement DOM — htmx émet la forme kebab. #}
+            @htmx:after-request="if ($event.detail.successful) envoye = true"
             title="Envoyer un lien de réinitialisation de mot de passe">
       <span class="sam-btn-icon" x-text="envoye ? '✓' : '🔑'">🔑</span>
       <span x-text="envoye ? 'Envoyé' : 'Réinit. mdp'">Réinit. mdp</span>
