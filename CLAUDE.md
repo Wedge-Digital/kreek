@@ -1239,6 +1239,49 @@ Quand un fragment est injecté via `htmx.ajax` avec `swap: 'innerHTML'`, l'élé
 <div x-data="skillPicker(...)">...</div>
 ```
 
+### La fenêtre où un élément est visible mais pas encore câblé
+
+HTMX câble le contenu qu'il insère **quelques dizaines de millisecondes après
+l'avoir rendu visible**. Pendant cette fenêtre, un bouton est peint, cliquable —
+et inerte. Le clic s'y perd sans émettre de requête, sans erreur de console,
+sans rien.
+
+Mesuré sur l'étape de validation du magicien de compétition, trois fois de
+suite, identique :
+
+```
+t=0ms    6 éléments htmx non câblés sur 31   ← dont « 🏆 Créer la compétition »
+t=50ms   0
+```
+
+**Aucune attente habituelle ne voit cette fenêtre.** À `t=0` l'élément est
+visible, son texte est le bon, plus aucune requête n'est en vol : tous les
+signaux qu'on attend naturellement sont déjà verts. Attendre `.htmx-request` à
+zéro ne suffit pas non plus — la classe est retirée *avant* que le contenu
+inséré soit câblé.
+
+En e2e, cliquer sur du contenu fraîchement injecté passe donc par
+`tests/e2e/htmx_helpers.py` :
+
+```python
+from htmx_helpers import cliquer_quand_cable
+
+cliquer_quand_cable(page, ".btn-toggle-spp")   # attend le câblage, puis clique
+```
+
+**Pas de `sleep`.** Une durée fixe n'a aucune marge sur une machine chargée — et
+c'est exactement là que la suite échouait — tout en coûtant son délai aux
+milliers d'appels où tout est déjà prêt. La condition rend la main dès que c'est
+vrai : 7 à 20 ms mesurés.
+
+Un humain n'atteint pas cette fenêtre : il lui faut deux à trois cents
+millisecondes rien que pour réagir à ce qui vient de s'afficher. **C'est un
+piège de test, pas un défaut produit** — mais il coûte cher à diagnostiquer,
+parce que le symptôme, un clic qui ne produit strictement rien, ne ressemble
+pas à un problème d'attente. Il a valu deux diagnostics faux — l'`id` dupliqué,
+puis « htmx est aléatoire » — et une correction qui stabilisait le test par
+accident, en ajoutant deux allers-retours vers le navigateur.
+
 ---
 
 ## Kanban — cycle de vie des cartes
