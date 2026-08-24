@@ -47,6 +47,8 @@ import pytest
 import requests
 from playwright.sync_api import Page, expect
 
+from htmx_helpers import cliquer_quand_cable
+
 from db_helpers import query_db as _query_db
 
 BASE_URL = "http://localhost:3210"
@@ -133,14 +135,11 @@ def _activate_spp_spending(page: Page) -> None:
     "Activer la dépense de SPP" pour basculer vers le panneau de dépense.
 
     `#pd-right-panel` est monté par un `hx-trigger="load"` : le bouton n'existe
-    qu'une fois ce fragment inséré. Cliquer dès qu'il devient visible peut
-    devancer son câblage par htmx — le clic part alors **dans le vide**, aucune
-    requête n'est émise, et le panneau reste le journal. On attend donc que plus
-    aucune requête htmx ne soit en vol, pas une durée."""
-    bouton = page.locator(".btn-toggle-spp")
-    expect(bouton).to_be_visible(timeout=10000)
-    expect(page.locator(".htmx-request")).to_have_count(0, timeout=10000)
-    bouton.click()
+    qu'une fois ce fragment inséré, et il est **inerte** le temps qu'htmx le
+    câble — cf. `htmx_helpers`. Un clic tombé dans cette fenêtre se perd sans
+    émettre de requête, et l'échec tombe dix secondes plus tard sur un symptôme
+    muet."""
+    cliquer_quand_cable(page, ".btn-toggle-spp")
     expect(page.locator(".tabs")).to_be_visible(timeout=10000)
 
 

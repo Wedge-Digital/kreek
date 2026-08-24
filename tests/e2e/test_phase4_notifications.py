@@ -24,6 +24,8 @@ import time
 
 from playwright.sync_api import Page, expect
 
+from htmx_helpers import cliquer_quand_cable
+
 FAKE_LOGO_URL = "https://res.cloudinary.com/demo/image/upload/v1/sample.jpg"
 
 
@@ -70,8 +72,12 @@ def _valider(page: Page) -> None:
 def _revenir_en_phase4(page: Page) -> None:
     """Par le bouton « ← Retour » de l'étape 5, et non par `go_back()` : le
     magicien navigue en `htmx.ajax` + `pushState` posés à la main, donc le
-    retour navigateur ne re-rend pas la page."""
-    page.click("text=← Retour")
+    retour navigateur ne re-rend pas la page.
+
+    Ce bouton vient d'être injecté par le passage à l'étape 5 : il est visible
+    avant d'être câblé, et un clic tombé dans cette fenêtre se perd **sans
+    rien signaler** — cf. `htmx_helpers`."""
+    cliquer_quand_cable(page, "text=← Retour")
     _attendre_le_widget(page)
 
 
