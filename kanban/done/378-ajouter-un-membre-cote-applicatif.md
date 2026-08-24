@@ -47,18 +47,37 @@ cohérents.
 
 ## Checklist
 
-- [ ] Use case, `AddMemberCommand` sans primitive nue — `Notification` est un
+- [x] Use case, `AddMemberCommand` sans primitive nue — `Notification` est un
       value object, pas un `bool`
-- [ ] `#[tracing::instrument(skip_all, fields(cmd = ?cmd))]`, `skip_all`
-      obligatoire
-- [ ] `SpacesContext` gagne `email_service`, câblé dans `main.rs`
-- [ ] Émission par `emettre()`, jamais `.send(`
-- [ ] Gabarit d'email de courtoisie, sous `emails/fr_FR/`
-- [ ] Tests unitaires sur `FakeRepo` et service d'email factice :
-  - [ ] ajout nominal en Membre → compte inchangé ; en Admin → compte +1
-  - [ ] coach déjà membre → `Metier(DejaMembre)`, **aucune écriture, aucun
+- [x] `#[tracing::instrument(skip_all, fields(cmd = ?cmd))]`
+- [x] `SpacesContext` gagne `email_service`, câblé dans `main.rs`
+- [x] Émission par `emettre()`, jamais `.send(` — et l'envoi d'e-mail déclaré
+      par `// arch:ok`, que l'axe 12 exige **sur la ligne immédiatement
+      précédente**
+- [x] Gabarit d'email de courtoisie, sous `emails/fr_FR/`
+- [x] Sept tests unitaires sur `FakeSpaceRepo`, un cache factice et un service
+      d'email factice :
+  - [x] ajout nominal en Membre → compte inchangé ; en Admin → compte +1
+  - [x] coach déjà membre → `Metier(DejaMembre)`, **aucune écriture, aucun
         événement, aucun email**
-  - [ ] `Notification::Envoyer` → un envoi ; `Taire` → aucun
-  - [ ] **l'envoi échoue → `Ok` quand même, et l'écriture a eu lieu** — le seul
-        test qui vérifie que la courtoisie ne gouverne pas l'appartenance
-- [ ] `make lint`, `make check-arch`, `make test` passent
+  - [x] `Notification::Envoyer` → un envoi ; `Taire` → aucun
+  - [x] **l'envoi échoue → `Ok` quand même, écriture et événement bien là**
+  - [x] **ajouté** : un coach absent du cache est refusé
+- [x] Le test de l'envoi qui échoue **vu échouer** sur un envoi rendu bloquant
+- [x] `make lint`, `make check-arch`, `make test` passent — 1161 tests
+
+## Ce qu'on a appris en la faisant
+
+**Le use case a besoin de deux dépôts.** `add_member` prend un `Coach` complet
+depuis la carte 376, donc le cache d'utilisateurs entre en jeu. D'où une erreur
+de plus, `CoachInconnu`, et son test : sans pseudo, il n'y a pas de `Coach` à
+construire.
+
+**L'axe 12 a fait son travail sur un `.send(` qui n'en était pas un.** C'est le
+cas que la règle prévoit — envoi d'e-mail, requête HTTP — et le marqueur
+`// arch:ok` doit être **sur la ligne immédiatement précédente**, pas deux lignes
+au-dessus. Le verrou est plus strict que sa description ne le laissait croire.
+
+**Deux classes CSS inventées dans le gabarit d'email.** `cta` et `muted`
+n'existent pas dans sa feuille — elles n'auraient simplement rien fait. Les
+classes réellement définies ont été relevées et vérifiées une par une.

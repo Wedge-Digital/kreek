@@ -5,6 +5,7 @@ use crate::app::spaces::io::app_events::user_created_listener::user_created_list
 use crate::app::spaces::io::repository::space_repository::SpaceRepository;
 use crate::app::spaces::io::repository::user_cache_repository::SpaceUserCacheRepository;
 use crate::app::spaces::io::web::host_layout::ISpacesHostLayout;
+use crate::common::services::email::IEmailService;
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -19,6 +20,12 @@ pub struct SpacesContext {
     /// connaître les routes ni le layout de celui qui l'héberge — c'est la
     /// condition pour qu'il soit extractible.
     pub host_layout: Arc<dyn ISpacesHostLayout>,
+    /// Pour la courtoisie envoyée au coach ajouté par un administrateur.
+    ///
+    /// `crate::common::services::email` est un service de la couche commune —
+    /// ni un autre BC, ni l'hôte — donc rien de ce que le statut extractible
+    /// proscrit. `AuthContext` le porte déjà de la même façon.
+    pub email_service: Arc<dyn IEmailService>,
 }
 
 pub fn init_app_event_listeners(app_event_bus: &EventBus, pool: PgPool) {
@@ -35,12 +42,14 @@ impl SpacesContext {
         pool: &PgPool,
         event_bus: EventBus,
         host_layout: Arc<dyn ISpacesHostLayout>,
+        email_service: Arc<dyn IEmailService>,
     ) -> Self {
         Self {
             space_repository: Arc::new(SpaceRepository::new(pool.clone())),
             user_cache_repository: Arc::new(SpaceUserCacheRepository::new(pool.clone())),
             event_bus,
             host_layout,
+            email_service,
         }
     }
 }
