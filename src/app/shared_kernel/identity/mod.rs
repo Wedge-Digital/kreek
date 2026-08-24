@@ -2,6 +2,7 @@
 //! sont extraits vers un autre projet. Rien ici ne connaît le Blood Bowl.
 pub mod auth_app_events;
 pub mod authorization;
+pub mod charset;
 pub mod cloudinary;
 pub mod coach_definition;
 pub mod coach_icon;

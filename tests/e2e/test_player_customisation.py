@@ -54,7 +54,7 @@ def custo_ctx(browser, space_id):
         f"SELECT player_id FROM players_proj WHERE team_id = '{team_id}' "
         "AND membership = 'Active' ORDER BY player_id"
     )
-    assert len(joueurs) >= 8, f"{len(joueurs)} joueurs seulement dans {team_id}"
+    assert len(joueurs) >= 9, f"{len(joueurs)} joueurs seulement dans {team_id}"
     return {"space_id": space_id, "team_id": team_id, "joueurs": joueurs}
 
 
@@ -223,6 +223,48 @@ def test_une_competence_customisee_est_appliquee_et_journalisee(custo_ctx):
     ).text
     assert "Customisation par" in journal, "le journal doit nommer le commissaire"
     assert "mode-chip-custom" in journal
+
+
+# ── Scénario 2 bis — une compétence dont le nom porte une apostrophe ──────────
+
+
+def test_une_competence_a_apostrophe_traverse_toute_la_chaine(custo_ctx):
+    """La régression qui a coûté une enquête.
+
+    « Capitaine d'équipe » s'affichait dans le panneau, s'ajoutait au panier,
+    et n'échouait qu'à la validation : le nom traverse un `SkillName` dont le
+    charset refusait l'apostrophe, et l'échec était écrasé en `UnknownSkill`
+    — une erreur qui accusait le catalogue alors que seul son nom était en
+    cause. Aucun test unitaire ne pouvait le voir : le panier acceptait la
+    ligne, seule l'application de l'événement la refusait.
+
+    Le test vise donc nommément cette compétence-là, et non « la première
+    ajoutable » : elle est troisième dans l'ordre alphabétique du panneau, et
+    un test qui prend la première ne la rencontrerait jamais.
+    """
+    joueur = custo_ctx["joueurs"][8]
+    panneau = _panneau(custo_ctx, joueur).text
+    assert "CAPITAINE_EQUIPE" in panneau, "la compétence à apostrophe doit être proposée"
+
+    assert (
+        _muter(custo_ctx, joueur, "skills/add", {"skill_id": "CAPITAINE_EQUIPE"}).status_code
+        == 200
+    )
+    version = _version(_panneau(custo_ctx, joueur).text)
+    validation = requests.post(
+        _url(custo_ctx, joueur, "customisation/validate"),
+        data={"expected_version": version},
+        headers=HX,
+        timeout=10,
+    )
+    assert validation.status_code == 200, "la validation refusait le nom, pas la compétence"
+    assert _lignes_du_panier(joueur) == ""
+
+    journal = requests.get(
+        _url(custo_ctx, joueur, "widgets/evolution-journal"), timeout=10
+    ).text
+    # Askama échappe l'apostrophe en `&#x27;` — les deux formes valent preuve.
+    assert "Capitaine d&#x27;équipe" in journal or "Capitaine d'équipe" in journal
 
 
 # ── Scénarios 3 et 4 — direction des seuils de dé, puis borne ─────────────────

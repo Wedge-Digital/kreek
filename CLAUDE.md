@@ -488,6 +488,58 @@ pub struct Kpo(pub u32);
 - Requêtes SQL (`sqlx::query!`) — les types sqlx ont leurs propres contraintes
 - `reason: Option<String>` et autres champs de texte libre sans validation domaine
 
+### Charset du texte saisi — une seule expression pour toute l'application
+
+Deux constantes, dans `src/app/shared_kernel/identity/charset.rs` :
+
+| Constante | Portée |
+|---|---|
+| `TEXTE_SAISI` | tout texte saisi : compétence, poste, joueur, équipe, roster, espace, saison, journée, tier, compétition |
+| `IDENTIFIANT_COACH` | `CoachName` seul |
+
+**Aucun value object texte ne redéfinit sa propre expression.** Ajouter un
+caractère se décide à un seul endroit, et vaut aussitôt partout.
+
+Onze charsets coexistaient, chacun dans son fichier, et neuf refusaient
+l'apostrophe. Une compétence nommée « Capitaine d'équipe » s'affichait dans le
+sélecteur, s'ajoutait au panier de customisation, et n'échouait qu'à la
+validation — sur un `UnknownSkill` qui accusait le catalogue alors que seul son
+nom était en cause.
+
+`TEXTE_SAISI` part de l'ancien charset de `CompetitionName`, le plus permissif
+des onze : c'est donc un **sur-ensemble strict** de tous les autres, et aucun
+nom valide hier ne peut devenir invalide. Élargir reste toujours sûr ;
+resserrer ne l'est jamais — les noms sont relus depuis la base par
+`try_new(...).map_err(db_err)?`, et un caractère retiré du charset rend
+illisible tout ce qui le porte.
+
+**`CoachName` est à part parce que ce n'est pas un libellé** : c'est
+l'identifiant de connexion, celui que `perform_login` cherche par
+`find_by_coach_name`. La ponctuation libre y compliquerait la saisie sans rien
+apporter, et `@` rapprocherait un pseudonyme d'une adresse électronique.
+
+**Le fichier vit dans `identity/` et non `bloodbowl/`** : `auth` et `spaces`
+sont extractibles, et `shared_kernel::bloodbowl::` leur est interdit. Le
+charset part avec eux.
+
+#### Le piège à connaître
+
+nutype ne vérifie une expression **à la compilation que si elle est
+littérale**. Passée par une constante, elle n'est compilée qu'au premier usage :
+une faute de syntaxe ne produit pas d'erreur de `cargo build` mais un `panic`
+en production. Les tests de `charset.rs` touchent les deux constantes — c'est
+ce qui referme le trou, et il faut le maintenir.
+
+#### Ce que le charset ne règle pas
+
+Un caractère refusé ne le dit pas. Quatre sites avalent encore l'échec :
+`UnknownSkill` à la place du vrai motif (`validate_customisation_use_case.rs`),
+poste replié sur « Joueur » (`player_creation.rs`), roster escamoté par un
+`.ok()?` (`roster_service.rs`, deux fois). Élargir le charset fait passer le
+français d'aujourd'hui ; ça ne répare pas le mécanisme, et le prochain
+caractère non prévu produira encore un poste « Joueur » sans une ligne de
+journal.
+
 ---
 
 ## App events vs Domain events — règle fondamentale

@@ -1,8 +1,9 @@
+use crate::app::shared_kernel::identity::charset::IDENTIFIANT_COACH;
 use nutype::nutype;
 
 #[nutype(
     sanitize(trim),
-    validate(not_empty, len_char_max = 50, regex = r"^[\p{L}0-9._ -]+$"),
+    validate(not_empty, len_char_max = 50, regex = IDENTIFIANT_COACH),
     derive(Eq, Hash, PartialEq, Debug, Clone, Serialize, Deserialize, Display)
 )]
 pub struct CoachName(String);

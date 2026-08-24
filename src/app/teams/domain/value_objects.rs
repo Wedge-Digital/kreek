@@ -1,3 +1,4 @@
+use crate::app::shared_kernel::identity::charset::TEXTE_SAISI;
 use serde::{Deserialize, Serialize};
 
 // ── Montants ──────────────────────────────────────────────────────────────────
@@ -31,7 +32,7 @@ pub struct RosterRef(String);
 
 #[nutype(
     sanitize(trim),
-    validate(not_empty, len_char_max = 100, regex = r"^[\p{L}0-9 -]+$"),
+    validate(not_empty, len_char_max = 100, regex = TEXTE_SAISI),
     derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Display, AsRef)
 )]
 pub struct TeamName(String);
@@ -138,10 +139,20 @@ mod tests {
         assert!(TeamName::try_new(long).is_err());
     }
 
+    /// Depuis le charset commun, la ponctuation passe — apostrophes et
+    /// tirets des deux formes compris, ce qui était le but de l'opération.
+    #[test]
+    fn team_name_punctuation_is_allowed() {
+        assert!(TeamName::try_new("Les@Korrigans".to_string()).is_ok());
+        assert!(TeamName::try_new("Team!".to_string()).is_ok());
+        assert!(TeamName::try_new("L'Équipe d’Or".to_string()).is_ok());
+        assert!(TeamName::try_new("Korrigans — Réserve".to_string()).is_ok());
+    }
+
     #[test]
     fn team_name_invalid_chars() {
-        assert!(TeamName::try_new("Les@Korrigans".to_string()).is_err());
-        assert!(TeamName::try_new("Team!".to_string()).is_err());
+        assert!(TeamName::try_new("Les|Korrigans".to_string()).is_err());
+        assert!(TeamName::try_new("<script>".to_string()).is_err());
     }
 
     #[test]

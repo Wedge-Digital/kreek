@@ -1,3 +1,4 @@
+use crate::app::shared_kernel::identity::charset::TEXTE_SAISI;
 use nutype::nutype;
 use std::fmt::Display;
 
@@ -5,7 +6,7 @@ use std::fmt::Display;
     sanitize(trim),
     validate(
         len_char_max = 100,
-        regex = r"^[\p{L}\p{N} \-'.,!?:;()\[\]&@#%*+=_°~]+$"
+        regex = TEXTE_SAISI
     ),
     derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, AsRef)
 )]
@@ -32,9 +33,12 @@ mod tests {
         assert!(CompetitionName::try_new("Ligue des Champions").is_ok());
     }
 
+    /// Le tiret cadratin était refusé, et le test gravait ce refus au lieu de
+    /// le contester. C'est pourtant la ponctuation qu'un traitement de texte
+    /// produit tout seul.
     #[test]
     fn valid_with_accents() {
-        assert!(CompetitionName::try_new("Championnat Étoilé — Saison 5").is_err()); // — is not in charset
+        assert!(CompetitionName::try_new("Championnat Étoilé — Saison 5").is_ok());
         assert!(CompetitionName::try_new("Championnat Etoile Saison 5").is_ok());
     }
 
