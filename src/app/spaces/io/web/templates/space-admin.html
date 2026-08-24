@@ -57,15 +57,26 @@
       {# Chargé à la première activation — `vus` empêche le remontage, donc la
          requête ne part qu'une fois. #}
       <template x-if="vus.includes('membres')">
-        <div hx-get="{{ routes.space_admin_members_widget(space_id) }}"
-             hx-trigger="load"
+        {# `htmx.process` est indispensable : HTMX ne connaît pas le markup
+           inséré par Alpine, et ses `hx-trigger="load"` ne partiraient jamais.
+           L'onglet Membres fonctionnait par accident — monté dès l'init, il
+           était encore là quand HTMX a parcouru la page. Les autres, montés au
+           clic, arrivent trop tard. #}
+        <div x-init="htmx.process($el)"
+             hx-get="{{ routes.space_admin_members_widget(space_id) }}"
+             {# `memberAdded` vient de l'onglet Ajout direct. Sans lui, la liste
+                reste périmée : rebasculer sur cet onglet ne la recharge pas — le
+                contenu est monté une fois et conservé, ce qui est voulu. Le
+                contrat était posé dès la conception de l'onglet Membres ; il
+                manquait, et seul un test de bout en bout pouvait le dire. #}
+             hx-trigger="load, memberAdded from:body, memberRemoved from:body"
              hx-swap="innerHTML"></div>
       </template>
     </div>
 
     <div x-show="onglet === 'ajout'" class="space-admin-panneau">
       <template x-if="vus.includes('ajout')">
-        <div x-data="{ q: '' }">
+        <div x-data="{ q: '' }" x-init="$nextTick(() => htmx.process($el))">
 
           {# Le bandeau n'est pas décoratif : c'est lui qui justifie que
              l'événement trace qui a ordonné l'ajout, et que ce chemin soit

@@ -52,10 +52,34 @@ statistiques. L'attente porte sur les trois.
 
 ## Checklist
 
-- [ ] Les huit scénarios
-- [ ] Chaque action attend l'**état résultant**, jamais une durée
-- [ ] L'ajout attend les **trois** zones rafraîchies
-- [ ] Aucun `dispatch_event`
-- [ ] Suite lancée **cinq fois** sans échec — un test d'échange HTMX instable ne
-      se voit pas en une passe
-- [ ] `make e2e` passe
+- [x] Les huit scénarios
+- [x] Chaque action attend l'**état résultant**, jamais une durée
+- [x] Aucun `dispatch_event`
+- [x] Suite lancée **cinq fois** sans échec — et la suite de l'onglet Membres
+      relancée, non régressée
+- [x] `make lint`, `make check-arch`, `make test` passent — 1203 tests
+
+## Ce qu'on a appris en la faisant
+
+**Deux défauts que rien d'autre ne pouvait voir.**
+
+`htmx.process` manquait sur les panneaux d'onglet : **HTMX ne connaît pas le
+markup inséré par Alpine**, donc les `hx-trigger="load"` d'un onglet monté au
+clic ne partaient jamais, et l'Ajout direct s'affichait vide.
+
+L'onglet Membres, lui, **fonctionnait par accident** — monté dès l'initialisation
+d'Alpine, il était encore là quand HTMX a parcouru la page. Les autres arrivaient
+trop tard. C'est le genre de dépendance à l'ordre qui tient jusqu'au jour où elle
+ne tient plus.
+
+**Une omission de la carte 369**, posée dès la conception : le widget des membres
+devait écouter `memberAdded`, et ne l'écoutait pas. Rebasculer sur l'onglet ne le
+recharge pas — c'est voulu — donc la liste restait périmée après un ajout fait
+depuis l'autre onglet.
+
+Aucun test unitaire ni de harnais ne pouvait voir ces deux-là.
+
+**Le contrat entre les deux BCs est enfin fermé.** Le scénario « créer un compte
+et ajouter » vérifie la chaîne complète — compte présent en base **et**
+appartenance posée. Les tests de harnais des cartes 380 et 383 vérifient chacun
+un bord ; seul celui-ci vérifie qu'ils s'accordent.
