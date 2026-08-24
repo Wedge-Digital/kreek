@@ -1,5 +1,8 @@
 use crate::app::auth::context::AuthContext;
 use crate::app::auth::io::web::auth_layout::auth_layout;
+use crate::app::auth::io::web::coach_creation_widget::{
+    get_coach_creation_widget, post_coach_creation_widget,
+};
 use crate::app::auth::io::web::forgot_password::{
     display_forgot_password, display_forgot_password_sent, post_forgot_password,
 };
@@ -34,6 +37,10 @@ where
         .route(
             path::FORGOT_PASSWORD,
             get(display_forgot_password).post(post_forgot_password),
+        )
+        .route(
+            path::COACH_CREATION_WIDGET,
+            get(get_coach_creation_widget).post(post_coach_creation_widget),
         )
         .route(
             path::RESET_PASSWORD_REQUEST,

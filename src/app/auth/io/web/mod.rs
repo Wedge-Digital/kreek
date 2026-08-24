@@ -1,4 +1,5 @@
 pub mod auth_layout;
+pub mod coach_creation_widget;
 pub mod forgot_password;
 pub mod get_login;
 pub mod get_login_success;

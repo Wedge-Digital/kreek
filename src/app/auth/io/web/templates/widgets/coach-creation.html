@@ -1,0 +1,47 @@
+{#
+  Formulaire de création de compte, rendu comme fragment pour un hôte.
+
+  Pas de `<link rel="stylesheet">` : un `<link>` inséré dans un DOM déjà vivant
+  ne bloque pas le rendu, et le markup s'afficherait sans ses styles pendant
+  50 à 200 ms — le clignotement que la carte 342 a supprimé. La feuille de ce
+  widget est donc au bundle de l'hôte, `widgets/coach-creation.css`.
+
+  Ce BC reste exclu du bundle pour **ses pages**, qui sont des chargements
+  complets sans swap. Un fragment affiché dans une page de l'hôte n'est pas ce
+  cas-là.
+
+  Aucun sélecteur de profil : le rôle dans un espace appartient à l'hôte.
+#}
+<div class="coach-creation" hx-disinherit="*">
+  <form hx-post="{{ crate::app::auth::routes::path::COACH_CREATION_WIDGET }}"
+        hx-target="closest .coach-creation"
+        hx-swap="outerHTML">
+
+    <div class="coach-creation-grid">
+      <label class="coach-creation-field">
+        <span class="coach-creation-label">Pseudo</span>
+        <input class="coach-creation-input" type="text" name="coach_name"
+               value="{{ pseudo }}" placeholder="Ex. NurgleFan" required>
+      </label>
+
+      <label class="coach-creation-field">
+        <span class="coach-creation-label">Email</span>
+        <input class="coach-creation-input" type="email" name="email"
+               value="{{ email }}" placeholder="coach@example.com" required>
+      </label>
+    </div>
+
+    {% if let Some(message) = erreur %}
+    <div class="coach-creation-erreur">{{ message }}</div>
+    {% endif %}
+
+    <button type="submit" class="coach-creation-submit">
+      ➕ Créer le compte
+    </button>
+
+    <p class="coach-creation-note">
+      Un e-mail invite le coach à définir son mot de passe. Sans lui, il ne peut
+      pas se connecter.
+    </p>
+  </form>
+</div>
