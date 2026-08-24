@@ -119,6 +119,43 @@
   min-height: calc(64px + 44px + 64px + 2 * var(--p2) + 2 * var(--p1));
 }
 
+/* ── Bandeau d'avertissement de l'ajout direct ── */
+.space-admin .space-admin-avertissement {
+  display: flex;
+  gap: var(--p1);
+  padding: var(--p1) var(--p2);
+  margin-bottom: var(--p1);
+  border: 1px solid var(--orange);
+  border-radius: 8px;
+  background: rgba(255, 107, 53, 0.08);
+}
+.space-admin .space-admin-avertissement-icone { font-size: 20px; flex-shrink: 0; }
+.space-admin .space-admin-avertissement-titre {
+  font-weight: 700;
+  font-size: var(--text-small);
+  color: var(--dark-1);
+}
+.space-admin .space-admin-avertissement-texte {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.space-admin .space-admin-recherche { margin-bottom: var(--p1); }
+.space-admin .space-admin-recherche-champ {
+  width: 100%;
+  padding: 10px var(--p2);
+  border: 1px solid var(--dark-5);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: var(--text-small);
+}
+.space-admin .space-admin-recherche-champ:focus {
+  outline: none;
+  border-color: var(--main-blue);
+}
+
 .space-admin .space-admin-attente {
   color: var(--dark-3);
   font-size: var(--text-tiny);

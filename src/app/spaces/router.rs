@@ -7,6 +7,7 @@ use crate::app::spaces::io::web::controllers::space_admin_controller::space_admi
 use crate::app::spaces::io::web::controllers::widgets::coach_search::search_coaches_controller;
 use crate::app::spaces::io::web::controllers::widgets::coach_search_results::coaches_search_results_controller;
 use crate::app::spaces::io::web::controllers::widgets::coach_select::get_coach_selector_widget;
+use crate::app::spaces::io::web::controllers::widgets::space_admin_candidates_widget::space_admin_candidates_widget;
 use crate::app::spaces::io::web::controllers::widgets::space_admin_members_widget::space_admin_members_widget;
 use crate::app::spaces::io::web::controllers::widgets::spaces_sidebar_widget::get_spaces_sidebar;
 use crate::app::spaces::io::web::join_spaces::join_spaces;
@@ -32,6 +33,10 @@ where
         .route(
             path::SPACE_ADMIN_MEMBERS_WIDGET,
             get(space_admin_members_widget),
+        )
+        .route(
+            path::SPACE_ADMIN_CANDIDATES_WIDGET,
+            get(space_admin_candidates_widget),
         )
         .route(
             path::SPACE_ADMIN_MEMBER_ROLE,

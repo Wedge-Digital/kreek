@@ -113,6 +113,7 @@ const FEUILLES_APP: &[&str] = &[
     "pages/widget-tester-layout.css",
     "widgets/coach-creation.css",
     "widgets/coach-search.css",
+    "widgets/space-admin-candidates.css",
     "widgets/space-admin-members.css",
     "widgets/dis-page.css",
     "widgets/inducement-grid.css",

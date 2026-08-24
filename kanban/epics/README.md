@@ -78,6 +78,16 @@ session brève : `06` (groupement O(n²)), `09` (`Entity::eq` shadowe
 dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 `String::replace`), `254` (message d'erreur JSON trompeur).
 
+**Deux règles de calcul et leur migration** — trois cartes livrées ensemble :
+la première seule laisserait les valeurs d'équipe de production fausses jusqu'au
+déploiement de la troisième, qui porte le recalcul global.
+
+| Carte | Note |
+|---|---|
+| `386-migrations-de-donnees-au-demarrage` | Socle : une correction de données qui a besoin du corpus ne peut pas être du SQL — `REFERENCES__DIR` vit hors du dépôt |
+| `387-les-competences-elite-valent-dix-kpo-de-plus` | Barème de valeur : +10 kPo pour une compétence Élite, achat en SPP comme création |
+| `388-lineman-a-vil-prix` | `LOW_COST_LINEMEN` : le prix des linemen ne compte pas dans la VEA, leurs augmentations si |
+
 **Isolées** :
 
 | Carte | Note |

@@ -7,7 +7,9 @@
 
 use crate::app::shared_kernel::identity::authorization::SpaceProfile;
 use crate::app::shared_kernel::identity::ids::CoachId;
-use crate::app::spaces::domain::space_repository_port::space_repository_port::SpaceMemberRow;
+use crate::app::spaces::domain::space_repository_port::space_repository_port::{
+    CandidateRow, SpaceMemberRow,
+};
 use crate::common::initials::initials;
 
 pub struct MemberRowVm {
@@ -152,4 +154,29 @@ mod tests {
         );
         assert_eq!(vms[0].initials, "CC");
     }
+}
+
+/// Une ligne de la liste des candidats à l'ajout direct.
+///
+/// `est_membre` décide de tout le rendu de la ligne : un badge, ou un sélecteur
+/// de profil et un bouton. Le gabarit ne tranche rien de lui-même.
+pub struct CandidateRowVm {
+    pub coach_id: String,
+    pub name: String,
+    pub email: String,
+    pub initials: String,
+    pub est_membre: bool,
+}
+
+pub fn build_candidate_rows(lignes: Vec<CandidateRow>) -> Vec<CandidateRowVm> {
+    lignes
+        .into_iter()
+        .map(|l| CandidateRowVm {
+            initials: initials(&l.coach_name),
+            coach_id: l.coach_id,
+            name: l.coach_name,
+            email: l.email,
+            est_membre: l.est_membre,
+        })
+        .collect()
 }

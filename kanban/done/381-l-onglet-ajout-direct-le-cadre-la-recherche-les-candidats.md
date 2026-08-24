@@ -42,17 +42,30 @@ membre » — selon `est_membre`, jamais selon une décision du gabarit.
 
 ## Checklist
 
-- [ ] Route `SPACE_ADMIN_CANDIDATES_WIDGET`, garde `is_admin()`
-- [ ] Recherche débouncée, `hx-get` avec `hx-params="q"`
-- [ ] Les trois états, distincts
-- [ ] Seuil et plafond appliqués **côté serveur**, jamais en paramètre
-- [ ] `CandidateRowVm` construit dans `builders.rs`
-- [ ] Email affiché — décidé en phase 4, avec ses trois garde-fous : seuil,
-      plafond, `is_admin()`
-- [ ] Sélecteur de profil en **`<kreek-select>`**
-- [ ] Racine en `hx-disinherit="*"`, paramètres contextuels **baked** dans l'URL
-      par Askama, jamais par `hx-include`
-- [ ] Feuille nommée d'après la racine, inscrite dans `FEUILLES_APP`, portée
-      vérifiée par `check-css-collisions.sh` et `debordements.py`
-- [ ] Aucun `style="…"` — la maquette en contient
-- [ ] `make lint`, `make check-arch`, `make test` passent
+- [x] Route `SPACE_ADMIN_CANDIDATES_WIDGET`, garde `is_admin()`
+- [x] Recherche débouncée, `hx-get` avec `hx-params="q"`
+- [x] Les trois états, distincts — et la distinction **vue échouer** en
+      fusionnant les deux premiers
+- [x] Seuil et plafond appliqués **côté serveur**, jamais en paramètre. Le seuil
+      s'applique **avant la lecture** : le contrôleur rend l'état sous-seuil sans
+      appeler le dépôt
+- [x] `CandidateRowVm` construit dans `builders.rs`
+- [x] Email affiché
+- [x] Sélecteur de profil en **`<kreek-select>`**, rendu mais inerte — la
+      carte 382 lui donnera son `hx-post`
+- [x] Racine en `hx-disinherit="*"`, paramètres baked dans l'URL par Askama
+- [x] Feuille nommée d'après la racine, inscrite dans `FEUILLES_APP`, portée
+      vérifiée par les axes 14 et 15
+- [x] Aucun `style="…"`
+- [x] `make lint`, `make check-arch`, `make test` passent — 1195 tests
+
+## Ce qu'on a appris en la faisant
+
+**Deux tests non prévus se sont imposés.** Une ligne « déjà membre » ne porte ni
+bouton ni sélecteur, et un non-membre porte les deux. C'est `est_membre` qui
+décide de tout le rendu, jamais le gabarit — le vérifier ferme la porte à une
+divergence entre les deux branches, que rien d'autre n'observerait.
+
+**Le sélecteur et le bouton sont rendus dès maintenant bien qu'inertes**, comme
+la ligne de membre en carte 369 : sans eux, la ligne n'a pas sa vraie hauteur et
+le dessin se jugerait sur un faux.

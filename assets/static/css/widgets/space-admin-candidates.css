@@ -1,0 +1,98 @@
+/* ── Widget « candidats à l'ajout direct » ──────────────────────────────────
+   Portée : `.space-admin-candidates`, racine du widget — le nom de la feuille
+   **est** le sélecteur de portée, et l'axe 15 le vérifie. Les enfants gardent un
+   préfixe court `sac-`, comme `dis-page.css` fait avec `dis-`.
+
+   Les classes de la maquette — `.member-row`, `.member-avatar` — ne sont pas
+   reprises : elles appartiennent déjà à d'autres écrans, et depuis le bundle
+   unique deux pages qui partagent une classe partagent son style. */
+
+.space-admin-candidates { display: flex; flex-direction: column; }
+
+.space-admin-candidates .sac-etat {
+  padding: var(--p2);
+  text-align: center;
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+}
+.space-admin-candidates .sac-etat--vide { line-height: 1.6; }
+.space-admin-candidates .sac-etat-icone {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.space-admin-candidates .sac-list { display: flex; flex-direction: column; }
+
+/* Même métrique que la ligne de membre : 40 px d'avatar et 2 × 12 px. Les deux
+   listes se lisent l'une sous l'autre dans la même page. */
+.space-admin-candidates .sac-row {
+  display: flex;
+  align-items: center;
+  gap: var(--p1);
+  padding: 12px var(--p2);
+  border-bottom: 1px solid var(--dark-6);
+}
+.space-admin-candidates .sac-row:last-child { border-bottom: none; }
+
+.space-admin-candidates .sac-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--main-blue);
+  color: var(--white);
+  font-weight: 700;
+  font-size: var(--text-tiny);
+}
+
+.space-admin-candidates .sac-info { flex: 1; min-width: 0; }
+.space-admin-candidates .sac-name { font-weight: 600; font-size: var(--text-small); }
+.space-admin-candidates .sac-email {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.space-admin-candidates .sac-badge {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: 4px;
+  background: var(--dark-6);
+  color: var(--dark-3);
+  font-size: var(--text-tiny);
+  font-weight: 700;
+}
+
+.space-admin-candidates .sac-role { width: 130px; flex-shrink: 0; }
+
+.space-admin-candidates .sac-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 1px solid var(--dark-5);
+  border-radius: 6px;
+  background: var(--white);
+  font-family: inherit;
+  font-size: var(--text-tiny);
+  font-weight: 600;
+  color: var(--dark-2);
+  cursor: pointer;
+}
+.space-admin-candidates .sac-btn:hover {
+  border-color: var(--main-blue);
+  color: var(--main-blue);
+}
+
+@media (max-width: 768px) {
+  .space-admin-candidates .sac-row { flex-wrap: wrap; }
+  .space-admin-candidates .sac-info { flex: 1 1 60%; }
+  .space-admin-candidates .sac-role { width: 100%; order: 3; }
+  .space-admin-candidates .sac-btn { order: 4; }
+}
