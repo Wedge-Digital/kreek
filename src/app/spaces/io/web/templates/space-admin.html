@@ -65,7 +65,44 @@
 
     <div x-show="onglet === 'ajout'" class="space-admin-panneau">
       <template x-if="vus.includes('ajout')">
-        <div class="space-admin-attente">Onglet Ajout direct — à venir.</div>
+        <div x-data="{ q: '' }">
+
+          {# Le bandeau n'est pas décoratif : c'est lui qui justifie que
+             l'événement trace qui a ordonné l'ajout, et que ce chemin soit
+             réservé aux coachs qu'on connaît. #}
+          <div class="space-admin-avertissement">
+            <div class="space-admin-avertissement-icone">⚠️</div>
+            <div>
+              <div class="space-admin-avertissement-titre">
+                L'ajout direct se passe du consentement du coach
+              </div>
+              <div class="space-admin-avertissement-texte">
+                Le coach devient membre de l'espace immédiatement, sans invitation
+                à accepter. À réserver aux coachs de votre ligue que vous
+                connaissez — pour les autres, passez par l'onglet Invitations.
+              </div>
+            </div>
+          </div>
+
+          <div class="space-admin-recherche">
+            <input class="space-admin-recherche-champ" type="text" x-model="q"
+                   name="q"
+                   placeholder="Pseudo ou email du coach…"
+                   hx-get="{{ routes.space_admin_candidates_widget(space_id) }}"
+                   hx-trigger="input changed delay:300ms"
+                   hx-target="next .space-admin-candidats"
+                   hx-swap="innerHTML"
+                   hx-params="q">
+          </div>
+
+          {# Chargé une première fois pour rendre l'état sous-seuil, puis
+             remplacé à chaque frappe. #}
+          <div class="space-admin-candidats"
+               hx-get="{{ routes.space_admin_candidates_widget(space_id) }}"
+               hx-trigger="load"
+               hx-swap="innerHTML"></div>
+
+        </div>
       </template>
     </div>
 

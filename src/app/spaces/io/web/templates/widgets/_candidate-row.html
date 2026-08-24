@@ -1,0 +1,32 @@
+{#
+  Une ligne de candidat à l'ajout direct.
+
+  Fragment séparé parce qu'il a **deux appelants** : la liste complète, et le
+  re-rendu d'une seule ligne après un ajout (carte 382).
+
+  `est_membre` décide de tout : un badge, ou un sélecteur de profil et un bouton.
+  Le gabarit ne tranche rien de lui-même.
+
+  Le sélecteur et le bouton sont rendus mais **inertes** — la carte 382 leur
+  donnera leur `hx-post`. Ils sont là dès maintenant parce qu'une ligne sans eux
+  n'a pas la hauteur d'une vraie ligne, et le dessin se jugerait sur un faux.
+#}
+<div class="sac-row" data-coach="{{ candidat.coach_id }}">
+  <div class="sac-avatar">{{ candidat.initials }}</div>
+  <div class="sac-info">
+    <div class="sac-name">{{ candidat.name }}</div>
+    <div class="sac-email">{{ candidat.email }}</div>
+  </div>
+
+  {% if candidat.est_membre %}
+  <span class="sac-badge">Déjà membre</span>
+  {% else %}
+  <kreek-select class="sac-role" name="profile">
+    <option value="SpaceUser" selected>Membre</option>
+    <option value="SpaceAdmin">Admin</option>
+  </kreek-select>
+  <button type="button" class="sac-btn">
+    <span class="sac-btn-icon">➕</span> Ajouter
+  </button>
+  {% endif %}
+</div>

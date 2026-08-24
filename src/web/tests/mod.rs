@@ -1,3 +1,4 @@
 mod test_actions_membres;
+mod test_candidats_ajout_direct;
 mod test_menu_administration;
 mod test_widget_creation_compte;

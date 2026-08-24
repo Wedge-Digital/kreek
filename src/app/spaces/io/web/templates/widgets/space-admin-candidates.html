@@ -1,0 +1,34 @@
+{#
+  Widget « candidats à l'ajout direct ».
+
+  `hx-disinherit="*"` : aucun attribut HTMX de la page hôte ne descend ici.
+
+  Trois états et non deux — « tapez au moins deux caractères » et « aucun coach
+  ne correspond » ne disent pas la même chose, et seul le second propose de créer
+  un compte. Les confondre ferait proposer une création dès la première frappe.
+#}
+<div class="space-admin-candidates" hx-disinherit="*">
+
+  {% if sous_seuil %}
+  <div class="sac-etat">
+    Tapez au moins deux caractères pour chercher un coach.
+  </div>
+
+  {% else if candidats.is_empty() %}
+  <div class="sac-etat sac-etat--vide">
+    <div class="sac-etat-icone">🔍</div>
+    <div>
+      Aucun coach ne correspond à « {{ requete }} ».<br>
+      Créez-lui un compte ci-dessous.
+    </div>
+  </div>
+
+  {% else %}
+  <div class="sac-list">
+    {% for candidat in candidats %}
+      {% include "widgets/_candidate-row.html" %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
