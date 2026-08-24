@@ -26,12 +26,12 @@ cp scripts/seed_accounts.example.json scripts/seed_accounts.json
 cargo run -- seed-accounts --input scripts/seed_accounts.json
 ```
 
-> Le compte d'exemple porte `legacy_id: 1`, requis par le mode `BYPASS_AUTH`
-> (voir ci-dessous) et par les tests e2e.
+> Le compte d'exemple s'appelle `DevCoach` : c'est **par ce nom** que le mode
+> `BYPASS_AUTH` (voir ci-dessous) et les tests e2e le retrouvent.
 
 ## BYPASS_AUTH — développement uniquement ⚠️
 
-`BYPASS_AUTH=true` connecte automatiquement l'utilisateur `legacy_id=1` sans
+`BYPASS_AUTH=true` connecte automatiquement le coach `DevCoach` sans
 authentification. **À n'utiliser qu'en développement local.** Ne jamais
 l'activer dans un environnement exposé — c'est un contournement total de
 l'authentification. La valeur par défaut est `false` (`config/default.toml`).

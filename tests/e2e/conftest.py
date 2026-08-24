@@ -66,7 +66,7 @@ def _server_serves_demo_ruleset(_server_is_running):
             f"{url} redirige vers la page de connexion : le serveur n'a pas "
             "authentifié la requête.\n"
             "Vérifie BYPASS_AUTH=true, et que la base contient bien "
-            "l'utilisateur legacy_id=1 (`cargo run -- seed-accounts`).",
+            "le coach DevCoach (`make seed_e2e`).",
             returncode=2,
         )
 

@@ -16,9 +16,10 @@ rendu HTML/HTMX/Alpine réellement produit dans un navigateur.
   suffit — sauf si ton `.env.dev` surcharge `REFERENCES__DIR` vers un jeu de
   règles réel, auquel cas lance `make dev-demo`.
 - La base doit contenir le seed de la suite : `make seed_e2e`. Il crée un space
-  « Espace E2E », le coach `DevCoach` (`legacy_id=1`, celui que `BYPASS_AUTH`
-  connecte) et onze autres coachs pour alimenter les sélecteurs. Entièrement
-  synthétique et idempotent — rejouable après n'importe quel `make reset_db`.
+  « Espace E2E », le coach `DevCoach` (celui que `BYPASS_AUTH` connecte, repéré
+  par son nom) et onze autres coachs pour alimenter les sélecteurs. Entièrement
+  synthétique et idempotent — rejouable après n'importe quel `make reset_db`, et
+  installable sur une base portant déjà les données legacy.
 - `uv` installé.
 
 ## Installation (une fois)
@@ -46,9 +47,9 @@ Ou depuis la racine : `make e2e`.
 | `E2E_SPACE_ID` | résolu par nom | Space ciblé par les tests — **toutes** les compétitions et équipes qu'ils créent y atterrissent. Par défaut, résolu au lancement via `GET /app/spaces` en cherchant l'espace nommé « Espace E2E » (créé par `make seed_e2e`). Ce n'est délibérément **pas** le premier espace venu : sur une base contenant de vraies données, ce raccourci polluerait un espace de production. Si l'espace dédié est absent, la suite s'arrête. Surcharger uniquement pour cibler un espace précis. |
 | `E2E_COMPETITION_ID` / `E2E_SEASON_ID` | `E2E_SPACE_ID` | Utilisés seulement par `competition_rules_url` (la page accepte des IDs inexistants) |
 
-**Si la résolution échoue** ("Aucun space_id trouvé") : la base ne contient pas le seed de la suite, ou l'utilisateur `legacy_id=1` n'appartient à aucun space. Lancer `make seed_e2e`, qui rend DevCoach membre du space par construction.
+**Si la résolution échoue** ("Aucun space_id trouvé") : la base ne contient pas le seed de la suite, ou `DevCoach` n'appartient à aucun space. Lancer `make seed_e2e`, qui rend DevCoach membre du space par construction.
 
-> Historiquement, la suite s'appuyait sur `make init_db WITH_SEED=1`, dont `seed_space_members.py` affecte 100 coachs **aléatoires** par espace — sans garantie que `legacy_id=1` en fasse partie, d'où des échecs intermittents au premier écran. `make seed_e2e` supprime cet aléa.
+> Historiquement, la suite s'appuyait sur `make init_db WITH_SEED=1`, dont `seed_space_members.py` affecte 100 coachs **aléatoires** par espace — sans garantie que `DevCoach` en fasse partie, d'où des échecs intermittents au premier écran. `make seed_e2e` supprime cet aléa.
 
 ## Portée actuelle
 

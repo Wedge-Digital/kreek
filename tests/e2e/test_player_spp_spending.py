@@ -16,7 +16,7 @@ Scénarios couverts :
 
 Non testé ici : utilisateur non autorisé (ni coach, ni admin) sur une équipe en
 phase PlayerImprovement. `bypass_auth` connecte toujours le même utilisateur
-(legacy_id=1), et ce compte est coach de toutes les équipes seedées — le
+(« DevCoach »), et ce compte est coach de toutes les équipes seedées — le
 simuler nécessiterait de modifier directement le payload JSON de l'événement
 TeamCreated dans l'event store pour changer le coach_id effectif (l'agrégat
 est rejoué depuis team_event_store, pas depuis la projection team_proj), ce
@@ -130,8 +130,17 @@ def _wait_for(check, attempts=30, delay_s=0.2):
 
 def _activate_spp_spending(page: Page) -> None:
     """Le panneau droit charge le journal par défaut — il faut cliquer sur
-    "Activer la dépense de SPP" pour basculer vers le panneau de dépense."""
-    page.locator(".btn-toggle-spp").click()
+    "Activer la dépense de SPP" pour basculer vers le panneau de dépense.
+
+    `#pd-right-panel` est monté par un `hx-trigger="load"` : le bouton n'existe
+    qu'une fois ce fragment inséré. Cliquer dès qu'il devient visible peut
+    devancer son câblage par htmx — le clic part alors **dans le vide**, aucune
+    requête n'est émise, et le panneau reste le journal. On attend donc que plus
+    aucune requête htmx ne soit en vol, pas une durée."""
+    bouton = page.locator(".btn-toggle-spp")
+    expect(bouton).to_be_visible(timeout=10000)
+    expect(page.locator(".htmx-request")).to_have_count(0, timeout=10000)
+    bouton.click()
     expect(page.locator(".tabs")).to_be_visible(timeout=10000)
 
 

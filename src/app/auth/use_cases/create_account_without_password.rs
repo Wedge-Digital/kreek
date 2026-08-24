@@ -53,7 +53,8 @@ struct DefinirMotDePasseEmail {
 pub struct CreateAccountWithoutPasswordCommand {
     pub coach_name: String,
     pub email: String,
-    pub host_domain: String,
+    /// L'URL publique, schéma compris — cf. `AuthContext::app_url`.
+    pub app_url: String,
 }
 
 #[derive(Debug, PartialEq)]
@@ -103,7 +104,7 @@ pub async fn execute(
     let jeton = Token::new();
     jetons.create(&jeton, &coach_name).await?;
 
-    if let Err(e) = envoyer(email, &coach_name, &adresse, &jeton, &cmd.host_domain).await {
+    if let Err(e) = envoyer(email, &coach_name, &adresse, &jeton, &cmd.app_url).await {
         nettoyer(jetons, &jeton).await;
         return Err(e);
     }
@@ -138,14 +139,10 @@ async fn envoyer(
     coach_name: &CoachName,
     adresse: &Email,
     jeton: &Token,
-    host_domain: &str,
+    app_url: &str,
 ) -> Result<(), CreateAccountError> {
-    let reset_url = format!(
-        "http://{}{}/{}",
-        host_domain,
-        path::RESET_PASSWORD_BASE,
-        jeton
-    );
+    // Rien à recoller : l'hôte injecte l'URL déjà normalisée.
+    let reset_url = format!("{}{}/{}", app_url, path::RESET_PASSWORD_BASE, jeton);
     let html = DefinirMotDePasseEmail {
         coach_name: coach_name.to_string(),
         reset_url,
@@ -326,7 +323,7 @@ mod tests {
         CreateAccountWithoutPasswordCommand {
             coach_name: pseudo.into(),
             email: email.into(),
-            host_domain: "exemple.test".into(),
+            app_url: "http://exemple.test".into(),
         }
     }
 

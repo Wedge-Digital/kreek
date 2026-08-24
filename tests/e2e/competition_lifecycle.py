@@ -37,7 +37,7 @@ from playwright.sync_api import Page, expect
 
 BASE_URL = "http://localhost:3210"
 FAKE_LOGO_URL = "https://res.cloudinary.com/demo/image/upload/v1/sample.jpg"
-# Nom du compte connecté par bypass_auth (legacy_id=1) — cf. scripts/seed_accounts.example.json.
+# Nom du compte connecté par bypass_auth — c'est par ce nom qu'il le cherche.
 BYPASS_AUTH_COACH_NAME = "DevCoach"
 
 # Rosters du jeu de démonstration (assets/references.example) sans
@@ -105,7 +105,7 @@ def create_full_competition(
 
     # ── Phase 1 : infos + admin ──────────────────────────────────────────
     # L'admin de compétition doit être l'utilisateur bypass_auth lui-même
-    # (legacy_id=1, "Bagouze") : /recap et d'autres pages exigent d'être
+    # (« DevCoach ») : /recap et d'autres pages exigent d'être
     # admin d'espace, admin de compétition, ou coach d'une des deux équipes
     # (cf. recap_controller.rs::is_authorized) — un admin choisi au hasard
     # dans les ~100 coachs seedés rendrait ces pages inaccessibles au compte

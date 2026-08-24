@@ -1,8 +1,8 @@
 """Tests E2E du widget coach-selector (multi-select) sur la création de
 compétition, phase 1.
 
-Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true) — l'utilisateur
-legacy_id=1 est connecté automatiquement et doit être membre du space
+Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true) — le coach
+« DevCoach » est connecté automatiquement et doit être membre du space
 E2E_SPACE_ID (par défaut, le space seedé en données de migration).
 """
 

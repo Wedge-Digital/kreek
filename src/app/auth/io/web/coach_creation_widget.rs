@@ -92,7 +92,7 @@ pub async fn post_coach_creation_widget(
     let cmd = CreateAccountWithoutPasswordCommand {
         coach_name: form.coach_name.clone(),
         email: form.email.clone(),
-        host_domain: ctx.host_domain.clone(),
+        app_url: ctx.app_url.clone(),
     };
 
     match execute(

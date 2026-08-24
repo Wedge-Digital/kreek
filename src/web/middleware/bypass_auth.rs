@@ -6,8 +6,6 @@ use axum::http::Request;
 use axum::middleware::Next;
 use axum::response::Response;
 
-const BYPASS_AUTH_LEGACY_USER_ID: i32 = 1;
-
 /// En-tête choisissant l'identité connectée. Absent ou non reconnu → `DevCoach`,
 /// c'est-à-dire le comportement historique, inchangé.
 ///
@@ -39,27 +37,23 @@ pub async fn bypass_auth_middleware(
     // jamais remplacée. Un test qui veut l'autre identité doit donc partir d'un
     // contexte navigateur neuf, sans cookie de session.
     if state.bypass_auth && auth_session.user.is_none() {
-        // Le membre simple est repéré par son nom, pas par un `legacy_id` : cet
-        // espace d'identifiants appartient au système legacy, dont l'import
-        // occupe déjà les premières valeurs.
+        // Les deux identités sont repérées par leur **nom**, jamais par un
+        // `legacy_id` : cet espace d'identifiants appartient au système legacy,
+        // dont l'import occupe déjà les premières valeurs — `legacy_id = 1` y
+        // désigne un vrai coach. Le seed qui crée ces comptes ne peut donc pas
+        // le revendiquer sans devenir impossible à installer sur une base ayant
+        // reçu les données legacy, ce qui fut le cas jusqu'ici.
         let simple = demande_profil_simple(&request);
         tracing::debug!(%path, simple, "bypass_auth: login automatique");
-        let recherche = match simple {
-            true => {
-                state
-                    .auth
-                    .user_repository
-                    .find_by_coach_name(crate::cli::seed_e2e::SIMPLE_COACH_NAME)
-                    .await
-            }
-            false => {
-                state
-                    .auth
-                    .user_repository
-                    .find_by_legacy_id(BYPASS_AUTH_LEGACY_USER_ID)
-                    .await
-            }
+        let coach_name = match simple {
+            true => crate::cli::seed_e2e::SIMPLE_COACH_NAME,
+            false => crate::cli::seed_e2e::DEV_COACH_NAME,
         };
+        let recherche = state
+            .auth
+            .user_repository
+            .find_by_coach_name(coach_name)
+            .await;
         match recherche {
             Ok(Some(user)) => {
                 if auth_session.login(&user).await.is_ok() {

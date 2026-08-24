@@ -185,8 +185,9 @@ reset_test_db:
 seed_accounts:
 	DATABASE_URL="$(DATABASE_URL)" cargo run -- seed-accounts
 
-# Seed synthétique de la suite e2e : un space, DevCoach (legacy_id=1, connecté
-# par BYPASS_AUTH) et onze autres coachs. Idempotent — rejouable sans risque.
+# Seed synthétique de la suite e2e : un space, DevCoach (celui que BYPASS_AUTH
+# connecte, repéré par son nom) et onze autres coachs. Idempotent — rejouable
+# sans risque, et installable par-dessus les données legacy.
 seed_e2e:
 	DATABASE_URL="$(DATABASE_URL)" cargo run -- seed-e2e
 

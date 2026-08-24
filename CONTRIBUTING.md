@@ -105,7 +105,7 @@ chez vous.
   template PostgreSQL, exécution parallèle).
 - Toute nouvelle commande, tout nouvel événement, toute nouvelle projection
   arrive avec ses tests.
-- Les tests e2e s'appuient sur le compte de seed (`legacy_id: 1`).
+- Les tests e2e s'appuient sur le compte de seed, `DevCoach`.
 
 ```bash
 make test          # réinitialise la base de test, puis cargo test

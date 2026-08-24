@@ -11,11 +11,17 @@ use argon2::{Argon2, PasswordHasher};
 use sqlx::PgPool;
 use ulid::Ulid;
 
-/// Nom et legacy_id imposés : `bypass_auth` connecte l'utilisateur legacy_id=1,
-/// et `tests/e2e/competition_lifecycle.py` le recherche par ce nom exact.
-const DEV_COACH_NAME: &str = "DevCoach";
+/// Nom imposé : c'est sous ce nom que `bypass_auth` connecte l'utilisateur, et
+/// que `tests/e2e/competition_lifecycle.py` le recherche.
+///
+/// **Sans `legacy_id`**, pour la même raison que [`SIMPLE_COACH_NAME`] : cet
+/// espace d'identifiants appartient au système legacy, dont l'import occupe
+/// déjà les premières valeurs. Tant que ce compte revendiquait `legacy_id = 1`,
+/// le seed échouait sur toute base ayant reçu les données legacy — où cette
+/// valeur désigne un vrai coach —, et les deux jeux de données ne pouvaient pas
+/// cohabiter.
+pub const DEV_COACH_NAME: &str = "DevCoach";
 const DEV_COACH_EMAIL: &str = "dev@example.test";
-const DEV_COACH_LEGACY_ID: i32 = 1;
 
 /// Second utilisateur joignable par `bypass_auth`, membre **simple** du space.
 /// Il existe pour que la suite e2e puisse exercer un refus d'autorisation :
@@ -45,17 +51,11 @@ type SeedResult<T> = Result<T, Box<dyn std::error::Error>>;
 pub async fn execute(pool: &PgPool) -> SeedResult<()> {
     let space_id = upsert_space(pool).await?;
 
-    let dev_id = seed_coach(
-        pool,
-        DEV_COACH_NAME,
-        DEV_COACH_EMAIL,
-        Some(DEV_COACH_LEGACY_ID),
-    )
-    .await?;
+    let dev_id = seed_coach(pool, DEV_COACH_NAME, DEV_COACH_EMAIL).await?;
     link_member(pool, &space_id, &dev_id, SpaceProfile::SpaceAdmin).await?;
 
     for n in 1..=EXTRA_COACHES {
-        let id = seed_coach(pool, &coach_name(n), &coach_email(n), None).await?;
+        let id = seed_coach(pool, &coach_name(n), &coach_email(n)).await?;
         link_member(pool, &space_id, &id, SpaceProfile::SpaceUser).await?;
     }
 
@@ -83,13 +83,8 @@ fn hash_password(password: &str) -> Result<String, argon2::password_hash::Error>
 
 /// Crée le compte et sa projection dans le cache du BC spaces, en propageant
 /// l'identifiant réellement retenu en base — c'est lui qui relie les trois tables.
-async fn seed_coach(
-    pool: &PgPool,
-    name: &str,
-    email: &str,
-    legacy_id: Option<i32>,
-) -> SeedResult<String> {
-    let id = upsert_user(pool, name, email, legacy_id).await?;
+async fn seed_coach(pool: &PgPool, name: &str, email: &str) -> SeedResult<String> {
+    let id = upsert_user(pool, name, email).await?;
     upsert_user_cache(pool, &id, name, email).await?;
     Ok(id)
 }
@@ -98,19 +93,19 @@ async fn seed_coach(
 /// l'identifiant aussi bien à la création qu'au conflit. Sans lui, une seconde
 /// exécution ignorerait quel id rattacher au space, et créerait des adhésions
 /// orphelines.
-async fn upsert_user(
-    pool: &PgPool,
-    name: &str,
-    email: &str,
-    legacy_id: Option<i32>,
-) -> SeedResult<String> {
+/// `legacy_id` n'apparaît pas dans l'instruction, et c'est délibéré : la
+/// colonne appartient au système legacy, et un `DO UPDATE` qui y écrirait NULL
+/// effacerait la correspondance d'un coach importé portant l'un de ces noms.
+/// Le seed ne revendique rien dans cet espace d'identifiants, il le laisse tel
+/// qu'il le trouve.
+async fn upsert_user(pool: &PgPool, name: &str, email: &str) -> SeedResult<String> {
     let hash = hash_password(SEED_PASSWORD).map_err(|e| format!("hash « {name} » : {e}"))?;
     let row: (String,) = sqlx::query_as(
         r#"
-        INSERT INTO auth__users (id, coach_name, email, password_hash, legacy_id, created_at)
-        VALUES ($1, $2, $3, $4, $5, now())
+        INSERT INTO auth__users (id, coach_name, email, password_hash, created_at)
+        VALUES ($1, $2, $3, $4, now())
         ON CONFLICT (lower(coach_name))
-        DO UPDATE SET email = EXCLUDED.email, legacy_id = EXCLUDED.legacy_id
+        DO UPDATE SET email = EXCLUDED.email
         RETURNING id
         "#,
     )
@@ -118,7 +113,6 @@ async fn upsert_user(
     .bind(name)
     .bind(email)
     .bind(&hash)
-    .bind(legacy_id)
     .fetch_one(pool)
     .await
     .map_err(|e| conflict_hint(name, e))?;
@@ -183,9 +177,9 @@ async fn link_member(
     Ok(())
 }
 
-/// `email` et `legacy_id` portent aussi des contraintes d'unicité : si une
-/// donnée préexistante les détient, l'upsert échoue sur une contrainte dont le
-/// message brut de Postgres n'explique pas la cause dans ce contexte.
+/// `email` porte aussi une contrainte d'unicité : si une donnée préexistante la
+/// détient, l'upsert échoue sur une contrainte dont le message brut de Postgres
+/// n'explique pas la cause dans ce contexte.
 fn conflict_hint(label: &str, e: sqlx::Error) -> String {
     match e.as_database_error().and_then(|d| d.constraint()) {
         Some(c) => format!(
@@ -222,18 +216,52 @@ mod tests {
         assert_eq!(counts(&pool).await, (12, 1, 12, 12));
     }
 
+    /// Repéré par le **nom** sous lequel `bypass_auth` le cherche — c'est la
+    /// seule chose qui relie ce compte au middleware depuis qu'il ne revendique
+    /// plus de `legacy_id`.
     #[sqlx::test]
-    async fn dev_coach_is_admin_of_the_space_with_legacy_id_one(pool: PgPool) {
+    async fn dev_coach_is_admin_of_the_space(pool: PgPool) {
         execute(&pool).await.unwrap();
         let profile: String = sqlx::query_scalar(
             "select us.profile from spaces__user_space us
              join auth__users u on u.id = us.coach_id
-             where u.legacy_id = 1",
+             where u.coach_name = $1",
         )
+        .bind(DEV_COACH_NAME)
         .fetch_one(&pool)
         .await
         .unwrap();
         assert_eq!(profile, SpaceProfile::SpaceAdmin.as_str());
+    }
+
+    /// Le seed doit pouvoir s'installer sur une base portant déjà les données
+    /// legacy, où `legacy_id = 1` désigne un vrai coach. Tant que `DevCoach`
+    /// revendiquait cette valeur, la contrainte d'unicité faisait échouer le
+    /// seed, et les deux jeux de données ne pouvaient pas cohabiter.
+    #[sqlx::test]
+    async fn seeds_over_an_existing_legacy_user(pool: PgPool) {
+        sqlx::query(
+            "insert into auth__users (id, coach_name, email, password_hash, legacy_id, created_at)
+             values ($1, 'Coach Legacy', 'legacy@example.test', 'x', 1, now())",
+        )
+        .bind(Ulid::new().to_string())
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        execute(&pool).await.unwrap();
+
+        let reste: Option<i32> = sqlx::query_scalar(
+            "select legacy_id from auth__users where coach_name = 'Coach Legacy'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            reste,
+            Some(1),
+            "le seed ne doit pas toucher au legacy_id d'autrui"
+        );
     }
 
     /// La seconde identité de `bypass_auth` n'a d'intérêt que si elle est

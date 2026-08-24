@@ -431,7 +431,7 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
             &pool,
             event_bus.clone(),
             Arc::new(KreekSpacesLayout {
-                app_url: format!("http://{}", host_domain),
+                app_url: app_url.clone(),
             }),
             email_service.clone(),
         ),
