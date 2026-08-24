@@ -8,3 +8,4 @@ pub mod post_login;
 pub mod post_logout;
 pub mod post_register;
 pub mod reset_password;
+pub mod reset_password_request;

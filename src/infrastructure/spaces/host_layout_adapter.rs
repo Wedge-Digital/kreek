@@ -35,6 +35,10 @@ impl ISpacesHostLayout for KreekSpacesLayout {
         auth_path::AUTH_LAYOUT.to_string()
     }
 
+    fn password_reset_action(&self) -> String {
+        crate::app::auth::routes::path::RESET_PASSWORD_REQUEST.to_string()
+    }
+
     fn upload_widget(&self, field: UploadField<'_>) -> String {
         render_upload_widget(
             field.field_id,

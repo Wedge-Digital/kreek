@@ -40,6 +40,7 @@ struct LigneTemplate {
     routes: crate::app::spaces::routes::Routes,
     space_id: String,
     membre: crate::app::spaces::io::web::builders::MemberRowVm,
+    reset_action: String,
 }
 
 /// Traduit une erreur du domaine en statut HTTP.
@@ -197,6 +198,7 @@ async fn ligne_re_rendue(
         routes: crate::app::spaces::routes::Routes::default(),
         space_id: perms.space_id.to_string(),
         membre,
+        reset_action: ctx.host_layout.password_reset_action(),
     };
     match ligne.render() {
         Ok(html) => (

@@ -102,6 +102,11 @@ mod tests {
     struct FakeHostLayout;
 
     impl ISpacesHostLayout for FakeHostLayout {
+        fn password_reset_action(&self) -> String {
+            // Volontairement quelconque : ce BC ne connaît pas la vraie
+            // destination, il rend la chaîne que l'hôte lui donne.
+            "/destination-de-l-hote".to_string()
+        }
         fn wrap_page(&self, _content: String) -> Response {
             unimplemented!("le sidebar ne rend jamais de page complète")
         }

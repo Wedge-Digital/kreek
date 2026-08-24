@@ -82,6 +82,11 @@
 .space-admin-members .sam-btn:hover { background: var(--dark-6); }
 .space-admin-members .sam-btn--primary:hover { border-color: var(--main-blue); color: var(--main-blue); }
 .space-admin-members .sam-btn--danger:hover { border-color: var(--red); color: var(--red); }
+.space-admin-members .sam-btn.is-envoye {
+  border-color: var(--green);
+  color: var(--green);
+  cursor: default;
+}
 .space-admin-members .sam-btn-icon { font-size: var(--text-tiny); }
 
 @media (max-width: 768px) {

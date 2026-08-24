@@ -57,16 +57,38 @@ que l'adresse, et par injection.
 
 ## Checklist
 
-- [ ] Route `auth` rendant `HX-Trigger: showToast`, sans swap, réutilisant
+- [x] Route `auth` rendant **204** sans contenu ni redirection, réutilisant
       `send_reset_password_email`
-- [ ] `password_reset_action()` ajoutée à `ISpacesHostLayout`
-- [ ] Implémentée dans `src/infrastructure/spaces/host_layout_adapter.rs` —
-      seul point du projet qui relie `spaces` au reste
-- [ ] `MemberRowVm.reset_action` porte l'URL **déjà résolue** : le gabarit n'a
-      pas à savoir d'où elle vient
-- [ ] `spaces` n'importe ni `auth::routes`, ni `crate::web` — l'axe 9 de
-      `check-arch` le vérifie
-- [ ] Le comportement est le même pour tout le monde, **soi-même compris** —
-      la maquette laissait entendre qu'on copiait un lien pour soi, ce n'est pas
-      retenu
-- [ ] `make lint`, `make check-arch`, `make test` passent
+- [ ] ~~`HX-Trigger: showToast`~~ — **écarté** : aucun mécanisme de toast
+      n'existe dans le projet. En construire un serait un dispositif d'interface
+      transverse, utile mais qui n'a pas à se décider au détour de cette carte.
+      Le bouton gère son propre retour, en local
+- [x] `password_reset_action()` ajoutée à `ISpacesHostLayout`
+- [x] Implémentée dans `src/infrastructure/spaces/host_layout_adapter.rs`
+- [x] ~~`MemberRowVm.reset_action`~~ → **portée par le gabarit** : l'URL est la
+      même pour toutes les lignes, la mettre dans le VM l'aurait recopiée à
+      chaque membre
+- [x] `spaces` n'importe ni `auth::routes`, ni `crate::web` — vérifié, et l'axe 9
+      passe
+- [x] Le comportement est le même pour tout le monde, **soi-même compris**
+- [x] `make lint`, `make check-arch`, `make test` passent — 1140 tests
+
+## Ce qu'on a appris en la faisant
+
+**Une seconde raison de ne pas réutiliser l'endpoint public**, que la carte
+n'avait pas vue : il répond `HX-Redirect` vers la page « consultez vos emails ».
+Invoqué depuis une ligne de tableau, il ferait **quitter l'application**. La
+carte n'invoquait que le rendu d'une page au lieu d'un fragment.
+
+**Le retour visuel n'est pas optimiste.** Le libellé ne bascule en « Envoyé ✓ »
+que si `event.detail.successful` est vrai. Un basculement au clic mentirait à la
+première panne d'envoi.
+
+**Un pseudo inconnu rend 204 comme un pseudo connu**, avec son test. Distinguer
+les deux dirait à n'importe qui si un compte existe — c'est le choix déjà fait
+par l'endpoint public, repris plutôt que réinventé.
+
+**La doublure du trait porte une URL volontairement quelconque.** Ajouter une
+méthode à `ISpacesHostLayout` a cassé `FakeHostLayout`. Lui donner la vraie
+destination aurait laissé croire que le BC la connaît ; `/destination-de-l-hote`
+prouve le contraire.
