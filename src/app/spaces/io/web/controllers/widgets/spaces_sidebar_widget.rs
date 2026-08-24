@@ -1,6 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::spaces::context::SpacesContext;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::SpaceSummary;
+use crate::app::spaces::io::web::host_layout::CoachPrefill;
 use crate::app::spaces::io::web::host_layout::ISpacesHostLayout;
 use crate::app::spaces::routes::Routes;
 use askama::Template;
@@ -102,6 +103,9 @@ mod tests {
     struct FakeHostLayout;
 
     impl ISpacesHostLayout for FakeHostLayout {
+        fn coach_creation_widget(&self, _: CoachPrefill<'_>) -> String {
+            "<div>formulaire de l'hôte</div>".to_string()
+        }
         fn space_url(&self, space_id: &str) -> String {
             format!("https://hote.test/espace/{space_id}")
         }

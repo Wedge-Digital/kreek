@@ -18,6 +18,19 @@ pub struct UploadField<'a> {
 /// fragments, et c'est l'hôte — au travers de ce trait — qui les enveloppe
 /// dans son propre cadre et qui fournit les destinations dont il est le seul
 /// propriétaire.
+/// Ce dont l'hôte a besoin pour pré-remplir le formulaire de création.
+///
+/// Deux champs ciblés plutôt qu'une chaîne à répartir : **c'est ce BC qui sait**
+/// ce que l'utilisateur cherchait. Faire trancher l'hôte sur la présence d'un
+/// `@` lui ferait deviner une intention qu'il n'observe pas.
+///
+/// Défini ici et non emprunté au BC qui rend le formulaire : ce BC ne peut pas
+/// importer ses types, et l'adapter traduit.
+pub struct CoachPrefill<'a> {
+    pub pseudo: Option<&'a str>,
+    pub email: Option<&'a str>,
+}
+
 pub trait ISpacesHostLayout: Send + Sync {
     /// Enveloppe un fragment de page dans le document complet de l'hôte.
     fn wrap_page(&self, content: String) -> Response;
@@ -54,6 +67,18 @@ pub trait ISpacesHostLayout: Send + Sync {
     /// L'appelant gère son propre retour visuel — la destination répond sans
     /// contenu.
     fn password_reset_action(&self) -> String;
+
+    /// Rend le formulaire de création de compte, fourni par l'hôte.
+    ///
+    /// Le **markup** et non une URL, contrairement à `password_reset_action` :
+    /// un formulaire de création de compte est une mécanique autonome, qui porte
+    /// ses propres règles de validation et ses propres messages d'erreur. Un
+    /// bouton de réinitialisation, lui, est un élément du dessin d'une ligne — le
+    /// faire rendre par l'hôte l'obligerait à connaître les classes CSS de ce BC.
+    ///
+    /// Ce BC ne sait pas quel compte est créé ni comment : il place le fragment
+    /// et écoute un événement DOM.
+    fn coach_creation_widget(&self, prefill: CoachPrefill<'_>) -> String;
 
     /// Rend un champ d'upload d'image. Le composant, son service de stockage
     /// et le compte associé appartiennent à l'hôte — le BC décrit seulement le

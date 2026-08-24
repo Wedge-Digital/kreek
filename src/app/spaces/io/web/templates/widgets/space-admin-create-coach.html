@@ -1,0 +1,47 @@
+{#
+  Panneau de création de compte.
+
+  Le formulaire vient de l'hôte et est rendu tel quel — `|safe` parce que c'est
+  du markup déjà produit, pas une saisie d'utilisateur. Ce BC ignore ce qu'il
+  contient et quelles règles le gouvernent.
+
+  Le sélecteur de profil, lui, est son concept : il vit à côté du fragment, dans
+  son propre markup.
+
+  ── Le contrat que rien ne vérifie ────────────────────────────────────────
+  `accountCreated`, `coach_id` et `name` franchissent une frontière de BC par le
+  navigateur. Ni le compilateur, ni `cargo test`, ni `check-arch` ne les voient —
+  ce dernier est un `grep`, aveugle aux chaînes littérales et aux attributs HTML.
+  Les renommer d'un côté casse l'autre en silence, et seul un test de bout en
+  bout le dira.
+#}
+<div class="space-admin-creation"
+     x-data="{ profil: 'SpaceUser' }"
+     @account-created.window="
+        htmx.ajax('POST', '{{ routes.space_admin_member_add(space_id) }}', {
+          values: { coach_id: $event.detail.coach_id, profile: profil, notifier: 'true' },
+          target: '#sac-apres-creation',
+          swap: 'innerHTML'
+        })">
+
+  <div class="space-admin-creation-titre">Le coach n'a pas de compte ?</div>
+  <div class="space-admin-creation-sous-titre">
+    Le compte est créé et rattaché à l'espace dans la foulée. Un email lui demande
+    de définir son mot de passe.
+  </div>
+
+  <div class="space-admin-creation-ligne">
+    <div class="space-admin-creation-hote">{{ formulaire|safe }}</div>
+
+    <label class="space-admin-creation-profil">
+      <span class="space-admin-creation-profil-label">Profil</span>
+      <kreek-select name="profile" x-model="profil">
+        <option value="SpaceUser" selected>Membre</option>
+        <option value="SpaceAdmin">Admin</option>
+      </kreek-select>
+    </label>
+  </div>
+
+  {# Reçoit la ligne rendue par l'ajout, ou son message d'erreur. #}
+  <div id="sac-apres-creation" class="space-admin-creation-retour"></div>
+</div>

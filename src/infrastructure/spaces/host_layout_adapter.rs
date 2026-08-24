@@ -1,7 +1,7 @@
 use crate::app::auth::routes::path as auth_path;
 use crate::app::news::routes::Routes as NewsRoutes;
 use crate::app::routes::AppRoutes;
-use crate::app::spaces::io::web::host_layout::{ISpacesHostLayout, UploadField};
+use crate::app::spaces::io::web::host_layout::{CoachPrefill, ISpacesHostLayout, UploadField};
 use crate::web::app_shell::{AppShell, CONTENT_TARGET};
 use crate::web::upload_widget::render_upload_widget;
 use axum::response::{IntoResponse, Response};
@@ -45,6 +45,20 @@ impl ISpacesHostLayout for KreekSpacesLayout {
 
     fn unauthenticated_redirect(&self) -> String {
         auth_path::AUTH_LAYOUT.to_string()
+    }
+
+    fn coach_creation_widget(&self, prefill: CoachPrefill<'_>) -> String {
+        use askama::Template;
+        crate::app::auth::io::web::coach_creation_widget::CoachCreationWidget {
+            pseudo: prefill.pseudo.unwrap_or_default().to_string(),
+            email: prefill.email.unwrap_or_default().to_string(),
+            erreur: None,
+        }
+        .render()
+        .unwrap_or_else(|e| {
+            tracing::error!("coach_creation_widget: rendu impossible: {e}");
+            String::new()
+        })
     }
 
     fn password_reset_action(&self) -> String {

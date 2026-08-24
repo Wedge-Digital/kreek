@@ -72,12 +72,27 @@ sait ce que l'utilisateur cherchait, et passe par `CoachPrefill`.
 
 ## Checklist
 
-- [ ] `coach_creation_widget()` ajoutée à `ISpacesHostLayout`
-- [ ] Implémentée dans `src/infrastructure/spaces/host_layout_adapter.rs`
-- [ ] `spaces` n'importe ni `auth::routes` ni `crate::web` — axe 9
-- [ ] Écoute de `accountCreated`, POST de l'appartenance avec le profil choisi
-- [ ] Le contrat des trois chaînes commenté sur place, avec renvoi à la 384
-- [ ] Message d'erreur explicite en cas d'échec après création
-- [ ] Pré-remplissage réparti par `spaces`, passé en `CoachPrefill`
-- [ ] Maquette ajustée : les deux moitiés de la grille se lisent comme une ligne
-- [ ] `make lint`, `make check-arch`, `make test` passent
+- [x] `coach_creation_widget()` ajoutée à `ISpacesHostLayout`, avec son
+      `CoachPrefill` **défini par ce BC** — il ne peut pas importer les types de
+      celui qui rend le formulaire, et l'adapter traduit
+- [x] Implémentée dans `src/infrastructure/spaces/host_layout_adapter.rs`
+- [x] Ce BC n'importe ni `auth::routes` ni `crate::web` — l'axe 9 passe
+- [x] Écoute de `accountCreated`, POST de l'appartenance avec le profil choisi
+- [x] Le contrat des trois chaînes commenté sur place, avec renvoi à la 384
+- [x] Message d'erreur explicite en cas d'échec après création
+- [x] ~~Fragment rendu avec la page~~ → **un endpoint**, voir ci-dessous
+- [x] Pré-remplissage réparti par ce BC selon la présence d'un `@`
+- [x] La ligne à deux propriétaires alignée sur sa base
+- [x] `make lint`, `make check-arch`, `make test` passent — 1203 tests
+
+## Ce qu'on a appris en la faisant
+
+**Le pré-remplissage impose un endpoint.** La carte prévoyait un fragment rendu
+avec la page ; impossible, puisque le pré-remplissage dépend de ce qui a été
+cherché — donc d'une action postérieure au chargement. Le panneau est servi par
+`…/admin/widgets/create-coach` et se recharge après chaque recherche.
+
+**Le harnais ne voit qu'un bord du contrat à la fois.** La carte 380 vérifie que
+l'en-tête est **posé** avec ses trois chaînes ; celle-ci vérifie que le panneau
+les **écoute**. Les deux tests peuvent passer sans que les bords s'accordent —
+seule la carte 384 ferme la boucle, et c'est écrit dans les deux fichiers.
