@@ -5,10 +5,10 @@
   re-rendu d'une seule ligne après un changement de rôle (carte 371). Sans lui,
   cette action re-rendrait toute la liste pour une ligne.
 
-  Le sélecteur et les boutons sont rendus mais **inertes** : la carte 371 leur
-  donnera leur `hx-post`. Ils sont là dès maintenant parce que la mesure de la
-  réservation de hauteur en dépend — une ligne sans eux n'a pas la hauteur d'une
-  vraie ligne.
+  La ligne s'échange **elle-même** : `hx-target="closest .sam-row"`. Le
+  changement de rôle la remplace par sa version à jour — le serveur est seul à
+  savoir que le sélecteur du dernier administrateur doit se figer. Le retrait
+  répond un corps vide, et la ligne disparaît.
 #}
 <div class="sam-row" data-recherche="{{ membre.name|lower }} {{ membre.email|lower }}">
   <div class="sam-avatar">{{ membre.initials }}</div>
@@ -21,18 +21,29 @@
   </div>
 
   <kreek-select class="sam-role" name="profile"
-                {% if membre.role_locked %}disabled{% endif %}>
+                {% if membre.role_locked %}disabled{% else %}
+                hx-post="{{ routes.space_admin_member_role(space_id, membre.coach_id) }}"
+                hx-trigger="change"
+                hx-target="closest .sam-row"
+                hx-swap="outerHTML"
+                {% endif %}>
     <option value="SpaceAdmin"{% if membre.is_admin %} selected{% endif %}>Admin</option>
     <option value="SpaceUser"{% if !membre.is_admin %} selected{% endif %}>Membre</option>
   </kreek-select>
 
   <div class="sam-actions">
+    {# Inerte encore : la carte 372 lui donnera sa destination, injectée par
+       l'hôte — `spaces` est extractible et ne connaît pas `auth`. #}
     <button type="button" class="sam-btn sam-btn--primary"
             title="Envoyer un lien de réinitialisation de mot de passe">
       <span class="sam-btn-icon">🔑</span> Réinit. mdp
     </button>
     {% if membre.removable %}
-    <button type="button" class="sam-btn sam-btn--danger" title="Retirer de l'espace">
+    <button type="button" class="sam-btn sam-btn--danger" title="Retirer de l'espace"
+            hx-post="{{ routes.space_admin_member_remove(space_id, membre.coach_id) }}"
+            hx-target="closest .sam-row"
+            hx-swap="outerHTML"
+            hx-confirm="Retirer {{ membre.name }} de cet espace ?">
       <span class="sam-btn-icon">✕</span>
     </button>
     {% endif %}

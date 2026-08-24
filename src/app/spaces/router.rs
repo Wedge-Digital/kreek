@@ -1,5 +1,8 @@
 use crate::app::spaces::context::SpacesContext;
 use crate::app::spaces::io::web::all_spaces::space_all;
+use crate::app::spaces::io::web::controllers::member_actions::{
+    change_member_role_controller, remove_member_controller,
+};
 use crate::app::spaces::io::web::controllers::space_admin_controller::space_admin_controller;
 use crate::app::spaces::io::web::controllers::widgets::coach_search::search_coaches_controller;
 use crate::app::spaces::io::web::controllers::widgets::coach_search_results::coaches_search_results_controller;
@@ -29,6 +32,14 @@ where
         .route(
             path::SPACE_ADMIN_MEMBERS_WIDGET,
             get(space_admin_members_widget),
+        )
+        .route(
+            path::SPACE_ADMIN_MEMBER_ROLE,
+            post(change_member_role_controller),
+        )
+        .route(
+            path::SPACE_ADMIN_MEMBER_REMOVE,
+            post(remove_member_controller),
         )
         .route(path::SPACES_SIDEBAR, get(get_spaces_sidebar))
         .route(path::SPACE_JOIN, post(join_spaces))
