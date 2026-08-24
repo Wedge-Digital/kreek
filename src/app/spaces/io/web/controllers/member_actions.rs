@@ -52,6 +52,7 @@ fn statut_metier(e: &SpaceMembershipError) -> StatusCode {
         SpaceMembershipError::ActeurEstLaCible => StatusCode::FORBIDDEN,
         SpaceMembershipError::DernierAdministrateur => StatusCode::CONFLICT,
         SpaceMembershipError::PasMembre => StatusCode::NOT_FOUND,
+        SpaceMembershipError::DejaMembre => StatusCode::CONFLICT,
     }
 }
 
@@ -158,6 +159,7 @@ fn libelle(e: &SpaceMembershipError) -> String {
             "Un espace doit garder au moins un administrateur."
         }
         SpaceMembershipError::PasMembre => "Ce coach n'est pas membre de cet espace.",
+        SpaceMembershipError::DejaMembre => "Ce coach est déjà membre de cet espace.",
     }
     .to_string()
 }

@@ -131,6 +131,43 @@ impl Space {
         }))
     }
 
+    /// Ajoute un membre à l'espace, **sans son consentement**.
+    ///
+    /// `nouveau` est un `Coach` complet et non un identifiant : l'agrégat stocke
+    /// des `Coach`, qui portent un pseudo et une icône. Le use case le construit
+    /// depuis le cache d'utilisateurs — le domaine ne va rien chercher lui-même.
+    ///
+    /// `acteur` **ne sert aucune règle** : rien n'interdit à un administrateur
+    /// d'ajouter qui il veut. Il est là pour la trace, l'opération se passant du
+    /// consentement de la cible.
+    ///
+    /// # Deux non-règles, décidées et non oubliées
+    ///
+    /// **Les deux profils sont attribuables** à l'ajout, Membre comme Admin.
+    ///
+    /// **Aucun plafond de membres par espace.** Un plafond ajouté plus tard, une
+    /// fois des espaces au-delà du seuil en production, coûte bien plus qu'un
+    /// plafond posé d'emblée. Ne pas en ajouter en croyant réparer un oubli.
+    pub fn add_member(
+        &mut self,
+        acteur: &CoachId,
+        nouveau: Coach,
+    ) -> Result<ChangementDAppartenance, SpaceMembershipError> {
+        if self.membre(&nouveau.id).is_some() {
+            return Err(SpaceMembershipError::DejaMembre);
+        }
+
+        let evenement = SpacesDomainEvent::UserAddedToSpaceByAdmin {
+            event_id: EventId::new(),
+            user_id: nouveau.id,
+            space_id: self.id,
+            profile: nouveau.profile.clone(),
+            added_by: *acteur,
+        };
+        self.coaches.push(nouveau);
+        Ok(self.avec(evenement))
+    }
+
     fn membre(&self, id: &CoachId) -> Option<&Coach> {
         self.coaches.iter().find(|c| &c.id == id)
     }
@@ -379,6 +416,111 @@ mod tests {
         assert_eq!(
             space.remove_member(&a, &etranger).unwrap_err(),
             SpaceMembershipError::PasMembre
+        );
+    }
+
+    // ── Ajout par un administrateur ─────────────────────────────────────────
+
+    #[test]
+    fn ajouter_un_non_membre_en_membre_rend_l_evenement() {
+        let admin = coach("Admin", SpaceProfile::SpaceAdmin);
+        let a = admin.id;
+        let mut space = espace(vec![admin]);
+        let nouveau = coach("Nouveau", SpaceProfile::SpaceUser);
+        let n = nouveau.id;
+
+        let r = space.add_member(&a, nouveau).unwrap();
+
+        assert_eq!(type_de(&r), Some("UserAddedToSpaceByAdmin"));
+        assert_eq!(
+            r.administrateurs,
+            NombreAdministrateurs::try_new(1).unwrap()
+        );
+        assert_eq!(space.coaches().len(), 2);
+        assert!(space.membre(&n).is_some());
+    }
+
+    #[test]
+    fn ajouter_un_non_membre_en_admin_incremente_le_compte() {
+        let admin = coach("Admin", SpaceProfile::SpaceAdmin);
+        let a = admin.id;
+        let mut space = espace(vec![admin]);
+
+        let r = space
+            .add_member(&a, coach("Second", SpaceProfile::SpaceAdmin))
+            .unwrap();
+
+        assert_eq!(
+            r.administrateurs,
+            NombreAdministrateurs::try_new(2).unwrap()
+        );
+    }
+
+    #[test]
+    fn ajouter_un_coach_deja_membre_est_refuse_et_ne_mute_rien() {
+        let admin = coach("Admin", SpaceProfile::SpaceAdmin);
+        let membre = coach("Membre", SpaceProfile::SpaceUser);
+        let (a, m) = (admin.id, membre.id);
+        let mut space = espace(vec![admin, membre]);
+        let avant = space.coaches().to_vec();
+
+        let deja = Coach::new(
+            m,
+            CoachName::try_new("Membre").unwrap(),
+            SpaceProfile::SpaceUser,
+            None,
+        );
+        let r = space.add_member(&a, deja);
+
+        assert_eq!(r.unwrap_err(), SpaceMembershipError::DejaMembre);
+        assert_eq!(space.coaches(), avant.as_slice());
+    }
+
+    /// Ajouter en Admin quelqu'un qui est déjà Membre **n'est pas** une
+    /// promotion.
+    ///
+    /// Sans ce test, l'ajout deviendrait un chemin détourné pour changer un
+    /// rôle — sans passer par `change_member_role`, donc sans sa règle du
+    /// dernier administrateur ni sa vérification sur l'acteur.
+    #[test]
+    fn ajouter_avec_un_autre_profil_reste_un_refus_et_non_une_promotion() {
+        let admin = coach("Admin", SpaceProfile::SpaceAdmin);
+        let membre = coach("Membre", SpaceProfile::SpaceUser);
+        let (a, m) = (admin.id, membre.id);
+        let mut space = espace(vec![admin, membre]);
+
+        let promu = Coach::new(
+            m,
+            CoachName::try_new("Membre").unwrap(),
+            SpaceProfile::SpaceAdmin,
+            None,
+        );
+        let r = space.add_member(&a, promu);
+
+        assert_eq!(r.unwrap_err(), SpaceMembershipError::DejaMembre);
+        assert_eq!(
+            space.membre(&m).unwrap().profile,
+            SpaceProfile::SpaceUser,
+            "le profil ne doit pas avoir changé"
+        );
+    }
+
+    #[test]
+    fn l_evenement_porte_l_acteur_qui_a_ordonne_l_ajout() {
+        let admin = coach("Admin", SpaceProfile::SpaceAdmin);
+        let a = admin.id;
+        let mut space = espace(vec![admin]);
+
+        let r = space
+            .add_member(&a, coach("Nouveau", SpaceProfile::SpaceUser))
+            .unwrap();
+
+        let Some(SpacesDomainEvent::UserAddedToSpaceByAdmin { added_by, .. }) = r.evenement else {
+            panic!("l'événement attendu est UserAddedToSpaceByAdmin");
+        };
+        assert_eq!(
+            added_by, a,
+            "une opération sans consentement dit qui l'a ordonnée"
         );
     }
 

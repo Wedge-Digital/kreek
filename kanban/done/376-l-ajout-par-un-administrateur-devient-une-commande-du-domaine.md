@@ -61,18 +61,35 @@ réparer un oubli.
 
 ## Checklist
 
-- [ ] `Space::add_member(acteur, nouveau, profil)`
-- [ ] `DejaMembre` ajoutée à `SpaceMembershipError`
-- [ ] `UserAddedToSpaceByAdmin` : variante, type, tags, mapping `to_app_event()`
-      vers `SpacesAppEvent::UserSubscribed`
-- [ ] Aucune primitive nue dans l'événement — quatre value objects
-- [ ] Les deux non-règles commentées sur place
-- [ ] Tests unitaires :
-  - [ ] ajout d'un non-membre en Membre → événement, compte d'admins inchangé
-  - [ ] ajout d'un non-membre en Admin → compte +1
-  - [ ] coach déjà membre → `DejaMembre`, **`coaches` inchangé**
-  - [ ] coach déjà membre, **avec un autre profil** → `DejaMembre` — ce n'est
-        pas une promotion déguisée. Sans ce test, l'ajout devient un chemin
-        détourné pour changer un rôle, sans la règle du dernier administrateur
-  - [ ] `added_by` porte bien l'acteur
-- [ ] `make lint`, `make check-arch`, `make test` passent
+- [x] ~~`Space::add_member(acteur, nouveau: &CoachId, profil)`~~ →
+      **`add_member(acteur, nouveau: Coach)`**. L'agrégat stocke des `Coach`, qui
+      portent un pseudo et une icône : un identifiant seul ne permet pas d'en
+      construire un. Le use case le bâtira depuis `find_user_by_id`, qui existe
+      au port du cache
+- [x] `DejaMembre` ajoutée à `SpaceMembershipError`, traduite en **409**
+- [x] `UserAddedToSpaceByAdmin` : variante, type, tags, mapping vers
+      `SpacesAppEvent::UserSubscribed` — le même app event que l'adhésion
+      spontanée
+- [x] Aucune primitive nue dans l'événement
+- [x] Les deux non-règles commentées sur place
+- [x] Cinq tests unitaires, dont celui qui distingue l'ajout d'une promotion
+- [x] Les deux tests clés **vus échouer** sur une implémentation qui met à jour
+      le profil au lieu de refuser
+- [x] `make lint`, `make check-arch`, `make test` passent — 1149 tests
+
+## Ce qu'on a appris en la faisant
+
+**Le verrou de la carte 364 avait dérivé, en silence.** Il vérifiait qu'aucune
+variante ne partage son type d'événement, mais énumérait les variantes **à la
+main** : trois ajoutées depuis — deux par la carte 365, une par celle-ci — n'y
+figuraient pas. Il ne couvrait plus que cinq cas sur huit, et rien ne l'a dit.
+
+**Un test qui énumère ne sait pas qu'il est incomplet.** La liste est complétée,
+mais surtout un `match` exhaustif a été ajouté : il **ne compile plus** dès
+qu'une variante apparaît, le compilateur amène dessus, et son commentaire renvoie
+à la liste à tenir. La dérive silencieuse devient une erreur de compilation.
+
+**`DejaMembre` est atteignable**, contrairement à `DernierAdministrateur` — un
+administrateur peut poster un ajout pour un coach déjà membre, la garde passe, et
+rien ne l'arrête avant le domaine. Vérifié **avant** de coder, après trois cartes
+où un test annoncé s'est révélé impossible à écrire.

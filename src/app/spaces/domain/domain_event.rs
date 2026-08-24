@@ -40,6 +40,22 @@ pub enum SpacesDomainEvent {
         user_id: CoachId,
         space_id: SpaceId,
     },
+    /// L'ajout d'un membre par un administrateur, **sans son consentement**.
+    ///
+    /// Un événement à lui plutôt qu'un champ ajouté à `UserSubscribedToSpace` :
+    /// celui-ci est émis par l'adhésion spontanée, où `added_by` vaudrait le
+    /// coach lui-même. Un champ qui ne veut pas dire la même chose selon
+    /// l'émetteur ne se lit pas.
+    ///
+    /// `added_by` est là parce que l'opération se passe du consentement de la
+    /// cible : une opération sans consentement doit dire qui l'a ordonnée.
+    UserAddedToSpaceByAdmin {
+        event_id: EventId,
+        user_id: CoachId,
+        space_id: SpaceId,
+        profile: SpaceProfile,
+        added_by: CoachId,
+    },
     /// Le retrait d'un membre par un administrateur.
     ///
     /// Seul des trois événements d'appartenance à **franchir la frontière** :
@@ -81,6 +97,7 @@ pub const USER_INVITED_IN_SPACE: &str = "UserInvitedInSpace";
 
 pub const USER_PROMOTED_TO_SPACE_ADMIN: &str = "UserPromotedToSpaceAdmin";
 pub const USER_DEMOTED_TO_SPACE_USER: &str = "UserDemotedToSpaceUser";
+pub const USER_ADDED_TO_SPACE_BY_ADMIN: &str = "UserAddedToSpaceByAdmin";
 pub const USER_UNSUBSCRIBED_FROM_SPACE: &str = "UserUnsubscribedFromSpace";
 pub const SPACE_ARCHIVED: &str = "SpaceArchived";
 
@@ -111,6 +128,21 @@ impl SpacesDomainEvent {
                 space_id: space_id.clone(),
                 space_profile: space_profile.clone(),
             }),
+            // L'ajout par un administrateur franchit la frontière sous le
+            // **même** app event que l'adhésion spontanée. Le domaine sépare les
+            // deux faits — le journal doit les distinguer d'un `grep` — mais
+            // l'extérieur n'a besoin que de l'effet : un coach est membre.
+            SpacesDomainEvent::UserAddedToSpaceByAdmin {
+                user_id,
+                space_id,
+                profile,
+                ..
+            } => Some(SpacesAppEvent::UserSubscribed {
+                event_id: EventId::new(),
+                user_id: *user_id,
+                space_id: *space_id,
+                space_profile: profile.clone(),
+            }),
             // Le retrait franchit la frontière : un coach retiré peut être
             // administrateur d'une compétition de l'espace. L'app event existait
             // déjà dans l'enum, sans émetteur ni auditeur — on le réveille.
@@ -135,6 +167,7 @@ impl SpacesDomainEvent {
             Self::UserSubscribedToSpace { .. } => USER_SUBSCRIBED_TO_SPACE,
             Self::UserPromotedToSpaceAdmin { .. } => USER_PROMOTED_TO_SPACE_ADMIN,
             Self::UserDemotedToSpaceUser { .. } => USER_DEMOTED_TO_SPACE_USER,
+            Self::UserAddedToSpaceByAdmin { .. } => USER_ADDED_TO_SPACE_BY_ADMIN,
             Self::UserUnsubscribedFromSpace { .. } => USER_UNSUBSCRIBED_FROM_SPACE,
             Self::SpaceArchived { .. } => SPACE_ARCHIVED,
         }
@@ -147,6 +180,7 @@ impl SpacesDomainEvent {
             Self::UserSubscribedToSpace { space_id, .. } => *space_id,
             Self::UserPromotedToSpaceAdmin { space_id, .. } => *space_id,
             Self::UserDemotedToSpaceUser { space_id, .. } => *space_id,
+            Self::UserAddedToSpaceByAdmin { space_id, .. } => *space_id,
             Self::UserUnsubscribedFromSpace { space_id, .. } => *space_id,
             Self::SpaceArchived { space_id, .. } => *space_id,
         }
@@ -189,6 +223,9 @@ impl SpacesDomainEvent {
                 space_id, user_id, ..
             }
             | Self::UserUnsubscribedFromSpace {
+                space_id, user_id, ..
+            }
+            | Self::UserAddedToSpaceByAdmin {
                 space_id, user_id, ..
             } => vec![
                 EventTag {
@@ -255,6 +292,23 @@ mod tests {
                 user_id,
                 space_id,
             },
+            SpacesDomainEvent::UserDemotedToSpaceUser {
+                event_id: EventId::new(),
+                user_id,
+                space_id,
+            },
+            SpacesDomainEvent::UserUnsubscribedFromSpace {
+                event_id: EventId::new(),
+                user_id,
+                space_id,
+            },
+            SpacesDomainEvent::UserAddedToSpaceByAdmin {
+                event_id: EventId::new(),
+                user_id,
+                space_id,
+                profile: SpaceProfile::SpaceUser,
+                added_by: user_id,
+            },
             SpacesDomainEvent::SpaceArchived {
                 event_id: EventId::new(),
                 space_id,
@@ -262,13 +316,38 @@ mod tests {
         ]
     }
 
+    /// Force à compléter `toutes()` quand une variante apparaît.
+    ///
+    /// Le test de distinction énumère les variantes **à la main**, et il a
+    /// silencieusement dérivé : trois variantes ajoutées après la carte 364 n'y
+    /// figuraient pas, et le verrou ne couvrait plus que cinq cas sur huit. Un
+    /// test qui énumère ne sait pas qu'il est incomplet.
+    ///
+    /// Ce `match` exhaustif, lui, ne compile plus dès qu'une variante apparaît.
+    /// Le compilateur amène alors ici, et ce commentaire amène à `toutes()`.
+    #[allow(dead_code)]
+    fn _completude(e: &SpacesDomainEvent) {
+        match e {
+            SpacesDomainEvent::SpaceCreated { .. }
+            | SpacesDomainEvent::UserInvitedInSpace { .. }
+            | SpacesDomainEvent::UserSubscribedToSpace { .. }
+            | SpacesDomainEvent::UserPromotedToSpaceAdmin { .. }
+            | SpacesDomainEvent::UserDemotedToSpaceUser { .. }
+            | SpacesDomainEvent::UserAddedToSpaceByAdmin { .. }
+            | SpacesDomainEvent::UserUnsubscribedFromSpace { .. }
+            | SpacesDomainEvent::SpaceArchived { .. } => {}
+        }
+    }
+
     /// Le test qui aurait attrapé le défaut, et qui attrapera le prochain.
     ///
     /// Vérifier qu'une variante rend *sa* chaîne ne suffit pas : `UserInvited`
     /// et `UserSubscribed` rendaient chacune la sienne, et c'était la même. Ce
     /// qu'il faut vérifier est une propriété de l'ensemble — un type par fait.
+    ///
+    /// La liste vient de `toutes()`, que `_completude` oblige à tenir à jour.
     #[test]
-    fn les_cinq_variantes_rendent_cinq_types_distincts() {
+    fn chaque_variante_rend_un_type_distinct() {
         let types: Vec<&str> = toutes().iter().map(|e| e.to_event_type()).collect();
         let distincts: std::collections::HashSet<&str> = types.iter().copied().collect();
 

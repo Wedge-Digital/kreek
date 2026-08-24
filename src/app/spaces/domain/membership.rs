@@ -56,4 +56,10 @@ pub enum SpaceMembershipError {
     ActeurEstLaCible,
     /// La cible n'appartient pas à l'espace.
     PasMembre,
+    /// La cible appartient déjà à l'espace.
+    ///
+    /// Sans cette règle, le doublon serait refusé par la clé primaire composite
+    /// de `spaces__user_space` — une règle métier rendue par une erreur SQL
+    /// brute, illisible et intraduisible en 409.
+    DejaMembre,
 }
