@@ -1,9 +1,9 @@
 # E02 — Notifications e-mail de compétition
 
-**État :** en cours — 13 cartes · 12 faites. Démarrée le 2026-08-22.
-Ne reste que la **338**, dont seule la vérification en client de messagerie réel
-manque. Les 366 et 367, nées de la revue de déploiement du 2026-08-24, sont
-faites : le critère de clôture ci-dessous est désormais **constaté**.
+**État :** close le 2026-08-25 — 13 cartes · 13 faites. Démarrée le 2026-08-22.
+Les 366 et 367, nées de la revue de déploiement du 2026-08-24, ont rendu le
+critère de clôture ci-dessous **constaté** ; la 338 l'a complété par le seul
+contrôle qu'aucun test ne peut faire.
 La 331 pose le modèle et la colonne ; la 332 donne le premier chemin
 d'édition — un organisateur peut régler les notifications d'une compétition
 déjà démarrée, ce qu'aucun écran ne permettait.
@@ -32,7 +32,7 @@ réglage qui fait réellement partir des e-mails — et retire les deux morts.
 | 335 | Journal d'envois — table et repository | **faite** — `claim`/`confirm`, l'idempotence de R3 |
 | 336 | Domaine de l'ordonnancement — `due_today()` | **faite** — ce qui part aujourd'hui, pur et testable |
 | 337 | Résolution des destinataires | **faite** — qui reçoit quoi, borné par l'espace (R7) |
-| 338 | Les quatre gabarits d'e-mail | les maquettes validées, en Askama |
+| 338 | Les quatre gabarits d'e-mail | **faite** — et le rendu réel a trouvé `http:///`, un `HOST_DOMAIN` vide que rien ne signalait |
 | 339 | Le cœur d'expédition | **faite** — réserver, rendre, envoyer, confirmer |
 | 340 | Les deux déclencheurs — CLI du cron et listener d'ouverture | **faite — la fonctionnalité est allumée** |
 | 325 | L'e-mail de mot de passe au nouveau standard visuel | **faite** — harmonisation, pas une réécriture |
@@ -111,5 +111,20 @@ la table du journal. Les trois tests échouent si la journée est décalée d'un
 jour — vérifié, et c'est ce qui distingue un critère atteint d'un critère
 supposé.
 
-Reste la 338 : ce que ces e-mails **donnent à voir** dans un vrai client de
-messagerie. C'est la seule chose qu'aucun test ne peut dire.
+La 338 a complété ce constat par ce qu'aucun test ne peut dire : ce que ces
+e-mails **donnent à voir**. Les trois notifications du cron ont été rendues par
+la commande de production elle-même, et le premier rendu a immédiatement montré
+un `<img src="http:///…">` — `AppConfig::app_url()` transforme un domaine vide
+en `"http://"` au lieu de refuser, et `.env.dev` comme `.env.remote.demo` l'ont
+vide.
+
+**L'ouverture dans Outlook et Gmail n'a pas eu lieu** : elle demandait un envoi
+réel depuis une clé Resend, et le sujet a été jugé maîtrisé. L'épic est close
+sans cette dernière observation, et il vaut mieux que ce soit écrit qu'oublié.
+
+## Ce que l'épic laisse derrière elle
+
+Un défaut latent, hors de son périmètre et sans carte à ce jour : `app_url()`
+rend une URL sans hôte plutôt que d'échouer quand `HOST_DOMAIN` est vide. Il ne
+touche aujourd'hui que dev et démo. Le jour où un déploiement oublie ce réglage,
+tous ses e-mails partiront avec des liens morts, sans une ligne de journal.
