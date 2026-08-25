@@ -19,8 +19,14 @@ Validées et commitées (`fde2690`) :
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
 | Saisie des actions — gain de la Haine | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ **399-404** |
-| Fiche d'équipe — mots-clefs | | | | | | | |
-| Fiche joueur — mots-clefs et Haines | | | | | | | |
+| Fiche d'équipe — mots-clefs | — | — | — | — | — | — | ✅ **405** |
+| Fiche joueur — mots-clefs et Haines | — | — | — | — | — | — | ✅ **405** |
+
+Ces deux pages **ne passent pas par le workflow** : il ne s'agit que d'afficher
+des informations déjà présentes, sur des écrans qui existent. La carte 405 les
+couvre à elle seule, et répare au passage le `match` des catégories de
+compétences, où `MUTATIONS` est testé au singulier et `DEVIOUS` absent — les deux
+s'affichent aujourd'hui avec la couleur du général.
 
 ## Décisions déjà prises
 
