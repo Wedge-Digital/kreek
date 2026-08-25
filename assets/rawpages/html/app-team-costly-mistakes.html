@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Erreurs coûteuses — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ── Rôles de couleur — repris de la page de renvois ───────────────────
+       `risk` domine ici aussi : cet écran ne fait que retirer de l'argent, et
+       le coach n'a aucune prise sur le résultat. */
+    :root {
+      --role-action:  #003049;
+      --role-cost:    #7A5210;
+      --role-risk:    #A61B1B;
+      --role-caution: #8F4116;
+      --tint-action:  rgba(0,48,73,0.06);
+      --tint-risk:    rgba(166,27,27,0.08);
+      --tint-caution: rgba(143,65,22,0.10);
+      --role-safe:    #2F6B4F;
+      --tint-safe:    rgba(47,107,79,0.10);
+    }
+
+    .cm-page { display: flex; flex-direction: column; gap: var(--p1); max-width: 900px; margin: 0 auto; }
+
+    /* ── En-tête — repris de la page de renvois ───────────────────────────── */
+    .cm-header {
+      background: var(--white); border-radius: 10px; padding: var(--p2);
+      border-top: 3px solid var(--role-risk);
+      display: flex; gap: var(--p2); align-items: center; flex-wrap: wrap;
+    }
+    .cm-header-logo {
+      width: 64px; height: 64px; border-radius: 10px; background: var(--role-action);
+      color: var(--white); font-family: var(--font-title); font-size: var(--h4);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .cm-header-info { flex: 1; min-width: 240px; }
+    .cm-header-top  { display: flex; align-items: center; gap: var(--p1); margin-bottom: var(--p05); flex-wrap: wrap; }
+    .cm-header-name { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-1); }
+    .cm-phase-badge {
+      background: var(--tint-risk); color: var(--role-risk); border-radius: 20px;
+      padding: 4px 12px; font-size: var(--text-tiny); font-weight: 600;
+    }
+    .cm-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
+    .meta-item  { display: flex; flex-direction: column; gap: 2px; }
+    .meta-label { font-size: var(--text-tiny); color: var(--dark-3); }
+    .meta-value { font-size: var(--text-small); color: var(--dark-1); font-weight: 600; }
+    .meta-value--alert { color: var(--role-risk); }
+
+    .panel { background: var(--white); border-radius: 10px; padding: var(--p2); }
+    .panel-title {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+      color: var(--dark-1); margin-bottom: var(--p05);
+    }
+    .panel-sub { font-size: var(--text-tiny); color: var(--dark-3); margin-bottom: var(--p1); }
+
+    .alert { border-radius: 8px; padding: var(--p1); display: flex; gap: 10px; font-size: var(--text-small); }
+    .alert--info { background: var(--tint-action); color: var(--dark-2); }
+
+    /* ── La table de déclenchement ────────────────────────────────────────
+       Elle est montrée parce que le coach ne lance pas le dé lui-même : à
+       défaut de prise sur le résultat, il doit au moins pouvoir vérifier que
+       le résultat est juste. */
+    .cm-table { width: 100%; border-collapse: collapse; font-size: var(--text-tiny); }
+    .cm-table th, .cm-table td { padding: 7px 10px; text-align: center; border-bottom: 1px solid var(--dark-5); }
+    .cm-table th { color: var(--dark-3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+    .cm-table th:first-child, .cm-table td:first-child { text-align: left; }
+    .cm-table tr.current td { background: var(--tint-action); font-weight: 700; color: var(--dark-0); }
+    .cm-table tr.current td:first-child { border-left: 3px solid var(--role-action); }
+    .cm-table td.hit { background: var(--tint-risk); color: var(--role-risk); border-radius: 4px; }
+
+    /* ── Le dé ────────────────────────────────────────────────────────────── */
+    .cm-roll-zone { display: flex; flex-direction: column; align-items: center; gap: var(--p1); padding: var(--p2) 0; }
+    .cm-die {
+      width: 96px; height: 96px; border-radius: 14px;
+      background: var(--white); border: 2px solid var(--dark-4);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-size: 44px; font-weight: 800; color: var(--dark-1);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.10);
+    }
+    .cm-die--rolling { animation: cm-shake 0.14s linear infinite; color: var(--dark-3); }
+    @keyframes cm-shake {
+      0%   { transform: translateY(0) rotate(-4deg); }
+      50%  { transform: translateY(-6px) rotate(4deg); }
+      100% { transform: translateY(0) rotate(-4deg); }
+    }
+    .cm-die--done { border-color: var(--role-action); }
+    .cm-roll-hint { font-size: var(--text-tiny); color: var(--dark-3); }
+
+    .cm-btn-roll {
+      border: none; border-radius: 8px; padding: 12px 28px;
+      background: var(--role-action); color: var(--white);
+      font-size: var(--text-small); font-weight: 600; cursor: pointer; font-family: inherit;
+    }
+    .cm-btn-roll:hover:not(:disabled) { background: var(--dark-1); }
+    .cm-btn-roll:disabled { background: var(--dark-4); cursor: not-allowed; }
+
+    /* ── Le résultat ──────────────────────────────────────────────────────── */
+    .cm-result { display: none; flex-direction: column; gap: var(--p1); }
+    .cm-result.shown { display: flex; }
+    .cm-verdict {
+      border-radius: 10px; padding: var(--p2); display: flex; gap: var(--p1);
+      align-items: flex-start; border-left: 4px solid var(--dark-4);
+    }
+    .cm-verdict-icon { font-size: 30px; line-height: 1; flex-shrink: 0; }
+    .cm-verdict-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 800; margin-bottom: 2px; }
+    .cm-verdict-text { font-size: var(--text-small); color: var(--dark-2); }
+    .cm-verdict--safe  { background: var(--tint-safe);    border-left-color: var(--role-safe); }
+    .cm-verdict--safe  .cm-verdict-title { color: var(--role-safe); }
+    .cm-verdict--minor { background: var(--tint-caution); border-left-color: var(--role-caution); }
+    .cm-verdict--minor .cm-verdict-title { color: var(--role-caution); }
+    .cm-verdict--major { background: var(--tint-risk);    border-left-color: var(--role-risk); }
+    .cm-verdict--major .cm-verdict-title { color: var(--role-risk); }
+    .cm-verdict--catastrophe { background: rgba(166,27,27,0.16); border-left-color: var(--role-risk); }
+    .cm-verdict--catastrophe .cm-verdict-title { color: var(--role-risk); }
+
+    /* Le calcul est montré en entier : un coach qui perd 340 kPo doit pouvoir
+       refaire l'opération sans demander à personne. */
+    .cm-calc { display: flex; flex-direction: column; gap: 6px; }
+    .cm-calc-line { display: flex; justify-content: space-between; gap: var(--p1); font-size: var(--text-small); }
+    .cm-calc-label { color: var(--dark-2); }
+    .cm-calc-value { font-weight: 600; color: var(--dark-1); white-space: nowrap; }
+    .cm-calc-line--total { border-top: 1px solid var(--dark-5); padding-top: 8px; margin-top: 2px; }
+    .cm-calc-line--total .cm-calc-label { font-weight: 700; color: var(--dark-0); }
+    .cm-calc-line--total .cm-calc-value { font-weight: 800; color: var(--role-risk); }
+    .cm-calc-line--rest .cm-calc-value { color: var(--role-action); font-weight: 800; }
+    .cm-dice-detail {
+      display: inline-flex; gap: 4px; align-items: center;
+      font-family: var(--font-title); font-size: var(--text-tiny);
+      color: var(--dark-3); margin-left: 6px;
+    }
+    .cm-die-mini {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 20px; height: 20px; border-radius: 4px;
+      border: 1px solid var(--dark-4); font-weight: 700; color: var(--dark-2);
+    }
+
+    .cm-footer { display: flex; justify-content: flex-end; }
+    .cta-primary {
+      border: none; border-radius: 8px; padding: 14px 28px;
+      background: var(--role-action); color: var(--white);
+      font-size: var(--text-small); font-weight: 600; cursor: pointer; font-family: inherit;
+    }
+    .cta-primary:hover:not(:disabled) { background: var(--dark-1); }
+    .cta-primary:disabled { background: var(--dark-4); cursor: not-allowed; }
+
+    /* ── Sélecteur de maquette ───────────────────────────────────────────── */
+    .demo-switcher {
+      background: var(--dark-6); border: 1px dashed var(--dark-4); border-radius: 8px;
+      padding: var(--p05) var(--p1); margin-bottom: var(--p1);
+      display: flex; gap: var(--p05); align-items: center; flex-wrap: wrap;
+    }
+    .demo-switcher-label { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2); }
+    .state-pill {
+      font-size: var(--text-tiny); font-weight: 600; padding: 5px 14px; border-radius: 20px;
+      border: 1.5px solid var(--dark-4); background: var(--white); color: var(--dark-2);
+      cursor: pointer; font-family: inherit;
+    }
+    .state-pill:hover  { border-color: var(--role-action); color: var(--role-action); }
+    .state-pill.active { background: var(--role-action); border-color: var(--role-action); color: var(--white); }
+
+    @media (max-width: 768px) {
+      .cm-header { padding: var(--p1); gap: var(--p1); }
+      .cm-header-logo { width: 44px; height: 44px; font-size: var(--h5); }
+      .cm-table th, .cm-table td { padding: 6px 4px; }
+      .cta-primary { width: 100%; min-height: 48px; }
+      .cm-footer { justify-content: stretch; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══ Chrome mobile — repris de app-layout-mobile.html, masqué au-dessus de 768px ══ -->
+  <div class="mobile-header">
+    <div class="mobile-header-space">
+      <div class="mobile-header-space-logo">TC</div>
+      <span class="mobile-header-space-name">Tribu Celtique</span>
+      <span class="mobile-header-space-chevron">▼</span>
+    </div>
+    <div class="mobile-header-actions">
+      <button class="mobile-header-btn">🔔</button>
+      <button class="mobile-header-btn">👤</button>
+    </div>
+  </div>
+
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active">Équipes</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+
+        <!-- Sélecteur de démonstration — outil de maquette, n'existe pas en prod -->
+        <div class="demo-switcher">
+          <span class="demo-switcher-label">Aperçu maquette — issue forcée :</span>
+          <button class="state-pill active" data-issue="safe" onclick="setIssue('safe')">Crise évitée</button>
+          <button class="state-pill" data-issue="minor" onclick="setIssue('minor')">Incident mineur</button>
+          <button class="state-pill" data-issue="major" onclick="setIssue('major')">Incident majeur</button>
+          <button class="state-pill" data-issue="catastrophe" onclick="setIssue('catastrophe')">Catastrophe</button>
+        </div>
+
+        <div style="margin-bottom: var(--p1);">
+          <a href="app-team-detail.html" style="color: var(--dark-3); font-size: var(--text-tiny);">← Fiche de l'équipe</a>
+        </div>
+
+        <div class="cm-page">
+
+          <!-- ── En-tête ──────────────────────────────────────────────── -->
+          <div class="cm-header">
+            <div class="cm-header-logo">KF</div>
+            <div class="cm-header-info">
+              <div class="cm-header-top">
+                <div class="cm-header-name">Les Korrigans FC</div>
+                <span class="cm-phase-badge">💸 Erreurs coûteuses</span>
+              </div>
+              <div class="cm-header-meta">
+                <div class="meta-item">
+                  <div class="meta-label">Roster</div>
+                  <div class="meta-value">Elfes Sylvestres</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Trésorerie</div>
+                  <div class="meta-value meta-value--alert" id="hdr-treasury">345 kPo</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Tranche applicable</div>
+                  <div class="meta-value" id="hdr-band">300 – 399 kPo</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="alert alert--info">
+            <span>💰</span>
+            <span>Une trésorerie supérieure à <strong>100 kPo</strong> attire les ennuis.
+              Un jet décide de ce qu'il en reste — le résultat s'applique immédiatement
+              et ne peut pas être relancé.</span>
+          </div>
+
+          <!-- ── La table ─────────────────────────────────────────────── -->
+          <div class="panel">
+            <div class="panel-title">Ce qui peut arriver</div>
+            <div class="panel-sub">Votre tranche est mise en évidence. Le dé décide de la colonne.</div>
+            <table class="cm-table">
+              <thead>
+                <tr>
+                  <th>Trésorerie</th>
+                  <th>Crise évitée</th>
+                  <th>Incident mineur</th>
+                  <th>Incident majeur</th>
+                  <th>Catastrophe</th>
+                </tr>
+              </thead>
+              <tbody id="cm-table-body"></tbody>
+            </table>
+          </div>
+
+          <!-- ── Le jet ───────────────────────────────────────────────── -->
+          <div class="panel">
+            <div class="cm-roll-zone">
+              <div class="cm-die" id="cm-die">?</div>
+              <button class="cm-btn-roll" id="cm-roll" onclick="rollDie()">Lancer le dé</button>
+              <div class="cm-roll-hint" id="cm-hint">Un seul jet, une seule fois.</div>
+            </div>
+
+            <!-- ── Le résultat ────────────────────────────────────────── -->
+            <div class="cm-result" id="cm-result">
+              <div class="cm-verdict" id="cm-verdict">
+                <span class="cm-verdict-icon" id="cm-verdict-icon">🎲</span>
+                <div>
+                  <div class="cm-verdict-title" id="cm-verdict-title"></div>
+                  <div class="cm-verdict-text" id="cm-verdict-text"></div>
+                </div>
+              </div>
+
+              <div class="cm-calc" id="cm-calc"></div>
+            </div>
+          </div>
+
+          <div class="cm-footer">
+            <button class="cta-primary" id="cm-continue" disabled>L'équipe est prête à jouer →</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="mobile-tabbar">
+    <a class="mobile-tab" href="app-home.html"><span class="mobile-tab-icon">🏠</span><span class="mobile-tab-label">Accueil</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">🏆</span><span class="mobile-tab-label">Compétitions</span></a>
+    <a class="mobile-tab active" href="#"><span class="mobile-tab-icon">🛡️</span><span class="mobile-tab-label">Équipes</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">📰</span><span class="mobile-tab-label">Actus</span></a>
+  </div>
+
+<script>
+/* Comportement de maquette uniquement — le tirage réel se fera côté serveur,
+   une seule fois, à l'ouverture de la phase. Ici, le sélecteur force l'issue
+   pour montrer les quatre cas. */
+
+/* La table de déclenchement. Les tranches sont écrites 100-199, 200-299…
+   plutôt que 100-195, 200-295 : la trésorerie est un entier de kPo, et les
+   bornes officielles supposent des montants en multiples de cinq. Une équipe à
+   197 kPo ne doit tomber dans aucun trou. */
+var TABLE = [
+  { min: 100, max: 199, label: '100 – 199 kPo', safe: '2–6', minor: '1',   major: '—',   catastrophe: '—'   },
+  { min: 200, max: 299, label: '200 – 299 kPo', safe: '3–6', minor: '1–2', major: '—',   catastrophe: '—'   },
+  { min: 300, max: 399, label: '300 – 399 kPo', safe: '4–6', minor: '2–3', major: '1',   catastrophe: '—'   },
+  { min: 400, max: 499, label: '400 – 499 kPo', safe: '5–6', minor: '3–4', major: '1–2', catastrophe: '—'   },
+  { min: 500, max: 599, label: '500 – 599 kPo', safe: '6',   minor: '4–5', major: '2–3', catastrophe: '1'   },
+  { min: 600, max: 1e9, label: '600 kPo et +',  safe: '—',   minor: '5–6', major: '3–4', catastrophe: '1–2' }
+];
+
+/* Chaque issue de démonstration porte une trésorerie qui la rend possible :
+   une catastrophe n'existe qu'au-delà de 500 kPo. */
+var SCENARIOS = {
+  safe:        { treasury: 345, roll: 5, dice: [],     issue: 'safe'        },
+  minor:       { treasury: 345, roll: 3, dice: [2],    issue: 'minor'       },
+  major:       { treasury: 345, roll: 1, dice: [],     issue: 'major'       },
+  catastrophe: { treasury: 560, roll: 1, dice: [3, 4], issue: 'catastrophe' }
+};
+
+var courant = SCENARIOS.safe;
+
+function bande(treasury) {
+  return TABLE.find(function (b) { return treasury >= b.min && treasury <= b.max; });
+}
+
+function dessinerTable() {
+  var b = bande(courant.treasury);
+  document.getElementById('cm-table-body').innerHTML = TABLE.map(function (l) {
+    var actuelle = l === b;
+    var cases = ['safe', 'minor', 'major', 'catastrophe'].map(function (c) {
+      var touche = actuelle && courant.issue === c;
+      return '<td class="' + (touche ? 'hit' : '') + '">' + l[c] + '</td>';
+    }).join('');
+    return '<tr class="' + (actuelle ? 'current' : '') + '"><td>' + l.label + '</td>' + cases + '</tr>';
+  }).join('');
+}
+
+function setIssue(nom) {
+  courant = SCENARIOS[nom];
+  document.querySelectorAll('.state-pill').forEach(function (p) {
+    p.classList.toggle('active', p.dataset.issue === nom);
+  });
+  document.getElementById('hdr-treasury').textContent = courant.treasury + ' kPo';
+  document.getElementById('hdr-band').textContent = bande(courant.treasury).label;
+  document.getElementById('cm-die').textContent = '?';
+  document.getElementById('cm-die').className = 'cm-die';
+  document.getElementById('cm-result').classList.remove('shown');
+  document.getElementById('cm-roll').disabled = false;
+  document.getElementById('cm-roll').textContent = 'Lancer le dé';
+  document.getElementById('cm-hint').textContent = 'Un seul jet, une seule fois.';
+  document.getElementById('cm-continue').disabled = true;
+  dessinerTable();
+}
+
+function rollDie() {
+  var bouton = document.getElementById('cm-roll');
+  var de = document.getElementById('cm-die');
+  bouton.disabled = true;
+  de.className = 'cm-die cm-die--rolling';
+  document.getElementById('cm-hint').textContent = 'Le dé roule…';
+
+  var debut = Date.now();
+  var timer = setInterval(function () {
+    de.textContent = 1 + Math.floor(Math.random() * 6);
+    if (Date.now() - debut > 1100) {
+      clearInterval(timer);
+      de.textContent = courant.roll;
+      de.className = 'cm-die cm-die--done';
+      afficherResultat();
+    }
+  }, 70);
+}
+
+function des(valeurs) {
+  if (!valeurs.length) return '';
+  return '<span class="cm-dice-detail">' + valeurs.map(function (v) {
+    return '<span class="cm-die-mini">' + v + '</span>';
+  }).join('') + '</span>';
+}
+
+function ligne(label, valeur, classe) {
+  return '<div class="cm-calc-line ' + (classe || '') + '">'
+       + '<span class="cm-calc-label">' + label + '</span>'
+       + '<span class="cm-calc-value">' + valeur + '</span></div>';
+}
+
+function afficherResultat() {
+  var t = courant.treasury, perte = 0, calc = '', titre, texte, icone, variante;
+
+  if (courant.issue === 'safe') {
+    titre = 'Crise évitée'; icone = '🍀'; variante = 'safe';
+    texte = 'Les comptes sont passés au travers. Rien n\'est perdu.';
+    calc = ligne('Trésorerie', t + ' kPo')
+         + ligne('Perte', '0 kPo', 'cm-calc-line--total')
+         + ligne('Il vous reste', t + ' kPo', 'cm-calc-line--rest');
+  } else if (courant.issue === 'minor') {
+    var d3 = courant.dice[0];
+    perte = d3 * 10;
+    titre = 'Incident mineur'; icone = '💸'; variante = 'minor';
+    texte = 'Une dépense imprévue, vite absorbée.';
+    calc = ligne('Trésorerie', t + ' kPo')
+         + ligne('Jet de dégâts — 1D3 × 10' + des([d3]), d3 + ' × 10 = ' + perte + ' kPo')
+         + ligne('Perte', '− ' + perte + ' kPo', 'cm-calc-line--total')
+         + ligne('Il vous reste', (t - perte) + ' kPo', 'cm-calc-line--rest');
+  } else if (courant.issue === 'major') {
+    var moitie = t / 2;
+    perte = Math.floor(moitie / 5) * 5;
+    titre = 'Incident majeur'; icone = '🔥'; variante = 'major';
+    texte = 'La moitié de la caisse y passe.';
+    calc = ligne('Trésorerie', t + ' kPo')
+         + ligne('La moitié', moitie + ' kPo')
+         + ligne('Arrondie au 5 kPo inférieur', perte + ' kPo')
+         + ligne('Perte', '− ' + perte + ' kPo', 'cm-calc-line--total')
+         + ligne('Il vous reste', (t - perte) + ' kPo', 'cm-calc-line--rest');
+  } else {
+    var somme = courant.dice[0] + courant.dice[1];
+    var reste = somme * 10;
+    perte = t - reste;
+    titre = 'Catastrophe'; icone = '💀'; variante = 'catastrophe';
+    texte = 'Il ne reste presque rien.';
+    calc = ligne('Trésorerie', t + ' kPo')
+         + ligne('Ce qui est sauvé — 2D6 × 10' + des(courant.dice), somme + ' × 10 = ' + reste + ' kPo')
+         + ligne('Perte', '− ' + perte + ' kPo', 'cm-calc-line--total')
+         + ligne('Il vous reste', reste + ' kPo', 'cm-calc-line--rest');
+  }
+
+  document.getElementById('cm-verdict').className = 'cm-verdict cm-verdict--' + variante;
+  document.getElementById('cm-verdict-icon').textContent = icone;
+  document.getElementById('cm-verdict-title').textContent = titre;
+  document.getElementById('cm-verdict-text').textContent = texte;
+  document.getElementById('cm-calc').innerHTML = calc;
+  document.getElementById('cm-result').classList.add('shown');
+  document.getElementById('cm-hint').textContent = 'Jet effectué — il ne peut pas être relancé.';
+  document.getElementById('cm-roll').textContent = 'Dé lancé';
+  document.getElementById('cm-continue').disabled = false;
+  dessinerTable();
+}
+
+setIssue('safe');
+</script>
+</body>
+</html>
