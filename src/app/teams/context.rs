@@ -8,7 +8,8 @@ use crate::app::teams::io::listeners::{phase_basket_purge_listener, team_value_l
 use crate::app::teams::io::repository::phase_basket_repository::PhaseBasketRepository;
 use crate::app::teams::io::repository::team_repository::TeamRepository;
 use crate::app::teams::ports::{
-    IJourneymanTypePort, IPhaseBasketRepository, IRosterCatalogPort, ISquadPort, ITeamRepository,
+    IJourneymanTypePort, IPhaseBasketRepository, IRosterCatalogPort, ISquadPort, ITeamAccessPort,
+    ITeamRepository,
 };
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
@@ -20,6 +21,10 @@ pub struct TeamsContext {
     pub journeyman_type_port: Arc<dyn IJourneymanTypePort>,
     pub roster_catalog_port: Arc<dyn IRosterCatalogPort>,
     pub squad_port: Arc<dyn ISquadPort>,
+    /// Les deux droits d'administration qu'une équipe ne porte pas elle-même.
+    /// Sert au seul affichage du bouton d'édition d'effectif — l'écriture reste
+    /// gardée côté `players`.
+    pub access_port: Arc<dyn ITeamAccessPort>,
     pub basket_repository: Arc<dyn IPhaseBasketRepository>,
 }
 
@@ -64,12 +69,14 @@ impl TeamsContext {
         journeyman_type_port: Arc<dyn IJourneymanTypePort>,
         roster_catalog_port: Arc<dyn IRosterCatalogPort>,
         squad_port: Arc<dyn ISquadPort>,
+        access_port: Arc<dyn ITeamAccessPort>,
     ) -> Self {
         Self {
             team_repository: Arc::new(TeamRepository::new(pool.clone(), event_bus)),
             journeyman_type_port,
             roster_catalog_port,
             squad_port,
+            access_port,
             basket_repository: Arc::new(PhaseBasketRepository::new(pool.clone())),
         }
     }

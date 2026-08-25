@@ -1,3 +1,4 @@
+use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::teams::domain::team::{GamePhase, Team, TeamDomainEvent};
 use async_trait::async_trait;
 
@@ -21,6 +22,36 @@ pub struct SquadMemberDto {
     pub spp: u32,
     pub value_kpo: u32,
     pub available_for_next_match: bool,
+}
+
+/// Les deux droits qu'un visiteur **ne tient pas de la propriété** de l'équipe.
+///
+/// Un seul port pour deux questions, là où `players` en a deux : les siens
+/// servent ailleurs, ceux-ci ne répondent qu'à « ce visiteur peut-il modifier
+/// cet effectif ? ». Deux ports auraient valu deux câblages dans `main.rs`
+/// pour un seul appelant.
+///
+/// La propriété n'y figure pas, et c'est délibéré : `Team` porte déjà
+/// `coach_id`. Elle se décide sans aucun aller-retour, et c'est pour ça qu'elle
+/// est évaluée en premier.
+///
+/// # `coach_name` en plus de `coach_id`
+///
+/// Une compétition stocke ses administrateurs **des deux façons** —
+/// `admin_ids` et `admin_names`. `can_spend_spp`, qui garde l'écriture,
+/// interroge les deux. N'en reprendre qu'une priverait du bouton des
+/// administrateurs qui l'ont aujourd'hui, et l'affichage cesserait de suivre
+/// l'autorisation — le défaut même que cette carte corrige.
+#[async_trait]
+pub trait ITeamAccessPort: Send + Sync {
+    async fn is_space_admin(&self, coach_id: &CoachId, space_id: &SpaceId) -> bool;
+
+    async fn is_competition_admin(
+        &self,
+        competition_id: &str,
+        coach_id: &str,
+        coach_name: &str,
+    ) -> bool;
 }
 
 /// Consultation de l'effectif. Rend l'effectif **entier**, drapeau de

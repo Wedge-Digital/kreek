@@ -500,6 +500,10 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                 teams_journeyman_type,
                 teams_roster_catalog,
                 teams_squad,
+                Arc::new(crate::infrastructure::teams::access_adapter::TeamAccessAdapter::new(
+                    Arc::new(crate::app::spaces::io::repository::space_repository::SpaceRepository::new(pool.clone())),
+                    Arc::new(crate::app::competitions::io::repository::competition_repository::CompetitionRepository::new(pool.clone())),
+                )),
             )
         },
         players: PlayersContext::new(

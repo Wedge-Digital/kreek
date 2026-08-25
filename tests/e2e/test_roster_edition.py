@@ -352,3 +352,38 @@ def test_membre_sans_droit_est_refuse(roster_ctx):
     # dû à une URL fautive se lirait comme un refus d'autorisation.
     accepte = requests.post(url, headers=entetes, data="")
     assert accepte.status_code == 200, f"DevCoach : {accepte.status_code}"
+
+def test_un_coach_tiers_ne_voit_pas_le_bouton_d_edition(browser, space_id, roster_ctx):
+    """Carte 389 — l'affichage rejoint l'autorisation.
+
+    L'écriture était déjà gardée : le test ci-dessus le montre par un 403. Mais
+    le bouton s'affichait pour tout visiteur, qui entrait en édition, saisissait
+    un effectif entier, et découvrait le refus à l'enregistrement.
+
+    Un contexte de navigateur à part, et non la fixture `page` : l'en-tête de
+    profil se pose à la création du contexte, et le partager avec les autres
+    tests les connecterait tous en membre simple.
+    """
+    home = roster_ctx["team_id"]
+    url = f"{BASE_URL}/app/{space_id}/teams/{home}"
+
+    contexte = browser.new_context(extra_http_headers=ENTETE_MEMBRE_SIMPLE)
+    try:
+        vue_tiers = contexte.new_page()
+        vue_tiers.goto(url, wait_until="load")
+        expect(vue_tiers.locator(".state-banner")).to_be_visible(timeout=10000)
+        expect(vue_tiers.locator(".roster-edit-trigger-btn")).to_have_count(0)
+        # Le bandeau garde tout le reste : on retire un raccourci, pas la page.
+        expect(vue_tiers.get_by_text("Imprimer", exact=False).first).to_be_visible()
+    finally:
+        contexte.close()
+
+    # Contre-épreuve indispensable : sans elle, le test passerait aussi bien si
+    # le bouton avait disparu pour tout le monde.
+    vue_admin = browser.new_page()
+    try:
+        vue_admin.goto(url, wait_until="load")
+        expect(vue_admin.locator(".roster-edit-trigger-btn")).to_have_count(1)
+    finally:
+        vue_admin.close()
+

@@ -1,6 +1,8 @@
+use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
 use crate::app::teams::domain::team::{GamePhase, ParticipationStatus, Team};
 use crate::app::teams::ports::{IRosterCatalogPort, ITeamRepository, RepositoryError};
+use crate::app::teams::use_cases::roster_edit_access_service;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -82,7 +84,16 @@ pub struct BannerVm {
 }
 
 impl BannerVm {
-    fn from_domain(team: &Team, space_id: &str, app_routes: &AppRoutes) -> Option<Self> {
+    /// `peut_editer` ne conditionne **que** le déclencheur d'édition. Le
+    /// bandeau, son texte et le bouton d'impression restent identiques pour
+    /// tout visiteur : on retire un raccourci qu'il n'a pas le droit
+    /// d'emprunter, on ne lui cache pas la page.
+    fn from_domain(
+        team: &Team,
+        space_id: &str,
+        app_routes: &AppRoutes,
+        peut_editer: bool,
+    ) -> Option<Self> {
         use GamePhase::*;
         use ParticipationStatus::*;
 
@@ -101,7 +112,10 @@ impl BannerVm {
                 icon: "✅".into(),
                 title: "Équipe prête à jouer.".into(),
                 detail: "Aucune action requise avant le prochain match.".into(),
-                ctas: vec![BannerCtaVm::RosterEdit, BannerCtaVm::Print],
+                ctas: match peut_editer {
+                    true => vec![BannerCtaVm::RosterEdit, BannerCtaVm::Print],
+                    false => vec![BannerCtaVm::Print],
+                },
             }),
             (Enrolled, Some(MatchReporting)) => {
                 let href = team
@@ -191,7 +205,12 @@ pub struct TeamDetailVm {
 }
 
 impl TeamDetailVm {
-    fn from(team: &Team, space_id: &str, roster_catalog_port: &dyn IRosterCatalogPort) -> Self {
+    fn from(
+        team: &Team,
+        space_id: &str,
+        roster_catalog_port: &dyn IRosterCatalogPort,
+        peut_editer: bool,
+    ) -> Self {
         let (status_label, status_css_class) = status_display(team);
         let roster_initials = team
             .roster_name
@@ -224,7 +243,7 @@ impl TeamDetailVm {
         });
 
         let app_routes = AppRoutes::default();
-        let banner = BannerVm::from_domain(team, space_id, &app_routes);
+        let banner = BannerVm::from_domain(team, space_id, &app_routes, peut_editer);
 
         Self {
             id: team.id.to_string(),
@@ -317,6 +336,7 @@ async fn find_team_with_retry(
 
 pub async fn team_detail(
     Path((space_id, team_id)): Path<(String, String)>,
+    auth_session: AuthSession,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let team = match find_team_with_retry(state.teams.team_repository.as_ref(), &team_id).await {
@@ -331,12 +351,27 @@ pub async fn team_detail(
         }
     };
 
+    // Sans session, aucun droit : le bandeau garde son texte et son bouton
+    // d'impression, il perd seulement le déclencheur d'édition.
+    let peut_editer = match auth_session.user.as_ref() {
+        Some(user) => {
+            roster_edit_access_service::peut_modifier_effectif(
+                &team,
+                &user.id,
+                &user.coach_name.clone().into_inner(),
+                state.teams.access_port.as_ref(),
+            )
+            .await
+        }
+        None => false,
+    };
+
     let back_url = AppRoutes::default().team_creation.my_teams(&space_id);
     let roster_catalog_port = state.teams.roster_catalog_port.as_ref();
 
     TeamDetailTemplate {
         app_routes: Default::default(),
-        vm: TeamDetailVm::from(&team, &space_id, roster_catalog_port),
+        vm: TeamDetailVm::from(&team, &space_id, roster_catalog_port, peut_editer),
         back_url,
     }
     .into_response()
@@ -358,6 +393,52 @@ mod tests {
     use crate::app::teams::ports::{MyTeamRow, TeamCardRow, TeamEnrollmentRow};
     use async_trait::async_trait;
     use std::sync::Mutex;
+
+    /// Le bandeau perd **le seul** déclencheur d'édition, et rien d'autre.
+    ///
+    /// C'est ce qui distingue « masquer un raccourci » de « cacher la page » :
+    /// un visiteur tiers garde le bandeau, son texte et son bouton
+    /// d'impression. Sans cette moitié-là, un correctif qui viderait les CTA
+    /// passerait le test du bouton absent.
+    #[test]
+    fn le_bandeau_perd_le_seul_bouton_d_edition_pour_un_tiers() {
+        // `TeamEnrolled` pose les deux états d'un coup — inscrite et prête à
+        // jouer —, seul couple dans lequel le bouton d'édition existe.
+        let team = Team::hydrate(&[
+            created_event(),
+            TeamDomainEvent::TeamEnrolled {
+                competition_id: CompetitionId::try_new("00000000000000000000000003").unwrap(),
+                competition_name: "Ligue de Condate".to_string(),
+                season_id: SeasonId::try_new("00000000000000000000000004").unwrap(),
+                season_name: "Saison 2025".to_string(),
+            },
+        ])
+        .unwrap();
+        let routes = AppRoutes::default();
+
+        let avec = BannerVm::from_domain(&team, "space", &routes, true).unwrap();
+        let sans = BannerVm::from_domain(&team, "space", &routes, false).unwrap();
+
+        assert!(avec
+            .ctas
+            .iter()
+            .any(|c| matches!(c, BannerCtaVm::RosterEdit)));
+        assert!(!sans
+            .ctas
+            .iter()
+            .any(|c| matches!(c, BannerCtaVm::RosterEdit)));
+
+        for banniere in [&avec, &sans] {
+            assert!(
+                banniere
+                    .ctas
+                    .iter()
+                    .any(|c| matches!(c, BannerCtaVm::Print)),
+                "le bouton d'impression reste pour tout le monde"
+            );
+            assert_eq!(banniere.title, avec.title, "le texte ne change pas");
+        }
+    }
 
     fn created_event() -> TeamDomainEvent {
         TeamDomainEvent::TeamCreated {

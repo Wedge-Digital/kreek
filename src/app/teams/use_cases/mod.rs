@@ -7,6 +7,7 @@ pub mod dismiss_staff;
 pub mod dismiss_team;
 pub mod recompute_team_value_use_case;
 pub mod reject_enrollment;
+pub mod roster_edit_access_service;
 pub mod team_value_service;
 #[cfg(test)]
 pub mod test_doubles;

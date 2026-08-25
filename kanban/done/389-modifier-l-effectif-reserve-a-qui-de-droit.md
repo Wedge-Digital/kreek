@@ -121,20 +121,50 @@ quatrième copie, en revanche, mériterait qu'on s'arrête.
 
 ## Checklist
 
-- [ ] `ITeamAccessPort` dans `teams/ports.rs`
-- [ ] `access_adapter.rs` dans `src/infrastructure/teams/`, câblé dans
-      `main.rs` et porté par `TeamsContext`
-- [ ] `roster_edit_access_service.rs` + marqueur `arch:no-instrument`
-- [ ] `team_detail` prend `AuthSession` ; visiteur sans session → pas de CTA
-- [ ] `BannerVm::from_domain` conditionne `RosterEdit`, laisse `Print`
-- [ ] Tests unitaires, sur un port factice :
-  - [ ] coach propriétaire → bouton
-  - [ ] admin d'espace non propriétaire → bouton
-  - [ ] admin de compétition par id → bouton ; par nom → bouton
-  - [ ] coach tiers → **pas** de bouton, bandeau et `Imprimer` toujours là
-  - [ ] équipe sans compétition et visiteur tiers → pas de bouton, aucun appel
-        au port compétition
-- [ ] Test e2e : un coach tiers ouvre la fiche d'une équipe prête à jouer et
-      n'y voit pas le bouton — **à vérifier avant d'écrire** : le jeu de
-      données e2e porte-t-il un second coach dans le même espace ?
-- [ ] `make lint`, `make check-arch`, `make test`, tests e2e impactés
+- [x] `ITeamAccessPort` dans `teams/ports.rs`
+- [x] `access_adapter.rs`, câblé dans `main.rs`, porté par `TeamsContext`
+- [x] `roster_edit_access_service.rs` + marqueur `arch:no-instrument`
+- [x] `team_detail` prend `AuthSession` ; sans session → pas de CTA
+- [x] `BannerVm::from_domain` conditionne `RosterEdit`, laisse `Print`
+- [x] Six tests unitaires sur port factice, plus un septième sur le bandeau
+- [x] Test e2e, **vu échouer** — `Locator expected to have count '0', actual: 1`
+- [x] `make lint`, `make check-arch`, `make test` — 1266 tests
+
+## Ce qui a été fait
+
+Le port compte ses appels dans les tests, et c'est ce qui permet de vérifier
+l'ordre des trois questions : un propriétaire qui regarde son équipe — le cas
+de loin le plus fréquent — ne déclenche **aucun** aller-retour, et une équipe
+hors compétition n'interroge pas le port des compétitions. Sans ces
+assertions-là, l'ordre serait une intention non tenue.
+
+L'adapter rend `false` quand un dépôt échoue : le bouton disparaît plutôt que
+d'apparaître à tort. L'écriture restant gardée par `can_spend_spp`, le pire cas
+est un administrateur privé de son raccourci, jamais un visiteur qui gagne un
+droit.
+
+### Un septième test que la carte ne demandait pas
+
+Celui du bandeau. La carte listait « coach tiers → pas de bouton, bandeau et
+`Imprimer` toujours là », mais rien ne tenait la seconde moitié. Un correctif
+qui aurait vidé les CTA — ou masqué le bandeau entier — aurait passé le test du
+bouton absent. Il compare désormais les deux rendus et vérifie que seul le
+déclencheur d'édition change.
+
+### La question laissée ouverte est réglée
+
+« Le jeu de données e2e porte-t-il un second coach dans le même espace ? » —
+oui : `X-Bypass-Auth-Profile: simple` connecte « E2E Coach 01 », membre simple,
+et trois fichiers s'en servent déjà. Le test e2e ouvre un **contexte de
+navigateur à part** : l'en-tête se pose à sa création, et le partager
+connecterait tous les autres tests en membre simple.
+
+Il porte sa contre-épreuve : sans elle, il passerait aussi bien si le bouton
+avait disparu pour tout le monde.
+
+### Le piège de l'axe 11
+
+`arch:no-instrument` n'est reconnu que sur **la seule ligne qui précède** la
+fonction. Écrit sur deux lignes, il échoue — et le message ne dit pas pourquoi,
+il se contente de nommer la fonction non instrumentée. Le motif est désormais
+sur une ligne, avec un commentaire qui prévient le prochain.
