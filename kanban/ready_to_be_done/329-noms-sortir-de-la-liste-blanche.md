@@ -11,22 +11,48 @@ tier.rs}`, `src/app/teams/domain/value_objects.rs`,
 `src/app/competitions/io/web/templates/admin/widgets/schedule-round-detail.html`
 (+ son contrôleur)
 
-## Le problème
+## Mise à jour du 2026-08-25 — ce que le commit `542bdfd` a déjà réglé
 
-Il n'y a pas une règle de nommage mais six, incohérentes.
+La carte décrivait **six règles de nommage incohérentes**, une par value object.
+Ce constat est périmé : `542bdfd` (« un charset unique pour tout le texte
+saisi ») les a fondues en deux expressions, dans
+`src/app/shared_kernel/identity/charset.rs` :
 
-| Value object | Fichier | Long. | Charset |
-|---|---|---|---|
-| `SpaceName` | `identity/space_name.rs:6` | 100 | `\p{L} 0-9 _ - ' .` espace |
-| `NameVo` — alias de `TeamName` (`team_creation`), `SeasonName`, `TierName` | `identity/name_vo.rs:5` | 50 | `\p{L} 0-9 -` espace |
-| `TeamName` (BC `teams`) | `teams/domain/value_objects.rs:34` | 100 | `\p{L} 0-9 -` espace |
-| `CoachName` | `identity/coach_name.rs:5` | 50 | `\p{L} 0-9 . _ -` espace |
-| `CompetitionName` | `bloodbowl/competition_name.rs:8` | 100 | très large |
-| `RosterName` | `teams/domain/value_objects.rs:22` | 100 | aucune regex |
+| Constante | Portée | Expression |
+|---|---|---|
+| `TEXTE_SAISI` | tout texte saisi — compétence, poste, joueur, équipe, roster, espace, saison, journée, tier, compétition | `^[\p{L}\p{M}\p{N} '’\-–—.,;:!?()\[\]«»"“”…&@#%*+=_°~/\\]+$` |
+| `IDENTIFIANT_COACH` | `CoachName` seul | `^[\p{L}\p{M}\p{N}._ '’\-–—]+$` |
 
-`L'Ost du Chaos` est refusé en nom d'équipe mais accepté en nom d'espace.
-`Les Zazous & Cie` est refusé des deux côtés, accepté en compétition.
-`Jean-Éric O'Brien` est refusé en nom de coach.
+Les trois exemples qui ouvraient cette carte **passent désormais tous les
+trois** : `L'Ost du Chaos`, `Les Zazous & Cie`, `Jean-Éric O'Brien`. Le commit a
+pris pour base l'ancien charset de `CompetitionName`, le plus permissif des
+onze, et y a ajouté les marques combinantes (`\p{M}`, pour les accents
+décomposés collés depuis macOS), les apostrophes et tirets typographiques, les
+guillemets et deux séparateurs.
+
+## Le problème, tel qu'il reste
+
+**C'est toujours une liste blanche**, et elle se rouvrira au prochain caractère
+oublié. Restent dehors aujourd'hui :
+
+| Refusé | Exemple qui échoue |
+|---|---|
+| `\p{So}` — emoji et symboles | `Team 🏈` |
+| `\p{Sc}` — symboles monétaires | `Ligue €uro` |
+| `< > \| { } $ ^` | `Équipe <Étoilée>`, `Journée\|1` |
+
+Le mécanisme n'a pas changé : chaque caractère non prévu redevient une carte, et
+un nom refusé **ne dit toujours pas pourquoi** — les quatre sites qui avalent
+l'échec (`UnknownSkill` dans `validate_customisation_use_case.rs`, poste replié
+sur « Joueur » dans `player_creation.rs`, roster escamoté par un `.ok()?` deux
+fois dans `roster_service.rs`) sont intacts. `CLAUDE.md` le note noir sur blanc :
+« élargir le charset fait passer le français d'aujourd'hui ; ça ne répare pas le
+mécanisme ».
+
+**Ce qui reste vrai de la divergence** : `NameVo` porte toujours **quatre alias**
+— `TeamName` (dans `team_creation`), `SeasonName`, `MatchDayName`, `TierName` —
+qui sont littéralement le même type Rust, et sa borne est 50 quand le `TeamName`
+de `teams` est à 100. Le charset, lui, est désormais commun aux deux.
 
 ## Pourquoi la liste blanche, et pas une liste blanche plus longue
 
@@ -58,18 +84,22 @@ Passent désormais : `'` `&` `"` `<` `>` `!` `?` `/` `|` `«»` `—` `€`, les
 emoji, les alphabets non latins. U+200D (ZWJ) reste **autorisé** — le refuser
 casserait les séquences emoji composées et plusieurs écritures indiennes.
 
-La règle vit à un seul endroit, `identity/display_name_charset.rs` :
+La règle vit à un seul endroit — et ce fichier **existe déjà** depuis
+`542bdfd` : `identity/charset.rs`. La bascule y remplace le contenu des deux
+constantes, elle n'en crée pas un troisième :
 
 ```rust
 use regex::Regex;
 use std::sync::LazyLock;
 
-pub static DISPLAY_NAME: LazyLock<Regex> = LazyLock::new(|| {
+pub static TEXTE_SAISI: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^[^\p{Cc}\p{Zl}\p{Zp}\x{202A}-\x{202E}\x{2066}-\x{2069}]+$").unwrap()
 });
 ```
 
-et chaque `nutype` la référence par `validate(regex = DISPLAY_NAME)`.
+Les `nutype` la référencent déjà par `validate(regex = TEXTE_SAISI)` : **aucun
+d'eux n'est à toucher**, ce que la version d'origine de cette carte ne pouvait
+pas prévoir. Le câblage est fait ; il ne reste que l'expression à retourner.
 
 Les deux points d'intendance sont vérifiés : `nutype` 0.7 accepte
 `regex = IDENT` sur un `static LazyLock<Regex>` (README, section *regex*), et
@@ -77,31 +107,37 @@ Les deux points d'intendance sont vérifiés : `nutype` 0.7 accepte
 nouvelle. La regex ci-dessus a été compilée et éprouvée sur les douze cas du
 tableau de tests plus bas.
 
-## Piège n°1 — il y a deux `TeamName`, et ils doivent bouger ensemble
+## Piège n°1 — il y a deux `TeamName`, et ils ne portent plus la même borne
 
-`team_creation` utilise `NameVo` (50), `teams` a le sien (100).
-`teams/io/app_events/team_created_listener.rs:66` fait :
+`team_creation` utilise `NameVo` (50), `teams` a le sien (100). Depuis
+`542bdfd`, **les deux partagent `TEXTE_SAISI`** : le scénario d'origine — un
+seul des deux assoupli, et une équipe fraîchement créée s'appelant
+silencieusement « Unknown » via
+`teams/io/app_events/team_created_listener.rs:66` — ne peut plus se produire par
+le charset. Il le pourrait encore par la **longueur**, si l'un des deux bougeait
+seul. Les faire converger à 100 reste au programme.
 
 ```rust
 let tname = TeamName::try_new(team_name)
     .unwrap_or_else(|_| TeamName::try_new("Unknown".to_string()).unwrap());
 ```
 
-Assouplir un seul des deux, et une équipe fraîchement créée s'appelle
-**silencieusement « Unknown »** dans le BC `teams`. Les deux convergent à 100.
+Ce repli silencieux reste la vraie fragilité : il transformera n'importe quelle
+divergence future en nom « Unknown », sans une ligne de journal.
 
 Au passage : `pub type TeamName = NameVo` est un **alias**, pas un newtype —
-`TeamName`, `SeasonName` et `TierName` sont aujourd'hui littéralement le même
+`TeamName`, `SeasonName`, `MatchDayName` et `TierName` sont aujourd'hui le même
 type Rust, et le compilateur accepte une saison là où une équipe est attendue.
-Puisqu'on ouvre ce fichier, les séparer en trois `nutype` distincts partageant
+Puisqu'on ouvre ce fichier, les séparer en quatre `nutype` distincts partageant
 le charset. C'est la règle « pas de type primitif nu » du `CLAUDE.md`, un cran
 au-dessus.
 
 ## Piège n°2 — `CoachName` n'est pas un nom d'affichage, c'est un identifiant de connexion
 
-`post_login` s'en sert comme identifiant, et
-`migrations/20260502120000_users.sql:10` porte
-`users_coach_name_uq UNIQUE (coach_name)` — unicité **octet par octet**.
+`post_login` s'en sert comme identifiant. L'unicité est portée par
+`users_coach_name_lower_uq UNIQUE (lower(coach_name))` — depuis la migration
+`20260812000001`, elle est **insensible à la casse**, mais reste **octet par
+octet** pour tout le reste.
 Rendre ce champ pleinement permissif ouvre l'usurpation par caractère
 invisible : `Bagouze` et `Bagouze` avec un ZWSP inséré deviennent deux comptes
 distincts, visuellement identiques, dans la liste des coachs comme dans les
@@ -114,7 +150,7 @@ de coach — acceptable pour un identifiant. Les homoglyphes inter-alphabets
 normalisation et une table de confusables, c'est une carte à part si le besoin
 se présente.
 
-## Piège n°3 — un rendu qui va casser le jour où la carte sort
+## Piège n°3 — un rendu déjà cassé, depuis `542bdfd`
 
 `competitions/io/web/templates/admin/widgets/schedule-round-detail.html:102` :
 
@@ -123,11 +159,14 @@ se présente.
 ```
 
 C'est à l'intérieur d'un `<script>`. Askama échappe en entités HTML, que le
-navigateur **ne décode pas** dans un `<script>` : `L'Ost` s'affichera
+navigateur **ne décode pas** dans un `<script>` : `L'Ost` s'affiche
 `L&#x27;Ost` dans le sélecteur d'équipes de l'admin. Ce n'est pas une injection
-— l'échappement tient, `</script>` devient `&lt;/script&gt;` — mais c'est une
-corruption visible qui n'apparaîtra qu'après cette carte, donc elle en fait
-partie.
+— l'échappement tient, `</script>` devient `&lt;/script&gt;`.
+
+**Ce défaut n'est plus à venir : il est actif.** La carte le prévoyait « le jour
+où la carte sort » ; depuis `542bdfd`, l'apostrophe est acceptée partout, donc
+tout nom d'équipe ou de coach qui en porte une s'affiche corrompu dans ce
+sélecteur, aujourd'hui, en production.
 
 Correctif : cesser d'interpoler dans du JS. Le contrôleur sérialise le tableau
 avec `serde_json`, le template le pose en attribut `data-teams`, le script fait
@@ -151,10 +190,14 @@ réelle.
 
 ## Hors périmètre
 
-`CompetitionName`, `RosterName`, `PositionNameVo`, `PersonalName`, `SkillName`.
-La même bascule leur ira, mais l'élargir maintenant double la surface de test
-sans rien débloquer. `CompetitionName` deviendra d'ailleurs un simple appel à
-`DISPLAY_NAME` — carte de suite, triviale.
+`RosterName` — le seul qui n'ait **aucune** regex, ni avant ni après
+`542bdfd`.
+
+`CompetitionName`, `PositionNameVo`, `PersonalName` et `SkillName` sortent du
+hors-périmètre : depuis `542bdfd` ils partagent tous `TEXTE_SAISI`, donc la
+bascule les emporte qu'on le veuille ou non. C'est un élargissement de portée
+par rapport à la version d'origine de la carte, et il faut le tester en
+conséquence.
 
 Les longueurs restent inchangées, à l'exception des deux `TeamName` qui
 convergent : uniformiser les bornes est un autre sujet que les caractères.
@@ -164,17 +207,21 @@ de charset, et on élargit — tout nom existant reste valide.
 
 ## Tableau de tests unitaires
 
-Une assertion par ligne, à décliner sur chaque VO.
+Une assertion par ligne, à décliner sur chaque VO. La colonne « déjà »
+distingue ce que `542bdfd` fait passer aujourd'hui — utile en non-régression,
+mais qui ne prouve rien de la bascule — de ce qui la discrimine réellement.
 
-| Valeur | Attendu | Motif |
-|---|---|---|
-| `L'Ost du Chaos` | accepté | apostrophe |
-| `Les Zazous & Cie` | accepté | esperluette |
-| `F.C. Machin` | accepté | points |
-| `Équipe <Étoilée>` | accepté | chevrons — l'échappement au rendu s'en charge |
-| `Ligue « Hiver » — 2026` | accepté | guillemets français, tiret cadratin |
-| `Скавены` | accepté | alphabet non latin |
-| `Team 🏈` | accepté | emoji simple |
+| Valeur | Attendu | Déjà ? | Motif |
+|---|---|---|---|
+| `L'Ost du Chaos` | accepté | oui | apostrophe |
+| `Les Zazous & Cie` | accepté | oui | esperluette |
+| `F.C. Machin` | accepté | oui | points |
+| `Ligue « Hiver » — 2026` | accepté | oui | guillemets français, tiret cadratin |
+| `Скавены` | accepté | oui | `\p{L}` couvre déjà les alphabets non latins |
+| `Équipe <Étoilée>` | accepté | **non** | chevrons — l'échappement au rendu s'en charge |
+| `Ligue €uro` | accepté | **non** | `\p{Sc}`, hors de la liste blanche actuelle |
+| `Journée\|1` | accepté | **non** | la barre verticale, refusée aujourd'hui |
+| `Team 🏈` | accepté | **non** | emoji simple |
 | `Famille 👨‍👩‍👧` | accepté partout **sauf `CoachName`** | séquence ZWJ (U+200D) |
 | `Ligne1\nLigne2` | refusé | `\p{Cc}` |
 | `Tab\there` | refusé | `\p{Cc}` |
