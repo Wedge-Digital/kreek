@@ -675,7 +675,13 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
     );
 
     let server_address = cfg.server_addr();
-    let state = compose(cfg, pool).await;
+    let state = compose(cfg, pool.clone()).await;
+
+    // Entre `compose` et `build_router` : tous les adapters sont construits,
+    // le corpus de règles est chargé, et le serveur n'écoute pas encore. Un
+    // échec ici refuse le démarrage — cf. `infrastructure::data_migrations`.
+    infrastructure::data_migrations::executer(&state, &pool).await;
+
     let app = build_router(state);
 
     let listener = tokio::net::TcpListener::bind(&server_address)

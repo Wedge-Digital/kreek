@@ -1,4 +1,5 @@
 pub mod competitions;
+pub mod data_migrations;
 pub mod match_report;
 pub mod news;
 pub mod players;

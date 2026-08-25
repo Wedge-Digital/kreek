@@ -70,11 +70,43 @@ Sur cible `kreek::`, donc `tracing::info!` depuis ce module — une cible hors
 
 ## Checklist
 
-- [ ] Migration SQL de la table de garde
-- [ ] `src/infrastructure/data_migrations/mod.rs` : registre ordonné, exécution
+- [x] Migration SQL de la table de garde
+- [x] `src/infrastructure/data_migrations/mod.rs` : registre ordonné, exécution
       séquentielle, marque en base dans la transaction de la migration
-- [ ] Appel dans `run_server`, avant `build_router`
-- [ ] Journalisation `info` sur cible `kreek::`, sautée / appliquée / durée
-- [ ] Test unitaire : une migration factice appliquée deux fois n'écrit qu'une
-      fois ; une migration qui échoue ne marque rien
-- [ ] `make lint`, `make check-arch`, `make test`
+- [x] Appel dans `run_server`, avant `build_router`
+- [x] Journalisation `info` sur cible `kreek::`, sautée / appliquée / durée
+- [x] Quatre tests unitaires — rejeu, échec, ordre, arrêt de la série
+- [x] `make lint`, `make check-arch`, `make test` — 1243 tests
+- [x] Démarrage réel constaté : la table existe, le registre est vide
+
+## Ce qui a été fait, et deux écarts avec la carte
+
+**Le nom de migration proposé était déjà pris.** La carte annonçait
+`20260824000001_applied_data_migrations.sql` ; ce numéro appartient depuis au
+`competition_seasons_notifications_off_for_existing` de la carte 366. Le
+registre est donc en `20260825000001`.
+
+**Le cœur est séparé de son point d'entrée.** `executer()` lit le registre réel
+et refuse le démarrage ; `appliquer()` prend la liste en paramètre. Un test qui
+serait passé par `executer()` aurait dépendu des migrations réelles, dont la
+liste change à chaque carte : il aurait fallu le réécrire deux fois dans la
+semaine, et il ne testerait plus le mécanisme mais son contenu.
+
+### Deux tests que la carte ne demandait pas
+
+**L'ordre du registre.** La carte insiste sur son importance — la migration des
+valeurs d'équipe lit ce que celle des compétences corrige — sans demander de le
+vérifier. Une liste dont l'ordre compte et que rien ne tient finit par être
+réordonnée par mégarde.
+
+**L'arrêt de la série au premier échec.** Sans lui, la migration suivante
+travaillerait sur des données à moitié corrigées, et se marquerait comme
+appliquée.
+
+### Ce que le test d'échec vérifie réellement
+
+Non pas que l'erreur remonte — c'est le facile — mais que **rien ne subsiste** :
+la migration factice écrit une ligne *avant* d'échouer, et le test constate que
+cette ligne a disparu avec la marque. C'est l'atomicité qui est en jeu, pas la
+table de garde : celle-ci protège du rejeu normal, elle ne protège pas d'une
+interruption au milieu.
