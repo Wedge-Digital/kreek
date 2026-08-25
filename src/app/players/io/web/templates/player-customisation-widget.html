@@ -10,9 +10,35 @@
 
    `version` est embarquée dans chaque geste : c'est la garde d'écriture
    concurrente, et le panneau étant re-rendu à chaque action, elle repart
-   toujours à jour. #}
+   toujours à jour.
+
+   ── L'onglet actif vit dans l'URL ────────────────────────────────────────
+   L'enregistrement d'une customisation renvoie `HX-Refresh: true` : la page
+   entière se recharge, et c'est **voulu** — c'est ce qui garde justes les
+   quatre endroits qui affichent les SPP. Le remplacer par des swaps ciblés
+   ferait apparaître un défaut de fraîcheur bien pire que celui qu'on corrige
+   (cf. carte 398, qui l'a mesuré).
+
+   Mais un rechargement complet efface l'état Alpine, donc l'onglet. D'où le
+   fragment : il survit au rechargement, et l'`init()` le relit.
+
+   `replaceState` et non `location.hash` : ce dernier empile une entrée
+   d'historique par clic, et le bouton Retour du navigateur se mettrait à
+   défiler les onglets au lieu de quitter la page.
+
+   Rien n'est écrit tant qu'aucun onglet n'a été choisi : arriver sur la fiche
+   par une autre voie laisse l'URL propre et « Compétences » actif. #}
 <div class="pd-right" id="pd-right-panel" hx-disinherit="*"
-     x-data="{ activeTab: 'skills', skillSearch: '' }">
+     x-data="{
+       onglets: ['skills', 'stats', 'price', 'spp'],
+       activeTab: 'skills',
+       skillSearch: '',
+       init() {
+         const demande = location.hash.replace('#custo-', '');
+         if (this.onglets.includes(demande)) { this.activeTab = demande; }
+         this.$watch('activeTab', (v) => history.replaceState(null, '', '#custo-' + v));
+       }
+     }">
 
   <div class="spend-panel-header">
     <div class="spend-panel-title">Mode customisation</div>

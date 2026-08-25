@@ -26,6 +26,8 @@ import pytest
 import requests
 from playwright.sync_api import Page, expect
 
+from htmx_helpers import cliquer_quand_cable
+
 from competition_lifecycle import BASE_URL, build_full_competition
 from db_helpers import execute_db, query_db
 
@@ -475,3 +477,80 @@ def test_un_joueur_n_est_atteignable_que_depuis_son_espace(custo_ctx):
         timeout=10,
     )
     assert ecriture.status_code == 404, f"écriture : {ecriture.status_code}"
+
+# ── Scénario — l'onglet actif survit à l'enregistrement ───────────────────────
+
+
+SPP_AJOUTER = ".custo-action-panel:has(input[name='amount']) .custo-action-btn"
+
+
+def test_l_onglet_actif_survit_a_l_enregistrement(page: Page, custo_ctx):
+    """L'enregistrement renvoie `HX-Refresh: true` — la page entière se
+    recharge, et c'est voulu : c'est ce qui garde justes les quatre endroits
+    qui affichent les SPP. Mais un rechargement efface l'état Alpine, donc
+    l'onglet, et l'utilisateur repart de « Compétences » à chaque validation.
+
+    Seul un test de navigateur voit ce défaut : il n'y a ni requête ni réponse
+    à observer, juste un état client perdu (carte 398).
+    """
+    joueur = custo_ctx["joueurs"][-1]
+    page.goto(_url(custo_ctx, joueur, "detail"), wait_until="load")
+
+    cliquer_quand_cable(page, ".btn-customise")
+    expect(page.locator(".custo-zone .tabs")).to_be_visible(timeout=10000)
+
+    page.locator(".custo-zone .tab", has_text="SPP").click()
+    expect(page.locator(".custo-zone .tab.active")).to_have_text("SPP")
+
+    # Repéré par son contenu, pas par sa visibilité : le champ `amount`
+    # n'existe que dans le panneau SPP. Juste après un remplacement, Alpine
+    # n'a pas encore appliqué `x-show` et les quatre panneaux sont visibles —
+    # un sélecteur `:visible` désignerait alors celui des compétences.
+    panneau_spp = page.locator(".custo-action-panel:has(input[name='amount'])")
+    panneau_spp.locator("input[name='amount']").fill("5")
+    cliquer_quand_cable(page, SPP_AJOUTER)
+
+    # Attendre que le remplacement du panneau ait eu lieu **avant** de lire
+    # l'onglet : lu trop tôt, on lirait l'ancien DOM, où « SPP » est encore
+    # actif, et l'assertion passerait sans rien vérifier.
+    expect(page.locator(".custo-zone")).not_to_contain_text(
+        "Aucune modification en attente", timeout=10000
+    )
+    expect(page.locator(".custo-zone .tab.active")).to_have_text("SPP", timeout=10000)
+
+    # L'annulation d'une ligne re-rend le panneau elle aussi.
+    cliquer_quand_cable(page, ".btn-cancel-entry")
+    expect(page.locator(".custo-zone")).to_contain_text(
+        "Aucune modification en attente", timeout=10000
+    )
+    expect(page.locator(".custo-zone .tab.active")).to_have_text("SPP", timeout=10000)
+
+    # Le vidage du panier n'est pas couvert ici : il **ferme** le mode
+    # customisation — comportement voulu, tenu par
+    # `test_annuler_vide_le_panier_et_ne_rouvre_pas_le_mode`. Il n'y a donc
+    # aucun onglet à restaurer dans ce cas, et la case de la carte 398 qui le
+    # demandait n'a pas d'objet.
+
+    # Enfin l'enregistrement, qui recharge la page entière.
+    panneau_spp.locator("input[name='amount']").fill("5")
+    cliquer_quand_cable(page, SPP_AJOUTER)
+    expect(page.locator(".custo-zone")).not_to_contain_text(
+        "Aucune modification en attente", timeout=10000
+    )
+    cliquer_quand_cable(page, "button.btn-submit")
+
+    expect(page.locator(".custo-zone .tabs")).to_be_visible(timeout=10000)
+    expect(page.locator(".custo-zone .tab.active")).to_have_text("SPP", timeout=10000)
+
+
+def test_arriver_sur_la_fiche_ouvre_l_onglet_par_defaut(page: Page, custo_ctx):
+    """Le fragment ne doit rien laisser derrière lui : une fiche ouverte
+    directement, sans fragment, part de « Compétences » — sinon l'onglet d'un
+    joueur suivrait sur le suivant."""
+    joueur = custo_ctx["joueurs"][0]
+    page.goto(_url(custo_ctx, joueur, "detail"), wait_until="load")
+    cliquer_quand_cable(page, ".btn-customise")
+
+    expect(page.locator(".custo-zone .tab.active")).to_have_text(
+        "Compétences", timeout=10000
+    )

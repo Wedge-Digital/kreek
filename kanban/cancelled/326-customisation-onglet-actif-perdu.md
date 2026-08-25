@@ -1,3 +1,14 @@
+> **Carte annulée le 2026-08-25 — fusionnée dans la [398](../ready_to_be_done/398-l-onglet-de-customisation-survit-a-l-enregistrement.md).**
+>
+> Les deux cartes visaient le même écran et l'on croyait qu'elles partageaient
+> une cause. La mesure a montré l'inverse : **elles étaient en tension**. Ce qui
+> empêche le défaut de la 327 — le `HX-Refresh` de l'enregistrement — est
+> exactement ce que la 326 proposait de supprimer. Les corriger séparément
+> aurait fait que l'une défasse l'autre.
+>
+> Le contenu ci-dessous est conservé tel qu'il était ; la 398 porte le
+> diagnostic et la correction.
+
 # `players` — L'onglet de customisation actif ne survit pas à l'enregistrement
 
 **Priorité : haute** — bug de livraison du mode de customisation
