@@ -52,3 +52,6 @@ assets/articles.json
 # Le slash final est nécessaire : il ne faut pas attraper assets/references.example/,
 # le jeu de démonstration, lui versionné.
 assets/references/
+
+# Fichiers de travail du canevas de design — sources des planches, pas du produit.
+.design/

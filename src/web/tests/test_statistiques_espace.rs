@@ -1,4 +1,4 @@
-//! Les trois compteurs de l'onglet Membres.
+//! Les deux compteurs de l'onglet Membres.
 //!
 //! Le harnais vérifie ce qu'ils comptent ; **il ne peut pas vérifier qu'ils se
 //! rafraîchissent** — cela dépend d'événements DOM, et seul un test de bout en
@@ -45,21 +45,6 @@ async fn les_compteurs_derivent_de_la_meme_lecture(pool: sqlx::PgPool) {
     // Le seed pose DevCoach administrateur et onze membres simples.
     assert_eq!(compteur(&r.corps, "membres"), "12");
     assert_eq!(compteur(&r.corps, "administrateurs"), "1");
-}
-
-/// Le troisième compteur vaut zéro tant que les invitations n'existent pas.
-///
-/// Ce n'est pas un oubli : il n'y a effectivement aucune invitation en attente,
-/// faute d'invitations tout court. Le test verrouille l'intention, pour qu'une
-/// valeur inventée se voie.
-#[sqlx::test]
-async fn les_invitations_en_attente_valent_zero(pool: sqlx::PgPool) {
-    let space = contexte(&pool).await;
-    let app = Harnais::connecte_en_tant_que(pool, "DevCoach").await;
-
-    let r = app.get(&format!("/app/{space}/admin/widgets/stats")).await;
-
-    assert_eq!(compteur(&r.corps, "invitations"), "0");
 }
 
 /// Le compte d'administrateurs suit une promotion.

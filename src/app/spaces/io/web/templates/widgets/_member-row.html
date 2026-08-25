@@ -10,6 +10,10 @@
   savoir que le sélecteur du dernier administrateur doit se figer. Le retrait
   répond un corps vide, et la ligne disparaît.
 #}
+{# `membre.email` est déjà masquée par le VM : le filtre ne porte donc que sur
+   le pseudo et le domaine. C'est le prix assumé d'un masquage fait au serveur —
+   garder l'adresse ici pour la recherche l'aurait laissée lisible dans le
+   source, ce qui n'aurait masqué que pour l'œil. #}
 <div class="sam-row" data-recherche="{{ membre.name|lower }} {{ membre.email|lower }}">
   <div class="sam-avatar">{{ membre.initials }}</div>
   <div class="sam-info">
@@ -36,7 +40,7 @@
     <option value="SpaceUser"{% if !membre.is_admin %} selected{% endif %}>Membre</option>
   </kreek-select>
 
-  <div class="sam-actions">
+  <div class="sam-actions{% if !membre.removable %} sam-actions--sans-retrait{% endif %}">
     {# La destination est injectée par l'hôte : ce BC est extractible et ne
        connaît pas celui qui gère les comptes. Elle répond sans contenu, d'où
        `hx-swap="none"` et un retour visuel entièrement local.

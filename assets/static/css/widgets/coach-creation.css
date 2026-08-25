@@ -15,6 +15,17 @@
 
 .coach-creation { display: flex; flex-direction: column; gap: var(--p1); }
 
+/* Le `<form>` porte la colonne, et non sa racine : c'est lui le parent direct
+   des champs, du bouton et de la note. Tant que seule `.coach-creation` était
+   en flex, l'`align-self` du bouton s'appliquait dans un parent en `display:
+   block`, où il ne veut rien dire — la règle était bien calculée, et sans le
+   moindre effet. */
+.coach-creation form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p1);
+}
+
 .coach-creation .coach-creation-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -53,8 +64,12 @@
   border-radius: 8px;
 }
 
+/* À droite, et détaché de la ligne de champs : c'est l'action qui clôt le
+   formulaire, pas un troisième champ. `--p1` s'ajoute au `gap` du conteneur,
+   ce qui porte la séparation à --p2 sans la coder en dur. */
 .coach-creation .coach-creation-submit {
-  align-self: flex-start;
+  align-self: flex-end;
+  margin-top: var(--p1);
   padding: 10px var(--p2);
   border: none;
   border-radius: 8px;

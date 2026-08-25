@@ -86,20 +86,33 @@ def _ligne(page: Page, pseudo: str):
 
 # ── Affichage ─────────────────────────────────────────────────────────────────
 
-def test_la_page_presente_ses_quatre_onglets(page: Page, espace_jetable: str):
+def test_la_page_presente_ses_trois_onglets(page: Page, espace_jetable: str):
     _ouvrir(page, espace_jetable)
-    for libelle in ("Membres", "Ajout direct", "Invitations", "Paramètres"):
+    for libelle in ("Membres", "Ajout direct", "Paramètres"):
         expect(page.locator(".space-admin-tab").filter(has_text=libelle)).to_be_visible()
+    expect(page.locator(".space-admin-tab")).to_have_count(3)
     expect(page.locator(".space-admin-tab.is-active")).to_have_text("👥 Membres")
 
 
-def test_la_liste_affiche_pseudo_email_et_role(page: Page, espace_jetable: str):
+def test_la_liste_affiche_pseudo_email_masque_et_role(page: Page, espace_jetable: str):
+    """L'assertion porte sur l'**absence** de l'adresse, pas sur la présence
+    d'un « @ » : le masque en contient un, si bien qu'un test qui se contentait
+    de le chercher passait aussi bien avec l'adresse en clair. C'est la fuite
+    qu'il faut pouvoir attraper, pas l'affichage."""
     _ouvrir(page, espace_jetable)
 
     expect(page.locator(".sam-row")).to_have_count(2)
     ligne = _ligne(page, MEMBRE_SIMPLE)
-    expect(ligne.locator(".sam-email")).to_contain_text("@")
+    email = ligne.locator(".sam-email")
+    expect(email).to_contain_text("•••@example.test")
+    expect(email).not_to_contain_text("e2e-coach-01")
     expect(ligne.locator(".sam-role")).to_be_visible()
+
+    # Le masquage est fait au serveur : l'adresse ne doit pas non plus traîner
+    # dans le source, où le filtre local la déposait via `data-recherche`.
+    assert "e2e-coach-01@" not in page.content(), (
+        "l'adresse complète ne doit pas atteindre le navigateur"
+    )
 
 
 def test_sa_propre_ligne_n_est_ni_modifiable_ni_retirable(page: Page, espace_jetable: str):
@@ -224,11 +237,6 @@ def test_les_compteurs_suivent_une_promotion_sans_rechargement(page: Page, espac
 
     _retrograder(page, MEMBRE_SIMPLE)
     expect(_compteur(page, "administrateurs")).to_have_text("1", timeout=10000)
-
-
-def test_les_invitations_en_attente_valent_zero(page: Page, espace_jetable: str):
-    _ouvrir(page, espace_jetable)
-    expect(_compteur(page, "invitations")).to_have_text("0", timeout=10000)
 
 
 # ── Autorisation ──────────────────────────────────────────────────────────────

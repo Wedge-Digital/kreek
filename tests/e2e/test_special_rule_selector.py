@@ -21,6 +21,8 @@ import time
 
 from playwright.sync_api import Page, expect
 
+from htmx_helpers import attendre_cablage, cliquer_quand_cable
+
 BASE_URL = "http://localhost:3210"
 FAKE_LOGO_URL = "https://res.cloudinary.com/demo/image/upload/v1/sample.jpg"
 
@@ -87,7 +89,18 @@ def _create_draft_team(page: Page, space_id: str, competition_name: str) -> str:
 
 
 def _select_roster(page: Page, uid: str, name: str) -> None:
-    """Déclenche `rosterSelected` directement, sans passer par TomSelect."""
+    """Déclenche `rosterSelected` directement, sans passer par TomSelect.
+
+    L'attente de câblage est nécessaire : les trois conteneurs qui écoutent
+    `rosterSelected from:body` ne le reçoivent que si htmx les a câblés, et un
+    événement déclenché plus tôt se perd exactement comme un clic.
+
+    **Elle ne suffit pas.** Ce test reste instable — environ un échec sur six,
+    contre un sur deux avant —, et toujours au même endroit : le tableau des
+    joueurs n'arrive jamais. La cause du reste n'est pas établie ; ne pas
+    supposer que ce garde-fou l'a fermée.
+    """
+    attendre_cablage(page, "#player-table-container")
     page.evaluate(
         "([uid, name]) => htmx.trigger(document.body, 'rosterSelected', {uid, name})",
         [uid, name],
@@ -169,8 +182,12 @@ def test_finalize_blocked_when_choice_roster_has_no_special_rule(
     hired = _hire_players(page, 11)
     assert hired >= 11, f"N'a pu recruter que {hired} joueurs (11 requis)"
 
-    page.click("text=Terminer la construction →")
-    page.wait_for_timeout(1000)
+    # Le bouton vient d'être injecté : visible avant d'être câblé, et un clic
+    # tombé dans cette fenêtre se perd sans rien signaler — cf. `htmx_helpers`.
+    cliquer_quand_cable(page, "text=Terminer la construction →")
 
+    # Pas d'attente en durée : `to_contain_text` attend déjà l'état résultant,
+    # et le `wait_for_timeout(1000)` qui était ici ne pouvait de toute façon
+    # rien pour un clic déjà perdu.
     error = page.locator("#submit-errors")
     expect(error).to_contain_text("règle spéciale")

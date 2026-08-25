@@ -86,6 +86,39 @@
   color: var(--white);
 }
 
+/* ── Panneau d'onglet ───────────────────────────────────────────────────────
+   `.space-admin-panneau` existait dans le gabarit **sans aucune règle** : le
+   contenu de chaque onglet flottait donc directement sur le fond de page, sans
+   rien qui dise où un onglet commence et où il finit.
+
+   Le manque était pourtant prévu — la réservation de hauteur ci-dessous
+   budgète depuis toujours un terme « padding du panneau » de 2 × --p2, celui
+   qu'on pose enfin ici.
+
+   Même grammaire que la barre d'onglets juste au-dessus : fond blanc, bordure
+   --dark-5, rayon 12 px. C'est ce qui les fait lire comme un seul bloc. */
+.space-admin .space-admin-panneau {
+  background: var(--white);
+  border: 1px solid var(--dark-5);
+  border-radius: 12px;
+  padding: var(--p2);
+}
+/* Un onglet masqué garde son markup — `x-show` pose `display: none`, mais la
+   règle ci-dessus le repeindrait en carte vide si Alpine tardait. */
+.space-admin .space-admin-panneau[style*="display: none"] { display: none; }
+
+/* ── En-tête de section — une seule grammaire pour les deux onglets ──────────
+   Trois blocs de l'ajout direct n'étaient séparés que par des filets muets, et
+   la liste des membres n'était annoncée par rien. */
+.space-admin .space-admin-section-titre {
+  font-size: var(--text-tiny);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--dark-3);
+  margin-bottom: var(--p1);
+}
+
 /* ── Zone d'onglet — hauteur réservée ───────────────────────────────────────
    Chaque onglet est chargé en différé. La réservation évite que la zone vaille
    zéro jusqu'à l'arrivée de son fragment.
@@ -108,6 +141,7 @@
    Chaque terme vient du dessin de la maquette :
 
        barre de statistiques   64 px   (chip : 40 px + 2 × 10 px de padding)
+       titre de section        30 px   (18 px de hauteur + --p1 dessous)
        champ de recherche      44 px
        une ligne de membre     64 px   (avatar 40 px + 2 × 12 px de padding)
        padding du panneau      2 × --p2
@@ -116,17 +150,21 @@
    `min-height` et jamais `height` : la zone doit pouvoir grandir avec son
    contenu, elle ne doit simplement pas être plus petite que sa taille attendue. */
 .space-admin .space-admin-zone {
-  min-height: calc(64px + 44px + 64px + 2 * var(--p2) + 2 * var(--p1));
+  min-height: calc(64px + 30px + 44px + 64px + 2 * var(--p2) + 2 * var(--p1));
 }
 
 /* ── Bandeau d'avertissement de l'ajout direct ── */
+/* Hors du panneau et non dedans : c'est un avertissement sur l'onglet entier,
+   pas sur une de ses sections. Le filet gauche épaissi le distingue d'une carte
+   ordinaire sans lui donner la couleur pleine d'une alerte bloquante. */
 .space-admin .space-admin-avertissement {
   display: flex;
   gap: var(--p1);
   padding: var(--p1) var(--p2);
-  margin-bottom: var(--p1);
+  margin-bottom: var(--p2);
   border: 1px solid var(--orange);
-  border-radius: 8px;
+  border-left-width: 4px;
+  border-radius: 10px;
   background: rgba(255, 107, 53, 0.08);
 }
 .space-admin .space-admin-avertissement-icone { font-size: 20px; flex-shrink: 0; }
@@ -137,15 +175,18 @@
 }
 .space-admin .space-admin-avertissement-texte {
   font-size: var(--text-tiny);
-  color: var(--dark-3);
+  color: var(--dark-2);
   margin-top: 4px;
   line-height: 1.5;
 }
 
+/* `--p1` et non `--p2` : le champ tient toute la largeur du panneau, donc son
+   texte doit s'aligner sur le contenu des lignes, pas s'en décaler de 24 px. */
 .space-admin .space-admin-recherche { margin-bottom: var(--p1); }
 .space-admin .space-admin-recherche-champ {
   width: 100%;
-  padding: 10px var(--p2);
+  box-sizing: border-box;
+  padding: 10px var(--p1);
   border: 1px solid var(--dark-5);
   border-radius: 8px;
   font-family: inherit;
@@ -158,28 +199,35 @@
 
 /* ── Panneau de création de compte ──────────────────────────────────────────
    La ligne réunit deux propriétaires : le formulaire vient de l'hôte, le
-   sélecteur de profil appartient à ce BC. Les deux moitiés doivent se lire
-   comme une seule ligne — d'où le `flex-end`, qui aligne les champs sur leur
-   base quelle que soit la hauteur de leurs libellés. */
+   sélecteur de profil appartient à ce BC.
+
+   `flex-start` et non `flex-end`. Le `flex-end` d'origine visait à aligner les
+   champs sur leur base, ce qui n'aurait marché que si les deux moitiés faisaient
+   la même hauteur. Celle de l'hôte en fait trois rangs — champs, bouton, note —
+   si bien que « Profil » se calait sur le **bouton**, à quarante pixels sous les
+   libellés qu'il devait accompagner. Aligné par le haut, il retrouve la ligne
+   de Pseudo et Email, qui est celle qu'on lit. */
 .space-admin .space-admin-creation {
   margin-top: var(--p2);
-  padding-top: var(--p1);
+  padding-top: var(--p2);
   border-top: 1px solid var(--dark-5);
 }
 .space-admin .space-admin-creation-titre {
-  font-size: var(--text-small);
+  font-size: var(--text-tiny);
   font-weight: 700;
-  color: var(--dark-1);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--dark-3);
 }
 .space-admin .space-admin-creation-sous-titre {
   font-size: var(--text-tiny);
   color: var(--dark-3);
-  margin: 4px 0 var(--p1);
+  margin: var(--p05) 0 var(--p1);
   line-height: 1.5;
 }
 .space-admin .space-admin-creation-ligne {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: var(--p1);
 }
 .space-admin .space-admin-creation-hote { flex: 1; }
@@ -206,14 +254,16 @@
 /* ── Journal de session de l'ajout direct ── */
 .space-admin .space-admin-journal {
   margin-top: var(--p2);
-  padding-top: var(--p1);
+  padding-top: var(--p2);
   border-top: 1px solid var(--dark-5);
 }
 .space-admin .space-admin-journal-titre {
   font-size: var(--text-tiny);
   font-weight: 700;
-  color: var(--dark-2);
-  margin-bottom: 6px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--dark-3);
+  margin-bottom: var(--p1);
 }
 .space-admin .space-admin-journal-vide {
   font-size: var(--text-tiny);
@@ -257,6 +307,6 @@
      zone est plus haute qu'en desktop, pas moins. Valeur à confirmer par la
      même mesure que ci-dessus. */
   .space-admin .space-admin-zone {
-    min-height: calc(128px + 44px + 64px + 2 * var(--p2) + 2 * var(--p1));
+    min-height: calc(128px + 30px + 44px + 64px + 2 * var(--p2) + 2 * var(--p1));
   }
 }

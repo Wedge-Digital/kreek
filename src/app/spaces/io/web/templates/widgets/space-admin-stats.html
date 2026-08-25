@@ -1,8 +1,9 @@
 {#
-  Les trois compteurs de l'onglet Membres.
+  Les deux compteurs de l'onglet Membres.
 
-  Le troisième vaut zéro jusqu'à l'onglet Invitations — il n'y a effectivement
-  aucune invitation en attente, faute d'invitations tout court.
+  Un troisième affichait « Invitations en attente », figé à zéro, en attendant
+  un onglet Invitations. Cet onglet a été abandonné : le compteur promettait
+  donc une fonction sans destination, et il est parti avec elle.
 #}
 <div class="space-admin-stats" hx-disinherit="*">
   <div class="sas-chip">
@@ -17,13 +18,6 @@
     <div>
       <div class="sas-chip-valeur" data-compteur="administrateurs">{{ administrateurs }}</div>
       <div class="sas-chip-libelle">Administrateurs</div>
-    </div>
-  </div>
-  <div class="sas-chip">
-    <div class="sas-chip-icone">⏳</div>
-    <div>
-      <div class="sas-chip-valeur" data-compteur="invitations">{{ invitations_en_attente }}</div>
-      <div class="sas-chip-libelle">Invitations en attente</div>
     </div>
   </div>
 </div>

@@ -103,14 +103,15 @@ def test_un_pseudo_inexistant_propose_de_creer_un_compte(page: Page, espace_jeta
     )
 
 
-def test_un_coach_de_la_plateforme_est_proposé_avec_son_email(page: Page, espace_jetable: str):
+def test_un_coach_de_la_plateforme_est_proposé_avec_son_email_masqué(page: Page, espace_jetable: str):
     _ouvrir_ajout_direct(page, espace_jetable)
 
     _chercher(page, NON_MEMBRE)
 
     ligne = _candidat(page, NON_MEMBRE)
     expect(ligne).to_be_visible(timeout=10000)
-    expect(ligne.locator(".sac-email")).to_contain_text("@")
+    expect(ligne.locator(".sac-email")).to_contain_text("•••@")
+    expect(ligne.locator(".sac-email")).not_to_contain_text("e2e-coach-")
     expect(ligne.locator(".sac-btn")).to_be_visible()
 
 

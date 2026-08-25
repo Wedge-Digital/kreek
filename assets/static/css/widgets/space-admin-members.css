@@ -11,9 +11,21 @@
 
 .space-admin-members { display: flex; flex-direction: column; gap: var(--p1); }
 
+/* Même grammaire que les en-têtes de section de la page hôte, redéclarée ici :
+   le nom de la feuille **est** son sélecteur de portée, un widget ne porte donc
+   pas une classe de la page. C'est le prix de l'axe 15, assumé. */
+.space-admin-members .sam-section-titre {
+  font-size: var(--text-tiny);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--dark-3);
+}
+
 .space-admin-members .sam-search-input {
   width: 100%;
-  padding: 10px var(--p2);
+  box-sizing: border-box;
+  padding: 10px var(--p1);
   border: 1px solid var(--dark-5);
   border-radius: 8px;
   font-family: inherit;
@@ -27,12 +39,17 @@
 .space-admin-members .sam-list { display: flex; flex-direction: column; }
 
 /* 40 px d'avatar + 2 × 12 px : c'est le terme « une ligne de membre » de la
-   réservation de hauteur posée par la page hôte. Le changer oblige à la revoir. */
+   réservation de hauteur posée par la page hôte. Le changer oblige à la revoir.
+   Seul le retrait **horizontal** a disparu — la hauteur, elle, est intacte.
+
+   Ce retrait de 24 px était la cause du désalignement : le panneau porte
+   désormais son propre padding, et la ligne qui ajoutait le sien décalait
+   avatars et libellés du champ de recherche placé juste au-dessus. */
 .space-admin-members .sam-row {
   display: flex;
   align-items: center;
   gap: var(--p1);
-  padding: 12px var(--p2);
+  padding: 12px 0;
   border-bottom: 1px solid var(--dark-6);
 }
 .space-admin-members .sam-row:last-child { border-bottom: none; }
@@ -62,14 +79,19 @@
   white-space: nowrap;
 }
 
-.space-admin-members .sam-role { width: 130px; flex-shrink: 0; }
+/* 150 px et non 130 : « Administrateur » n'y tenait pas. La hauteur est celle
+   des boutons voisins — ils ne s'alignaient sur rien, chacun se contentant du
+   sien. */
+.space-admin-members .sam-role { width: 150px; flex-shrink: 0; height: 36px; }
 
 .space-admin-members .sam-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .space-admin-members .sam-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 10px;
+  gap: var(--p05);
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 10px;
   border: 1px solid var(--dark-5);
   border-radius: 6px;
   background: var(--white);
@@ -81,7 +103,21 @@
 }
 .space-admin-members .sam-btn:hover { background: var(--dark-6); }
 .space-admin-members .sam-btn--primary:hover { border-color: var(--main-blue); color: var(--main-blue); }
+/* Carré, pour que sa place soit une constante et non le résultat de son
+   contenu — c'est cette constante que réserve `--sans-retrait` ci-dessous. */
+.space-admin-members .sam-btn--danger {
+  width: 36px;
+  padding: 0;
+  justify-content: center;
+}
 .space-admin-members .sam-btn--danger:hover { border-color: var(--red); color: var(--red); }
+
+/* Sa propre ligne n'a pas de bouton de retrait : sans réservation, son bloc
+   d'actions est plus étroit de 36 px, et le sélecteur de rôle se décale d'autant
+   — seul de la colonne à ne pas s'aligner. Mesuré : 1098 px contre 1060. */
+.space-admin-members .sam-actions--sans-retrait {
+  padding-right: calc(36px + var(--p05));
+}
 .space-admin-members .sam-btn.is-envoye {
   border-color: var(--green);
   color: var(--green);

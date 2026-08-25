@@ -1,4 +1,4 @@
-//! Les trois compteurs de l'onglet Membres.
+//! Les deux compteurs de l'onglet Membres.
 //!
 //! # Une seule lecture
 //!
@@ -6,15 +6,12 @@
 //! Un `SELECT count(*)` séparé donnerait deux lectures pour une donnée que la
 //! première contient.
 //!
-//! # Le troisième vaut zéro, et c'est délibéré
+//! # Il y en avait un troisième
 //!
-//! Les invitations d'espace n'existent pas — ni table, ni use case. Elles
-//! arrivent avec leur onglet, qui n'aura qu'une requête à ajouter ici. Le zéro
-//! est honnête : il n'y a effectivement aucune invitation en attente, faute
-//! d'invitations tout court.
-//!
-//! Livrer deux compteurs et rouvrir la carte plus tard découperait ce widget en
-//! deux moitiés dont la seconde n'a pas de valeur propre.
+//! « Invitations en attente », figé à zéro, posé en prévision d'un onglet
+//! Invitations auquel il n'aurait eu qu'une requête à ajouter. Cet onglet a été
+//! abandonné : le compteur n'attendait donc plus rien, et un zéro perpétuel
+//! sans destination promet une fonction qui n'arrive pas.
 
 use crate::app::shared_kernel::identity::authorization::SpaceProfile;
 use crate::app::spaces::context::SpacesContext;
@@ -29,8 +26,6 @@ use axum::response::{Html, IntoResponse, Response};
 pub struct SpaceAdminStatsTemplate {
     pub membres: usize,
     pub administrateurs: usize,
-    /// Toujours zéro jusqu'à l'onglet Invitations.
-    pub invitations_en_attente: usize,
 }
 
 impl IntoResponse for SpaceAdminStatsTemplate {
@@ -68,7 +63,6 @@ pub async fn space_admin_stats_widget(
     SpaceAdminStatsTemplate {
         membres: lignes.len(),
         administrateurs,
-        invitations_en_attente: 0,
     }
     .into_response()
 }

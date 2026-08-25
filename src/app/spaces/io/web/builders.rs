@@ -10,11 +10,15 @@ use crate::app::shared_kernel::identity::ids::CoachId;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::{
     CandidateRow, SpaceMemberRow,
 };
+use crate::common::email_masque::email_masque;
 use crate::common::initials::initials;
 
 pub struct MemberRowVm {
     pub coach_id: String,
     pub name: String,
+    /// L'adresse **masquée** — jamais l'adresse elle-même. Une liste de coachs
+    /// sert à reconnaître quelqu'un, pas à le contacter, et ce qui n'est pas
+    /// envoyé au navigateur ne peut pas être relu dans son source.
     pub email: String,
     pub initials: String,
     pub is_self: bool,
@@ -70,7 +74,7 @@ pub fn build_member_rows(lignes: Vec<SpaceMemberRow>, moi: &CoachId) -> Vec<Memb
                 removable: !is_self && !dernier_admin,
                 coach_id: l.coach_id,
                 name: l.coach_name,
-                email: l.email,
+                email: email_masque(&l.email),
             }
         })
         .collect()
@@ -163,6 +167,7 @@ mod tests {
 pub struct CandidateRowVm {
     pub coach_id: String,
     pub name: String,
+    /// Masquée, comme celle d'un membre — cf. [`MemberRowVm::email`].
     pub email: String,
     pub initials: String,
     pub est_membre: bool,
@@ -175,7 +180,7 @@ pub fn build_candidate_rows(lignes: Vec<CandidateRow>) -> Vec<CandidateRowVm> {
             initials: initials(&l.coach_name),
             coach_id: l.coach_id,
             name: l.coach_name,
-            email: l.email,
+            email: email_masque(&l.email),
             est_membre: l.est_membre,
         })
         .collect()

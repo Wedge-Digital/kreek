@@ -17,7 +17,7 @@
     <div class="space-admin-banner-info">
       <div class="space-admin-banner-title">Administration — {{ space_name }}</div>
       <div class="space-admin-banner-sub">
-        Gestion des membres, invitations et paramètres de l'espace
+        Gestion des membres et paramètres de l'espace
       </div>
     </div>
     <div class="space-admin-banner-badge">Admin</div>
@@ -33,11 +33,6 @@
             :class="{ 'is-active': onglet === 'ajout' }"
             @click="onglet = 'ajout'; vus.includes('ajout') || vus.push('ajout')">
       ➕ Ajout direct
-    </button>
-    <button type="button" class="space-admin-tab"
-            :class="{ 'is-active': onglet === 'invitations' }"
-            @click="onglet = 'invitations'; vus.includes('invitations') || vus.push('invitations')">
-      📩 Invitations
     </button>
     <button type="button" class="space-admin-tab"
             :class="{ 'is-active': onglet === 'parametres' }"
@@ -100,10 +95,15 @@
               <div class="space-admin-avertissement-texte">
                 Le coach devient membre de l'espace immédiatement, sans invitation
                 à accepter. À réserver aux coachs de votre ligue que vous
-                connaissez — pour les autres, passez par l'onglet Invitations.
+                connaissez.
               </div>
             </div>
           </div>
+
+          {# Les trois blocs de cet onglet — chercher, créer, journal — n'étaient
+             séparés que par des filets muets. Chacun porte désormais son
+             en-tête, dans la même grammaire que la liste des membres. #}
+          <div class="space-admin-section-titre">Ajouter un coach déjà inscrit</div>
 
           <div class="space-admin-recherche">
             <input class="space-admin-recherche-champ" type="text" x-model="q"
@@ -170,12 +170,6 @@
           </div>
 
         </div>
-      </template>
-    </div>
-
-    <div x-show="onglet === 'invitations'" class="space-admin-panneau">
-      <template x-if="vus.includes('invitations')">
-        <div class="space-admin-attente">Onglet Invitations — à venir.</div>
       </template>
     </div>
 

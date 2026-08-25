@@ -10,7 +10,7 @@
 .space-admin-candidates { display: flex; flex-direction: column; }
 
 .space-admin-candidates .sac-etat {
-  padding: var(--p2);
+  padding: var(--p2) 0;
   text-align: center;
   font-size: var(--text-tiny);
   color: var(--dark-3);
@@ -23,13 +23,14 @@
 
 .space-admin-candidates .sac-list { display: flex; flex-direction: column; }
 
-/* Même métrique que la ligne de membre : 40 px d'avatar et 2 × 12 px. Les deux
-   listes se lisent l'une sous l'autre dans la même page. */
+/* Même métrique que la ligne de membre : 40 px d'avatar et 2 × 12 px, et le
+   même retrait horizontal nul — les deux listes se lisent l'une sous l'autre
+   dans la même page, elles doivent partir du même bord. */
 .space-admin-candidates .sac-row {
   display: flex;
   align-items: center;
   gap: var(--p1);
-  padding: 12px var(--p2);
+  padding: 12px 0;
   border-bottom: 1px solid var(--dark-6);
 }
 .space-admin-candidates .sac-row:last-child { border-bottom: none; }
@@ -68,7 +69,7 @@
   font-weight: 700;
 }
 
-.space-admin-candidates .sac-role { width: 130px; flex-shrink: 0; }
+.space-admin-candidates .sac-role { width: 150px; flex-shrink: 0; height: 36px; }
 
 .space-admin-candidates .sac-notif {
   display: inline-flex;
@@ -84,8 +85,10 @@
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 10px;
+  gap: var(--p05);
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 var(--p1);
   border: 1px solid var(--dark-5);
   border-radius: 6px;
   background: var(--white);
@@ -104,15 +107,5 @@
   .space-admin-candidates .sac-row { flex-wrap: wrap; }
   .space-admin-candidates .sac-info { flex: 1 1 60%; }
   .space-admin-candidates .sac-role { width: 100%; order: 3; }
-  .space-admin-candidates .sac-notif {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-  font-size: var(--text-tiny);
-  color: var(--dark-3);
-  cursor: pointer;
-}
-
-.space-admin-candidates .sac-btn { order: 4; }
+  .space-admin-candidates .sac-btn { order: 4; }
 }

@@ -1,3 +1,4 @@
+pub mod email_masque;
 pub mod event_envelope;
 pub mod event_listener;
 pub mod initials;
