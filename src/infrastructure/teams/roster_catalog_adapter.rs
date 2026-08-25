@@ -47,11 +47,21 @@ impl RosterCatalogAdapter {
     }
 }
 
+/// « Lineman a vil prix » — la règle qui annule le prix de base des linemen
+/// dans la valeur d'équipe.
+///
+/// L'uid reste ici : `teams` lit une règle, pas un identifiant de corpus qu'il
+/// faudrait aller comprendre ailleurs. Une constante nommée plutôt qu'un
+/// littéral au milieu d'un `any()`, pour qu'une recherche sur ce nom trouve
+/// aussi son sens.
+const LOW_COST_LINEMEN: &str = "LOW_COST_LINEMEN";
+
 impl IRosterCatalogPort for RosterCatalogAdapter {
     fn find_catalog(&self, roster_id: &str) -> Option<RosterCatalogDto> {
         let team = self.refs.find_team_by_uid(roster_id)?;
         Some(RosterCatalogDto {
             logo: team.logo.clone(),
+            linemen_are_free: team.special_rules.iter().any(|r| r == LOW_COST_LINEMEN),
             reroll_base_cost: team.reroll_cost,
             positions: team
                 .available_players

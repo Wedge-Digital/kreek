@@ -190,6 +190,7 @@ impl IRosterCatalogPort for FakeRosterCatalogPort {
     fn find_catalog(&self, _roster_id: &str) -> Option<RosterCatalogDto> {
         Some(RosterCatalogDto {
             logo: None,
+            linemen_are_free: false,
             reroll_base_cost: 60,
             positions: vec![
                 poste_dto(PIETAILLE, "Piétaille des Carrières", 50, 16, true),

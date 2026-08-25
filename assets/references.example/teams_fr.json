@@ -184,7 +184,8 @@
       "rerollCost": 70,
       "tier": "Tier 3",
       "specialRules": [
-        "FAVOURED_OF_CHOOSE_ANY"
+        "FAVOURED_OF_CHOOSE_ANY",
+        "LOW_COST_LINEMEN"
       ],
       "allowedStaff": [
         "CHEERLEADERS",

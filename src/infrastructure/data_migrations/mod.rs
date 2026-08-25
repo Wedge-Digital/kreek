@@ -58,10 +58,18 @@ pub trait DataMigration: Send + Sync {
 }
 
 pub mod m001_bonus_elite;
+pub mod m002_recalcul_valeurs_equipe;
 
 /// Le registre, dans son ordre d'exécution.
+///
+/// L'ordre est une donnée : le recalcul des valeurs d'équipe somme les valeurs
+/// joueurs que le bonus Élite vient de corriger. Inversés, il rendrait des
+/// valeurs fausses sans que rien ne le signale.
 fn registre() -> Vec<Box<dyn DataMigration>> {
-    vec![Box::new(m001_bonus_elite::BonusElite)]
+    vec![
+        Box::new(m001_bonus_elite::BonusElite),
+        Box::new(m002_recalcul_valeurs_equipe::RecalculValeursEquipe),
+    ]
 }
 
 /// Applique ce qui ne l'a pas encore été, puis rend la main. Refuse le

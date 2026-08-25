@@ -17,21 +17,38 @@ pub async fn resolve_team_value(
     journeyman_type_port: &dyn IJourneymanTypePort,
 ) -> Kpo {
     let roster_id = team.roster_id.0.as_str();
-    let players = load_players(team, squad_port).await;
     let journeyman = journeyman_type_port.journeyman_type_for_roster(roster_id);
     let roster = roster_catalog_port.find_catalog(roster_id);
+    let players = load_players(team, squad_port, roster.as_ref()).await;
 
     let inputs = build_inputs(team, players, &journeyman, roster.as_ref());
     compute_team_value(&inputs)
 }
 
-async fn load_players(team: &Team, port: &dyn ISquadPort) -> Vec<ValuedPlayer> {
+/// `roster` sert à résoudre le poste de chaque joueur — son prix de base et
+/// son élitisme de ligne journalier. Un poste introuvable au corpus donne un
+/// prix nul et « pas un lineman » : la règle ne s'applique alors pas à lui,
+/// plutôt que de s'appliquer sur un prix inventé.
+async fn load_players(
+    team: &Team,
+    port: &dyn ISquadPort,
+    roster: Option<&crate::app::teams::ports::RosterCatalogDto>,
+) -> Vec<ValuedPlayer> {
     port.find_squad(&team.id.to_string())
         .await
         .into_iter()
-        .map(|p| ValuedPlayer {
-            value_kpo: Kpo(p.value_kpo),
-            available_for_next_match: p.available_for_next_match,
+        .map(|p| {
+            let poste = roster.and_then(|r| {
+                r.positions
+                    .iter()
+                    .find(|position| position.uid == p.roster_line_id)
+            });
+            ValuedPlayer {
+                value_kpo: Kpo(p.value_kpo),
+                available_for_next_match: p.available_for_next_match,
+                is_lineman: poste.map(|x| x.is_journeyman).unwrap_or(false),
+                base_cost: Kpo(poste.map(|x| x.cost).unwrap_or(0)),
+            }
         })
         .collect()
 }
@@ -57,5 +74,6 @@ fn build_inputs(
         cheerleaders: team.cheerleaders,
         cheerleader_price: Kpo(roster.map(|r| r.staff_price("CHEERLEADERS")).unwrap_or(0)),
         journeyman_price: Kpo(journeyman.price_kpo),
+        free_linemen: roster.map(|r| r.linemen_are_free).unwrap_or(false),
     }
 }

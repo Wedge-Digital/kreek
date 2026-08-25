@@ -141,22 +141,72 @@ attentes.
 
 ## Checklist
 
-- [ ] `RosterCatalogDto.linemen_are_free`, rempli par `roster_catalog_adapter`
-      depuis `LOW_COST_LINEMEN` (constante nommée)
-- [ ] `ValuedPlayer.is_lineman` / `.base_cost`, `TeamValueInputs.free_linemen`
-- [ ] `players_value` avec `saturating_sub`, `journeymen_value` à zéro sous la règle
-- [ ] `build_inputs` résout le poste par `roster_line_id`
-- [ ] Migration de recalcul global, enregistrée **après** celle de la carte 387
-- [ ] Garde : aucun roster porteur de `LOW_COST_LINEMEN` dans le corpus →
-      migration en échec, démarrage refusé, rien de marqué en base
-- [ ] `LOW_COST_LINEMEN` dans le corpus d'exemple, sur un roster dont l'impact
-      e2e a été vérifié
-- [ ] Tests unitaires :
-  - [ ] onze linemen nus sous la règle → VEA nulle
-  - [ ] lineman avec deux compétences → seules les augmentations comptent
-  - [ ] lineman customisé sous son prix de base → zéro, jamais négatif
-  - [ ] neuf disponibles sous la règle → aucun journalier facturé
-  - [ ] roster sans la règle → tous les tests existants inchangés
-  - [ ] un poste non-lineman garde son prix, même sous la règle
-- [ ] Test e2e : fiche d'une équipe d'un roster à vil prix, VEA vérifiée à l'écran
-- [ ] `make lint`, `make check-arch`, `make test`, tests e2e impactés
+- [x] `RosterCatalogDto.linemen_are_free`, rempli par l'adapter depuis une
+      constante nommée
+- [x] `ValuedPlayer.is_lineman` / `.base_cost`, `TeamValueInputs.free_linemen`
+- [x] `players_value` avec `saturating_sub`, `journeymen_value` à zéro sous la règle
+- [x] `build_inputs` résout le poste par `roster_line_id`
+- [x] Migration de recalcul global, enregistrée après celle de la carte 387
+- [x] Garde testée **dans ses deux branches**
+- [x] `LOW_COST_LINEMEN` au corpus d'exemple, sur `DEMO_LANTERNE`
+- [x] Six tests unitaires du domaine
+- [x] Test e2e, vu échouer : `assert 440 < 440`
+- [x] `make lint`, `make check-arch`, `make test` — 1258 tests
+
+## Le roster retenu, et pourquoi
+
+`DEMO_LANTERNE`. La carte demandait de vérifier l'impact e2e avant de choisir :
+les trois rosters de démonstration sont exercés, mais celui-ci est **hors du
+cycle `ROSTERS`**, et ses deux seuls tests lisent la trésorerie
+(`test_recruitment_phase`) ou un message d'erreur
+(`test_special_rule_selector`) — jamais une valeur d'équipe. La règle n'y
+déplace aucune attente.
+
+## Ce qui a été fait
+
+Le domaine porte la règle, l'adapter traduit l'uid : `teams` lit « les linemen
+sont gratuits », pas un identifiant de corpus. `load_players` résout le poste
+par `roster_line_id` ; un poste introuvable donne « pas un lineman » et un prix
+nul, de sorte que la règle ne s'applique jamais sur un prix inventé.
+
+### La migration n'est pas atomique avec sa marque, et c'est assumé
+
+Elle passe par `recompute_team_value_use_case`, qui ouvre sa propre transaction
+par équipe — c'est ce qui en fait le mécanisme *nominal*. La règle d'atomicité
+de la carte 386 y perd son effet.
+
+Sans conséquence : l'événement porte une valeur **absolue**, pas un delta. Une
+interruption laisse des équipes recalculées et d'autres non ; le rejeu repasse
+sur toutes, et recalculer une valeur déjà juste la laisse juste. C'est
+précisément ce qu'un delta ne permettrait pas. Le motif est écrit dans le
+module plutôt que laissé à deviner.
+
+### La garde n'était testée que du bon côté
+
+Sa première version vivait dans la migration, et le seul test possible passait
+par le corpus d'exemple — qui **porte** la règle. La branche d'échec, la seule
+qui compte, n'était pas exerçable. Elle est extraite en fonction pure et
+vérifiée dans les deux sens.
+
+### Deux fausses manœuvres, à retenir
+
+**Le premier test e2e passait avec la règle désactivée.** Il comparait l'équipe
+à vil prix à une équipe d'un autre roster ; or les Lanterniers sont
+naturellement moins chers que les Granitiers, et la comparaison mesurait cela.
+Le discriminant retenu tient à l'arithmétique : hors règle, la valeur d'équipe
+vaut la somme des joueurs **plus** relances et staff, donc elle ne peut pas lui
+être inférieure. Un second test tient le sens inverse sur le témoin, sans quoi
+l'assertion passerait aussi si toutes les valeurs étaient nulles.
+
+**Et la « désactivation » qui a servi à le constater n'avait rien désactivé.**
+`cargo fmt` avait replié l'expression sur une ligne, ma substitution
+multi-lignes ne correspondait plus, et elle s'est appliquée en silence sur
+zéro occurrence. Toute substitution de ce genre porte désormais son `assert`.
+
+## Rappel de déploiement
+
+Le corpus de production doit porter `LOW_COST_LINEMEN` sur ses rosters
+concernés **avant** le déploiement, sinon la migration refuse le démarrage. Et
+déployer quand aucun rapport de match n'est ouvert : un match en cours a
+enregistré la valeur des deux équipes en pré-match, et l'écart ne se résorbera
+qu'au rapport suivant.

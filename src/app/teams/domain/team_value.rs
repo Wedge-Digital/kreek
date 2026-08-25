@@ -11,6 +11,14 @@ const MATCH_SQUAD_SIZE: u32 = 11;
 pub struct ValuedPlayer {
     pub value_kpo: Kpo,
     pub available_for_next_match: bool,
+    /// Ce joueur occupe-t-il la ligne marquée `is_journeyman` de son roster ?
+    ///
+    /// C'est la même ligne que celle dont le prix sert aux journaliers : la
+    /// règle « Lineman a vil prix » n'en introduit pas une seconde définition.
+    pub is_lineman: bool,
+    /// Le prix du poste **au corpus d'aujourd'hui**, pas celui payé le jour du
+    /// recrutement. C'est déjà le comportement des relances et du staff.
+    pub base_cost: Kpo,
 }
 
 pub struct TeamValueInputs {
@@ -24,6 +32,11 @@ pub struct TeamValueInputs {
     pub cheerleaders: CheerleaderCount,
     pub cheerleader_price: Kpo,
     pub journeyman_price: Kpo,
+    /// La règle `LOW_COST_LINEMEN` du roster — « Lineman a vil prix ».
+    ///
+    /// Le domaine lit une règle, pas un identifiant de corpus : c'est
+    /// l'adapter qui traduit l'uid.
+    pub free_linemen: bool,
 }
 
 /// Valeur d'équipe : une somme recalculée, jamais une accumulation de deltas.
@@ -34,18 +47,36 @@ pub struct TeamValueInputs {
 /// à leur prix de base, pas au montant déboursé : l'écart apparaîtra le jour où
 /// une relance achetée en cours de saison coûtera double.
 pub fn compute_team_value(inputs: &TeamValueInputs) -> Kpo {
-    Kpo(players_value(&inputs.players)
-        + journeymen_value(&inputs.players, inputs.journeyman_price)
+    Kpo(players_value(&inputs.players, inputs.free_linemen)
+        + journeymen_value(
+            &inputs.players,
+            inputs.journeyman_price,
+            inputs.free_linemen,
+        )
         + staff_value(inputs)
         + rerolls_value(inputs))
 }
 
 /// Un joueur indisponible ne vaut rien : ni blessé absent, ni retraité, ni mort.
-fn players_value(players: &[ValuedPlayer]) -> u32 {
+///
+/// Sous « Lineman a vil prix », un lineman ne compte que pour ce qu'il a gagné
+/// au-delà de son prix — ses compétences et ses caractéristiques comptent
+/// plein, son prix de base ne compte pas.
+///
+/// **La borne à zéro n'est pas décorative** : un commissaire peut avoir baissé
+/// la valeur d'un joueur sous son prix de base par customisation. Un lineman
+/// dans ce cas compte pour zéro, jamais en négatif.
+fn players_value(players: &[ValuedPlayer], free_linemen: bool) -> u32 {
     players
         .iter()
         .filter(|p| p.available_for_next_match)
-        .map(|p| p.value_kpo.0)
+        .map(|p| {
+            if free_linemen && p.is_lineman {
+                p.value_kpo.0.saturating_sub(p.base_cost.0)
+            } else {
+                p.value_kpo.0
+            }
+        })
         .sum()
 }
 
@@ -58,7 +89,13 @@ fn available_count(players: &[ValuedPlayer]) -> u32 {
 
 /// Les places manquantes pour atteindre onze, au prix de la ligne journalier du
 /// roster. Un effectif de douze disponibles n'en appelle aucun.
-fn journeymen_value(players: &[ValuedPlayer], journeyman_price: Kpo) -> u32 {
+/// Les journaliers sont des linemen : sous la règle, ils ne coûtent rien non
+/// plus. Les facturer alors que les vrais linemen sont gratuits reviendrait à
+/// pénaliser un effectif incomplet plus qu'un effectif complet.
+fn journeymen_value(players: &[ValuedPlayer], journeyman_price: Kpo, free_linemen: bool) -> u32 {
+    if free_linemen {
+        return 0;
+    }
     let missing = MATCH_SQUAD_SIZE.saturating_sub(available_count(players));
     missing * journeyman_price.0
 }
@@ -83,6 +120,18 @@ mod tests {
         ValuedPlayer {
             value_kpo: Kpo(value),
             available_for_next_match: available,
+            is_lineman: false,
+            base_cost: Kpo(0),
+        }
+    }
+
+    /// Un lineman à son prix de base, sans amélioration.
+    fn lineman(value: u32, base_cost: u32) -> ValuedPlayer {
+        ValuedPlayer {
+            value_kpo: Kpo(value),
+            available_for_next_match: true,
+            is_lineman: true,
+            base_cost: Kpo(base_cost),
         }
     }
 
@@ -100,6 +149,14 @@ mod tests {
             cheerleaders: CheerleaderCount(0),
             cheerleader_price: Kpo(10),
             journeyman_price: Kpo(50),
+            free_linemen: false,
+        }
+    }
+
+    fn inputs_vil_prix(players: Vec<ValuedPlayer>) -> TeamValueInputs {
+        TeamValueInputs {
+            free_linemen: true,
+            ..inputs(players)
         }
     }
 
@@ -167,5 +224,59 @@ mod tests {
 
         // 550 + 2×60 + 50 — le prix de base, quel qu'ait été le montant payé
         assert_eq!(compute_team_value(&i), Kpo(720));
+    }
+
+    // ── « Lineman a vil prix » ───────────────────────────────────────────────
+
+    #[test]
+    fn onze_linemen_nus_sous_la_regle_ne_valent_rien() {
+        let effectif = (0..11).map(|_| lineman(50, 50)).collect();
+        assert_eq!(compute_team_value(&inputs_vil_prix(effectif)), Kpo(0));
+    }
+
+    /// Le prix ne compte pas, les améliorations comptent plein : c'est toute la
+    /// règle.
+    #[test]
+    fn un_lineman_ameliore_ne_compte_que_ses_ameliorations() {
+        let mut effectif: Vec<ValuedPlayer> = (0..10).map(|_| lineman(50, 50)).collect();
+        effectif.push(lineman(50 + 20 + 30, 50)); // deux compétences
+        assert_eq!(compute_team_value(&inputs_vil_prix(effectif)), Kpo(50));
+    }
+
+    /// Un commissaire peut avoir baissé une valeur sous le prix de base. La
+    /// valeur d'équipe ne devient pas négative pour autant.
+    #[test]
+    fn un_lineman_customise_sous_son_prix_compte_pour_zero() {
+        let effectif = vec![lineman(30, 50)];
+        // Onze places à combler moins une : les journaliers sont gratuits eux
+        // aussi sous la règle, donc la TV est nulle et non négative.
+        assert_eq!(compute_team_value(&inputs_vil_prix(effectif)), Kpo(0));
+    }
+
+    #[test]
+    fn sous_la_regle_aucun_journalier_n_est_facture() {
+        let effectif: Vec<ValuedPlayer> = (0..9).map(|_| lineman(50, 50)).collect();
+        assert_eq!(compute_team_value(&inputs_vil_prix(effectif)), Kpo(0));
+    }
+
+    /// La règle ne vise que la ligne journalier du roster : un titulaire garde
+    /// son prix, gratuité des linemen ou non.
+    #[test]
+    fn un_poste_non_lineman_garde_son_prix_sous_la_regle() {
+        let mut effectif: Vec<ValuedPlayer> = (0..10).map(|_| lineman(50, 50)).collect();
+        effectif.push(ValuedPlayer {
+            value_kpo: Kpo(90),
+            available_for_next_match: true,
+            is_lineman: false,
+            base_cost: Kpo(90),
+        });
+        assert_eq!(compute_team_value(&inputs_vil_prix(effectif)), Kpo(90));
+    }
+
+    /// Le témoin : sans la règle, rien ne change pour les mêmes joueurs.
+    #[test]
+    fn sans_la_regle_les_linemen_comptent_pour_leur_prix() {
+        let effectif: Vec<ValuedPlayer> = (0..11).map(|_| lineman(50, 50)).collect();
+        assert_eq!(compute_team_value(&inputs(effectif)), Kpo(550));
     }
 }

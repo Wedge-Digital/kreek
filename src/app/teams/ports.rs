@@ -94,6 +94,13 @@ pub struct StaffPriceDto {
 /// une règle de saison, appliquée par le domaine, pas par le catalogue.
 pub struct RosterCatalogDto {
     pub logo: Option<String>,
+    /// La règle « Lineman a vil prix » — le prix de base des linemen ne compte
+    /// pas dans la valeur d'équipe.
+    ///
+    /// Une règle, pas un identifiant de corpus : `teams` n'a pas à connaître
+    /// `LOW_COST_LINEMEN`, c'est l'adapter qui traduit. Précédent :
+    /// `FAVOURED_OF_CHOOSE_`, en dur dans `team_creation`.
+    pub linemen_are_free: bool,
     pub reroll_base_cost: u32,
     pub positions: Vec<CatalogPositionDto>,
     pub cross_limits: Vec<CrossLimitDto>,

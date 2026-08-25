@@ -39,6 +39,10 @@
     {
       "uid": "FAVOURED_OF_UNDIVIDED",
       "label": "Favori des Divinités Réunies"
+    },
+    {
+      "uid": "LOW_COST_LINEMEN",
+      "label": "Lineman a vil prix"
     }
   ]
 }
