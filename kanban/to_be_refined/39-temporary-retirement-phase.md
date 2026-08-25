@@ -74,3 +74,22 @@ La validation déclenche directement le calcul des erreurs couteuses (carte 40) 
 - [ ] `update_projection_in_tx()` mis à jour (carte 42) — version uniquement, état joueur géré par BC players
 - [ ] Routes GET + POST
 - [ ] Fragment UI avec avertissement quota + possibilité de renvoi rappelée
+
+---
+
+## Pourquoi elle revient de `done/` — constat du 2026-08-25
+
+Classée `done` le 2026-08-18 par le commit `2bd45c3`, qui a clos l'épic E01
+« par vérification une par une dans le code ». Sa checklist n'a jamais eu une
+case cochée, et le code confirme :
+
+- `GamePhase::TemporaryRetirement`, `PlayerRetiredTemporarily` et
+  `RetirementPhaseValidated` existent dans `teams/domain/team.rs` ;
+- `Team::validate_retirement_phase()` (`team.rs:942`) **n'a aucun appelant** ;
+- `PlayerRetiredTemporarily` n'est émis nulle part ; aucune route, aucun écran,
+  aucun use case ;
+- la phase n'est atteignable que par `override_phase`, l'outil d'administration ;
+- `DismissalsPhaseValidated` saute donc directement en `ReadyToPlay`, ce que le
+  commentaire de `team.rs:573` assume comme « simplification temporaire ».
+
+Même cas que la carte 40, dont elle est le prérequis.

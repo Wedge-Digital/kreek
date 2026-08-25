@@ -96,6 +96,8 @@ déploiement de la troisième, qui porte le recalcul global.
 | `13-mock-data-competition-detail` | Les onglets Équipes et Stats servent de la donnée fictive **en production**. C'est la seule dette visible par un utilisateur |
 | `60-jersey-numbers-at-submission` | Attribution des numéros de maillot à la soumission |
 | `362-le-bundle-css-est-gele-au-demarrage` | Une feuille éditée n'a aucun effet sur un serveur qui tourne, et rien ne le signale. A fait accuser à tort la carte 343 pendant une heure |
+| `394-gestion-de-la-haine` | Marque-place : la règle de la Haine reste à définir — rien n'en existe dans le code ni dans le corpus |
+| `393-reprendre-un-rapport-de-match-en-cours` | Rouvrir un rapport entamé ramène toujours au facteur fans, qu'on peut réenregistrer — recette et TV avec. `PreMatch` est un seul état pour quatre étapes |
 | `389-modifier-l-effectif-reserve-a-qui-de-droit` | Le bouton d'édition d'effectif s'affiche pour tout visiteur, alors que l'écriture derrière refuse déjà par 403. Un bouton menteur, pas une faille |
 | `385-l-avatar-d-un-coach-n-existe-nulle-part` | Zéro utilisateur sur 864 en a un, aucun écran n'en pose, et le cache écrase la colonne. Trois tables entretiennent l'illusion |
 | `361-reserver-la-place-sur-la-construction-d-equipe` | 1 265 px de saut en desktop, 1 841 en mobile — la plus grosse zone non réservée, hors périmètre de la 343 |
