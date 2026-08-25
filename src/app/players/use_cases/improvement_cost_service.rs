@@ -53,7 +53,9 @@ pub fn resolve_skill_cost(
         AcquisitionMode::Customised => 0,
     };
 
-    let value_delta = catalog.skill_value_delta(is_secondary);
+    // `skill.is_elite`, comme le coût en SPP juste au-dessus : la valeur et
+    // le coût lisent le même drapeau, il n'y a pas deux notions d'élitisme.
+    let value_delta = catalog.skill_value_delta(is_secondary, skill.is_elite);
 
     Ok((
         SppCost::try_new(cost as u8).expect("coût borné par la matrice de référence (<= 99)"),
@@ -163,6 +165,61 @@ mod tests {
         );
     }
 
+    /// Le barème de la carte 387 : dix de plus pour une Élite, dans les deux
+    /// accès. Les quatre valeurs viennent du corpus, aucune n'est dans le code.
+    #[test]
+    fn une_elite_vaut_dix_kpo_de_plus_qu_une_standard_de_meme_acces() {
+        let catalog = catalog();
+        let valeur = |skill_id: &str| {
+            let is_primary = is_primary_for(&catalog, "DEMO_GRANIT__PIETAILLE", skill_id);
+            let is_elite = catalog.find_skill(skill_id).unwrap().is_elite;
+            initial_skill_value_delta(&catalog, is_primary, is_elite)
+        };
+
+        assert_eq!(
+            valeur("APPUI_FERME"),
+            ValueKpo(20),
+            "GENERAL primaire, Standard"
+        );
+        assert_eq!(
+            valeur("SECOND_SOUFFLE"),
+            ValueKpo(30),
+            "GENERAL primaire, Élite"
+        );
+        assert_eq!(
+            valeur("POIGNE_LARGE"),
+            ValueKpo(40),
+            "STRENGTH secondaire, Standard"
+        );
+        assert_eq!(
+            valeur("MASSE_INEBRANLABLE"),
+            ValueKpo(50),
+            "STRENGTH secondaire, Élite"
+        );
+    }
+
+    /// Le mode d'acquisition ne change pas la valeur — comme le coût en SPP,
+    /// déjà réglé par `random_for(is_elite)`. Une Élite tirée au hasard vaut
+    /// autant qu'une Élite choisie.
+    #[test]
+    fn le_mode_d_acquisition_ne_change_pas_la_valeur_d_une_elite() {
+        let catalog = catalog();
+        let par_mode = |mode| {
+            resolve_skill_cost(
+                &catalog,
+                "DEMO_GRANIT__PIETAILLE",
+                "SECOND_SOUFFLE",
+                mode,
+                1,
+            )
+            .unwrap()
+            .1
+        };
+
+        assert_eq!(par_mode(AcquisitionMode::Chosen), ValueKpo(30));
+        assert_eq!(par_mode(AcquisitionMode::Random), ValueKpo(30));
+    }
+
     /// Le cœur de la carte 249 : avant elle, la même compétence sur le même
     /// joueur valait 20 kPo (ou 30 si élite) obtenue à la création et 20 000 à
     /// l'achat en SPP — deux barèmes, deux unités. « Origine » désigne ici le
@@ -179,6 +236,10 @@ mod tests {
             ("DEMO_GRANIT__PIETAILLE", "APPUI_FERME"), // GENERAL, primaire
             ("DEMO_GRANIT__PIETAILLE", "POIGNE_LARGE"), // STRENGTH, secondaire
             ("DEMO_GRANIT__PERCUTEUR", "POIGNE_LARGE"), // STRENGTH, primaire ici
+            // La parité doit tenir aussi sous le barème Élite, sans quoi une
+            // Élite obtenue à la création vaudrait dix de moins qu'achetée.
+            ("DEMO_GRANIT__PIETAILLE", "SECOND_SOUFFLE"), // GENERAL, primaire, Élite
+            ("DEMO_GRANIT__PIETAILLE", "MASSE_INEBRANLABLE"), // STRENGTH, secondaire, Élite
         ] {
             let (_, achat) = resolve_skill_cost(
                 &catalog,
@@ -189,7 +250,8 @@ mod tests {
             )
             .unwrap();
             let is_primary = is_primary_for(&catalog, roster_line_id, skill_id);
-            let creation = initial_skill_value_delta(&catalog, is_primary);
+            let is_elite = catalog.find_skill(skill_id).unwrap().is_elite;
+            let creation = initial_skill_value_delta(&catalog, is_primary, is_elite);
 
             assert_eq!(
                 creation, achat,

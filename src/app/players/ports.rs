@@ -260,7 +260,9 @@ pub trait ISkillCatalogPort: Send + Sync {
     fn cost_for_level(&self, level: u8, is_elite: bool) -> Option<SkillCostLevelDto>;
 
     /// Valeur (kPo) ajoutée par l'achat d'une compétence primary/secondary.
-    fn skill_value_delta(&self, is_secondary_access: bool) -> u32;
+    /// Cf. `IReferenceRepository::improvement_skill_value_delta` : l'accès
+    /// **et** l'élitisme, jamais l'un sans l'autre.
+    fn skill_value_delta(&self, is_secondary_access: bool, is_elite: bool) -> u32;
     /// Valeur (kPo) ajoutée par une augmentation de la caractéristique donnée.
     fn stat_value_delta(&self, stat: crate::app::players::domain::match_impact::StatKind) -> u32;
 

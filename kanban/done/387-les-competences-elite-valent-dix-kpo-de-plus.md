@@ -156,27 +156,75 @@ doit pas laisser une trace là où elle n'a rien changé.
 
 ## Checklist
 
-- [ ] `primary_elite` / `secondary_elite` dans `improvement_values.json` de
-      l'exemple, champs **obligatoires** dans `SkillImprovementValues`
-- [ ] `improvement_skill_value_delta(is_secondary, is_elite)` — port `references`,
+- [x] `primary_elite` / `secondary_elite` dans le corpus d'exemple, champs
+      **obligatoires** dans `SkillImprovementValues`
+- [x] `improvement_skill_value_delta(is_secondary, is_elite)` — port et
       implémentation en mémoire
-- [ ] `skill_value_delta(is_secondary, is_elite)` — port `players`, adapter
-- [ ] `resolve_skill_cost` passe `skill.is_elite` (déjà résolu pour le coût SPP)
-- [ ] `initial_skill_value_delta(catalog, is_primary, is_elite)` + appel dans
-      `team_created_listener`
-- [ ] Événement `PlayerValueRecalibrated` : enum, `event_name()`, `apply` de
-      l'agrégat, branche de projection
-- [ ] Migration enregistrée dans le registre de la carte 386, **avant** celle de
-      la carte 388
-- [ ] Tests unitaires :
-  - [ ] Élite primaire = 30, Élite secondaire = 50, Standard inchangée à 20/40
-  - [ ] `une_competence_vaut_le_meme_prix_a_la_creation_et_a_l_achat_en_spp`
-        étendu à une compétence Élite
-  - [ ] mode Random et mode Chosen donnent la même valeur
-  - [ ] corpus privé des champs élite → chargement refusé, message nommant le
-        fichier fautif
-  - [ ] migration : joueur à deux Élite → +20 et un seul événement ; joueur sans
-        Élite → aucun événement ; rejeu → aucune écriture
-- [ ] Test e2e : achat d'une compétence Élite en phase d'améliorations, valeur du
-      joueur vérifiée à l'écran
-- [ ] `make lint`, `make check-arch`, `make test`, tests e2e impactés
+- [x] `skill_value_delta(is_secondary, is_elite)` — port `players`, adapter
+- [x] `resolve_skill_cost` passe `skill.is_elite`
+- [x] `initial_skill_value_delta(catalog, is_primary, is_elite)` + son appel
+- [x] Événement `PlayerValueRecalibrated` : variante, `event_name()`, `apply`,
+      branche de projection, et les deux `match` exhaustifs de l'historique
+- [x] Migration enregistrée dans le registre de la carte 386
+- [x] Tests unitaires : barème 20/30/40/50, parité création/achat étendue aux
+      Élite, modes Chosen et Random équivalents, corpus incomplet refusé,
+      migration (deux Élite, aucune Élite, rejeu)
+- [x] Test e2e : achat d'une Élite, valeur du joueur vérifiée à l'écran
+- [x] `make lint`, `make check-arch`, `make test` — 1249 tests
+
+## Ce qui a été fait
+
+Le barème vit **entièrement dans le corpus** : quatre cases, quatre nombres,
+aucune valeur de règle du jeu dans le code Rust. Les deux signatures de port ont
+été **modifiées** plutôt que doublées — une variante « sans élite » laissée à
+côté aurait été le piège où retomber. Le compilateur a désigné les deux seuls
+appelants, qui tranchent désormais explicitement.
+
+`RecalibrationReason` est un enum et non un texte libre : ces événements se
+relisent des années plus tard, et « pourquoi cette valeur a-t-elle bougé sans
+que personne n'y touche » est la première question qu'on leur posera.
+
+La migration écrit **dans la transaction du registre**, donc pas via
+`IPlayerRepository::append` qui ouvre la sienne. Elle appelle les deux fonctions
+transactionnelles que le dépôt expose déjà — le SQL d'écriture n'est pas
+dupliqué, la migration écrit exactement comme l'application.
+
+### Ce que le compilateur a trouvé
+
+Deux `match` exhaustifs sur `PlayerDomainEvent` dans `match_history_service`,
+que la carte ne listait pas. Ils rattachent chaque événement à un match ou
+l'écartent explicitement : la nouvelle variante devait y être **nommée**, et
+non absorbée par un `_ =>`. C'est ce qui garde ce service honnête quand un
+événement apparaît.
+
+### Le « vu échouer » n'a pas pu se faire à l'e2e
+
+Ramener `primary_elite` à 20 ne fait pas échouer le test de navigateur : le
+serveur de développement ne surveille pas les fichiers JSON, et le corpus reste
+en mémoire tel qu'il était au démarrage. Le même sabotage fait en revanche
+échouer le test unitaire du barème — `left: ValueKpo(20), right: ValueKpo(30)` —
+qui lit le corpus directement. La chaîne est donc couverte des deux côtés, mais
+la démonstration s'arrête à la frontière du processus.
+
+### Le test e2e a d'abord échoué en suite, et passé seul
+
+Il empruntait le joueur « riche » de la fixture, dont les tests précédents du
+fichier ont déjà dépensé les SPP. Le bouton « Choisir » existe alors mais reste
+**masqué** — `x-show` le remplace par « Budget insuf. » — et l'échec tombe sur
+une attente de visibilité, loin de sa cause.
+
+Le fichier suit une convention que je n'avais pas vue : **un joueur dédié par
+test**, précisément pour que l'ordre d'exécution ne compte pas. La fixture en
+crédite un cinquième, avec le commentaire qui dit pourquoi.
+
+### Vérifié au vrai démarrage
+
+La migration s'est exécutée sur la base de développement et s'est marquée dans
+le registre. Zéro joueur corrigé, aucun n'y portant de compétence Élite : le
+mécanisme est constaté sans effet de bord.
+
+## Rappel de déploiement
+
+Le corpus de production doit porter `primary_elite` et `secondary_elite`
+**avant** le premier démarrage du nouveau binaire. Sinon `load_references`
+refuse de démarrer — c'est voulu, et c'est bruyant.

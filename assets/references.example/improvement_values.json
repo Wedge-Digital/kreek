@@ -2,7 +2,12 @@
   "bloodbowl_version": "2025",
   "edition": "Third Season Edition",
   "improvement_values": {
-    "skill": { "primary": 20, "secondary": 40 },
+    "skill": {
+      "primary": 20,
+      "primary_elite": 30,
+      "secondary": 40,
+      "secondary_elite": 50
+    },
     "stat": { "ma": 20, "st": 60, "ag": 30, "pa": 20, "av": 10 }
   }
 }

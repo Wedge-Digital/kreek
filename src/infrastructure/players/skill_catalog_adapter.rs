@@ -95,9 +95,9 @@ impl ISkillCatalogPort for SkillCatalogAdapter {
         })
     }
 
-    fn skill_value_delta(&self, is_secondary_access: bool) -> u32 {
+    fn skill_value_delta(&self, is_secondary_access: bool, is_elite: bool) -> u32 {
         self.reference_repo
-            .improvement_skill_value_delta(is_secondary_access)
+            .improvement_skill_value_delta(is_secondary_access, is_elite)
     }
 
     fn stat_value_delta(&self, stat: StatKind) -> u32 {

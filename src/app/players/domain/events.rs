@@ -9,6 +9,19 @@ use crate::app::players::domain::value_objects::{
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use serde::{Deserialize, Serialize};
 
+/// Ce qui a motivé une recalibration de valeur.
+///
+/// Un enum et non un texte libre : ces événements se relisent des années plus
+/// tard, et « pourquoi cette valeur a-t-elle bougé sans que personne n'y
+/// touche » est la première question qu'on leur posera. Une chaîne libre y
+/// répondrait mal et ne se filtrerait pas.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RecalibrationReason {
+    /// Carte 387 — les compétences Élite valent dix kPo de plus, et les
+    /// joueurs qui en portaient avant la règle ont été corrigés d'un bloc.
+    BonusElite,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PlayerDomainEvent {
     /// Le roster initial d'une équipe est au complet — tous ses joueurs ont été
@@ -208,6 +221,24 @@ pub enum PlayerDomainEvent {
         delta: KpoDelta,
         author: String, // arch:ok
     },
+    /// Une correction de valeur appliquée par une **migration de données**,
+    /// jamais par un geste d'utilisateur.
+    ///
+    /// `PlayerValueCustomised` n'est pas réutilisé : il dit « un commissaire a
+    /// posé cette valeur hors barème ». Le relire dans un an sur un joueur que
+    /// personne n'a touché induirait en erreur — et il déclenche en plus un
+    /// recalcul de valeur d'équipe dont une migration n'a pas besoin, la
+    /// suivante les recalculant toutes.
+    ///
+    /// On ne réécrit pas l'histoire : les `PlayerSkillPurchased` et
+    /// `InitialSkillEarned` déjà écrits gardent le `value_delta` calculé le
+    /// jour de leur émission. C'est cet événement-ci qui porte l'écart.
+    PlayerValueRecalibrated {
+        player_id: PlayerId,
+        team_id: TeamId,
+        delta: KpoDelta,
+        reason: RecalibrationReason,
+    },
     PlayerSppCustomised {
         player_id: PlayerId,
         team_id: TeamId,
@@ -242,6 +273,7 @@ impl PlayerDomainEvent {
             Self::PlayerSkillCustomised { .. } => "PlayerSkillCustomised",
             Self::PlayerStatCustomised { .. } => "PlayerStatCustomised",
             Self::PlayerValueCustomised { .. } => "PlayerValueCustomised",
+            Self::PlayerValueRecalibrated { .. } => "PlayerValueRecalibrated",
             Self::PlayerSppCustomised { .. } => "PlayerSppCustomised",
         }
     }

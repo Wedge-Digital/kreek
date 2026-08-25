@@ -46,7 +46,13 @@ pub trait IReferenceRepository: Send + Sync {
     // `improvement_values.json`, et non plus codée en dur — la même table sert
     // les deux origines d'une compétence, bonus de création et achat en SPP,
     // qui divergeaient jusqu'à la carte 249.
-    fn improvement_skill_value_delta(&self, is_secondary_access: bool) -> u32;
+    /// La valeur qu'ajoute une compétence, selon son accès **et** son
+    /// élitisme.
+    ///
+    /// Signature modifiée plutôt qu'une seconde méthode : une variante « sans
+    /// élite » laissée à côté serait le piège où retomber, et les deux
+    /// appelants doivent trancher explicitement.
+    fn improvement_skill_value_delta(&self, is_secondary_access: bool, is_elite: bool) -> u32;
     fn improvement_stat_value_delta_ma(&self) -> u32;
     fn improvement_stat_value_delta_st(&self) -> u32;
     fn improvement_stat_value_delta_ag(&self) -> u32;

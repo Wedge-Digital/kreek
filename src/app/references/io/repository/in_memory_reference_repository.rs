@@ -76,10 +76,19 @@ pub struct ImprovementValues {
     pub stat: StatImprovementValues,
 }
 
+/// Le barème complet, quatre cases, aucune à additionner.
+///
+/// **Aucun `serde(default)`.** Un corpus privé des deux champs élite
+/// démarrerait en appliquant silencieusement le barème Standard aux
+/// compétences Élite : la règle serait inactive sans que rien ne le dise.
+/// C'est la forme d'échec que `CLAUDE.md` proscrit — « une étape sautée doit
+/// échouer, pas rassurer ».
 #[derive(Deserialize)]
 pub struct SkillImprovementValues {
     pub primary: u32,
+    pub primary_elite: u32,
     pub secondary: u32,
+    pub secondary_elite: u32,
 }
 
 #[derive(Deserialize)]
@@ -273,11 +282,15 @@ impl IReferenceRepository for InMemoryReferenceRepository {
             .unwrap_or_default()
     }
 
-    fn improvement_skill_value_delta(&self, is_secondary_access: bool) -> u32 {
-        if is_secondary_access {
-            self.improvement_values.skill.secondary
-        } else {
-            self.improvement_values.skill.primary
+    fn improvement_skill_value_delta(&self, is_secondary_access: bool, is_elite: bool) -> u32 {
+        // Quatre cases, quatre nombres du corpus. Pas de bonus additionné à
+        // une base : aucune valeur de règle du jeu ne vit dans le code Rust.
+        let s = &self.improvement_values.skill;
+        match (is_secondary_access, is_elite) {
+            (false, false) => s.primary,
+            (false, true) => s.primary_elite,
+            (true, false) => s.secondary,
+            (true, true) => s.secondary_elite,
         }
     }
     fn improvement_stat_value_delta_ma(&self) -> u32 {
@@ -301,6 +314,54 @@ impl IReferenceRepository for InMemoryReferenceRepository {
 mod tests {
     use super::*;
     use crate::app::references::domain::consistency::check_consistency;
+
+    /// Un corpus privé des champs Élite doit **refuser le chargement**, et non
+    /// démarrer sur le barème Standard.
+    ///
+    /// Sans `serde(default)`, l'absence est une erreur de désérialisation. Le
+    /// test le constate sur le vrai chemin — `load_from_dir` sur un dossier
+    /// réel — parce que c'est là que se joue l'exigence : la règle serait
+    /// inactive en production sans qu'une ligne le dise, et c'est exactement
+    /// la forme d'échec que `CLAUDE.md` proscrit.
+    ///
+    /// Le message doit **nommer le fichier fautif** : un corpus se répare
+    /// fichier par fichier, et « champ manquant » sans son chemin fait fouiller
+    /// onze fichiers.
+    #[test]
+    fn un_corpus_sans_les_champs_elite_refuse_de_charger() {
+        let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/references.example");
+        let temp =
+            std::env::temp_dir().join(format!("kreek-corpus-sans-elite-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&temp);
+        std::fs::create_dir_all(&temp).unwrap();
+        for f in std::fs::read_dir(&source).unwrap() {
+            let f = f.unwrap();
+            std::fs::copy(f.path(), temp.join(f.file_name())).unwrap();
+        }
+        // Le barème d'avant la carte 387, tel qu'un corpus non mis à jour le
+        // porte encore.
+        std::fs::write(
+            temp.join("improvement_values.json"),
+            r#"{"bloodbowl_version":"2025","edition":"Third Season Edition",
+                "improvement_values":{"skill":{"primary":20,"secondary":40},
+                "stat":{"ma":20,"st":60,"ag":30,"pa":20,"av":10}}}"#,
+        )
+        .unwrap();
+
+        let r = InMemoryReferenceRepository::load_from_dir(&temp);
+        let _ = std::fs::remove_dir_all(&temp);
+
+        let e = r.err().expect("un corpus incomplet ne doit pas charger");
+        let message = e.to_string();
+        assert!(
+            message.contains("improvement_values.json"),
+            "le message doit nommer le fichier fautif : {message}"
+        );
+        assert!(
+            message.contains("primary_elite"),
+            "le message doit nommer le champ manquant : {message}"
+        );
+    }
 
     /// Doit rester aligné sur `FIVE_CHAOS_GODS` (special_rule_selector.rs),
     /// que le sélecteur de règle à choix résout depuis le jeu de données.
@@ -556,8 +617,11 @@ mod tests {
     #[test]
     fn improvement_value_delta_matches_official_table() {
         let repo = InMemoryReferenceRepository::load_for_tests();
-        assert_eq!(repo.improvement_skill_value_delta(false), 20);
-        assert_eq!(repo.improvement_skill_value_delta(true), 40);
+        assert_eq!(repo.improvement_skill_value_delta(false, false), 20);
+        assert_eq!(repo.improvement_skill_value_delta(true, false), 40);
+        // Le barème Élite : dix de plus dans les deux accès.
+        assert_eq!(repo.improvement_skill_value_delta(false, true), 30);
+        assert_eq!(repo.improvement_skill_value_delta(true, true), 50);
         assert_eq!(repo.improvement_stat_value_delta_ma(), 20);
         assert_eq!(repo.improvement_stat_value_delta_st(), 60);
         assert_eq!(repo.improvement_stat_value_delta_ag(), 30);

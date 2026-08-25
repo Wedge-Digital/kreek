@@ -49,6 +49,9 @@ fn player_and_team_id(event: &PlayerDomainEvent) -> (&str, &str) {
         PlayerDomainEvent::PlayerValueCustomised {
             player_id, team_id, ..
         } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::PlayerValueRecalibrated {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
         PlayerDomainEvent::PlayerSppCustomised {
             player_id, team_id, ..
         } => (&player_id.0, &team_id.0),
@@ -466,6 +469,24 @@ pub async fn upsert_player_projection(
         // projection ne doit pas pouvoir devenir négative si un événement
         // historique le franchissait — `value_kpo` est un entier non signé côté
         // domaine.
+        // Même écriture que la customisation, même plancher : c'est la valeur
+        // qui bouge, seule l'intention diffère.
+        PlayerDomainEvent::PlayerValueRecalibrated {
+            player_id, delta, ..
+        } => {
+            sqlx::query(
+                "UPDATE players_proj
+                 SET value_kpo = GREATEST(value_kpo + $2, 0),
+                     version = version + 1
+                 WHERE player_id = $1",
+            )
+            .bind(&player_id.0)
+            .bind(delta.into_inner())
+            .execute(&mut **tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+        }
+
         PlayerDomainEvent::PlayerValueCustomised {
             player_id, delta, ..
         } => {

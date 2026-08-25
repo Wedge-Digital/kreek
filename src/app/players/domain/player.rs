@@ -543,6 +543,16 @@ impl Player {
                 player.version += 1;
                 Some(player)
             }
+            // Même arithmétique que la customisation : un delta signé, borné
+            // à zéro. Une valeur ne descend pas sous zéro, même si un
+            // commissaire l'avait déjà baissée sous son barème.
+            PlayerDomainEvent::PlayerValueRecalibrated { delta, .. } => {
+                let mut player = current?;
+                let resultat = player.value.0 as i64 + delta.into_inner() as i64;
+                player.value = ValueKpo(resultat.max(0) as u32);
+                player.version += 1;
+                Some(player)
+            }
             PlayerDomainEvent::PlayerValueCustomised { delta, .. } => {
                 let mut player = current?;
                 let resultat = player.value.0 as i64 + delta.into_inner() as i64;

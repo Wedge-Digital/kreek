@@ -126,7 +126,7 @@ mod tests {
         fn cost_for_level(&self, _level: u8, _is_elite: bool) -> Option<SkillCostLevelDto> {
             None
         }
-        fn skill_value_delta(&self, _is_secondary_access: bool) -> u32 {
+        fn skill_value_delta(&self, _is_secondary_access: bool, _is_elite: bool) -> u32 {
             0
         }
         fn stat_value_delta(&self, _stat: StatKind) -> u32 {

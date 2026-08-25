@@ -163,8 +163,14 @@ def spp_ctx(browser, space_id):
 
     home_team_id = ctx["teams"][home_idx]
     players = _team_player_ids(home_team_id)
-    assert len(players) >= 4, f"au moins 4 joueurs attendus pour {home_team_id}"
-    rich_player, poor_player, value_player, stat_player = players[0], players[1], players[2], players[3]
+    assert len(players) >= 5, f"au moins 5 joueurs attendus pour {home_team_id}"
+    rich_player, poor_player, value_player, stat_player, elite_player = (
+        players[0],
+        players[1],
+        players[2],
+        players[3],
+        players[4],
+    )
 
     _record_action_api(space_id, mr_id, "home", rich_player, turn=1, action_type="TOUCHDOWN")
     _record_action_api(space_id, mr_id, "home", rich_player, turn=2, action_type="SORTIE")
@@ -185,6 +191,13 @@ def spp_ctx(browser, space_id):
     # sous le seuil. Huit en donnent 16, et le test redevient confortable.
     for turn in range(1, 9):
         _record_action_api(space_id, mr_id, "home", stat_player, turn=turn, action_type="TOUCHDOWN")
+    # Joueur dédié au barème Élite — un de plus, pour la même raison que les
+    # trois précédents : la réserve de SPP n'est pas partagée, et un joueur
+    # déjà dépensé rend le bouton « Choisir » invisible plutôt qu'absent, ce
+    # qui échoue loin de sa cause. Une Élite primaire de niveau 1 coûte 8 SPP
+    # contre 6 pour une Standard ; quatre essais à 2 SPP en donnent 8.
+    for turn in range(1, 5):
+        _record_action_api(space_id, mr_id, "home", elite_player, turn=turn, action_type="TOUCHDOWN")
 
     resp = _post_step5(space_id, mr_id, summary_title="Match E2E dépense SPP", summary_body="Généré par les tests.")
     assert resp.status_code in (302, 303), f"step5: {resp.status_code}\n{resp.text[:200]}"
@@ -197,9 +210,9 @@ def spp_ctx(browser, space_id):
     _wait_for(team_in_improvement)
 
     def players_credited():
-        ids = "', '".join([rich_player, value_player, stat_player])
+        ids = "', '".join([rich_player, value_player, stat_player, elite_player])
         rows = _query_db(f"SELECT spp FROM players_proj WHERE player_id IN ('{ids}');")
-        return len(rows) == 3 and all(int(r) > 0 for r in rows)
+        return len(rows) == 4 and all(int(r) > 0 for r in rows)
 
     _wait_for(players_credited)
 
@@ -210,6 +223,7 @@ def spp_ctx(browser, space_id):
         "poor_player_id": poor_player,
         "value_player_id": value_player,
         "stat_player_id": stat_player,
+        "elite_player_id": elite_player,
     }
 
 
@@ -337,3 +351,35 @@ def test_team_value_is_frozen_during_the_post_match_phases(page: Page, space_id,
     assert value_after == value_before, (
         "la TV doit rester figée pendant la phase d'amélioration des joueurs"
     )
+
+def test_une_competence_elite_ajoute_dix_kpo_de_plus_qu_une_standard(page: Page, space_id, spp_ctx):
+    """Carte 387 — le barème passe à 30 kPo pour une Élite en accès primaire,
+    contre 20 pour une Standard.
+
+    L'assertion porte sur la valeur du joueur **lue à l'écran** après l'achat :
+    c'est le seul niveau où l'on constate que le barème du corpus a traversé le
+    port, le service de coût, l'événement et la projection.
+    """
+    player_id = spp_ctx["elite_player_id"]
+    page.goto(f"{BASE_URL}/app/{space_id}/players/{player_id}/detail", wait_until="load")
+
+    valeur = page.locator(".meta-item", has_text="Valeur actuelle").locator(".meta-value")
+    avant = int(valeur.inner_text().replace("kPo", "").strip())
+
+    _activate_spp_spending(page)
+    page.wait_for_selector(".skill-list-table", timeout=10000)
+
+    # « Second Souffle » : GENERAL, donc primaire pour ce poste, et Élite.
+    ligne = page.locator("tr", has=page.locator(".skill-name", has_text="Second Souffle"))
+    expect(ligne.locator(".skill-elite-badge")).to_be_visible(timeout=10000)
+    with page.expect_navigation(wait_until="load"):
+        ligne.locator(".btn-add-skill", has_text="Choisir").click()
+
+    page.goto(f"{BASE_URL}/app/{space_id}/players/{player_id}/detail", wait_until="load")
+    apres = int(valeur.inner_text().replace("kPo", "").strip())
+
+    assert apres - avant == 30, (
+        f"une Élite primaire vaut 30 kPo, pas {apres - avant} — "
+        "le barème du corpus n'a pas traversé toute la chaîne"
+    )
+

@@ -22,8 +22,16 @@ use tracing::Instrument;
 /// une compétence vaut le même prix quelle que soit son origine. Ce n'était pas
 /// le cas avant la carte 249, où ce chemin appliquait un barème codé en dur,
 /// assorti d'un bonus élite que l'autre chemin ignorait.
-pub fn initial_skill_value_delta(catalog: &dyn ISkillCatalogPort, is_primary: bool) -> ValueKpo {
-    ValueKpo(catalog.skill_value_delta(!is_primary))
+///
+/// L'élitisme entre dans le calcul depuis la carte 387. La parité posée par la
+/// 249 n'en est pas rompue : c'est le barème **commun** qui a gagné deux cases,
+/// et les deux origines le lisent toujours au même endroit.
+pub fn initial_skill_value_delta(
+    catalog: &dyn ISkillCatalogPort,
+    is_primary: bool,
+    is_elite: bool,
+) -> ValueKpo {
+    ValueKpo(catalog.skill_value_delta(!is_primary, is_elite))
 }
 
 fn skill_category_css(category: &str) -> &'static str {
@@ -96,9 +104,7 @@ async fn handle_player(
             .map(|s| s.category.as_str())
             .unwrap_or("");
         let category_css = skill_category_css(category).to_string();
-        // `is_elite` n'entre pas dans ce calcul — il reste dans l'événement à
-        // titre d'historique.
-        let value_delta = initial_skill_value_delta(catalog, is_primary);
+        let value_delta = initial_skill_value_delta(catalog, is_primary, is_elite);
 
         let skill_id_vo = SkillId::try_new(skill.skill_id.clone())
             .unwrap_or_else(|_| SkillId::try_new("unknown".to_string()).unwrap());

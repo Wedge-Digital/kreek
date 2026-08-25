@@ -108,6 +108,8 @@ fn event_match_report_id(event: &PlayerDomainEvent) -> Option<String> {
         | PlayerDomainEvent::PlayerSkillCustomised { .. }
         | PlayerDomainEvent::PlayerStatCustomised { .. }
         | PlayerDomainEvent::PlayerValueCustomised { .. }
+        // Correction de migration, rattachée à aucun match.
+        | PlayerDomainEvent::PlayerValueRecalibrated { .. }
         | PlayerDomainEvent::PlayerSppCustomised { .. } => None,
     }
 }
@@ -168,6 +170,8 @@ fn apply_event(entry: &mut MatchHistoryEntry, event: &PlayerDomainEvent) {
         | PlayerDomainEvent::PlayerSkillCustomised { .. }
         | PlayerDomainEvent::PlayerStatCustomised { .. }
         | PlayerDomainEvent::PlayerValueCustomised { .. }
+        // Correction de migration, rattachée à aucun match.
+        | PlayerDomainEvent::PlayerValueRecalibrated { .. }
         | PlayerDomainEvent::PlayerSppCustomised { .. } => {}
     }
 }

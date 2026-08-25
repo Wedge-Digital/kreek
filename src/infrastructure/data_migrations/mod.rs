@@ -57,9 +57,11 @@ pub trait DataMigration: Send + Sync {
     ) -> Result<usize, String>;
 }
 
+pub mod m001_bonus_elite;
+
 /// Le registre, dans son ordre d'exécution.
 fn registre() -> Vec<Box<dyn DataMigration>> {
-    vec![]
+    vec![Box::new(m001_bonus_elite::BonusElite)]
 }
 
 /// Applique ce qui ne l'a pas encore été, puis rend la main. Refuse le
