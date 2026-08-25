@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Haine — Tyrandel — Fiche joueur — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <style>
+
+    /* ── Page layout ─────────────────────────────────────────────────────── */
+    .player-page {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+    }
+    .breadcrumb { font-size: var(--text-tiny); color: var(--dark-3); cursor: pointer; }
+    .breadcrumb:hover { color: var(--main-blue); }
+
+    /* ── Player header ───────────────────────────────────────────────────── */
+    .player-header {
+      background: var(--white);
+      border-radius: var(--card-radius);
+      padding: var(--p2);
+      display: flex;
+      align-items: flex-start;
+      gap: var(--p3);
+      flex-wrap: wrap;
+    }
+    .player-avatar {
+      width: 110px; height: 110px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: 40px; color: var(--white);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      background: linear-gradient(135deg, var(--red), #7a1414);
+    }
+    .player-header-body { flex: 1; min-width: 240px; display: flex; flex-direction: column; gap: 10px; }
+    .player-header-top  { display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap; }
+    .player-name        { font-family: var(--font-title); font-size: var(--h3); font-weight: 800; color: var(--dark-0); }
+
+    .jersey-chip {
+      width: 36px; height: 30px;
+      border: 1.5px solid var(--dark-5); border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: var(--text-tiny); font-weight: 800; color: var(--dark-3);
+      background: var(--dark-6); font-family: var(--font-title);
+    }
+
+    .player-pos {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: var(--text-tiny); font-weight: 700;
+    }
+    .pos-lineman { background: rgba(0,48,73,0.1); color: var(--main-blue); }
+    .pos-blitzer { background: rgba(224,32,32,0.1); color: var(--red); }
+    .pos-thrower { background: rgba(98,149,132,0.1); color: var(--green); }
+    .pos-catcher { background: rgba(255,215,0,0.15); color: #9A7800; }
+
+    .badge-locked {
+      font-size: var(--text-tiny); font-weight: 700; padding: 3px 10px;
+      border-radius: 20px; background: var(--dark-6); color: var(--dark-3);
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .badge-admin {
+      font-size: var(--text-tiny); font-weight: 700; padding: 3px 10px;
+      border-radius: 20px; background: rgba(0,48,73,0.12); color: var(--main-blue);
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .spp-budget-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+    /* ── NOUVEAU — mots-clefs du poste (à discuter) ────────────────────────
+       Même traitement que dans le tableau de la fiche d'équipe : du texte, pas
+       des badges. Ils qualifient la ligne de roster et ne doivent pas disputer
+       l'œil au poste, ni aux compétences juste en dessous. */
+    .player-keywords {
+      font-size: 11px; font-style: italic; font-weight: 400;
+      color: var(--dark-3); line-height: 1.4;
+    }
+
+    /* ── NOUVEAU — la Haine, trait acquis et gratuit ───────────────────────
+       Catégorie TRAITS : elle ne partage la couleur d'aucune des cinq
+       catégories de compétences, et le ✓ dit qu'elle est acquise, comme pour
+       les autres. Ce qui la distingue, c'est l'absence de coût. */
+    .skill-tag--trait {
+      background: rgba(111,53,165,0.10); color: #6f35a5;
+      border: 1px solid rgba(111,53,165,0.25);
+    }
+
+    .btn-customise {
+      width: 100%; padding: 8px 14px; border-radius: 6px; border: 1.5px solid var(--main-blue);
+      background: var(--white); color: var(--main-blue); font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.12s;
+    }
+    .btn-customise:hover { background: var(--main-blue); color: var(--white); }
+    .btn-toggle-spp {
+      width: 100%; padding: 8px 14px; border-radius: 6px; border: 1.5px solid var(--green);
+      background: var(--white); color: var(--green); font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.12s;
+    }
+    .btn-toggle-spp:hover { background: var(--green); color: var(--white); }
+
+    .player-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
+    .meta-item  { display: flex; flex-direction: column; gap: 2px; }
+    .meta-label { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-value { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+
+    .player-stats-row { display: flex; gap: var(--p3); flex-wrap: wrap; }
+    .pstat     { text-align: center; min-width: 34px; }
+    .pstat-val { font-family: var(--font-title); font-size: var(--h5); font-weight: 800; color: var(--dark-1); }
+    .pstat-label { font-size: 10px; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.4px; }
+
+    .player-skills-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .skill-tag {
+      font-size: var(--text-tiny); font-weight: 600; padding: 3px 10px;
+      border-radius: 20px; background: var(--dark-5); color: var(--dark-1);
+    }
+    .skill-tag--acquired { background: rgba(98,149,132,0.15); color: #3a6655; }
+
+    /* Portefeuille SPP (lecture seule) */
+    .spp-budget {
+      display: flex; flex-direction: column; gap: 6px;
+      padding: 14px 18px;
+      background: var(--dark-6);
+      border: 1px solid var(--dark-5);
+      border-radius: 8px;
+      min-width: 260px;
+    }
+    .spp-budget-top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--p1); }
+    .spp-budget-label {
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .spp-budget-numbers {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 800; color: var(--dark-2); white-space: nowrap;
+    }
+    .spp-budget-bar { height: 8px; background: var(--dark-5); border-radius: 4px; overflow: hidden; }
+    .spp-budget-bar-inner { height: 100%; border-radius: 4px; background: var(--dark-3); }
+    .spp-budget-bottom {
+      display: flex; justify-content: space-between; font-size: var(--text-tiny); color: var(--dark-3);
+    }
+
+    /* ── Split layout ────────────────────────────────────────────────────── */
+    .pd-split { display: flex; gap: var(--p2); align-items: flex-start; }
+
+    /* ── Left: historique de matchs ──────────────────────────────────────── */
+    .pd-left {
+      width: 360px; flex-shrink: 0;
+      display: flex; flex-direction: column; gap: var(--p2);
+    }
+    .history-panel { background: var(--white); border-radius: var(--card-radius); overflow: hidden; }
+    .history-panel-header {
+      padding: 10px var(--p2); border-bottom: 2px solid var(--dark-5);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .history-panel-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); }
+    .history-count-badge { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; }
+
+    .career-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--dark-6); }
+    .career-stat {
+      background: var(--white); padding: 12px 8px; text-align: center;
+      display: flex; flex-direction: column; gap: 2px; align-items: center;
+    }
+    .career-stat-icon { font-size: 16px; }
+    .career-stat-val  { font-family: var(--font-title); font-size: var(--h5); font-weight: 800; color: var(--dark-1); }
+    .career-stat-label { font-size: 10px; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.3px; }
+
+    .match-list { display: flex; flex-direction: column; }
+    .match-card { padding: var(--p1) var(--p2); border-top: 1px solid var(--dark-6); display: flex; flex-direction: column; gap: 8px; }
+    .match-card-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .match-opponent { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .match-opponent-name { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .match-meta { font-size: 10px; color: var(--dark-3); }
+    .match-score { font-size: var(--text-tiny); color: var(--dark-3); white-space: nowrap; }
+
+    .match-actions { display: flex; flex-direction: column; gap: 3px; }
+    .pd-log-entry { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; font-size: var(--text-tiny); }
+    .pd-log-entry:hover { background: var(--dark-7); }
+    .pd-log-icon { font-size: 13px; flex-shrink: 0; width: 18px; text-align: center; }
+    .pd-log-text { flex: 1; color: var(--dark-1); }
+    .pd-log-spp  { font-weight: 700; color: #9A7800; white-space: nowrap; }
+    .pd-log-empty { font-size: var(--text-tiny); color: var(--dark-4); font-style: italic; padding: 4px 6px; }
+
+    .match-subtotal {
+      display: flex; justify-content: flex-end; gap: 4px;
+      font-size: 10px; color: rgba(154,120,0,0.8); font-weight: 700;
+      border-top: 1px dashed var(--dark-6); padding-top: 6px;
+    }
+
+    /* ── Right: journal des évolutions / customisation ───────────────────── */
+    .pd-right {
+      flex: 1;
+      background: var(--white);
+      border-radius: var(--card-radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .spend-panel-header {
+      padding: var(--p2); border-bottom: 2px solid var(--dark-5);
+      display: flex; align-items: center; justify-content: space-between; gap: var(--p2); flex-wrap: wrap;
+    }
+    .spend-panel-title { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-0); }
+    .spend-panel-remaining {
+      display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0;
+      background: var(--dark-6); border: 1px solid var(--dark-5);
+      border-radius: 10px; padding: 8px 18px;
+    }
+    .spend-panel-remaining-val { font-family: var(--font-title); font-size: var(--h4); font-weight: 800; color: var(--dark-2); }
+    .spend-panel-remaining-label { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; }
+
+    /* Bandeaux de contexte (verrouillage / mode admin) */
+    .lock-banner {
+      margin: var(--p2) var(--p2) 0;
+      padding: var(--p1) var(--p2);
+      background: rgba(0,48,73,0.04);
+      border: 1px solid rgba(0,48,73,0.12);
+      border-radius: 8px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .lock-banner-icon { font-size: 20px; flex-shrink: 0; }
+    .lock-banner-text { font-size: var(--text-tiny); color: var(--dark-2); line-height: 1.4; }
+    .lock-banner-text strong { color: var(--dark-1); }
+    .lock-banner--admin { background: rgba(0,48,73,0.05); border-color: rgba(0,48,73,0.2); }
+
+    /* ── Zone de customisation ────────────────────────────────────────────── */
+    .custo-zone { border-bottom: 2px solid var(--dark-5); }
+
+    .tabs { display: flex; border-bottom: 2px solid var(--dark-5); gap: 4px; padding: 0 var(--p2); }
+    .tab {
+      padding: 10px 20px; font-size: var(--text-small); font-weight: 500; color: var(--dark-2);
+      cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .tab:hover { color: var(--dark-1); }
+    .tab.active { color: var(--main-blue); border-bottom-color: var(--main-blue); }
+
+    /* Onglet compétences (ajout libre) */
+    .custo-skill-controls { padding: var(--p1) var(--p2); border-bottom: 1px solid var(--dark-5); }
+    .custo-skill-search {
+      width: 100%; max-width: 320px; padding: 8px 12px; border: 1.5px solid var(--dark-4);
+      border-radius: 6px; font-size: var(--text-small); font-family: var(--font-body);
+    }
+    .custo-skill-search:focus { outline: none; border-color: var(--main-blue); }
+    .skill-list { max-height: 320px; overflow-y: auto; }
+    .skill-list-table { width: 100%; border-collapse: collapse; }
+    .skill-list-table th {
+      text-align: left; padding: 8px var(--p2); font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid var(--dark-5);
+      background: var(--dark-6); position: sticky; top: 0; z-index: 1;
+    }
+    .skill-list-table td { padding: 12px var(--p2); font-size: var(--text-small); border-bottom: 1px solid var(--dark-6); vertical-align: middle; }
+    .skill-list-table tr:last-child td { border-bottom: none; }
+    .skill-list-table tr:hover td { background: var(--dark-7); }
+    .skill-name { font-weight: 600; color: var(--dark-1); }
+    .skill-desc { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; max-width: 320px; }
+
+    .skill-type-pill { display: inline-block; font-size: var(--text-tiny); font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+    .type-general  { background: rgba(0,48,73,0.08);     color: var(--main-blue); }
+    .type-strength { background: rgba(224,32,32,0.08);   color: var(--red); }
+    .type-agility  { background: rgba(98,149,132,0.12);  color: var(--green); }
+    .type-passing  { background: rgba(255,215,0,0.18);   color: #9A7800; }
+    .type-mutation { background: rgba(111,53,165,0.10);  color: var(--light-1); }
+
+    .btn-add-skill {
+      padding: 6px 16px; border-radius: 6px; border: 1.5px solid var(--main-blue);
+      background: var(--white); color: var(--main-blue); font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer; white-space: nowrap; transition: all 0.12s;
+    }
+    .btn-add-skill:hover { background: var(--main-blue); color: var(--white); }
+
+    /* Onglet caractéristiques (actions dédiées, pas d'édition inline) */
+    .custo-stat-grid-wrap { padding: var(--p2); }
+    .custo-stat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--p1); }
+    .custo-stat-card {
+      border: 1.5px solid var(--dark-5); border-radius: 10px; padding: var(--p1);
+      display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+    }
+    .custo-stat-name { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.4px; }
+    .custo-stat-current { font-family: var(--font-title); font-size: var(--h5); font-weight: 800; color: var(--dark-1); }
+    .custo-stat-input {
+      width: 100%; text-align: center; padding: 6px; border: 1.5px solid var(--dark-4);
+      border-radius: 6px; font-size: var(--text-small); font-weight: 700;
+    }
+    .custo-stat-input:focus { outline: none; border-color: var(--main-blue); }
+    .custo-stat-preview {
+      font-size: var(--text-tiny); color: var(--main-blue); font-weight: 600;
+      display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap;
+    }
+    .custo-stat-preview-sep  { color: var(--dark-4); }
+    .custo-stat-preview-up   { color: var(--green); }
+    .custo-stat-preview-down { color: var(--dark-3); }
+    .custo-stat-actions { width: 100%; display: flex; flex-direction: column; gap: 4px; }
+    .custo-stat-add-btn {
+      width: 100%; padding: 6px; border-radius: 6px; border: 1.5px solid var(--main-blue);
+      background: var(--white); color: var(--main-blue); font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer; transition: all 0.12s;
+    }
+    .custo-stat-add-btn:hover:not(:disabled) { background: var(--main-blue); color: var(--white); }
+    .custo-stat-add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    /* Dégrader reste secondaire : même famille, moins d'insistance — retirer
+       une caractéristique n'est pas le geste courant. */
+    .custo-stat-add-btn--degrade { border-color: var(--dark-4); color: var(--dark-2); }
+    .custo-stat-add-btn--degrade:hover:not(:disabled) { background: var(--dark-2); border-color: var(--dark-2); color: var(--white); }
+    .custo-stat-pending { font-size: 10px; color: var(--main-blue); font-weight: 700; }
+
+    /* Onglets prix / SPP (actions dédiées) */
+    .custo-action-panel { padding: var(--p2); display: flex; flex-direction: column; gap: var(--p2); }
+    .custo-action-card {
+      border: 1.5px solid var(--dark-5); border-radius: 10px; padding: var(--p2);
+      display: flex; align-items: center; justify-content: space-between; gap: var(--p2); flex-wrap: wrap;
+    }
+    .custo-action-info { display: flex; flex-direction: column; gap: 2px; }
+    .custo-action-label { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.4px; }
+    .custo-action-current { font-family: var(--font-title); font-size: var(--h5); font-weight: 800; color: var(--dark-1); }
+    .custo-action-form { display: flex; align-items: center; gap: 8px; }
+    .custo-action-input {
+      width: 150px; padding: 8px 12px; border: 1.5px solid var(--dark-4);
+      border-radius: 6px; font-size: var(--text-small); font-family: var(--font-body);
+    }
+    .custo-action-input:focus { outline: none; border-color: var(--main-blue); }
+    .custo-action-unit { font-size: var(--text-tiny); color: var(--dark-3); }
+    .custo-price-step {
+      width: 38px; padding: 8px 0; border-radius: 6px; border: 1.5px solid var(--dark-4);
+      background: var(--white); color: var(--dark-2); font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer; transition: all 0.12s;
+    }
+    .custo-price-step:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .custo-action-hint { font-size: var(--text-tiny); color: var(--red); font-weight: 600; }
+    .custo-action-btn {
+      padding: 8px 18px; border-radius: 6px; border: 1.5px solid var(--main-blue);
+      background: var(--white); color: var(--main-blue); font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer; white-space: nowrap; transition: all 0.12s;
+    }
+    .custo-action-btn:hover:not(:disabled) { background: var(--main-blue); color: var(--white); }
+    .custo-action-btn:disabled { border-color: var(--dark-4); color: var(--dark-4); cursor: default; }
+
+    /* Modifications en attente (repris du panneau de dépense SPP) */
+    .spp-summary { padding: var(--p2); }
+    .spp-summary-header {
+      display: flex; align-items: center; justify-content: space-between; gap: var(--p2); flex-wrap: wrap;
+      margin-bottom: var(--p1);
+    }
+    .spp-summary-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); }
+    .spp-summary-table { width: 100%; border-collapse: collapse; }
+    .spp-summary-table th {
+      text-align: left; padding: 8px var(--p1); font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.4px; background: var(--dark-6); border-bottom: 1px solid var(--dark-5);
+    }
+    .spp-summary-table td { padding: 10px var(--p1); font-size: var(--text-small); border-bottom: 1px solid var(--dark-6); vertical-align: middle; }
+    .spp-summary-table tr:last-child td { border-bottom: none; }
+    .mode-chip { display: inline-flex; align-items: center; gap: 4px; font-size: var(--text-tiny); font-weight: 700; padding: 2px 10px; border-radius: 20px; }
+    .mode-chip-icon { display: inline-flex; align-items: center; line-height: 1; }
+    .mode-chip-chosen { background: rgba(0,48,73,0.08); color: var(--main-blue); }
+    .mode-chip-random { background: rgba(154,120,0,0.10); color: #9A7800; }
+    .mode-chip-custom { background: rgba(0,48,73,0.10); color: var(--main-blue); }
+    .summary-cost  { font-weight: 700; color: #9A7800; }
+    .summary-value { font-weight: 700; color: var(--green); }
+    .summary-ref   { font-size: var(--text-tiny); color: var(--dark-3); }
+    .spp-empty-state { padding: var(--p3); text-align: center; color: var(--dark-3); font-size: var(--text-small); font-style: italic; }
+    .btn-cancel-entry {
+      font-size: var(--text-tiny); color: var(--dark-3); cursor: pointer; background: none;
+      border: 1px solid var(--dark-5); padding: 4px 10px; border-radius: 5px; transition: all 0.12s;
+    }
+    .btn-cancel-entry:hover { color: var(--red); border-color: var(--red); }
+
+    .spend-panel-footer { padding: var(--p1) var(--p2); border-top: 2px solid var(--dark-5); display: flex; gap: var(--p1); }
+    .btn-submit {
+      flex: 1; padding: 12px var(--p1); background: var(--main-blue); color: var(--white);
+      border-radius: 8px; font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
+      cursor: pointer; border: none; text-align: center; transition: opacity 0.15s;
+    }
+    .btn-submit:hover:not(:disabled) { opacity: 0.9; }
+    .btn-submit:disabled { opacity: 0.4; cursor: default; }
+    .btn-cancel-all {
+      padding: 12px var(--p2); background: var(--white); color: var(--dark-3);
+      border-radius: 8px; font-size: var(--text-small); font-weight: 700;
+      cursor: pointer; border: 1.5px solid var(--dark-4); text-align: center; transition: all 0.15s;
+    }
+    .btn-cancel-all:hover { border-color: var(--red); color: var(--red); }
+
+    [x-cloak] { display: none !important; }
+
+    /* ── Mobile header (masqué sur desktop) ─────────────────────────────── */
+    .mobile-header { display: none; }
+
+    /* ── Responsive — tablette (≤ 960px) ─────────────────────────────────── */
+    @media (max-width: 960px) {
+      .pd-split { flex-direction: column; }
+      .pd-left  { width: 100%; }
+      .custo-stat-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    /* ── Responsive — mobile (≤ 768px) ───────────────────────────────────── */
+    @media (max-width: 768px) {
+      .sidebar  { display: none !important; }
+      .menu-bar { display: none !important; }
+      .app-layout { display: block !important; height: auto !important; overflow: visible !important; }
+      .main-area  { width: 100% !important; }
+      .page-content {
+        padding: var(--p1) !important; height: auto !important; overflow: visible !important;
+        padding-top: 64px !important; padding-bottom: var(--p3) !important;
+      }
+      .mobile-header {
+        display: flex !important; position: fixed; top: 0; left: 0; right: 0; z-index: 500;
+        background: var(--dark-0); align-items: center; gap: 10px; padding: 0 var(--p1); height: 52px;
+      }
+
+      .player-header { padding: var(--p1); gap: var(--p1); }
+      .player-avatar { width: 72px; height: 72px; font-size: 26px; }
+      .player-name    { font-size: var(--h5); }
+      .spp-budget { min-width: 0; width: 100%; }
+
+      .spp-summary-table th:nth-child(5), .spp-summary-table td:nth-child(5) { display: none; }
+      .custo-stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .custo-action-card { flex-direction: column; align-items: stretch; }
+      .custo-action-form { flex-direction: column; align-items: stretch; }
+      .custo-action-input { width: 100%; }
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- Mobile header (masqué sur desktop) -->
+  <div class="mobile-header">
+    <span style="color: rgba(255,255,255,0.8); font-size: 18px;">←</span>
+    <div class="jersey-chip" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: var(--white);">4</div>
+    <span style="font-family: var(--font-title); font-size: var(--text-tiny); font-weight: 700; color: var(--white);">Tyrandel</span>
+  </div>
+
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px; font-family: var(--font-body);">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active">Équipes</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="player-page" x-data="playerDetail()" x-cloak>
+
+          <div class="breadcrumb">← Les Korrigans FC</div>
+
+          <!-- ① En-tête joueur -->
+          <div class="player-header">
+            <div class="player-avatar">4</div>
+            <div class="player-header-body">
+              <div class="player-header-top">
+                <div class="player-name">Tyrandel</div>
+                <span class="jersey-chip">#4</span>
+                <span class="player-pos pos-blitzer">Frappeur</span>
+                <span class="player-keywords">Elfe, Blitzer</span>
+                <span class="badge-locked" x-show="mode === 'view'">🔒 Hors phase d'amélioration</span>
+                <span class="badge-admin" x-show="mode === 'customise'" x-cloak>🛠️ Mode customisation</span>
+              </div>
+              <div class="player-header-meta">
+                <div class="meta-item">
+                  <div class="meta-label">Roster</div>
+                  <div class="meta-value">Elfes Sylvestres</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Valeur actuelle</div>
+                  <div class="meta-value" x-text="formattedValue"></div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Matchs joués</div>
+                  <div class="meta-value">6</div>
+                </div>
+              </div>
+              <div class="player-stats-row">
+                <div class="pstat"><div class="pstat-val" x-text="player.ma"></div><div class="pstat-label">MV</div></div>
+                <div class="pstat"><div class="pstat-val" x-text="player.st"></div><div class="pstat-label">FO</div></div>
+                <div class="pstat"><div class="pstat-val" x-text="player.ag + '+'"></div><div class="pstat-label">AG</div></div>
+                <div class="pstat"><div class="pstat-val" x-text="player.pa + '+'"></div><div class="pstat-label">PA</div></div>
+                <div class="pstat"><div class="pstat-val" x-text="player.av + '+'"></div><div class="pstat-label">AR</div></div>
+              </div>
+              <div class="player-skills-row">
+                <span class="skill-tag">Esquiver</span>
+                <template x-for="skill in player.acquiredSkills" :key="skill">
+                  <span class="skill-tag skill-tag--acquired" x-text="skill + ' ✓'"></span>
+                </template>
+                <!-- NOUVEAU — les Haines gagnées, parmi les compétences acquises -->
+                <template x-for="haine in player.hatreds" :key="haine">
+                  <span class="skill-tag skill-tag--trait" x-text="'Haine : ' + haine + ' ✓'"></span>
+                </template>
+              </div>
+            </div>
+
+            <!-- Portefeuille SPP -->
+            <div class="spp-budget">
+              <div class="spp-budget-top">
+                <span class="spp-budget-label">SPP du joueur</span>
+                <span class="spp-budget-numbers" x-text="player.sppSpent + ' / ' + player.sppEarned + ' SPP'"></span>
+              </div>
+              <div class="spp-budget-bar">
+                <div class="spp-budget-bar-inner" :style="'width:' + sppPercent + '%'"></div>
+              </div>
+              <div class="spp-budget-bottom">
+                <span>Gagnés sur 6 matchs</span>
+                <span x-text="sppReserve + ' SPP en réserve'"></span>
+              </div>
+              <div class="spp-budget-actions" x-show="mode === 'view'">
+                <button class="btn-customise" @click="startCustomisation()">✏️ Customiser</button>
+                <button class="btn-toggle-spp" onclick="window.location.href='app-player-detail.html'">▶ Activer la dépense de SPP</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ② Historique + journal -->
+          <div class="pd-split">
+
+            <!-- Colonne gauche : historique de matchs -->
+            <div class="pd-left">
+              <div class="history-panel">
+                <div class="history-panel-header">
+                  <div class="history-panel-title">Résumé de carrière</div>
+                </div>
+                <div class="career-summary">
+                  <div class="career-stat"><span class="career-stat-icon">🏈</span><span class="career-stat-val">5</span><span class="career-stat-label">Touchdowns</span></div>
+                  <div class="career-stat"><span class="career-stat-icon">🎯</span><span class="career-stat-val">4</span><span class="career-stat-label">Passes</span></div>
+                  <div class="career-stat"><span class="career-stat-icon">🛡️</span><span class="career-stat-val">1</span><span class="career-stat-label">Intercept.</span></div>
+                  <div class="career-stat"><span class="career-stat-icon">🩸</span><span class="career-stat-val">3</span><span class="career-stat-label">Sorties</span></div>
+                  <div class="career-stat"><span class="career-stat-icon">⭐</span><span class="career-stat-val">1</span><span class="career-stat-label">MVP</span></div>
+                  <div class="career-stat"><span class="career-stat-icon">💰</span><span class="career-stat-val" x-text="player.sppEarned"></span><span class="career-stat-label">SPP total</span></div>
+                </div>
+              </div>
+
+              <div class="history-panel">
+                <div class="history-panel-header">
+                  <div class="history-panel-title">Historique de matchs</div>
+                  <div class="history-count-badge">6 matchs</div>
+                </div>
+                <div class="match-list">
+
+                  <div class="match-card">
+                    <div class="match-card-header">
+                      <div class="match-opponent">
+                        <span class="match-opponent-name">Bone Crushers</span>
+                        <span class="match-meta"><span class="badge badge-green">Victoire</span>&nbsp;J6</span>
+                      </div>
+                      <div class="match-score">TD 3-1</div>
+                    </div>
+                    <div class="match-actions">
+                      <div class="pd-log-entry"><span class="pd-log-icon">🏈</span><span class="pd-log-text">Touchdown</span><span class="pd-log-spp">+3 SPP</span></div>
+                      <div class="pd-log-entry"><span class="pd-log-icon">🎯</span><span class="pd-log-text">Passe réussie</span><span class="pd-log-spp">+1 SPP</span></div>
+                      <div class="pd-log-entry"><span class="pd-log-icon">🩸</span><span class="pd-log-text">Sortie infligée</span><span class="pd-log-spp">+2 SPP</span></div>
+                    </div>
+                    <div class="match-subtotal"><span>+6 SPP</span></div>
+                  </div>
+
+                  <div class="match-card">
+                    <div class="match-card-header">
+                      <div class="match-opponent">
+                        <span class="match-opponent-name">Green Machine</span>
+                        <span class="match-meta"><span class="badge badge-green">Victoire</span>&nbsp;J5</span>
+                      </div>
+                      <div class="match-score">TD 2-0</div>
+                    </div>
+                    <div class="match-actions">
+                      <div class="pd-log-entry"><span class="pd-log-icon">🏈</span><span class="pd-log-text">Touchdown</span><span class="pd-log-spp">+3 SPP</span></div>
+                      <div class="pd-log-entry"><span class="pd-log-icon">🎯</span><span class="pd-log-text">Passe réussie</span><span class="pd-log-spp">+1 SPP</span></div>
+                      <div class="pd-log-entry"><span class="pd-log-icon">🩸</span><span class="pd-log-text">Sortie infligée</span><span class="pd-log-spp">+2 SPP</span></div>
+                    </div>
+                    <div class="match-subtotal"><span>+6 SPP</span></div>
+                  </div>
+
+                  <div class="match-card">
+                    <div class="match-card-header">
+                      <div class="match-opponent">
+                        <span class="match-opponent-name">Nightmare Warband</span>
+                        <span class="match-meta"><span class="badge badge-green">Victoire</span>&nbsp;J4</span>
+                      </div>
+                      <div class="match-score">TD 3-0</div>
+                    </div>
+                    <div class="match-actions">
+                      <div class="pd-log-entry"><span class="pd-log-icon">🏈</span><span class="pd-log-text">Touchdown</span><span class="pd-log-spp">+3 SPP</span></div>
+                      <div class="pd-log-entry"><span class="pd-log-icon">🏈</span><span class="pd-log-text">Touchdown</span><span class="pd-log-spp">+3 SPP</span></div>
+                      <div class="pd-log-entry"><span class="pd-log-icon">🛡️</span><span class="pd-log-text">Interception</span><span class="pd-log-spp">+2 SPP</span></div>
+                      <div class="pd-log-entry"><span class="pd-log-icon">⭐</span><span class="pd-log-text">MVP</span><span class="pd-log-spp">+4 SPP</span></div>
+                    </div>
+                    <div class="match-subtotal"><span>+12 SPP</span></div>
+                  </div>
+
+                  <div class="match-card">
+                    <div class="match-card-header">
+                      <div class="match-opponent">
+                        <span class="match-opponent-name">Skull Crushers</span>
+                        <span class="match-meta"><span class="badge badge-red">Défaite</span>&nbsp;J3</span>
+                      </div>
+                      <div class="match-score">TD 0-2</div>
+                    </div>
+                    <div class="match-actions">
+                      <div class="pd-log-empty">Aucune action marquante ce match.</div>
+                    </div>
+                  </div>
+
+                  <div class="match-card">
+                    <div class="match-card-header">
+                      <div class="match-opponent">
+                        <span class="match-opponent-name">Iron Golems</span>
+                        <span class="match-meta"><span class="badge badge-dark">Nul</span>&nbsp;J2</span>
+                      </div>
+                      <div class="match-score">TD 1-1</div>
+                    </div>
+                    <div class="match-actions">
+                      <div class="pd-log-entry"><span class="pd-log-icon">🎯</span><span class="pd-log-text">Passe réussie</span><span class="pd-log-spp">+1 SPP</span></div>
+                      <div class="pd-log-entry"><span class="pd-log-icon">🩸</span><span class="pd-log-text">Sortie infligée</span><span class="pd-log-spp">+2 SPP</span></div>
+                    </div>
+                    <div class="match-subtotal"><span>+3 SPP</span></div>
+                  </div>
+
+                  <div class="match-card">
+                    <div class="match-card-header">
+                      <div class="match-opponent">
+                        <span class="match-opponent-name">Chaos United</span>
+                        <span class="match-meta"><span class="badge badge-green">Victoire</span>&nbsp;J1</span>
+                      </div>
+                      <div class="match-score">TD 2-1</div>
+                    </div>
+                    <div class="match-actions">
+                      <div class="pd-log-entry"><span class="pd-log-icon">🏈</span><span class="pd-log-text">Touchdown</span><span class="pd-log-spp">+3 SPP</span></div>
+                      <div class="pd-log-entry"><span class="pd-log-icon">🎯</span><span class="pd-log-text">Passe réussie</span><span class="pd-log-spp">+1 SPP</span></div>
+                    </div>
+                    <div class="match-subtotal"><span>+4 SPP</span></div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <!-- Colonne droite : journal des évolutions / customisation -->
+            <div class="pd-right">
+              <div class="spend-panel-header">
+                <div class="spend-panel-title" x-text="mode === 'customise' ? 'Mode Customisation' : 'Journal des évolutions'"></div>
+                <div class="spend-panel-remaining">
+                  <div class="spend-panel-remaining-val" x-text="sppReserve"></div>
+                  <div class="spend-panel-remaining-label">SPP en réserve</div>
+                </div>
+              </div>
+
+              <!-- Bandeau verrouillage (lecture seule) -->
+              <div class="lock-banner" x-show="mode === 'view'">
+                <span class="lock-banner-icon">🔒</span>
+                <span class="lock-banner-text">
+                  <strong>La dépense de SPP n'est pas disponible actuellement.</strong><br>
+                  Elle s'ouvre uniquement pendant la phase d'amélioration qui suit un match. Tyrandel a <span x-text="sppReserve"></span> SPP en réserve qui pourront être dépensés après le prochain match.
+                </span>
+              </div>
+
+              <!-- Bandeau mode admin -->
+              <div class="lock-banner lock-banner--admin" x-show="mode === 'customise'" x-cloak>
+                <span class="lock-banner-icon">🛠️</span>
+                <span class="lock-banner-text">
+                  <strong>Mode customisation.</strong> Les modifications ci-dessous sont appliquées directement au joueur, sans passer par les règles du jeu. Chaque action est journalisée avec le nom du commissaire.
+                </span>
+              </div>
+
+              <!-- Zone de customisation -->
+              <template x-if="mode === 'customise'">
+                <div class="custo-zone">
+                  <div class="tabs">
+                    <div class="tab" :class="activeTab === 'skills' ? 'active' : ''" @click="activeTab = 'skills'">Compétences</div>
+                    <div class="tab" :class="activeTab === 'stats' ? 'active' : ''" @click="activeTab = 'stats'">Caractéristiques</div>
+                    <div class="tab" :class="activeTab === 'price' ? 'active' : ''" @click="activeTab = 'price'">Prix</div>
+                    <div class="tab" :class="activeTab === 'spp' ? 'active' : ''" @click="activeTab = 'spp'">SPP</div>
+                  </div>
+
+                  <!-- Onglet compétences : ajout libre, sans restriction ni coût -->
+                  <template x-if="activeTab === 'skills'">
+                    <div>
+                      <div class="custo-skill-controls">
+                        <input class="custo-skill-search" type="text" placeholder="Rechercher une compétence…" x-model="skillSearch">
+                      </div>
+                      <div class="skill-list">
+                        <table class="skill-list-table">
+                          <thead>
+                            <tr><th style="min-width:220px;">Compétence</th><th>Type</th><th></th></tr>
+                          </thead>
+                          <tbody>
+                            <template x-for="skill in addableSkills" :key="skill.id">
+                              <tr>
+                                <td>
+                                  <div class="skill-name" x-text="skill.name"></div>
+                                  <div class="skill-desc" x-text="skill.desc"></div>
+                                </td>
+                                <td><span class="skill-type-pill" :class="'type-' + skill.category" x-text="categoryLabel(skill.category)"></span></td>
+                                <td><button class="btn-add-skill" @click="queueSkill(skill)">+ Ajouter</button></td>
+                              </tr>
+                            </template>
+                            <tr x-show="addableSkills.length === 0">
+                              <td colspan="3" style="text-align:center; color:var(--dark-3); font-style:italic; padding:var(--p2);">
+                                Aucune compétence ne correspond à la recherche.
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </template>
+
+                  <!-- Onglet caractéristiques : actions dédiées, pas d'édition
+                       inline. La saisie est une **amplitude** positive, et ce
+                       sont les deux boutons qui portent le sens : un champ
+                       signé obligeait à taper « -1 » pour dégrader, ce que rien
+                       n'annonçait. L'aperçu montre les deux issues, faute de
+                       quoi il faudrait deviner laquelle le champ décrit.
+                       « Améliorer » / « Dégrader » plutôt qu'augmenter et
+                       diminuer : le sens est la **qualité du joueur**, et pour
+                       AG et PA une amélioration fait descendre le chiffre. -->
+                  <template x-if="activeTab === 'stats'">
+                    <div class="custo-stat-grid-wrap">
+                      <div class="custo-stat-grid">
+                        <template x-for="stat in statDefs" :key="stat.key">
+                          <div class="custo-stat-card">
+                            <div class="custo-stat-name" x-text="stat.label"></div>
+                            <!-- Valeur **effective** : celle du joueur une fois
+                                 le panier appliqué. Sans ça, deux modifications
+                                 chaînées sur la même caractéristique partiraient
+                                 toutes deux de la valeur d'origine. -->
+                            <div class="custo-stat-current" x-text="stat.display(statEffective(stat))"></div>
+                            <div class="custo-stat-pending" x-show="pendingCrans(stat.key)" x-cloak
+                                 x-text="'dont ' + (pendingCrans(stat.key) > 0 ? '+' : '−') + Math.abs(pendingCrans(stat.key)) + ' en attente'"></div>
+                            <input class="custo-stat-input" type="number" min="1" step="1"
+                                   x-model.number="statAmount[stat.key]">
+                            <div class="custo-stat-preview" x-show="statAmount[stat.key]">
+                              <span class="custo-stat-preview-up"
+                                    x-text="'▲ ' + stat.display(statAfter(stat, Math.abs(statAmount[stat.key] || 0)))"></span>
+                              <span class="custo-stat-preview-sep">·</span>
+                              <span class="custo-stat-preview-down"
+                                    x-text="'▼ ' + stat.display(statAfter(stat, -Math.abs(statAmount[stat.key] || 0)))"></span>
+                            </div>
+                            <div class="custo-stat-actions">
+                              <button class="custo-stat-add-btn" :disabled="!statAmount[stat.key]"
+                                      @click="queueStat(stat, 1)">Améliorer</button>
+                              <button class="custo-stat-add-btn custo-stat-add-btn--degrade" :disabled="!statAmount[stat.key]"
+                                      @click="queueStat(stat, -1)">Dégrader</button>
+                            </div>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                  </template>
+
+                  <!-- Onglet prix : action dédiée -->
+                  <template x-if="activeTab === 'price'">
+                    <div class="custo-action-panel">
+                      <div class="custo-action-card">
+                        <div class="custo-action-info">
+                          <div class="custo-action-label">Prix actuel</div>
+                          <div class="custo-action-current" x-text="formattedValueKpo"></div>
+                        </div>
+                        <!-- Pas de 5 kPo : c'est le grain des prix du jeu, et
+                             la saisie libre invitait à des montants qui n'y
+                             correspondent pas. Les deux boutons donnent le
+                             réglage courant sans passer par le clavier. -->
+                        <div class="custo-action-form">
+                          <input class="custo-action-input" type="number" step="5" placeholder="Ex. 10 ou -15"
+                                 x-model.number="priceDelta">
+                          <span class="custo-action-unit">kPo</span>
+                          <button class="custo-price-step" @click="stepPrice(-5)" title="Retirer 5 kPo">−5</button>
+                          <button class="custo-price-step" @click="stepPrice(5)" title="Ajouter 5 kPo">+5</button>
+                          <button class="custo-action-btn" :disabled="!priceDelta" @click="queuePrice()">Ajuster</button>
+                        </div>
+                        <div class="custo-action-hint" x-show="priceDelta % 5 !== 0" x-cloak>
+                          Les prix se règlent par pas de 5 kPo.
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+
+                  <!-- Onglet SPP : ajout uniquement -->
+                  <template x-if="activeTab === 'spp'">
+                    <div class="custo-action-panel">
+                      <div class="custo-action-card">
+                        <div class="custo-action-info">
+                          <div class="custo-action-label">SPP gagnés (total carrière)</div>
+                          <div class="custo-action-current" x-text="player.sppEarned"></div>
+                        </div>
+                        <div class="custo-action-form">
+                          <input class="custo-action-input" type="number" placeholder="Ex. 5" x-model.number="sppToAdd">
+                          <button class="custo-action-btn" :disabled="!sppToAdd" @click="queueSppAdd()">Ajouter</button>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+
+                  <!-- Modifications en attente -->
+                  <div class="spp-summary">
+                    <div class="spp-summary-header">
+                      <div class="spp-summary-title">Modifications en attente</div>
+                    </div>
+                    <div class="spp-empty-state" x-show="pendingChanges.length === 0">
+                      Aucune modification en attente — choisissez une action dans les onglets ci-dessus.
+                    </div>
+                    <table class="spp-summary-table" x-show="pendingChanges.length > 0">
+                      <thead>
+                        <tr><th>Modification</th><th>Type</th><th></th></tr>
+                      </thead>
+                      <tbody>
+                        <template x-for="(c, idx) in pendingChanges" :key="c.id">
+                          <tr>
+                            <td x-text="c.label"></td>
+                            <td>
+                              <span class="mode-chip mode-chip-custom">
+                                <span class="mode-chip-icon">🛠️</span><span x-text="c.typeName"></span>
+                              </span>
+                            </td>
+                            <td><button class="btn-cancel-entry" @click="removePending(idx)">Annuler</button></td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="spend-panel-footer">
+                    <button class="btn-submit" :disabled="pendingChanges.length === 0" @click="saveCustomisation()">
+                      Enregistrer les modifications
+                    </button>
+                    <button class="btn-cancel-all" @click="cancelCustomisation()">Annuler</button>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Journal des évolutions (historique, masqué en mode customisation) -->
+              <div class="spp-summary" x-show="mode === 'view'">
+                <table class="spp-summary-table">
+                  <thead>
+                    <tr><th>Évolution</th><th>Mode</th><th>Coût</th><th>Valeur</th><th>Obtenue</th></tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="entry in evolutionLog" :key="entry.id">
+                      <tr>
+                        <td x-text="entry.label"></td>
+                        <td>
+                          <span class="mode-chip mode-chip-custom" x-show="entry.custom">
+                            <span class="mode-chip-icon">🛠️</span><span>Customisation</span>
+                          </span>
+                          <span class="mode-chip mode-chip-chosen" x-show="!entry.custom" x-text="entry.mode"></span>
+                        </td>
+                        <td class="summary-cost" x-text="entry.cost"></td>
+                        <td class="summary-value" x-text="entry.value"></td>
+                        <td class="summary-ref" x-text="entry.ref"></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+function playerDetail() {
+  return {
+
+    mode:      'view', // 'view' | 'customise'
+    activeTab: 'skills',
+
+    player: {
+      ma: 7, st: 3, ag: 3, pa: 5, av: 8,
+      value: 128000,
+      acquiredSkills: ['Bloc', 'Garde'],
+      /* NOUVEAU — les Haines gagnées. Plusieurs sont possibles : chaque
+         blessure qui en donne une ajoute son mot-clef. */
+      hatreds: ['Nain', 'Homme-Bête'],
+      sppEarned: 31,
+      sppSpent: 18,
+    },
+
+    /* ── Catalogue complet de compétences (aucune restriction d'accès) ────── */
+    catalog: {
+      general: [
+        { id: 'block',   name: 'Bloc',            desc: 'Ne tombe pas lors d\'un placage raté.' },
+        { id: 'sure',    name: 'Sûr',              desc: 'Relance le premier jet de gestion de balle raté.' },
+        { id: 'guard',   name: 'Garde',            desc: 'Aide aux plaquages même depuis la zone de marquage.' },
+        { id: 'wrestle', name: 'Lutteuse',         desc: 'Peut tomber avec l\'adversaire lors d\'un placage.' },
+        { id: 'kick',    name: 'Botteuse',         desc: 'Peut choisir la direction du coup de pied d\'envoi.' },
+      ],
+      strength: [
+        { id: 'pres',    name: 'Présence',         desc: 'Les adversaires relancent leurs jets d\'armure réussis.' },
+        { id: 'stand',   name: 'Costaud',          desc: 'Ne peut pas être mis au sol par un seul attaquant.' },
+        { id: 'mighty',  name: 'Coup de marteau',  desc: 'Peut transformer un résultat Renversé en KO.' },
+      ],
+      agility: [
+        { id: 'acro',    name: 'Acrobatie',        desc: 'Peut tenter une esquive même après être tombé.' },
+        { id: 'catch',   name: 'Attraper',         desc: 'Relance le premier jet de réception raté.' },
+        { id: 'jump',    name: 'Saut',             desc: 'Peut sauter par-dessus les joueurs adjacents.' },
+      ],
+      passing: [
+        { id: 'pass',    name: 'Passe longue',     desc: 'Ignore les modificateurs de distance lors des passes longues.' },
+        { id: 'strong',  name: 'Bras fort',        desc: 'Portée de passe augmentée d\'un cran.' },
+      ],
+      mutation: [
+        { id: 'horns',   name: 'Cornes',           desc: '+1 à la Force lors d\'un Bloc en mouvement.' },
+        { id: 'bighand', name: 'Grandes Mains',    desc: 'Ramasse/attrape sans malus lié aux intempéries.' },
+      ],
+    },
+
+    /* ── Journal des évolutions (historique + entrées admin) ──────────────── */
+    evolutionLog: [
+      { id: 1, custom: false, label: 'Bloc',   mode: 'Choisie', cost: '6 SPP',  value: '+10 kPo', ref: 'J2 vs Iron Golems' },
+      { id: 2, custom: false, label: 'Garde',  mode: 'Choisie', cost: '12 SPP', value: '+20 kPo', ref: 'J4 vs Nightmare Warband' },
+      { id: 3, custom: true,  label: 'Prix ajusté',             cost: '—',      value: '+7 000 Po', ref: 'Par BigBoss (commissaire), 02/07/2026' },
+      { id: 4, custom: false, label: 'Haine : Nain',       mode: 'Blessure', cost: '—', value: '—', ref: 'J5 vs Marteaux de Vitré — Amoché' },
+      { id: 5, custom: false, label: 'Haine : Homme-Bête', mode: 'Blessure', cost: '—', value: '—', ref: 'J6 vs Rabatteurs de Khorne — Blessure sérieuse' },
+    ],
+    nextLogId: 6,
+
+    /* ── État de la customisation en cours ─────────────────────────────────── */
+    skillSearch:  '',
+    statAmount:   { ma: 1, st: 1, ag: 1, pa: 1, av: 1 },
+    priceDelta:    null,
+    sppToAdd:      null,
+    pendingChanges: [],
+    nextChangeId:   1,
+    adminName:     'BigBoss',
+
+    startCustomisation() {
+      this.mode = 'customise';
+      this.activeTab = 'skills';
+    },
+    cancelCustomisation() {
+      this.pendingChanges = [];
+      this.priceDelta = null;
+      this.sppToAdd = null;
+      this.mode = 'view';
+    },
+    saveCustomisation() {
+      const now = 'à l\'instant';
+      this.pendingChanges.forEach(c => {
+        if (c.type === 'skill')    this.player.acquiredSkills.push(c.skillName);
+        if (c.type === 'stat')     this.player[c.statKey] += c.amount;
+        if (c.type === 'price')    this.player.value += c.amount * 1000;
+        if (c.type === 'spp-add')  this.player.sppEarned += c.amount;
+
+        this.evolutionLog.unshift({
+          id: this.nextLogId++, custom: true, label: c.label,
+          cost: '—', value: c.valueLabel || '—',
+          ref: 'Par ' + this.adminName + ' (commissaire), ' + now,
+        });
+      });
+      this.pendingChanges = [];
+      this.priceDelta = null;
+      this.sppToAdd = null;
+      this.mode = 'view';
+    },
+    removePending(idx) {
+      this.pendingChanges.splice(idx, 1);
+    },
+
+    /* ── Compétences ────────────────────────────────────────────────────────── */
+    categoryLabel(key) {
+      return { general: 'Général', strength: 'Force', agility: 'Agilité', passing: 'Passe', mutation: 'Mutation' }[key] || key;
+    },
+    get addableSkills() {
+      const known = [...this.player.acquiredSkills, 'Esquiver',
+                      ...this.pendingChanges.filter(c => c.type === 'skill').map(c => c.skillName)];
+      let skills = [];
+      Object.keys(this.catalog).forEach(cat => {
+        this.catalog[cat].forEach(skill => {
+          if (!known.includes(skill.name)) skills.push({ ...skill, category: cat });
+        });
+      });
+      if (this.skillSearch.trim()) {
+        const q = this.skillSearch.trim().toLowerCase();
+        skills = skills.filter(s => s.name.toLowerCase().includes(q));
+      }
+      return skills;
+    },
+    queueSkill(skill) {
+      this.pendingChanges.push({
+        id: this.nextChangeId++, type: 'skill', skillName: skill.name,
+        label: 'Compétence : ' + skill.name, typeName: 'Compétence',
+        valueLabel: null,
+      });
+    },
+
+    /* ── Caractéristiques ───────────────────────────────────────────────────── */
+    // `step` = ce qu'un cran d'**amélioration** fait à la valeur brute.
+    //
+    // MV, FO et AR montent quand le joueur s'améliore ; AG et PA sont des
+    // nombres cibles à atteindre au dé, donc ils *descendent*. AR s'affiche
+    // avec un « + » comme AG et PA mais se comporte à l'inverse : en règles
+    // 2020 l'adversaire doit atteindre la cible pour blesser, donc une armure
+    // haute protège mieux. Le suffixe « + » ne dit rien de la direction — seule
+    // cette table fait foi.
+    //
+    // Miroir de `apply_increase()` dans
+    // `src/app/players/use_cases/player_stats_service.rs`, qui est la source de
+    // vérité côté domaine. Toute divergence installerait une seconde
+    // convention à côté d'elle.
+    get statDefs() {
+      return [
+        { key: 'ma', label: 'MV', name: 'Mouvement', current: this.player.ma, step: +1, display: v => v },
+        { key: 'ag', label: 'AG', name: 'Agilité',   current: this.player.ag, step: -1, display: v => v + '+' },
+        { key: 'st', label: 'FO', name: 'Force',     current: this.player.st, step: +1, display: v => v },
+        { key: 'pa', label: 'PA', name: 'Passe',     current: this.player.pa, step: -1, display: v => v + '+' },
+        { key: 'av', label: 'AR', name: 'Armure',    current: this.player.av, step: +1, display: v => v + '+' },
+      ];
+    },
+    // Crans déjà empilés dans le panier pour cette caractéristique. C'est ce
+    // qui permet d'enchaîner deux modifications sur la même stat sans que la
+    // seconde reparte de la valeur d'origine.
+    pendingCrans(statKey) {
+      return this.pendingChanges
+        .filter(c => c.type === 'stat' && c.statKey === statKey)
+        .reduce((total, c) => total + c.crans, 0);
+    },
+    // Valeur du joueur une fois le panier appliqué — le point de départ réel de
+    // toute nouvelle modification.
+    statEffective(stat) {
+      return stat.current + this.pendingCrans(stat.key) * stat.step;
+    },
+    // Valeur brute obtenue en appliquant `crans` d'amélioration (négatif pour
+    // une dégradation) **à partir de la valeur effective**, panier compris.
+    statAfter(stat, crans) {
+      return this.statEffective(stat) + crans * stat.step;
+    },
+    // `sens` vaut +1 (Améliorer) ou -1 (Dégrader) — en **qualité du joueur**,
+    // pas en valeur brute. Le champ ne porte qu'une amplitude, le sens vient du
+    // bouton cliqué, et `statAfter` traduit en valeur brute selon la stat.
+    //
+    // Le libellé décrit **l'offset demandé**, pas un état intermédiaire :
+    // « Amélioration de Force +1 ». Afficher un « 3+ → 2+ » ferait dépendre
+    // chaque ligne de celles qui la précèdent — annuler la première rendrait
+    // les suivantes fausses, alors que l'offset, lui, reste vrai.
+    //
+    // Le mot dit l'intention, le nombre dit l'offset **réellement appliqué à la
+    // valeur stockée**. Les deux ne vont pas toujours dans le même sens :
+    // améliorer l'agilité, c'est « -1 », le seuil de dé descendant quand le
+    // joueur progresse. « Amélioration d'Agilité -1 » n'est donc pas une
+    // contradiction — c'est ce qui évite d'avoir à deviner la convention.
+    queueStat(stat, sens) {
+      const crans = Math.abs(this.statAmount[stat.key] || 0) * sens;
+      if (!crans) return;
+      const offset = crans * stat.step;
+      this.pendingChanges.push({
+        id: this.nextChangeId++, type: 'stat', statKey: stat.key,
+        crans, offset, rawValue: this.statAfter(stat, crans),
+        label: (crans > 0 ? 'Amélioration' : 'Dégradation')
+             + ' ' + this.elision(stat.name)
+             + ' ' + (offset > 0 ? '+' : '') + offset,
+        typeName: 'Caractéristique',
+        valueLabel: null,
+      });
+    },
+    elision(nom) {
+      return /^[AEIOUYÉÈ]/i.test(nom) ? "d'" + nom : 'de ' + nom;
+    },
+
+    /* ── Prix ────────────────────────────────────────────────────────────────── */
+    // Incrémente par pas de 5 en repartant du multiple de 5 le plus proche :
+    // une saisie clavier hors grille est ainsi ramenée dans la grille au
+    // premier clic, plutôt que de la propager.
+    stepPrice(pas) {
+      const base = Math.round((this.priceDelta || 0) / 5) * 5;
+      this.priceDelta = base + pas;
+    },
+    queuePrice() {
+      if (!this.priceDelta) return;
+      const sign = this.priceDelta > 0 ? '+' : '';
+      this.pendingChanges.push({
+        id: this.nextChangeId++, type: 'price', amount: this.priceDelta,
+        label: 'Prix ' + sign + this.priceDelta + ' kPo',
+        typeName: 'Prix',
+        valueLabel: sign + (this.priceDelta * 1000).toLocaleString('fr-FR') + ' Po',
+      });
+      this.priceDelta = null;
+    },
+
+    /* ── SPP ─────────────────────────────────────────────────────────────────── */
+    queueSppAdd() {
+      if (!this.sppToAdd) return;
+      this.pendingChanges.push({
+        id: this.nextChangeId++, type: 'spp-add', amount: this.sppToAdd,
+        label: 'SPP +' + this.sppToAdd, typeName: 'SPP',
+        valueLabel: '+' + this.sppToAdd + ' SPP',
+      });
+      this.sppToAdd = null;
+    },
+
+    /* ── Valeurs dérivées ────────────────────────────────────────────────────── */
+    get sppReserve()   { return this.player.sppEarned - this.player.sppSpent; },
+    get sppPercent()   { return Math.min(100, Math.round((this.player.sppSpent / this.player.sppEarned) * 100)); },
+    get formattedValue()    { return this.player.value.toLocaleString('fr-FR') + ' Po'; },
+    get formattedValueKpo() { return Math.round(this.player.value / 1000) + ' kPo'; },
+
+  };
+}
+</script>
+
+</body>
+</html>

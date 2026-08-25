@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Haine — Rapport de match — Étape 3 — Actions domicile</title>
+  <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="match-report-shared.css">
+  <style>
+    /* ── Override container gap ── */
+    .mr-container {
+      gap: var(--p1);
+    }
+
+    /* ── Card overrides for step3 ── */
+    .mr-card {
+      padding: var(--p1);
+      gap: 8px;
+    }
+    .mr-card-title {
+      font-size: var(--text-tiny);
+      color: var(--dark-2); text-transform: uppercase; letter-spacing: 0.3px;
+      padding: 0 4px;
+    }
+
+    /* ── Turn grid ── */
+    .mr-turn-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 4px;
+    }
+    .mr-turn-btn {
+      height: 36px;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: var(--text-tiny); font-weight: 700;
+      border: 1px solid var(--dark-5);
+      background: var(--white); color: var(--dark-2);
+      cursor: pointer; transition: all 0.12s;
+    }
+    .mr-turn-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .mr-turn-btn.active {
+      background: var(--main-blue); color: var(--white); border-color: var(--main-blue);
+    }
+    .mr-turn-btn.has-events {
+      border-color: var(--green);
+      color: var(--green);
+    }
+    .mr-turn-btn.has-events.active {
+      background: var(--main-blue); color: var(--white); border-color: var(--main-blue);
+    }
+    .mr-turn-sep {
+      grid-column: 1 / -1;
+      height: 1px; background: var(--dark-6);
+    }
+    .mr-turn-label {
+      grid-column: 1 / -1;
+      font-size: 10px; color: var(--dark-4); text-align: center;
+      padding: 2px 0;
+    }
+
+    /* ── Player grid ── */
+    .mr-player-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+    }
+    .mr-player-section {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .mr-player-section + .mr-player-section {
+      margin-top: 6px;
+      padding-top: 8px;
+      border-top: 1px solid var(--dark-6);
+    }
+    .mr-player-section-label {
+      font-size: 10px; font-weight: 700; color: var(--dark-4);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 0 2px;
+    }
+    .mr-player-section-label--journeyman { color: var(--dark-3); }
+    .mr-player-section-label--star { color: #9A7800; }
+
+    .mr-player-chip {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid var(--dark-5);
+      background: var(--white);
+      cursor: pointer; transition: all 0.12s;
+      min-width: 0;
+    }
+    .mr-player-chip:hover { border-color: var(--main-blue); }
+    .mr-player-chip.active {
+      background: rgba(0,48,73,0.06); border-color: var(--main-blue);
+    }
+    /* Journeyman chip — bordure pointillée, maillot gris */
+    .mr-player-chip--journeyman {
+      border-style: dashed;
+      border-color: var(--dark-4);
+    }
+    .mr-player-chip--journeyman .mr-player-chip-jersey {
+      background: var(--dark-3);
+    }
+    .mr-player-chip--journeyman:hover { border-color: var(--main-blue); border-style: solid; }
+    .mr-player-chip--journeyman.active { border-style: solid; }
+
+    /* Star player chip — accent or, maillot doré */
+    .mr-player-chip--star {
+      border-color: rgba(255,215,0,0.5);
+      background: rgba(255,215,0,0.03);
+    }
+    .mr-player-chip--star .mr-player-chip-jersey {
+      background: var(--gold);
+      color: var(--dark-0);
+    }
+    .mr-player-chip--star:hover { border-color: var(--gold); background: rgba(255,215,0,0.07); }
+    .mr-player-chip--star.active { border-color: var(--gold); background: rgba(255,215,0,0.1); }
+
+    .mr-player-chip-jersey {
+      width: 24px; height: 24px; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+      color: var(--white); flex-shrink: 0;
+      background: var(--main-blue);
+    }
+    .mr-player-chip-info {
+      flex: 1; min-width: 0; overflow: hidden;
+    }
+    .mr-player-chip-name {
+      font-size: 11px; font-weight: 600; color: var(--dark-1);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .mr-player-chip-pos {
+      font-size: 9px; color: var(--dark-4);
+    }
+    /* ── Action buttons ── */
+    .mr-action-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .mr-action-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 10px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--dark-5);
+      background: var(--white);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .mr-action-btn:hover { border-color: var(--main-blue); background: rgba(0,48,73,0.03); }
+    .mr-action-btn:active { transform: scale(0.96); }
+    .mr-action-btn--damage {
+      border-color: rgba(224,32,32,0.2);
+      background: rgba(224,32,32,0.02);
+    }
+    .mr-action-btn--damage:hover { border-color: var(--red); background: rgba(224,32,32,0.06); }
+    .mr-action-btn--mvp {
+      border-color: rgba(255,215,0,0.3);
+      background: rgba(255,215,0,0.03);
+    }
+    .mr-action-btn--mvp:hover { border-color: var(--gold); background: rgba(255,215,0,0.08); }
+    .mr-action-btn-icon { font-size: 20px; }
+    .mr-action-btn-label {
+      font-size: 10px; font-weight: 600; color: var(--dark-2);
+      text-align: center;
+    }
+    .mr-action-btn--damage .mr-action-btn-label { color: var(--red); }
+    .mr-action-btn--mvp .mr-action-btn-label { color: #9A7800; }
+
+    .mr-action-btn--sortie {
+      border-color: rgba(255,107,53,0.25);
+      background: rgba(255,107,53,0.02);
+    }
+    .mr-action-btn--sortie:hover { border-color: var(--orange); background: rgba(255,107,53,0.07); }
+    .mr-action-btn--sortie .mr-action-btn-label { color: var(--orange); }
+
+    .mr-action-status-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .mr-action-btn.disabled {
+      opacity: 0.3; cursor: not-allowed; pointer-events: none;
+    }
+
+    /* ── Hint ── */
+    .mr-hint {
+      font-size: 11px; color: var(--dark-4); text-align: center;
+      font-style: italic; padding: 4px;
+    }
+
+    /* ── Event log ── */
+    .mr-log {
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p1);
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .mr-log-title {
+      font-family: var(--font-title); font-size: var(--text-tiny); font-weight: 700;
+      color: var(--dark-2); text-transform: uppercase; letter-spacing: 0.3px;
+      padding: 0 4px; margin-bottom: 4px;
+    }
+    .mr-log-entry {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: var(--text-tiny);
+      transition: background 0.1s;
+    }
+    .mr-log-entry:hover { background: var(--dark-7); }
+    .mr-log-entry--damage { background: rgba(224,32,32,0.03); }
+    .mr-log-entry--damage:hover { background: rgba(224,32,32,0.06); }
+
+    .mr-log-turn {
+      width: 24px; height: 24px; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700;
+      background: var(--dark-6); color: var(--dark-3);
+      flex-shrink: 0;
+    }
+    .mr-log-entry--damage .mr-log-turn {
+      background: rgba(224,32,32,0.1); color: var(--red);
+    }
+    .mr-log-icon { font-size: 14px; flex-shrink: 0; }
+    .mr-log-text {
+      flex: 1; color: var(--dark-1); min-width: 0;
+    }
+    .mr-log-text strong { font-weight: 600; }
+    .mr-log-text--damage { color: var(--red); }
+    .mr-log-delete {
+      background: none; border: none; cursor: pointer;
+      color: var(--dark-4); font-size: 12px; padding: 4px;
+      border-radius: 4px; transition: all 0.15s; flex-shrink: 0;
+    }
+    .mr-log-delete:hover { color: var(--red); background: rgba(224,32,32,0.06); }
+
+    .mr-log-empty {
+      font-size: var(--text-tiny); color: var(--dark-4); font-style: italic;
+      text-align: center; padding: var(--p1);
+    }
+
+    /* ── MVP log entry ── */
+    .mr-log-entry--mvp { background: rgba(255,215,0,0.04); }
+    .mr-log-entry--mvp .mr-log-turn { background: rgba(255,215,0,0.15); color: #9A7800; }
+
+    /* ── Injury sub-select (shown in log for damage entries) ── */
+    .mr-log-injury-select {
+      padding: 4px 8px;
+      border: 1px solid rgba(224,32,32,0.2); border-radius: 4px;
+      font-size: 10px; color: var(--dark-1);
+      font-family: inherit; background: var(--white);
+      outline: none; flex-shrink: 0;
+    }
+
+    /* ── Player sections ── */
+    .mr-player-section { display: flex; flex-direction: column; gap: 6px; }
+    .mr-player-section + .mr-player-section { margin-top: 8px; }
+    .mr-player-section-label {
+      font-size: 9px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--dark-4); padding: 0 2px;
+    }
+    .mr-player-section-label--journeyman { color: var(--dark-3); }
+    .mr-player-section-label--mercenary  { color: var(--dark-3); }
+    .mr-player-section-label--star       { color: #9A7800; }
+    .mr-player-chip--journeyman { border-style: dashed; }
+    .mr-player-chip--journeyman .mr-player-chip-jersey { background: var(--dark-4); }
+    .mr-player-chip--mercenary { border-style: dashed; }
+    .mr-player-chip--mercenary .mr-player-chip-jersey { background: var(--dark-3); }
+    .mr-player-chip--star { border-color: rgba(255,215,0,0.4); }
+    .mr-player-chip--star .mr-player-chip-jersey {
+      background: rgba(255,215,0,0.15); color: #9A7800;
+      font-size: 14px;
+    }
+
+    /* ── Action status row ── */
+    .mr-action-status-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+      margin-top: 4px;
+    }
+    .mr-action-btn--sortie {
+      border-color: rgba(224,32,32,0.15); background: rgba(224,32,32,0.02);
+    }
+    .mr-action-btn--sortie:hover { border-color: var(--red); background: rgba(224,32,32,0.06); }
+    .mr-action-btn--sortie .mr-action-btn-label { color: var(--red); }
+    .mr-action-btn--damage .mr-action-btn-label { color: var(--dark-2); }
+
+    /* ── Injury panel (inline) ── */
+    .mr-injury-panel {
+      margin-top: 8px; padding-top: 12px;
+      border-top: 1px solid var(--dark-6);
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .mr-injury-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.4px; color: var(--dark-3); padding: 0 2px;
+    }
+    .mr-injury-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    }
+    .mr-injury-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 10px;
+      border-radius: 8px; border: 1px solid var(--dark-5);
+      background: var(--white); cursor: pointer; transition: all 0.12s;
+      text-align: left;
+    }
+    .mr-injury-btn:hover { border-color: var(--dark-3); }
+    .mr-injury-btn.active {
+      border-color: var(--main-blue);
+      background: rgba(0,48,73,0.06);
+    }
+    .mr-injury-btn--death { border-color: rgba(224,32,32,0.2); }
+    .mr-injury-btn--death:hover { border-color: var(--red); }
+    .mr-injury-btn--death.active { border-color: var(--red); background: rgba(224,32,32,0.05); }
+    .mr-injury-btn--full { grid-column: 1 / -1; }
+    .mr-injury-roll {
+      font-size: 10px; font-weight: 700;
+      color: var(--dark-4); white-space: nowrap; flex-shrink: 0;
+      width: 32px; text-align: center;
+    }
+    .mr-injury-label {
+      font-size: 12px; font-weight: 600; color: var(--dark-1);
+    }
+    .mr-injury-btn--death .mr-injury-label { color: var(--red); }
+
+    /* ── Sequel detail ── */
+    .mr-sequel-panel {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .mr-sequel-grid {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;
+    }
+    .mr-sequel-btn {
+      padding: 8px 4px; border-radius: 6px; text-align: center;
+      font-size: 11px; font-weight: 700;
+      border: 1px solid var(--dark-5); background: var(--white);
+      cursor: pointer; color: var(--dark-2); transition: all 0.12s;
+    }
+    .mr-sequel-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .mr-sequel-btn.active {
+      border-color: var(--main-blue); background: var(--main-blue); color: var(--white);
+    }
+
+    /* ── Injury confirm ── */
+    /* ── NOUVEAU — gain de Haine sur blessure grave (à discuter) ────────── */
+    .mr-hate-panel {
+      margin-top: var(--p1); padding-top: var(--p1);
+      border-top: 1px dashed var(--dark-4);
+    }
+    .mr-hate-question { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .mr-hate-label {
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2);
+      text-transform: uppercase; letter-spacing: 0.5px; flex: 1; min-width: 160px;
+    }
+    .mr-hate-choice { display: flex; gap: 8px; }
+    .mr-hate-btn {
+      padding: 6px 18px; border-radius: 6px; cursor: pointer; font-family: inherit;
+      font-size: var(--text-tiny); font-weight: 700;
+      border: 1.5px solid var(--dark-4); background: var(--white); color: var(--dark-2);
+    }
+    .mr-hate-btn:hover { border-color: var(--dark-3); }
+    .mr-hate-btn.active { border-color: var(--main-blue); background: rgba(0,48,73,0.06); color: var(--main-blue); }
+    .mr-hate-btn--no.active { border-color: var(--dark-3); background: var(--dark-6); color: var(--dark-2); }
+
+    .mr-hate-keywords { margin-top: var(--p1); }
+    .mr-hate-keywords-title {
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2);
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+    }
+    .mr-hate-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .mr-hate-kw {
+      padding: 7px 6px; border-radius: 6px; cursor: pointer; font-family: inherit;
+      font-size: var(--text-tiny); font-weight: 600; text-align: center;
+      border: 1.5px solid var(--dark-5); background: var(--white); color: var(--dark-2);
+    }
+    .mr-hate-kw:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .mr-hate-kw.active { border-color: var(--main-blue); background: var(--main-blue); color: var(--white); }
+    .mr-hate-group-title {
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.5px; margin: 4px 0 6px;
+    }
+    .mr-hate-more { margin-top: var(--p1); }
+    .mr-hate-more-summary {
+      cursor: pointer; font-size: var(--text-tiny); font-weight: 700;
+      color: var(--dark-2); padding: 4px 0; list-style: none;
+    }
+    .mr-hate-more-summary::before { content: '▸ '; color: var(--dark-3); }
+    .mr-hate-more[open] .mr-hate-more-summary::before { content: '▾ '; }
+    .mr-hate-more-summary:hover { color: var(--main-blue); }
+    .mr-hate-more > .mr-hate-grid { margin-top: 8px; }
+    .mr-hate-search {
+      box-sizing: border-box; width: 100%; margin-bottom: 8px;
+      padding: 7px 10px; border: 1.5px solid var(--dark-4); border-radius: 6px;
+      font: inherit; font-size: var(--text-tiny); color: var(--dark-1);
+    }
+    .mr-hate-search:focus { outline: none; border-color: var(--main-blue); }
+    .mr-hate-empty { font-size: var(--text-tiny); color: var(--dark-3); padding: 8px 0; }
+    .mr-hate-hint { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 8px; }
+    @media (max-width: 768px) {
+      .mr-hate-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .mr-injury-confirm {
+      padding: 12px; border-radius: 8px;
+      background: var(--main-blue); color: var(--white);
+      text-align: center; font-size: 13px; font-weight: 700;
+      cursor: pointer; border: none;
+    }
+
+    @media (min-width: 768px) {
+      .mr-player-grid { grid-template-columns: repeat(4, 1fr); }
+      .mr-injury-grid { grid-template-columns: repeat(3, 1fr); }
+      .mr-sequel-grid { grid-template-columns: repeat(5, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="mobile-header">
+    <div class="mobile-header-space">
+      <div class="mobile-header-space-logo">TC</div>
+      <span class="mobile-header-space-name">Tribu Celtique</span>
+      <span class="mobile-header-space-chevron">&#9660;</span>
+    </div>
+    <div class="mobile-header-actions">
+      <button class="mobile-header-btn">&#128100;</button>
+    </div>
+  </div>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+          </div>
+          <div class="menu-right">
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="mr-container">
+
+          <!-- Header -->
+          <div class="mr-header">
+            <div class="mr-header-icon">⚔️</div>
+            <div class="mr-header-title">Actions — Storm Treemen</div>
+            <div class="mr-header-sub">Sélectionnez un tour, un joueur, puis une action</div>
+          </div>
+
+          <!-- Steps -->
+          <div class="mr-steps">
+            <div class="mr-step mr-step--done">✓</div>
+            <div class="mr-step-line mr-step-line--done"></div>
+            <div class="mr-step mr-step--done">✓</div>
+            <div class="mr-step-line mr-step-line--done"></div>
+            <div class="mr-step mr-step--active">3</div>
+            <div class="mr-step-line"></div>
+            <div class="mr-step mr-step--pending">4</div>
+            <div class="mr-step-line"></div>
+            <div class="mr-step mr-step--pending">5</div>
+          </div>
+
+          <!-- 1. Turn selector -->
+          <div class="mr-card">
+            <div class="mr-card-title">Tour</div>
+            <div class="mr-turn-grid">
+              <div class="mr-turn-label">— 1ère mi-temps —</div>
+              <div class="mr-turn-btn has-events" onclick="selectTurn(this)">1</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">2</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">3</div>
+              <div class="mr-turn-btn active has-events" onclick="selectTurn(this)">4</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">5</div>
+              <div class="mr-turn-btn has-events" onclick="selectTurn(this)">6</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">7</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">8</div>
+              <div class="mr-turn-label">— 2ème mi-temps —</div>
+              <div class="mr-turn-btn has-events" onclick="selectTurn(this)">9</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">10</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">11</div>
+              <div class="mr-turn-btn active has-events" onclick="selectTurn(this)">12</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">13</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">14</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">15</div>
+              <div class="mr-turn-btn" onclick="selectTurn(this)">16</div>
+            </div>
+          </div>
+
+          <!-- 2. Player selector -->
+          <div class="mr-card">
+            <div class="mr-card-title">Joueur</div>
+
+            <!-- Section : joueurs réguliers -->
+            <div class="mr-player-section">
+              <div class="mr-player-section-label">Équipe</div>
+              <div class="mr-player-grid">
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">1</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Thalion</div>
+                    <div class="mr-player-chip-pos">Thrower</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">2</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Elrohir</div>
+                    <div class="mr-player-chip-pos">Lineman</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">3</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Grotak</div>
+                    <div class="mr-player-chip-pos">Blitzer</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">4</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Celeborn</div>
+                    <div class="mr-player-chip-pos">Lineman</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">5</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Galadhon</div>
+                    <div class="mr-player-chip-pos">Lineman</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">6</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Nimrodel</div>
+                    <div class="mr-player-chip-pos">Catcher</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip active" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">7</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Aëlindra</div>
+                    <div class="mr-player-chip-pos">Catcher</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">8</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Orophin</div>
+                    <div class="mr-player-chip-pos">Blitzer</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">9</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Ithildin</div>
+                    <div class="mr-player-chip-pos">Wardancer</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">10</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Haldir</div>
+                    <div class="mr-player-chip-pos">Treeman</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">11</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Fenris</div>
+                    <div class="mr-player-chip-pos">Lineman</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">12</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Amroth</div>
+                    <div class="mr-player-chip-pos">Lineman</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Section : mercenaires -->
+            <div class="mr-player-section">
+              <div class="mr-player-section-label mr-player-section-label--mercenary">Mercenaires</div>
+              <div class="mr-player-grid">
+
+                <div class="mr-player-chip mr-player-chip--mercenary" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">⚔</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Mercenaire</div>
+                    <div class="mr-player-chip-pos">Blitzer</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Section : journaliers -->
+            <div class="mr-player-section">
+              <div class="mr-player-section-label mr-player-section-label--journeyman">Journaliers</div>
+              <div class="mr-player-grid">
+
+                <div class="mr-player-chip mr-player-chip--journeyman" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">13</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Journalier</div>
+                    <div class="mr-player-chip-pos">Lineman</div>
+                  </div>
+                </div>
+
+                <div class="mr-player-chip mr-player-chip--journeyman" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">14</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Journalier</div>
+                    <div class="mr-player-chip-pos">Lineman</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Section : star players -->
+            <div class="mr-player-section">
+              <div class="mr-player-section-label mr-player-section-label--star">Star players</div>
+              <div class="mr-player-grid">
+
+                <div class="mr-player-chip mr-player-chip--star" onclick="selectPlayer(this)">
+                  <div class="mr-player-chip-jersey">⭐</div>
+                  <div class="mr-player-chip-info">
+                    <div class="mr-player-chip-name">Morg 'n' Thorg</div>
+                    <div class="mr-player-chip-pos">Star Player</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+
+          <!-- 3. Action buttons -->
+          <div class="mr-card">
+            <div class="mr-card-title">Action</div>
+            <div class="mr-hint">Tour <strong>4</strong> · <strong>Aëlindra</strong> (Catcher #7)</div>
+            <div class="mr-action-grid">
+              <button class="mr-action-btn">
+                <span class="mr-action-btn-icon">🏈</span>
+                <span class="mr-action-btn-label">Touchdown</span>
+              </button>
+              <button class="mr-action-btn">
+                <span class="mr-action-btn-icon">🎯</span>
+                <span class="mr-action-btn-label">Passe</span>
+              </button>
+              <button class="mr-action-btn">
+                <span class="mr-action-btn-icon">🛡️</span>
+                <span class="mr-action-btn-label">Interception</span>
+              </button>
+              <button class="mr-action-btn">
+                <span class="mr-action-btn-icon">👊</span>
+                <span class="mr-action-btn-label">Agression</span>
+              </button>
+              <button class="mr-action-btn">
+                <span class="mr-action-btn-icon">🤸</span>
+                <span class="mr-action-btn-label">Lancer</span>
+              </button>
+              <button class="mr-action-btn mr-action-btn--sortie">
+                <span class="mr-action-btn-icon">🩸</span>
+                <span class="mr-action-btn-label">Sortie</span>
+              </button>
+            </div>
+            <div class="mr-action-status-row">
+              <button class="mr-action-btn mr-action-btn--damage" id="btn-blesse" onclick="toggleBlesse(this)">
+                <span class="mr-action-btn-icon">🚑</span>
+                <span class="mr-action-btn-label">Blessé</span>
+              </button>
+              <button class="mr-action-btn mr-action-btn--mvp">
+                <span class="mr-action-btn-icon">⭐</span>
+                <span class="mr-action-btn-label">Désigner MVP</span>
+              </button>
+            </div>
+
+            <!-- Panneau blessure (affiché quand "Blessé" est sélectionné) -->
+            <div class="mr-injury-panel" id="injury-panel" style="display:none">
+              <div class="mr-injury-title">Type de blessure</div>
+              <div class="mr-injury-grid">
+                <button class="mr-injury-btn" onclick="selectInjuryType(this,'commotion')">
+                  <span class="mr-injury-roll">1–8</span>
+                  <span class="mr-injury-label">Commotion</span>
+                </button>
+                <button class="mr-injury-btn" onclick="selectInjuryType(this,'amoche')">
+                  <span class="mr-injury-roll">9–10</span>
+                  <span class="mr-injury-label">Amoché</span>
+                </button>
+                <button class="mr-injury-btn" onclick="selectInjuryType(this,'serious')">
+                  <span class="mr-injury-roll">11–12</span>
+                  <span class="mr-injury-label">Blessure Sérieuse</span>
+                </button>
+                <button class="mr-injury-btn" onclick="selectInjuryType(this,'sequel')">
+                  <span class="mr-injury-roll">13–14</span>
+                  <span class="mr-injury-label">Séquelle</span>
+                </button>
+                <button class="mr-injury-btn mr-injury-btn--death mr-injury-btn--full" onclick="selectInjuryType(this,'death')">
+                  <span class="mr-injury-roll">15–16</span>
+                  <span class="mr-injury-label">Mort</span>
+                </button>
+              </div>
+
+              <!-- Détail séquelle (affiché seulement si Séquelle est sélectionné) -->
+              <div class="mr-sequel-panel" id="sequel-panel" style="display:none">
+                <div class="mr-injury-title">Séquelle</div>
+                <div class="mr-sequel-grid">
+                  <button class="mr-sequel-btn" onclick="selectSequel(this,'-1 AV')">-1 AV</button>
+                  <button class="mr-sequel-btn" onclick="selectSequel(this,'-1 MA')">-1 MA</button>
+                  <button class="mr-sequel-btn" onclick="selectSequel(this,'-1 PA')">-1 PA</button>
+                  <button class="mr-sequel-btn" onclick="selectSequel(this,'-1 AG')">-1 AG</button>
+                  <button class="mr-sequel-btn" onclick="selectSequel(this,'-1 ST')">-1 ST</button>
+                </div>
+              </div>
+
+              <!-- NOUVEAU — Haine : n'apparaît que sur une blessure grave (séquelle) -->
+              <div class="mr-hate-panel" id="hate-panel" style="display:none">
+                <div class="mr-hate-question">
+                  <span class="mr-hate-label">Aëlindra gagne-t-elle la Haine&nbsp;?</span>
+                  <span class="mr-hate-choice">
+                    <button class="mr-hate-btn mr-hate-btn--no" id="hate-no" onclick="setHate(false)">Non</button>
+                    <button class="mr-hate-btn" id="hate-yes" onclick="setHate(true)">Oui</button>
+                  </span>
+                </div>
+
+                <div class="mr-hate-keywords" id="hate-keywords" style="display:none">
+                  <div class="mr-hate-keywords-title">Haine de&nbsp;…</div>
+                  <input class="mr-hate-search" id="hate-search" type="search"
+                         placeholder="Filtrer — « nain », « blitzer »…"
+                         oninput="filterHateGrid(this.value)">
+
+                  <div id="hate-group-opponent">
+                    <div class="mr-hate-group-title">Rencontrés dans l'équipe adverse</div>
+                    <div class="mr-hate-grid" id="hate-grid-opponent"></div>
+                  </div>
+
+                  <details class="mr-hate-more" id="hate-more">
+                    <summary class="mr-hate-more-summary">Tous les autres mots-clefs</summary>
+                    <div class="mr-hate-grid" id="hate-grid-all"></div>
+                  </details>
+
+                  <div class="mr-hate-empty" id="hate-empty" style="display:none">Aucun mot-clef ne correspond.</div>
+                  <div class="mr-hate-hint">Un seul mot-clef par Haine gagnée.
+                    La Haine est un <strong>trait</strong>&nbsp;: elle ne change pas la valeur du joueur.</div>
+                </div>
+              </div>
+
+              <button class="mr-injury-confirm" id="injury-confirm" style="display:none" onclick="confirmInjury()">Confirmer</button>
+            </div>
+          </div>
+
+          <!-- 4. Event log -->
+          <div class="mr-log">
+            <div class="mr-log-title">Événements du match</div>
+
+            <div class="mr-log-entry">
+              <div class="mr-log-turn">1</div>
+              <span class="mr-log-icon">🏈</span>
+              <span class="mr-log-text"><strong>#7 Aëlindra</strong> — Touchdown</span>
+              <button class="mr-log-delete" title="Supprimer">✕</button>
+            </div>
+
+            <div class="mr-log-entry">
+              <div class="mr-log-turn">4</div>
+              <span class="mr-log-icon">🎯</span>
+              <span class="mr-log-text"><strong>#1 Thalion</strong> — Passe réussie</span>
+              <button class="mr-log-delete" title="Supprimer">✕</button>
+            </div>
+
+            <div class="mr-log-entry mr-log-entry--damage">
+              <div class="mr-log-turn">6</div>
+              <span class="mr-log-icon">🚑</span>
+              <span class="mr-log-text mr-log-text--damage"><strong>#3 Grotak</strong> — Blessé · Amoché</span>
+              <button class="mr-log-delete" title="Supprimer">✕</button>
+            </div>
+
+            <div class="mr-log-entry mr-log-entry--damage">
+              <div class="mr-log-turn">9</div>
+              <span class="mr-log-icon">🚑</span>
+              <span class="mr-log-text mr-log-text--damage"><strong>#11 Fenris</strong> — Blessé · Séquelle (-1 AV)</span>
+              <button class="mr-log-delete" title="Supprimer">✕</button>
+            </div>
+
+            <div class="mr-log-entry">
+              <div class="mr-log-turn">12</div>
+              <span class="mr-log-icon">🏈</span>
+              <span class="mr-log-text"><strong>#7 Aëlindra</strong> — Touchdown</span>
+              <button class="mr-log-delete" title="Supprimer">✕</button>
+            </div>
+
+            <div class="mr-log-entry mr-log-entry--mvp">
+              <div class="mr-log-turn">★</div>
+              <span class="mr-log-icon">⭐</span>
+              <span class="mr-log-text"><strong>#7 Aëlindra</strong> — MVP</span>
+              <button class="mr-log-delete" title="Supprimer">✕</button>
+            </div>
+
+          </div>
+
+          <!-- MVP warning -->
+          <!--
+          <div class="mr-warn-banner">
+            <span>⚠️</span>
+            <span>N'oubliez pas de désigner le <strong>MVP</strong> de l'équipe.</span>
+          </div>
+          -->
+
+          <!-- Actions -->
+          <div class="mr-actions">
+            <a href="app-match-report-step2-inducements.html" class="btn-outline-sm">← Retour</a>
+            <a href="app-match-report-step4.html" class="btn-primary-sm">Actions visiteur →</a>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  var selectedInjuryType = null;
+  var selectedSequel = null;
+
+  function selectTurn(el) {
+    el.parentElement.querySelectorAll('.mr-turn-btn').forEach(function(b) { b.classList.remove('active'); });
+    el.classList.add('active');
+  }
+
+  function selectPlayer(el) {
+    el.closest('.mr-card').querySelectorAll('.mr-player-chip').forEach(function(b) { b.classList.remove('active'); });
+    el.classList.add('active');
+  }
+
+  function toggleBlesse(btn) {
+    var isActive = btn.classList.toggle('active');
+    var panel = document.getElementById('injury-panel');
+    panel.style.display = isActive ? '' : 'none';
+    if (!isActive) {
+      resetInjuryPanel();
+    }
+  }
+
+  function resetInjuryPanel() {
+    selectedInjuryType = null;
+    selectedSequel = null;
+    document.querySelectorAll('.mr-injury-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.mr-sequel-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.getElementById('sequel-panel').style.display = 'none';
+    document.getElementById('injury-confirm').style.display = 'none';
+    resetHatePanel();
+  }
+
+  function selectInjuryType(btn, type) {
+    document.querySelectorAll('.mr-injury-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    selectedInjuryType = type;
+    selectedSequel = null;
+    document.querySelectorAll('.mr-sequel-btn').forEach(function(b) { b.classList.remove('active'); });
+    var sequelPanel = document.getElementById('sequel-panel');
+    sequelPanel.style.display = (type === 'sequel') ? '' : 'none';
+    // La Haine se déclare sur Amoché, Blessure Sérieuse et Séquelle —
+    // ni sur une Commotion, ni sur une Mort.
+    resetHatePanel();
+    if (PEUT_GAGNER_HAINE.indexOf(type) !== -1) {
+      buildHateGrid();
+      document.getElementById('hate-panel').style.display = '';
+    }
+    updateConfirmBtn();
+  }
+
+  function selectSequel(btn, stat) {
+    document.querySelectorAll('.mr-sequel-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    selectedSequel = stat;
+    updateConfirmBtn();
+  }
+
+  var injuryLabels = {
+    commotion: 'Commotion',
+    amoche: 'Amoché',
+    serious: 'Blessure Sérieuse',
+    sequel: 'Séquelle',
+    death: 'Mort'
+  };
+
+  /* ── NOUVEAU — Haine ─────────────────────────────────────────────────────
+     Les 38 mots-clefs du référentiel, chargés depuis `keywords_fr.json` dans
+     l'implémentation. Triés par libellé : un coach cherche « Nain », pas
+     « DWARF ». */
+  var HATE_KEYWORDS = [
+    {uid:'ANIMAL',label:'Animal'}, {uid:'CONSTRUCT',label:'Artefact'},
+    {uid:'BLITZER',label:'Blitzer'}, {uid:'BLOCKER',label:'Bloqueur'},
+    {uid:'RUNNER',label:'Coureur'}, {uid:'DARK_ELF',label:'Elfe Noir'},
+    {uid:'ELF',label:'Elfe'}, {uid:'GNOBLAR',label:'Gnoblar'},
+    {uid:'GNOME',label:'Gnome'}, {uid:'GOBLIN',label:'Gobelin'},
+    {uid:'GHOUL',label:'Goule'}, {uid:'BIG_GUY',label:'Gros Bras'},
+    {uid:'HALFLING',label:'Halfling'}, {uid:'BEASTMAN',label:'Homme-Bête'},
+    {uid:'LIZARDMAN',label:'Homme-Lézard'}, {uid:'TREEMAN',label:'Homme-arbre'},
+    {uid:'HUMAN',label:'Humain'}, {uid:'THROWER',label:'Lanceur'},
+    {uid:'WEREWOLF',label:'Loup-garou'}, {uid:'MINOTAUR',label:'Minotaure'},
+    {uid:'UNDEAD',label:'Mort-Vivant'}, {uid:'DWARF',label:'Nain'},
+    {uid:'OGRE',label:'Ogre'}, {uid:'BLACK_ORC',label:'Orque Noir'},
+    {uid:'ORC',label:'Orque'}, {uid:'CATCHER',label:'Receveur'},
+    {uid:'SPAWN',label:'Rejeton'}, {uid:'THRALL',label:'Sbire'},
+    {uid:'SKAVEN',label:'Skaven'}, {uid:'SNOTLING',label:'Snotling'},
+    {uid:'SPECIAL',label:'Spécial'}, {uid:'WRAITH',label:'Spectre'},
+    {uid:'SKELETON',label:'Squelette'}, {uid:'LINEMAN',label:'Trois-quart'},
+    {uid:'TROLL',label:'Troll'}, {uid:'VAMPIRE',label:'Vampire'},
+    {uid:'YHETEE',label:'Yéti'}, {uid:'ZOMBIE',label:'Zombie'}
+  ];
+
+  /* Les mots-clefs réellement présents chez l'adversaire — union de ceux
+     portés par ses lignes de roster. Ici en dur pour la maquette ; côté
+     serveur, ils viendront du corpus via la feuille d'équipe. */
+  var KEYWORDS_ADVERSAIRE = ['BLOCKER', 'HUMAN', 'BEASTMAN', 'BIG_GUY', 'MINOTAUR', 'LINEMAN'];
+
+  var hateGained = null;      // null = pas répondu, true / false ensuite
+  var hateKeyword = null;
+
+  function buildHateGrid() {
+    var chezAdverse = document.getElementById('hate-grid-opponent');
+    if (chezAdverse.childElementCount) return;
+    var lesAutres = document.getElementById('hate-grid-all');
+    HATE_KEYWORDS.forEach(function (mot) {
+      var b = document.createElement('button');
+      b.className = 'mr-hate-kw';
+      b.textContent = mot.label;
+      b.dataset.uid = mot.uid;
+      b.onclick = function () { selectHateKeyword(b, mot); };
+      var present = KEYWORDS_ADVERSAIRE.indexOf(mot.uid) !== -1;
+      (present ? chezAdverse : lesAutres).appendChild(b);
+    });
+    // Un adversaire sans mot-clef connu : le groupe disparaît plutôt que de
+    // montrer un titre au-dessus du vide.
+    document.getElementById('hate-group-opponent').style.display =
+      chezAdverse.childElementCount ? '' : 'none';
+  }
+
+  /* Trente-huit mots-clefs font un mur : la recherche filtre à la frappe,
+     sans jamais masquer celui qui est déjà choisi. */
+  function filterHateGrid(saisie) {
+    var q = saisie.trim().toLowerCase();
+    var visibles = 0, dansLesAutres = 0;
+    document.querySelectorAll('.mr-hate-kw').forEach(function (b) {
+      var ok = !q || b.textContent.toLowerCase().indexOf(q) !== -1 || b.classList.contains('active');
+      b.style.display = ok ? '' : 'none';
+      if (!ok) return;
+      visibles++;
+      if (b.parentElement.id === 'hate-grid-all') dansLesAutres++;
+    });
+    // Une recherche qui ne trouve que dans le repli l'ouvre : sinon le coach
+    // tape « yéti » et voit une liste vide alors que le mot existe.
+    if (q && dansLesAutres) document.getElementById('hate-more').open = true;
+    var chezAdverse = document.getElementById('hate-grid-opponent');
+    var visiblesChezAdverse = Array.prototype.filter.call(
+      chezAdverse.children, function (b) { return b.style.display !== 'none'; }).length;
+    document.getElementById('hate-group-opponent').style.display =
+      visiblesChezAdverse ? '' : 'none';
+    document.getElementById('hate-empty').style.display = visibles ? 'none' : '';
+  }
+
+  function setHate(gagne) {
+    hateGained = gagne;
+    document.getElementById('hate-yes').classList.toggle('active', gagne);
+    document.getElementById('hate-no').classList.toggle('active', !gagne);
+    document.getElementById('hate-keywords').style.display = gagne ? '' : 'none';
+    if (!gagne) {
+      hateKeyword = null;
+      document.querySelectorAll('.mr-hate-kw').forEach(function (b) { b.classList.remove('active'); });
+    } else {
+      var champ = document.getElementById('hate-search');
+      champ.value = '';
+      document.getElementById('hate-more').open = false;
+      filterHateGrid('');
+      champ.focus();
+    }
+    updateConfirmBtn();
+  }
+
+  function selectHateKeyword(btn, mot) {
+    document.querySelectorAll('.mr-hate-kw').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    hateKeyword = mot;
+    updateConfirmBtn();
+  }
+
+  function resetHatePanel() {
+    hateGained = null;
+    hateKeyword = null;
+    document.getElementById('hate-panel').style.display = 'none';
+    document.getElementById('hate-keywords').style.display = 'none';
+    document.getElementById('hate-yes').classList.remove('active');
+    document.getElementById('hate-no').classList.remove('active');
+    document.querySelectorAll('.mr-hate-kw').forEach(function (b) { b.classList.remove('active'); });
+  }
+
+  function updateConfirmBtn() {
+    var btn = document.getElementById('injury-confirm');
+    if (!selectedInjuryType) { btn.style.display = 'none'; return; }
+    if (selectedInjuryType === 'sequel' && !selectedSequel) { btn.style.display = 'none'; return; }
+    // Une blessure qui peut donner la Haine ne se confirme pas tant que la
+    // question n'est pas tranchée.
+    if (PEUT_GAGNER_HAINE.indexOf(selectedInjuryType) !== -1) {
+      if (hateGained === null) { btn.style.display = 'none'; return; }
+      if (hateGained && !hateKeyword) { btn.style.display = 'none'; return; }
+    }
+    var label = injuryLabels[selectedInjuryType];
+    if (selectedSequel) label += ' (' + selectedSequel + ')';
+    if (hateGained && hateKeyword) label += ' + Haine : ' + hateKeyword.label;
+    btn.textContent = 'Confirmer — ' + label;
+    btn.style.display = '';
+  }
+
+  function confirmInjury() {
+    var panel = document.getElementById('injury-panel');
+    panel.style.display = 'none';
+    document.getElementById('btn-blesse').classList.remove('active');
+    resetInjuryPanel();
+    // En implémentation réelle : POST vers le serveur via HTMX
+    console.log('Blessure enregistrée → ' + (selectedInjuryType || 'unknown')
+      + (hateKeyword ? ' · Haine : ' + hateKeyword.uid : ''));
+  }
+  </script>
+  <div class="mobile-tabbar">
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#127968;</span><span class="mobile-tab-label">Accueil</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#127942;</span><span class="mobile-tab-label">Compétitions</span></a>
+    <a class="mobile-tab active" href="#"><span class="mobile-tab-icon">&#128203;</span><span class="mobile-tab-label">Match</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#128737;&#65039;</span><span class="mobile-tab-label">Équipes</span></a>
+    <a class="mobile-tab" href="#"><span class="mobile-tab-icon">&#128100;</span><span class="mobile-tab-label">Compte</span></a>
+  </div>
+</body>
+</html>

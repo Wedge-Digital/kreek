@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mots-clefs — Les Korrigans FC — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ── Repris tel quel de assets/static/css/pages/team-page.css ──── */
+    .team-page { max-width: 1400px; margin: 0 auto; }
+
+    .team-header {
+      background: var(--white); border-radius: 10px 10px 0 0; padding: var(--p2);
+      display: flex; align-items: flex-start; gap: var(--p3);
+      border-bottom: 2px solid var(--dark-5);
+    }
+    .team-header-logo {
+      width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, #003049, #555770);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: 36px; color: var(--white);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      overflow: hidden;
+    }
+    .team-header-info { flex: 1; display: flex; flex-direction: column; gap: var(--p1); }
+    .team-header-name { font-family: var(--font-title); font-size: var(--h2); font-weight: 800; color: var(--dark-0); }
+    .team-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
+    .meta-item   { display: flex; flex-direction: column; gap: 2px; }
+    .meta-label  { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-value  { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+
+    .team-header-top  { display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap; }
+
+    /* Badge état — les 5 variantes réellement produites par status_display() côté back */
+    .team-status-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 20px;
+      font-size: var(--text-tiny); font-weight: 700; white-space: nowrap;
+    }
+    .team-status-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    .team-status-badge--pending    { background: rgba(255,107,53,0.12);  color: var(--orange); }
+    .team-status-badge--ready      { background: rgba(98,149,132,0.15); color: var(--green); }
+    .team-status-badge--phase      { background: rgba(0,48,73,0.10);    color: var(--main-blue); }
+    .team-status-badge--offseason  { background: var(--dark-6);         color: var(--dark-3); }
+    .team-status-badge--dismissed  { background: rgba(224,32,32,0.10);  color: var(--red); }
+
+    .team-header-roster { display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
+    .roster-icon {
+      width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, #629584, #3a6655);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: 28px; color: var(--white);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .roster-icon-label { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; text-align: center; max-width: 120px; }
+
+    .staff-panel { background: var(--white); border-radius: 0 0 10px 10px; padding: var(--p2); }
+    .staff-panel-title {
+      font-size: var(--text-small); font-weight: 700; color: var(--dark-2);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: var(--p1);
+    }
+    .staff-table td { color: var(--dark-1); }
+
+    /* ── Repris tel quel de assets/static/css/widgets/players-widget.css ── */
+    .player-table  { width: 100%; border-collapse: collapse; }
+    .players-widget { padding: var(--p2); background: var(--white); }
+    .player-table th {
+      text-align: left; padding: 10px 12px;
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      border-bottom: 2px solid var(--dark-5); background: var(--dark-6);
+    }
+    .player-table td { padding: 12px; font-size: var(--text-small); }
+    .player-table tbody tr:nth-child(odd)  td { background: var(--white); }
+    .player-table tbody tr:nth-child(even) td { background: var(--dark-6); }
+    .player-table tbody tr:hover td { background: var(--dark-5); cursor: pointer; }
+    .player-table tbody.no-hover tr:nth-child(odd):hover  td { background: var(--white);  cursor: default; }
+    .player-table tbody.no-hover tr:nth-child(even):hover td { background: var(--dark-6); cursor: default; }
+    .player-table tr:last-child td { border-bottom: none; }
+    .player-table tr.subtotal-row td {
+      border-top: 2px solid var(--dark-4); border-bottom: none;
+      background: var(--dark-6); font-weight: 700; color: var(--dark-0);
+      font-size: var(--text-small);
+    }
+    .player-pos  { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: var(--text-tiny); font-weight: 700; }
+    .pos-lineman { background: rgba(0,48,73,0.1);    color: var(--main-blue); }
+    .pos-blitzer { background: rgba(224,32,32,0.1);  color: var(--red); }
+    .pos-thrower { background: rgba(98,149,132,0.1); color: var(--green); }
+    .pos-catcher { background: rgba(255,215,0,0.15); color: #9A7800; }
+    /* ── NOUVEAU — mots-clefs du poste (à discuter) ───────────────────────
+       Du texte, pas des badges. Trois familles de pastilles cohabitent déjà
+       dans ce tableau — poste, compétences de base, compétences acquises — et
+       une quatrième aurait disputé l'œil au poste, qu'elle ne fait que
+       qualifier. L'italique gris se lit quand on le cherche et s'efface
+       sinon. */
+    .player-keywords {
+      margin-top: 3px;
+      font-size: 11px; font-style: italic; font-weight: 400;
+      color: var(--dark-3); line-height: 1.4;
+    }
+
+    .skill-tag     { display: inline-block; font-size: var(--text-tiny); font-weight: 600; padding: 3px 10px; border-radius: 20px; background: var(--dark-5); color: var(--dark-1); }
+    .type-general  { background: rgba(0,48,73,0.08);    color: var(--main-blue); }
+    .type-strength { background: rgba(224,32,32,0.08);  color: var(--red); }
+    .type-agility  { background: rgba(98,149,132,0.12); color: var(--green); }
+    .type-passing  { background: rgba(255,215,0,0.18);  color: #9A7800; }
+    .type-mutation { background: rgba(111,53,165,0.10); color: #6f35a5; }
+
+    /* ── NOUVEAU — bandeau d'état contextuel (à discuter) ────────────────── */
+    .state-banner {
+      border-radius: 0; padding: var(--p1) var(--p2);
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      border-bottom: 2px solid var(--dark-5);
+    }
+    .state-banner-icon { font-size: 22px; flex-shrink: 0; }
+    .state-banner-text { flex: 1; font-size: var(--text-small); color: var(--dark-2); min-width: 220px; }
+    .state-banner-text strong { color: var(--dark-1); }
+    .state-banner-cta {
+      padding: 8px 16px; border-radius: 6px; font-size: var(--text-tiny); font-weight: 700;
+      white-space: nowrap; border: none; cursor: pointer; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+      font-family: inherit;
+    }
+    .state-banner-cta--outline {
+      background: transparent; border: 1.5px solid var(--dark-3); color: var(--dark-2);
+    }
+    .state-banner-cta--outline:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .state-banner--pending { background: rgba(255,107,53,0.06); }
+    .state-banner--ready   { background: rgba(98,149,132,0.06); }
+    .state-banner--phase   { background: rgba(0,48,73,0.05); }
+    .state-banner--phase .state-banner-cta:not(.state-banner-cta--outline) { background: var(--main-blue); color: var(--white); }
+
+    /* ── NOUVEAU — mode édition de l'effectif (à discuter) ────────────────
+       Maquette de : réordonnancement libre par glisser-déposer, renommage et
+       renumérotation des joueurs. Implique côté back un champ display_order
+       persisté par joueur + des événements domaine PlayerRenamed /
+       PlayerJerseyChanged / PlayerReordered — rien de tout ça n'existe
+       aujourd'hui (jersey figé à la création, personal_name toujours vide,
+       tri actuel = ORDER BY jersey). Aucune de ces mutations n'est réelle
+       ici : Enregistrer ne fait que rafraîchir l'affichage local. */
+    .drag-handle-cell { display: none; width: 28px; text-align: center; color: var(--dark-3); }
+    .player-table.edit-mode .drag-handle-cell { display: table-cell; }
+    td.drag-handle-cell { cursor: grab; font-size: 16px; }
+    tr.player-row.dragging { opacity: 0.4; }
+
+    .cell-jersey .edit-value, .cell-name .edit-value { display: none; }
+    .player-table.edit-mode .cell-jersey .display-value,
+    .player-table.edit-mode .cell-name .display-value { display: none; }
+    .player-table.edit-mode .cell-jersey .edit-value,
+    .player-table.edit-mode .cell-name .edit-value { display: inline-block; }
+    .edit-value {
+      box-sizing: border-box; padding: 6px 8px; border: 1.5px solid var(--dark-4);
+      border-radius: 4px; font: inherit; color: var(--dark-1);
+    }
+    .jersey-input { width: 52px; text-align: center; }
+    .name-input { width: 100%; min-width: 140px; }
+    .cell-jersey.has-duplicate .jersey-input { border-color: var(--red); background: rgba(224,32,32,0.06); }
+
+    .player-table.edit-mode tbody tr.player-row td.cell-readonly { opacity: 0.5; }
+    .player-table.edit-mode tbody tr.player-row:hover td { background: inherit; cursor: default; }
+
+    /* Annuler/Enregistrer prennent la place de « Modifier l'effectif » dans le
+       bandeau d'état — pas de barre séparée sous le tableau. */
+    .roster-edit-warning-inline { font-size: var(--text-tiny); color: var(--red); font-weight: 600; }
+    .roster-edit-save-btn { background: var(--main-blue); color: var(--white); }
+    .roster-edit-save-btn:disabled { background: var(--dark-4); cursor: not-allowed; }
+
+    /* ── NOUVEAU — sélecteur de démonstration (n'existe pas en prod) ─────── */
+    .demo-switcher {
+      background: rgba(255,215,0,0.08); border: 1px dashed rgba(154,120,0,0.4);
+      border-radius: 8px; padding: 10px var(--p2); margin-bottom: var(--p1);
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .demo-switcher-label { font-size: var(--text-tiny); font-weight: 700; color: #9A7800; text-transform: uppercase; letter-spacing: 0.4px; }
+    .state-pill {
+      font-size: var(--text-tiny); font-weight: 600; padding: 5px 14px; border-radius: 20px;
+      border: 1.5px solid var(--dark-4); background: var(--white); color: var(--dark-2);
+      cursor: pointer; transition: all 0.12s;
+    }
+    .state-pill:hover  { border-color: var(--main-blue); color: var(--main-blue); }
+    .state-pill.active { background: var(--main-blue); border-color: var(--main-blue); color: var(--white); }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active">Équipes</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+
+        <!-- NOUVEAU — note de maquette : ce que cette variante montre -->
+        <div class="demo-switcher">
+          <span class="demo-switcher-label">Variante</span>
+          <span style="font-size: var(--text-tiny); color: #9A7800;">
+            Les mots-clefs de chaque ligne de roster, sous le poste. Ils viennent du
+            corpus (<code>keywords</code> de la ligne), pas du joueur.
+          </span>
+        </div>
+
+        <!-- Sélecteur de démonstration — outil de maquette, n'existe pas en prod -->
+        <div class="demo-switcher">
+          <span class="demo-switcher-label">Aperçu maquette — état de l'équipe :</span>
+          <button class="state-pill" data-state="pending" onclick="setTeamState('pending')">En attente d'inscription</button>
+          <button class="state-pill active" data-state="ready" onclick="setTeamState('ready')">Prête à jouer</button>
+          <button class="state-pill" data-state="match" onclick="setTeamState('match')">Rapport de match en cours</button>
+          <button class="state-pill" data-state="improvement" onclick="setTeamState('improvement')">Phase d'évolution des joueurs</button>
+          <button class="state-pill" data-state="recruitment" onclick="setTeamState('recruitment')">Phase de recrutement</button>
+          <button class="state-pill" data-state="dismissals" onclick="setTeamState('dismissals')">Phase de renvois</button>
+        </div>
+
+        <div style="margin-bottom: var(--p1);">
+          <a href="app-my-teams.html" style="color: var(--dark-3); font-size: var(--text-tiny);">← Mes équipes</a>
+        </div>
+
+        <div class="team-page">
+
+          <!-- En-tête -->
+          <div class="team-header">
+            <div class="team-header-logo">KF</div>
+
+            <div class="team-header-info">
+              <div class="team-header-top">
+                <div class="team-header-name">Les Korrigans FC</div>
+                <span id="team-status-badge" class="team-status-badge team-status-badge--ready">Prête à jouer</span>
+              </div>
+              <div class="team-header-meta">
+                <div class="meta-item">
+                  <div class="meta-label">Roster</div>
+                  <div class="meta-value">Elfes Sylvestres</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Coach</div>
+                  <div class="meta-value">Colonel Castor</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Ligue</div>
+                  <div class="meta-value">Ligue de Condate</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Saison</div>
+                  <div class="meta-value">Saison 5</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Valeur d'équipe</div>
+                  <div class="meta-value">873 kPo</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Trésorerie</div>
+                  <div class="meta-value">40 kPo</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Fans dévoués</div>
+                  <div class="meta-value">5</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="team-header-roster">
+              <div class="roster-icon">ES</div>
+              <div class="roster-icon-label">Elfes Sylvestres</div>
+            </div>
+          </div>
+
+          <!-- Bandeaux d'état contextuels — un seul visible à la fois, piloté par le sélecteur -->
+          <div class="state-banner state-banner--pending" data-state="pending" style="display:none;">
+            <span class="state-banner-icon">📋</span>
+            <span class="state-banner-text"><strong>Équipe en attente d'inscription.</strong> L'inscription est en cours de validation par un commissaire de ligue.</span>
+          </div>
+          <div class="state-banner state-banner--ready" data-state="ready" style="display:flex;">
+            <span class="state-banner-icon">✅</span>
+            <span class="state-banner-text"><strong>Équipe prête à jouer.</strong> Aucune action requise avant le prochain match.</span>
+            <button class="state-banner-cta state-banner-cta--outline" onclick="window.print()">Imprimer en PDF</button>
+            <button class="state-banner-cta state-banner-cta--outline roster-edit-trigger-btn" onclick="toggleRosterEdit()">✎ Modifier l'effectif</button>
+            <span class="state-banner-cta roster-edit-warning-inline" style="display:none;">Deux joueurs ne peuvent pas porter le même numéro.</span>
+            <button class="state-banner-cta state-banner-cta--outline roster-edit-cancel-btn" style="display:none;" onclick="cancelRosterEdit()">Annuler</button>
+            <button class="state-banner-cta roster-edit-save-btn" style="display:none;" onclick="saveRosterEdit()">Enregistrer</button>
+          </div>
+          <div class="state-banner state-banner--phase" data-state="match" style="display:none;">
+            <span class="state-banner-icon">📝</span>
+            <span class="state-banner-text"><strong>Rapport de match en cours.</strong> La saisie du dernier match n'est pas terminée.</span>
+            <a class="state-banner-cta" href="app-match-report-step3.html">Reprendre le rapport →</a>
+          </div>
+          <div class="state-banner state-banner--phase" data-state="improvement" style="display:none;">
+            <span class="state-banner-icon">⚡</span>
+            <span class="state-banner-text"><strong>Phase d'évolution des joueurs.</strong> Des joueurs ont des SPP à dépenser suite au dernier match.</span>
+            <button class="state-banner-cta" onclick="finishImprovement()">Évolutions terminées</button>
+          </div>
+          <div class="state-banner state-banner--phase" data-state="recruitment" style="display:none;">
+            <span class="state-banner-icon">🛒</span>
+            <span class="state-banner-text"><strong>Phase de recrutement.</strong> Achetez des joueurs ou du staff avant de terminer les achats.</span>
+            <a class="state-banner-cta state-banner-cta--outline" href="app-team-recruitment.html">Recruter →</a>
+            <button class="state-banner-cta" onclick="finishRecruitment()">Terminer les achats</button>
+          </div>
+          <div class="state-banner state-banner--phase" data-state="dismissals" style="display:none;">
+            <span class="state-banner-icon">🚪</span>
+            <span class="state-banner-text"><strong>Phase de renvois.</strong> Renvoyez les joueurs dont vous ne voulez plus avant de valider.</span>
+            <a class="state-banner-cta state-banner-cta--outline" href="app-team-dismissals.html">Gérer les renvois →</a>
+            <button class="state-banner-cta" onclick="validateDismissals()">Valider les renvois</button>
+          </div>
+
+          <!-- Onglets -->
+          <div class="tabs" style="background: var(--white); padding: 0 var(--p2); border-bottom: 1px solid var(--dark-5);">
+            <div class="tab active">Joueurs &amp; Staff</div>
+            <div class="tab">Matchs</div>
+            <div class="tab">Trésorerie</div>
+          </div>
+
+          <!-- Widget joueurs — délégué au BC players en prod (hx-get), inliné ici pour la maquette -->
+          <div class="players-widget">
+            <table class="player-table">
+              <thead>
+                <tr>
+                  <th class="drag-handle-cell"></th>
+                  <th style="text-align: center; width: 40px;">#</th>
+                  <th style="text-align: left;">Nom</th>
+                  <th style="text-align: left;">Poste</th>
+                  <th style="text-align: left; min-width: 180px;">Compétences de base</th>
+                  <th style="text-align: left; min-width: 180px;">Compétences acquises</th>
+                  <th style="text-align: center;">SPP</th>
+                  <th style="text-align: center;">Valeur</th>
+                </tr>
+              </thead>
+              <tbody id="roster-tbody">
+                <tr class="player-row" data-jersey="1" onclick="openPlayer()">
+                  <td class="drag-handle-cell">⠿</td>
+                  <td class="cell-jersey" style="text-align: center;">
+                    <span class="display-value" style="color: var(--dark-3); font-family: monospace;">1</span>
+                    <input class="edit-value jersey-input" type="number" min="1" max="99" value="1" oninput="onJerseyInput()">
+                  </td>
+                  <td class="cell-name">
+                    <span class="display-value"><strong>Aerindel</strong></span>
+                    <input class="edit-value name-input" type="text" value="Aerindel" placeholder="Lanceur">
+                  </td>
+                  <td class="cell-readonly"><span class="player-pos pos-thrower">Lanceur</span><div class="player-keywords">Elfe, Lanceur</div></td>
+                  <td class="cell-readonly"><span class="skill-tag type-passing">Passe</span> <span class="skill-tag type-general">Sûr</span></td>
+                  <td class="cell-readonly"><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td class="cell-readonly" style="text-align: center; font-weight: 600;">18</td>
+                  <td class="cell-readonly" style="text-align: center;">95 kPo</td>
+                </tr>
+                <tr class="player-row" data-jersey="2" onclick="openPlayer()">
+                  <td class="drag-handle-cell">⠿</td>
+                  <td class="cell-jersey" style="text-align: center;">
+                    <span class="display-value" style="color: var(--dark-3); font-family: monospace;">2</span>
+                    <input class="edit-value jersey-input" type="number" min="1" max="99" value="2" oninput="onJerseyInput()">
+                  </td>
+                  <td class="cell-name">
+                    <span class="display-value"><strong>Sylvara</strong></span>
+                    <input class="edit-value name-input" type="text" value="Sylvara" placeholder="Receveur">
+                  </td>
+                  <td class="cell-readonly"><span class="player-pos pos-catcher">Receveur</span><div class="player-keywords">Elfe, Receveur</div></td>
+                  <td class="cell-readonly"><span class="skill-tag type-agility">Attraper</span> <span class="skill-tag type-general">Esquiver</span></td>
+                  <td class="cell-readonly"><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td class="cell-readonly" style="text-align: center; font-weight: 600;">24</td>
+                  <td class="cell-readonly" style="text-align: center;">65 kPo</td>
+                </tr>
+                <tr class="player-row" data-jersey="3" onclick="openPlayer()">
+                  <td class="drag-handle-cell">⠿</td>
+                  <td class="cell-jersey" style="text-align: center;">
+                    <span class="display-value" style="color: var(--dark-3); font-family: monospace;">3</span>
+                    <input class="edit-value jersey-input" type="number" min="1" max="99" value="3" oninput="onJerseyInput()">
+                  </td>
+                  <td class="cell-name">
+                    <span class="display-value"><strong>Maerindel</strong></span>
+                    <input class="edit-value name-input" type="text" value="Maerindel" placeholder="Receveur">
+                  </td>
+                  <td class="cell-readonly"><span class="player-pos pos-catcher">Receveur</span><div class="player-keywords">Elfe, Receveur</div></td>
+                  <td class="cell-readonly"><span class="skill-tag type-agility">Attraper</span> <span class="skill-tag type-general">Esquiver</span></td>
+                  <td class="cell-readonly"><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td class="cell-readonly" style="text-align: center; font-weight: 600;">11</td>
+                  <td class="cell-readonly" style="text-align: center;">65 kPo</td>
+                </tr>
+                <tr class="player-row" data-jersey="4" onclick="openPlayer()">
+                  <td class="drag-handle-cell">⠿</td>
+                  <td class="cell-jersey" style="text-align: center;">
+                    <span class="display-value" style="color: var(--dark-3); font-family: monospace;">4</span>
+                    <input class="edit-value jersey-input" type="number" min="1" max="99" value="4" oninput="onJerseyInput()">
+                  </td>
+                  <td class="cell-name">
+                    <span class="display-value"><strong>Tyrandel</strong></span>
+                    <input class="edit-value name-input" type="text" value="Tyrandel" placeholder="Frappeur">
+                  </td>
+                  <td class="cell-readonly"><span class="player-pos pos-blitzer">Frappeur</span><div class="player-keywords">Elfe, Blitzer</div></td>
+                  <td class="cell-readonly"><span class="skill-tag type-general">Esquiver</span></td>
+                  <td class="cell-readonly"><span class="skill-tag type-general">Bloc</span> <span class="skill-tag type-strength">Garde</span></td>
+                  <td class="cell-readonly" style="text-align: center; font-weight: 600;">13</td>
+                  <td class="cell-readonly" style="text-align: center;">128 kPo</td>
+                </tr>
+                <tr class="player-row" data-jersey="5" onclick="openPlayer()">
+                  <td class="drag-handle-cell">⠿</td>
+                  <td class="cell-jersey" style="text-align: center;">
+                    <span class="display-value" style="color: var(--dark-3); font-family: monospace;">5</span>
+                    <input class="edit-value jersey-input" type="number" min="1" max="99" value="5" oninput="onJerseyInput()">
+                  </td>
+                  <td class="cell-name">
+                    <span class="display-value"><strong>Corandel</strong></span>
+                    <input class="edit-value name-input" type="text" value="Corandel" placeholder="Frappeur">
+                  </td>
+                  <td class="cell-readonly"><span class="player-pos pos-blitzer">Frappeur</span><div class="player-keywords">Elfe, Blitzer</div></td>
+                  <td class="cell-readonly"><span class="skill-tag type-general">Esquiver</span></td>
+                  <td class="cell-readonly"><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td class="cell-readonly" style="text-align: center; font-weight: 600;">6</td>
+                  <td class="cell-readonly" style="text-align: center;">110 kPo</td>
+                </tr>
+                <tr class="player-row" data-jersey="6" onclick="openPlayer()">
+                  <td class="drag-handle-cell">⠿</td>
+                  <td class="cell-jersey" style="text-align: center;">
+                    <span class="display-value" style="color: var(--dark-3); font-family: monospace;">6</span>
+                    <input class="edit-value jersey-input" type="number" min="1" max="99" value="6" oninput="onJerseyInput()">
+                  </td>
+                  <td class="cell-name">
+                    <span class="display-value"><strong>Findas</strong></span>
+                    <input class="edit-value name-input" type="text" value="Findas" placeholder="Défenseur">
+                  </td>
+                  <td class="cell-readonly"><span class="player-pos pos-lineman">Défenseur</span><div class="player-keywords">Elfe, Trois-quart</div></td>
+                  <td class="cell-readonly"><span class="skill-tag type-general">Esquiver</span></td>
+                  <td class="cell-readonly"><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td class="cell-readonly" style="text-align: center; font-weight: 600;">9</td>
+                  <td class="cell-readonly" style="text-align: center;">70 kPo</td>
+                </tr>
+                <tr class="player-row" data-jersey="7" onclick="openPlayer()">
+                  <td class="drag-handle-cell">⠿</td>
+                  <td class="cell-jersey" style="text-align: center;">
+                    <span class="display-value" style="color: var(--dark-3); font-family: monospace;">7</span>
+                    <input class="edit-value jersey-input" type="number" min="1" max="99" value="7" oninput="onJerseyInput()">
+                  </td>
+                  <td class="cell-name">
+                    <span class="display-value"><strong>Galadras</strong></span>
+                    <input class="edit-value name-input" type="text" value="Galadras" placeholder="Défenseur">
+                  </td>
+                  <td class="cell-readonly"><span class="player-pos pos-lineman">Défenseur</span><div class="player-keywords">Elfe, Trois-quart</div></td>
+                  <td class="cell-readonly"><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td class="cell-readonly"><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td class="cell-readonly" style="text-align: center; font-weight: 600;">3</td>
+                  <td class="cell-readonly" style="text-align: center;">70 kPo</td>
+                </tr>
+                <tr class="player-row" data-jersey="8" onclick="openPlayer()">
+                  <td class="drag-handle-cell">⠿</td>
+                  <td class="cell-jersey" style="text-align: center;">
+                    <span class="display-value" style="color: var(--dark-3); font-family: monospace;">8</span>
+                    <input class="edit-value jersey-input" type="number" min="1" max="99" value="8" oninput="onJerseyInput()">
+                  </td>
+                  <td class="cell-name">
+                    <span class="display-value"><strong>Mirindel</strong></span>
+                    <input class="edit-value name-input" type="text" value="Mirindel" placeholder="Défenseur">
+                  </td>
+                  <td class="cell-readonly"><span class="player-pos pos-lineman">Défenseur</span><div class="player-keywords">Elfe, Trois-quart</div></td>
+                  <td class="cell-readonly"><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td class="cell-readonly"><span style="color: var(--dark-4); font-style: italic;">—</span></td>
+                  <td class="cell-readonly" style="text-align: center; font-weight: 600;">0</td>
+                  <td class="cell-readonly" style="text-align: center;">70 kPo</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Staff -->
+          <div class="staff-panel">
+            <div class="staff-panel-title">Staff</div>
+            <table class="player-table staff-table">
+              <thead>
+                <tr>
+                  <th style="text-align: left;">Poste</th>
+                  <th style="text-align: center;">Quantité</th>
+                  <th style="text-align: center;">Prix (kPo)</th>
+                  <th style="text-align: center;">Coût total (kPo)</th>
+                </tr>
+              </thead>
+              <tbody class="no-hover">
+                <tr>
+                  <td><strong>Relances</strong></td>
+                  <td style="text-align: center;">2</td>
+                  <td style="text-align: center;">50</td>
+                  <td style="text-align: center;">100</td>
+                </tr>
+                <tr>
+                  <td><strong>Apothicaire</strong></td>
+                  <td style="text-align: center;">1</td>
+                  <td style="text-align: center;">50</td>
+                  <td style="text-align: center;">50</td>
+                </tr>
+                <tr>
+                  <td><strong>Assistants entraîneurs</strong></td>
+                  <td style="text-align: center;">2</td>
+                  <td style="text-align: center;">10</td>
+                  <td style="text-align: center;">20</td>
+                </tr>
+                <tr>
+                  <td><strong>Pom-pom girls</strong></td>
+                  <td style="text-align: center;">3</td>
+                  <td style="text-align: center;">10</td>
+                  <td style="text-align: center;">30</td>
+                </tr>
+                <tr class="subtotal-row">
+                  <td colspan="3" style="text-align: right;">Sous-total staff</td>
+                  <td style="text-align: center;">200</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  var STATE_META = {
+    pending:     { label: "En attente d'inscription",  css: 'pending' },
+    ready:       { label: 'Prête à jouer',              css: 'ready' },
+    match:       { label: 'Rapport en cours',           css: 'phase' },
+    improvement: { label: "Phase d'amélioration",       css: 'phase' },
+    recruitment: { label: 'Phase de recrutement',       css: 'phase' },
+    dismissals:  { label: 'Phase de renvois',           css: 'phase' },
+  };
+
+  function setTeamState(state) {
+    // Modifier l'effectif n'existe que dans le bandeau « Prête à jouer » —
+    // quitter un état en cours d'édition doit annuler proprement, sinon
+    // Annuler/Enregistrer disparaissent avec le bandeau sans qu'on ait pu
+    // s'en servir.
+    if (state !== 'ready' && document.querySelector('.player-table').classList.contains('edit-mode')) {
+      cancelRosterEdit();
+    }
+    document.querySelectorAll('.state-pill').forEach(function (el) {
+      el.classList.toggle('active', el.dataset.state === state);
+    });
+    document.querySelectorAll('.state-banner').forEach(function (el) {
+      el.style.display = (el.dataset.state === state) ? 'flex' : 'none';
+    });
+    var badge = document.getElementById('team-status-badge');
+    badge.className = 'team-status-badge team-status-badge--' + STATE_META[state].css;
+    badge.textContent = STATE_META[state].label;
+    window.currentTeamState = state;
+  }
+
+  function openPlayer() {
+    if (document.querySelector('.player-table').classList.contains('edit-mode')) return;
+    var editable = window.currentTeamState === 'improvement';
+    window.location.href = editable ? 'app-player-detail.html' : 'app-player-detail-readonly.html';
+  }
+
+  // ── Mode édition de l'effectif (maquette — rien n'est persisté) ────────
+  var rosterEditSnapshot = null;
+
+  function toggleRosterEdit() {
+    rosterEditSnapshot = document.getElementById('roster-tbody').innerHTML;
+    document.querySelector('.player-table').classList.add('edit-mode');
+    document.querySelectorAll('.player-row').forEach(function (row) {
+      row.setAttribute('draggable', 'true');
+    });
+    setRosterEditButtonsVisible(true);
+    enableRosterDragAndDrop();
+  }
+
+  function exitRosterEdit() {
+    document.querySelector('.player-table').classList.remove('edit-mode');
+    setRosterEditButtonsVisible(false);
+    document.querySelectorAll('.roster-edit-warning-inline').forEach(function (el) { el.style.display = 'none'; });
+    document.querySelectorAll('.roster-edit-save-btn').forEach(function (btn) { btn.disabled = false; });
+  }
+
+  // Dans le bandeau d'état actif, Annuler/Enregistrer prennent la place de
+  // « Modifier l'effectif » — même bouton, pas une barre séparée.
+  function setRosterEditButtonsVisible(editing) {
+    document.querySelectorAll('.roster-edit-trigger-btn').forEach(function (btn) { btn.style.display = editing ? 'none' : ''; });
+    document.querySelectorAll('.roster-edit-cancel-btn').forEach(function (btn) { btn.style.display = editing ? '' : 'none'; });
+    document.querySelectorAll('.roster-edit-save-btn').forEach(function (btn) { btn.style.display = editing ? '' : 'none'; });
+  }
+
+  function cancelRosterEdit() {
+    document.getElementById('roster-tbody').innerHTML = rosterEditSnapshot;
+    exitRosterEdit();
+  }
+
+  // En prod : POST vers le BC players (un événement domaine par joueur
+  // renommé/renuméroté + un événement d'ordre pour la liste) — ici, on se
+  // contente de recopier les valeurs des champs dans l'affichage.
+  function saveRosterEdit() {
+    document.querySelectorAll('.player-row').forEach(function (row) {
+      var jerseyInput = row.querySelector('.jersey-input');
+      var nameInput   = row.querySelector('.name-input');
+      row.querySelector('.cell-jersey .display-value').textContent = jerseyInput.value || '—';
+      row.querySelector('.cell-name .display-value').innerHTML =
+        '<strong>' + (nameInput.value || nameInput.placeholder) + '</strong>';
+      row.dataset.jersey = jerseyInput.value;
+    });
+    exitRosterEdit();
+  }
+
+  function onJerseyInput() {
+    var seen = {};
+    var duplicate = false;
+    document.querySelectorAll('.cell-jersey').forEach(function (cell) {
+      cell.classList.remove('has-duplicate');
+    });
+    document.querySelectorAll('.jersey-input').forEach(function (input) {
+      var v = input.value;
+      if (!v) return;
+      if (seen[v]) {
+        duplicate = true;
+        input.closest('.cell-jersey').classList.add('has-duplicate');
+        seen[v].closest('.cell-jersey').classList.add('has-duplicate');
+      }
+      seen[v] = input;
+    });
+    document.querySelectorAll('.roster-edit-warning-inline').forEach(function (el) { el.style.display = duplicate ? 'inline-flex' : 'none'; });
+    document.querySelectorAll('.roster-edit-save-btn').forEach(function (btn) { btn.disabled = duplicate; });
+  }
+
+  // Glisser-déposer minimal : réordonne les <tr> selon la position du curseur.
+  function enableRosterDragAndDrop() {
+    var dragEl = null;
+    document.querySelectorAll('.player-row').forEach(function (row) {
+      row.addEventListener('dragstart', function () {
+        dragEl = row;
+        row.classList.add('dragging');
+      });
+      row.addEventListener('dragend', function () {
+        row.classList.remove('dragging');
+        dragEl = null;
+      });
+      row.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        if (!dragEl || dragEl === row) return;
+        var rect = row.getBoundingClientRect();
+        var before = (e.clientY - rect.top) < rect.height / 2;
+        row.parentElement.insertBefore(dragEl, before ? row : row.nextSibling);
+      });
+    });
+  }
+
+  // Valide la phase d'amélioration (validate-improvement) → GamePhase::Recruitment
+  function finishImprovement() {
+    setTeamState('recruitment');
+  }
+
+  // Valide la phase de recrutement (validate-recruitment) → GamePhase::Dismissals
+  function finishRecruitment() {
+    setTeamState('dismissals');
+  }
+
+  // Valide la phase de renvois (validate-dismissals) → GamePhase::TemporaryRetirement
+  // Simplifié ici en retour à "Prête à jouer" — la retraite temporaire n'est pas
+  // encore maquettée (carte 43, to_be_refined).
+  function validateDismissals() {
+    setTeamState('ready');
+  }
+</script>
+
+</body>
+</html>
