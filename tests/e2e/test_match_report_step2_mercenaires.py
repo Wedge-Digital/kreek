@@ -310,3 +310,53 @@ def test_submit_without_mercenaires_regression(page: Page, space_id, merco_ctx, 
     assert "/inducements/" in new_url or "/step3" in new_url, (
         f"Non-régression échouée — redirect inattendu : {new_url!r}"
     )
+
+# ── Carte 406 — le mercenaire d'un poste à seize exemplaires ──────────────────
+
+
+def test_un_mercenaire_sur_un_poste_a_seize_exemplaires_survit(page: Page, space_id, merco_ctx):
+    """Le défaut de la carte 406, reproduit de bout en bout.
+
+    Un poste dont `max_quantity` dépasse dix — la piétaille s'aligne à seize —
+    faisait échouer la construction de sa spécification, sans empêcher l'achat
+    d'être enregistré. Le domaine jetait ensuite l'orphelin par un `filter_map`,
+    et le mercenaire, pourtant facturé, n'existait plus nulle part.
+
+    **La soumission passe par HTTP et non par la grille** : celle-ci écarte les
+    postes journalier, et c'est justement le seul type de poste que le corpus de
+    démonstration place au-dessus de dix. Le serveur, lui, ne les filtre pas —
+    la production le prouve. Poster directement reproduit donc le cas réel sans
+    déplacer les plafonds du corpus, dont plusieurs tests dépendent.
+    """
+    mr_id = _create_pre_match(space_id, merco_ctx, home_idx=2, away_idx=3)
+    location = _advance_to_inducements(space_id, mr_id)
+    if "/inducements/" not in location:
+        pytest.skip("Pas de page inducements pour cette compétition")
+    team_id = _TEAM_ID_RE.search(location).group(1)
+
+    reponse = requests.post(
+        f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/inducements/{team_id}",
+        headers={"HX-Request": "true", "Content-Type": "application/x-www-form-urlencoded"},
+        data={
+            "intent": "validate",
+            "selection": "[]",
+            "mercenaries": '[{"position_uid": "DEMO_GRANIT__PIETAILLE", "level": "base"}]',
+        },
+        allow_redirects=False,
+    )
+    assert reponse.status_code in (302, 303), (
+        f"l'engagement doit être accepté : {reponse.status_code}\n{reponse.text[:300]}"
+    )
+
+    from db_helpers import query_db
+
+    achats = query_db(
+        "SELECT payload::text FROM match_report_event_store "
+        f"WHERE match_report_id = '{mr_id}' AND event_type = 'InducementsRecorded'"
+    )
+    assert achats, "l'événement doit exister"
+    assert any("MERCO:DEMO_GRANIT__PIETAILLE" in ligne for ligne in achats), (
+        "le mercenaire doit figurer dans l'événement — c'est là qu'il "
+        f"disparaissait : {achats}"
+    )
+

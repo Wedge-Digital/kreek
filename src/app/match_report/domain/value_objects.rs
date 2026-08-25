@@ -78,6 +78,12 @@ pub struct TeamValue(u32);
 )]
 pub struct DedicatedFans(u32);
 
+/// Une quantité **achetée** de coups de pouce identiques.
+///
+/// Dix est déjà généreux pour un achat. Ce plafond n'a rien à voir avec celui
+/// d'un roster, qui vit sur une autre échelle — un trois-quarts s'aligne à
+/// seize. Confondre les deux a fait disparaître des mercenaires payés
+/// (carte 406) : le plafond porte désormais son propre type.
 #[nutype(
     validate(greater_or_equal = 1, less_or_equal = 10),
     derive(
@@ -93,6 +99,31 @@ pub struct DedicatedFans(u32);
     )
 )]
 pub struct InducementQty(u8);
+
+/// Le plafond que le corpus pose sur un coup de pouce ou un poste.
+///
+/// Il vient du référentiel, pas d'une saisie : il n'a pas à être borné par le
+/// haut, et l'y borner revenait à disqualifier des postes légitimes. Seize pour
+/// un trois-quarts, quatre pour un percuteur, un pour un colosse.
+///
+/// Il ne protège aucun invariant que `validate_max_qty` ne vérifie déjà — mais
+/// un `u8` nu se serait confondu de nouveau avec une quantité d'achat, ce qui
+/// est précisément le défaut qu'on corrige.
+#[nutype(
+    validate(greater_or_equal = 1),
+    derive(
+        Debug,
+        Clone,
+        Copy,
+        PartialEq,
+        Eq,
+        PartialOrd,
+        Ord,
+        Serialize,
+        Deserialize
+    )
+)]
+pub struct InducementMaxQty(u8);
 
 #[nutype(
     validate(greater_or_equal = 1),
@@ -116,7 +147,9 @@ impl InducementPurchase {
 #[derive(Debug, Clone)]
 pub struct AllowedInducementSpec {
     pub uid: InducementId,
-    pub max_qty: InducementQty,
+    /// Le plafond du **corpus**, jamais une quantité d'achat — cf.
+    /// [`InducementMaxQty`].
+    pub max_qty: InducementMaxQty,
     pub unit_cost: InducementCost,
     pub is_star_player: IsStarPlayer,
 }

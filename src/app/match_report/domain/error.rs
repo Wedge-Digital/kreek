@@ -7,14 +7,34 @@ pub enum DomainError {
     InvalidEventSequence,
     EmptyEventStream,
     InvalidD3Roll(u8),
-    BudgetExceeded { spent: u32, budget: u32 },
-    MaxQtyExceeded { uid: String, qty: u8, max_qty: u8 },
+    BudgetExceeded {
+        spent: u32,
+        budget: u32,
+    },
+    MaxQtyExceeded {
+        uid: String,
+        qty: u8,
+        max_qty: u8,
+    },
+    /// Un achat dont aucune spécification ne porte l'uid.
+    ///
+    /// C'est une incohérence d'appelant, jamais une donnée à ignorer : le coup
+    /// de pouce a été facturé au coach, et le filtrer le faisait disparaître
+    /// sans un mot (carte 406).
+    UnknownInducement {
+        uid: String,
+    },
     StarPlayerLimitExceeded,
-    StarPlayerConflict { uid: String },
+    StarPlayerConflict {
+        uid: String,
+    },
     TeamValuesNotRecorded,
     InvalidTurn(u8),
     ActionNotFound(String),
-    TooManyMercenaries { requested: u8, max: u8 },
+    TooManyMercenaries {
+        requested: u8,
+        max: u8,
+    },
     CorrectionNotAllowed(CorrectionBlocker),
 }
 
@@ -33,6 +53,9 @@ impl fmt::Display for DomainError {
             }
             Self::MaxQtyExceeded { uid, qty, max_qty } => {
                 write!(f, "quantité invalide pour {uid} : {qty} (max {max_qty})")
+            }
+            Self::UnknownInducement { uid } => {
+                write!(f, "coup de pouce inconnu du tier : {uid}")
             }
             Self::StarPlayerLimitExceeded => write!(f, "maximum 2 star players par équipe"),
             Self::StarPlayerConflict { uid } => {

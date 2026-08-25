@@ -273,6 +273,21 @@ pub async fn post_inducements(
         Err(record_inducements_use_case::RecordInducementsError::NotInPreMatchPhase) => {
             StatusCode::CONFLICT.into_response()
         }
+        // Un refus du domaine est une saisie invalide, pas une panne : 422 et
+        // une ligne `warn`, là où le `Err(e)` générique en faisait un 500 muet.
+        //
+        // `UnknownInducement` en particulier signalait jusqu'ici *rien du tout*
+        // — l'achat était filtré en silence après avoir été facturé
+        // (carte 406). Il vaut mieux un refus lisible qu'un mercenaire évaporé.
+        Err(record_inducements_use_case::RecordInducementsError::Domain(e)) => {
+            tracing::warn!(
+                match_report_id = %match_report_id,
+                team_id = %team_id,
+                erreur = %e,
+                "post_inducements refusé par le domaine"
+            );
+            (StatusCode::UNPROCESSABLE_ENTITY, e.to_string()).into_response()
+        }
         Err(e) => {
             tracing::error!("post_inducements: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()

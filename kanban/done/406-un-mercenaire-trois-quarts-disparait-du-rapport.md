@@ -124,19 +124,55 @@ même façon, sans un mot. À corriger avec le reste, tant qu'on y est.
 
 ## Checklist
 
-- [ ] Le plafond de `AllowedInducementSpec` cesse d'être un `InducementQty`
-- [ ] Un achat ne peut plus exister sans sa spec — construction conjointe
-- [ ] `build_purchase_list` refuse un achat sans spec (`DomainError`), au lieu de
-      le filtrer ; le contrôleur en fait un 422 avec une ligne `warn`
-- [ ] Même traitement pour `build_allowed_specs`, qui porte le même motif
-- [ ] Tests unitaires :
-  - [ ] **mercenaire sur un poste à `max_quantity = 16` → engagé, présent dans
-        les achats et dans les joueurs temporaires** — le test qui reproduit ce
-        défaut
-  - [ ] mercenaire sur un poste à `max_quantity = 4` → non-régression
-  - [ ] achat dont l'uid n'a pas de spec → erreur, jamais un silence
-  - [ ] inducement de corpus à `maxQuantity = 12` → présent dans les specs
-  - [ ] la limite de trois mercenaires continue de s'appliquer
-- [ ] Test e2e : engager un trois-quarts en mercenaire, le retrouver dans le
-      sélecteur de joueurs à l'étape des actions, lui faire marquer un touchdown
-- [ ] `make lint`, `make check-arch`, `make test`
+- [x] Le plafond cesse d'être un `InducementQty` — c'est un `InducementMaxQty`,
+      sans borne haute
+- [x] Un achat ne peut plus exister sans sa spec — construction conjointe
+- [x] `build_purchase_list` refuse (`UnknownInducement`) au lieu de filtrer ; le
+      contrôleur en fait un 422 avec une ligne `warn`
+- [x] Même traitement pour `build_allowed_specs`
+- [x] Cinq tests unitaires, dont celui qui reproduit le défaut — **vu échouer**
+- [x] Test e2e, **vu échouer** : `"purchases": []`
+- [x] `make lint`, `make check-arch`, `make test` — 1271 tests
+
+## Ce qui a été fait
+
+Le plafond a son type, `InducementMaxQty`, **sans borne haute** : il vient du
+corpus, pas d'une saisie. `InducementQty` garde la sienne à dix, qui est un
+plafond d'achat et n'avait aucune raison de suivre celui d'un roster. Le
+compilateur a désigné les trois sites à basculer.
+
+Spec et achat se construisent ensemble, dans un `let … else` qui journalise et
+passe au suivant. L'orphelin ne peut plus naître.
+
+### Il y avait un troisième avalement
+
+La carte en décrivait deux ; `validate_max_qty` porte le même `if let` sans
+`else`. Un achat sans spec y passait la validation en silence avant même
+d'atteindre le `filter_map`. Il est désormais refusé **au plus tôt** — c'est la
+phase de validation, pas celle de construction — et `build_purchase_list`
+refuse à son tour, ce qui ferme la chaîne des deux côtés.
+
+### Le contrôleur ne rendait pas 422
+
+Un refus du domaine tombait dans le `Err(e)` générique, donc en **500 muet**.
+Il rend maintenant un 422 avec le message du domaine et une ligne `warn`
+nommant le rapport, l'équipe et le motif.
+
+### Le corpus de démonstration ne peut pas exprimer le cas
+
+Vérifié : **seuls les postes journalier dépassent dix** dans le jeu d'exemple —
+et un test existant vérifie que la grille des mercenaires les écarte. Le défaut
+n'est donc pas reproductible par l'interface avec ce corpus.
+
+Mais le **serveur ne les filtre pas** : `validate_mercenary_positions` vérifie
+seulement que le poste appartient au roster. La production le prouve. Le test
+e2e poste donc en HTTP, ce qui reproduit le cas réel sans déplacer les plafonds
+du corpus — dont plusieurs tests de valeur d'équipe dépendent.
+
+Sans le correctif, il rend :
+
+```
+'{"type": "InducementsRecorded", "purchases": [], …}'
+```
+
+L'événement émis, vide, et le mercenaire facturé évaporé.

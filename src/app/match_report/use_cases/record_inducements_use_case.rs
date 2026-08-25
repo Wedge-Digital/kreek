@@ -308,12 +308,16 @@ fn build_all_specs_and_purchases(
     (specs, tuples)
 }
 
+/// Les `filter_map` restent, mais ils ne peuvent plus faire disparaître un
+/// coup de pouce que le corpus déclare : `InducementMaxQty` n'a pas de borne
+/// haute. Avant, un inducement à plus de dix exemplaires s'évaporait ici sans
+/// un mot — le corpus d'exemple plafonnant à cinq, personne ne l'avait vu.
 fn build_allowed_specs(tier: &TierRulesDto) -> Vec<AllowedInducementSpec> {
-    use crate::app::match_report::domain::value_objects::{InducementCost, InducementQty};
+    use crate::app::match_report::domain::value_objects::{InducementCost, InducementMaxQty};
     let inducements = tier.allowed_inducements.iter().filter_map(|s| {
         Some(AllowedInducementSpec {
             uid: InducementId(s.uid.clone()),
-            max_qty: InducementQty::try_new(s.max_qty).ok()?,
+            max_qty: InducementMaxQty::try_new(s.max_qty).ok()?,
             unit_cost: InducementCost::try_new(s.unit_cost).ok()?,
             is_star_player: IsStarPlayer(false),
         })
@@ -321,7 +325,7 @@ fn build_allowed_specs(tier: &TierRulesDto) -> Vec<AllowedInducementSpec> {
     let stars = tier.allowed_star_players.iter().filter_map(|s| {
         Some(AllowedInducementSpec {
             uid: InducementId(s.uid.clone()),
-            max_qty: InducementQty::try_new(s.max_qty).ok()?,
+            max_qty: InducementMaxQty::try_new(s.max_qty).ok()?,
             unit_cost: InducementCost::try_new(s.unit_cost).ok()?,
             is_star_player: IsStarPlayer(true),
         })
@@ -332,7 +336,7 @@ fn build_allowed_specs(tier: &TierRulesDto) -> Vec<AllowedInducementSpec> {
 fn build_merco_specs(
     mercs: &[ValidatedMercenary],
 ) -> (Vec<AllowedInducementSpec>, Vec<(InducementId, u8)>) {
-    use crate::app::match_report::domain::value_objects::{InducementCost, InducementQty};
+    use crate::app::match_report::domain::value_objects::{InducementCost, InducementMaxQty};
     let mut groups: HashMap<String, (u32, u8, u8)> = HashMap::new();
     for merc in mercs {
         let uid = format!("MERCO:{}:{}", merc.position_id, merc.level.as_str());
@@ -343,17 +347,29 @@ fn build_merco_specs(
     let mut tuples = vec![];
     for (uid, (cost, qty, max_qty_for_pos)) in groups {
         let induction_id = InducementId(uid);
-        if let (Ok(mq), Ok(uc)) = (
-            InducementQty::try_new(max_qty_for_pos),
+        // Spec et achat **ensemble, ou aucun des deux**. Le `tuples.push`
+        // vivait hors du `if let` : quand le plafond du poste dépassait la
+        // borne de l'ancien type — seize pour un trois-quarts — l'achat restait
+        // sans sa spec, et le domaine le jetait plus loin sans un mot. Le coach
+        // avait payé (carte 406).
+        let (Ok(mq), Ok(uc)) = (
+            InducementMaxQty::try_new(max_qty_for_pos),
             InducementCost::try_new(cost),
-        ) {
-            specs.push(AllowedInducementSpec {
-                uid: induction_id.clone(),
-                max_qty: mq,
-                unit_cost: uc,
-                is_star_player: IsStarPlayer(false),
-            });
-        }
+        ) else {
+            tracing::warn!(
+                uid = %induction_id.0,
+                max_qty = max_qty_for_pos,
+                cost,
+                "mercenaire écarté : plafond ou coût hors bornes"
+            );
+            continue;
+        };
+        specs.push(AllowedInducementSpec {
+            uid: induction_id.clone(),
+            max_qty: mq,
+            unit_cost: uc,
+            is_star_player: IsStarPlayer(false),
+        });
         tuples.push((induction_id, qty));
     }
     (specs, tuples)
@@ -421,6 +437,57 @@ mod tests {
     use crate::app::match_report::domain::value_objects::{DedicatedFans, MatchReportOrigin};
     use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RoundId, SeasonId};
     use crate::app::shared_kernel::identity::ids::SpaceId;
+
+    // ── Carte 406 — le mercenaire qui disparaissait ─────────────────────────
+
+    fn merco(position: &str, max_qty: u8) -> ValidatedMercenary {
+        ValidatedMercenary {
+            position_id: RosterPositionUid::try_new(position).unwrap(),
+            level: MercenaryLevel::Base,
+            cost: 50,
+            max_qty,
+        }
+    }
+
+    /// Le test qui reproduit le défaut.
+    ///
+    /// Un trois-quarts s'aligne à seize, et l'ancien type bornait à dix : la
+    /// spec n'était pas créée, l'achat l'était quand même, et le domaine le
+    /// jetait plus loin sans un mot. Le mercenaire était facturé puis
+    /// n'existait nulle part.
+    #[test]
+    fn un_poste_a_seize_exemplaires_produit_sa_spec_et_son_achat() {
+        let (specs, tuples) = build_merco_specs(&[merco("DEMO_GRANIT__PIETAILLE", 16)]);
+
+        assert_eq!(specs.len(), 1, "la spec doit exister");
+        assert_eq!(specs[0].max_qty.into_inner(), 16);
+        assert_eq!(tuples.len(), 1, "l'achat doit exister");
+        assert_eq!(specs[0].uid, tuples[0].0, "et les deux doivent se répondre");
+    }
+
+    /// Non-régression : les postes qui fonctionnaient continuent de le faire.
+    #[test]
+    fn un_poste_a_quatre_exemplaires_fonctionne_toujours() {
+        let (specs, tuples) = build_merco_specs(&[merco("DEMO_GRANIT__PERCUTEUR", 4)]);
+
+        assert_eq!(specs.len(), 1);
+        assert_eq!(specs[0].max_qty.into_inner(), 4);
+        assert_eq!(tuples.len(), 1);
+    }
+
+    /// L'invariant qui rendait le défaut possible : un achat ne peut plus
+    /// exister sans sa spec, quel que soit le motif d'écart.
+    #[test]
+    fn un_achat_ne_survit_jamais_a_l_echec_de_sa_spec() {
+        // `max_qty = 0` viole la borne basse : la spec est refusée.
+        let (specs, tuples) = build_merco_specs(&[merco("DEMO_GRANIT__PIETAILLE", 0)]);
+
+        assert!(specs.is_empty());
+        assert!(
+            tuples.is_empty(),
+            "sans spec, pas d'achat — c'est l'orphelin qui coûtait un mercenaire"
+        );
+    }
 
     fn make_pm(home_tv: u32, away_tv: u32) -> MatchReportPreMatch {
         MatchReportPreMatch {

@@ -5,8 +5,8 @@ use crate::app::match_report::domain::match_report_ready_to_publish::MatchReport
 use crate::app::match_report::domain::value_objects::TurnNumber;
 use crate::app::match_report::domain::value_objects::{
     ActionId, ActionPlayer, AllowedInducementSpec, D3Roll, DedicatedFans, FanFactorMod,
-    InducementPurchase, InducementQty, MatchAction, MatchActionType, MatchGain, MatchReportOrigin,
-    TeamSide, TeamValue, TempPlayer,
+    InducementMaxQty, InducementPurchase, InducementQty, MatchAction, MatchActionType, MatchGain,
+    MatchReportOrigin, TeamSide, TeamValue, TempPlayer,
 };
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
@@ -201,7 +201,7 @@ impl MatchReportPreMatch {
         recorded_by: CoachId,
     ) -> Result<(Self, Vec<MatchReportDomainEvent>), DomainError> {
         validate_purchases(purchases, allowed_specs, opponent_star_uids, budget)?;
-        let purchase_list = build_purchase_list(purchases, allowed_specs);
+        let purchase_list = build_purchase_list(purchases, allowed_specs)?;
         let events = build_inducement_events(team_id, &purchase_list, allowed_specs, recorded_by);
         let mut updated = self.clone();
         set_inducements_for(&mut updated, team_id, purchase_list);
@@ -475,14 +475,19 @@ fn validate_max_qty(
     allowed_specs: &[AllowedInducementSpec],
 ) -> Result<(), DomainError> {
     for (uid, qty) in purchases {
-        if let Some(spec) = allowed_specs.iter().find(|s| &s.uid == uid) {
-            if *qty > spec.max_qty.into_inner() {
-                return Err(DomainError::MaxQtyExceeded {
-                    uid: uid.0.clone(),
-                    qty: *qty,
-                    max_qty: spec.max_qty.into_inner(),
-                });
-            }
+        // Un achat sans spec passait ici en silence — troisième avalement de la
+        // même chaîne. Il est refusé au plus tôt, avant même la question du
+        // plafond : c'est la phase de validation, pas celle de construction.
+        let spec = allowed_specs
+            .iter()
+            .find(|s| &s.uid == uid)
+            .ok_or_else(|| DomainError::UnknownInducement { uid: uid.0.clone() })?;
+        if *qty > spec.max_qty.into_inner() {
+            return Err(DomainError::MaxQtyExceeded {
+                uid: uid.0.clone(),
+                qty: *qty,
+                max_qty: spec.max_qty.into_inner(),
+            });
         }
     }
     Ok(())
@@ -544,21 +549,31 @@ fn validate_budget(
     }
 }
 
+/// **Refuse** un achat sans spécification, au lieu de le filtrer.
+///
+/// Un `filter_map` le jetait sans un mot : le coup de pouce était facturé au
+/// coach, puis n'existait plus nulle part — ni dans l'événement, ni dans les
+/// joueurs temporaires. Aucune erreur, aucune ligne de journal (carte 406).
+///
+/// Un achat dont aucune spec ne porte l'uid est une incohérence d'appelant, pas
+/// une donnée à ignorer. Le domaine ne journalise pas : il refuse, et c'est le
+/// contrôleur qui en fait un 422 et une ligne.
 fn build_purchase_list(
     purchases: &[(InducementId, u8)],
     allowed_specs: &[AllowedInducementSpec],
-) -> Vec<InducementPurchase> {
+) -> Result<Vec<InducementPurchase>, DomainError> {
     purchases
         .iter()
-        .filter_map(|(uid, qty)| {
-            allowed_specs
+        .map(|(uid, qty)| {
+            let spec = allowed_specs
                 .iter()
                 .find(|s| &s.uid == uid)
-                .map(|spec| InducementPurchase {
-                    uid: uid.clone(),
-                    qty: InducementQty::try_new(*qty).expect("qty validated at IO boundary"),
-                    unit_cost: spec.unit_cost,
-                })
+                .ok_or_else(|| DomainError::UnknownInducement { uid: uid.0.clone() })?;
+            Ok(InducementPurchase {
+                uid: uid.clone(),
+                qty: InducementQty::try_new(*qty).expect("qty validated at IO boundary"),
+                unit_cost: spec.unit_cost,
+            })
         })
         .collect()
 }
@@ -646,7 +661,7 @@ mod tests {
     fn spec(uid: &str, max_qty: u8, unit_cost: u32, is_star: bool) -> AllowedInducementSpec {
         AllowedInducementSpec {
             uid: InducementId(uid.to_string()),
-            max_qty: InducementQty::try_new(max_qty).unwrap(),
+            max_qty: InducementMaxQty::try_new(max_qty).unwrap(),
             unit_cost: InducementCost::try_new(unit_cost).unwrap(),
             is_star_player: IsStarPlayer(is_star),
         }
@@ -861,6 +876,57 @@ mod tests {
         let (updated, events) = result.unwrap();
         assert!(updated.home_inducements.as_ref().unwrap().is_empty());
         assert_eq!(events.len(), 1);
+    }
+
+    /// Un achat sans spécification **refuse**, il ne s'évapore plus.
+    ///
+    /// C'est le maillon qui rendait le défaut silencieux : le coup de pouce
+    /// était facturé, puis jeté par un `filter_map` sans erreur ni journal
+    /// (carte 406). Le domaine ne journalise pas — il refuse, et le contrôleur
+    /// en fait un 422.
+    #[test]
+    fn un_achat_sans_specification_est_refuse() {
+        let pm = make_pm(1000, 1000);
+        let achats = vec![(InducementId("MERCO:INCONNU:base".to_string()), 1)];
+
+        let erreur = pm
+            .record_inducements(
+                &pm.home_team_id.clone(),
+                &achats,
+                100_000,
+                &[],
+                &[],
+                CoachId::new(),
+            )
+            .expect_err("un achat sans spec est une incohérence, pas une donnée à ignorer");
+
+        assert!(
+            matches!(erreur, DomainError::UnknownInducement { ref uid } if uid == "MERCO:INCONNU:base"),
+            "l'erreur doit nommer le coup de pouce : {erreur:?}"
+        );
+    }
+
+    /// Un plafond de corpus au-delà de dix ne disqualifie plus le coup de
+    /// pouce. Le corpus d'exemple plafonne à cinq, ce qui masquait le défaut
+    /// sur ce chemin — il aurait mordu au premier référentiel plus généreux.
+    #[test]
+    fn un_plafond_de_corpus_a_douze_reste_utilisable() {
+        let pm = make_pm(1000, 1000);
+        let specs = vec![spec("APOTHICAIRE", 12, 50, false)];
+        let achats = vec![(InducementId("APOTHICAIRE".to_string()), 10)];
+
+        let (mise_a_jour, _) = pm
+            .record_inducements(
+                &pm.home_team_id.clone(),
+                &achats,
+                100_000,
+                &specs,
+                &[],
+                CoachId::new(),
+            )
+            .expect("douze est un plafond légitime");
+
+        assert_eq!(mise_a_jour.home_inducements.as_ref().unwrap().len(), 1);
     }
 
     #[test]
