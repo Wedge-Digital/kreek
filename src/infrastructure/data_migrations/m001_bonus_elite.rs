@@ -21,7 +21,7 @@
 //! l'application.
 
 use crate::app::players::domain::events::{PlayerDomainEvent, RecalibrationReason};
-use crate::app::players::domain::player::{PlayerId, TeamId};
+use crate::app::players::domain::player::{AcquisitionMode, PlayerId, TeamId};
 use crate::app::players::domain::value_objects::KpoDelta;
 use crate::app::players::io::repository::player_repository::{
     insert_player_event, upsert_player_projection,
@@ -73,6 +73,13 @@ impl DataMigration for BonusElite {
             let elites = joueur
                 .acquired_skills
                 .iter()
+                // Une compétence donnée par un commissaire a compté **zéro**
+                // dans la valeur du joueur — c'est la règle du mode
+                // customisation, écrite dans `Player::apply`. Lui appliquer le
+                // rattrapage ajouterait dix kPo au titre d'un barème qui ne lui
+                // a jamais servi, et rendrait le joueur plus cher que la règle
+                // ne le prévoit.
+                .filter(|s| s.mode != AcquisitionMode::Customised)
                 .filter(|s| {
                     state
                         .players
@@ -111,9 +118,9 @@ impl DataMigration for BonusElite {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::players::domain::player::{AcquisitionMode, Spp, ValueKpo};
+    use crate::app::players::domain::player::{Spp, ValueKpo};
     use crate::app::players::domain::value_objects::{
-        PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
+        CustomisationId, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
     };
     use crate::app::shared_kernel::identity::ids::SpaceId;
     use crate::infrastructure::data_migrations::appliquer;
@@ -208,6 +215,57 @@ mod tests {
             1,
             "une correction unique, pas une par compétence"
         );
+    }
+
+    /// Le cas que le premier jet manquait.
+    ///
+    /// Une compétence donnée par un commissaire a compté **zéro** dans la
+    /// valeur du joueur — `Player::apply` l'écrit en dur. Lui appliquer le
+    /// rattrapage ajouterait dix kPo au titre d'un barème qui ne lui a jamais
+    /// servi. Le filtre ne regardait que l'élitisme, jamais l'origine.
+    #[sqlx::test]
+    async fn une_elite_donnee_par_un_commissaire_ne_rapporte_rien(pool: sqlx::PgPool) {
+        let state = etat(pool.clone()).await;
+        let pid = PlayerId("elite-offerte".to_string());
+        let tid = TeamId("team-elite-offerte".to_string());
+
+        let cree = PlayerDomainEvent::PlayerCreated {
+            player_id: pid.clone(),
+            team_id: tid.clone(),
+            space_id: SpaceId::new(),
+            position_name: PositionNameVo::try_new("Piétaille".to_string()).unwrap(),
+            roster_line_id: RosterLineId::try_new("DEMO_GRANIT__PIETAILLE".to_string()).unwrap(),
+            jersey: None,
+            base_skills: vec![],
+            starting_spp: Spp(0),
+            starting_value: ValueKpo(100),
+        };
+        let offerte = PlayerDomainEvent::PlayerSkillCustomised {
+            player_id: pid.clone(),
+            team_id: tid.clone(),
+            customisation_id: CustomisationId::try_new("c-migration".to_string()).unwrap(),
+            skill_id: SkillId::try_new(ELITE.to_string()).unwrap(),
+            skill_name: SkillName::try_new(ELITE.to_string()).unwrap(),
+            author: "Commissaire".to_string(),
+        };
+        let mut tx = pool.begin().await.unwrap();
+        insert_player_event(&mut tx, &cree, 1).await.unwrap();
+        upsert_player_projection(&mut tx, &cree).await.unwrap();
+        insert_player_event(&mut tx, &offerte, 2).await.unwrap();
+        upsert_player_projection(&mut tx, &offerte).await.unwrap();
+        tx.commit().await.unwrap();
+
+        let avant = valeur(&pool, &pid).await;
+        appliquer(&state, &pool, vec![Box::new(BonusElite)])
+            .await
+            .unwrap();
+
+        assert_eq!(
+            valeur(&pool, &pid).await,
+            avant,
+            "une Élite offerte n'a jamais valorisé le joueur : rien à rattraper"
+        );
+        assert_eq!(recalibrations(&pool, &pid).await, 0);
     }
 
     /// Une migration ne doit pas laisser de trace là où elle n'a rien changé.
