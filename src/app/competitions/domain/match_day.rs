@@ -1,11 +1,27 @@
 use crate::app::shared_kernel::bloodbowl::date_string::DateString;
 use crate::app::shared_kernel::bloodbowl::ids::{MatchId, PairingId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
-use crate::app::shared_kernel::identity::name_vo::NameVo;
+use crate::app::shared_kernel::identity::charset::TEXTE_SAISI;
 use nutype::nutype;
 use std::collections::HashSet;
 
-pub type MatchDayName = NameVo;
+/// Le nom d'une journée — son propre type, cf. [`SeasonName`].
+#[nutype(
+    sanitize(trim),
+    validate(not_empty, len_char_max = 50, regex = TEXTE_SAISI),
+    derive(
+        Debug,
+        Clone,
+        Serialize,
+        Deserialize,
+        PartialEq,
+        Eq,
+        Hash,
+        Display,
+        AsRef
+    )
+)]
+pub struct MatchDayName(String);
 
 #[nutype(
     validate(greater_or_equal = 0),

@@ -150,9 +150,51 @@ mod tests {
     }
 
     #[test]
+    /// Les deux `TeamName` du projet — celui-ci et celui de
+    /// `shared_kernel::bloodbowl` — doivent accepter exactement les mêmes
+    /// noms.
+    ///
+    /// `teams/io/app_events/team_created_listener.rs:68` retombe sur
+    /// « Unknown » **en silence** quand la conversion échoue : toute
+    /// divergence entre les deux règles ferait perdre son nom à une équipe
+    /// fraîchement créée, sans une ligne de journal. Ils ont longtemps
+    /// divergé — 50 caractères d'un côté, 100 de l'autre.
+    #[test]
+    fn les_deux_team_name_acceptent_les_memes_noms() {
+        use crate::app::shared_kernel::bloodbowl::team::TeamName as TeamNameSource;
+
+        for nom in [
+            "Les Korrigans FC",
+            "L'Ost du Chaos",
+            "Les Zazous & Cie",
+            "Équipe <Étoilée>",
+            "Team 🏈",
+            &"a".repeat(100),
+        ] {
+            assert!(
+                TeamNameSource::try_new(nom.to_string()).is_ok(),
+                "{nom} refusé à la source"
+            );
+            assert!(
+                TeamName::try_new(nom.to_string()).is_ok(),
+                "{nom} accepté à la source mais refusé ici — « Unknown » en vue"
+            );
+        }
+
+        for nom in ["Les\nKorrigans", &"a".repeat(101)] {
+            assert!(TeamNameSource::try_new(nom.to_string()).is_err());
+            assert!(TeamName::try_new(nom.to_string()).is_err());
+        }
+    }
+
+    #[test]
+    /// `<script>` passe désormais, et c'est **voulu** : la défense contre
+    /// l'injection est l'échappement au rendu, pas le refus à la saisie.
     fn team_name_invalid_chars() {
-        assert!(TeamName::try_new("Les|Korrigans".to_string()).is_err());
-        assert!(TeamName::try_new("<script>".to_string()).is_err());
+        assert!(TeamName::try_new("Les\nKorrigans".to_string()).is_err());
+        assert!(TeamName::try_new("evil\u{202E}nom".to_string()).is_err());
+        assert!(TeamName::try_new("Les|Korrigans".to_string()).is_ok());
+        assert!(TeamName::try_new("<script>".to_string()).is_ok());
     }
 
     #[test]

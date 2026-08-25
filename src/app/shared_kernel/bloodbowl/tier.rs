@@ -1,8 +1,24 @@
-use crate::app::shared_kernel::identity::name_vo::NameVo;
+use crate::app::shared_kernel::identity::charset::TEXTE_SAISI;
 use nutype::nutype;
 use serde::{Deserialize, Serialize};
 
-pub type TierName = NameVo;
+/// Le nom d'un tier — son propre type, cf. [`SeasonName`].
+#[nutype(
+    sanitize(trim),
+    validate(not_empty, len_char_max = 50, regex = TEXTE_SAISI),
+    derive(
+        Debug,
+        Clone,
+        Serialize,
+        Deserialize,
+        PartialEq,
+        Eq,
+        Hash,
+        Display,
+        AsRef
+    )
+)]
+pub struct TierName(String);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CreationBudget(pub u32);

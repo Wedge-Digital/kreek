@@ -94,14 +94,16 @@
       </div>
     </div>
   </div>
+  <div class="add-match-teams" data-teams="{{ detail.team_options_json }}"></div>
+  {# Les équipes transitent par un **attribut**, jamais par une interpolation
+     dans ce `<script>` : Askama y écrirait des entités HTML que le navigateur
+     ne décode pas, et « L'Ost » s'afficherait « L&#x27;Ost ». Un attribut,
+     lui, est décodé. Le précédent est `new-competition-phase-1.html`. #}
   <script>
   (function() {
-    var form = document.currentScript.previousElementSibling;
-    var teams = [
-      {% for t in detail.team_options %}
-      { value: '{{ t.team_id }}', text: '{{ t.team_name }}', coach: '{{ t.coach_name }}', roster: '{{ t.roster_name }}' },
-      {% endfor %}
-    ];
+    var teamsEl = document.currentScript.previousElementSibling;
+    var form = teamsEl.previousElementSibling;
+    var teams = JSON.parse(teamsEl.dataset.teams);
     var tsConfig = {
       valueField: 'value',
       labelField: 'text',

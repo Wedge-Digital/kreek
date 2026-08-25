@@ -460,7 +460,12 @@ mod tests {
     #[tokio::test]
     async fn un_pseudo_ou_une_adresse_invalide_est_refuse_avant_tout() {
         let bus = new_bus();
-        for (pseudo, adresse) in [("!!!", "bon@bb.club"), ("BonPseudo", "pas-une-adresse")] {
+        // `!!!` passe désormais le charset — il faut un pseudo réellement
+        // invalide, donc un invisible, seul refus qui subsiste côté coach.
+        for (pseudo, adresse) in [
+            ("Bagouze\u{200B}", "bon@bb.club"),
+            ("BonPseudo", "pas-une-adresse"),
+        ] {
             let users = FakeUsers::libre();
             let jetons = FakeJetons::neuf();
             let email = FakeEmail::qui_marche();

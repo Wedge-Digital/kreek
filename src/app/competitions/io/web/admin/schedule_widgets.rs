@@ -205,10 +205,18 @@ async fn load_published_pairings(state: &AppState, match_day: &MatchDay) -> Vec<
         })
 }
 
+/// Sérialisée directement aux noms que TomSelect attend : le gabarit la pose
+/// en attribut de données, et le script la relit par `JSON.parse` sans avoir à
+/// la transposer.
+#[derive(serde::Serialize)]
 pub struct TeamOptionVm {
+    #[serde(rename = "value")]
     pub team_id: String,
+    #[serde(rename = "text")]
     pub team_name: String,
+    #[serde(rename = "coach")]
     pub coach_name: String,
+    #[serde(rename = "roster")]
     pub roster_name: String,
 }
 
@@ -219,7 +227,17 @@ pub struct RoundDetailVm {
     pub date_start: String,
     pub date_end: String,
     pub fixtures: Vec<FixtureVm>,
-    pub team_options: Vec<TeamOptionVm>,
+    /// Les équipes **déjà sérialisées**, et non la liste elle-même.
+    ///
+    /// Elles étaient interpolées une à une dans le `<script>` du gabarit.
+    /// Askama échappe en entités HTML, que le navigateur **ne décode pas**
+    /// dans un `<script>` : depuis que l'apostrophe est un caractère de nom
+    /// valide, « L'Ost » s'affichait « L&#x27;Ost » dans le sélecteur. Ce
+    /// n'était pas une injection — l'échappement tenait — mais un rendu faux.
+    ///
+    /// Un **attribut**, lui, est décodé par le navigateur. C'est ce qui rend
+    /// la chaîne intacte à `JSON.parse`.
+    pub team_options_json: String,
 }
 
 #[derive(Template)]
@@ -339,7 +357,7 @@ pub async fn schedule_round_detail_widget(
         })
         .collect();
 
-    let team_options = enrolled
+    let team_options: Vec<TeamOptionVm> = enrolled
         .iter()
         .map(|t| TeamOptionVm {
             team_id: t.team_id.clone(),
@@ -362,7 +380,12 @@ pub async fn schedule_round_detail_widget(
         date_start: match_day.date_start.unwrap_or_default().into_inner(),
         date_end: match_day.date_end.unwrap_or_default().into_inner(),
         fixtures,
-        team_options,
+        // Une liste vide reste du JSON valide : `JSON.parse("[]")` ne casse
+        // rien, là où un échec de sérialisation rendrait le sélecteur muet.
+        team_options_json: serde_json::to_string(&team_options).unwrap_or_else(|e| {
+            tracing::error!("schedule-round-detail: équipes non sérialisables: {e}");
+            "[]".to_string()
+        }),
     };
 
     RoundDetailTemplate {

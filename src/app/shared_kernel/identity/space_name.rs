@@ -71,10 +71,14 @@ mod tests {
     }
 
     #[test]
-    fn rejects_special_chars() {
+    fn rejects_control_chars() {
         assert_eq!(
-            SpaceName::try_new("my|space").unwrap_err(),
+            SpaceName::try_new("mon\nespace").unwrap_err(),
             SpaceNameError::RegexViolated
+        );
+        assert!(
+            SpaceName::try_new("my|space").is_ok(),
+            "la barre verticale ne casse rien et doit passer"
         );
     }
 

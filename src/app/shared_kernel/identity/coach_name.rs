@@ -65,9 +65,9 @@ mod tests {
     }
 
     #[test]
-    fn special_characters_are_rejected() {
+    fn les_invisibles_sont_rejetes() {
         assert_eq!(
-            CoachName::try_new("Bag@uze").unwrap_err(),
+            CoachName::try_new("Bagouze\u{200B}").unwrap_err(),
             CoachNameError::RegexViolated,
         );
     }
@@ -90,12 +90,27 @@ mod tests {
     }
 
     #[test]
-    fn special_characters_are_still_rejected() {
-        for name in ["Bag@uze", "Coach!", "Test#1", "foo/bar"] {
+    /// La ponctuation passe désormais : elle ne cassait rien. Ce qui reste
+    /// dehors, ce sont les invisibles et les sauts de ligne — les seuls à
+    /// pouvoir produire deux comptes indiscernables ou un journal illisible.
+    fn seuls_les_invisibles_et_les_controles_restent_rejetes() {
+        for name in [
+            "Bagouze\u{200B}",
+            "Bag\u{200D}ouze",
+            "Bagouze\u{FEFF}",
+            "Bag\nouze",
+            "Bag\touze",
+        ] {
             assert_eq!(
                 CoachName::try_new(name).unwrap_err(),
                 CoachNameError::RegexViolated,
-                "'{name}' aurait dû être rejeté",
+                "{name:?} aurait dû être rejeté",
+            );
+        }
+        for name in ["Bag@uze", "Coach!", "Test#1", "foo/bar"] {
+            assert!(
+                CoachName::try_new(name).is_ok(),
+                "{name} ne casse rien et doit passer"
             );
         }
     }

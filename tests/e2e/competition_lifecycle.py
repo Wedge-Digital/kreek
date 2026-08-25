@@ -286,6 +286,7 @@ def _space_coach_ids(space_id: str) -> list[str]:
 def build_and_submit_team_http(
     page: Page, space_id: str, competition_id: str, season_id: str,
     coach_id: str, roster_index: int, roster_uid: str | None = None,
+    team_name: str | None = None,
 ) -> str:
     """Même parcours que `build_and_submit_team`, en HTTP direct au lieu du clic.
 
@@ -319,7 +320,9 @@ def build_and_submit_team_http(
     resp = api.post(
         f"{BASE_URL}/app/{space_id}/team/create",
         data={
-            "team_name": f"Team HTTP {roster_name} {time.time_ns()}",
+            # `team_name` imposé sert aux tests de charset : le nom doit
+            # traverser la création, l'enrôlement et le rendu sans être altéré.
+            "team_name": team_name or f"Team HTTP {roster_name} {time.time_ns()}",
             "coach_id": coach_id,
             "coach_name": "",
             "logo_url": FAKE_LOGO_URL,

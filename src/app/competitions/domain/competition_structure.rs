@@ -1,6 +1,7 @@
+use crate::app::competitions::domain::match_day::MatchDayName;
 use crate::app::shared_kernel::bloodbowl::date_string::DateString;
 use crate::app::shared_kernel::bloodbowl::ranking_group_id::RankingGroupId;
-use crate::app::shared_kernel::identity::name_vo::NameVo;
+use crate::app::shared_kernel::identity::charset::TEXTE_SAISI;
 use nutype::nutype;
 use serde::{Deserialize, Serialize};
 
@@ -53,8 +54,31 @@ pub struct RankingGroupConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RankingGroup {
     pub id: RankingGroupId,
-    pub name: NameVo,
+    pub name: RankingGroupName,
 }
+
+/// Le nom d'un groupe de classement.
+///
+/// Il portait un `NameVo` nu — le type générique que quatre autres noms
+/// partageaient. Lui donner le sien est ce que demande la règle « pas de type
+/// primitif nu » du `CLAUDE.md`, un cran au-dessus : un `String` validé qui
+/// désigne n'importe quel nom n'est guère mieux qu'un `String`.
+#[nutype(
+    sanitize(trim),
+    validate(not_empty, len_char_max = 50, regex = TEXTE_SAISI),
+    derive(
+        Debug,
+        Clone,
+        Serialize,
+        Deserialize,
+        PartialEq,
+        Eq,
+        Hash,
+        Display,
+        AsRef
+    )
+)]
+pub struct RankingGroupName(String);
 
 #[nutype(
     validate(less_or_equal = 100),
@@ -100,11 +124,11 @@ pub struct ScheduleConfig {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ScheduledDate {
     FixedDate {
-        name: NameVo,
+        name: MatchDayName,
         multiplexe_date: DateString,
     },
     TimeFrame {
-        name: NameVo,
+        name: MatchDayName,
         start_date: DateString,
         end_date: DateString,
     },

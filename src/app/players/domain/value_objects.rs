@@ -186,8 +186,9 @@ mod tests {
 
     #[test]
     fn ce_qui_reste_refuse() {
-        assert!(SkillName::try_new("Block|Dodge".to_string()).is_err());
+        assert!(SkillName::try_new("Block\nDodge".to_string()).is_err());
         assert!(SkillName::try_new("   ".to_string()).is_err());
         assert!(SkillName::try_new("a".repeat(51)).is_err());
+        assert!(SkillName::try_new("Block|Dodge".to_string()).is_ok());
     }
 }

@@ -232,21 +232,52 @@ mais qui ne prouve rien de la bascule — de ce qui la discrimine réellement.
 
 ## Checklist
 
-- [ ] `identity/display_name_charset.rs` : `DISPLAY_NAME` en `LazyLock<Regex>`
-- [ ] `SpaceName` (100), `CoachName` (50, + refus `\p{Cf}`), `SeasonName` (50),
-      `TierName` (50) basculés sur `DISPLAY_NAME`
-- [ ] `NameVo` éclaté : `TeamName`, `SeasonName`, `TierName` deviennent trois
-      `nutype` distincts ; `NameVo` disparaît si plus aucun consommateur
-      (règle 4 du `CLAUDE.md` — lister les consommateurs avant de supprimer)
-- [ ] Les deux `TeamName` portent la même règle et la même longueur (100)
-- [ ] Tests unitaires par VO : le tableau ci-dessus
-- [ ] Test unitaire : un nom valide en `team_creation` l'est en `teams` — le
-      « Unknown » du listener ne peut plus se déclencher
-- [ ] `schedule-round-detail` passe par `data-teams` + `JSON.parse`
-- [ ] Messages d'erreur de `register_space` et `post_draft_team` réécrits
-- [ ] Test e2e : créer un espace puis une équipe nommés `L'Ost & Cie`, vérifier
-      l'affichage sur la page d'équipe **et** dans le sélecteur d'admin du
-      calendrier
-- [ ] `make test` passe
-- [ ] `make lint` passe
-- [ ] `make check-arch` passe
+- [x] Les deux constantes de `identity/charset.rs` basculées en liste noire
+- [x] `CoachName` ajoute le refus de `\p{Cf}` — les invisibles, et eux seuls
+- [x] `NameVo` éclaté, puis **supprimé** : plus aucun consommateur
+- [x] Les deux `TeamName` portent la même règle et la même longueur (100)
+- [x] Tests unitaires : le tableau ci-dessus, plus ce que la bascule ouvre
+- [x] Test unitaire : un nom valide à la source l'est dans `teams` — le
+      « Unknown » du listener ne peut plus se déclencher par le charset
+- [x] `schedule-round-detail` passe par `data-teams` + `JSON.parse`
+- [x] Messages d'erreur de `register_space` et `post_draft_team` réécrits
+- [x] Test e2e, **vu échouer** : `tests/e2e/test_noms_typographiques.py`
+- [x] `make test` — 1239 tests
+- [x] `make lint`, `make check-arch`
+
+### Les noms de la checklist d'origine n'existaient plus
+
+Elle demandait un fichier `identity/display_name_charset.rs` et une constante
+`DISPLAY_NAME`. Le commit `542bdfd` avait déjà créé `identity/charset.rs` avec
+`TEXTE_SAISI` et `IDENTIFIANT_COACH` ; en introduire un troisième nom aurait
+rouvert la dispersion que ce commit venait de fermer.
+
+## Ce qui a été fait, et ce que la carte n'avait pas vu
+
+**Cinq types, pas trois.** `NameVo` n'était pas qu'un alias derrière quatre
+noms : `competition_structure.rs` l'employait **directement** pour le nom d'un
+groupe de classement et pour celui des deux variantes de `ScheduledDate`. Ce
+dernier est sémantiquement une journée — il devient `MatchDayName`. Le groupe
+gagne son `RankingGroupName`. `NameVo` a donc pu disparaître entièrement.
+
+**Le compilateur a trouvé trois confusions**, toutes dans du code de test, et
+toutes du même genre : un `NameVo` posé là où une journée est attendue. Elles
+n'étaient visibles qu'après l'éclatement — c'est exactement ce qu'un alias
+partagé empêche de voir.
+
+**`cargo build` ne suffisait pas** à le constater : il ne compile pas le code
+sous `#[cfg(test)]`. Zéro erreur y donnait une fausse assurance ; `cargo build
+--tests` en a rendu trois.
+
+**Huit tests unitaires affirmaient l'ancienne règle** — `|`, `<script>`,
+`Bag@uze` refusés. Réécrits pour affirmer la nouvelle, et pour tenir ce que la
+bascule **ouvre** : c'est cette moitié-là qui distingue la liste noire de
+l'ancienne liste blanche.
+
+### Le point à trancher, laissé ouvert
+
+La carte décidait que `CoachName` reçoive le charset commun moins `\p{Cf}`.
+Appliqué. Mais `charset.rs` excluait `@` **délibérément**, pour qu'un
+pseudonyme ne prenne pas l'allure d'une adresse électronique — un raisonnement
+que la carte ne mentionnait pas. `Bag@uze` est donc devenu un pseudonyme
+valide. Le retour arrière tient en un caractère de classe.

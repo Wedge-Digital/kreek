@@ -71,7 +71,9 @@ mod tests {
     }
 
     #[test]
-    fn rejects_invalid_chars() {
-        assert!(CompetitionName::try_new("Ligue|Interdite").is_err());
+    fn rejects_control_chars() {
+        assert!(CompetitionName::try_new("Ligue\nInterdite").is_err());
+        // La barre verticale ne casse rien : elle passe depuis la bascule.
+        assert!(CompetitionName::try_new("Ligue|Autorisée").is_ok());
     }
 }

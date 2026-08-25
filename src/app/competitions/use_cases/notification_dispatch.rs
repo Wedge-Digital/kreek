@@ -316,12 +316,12 @@ fn date_limite(l: &DispatchLabels, app_url: &str, d: &Recipient) -> (String, Str
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::competitions::domain::match_day::MatchDayName;
     use crate::app::competitions::domain::match_day::{MatchDayType, Pairing};
     use crate::app::competitions::ports::{SpaceMemberDto, TeamInfoDto};
     use crate::app::shared_kernel::bloodbowl::ids::{MatchId, PairingId};
     use crate::app::shared_kernel::bloodbowl::team::TeamId;
     use crate::app::shared_kernel::identity::ids::SpaceId;
-    use crate::app::shared_kernel::identity::name_vo::NameVo;
     use crate::common::services::email::EmailError;
     use async_trait::async_trait;
     use std::sync::Mutex;
@@ -408,7 +408,7 @@ mod tests {
     fn journee(pairings: Vec<Pairing>) -> RoundRef {
         RoundRef {
             round_id: MatchId::try_new("01KZVCKDG19DXZHJA295WSJGMX").unwrap(),
-            round_name: NameVo::try_new("Journée 3").unwrap(),
+            round_name: MatchDayName::try_new("Journée 3").unwrap(),
             date_start: DateString::try_new("2026-09-11").unwrap(),
             date_end: None,
             day_type: MatchDayType::FixedDate,

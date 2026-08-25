@@ -239,8 +239,8 @@ fn analyser(d: &DateString) -> Option<Date> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::competitions::domain::match_day::MatchDayName;
     use crate::app::competitions::domain::match_day::MatchDayPosition;
-    use crate::app::shared_kernel::identity::name_vo::NameVo;
 
     const AUJOURDHUI: &str = "2026-09-10";
 
@@ -255,7 +255,7 @@ mod tests {
                 "01KZVCKDG19DXZHJA295WSJGMV",
             )
             .unwrap(),
-            name: NameVo::try_new("Journée 3").unwrap(),
+            name: MatchDayName::try_new("Journée 3").unwrap(),
             day_type,
             date_start: debut.map(d),
             date_end: fin.map(d),

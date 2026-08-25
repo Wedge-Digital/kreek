@@ -43,9 +43,11 @@ pub async fn post_draft_team(
     let team_name = match TeamName::try_new(form.team_name) {
         Ok(n) => n,
         Err(_) => {
+            // « alphanumériques » était faux avant même la bascule : les
+            // espaces et les tirets passaient. Le message dit la règle réelle.
             return error_response(
-                "Le nom d'équipe est invalide (1–50 caractères alphanumériques).",
-            )
+                "Le nom d'équipe doit tenir sur une ligne, sans caractère invisible, et faire 100 caractères au plus.",
+            );
         }
     };
 

@@ -91,8 +91,12 @@ pub async fn register_space_submit(
     let space_name = match SpaceName::try_new(&payload.space_name) {
         Ok(v) => Some(v),
         Err(_) => {
+            // Le message décrit la règle **réelle**. Il a longtemps annoncé
+            // « lettres, chiffres, tirets et underscores » alors que
+            // l'apostrophe et le point passaient déjà : un message faux fait
+            // corriger ce qui n'était pas en cause.
             form.space_name_error = Some(
-                "Le nom ne peut contenir que des lettres, chiffres, tirets et underscores (100 caractères max).".into(),
+                "Le nom doit tenir sur une ligne, sans caractère invisible, et faire 100 caractères au plus.".into(),
             );
             None
         }
