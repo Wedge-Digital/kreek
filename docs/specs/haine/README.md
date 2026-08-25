@@ -18,7 +18,7 @@ Validées et commitées (`fde2690`) :
 
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| Saisie des actions — gain de la Haine | ✅ | | | | | | |
+| Saisie des actions — gain de la Haine | ✅ | ✅ | | | | | |
 | Fiche d'équipe — mots-clefs | | | | | | | |
 | Fiche joueur — mots-clefs et Haines | | | | | | | |
 
@@ -41,10 +41,22 @@ d'équipe, et rien à faire du côté de `teams`. Suivant le précédent posé p
 customisation, l'événement ne portera **pas** de champ de valeur à zéro : « il
 n'existe pas, il ne vaut pas zéro ».
 
-**Pas de doublon** : un joueur ne gagne pas deux fois le même mot-clef. Le cumul
-de Haines différentes, lui, n'est pas borné.
+**Aucune gestion des doublons** : un joueur peut recevoir deux fois le même
+mot-clef, c'est au coach de ne pas le faire. Le panneau de saisie ne connaît pas
+les Haines déjà acquises — elles vivent dans `players` — et s'en passer évite une
+consultation inter-BC, une règle de refus et ses tests. Le cumul de Haines
+différentes n'est pas borné non plus.
 
 **On suit le mécanisme d'impact de match existant**, sans en créer un second.
+
+**Le quatrième mode d'acquisition s'appelle `Injury`.** Le coach répond oui ou
+non puis choisit son mot-clef : rien d'automatique. Les trois modes existants
+nomment la façon d'obtenir — le coach a choisi, le dé a choisi, un commissaire a
+posé — et la quatrième case de cette série est « à la suite d'une blessure ».
+
+**La Haine d'un journalier reste dans le rapport de match.** Aucun agrégat
+`players` n'existe pour un joueur temporaire, et rien ne le relie au joueur qu'on
+engagerait ensuite.
 
 **Supprimer l'action supprime la Haine.**
 

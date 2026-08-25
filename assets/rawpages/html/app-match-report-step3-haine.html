@@ -762,7 +762,7 @@
                          oninput="filterHateGrid(this.value)">
 
                   <div id="hate-group-opponent">
-                    <div class="mr-hate-group-title">Rencontrés dans l'équipe adverse</div>
+                    <div class="mr-hate-group-title">Dans le roster adverse</div>
                     <div class="mr-hate-grid" id="hate-grid-opponent"></div>
                   </div>
 
@@ -940,9 +940,9 @@
     {uid:'YHETEE',label:'Yéti'}, {uid:'ZOMBIE',label:'Zombie'}
   ];
 
-  /* Les mots-clefs réellement présents chez l'adversaire — union de ceux
-     portés par ses lignes de roster. Ici en dur pour la maquette ; côté
-     serveur, ils viendront du corpus via la feuille d'équipe. */
+  /* L'union des mots-clefs du roster adverse — tous ses postes, pas seulement
+     ceux alignés : couvrant, et sans dépendance à la feuille de match. Ici en
+     dur pour la maquette ; côté serveur, find_roster_positions les rend déjà. */
   var KEYWORDS_ADVERSAIRE = ['BLOCKER', 'HUMAN', 'BEASTMAN', 'BIG_GUY', 'MINOTAUR', 'LINEMAN'];
 
   var hateGained = null;      // null = pas répondu, true / false ensuite

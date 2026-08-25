@@ -40,17 +40,18 @@ Trois raisons de ne pas en faire un widget à part :
 
 Deux listes, résolues côté serveur, dans cet ordre :
 
-- `opponent_keywords` — les mots-clefs présents chez l'adversaire, affichés en
-  premier sous « Rencontrés dans l'équipe adverse » ;
+- `opponent_keywords` — les mots-clefs du **roster** adverse, affichés en premier
+  sous « Dans le roster adverse » ;
 - `other_keywords` — tous les autres, derrière le repli.
 
 Les deux portent `{ uid, label }` : l'`uid` part au serveur, le `label` s'affiche.
 **Le tri est fait par libellé**, pas par uid — un coach cherche « Nain », pas
 « DWARF ».
 
-Le partage entre les deux listes est une décision de la phase 3 : union des
-mots-clefs du **roster** adverse, ou des **joueurs réellement alignés**. Le
-libellé « rencontrés dans l'équipe adverse » engage plutôt la seconde.
+Le partage se fait sur le **roster** adverse, et non sur les joueurs réellement
+alignés (phase 3) : couvrant, et sans dépendance à la feuille de match. Le
+libellé suit — « dans le roster adverse », et non « rencontrés », qu'un poste non
+aligné démentirait.
 
 ## Ce qui reste front, ce qui part au serveur
 
@@ -83,7 +84,7 @@ affiche la Haine avec la blessure.
    là. Sans quoi le coach tape « yéti », voit une liste vide, et conclut que le
    mot n'existe pas.
 4. **Le mot-clef choisi reste visible** même s'il ne correspond plus au filtre, et
-   le groupe « chez l'adversaire » disparaît quand il devient vide plutôt que de
+   le groupe du roster adverse disparaît quand il devient vide plutôt que de
    laisser un titre au-dessus du rien.
 
 ## Règles métier tranchées
@@ -91,7 +92,7 @@ affiche la Haine avec la blessure.
 | Question | Décision |
 |---|---|
 | Un journalier peut-il gagner la Haine ? | **Oui** — utile s'il est engagé ensuite |
-| Deux fois le même mot-clef ? | **Non**, jamais de doublon sur un joueur |
+| Deux fois le même mot-clef ? | **Autorisé** — aucune vérification, c'est au coach de faire attention |
 | Plusieurs Haines différentes ? | **Oui**, sans limite |
 | Quand est-elle acquise ? | Par le **mécanisme d'impact de match existant** — `PlayerInjured` traverse déjà, `TeamMatchConcluded` applique à la publication, `TeamMatchImpactReverted` défait à la dépublication |
 | Supprimer l'action ? | **Supprime la Haine** |
