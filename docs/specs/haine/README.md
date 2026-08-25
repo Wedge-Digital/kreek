@@ -18,7 +18,7 @@ Validées et commitées (`fde2690`) :
 
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| Saisie des actions — gain de la Haine | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | |
+| Saisie des actions — gain de la Haine | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ **399-404** |
 | Fiche d'équipe — mots-clefs | | | | | | | |
 | Fiche joueur — mots-clefs et Haines | | | | | | | |
 
