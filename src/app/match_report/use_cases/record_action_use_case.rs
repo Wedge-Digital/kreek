@@ -310,6 +310,12 @@ mod tests {
 
     #[async_trait]
     impl IMatchReportRepository for DepotIntouchable {
+        async fn find_team_ids(
+            &self,
+            _: &str,
+        ) -> Result<Option<(String, String)>, RepositoryError> {
+            panic!("le dépôt ne doit pas être sollicité")
+        }
         async fn append(
             &self,
             _: &str,

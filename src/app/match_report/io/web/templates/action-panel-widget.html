@@ -4,6 +4,77 @@
         showSequel: false,
         injuryType: '',
         sequelStat: 'AV',
+        /* La Haine se déclare sur Amoché, Blessure Sérieuse et Séquelle — ni sur
+           une Commotion, ni sur une Mort. Une seule liste nommée, jamais trois
+           comparaisons dispersées. Ce n'est qu'un reflet de
+           `InjuryType::peut_donner_haine()` : un écart se solde par un 422,
+           jamais par une donnée fausse. */
+        PEUT_GAGNER_HAINE: ['AMOCHE', 'BLESSURE_SERIEUSE', 'SEQUEL'],
+        hateGained: null,
+        hateKeyword: null,
+        hateFilter: '',
+        get peutGagnerHaine() {
+            return this.PEUT_GAGNER_HAINE.includes(this.injuryType);
+        },
+        /* Le bouton reste masqué tant que la question n'est pas tranchée, et
+           tant qu'aucun mot-clef n'est choisi si la réponse est oui. */
+        get peutConfirmer() {
+            if (!this.injuryType) return false;
+            if (!this.peutGagnerHaine) return true;
+            if (this.hateGained === null) return false;
+            return !this.hateGained || !!this.hateKeyword;
+        },
+        choisirBlessure(type) {
+            this.injuryType = type;
+            this.showSequel = (type === 'SEQUEL');
+            this.hateGained = null;
+            this.hateKeyword = null;
+            this.hateFilter = '';
+        },
+        /* Le mot-clef choisi reste visible même s'il ne correspond plus au
+           filtre : sans quoi le coach perdrait de vue ce qu'il vient de
+           sélectionner en continuant à taper. */
+        motVisible(uid, label) {
+            if (this.hateKeyword && this.hateKeyword.uid === uid) return true;
+            const q = this.hateFilter.trim().toLowerCase();
+            return !q || label.toLowerCase().includes(q);
+        },
+        visibles(liste) {
+            return liste.filter(m => this.motVisible(m.uid, m.label)).length;
+        },
+        /* Les deux listes sont rendues par le serveur ; on n'en garde ici qu'un
+           index, lu **depuis le DOM** au montage. Aucun libellé n'est interpolé
+           en littéral JS : Askama échappe l'apostrophe, l'attribut la redécode,
+           et « Capitaine d'équipe » refermerait la chaîne. */
+        motsRoster: [],
+        motsAutres: [],
+        init() {
+            const lire = (groupe) => Array.from(
+                this.$el.querySelectorAll('[data-groupe=' + groupe + '] .mr-hate-kw')
+            ).map(b => ({ uid: b.dataset.uid, label: b.dataset.label }));
+            this.motsRoster = lire('roster');
+            this.motsAutres = lire('autres');
+        },
+        /* Une recherche qui ne trouve que dans le repli l'ouvre : sinon le coach
+           tape « yéti », voit une liste vide, et conclut que le mot n'existe pas. */
+        ajusterRepli() {
+            if (this.hateFilter.trim() && this.visibles(this.motsAutres) > 0) {
+                this.$refs.repli.open = true;
+            }
+        },
+        libelleConfirmation() {
+            const noms = {
+                COMMOTION: 'Commotion', AMOCHE: 'Amoché',
+                BLESSURE_SERIEUSE: 'Blessure Sérieuse',
+                SEQUEL: 'Séquelle', MORT: 'Mort'
+            };
+            let l = noms[this.injuryType] || '';
+            if (this.injuryType === 'SEQUEL') { l += ' (-' + this.sequelStat + ')'; }
+            if (this.hateGained && this.hateKeyword) {
+                l += ' + Haine : ' + this.hateKeyword.label;
+            }
+            return 'Confirmer — ' + l;
+        },
         submitAction(type) {
             this.showInjury = false;
             this.showSequel = false;
@@ -27,10 +98,19 @@
                 injury_type: this.injuryType
             };
             if (this.injuryType === 'SEQUEL') { data.sequel_stat = this.sequelStat; }
+            if (this.peutGagnerHaine && this.hateGained !== null) {
+                data.hate_gained = this.hateGained;
+                if (this.hateGained && this.hateKeyword) {
+                    data.hate_keyword = this.hateKeyword.uid;
+                }
+            }
             htmx.ajax('POST', '{{ post_url }}', { values: data, swap: 'none' });
             htmx.trigger(document.body, 'actionRecorded', {});
             this.showInjury = false;
             this.showSequel = false;
+            this.injuryType = '';
+            this.hateGained = null;
+            this.hateKeyword = null;
         }
      }">
     <div class="mr-action-grid">
@@ -73,28 +153,28 @@
     <div class="mr-injury-panel" x-show="showInjury">
         <div class="mr-injury-title">Type de blessure</div>
         <div class="mr-injury-grid">
-            <button type="button" class="mr-injury-btn"
-                    @click="injuryType='COMMOTION'; submitBlesse()">
+            <button type="button" class="mr-injury-btn" :class="{ active: injuryType === 'COMMOTION' }"
+                    @click="choisirBlessure('COMMOTION')">
                 <span class="mr-injury-roll">1–8</span>
                 <span class="mr-injury-label">Commotion</span>
             </button>
-            <button type="button" class="mr-injury-btn"
-                    @click="injuryType='AMOCHE'; submitBlesse()">
+            <button type="button" class="mr-injury-btn" :class="{ active: injuryType === 'AMOCHE' }"
+                    @click="choisirBlessure('AMOCHE')">
                 <span class="mr-injury-roll">9–10</span>
                 <span class="mr-injury-label">Amoché</span>
             </button>
-            <button type="button" class="mr-injury-btn"
-                    @click="injuryType='BLESSURE_SERIEUSE'; submitBlesse()">
+            <button type="button" class="mr-injury-btn" :class="{ active: injuryType === 'BLESSURE_SERIEUSE' }"
+                    @click="choisirBlessure('BLESSURE_SERIEUSE')">
                 <span class="mr-injury-roll">11–12</span>
                 <span class="mr-injury-label">Blessure Sérieuse</span>
             </button>
-            <button type="button" class="mr-injury-btn"
-                    @click="injuryType='SEQUEL'; showSequel = true">
+            <button type="button" class="mr-injury-btn" :class="{ active: injuryType === 'SEQUEL' }"
+                    @click="choisirBlessure('SEQUEL')">
                 <span class="mr-injury-roll">13–14</span>
                 <span class="mr-injury-label">Blessure Grave</span>
             </button>
-            <button type="button" class="mr-injury-btn mr-injury-btn--death"
-                    @click="injuryType='MORT'; submitBlesse()">
+            <button type="button" class="mr-injury-btn mr-injury-btn--death" :class="{ active: injuryType === 'MORT' }"
+                    @click="choisirBlessure('MORT')">
                 <span class="mr-injury-roll">15–16</span>
                 <span class="mr-injury-label">Mort</span>
             </button>
@@ -110,9 +190,67 @@
             <option value="AG">-AG</option>
             <option value="ST">-ST</option>
         </select>
-        <button type="button" class="mr-injury-btn mr-injury-btn--full"
-                @click="submitBlesse()">
-            <span class="mr-injury-label">Confirmer la blessure grave</span>
-        </button>
     </div>
+
+    <div class="mr-hate-panel" x-show="showInjury && peutGagnerHaine">
+        <div class="mr-hate-question">
+            <span class="mr-hate-label">Le joueur gagne-t-il la Haine&nbsp;?</span>
+            <span class="mr-hate-choice">
+                <button type="button" class="mr-hate-btn mr-hate-btn--no"
+                        :class="{ active: hateGained === false }"
+                        @click="hateGained = false; hateKeyword = null">Non</button>
+                <button type="button" class="mr-hate-btn"
+                        :class="{ active: hateGained === true }"
+                        @click="hateGained = true; hateFilter = ''">Oui</button>
+            </span>
+        </div>
+
+        <div class="mr-hate-keywords" x-show="hateGained === true">
+            <div class="mr-hate-keywords-title">Haine de&nbsp;…</div>
+            <input class="mr-hate-search" type="search" x-model="hateFilter"
+                   @input="ajusterRepli()"
+                   placeholder="Filtrer — « nain », « elfe »…">
+
+            <div x-show="visibles(motsRoster) > 0">
+                <div class="mr-hate-group-title">Dans le roster adverse</div>
+                <div class="mr-hate-grid" data-groupe="roster">
+{%- for mot in hate_in_roster %}
+                    <button type="button" class="mr-hate-kw"
+                            data-uid="{{ mot.uid }}" data-label="{{ mot.label }}"
+                            x-show="motVisible($el.dataset.uid, $el.dataset.label)"
+                            :class="{ active: hateKeyword && hateKeyword.uid === $el.dataset.uid }"
+                            @click="hateKeyword = { uid: $el.dataset.uid, label: $el.dataset.label }"
+                    >{{ mot.label }}</button>
+{%- endfor %}
+                </div>
+            </div>
+
+            <details class="mr-hate-more" x-ref="repli">
+                <summary class="mr-hate-more-summary">Tous les autres mots-clefs</summary>
+                <div class="mr-hate-grid" data-groupe="autres">
+{%- for mot in hate_others %}
+                    <button type="button" class="mr-hate-kw"
+                            data-uid="{{ mot.uid }}" data-label="{{ mot.label }}"
+                            x-show="motVisible($el.dataset.uid, $el.dataset.label)"
+                            :class="{ active: hateKeyword && hateKeyword.uid === $el.dataset.uid }"
+                            @click="hateKeyword = { uid: $el.dataset.uid, label: $el.dataset.label }"
+                    >{{ mot.label }}</button>
+{%- endfor %}
+                </div>
+            </details>
+
+            <div class="mr-hate-empty"
+                 x-show="visibles(motsRoster) + visibles(motsAutres) === 0">
+                Aucun mot-clef ne correspond.
+            </div>
+            <div class="mr-hate-hint">Un seul mot-clef par Haine gagnée.
+                La Haine est un <strong>trait</strong>&nbsp;: elle ne change pas la
+                valeur du joueur.</div>
+        </div>
+    </div>
+
+    <button type="button" class="mr-injury-btn mr-injury-btn--full"
+            x-show="showInjury && peutConfirmer" @click="submitBlesse()">
+        <span class="mr-injury-label" x-text="libelleConfirmation()"></span>
+    </button>
 </div>

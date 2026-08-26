@@ -12,6 +12,8 @@ pub struct ActionRowVm {
     pub player_name: String,
     pub player_position: String,
     pub action_label: String,
+    /// « Nain » plutôt que `DWARF` : le libellé, résolu au catalogue.
+    pub hate_label: Option<String>,
     pub action_icon: String,
     pub delete_url: String,
 }
@@ -65,6 +67,8 @@ async fn render_action_log(
         .into_iter()
         .map(|r| {
             let (action_label, action_icon) = parse_action(&r.action_json);
+            let hate_label =
+                libelle_de_haine(&r.action_json, state.match_report.keyword_catalog.as_ref());
             ActionRowVm {
                 delete_url: routes
                     .match_report
@@ -75,6 +79,7 @@ async fn render_action_log(
                 player_position: r.player_position,
                 action_label,
                 action_icon,
+                hate_label,
             }
         })
         .collect();
@@ -89,6 +94,30 @@ fn parse_action(json: &serde_json::Value) -> (String, String) {
         );
     }
     ("Action inconnue".to_string(), "❓".to_string())
+}
+
+/// Le libellé du mot-clef haï, s'il y en a un.
+///
+/// Un uid que le catalogue ne connaît plus est **affiché tel quel** plutôt
+/// qu'escamoté : une Haine qui disparaît de l'écran sans un mot serait le genre
+/// de silence que cette série corrige.
+fn libelle_de_haine(
+    json: &serde_json::Value,
+    catalogue: &dyn crate::app::match_report::ports::IKeywordCatalogPort,
+) -> Option<String> {
+    let MatchActionType::Blesse {
+        hatred: Some(mot), ..
+    } = serde_json::from_value::<MatchActionType>(json.clone()).ok()?
+    else {
+        return None;
+    };
+    let uid = mot.to_string();
+    Some(
+        catalogue
+            .find_hateable(&uid)
+            .map(|k| k.label)
+            .unwrap_or(uid),
+    )
 }
 
 fn action_type_label(action: &MatchActionType) -> String {

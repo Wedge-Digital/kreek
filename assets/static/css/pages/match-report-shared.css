@@ -403,3 +403,67 @@
 .mr-toast--delete  { background: var(--dark-3); color: var(--white); }
 .mr-toast-enter-start, .mr-toast-leave-end   { opacity: 0; transform: translateY(8px); }
 .mr-toast-enter-end,   .mr-toast-leave-start { opacity: 1; transform: translateY(0); }
+
+/* ── Haine sur blessure (carte 402) ────────────────────────────────────────
+   Copiées de `rawpages/app-match-report-step3-haine.html`, désindentées et
+   inchangées par ailleurs. Elles vivent ici plutôt que dans
+   `widgets/action-panel.css`, qui est marquée `css:mort` et hors du bundle ;
+   `.mr-log-hate` les rejoint, le journal étant rendu par la même page. */
+.mr-hate-panel {
+  margin-top: var(--p1); padding-top: var(--p1);
+  border-top: 1px dashed var(--dark-4);
+}
+.mr-hate-question { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mr-hate-label {
+  font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2);
+  text-transform: uppercase; letter-spacing: 0.5px; flex: 1; min-width: 160px;
+}
+.mr-hate-choice { display: flex; gap: 8px; }
+.mr-hate-btn {
+  padding: 6px 18px; border-radius: 6px; cursor: pointer; font-family: inherit;
+  font-size: var(--text-tiny); font-weight: 700;
+  border: 1.5px solid var(--dark-4); background: var(--white); color: var(--dark-2);
+}
+.mr-hate-btn:hover { border-color: var(--dark-3); }
+.mr-hate-btn.active { border-color: var(--main-blue); background: rgba(0,48,73,0.06); color: var(--main-blue); }
+.mr-hate-btn--no.active { border-color: var(--dark-3); background: var(--dark-6); color: var(--dark-2); }
+
+.mr-hate-keywords { margin-top: var(--p1); }
+.mr-hate-keywords-title {
+  font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2);
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+}
+.mr-hate-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.mr-hate-kw {
+  padding: 7px 6px; border-radius: 6px; cursor: pointer; font-family: inherit;
+  font-size: var(--text-tiny); font-weight: 600; text-align: center;
+  border: 1.5px solid var(--dark-5); background: var(--white); color: var(--dark-2);
+}
+.mr-hate-kw:hover { border-color: var(--main-blue); color: var(--main-blue); }
+.mr-hate-kw.active { border-color: var(--main-blue); background: var(--main-blue); color: var(--white); }
+.mr-hate-group-title {
+  font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+  text-transform: uppercase; letter-spacing: 0.5px; margin: 4px 0 6px;
+}
+.mr-hate-more { margin-top: var(--p1); }
+.mr-hate-more-summary {
+  cursor: pointer; font-size: var(--text-tiny); font-weight: 700;
+  color: var(--dark-2); padding: 4px 0; list-style: none;
+}
+.mr-hate-more-summary::before { content: '▸ '; color: var(--dark-3); }
+.mr-hate-more[open] .mr-hate-more-summary::before { content: '▾ '; }
+.mr-hate-more-summary:hover { color: var(--main-blue); }
+.mr-hate-more > .mr-hate-grid { margin-top: 8px; }
+.mr-hate-search {
+  box-sizing: border-box; width: 100%; margin-bottom: 8px;
+  padding: 7px 10px; border: 1.5px solid var(--dark-4); border-radius: 6px;
+  font: inherit; font-size: var(--text-tiny); color: var(--dark-1);
+}
+.mr-hate-search:focus { outline: none; border-color: var(--main-blue); }
+.mr-hate-empty { font-size: var(--text-tiny); color: var(--dark-3); padding: 8px 0; }
+.mr-hate-hint { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 8px; }
+@media (max-width: 768px) {
+  .mr-hate-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.mr-log-hate { color: var(--dark-2); font-style: italic; }

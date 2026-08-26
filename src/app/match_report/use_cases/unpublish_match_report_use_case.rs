@@ -145,6 +145,12 @@ mod tests {
 
     #[async_trait::async_trait]
     impl IMatchReportRepository for FakeRepo {
+        async fn find_team_ids(
+            &self,
+            _: &str,
+        ) -> Result<Option<(String, String)>, RepositoryError> {
+            Ok(None)
+        }
         /// Doublure : le contrôle d'appartenance est exercé par les tests de
         /// handler, sur une vraie base.
         async fn find_space_id(&self, _: &str) -> Result<Option<String>, RepositoryError> {

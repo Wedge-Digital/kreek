@@ -297,6 +297,11 @@ def test_s5_record_blesse_amoche(page: Page, space_id, mr_step3):
 
     page.locator(".mr-injury-btn").filter(has_text="Amoché").click()
 
+    # Depuis la carte 402, une blessure qui peut donner la Haine ne se confirme
+    # pas tant que la question n'est pas tranchée : le bouton reste masqué.
+    page.locator(".mr-hate-btn--no").click()
+    page.locator(".mr-injury-btn--full").click()
+
     # Une entrée existe déjà (TD du tour précédent, module partagé) : on
     # attend spécifiquement l'entrée T3/Blessé plutôt que "une entrée
     # existe", sans quoi l'assertion passerait trivialement sur l'ancienne.
@@ -320,6 +325,7 @@ def test_s6_record_blesse_sequel_av(page: Page, space_id, mr_step3):
     page.wait_for_selector("select.mr-sequel-select", state="visible", timeout=3000)
 
     page.locator("select.mr-sequel-select").select_option("AV")
+    page.locator(".mr-hate-btn--no").click()
     page.locator(".mr-injury-btn--full").click()
 
     page.wait_for_selector("#action-log .mr-log-entry", timeout=6000)

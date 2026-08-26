@@ -59,6 +59,16 @@ pub trait IMatchReportRepository: Send + Sync {
         match_report_id: &str,
     ) -> Result<Option<MatchReportState>, RepositoryError>;
 
+    /// Les deux équipes du rapport : `(domicile, extérieur)`.
+    ///
+    /// Lue sur la projection pour la même raison que `find_space_id` :
+    /// `find_by_id` rejoue l'agrégat depuis l'event store, ce qui est hors de
+    /// prix pour un panneau rechargé à chaque changement de tour ou de joueur.
+    async fn find_team_ids(
+        &self,
+        match_report_id: &str,
+    ) -> Result<Option<(String, String)>, RepositoryError>;
+
     async fn append_many(
         &self,
         match_report_id: &str,

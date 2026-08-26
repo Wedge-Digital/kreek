@@ -1,6 +1,7 @@
 pub mod correction_eligibility_service;
 pub mod create_match_report_use_case;
 pub mod delete_action_use_case;
+pub mod hate_keywords_service;
 pub mod init_temp_players_use_case;
 pub mod publish_match_report_use_case;
 pub mod record_action_use_case;

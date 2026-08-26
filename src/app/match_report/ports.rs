@@ -101,6 +101,10 @@ pub struct RosterPositionDto {
     pub base_cost: u32,
     pub max_qty: u8,
     pub is_journeyman: bool,
+    /// Les mots-clefs que porte cette ligne de roster — son espèce et son rôle.
+    /// C'est par leur union que l'écran sait quelles Haines valent la peine
+    /// d'être proposées en premier (carte 402).
+    pub keywords: Vec<String>,
 }
 
 pub struct PositionCountDto {

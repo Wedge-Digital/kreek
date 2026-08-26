@@ -121,6 +121,7 @@ impl ITeamDataPort for RefTeamDataAdapter {
                 base_cost: p.cost,
                 max_qty: p.max_quantity,
                 is_journeyman: p.is_journeyman,
+                keywords: p.keywords.clone(),
             })
             .collect()
     }
