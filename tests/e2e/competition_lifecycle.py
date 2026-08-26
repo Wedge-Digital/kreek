@@ -163,9 +163,38 @@ def create_full_competition(
 
     # ── Phase 5 : publication ─────────────────────────────────────────────
     page.click(".btn-cta")
-    page.wait_for_timeout(1000)
+    _attendre_finalisation(season_id)
 
     return {"competition_id": competition_id, "season_id": season_id, "name": competition_name}
+
+
+def _attendre_finalisation(season_id: str, timeout_s: int = 15) -> None:
+    """Attend que la saison atteigne `ready`, au lieu de parier sur une durée.
+
+    Un `wait_for_timeout(1000)` tenait lieu de vérification : sous charge, la
+    publication n'aboutissait pas et **rien ne le signalait**. La compétition
+    restait en `invitations_configured`, joignable malgré tout — c'était le
+    défaut de la carte 407 — et les tests continuaient sur une compétition
+    inachevée sans qu'on le sache. Quinze saisons de runs passés sont restées
+    dans cet état.
+
+    Depuis la garde de la 407, l'échec se manifeste vingt étapes plus loin, à la
+    création d'équipe. Constater la postcondition ici le ramène à sa cause.
+    """
+    from db_helpers import query_db
+
+    deadline = time.time() + timeout_s
+    statut = None
+    while time.time() < deadline:
+        lignes = query_db(f"SELECT status FROM competition_seasons WHERE id = '{season_id}';")
+        statut = lignes[0] if lignes else None
+        if statut == "ready":
+            return
+        time.sleep(0.2)
+    raise AssertionError(
+        f"la phase 5 n'a pas finalisé la saison {season_id} : statut « {statut} » "
+        "au lieu de « ready »"
+    )
 
 
 def _select_competition_by_name(page: Page, competition_name: str) -> None:

@@ -448,3 +448,148 @@ def test_s11_step4_away_team(page: Page, space_id, mr_step3):
 
     page.wait_for_selector("#turn-selector .mr-turn-btn", timeout=6000)
     page.wait_for_selector("#player-selector .mr-player-chip", timeout=6000)
+
+# ── Haine (carte 404) ─────────────────────────────────────────────────────────
+#
+# Les scénarios H3 et H4 sont la raison d'être de cette section : ils vérifient
+# qu'une chose **n'apparaît pas**. La logique serveur est identique dans les deux
+# cas, seule la conditionnelle du template change — aucun test unitaire ne peut
+# le voir.
+#
+# Ils vivent dans ce fichier plutôt que dans un fichier à eux pour réutiliser la
+# fixture `mr_step3`, de portée module : un fichier neuf reconstruirait équipes,
+# compétition et rapport, et allongerait une suite que la carte 312 cherche à
+# raccourcir.
+
+# Les rosters de démonstration portent DWARF, ELF et SKAVEN (carte 399). Un
+# mot-clef d'une autre espèce est donc nécessairement dans le repli.
+MOT_DU_REPLI = "Vampire"
+
+
+def _ouvrir_blessure(page: Page, space_id: str, mr_id: str, turn: int) -> None:
+    page.goto(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step3", wait_until="load")
+    _wait_for_widgets(page)
+    _select_turn_and_player(page, turn=turn)
+    page.locator(".mr-action-btn--damage").click()
+    page.wait_for_selector(".mr-injury-panel", state="visible", timeout=3000)
+
+
+def _choisir(page: Page, libelle: str) -> None:
+    page.locator(".mr-injury-btn").filter(has_text=libelle).click()
+
+
+def _panneau_haine(page: Page):
+    return page.locator(".mr-hate-panel")
+
+
+def _confirmation(page: Page):
+    return page.locator(".mr-injury-btn--full")
+
+
+def test_h1_amoche_montre_la_section_et_non_enregistre_sans_haine(
+    page: Page, space_id, mr_step3
+):
+    """R1 et R2 : la section apparaît sur Amoché, et « Non » suffit à confirmer."""
+    # Tour 13 : les tours 1 à 5 et 8 portent déjà des actions posées par
+    # les tests S4 à S8, et un filtre « T5 » en attraperait plusieurs.
+    _ouvrir_blessure(page, space_id, mr_step3, turn=13)
+    _choisir(page, "Amoché")
+    # `wait_for` avant l'assertion : `not_to_be_visible()` serait vraie à
+    # l'instant du clic, avant qu'Alpine n'ait appliqué `x-show`, et
+    # l'assertion inverse passerait aussi. Attendre l'état stable est ce qui
+    # rend ce test capable d'échouer.
+    _panneau_haine(page).wait_for(state="visible", timeout=3000)
+    expect(_panneau_haine(page)).to_be_visible()
+
+    page.locator(".mr-hate-btn--no").click()
+    expect(_confirmation(page)).to_be_visible()
+    _confirmation(page).click()
+
+    entree = page.locator("#action-log .mr-log-entry", has_text="T13").last
+    expect(entree).to_contain_text("Blessé", timeout=6000)
+    expect(entree).not_to_contain_text("Haine")
+
+
+def test_h2_une_sequelle_avec_haine_apparait_au_journal(page: Page, space_id, mr_step3):
+    """Chemin nominal : Séquelle → Oui → mot-clef → le journal porte la Haine."""
+    _ouvrir_blessure(page, space_id, mr_step3, turn=6)
+    _choisir(page, "13–14")
+    page.wait_for_selector("select.mr-sequel-select", state="visible", timeout=3000)
+    page.locator("select.mr-sequel-select").select_option("AV")
+
+    page.locator(".mr-hate-btn").filter(has_text="Oui").click()
+    mot = page.locator(".mr-hate-kw").first
+    libelle = mot.inner_text().strip()
+    mot.click()
+    _confirmation(page).click()
+
+    entree = page.locator("#action-log .mr-log-entry", has_text="T6").last
+    expect(entree).to_contain_text(f"Haine\u00a0: {libelle}", timeout=6000)
+
+
+def test_h3_une_commotion_ne_montre_pas_la_section(page: Page, space_id, mr_step3):
+    """R1 côté front. Ce test ne peut pas exister ailleurs qu'en navigateur."""
+    _ouvrir_blessure(page, space_id, mr_step3, turn=7)
+    _choisir(page, "Commotion")
+    expect(_panneau_haine(page)).not_to_be_visible()
+    # La confirmation, elle, doit être offerte : la règle interdit la Haine sur
+    # une Commotion, pas la Commotion.
+    expect(_confirmation(page)).to_be_visible()
+
+
+def test_h4_oui_sans_mot_clef_masque_la_confirmation(page: Page, space_id, mr_step3):
+    """R3 côté front : répondre « Oui » ne suffit pas, il faut choisir."""
+    _ouvrir_blessure(page, space_id, mr_step3, turn=8)
+    _choisir(page, "Amoché")
+    page.locator(".mr-hate-btn").filter(has_text="Oui").click()
+    expect(_confirmation(page)).not_to_be_visible()
+
+    page.locator(".mr-hate-kw").first.click()
+    expect(_confirmation(page)).to_be_visible()
+
+
+def test_h5_le_filtre_ouvre_le_repli_de_lui_meme(page: Page, space_id, mr_step3):
+    """Sinon le coach tape un mot, voit une liste vide, et le croit inexistant."""
+    _ouvrir_blessure(page, space_id, mr_step3, turn=9)
+    _choisir(page, "Amoché")
+    page.locator(".mr-hate-btn").filter(has_text="Oui").click()
+
+    repli = page.locator(".mr-hate-more")
+    assert not repli.evaluate("e => e.open"), "le repli doit être fermé au départ"
+
+    page.locator(".mr-hate-search").fill(MOT_DU_REPLI)
+    expect(page.locator(".mr-hate-kw", has_text=MOT_DU_REPLI).first).to_be_visible()
+    assert repli.evaluate("e => e.open"), (
+        f"« {MOT_DU_REPLI} » n'existe que dans le repli : il doit s'ouvrir seul"
+    )
+
+
+def test_h6_le_mot_choisi_reste_visible_malgre_le_filtre(page: Page, space_id, mr_step3):
+    """Sans quoi le coach perdrait de vue ce qu'il vient de sélectionner."""
+    _ouvrir_blessure(page, space_id, mr_step3, turn=10)
+    _choisir(page, "Amoché")
+    page.locator(".mr-hate-btn").filter(has_text="Oui").click()
+
+    choisi = page.locator(".mr-hate-kw").first
+    libelle = choisi.inner_text().strip()
+    choisi.click()
+
+    page.locator(".mr-hate-search").fill("zzzz-aucun-mot-clef")
+    expect(page.locator(".mr-hate-kw", has_text=libelle).first).to_be_visible()
+
+
+def test_h7_deux_fois_le_meme_mot_clef_est_accepte(page: Page, space_id, mr_step3):
+    """R7 : aucune garde de doublon, ni au domaine ni à l'écran."""
+    libelles = []
+    for turn in (11, 12):
+        _ouvrir_blessure(page, space_id, mr_step3, turn=turn)
+        _choisir(page, "Amoché")
+        page.locator(".mr-hate-btn").filter(has_text="Oui").click()
+        mot = page.locator(".mr-hate-kw").first
+        libelles.append(mot.inner_text().strip())
+        mot.click()
+        _confirmation(page).click()
+        entree = page.locator("#action-log .mr-log-entry", has_text=f"T{turn}").last
+        expect(entree).to_contain_text("Haine", timeout=6000)
+
+    assert libelles[0] == libelles[1], "le test doit rejouer le même mot-clef"

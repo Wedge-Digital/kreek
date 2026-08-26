@@ -1,0 +1,200 @@
+"""La Haine d'un journalier ne rejoint aucun agrégat joueur (carte 404, R9).
+
+C'est le seul scénario de la Haine qui vérifie une **absence d'écriture
+ailleurs** : le journalier n'existe que le temps du match, sa Haine reste dans
+le rapport — visible au récapitulatif — et n'atteint jamais `players`.
+
+Le filtre qui l'assure existait avant la fonctionnalité (`ActionPlayer::Regular`,
+BR1) et un test unitaire le couvre déjà. Celui-ci vérifie la chaîne entière,
+publication comprise.
+
+**Obtenir un journalier demande deux matchs.** Il n'en apparaît que si l'équipe
+compte moins de onze joueurs disponibles : le premier match inflige une Blessure
+Sérieuse, qui rend son porteur indisponible au suivant ; le second voit donc
+l'équipe à dix, et le serveur lui adjoint un journalier.
+
+Fichier séparé, et compétition à deux équipes : celle de
+`test_match_report_recap` a ses douze équipes déjà engagées, et publier une
+blessure sur l'une d'elles ferait dépendre ses tests de l'ordre d'exécution.
+
+Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true), `make seed_e2e`.
+"""
+
+import json
+import re
+
+import pytest
+import requests
+
+from db_helpers import query_db
+
+BASE_URL = "http://localhost:3210"
+
+
+@pytest.fixture(scope="module")
+def contexte(browser, space_id):
+    from competition_lifecycle import build_full_competition
+
+    full = build_full_competition(browser, space_id, num_teams=2, num_rounds=2)
+    assert len(full["round_ids"]) >= 2, "il faut deux journées : une par match"
+    return full
+
+
+_ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
+
+
+def _creer_rapport(space_id, ctx, round_id, home, away):
+    """Crée le rapport puis confirme la sélection — `/new` dédoublonne, la
+    confirmation est un no-op si le rapport est déjà en PreMatch."""
+    champs = {
+        "competition_id": ctx["competition_id"],
+        "season_id": ctx["season_id"],
+        "round_id": round_id,
+        "home_team_id": home,
+        "away_team_id": away,
+    }
+    resp = requests.post(
+        f"{BASE_URL}/app/{space_id}/match-report/new", data=champs, allow_redirects=False
+    )
+    assert resp.status_code in (302, 303), f"création : {resp.status_code}\n{resp.text[:300]}"
+    m = _ULID_RE.search(resp.headers.get("Location", ""))
+    assert m, f"identifiant introuvable dans Location : {resp.headers.get('Location')!r}"
+    mr_id = m.group(1)
+
+    if requests.get(
+        f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step2", allow_redirects=False
+    ).status_code != 200:
+        resp = requests.post(
+            f"{BASE_URL}/app/{space_id}/match-report/{mr_id}", data=champs, allow_redirects=False
+        )
+        assert resp.status_code in (302, 303), f"confirmation : {resp.status_code}"
+    return mr_id
+
+
+def _passer_en_pre_match(space_id, mr_id):
+    """Facteur fans puis coups de pouce vides — c'est ici que les journaliers
+    sont adjoints à une équipe incomplète."""
+    resp = requests.post(
+        f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step2",
+        data={"home_fan_roll": "2", "away_fan_roll": "3"},
+        allow_redirects=False,
+    )
+    assert resp.status_code in (302, 303), f"facteur fans : {resp.status_code}"
+    location = resp.headers.get("Location", "")
+    for _ in range(3):
+        if not location or "/inducements/" not in location:
+            break
+        resp = requests.post(f"{BASE_URL}{location}", data={"selection": ""}, allow_redirects=False)
+        if resp.status_code not in (302, 303):
+            break
+        location = resp.headers.get("Location", "")
+
+
+def _enregistrer(space_id, mr_id, side, player_id, turn, **champs):
+    data = {"turn": str(turn), "player_id": player_id, "player_type": "regular"}
+    data.update({k: str(v) for k, v in champs.items()})
+    endpoint = "step3" if side == "home" else "step4"
+    resp = requests.post(
+        f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/{endpoint}/actions", data=data
+    )
+    assert resp.status_code == 200, f"action : {resp.status_code}\n{resp.text[:300]}"
+
+
+def _publier(space_id, mr_id):
+    resp = requests.post(
+        f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step5",
+        data={
+            "home_gain": "50000",
+            "away_gain": "40000",
+            "home_fan_mod": "1",
+            "away_fan_mod": "-1",
+            "summary_title": "Match capté par les tests E2E",
+            "summary_body": "Compte-rendu généré automatiquement.",
+        },
+        allow_redirects=False,
+    )
+    assert resp.status_code in (302, 303), f"step5 : {resp.status_code}\n{resp.text[:300]}"
+    resp = requests.post(
+        f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/recap/publish", allow_redirects=False
+    )
+    assert resp.status_code in (302, 303), f"publication : {resp.status_code}\n{resp.text[:300]}"
+
+
+def _un_joueur(team_id):
+    rows = query_db(f"SELECT player_id FROM players_proj WHERE team_id = '{team_id}' LIMIT 1")
+    assert rows, f"aucun joueur dans l'équipe {team_id}"
+    return rows[0]
+
+
+def _journalier(mr_id, side):
+    rows = query_db(
+        f"SELECT {side}_temp_players FROM match_report_proj WHERE match_report_id = '{mr_id}'"
+    )
+    temps = json.loads(rows[0]) if rows and rows[0] else []
+    for t in temps:
+        if "Journeyman" in t.get("kind", {}):
+            return t["id"]
+    return None
+
+
+def _competences_de_blessure(team_id):
+    """Les compétences en mode `Injury` de tout l'effectif — celles que seule
+    une Haine peut produire."""
+    rows = query_db(
+        f"SELECT jsonb_array_length(coalesce(acquired_skills, '[]'::jsonb)) "
+        f"FROM players_proj WHERE team_id = '{team_id}'"
+    )
+    _ = rows
+    lignes = query_db(
+        "SELECT count(*) FROM players_proj p, "
+        "jsonb_array_elements(coalesce(p.acquired_skills, '[]'::jsonb)) s "
+        f"WHERE p.team_id = '{team_id}' AND s->>'mode' = 'Injury'"
+    )
+    return int(lignes[0])
+
+
+def test_la_haine_d_un_journalier_n_atteint_aucun_joueur(space_id, contexte):
+    domicile, exterieur = contexte["team_ids"][0], contexte["team_ids"][1]
+    journees = contexte["round_ids"]
+
+    # ── Match 1 : une Blessure Sérieuse rend un joueur indisponible ──────────
+    mr1 = _creer_rapport(space_id, contexte, journees[0], domicile, exterieur)
+    _passer_en_pre_match(space_id, mr1)
+    _enregistrer(
+        space_id, mr1, "home", _un_joueur(domicile), turn=1,
+        action_type="BLESSE", injury_type="BLESSURE_SERIEUSE",
+    )
+    _publier(space_id, mr1)
+
+    avant = _competences_de_blessure(domicile)
+
+    # ── Match 2 : l'équipe est à dix, le serveur lui adjoint un journalier ───
+    mr2 = _creer_rapport(space_id, contexte, journees[1], domicile, exterieur)
+    _passer_en_pre_match(space_id, mr2)
+    journalier = _journalier(mr2, "home")
+    assert journalier, (
+        "aucun journalier au second match : la Blessure Sérieuse du premier "
+        "devait rendre un joueur indisponible et faire passer l'équipe à dix"
+    )
+
+    # ── Le journalier est blessé et gagne une Haine ──────────────────────────
+    resp = requests.post(
+        f"{BASE_URL}/app/{space_id}/match-report/{mr2}/step3/actions",
+        data={
+            "turn": "1",
+            "player_id": journalier,
+            "player_type": "temp",
+            "action_type": "BLESSE",
+            "injury_type": "AMOCHE",
+            "hate_gained": "true",
+            "hate_keyword": "DARK_ELF",
+        },
+    )
+    assert resp.status_code == 200, f"action du journalier : {resp.status_code}\n{resp.text[:300]}"
+    _publier(space_id, mr2)
+
+    apres = _competences_de_blessure(domicile)
+    assert apres == avant, (
+        f"la Haine d'un journalier a atteint l'effectif : {avant} → {apres} "
+        "compétences en mode Injury"
+    )
