@@ -270,7 +270,6 @@ voir, pas s'évaporer du tier.
 pub struct VisibilitySettingsForm {
     pub access_mode: String,             // "invitation" | "open"
     pub requires_validation: String,     // "manual" | "automatic"
-    #[serde(default)] pub max_participants: Option<u32>,
 }
 ```
 
@@ -283,8 +282,18 @@ Le handler les traduit en `AccessMode` et `RequiresValidation`, et **une valeur
 inconnue est un 400** — pas un repli silencieux sur le défaut, qui ouvrirait une
 compétition fermée.
 
-`max_participants` : `0` vaut « illimité » à l'écran, donc `Some(0)` devient
-`None` dans la commande. La traduction est faite **une fois, dans le handler**.
+**Le panneau ne porte pas de plafond de participants.** Le champ « Places max »
+de la maquette a été retiré : rien ne l'applique. `team_enrollment.rs` ne le
+lit pas — aucune inscription n'a jamais été refusée pour cause de compétition
+pleine. Il n'est qu'un nombre affiché, et un réglage qui ne règle rien n'a pas
+sa place dans un écran de réglages.
+
+Ce qui subsiste ailleurs, et qui n'est pas dans ce périmètre : l'étape 4 du
+magicien le saisit toujours, les récapitulatifs l'affichent
+(`new_competition_phase_5.rs:228`, `summary_tab.rs:351`), et
+`send_due_notifications_use_case.rs:237` s'en sert pour écrire « il reste N
+places » dans les relances. Le retirer du modèle éteindrait cette ligne
+d'e-mail — c'est le coût, et c'est une décision distincte de celle-ci.
 
 ### Sortie
 
@@ -297,7 +306,6 @@ pub struct SettingsVisibilityWidget {
 pub struct VisibilityVm {
     pub access_mode: String,
     pub requires_validation: bool,
-    pub max_participants: u32,      // 0 = illimité
     pub invited_count: u32,         // affichage seul, rappelle ce qu'on ne touche pas
 }
 ```
