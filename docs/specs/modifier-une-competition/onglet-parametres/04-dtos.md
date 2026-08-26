@@ -292,8 +292,9 @@ Ce qui subsiste ailleurs, et qui n'est pas dans ce périmètre : l'étape 4 du
 magicien le saisit toujours, les récapitulatifs l'affichent
 (`new_competition_phase_5.rs:228`, `summary_tab.rs:351`), et
 `send_due_notifications_use_case.rs:237` s'en sert pour écrire « il reste N
-places » dans les relances. Le retirer du modèle éteindrait cette ligne
-d'e-mail — c'est le coût, et c'est une décision distincte de celle-ci.
+places » dans les relances. Le retirer du modèle est le sujet de la **carte
+415**, écrite à part : le retrait touche le magicien, deux récapitulatifs et un
+gabarit d'e-mail, aucun desquels ne relève de cet onglet.
 
 ### Sortie
 

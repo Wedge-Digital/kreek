@@ -375,9 +375,9 @@ jour où quelqu'un en créera une.
    et la commande.
 
    Le use case doit donc **relire `max_participants` avec le reste** : le
-   panneau ne l'édite plus, mais `invitations` le porte toujours, et le
-   réécrire à zéro éteindrait la ligne « il reste N places » des relances
-   (`send_due_notifications_use_case.rs:237`).
+   panneau ne l'édite plus, mais `invitations` le porte toujours. La **carte
+   415** le retire du modèle — jusqu'à ce qu'elle passe, ce champ traverse le
+   use case sans être touché, comme `invited_coaches`.
 
 ## Ce qui reste ouvert
 
