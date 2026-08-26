@@ -3,6 +3,8 @@ use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum DomainError {
+    /// Une Haine a été portée sur une blessure qui n'en permet pas.
+    HatredNotAllowedForInjury,
     SameTeam,
     InvalidEventSequence,
     EmptyEventStream,
@@ -41,6 +43,9 @@ pub enum DomainError {
 impl fmt::Display for DomainError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::HatredNotAllowedForInjury => {
+                write!(f, "cette blessure ne permet pas de désigner une Haine")
+            }
             Self::SameTeam => write!(f, "les deux équipes doivent être différentes"),
             Self::InvalidEventSequence => write!(f, "séquence d'événements invalide"),
             Self::EmptyEventStream => write!(f, "aucun événement dans le stream"),

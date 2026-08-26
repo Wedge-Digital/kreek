@@ -69,7 +69,7 @@ impl TimelineEventVm {
     fn from_action(action: &MatchAction, side: &'static str) -> Self {
         // BR6 — injury_label/injury_badge_class jamais renseignés pour Sortie, seulement pour Blesse{injury}
         let (injury_label, injury_badge_class) = match &action.action {
-            MatchActionType::Blesse { injury } => {
+            MatchActionType::Blesse { injury, .. } => {
                 (Some(injury_label(injury)), injury_badge_class(injury))
             }
             _ => (None, ""),
@@ -235,7 +235,7 @@ impl InjuryRowVm {
 
     fn from_action(action: &MatchAction, side: &'static str) -> Option<Self> {
         match &action.action {
-            MatchActionType::Blesse { injury } => Some(Self {
+            MatchActionType::Blesse { injury, .. } => Some(Self {
                 side,
                 player_display_name: action.player_display_name.clone(),
                 player_position: action.player_position.clone(),

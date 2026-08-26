@@ -89,16 +89,18 @@ mod tests {
             version: 1,
         };
         let action_id = ActionId("ACT01".into());
-        let (updated, _) = pm.record_action(
-            TeamSide::Home,
-            TurnNumber::try_new(1).unwrap(),
-            ActionPlayer::Regular(crate::app::shared_kernel::bloodbowl::ids::PlayerId::new()),
-            MatchActionType::Touchdown,
-            "Player Name".into(),
-            String::new(),
-            action_id.clone(),
-            CoachId::new(),
-        );
+        let (updated, _) = pm
+            .record_action(
+                TeamSide::Home,
+                TurnNumber::try_new(1).unwrap(),
+                ActionPlayer::Regular(crate::app::shared_kernel::bloodbowl::ids::PlayerId::new()),
+                MatchActionType::Touchdown,
+                "Player Name".into(),
+                String::new(),
+                action_id.clone(),
+                CoachId::new(),
+            )
+            .expect("action de test valide");
         (updated, action_id)
     }
 

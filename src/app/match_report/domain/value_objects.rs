@@ -246,6 +246,34 @@ pub enum ActionPlayer {
     Temp(TempPlayerId),
 }
 
+/// La forme d'un identifiant de mot-clef du corpus : `DARK_ELF`, `BEASTMAN`.
+///
+/// **Ce n'est pas du texte saisi**, et `TEXTE_SAISI` ne s'y applique donc pas —
+/// l'y soumettre laisserait passer « elfe noir » là où on attend `DARK_ELF`.
+/// C'est aussi pourquoi cette expression vit ici et non dans
+/// `shared_kernel::identity::charset` : la voisiner avec les charsets de saisie
+/// inviterait à la confondre avec eux.
+///
+/// **Le piège nutype** (cf. `CLAUDE.md`) : passée par une constante plutôt
+/// qu'en littéral, l'expression n'est compilée qu'au premier usage — une faute
+/// de syntaxe ne casse pas `cargo build`, elle panique en production. Le test
+/// `un_uid_de_mot_clef_respecte_la_forme_du_corpus` touche la constante ; c'est
+/// lui qui referme le trou, et il faut le maintenir.
+static UID_MOT_CLEF: std::sync::LazyLock<regex::Regex> =
+    std::sync::LazyLock::new(|| regex::Regex::new(r"^[A-Z][A-Z0-9_]*$").unwrap());
+
+/// Le mot-clef qu'un joueur se met à haïr après avoir été blessé.
+///
+/// Le VO valide **la forme, jamais l'existence** : un uid absent du corpus est
+/// syntaxiquement correct, et c'est le use case qui le refuse (carte 401). Un
+/// value object qui interrogerait un port cesserait d'être un objet du domaine.
+#[nutype(
+    sanitize(trim),
+    validate(not_empty, len_char_max = 40, regex = UID_MOT_CLEF),
+    derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Display, AsRef)
+)]
+pub struct HatredKeyword(String);
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MatchActionType {
     Touchdown,
@@ -255,7 +283,25 @@ pub enum MatchActionType {
     Lancer,
     Sortie,
     Mvp,
-    Blesse { injury: InjuryType },
+    /// `hatred` est **le choix** du coach ; `hatred_skill_uid` est **ce qu'il
+    /// valait ce jour-là**. Ce n'est pas une redondance : résoudre le lien plus
+    /// tard, à la publication, ferait dépendre un fait passé de l'état présent
+    /// du référentiel — un corpus qui change de compétence entre la saisie et la
+    /// publication réécrirait le sens d'une action déjà enregistrée.
+    ///
+    /// Les deux champs sont en `#[serde(default)]` parce que les actions sont
+    /// persistées en JSON, dans l'event store comme dans
+    /// `match_report_actions.action_json`. Sans lui, la relecture des blessures
+    /// déjà écrites échouerait, et le rejeu de tout rapport ancien avec.
+    Blesse {
+        injury: InjuryType,
+        #[serde(default)]
+        hatred: Option<HatredKeyword>,
+        // arch:ok — instantané dénormalisé, comme `player_display_name` et
+        // `player_position` : la valeur est figée au moment du choix.
+        #[serde(default)]
+        hatred_skill_uid: Option<String>,
+    },
 }
 
 /// La catégorie de SPP que vaut une action, quand elle en vaut une.
@@ -302,6 +348,22 @@ pub enum InjuryType {
     BlessureSerieuse,
     Sequel { stat: SequelStat },
     Mort,
+}
+
+impl InjuryType {
+    /// Amoché, Blessure Sérieuse, Séquelle laissent une rancune.
+    ///
+    /// Une Commotion est trop légère pour en laisser une, et une Mort ne laisse
+    /// personne pour haïr. La règle est **ici et nulle part ailleurs** : la
+    /// constante que portera le template (carte 402) n'en est qu'un reflet,
+    /// chargé de masquer la section. Un écart entre les deux se solde par un
+    /// refus, jamais par une donnée fausse.
+    pub fn peut_donner_haine(&self) -> bool {
+        matches!(
+            self,
+            InjuryType::Amoche | InjuryType::BlessureSerieuse | InjuryType::Sequel { .. }
+        )
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

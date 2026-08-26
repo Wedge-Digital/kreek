@@ -159,8 +159,12 @@ fn build_action_type(
         "LANCER" => Some(MatchActionType::Lancer),
         "SORTIE" => Some(MatchActionType::Sortie),
         "MVP" => Some(MatchActionType::Mvp),
+        // La Haine reste vide ici : sa saisie et sa validation arrivent avec la
+        // carte 401, qui a besoin du port de référence que ce parseur n'a pas.
         "BLESSE" => Some(MatchActionType::Blesse {
             injury: build_injury(injury?, sequel)?,
+            hatred: None,
+            hatred_skill_uid: None,
         }),
         _ => None,
     }

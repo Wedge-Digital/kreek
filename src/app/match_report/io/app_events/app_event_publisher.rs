@@ -340,7 +340,7 @@ fn map_action_to_impact_event(
         MatchActionType::Sortie => PlayerMatchImpactAppEvent::PlayerPerformedCasualty(context),
         MatchActionType::Mvp => PlayerMatchImpactAppEvent::PlayerPerformedMvp(context),
         MatchActionType::Agression => PlayerMatchImpactAppEvent::PlayerPerformedFoul(context),
-        MatchActionType::Blesse { injury } => PlayerMatchImpactAppEvent::PlayerInjured {
+        MatchActionType::Blesse { injury, .. } => PlayerMatchImpactAppEvent::PlayerInjured {
             context,
             injury_type: map_injury_type_payload(injury),
         },
@@ -496,7 +496,7 @@ fn build_action_type(action: &MatchActionType) -> ActionTypePayload {
         MatchActionType::Lancer => ActionTypePayload::Lancer,
         MatchActionType::Sortie => ActionTypePayload::Sortie,
         MatchActionType::Mvp => ActionTypePayload::Mvp,
-        MatchActionType::Blesse { injury } => ActionTypePayload::Blesse {
+        MatchActionType::Blesse { injury, .. } => ActionTypePayload::Blesse {
             injury: injury_label(injury),
         },
     }
@@ -721,6 +721,8 @@ mod player_impact_tests {
                 injury: InjuryType::Sequel {
                     stat: SequelStat::MinusAg,
                 },
+                hatred: None,
+                hatred_skill_uid: None,
             })],
             &ctx_base(),
         );

@@ -52,16 +52,19 @@ pub async fn execute(
     let (display_name, position) =
         resolve_player_info(&cmd.player, cmd.team_side, &pm, player_data).await?;
     let action_id = ActionId(ulid::Ulid::new().to_string());
-    let (_, event) = pm.record_action(
-        cmd.team_side,
-        cmd.turn,
-        cmd.player,
-        cmd.action,
-        display_name,
-        position,
-        action_id.clone(),
-        cmd.recorded_by,
-    );
+    // Le refus vient du domaine — le use case ne fait que le porter.
+    let (_, event) = pm
+        .record_action(
+            cmd.team_side,
+            cmd.turn,
+            cmd.player,
+            cmd.action,
+            display_name,
+            position,
+            action_id.clone(),
+            cmd.recorded_by,
+        )
+        .map_err(RecordActionError::Domain)?;
 
     let outcome = RecordActionOutcome {
         action_id: action_id.0.clone(),

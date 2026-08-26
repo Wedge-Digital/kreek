@@ -260,7 +260,18 @@ impl MatchReportPreMatch {
         player_position: String,
         action_id: ActionId,
         recorded_by: CoachId,
-    ) -> (Self, MatchReportDomainEvent) {
+    ) -> Result<(Self, MatchReportDomainEvent), DomainError> {
+        if let MatchActionType::Blesse {
+            injury,
+            hatred: Some(_),
+            ..
+        } = &action
+        {
+            if !injury.peut_donner_haine() {
+                return Err(DomainError::HatredNotAllowedForInjury);
+            }
+        }
+
         let event = MatchReportDomainEvent::ActionRecorded {
             action_id: action_id.clone(),
             team_side,
@@ -285,7 +296,7 @@ impl MatchReportPreMatch {
             TeamSide::Away => updated.away_actions.push(entry),
         }
         updated.version += 1;
-        (updated, event)
+        Ok((updated, event))
     }
 
     pub fn delete_action(
@@ -1037,6 +1048,7 @@ mod tests {
             ActionId("act-01".to_string()),
             CoachId::new(),
         )
+        .expect("action de test valide")
     }
 
     #[test]
@@ -1066,26 +1078,30 @@ mod tests {
     #[test]
     fn record_two_mvp_same_team() {
         let pm = make_pm(1000, 1000);
-        let (pm2, _) = pm.record_action(
-            TeamSide::Home,
-            TurnNumber::try_new(1).unwrap(),
-            ActionPlayer::Regular(PlayerId::new()),
-            MatchActionType::Mvp,
-            "A".to_string(),
-            String::new(),
-            ActionId("a1".to_string()),
-            CoachId::new(),
-        );
-        let (pm3, _) = pm2.record_action(
-            TeamSide::Home,
-            TurnNumber::try_new(1).unwrap(),
-            ActionPlayer::Regular(PlayerId::new()),
-            MatchActionType::Mvp,
-            "B".to_string(),
-            String::new(),
-            ActionId("a2".to_string()),
-            CoachId::new(),
-        );
+        let (pm2, _) = pm
+            .record_action(
+                TeamSide::Home,
+                TurnNumber::try_new(1).unwrap(),
+                ActionPlayer::Regular(PlayerId::new()),
+                MatchActionType::Mvp,
+                "A".to_string(),
+                String::new(),
+                ActionId("a1".to_string()),
+                CoachId::new(),
+            )
+            .expect("action de test valide");
+        let (pm3, _) = pm2
+            .record_action(
+                TeamSide::Home,
+                TurnNumber::try_new(1).unwrap(),
+                ActionPlayer::Regular(PlayerId::new()),
+                MatchActionType::Mvp,
+                "B".to_string(),
+                String::new(),
+                ActionId("a2".to_string()),
+                CoachId::new(),
+            )
+            .expect("action de test valide");
         assert_eq!(pm3.home_actions.len(), 2);
     }
 
@@ -1274,6 +1290,158 @@ mod tests {
         assert_eq!(updated.home_inducements.as_ref().unwrap().len(), 2);
     }
 
+    // ── Haine (carte 400) ────────────────────────────────────────────────────
+
+    use crate::app::match_report::domain::value_objects::{HatredKeyword, SequelStat};
+
+    fn enregistrer_blessure(
+        injury: InjuryType,
+        hatred: Option<HatredKeyword>,
+    ) -> Result<(MatchReportPreMatch, MatchReportDomainEvent), DomainError> {
+        let pm = make_pm(1000, 1000);
+        pm.record_action(
+            TeamSide::Home,
+            TurnNumber::try_new(1).unwrap(),
+            ActionPlayer::Regular(PlayerId::new()),
+            MatchActionType::Blesse {
+                injury,
+                hatred,
+                hatred_skill_uid: None,
+            },
+            "A".into(),
+            "B".into(),
+            ActionId("h1".into()),
+            CoachId::new(),
+        )
+    }
+
+    fn haine() -> Option<HatredKeyword> {
+        Some(HatredKeyword::try_new("DARK_ELF").unwrap())
+    }
+
+    #[test]
+    fn une_haine_est_acceptee_sur_amoche_serieuse_et_sequelle() {
+        for injury in [
+            InjuryType::Amoche,
+            InjuryType::BlessureSerieuse,
+            InjuryType::Sequel {
+                stat: SequelStat::MinusMa,
+            },
+        ] {
+            assert!(
+                enregistrer_blessure(injury.clone(), haine()).is_ok(),
+                "{injury:?} doit permettre une Haine"
+            );
+        }
+    }
+
+    #[test]
+    fn une_haine_est_refusee_sur_commotion_et_sur_mort() {
+        for injury in [InjuryType::Commotion, InjuryType::Mort] {
+            assert_eq!(
+                enregistrer_blessure(injury.clone(), haine()).err(),
+                Some(DomainError::HatredNotAllowedForInjury),
+                "{injury:?} ne doit pas permettre de Haine"
+            );
+        }
+    }
+
+    /// La règle interdit la Haine sur une Commotion, **pas la Commotion**.
+    ///
+    /// Sans ce test, un domaine qui refuserait toute blessure légère passerait
+    /// les deux précédents sans qu'on le voie.
+    #[test]
+    fn une_blessure_sans_haine_reste_acceptee_sur_les_cinq_types() {
+        for injury in [
+            InjuryType::Commotion,
+            InjuryType::Amoche,
+            InjuryType::BlessureSerieuse,
+            InjuryType::Sequel {
+                stat: SequelStat::MinusSt,
+            },
+            InjuryType::Mort,
+        ] {
+            assert!(
+                enregistrer_blessure(injury.clone(), None).is_ok(),
+                "{injury:?} sans Haine doit rester enregistrable"
+            );
+        }
+    }
+
+    #[test]
+    fn les_sept_autres_actions_restent_enregistrables() {
+        let pm = make_pm(1000, 1000);
+        for action in [
+            MatchActionType::Touchdown,
+            MatchActionType::Passe,
+            MatchActionType::Interception,
+            MatchActionType::Agression,
+            MatchActionType::Lancer,
+            MatchActionType::Sortie,
+            MatchActionType::Mvp,
+        ] {
+            let r = pm.record_action(
+                TeamSide::Home,
+                TurnNumber::try_new(1).unwrap(),
+                ActionPlayer::Regular(PlayerId::new()),
+                action.clone(),
+                "A".into(),
+                "B".into(),
+                ActionId("x".into()),
+                CoachId::new(),
+            );
+            assert!(r.is_ok(), "{action:?} doit rester enregistrable");
+        }
+    }
+
+    #[test]
+    fn une_sequelle_donne_une_haine_quelle_que_soit_la_stat() {
+        for stat in [
+            SequelStat::MinusAv,
+            SequelStat::MinusMa,
+            SequelStat::MinusPa,
+            SequelStat::MinusAg,
+            SequelStat::MinusSt,
+        ] {
+            assert!(InjuryType::Sequel { stat }.peut_donner_haine());
+        }
+    }
+
+    /// Les actions sont persistées en JSON. Une blessure écrite avant cette carte
+    /// ne porte ni `hatred` ni `hatred_skill_uid` : sa relecture doit réussir,
+    /// sinon le rejeu de tout rapport ancien échoue avec elle.
+    #[test]
+    fn une_action_historique_sans_haine_se_deserialise() {
+        let action: MatchActionType = serde_json::from_str(r#"{"Blesse":{"injury":"Amoche"}}"#)
+            .expect("le JSON d'avant la Haine doit rester relisible");
+        match action {
+            MatchActionType::Blesse {
+                hatred,
+                hatred_skill_uid,
+                ..
+            } => {
+                assert!(hatred.is_none());
+                assert!(hatred_skill_uid.is_none());
+            }
+            other => panic!("attendu une blessure, obtenu {other:?}"),
+        }
+    }
+
+    /// Touche `UID_MOT_CLEF`. Ce n'est pas décoratif : nutype ne compile une
+    /// expression passée par constante qu'au premier usage — une faute de syntaxe
+    /// ne casserait pas `cargo build`, elle paniquerait en production.
+    #[test]
+    fn un_uid_de_mot_clef_respecte_la_forme_du_corpus() {
+        assert!(HatredKeyword::try_new("DARK_ELF").is_ok());
+        assert!(HatredKeyword::try_new("BEASTMAN").is_ok());
+        assert!(
+            HatredKeyword::try_new("dark elf").is_err(),
+            "un libellé n'est pas un uid de corpus"
+        );
+        assert!(HatredKeyword::try_new("").is_err());
+        assert!(HatredKeyword::try_new("1DARK").is_err());
+    }
+
     // ── step5 : compute_score ────────────────────────────────────────────────
 
     fn add_td(pm: &MatchReportPreMatch, side: TeamSide) -> MatchReportPreMatch {
@@ -1287,6 +1455,7 @@ mod tests {
             ActionId(format!("td-{}", rand_id())),
             CoachId::new(),
         )
+        .expect("action de test valide")
         .0
     }
 
@@ -1301,6 +1470,7 @@ mod tests {
             ActionId(format!("so-{}", rand_id())),
             CoachId::new(),
         )
+        .expect("action de test valide")
         .0
     }
 
@@ -1311,12 +1481,15 @@ mod tests {
             ActionPlayer::Regular(PlayerId::new()),
             MatchActionType::Blesse {
                 injury: InjuryType::Commotion,
+                hatred: None,
+                hatred_skill_uid: None,
             },
             "A".into(),
             "B".into(),
             ActionId(format!("bl-{}", rand_id())),
             CoachId::new(),
         )
+        .expect("action de test valide")
         .0
     }
 
