@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modifier la compétition — Admin — Paramètres — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ── Layout ── */
+    .admin-container {
+      max-width: 1060px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+      padding-bottom: var(--p4);
+    }
+
+    /* ── Banner (shared) ── */
+    .admin-banner {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 12px; padding: var(--p2);
+      display: flex; align-items: center; gap: var(--p2);
+    }
+    .admin-banner-icon {
+      width: 56px; height: 56px; border-radius: 12px;
+      background: rgba(255,255,255,0.12);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; flex-shrink: 0;
+    }
+    .admin-banner-info { flex: 1; }
+    .admin-banner-title { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--white); }
+    .admin-banner-sub { font-size: var(--text-tiny); color: rgba(255,255,255,0.65); margin-top: 4px; }
+    .admin-banner-badge {
+      background: rgba(255,107,53,0.25); color: var(--orange);
+      font-size: var(--text-tiny); font-weight: 700;
+      padding: 4px 12px; border-radius: 20px;
+      border: 1px solid rgba(255,107,53,0.4);
+    }
+    .admin-banner-back {
+      font-size: var(--text-tiny); color: rgba(255,255,255,0.5);
+      text-decoration: none; margin-top: 4px; display: inline-block;
+    }
+    .admin-banner-back:hover { color: rgba(255,255,255,0.8); }
+
+    /* ── Tabs (shared) ── */
+    .admin-tabs {
+      display: flex; gap: 4px;
+      background: var(--white); border-radius: 10px;
+      padding: 6px; border: 1px solid var(--dark-5);
+    }
+    .admin-tab {
+      flex: 1; text-align: center;
+      padding: 8px var(--p1); border-radius: 7px;
+      font-size: var(--text-tiny); font-weight: 600;
+      color: var(--dark-3); cursor: pointer;
+      transition: all 0.15s; text-decoration: none;
+    }
+    .admin-tab:hover  { background: var(--dark-6); color: var(--dark-1); }
+    .admin-tab.active { background: var(--main-blue); color: var(--white); }
+
+    /* ── NOUVEAU — la conséquence est un état du formulaire ───────────────
+       Pas de bandeau posé en tête de panneau, pas de modale après coup : ce
+       qu'un réglage défait est porté par l'élément qu'on manipule, et
+       n'apparaît que lorsque la modification existe. */
+
+    /* Barème : le pied de panneau ne se remplit qu'une fois quelque chose
+       changé, et le bouton dit ce qu'il va faire. */
+    /* Toujours visible : un admin doit savoir ce qu'il engage **avant** de
+       toucher au réglage. C'est le ton qui change, pas la présence — au repos
+       une phrase grise, dès qu'une modification existe un décompte et une
+       ligne d'accent. */
+    .panel-consequence {
+      display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+      margin-top: var(--p1); padding-top: var(--p1);
+      border-top: 1px solid var(--dark-5);
+      font-size: var(--text-tiny); color: var(--dark-3); line-height: 1.5;
+    }
+    .panel-consequence.shown {
+      color: var(--dark-1);
+      border-top-color: var(--main-blue);
+    }
+    .panel-consequence-count {
+      font-family: var(--font-title); font-weight: 800; color: var(--main-blue);
+      font-variant-numeric: tabular-nums;
+    }
+    .panel-consequence em { font-style: normal; color: var(--dark-3); }
+    .consequence-idle   { display: block; }
+    .consequence-active { display: none; }
+    .panel-consequence.shown .consequence-idle   { display: none; }
+    .panel-consequence.shown .consequence-active { display: block; }
+
+    /* La valeur changée se signale sur place, sans couleur d'alerte. */
+    .pts-input.changed, .bonus-input.changed { border-color: var(--main-blue); }
+    .pts-was {
+      font-size: 11px; color: var(--dark-3); min-height: 14px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .pts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--p1); }
+    .pts-field { display: flex; flex-direction: column; gap: 4px; }
+    .pts-label { font-size: var(--text-tiny); color: var(--dark-3); }
+    .pts-input { width: 100%; box-sizing: border-box; padding: 8px 10px;
+      border: 1.5px solid var(--dark-4); border-radius: 6px; font: inherit;
+      font-size: var(--text-small); text-align: center; font-variant-numeric: tabular-nums; }
+
+    .bonus-row { display: flex; align-items: center; gap: 10px; padding: 8px 0;
+      border-bottom: 1px solid var(--dark-6); flex-wrap: wrap; }
+    .bonus-row:last-child { border-bottom: none; }
+    .bonus-name { flex: 1; min-width: 140px; font-size: var(--text-small); color: var(--dark-1); }
+    .bonus-input { width: 64px; box-sizing: border-box; padding: 6px 8px;
+      border: 1.5px solid var(--dark-4); border-radius: 6px; font: inherit;
+      font-size: var(--text-tiny); text-align: center; font-variant-numeric: tabular-nums; }
+
+    /* Départage : l'ordre **est** la priorité, d'où les poignées. */
+    .tiebreak-list { display: flex; flex-direction: column; gap: 6px; }
+    .tiebreak-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; border: 1px solid var(--dark-5); border-radius: 6px;
+      background: var(--white); font-size: var(--text-small);
+    }
+    .tiebreak-handle { color: var(--dark-4); cursor: grab; }
+    .tiebreak-rank { font-family: var(--font-title); font-weight: 800; color: var(--main-blue); width: 18px; font-variant-numeric: tabular-nums; }
+    .tiebreak-name { flex: 1; }
+
+    /* Poules : une poule retirée **reste visible**, dans son état retiré. On
+       voit ce qu'on défait, et on peut revenir dessus. */
+    .pool-list { display: flex; flex-direction: column; gap: 8px; }
+    .pool-row { display: flex; align-items: center; gap: 10px; }
+    .pool-badge {
+      width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0;
+      background: var(--main-blue); color: var(--white);
+      display: flex; align-items: center; justify-content: center;
+      font-size: var(--text-tiny); font-weight: 700;
+    }
+    .pool-name-input { flex: 1; padding: 7px 10px; border: 1.5px solid var(--dark-4);
+      border-radius: 6px; font: inherit; font-size: var(--text-small); }
+    .pool-count { font-size: var(--text-tiny); color: var(--dark-3); white-space: nowrap; }
+    .pool-action {
+      border: 1.5px solid var(--dark-4); background: var(--white); color: var(--dark-3);
+      border-radius: 6px; padding: 5px 10px; cursor: pointer;
+      font-family: inherit; font-size: var(--text-tiny); font-weight: 600; white-space: nowrap;
+    }
+    .pool-action:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    .pool-row--removed .pool-badge { background: var(--dark-4); }
+    .pool-row--removed .pool-name-input {
+      text-decoration: line-through; color: var(--dark-3);
+      background: var(--dark-6); border-style: dashed;
+    }
+    .pool-row--removed .pool-count { color: #A61B1B; font-weight: 600; }
+
+    /* ── Tiers — repris de `pages/new-competition-phase-2.css` ─────────────
+       Le bloc dit où un tier commence et finit, l'en-tête teinté distingue les
+       tiers entre eux, et le corps sépare ce qui est verrouillé de ce qui se
+       modifie. Même découpage qu'à la création, aux mêmes couleurs. */
+    .tier-block { border: 1px solid var(--dark-5); border-radius: 8px; overflow: hidden; margin-bottom: var(--p2); }
+    .tier-block:last-child { margin-bottom: 0; }
+    .tier-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; border-bottom: 1px solid var(--dark-5);
+    }
+    .tier-block--1 .tier-head { background: rgba(230,57,70,0.08); }
+    .tier-block--2 .tier-head { background: rgba(255,107,53,0.08); }
+    .tier-title { font-family: var(--font-title); font-weight: 700; font-size: var(--text-small); color: var(--dark-1); }
+    .tier-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.5px; }
+    .tier-block--1 .tier-badge { background: var(--red-badge); color: var(--white); }
+    .tier-block--2 .tier-badge { background: var(--orange);    color: var(--white); }
+    .tier-body { padding: var(--p1) var(--p2) var(--p2); background: var(--white); }
+
+    /* Les réglages verrouillés se lisent comme des faits, pas comme des champs
+       désactivés : ils ne seront pas modifiables dans cette version. */
+    .tier-fixed { display: flex; gap: var(--p2); flex-wrap: wrap; margin-bottom: 6px; }
+    .tier-fixed-item { display: flex; flex-direction: column; gap: 1px; }
+    .tier-fixed-label { font-size: 10px; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .tier-fixed-value { font-size: var(--text-small); font-weight: 600; color: var(--dark-2); font-variant-numeric: tabular-nums; }
+    .tier-fixed-why { font-size: 11px; color: var(--dark-3); font-style: italic; }
+
+    .sub-section-title {
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    /* ── Coups de pouce — repris tel quel du widget existant ───────────────
+       `assets/static/css/widgets/inducement-grid.css`, celui du sélecteur de
+       la page de création. Même geste, même rendu : l'admin qui a créé la
+       compétition retrouve exactement ce qu'il connaît. */
+    .inducement-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+    .inducement-grid .inducement-chip {
+      padding: 6px 14px; border: 2px solid var(--dark-5); border-radius: 20px;
+      font-size: var(--text-tiny); cursor: pointer; background: var(--white); color: var(--dark-2);
+      display: flex; align-items: center; gap: 6px; transition: all 0.12s;
+    }
+    .inducement-grid .inducement-chip.selected { border-color: var(--main-blue); color: var(--main-blue); background: rgba(0,48,73,0.05); }
+    .inducement-grid .inducement-chip:hover { border-color: var(--dark-4); color: var(--dark-1); }
+    .inducement-grid .picker-cost { font-size: 10px; color: var(--dark-3); }
+    .inducement-grid .inducement-chip.selected .picker-cost { color: var(--main-blue); opacity: 0.7; }
+
+    /* Le seul ajout : de quoi savoir où on en est sans compter les pastilles. */
+    /* L'espace au-dessus détache les coups de pouce des réglages verrouillés :
+       deux natures d'information dans le même bloc, l'une figée et l'autre
+       modifiable, doivent se lire comme deux choses. */
+    .induce-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: var(--p1); flex-wrap: wrap;
+      margin: 0 0 6px; padding-top: var(--p2);
+    }
+    .induce-tally { font-size: var(--text-tiny); color: var(--dark-3); font-variant-numeric: tabular-nums; }
+    .induce-tally b { color: var(--main-blue); font-family: var(--font-title); }
+
+    /* ── Tiers — repris de `pages/new-competition-phase-2.css` ─────────────
+       Le bloc dit où un tier commence et finit, l'en-tête teinté distingue les
+       tiers entre eux, et le corps sépare ce qui est verrouillé de ce qui se
+       modifie. Même découpage qu'à la création, aux mêmes couleurs. */
+    .tier-block { border: 1px solid var(--dark-5); border-radius: 8px; overflow: hidden; margin-bottom: var(--p2); }
+    .tier-block:last-child { margin-bottom: 0; }
+    .tier-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; border-bottom: 1px solid var(--dark-5);
+    }
+    .tier-block--1 .tier-head { background: rgba(230,57,70,0.08); }
+    .tier-block--2 .tier-head { background: rgba(255,107,53,0.08); }
+    .tier-title { font-family: var(--font-title); font-weight: 700; font-size: var(--text-small); color: var(--dark-1); }
+    .tier-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.5px; }
+    .tier-block--1 .tier-badge { background: var(--red-badge); color: var(--white); }
+    .tier-block--2 .tier-badge { background: var(--orange);    color: var(--white); }
+    .tier-body { padding: var(--p1) var(--p2) var(--p2); background: var(--white); }
+
+    /* Les réglages verrouillés se lisent comme des faits, pas comme des champs
+       désactivés : ils ne seront pas modifiables dans cette version. */
+    .tier-fixed { display: flex; gap: var(--p2); flex-wrap: wrap; margin-bottom: 6px; }
+    .tier-fixed-item { display: flex; flex-direction: column; gap: 1px; }
+    .tier-fixed-label { font-size: 10px; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .tier-fixed-value { font-size: var(--text-small); font-weight: 600; color: var(--dark-2); font-variant-numeric: tabular-nums; }
+    .tier-fixed-why { font-size: 11px; color: var(--dark-3); font-style: italic; }
+
+    .sub-section-title {
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    @media (max-width: 768px) {
+      .pts-grid { grid-template-columns: 1fr; }
+      }
+
+    /* ── Settings panel ── */
+    .settings-panel {
+      background: var(--white);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .settings-panel-head {
+      padding: var(--p2);
+      border-bottom: 2px solid var(--dark-5);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .settings-panel-title {
+      font-family: var(--font-title); font-size: var(--h5);
+      font-weight: 700; color: var(--dark-1);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .settings-panel-title-icon { font-size: 18px; }
+    .settings-panel-body {
+      padding: var(--p2);
+      display: flex; flex-direction: column; gap: var(--p2);
+    }
+
+    /* ── Form elements ── */
+    .form-row {
+      display: flex; align-items: flex-start; gap: var(--p2);
+    }
+    .form-row-label {
+      min-width: 160px; flex-shrink: 0;
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-2);
+      padding-top: 10px;
+    }
+    .form-row-content { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .form-row-hint { font-size: 11px; color: var(--dark-4); }
+
+    .form-input {
+      padding: 10px 14px;
+      border: 1px solid var(--dark-4); border-radius: 7px;
+      font-size: var(--text-small); color: var(--dark-1);
+      font-family: inherit; outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      width: 100%;
+    }
+    .form-input:focus {
+      border-color: var(--main-blue);
+      box-shadow: 0 0 0 3px rgba(0,48,73,0.08);
+    }
+
+    .form-select {
+      padding: 10px 14px;
+      border: 1px solid var(--dark-4); border-radius: 7px;
+      font-size: var(--text-small); color: var(--dark-1);
+      font-family: inherit; outline: none; background: var(--white);
+      cursor: pointer;
+    }
+    .form-select:focus { border-color: var(--main-blue); }
+
+    /* ── Logo upload ── */
+    .logo-row {
+      display: flex; align-items: center; gap: var(--p2);
+    }
+    .logo-preview {
+      width: 80px; height: 80px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: 24px;
+      color: var(--white); flex-shrink: 0;
+    }
+    .logo-actions { display: flex; flex-direction: column; gap: 6px; }
+
+    /* ── Admin list ── */
+    .admin-list { display: flex; flex-direction: column; gap: 6px; }
+    .admin-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px;
+      border: 1px solid var(--dark-6); border-radius: 8px;
+    }
+    .admin-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 12px;
+      color: var(--white); flex-shrink: 0;
+      background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+    }
+    .admin-name { flex: 1; font-size: var(--text-tiny); font-weight: 500; color: var(--dark-1); }
+    .admin-role { font-size: 11px; color: var(--dark-3); }
+    .admin-remove {
+      font-size: 11px; color: var(--dark-4); cursor: pointer;
+      padding: 4px 8px; border-radius: 4px;
+      transition: all 0.15s;
+    }
+    .admin-remove:hover { color: var(--red); background: rgba(224,32,32,0.06); }
+
+    .admin-add-row {
+      display: flex; gap: 8px;
+    }
+    .admin-add-input {
+      flex: 1; padding: 8px 12px;
+      border: 1px solid var(--dark-5); border-radius: 7px;
+      font-size: var(--text-tiny); font-family: inherit;
+      color: var(--dark-1); outline: none;
+    }
+    .admin-add-input:focus { border-color: var(--main-blue); }
+
+    /* ── Rules recap ── */
+    .rules-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: var(--p2);
+    }
+    .rule-block {
+      background: var(--dark-7);
+      border-radius: 8px;
+      padding: var(--p1);
+    }
+    .rule-block-title {
+      font-size: 11px; font-weight: 700; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.4px;
+      margin-bottom: 8px;
+    }
+    .rule-row {
+      display: flex; justify-content: space-between;
+      font-size: var(--text-tiny); color: var(--dark-2);
+      padding: 3px 0;
+    }
+    .rule-row strong { color: var(--dark-1); }
+
+    /* ── Tier list ── */
+    .tier-badge {
+      font-size: 11px; font-weight: 700;
+      padding: 2px 8px; border-radius: 4px;
+      color: var(--white); flex-shrink: 0;
+    }
+    .tier-badge--3 { background: var(--dark-3); }
+
+    /* ── Buttons ── */
+    .btn-primary-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--main-blue); color: var(--white);
+      font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer; border: none; transition: opacity 0.15s;
+    }
+    .btn-primary-sm:hover { opacity: 0.9; }
+
+    .btn-outline-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--white); color: var(--dark-2);
+      font-size: var(--text-tiny); font-weight: 600;
+      cursor: pointer; border: 1px solid var(--dark-5);
+      transition: all 0.15s;
+    }
+    .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    .btn-danger-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--white); color: var(--dark-3);
+      font-size: var(--text-tiny); font-weight: 600;
+      cursor: pointer; border: 1px solid var(--dark-5);
+      transition: all 0.15s;
+    }
+    .btn-danger-sm:hover { border-color: var(--red); color: var(--red); background: rgba(224,32,32,0.04); }
+
+    /* ── Section separator ── */
+    .section-sep { height: 1px; background: var(--dark-5); }
+
+    /* ── Danger zone ── */
+    .danger-zone {
+      border: 1px solid rgba(224,32,32,0.2);
+      border-radius: 12px;
+      padding: var(--p2);
+      background: rgba(224,32,32,0.02);
+    }
+    .danger-zone-title {
+      font-family: var(--font-title); font-size: var(--h5);
+      font-weight: 700; color: var(--red);
+      margin-bottom: var(--p1);
+    }
+    .danger-zone-actions {
+      display: flex; gap: var(--p1); flex-wrap: wrap;
+    }
+    .danger-zone-item {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--p2);
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(224,32,32,0.1);
+    }
+    .danger-zone-item:last-child { border-bottom: none; }
+    .danger-zone-item-info { flex: 1; }
+    .danger-zone-item-label { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); }
+    .danger-zone-item-desc { font-size: 11px; color: var(--dark-3); margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item" href="app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item active">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="admin-container">
+
+          <!-- ══ Banner ══════════════════════════════════════════════ -->
+          <div class="admin-banner">
+            <div class="admin-banner-icon">🏆</div>
+            <div class="admin-banner-info">
+              <div class="admin-banner-title">Ligue de Condate — Saison 5</div>
+              <div class="admin-banner-sub">Administration de la compétition · 3 administrateurs</div>
+              <a href="app-competition-detail.html" class="admin-banner-back">← Retour à la compétition</a>
+            </div>
+            <div class="admin-banner-badge">Admin</div>
+          </div>
+
+          <!-- ══ Tabs ═══════════════════════════════════════════════ -->
+          <div class="admin-tabs">
+            <a class="admin-tab" href="app-competition-admin.html">📋 Résumé</a>
+            <a class="admin-tab" href="app-competition-admin-enrollments.html">📋 Inscriptions</a>
+            <a class="admin-tab" href="app-competition-admin-groups.html">🎲 Poules</a>
+            <a class="admin-tab" href="app-competition-admin-schedule.html">📅 Calendrier</a>
+            <a class="admin-tab active" href="#">⚙️ Paramètres</a>
+          </div>
+
+          <!-- ══ Informations générales ═════════════════════════════ -->
+          <div class="settings-panel">
+            <div class="settings-panel-head">
+              <div class="settings-panel-title">
+                <span class="settings-panel-title-icon">📝</span>
+                Informations générales
+              </div>
+              <button class="btn-primary-sm">💾 Enregistrer</button>
+            </div>
+            <div class="settings-panel-body">
+              <div class="form-row">
+                <div class="form-row-label">Nom</div>
+                <div class="form-row-content">
+                  <input type="text" class="form-input" value="Ligue de Condate">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-row-label">Saison</div>
+                <div class="form-row-content">
+                  <input type="text" class="form-input" value="Saison 5">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-row-label">Logo</div>
+                <div class="form-row-content">
+                  <div class="logo-row">
+                    <div class="logo-preview">LC</div>
+                    <div class="logo-actions">
+                      <button class="btn-outline-sm">🖼️ Changer le logo</button>
+                      <div class="form-row-hint">JPG, PNG ou WebP · 2 Mo max</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ Administrateurs ════════════════════════════════════ -->
+          <div class="settings-panel">
+            <div class="settings-panel-head">
+              <div class="settings-panel-title">
+                <span class="settings-panel-title-icon">👥</span>
+                Administrateurs
+              </div>
+            </div>
+            <div class="settings-panel-body">
+              <div class="admin-list">
+                <div class="admin-row">
+                  <div class="admin-avatar">B</div>
+                  <span class="admin-name">Bagouze</span>
+                  <span class="admin-role">Créateur</span>
+                </div>
+                <div class="admin-row">
+                  <div class="admin-avatar" style="background: linear-gradient(135deg, var(--green), #003049);">G</div>
+                  <span class="admin-name">Grim</span>
+                  <span class="admin-role">Admin</span>
+                  <span class="admin-remove">✕ Retirer</span>
+                </div>
+                <div class="admin-row">
+                  <div class="admin-avatar" style="background: linear-gradient(135deg, var(--orange), #1C1C29);">D</div>
+                  <span class="admin-name">Darkmoule</span>
+                  <span class="admin-role">Admin</span>
+                  <span class="admin-remove">✕ Retirer</span>
+                </div>
+              </div>
+
+              <div class="section-sep"></div>
+
+              <div class="admin-add-row">
+                <input type="text" class="admin-add-input" placeholder="Rechercher un coach à ajouter…">
+                <button class="btn-primary-sm">+ Ajouter</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ Classement ═══════════════════════════════════════ -->
+          <div class="settings-panel">
+            <div class="settings-panel-head">
+              <div class="settings-panel-title">
+                <span class="settings-panel-title-icon">🏆</span>
+                Points de classement
+              </div>
+              <button class="btn-primary-sm" id="ranking-save">Enregistrer</button>
+            </div>
+            <div class="settings-panel-body">
+
+              <div class="pts-grid">
+                <div class="pts-field">
+                  <span class="pts-label">Victoire</span>
+                  <input type="number" class="pts-input" value="3" min="0" data-was="3" oninput="markChanged(this)">
+                  <span class="pts-was"></span>
+                </div>
+                <div class="pts-field">
+                  <span class="pts-label">Match nul</span>
+                  <input type="number" class="pts-input" value="1" min="0" data-was="1" oninput="markChanged(this)">
+                  <span class="pts-was"></span>
+                </div>
+                <div class="pts-field">
+                  <span class="pts-label">Défaite</span>
+                  <input type="number" class="pts-input" value="0" min="0" data-was="0" oninput="markChanged(this)">
+                  <span class="pts-was"></span>
+                </div>
+              </div>
+
+              <div class="section-sep"></div>
+
+              <div class="settings-panel-title" style="font-size: var(--text-tiny); margin-bottom: 8px;">
+                Points bonus
+              </div>
+              <div class="bonus-row">
+                <label class="bonus-name"><input type="checkbox" checked> Bonus offensif</label>
+                <span class="pool-count">à partir de</span>
+                <input type="number" class="bonus-input" value="3" min="1">
+                <span class="pool-count">TD d'écart, pour</span>
+                <input type="number" class="bonus-input" value="1" min="0">
+                <span class="pool-count">pt</span>
+              </div>
+              <div class="bonus-row">
+                <label class="bonus-name"><input type="checkbox" checked> Bonus défensif</label>
+                <span class="pool-count">au plus</span>
+                <input type="number" class="bonus-input" value="1" min="0">
+                <span class="pool-count">TD encaissé, pour</span>
+                <input type="number" class="bonus-input" value="1" min="0">
+                <span class="pool-count">pt</span>
+              </div>
+              <div class="bonus-row">
+                <label class="bonus-name"><input type="checkbox"> Bonus agressif</label>
+                <span class="pool-count">à partir de</span>
+                <input type="number" class="bonus-input" value="3" min="1">
+                <span class="pool-count">sorties, pour</span>
+                <input type="number" class="bonus-input" value="1" min="0">
+                <span class="pool-count">pt</span>
+              </div>
+
+              <div class="section-sep"></div>
+
+              <div class="settings-panel-title" style="font-size: var(--text-tiny); margin-bottom: 8px;">
+                Critères de départage — l'ordre est la priorité
+              </div>
+              <div class="tiebreak-list">
+                <div class="tiebreak-row"><span class="tiebreak-handle">⠿</span><span class="tiebreak-rank">1</span><span class="tiebreak-name">Différence de touchdowns</span><input type="checkbox" checked></div>
+                <div class="tiebreak-row"><span class="tiebreak-handle">⠿</span><span class="tiebreak-rank">2</span><span class="tiebreak-name">Touchdowns marqués</span><input type="checkbox" checked></div>
+                <div class="tiebreak-row"><span class="tiebreak-handle">⠿</span><span class="tiebreak-rank">3</span><span class="tiebreak-name">Sorties infligées</span><input type="checkbox" checked></div>
+                <div class="tiebreak-row"><span class="tiebreak-handle">⠿</span><span class="tiebreak-rank">4</span><span class="tiebreak-name">Confrontation directe</span><input type="checkbox"></div>
+              </div>
+
+              <!-- La conséquence ne s'affiche que lorsqu'il y a quelque chose à
+                   conséquencer. Tant que rien ne change, rien ne s'annonce. -->
+              <div class="panel-consequence" id="ranking-consequence">
+                <span class="consequence-idle">
+                  Modifier ce barème recalcule le classement à partir des <b>24 matchs</b>
+                  déjà publiés :
+                  le classement peut s'en trouver renversé.
+                  <em>Les résultats des matchs, eux, ne changent pas.</em>
+                </span>
+                <span class="consequence-active">
+                  <span class="panel-consequence-count" id="ranking-changes">0</span>
+                  changement<span id="ranking-changes-s"></span> en attente —
+                  le classement sera recalculé sur les <b>24 matchs</b> publiés,
+                  dans l'ordre, à l'enregistrement.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ Poules ═══════════════════════════════════════════ -->
+          <div class="settings-panel">
+            <div class="settings-panel-head">
+              <div class="settings-panel-title">
+                <span class="settings-panel-title-icon">🎲</span>
+                Poules
+              </div>
+              <button class="btn-primary-sm" id="pools-save">💾 Enregistrer</button>
+            </div>
+            <div class="settings-panel-body">
+
+              <div class="pool-list" id="pool-list">
+                <div class="pool-row" data-teams="6">
+                  <span class="pool-badge">A</span>
+                  <input type="text" class="pool-name-input" value="Poule du Nord">
+                  <span class="pool-count">6 équipes</span>
+                  <button class="pool-action" onclick="togglePool(this)">Retirer</button>
+                </div>
+                <div class="pool-row" data-teams="6">
+                  <span class="pool-badge">B</span>
+                  <input type="text" class="pool-name-input" value="Poule du Sud">
+                  <span class="pool-count">6 équipes</span>
+                  <button class="pool-action" onclick="togglePool(this)">Retirer</button>
+                </div>
+              </div>
+
+              <div class="panel-consequence" id="pools-consequence">
+                <span class="consequence-idle">
+                  Retirer une poule en sort toutes ses équipes : elles seront à
+                  réaffecter à la main.
+                  <em>Le calendrier déjà généré n'est pas touché.</em>
+                </span>
+                <span class="consequence-active">
+                  <span class="panel-consequence-count" id="pools-orphans">0</span>
+                  équipe<span id="pools-orphans-s"></span> à réaffecter dans
+                  l'onglet Poules après enregistrement.
+                </span>
+              </div>
+
+              <div style="margin-top: var(--p1);">
+                <button class="btn-outline-sm" onclick="addPool()">+ Ajouter une poule</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ Tiers ════════════════════════════════════════════ -->
+          <div class="settings-panel">
+            <div class="settings-panel-head">
+              <div class="settings-panel-title">
+                <span class="settings-panel-title-icon">🎯</span>
+                Tiers &amp; coups de pouce
+              </div>
+              <button class="btn-primary-sm">💾 Enregistrer</button>
+            </div>
+            <div class="settings-panel-body">
+
+              <div class="tier-block tier-block--1">
+                <div class="tier-head">
+                  <span class="tier-title">Débutants</span>
+                  <span class="tier-badge">T1</span>
+                </div>
+                <div class="tier-body">
+                  <div class="tier-fixed">
+                    <span class="tier-fixed-item">
+                      <span class="tier-fixed-label">Budget de création</span>
+                      <span class="tier-fixed-value">1060 kPo</span>
+                    </span>
+                    <span class="tier-fixed-item">
+                      <span class="tier-fixed-label">XP de départ</span>
+                      <span class="tier-fixed-value">0</span>
+                    </span>
+                    <span class="tier-fixed-item">
+                      <span class="tier-fixed-label">Rosters autorisés</span>
+                      <span class="tier-fixed-value">3</span>
+                    </span>
+                  </div>
+                  <div class="tier-fixed-why">Verrouillés — les modifier obligerait à revalider les équipes déjà créées.</div>
+
+                  <div class="induce-head">
+                    <span class="sub-section-title">Coups de pouce autorisés</span>
+                    <span class="induce-tally"><b class="induce-count">5</b> sur 8</span>
+                  </div>
+                  <div class="inducement-grid">
+                    <span class="inducement-chip selected" onclick="toggleChip(this)">Renfort Temporaire<small class="picker-cost">20 kPo</small></span>
+                    <span class="inducement-chip selected" onclick="toggleChip(this)">Chariot de Vivres<small class="picker-cost">15 kPo</small></span>
+                    <span class="inducement-chip selected" onclick="toggleChip(this)">Mage des Brumes<small class="picker-cost">60 kPo</small></span>
+                    <span class="inducement-chip selected" onclick="toggleChip(this)">Arbitre Complaisant<small class="picker-cost">50 kPo</small></span>
+                    <span class="inducement-chip" onclick="toggleChip(this)">Masseur Douteux<small class="picker-cost">30 kPo</small></span>
+                    <span class="inducement-chip" onclick="toggleChip(this)">Orval le Patient<small class="picker-cost">170 kPo</small></span>
+                    <span class="inducement-chip selected" onclick="toggleChip(this)">Sylve aux Mains Vives<small class="picker-cost">150 kPo</small></span>
+                    <span class="inducement-chip" onclick="toggleChip(this)">Grumo le Terne<small class="picker-cost">130 kPo</small></span>
+                  </div>
+                </div>
+              </div>
+              <div class="tier-block tier-block--2">
+                <div class="tier-head">
+                  <span class="tier-title">Confirmés</span>
+                  <span class="tier-badge">T2</span>
+                </div>
+                <div class="tier-body">
+                  <div class="tier-fixed">
+                    <span class="tier-fixed-item">
+                      <span class="tier-fixed-label">Budget de création</span>
+                      <span class="tier-fixed-value">1160 kPo</span>
+                    </span>
+                    <span class="tier-fixed-item">
+                      <span class="tier-fixed-label">XP de départ</span>
+                      <span class="tier-fixed-value">6</span>
+                    </span>
+                    <span class="tier-fixed-item">
+                      <span class="tier-fixed-label">Rosters autorisés</span>
+                      <span class="tier-fixed-value">2</span>
+                    </span>
+                  </div>
+                  <div class="tier-fixed-why">Verrouillés — les modifier obligerait à revalider les équipes déjà créées.</div>
+
+                  <div class="induce-head">
+                    <span class="sub-section-title">Coups de pouce autorisés</span>
+                    <span class="induce-tally"><b class="induce-count">6</b> sur 8</span>
+                  </div>
+                  <div class="inducement-grid">
+                    <span class="inducement-chip selected" onclick="toggleChip(this)">Renfort Temporaire<small class="picker-cost">20 kPo</small></span>
+                    <span class="inducement-chip selected" onclick="toggleChip(this)">Chariot de Vivres<small class="picker-cost">15 kPo</small></span>
+                    <span class="inducement-chip selected" onclick="toggleChip(this)">Mage des Brumes<small class="picker-cost">60 kPo</small></span>
+                    <span class="inducement-chip selected" onclick="toggleChip(this)">Arbitre Complaisant<small class="picker-cost">50 kPo</small></span>
+                    <span class="inducement-chip selected" onclick="toggleChip(this)">Masseur Douteux<small class="picker-cost">30 kPo</small></span>
+                    <span class="inducement-chip" onclick="toggleChip(this)">Orval le Patient<small class="picker-cost">170 kPo</small></span>
+                    <span class="inducement-chip selected" onclick="toggleChip(this)">Sylve aux Mains Vives<small class="picker-cost">150 kPo</small></span>
+                    <span class="inducement-chip" onclick="toggleChip(this)">Grumo le Terne<small class="picker-cost">130 kPo</small></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ Inscriptions ══════════════════════════════════════ -->
+          <div class="settings-panel">
+            <div class="settings-panel-head">
+              <div class="settings-panel-title">
+                <span class="settings-panel-title-icon">🔒</span>
+                Visibilité
+              </div>
+              <button class="btn-primary-sm">💾 Enregistrer</button>
+            </div>
+            <div class="settings-panel-body">
+              <div class="form-row">
+                <div class="form-row-label">Mode d'accès</div>
+                <div class="form-row-content">
+                  <select class="form-select">
+                    <option selected>Sur invitation uniquement</option>
+                    <option>Ouvert à tous les membres de l'espace</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-row-label">Validation</div>
+                <div class="form-row-content">
+                  <select class="form-select">
+                    <option selected>Validation manuelle par un admin</option>
+                    <option>Inscription automatique</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-row-label">Places max</div>
+                <div class="form-row-content">
+                  <input type="number" class="form-input" value="20" style="width: 100px;">
+                  <div class="form-row-hint">0 = illimité</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ Zone de danger ════════════════════════════════════ -->
+          <div class="danger-zone">
+            <div class="danger-zone-title">⚠️ Zone de danger</div>
+            <div class="danger-zone-item">
+              <div class="danger-zone-item-info">
+                <div class="danger-zone-item-label">Réinitialiser la saison</div>
+                <div class="danger-zone-item-desc">Supprime tous les résultats, les poules et le calendrier. Les équipes inscrites sont conservées.</div>
+              </div>
+              <button class="btn-danger-sm">Réinitialiser</button>
+            </div>
+            <div class="danger-zone-item">
+              <div class="danger-zone-item-info">
+                <div class="danger-zone-item-label">Supprimer la saison</div>
+                <div class="danger-zone-item-desc">Supprime définitivement cette saison et toutes ses données. Action irréversible.</div>
+              </div>
+              <button class="btn-danger-sm">Supprimer</button>
+            </div>
+          </div>
+
+        </div><!-- /admin-container -->
+      </div><!-- /page-content -->
+    </div><!-- /main-area -->
+  </div><!-- /app-layout -->
+
+<script>
+/* Comportement de maquette.
+   Principe tenu partout ici : la conséquence est un **état du formulaire**.
+   Rien ne s'annonce tant que rien n'a changé, et ce qui change le dit à sa
+   place — pas dans un bandeau posé en tête de panneau. */
+
+/* ── Barème ─────────────────────────────────────────────────────────────── */
+function markChanged(input) {
+  var was = input.dataset.was;
+  var changed = input.value !== was;
+  input.classList.toggle('changed', changed);
+  var note = input.parentElement.querySelector('.pts-was');
+  if (note) { note.textContent = changed ? ('était ' + was) : ''; }
+  refreshRankingConsequence();
+}
+
+function refreshRankingConsequence() {
+  var n = document.querySelectorAll('.pts-input.changed, .bonus-input.changed').length;
+  document.getElementById('ranking-changes').textContent = n;
+  document.getElementById('ranking-changes-s').textContent = n > 1 ? 's' : '';
+  document.getElementById('ranking-consequence').classList.toggle('shown', n > 0);
+  document.getElementById('ranking-save').textContent =
+    n > 0 ? 'Enregistrer et recalculer le classement' : 'Enregistrer';
+}
+
+/* ── Poules ─────────────────────────────────────────────────────────────
+   Une poule retirée reste à l'écran, barrée : on voit ce qu'on défait, et le
+   geste s'annule. Elle ne disparaîtra qu'à l'enregistrement. */
+function togglePool(btn) {
+  var row = btn.closest('.pool-row');
+  var removed = row.classList.toggle('pool-row--removed');
+  btn.textContent = removed ? 'Rétablir' : 'Retirer';
+  var teams = row.dataset.teams;
+  row.querySelector('.pool-count').textContent =
+    removed ? (teams + ' équipes à réaffecter') : (teams + ' équipes');
+  refreshPoolsConsequence();
+}
+
+function addPool() {
+  var list = document.getElementById('pool-list');
+  var row = document.createElement('div');
+  row.className = 'pool-row';
+  row.dataset.teams = '0';
+  row.innerHTML = '<span class="pool-badge"></span>'
+    + '<input type="text" class="pool-name-input" value="Nouvelle poule">'
+    + '<span class="pool-count">0 équipe</span>'
+    + '<button class="pool-action" onclick="togglePool(this)">Retirer</button>';
+  list.appendChild(row);
+  renumberPools();
+}
+
+function renumberPools() {
+  document.querySelectorAll('#pool-list .pool-row').forEach(function (row, i) {
+    row.querySelector('.pool-badge').textContent = String.fromCharCode(65 + i);
+  });
+}
+
+function refreshPoolsConsequence() {
+  var orphans = 0;
+  document.querySelectorAll('#pool-list .pool-row--removed').forEach(function (row) {
+    orphans += parseInt(row.dataset.teams, 10) || 0;
+  });
+  document.getElementById('pools-orphans').textContent = orphans;
+  document.getElementById('pools-orphans-s').textContent = orphans > 1 ? 's' : '';
+  document.getElementById('pools-consequence').classList.toggle('shown', orphans > 0);
+}
+
+/* ── Coups de pouce ─────────────────────────────────────────────────────
+   Même geste que le sélecteur de la page de création : on clique la pastille,
+   elle passe en `selected`. Rien de neuf à apprendre. */
+function toggleChip(chip) {
+  chip.classList.toggle('selected');
+  var grid = chip.closest('.inducement-grid');
+  var head = grid.previousElementSibling;
+  head.querySelector('.induce-count').textContent =
+    grid.querySelectorAll('.inducement-chip.selected').length;
+}
+
+document.querySelectorAll('.bonus-input').forEach(function (i) {
+  i.dataset.was = i.value;
+  i.addEventListener('input', function () {
+    i.classList.toggle('changed', i.value !== i.dataset.was);
+    refreshRankingConsequence();
+  });
+});
+</script>
+</body>
+</html>
