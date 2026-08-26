@@ -36,9 +36,16 @@ pub struct HateKeywordChoices {
 }
 ```
 
-Il partage le catalogue sur l'union des `keywords` du **roster** adverse —
+Il part de `list_hateable()` — **jamais du catalogue entier** : les huit
+mots-clefs de poste et de catégorie n'ont rien à faire dans le sélecteur. Il
+partage ensuite sur l'union des `keywords` du **roster** adverse —
 `RosterPositionDto` gagne le champ, l'adapter le remplit — et **trie par
 libellé** : un coach cherche « Nain », pas « DWARF ».
+
+Conséquence à connaître : un roster dont tous les postes sont des rôles —
+`BLITZER`, `LINEMAN` — donnera un **premier groupe vide**, et tous ses
+mots-clefs haïssables passeront dans le repli. Le comportement est déjà prévu :
+le groupe disparaît plutôt que d'afficher un titre au-dessus du rien.
 
 **Le service est obligatoire** : sans lui le handler manipulerait les DTOs du
 port pour en faire des VMs, ce que le `CLAUDE.md` interdit nommément.
@@ -89,5 +96,6 @@ cérémonie coûterait plus que le contenu.
 - [ ] Journal des actions : la Haine sur la ligne de blessure
 - [ ] Feuille CSS scopée **et inscrite au bundle**
 - [ ] Tests unitaires : partage roster adverse / autres, tri par libellé,
-      adversaire sans mot-clef connu → premier groupe vide
+      adversaire sans mot-clef connu → premier groupe vide, **et aucun mot-clef
+      non haïssable dans l'une ou l'autre liste**
 - [ ] `make lint`, `make check-arch`, `make test`

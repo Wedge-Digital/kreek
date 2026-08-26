@@ -74,7 +74,7 @@ Il rend deux listes de mots-clefs du domaine, triées par libellé, partagées e
 | `domain/events.rs` | le gain de Haine, sans champ de valeur |
 | `io/repository/player_repository.rs` | branche de projection : ajout dans `acquired_skills` |
 | `io/app_events/player_match_impact_listener.rs` | applique le gain à la conclusion du match, le défait au revert |
-| `shared_kernel/app_events/player_match_impact_app_events.rs` | `PlayerInjured` gagne `hatred: Option<String>` — l'uid du mot-clef |
+| `shared_kernel/app_events/player_match_impact_app_events.rs` | `PlayerInjured` gagne `hatred_skill_uid: Option<String>` — l'uid de la **compétence**, figé à la saisie |
 
 ## Le chemin complet
 
@@ -83,7 +83,7 @@ Saisie          POST action  →  MatchActionType::Blesse { injury, hatred }
                              →  ActionRecorded          (event store match_report)
 
 Publication     TeamMatchConcluded  →  PlayerInjured { context, injury_type, hatred }
-                             →  listener players  →  compétence HAINE_<UID> acquise
+                             →  listener players  →  la compétence désignée est acquise
 
 Dépublication   TeamMatchImpactReverted  →  la Haine est défaite avec le reste
 
@@ -145,5 +145,5 @@ pas tranché entre une instance par langue et une instance bilingue. À ne pas
 anticiper ici — mais à savoir, pour ne pas coder un choix de langue en passant.
 
 Il reste à prévoir la **garde** : si le corpus ne porte aucun mot-clef, ou aucune
-compétence `HAINE_<UID>`, la fonctionnalité serait muette. Elle doit échouer
+compétence de Haine, la fonctionnalité serait muette. Elle doit échouer
 bruyamment, comme le prévoit la carte 388 pour `LOW_COST_LINEMEN`.

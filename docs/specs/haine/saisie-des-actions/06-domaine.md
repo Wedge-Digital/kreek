@@ -92,7 +92,7 @@ customisées (`player.rs:523`) :
 
 ```rust
 AcquiredSkill {
-    skill_id: SkillId::try_new(format!("HAINE_{uid}"))?,
+    skill_id: SkillId::try_new(hatred_skill_uid)?,   // porté par l'app event
     skill_name,                       // « Haine : Nain », résolu au catalogue
     mode: AcquisitionMode::Injury,
     // Ni coût ni valeur : un trait gagné en encaissant un coup ne se paie pas

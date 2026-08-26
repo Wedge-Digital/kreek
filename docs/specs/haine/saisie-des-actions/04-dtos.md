@@ -164,7 +164,8 @@ moment du clic.
 PlayerInjured {
     context: PlayerMatchContextPayload,
     injury_type: InjuryTypePayload,
-    hatred: Option<String>,   // l'uid du mot-clef
+    #[serde(default)]
+    hatred_skill_uid: Option<String>,   // l'uid de la compétence, figé à la saisie
 }
 ```
 
@@ -172,12 +173,12 @@ PlayerInjured {
 **Consommé par** : `player_match_impact_listener` dans `players`.
 
 L'uid voyage **nu**, en `String` : c'est un app event, sérialisé et persisté, et
-les value objects d'un BC ne traversent pas ses frontières. Le listener le
-revalide chez lui.
+les value objects d'un BC ne traversent pas ses frontières.
 
-Le nom de la compétence créée est `HAINE_<UID>` — `HAINE_DARK_ELF`,
-`HAINE_BIG_GUY`. C'est la mise à plat décidée : l'uid de la compétence porte le
-mot-clef, donc aucune structure supplémentaire.
+**C'est l'uid de la compétence, pas celui du mot-clef.** Le corpus porte le lien
+(`hate_skill_uid`), le use case le fige dans l'action au moment de la saisie, et
+le publisher le recopie. Aucune convention de nommage, aucune résolution tardive
+— et un fait passé ne dépend pas de l'état présent du référentiel.
 
 ## Règles métier tranchées
 

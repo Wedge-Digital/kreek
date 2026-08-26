@@ -17,10 +17,10 @@ compétences acquises. À la dépublication, elle s'en va avec le reste.
 ## Le trajet
 
 ```
-publication  →  PlayerInjured { context, injury_type, hatred }
+publication  →  PlayerInjured { context, injury_type, hatred_skill_uid }
              →  player_match_impact_listener
-             →  player.record_hatred(context, keyword, nom)
-             →  acquired_skills += HAINE_<UID>
+             →  player.record_hatred(context, skill_id, nom)
+             →  acquired_skills += la compétence désignée
 ```
 
 **On ne crée pas de second chemin.** Le mécanisme d'impact de match existe,
@@ -47,21 +47,40 @@ La Haine d'un journalier reste donc dans le rapport de match — visible au
 récapitulatif, absente de `players` — **sans une ligne écrite pour ça**. Rien à
 ajouter ; simplement, ne pas défaire ce filtre.
 
-## L'uid voyage, le libellé se résout
+## Le publisher recopie, il ne résout rien
 
-L'app event porte `hatred: Option<String>` — l'uid nu. Un app event est
-sérialisé et persisté, et les value objects d'un BC ne franchissent pas ses
-frontières.
+**L'app event porte l'uid de la compétence, pas celui du mot-clef.**
 
-« Haine : Nain » est résolu **par le listener**, via `ISkillCatalogPort` que
-`players` possède déjà. Un libellé change avec le corpus, un uid non : inscrire
-le nom dans l'event store y figerait une traduction.
+```rust
+PlayerInjured {
+    context: PlayerMatchContextPayload,
+    injury_type: InjuryTypePayload,
+    #[serde(default)]
+    hatred_skill_uid: Option<String>,   // « HAINE_BEASTMAN »
+}
+```
+
+**Aucune traduction n'a lieu ici.** L'action porte déjà `hatred_skill_uid`,
+figé au moment de la saisie par le use case de la carte 401, qui tenait le DTO du
+mot-clef en main. Le publisher se contente de le recopier dans l'app event.
+
+**Aucun port supplémentaire, donc**, et surtout aucune convention de nommage : la
+première conception fabriquait `format!("HAINE_{uid}")`, le corpus porte
+désormais le lien et la carte 399 le vérifie au démarrage. Un lien supposé est
+devenu un lien déclaré, puis figé.
+
+Le domaine de `match_report` garde le **mot-clef** à côté — c'est ce que le coach
+a choisi, et ce que le récapitulatif du match affiche.
+
+« Haine : Homme-Bête » reste résolu **par le listener**, via `ISkillCatalogPort`
+que `players` possède déjà : un libellé change avec le corpus, un uid non, et
+inscrire le nom dans l'event store y figerait une traduction.
 
 ## Le trait est gratuit, et l'état porte des zéros
 
 ```rust
 AcquiredSkill {
-    skill_id: SkillId::try_new(format!("HAINE_{uid}"))?,
+    skill_id: SkillId::try_new(hatred_skill_uid)?,   // porté par l'app event
     skill_name,
     mode: AcquisitionMode::Injury,
     // Ni coût ni valeur : un trait gagné en encaissant un coup ne se paie pas
@@ -90,8 +109,9 @@ cette fonctionnalité, qui n'ont pas encore leurs phases 2 à 7.
 
 ## Checklist
 
-- [ ] `PlayerInjured` gagne `hatred: Option<String>`
-- [ ] Le publisher le remplit depuis `Blesse { hatred }`
+- [ ] `PlayerInjured` gagne `hatred_skill_uid: Option<String>`
+- [ ] Le publisher **recopie** `hatred_skill_uid` depuis l'action ; aucun port
+      nouveau, **aucun `format!` de convention nulle part**
 - [ ] `AcquisitionMode::Injury` + branche de projection
 - [ ] Événement domaine de gain, **sans champ de valeur**
 - [ ] `Player::record_hatred` — pas de `Result` : tout est vérifié en amont, et
@@ -104,5 +124,9 @@ cette fonctionnalité, qui n'ont pas encore leurs phases 2 à 7.
   - [ ] trois Haines différentes → cumulées
   - [ ] dépublication → la Haine est défaite avec l'impact du match
   - [ ] action d'un journalier porteur d'une Haine → **aucun app event**
-  - [ ] `PlayerInjured` sans `hatred` → comportement d'avant, inchangé
+  - [ ] `PlayerInjured` sans `hatred_skill_uid` → comportement d'avant, inchangé
+  - [ ] une action portant un `hatred_skill_uid` inconnu du catalogue au moment
+        de la publication → **aucune compétence créée**, une ligne `warn` : la
+        garde du démarrage rend le cas improbable, mais un corpus amputé entre
+        la saisie et la publication ne doit pas produire une compétence vide
 - [ ] `make lint`, `make check-arch`, `make test`

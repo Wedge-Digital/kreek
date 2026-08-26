@@ -30,9 +30,13 @@ s'affichent aujourd'hui avec la couleur du général.
 
 ## Décisions déjà prises
 
-**La mise à plat plutôt qu'une compétence paramétrée.** Trente-huit compétences
-`HAINE_<MOT_CLEF>` en catégorie `TRAITS`, plutôt qu'une compétence unique portant
-un paramètre. Le corpus s'y prête déjà : la catégorie `TRAITS` existe dans
+**La mise à plat plutôt qu'une compétence paramétrée.** Une compétence par
+mot-clef haïssable — **trente**, en catégorie `TRAITS` — plutôt qu'une compétence
+unique portant un paramètre. Les huit mots-clefs de rôle (Blitzer, Bloqueur,
+Receveur, Coureur, Lanceur, Trois-quart, Gros Bras, Spécial) ne se haïssent pas :
+on hait une espèce, pas un poste. Le corpus le dit par
+`league_hate_selectable`, et porte le lien vers la compétence par
+`hate_skill_uid` — **aucune convention de nommage, aucune liste dans le code**. Le corpus s'y prête déjà : la catégorie `TRAITS` existe dans
 `skill_cat_fr.json`, et **elle n'est accessible à aucun poste** — vérifié sur les
 `primaryAccess` et `secondaryAccess` de tout le corpus. Deux conséquences
 gratuites : les Haines n'apparaissent pas dans le sélecteur de compétences, et

@@ -16,7 +16,10 @@ laquelle le permet.
 MatchActionType::Blesse {
     injury: InjuryType,
     #[serde(default)]
-    hatred: Option<HatredKeyword>,
+    hatred: Option<HatredKeyword>,      // ce que le coach a choisi
+    #[serde(default)]
+    hatred_skill_uid: Option<String>,   // arch:ok — la compétence que ce mot-clef
+                                        // désignait au moment du choix
 }
 
 impl InjuryType {
@@ -25,6 +28,21 @@ impl InjuryType {
     pub fn peut_donner_haine(&self) -> bool
 }
 ```
+
+## Deux champs, et ce n'est pas une redondance
+
+Le premier est **le choix** du coach, le second **ce qu'il valait ce jour-là**.
+Le corpus fournit le lien (`hate_skill_uid`, carte 399), le use case l'a déjà en
+main quand il valide le mot-clef — l'action le fige.
+
+**C'est plus juste en event sourcing.** Résoudre plus tard, à la publication,
+ferait dépendre un fait passé de l'état présent du référentiel : un corpus qui
+change de compétence entre la saisie et la publication réécrirait le sens d'une
+action déjà enregistrée.
+
+Le précédent est dans le même type : `MatchAction` porte déjà
+`player_display_name` et `player_position`, marqués `arch:ok texte libre
+dénormalisé (snapshot pour l'historique)`.
 
 ## `#[serde(default)]`, sinon l'historique devient illisible
 
@@ -82,7 +100,8 @@ object qui interrogerait un port cesserait d'être un objet du domaine.
 
 - [ ] `HatredKeyword` avec son charset propre
 - [ ] `InjuryType::peut_donner_haine()`
-- [ ] `Blesse` gagne `hatred` avec `#[serde(default)]`
+- [ ] `Blesse` gagne `hatred` **et** `hatred_skill_uid`, tous deux en
+      `#[serde(default)]`
 - [ ] `DomainError::HatredNotAllowedForInjury`
 - [ ] `record_action` rend un `Result` ; le use case propage
 - [ ] Tests unitaires :
@@ -93,6 +112,6 @@ object qui interrogerait un port cesserait d'être un objet du domaine.
         toute blessure légère passerait les deux précédents
   - [ ] les six autres actions inchangées
   - [ ] `peut_donner_haine` sur `Sequel`, quelle que soit la stat
-  - [ ] une action historique sans `hatred` se désérialise
+  - [ ] une action historique sans `hatred` ni `hatred_skill_uid` se désérialise
   - [ ] `HatredKeyword` : `DARK_ELF` accepté, `dark elf` et vide refusés
 - [ ] `make lint`, `make check-arch`, `make test`
