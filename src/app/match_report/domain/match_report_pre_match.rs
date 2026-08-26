@@ -54,6 +54,7 @@ impl MatchReportPreMatch {
             reason,
             home_team_id: Some(self.home_team_id),
             away_team_id: Some(self.away_team_id),
+            pairing_id: self.pairing_id,
         }
     }
 

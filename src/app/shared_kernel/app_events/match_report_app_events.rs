@@ -11,7 +11,22 @@ pub enum MatchReportAppEvent {
         home_team_id: String,
         away_team_id: String,
         space_id: String,
+        /// `None` pour un rapport **manuel** — créé hors calendrier, sans
+        /// appariement préalable.
         pairing_id: Option<String>,
+        /// Les deux identifiants dont `competitions` a besoin pour fabriquer
+        /// l'appariement manquant d'un rapport manuel : `round_id` pour le
+        /// chercher puis l'y rattacher, `season_id` pour sa ligne d'affichage.
+        ///
+        /// L'agrégat les connaît, ils manquaient simplement à l'événement — ce
+        /// qui condamnait le listener de confirmation à abandonner en silence
+        /// (carte 427). L'app event n'étant pas persisté, les ajouter ne demande
+        /// ni `serde(default)` ni migration.
+        season_id: String,
+        round_id: String,
+        /// Porté pour le même motif : l'événement domaine `PairingCreated` que
+        /// `competitions` émettra en fabriquant l'appariement l'exige.
+        competition_id: String,
     },
     /// Le rapport est annulé — son pairing a été supprimé. Les BCs qui avaient
     /// réagi à `MatchReportConfirmed` doivent défaire leur réaction.
@@ -20,6 +35,11 @@ pub enum MatchReportAppEvent {
         match_report_id: String,
         home_team_id: String,
         away_team_id: String,
+        /// L'appariement d'origine, ou `None` pour un rapport manuel.
+        /// `competitions` s'en sert pour savoir s'il défait une rencontre du
+        /// calendrier ou s'il supprime un appariement né pour ce seul rapport.
+        #[serde(default)]
+        pairing_id: Option<String>,
     },
     MatchReportPublished(MatchReportPublishedPayload),
     /// Le rapport repasse en état corrigeable : les BCs qui en avaient tiré des

@@ -1073,6 +1073,7 @@ mod tests {
             reason: "Pairing supprimé".to_string(),
             home_team_id: Some(home_id),
             away_team_id: Some(away_id),
+            pairing_id: None,
         }
     }
 

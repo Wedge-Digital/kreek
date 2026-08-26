@@ -4,6 +4,7 @@ use crate::app::competitions::domain::match_day_repository_port::IMatchDayReposi
 use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
 use crate::app::competitions::io::app_events::app_event_publisher::competitions_app_event_publisher;
 use crate::app::competitions::io::app_events::competition_ready_listener;
+use crate::app::competitions::io::app_events::match_report_cancelled_listener;
 use crate::app::competitions::io::app_events::match_report_confirmed_listener;
 use crate::app::competitions::io::app_events::match_report_published_listener;
 use crate::app::competitions::io::app_events::match_report_unpublished_listener;
@@ -48,7 +49,21 @@ pub fn init_listeners(
     match_day_repository: Arc<dyn IMatchDayRepository>,
     team_info_port: Arc<dyn ITeamInfoPort>,
 ) {
-    match_report_confirmed_listener::init(&app_event_bus, pool.clone());
+    // Le listener de confirmation reçoit le dépôt de journées et le port
+    // équipes depuis la carte 427 : il fabrique désormais l'appariement d'un
+    // rapport manuel, comme le fait celui de publication.
+    match_report_confirmed_listener::init(
+        &app_event_bus,
+        event_bus.clone(),
+        pool.clone(),
+        match_day_repository.clone(),
+        team_info_port.clone(),
+    );
+    match_report_cancelled_listener::init(
+        &app_event_bus,
+        pool.clone(),
+        match_day_repository.clone(),
+    );
     user_unsubscribed_listener::init(&app_event_bus, pool.clone());
     match_report_unpublished_listener::init(&app_event_bus, pool.clone());
     match_report_published_listener::init(

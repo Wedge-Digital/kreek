@@ -641,6 +641,7 @@ mod tests {
             reason: "Pairing supprimé".to_string(),
             home_team_id: Some(TeamId::new()),
             away_team_id: Some(TeamId::new()),
+            pairing_id: None,
         };
         repo.append(&mr_id, &cancelled, 1).await.unwrap();
 

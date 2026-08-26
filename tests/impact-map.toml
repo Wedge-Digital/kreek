@@ -118,6 +118,10 @@
 # traverse un match complet, plus `players` dont il vérifie qu'il ne bouge pas.
 "test_haine_journalier" = ["match_report", "players", "references", "teams",
                            "competitions", "team_creation", "ranking", "spaces"]
+# Traverse le bus d'app events de `match_report` vers `competitions` : la
+# confirmation d'un rapport manuel doit y fabriquer un appariement.
+"test_rapport_manuel_visible" = ["match_report", "competitions", "teams",
+                                 "team_creation", "references", "ranking", "spaces"]
 # N'affiche que deux pages, mais les mots-clefs viennent du corpus et les
 # libellés de l'adapter : `references` et `players` suffisent, plus ce qu'il
 # faut pour qu'une équipe et ses joueurs existent.

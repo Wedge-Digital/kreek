@@ -171,8 +171,11 @@ migration:
 	@test -n "$(desc)" || (echo "Usage : make migration desc=<description>"; exit 1)
 	DATABASE_URL="$(DATABASE_URL)" sqlx migrate add $(desc)
 
+# `--all-targets` : `make lint` lance `cargo clippy --tests`, donc les requêtes
+# écrites dans un module de test doivent être au cache elles aussi. Sans lui, la
+# cible ne peut pas satisfaire le lint qu'elle sert — constaté carte 427.
 prepare_db:
-	DATABASE_URL="$(DATABASE_URL)" cargo sqlx prepare
+	DATABASE_URL="$(DATABASE_URL)" cargo sqlx prepare -- --all-targets
 
 reset_db:
 	$(call refuser_si_distant,$(DATABASE_URL))

@@ -85,9 +85,9 @@ pub async fn execute(
     let away_id = draft.away_team_id.to_string();
     let pairing_id = draft.pairing_id.clone();
 
-    let (_pre_match, confirm_event) = draft.confirm_selection(cmd.confirmed_by);
+    let (pre_match, confirm_event) = draft.confirm_selection(cmd.confirmed_by);
 
-    repo.append(&mr_id_str, &confirm_event, _pre_match.version - 1)
+    repo.append(&mr_id_str, &confirm_event, pre_match.version - 1)
         .await
         .map_err(|e| UpdateMatchSelectionError::Repository(e.to_string()))?;
 
@@ -105,6 +105,9 @@ pub async fn execute(
             away_team_id: away_id,
             space_id,
             pairing_id,
+            season_id: pre_match.season_id.to_string(),
+            round_id: pre_match.round_id.to_string(),
+            competition_id: pre_match.competition_id.to_string(),
         }
         .to_enveloppe(),
     );

@@ -57,6 +57,19 @@ pub enum MatchReportDomainEvent {
         home_team_id: Option<TeamId>,
         #[serde(default)]
         away_team_id: Option<TeamId>,
+        /// L'appariement que le rapport portait **à sa création**, ou `None`
+        /// s'il a été saisi hors calendrier.
+        ///
+        /// C'est ce qui permet à `competitions` de distinguer les deux cas à
+        /// l'annulation : une rencontre programmée reste au calendrier et sa
+        /// ligne repasse en « à venir », tandis que l'appariement fabriqué pour
+        /// un rapport manuel n'existait que pour lui et s'en va avec lui
+        /// (carte 427).
+        ///
+        /// `None` aussi sur les événements persistés avant ce champ — ils
+        /// venaient d'un brouillon, sans appariement à ménager.
+        #[serde(default)]
+        pairing_id: Option<String>,
     },
     TeamValuesRecorded {
         home_team_value: TeamValue,

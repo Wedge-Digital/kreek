@@ -110,6 +110,9 @@ async fn confirm_draft(
             away_team_id: away_id,
             space_id,
             pairing_id: pre_match.pairing_id.clone(),
+            season_id: pre_match.season_id.to_string(),
+            round_id: pre_match.round_id.to_string(),
+            competition_id: pre_match.competition_id.to_string(),
         }
         .to_enveloppe(),
     );

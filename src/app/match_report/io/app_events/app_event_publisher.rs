@@ -115,8 +115,15 @@ async fn aiguiller(
         MatchReportDomainEvent::MatchReportCancelled {
             home_team_id,
             away_team_id,
+            pairing_id,
             ..
-        } => handle_cancelled(match_report_id, home_team_id, away_team_id, app_event_bus),
+        } => handle_cancelled(
+            match_report_id,
+            home_team_id,
+            away_team_id,
+            pairing_id.clone(),
+            app_event_bus,
+        ),
         _ => {}
     }
 }
@@ -132,6 +139,7 @@ fn handle_cancelled(
     match_report_id: &str,
     home_team_id: Option<TeamId>,
     away_team_id: Option<TeamId>,
+    pairing_id: Option<String>,
     app_event_bus: &EventBus,
 ) {
     let (Some(home), Some(away)) = (home_team_id, away_team_id) else {
@@ -149,6 +157,7 @@ fn handle_cancelled(
             match_report_id: match_report_id.to_string(),
             home_team_id: home.to_string(),
             away_team_id: away.to_string(),
+            pairing_id,
         }
         .to_enveloppe(),
     );
