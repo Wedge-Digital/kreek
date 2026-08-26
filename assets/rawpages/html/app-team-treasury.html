@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trésorerie — Les Korrigans FC</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ── Repris tel quel de app-team-detail.html ─────────────────────── */
+    .team-page { max-width: 1400px; margin: 0 auto; }
+    .team-header {
+      background: var(--white); border-radius: 10px 10px 0 0; padding: var(--p2);
+      display: flex; align-items: flex-start; gap: var(--p3);
+      border-bottom: 2px solid var(--dark-5);
+    }
+    .team-header-logo {
+      width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, #003049, #555770);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: 36px; color: var(--white);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .team-header-info { flex: 1; display: flex; flex-direction: column; gap: var(--p1); }
+    .team-header-name { font-family: var(--font-title); font-size: var(--h2); font-weight: 800; color: var(--dark-0); }
+    .team-header-top  { display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap; }
+    .team-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
+    .meta-item   { display: flex; flex-direction: column; gap: 2px; }
+    .meta-label  { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-value  { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+    .team-status-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 20px;
+      font-size: var(--text-tiny); font-weight: 700; white-space: nowrap;
+      background: rgba(98,149,132,0.15); color: var(--green);
+    }
+    .team-status-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .tabs { display: flex; gap: 2px; }
+    .tab {
+      padding: 12px var(--p2); font-size: var(--text-small); font-weight: 600;
+      color: var(--dark-3); cursor: pointer; border-bottom: 3px solid transparent;
+    }
+    .tab.active { color: var(--main-blue); border-bottom-color: var(--main-blue); }
+
+    /* ── Trésorerie ──────────────────────────────────────────────────── */
+    .treasury { background: var(--white); border-radius: 0 0 10px 10px; padding: var(--p2); }
+
+    /* Bandeau de synthèse — l'équation du solde, lue de gauche à droite */
+    .tr-summary {
+      display: flex; align-items: stretch; flex-wrap: wrap;
+      gap: var(--p2); padding-bottom: var(--p2);
+      border-bottom: 1px solid var(--dark-5); margin-bottom: var(--p2);
+    }
+    .tr-balance { display: flex; flex-direction: column; gap: 4px; padding-right: var(--p2); }
+    .tr-balance-label {
+      font-size: var(--text-tiny); color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
+    }
+    .tr-balance-value {
+      font-family: var(--font-title); font-size: 42px; font-weight: 800;
+      color: var(--main-blue); line-height: 1;
+    }
+    .tr-balance-unit { font-size: var(--text-small); font-weight: 600; color: var(--dark-3); margin-left: 4px; }
+
+    /* L'équation : dotation + encaissé − dépensé = solde */
+    .tr-equation { display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap; }
+    .tr-term { display: flex; flex-direction: column; gap: 2px; min-width: 96px; }
+    .tr-term-label { font-size: var(--text-tiny); color: var(--dark-3); }
+    .tr-term-value { font-size: var(--text-small); font-weight: 700; color: var(--dark-1); white-space: nowrap; }
+    .tr-term-value.credit { color: var(--green); }
+    .tr-term-value.debit  { color: var(--dark-1); }
+    .tr-op { font-size: var(--text-medium); color: var(--dark-4); font-weight: 300; line-height: 1; }
+
+    /* Relevé */
+    .tr-statement-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: var(--p1); margin-bottom: var(--p1); flex-wrap: wrap;
+    }
+    .tr-statement-title {
+      font-size: var(--text-small); font-weight: 700; color: var(--dark-2);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .tr-statement-hint { font-size: var(--text-tiny); color: var(--dark-3); }
+
+    .tr-table-wrap { overflow-x: auto; }
+    .tr-table { width: 100%; border-collapse: collapse; font-size: var(--text-small); }
+    .tr-table th {
+      text-align: left; padding: 8px var(--p1); font-size: var(--text-tiny);
+      color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px;
+      font-weight: 600; border-bottom: 1px solid var(--dark-5); white-space: nowrap;
+    }
+    .tr-table th.num, .tr-table td.num { text-align: right; }
+    .tr-table td { padding: 12px var(--p1); border-bottom: 1px solid var(--dark-6); vertical-align: top; }
+    .tr-table tbody tr:hover { background: var(--dark-7); }
+
+    .tr-date { color: var(--dark-3); font-size: var(--text-tiny); white-space: nowrap; }
+
+    .tr-movement { display: flex; align-items: flex-start; gap: 10px; }
+    .tr-icon {
+      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 15px;
+      background: var(--dark-6);
+    }
+    .tr-icon--credit  { background: rgba(98,149,132,0.15); }
+    .tr-icon--debit   { background: rgba(0,48,73,0.07); }
+    .tr-icon--fix     { background: rgba(255,107,53,0.12); }
+    .tr-label { font-weight: 600; color: var(--dark-1); }
+    .tr-detail { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; }
+
+    .tr-amount { font-weight: 700; white-space: nowrap; }
+    .tr-amount.credit { color: var(--green); }
+    .tr-amount.debit  { color: var(--dark-1); }
+    .tr-running { color: var(--dark-2); font-weight: 600; white-space: nowrap; }
+
+    /* Une correction n'est pas un mouvement ordinaire : elle défait le précédent */
+    .tr-row--fix td { background: rgba(255,107,53,0.03); }
+    .tr-badge-fix {
+      display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 10px;
+      background: rgba(255,107,53,0.15); color: #9A5000;
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+      vertical-align: 2px;
+    }
+
+    /* La dotation ouvre le relevé : c'est le point de départ, pas un mouvement */
+    .tr-row--origin td { background: var(--dark-7); }
+    .tr-row--origin .tr-label { color: var(--main-blue); }
+
+    /* Séparateur de journée */
+    .tr-row--sep td {
+      padding: 6px var(--p1); background: var(--white);
+      border-bottom: 1px solid var(--dark-5);
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    /* État vide — une équipe qui vient d'être créée */
+    .tr-empty { padding: var(--p3) var(--p2); text-align: center; }
+    .tr-empty-icon  { font-size: 40px; opacity: 0.35; }
+    .tr-empty-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-2); margin-top: var(--p1); }
+    .tr-empty-text  { font-size: var(--text-small); color: var(--dark-3); margin-top: 6px; max-width: 460px; margin-left: auto; margin-right: auto; }
+
+    /* Sélecteur de démonstration — outil de maquette, n'existe pas en prod */
+    .demo-switcher {
+      display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap;
+      background: var(--dark-7); border: 1px dashed var(--dark-4);
+      border-radius: 8px; padding: 10px var(--p1); margin-bottom: var(--p1);
+    }
+    .demo-switcher-label { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; }
+    .state-pill {
+      padding: 5px 12px; border-radius: 14px; border: 1px solid var(--dark-4);
+      background: var(--white); color: var(--dark-2);
+      font-size: var(--text-tiny); font-weight: 600; cursor: pointer;
+    }
+    .state-pill.active { background: var(--main-blue); color: var(--white); border-color: var(--main-blue); }
+
+    @media (max-width: 768px) {
+      .team-header { flex-direction: column; align-items: center; text-align: center; }
+      .team-header-meta { justify-content: center; }
+      .tr-summary { flex-direction: column; gap: var(--p1); }
+      .tr-balance { padding-right: 0; }
+      .tr-balance-value { font-size: 34px; }
+      /* La colonne « solde après » disparaît avant les montants : le solde
+         courant reste lisible dans le bandeau, le détail du mouvement non. */
+      .tr-table th:nth-child(4), .tr-table td:nth-child(4) { display: none; }
+      .tabs { overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active">Équipes</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+
+        <!-- Sélecteur de démonstration — outil de maquette, n'existe pas en prod -->
+        <div class="demo-switcher">
+          <span class="demo-switcher-label">Aperçu maquette :</span>
+          <button class="state-pill active" data-state="loaded" onclick="setState('loaded')">Équipe en cours de saison</button>
+          <button class="state-pill" data-state="empty" onclick="setState('empty')">Équipe qui vient d'être créée</button>
+        </div>
+
+        <div style="margin-bottom: var(--p1);">
+          <a href="app-team-detail.html" style="color: var(--dark-3); font-size: var(--text-tiny);">← Les Korrigans FC</a>
+        </div>
+
+        <div class="team-page">
+
+          <!-- En-tête — repris de app-team-detail.html -->
+          <div class="team-header">
+            <div class="team-header-logo">KF</div>
+            <div class="team-header-info">
+              <div class="team-header-top">
+                <div class="team-header-name">Les Korrigans FC</div>
+                <span class="team-status-badge">Prête à jouer</span>
+              </div>
+              <div class="team-header-meta">
+                <div class="meta-item">
+                  <div class="meta-label">Roster</div>
+                  <div class="meta-value">Elfes Sylvestres</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Coach</div>
+                  <div class="meta-value">Colonel Castor</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Ligue</div>
+                  <div class="meta-value">Ligue de Condate</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Valeur d'équipe</div>
+                  <div class="meta-value">873 kPo</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Trésorerie</div>
+                  <div class="meta-value" id="hdr-balance">85 kPo</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Onglets -->
+          <div class="tabs" style="background: var(--white); padding: 0 var(--p2); border-bottom: 1px solid var(--dark-5);">
+            <div class="tab">Joueurs &amp; Staff</div>
+            <div class="tab">Matchs</div>
+            <div class="tab active">Trésorerie</div>
+          </div>
+
+          <div class="treasury">
+
+            <!-- ══ État chargé ══════════════════════════════════════════ -->
+            <div id="state-loaded">
+
+              <!-- Synthèse : l'équation qui explique le solde -->
+              <div class="tr-summary">
+                <div class="tr-balance">
+                  <div class="tr-balance-label">Solde</div>
+                  <div class="tr-balance-value">85<span class="tr-balance-unit">kPo</span></div>
+                </div>
+                <div class="tr-equation">
+                  <div class="tr-term">
+                    <div class="tr-term-label">Dotation de départ</div>
+                    <div class="tr-term-value">510 kPo</div>
+                  </div>
+                  <div class="tr-op">+</div>
+                  <div class="tr-term">
+                    <div class="tr-term-label">Encaissé</div>
+                    <div class="tr-term-value credit">125 kPo</div>
+                  </div>
+                  <div class="tr-op">−</div>
+                  <div class="tr-term">
+                    <div class="tr-term-label">Dépensé</div>
+                    <div class="tr-term-value debit">550 kPo</div>
+                  </div>
+                  <div class="tr-op">=</div>
+                  <div class="tr-term">
+                    <div class="tr-term-label">Solde</div>
+                    <div class="tr-term-value">85 kPo</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tr-statement-head">
+                <div class="tr-statement-title">Relevé des mouvements</div>
+                <div class="tr-statement-hint">Du plus ancien au plus récent — 11 mouvements</div>
+              </div>
+
+              <div class="tr-table-wrap">
+                <table class="tr-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Mouvement</th>
+                      <th class="num">Montant</th>
+                      <th class="num">Solde après</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+
+                    <tr class="tr-row--origin">
+                      <td class="tr-date">12 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon">🏁</div>
+                          <div>
+                            <div class="tr-label">Dotation de départ</div>
+                            <div class="tr-detail">Création de l'équipe</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount credit">+510 kPo</span></td>
+                      <td class="num"><span class="tr-running">510 kPo</span></td>
+                    </tr>
+
+                    <tr class="tr-row--sep"><td colspan="4">Journée 1 — contre les Trolls du Bief</td></tr>
+
+                    <tr>
+                      <td class="tr-date">12 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--debit">🎯</div>
+                          <div>
+                            <div class="tr-label">Coups de pouce</div>
+                            <div class="tr-detail">Apothicaire itinérant · Chef cuisinier</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount debit">−100 kPo</span></td>
+                      <td class="num"><span class="tr-running">410 kPo</span></td>
+                    </tr>
+
+                    <tr>
+                      <td class="tr-date">14 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--credit">💰</div>
+                          <div>
+                            <div class="tr-label">Recette d'après-match</div>
+                            <div class="tr-detail">Victoire 2–1 · 15 000 spectateurs</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount credit">+60 kPo</span></td>
+                      <td class="num"><span class="tr-running">470 kPo</span></td>
+                    </tr>
+
+                    <tr>
+                      <td class="tr-date">14 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--debit">🧍</div>
+                          <div>
+                            <div class="tr-label">Recrutement</div>
+                            <div class="tr-detail">Gwenn, Passeuse — n° 7</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount debit">−90 kPo</span></td>
+                      <td class="num"><span class="tr-running">380 kPo</span></td>
+                    </tr>
+
+                    <tr>
+                      <td class="tr-date">14 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--debit">🧢</div>
+                          <div>
+                            <div class="tr-label">Personnel</div>
+                            <div class="tr-detail">Apothicaire</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount debit">−120 kPo</span></td>
+                      <td class="num"><span class="tr-running">260 kPo</span></td>
+                    </tr>
+
+                    <tr class="tr-row--sep"><td colspan="4">Journée 2 — contre les Griffons d'Argent</td></tr>
+
+                    <tr>
+                      <td class="tr-date">19 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--debit">🎯</div>
+                          <div>
+                            <div class="tr-label">Coups de pouce</div>
+                            <div class="tr-detail">Sorcier</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount debit">−15 kPo</span></td>
+                      <td class="num"><span class="tr-running">245 kPo</span></td>
+                    </tr>
+
+                    <tr>
+                      <td class="tr-date">21 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--credit">💰</div>
+                          <div>
+                            <div class="tr-label">Recette d'après-match</div>
+                            <div class="tr-detail">Défaite 0–3 · 11 000 spectateurs</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount credit">+35 kPo</span></td>
+                      <td class="num"><span class="tr-running">280 kPo</span></td>
+                    </tr>
+
+                    <tr class="tr-row--fix">
+                      <td class="tr-date">21 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--fix">↩️</div>
+                          <div>
+                            <div class="tr-label">Recette annulée<span class="tr-badge-fix">Correction</span></div>
+                            <div class="tr-detail">Le rapport de la journée 2 a été corrigé — la recette précédente est reprise</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount debit">−35 kPo</span></td>
+                      <td class="num"><span class="tr-running">245 kPo</span></td>
+                    </tr>
+
+                    <tr class="tr-row--fix">
+                      <td class="tr-date">21 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--fix">↩️</div>
+                          <div>
+                            <div class="tr-label">Coups de pouce remboursés<span class="tr-badge-fix">Correction</span></div>
+                            <div class="tr-detail">Rendus avec l'annulation du rapport — Sorcier</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount credit">+15 kPo</span></td>
+                      <td class="num"><span class="tr-running">260 kPo</span></td>
+                    </tr>
+
+                    <tr>
+                      <td class="tr-date">22 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--credit">💰</div>
+                          <div>
+                            <div class="tr-label">Recette d'après-match</div>
+                            <div class="tr-detail">Défaite 0–3 · 11 000 spectateurs · rapport corrigé</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount credit">+30 kPo</span></td>
+                      <td class="num"><span class="tr-running">290 kPo</span></td>
+                    </tr>
+
+                    <tr>
+                      <td class="tr-date">22 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--fix">💸</div>
+                          <div>
+                            <div class="tr-label">Bourde coûteuse</div>
+                            <div class="tr-detail">Jet de 3 — « Fraude fiscale »</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount debit">−205 kPo</span></td>
+                      <td class="num"><span class="tr-running">85 kPo</span></td>
+                    </tr>
+
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- ══ État vide — équipe créée, rien de dépensé ═══════════ -->
+            <div id="state-empty" style="display: none;">
+              <div class="tr-summary">
+                <div class="tr-balance">
+                  <div class="tr-balance-label">Solde</div>
+                  <div class="tr-balance-value">510<span class="tr-balance-unit">kPo</span></div>
+                </div>
+                <div class="tr-equation">
+                  <div class="tr-term">
+                    <div class="tr-term-label">Dotation de départ</div>
+                    <div class="tr-term-value">510 kPo</div>
+                  </div>
+                  <div class="tr-op">+</div>
+                  <div class="tr-term">
+                    <div class="tr-term-label">Encaissé</div>
+                    <div class="tr-term-value credit">0 kPo</div>
+                  </div>
+                  <div class="tr-op">−</div>
+                  <div class="tr-term">
+                    <div class="tr-term-label">Dépensé</div>
+                    <div class="tr-term-value debit">0 kPo</div>
+                  </div>
+                  <div class="tr-op">=</div>
+                  <div class="tr-term">
+                    <div class="tr-term-label">Solde</div>
+                    <div class="tr-term-value">510 kPo</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tr-empty">
+                <div class="tr-empty-icon">🏦</div>
+                <div class="tr-empty-title">Aucun mouvement pour l'instant</div>
+                <div class="tr-empty-text">
+                  L'équipe n'a encore rien encaissé ni dépensé. Son premier match et ses
+                  premiers recrutements apparaîtront ici, à la suite de la dotation de départ.
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /treasury -->
+        </div><!-- /team-page -->
+      </div><!-- /page-content -->
+    </div><!-- /main-area -->
+  </div><!-- /app-layout -->
+
+<script>
+/* Comportement de maquette : bascule entre les deux états. */
+function setState(name) {
+  document.getElementById('state-loaded').style.display = (name === 'loaded') ? '' : 'none';
+  document.getElementById('state-empty').style.display  = (name === 'empty')  ? '' : 'none';
+  document.getElementById('hdr-balance').textContent = (name === 'loaded') ? '85 kPo' : '510 kPo';
+  document.querySelectorAll('.state-pill').forEach(function (p) {
+    p.classList.toggle('active', p.dataset.state === name);
+  });
+}
+</script>
+</body>
+</html>
