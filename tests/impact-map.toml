@@ -122,6 +122,10 @@
 # confirmation d'un rapport manuel doit y fabriquer un appariement.
 "test_rapport_manuel_visible" = ["match_report", "competitions", "teams",
                                  "team_creation", "references", "ranking", "spaces"]
+# L'annulation libère le verrou de `teams` et défait la ligne de `competitions`,
+# par le bus d'app events.
+"test_annuler_un_rapport" = ["match_report", "competitions", "teams",
+                             "team_creation", "references", "ranking", "spaces"]
 # N'affiche que deux pages, mais les mots-clefs viennent du corpus et les
 # libellés de l'adapter : `references` et `players` suffisent, plus ce qu'il
 # faut pour qu'une équipe et ses joueurs existent.

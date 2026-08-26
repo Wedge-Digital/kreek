@@ -15,6 +15,9 @@ use crate::app::match_report::io::web::view_models::{
 use crate::app::match_report::ports::TeamInfoDto;
 use crate::app::match_report::ports::{ICompetitionDataPort, ISpaceAdminPort, ITeamDataPort};
 use crate::app::match_report::use_cases::correction_eligibility_service;
+use crate::app::match_report::use_cases::match_report_access_service::{
+    is_authorized, AccesRapportDeps, PorteeRapport,
+};
 use crate::app::match_report::use_cases::publish_match_report_use_case::{
     self, PublishMatchReportCommand, PublishMatchReportError,
 };
@@ -164,8 +167,15 @@ pub async fn get_recap(
         MatchReportState::Cancelled(_) => return StatusCode::GONE.into_response(),
     };
 
-    let scope = RecapScope::from_source(&source);
-    if !is_authorized(&RecapAuthDeps::from_state(&state), &user, &space_id, &scope).await {
+    let scope = PorteeRapport::from_source(&source);
+    if !is_authorized(
+        &AccesRapportDeps::from_state(&state),
+        &user,
+        &space_id,
+        &scope,
+    )
+    .await
+    {
         return StatusCode::FORBIDDEN.into_response();
     }
 
@@ -179,31 +189,10 @@ pub async fn get_recap(
 /// Dépendances du contrôle d'accès : les trois ports réellement consultés,
 /// plutôt que `AppState` entier. C'est ce qui rend la règle testable — `AppState`
 /// n'est pas constructible en test unitaire.
-struct RecapAuthDeps<'a> {
-    space_admin: &'a dyn ISpaceAdminPort,
-    competition_data: &'a dyn ICompetitionDataPort,
-    team_data: &'a dyn ITeamDataPort,
-}
-
-impl<'a> RecapAuthDeps<'a> {
-    fn from_state(state: &'a AppState) -> Self {
-        Self {
-            space_admin: state.match_report.space_admin.as_ref(),
-            competition_data: state.match_report.competition_data.as_ref(),
-            team_data: state.match_report.team_data.as_ref(),
-        }
-    }
-}
 
 /// Ce sur quoi porte l'autorisation. Extrait de `RecapSource`, qui emprunte les
-/// actions du match et serait pénible à fabriquer en test.
-struct RecapScope {
-    competition_id: String,
-    home_team_id: String,
-    away_team_id: String,
-}
 
-impl RecapScope {
+impl PorteeRapport {
     fn from_source(source: &RecapSource<'_>) -> Self {
         Self {
             competition_id: source.competition_id.clone(),
@@ -228,50 +217,6 @@ impl RecapScope {
             MatchReportState::Cancelled(_) => Err(StatusCode::GONE),
         }
     }
-}
-
-/// Autorisé si l'utilisateur est admin d'espace, admin de la compétition du
-/// rapport, ou coach de l'une des deux équipes concernées.
-async fn is_authorized(
-    deps: &RecapAuthDeps<'_>,
-    user: &User,
-    space_id: &str,
-    scope: &RecapScope,
-) -> bool {
-    let user_id = user.id.to_string();
-    if deps.space_admin.is_space_admin(&user_id, space_id).await {
-        return true;
-    }
-    if is_competition_admin(deps, &scope.competition_id, &user_id).await {
-        return true;
-    }
-    is_coach_of_either_team(deps, scope, &user_id).await
-}
-
-async fn is_competition_admin(
-    deps: &RecapAuthDeps<'_>,
-    competition_id: &str,
-    user_id: &str,
-) -> bool {
-    deps.competition_data
-        .is_competition_admin(competition_id, user_id)
-        .await
-        .unwrap_or(false)
-}
-
-/// Une erreur de port vaut « pas coach » : un contrôle d'accès échoue fermé.
-async fn is_coach_of_either_team(
-    deps: &RecapAuthDeps<'_>,
-    scope: &RecapScope,
-    user_id: &str,
-) -> bool {
-    let (home, away) = tokio::join!(
-        deps.team_data
-            .is_coach_of_team(&scope.home_team_id, user_id),
-        deps.team_data
-            .is_coach_of_team(&scope.away_team_id, user_id),
-    );
-    home.unwrap_or(false) || away.unwrap_or(false)
 }
 
 async fn build_recap_template(
@@ -461,7 +406,7 @@ async fn authorize_recap_action(
     match_report_id: &str,
 ) -> Result<(), StatusCode> {
     let scope = load_recap_scope(state, match_report_id).await?;
-    match is_authorized(&RecapAuthDeps::from_state(state), user, space_id, &scope).await {
+    match is_authorized(&AccesRapportDeps::from_state(state), user, space_id, &scope).await {
         true => Ok(()),
         false => Err(StatusCode::FORBIDDEN),
     }
@@ -470,7 +415,7 @@ async fn authorize_recap_action(
 async fn load_recap_scope(
     state: &AppState,
     match_report_id: &str,
-) -> Result<RecapScope, StatusCode> {
+) -> Result<PorteeRapport, StatusCode> {
     let mr_state = state
         .match_report
         .match_report_repo
@@ -481,7 +426,7 @@ async fn load_recap_scope(
             StatusCode::INTERNAL_SERVER_ERROR
         })?
         .ok_or(StatusCode::NOT_FOUND)?;
-    RecapScope::from_report_state(&mr_state)
+    PorteeRapport::from_report_state(&mr_state)
 }
 
 async fn execute_publish(
@@ -661,8 +606,8 @@ mod authorization_tests {
         )
     }
 
-    fn scope() -> RecapScope {
-        RecapScope {
+    fn scope() -> PorteeRapport {
+        PorteeRapport {
             competition_id: "comp-1".to_string(),
             home_team_id: HOME.to_string(),
             away_team_id: AWAY.to_string(),
@@ -676,7 +621,7 @@ mod authorization_tests {
     ) -> bool {
         let space_admin = FakeSpaceAdmin(space_admin);
         let competition_data = FakeCompetitionData(comp_admin);
-        let deps = RecapAuthDeps {
+        let deps = AccesRapportDeps {
             space_admin: &space_admin,
             competition_data: &competition_data,
             team_data: &team_data,

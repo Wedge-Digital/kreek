@@ -1,4 +1,5 @@
 use crate::app::match_report::io::web::actions_step_controller::{get_step3, get_step4};
+use crate::app::match_report::io::web::cancel_match_report_controller::post_cancel_match_report;
 use crate::app::match_report::io::web::inducements_controller::{
     get_inducements, post_inducements,
 };
@@ -55,6 +56,10 @@ pub fn router() -> Router<AppState> {
         .route(path::MATCH_REPORT_STEP3, get(get_step3))
         .route(path::MATCH_REPORT_STEP4, get(get_step4))
         .route(path::MATCH_REPORT_STEP5, get(get_step5).post(post_step5))
+        .route(
+            path::MATCH_REPORT_CANCEL,
+            axum::routing::post(post_cancel_match_report),
+        )
         .route(
             path::MATCH_REPORT_STEP3_TURN_SELECTOR,
             get(get_turn_selector_step3),

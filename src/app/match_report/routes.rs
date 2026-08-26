@@ -8,6 +8,7 @@ pub mod path {
     pub const MATCH_REPORT_STEP3: &str = "/app/{space_id}/match-report/{match_report_id}/step3";
     pub const MATCH_REPORT_STEP4: &str = "/app/{space_id}/match-report/{match_report_id}/step4";
     pub const MATCH_REPORT_STEP5: &str = "/app/{space_id}/match-report/{match_report_id}/step5";
+    pub const MATCH_REPORT_CANCEL: &str = "/app/{space_id}/match-report/{match_report_id}/cancel";
     pub const MATCH_REPORT_STEP3_TURN_SELECTOR: &str =
         "/app/{space_id}/match-report/{match_report_id}/step3/turn-selector";
     pub const MATCH_REPORT_STEP4_TURN_SELECTOR: &str =
@@ -84,6 +85,11 @@ impl Routes {
             .replace("{match_report_id}", match_report_id)
     }
 
+    pub fn cancel_match_report(&self, space_id: &str, match_report_id: &str) -> String {
+        path::MATCH_REPORT_CANCEL
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+    }
     pub fn step5(&self, space_id: &str, match_report_id: &str) -> String {
         path::MATCH_REPORT_STEP5
             .replace("{space_id}", space_id)

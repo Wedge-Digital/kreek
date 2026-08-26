@@ -467,3 +467,26 @@
 }
 
 .mr-log-hate { color: var(--dark-2); font-style: italic; }
+
+/* ── Annuler le rapport (carte 433) ────────────────────────────────────────
+   Discret et à l'écart des actions du match : c'est une sortie, pas une étape.
+   Rouge sourd plutôt que plein — le bouton ne doit pas attirer le clic. */
+.mr-cancel-report {
+  margin-top: var(--p3);
+  padding-top: var(--p2);
+  border-top: 1px dashed var(--dark-5);
+  text-align: center;
+}
+.mr-cancel-btn {
+  background: none;
+  border: 1px solid var(--dark-5);
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  cursor: pointer;
+}
+.mr-cancel-btn:hover {
+  border-color: var(--red);
+  color: var(--red);
+}

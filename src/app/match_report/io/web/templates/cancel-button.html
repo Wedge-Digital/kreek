@@ -1,0 +1,17 @@
+{# Abandonner un rapport en cours (carte 433).
+
+   Inclus par les cinq pages d'avant publication : il n'existe pas de bandeau
+   partagé, chaque page étant son propre template. L'inclusion hérite du
+   contexte, d'où l'exigence que la struct porte `space_id` et
+   `match_report_id`.
+
+   « Annuler », jamais « Supprimer » : rien n'est effacé, l'event store garde
+   l'histoire et l'agrégat passe en `Cancelled`. #}
+<div class="mr-cancel-report">
+    <button type="button" class="mr-cancel-btn"
+            hx-post="{{ app_routes.match_report.cancel_match_report(space_id, match_report_id) }}"
+            hx-confirm="Annuler ce rapport de match ? La saisie sera perdue et les deux équipes redeviendront disponibles."
+            hx-swap="none">
+        Annuler le rapport
+    </button>
+</div>
