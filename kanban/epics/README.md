@@ -80,16 +80,6 @@ session brève : `06` (groupement O(n²)), `09` (`Entity::eq` shadowe
 dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 `String::replace`), `254` (message d'erreur JSON trompeur).
 
-**Deux règles de calcul et leur migration** — trois cartes livrées ensemble :
-la première seule laisserait les valeurs d'équipe de production fausses jusqu'au
-déploiement de la troisième, qui porte le recalcul global.
-
-| Carte | Note |
-|---|---|
-| `386-migrations-de-donnees-au-demarrage` | Socle : une correction de données qui a besoin du corpus ne peut pas être du SQL — `REFERENCES__DIR` vit hors du dépôt |
-| `387-les-competences-elite-valent-dix-kpo-de-plus` | Barème de valeur : +10 kPo pour une compétence Élite, achat en SPP comme création |
-| `388-lineman-a-vil-prix` | `LOW_COST_LINEMEN` : le prix des linemen ne compte pas dans la VEA, leurs augmentations si |
-
 **Isolées** :
 
 | Carte | Note |
@@ -106,7 +96,6 @@ déploiement de la troisième, qui porte le recalcul global.
 | `412-la-phase-finale-quitte-la-creation-de-competition` | Un réglage qu'il faut remplir et dont rien ne se sert : aucun appariement de phase finale n'est généré, aucun classement n'en tient compte |
 | `397-sentry-l-alerte-que-le-journal-ne-donne-pas` | E11 a donné de quoi enquêter, pas d'être prévenu : une erreur en production n'existe que si quelqu'un ouvre les journaux et cherche |
 | `395-le-site-en-francais-et-en-anglais` | 144 templates, ~210 libellés en Rust, 11 fichiers de corpus et 51 sélecteurs e2e en français. Deviendra une épic ; la question ouverte est instance par langue ou instance bilingue |
-| `389-modifier-l-effectif-reserve-a-qui-de-droit` | Le bouton d'édition d'effectif s'affiche pour tout visiteur, alors que l'écriture derrière refuse déjà par 403. Un bouton menteur, pas une faille |
 | `385-l-avatar-d-un-coach-n-existe-nulle-part` | Zéro utilisateur sur 864 en a un, aucun écran n'en pose, et le cache écrase la colonne. Trois tables entretiennent l'illusion |
 | `361-reserver-la-place-sur-la-construction-d-equipe` | 1 265 px de saut en desktop, 1 841 en mobile — la plus grosse zone non réservée, hors périmètre de la 343 |
 | `360-bandeau-d-inscription-en-attente-inexistant` | Un test e2e attend une classe qui n'a jamais été rendue. La suite est rouge en permanence |
