@@ -1,5 +1,6 @@
 use crate::app::players::domain::events::PlayerDomainEvent;
 use crate::app::players::domain::player::{AcquisitionMode, Player, PlayerId, TeamId};
+use crate::app::players::io::app_events::team_created_listener::skill_category_css;
 use crate::app::players::ports::{AcquiredSkillProjection, IPlayerRepository, RepositoryError};
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
@@ -29,7 +30,12 @@ fn projeter_skill(
     AcquiredSkillProjection {
         skill_id: s.skill_id.as_ref().to_string(),
         skill_name: s.skill_name.as_ref().to_string(),
-        category_css: String::new(),
+        // Même couleur qu'à l'écriture, sinon une dépublication repeindrait
+        // les Haines survivantes en badge sans classe.
+        category_css: match s.mode {
+            AcquisitionMode::Injury => skill_category_css("TRAITS").to_string(),
+            _ => String::new(),
+        },
         mode: match s.mode {
             AcquisitionMode::Chosen => "Chosen",
             AcquisitionMode::Random => "Random",
@@ -478,7 +484,12 @@ pub async fn upsert_player_projection(
             let acq = AcquiredSkillProjection {
                 skill_id: skill_id.as_ref().to_string(),
                 skill_name: skill_name.as_ref().to_string(),
-                category_css: String::new(),
+                // Constant, et non résolu au catalogue : une Haine est en
+                // catégorie `TRAITS` par construction — la carte 399 les y met
+                // toutes, et c'est ce qui les rend inachetables. Passer par la
+                // table plutôt que d'écrire « type-traits » en dur garde une
+                // seule source pour les couleurs.
+                category_css: skill_category_css("TRAITS").to_string(),
                 mode: "Injury".to_string(),
                 spp_cost: 0,
             };

@@ -45,6 +45,9 @@ pub struct PlayerDetailVm {
     pub name: String,
     pub jersey: Option<i16>,
     pub position_name: String,
+    /// « Elfe, Blitzer ». Vide si le poste n'en porte pas — le template
+    /// n'affiche alors rien, plutôt qu'une ligne vide.
+    pub keywords: String,
     pub ma: u8,
     pub st: u8,
     pub ag: u8,
@@ -413,6 +416,10 @@ fn build_vm(
         name: player.position_name.to_string(),
         jersey: player.jersey.map(|j| j.into_inner() as i16),
         position_name: player.position_name.to_string(),
+        keywords: catalog
+            .find_position(player.roster_line_id.as_ref())
+            .map(|p| p.keywords.join(", "))
+            .unwrap_or_default(),
         ma: stats.ma,
         st: stats.st,
         ag: stats.ag,

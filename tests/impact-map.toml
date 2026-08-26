@@ -118,6 +118,11 @@
 # traverse un match complet, plus `players` dont il vérifie qu'il ne bouge pas.
 "test_haine_journalier" = ["match_report", "players", "references", "teams",
                            "competitions", "team_creation", "ranking", "spaces"]
+# N'affiche que deux pages, mais les mots-clefs viennent du corpus et les
+# libellés de l'adapter : `references` et `players` suffisent, plus ce qu'il
+# faut pour qu'une équipe et ses joueurs existent.
+"test_mots_clefs_et_traits" = ["players", "references", "teams", "team_creation",
+                               "competitions", "spaces"]
 "test_match_report_step5" = ["match_report", "teams", "players", "references",
                              "competitions", "team_creation", "ranking", "spaces"]
 

@@ -192,6 +192,10 @@ pub struct PositionCatalogEntryDto {
     pub base_skills: Vec<String>,
     pub primary_categories: Vec<String>,
     pub secondary_categories: Vec<String>,
+    /// Les mots-clefs du poste, en **libellés** déjà résolus — « Elfe »,
+    /// « Blitzer », et non `ELF`, `BLITZER`. La résolution appartient à
+    /// l'adapter, qui tient le corpus ; l'affichage n'a plus qu'à les joindre.
+    pub keywords: Vec<String>,
 }
 
 /// Coûts en SPP pour un niveau de la matrice, déjà résolus pour le statut

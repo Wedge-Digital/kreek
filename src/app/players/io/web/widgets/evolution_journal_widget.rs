@@ -1,4 +1,5 @@
 use crate::app::players::domain::events::PlayerDomainEvent;
+use crate::app::players::domain::match_impact::MatchContext;
 use crate::app::players::domain::match_impact::StatKind;
 use crate::app::players::domain::player::{AcquisitionMode, PlayerId, ValueKpo};
 use crate::app::players::domain::value_objects::SppCost;
@@ -93,6 +94,11 @@ fn evolution_log_row(event: &PlayerDomainEvent) -> Option<EvolutionLogRowVm> {
         PlayerDomainEvent::PlayerSkillCustomised {
             skill_name, author, ..
         } => Some(ligne_customisee(skill_name.to_string(), author)),
+        PlayerDomainEvent::PlayerHatredGained {
+            skill_name,
+            context,
+            ..
+        } => Some(ligne_de_haine(skill_name.to_string(), context)),
         PlayerDomainEvent::PlayerStatCustomised {
             stat,
             offset,
@@ -122,6 +128,23 @@ fn evolution_log_row(event: &PlayerDomainEvent) -> Option<EvolutionLogRowVm> {
 
 /// Le socle commun des quatre familles : colonnes vides, mode « Customisation »,
 /// et l'auteur nommé. Chaque famille ne surcharge que ce qui la distingue.
+/// Un trait gagné en encaissant un coup.
+///
+/// Coût et valeur restent **vides**, comme pour une customisation : ni « 0 SPP »
+/// ni « +0 kPo ». Le modèle ne porte pas ces champs — ils n'existent pas, ils ne
+/// valent pas zéro — et l'affichage doit dire la même chose : un zéro affiché
+/// invite à croire qu'un calcul a eu lieu.
+fn ligne_de_haine(label: String, context: &MatchContext) -> EvolutionLogRowVm {
+    EvolutionLogRowVm {
+        label,
+        mode_label: "Blessure",
+        mode_css: "mode-chip-chosen",
+        cost: String::new(),
+        value: String::new(),
+        origin: format!("Blessé contre {}", context.opponent_team_name),
+    }
+}
+
 fn ligne_customisee(label: String, author: &str) -> EvolutionLogRowVm {
     EvolutionLogRowVm {
         label,

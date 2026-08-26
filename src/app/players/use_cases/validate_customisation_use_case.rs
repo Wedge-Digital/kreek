@@ -225,6 +225,7 @@ mod tests {
                 base_skills: vec![],
                 primary_categories: vec![],
                 secondary_categories: vec![],
+                keywords: vec![],
             })
         }
         fn position_access(&self, _: &str) -> Option<PositionAccessDto> {

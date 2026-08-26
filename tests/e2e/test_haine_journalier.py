@@ -35,8 +35,10 @@ BASE_URL = "http://localhost:3210"
 def contexte(browser, space_id):
     from competition_lifecycle import build_full_competition
 
-    full = build_full_competition(browser, space_id, num_teams=2, num_rounds=2)
-    assert len(full["round_ids"]) >= 2, "il faut deux journées : une par match"
+    full = build_full_competition(browser, space_id, num_teams=2, num_rounds=3)
+    assert len(full["round_ids"]) >= 3, (
+        "trois journées : deux pour obtenir un journalier, une pour le pendant positif"
+    )
     return full
 
 
@@ -198,3 +200,34 @@ def test_la_haine_d_un_journalier_n_atteint_aucun_joueur(space_id, contexte):
         f"la Haine d'un journalier a atteint l'effectif : {avant} → {apres} "
         "compétences en mode Injury"
     )
+
+
+def test_la_haine_d_un_joueur_permanent_atteint_l_effectif(page, space_id, contexte):
+    """Le pendant positif — et ce qui rend le test précédent concluant.
+
+    Sans lui, « aucune compétence en mode Injury » passerait aussi bien si la
+    chaîne entière était cassée. Il vérifie en outre la couleur du badge, que
+    seul le navigateur peut constater : la projection écrivait la Haine avec une
+    classe **vide** avant la carte 405, et trois feuilles sur quatre ne
+    portaient pas celle des traits.
+    """
+    domicile, exterieur = contexte["team_ids"][1], contexte["team_ids"][0]
+    mr = _creer_rapport(space_id, contexte, contexte["round_ids"][2], domicile, exterieur)
+    _passer_en_pre_match(space_id, mr)
+
+    avant = _competences_de_blessure(domicile)
+    _enregistrer(
+        space_id, mr, "home", _un_joueur(domicile), turn=1,
+        action_type="BLESSE", injury_type="AMOCHE",
+        hate_gained="true", hate_keyword="DARK_ELF",
+    )
+    _publier(space_id, mr)
+
+    assert _competences_de_blessure(domicile) == avant + 1, (
+        "la Haine d'un joueur permanent doit rejoindre ses compétences acquises"
+    )
+
+    page.goto(f"{BASE_URL}/app/{space_id}/teams/{domicile}", wait_until="load")
+    badge = page.locator(".skill-tag.type-traits", has_text="Haine").first
+    badge.wait_for(timeout=10000)
+

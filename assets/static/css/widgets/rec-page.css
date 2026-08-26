@@ -114,6 +114,10 @@
 .rec-page .type-agility  { background: rgba(98,149,132,0.12); color: var(--green); }
 .rec-page .type-passing  { background: rgba(255,215,0,0.18);  color: #9A7800; }
 .rec-page .type-mutation { background: rgba(111,53,165,0.10); color: #6f35a5; }
+/* `TRAITS` manquait : une Haine s'y serait affichée sans couleur du tout,
+   ce qui est pire que la couleur fausse d'avant la carte 405. Teinte
+   reprise de `pd-right.css`, seule feuille qui portait les sept. */
+.rec-page .type-traits   { background: var(--dark-6);          color: var(--dark-2); }
 .rec-page .type-devious  { background: rgba(122,82,16,0.10);  color: var(--role-cost); }
 .rec-page .type-trait    { background: var(--dark-5);         color: var(--dark-1); }
 .rec-page .quota      { font-family: monospace; color: var(--dark-2); }

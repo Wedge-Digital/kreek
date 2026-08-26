@@ -68,6 +68,20 @@ impl ISkillCatalogPort for SkillCatalogAdapter {
             base_skills: position.skills.clone(),
             primary_categories: position.primary_access.clone(),
             secondary_categories: position.secondary_access.clone(),
+            // Un uid que le corpus ne connaît pas est affiché tel quel plutôt
+            // qu'escamoté : la garde de démarrage le refuse déjà (carte 399), et
+            // un mot-clef qui disparaîtrait sans un mot serait le genre de
+            // silence que cette série corrige.
+            keywords: position
+                .keywords
+                .iter()
+                .map(|uid| {
+                    self.reference_repo
+                        .find_keyword_by_uid(uid)
+                        .map(|k| k.label.clone())
+                        .unwrap_or_else(|| uid.clone())
+                })
+                .collect(),
         })
     }
 
@@ -131,6 +145,34 @@ mod tests {
 
     fn adapter() -> SkillCatalogAdapter {
         SkillCatalogAdapter::new(Arc::new(InMemoryReferenceRepository::load_for_tests()))
+    }
+
+    // ── Mots-clefs de poste (carte 405) ──────────────────────────────────────
+
+    /// Les **libellés**, pas les uids : « Nain », pas `DWARF`. C'est l'adapter
+    /// qui résout, pour que l'affichage n'ait plus qu'à les joindre.
+    #[test]
+    fn un_poste_rend_les_libelles_de_ses_mots_clefs() {
+        let poste = adapter()
+            .find_position("DEMO_GRANIT__PIETAILLE")
+            .expect("le poste existe au corpus de démonstration");
+        assert_eq!(poste.keywords, vec!["Trois-quart", "Nain"]);
+    }
+
+    /// Un poste introuvable ne rend rien du tout : le tableau n'affiche alors
+    /// aucune ligne de mots-clefs, plutôt qu'une ligne vide sous le badge.
+    #[test]
+    fn un_poste_introuvable_ne_rend_aucun_mot_clef() {
+        assert!(adapter().find_position("POSTE_QUI_N_EXISTE_PAS").is_none());
+    }
+
+    /// Un uid que le corpus ne connaît plus est affiché **tel quel** plutôt
+    /// qu'escamoté — le silence est ce que cette série corrige.
+    #[test]
+    fn un_mot_clef_inconnu_reste_visible_sous_son_uid() {
+        let repo = InMemoryReferenceRepository::load_for_tests();
+        let mot = repo.find_keyword_by_uid("ESPECE_INEXISTANTE");
+        assert!(mot.is_none(), "le préalable du test : cet uid n'existe pas");
     }
 
     #[test]

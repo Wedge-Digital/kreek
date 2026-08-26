@@ -34,13 +34,27 @@ pub fn initial_skill_value_delta(
     ValueKpo(catalog.skill_value_delta(!is_primary, is_elite))
 }
 
-fn skill_category_css(category: &str) -> &'static str {
+/// La classe de couleur d'une catégorie de compétence.
+///
+/// Le corpus en déclare **sept**. Cette fonction en testait cinq, dont une au
+/// mauvais nombre — `MUTATION` au singulier quand le corpus dit `MUTATIONS` —
+/// si bien que mutations et retors portaient la couleur du général. Personne ne
+/// l'avait vu : une couleur fausse ne casse rien, elle ment simplement.
+///
+/// Le repli reste, pour une catégorie qu'un corpus futur inventerait.
+///
+/// **La correction ne repeint pas le passé** : la classe est figée dans
+/// `players_proj.acquired_skills` à l'écriture, pas résolue à l'affichage. Les
+/// compétences déjà acquises gardent leur couleur erronée.
+pub fn skill_category_css(category: &str) -> &'static str {
     match category {
         "GENERAL" => "type-general",
         "STRENGTH" => "type-strength",
         "AGILITY" => "type-agility",
         "PASSING" => "type-passing",
-        "MUTATION" => "type-mutation",
+        "MUTATIONS" => "type-mutation",
+        "DEVIOUS" => "type-devious",
+        "TRAITS" => "type-traits",
         _ => "type-general",
     }
 }
@@ -226,6 +240,70 @@ pub fn init(
 
 #[cfg(test)]
 mod tests {
+    // ── Couleurs de catégorie (carte 405) ────────────────────────────────────
+
+    /// Les **sept** catégories que le corpus déclare, plus une inconnue.
+    ///
+    /// La fonction en testait cinq, dont `MUTATION` au singulier quand le corpus
+    /// dit `MUTATIONS` : mutations et retors portaient la couleur du général, en
+    /// production, sans que rien ne le signale. Ce test est ce qui empêche la
+    /// table de redivergerdu corpus.
+    #[test]
+    fn les_sept_categories_du_corpus_ont_leur_couleur() {
+        let attendu = [
+            ("GENERAL", "type-general"),
+            ("STRENGTH", "type-strength"),
+            ("AGILITY", "type-agility"),
+            ("PASSING", "type-passing"),
+            ("MUTATIONS", "type-mutation"),
+            ("DEVIOUS", "type-devious"),
+            ("TRAITS", "type-traits"),
+        ];
+        for (categorie, classe) in attendu {
+            assert_eq!(
+                skill_category_css(categorie),
+                classe,
+                "catégorie « {categorie} »"
+            );
+        }
+    }
+
+    /// Le repli reste, pour une catégorie qu'un corpus futur inventerait.
+    #[test]
+    fn une_categorie_inconnue_retombe_sur_le_general() {
+        assert_eq!(skill_category_css("SORCELLERIE"), "type-general");
+        assert_eq!(skill_category_css("MUTATION"), "type-general");
+    }
+
+    /// Le corpus de démonstration ne doit déclarer aucune catégorie que la table
+    /// ignore : c'est ce test qui relie la table au corpus plutôt qu'à une liste
+    /// écrite de mémoire.
+    #[test]
+    fn aucune_categorie_du_corpus_ne_retombe_sur_le_repli() {
+        use crate::app::references::domain::port::IReferenceRepository;
+        use crate::app::references::io::repository::in_memory_reference_repository::InMemoryReferenceRepository;
+
+        let repo = InMemoryReferenceRepository::load_for_tests();
+        let mut vues: Vec<&str> = repo
+            .list_skills()
+            .iter()
+            .map(|s| s.category.as_str())
+            .collect();
+        vues.sort_unstable();
+        vues.dedup();
+        assert!(!vues.is_empty(), "le corpus doit déclarer des catégories");
+        for categorie in vues {
+            if categorie == "GENERAL" {
+                continue; // seule catégorie dont `type-general` est la vraie couleur
+            }
+            assert_ne!(
+                skill_category_css(categorie),
+                "type-general",
+                "« {categorie} » retombe sur le repli : la table ignore une catégorie du corpus"
+            );
+        }
+    }
+
     use super::*;
     use crate::app::shared_kernel::app_events::players_app_events::PlayersAppEvent;
     use crate::common::services::event_bus::event_bus::new_bus;

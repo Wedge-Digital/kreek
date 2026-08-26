@@ -1,4 +1,5 @@
 use crate::app::players::domain::player::TeamId;
+use crate::app::players::io::app_events::team_created_listener::skill_category_css;
 use crate::app::players::ports::{AcquiredSkillProjection, ISkillCatalogPort, PlayerProjection};
 use crate::app::players::use_cases::player_stats_service::{self, ResolvedPlayerStats};
 use crate::app::routes::AppRoutes;
@@ -35,17 +36,22 @@ pub struct PlayerRowVm {
     /// plus les augmentations achetées en SPP. `None` si le poste est introuvable
     /// au catalogue : la table affiche alors un tiret plutôt qu'une valeur fausse.
     pub stats: Option<ResolvedPlayerStats>,
+    /// « Elfe, Blitzer » — les mots-clefs du poste, déjà joints.
+    ///
+    /// Vide quand le poste n'en porte pas : le template n'affiche alors rien du
+    /// tout, plutôt qu'une ligne vide sous le badge.
+    pub keywords: String,
 }
 
-fn skill_category_css(category: &str) -> &'static str {
-    match category {
-        "GENERAL" => "type-general",
-        "STRENGTH" => "type-strength",
-        "AGILITY" => "type-agility",
-        "PASSING" => "type-passing",
-        "MUTATION" => "type-mutation",
-        _ => "type-general",
-    }
+/// Les mots-clefs du poste, joints pour l'affichage.
+///
+/// Aucune requête de plus : `find_position` est déjà appelée pour résoudre les
+/// compétences de base, et l'adapter y a joint les libellés (carte 405).
+fn mots_clefs_du_poste(roster_line_id: &str, catalog: &dyn ISkillCatalogPort) -> String {
+    catalog
+        .find_position(roster_line_id)
+        .map(|p| p.keywords.join(", "))
+        .unwrap_or_default()
 }
 
 fn build_base_skills(p: &PlayerProjection, catalog: &dyn ISkillCatalogPort) -> Vec<SkillTagVm> {
@@ -134,6 +140,7 @@ pub async fn build_player_rows(state: &AppState, team: &TeamId) -> Vec<PlayerRow
         .into_iter()
         .map(|p| {
             let base_skills = build_base_skills(&p, catalog);
+            let keywords = mots_clefs_du_poste(&p.roster_line_id, catalog);
             let resolved = stats.get(&p.player_id).copied();
             PlayerRowVm {
                 player_id: p.player_id,
@@ -145,6 +152,7 @@ pub async fn build_player_rows(state: &AppState, team: &TeamId) -> Vec<PlayerRow
                 spp: p.spp,
                 value_kpo: p.value_kpo,
                 stats: resolved,
+                keywords,
             }
         })
         .collect()

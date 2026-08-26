@@ -445,3 +445,24 @@ textarea.form-input-article { resize: vertical; min-height: 80px; }
 .form-actions--left { display: flex; justify-content: flex-start; margin-top: var(--p2); }
 
 .form-error-banner { background: var(--red); color: var(--white); padding: var(--p1); border-radius: var(--p1); }
+
+/* ── Mots-clefs de poste (carte 405) ───────────────────────────────────────
+   « Elfe, Blitzer », sous le badge de poste, sur la fiche d'équipe comme sur
+   la fiche joueur.
+
+   **Du texte, jamais une pastille** : trois familles de badges cohabitent déjà
+   dans le tableau des joueurs — poste, compétences de base, compétences
+   acquises — et une quatrième disputerait l'œil au poste, que les mots-clefs
+   ne font que qualifier.
+
+   Ici plutôt que dans les deux feuilles scopées : `common.css` est global par
+   conception (cf. `check-css-collisions.sh`), et c'est ce qui permet d'en avoir
+   une seule définition pour les deux écrans. */
+.player-keywords {
+  display: block;
+  font-size: 11px;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--dark-3);
+  line-height: 1.4;
+}

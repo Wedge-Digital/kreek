@@ -68,7 +68,7 @@
               <input class="edit-value name-input" type="text" name="personal_name"
                      value="{{ p.personal_name }}" placeholder="{{ p.position_name }}">
             </td>
-            <td class="player-position cell-readonly">{{ p.position_name }}</td>
+            <td class="player-position cell-readonly">{{ p.position_name }}{% if !p.keywords.is_empty() %}<span class="player-keywords">{{ p.keywords }}</span>{% endif %}</td>
             {% if let Some(s) = p.stats %}
             {# AG, PA et AR sont des seuils de dé : ils s'affichent suivis d'un « + », comme sur la fiche joueur. #}
             <td class="player-stat cell-readonly">{{ s.ma }}</td>

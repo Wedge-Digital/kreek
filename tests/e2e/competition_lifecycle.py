@@ -33,6 +33,7 @@ Deux constructions d'équipe cohabitent, et ce n'est pas un doublon :
 import re
 import time
 
+from htmx_helpers import cliquer_quand_cable
 from playwright.sync_api import Page, expect
 
 BASE_URL = "http://localhost:3210"
@@ -162,7 +163,12 @@ def create_full_competition(
     page.wait_for_selector(".recap-row", timeout=10000)
 
     # ── Phase 5 : publication ─────────────────────────────────────────────
-    page.click(".btn-cta")
+    # `cliquer_quand_cable` et non `click` : c'est **ce bouton** que `CLAUDE.md`
+    # cite en exemple du piège — peint et cliquable quelques dizaines de
+    # millisecondes avant qu'htmx ne l'ait câblé, un clic s'y perd sans requête,
+    # sans erreur de console, sans rien. La postcondition ci-dessous le
+    # constatait ; l'attente le supprime.
+    cliquer_quand_cable(page, ".btn-cta")
     _attendre_finalisation(season_id)
 
     return {"competition_id": competition_id, "season_id": season_id, "name": competition_name}

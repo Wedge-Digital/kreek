@@ -36,6 +36,9 @@
 .players-widget .type-agility         { background: rgba(98,149,132,0.12); color: var(--green); }
 .players-widget .type-passing         { background: rgba(255,215,0,0.18);  color: #9A7800; }
 .players-widget .type-mutation        { background: rgba(111,53,165,0.10); color: #6f35a5; }
+/* `DEVIOUS` et `TRAITS` manquaient — cf. `rec-page.css`. */
+.players-widget .type-devious         { background: rgba(255,107,53,0.12); color: var(--orange); }
+.players-widget .type-traits          { background: var(--dark-6);         color: var(--dark-2); }
 .players-widget .player-skill  { background: var(--dark-5); color: var(--dark-1); border-radius: 4px; padding: 2px 6px; font-size: 11px; margin-right: 4px; display: inline-block; }
 
 /* ── Classes reprises des styles inline du fragment ────────────────────────────

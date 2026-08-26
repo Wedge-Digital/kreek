@@ -27,6 +27,7 @@
         <span class="jersey-chip">#{{ j }}</span>
         {% endif %}
         <span class="player-pos">{{ vm.position_name }}</span>
+        {% if !vm.keywords.is_empty() %}<span class="player-keywords">{{ vm.keywords }}</span>{% endif %}
         {% if !vm.can_spend %}
         <span class="badge-locked">🔒 Hors phase d'amélioration</span>
         {% endif %}

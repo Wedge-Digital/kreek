@@ -99,6 +99,12 @@
 .skill-picker.type-passing  { background: rgba(255,215,0,0.18);  color: #9A7800; }
 .skill-picker .type-mutation,
 .skill-picker.type-mutation { background: rgba(111,53,165,0.10); color: var(--light-1); }
+/* `DEVIOUS` et `TRAITS` manquaient. Le sélecteur inverse les teintes —
+   fond coloré, texte clair — d'où `--light-1` plutôt que la couleur. */
+.skill-picker .type-devious,
+.skill-picker.type-devious { background: rgba(255,107,53,0.12); color: var(--light-1); }
+.skill-picker .type-traits,
+.skill-picker.type-traits { background: var(--dark-3); color: var(--light-1); }
 .skill-picker .access-normal,
 .skill-picker.access-normal { background: var(--dark-5);                color: var(--dark-2); }
 .skill-picker .access-elite,
