@@ -105,6 +105,246 @@
       "type": "Trait",
       "activation": "Passive",
       "description": "Une fois par match, ce joueur permet de conserver une relance dépensée sur un 6+."
+    },
+    {
+      "uid": "HAINE_AMAZON",
+      "name": "Haine : Amazone",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Amazones."
+    },
+    {
+      "uid": "HAINE_BEASTMAN",
+      "name": "Haine : Homme-Bête",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Hommes-Bêtes."
+    },
+    {
+      "uid": "HAINE_BLACK_ORC",
+      "name": "Haine : Orque Noir",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Orques Noirs."
+    },
+    {
+      "uid": "HAINE_CHAOS",
+      "name": "Haine : Chaos",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les suppôts du Chaos."
+    },
+    {
+      "uid": "HAINE_CHAOS_DWARF",
+      "name": "Haine : Nain du Chaos",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Nains du Chaos."
+    },
+    {
+      "uid": "HAINE_DARK_ELF",
+      "name": "Haine : Elfe Noir",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Elfes Noirs."
+    },
+    {
+      "uid": "HAINE_DWARF",
+      "name": "Haine : Nain",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Nains."
+    },
+    {
+      "uid": "HAINE_ELF",
+      "name": "Haine : Elfe",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Elfes."
+    },
+    {
+      "uid": "HAINE_GOBLIN",
+      "name": "Haine : Gobelin",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Gobelins."
+    },
+    {
+      "uid": "HAINE_HALFLING",
+      "name": "Haine : Halfling",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Halflings."
+    },
+    {
+      "uid": "HAINE_HIGH_ELF",
+      "name": "Haine : Haut Elfe",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Hauts Elfes."
+    },
+    {
+      "uid": "HAINE_HOBGOBLIN",
+      "name": "Haine : Hobgobelin",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Hobgobelins."
+    },
+    {
+      "uid": "HAINE_HUMAN",
+      "name": "Haine : Humain",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Humains."
+    },
+    {
+      "uid": "HAINE_KHORNE",
+      "name": "Haine : Khorne",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les fidèles de Khorne."
+    },
+    {
+      "uid": "HAINE_LIZARDMAN",
+      "name": "Haine : Homme-Lézard",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Hommes-Lézards."
+    },
+    {
+      "uid": "HAINE_MINOTAUR",
+      "name": "Haine : Minotaure",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Minotaures."
+    },
+    {
+      "uid": "HAINE_NECROMANTIC",
+      "name": "Haine : Nécromantique",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les créatures nécromantiques."
+    },
+    {
+      "uid": "HAINE_NORSE",
+      "name": "Haine : Norse",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Norses."
+    },
+    {
+      "uid": "HAINE_NURGLE",
+      "name": "Haine : Nurgle",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les fidèles de Nurgle."
+    },
+    {
+      "uid": "HAINE_OGRE",
+      "name": "Haine : Ogre",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Ogres."
+    },
+    {
+      "uid": "HAINE_ORC",
+      "name": "Haine : Orque",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Orques."
+    },
+    {
+      "uid": "HAINE_SAURUS",
+      "name": "Haine : Saurus",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Saurus."
+    },
+    {
+      "uid": "HAINE_SKAVEN",
+      "name": "Haine : Skaven",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Skavens."
+    },
+    {
+      "uid": "HAINE_SKELETON",
+      "name": "Haine : Squelette",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Squelettes."
+    },
+    {
+      "uid": "HAINE_SLANN",
+      "name": "Haine : Slann",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Slanns."
+    },
+    {
+      "uid": "HAINE_SNOTLING",
+      "name": "Haine : Snotling",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Snotlings."
+    },
+    {
+      "uid": "HAINE_TROLL",
+      "name": "Haine : Troll",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Trolls."
+    },
+    {
+      "uid": "HAINE_UNDEAD",
+      "name": "Haine : Mort-Vivant",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Morts-Vivants."
+    },
+    {
+      "uid": "HAINE_VAMPIRE",
+      "name": "Haine : Vampire",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Vampires."
+    },
+    {
+      "uid": "HAINE_WOOD_ELF",
+      "name": "Haine : Elfe Sylvain",
+      "category": "TRAITS",
+      "type": "Trait",
+      "activation": "Passive",
+      "description": "Ce joueur hait les Elfes Sylvains."
     }
   ]
 }

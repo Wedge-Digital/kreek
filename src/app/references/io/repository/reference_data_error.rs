@@ -7,8 +7,22 @@ use std::fmt;
 /// le domaine ignore d'où viennent ses données.
 #[derive(Debug)]
 pub enum ReferenceDataError {
-    FileUnreadable { file: String, cause: String },
-    InvalidJson { file: String, cause: String },
+    FileUnreadable {
+        file: String,
+        cause: String,
+    },
+    InvalidJson {
+        file: String,
+        cause: String,
+    },
+    /// Le corpus est lisible et bien formé, mais il se contredit.
+    ///
+    /// Distincte de `InvalidJson` parce qu'aucun fichier n'est en cause : c'est
+    /// la cohérence entre deux d'entre eux qui manque, et le message doit
+    /// nommer le lien rompu plutôt qu'un chemin.
+    CorpusIncoherent {
+        motif: String,
+    },
 }
 
 impl fmt::Display for ReferenceDataError {
@@ -19,6 +33,9 @@ impl fmt::Display for ReferenceDataError {
             }
             ReferenceDataError::InvalidJson { file, cause } => {
                 write!(f, "données de référence invalides : {} ({})", file, cause)
+            }
+            ReferenceDataError::CorpusIncoherent { motif } => {
+                write!(f, "données de référence incohérentes : {}", motif)
             }
         }
     }

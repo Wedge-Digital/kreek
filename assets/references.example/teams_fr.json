@@ -49,7 +49,11 @@
             "STRENGTH"
           ],
           "max_quantity": 16,
-          "is_journeyman": true
+          "is_journeyman": true,
+          "keywords": [
+            "LINEMAN",
+            "DWARF"
+          ]
         },
         {
           "uid": "DEMO_GRANIT__PERCUTEUR",
@@ -71,7 +75,11 @@
             "AGILITY"
           ],
           "max_quantity": 4,
-          "is_journeyman": false
+          "is_journeyman": false,
+          "keywords": [
+            "BLITZER",
+            "DWARF"
+          ]
         },
         {
           "uid": "DEMO_GRANIT__COLOSSE",
@@ -93,7 +101,11 @@
             "GENERAL"
           ],
           "max_quantity": 1,
-          "is_journeyman": false
+          "is_journeyman": false,
+          "keywords": [
+            "BIG_GUY",
+            "DWARF"
+          ]
         }
       ]
     },
@@ -129,7 +141,11 @@
             "GENERAL"
           ],
           "max_quantity": 16,
-          "is_journeyman": true
+          "is_journeyman": true,
+          "keywords": [
+            "LINEMAN",
+            "ELF"
+          ]
         },
         {
           "uid": "DEMO_ZEPHYR__RECEVEUR",
@@ -152,7 +168,11 @@
             "PASSING"
           ],
           "max_quantity": 4,
-          "is_journeyman": false
+          "is_journeyman": false,
+          "keywords": [
+            "CATCHER",
+            "ELF"
+          ]
         },
         {
           "uid": "DEMO_ZEPHYR__LANCEUR",
@@ -174,7 +194,11 @@
             "GENERAL"
           ],
           "max_quantity": 2,
-          "is_journeyman": false
+          "is_journeyman": false,
+          "keywords": [
+            "THROWER",
+            "ELF"
+          ]
         }
       ]
     },
@@ -212,7 +236,11 @@
             "DEVIOUS"
           ],
           "max_quantity": 16,
-          "is_journeyman": true
+          "is_journeyman": true,
+          "keywords": [
+            "LINEMAN",
+            "SKAVEN"
+          ]
         },
         {
           "uid": "DEMO_LANTERNE__RODEUR",
@@ -234,7 +262,11 @@
             "AGILITY"
           ],
           "max_quantity": 2,
-          "is_journeyman": false
+          "is_journeyman": false,
+          "keywords": [
+            "RUNNER",
+            "SKAVEN"
+          ]
         },
         {
           "uid": "DEMO_LANTERNE__MUTANT",
@@ -256,7 +288,11 @@
             "STRENGTH"
           ],
           "max_quantity": 2,
-          "is_journeyman": false
+          "is_journeyman": false,
+          "keywords": [
+            "SPECIAL",
+            "SKAVEN"
+          ]
         }
       ]
     }

@@ -16,6 +16,7 @@ pub enum ConsistencyViolation {
     UnknownStaff { owner: String, uid: String },
     UnknownSpecialRule { owner: String, uid: String },
     UnknownRoster { owner: String, uid: String },
+    UnknownKeyword { owner: String, uid: String },
 }
 
 impl std::fmt::Display for ConsistencyViolation {
@@ -28,6 +29,7 @@ impl std::fmt::Display for ConsistencyViolation {
                 ("règle spéciale", owner, uid)
             }
             ConsistencyViolation::UnknownRoster { owner, uid } => ("roster", owner, uid),
+            ConsistencyViolation::UnknownKeyword { owner, uid } => ("mot-clef", owner, uid),
         };
         write!(f, "{owner} référence un(e) {kind} inconnu(e) : {uid}")
     }
@@ -49,6 +51,7 @@ fn check_teams(repo: &dyn IReferenceRepository) -> Vec<ConsistencyViolation> {
             out.extend(missing_skills(repo, &pos.uid, &pos.skills));
             out.extend(missing_categories(repo, &pos.uid, &pos.primary_access));
             out.extend(missing_categories(repo, &pos.uid, &pos.secondary_access));
+            out.extend(missing_keywords(repo, &pos.uid, &pos.keywords));
         }
     }
     out
@@ -78,6 +81,24 @@ fn missing_skills(
     uids.iter()
         .filter(|uid| repo.find_skill_by_uid(uid).is_none())
         .map(|uid| ConsistencyViolation::UnknownSkill {
+            owner: owner.to_string(),
+            uid: uid.clone(),
+        })
+        .collect()
+}
+
+/// Un mot-clef inconnu sur une ligne de roster ne produit aucune erreur : il ne
+/// correspond simplement à rien, et la Haine qui le vise n'atteindrait jamais le
+/// joueur. C'est la même question que pour les compétences — « l'uid cité
+/// existe-t-il ? » — et elle mérite la même réponse.
+fn missing_keywords(
+    repo: &dyn IReferenceRepository,
+    owner: &str,
+    uids: &[String],
+) -> Vec<ConsistencyViolation> {
+    uids.iter()
+        .filter(|uid| repo.find_keyword_by_uid(uid).is_none())
+        .map(|uid| ConsistencyViolation::UnknownKeyword {
             owner: owner.to_string(),
             uid: uid.clone(),
         })

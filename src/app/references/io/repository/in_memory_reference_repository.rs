@@ -1,6 +1,6 @@
 use crate::app::references::domain::models::{
-    Inducement, League, PlayerPosition, Skill, SkillCategory, SkillCostLevel, SpecialRule, SppRule,
-    SppScale, Staff, StarPlayer, Team,
+    Inducement, Keyword, League, PlayerPosition, Skill, SkillCategory, SkillCostLevel, SpecialRule,
+    SppRule, SppScale, Staff, StarPlayer, Team,
 };
 use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::references::io::repository::reference_data_error::ReferenceDataError;
@@ -11,6 +11,7 @@ use crate::app::shared_kernel::bloodbowl::inducement_definition::{
 use crate::app::shared_kernel::bloodbowl::roster_definition::RosterDefinition;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
+use std::collections::HashSet;
 use std::path::Path;
 // ── Raw JSON wrappers (deserialization only) ──────────────────────────────────
 
@@ -32,6 +33,11 @@ struct TeamsFile {
 #[derive(Deserialize)]
 struct SkillsFile {
     skills: Vec<Skill>,
+}
+
+#[derive(Deserialize)]
+struct KeywordsFile {
+    keywords: Vec<Keyword>,
 }
 
 #[derive(Deserialize)]
@@ -111,6 +117,7 @@ pub struct InMemoryReferenceRepository {
     special_rules: Vec<SpecialRule>,
     staff: Vec<Staff>,
     leagues: Vec<League>,
+    keywords: Vec<Keyword>,
     skill_cost_matrix: Vec<SkillCostLevel>,
     improvement_values: ImprovementValues,
     spp_rules: SppRulesFile,
@@ -145,6 +152,12 @@ impl InMemoryReferenceRepository {
     /// Charge l'intégralité des données de référence depuis `dir`, une fois,
     /// au démarrage. Tout est ensuite servi depuis la mémoire.
     pub fn load_from_dir(dir: &Path) -> Result<Self, ReferenceDataError> {
+        let depot = Self::lire(dir)?;
+        depot.verifier_coherence_des_haines()?;
+        Ok(depot)
+    }
+
+    fn lire(dir: &Path) -> Result<Self, ReferenceDataError> {
         Ok(Self {
             inducements: read_json::<InducementsFile>(dir, "inducements_fr.json")?.inducements,
             star_players: read_json::<StarPlayersFile>(dir, "star_players_fr.json")?.star_players,
@@ -155,11 +168,63 @@ impl InMemoryReferenceRepository {
                 .special_rules,
             staff: read_json::<StaffFile>(dir, "staff_fr.json")?.staff,
             leagues: read_json::<LeaguesFile>(dir, "leagues_fr.json")?.leagues,
+            keywords: read_json::<KeywordsFile>(dir, "keywords_fr.json")?.keywords,
             skill_cost_matrix: read_json::<SkillCostFile>(dir, "skill_cost.json")?,
             improvement_values: read_json::<ImprovementValuesFile>(dir, "improvement_values.json")?
                 .improvement_values,
             spp_rules: read_json::<SppRulesFile>(dir, "spp_rules.json")?,
         })
+    }
+
+    /// Refuse un corpus où la Haine serait déclarée puis perdue.
+    ///
+    /// Deux échecs, et non un seul. Le premier attrape le corpus non migré :
+    /// `league_hate_selectable` valant `false` par défaut, un corpus dépourvu du
+    /// champ rendrait **zéro** mot-clef haïssable, et le sélecteur serait vide
+    /// sans que rien ne le dise. Le second remplace la convention de nommage
+    /// écartée à la conception : le lien vers la compétence n'est plus supposé
+    /// à partir de l'uid, il est vérifié ici, une fois pour toutes, au
+    /// démarrage.
+    ///
+    /// Échouer empêche le serveur de démarrer. C'est voulu : une Haine qu'on
+    /// enregistre et qui n'atteint jamais le joueur est plus coûteuse à
+    /// diagnostiquer qu'un démarrage refusé, qui nomme son motif.
+    fn verifier_coherence_des_haines(&self) -> Result<(), ReferenceDataError> {
+        let haissables: Vec<&Keyword> = self
+            .keywords
+            .iter()
+            .filter(|k| k.league_hate_selectable)
+            .collect();
+
+        if haissables.is_empty() {
+            return Err(ReferenceDataError::CorpusIncoherent {
+                motif: "aucun mot-clef n'est haïssable : la Haine serait muette".to_string(),
+            });
+        }
+
+        let catalogue: HashSet<&str> = self.skills.iter().map(|s| s.uid.as_str()).collect();
+        for mot in haissables {
+            match mot.hate_skill_uid.as_deref() {
+                None => {
+                    return Err(ReferenceDataError::CorpusIncoherent {
+                        motif: format!(
+                            "le mot-clef haïssable « {} » ne désigne aucune compétence de Haine",
+                            mot.uid
+                        ),
+                    })
+                }
+                Some(uid) if !catalogue.contains(uid) => {
+                    return Err(ReferenceDataError::CorpusIncoherent {
+                        motif: format!(
+                            "le mot-clef « {} » désigne la compétence « {uid} », absente du catalogue",
+                            mot.uid
+                        ),
+                    })
+                }
+                Some(_) => {}
+            }
+        }
+        Ok(())
     }
 
     /// Jeu de données des tests unitaires : le jeu de démonstration versionné,
@@ -249,6 +314,14 @@ impl IReferenceRepository for InMemoryReferenceRepository {
     fn find_skill_by_uid(&self, uid: &str) -> Option<&Skill> {
         self.skills.iter().find(|x| x.uid == uid)
     }
+    fn list_keywords(&self) -> &[Keyword] {
+        &self.keywords
+    }
+
+    fn find_keyword_by_uid(&self, uid: &str) -> Option<&Keyword> {
+        self.keywords.iter().find(|k| k.uid == uid)
+    }
+
     fn find_position_by_uid(&self, uid: &str) -> Option<&PlayerPosition> {
         self.teams
             .iter()
@@ -360,6 +433,171 @@ mod tests {
         assert!(
             message.contains("primary_elite"),
             "le message doit nommer le champ manquant : {message}"
+        );
+    }
+
+    // ── Mots-clefs et Haine (carte 399) ──────────────────────────────────────
+
+    /// Les huit mots-clefs qu'on ne hait pas : on hait une espèce, pas un rôle.
+    /// La liste est ici **pour être confrontée au corpus**, pas pour le piloter
+    /// — aucune exclusion n'est écrite dans le code de production.
+    const NON_HAISSABLES: [&str; 8] = [
+        "BIG_GUY", "BLITZER", "BLOCKER", "CATCHER", "LINEMAN", "RUNNER", "SPECIAL", "THROWER",
+    ];
+
+    /// Copie le corpus de démonstration dans un dossier jetable, en y
+    /// remplaçant un fichier. Les gardes de démarrage ne s'observent que sur le
+    /// vrai chemin de chargement.
+    fn corpus_mute(nom: &str, fichier: &str, contenu: &str) -> std::path::PathBuf {
+        let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/references.example");
+        let temp = std::env::temp_dir().join(format!("kreek-{nom}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&temp);
+        std::fs::create_dir_all(&temp).unwrap();
+        for f in std::fs::read_dir(&source).unwrap() {
+            let f = f.unwrap();
+            std::fs::copy(f.path(), temp.join(f.file_name())).unwrap();
+        }
+        std::fs::write(temp.join(fichier), contenu).unwrap();
+        temp
+    }
+
+    fn echec_du_chargement(temp: std::path::PathBuf) -> String {
+        let r = InMemoryReferenceRepository::load_from_dir(&temp);
+        let _ = std::fs::remove_dir_all(&temp);
+        r.err()
+            .expect("un corpus incohérent ne doit pas charger")
+            .to_string()
+    }
+
+    #[test]
+    fn le_corpus_porte_trente_huit_mots_clefs_dont_trente_haissables() {
+        let repo = InMemoryReferenceRepository::load_for_tests();
+        let mots = repo.list_keywords();
+        assert_eq!(mots.len(), 38, "le corpus doit porter 38 mots-clefs");
+        assert_eq!(
+            mots.iter().filter(|k| k.league_hate_selectable).count(),
+            30,
+            "30 mots-clefs doivent être haïssables"
+        );
+        for uid in NON_HAISSABLES {
+            let mot = repo
+                .find_keyword_by_uid(uid)
+                .unwrap_or_else(|| panic!("mot-clef « {uid} » absent du corpus"));
+            assert!(
+                !mot.league_hate_selectable,
+                "« {uid} » est un rôle, pas une espèce : il ne doit pas être haïssable"
+            );
+        }
+    }
+
+    #[test]
+    fn un_mot_clef_se_trouve_par_son_uid_et_un_inconnu_rend_none() {
+        let repo = InMemoryReferenceRepository::load_for_tests();
+        assert_eq!(
+            repo.find_keyword_by_uid("DARK_ELF")
+                .map(|k| k.label.as_str()),
+            Some("Elfe Noir")
+        );
+        assert!(repo
+            .find_keyword_by_uid("ESPECE_QUI_N_EXISTE_PAS")
+            .is_none());
+    }
+
+    /// Le lien que la conception a refusé de déduire par convention de nommage.
+    #[test]
+    fn chaque_mot_clef_haissable_designe_une_competence_qui_existe() {
+        let repo = InMemoryReferenceRepository::load_for_tests();
+        let catalogue: HashSet<&str> = repo.list_skills().iter().map(|s| s.uid.as_str()).collect();
+        let haissables: Vec<&Keyword> = repo
+            .list_keywords()
+            .iter()
+            .filter(|k| k.league_hate_selectable)
+            .collect();
+        for mot in &haissables {
+            let uid = mot
+                .hate_skill_uid
+                .as_deref()
+                .unwrap_or_else(|| panic!("« {} » haïssable sans compétence", mot.uid));
+            assert!(
+                catalogue.contains(uid),
+                "« {} » désigne « {uid} », absente du catalogue",
+                mot.uid
+            );
+        }
+        assert_eq!(haissables.len(), 30);
+    }
+
+    /// `#[serde(default)]` sur `keywords` : un corpus tiers dépourvu du champ
+    /// doit charger et rendre une liste vide, jamais empêcher le démarrage.
+    #[test]
+    fn une_ligne_de_roster_sans_mots_clefs_charge_et_rend_une_liste_vide() {
+        let position: PlayerPosition = serde_json::from_str(
+            r#"{"uid":"X","positionName":"Sans mots-clefs","cost":50,
+                "MA":6,"ST":3,"AG":3,"PA":4,"AV":9,"max_quantity":16}"#,
+        )
+        .expect("une ligne sans `keywords` doit rester chargeable");
+        assert!(position.keywords.is_empty());
+    }
+
+    /// Le fait sur lequel repose toute la mise à plat de la Haine : `TRAITS`
+    /// n'étant l'accès d'aucun poste, les Haines n'apparaissent pas dans le
+    /// sélecteur de compétences et `resolve_skill_cost` les refuse — deux
+    /// propriétés obtenues sans écrire une ligne, et perdues sans un mot le
+    /// jour où un poste ouvrirait cette catégorie.
+    #[test]
+    fn traits_n_est_dans_l_acces_d_aucun_poste_du_corpus() {
+        let repo = InMemoryReferenceRepository::load_for_tests();
+        for team in repo.list_teams() {
+            for poste in &team.available_players {
+                assert!(
+                    !poste.primary_access.contains(&"TRAITS".to_string())
+                        && !poste.secondary_access.contains(&"TRAITS".to_string()),
+                    "le poste « {} » ouvre TRAITS : la Haine deviendrait achetable",
+                    poste.uid
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn un_corpus_sans_aucun_mot_clef_haissable_refuse_de_charger() {
+        let message = echec_du_chargement(corpus_mute(
+            "haine-aucune",
+            "keywords_fr.json",
+            r#"{"ruleset":"demo","edition":"t","keywords":[{"uid":"DWARF","label":"Nain"}]}"#,
+        ));
+        assert!(
+            message.contains("aucun mot-clef n'est haïssable"),
+            "le motif doit nommer l'absence : {message}"
+        );
+    }
+
+    #[test]
+    fn un_mot_clef_haissable_sans_competence_refuse_de_charger() {
+        let message = echec_du_chargement(corpus_mute(
+            "haine-sans-competence",
+            "keywords_fr.json",
+            r#"{"ruleset":"demo","edition":"t","keywords":[
+                {"uid":"DWARF","label":"Nain","league_hate_selectable":true}]}"#,
+        ));
+        assert!(
+            message.contains("DWARF") && message.contains("aucune compétence"),
+            "le motif doit nommer le mot-clef fautif : {message}"
+        );
+    }
+
+    #[test]
+    fn un_mot_clef_designant_une_competence_absente_refuse_de_charger() {
+        let message = echec_du_chargement(corpus_mute(
+            "haine-competence-absente",
+            "keywords_fr.json",
+            r#"{"ruleset":"demo","edition":"t","keywords":[
+                {"uid":"DWARF","label":"Nain","league_hate_selectable":true,
+                 "hate_skill_uid":"HATE_DWARF"}]}"#,
+        ));
+        assert!(
+            message.contains("HATE_DWARF") && message.contains("absente du catalogue"),
+            "le motif doit nommer la compétence introuvable : {message}"
         );
     }
 

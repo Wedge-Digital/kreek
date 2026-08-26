@@ -1,0 +1,226 @@
+{
+  "ruleset": "demo",
+  "edition": "Jeu de démonstration — données fictives",
+  "keywords": [
+    {
+      "uid": "AMAZON",
+      "label": "Amazone",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_AMAZON"
+    },
+    {
+      "uid": "BEASTMAN",
+      "label": "Homme-Bête",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_BEASTMAN"
+    },
+    {
+      "uid": "BIG_GUY",
+      "label": "Gros Bras",
+      "league_hate_selectable": false
+    },
+    {
+      "uid": "BLACK_ORC",
+      "label": "Orque Noir",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_BLACK_ORC"
+    },
+    {
+      "uid": "BLITZER",
+      "label": "Blitzer",
+      "league_hate_selectable": false
+    },
+    {
+      "uid": "BLOCKER",
+      "label": "Bloqueur",
+      "league_hate_selectable": false
+    },
+    {
+      "uid": "CATCHER",
+      "label": "Receveur",
+      "league_hate_selectable": false
+    },
+    {
+      "uid": "CHAOS",
+      "label": "Chaos",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_CHAOS"
+    },
+    {
+      "uid": "CHAOS_DWARF",
+      "label": "Nain du Chaos",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_CHAOS_DWARF"
+    },
+    {
+      "uid": "DARK_ELF",
+      "label": "Elfe Noir",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_DARK_ELF"
+    },
+    {
+      "uid": "DWARF",
+      "label": "Nain",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_DWARF"
+    },
+    {
+      "uid": "ELF",
+      "label": "Elfe",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_ELF"
+    },
+    {
+      "uid": "GOBLIN",
+      "label": "Gobelin",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_GOBLIN"
+    },
+    {
+      "uid": "HALFLING",
+      "label": "Halfling",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_HALFLING"
+    },
+    {
+      "uid": "HIGH_ELF",
+      "label": "Haut Elfe",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_HIGH_ELF"
+    },
+    {
+      "uid": "HOBGOBLIN",
+      "label": "Hobgobelin",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_HOBGOBLIN"
+    },
+    {
+      "uid": "HUMAN",
+      "label": "Humain",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_HUMAN"
+    },
+    {
+      "uid": "KHORNE",
+      "label": "Khorne",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_KHORNE"
+    },
+    {
+      "uid": "LINEMAN",
+      "label": "Trois-quart",
+      "league_hate_selectable": false
+    },
+    {
+      "uid": "LIZARDMAN",
+      "label": "Homme-Lézard",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_LIZARDMAN"
+    },
+    {
+      "uid": "MINOTAUR",
+      "label": "Minotaure",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_MINOTAUR"
+    },
+    {
+      "uid": "NECROMANTIC",
+      "label": "Nécromantique",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_NECROMANTIC"
+    },
+    {
+      "uid": "NORSE",
+      "label": "Norse",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_NORSE"
+    },
+    {
+      "uid": "NURGLE",
+      "label": "Nurgle",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_NURGLE"
+    },
+    {
+      "uid": "OGRE",
+      "label": "Ogre",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_OGRE"
+    },
+    {
+      "uid": "ORC",
+      "label": "Orque",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_ORC"
+    },
+    {
+      "uid": "RUNNER",
+      "label": "Coureur",
+      "league_hate_selectable": false
+    },
+    {
+      "uid": "SAURUS",
+      "label": "Saurus",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_SAURUS"
+    },
+    {
+      "uid": "SKAVEN",
+      "label": "Skaven",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_SKAVEN"
+    },
+    {
+      "uid": "SKELETON",
+      "label": "Squelette",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_SKELETON"
+    },
+    {
+      "uid": "SLANN",
+      "label": "Slann",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_SLANN"
+    },
+    {
+      "uid": "SNOTLING",
+      "label": "Snotling",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_SNOTLING"
+    },
+    {
+      "uid": "SPECIAL",
+      "label": "Spécial",
+      "league_hate_selectable": false
+    },
+    {
+      "uid": "THROWER",
+      "label": "Lanceur",
+      "league_hate_selectable": false
+    },
+    {
+      "uid": "TROLL",
+      "label": "Troll",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_TROLL"
+    },
+    {
+      "uid": "UNDEAD",
+      "label": "Mort-Vivant",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_UNDEAD"
+    },
+    {
+      "uid": "VAMPIRE",
+      "label": "Vampire",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_VAMPIRE"
+    },
+    {
+      "uid": "WOOD_ELF",
+      "label": "Elfe Sylvain",
+      "league_hate_selectable": true,
+      "hate_skill_uid": "HAINE_WOOD_ELF"
+    }
+  ]
+}

@@ -76,6 +76,41 @@ pub struct PlayerPosition {
     pub max_quantity: u8,
     #[serde(default)]
     pub is_journeyman: bool,
+    /// Les mots-clefs du règlement que porte cette ligne de roster — son
+    /// espèce et son rôle. C'est par eux qu'une Haine atteint un joueur.
+    ///
+    /// `#[serde(default)]` n'est pas un confort : `load_references` n'échoue
+    /// pas, il **empêche le démarrage**. Un corpus tiers dépourvu du champ doit
+    /// donner une liste vide, pas un serveur mort.
+    #[serde(default)]
+    pub keywords: Vec<String>,
+}
+
+// ── Keyword ───────────────────────────────────────────────────────────────────
+
+/// Un mot-clef du règlement : une espèce (`DARK_ELF`) ou un rôle (`BLITZER`).
+///
+/// **On hait une espèce, pas un rôle.** Les six postes, plus Gros Bras et
+/// Spécial, ne sont pas haïssables — et c'est le corpus qui le dit, par
+/// `league_hate_selectable`. Aucune liste d'exclusion n'est écrite dans le code.
+///
+/// `hate_skill_uid` est **porté par la donnée, pas déduit**. Une première
+/// conception fabriquait la compétence par convention — `format!("HAINE_{uid}")`
+/// — et un corpus qui aurait nommé la sienne `HATE_BEASTMAN` aurait fait échouer
+/// la résolution en silence : la Haine se serait déclarée puis perdue à la
+/// publication. Le lien est ici vérifiable, et vérifié au démarrage.
+#[derive(Debug, Clone, Deserialize)]
+pub struct Keyword {
+    pub uid: String,
+    pub label: String,
+    /// `#[serde(default)]` vaut `false` : un corpus non migré rend donc **zéro**
+    /// mot-clef haïssable. C'est exactement ce que la garde de démarrage
+    /// attrape — sans elle, le sélecteur serait vide sans un mot.
+    #[serde(default)]
+    pub league_hate_selectable: bool,
+    /// Présent si et seulement si le mot-clef est haïssable.
+    #[serde(default)]
+    pub hate_skill_uid: Option<String>,
 }
 
 /// Un seul schéma dans le corpus : `{"max": N, "in": [uid, …]}`. Les Élus du

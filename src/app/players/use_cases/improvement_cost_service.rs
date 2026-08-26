@@ -289,6 +289,25 @@ mod tests {
         assert_eq!(result, Err(ImprovementCostError::CategoryNotAccessible));
     }
 
+    /// Une Haine ne s'achète pas. Elle vit en catégorie `TRAITS`, que l'accès
+    /// d'aucun poste n'ouvre — le refus tombe donc sans qu'aucune règle
+    /// particulière ait été écrite pour elle (carte 399).
+    ///
+    /// Le jour où un poste ouvrirait `TRAITS`, ce test et son jumeau dans
+    /// `in_memory_reference_repository` échouent ensemble : c'est le seul
+    /// signal qui existe.
+    #[test]
+    fn une_haine_n_est_jamais_achetable() {
+        let result = resolve_skill_cost(
+            &catalog(),
+            "DEMO_GRANIT__PIETAILLE",
+            "HAINE_DARK_ELF",
+            AcquisitionMode::Chosen,
+            1,
+        );
+        assert_eq!(result, Err(ImprovementCostError::CategoryNotAccessible));
+    }
+
     #[test]
     fn resolve_skill_cost_unknown_skill_is_rejected() {
         let result = resolve_skill_cost(
