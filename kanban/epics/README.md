@@ -98,6 +98,7 @@ déploiement de la troisième, qui porte le recalcul global.
 | `13-mock-data-competition-detail` | Les onglets Équipes et Stats servent de la donnée fictive **en production**. C'est la seule dette visible par un utilisateur |
 | `60-jersey-numbers-at-submission` | Attribution des numéros de maillot à la soumission |
 | `362-le-bundle-css-est-gele-au-demarrage` | Une feuille éditée n'a aucun effet sur un serveur qui tourne, et rien ne le signale. A fait accuser à tort la carte 343 pendant une heure |
+| `427-un-rapport-manuel-en-cours-n-apparait-nulle-part` | La projection de l'onglet Résultats a `pairing_id` pour clef. Deux listeners fabriquent l'appariement manquant d'un rapport manuel, le troisième — celui qui écrit « en cours » — abandonne en silence |
 | `416-treize-routes-d-administration-sans-controle` | Tirage des poules, génération et suppression de journées et de matchs : treize routes de mutation qu'aucun contrôle d'accès ne garde, et dont plusieurs prennent leur cible dans le corps, hors de portée de `space_scope` |
 | `415-le-plafond-de-participants-n-a-jamais-servi` | Un réglage que rien n'applique et que personne n'a jamais posé — 1874 saisons, zéro plafond. Il fait partir depuis toujours un e-mail portant une ligne « Places restantes » vide |
 | `414-archiver-une-saison` | On n'implémentera pas de suppression : huit tables portent `season_id` et les trois flux d'événements n'en portent aucun. Une saison finie se range, elle ne se détruit pas — et l'archivage doit aussi taire le cron d'e-mails |
