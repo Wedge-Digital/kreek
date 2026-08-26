@@ -104,8 +104,6 @@ déploiement de la troisième, qui porte le recalcul global.
 | `414-archiver-une-saison` | On n'implémentera pas de suppression : huit tables portent `season_id` et les trois flux d'événements n'en portent aucun. Une saison finie se range, elle ne se détruit pas — et l'archivage doit aussi taire le cron d'e-mails |
 | `413-retirer-une-customisation-appliquee` | Le mode customisation ne sait qu'ajouter : une erreur ne se corrige qu'en la compensant, et le journal garde les deux |
 | `412-la-phase-finale-quitte-la-creation-de-competition` | Un réglage qu'il faut remplir et dont rien ne se sert : aucun appariement de phase finale n'est généré, aucun classement n'en tient compte |
-| `406-un-mercenaire-trois-quarts-disparait-du-rapport` | Engagé, facturé, puis absent du rapport : le plafond du roster (16) déborde la borne d'`InducementQty` (10), l'achat devient orphelin et le domaine le jette sans un mot |
-| `399` à `405` — la Haine | Un trait gagné en encaissant un coup, qualifié par un mot-clef. Sept cartes issues du workflow feature, spécifiées dans `docs/specs/haine/` |
 | `397-sentry-l-alerte-que-le-journal-ne-donne-pas` | E11 a donné de quoi enquêter, pas d'être prévenu : une erreur en production n'existe que si quelqu'un ouvre les journaux et cherche |
 | `395-le-site-en-francais-et-en-anglais` | 144 templates, ~210 libellés en Rust, 11 fichiers de corpus et 51 sélecteurs e2e en français. Deviendra une épic ; la question ouverte est instance par langue ou instance bilingue |
 | `389-modifier-l-effectif-reserve-a-qui-de-droit` | Le bouton d'édition d'effectif s'affiche pour tout visiteur, alors que l'écriture derrière refuse déjà par 403. Un bouton menteur, pas une faille |
