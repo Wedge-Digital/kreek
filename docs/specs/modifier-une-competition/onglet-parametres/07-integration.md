@@ -109,6 +109,21 @@ ligne, sur les onze.** GET compris : le commentaire de la fonction
 (`admin_page.rs:57`) le dit déjà — sans contrôle sur le chemin htmx, le
 changement d'onglet contourne l'autorisation.
 
+Le prédicat est **celui-là et pas un autre** : admin de l'espace
+(`SpaceProfile::SpaceAdmin`), ou admin de la compétition — par identifiant
+(`admin_ids`) **ou** par nom de coach (`admin_names`), les deux listes étant
+consultées parce que les deux sont peuplées. Tout le reste est un `403`, le
+propriétaire de l'équipe comme le simple participant.
+
+**Aucun panneau n'a de règle propre.** L'autorisation est posée une fois, à
+l'entrée ; les cinq panneaux s'ouvrent ensemble ou pas du tout. Une granularité
+par panneau créerait un second modèle de droits pour un seul écran, et c'est
+exactement le genre de modèle qu'on oublie de tenir à jour.
+
+**Ni le rendu de l'onglet, ni l'onglet lui-même ne servent de garde.** Masquer
+l'onglet à un non-admin est du confort, pas de la sécurité : les onze URL
+restent atteignables directement, et ce sont elles qui refusent.
+
 > ### Ce que les onze ne doivent pas imiter
 >
 > **Les treize routes de mutation admin existantes ne vérifient rien.**
@@ -211,7 +226,9 @@ Fichier `tests/e2e/test_competition_admin_settings.py`.
 | `test_retirer_une_poule_desaffecte_ses_equipes` | la cascade, vérifiée dans l'onglet Poules |
 | `test_retirer_toutes_les_poules` | le cas que la projection paresseuse traite le plus mal |
 | `test_modifier_les_coups_de_pouce_d_un_tier` | la collecte JS de l'événement du picker |
-| `test_un_non_admin_n_ouvre_pas_l_onglet` | `403` sur le GET du fragment, pas seulement sur la page |
+| `test_un_non_admin_est_refuse_sur_les_onze_routes` | **paramétré sur les onze**, `403` sur chaque GET et chaque POST |
+| `test_un_admin_de_competition_ouvre_les_cinq_panneaux` | l'admin nommé dans la compétition, sans être admin d'espace |
+| `test_un_admin_d_espace_ouvre_les_cinq_panneaux` | l'admin d'espace, sans être nommé dans la compétition |
 | `test_le_calendrier_survit_a_l_enregistrement_des_poules` | la relecture du JSONB — le défaut le plus silencieux |
 
 **Le quatrième et le dernier sont ceux qui valent le prix de la suite.** Le
