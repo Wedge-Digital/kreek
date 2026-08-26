@@ -1,3 +1,19 @@
+> **Carte annulée le 2026-08-26 — devenue l'épic [E13](../epics/ready_to_be_done/E13-gestion-des-erreurs-couteuses.md).**
+>
+> Ses deux « à définir » ont trouvé leur réponse, et la fonctionnalité est
+> désormais spécifiée en entier par le workflow feature :
+> `docs/specs/erreurs-couteuses/`, huit phases, et quatre cartes — **408 à 411**.
+>
+> Ce que cette carte contenait et qui a survécu : la table de déclenchement,
+> reprise telle quelle dans la 408, aux tranches près — fermées à la centaine
+> plutôt qu'à 195, 295, 395, pour qu'une trésorerie de 197 kPo ne tombe dans
+> aucun trou.
+>
+> Ce qui a changé depuis son écriture : **c'est le système qui tire le dé**, et
+> non le coach comme cette carte le prévoyait « par cohérence avec le principe
+> établi ». La phase se joue seul devant un écran, sans dé sous la main —
+> exception assumée, écrite dans la spec.
+
 # BC `teams` — Erreur couteuse + retour "Prête à jouer"
 
 **Priorité : haute**
