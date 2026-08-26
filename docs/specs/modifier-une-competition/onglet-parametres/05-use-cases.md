@@ -224,10 +224,14 @@ la forme est juste.
 ```rust
 pub enum UpdatePoolsSettingsError {
     SeasonNotFound,
-    DuplicatePoolName,   // deux poules du même nom ne se distinguent pas à l'écran
+    InvalidPools(DomainError),   // doublon de nom ou d'identifiant
     Repository(String),
 }
 ```
+
+> **Corrigé en phase 6.** Le refus des doublons vit dans
+> `RankingGroupConfig::try_new()`, pas dans ce use case : le type est encapsulé
+> et sa seule porte d'entrée valide. Le use case remonte l'erreur du domaine.
 
 ---
 
@@ -260,20 +264,16 @@ Le panneau n'édite ni le nom, ni le budget, ni l'XP de départ, ni les rosters,
 mais `TierRule` est un tout et les transporte quand même (phase 4). Le use case
 compare donc, tier par tier, ce qui doit être identique :
 
-```rust
-fn ensure_only_inducements_changed(before: &[TierRule], after: &[TierRule])
-    -> Result<(), UpdateTiersSettingsError>
-```
+> **Corrigé en phase 6.** Ce contrôle était écrit ici ; il répond à « est-ce
+> autorisé ? » et vit donc dans le domaine :
+> `CompetitionRules::with_inducements_from(tiers) -> Result<Self, DomainError>`.
+> Le use case l'appelle et convertit l'erreur, il ne la calcule pas.
 
 Le nombre de tiers doit être identique, et chaque tier conserver `name`,
 `budget`, `starting_xp` et `rosters`. **Un écart est un refus, pas une
 correction** : accepter la valeur reçue rendrait modifiable par requête forgée
 ce que l'écran n'ouvre pas, et corriger silencieusement ferait croire à un
 enregistrement qui n'a pas eu lieu.
-
-C'est le seul contrôle non trivial des cinq use cases, et il est ici plutôt que
-dans le handler parce qu'il compare l'état persisté à la commande — une question
-d'orchestration, pas de format HTTP.
 
 **Un tier sans aucun coup de pouce est valide** (phase 4) : `Vec` vide accepté,
 aucune borne basse.
