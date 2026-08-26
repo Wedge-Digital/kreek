@@ -101,4 +101,4 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 | `360-bandeau-d-inscription-en-attente-inexistant` | Un test e2e attend une classe qui n'a jamais été rendue. La suite est rouge en permanence |
 | `357-le-champ-tags-est-en-ecriture-seule` | Quatre formes écrites, aucun lecteur : `find_by_tag()` n'a pas d'appelant. À trancher — compléter l'abstraction ou la supprimer |
 | `352-match-report-confirmed-passe-par-le-publisher` | Deux use cases émettent un app event directement, ce que `CLAUDE.md` interdit. Trouvée par la carte 350. Débloque un axe « pas d'`app_event_bus` dans `use_cases/` » |
-| `61-rendre-accessible-un-espace-publiquement` | **Fichier vide, sans extension `.md`** — à écrire ou à supprimer |
+| `432-rendre-accessible-un-espace-publiquement` | **Fichier vide** — à écrire ou à supprimer. Portait le numéro 61, déjà pris par `61-players-bc-structure-aggregate` |

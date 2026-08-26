@@ -52,9 +52,9 @@ l'identifiant de connexion**, avec une unicité octet par octet
 - **L'inscription et la réinitialisation de mot de passe**, que la 328 laisse
   hors périmètre : un lien partagé mène à une connexion, couvrir ces deux
   parcours doublerait la surface de test pour un cas rare.
-- `61-rendre-accessible-un-espace-publiquement`, **fichier vide sans extension
-  `.md`**. Sujet voisin, mais il n'y a rien à rattacher — à écrire ou à
-  supprimer.
+- `432-rendre-accessible-un-espace-publiquement`, **fichier vide**. Sujet
+  voisin, mais il n'y a rien à rattacher — à écrire ou à supprimer. Portait le
+  numéro 61, déjà pris.
 
 ## Terminé quand
 

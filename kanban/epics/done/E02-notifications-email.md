@@ -1,7 +1,7 @@
 # E02 — Notifications e-mail de compétition
 
 **État :** close le 2026-08-25 — 13 cartes · 13 faites. Démarrée le 2026-08-22.
-Les 366 et 367, nées de la revue de déploiement du 2026-08-24, ont rendu le
+Les 430 et 431, nées de la revue de déploiement du 2026-08-24, ont rendu le
 critère de clôture ci-dessous **constaté** ; la 338 l'a complété par le seul
 contrôle qu'aucun test ne peut faire.
 La 331 pose le modèle et la colonne ; la 332 donne le premier chemin
@@ -36,8 +36,8 @@ réglage qui fait réellement partir des e-mails — et retire les deux morts.
 | 339 | Le cœur d'expédition | **faite** — réserver, rendre, envoyer, confirmer |
 | 340 | Les deux déclencheurs — CLI du cron et listener d'ouverture | **faite — la fonctionnalité est allumée** |
 | 325 | L'e-mail de mot de passe au nouveau standard visuel | **faite** — harmonisation, pas une réécriture |
-| 366 | Éteindre les saisons antérieures à la migration | **faite** — 318 saisons éteintes, colonne `NOT NULL` avec défaut « neuve » |
-| 367 | Tests du chemin du cron | **faite** — 5 unitaires sur le vrai SQL, 3 e2e à travers le binaire |
+| 430 | Éteindre les saisons antérieures à la migration | **faite** — 318 saisons éteintes, colonne `NOT NULL` avec défaut « neuve » |
+| 431 | Tests du chemin du cron | **faite** — 5 unitaires sur le vrai SQL, 3 e2e à travers le binaire |
 
 ## Ce qui commande l'ordre
 
@@ -76,13 +76,13 @@ personne ne la reprenne.
 
 Elles étaient 318 sur 471 — l'épic annonçait 213, la spec ~399. Les trois
 chiffres diffèrent, ce qui dit assez que la question a dormi. Tranchée par la
-**carte 366** : éteintes, et la colonne passe `NOT NULL` avec un défaut « tout
+**carte 430** : éteintes, et la colonne passe `NOT NULL` avec un défaut « tout
 allumé » pour les neuves, de sorte que le cas ne puisse plus réapparaître.
 
 **Le chemin du cron n'avait aucun test.** Les deux extrémités en avaient — 17 sur
 `due_today()`, 6 sur l'expédition — mais les 180 lignes qui les cousent, aucune,
 ni unitaire ni e2e. Elles portent trois des quatre notifications. Couvert par la
-**carte 367**, qui a au passage mis au jour un mode d'échec de plus :
+**carte 431**, qui a au passage mis au jour un mode d'échec de plus :
 `traiter_saison()` avale l'erreur du dépôt de journées par `unwrap_or_default()`,
 transformant une panne en « rien à envoyer », sans une ligne de journal.
 
