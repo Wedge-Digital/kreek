@@ -14,7 +14,7 @@ qu'elle redevienne prête à jouer.
 
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| L'écran du jet | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | |
+| L'écran du jet | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ **408-411** |
 
 ## La séquence
 
