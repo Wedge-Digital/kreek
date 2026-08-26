@@ -60,6 +60,37 @@ Directives de travail pour Claude Code sur ce projet.
     chantier qui vaut la peine d'être gardé vaut un commit, quitte à ce qu'il
     soit provisoire.
 
+13. **Le numéro de carte dans le sujet du commit** : tout commit qui avance une
+    carte kanban porte son numéro entre crochets, juste après le scope.
+
+    ```
+    fix(team_creation): [407] refuse la création sur une saison non finalisée
+    docs(kanban): [407] l'inscription dans une compétition non finalisée
+    ```
+
+    **Dans le sujet, pas dans le corps** : `git log --oneline` est ce qu'on lit
+    pour retrouver un changement, et il n'affiche que le sujet. Un numéro
+    relégué dans le corps ne se trouve qu'en lisant les commits un par un.
+    C'est exactement ce qui a échoué : la carte 406 était close et poussée, son
+    commit `306fec3` ne portait aucun numéro, et relire l'historique n'a pas
+    suffi à le voir — la carte a été crue non faite.
+
+    **Après le scope, pas à la fin** : un terminal étroit tronque la fin du
+    sujet ; un numéro placé en tête y survit. Les crochets se filtrent au
+    `grep '\[406\]'` sans attraper les nombres qui traînent dans les libellés.
+
+    Jusqu'ici seuls les commits `docs(kanban)` citaient un numéro — précisément
+    ceux qu'on ne cherche pas, puisqu'ils ne portent pas le code.
+
+    - Un commit qui n'avance **aucune** carte — formatage, outillage, coquille —
+      n'en porte pas. On n'invente pas de numéro.
+    - Un commit qui en avance **plusieurs** les liste : `fix(teams): [326] [327]
+      …`. Au-delà de trois, c'est que le commit fait trop de choses.
+    - Le numéro **ne remplace pas** le sujet : `fix(team_creation): [407]` ne dit
+      rien à qui parcourt l'historique.
+
+    L'historique déjà poussé n'est pas réécrit ; la règle vaut pour la suite.
+
 ---
 
 ## Vérifications à l'installation — une fois par clone
