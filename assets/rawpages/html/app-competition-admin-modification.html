@@ -277,6 +277,17 @@
     .form-row-content { flex: 1; display: flex; flex-direction: column; gap: 6px; }
     .form-row-hint { font-size: 11px; color: var(--dark-4); }
 
+    /* Emplacement d'erreur de champ : réservé en permanence dans le flux, il
+       n'apparaît qu'occupé. Un message inséré à la volée décalerait le
+       formulaire au moment précis où l'utilisateur lit ce qu'on lui reproche. */
+    .form-row-error {
+      font-size: 11px; color: var(--red); font-weight: 600;
+      min-height: 15px; margin-top: 4px;
+      opacity: 0; transition: opacity 0.15s;
+    }
+    .form-row-error.shown { opacity: 1; }
+    .form-input.invalid { border-color: var(--red); }
+
     .form-input {
       padding: 10px 14px;
       border: 1px solid var(--dark-4); border-radius: 7px;
@@ -465,7 +476,9 @@
               <div class="form-row">
                 <div class="form-row-label">Nom</div>
                 <div class="form-row-content">
-                  <input type="text" class="form-input" value="Ligue de Condate">
+                  <input type="text" class="form-input" id="comp-name" value="Ligue de Condate"
+                         oninput="checkCompetitionName(this)">
+                  <div class="form-row-error" id="comp-name-error"></div>
                 </div>
               </div>
               <div class="form-row">
@@ -801,6 +814,19 @@
    Principe tenu partout ici : la conséquence est un **état du formulaire**.
    Rien ne s'annonce tant que rien n'a changé, et ce qui change le dit à sa
    place — pas dans un bandeau posé en tête de panneau. */
+
+/* ── Nom de compétition ─────────────────────────────────────────────────── */
+/* Le nom reste unique dans l'espace : le serveur refuse déjà un doublon par
+   CompetitionNameAlreadyTaken. La maquette montre où le message se pose. */
+var NOMS_PRIS = ['coupe des marches', 'tournoi du bief'];
+
+function checkCompetitionName(input) {
+  var pris = NOMS_PRIS.indexOf(input.value.trim().toLowerCase()) !== -1;
+  var slot = document.getElementById('comp-name-error');
+  slot.textContent = pris ? 'Ce nom est déjà pris dans cet espace.' : '';
+  slot.classList.toggle('shown', pris);
+  input.classList.toggle('invalid', pris);
+}
 
 /* ── Barème ─────────────────────────────────────────────────────────────── */
 function markChanged(input) {

@@ -11,14 +11,18 @@ la maquette portait une « zone de danger » — retirée le 2026-08-26
 **On n'implémentera pas de suppression de saison.** Une saison finie
 s'**archive** : elle sort des affichages courants, et rien n'est détruit.
 
-Ce n'est pas de la prudence de principe, c'est le coût mesuré. Dix tables
-portent `season_id`, sur quatre BCs :
+Ce n'est pas de la prudence de principe, c'est le coût mesuré. Huit tables
+portent `season_id`, sur quatre BCs, sans compter `competition_seasons`
+elle-même :
 
 ```
 competition_groups · competition_match_days · competition_match_display_proj
-competition_notification_deliveries · competition_seasons · competitions_members
-match_report_proj · ranking_lines · team_drafts · team_proj
+competition_notification_deliveries · match_report_proj · ranking_lines
+team_drafts · team_proj
 ```
+
+(`competition_group_teams` suit par cascade ; `competitions_members` s'attache
+à la **compétition**, pas à la saison, et survivrait donc à l'archivage.)
 
 **Et les trois flux d'événements n'en portent pas.** `team_event_store`,
 `players_events` et `match_report_event_store` ne connaissent que leur agrégat.

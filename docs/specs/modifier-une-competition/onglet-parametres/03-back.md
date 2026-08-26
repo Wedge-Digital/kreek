@@ -210,6 +210,57 @@ idempotent.
 porte pas de colonne de poule (établi en phase 2), le regroupement est un filtre
 d'affichage sur l'assignation courante. Le classement n'a rien à rejouer.
 
+## Retirer une poule ne se joue pas que dans le JSONB
+
+Les poules vivent à **deux endroits**, et la phase 2 n'en voyait qu'un.
+
+| Où | Quoi | Qui écrit |
+|---|---|---|
+| `structure.ranking_group.ranking_groups` (JSONB) | la déclaration : identifiant, nom, ordre | le magicien, et le panneau Poules |
+| `competition_groups` (table) | la même liste, matérialisée | `ensure_groups_from_structure`, à l'ouverture de l'onglet Poules |
+| `competition_group_teams` (table) | **l'affectation des équipes** | l'onglet Poules |
+
+La table est alimentée **paresseusement** : `groups_widgets.rs:158` projette le
+JSONB dans `competition_groups` à chaque ouverture de l'onglet Poules. Le JSONB
+reste la source de vérité, la table porte ce que le JSONB ne sait pas dire —
+qui joue dans quelle poule.
+
+**Le piège : cette projection est un `INSERT … ON CONFLICT DO UPDATE`, elle ne
+supprime jamais.** Une poule retirée du JSONB garderait donc sa ligne dans
+`competition_groups`, et ses équipes leur affectation dans
+`competition_group_teams`. Le retrait serait cosmétique : invisible dans la
+déclaration, intact dans les faits.
+
+Deux détails aggravent le cas :
+
+- la projection est encadrée par `if !struct_groups.is_empty()` — retirer
+  **toutes** les poules ne déclenche donc aucune écriture, et laisse la table
+  entière derrière. Or retirer la dernière poule est autorisé (phase 4) : les
+  équipes repassent en attente d'affectation. Ce n'est donc pas un cas
+  théorique, c'est un usage prévu, et il est celui que la projection traite le
+  plus mal ;
+- `competition_group_teams` a un `ON DELETE CASCADE` vers `competition_groups` :
+  la désaffectation est gratuite **dès qu'on supprime la ligne de poule**, et
+  uniquement à ce moment.
+
+**Le POST du panneau Poules doit donc faire deux écritures** : le JSONB, puis la
+suppression dans `competition_groups` des poules absentes de la nouvelle liste.
+C'est ce second geste qui rend la conséquence annoncée à l'écran — « 6 équipes à
+réaffecter » — vraie.
+
+Une méthode à ajouter au port des poules :
+
+```rust
+/// Supprime les poules de la saison absentes de la liste fournie.
+/// La cascade sur `competition_group_teams` désaffecte leurs équipes.
+async fn delete_groups_absent_from(&self, season_id: &str, kept_ids: &[String])
+    -> Result<u64, GroupRepositoryError>;
+```
+
+Elle rend le **nombre d'affectations défaites**, que le widget affiche au
+retour. Et les deux écritures partagent une transaction : un JSONB enregistré
+sans sa suppression laisserait exactement l'incohérence qu'on cherche à éviter.
+
 ## Le nouvel onglet dans l'aiguillage
 
 `admin_page.rs` aiguille par `match active_tab`. Trois changements :
@@ -267,12 +318,12 @@ second modèle de droits pour un seul écran.
   saison archivée sort des affichages par un filtre, et rien n'est détruit.
 
   Ce qu'une vraie suppression aurait demandé, et qui justifie de ne pas la
-  faire : dix tables portent `season_id` — `competition_groups`,
-  `competition_match_days`, `competition_match_display_proj`,
-  `competition_notification_deliveries`, `competition_seasons`,
-  `competitions_members`, `match_report_proj`, `ranking_lines`, `team_drafts`,
-  `team_proj` — réparties sur quatre BCs, **et les trois flux d'événements n'en
-  portent pas**. `team_event_store`, `players_events` et
+  faire : huit tables portent `season_id` — `competition_groups`,
+  `competition_group_teams` par cascade, `competition_match_days`,
+  `competition_match_display_proj`, `competition_notification_deliveries`,
+  `match_report_proj`, `ranking_lines`, `team_drafts`, `team_proj` — réparties
+  sur quatre BCs, sans compter `competition_seasons` elle-même, **et les trois
+  flux d'événements n'en portent pas**. `team_event_store`, `players_events` et
   `match_report_event_store` ne connaissent que leur agrégat : les atteindre
   imposerait de passer par les projections pour retrouver quoi détruire, en se
   servant d'un dérivé rebuildable comme index de la destruction.
