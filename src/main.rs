@@ -491,7 +491,12 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                     references.repository.clone(),
                 ),
             );
-            match_report::context::MatchReportContext::new(&pool, comp_data, team_data, player_data, coach_data, space_admin, spp_calculator, event_bus.clone())
+            let keyword_catalog = Arc::new(
+                crate::infrastructure::match_report::keyword_catalog_adapter::KeywordCatalogAdapter::new(
+                    references.repository.clone(),
+                ),
+            );
+            match_report::context::MatchReportContext::new(&pool, comp_data, team_data, player_data, coach_data, space_admin, spp_calculator, keyword_catalog, event_bus.clone())
         },
         teams: {
             TeamsContext::new(

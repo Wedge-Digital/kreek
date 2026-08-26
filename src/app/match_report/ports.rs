@@ -108,6 +108,35 @@ pub struct PositionCountDto {
     pub count: u8,
 }
 
+/// Un mot-clef **haïssable**, tel que le règlement le connaît.
+///
+/// `hate_skill_uid` n'est pas optionnel ici : le corpus le porte pour tout
+/// mot-clef haïssable (carte 399), et sa présence dans ce DTO est ce qui permet
+/// au use case de figer la compétence dans l'action sans que personne ait à la
+/// résoudre plus tard.
+pub struct KeywordDto {
+    pub uid: String,
+    pub label: String,
+    pub hate_skill_uid: String,
+}
+
+/// Ce que le règlement connaît comme mots-clefs haïssables.
+///
+/// **Un port dédié, et non une méthode de plus sur `ITeamDataPort`** : celui-ci
+/// répond « que sait-on de cette équipe ? », celui-là « quels mots-clefs le
+/// règlement connaît-il ? ». Les fondre obligerait à passer un `team_id` à une
+/// question qui n'en a pas.
+pub trait IKeywordCatalogPort: Send + Sync {
+    /// Les mots-clefs haïssables, et **eux seuls**.
+    ///
+    /// Le port ne rend jamais les huit autres — un mot-clef de poste existe au
+    /// corpus mais ne se hait pas. Le faire filtrer par chaque appelant serait
+    /// la garantie qu'un l'oublie ; le DTO ne porte donc pas de drapeau, son
+    /// existence dans la réponse **est** le drapeau.
+    fn list_hateable(&self) -> Vec<KeywordDto>;
+    fn find_hateable(&self, uid: &str) -> Option<KeywordDto>;
+}
+
 #[async_trait]
 pub trait ICoachDataPort: Send + Sync {
     async fn find_coach_name(&self, coach_id: &str) -> Option<String>;

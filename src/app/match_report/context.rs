@@ -4,8 +4,8 @@ use crate::app::match_report::io::app_events::{
 };
 use crate::app::match_report::io::repository::match_report_repository::MatchReportRepository;
 use crate::app::match_report::ports::{
-    ICoachDataPort, ICompetitionDataPort, IPlayerDataPort, ISpaceAdminPort, ISppCalculatorPort,
-    ITeamDataPort,
+    ICoachDataPort, ICompetitionDataPort, IKeywordCatalogPort, IPlayerDataPort, ISpaceAdminPort,
+    ISppCalculatorPort, ITeamDataPort,
 };
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
@@ -20,6 +20,7 @@ pub struct MatchReportContext {
     pub coach_data: Arc<dyn ICoachDataPort>,
     pub space_admin: Arc<dyn ISpaceAdminPort>,
     pub spp_calculator: Arc<dyn ISppCalculatorPort>,
+    pub keyword_catalog: Arc<dyn IKeywordCatalogPort>,
     pub event_bus: EventBus,
 }
 
@@ -52,6 +53,7 @@ impl MatchReportContext {
         coach_data: Arc<dyn ICoachDataPort>,
         space_admin: Arc<dyn ISpaceAdminPort>,
         spp_calculator: Arc<dyn ISppCalculatorPort>,
+        keyword_catalog: Arc<dyn IKeywordCatalogPort>,
         event_bus: EventBus,
     ) -> Self {
         Self {
@@ -62,6 +64,7 @@ impl MatchReportContext {
             coach_data,
             space_admin,
             spp_calculator,
+            keyword_catalog,
             event_bus,
         }
     }
