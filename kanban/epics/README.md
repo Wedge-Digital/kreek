@@ -95,7 +95,7 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 | `413-retirer-une-customisation-appliquee` | Le mode customisation ne sait qu'ajouter : une erreur ne se corrige qu'en la compensant, et le journal garde les deux |
 | `412-la-phase-finale-quitte-la-creation-de-competition` | Un réglage qu'il faut remplir et dont rien ne se sert : aucun appariement de phase finale n'est généré, aucun classement n'en tient compte |
 | `397-sentry-l-alerte-que-le-journal-ne-donne-pas` | E11 a donné de quoi enquêter, pas d'être prévenu : une erreur en production n'existe que si quelqu'un ouvre les journaux et cherche |
-| `395-le-site-en-francais-et-en-anglais` | 144 templates, ~210 libellés en Rust, 11 fichiers de corpus et 51 sélecteurs e2e en français. Deviendra une épic ; la question ouverte est instance par langue ou instance bilingue |
+| `395-le-site-en-francais-et-en-anglais` | ~1 700 chaînes : 144 templates, **869 libellés en Rust dont 120 dans le domaine**, 67 variantes d'erreur, 51 sélecteurs e2e. Instruite le 2026-08-26 — bilingue, catalogue plat, filtre Askama — puis mise en attente : trop volumineuse pour une session |
 | `385-l-avatar-d-un-coach-n-existe-nulle-part` | Zéro utilisateur sur 864 en a un, aucun écran n'en pose, et le cache écrase la colonne. Trois tables entretiennent l'illusion |
 | `361-reserver-la-place-sur-la-construction-d-equipe` | 1 265 px de saut en desktop, 1 841 en mobile — la plus grosse zone non réservée, hors périmètre de la 343 |
 | `360-bandeau-d-inscription-en-attente-inexistant` | Un test e2e attend une classe qui n'a jamais été rendue. La suite est rouge en permanence |
