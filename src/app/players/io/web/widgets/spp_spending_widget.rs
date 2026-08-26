@@ -264,6 +264,7 @@ mod tests {
             mode: AcquisitionMode::Chosen,
             spp_cost: SppCost::try_new(6).unwrap(),
             value_delta: ValueKpo(20),
+            from_match: None,
         });
         let catalog = SkillCatalogAdapter::new(std::sync::Arc::new(
             InMemoryReferenceRepository::load_for_tests(),

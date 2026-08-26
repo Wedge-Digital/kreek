@@ -122,6 +122,22 @@ pub enum PlayerDomainEvent {
         context: MatchContext,
         injury_type: InjuryType,
     },
+    /// Le joueur se met à haïr une espèce après avoir encaissé un coup.
+    ///
+    /// **Aucun champ de valeur**, contrairement à l'état projeté qui portera des
+    /// zéros : un trait gagné en encaissant un coup ne se paie pas et ne
+    /// renchérit pas le joueur — le champ n'existe pas, il ne vaut pas zéro.
+    /// C'est la distinction que le projet tient depuis la customisation.
+    ///
+    /// `context` porte le match, ce qui rend le gain défaisable à la
+    /// dépublication sans qu'aucun compteur ait à être tenu à jour.
+    PlayerHatredGained {
+        player_id: PlayerId,
+        team_id: TeamId,
+        context: MatchContext,
+        skill_id: SkillId,
+        skill_name: SkillName,
+    },
     PlayerAvailabilityRestored {
         player_id: PlayerId,
         team_id: TeamId,
@@ -262,6 +278,7 @@ impl PlayerDomainEvent {
             Self::MatchMvpNamed { .. } => "MatchMvpNamed",
             Self::FoulCommitted { .. } => "FoulCommitted",
             Self::InjurySustained { .. } => "InjurySustained",
+            Self::PlayerHatredGained { .. } => "PlayerHatredGained",
             Self::PlayerAvailabilityRestored { .. } => "PlayerAvailabilityRestored",
             Self::MatchConcluded { .. } => "MatchConcluded",
             Self::MatchImpactReverted { .. } => "MatchImpactReverted",

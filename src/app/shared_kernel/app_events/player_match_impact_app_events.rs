@@ -34,6 +34,14 @@ pub enum PlayerMatchImpactAppEvent {
     PlayerInjured {
         context: PlayerMatchContextPayload,
         injury_type: InjuryTypePayload,
+        /// L'uid de la **compétence**, pas celui du mot-clef : l'action le porte
+        /// déjà, figé à la saisie par le use case qui tenait le DTO en main.
+        /// Le publisher le recopie — aucune traduction, aucune convention de
+        /// nommage, aucun port supplémentaire.
+        ///
+        /// `#[serde(default)]` : les app events déjà écrits ne le portent pas.
+        #[serde(default)]
+        hatred_skill_uid: Option<String>,
     },
     TeamMatchConcluded {
         team_id: String,

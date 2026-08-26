@@ -50,7 +50,10 @@ pub fn resolve_skill_cost(
         // `unreachable!` — ce chemin sert aussi à recalculer le coût d'une
         // compétence déjà acquise pour l'afficher, et un panic y serait
         // disproportionné.
-        AcquisitionMode::Customised => 0,
+        // Une Haine ne passe pas plus ici qu'une customisation : elle est
+        // gratuite par définition, et ce service sert aussi à réafficher le
+        // coût d'une compétence déjà acquise.
+        AcquisitionMode::Customised | AcquisitionMode::Injury => 0,
     };
 
     // `skill.is_elite`, comme le coût en SPP juste au-dessus : la valeur et

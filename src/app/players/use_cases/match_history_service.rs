@@ -83,7 +83,8 @@ fn event_match_report_id(event: &PlayerDomainEvent) -> Option<String> {
     match event {
         // Fait d'équipe, hors de tout historique de match.
         PlayerDomainEvent::InitialRosterCompleted { .. } => None,
-        PlayerDomainEvent::TouchdownScored { context, .. }
+        PlayerDomainEvent::PlayerHatredGained { context, .. }
+        | PlayerDomainEvent::TouchdownScored { context, .. }
         | PlayerDomainEvent::PassCompleted { context, .. }
         | PlayerDomainEvent::InterceptionMade { context, .. }
         | PlayerDomainEvent::CasualtyInflicted { context, .. }
@@ -117,6 +118,9 @@ fn event_match_report_id(event: &PlayerDomainEvent) -> Option<String> {
 fn apply_event(entry: &mut MatchHistoryEntry, event: &PlayerDomainEvent) {
     match event {
         PlayerDomainEvent::InitialRosterCompleted { .. } => {}
+        // La Haine appartient au récit du match, mais l'entrée d'historique
+        // n'en porte pas de colonne : rien à cumuler ici.
+        PlayerDomainEvent::PlayerHatredGained { .. } => {}
         PlayerDomainEvent::MatchConcluded {
             context,
             team_score,

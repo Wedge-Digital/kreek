@@ -470,6 +470,7 @@ mod tests {
                 mode: AcquisitionMode::Chosen,
                 spp_cost: SppCost::try_new(*cost).unwrap(),
                 value_delta: ValueKpo(0),
+                from_match: None,
             });
         }
         player

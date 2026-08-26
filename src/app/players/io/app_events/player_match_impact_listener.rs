@@ -1,7 +1,9 @@
+use crate::app::players::domain::events::PlayerDomainEvent;
 use crate::app::players::domain::match_impact::{
     InjuryType, MatchContext, MatchReportId, RoundId, SppEarned, StatKind,
 };
 use crate::app::players::domain::player::{Player, PlayerId, TeamId};
+use crate::app::players::domain::value_objects::{SkillId, SkillName};
 use crate::app::players::io::app_events::team_match_concluded_listener::handle_team_match_concluded;
 use crate::app::players::ports::IPlayerRepository;
 use crate::app::players::ports::ISkillCatalogPort;
@@ -103,6 +105,7 @@ async fn handle_event(
     // savoir.
     let bareme = catalog.spp_scale_for_roster_line(player.roster_line_id.as_ref());
 
+    let mut haine: Option<PlayerDomainEvent> = None;
     let event = match app_event {
         PlayerMatchImpactAppEvent::PlayerPerformedTouchdown(_) => {
             player.record_touchdown(context, spp_earned(bareme.touchdown))
@@ -120,23 +123,76 @@ async fn handle_event(
             player.record_mvp(context, spp_earned(bareme.mvp))
         }
         PlayerMatchImpactAppEvent::PlayerPerformedFoul(_) => player.record_foul(context),
-        PlayerMatchImpactAppEvent::PlayerInjured { injury_type, .. } => {
+        PlayerMatchImpactAppEvent::PlayerInjured {
+            injury_type,
+            hatred_skill_uid,
+            ..
+        } => {
+            // Deux faits distincts : la blessure, puis la Haine qu'elle laisse.
+            // Le second n'existe que si le coach l'a déclaré.
+            haine = evenement_de_haine(&player, &context, hatred_skill_uid.as_deref(), catalog);
             player.record_injury(context, to_injury_type(&injury_type))
         }
         PlayerMatchImpactAppEvent::TeamMatchConcluded { .. }
         | PlayerMatchImpactAppEvent::TeamMatchImpactReverted { .. } => unreachable!(),
     };
 
-    let next_version = player.version + 1;
-    if let Err(e) = player_repo
-        .append(&player.id, &player.team_id, &event, next_version)
-        .await
-    {
+    // En lot : les deux événements du même joueur, dans l'ordre, ou aucun.
+    let mut entrees = vec![(
+        player.id.clone(),
+        player.team_id.clone(),
+        event,
+        player.version + 1,
+    )];
+    if let Some(gain) = haine {
+        entrees.push((
+            player.id.clone(),
+            player.team_id.clone(),
+            gain,
+            player.version + 2,
+        ));
+    }
+    if let Err(e) = player_repo.append_batch(entrees).await {
         tracing::error!(
             "player_match_impact_listener: append {}: {e}",
             context_payload.player_id
         );
     }
+}
+
+/// La Haine, si le coach en a déclaré une et que le catalogue la connaît encore.
+///
+/// Le libellé est résolu **ici** et non figé dans l'app event : un libellé change
+/// avec le corpus, un uid non, et inscrire le nom dans l'event store y figerait
+/// une traduction.
+///
+/// Un uid que le catalogue ne connaît plus ne produit **aucune compétence**, et
+/// laisse une ligne. La garde de démarrage (carte 399) rend le cas improbable,
+/// mais un corpus amputé entre la saisie et la publication ne doit pas créer une
+/// compétence sans nom.
+fn evenement_de_haine(
+    player: &Player,
+    context: &MatchContext,
+    hatred_skill_uid: Option<&str>,
+    catalog: &dyn ISkillCatalogPort,
+) -> Option<PlayerDomainEvent> {
+    let uid = hatred_skill_uid?;
+    let Some(skill) = catalog.find_skill(uid) else {
+        tracing::warn!(
+            skill_uid = %uid,
+            player_id = %player.id.0,
+            "Haine ignorée : compétence absente du catalogue à la publication"
+        );
+        return None;
+    };
+    let (Ok(skill_id), Ok(skill_name)) = (
+        SkillId::try_new(skill.skill_id),
+        SkillName::try_new(skill.name),
+    ) else {
+        tracing::warn!(skill_uid = %uid, "Haine ignorée : compétence illisible");
+        return None;
+    };
+    Some(player.record_hatred(context.clone(), skill_id, skill_name))
 }
 
 async fn dispatch_team_match_concluded(
@@ -285,6 +341,74 @@ mod tests {
         SkillCatalogAdapter::new(Arc::new(InMemoryReferenceRepository::load_for_tests()))
     }
 
+    // ── Haine (carte 403) ────────────────────────────────────────────────────
+
+    fn joueur_de_test() -> Player {
+        Player::from_events(&[PlayerDomainEvent::PlayerCreated {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            space_id: SpaceId::new(),
+            position_name: PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
+            roster_line_id: RosterLineId::try_new("DEMO_GRANIT__PIETAILLE".to_string()).unwrap(),
+            jersey: None,
+            base_skills: vec![],
+            starting_spp: Spp(0),
+            starting_value: ValueKpo(100),
+        }])
+        .unwrap()
+    }
+
+    fn contexte() -> MatchContext {
+        MatchContext {
+            match_report_id: MatchReportId("mr1".into()),
+            round_id: RoundId("r1".into()),
+            round_label: "Journée 5".into(),
+            opponent_team_id: TeamId("adversaire".into()),
+            opponent_team_name: "Bone Crushers".into(),
+        }
+    }
+
+    #[test]
+    fn une_haine_connue_du_catalogue_produit_son_gain() {
+        let e = evenement_de_haine(
+            &joueur_de_test(),
+            &contexte(),
+            Some("HAINE_DARK_ELF"),
+            &test_catalog(),
+        );
+        match e {
+            Some(PlayerDomainEvent::PlayerHatredGained {
+                skill_id,
+                skill_name,
+                ..
+            }) => {
+                assert_eq!(skill_id.as_ref(), "HAINE_DARK_ELF");
+                assert_eq!(skill_name.as_ref(), "Haine : Elfe Noir");
+            }
+            autre => panic!("attendu un gain de Haine, obtenu {autre:?}"),
+        }
+    }
+
+    /// La garde de démarrage (carte 399) rend le cas improbable, mais un corpus
+    /// amputé entre la saisie et la publication ne doit pas créer une compétence
+    /// sans nom.
+    #[test]
+    fn un_uid_absent_du_catalogue_ne_produit_aucune_competence() {
+        let e = evenement_de_haine(
+            &joueur_de_test(),
+            &contexte(),
+            Some("HAINE_ESPECE_DISPARUE"),
+            &test_catalog(),
+        );
+        assert!(e.is_none());
+    }
+
+    #[test]
+    fn sans_haine_declaree_aucun_gain_n_est_produit() {
+        let e = evenement_de_haine(&joueur_de_test(), &contexte(), None, &test_catalog());
+        assert!(e.is_none());
+    }
+
     fn sample_context_payload(player_id: &str) -> PlayerMatchContextPayload {
         PlayerMatchContextPayload {
             match_report_id: "mr1".into(),
@@ -351,6 +475,7 @@ mod tests {
             PlayerMatchImpactAppEvent::PlayerInjured {
                 context: sample_context_payload("p2"),
                 injury_type: InjuryTypePayload::BlessureSerieuse,
+                hatred_skill_uid: None,
             },
             &player_repo,
             &catalog,

@@ -156,6 +156,7 @@ fn skill_row(
         AcquisitionMode::Chosen => "Choisie",
         AcquisitionMode::Random => "Aléatoire",
         AcquisitionMode::Customised => "Customisation",
+        AcquisitionMode::Injury => "Blessure",
     };
     let mode_css = match mode {
         AcquisitionMode::Random => "mode-chip-random",

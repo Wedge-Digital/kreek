@@ -340,9 +340,17 @@ fn map_action_to_impact_event(
         MatchActionType::Sortie => PlayerMatchImpactAppEvent::PlayerPerformedCasualty(context),
         MatchActionType::Mvp => PlayerMatchImpactAppEvent::PlayerPerformedMvp(context),
         MatchActionType::Agression => PlayerMatchImpactAppEvent::PlayerPerformedFoul(context),
-        MatchActionType::Blesse { injury, .. } => PlayerMatchImpactAppEvent::PlayerInjured {
+        // Le publisher **recopie** ; il ne résout rien. L'uid de la compétence
+        // est figé dans l'action depuis la saisie (carte 401), et le mot-clef
+        // reste du côté de `match_report`, où le récapitulatif l'affiche.
+        MatchActionType::Blesse {
+            injury,
+            hatred_skill_uid,
+            ..
+        } => PlayerMatchImpactAppEvent::PlayerInjured {
             context,
             injury_type: map_injury_type_payload(injury),
+            hatred_skill_uid: hatred_skill_uid.clone(),
         },
     })
 }
@@ -712,6 +720,62 @@ mod player_impact_tests {
             events[0],
             PlayerMatchImpactAppEvent::PlayerPerformedFoul(_)
         ));
+    }
+
+    // ── Haine (carte 403) ────────────────────────────────────────────────────
+
+    fn blessure_avec_haine() -> MatchActionType {
+        MatchActionType::Blesse {
+            injury: InjuryType::Amoche,
+            hatred: Some(
+                crate::app::match_report::domain::value_objects::HatredKeyword::try_new("DWARF")
+                    .unwrap(),
+            ),
+            hatred_skill_uid: Some("HAINE_DWARF".to_string()),
+        }
+    }
+
+    /// Le publisher recopie l'uid de la compétence, il ne le fabrique pas :
+    /// aucune convention de nommage nulle part.
+    #[test]
+    fn le_publisher_recopie_l_uid_de_la_competence() {
+        let events =
+            build_player_impact_events(&[regular_action(blessure_avec_haine())], &ctx_base());
+        match &events[..] {
+            [PlayerMatchImpactAppEvent::PlayerInjured {
+                hatred_skill_uid, ..
+            }] => assert_eq!(hatred_skill_uid.as_deref(), Some("HAINE_DWARF")),
+            autre => panic!("attendu une blessure avec Haine, obtenu {autre:?}"),
+        }
+    }
+
+    /// La Haine d'un journalier reste dans le rapport de match et n'atteint
+    /// jamais `players` — par le filtre `ActionPlayer::Regular` qui existait
+    /// déjà. Ce test est là pour qu'on ne le défasse pas sans s'en apercevoir.
+    #[test]
+    fn la_haine_d_un_journalier_ne_produit_aucun_app_event() {
+        let events = build_player_impact_events(&[temp_action(blessure_avec_haine())], &ctx_base());
+        assert!(
+            events.is_empty(),
+            "un joueur temporaire ne doit produire aucun impact : {events:?}"
+        );
+    }
+
+    /// Une blessure sans Haine se comporte exactement comme avant la carte.
+    #[test]
+    fn une_blessure_sans_haine_ne_porte_pas_d_uid() {
+        let action = MatchActionType::Blesse {
+            injury: InjuryType::Amoche,
+            hatred: None,
+            hatred_skill_uid: None,
+        };
+        let events = build_player_impact_events(&[regular_action(action)], &ctx_base());
+        match &events[..] {
+            [PlayerMatchImpactAppEvent::PlayerInjured {
+                hatred_skill_uid, ..
+            }] => assert!(hatred_skill_uid.is_none()),
+            autre => panic!("attendu une blessure sans Haine, obtenu {autre:?}"),
+        }
     }
 
     #[test]

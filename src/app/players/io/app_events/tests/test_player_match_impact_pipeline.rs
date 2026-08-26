@@ -127,6 +127,7 @@ async fn full_pipeline_credits_spp_and_records_injury_then_restores_availability
         PlayerMatchImpactAppEvent::PlayerInjured {
             context: context("injured"),
             injury_type: InjuryTypePayload::BlessureSerieuse,
+            hatred_skill_uid: None,
         }
         .to_enveloppe(),
     );
@@ -275,6 +276,7 @@ async fn un_joueur_blesse_pendant_le_match_reste_absent_au_suivant(pool: PgPool)
         PlayerMatchImpactAppEvent::PlayerInjured {
             context: context("blesse"),
             injury_type: InjuryTypePayload::BlessureSerieuse,
+            hatred_skill_uid: None,
         }
         .to_enveloppe(),
     );

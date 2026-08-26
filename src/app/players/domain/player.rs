@@ -35,12 +35,26 @@ pub struct AcquiredSkill {
     pub mode: AcquisitionMode,
     pub spp_cost: SppCost,
     pub value_delta: ValueKpo,
+    /// Le match qui l'a produite — `None` pour un achat ou une customisation.
+    ///
+    /// C'est ce qui rend la dépublication **exacte**. Compter « combien ce match
+    /// en a ajouté » puis tronquer la fin de la liste ne serait vrai que si rien
+    /// d'autre n'était venu après : une compétence accordée par un commissaire
+    /// entre la publication et la dépublication serait retirée à la place de la
+    /// Haine. L'origine portée par l'élément ne peut pas diverger de lui, un
+    /// compteur si.
+    pub from_match: Option<MatchReportId>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AcquisitionMode {
     Chosen,
     Random,
+    /// Gagnée en encaissant un coup. Ce n'est pas `Automatic` : le coach répond
+    /// à une question puis choisit parmi trente mots-clefs — c'est le geste le
+    /// moins automatique de l'écran. Les trois autres modes nomment la façon
+    /// d'obtenir ; celui-ci est « à la suite d'une blessure ».
+    Injury,
     /// Donnée par un commissaire, hors des règles du jeu. C'est ce mode qui
     /// permet au journal des évolutions d'afficher sa pastille de customisation
     /// sans interroger l'event store.
@@ -289,6 +303,8 @@ impl Player {
                     mode: *mode,
                     spp_cost: *spp_cost,
                     value_delta: *value_delta,
+                    // Un achat en SPP ne vient d'aucun match.
+                    from_match: None,
                 });
                 player.value = ValueKpo(player.value.0 + value_delta.0);
                 player.version += 1;
@@ -309,6 +325,8 @@ impl Player {
                     mode: *mode,
                     spp_cost: *spp_cost,
                     value_delta: *value_delta,
+                    // Un achat en SPP ne vient d'aucun match.
+                    from_match: None,
                 });
                 player.value = ValueKpo(player.value.0 + value_delta.0);
                 player.version += 1;
@@ -514,6 +532,31 @@ impl Player {
             // prix déplace la valeur d'équipe. Une compétence donnée par un
             // commissaire ne renchérit pas le joueur, contrairement à la même
             // achetée en SPP.
+            // ── Haine ─────────────────────────────────────────────────────────
+            // Un trait gagné en encaissant un coup : ni coût, ni valeur. C'est
+            // la même distinction que la customisation — l'événement ne porte
+            // pas de champ de valeur, l'état projeté porte des zéros.
+            //
+            // `from_match` est ce qui rend la dépublication exacte : on retirera
+            // ce que ce match a produit, sans dépendre de l'ordre de la liste.
+            PlayerDomainEvent::PlayerHatredGained {
+                context,
+                skill_id,
+                skill_name,
+                ..
+            } => {
+                let mut player = current?;
+                player.acquired_skills.push(AcquiredSkill {
+                    skill_id: skill_id.clone(),
+                    skill_name: skill_name.clone(),
+                    mode: AcquisitionMode::Injury,
+                    spp_cost: SppCost::try_new(0).unwrap(),
+                    value_delta: ValueKpo(0),
+                    from_match: Some(context.match_report_id.clone()),
+                });
+                player.version += 1;
+                Some(player)
+            }
             PlayerDomainEvent::PlayerSkillCustomised {
                 skill_id,
                 skill_name,
@@ -528,6 +571,9 @@ impl Player {
                     // commissaire ne se paie pas et ne renchérit pas le joueur.
                     spp_cost: SppCost::try_new(0).unwrap(),
                     value_delta: ValueKpo(0),
+                    // Une customisation ne vient d'aucun match : rien à défaire
+                    // à la dépublication d'un rapport.
+                    from_match: None,
                 });
                 player.version += 1;
                 Some(player)
@@ -606,6 +652,15 @@ impl Player {
         // liste — on ne défait que le dernier match.
         truncate_by(&mut self.injuries, c.injuries_added);
         truncate_by(&mut self.stat_adjustments, c.stat_adjustments_added);
+
+        // Les compétences se retirent par **origine**, pas par position. Compter
+        // « combien ce match en a ajouté » puis tronquer la fin ne serait vrai
+        // que si rien d'autre n'était venu après : une compétence accordée par
+        // un commissaire entre la publication et la dépublication serait retirée
+        // à sa place. `has_spent_spp_since_match` couvre l'achat en SPP, rien ne
+        // couvre la customisation.
+        self.acquired_skills
+            .retain(|s| s.from_match.as_ref() != Some(match_report_id));
 
         self.participation_status = c.participation_status_before;
     }
@@ -699,6 +754,30 @@ impl Player {
             injury_type,
         }
     }
+    /// Le joueur se met à haïr une espèce.
+    ///
+    /// Pas de `Result` : tout est vérifié en amont — le type de blessure par le
+    /// domaine de `match_report`, l'existence du mot-clef par le use case de
+    /// saisie, celle de la compétence par le listener. Une méthode qui ne peut
+    /// pas échouer ferait écrire des `unwrap` à ses appelants.
+    ///
+    /// Aucune règle de doublon : haïr deux fois la même espèce est possible, et
+    /// c'est au règlement de le dire, pas à ce greffier.
+    pub fn record_hatred(
+        &self,
+        context: MatchContext,
+        skill_id: SkillId,
+        skill_name: SkillName,
+    ) -> PlayerDomainEvent {
+        PlayerDomainEvent::PlayerHatredGained {
+            player_id: self.id.clone(),
+            team_id: self.team_id.clone(),
+            context,
+            skill_id,
+            skill_name,
+        }
+    }
+
     pub fn restore_availability(&self, match_report_id: MatchReportId) -> PlayerDomainEvent {
         PlayerDomainEvent::PlayerAvailabilityRestored {
             player_id: self.id.clone(),
@@ -1326,6 +1405,121 @@ mod revert_match_impact_tests {
 
     fn spp(n: u32) -> SppEarned {
         SppEarned::try_new(n).unwrap()
+    }
+
+    // ── Haine (carte 403) ────────────────────────────────────────────────────
+
+    fn haine(mr: &str, uid: &str) -> PlayerDomainEvent {
+        PlayerDomainEvent::PlayerHatredGained {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            context: context(mr),
+            skill_id: SkillId::try_new(uid.to_string()).unwrap(),
+            skill_name: SkillName::try_new(format!("Haine : {uid}")).unwrap(),
+        }
+    }
+
+    fn joueur(events: Vec<PlayerDomainEvent>) -> Player {
+        let mut tous = vec![created()];
+        tous.extend(events);
+        Player::from_events(&tous).expect("le joueur doit se reconstituer")
+    }
+
+    #[test]
+    fn une_haine_est_gratuite_et_ne_renchérit_pas_le_joueur() {
+        let p = joueur(vec![haine("mr-1", "HAINE_DWARF")]);
+        assert_eq!(p.acquired_skills.len(), 1);
+        let s = &p.acquired_skills[0];
+        assert_eq!(s.spp_cost.into_inner(), 0);
+        assert_eq!(s.value_delta.0, 0);
+        assert!(matches!(s.mode, AcquisitionMode::Injury));
+        assert_eq!(s.from_match, Some(MatchReportId("mr-1".into())));
+    }
+
+    /// Le joueur encaisse, il ne gagne rien : sa réserve ne bouge pas.
+    #[test]
+    fn une_haine_ne_touche_pas_la_reserve_de_spp() {
+        let avant = joueur(vec![]).spp_remaining();
+        let apres = joueur(vec![haine("mr-1", "HAINE_DWARF")]).spp_remaining();
+        assert_eq!(avant, apres);
+    }
+
+    /// Aucune règle de doublon : c'est au règlement de le dire, pas au greffier.
+    #[test]
+    fn hair_deux_fois_la_meme_espece_est_accepte() {
+        let p = joueur(vec![
+            haine("mr-1", "HAINE_DWARF"),
+            haine("mr-2", "HAINE_DWARF"),
+        ]);
+        assert_eq!(p.acquired_skills.len(), 2);
+    }
+
+    #[test]
+    fn trois_haines_differentes_se_cumulent() {
+        let p = joueur(vec![
+            haine("mr-1", "HAINE_DWARF"),
+            haine("mr-1", "HAINE_ELF"),
+            haine("mr-1", "HAINE_SKAVEN"),
+        ]);
+        assert_eq!(p.acquired_skills.len(), 3);
+    }
+
+    /// Le cœur de la carte : la dépublication retire la Haine de ce match, et
+    /// **elle seule**.
+    #[test]
+    fn la_depublication_defait_la_haine_du_match() {
+        let mut events = match_events("mr-1");
+        events.push(haine("mr-1", "HAINE_DWARF"));
+        let p = joueur(events);
+        assert_eq!(p.acquired_skills.len(), 1);
+
+        let revert = p
+            .revert_match_impact(&MatchReportId("mr-1".into()))
+            .unwrap();
+        let mut tous = vec![created()];
+        tous.extend(match_events("mr-1"));
+        tous.push(haine("mr-1", "HAINE_DWARF"));
+        tous.push(revert);
+        let apres = Player::from_events(&tous).unwrap();
+        assert!(
+            apres.acquired_skills.is_empty(),
+            "la Haine doit partir avec l'impact du match"
+        );
+    }
+
+    /// Le scénario qui condamnait le compteur : une compétence arrivée **après**
+    /// la Haine, par un autre chemin, ne doit pas être retirée à sa place.
+    #[test]
+    fn la_depublication_epargne_une_competence_d_une_autre_origine() {
+        let mut tous = vec![created()];
+        tous.extend(match_events("mr-1"));
+        tous.push(haine("mr-1", "HAINE_DWARF"));
+        tous.push(PlayerDomainEvent::PlayerSkillCustomised {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            customisation_id: CustomisationId::try_new("cust-1".to_string()).unwrap(),
+            skill_id: SkillId::try_new("BLOC".to_string()).unwrap(),
+            skill_name: SkillName::try_new("Bloc".to_string()).unwrap(),
+            author: "Commissaire".into(),
+        });
+        let p = Player::from_events(&tous).unwrap();
+        assert_eq!(p.acquired_skills.len(), 2);
+
+        tous.push(
+            p.revert_match_impact(&MatchReportId("mr-1".into()))
+                .unwrap(),
+        );
+        let apres = Player::from_events(&tous).unwrap();
+        let restants: Vec<&str> = apres
+            .acquired_skills
+            .iter()
+            .map(|s| s.skill_id.as_ref())
+            .collect();
+        assert_eq!(
+            restants,
+            vec!["BLOC"],
+            "la compétence du commissaire devait survivre, la Haine partir"
+        );
     }
 
     /// Un match complet : essai, passe, sortie, faute, MVP, puis conclusion.

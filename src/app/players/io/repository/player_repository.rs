@@ -19,12 +19,37 @@ fn event_type_name(event: &PlayerDomainEvent) -> &'static str {
     event.type_name()
 }
 
+/// La compétence acquise telle que la projection la porte.
+///
+/// `category_css` reste vide : la projection ne l'a jamais rempli à l'écriture,
+/// et c'est l'affichage qui le résout au catalogue.
+fn projeter_skill(
+    s: &crate::app::players::domain::player::AcquiredSkill,
+) -> AcquiredSkillProjection {
+    AcquiredSkillProjection {
+        skill_id: s.skill_id.as_ref().to_string(),
+        skill_name: s.skill_name.as_ref().to_string(),
+        category_css: String::new(),
+        mode: match s.mode {
+            AcquisitionMode::Chosen => "Chosen",
+            AcquisitionMode::Random => "Random",
+            AcquisitionMode::Customised => "Customised",
+            AcquisitionMode::Injury => "Injury",
+        }
+        .to_string(),
+        spp_cost: s.spp_cost.into_inner() as i32,
+    }
+}
+
 fn player_and_team_id(event: &PlayerDomainEvent) -> (&str, &str) {
     match event {
         // Fait d'équipe, jamais persisté : il n'atteint pas ce chemin.
         PlayerDomainEvent::InitialRosterCompleted { .. } => {
             unreachable!("InitialRosterCompleted n'est jamais appendu")
         }
+        PlayerDomainEvent::PlayerHatredGained {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
         PlayerDomainEvent::PlayerCreated {
             player_id, team_id, ..
         } => (&player_id.0, &team_id.0),
@@ -192,6 +217,7 @@ pub async fn upsert_player_projection(
                     AcquisitionMode::Chosen => "Chosen".to_string(),
                     AcquisitionMode::Random => "Random".to_string(),
                     AcquisitionMode::Customised => "Customised".to_string(),
+                    AcquisitionMode::Injury => "Injury".to_string(),
                 },
                 spp_cost: spp_cost.into_inner() as i32,
             };
@@ -314,6 +340,7 @@ pub async fn upsert_player_projection(
                     AcquisitionMode::Chosen => "Chosen".to_string(),
                     AcquisitionMode::Random => "Random".to_string(),
                     AcquisitionMode::Customised => "Customised".to_string(),
+                    AcquisitionMode::Injury => "Injury".to_string(),
                 },
                 spp_cost: spp_cost.into_inner() as i32,
             };
@@ -349,22 +376,34 @@ pub async fn upsert_player_projection(
             .map_err(RepositoryError::Database)?;
         }
 
-        // Compensation d'une dépublication. La projection ne porte que `spp` et
-        // `participation_status` parmi les champs touchés : les deux sont relus
-        // depuis l'agrégat rejoué, seul endroit où l'instantané du dernier match
-        // est connu.
+        // Compensation d'une dépublication. Trois champs sont relus depuis
+        // l'agrégat rejoué, seul endroit où l'instantané du dernier match est
+        // connu.
+        //
+        // `acquired_skills` en fait partie depuis la Haine (carte 403), et il
+        // est **reposé en entier** plutôt que retranché : la colonne s'alimente
+        // en `||`, et retrancher aurait exigé que l'événement porte ce qu'il
+        // faut retirer, alors qu'il est mince à dessein. `Player::from_events`
+        // sait déjà le défaire — c'est le même raisonnement que pour le cumul
+        // des caractéristiques, quelques lignes plus bas.
         PlayerDomainEvent::MatchImpactReverted { player_id, .. } => {
             let events = load_events_in_tx(tx, &player_id.0).await?;
             let Some(player) = Player::from_events(&events) else {
                 return Ok(());
             };
+            let skills: Vec<AcquiredSkillProjection> =
+                player.acquired_skills.iter().map(projeter_skill).collect();
+            let skills_json =
+                serde_json::to_value(&skills).map_err(RepositoryError::Serialization)?;
             sqlx::query(
                 "UPDATE players_proj
-                 SET spp = $1, participation_status = $2, version = version + 1
-                 WHERE player_id = $3",
+                 SET spp = $1, participation_status = $2, acquired_skills = $3::jsonb,
+                     version = version + 1
+                 WHERE player_id = $4",
             )
             .bind(player.spp.0 as i32)
             .bind(participation_status_label(player.participation_status))
+            .bind(&skills_json)
             .bind(&player_id.0)
             .execute(&mut **tx)
             .await
@@ -427,6 +466,37 @@ pub async fn upsert_player_projection(
         // La compétence rejoint les acquises **sans valeur** : seul le prix
         // déplace la valeur d'équipe. `value_kpo` n'est donc pas touché ici,
         // contrairement à `PlayerSkillPurchased`.
+        // Même forme que la customisation : la compétence rejoint la liste, à
+        // coût et valeur nuls. Ce que la dépublication en retire est traité par
+        // `MatchImpactReverted`, qui repose la liste entière depuis l'agrégat.
+        PlayerDomainEvent::PlayerHatredGained {
+            player_id,
+            skill_id,
+            skill_name,
+            ..
+        } => {
+            let acq = AcquiredSkillProjection {
+                skill_id: skill_id.as_ref().to_string(),
+                skill_name: skill_name.as_ref().to_string(),
+                category_css: String::new(),
+                mode: "Injury".to_string(),
+                spp_cost: 0,
+            };
+            let acq_json = serde_json::to_value(&acq).map_err(RepositoryError::Serialization)?;
+
+            sqlx::query(
+                "UPDATE players_proj
+                 SET acquired_skills = acquired_skills || jsonb_build_array($1::jsonb),
+                     version = version + 1
+                 WHERE player_id = $2",
+            )
+            .bind(&acq_json)
+            .bind(&player_id.0)
+            .execute(&mut **tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+        }
+
         PlayerDomainEvent::PlayerSkillCustomised {
             player_id,
             skill_id,
