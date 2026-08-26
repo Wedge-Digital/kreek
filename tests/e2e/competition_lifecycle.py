@@ -179,10 +179,15 @@ def _select_competition_by_name(page: Page, competition_name: str) -> None:
     expect(season_hidden).not_to_have_value("", timeout=5000)
 
 
-def build_and_submit_team(page: Page, space_id: str, competition_name: str, coach_option_index: int, roster_index: int) -> str:
+def build_and_submit_team(page: Page, space_id: str, competition_name: str, coach_option_index: int, roster_index: int, *, soumettre: bool = True) -> str:
     """Crée un draft, choisit un roster (parmi ROSTERS, sans choix de règle
     spéciale à gérer), recrute 11 joueurs, finalise et soumet — auto-enrôlée
-    puisque la compétition a requires_validation=false. Retourne le team_id."""
+    puisque la compétition a requires_validation=false. Retourne le team_id.
+
+    `soumettre=False` s'arrête sur la page de finalisation, équipe complète mais
+    pas encore soumise. C'est le seul moyen d'observer une équipe **commencée
+    avant** un changement d'état de sa compétition et présentée après : la page
+    de finalisation exige un roster complet, un brouillon nu y répond 404."""
     roster_uid, roster_name = ROSTERS[roster_index % len(ROSTERS)]
 
     page.goto(f"{BASE_URL}/app/{space_id}/team/create", wait_until="load")
@@ -251,6 +256,9 @@ def build_and_submit_team(page: Page, space_id: str, competition_name: str, coac
     # cliquer élimine la course, sans parier sur une durée arbitraire.
     page.wait_for_selector(".player-list .player-row", timeout=5000)
     page.wait_for_selector(".spp-budget", timeout=5000)
+
+    if not soumettre:
+        return team_id
 
     # SPP > 0 : atterrit sur finalize-team.html, soumission sans dépense.
     submit_btn = page.locator(".submit-bar button")

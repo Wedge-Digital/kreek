@@ -4,6 +4,9 @@ use crate::app::shared_kernel::identity::id_service::EntityIdService;
 use crate::app::shared_kernel::identity::ids::{CoachId, Entity, UserId};
 use crate::app::team_creation::routes::Routes as TeamRoutes;
 use crate::app::team_creation::use_cases::create_draft_team::create_draft_team;
+use crate::app::team_creation::use_cases::season_access_service::{
+    acces_creation, AccesCreation, SAISON_PAS_OUVERTE,
+};
 use crate::state::AppState;
 use axum::body::Body;
 use axum::extract::{Json, Path, State};
@@ -69,17 +72,29 @@ pub async fn post_draft_team(
         return error_response("Sélectionnez une compétition et une saison.");
     }
 
-    let creation_rules = match state
-        .team_creation
-        .competition_rules
-        .find_creation_rules_for_season(&form.season_id)
-        .await
-    {
-        Some(r) if !r.tiers.is_empty() => r,
-        Some(_) => {
+    let acces = acces_creation(
+        state
+            .team_creation
+            .competition_rules
+            .find_season_creation_data(&form.season_id)
+            .await,
+    );
+    let creation_rules = match acces {
+        AccesCreation::Ouverte(r) => r,
+        AccesCreation::PasEncorePrete { statut } => {
+            tracing::info!(
+                season_id = %form.season_id,
+                statut = %statut,
+                "création d'équipe refusée : la saison n'est pas ouverte aux inscriptions"
+            );
+            return error_response(SAISON_PAS_OUVERTE);
+        }
+        AccesCreation::SansRegles => {
             return error_response("La compétition sélectionnée n'a pas de règles de création.")
         }
-        None => return error_response("Saison introuvable — rechargez la page."),
+        AccesCreation::Introuvable => {
+            return error_response("Saison introuvable — rechargez la page.")
+        }
     };
 
     let user_id_str = user.id.to_string();

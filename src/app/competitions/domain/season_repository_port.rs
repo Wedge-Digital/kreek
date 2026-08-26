@@ -6,6 +6,13 @@ use crate::app::competitions::domain::competition_structure::CompetitionStructur
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use async_trait::async_trait;
 
+/// Le statut d'une saison entièrement configurée, celui que pose `set_ready.sql`.
+///
+/// La chaîne existait jusqu'ici dans le seul SQL. La comparer en dur ailleurs
+/// aurait recréé exactement le couplage muet que la carte 407 a coûté : un
+/// `status` qui change de nom, et une garde qui laisse tout passer sans un mot.
+pub const STATUT_SAISON_PRETE: &str = "ready";
+
 pub struct SeasonBaseInfo {
     pub name: String,
 }

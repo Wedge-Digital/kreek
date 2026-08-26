@@ -21,14 +21,20 @@ import time
 
 from playwright.sync_api import Page, expect
 
+from competition_lifecycle import create_full_competition
 from htmx_helpers import attendre_cablage, cliquer_quand_cable
 
 BASE_URL = "http://localhost:3210"
-FAKE_LOGO_URL = "https://res.cloudinary.com/demo/image/upload/v1/sample.jpg"
 
 
 def _create_minimal_competition(page: Page, competition_create_url: str) -> str:
-    """Crée une compétition avec un tier à 0 SPP (finalisation immédiate).
+    """Crée une compétition **finalisée**, avec un tier à 0 SPP.
+
+    Elle s'arrêtait jusqu'ici à la phase 2, et bâtir une équipe dessus
+    fonctionnait : c'était précisément le défaut de la carte 407, encodé ici
+    comme prémisse. Une saison non finalisée refuse désormais la création, donc
+    ces tests passent par le magicien complet — leur sujet est le sélecteur de
+    règle spéciale, pas l'état de la compétition.
 
     Retourne le nom de la compétition, unique par exécution — nécessaire pour
     la retrouver ensuite dans le kreek-select de /team/create : la base de
@@ -36,23 +42,7 @@ def _create_minimal_competition(page: Page, competition_create_url: str) -> str:
     les liste par ordre alphabétique de nom (pas par date de création), donc
     "la première option" n'est pas fiablement la nôtre.
     """
-    competition_name = f"SpecialRule E2E {time.time_ns()}"
-    page.goto(competition_create_url, wait_until="load")
-    page.fill("input[name='name']", competition_name)
-    page.wait_for_selector(".coach-result-row", timeout=5000)
-    page.locator(".coach-result-row").first.click()
-    page.evaluate(f"document.getElementById('logo_url').value = '{FAKE_LOGO_URL}'")
-    with page.expect_navigation(wait_until="load"):
-        page.click("button[type='submit']")
-
-    page.wait_for_selector(".tier-block", timeout=5000)
-    xp_input = page.locator(".tier-block").first.locator("input.tier-xp")
-    xp_input.fill("0")
-    xp_input.dispatch_event("change")
-    page.fill("#season_name", f"Saison SpecialRule E2E {time.time_ns()}")
-    page.click("button[onclick='submitRules()']")
-    page.wait_for_selector("#groups-config", timeout=10000)
-    return competition_name
+    return create_full_competition(page, competition_create_url, num_rounds=1, tier_xp=0)["name"]
 
 
 def _create_draft_team(page: Page, space_id: str, competition_name: str) -> str:

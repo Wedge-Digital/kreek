@@ -125,9 +125,33 @@ pub trait RulesetRepository: Send + Sync {
     async fn find_all(&self) -> Result<Vec<Ruleset>, RepositoryError>;
 }
 
+/// Ce que le BC `competitions` sait d'une saison au moment d'y créer une équipe.
+///
+/// Le **statut** en fait partie, et ce n'est pas un détail : une saison est
+/// joignable dès que ses règles sont posées, soit trois étapes avant d'être
+/// prête. Une équipe créée dans cette fenêtre ne s'inscrit jamais — la
+/// configuration des invitations n'existe pas encore, et l'inscription
+/// automatique retombe silencieusement sur « non » (carte 407).
+///
+/// DTO de lecture : les primitives y sont permises.
+pub struct SeasonCreationData {
+    /// La saison est entièrement configurée et ouverte aux inscriptions.
+    ///
+    /// C'est **l'adapter** qui traduit : `team_creation` n'a pas à connaître le
+    /// vocabulaire de statuts du BC `competitions`, c'est tout l'objet de l'ACL.
+    pub prete: bool,
+    /// Le statut brut, **pour le journal uniquement** — jamais pour décider.
+    /// C'est lui qui rendra la ligne de refus exploitable.
+    pub statut: String,
+    pub rules: Option<CreationRules>,
+}
+
 #[async_trait]
 pub trait ICompetitionCreationRulesPort: Send + Sync {
-    async fn find_creation_rules_for_season(&self, season_id: &str) -> Option<CreationRules>;
+    /// Remonte la donnée brute **sans trancher** : c'est
+    /// `use_cases::season_access_service::acces_creation` qui décide, et lui
+    /// se teste sans base ni HTTP.
+    async fn find_season_creation_data(&self, season_id: &str) -> Option<SeasonCreationData>;
 }
 
 // ── ACL vers le BC `competitions` (noms d'affichage compétition/saison) ────────

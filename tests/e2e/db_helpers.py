@@ -24,9 +24,14 @@ def execute_db(sql: str) -> None:
     """Écriture directe en base — réservée aux états qu'aucun parcours
     utilisateur ne peut atteindre.
 
-    Aujourd'hui un seul usage : vieillir un panier de customisation de plus de
-    24 h pour observer sa péremption. Attendre réellement une journée n'est pas
-    une option, et reculer l'horloge du serveur en toucherait bien d'autres.
+    Deux usages aujourd'hui :
+
+    - vieillir un panier de customisation de plus de 24 h pour observer sa
+      péremption — attendre réellement une journée n'est pas une option, et
+      reculer l'horloge du serveur en toucherait bien d'autres ;
+    - reculer le statut d'une saison publiée pour retrouver l'état « en cours
+      de configuration » (carte 407) — le magicien enchaîne ses cinq phases
+      sans point d'arrêt.
 
     Volontairement distincte de `query_db` malgré un corps quasi identique :
     une fonction qui écrit doit se voir à l'appel. Un test qui fabrique un état

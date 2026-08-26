@@ -5,6 +5,7 @@ use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::team_creation::io::web::view_models::SppLogEntryVm;
 use crate::app::team_creation::use_cases::commands::SubmitTeamCommand;
 use crate::app::team_creation::use_cases::roster_service;
+use crate::app::team_creation::use_cases::season_access_service::verifier_saison_ouverte;
 use crate::app::team_creation::use_cases::submit_team as submit_uc;
 use crate::state::AppState;
 use askama::Template;
@@ -60,6 +61,22 @@ fn submit_error_response(message: String) -> Response {
         .into_response()
 }
 
+/// Refus rendu **pour le GET**, dont l'appelant sélectionne `#app-content`.
+///
+/// `submit_error_response` ne convient pas ici : il retarge `#submit-errors`,
+/// qui n'existe pas sur la page appelante. Avec `hx-select="#app-content"`, un
+/// fragment sans cet identifiant ne sélectionne rien — donc n'échange rien, et
+/// le bouton reste sans effet. Le silence qu'on est en train de corriger.
+fn page_error_response(message: &str) -> Response {
+    Response::builder()
+        .header("content-type", "text/html; charset=utf-8")
+        .body(Body::from(format!(
+            r#"<div id="app-content" class="table-error-zone"><p class="table-error">{message}</p></div>"#
+        )))
+        .unwrap()
+        .into_response()
+}
+
 // ── GET ───────────────────────────────────────────────────────────────────────
 
 pub async fn finalize_team(
@@ -103,6 +120,15 @@ pub async fn finalize_team(
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
+
+    if let Err(motif) = verifier_saison_ouverte(
+        state.team_creation.competition_rules.as_ref(),
+        draft.season_id(),
+    )
+    .await
+    {
+        return page_error_response(motif);
+    }
 
     let auto_enroll = match SeasonId::try_new(draft.season_id()) {
         Ok(sid) => state
@@ -291,6 +317,15 @@ pub async fn post_finalize_team(
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
+
+    if let Err(motif) = verifier_saison_ouverte(
+        state.team_creation.competition_rules.as_ref(),
+        post_draft.season_id(),
+    )
+    .await
+    {
+        return submit_error_response(motif.to_string());
+    }
 
     let post_auto_enroll = match SeasonId::try_new(post_draft.season_id()) {
         Ok(sid) => state

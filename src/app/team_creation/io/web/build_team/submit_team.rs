@@ -3,6 +3,7 @@ use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
 use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::app::team_creation::use_cases::commands::SubmitTeamCommand;
+use crate::app::team_creation::use_cases::season_access_service::verifier_saison_ouverte;
 use crate::app::team_creation::use_cases::submit_team as submit_uc;
 use crate::state::AppState;
 use axum::body::Body;
@@ -34,6 +35,16 @@ pub async fn submit_team(
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
+
+    if let Err(motif) = verifier_saison_ouverte(
+        state.team_creation.competition_rules.as_ref(),
+        draft.season_id(),
+    )
+    .await
+    {
+        tracing::info!(team_id = %team_id, "soumission d'équipe refusée : {motif}");
+        return (StatusCode::CONFLICT, motif).into_response();
+    }
 
     let auto_enroll = match SeasonId::try_new(draft.season_id()) {
         Ok(sid) => state
