@@ -393,43 +393,10 @@
     }
     .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
 
-    .btn-danger-sm {
-      padding: 8px 16px; border-radius: 7px;
-      background: var(--white); color: var(--dark-3);
-      font-size: var(--text-tiny); font-weight: 600;
-      cursor: pointer; border: 1px solid var(--dark-5);
-      transition: all 0.15s;
-    }
-    .btn-danger-sm:hover { border-color: var(--red); color: var(--red); background: rgba(224,32,32,0.04); }
 
     /* ── Section separator ── */
     .section-sep { height: 1px; background: var(--dark-5); }
 
-    /* ── Danger zone ── */
-    .danger-zone {
-      border: 1px solid rgba(224,32,32,0.2);
-      border-radius: 12px;
-      padding: var(--p2);
-      background: rgba(224,32,32,0.02);
-    }
-    .danger-zone-title {
-      font-family: var(--font-title); font-size: var(--h5);
-      font-weight: 700; color: var(--red);
-      margin-bottom: var(--p1);
-    }
-    .danger-zone-actions {
-      display: flex; gap: var(--p1); flex-wrap: wrap;
-    }
-    .danger-zone-item {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: var(--p2);
-      padding: 10px 0;
-      border-bottom: 1px solid rgba(224,32,32,0.1);
-    }
-    .danger-zone-item:last-child { border-bottom: none; }
-    .danger-zone-item-info { flex: 1; }
-    .danger-zone-item-label { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); }
-    .danger-zone-item-desc { font-size: 11px; color: var(--dark-3); margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -823,24 +790,6 @@
             </div>
           </div>
 
-          <!-- ══ Zone de danger ════════════════════════════════════ -->
-          <div class="danger-zone">
-            <div class="danger-zone-title">⚠️ Zone de danger</div>
-            <div class="danger-zone-item">
-              <div class="danger-zone-item-info">
-                <div class="danger-zone-item-label">Réinitialiser la saison</div>
-                <div class="danger-zone-item-desc">Supprime tous les résultats, les poules et le calendrier. Les équipes inscrites sont conservées.</div>
-              </div>
-              <button class="btn-danger-sm">Réinitialiser</button>
-            </div>
-            <div class="danger-zone-item">
-              <div class="danger-zone-item-info">
-                <div class="danger-zone-item-label">Supprimer la saison</div>
-                <div class="danger-zone-item-desc">Supprime définitivement cette saison et toutes ses données. Action irréversible.</div>
-              </div>
-              <button class="btn-danger-sm">Supprimer</button>
-            </div>
-          </div>
 
         </div><!-- /admin-container -->
       </div><!-- /page-content -->
