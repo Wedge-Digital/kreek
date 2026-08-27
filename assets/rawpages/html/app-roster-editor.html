@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nouveau roster — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .re-page { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--p1); }
+
+    /* ── Bandeau de titre ─────────────────────────────────────────────── */
+    .re-head {
+      background: var(--white); border-radius: 10px; padding: var(--p2);
+      display: flex; align-items: center; gap: var(--p2); flex-wrap: wrap;
+    }
+    .re-head-icon {
+      width: 56px; height: 56px; border-radius: 12px; flex-shrink: 0;
+      background: linear-gradient(135deg, #003049, #555770);
+      display: flex; align-items: center; justify-content: center; font-size: 26px;
+    }
+    .re-head-text { flex: 1; min-width: 200px; }
+    .re-head-title { font-family: var(--font-title); font-size: var(--h2); font-weight: 800; color: var(--dark-0); line-height: 1.1; }
+    .re-head-sub   { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; }
+    .re-scope {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 20px;
+      background: rgba(0,48,73,0.08); color: var(--main-blue);
+      font-size: var(--text-tiny); font-weight: 700; white-space: nowrap;
+    }
+    .re-head-actions { display: flex; gap: var(--p1); }
+
+    /* ── Panneaux ─────────────────────────────────────────────────────────
+       Deux poids, pas cinq. Le panneau de réglages se tient en retrait ; celui
+       des postes porte le travail et le montre. */
+    .re-panel { background: var(--white); border-radius: 10px; overflow: hidden; }
+
+    /* Réglages — discret : en-tête sourd, fond légèrement retiré du blanc */
+    .re-panel--setup { background: var(--white-1); border: 1px solid var(--dark-5); }
+    .re-panel--setup .re-panel-head { padding: 10px var(--p2); background: var(--dark-7); }
+    .re-panel--setup .re-panel-title { font-size: var(--text-small); color: var(--dark-2); }
+
+    /* Postes — dominant : titre plus grand, filet d'accent, ombre portée */
+    .re-panel--main {
+      box-shadow: 0 2px 14px rgba(0,48,73,0.07);
+      border-top: 3px solid var(--main-blue);
+    }
+    .re-panel--main .re-panel-head { padding: var(--p1) var(--p2) 14px; }
+    .re-panel--main .re-panel-title { font-size: var(--h4); color: var(--dark-0); }
+
+    .re-panel-head {
+      display: flex; align-items: center; justify-content: space-between; gap: var(--p1);
+      padding: var(--p1) var(--p2); border-bottom: 1px solid var(--dark-5);
+    }
+    .re-panel-title {
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1);
+    }
+    .re-panel-count { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; }
+    .re-panel-body { padding: var(--p2); display: flex; flex-direction: column; gap: var(--p2); }
+
+    /* Blocs internes du panneau de réglages — séparés par un filet, jamais par
+       une carte de plus : c'est ce qui évitait la pile de cinq cartes égales. */
+    .re-block { display: flex; flex-direction: column; gap: var(--p1); }
+    .re-block + .re-block {
+      padding-top: var(--p2); margin-top: var(--p1);
+      border-top: 1px solid var(--dark-5);
+    }
+    .re-block-head {
+      font-family: var(--font-accent); font-size: 11px; font-weight: 700;
+      color: var(--dark-3); text-transform: uppercase; letter-spacing: 1px;
+    }
+
+    /* ── Champs ───────────────────────────────────────────────────────── */
+    .re-row { display: flex; align-items: flex-start; gap: var(--p2); flex-wrap: wrap; }
+    .re-field { display: flex; flex-direction: column; gap: 5px; }
+    .re-field-label {
+      font-size: var(--text-tiny); color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
+    }
+    .re-field-hint { font-size: 11px; color: var(--dark-4); }
+    .re-input, .re-select {
+      padding: 9px 12px; border: 1px solid var(--dark-4); border-radius: 7px;
+      font-size: var(--text-small); color: var(--dark-1);
+      font-family: inherit; outline: none; background: var(--white);
+      transition: border-color 0.15s;
+    }
+    .re-input:focus, .re-select:focus { border-color: var(--main-blue); }
+    .re-input--name { width: 260px; }
+    .re-input--num  { width: 84px; text-align: right; }
+    .re-input--stat { width: 56px; text-align: center; }
+    .re-field--grow { flex: 1; min-width: 220px; }
+
+    .re-logo { display: flex; align-items: center; gap: var(--p1); }
+    .re-logo-preview {
+      width: 56px; height: 56px; border-radius: 12px; flex-shrink: 0;
+      background: var(--dark-6); border: 1px dashed var(--dark-4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; color: var(--dark-3);
+    }
+
+    /* ── Puces de sélection multiple ──────────────────────────────────── */
+    .re-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .re-chip {
+      padding: 6px 12px; border-radius: 16px; cursor: pointer;
+      border: 1px solid var(--dark-4); background: var(--white);
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-2);
+      transition: all 0.12s; user-select: none;
+    }
+    .re-chip:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .re-chip.on {
+      background: var(--main-blue); border-color: var(--main-blue); color: var(--white);
+    }
+
+    /* ── Limites croisées ─────────────────────────────────────────────── */
+    .re-limit {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 10px var(--p1); border-radius: 8px;
+      background: var(--dark-7); font-size: var(--text-small); color: var(--dark-2);
+    }
+    .re-limit-text { font-weight: 600; }
+
+    /* ── Tableau des postes ───────────────────────────────────────────── */
+    .re-table-wrap { overflow-x: auto; }
+    .re-table { width: 100%; border-collapse: collapse; font-size: var(--text-small); }
+    .re-table th {
+      text-align: left; padding: 8px var(--p1); font-size: var(--text-tiny);
+      color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px;
+      font-weight: 600; border-bottom: 1px solid var(--dark-5); white-space: nowrap;
+    }
+    .re-table th.c, .re-table td.c { text-align: center; }
+    .re-table th.n, .re-table td.n { text-align: right; }
+    .re-table td { padding: 10px var(--p1); border-bottom: 1px solid var(--dark-6); }
+    .re-pos-row { cursor: pointer; }
+    .re-pos-row:hover { background: var(--dark-7); }
+    .re-pos-row.open { background: rgba(0,48,73,0.04); }
+
+    .re-pos-name {
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--font-title); font-size: var(--text-small);
+      font-weight: 700; color: var(--dark-0);
+    }
+    .re-caret { color: var(--dark-3); font-size: 11px; width: 10px; }
+
+    /* Les cinq caractéristiques se lisent comme un bloc, pas comme cinq
+       colonnes indépendantes — c'est ainsi qu'elles se lisent sur une fiche. */
+    .re-table th.stat, .re-table td.stat { background: rgba(0,48,73,0.025); }
+    .re-table th.stat:first-of-type, .re-table td.stat.first { border-left: 1px solid var(--dark-6); }
+    .re-table th.stat.last, .re-table td.stat.last { border-right: 1px solid var(--dark-6); }
+    .re-jm-badge {
+      padding: 1px 7px; border-radius: 10px; background: rgba(0,48,73,0.1);
+      color: var(--main-blue); font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .re-stat { font-variant-numeric: tabular-nums; color: var(--dark-2); font-weight: 500; }
+    .re-cost { font-variant-numeric: tabular-nums; color: var(--dark-1); font-weight: 700; }
+
+    /* Les mots-clefs sous le nom : ils disent l'espèce et le rôle, donc ils
+       appartiennent à l'identité du poste, pas à ses chiffres. */
+    .re-pos-kw { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; margin-left: 18px; }
+    .re-kw-tag {
+      padding: 1px 8px; border-radius: 9px;
+      background: var(--dark-6); color: var(--dark-2);
+      font-size: 10px; font-weight: 600; letter-spacing: 0.2px; white-space: nowrap;
+    }
+    .re-kw-tag--none { background: rgba(255,107,53,0.12); color: #9A5000; }
+    .re-skills-cell { color: var(--dark-3); font-size: 11px; line-height: 1.4; }
+    .re-actions-cell { white-space: nowrap; text-align: right; }
+    .re-icon-btn {
+      border: none; background: none; cursor: pointer; padding: 4px 6px;
+      font-size: 14px; opacity: 0.55; border-radius: 5px;
+    }
+    .re-icon-btn:hover { opacity: 1; background: var(--dark-6); }
+
+    /* ── Éditeur déplié ───────────────────────────────────────────────── */
+    .re-editor-row td { padding: 0; border-bottom: 1px solid var(--dark-5); }
+    .re-editor {
+      background: var(--dark-7); padding: var(--p2);
+      display: flex; flex-direction: column; gap: var(--p2);
+      border-left: 3px solid var(--main-blue);
+    }
+    .re-editor-block { display: flex; flex-direction: column; gap: 8px; }
+    .re-editor-block-title {
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .re-stat-group { display: flex; gap: var(--p1); flex-wrap: wrap; }
+    .re-stat-field { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .re-stat-label {
+      font-family: var(--font-accent); font-size: 11px; font-weight: 700;
+      color: var(--dark-3); letter-spacing: 1px;
+    }
+    .re-editor-foot { display: flex; justify-content: flex-end; gap: var(--p1); }
+
+    .re-check { display: flex; align-items: center; gap: 8px; font-size: var(--text-small); color: var(--dark-2); }
+    .re-check input { width: 16px; height: 16px; cursor: pointer; }
+
+    /* ── Sélecteur de compétences ─────────────────────────────────────────
+       146 compétences au corpus, dont 74 traits et 31 Haines. Une rangée de
+       puces ne tient pas cette échelle : il faut chercher, filtrer, et lire ce
+       que fait la compétence avant de la poser. */
+    .re-picked { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .re-picked-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 8px 5px 12px; border-radius: 16px;
+      background: var(--green); color: var(--white);
+      font-size: var(--text-tiny); font-weight: 600;
+    }
+    .re-picked-chip--trait { background: var(--dark-2); }
+    .re-picked-chip--kw    { background: var(--main-blue); }
+    .re-picked-x {
+      cursor: pointer; opacity: 0.7; font-size: 13px; line-height: 1;
+      padding: 0 2px;
+    }
+    .re-picked-x:hover { opacity: 1; }
+    .re-picked-none { font-size: var(--text-tiny); color: var(--dark-4); font-style: italic; }
+
+    .re-picker {
+      margin-top: 10px; border: 1px solid var(--dark-4); border-radius: 9px;
+      background: var(--white); overflow: hidden;
+    }
+    .re-picker-top {
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+      padding: 10px var(--p1); border-bottom: 1px solid var(--dark-5);
+    }
+    .re-picker-search {
+      flex: 1; min-width: 180px;
+      padding: 8px 12px; border: 1px solid var(--dark-4); border-radius: 7px;
+      font-size: var(--text-small); font-family: inherit; outline: none;
+    }
+    .re-picker-search:focus { border-color: var(--main-blue); }
+    .re-picker-cats { display: flex; gap: 5px; flex-wrap: wrap; padding: 8px var(--p1) 0; }
+    .re-cat {
+      padding: 4px 10px; border-radius: 13px; cursor: pointer;
+      border: 1px solid var(--dark-5); background: var(--white);
+      font-size: 11px; font-weight: 600; color: var(--dark-3);
+    }
+    .re-cat:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .re-cat.on { background: var(--main-blue); border-color: var(--main-blue); color: var(--white); }
+
+    .re-picker-list { max-height: 260px; overflow-y: auto; padding: 8px var(--p1) var(--p1); }
+    .re-sk {
+      padding: 9px 10px; border-radius: 7px; cursor: pointer;
+      border: 1px solid transparent;
+    }
+    .re-sk:hover { background: var(--dark-7); border-color: var(--dark-5); }
+    .re-sk-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .re-sk-name { font-weight: 700; color: var(--dark-1); font-size: var(--text-small); }
+    .re-sk-cat {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.3px;
+      padding: 1px 7px; border-radius: 9px;
+      background: var(--dark-6); color: var(--dark-3); text-transform: uppercase;
+    }
+    .re-sk-elite { background: rgba(255,215,0,0.25); color: #8A6D00; }
+    .re-sk-fam   { background: rgba(0,48,73,0.1);  color: var(--main-blue); }
+    .re-sk-desc {
+      font-size: 11px; color: var(--dark-3); line-height: 1.45; margin-top: 3px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .re-picker-foot {
+      padding: 8px var(--p1); border-top: 1px solid var(--dark-5);
+      background: var(--dark-7); font-size: 11px; color: var(--dark-3);
+      display: flex; justify-content: space-between; gap: var(--p1);
+    }
+    .re-picker-empty { padding: var(--p2); text-align: center; font-size: var(--text-tiny); color: var(--dark-3); }
+
+    /* ── Ajout d'un poste ─────────────────────────────────────────────── */
+    .re-add-row {
+      padding: var(--p1) var(--p2); border-top: 1px dashed var(--dark-4);
+      background: var(--white);
+    }
+
+    /* ── Pied de cohérence — le ton change, l'emplacement ne bouge pas ── */
+    /* Attachée au panneau qu'elle vérifie, jamais flottante : une cinquième
+       carte de même poids aurait dit qu'elle est un sujet à part. */
+    .re-checks {
+      padding: var(--p1) var(--p2);
+      display: flex; flex-direction: column; gap: 6px;
+      border-top: 1px solid var(--dark-5); background: var(--dark-7);
+    }
+    .re-checks.warn { background: rgba(255,107,53,0.05); }
+    .re-checks.ok   { background: rgba(98,149,132,0.06); }
+    .re-check-line { display: flex; align-items: baseline; gap: 8px; font-size: var(--text-small); }
+    .re-check-line--ok   { color: var(--dark-3); }
+    .re-check-line--warn { color: #9A5000; font-weight: 600; }
+
+    /* ── Boutons ──────────────────────────────────────────────────────── */
+    .re-btn {
+      padding: 9px 18px; border-radius: 7px; cursor: pointer;
+      font-size: var(--text-small); font-weight: 600; font-family: inherit;
+      border: 1px solid var(--dark-4); background: var(--white); color: var(--dark-2);
+      transition: all 0.15s;
+    }
+    .re-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .re-btn--primary {
+      background: var(--main-blue); border-color: var(--main-blue); color: var(--white);
+    }
+    .re-btn--primary:hover { background: #00243a; color: var(--white); }
+    .re-btn--sm { padding: 6px 14px; font-size: var(--text-tiny); }
+    .re-btn--ghost { border-style: dashed; color: var(--dark-3); }
+
+    /* ── Sélecteur de démonstration — outil de maquette ───────────────── */
+    .demo-switcher {
+      display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap;
+      background: var(--dark-7); border: 1px dashed var(--dark-4);
+      border-radius: 8px; padding: 10px var(--p1); margin-bottom: var(--p1);
+    }
+    .demo-switcher-label { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; }
+    .state-pill {
+      padding: 5px 12px; border-radius: 14px; border: 1px solid var(--dark-4);
+      background: var(--white); color: var(--dark-2);
+      font-size: var(--text-tiny); font-weight: 600; cursor: pointer;
+    }
+    .state-pill.active { background: var(--main-blue); color: var(--white); border-color: var(--main-blue); }
+
+    /* ── État vide ────────────────────────────────────────────────────── */
+    .re-empty { padding: var(--p3) var(--p2); text-align: center; }
+    .re-empty-icon  { font-size: 38px; opacity: 0.3; }
+    .re-empty-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-2); margin-top: var(--p1); }
+    .re-empty-text  { font-size: var(--text-small); color: var(--dark-3); margin-top: 6px; max-width: 440px; margin-left: auto; margin-right: auto; }
+
+    @media (max-width: 768px) {
+      .re-head { flex-direction: column; align-items: flex-start; }
+      .re-head-actions { width: 100%; }
+      .re-head-actions .re-btn { flex: 1; }
+      .re-input--name { width: 100%; }
+      .re-field--grow { min-width: 100%; }
+      /* Les colonnes PA et AV partent avant les autres : elles se relisent
+         dans l'éditeur, alors que le nom et le coût n'ont nulle part où aller. */
+      .re-table th:nth-child(7), .re-table td:nth-child(7),
+      .re-table th:nth-child(8), .re-table td:nth-child(8) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item">Équipes</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item active">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+
+        <div class="demo-switcher">
+          <span class="demo-switcher-label">Aperçu maquette :</span>
+          <button class="state-pill active" data-state="filled" onclick="setState('filled')">En cours d'écriture</button>
+          <button class="state-pill" data-state="done" onclick="setState('done')">Prêt à enregistrer</button>
+          <button class="state-pill" data-state="blank" onclick="setState('blank')">Roster vierge</button>
+        </div>
+
+        <div style="margin-bottom: var(--p1);">
+          <a href="#" style="color: var(--dark-3); font-size: var(--text-tiny);">← Rosters de l'espace</a>
+        </div>
+
+        <div class="re-page">
+
+          <!-- ══ Titre ═══════════════════════════════════════════════ -->
+          <div class="re-head">
+            <div class="re-head-icon">🛡️</div>
+            <div class="re-head-text">
+              <div class="re-head-title" id="head-title">Slanns de la Mare Basse</div>
+              <div class="re-head-sub">Roster personnalisé</div>
+            </div>
+            <span class="re-scope">🔒 Ligue de Condate uniquement</span>
+            <div class="re-head-actions">
+              <button class="re-btn">Annuler</button>
+              <button class="re-btn re-btn--primary">💾 Enregistrer</button>
+            </div>
+          </div>
+
+          <!-- ══ Réglages du roster — un panneau, quatre blocs ══════ -->
+          <div class="re-panel re-panel--setup">
+            <div class="re-panel-head">
+              <div class="re-panel-title"><span>⚙️</span> Réglages du roster</div>
+            </div>
+            <div class="re-panel-body">
+
+              <div class="re-block">
+                <div class="re-block-head">Identité</div>
+                <div class="re-row">
+                  <div class="re-field">
+                    <div class="re-field-label">Nom du roster</div>
+                    <input type="text" class="re-input re-input--name" id="name-input"
+                           value="Slanns de la Mare Basse" oninput="syncTitle(this)">
+                  </div>
+                  <div class="re-field">
+                    <div class="re-field-label">Logo</div>
+                    <div class="re-logo">
+                      <div class="re-logo-preview">🖼️</div>
+                      <button class="re-btn re-btn--sm">Choisir…</button>
+                    </div>
+                  </div>
+                  <div class="re-field">
+                    <div class="re-field-label">Tier</div>
+                    <select class="re-select">
+                      <option>Tier 1</option>
+                      <option selected>Tier 2</option>
+                      <option>Tier 3</option>
+                    </select>
+                    <div class="re-field-hint">Indicatif — les compétitions décident</div>
+                  </div>
+                  <div class="re-field">
+                    <div class="re-field-label">Relance</div>
+                    <input type="number" class="re-input re-input--num" value="60">
+                    <div class="re-field-hint">kPo</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="re-block">
+                <div class="re-block-head">Règles spéciales</div>
+                <div class="re-chips">
+                  <span class="re-chip on" onclick="tog(this)">Brutes Bagarreuses</span>
+                  <span class="re-chip" onclick="tog(this)">Gens de Rocaille</span>
+                  <span class="re-chip on" onclick="tog(this)">Meneur Né</span>
+                  <span class="re-chip" onclick="tog(this)">Souffle des Cimes</span>
+                  <span class="re-chip" onclick="tog(this)">Favori d'une divinité au choix</span>
+                </div>
+              </div>
+
+              <div class="re-block">
+                <div class="re-block-head">Personnel autorisé</div>
+                <div class="re-chips">
+                  <span class="re-chip on" onclick="tog(this)">Apothicaire</span>
+                  <span class="re-chip on" onclick="tog(this)">Meneuses de Ban</span>
+                  <span class="re-chip on" onclick="tog(this)">Assistants</span>
+                  <span class="re-chip on" onclick="tog(this)">Facteur de supporters</span>
+                </div>
+              </div>
+
+              <div class="re-block">
+                <div class="re-block-head">Limites croisées</div>
+                <div class="re-limit">
+                  <span class="re-limit-text">Au plus</span>
+                  <input type="number" class="re-input re-input--stat" value="2">
+                  <span class="re-limit-text">joueurs parmi</span>
+                  <div class="re-chips">
+                    <span class="re-chip on" onclick="tog(this)">Kroxigor</span>
+                    <span class="re-chip on" onclick="tog(this)">Saurus</span>
+                    <span class="re-chip" onclick="tog(this)">Skink</span>
+                  </div>
+                  <button class="re-icon-btn" title="Retirer cette limite">🗑️</button>
+                </div>
+                <button class="re-btn re-btn--sm re-btn--ghost" style="align-self: flex-start;">+ Ajouter une limite</button>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ══ Postes ══════════════════════════════════════════════ -->
+          <div class="re-panel re-panel--main">
+            <div class="re-panel-head">
+              <div class="re-panel-title"><span>🧍</span> Postes</div>
+              <div class="re-panel-count" id="pos-count">3 postes</div>
+            </div>
+
+            <!-- Liste garnie -->
+            <div id="pos-filled">
+              <div class="re-table-wrap">
+                <table class="re-table">
+                  <thead>
+                    <tr>
+                      <th>Poste</th>
+                      <th class="n">Coût</th>
+                      <th class="c stat">MA</th>
+                      <th class="c stat">ST</th>
+                      <th class="c stat">AG</th>
+                      <th class="c stat">PA</th>
+                      <th class="c stat last">AV</th>
+                      <th class="c">Max</th>
+                      <th>Compétences</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+
+                    <tr class="re-pos-row" onclick="toggleEditor('ed1', this)">
+                      <td>
+                        <div class="re-pos-name">
+                          <span class="re-caret">▸</span> Skink de la Mare
+                          <span class="re-jm-badge">Journalier</span>
+                        </div>
+                        <div class="re-pos-kw">
+                          <span class="re-kw-tag">Homme-Lézard</span>
+                          <span class="re-kw-tag">Trois-quart</span>
+                        </div>
+                      </td>
+                      <td class="n re-cost">60</td>
+                      <td class="c stat first re-stat">8</td>
+                      <td class="c stat re-stat">2</td>
+                      <td class="c stat re-stat">3+</td>
+                      <td class="c stat re-stat">4+</td>
+                      <td class="c stat last re-stat">8+</td>
+                      <td class="c re-stat">16</td>
+                      <td class="re-skills-cell">Esquive, Réception</td>
+                      <td class="re-actions-cell">
+                        <button class="re-icon-btn" title="Dupliquer">⧉</button>
+                        <button class="re-icon-btn" title="Retirer">🗑️</button>
+                      </td>
+                    </tr>
+
+                    <tr class="re-pos-row open" onclick="toggleEditor('ed2', this)">
+                      <td>
+                        <div class="re-pos-name">
+                          <span class="re-caret">▾</span> Saurus
+                        </div>
+                        <div class="re-pos-kw">
+                          <span class="re-kw-tag">Homme-Lézard</span>
+                        </div>
+                      </td>
+                      <td class="n re-cost">85</td>
+                      <td class="c stat first re-stat">6</td>
+                      <td class="c stat re-stat">4</td>
+                      <td class="c stat re-stat">5+</td>
+                      <td class="c stat re-stat">6+</td>
+                      <td class="c stat last re-stat">10+</td>
+                      <td class="c re-stat">6</td>
+                      <td class="re-skills-cell">Blocage, Garde<br><em>Régénération</em></td>
+                      <td class="re-actions-cell">
+                        <button class="re-icon-btn" title="Dupliquer">⧉</button>
+                        <button class="re-icon-btn" title="Retirer">🗑️</button>
+                      </td>
+                    </tr>
+
+                    <!-- ── L'éditeur déplié, en place ── -->
+                    <tr class="re-editor-row" id="ed2">
+                      <td colspan="10">
+                        <div class="re-editor" onclick="event.stopPropagation()">
+
+                          <div class="re-row">
+                            <div class="re-field">
+                              <div class="re-field-label">Nom du poste</div>
+                              <input type="text" class="re-input re-input--name" value="Saurus">
+                            </div>
+                            <div class="re-field">
+                              <div class="re-field-label">Coût</div>
+                              <input type="number" class="re-input re-input--num" value="85">
+                              <div class="re-field-hint">kPo</div>
+                            </div>
+                            <div class="re-field">
+                              <div class="re-field-label">Quantité max</div>
+                              <input type="number" class="re-input re-input--num" value="6">
+                            </div>
+                          </div>
+
+                          <div class="re-editor-block">
+                            <div class="re-editor-block-title">Caractéristiques</div>
+                            <div class="re-stat-group">
+                              <div class="re-stat-field">
+                                <span class="re-stat-label">MA</span>
+                                <input type="number" class="re-input re-input--stat" value="6">
+                              </div>
+                              <div class="re-stat-field">
+                                <span class="re-stat-label">ST</span>
+                                <input type="number" class="re-input re-input--stat" value="4">
+                              </div>
+                              <div class="re-stat-field">
+                                <span class="re-stat-label">AG</span>
+                                <input type="number" class="re-input re-input--stat" value="5">
+                              </div>
+                              <div class="re-stat-field">
+                                <span class="re-stat-label">PA</span>
+                                <input type="number" class="re-input re-input--stat" value="6">
+                              </div>
+                              <div class="re-stat-field">
+                                <span class="re-stat-label">AV</span>
+                                <input type="number" class="re-input re-input--stat" value="10">
+                              </div>
+                            </div>
+                            <div class="re-field-hint">AG, PA et AV sont des seuils : la valeur 4 s'affiche « 4+ ».</div>
+                          </div>
+
+                          <!-- Compétences et traits sont séparés : le corpus les
+                               distingue (type « Trait »), et le règlement aussi. -->
+                          <div class="re-editor-block">
+                            <div class="re-editor-block-title">Compétences de départ</div>
+                            <div class="re-picked" id="pick-skill">
+                              <span class="re-picked-none">Aucune</span>
+                            </div>
+                            <button class="re-btn re-btn--sm re-btn--ghost" style="align-self: flex-start;"
+                                    onclick="openPicker('skill')">+ Ajouter une compétence</button>
+                            <div class="re-picker" id="picker-skill" style="display: none;">
+                              <div class="re-picker-top">
+                                <input type="text" class="re-picker-search" id="q-skill"
+                                       placeholder="Chercher parmi 72 compétences…" oninput="renderPicker('skill')">
+                                <button class="re-btn re-btn--sm" onclick="closePicker('skill')">Fermer</button>
+                              </div>
+                              <div class="re-picker-cats" id="cats-skill"></div>
+                              <div class="re-picker-list" id="list-skill"></div>
+                              <div class="re-picker-foot">
+                                <span id="count-skill"></span>
+                                <span>Les compétences <strong>Élite</strong> coûtent 10 kPo de plus à l'achat en SPP.</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="re-editor-block">
+                            <div class="re-editor-block-title">Traits</div>
+                            <div class="re-picked" id="pick-trait">
+                              <span class="re-picked-none">Aucun</span>
+                            </div>
+                            <button class="re-btn re-btn--sm re-btn--ghost" style="align-self: flex-start;"
+                                    onclick="openPicker('trait')">+ Ajouter un trait</button>
+                            <div class="re-picker" id="picker-trait" style="display: none;">
+                              <div class="re-picker-top">
+                                <input type="text" class="re-picker-search" id="q-trait"
+                                       placeholder="Chercher parmi 74 traits…" oninput="renderPicker('trait')">
+                                <button class="re-btn re-btn--sm" onclick="closePicker('trait')">Fermer</button>
+                              </div>
+                              <div class="re-picker-list" id="list-trait"></div>
+                              <div class="re-picker-foot">
+                                <span id="count-trait"></span>
+                                <span>Un trait n'est ni acheté ni gagné : il est <strong>attaché au poste</strong>.</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="re-row">
+                            <div class="re-field re-field--grow">
+                              <div class="re-editor-block-title">Accès primaire</div>
+                              <div class="re-chips" style="margin-top: 8px;">
+                                <span class="re-chip on" onclick="tog(this)">Général</span>
+                                <span class="re-chip on" onclick="tog(this)">Force</span>
+                                <span class="re-chip" onclick="tog(this)">Agilité</span>
+                                <span class="re-chip" onclick="tog(this)">Passe</span>
+                                <span class="re-chip" onclick="tog(this)">Mutation</span>
+                              </div>
+                            </div>
+                            <div class="re-field re-field--grow">
+                              <div class="re-editor-block-title">Accès secondaire</div>
+                              <div class="re-chips" style="margin-top: 8px;">
+                                <span class="re-chip" onclick="tog(this)">Général</span>
+                                <span class="re-chip" onclick="tog(this)">Force</span>
+                                <span class="re-chip on" onclick="tog(this)">Agilité</span>
+                                <span class="re-chip" onclick="tog(this)">Passe</span>
+                                <span class="re-chip" onclick="tog(this)">Mutation</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="re-editor-block">
+                            <div class="re-editor-block-title">Mots-clefs</div>
+                            <div class="re-picked" id="pick-kw">
+                              <span class="re-picked-none">Aucun</span>
+                            </div>
+                            <button class="re-btn re-btn--sm re-btn--ghost" style="align-self: flex-start;"
+                                    onclick="openPicker('kw')">+ Ajouter un mot-clef</button>
+                            <div class="re-picker" id="picker-kw" style="display: none;">
+                              <div class="re-picker-top">
+                                <input type="text" class="re-picker-search" id="q-kw"
+                                       placeholder="Chercher parmi 38 mots-clefs…" oninput="renderPicker('kw')">
+                                <button class="re-btn re-btn--sm" onclick="closePicker('kw')">Fermer</button>
+                              </div>
+                              <div class="re-picker-cats" id="cats-kw"></div>
+                              <div class="re-picker-list" id="list-kw"></div>
+                              <div class="re-picker-foot">
+                                <span id="count-kw"></span>
+                                <span>L'espèce dit qui l'on est, le rôle ce que l'on fait.</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="re-editor-block">
+                            <label class="re-check">
+                              <input type="checkbox">
+                              Ce poste est le <strong>journalier</strong> du roster
+                            </label>
+                            <div class="re-field-hint">Un seul poste peut l'être. C'est lui qu'on recrute en mercenaire.</div>
+                          </div>
+
+                          <div class="re-editor-foot">
+                            <button class="re-btn re-btn--sm">Replier</button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <tr class="re-pos-row" onclick="toggleEditor('ed3', this)">
+                      <td>
+                        <div class="re-pos-name">
+                          <span class="re-caret">▸</span> Kroxigor
+                        </div>
+                        <div class="re-pos-kw">
+                          <span class="re-kw-tag--none re-kw-tag">aucun mot-clef</span>
+                        </div>
+                      </td>
+                      <td class="n re-cost">140</td>
+                      <td class="c stat first re-stat">6</td>
+                      <td class="c stat re-stat">5</td>
+                      <td class="c stat re-stat">5+</td>
+                      <td class="c stat re-stat">—</td>
+                      <td class="c stat last re-stat">10+</td>
+                      <td class="c re-stat">1</td>
+                      <td class="re-skills-cell">Châtaigne, Tête de Piaf, Grosse Patte</td>
+                      <td class="re-actions-cell">
+                        <button class="re-icon-btn" title="Dupliquer">⧉</button>
+                        <button class="re-icon-btn" title="Retirer">🗑️</button>
+                      </td>
+                    </tr>
+
+                  </tbody>
+                </table>
+              </div>
+              <div class="re-add-row">
+                <button class="re-btn re-btn--sm re-btn--ghost">+ Ajouter un poste</button>
+              </div>
+            </div>
+
+            <!-- Liste vide -->
+            <div id="pos-blank" style="display: none;">
+              <div class="re-empty">
+                <div class="re-empty-icon">🧍</div>
+                <div class="re-empty-title">Aucun poste</div>
+                <div class="re-empty-text">
+                  Un roster est fait de postes — le journalier qu'on recrute à seize,
+                  et les spécialistes qu'on compte sur les doigts d'une main.
+                </div>
+                <button class="re-btn re-btn--primary" style="margin-top: var(--p2);">+ Ajouter le premier poste</button>
+              </div>
+            </div>
+
+            <!-- La cohérence est le pied du panneau qu'elle vérifie -->
+            <div class="re-checks warn" id="checks">
+              <div class="re-check-line re-check-line--warn">
+                <span>⚠</span> <span>Le Kroxigor n'a pas de valeur de passe — laissez « — » si le poste ne peut pas lancer.</span>
+              </div>
+              <div class="re-check-line re-check-line--ok">
+                <span>✓</span> <span>Un poste journalier est défini : Skink de la Mare.</span>
+              </div>
+              <div class="re-check-line re-check-line--warn">
+                <span>⚠</span> <span>Le Kroxigor ne porte aucun mot-clef — aucune Haine ne pourra le viser, et il n'aura ni espèce ni rôle.</span>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /re-page -->
+      </div><!-- /page-content -->
+    </div><!-- /main-area -->
+  </div><!-- /app-layout -->
+
+<script>
+/* Comportement de maquette — rien de tout ceci n'est de la logique produit. */
+window.addEventListener('DOMContentLoaded', function () {
+  renderPicked('skill');
+  renderPicked('trait');
+  renderPicked('kw');
+});
+
+/* ── Le catalogue, tel qu'il est ──────────────────────────────────────────
+   146 entrées au corpus réel : 72 compétences réparties en six catégories de
+   douze, et 74 traits. Cet extrait en reprend assez pour que la recherche et
+   les filtres se jugent pour de vrai. */
+var CATS = [
+  ['GENERAL',   'Général'],
+  ['AGILITY',   'Agilité'],
+  ['PASSING',   'Passe'],
+  ['STRENGTH',  'Force'],
+  ['DEVIOUS',   'Sournois'],
+  ['MUTATIONS', 'Mutations'],
+];
+
+var SKILLS = [
+  ['Blocage','GENERAL',1,'Peut choisir de ne pas être Mis à Terre lorsqu\'un résultat Double Chute est appliqué lors d\'une Action de Blocage dont il fait partie.'],
+  ['Intrépidité','GENERAL',0,'Lorsqu\'il bloque un adversaire plus fort, lance un D6 et ajoute sa Force ; s\'il dépasse la Force adverse, il l\'égale pour la durée du blocage.'],
+  ['Parade','GENERAL',0,'Lorsqu\'il est Repoussé suite à un blocage contre lui, l\'adversaire ne peut pas Suivre.'],
+  ['Frénésie','GENERAL',0,'Doit Suivre après chaque blocage, et si la cible est toujours Debout, doit la bloquer une seconde fois.'],
+  ['Frappe précise','GENERAL',0,'Si ce joueur est le botteur, le ballon ne dévie que de D3 cases plutôt que D6.'],
+  ['Pro','GENERAL',0,'Une fois par activation, peut tenter de relancer un seul dé sur 3+.'],
+  ['Prise Sûre','GENERAL',0,'Peut relancer le D6 pour ramasser le ballon. Arracher le Ballon ne peut pas être utilisé contre lui.'],
+  ['Tacle','GENERAL',0,'Un adversaire qui Esquive hors de sa Zone de Tacle ne peut pas utiliser Esquive.'],
+  ['Lutte','GENERAL',0,'Sur un Double Chute, les deux joueurs sont placés À Terre plutôt que Mis à Terre.'],
+  ['Réception','AGILITY',0,'Peut relancer tout Test d\'Agilité raté en tentant de Réceptionner le ballon.'],
+  ['Esquive','AGILITY',1,'Une fois par Tour, peut relancer un Test d\'Agilité en Esquivant. Affecte aussi le résultat Trébuchement.'],
+  ['Saut','AGILITY',0,'Peut Sauter par-dessus une case adjacente, en réduisant les modificateurs négatifs de 1.'],
+  ['Glissade Contrôlée','AGILITY',0,'Choisit lui-même la case adjacente inoccupée dans laquelle il est Repoussé.'],
+  ['Sprint','AGILITY',0,'Peut tenter de Se Précipiter une fois de plus que la normale.'],
+  ['Équilibre','AGILITY',0,'Une fois par Tour, peut relancer un D6 en tentant de Foncer.'],
+  ['Rétablissement','AGILITY',0,'Se Relève gratuitement, et peut déclarer un blocage en étant À Terre sur un Test d\'Agilité à +1.'],
+  ['Tacle Plongeant','AGILITY',0,'Applique -2 au Test d\'Agilité de l\'adversaire qui quitte sa Zone de Tacle, et se place À Terre.'],
+  ['Lancer Précis','PASSING',0,'+1 au Test de Capacité de Passe sur une Passe Rapide ou une Passe Courte.'],
+  ['Canonnier','PASSING',0,'+1 au Test de Capacité de Passe sur une Passe Longue ou une Bombe Longue.'],
+  ['Passe','PASSING',0,'Peut relancer tout Test de Capacité de Passe raté lors d\'une Action de Passe.'],
+  ['Chef','PASSING',0,'L\'équipe gagne une Relance de Meneur supplémentaire tant qu\'il est sur le terrain.'],
+  ['Nerfs d\'Acier','PASSING',0,'Ignore les modificateurs pour être Marqué en Réceptionnant ou en Passant.'],
+  ['Passe assurée','PASSING',0,'Un 1 naturel donne une Passe Trébuchée : il garde le ballon, sans Turnover.'],
+  ['Garde','STRENGTH',1,'Fournit des Assistances Offensives et Défensives quel que soit le nombre d\'adversaires qui le Marquent.'],
+  ['Chataîgne','STRENGTH',1,'+1 au Jet d\'Armure ou au Jet de Blessure lorsqu\'il Met à Terre un adversaire.'],
+  ['Stabilité','STRENGTH',0,'Peut choisir de ne pas être Repoussé et de rester dans sa case.'],
+  ['Projection','STRENGTH',0,'Choisit la case dans laquelle la cible est Repoussée. Pas de Côté ne peut pas être utilisé contre lui.'],
+  ['Juggernaut','STRENGTH',0,'En Blitz, traite les Double Chute comme Repoussé ; Repoussoir, Tient Bon et Lutte sont inopérants.'],
+  ['Esquive en force','STRENGTH',0,'Une fois par Tour, applique +1 à +3 au Test d\'Agilité en Esquivant, selon sa Force.'],
+  ['Crâne Épais','STRENGTH',0,'N\'est Assommé que sur 9 ; un 8 est traité comme Sonné.'],
+  ['Bras Musclé','STRENGTH',0,'+1 au Test de Capacité de Passe en Lançant un Coéquipier.'],
+  ['Joueur Vicieux','DEVIOUS',0,'+1 au Jet d\'Armure ou de Blessure lors d\'une Action de Faute.'],
+  ['Coup de Pied Appuyé','DEVIOUS',0,'Fournit des Assistances Offensives sur une Faute quel que soit le nombre d\'adversaires qui le Marquent.'],
+  ['Sournois','DEVIOUS',0,'N\'est pas Expulsé sur un double naturel, tant que l\'Armure de la cible n\'est pas cassée.'],
+  ['Poursuite','DEVIOUS',0,'Sur 4+, se place immédiatement dans la case qu\'un adversaire vient de quitter en Esquivant.'],
+  ['Agression Éclair','DEVIOUS',0,'Son activation ne se termine pas après une Faute : il peut continuer son Mouvement.'],
+  ['Marteau Pilon','DEVIOUS',0,'Après avoir Mis à Terre un adversaire, effectue une Faute gratuite contre lui, puis est Placé À Terre.'],
+  ['Griffes','MUTATIONS',0,'Tout Jet d\'Armure de 8 naturel ou plus casse l\'Armure, quelle que soit sa valeur.'],
+  ['Cornes','MUTATIONS',0,'+1 à sa Force pour tout blocage effectué pendant une Action de Blitz.'],
+  ['Tentacules','MUTATIONS',0,'Peut empêcher un adversaire de quitter sa Zone de Tacle sur un jet de Force opposé.'],
+  ['Queue Préhensile','MUTATIONS',0,'-1 supplémentaire au Test d\'Agilité de l\'adversaire qui quitte sa Zone de Tacle.'],
+  ['Deux Têtes','MUTATIONS',0,'+1 au Test d\'Agilité chaque fois qu\'il tente d\'Esquiver.'],
+  ['Bras Supplémentaires','MUTATIONS',0,'+1 au Test d\'Agilité pour Réceptionner, Ramasser ou Intercepter.'],
+  ['Répulsion','MUTATIONS',0,'Sur un 1, le blocage adverse est annulé et l\'activation adverse se termine.'],
+  ['Présence Perturbante','MUTATIONS',0,'-1 aux tests de passe et de réception des adversaires dans un rayon de 3 cases.'],
+];
+
+/* Les traits forment leur propre liste, et deux familles y sont repliées :
+   sans ça, les 31 Haines et les variantes numérotées noieraient les autres. */
+var TRAITS = [
+  ['Haine (…)', 'famille', 'Relance un résultat Crâne contre un joueur portant le mot-clef choisi. 31 variantes au corpus — choisissez le mot-clef.'],
+  ['Animosité (…)', 'famille', 'Sur 1, refuse de passer ou de remettre le ballon à un coéquipier portant le mot-clef choisi.'],
+  ['Solitaire (N+)', 'famille', 'Doit réussir un D6 pour utiliser une Relance d\'Équipe. Le seuil se choisit : 3+ ou 4+.'],
+  ['Soif de Sang (N+)', 'famille', 'Doit mordre un Servant Serf à la fin de son activation. Le seuil se choisit : 2+ ou 3+.'],
+  ['Régénération', '', 'Sur 4+, ignore la Victime et retourne dans la Boîte de Réserves.'],
+  ['Gros Débile', '', 'Sur 1-3, devient Distrait. +1 s\'il a des coéquipiers Debout adjacents.'],
+  ['Cerveau Lent', '', 'Sur 1, le joueur devient Distrait.'],
+  ['Prendre Racine', '', 'Sur 1, devient Enraciné : ne peut plus bouger ni être Repoussé.'],
+  ['Sauvagerie Animale', '', 'Sur 1-3, s\'en prend à un coéquipier adjacent, qui est Mis à Terre.'],
+  ['Fureur Débridée', '', 'Sur 1-3, enrage sans effet et son activation se termine.'],
+  ['Lancer un Coéquipier', '', 'Peut déclarer l\'Action Lancer un Coéquipier.'],
+  ['Poids Plume', '', 'Peut être lancé par un coéquipier, même en étant À Terre.'],
+  ['Minus', '', 'Aucun modificateur négatif pour être Marqué en Esquivant, mais Table de Blessures Minuscule.'],
+  ['Microbe', '', '+1 en Esquivant, mais n\'applique pas le -1 aux adversaires qui esquivent chez lui.'],
+  ['Insignifiant', '', 'Pas plus de joueurs avec ce Trait que de joueurs sans, à la création de la liste.'],
+  ['Arme Secrète', '', 'Expulsé à la fin de l\'Engagement, même absent du terrain.'],
+  ['Tronçonneuse', '', 'Action Spéciale : Jet d\'Armure à +3 contre un adversaire adjacent, ou Mis à Terre sur 1.'],
+  ['Poignard', '', 'Action Spéciale : Jet d\'Armure non modifiable contre un adversaire adjacent.'],
+  ['Bombardier', '', 'Action Spéciale : lance une bombe comme une passe ; elle explose au sol.'],
+  ['Boulet et Chaîne', '', 'Sa seule action possible : un déplacement aléatoire qui bloque tout ce qu\'il croise.'],
+  ['Décomposition', '', '+1 à tout Jet de Victime fait pour ce joueur.'],
+  ['Toujours Affamé', '', 'Sur 1 puis 1, mange le coéquipier qu\'il lançait — retiré de la liste, sans apothicaire.'],
+  ['Mon Ballon', '', 'Ne peut jamais abandonner volontairement le ballon.'],
+  ['Pas de Bras', '', 'Ne peut jamais avoir la possession du ballon.'],
+  ['Capitaine d\'équipe', '', 'Permet d\'économiser une relance lors de son utilisation, sur un 6+.'],
+];
+
+/* ── Les mots-clefs, tels qu'ils sont ─────────────────────────────────────
+   38 au corpus : 30 espèces qu'une Haine de ligue peut viser, 8 rôles qui ne
+   se haïssent pas. `hate` reprend `league_hate_selectable`. */
+var KEYWORDS = [
+  ['Animal','esp',1], ['Homme-Bête','esp',1], ['Orque Noir','esp',1], ['Artefact','esp',1],
+  ['Elfe Noir','esp',1], ['Nain','esp',1], ['Elfe','esp',1], ['Goule','esp',1],
+  ['Gnoblar','esp',1], ['Gnome','esp',1], ['Gobelin','esp',1], ['Halfling','esp',1],
+  ['Humain','esp',1], ['Homme-Lézard','esp',1], ['Minotaure','esp',1], ['Ogre','esp',1],
+  ['Orque','esp',1], ['Skaven','esp',1], ['Squelette','esp',1], ['Snotling','esp',1],
+  ['Rejeton','esp',1], ['Sbire','esp',1], ['Homme-arbre','esp',1], ['Troll','esp',1],
+  ['Mort-Vivant','esp',1], ['Vampire','esp',1], ['Loup-garou','esp',1], ['Spectre','esp',1],
+  ['Yéti','esp',1], ['Zombie','esp',1],
+  /* Les huit rôles. « Gros Bras » est le seul cas mixte : aucune Haine de ligue
+     ne le propose, mais la compétence HATRED_BIG_GUY existe au corpus. */
+  ['Gros Bras','role',2], ['Blitzer','role',0], ['Bloqueur','role',0], ['Receveur','role',0],
+  ['Trois-quart','role',0], ['Coureur','role',0], ['Lanceur','role',0], ['Spécial','role',0],
+];
+
+var kwFilter = null;
+
+var picked = { skill: [], trait: [], kw: [] };
+var catFilter = null;
+
+function openPicker(kind) {
+  document.getElementById('picker-' + kind).style.display = '';
+  if (kind === 'skill') { renderCats(); }
+  if (kind === 'kw')    { renderKwCats(); }
+  renderPicker(kind);
+  document.getElementById('q-' + kind).focus();
+}
+function closePicker(kind) {
+  document.getElementById('picker-' + kind).style.display = 'none';
+}
+
+function renderCats() {
+  var box = document.getElementById('cats-skill');
+  box.innerHTML = '<span class="re-cat' + (catFilter ? '' : ' on')
+    + '" onclick="setCat(null)">Toutes</span>'
+    + CATS.map(function (c) {
+        return '<span class="re-cat' + (catFilter === c[0] ? ' on' : '')
+             + '" onclick="setCat(\'' + c[0] + '\')">' + c[1] + '</span>';
+      }).join('');
+}
+function setCat(c) { catFilter = c; renderCats(); renderPicker('skill'); }
+
+function renderKwCats() {
+  var box = document.getElementById('cats-kw');
+  var f = [[null,'Tous les 38'], ['esp','Espèces (30)'], ['role','Rôles (8)']];
+  box.innerHTML = f.map(function (x) {
+    return '<span class="re-cat' + (kwFilter === x[0] ? ' on' : '')
+         + '" onclick="setKwCat(' + (x[0] ? "'" + x[0] + "'" : 'null') + ')">' + x[1] + '</span>';
+  }).join('');
+}
+function setKwCat(c) { kwFilter = c; renderKwCats(); renderPicker('kw'); }
+
+function label(code) {
+  for (var i = 0; i < CATS.length; i++) { if (CATS[i][0] === code) { return CATS[i][1]; } }
+  return code;
+}
+
+function renderPicker(kind) {
+  var q = document.getElementById('q-' + kind).value.trim().toLowerCase();
+  var rows, total;
+
+  if (kind === 'skill') {
+    total = 72;
+    rows = SKILLS.filter(function (s) {
+      return (!catFilter || s[1] === catFilter)
+          && (!q || s[0].toLowerCase().indexOf(q) !== -1 || s[3].toLowerCase().indexOf(q) !== -1);
+    }).map(function (s) {
+      var badge = s[2]
+        ? '<span class="re-sk-cat re-sk-elite">Élite</span>'
+        : '<span class="re-sk-cat">' + label(s[1]) + '</span>';
+      return sk(s[0], badge, s[3], 'skill');
+    });
+  } else if (kind === 'kw') {
+    total = 38;
+    rows = KEYWORDS.filter(function (k) {
+      return (!kwFilter || k[1] === kwFilter)
+          && (!q || k[0].toLowerCase().indexOf(q) !== -1);
+    }).map(function (k) {
+      var badge = k[1] === 'esp'
+        ? '<span class="re-sk-cat">Espèce</span>'
+        : '<span class="re-sk-cat re-sk-fam">Rôle</span>';
+      var note = k[2] === 1 ? 'Une Haine de ligue peut viser ce mot-clef.'
+               : k[2] === 2 ? 'Aucune Haine de ligue ne le propose — mais la compétence Haine (Gros Bras) existe au corpus.'
+               : 'Aucune Haine ne vise ce mot-clef.';
+      return sk(k[0], badge, note, 'kw');
+    });
+  } else {
+    total = 74;
+    rows = TRAITS.filter(function (s) {
+      return !q || s[0].toLowerCase().indexOf(q) !== -1 || s[2].toLowerCase().indexOf(q) !== -1;
+    }).map(function (s) {
+      var badge = s[1] === 'famille'
+        ? '<span class="re-sk-cat re-sk-fam">Famille</span>' : '';
+      return sk(s[0], badge, s[2], 'trait');
+    });
+  }
+
+  document.getElementById('list-' + kind).innerHTML = rows.length
+    ? rows.join('')
+    : '<div class="re-picker-empty">Rien ne correspond à « ' + q +' ».</div>';
+  var quoi = kind === 'skill' ? ' compétences' : (kind === 'kw' ? ' mots-clefs' : ' traits');
+  document.getElementById('count-' + kind).textContent = rows.length + ' sur ' + total + quoi;
+}
+
+function sk(name, badge, desc, kind) {
+  return '<div class="re-sk" onclick="pick(\'' + kind + '\', this)">'
+       + '<div class="re-sk-top"><span class="re-sk-name">' + name + '</span>' + badge + '</div>'
+       + '<div class="re-sk-desc">' + desc + '</div></div>';
+}
+
+function pick(kind, el) {
+  var name = el.querySelector('.re-sk-name').textContent;
+  if (picked[kind].indexOf(name) === -1) { picked[kind].push(name); }
+  renderPicked(kind);
+}
+function unpick(kind, name) {
+  picked[kind] = picked[kind].filter(function (n) { return n !== name; });
+  renderPicked(kind);
+}
+function renderPicked(kind) {
+  var box = document.getElementById('pick-' + kind);
+  if (!picked[kind].length) {
+    box.innerHTML = '<span class="re-picked-none">' + (kind === 'skill' ? 'Aucune' : 'Aucun') + '</span>';
+    return;
+  }
+  
+  var cls = kind === 'trait' ? ' re-picked-chip--trait'
+          : kind === 'kw'    ? ' re-picked-chip--kw' : '';
+  box.innerHTML = picked[kind].map(function (n) {
+    return '<span class="re-picked-chip' + cls + '">'
+         + n + '<span class="re-picked-x" onclick="unpick(\'' + kind + '\', \'' + n.replace(/'/g, "\\'") + '\')">×</span></span>';
+  }).join('');
+}
+
+function tog(el) { el.classList.toggle('on'); }
+
+function syncTitle(input) {
+  document.getElementById('head-title').textContent =
+    input.value.trim() || 'Roster sans nom';
+}
+
+function toggleEditor(id, row) {
+  var ed = document.getElementById(id);
+  if (!ed) { return; }
+  var open = ed.style.display !== 'none';
+  ed.style.display = open ? 'none' : '';
+  row.classList.toggle('open', !open);
+  var caret = row.querySelector('.re-caret');
+  if (caret) { caret.textContent = open ? '▸' : '▾'; }
+}
+
+/* Le poste déplié arrive garni : on juge mal un sélecteur sur une liste vide. */
+picked.skill = ['Blocage', 'Garde'];
+picked.trait = ['Régénération'];
+picked.kw    = ['Homme-Lézard'];
+
+function setState(name) {
+  var blank = (name === 'blank');
+  document.getElementById('pos-filled').style.display = blank ? 'none' : '';
+  document.getElementById('pos-blank').style.display  = blank ? '' : 'none';
+  document.getElementById('pos-count').textContent = blank ? 'aucun poste' : '3 postes';
+
+  var lignes = {
+    filled: [
+      ['warn', 'Le Kroxigor n\'a pas de valeur de passe — laissez « — » si le poste ne peut pas lancer.'],
+      ['ok',   'Un poste journalier est défini : Skink de la Mare.'],
+      ['warn', 'Le Kroxigor ne porte aucun mot-clef — aucune Haine ne pourra le viser, et il n\'aura ni espèce ni rôle.'],
+    ],
+    done: [
+      ['ok', 'Un poste journalier est défini : Skink de la Mare.'],
+      ['ok', 'Les trois postes portent une espèce et un rôle.'],
+      ['ok', 'Le personnel autorisé et les règles spéciales sont renseignés.'],
+    ],
+    blank: [
+      ['warn', 'Aucun poste : un roster sans poste ne peut pas être enregistré.'],
+      ['warn', 'Aucun poste journalier — il en faut exactement un.'],
+    ],
+  }[name];
+
+  var checks = document.getElementById('checks');
+  var pire = lignes.some(function (l) { return l[0] === 'warn'; }) ? 'warn' : 'ok';
+  checks.className = 're-checks ' + pire;
+  checks.innerHTML = lignes.map(function (l) {
+    return '<div class="re-check-line re-check-line--' + l[0] + '">'
+         + '<span>' + (l[0] === 'ok' ? '✓' : '⚠') + '</span> <span>' + l[1] + '</span></div>';
+  }).join('');
+
+  document.querySelectorAll('.state-pill').forEach(function (p) {
+    p.classList.toggle('active', p.dataset.state === name);
+  });
+}
+</script>
+</body>
+</html>
