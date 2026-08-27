@@ -42,6 +42,22 @@ pub struct SquadMemberDto {
 /// interroge les deux. N'en reprendre qu'une priverait du bouton des
 /// administrateurs qui l'ont aujourd'hui, et l'affichage cesserait de suivre
 /// l'autorisation — le défaut même que cette carte corrige.
+/// Le hasard, derrière un port.
+///
+/// Le précédent du projet tire en dur dans le use case (`random_draw.rs:44`), et
+/// ses tests ne portent que sur la répartition, jamais sur le tirage. **Ça ne
+/// suffit pas ici** : il faut pouvoir prouver qu'à 345 kPo un 1 donne un
+/// incident majeur et retire exactement 170. Sans jet forçable, ce test n'existe
+/// pas, et la table de la carte 408 reste non vérifiée de bout en bout.
+pub trait IDiceRoller: Send + Sync {
+    fn d6(&self) -> u8;
+    fn d3(&self) -> u8;
+    /// Un **couple**, et non deux appels à `d6` : les deux dés d'une
+    /// catastrophe sont un seul geste, et un test qui enchaîne deux dés truqués
+    /// devient vite illisible.
+    fn two_d6(&self) -> (u8, u8);
+}
+
 #[async_trait]
 pub trait ITeamAccessPort: Send + Sync {
     async fn is_space_admin(&self, coach_id: &CoachId, space_id: &SpaceId) -> bool;

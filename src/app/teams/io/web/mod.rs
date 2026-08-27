@@ -1,3 +1,4 @@
+pub mod costly_mistakes;
 pub mod dismiss_team;
 pub mod dismissals;
 pub mod dismissals_view_models;

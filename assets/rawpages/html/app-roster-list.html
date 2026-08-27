@@ -3,29 +3,126 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rosters — Blood Bowl Club</title>
+  <title>Rosters de l'espace — Blood Bowl Club</title>
   <link rel="stylesheet" href="shared.css">
   <style>
-    .roster-grid { display: flex; flex-wrap: wrap; gap: var(--p1); }
-    .roster-card {
-      border: 1px solid var(--dark-4); border-radius: 5px;
-      background: var(--white-1); display: flex; flex-direction: column; align-items: center;
-      gap: var(--p1); padding: var(--p2); width: 200px; cursor: pointer;
-      transition: box-shadow 0.2s, border-color 0.2s;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    .rl-page { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--p1); }
+
+    /* ── Bandeau de titre ─────────────────────────────────────────────── */
+    .rl-head {
+      background: var(--white); border-radius: 10px; padding: var(--p2);
+      display: flex; align-items: center; gap: var(--p2); flex-wrap: wrap;
     }
-    .roster-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); border-color: var(--dark-3); }
-    .roster-img {
-      width: 90px; height: 90px; border-radius: 8px;
+    .rl-head-text { flex: 1; min-width: 200px; }
+    .rl-head-title { font-family: var(--font-title); font-size: var(--h2); font-weight: 800; color: var(--dark-0); line-height: 1.1; }
+    .rl-head-sub { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 4px; }
+
+    /* ── Recherche ────────────────────────────────────────────────────── */
+    .rl-search {
+      padding: 9px 14px; border: 1px solid var(--dark-4); border-radius: 7px;
+      font-size: var(--text-small); font-family: inherit; outline: none;
+      min-width: 240px;
+    }
+    .rl-search:focus { border-color: var(--main-blue); }
+
+    /* ── Sections — deux natures, deux poids ──────────────────────────────
+       Les rosters de l'espace se gèrent ; ceux du règlement se consultent.
+       Les mêler dans une liste unique effacerait cette différence. */
+    .rl-section { background: var(--white); border-radius: 10px; overflow: hidden; }
+    .rl-section--own { box-shadow: 0 2px 14px rgba(0,48,73,0.07); border-top: 3px solid var(--main-blue); }
+    .rl-section--corpus { background: var(--white-1); border: 1px solid var(--dark-5); }
+
+    .rl-section-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--p1); padding: var(--p1) var(--p2);
+      border-bottom: 1px solid var(--dark-5); flex-wrap: wrap;
+    }
+    .rl-section--corpus .rl-section-head { background: var(--dark-7); padding: 10px var(--p2); }
+    .rl-section-title {
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-0);
+    }
+    .rl-section--corpus .rl-section-title { font-size: var(--text-small); color: var(--dark-2); }
+    .rl-section-note { font-size: var(--text-tiny); color: var(--dark-3); }
+
+    /* ── Lignes ───────────────────────────────────────────────────────── */
+    .rl-row {
+      display: flex; align-items: center; gap: var(--p2);
+      padding: var(--p1) var(--p2); border-bottom: 1px solid var(--dark-6);
+    }
+    .rl-row:last-child { border-bottom: none; }
+    .rl-row:hover { background: var(--dark-7); }
+
+    .rl-logo {
+      width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0;
+      background: linear-gradient(135deg, #003049, #555770);
       display: flex; align-items: center; justify-content: center;
-      font-size: 40px;
+      font-family: var(--font-title); font-weight: 900; font-size: 15px; color: var(--white);
     }
-    .roster-name { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-1); text-align: center; }
-    .roster-type { font-size: var(--text-tiny); color: var(--dark-3); }
-    .page-header { margin-bottom: var(--p3); }
-    .search-bar { display: flex; gap: var(--p1); margin-bottom: var(--p2); }
-    .search-input { flex: 1; padding: 12px 16px; border: 1px solid var(--dark-4); border-radius: 8px; font-size: var(--text-small); outline: none; }
-    .search-input:focus { border-color: var(--main-blue); }
+    .rl-logo--corpus { background: linear-gradient(135deg, #8F90A6, #C7C9D9); }
+
+    .rl-main { flex: 1; min-width: 160px; }
+    .rl-name {
+      font-family: var(--font-title); font-size: var(--text-small);
+      font-weight: 700; color: var(--dark-0);
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .rl-meta { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 3px; }
+
+    .rl-badge {
+      padding: 1px 8px; border-radius: 10px; font-size: 10px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .rl-badge--locked { background: rgba(0,48,73,0.1);    color: var(--main-blue); }
+    .rl-badge--draft  { background: rgba(255,107,53,0.14); color: #9A5000; }
+
+    /* Le compteur d'équipes est ce qui décide de tout : il verrouille. */
+    .rl-teams { text-align: right; min-width: 108px; }
+    .rl-teams-n { font-family: var(--font-title); font-size: var(--h4); font-weight: 800; color: var(--dark-1); line-height: 1; }
+    .rl-teams-n--zero { color: var(--dark-4); }
+    .rl-teams-l { font-size: 11px; color: var(--dark-3); margin-top: 2px; }
+
+    .rl-actions { display: flex; gap: 6px; white-space: nowrap; }
+
+    /* ── Boutons ──────────────────────────────────────────────────────── */
+    .rl-btn {
+      padding: 7px 14px; border-radius: 7px; cursor: pointer;
+      font-size: var(--text-tiny); font-weight: 600; font-family: inherit;
+      border: 1px solid var(--dark-4); background: var(--white); color: var(--dark-2);
+      transition: all 0.15s;
+    }
+    .rl-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .rl-btn--primary { background: var(--main-blue); border-color: var(--main-blue); color: var(--white); padding: 9px 18px; font-size: var(--text-small); }
+    .rl-btn--primary:hover { background: #00243a; color: var(--white); }
+    .rl-btn--danger:hover { border-color: var(--red); color: var(--red); }
+
+    /* ── État vide ────────────────────────────────────────────────────── */
+    .rl-empty { padding: var(--p3) var(--p2); text-align: center; }
+    .rl-empty-icon  { font-size: 38px; opacity: 0.3; }
+    .rl-empty-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-2); margin-top: var(--p1); }
+    .rl-empty-text  { font-size: var(--text-small); color: var(--dark-3); margin-top: 6px; max-width: 470px; margin-left: auto; margin-right: auto; }
+
+    /* ── Sélecteur de démonstration ───────────────────────────────────── */
+    .demo-switcher {
+      display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap;
+      background: var(--dark-7); border: 1px dashed var(--dark-4);
+      border-radius: 8px; padding: 10px var(--p1); margin-bottom: var(--p1);
+    }
+    .demo-switcher-label { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; }
+    .state-pill {
+      padding: 5px 12px; border-radius: 14px; border: 1px solid var(--dark-4);
+      background: var(--white); color: var(--dark-2);
+      font-size: var(--text-tiny); font-weight: 600; cursor: pointer;
+    }
+    .state-pill.active { background: var(--main-blue); color: var(--white); border-color: var(--main-blue); }
+
+    @media (max-width: 768px) {
+      .rl-head { flex-direction: column; align-items: stretch; }
+      .rl-row { flex-wrap: wrap; }
+      .rl-teams { text-align: left; min-width: 0; }
+      .rl-actions { width: 100%; }
+      .rl-actions .rl-btn { flex: 1; }
+    }
   </style>
 </head>
 <body>
@@ -35,7 +132,6 @@
       <div class="league-btn league-btn-active">TC</div>
       <div class="league-btn">KC</div>
       <div class="league-btn">LM</div>
-      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
     </div>
 
     <div class="main-area">
@@ -47,11 +143,11 @@
               <span class="menu-logo-text">Blood Bowl Club</span>
             </div>
             <a class="menu-item" href="app-home.html">Accueil</a>
-            <a class="menu-item active">Compétitions</a>
+            <a class="menu-item">Équipes</a>
             <a class="menu-item">Règles du jeu</a>
           </div>
           <div class="menu-right">
-            <a class="menu-item">Administration</a>
+            <a class="menu-item active">Administration</a>
             <div class="menu-account">👤</div>
           </div>
         </div>
@@ -59,100 +155,143 @@
       </div>
 
       <div class="page-content">
-        <div class="page-header">
-          <div class="h3-gras" style="margin-bottom: 8px;">Rosters disponibles</div>
-          <div class="text-small text-dark-2">Sélectionnez le roster pour créer votre équipe</div>
+
+        <div class="demo-switcher">
+          <span class="demo-switcher-label">Aperçu maquette :</span>
+          <button class="state-pill active" data-state="some" onclick="setState('some')">L'espace a ses rosters</button>
+          <button class="state-pill" data-state="none" onclick="setState('none')">Aucun roster personnalisé</button>
         </div>
 
-        <div class="search-bar">
-          <input class="search-input" type="text" placeholder="Rechercher un roster...">
-          <select class="form-select" style="width: 200px;">
-            <option>Toutes les éditions</option>
-            <option>BB 2020</option>
-            <option>BB7</option>
-            <option>Dungeon Bowl</option>
-          </select>
-        </div>
+        <div class="rl-page">
 
-        <div class="roster-grid">
-          <div class="roster-card">
-            <div class="roster-img" style="background: linear-gradient(135deg,#e8f0f8,#c9dde8);">🧝</div>
-            <div class="roster-name">Hauts Elfes</div>
-            <div class="roster-type">BB 2020</div>
+          <div class="rl-head">
+            <div class="rl-head-text">
+              <div class="rl-head-title">Rosters</div>
+              <div class="rl-head-sub">Ligue de Condate — ce que les coachs peuvent choisir en créant une équipe</div>
+            </div>
+            <input type="text" class="rl-search" placeholder="Chercher un roster…">
+            <button class="rl-btn rl-btn--primary">+ Nouveau roster</button>
           </div>
-          <div class="roster-card">
-            <div class="roster-img" style="background: linear-gradient(135deg,#1a2a1a,#2d4a2d);">🌲</div>
-            <div class="roster-name">Elfes Sylvestres</div>
-            <div class="roster-type">BB 2020</div>
+
+          <!-- ══ Les rosters de l'espace ═════════════════════════════ -->
+          <div class="rl-section rl-section--own">
+            <div class="rl-section-head">
+              <div class="rl-section-title"><span>🛡️</span> Rosters de cet espace</div>
+              <div class="rl-section-note" id="own-note">2 rosters — visibles nulle part ailleurs</div>
+            </div>
+
+            <div id="own-list">
+              <div class="rl-row">
+                <div class="rl-logo">SM</div>
+                <div class="rl-main">
+                  <div class="rl-name">
+                    Slanns de la Mare Basse
+                    <span class="rl-badge rl-badge--locked">🔒 Verrouillé</span>
+                  </div>
+                  <div class="rl-meta">Tier 2 · 3 postes · relance 60 kPo · créé le 12 août</div>
+                </div>
+                <div class="rl-teams">
+                  <div class="rl-teams-n">3</div>
+                  <div class="rl-teams-l">équipes le jouent</div>
+                </div>
+                <div class="rl-actions">
+                  <button class="rl-btn">Consulter</button>
+                </div>
+              </div>
+
+              <div class="rl-row">
+                <div class="rl-logo">HC</div>
+                <div class="rl-main">
+                  <div class="rl-name">
+                    Hordes du Cairn
+                    <span class="rl-badge rl-badge--draft">Modifiable</span>
+                  </div>
+                  <div class="rl-meta">Tier 3 · 5 postes · relance 70 kPo · créé le 19 août</div>
+                </div>
+                <div class="rl-teams">
+                  <div class="rl-teams-n rl-teams-n--zero">0</div>
+                  <div class="rl-teams-l">aucune équipe</div>
+                </div>
+                <div class="rl-actions">
+                  <button class="rl-btn">Modifier</button>
+                  <button class="rl-btn rl-btn--danger">Supprimer</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="own-empty" style="display: none;">
+              <div class="rl-empty">
+                <div class="rl-empty-icon">🛡️</div>
+                <div class="rl-empty-title">Aucun roster personnalisé</div>
+                <div class="rl-empty-text">
+                  Les coachs de cet espace n'ont que les rosters du règlement à leur
+                  disposition. Un roster créé ici s'ajoute à leur choix, et n'apparaît
+                  dans aucun autre espace.
+                </div>
+                <button class="rl-btn rl-btn--primary" style="margin-top: var(--p2);">+ Créer le premier roster</button>
+              </div>
+            </div>
           </div>
-          <div class="roster-card">
-            <div class="roster-img" style="background: linear-gradient(135deg,#1C1C29,#26263D);">🧟</div>
-            <div class="roster-name">Morts-vivants</div>
-            <div class="roster-type">BB 2020</div>
+
+          <!-- ══ Les rosters du règlement ════════════════════════════ -->
+          <div class="rl-section rl-section--corpus">
+            <div class="rl-section-head">
+              <div class="rl-section-title"><span>📖</span> Rosters du règlement</div>
+              <div class="rl-section-note">3 rosters — les mêmes pour tous les espaces, non modifiables</div>
+            </div>
+
+            <div class="rl-row">
+              <div class="rl-logo rl-logo--corpus">GR</div>
+              <div class="rl-main">
+                <div class="rl-name">Granitiers</div>
+                <div class="rl-meta">Tier 1 · 3 postes · relance 60 kPo</div>
+              </div>
+              <div class="rl-actions">
+                <button class="rl-btn">Consulter</button>
+              </div>
+            </div>
+
+            <div class="rl-row">
+              <div class="rl-logo rl-logo--corpus">ZÉ</div>
+              <div class="rl-main">
+                <div class="rl-name">Zéphyriens</div>
+                <div class="rl-meta">Tier 2 · 3 postes · relance 50 kPo</div>
+              </div>
+              <div class="rl-actions">
+                <button class="rl-btn">Consulter</button>
+              </div>
+            </div>
+
+            <div class="rl-row">
+              <div class="rl-logo rl-logo--corpus">LA</div>
+              <div class="rl-main">
+                <div class="rl-name">Lanterniers</div>
+                <div class="rl-meta">Tier 3 · 3 postes · relance 70 kPo</div>
+              </div>
+              <div class="rl-actions">
+                <button class="rl-btn">Consulter</button>
+              </div>
+            </div>
           </div>
-          <div class="roster-card">
-            <div class="roster-img" style="background: linear-gradient(135deg,#3a1a1a,#5a2a2a);">🐀</div>
-            <div class="roster-name">Skavens</div>
-            <div class="roster-type">BB 2020</div>
-          </div>
-          <div class="roster-card">
-            <div class="roster-img" style="background: linear-gradient(135deg,#2a1a3a,#4a2a5a);">👹</div>
-            <div class="roster-name">Chaos Rénégats</div>
-            <div class="roster-type">BB 2020</div>
-          </div>
-          <div class="roster-card">
-            <div class="roster-img" style="background: linear-gradient(135deg,#2d1a00,#5c3500);">🍄</div>
-            <div class="roster-name">Orques</div>
-            <div class="roster-type">BB 2020</div>
-          </div>
-          <div class="roster-card">
-            <div class="roster-img" style="background: linear-gradient(135deg,#1a1a2e,#2a2a5e);">🧙</div>
-            <div class="roster-name">Elfes Noirs</div>
-            <div class="roster-type">BB 2020</div>
-          </div>
-          <div class="roster-card">
-            <div class="roster-img" style="background: linear-gradient(135deg,#2e2e2e,#4e4e4e);">⚒️</div>
-            <div class="roster-name">Nains</div>
-            <div class="roster-type">BB 2020</div>
-          </div>
-          <div class="roster-card">
-            <div class="roster-img" style="background: linear-gradient(135deg,#f0e6d0,#d4c4a0);">🏰</div>
-            <div class="roster-name">Humains</div>
-            <div class="roster-type">BB 2020</div>
-          </div>
-          <div class="roster-card">
-            <div class="roster-img" style="background: linear-gradient(135deg,#1e3a1e,#3a6a3a);">🦎</div>
-            <div class="roster-name">Hommes-lézards</div>
-            <div class="roster-type">BB 2020</div>
-          </div>
-          <div class="roster-card">
-            <div class="roster-img" style="background: linear-gradient(135deg,#3a0a0a,#6a1a1a);">🧛</div>
-            <div class="roster-name">Nécromanciens</div>
-            <div class="roster-type">BB 2020</div>
-          </div>
-          <div class="roster-card">
-            <div class="roster-img" style="background: linear-gradient(135deg,#FFD700,#B8860B);">⭐</div>
-            <div class="roster-name">Halflings</div>
-            <div class="roster-type">BB 2020</div>
-          </div>
-          <div class="roster-card">
-            <div class="roster-img" style="background: linear-gradient(135deg,#4a2a00,#8a5a00);">🐗</div>
-            <div class="roster-name">Nains du Chaos</div>
-            <div class="roster-type">BB 2020</div>
-          </div>
-          <div class="roster-card">
-            <div class="roster-img" style="background: linear-gradient(135deg,#003049,#005080);">🌊</div>
-            <div class="roster-name">Amazones</div>
-            <div class="roster-type">BB 2020</div>
-          </div>
-          <div class="roster-card">
-            <div class="roster-img" style="background: linear-gradient(135deg,#1a2a1a,#3a6a4a);">🌿</div>
-            <div class="roster-name">Gobelins</div>
-            <div class="roster-type">BB 2020</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+
+        </div><!-- /rl-page -->
+      </div><!-- /page-content -->
+    </div><!-- /main-area -->
+  </div><!-- /app-layout -->
+
+<script>
+/* Comportement de maquette. */
+function setState(name) {
+  var some = (name === 'some');
+  document.getElementById('own-list').style.display  = some ? '' : 'none';
+  document.getElementById('own-empty').style.display = some ? 'none' : '';
+  document.getElementById('own-note').textContent = some
+    ? '2 rosters — visibles nulle part ailleurs'
+    : 'aucun pour l\'instant';
+  document.querySelectorAll('.state-pill').forEach(function (p) {
+    p.classList.toggle('active', p.dataset.state === name);
+  });
+}
+</script>
 </body>
 </html>

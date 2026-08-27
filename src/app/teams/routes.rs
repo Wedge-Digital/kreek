@@ -19,6 +19,7 @@ pub mod path {
         "/app/{space_id}/teams/{team_id}/validate-recruitment-phase";
     pub const VALIDATE_DISMISSALS_PHASE: &str =
         "/app/{space_id}/teams/{team_id}/validate-dismissals-phase";
+    pub const COSTLY_MISTAKES_ROLL: &str = "/app/{space_id}/teams/{team_id}/costly-mistakes/roll";
 
     // ── Recrutement ───────────────────────────────────────────────────────
     pub const RECRUITMENT_PAGE: &str = "/app/{space_id}/teams/{team_id}/recruitment";
@@ -119,6 +120,14 @@ impl Routes {
 
     pub fn validate_recruitment_phase(&self, space_id: &str, team_id: &str) -> String {
         path::VALIDATE_RECRUITMENT_PHASE
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+
+    /// Le POST du jet. **Sans corps** : l'équipe est dans le chemin, le coach
+    /// dans la session, et le client ne peut donc pas proposer de jet.
+    pub fn costly_mistakes_roll(&self, space_id: &str, team_id: &str) -> String {
+        path::COSTLY_MISTAKES_ROLL
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
     }
@@ -258,6 +267,7 @@ mod tests {
             ("improvement", r.validate_improvement_phase(SPACE, TEAM)),
             ("recruitment", r.validate_recruitment_phase(SPACE, TEAM)),
             ("dismissals", r.validate_dismissals_phase(SPACE, TEAM)),
+            ("costly_mistakes_roll", r.costly_mistakes_roll(SPACE, TEAM)),
         ]
     }
 

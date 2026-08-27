@@ -72,6 +72,10 @@ pub fn router() -> Router<AppState> {
             path::VALIDATE_DISMISSALS_PHASE,
             post(post_validate_dismissals_phase),
         )
+        .route(
+            path::COSTLY_MISTAKES_ROLL,
+            post(crate::app::teams::io::web::costly_mistakes::post_costly_mistakes_roll),
+        )
         .route(path::RECRUITMENT_PAGE, get(recruitment_page))
         .route(path::RECRUITMENT_CATALOG_WIDGET, get(recruitment_catalog))
         .route(path::RECRUITMENT_CART_WIDGET, get(recruitment_cart))
