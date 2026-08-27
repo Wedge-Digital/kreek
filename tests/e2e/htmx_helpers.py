@@ -47,17 +47,23 @@ from playwright.sync_api import Page
 _EST_CABLE = "e => !!(e['htmx-internal-data'])"
 
 
-def attendre_cablage(page: Page, selecteur: str, timeout: int = 10000) -> None:
-    """Rend la main quand htmx a câblé l'élément désigné.
+def attendre_cablage_locator(page: Page, cible, timeout: int = 10000) -> None:
+    """Même attente, pour une cible qu'un sélecteur seul ne désigne pas — une
+    ligne de tableau retrouvée par filtrage, par exemple.
 
-    L'élément est résolu par `page.locator`, puis passé à `wait_for_function`
-    **par sa poignée**. Une première version interrogeait `document.querySelector`
-    avec le sélecteur : les moteurs propres à Playwright (`text=`, `has-text`)
-    n'y sont pas des sélecteurs CSS, la condition n'était jamais vraie, et les
-    tests échouaient à tous les coups au lieu d'une fois sur deux.
+    L'élément est passé à `wait_for_function` **par sa poignée**. Une première
+    version interrogeait `document.querySelector` avec le sélecteur : les moteurs
+    propres à Playwright (`text=`, `has-text`) n'y sont pas des sélecteurs CSS,
+    la condition n'était jamais vraie, et les tests échouaient à tous les coups
+    au lieu d'une fois sur deux.
     """
-    poignee = page.locator(selecteur).first.element_handle(timeout=timeout)
+    poignee = cible.first.element_handle(timeout=timeout)
     page.wait_for_function(_EST_CABLE, arg=poignee, timeout=timeout)
+
+
+def attendre_cablage(page: Page, selecteur: str, timeout: int = 10000) -> None:
+    """Rend la main quand htmx a câblé l'élément désigné."""
+    attendre_cablage_locator(page, page.locator(selecteur), timeout)
 
 
 def cliquer_quand_cable(page: Page, selecteur: str, timeout: int = 10000) -> None:

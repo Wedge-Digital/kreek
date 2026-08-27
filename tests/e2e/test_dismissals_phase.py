@@ -31,6 +31,7 @@ from playwright.sync_api import Page, expect
 
 from competition_lifecycle import BASE_URL, build_full_competition
 from db_helpers import query_db
+from htmx_helpers import attendre_cablage_locator
 from team_phase_helpers import traverser_erreurs_couteuses
 from match_report_helpers import (
     create_draft,
@@ -194,9 +195,18 @@ def _eligibles_affiches(page: Page) -> int:
 
 def _marquer(page: Page, maillot: int) -> None:
     """Clique et attend que le panier ait grandi — le bouton est remplacé par le
-    swap, l'attente ne peut donc pas porter sur lui."""
+    swap, l'attente ne peut donc pas porter sur lui.
+
+    **Le clic attend le câblage.** Le tableau des renvois est lui-même du contenu
+    inséré par htmx, et pendant quelques dizaines de millisecondes ses boutons
+    sont peints, visibles et inertes : le clic s'y perd sans requête ni erreur.
+    Le piège est documenté dans le `CLAUDE.md` ; il a fait tomber le scénario 3
+    une fois sur une suite complète, en passant seul à chaque relance.
+    """
     avant = page.locator(".dis-cart .recap-row").count()
-    _ligne_du_maillot(page, maillot).locator(".fire-btn").click()
+    bouton = _ligne_du_maillot(page, maillot).locator(".fire-btn")
+    attendre_cablage_locator(page, bouton)
+    bouton.click()
     expect(page.locator(".dis-cart .recap-row")).to_have_count(avant + 1, timeout=10000)
 
 
