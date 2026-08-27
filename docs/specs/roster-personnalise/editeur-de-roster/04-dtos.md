@@ -100,24 +100,55 @@ qu'il faut :
 fichier de confiance ; personne n'a jamais tapé une caractéristique. Cet écran
 est le premier.
 
+Le LRB les donne — *Livre de Règles Bonifiées Saison 3*, section 5 à 9,
+page 25 :
+
+> Les Caractéristiques ont une valeur maximum et minimum, et on ne peut jamais
+> les améliorer ni les réduire au-delà ou en deçà des valeurs indiquées
+> ci-dessous.
+
+| | M | F | AG | CP | AR |
+|---|---|---|---|---|---|
+| Maximum | 9 | **8** | 1+ | 1+ | 11+ |
+| Minimum | 1 | 1 | 6+ | 6+ | 3+ |
+
 ```rust
 pub struct StatLine {
-    pub ma: Movement,             // 1 à 9
-    pub st: Strength,             // 1 à 7
-    pub ag: AgilityTarget,        // 1 à 6
-    pub pa: Option<PassingTarget>,// 1 à 6, ou absent
-    pub av: ArmourTarget,         // 3 à 11
+    pub ma: Movement,        // 1 à 9
+    pub st: Strength,        // 1 à 8
+    pub ag: AgilityTarget,   // 1 à 6
+    pub pa: PassingTarget,   // 1 à 6
+    pub av: ArmourTarget,    // 3 à 11
 }
 ```
 
-**`pa` est le seul `Option`, et ce n'est pas une commodité.** Un poste peut ne
-pas savoir lancer — le corpus l'écrit alors sans valeur, et la maquette
-l'affiche « — ». Le rendre obligatoire forcerait à inventer un chiffre pour un
-joueur qui ne passe pas, et ce chiffre finirait par autoriser une passe.
+**Le piège du tableau : « maximum » veut dire « le meilleur », pas « le plus
+grand ».** Pour l'Agilité et la Capacité de Passe, le meilleur est `1+` —
+numériquement le plus petit. Pour l'Armure, le meilleur est `11+` —
+numériquement le plus grand. Transcrire la colonne « Maximum » en
+`less_or_equal` inverserait deux bornes sur cinq.
 
-Les bornes viennent du règlement, pas d'une intuition : elles seront à confirmer
-contre le LRB avant l'implémentation. Ce qui compte ici est qu'**elles
-existent** — un `u8` nu laisserait poser une Force de 200.
+Les intervalles numériques sont donc ceux du bloc ci-dessus, et il vaut mieux
+les écrire ainsi que recopier le tableau.
+
+### `pa` n'est pas optionnel — correction
+
+Une version précédente de cette phase le posait en `Option`, au motif qu'un
+poste peut ne pas savoir lancer. **Vérifié : c'est faux pour un poste de
+roster.**
+
+| Type | Champ | Peut valoir « – » |
+|---|---|---|
+| `PlayerPosition` (poste de roster) | `pa: u8` | **non** |
+| `StarPlayer` | `pa: String` | **oui** — « Grumo le Terne » porte `"-"` |
+
+Le corpus encode donc la même caractéristique de deux façons selon le type, et
+seuls les joueurs vedettes admettent l'absence. Aucun des neuf postes du corpus
+de démonstration n'omet sa Capacité de Passe, et le LRB ne prévoit pas de poste
+sans elle.
+
+**Conséquence pour la maquette** : le Kroxigor y affiche « — » en Capacité de
+Passe. C'est une invention, à corriger.
 
 ### Où ces types doivent vivre
 
@@ -286,14 +317,14 @@ séparables.
 
 ## Règles métier à préciser
 
-1. **Les bornes des cinq caractéristiques** sont à confirmer contre le LRB. Je
-   propose MA 1–9, ST 1–7, AG 1–6, PA 1–6, AV 3–11, mais c'est une lecture, pas
-   une source.
+1. **Tranché — au moins une catégorie d'accès primaire est obligatoire.** Un
+   poste sans accès ne progresserait jamais par compétence. Le contrôle rejoint
+   ceux du pied de cohérence (phase 2) et le refus du serveur.
 
-2. **Un poste peut-il n'avoir aucune catégorie d'accès ?** Un poste sans accès
-   primaire ne progresse jamais par compétence. C'est représentable, sans doute
-   pas souhaitable, et rien ne l'interdit aujourd'hui.
+   L'accès **secondaire**, lui, peut être vide : le corpus en compte, et un
+   poste qui ne progresse que dans sa catégorie principale est un poste
+   ordinaire.
 
-3. **Le tier d'un roster est-il libre ?** La maquette propose Tier 1 à 3 ; le
+2. **Le tier d'un roster est-il libre ?** La maquette propose Tier 1 à 3 ; le
    corpus écrit `"tier": "Tier 1"` en texte. Une liste fermée ou un champ libre
    changent le contrat.

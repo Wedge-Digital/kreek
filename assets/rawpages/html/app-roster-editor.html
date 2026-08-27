@@ -588,7 +588,7 @@
                                 <input type="number" class="re-input re-input--stat" value="10">
                               </div>
                             </div>
-                            <div class="re-field-hint">AG, PA et AV sont des seuils : la valeur 4 s'affiche « 4+ ».</div>
+                            <div class="re-field-hint">Seuils : la valeur 4 s'affiche « 4+ ». Bornes du règlement — M 1–9, F 1–8, AG et CP 1–6, AR 3–11.</div>
                           </div>
 
                           <!-- Compétences et traits sont séparés : le corpus les
@@ -709,7 +709,7 @@
                       <td class="c stat first re-stat">6</td>
                       <td class="c stat re-stat">5</td>
                       <td class="c stat re-stat">5+</td>
-                      <td class="c stat re-stat">—</td>
+                      <td class="c stat re-stat">6+</td>
                       <td class="c stat last re-stat">10+</td>
                       <td class="c re-stat">1</td>
                       <td class="re-skills-cell">Châtaigne, Tête de Piaf, Grosse Patte</td>
@@ -743,7 +743,7 @@
             <!-- La cohérence est le pied du panneau qu'elle vérifie -->
             <div class="re-checks warn" id="checks">
               <div class="re-check-line re-check-line--warn">
-                <span>⚠</span> <span>Le Kroxigor n'a pas de valeur de passe — laissez « — » si le poste ne peut pas lancer.</span>
+                <span>⚠</span> <span>Le Kroxigor n'a aucun accès primaire — il ne pourra jamais gagner de compétence.</span>
               </div>
               <div class="re-check-line re-check-line--ok">
                 <span>✓</span> <span>Un poste journalier est défini : Skink de la Mare.</span>
@@ -1025,7 +1025,7 @@ function setState(name) {
 
   var lignes = {
     filled: [
-      ['warn', 'Le Kroxigor n\'a pas de valeur de passe — laissez « — » si le poste ne peut pas lancer.'],
+      ['warn', 'Le Kroxigor n\'a aucun accès primaire — il ne pourra jamais gagner de compétence.'],
       ['ok',   'Un poste journalier est défini : Skink de la Mare.'],
       ['warn', 'Le Kroxigor ne porte aucun mot-clef — aucune Haine ne pourra le viser, et il n\'aura ni espèce ni rôle.'],
     ],
