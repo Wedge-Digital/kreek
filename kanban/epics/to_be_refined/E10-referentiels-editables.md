@@ -18,7 +18,8 @@ listes sans passer par le code.
 | # | Intitulé | Apport |
 |---|---|---|
 | 54 | Référentiel des ligues + widget sélecteur | fragment HTMX à 3 états, `on_select` injecté par l'hôte |
-| 50-reference-BC-roster-editor | Éditeur de rosters | modifier les rosters « dans une certaine mesure » |
+| **439 à 447** | **Roster personnalisé, propre à un espace** | neuf cartes issues du workflow feature, spécifiées dans `docs/specs/roster-personnalise/` |
+| 50-reference-BC-roster-editor | Éditeur de rosters | **absorbée** par les neuf ci-dessus — sa question « modifier les rosters dans une certaine mesure » est tranchée : on n'édite pas ceux du règlement, on en crée de nouveaux |
 
 ## Ce qui commande l'ordre
 
