@@ -43,13 +43,13 @@
     /* ─── Standings ─── */
     .standings-table { background: var(--white); border-radius: 10px; overflow: hidden; margin-bottom: var(--p1); }
     .standings-head  {
-      display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px;
+      display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px;
       padding: 12px 16px; gap: 8px; align-items: center;
       background: var(--dark-0); color: var(--white);
       font-size: var(--text-tiny); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
     }
     .standings-row {
-      display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px;
+      display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px;
       padding: 12px 16px; gap: 8px; align-items: center;
       border-bottom: 1px solid var(--dark-6); font-size: var(--text-tiny);
     }
@@ -62,7 +62,7 @@
        query, et le CLAUDE.md les interdit dans les templates. */
     .standings-table--bonus .standings-head,
     .standings-table--bonus .standings-row {
-      grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px;
+      grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px 60px;
     }
     .s-team {
       font-weight: 600; color: var(--dark-1); font-size: var(--text-small);
@@ -94,6 +94,48 @@
     .sd-team  { text-align: left !important; font-weight: 600; color: var(--dark-1); font-size: var(--text-small); }
     .sd-num   { color: var(--dark-2); }
     .sd-bonus { color: var(--dark-2); font-weight: 600; }
+    /* Les points manuels entrent dans le total AVANT les départages : ils sont
+       donc dans le groupe « Points », pas à côté des départages. Signés, comme
+       le bonus — ils se lisent comme une contribution, jamais comme un état. */
+    .sd-manual        { color: var(--dark-2); font-weight: 600; }
+    .sd-manual--zero  { color: var(--dark-4); font-weight: 400; }
+    /* Un point manuel non nul est un lien vers les lignes de cette équipe : on
+       voit un chiffre qui surprend, on veut savoir d'où il vient. Le zéro n'en
+       est pas un — il n'y a rien à aller lire. */
+    .sd-manual a {
+      color: inherit; text-decoration: none;
+      border-bottom: 1px dotted currentColor; padding-bottom: 1px;
+    }
+    .sd-manual a:hover { border-bottom-style: solid; }
+    .sd-manual--plus  a { color: var(--green); }
+    .sd-manual--minus a { color: var(--red); }
+
+    /* Bandeau d'action au-dessus du classement — réservé aux administrateurs */
+    .st-actions {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--p1); flex-wrap: wrap; margin-bottom: var(--p1);
+    }
+    .st-actions-note { font-size: var(--text-tiny); color: var(--dark-3); }
+    .st-btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 8px 16px; border-radius: 7px; cursor: pointer;
+      border: 1px solid var(--dark-4); background: var(--white); color: var(--dark-2);
+      font-size: var(--text-tiny); font-weight: 600; font-family: inherit;
+      text-decoration: none; transition: all 0.15s;
+    }
+    .st-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    /* Colonne « Man. » du classement simple. Une colonne plutôt qu'une pastille
+       collée au nom : le total doit s'additionner sous les yeux du lecteur, et
+       une pastille hors du tableau laisse la soustraction à faire de tête. */
+    .s-man--zero  { color: var(--dark-4); }
+    .s-man a {
+      color: inherit; text-decoration: none;
+      border-bottom: 1px dotted currentColor; padding-bottom: 1px;
+    }
+    .s-man a:hover { border-bottom-style: solid; }
+    .s-man--plus  a { color: var(--green);  font-weight: 600; }
+    .s-man--minus a { color: var(--red);    font-weight: 600; }
     .sd-total { font-weight: 700; color: var(--dark-0); background: rgba(0,0,0,0.03); }
     /* Bloc des départages : visuellement détaché des colonnes de points. */
     .sd-tb        { color: var(--dark-2); background: rgba(51,102,255,0.04); }
@@ -411,19 +453,33 @@
 
             <!-- ── Classement ── -->
             <div id="tab-classement" class="tab-content" style="display:none;">
+
+              <!-- Action du CLASSEMENT, donc répétée dans ses deux onglets et
+                   nulle part ailleurs. Au-dessus des onglets, elle se serait
+                   affichée sur Calendrier, Équipes et Statistiques, où elle n'a
+                   rien à faire. La duplication est le prix de cette justesse.
+                   Le bouton ne s'affiche qu'aux administrateurs ; la page qu'il
+                   ouvre est consultable par tous — un total qui ne s'explique
+                   pas est un total contesté. -->
+              <div class="st-actions">
+                <span class="st-actions-note">Une équipe porte des points attribués manuellement.</span>
+                <a class="st-btn" href="app-manual-ranking-points.html">⚖️ Points manuels</a>
+              </div>
+
               <div class="standings-table card-shadow">
                 <div class="standings-head">
                   <div>#</div><div>Équipe</div>
                   <div class="text-center">MJ</div><div class="text-center">V</div>
                   <div class="text-center">N</div><div class="text-center">D</div>
+                  <div class="text-center" title="Points attribués manuellement">Man.</div>
                   <div class="text-center">Pts</div>
                 </div>
-                <div class="standings-row"><div class="s-rank">1</div><div class="s-team">🏆 Les Korrigans FC</div><div class="s-num">8</div><div class="s-num">6</div><div class="s-num">1</div><div class="s-num">1</div><div class="s-pts">19</div></div>
-                <div class="standings-row"><div class="s-rank">2</div><div class="s-team">Orc Boyz United</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">2</div><div class="s-num">1</div><div class="s-pts">17</div></div>
-                <div class="standings-row"><div class="s-rank">3</div><div class="s-team">Skaven Speedsters</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">1</div><div class="s-num">2</div><div class="s-pts">16</div></div>
-                <div class="standings-row"><div class="s-rank">4</div><div class="s-team">Dwarf Ironbreakers</div><div class="s-num">8</div><div class="s-num">4</div><div class="s-num">1</div><div class="s-num">3</div><div class="s-pts">13</div></div>
-                <div class="standings-row"><div class="s-rank">5</div><div class="s-team">Chaos Warriors</div><div class="s-num">8</div><div class="s-num">3</div><div class="s-num">2</div><div class="s-num">3</div><div class="s-pts">11</div></div>
-                <div class="standings-row"><div class="s-rank">6</div><div class="s-team">Dark Elves Ravens</div><div class="s-num">8</div><div class="s-num">3</div><div class="s-num">1</div><div class="s-num">4</div><div class="s-pts">10</div></div>
+                <div class="standings-row"><div class="s-rank">1</div><div class="s-team">🏆 Les Korrigans FC</div><div class="s-num">8</div><div class="s-num">6</div><div class="s-num">1</div><div class="s-num">1</div><div class="s-num s-man s-man--zero">—</div><div class="s-pts">19</div></div>
+                <div class="standings-row"><div class="s-rank">2</div><div class="s-team">Orc Boyz United</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">2</div><div class="s-num">1</div><div class="s-num s-man s-man--zero">—</div><div class="s-pts">17</div></div>
+                <div class="standings-row"><div class="s-rank">3</div><div class="s-team">Skaven Speedsters</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">1</div><div class="s-num">2</div><div class="s-num s-man s-man--zero">—</div><div class="s-pts">16</div></div>
+                <div class="standings-row"><div class="s-rank">4</div><div class="s-team">Dwarf Ironbreakers</div><div class="s-num">8</div><div class="s-num">4</div><div class="s-num">1</div><div class="s-num">3</div><div class="s-num s-man s-man--zero">—</div><div class="s-pts">13</div></div>
+                <div class="standings-row"><div class="s-rank">5</div><div class="s-team">Chaos Warriors</div><div class="s-num">8</div><div class="s-num">3</div><div class="s-num">2</div><div class="s-num">3</div><div class="s-num s-man s-man--zero">—</div><div class="s-pts">11</div></div>
+                <div class="standings-row"><div class="s-rank">6</div><div class="s-team">Dark Elves Ravens</div><div class="s-num">8</div><div class="s-num">3</div><div class="s-num">1</div><div class="s-num">4</div><div class="s-num s-man s-man--minus"><a href="app-manual-ranking-points.html" title="Voir les points manuels de cette équipe">−1</a></div><div class="s-pts">10</div></div>
               </div>
             </div>
 
@@ -436,11 +492,12 @@
                   <div class="text-center">MJ</div><div class="text-center">V</div>
                   <div class="text-center">N</div><div class="text-center">D</div>
                   <div class="text-center">Bonus</div>
+                  <div class="text-center" title="Points attribués manuellement">Man.</div>
                   <div class="text-center">Pts</div>
                 </div>
-                <div class="standings-row"><div class="s-rank">1</div><div class="s-team">🏆 Les Korrigans FC</div><div class="s-num">8</div><div class="s-num">6</div><div class="s-num">1</div><div class="s-num">1</div><div class="s-num">2</div><div class="s-pts">19</div></div>
-                <div class="standings-row"><div class="s-rank">2</div><div class="s-team">Orc Boyz United</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">2</div><div class="s-num">1</div><div class="s-num">0</div><div class="s-pts">17</div></div>
-                <div class="standings-row"><div class="s-rank">3</div><div class="s-team">Skaven Speedsters</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">1</div><div class="s-num">2</div><div class="s-num">1</div><div class="s-pts">16</div></div>
+                <div class="standings-row"><div class="s-rank">1</div><div class="s-team">🏆 Les Korrigans FC</div><div class="s-num">8</div><div class="s-num">6</div><div class="s-num">1</div><div class="s-num">1</div><div class="s-num">2</div><div class="s-num s-man s-man--zero">—</div><div class="s-pts">19</div></div>
+                <div class="standings-row"><div class="s-rank">2</div><div class="s-team">Orc Boyz United</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">2</div><div class="s-num">1</div><div class="s-num">0</div><div class="s-num s-man s-man--zero">—</div><div class="s-pts">17</div></div>
+                <div class="standings-row"><div class="s-rank">3</div><div class="s-team">Skaven Speedsters</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">1</div><div class="s-num">2</div><div class="s-num">1</div><div class="s-num s-man s-man--zero">—</div><div class="s-pts">16</div></div>
               </div>
             </div>
 
@@ -465,13 +522,25 @@
                  exposé, puis les compteurs de départage dans l'ordre de priorité
                  configuré pour la compétition. Lecture de gauche à droite. -->
             <div id="tab-classement-detaille" class="tab-content" style="display:none;">
+
+              <!-- Action du CLASSEMENT, donc répétée dans ses deux onglets et
+                   nulle part ailleurs. Au-dessus des onglets, elle se serait
+                   affichée sur Calendrier, Équipes et Statistiques, où elle n'a
+                   rien à faire. La duplication est le prix de cette justesse.
+                   Le bouton ne s'affiche qu'aux administrateurs ; la page qu'il
+                   ouvre est consultable par tous — un total qui ne s'explique
+                   pas est un total contesté. -->
+              <div class="st-actions">
+                <span class="st-actions-note">Une équipe porte des points attribués manuellement.</span>
+                <a class="st-btn" href="app-manual-ranking-points.html">⚖️ Points manuels</a>
+              </div>
               <div class="sd-scroll card-shadow">
                 <table class="sd-table">
                   <thead>
                     <tr class="sd-group-head">
                       <th colspan="2"></th>
                       <th colspan="4">Matchs</th>
-                      <th colspan="2">Points</th>
+                      <th colspan="3">Points</th>
                       <th colspan="4">Départages — ordre de priorité →</th>
                     </tr>
                     <tr class="sd-col-head">
@@ -482,7 +551,8 @@
                       <th title="Nuls">N</th>
                       <th title="Perdus">D</th>
                       <th title="Points bonus cumulés">Bonus</th>
-                      <th title="Total de points de classement">Total</th>
+                      <th title="Points attribués manuellement par un administrateur">Manuel</th>
+                      <th title="Total de points de classement — bonus et points manuels compris">Total</th>
                       <th title="1er départage — Différence de touchdowns">1 · Δ TD</th>
                       <th title="2e départage — Touchdowns marqués">2 · TD+</th>
                       <th title="3e départage — Blessures infligées">3 · Bl.</th>
@@ -494,7 +564,7 @@
                       <td class="sd-rank">1</td>
                       <td class="sd-team">🏆 Les Korrigans FC</td>
                       <td class="sd-num">8</td><td class="sd-num">6</td><td class="sd-num">1</td><td class="sd-num">1</td>
-                      <td class="sd-bonus">+2</td><td class="sd-total">21</td>
+                      <td class="sd-bonus">+2</td><td class="sd-manual sd-manual--zero">—</td><td class="sd-total">21</td>
                       <td class="sd-tb sd-tb-first">+14</td><td class="sd-tb">24</td><td class="sd-tb">11</td><td class="sd-tb">10</td>
                     </tr>
                     <!-- Égalité à 17 points, départagée par la différence de TD -->
@@ -502,14 +572,14 @@
                       <td class="sd-rank">2</td>
                       <td class="sd-team">Orc Boyz United</td>
                       <td class="sd-num">8</td><td class="sd-num">5</td><td class="sd-num">2</td><td class="sd-num">1</td>
-                      <td class="sd-bonus">+0</td><td class="sd-total">17</td>
+                      <td class="sd-bonus">+0</td><td class="sd-manual sd-manual--zero">—</td><td class="sd-total">17</td>
                       <td class="sd-tb sd-tb-first sd-decisive">+9</td><td class="sd-tb">19</td><td class="sd-tb">8</td><td class="sd-tb">10</td>
                     </tr>
                     <tr>
                       <td class="sd-rank">3</td>
                       <td class="sd-team">Skaven Speedsters</td>
                       <td class="sd-num">8</td><td class="sd-num">5</td><td class="sd-num">1</td><td class="sd-num">2</td>
-                      <td class="sd-bonus">+1</td><td class="sd-total">17</td>
+                      <td class="sd-bonus">+1</td><td class="sd-manual sd-manual--zero">—</td><td class="sd-total">17</td>
                       <td class="sd-tb sd-tb-first sd-decisive">+4</td><td class="sd-tb">18</td><td class="sd-tb">14</td><td class="sd-tb">14</td>
                     </tr>
                     <!-- Égalité non résolue par le 1er critère : on lit le 2e -->
@@ -517,30 +587,33 @@
                       <td class="sd-rank">4</td>
                       <td class="sd-team">Dwarf Ironbreakers</td>
                       <td class="sd-num">8</td><td class="sd-num">4</td><td class="sd-num">1</td><td class="sd-num">3</td>
-                      <td class="sd-bonus">+0</td><td class="sd-total">13</td>
+                      <td class="sd-bonus">+0</td><td class="sd-manual sd-manual--zero">—</td><td class="sd-total">13</td>
                       <td class="sd-tb sd-tb-first sd-tied">+2</td><td class="sd-tb sd-decisive">16</td><td class="sd-tb">9</td><td class="sd-tb">14</td>
                     </tr>
                     <tr>
                       <td class="sd-rank">5</td>
                       <td class="sd-team">Chaos Warriors</td>
                       <td class="sd-num">8</td><td class="sd-num">4</td><td class="sd-num">1</td><td class="sd-num">3</td>
-                      <td class="sd-bonus">+0</td><td class="sd-total">13</td>
+                      <td class="sd-bonus">+0</td><td class="sd-manual sd-manual--zero">—</td><td class="sd-total">13</td>
                       <td class="sd-tb sd-tb-first sd-tied">+2</td><td class="sd-tb sd-decisive">12</td><td class="sd-tb">6</td><td class="sd-tb">10</td>
                     </tr>
-                    <!-- Ex æquo assumé : tous les critères actifs sont égaux -->
-                    <tr>
-                      <td class="sd-rank">6</td>
-                      <td class="sd-team">Dark Elves Ravens</td>
-                      <td class="sd-num">8</td><td class="sd-num">3</td><td class="sd-num">1</td><td class="sd-num">4</td>
-                      <td class="sd-bonus">+1</td><td class="sd-total">11</td>
-                      <td class="sd-tb sd-tb-first sd-tied">−3</td><td class="sd-tb sd-tied">10</td><td class="sd-tb sd-tied">7</td><td class="sd-tb sd-tied">13</td>
-                    </tr>
+                    <!-- Deux équipes que TOUS les critères de départage donnaient
+                         ex æquo — même bonus, mêmes TD, mêmes blessures. C'est un
+                         point manuel qui les sépare, et il le fait AVANT les
+                         départages : il entre dans le total, pas après lui. -->
                     <tr>
                       <td class="sd-rank">6</td>
                       <td class="sd-team">Wood Elves Wanderers</td>
                       <td class="sd-num">8</td><td class="sd-num">3</td><td class="sd-num">1</td><td class="sd-num">4</td>
-                      <td class="sd-bonus">+1</td><td class="sd-total">11</td>
-                      <td class="sd-tb sd-tb-first sd-tied">−3</td><td class="sd-tb sd-tied">10</td><td class="sd-tb sd-tied">7</td><td class="sd-tb sd-tied">13</td>
+                      <td class="sd-bonus">+1</td><td class="sd-manual sd-manual--zero">—</td><td class="sd-total">11</td>
+                      <td class="sd-tb sd-tb-first">−3</td><td class="sd-tb">10</td><td class="sd-tb">7</td><td class="sd-tb">13</td>
+                    </tr>
+                    <tr>
+                      <td class="sd-rank">7</td>
+                      <td class="sd-team">Dark Elves Ravens</td>
+                      <td class="sd-num">8</td><td class="sd-num">3</td><td class="sd-num">1</td><td class="sd-num">4</td>
+                      <td class="sd-bonus">+1</td><td class="sd-manual sd-manual--minus"><a href="app-manual-ranking-points.html" title="Voir les points manuels de cette équipe">−1</a></td><td class="sd-total">10</td>
+                      <td class="sd-tb sd-tb-first">−3</td><td class="sd-tb">10</td><td class="sd-tb">7</td><td class="sd-tb">13</td>
                     </tr>
                   </tbody>
                 </table>
@@ -560,7 +633,7 @@
                       <tr class="sd-group-head">
                         <th colspan="2"></th>
                         <th colspan="4">Matchs</th>
-                        <th colspan="2">Points</th>
+                        <th colspan="3">Points</th>
                         <th colspan="7">Départages — ordre de priorité →</th>
                       </tr>
                       <tr class="sd-col-head">
@@ -571,7 +644,8 @@
                         <th title="Nuls">N</th>
                         <th title="Perdus">D</th>
                         <th title="Points bonus cumulés">Bonus</th>
-                        <th title="Total de points de classement">Total</th>
+                        <th title="Points attribués manuellement">Manuel</th>
+                        <th title="Total — bonus et points manuels compris">Total</th>
                         <th title="1er départage — Différence de touchdowns">1 · Δ TD</th>
                         <th title="2e départage — Touchdowns marqués">2 · TD+</th>
                         <th title="3e départage — Touchdowns encaissés">3 · TD−</th>
@@ -586,14 +660,14 @@
                         <td class="sd-rank">1</td>
                         <td class="sd-team">🏆 Les Korrigans FC</td>
                         <td class="sd-num">8</td><td class="sd-num">6</td><td class="sd-num">1</td><td class="sd-num">1</td>
-                        <td class="sd-bonus">+2</td><td class="sd-total">21</td>
+                        <td class="sd-bonus">+2</td><td class="sd-manual sd-manual--zero">—</td><td class="sd-total">21</td>
                         <td class="sd-tb sd-tb-first">+14</td><td class="sd-tb">24</td><td class="sd-tb">10</td><td class="sd-tb">11</td><td class="sd-tb">6</td><td class="sd-tb">4</td><td class="sd-tb">9</td>
                       </tr>
                       <tr>
                         <td class="sd-rank">2</td>
                         <td class="sd-team">Orc Boyz United</td>
                         <td class="sd-num">8</td><td class="sd-num">5</td><td class="sd-num">2</td><td class="sd-num">1</td>
-                        <td class="sd-bonus">+0</td><td class="sd-total">17</td>
+                        <td class="sd-bonus">+0</td><td class="sd-manual sd-manual--zero">—</td><td class="sd-total">17</td>
                         <td class="sd-tb sd-tb-first">+9</td><td class="sd-tb">19</td><td class="sd-tb">10</td><td class="sd-tb">8</td><td class="sd-tb">5</td><td class="sd-tb">7</td><td class="sd-tb">5</td>
                       </tr>
                     </tbody>

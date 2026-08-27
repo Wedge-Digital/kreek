@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Points de classement manuels — Ligue de Condate</title>
+  <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="../../static/css/components/kreek-select.css">
+  <style>
+    .mp-page { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--p1); }
+
+    /* ── Bandeau ──────────────────────────────────────────────────────── */
+    .mp-head {
+      background: var(--white); border-radius: 10px; padding: var(--p2);
+      display: flex; align-items: center; gap: var(--p2); flex-wrap: wrap;
+    }
+    .mp-head-text { flex: 1; min-width: 220px; }
+    .mp-head-title { font-family: var(--font-title); font-size: var(--h2); font-weight: 700; color: var(--dark-0); line-height: 1.1; }
+    .mp-head-sub { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 4px; }
+
+    /* ── Panneaux — deux poids, la leçon de l'éditeur de roster ───────── */
+    .mp-panel { background: var(--white); border-radius: 10px; overflow: hidden; }
+    .mp-panel--form { background: var(--white-1); border: 1px solid var(--dark-5); }
+    .mp-panel--form .mp-panel-head { background: var(--dark-7); padding: 10px var(--p2); }
+    .mp-panel--form .mp-panel-title { font-size: var(--text-small); color: var(--dark-2); }
+    .mp-panel--list { box-shadow: 0 2px 14px rgba(0,48,73,0.07); border-top: 3px solid var(--main-blue); }
+    .mp-panel--list .mp-panel-title { font-size: var(--h4); font-weight: 600; color: var(--dark-0); }
+
+    .mp-panel-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--p1); padding: var(--p1) var(--p2);
+      border-bottom: 1px solid var(--dark-5); flex-wrap: wrap;
+    }
+    .mp-panel-title {
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--font-title); font-weight: 600; color: var(--dark-1);
+    }
+    .mp-panel-note { font-size: var(--text-tiny); color: var(--dark-3); }
+    .mp-panel-body { padding: var(--p2); }
+
+    /* ── Formulaire ───────────────────────────────────────────────────── */
+    /* Deux rangées : identité de la ligne en haut, motif et action en bas.
+       Une seule rangée mettait le motif — qui porte une indication sous lui —
+       à côté de champs qui n'en ont pas, et rien ne s'alignait. */
+    .mp-form { display: flex; gap: var(--p2); align-items: flex-end; flex-wrap: wrap; }
+    .mp-form--second { margin-top: var(--p2); }
+    .mp-field { display: flex; flex-direction: column; gap: 5px; }
+    /* Le contrôle de chaque champ arrive à la même hauteur, quelle que soit la
+       longueur du libellé. */
+    .mp-label { min-height: 15px; }
+    .mp-field--grow { flex: 1; min-width: 220px; }
+    .mp-label {
+      font-size: var(--text-tiny); color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .mp-input {
+      padding: 9px 12px; border: 1px solid var(--dark-4); border-radius: 7px;
+      font-size: var(--text-small); color: var(--dark-1);
+      font-family: inherit; outline: none; background: var(--white);
+      transition: border-color 0.15s;
+    }
+    .mp-input:focus { border-color: var(--main-blue); }
+    .mp-input--pts { width: 92px; text-align: center; font-variant-numeric: tabular-nums; }
+    /* Réservée sur tous les champs de la rangée : sans elle, un champ qui porte
+       une indication descend son voisin d'une ligne, et le bouton s'aligne sur
+       l'indication plutôt que sur le champ de saisie. */
+    .mp-hint { font-size: 11px; color: var(--dark-4); min-height: 14px; }
+
+    /* Les deux sens d'un ajustement, dits par l'écran et non devinés */
+    .mp-sign { display: flex; gap: 0; }
+    .mp-sign button {
+      padding: 9px 14px; border: 1px solid var(--dark-4); background: var(--white);
+      font-size: var(--text-small); font-weight: 500; cursor: pointer;
+      font-family: inherit; color: var(--dark-3);
+    }
+    .mp-sign button:first-child { border-radius: 7px 0 0 7px; border-right: none; }
+    .mp-sign button:last-child  { border-radius: 0 7px 7px 0; }
+    .mp-sign button.on.plus  { background: rgba(98,149,132,0.15);  color: var(--green);  border-color: var(--green); }
+    .mp-sign button.on.minus { background: rgba(224,32,32,0.08);   color: var(--red);    border-color: var(--red); }
+
+    /* ── Tableau ──────────────────────────────────────────────────────── */
+    .mp-table-wrap { overflow-x: auto; }
+    .mp-table { width: 100%; border-collapse: collapse; font-size: var(--text-small); }
+    .mp-table th {
+      text-align: left; padding: 8px var(--p2); font-size: var(--text-tiny);
+      color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--dark-5); white-space: nowrap;
+    }
+    .mp-table th.n, .mp-table td.n { text-align: right; }
+    .mp-table td { padding: 12px var(--p2); border-bottom: 1px solid var(--dark-6); vertical-align: middle; }
+    /* INTERACTION — neutre, et exclue des lignes qui portent déjà un rôle */
+    .mp-table tbody tr:not(.mp-row--team):not(.mp-row--cols):hover { background: var(--dark-7); }
+
+    /* ── Trois rôles, et la mesure a tranché comment les séparer ──────────
+       `--dark-6` (#F0F2F4) et `--dark-7` (#EFF2F5) diffèrent d'une unité par
+       canal : rapport 1.001, invisible. Le classement détaillé de production
+       oppose pourtant ces deux-là — `ranking-detailed-standings-widget.css`
+       lignes 40 et 44 — donc son survol ne se voit pas une ligne sur deux.
+
+       Un bleu à 6 % sur blanc donne (240,243,244) : c'est `--dark-7` à un
+       point près. La teinte seule ne sépare pas à cette densité. Ce qui sépare
+       ici, ce sont trois choses ensemble :
+         · un vrai pas de valeur — `--dark-5` contre `--dark-7`, rapport 1.106,
+           du même ordre que blanc→survol (1.124) ;
+         · un filet d'accent à gauche, indice non chromatique ;
+         · le chevron et la graisse, qui disent « en-tête » sans couleur.
+       Le règlement de l'accessibilité l'exige d'ailleurs : une information
+       portée par la couleur doit l'être aussi par la forme ou la position. */
+
+    /* STRUCTURE — la bande de groupe */
+    .mp-row--team td {
+      background: var(--dark-5); padding: 10px var(--p2);
+      border-bottom: 1px solid var(--dark-4);
+      border-left: 3px solid var(--main-blue);
+      font-weight: 600; color: var(--dark-1);
+      font-size: var(--text-small); cursor: pointer; user-select: none;
+      transition: background 0.12s;
+    }
+    /* INTERACTION SUR LA STRUCTURE — même rôle, plus dense, teinté de marque */
+    .mp-row--team td:hover { background: rgba(0,48,73,0.14); }
+    /* L'en-tête de colonnes vit dans chaque équipe, replié avec elle : posé une
+       seule fois tout en haut, il surplombait des sections fermées et ne
+       désignait rien. */
+    .mp-row--cols th { padding-top: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--dark-6); }
+    .mp-caret { display: inline-block; width: 12px; color: var(--main-blue); font-size: 11px; }
+    /* `--dark-3` sur la bande teintée tombait sous 3:1. `--dark-2` passe 6:1. */
+    /* `--dark-3` sur la bande tombait à 2.6:1. `--dark-2` donne 5.66:1. */
+    .mp-count { color: var(--dark-2); font-weight: 400; font-size: var(--text-tiny); margin-left: 8px; }
+    .mp-team-total {
+      float: right; font-family: var(--font-body); font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+    .mp-team-total.plus  { color: var(--green); }
+    .mp-team-total.minus { color: var(--red); }
+
+    /* Sans graisse, comme les nombres du classement détaillé : la couleur et
+       les chiffres tabulaires suffisent à les distinguer du motif. */
+    .mp-pts { font-variant-numeric: tabular-nums; white-space: nowrap; font-size: var(--text-small); }
+    .mp-pts.plus  { color: var(--green); }
+    .mp-pts.minus { color: var(--red); }
+
+    .mp-reason { color: var(--dark-1); }
+
+    /* ✕ et non une poubelle : c'est le geste de retrait du reste du site —
+       six occurrences dans les gabarits de production, une seule poubelle. */
+    .mp-icon-btn {
+      border: none; background: none; cursor: pointer; padding: 4px 8px;
+      font-size: var(--text-small); line-height: 1; color: var(--dark-4);
+      border-radius: 5px; font-family: inherit;
+      transition: color 0.12s, background 0.12s;
+    }
+    .mp-icon-btn:hover { color: var(--red); background: var(--dark-6); }
+
+    /* ── Pied de conséquence — le ton change, la place ne bouge pas ───── */
+    .mp-consequence {
+      padding: var(--p1) var(--p2); background: var(--dark-7);
+      border-top: 1px solid var(--dark-5);
+      font-size: var(--text-small); color: var(--dark-3);
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .mp-consequence.shown { background: rgba(255,107,53,0.06); color: #9A5000; }
+
+    /* ── Boutons ──────────────────────────────────────────────────────── */
+    .mp-btn {
+      padding: 9px 18px; border-radius: 7px; cursor: pointer;
+      font-size: var(--text-small); font-weight: 600; font-family: inherit;
+      border: 1px solid var(--dark-4); background: var(--white); color: var(--dark-2);
+      transition: all 0.15s;
+    }
+    .mp-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .mp-btn--primary { background: var(--main-blue); border-color: var(--main-blue); color: var(--white); }
+    .mp-btn--primary:hover { background: #00243a; color: var(--white); }
+
+    /* ── État vide ────────────────────────────────────────────────────── */
+    .mp-empty { padding: var(--p3) var(--p2); text-align: center; }
+    .mp-empty-icon  { font-size: 38px; opacity: 0.3; }
+    .mp-empty-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 600; color: var(--dark-2); margin-top: var(--p1); }
+    .mp-empty-text  { font-size: var(--text-small); color: var(--dark-3); margin-top: 6px; max-width: 470px; margin-left: auto; margin-right: auto; }
+
+    /* ── Sélecteur de démonstration ───────────────────────────────────── */
+    .demo-switcher {
+      display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap;
+      background: var(--dark-7); border: 1px dashed var(--dark-4);
+      border-radius: 8px; padding: 10px var(--p1); margin-bottom: var(--p1);
+    }
+    .demo-switcher-label { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; }
+    .state-pill {
+      padding: 5px 12px; border-radius: 14px; border: 1px solid var(--dark-4);
+      background: var(--white); color: var(--dark-2);
+      font-size: var(--text-tiny); font-weight: 600; cursor: pointer;
+    }
+    .state-pill.active { background: var(--main-blue); color: var(--white); border-color: var(--main-blue); }
+
+    @media (max-width: 768px) {
+      .mp-head { flex-direction: column; align-items: stretch; }
+      .mp-form { flex-direction: column; align-items: stretch; }
+      .mp-field--grow { min-width: 0; }
+      /* « Attribué par » se replie sous le motif ; la colonne disparaît. */
+      .mp-table th:nth-child(4), .mp-table td:nth-child(4) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+
+        <div class="demo-switcher">
+          <span class="demo-switcher-label">Aperçu maquette :</span>
+          <button class="state-pill active" data-state="some" onclick="setState('some')">Des points déjà attribués</button>
+          <button class="state-pill" data-state="none" onclick="setState('none')">Aucun point manuel</button>
+        </div>
+
+        <div style="margin-bottom: var(--p1);">
+          <a href="app-competition-detail.html" style="color: var(--dark-3); font-size: var(--text-tiny);">← Classement · Ligue de Condate</a>
+        </div>
+
+        <div class="mp-page">
+
+          <div class="mp-head">
+            <div class="mp-head-text">
+              <div class="mp-head-title">Points de classement manuels</div>
+              <div class="mp-head-sub">Ligue de Condate · Saison 5 — ils entrent dans le total du classement <strong>avant</strong> les départages, et peuvent le rendre négatif</div>
+            </div>
+          </div>
+
+          <!-- ══ Attribuer ═══════════════════════════════════════════ -->
+          <div class="mp-panel mp-panel--form">
+            <div class="mp-panel-head">
+              <div class="mp-panel-title"><span>➕</span> Attribuer des points</div>
+            </div>
+            <div class="mp-panel-body">
+              <div class="mp-form">
+                <div class="mp-field mp-field--grow">
+                  <div class="mp-label">Équipe</div>
+                  <kreek-select name="team_id" placeholder="Choisir une équipe…">
+                    <option value="korrigans">Les Korrigans FC</option>
+                    <option value="trolls" selected>Trolls du Bief</option>
+                    <option value="griffons">Griffons d'Argent</option>
+                    <option value="zephyriens">Zéphyriens de Kerlan</option>
+                  </kreek-select>
+                </div>
+
+                <div class="mp-field">
+                  <div class="mp-label">Sens</div>
+                  <div class="mp-sign">
+                    <button type="button" class="plus on" id="sg-plus" onclick="setSign(1)">+ Bonus</button>
+                    <button type="button" class="minus" id="sg-minus" onclick="setSign(-1)">− Pénalité</button>
+                  </div>
+                </div>
+
+                <div class="mp-field">
+                  <div class="mp-label">Points</div>
+                  <input type="number" class="mp-input mp-input--pts" id="pts" value="3" min="1" oninput="refresh()">
+                </div>
+              </div>
+
+              <div class="mp-form mp-form--second">
+                <div class="mp-field mp-field--grow">
+                  <div class="mp-label">Motif</div>
+                  <input type="text" class="mp-input" id="reason"
+                         placeholder="Forfait de l'adversaire, sanction, bonus d'organisation…" oninput="refresh()">
+                  <div class="mp-hint">Facultatif, mais il sera lu par tous les coachs — et six mois plus tard, par vous.</div>
+                </div>
+
+                <div class="mp-field">
+                  <div class="mp-label">&nbsp;</div>
+                  <button class="mp-btn mp-btn--primary" onclick="return false;">Attribuer</button>
+                  <div class="mp-hint">&nbsp;</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mp-consequence" id="consequence">
+              <span>Le classement est recalculé dès l'attribution.</span>
+            </div>
+          </div>
+
+          <!-- ══ Les lignes ══════════════════════════════════════════ -->
+          <div class="mp-panel mp-panel--list">
+            <div class="mp-panel-head">
+              <div class="mp-panel-title"><span>📋</span> Points attribués</div>
+              <div class="mp-panel-note" id="list-note">4 lignes · 3 équipes concernées</div>
+            </div>
+
+            <div id="list-some">
+              <div class="mp-table-wrap">
+                <table class="mp-table">
+                  <tbody>
+
+                    <tr class="mp-row--team" onclick="toggleTeam('trolls', this)">
+                      <td colspan="5"><span class="mp-caret">▸</span>Trolls du Bief<span class="mp-count">2 lignes</span><span class="mp-team-total plus">+5</span></td>
+                    </tr>
+                                        <tr class="mp-line trolls mp-row--cols" style="display: none;">
+                      <th class="n">Points</th>
+                      <th>Motif</th>
+                      <th>Date</th>
+                      <th>Attribué par</th>
+                      <th></th>
+                    </tr>
+                    <tr class="mp-line trolls" style="display: none;">
+                      <td class="n"><span class="mp-pts plus">+3</span></td>
+                      <td>
+                        <span class="mp-reason">Forfait des Griffons d'Argent — journée 3</span>
+                      </td>
+                      <td>19 août</td>
+                      <td>Colonel Castor</td>
+                      <td class="n"><button class="mp-icon-btn" title="Retirer cette ligne">✕</button></td>
+                    </tr>
+                    <tr class="mp-line trolls" style="display: none;">
+                      <td class="n"><span class="mp-pts plus">+2</span></td>
+                      <td>
+                        <span class="mp-reason">Bonus d'organisation — a reçu le plateau de la journée 2</span>
+                      </td>
+                      <td>14 août</td>
+                      <td>Colonel Castor</td>
+                      <td class="n"><button class="mp-icon-btn" title="Retirer cette ligne">✕</button></td>
+                    </tr>
+
+                    <tr class="mp-row--team" onclick="toggleTeam('griffons', this)">
+                      <td colspan="5"><span class="mp-caret">▸</span>Griffons d'Argent<span class="mp-count">1 ligne</span><span class="mp-team-total minus">−3</span></td>
+                    </tr>
+                                        <tr class="mp-line griffons mp-row--cols" style="display: none;">
+                      <th class="n">Points</th>
+                      <th>Motif</th>
+                      <th>Date</th>
+                      <th>Attribué par</th>
+                      <th></th>
+                    </tr>
+                    <tr class="mp-line griffons" style="display: none;">
+                      <td class="n"><span class="mp-pts minus">−3</span></td>
+                      <td>
+                        <span class="mp-reason">Forfait à la journée 3 — rencontre non jouée</span>
+                      </td>
+                      <td>19 août</td>
+                      <td>Colonel Castor</td>
+                      <td class="n"><button class="mp-icon-btn" title="Retirer cette ligne">✕</button></td>
+                    </tr>
+
+                    <tr class="mp-row--team" onclick="toggleTeam('korrigans', this)">
+                      <td colspan="5"><span class="mp-caret">▸</span>Les Korrigans FC<span class="mp-count">1 ligne</span><span class="mp-team-total plus">+1</span></td>
+                    </tr>
+                                        <tr class="mp-line korrigans mp-row--cols" style="display: none;">
+                      <th class="n">Points</th>
+                      <th>Motif</th>
+                      <th>Date</th>
+                      <th>Attribué par</th>
+                      <th></th>
+                    </tr>
+                    <tr class="mp-line korrigans" style="display: none;">
+                      <td class="n"><span class="mp-pts plus">+1</span></td>
+                      <td>
+                        <span class="mp-reason">Rattrapage — bonus défensif oublié à la journée 1</span>
+                      </td>
+                      <td>12 août</td>
+                      <td>Dame Brumeuse</td>
+                      <td class="n"><button class="mp-icon-btn" title="Retirer cette ligne">✕</button></td>
+                    </tr>
+
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div id="list-none" style="display: none;">
+              <div class="mp-empty">
+                <div class="mp-empty-icon">📋</div>
+                <div class="mp-empty-title">Aucun point manuel</div>
+                <div class="mp-empty-text">
+                  Le classement ne tient que des matchs joués. Un forfait, une sanction
+                  ou un rattrapage s'ajoutent ici, et chaque ligne reste visible de tous.
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /mp-page -->
+      </div><!-- /page-content -->
+    </div><!-- /main-area -->
+  </div><!-- /app-layout -->
+
+<script src="../../static/js/kreek-select.js"></script>
+<script>
+/* Comportement de maquette. */
+var sign = 1;
+
+function setSign(s) {
+  sign = s;
+  document.getElementById('sg-plus').classList.toggle('on', s === 1);
+  document.getElementById('sg-minus').classList.toggle('on', s === -1);
+  refresh();
+}
+
+function refresh() {
+  var n = parseInt(document.getElementById('pts').value, 10) || 0;
+  var motif = document.getElementById('reason').value.trim();
+  var box = document.getElementById('consequence');
+
+  if (!n) {
+    box.className = 'mp-consequence';
+    box.innerHTML = '<span>Le classement est recalculé dès l\'attribution.</span>';
+    return;
+  }
+  var signe = (sign === 1 ? '+' : '−') + n;
+  box.className = 'mp-consequence shown';
+  box.innerHTML = '<span>⚠</span><span>Les Trolls du Bief passeront de 5 à '
+    + (5 + sign * n) + ' points manuels (' + signe + ')'
+    + (motif ? '' : ', <em>sans motif</em>') + '.</span>';
+}
+
+function toggleTeam(team, row) {
+  var lignes = document.querySelectorAll('.mp-line.' + team);
+  var plie = lignes.length && lignes[0].style.display === 'none';
+  lignes.forEach(function (l) { l.style.display = plie ? '' : 'none'; });
+  row.querySelector('.mp-caret').textContent = plie ? '▾' : '▸';
+}
+
+function setState(name) {
+  var some = (name === 'some');
+  document.getElementById('list-some').style.display = some ? '' : 'none';
+  document.getElementById('list-none').style.display = some ? 'none' : '';
+  document.getElementById('list-note').textContent = some
+    ? '4 lignes · 3 équipes concernées'
+    : 'aucune ligne';
+  document.querySelectorAll('.state-pill').forEach(function (p) {
+    p.classList.toggle('active', p.dataset.state === name);
+  });
+}
+
+window.addEventListener('DOMContentLoaded', refresh);
+</script>
+</body>
+</html>
