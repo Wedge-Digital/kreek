@@ -283,6 +283,7 @@ fn status_display(team: &Team) -> (String, String) {
             Some(GamePhase::PlayerImprovement) => ("Phase d'amélioration".into(), "phase".into()),
             Some(GamePhase::Recruitment) => ("Phase de recrutement".into(), "phase".into()),
             Some(GamePhase::Dismissals) => ("Phase de renvois".into(), "phase".into()),
+            Some(GamePhase::CostlyMistakes) => ("Erreurs coûteuses".into(), "phase".into()),
             Some(GamePhase::TemporaryRetirement) => ("Retraite temporaire".into(), "phase".into()),
             Some(GamePhase::OffSeason) => ("Off-season".into(), "offseason".into()),
             None => ("Inscrite".into(), "ready".into()),

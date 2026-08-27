@@ -1,4 +1,5 @@
 pub mod basket;
+pub mod costly_mistakes;
 pub mod dismissals_basket;
 pub mod error;
 pub mod recruitment_basket;

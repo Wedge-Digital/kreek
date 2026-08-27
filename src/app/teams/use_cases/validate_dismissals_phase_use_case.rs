@@ -46,7 +46,7 @@ pub async fn execute(
     basket_repo: &dyn IPhaseBasketRepository,
     catalog: &dyn IRosterCatalogPort,
     squad: &dyn ISquadPort,
-) -> Result<(), ValidateDismissalsPhaseError> {
+) -> Result<ValidateDismissalsOutcome, ValidateDismissalsPhaseError> {
     let team_id = cmd.team_id.to_string();
     let team = team_repo
         .find_by_id(&team_id)
@@ -60,6 +60,9 @@ pub async fn execute(
 
     let lot = appliquer_les_renvois(&team, &basket)?;
     let lot = cloturer_la_phase(&team, lot)?;
+    // L'issue se lit sur le dernier événement du lot : c'est `cloturer_la_phase`
+    // qui a tranché, en interrogeant le domaine.
+    let issue = ValidateDismissalsOutcome::depuis_le_lot(&lot);
 
     team_repo
         .append_batch(&team_id, &lot, team.version)
@@ -75,7 +78,28 @@ pub async fn execute(
         .await
         .map_err(ValidateDismissalsPhaseError::Repository)?;
 
-    Ok(())
+    Ok(issue)
+}
+
+/// Où l'équipe se retrouve après la validation.
+///
+/// Le contrôleur en a besoin : une équipe au-dessus du seuil doit être menée à
+/// l'écran du jet (carte 410), les autres retournent à leur fiche.
+#[derive(Debug, PartialEq, Eq)]
+pub enum ValidateDismissalsOutcome {
+    /// Trésorerie sous le seuil : l'équipe est prête à jouer.
+    PreteAJouer,
+    /// Un jet lui reste à faire.
+    ErreursCouteuses,
+}
+
+impl ValidateDismissalsOutcome {
+    fn depuis_le_lot(lot: &[TeamDomainEvent]) -> Self {
+        match lot.last() {
+            Some(TeamDomainEvent::CostlyMistakesPhaseStarted) => Self::ErreursCouteuses,
+            _ => Self::PreteAJouer,
+        }
+    }
 }
 
 /// Étape 1 — un événement **par ligne**, jamais un événement de lot : l'event
@@ -217,7 +241,7 @@ mod tests {
         teams: &FakeTeamRepository,
         baskets: &FakeBasketRepository,
         squad: &FakeSquadPort,
-    ) -> Result<(), ValidateDismissalsPhaseError> {
+    ) -> Result<ValidateDismissalsOutcome, ValidateDismissalsPhaseError> {
         execute(
             ValidateDismissalsPhaseCommand { team_id: team_id() },
             teams,
@@ -239,10 +263,33 @@ mod tests {
 
         let appendus = teams.appended();
         assert_eq!(appendus.len(), 1);
+        // L'équipe de test a 1000 kPo : depuis la carte 408, la transition est
+        // celle des erreurs coûteuses. Ce test porte sur la **forme du lot** —
+        // une seule transition, aucun renvoi — pas sur laquelle des deux.
         assert!(matches!(
             appendus[0],
-            TeamDomainEvent::DismissalsPhaseValidated
+            TeamDomainEvent::CostlyMistakesPhaseStarted
         ));
+    }
+
+    /// L'issue est ce dont le contrôleur a besoin pour savoir où mener le
+    /// coach — l'écran du jet arrive avec la carte 410.
+    ///
+    /// Les trois tests voisins ont échoué à l'introduction de la nouvelle
+    /// transition : ils affirmaient une issue qui était devenue conditionnelle
+    /// sans que rien ne l'exprime. Celui-ci la nomme.
+    #[tokio::test]
+    async fn l_issue_dit_ou_l_equipe_se_retrouve() {
+        let teams = FakeTeamRepository::with_events(events());
+        let baskets = FakeBasketRepository::default();
+
+        let issue = valider(&teams, &baskets, &effectif(12)).await.unwrap();
+
+        assert_eq!(
+            issue,
+            ValidateDismissalsOutcome::ErreursCouteuses,
+            "l'équipe de test a 1000 kPo en caisse"
+        );
     }
 
     #[tokio::test]
@@ -264,7 +311,7 @@ mod tests {
             TeamDomainEvent::PlayerDismissed { .. }
         ));
         assert!(
-            matches!(appendus[2], TeamDomainEvent::DismissalsPhaseValidated),
+            matches!(appendus[2], TeamDomainEvent::CostlyMistakesPhaseStarted),
             "la transition doit clore le lot — c'est elle qui interdit la double application"
         );
     }

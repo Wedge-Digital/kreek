@@ -106,7 +106,7 @@ pub enum StaffType {
 
 // ── Erreur couteuse ───────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum IncidentType {
     None,
     Minor,

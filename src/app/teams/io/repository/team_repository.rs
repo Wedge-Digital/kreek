@@ -829,6 +829,7 @@ mod tests {
             roll: 6,
             incident: IncidentType::None,
             gp_lost: Kpo(1200),
+            damage_dice: vec![],
         };
         repo.append(&team_id, &bourde, 1).await.unwrap();
 

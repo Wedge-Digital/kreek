@@ -80,7 +80,11 @@ pub async fn post_validate_recruitment_phase(
 
     use validate_recruitment_phase_use_case::ValidateRecruitmentPhaseError as E;
     match resultat {
-        Ok(()) => redirect_response(
+        // L'issue est déjà connue ici, mais les deux mènent pour l'instant à la
+        // feuille d'équipe : l'écran du jet arrive avec la carte 410, et c'est
+        // elle qui branchera `ErreursCouteuses` ailleurs. La feuille affiche
+        // déjà la phase, donc rien n'est perdu entre-temps.
+        Ok(_issue) => redirect_response(
             AppRoutes::default()
                 .teams
                 .team_detail(&_space_id, &team_id.to_string()),
@@ -130,7 +134,11 @@ pub async fn post_validate_dismissals_phase(
         // n'a plus lieu d'être une fois la phase close. Un rafraîchissement y
         // rechargerait un écran dont la phase vient de changer, donc vide : on
         // ramène le coach à sa feuille d'équipe.
-        Ok(()) => redirect_response(
+        // L'issue est déjà connue ici, mais les deux mènent pour l'instant à
+        // la feuille d'équipe : l'écran du jet arrive avec la carte 410, et
+        // c'est elle qui branchera `ErreursCouteuses` ailleurs. La feuille
+        // affiche déjà la phase, donc rien n'est perdu entre-temps.
+        Ok(_issue) => redirect_response(
             AppRoutes::default()
                 .teams
                 .team_detail(&_space_id, &team_id.to_string()),

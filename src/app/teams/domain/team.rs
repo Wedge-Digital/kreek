@@ -7,6 +7,7 @@ use crate::app::shared_kernel::bloodbowl::staff_counts::{
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::teams::domain::basket::RosterLineId;
+use crate::app::teams::domain::costly_mistakes::{incident_for, loss_for, SEUIL_ERREURS_COUTEUSES};
 use crate::app::teams::domain::error::DomainError;
 use crate::app::teams::domain::treasury::{MovementReason, TreasuryMovement};
 use crate::app::teams::domain::value_objects::{
@@ -32,6 +33,9 @@ pub enum GamePhase {
     PlayerImprovement,
     Recruitment,
     Dismissals,
+    /// Entre les renvois et le retour au jeu, quand la trésorerie dépasse le
+    /// seuil : un jet décide de ce qu'il en reste.
+    CostlyMistakes,
     TemporaryRetirement,
     OffSeason,
 }
@@ -157,10 +161,21 @@ pub enum TeamDomainEvent {
         player_id: PlayerId,
     },
     RetirementPhaseValidated,
+    /// L'équipe entre dans la phase des erreurs coûteuses : sa trésorerie
+    /// dépasse le seuil, un jet lui reste à faire.
+    CostlyMistakesPhaseStarted,
     CostlyMistakesApplied {
         roll: u8,
         incident: IncidentType,
         gp_lost: Kpo,
+        /// Les dés de dégâts — 1D3 pour un incident mineur, 2D6 pour une
+        /// catastrophe, vide sinon.
+        ///
+        /// `#[serde(default)]` parce que l'événement existait avant ce champ :
+        /// l'aval de cette fonctionnalité a été écrit avant son producteur, et
+        /// les rares événements déjà persistés doivent rester relisibles.
+        #[serde(default)]
+        damage_dice: Vec<u8>,
     },
 
     // Off-season
@@ -226,6 +241,7 @@ impl TeamDomainEvent {
             Self::DismissalsPhaseValidated => "DismissalsPhaseValidated",
             Self::PlayerRetiredTemporarily { .. } => "PlayerRetiredTemporarily",
             Self::RetirementPhaseValidated => "RetirementPhaseValidated",
+            Self::CostlyMistakesPhaseStarted => "CostlyMistakesPhaseStarted",
             Self::CostlyMistakesApplied { .. } => "CostlyMistakesApplied",
             Self::OffSeasonStarted { .. } => "OffSeasonStarted",
             Self::PlayerReEngaged { .. } => "PlayerReEngaged",
@@ -412,6 +428,7 @@ impl Team {
             | TeamDomainEvent::RecruitmentPhaseValidated
             | TeamDomainEvent::PlayerDismissed { .. }
             | TeamDomainEvent::DismissalsPhaseValidated
+            | TeamDomainEvent::CostlyMistakesPhaseStarted
             | TeamDomainEvent::PlayerRetiredTemporarily { .. }
             | TeamDomainEvent::RetirementPhaseValidated
             | TeamDomainEvent::OffSeasonStarted { .. }
@@ -569,6 +586,9 @@ impl Team {
             }
             TeamDomainEvent::RecruitmentPhaseValidated => {
                 self.game_phase = Some(GamePhase::Dismissals);
+            }
+            TeamDomainEvent::CostlyMistakesPhaseStarted => {
+                self.game_phase = Some(GamePhase::CostlyMistakes);
             }
             TeamDomainEvent::DismissalsPhaseValidated => {
                 // Simplification temporaire : la retraite temporaire (carte 39,
@@ -934,9 +954,51 @@ impl Team {
             .map(|_| TeamDomainEvent::RecruitmentPhaseValidated)
     }
 
+    /// Deux sorties : au-dessus du seuil, l'équipe doit son jet ; en dessous,
+    /// elle repart jouer.
+    ///
+    /// La règle vit **ici**, dans la méthode de commande ; `apply()` reste bête
+    /// et applique un fait sans en décider. Aucune migration n'en découle : les
+    /// équipes dont l'historique ne porte que `DismissalsPhaseValidated` se
+    /// rejouent à l'identique.
+    ///
+    /// **Une hypothèse à ne pas perdre** : la trésorerie lue est celle de
+    /// l'agrégat chargé avant l'application des renvois. C'est juste parce qu'un
+    /// renvoi ne rembourse rien. Si cela changeait, il faudrait passer la
+    /// trésorerie d'après-lot au lieu de la lire dans `self`.
     pub fn validate_dismissals_phase(&self) -> Result<TeamDomainEvent, DomainError> {
-        self.expect_phase(GamePhase::Dismissals)
-            .map(|_| TeamDomainEvent::DismissalsPhaseValidated)
+        self.expect_phase(GamePhase::Dismissals)?;
+        Ok(if self.treasury.0 >= SEUIL_ERREURS_COUTEUSES {
+            TeamDomainEvent::CostlyMistakesPhaseStarted
+        } else {
+            TeamDomainEvent::DismissalsPhaseValidated
+        })
+    }
+
+    /// Applique le jet des erreurs coûteuses.
+    ///
+    /// Ne reçoit que **les dés bruts** : l'incident et la perte, l'agrégat les
+    /// établit lui-même depuis sa propre trésorerie.
+    ///
+    /// La forme rejetée les passait en paramètres — le use case aurait alors pu
+    /// produire un événement disant « incident mineur, 2 000 kPo perdus » sans
+    /// que rien ne l'en empêche, et **l'agrégat aurait signé un fait qu'il n'a
+    /// pas établi**. Le prix est un double appel à une fonction pure sur deux
+    /// entiers.
+    pub fn apply_costly_mistakes(
+        &self,
+        roll: u8,
+        damage_dice: Vec<u8>,
+    ) -> Result<TeamDomainEvent, DomainError> {
+        self.expect_phase(GamePhase::CostlyMistakes)?;
+        let incident = incident_for(self.treasury, roll);
+        let gp_lost = loss_for(self.treasury, incident, &damage_dice);
+        Ok(TeamDomainEvent::CostlyMistakesApplied {
+            roll,
+            incident,
+            gp_lost,
+            damage_dice,
+        })
     }
 
     pub fn validate_retirement_phase(&self) -> Result<TeamDomainEvent, DomainError> {
@@ -1053,6 +1115,95 @@ mod tests {
             season_id: season_id(),
             season_name: "Saison 2025".to_string(),
         }
+    }
+
+    // ── Erreurs coûteuses (carte 408) ────────────────────────────────────────
+
+    /// Une équipe en phase de renvois, avec la trésorerie voulue.
+    ///
+    /// La trésorerie est posée par un événement de crédit plutôt qu'écrite dans
+    /// l'agrégat : c'est le seul chemin qui existe, et un test qui contournerait
+    /// `apply` ne prouverait rien du rejeu.
+    fn equipe_en_renvois(tresorerie: u32) -> Team {
+        let mut evenements = vec![created_event()];
+        evenements.push(TeamDomainEvent::TeamEnrolled {
+            competition_id: competition_id(),
+            competition_name: "Ligue de Condate".to_string(),
+            season_id: season_id(),
+            season_name: "Saison 2025".to_string(),
+        });
+        let mut equipe = Team::hydrate(&evenements).unwrap();
+        // `TeamCreated` a posé 1000 kPo ; on redescend au montant voulu par un
+        // débit, puis on amène l'équipe en phase de renvois.
+        equipe.treasury = Kpo(tresorerie);
+        equipe.game_phase = Some(GamePhase::Dismissals);
+        equipe
+    }
+
+    #[test]
+    fn sous_le_seuil_la_validation_des_renvois_ramene_au_jeu() {
+        let event = equipe_en_renvois(99).validate_dismissals_phase().unwrap();
+        assert!(matches!(event, TeamDomainEvent::DismissalsPhaseValidated));
+    }
+
+    /// Le seuil est **inclusif** : à 100 kPo tout rond, l'équipe doit son jet.
+    #[test]
+    fn au_seuil_exact_la_validation_ouvre_les_erreurs_couteuses() {
+        let event = equipe_en_renvois(100).validate_dismissals_phase().unwrap();
+        assert!(matches!(event, TeamDomainEvent::CostlyMistakesPhaseStarted));
+    }
+
+    #[test]
+    fn l_entree_en_phase_change_la_phase_et_rien_d_autre() {
+        let equipe = equipe_en_renvois(500);
+        let tresorerie_avant = equipe.treasury;
+        let apres = equipe.apply(&TeamDomainEvent::CostlyMistakesPhaseStarted);
+        assert_eq!(apres.game_phase, Some(GamePhase::CostlyMistakes));
+        assert_eq!(
+            apres.treasury, tresorerie_avant,
+            "entrer en phase ne coûte rien"
+        );
+    }
+
+    /// L'agrégat ne reçoit que les dés : il établit lui-même l'incident et la
+    /// perte depuis sa propre trésorerie. C'est ce qui l'empêche de signer un
+    /// fait qu'il n'a pas établi.
+    #[test]
+    fn le_jet_est_traduit_par_l_agregat_depuis_sa_propre_tresorerie() {
+        let equipe = equipe_en_renvois(560).apply(&TeamDomainEvent::CostlyMistakesPhaseStarted);
+        let event = equipe.apply_costly_mistakes(1, vec![3, 4]).unwrap();
+        match event {
+            TeamDomainEvent::CostlyMistakesApplied {
+                roll,
+                incident,
+                gp_lost,
+                damage_dice,
+            } => {
+                assert_eq!(roll, 1);
+                assert_eq!(incident, IncidentType::Catastrophe, "560 kPo, jet de 1");
+                assert_eq!(gp_lost, Kpo(490), "il doit rester 70 kPo");
+                assert_eq!(damage_dice, vec![3, 4], "les dés bruts sont conservés");
+            }
+            autre => panic!("attendu un jet appliqué, obtenu {autre:?}"),
+        }
+    }
+
+    #[test]
+    fn le_jet_hors_phase_est_refuse_et_ne_produit_rien() {
+        let equipe = equipe_en_renvois(500);
+        assert!(
+            equipe.apply_costly_mistakes(1, vec![]).is_err(),
+            "l'équipe est encore en phase de renvois"
+        );
+    }
+
+    #[test]
+    fn le_jet_applique_ramene_l_equipe_au_jeu_et_debite_la_perte() {
+        let equipe = equipe_en_renvois(150).apply(&TeamDomainEvent::CostlyMistakesPhaseStarted);
+        let event = equipe.apply_costly_mistakes(1, vec![2]).unwrap();
+        let apres = equipe.apply(&event);
+        assert_eq!(apres.game_phase, Some(GamePhase::ReadyToPlay));
+        assert_eq!(apres.treasury, Kpo(130), "un mineur de 2 retire 20 kPo");
     }
 
     #[test]
@@ -1273,7 +1424,15 @@ mod tests {
         let team = team.apply(&event);
         assert_eq!(team.game_phase, Some(GamePhase::Dismissals));
 
+        // L'équipe de ce test a 1000 kPo en caisse : depuis la carte 408, la
+        // validation des renvois l'envoie aux erreurs coûteuses avant de la
+        // rendre au jeu. Une équipe pauvre y va toujours directement — c'est le
+        // test `sous_le_seuil_la_validation_des_renvois_ramene_au_jeu`.
         let event = team.validate_dismissals_phase().unwrap();
+        let team = team.apply(&event);
+        assert_eq!(team.game_phase, Some(GamePhase::CostlyMistakes));
+
+        let event = team.apply_costly_mistakes(6, vec![]).unwrap();
         let team = team.apply(&event);
         assert_eq!(team.game_phase, Some(GamePhase::ReadyToPlay));
     }

@@ -187,6 +187,7 @@ mod tests {
                 roll: 3,
                 incident: IncidentType::None,
                 gp_lost: Kpo(0),
+                damage_dice: vec![],
             }
         ));
     }
