@@ -31,6 +31,7 @@ from playwright.sync_api import Page, expect
 
 from competition_lifecycle import BASE_URL, build_full_competition
 from db_helpers import query_db
+from team_phase_helpers import traverser_erreurs_couteuses
 from match_report_helpers import (
     create_draft,
     ensure_inducements,
@@ -453,7 +454,12 @@ def test_06_valider_retire_les_joueurs_sans_toucher_la_tresorerie(page: Page, re
     blesse = renvois_ctx["blesse"]
 
     page.locator(".dis-cart .cta-primary").click()
-    _attendre_phase(team_id, "ReadyToPlay")
+    # **Plus `ReadyToPlay` depuis l'épic E13** : au-dessus de 100 kPo la
+    # validation ouvre la phase des erreurs coûteuses, et cette équipe a encaissé
+    # le gain de match par défaut. C'est ce qui rend l'assertion de trésorerie
+    # ci-dessous plus forte qu'avant : le jet n'a pas encore eu lieu, donc si la
+    # caisse a bougé, c'est bien le renvoi qui l'a fait.
+    _attendre_phase(team_id, "CostlyMistakes")
 
     _attendre(
         lambda: _appartenance(renvoye) == "Dismissed" and _appartenance(blesse) == "Dismissed",
@@ -528,6 +534,12 @@ def test_09_le_maillot_libere_est_reattribue_a_la_sequence_suivante(renvois_ctx)
 
     maillots = {int(l.split("|")[0]) for l in _actifs(home)}
     assert MAILLOT_RENVOYE not in maillots, "le numéro est libre"
+
+    # Le jet des erreurs coûteuses sépare désormais les renvois du match suivant.
+    # Ce qu'il laisse en caisse est aléatoire — jusqu'à ne laisser que 20 kPo —
+    # mais sans conséquence ici : le match qui suit rapporte 50 000 kPo, et le
+    # recrutement n'a lieu qu'après.
+    traverser_erreurs_couteuses(space_id, home)
 
     _jouer_match(space_id, ctx["full"], ctx["full"]["round_ids"][1], home, away)
     _attendre_phase(home, "PlayerImprovement")

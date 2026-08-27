@@ -9,12 +9,15 @@ Scénarios couverts :
   recrutement, dont le panier valide la phase → passage réel en renvois.
   Seule phase à ne pas se clore depuis son bandeau (carte 264).
 - Phase de renvois (Dismissals) : bandeau "Gérer les renvois →" → clic → page
-  de renvois, dont le panier valide la phase → retour réel en "Prête à jouer"
-  (bandeau impression visible à ce stade). Comme le recrutement, cette phase ne
-  se clôt pas depuis son bandeau (carte 269).
+  de renvois, dont le panier valide la phase. Comme le recrutement, cette phase
+  ne se clôt pas depuis son bandeau (carte 269).
+- Phase des erreurs coûteuses (CostlyMistakes) : bandeau "Lancer le dé →" →
+  clic → écran du jet, dont le lien de sortie ramène en "Prête à jouer"
+  (bandeau impression visible à ce stade). Au-dessus de 100 kPo cette phase
+  n'est pas contournable, et l'équipe suivie ici y passe (épic E13).
 
 Toute la séquence MatchReporting → PlayerImprovement → Recruitment →
-Dismissals → ReadyToPlay est pilotée par de vraies actions applicatives
+Dismissals → CostlyMistakes → ReadyToPlay est pilotée par de vraies actions applicatives
 (création + confirmation + publication d'un rapport de match, puis les 3
 routes POST de validation de phase) sur une même équipe suivie de bout en
 bout — pas de fabrication d'état en base.
@@ -254,6 +257,29 @@ def test_dismissals_banner_leads_to_the_dismissals_page(page: Page, space_id, ma
     cta = page.locator(".dis-cart .cta-primary")
     expect(cta).to_contain_text("Valider sans renvoyer personne")
     cta.click()
+
+    # **La phase des erreurs coûteuses s'intercale ici** (épic E13) : au-dessus
+    # de 100 kPo, valider les renvois ne rend pas l'équipe prête à jouer, elle
+    # lui doit un jet. Ce test suit la séquence de bout en bout par de vraies
+    # actions — c'est sa raison d'être —, donc il lance le dé plutôt que de
+    # contourner l'étape.
+    expect(page.locator(".team-status-badge")).to_contain_text(
+        "Erreurs coûteuses", timeout=15000
+    )
+    banner = page.locator(".state-banner--phase")
+    expect(banner).to_contain_text("Erreurs coûteuses.")
+    banner.locator(".state-banner-cta").click()
+
+    expect(page.locator(".cm-table")).to_be_visible(timeout=10000)
+    page.locator(".cm-btn-roll").click()
+    # Aucune assertion sur l'issue : le dé est tiré par le serveur, et attendre
+    # un incident précis serait instable une fois sur six. La table est vérifiée
+    # par les tests unitaires de la carte 408.
+    expect(page.locator(".cm-verdict-title")).to_be_visible(timeout=10000)
+
+    # Le lien de sortie n'apparaît qu'une fois le jet fait : c'est lui qui ramène
+    # le coach sur sa fiche, et donc lui qui poursuit la séquence.
+    page.locator(".cm-footer .cta-primary").click()
 
     expect(page.locator(".team-status-badge")).to_contain_text("Prête à jouer", timeout=15000)
     ready_banner = page.locator(".state-banner--ready")

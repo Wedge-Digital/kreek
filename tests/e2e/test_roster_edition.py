@@ -17,6 +17,7 @@ from playwright.sync_api import Page, expect
 from competition_lifecycle import BASE_URL, build_full_competition
 from db_helpers import query_db
 from match_report_helpers import play_match
+from team_phase_helpers import traverser_erreurs_couteuses
 
 # Coach seedé sans droit d'administration (`seed_e2e.rs::SIMPLE_COACH_NAME`).
 # `bypass_auth` le connecte sur présentation de cet en-tête ; sans lui, c'est
@@ -153,6 +154,11 @@ def roster_ctx(browser, space_id):
         expect(page.locator(".dis-cart .recap-row")).to_have_count(1, timeout=10000)
         page.locator(".dis-cart .cta-primary").click()
 
+        # La phase des erreurs coûteuses s'intercale ici depuis l'épic E13 : cette
+        # équipe a encaissé le gain de match par défaut, elle doit donc un jet.
+        # Rien de ce que ces scénarios vérifient — nom, numéro, ordre — ne dépend
+        # de la trésorerie qu'il laisse, et aucun n'achète quoi que ce soit.
+        traverser_erreurs_couteuses(space_id, home)
         _attendre_phase(page, home, "ReadyToPlay")
         return {
             "space_id": space_id,

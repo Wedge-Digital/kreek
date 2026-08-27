@@ -216,6 +216,14 @@
 "test_dismissals_phase" = ["teams", "players", "match_report", "spp_calculator",
                            "competitions", "references", "ranking",
                            "team_creation", "spaces"]
+# La phase qui suit immédiatement les renvois, atteinte par le même chemin —
+# d'où le même périmètre, moins `players` : le jet ne touche que la trésorerie
+# de `teams`, et aucun scénario n'observe un joueur. `references` y est dur au
+# delà du roster : c'est lui qui borne la dépense (plafond d'effectif, cumul
+# entre postes, prix du staff), donc lui qui décide de quel côté du seuil une
+# équipe tombe.
+"test_erreurs_couteuses" = ["teams", "match_report", "competitions", "references",
+                            "ranking", "team_creation", "spaces"]
 
 # ── Classement ───────────────────────────────────────────────────────────────
 "test_ranking_bonus" = ["ranking", "competitions", "match_report", "teams", "players",

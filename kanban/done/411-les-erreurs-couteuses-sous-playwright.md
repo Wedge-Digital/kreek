@@ -50,6 +50,60 @@ Le skill `test-impact` tient une carte tests ↔ bounded contexts. **Un nouveau
 test e2e impose sa mise à jour**, sans quoi il ne sera jamais sélectionné par les
 exécutions ciblées et ne tournera qu'en CI complète.
 
+## Un septième scénario, écrit en plus des six
+
+Le sixième de la table — « ouvrir la page hors phase » — est vérifié tel quel.
+S'y ajoute **une équipe inconnue** : `404` sur la page comme sur le jet. Le
+handler charge l'équipe pour décider du droit, et un identifiant qui ne
+correspond à rien y passe par une branche que rien d'autre n'emprunte.
+
+Ce n'est pas un caprice de couverture. Les six scénarios de la table portent
+tous sur une équipe qui existe : sans ce septième, un handler qui répondrait
+`500` — ou pire, `403`, ce qui confirmerait l'inexistence par la négative — ne
+serait vu par aucun d'eux.
+
+## Ce que la suite complète a révélé — quatre tests que l'épic avait cassés
+
+`make e2e` au vert n'était pas une formalité de fin de carte : **la suite était
+rouge avant qu'on l'écrive**, et les cartes 408 à 410 étaient déjà commitées et
+poussées. Onze tests tombaient, tous sur la même cause.
+
+La phase des erreurs coûteuses **s'intercale** entre les renvois et « prête à
+jouer ». Tout test qui validait des renvois puis attendait `ReadyToPlay`
+attendait désormais en vain :
+
+| Fichier | Ce qui cassait |
+|---|---|
+| `test_roster_edition.py` | 8 erreurs — sa fixture n'atteignait plus `ReadyToPlay`, aucun de ses scénarios ne démarrait |
+| `test_dismissals_phase.py` | scénario 6 (phase attendue) et 9 par ricochet |
+| `test_team_detail_state_banner.py` | la chaîne de bandeaux s'arrêtait avant la fin |
+
+**Le gain de match par défaut vaut 50 000 kPo.** Toute équipe de test dépasse
+donc le seuil de 100 : la phase n'est contournable pour aucune d'elles.
+
+### Deux réparations, pas une
+
+Elles n'ont pas le même statut, et les confondre aurait fait perdre de la
+couverture :
+
+- `test_team_detail_state_banner.py` **suit la séquence de bout en bout par de
+  vraies actions** — c'est sa raison d'être. Il a donc été **étendu** : bandeau
+  « Lancer le dé → », écran, jet, lien de sortie, « Prête à jouer ». La nouvelle
+  phase entre dans la chaîne qu'il documente.
+- Les deux autres ne portent pas sur elle. Ils la **franchissent** via
+  `tests/e2e/team_phase_helpers.py`, module partagé écrit pour l'occasion.
+
+### Le piège du franchissement
+
+`traverser_erreurs_couteuses` ne promet **rien** sur la trésorerie qu'il laisse :
+une catastrophe ne laisse que 2d6 dizaines de kPo, soit 20 au pire. Un scénario
+qui dépense après l'avoir appelé serait instable — pas toujours, ce qui est pire.
+
+Le scénario 9 de `test_dismissals_phase` dépense justement, et il est sûr pour
+une raison qu'il fallait vérifier et non supposer : **le match qu'il joue
+entre-temps rapporte 50 000 kPo**, et son recrutement n'a lieu qu'après. C'est
+écrit dans le module comme dans le test.
+
 ## Checklist
 
 - [ ] Les six scénarios dans `tests/e2e/`

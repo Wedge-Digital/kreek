@@ -1,7 +1,7 @@
 # E13 — Gestion des erreurs coûteuses
 
-**État :** `ready` — 4 cartes, 0 faite. Spécifiée par le workflow feature les
-2026-08-25 et 26.
+**État :** `done` — 4 cartes, 4 faites, du 2026-08-26 au 27. Spécifiée par le
+workflow feature les 2026-08-25 et 26.
 **Conception :** `docs/specs/erreurs-couteuses/`
 
 ## La fonction
@@ -36,7 +36,7 @@ les deux listeners qui recalculent la valeur d'équipe et purgent les paniers.
 | 408 | Le domaine des erreurs coûteuses | la table, les effets, la phase, les deux sorties de la validation des renvois — 36 tests |
 | 409 | Lancer le dé par requête | port du dé, use case, POST gardé par le droit — sans écran |
 | 410 | L'écran du jet | page, fragment, animation à durée plancher, CSS, bandeau |
-| 411 | Les erreurs coûteuses sous Playwright | six scénarios |
+| 411 | Les erreurs coûteuses sous Playwright | sept scénarios, chacun vu échouer |
 
 ## Ce qui commande l'ordre
 
@@ -65,6 +65,28 @@ Une équipe qui valide ses renvois avec **150 kPo en caisse** arrive sur l'écra
 du jet, lance le dé, voit son résultat détaillé, et retrouve sur sa fiche une
 trésorerie diminuée du montant annoncé — pendant qu'une équipe à **99 kPo** passe
 directement en « prête à jouer » sans rien voir.
+
+## Ce que le critère a donné
+
+Constaté à l'écran, pas déduit : une équipe à **150 kPo** franchit la validation
+des renvois, trouve « Lancer le dé » sur sa fiche, arrive sur l'écran, lance, et
+sa trésorerie tombe au montant que le calcul lui annonce. Une équipe à **80 kPo**
+passe en « prête à jouer » et son écran de jet répond `422`.
+
+**La carte 410 s'est faite prendre à ce jeu.** Ses tests unitaires passaient tous
+— 1373 au total au vert — et la fonctionnalité était pourtant **inatteignable** :
+les deux transitions de phase n'avaient pas de branche dans la projection, et le
+`_ =>` final les avalait en silence. `team_proj` restait sur `Dismissals`, donc
+le bandeau ne menait à rien. Seule la vérification à l'écran l'a vu.
+
+C'est le même défaut que la carte 175, dont le commentaire d'avertissement se
+trouve **trois lignes plus bas dans le même fichier**. Un piège documenté à
+l'endroit exact où il se retend ne suffit pas à l'éviter.
+
+Et la 411 a trouvé la seconde moitié de la même leçon : **onze tests e2e étaient
+rouges**, cassés par les cartes déjà poussées. Une phase qui s'intercale dans un
+cycle de vie casse tout ce qui connaissait l'ancien enchaînement, et rien ne le
+dit avant que la suite complète ne tourne. Elle n'avait pas tourné.
 
 ## Ce que son histoire a appris
 
