@@ -7,6 +7,9 @@
    Il renvoie aussi la table par un échange hors-cible, avec sa case atteinte :
    le coach ne tire pas lui-même, et à défaut d'avoir prise sur le résultat il
    doit pouvoir vérifier qu'il est juste. #}
+{# `data-roll` : la face sur laquelle le dé doit s'arrêter. Le composant la
+   lit à l'échéance du plancher — c'est le serveur qui a tiré, pas lui. #}
+<div class="cm-roll-value" data-roll="{{ roll }}" hidden></div>
 <div class="cm-verdict cm-verdict--{{ verdict_kind }}">
     <span class="cm-verdict-icon">{{ verdict_icon }}</span>
     <div>

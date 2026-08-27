@@ -12,7 +12,7 @@
         fini: false,
         face: '?',
         erreur: '',
-        async lancer() {
+        lancer() {
             if (this.lance) return;
             this.lance = true;
             this.erreur = '';
@@ -23,27 +23,51 @@
             const roulement = setInterval(() => {
                 this.face = 1 + Math.floor(Math.random() * 6);
             }, 70);
-            const echeance = new Promise(r => setTimeout(r, this.PLANCHER_MS));
 
-            try {
-                /* `htmx.ajax` piloté ici, et non un `hx-post` nu : celui-ci
-                   échangerait le fragment dès sa réception, avant l'échéance. */
-                await Promise.all([
-                    htmx.ajax('POST', this.$refs.zone.dataset.rollUrl, {
-                        target: '#cm-result',
-                        swap: 'innerHTML',
-                    }),
-                    echeance,
-                ]);
+            /* Le fragment est **posé de côté**, hors de l'écran, puis déplacé à
+               l'échéance. `htmx.ajax` échange dès la réception : c'est le
+               déplacement, et non la requête, qui tient le plancher.
+               La promesse d'htmx n'est pas guettée — son contrat de résolution
+               dépend de la version, et un `await` qui ne rendrait jamais la main
+               laisserait le dé tourner indéfiniment. */
+            const zone = this.$refs.zone;
+            const attente = this.$refs.attente;
+            const cible = this.$refs.resultat;
+            let echu = false;
+            let recu = false;
+
+            const afficher = () => {
+                if (!echu || !recu) return;
                 clearInterval(roulement);
-                this.face = document.getElementById('cm-result').dataset.roll || this.face;
+                const tire = attente.querySelector('.cm-roll-value');
+                if (tire) { this.face = tire.dataset.roll; }
+                cible.innerHTML = attente.innerHTML;
+                attente.innerHTML = '';
                 this.fini = true;
-            } catch (e) {
+            };
+
+            setTimeout(() => { echu = true; afficher(); }, this.PLANCHER_MS);
+
+            fetch(zone.dataset.rollUrl, {
+                method: 'POST',
+                headers: { 'HX-Request': 'true' },
+            }).then(r => {
+                if (!r.ok) { throw new Error('statut ' + r.status); }
+                return r.text();
+            }).then(html => {
+                attente.innerHTML = html;
+                recu = true;
+                afficher();
+            }).catch(e => {
+                /* Le motif au journal du navigateur : sans lui, un jet qui
+                   échoue ne laisse qu'un bouton inerte, et le diagnostic
+                   recommence de zéro. */
+                console.error('[costly-mistakes] le jet a échoué', e);
                 clearInterval(roulement);
                 this.lance = false;
                 this.face = '?';
-                this.erreur = 'Le jet n\\'a pas abouti. Rechargez la page pour connaître votre situation.';
-            }
+                this.erreur = 'Le jet a échoué. Rechargez la page pour connaître votre situation.';
+            });
         }
      }">
 
@@ -102,7 +126,10 @@
             <div class="cm-roll-error" x-show="erreur" x-text="erreur"></div>
         </div>
 
-        <div class="cm-result" id="cm-result" x-show="fini"></div>
+        <div class="cm-result" id="cm-result" x-ref="resultat" x-show="fini"></div>
+        {# Le fragment y atterrit avant d'être montré : c'est ce qui rend le
+           plancher d'animation indépendant du temps de réponse. #}
+        <div x-ref="attente" hidden></div>
     </div>
 
     <div class="cm-footer">

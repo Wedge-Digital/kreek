@@ -53,8 +53,12 @@
 .costly-mistakes .cm-btn-roll:hover:not(:disabled) { background: var(--dark-1); }
 .costly-mistakes .cm-btn-roll:disabled { background: var(--dark-4); cursor: not-allowed; }
 /* ── Le résultat ──────────────────────────────────────────────────────── */
-.costly-mistakes .cm-result { display: none; flex-direction: column; gap: var(--p1); }
-.costly-mistakes .cm-result.shown { display: flex; }
+/* Pas de `display: none` ici : la maquette masquait par une classe `.shown`
+   qu'un script ajoutait, mais c'est `x-show` qui décide désormais. Les deux
+   mécanismes se battaient — Alpine posait `display: flex` en style inline, et la
+   règle de classe le reprenait sur un élément sans `.shown`. Le verdict restait
+   invisible alors que le composant avait fini. */
+.costly-mistakes .cm-result { display: flex; flex-direction: column; gap: var(--p1); }
 .costly-mistakes .cm-verdict {
   border-radius: 10px; padding: var(--p2); display: flex; gap: var(--p1);
   align-items: flex-start; border-left: 4px solid var(--dark-4);
