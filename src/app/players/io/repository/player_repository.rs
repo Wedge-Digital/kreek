@@ -1,4 +1,4 @@
-use crate::app::players::domain::events::PlayerDomainEvent;
+use crate::app::players::domain::events::{PlayerDomainEvent, UndoEffect};
 use crate::app::players::domain::player::{AcquisitionMode, Player, PlayerId, TeamId};
 use crate::app::players::io::app_events::team_created_listener::skill_category_css;
 use crate::app::players::ports::{AcquiredSkillProjection, IPlayerRepository, RepositoryError};
@@ -84,6 +84,9 @@ fn player_and_team_id(event: &PlayerDomainEvent) -> (&str, &str) {
             player_id, team_id, ..
         } => (&player_id.0, &team_id.0),
         PlayerDomainEvent::PlayerSppCustomised {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::PlayerCustomisationReverted {
             player_id, team_id, ..
         } => (&player_id.0, &team_id.0),
         PlayerDomainEvent::TouchdownScored {
@@ -598,6 +601,11 @@ pub async fn upsert_player_projection(
             .await
             .map_err(RepositoryError::Database)?;
         }
+        PlayerDomainEvent::PlayerCustomisationReverted {
+            player_id, undo, ..
+        } => {
+            retirer_customisation_de_la_projection(tx, &player_id.0, undo).await?;
+        }
         PlayerDomainEvent::PlayerReordered {
             player_id,
             display_order,
@@ -625,6 +633,80 @@ pub async fn upsert_player_projection(
     Ok(())
 }
 
+/// Défait une customisation dans la projection, une écriture par forme.
+///
+/// La caractéristique n'écrit rien ici : son cumul est reposé en fin de
+/// `upsert_player_projection` par `recompute_stat_deltas`, qui relit l'agrégat.
+/// C'est ce recalcul qui rend la projection insensible aux retraits — la même
+/// raison qui l'avait fait écrire pour `MatchImpactReverted`.
+async fn retirer_customisation_de_la_projection(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    player_id: &str,
+    undo: &UndoEffect,
+) -> Result<(), RepositoryError> {
+    match undo {
+        // Le filtre porte sur `skill_id` **et** `mode` : viser le seul
+        // identifiant retirerait une compétence achetée si les deux coexistaient.
+        // `COALESCE` parce que `jsonb_agg` d'un ensemble vide rend `NULL`, et
+        // qu'une colonne nulle ferait échouer la lecture de la projection.
+        UndoEffect::Skill { skill_id } => {
+            sqlx::query(
+                "UPDATE players_proj
+                 SET acquired_skills = COALESCE((
+                         SELECT jsonb_agg(e)
+                         FROM jsonb_array_elements(acquired_skills) e
+                         WHERE NOT (e->>'skill_id' = $2 AND e->>'mode' = 'Customised')
+                     ), '[]'::jsonb),
+                     version = version + 1
+                 WHERE player_id = $1",
+            )
+            .bind(player_id)
+            .bind(skill_id.as_ref())
+            .execute(&mut **tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+        }
+        UndoEffect::Stat { .. } => {
+            sqlx::query("UPDATE players_proj SET version = version + 1 WHERE player_id = $1")
+                .bind(player_id)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+        }
+        // Posée, pas ajoutée : la valeur est absolue. Aucun `GREATEST` n'est
+        // nécessaire — elle vient d'un rejeu du domaine, qui l'a déjà écrêtée.
+        UndoEffect::Value { value_after } => {
+            sqlx::query(
+                "UPDATE players_proj
+                 SET value_kpo = $2, version = version + 1
+                 WHERE player_id = $1",
+            )
+            .bind(player_id)
+            .bind(value_after.0 as i32)
+            .execute(&mut **tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+        }
+        // `GREATEST` par prudence : le domaine refuse le retrait quand la
+        // réserve est insuffisante, mais `spp` est un entier signé en base et
+        // une projection négative serait plus difficile à diagnostiquer qu'à
+        // empêcher.
+        UndoEffect::Spp { amount } => {
+            sqlx::query(
+                "UPDATE players_proj
+                 SET spp = GREATEST(spp - $2, 0), version = version + 1
+                 WHERE player_id = $1",
+            )
+            .bind(player_id)
+            .bind(amount.into_inner() as i32)
+            .execute(&mut **tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+        }
+    }
+    Ok(())
+}
+
 /// Les événements qui peuvent déplacer une caractéristique. Le recalcul n'est
 /// déclenché que par eux : il coûte une relecture du flux du joueur, inutile
 /// pour un renommage ou un changement de maillot.
@@ -638,6 +720,13 @@ fn event_touches_stats(event: &PlayerDomainEvent) -> bool {
             | PlayerDomainEvent::PlayerStatCustomised { .. }
             | PlayerDomainEvent::InjurySustained { .. }
             | PlayerDomainEvent::MatchImpactReverted { .. }
+            // Le retrait d'une caractéristique customisée, et lui seul : les
+            // trois autres formes ne touchent aucune caractéristique, et le
+            // recalcul coûte une relecture du flux.
+            | PlayerDomainEvent::PlayerCustomisationReverted {
+                undo: UndoEffect::Stat { .. },
+                ..
+            }
     )
 }
 

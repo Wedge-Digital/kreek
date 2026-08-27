@@ -32,6 +32,11 @@ pub mod path {
         "/app/{space_id}/players/{player_id}/customisation/validate";
     pub const PLAYER_CUSTOMISATION_CANCEL: &str =
         "/app/{space_id}/players/{player_id}/customisation/cancel";
+    /// `applied` et non `lines` : `LINE_REMOVE` retire une ligne du **panier**,
+    /// celle-ci retire une customisation **déjà appliquée** au joueur. Deux
+    /// gestes que rien ne rapproche, sinon le mot « retirer ».
+    pub const PLAYER_CUSTOMISATION_APPLIED_REMOVE: &str =
+        "/app/{space_id}/players/{player_id}/customisation/applied/remove";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -127,6 +132,14 @@ impl Routes {
 
     pub fn customisation_cancel(&self, space_id: &str, player_id: &str) -> String {
         Self::pour_joueur(path::PLAYER_CUSTOMISATION_CANCEL, space_id, player_id)
+    }
+
+    pub fn customisation_remove_applied(&self, space_id: &str, player_id: &str) -> String {
+        Self::pour_joueur(
+            path::PLAYER_CUSTOMISATION_APPLIED_REMOVE,
+            space_id,
+            player_id,
+        )
     }
 
     fn pour_joueur(gabarit: &str, space_id: &str, player_id: &str) -> String {

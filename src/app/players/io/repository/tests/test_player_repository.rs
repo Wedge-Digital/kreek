@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use crate::app::players::domain::events::PlayerDomainEvent;
+use crate::app::players::domain::events::{PlayerDomainEvent, UndoEffect};
 use crate::app::players::domain::match_impact::{
     InjuryType, MatchContext, MatchReportId, RoundId, SppEarned, StatKind,
 };
@@ -957,4 +957,160 @@ async fn le_cumul_est_insensible_a_l_ordre(pool: PgPool) {
 
     assert_eq!(deltas(&pool, &a.0).await.3, deltas(&pool, &b.0).await.3);
     assert_eq!(deltas(&pool, &a.0).await.3, -2);
+}
+
+// ── Retrait d'une customisation appliquée (carte 413) ─────────────────────────
+//
+// Quatre formes, quatre écritures. Ces tests existent parce que la carte 410 a
+// livré une fonctionnalité **inatteignable** avec ses tests unitaires au vert :
+// deux transitions n'avaient pas de bras de projection, et rien ne l'a dit.
+// Ici le `match` est exhaustif et le compilateur a bien réclamé le bras — reste
+// à vérifier que ce qu'il écrit est juste.
+
+/// Retirer une compétence offerte la sort du tableau `jsonb`.
+#[sqlx::test]
+async fn le_retrait_d_une_competence_la_sort_de_la_projection(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool.clone());
+    let team_id = TeamId("t-r-skill".into());
+    let joueur = PlayerId("p".into());
+    let p = seed_player(&repo, &joueur, &team_id).await;
+
+    let pose = p
+        .customise_skill(
+            custo_id("c1"),
+            SkillId::try_new("BLOCK".to_string()).unwrap(),
+            SkillName::try_new("Bloc".to_string()).unwrap(),
+            "Bagouze".into(),
+        )
+        .unwrap();
+    repo.append(&joueur, &team_id, &pose, 2).await.unwrap();
+    assert_eq!(
+        proj.find_by_id(&joueur.0)
+            .await
+            .unwrap()
+            .unwrap()
+            .acquired_skills
+            .len(),
+        1
+    );
+
+    let retrait = retirer(&repo, &joueur, "c1", 3, &team_id).await;
+    assert!(matches!(retrait, UndoEffect::Skill { .. }));
+
+    let apres = proj.find_by_id(&joueur.0).await.unwrap().unwrap();
+    assert!(
+        apres.acquired_skills.is_empty(),
+        "la compétence a quitté la projection : {:?}",
+        apres.acquired_skills
+    );
+}
+
+/// **Le cas de l'écrêtage, jusqu'en base.** 100 kPo, un −500 appliqué : la
+/// projection tombe à 0. Le retrait doit reposer 100, et non 500.
+#[sqlx::test]
+async fn le_retrait_d_un_prix_repose_la_valeur_absolue_et_non_le_delta_inverse(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool.clone());
+    let team_id = TeamId("t-r-prix".into());
+    let joueur = PlayerId("p".into());
+    let p = seed_player(&repo, &joueur, &team_id).await;
+
+    let pose = p
+        .customise_value(
+            custo_id("c1"),
+            KpoDelta::try_new(-500).unwrap(),
+            "Bagouze".into(),
+        )
+        .unwrap();
+    repo.append(&joueur, &team_id, &pose, 2).await.unwrap();
+    assert_eq!(
+        proj.find_by_id(&joueur.0).await.unwrap().unwrap().value_kpo,
+        0,
+        "l'écrêtage a bien eu lieu"
+    );
+
+    retirer(&repo, &joueur, "c1", 3, &team_id).await;
+
+    assert_eq!(
+        proj.find_by_id(&joueur.0).await.unwrap().unwrap().value_kpo,
+        100,
+        "et non 500, qu'un delta inverse aurait donné"
+    );
+}
+
+#[sqlx::test]
+async fn le_retrait_de_spp_les_soustrait_en_projection(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool.clone());
+    let team_id = TeamId("t-r-spp".into());
+    let joueur = PlayerId("p".into());
+    let p = seed_player(&repo, &joueur, &team_id).await;
+
+    let pose = p
+        .customise_spp(custo_id("c1"), SppAmount::try_new(15).unwrap(), "B".into())
+        .unwrap();
+    repo.append(&joueur, &team_id, &pose, 2).await.unwrap();
+    assert_eq!(proj.find_by_id(&joueur.0).await.unwrap().unwrap().spp, 15);
+
+    retirer(&repo, &joueur, "c1", 3, &team_id).await;
+
+    assert_eq!(proj.find_by_id(&joueur.0).await.unwrap().unwrap().spp, 0);
+}
+
+/// La caractéristique n'écrit rien elle-même : son cumul est reposé par
+/// `recompute_stat_deltas`. C'est ce test qui vérifie que le retrait figure bien
+/// dans `event_touches_stats` — sans quoi le recalcul ne serait pas déclenché et
+/// la projection garderait l'offset.
+#[sqlx::test]
+async fn le_retrait_d_une_caracteristique_declenche_le_recalcul_du_cumul(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let team_id = TeamId("t-r-stat".into());
+    let joueur = PlayerId("p".into());
+    let p = seed_player(&repo, &joueur, &team_id).await;
+
+    let pose = p
+        .customise_stat(
+            custo_id("c1"),
+            StatKind::Pa,
+            StatCrans::try_new(1).unwrap(),
+            "B".into(),
+        )
+        .unwrap();
+    repo.append(&joueur, &team_id, &pose, 2).await.unwrap();
+    assert_eq!(deltas(&pool, &joueur.0).await.3, -1);
+
+    retirer(&repo, &joueur, "c1", 3, &team_id).await;
+
+    assert_eq!(deltas(&pool, &joueur.0).await.3, 0, "le cumul est reposé");
+}
+
+/// Le geste complet du use case, en un helper : lire le flux, trouver la
+/// customisation, rejouer sans elle, appeler le domaine, appendre. Rend l'`undo`
+/// produit, pour que l'appelant puisse le vérifier.
+async fn retirer(
+    repo: &PgPlayerRepository,
+    joueur: &PlayerId,
+    id: &str,
+    version: i32,
+    team_id: &TeamId,
+) -> UndoEffect {
+    use crate::app::players::domain::customisations::{flux_effectif, trouver, undo_pour};
+
+    let events = repo.find_events_by_id(joueur).await.unwrap();
+    let cible = custo_id(id);
+    let visee = trouver(&events, &cible).expect("la customisation doit être trouvable");
+    let effectif: Vec<PlayerDomainEvent> = flux_effectif(&events, Some(&cible))
+        .into_iter()
+        .cloned()
+        .collect();
+    let valeur = Player::from_events(&effectif).unwrap().value;
+    let undo = undo_pour(visee, valeur).unwrap();
+
+    let p = repo.find_by_id(joueur).await.unwrap().unwrap();
+    let event = p
+        .revert_customisation(cible, undo.clone(), "Bagouze".into())
+        .unwrap();
+    repo.append(joueur, team_id, &event, version).await.unwrap();
+    undo
 }

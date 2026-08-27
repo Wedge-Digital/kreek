@@ -156,3 +156,43 @@
 /* Dans une carte de caractéristique, l'espace est compté : pas de marge
    latérale, le texte tient sous les boutons. */
 .pd-right .custo-stat-card .custo-refusal { margin: 4px 0 0; padding: 6px; text-align: center; }
+
+/* ── Retrait d'une customisation appliquée (carte 413) ──────────────────────
+   Repris de assets/rawpages/html/app-player-detail-custo-suppression.html.
+   Le geste existe déjà pour le panier ; ici il porte sur ce qui est **déjà
+   appliqué au joueur**, et défait donc un effet réel. */
+.pd-right .custo-applied { margin-top: var(--p2); }
+.pd-right .custo-applied-actions { text-align: right; white-space: nowrap; }
+.pd-right .custo-remove-btn {
+  width: 26px; height: 26px; border-radius: 6px; cursor: pointer;
+  border: 1.5px solid var(--dark-4); background: var(--white);
+  color: var(--dark-3); font-size: 14px; line-height: 1; font-family: inherit;
+}
+.pd-right .custo-remove-btn:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
+.pd-right .custo-remove-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+/* La croix bloquée reste visible : disparue, elle laisserait croire à un
+   défaut ; grise et expliquée, elle enseigne la règle. */
+.pd-right .custo-blocked-why {
+  display: block; font-size: 11px; font-style: italic; color: var(--dark-3);
+  margin-top: 3px; max-width: 220px; white-space: normal;
+}
+/* La confirmation s'ouvre sous la ligne, dans le tableau : pas de modale à
+   fermer, et ce qu'on s'apprête à défaire reste sous les yeux. */
+.pd-right .custo-confirm-row td {
+  background: rgba(224, 32, 32, 0.05); border-bottom: 1px solid var(--dark-5);
+}
+.pd-right .custo-confirm {
+  display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap;
+  font-size: var(--text-small); color: var(--dark-1);
+}
+.pd-right .custo-confirm-text { flex: 1; min-width: 200px; }
+.pd-right .custo-confirm-text strong { color: var(--red); }
+.pd-right .custo-confirm-actions { display: flex; gap: 8px; }
+.pd-right .custo-btn-sm {
+  padding: 6px 14px; border-radius: 6px; cursor: pointer; font-family: inherit;
+  font-size: var(--text-tiny); font-weight: 700; border: none;
+}
+.pd-right .custo-btn-sm--cancel {
+  background: transparent; border: 1.5px solid var(--dark-4); color: var(--dark-2);
+}
+.pd-right .custo-btn-sm--confirm { background: var(--red); color: var(--white); }

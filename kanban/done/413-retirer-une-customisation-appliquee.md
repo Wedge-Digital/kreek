@@ -132,6 +132,74 @@ Celui du mode customisation : `can_customise` — **admin d'espace ou admin de
 compétition, jamais le coach**. Le POST est gardé comme les autres actions de
 customisation.
 
+## Le rejeu « sans l'événement visé » ne suffit pas
+
+La carte disait : charger le flux, **en retirer l'événement visé**, rejouer, lire
+la valeur. Cela ne tient qu'au **premier** retrait.
+
+```
+créé(100) · C1 prix +50 → 150 · C2 prix +30 → 180 · retrait de C2 pose 150
+```
+
+Retirons C1. Le flux privé du seul C1 vaut `[créé(100), C2(+30)=130,
+retraitC2(pose 150)]` → **150**, c'est-à-dire exactement la valeur courante :
+le retrait aurait été un **no-op silencieux**. La bonne réponse est 100.
+
+La cause est que `value_after` est absolu — ce que la carte a raison d'exiger,
+l'écrêtage n'étant pas inversible — mais un absolu **posé dans un monde où C1
+existait encore**.
+
+**Le rejeu porte donc sur le flux effectif** : privé de l'événement visé, de
+toutes les customisations déjà retirées, et de tous les événements de retrait.
+`domain/customisations.rs::flux_effectif`. La forme de l'événement n'a pas
+changé ; seul le filtre.
+
+Le test `deux_retraits_de_prix_successifs_partent_chacun_de_l_etat_reel` le
+verrouille — écrit avec **deux customisations de prix**, sans quoi il serait
+passé au vert sans rien prouver. La mutation qui rétablit la conception d'origine
+fait tomber trois tests.
+
+## Trois consommateurs, un seul filtre
+
+`flux_effectif` sert le rejeu du use case, la liste du panneau, **et le journal**.
+Un même endroit décide de ce qui tient encore, et deux conséquences en découlent
+sans garde dédiée :
+
+- un second retrait du même identifiant se refuse tout seul — la customisation
+  n'est plus dans le flux effectif ;
+- une customisation retirée **disparaît du journal**, son retrait avec elle.
+
+Ce dernier point est une décision produit, prise en cours de carte : le journal
+est une vue du **joueur**, pas de son dossier. Y laisser une customisation qui ne
+s'applique plus, ou une ligne « retirée » répondant à une ligne encore lisible,
+raconterait deux fois ce qui n'a plus lieu. L'event store, lui, garde les deux —
+l'audit les y retrouve.
+
+## Ce que la vérification à l'écran a corrigé
+
+Le panneau annonçait « Le joueur perdra ces **+25** kPo de valeur ». Le « + » est
+maladroit ; sur un ajustement **négatif** la phrase aurait dit « perdra ces −25
+kPo », soit **le contraire de la vérité** — retirer une baisse de prix *rend* de
+la valeur au joueur. La phrase suit maintenant le signe, et un test la verrouille.
+
+Aucun test unitaire ne l'aurait vu : la maquette ne montrait que le cas positif,
+et la formulation était juste pour lui.
+
+## Sans date : l'auteur seul
+
+La maquette affiche « BigBoss, 02/07/2026 ». `occurred_at` existe bien dans
+`players_events`, mais `find_events_by_id` ne le rend pas, et l'exposer
+demanderait d'élargir le port pour une colonne d'affichage. Décidé : **l'auteur
+seul**.
+
+## Le piège d'outillage rencontré
+
+`cargo test` nu pointe sur la base de **développement** et fait échouer *tous* les
+tests `sqlx::test`. Deux falsifications de projection ont d'abord semblé
+concluantes alors qu'elles ne mesuraient rien. `make test` pose
+`DATABASE_URL=$(TEST_DB_URL)` — c'est lui qui fait foi, et une falsification
+lancée à la main doit reprendre la même variable.
+
 ## Checklist
 
 - [ ] `PlayerCustomisationReverted` + `UndoEffect` dans `events.rs`

@@ -1,6 +1,6 @@
 use crate::app::players::io::web::customisation_controller::{
-    post_add_skill, post_add_spp, post_add_stat, post_adjust_price, post_cancel, post_remove_line,
-    post_validate,
+    post_add_skill, post_add_spp, post_add_stat, post_adjust_price, post_cancel,
+    post_remove_applied, post_remove_line, post_validate,
 };
 use crate::app::players::io::web::increase_stat_controller::post_increase_stat;
 use crate::app::players::io::web::player_debug_controller::player_debug_controller;
@@ -53,4 +53,8 @@ pub fn router() -> Router<AppState> {
         )
         .route(path::PLAYER_CUSTOMISATION_VALIDATE, post(post_validate))
         .route(path::PLAYER_CUSTOMISATION_CANCEL, post(post_cancel))
+        .route(
+            path::PLAYER_CUSTOMISATION_APPLIED_REMOVE,
+            post(post_remove_applied),
+        )
 }

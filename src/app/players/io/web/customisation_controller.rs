@@ -28,10 +28,13 @@ use crate::app::players::ports::{
 use crate::app::players::use_cases::commands::{
     AddCustomisationSkillCommand, AddCustomisationSppCommand, AddCustomisationStatCommand,
     AdjustCustomisationPriceCommand, CancelCustomisationCommand, RemoveCustomisationLineCommand,
-    ValidateCustomisationCommand,
+    RevertCustomisationCommand, ValidateCustomisationCommand,
 };
 use crate::app::players::use_cases::customisation_basket_mutation::{
     self, CustomisationBasketError,
+};
+use crate::app::players::use_cases::revert_customisation_use_case::{
+    self, RevertCustomisationError,
 };
 use crate::app::players::use_cases::validate_customisation_use_case::{
     self, ValidateCustomisationError,
@@ -87,6 +90,14 @@ pub struct RemoveLineForm {
 #[derive(Deserialize)]
 pub struct VersionForm {
     pub expected_version: u32,
+}
+
+/// Pas d'`expected_version` : le panier n'est pas en cause. L'identifiant
+/// désigne une customisation précise, et un second envoi du même se refuse tout
+/// seul — elle a quitté le flux effectif.
+#[derive(Deserialize)]
+pub struct AppliedCustomisationForm {
+    pub customisation_id: String,
 }
 
 /// Les trois dépôts que toute mutation traverse. Les nommer une fois évite de
@@ -430,6 +441,75 @@ pub async fn post_cancel(
     // Le panier disparu, le slot n'a plus de mode à afficher : retour au
     // journal, exactement ce que verrait un rechargement complet.
     journal(space_id, player_id, state).await
+}
+
+// ── Retrait d'une customisation appliquée ─────────────────────────────────────
+
+/// Le huitième geste du mode. Il ne touche pas au panier : il défait ce qui a
+/// déjà été appliqué au joueur.
+pub async fn post_remove_applied(
+    Path((space_id, player_id)): Path<(String, String)>,
+    auth_session: AuthSession,
+    State(state): State<AppState>,
+    Form(form): Form<AppliedCustomisationForm>,
+) -> Response {
+    if let Err(refus) = garde(&state, auth_session.user.as_ref(), &space_id, &player_id).await {
+        return refus;
+    }
+    let Some(user) = auth_session.user.clone() else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
+    let Ok(customisation_id) = CustomisationId::try_new(form.customisation_id) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+
+    let issue = revert_customisation_use_case::execute(
+        RevertCustomisationCommand {
+            player_id: PlayerId(player_id.clone()),
+            customisation_id,
+            author: user.coach_name.clone().into_inner(),
+        },
+        state.players.repository.as_ref(),
+        &state.players.event_bus,
+    )
+    .await;
+    apres_retrait(&state, &space_id, &player_id, issue).await
+}
+
+async fn apres_retrait(
+    state: &AppState,
+    space_id: &str,
+    player_id: &str,
+    issue: Result<(), RevertCustomisationError>,
+) -> Response {
+    match issue {
+        // Même raison que la validation : la fiche entière change — valeur,
+        // caractéristiques, SPP, compétences. Un swap partiel en laisserait la
+        // moitié périmée (carte 398, qui l'a mesuré).
+        Ok(()) => [("HX-Refresh", "true")].into_response(),
+        Err(RevertCustomisationError::PlayerNotFound) => StatusCode::NOT_FOUND.into_response(),
+        // La customisation n'existe plus : un second clic sur une croix, ou un
+        // panneau resté ouvert pendant qu'un autre commissaire retirait la même
+        // ligne. Le panneau re-rendu dit l'état réel sans dramatiser — c'est le
+        // traitement que `ConcurrentWrite` reçoit déjà à la validation.
+        Err(RevertCustomisationError::CustomisationIntrouvable) => {
+            rendre_panneau(state, space_id, player_id, None).await
+        }
+        // Le seul refus métier : des SPP déjà dépensés. L'écran l'annonçait
+        // sous une croix grisée, mais masquer un bouton n'est pas un contrôle —
+        // et le motif du domaine nomme les deux nombres.
+        Err(RevertCustomisationError::Domain(cause)) => {
+            let refus = RefusalVm {
+                message: cause.to_string(),
+                target: RefusalTarget::Applied,
+            };
+            rendre_panneau(state, space_id, player_id, Some(refus)).await
+        }
+        Err(autre) => {
+            tracing::error!("customisation retrait {player_id}: {autre:?}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
 }
 
 #[cfg(test)]

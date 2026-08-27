@@ -56,7 +56,7 @@ def custo_ctx(browser, space_id):
         f"SELECT player_id FROM players_proj WHERE team_id = '{team_id}' "
         "AND membership = 'Active' ORDER BY player_id"
     )
-    assert len(joueurs) >= 9, f"{len(joueurs)} joueurs seulement dans {team_id}"
+    assert len(joueurs) >= 10, f"{len(joueurs)} joueurs seulement dans {team_id}"
     return {"space_id": space_id, "team_id": team_id, "joueurs": joueurs}
 
 
@@ -112,6 +112,19 @@ def _valeur(player_id: str) -> int:
 
 def _tv(team_id: str) -> int:
     return int(query_db(f"SELECT team_value FROM team_proj WHERE team_id = '{team_id}'")[0])
+
+
+def _customisations_appliquees(html: str) -> list[str]:
+    """Les identifiants listés par la section « Customisations appliquées ».
+
+    Lus dans le `hx-vals` du bouton de confirmation : c'est ce que le navigateur
+    enverrait, donc la seule preuve que la ligne est réellement retirable.
+    """
+    section = re.search(
+        r"Customisations appliquées(.*?)Modifications en attente", html, re.S
+    )
+    assert section, "section « Customisations appliquées » absente du panneau"
+    return re.findall(r'"customisation_id": "([^"]+)"', section.group(1))
 
 
 def _agilite_affichee(html: str) -> str:
@@ -412,6 +425,95 @@ def test_une_saisie_en_cours_est_retrouvee_apres_rechargement(custo_ctx):
 
 
 # ── Scénario 9 — plancher de prix ────────────────────────────────────────────
+
+
+def test_retirer_une_customisation_de_prix_defait_le_joueur_et_la_valeur_d_equipe(custo_ctx):
+    """Carte 413 — le retrait, de bout en bout.
+
+    Ce que ce test voit et qu'aucun test unitaire ne peut voir : que l'app event
+    de retrait **traverse réellement** vers `teams` et y déclenche le recalcul.
+    Le bras de `to_app_event` est vérifié unitairement, mais un publisher qui ne
+    saurait pas désérialiser le nouvel événement le laisserait tomber en
+    silence, et la valeur d'équipe resterait figée sans qu'une seule ligne
+    rougisse.
+    """
+    joueur = custo_ctx["joueurs"][9]
+    equipe = custo_ctx["team_id"]
+    valeur_avant, tv_avant = _valeur(joueur), _tv(equipe)
+
+    _muter(custo_ctx, joueur, "price/adjust", {"delta_kpo": 30})
+    requests.post(
+        _url(custo_ctx, joueur, "customisation/validate"),
+        data={"expected_version": _version(_panneau(custo_ctx, joueur).text)},
+        headers=HX, timeout=10,
+    )
+    _attendre(lambda: _valeur(joueur) == valeur_avant + 30, "le prix est appliqué")
+    _attendre(lambda: _tv(equipe) == tv_avant + 30, "la valeur d'équipe l'a suivi")
+
+    # La section liste la customisation, et le journal aussi.
+    panneau = _panneau(custo_ctx, joueur).text
+    appliquees = _customisations_appliquees(panneau)
+    assert len(appliquees) == 1, f"une seule customisation attendue : {appliquees}"
+    journal = requests.get(
+        _url(custo_ctx, joueur, "widgets/evolution-journal"), timeout=10
+    ).text
+    assert "Prix ajusté" in journal, "le journal porte la customisation avant son retrait"
+
+    retrait = requests.post(
+        _url(custo_ctx, joueur, "customisation/applied/remove"),
+        data={"customisation_id": appliquees[0]},
+        headers=HX, timeout=10,
+    )
+    assert retrait.status_code == 200, retrait.text[:200]
+
+    # Le joueur **et** l'équipe reviennent — c'est la demande de la carte.
+    _attendre(lambda: _valeur(joueur) == valeur_avant, "la valeur du joueur est défaite")
+    _attendre(lambda: _tv(equipe) == tv_avant, "la valeur d'équipe est défaite")
+
+    # Et la customisation a disparu des deux vues, sans laisser de ligne
+    # « retirée » derrière elle : l'event store la garde, l'écran non.
+    panneau = _panneau(custo_ctx, joueur).text
+    assert _customisations_appliquees(panneau) == []
+    assert "Ce joueur n'a aucune customisation." in panneau
+    journal = requests.get(
+        _url(custo_ctx, joueur, "widgets/evolution-journal"), timeout=10
+    ).text
+    assert "Prix ajusté" not in journal, "la customisation retirée quitte le journal"
+
+    # Un second envoi du même identifiant ne reprend rien : la customisation a
+    # quitté le flux effectif, aucune garde d'écran n'a eu à y penser.
+    rejoue = requests.post(
+        _url(custo_ctx, joueur, "customisation/applied/remove"),
+        data={"customisation_id": appliquees[0]},
+        headers=HX, timeout=10,
+    )
+    assert rejoue.status_code == 200
+    assert _valeur(joueur) == valeur_avant, "un second retrait ne doit rien reprendre"
+
+
+def test_un_membre_simple_ne_peut_pas_retirer_une_customisation(custo_ctx):
+    """Masquer un bouton n'est pas un contrôle d'accès — le `POST` est gardé.
+
+    L'identifiant est délibérément **inexistant** : un refus de droit doit
+    précéder toute recherche, donc rendre `403` et non `200`. Sous l'identité
+    admin, la même requête rend `200` — c'est la contre-épreuve, sans laquelle
+    un `403` dû à une URL fautive se lirait comme un refus d'autorisation.
+    """
+    joueur = custo_ctx["joueurs"][9]
+
+    refus = requests.post(
+        _url(custo_ctx, joueur, "customisation/applied/remove"),
+        data={"customisation_id": "01ARZ3NDEKTSV4RRFFQ69G5FAV"},
+        headers={**HX, **ENTETE_MEMBRE_SIMPLE}, timeout=10,
+    )
+    assert refus.status_code == 403, f"membre simple : {refus.status_code}"
+
+    admin = requests.post(
+        _url(custo_ctx, joueur, "customisation/applied/remove"),
+        data={"customisation_id": "01ARZ3NDEKTSV4RRFFQ69G5FAV"},
+        headers=HX, timeout=10,
+    )
+    assert admin.status_code == 200, f"DevCoach : {admin.status_code}"
 
 
 def test_un_prix_sous_zero_est_refuse(custo_ctx):

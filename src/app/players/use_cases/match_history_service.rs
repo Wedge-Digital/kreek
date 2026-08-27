@@ -111,7 +111,10 @@ fn event_match_report_id(event: &PlayerDomainEvent) -> Option<String> {
         | PlayerDomainEvent::PlayerValueCustomised { .. }
         // Correction de migration, rattachée à aucun match.
         | PlayerDomainEvent::PlayerValueRecalibrated { .. }
-        | PlayerDomainEvent::PlayerSppCustomised { .. } => None,
+        | PlayerDomainEvent::PlayerSppCustomised { .. }
+        // Le retrait d'une customisation n'appartient pas plus à un match que
+        // la customisation qu'il défait.
+        | PlayerDomainEvent::PlayerCustomisationReverted { .. } => None,
     }
 }
 
@@ -176,7 +179,8 @@ fn apply_event(entry: &mut MatchHistoryEntry, event: &PlayerDomainEvent) {
         | PlayerDomainEvent::PlayerValueCustomised { .. }
         // Correction de migration, rattachée à aucun match.
         | PlayerDomainEvent::PlayerValueRecalibrated { .. }
-        | PlayerDomainEvent::PlayerSppCustomised { .. } => {}
+        | PlayerDomainEvent::PlayerSppCustomised { .. }
+        | PlayerDomainEvent::PlayerCustomisationReverted { .. } => {}
     }
 }
 

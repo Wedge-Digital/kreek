@@ -1,5 +1,5 @@
 use crate::app::players::domain::error::DomainError;
-use crate::app::players::domain::events::PlayerDomainEvent;
+use crate::app::players::domain::events::{PlayerDomainEvent, UndoEffect};
 use crate::app::players::domain::match_impact::{
     CasualtyCount, FoulCount, InjuryType, InterceptionCount, MatchContext, MatchReportId,
     MatchesPlayedCount, MvpCount, PassCount, PersistentInjuryCount, PlayerInjuryRecord,
@@ -612,6 +612,55 @@ impl Player {
                 player.version += 1;
                 Some(player)
             }
+            PlayerDomainEvent::PlayerCustomisationReverted { undo, .. } => {
+                let mut player = current?;
+                Self::appliquer_retrait(&mut player, undo);
+                player.version += 1;
+                Some(player)
+            }
+        }
+    }
+
+    /// Défait une customisation sur l'état courant.
+    ///
+    /// Hors de `apply` pour tenir la limite de vingt lignes, et parce que les
+    /// quatre formes n'ont rien en commun qu'un `match`.
+    fn appliquer_retrait(player: &mut Self, undo: &UndoEffect) {
+        match undo {
+            // Retrait par `skill_id` **et** mode : un joueur pourrait un jour
+            // porter la même compétence achetée et offerte, et c'est l'offerte
+            // qu'on retire.
+            UndoEffect::Skill { skill_id } => {
+                if let Some(rang) = player
+                    .acquired_skills
+                    .iter()
+                    .position(|s| s.skill_id == *skill_id && s.mode == AcquisitionMode::Customised)
+                {
+                    player.acquired_skills.remove(rang);
+                }
+            }
+            // Le couple (caractéristique, offset) suffit : deux customisations
+            // identiques sont interchangeables, retirer l'une ou l'autre donne
+            // le même joueur.
+            UndoEffect::Stat { stat, offset } => {
+                if let Some(rang) = player
+                    .stat_customisations
+                    .iter()
+                    .position(|c| c.stat == *stat && c.offset == *offset)
+                {
+                    player.stat_customisations.remove(rang);
+                }
+            }
+            // Posée telle quelle : c'est une valeur absolue, calculée par rejeu.
+            // Y voir un delta réintroduirait le défaut d'écrêtage que cette
+            // forme existe pour éviter.
+            UndoEffect::Value { value_after } => player.value = *value_after,
+            // `saturating_sub` par prudence seule : le domaine refuse le retrait
+            // quand la réserve est insuffisante, et la soustraction ne peut donc
+            // pas passer sous zéro.
+            UndoEffect::Spp { amount } => {
+                player.spp = Spp(player.spp.0.saturating_sub(amount.into_inner() as u32));
+            }
         }
     }
 
@@ -1015,6 +1064,43 @@ impl Player {
             team_id: self.team_id.clone(),
             customisation_id,
             amount,
+            author,
+        })
+    }
+
+    /// Retire une customisation appliquée.
+    ///
+    /// **Une seule garde, et elle ne vise que les SPP.** Un commissaire offre 10
+    /// SPP, le coach en dépense 12 : retirer l'offre mettrait le joueur à −2. On
+    /// refuse plutôt que d'écrêter en silence ou de casser en cascade les
+    /// améliorations déjà payées — le commissaire voit pourquoi et décide.
+    ///
+    /// Les trois autres formes ne se refusent jamais : retirer une compétence,
+    /// une caractéristique ou un ajustement de prix ne peut mettre le joueur
+    /// dans aucun état impossible.
+    ///
+    /// L'`undo` arrive **construit** : ni `acquired_skills` ni
+    /// `stat_customisations` ne portent de `customisation_id`, l'agrégat ne sait
+    /// donc pas retrouver ce qu'il faut défaire. C'est le use case qui le lit
+    /// dans le flux ; l'agrégat juge et enregistre.
+    pub fn revert_customisation(
+        &self,
+        customisation_id: CustomisationId,
+        undo: UndoEffect,
+        author: String,
+    ) -> Result<PlayerDomainEvent, DomainError> {
+        if let UndoEffect::Spp { amount } = &undo {
+            let offerts = amount.into_inner() as u32;
+            let restants = self.spp_remaining();
+            if restants < offerts {
+                return Err(DomainError::CustomisationSppSpent { restants, offerts });
+            }
+        }
+        Ok(PlayerDomainEvent::PlayerCustomisationReverted {
+            player_id: self.id.clone(),
+            team_id: self.team_id.clone(),
+            customisation_id,
+            undo,
             author,
         })
     }
@@ -2088,5 +2174,309 @@ mod customisation_tests {
         assert!(SppAmount::try_new(101).is_err());
         assert!(CustomisationId::try_new(String::new()).is_err());
         assert!(BasketLineId::try_new(String::new()).is_err());
+    }
+}
+
+#[cfg(test)]
+mod revert_customisation_tests {
+    use super::*;
+    use crate::app::players::domain::customisations::{
+        appliquees, flux_effectif, trouver, undo_pour, FamilleCustomisation, MotifBlocage,
+    };
+    use crate::app::players::domain::value_objects::StatCrans;
+
+    fn cid(v: &str) -> CustomisationId {
+        CustomisationId::try_new(v.to_string()).unwrap()
+    }
+
+    fn cree(valeur: u32, spp: u32) -> PlayerDomainEvent {
+        PlayerDomainEvent::PlayerCreated {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            space_id: SpaceId::new(),
+            position_name: PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
+            roster_line_id: RosterLineId::try_new("BLITZER".to_string()).unwrap(),
+            jersey: Some(JerseyVo::try_new(7).unwrap()),
+            base_skills: vec![],
+            starting_spp: Spp(spp),
+            starting_value: ValueKpo(valeur),
+        }
+    }
+
+    fn prix(id: &str, delta: i32) -> PlayerDomainEvent {
+        PlayerDomainEvent::PlayerValueCustomised {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            customisation_id: cid(id),
+            delta: KpoDelta::try_new(delta).unwrap(),
+            author: "BigBoss".into(),
+        }
+    }
+
+    fn spp_offerts(id: &str, montant: u8) -> PlayerDomainEvent {
+        PlayerDomainEvent::PlayerSppCustomised {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            customisation_id: cid(id),
+            amount: SppAmount::try_new(montant).unwrap(),
+            author: "BigBoss".into(),
+        }
+    }
+
+    fn competence_offerte(id: &str, skill: &str) -> PlayerDomainEvent {
+        PlayerDomainEvent::PlayerSkillCustomised {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            customisation_id: cid(id),
+            skill_id: SkillId::try_new(skill.to_string()).unwrap(),
+            skill_name: SkillName::try_new("Bloc".to_string()).unwrap(),
+            author: "BigBoss".into(),
+        }
+    }
+
+    fn caracteristique(id: &str, stat: StatKind, crans: i8) -> PlayerDomainEvent {
+        let j = Player::from_events(&[cree(100, 0)]).unwrap();
+        let event = j
+            .customise_stat(
+                cid(id),
+                stat,
+                StatCrans::try_new(crans).unwrap(),
+                "BigBoss".into(),
+            )
+            .unwrap();
+        event
+    }
+
+    /// Rejoue un flux et retire une customisation, comme le fait le use case.
+    fn retirer(flux: &[PlayerDomainEvent], id: &str) -> Result<PlayerDomainEvent, DomainError> {
+        let joueur = Player::from_events(flux).unwrap();
+        let visee = trouver(flux, &cid(id)).expect("la customisation doit être trouvable");
+        let effectif: Vec<PlayerDomainEvent> = flux_effectif(flux, Some(&cid(id)))
+            .into_iter()
+            .cloned()
+            .collect();
+        let valeur = Player::from_events(&effectif).unwrap().value;
+        let undo = undo_pour(visee, valeur).unwrap();
+        joueur.revert_customisation(cid(id), undo, "BigBoss".into())
+    }
+
+    /// Rejoue le flux **avec** le retrait, et rend le joueur obtenu.
+    fn apres_retrait(flux: &[PlayerDomainEvent], id: &str) -> Player {
+        let retrait = retirer(flux, id).expect("le retrait doit être accepté");
+        let mut complet = flux.to_vec();
+        complet.push(retrait);
+        Player::from_events(&complet).unwrap()
+    }
+
+    #[test]
+    fn retirer_une_competence_la_sort_de_l_effectif_sans_toucher_aux_spp() {
+        let flux = vec![cree(100, 6), competence_offerte("c1", "BLOCK")];
+        let avant = Player::from_events(&flux).unwrap();
+        assert_eq!(avant.acquired_skills.len(), 1);
+
+        let j = apres_retrait(&flux, "c1");
+
+        assert!(
+            j.acquired_skills.is_empty(),
+            "la compétence a quitté l'effectif"
+        );
+        assert_eq!(j.spp.0, 6, "une compétence offerte n'avait rien coûté");
+        assert_eq!(j.value, ValueKpo(100), "et n'avait rien ajouté à la valeur");
+    }
+
+    #[test]
+    fn retirer_une_caracteristique_efface_son_offset_sans_toucher_a_la_valeur() {
+        let flux = vec![cree(100, 0), caracteristique("c1", StatKind::Ag, 1)];
+        assert_eq!(
+            Player::from_events(&flux)
+                .unwrap()
+                .stat_customisations
+                .len(),
+            1
+        );
+
+        let j = apres_retrait(&flux, "c1");
+
+        assert!(j.stat_customisations.is_empty());
+        assert_eq!(j.value, ValueKpo(100));
+    }
+
+    /// **Le cas que la valeur absolue existe pour couvrir.**
+    ///
+    /// 30 kPo, un −50 appliqué : `apply` écrête à 0. Rendre +50 donnerait 50,
+    /// soit 20 de plus qu'avant. Le rejeu, lui, donne 30.
+    #[test]
+    fn retirer_un_prix_apres_ecretage_rend_la_valeur_d_avant_et_non_le_delta_inverse() {
+        let flux = vec![cree(30, 0), prix("c1", -50)];
+        assert_eq!(
+            Player::from_events(&flux).unwrap().value,
+            ValueKpo(0),
+            "l'écrêtage a bien eu lieu"
+        );
+
+        let j = apres_retrait(&flux, "c1");
+
+        assert_eq!(
+            j.value,
+            ValueKpo(30),
+            "et non 50, qu'un delta inverse aurait donné"
+        );
+    }
+
+    /// **Le cas que le flux effectif existe pour couvrir.**
+    ///
+    /// Retirer le seul événement visé ne suffit pas : le retrait de `c2` a posé
+    /// une valeur *absolue*, calculée quand `c1` existait encore. La rejouer
+    /// telle quelle rendrait 150 — la valeur courante — et le second retrait
+    /// serait un no-op silencieux.
+    #[test]
+    fn deux_retraits_de_prix_successifs_partent_chacun_de_l_etat_reel() {
+        let flux = vec![cree(100, 0), prix("c1", 50), prix("c2", 30)];
+        assert_eq!(Player::from_events(&flux).unwrap().value, ValueKpo(180));
+
+        let retrait_c2 = retirer(&flux, "c2").unwrap();
+        let mut flux = flux;
+        flux.push(retrait_c2);
+        assert_eq!(Player::from_events(&flux).unwrap().value, ValueKpo(150));
+
+        let j = apres_retrait(&flux, "c1");
+
+        assert_eq!(
+            j.value,
+            ValueKpo(100),
+            "le second retrait doit défaire c1, pas reposer la valeur d'après c2"
+        );
+    }
+
+    #[test]
+    fn retirer_des_spp_avec_reserve_suffisante_les_soustrait() {
+        let flux = vec![cree(100, 4), spp_offerts("c1", 10)];
+        assert_eq!(Player::from_events(&flux).unwrap().spp.0, 14);
+
+        let j = apres_retrait(&flux, "c1");
+
+        assert_eq!(j.spp.0, 4);
+    }
+
+    /// Le commissaire offre 10 SPP, le coach en dépense assez pour qu'il n'en
+    /// reste que 3. Retirer l'offre mettrait le joueur en négatif.
+    #[test]
+    fn retirer_des_spp_deja_depenses_est_refuse_et_ne_produit_aucun_evenement() {
+        let flux = vec![
+            cree(100, 4),
+            spp_offerts("c1", 10),
+            PlayerDomainEvent::PlayerSkillPurchased {
+                player_id: PlayerId("p1".into()),
+                team_id: TeamId("t1".into()),
+                skill_id: SkillId::try_new("BLOCK".to_string()).unwrap(),
+                skill_name: SkillName::try_new("Bloc".to_string()).unwrap(),
+                category_css: "general".into(),
+                mode: AcquisitionMode::Chosen,
+                spp_cost: SppCost::try_new(11).unwrap(),
+                value_delta: ValueKpo(20),
+            },
+        ];
+        assert_eq!(Player::from_events(&flux).unwrap().spp_remaining(), 3);
+
+        let issue = retirer(&flux, "c1");
+
+        match issue {
+            Err(DomainError::CustomisationSppSpent { restants, offerts }) => {
+                assert_eq!(
+                    (restants, offerts),
+                    (3, 10),
+                    "le motif nomme les deux nombres"
+                );
+            }
+            autre => panic!("le retrait devait être refusé : {autre:?}"),
+        }
+    }
+
+    #[test]
+    fn un_identifiant_inconnu_ne_se_trouve_pas() {
+        let flux = vec![cree(100, 0), prix("c1", 50)];
+        assert!(trouver(&flux, &cid("jamais-vue")).is_none());
+    }
+
+    /// Un second retrait du même identifiant se refuse **sans garde dédiée** :
+    /// la customisation a quitté le flux effectif.
+    #[test]
+    fn une_customisation_deja_retiree_ne_se_trouve_plus() {
+        let flux = vec![cree(100, 0), prix("c1", 50)];
+        let retrait = retirer(&flux, "c1").unwrap();
+        let mut flux = flux;
+        flux.push(retrait);
+
+        assert!(trouver(&flux, &cid("c1")).is_none());
+    }
+
+    /// C'est ce qui la fait disparaître du journal comme du panneau.
+    #[test]
+    fn une_customisation_retiree_quitte_la_liste_des_appliquees() {
+        let flux = vec![cree(100, 0), prix("c1", 50), prix("c2", 30)];
+        let joueur = Player::from_events(&flux).unwrap();
+        assert_eq!(appliquees(&flux, &joueur).len(), 2);
+
+        let retrait = retirer(&flux, "c1").unwrap();
+        let mut flux = flux;
+        flux.push(retrait);
+        let joueur = Player::from_events(&flux).unwrap();
+
+        let restantes = appliquees(&flux, &joueur);
+        assert_eq!(restantes.len(), 1);
+        assert_eq!(restantes[0].id, cid("c2"));
+    }
+
+    #[test]
+    fn la_liste_porte_l_auteur_et_le_motif_de_blocage() {
+        let flux = vec![
+            cree(100, 0),
+            spp_offerts("c1", 10),
+            PlayerDomainEvent::PlayerSkillPurchased {
+                player_id: PlayerId("p1".into()),
+                team_id: TeamId("t1".into()),
+                skill_id: SkillId::try_new("BLOCK".to_string()).unwrap(),
+                skill_name: SkillName::try_new("Bloc".to_string()).unwrap(),
+                category_css: "general".into(),
+                mode: AcquisitionMode::Chosen,
+                spp_cost: SppCost::try_new(8).unwrap(),
+                value_delta: ValueKpo(20),
+            },
+        ];
+        let joueur = Player::from_events(&flux).unwrap();
+
+        let lignes = appliquees(&flux, &joueur);
+
+        assert_eq!(lignes.len(), 1);
+        assert_eq!(lignes[0].auteur, "BigBoss");
+        assert!(matches!(
+            lignes[0].famille,
+            FamilleCustomisation::Spp { .. }
+        ));
+        assert_eq!(
+            lignes[0].blocage,
+            Some(MotifBlocage::SppDepenses {
+                restants: 2,
+                offerts: 10
+            })
+        );
+    }
+
+    /// Seul le retrait d'un **prix** franchit la frontière du BC — les trois
+    /// autres restent dans `players`, comme leurs customisations d'origine.
+    #[test]
+    fn seul_le_retrait_d_un_prix_produit_un_app_event() {
+        let flux = vec![
+            cree(100, 6),
+            prix("c1", 50),
+            competence_offerte("c2", "BLOCK"),
+            caracteristique("c3", StatKind::Ag, 1),
+            spp_offerts("c4", 10),
+        ];
+
+        assert!(retirer(&flux, "c1").unwrap().to_app_event().is_some());
+        assert!(retirer(&flux, "c2").unwrap().to_app_event().is_none());
+        assert!(retirer(&flux, "c3").unwrap().to_app_event().is_none());
+        assert!(retirer(&flux, "c4").unwrap().to_app_event().is_none());
     }
 }

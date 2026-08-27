@@ -14,6 +14,10 @@ use crate::app::auth::auth_backend::AuthSession;
 use crate::app::players::domain::customisation_basket::{
     is_expired, ActionState, CustomisationBasket, CustomisationLine,
 };
+use crate::app::players::domain::customisations::{
+    appliquees, CustomisationAppliquee, FamilleCustomisation, MotifBlocage,
+};
+use crate::app::players::domain::events::PlayerDomainEvent;
 use crate::app::players::domain::match_impact::StatKind;
 use crate::app::players::domain::player::{Player, PlayerId};
 use crate::app::players::io::web::customisation_access::autoriser;
@@ -56,6 +60,10 @@ pub enum RefusalTarget {
     /// Refus non rattaché à un clic : la revalidation d'ensemble à la
     /// validation, qui juge des lignes ajoutées bien plus tôt.
     Pending,
+    /// Le retrait d'une customisation déjà appliquée. Distinct de `Pending` :
+    /// les deux sections se suivent à l'écran, et un message posé dans la
+    /// mauvaise accuserait la mauvaise ligne.
+    Applied,
 }
 
 pub struct RefusalVm {
@@ -93,6 +101,7 @@ pub struct CustomisationUrlsVm {
     pub adjust_price: String,
     pub add_spp: String,
     pub remove_line: String,
+    pub remove_applied: String,
     pub validate: String,
     pub cancel: String,
 }
@@ -106,10 +115,31 @@ impl CustomisationUrlsVm {
             adjust_price: c.customisation_adjust_price(space_id, player_id),
             add_spp: c.customisation_add_spp(space_id, player_id),
             remove_line: c.customisation_remove_line(space_id, player_id),
+            remove_applied: c.customisation_remove_applied(space_id, player_id),
             validate: c.customisation_validate(space_id, player_id),
             cancel: c.customisation_cancel(space_id, player_id),
         }
     }
+}
+
+/// Une customisation déjà appliquée, telle que la section la montre.
+pub struct AppliedCustomisationVm {
+    pub id: String,
+    /// « Prix ajusté », « Compétence offerte — Bloc », …
+    pub label: String,
+    /// La colonne d'effet : « +7 000 Po », « compétence », « +1 AG ».
+    pub effect: String,
+    /// Le commissaire qui l'a posée. **Sans date** : `find_events_by_id` ne
+    /// rend pas `occurred_at`, et l'exposer demanderait d'élargir le port pour
+    /// une colonne d'affichage.
+    pub author: String,
+    /// Ce que la confirmation annonce, dans les termes du joueur — ils diffèrent
+    /// d'une famille à l'autre, et c'est tout l'intérêt de les écrire.
+    pub undo_text: String,
+    pub removable: bool,
+    /// Le motif du blocage, sous la croix grisée. Une croix qui disparaît
+    /// laisse croire à un bug ; une croix grise qui s'explique enseigne la règle.
+    pub block_reason: Option<String>,
 }
 
 pub struct CustomisationVm {
@@ -119,6 +149,7 @@ pub struct CustomisationVm {
     pub stats: Vec<StatCardVm>,
     pub price_kpo: u32,
     pub spp_earned: u32,
+    pub applied: Vec<AppliedCustomisationVm>,
     pub pending: Vec<PendingLineVm>,
     /// Le refus est **réparti** ici plutôt que porté tel quel : le template
     /// affiche du texte, il ne fait pas correspondre une cible à une carte.
@@ -126,6 +157,7 @@ pub struct CustomisationVm {
     pub refusal_price: Option<String>,
     pub refusal_spp: Option<String>,
     pub refusal_pending: Option<String>,
+    pub refusal_applied: Option<String>,
     pub urls: CustomisationUrlsVm,
     /// Version du panier, embarquée dans chaque geste : c'est la garde
     /// d'écriture concurrente, et le panneau est re-rendu à chaque action —
@@ -286,6 +318,119 @@ fn pending_label(line: &CustomisationLine, catalog: &dyn ISkillCatalogPort) -> S
     }
 }
 
+/// Les customisations déjà appliquées, telles que la section les montre.
+///
+/// La liste vient du **flux effectif** (`domain::customisations`) : une
+/// customisation retirée n'y figure plus, ce qui interdit de la retirer deux
+/// fois sans qu'aucune garde d'écran n'ait à y penser.
+fn build_applied(
+    events: &[PlayerDomainEvent],
+    player: &Player,
+    catalog: &dyn ISkillCatalogPort,
+) -> Vec<AppliedCustomisationVm> {
+    appliquees(events, player)
+        .into_iter()
+        .map(|c| ligne_appliquee(c, catalog))
+        .collect()
+}
+
+fn ligne_appliquee(
+    c: CustomisationAppliquee,
+    catalog: &dyn ISkillCatalogPort,
+) -> AppliedCustomisationVm {
+    let (label, effect, undo_text) = description(&c.famille, catalog);
+    AppliedCustomisationVm {
+        id: c.id.as_ref().to_string(),
+        label,
+        effect,
+        author: c.auteur,
+        undo_text,
+        removable: c.blocage.is_none(),
+        block_reason: c.blocage.map(motif),
+    }
+}
+
+/// Libellé, effet, et **ce que le retrait annonce** — les trois d'un coup,
+/// parce qu'ils se rédigent ensemble et qu'aucun ne se déduit des autres.
+///
+/// Les phrases de retrait diffèrent d'une famille à l'autre, et c'est le sujet :
+/// « aucun SPP n'est rendu » n'a de sens que pour une compétence, « sa valeur ne
+/// bouge pas » que pour une caractéristique.
+fn description(
+    famille: &FamilleCustomisation,
+    catalog: &dyn ISkillCatalogPort,
+) -> (String, String, String) {
+    match famille {
+        FamilleCustomisation::Skill { skill_id, nom } => {
+            let nom = catalog
+                .find_skill(skill_id.as_ref())
+                .map(|s| s.name)
+                .unwrap_or_else(|| nom.as_ref().to_string());
+            (
+                format!("Compétence offerte — {nom}"),
+                "compétence".to_string(),
+                format!(
+                    "Le joueur perdra la compétence {nom}. Aucun SPP n'est rendu : \
+                     elle n'en avait pas coûté."
+                ),
+            )
+        }
+        FamilleCustomisation::Stat { stat, offset } => {
+            let court = libelle_court(*stat);
+            let signe_offset = signe(*offset as i16);
+            (
+                format!("Caractéristique — {court} {signe_offset}"),
+                format!("{court} {signe_offset}"),
+                format!(
+                    "Le joueur perdra ce {signe_offset} de {court}. Sa valeur ne bouge pas : \
+                     une caractéristique customisée n'en ajoute aucune."
+                ),
+            )
+        }
+        // **Le sens de la phrase dépend du signe.** Retirer un ajustement
+        // *positif* fait perdre de la valeur ; retirer un ajustement *négatif*
+        // la rend. Une phrase unique dirait le contraire de la vérité une fois
+        // sur deux, et « perdra ces −25 kPo » ne veut rien dire.
+        FamilleCustomisation::Value { delta } => {
+            let brut = delta.into_inner();
+            let montant = brut.unsigned_abs();
+            let phrase = match brut >= 0 {
+                true => format!("Le joueur perdra les {montant} kPo que cette customisation lui avait ajoutés"),
+                false => format!("Le joueur retrouvera les {montant} kPo que cette customisation lui avait retirés"),
+            };
+            (
+                "Prix ajusté".to_string(),
+                format!("{} kPo", signe(brut as i16)),
+                format!("{phrase}, et la valeur d'équipe sera recalculée."),
+            )
+        }
+        FamilleCustomisation::Spp { amount } => {
+            let n = amount.into_inner();
+            (
+                "SPP offerts".to_string(),
+                format!("+{n} SPP"),
+                format!("Le joueur perdra ces {n} SPP."),
+            )
+        }
+    }
+}
+
+fn libelle_court(stat: StatKind) -> &'static str {
+    stat_display::ALL
+        .iter()
+        .find(|d| d.stat == stat)
+        .map(|d| d.label)
+        .unwrap_or("Caractéristique")
+}
+
+fn motif(blocage: MotifBlocage) -> String {
+    match blocage {
+        MotifBlocage::SppDepenses { restants, offerts } => {
+            format!("Ces SPP ont été dépensés — il n'en reste que {restants} sur {offerts}.")
+        }
+    }
+}
+
 fn stat_label(stat: StatKind, crans: i8) -> String {
     let sens = match crans > 0 {
         true => "Amélioration",
@@ -318,6 +463,7 @@ fn signe(v: i16) -> String {
 fn build_vm(
     player: &Player,
     basket: &CustomisationBasket,
+    events: &[PlayerDomainEvent],
     catalog: &dyn ISkillCatalogPort,
     routes: &AppRoutes,
     space_id: &str,
@@ -332,11 +478,13 @@ fn build_vm(
         stats: build_stats(basket, r),
         price_kpo: basket.effective_value().0,
         spp_earned: basket.effective_spp().0,
+        applied: build_applied(events, player, catalog),
         pending: build_pending(basket, catalog),
         refusal_skills: message_si(r, &RefusalTarget::Skills),
         refusal_price: message_si(r, &RefusalTarget::Price),
         refusal_spp: message_si(r, &RefusalTarget::Spp),
         refusal_pending: message_si(r, &RefusalTarget::Pending),
+        refusal_applied: message_si(r, &RefusalTarget::Applied),
         urls: CustomisationUrlsVm::from_routes(routes, space_id, player_id),
         version: basket.version().0,
     }
@@ -406,11 +554,27 @@ pub(crate) async fn rendre_panneau(
     refus: Option<RefusalVm>,
 ) -> Response {
     let catalog = state.players.skill_catalog.as_ref();
+    // Le flux brut **en plus** de l'agrégat : ni `acquired_skills` ni
+    // `stat_customisations` ne portent de `customisation_id`, le joueur hydraté
+    // ne sait donc pas dire d'où viennent ses customisations.
+    let events = match state
+        .players
+        .repository
+        .find_events_by_id(&PlayerId(player_id.to_string()))
+        .await
+    {
+        Ok(events) => events,
+        Err(e) => {
+            tracing::error!("player_customisation_widget flux {player_id}: {e:?}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
     match hydrater(state, player_id, catalog).await {
         Ok((basket, player)) => PlayerCustomisationTemplate {
             vm: build_vm(
                 &player,
                 &basket,
+                &events,
                 catalog,
                 &AppRoutes::default(),
                 space_id,
@@ -499,9 +663,10 @@ mod tests {
     use super::*;
     use crate::app::players::domain::customisation_basket::{BasketVersion, ResolvedStats};
     use crate::app::players::domain::events::PlayerDomainEvent;
-    use crate::app::players::domain::player::{Spp, TeamId, ValueKpo};
+    use crate::app::players::domain::player::{AcquisitionMode, Spp, TeamId, ValueKpo};
     use crate::app::players::domain::value_objects::{
-        KpoDelta, PositionNameVo, RosterLineId, SkillId, SppAmount, StatCrans,
+        CustomisationId, KpoDelta, PositionNameVo, RosterLineId, SkillId, SkillName, SppAmount,
+        SppCost, StatCrans,
     };
     use crate::app::references::io::repository::in_memory_reference_repository::InMemoryReferenceRepository;
     use crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter;
@@ -708,6 +873,7 @@ mod tests {
         let vm = build_vm(
             &joueur(),
             &p,
+            &[],
             &catalog,
             &AppRoutes::default(),
             "space1",
@@ -752,6 +918,7 @@ mod tests {
         let vm = build_vm(
             &joueur(),
             &p,
+            &[],
             &catalog,
             &AppRoutes::default(),
             "space1",
@@ -774,6 +941,7 @@ mod tests {
         let vm = build_vm(
             &joueur(),
             &p,
+            &[],
             &catalog,
             &AppRoutes::default(),
             "space1",
@@ -817,6 +985,7 @@ mod tests {
         let vm = build_vm(
             &joueur(),
             &p,
+            &[],
             &catalog,
             &AppRoutes::default(),
             "space1",
@@ -849,5 +1018,110 @@ mod tests {
         assert!(html.contains(">37</div>"));
         // La version voyage avec chaque geste.
         assert!(html.contains("\"expected_version\": \"3\""));
+    }
+
+    // ── Customisations appliquées (carte 413) ─────────────────────────────────
+
+    fn custo_prix(id: &str, delta: i32) -> PlayerDomainEvent {
+        PlayerDomainEvent::PlayerValueCustomised {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            customisation_id: CustomisationId::try_new(id.to_string()).unwrap(),
+            delta: KpoDelta::try_new(delta).unwrap(),
+            author: "BigBoss".into(),
+        }
+    }
+
+    /// **Le sens de la phrase suit le signe.** Une formulation unique dirait le
+    /// contraire de la vérité une fois sur deux : retirer un ajustement négatif
+    /// *rend* de la valeur au joueur, il n'en perd pas.
+    ///
+    /// Vu à l'écran avant d'être écrit ici — le panneau annonçait « perdra ces
+    /// +25 kPo », qui se serait lu « perdra ces −25 kPo » sur l'autre signe.
+    #[test]
+    fn le_retrait_d_un_prix_annonce_une_perte_ou_un_gain_selon_le_signe() {
+        let catalog = catalogue();
+        let joueur = joueur();
+
+        let hausse = build_applied(&[custo_prix("c1", 25)], &joueur, &catalog);
+        assert_eq!(hausse[0].effect, "+25 kPo");
+        assert!(
+            hausse[0]
+                .undo_text
+                .starts_with("Le joueur perdra les 25 kPo"),
+            "{}",
+            hausse[0].undo_text
+        );
+
+        let baisse = build_applied(&[custo_prix("c2", -25)], &joueur, &catalog);
+        assert_eq!(baisse[0].effect, "-25 kPo");
+        assert!(
+            baisse[0]
+                .undo_text
+                .starts_with("Le joueur retrouvera les 25 kPo"),
+            "{}",
+            baisse[0].undo_text
+        );
+        // Et jamais de signe accolé au montant dans la phrase : « perdra ces
+        // −25 kPo » ne veut rien dire.
+        for l in [&hausse[0], &baisse[0]] {
+            assert!(!l.undo_text.contains("-25"), "{}", l.undo_text);
+            assert!(!l.undo_text.contains("+25"), "{}", l.undo_text);
+        }
+    }
+
+    /// La croix grisée porte son motif, et le motif nomme les deux nombres.
+    #[test]
+    fn des_spp_depenses_bloquent_le_retrait_avec_leur_motif() {
+        let catalog = catalogue();
+        let offre = PlayerDomainEvent::PlayerSppCustomised {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            customisation_id: CustomisationId::try_new("c1".to_string()).unwrap(),
+            amount: SppAmount::try_new(10).unwrap(),
+            author: "BigBoss".into(),
+        };
+        // Le joueur part à 30 SPP ; l'offre le mène à 40, dont 38 dépensés.
+        let depense = PlayerDomainEvent::PlayerSkillPurchased {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            skill_id: SkillId::try_new("BLOCK".to_string()).unwrap(),
+            skill_name: SkillName::try_new("Bloc".to_string()).unwrap(),
+            category_css: "general".into(),
+            mode: AcquisitionMode::Chosen,
+            spp_cost: SppCost::try_new(38).unwrap(),
+            value_delta: ValueKpo(20),
+        };
+        let flux = vec![custo_prix("c0", 10), offre, depense];
+        let joueur = Player::from_events(&[
+            PlayerDomainEvent::PlayerCreated {
+                player_id: PlayerId("p1".into()),
+                team_id: TeamId("t1".into()),
+                space_id: SpaceId::new(),
+                position_name: PositionNameVo::try_new("Piétaille".to_string()).unwrap(),
+                roster_line_id: RosterLineId::try_new("DEMO_GRANIT__PIETAILLE".to_string())
+                    .unwrap(),
+                jersey: None,
+                base_skills: vec![],
+                starting_spp: Spp(30),
+                starting_value: ValueKpo(50),
+            },
+            flux[0].clone(),
+            flux[1].clone(),
+            flux[2].clone(),
+        ])
+        .unwrap();
+
+        let lignes = build_applied(&flux, &joueur, &catalog);
+
+        let spp = lignes.iter().find(|l| l.label == "SPP offerts").unwrap();
+        assert!(!spp.removable);
+        assert_eq!(
+            spp.block_reason.as_deref(),
+            Some("Ces SPP ont été dépensés — il n'en reste que 2 sur 10.")
+        );
+        // Le prix, lui, reste retirable : le blocage ne déborde pas.
+        let prix = lignes.iter().find(|l| l.label == "Prix ajusté").unwrap();
+        assert!(prix.removable && prix.block_reason.is_none());
     }
 }

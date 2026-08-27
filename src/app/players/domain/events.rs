@@ -262,6 +262,49 @@ pub enum PlayerDomainEvent {
         amount: SppAmount,
         author: String, // arch:ok
     },
+    /// Une customisation appliquée a été retirée par un commissaire.
+    ///
+    /// **Un fait, quatre formes.** Le nom dit ce qui s'est passé ; `undo` dit ce
+    /// que ça défait. Quatre événements distincts diraient quatre fois le même
+    /// fait, et le journal aurait à les rassembler.
+    ///
+    /// **L'événement porte ce qu'il faut pour défaire** : `apply` traite les
+    /// événements un par un, sans accès au reste du flux. Il ne peut pas
+    /// retrouver la customisation d'origine pour en déduire l'inverse.
+    PlayerCustomisationReverted {
+        player_id: PlayerId,
+        team_id: TeamId,
+        /// Celle qui est défaite. C'est aussi ce qui la fait disparaître des
+        /// vues : `flux_effectif` retire l'une et l'autre.
+        customisation_id: CustomisationId,
+        undo: UndoEffect,
+        author: String, // arch:ok
+    },
+}
+
+/// Ce qu'un retrait défait, selon la famille de la customisation visée.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum UndoEffect {
+    Skill {
+        skill_id: SkillId,
+    },
+    Stat {
+        stat: StatKind,
+        offset: i8, // arch:ok offset brut, celui-là même que l'événement d'origine portait
+    },
+    /// **Absolue, jamais un delta inverse.** `apply` fait
+    /// `value = max(value + delta, 0)` : un joueur à 30 kPo qui subit un −50
+    /// tombe à 0, pas à −20. Lui ajouter +50 pour défaire lui donnerait 50, soit
+    /// 20 de plus qu'avant — l'écrêtage n'est pas inversible.
+    ///
+    /// Même piège, même réponse que `PostMatchSequenceReverted` pour
+    /// `dedicated_fans`.
+    Value {
+        value_after: ValueKpo,
+    },
+    Spp {
+        amount: SppAmount,
+    },
 }
 
 impl PlayerDomainEvent {
@@ -292,6 +335,7 @@ impl PlayerDomainEvent {
             Self::PlayerValueCustomised { .. } => "PlayerValueCustomised",
             Self::PlayerValueRecalibrated { .. } => "PlayerValueRecalibrated",
             Self::PlayerSppCustomised { .. } => "PlayerSppCustomised",
+            Self::PlayerCustomisationReverted { .. } => "PlayerCustomisationReverted",
         }
     }
 
@@ -322,6 +366,20 @@ impl PlayerDomainEvent {
             // caractéristique et SPP customisés restent dans le BC.
             Self::PlayerValueCustomised {
                 player_id, team_id, ..
+            } => Some(PlayersAppEvent::PlayerValueCustomised {
+                team_id: team_id.0.clone(),
+                player_id: player_id.0.clone(),
+            }),
+            // Le retrait d'un **prix** rouvre la même frontière que le prix
+            // lui-même : l'app event ne porte que l'équipe et le joueur, et
+            // provoque un recalcul complet de la valeur d'équipe. Les trois
+            // autres formes de retrait restent dans le BC, comme leurs
+            // customisations d'origine.
+            Self::PlayerCustomisationReverted {
+                player_id,
+                team_id,
+                undo: UndoEffect::Value { .. },
+                ..
             } => Some(PlayersAppEvent::PlayerValueCustomised {
                 team_id: team_id.0.clone(),
                 player_id: player_id.0.clone(),

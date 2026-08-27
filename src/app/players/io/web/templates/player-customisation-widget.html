@@ -33,6 +33,10 @@
        onglets: ['skills', 'stats', 'price', 'spp'],
        activeTab: 'skills',
        skillSearch: '',
+       {# La confirmation en cours, s'il y en a une. Purement locale : le
+          panneau est re-rendu à chaque geste, elle repart donc toujours
+          fermée — ce qui est le bon défaut après un retrait. #}
+       confirmingId: null,
        init() {
          const demande = location.hash.replace('#custo-', '');
          if (this.onglets.includes(demande)) { this.activeTab = demande; }
@@ -204,6 +208,68 @@
         <div class="custo-refusal">{{ motif }}</div>
         {% endif %}
       </div>
+    </div>
+
+    {# ── Customisations déjà appliquées ──
+       Au-dessus des modifications en attente : on lit ce qui est en vigueur
+       avant ce qui est en train d'être saisi. #}
+    <div class="spp-summary custo-applied">
+      <div class="spp-summary-header">
+        <div class="spp-summary-title">Customisations appliquées</div>
+      </div>
+      {% if let Some(motif) = vm.refusal_applied %}
+      <div class="custo-refusal">{{ motif }}</div>
+      {% endif %}
+      {% if vm.applied.is_empty() %}
+      <div class="spp-empty-state">Ce joueur n'a aucune customisation.</div>
+      {% else %}
+      <table class="spp-summary-table">
+        <thead>
+          <tr><th>Customisation</th><th>Effet</th><th>Posée par</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for c in vm.applied %}
+          <tr>
+            <td>{{ c.label }}</td>
+            <td class="summary-value">{{ c.effect }}</td>
+            <td class="summary-ref">{{ c.author }}</td>
+            <td class="custo-applied-actions">
+              {# La croix reste **visible** quand elle est bloquée : disparue,
+                 elle laisserait croire à un défaut ; grise et expliquée, elle
+                 enseigne la règle. #}
+              <button class="custo-remove-btn" type="button"
+                      {% if !c.removable %}disabled{% endif %}
+                      @click="confirmingId = '{{ c.id }}'"
+                      title="{% if c.removable %}Retirer cette customisation{% else %}{{ c.block_reason.as_deref().unwrap_or("") }}{% endif %}">&times;</button>
+              {% if let Some(motif) = c.block_reason %}
+              <span class="custo-blocked-why">{{ motif }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {# La confirmation s'ouvre **sous la ligne**, pas en modale : ce qu'on
+             défait reste sous les yeux pendant qu'on décide. #}
+          <tr class="custo-confirm-row" x-show="confirmingId === '{{ c.id }}'" x-cloak>
+            <td colspan="4">
+              <div class="custo-confirm">
+                <div class="custo-confirm-text">
+                  Retirer cette customisation&nbsp;? <strong>{{ c.undo_text }}</strong>
+                </div>
+                <div class="custo-confirm-actions">
+                  <button class="custo-btn-sm custo-btn-sm--cancel" type="button"
+                          @click="confirmingId = null">Annuler</button>
+                  <button class="custo-btn-sm custo-btn-sm--confirm" type="button"
+                          hx-post="{{ vm.urls.remove_applied }}"
+                          hx-vals='{"customisation_id": "{{ c.id }}"}'
+                          hx-target="#pd-right-panel"
+                          hx-swap="outerHTML">Retirer</button>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
     </div>
 
     {# ── Modifications en attente ── #}

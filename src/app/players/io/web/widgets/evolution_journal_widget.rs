@@ -1,3 +1,4 @@
+use crate::app::players::domain::customisations::flux_effectif;
 use crate::app::players::domain::events::PlayerDomainEvent;
 use crate::app::players::domain::match_impact::MatchContext;
 use crate::app::players::domain::match_impact::StatKind;
@@ -46,8 +47,19 @@ pub struct EvolutionJournalVm {
 /// distinguer un bonus de création (`InitialSkillEarned`) d'un achat via les
 /// SPP (`PlayerSkillPurchased`) : une fois repliés dans `player.acquired_skills`,
 /// les deux events produisent une structure identique, sans champ d'origine.
+/// Le journal lit le **flux effectif** : une customisation retirée en disparaît,
+/// et son retrait avec elle.
+///
+/// L'event sourcing ne réécrit jamais l'histoire — les deux événements restent
+/// dans l'event store, où l'audit les retrouve. Mais le journal est une vue du
+/// joueur, pas de son dossier : y laisser une customisation qui ne s'applique
+/// plus, ou une ligne « retirée » qui répond à une ligne qu'on lit encore,
+/// raconterait deux fois ce qui n'a plus lieu.
 fn evolution_log_vm(events: &[PlayerDomainEvent]) -> Vec<EvolutionLogRowVm> {
-    events.iter().filter_map(evolution_log_row).collect()
+    flux_effectif(events, None)
+        .into_iter()
+        .filter_map(evolution_log_row)
+        .collect()
 }
 
 fn evolution_log_row(event: &PlayerDomainEvent) -> Option<EvolutionLogRowVm> {
@@ -278,8 +290,12 @@ pub async fn evolution_journal_widget(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::players::domain::events::UndoEffect;
     use crate::app::players::domain::player::TeamId;
-    use crate::app::players::domain::value_objects::{CustomisationId, SkillId, SkillName};
+    use crate::app::players::domain::player::ValueKpo;
+    use crate::app::players::domain::value_objects::{
+        CustomisationId, KpoDelta, SkillId, SkillName,
+    };
     use crate::app::shared_kernel::identity::ids::SpaceId;
 
     fn initial_skill_event() -> PlayerDomainEvent {
@@ -454,6 +470,47 @@ mod tests {
         }]);
 
         assert_eq!(lignes[0].value, "-300 kPo");
+    }
+
+    /// La conséquence de la carte 413 sur le journal : une customisation
+    /// retirée n'y laisse **aucune trace**, ni elle ni son retrait. La ligne
+    /// voisine, elle, reste — sans quoi le filtre effacerait trop.
+    #[test]
+    fn une_customisation_retiree_disparait_du_journal_avec_son_retrait() {
+        let (player_id, team_id, _) = ids();
+        let custo = |id: &str, delta: i32| PlayerDomainEvent::PlayerValueCustomised {
+            player_id: player_id.clone(),
+            team_id: team_id.clone(),
+            customisation_id: CustomisationId::try_new(id.to_string()).unwrap(),
+            delta: KpoDelta::try_new(delta).unwrap(),
+            author: "BigBoss".into(),
+        };
+
+        let flux = vec![
+            custo("c1", 50),
+            custo("c2", 30),
+            PlayerDomainEvent::PlayerCustomisationReverted {
+                player_id,
+                team_id,
+                customisation_id: CustomisationId::try_new("c1".to_string()).unwrap(),
+                undo: UndoEffect::Value {
+                    value_after: ValueKpo(100),
+                },
+                author: "BigBoss".into(),
+            },
+        ];
+
+        let lignes = evolution_log_vm(&flux);
+
+        let montants: Vec<&str> = lignes.iter().map(|l| l.value.as_str()).collect();
+        assert_eq!(lignes.len(), 1, "seule c2 subsiste : {montants:?}");
+        // Le montant, pas le libellé : les deux lignes s'appellent « Prix
+        // ajusté », et seule la colonne de valeur les distingue.
+        assert!(
+            lignes[0].value.contains("30"),
+            "c'est bien c2 : {}",
+            lignes[0].value
+        );
     }
 
     #[test]

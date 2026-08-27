@@ -16,6 +16,14 @@ pub enum DomainError {
     },
     NegativePlayerValue,
     BasketLineNotFound,
+    /// Le retrait viserait des SPP déjà convertis en compétence ou en
+    /// caractéristique. `restants` et `offerts` sont dans l'erreur parce que le
+    /// message les nomme : « il n'en reste que 3 sur 10 » enseigne la règle, là
+    /// où « SPP insuffisants » laisse chercher.
+    CustomisationSppSpent {
+        restants: u32,
+        offerts: u32,
+    },
 }
 
 impl fmt::Display for DomainError {
@@ -30,6 +38,10 @@ impl fmt::Display for DomainError {
             }
             Self::NegativePlayerValue => write!(f, "le prix ne peut pas être négatif"),
             Self::BasketLineNotFound => write!(f, "ligne de panier introuvable"),
+            Self::CustomisationSppSpent { restants, offerts } => write!(
+                f,
+                "ces SPP ont été dépensés — il n'en reste que {restants} sur {offerts}"
+            ),
         }
     }
 }

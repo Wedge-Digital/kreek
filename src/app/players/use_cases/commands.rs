@@ -114,3 +114,16 @@ pub struct ValidateCustomisationCommand {
 pub struct CancelCustomisationCommand {
     pub player_id: PlayerId,
 }
+
+/// Retrait d'une customisation déjà appliquée.
+///
+/// Pas d'`expected_version` : contrairement au panier, il n'y a rien à
+/// dénombrer avant d'agir. L'identifiant désigne une ligne précise, et un second
+/// retrait du même identifiant se refuse tout seul — la customisation a quitté
+/// le flux effectif.
+#[derive(Debug)]
+pub struct RevertCustomisationCommand {
+    pub player_id: PlayerId,
+    pub customisation_id: CustomisationId,
+    pub author: String, // arch:ok nom d'affichage du commissaire
+}
