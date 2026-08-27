@@ -1,0 +1,93 @@
+/* Erreurs coûteuses — l'écran du jet (carte 410).
+
+   Copiées de `rawpages/app-team-costly-mistakes.html`, et **scopées sous
+   `.costly-mistakes`** : le nom du fichier est le sélecteur de portée (axe 15 de
+   `check-arch`). Les huit sélecteurs de la maquette qui n'étaient pas en `.cm-`
+   — `.alert`, `.cta-primary`, `.meta-*`, `.demo-switcher` — sont restés
+   dehors : les trois premiers vivent déjà dans le global, le dernier n'existe
+   que pour la maquette. */
+
+.costly-mistakes { display: flex; flex-direction: column; gap: var(--p1); max-width: 900px; margin: 0 auto; }
+/* ── En-tête — repris de la page de renvois ───────────────────────────── */
+.costly-mistakes .cm-header {
+  background: var(--white); border-radius: 10px; padding: var(--p2);
+  border-top: 3px solid var(--role-risk);
+  display: flex; gap: var(--p2); align-items: center; flex-wrap: wrap;
+}
+.costly-mistakes .cm-header-logo {
+  width: 64px; height: 64px; border-radius: 10px; background: var(--role-action);
+  color: var(--white); font-family: var(--font-title); font-size: var(--h4);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.costly-mistakes .cm-header-info { flex: 1; min-width: 240px; }
+.costly-mistakes .cm-header-top  { display: flex; align-items: center; gap: var(--p1); margin-bottom: var(--p05); flex-wrap: wrap; }
+.costly-mistakes .cm-header-name { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-1); }
+.costly-mistakes .cm-phase-badge {
+  background: var(--tint-risk); color: var(--role-risk); border-radius: 20px;
+  padding: 4px 12px; font-size: var(--text-tiny); font-weight: 600;
+}
+.costly-mistakes .cm-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
+.costly-mistakes .cm-table th, .costly-mistakes .cm-table td { padding: 7px 10px; text-align: center; border-bottom: 1px solid var(--dark-5); }
+.costly-mistakes .cm-table th { color: var(--dark-3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+.costly-mistakes .cm-table th:first-child, .costly-mistakes .cm-table td:first-child { text-align: left; }
+.costly-mistakes .cm-table tr.current td { background: var(--tint-action); font-weight: 700; color: var(--dark-0); }
+.costly-mistakes .cm-table tr.current td:first-child { border-left: 3px solid var(--role-action); }
+.costly-mistakes .cm-table td.hit { background: var(--tint-risk); color: var(--role-risk); border-radius: 4px; }
+/* ── Le dé ────────────────────────────────────────────────────────────── */
+.costly-mistakes .cm-roll-zone { display: flex; flex-direction: column; align-items: center; gap: var(--p1); padding: var(--p2) 0; }
+.costly-mistakes .cm-die {
+  width: 96px; height: 96px; border-radius: 14px;
+  background: var(--white); border: 2px solid var(--dark-4);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-size: 44px; font-weight: 800; color: var(--dark-1);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.10);
+}
+.costly-mistakes .cm-die--rolling { animation: cm-shake 0.14s linear infinite; color: var(--dark-3); }
+.costly-mistakes .cm-die--done { border-color: var(--role-action); }
+.costly-mistakes .cm-roll-hint { font-size: var(--text-tiny); color: var(--dark-3); }
+.costly-mistakes .cm-btn-roll {
+  border: none; border-radius: 8px; padding: 12px 28px;
+  background: var(--role-action); color: var(--white);
+  font-size: var(--text-small); font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.costly-mistakes .cm-btn-roll:hover:not(:disabled) { background: var(--dark-1); }
+.costly-mistakes .cm-btn-roll:disabled { background: var(--dark-4); cursor: not-allowed; }
+/* ── Le résultat ──────────────────────────────────────────────────────── */
+.costly-mistakes .cm-result { display: none; flex-direction: column; gap: var(--p1); }
+.costly-mistakes .cm-result.shown { display: flex; }
+.costly-mistakes .cm-verdict {
+  border-radius: 10px; padding: var(--p2); display: flex; gap: var(--p1);
+  align-items: flex-start; border-left: 4px solid var(--dark-4);
+}
+.costly-mistakes .cm-verdict-icon { font-size: 30px; line-height: 1; flex-shrink: 0; }
+.costly-mistakes .cm-verdict-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 800; margin-bottom: 2px; }
+.costly-mistakes .cm-verdict-text { font-size: var(--text-small); color: var(--dark-2); }
+.costly-mistakes .cm-verdict--safe  { background: var(--tint-safe);    border-left-color: var(--role-safe); }
+.costly-mistakes .cm-verdict--safe  .cm-verdict-title { color: var(--role-safe); }
+.costly-mistakes .cm-verdict--minor { background: var(--tint-caution); border-left-color: var(--role-caution); }
+.costly-mistakes .cm-verdict--minor .cm-verdict-title { color: var(--role-caution); }
+.costly-mistakes .cm-verdict--major { background: var(--tint-risk);    border-left-color: var(--role-risk); }
+.costly-mistakes .cm-verdict--major .cm-verdict-title { color: var(--role-risk); }
+.costly-mistakes .cm-verdict--catastrophe { background: rgba(166,27,27,0.16); border-left-color: var(--role-risk); }
+.costly-mistakes .cm-verdict--catastrophe .cm-verdict-title { color: var(--role-risk); }
+/* Le calcul est montré en entier : un coach qui perd 340 kPo doit pouvoir
+   refaire l'opération sans demander à personne. */
+.costly-mistakes .cm-calc { display: flex; flex-direction: column; gap: 6px; }
+.costly-mistakes .cm-calc-line { display: flex; justify-content: space-between; gap: var(--p1); font-size: var(--text-small); }
+.costly-mistakes .cm-calc-label { color: var(--dark-2); }
+.costly-mistakes .cm-calc-value { font-weight: 600; color: var(--dark-1); white-space: nowrap; }
+.costly-mistakes .cm-calc-line--total { border-top: 1px solid var(--dark-5); padding-top: 8px; margin-top: 2px; }
+.costly-mistakes .cm-calc-line--total .cm-calc-label { font-weight: 700; color: var(--dark-0); }
+.costly-mistakes .cm-calc-line--total .cm-calc-value { font-weight: 800; color: var(--role-risk); }
+.costly-mistakes .cm-calc-line--rest .cm-calc-value { color: var(--role-action); font-weight: 800; }
+.costly-mistakes .cm-dice-detail {
+  display: inline-flex; gap: 4px; align-items: center;
+  font-family: var(--font-title); font-size: var(--text-tiny);
+  color: var(--dark-3); margin-left: 6px;
+}
+.costly-mistakes .cm-die-mini {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 4px;
+  border: 1px solid var(--dark-4); font-weight: 700; color: var(--dark-2);
+}
+.costly-mistakes .cm-footer { display: flex; justify-content: flex-end; }

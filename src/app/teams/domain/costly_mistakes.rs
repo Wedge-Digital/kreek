@@ -60,6 +60,51 @@ const TABLE: [Tranche; 6] = [
     },
 ];
 
+/// Les six tranches, telles qu'elles s'affichent — bornes et libellés de jets.
+///
+/// Rendues depuis la table elle-même : un tableau d'affichage écrit à part
+/// finirait par diverger de celui qui décide, et c'est précisément le genre
+/// d'écart qu'un coach ne peut pas contester.
+pub fn tranches_affichables() -> Vec<TrancheAffichee> {
+    TABLE
+        .iter()
+        .scan(SEUIL_ERREURS_COUTEUSES, |depuis, t| {
+            let min = *depuis;
+            *depuis = t.jusqu_a.saturating_add(1);
+            Some(TrancheAffichee {
+                min,
+                max: t.jusqu_a,
+                jets: t.par_jet,
+            })
+        })
+        .collect()
+}
+
+/// Une ligne de la table, prête à afficher.
+pub struct TrancheAffichee {
+    pub min: u32,
+    pub max: u32,
+    pub jets: [IncidentType; 6],
+}
+
+impl TrancheAffichee {
+    /// Les jets qui donnent cet incident, en « 2–6 », « 1 », ou « — ».
+    pub fn plage(&self, incident: IncidentType) -> String {
+        let jets: Vec<u8> = (1..=6u8)
+            .filter(|j| self.jets[(*j - 1) as usize] == incident)
+            .collect();
+        match jets.as_slice() {
+            [] => "—".to_string(),
+            [seul] => seul.to_string(),
+            [premier, .., dernier] => format!("{premier}–{dernier}"),
+        }
+    }
+
+    pub fn contient(&self, treasury: Kpo) -> bool {
+        treasury.0 >= self.min && treasury.0 <= self.max
+    }
+}
+
 /// L'incident que ce jet produit pour cette trésorerie.
 ///
 /// Sous le seuil, aucun — et sans panique : l'appelant peut interroger la table
@@ -217,6 +262,48 @@ mod tests {
     #[test]
     fn une_catastrophe_ne_rend_jamais_d_argent() {
         assert_eq!(loss_for(Kpo(100), Catastrophe, &[6, 6]), Kpo(0));
+    }
+
+    /// La table affichée est **rendue depuis celle qui décide**. Ce test la
+    /// confronte au règlement, colonne par colonne : c'est ce que le coach lit
+    /// pour vérifier que son résultat est juste.
+    #[test]
+    fn la_table_affichee_dit_la_meme_chose_que_celle_qui_decide() {
+        let attendu = [
+            (100, 199, "2–6", "1", "—", "—"),
+            (200, 299, "3–6", "1–2", "—", "—"),
+            (300, 399, "4–6", "2–3", "1", "—"),
+            (400, 499, "5–6", "3–4", "1–2", "—"),
+            (500, 599, "6", "4–5", "2–3", "1"),
+            (600, u32::MAX, "—", "5–6", "3–4", "1–2"),
+        ];
+        let tranches = tranches_affichables();
+        assert_eq!(tranches.len(), 6);
+        for (t, (min, max, sain, mineur, majeur, catastrophe)) in tranches.iter().zip(attendu) {
+            assert_eq!((t.min, t.max), (min, max), "bornes de la tranche {min}");
+            assert_eq!(t.plage(Aucun), sain, "crise évitée, tranche {min}");
+            assert_eq!(t.plage(Minor), mineur, "mineur, tranche {min}");
+            assert_eq!(t.plage(Major), majeur, "majeur, tranche {min}");
+            assert_eq!(
+                t.plage(Catastrophe),
+                catastrophe,
+                "catastrophe, tranche {min}"
+            );
+        }
+    }
+
+    #[test]
+    fn une_seule_tranche_contient_une_tresorerie_donnee() {
+        for tresorerie in [100, 197, 199, 200, 500, 599, 600, 10_000] {
+            let n = tranches_affichables()
+                .iter()
+                .filter(|t| t.contient(Kpo(tresorerie)))
+                .count();
+            assert_eq!(
+                n, 1,
+                "{tresorerie} kPo doit tomber dans exactement une tranche"
+            );
+        }
     }
 
     #[test]

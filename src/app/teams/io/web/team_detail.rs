@@ -178,6 +178,17 @@ impl BannerVm {
                     href: app_routes.teams.dismissals_page(space_id, &team_id),
                 }],
             }),
+            (Enrolled, Some(CostlyMistakes)) => Some(Self {
+                css_variant: "phase".into(),
+                icon: "💸".into(),
+                title: "Erreurs coûteuses.".into(),
+                detail: "Votre trésorerie attire les ennuis : un jet décide de ce qu'il en reste."
+                    .into(),
+                ctas: vec![BannerCtaVm::Navigate {
+                    label: "Lancer le dé →".into(),
+                    href: app_routes.teams.costly_mistakes_page(space_id, &team_id),
+                }],
+            }),
             _ => None,
         }
     }

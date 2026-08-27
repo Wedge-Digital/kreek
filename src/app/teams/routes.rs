@@ -19,6 +19,7 @@ pub mod path {
         "/app/{space_id}/teams/{team_id}/validate-recruitment-phase";
     pub const VALIDATE_DISMISSALS_PHASE: &str =
         "/app/{space_id}/teams/{team_id}/validate-dismissals-phase";
+    pub const COSTLY_MISTAKES_PAGE: &str = "/app/{space_id}/teams/{team_id}/costly-mistakes";
     pub const COSTLY_MISTAKES_ROLL: &str = "/app/{space_id}/teams/{team_id}/costly-mistakes/roll";
 
     // ── Recrutement ───────────────────────────────────────────────────────
@@ -120,6 +121,12 @@ impl Routes {
 
     pub fn validate_recruitment_phase(&self, space_id: &str, team_id: &str) -> String {
         path::VALIDATE_RECRUITMENT_PHASE
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+
+    pub fn costly_mistakes_page(&self, space_id: &str, team_id: &str) -> String {
+        path::COSTLY_MISTAKES_PAGE
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
     }
@@ -267,6 +274,7 @@ mod tests {
             ("improvement", r.validate_improvement_phase(SPACE, TEAM)),
             ("recruitment", r.validate_recruitment_phase(SPACE, TEAM)),
             ("dismissals", r.validate_dismissals_phase(SPACE, TEAM)),
+            ("costly_mistakes_page", r.costly_mistakes_page(SPACE, TEAM)),
             ("costly_mistakes_roll", r.costly_mistakes_roll(SPACE, TEAM)),
         ]
     }

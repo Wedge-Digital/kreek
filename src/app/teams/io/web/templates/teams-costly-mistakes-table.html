@@ -1,0 +1,15 @@
+{# Les six lignes de la table, partagées par la page et le fragment de résultat.
+
+   Le fragment la renvoie **entière** plutôt que de marquer une case par un
+   second échange : six lignes coûtent moins qu'un aller-retour, et un
+   `hx-swap-oob` visant un `<tbody>` demanderait un `<template>` — le parseur
+   HTML jette les `<tr>` orphelins. #}
+{%- for b in bands %}
+<tr{% if b.courante %} class="cm-band--current"{% endif %}>
+    <td>{{ b.label }}</td>
+    <td{% if b.touchee == "safe" %} class="cm-cell--hit"{% endif %}>{{ b.safe }}</td>
+    <td{% if b.touchee == "minor" %} class="cm-cell--hit"{% endif %}>{{ b.minor }}</td>
+    <td{% if b.touchee == "major" %} class="cm-cell--hit"{% endif %}>{{ b.major }}</td>
+    <td{% if b.touchee == "catastrophe" %} class="cm-cell--hit"{% endif %}>{{ b.catastrophe }}</td>
+</tr>
+{%- endfor %}

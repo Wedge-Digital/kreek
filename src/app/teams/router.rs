@@ -73,6 +73,10 @@ pub fn router() -> Router<AppState> {
             post(post_validate_dismissals_phase),
         )
         .route(
+            path::COSTLY_MISTAKES_PAGE,
+            get(crate::app::teams::io::web::costly_mistakes::get_costly_mistakes_page),
+        )
+        .route(
             path::COSTLY_MISTAKES_ROLL,
             post(crate::app::teams::io::web::costly_mistakes::post_costly_mistakes_roll),
         )

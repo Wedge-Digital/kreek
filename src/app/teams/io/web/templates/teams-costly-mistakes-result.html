@@ -1,0 +1,37 @@
+{# Le résultat du jet, injecté dans `#cm-result` par le composant qui tient
+   l'animation.
+
+   Le fragment **ne répète pas l'`id` de son conteneur** : injecté en
+   `innerHTML`, il le dupliquerait dans le DOM (piège documenté du CLAUDE.md).
+
+   Il renvoie aussi la table par un échange hors-cible, avec sa case atteinte :
+   le coach ne tire pas lui-même, et à défaut d'avoir prise sur le résultat il
+   doit pouvoir vérifier qu'il est juste. #}
+<div class="cm-verdict cm-verdict--{{ verdict_kind }}">
+    <span class="cm-verdict-icon">{{ verdict_icon }}</span>
+    <div>
+        <div class="cm-verdict-title">{{ verdict_title }}</div>
+        <div class="cm-verdict-text">{{ verdict_text }}</div>
+    </div>
+</div>
+
+<div class="cm-calc">
+{%- for ligne in calc %}
+    <div class="cm-calc-line{% if !ligne.kind.is_empty() %} cm-calc-line--{{ ligne.kind }}{% endif %}">
+        <span class="cm-calc-label">{{ ligne.label }}
+{%- if !ligne.dice.is_empty() %}
+            <span class="cm-dice-detail">
+{%- for de in ligne.dice %}<span class="cm-die-mini">{{ de }}</span>{% endfor %}
+            </span>
+{%- endif %}
+        </span>
+        <span class="cm-calc-value">{{ ligne.value }}</span>
+    </div>
+{%- endfor %}
+</div>
+
+{# `<template>` parce qu'un `<tr>` hors d'un tableau est jeté par le parseur.
+   htmx en extrait le contenu pour l'échange hors-cible. #}
+<template hx-swap-oob="innerHTML:#cm-table-body">
+{%- include "teams-costly-mistakes-table.html" %}
+</template>

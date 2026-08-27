@@ -1,0 +1,112 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+<div class="costly-mistakes"
+     x-data="{
+        /* Le POST répond en quelques dizaines de millisecondes. Sans plancher,
+           le dé clignoterait et le résultat surgirait sans que rien ne se soit
+           passé. Le coach ne lance pas le dé lui-même : le suspense est la seule
+           chose qu'il obtienne en échange. */
+        PLANCHER_MS: 1100,
+        lance: false,
+        fini: false,
+        face: '?',
+        erreur: '',
+        async lancer() {
+            if (this.lance) return;
+            this.lance = true;
+            this.erreur = '';
+
+            /* L'animation défile sur des valeurs quelconques pendant que la
+               requête part, et s'arrête sur celle que le serveur a tirée — le
+               dé n'est pas décidé ici. */
+            const roulement = setInterval(() => {
+                this.face = 1 + Math.floor(Math.random() * 6);
+            }, 70);
+            const echeance = new Promise(r => setTimeout(r, this.PLANCHER_MS));
+
+            try {
+                /* `htmx.ajax` piloté ici, et non un `hx-post` nu : celui-ci
+                   échangerait le fragment dès sa réception, avant l'échéance. */
+                await Promise.all([
+                    htmx.ajax('POST', this.$refs.zone.dataset.rollUrl, {
+                        target: '#cm-result',
+                        swap: 'innerHTML',
+                    }),
+                    echeance,
+                ]);
+                clearInterval(roulement);
+                this.face = document.getElementById('cm-result').dataset.roll || this.face;
+                this.fini = true;
+            } catch (e) {
+                clearInterval(roulement);
+                this.lance = false;
+                this.face = '?';
+                this.erreur = 'Le jet n\\'a pas abouti. Rechargez la page pour connaître votre situation.';
+            }
+        }
+     }">
+
+    <div class="cm-header">
+        <div class="cm-header-top">
+            <div class="cm-header-info">
+                <div class="cm-header-name">{{ team_name }}</div>
+                <span class="cm-phase-badge">Erreurs coûteuses</span>
+            </div>
+            <div class="cm-header-meta">
+                <div class="meta-label">Trésorerie</div>
+                <div class="meta-value">{{ treasury }} kPo</div>
+            </div>
+            <div class="cm-header-meta">
+                <div class="meta-label">Tranche applicable</div>
+                <div class="meta-value">{{ band_label }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert--info">
+        <span>💰</span>
+        <span>Une trésorerie supérieure à <strong>100 kPo</strong> attire les ennuis.
+            Un jet décide de ce qu'il en reste — le résultat s'applique immédiatement
+            et ne peut pas être relancé.</span>
+    </div>
+
+    <div class="panel">
+        <div class="panel-title">Ce qui peut arriver</div>
+        <div class="panel-sub">Votre tranche est mise en évidence. Le dé décide de la colonne.</div>
+        <table class="cm-table">
+            <thead>
+                <tr>
+                    <th>Trésorerie</th>
+                    <th>Crise évitée</th>
+                    <th>Incident mineur</th>
+                    <th>Incident majeur</th>
+                    <th>Catastrophe</th>
+                </tr>
+            </thead>
+            <tbody id="cm-table-body">
+                {%- include "teams-costly-mistakes-table.html" %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <div class="cm-roll-zone" x-ref="zone" data-roll-url="{{ roll_url }}">
+            <div class="cm-die" :class="{ 'cm-die--rolling': lance && !fini, 'cm-die--done': fini }"
+                 x-text="face">?</div>
+            <button type="button" class="cm-btn-roll" @click="lancer()"
+                    :disabled="lance" x-show="!fini">Lancer le dé</button>
+            <div class="cm-roll-hint"
+                 x-text="fini ? 'Le sort en est jeté.' : (lance ? 'Le dé roule…' : 'Un seul jet, une seule fois.')">
+            </div>
+            <div class="cm-roll-error" x-show="erreur" x-text="erreur"></div>
+        </div>
+
+        <div class="cm-result" id="cm-result" x-show="fini"></div>
+    </div>
+
+    <div class="cm-footer">
+        <a class="cta-primary" href="{{ team_url }}" x-show="fini">L'équipe est prête à jouer →</a>
+    </div>
+</div>
+{% endblock %}

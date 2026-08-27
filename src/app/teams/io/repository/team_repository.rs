@@ -149,6 +149,33 @@ impl TeamRepository {
                 .await
                 .map_err(RepositoryError::Database)?;
             }
+            // Le `_ =>` en fin de `match` accepte tout : cet arm a manqué à la
+            // carte 408, et la phase de l'agrégat avançait pendant que la
+            // projection restait sur `Dismissals`. Le bandeau ne menait donc
+            // jamais à l'écran du jet. C'est le bug de la carte 175, à
+            // l'identique — le commentaire ci-dessous le décrivait déjà.
+            TeamDomainEvent::CostlyMistakesPhaseStarted => {
+                sqlx::query(
+                    "UPDATE team_proj SET game_phase = 'CostlyMistakes', updated_at = now() WHERE team_id = $1",
+                )
+                .bind(team_id)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
+            // Le jet referme la phase et rend l'équipe au jeu. Sans cet arm, la
+            // projection resterait sur `CostlyMistakes` et le bandeau
+            // proposerait indéfiniment un dé déjà lancé — que le domaine
+            // refuserait par 409.
+            TeamDomainEvent::CostlyMistakesApplied { .. } => {
+                sqlx::query(
+                    "UPDATE team_proj SET game_phase = 'ReadyToPlay', updated_at = now() WHERE team_id = $1",
+                )
+                .bind(team_id)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
             TeamDomainEvent::DismissalsPhaseValidated => {
                 sqlx::query(
                     "UPDATE team_proj SET game_phase = 'ReadyToPlay', updated_at = now() WHERE team_id = $1",
@@ -807,6 +834,66 @@ mod tests {
         .fetch_one(&repo.pool)
         .await
         .unwrap()
+    }
+
+    /// Les deux transitions de la phase des erreurs coûteuses doivent atteindre
+    /// la **projection**, pas seulement l'agrégat.
+    ///
+    /// Le `_ =>` en fin de `match` accepte tout : la carte 408 a introduit
+    /// `CostlyMistakesPhaseStarted` sans son arm, et la phase avançait dans
+    /// l'event store pendant que `team_proj` restait sur `Dismissals`. Le
+    /// bandeau ne menait donc jamais à l'écran du jet — constaté à l'écran, pas
+    /// par un test. C'est le bug de la carte 175, à l'identique.
+    #[tokio::test]
+    async fn les_deux_transitions_des_erreurs_couteuses_atteignent_la_projection() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = TeamRepository::new(pool.clone(), new_bus());
+        let team_id = ulid::Ulid::new().to_string();
+        repo.append(&team_id, &created_event(&team_id), 0)
+            .await
+            .unwrap();
+
+        let phase = |id: String| {
+            let pool = pool.clone();
+            async move {
+                sqlx::query_scalar::<_, Option<String>>(
+                    "SELECT game_phase FROM team_proj WHERE team_id = $1",
+                )
+                .bind(id)
+                .fetch_one(&pool)
+                .await
+                .unwrap()
+            }
+        };
+
+        repo.append(&team_id, &TeamDomainEvent::CostlyMistakesPhaseStarted, 1)
+            .await
+            .unwrap();
+        assert_eq!(
+            phase(team_id.clone()).await.as_deref(),
+            Some("CostlyMistakes"),
+            "l'entrée en phase doit être projetée, sinon le bandeau n'y mène pas"
+        );
+
+        repo.append(
+            &team_id,
+            &TeamDomainEvent::CostlyMistakesApplied {
+                roll: 6,
+                incident: IncidentType::None,
+                gp_lost: Kpo(0),
+                damage_dice: vec![],
+            },
+            2,
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            phase(team_id).await.as_deref(),
+            Some("ReadyToPlay"),
+            "le jet referme la phase et rend l'équipe au jeu"
+        );
     }
 
     /// Le grand livre suit l'agrégat pas à pas : chaque mouvement porte le

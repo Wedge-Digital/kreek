@@ -95,6 +95,7 @@ const FEUILLES_APP: &[&str] = &[
     "pages/match-report-actions.css",
     "pages/match-report-inducements.css",
     "pages/match-report-pre-match.css",
+    "pages/costly-mistakes.css",
     "pages/match-report-shared.css",
     "pages/match-report-step1.css",
     "pages/match-report-step5.css",
