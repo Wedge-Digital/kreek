@@ -76,6 +76,32 @@
     .player-table tbody tr:nth-child(even) td { background: var(--dark-6); }
     .player-table tbody tr:hover td { background: var(--dark-5); cursor: pointer; }
     .player-table tbody.no-hover tr:nth-child(odd):hover  td { background: var(--white);  cursor: default; }
+    /* ── Joueur indisponible pour le prochain match ────────────────────
+       Le sous-total ne compte que les disponibles : sans marquage, la somme
+       paraîtrait fausse à qui additionne les lignes de l'œil. */
+    .player-table tr.is-out td { color: var(--dark-3); }
+    .player-table tr.is-out .cell-name strong { font-weight: 400; }
+    .out-tag {
+      display: inline-block; margin-left: 8px; padding: 1px 8px;
+      border-radius: 10px; background: rgba(224,32,32,0.08); color: var(--red);
+      font-size: 10px; font-weight: 600; vertical-align: 1px; white-space: nowrap;
+    }
+
+    /* ── Sous-total des disponibles ────────────────────────────────────
+       Dans un <tfoot>, pas dans une <tr> de fin de <tbody> : le pied reste
+       attaché au tableau si un jour la liste défile, et il ne se prend pas le
+       zébrage ni le survol des lignes de joueur. */
+    .player-table tfoot td {
+      padding: 12px; font-size: var(--text-small);
+      background: var(--dark-7); border-top: 2px solid var(--dark-5);
+    }
+    .subtotal-label { color: var(--dark-2); font-weight: 600; }
+    .subtotal-note  { color: var(--dark-3); font-size: var(--text-tiny); font-weight: 400; }
+    .subtotal-value {
+      text-align: center; font-weight: 600; color: var(--dark-1);
+      font-variant-numeric: tabular-nums;
+    }
+
     .player-table tbody.no-hover tr:nth-child(even):hover td { background: var(--dark-6); cursor: default; }
     .player-table tr:last-child td { border-bottom: none; }
     .player-table tr.subtotal-row td {
@@ -438,14 +464,14 @@
                   <td class="cell-readonly" style="text-align: center; font-weight: 600;">3</td>
                   <td class="cell-readonly" style="text-align: center;">70 kPo</td>
                 </tr>
-                <tr class="player-row" data-jersey="8" onclick="openPlayer()">
+                <tr class="player-row is-out" data-jersey="8" onclick="openPlayer()">
                   <td class="drag-handle-cell">⠿</td>
                   <td class="cell-jersey" style="text-align: center;">
                     <span class="display-value" style="color: var(--dark-3); font-family: monospace;">8</span>
                     <input class="edit-value jersey-input" type="number" min="1" max="99" value="8" oninput="onJerseyInput()">
                   </td>
                   <td class="cell-name">
-                    <span class="display-value"><strong>Mirindel</strong></span>
+                    <span class="display-value"><strong>Mirindel</strong><span class="out-tag">Absent au prochain match</span></span>
                     <input class="edit-value name-input" type="text" value="Mirindel" placeholder="Défenseur">
                   </td>
                   <td class="cell-readonly"><span class="player-pos pos-lineman">Défenseur</span></td>
@@ -455,6 +481,20 @@
                   <td class="cell-readonly" style="text-align: center;">70 kPo</td>
                 </tr>
               </tbody>
+              <!-- Sous-total des seuls joueurs disponibles : c'est ce qui compose
+                   la valeur d'équipe du prochain match, et le chiffre qu'un coach
+                   vérifie avant de jouer. Les absents restent dans la liste mais
+                   hors du compte — d'où leur marquage. -->
+              <tfoot>
+                <tr>
+                  <td colspan="6">
+                    <span class="subtotal-label">7 joueurs disponibles</span>
+                    <span class="subtotal-note"> — 1 absent, hors du compte</span>
+                  </td>
+                  <td class="subtotal-value">—</td>
+                  <td class="subtotal-value">603 kPo</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
 
