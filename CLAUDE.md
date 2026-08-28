@@ -38,16 +38,28 @@ Directives de travail pour Claude Code sur ce projet.
     l'ancien binaire et leur verdict ne veut rien dire — un test qui passe
     prouve alors le contraire de ce qu'on croit.
 
-    Le signal fiable est le **changement de PID**, pas la joignabilité : le
-    processus reste joignable pendant toute la compilation, et ne redémarre
-    qu'après.
+    Le signal fiable est le **changement de PID**, et lui seul :
+
+    - la **joignabilité** ne dit rien — le processus répond pendant toute la
+      compilation, et ne redémarre qu'après ;
+    - comparer l'horodatage du **binaire** à celui du processus ne dit rien non
+      plus : `make test` et `cargo build` réécrivent `target/debug/kreek` sans
+      redémarrer quoi que ce soit, et l'observateur en réécrit un autre par
+      dessus. Les deux dates se croisent sans rapport avec ce qui tourne.
 
     ```bash
     PID=$(pgrep -f 'target/debug/kreek' | head -1)
-    cargo build
+    touch src/main.rs   # réveille l'observateur, même si le code vient d'être édité
     until [ "$(pgrep -f 'target/debug/kreek' | head -1)" != "$PID" ]; do sleep 1; done
-    until [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 http://localhost:3210/)" != "000" ]; do sleep 1; done
     ```
+
+    **Attendre que `make test` ou `cargo build` soient finis** avant de réveiller
+    l'observateur : ils tiennent le verrou de compilation, et il attend en
+    silence — on croit alors qu'il ne se passe rien.
+
+    L'observateur se repère par `pgrep -f cargo-watch`, pas `cargo watch` : le
+    binaire s'appelle `cargo-watch`, et chercher la seconde forme l'a fait passer
+    pour absent.
 
     La règle 8 reste entière : on ne **démarre** jamais le serveur soi-même. On
     attend seulement qu'il ait fini de se relancer.
