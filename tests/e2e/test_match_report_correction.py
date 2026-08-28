@@ -34,6 +34,7 @@ from playwright.sync_api import Page, expect
 
 from competition_lifecycle import BASE_URL
 from db_helpers import query_db
+from htmx_helpers import cliquer_quand_cable
 from match_report_helpers import (
     create_draft,
     ensure_inducements,
@@ -203,7 +204,11 @@ def test_bouton_desactive_quand_une_equipe_a_depense_ses_spp(page: Page, space_i
     )
     page.goto(f"{BASE_URL}/app/{space_id}/players/{scorer}/detail", wait_until="load")
     # Le panneau droit affiche le journal par défaut (cf. test_player_spp_spending).
-    page.locator(".btn-toggle-spp").click()
+    # `cliquer_quand_cable` et non `click` : c'est **ce bouton** que le
+    # `CLAUDE.md` donne en exemple du piège de la fenêtre de câblage — peint et
+    # cliquable quelques dizaines de millisecondes avant qu'htmx ne l'ait câblé,
+    # un clic s'y perd sans requête ni erreur.
+    cliquer_quand_cable(page, ".btn-toggle-spp")
     expect(page.locator(".tabs")).to_be_visible(timeout=10000)
     page.wait_for_selector(".skill-list-table", timeout=10000)
     with page.expect_navigation(wait_until="load"):

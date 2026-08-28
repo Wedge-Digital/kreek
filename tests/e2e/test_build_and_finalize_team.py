@@ -19,6 +19,8 @@ import time
 
 from playwright.sync_api import Page, expect
 
+from htmx_helpers import attendre_cablage
+
 from competition_lifecycle import create_full_competition
 
 BASE_URL = "http://localhost:3210"
@@ -58,6 +60,14 @@ def test_build_and_finalize_with_spp(page: Page, competition_create_url, space_i
     page.wait_for_url(re.compile(r".*/build$"), timeout=10000)
 
     # ── Page build-team ──────────────────────────────────────────────
+    # **Attendre le câblage avant d'émettre.** Le conteneur écoute
+    # `rosterSelected from:body` ; un événement émis avant qu'htmx ne l'ait câblé
+    # est **perdu pour de bon**, et la table reste sur son rendu de `load`, sans
+    # bouton. D'où un `wait_for_selector` qui expire au lieu de traîner — le
+    # symptôme ne ressemble pas à un problème d'attente, et c'est ce qui rend ce
+    # piège coûteux (cf. `CLAUDE.md`).
+    attendre_cablage(page, "#player-table-container")
+
     # Sélection du roster via l'événement DOM que TomSelect émettrait
     # normalement, plutôt qu'un clic UI (peu fiable en Playwright headless).
     page.evaluate(
