@@ -163,8 +163,8 @@ pub async fn get_new_competition_phase_5(
 
     // ── Structure ────────────────────────────────────────────────────────────
     let (has_structure, groups_label, playoffs_label, dates_label) = if let Some(s) = &structure {
-        let groups: Option<String> = if s.ranking_group.use_ranking_groups.0 {
-            let n = s.ranking_group.ranking_groups.len();
+        let groups: Option<String> = if s.ranking_group.use_ranking_groups() {
+            let n = s.ranking_group.groups().len();
             Some(format!("{n} poule{}", if n > 1 { "s" } else { "" }))
         } else {
             None

@@ -1,7 +1,7 @@
 # E14 — Modifier une compétition en cours
 
-**État :** `ready` — 10 cartes, 0 faite. Spécifiée par le workflow feature les
-2026-08-25 et 26.
+**État :** `en_cours` — 10 cartes, 1 faite (417, le 2026-08-28). Spécifiée par
+le workflow feature les 2026-08-25 et 26.
 **Conception :** `docs/specs/modifier-une-competition/`
 
 ## La fonction

@@ -2,7 +2,7 @@ use crate::app::competitions::domain::error::DomainError;
 use crate::app::shared_kernel::bloodbowl::tier::{CreationBudget, StartingXp, TierName};
 use nutype::nutype;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -130,6 +130,92 @@ impl TryFrom<Vec<TiebreakSetting>> for TiebreakConfig {
 pub struct CompetitionRules {
     pub ranking_rules: RankingRules,
     pub tiers: Vec<TierRule>,
+}
+
+/// Les trois règles que l'onglet Paramètres fera respecter (épic E14).
+///
+/// **Aucune ne consomme `self`** : elles empruntent et rendent une copie
+/// modifiée. C'est ce qui permettra au panneau de proposer un aperçu sans
+/// engager la modification — et ce que vérifie
+/// `les_methodes_n_alterent_pas_l_original`.
+impl CompetitionRules {
+    /// Le barème de classement est **entièrement rouvert** : c'est le seul des
+    /// réglages dont chaque champ se modifie en cours de saison.
+    pub fn with_ranking_rules(&self, ranking_rules: RankingRules) -> Self {
+        Self {
+            ranking_rules,
+            tiers: self.tiers.clone(),
+        }
+    }
+
+    /// Ne rouvre que les **coups de pouce** : nom, budget, expérience de départ
+    /// et rosters de chaque tier restent tels qu'à la création.
+    ///
+    /// **Un refus, pas une correction.** Recopier silencieusement les valeurs
+    /// d'origine sur un écart rendrait modifiable par requête forgée ce que
+    /// l'écran n'ouvre pas — l'appelant croirait avoir changé un budget, et le
+    /// désaccord se découvrirait bien plus tard.
+    ///
+    /// **Les uid de coups de pouce ne sont pas validés** : le corpus vit hors du
+    /// dépôt et peut changer sous les pieds d'une compétition. Refuser un uid
+    /// inconnu figerait le réglage le jour où le corpus bouge.
+    pub fn with_inducements_from(&self, tiers: Vec<TierRule>) -> Result<Self, DomainError> {
+        if tiers.len() != self.tiers.len() {
+            return Err(DomainError::TierCountChanged {
+                before: self.tiers.len(),
+                after: tiers.len(),
+            });
+        }
+        for (avant, recu) in self.tiers.iter().zip(tiers.iter()) {
+            Self::refuser_tout_ecart(avant, recu)?;
+        }
+        Ok(Self {
+            ranking_rules: self.ranking_rules.clone(),
+            tiers,
+        })
+    }
+
+    /// Les quatre champs figés, comparés un à un pour que l'erreur porte le nom
+    /// de celui qui a bougé — « le champ a changé » ne dirait pas lequel.
+    fn refuser_tout_ecart(avant: &TierRule, recu: &TierRule) -> Result<(), DomainError> {
+        let ecart = |field: &'static str| DomainError::ImmutableTierField {
+            tier: avant.name.as_ref().to_string(),
+            field,
+        };
+        if recu.name.as_ref() != avant.name.as_ref() {
+            return Err(ecart("name"));
+        }
+        if recu.budget.0 != avant.budget.0 {
+            return Err(ecart("budget"));
+        }
+        if recu.starting_xp.into_inner() != avant.starting_xp.into_inner() {
+            return Err(ecart("starting_xp"));
+        }
+        if recu.rosters != avant.rosters {
+            return Err(ecart("rosters"));
+        }
+        Ok(())
+    }
+
+    /// Un roster ne peut pas figurer dans deux tiers.
+    ///
+    /// Déplacée depuis `save_competition_rules.rs` (carte 417) : la règle est
+    /// métier, elle n'avait rien à faire dans un use case. Le corps est
+    /// **copié** tel quel, seul le type d'erreur change.
+    pub fn ensure_roster_unicity(&self) -> Result<(), DomainError> {
+        let mut seen: HashMap<&str, &str> = HashMap::new();
+        for tier in &self.tiers {
+            for roster in &tier.rosters {
+                if let Some(prev) = seen.insert(roster.as_str(), tier.name.as_ref()) {
+                    return Err(DomainError::RosterInMultipleTiers {
+                        roster: roster.clone(),
+                        tiers: (prev.to_string(), tier.name.as_ref().to_string()),
+                    });
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -371,5 +457,234 @@ mod tests {
         let serialized = serde_json::to_string(&ob).unwrap();
         assert!(serialized.contains("\"diff_td\":5"));
         assert!(!serialized.contains("min_td"));
+    }
+}
+
+#[cfg(test)]
+mod reglages_rouverts_tests {
+    //! Les règles que l'onglet Paramètres fera respecter (carte 417).
+    use super::*;
+
+    fn tier(nom: &str, budget: u32, xp: u32, rosters: &[&str], coups: &[&str]) -> TierRule {
+        TierRule {
+            name: TierName::try_new(nom.to_string()).unwrap(),
+            budget: CreationBudget(budget),
+            starting_xp: StartingXp::try_new(xp).unwrap(),
+            rosters: rosters.iter().map(|r| r.to_string()).collect(),
+            inducements: coups.iter().map(|c| c.to_string()).collect(),
+            star_players: vec![],
+        }
+    }
+
+    fn regles(tiers: Vec<TierRule>) -> CompetitionRules {
+        CompetitionRules {
+            ranking_rules: bareme(3),
+            tiers,
+        }
+    }
+
+    fn bareme(victoire: u32) -> RankingRules {
+        RankingRules {
+            win_points: RankingPoints::try_new(victoire).unwrap(),
+            draw_points: RankingPoints::try_new(1).unwrap(),
+            lose_points: RankingPoints::try_new(0).unwrap(),
+            offensive_bonus: OffensiveBonus {
+                activated: Activated(false),
+                min_td: MinTd::try_new(2).unwrap(),
+                points: RankingPoints::try_new(1).unwrap(),
+            },
+            defensive_bonus: DefensiveBonus {
+                activated: Activated(false),
+                points: RankingPoints::try_new(1).unwrap(),
+                max_td_conceded: default_max_td_conceded(),
+            },
+            aggressive_bonus: default_aggressive_bonus(),
+            tiebreakers: TiebreakConfig::all_active(vec![code("nb_td")]).unwrap(),
+        }
+    }
+
+    fn code(raw: &str) -> TiebreakCode {
+        TiebreakCode::try_new(raw).unwrap()
+    }
+
+    fn deux_tiers() -> Vec<TierRule> {
+        vec![
+            tier("Élite", 1000, 0, &["HUMAN"], &["BABE"]),
+            tier("Amateurs", 1200, 6, &["ORC"], &[]),
+        ]
+    }
+
+    // ── with_inducements_from ────────────────────────────────────────────────
+
+    #[test]
+    fn with_inducements_from_accepte_un_changement_de_coups_de_pouce() {
+        let avant = regles(deux_tiers());
+        let mut recus = deux_tiers();
+        recus[0].inducements = vec!["BABE".into(), "BLOODWEISER".into()];
+        recus[1].inducements = vec!["APOTHECARY".into()];
+
+        let apres = avant.with_inducements_from(recus).expect("cas nominal");
+
+        assert_eq!(apres.tiers[0].inducements.len(), 2);
+        assert_eq!(apres.tiers[1].inducements, vec!["APOTHECARY".to_string()]);
+    }
+
+    #[test]
+    fn with_inducements_from_accepte_un_tier_sans_coup_de_pouce() {
+        let avant = regles(deux_tiers());
+        let mut recus = deux_tiers();
+        recus[0].inducements = vec![];
+
+        let apres = avant
+            .with_inducements_from(recus)
+            .expect("liste vide valide");
+
+        assert!(apres.tiers[0].inducements.is_empty());
+    }
+
+    /// Les quatre refus sont écrits séparément et non en boucle : l'erreur porte
+    /// le nom du champ, et c'est ce nom qu'on veut voir échouer nommément.
+    #[test]
+    fn with_inducements_from_refuse_un_budget_modifie() {
+        let avant = regles(deux_tiers());
+        let mut recus = deux_tiers();
+        recus[0].budget = CreationBudget(999);
+
+        match avant.with_inducements_from(recus) {
+            Err(DomainError::ImmutableTierField { tier, field }) => {
+                assert_eq!((tier.as_str(), field), ("Élite", "budget"));
+            }
+            autre => panic!("attendu un refus de budget : {autre:?}"),
+        }
+    }
+
+    #[test]
+    fn with_inducements_from_refuse_un_nom_modifie() {
+        let avant = regles(deux_tiers());
+        let mut recus = deux_tiers();
+        recus[1].name = TierName::try_new("Renommé".to_string()).unwrap();
+
+        match avant.with_inducements_from(recus) {
+            Err(DomainError::ImmutableTierField { tier, field }) => {
+                assert_eq!((tier.as_str(), field), ("Amateurs", "name"));
+            }
+            autre => panic!("attendu un refus de nom : {autre:?}"),
+        }
+    }
+
+    #[test]
+    fn with_inducements_from_refuse_un_xp_modifie() {
+        let avant = regles(deux_tiers());
+        let mut recus = deux_tiers();
+        recus[1].starting_xp = StartingXp::try_new(42).unwrap();
+
+        match avant.with_inducements_from(recus) {
+            Err(DomainError::ImmutableTierField { field, .. }) => {
+                assert_eq!(field, "starting_xp");
+            }
+            autre => panic!("attendu un refus d'expérience : {autre:?}"),
+        }
+    }
+
+    #[test]
+    fn with_inducements_from_refuse_des_rosters_modifies() {
+        let avant = regles(deux_tiers());
+        let mut recus = deux_tiers();
+        recus[0].rosters = vec!["HUMAN".into(), "ELF".into()];
+
+        match avant.with_inducements_from(recus) {
+            Err(DomainError::ImmutableTierField { field, .. }) => {
+                assert_eq!(field, "rosters");
+            }
+            autre => panic!("attendu un refus de rosters : {autre:?}"),
+        }
+    }
+
+    #[test]
+    fn with_inducements_from_refuse_un_tier_ajoute() {
+        let avant = regles(deux_tiers());
+        let mut recus = deux_tiers();
+        recus.push(tier("Bonus", 500, 0, &["SKAVEN"], &[]));
+
+        match avant.with_inducements_from(recus) {
+            Err(DomainError::TierCountChanged { before, after }) => {
+                assert_eq!((before, after), (2, 3));
+            }
+            autre => panic!("attendu un refus de dénombrement : {autre:?}"),
+        }
+    }
+
+    #[test]
+    fn with_inducements_from_refuse_un_tier_retire() {
+        let avant = regles(deux_tiers());
+        let recus = vec![deux_tiers().remove(0)];
+
+        match avant.with_inducements_from(recus) {
+            Err(DomainError::TierCountChanged { before, after }) => {
+                assert_eq!((before, after), (2, 1));
+            }
+            autre => panic!("attendu un refus de dénombrement : {autre:?}"),
+        }
+    }
+
+    // ── ensure_roster_unicity — déplacée depuis le use case ──────────────────
+
+    #[test]
+    fn ensure_roster_unicity_accepte_des_tiers_disjoints() {
+        assert!(regles(deux_tiers()).ensure_roster_unicity().is_ok());
+    }
+
+    #[test]
+    fn ensure_roster_unicity_refuse_un_roster_dans_deux_tiers() {
+        let mut tiers = deux_tiers();
+        tiers[1].rosters = vec!["HUMAN".into()];
+
+        match regles(tiers).ensure_roster_unicity() {
+            Err(DomainError::RosterInMultipleTiers { roster, tiers }) => {
+                assert_eq!(roster, "HUMAN");
+                assert_eq!(tiers, ("Élite".to_string(), "Amateurs".to_string()));
+            }
+            autre => panic!("attendu un refus d'unicité : {autre:?}"),
+        }
+    }
+
+    // ── Non-consommation ─────────────────────────────────────────────────────
+
+    /// Les trois méthodes empruntent et rendent une copie : l'original reste
+    /// intact. C'est ce qui permettra au panneau de proposer un **aperçu** sans
+    /// engager la modification — sans quoi il faudrait relire la saison pour
+    /// annuler.
+    #[test]
+    fn les_methodes_n_alterent_pas_l_original() {
+        let avant = regles(deux_tiers());
+
+        let mut recus = deux_tiers();
+        recus[0].inducements = vec!["BABE".into(), "BLOODWEISER".into()];
+        let modifiees = avant.with_inducements_from(recus).unwrap();
+        let rebareme = avant.with_ranking_rules(bareme(5));
+
+        assert_eq!(
+            avant.tiers[0].inducements,
+            vec!["BABE".to_string()],
+            "les coups de pouce d'origine ont bougé"
+        );
+        assert_eq!(
+            avant.ranking_rules.win_points.into_inner(),
+            3,
+            "le barème d'origine a bougé"
+        );
+        // Et les copies, elles, portent bien la modification.
+        assert_eq!(modifiees.tiers[0].inducements.len(), 2);
+        assert_eq!(rebareme.ranking_rules.win_points.into_inner(), 5);
+    }
+
+    #[test]
+    fn with_ranking_rules_ne_touche_pas_aux_tiers() {
+        let avant = regles(deux_tiers());
+
+        let apres = avant.with_ranking_rules(bareme(5));
+
+        assert_eq!(apres.tiers.len(), 2);
+        assert_eq!(apres.tiers[0].inducements, vec!["BABE".to_string()]);
     }
 }

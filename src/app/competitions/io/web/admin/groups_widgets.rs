@@ -158,7 +158,7 @@ pub async fn group_cards_widget(
     if let Some(ref s) = structure {
         let struct_groups: Vec<(String, String)> = s
             .ranking_group
-            .ranking_groups
+            .groups()
             .iter()
             .map(|g| (g.id.as_ref().to_string(), g.name.as_ref().to_string()))
             .collect();

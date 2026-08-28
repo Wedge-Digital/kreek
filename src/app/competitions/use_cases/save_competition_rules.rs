@@ -1,10 +1,11 @@
 use crate::app::competitions::domain::competition_rules::{CompetitionRules, TiebreakConfig};
+use crate::app::competitions::domain::error::DomainError;
 use crate::app::competitions::domain::season_repository_port::{
     ISeasonRepository, SeasonRepositoryError,
 };
 use crate::app::competitions::ports::ITiebreakCatalogPort;
 use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 #[derive(Debug)]
 pub struct SaveCompetitionRulesCommand {
@@ -15,6 +16,9 @@ pub struct SaveCompetitionRulesCommand {
 
 #[derive(Debug)]
 pub enum SaveCompetitionRulesError {
+    /// La règle vit désormais dans le domaine (`CompetitionRules::
+    /// ensure_roster_unicity`, carte 417). La variante reste ici parce que
+    /// c'est la surface d'erreur du use case ; seule sa **source** a changé.
     RosterInMultipleTiers {
         roster: String,
         tiers: (String, String),
@@ -42,26 +46,19 @@ pub async fn execute(
     repo: &dyn ISeasonRepository,
     catalog: &dyn ITiebreakCatalogPort,
 ) -> Result<(), SaveCompetitionRulesError> {
-    ensure_roster_unicity(&cmd.rules)?;
+    // Traduction explicite plutôt qu'un `From` : le use case n'a qu'une seule
+    // erreur domaine à relayer, et un `From` général laisserait passer les
+    // quatre autres variantes sous ce même nom — un doublon de poule
+    // s'annoncerait « roster dans deux tiers ».
+    if let Err(DomainError::RosterInMultipleTiers { roster, tiers }) =
+        cmd.rules.ensure_roster_unicity()
+    {
+        return Err(SaveCompetitionRulesError::RosterInMultipleTiers { roster, tiers });
+    }
     ensure_known_tiebreak_codes(&cmd.rules.ranking_rules.tiebreakers, catalog)?;
 
     repo.save_rules(&cmd.season_id, &cmd.season_name, &cmd.rules)
         .await?;
-    Ok(())
-}
-
-fn ensure_roster_unicity(rules: &CompetitionRules) -> Result<(), SaveCompetitionRulesError> {
-    let mut seen: HashMap<&str, &str> = HashMap::new();
-    for tier in &rules.tiers {
-        for roster in &tier.rosters {
-            if let Some(prev) = seen.insert(roster.as_str(), tier.name.as_ref()) {
-                return Err(SaveCompetitionRulesError::RosterInMultipleTiers {
-                    roster: roster.clone(),
-                    tiers: (prev.to_string(), tier.name.as_ref().to_string()),
-                });
-            }
-        }
-    }
     Ok(())
 }
 

@@ -109,17 +109,55 @@ groups_widgets.rs:160
 Tous de la forme `s.ranking_group.use_ranking_groups.0` ou `.ranking_groups` →
 `use_ranking_groups()` et `groups()`.
 
-## Le piège au déploiement
+## Le piège au déploiement — et la requête qui le manquait
 
-Une saison portant déjà deux poules homonymes **ne se désérialisera plus**. À
-vérifier avant de livrer :
+Une saison portant déjà deux poules homonymes **ne se désérialisera plus**. C'est
+le seul endroit où cette carte peut casser des données en place.
+
+**La requête que cette carte prescrivait visait la mauvaise table.**
 
 ```sql
+-- Ce que la carte demandait, et qui ne vérifie rien :
 select season_id, name, count(*) from competition_groups
 group by 1,2 having count(*) > 1;
 ```
 
-C'est le seul endroit où cette carte peut casser des données en place.
+`competition_groups` est la table **matérialisée** par
+`ensure_groups_from_structure` — celle dont la carte 416 a découvert qu'elle
+reste vide tant que personne n'a ouvert le widget des poules. Ce qui se
+désérialise, c'est `competition_seasons.structure`, une colonne JSON. La requête
+serait passée au vert sans avoir rien regardé.
+
+```sql
+-- La bonne source :
+select s.id, g->>'name', count(*)
+from competition_seasons s,
+     jsonb_array_elements(s.structure->'ranking_group'->'ranking_groups') g
+group by 1,2 having count(*) > 1;
+-- idem avec g->>'id' pour les identifiants.
+```
+
+Passée en production le 2026-08-28 : **9 saisons, toutes avec structure et
+poules, aucun doublon de nom ni d'identifiant.** Livrable sans risque.
+
+## Ce que la lecture du code a confirmé
+
+`RankingGroupConfig` n'est **jamais construit par littéral** dans le code Rust —
+il n'arrive que par `Deserialize`, depuis le navigateur et depuis la base. Il n'y
+avait donc aucun site de construction à convertir, et l'encapsulation ne joue que
+sur le chemin que `#[serde(try_from)]` garde. La carte l'avait vu ; le code le
+confirme.
+
+Six sites de lecture, tous désignés par le compilateur dès les champs passés en
+privé.
+
+## Le `From` qu'on n'a pas écrit
+
+`ensure_roster_unicity` déplacée, le use case doit relayer une `DomainError`. Un
+`impl From<DomainError> for SaveCompetitionRulesError` aurait été plus court —
+et faux : il aurait fait passer les **quatre autres** variantes sous le même nom,
+et un doublon de poule se serait annoncé « roster dans deux tiers ». La
+traduction est donc explicite, sur la seule variante concernée.
 
 ## Tests
 
@@ -139,6 +177,15 @@ C'est le seul endroit où cette carte peut casser des données en place.
 | `with_inducements_from_refuse_un_tier_ajoute` | nombre de tiers |
 | `with_inducements_from_refuse_un_tier_retire` | nombre de tiers |
 | `ensure_roster_unicity_*` | déplacés, inchangés |
+
+Un **seizième** s'y ajoute, hors liste : `les_methodes_n_alterent_pas_l_original`.
+Les trois méthodes empruntent et rendent une copie — c'est ce qui permettra au
+panneau de proposer un aperçu sans engager la modification, et rien d'autre ne
+l'affirmait. Deux contre-épreuves l'accompagnent : `deserialize_accepte_une_
+configuration_valide`, sans laquelle un JSON refusé pour une faute de forme se
+lirait comme un refus d'invariant, et `deserialize_tolere_un_dispatch_type_
+absent`, le champ étant `#[serde(default)]` pour les structures écrites avant son
+introduction.
 
 `deserialize_passe_par_try_new` est celui qui compte : sans lui, retirer le
 `#[serde(try_from)]` au détour d'un refactor ne casserait rien de visible.

@@ -286,8 +286,8 @@ fn build_structure_labels(
     let Some(s) = structure else {
         return (false, None, None, None);
     };
-    let groups: Option<String> = if s.ranking_group.use_ranking_groups.0 {
-        let n = s.ranking_group.ranking_groups.len();
+    let groups: Option<String> = if s.ranking_group.use_ranking_groups() {
+        let n = s.ranking_group.groups().len();
         Some(format!("{n} poule{}", if n > 1 { "s" } else { "" }))
     } else {
         None

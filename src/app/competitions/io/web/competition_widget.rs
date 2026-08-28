@@ -350,12 +350,14 @@ pub async fn get_competition_widget_detail(
     });
 
     let structure = full.structure.map(|s| StructureViewModel {
-        use_groups: s.ranking_group.use_ranking_groups.0,
+        use_groups: s.ranking_group.use_ranking_groups(),
         group_names: s
             .ranking_group
-            .ranking_groups
-            .into_iter()
-            .map(|g| g.name.into_inner())
+            .groups()
+            .iter()
+            // `groups()` emprunte : le nom est cloné plutôt que déplacé, ce qui
+            // est le prix — voulu — de ne plus laisser sortir l'agrégat.
+            .map(|g| g.name.as_ref().to_string())
             .collect(),
         use_playoffs: s.play_offs_phase.use_playoffs_phase.0,
         use_schedule: s.schedule.use_schedule.0,
