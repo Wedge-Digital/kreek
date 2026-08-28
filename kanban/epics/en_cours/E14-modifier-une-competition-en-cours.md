@@ -2,8 +2,9 @@
 
 **État :** `en_cours` — 10 cartes, 5 faites (417 à 421, le 2026-08-28).
 Les vagues 1 — le socle — et 2 — la place — sont complètes ; la vague 3 est
-entamée par le panneau qui pose la forme des quatre autres. Restent 422 à 425 et
-les tests e2e de l'onglet. Spécifiée par
+entamée par le panneau qui pose la forme des quatre autres, puis par celui qui
+porte le cas commandant l'épic — modifier le barème recalcule le classement
+publié. Restent 423 à 425 et les tests e2e de l'onglet. Spécifiée par
 le workflow feature les 2026-08-25 et 26.
 **Conception :** `docs/specs/modifier-une-competition/`
 

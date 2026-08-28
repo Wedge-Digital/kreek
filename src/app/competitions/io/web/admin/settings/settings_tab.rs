@@ -35,6 +35,7 @@ pub struct SettingsTabTemplate {
     /// page d'assemblage ne porte aucune logique, pas même une construction
     /// d'URL. Les quatre autres suivront.
     pub general_url: String,
+    pub ranking_url: String,
 }
 
 impl IntoResponse for SettingsTabTemplate {
@@ -77,11 +78,17 @@ pub async fn settings_tab(
             &competition_id,
             &season_id,
         );
+        let ranking_url = AppRoutes::default().competitions.admin_settings_ranking(
+            &space_id,
+            &competition_id,
+            &season_id,
+        );
         return SettingsTabTemplate {
             space_id,
             competition_id,
             season_id,
             general_url,
+            ranking_url,
         }
         .into_response();
     }

@@ -93,6 +93,36 @@ pub struct TiebreakCriterionDto {
     pub label: String,
 }
 
+/// Ce qu'un rejeu de classement a fait.
+pub struct RecomputeReportDto {
+    pub matches_replayed: u32,
+    pub teams: u32,
+}
+
+/// Demander à `ranking` de rejouer tout le classement d'une saison.
+///
+/// # Le premier port de ce BC qui **ordonne** au lieu de demander
+///
+/// Les sept autres sont des lectures. Le `CLAUDE.md` range la propagation d'un
+/// effet du côté des **app events** — « on réagit à un fait qui vient de se
+/// produire ailleurs ». On s'en écarte ici pour une raison précise :
+///
+/// **l'écran doit confirmer.** Le commissaire enregistre un barème et veut
+/// savoir, dans la même réponse, combien de matchs ont été rejoués. Un événement
+/// asynchrone ne le permet pas — il faudrait sonder, ou promettre sans preuve.
+///
+/// Et un second `POST` enchaîné par le front ne le permet pas non plus : si
+/// l'onglet se ferme entre les deux, le barème reste enregistré **sans son
+/// recalcul**, et le classement publié mélange alors deux règles sans que
+/// personne ne l'apprenne.
+///
+/// Si un second cas de commande synchrone apparaît, la règle du `CLAUDE.md`
+/// mérite d'être complétée plutôt que contournée une fois de plus.
+#[async_trait]
+pub trait IRankingRecomputePort: Send + Sync {
+    async fn recompute_season(&self, season_id: &str) -> Result<RecomputeReportDto, String>;
+}
+
 pub trait ITiebreakCatalogPort: Send + Sync {
     /// Catalogue complet, dans l'ordre canonique. Synchrone : le catalogue est
     /// statique, sa consultation ne fait aucun IO.

@@ -73,12 +73,17 @@ pub async fn execute(
 
     let nouvelles =
         rejouer(&anciennes, &rules).map_err(RecomputeSeasonRankingError::Inconsistent)?;
-    let equipes = compter_equipes(&anciennes);
+    let equipes = compter(anciennes.iter().map(|r| r.team_id.to_string()));
+    // **Des matchs, pas des lignes.** Chaque match en produit deux — une par
+    // équipe — et rendre `nouvelles.len()` annoncerait le double : « recalculé
+    // sur 24 matchs » pour douze. Compter les rapports distincts est exact, sans
+    // supposer qu'il y en a toujours exactement deux par match.
+    let matchs = compter(anciennes.iter().map(|r| r.match_report_id.to_string()));
 
     repo.replace_lines_for_season(&season, &nouvelles).await?;
 
     Ok(RecomputeReport {
-        matches_replayed: nouvelles.len() as u32,
+        matches_replayed: matchs,
         teams: equipes,
     })
 }
@@ -107,8 +112,9 @@ fn rejouer(
     Ok(nouvelles)
 }
 
-fn compter_equipes(anciennes: &[RankingLineFullRow]) -> u32 {
-    let mut vues: Vec<String> = anciennes.iter().map(|r| r.team_id.to_string()).collect();
+/// Le nombre de valeurs distinctes d'une suite d'identifiants.
+fn compter(valeurs: impl Iterator<Item = String>) -> u32 {
+    let mut vues: Vec<String> = valeurs.collect();
     vues.sort();
     vues.dedup();
     vues.len() as u32
@@ -317,13 +323,18 @@ mod tests {
         }
     }
 
-    fn ctx(team: TeamId, season: SeasonId) -> MatchContext {
+    /// **Les deux équipes d'un match partagent son rapport.** La première
+    /// version de cette doublure en engendrait un par ligne : quatre lignes
+    /// paraissaient alors quatre matchs, et le décompte rendu par le use case
+    /// semblait juste. C'est l'écran de la carte 422 qui l'a démenti, en
+    /// annonçant « 2 lignes » là où il n'y avait qu'un match.
+    fn ctx(team: TeamId, season: SeasonId, rapport: MatchReportId) -> MatchContext {
         MatchContext {
             team_id: team,
             competition_id: CompetitionId::new(),
             season_id: season,
             round_id: RoundId::new(),
-            match_report_id: MatchReportId::new(),
+            match_report_id: rapport,
             recorded_at: Utc::now(),
         }
     }
@@ -337,10 +348,14 @@ mod tests {
         let season = SeasonId::new();
         let (a, b) = (TeamId::new(), TeamId::new());
 
-        let a1 = RankingLine::record_match(None, ctx(a, season), stats(3, 1), &rules);
-        let b1 = RankingLine::record_match(None, ctx(b, season), stats(1, 3), &rules);
-        let a2 = RankingLine::record_match(Some(totaux(&a1)), ctx(a, season), stats(0, 0), &rules);
-        let b2 = RankingLine::record_match(Some(totaux(&b1)), ctx(b, season), stats(2, 0), &rules);
+        // Deux journées, deux rapports : quatre lignes pour **deux** matchs.
+        let (j1, j2) = (MatchReportId::new(), MatchReportId::new());
+        let a1 = RankingLine::record_match(None, ctx(a, season, j1), stats(3, 1), &rules);
+        let b1 = RankingLine::record_match(None, ctx(b, season, j1), stats(1, 3), &rules);
+        let a2 =
+            RankingLine::record_match(Some(totaux(&a1)), ctx(a, season, j2), stats(0, 0), &rules);
+        let b2 =
+            RankingLine::record_match(Some(totaux(&b1)), ctx(b, season, j2), stats(2, 0), &rules);
 
         let repo = FakeRepo::default();
         *repo.lines.lock().unwrap() = vec![a1, b1, a2, b2];
@@ -375,7 +390,7 @@ mod tests {
         assert_eq!(
             rapport,
             RecomputeReport {
-                matches_replayed: 4,
+                matches_replayed: 2,
                 teams: 2
             }
         );
@@ -408,7 +423,10 @@ mod tests {
         let port = FakePort { rules: bareme(5) };
         let rapport = execute(&season, &repo, &port).await.expect("rejeu");
 
-        assert_eq!(rapport.matches_replayed, 4);
+        assert_eq!(
+            rapport.matches_replayed, 2,
+            "quatre lignes, mais deux matchs"
+        );
         assert_eq!(
             ligne_finale(&repo, a).ranking_points,
             RankingPoints(6),

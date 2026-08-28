@@ -123,6 +123,60 @@ d'écran pur, sans aller-retour (maquette).
 - E2E : **deux matchs joués, victoire passée à 3 points, le classement affiche
   le nouveau total.** C'est le scénario central de toute la fonctionnalité.
 
+## Un défaut de la carte 418, révélé par cet écran
+
+Le pied de panneau annonçait « recalculé sur **2 lignes** » pour un seul match.
+`RecomputeReport::matches_replayed` rendait `nouvelles.len()` — c'est-à-dire des
+**lignes de classement**, qu'il y a deux par match. La maquette aurait affiché
+« 24 matchs » là où il y en avait douze.
+
+Il compte désormais les **rapports distincts** : exact, et sans supposer qu'il y
+en a toujours exactement deux par match.
+
+**Ce qui l'avait masqué** : la doublure de la 418 donnait un `match_report_id`
+différent à chacune des deux équipes d'un même match. Quatre lignes paraissaient
+quatre matchs, et le test affirmait `matches_replayed: 4` — sur un décor où
+c'était faux. La doublure est corrigée : deux journées, deux rapports, quatre
+lignes pour **deux** matchs.
+
+Troisième défaut de la session que seule la vérification à l'écran attrape, après
+les branches de projection manquantes de la 410 et la phrase de retrait qui
+mentait sur un signe négatif à la 413. Les trois avaient leurs tests au vert.
+
+## `htmx.ajax` n'envoie pas de JSON
+
+Il encode ses `values` en **formulaire**, quel que soit l'en-tête posé. Un
+`Content-Type: application/json` sur un corps encodé en formulaire se serait fait
+rejeter par l'extracteur, et le diagnostic serait parti chercher un défaut de
+barème.
+
+L'envoi passe donc par `fetch`, même arbitrage que l'écran du jet des erreurs
+coûteuses (carte 410) et pour la même raison : ne pas dépendre d'un contrat
+interne d'htmx.
+
+## Deux écarts à la maquette
+
+**Le glisser-déposer est remplacé par deux boutons de priorité.** La carte ne
+demandait pas le réordonnancement, mais sans lui le panneau ne peut pas faire ce
+que son propre libellé promet — « l'ordre est la priorité ». Deux boutons : même
+fonction, aucune dépendance, atteignables au clavier.
+
+**Le décompte au repos disparaît.** La maquette annonce « à partir des **24
+matchs** déjà publiés ». Ce nombre n'est pas dans le `RankingVm` que la carte
+spécifie, et l'obtenir demanderait une méthode de port qu'elle ne demande pas. La
+phrase est écrite sans lui ; le chiffre apparaît **après** le rejeu, où il est un
+fait et non une estimation.
+
+## Ce que « le handler n'a aucune validation à écrire » vaut vraiment
+
+Vérifié plutôt que cru : `serde_json::from_str::<RankingPoints>("999999")` rend
+bien une erreur. nutype valide **à la désérialisation** — contrairement au
+`Deserialize` nu d'une struct à champs publics, qui était tout le sujet de la
+417. La distinction est réelle, et cette carte s'appuie du bon côté.
+
+L'e2e le couvre par trois formes de refus — points hors bornes, départage vide,
+aucun critère actif — pour ne pas reposer sur une seule.
+
 ## Checklist
 
 - [ ] Le port, l'adapter, l'injection dans `main.rs`

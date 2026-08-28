@@ -4,5 +4,7 @@
 //! par sa carte (421 à 425). Le dossier existe dès la coquille pour que les cinq
 //! arrivent à côté de leur assemblage plutôt que dispersés dans `admin/`.
 
+pub mod builders;
 pub mod general_panel;
+pub mod ranking_panel;
 pub mod settings_tab;

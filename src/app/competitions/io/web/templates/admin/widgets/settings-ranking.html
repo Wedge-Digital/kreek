@@ -1,0 +1,240 @@
+{# Panneau « Points de classement » (carte 422).
+
+   Le seul POST long de l'onglet — d'où `hx-indicator`. Il envoie du **JSON** et
+   non un formulaire : chaque champ du barème est un nutype qui valide à la
+   désérialisation, et `TiebreakConfig` refuse la liste vide, les doublons et
+   l'absence de critère actif. Le serveur n'a aucune validation à écrire.
+
+   Le script est scopé par `document.currentScript.previousElementSibling`
+   (convention 6) : aucun `id` global, et deux panneaux dans la même page ne se
+   marcheraient pas dessus. #}
+<div class="settings-panel" id="settings-ranking-panel" hx-disinherit="*">
+  <div class="settings-panel-head">
+    <div class="settings-panel-title">
+      <span class="settings-panel-title-icon">🏆</span>Points de classement
+    </div>
+    <button type="button" class="btn btn-primary" data-role="save">
+      Enregistrer <span class="htmx-indicator">…</span>
+    </button>
+  </div>
+  <div class="settings-panel-body">
+
+    <div class="pts-grid">
+      <div class="pts-field">
+        <span class="pts-label">Victoire</span>
+        <input type="number" class="pts-input" data-champ="win_points"
+               value="{{ vm.win_points }}" min="0" data-was="{{ vm.win_points }}">
+        <span class="pts-was"></span>
+      </div>
+      <div class="pts-field">
+        <span class="pts-label">Match nul</span>
+        <input type="number" class="pts-input" data-champ="draw_points"
+               value="{{ vm.draw_points }}" min="0" data-was="{{ vm.draw_points }}">
+        <span class="pts-was"></span>
+      </div>
+      <div class="pts-field">
+        <span class="pts-label">Défaite</span>
+        <input type="number" class="pts-input" data-champ="lose_points"
+               value="{{ vm.lose_points }}" min="0" data-was="{{ vm.lose_points }}">
+        <span class="pts-was"></span>
+      </div>
+    </div>
+
+    <div class="section-sep"></div>
+
+    <div class="settings-panel-subtitle">Points bonus</div>
+    <div class="bonus-row" data-bonus="offensive">
+      <label class="bonus-name">
+        <input type="checkbox" data-champ="activated" {% if vm.offensive.activated %}checked{% endif %}>
+        Bonus offensif
+      </label>
+      <span class="pool-count">à partir de</span>
+      <input type="number" class="bonus-input" data-champ="threshold"
+             value="{{ vm.offensive.threshold }}" min="1">
+      <span class="pool-count">TD d'écart, pour</span>
+      <input type="number" class="bonus-input" data-champ="points"
+             value="{{ vm.offensive.points }}" min="0">
+      <span class="pool-count">pt</span>
+    </div>
+    <div class="bonus-row" data-bonus="defensive">
+      <label class="bonus-name">
+        <input type="checkbox" data-champ="activated" {% if vm.defensive.activated %}checked{% endif %}>
+        Bonus défensif
+      </label>
+      <span class="pool-count">au plus</span>
+      <input type="number" class="bonus-input" data-champ="threshold"
+             value="{{ vm.defensive.threshold }}" min="0">
+      <span class="pool-count">TD encaissé, pour</span>
+      <input type="number" class="bonus-input" data-champ="points"
+             value="{{ vm.defensive.points }}" min="0">
+      <span class="pool-count">pt</span>
+    </div>
+    <div class="bonus-row" data-bonus="aggressive">
+      <label class="bonus-name">
+        <input type="checkbox" data-champ="activated" {% if vm.aggressive.activated %}checked{% endif %}>
+        Bonus agressif
+      </label>
+      <span class="pool-count">à partir de</span>
+      <input type="number" class="bonus-input" data-champ="threshold"
+             value="{{ vm.aggressive.threshold }}" min="1">
+      <span class="pool-count">sorties, pour</span>
+      <input type="number" class="bonus-input" data-champ="points"
+             value="{{ vm.aggressive.points }}" min="0">
+      <span class="pool-count">pt</span>
+    </div>
+
+    <div class="section-sep"></div>
+
+    <div class="settings-panel-subtitle">Critères de départage — l'ordre est la priorité</div>
+    <div class="tiebreak-list" data-role="tiebreaks">
+      {% for t in vm.tiebreakers %}
+      <div class="tiebreak-row" data-code="{{ t.code }}">
+        <button type="button" class="tiebreak-move" data-move="up" title="Monter">▲</button>
+        <button type="button" class="tiebreak-move" data-move="down" title="Descendre">▼</button>
+        <span class="tiebreak-rank">{{ loop.index }}</span>
+        <span class="tiebreak-name">{{ t.label }}</span>
+        <input type="checkbox" data-champ="activated" {% if t.activated %}checked{% endif %}>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if let Some(err) = vm.error %}
+    <div class="form-error-banner">{{ err }}</div>
+    {% endif %}
+
+    {# Toujours dans le flux : un commissaire doit savoir ce qu'il engage
+       **avant** de toucher au réglage. C'est le ton qui change, pas la
+       présence. #}
+    <div class="panel-consequence" data-role="consequence">
+      <span class="consequence-idle">
+        {% if let Some(r) = vm.recompute %}
+        Classement recalculé sur <b>{{ r.matches_replayed }}</b> match{% if r.matches_replayed > 1 %}s{% endif %},
+        pour <b>{{ r.teams }}</b> équipe{% if r.teams > 1 %}s{% endif %}.
+        <em>Les résultats des matchs, eux, n'ont pas changé.</em>
+        {% else %}
+        Modifier ce barème recalcule le classement à partir des matchs déjà
+        publiés : il peut s'en trouver renversé.
+        <em>Les résultats des matchs, eux, ne changent pas.</em>
+        {% endif %}
+      </span>
+      <span class="consequence-active">
+        <span class="panel-consequence-count" data-role="count">0</span>
+        changement<span data-role="plural"></span> en attente — le classement
+        sera recalculé sur les matchs publiés, dans l'ordre, à l'enregistrement.
+      </span>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+    // Scopé par le frère précédent : aucun `id` global (convention 6).
+    const panneau = document.currentScript.previousElementSibling;
+    const consequence = panneau.querySelector('[data-role="consequence"]');
+    const compte = panneau.querySelector('[data-role="count"]');
+    const pluriel = panneau.querySelector('[data-role="plural"]');
+    const liste = panneau.querySelector('[data-role="tiebreaks"]');
+
+    /** Le nombre de champs numériques qui diffèrent de leur valeur d'origine. */
+    function changements() {
+        return [...panneau.querySelectorAll('.pts-input')]
+            .filter(i => i.value !== i.dataset.was).length;
+    }
+
+    function rafraichir() {
+        const n = changements();
+        consequence.classList.toggle('shown', n > 0);
+        compte.textContent = n;
+        pluriel.textContent = n > 1 ? 's' : '';
+        panneau.querySelectorAll('.pts-input').forEach(i => {
+            i.classList.toggle('changed', i.value !== i.dataset.was);
+            const note = i.parentElement.querySelector('.pts-was');
+            note.textContent = i.value !== i.dataset.was ? `était ${i.dataset.was}` : '';
+        });
+    }
+    panneau.addEventListener('input', rafraichir);
+
+    /** Les rangs sont réécrits après chaque déplacement : ils portent la
+        priorité, et un rang périmé mentirait sur ce qui sera enregistré. */
+    function renumeroter() {
+        [...liste.children].forEach((row, i) => {
+            row.querySelector('.tiebreak-rank').textContent = i + 1;
+            row.querySelector('[data-move="up"]').disabled = i === 0;
+            row.querySelector('[data-move="down"]').disabled = i === liste.children.length - 1;
+        });
+    }
+    liste.addEventListener('click', e => {
+        const bouton = e.target.closest('.tiebreak-move');
+        if (!bouton) return;
+        const ligne = bouton.closest('.tiebreak-row');
+        const voisin = bouton.dataset.move === 'up'
+            ? ligne.previousElementSibling : ligne.nextElementSibling;
+        if (!voisin) return;
+        bouton.dataset.move === 'up'
+            ? liste.insertBefore(ligne, voisin)
+            : liste.insertBefore(voisin, ligne);
+        renumeroter();
+    });
+    renumeroter();
+
+    function bonus(nom) {
+        const rangee = panneau.querySelector(`[data-bonus="${nom}"]`);
+        const lire = c => rangee.querySelector(`[data-champ="${c}"]`);
+        return {
+            activated: lire('activated').checked,
+            threshold: Number(lire('threshold').value),
+            points: Number(lire('points').value),
+        };
+    }
+
+    /** La charge utile épouse `RankingRules` : `serde` la valide entièrement,
+        le serveur n'a rien à contrôler. */
+    function charge() {
+        const pts = c => Number(panneau.querySelector(`.pts-input[data-champ="${c}"]`).value);
+        const off = bonus('offensive'), def = bonus('defensive'), agg = bonus('aggressive');
+        return {
+            win_points: pts('win_points'),
+            draw_points: pts('draw_points'),
+            lose_points: pts('lose_points'),
+            offensive_bonus: { activated: off.activated, diff_td: off.threshold, points: off.points },
+            defensive_bonus: { activated: def.activated, max_td_conceded: def.threshold, points: def.points },
+            aggressive_bonus: { activated: agg.activated, min_casualties: agg.threshold, points: agg.points },
+            tiebreakers: [...liste.children].map(row => ({
+                code: row.dataset.code,
+                activated: row.querySelector('[data-champ="activated"]').checked,
+            })),
+        };
+    }
+
+    /* `fetch` et non `htmx.ajax` : htmx encode ses `values` en **formulaire**,
+       quel que soit l'en-tête posé. Un `Content-Type: application/json` sur un
+       corps `application/x-www-form-urlencoded` se ferait rejeter par
+       l'extracteur — et le diagnostic partirait chercher un défaut de barème.
+
+       Même arbitrage que l'écran du jet des erreurs coûteuses (carte 410), pour
+       la même raison : ne pas dépendre d'un contrat interne d'htmx. */
+    const bouton = panneau.querySelector('[data-role="save"]');
+    bouton.addEventListener('click', function () {
+        bouton.disabled = true;
+        bouton.classList.add('htmx-request');
+        fetch('{{ post_url }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'HX-Request': 'true' },
+            body: JSON.stringify(charge()),
+        })
+          .then(r => {
+              if (!r.ok) { throw new Error('statut ' + r.status); }
+              return r.text();
+          })
+          .then(html => {
+              /* Le panneau se remplace lui-même : la réponse **est** le widget,
+                 relu depuis la base. */
+              panneau.outerHTML = html;
+          })
+          .catch(e => {
+              console.error('[settings-ranking] enregistrement échoué', e);
+              bouton.disabled = false;
+              bouton.classList.remove('htmx-request');
+          });
+    });
+})();
+</script>

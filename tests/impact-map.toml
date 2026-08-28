@@ -79,6 +79,13 @@
 # inscrites, dont l'appartenance à la saison est vérifiée à l'affectation.
 "test_competition_admin_acces" = ["competitions", "auth", "teams", "spaces",
                                   "references", "ranking"]
+# Le panneau du barème traverse `competitions` vers `ranking` par un port qui
+# **ordonne** : le rejeu du classement a lieu dans le même POST. `match_report`
+# est une dépendance dure — c'est le seul chemin vers des lignes de classement à
+# rejouer.
+"test_competition_settings_ranking" = ["competitions", "ranking", "match_report",
+                                       "teams", "players", "spp_calculator",
+                                       "references", "team_creation", "spaces", "auth"]
 # Le widget de réglage des notifications, monté dans l'onglet Synthèse.
 "test_notification_settings"   = ["competitions", "teams", "spaces", "references", "ranking"]
 

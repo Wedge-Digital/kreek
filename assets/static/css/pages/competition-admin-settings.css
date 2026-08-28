@@ -100,3 +100,85 @@
   .competition-admin-settings .form-row { flex-direction: column; gap: 6px; }
   .competition-admin-settings .form-row-label { min-width: 0; padding-top: 0; }
 }
+
+/* ── Panneau « Points de classement » (carte 422) ──────────────────────────
+   Copié de la maquette puis préfixé par la portée : les règles ne sont pas
+   réécrites (règle 5 du `CLAUDE.md`), seul le sélecteur change. */
+.competition-admin-settings .pts-input.changed, .competition-admin-settings .bonus-input.changed { border-color: var(--main-blue); }
+.competition-admin-settings .pts-was {
+  font-size: 11px; color: var(--dark-3); min-height: 14px;
+  font-variant-numeric: tabular-nums;
+  }
+
+.competition-admin-settings .pts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--p1); }
+.competition-admin-settings .pts-field { display: flex; flex-direction: column; gap: 4px; }
+.competition-admin-settings .pts-label { font-size: var(--text-tiny); color: var(--dark-3); }
+.competition-admin-settings .pts-input { width: 100%; box-sizing: border-box; padding: 8px 10px;
+  border: 1.5px solid var(--dark-4); border-radius: 6px; font: inherit;
+  font-size: var(--text-small); text-align: center; font-variant-numeric: tabular-nums; }
+
+.competition-admin-settings .bonus-row { display: flex; align-items: center; gap: 10px; padding: 8px 0;
+  border-bottom: 1px solid var(--dark-6); flex-wrap: wrap; }
+.competition-admin-settings .bonus-row:last-child { border-bottom: none; }
+.competition-admin-settings .bonus-name { flex: 1; min-width: 140px; font-size: var(--text-small); color: var(--dark-1); }
+.competition-admin-settings .bonus-input { width: 64px; box-sizing: border-box; padding: 6px 8px;
+  border: 1.5px solid var(--dark-4); border-radius: 6px; font: inherit;
+  font-size: var(--text-tiny); text-align: center; font-variant-numeric: tabular-nums; }
+
+/* Départage : l'ordre **est** la priorité, d'où les poignées. */
+.competition-admin-settings .tiebreak-list { display: flex; flex-direction: column; gap: 6px; }
+.competition-admin-settings .tiebreak-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border: 1px solid var(--dark-5); border-radius: 6px;
+  background: var(--white); font-size: var(--text-small);
+  }
+.competition-admin-settings .tiebreak-handle { color: var(--dark-4); cursor: grab; }
+.competition-admin-settings .tiebreak-rank { font-family: var(--font-title); font-weight: 800; color: var(--main-blue); width: 18px; font-variant-numeric: tabular-nums; }
+.competition-admin-settings .tiebreak-name { flex: 1; }
+.competition-admin-settings .pool-count { font-size: var(--text-tiny); color: var(--dark-3); white-space: nowrap; }
+.competition-admin-settings .section-sep { height: 1px; background: var(--dark-5); }
+
+/* La conséquence est un **état du formulaire**, pas un bandeau posé en tête ni
+   une modale après coup : ce qu'un réglage défait est porté par l'élément qu'on
+   manipule. Toujours visible — un commissaire doit savoir ce qu'il engage
+   *avant* de toucher au réglage — c'est le ton qui change, pas la présence. */
+.competition-admin-settings .panel-consequence {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  margin-top: var(--p1); padding-top: var(--p1);
+  border-top: 1px solid var(--dark-5);
+  font-size: var(--text-tiny); color: var(--dark-3); line-height: 1.5;
+  }
+.competition-admin-settings .panel-consequence.shown {
+  color: var(--dark-1);
+  border-top-color: var(--main-blue);
+  }
+.competition-admin-settings .panel-consequence-count {
+  font-family: var(--font-title); font-weight: 800; color: var(--main-blue);
+  font-variant-numeric: tabular-nums;
+  }
+.competition-admin-settings .panel-consequence em { font-style: normal; color: var(--dark-3); }
+.competition-admin-settings .consequence-idle { display: block; }
+.competition-admin-settings .consequence-active { display: none; }
+.competition-admin-settings .panel-consequence.shown .consequence-idle { display: none; }
+.competition-admin-settings .panel-consequence.shown .consequence-active { display: block; }
+
+/* Le sous-titre de section — la maquette le rendait par un `style=` inline sur
+   `.settings-panel-title`, ce que le `CLAUDE.md` interdit dans les templates. */
+.competition-admin-settings .settings-panel-subtitle {
+  font-family: var(--font-title); font-weight: 700; color: var(--dark-1);
+  font-size: var(--text-tiny); margin-bottom: 8px;
+}
+
+/* Les deux boutons de priorité remplacent la poignée de glisser-déposer de la
+   maquette : même fonction, sans dépendance JS, et atteignables au clavier. */
+.competition-admin-settings .tiebreak-move {
+  border: 1px solid var(--dark-5); background: var(--white); color: var(--dark-3);
+  border-radius: 5px; width: 22px; height: 22px; line-height: 1; cursor: pointer;
+  font-family: inherit; font-size: 11px;
+}
+.competition-admin-settings .tiebreak-move:hover:not(:disabled) { color: var(--main-blue); }
+.competition-admin-settings .tiebreak-move:disabled { opacity: 0.3; cursor: not-allowed; }
+
+@media (max-width: 768px) {
+  .competition-admin-settings .pts-grid { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,216 @@
+//! Les view models des panneaux qui dépendent d'un **port** autant que du
+//! domaine.
+//!
+//! Le `CLAUDE.md` réserve `from_domain()` aux VMs purement domaine ; ceux qui
+//! croisent un DTO de port vivent ici, pour que `view_models` n'importe jamais
+//! les types du port.
+
+use crate::app::competitions::domain::competition_rules::RankingRules;
+use crate::app::competitions::io::web::admin::settings::ranking_panel::{
+    BonusVm, RankingVm, TiebreakRowVm,
+};
+use crate::app::competitions::ports::ITiebreakCatalogPort;
+
+/// Le barème et ses critères de départage, joints au catalogue.
+///
+/// # Une jointure **ordonnée**, et sa règle de fin
+///
+/// L'ordre vient de la `TiebreakConfig` enregistrée — c'est lui qui porte la
+/// priorité. Les libellés viennent du catalogue. Et **les critères du catalogue
+/// absents de la configuration s'ajoutent à la fin, désactivés**.
+///
+/// Sans cette dernière règle, un critère ajouté au catalogue serait invisible
+/// pour toutes les compétitions existantes : leur configuration ne le
+/// mentionnant pas, il n'apparaîtrait jamais à l'écran, et personne ne pourrait
+/// l'activer. Le catalogue grandirait sans que rien ne le montre.
+pub fn build_ranking_vm(rules: &RankingRules, catalog: &dyn ITiebreakCatalogPort) -> RankingVm {
+    let connus = catalog.all();
+    let libelle = |code: &str| {
+        connus
+            .iter()
+            .find(|c| c.code == code)
+            .map(|c| c.label.clone())
+            // Un code enregistré que le catalogue ne connaît plus : on le montre
+            // sous son code plutôt que de l'escamoter. Le faire disparaître
+            // changerait la priorité des suivants sans le dire.
+            .unwrap_or_else(|| code.to_string())
+    };
+
+    let mut lignes: Vec<TiebreakRowVm> = rules
+        .tiebreakers
+        .settings()
+        .iter()
+        .map(|s| TiebreakRowVm {
+            code: s.code.as_ref().to_string(),
+            label: libelle(s.code.as_ref()),
+            activated: s.activated.0,
+        })
+        .collect();
+
+    for critere in &connus {
+        if !lignes.iter().any(|l| l.code == critere.code) {
+            lignes.push(TiebreakRowVm {
+                code: critere.code.clone(),
+                label: critere.label.clone(),
+                activated: false,
+            });
+        }
+    }
+
+    RankingVm {
+        win_points: rules.win_points.into_inner(),
+        draw_points: rules.draw_points.into_inner(),
+        lose_points: rules.lose_points.into_inner(),
+        offensive: BonusVm {
+            activated: rules.offensive_bonus.activated.0,
+            threshold: rules.offensive_bonus.min_td.into_inner(),
+            points: rules.offensive_bonus.points.into_inner(),
+        },
+        defensive: BonusVm {
+            activated: rules.defensive_bonus.activated.0,
+            threshold: rules.defensive_bonus.max_td_conceded.into_inner(),
+            points: rules.defensive_bonus.points.into_inner(),
+        },
+        aggressive: BonusVm {
+            activated: rules.aggressive_bonus.activated.0,
+            threshold: rules.aggressive_bonus.min_casualties.into_inner(),
+            points: rules.aggressive_bonus.points.into_inner(),
+        },
+        tiebreakers: lignes,
+        recompute: None,
+        error: None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::competitions::domain::competition_rules::{
+        Activated, AggressiveBonus, DefensiveBonus, MaxTdConceded, MinCasualties, MinTd,
+        OffensiveBonus, RankingPoints, TiebreakCode, TiebreakConfig, TiebreakSetting,
+    };
+    use crate::app::competitions::ports::TiebreakCriterionDto;
+
+    struct FakeCatalogue(Vec<(&'static str, &'static str)>);
+
+    impl ITiebreakCatalogPort for FakeCatalogue {
+        fn all(&self) -> Vec<TiebreakCriterionDto> {
+            self.0
+                .iter()
+                .map(|(code, label)| TiebreakCriterionDto {
+                    code: code.to_string(),
+                    label: label.to_string(),
+                })
+                .collect()
+        }
+    }
+
+    fn reglage(code: &str, actif: bool) -> TiebreakSetting {
+        TiebreakSetting {
+            code: TiebreakCode::try_new(code).unwrap(),
+            activated: Activated(actif),
+        }
+    }
+
+    fn bareme(tiebreakers: TiebreakConfig) -> RankingRules {
+        RankingRules {
+            win_points: RankingPoints::try_new(3).unwrap(),
+            draw_points: RankingPoints::try_new(1).unwrap(),
+            lose_points: RankingPoints::try_new(0).unwrap(),
+            offensive_bonus: OffensiveBonus {
+                activated: Activated(true),
+                min_td: MinTd::try_new(2).unwrap(),
+                points: RankingPoints::try_new(1).unwrap(),
+            },
+            defensive_bonus: DefensiveBonus {
+                activated: Activated(false),
+                points: RankingPoints::try_new(1).unwrap(),
+                max_td_conceded: MaxTdConceded::try_new(1).unwrap(),
+            },
+            aggressive_bonus: AggressiveBonus {
+                activated: Activated(false),
+                points: RankingPoints::try_new(1).unwrap(),
+                min_casualties: MinCasualties::try_new(3).unwrap(),
+            },
+            tiebreakers,
+        }
+    }
+
+    /// **L'ordre vient de la configuration, les libellés du catalogue.** Le
+    /// catalogue est délibérément donné dans un ordre différent : c'est ce qui
+    /// prouve que la jointure ne le suit pas.
+    #[test]
+    fn la_jointure_suit_l_ordre_de_la_configuration_pas_du_catalogue() {
+        let config =
+            TiebreakConfig::try_new(vec![reglage("nb_td", true), reglage("diff_td", false)])
+                .unwrap();
+        let catalogue = FakeCatalogue(vec![
+            ("diff_td", "Différence de touchdowns"),
+            ("nb_td", "Touchdowns marqués"),
+        ]);
+
+        let vm = build_ranking_vm(&bareme(config), &catalogue);
+
+        let codes: Vec<&str> = vm.tiebreakers.iter().map(|t| t.code.as_str()).collect();
+        assert_eq!(codes, vec!["nb_td", "diff_td"]);
+        assert_eq!(vm.tiebreakers[0].label, "Touchdowns marqués");
+        assert!(vm.tiebreakers[0].activated);
+        assert!(!vm.tiebreakers[1].activated);
+    }
+
+    /// **Un critère ajouté au catalogue rejoint la fin, désactivé.**
+    ///
+    /// Sans cette règle il serait invisible pour toutes les compétitions
+    /// existantes — leur configuration ne le mentionnant pas, il n'apparaîtrait
+    /// jamais à l'écran et personne ne pourrait l'activer. Le catalogue
+    /// grandirait sans que rien ne le montre.
+    #[test]
+    fn un_critere_du_catalogue_absent_de_la_configuration_rejoint_la_fin_desactive() {
+        let config = TiebreakConfig::try_new(vec![reglage("nb_td", true)]).unwrap();
+        let catalogue = FakeCatalogue(vec![
+            ("nb_td", "Touchdowns marqués"),
+            ("nouveau", "Confrontation directe"),
+        ]);
+
+        let vm = build_ranking_vm(&bareme(config), &catalogue);
+
+        assert_eq!(vm.tiebreakers.len(), 2);
+        assert_eq!(vm.tiebreakers[1].code, "nouveau");
+        assert_eq!(vm.tiebreakers[1].label, "Confrontation directe");
+        assert!(
+            !vm.tiebreakers[1].activated,
+            "un critère jamais configuré arrive éteint"
+        );
+    }
+
+    /// Un code enregistré que le catalogue ne connaît plus **reste affiché**,
+    /// sous son code. L'escamoter changerait la priorité des suivants sans le
+    /// dire.
+    #[test]
+    fn un_code_inconnu_du_catalogue_reste_affiche_sous_son_code() {
+        let config =
+            TiebreakConfig::try_new(vec![reglage("disparu", true), reglage("nb_td", true)])
+                .unwrap();
+        let catalogue = FakeCatalogue(vec![("nb_td", "Touchdowns marqués")]);
+
+        let vm = build_ranking_vm(&bareme(config), &catalogue);
+
+        assert_eq!(vm.tiebreakers.len(), 2);
+        assert_eq!(vm.tiebreakers[0].code, "disparu");
+        assert_eq!(vm.tiebreakers[0].label, "disparu");
+        assert_eq!(vm.tiebreakers[1].code, "nb_td");
+    }
+
+    #[test]
+    fn les_trois_bonus_portent_leur_seuil_respectif() {
+        let config = TiebreakConfig::try_new(vec![reglage("nb_td", true)]).unwrap();
+        let vm = build_ranking_vm(&bareme(config), &FakeCatalogue(vec![]));
+
+        assert_eq!((vm.win_points, vm.draw_points, vm.lose_points), (3, 1, 0));
+        assert!(vm.offensive.activated);
+        assert_eq!(vm.offensive.threshold, 2, "TD d'écart");
+        assert_eq!(vm.defensive.threshold, 1, "TD encaissés au plus");
+        assert_eq!(vm.aggressive.threshold, 3, "sorties");
+        assert!(vm.recompute.is_none(), "aucun rejeu n'a eu lieu");
+    }
+}

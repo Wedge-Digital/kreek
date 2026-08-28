@@ -18,7 +18,11 @@
        hx-trigger="load"
        hx-target="this"
        hx-swap="innerHTML"></div>
-  <div id="settings-ranking"></div>
+  <div id="settings-ranking"
+       hx-get="{{ ranking_url }}"
+       hx-trigger="load"
+       hx-target="this"
+       hx-swap="innerHTML"></div>
   <div id="settings-pools"></div>
   <div id="settings-tiers"></div>
   <div id="settings-visibility"></div>

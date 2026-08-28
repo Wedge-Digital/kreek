@@ -14,8 +14,8 @@ use crate::app::competitions::io::repository::group_repository::GroupRepository;
 use crate::app::competitions::io::repository::match_day_repository::MatchDayRepository;
 use crate::app::competitions::io::repository::season_repository::SeasonRepository;
 use crate::app::competitions::ports::{
-    ICompetitionReferencePort, ICompetitionSpaceMemberPort, IMatchReportStatusPort, ITeamInfoPort,
-    ITiebreakCatalogPort,
+    ICompetitionReferencePort, ICompetitionSpaceMemberPort, IMatchReportStatusPort,
+    IRankingRecomputePort, ITeamInfoPort, ITiebreakCatalogPort,
 };
 use crate::common::services::email::IEmailService;
 use crate::common::services::event_bus::event_bus::EventBus;
@@ -33,6 +33,8 @@ pub struct CompetitionsContext {
     pub space_member_port: Arc<dyn ICompetitionSpaceMemberPort>,
     pub tiebreak_catalog_port: Arc<dyn ITiebreakCatalogPort>,
     pub match_report_status_port: Arc<dyn IMatchReportStatusPort>,
+    /// Le seul port de ce BC qui **ordonne** — cf. `IRankingRecomputePort`.
+    pub ranking_recompute_port: Arc<dyn IRankingRecomputePort>,
     pub email_service: Arc<dyn IEmailService>,
     /// L'URL publique, schéma compris, pour les liens des e-mails.
     ///
@@ -98,6 +100,7 @@ impl CompetitionsContext {
         space_member_port: Arc<dyn ICompetitionSpaceMemberPort>,
         tiebreak_catalog_port: Arc<dyn ITiebreakCatalogPort>,
         match_report_status_port: Arc<dyn IMatchReportStatusPort>,
+        ranking_recompute_port: Arc<dyn IRankingRecomputePort>,
         email_service: Arc<dyn IEmailService>,
         app_url: String,
     ) -> Self {
@@ -111,6 +114,7 @@ impl CompetitionsContext {
             space_member_port,
             tiebreak_catalog_port,
             match_report_status_port,
+            ranking_recompute_port,
             email_service,
             app_url,
             event_bus,
