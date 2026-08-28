@@ -211,6 +211,45 @@
       display: flex; align-items: center; justify-content: space-between;
       text-align: left; cursor: default; font: inherit; color: inherit;
     }
+    /* ── Journaliers recrutables ───────────────────────────────────────
+       Un panneau distinct, au-dessus du catalogue et marqué d'un filet
+       d'accent : ces joueurs sont **éphémères**. Un poste du catalogue sera
+       encore là au prochain match ; un journalier non recruté est perdu à la
+       sortie de la phase. La position et le filet disent cette urgence, que
+       des lignes mêlées au catalogue effaceraient. */
+    .panel--jm { border-top: 3px solid var(--orange); }
+    .panel--jm .panel-title { display: flex; align-items: center; gap: 8px; }
+
+    .jm-warn {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px var(--p1); border-radius: 8px; margin-bottom: var(--p1);
+      background: rgba(255,107,53,0.07); color: #9A5000;
+      font-size: var(--text-tiny); line-height: 1.5;
+    }
+
+    .jm-name { font-weight: 600; color: var(--dark-1); }
+    .jm-pos  { font-size: var(--text-tiny); color: var(--dark-3); }
+
+    /* Les SPP sont l'argument de la décision : c'est pour eux qu'on paie plus
+       cher qu'un poste neuf. */
+    .jm-spp {
+      display: inline-block; padding: 1px 9px; border-radius: 10px;
+      background: rgba(0,48,73,0.08); color: var(--main-blue);
+      font-weight: 600; font-variant-numeric: tabular-nums;
+    }
+    .jm-spp--zero { background: var(--dark-6); color: var(--dark-4); font-weight: 400; }
+
+    .jm-imp { font-size: var(--text-tiny); }
+    .jm-imp-none { color: var(--dark-4); }
+    .jm-imp-tag {
+      display: inline-block; padding: 1px 8px; border-radius: 10px;
+      background: rgba(98,149,132,0.15); color: var(--green); font-weight: 600;
+    }
+
+    /* Le prix se décompose : le coach doit voir POURQUOI il paie plus que le
+       tarif du poste — c'est la règle du LRB rendue lisible. */
+    .jm-price-base { font-size: 11px; color: var(--dark-3); }
+
     .cart-head .panel-title { margin-bottom: 0; }
     .cart-count { color: var(--role-pending); }
     .cart-chevron { display: none; }
@@ -421,6 +460,41 @@
           <div class="rec-grid">
             <div class="rec-main">
 
+              <!-- ── Journaliers du dernier match ───────────────────── -->
+              <div class="panel panel--jm" id="jm-panel">
+                <div class="panel-title"><span>⏳</span> Journaliers du dernier match</div>
+                <div class="panel-sub">
+                  Ils ont joué pour vous à la journée 3. Les recruter les fait entrer
+                  définitivement dans l'effectif, avec les points d'expérience qu'ils
+                  ont gagnés.
+                </div>
+
+                <div class="jm-warn">
+                  <span>⏳</span>
+                  <span>
+                    <strong>Ils partent à la fin de cette phase.</strong> Un journalier
+                    qui n'est pas recruté maintenant est perdu — avec son expérience.
+                  </span>
+                </div>
+
+                <div class="table-scroll">
+                  <table class="buy-table">
+                    <thead>
+                      <tr>
+                        <th class="col-left" scope="col">Journalier</th>
+                        <th scope="col">Expérience</th>
+                        <th class="col-left" scope="col">Amélioration prise</th>
+                        <th scope="col">Prix</th>
+                        <th><span class="sr-only">Action</span></th>
+                      </tr>
+                    </thead>
+                    <tbody id="journeymen-body">
+                      <!-- rempli par le script -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
               <!-- ── Recruter un joueur ─────────────────────────────── -->
               <div class="panel">
                 <div class="panel-title">Recruter un joueur</div>
@@ -567,6 +641,16 @@
     { name: 'Danseur de Guerre',stats: '8/3/2+/4+/8+',  skills: ['Bloc', 'Esquiver', 'Bond'],         max: 2,  price: 130, owned: 1 },
     { name: 'Homme-Arbre',      stats: '2/6/5+/5+/11+', skills: ['Solitaire (4+)', 'Châtaigne'],      max: 1,  price: 120, owned: 1 },
   ];
+  /* Les journaliers du dernier match. Leur prix EST leur valeur courante — la
+     formule du LRB, « frais d'embauche plus hausse de valeur », est la
+     définition même de la valeur d'un joueur. `base` sert seulement à montrer
+     au coach d'où vient l'écart. */
+  const JOURNEYMEN = [
+    { name: 'Gwenn ar Skorn', pos: 'Trois-quart', spp: 6, imp: 'Blocage',   base: 65, price: 85 },
+    { name: 'Maelig Treut',   pos: 'Trois-quart', spp: 2, imp: null,        base: 65, price: 65 },
+    { name: 'Ronan Kadour',   pos: 'Trois-quart', spp: 0, imp: null,        base: 65, price: 65 },
+  ];
+
   const STAFF = [
     { uid: 'REROLL',      name: 'Relance',              max: 8, price: 100, base: 50, owned: 2, doubled: true },
     { uid: 'APOTHECARY',  name: 'Apothicaire',          max: 1, price: 50,  owned: 1 },
@@ -589,7 +673,12 @@
     return state.purse - cartTotal();
   }
   function squadTotal() {
-    return state.squad + state.cart.filter(c => c.kind === 'player').length;
+    // Décision 11 : la limite de 16 ne compte que les PERMANENTS. `state.squad`
+    // est donc l'effectif permanent, journaliers exclus — sinon un coach plein
+    // de journaliers ne pourrait recruter personne, alors que les recruter
+    // est précisément ce qui le sortirait de l'impasse.
+    return state.squad
+      + state.cart.filter(c => c.kind === 'player' || c.kind === 'journeyman').length;
   }
 
   // ── Rendu ──────────────────────────────────────────────────────────────
@@ -604,6 +693,34 @@
   function quotaCell(count, max, pending) {
     const add = pending ? `<span class="quota-add">+${pending}</span>` : '';
     return `<span class="quota ${count >= max ? 'quota--full' : ''}">${count} / ${max}</span>${add}`;
+  }
+
+  function journeymanRow(j, i) {
+    const pending = queued('journeyman', i);
+    // Un journalier déjà au panier ne se reprend pas : il n'y en a qu'un.
+    const reason = pending ? 'Au panier'
+                 : (j.price > remaining() ? 'Trésorerie insuffisante' : null);
+    const spp = j.spp
+      ? `<span class="jm-spp">${j.spp} PSP</span>`
+      : `<span class="jm-spp jm-spp--zero">0 PSP</span>`;
+    const imp = j.imp
+      ? `<span class="jm-imp-tag">${j.imp}</span>`
+      : `<span class="jm-imp-none">aucune</span>`;
+    // Le prix se décompose dès qu'il dépasse le tarif du poste — sinon le coach
+    // croit à une erreur.
+    const ecart = j.price > j.base
+      ? `<div class="jm-price-base">${j.base} + ${j.price - j.base} d'amélioration</div>`
+      : '';
+    return `<tr class="${reason && reason !== 'Au panier' ? 'is-blocked' : ''}">
+      <td class="col-left">
+        <span class="jm-name">${j.name}</span>
+        <div class="jm-pos">${j.pos}</div>
+      </td>
+      <td>${spp}</td>
+      <td class="col-left jm-imp">${imp}</td>
+      <td><span class="price">${j.price} kPo</span>${ecart}</td>
+      <td>${actionCell(reason, `recruitJourneyman(${i})`, 'Recruter', j.name)}</td>
+    </tr>`;
   }
 
   function positionRow(p, i) {
@@ -718,6 +835,16 @@
   }
 
   function render() {
+    // Le panneau disparaît quand il n'y a rien à recruter : la plupart des
+    // matchs se jouent sans journalier, et un panneau vide poserait la question
+    // « qu'est-ce que j'ai raté ? » à chaque phase de recrutement.
+    const jmPanel = document.getElementById('jm-panel');
+    if (JOURNEYMEN.length) {
+      jmPanel.style.display = '';
+      document.getElementById('journeymen-body').innerHTML = JOURNEYMEN.map(journeymanRow).join('');
+    } else {
+      jmPanel.style.display = 'none';
+    }
     document.getElementById('positions-body').innerHTML = POSITIONS.map(positionRow).join('');
     document.getElementById('staff-body').innerHTML = STAFF.map(staffRow).join('');
     renderComposition();
@@ -730,6 +857,12 @@
   function hire(i) {
     const p = POSITIONS[i];
     state.cart.push({ kind: 'player', idx: i, label: p.name, price: p.price });
+    render();
+  }
+
+  function recruitJourneyman(i) {
+    const j = JOURNEYMEN[i];
+    state.cart.push({ kind: 'journeyman', idx: i, label: `${j.name} — journalier`, price: j.price });
     render();
   }
 
