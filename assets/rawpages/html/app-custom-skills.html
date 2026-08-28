@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compétences personnalisées — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="../../static/css/components/kreek-select.css">
+  <style>
+    .cs-page { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--p1); }
+
+    /* ── Bandeau ──────────────────────────────────────────────────────── */
+    .cs-head {
+      background: var(--white); border-radius: 10px; padding: var(--p2);
+      display: flex; align-items: center; gap: var(--p2); flex-wrap: wrap;
+    }
+    .cs-head-text { flex: 1; min-width: 220px; }
+    .cs-head-title { font-family: var(--font-title); font-size: var(--h2); font-weight: 700; color: var(--dark-0); line-height: 1.1; }
+    .cs-head-sub { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 4px; }
+    .cs-scope {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 20px;
+      background: rgba(0,48,73,0.08); color: var(--main-blue);
+      font-size: var(--text-tiny); font-weight: 600; white-space: nowrap;
+    }
+
+    /* ── Panneaux : deux poids ────────────────────────────────────────── */
+    .cs-panel { background: var(--white); border-radius: 10px; overflow: hidden; }
+    .cs-panel--form { background: var(--white-1); border: 1px solid var(--dark-5); }
+    .cs-panel--form .cs-panel-head { background: rgba(0,48,73,0.045); padding: 10px var(--p2); }
+    .cs-panel--form .cs-panel-title { font-size: var(--text-small); color: var(--dark-2); }
+    .cs-panel--list { box-shadow: 0 2px 14px rgba(0,48,73,0.07); border-top: 3px solid var(--main-blue); }
+    .cs-panel--list .cs-panel-title { font-size: var(--h4); color: var(--dark-0); }
+
+    .cs-panel-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--p1); padding: var(--p1) var(--p2);
+      border-bottom: 1px solid var(--dark-5); flex-wrap: wrap;
+    }
+    .cs-panel-title { display: flex; align-items: center; gap: 8px; font-family: var(--font-title); font-weight: 600; color: var(--dark-1); }
+    .cs-panel-note { font-size: var(--text-tiny); color: var(--dark-3); }
+    .cs-panel-body { padding: var(--p2); }
+
+    /* ── Formulaire ───────────────────────────────────────────────────── */
+    .cs-form { display: flex; gap: var(--p2); align-items: flex-end; flex-wrap: wrap; }
+    .cs-form--second { margin-top: var(--p2); }
+    .cs-field { display: flex; flex-direction: column; gap: 5px; }
+    .cs-field--grow { flex: 1; min-width: 240px; }
+    .cs-label {
+      font-size: var(--text-tiny); color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.5px; min-height: 15px;
+    }
+    .cs-input, .cs-textarea {
+      padding: 9px 12px; border: 1px solid var(--dark-4); border-radius: 7px;
+      font-size: var(--text-small); color: var(--dark-1);
+      font-family: inherit; outline: none; background: var(--white);
+      transition: border-color 0.15s; width: 100%;
+    }
+    .cs-input:focus, .cs-textarea:focus { border-color: var(--main-blue); }
+    .cs-textarea { resize: vertical; min-height: 76px; line-height: 1.5; }
+    .cs-hint { font-size: 11px; color: var(--dark-4); min-height: 14px; }
+
+    /* Un champ figé n'est pas un champ désactivé : il ne se grise pas, il se
+       transforme en fait. Griser inviterait à chercher comment le réactiver
+       alors qu'il n'y a rien à réactiver. */
+    .cs-frozen {
+      padding: 9px 12px; border-radius: 7px;
+      background: rgba(0,48,73,0.05); border: 1px solid transparent;
+      font-size: var(--text-small); color: var(--dark-2);
+      display: flex; align-items: center; gap: 8px; min-height: 40px;
+    }
+    .cs-frozen-lock { color: var(--dark-4); font-size: 12px; }
+
+    .cs-locked-warn {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px var(--p1); border-radius: 8px; margin-bottom: var(--p2);
+      background: rgba(0,48,73,0.05); color: var(--dark-2);
+      font-size: var(--text-tiny); line-height: 1.5;
+    }
+    .cs-count { font-variant-numeric: tabular-nums; }
+    .cs-count--over { color: var(--red); font-weight: 600; }
+
+    /* Le type a une conséquence chiffrée — il mérite d'être un choix explicite
+       et non une option perdue dans une liste. */
+    .cs-seg { display: flex; }
+    .cs-seg button {
+      padding: 9px 16px; border: 1px solid var(--dark-4); background: var(--white);
+      font-size: var(--text-small); font-weight: 500; cursor: pointer;
+      font-family: inherit; color: var(--dark-3);
+    }
+    .cs-seg button:first-child { border-radius: 7px 0 0 7px; border-right: none; }
+    .cs-seg button:last-child  { border-radius: 0 7px 7px 0; }
+    .cs-seg button.on          { background: rgba(0,48,73,0.10); color: var(--main-blue); border-color: var(--main-blue); }
+    .cs-seg button.on.elite    { background: rgba(255,215,0,0.22); color: #8A6D00; border-color: #C9A400; }
+
+    /* ── Aperçu — la pastille telle qu'elle apparaîtra sur une fiche ──── */
+    .cs-preview {
+      display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap;
+      margin-top: var(--p2); padding: var(--p1) var(--p2);
+      border-radius: 8px; background: rgba(0,48,73,0.04);
+      border-left: 3px solid var(--main-blue);
+    }
+    .cs-preview-label { font-size: var(--text-tiny); color: var(--dark-3); }
+    .skill-tag {
+      display: inline-block; font-size: var(--text-tiny); font-weight: 600;
+      padding: 3px 10px; border-radius: 20px; background: var(--dark-5); color: var(--dark-1);
+    }
+    .type-general   { background: rgba(0,48,73,0.08);   color: var(--main-blue); }
+    .type-strength  { background: rgba(224,32,32,0.08); color: var(--red); }
+    .type-agility   { background: rgba(98,149,132,0.12);color: var(--green); }
+    .type-passing   { background: rgba(255,215,0,0.18); color: #9A7800; }
+    .type-mutation  { background: rgba(111,53,165,0.10);color: #6f35a5; }
+    .type-devious   { background: rgba(255,107,53,0.12);color: var(--orange); }
+    .type-traits    { background: var(--dark-6);        color: var(--dark-2); }
+    .cs-elite-mark { color: #9A7800; font-size: var(--text-tiny); font-weight: 600; }
+
+    /* ── Liste ────────────────────────────────────────────────────────── */
+    .cs-row {
+      display: flex; align-items: flex-start; gap: var(--p2);
+      padding: var(--p1) var(--p2); border-bottom: 1px solid var(--dark-6);
+    }
+    .cs-row:last-child { border-bottom: none; }
+    .cs-row:hover { background: rgba(0,48,73,0.03); }
+    .cs-row-main { flex: 1; min-width: 200px; }
+    .cs-row-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .cs-row-name { font-weight: 600; color: var(--dark-0); }
+    .cs-row-desc { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 4px; line-height: 1.5; }
+    .cs-row-usage { text-align: right; min-width: 104px; }
+    .cs-usage-n { font-family: var(--font-title); font-size: var(--h4); font-weight: 600; color: var(--dark-1); line-height: 1; }
+    .cs-usage-n--zero { color: var(--dark-4); }
+    .cs-usage-l { font-size: 11px; color: var(--dark-3); margin-top: 2px; }
+    .cs-row-actions { display: flex; gap: 6px; white-space: nowrap; }
+
+    .cs-badge {
+      padding: 1px 8px; border-radius: 10px; font-size: 10px;
+      font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .cs-badge--locked { background: rgba(0,48,73,0.1); color: var(--main-blue); }
+
+    /* ── Boutons ──────────────────────────────────────────────────────── */
+    .cs-btn {
+      padding: 9px 18px; border-radius: 7px; cursor: pointer;
+      font-size: var(--text-small); font-weight: 600; font-family: inherit;
+      border: 1px solid var(--dark-4); background: var(--white); color: var(--dark-2);
+      transition: all 0.15s;
+    }
+    .cs-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .cs-btn--primary { background: var(--main-blue); border-color: var(--main-blue); color: var(--white); }
+    .cs-btn--primary:hover { background: #00243a; color: var(--white); }
+    .cs-btn--sm { padding: 7px 14px; font-size: var(--text-tiny); }
+    .cs-btn--danger:hover { border-color: var(--red); color: var(--red); }
+
+    /* ── État vide ────────────────────────────────────────────────────── */
+    .cs-empty { padding: var(--p3) var(--p2); text-align: center; }
+    .cs-empty-icon  { font-size: 38px; opacity: 0.3; }
+    .cs-empty-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 600; color: var(--dark-2); margin-top: var(--p1); }
+    .cs-empty-text  { font-size: var(--text-small); color: var(--dark-3); margin-top: 6px; max-width: 470px; margin-left: auto; margin-right: auto; }
+
+    /* ── Sélecteur de démonstration ───────────────────────────────────── */
+    .demo-switcher {
+      display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap;
+      background: var(--dark-7); border: 1px dashed var(--dark-4);
+      border-radius: 8px; padding: 10px var(--p1); margin-bottom: var(--p1);
+    }
+    .demo-switcher-label { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; }
+    .state-pill {
+      padding: 5px 12px; border-radius: 14px; border: 1px solid var(--dark-4);
+      background: var(--white); color: var(--dark-2);
+      font-size: var(--text-tiny); font-weight: 600; cursor: pointer;
+    }
+    .state-pill.active { background: var(--main-blue); color: var(--white); border-color: var(--main-blue); }
+
+    @media (max-width: 768px) {
+      .cs-head { flex-direction: column; align-items: stretch; }
+      .cs-form { flex-direction: column; align-items: stretch; }
+      .cs-field--grow { min-width: 0; }
+      .cs-row { flex-wrap: wrap; }
+      .cs-row-usage { text-align: left; min-width: 0; }
+      .cs-row-actions { width: 100%; }
+      .cs-row-actions .cs-btn { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item">Équipes</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item active">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+
+        <div class="demo-switcher">
+          <span class="demo-switcher-label">Aperçu maquette :</span>
+          <button class="state-pill active" data-state="some" onclick="setState('some')">Création</button>
+          <button class="state-pill" data-state="locked" onclick="setState('locked')">Édition d'une compétence employée</button>
+          <button class="state-pill" data-state="none" onclick="setState('none')">Aucune compétence</button>
+        </div>
+
+        <div style="margin-bottom: var(--p1);">
+          <a href="#" style="color: var(--dark-3); font-size: var(--text-tiny);">← Administration de l'espace</a>
+        </div>
+
+        <div class="cs-page">
+
+          <div class="cs-head">
+            <div class="cs-head-text">
+              <div class="cs-head-title">Compétences personnalisées</div>
+              <div class="cs-head-sub">Ligue de Condate — elles s'ajoutent au règlement pour les rosters et les joueurs de cet espace</div>
+            </div>
+            <span class="cs-scope">🔒 Visibles nulle part ailleurs</span>
+          </div>
+
+          <!-- ══ Créer ═══════════════════════════════════════════════ -->
+          <div class="cs-panel cs-panel--form">
+            <div class="cs-panel-head">
+              <div class="cs-panel-title"><span id="form-icon">➕</span> <span id="form-title">Nouvelle compétence</span></div>
+            </div>
+            <div class="cs-panel-body">
+
+              <!-- Ce que le verrou protège, dit à l'endroit où il s'applique :
+                   la catégorie et le type décident du coût d'un achat, et
+                   quatre joueurs ont déjà payé celui-ci. -->
+              <div class="cs-locked-warn" id="locked-warn" style="display:none;">
+                <span>🔒</span>
+                <span>
+                  <strong>4 joueurs ont cette compétence.</strong> Le nom et la description
+                  restent modifiables — une faute se corrige. La catégorie et le type, eux,
+                  sont figés : ils décident du coût, et ces joueurs l'ont déjà payé.
+                </span>
+              </div>
+
+              <div class="cs-form">
+                <div class="cs-field cs-field--grow">
+                  <div class="cs-label">Nom</div>
+                  <input type="text" class="cs-input" id="name" value="Souffle des Marais"
+                         maxlength="50" oninput="refresh()">
+                  <div class="cs-hint"><span class="cs-count" id="name-count">18</span> / 50</div>
+                </div>
+
+                <div class="cs-field cs-field--grow">
+                  <div class="cs-label">Catégorie</div>
+                  <div id="cat-editable">
+                    <kreek-select name="category" placeholder="Choisir…">
+                      <option value="GENERAL">Général</option>
+                      <option value="AGILITY" selected>Agilité</option>
+                      <option value="STRENGTH">Force</option>
+                      <option value="PASSING">Passe</option>
+                      <option value="DEVIOUS">Retors</option>
+                      <option value="MUTATIONS">Mutations</option>
+                      <option value="TRAITS">Traits</option>
+                    </kreek-select>
+                  </div>
+                  <div class="cs-frozen" id="cat-frozen" style="display:none;">
+                    <span class="cs-frozen-lock">🔒</span> Agilité
+                  </div>
+                  <div class="cs-hint" id="cat-hint">Elle décide de qui peut l'apprendre</div>
+                </div>
+
+                <div class="cs-field">
+                  <div class="cs-label">Type</div>
+                  <div class="cs-seg" id="type-editable">
+                    <button type="button" class="on" id="t-std" onclick="setType('std')">Standard</button>
+                    <button type="button" class="elite" id="t-eli" onclick="setType('eli')">Élite</button>
+                  </div>
+                  <div class="cs-frozen" id="type-frozen" style="display:none;">
+                    <span class="cs-frozen-lock">🔒</span> Élite
+                  </div>
+                  <div class="cs-hint" id="type-hint">&nbsp;</div>
+                </div>
+
+                <div class="cs-field">
+                  <div class="cs-label">Activation</div>
+                  <div class="cs-seg">
+                    <button type="button" class="on" id="a-pas" onclick="setAct('pas')">Passive</button>
+                    <button type="button" id="a-act" onclick="setAct('act')">Active</button>
+                  </div>
+                  <div class="cs-hint">&nbsp;</div>
+                </div>
+              </div>
+
+              <div class="cs-form cs-form--second">
+                <div class="cs-field cs-field--grow">
+                  <div class="cs-label">Description</div>
+                  <textarea class="cs-textarea" id="desc" maxlength="600" oninput="refresh()">Ce joueur ignore le premier modificateur négatif de son Test d'Agilité lorsqu'il Esquive hors d'une case boueuse.</textarea>
+                  <div class="cs-hint">
+                    <span class="cs-count" id="desc-count">109</span> / 600 —
+                    c'est ce texte que les coachs liront pour appliquer la règle sur table
+                  </div>
+                </div>
+              </div>
+
+              <!-- L'aperçu montre la pastille telle qu'elle apparaîtra sur une
+                   fiche de joueur : c'est là qu'elle sera lue, pas ici. -->
+              <div class="cs-preview">
+                <span class="cs-preview-label">Sur une fiche de joueur :</span>
+                <span class="skill-tag type-agility" id="preview-tag">Souffle des Marais</span>
+                <span class="cs-elite-mark" id="preview-elite" style="display:none;">★ Élite — 10 kPo de plus à l'achat</span>
+              </div>
+
+              <div style="display:flex; justify-content:flex-end; gap:var(--p1); margin-top: var(--p2);">
+                <button class="cs-btn" onclick="setState('some')">Annuler</button>
+                <button class="cs-btn cs-btn--primary" id="submit-btn">Créer la compétence</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ Les compétences de l'espace ═════════════════════════ -->
+          <div class="cs-panel cs-panel--list">
+            <div class="cs-panel-head">
+              <div class="cs-panel-title"><span>📜</span> Compétences de cet espace</div>
+              <div class="cs-panel-note" id="list-note">3 compétences</div>
+            </div>
+
+            <div id="list-some">
+              <div class="cs-row">
+                <div class="cs-row-main">
+                  <div class="cs-row-top">
+                    <span class="cs-row-name">Souffle des Cimes</span>
+                    <span class="skill-tag type-agility">Agilité</span>
+                    <span class="cs-elite-mark">★ Élite</span>
+                    <span class="cs-badge cs-badge--locked">🔒 Non supprimable</span>
+                  </div>
+                  <div class="cs-row-desc">
+                    Une fois par mi-temps, ce joueur peut relancer un Test d'Agilité raté
+                    lorsqu'il se trouve dans sa propre moitié de terrain.
+                  </div>
+                </div>
+                <div class="cs-row-usage">
+                  <div class="cs-usage-n">4</div>
+                  <div class="cs-usage-l">joueurs l'ont</div>
+                </div>
+                <div class="cs-row-actions">
+                  <button class="cs-btn cs-btn--sm" onclick="setState('locked')">Modifier le libellé</button>
+                </div>
+              </div>
+
+              <div class="cs-row">
+                <div class="cs-row-main">
+                  <div class="cs-row-top">
+                    <span class="cs-row-name">Rancune du Bief</span>
+                    <span class="skill-tag type-traits">Traits</span>
+                  </div>
+                  <div class="cs-row-desc">
+                    Ce joueur peut relancer un résultat Crâne lorsqu'il bloque un joueur
+                    de l'équipe qui l'a mis à terre au match précédent.
+                  </div>
+                </div>
+                <div class="cs-row-usage">
+                  <div class="cs-usage-n cs-usage-n--zero">0</div>
+                  <div class="cs-usage-l">aucun joueur</div>
+                </div>
+                <div class="cs-row-actions">
+                  <button class="cs-btn cs-btn--sm">Modifier</button>
+                  <button class="cs-btn cs-btn--sm cs-btn--danger">Supprimer</button>
+                </div>
+              </div>
+
+              <div class="cs-row">
+                <div class="cs-row-main">
+                  <div class="cs-row-top">
+                    <span class="cs-row-name">Pied Marin</span>
+                    <span class="skill-tag type-general">Général</span>
+                  </div>
+                  <div class="cs-row-desc">
+                    Ce joueur ne subit aucun modificateur négatif pour se relever sur un
+                    terrain détrempé.
+                  </div>
+                </div>
+                <div class="cs-row-usage">
+                  <div class="cs-usage-n cs-usage-n--zero">0</div>
+                  <div class="cs-usage-l">aucun joueur</div>
+                </div>
+                <div class="cs-row-actions">
+                  <button class="cs-btn cs-btn--sm">Modifier</button>
+                  <button class="cs-btn cs-btn--sm cs-btn--danger">Supprimer</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="list-none" style="display:none;">
+              <div class="cs-empty">
+                <div class="cs-empty-icon">📜</div>
+                <div class="cs-empty-title">Aucune compétence personnalisée</div>
+                <div class="cs-empty-text">
+                  Les joueurs de cet espace n'ont que les compétences du règlement.
+                  Celles que vous créerez ici s'y ajouteront, pour les rosters comme
+                  pour les améliorations en points d'expérience.
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /cs-page -->
+      </div><!-- /page-content -->
+    </div><!-- /main-area -->
+  </div><!-- /app-layout -->
+
+<script src="../../static/js/kreek-select.js"></script>
+<script>
+/* Comportement de maquette. */
+var type = 'std', act = 'pas';
+
+function setType(t) {
+  type = t;
+  document.getElementById('t-std').classList.toggle('on', t === 'std');
+  document.getElementById('t-eli').classList.toggle('on', t === 'eli');
+  refresh();
+}
+function setAct(a) {
+  act = a;
+  document.getElementById('a-pas').classList.toggle('on', a === 'pas');
+  document.getElementById('a-act').classList.toggle('on', a === 'act');
+}
+
+function refresh() {
+  var nom = document.getElementById('name').value.trim();
+  var desc = document.getElementById('desc').value;
+
+  document.getElementById('name-count').textContent = nom.length;
+  document.getElementById('desc-count').textContent = desc.length;
+
+  document.getElementById('preview-tag').textContent = nom || 'Sans nom';
+  document.getElementById('preview-elite').style.display = (type === 'eli') ? '' : 'none';
+
+  /* Le type est le seul champ qui coûte : l'écrire ici évite de le découvrir
+     au moment où un coach paie. */
+  var figee = document.getElementById('type-frozen').style.display !== 'none';
+  document.getElementById('type-hint').innerHTML =
+    (type === 'eli' && !figee) ? '+10 kPo à l\'achat' : '&nbsp;';
+}
+
+function setState(name) {
+  var vide   = (name === 'none');
+  var figee  = (name === 'locked');
+
+  document.getElementById('list-some').style.display = vide ? 'none' : '';
+  document.getElementById('list-none').style.display = vide ? '' : 'none';
+  document.getElementById('list-note').textContent = vide ? 'aucune' : '3 compétences';
+
+  /* Ce qui reste modifiable sur une compétence employée : le libellé, jamais
+     ce qui décide du coût. */
+  document.getElementById('locked-warn').style.display   = figee ? '' : 'none';
+  document.getElementById('cat-editable').style.display  = figee ? 'none' : '';
+  document.getElementById('cat-frozen').style.display    = figee ? '' : 'none';
+  document.getElementById('type-editable').style.display = figee ? 'none' : '';
+  document.getElementById('type-frozen').style.display   = figee ? '' : 'none';
+  document.getElementById('cat-hint').innerHTML = figee
+    ? 'Figée — des joueurs l\'ont déjà payée'
+    : 'Elle décide de qui peut l\'apprendre';
+
+  document.getElementById('form-icon').textContent  = figee ? '✎' : '➕';
+  document.getElementById('form-title').textContent = figee ? 'Souffle des Cimes' : 'Nouvelle compétence';
+  document.getElementById('submit-btn').textContent = figee ? 'Enregistrer' : 'Créer la compétence';
+
+  if (figee) {
+    document.getElementById('name').value = 'Souffle des Cimes';
+    document.getElementById('desc').value = "Une fois par mi-temps, ce joueur peut relancer un Test d'Agilité raté lorsqu'il se trouve dans sa propre moitié de terrain.";
+    setType('eli');
+  }
+  refresh();
+
+  document.querySelectorAll('.state-pill').forEach(function (p) {
+    p.classList.toggle('active', p.dataset.state === name);
+  });
+}
+
+window.addEventListener('DOMContentLoaded', refresh);
+</script>
+</body>
+</html>
