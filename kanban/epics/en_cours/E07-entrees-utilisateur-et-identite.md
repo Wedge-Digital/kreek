@@ -53,9 +53,12 @@ l'identifiant de connexion**, avec une unicité octet par octet
 - **L'inscription et la réinitialisation de mot de passe**, que la 328 laisse
   hors périmètre : un lien partagé mène à une connexion, couvrir ces deux
   parcours doublerait la surface de test pour un cas rare.
-- `432-rendre-accessible-un-espace-publiquement`, **fichier vide**. Sujet
-  voisin, mais il n'y a rien à rattacher — à écrire ou à supprimer. Portait le
-  numéro 61, déjà pris.
+- `432-rendre-accessible-un-espace-publiquement`. Sujet voisin — qui a le droit
+  de lire quoi sans être connecté — mais sa **portée n'est pas tranchée** :
+  lecture pour tout visiteur, pour tout coach connecté, ou vitrine choisie page
+  par page. La première touche `space_scope`, le verrou de la carte 416, et
+  demande un chemin distinct plutôt qu'un assouplissement. Rien à rattacher tant
+  que ce choix n'est pas fait.
 
 ## Terminé quand
 
