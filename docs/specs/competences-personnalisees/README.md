@@ -41,4 +41,4 @@ choisi à la création d'équipe et produire des postes.
 
 | Page | État |
 |---|---|
-| `page-de-gestion/` | phases 1 et 2 faites |
+| `page-de-gestion/` | **workflow complet** — cartes 463 à 472 |

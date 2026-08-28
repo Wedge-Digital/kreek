@@ -66,6 +66,12 @@ champs donne un écran illisible là où une fiche se lit d'un coup. Et le bande
 ### Les catalogues, rendus une fois avec la page
 
 146 compétences, 38 mots-clefs, les catégories, le staff, les règles spéciales.
+
+**Les compétences viennent de `list_skills_for_space`, pas de `list_skills`**
+(carte 465). Un poste de roster d'espace doit pouvoir poser une compétence
+personnalisée de ce même espace — sans quoi les deux fonctionnalités se livrent
+le même jour en s'ignorant, et c'est pourtant leur emploi le plus évident
+ensemble.
 Quelques dizaines de kilooctets, contre un aller-retour par touche pour filtrer
 une liste qu'on tient déjà.
 
