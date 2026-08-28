@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ranking_lines (\n            id, competition_id, season_id, round_id, match_report_id, team_id,\n            recorded_at, matches_played, wins, draws, losses, ranking_points,\n            bonus_points, td_for, td_against, casualties, fouls, completions\n        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,\n                  $15, $16, $17, $18)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Timestamptz",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f4ea09688d4c6b78871b1423fcdfc86ad01a2ee2ae94de9ebc6e122650ee8212"
+}

@@ -1,4 +1,5 @@
 use crate::app::ranking::domain::ranking_line::RankingLine;
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use async_trait::async_trait;
 
@@ -23,6 +24,43 @@ pub struct RankingLineRow {
     /// Part bonus du total, déjà comprise dans `ranking_points`.
     pub bonus_points: u32,
     /// Compteurs de départage. `diff_td` n'y figure pas : dérivé.
+    pub td_for: u32,
+    pub td_against: u32,
+    pub casualties: u32,
+    pub fouls: u32,
+    pub completions: u32,
+}
+
+/// Une ligne de classement **avec son contexte**, pour le rejeu (carte 418).
+///
+/// `RankingLineRow` ne porte que les cumuls : c'est tout ce dont le classement
+/// affiché a besoin. Le rejeu, lui, reconstruit des `RankingLine` entières et a
+/// donc besoin de la journée, du rapport, de la compétition et de l'horodatage —
+/// sans eux, les lignes réécrites perdraient le lien avec le match qui les a
+/// produites.
+///
+/// DTO de lecture (query) : primitives acceptées, sauf `team_id`, décodé une
+/// fois au dépôt comme dans `RankingLineRow`.
+#[derive(Debug, Clone)]
+pub struct RankingLineFullRow {
+    /// Les cinq identifiants sont **typés**, pas des `String`, contrairement à
+    /// l'usage des DTO de lecture. Ils doivent tous franchir la frontière du
+    /// domaine pour reconstruire une `RankingLine`, et le décodage a lieu une
+    /// fois au dépôt — même raison que pour `RankingLineRow::team_id` : un id
+    /// illisible y devient une erreur bruyante, au lieu d'être remplacé plus
+    /// loin par un identifiant neuf qui réécrirait la ligne en silence.
+    pub team_id: TeamId,
+    pub competition_id: CompetitionId,
+    pub season_id: SeasonId,
+    pub round_id: RoundId,
+    pub match_report_id: MatchReportId,
+    pub recorded_at: chrono::DateTime<chrono::Utc>,
+    pub matches_played: u32,
+    pub wins: u32,
+    pub draws: u32,
+    pub losses: u32,
+    pub ranking_points: u32,
+    pub bonus_points: u32,
     pub td_for: u32,
     pub td_against: u32,
     pub casualties: u32,
@@ -80,6 +118,34 @@ pub trait IRankingRepository: Send + Sync {
     async fn delete_lines_for_match(
         &self,
         match_report_id: &str,
+    ) -> Result<(), RankingRepositoryError>;
+
+    /// Toutes les lignes de la saison, **dans l'ordre où elles ont été
+    /// enregistrées**.
+    ///
+    /// L'ordre est celui de `sequence`, pas de `recorded_at`. Le dépôt teste
+    /// déjà pourquoi : une ligne peut porter un horodatage antérieur à celle qui
+    /// la précède, et « c'est l'ordre d'enregistrement qui compte, jamais le
+    /// timestamp seul ». Rejouer dans l'ordre des horodatages lirait ces
+    /// lignes-là à l'envers, et la différence de deux cumuls rendrait un écart
+    /// négatif — une erreur, sur des données pourtant saines.
+    async fn find_all_lines_for_season(
+        &self,
+        season_id: &str,
+    ) -> Result<Vec<RankingLineFullRow>, RankingRepositoryError>;
+
+    /// Remplace **tout** le classement d'une saison, en une seule transaction.
+    ///
+    /// Et non un `delete` suivi d'un `insert_lines` : ce sont deux transactions,
+    /// et l'échec de la seconde laisserait la saison **sans classement du tout**.
+    ///
+    /// Le `DELETE` porte sur `season_id` et non sur une liste d'identifiants :
+    /// une ligne orpheline que le rejeu n'aurait pas relue serait sinon
+    /// conservée par une opération qui prétend l'avoir remplacée.
+    async fn replace_lines_for_season(
+        &self,
+        season_id: &str,
+        lines: &[RankingLine],
     ) -> Result<(), RankingRepositoryError>;
 }
 

@@ -117,6 +117,67 @@ Le premier protège le couple : écrit sur plusieurs jeux de statistiques, il
 échoue dès qu'un champ est ajouté d'un côté sans l'autre. Le quatrième est le
 filet du recalcul entier.
 
+## Trois corrections apportées à cette carte
+
+### L'ordre de lecture — `sequence`, pas `recorded_at`
+
+La carte demandait « `recorded_at` croissant, départagé par `match_report_id` ».
+**Le dépôt teste déjà le contraire**, dans `ranking_repository.rs` :
+
+> La ligne insérée en second doit faire foi, même si son `recorded_at` est
+> antérieur — c'est l'ordre d'enregistrement (`sequence`) qui compte, jamais le
+> timestamp seul.
+
+Le test existant insère délibérément une ligne au `recorded_at` « futur » puis
+une au « passé ». Lire dans l'ordre des horodatages prendrait ces deux lignes
+**à l'envers**, et la différence de deux cumuls rendrait un écart négatif — donc
+une erreur, sur des données parfaitement saines.
+
+Remettre l'ordre prescrit par la carte fait tomber
+`find_all_lines_for_season_suit_la_sequence_et_non_l_horodatage`. Vérifié.
+
+### Le type de retour — `RankingLineRow` ne suffit pas
+
+La carte faisait rendre `Vec<RankingLineRow>`. Ce DTO ne porte **que les
+cumuls** : ni `round_id`, ni `match_report_id`, ni `recorded_at`, ni
+`competition_id`. On ne peut pas reconstruire une `RankingLine` avec.
+
+D'où `RankingLineFullRow`. Ses cinq identifiants sont **typés**, contrairement à
+l'usage des DTO de lecture : une première version les gardait en `String` et les
+redécodait dans le use case avec un repli sur un ULID neuf — les lignes auraient
+été réécrites sous un rapport inexistant, en silence. Le décodage a lieu une fois
+au dépôt, exactement pour la raison déjà écrite sur `RankingLineRow::team_id`.
+
+### La soustraction avant la conversion
+
+La carte prescrivait `u8::try_from` plutôt que `as`, à raison. Elle ne disait
+rien du cas où la différence est **négative** : sur des `u32`, l'écart
+déborderait par le bas et le `try_from` suivant dirait « hors bornes » — le bon
+refus pour la mauvaise raison, et un diagnostic qui part à côté. `checked_sub`
+d'abord, deux erreurs distinctes.
+
+## Le test d'atomicité — pas par un doublon d'identifiant
+
+Provoquer l'échec par un `id` en double est impossible : ils sont engendrés dans
+`insert_line_in_tx`, aucun appelant ne peut en imposer un. L'échec vient d'un
+déclencheur PostgreSQL créé dans le test, que la base éphémère de `sqlx::test`
+isole du reste de la suite.
+
+Revenir à deux transactions — `delete` puis `insert` — fait tomber le test :
+la saison se retrouve **sans aucune ligne**, le premier ayant réussi et le second
+échoué. C'est précisément ce que la carte voulait empêcher.
+
+## Trois tests en plus des six
+
+- `stats_between_echoue_sur_un_cumul_qui_decroit` — la moitié manquante du
+  refus, cf. « la soustraction avant la conversion » ci-dessus.
+- `un_rejeu_incoherent_n_ecrit_rien` — mieux vaut un classement périmé qu'un
+  classement faux : le use case s'arrête avant d'appeler
+  `replace_lines_for_season`.
+- `le_rejeu_conserve_l_ordre_des_lignes` — une implémentation qui regrouperait
+  par équipe avant de rejouer rendrait les mêmes totaux dans un ordre différent,
+  et la `sequence` réécrite ne suivrait plus le calendrier.
+
 ## Checklist
 
 - [ ] `RankingLine::stats_between` + ses trois tests

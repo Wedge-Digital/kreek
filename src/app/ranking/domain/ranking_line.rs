@@ -1,3 +1,4 @@
+use crate::app::ranking::domain::error::DomainError;
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use chrono::{DateTime, Utc};
@@ -311,6 +312,78 @@ impl RankingLine {
             completions: CompletionsMade(completions.0 + stats.completions.0),
         }
     }
+
+    /// L'inverse exact de `record_match` : retrouve les statistiques du match à
+    /// partir de deux lignes consécutives de la **même équipe**.
+    ///
+    /// # Pourquoi c'est possible sans relire `match_report`
+    ///
+    /// Une ligne porte les totaux de l'équipe *après* le match, pas les
+    /// statistiques du match. Mais `record_match` n'ajoute que des sommes : la
+    /// différence de deux cumuls consécutifs rend exactement ce qui a été ajouté.
+    ///
+    /// Le **résultat** ne se lit pas et n'a pas à l'être — `record_match` le
+    /// redérive des deux scores. `wins`/`draws`/`losses` sont un produit du
+    /// rejeu, jamais une entrée.
+    ///
+    /// Conséquence : le BC est autosuffisant, et un rejeu ne peut pas diverger
+    /// d'un rapport modifié entre-temps puisqu'il ne relit rien.
+    ///
+    /// # Pourquoi elle vit ici
+    ///
+    /// **À côté de `record_match`, parce que les deux se modifient ensemble.**
+    /// Un champ ajouté à `MatchStats` sans l'être ici produirait un rejeu qui
+    /// perd cette statistique — en silence, la ligne restant bien formée. Le
+    /// test de propriété `stats_between_est_l_inverse_de_record_match` est ce
+    /// qui referme le piège.
+    pub fn stats_between(
+        previous: Option<&CumulativeTotals>,
+        current: &RankingLine,
+    ) -> Result<MatchStats, DomainError> {
+        let zero = CumulativeTotals::ZERO;
+        let p = previous.unwrap_or(&zero);
+        Ok(MatchStats {
+            own_td: score_ecart("td_for", p.td_for.0, current.td_for.0)?,
+            opponent_td: score_ecart("td_against", p.td_against.0, current.td_against.0)?,
+            casualties_inflicted: CasualtiesInflicted(ecart(
+                "casualties",
+                p.casualties.0,
+                current.casualties.0,
+            )?),
+            fouls: FoulsCommitted(ecart("fouls", p.fouls.0, current.fouls.0)?),
+            completions: CompletionsMade(ecart(
+                "completions",
+                p.completions.0,
+                current.completions.0,
+            )?),
+        })
+    }
+}
+
+/// La différence de deux cumuls, ou l'erreur qui dit lequel décroît.
+fn ecart(field: &'static str, previous: u32, current: u32) -> Result<u32, DomainError> {
+    current
+        .checked_sub(previous)
+        .ok_or(DomainError::DecreasingTotal {
+            field,
+            previous,
+            current,
+        })
+}
+
+/// Le même écart, ramené à un `MatchScore`.
+///
+/// `u8::try_from` et non `as` : un `as` replierait un écart aberrant en un score
+/// parfaitement plausible, et la corruption passerait pour une donnée normale.
+fn score_ecart(
+    field: &'static str,
+    previous: u32,
+    current: u32,
+) -> Result<MatchScore, DomainError> {
+    let brut = ecart(field, previous, current)?;
+    u8::try_from(brut)
+        .map(MatchScore)
+        .map_err(|_| DomainError::ScoreOutOfRange { field, value: brut })
 }
 
 #[cfg(test)]
@@ -733,5 +806,90 @@ mod tests {
     #[test]
     fn no_bonus_points_when_all_deactivated() {
         assert_eq!(rules().bonus_points(&stats(9, 0, 9)).0, 0);
+    }
+
+    // ── stats_between — l'inverse de record_match (carte 418) ────────────────
+
+    /// **Le test qui protège le couple.** Il énonce une propriété, pas un cas :
+    /// pour toute statistique, `stats_between(record_match(p, s)) == s`.
+    ///
+    /// Écrit sur plusieurs jeux plutôt qu'un seul : un champ ajouté à
+    /// `MatchStats` sans l'être à `stats_between` produirait un rejeu qui perd
+    /// cette statistique en silence, la ligne restant bien formée. C'est ce test
+    /// qui le fait rougir.
+    #[test]
+    fn stats_between_est_l_inverse_de_record_match() {
+        let jeux = [
+            stats_with(0, 0, 0, 0, 0),
+            stats_with(3, 1, 2, 5, 7),
+            stats_with(1, 1, 0, 1, 0),
+            stats_with(255, 0, 99, 0, 12),
+            stats_with(0, 4, 1, 3, 3),
+        ];
+
+        // Depuis zéro, puis en chaîne : la propriété doit tenir aussi bien sur
+        // la première ligne d'une équipe que sur la dixième.
+        let mut precedent: Option<CumulativeTotals> = None;
+        for attendu in jeux {
+            let ligne = RankingLine::record_match(precedent.clone(), ctx(), attendu, &rules());
+
+            let retrouve = RankingLine::stats_between(precedent.as_ref(), &ligne)
+                .expect("des lignes engendrées par record_match sont cohérentes");
+
+            assert_eq!(retrouve.own_td, attendu.own_td);
+            assert_eq!(retrouve.opponent_td, attendu.opponent_td);
+            assert_eq!(retrouve.casualties_inflicted, attendu.casualties_inflicted);
+            assert_eq!(retrouve.fouls, attendu.fouls);
+            assert_eq!(retrouve.completions, attendu.completions);
+
+            precedent = Some(totals_of(&ligne));
+        }
+    }
+
+    #[test]
+    fn stats_between_sur_la_premiere_ligne() {
+        let attendu = stats_with(2, 1, 3, 4, 5);
+        let ligne = RankingLine::record_match(None, ctx(), attendu, &rules());
+
+        let retrouve = RankingLine::stats_between(None, &ligne).unwrap();
+
+        assert_eq!(retrouve.own_td, MatchScore(2));
+        assert_eq!(retrouve.fouls, FoulsCommitted(4));
+    }
+
+    /// `u8::try_from` et non `as` : un `as` aurait rendu `MatchScore(44)` pour
+    /// un écart de 300, soit une donnée corrompue déguisée en score plausible.
+    #[test]
+    fn stats_between_echoue_sur_un_ecart_aberrant() {
+        let mut ligne = RankingLine::record_match(None, ctx(), stats(0, 0, 0), &rules());
+        ligne.td_for = TdFor(300);
+
+        match RankingLine::stats_between(None, &ligne) {
+            Err(DomainError::ScoreOutOfRange { field, value }) => {
+                assert_eq!((field, value), ("td_for", 300));
+            }
+            autre => panic!("attendu un dépassement de bornes : {autre:?}"),
+        }
+    }
+
+    /// Un cumul qui décroît est impossible par construction. `checked_sub`
+    /// plutôt qu'une soustraction nue : sur des `u32` l'écart négatif
+    /// déborderait par le bas et se présenterait comme « hors bornes » — le bon
+    /// refus pour la mauvaise raison, et un diagnostic qui part à côté.
+    #[test]
+    fn stats_between_echoue_sur_un_cumul_qui_decroit() {
+        let premiere = RankingLine::record_match(None, ctx(), stats_with(3, 0, 0, 0, 0), &rules());
+        let mut seconde =
+            RankingLine::record_match(Some(totals_of(&premiere)), ctx(), stats(1, 0, 0), &rules());
+        seconde.td_for = TdFor(1); // en deçà du cumul précédent
+
+        match RankingLine::stats_between(Some(&totals_of(&premiere)), &seconde) {
+            Err(DomainError::DecreasingTotal {
+                field,
+                previous,
+                current,
+            }) => assert_eq!((field, previous, current), ("td_for", 3, 1)),
+            autre => panic!("attendu un cumul décroissant : {autre:?}"),
+        }
     }
 }

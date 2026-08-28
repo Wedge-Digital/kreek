@@ -121,7 +121,9 @@ async fn load_previous(
     Ok(row.map(to_totals))
 }
 
-fn to_domain_rules(info: crate::app::ranking::ports::RankingRulesInfo) -> RankingRules {
+/// Publique depuis la carte 418 : le rejeu lit le même barème par le même port,
+/// et une seconde traduction divergerait le jour où un bonus s'ajoute.
+pub fn to_domain_rules(info: crate::app::ranking::ports::RankingRulesInfo) -> RankingRules {
     RankingRules {
         win_points: RankingPoints(info.win_points),
         draw_points: RankingPoints(info.draw_points),
@@ -148,7 +150,8 @@ fn to_domain_rules(info: crate::app::ranking::ports::RankingRulesInfo) -> Rankin
 mod tests {
     use super::*;
     use crate::app::ranking::ports::{
-        BonusRuleInfo, EnrolledTeamInfo, RankingLineRow, RankingRepositoryError, RankingRulesInfo,
+        BonusRuleInfo, EnrolledTeamInfo, RankingLineFullRow, RankingLineRow,
+        RankingRepositoryError, RankingRulesInfo,
     };
     use async_trait::async_trait;
     use std::sync::Mutex;
@@ -235,6 +238,22 @@ mod tests {
         ) -> Result<(), RankingRepositoryError> {
             self.lines.lock().unwrap().extend_from_slice(new_lines);
             Ok(())
+        }
+        // Le rejeu n'entre pas dans ce use case : la doublure échoue bruyamment
+        // si on l'y appelle un jour, plutôt que de rendre un `Ok(vec![])` qui
+        // ferait passer au vert un test n'ayant rien exercé.
+        async fn find_all_lines_for_season(
+            &self,
+            _: &str,
+        ) -> Result<Vec<RankingLineFullRow>, RankingRepositoryError> {
+            unimplemented!("hors du périmètre de record_match")
+        }
+        async fn replace_lines_for_season(
+            &self,
+            _: &str,
+            _: &[RankingLine],
+        ) -> Result<(), RankingRepositoryError> {
+            unimplemented!("hors du périmètre de record_match")
         }
         async fn delete_lines_for_match(
             &self,

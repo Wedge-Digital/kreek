@@ -1,5 +1,8 @@
 use crate::app::ranking::domain::ranking_line::RankingLine;
-use crate::app::ranking::ports::{IRankingRepository, RankingLineRow, RankingRepositoryError};
+use crate::app::ranking::ports::{
+    IRankingRepository, RankingLineFullRow, RankingLineRow, RankingRepositoryError,
+};
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::sulid::SUlid;
 use async_trait::async_trait;
@@ -32,6 +35,77 @@ struct Row {
     casualties: i32,
     fouls: i32,
     completions: i32,
+}
+
+/// Le miroir de `RankingLineFullRow` : les mêmes colonnes, plus le contexte.
+#[derive(sqlx::FromRow)]
+struct FullRow {
+    team_id: String,
+    competition_id: String,
+    season_id: String,
+    round_id: String,
+    match_report_id: String,
+    recorded_at: time::OffsetDateTime,
+    matches_played: i32,
+    wins: i32,
+    draws: i32,
+    losses: i32,
+    ranking_points: i32,
+    bonus_points: i32,
+    td_for: i32,
+    td_against: i32,
+    casualties: i32,
+    fouls: i32,
+    completions: i32,
+}
+
+impl TryFrom<FullRow> for RankingLineFullRow {
+    type Error = RankingRepositoryError;
+
+    fn try_from(r: FullRow) -> Result<Self, Self::Error> {
+        Ok(RankingLineFullRow {
+            team_id: TeamId::try_new(&r.team_id).map_err(|e| {
+                RankingRepositoryError::MalformedRow(format!("team_id « {} » : {e}", r.team_id))
+            })?,
+            competition_id: decoder("competition_id", &r.competition_id, CompetitionId::try_new)?,
+            season_id: decoder("season_id", &r.season_id, SeasonId::try_new)?,
+            round_id: decoder("round_id", &r.round_id, RoundId::try_new)?,
+            match_report_id: decoder(
+                "match_report_id",
+                &r.match_report_id,
+                MatchReportId::try_new,
+            )?,
+            // sqlx est compilé avec `time`, le domaine parle `chrono` : la
+            // conversion a lieu ici, comme à l'insertion et en sens inverse.
+            recorded_at: chrono::DateTime::from_timestamp_nanos(
+                (r.recorded_at.unix_timestamp_nanos()) as i64,
+            ),
+            matches_played: r.matches_played as u32,
+            wins: r.wins as u32,
+            draws: r.draws as u32,
+            losses: r.losses as u32,
+            ranking_points: r.ranking_points as u32,
+            bonus_points: r.bonus_points as u32,
+            td_for: r.td_for as u32,
+            td_against: r.td_against as u32,
+            casualties: r.casualties as u32,
+            fouls: r.fouls as u32,
+            completions: r.completions as u32,
+        })
+    }
+}
+
+/// Décode un identifiant stocké en `TEXT`, en nommant la colonne fautive.
+///
+/// Sans lui, chaque champ portait son propre `map_err` — cinq fois la même
+/// phrase, et l'occasion d'en oublier un.
+fn decoder<T, E: std::fmt::Display>(
+    colonne: &str,
+    brut: &str,
+    parse: impl Fn(&str) -> Result<T, E>,
+) -> Result<T, RankingRepositoryError> {
+    parse(brut)
+        .map_err(|e| RankingRepositoryError::MalformedRow(format!("{colonne} « {brut} » : {e}")))
 }
 
 /// Faillible, contrairement à un `From` : `team_id` est stocké en `TEXT` et doit
@@ -122,49 +196,101 @@ impl IRankingRepository for PgRankingRepository {
 
     async fn insert_lines(&self, lines: &[RankingLine]) -> Result<(), RankingRepositoryError> {
         let mut tx = self.pool.begin().await.map_err(db_err)?;
-
         for line in lines {
-            let id = SUlid::new().to_string();
-            // sqlx est compilé avec la feature `time`, pas `chrono` — conversion
-            // nécessaire au point de persistance (le domaine reste en chrono::DateTime<Utc>).
-            let recorded_at = time::OffsetDateTime::from_unix_timestamp_nanos(
-                line.recorded_at.timestamp_nanos_opt().unwrap_or(0) as i128,
-            )
-            .map_err(|e| RankingRepositoryError::Database(e.to_string()))?;
-            sqlx::query!(
-                r#"INSERT INTO ranking_lines (
-                    id, competition_id, season_id, round_id, match_report_id, team_id,
-                    recorded_at, matches_played, wins, draws, losses, ranking_points,
-                    bonus_points, td_for, td_against, casualties, fouls, completions
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-                          $15, $16, $17, $18)"#,
-                id,
-                line.competition_id.to_string(),
-                line.season_id.to_string(),
-                line.round_id.to_string(),
-                line.match_report_id.to_string(),
-                line.team_id.to_string(),
-                recorded_at,
-                line.matches_played.0 as i32,
-                line.wins.0 as i32,
-                line.draws.0 as i32,
-                line.losses.0 as i32,
-                line.ranking_points.0 as i32,
-                line.bonus_points.0 as i32,
-                line.td_for.0 as i32,
-                line.td_against.0 as i32,
-                line.casualties.0 as i32,
-                line.fouls.0 as i32,
-                line.completions.0 as i32,
-            )
+            insert_line_in_tx(&mut tx, line).await?;
+        }
+        tx.commit().await.map_err(db_err)?;
+        Ok(())
+    }
+
+    async fn find_all_lines_for_season(
+        &self,
+        season_id: &str,
+    ) -> Result<Vec<RankingLineFullRow>, RankingRepositoryError> {
+        let rows = sqlx::query_as!(
+            FullRow,
+            r#"SELECT team_id, competition_id, season_id, round_id, match_report_id,
+                      recorded_at, matches_played, wins, draws, losses, ranking_points,
+                      bonus_points, td_for, td_against, casualties, fouls, completions
+               FROM ranking_lines
+               WHERE season_id = $1
+               ORDER BY sequence ASC"#,
+            season_id,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(db_err)?;
+
+        rows.into_iter().map(RankingLineFullRow::try_from).collect()
+    }
+
+    async fn replace_lines_for_season(
+        &self,
+        season_id: &str,
+        lines: &[RankingLine],
+    ) -> Result<(), RankingRepositoryError> {
+        let mut tx = self.pool.begin().await.map_err(db_err)?;
+
+        sqlx::query!("DELETE FROM ranking_lines WHERE season_id = $1", season_id)
             .execute(&mut *tx)
             .await
             .map_err(db_err)?;
+
+        for line in lines {
+            insert_line_in_tx(&mut tx, line).await?;
         }
 
         tx.commit().await.map_err(db_err)?;
         Ok(())
     }
+}
+
+/// L'insertion d'une ligne, partagée par `insert_lines` et
+/// `replace_lines_for_season`.
+///
+/// Extraite plutôt que dupliquée : les dix-huit colonnes se modifient ensemble,
+/// et deux copies divergeraient le jour où l'une gagne une colonne.
+async fn insert_line_in_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    line: &RankingLine,
+) -> Result<(), RankingRepositoryError> {
+    let id = SUlid::new().to_string();
+    // sqlx est compilé avec la feature `time`, pas `chrono` — conversion
+    // nécessaire au point de persistance (le domaine reste en chrono::DateTime<Utc>).
+    let recorded_at = time::OffsetDateTime::from_unix_timestamp_nanos(
+        line.recorded_at.timestamp_nanos_opt().unwrap_or(0) as i128,
+    )
+    .map_err(|e| RankingRepositoryError::Database(e.to_string()))?;
+    sqlx::query!(
+        r#"INSERT INTO ranking_lines (
+            id, competition_id, season_id, round_id, match_report_id, team_id,
+            recorded_at, matches_played, wins, draws, losses, ranking_points,
+            bonus_points, td_for, td_against, casualties, fouls, completions
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+                  $15, $16, $17, $18)"#,
+        id,
+        line.competition_id.to_string(),
+        line.season_id.to_string(),
+        line.round_id.to_string(),
+        line.match_report_id.to_string(),
+        line.team_id.to_string(),
+        recorded_at,
+        line.matches_played.0 as i32,
+        line.wins.0 as i32,
+        line.draws.0 as i32,
+        line.losses.0 as i32,
+        line.ranking_points.0 as i32,
+        line.bonus_points.0 as i32,
+        line.td_for.0 as i32,
+        line.td_against.0 as i32,
+        line.casualties.0 as i32,
+        line.fouls.0 as i32,
+        line.completions.0 as i32,
+    )
+    .execute(&mut **tx)
+    .await
+    .map_err(db_err)?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -518,5 +644,127 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(lines.len(), 2, "une ligne par équipe, pas quatre");
+    }
+
+    // ── Rejeu d'une saison (carte 418) ──────────────────────────────────────
+
+    /// L'ordre de lecture est celui de `sequence`, **pas** de `recorded_at`.
+    ///
+    /// Le dépôt teste déjà pourquoi ailleurs : une ligne peut porter un
+    /// horodatage antérieur à celle qui la précède, et c'est l'ordre
+    /// d'enregistrement qui fait foi. Rejouer dans l'ordre des horodatages
+    /// lirait ces lignes à l'envers, et la différence de deux cumuls rendrait un
+    /// écart négatif — une erreur, sur des données pourtant saines.
+    #[sqlx::test]
+    async fn find_all_lines_for_season_suit_la_sequence_et_non_l_horodatage(pool: PgPool) {
+        let repo = PgRankingRepository::new(pool);
+        let (team_id, season_id) = (TeamId::new(), SeasonId::new());
+
+        let mut premiere = sample_line(&team_id, &season_id, 1, 1, 0, 0, 3, 0);
+        premiere.recorded_at = Utc::now() + chrono::Duration::hours(1); // "futur"
+        repo.insert_lines(&[premiere]).await.unwrap();
+
+        let mut seconde = sample_line(&team_id, &season_id, 2, 1, 0, 1, 3, 0);
+        seconde.recorded_at = Utc::now() - chrono::Duration::hours(1); // "passé"
+        repo.insert_lines(&[seconde]).await.unwrap();
+
+        let lues = repo
+            .find_all_lines_for_season(&season_id.to_string())
+            .await
+            .unwrap();
+
+        assert_eq!(lues.len(), 2);
+        assert_eq!(
+            (lues[0].matches_played, lues[1].matches_played),
+            (1, 2),
+            "l'ordre suit sequence, pas recorded_at"
+        );
+    }
+
+    #[sqlx::test]
+    async fn replace_lines_for_season_remplace_tout(pool: PgPool) {
+        let repo = PgRankingRepository::new(pool);
+        let (team_id, season_id) = (TeamId::new(), SeasonId::new());
+        repo.insert_lines(&[
+            sample_line(&team_id, &season_id, 1, 1, 0, 0, 3, 0),
+            sample_line(&team_id, &season_id, 2, 2, 0, 0, 6, 0),
+        ])
+        .await
+        .unwrap();
+
+        let neuve = sample_line(&team_id, &season_id, 1, 1, 0, 0, 5, 0);
+        repo.replace_lines_for_season(&season_id.to_string(), &[neuve])
+            .await
+            .unwrap();
+
+        let lues = repo
+            .find_all_lines_for_season(&season_id.to_string())
+            .await
+            .unwrap();
+        assert_eq!(lues.len(), 1, "les deux anciennes ont disparu");
+        assert_eq!(lues[0].ranking_points, 5);
+    }
+
+    /// **Un échec en cours ne laisse pas de saison à moitié rejouée.**
+    ///
+    /// L'échec est provoqué par un déclencheur, et non par un doublon
+    /// d'identifiant : les `id` sont engendrés dans `insert_line_in_tx`, aucun
+    /// appelant ne peut en imposer un. La base éphémère de `sqlx::test` rend le
+    /// déclencheur sans effet sur le reste de la suite.
+    ///
+    /// Ce que le test refuserait sans la transaction unique : un `delete` suivi
+    /// d'un `insert` laisserait ici la saison **sans aucune ligne**, le premier
+    /// ayant réussi et le second échoué.
+    #[sqlx::test]
+    async fn replace_lines_for_season_est_atomique(pool: PgPool) {
+        let repo = PgRankingRepository::new(pool.clone());
+        let (team_id, season_id) = (TeamId::new(), SeasonId::new());
+        repo.insert_lines(&[sample_line(&team_id, &season_id, 1, 1, 0, 0, 3, 0)])
+            .await
+            .unwrap();
+
+        // Le déclencheur refuse toute ligne à 42 points — la deuxième des trois.
+        // Deux requêtes séparées : une instruction préparée n'en accepte qu'une.
+        sqlx::query(
+            r#"CREATE FUNCTION refuser_42() RETURNS trigger AS $$
+               BEGIN
+                 IF NEW.ranking_points = 42 THEN
+                   RAISE EXCEPTION 'refus de test';
+                 END IF;
+                 RETURN NEW;
+               END $$ LANGUAGE plpgsql"#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            r#"CREATE TRIGGER t_refuser_42 BEFORE INSERT ON ranking_lines
+                 FOR EACH ROW EXECUTE FUNCTION refuser_42()"#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let issue = repo
+            .replace_lines_for_season(
+                &season_id.to_string(),
+                &[
+                    sample_line(&team_id, &season_id, 1, 1, 0, 0, 5, 0),
+                    sample_line(&team_id, &season_id, 2, 1, 0, 1, 42, 0),
+                    sample_line(&team_id, &season_id, 3, 2, 0, 1, 8, 0),
+                ],
+            )
+            .await;
+
+        assert!(issue.is_err(), "l'insertion devait échouer");
+        let lues = repo
+            .find_all_lines_for_season(&season_id.to_string())
+            .await
+            .unwrap();
+        assert_eq!(lues.len(), 1, "l'ancienne ligne est toujours là : {lues:?}");
+        assert_eq!(
+            lues[0].ranking_points, 3,
+            "c'est bien l'ancienne, pas une des nouvelles"
+        );
     }
 }

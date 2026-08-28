@@ -1,6 +1,7 @@
 # E14 — Modifier une compétition en cours
 
-**État :** `en_cours` — 10 cartes, 1 faite (417, le 2026-08-28). Spécifiée par
+**État :** `en_cours` — 10 cartes, 2 faites (417 et 418, le 2026-08-28).
+La vague 1 — le socle — est complète. Spécifiée par
 le workflow feature les 2026-08-25 et 26.
 **Conception :** `docs/specs/modifier-une-competition/`
 

@@ -1,0 +1,118 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT team_id, competition_id, season_id, round_id, match_report_id,\n                      recorded_at, matches_played, wins, draws, losses, ranking_points,\n                      bonus_points, td_for, td_against, casualties, fouls, completions\n               FROM ranking_lines\n               WHERE season_id = $1\n               ORDER BY sequence ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "team_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "competition_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "season_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "round_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "match_report_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "recorded_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "matches_played",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "wins",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "draws",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "losses",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "ranking_points",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "bonus_points",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 12,
+        "name": "td_for",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 13,
+        "name": "td_against",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 14,
+        "name": "casualties",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 15,
+        "name": "fouls",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 16,
+        "name": "completions",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d0988167635c3f2000c101d33612bb56e7875c781bae7d7b6371a3d12475a109"
+}
