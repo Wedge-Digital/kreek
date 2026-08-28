@@ -77,7 +77,14 @@ pub async fn summary_tab_fragment(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    if let Err(resp) = require_admin_access(&auth_session, &space_id, &competition_id, &state).await
+    if let Err(resp) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
     {
         return resp;
     }

@@ -62,10 +62,22 @@ pub async fn admin_page(
 /// fragment htmx), pas seulement sur le chargement de page complet : sans
 /// quoi le chemin htmx (utilisé pour le changement d'onglet en SPA) contourne
 /// le contrôle d'accès.
+///
+/// **La saison du chemin doit appartenir à la compétition du chemin** (carte
+/// 416). Le droit est accordé par compétition ; sans ce contrôle,
+/// l'administrateur de la compétition A pose son propre `competition_id` et le
+/// `season_id` de la compétition B du même espace, et la garde le laisse passer
+/// avant que le handler n'agisse sur B. `space_scope` ne le rattrape pas : il
+/// vérifie que la saison appartient à l'**espace**, jamais à la compétition.
+///
+/// Le contrôle vit ici plutôt que dans chaque handler pour que la fonction soit
+/// le seul endroit qui réponde « ce chemin est-il cohérent et m'est-il
+/// permis ? ». Les appelants n'ont rien à y penser.
 pub async fn require_admin_access(
     auth_session: &AuthSession,
     space_id: &str,
     competition_id: &str,
+    season_id: &str,
     state: &AppState,
 ) -> Result<CompetitionBaseInfo, Response> {
     let Some(user) = &auth_session.user else {
@@ -114,7 +126,37 @@ pub async fn require_admin_access(
         return Err(StatusCode::FORBIDDEN.into_response());
     }
 
+    verifier_saison_de_la_competition(season_id, competition_id, state).await?;
+
     Ok(comp_info)
+}
+
+/// `404` et non `403` : une saison qui n'appartient pas à cette compétition est
+/// hors du périmètre du chemin. Répondre `403` confirmerait son existence à qui
+/// se contente d'essayer des identifiants.
+async fn verifier_saison_de_la_competition(
+    season_id: &str,
+    competition_id: &str,
+    state: &AppState,
+) -> Result<(), Response> {
+    // Un identifiant mal formé est une requête fautive, pas un refus de droit :
+    // il n'a pas pu désigner quoi que ce soit.
+    let Ok(season_entity_id) = SeasonId::try_new(season_id) else {
+        return Err(StatusCode::BAD_REQUEST.into_response());
+    };
+    match state
+        .competitions
+        .season_repository
+        .find_full(&season_entity_id)
+        .await
+    {
+        Ok(Some(saison)) if saison.competition_id == competition_id => Ok(()),
+        Ok(_) => Err(StatusCode::NOT_FOUND.into_response()),
+        Err(e) => {
+            tracing::error!("require_admin_access saison {season_id}: {e:?}");
+            Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+        }
+    }
 }
 
 pub async fn render_admin_page(
@@ -125,11 +167,12 @@ pub async fn render_admin_page(
     active_tab: &str,
     state: &AppState,
 ) -> Response {
-    let comp_info = match require_admin_access(&auth_session, space_id, competition_id, state).await
-    {
-        Ok(info) => info,
-        Err(resp) => return resp,
-    };
+    let comp_info =
+        match require_admin_access(&auth_session, space_id, competition_id, season_id, state).await
+        {
+            Ok(info) => info,
+            Err(resp) => return resp,
+        };
 
     let comp_id = match CompetitionId::try_new(competition_id) {
         Ok(id) => id,

@@ -82,6 +82,76 @@ sont dans le même cas et méritent le même traitement, mais une lecture non
 autorisée et une destruction non autorisée ne sont pas la même urgence. À
 traiter ensuite, pas dans la même carte.
 
+## Passer les identifiants dans l'URL n'aurait rien contrôlé
+
+La carte prescrivait de faire remonter les cibles du corps vers le chemin, et
+disait : « **La première voie est préférable : elle rend le contrôle structurel
+plutôt que répété.** »
+
+C'est faux pour ces identifiants-là. La docstring de `space_scope` le dit
+elle-même, deux lignes après en avoir tiré la conclusion inverse :
+
+> Les paramètres sans résolveur (`round_id`, `pairing_id`, `action_id`…)
+> passent : ils sont toujours accompagnés d'un parent qui, lui, est contrôlé.
+
+La prémisse est vraie, la conclusion ne l'est pas. Le parent — `season_id` — est
+bien contrôlé pour l'espace ; **rien ne rattache l'enfant au parent**. Un
+`round_id` reste aussi libre dans le chemin que dans le corps. Le déplacer
+n'aurait changé que la forme, en touchant cinq appels JS dans deux templates et
+en mêlant un changement cosmétique à un correctif de sécurité qu'on voudra
+pouvoir relire seul.
+
+**Le contrôle est donc explicite**, dans `io/web/admin/admin_scope.rs` : la
+journée, l'appariement, le groupe et l'équipe visés appartiennent-ils à la saison
+du chemin ? Une lecture chacun, aucun nouveau port.
+
+`404` et non `403` sur une cible étrangère : un `403` confirmerait son existence
+à qui se contente d'essayer des identifiants.
+
+## Deux failles de plus, que la carte n'avait pas vues
+
+**`require_admin_access` ne recevait pas `season_id`.** Il vérifiait l'espace et
+la compétition. Le droit étant accordé **par compétition**, l'administrateur de
+la compétition A pouvait poser son propre `competition_id` et le `season_id` de
+la compétition B du même espace : la garde passait, puis le handler agissait sur
+B. `space_scope` ne le rattrape pas — il vérifie que la saison appartient à
+l'**espace**, jamais à la compétition.
+
+Le contrôle est posé **dans `require_admin_access`** plutôt que dans chaque
+handler : la fonction devient le seul endroit qui réponde « ce chemin est-il
+cohérent et m'est-il permis ? », et ses sept appelants en bénéficient sans y
+penser.
+
+**`put_update_round` et `delete_round` prennent `round_id` dans le chemin** — et
+la carte les rangeait donc parmi les routes sans problème de cible. Elles
+chargeaient pourtant la journée par son seul identifiant, en ignorant
+`_season_id` : exactement le même trou que les cibles du corps, sans en être.
+
+## Les tests
+
+Six scénarios dans `tests/e2e/test_competition_admin_acces.py`, sur **deux**
+compétitions du même espace — une cible inventée ne prouverait rien, elle rendrait
+`404` pour la seule raison qu'elle n'existe pas.
+
+Un test paramétré couvre les treize routes plutôt qu'un test chacune : la liste
+**est** l'assertion, et un décompte final interdit d'en retirer une sans s'en
+apercevoir. Le corps envoyé est celui du vrai client — un corps absent ferait
+échouer l'extracteur *avant* le contrôle d'accès, et le test vérifierait un rejet
+de format au lieu d'un refus de droit.
+
+**Cinq mutations, cinq tests rouges, chacun le sien** — la garde de
+`delete_match`, l'appartenance de `post_add_match`, celle de l'appariement, celle
+du groupe, et la cohérence saison↔compétition. La contre-épreuve reste verte.
+`post_add_match` est visée délibérément : c'est la **dernière** route de la boucle
+du test de portée, donc aussi la preuve que la boucle va jusqu'au bout.
+
+## Un piège rencontré : un test sauté n'est pas une couverture
+
+Le scénario de portée des poules se **sautait** — `competition_groups` était vide.
+Les poules sont configurées par le magicien mais ne se matérialisent qu'au premier
+affichage de leur widget (`ensure_groups_from_structure`). Le test ouvre désormais
+ce widget avant de viser un groupe, et affirme qu'il en trouve un.
+
 ## Vérification préalable
 
 Avant de corriger, mesurer si l'accès non autorisé a servi :

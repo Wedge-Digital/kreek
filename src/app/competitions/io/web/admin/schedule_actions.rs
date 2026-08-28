@@ -1,5 +1,18 @@
+//! Les dix mutations du calendrier.
+//!
+//! **Chacune commence par `require_admin_access`, puis vérifie que sa cible
+//! appartient à la saison du chemin** (carte 416). Le second contrôle n'est pas
+//! redondant : `space_scope` n'a de résolveur ni pour `round_id` ni pour
+//! `pairing_id`, qui passent donc librement — dans le chemin comme dans le
+//! corps. Les déplacer de l'un à l'autre n'aurait rien contrôlé.
+
+use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::domain::match_day::{
     MatchDay, MatchDayName, MatchDayPosition, MatchDayType,
+};
+use crate::app::competitions::io::web::admin::admin_page::require_admin_access;
+use crate::app::competitions::io::web::admin::admin_scope::{
+    appariement_de_la_saison, journee_de_la_saison,
 };
 use crate::app::competitions::use_cases::admin::{
     add_match_use_case, delete_pairing_use_case, generate_all_pairings, generate_pairings,
@@ -108,9 +121,21 @@ fn pairings_already_exist_refused() -> Response {
 // ── Generate all pairings ────────────────────────────────────────────────────
 
 pub async fn post_generate_all(
+    auth_session: AuthSession,
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> Response {
+    if let Err(refus) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
     match generate_all_pairings::execute(
         &season_id,
         &competition_id,
@@ -137,9 +162,21 @@ pub async fn post_generate_all(
 // ── Clear all pairings ───────────────────────────────────────────────────────
 
 pub async fn post_clear_all(
-    Path((_space_id, _competition_id, season_id)): Path<(String, String, String)>,
+    auth_session: AuthSession,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> Response {
+    if let Err(refus) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
     match delete_pairing_use_case::clear_season(
         &season_id,
         state.competitions.match_day_repository.as_ref(),
@@ -165,10 +202,22 @@ pub struct AddRoundBody {
 }
 
 pub async fn post_add_round(
-    Path((_space_id, _competition_id, season_id)): Path<(String, String, String)>,
+    auth_session: AuthSession,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
     axum::Json(body): axum::Json<AddRoundBody>,
 ) -> Response {
+    if let Err(refus) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
     let existing = state
         .competitions
         .match_day_repository
@@ -217,10 +266,22 @@ pub async fn post_add_round(
 // ── Add rest day ─────────────────────────────────────────────────────────────
 
 pub async fn post_add_rest(
-    Path((_space_id, _competition_id, season_id)): Path<(String, String, String)>,
+    auth_session: AuthSession,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
     axum::Json(body): axum::Json<AddRoundBody>,
 ) -> Response {
+    if let Err(refus) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
     let existing = state
         .competitions
         .match_day_repository
@@ -276,28 +337,30 @@ pub struct UpdateRoundBody {
     pub date_end: Option<String>,
 }
 
+/// **`round_id` est dans le chemin, et ça ne suffit pas.** `space_scope` n'a
+/// pas de résolveur pour lui : il passe sans être rattaché à la saison qui
+/// l'accompagne. La journée était chargée par son seul identifiant, donc
+/// n'importe laquelle de la base.
 pub async fn put_update_round(
-    Path((_space_id, _competition_id, _season_id, round_id)): Path<(
-        String,
-        String,
-        String,
-        String,
-    )>,
+    auth_session: AuthSession,
+    Path((space_id, competition_id, season_id, round_id)): Path<(String, String, String, String)>,
     State(state): State<AppState>,
     axum::Json(body): axum::Json<UpdateRoundBody>,
 ) -> Response {
-    let existing = match state
-        .competitions
-        .match_day_repository
-        .find_by_id(&round_id)
-        .await
+    if let Err(refus) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
     {
-        Ok(Some(d)) => d,
-        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
-        Err(e) => {
-            tracing::error!("put_update_round find: {e:?}");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
+        return refus;
+    }
+    let existing = match journee_de_la_saison(&round_id, &season_id, &state).await {
+        Ok(journee) => journee,
+        Err(refus) => return refus,
     };
 
     let name = body
@@ -342,14 +405,24 @@ pub async fn put_update_round(
 // ── Delete round ─────────────────────────────────────────────────────────────
 
 pub async fn delete_round(
-    Path((_space_id, _competition_id, _season_id, round_id)): Path<(
-        String,
-        String,
-        String,
-        String,
-    )>,
+    auth_session: AuthSession,
+    Path((space_id, competition_id, season_id, round_id)): Path<(String, String, String, String)>,
     State(state): State<AppState>,
 ) -> Response {
+    if let Err(refus) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
+    if let Err(refus) = journee_de_la_saison(&round_id, &season_id, &state).await {
+        return refus;
+    }
     match delete_pairing_use_case::delete_round(
         &round_id,
         state.competitions.match_day_repository.as_ref(),
@@ -375,10 +448,25 @@ pub struct RoundIdBody {
 }
 
 pub async fn post_generate_round_pairings(
+    auth_session: AuthSession,
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
     axum::Json(body): axum::Json<RoundIdBody>,
 ) -> Response {
+    if let Err(refus) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
+    if let Err(refus) = journee_de_la_saison(&body.round_id, &season_id, &state).await {
+        return refus;
+    }
     match generate_pairings::execute(
         &body.round_id,
         &season_id,
@@ -409,10 +497,25 @@ pub async fn post_generate_round_pairings(
 // ── Clear round pairings ─────────────────────────────────────────────────────
 
 pub async fn post_clear_round_pairings(
-    Path((_space_id, _competition_id, _season_id)): Path<(String, String, String)>,
+    auth_session: AuthSession,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
     axum::Json(body): axum::Json<RoundIdBody>,
 ) -> Response {
+    if let Err(refus) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
+    if let Err(refus) = journee_de_la_saison(&body.round_id, &season_id, &state).await {
+        return refus;
+    }
     match delete_pairing_use_case::clear_round(
         &body.round_id,
         state.competitions.match_day_repository.as_ref(),
@@ -439,11 +542,28 @@ pub struct AddMatchBody {
     pub away_team_id: String,
 }
 
+/// La cible est la **journée** ; les deux équipes sont des données, et leur
+/// inscription est déjà jugée par le use case (`TeamsNotEnrolled`).
 pub async fn post_add_match(
+    auth_session: AuthSession,
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
     axum::Json(body): axum::Json<AddMatchBody>,
 ) -> Response {
+    if let Err(refus) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
+    if let Err(refus) = journee_de_la_saison(&body.round_id, &season_id, &state).await {
+        return refus;
+    }
     match add_match_use_case::execute(
         &body.round_id,
         &season_id,
@@ -492,11 +612,30 @@ fn delete_match_refused() -> Response {
         .into_response()
 }
 
+/// L'exemple que la carte 416 cite : la vraie cible était dans le corps, et le
+/// chemin entier ignoré. Un coach qui connaît l'identifiant de son propre
+/// appariement pouvait le faire supprimer depuis n'importe quelle URL
+/// d'administration qu'il avait le droit d'atteindre.
 pub async fn delete_match(
-    Path((_space_id, _competition_id, _season_id)): Path<(String, String, String)>,
+    auth_session: AuthSession,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
     axum::Json(body): axum::Json<DeleteMatchBody>,
 ) -> Response {
+    if let Err(refus) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
+    if let Err(refus) = appariement_de_la_saison(&body.pairing_id, &season_id, &state).await {
+        return refus;
+    }
     match delete_pairing_use_case::execute(
         &body.pairing_id,
         state.competitions.match_day_repository.as_ref(),

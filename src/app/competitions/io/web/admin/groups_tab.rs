@@ -37,8 +37,14 @@ pub async fn groups_tab(
     headers: HeaderMap,
 ) -> impl IntoResponse {
     if headers.contains_key("hx-request") {
-        if let Err(resp) =
-            require_admin_access(&auth_session, &space_id, &competition_id, &state).await
+        if let Err(resp) = require_admin_access(
+            &auth_session,
+            &space_id,
+            &competition_id,
+            &season_id,
+            &state,
+        )
+        .await
         {
             return resp;
         }

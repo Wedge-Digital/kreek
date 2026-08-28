@@ -1,3 +1,15 @@
+//! Les trois mutations de la répartition en poules.
+//!
+//! **Chacune commence par `require_admin_access`** (carte 416) : jusqu'à elle,
+//! aucune des treize routes de mutation de l'administration n'acceptait
+//! `AuthSession`, et n'importe quel membre connecté pouvait réinitialiser les
+//! poules d'une compétition qu'il ne gère pas.
+
+use crate::app::auth::auth_backend::AuthSession;
+use crate::app::competitions::io::web::admin::admin_page::require_admin_access;
+use crate::app::competitions::io::web::admin::admin_scope::{
+    equipe_de_la_saison, groupe_de_la_saison,
+};
 use crate::app::competitions::use_cases::admin::{assign_team_to_group, random_draw, reset_groups};
 use crate::state::AppState;
 use axum::body::Body;
@@ -14,9 +26,21 @@ fn groups_changed() -> Response {
 }
 
 pub async fn post_random_draw(
-    Path((_space_id, _competition_id, season_id)): Path<(String, String, String)>,
+    auth_session: AuthSession,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> Response {
+    if let Err(refus) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
     match random_draw::execute(
         &season_id,
         state.competitions.group_repository.as_ref(),
@@ -35,9 +59,21 @@ pub async fn post_random_draw(
 }
 
 pub async fn post_reset_groups(
-    Path((_space_id, _competition_id, season_id)): Path<(String, String, String)>,
+    auth_session: AuthSession,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
-) -> impl IntoResponse {
+) -> Response {
+    if let Err(refus) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
     match reset_groups::execute(&season_id, state.competitions.group_repository.as_ref()).await {
         Ok(()) => groups_changed(),
         Err(e) => {
@@ -53,11 +89,34 @@ pub struct AssignBody {
     pub group_id: String,
 }
 
+/// **Deux cibles, toutes deux hors du chemin.** Le groupe et l'équipe viennent
+/// du corps ; ni l'un ni l'autre n'est vu par `space_scope`, qui ne résout que
+/// les paramètres de chemin. Sans les deux contrôles ci-dessous, un
+/// administrateur légitime pourrait affecter n'importe quelle équipe dans
+/// n'importe quel groupe de la base.
 pub async fn post_assign_team(
-    Path((_space_id, _competition_id, _season_id)): Path<(String, String, String)>,
+    auth_session: AuthSession,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
     axum::Json(body): axum::Json<AssignBody>,
-) -> impl IntoResponse {
+) -> Response {
+    if let Err(refus) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
+    if let Err(refus) = groupe_de_la_saison(&body.group_id, &season_id, &state).await {
+        return refus;
+    }
+    if let Err(refus) = equipe_de_la_saison(&body.team_id, &season_id, &state).await {
+        return refus;
+    }
     match assign_team_to_group::execute(
         &body.team_id,
         &body.group_id,

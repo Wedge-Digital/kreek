@@ -1,4 +1,5 @@
 pub mod admin_page;
+pub mod admin_scope;
 pub mod dashboard;
 pub mod enrollments_tab;
 pub mod groups_actions;
