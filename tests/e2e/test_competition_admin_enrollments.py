@@ -10,6 +10,7 @@ import re
 import time
 
 import pytest
+import requests
 from playwright.sync_api import Page, expect
 
 FAKE_LOGO_URL = "https://res.cloudinary.com/demo/image/upload/v1/sample.jpg"
@@ -61,6 +62,58 @@ def test_ouvrir_l_administration_mene_au_resume(page: Page, competition_create_u
     onglet_actif = page.locator(".admin-tab.active")
     expect(onglet_actif).to_have_count(1)
     expect(onglet_actif).to_contain_text("Résumé")
+
+
+def test_l_onglet_parametres_s_ouvre_sur_ses_conteneurs(page: Page, competition_create_url):
+    """Carte 420 — la coquille de l'onglet Paramètres.
+
+    Elle ne montre rien : les cinq panneaux arrivent avec les cartes 421 à 425.
+    Ce que ce test affirme, c'est que l'aiguillage la sert — donc que les cartes
+    suivantes auront bien un conteneur où se poser.
+
+    L'assertion porte sur **les cinq conteneurs**, pas sur la seule présence de
+    l'onglet : une branche d'aiguillage manquante rendrait le Résumé par défaut,
+    et l'onglet aurait l'air de fonctionner.
+    """
+    admin_url = _create_competition_and_get_admin_url(page, competition_create_url)
+
+    page.goto(admin_url + "/settings", wait_until="load")
+
+    expect(page.locator(".competition-admin-settings")).to_be_visible()
+    for conteneur in ("general", "ranking", "pools", "tiers", "visibility"):
+        expect(page.locator(f"#settings-{conteneur}")).to_have_count(1)
+
+    onglet_actif = page.locator(".admin-tab.active")
+    expect(onglet_actif).to_have_count(1)
+    expect(onglet_actif).to_contain_text("Paramètres")
+
+
+def test_l_onglet_parametres_est_garde(page: Page, competition_create_url):
+    """Le `GET` du fragment est gardé, pas seulement la page complète.
+
+    C'est **par le fragment qu'on navigue** : sans contrôle sur ce chemin, le
+    changement d'onglet contournerait l'autorisation. Masquer l'onglet ne
+    suffirait pas — l'URL est devinable.
+    """
+    admin_url = _create_competition_and_get_admin_url(page, competition_create_url)
+
+    # `requests` et non `page.request` : ce dernier réutilise le cookie de
+    # session du navigateur, et `bypass_auth` **ne remplace jamais une identité
+    # déjà connectée** — l'en-tête serait ignoré, DevCoach répondrait, et le test
+    # constaterait un `200` sans avoir rien exercé.
+    refus = requests.get(
+        admin_url + "/settings",
+        headers={"HX-Request": "true", "X-Bypass-Auth-Profile": "simple"},
+        timeout=10,
+    )
+    assert refus.status_code == 403, f"membre simple : {refus.status_code}"
+
+    # Contre-épreuve : sans l'en-tête, la même requête passe. Sans elle, un 403
+    # dû à une URL fautive se lirait comme un refus d'autorisation.
+    admis = requests.get(
+        admin_url + "/settings", headers={"HX-Request": "true"}, timeout=10
+    )
+    assert admis.status_code == 200, f"DevCoach : {admis.status_code}"
 
 
 def test_les_onglets_retires_ne_repondent_plus(page: Page, competition_create_url):

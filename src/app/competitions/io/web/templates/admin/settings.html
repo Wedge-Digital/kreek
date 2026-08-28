@@ -1,0 +1,21 @@
+{# Onglet Paramètres — page d'assemblage.
+
+   Aucun calcul, aucun JS : cinq conteneurs, chacun rempli par son propre
+   endpoint (pattern « page d'assemblage à widgets » du CLAUDE.md).
+
+   ── Pourquoi les conteneurs n'ont pas encore de `hx-get` ──────────────────
+   La conception les câblait dès la carte 420, vers des routes livrées par les
+   cartes 421 à 425. Chaque ouverture aurait donc émis cinq requêtes rendant
+   404, et `request_log` journalise toutes les requêtes, statut compris : cinq
+   lignes `status=404` par ouverture, pour un onglet qui n'a rien à montrer.
+
+   Le rendu est identique dans les deux cas — sur un 404, htmx n'échange rien.
+   Seul le bruit diffère. Chaque carte de panneau apporte donc son `hx-get` en
+   même temps que sa route. #}
+<div class="competition-admin-settings">
+  <div id="settings-general"></div>
+  <div id="settings-ranking"></div>
+  <div id="settings-pools"></div>
+  <div id="settings-tiers"></div>
+  <div id="settings-visibility"></div>
+</div>

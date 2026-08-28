@@ -1,7 +1,8 @@
 # E14 — Modifier une compétition en cours
 
-**État :** `en_cours` — 10 cartes, 3 faites (417, 418 et 419, le 2026-08-28).
-La vague 1 — le socle — est complète ; la vague 2 est entamée. Spécifiée par
+**État :** `en_cours` — 10 cartes, 4 faites (417 à 420, le 2026-08-28).
+Les vagues 1 — le socle — et 2 — la place — sont complètes. Restent les cinq
+panneaux et leurs tests e2e. Spécifiée par
 le workflow feature les 2026-08-25 et 26.
 **Conception :** `docs/specs/modifier-une-competition/`
 

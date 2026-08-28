@@ -74,6 +74,52 @@ reprennent `widgets/inducement-grid.css`, les blocs de tier
 - Unitaire : l'aiguillage rend la branche `settings`.
 - E2E : l'onglet apparaît, s'ouvre, et un non-admin reçoit `403` sur son GET.
 
+## Les conteneurs n'ont pas encore leur `hx-get`
+
+La conception les câblait dès cette carte, vers les cinq routes que livreront les
+cartes 421 à 425. Chaque ouverture de l'onglet aurait donc émis **cinq requêtes
+rendant `404`** — et `request_log` journalise toutes les requêtes, statut
+compris. Cinq lignes `status=404` par ouverture, pour un onglet qui n'a rien à
+montrer : exactement le bruit que l'épic E11 s'est employée à bannir. Le journal
+n'est utile en production que si ce qu'on y lit signifie quelque chose.
+
+**Le rendu à l'écran est identique dans les deux cas** : sur un `404`, htmx
+n'échange rien et le conteneur reste vide. La seule différence entre les deux
+options est le bruit.
+
+Chaque carte de panneau apporte donc son `hx-get` en même temps que sa route.
+Bénéfice second : elles deviennent autonomes, leur ligne de template arrivant
+avec leur endpoint.
+
+## Le test unitaire demandé n'est pas réalisable
+
+La carte demandait « Unitaire : l'aiguillage rend la branche `settings` ».
+L'aiguillage vit dans `render_admin_page`, qui prend un `&AppState` — et le dépôt
+dit lui-même, dans `recap_controller.rs:190`, qu'`AppState` **n'est pas
+constructible en test**. C'est la raison d'être de la carte 311.
+
+L'écrire aurait demandé d'inventer un harnais de niveau handler, très au-delà de
+cette carte. **L'e2e couvre l'aiguillage**, et le dit plutôt que de laisser une
+case cochée sur un test qui n'existe pas.
+
+## Deux scénarios e2e, et ce qu'ils affirment vraiment
+
+`test_l_onglet_parametres_s_ouvre_sur_ses_conteneurs` porte sur **les cinq
+conteneurs**, et non sur la seule présence de l'onglet dans la barre. Sans branche
+d'aiguillage, le défaut sert le Résumé — l'onglet s'afficherait, répondrait `200`,
+et paraîtrait fonctionner. Retirer la branche fait bien tomber ce test, et lui
+seul.
+
+`test_l_onglet_parametres_est_garde` vérifie le `GET` du **fragment**, pas
+seulement la page complète : c'est par le fragment qu'on navigue, et l'URL est
+devinable.
+
+Il a d'abord échoué pour une raison qui vaut d'être notée : `page.request`
+réutilise le cookie de session du navigateur, et `bypass_auth` **ne remplace
+jamais une identité déjà connectée** — sa docstring le dit. L'en-tête de membre
+simple était ignoré, DevCoach répondait, et le test constatait un `200` sans avoir
+rien exercé. Il passe par `requests`, sans cookie.
+
 ## Checklist
 
 - [ ] Constante de route, `.route(...)`, branche d'aiguillage, entrée d'onglet

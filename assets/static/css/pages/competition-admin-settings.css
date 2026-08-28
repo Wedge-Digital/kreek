@@ -1,0 +1,102 @@
+/* Onglet Paramètres de l'administration de compétition (carte 420).
+
+   Reprise de assets/rawpages/html/app-competition-admin-modification.html,
+   section `.settings-panel*`. Portée par `.competition-admin-settings` — le nom
+   du fichier **est** le sélecteur de portée (axe 15).
+
+   Deux composants ne sont pas réécrits ici : les puces de coups de pouce
+   reprennent `widgets/inducement-grid.css`, les blocs de tier
+   `pages/new-competition-phase-2.css`. */
+
+.competition-admin-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p2);
+}
+
+/* ── Le panneau ────────────────────────────────────────────────────────── */
+.competition-admin-settings .settings-panel {
+  background: var(--white);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.competition-admin-settings .settings-panel-head {
+  padding: var(--p2);
+  border-bottom: 2px solid var(--dark-5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.competition-admin-settings .settings-panel-title {
+  font-family: var(--font-title);
+  font-size: var(--h5);
+  font-weight: 700;
+  color: var(--dark-1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.competition-admin-settings .settings-panel-title-icon { font-size: 18px; }
+.competition-admin-settings .settings-panel-body {
+  padding: var(--p2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--p2);
+}
+
+/* ── Les lignes de formulaire ──────────────────────────────────────────── */
+.competition-admin-settings .form-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--p2);
+}
+.competition-admin-settings .form-row-label {
+  min-width: 160px;
+  flex-shrink: 0;
+  font-size: var(--text-tiny);
+  font-weight: 600;
+  color: var(--dark-2);
+  padding-top: 10px;
+}
+.competition-admin-settings .form-row-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.competition-admin-settings .form-row-hint { font-size: 11px; color: var(--dark-4); }
+
+/* L'emplacement d'erreur est **réservé en permanence dans le flux** : il
+   n'apparaît qu'occupé. Un message inséré à la volée décalerait le formulaire au
+   moment précis où l'utilisateur lit ce qu'on lui reproche. */
+.competition-admin-settings .form-row-error {
+  font-size: 11px;
+  color: var(--red);
+  font-weight: 600;
+  min-height: 15px;
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.competition-admin-settings .form-row-error.shown { opacity: 1; }
+
+/* ── Les champs ────────────────────────────────────────────────────────── */
+.competition-admin-settings .form-input {
+  padding: 10px 14px;
+  border: 1px solid var(--dark-4);
+  border-radius: 7px;
+  font-size: var(--text-small);
+  color: var(--dark-1);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+}
+.competition-admin-settings .form-input:focus { border-color: var(--main-blue); }
+.competition-admin-settings .form-input.invalid { border-color: var(--red); }
+
+/* ── Responsivité — desktop-first, breakpoint unique du projet ─────────── */
+@media (max-width: 768px) {
+  .competition-admin-settings .form-row { flex-direction: column; gap: 6px; }
+  .competition-admin-settings .form-row-label { min-width: 0; padding-top: 0; }
+}

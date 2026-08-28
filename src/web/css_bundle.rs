@@ -87,6 +87,7 @@ const FEUILLES_APP: &[&str] = &[
     "pages/competition-admin-enrollments.css",
     "pages/competition-admin-groups.css",
     "pages/competition-admin-schedule.css",
+    "pages/competition-admin-settings.css",
     "pages/competition-container.css",
     "pages/competition-detail.css",
     "pages/editor-container.css",

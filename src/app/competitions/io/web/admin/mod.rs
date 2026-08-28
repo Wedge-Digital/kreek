@@ -7,4 +7,5 @@ pub mod groups_widgets;
 pub mod schedule_actions;
 pub mod schedule_tab;
 pub mod schedule_widgets;
+pub mod settings;
 pub mod summary_tab;

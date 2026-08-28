@@ -236,6 +236,14 @@ pub async fn render_admin_page(
             };
             tpl.render().unwrap_or_default()
         }
+        "settings" => {
+            let tpl = super::settings::settings_tab::SettingsTabTemplate {
+                space_id: space_id.to_string(),
+                competition_id: competition_id.to_string(),
+                season_id: season_id.to_string(),
+            };
+            tpl.render().unwrap_or_default()
+        }
         "schedule" => {
             let tpl = super::schedule_tab::ScheduleTabTemplate {
                 app_routes,
