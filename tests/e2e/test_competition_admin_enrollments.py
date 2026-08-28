@@ -42,6 +42,46 @@ def _create_competition_and_get_admin_url(page: Page, competition_create_url: st
     return f"http://localhost:3210/app/{space_id}/competitions/{competition_id}/{season_id}/admin"
 
 
+def test_ouvrir_l_administration_mene_au_resume(page: Page, competition_create_url):
+    """Carte 419 — le Résumé est l'onglet d'accueil.
+
+    Le tableau de bord l'occupait ; il a quitté l'administration, et le défaut de
+    l'aiguillage rend désormais le Résumé. Trois cas e2e le vérifiaient sous son
+    ancien nom — ils partent avec lui, et celui-ci prend leur place.
+
+    L'assertion porte sur le **contenu servi**, pas seulement sur le fait que la
+    page réponde : c'est l'onglet actif et le fragment rendu qui distinguent le
+    Résumé de ce qui l'a précédé.
+    """
+    admin_url = _create_competition_and_get_admin_url(page, competition_create_url)
+
+    page.goto(admin_url, wait_until="load")
+
+    expect(page.locator(".admin-summary")).to_be_visible()
+    onglet_actif = page.locator(".admin-tab.active")
+    expect(onglet_actif).to_have_count(1)
+    expect(onglet_actif).to_contain_text("Résumé")
+
+
+def test_les_onglets_retires_ne_repondent_plus(page: Page, competition_create_url):
+    """Leurs routes ont disparu avec eux — un signet périmé rend `404`, il ne
+    retombe pas sur une page à moitié rendue.
+
+    Et la barre d'onglets ne les propose plus : masquer un lien sans retirer la
+    route, ou l'inverse, laisserait la moitié du travail faite.
+    """
+    admin_url = _create_competition_and_get_admin_url(page, competition_create_url)
+
+    for parti in ("dashboard", "results"):
+        reponse = page.request.get(f"{admin_url}/{parti}")
+        assert reponse.status == 404, f"/{parti} rend {reponse.status}"
+
+    page.goto(admin_url, wait_until="load")
+    barre = page.locator(".admin-tabs")
+    expect(barre).not_to_contain_text("Tableau de bord")
+    expect(barre).not_to_contain_text("Résultats")
+
+
 def test_enrollments_tab_loads(page: Page, competition_create_url):
     admin_url = _create_competition_and_get_admin_url(page, competition_create_url)
 

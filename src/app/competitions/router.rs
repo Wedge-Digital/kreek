@@ -1,5 +1,4 @@
 use crate::app::competitions::io::web::admin::admin_page::admin_page;
-use crate::app::competitions::io::web::admin::dashboard::dashboard_fragment;
 use crate::app::competitions::io::web::admin::enrollments_tab::enrollments_tab;
 use crate::app::competitions::io::web::admin::groups_actions::{
     post_assign_team, post_random_draw, post_reset_groups,
@@ -8,7 +7,6 @@ use crate::app::competitions::io::web::admin::groups_tab::groups_tab;
 use crate::app::competitions::io::web::admin::groups_widgets::{
     group_cards_widget, unassigned_pool_widget,
 };
-use crate::app::competitions::io::web::admin::results_tab::results_tab;
 use crate::app::competitions::io::web::admin::schedule_actions::{
     delete_match, delete_round, post_add_match, post_add_rest, post_add_round, post_clear_all,
     post_clear_round_pairings, post_generate_all, post_generate_round_pairings, put_update_round,
@@ -109,7 +107,6 @@ pub fn router() -> Router<AppState> {
             get(get_competitions_widget_tester),
         )
         .route(path::COMPETITION_ADMIN, get(admin_page))
-        .route(path::COMPETITION_ADMIN_DASHBOARD, get(dashboard_fragment))
         .route(path::COMPETITION_ADMIN_SUMMARY, get(summary_tab_fragment))
         .route(
             path::NOTIFICATION_SETTINGS_WIDGET,
@@ -141,7 +138,6 @@ pub fn router() -> Router<AppState> {
             path::COMPETITION_ADMIN_GROUPS_ASSIGN,
             post(post_assign_team),
         )
-        .route(path::COMPETITION_ADMIN_RESULTS, get(results_tab))
         // ── Schedule tab ──
         .route(path::COMPETITION_ADMIN_SCHEDULE, get(schedule_tab))
         .route(

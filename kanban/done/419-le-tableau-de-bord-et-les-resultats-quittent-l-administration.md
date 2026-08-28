@@ -57,6 +57,47 @@ aussi une entrée du bundle sans feuille.
 - Ajouter à la suite e2e existante : ouvrir l'administration mène au Résumé.
 - `make e2e` doit rester vert : aucun autre test ne référence les deux routes.
 
+## Deux fichiers que cette carte avait manqués
+
+La liste « ce qui part » était juste sur les sept fichiers, et la vérification de
+la règle 4 les a tous confirmés sans consommateur hors périmètre. Deux autres
+fichiers référençaient pourtant ce qui disparaît.
+
+**`tests/e2e/visual/urls.py`** — trois entrées : les URL `admin-dashboard` et
+`admin-resultats`, plus le sélecteur `.competition-admin-dashboard`. Trois
+scripts la lisent : `debordements.py`, `decalages.py`, `releve.py`.
+
+Ce suivi visuel n'est branché **ni à une cible `make`, ni à la CI** — il se lance
+à la main. Les deux URL mortes auraient donc rendu `404` en silence, sans qu'aucun
+build ne rougisse. Et `debordements.py` est justement l'outil que le `CLAUDE.md`
+cite pour attraper les feuilles CSS qui débordent : le laisser pointer vers du
+vide l'aurait rendu moins fiable sans que rien ne le dise.
+
+**`tests/impact-map.toml`** — l'entrée de l'e2e supprimé. Celle-là n'aurait pas
+échappé longtemps : l'**axe 8** de `check-arch` refuse une « entrée orpheline
+(fichier de test inexistant) ». Le verrou existait, la carte l'ignorait.
+
+## L'aiguillage : le défaut passe en dernier
+
+La carte dit « le défaut `_` devient `summary` ». Concrètement, la branche
+`"summary"` **devient** le défaut — et doit donc **descendre en dernière
+position**. Elle vivait au milieu du `match` ; l'y laisser en `_` aurait rendu
+`"groups"` et `"schedule"` inatteignables, ce que `-D unreachable-patterns`
+refuse à la compilation.
+
+## Deux scénarios e2e, pas un
+
+La carte demandait « ouvrir l'administration mène au Résumé ». Un second
+l'accompagne : **les deux routes retirées rendent `404`, et la barre ne les
+propose plus**.
+
+Masquer un lien sans retirer la route — ou l'inverse — laisserait la moitié du
+travail faite, et le premier test seul ne verrait ni l'un ni l'autre.
+
+Le premier a été **vu échouer** : en remettant un autre onglet comme défaut, il
+tombe sur l'absence de `.admin-summary`. Il observe donc le contenu servi, et non
+le simple fait que la page réponde.
+
 ## Checklist
 
 - [ ] Sept fichiers supprimés

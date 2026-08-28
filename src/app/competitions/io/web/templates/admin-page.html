@@ -16,11 +16,6 @@
   </div>
 
   <div class="admin-tabs" onclick="if(event.target.classList.contains('admin-tab')){this.querySelectorAll('.admin-tab').forEach(function(t){t.classList.remove('active')});event.target.classList.add('active');}">
-    <a class="admin-tab{% if active_tab == "dashboard" %} active{% endif %}"
-       hx-get="{{ app_routes.competitions.admin_dashboard(space_id, competition_id, season_id) }}"
-       hx-target="#admin-content"
-       hx-swap="innerHTML"
-       hx-push-url="{{ app_routes.competitions.admin_dashboard(space_id, competition_id, season_id) }}">📊 Tableau de bord</a>
     <a class="admin-tab{% if active_tab == "summary" %} active{% endif %}"
        hx-get="{{ app_routes.competitions.admin_summary(space_id, competition_id, season_id) }}"
        hx-target="#admin-content"
@@ -43,11 +38,6 @@
        hx-target="#admin-content"
        hx-swap="innerHTML"
        hx-push-url="{{ app_routes.competitions.admin_schedule(space_id, competition_id, season_id) }}">📅 Calendrier</a>
-    <a class="admin-tab{% if active_tab == "results" %} active{% endif %}"
-       hx-get="{{ app_routes.competitions.admin_results(space_id, competition_id, season_id) }}"
-       hx-target="#admin-content"
-       hx-swap="innerHTML"
-       hx-push-url="{{ app_routes.competitions.admin_results(space_id, competition_id, season_id) }}">✅ Résultats</a>
   </div>
 
   <div id="admin-content">

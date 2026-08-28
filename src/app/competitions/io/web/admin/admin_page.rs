@@ -1,8 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::domain::competition_repository_port::CompetitionBaseInfo;
-use crate::app::competitions::io::web::admin::dashboard::build_dashboard_fragment;
 use crate::app::competitions::io::web::admin::summary_tab::build_summary_fragment;
-use crate::app::competitions::use_cases::admin::dashboard_query;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::app::shared_kernel::identity::authorization::SpaceProfile;
@@ -50,7 +48,9 @@ pub async fn admin_page(
         &space_id,
         &competition_id,
         &season_id,
-        "dashboard",
+        // Le Résumé est l'onglet d'accueil depuis la carte 419 : le tableau de
+        // bord qui l'occupait a quitté l'administration.
+        "summary",
         &state,
     )
     .await
@@ -227,7 +227,33 @@ pub async fn render_admin_page(
             };
             tpl.render().unwrap_or_default()
         }
-        "summary" => {
+        "groups" => {
+            let tpl = super::groups_tab::GroupsTabTemplate {
+                app_routes,
+                space_id: space_id.to_string(),
+                competition_id: competition_id.to_string(),
+                season_id: season_id.to_string(),
+            };
+            tpl.render().unwrap_or_default()
+        }
+        "schedule" => {
+            let tpl = super::schedule_tab::ScheduleTabTemplate {
+                app_routes,
+                space_id: space_id.to_string(),
+                competition_id: competition_id.to_string(),
+                season_id: season_id.to_string(),
+            };
+            tpl.render().unwrap_or_default()
+        }
+        // **Le Résumé est le défaut**, et non un onglet nommé parmi d'autres :
+        // il rendait le tableau de bord avant la carte 419. Un onglet inconnu —
+        // signet périmé, URL forgée — atterrit donc sur l'accueil plutôt que sur
+        // une page blanche.
+        //
+        // En dernière position, faute de quoi les branches suivantes
+        // deviendraient inatteignables — ce que `-D unreachable-patterns`
+        // refuserait, mais qu'il vaut mieux ne pas écrire.
+        _ => {
             match build_summary_fragment(
                 &comp_id,
                 &season_entity_id,
@@ -249,70 +275,6 @@ pub async fn render_admin_page(
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
             }
-        }
-        "groups" => {
-            let tpl = super::groups_tab::GroupsTabTemplate {
-                app_routes,
-                space_id: space_id.to_string(),
-                competition_id: competition_id.to_string(),
-                season_id: season_id.to_string(),
-            };
-            tpl.render().unwrap_or_default()
-        }
-        "results" => {
-            let rows = state
-                .competitions
-                .match_day_repository
-                .list_resultats(season_id, None, u32::MAX)
-                .await
-                .unwrap_or_default();
-            let (journees, _next_cursor) = crate::app::competitions::io::web::resultats_view::build_journees(
-                rows,
-                usize::MAX,
-                &crate::app::competitions::io::web::resultats_view::ResultAuthorization::unrestricted(),
-            );
-            let tpl = super::results_tab::ResultsTabTemplate {
-                app_routes,
-                space_id: space_id.to_string(),
-                competition_id: competition_id.to_string(),
-                season_id: season_id.to_string(),
-                journees,
-            };
-            tpl.render().unwrap_or_default()
-        }
-        "schedule" => {
-            let tpl = super::schedule_tab::ScheduleTabTemplate {
-                app_routes,
-                space_id: space_id.to_string(),
-                competition_id: competition_id.to_string(),
-                season_id: season_id.to_string(),
-            };
-            tpl.render().unwrap_or_default()
-        }
-        _ => {
-            let summary = match dashboard_query::execute(
-                &comp_id,
-                &season_entity_id,
-                state.competitions.competition_repository.as_ref(),
-                state.competitions.season_repository.as_ref(),
-            )
-            .await
-            {
-                Ok(s) => s,
-                Err(e) => {
-                    tracing::error!("admin_page dashboard_query error: {e:?}");
-                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-                }
-            };
-
-            let dashboard = build_dashboard_fragment(
-                &summary,
-                &app_routes,
-                space_id,
-                competition_id,
-                season_id,
-            );
-            dashboard.render().unwrap_or_default()
         }
     };
 

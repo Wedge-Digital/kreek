@@ -73,7 +73,6 @@ CLASSE_ATTENDUE = {
     "competitions-liste": ".competition-container",
     "competition-nouvelle": ".new-competition",
     "competition-detail": ".competition-detail",
-    "admin-dashboard": ".competition-admin-dashboard",
     "admin-inscriptions": ".competition-admin-enrollments",
     "admin-groupes": ".competition-admin-groups",
     "admin-calendrier": ".competition-admin-schedule",
@@ -189,11 +188,9 @@ def collecter() -> tuple[dict[str, str], list[str]]:
         "competition-nouvelle":  f"{a}/competitions/create",
         "competition-detail":    f"{a}/competitions/{competition}/{saison}" if saison else None,
         "competition-calendrier": f"{a}/competitions/{competition}/{saison}/calendrier" if saison else None,
-        "admin-dashboard":       f"{a}/competitions/{competition}/{saison}/admin/dashboard" if saison else None,
         "admin-inscriptions":    f"{a}/competitions/{competition}/{saison}/admin/enrollments" if saison else None,
         "admin-groupes":         f"{a}/competitions/{competition}/{saison}/admin/groups" if saison else None,
         "admin-calendrier":      f"{a}/competitions/{competition}/{saison}/admin/schedule" if saison else None,
-        "admin-resultats":       f"{a}/competitions/{competition}/{saison}/admin/results" if saison else None,
         "admin-resume":          f"{a}/competitions/{competition}/{saison}/admin/summary" if saison else None,
         # ── phases de création de compétition ────────────────────────────
         #

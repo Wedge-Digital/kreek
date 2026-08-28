@@ -72,7 +72,6 @@
 "test_competition_two_tiers"        = ["competitions", "references", "ranking", "spaces"]
 
 # ── Administration de compétition (équipes enrôlées lues via le port teams) ──
-"test_competition_admin_dashboard"   = ["competitions", "teams", "spaces", "references", "ranking"]
 "test_competition_admin_enrollments" = ["competitions", "teams", "spaces", "references", "ranking"]
 # Le contrôle d'accès des treize routes de mutation. `auth` y est une dépendance
 # **dure** et non une commodité : le refus n'est observable que sous l'identité

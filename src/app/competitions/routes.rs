@@ -39,8 +39,6 @@ pub mod path {
         "/app/{space_id}/competitions/widget/latest-results";
     pub const COMPETITION_ADMIN: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin";
-    pub const COMPETITION_ADMIN_DASHBOARD: &str =
-        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/dashboard";
     pub const COMPETITION_ADMIN_ENROLLMENTS: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/enrollments";
     pub const COMPETITION_ADMIN_GROUPS: &str =
@@ -81,8 +79,6 @@ pub mod path {
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/delete-match";
     pub const COMPETITION_ADMIN_SUMMARY: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/summary";
-    pub const COMPETITION_ADMIN_RESULTS: &str =
-        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/results";
     pub const NOTIFICATION_SETTINGS_WIDGET: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/notifications-widget";
     pub const NOTIFICATION_SETTINGS: &str =
@@ -203,12 +199,6 @@ impl Routes {
     }
     pub fn admin(&self, sid: &str, cid: &str, season_id: &str) -> String {
         path::COMPETITION_ADMIN
-            .replace("{space_id}", sid)
-            .replace("{competition_id}", cid)
-            .replace("{season_id}", season_id)
-    }
-    pub fn admin_dashboard(&self, sid: &str, cid: &str, season_id: &str) -> String {
-        path::COMPETITION_ADMIN_DASHBOARD
             .replace("{space_id}", sid)
             .replace("{competition_id}", cid)
             .replace("{season_id}", season_id)
@@ -359,12 +349,6 @@ impl Routes {
     }
     pub fn notification_settings(&self, sid: &str, cid: &str, season_id: &str) -> String {
         path::NOTIFICATION_SETTINGS
-            .replace("{space_id}", sid)
-            .replace("{competition_id}", cid)
-            .replace("{season_id}", season_id)
-    }
-    pub fn admin_results(&self, sid: &str, cid: &str, season_id: &str) -> String {
-        path::COMPETITION_ADMIN_RESULTS
             .replace("{space_id}", sid)
             .replace("{competition_id}", cid)
             .replace("{season_id}", season_id)
