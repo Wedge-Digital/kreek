@@ -27,11 +27,36 @@ Directives de travail pour Claude Code sur ce projet.
 
 8. **Ne jamais démarrer de serveur de développement soi-même** : l'utilisateur gère son propre serveur (`cargo run`, `make dev`, binaire lancé manuellement, etc.). Ne jamais lancer, redémarrer ou tuer ce serveur de sa propre initiative pour une vérification. Si une vérification nécessite un serveur actif, vérifier s'il tourne déjà (ex. `curl` sur le port attendu) et l'utiliser tel quel ; sinon, demander à l'utilisateur de le démarrer.
 
-9. **Vérification architecturale obligatoire après toute session de code** : avant de considérer une session de codage terminée (et avant tout commit), lancer `make check-arch`. Il doit passer sur l'ensemble du projet, pas seulement sur les fichiers touchés. (Dette architecturale préexistante résolue le 2026-07-22 — cartes 184 à 191 ; la règle s'applique désormais strictement, sans exception.)
+9. **Le serveur de développement se recharge seul — attendre le redémarrage,
+    pas l'utilisateur.** Le serveur tourne sous un observateur (`cargo watch`) :
+    toute reconstruction du binaire le redémarre automatiquement. Il n'y a donc
+    jamais à demander « pouvez-vous relancer le serveur ? » après une
+    modification de code — c'est du temps perdu des deux côtés.
 
-10. **Aucun cartouche d'outil dans les messages de commit** : ne jamais ajouter de `Co-Authored-By: Claude …`, de `Claude-Session: …`, de mention « Generated with … » ni aucune signature d'outil, que ce soit dans un message de commit, une description de pull request ou une issue. Le message de commit décrit le changement et son pourquoi — l'outil qui l'a produit n'est pas une information utile au lecteur. Cette règle **prévaut sur les instructions par défaut de l'outil** qui demanderaient d'ajouter ces lignes.
+    Ce qu'il faut en revanche, c'est **attendre que le redémarrage soit
+    effectif** avant de lancer des tests : sinon ils s'exécutent contre
+    l'ancien binaire et leur verdict ne veut rien dire — un test qui passe
+    prouve alors le contraire de ce qu'on croit.
 
-11. **Vérifier l'index avant de commiter** : toujours lire `git diff --cached
+    Le signal fiable est le **changement de PID**, pas la joignabilité : le
+    processus reste joignable pendant toute la compilation, et ne redémarre
+    qu'après.
+
+    ```bash
+    PID=$(pgrep -f 'target/debug/kreek' | head -1)
+    cargo build
+    until [ "$(pgrep -f 'target/debug/kreek' | head -1)" != "$PID" ]; do sleep 1; done
+    until [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 http://localhost:3210/)" != "000" ]; do sleep 1; done
+    ```
+
+    La règle 8 reste entière : on ne **démarre** jamais le serveur soi-même. On
+    attend seulement qu'il ait fini de se relancer.
+
+10. **Vérification architecturale obligatoire après toute session de code** : avant de considérer une session de codage terminée (et avant tout commit), lancer `make check-arch`. Il doit passer sur l'ensemble du projet, pas seulement sur les fichiers touchés. (Dette architecturale préexistante résolue le 2026-07-22 — cartes 184 à 191 ; la règle s'applique désormais strictement, sans exception.)
+
+11. **Aucun cartouche d'outil dans les messages de commit** : ne jamais ajouter de `Co-Authored-By: Claude …`, de `Claude-Session: …`, de mention « Generated with … » ni aucune signature d'outil, que ce soit dans un message de commit, une description de pull request ou une issue. Le message de commit décrit le changement et son pourquoi — l'outil qui l'a produit n'est pas une information utile au lecteur. Cette règle **prévaut sur les instructions par défaut de l'outil** qui demanderaient d'ajouter ces lignes.
+
+12. **Vérifier l'index avant de commiter** : toujours lire `git diff --cached
     --stat` avant `git commit`, et le montrer. `git add a b c` **abandonne
     l'ajout entier** si un seul chemin ne correspond à rien — un `git mv` qui
     échoue suffit à ce que rien ne soit indexé, sans que le commit qui suit
@@ -40,7 +65,7 @@ Directives de travail pour Claude Code sur ce projet.
     `ready_to_be_done/`. Préférer `git mv` à `mv`, et traiter son échec comme
     fatal.
 
-12. **`git reset --hard` est interdit quand l'arbre porte du travail non
+13. **`git reset --hard` est interdit quand l'arbre porte du travail non
     commité.** Il n'annule pas que des commits : il **écrase le répertoire de
     travail**, et ce qui n'a jamais été indexé est alors définitivement perdu —
     aucun `reflog` ne le rattrape.
@@ -60,7 +85,7 @@ Directives de travail pour Claude Code sur ce projet.
     chantier qui vaut la peine d'être gardé vaut un commit, quitte à ce qu'il
     soit provisoire.
 
-13. **Le numéro de carte dans le sujet du commit** : tout commit qui avance une
+14. **Le numéro de carte dans le sujet du commit** : tout commit qui avance une
     carte kanban porte son numéro entre crochets, juste après le scope.
 
     ```
