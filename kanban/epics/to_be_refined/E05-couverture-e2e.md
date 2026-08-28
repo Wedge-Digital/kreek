@@ -1,6 +1,7 @@
 # E05 — Couverture e2e du déjà livré
 
-**État :** 4 cartes · 0 faite
+**État :** 4 cartes · 0 faite · `to_be_refined` — **312 reste à raffiner**,
+et l'état d'une épic suit sa carte la plus en amont.
 
 ## La fonction
 

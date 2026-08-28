@@ -18,14 +18,14 @@ ajoute à celles du règlement.
 
 | # | Intitulé | Apport |
 |---|---|---|
-| 54 | Référentiel des ligues + widget sélecteur | fragment HTMX à 3 états, `on_select` injecté par l'hôte |
+| 54 | Référentiel des ligues + widget sélecteur | fragment HTMX à 3 états, `on_select` injecté par l'hôte — **`to_be_refined`**, sa section « Points à préciser » porte trois questions |
 | **439 à 447** | **Roster personnalisé, propre à un espace** | neuf cartes issues du workflow feature, spécifiées dans `docs/specs/roster-personnalise/` |
 | **463 à 472** | **Compétences personnalisées, propres à un espace** | dix cartes issues du workflow feature, spécifiées dans `docs/specs/competences-personnalisees/` |
 | 50-reference-BC-roster-editor | Éditeur de rosters | **absorbée** par les neuf ci-dessus — sa question « modifier les rosters dans une certaine mesure » est tranchée : on n'édite pas ceux du règlement, on en crée de nouveaux |
 
 ## Ce qui commande l'ordre
 
-Aucune dépendance entre les deux, mais **54 est de loin la plus avancée** : sa
+**54 est indépendante des deux autres, et de loin la plus avancée** : sa
 conception est écrite — route, paramètres, les trois états du fragment,
 l'intégration côté `team_creation` — et il ne lui reste que trois questions
 ouvertes, toutes tranchables en une conversation :

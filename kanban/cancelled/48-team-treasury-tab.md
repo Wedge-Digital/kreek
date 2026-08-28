@@ -1,3 +1,16 @@
+> **Carte annulée le 2026-08-28 — remplacée par les cartes 434 à 437.**
+>
+> Elle décrivait l'onglet Trésorerie en une intention et trois paragraphes,
+> avec une dépendance vers `29-teams-repository` close depuis longtemps. Le
+> même écran a été repris par le workflow feature en août 2026, qui a produit
+> une conception complète — `docs/specs/tresorerie-equipe/` — et **quatre
+> cartes** : la fiche équipe accueille des onglets (434), lire le grand livre
+> (435), le relevé s'affiche (436), les tests e2e (437).
+>
+> Ce que la 48 n'avait pas vu : le grand livre `teams__treasury_ledger`
+> **existait déjà, écrit depuis l'origine et jamais lu**. Il n'y avait donc pas
+> à projeter l'event store, mais à lire une table qu'on ignorait avoir.
+
 # BC `teams` — Onglet Trésorerie de la fiche d'équipe
 
 **Priorité : moyenne**

@@ -1,6 +1,6 @@
 # Le relevé de trésorerie s'affiche
 
-**Ordre :** 2 · **Dépend de :** 434, 435
+**Épic :** E06 — La fiche d'équipe complétée · **Ordre :** 2 · **Dépend de :** 434, 435
 **Conception :** `docs/specs/tresorerie-equipe/onglet-tresorerie/` (`04-dtos.md`,
 `07-integration.md`) · **Maquette :**
 `assets/rawpages/html/app-team-treasury.html`

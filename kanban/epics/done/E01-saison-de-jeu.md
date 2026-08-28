@@ -32,6 +32,17 @@ Les dix cartes ont été livrées sans jamais être déplacées en `done/` — e
 l'ont été d'un bloc à la création de cette épic, après vérification une par une
 dans le code (colonne de droite).
 
+**Deux d'entre elles ont bougé depuis, et ce tableau ne le disait pas :**
+
+| Carte | Ce qui s'est passé |
+|---|---|
+| `39` — retraite temporaire | **revenue en `to_be_refined/`** : la vérification l'avait comptée faite à tort |
+| `40` — erreur coûteuse | **devenue l'épic E13**, close depuis ; la carte est en `cancelled/` |
+
+Le commit `577fda8` a fait les deux mouvements sans reprendre cette épic. La
+clôture de E01 tient malgré la 39 : son « Terminé quand » se constate sur le
+tour complet d'une journée, et la retraite temporaire n'en fait pas partie.
+
 ## Ce que l'épic ne couvre pas
 
 Trois cartes en ont été **sorties** parce que la vérification a montré qu'elles

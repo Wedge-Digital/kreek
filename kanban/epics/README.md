@@ -41,13 +41,13 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 | [E01 — Saison de jeu : le cycle de vie d'une équipe](done/E01-saison-de-jeu.md) | `done` | 10 |
 | [E02 — Notifications e-mail de compétition](done/E02-notifications-email.md) | `done` | 13 |
 | [E03 — Front : ni saut, ni clignotement](done/E03-front-ni-saut-ni-clignotement.md) | `done` | 4 |
-| [E04 — Les verrous architecturaux](ready_to_be_done/E04-verrous-architecturaux.md) | `ready` | 6 |
-| [E05 — Couverture e2e du déjà livré](ready_to_be_done/E05-couverture-e2e.md) | `ready` | 4 |
-| [E06 — La fiche d'équipe complétée](to_be_refined/E06-fiche-equipe-completee.md) | `to_be_refined` | 3 |
-| [E07 — Entrées utilisateur et identité](ready_to_be_done/E07-entrees-utilisateur-et-identite.md) | `ready` | 2 |
-| [E08 — Mode customisation : finir la livraison](ready_to_be_done/E08-mode-customisation.md) | `ready` | 2 |
+| [E04 — Les verrous architecturaux](to_be_refined/E04-verrous-architecturaux.md) | `to_be_refined` | 6 |
+| [E05 — Couverture e2e du déjà livré](to_be_refined/E05-couverture-e2e.md) | `to_be_refined` | 4 |
+| [E06 — La fiche d'équipe complétée](to_be_refined/E06-fiche-equipe-completee.md) | `to_be_refined` | 6 |
+| [E07 — Entrées utilisateur et identité](en_cours/E07-entrees-utilisateur-et-identite.md) | `en_cours` · 1/2 | 2 |
+| [E08 — Mode customisation : finir la livraison](done/E08-mode-customisation.md) | `done` · fusionnée dans la 398 | 2 |
 | [E09 — BC `news`](to_be_refined/E09-bc-news.md) | `to_be_refined` | 2 |
-| [E10 — Référentiels éditables](to_be_refined/E10-referentiels-editables.md) | `to_be_refined` | 2 |
+| [E10 — Référentiels éditables](to_be_refined/E10-referentiels-editables.md) | `to_be_refined` | 20 |
 | [E11 — Savoir ce qui se passe en production](done/E11-journal-de-production.md) | `done` | 9 |
 | [E12 — Administrer les membres d'un espace](done/E12-administrer-les-membres-d-un-espace.md) | `done` · 21/21 | 21 |
 | [E13 — Gestion des erreurs coûteuses](done/E13-gestion-des-erreurs-couteuses.md) | `done` · 4/4 | 4 |
@@ -64,7 +64,7 @@ de code tant que la règle n'est pas tranchée :
 | Carte | Question ouverte |
 |---|---|
 | `274-inducements-egalite-de-tv` | À valeurs d'équipe égales, qui est top dog ? Un `>` strict désigne le domicile, personne ne l'a décidé |
-| `TBD-62-anti-optimisateur` | Contenu à définir |
+| `473-une-option-anti-optimisateur` | Contenu à définir — trois portées possibles, sans rapport entre elles. Portait `TBD-62`, dont le numéro appartient à une carte close |
 
 **Actions sur une équipe, hors cycle de saison** — sorties de E01 après
 vérification : rien dans le code ne les implémente.
@@ -88,7 +88,6 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 | `13-mock-data-competition-detail` | Les onglets Équipes et Stats servent de la donnée fictive **en production**. C'est la seule dette visible par un utilisateur |
 | `60-jersey-numbers-at-submission` | Attribution des numéros de maillot à la soumission |
 | `362-le-bundle-css-est-gele-au-demarrage` | Une feuille éditée n'a aucun effet sur un serveur qui tourne, et rien ne le signale. A fait accuser à tort la carte 343 pendant une heure |
-| `434` à `437` — l'onglet Trésorerie | Le relevé des mouvements de caisse d'une équipe, en partant de sa dotation. Quatre cartes issues du workflow feature, spécifiées dans `docs/specs/tresorerie-equipe/`. Le grand livre existait déjà, écrit depuis l'origine et jamais lu |
 | `462-donner-un-portrait-a-un-joueur` | Voisine de la 461, mais elle traverse toute la pile : un joueur n'a aujourd'hui aucune image, et ce que la fiche affiche est son numéro de maillot sur un dégradé |
 | `461-changer-le-logo-d-une-equipe` | Un logo choisi à la création ne se corrige nulle part. L'événement LogoChanged existe depuis l'origine dans l'agrégat, mais personne ne l'émet et rien ne le projette |
 | `460-sous-total-des-joueurs-disponibles` | Une ligne de pied sous le tableau des joueurs. Elle porte aussi le marquage des indisponibles, sans lequel un total qui exclut une ligne sans dire laquelle paraîtrait faux |
@@ -107,4 +106,4 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 | `360-bandeau-d-inscription-en-attente-inexistant` | Un test e2e attend une classe qui n'a jamais été rendue. La suite est rouge en permanence |
 | `357-le-champ-tags-est-en-ecriture-seule` | Quatre formes écrites, aucun lecteur : `find_by_tag()` n'a pas d'appelant. À trancher — compléter l'abstraction ou la supprimer |
 | `352-match-report-confirmed-passe-par-le-publisher` | Deux use cases émettent un app event directement, ce que `CLAUDE.md` interdit. Trouvée par la carte 350. Débloque un axe « pas d'`app_event_bus` dans `use_cases/` » |
-| `432-rendre-accessible-un-espace-publiquement` | **Fichier vide** — à écrire ou à supprimer. Portait le numéro 61, déjà pris par `61-players-bc-structure-aggregate` |
+| `432-rendre-accessible-un-espace-publiquement` | Contenu à définir — « publiquement » recouvre trois portées, et la plus large touche `space_scope`, le verrou de la carte 416. Portait le numéro 61, déjà pris |

@@ -1,6 +1,6 @@
 # Lire le grand livre d'une équipe
 
-**Ordre :** 1 · **Dépend de :** rien
+**Épic :** E06 — La fiche d'équipe complétée · **Ordre :** 1 · **Dépend de :** rien
 **Conception :** `docs/specs/tresorerie-equipe/onglet-tresorerie/` (`03-back.md`,
 `05-use-cases.md`, `06-domaine.md`)
 

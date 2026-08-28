@@ -1,6 +1,9 @@
 # E08 — Mode customisation : finir la livraison
 
-**État :** 2 cartes · 0 faite
+**État :** `done` le 2026-08-28 — les deux cartes ont été **fusionnées dans
+la [398](../../done/398-l-onglet-de-customisation-survit-a-l-enregistrement.md)**,
+livrée par le commit `c488c62`. Voir « Terminé quand » : les deux moitiés du
+critère sont répondues, la seconde autrement que prévu.
 
 ## La fonction
 
@@ -25,6 +28,11 @@ de repère. L'épic rend le mode utilisable en continu.
 
 Les deux sont en **priorité haute**, et ce sont les seules cartes du backlog
 qualifiées de « bug de livraison ».
+
+**Les deux ont été annulées le 2026-08-25 et fusionnées dans la 398.** Elles
+visaient le même écran, et l'on croyait qu'elles partageaient une cause —
+c'était pire que ça : **elles étaient en tension**. Ce qui empêche le défaut de
+la 327 est exactement ce que la 326 proposait de supprimer.
 
 ## Ce qui commande l'ordre
 

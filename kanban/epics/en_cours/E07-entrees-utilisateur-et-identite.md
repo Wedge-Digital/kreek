@@ -1,6 +1,7 @@
 # E07 — Entrées utilisateur et identité
 
-**État :** 2 cartes · 0 faite
+**État :** `en_cours` — 2 cartes, **1 faite** : la 329 est livrée par le
+commit `19c1f76`, qui a sorti les noms de la liste blanche. Reste la 328.
 
 ## La fonction
 

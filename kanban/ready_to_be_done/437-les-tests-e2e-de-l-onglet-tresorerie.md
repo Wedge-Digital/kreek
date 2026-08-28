@@ -1,6 +1,6 @@
 # Les tests E2E de l'onglet Trésorerie
 
-**Ordre :** 3 · **Dépend de :** 436
+**Épic :** E06 — La fiche d'équipe complétée · **Ordre :** 3 · **Dépend de :** 436
 **Conception :** `docs/specs/tresorerie-equipe/onglet-tresorerie/07-integration.md`
 
 ## Objectif

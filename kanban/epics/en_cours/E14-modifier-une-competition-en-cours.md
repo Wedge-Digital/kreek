@@ -24,10 +24,15 @@ en cours de saison produirait un classement qui mélange deux règles.
 
 ## État
 
-Rien n'est implémenté. L'onglet n'existe pas — `admin_page.rs` aiguille cinq
-onglets et n'en connaît pas de sixième.
+**Cinq cartes sur dix sont faites, le 2026-08-28.** L'onglet existe : `417` a
+posé la garde de statut sur les quatre use cases d'écriture, `418` a rendu le
+classement rejouable, `419` a sorti le tableau de bord et les résultats de
+l'administration, `420` a créé la coquille de l'onglet, et `421` son premier
+panneau — celui qui pose la forme des quatre autres.
 
-Ce qui existe déjà et sera réemployé : les quatre use cases d'écriture du
+Restent `422` à `425` — les quatre panneaux — et `426`, les tests e2e.
+
+Ce qui existait déjà et a été réemployé : les quatre use cases d'écriture du
 magicien (`save_competition_rules`, `save_competition_structure`,
 `save_competition_invitations`, `update_draft_competition`), aucun n'ayant de
 garde de statut ; le widget de sélection des coups de pouce du BC `references` ;

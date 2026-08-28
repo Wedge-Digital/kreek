@@ -1,6 +1,7 @@
 # E04 — Les verrous architecturaux
 
-**État :** 6 cartes · 0 faite
+**État :** 6 cartes · 0 faite · `to_be_refined` — **316 et 323 restent à
+raffiner**, et l'état d'une épic suit sa carte la plus en amont.
 
 ## La fonction
 
