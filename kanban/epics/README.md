@@ -89,6 +89,7 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 | `60-jersey-numbers-at-submission` | Attribution des numéros de maillot à la soumission |
 | `362-le-bundle-css-est-gele-au-demarrage` | Une feuille éditée n'a aucun effet sur un serveur qui tourne, et rien ne le signale. A fait accuser à tort la carte 343 pendant une heure |
 | `434` à `437` — l'onglet Trésorerie | Le relevé des mouvements de caisse d'une équipe, en partant de sa dotation. Quatre cartes issues du workflow feature, spécifiées dans `docs/specs/tresorerie-equipe/`. Le grand livre existait déjà, écrit depuis l'origine et jamais lu |
+| `462-donner-un-portrait-a-un-joueur` | Voisine de la 461, mais elle traverse toute la pile : un joueur n'a aujourd'hui aucune image, et ce que la fiche affiche est son numéro de maillot sur un dégradé |
 | `461-changer-le-logo-d-une-equipe` | Un logo choisi à la création ne se corrige nulle part. L'événement LogoChanged existe depuis l'origine dans l'agrégat, mais personne ne l'émet et rien ne le projette |
 | `460-sous-total-des-joueurs-disponibles` | Une ligne de pied sous le tableau des joueurs. Elle porte aussi le marquage des indisponibles, sans lequel un total qui exclut une ligne sans dire laquelle paraîtrait faux |
 | `454` à `459` — recruter un journalier | Un journalier devient un joueur dès le début du rapport de match : il agit, gagne des SPP, prend ses améliorations, et doit être recruté en phase de recrutement pour rester. Six cartes issues du workflow feature, spécifiées dans `docs/specs/embaucher-un-journalier/` |
