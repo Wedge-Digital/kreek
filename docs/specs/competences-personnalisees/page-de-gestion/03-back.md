@@ -240,16 +240,56 @@ retirer — comme `CustomRosterDeleted` nettoie les tiers de compétition. Mais 
 règle 5 l'interdit déjà : **une compétence employée n'est pas supprimable**, et
 un roster qui la pose compte comme un usage. Le cas ne peut donc pas se produire.
 
-## Règles métier à préciser
+## Livraison conjointe avec l'épic E10
 
-**Une seule.** Un roster personnalisé qui pose une compétence personnalisée
-compte-t-il comme un usage bloquant ?
+**Les rosters personnalisés et les compétences personnalisées partent
+ensemble.** Ce n'est pas une commodité de planning : les deux se tiennent par
+les deux bouts.
 
-J'ai posé que **oui** — sans quoi supprimer la compétence laisserait un uid mort
-dans le roster. Mais ça crée une dépendance entre les deux fonctionnalités : la
-`ISkillUsagePort` doit interroger `references__custom_rosters`, table que l'épic
-E10 n'a pas encore créée.
+### Ce que ça règle
 
-**Si E10 n'est pas livrée, le second compte vaut zéro** et la fonctionnalité
-marche. Il faudra y revenir — ce qui vaut d'être écrit dans la carte plutôt que
-découvert.
+La seule règle métier restée ouverte — *un roster personnalisé qui pose une
+compétence personnalisée compte-t-il comme un usage bloquant ?* — n'a plus de
+variante. **Oui, et dès le premier jour** : `references__custom_rosters` (carte
+441) existera quand `ISkillUsagePort` l'interrogera. Le second compte n'est pas
+un repli à zéro qu'on rebranchera plus tard, c'est la moitié de la réponse.
+
+Cela impose **un seul ordre** : la carte qui pose `ISkillUsagePort` vient après
+la 441, qui crée la table. C'est la seule contrainte de séquence entre les deux
+séries.
+
+### Ce que ça découvre — un troisième appelant
+
+L'éditeur de roster (carte 446) sert un sélecteur de compétences pour les
+compétences de base d'un poste :
+
+> 146 compétences, 38 mots-clefs, les catégories, le staff, les règles spéciales.
+
+**Ce sélecteur-là aussi doit montrer les compétences de l'espace.** Sans quoi on
+livrerait le jour même deux fonctionnalités qui s'ignorent : un espace pourrait
+créer une compétence et un roster, sans pouvoir poser l'une dans l'autre — et
+c'est pourtant l'emploi le plus évident des deux ensemble.
+
+`list_skills_for_space` a donc **trois appelants et non deux** :
+
+| Appelant | Statut |
+|---|---|
+| `skill_picker.rs` | existant, sa route gagne un `space_id` |
+| `skill_catalog_adapter.rs` | existant |
+| l'éditeur de roster (carte 446) | **à naître, et à écrire d'emblée avec l'espace** |
+
+Le troisième est le moins cher des trois — il n'existe pas encore, donc rien à
+migrer. Mais c'est celui qu'on oublierait, puisqu'il ne figure dans aucun
+inventaire de l'existant.
+
+### Ce que ça oblige à corriger ailleurs
+
+L'épic E10 exclut aujourd'hui explicitement ce chantier :
+
+> **Les autres référentiels** — compétences, coups de pouce, star players — qui
+> restent en lecture seule.
+
+Cette phrase devient fausse. Elle sera reprise en phase 8, avec l'entrée des
+cartes de compétences dans l'épic et le « Terminé quand » qui doit désormais
+mentionner les deux — sans quoi l'épic se clôturerait sur la moitié de ce
+qu'elle livre.
