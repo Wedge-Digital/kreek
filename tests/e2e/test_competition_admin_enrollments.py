@@ -88,6 +88,59 @@ def test_l_onglet_parametres_s_ouvre_sur_ses_conteneurs(page: Page, competition_
     expect(onglet_actif).to_contain_text("Paramètres")
 
 
+def test_renommer_une_competition_depuis_les_parametres(page: Page, competition_create_url):
+    """Carte 421 — le panneau « Informations générales », de bout en bout.
+
+    Ce que ce test voit et qu'aucun test unitaire ne voit : que le panneau est
+    **réellement servi** dans son conteneur, que le POST échange le widget par
+    lui-même, et que le nouveau nom revient de la base — pas du formulaire.
+    """
+    admin_url = _create_competition_and_get_admin_url(page, competition_create_url)
+    nouveau = f"Renommee E2E {time.time_ns()}"
+
+    page.goto(admin_url + "/settings", wait_until="load")
+
+    # Le conteneur se remplit par htmx : c'est le panneau qu'on attend, pas la page.
+    expect(page.locator("#settings-general-panel")).to_be_visible(timeout=10000)
+    page.fill("#settings-general-panel input[name='name']", nouveau)
+    page.click("#settings-general-panel button[type='submit']")
+
+    # Le widget est réécrit avec ce que porte la base.
+    expect(page.locator("#settings-general-panel input[name='name']")).to_have_value(
+        nouveau, timeout=10000
+    )
+    # Et la valeur survit à un rechargement complet — donc elle est enregistrée,
+    # et non seulement réaffichée.
+    page.goto(admin_url + "/settings", wait_until="load")
+    expect(page.locator("#settings-general-panel input[name='name']")).to_have_value(
+        nouveau, timeout=10000
+    )
+
+
+def test_un_nom_deja_pris_s_affiche_sous_le_champ(page: Page, competition_create_url):
+    """L'erreur se lit **sous le champ fautif**, pas en bandeau.
+
+    Et l'emplacement est réservé en permanence dans le flux : le formulaire ne
+    saute pas au moment où l'utilisateur lit ce qu'on lui reproche.
+    """
+    premiere = _create_competition_and_get_admin_url(page, competition_create_url)
+    page.goto(premiere + "/settings", wait_until="load")
+    expect(page.locator("#settings-general-panel")).to_be_visible(timeout=10000)
+    nom_pris = page.input_value("#settings-general-panel input[name='name']")
+
+    # Une seconde compétition du même espace, qu'on tente de renommer comme la
+    # première.
+    seconde = _create_competition_and_get_admin_url(page, competition_create_url)
+    page.goto(seconde + "/settings", wait_until="load")
+    expect(page.locator("#settings-general-panel")).to_be_visible(timeout=10000)
+    page.fill("#settings-general-panel input[name='name']", nom_pris)
+    page.click("#settings-general-panel button[type='submit']")
+
+    erreur = page.locator("#settings-general-panel .form-row-error.shown")
+    expect(erreur).to_be_visible(timeout=10000)
+    expect(erreur).to_contain_text("déjà pris")
+
+
 def test_l_onglet_parametres_est_garde(page: Page, competition_create_url):
     """Le `GET` du fragment est gardé, pas seulement la page complète.
 

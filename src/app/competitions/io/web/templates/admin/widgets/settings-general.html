@@ -1,0 +1,67 @@
+{% import "components/upload_widget.html" as cmp %}
+{# Panneau « Informations générales » — le premier des cinq (carte 421).
+
+   `hx-disinherit="*"` : la racine bloque tout héritage d'attributs htmx venant
+   de la page hôte (convention 3 des widgets). `hx-swap="outerHTML"` sur
+   elle-même : le POST renvoie ce même widget, relu depuis la base. #}
+<div class="settings-panel" id="settings-general-panel" hx-disinherit="*">
+  <div class="settings-panel-head">
+    <div class="settings-panel-title">
+      <span class="settings-panel-title-icon">📝</span>Informations générales
+    </div>
+  </div>
+  <form class="settings-panel-body"
+        hx-post="{{ post_url }}"
+        hx-target="#settings-general-panel"
+        hx-swap="outerHTML">
+
+    <div class="form-row">
+      <div class="form-row-label">Nom de la compétition</div>
+      <div class="form-row-content">
+        <input class="form-input{% if vm.name_error.is_some() %} invalid{% endif %}"
+               type="text" name="name" value="{{ vm.name }}" required>
+        {# L'emplacement d'erreur est **toujours dans le flux**, occupé ou non :
+           un message inséré à la volée décalerait le formulaire au moment précis
+           où l'utilisateur lit ce qu'on lui reproche. #}
+        <div class="form-row-error{% if vm.name_error.is_some() %} shown{% endif %}">
+          {% if let Some(err) = vm.name_error %}{{ err }}{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-row-label">Nom de la saison</div>
+      <div class="form-row-content">
+        <input class="form-input" type="text" name="season_name"
+               value="{{ vm.season_name }}" required>
+        <div class="form-row-hint">Le nom de la saison en cours, pas de la compétition.</div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-row-label">Logo</div>
+      <div class="form-row-content">
+        {% call cmp::cloudinary_upload("logo_url", vm.logo_url, "competitions/logos", "Logo", vm.logo_error) %}
+      </div>
+    </div>
+
+    {# Affichage seul : ce panneau n'édite pas les administrateurs. Les montrer
+       évite de croire qu'un renommage les aurait perdus. #}
+    <div class="form-row">
+      <div class="form-row-label">Administrateurs</div>
+      <div class="form-row-content">
+        {% if vm.admins.is_empty() %}
+        <div class="form-row-hint">Aucun administrateur déclaré.</div>
+        {% else %}
+        <div class="form-row-hint">
+          {% for admin in vm.admins %}{{ admin.coach_name }}{% if admin.is_owner %} (créateur){% endif %}{% if !loop.last %} · {% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="text-right">
+      <button type="submit" class="btn btn-primary">Enregistrer</button>
+    </div>
+  </form>
+</div>

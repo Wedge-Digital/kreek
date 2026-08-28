@@ -51,7 +51,7 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 | [E11 — Savoir ce qui se passe en production](done/E11-journal-de-production.md) | `done` | 9 |
 | [E12 — Administrer les membres d'un espace](done/E12-administrer-les-membres-d-un-espace.md) | `done` · 21/21 | 21 |
 | [E13 — Gestion des erreurs coûteuses](done/E13-gestion-des-erreurs-couteuses.md) | `done` · 4/4 | 4 |
-| [E14 — Modifier une compétition en cours](en_cours/E14-modifier-une-competition-en-cours.md) | `en_cours` · 4/10 | 10 |
+| [E14 — Modifier une compétition en cours](en_cours/E14-modifier-une-competition-en-cours.md) | `en_cours` · 5/10 | 10 |
 
 ## Les cartes sans épic
 

@@ -18,6 +18,7 @@ use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::io::web::admin::admin_page::{
     render_admin_page, require_admin_access,
 };
+use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -30,6 +31,10 @@ pub struct SettingsTabTemplate {
     pub space_id: String,
     pub competition_id: String,
     pub season_id: String,
+    /// L'URL de chaque panneau, calculée ici plutôt que dans le template : la
+    /// page d'assemblage ne porte aucune logique, pas même une construction
+    /// d'URL. Les quatre autres suivront.
+    pub general_url: String,
 }
 
 impl IntoResponse for SettingsTabTemplate {
@@ -67,10 +72,16 @@ pub async fn settings_tab(
             return resp;
         }
 
+        let general_url = AppRoutes::default().competitions.admin_settings_general(
+            &space_id,
+            &competition_id,
+            &season_id,
+        );
         return SettingsTabTemplate {
             space_id,
             competition_id,
             season_id,
+            general_url,
         }
         .into_response();
     }

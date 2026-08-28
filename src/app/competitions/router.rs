@@ -15,6 +15,9 @@ use crate::app::competitions::io::web::admin::schedule_tab::schedule_tab;
 use crate::app::competitions::io::web::admin::schedule_widgets::{
     schedule_round_detail_widget, schedule_sidebar_widget,
 };
+use crate::app::competitions::io::web::admin::settings::general_panel::{
+    get_settings_general, post_settings_general,
+};
 use crate::app::competitions::io::web::admin::settings::settings_tab::settings_tab;
 use crate::app::competitions::io::web::admin::summary_tab::summary_tab_fragment;
 use crate::app::competitions::io::web::all_competition::get_all_competition;
@@ -142,6 +145,10 @@ pub fn router() -> Router<AppState> {
         // ── Schedule tab ──
         .route(path::COMPETITION_ADMIN_SCHEDULE, get(schedule_tab))
         .route(path::COMPETITION_ADMIN_SETTINGS, get(settings_tab))
+        .route(
+            path::COMPETITION_ADMIN_SETTINGS_GENERAL,
+            get(get_settings_general).post(post_settings_general),
+        )
         .route(
             path::COMPETITION_ADMIN_SCHEDULE_ROUNDS,
             get(schedule_sidebar_widget),

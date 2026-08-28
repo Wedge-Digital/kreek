@@ -241,6 +241,11 @@ pub async fn render_admin_page(
                 space_id: space_id.to_string(),
                 competition_id: competition_id.to_string(),
                 season_id: season_id.to_string(),
+                general_url: app_routes.competitions.admin_settings_general(
+                    space_id,
+                    competition_id,
+                    season_id,
+                ),
             };
             tpl.render().unwrap_or_default()
         }

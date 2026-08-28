@@ -97,6 +97,47 @@ l'utilisateur lit le reproche. Alimenté par `SettingsGeneralWidget.error`.
   d'unicité.
 - E2E : renommer la compétition, et voir l'erreur sous le champ sur un doublon.
 
+## Le piège que cette carte ne nommait pas
+
+Elle dit — à raison — que ne pas relire les administrateurs et le barème les
+effacerait. Mais la relecture seule ne suffit pas : `find_base_info` rend
+`admin_ids: Vec<String>`, quand `update_base_info` exige `&[CoachId]`. **Il faut
+convertir, et la conversion peut échouer.**
+
+Un `filter_map` — le réflexe naturel — écarterait en silence tout administrateur
+dont l'identifiant ne se décode pas : exactement la perte que la relecture existe
+pour empêcher, obtenue par un autre chemin. Le use case **refuse** donc le
+renommage sur une ligne corrompue (`MalformedAdminId`), plutôt que de retirer un
+administrateur sans le dire.
+
+C'est aussi ce qui distingue ce use case de `update_draft_competition`, qui
+reçoit ses `admin_ids` dans sa commande : le magicien, lui, les édite.
+
+## Un refus par champ, pas un refus unique
+
+La conception parlait d'« un emplacement d'erreur sous le champ Nom », et j'avais
+écrit un `Option<String>` unique. Askama a refusé `None::<String>` dans l'appel
+de la macro d'upload, ce qui a forcé à relire — et à voir qu'une **URL de logo
+invalide se serait affichée sous le nom**, envoyant corriger le mauvais champ.
+
+Le refus porte donc sa cible (`Refus { name, logo }`). Le hasard d'une erreur de
+compilation, mais la correction tient sur le fond.
+
+## Ce que les tests affirment
+
+**Les deux relectures sont falsifiées** — c'est le cœur de la carte, et leur
+défaut serait invisible à l'écran. Retirer celle des administrateurs fait tomber
+deux tests, retirer celle du barème en fait tomber trois.
+
+L'e2e de renommage vérifie que la valeur **survit à un rechargement complet** :
+sans cela, un widget qui réafficherait la saisie sans l'enregistrer passerait au
+vert.
+
+Deux mutations e2e, chacune sur sa cible. La seconde est la plus vicieuse :
+retirer le message du nom déjà pris **tout en laissant le refus opérer** —
+l'enregistrement échoue alors sans que rien ne le dise. Un seul test tombe, celui
+qui existe pour ça.
+
 ## Checklist
 
 - [ ] Le use case et ses tests

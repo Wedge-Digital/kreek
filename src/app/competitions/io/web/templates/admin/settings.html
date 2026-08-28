@@ -13,7 +13,11 @@
    Seul le bruit diffère. Chaque carte de panneau apporte donc son `hx-get` en
    même temps que sa route. #}
 <div class="competition-admin-settings">
-  <div id="settings-general"></div>
+  <div id="settings-general"
+       hx-get="{{ general_url }}"
+       hx-trigger="load"
+       hx-target="this"
+       hx-swap="innerHTML"></div>
   <div id="settings-ranking"></div>
   <div id="settings-pools"></div>
   <div id="settings-tiers"></div>
