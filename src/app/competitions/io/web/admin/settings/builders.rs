@@ -6,6 +6,9 @@
 //! les types du port.
 
 use crate::app::competitions::domain::competition_rules::RankingRules;
+use crate::app::competitions::domain::competition_structure::RankingGroupConfig;
+use crate::app::competitions::domain::group_repository_port::GroupWithTeams;
+use crate::app::competitions::io::web::admin::settings::pools_panel::{PoolRowVm, PoolsVm};
 use crate::app::competitions::io::web::admin::settings::ranking_panel::{
     BonusVm, RankingVm, TiebreakRowVm,
 };
@@ -212,5 +215,46 @@ mod tests {
         assert_eq!(vm.defensive.threshold, 1, "TD encaissés au plus");
         assert_eq!(vm.aggressive.threshold, 3, "sorties");
         assert!(vm.recompute.is_none(), "aucun rejeu n'a eu lieu");
+    }
+}
+
+/// Les poules déclarées, **jointes à leurs affectations d'équipes**.
+///
+/// # Pourquoi le compteur ne vient pas du JSONB
+///
+/// La déclaration ne sait pas qui joue où : seule `competition_group_teams` le
+/// sait, et c'est elle que la cascade videra. Un compteur lu dans la structure
+/// afficherait « 0 équipe à réaffecter » sur une poule qui en porte six — et le
+/// commissaire retirerait la poule en croyant que c'est sans conséquence.
+///
+/// L'ordre vient de la **déclaration**, pas de la table : c'est lui que l'écran
+/// montre et que l'enregistrement réécrit.
+pub fn build_pools_vm(config: &RankingGroupConfig, affectations: &[GroupWithTeams]) -> PoolsVm {
+    PoolsVm {
+        use_pools: config.use_ranking_groups(),
+        pools: config
+            .groups()
+            .iter()
+            .map(|g| {
+                let assigned_teams = affectations
+                    .iter()
+                    .find(|a| a.group_id == g.id.as_ref())
+                    .map(|a| a.team_ids.len() as u32)
+                    // Une poule déclarée que la table ne connaît pas encore :
+                    // la projection est paresseuse, elle n'a lieu qu'à
+                    // l'ouverture de l'onglet Poules. Zéro est la vérité.
+                    .unwrap_or(0);
+                PoolRowVm {
+                    id: g.id.as_ref().to_string(),
+                    name: g.name.as_ref().to_string(),
+                    assigned_teams,
+                    assigned_label: match assigned_teams {
+                        0 => "aucune équipe".to_string(),
+                        1 => "1 équipe".to_string(),
+                        n => format!("{n} équipes"),
+                    },
+                }
+            })
+            .collect(),
     }
 }

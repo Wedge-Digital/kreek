@@ -94,4 +94,16 @@ impl ISeasonRepository for FakeSeasonRepository {
     async fn find_full(&self, _: &SeasonId) -> Result<Option<SeasonFull>, SeasonRepositoryError> {
         Ok(None)
     }
+
+    /// La doublure ne projette rien : les tests qui portent sur la suppression
+    /// des poules passent par une vraie base (`sqlx::test`), la cascade étant
+    /// justement ce qu'on veut vérifier.
+    async fn save_structure_and_prune_groups(
+        &self,
+        _: &SeasonId,
+        _: &CompetitionStructure,
+        _: &[String],
+    ) -> Result<u64, SeasonRepositoryError> {
+        Ok(0)
+    }
 }

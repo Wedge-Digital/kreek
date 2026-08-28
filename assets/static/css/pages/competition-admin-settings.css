@@ -182,3 +182,22 @@
 @media (max-width: 768px) {
   .competition-admin-settings .pts-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Panneau « Poules » (carte 423) ────────────────────────────────────────
+   Une poule marquée à retirer reste **visible, barrée** : la faire disparaître
+   empêcherait de la rétablir, et masquerait la conséquence qu'on veut montrer
+   avant qu'elle ne soit provoquée. */
+.competition-admin-settings .pool-list {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.competition-admin-settings .pool-row {
+  display: flex; align-items: center; gap: 10px;
+}
+.competition-admin-settings .pool-row .pool-name { flex: 1; }
+.competition-admin-settings .pool-row--removed .pool-name {
+  text-decoration: line-through; color: var(--dark-3); background: var(--dark-6);
+}
+.competition-admin-settings .pool-row--removed .pool-count {
+  color: var(--red); font-weight: 600;
+}
+.competition-admin-settings .pool-actions { margin-top: var(--p1); }

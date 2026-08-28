@@ -217,6 +217,17 @@ mod tests {
         ) -> Result<(), SeasonRepositoryError> {
             Ok(())
         }
+        /// Hors du périmètre de ce use case : la doublure échoue bruyamment
+        /// si on l'y appelle, plutôt que de rendre un `Ok` qui ferait passer au
+        /// vert un test n'ayant rien exercé.
+        async fn save_structure_and_prune_groups(
+            &self,
+            _: &SeasonId,
+            _: &CompetitionStructure,
+            _: &[String],
+        ) -> Result<u64, SeasonRepositoryError> {
+            unimplemented!("hors du périmètre de ce use case")
+        }
         async fn find_invitations(
             &self,
             _: &SeasonId,

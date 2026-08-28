@@ -84,6 +84,41 @@ pub trait ISeasonRepository: Send + Sync {
         season_id: &SeasonId,
         structure: &CompetitionStructure,
     ) -> Result<(), SeasonRepositoryError>;
+
+    /// Écrit la structure **et supprime les poules absentes de `kept_ids`**,
+    /// dans une seule transaction. Rend le nombre d'affectations d'équipes
+    /// défaites par la cascade.
+    ///
+    /// # Pourquoi l'atomicité vit ici et non dans le use case
+    ///
+    /// Une transaction sqlx ne se partage pas entre deux ports sans faire entrer
+    /// sqlx dans une couche qui n'en veut pas. Le projet fait déjà ainsi ailleurs.
+    ///
+    /// # Pourquoi la suppression est indispensable
+    ///
+    /// Les poules vivent à deux endroits : la déclaration dans le JSONB de la
+    /// structure, et la table `competition_groups` — qui porte les affectations
+    /// d'équipes. Cette table est alimentée **paresseusement**, par un
+    /// `INSERT … ON CONFLICT DO UPDATE` qui **ne supprime jamais**. Une poule
+    /// retirée du JSONB garderait donc sa ligne et ses équipes : le retrait
+    /// serait purement cosmétique.
+    ///
+    /// `competition_group_teams` porte un `ON DELETE CASCADE` : la désaffectation
+    /// est gratuite dès qu'on supprime la ligne de poule, et **uniquement** à ce
+    /// moment.
+    ///
+    /// # Et le statut n'est pas touché
+    ///
+    /// `save_structure` pose `status = 'structure_selected'`, ce qui sert le
+    /// magicien de création. Sur une saison en cours, ce serait la faire
+    /// régresser sous `ready` — et la carte 407 interdit la création d'équipe
+    /// sur une saison qui ne l'est pas.
+    async fn save_structure_and_prune_groups(
+        &self,
+        season_id: &SeasonId,
+        structure: &CompetitionStructure,
+        kept_ids: &[String],
+    ) -> Result<u64, SeasonRepositoryError>;
     async fn find_invitations(
         &self,
         season_id: &SeasonId,

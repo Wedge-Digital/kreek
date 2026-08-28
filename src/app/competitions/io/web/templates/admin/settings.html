@@ -23,7 +23,11 @@
        hx-trigger="load"
        hx-target="this"
        hx-swap="innerHTML"></div>
-  <div id="settings-pools"></div>
+  <div id="settings-pools"
+       hx-get="{{ pools_url }}"
+       hx-trigger="load"
+       hx-target="this"
+       hx-swap="innerHTML"></div>
   <div id="settings-tiers"></div>
   <div id="settings-visibility"></div>
 </div>

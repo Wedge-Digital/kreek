@@ -86,6 +86,12 @@
 "test_competition_settings_ranking" = ["competitions", "ranking", "match_report",
                                        "teams", "players", "spp_calculator",
                                        "references", "team_creation", "spaces", "auth"]
+# Le panneau des poules écrit la structure **et** supprime des lignes dont la
+# cascade défait les affectations d'équipes. `teams` y est dur : le tirage au
+# sort a besoin d'équipes inscrites pour que la cascade ait quelque chose à
+# défaire.
+"test_competition_settings_pools" = ["competitions", "teams", "references",
+                                     "team_creation", "ranking", "spaces", "auth"]
 # Le widget de réglage des notifications, monté dans l'onglet Synthèse.
 "test_notification_settings"   = ["competitions", "teams", "spaces", "references", "ranking"]
 

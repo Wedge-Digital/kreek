@@ -141,6 +141,64 @@ qui permet de montrer la conséquence sans l'avoir provoquée.
 Le dernier est le plus important : son échec ne produirait aucune erreur, juste
 un calendrier vide découvert des jours plus tard.
 
+## Deux pièges de plus, que cette carte n'avait pas vus
+
+### Le statut de la saison
+
+`save_structure` pose `status = 'structure_selected'`. C'est juste pour le
+magicien de création, où réécrire la structure fait avancer la saison d'une
+étape. Sur une saison **en cours**, cela la fait régresser sous `ready` — et la
+carte 407 **interdit la création d'équipe sur une saison qui ne l'est pas**.
+
+Modifier une poule aurait donc cassé l'inscription de la compétition entière,
+sans un mot. Les neuf saisons de production sont `ready` ; toutes étaient
+concernées.
+
+D'où `update_structure_keep_status.sql`, qui n'écrit que la structure. Réutiliser
+le SQL du magicien fait tomber le test dédié.
+
+### Le renommage n'atteignait pas la table
+
+Constaté à l'écran, pas en test. Le retrait fonctionnait ; le renommage écrivait
+la déclaration et laissait la table intacte — elle n'est rafraîchie qu'à
+l'ouverture de l'onglet Poules, par le projecteur paresseux.
+
+La déclaration disait « Poule renommée », la table « Poule 1 ». Les deux écrans se
+seraient contredits jusqu'à ce que quelqu'un ouvre l'autre onglet. Et une poule
+**neuve** n'aurait existé qu'en déclaration — donc sans pouvoir recevoir d'équipe.
+
+`save_structure_and_prune_groups` projette donc les poules gardées dans la même
+transaction. Les deux tests écrits pour ça ont été **vus rouges avant la
+correction** : le patch du dépôt avait raté son ancre, et ils ont échoué d'eux-mêmes.
+
+## L'identifiant engendré : la prescription ne compilait pas
+
+La carte disait « identifiant aux poules neuves via `IdService::generate_id()` ».
+Sondé :
+
+```
+ulid nu      : 01M14XZ4N0PKPMYV8HCY7Q19TS → refusé
+g+minuscules : g01m14xz4n0pkpmyv8hcy7q19ts → accepté
+```
+
+`RankingGroupId` valide `^g[0-9a-z]+$`. Un ULID est **majuscule et sans
+préfixe** : `try_new` l'aurait refusé — et comme il rend un `Result`, l'échec
+serait parti dans un chemin d'erreur au lieu d'échouer à la compilation.
+
+D'où `format!("g{}", ulid.to_lowercase())` : la forme du magicien, mais engendrée
+côté serveur, ce qui était tout l'intérêt de la prescription.
+
+## Un test qui dépendait de l'ordre
+
+`test_le_calendrier_survit_a_l_enregistrement` relisait le nombre de journées au
+début du test. Les tests partageant une fixture de module et s'exécutant dans
+l'ordre, un enregistrement antérieur ayant effacé le calendrier le faisait
+échouer sur sa **prémisse** — « la fixture doit avoir un calendrier » — au lieu de
+son assertion.
+
+Vu pendant la falsification : le test tombait, mais pour la mauvaise raison. Le
+nombre est désormais relevé dans la fixture, avant tout enregistrement.
+
 ## Checklist
 
 - [ ] `save_structure_and_prune_groups` + son test d'intégration

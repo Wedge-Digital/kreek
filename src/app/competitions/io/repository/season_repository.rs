@@ -186,6 +186,85 @@ impl ISeasonRepository for SeasonRepository {
         Ok(())
     }
 
+    async fn save_structure_and_prune_groups(
+        &self,
+        season_id: &SeasonId,
+        structure: &CompetitionStructure,
+        kept_ids: &[String],
+    ) -> Result<u64, SeasonRepositoryError> {
+        let json = serde_json::to_string(structure)
+            .map_err(|e| SeasonRepositoryError::Database(e.to_string()))?;
+
+        let mut tx = self.pool.begin().await.map_err(db_err)?;
+
+        // `update_structure_keep_status.sql` et non `update_structure.sql` :
+        // celui-ci pose `status = 'structure_selected'`, ce qui ferait régresser
+        // une saison en cours sous `ready`.
+        let found: Option<String> =
+            sqlx::query_scalar(include_str!("sql/seasons/update_structure_keep_status.sql"))
+                .bind(json)
+                .bind(season_id.to_string())
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(db_err)?;
+
+        if found.is_none() {
+            return Err(SeasonRepositoryError::SeasonNotFound);
+        }
+
+        // Compté **avant** la suppression : après, la cascade a déjà fait
+        // disparaître les lignes, et `rows_affected()` du `DELETE` ne compte que
+        // les poules, jamais les affectations qu'il emporte.
+        let defaites: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM competition_group_teams t
+             JOIN competition_groups g ON g.id = t.group_id
+             WHERE g.season_id = $1 AND NOT (g.id = ANY($2))",
+        )
+        .bind(season_id.to_string())
+        .bind(kept_ids)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(db_err)?;
+
+        // `NOT (id = ANY($2))` supporte la liste vide : retirer **toutes** les
+        // poules n'est donc pas un cas particulier, tout part.
+        sqlx::query("DELETE FROM competition_groups WHERE season_id = $1 AND NOT (id = ANY($2))")
+            .bind(season_id.to_string())
+            .bind(kept_ids)
+            .execute(&mut *tx)
+            .await
+            .map_err(db_err)?;
+
+        // **Les poules gardées sont projetées ici, et pas plus tard.**
+        //
+        // `ensure_groups_from_structure` fait le même travail, mais seulement à
+        // l'ouverture de l'onglet Poules. Sans cette écriture, un renommage
+        // n'atteindrait la table qu'au prochain passage de quelqu'un sur cet
+        // onglet : la déclaration dirait « Poule renommée », la table
+        // « Poule 1 », et les deux écrans se contrediraient sans que rien ne le
+        // signale. Une poule neuve, elle, n'existerait qu'en déclaration — donc
+        // sans pouvoir recevoir d'équipe.
+        //
+        // Constaté à l'écran : le retrait fonctionnait, le renommage non.
+        for (position, groupe) in structure.ranking_group.groups().iter().enumerate() {
+            sqlx::query(
+                "INSERT INTO competition_groups (id, season_id, name, position)
+                 VALUES ($1, $2, $3, $4)
+                 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, position = EXCLUDED.position",
+            )
+            .bind(groupe.id.as_ref())
+            .bind(season_id.to_string())
+            .bind(groupe.name.as_ref())
+            .bind(position as i32)
+            .execute(&mut *tx)
+            .await
+            .map_err(db_err)?;
+        }
+
+        tx.commit().await.map_err(db_err)?;
+        Ok(defaites as u64)
+    }
+
     async fn find_invitations(
         &self,
         season_id: &SeasonId,

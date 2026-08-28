@@ -85,6 +85,8 @@ pub mod path {
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/settings/general";
     pub const COMPETITION_ADMIN_SETTINGS_RANKING: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/settings/ranking";
+    pub const COMPETITION_ADMIN_SETTINGS_POOLS: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/settings/pools";
     pub const NOTIFICATION_SETTINGS_WIDGET: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/notifications-widget";
     pub const NOTIFICATION_SETTINGS: &str =
@@ -350,6 +352,12 @@ impl Routes {
     }
     pub fn admin_settings_ranking(&self, sid: &str, cid: &str, season_id: &str) -> String {
         path::COMPETITION_ADMIN_SETTINGS_RANKING
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_settings_pools(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_SETTINGS_POOLS
             .replace("{space_id}", sid)
             .replace("{competition_id}", cid)
             .replace("{season_id}", season_id)

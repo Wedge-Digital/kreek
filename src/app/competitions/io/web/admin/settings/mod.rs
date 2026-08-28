@@ -6,5 +6,6 @@
 
 pub mod builders;
 pub mod general_panel;
+pub mod pools_panel;
 pub mod ranking_panel;
 pub mod settings_tab;

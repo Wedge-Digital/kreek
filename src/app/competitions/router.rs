@@ -18,6 +18,9 @@ use crate::app::competitions::io::web::admin::schedule_widgets::{
 use crate::app::competitions::io::web::admin::settings::general_panel::{
     get_settings_general, post_settings_general,
 };
+use crate::app::competitions::io::web::admin::settings::pools_panel::{
+    get_settings_pools, post_settings_pools,
+};
 use crate::app::competitions::io::web::admin::settings::ranking_panel::{
     get_settings_ranking, post_settings_ranking,
 };
@@ -155,6 +158,10 @@ pub fn router() -> Router<AppState> {
         .route(
             path::COMPETITION_ADMIN_SETTINGS_RANKING,
             get(get_settings_ranking).post(post_settings_ranking),
+        )
+        .route(
+            path::COMPETITION_ADMIN_SETTINGS_POOLS,
+            get(get_settings_pools).post(post_settings_pools),
         )
         .route(
             path::COMPETITION_ADMIN_SCHEDULE_ROUNDS,

@@ -1,0 +1,141 @@
+{# Panneau « Poules » (carte 423).
+
+   ── L'état « à retirer » est local, pas serveur ───────────────────────────
+   Une poule marquée à retirer est **barrée et non soumise** : ses deux champs
+   cachés sont désactivés. Rien n'est défait tant qu'on n'a pas enregistré, et
+   « Rétablir » n'est qu'un changement d'état local. C'est ce qui permet de
+   montrer la conséquence — « 6 équipes à réaffecter » — sans l'avoir provoquée.
+
+   ── Deux tableaux parallèles, jamais une case à cocher ────────────────────
+   `pool_id` et `pool_name` sont appariés par leur position. Une case décochée
+   n'étant pas soumise, faire porter une liste par des cases les
+   désynchroniserait dès la première — le serveur refuse d'ailleurs tout écart
+   de longueur par un 400 plutôt que par un `zip` silencieux. #}
+<div class="settings-panel" id="settings-pools-panel" hx-disinherit="*">
+  <div class="settings-panel-head">
+    <div class="settings-panel-title">
+      <span class="settings-panel-title-icon">🎲</span>Poules
+    </div>
+    <button type="submit" form="pools-form" class="btn btn-primary">Enregistrer</button>
+  </div>
+  <form class="settings-panel-body" id="pools-form"
+        hx-post="{{ post_url }}"
+        hx-target="#settings-pools-panel"
+        hx-swap="outerHTML">
+
+    <div class="form-row">
+      <div class="form-row-label">Organisation</div>
+      <div class="form-row-content">
+        <label class="bonus-name">
+          <input type="checkbox" name="use_pools" value="true"
+                 {% if vm.pools.use_pools %}checked{% endif %}>
+          Compétition en poules
+        </label>
+        <div class="form-row-hint">
+          Décoché, le classement est unique — les poules déclarées ci-dessous
+          restent enregistrées.
+        </div>
+      </div>
+    </div>
+
+    <div class="section-sep"></div>
+
+    <div class="pool-list" data-role="pools">
+      {% for p in vm.pools.pools %}
+      <div class="pool-row" data-role="pool" data-teams="{{ p.assigned_teams }}">
+        <input type="hidden" name="pool_id" value="{{ p.id }}">
+        <input class="form-input pool-name" type="text" name="pool_name"
+               value="{{ p.name }}" required>
+        <span class="pool-count">{{ p.assigned_label }}</span>
+        <button type="button" class="tiebreak-move" data-role="toggle"
+                title="Retirer cette poule">✕</button>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="pool-actions">
+      <button type="button" class="btn btn-secondary" data-role="add">+ Ajouter une poule</button>
+    </div>
+
+    {% if let Some(err) = vm.error %}
+    <div class="form-error-banner">{{ err }}</div>
+    {% endif %}
+
+    <div class="panel-consequence" data-role="consequence">
+      <span class="consequence-idle">
+        {% if let Some(rapport) = vm.outcome %}
+        {{ rapport }} <em>Leurs points ne changent pas.</em>
+        {% else %}
+        Retirer une poule désaffecte les équipes qui s'y trouvent.
+        <em>Leurs points ne changent pas.</em>
+        {% endif %}
+      </span>
+      <span class="consequence-active">
+        <span class="panel-consequence-count" data-role="count">0</span>
+        équipe<span data-role="plural"></span> à réaffecter si vous enregistrez.
+      </span>
+    </div>
+  </form>
+</div>
+<script>
+(function () {
+    const panneau = document.currentScript.previousElementSibling;
+    const liste = panneau.querySelector('[data-role="pools"]');
+    const consequence = panneau.querySelector('[data-role="consequence"]');
+    const compte = panneau.querySelector('[data-role="count"]');
+    const pluriel = panneau.querySelector('[data-role="plural"]');
+
+    /** Les équipes que les poules marquées à retirer désaffecteraient. Le
+        nombre est lu dans le libellé, qui vient de la table des affectations —
+        la déclaration ne sait pas qui joue où. */
+    function aReaffecter() {
+        return [...liste.querySelectorAll('.pool-row--removed')]
+            .reduce((n, row) => n + Number(row.dataset.teams || 0), 0);
+    }
+
+    function rafraichir() {
+        const n = aReaffecter();
+        consequence.classList.toggle('shown', n > 0);
+        compte.textContent = n;
+        pluriel.textContent = n > 1 ? 's' : '';
+    }
+
+    /** Marquer n'est pas supprimer : les champs sont **désactivés**, donc non
+        soumis, et la ligne reste visible barrée. Rien n'est défait tant qu'on
+        n'a pas enregistré. */
+    function basculer(row) {
+        const retiree = row.classList.toggle('pool-row--removed');
+        row.querySelectorAll('input').forEach(i => { i.disabled = retiree; });
+        row.querySelector('[data-role="toggle"]').textContent = retiree ? '↩' : '✕';
+        row.querySelector('[data-role="toggle"]').title =
+            retiree ? 'Rétablir cette poule' : 'Retirer cette poule';
+        rafraichir();
+    }
+
+    liste.addEventListener('click', e => {
+        const bouton = e.target.closest('[data-role="toggle"]');
+        if (bouton) { basculer(bouton.closest('[data-role="pool"]')); }
+    });
+
+    /** Une poule neuve part **sans identifiant** : c'est le serveur qui le lui
+        donne. Un identifiant de domaine minté par le navigateur ne serait
+        contrôlé ni en forme, ni en unicité, ni en provenance. */
+    panneau.querySelector('[data-role="add"]').addEventListener('click', function () {
+        const row = document.createElement('div');
+        row.className = 'pool-row';
+        row.dataset.role = 'pool';
+        row.dataset.teams = '0';
+        row.innerHTML =
+            '<input type="hidden" name="pool_id" value="">' +
+            '<input class="form-input pool-name" type="text" name="pool_name" value="" required>' +
+            '<span class="pool-count">aucune équipe</span>' +
+            '<button type="button" class="tiebreak-move" data-role="toggle" title="Retirer cette poule">✕</button>';
+        liste.appendChild(row);
+        row.querySelector('.pool-name').focus();
+    });
+
+    // `data-teams` vient du serveur : le calcul ne relit aucun libellé, qui
+    // pourrait être traduit ou reformulé sans qu'on y pense.
+    rafraichir();
+})();
+</script>
