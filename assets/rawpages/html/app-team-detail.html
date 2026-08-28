@@ -54,7 +54,12 @@
     }
     .roster-icon-label { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; text-align: center; max-width: 120px; }
 
-    .staff-panel { background: var(--white); border-radius: 0 0 10px 10px; padding: var(--p2); }
+    /* Le staff est une annexe de l'effectif : un filet d'accent en tête le
+       rattache au tableau qu'il prolonge, au lieu de flotter en blanc. */
+    .staff-panel {
+      background: var(--white); border-radius: 0 0 10px 10px; padding: var(--p2);
+      border-top: 2px solid rgba(0,48,73,0.10);
+    }
     .staff-panel-title {
       font-size: var(--text-small); font-weight: 700; color: var(--dark-2);
       text-transform: uppercase; letter-spacing: 0.5px;
@@ -65,16 +70,25 @@
     /* ── Repris tel quel de assets/static/css/widgets/players-widget.css ── */
     .player-table  { width: 100%; border-collapse: collapse; }
     .players-widget { padding: var(--p2); background: var(--white); }
+    /* ── Aplats : teintés du bleu de marque, jamais gris neutre ───────────
+       `--dark-6` est #F0F2F4 — 4 points d'écart entre canaux, c'est-à-dire
+       un gris. Sur un tableau qui occupe tout l'écran, l'absence de teinte se
+       lit comme de la fadeur.
+
+       Chaque aplat garde donc le MÊME pas de valeur qu'avant — le zébrage
+       reste à 1.12 du blanc, le contraste du texte est intact — mais il porte
+       la teinte de la marque. Ce n'est pas plus de couleur, c'est de la
+       couleur là où il n'y en avait pas. */
     .player-table th {
       text-align: left; padding: 10px 12px;
       font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
       text-transform: uppercase; letter-spacing: 0.5px;
-      border-bottom: 2px solid var(--dark-5); background: var(--dark-6);
+      border-bottom: 2px solid rgba(0,48,73,0.16); background: rgba(0,48,73,0.10);
     }
     .player-table td { padding: 12px; font-size: var(--text-small); }
     .player-table tbody tr:nth-child(odd)  td { background: var(--white); }
-    .player-table tbody tr:nth-child(even) td { background: var(--dark-6); }
-    .player-table tbody tr:hover td { background: var(--dark-5); cursor: pointer; }
+    .player-table tbody tr:nth-child(even) td { background: rgba(0,48,73,0.065); }
+    .player-table tbody tr:hover td { background: rgba(0,48,73,0.145); cursor: pointer; }
     .player-table tbody.no-hover tr:nth-child(odd):hover  td { background: var(--white);  cursor: default; }
     /* ── Joueur indisponible pour le prochain match ────────────────────
        Le sous-total ne compte que les disponibles : sans marquage, la somme
@@ -93,16 +107,23 @@
        zébrage ni le survol des lignes de joueur. */
     .player-table tfoot td {
       padding: 12px; font-size: var(--text-small);
-      background: var(--dark-7); border-top: 2px solid var(--dark-5);
+      background: rgba(0,48,73,0.115); border-top: 2px solid rgba(0,48,73,0.22);
     }
     .subtotal-label { color: var(--dark-2); font-weight: 600; }
-    .subtotal-note  { color: var(--dark-3); font-size: var(--text-tiny); font-weight: 400; }
+    /* `--dark-3` tombait à 2.51:1 sur le pied teinté — sous le seuil. La
+       mention reste secondaire par sa taille et sa graisse, pas par un gris
+       qu'on ne lit plus. */
+    .subtotal-note  { color: var(--dark-2); font-size: var(--text-tiny); font-weight: 400; }
+    /* Les cellules SPP et Valeur du corps portent `text-align: center` en
+       attribut `style=`, que la feuille ne peut pas surclasser. Le pied le
+       reprend donc en inline lui aussi — c'est la seule façon de s'aligner sur
+       elles tant que le corps ne passe pas en classes. */
     .subtotal-value {
-      text-align: center; font-weight: 600; color: var(--dark-1);
+      font-weight: 600; color: var(--dark-1);
       font-variant-numeric: tabular-nums;
     }
 
-    .player-table tbody.no-hover tr:nth-child(even):hover td { background: var(--dark-6); cursor: default; }
+    .player-table tbody.no-hover tr:nth-child(even):hover td { background: rgba(0,48,73,0.065); cursor: default; }
     .player-table tr:last-child td { border-bottom: none; }
     .player-table tr.subtotal-row td {
       border-top: 2px solid var(--dark-4); border-bottom: none;
@@ -487,12 +508,18 @@
                    hors du compte — d'où leur marquage. -->
               <tfoot>
                 <tr>
-                  <td colspan="6">
+                  <!-- La colonne de poignée existe dans les huit colonnes du
+                       tableau, mais elle est `display: none` hors mode édition.
+                       Le pied doit donc la porter lui aussi, sinon son colspan
+                       reste entier quand les autres lignes en perdent une —
+                       et tout le pied glisse d'une colonne vers la gauche. -->
+                  <td class="drag-handle-cell"></td>
+                  <td colspan="5">
                     <span class="subtotal-label">7 joueurs disponibles</span>
                     <span class="subtotal-note"> — 1 absent, hors du compte</span>
                   </td>
-                  <td class="subtotal-value">—</td>
-                  <td class="subtotal-value">603 kPo</td>
+                  <td class="subtotal-value" style="text-align: center;">—</td>
+                  <td class="subtotal-value" style="text-align: center;">603 kPo</td>
                 </tr>
               </tfoot>
             </table>
