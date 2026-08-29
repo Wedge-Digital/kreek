@@ -125,7 +125,7 @@
 
 .player-page .match-actions { display: flex; flex-direction: column; gap: 3px; }
 .player-page .pd-log-entry { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; font-size: var(--text-tiny); }
-.player-page .pd-log-entry:hover { background: var(--dark-7); }
+.player-page .pd-log-entry:hover { background: var(--dark-6); }
 .player-page .pd-log-icon { font-size: 13px; flex-shrink: 0; width: 18px; text-align: center; }
 .player-page .pd-log-text { flex: 1; color: var(--dark-1); }
 .player-page .pd-log-spp  { font-weight: 700; color: #9A7800; white-space: nowrap; }

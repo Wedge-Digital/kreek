@@ -55,6 +55,22 @@
 # `components/` ; vérifier B seul laisserait passer la 63e feuille écrite sans
 # portée, qui ne collisionne avec rien **aujourd'hui**.
 
+# Le contrôle C (proximité des tokens) répond à un défaut d'une autre nature :
+# `--dark-6` (#F0F2F4) et `--dark-7` (#EFF2F5) ont coexisté pendant des mois à
+# **1,0012 de rapport de contraste** — la même couleur écrite deux fois. Quatre
+# feuilles les opposaient pour distinguer un zébrage d'un survol, et le survol
+# des deux classements était donc invisible une ligne sur deux, en production,
+# sous les yeux de tous les coachs (carte 448).
+#
+# Le contrôle porte sur les **valeurs** des tokens, pas sur leurs usages : il
+# attrape la cause plutôt que ses effets, et une seule fois plutôt qu'en chaque
+# endroit. Un token indistinguable d'un autre n'a aucun usage légitime — s'il en
+# avait un, il serait un alias, et un alias s'écrit `--x: var(--y)`.
+#
+# Le seuil de 1,05 n'est pas une norme d'accessibilité : c'est le plancher en
+# deçà duquel deux fonds ne se distinguent pas à l'œil sur un écran ordinaire.
+# `--dark-5`/`--dark-6` valent 1,1074 et se voient ; 1,0012 ne se voit pas.
+
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -263,7 +279,54 @@ else:
     print(f"  {GREEN}✓ PASS{RESET}")
 print()
 
-sys.exit(1 if (fautifs or divergents) else 0)
+# ── Contrôle C : proximité des tokens de couleur ────────────────────────────
+
+import re as _re
+
+
+def _luminance(hexa):
+    """Luminance relative WCAG."""
+    hexa = hexa.lstrip("#")
+    canaux = []
+    for i in (0, 2, 4):
+        c = int(hexa[i:i + 2], 16) / 255
+        canaux.append(c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4)
+    r, v, b = canaux
+    return 0.2126 * r + 0.7152 * v + 0.0722 * b
+
+
+def _contraste(a, b):
+    la, lb = _luminance(a), _luminance(b)
+    haut, bas = max(la, lb), min(la, lb)
+    return (haut + 0.05) / (bas + 0.05)
+
+
+SEUIL = 1.05
+
+_common = pathlib.Path("assets/static/css/common.css")
+_tokens = _re.findall(r"(--[\w-]+):\s*(#[0-9A-Fa-f]{6})\s*;", _common.read_text())
+
+# Les alias déclarés (`--x: var(--y)`) ne sont pas concernés : ils ne prétendent
+# pas être une autre couleur. Seules les valeurs littérales entrent ici.
+trop_proches = []
+for i, (nom_a, val_a) in enumerate(_tokens):
+    for nom_b, val_b in _tokens[i + 1:]:
+        r = _contraste(val_a, val_b)
+        if r < SEUIL:
+            trop_proches.append((nom_a, val_a, nom_b, val_b, r))
+
+print(f"{BOLD}Contrôle C · Tokens — aucune paire indistinguable (< {SEUIL}){RESET}")
+if trop_proches:
+    print(f"  {RED}✗ FAIL{RESET}  {len(trop_proches)} paire(s) de tokens indistinguables")
+    for nom_a, val_a, nom_b, val_b, r in trop_proches:
+        print(f"       {nom_a} ({val_a}) / {nom_b} ({val_b}) = {r:.4f}")
+    print("       Deux tokens si proches ne peuvent pas distinguer deux états.")
+    print("       Fusionnez-les, ou écartez la valeur de l'un.")
+else:
+    print(f"  {GREEN}✓ PASS{RESET}")
+print()
+
+sys.exit(1 if (fautifs or divergents or trop_proches) else 0)
 PYTHON
 CODE=$?
 

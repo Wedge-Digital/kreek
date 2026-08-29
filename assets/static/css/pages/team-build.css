@@ -16,7 +16,7 @@
   font-size: var(--text-tiny); color: var(--dark-1); text-align: center;
 }
 .team-build .player-table tr:nth-child(odd) td,
-.team-build.player-table tr:nth-child(odd) td  { background: var(--dark-7); }
+.team-build.player-table tr:nth-child(odd) td  { background: var(--dark-6); }
 .team-build .player-table tr:nth-child(even) td,
 .team-build.player-table tr:nth-child(even) td { background: var(--white); }
 .team-build .player-table td.player-name,

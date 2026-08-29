@@ -10,7 +10,7 @@
 
 /* Résumé du match */
 .match-summary {
-  background: var(--dark-7); border-radius: 10px; padding: var(--p2); margin-bottom: var(--p3);
+  background: var(--dark-6); border-radius: 10px; padding: var(--p2); margin-bottom: var(--p3);
   display: flex; align-items: center; justify-content: center; gap: var(--p3);
 }
 .match-team-sm   { display: flex; flex-direction: column; align-items: center; gap: 6px; }

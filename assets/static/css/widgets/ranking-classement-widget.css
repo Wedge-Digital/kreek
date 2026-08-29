@@ -31,9 +31,9 @@
 .ranking-classement-widget .standings-row:last-child,
 .ranking-classement-widget.standings-row:last-child      { border-bottom: none; }
 .ranking-classement-widget .standings-row:nth-child(even),
-.ranking-classement-widget.standings-row:nth-child(even) { background: var(--dark-7); }
+.ranking-classement-widget.standings-row:nth-child(even) { background: var(--dark-6); }
 .ranking-classement-widget .standings-row:hover,
-.ranking-classement-widget.standings-row:hover           { background: var(--dark-6); }
+.ranking-classement-widget.standings-row:hover           { background: var(--dark-5); }
 .ranking-classement-widget .standings-rank,
 .ranking-classement-widget.standings-rank { color: var(--dark-3); font-weight: 700; text-align: center; }
 .ranking-classement-widget .standings-team,

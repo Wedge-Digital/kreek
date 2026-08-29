@@ -283,7 +283,7 @@
     position: absolute;
     right: 0; top: 0; bottom: 0;
     width: 32px;
-    background: linear-gradient(to right, transparent, var(--dark-7));
+    background: linear-gradient(to right, transparent, var(--dark-6));
     pointer-events: none;
   }
   .app-news-feed .filter-tabs,

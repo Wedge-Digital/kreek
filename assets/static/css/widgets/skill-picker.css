@@ -73,7 +73,7 @@
 .skill-picker .skill-list-table tr:last-child td,
 .skill-picker.skill-list-table tr:last-child td { border-bottom: none; }
 .skill-picker .skill-list-table tr:hover td,
-.skill-picker.skill-list-table tr:hover td { background: var(--dark-7); }
+.skill-picker.skill-list-table tr:hover td { background: var(--dark-6); }
 .skill-picker .skill-list-table tr.row-disabled td,
 .skill-picker.skill-list-table tr.row-disabled td { opacity: 0.4; }
 .skill-picker .skill-name-row,

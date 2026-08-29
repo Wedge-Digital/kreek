@@ -86,7 +86,7 @@
   border-bottom: 1px solid var(--dark-5); padding: 10px 8px;
   font-size: var(--text-tiny); color: var(--dark-1); text-align: center;
 }
-.dis-page .dis-table tbody tr:nth-child(even) td { background: var(--dark-7); }
+.dis-page .dis-table tbody tr:nth-child(even) td { background: var(--dark-6); }
 /* Estompé par la couleur, jamais par l'opacité : un renvoi doit rester lisible
    après coup, c'est la trace de ce qu'on vient de faire. */
 .dis-page .dis-table tr.is-gone td,

@@ -363,8 +363,8 @@
 }
 .mr-log-entry { border: 1px solid transparent; border-radius: 4px; }
 .mr-log-entry:nth-child(odd) { border-color: var(--dark-5); }
-.mr-log-entry:nth-child(even) { background: var(--dark-7); }
-.mr-log-entry:hover { background: var(--dark-6); border-color: var(--dark-5); }
+.mr-log-entry:nth-child(even) { background: var(--dark-6); }
+.mr-log-entry:hover { background: var(--dark-5); border-color: var(--dark-4); }
 .mr-log-turn {
   width: 28px; height: 28px; border-radius: 4px;
   display: flex; align-items: center; justify-content: center;

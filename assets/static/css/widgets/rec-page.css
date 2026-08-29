@@ -87,13 +87,13 @@
   border-bottom: 1px solid var(--dark-5); padding: 10px 8px;
   font-size: var(--text-tiny); color: var(--dark-1); text-align: center;
 }
-.rec-page .buy-table tbody tr:nth-child(even) td { background: var(--dark-7); }
+.rec-page .buy-table tbody tr:nth-child(even) td { background: var(--dark-6); }
 /* Une ligne indisponible reste lisible : on l'estompe par la couleur,
    jamais par l'opacité, qui écrase le contraste sous le seuil. */
 .rec-page .buy-table tr.is-blocked td,
 .rec-page .buy-table tr.is-blocked .pos-name,
 .rec-page .buy-table tr.is-blocked .pos-stats { color: var(--dark-3); }
-.rec-page .buy-table tr.is-blocked .skill-tag { color: var(--dark-3); background: var(--dark-7); }
+.rec-page .buy-table tr.is-blocked .skill-tag { color: var(--dark-3); background: var(--dark-6); }
 
 .rec-page .pos-name  { font-weight: 600; }
 /* Repli mobile des compétences sous le nom du poste : la colonne dédiée

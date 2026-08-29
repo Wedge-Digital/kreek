@@ -46,7 +46,7 @@
 }
 
 .league-select:disabled {
-  background-color: var(--dark-7);
+  background-color: var(--dark-6);
   color: var(--dark-2);
   cursor: default;
   opacity: 1;
@@ -60,7 +60,7 @@
   font-size: var(--text-small);
   color: var(--dark-3);
   font-style: italic;
-  background: var(--dark-7);
+  background: var(--dark-6);
 }
 
 .special-rule-chip-list {

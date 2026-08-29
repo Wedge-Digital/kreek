@@ -94,7 +94,7 @@
   padding: 10px var(--p2); border-bottom: 1px solid var(--dark-6);
   cursor: pointer; transition: background 0.1s; position: relative;
 }
-.finalize-page .player-row:hover { background: var(--dark-7); }
+.finalize-page .player-row:hover { background: var(--dark-6); }
 .finalize-page .player-row.selected { background: rgba(0,48,73,0.04); border-left: 3px solid var(--main-blue); padding-left: calc(var(--p2) - 3px); }
 .finalize-page .player-row:last-child { border-bottom: none; }
 
@@ -178,7 +178,7 @@
 }
 .finalize-page .spp-summary-table td { padding: 10px var(--p2); font-size: var(--text-small); border-bottom: 1px solid var(--dark-6); vertical-align: middle; }
 .finalize-page .spp-summary-table tr:last-child td { border-bottom: none; }
-.finalize-page .spp-summary-table tr:hover td { background: var(--dark-7); }
+.finalize-page .spp-summary-table tr:hover td { background: var(--dark-6); }
 .finalize-page .summary-player    { font-weight: 600; color: var(--dark-1); }
 .finalize-page .summary-pos       { font-size: var(--text-tiny); color: var(--dark-3); }
 .finalize-page .summary-cost      { font-weight: 700; color: #9A7800; }

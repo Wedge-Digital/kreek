@@ -3,7 +3,7 @@
   display: flex;
   height: 100vh;
   overflow: hidden;
-  background: var(--dark-7);
+  background: var(--dark-6);
 }
 
 /* ─── Sidebar ─── */
@@ -156,7 +156,7 @@
 }
 .sub-menu-btn { display: inline-flex; align-items: center; gap: var(--p1); color: var(--dark-1); font-size: var(--text-small); padding: var(--p1) var(--p2); border-radius: 6px; cursor: pointer; }
 .sub-menu-btn-icon { display: inline-flex; align-items: center; line-height: 1; font-size: 15px; }
-.sub-menu-btn:hover { background: rgba(255,255,255,0.75); color: var(--black-1) }
+.sub-menu-btn:hover { background: rgba(255,255,255,0.75); color: var(--dark-1) }
 .sub-menu-btn.active { background: rgba(255,255,255,0.55); }
 
 /* ─── Page Content ─── */

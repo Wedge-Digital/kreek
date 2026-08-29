@@ -15,7 +15,7 @@
 
 .my-teams-widget .archived-list { display: flex; flex-direction: column; gap: var(--p05); }
 .my-teams-widget .archived-card {
-  background: var(--dark-7); border-radius: 8px; border: 1px solid var(--dark-5);
+  background: var(--dark-6); border-radius: 8px; border: 1px solid var(--dark-5);
   padding: var(--p1) var(--p2);
   display: flex; align-items: center; gap: var(--p2);
   cursor: pointer; opacity: 0.85;

@@ -69,7 +69,7 @@
 .competition-admin-schedule .round-item:last-child,
 .competition-admin-schedule.round-item:last-child { border-bottom: none; }
 .competition-admin-schedule .round-item:hover,
-.competition-admin-schedule.round-item:hover { background: var(--dark-7); }
+.competition-admin-schedule.round-item:hover { background: var(--dark-6); }
 .competition-admin-schedule .round-item.active,
 .competition-admin-schedule.round-item.active { background: rgba(0,48,73,0.06); border-left: 3px solid var(--main-blue); }
 .competition-admin-schedule .round-item-icon,
@@ -169,7 +169,7 @@
 /* ── Date config ── */
 .competition-admin-schedule .round-date-config,
 .competition-admin-schedule.round-date-config {
-  background: var(--dark-7);
+  background: var(--dark-6);
   border-radius: 8px;
   padding: var(--p1) var(--p2);
   display: flex; align-items: center; gap: var(--p2);
@@ -236,7 +236,7 @@
 /* ── Add match form ── */
 .competition-admin-schedule .add-match-form,
 .competition-admin-schedule.add-match-form {
-  background: var(--dark-7);
+  background: var(--dark-6);
   border-radius: 8px;
   padding: var(--p2);
 }

@@ -28,7 +28,7 @@
 }
 .pd-right .skill-list-table td { padding: 12px var(--p2); font-size: var(--text-small); border-bottom: 1px solid var(--dark-6); vertical-align: middle; }
 .pd-right .skill-list-table tr:last-child td { border-bottom: none; }
-.pd-right .skill-list-table tr:hover td { background: var(--dark-7); }
+.pd-right .skill-list-table tr:hover td { background: var(--dark-6); }
 .pd-right .skill-col-name { min-width: 220px; }
 .pd-right .skill-name { font-weight: 600; color: var(--dark-1); }
 .pd-right .skill-desc { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; max-width: 320px; }

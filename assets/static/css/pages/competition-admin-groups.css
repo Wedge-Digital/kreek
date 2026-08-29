@@ -10,7 +10,7 @@
 /* ── Unassigned pool ── */
 .competition-admin-groups .unassigned-pool,
 .competition-admin-groups.unassigned-pool {
-  background: var(--dark-7);
+  background: var(--dark-6);
   border: 1px solid var(--dark-5);
   border-radius: 10px;
   padding: var(--p2);

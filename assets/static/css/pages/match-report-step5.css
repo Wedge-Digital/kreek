@@ -105,7 +105,7 @@
   flex-direction: column;
   gap: 8px;
   padding: var(--p1);
-  background: var(--dark-7);
+  background: var(--dark-6);
   border-radius: 8px;
 }
 .match-report-step5 .mr-team-row-header,
@@ -144,7 +144,7 @@
   align-items: center;
   gap: 12px;
   padding: var(--p1);
-  background: var(--dark-7);
+  background: var(--dark-6);
   border-radius: 8px;
 }
 .match-report-step5 .mr-gains-team-info,

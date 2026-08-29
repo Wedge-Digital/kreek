@@ -10,7 +10,7 @@
 .roster-grid { display: flex; flex-wrap: wrap; gap: var(--p1); }
 .roster-card {
   border: 1px solid var(--dark-4); border-radius: 5px;
-  background: var(--white-1); display: flex; flex-direction: column; align-items: center;
+  background: var(--white); display: flex; flex-direction: column; align-items: center;
   gap: var(--p1); padding: var(--p2); width: 200px; cursor: pointer;
   transition: box-shadow 0.2s, border-color 0.2s;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);

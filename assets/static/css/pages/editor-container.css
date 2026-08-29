@@ -28,7 +28,7 @@
 .editor-container .paragraph-empty-text { font-size: var(--text-small); color: var(--dark-2); }
 .editor-container .paragraph-empty-sub  { font-size: var(--text-tiny); color: var(--dark-3); }
 
-.editor-container .paragraph-editor { border: 1px solid var(--dark-5); border-radius: 10px; padding: var(--p2); margin-bottom: var(--p1); background: var(--dark-7); }
+.editor-container .paragraph-editor { border: 1px solid var(--dark-5); border-radius: 10px; padding: var(--p2); margin-bottom: var(--p1); background: var(--dark-6); }
 .editor-container .paragraph-editor-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--p1); }
 .editor-container .paragraph-num { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3); background: var(--dark-5); padding: 2px 8px; border-radius: 4px; }
 .editor-container .paragraph-actions { display: flex; gap: 4px; }

@@ -70,9 +70,9 @@
 .competition-detail .standings-row:last-child,
 .competition-detail.standings-row:last-child        { border-bottom: none; }
 .competition-detail .standings-row:nth-child(even),
-.competition-detail.standings-row:nth-child(even)   { background: var(--dark-7); }
+.competition-detail.standings-row:nth-child(even)   { background: var(--dark-6); }
 .competition-detail .standings-row:hover,
-.competition-detail.standings-row:hover             { background: var(--dark-6); }
+.competition-detail.standings-row:hover             { background: var(--dark-5); }
 .competition-detail .standings-row.top3,
 .competition-detail.standings-row.top3              { background: rgba(0,48,73,0.04); }
 .competition-detail .standings-rank,
@@ -109,7 +109,7 @@
 .competition-detail .match-widget--clickable,
 .competition-detail.match-widget--clickable { cursor: pointer; }
 .competition-detail .match-widget--clickable:hover,
-.competition-detail.match-widget--clickable:hover { background: var(--dark-7); }
+.competition-detail.match-widget--clickable:hover { background: var(--dark-6); }
 
 .competition-detail .match-widget-link,
 .competition-detail.match-widget-link {
@@ -227,7 +227,7 @@
 .competition-detail .stats-row:last-child,
 .competition-detail.stats-row:last-child  { border-bottom: none; }
 .competition-detail .stats-row:hover,
-.competition-detail.stats-row:hover       { background: var(--dark-7); }
+.competition-detail.stats-row:hover       { background: var(--dark-6); }
 .competition-detail .stats-row--head,
 .competition-detail.stats-row--head {
   background: var(--dark-0); color: var(--white);
@@ -282,7 +282,7 @@
 .competition-detail .cal-row--clickable,
 .competition-detail.cal-row--clickable        { position: relative; cursor: pointer; }
 .competition-detail .cal-row--clickable:hover,
-.competition-detail.cal-row--clickable:hover  { background: var(--dark-7); }
+.competition-detail.cal-row--clickable:hover  { background: var(--dark-6); }
 .competition-detail .cal-row-link,
 .competition-detail.cal-row-link              { position: absolute; inset: 0; }
 

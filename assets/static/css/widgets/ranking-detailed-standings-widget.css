@@ -37,11 +37,11 @@
 .ranking-detailed-standings-widget .sd-table tbody tr:last-child,
 .ranking-detailed-standings-widget.sd-table tbody tr:last-child      { border-bottom: none; }
 .ranking-detailed-standings-widget .sd-table tbody tr:nth-child(even),
-.ranking-detailed-standings-widget.sd-table tbody tr:nth-child(even) { background: var(--dark-7); }
+.ranking-detailed-standings-widget.sd-table tbody tr:nth-child(even) { background: var(--dark-6); }
 .ranking-detailed-standings-widget .sd-table tbody tr,
 .ranking-detailed-standings-widget.sd-table tbody tr { cursor: pointer; }
 .ranking-detailed-standings-widget .sd-table tbody tr:hover,
-.ranking-detailed-standings-widget.sd-table tbody tr:hover { background: var(--dark-6); }
+.ranking-detailed-standings-widget.sd-table tbody tr:hover { background: var(--dark-5); }
 
 .ranking-detailed-standings-widget .sd-rank,
 .ranking-detailed-standings-widget.sd-rank  { color: var(--dark-3); font-weight: 700; }

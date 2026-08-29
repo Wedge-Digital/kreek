@@ -5,7 +5,9 @@
 /* ─── Design Tokens ─── */
 :root {
   --white:       #FFFFFF;
-  --white-1:     #FDFDFD;
+  /* --white-1 (#FDFDFD) supprime avec la carte 448 : 1,0172 de --white,
+     donc indistinguable, et un seul usage -- dans une feuille qu'aucun
+     template ne charge. */
   --white-overlay: rgba(255,255,255,0.875);
 
   --dark-0:      #1C1C29;
@@ -15,14 +17,23 @@
   --dark-4:      #C7C9D9;
   --dark-5:      #E5E6EF;
   --dark-6:      #F0F2F4;
-  --dark-7:      #EFF2F5;
+  /* --dark-7 a ete supprime (carte 448). Il valait #EFF2F5 contre #F0F2F4
+     pour --dark-6 : un ecart de plus ou moins 1 par canal, soit un rapport
+     de contraste de 1,0012. Ce n'etaient pas deux nuances, c'etait la meme
+     couleur ecrite deux fois -- et quatre feuilles les opposaient pour
+     distinguer un zebrage d'un survol, rendant le survol invisible une ligne
+     sur deux, en production.
+     Le zebrage est desormais --dark-6, le survol --dark-5 (rapport 1,1074),
+     l'idiome que team-page.css et players-widget.css employaient deja. */
 
   --main-blue:   #003049;
   --dark-blue:   rgba(0,48,73,0.35);
   --link-blue:   #0063F7;
 
   --black:       #000000;
-  --black-1:     #292929;
+  /* --black-1 (#292929) supprime avec la carte 448 : 1,0115 de --dark-1,
+     la couleur de texte courante. Son unique usage colorait un survol qui
+     ne changeait donc rien de visible. */
 
   --red:         #E02020;
   --green:       #629584;
@@ -87,7 +98,7 @@
 /* ─── Reset ─── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
-body { font-family: var(--font-body); font-size: var(--text-small); color: var(--dark-1); background: var(--dark-7); }
+body { font-family: var(--font-body); font-size: var(--text-small); color: var(--dark-1); background: var(--dark-6); }
 a { text-decoration: none; color: inherit; }
 button { cursor: pointer; border: none; background: none; font-family: inherit; }
 input, select, textarea { font-family: inherit; font-size: inherit; }
