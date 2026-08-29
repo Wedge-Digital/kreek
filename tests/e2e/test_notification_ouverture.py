@@ -34,10 +34,38 @@ def _lignes_du_journal(season_id: str) -> list[str]:
 
 def _attendre_le_journal(season_id: str, minimum: int = 1) -> list[str]:
     """Le listener est détaché : la réponse HTTP ne l'attend pas, donc le test
-    non plus ne peut pas se contenter d'un `goto` suivi d'une lecture."""
+    non plus ne peut pas se contenter d'un `goto` suivi d'une lecture.
+
+    **L'attente porte sur la confirmation, pas sur la seule présence.** Un envoi
+    s'écrit en deux temps — la ligne est réservée (`claimed_at`), puis confirmée
+    (`sent_at`) — et une saison en produit une par membre de l'espace. Rendre la
+    main dès la première ligne laissait lire le journal **à mi-écriture** : douze
+    lignes, onze confirmées, une encore réservée. L'appelant affirmait ensuite
+    qu'elles l'étaient toutes, et échouait sur une lecture prise au vol.
+
+    Constaté une fois sur vingt-trois courses. La ligne incriminée était
+    confirmée quelques instants plus tard, et le journal ne comptait alors plus
+    aucune ligne en attente : le produit avait fait son travail.
+
+    **Et le compte doit être stable.** « Toutes confirmées » est satisfait par un
+    sous-ensemble : trois lignes écrites et confirmées sur douze rendraient la
+    main aussitôt, et l'appelant compterait trois envois là où il y en a douze.
+    L'attente exige donc que le nombre ne bouge plus pendant trois relevés
+    consécutifs — soit six dixièmes de seconde sans écriture nouvelle.
+
+    Ce n'est pas un assouplissement — si un envoi restait réellement non
+    confirmé, la boucle expire et l'assertion échoue comme avant, mais après dix
+    secondes d'attente réelle plutôt que sur un instantané. Vérifié en insérant
+    une ligne jamais confirmée : la boucle expire, et l'assertion tombe.
+    """
+    stables = 0
+    precedent = -1
     for _ in range(50):
         lignes = _lignes_du_journal(season_id)
-        if len(lignes) >= minimum:
+        complet = len(lignes) >= minimum and all(l.endswith("|true") for l in lignes)
+        stables = stables + 1 if len(lignes) == precedent else 0
+        precedent = len(lignes)
+        if complet and stables >= 3:
             return lignes
         time.sleep(0.2)
     return _lignes_du_journal(season_id)
