@@ -198,7 +198,20 @@ def test_creer_un_compte_et_ajouter_de_bout_en_bout(page: Page, espace_jetable: 
     pas seulement que le formulaire répond.
     """
     _ouvrir_ajout_direct(page, espace_jetable)
-    pseudo = f"E2ENouveau{time.time_ns() % 1_000_000}"
+    # **L'horodatage entier, comme partout ailleurs dans la suite.**
+    #
+    # Un `% 1_000_000` tronquait ici, sans raison : `CoachName` accepte 50
+    # caractères, et « E2ENouveau » plus dix-neuf chiffres en fait vingt-neuf.
+    # La troncature ne gagnait rien et ramenait l'espace des noms de dix-neuf
+    # chiffres à **mille valeurs** — dont l'horloge de la machine ne rend que
+    # les multiples de mille, les trois derniers chiffres étant toujours nuls.
+    #
+    # Un pseudonyme est unique en base : chaque exécution en consommait une, et
+    # la probabilité de collision montait à chaque `make e2e`. Constaté à 43
+    # comptes posés, soit environ 4 % par course — et le test a fini par tomber
+    # sur un nom déjà pris, en échouant sur un symptôme (« le journal n'affiche
+    # pas le pseudonyme ») qui n'évoquait en rien sa cause.
+    pseudo = f"E2ENouveau{time.time_ns()}"
 
     page.locator(".space-admin-creation input[name='coach_name']").fill(pseudo)
     page.locator(".space-admin-creation input[name='email']").fill(
