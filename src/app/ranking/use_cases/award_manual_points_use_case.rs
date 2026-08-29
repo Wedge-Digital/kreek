@@ -16,7 +16,10 @@ pub struct AwardManualPointsCommand {
     pub team_id: String,
     pub user_id: String,
     pub points: ManualPoints,
-    pub reason: ManualPointsReason,
+    /// **Optionnel** : le motif est facultatif à l'écran. `ManualPointsReason`
+    /// garde son `not_empty` — c'est ici, et non dans le value object, que
+    /// l'absence est permise.
+    pub reason: Option<ManualPointsReason>,
 }
 
 #[tracing::instrument(skip_all, fields(cmd = ?cmd))]
@@ -51,7 +54,7 @@ pub async fn execute(
         &cmd.season_id,
         &cmd.team_id,
         cmd.points.into_inner(),
-        cmd.reason.as_ref(),
+        cmd.reason.as_ref().map(|r| r.as_ref()),
         &cmd.user_id,
     )
     .await?;
@@ -74,7 +77,7 @@ mod tests {
 
     #[derive(Default)]
     struct FakeRepo {
-        ecrit: Mutex<Vec<(String, String, i32, String, String)>>,
+        ecrit: Mutex<Vec<(String, String, i32, Option<String>, String)>>,
         supprimees: u64,
     }
 
@@ -129,14 +132,14 @@ mod tests {
             season_id: &str,
             team_id: &str,
             points: i32,
-            reason: &str,
+            reason: Option<&str>,
             awarded_by: &str,
         ) -> Result<(), RankingRepositoryError> {
             self.ecrit.lock().unwrap().push((
                 season_id.into(),
                 team_id.into(),
                 points,
-                reason.into(),
+                reason.map(str::to_string),
                 awarded_by.into(),
             ));
             Ok(())
@@ -198,7 +201,7 @@ mod tests {
             team_id: team.into(),
             user_id: "U1".into(),
             points: ManualPoints::try_new(3).unwrap(),
-            reason: ManualPointsReason::try_new("forfait de l'adverse").unwrap(),
+            reason: Some(ManualPointsReason::try_new("forfait de l'adverse").unwrap()),
         }
     }
 
@@ -339,7 +342,7 @@ mod tests {
                 "S1".into(),
                 "T1".into(),
                 3,
-                "forfait de l'adverse".into(),
+                Some("forfait de l'adverse".to_string()),
                 "U1".into()
             )
         );

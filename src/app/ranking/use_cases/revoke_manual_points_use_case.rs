@@ -108,7 +108,7 @@ mod tests {
             _: &str,
             _: &str,
             _: i32,
-            _: &str,
+            _: Option<&str>,
             _: &str,
         ) -> Result<(), RankingRepositoryError> {
             Ok(())

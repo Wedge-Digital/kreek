@@ -1,0 +1,46 @@
+{# La page des points de classement manuels (carte 452).
+
+   Page d'assemblage : aucun calcul, aucun JS d'orchestration. Deux conteneurs,
+   chacun rempli par son propre endpoint.
+
+   ── Le formulaire n'ecoute rien ────────────────────────────────────────────
+   Rien de ce qui se passe dans la liste ne change ce qu'il propose, et le
+   recharger lui ferait perdre l'equipe choisie -- alors que le geste reel est
+   d'attribuer plusieurs lignes d'affilee pour la meme equipe. #}
+{% extends "app-layout.html" %}
+
+{% block content %}
+{# La racine porte le nom de sa feuille : `pages/ranking-manual-points.css`
+   n'a de portee que sous cette classe (axe 15). #}
+<div class="ranking-manual-points mp-page">
+
+  <div class="mp-head">
+    <div class="mp-head-text">
+      <div class="mp-head-title">Points de classement manuels</div>
+      <div class="mp-head-sub">
+        Forfait, sanction, rattrapage — des points qui ne viennent d'aucun match.
+        Ils entrent dans le classement avant les départages.
+      </div>
+    </div>
+    <a class="mp-back"
+       hx-get="{{ app_routes.competitions.competition_tab_standings(space_id, competition_id, season_id) }}"
+       hx-target="#app-content"
+       hx-select="#app-content"
+       hx-swap="outerHTML"
+       hx-push-url="true">← Retour au classement</a>
+  </div>
+
+  <div id="mp-form"
+       hx-get="{{ form_url }}"
+       hx-trigger="load"
+       hx-target="this"
+       hx-swap="innerHTML"></div>
+
+  <div id="mp-list"
+       hx-get="{{ list_url }}"
+       hx-trigger="load, manualPointsChanged from:body"
+       hx-target="this"
+       hx-swap="innerHTML"></div>
+
+</div>
+{% endblock %}

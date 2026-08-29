@@ -1,0 +1,87 @@
+{# Le releve des points manuels (carte 452), structure reprise de la maquette
+   `app-manual-ranking-points.html`.
+
+   ── Une seule table, et c'est ce qui aligne les colonnes ───────────────────
+   Une table par equipe laisserait chaque bloc dimensionner ses colonnes tout
+   seul : les largeurs sauteraient d'un bloc a l'autre. Les lignes de groupe et
+   les en-tetes vivent donc **dans** la table, en `colspan`.
+
+   ── L'en-tete de colonnes vit dans chaque bloc ─────────────────────────────
+   Pose une seule fois tout en haut, il surplomberait des sections fermees et ne
+   designerait rien. Replie avec son bloc, il ne parait que quand il sert.
+
+   ── L'ouverture n'est pas portee par la couleur seule ──────────────────────
+   Un chevron et la graisse le disent aussi : une information portee par la
+   couleur doit l'etre par la forme ou la position.
+
+   ── `can_manage` decide, le gabarit rend ───────────────────────────────────
+   L'autorisation est une decision applicative ; la laisser au gabarit la
+   disperserait dans le HTML, ou personne ne va la chercher. #}
+<div class="mp-panel mp-panel--list" hx-disinherit="*">
+  <div class="mp-panel-head">
+    <div class="mp-panel-title">Points attribués</div>
+    {% if vm.teams.is_empty() %}
+    <div class="mp-panel-note">Aucun point manuel sur cette saison.</div>
+    {% else %}
+    <div class="mp-panel-note">{{ vm.teams_label }}</div>
+    {% endif %}
+  </div>
+
+  {% if !vm.teams.is_empty() %}
+  {# La table deborde sous 768 px : elle defile dans son propre conteneur, la
+     page ne defile jamais horizontalement. #}
+  <div class="mp-table-wrap" x-data="{ ouvertes: {} }">
+    <table class="mp-table">
+      <tbody>
+        {% for team in vm.teams %}
+
+        <tr class="mp-row--team"
+            @click="ouvertes['{{ team.team_id }}'] = !ouvertes['{{ team.team_id }}']"
+            :aria-expanded="!!ouvertes['{{ team.team_id }}']"
+            tabindex="0"
+            @keydown.enter="ouvertes['{{ team.team_id }}'] = !ouvertes['{{ team.team_id }}']"
+            @keydown.space.prevent="ouvertes['{{ team.team_id }}'] = !ouvertes['{{ team.team_id }}']">
+          <td colspan="{% if vm.can_manage %}5{% else %}4{% endif %}">
+            <span class="mp-caret" x-text="ouvertes['{{ team.team_id }}'] ? '▾' : '▸'">▸</span>{{ team.team_name }}<span class="mp-count">{{ team.line_label }}</span><span class="mp-team-total {{ team.total_class }}">{{ team.total }}</span>
+          </td>
+        </tr>
+
+        <tr class="mp-line mp-row--cols" x-show="ouvertes['{{ team.team_id }}']" x-cloak>
+          <th class="n">Points</th>
+          <th>Motif</th>
+          <th>Date</th>
+          <th>Attribué par</th>
+          {% if vm.can_manage %}<th></th>{% endif %}
+        </tr>
+
+        {% for line in team.lines %}
+        <tr class="mp-line" x-show="ouvertes['{{ team.team_id }}']" x-cloak>
+          <td class="n"><span class="mp-pts {{ line.points_class }}">{{ line.points }}</span></td>
+          <td>
+            {% if let Some(r) = line.reason %}
+            <span class="mp-reason">{{ r }}</span>
+            {% else %}
+            <span class="mp-reason mp-reason--absent">—</span>
+            {% endif %}
+          </td>
+          <td>{{ line.awarded_at }}</td>
+          <td>{{ line.awarded_by }}</td>
+          {% if vm.can_manage %}
+          <td class="n">
+            {# Le ✕ est le geste de retrait du reste du site : six occurrences
+               dans les gabarits de production contre une seule poubelle. #}
+            <button type="button" class="mp-icon-btn"
+                    title="Retirer cette ligne"
+                    hx-delete="{{ line.delete_url }}"
+                    hx-swap="none">✕</button>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>

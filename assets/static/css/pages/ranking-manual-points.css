@@ -1,0 +1,221 @@
+/* Points de classement manuels — la page de gestion (carte 452).
+
+   Reprise de la maquette `assets/rawpages/html/app-manual-ranking-points.html`,
+   scopée sous `.ranking-manual-points` : le nom du fichier **est** le sélecteur
+   de portée (axe 15 de `check-arch`).
+
+   ── Deux tokens de la maquette n'existent plus ────────────────────────────
+   Elle précède la carte 448 et référence `--dark-7` (quatre fois) et
+   `--white-1` (une fois), supprimés depuis. Elle s'affiche encore parce qu'elle
+   a son propre `shared.css` ; copiés tels quels ici, ils auraient rendu des
+   fonds transparents **sans qu'aucune erreur ne le signale** — le contrôle C
+   vérifie les valeurs des tokens, pas les références à des tokens absents.
+   Traduits en `--dark-6` et `--white`, dont ils ne se distinguaient pas. */
+
+.ranking-manual-points.mp-page { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--p1); }
+
+/* ── Bandeau ──────────────────────────────────────────────────────── */
+.ranking-manual-points .mp-head {
+  background: var(--white); border-radius: 10px; padding: var(--p2);
+  display: flex; align-items: center; gap: var(--p2); flex-wrap: wrap;
+}
+.ranking-manual-points .mp-head-text { flex: 1; min-width: 220px; }
+.ranking-manual-points .mp-head-title { font-family: var(--font-title); font-size: var(--h2); font-weight: 700; color: var(--dark-0); line-height: 1.1; }
+.ranking-manual-points .mp-head-sub { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 4px; }
+
+/* ── Panneaux — deux poids, la leçon de l'éditeur de roster ───────── */
+.ranking-manual-points .mp-panel { background: var(--white); border-radius: 10px; overflow: hidden; }
+.ranking-manual-points .mp-panel--form { background: var(--white); border: 1px solid var(--dark-5); }
+.ranking-manual-points .mp-panel--form .mp-panel-head { background: var(--dark-6); padding: 10px var(--p2); }
+.ranking-manual-points .mp-panel--form .mp-panel-title { font-size: var(--text-small); color: var(--dark-2); }
+.ranking-manual-points .mp-panel--list { box-shadow: 0 2px 14px rgba(0,48,73,0.07); border-top: 3px solid var(--main-blue); }
+.ranking-manual-points .mp-panel--list .mp-panel-title { font-size: var(--h4); font-weight: 600; color: var(--dark-0); }
+
+.ranking-manual-points .mp-panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--p1); padding: var(--p1) var(--p2);
+  border-bottom: 1px solid var(--dark-5); flex-wrap: wrap;
+}
+.ranking-manual-points .mp-panel-title {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-title); font-weight: 600; color: var(--dark-1);
+}
+.ranking-manual-points .mp-panel-note { font-size: var(--text-tiny); color: var(--dark-3); }
+.ranking-manual-points .mp-panel-body { padding: var(--p2); }
+
+/* ── Formulaire ───────────────────────────────────────────────────── */
+/* Deux rangées : identité de la ligne en haut, motif et action en bas.
+   Une seule rangée mettait le motif — qui porte une indication sous lui —
+   à côté de champs qui n'en ont pas, et rien ne s'alignait. */
+.ranking-manual-points .mp-form { display: flex; gap: var(--p2); align-items: flex-end; flex-wrap: wrap; }
+.ranking-manual-points .mp-form--second { margin-top: var(--p2); }
+.ranking-manual-points .mp-field { display: flex; flex-direction: column; gap: 5px; }
+/* Le contrôle de chaque champ arrive à la même hauteur, quelle que soit la
+   longueur du libellé. */
+.ranking-manual-points .mp-label { min-height: 15px; }
+.ranking-manual-points .mp-field--grow { flex: 1; min-width: 220px; }
+.ranking-manual-points .mp-label {
+  font-size: var(--text-tiny); color: var(--dark-3);
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.ranking-manual-points .mp-input {
+  padding: 9px 12px; border: 1px solid var(--dark-4); border-radius: 7px;
+  font-size: var(--text-small); color: var(--dark-1);
+  font-family: inherit; outline: none; background: var(--white);
+  transition: border-color 0.15s;
+}
+.ranking-manual-points .mp-input:focus { border-color: var(--main-blue); }
+.ranking-manual-points .mp-input--pts { width: 92px; text-align: center; font-variant-numeric: tabular-nums; }
+/* Réservée sur tous les champs de la rangée : sans elle, un champ qui porte
+   une indication descend son voisin d'une ligne, et le bouton s'aligne sur
+   l'indication plutôt que sur le champ de saisie. */
+.ranking-manual-points .mp-hint { font-size: 11px; color: var(--dark-4); min-height: 14px; }
+
+/* Les deux sens d'un ajustement, dits par l'écran et non devinés */
+.ranking-manual-points .mp-sign { display: flex; gap: 0; }
+.ranking-manual-points .mp-sign button {
+  padding: 9px 14px; border: 1px solid var(--dark-4); background: var(--white);
+  font-size: var(--text-small); font-weight: 500; cursor: pointer;
+  font-family: inherit; color: var(--dark-3);
+}
+.ranking-manual-points .mp-sign button:first-child { border-radius: 7px 0 0 7px; border-right: none; }
+.ranking-manual-points .mp-sign button:last-child { border-radius: 0 7px 7px 0; }
+.ranking-manual-points .mp-sign button.on.plus { background: rgba(98,149,132,0.15);  color: var(--green);  border-color: var(--green); }
+.ranking-manual-points .mp-sign button.on.minus { background: rgba(224,32,32,0.08);   color: var(--red);    border-color: var(--red); }
+
+/* ── Tableau ──────────────────────────────────────────────────────── */
+.ranking-manual-points .mp-table-wrap { overflow-x: auto; }
+.ranking-manual-points .mp-table { width: 100%; border-collapse: collapse; font-size: var(--text-small); }
+.ranking-manual-points .mp-table th {
+  text-align: left; padding: 8px var(--p2); font-size: var(--text-tiny);
+  color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--dark-5); white-space: nowrap;
+}
+.ranking-manual-points .mp-table th.n, .ranking-manual-points .mp-table td.n { text-align: right; }
+.ranking-manual-points .mp-table td { padding: 12px var(--p2); border-bottom: 1px solid var(--dark-6); vertical-align: middle; }
+/* INTERACTION — neutre, et exclue des lignes qui portent déjà un rôle */
+.ranking-manual-points .mp-table tbody tr:not(.mp-row--team):not(.mp-row--cols):hover { background: var(--dark-6); }
+
+/* ── Trois rôles, et la mesure a tranché comment les séparer ──────────
+   `--dark-6` (#F0F2F4) et `--dark-7` (#EFF2F5) diffèrent d'une unité par
+   canal : rapport 1.001, invisible. Le classement détaillé de production
+   oppose pourtant ces deux-là — `ranking-detailed-standings-widget.css`
+   lignes 40 et 44 — donc son survol ne se voit pas une ligne sur deux.
+
+   Un bleu à 6 % sur blanc donne (240,243,244) : c'est `--dark-7` à un
+   point près. La teinte seule ne sépare pas à cette densité. Ce qui sépare
+   ici, ce sont trois choses ensemble :
+     · un vrai pas de valeur — `--dark-5` contre `--dark-7`, rapport 1.106,
+       du même ordre que blanc→survol (1.124) ;
+     · un filet d'accent à gauche, indice non chromatique ;
+     · le chevron et la graisse, qui disent « en-tête » sans couleur.
+   Le règlement de l'accessibilité l'exige d'ailleurs : une information
+   portée par la couleur doit l'être aussi par la forme ou la position. */
+
+/* STRUCTURE — la bande de groupe */
+.ranking-manual-points .mp-row--team td {
+  background: var(--dark-5); padding: 10px var(--p2);
+  border-bottom: 1px solid var(--dark-4);
+  border-left: 3px solid var(--main-blue);
+  font-weight: 600; color: var(--dark-1);
+  font-size: var(--text-small); cursor: pointer; user-select: none;
+  transition: background 0.12s;
+}
+/* INTERACTION SUR LA STRUCTURE — même rôle, plus dense, teinté de marque */
+.ranking-manual-points .mp-row--team td:hover { background: rgba(0,48,73,0.14); }
+/* L'en-tête de colonnes vit dans chaque équipe, replié avec elle : posé une
+   seule fois tout en haut, il surplombait des sections fermées et ne
+   désignait rien. */
+.ranking-manual-points .mp-row--cols th { padding-top: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--dark-6); }
+.ranking-manual-points .mp-caret { display: inline-block; width: 12px; color: var(--main-blue); font-size: 11px; }
+/* `--dark-3` sur la bande teintée tombait sous 3:1. `--dark-2` passe 6:1. */
+/* `--dark-3` sur la bande tombait à 2.6:1. `--dark-2` donne 5.66:1. */
+.ranking-manual-points .mp-count { color: var(--dark-2); font-weight: 400; font-size: var(--text-tiny); margin-left: 8px; }
+.ranking-manual-points .mp-team-total {
+  float: right; font-family: var(--font-body); font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.ranking-manual-points .mp-team-total.plus { color: var(--green); }
+.ranking-manual-points .mp-team-total.minus { color: var(--red); }
+
+/* Sans graisse, comme les nombres du classement détaillé : la couleur et
+   les chiffres tabulaires suffisent à les distinguer du motif. */
+.ranking-manual-points .mp-pts { font-variant-numeric: tabular-nums; white-space: nowrap; font-size: var(--text-small); }
+.ranking-manual-points .mp-pts.plus { color: var(--green); }
+.ranking-manual-points .mp-pts.minus { color: var(--red); }
+
+.ranking-manual-points .mp-reason { color: var(--dark-1); }
+
+/* ✕ et non une poubelle : c'est le geste de retrait du reste du site —
+   six occurrences dans les gabarits de production, une seule poubelle. */
+.ranking-manual-points .mp-icon-btn {
+  border: none; background: none; cursor: pointer; padding: 4px 8px;
+  font-size: var(--text-small); line-height: 1; color: var(--dark-4);
+  border-radius: 5px; font-family: inherit;
+  transition: color 0.12s, background 0.12s;
+}
+.ranking-manual-points .mp-icon-btn:hover { color: var(--red); background: var(--dark-6); }
+
+/* ── Pied de conséquence — le ton change, la place ne bouge pas ───── */
+.ranking-manual-points .mp-consequence {
+  padding: var(--p1) var(--p2); background: var(--dark-6);
+  border-top: 1px solid var(--dark-5);
+  font-size: var(--text-small); color: var(--dark-3);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.ranking-manual-points .mp-consequence.shown { background: rgba(255,107,53,0.06); color: #9A5000; }
+
+/* ── Boutons ──────────────────────────────────────────────────────── */
+.ranking-manual-points .mp-btn {
+  padding: 9px 18px; border-radius: 7px; cursor: pointer;
+  font-size: var(--text-small); font-weight: 600; font-family: inherit;
+  border: 1px solid var(--dark-4); background: var(--white); color: var(--dark-2);
+  transition: all 0.15s;
+}
+.ranking-manual-points .mp-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
+.ranking-manual-points .mp-btn--primary { background: var(--main-blue); border-color: var(--main-blue); color: var(--white); }
+.ranking-manual-points .mp-btn--primary:hover { background: #00243a; color: var(--white); }
+
+/* ── État vide ────────────────────────────────────────────────────── */
+.ranking-manual-points .mp-empty { padding: var(--p3) var(--p2); text-align: center; }
+.ranking-manual-points .mp-empty-icon { font-size: 38px; opacity: 0.3; }
+.ranking-manual-points .mp-empty-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 600; color: var(--dark-2); margin-top: var(--p1); }
+.ranking-manual-points .mp-empty-text { font-size: var(--text-small); color: var(--dark-3); margin-top: 6px; max-width: 470px; margin-left: auto; margin-right: auto; }
+
+/* ── Sélecteur de démonstration ───────────────────────────────────── */
+.ranking-manual-points .state-pill {
+  padding: 5px 12px; border-radius: 14px; border: 1px solid var(--dark-4);
+  background: var(--white); color: var(--dark-2);
+  font-size: var(--text-tiny); font-weight: 600; cursor: pointer;
+}
+.ranking-manual-points .state-pill.active { background: var(--main-blue); color: var(--white); border-color: var(--main-blue); }
+
+
+/* ── Ce que la maquette n'avait pas ───────────────────────────────────────
+   `mp-line` n'a volontairement aucune regle : c'est un crochet structurel,
+   porte par les lignes que l'accordeon montre ou cache. */
+.ranking-manual-points .mp-back {
+  font-size: var(--text-tiny); color: var(--main-blue); cursor: pointer;
+  white-space: nowrap;
+}
+.ranking-manual-points .mp-back:hover { text-decoration: underline; }
+
+/* Le refus s'affiche sous le formulaire, pas a la place : la saisie reste
+   visible, et on corrige ce qui est nomme plutot que de tout retaper. */
+.ranking-manual-points .mp-error {
+  margin-top: var(--p1); padding: 8px 12px; border-radius: 8px;
+  background: rgba(224,32,32,0.08); border: 1px solid var(--red);
+  color: var(--red); font-size: var(--text-tiny);
+}
+
+/* Un motif absent se lit comme une absence, pas comme un texte gris parmi
+   d'autres. */
+.ranking-manual-points .mp-reason--absent { color: var(--dark-4); }
+
+@media (max-width: 768px) {
+  .ranking-manual-points .mp-head { flex-direction: column; align-items: stretch; }
+  .ranking-manual-points .mp-form { flex-direction: column; align-items: stretch; }
+  .ranking-manual-points .mp-field--grow { min-width: 0; }
+  /* « Attribué par » se replie sous le motif ; la colonne disparaît. */
+  .ranking-manual-points .mp-table th:nth-child(4), .ranking-manual-points .mp-table td:nth-child(4) { display: none; }
+}

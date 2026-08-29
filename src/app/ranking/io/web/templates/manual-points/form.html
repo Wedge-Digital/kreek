@@ -1,0 +1,103 @@
+{# Le formulaire d'attribution (carte 452).
+
+   ── Le sens est une bascule, pas un signe tape ─────────────────────────────
+   Deux boutons radio « + Bonus » / « − Penalite », et un champ de points qui
+   n'accepte que des entiers positifs. Un `-3` se tape aussi bien par erreur
+   qu'expres ; le handler compose les deux, et un `direction` inconnu est un 400
+   plutot qu'un repli sur « bonus » -- lequel transformerait une penalite en
+   recompense.
+
+   ── Le pied de consequence ─────────────────────────────────────────────────
+   Il annonce l'effet avant qu'il ne se produise, en etat d'ecran pur, derive
+   des trois champs. Aucun aller-retour : la phrase est deja calculable. #}
+<div class="mp-panel mp-panel--form" hx-disinherit="*">
+  <div class="mp-panel-head">
+    <div class="mp-panel-title">Attribuer des points</div>
+    {% if !vm.can_manage %}
+    <div class="mp-panel-note">Lecture seule — seuls les commissaires attribuent des points.</div>
+    {% endif %}
+  </div>
+
+  {% if vm.can_manage %}
+  {# La portee Alpine enveloppe le formulaire **et** le pied de consequence :
+     l'un ecrit les variables, l'autre les lit. Un `x-data` sur chacun les
+     dedoublerait, et la phrase ne bougerait jamais. #}
+  <div class="mp-panel-body" x-data="{ direction: 'bonus', points: '' }">
+    <form class="mp-form"
+          hx-post="{{ post_url }}"
+          hx-target="#mp-form"
+          hx-swap="innerHTML">
+
+      <div class="mp-field mp-field--grow">
+        <label class="mp-label" for="mp-team">Équipe</label>
+        <kreek-select id="mp-team"
+                      name="team_id"
+                      url="{{ teams_json_url }}"
+                      value-field="id"
+                      label-field="name"
+                      placeholder="Choisir une équipe…"
+                      {# `selected-value`, et non `value` : le composant lit ce nom-la, et ignorait
+                         l'autre **en silence** -- l'equipe restait dans l'attribut sans
+                         jamais s'afficher, et le commissaire la re-choisissait a chaque
+                         attribution. C'est precisement ce que ce report evite. #}
+                      {% if let Some(t) = vm.selected_team_id %}selected-value="{{ t }}"{% endif %}></kreek-select>
+      </div>
+
+      <div class="mp-field">
+        <div class="mp-label">Sens</div>
+        {# Les boutons de la maquette, doublés d'un champ caché : la valeur doit
+           partir dans le POST, et un `<button>` ne porte rien. Deux boutons
+           plutôt que deux radios parce que la feuille les habille ainsi — et
+           qu'un groupe de radios ne se colore pas en vert et rouge sans
+           réécrire son apparence de zéro. #}
+        <div class="mp-sign">
+          <button type="button" class="plus" :class="direction === 'bonus' && 'on'"
+                  @click="direction = 'bonus'"
+                  :aria-pressed="direction === 'bonus'">+ Bonus</button>
+          <button type="button" class="minus" :class="direction === 'penalty' && 'on'"
+                  @click="direction = 'penalty'"
+                  :aria-pressed="direction === 'penalty'">− Pénalité</button>
+        </div>
+        <input type="hidden" name="direction" :value="direction">
+      </div>
+
+      <div class="mp-field">
+        <label class="mp-label" for="mp-points">Points</label>
+        <input id="mp-points" class="mp-input mp-input--pts" type="number" name="points"
+               min="1" max="100" step="1" required x-model="points" placeholder="3">
+      </div>
+
+      <div class="mp-field mp-field--grow">
+        <label class="mp-label" for="mp-reason">Motif</label>
+        <input id="mp-reason" class="mp-input" type="text" name="reason"
+               maxlength="200" placeholder="Ex. forfait au troisième tour">
+        <div class="mp-hint">Facultatif, mais il s'affiche dans le relevé.</div>
+      </div>
+
+      <button type="submit" class="mp-btn mp-btn--primary">Attribuer</button>
+    </form>
+
+    {% if let Some(err) = vm.error %}
+    <div class="mp-error">{{ err }}</div>
+    {% endif %}
+
+    {# Etat d'ecran pur : la phrase se derive des deux champs, sans aller-retour.
+       Elle annonce l'effet **avant** qu'il ne se produise, ce qu'un message de
+       confirmation posterieur ne ferait pas. #}
+    <div class="mp-consequence">
+      <template x-if="!parseInt(points || '0', 10)">
+        <span>Choisissez une équipe et un nombre de points.</span>
+      </template>
+      <template x-if="parseInt(points || '0', 10) > 0">
+        <span>
+          L'équipe
+          <b x-text="direction === 'penalty' ? 'perdra' : 'gagnera'"></b>
+          <b x-text="points"></b>
+          <span x-text="parseInt(points, 10) > 1 ? 'points' : 'point'"></span>
+          au classement.
+        </span>
+      </template>
+    </div>
+  </div>
+  {% endif %}
+</div>

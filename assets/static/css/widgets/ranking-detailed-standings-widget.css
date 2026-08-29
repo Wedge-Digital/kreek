@@ -101,3 +101,27 @@
 .ranking-detailed-standings-widget .sd-table td,
 .ranking-detailed-standings-widget.sd-table td { padding: 8px 6px; }
 }
+
+/* ── Accès aux points manuels (carte 452) ─────────────────────────────────
+   Le lien porte la couleur de marque et un soulignement pointillé : la couleur
+   seule ne suffit pas à annoncer un lien, et la ligne entière est déjà
+   cliquable vers l'équipe — sans marque, le clic partirait au mauvais endroit
+   sans qu'on comprenne pourquoi. */
+.ranking-detailed-standings-widget .sd-manual-link,
+.ranking-detailed-standings-widget.sd-manual-link {
+  color: var(--main-blue); font-weight: 700; cursor: pointer;
+  border-bottom: 1px dotted var(--main-blue);
+}
+.ranking-detailed-standings-widget .sd-manual-link:hover,
+.ranking-detailed-standings-widget.sd-manual-link:hover { border-bottom-style: solid; }
+
+.ranking-detailed-standings-widget .ranking-detailed-standings-widget-manage,
+.ranking-detailed-standings-widget.ranking-detailed-standings-widget-manage { display: flex; justify-content: flex-end; margin-top: var(--p1); }
+.ranking-detailed-standings-widget .ranking-detailed-standings-widget-manage-link,
+.ranking-detailed-standings-widget.ranking-detailed-standings-widget-manage-link {
+  font-size: var(--text-tiny); color: var(--main-blue); cursor: pointer;
+  padding: 6px 12px; border: 1px solid var(--dark-5); border-radius: 8px;
+  background: var(--white);
+}
+.ranking-detailed-standings-widget .ranking-detailed-standings-widget-manage-link:hover,
+.ranking-detailed-standings-widget.ranking-detailed-standings-widget-manage-link:hover { border-color: var(--main-blue); }

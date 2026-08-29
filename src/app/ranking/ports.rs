@@ -176,12 +176,19 @@ pub trait IRankingRepository: Send + Sync {
         season_id: &str,
     ) -> Result<Vec<ManualPointRow>, RankingRepositoryError>;
 
+    /// `reason` est **optionnel**, et la colonne l'est aussi.
+    ///
+    /// `ManualPointsReason` garde son `not_empty` : *si* un motif est donné, il
+    /// ne peut pas être blanc. L'optionalité vit un cran au-dessus — c'est la
+    /// commande qui autorise l'absence, pas le value object qui autoriserait le
+    /// vide. Sans cette distinction, « facultatif » se serait traduit par une
+    /// chaîne vide en base, indistinguable d'un motif effacé par mégarde.
     async fn insert_manual_points(
         &self,
         season_id: &str,
         team_id: &str,
         points: i32,
-        reason: &str,
+        reason: Option<&str>,
         awarded_by: &str,
     ) -> Result<(), RankingRepositoryError>;
 

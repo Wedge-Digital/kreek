@@ -47,6 +47,13 @@ pub struct ClassementGroupVm {
 }
 
 pub struct ClassementWidgetVm {
+    /// L'URL de la page de gestion. Portée par le VM plutôt que construite dans
+    /// le gabarit : c'est le parti pris du projet, et `line.delete_url` du
+    /// relevé suit le même.
+    pub manual_points_url: String,
+    /// Le bouton d'accès ne s'affiche qu'aux commissaires ; la page qu'il ouvre
+    /// est consultable par tous. Le lien sur un point manuel, lui, est ouvert.
+    pub can_manage: bool,
     pub rules_missing: bool,
     pub groups: Vec<ClassementGroupVm>,
 }
@@ -71,18 +78,32 @@ impl IntoResponse for ClassementWidgetTemplate {
 
 pub async fn classement_widget(
     auth_session: AuthSession,
-    Path((space_id, _competition_id, season_id)): Path<(String, String, String)>,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     if auth_session.user.is_none() {
         return StatusCode::UNAUTHORIZED.into_response();
     }
 
-    let vm = build_vm(&state, &space_id, &season_id).await;
+    let user_id = auth_session.user.as_ref().map(|u| u.id.to_string());
+    let vm = build_vm(
+        &state,
+        &space_id,
+        &competition_id,
+        &season_id,
+        user_id.as_deref(),
+    )
+    .await;
     ClassementWidgetTemplate { vm }.into_response()
 }
 
-async fn build_vm(state: &AppState, space_id: &str, season_id: &str) -> ClassementWidgetVm {
+async fn build_vm(
+    state: &AppState,
+    space_id: &str,
+    competition_id: &str,
+    season_id: &str,
+    user_id: Option<&str>,
+) -> ClassementWidgetVm {
     let (rules, teams, lines, groups, manual) = tokio::join!(
         state.ranking.competition_port.find_ranking_rules(season_id),
         state
@@ -119,7 +140,23 @@ async fn build_vm(state: &AppState, space_id: &str, season_id: &str) -> Classeme
         )
     };
 
+    let routes = crate::app::routes::AppRoutes::default();
     ClassementWidgetVm {
+        manual_points_url: routes
+            .ranking
+            .manual_points(space_id, competition_id, season_id),
+        can_manage: match user_id {
+            Some(id) => {
+                crate::app::ranking::use_cases::manual_points::autorise(
+                    state.ranking.admin_port.as_ref(),
+                    id,
+                    competition_id,
+                    space_id,
+                )
+                .await
+            }
+            None => false,
+        },
         rules_missing,
         groups: groups_vm,
     }

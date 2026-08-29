@@ -303,7 +303,7 @@ impl IRankingRepository for PgRankingRepository {
         season_id: &str,
         team_id: &str,
         points: i32,
-        reason: &str,
+        reason: Option<&str>,
         awarded_by: &str,
     ) -> Result<(), RankingRepositoryError> {
         sqlx::query!(
@@ -875,7 +875,7 @@ mod tests {
             &season.to_string(),
             &team.to_string(),
             points,
-            motif,
+            Some(motif),
             "DevCoach",
         )
         .await
@@ -1006,6 +1006,28 @@ mod tests {
             0,
             "idempotent : rien à supprimer n'est pas une erreur"
         );
+    }
+
+    /// Le motif est facultatif : son absence s'écrit `NULL`, pas une chaîne
+    /// vide. Les deux se liraient pareil à l'écran, mais seule la première dit
+    /// « aucun motif » plutôt que « motif effacé ».
+    #[sqlx::test]
+    async fn un_motif_absent_s_ecrit_null(pool: PgPool) {
+        let repo = PgRankingRepository::new(pool);
+        let season = SeasonId::new();
+
+        repo.insert_manual_points(
+            &season.to_string(),
+            &TeamId::new().to_string(),
+            3,
+            None,
+            "DevCoach",
+        )
+        .await
+        .unwrap();
+
+        let lignes = repo.list_manual_points(&season.to_string()).await.unwrap();
+        assert_eq!(lignes[0].reason, None);
     }
 
     /// **Le cas passant qu'on croirait interdit.** Deux fois trois points à la

@@ -47,7 +47,19 @@
                 <div class="standings-num">{{ row.losses }}</div>
                 {# Un tiret pour « aucun », jamais un zero : zero point manuel
                    n'existe pas, le domaine le refuse. #}
-                <div class="standings-num standings-manual">{% if let Some(m) = row.manual %}{{ m }}{% else %}—{% endif %}</div>
+                <div class="standings-num standings-manual">
+                    {%- if let Some(m) = row.manual -%}
+                    {# Un point manuel se voit ; on veut savoir d'ou il vient. Le
+                       tiret d'une absence n'est pas un lien. #}
+                    <a class="standings-manual-link"
+                       hx-get="{{ vm.manual_points_url }}"
+                       hx-target="#app-content"
+                       hx-select="#app-content"
+                       hx-swap="outerHTML"
+                       hx-push-url="true"
+                       title="Voir le detail des points manuels">{{ m }}</a>
+                    {%- else -%}—{%- endif -%}
+                </div>
                 {# « Pts » montre le total, points manuels compris : c'est sur lui
                    que le classement est ordonne. Afficher les seuls points de
                    match rendrait l'ordre incomprehensible. #}
@@ -60,3 +72,19 @@
     {% endfor %}
 {% endif %}
 </div>
+
+{# ── Le bouton est dupliqué dans les deux onglets de classement, exprès ──────
+   La page de compétition compte six onglets, et au-dessus d'eux ce bouton
+   s'afficherait sur Calendrier, Équipes et Statistiques, où il n'a rien à
+   faire. La duplication est donc **le choix correct** : ne la « factorisez »
+   pas au-dessus des onglets. #}
+{% if vm.can_manage %}
+<div class="ranking-classement-widget-manage">
+  <a class="ranking-classement-widget-manage-link"
+     hx-get="{{ vm.manual_points_url }}"
+     hx-target="#app-content"
+     hx-select="#app-content"
+     hx-swap="outerHTML"
+     hx-push-url="true">⚖️ Gérer les points manuels</a>
+</div>
+{% endif %}
