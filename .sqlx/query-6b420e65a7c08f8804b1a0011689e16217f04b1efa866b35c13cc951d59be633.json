@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ranking__manual_points\n                   (season_id, team_id, points, reason, awarded_by)\n               VALUES ($1, $2, $3, $4, $5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int4",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6b420e65a7c08f8804b1a0011689e16217f04b1efa866b35c13cc951d59be633"
+}

@@ -2,6 +2,8 @@ use crate::app::ranking::domain::ranking_line::RankingLine;
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use async_trait::async_trait;
+use std::collections::HashMap;
+use time::OffsetDateTime;
 
 // ── Repository interne (event-sourcing/projection du BC, table append-only) ────
 
@@ -147,6 +149,66 @@ pub trait IRankingRepository: Send + Sync {
         season_id: &str,
         lines: &[RankingLine],
     ) -> Result<(), RankingRepositoryError>;
+
+    // ── Points manuels (carte 450) ────────────────────────────────────────────
+    //
+    // Ils vivent dans leur propre table, `ranking__manual_points`, et non dans
+    // `ranking_lines` : le rejeu recalcule celle-ci depuis zéro à partir des
+    // cumuls de match, et effacerait donc tout ce qu'on y aurait rangé — sans
+    // qu'aucune erreur ne le signale, puisque le rejeu réussit.
+
+    /// Total par équipe, agrégé par la base.
+    ///
+    /// **Une lecture distincte de `list_manual_points`, et non un `SUM` en
+    /// Rust** : le classement ne veut qu'un nombre par équipe, et un `GROUP BY`
+    /// coûte moins qu'une liste rapatriée puis repliée. Les équipes sans ligne
+    /// sont **absentes** de la carte — elle n'est jamais complète, et son
+    /// consommateur lit zéro pour les absentes.
+    async fn find_manual_totals_for_season(
+        &self,
+        season_id: &str,
+    ) -> Result<HashMap<String, i32>, RankingRepositoryError>;
+
+    /// Chaque ligne avec son motif, pour la page de gestion — qui doit montrer
+    /// *pourquoi*, ce qu'un total ne dit pas.
+    async fn list_manual_points(
+        &self,
+        season_id: &str,
+    ) -> Result<Vec<ManualPointRow>, RankingRepositoryError>;
+
+    async fn insert_manual_points(
+        &self,
+        season_id: &str,
+        team_id: &str,
+        points: i32,
+        reason: &str,
+        awarded_by: &str,
+    ) -> Result<(), RankingRepositoryError>;
+
+    /// Rend le nombre de lignes supprimées — zéro vaut « introuvable ».
+    ///
+    /// **La saison est dans le `WHERE`**, et ce n'est pas une précaution
+    /// décorative : `space_scope` résout les identifiants du chemin qui ont un
+    /// résolveur, et `{point_id}` n'en a aucun. Sans `AND season_id`, un
+    /// identifiant deviné supprimerait la ligne d'une autre compétition. Le
+    /// refermer par le `WHERE` plutôt que par un contrôle applicatif, c'est la
+    /// leçon de la carte 416 : un contrôle s'écrit, puis s'oublie.
+    async fn delete_manual_points(
+        &self,
+        id: i64,
+        season_id: &str,
+    ) -> Result<u64, RankingRepositoryError>;
+}
+
+/// Une ligne de point manuel, telle que la page de gestion l'affiche. DTO de
+/// lecture : primitifs acceptés (règle CQRS du `CLAUDE.md`).
+pub struct ManualPointRow {
+    pub id: i64,
+    pub team_id: String,
+    pub points: i32,
+    pub reason: Option<String>,
+    pub awarded_by: String,
+    pub awarded_at: OffsetDateTime,
 }
 
 // ── ACL vers le BC `competitions` (règles de classement + équipes inscrites) ───
@@ -207,4 +269,25 @@ pub trait IRankingCompetitionPort: Send + Sync {
     async fn find_ranking_rules(&self, season_id: &str) -> Option<RankingRulesInfo>;
     async fn find_enrolled_teams(&self, season_id: &str) -> Vec<EnrolledTeamInfo>;
     async fn find_groups(&self, season_id: &str) -> Vec<RankingGroupInfo>;
+}
+
+// ── ACL d'autorisation (carte 450) ────────────────────────────────────────────
+
+/// Qui a le droit d'attribuer ou de retirer des points manuels.
+///
+/// **Deux méthodes et non une `is_admin`.** Les autorisations viennent de deux
+/// sources indépendantes — la compétition porte ses administrateurs, l'espace
+/// porte son `SpaceProfile` — et les fondre en une seule réponse cacherait
+/// **laquelle** a répondu. Le BC `competitions` a fait ce choix inverse dans
+/// `require_admin_access`, et la carte 426 a dû écrire deux tests distincts pour
+/// séparer à nouveau ce que le `||` avait mélangé : sans eux, supprimer l'une
+/// des deux branches ne rougissait rien.
+///
+/// Un échec de lecture rend `false` : refuser est le comportement sûr, et
+/// remonter une erreur d'infrastructure jusqu'à l'écran n'apprendrait rien de
+/// plus au commissaire.
+#[async_trait]
+pub trait IRankingAdminPort: Send + Sync {
+    async fn is_competition_admin(&self, user_id: &str, competition_id: &str) -> bool;
+    async fn is_space_admin(&self, user_id: &str, space_id: &str) -> bool;
 }

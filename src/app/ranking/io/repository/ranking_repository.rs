@@ -1,12 +1,13 @@
 use crate::app::ranking::domain::ranking_line::RankingLine;
 use crate::app::ranking::ports::{
-    IRankingRepository, RankingLineFullRow, RankingLineRow, RankingRepositoryError,
+    IRankingRepository, ManualPointRow, RankingLineFullRow, RankingLineRow, RankingRepositoryError,
 };
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::sulid::SUlid;
 use async_trait::async_trait;
 use sqlx::PgPool;
+use std::collections::HashMap;
 
 pub struct PgRankingRepository {
     pool: PgPool,
@@ -242,6 +243,99 @@ impl IRankingRepository for PgRankingRepository {
 
         tx.commit().await.map_err(db_err)?;
         Ok(())
+    }
+
+    // ── Points manuels (carte 450) ────────────────────────────────────────────
+
+    async fn find_manual_totals_for_season(
+        &self,
+        season_id: &str,
+    ) -> Result<HashMap<String, i32>, RankingRepositoryError> {
+        // `SUM` rend `numeric` et vaut `NULL` sur un groupe vide — impossible
+        // ici puisque `GROUP BY` n'engendre pas de groupe sans ligne, mais sqlx
+        // ne le sait pas. Le `::int` et le `!` le lui disent.
+        let rows = sqlx::query!(
+            r#"SELECT team_id, SUM(points)::int AS "total!"
+               FROM ranking__manual_points
+               WHERE season_id = $1
+               GROUP BY team_id"#,
+            season_id,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(db_err)?;
+
+        Ok(rows.into_iter().map(|r| (r.team_id, r.total)).collect())
+    }
+
+    async fn list_manual_points(
+        &self,
+        season_id: &str,
+    ) -> Result<Vec<ManualPointRow>, RankingRepositoryError> {
+        // Équipe puis date : la page groupe par équipe, et à l'intérieur d'un
+        // groupe on lit les décisions dans l'ordre où elles ont été prises.
+        let rows = sqlx::query!(
+            r#"SELECT id, team_id, points, reason, awarded_by, awarded_at
+               FROM ranking__manual_points
+               WHERE season_id = $1
+               ORDER BY team_id, awarded_at, id"#,
+            season_id,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(db_err)?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| ManualPointRow {
+                id: r.id,
+                team_id: r.team_id,
+                points: r.points,
+                reason: r.reason,
+                awarded_by: r.awarded_by,
+                awarded_at: r.awarded_at,
+            })
+            .collect())
+    }
+
+    async fn insert_manual_points(
+        &self,
+        season_id: &str,
+        team_id: &str,
+        points: i32,
+        reason: &str,
+        awarded_by: &str,
+    ) -> Result<(), RankingRepositoryError> {
+        sqlx::query!(
+            r#"INSERT INTO ranking__manual_points
+                   (season_id, team_id, points, reason, awarded_by)
+               VALUES ($1, $2, $3, $4, $5)"#,
+            season_id,
+            team_id,
+            points,
+            reason,
+            awarded_by,
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(db_err)?;
+        Ok(())
+    }
+
+    async fn delete_manual_points(
+        &self,
+        id: i64,
+        season_id: &str,
+    ) -> Result<u64, RankingRepositoryError> {
+        let r = sqlx::query!(
+            "DELETE FROM ranking__manual_points WHERE id = $1 AND season_id = $2",
+            id,
+            season_id,
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(db_err)?;
+        Ok(r.rows_affected())
     }
 }
 
@@ -765,6 +859,206 @@ mod tests {
         assert_eq!(
             lues[0].ranking_points, 3,
             "c'est bien l'ancienne, pas une des nouvelles"
+        );
+    }
+
+    // ── Points manuels (carte 450) ────────────────────────────────────────────
+
+    async fn attribuer(
+        repo: &PgRankingRepository,
+        season: &SeasonId,
+        team: &TeamId,
+        points: i32,
+        motif: &str,
+    ) {
+        repo.insert_manual_points(
+            &season.to_string(),
+            &team.to_string(),
+            points,
+            motif,
+            "DevCoach",
+        )
+        .await
+        .unwrap();
+    }
+
+    #[sqlx::test]
+    async fn insert_puis_totals_somme_les_lignes(pool: PgPool) {
+        let repo = PgRankingRepository::new(pool);
+        let season = SeasonId::new();
+        let equipe = TeamId::new();
+        let autre = TeamId::new();
+
+        attribuer(&repo, &season, &equipe, 3, "forfait adverse").await;
+        attribuer(&repo, &season, &equipe, -1, "retard de feuille").await;
+        attribuer(&repo, &season, &autre, 2, "rattrapage").await;
+
+        let totaux = repo
+            .find_manual_totals_for_season(&season.to_string())
+            .await
+            .unwrap();
+
+        assert_eq!(totaux.get(&equipe.to_string()), Some(&2), "3 - 1");
+        assert_eq!(totaux.get(&autre.to_string()), Some(&2));
+        assert_eq!(totaux.len(), 2);
+    }
+
+    /// Une équipe sans ligne est **absente** de la carte, elle n'y figure pas à
+    /// zéro. C'est ce qui rend le `unwrap_or(0)` du service légitime plutôt que
+    /// défensif.
+    #[sqlx::test]
+    async fn une_equipe_sans_ligne_est_absente_des_totaux(pool: PgPool) {
+        let repo = PgRankingRepository::new(pool);
+        let season = SeasonId::new();
+        let sans_ligne = TeamId::new();
+
+        attribuer(&repo, &season, &TeamId::new(), 3, "forfait").await;
+
+        let totaux = repo
+            .find_manual_totals_for_season(&season.to_string())
+            .await
+            .unwrap();
+
+        assert!(!totaux.contains_key(&sans_ligne.to_string()));
+    }
+
+    #[sqlx::test]
+    async fn list_rend_les_lignes_ordonnees(pool: PgPool) {
+        let repo = PgRankingRepository::new(pool);
+        let season = SeasonId::new();
+        // Deux équipes dont l'ordre alphabétique des identifiants est connu :
+        // sans cela le test affirmerait un tri qu'il ne contrôle pas.
+        let (mut a, mut b) = (TeamId::new(), TeamId::new());
+        if a.to_string() > b.to_string() {
+            std::mem::swap(&mut a, &mut b);
+        }
+
+        attribuer(&repo, &season, &b, 1, "seconde équipe").await;
+        attribuer(&repo, &season, &a, 2, "première ligne").await;
+        attribuer(&repo, &season, &a, 3, "seconde ligne").await;
+
+        let lignes = repo.list_manual_points(&season.to_string()).await.unwrap();
+
+        let ordre: Vec<(&str, i32)> = lignes
+            .iter()
+            .map(|l| (l.team_id.as_str(), l.points))
+            .collect();
+        assert_eq!(
+            ordre,
+            vec![
+                (a.to_string().as_str(), 2),
+                (a.to_string().as_str(), 3),
+                (b.to_string().as_str(), 1)
+            ],
+            "équipe puis date"
+        );
+        assert_eq!(lignes[0].reason.as_deref(), Some("première ligne"));
+        assert_eq!(lignes[0].awarded_by, "DevCoach");
+    }
+
+    /// **Le test du `AND season_id`.**
+    ///
+    /// `space_scope` ne résout pas `{point_id}` : sans la saison au `WHERE`, un
+    /// identifiant deviné supprimerait la ligne d'une autre compétition. Le
+    /// contrôle vit dans la requête plutôt que dans le use case, parce qu'un
+    /// contrôle applicatif s'écrit puis s'oublie.
+    #[sqlx::test]
+    async fn delete_d_une_autre_saison_ne_supprime_rien(pool: PgPool) {
+        let repo = PgRankingRepository::new(pool);
+        let sienne = SeasonId::new();
+        let etrangere = SeasonId::new();
+        attribuer(&repo, &sienne, &TeamId::new(), 3, "sanction").await;
+        let id = repo.list_manual_points(&sienne.to_string()).await.unwrap()[0].id;
+
+        let supprimees = repo
+            .delete_manual_points(id, &etrangere.to_string())
+            .await
+            .unwrap();
+
+        assert_eq!(supprimees, 0);
+        assert_eq!(
+            repo.list_manual_points(&sienne.to_string())
+                .await
+                .unwrap()
+                .len(),
+            1,
+            "la ligne d'origine doit être intacte"
+        );
+    }
+
+    #[sqlx::test]
+    async fn delete_deux_fois_rend_zero_la_seconde(pool: PgPool) {
+        let repo = PgRankingRepository::new(pool);
+        let season = SeasonId::new();
+        attribuer(&repo, &season, &TeamId::new(), 3, "sanction").await;
+        let id = repo.list_manual_points(&season.to_string()).await.unwrap()[0].id;
+
+        assert_eq!(
+            repo.delete_manual_points(id, &season.to_string())
+                .await
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            repo.delete_manual_points(id, &season.to_string())
+                .await
+                .unwrap(),
+            0,
+            "idempotent : rien à supprimer n'est pas une erreur"
+        );
+    }
+
+    /// **Le cas passant qu'on croirait interdit.** Deux fois trois points à la
+    /// même équipe, ce sont deux décisions et deux motifs — pas un doublon.
+    #[sqlx::test]
+    async fn deux_lignes_identiques_sont_acceptees(pool: PgPool) {
+        let repo = PgRankingRepository::new(pool);
+        let season = SeasonId::new();
+        let equipe = TeamId::new();
+
+        attribuer(&repo, &season, &equipe, 3, "forfait au tour 2").await;
+        attribuer(&repo, &season, &equipe, 3, "forfait au tour 5").await;
+
+        let totaux = repo
+            .find_manual_totals_for_season(&season.to_string())
+            .await
+            .unwrap();
+        assert_eq!(totaux.get(&equipe.to_string()), Some(&6));
+        assert_eq!(
+            repo.list_manual_points(&season.to_string())
+                .await
+                .unwrap()
+                .len(),
+            2
+        );
+    }
+
+    /// Les lignes d'une autre saison n'entrent dans aucune des deux lectures.
+    #[sqlx::test]
+    async fn les_lectures_sont_cloisonnees_par_saison(pool: PgPool) {
+        let repo = PgRankingRepository::new(pool);
+        let sienne = SeasonId::new();
+        let voisine = SeasonId::new();
+        let equipe = TeamId::new();
+
+        attribuer(&repo, &sienne, &equipe, 3, "chez elle").await;
+        attribuer(&repo, &voisine, &equipe, 50, "chez la voisine").await;
+
+        let totaux = repo
+            .find_manual_totals_for_season(&sienne.to_string())
+            .await
+            .unwrap();
+        assert_eq!(
+            totaux.get(&equipe.to_string()),
+            Some(&3),
+            "50 ne doit pas fuir"
+        );
+        assert_eq!(
+            repo.list_manual_points(&sienne.to_string())
+                .await
+                .unwrap()
+                .len(),
+            1
         );
     }
 }

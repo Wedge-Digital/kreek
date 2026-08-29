@@ -149,11 +149,13 @@ pub fn to_domain_rules(info: crate::app::ranking::ports::RankingRulesInfo) -> Ra
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::ranking::ports::ManualPointRow;
     use crate::app::ranking::ports::{
         BonusRuleInfo, EnrolledTeamInfo, RankingLineFullRow, RankingLineRow,
         RankingRepositoryError, RankingRulesInfo,
     };
     use async_trait::async_trait;
+    use std::collections::HashMap;
     use std::sync::Mutex;
 
     fn no_bonus() -> BonusRuleInfo {
@@ -264,6 +266,35 @@ mod tests {
                 .unwrap()
                 .retain(|l| l.match_report_id.to_string() != match_report_id);
             Ok(())
+        }
+        async fn find_manual_totals_for_season(
+            &self,
+            _: &str,
+        ) -> Result<HashMap<String, i32>, RankingRepositoryError> {
+            Ok(HashMap::new())
+        }
+        async fn list_manual_points(
+            &self,
+            _: &str,
+        ) -> Result<Vec<ManualPointRow>, RankingRepositoryError> {
+            Ok(Vec::new())
+        }
+        async fn insert_manual_points(
+            &self,
+            _: &str,
+            _: &str,
+            _: i32,
+            _: &str,
+            _: &str,
+        ) -> Result<(), RankingRepositoryError> {
+            Ok(())
+        }
+        async fn delete_manual_points(
+            &self,
+            _: i64,
+            _: &str,
+        ) -> Result<u64, RankingRepositoryError> {
+            Ok(0)
         }
     }
 

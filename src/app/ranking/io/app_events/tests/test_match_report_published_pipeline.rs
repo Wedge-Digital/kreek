@@ -120,11 +120,25 @@ where
     panic!("condition never satisfied within timeout");
 }
 
+/// Ce banc n'exerce aucune autorisation : il vérifie le tuyau app event →
+/// lignes de classement. La doublure refuse tout, ce qui est le défaut sûr.
+struct FakeAdmin;
+
+#[async_trait::async_trait]
+impl crate::app::ranking::ports::IRankingAdminPort for FakeAdmin {
+    async fn is_competition_admin(&self, _: &str, _: &str) -> bool {
+        false
+    }
+    async fn is_space_admin(&self, _: &str, _: &str) -> bool {
+        false
+    }
+}
+
 #[sqlx::test]
 async fn match_report_published_creates_two_ranking_lines(pool: PgPool) {
     let app_event_bus = new_bus();
     let competition_port: Arc<dyn IRankingCompetitionPort> = Arc::new(FakeCompetitionPort);
-    let ranking = RankingContext::new(&pool, competition_port.clone());
+    let ranking = RankingContext::new(&pool, competition_port.clone(), Arc::new(FakeAdmin));
     match_report_published_listener::init(
         &app_event_bus,
         ranking.repository.clone(),
@@ -177,7 +191,7 @@ async fn match_report_published_creates_two_ranking_lines(pool: PgPool) {
 async fn match_report_published_persists_the_tiebreak_counters(pool: PgPool) {
     let app_event_bus = new_bus();
     let competition_port: Arc<dyn IRankingCompetitionPort> = Arc::new(FakeCompetitionPort);
-    let ranking = RankingContext::new(&pool, competition_port.clone());
+    let ranking = RankingContext::new(&pool, competition_port.clone(), Arc::new(FakeAdmin));
     match_report_published_listener::init(
         &app_event_bus,
         ranking.repository.clone(),

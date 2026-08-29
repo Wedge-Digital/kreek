@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, team_id, points, reason, awarded_by, awarded_at\n               FROM ranking__manual_points\n               WHERE season_id = $1\n               ORDER BY team_id, awarded_at, id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "team_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "points",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "reason",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "awarded_by",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "awarded_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "ee61272413d0e15a33520cba21166483d03e7a730a0f55b277baeb048d28fd42"
+}

@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT team_id, SUM(points)::int AS \"total!\"\n               FROM ranking__manual_points\n               WHERE season_id = $1\n               GROUP BY team_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "team_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "total!",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "6dbb3fa3b5a851c19b599b83ba7e90ebfe34b5df6d236884e2231fda884c8a15"
+}

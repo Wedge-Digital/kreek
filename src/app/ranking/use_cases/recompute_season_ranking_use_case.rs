@@ -191,6 +191,7 @@ mod tests {
         CasualtiesInflicted, CompletionsMade, DrawCount, FoulsCommitted, MatchScore, MatchStats,
         RankingPoints, TdFor, WinCount,
     };
+    use crate::app::ranking::ports::ManualPointRow;
     use crate::app::ranking::ports::{
         BonusRuleInfo, EnrolledTeamInfo, RankingGroupInfo, RankingLineRow, RankingRulesInfo,
         TiebreakSettingInfo,
@@ -198,6 +199,7 @@ mod tests {
     use crate::app::shared_kernel::bloodbowl::team::TeamId;
     use async_trait::async_trait;
     use chrono::Utc;
+    use std::collections::HashMap;
     use std::sync::Mutex;
 
     // ── Doublures ────────────────────────────────────────────────────────────
@@ -249,6 +251,35 @@ mod tests {
             *self.remplacements.lock().unwrap() += 1;
             *self.lines.lock().unwrap() = lines.to_vec();
             Ok(())
+        }
+        async fn find_manual_totals_for_season(
+            &self,
+            _: &str,
+        ) -> Result<HashMap<String, i32>, RankingRepositoryError> {
+            Ok(HashMap::new())
+        }
+        async fn list_manual_points(
+            &self,
+            _: &str,
+        ) -> Result<Vec<ManualPointRow>, RankingRepositoryError> {
+            Ok(Vec::new())
+        }
+        async fn insert_manual_points(
+            &self,
+            _: &str,
+            _: &str,
+            _: i32,
+            _: &str,
+            _: &str,
+        ) -> Result<(), RankingRepositoryError> {
+            Ok(())
+        }
+        async fn delete_manual_points(
+            &self,
+            _: i64,
+            _: &str,
+        ) -> Result<u64, RankingRepositoryError> {
+            Ok(0)
         }
     }
 

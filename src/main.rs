@@ -533,7 +533,14 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
             )),
             event_bus.clone(),
         ),
-        ranking: RankingContext::new(&pool, ranking_competition_port),
+        ranking: RankingContext::new(
+            &pool,
+            ranking_competition_port,
+            Arc::new(crate::infrastructure::ranking::admin_adapter::RankingAdminAdapter::new(
+                Arc::new(crate::app::competitions::io::repository::competition_repository::CompetitionRepository::new(pool.clone())),
+                Arc::new(crate::app::spaces::io::repository::space_repository::SpaceRepository::new(pool.clone())),
+            )),
+        ),
         // Un résolveur par ressource identifiable dans un chemin. Les six
         // autres BCs arrivent avec les cartes 318 à 322 ; un paramètre sans
         // résolveur passe, faute de quoi la migration devrait être atomique.

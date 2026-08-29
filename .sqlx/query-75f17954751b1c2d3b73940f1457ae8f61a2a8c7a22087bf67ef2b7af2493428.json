@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM ranking__manual_points WHERE id = $1 AND season_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "75f17954751b1c2d3b73940f1457ae8f61a2a8c7a22087bf67ef2b7af2493428"
+}
