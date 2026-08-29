@@ -16,6 +16,7 @@ from playwright.sync_api import Page, expect
 
 from competition_lifecycle import BASE_URL, build_full_competition
 from db_helpers import query_db
+from htmx_helpers import cliquer_quand_cable, cliquer_quand_cable_locator
 from match_report_helpers import play_match
 from team_phase_helpers import traverser_erreurs_couteuses
 
@@ -150,9 +151,21 @@ def roster_ctx(browser, space_id):
         ligne = page.locator(".dis-table tbody tr").filter(
             has=page.locator(f".col-num:text-is('{maillot_libere}')")
         )
-        ligne.locator(".fire-btn").click()
+        # **`cliquer_quand_cable` et non `click`.** Les deux boutons portent des
+        # attributs htmx, et le panier est **réinjecté** par le premier clic :
+        # le second tombe donc dans la fenêtre où l'élément est peint, cliquable
+        # et inerte. Attendre l'apparition de la ligne — ce que fait le `expect`
+        # ci-dessous — ne suffit pas : `CLAUDE.md` le dit, la classe
+        # `.htmx-request` est retirée *avant* que le contenu inséré soit câblé.
+        #
+        # Le clic perdu ne produit rien : pas de requête, pas d'erreur de
+        # console. La validation ne partait pas, l'équipe restait en
+        # `Dismissals`, et `traverser_erreurs_couteuses` le constatait vingt
+        # secondes plus tard — un symptôme qui accuse la phase alors que la cause
+        # est ici. Un échec sur huit exécutions.
+        cliquer_quand_cable_locator(page, ligne.locator(".fire-btn"))
         expect(page.locator(".dis-cart .recap-row")).to_have_count(1, timeout=10000)
-        page.locator(".dis-cart .cta-primary").click()
+        cliquer_quand_cable(page, ".dis-cart .cta-primary")
 
         # La phase des erreurs coûteuses s'intercale ici depuis l'épic E13 : cette
         # équipe a encaissé le gain de match par défaut, elle doit donc un jet.

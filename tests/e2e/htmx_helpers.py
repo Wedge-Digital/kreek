@@ -70,3 +70,18 @@ def cliquer_quand_cable(page: Page, selecteur: str, timeout: int = 10000) -> Non
     """Clique une fois l'élément câblé — jamais avant."""
     attendre_cablage(page, selecteur, timeout)
     page.locator(selecteur).first.click()
+
+
+def cliquer_quand_cable_locator(page: Page, cible, timeout: int = 10000) -> None:
+    """Même clic, pour une cible qu'un sélecteur seul ne désigne pas.
+
+    Une ligne de tableau retrouvée par `.filter(has=…)`, par exemple : les
+    moteurs propres à Playwright ne sont pas des sélecteurs CSS, et
+    `cliquer_quand_cable` ne peut pas les retrouver depuis le navigateur.
+
+    L'attente avait déjà sa variante par poignée ; le clic ne l'avait pas, et
+    l'appelant se rabattait sur un `.click()` nu — c'est-à-dire sur le piège
+    même que ces helpers existent pour fermer.
+    """
+    attendre_cablage_locator(page, cible, timeout)
+    cible.first.click()

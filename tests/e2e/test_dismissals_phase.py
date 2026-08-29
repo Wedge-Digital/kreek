@@ -31,7 +31,7 @@ from playwright.sync_api import Page, expect
 
 from competition_lifecycle import BASE_URL, build_full_competition
 from db_helpers import query_db
-from htmx_helpers import attendre_cablage_locator
+from htmx_helpers import attendre_cablage_locator, cliquer_quand_cable
 from team_phase_helpers import traverser_erreurs_couteuses
 from match_report_helpers import (
     create_draft,
@@ -463,7 +463,10 @@ def test_06_valider_retire_les_joueurs_sans_toucher_la_tresorerie(page: Page, re
     renvoye = _joueur_au_maillot(team_id, MAILLOT_RENVOYE)
     blesse = renvois_ctx["blesse"]
 
-    page.locator(".dis-cart .cta-primary").click()
+    # Le panier est réinjecté à chaque ajout : ce bouton tombe dans la fenêtre
+    # où htmx ne l'a pas encore câblé. Ce test n'a pas échoué, mais il portait la
+    # même fragilité que celle mesurée dans `test_roster_edition`.
+    cliquer_quand_cable(page, ".dis-cart .cta-primary")
     # **Plus `ReadyToPlay` depuis l'épic E13** : au-dessus de 100 kPo la
     # validation ouvre la phase des erreurs coûteuses, et cette équipe a encaissé
     # le gain de match par défaut. C'est ce qui rend l'assertion de trésorerie
