@@ -201,3 +201,83 @@
   color: var(--red); font-weight: 600;
 }
 .competition-admin-settings .pool-actions { margin-top: var(--p1); }
+
+/* ── Panneau « Tiers & coups de pouce » (carte 424) ────────────────────────
+   Blocs de tier **copiés** de `pages/new-competition-phase-2.css`, seul le
+   préfixe de portée change (règle 5 : on ne réécrit pas ce qu'on déplace).
+
+   Emprunter la classe `new-competition-phase-2` à cette page-là aurait évité la
+   copie, mais fait déborder sa feuille sur une page qu'elle ne couvrait pas —
+   ce que le contrôle C du suivi visuel signale, et à raison.
+
+   Les puces, elles, ne sont pas copiées : `widgets/inducement-grid.css` est
+   scopée `.inducement-grid`, classe que le widget porte lui-même. Elle
+   fonctionne partout où le widget est monté. */
+.competition-admin-settings .tier-block,
+.competition-admin-settings.tier-block { border: 1px solid var(--dark-5); border-radius: 8px; overflow: hidden; margin-bottom: var(--p2); }
+.competition-admin-settings .tier-head,
+.competition-admin-settings.tier-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 16px; border-bottom: 1px solid var(--dark-5);
+}
+.competition-admin-settings .tier-1 .tier-head,
+.competition-admin-settings.tier-1 .tier-head { background: rgba(230,57,70,0.08); }
+.competition-admin-settings .tier-2 .tier-head,
+.competition-admin-settings.tier-2 .tier-head { background: rgba(255,107,53,0.08); }
+.competition-admin-settings .tier-3 .tier-head,
+.competition-admin-settings.tier-3 .tier-head { background: rgba(98,149,132,0.08); }
+.competition-admin-settings .tier-title,
+.competition-admin-settings.tier-title { font-family: var(--font-title); font-weight: 700; font-size: var(--text-small); color: var(--dark-1); }
+.competition-admin-settings .tier-badge,
+.competition-admin-settings.tier-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.5px; }
+.competition-admin-settings .tier-1 .tier-badge,
+.competition-admin-settings.tier-1 .tier-badge { background: var(--red-badge); color: var(--white); }
+.competition-admin-settings .tier-2 .tier-badge,
+.competition-admin-settings.tier-2 .tier-badge { background: var(--orange); color: var(--white); }
+.competition-admin-settings .tier-3 .tier-badge,
+.competition-admin-settings.tier-3 .tier-badge { background: var(--green); color: var(--white); }
+.competition-admin-settings .tier-body,
+.competition-admin-settings.tier-body { padding: var(--p1) var(--p2); display: flex; flex-wrap: wrap; gap: 6px; min-height: 44px; background: var(--white); }
+.competition-admin-settings .tier-chip,
+.competition-admin-settings.tier-chip {
+    padding: 4px 12px; border-radius: 16px; font-size: var(--text-tiny); font-weight: 500;
+    background: var(--dark-5); color: var(--dark-2); cursor: grab;
+    border: 1px solid var(--dark-4); user-select: none;
+}
+.competition-admin-settings .tier-chip:hover,
+.competition-admin-settings.tier-chip:hover { background: var(--dark-4); color: var(--dark-1); }
+.competition-admin-settings .tier-add,
+.competition-admin-settings.tier-add { padding: 4px 10px; border-radius: 16px; font-size: var(--text-tiny); color: var(--main-blue); border: 1px dashed var(--main-blue); cursor: pointer; background: none; }
+.competition-admin-settings .tier-add:hover,
+.competition-admin-settings.tier-add:hover { background: rgba(0,48,73,0.06); }
+.competition-admin-settings .tier-name-input,
+.competition-admin-settings.tier-name-input   { border: none; background: transparent; font-family: var(--font-title); font-weight: 700; font-size: var(--text-small); color: var(--dark-1); width: 120px; outline: none; }
+.competition-admin-settings .tier-head-left,
+.competition-admin-settings.tier-head-left    { display: flex; align-items: center; gap: var(--p1); flex: 1; }
+.competition-admin-settings .tier-head-controls,
+.competition-admin-settings.tier-head-controls { display: flex; align-items: center; gap: var(--p1); }
+.competition-admin-settings .tier-head-label,
+.competition-admin-settings.tier-head-label   { font-size: var(--text-tiny); color: var(--dark-3); }
+.competition-admin-settings .tier-budget,
+.competition-admin-settings.tier-budget       { width: 80px; }
+.competition-admin-settings .tier-xp,
+.competition-admin-settings.tier-xp           { width: 60px; }
+.competition-admin-settings .tier-head-right,
+.competition-admin-settings.tier-head-right   { display: flex; align-items: center; gap: 8px; }
+.competition-admin-settings .tier-remove-btn,
+.competition-admin-settings.tier-remove-btn   { background: none; border: none; cursor: pointer; color: var(--dark-4); font-size: 18px; line-height: 1; }
+.competition-admin-settings .tier-body-inner,
+.competition-admin-settings.tier-body-inner   { padding: var(--p1) var(--p2); background: var(--white); }
+
+/* Les champs en lecture seule d'un tier : ce panneau n'ouvre ni le nom, ni le
+   budget, ni l'XP, ni les rosters — et le domaine refuse tout écart. Les montrer
+   grisés dit pourquoi ils ne se saisissent pas. */
+.competition-admin-settings .tier-readonly {
+  display: flex; flex-wrap: wrap; gap: var(--p1) var(--p2);
+  font-size: var(--text-tiny); color: var(--dark-3);
+}
+.competition-admin-settings .tier-readonly b { color: var(--dark-2); font-weight: 600; }
+.competition-admin-settings .tier-picker-label {
+  font-size: var(--text-tiny); font-weight: 600; color: var(--dark-2);
+  margin: var(--p1) 0 6px;
+}

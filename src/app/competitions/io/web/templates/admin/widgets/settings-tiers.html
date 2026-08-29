@@ -1,0 +1,145 @@
+{# Panneau « Tiers & coups de pouce » (carte 424).
+
+   ── Le point le plus facile à rater ────────────────────────────────────────
+   Le sélecteur d'inducements **n'a aucun champ caché**. Il garde sa sélection
+   dans son état Alpine et n'émet qu'un événement DOM portant son `instanceId`.
+   Sans le JS de collecte ci-dessous, ce panneau enverrait des tiers aux listes
+   vides **sans qu'aucune erreur ne le signale** — et chaque enregistrement
+   effacerait tous les coups de pouce.
+
+   Son `x-init="notify()"` joue en notre faveur : chaque sélecteur annonce son
+   état dès son montage, donc la carte de collecte est remplie même si personne
+   ne touche à rien.
+
+   ── Les champs figés sont montrés, pas cachés ─────────────────────────────
+   Nom, budget, XP et rosters ne s'éditent pas ici, et le domaine refuse tout
+   écart. Les cacher laisserait croire qu'ils n'existent pas. #}
+<div class="settings-panel" id="settings-tiers-panel" hx-disinherit="*">
+  <div class="settings-panel-head">
+    <div class="settings-panel-title">
+      <span class="settings-panel-title-icon">🏅</span>Tiers &amp; coups de pouce
+    </div>
+    <button type="button" class="btn btn-primary" data-role="save">Enregistrer</button>
+  </div>
+  <div class="settings-panel-body" data-role="tiers">
+
+    {% for t in vm.tiers %}
+    {# `data-frozen` porte le tier tel que le serveur l'a rendu. Askama échappe
+       les guillemets ; le navigateur les redonne à la lecture de l'attribut. #}
+    <div class="tier-block tier-{{ t.index }}" data-role="tier" data-tier="{{ t.name }}"
+         data-frozen="{{ t.frozen_json }}">
+      <div class="tier-head">
+        <span class="tier-title">{{ t.name }}</span>
+        <span class="tier-badge">Tier {{ t.index }}</span>
+      </div>
+      <div class="tier-body">
+        <div class="tier-readonly">
+          <span>Budget <b>{{ t.budget_kpo }} kPo</b></span>
+          <span>XP de départ <b>{{ t.starting_xp }}</b></span>
+          <span>Rosters <b>{% for r in t.roster_names %}{{ r }}{% if !loop.last %}, {% endif %}{% endfor %}</b></span>
+        </div>
+
+        <div class="tier-picker-label">Coups de pouce autorisés</div>
+        <div data-slot="inducement"
+             data-selected="{{ t.selected_inducements }}"
+             data-instance="{{ t.picker_instance_id }}"></div>
+
+        <div class="tier-picker-label">Star players autorisés</div>
+        <div data-slot="star"
+             data-selected="{{ t.selected_star_players }}"
+             data-instance="{{ t.picker_instance_id }}"></div>
+      </div>
+    </div>
+    {% endfor %}
+
+    {% if let Some(err) = vm.error %}
+    <div class="form-error-banner">{{ err }}</div>
+    {% endif %}
+
+    <div class="panel-consequence">
+      <span class="consequence-idle">
+        {% if vm.saved %}
+        Coups de pouce enregistrés.
+        {% else %}
+        Seuls les coups de pouce et les star players se modifient ici.
+        <em>Budget, expérience de départ et rosters restent ceux de la création.</em>
+        {% endif %}
+      </span>
+      <span class="consequence-active"></span>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+    const panneau = document.currentScript.previousElementSibling;
+    const bouton = panneau.querySelector('[data-role="save"]');
+
+    /* La carte de collecte : `instanceId → uid[]`, une entrée par tier et par
+       type de sélecteur. C'est le seul endroit qui sait ce qui est coché — le
+       widget ne pose aucun champ dans le formulaire. */
+    const coupsDePouce = new Map();
+    const starPlayers = new Map();
+
+    document.body.addEventListener('inducementPickerChanged', e => {
+        coupsDePouce.set(e.detail.instanceId, e.detail.selected);
+    });
+    document.body.addEventListener('starPlayerPickerChanged', e => {
+        starPlayers.set(e.detail.instanceId, e.detail.selected);
+    });
+
+    function urlPicker(base, slot) {
+        const selection = slot.dataset.selected;
+        const qs = `instance_id=${encodeURIComponent(slot.dataset.instance)}` +
+                   `&selected=${encodeURIComponent(selection)}`;
+        return `${base}?${qs}`;
+    }
+
+    /* **En série, jamais en parallèle.** `htmx.ajax` perd des requêtes lancées
+       en rafale synchrone — le magicien de création porte le même commentaire,
+       et avec deux sélecteurs par tier c'est exactement le cas qui mord. */
+    async function chargerLesSelecteurs() {
+        for (const bloc of panneau.querySelectorAll('[data-role="tier"]')) {
+            const inducements = bloc.querySelector('[data-slot="inducement"]');
+            const stars = bloc.querySelector('[data-slot="star"]');
+            await htmx.ajax('GET', urlPicker('{{ inducement_picker_url }}', inducements),
+                            { target: inducements, swap: 'innerHTML' });
+            await htmx.ajax('GET', urlPicker('{{ star_player_picker_url }}', stars),
+                            { target: stars, swap: 'innerHTML' });
+        }
+    }
+
+    /* Les champs figés sont renvoyés **tels que le serveur les a rendus** : le
+       domaine refuse tout écart, et les recomposer depuis l'écran risquerait
+       d'introduire celui-là même qu'il refuse. */
+    function charge() {
+        return {
+            tiers: [...panneau.querySelectorAll('[data-role="tier"]')].map(bloc => {
+                const nom = bloc.dataset.tier;
+                const fige = JSON.parse(bloc.dataset.frozen);
+                return {
+                    ...fige,
+                    inducements: coupsDePouce.get(nom) || fige.inducements,
+                    star_players: starPlayers.get(nom) || fige.star_players,
+                };
+            }),
+        };
+    }
+
+    bouton.addEventListener('click', function () {
+        bouton.disabled = true;
+        fetch('{{ post_url }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'HX-Request': 'true' },
+            body: JSON.stringify(charge()),
+        })
+          .then(r => { if (!r.ok) { throw new Error('statut ' + r.status); } return r.text(); })
+          .then(html => { panneau.outerHTML = html; })
+          .catch(e => {
+              console.error('[settings-tiers] enregistrement échoué', e);
+              bouton.disabled = false;
+          });
+    });
+
+    chargerLesSelecteurs();
+})();
+</script>

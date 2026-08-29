@@ -256,6 +256,11 @@ pub async fn render_admin_page(
                     competition_id,
                     season_id,
                 ),
+                tiers_url: app_routes.competitions.admin_settings_tiers(
+                    space_id,
+                    competition_id,
+                    season_id,
+                ),
             };
             tpl.render().unwrap_or_default()
         }

@@ -115,8 +115,54 @@ L'URL du picker vient de `app_routes.references.inducement_picker()`, comme
 
 ## Checklist
 
-- [ ] Le use case et ses tests
-- [ ] Les deux handlers, `require_admin_access`
-- [ ] Le VM, `builders.rs`
-- [ ] Le template, le JS de collecte, les deux CSS repris
-- [ ] `make lint && make test && make check-arch`
+- [x] Le use case et ses tests
+- [x] Les deux handlers, `require_admin_access`
+- [x] Le VM, `builders.rs`
+- [x] Le template, le JS de collecte, les deux CSS repris
+- [x] `make lint && make test && make check-arch`
+
+## Ce que la réalisation a appris
+
+### L'onglet porte les quatre panneaux — les sélecteurs sont partagés
+
+`[data-role="save"]` et `.consequence-idle` existent aussi dans le panneau
+« Classement ». Un locator e2e non scopé prend **le premier du DOM** : le clic
+partait sur l'autre bouton, recalculait le classement, et le test lisait *son*
+message de conséquence. Aucun POST ne partait vers les tiers, et rien ne le
+signalait — le test échouait sur un libellé, symptôme qui n'évoque pas une
+erreur de cible.
+
+Tout locator du fichier passe désormais par `#settings-tiers-panel`. La règle
+vaut pour les cartes 425 et 426 : **sur cet onglet, un locator non scopé est un
+bug en attente.**
+
+### Le fragment ouvert directement au navigateur n'a pas htmx
+
+`page.goto()` sur l'endpoint du panneau rend un HTML sans layout, donc sans
+htmx : le script échoue sur `htmx is not defined` et aucun sélecteur ne charge.
+Les tests par `requests` ne s'en aperçoivent pas — ils n'exécutent aucun script.
+Les tests navigateur passent par `…/admin/settings`, la page par laquelle un
+commissaire arrive.
+
+### Le bouton n'est pas un élément htmx
+
+`attendre_cablage` attend un câblage htmx qui n'arrive jamais : l'écouteur est
+posé dès l'exécution du script. Ce qu'il faut attendre, c'est le **remplissage
+de la carte de collecte** — et comme le panneau charge ses sélecteurs en série,
+voir le premier ne dit rien des suivants. Enregistrer trop tôt retomberait sur
+les valeurs figées : le test passerait sans avoir rien prouvé.
+
+## Falsification
+
+| Mutation | Effet attendu | Constaté |
+|---|---|---|
+| Écouteur `inducementPickerChanged` retiré | le clic sur une puce est ignoré | test 1 rouge sur son assertion ; test 2 **vert** — le repli sur les valeurs figées le sauve |
+| Charge utile forcée à `inducements: []` | chaque enregistrement vide les coups de pouce | test 2 rouge : « les coups de pouce ont été vidés » |
+
+La première mutation justifie l'existence du second test : **le repli masque la
+perte de l'écouteur**, et seul un test qui enregistre sans rien toucher voit le
+défaut que la carte annonçait invisible.
+
+Le refus des champs figés a été vérifié à l'écran : un budget forgé à 999 999
+renvoie 200 avec « Le champ « budget » du tier « Tier 1 » ne se modifie pas
+depuis les réglages », et la base garde 1060.

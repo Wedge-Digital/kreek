@@ -25,6 +25,9 @@ use crate::app::competitions::io::web::admin::settings::ranking_panel::{
     get_settings_ranking, post_settings_ranking,
 };
 use crate::app::competitions::io::web::admin::settings::settings_tab::settings_tab;
+use crate::app::competitions::io::web::admin::settings::tiers_panel::{
+    get_settings_tiers, post_settings_tiers,
+};
 use crate::app::competitions::io::web::admin::summary_tab::summary_tab_fragment;
 use crate::app::competitions::io::web::all_competition::get_all_competition;
 use crate::app::competitions::io::web::calendrier_tab_controller::get_calendrier_tab;
@@ -162,6 +165,10 @@ pub fn router() -> Router<AppState> {
         .route(
             path::COMPETITION_ADMIN_SETTINGS_POOLS,
             get(get_settings_pools).post(post_settings_pools),
+        )
+        .route(
+            path::COMPETITION_ADMIN_SETTINGS_TIERS,
+            get(get_settings_tiers).post(post_settings_tiers),
         )
         .route(
             path::COMPETITION_ADMIN_SCHEDULE_ROUNDS,

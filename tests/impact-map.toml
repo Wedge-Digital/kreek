@@ -92,6 +92,11 @@
 # défaire.
 "test_competition_settings_pools" = ["competitions", "teams", "references",
                                      "team_creation", "ranking", "spaces", "auth"]
+# `references` y est une dépendance **dure** et non un décor : le panneau monte
+# les sélecteurs d'inducements et de star players fournis par ce BC, et c'est
+# leur événement DOM que la collecte JS écoute.
+"test_competition_settings_tiers" = ["competitions", "references", "teams",
+                                     "team_creation", "ranking", "spaces", "auth"]
 # Le widget de réglage des notifications, monté dans l'onglet Synthèse.
 "test_notification_settings"   = ["competitions", "teams", "spaces", "references", "ranking"]
 

@@ -6,13 +6,15 @@
 //! les types du port.
 
 use crate::app::competitions::domain::competition_rules::RankingRules;
+use crate::app::competitions::domain::competition_rules::TierRule;
 use crate::app::competitions::domain::competition_structure::RankingGroupConfig;
 use crate::app::competitions::domain::group_repository_port::GroupWithTeams;
 use crate::app::competitions::io::web::admin::settings::pools_panel::{PoolRowVm, PoolsVm};
 use crate::app::competitions::io::web::admin::settings::ranking_panel::{
     BonusVm, RankingVm, TiebreakRowVm,
 };
-use crate::app::competitions::ports::ITiebreakCatalogPort;
+use crate::app::competitions::io::web::admin::settings::tiers_panel::{ChipVm, TierVm};
+use crate::app::competitions::ports::{ICompetitionReferencePort, ITiebreakCatalogPort};
 
 /// Le barème et ses critères de départage, joints au catalogue.
 ///
@@ -257,4 +259,57 @@ pub fn build_pools_vm(config: &RankingGroupConfig, affectations: &[GroupWithTeam
             })
             .collect(),
     }
+}
+
+/// Les tiers, leurs uid résolus en noms lisibles.
+///
+/// # Un uid non résolu s'affiche tel quel
+///
+/// Un coup de pouce retiré du corpus doit **se voir**, pas s'évaporer. Le faire
+/// disparaître ferait croire au commissaire qu'il ne l'avait jamais autorisé —
+/// et l'enregistrement suivant le supprimerait pour de bon, sans qu'il l'ait
+/// décidé.
+pub fn build_tiers_vm(tiers: &[TierRule], refs: &dyn ICompetitionReferencePort) -> Vec<TierVm> {
+    tiers
+        .iter()
+        .enumerate()
+        .map(|(rang, t)| {
+            let puces = |uids: &[String], resoudre: &dyn Fn(&str) -> Option<String>| {
+                uids.iter()
+                    .map(|uid| ChipVm {
+                        uid: uid.clone(),
+                        label: resoudre(uid).unwrap_or_else(|| uid.clone()),
+                    })
+                    .collect::<Vec<_>>()
+            };
+            TierVm {
+                // 1-indexé : c'est ce que portent `.tier-1`, `.tier-2`, `.tier-3`.
+                index: (rang as u8) + 1,
+                name: t.name.as_ref().to_string(),
+                budget_kpo: t.budget.0,
+                starting_xp: t.starting_xp.into_inner(),
+                roster_names: t
+                    .rosters
+                    .iter()
+                    .map(|uid| refs.find_roster_name(uid).unwrap_or_else(|| uid.clone()))
+                    .collect(),
+                inducements: puces(&t.inducements, &|uid| refs.find_inducement_name(uid)),
+                star_players: puces(&t.star_players, &|uid| refs.find_star_player_name(uid)),
+                // Le nom du tier fait l'affaire : il est unique dans une
+                // compétition, et le sélecteur n'en demande pas plus.
+                picker_instance_id: t.name.as_ref().to_string(),
+                selected_inducements: t.inducements.join(","),
+                selected_star_players: t.star_players.join(","),
+                frozen_json: serde_json::json!({
+                    "name": t.name.as_ref(),
+                    "budget": t.budget.0,
+                    "starting_xp": t.starting_xp.into_inner(),
+                    "rosters": t.rosters,
+                    "inducements": t.inducements,
+                    "star_players": t.star_players,
+                })
+                .to_string(),
+            }
+        })
+        .collect()
 }

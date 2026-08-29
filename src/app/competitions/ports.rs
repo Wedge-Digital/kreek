@@ -38,6 +38,11 @@ pub trait IMatchReportStatusPort: Send + Sync {
 pub trait ICompetitionReferencePort: Send + Sync {
     fn find_inducement_name(&self, uid: &str) -> Option<String>;
     fn find_star_player_name(&self, uid: &str) -> Option<String>;
+    /// Le nom lisible d'un roster — « Granitiers » pour `DEMO_GRANIT`.
+    ///
+    /// Ajouté par la carte 424 : le panneau des tiers affiche les rosters
+    /// autorisés, et l'onglet Résumé montrait jusqu'ici les uid bruts.
+    fn find_roster_name(&self, uid: &str) -> Option<String>;
 }
 
 // ── ACL vers le BC `spaces` (profil membre, pour l'autorisation admin) ─────────

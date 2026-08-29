@@ -24,4 +24,12 @@ impl ICompetitionReferencePort for ReferenceNameAdapter {
             .find_star_player_by_uid(uid)
             .map(|s| s.name.clone())
     }
+
+    /// Un roster est une `Team` au corpus : le mot diffère, la chose est la
+    /// même — le modèle d'équipe dont les coachs héritent leur effectif.
+    fn find_roster_name(&self, uid: &str) -> Option<String> {
+        self.reference_repo
+            .find_team_by_uid(uid)
+            .map(|t| t.name.clone())
+    }
 }

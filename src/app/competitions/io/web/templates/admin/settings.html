@@ -28,6 +28,10 @@
        hx-trigger="load"
        hx-target="this"
        hx-swap="innerHTML"></div>
-  <div id="settings-tiers"></div>
+  <div id="settings-tiers"
+       hx-get="{{ tiers_url }}"
+       hx-trigger="load"
+       hx-target="this"
+       hx-swap="innerHTML"></div>
   <div id="settings-visibility"></div>
 </div>
