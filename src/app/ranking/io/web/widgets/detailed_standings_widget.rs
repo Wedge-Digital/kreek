@@ -58,7 +58,13 @@ pub struct DetailedRowVm {
     pub losses: u32,
     /// Signé, y compris « +0 » : se lit comme une contribution au total.
     pub bonus: String,
-    pub total: u32,
+    /// Signé lui aussi — « −1 » —, et `None` quand il n'y en a aucun.
+    ///
+    /// La distinction compte : « −1 » et « aucun » ne se lisent pas pareil, et
+    /// « 0 » n'existe pas puisque `ManualPoints` le refuse.
+    pub manual: Option<String>,
+    /// **Signé** : depuis les points manuels, un total peut être négatif.
+    pub total: i32,
     /// Une cellule par colonne de `DetailedStandingsVm::columns`, dans le même ordre.
     pub tiebreaks: Vec<TiebreakCellVm>,
 }
@@ -107,7 +113,7 @@ pub async fn detailed_standings_widget(
 }
 
 async fn build_vm(state: &AppState, space_id: &str, season_id: &str) -> DetailedStandingsVm {
-    let (rules, teams, lines, groups) = tokio::join!(
+    let (rules, teams, lines, groups, manual) = tokio::join!(
         state.ranking.competition_port.find_ranking_rules(season_id),
         state
             .ranking
@@ -118,6 +124,14 @@ async fn build_vm(state: &AppState, space_id: &str, season_id: &str) -> Detailed
             .repository
             .find_latest_lines_for_season(season_id),
         state.ranking.competition_port.find_groups(season_id),
+        // Cinquieme lecture, en parallele des quatre autres : le temps de
+        // reponse ne bouge pas. Une erreur rend une carte vide plutot que de
+        // faire echouer le classement -- un classement sans ses points manuels
+        // est faux, mais un classement absent est pire.
+        state
+            .ranking
+            .repository
+            .find_manual_totals_for_season(season_id),
     );
 
     let rules_missing = rules.is_none();
@@ -125,7 +139,14 @@ async fn build_vm(state: &AppState, space_id: &str, season_id: &str) -> Detailed
     let groups_vm = if rules_missing {
         vec![]
     } else {
-        build_detailed_groups(space_id, lines.unwrap_or_default(), &teams, &groups, &order)
+        build_detailed_groups(
+            space_id,
+            lines.unwrap_or_default(),
+            &manual.unwrap_or_default(),
+            &teams,
+            &groups,
+            &order,
+        )
     };
 
     DetailedStandingsVm {

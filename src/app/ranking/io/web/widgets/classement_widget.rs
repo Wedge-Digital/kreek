@@ -15,7 +15,26 @@ pub struct ClassementRowVm {
     pub wins: u32,
     pub draws: u32,
     pub losses: u32,
+    /// Les points **de match** seuls. Il ne s'affiche plus : la colonne « Pts »
+    /// montre desormais `total`. Il reste parce que la difference entre les deux
+    /// est ce que la colonne « Man. » explique.
     pub points: u32,
+    /// `None` quand l'équipe n'a reçu aucun point manuel, sinon la valeur
+    /// **déjà signée** — « +2 », « −1 ».
+    ///
+    /// **Une `Option`, jamais un zéro par convention.** Le gabarit doit
+    /// distinguer « aucun point manuel » — un tiret — de « zéro point
+    /// manuel », **qui n'existe pas** : `ManualPoints` refuse le zéro. L'option
+    /// rend cette impossibilité dans le type plutôt que dans un commentaire.
+    ///
+    /// **Une chaîne et non un `i32`**, comme `bonus` du classement détaillé :
+    /// Askama lie `m` en `&i32` dans un `if let`, et le comparer à un littéral
+    /// demanderait un déréférencement que les gabarits du projet n'emploient
+    /// pas. Le signe se pose donc dans le builder, une fois.
+    pub manual: Option<String>,
+    /// Points de match plus points manuels. **Signe** : un total peut etre
+    /// negatif, et c'est un rang valide, pas une erreur.
+    pub total: i32,
 }
 
 /// Un classement à afficher — soit l'unique classement de la saison
@@ -64,7 +83,7 @@ pub async fn classement_widget(
 }
 
 async fn build_vm(state: &AppState, space_id: &str, season_id: &str) -> ClassementWidgetVm {
-    let (rules, teams, lines, groups) = tokio::join!(
+    let (rules, teams, lines, groups, manual) = tokio::join!(
         state.ranking.competition_port.find_ranking_rules(season_id),
         state
             .ranking
@@ -75,6 +94,14 @@ async fn build_vm(state: &AppState, space_id: &str, season_id: &str) -> Classeme
             .repository
             .find_latest_lines_for_season(season_id),
         state.ranking.competition_port.find_groups(season_id),
+        // Cinquieme lecture, en parallele des quatre autres : le temps de
+        // reponse ne bouge pas. Une erreur rend une carte vide plutot que de
+        // faire echouer le classement -- un classement sans ses points manuels
+        // est faux, mais un classement absent est pire.
+        state
+            .ranking
+            .repository
+            .find_manual_totals_for_season(season_id),
     );
 
     let rules_missing = rules.is_none();
@@ -82,7 +109,14 @@ async fn build_vm(state: &AppState, space_id: &str, season_id: &str) -> Classeme
     let groups_vm = if rules_missing {
         vec![]
     } else {
-        build_classement_groups(space_id, lines.unwrap_or_default(), &teams, &groups, &order)
+        build_classement_groups(
+            space_id,
+            lines.unwrap_or_default(),
+            &manual.unwrap_or_default(),
+            &teams,
+            &groups,
+            &order,
+        )
     };
 
     ClassementWidgetVm {

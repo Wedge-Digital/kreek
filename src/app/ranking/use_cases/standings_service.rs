@@ -297,10 +297,13 @@ mod tests {
 
     /// **La carte est réellement lue.**
     ///
-    /// Les deux appelants la passent vide jusqu'à la carte 451 : sans ce test,
-    /// `to_standing` pourrait ignorer son argument et poser zéro sans que rien
-    /// ne bronche. La 451 chercherait alors longtemps pourquoi ses points
-    /// n'apparaissent pas.
+    /// Écrit quand les deux appelants passaient encore une carte vide : sans
+    /// lui, `to_standing` pouvait ignorer son argument et poser zéro sans que
+    /// rien ne bronche.
+    ///
+    /// La précaution a servi. En branchant la lecture (carte 451), le builder
+    /// du classement détaillé a reçu le paramètre **sans le faire descendre** —
+    /// et c'est un test de même nature, sur les vues, qui l'a montré.
     #[test]
     fn la_carte_des_points_manuels_atteint_le_classement() {
         let ligne = row(3, 0);

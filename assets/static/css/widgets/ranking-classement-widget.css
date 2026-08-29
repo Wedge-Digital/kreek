@@ -14,7 +14,7 @@
 }
 .ranking-classement-widget .standings-header,
 .ranking-classement-widget.standings-header {
-  display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px;
+  display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px;
   padding: 12px 16px; gap: 8px; align-items: center;
   background: var(--dark-0); color: var(--white);
   font-size: var(--text-tiny); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
@@ -23,7 +23,7 @@
 .ranking-classement-widget.standings-header-num { text-align: center; }
 .ranking-classement-widget .standings-row,
 .ranking-classement-widget.standings-row {
-  display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px;
+  display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px;
   padding: 12px 16px; gap: 8px; align-items: center;
   border-bottom: 1px solid var(--dark-6); font-size: var(--text-small);
   cursor: pointer;
@@ -40,6 +40,8 @@
 .ranking-classement-widget.standings-team { font-weight: 500; color: var(--dark-1); }
 .ranking-classement-widget .standings-num,
 .ranking-classement-widget.standings-num  { text-align: center; color: var(--dark-2); }
+.ranking-classement-widget .standings-manual,
+.ranking-classement-widget.standings-manual { color: var(--dark-3); }
 .ranking-classement-widget .standings-pts,
 .ranking-classement-widget.standings-pts  { text-align: center; font-weight: 700; color: var(--dark-0); }
 
@@ -66,7 +68,7 @@
 .ranking-classement-widget.standings-header,
 .ranking-classement-widget .standings-row,
 .ranking-classement-widget.standings-row {
-    grid-template-columns: 22px 1fr 28px 28px 28px 28px 34px;
+    grid-template-columns: 22px 1fr 28px 28px 28px 28px 32px 34px;
     padding: 10px var(--p1); gap: 4px;
   }
   .ranking-classement-widget .standings-team,

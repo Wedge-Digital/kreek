@@ -26,6 +26,10 @@
                 <div class="standings-header-num">V</div>
                 <div class="standings-header-num">N</div>
                 <div class="standings-header-num">D</div>
+                {# « Man. » est dans le groupe des points, jamais du cote des
+                   departages : les points manuels entrent dans le total *avant*
+                   qu'on departage, et la place de la colonne doit le dire. #}
+                <div class="standings-header-num" title="Points de classement manuels">Man.</div>
                 <div class="standings-header-num">Pts</div>
             </div>
             {% for row in group.rows %}
@@ -41,7 +45,13 @@
                 <div class="standings-num">{{ row.wins }}</div>
                 <div class="standings-num">{{ row.draws }}</div>
                 <div class="standings-num">{{ row.losses }}</div>
-                <div class="standings-pts">{{ row.points }}</div>
+                {# Un tiret pour « aucun », jamais un zero : zero point manuel
+                   n'existe pas, le domaine le refuse. #}
+                <div class="standings-num standings-manual">{% if let Some(m) = row.manual %}{{ m }}{% else %}—{% endif %}</div>
+                {# « Pts » montre le total, points manuels compris : c'est sur lui
+                   que le classement est ordonne. Afficher les seuls points de
+                   match rendrait l'ordre incomprehensible. #}
+                <div class="standings-pts">{{ row.total }}</div>
             </div>
             {% endfor %}
         </div>

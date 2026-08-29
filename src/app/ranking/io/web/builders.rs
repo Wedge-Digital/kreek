@@ -94,23 +94,27 @@ fn slice_for(
 pub fn build_classement_groups(
     space_id: &str,
     lines: Vec<RankingLineRow>,
+    manual: &HashMap<String, i32>,
     teams: &[EnrolledTeamInfo],
     groups: &[RankingGroupInfo],
     order: &TiebreakOrder,
 ) -> Vec<ClassementGroupVm> {
     split_into_groups(&lines, teams, groups)
         .into_iter()
-        .map(|slice| build_group_vm(space_id, slice, order))
+        .map(|slice| build_group_vm(space_id, slice, manual, order))
         .collect()
 }
 
 /// Le découpage précède l'ordonnancement : chaque poule est un classement
 /// autonome dont les rangs repartent à 1. Ordonner avant de découper donnerait
 /// des rangs globaux — le leader de la poule 2 pourrait afficher un rang 3.
-fn build_group_vm(space_id: &str, slice: GroupSlice, order: &TiebreakOrder) -> ClassementGroupVm {
-    // La carte est vide jusqu'à la carte 451, qui branchera la lecture des
-    // points manuels. Aucune saison n'en porte encore.
-    let ordered = build_ordered_standings(slice.lines, &HashMap::new(), order);
+fn build_group_vm(
+    space_id: &str,
+    slice: GroupSlice,
+    manual: &HashMap<String, i32>,
+    order: &TiebreakOrder,
+) -> ClassementGroupVm {
+    let ordered = build_ordered_standings(slice.lines, manual, order);
     ClassementGroupVm {
         title: slice.title,
         has_enrolled_teams: !slice.teams.is_empty(),
@@ -139,6 +143,11 @@ pub fn build_classement_rows(
                 draws: standing.totals.draws.0,
                 losses: standing.totals.losses.0,
                 points: standing.totals.ranking_points.0,
+                // `None` et non `Some(0)` : le gabarit rend un tiret, et zero
+                // point manuel n'existe pas -- `ManualPoints` le refuse.
+                manual: (standing.manual_points != 0)
+                    .then(|| signed(i64::from(standing.manual_points))),
+                total: standing.total_points(),
             }
         })
         .collect()
@@ -161,24 +170,24 @@ fn resolve_team_name(team_id: &str, teams: &[EnrolledTeamInfo]) -> String {
 pub fn build_detailed_groups(
     space_id: &str,
     lines: Vec<RankingLineRow>,
+    manual: &HashMap<String, i32>,
     teams: &[EnrolledTeamInfo],
     groups: &[RankingGroupInfo],
     order: &TiebreakOrder,
 ) -> Vec<DetailedGroupVm> {
     split_into_groups(&lines, teams, groups)
         .into_iter()
-        .map(|slice| build_detailed_group_vm(space_id, slice, order))
+        .map(|slice| build_detailed_group_vm(space_id, slice, manual, order))
         .collect()
 }
 
 fn build_detailed_group_vm(
     space_id: &str,
     slice: GroupSlice,
+    manual: &HashMap<String, i32>,
     order: &TiebreakOrder,
 ) -> DetailedGroupVm {
-    // La carte est vide jusqu'à la carte 451, qui branchera la lecture des
-    // points manuels. Aucune saison n'en porte encore.
-    let ordered = build_ordered_standings(slice.lines, &HashMap::new(), order);
+    let ordered = build_ordered_standings(slice.lines, manual, order);
     DetailedGroupVm {
         title: slice.title,
         has_enrolled_teams: !slice.teams.is_empty(),
@@ -223,7 +232,8 @@ fn to_detailed_row(
         draws: standing.totals.draws.0,
         losses: standing.totals.losses.0,
         bonus: signed(i64::from(standing.totals.bonus_points.0)),
-        total: standing.totals.ranking_points.0,
+        manual: (standing.manual_points != 0).then(|| signed(i64::from(standing.manual_points))),
+        total: standing.total_points(),
         tiebreaks: build_tiebreak_cells(&standing, order, outcome),
     }
 }
@@ -399,9 +409,23 @@ mod tests {
         let teams = vec![team(&t1, "A"), team(&t2, "B")];
         let lines = vec![line(&t1, 3), line(&t2, 9)];
 
-        let none = build_classement_groups("sp1", lines.clone(), &teams, &[], &empty_order());
+        let none = build_classement_groups(
+            "sp1",
+            lines.clone(),
+            &HashMap::new(),
+            &teams,
+            &[],
+            &empty_order(),
+        );
         let single_group = [group("g1", "Poule unique", &[&t1, &t2])];
-        let single = build_classement_groups("sp1", lines, &teams, &single_group, &empty_order());
+        let single = build_classement_groups(
+            "sp1",
+            lines,
+            &HashMap::new(),
+            &teams,
+            &single_group,
+            &empty_order(),
+        );
 
         for groups in [none, single] {
             assert_eq!(groups.len(), 1);
@@ -428,7 +452,14 @@ mod tests {
             group("g2", "Poule 2", &[&t3, &t4]),
         ];
 
-        let result = build_classement_groups("sp1", lines, &teams, &groups, &empty_order());
+        let result = build_classement_groups(
+            "sp1",
+            lines,
+            &HashMap::new(),
+            &teams,
+            &groups,
+            &empty_order(),
+        );
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].title, Some("Poule 1".to_string()));
@@ -450,7 +481,7 @@ mod tests {
         lines[1].td_for = 7;
         let order = TiebreakOrder::new(vec![TiebreakCriterion::NbTd]);
 
-        let result = build_classement_groups("sp1", lines, &teams, &[], &order);
+        let result = build_classement_groups("sp1", lines, &HashMap::new(), &teams, &[], &order);
 
         assert_eq!(result[0].rows[0].team_name, "Prolifique");
         assert_eq!(result[0].rows[0].rank, 1);
@@ -467,7 +498,14 @@ mod tests {
             group("g2", "Poule 2", &[]),
         ];
 
-        let result = build_classement_groups("sp1", vec![], &teams, &groups, &empty_order());
+        let result = build_classement_groups(
+            "sp1",
+            vec![],
+            &HashMap::new(),
+            &teams,
+            &groups,
+            &empty_order(),
+        );
 
         assert_eq!(result[1].title, Some("Poule 2".to_string()));
         assert!(!result[1].has_enrolled_teams);
@@ -480,7 +518,14 @@ mod tests {
         let teams = vec![team(&t1, "A"), team(&t2, "B")];
         let groups = vec![group("g1", "Poule 1", &[&t1]), group("g2", "Poule 2", &[])];
 
-        let result = build_classement_groups("sp1", vec![], &teams, &groups, &empty_order());
+        let result = build_classement_groups(
+            "sp1",
+            vec![],
+            &HashMap::new(),
+            &teams,
+            &groups,
+            &empty_order(),
+        );
 
         assert_eq!(result.len(), 3);
         assert_eq!(result[2].title, Some("Non assignées".to_string()));
@@ -512,8 +557,14 @@ mod tests {
         lines[0].td_for = 7;
         lines[1].td_for = 2;
 
-        let groups =
-            build_detailed_groups("sp1", lines, &[team(&t1, "A"), team(&t2, "B")], &[], &order);
+        let groups = build_detailed_groups(
+            "sp1",
+            lines,
+            &HashMap::new(),
+            &[team(&t1, "A"), team(&t2, "B")],
+            &[],
+            &order,
+        );
         let rows = &groups[0].rows;
 
         assert_eq!(states_of(&rows[0]), vec!["sd-tied", "sd-decisive", ""]);
@@ -527,8 +578,14 @@ mod tests {
         let order = TiebreakOrder::new(vec![TiebreakCriterion::NbTd, TiebreakCriterion::NbCas]);
         let lines = vec![line(&t1, 6), line(&t2, 6)];
 
-        let groups =
-            build_detailed_groups("sp1", lines, &[team(&t1, "A"), team(&t2, "B")], &[], &order);
+        let groups = build_detailed_groups(
+            "sp1",
+            lines,
+            &HashMap::new(),
+            &[team(&t1, "A"), team(&t2, "B")],
+            &[],
+            &order,
+        );
 
         for row in &groups[0].rows {
             assert_eq!(states_of(row), vec!["sd-tied", "sd-tied"]);
@@ -542,8 +599,14 @@ mod tests {
         let order = TiebreakOrder::new(vec![TiebreakCriterion::NbTd]);
         let lines = vec![line(&t1, 9), line(&t2, 6)];
 
-        let groups =
-            build_detailed_groups("sp1", lines, &[team(&t1, "A"), team(&t2, "B")], &[], &order);
+        let groups = build_detailed_groups(
+            "sp1",
+            lines,
+            &HashMap::new(),
+            &[team(&t1, "A"), team(&t2, "B")],
+            &[],
+            &order,
+        );
 
         for row in &groups[0].rows {
             assert_eq!(states_of(row), vec![""]);
@@ -573,7 +636,7 @@ mod tests {
             group("g2", "Poule 2", &[&b1, &b2]),
         ];
 
-        let result = build_detailed_groups("sp1", lines, &teams, &groups, &order);
+        let result = build_detailed_groups("sp1", lines, &HashMap::new(), &teams, &groups, &order);
 
         assert_eq!(states_of(&result[0].rows[0]), vec!["sd-decisive"]);
         assert_eq!(states_of(&result[1].rows[0]), vec!["sd-tied"]);
@@ -589,7 +652,14 @@ mod tests {
         lines[0].td_for = 2;
         lines[0].td_against = 6;
 
-        let groups = build_detailed_groups("sp1", lines, &[team(&t1, "A")], &[], &order);
+        let groups = build_detailed_groups(
+            "sp1",
+            lines,
+            &HashMap::new(),
+            &[team(&t1, "A")],
+            &[],
+            &order,
+        );
         let row = &groups[0].rows[0];
 
         assert_eq!(row.bonus, "+0");
@@ -606,8 +676,126 @@ mod tests {
         let teams = vec![team(&t1, "A")];
         let groups = vec![group("g1", "Poule 1", &[&t1]), group("g2", "Poule 2", &[])];
 
-        let result = build_classement_groups("sp1", vec![], &teams, &groups, &empty_order());
+        let result = build_classement_groups(
+            "sp1",
+            vec![],
+            &HashMap::new(),
+            &teams,
+            &groups,
+            &empty_order(),
+        );
 
         assert_eq!(result.len(), 2);
+    }
+
+    // ── Points manuels (carte 451) ───────────────────────────────────────────
+
+    fn manuels(paires: &[(&TeamId, i32)]) -> HashMap<String, i32> {
+        paires.iter().map(|(t, n)| (t.to_string(), *n)).collect()
+    }
+
+    /// Le tiret, pas un zéro. « Zéro point manuel » n'existe pas — le domaine
+    /// le refuse — donc l'afficher inventerait un état.
+    #[test]
+    fn une_equipe_sans_point_manuel_rend_none() {
+        let t = TeamId::new();
+        let groupes = build_classement_groups(
+            "sp1",
+            vec![line(&t, 6)],
+            &HashMap::new(),
+            &[team(&t, "A")],
+            &[],
+            &empty_order(),
+        );
+
+        assert_eq!(groupes[0].rows[0].manual, None);
+        assert_eq!(groupes[0].rows[0].total, 6);
+    }
+
+    #[test]
+    fn le_total_affiche_inclut_le_point_manuel() {
+        let t = TeamId::new();
+        let groupes = build_classement_groups(
+            "sp1",
+            vec![line(&t, 3)],
+            &manuels(&[(&t, 2)]),
+            &[team(&t, "A")],
+            &[],
+            &empty_order(),
+        );
+
+        let ligne = &groupes[0].rows[0];
+        assert_eq!(ligne.points, 3, "les points de match restent ceux du match");
+        assert_eq!(ligne.manual.as_deref(), Some("+2"));
+        assert_eq!(ligne.total, 5);
+    }
+
+    #[test]
+    fn un_total_negatif_se_rend_signe() {
+        let t = TeamId::new();
+        let groupes = build_classement_groups(
+            "sp1",
+            vec![line(&t, 1)],
+            &manuels(&[(&t, -3)]),
+            &[team(&t, "A")],
+            &[],
+            &empty_order(),
+        );
+
+        let ligne = &groupes[0].rows[0];
+        assert_eq!(ligne.manual.as_deref(), Some("−3"));
+        assert_eq!(ligne.total, -2, "un total négatif est un rang valide");
+    }
+
+    #[test]
+    fn le_detaille_rend_les_memes_valeurs() {
+        let t = TeamId::new();
+        let groupes = build_detailed_groups(
+            "sp1",
+            vec![line(&t, 3)],
+            &manuels(&[(&t, -1)]),
+            &[team(&t, "A")],
+            &[],
+            &empty_order(),
+        );
+
+        let ligne = &groupes[0].rows[0];
+        assert_eq!(ligne.manual.as_deref(), Some("−1"));
+        assert_eq!(ligne.total, 2);
+    }
+
+    /// **Le test que la carte ne prévoyait pas.**
+    ///
+    /// Les deux vues calculent leur total séparément, par deux builders
+    /// distincts. Rien ne les comparait : une divergence afficherait deux
+    /// classements contradictoires sur la même page, chacun cohérent avec
+    /// lui-même.
+    #[test]
+    fn les_deux_vues_s_accordent_sur_le_total() {
+        let (a, b) = (TeamId::new(), TeamId::new());
+        let lignes = vec![line(&a, 7), line(&b, 3)];
+        let cartes = manuels(&[(&a, -4), (&b, 2)]);
+        let equipes = [team(&a, "A"), team(&b, "B")];
+
+        let compact = build_classement_groups(
+            "sp1",
+            lignes.clone(),
+            &cartes,
+            &equipes,
+            &[],
+            &empty_order(),
+        );
+        let detaille = build_detailed_groups("sp1", lignes, &cartes, &equipes, &[], &empty_order());
+
+        let totaux_compact: Vec<i32> = compact[0].rows.iter().map(|r| r.total).collect();
+        let totaux_detaille: Vec<i32> = detaille[0].rows.iter().map(|r| r.total).collect();
+        assert_eq!(totaux_compact, totaux_detaille);
+        // 7 − 4 = 3 et 3 + 2 = 5 : l'ordre s'inverse, les deux vues doivent
+        // l'inverser pareil.
+        assert_eq!(totaux_compact, vec![5, 3]);
+        assert_eq!(
+            compact[0].rows[0].team_name, detaille[0].rows[0].team_name,
+            "les deux vues doivent aussi ranger dans le même ordre"
+        );
     }
 }

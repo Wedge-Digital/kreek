@@ -51,6 +51,10 @@
 .ranking-detailed-standings-widget.sd-num   { color: var(--dark-2); }
 .ranking-detailed-standings-widget .sd-bonus,
 .ranking-detailed-standings-widget.sd-bonus { color: var(--dark-2); font-weight: 600; }
+/* Grise comme `sd-bonus` : les deux sont des composantes du total, pas le
+   total. Seul `sd-total` porte le fond et la graisse. */
+.ranking-detailed-standings-widget .sd-manual,
+.ranking-detailed-standings-widget.sd-manual { color: var(--dark-2); font-weight: 600; }
 .ranking-detailed-standings-widget .sd-total,
 .ranking-detailed-standings-widget.sd-total { font-weight: 700; color: var(--dark-0); background: rgba(0,0,0,0.03); }
 

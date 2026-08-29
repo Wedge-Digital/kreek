@@ -24,8 +24,13 @@ from playwright.sync_api import Page
 from competition_lifecycle import BASE_URL, build_full_competition
 from match_report_helpers import play_match, wait_ranking_lines
 
-# Nombre de colonnes fixes avant le bloc des départages : # / Équipe / MJ / G / N / D / Bonus / Total.
-FIXED_COLUMNS = 8
+# Nombre de colonnes fixes avant le bloc des départages :
+# # / Équipe / MJ / G / N / D / Bonus / Manuel / Total.
+#
+# **À mettre à jour dès qu'une colonne s'ajoute avant les départages.** Sans
+# cela, `_tiebreak_headers` décale sa fenêtre et rend une colonne fixe comme si
+# c'était un critère — ce qui s'est produit à l'ajout de « Manuel » (carte 451).
+FIXED_COLUMNS = 9
 
 DECISIVE = "sd-decisive"
 TIED = "sd-tied"
