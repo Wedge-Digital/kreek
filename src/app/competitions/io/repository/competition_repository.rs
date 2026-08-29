@@ -361,4 +361,121 @@ mod tests {
 
         assert!(trouve.is_empty());
     }
+
+    // ── Qui est commissaire (carte 479) ──────────────────────────────────────
+
+    async fn membre(pool: &PgPool, competition_id: &str, coach_id: &str, profil: &str) {
+        sqlx::query(
+            "INSERT INTO competitions_members (competition_id, coach_id, competition_profile)
+             VALUES ($1, $2, $3)",
+        )
+        .bind(competition_id)
+        .bind(coach_id)
+        .bind(profil)
+        .execute(pool)
+        .await
+        .expect("insertion du membre de test");
+    }
+
+    /// Le cache porte le nom que `find_base_info` rend dans `admin_names` : sans
+    /// lui, le `LEFT JOIN` donne `NULL` et le `filter_map` écarte la ligne — le
+    /// test réussirait alors pour la mauvaise raison.
+    async fn cache_coach(pool: &PgPool, coach_id: &str, nom: &str) {
+        sqlx::query(
+            "INSERT INTO spaces__user_cache (id, coach_name, email)
+             VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING",
+        )
+        .bind(coach_id)
+        .bind(nom)
+        .bind(format!("{nom}@bb.club").to_lowercase())
+        .execute(pool)
+        .await
+        .expect("insertion du cache de test");
+    }
+
+    const ADMIN: &str = "01ARZ3NDEKTSV4RRFFQ69G5AAA";
+    const PARTICIPANT: &str = "01ARZ3NDEKTSV4RRFFQ69G5BBB";
+    // `CompetitionId` est un ULID : les « c-1 » des tests voisins ne passent
+    // jamais par son constructeur, ceux-ci si.
+    const LIGUE: &str = "01ARZ3NDEKTSV4RRFFQ69G5CCC";
+    const ORPHELINE: &str = "01ARZ3NDEKTSV4RRFFQ69G5DDD";
+
+    /// **Le défaut que cette carte referme.**
+    ///
+    /// La requête ne filtrait pas sur `competition_profile` : tout membre de
+    /// `competitions_members` entrait dans `admin_ids`, et `require_admin_access`
+    /// s'y fie. Un participant inscrit avec `CompetitionUser` serait donc devenu
+    /// commissaire — libre de modifier le barème, de retirer des poules,
+    /// d'attribuer des points manuels.
+    ///
+    /// Sans effet tant que rien n'écrit `CompetitionUser`, ce qui est le cas
+    /// aujourd'hui. Ce test est ce qui rend la variante utilisable sans danger.
+    #[sqlx::test]
+    async fn un_membre_non_admin_n_apparait_pas_dans_les_admins(pool: PgPool) {
+        competition(&pool, LIGUE, ESPACE, "Ligue").await;
+        cache_coach(&pool, ADMIN, "Commissaire").await;
+        cache_coach(&pool, PARTICIPANT, "Participant").await;
+        membre(&pool, LIGUE, ADMIN, "CompetitionAdmin").await;
+        membre(&pool, LIGUE, PARTICIPANT, "CompetitionUser").await;
+        let depot = CompetitionRepository::new(pool);
+
+        let info = depot
+            .find_base_info(&CompetitionId::try_new(LIGUE).unwrap())
+            .await
+            .unwrap()
+            .expect("la compétition doit être trouvée");
+
+        assert!(
+            !info.admin_ids.contains(&PARTICIPANT.to_string()),
+            "un CompetitionUser est traité en commissaire : {:?}",
+            info.admin_ids
+        );
+        assert!(!info.admin_names.contains(&"Participant".to_string()));
+    }
+
+    /// La contre-épreuve. Sans elle, un filtre qui exclurait **tout le monde**
+    /// passerait le test ci-dessus.
+    #[sqlx::test]
+    async fn un_admin_apparait_toujours(pool: PgPool) {
+        competition(&pool, LIGUE, ESPACE, "Ligue").await;
+        cache_coach(&pool, ADMIN, "Commissaire").await;
+        cache_coach(&pool, PARTICIPANT, "Participant").await;
+        membre(&pool, LIGUE, ADMIN, "CompetitionAdmin").await;
+        membre(&pool, LIGUE, PARTICIPANT, "CompetitionUser").await;
+        let depot = CompetitionRepository::new(pool);
+
+        let info = depot
+            .find_base_info(&CompetitionId::try_new(LIGUE).unwrap())
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert!(
+            info.admin_ids.contains(&ADMIN.to_string()),
+            "{:?}",
+            info.admin_ids
+        );
+        assert!(info.admin_names.contains(&"Commissaire".to_string()));
+    }
+
+    /// **Le filtre vit dans le `ON`, pas dans le `WHERE`.**
+    ///
+    /// C'est un `LEFT JOIN` : une condition sur la table jointe posée en `WHERE`
+    /// le transformerait en jointure interne. Une compétition sans membre
+    /// cesserait alors d'être trouvée — `find_base_info` rendrait `None` — et
+    /// tout ce qui en dépend répondrait `404` sur une compétition qui existe.
+    #[sqlx::test]
+    async fn une_competition_sans_membre_reste_trouvable(pool: PgPool) {
+        competition(&pool, ORPHELINE, ESPACE, "Sans commissaire").await;
+        let depot = CompetitionRepository::new(pool);
+
+        let info = depot
+            .find_base_info(&CompetitionId::try_new(ORPHELINE).unwrap())
+            .await
+            .unwrap();
+
+        let info = info.expect("une compétition sans membre doit rester trouvable");
+        assert_eq!(info.name, "Sans commissaire");
+        assert!(info.admin_ids.is_empty());
+    }
 }
