@@ -128,6 +128,29 @@ Directives de travail pour Claude Code sur ce projet.
 
     L'historique déjà poussé n'est pas réécrit ; la règle vaut pour la suite.
 
+15. **Rien n'est « complet », « terminé » ou « fini » tant qu'il reste une
+    carte.** Un épic dont neuf cartes sur dix sont livrées n'est pas complet ;
+    il est à 9/10. Une fonctionnalité dont les tests restent à écrire n'est pas
+    terminée ; son code l'est.
+
+    La formule exacte : **ce qui est fait, et ce qu'il reste**.
+
+    ```
+    ✗ L'onglet Paramètres est complet.
+    ✓ Les cinq panneaux sont livrés ; il reste la carte 426.
+    ```
+
+    **Pourquoi ce n'est pas une question de style.** « Complet » est ce qu'on
+    retient d'un compte rendu, et c'est sur ce mot qu'on décide de passer à
+    autre chose. Un chantier déclaré clos ne se relit pas, et la carte qui
+    restait se découvre des semaines plus tard — quand le contexte est perdu.
+    Dire « 9/10 » coûte trois caractères et laisse la décision de clore à qui
+    la prend.
+
+    Le même raisonnement vaut pour un épic, dont le `Terminé quand` est un
+    **critère observable** et jamais un décompte de cartes : « toutes les cartes
+    sont dans `done/` » n'est pas une preuve que la fonction marche.
+
 ---
 
 ## Vérifications à l'installation — une fois par clone
