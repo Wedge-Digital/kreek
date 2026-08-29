@@ -2,7 +2,8 @@
 
 **Épic :** E06 — La fiche d'équipe complétée · **Ordre :** 2
 **Dépend de :** 476, **434**
-**Conception :** `docs/specs/matchs-d-une-equipe/README.md`
+**Conception :** `docs/specs/matchs-d-une-equipe/README.md`, et
+`docs/specs/fiche-equipe-onglets/README.md` pour le mécanisme d'onglets
 **Remplace :** la carte `match-02-team-matches-tab`
 
 ## Objectif
@@ -29,11 +30,37 @@ compose — le patron déjà en place à la ligne 153 de la même fiche :
 players_widget_url: app_routes.players.players_by_team_widget(space_id, &team.id.to_string()),
 ```
 
-## La route
+## Deux routes, et pourquoi
+
+L'onglet appartient à `teams`, son contenu à `competitions`. **Pointer l'onglet
+directement sur la route de `competitions` ne marche pas** : le `hx-push-url`
+mettrait une URL `/competitions/…` dans la barre d'adresse pendant qu'on regarde
+une fiche d'équipe, et un rechargement livrerait le fragment nu, sans la fiche
+autour.
 
 ```
-GET /app/{space_id}/competitions/teams/{team_id}/matches
+GET /app/{space_id}/teams/{team_id}/matchs                    ← teams, la coquille
+GET /app/{space_id}/competitions/teams/{team_id}/matches      ← competitions, le fragment
 ```
+
+La coquille est trois lignes, sur le patron exact du widget joueurs déjà en
+place à la ligne 153 de la même fiche :
+
+```html
+<div id="team-matches" hx-get="{{ vm.matches_widget_url }}"
+     hx-trigger="load" hx-target="this" hx-swap="outerHTML">
+  <div class="loading-placeholder">Chargement des matchs…</div>
+</div>
+```
+
+Le prix est **un aller-retour de plus au premier clic**. C'est celui de la
+souveraineté des données, et il est déjà payé pour les joueurs.
+
+`TEAM_MATCHES` est posée **par cette carte** et non par la 434 : une route montée
+sans contenu répond « rien », et la règle est qu'un onglet ne devient cliquable
+que lorsque son contenu existe.
+
+## La route du fragment
 
 `{team_id}` est **déjà scopé** : `TeamSpaceOwnership` le résout, et il consulte
 les deux sources depuis les cartes 320-321. Rien à ajouter au middleware — et
@@ -184,6 +211,8 @@ qui ressemble à un défaut de données et non de code.
 - [ ] La route, le contrôleur, `team-matches-widget.html` incluant le composant
 - [ ] `compute_authorization` **réutilisée**, aucun contrôle d'accès neuf
 - [ ] Le `competition_id` résolu depuis le `team_id`, **jamais depuis l'URL**
-- [ ] L'onglet branché dans `teams-team-detail.html` via `AppRoutes`
+- [ ] `TEAM_MATCHES` côté `teams`, la coquille `teams-matches-tab.html`
+- [ ] L'onglet « Matchs » passe de `<div>` inerte à `<a>` htmx
+- [ ] `matches_widget_url` via `AppRoutes`, jamais un import direct
 - [ ] Les neuf tests
 - [ ] `make lint && make test && make check-arch`

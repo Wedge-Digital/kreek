@@ -333,3 +333,9 @@ qui marche aujourd'hui, et c'est le seul risque réel du chantier.
 La **434** — « la fiche équipe accueille des onglets » — pose le mécanisme
 d'aiguillage. L'onglet Matchs est aujourd'hui un `<div class="tab">` sans
 `hx-get` ni handler ; il n'a nulle part où se brancher avant elle.
+
+Son mécanisme est spécifié à part, dans
+**`docs/specs/fiche-equipe-onglets/README.md`** — il servait la seule trésorerie
+quand il a été conçu, il sert maintenant trois onglets dont un servi par un
+autre BC. C'est là que se trouve la forme de la coquille, et la règle qui décide
+quand un onglet se câble.

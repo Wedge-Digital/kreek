@@ -1,8 +1,12 @@
 # La fiche équipe accueille des onglets
 
 **Épic :** E06 — La fiche d'équipe complétée · **Ordre :** 1 · **Dépend de :** rien
-**Conception :** `docs/specs/tresorerie-equipe/onglet-tresorerie/02-front.md`
-et `07-integration.md`
+**Dont dépendent :** 436 (trésorerie), **477** (matchs), et par elle la 478
+**Conception :** `docs/specs/fiche-equipe-onglets/README.md`
+
+> **Trois cartes attendent ce mécanisme**, dont une d'un autre chantier —
+> l'onglet Matchs, dont le contenu est servi par `competitions`. C'est la
+> première carte de E06 à livrer, et rien ne se branche avant elle.
 
 ## Objectif
 
@@ -42,7 +46,8 @@ fragment de l'onglet « Joueurs & Staff », dans son propre gabarit
 
 ### L'aiguillage
 
-Sur le patron d'`admin_page.rs`, déjà en place :
+Sur le patron d'`admin_page.rs`, déjà en place (son `match active_tab`, ligne
+209) :
 
 ```rust
 pub async fn team_detail(…)          // active_tab = "squad"
@@ -54,6 +59,10 @@ let content = match active_tab {
 };
 ```
 
+**Le `_` rend « Joueurs & Staff », il n'échoue pas.** Un `active_tab` inconnu
+vient d'une URL tapée à la main ; répondre `404` sur une page qui existe serait
+pire que d'afficher l'onglet par défaut.
+
 ### La route
 
 ```rust
@@ -64,14 +73,29 @@ Montée en `get(team_page_treasury)`. `space_scope` la couvre sans rien ajouter 
 elle porte `{team_id}`, dont `teams` déclare déjà le résolveur
 (`infrastructure/teams/space_ownership.rs`).
 
+`TEAM_MATCHES` suivra le même moule, posée par la 477 — **pas par celle-ci** :
+une route montée sans contenu répond « rien ».
+
+**Aucune route de fragment séparée.** C'est la route de page que le `hx-get`
+appelle, et le handler distingue les deux usages à l'en-tête `HX-Request`, comme
+l'administration de compétition. Une seconde route doublerait la surface pour la
+même réponse.
+
 ### Les onglets
 
 « Joueurs & Staff » devient un `<a>` porteur de `hx-get` / `hx-target` /
 `hx-push-url`, sur le modèle d'`admin-page.html:19`.
 
-**« Trésorerie » reste un `<div>` inerte** — la carte 436 le câble. **« Matchs »
-reste inerte définitivement** : hors périmètre, et une route qui répond « rien »
-se lirait comme une panne.
+**« Trésorerie » et « Matchs » restent des `<div>` inertes** — la 436 câble le
+premier, la **477** le second.
+
+La règle est qu'**un onglet ne devient cliquable que lorsque son contenu
+existe** : une route qui répond « rien » se lit comme une panne. Chaque carte
+câble donc **son** onglet ; celle-ci pose le mécanisme et n'en câble qu'un.
+
+> Une version antérieure de cette carte disait « **Matchs** reste inerte
+> **définitivement** ». La seconde moitié du motif reste vraie, le
+> « définitivement » ne l'est plus — la 477 câble cet onglet.
 
 `hx-swap="innerHTML"` sur `#team-tab-content` : le fragment est le **contenu**
 du conteneur, jamais le conteneur lui-même. C'est la forme que le `CLAUDE.md`
