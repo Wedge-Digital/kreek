@@ -97,6 +97,12 @@
 # leur événement DOM que la collecte JS écoute.
 "test_competition_settings_tiers" = ["competitions", "references", "teams",
                                      "team_creation", "ranking", "spaces", "auth"]
+# Le seul panneau de l'onglet sans dépendance à `references` : il n'édite que
+# deux énumérations du document d'invitations. `team_creation` y figure quand
+# même — le test vérifie que la saison reste `ready`, et c'est ce BC qui refuse
+# la création d'équipe quand elle ne l'est pas (carte 407).
+"test_competition_settings_visibility" = ["competitions", "teams",
+                                          "team_creation", "spaces", "auth"]
 # Le widget de réglage des notifications, monté dans l'onglet Synthèse.
 "test_notification_settings"   = ["competitions", "teams", "spaces", "references", "ranking"]
 

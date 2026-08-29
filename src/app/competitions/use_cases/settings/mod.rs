@@ -8,3 +8,4 @@ pub mod update_general_settings_use_case;
 pub mod update_pools_settings_use_case;
 pub mod update_ranking_settings_use_case;
 pub mod update_tiers_settings_use_case;
+pub mod update_visibility_settings_use_case;

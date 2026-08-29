@@ -75,6 +75,13 @@ impl ISeasonRepository for FakeSeasonRepository {
     ) -> Result<(), SeasonRepositoryError> {
         Ok(())
     }
+    async fn save_visibility(
+        &self,
+        _: &SeasonId,
+        _: &CompetitionInvitations,
+    ) -> Result<(), SeasonRepositoryError> {
+        Ok(())
+    }
     async fn find_notifications(
         &self,
         _: &SeasonId,

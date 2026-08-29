@@ -316,6 +316,28 @@ impl ISeasonRepository for SeasonRepository {
         Ok(())
     }
 
+    async fn save_visibility(
+        &self,
+        season_id: &SeasonId,
+        invitations: &CompetitionInvitations,
+    ) -> Result<(), SeasonRepositoryError> {
+        let json = serde_json::to_string(invitations)
+            .map_err(|e| SeasonRepositoryError::Database(e.to_string()))?;
+
+        let found: Option<String> =
+            sqlx::query_scalar(include_str!("sql/seasons/update_visibility.sql"))
+                .bind(json)
+                .bind(season_id.to_string())
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(db_err)?;
+
+        if found.is_none() {
+            return Err(SeasonRepositoryError::SeasonNotFound);
+        }
+        Ok(())
+    }
+
     async fn find_notifications(
         &self,
         season_id: &SeasonId,

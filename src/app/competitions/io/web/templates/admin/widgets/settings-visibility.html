@@ -1,0 +1,86 @@
+{# Panneau « Visibilité » (carte 425).
+
+   ── Aucun JS, et c'est le point ───────────────────────────────────────────
+   Deux groupes de boutons radio dans un `<form hx-post>`. Le navigateur porte
+   la valeur choisie ; rien à collecter, rien à synchroniser, rien à tester en
+   navigateur pour prouver que la collecte marche.
+
+   Le magicien habille le même choix en `<div class="choice-btn" onclick=…>`.
+   Ici les `<label>` enveloppent un vrai `<input type="radio">` : même aspect,
+   mais l'état vit dans le formulaire au lieu d'une variable JS. Le CLAUDE.md
+   interdit par ailleurs les `<select>` natifs — la question ne se pose donc pas.
+
+   ── `invited_count` est affiché exprès ────────────────────────────────────
+   Le POST réécrit le document qui porte la liste des invités. L'afficher rend
+   visible ce que l'enregistrement doit préserver. #}
+<div class="settings-panel" id="settings-visibility-panel" hx-disinherit="*">
+  <div class="settings-panel-head">
+    <div class="settings-panel-title">
+      <span class="settings-panel-title-icon">🔒</span>Visibilité
+    </div>
+    <button type="submit" form="visibility-form" class="btn btn-primary">Enregistrer</button>
+  </div>
+
+  <form id="visibility-form"
+        class="settings-panel-body"
+        hx-post="{{ post_url }}"
+        hx-target="#settings-visibility-panel"
+        hx-swap="outerHTML">
+
+    <div class="visibility-section">
+      <div class="visibility-section-title">Mode d'accès</div>
+      <div class="visibility-choices">
+        <label class="visibility-choice{% if vm.access_mode == "invitation" %} selected{% endif %}">
+          <input type="radio" name="access_mode" value="invitation"
+                 {% if vm.access_mode == "invitation" %}checked{% endif %}>
+          <span class="visibility-choice-label">Sur invitation</span>
+          <span class="visibility-choice-help">Seuls les coachs invités peuvent s'inscrire.</span>
+        </label>
+        <label class="visibility-choice{% if vm.access_mode == "open" %} selected{% endif %}">
+          <input type="radio" name="access_mode" value="open"
+                 {% if vm.access_mode == "open" %}checked{% endif %}>
+          <span class="visibility-choice-label">Inscription libre</span>
+          <span class="visibility-choice-help">Tous les membres de l'espace peuvent s'inscrire.</span>
+        </label>
+      </div>
+      <div class="visibility-preserved" data-role="invited-count">
+        {% if vm.invited_count == 0 %}
+        Aucun coach invité pour l'instant.
+        {% else %}
+        <strong>{{ vm.invited_count }}</strong>
+        coach{% if vm.invited_count > 1 %}s{% endif %} invité{% if vm.invited_count > 1 %}s{% endif %}
+        — conservé{% if vm.invited_count > 1 %}s{% endif %} en passant en inscription libre.
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="visibility-section">
+      <div class="visibility-section-title">Validation des inscriptions</div>
+      <div class="visibility-choices">
+        <label class="visibility-choice{% if vm.requires_validation %} selected{% endif %}">
+          <input type="radio" name="requires_validation" value="manual"
+                 {% if vm.requires_validation %}checked{% endif %}>
+          <span class="visibility-choice-label">Les commissaires valident</span>
+          <span class="visibility-choice-help">Chaque demande d'inscription attend un accord.</span>
+        </label>
+        <label class="visibility-choice{% if !vm.requires_validation %} selected{% endif %}">
+          <input type="radio" name="requires_validation" value="automatic"
+                 {% if !vm.requires_validation %}checked{% endif %}>
+          <span class="visibility-choice-label">Acceptation automatique</span>
+          <span class="visibility-choice-help">Une demande d'inscription est acceptée d'office.</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="panel-consequence">
+      <span class="consequence-idle">
+        {% if vm.saved %}
+        Visibilité enregistrée.
+        {% else %}
+        Les coachs déjà invités, l'échéance et le nombre de places ne sont pas
+        modifiés ici. <em>Ils sont conservés tels quels.</em>
+        {% endif %}
+      </span>
+    </div>
+  </form>
+</div>

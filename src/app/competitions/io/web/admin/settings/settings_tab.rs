@@ -38,6 +38,7 @@ pub struct SettingsTabTemplate {
     pub ranking_url: String,
     pub pools_url: String,
     pub tiers_url: String,
+    pub visibility_url: String,
 }
 
 impl IntoResponse for SettingsTabTemplate {
@@ -95,6 +96,11 @@ pub async fn settings_tab(
             &competition_id,
             &season_id,
         );
+        let visibility_url = AppRoutes::default().competitions.admin_settings_visibility(
+            &space_id,
+            &competition_id,
+            &season_id,
+        );
         return SettingsTabTemplate {
             space_id,
             competition_id,
@@ -103,6 +109,7 @@ pub async fn settings_tab(
             ranking_url,
             pools_url,
             tiers_url,
+            visibility_url,
         }
         .into_response();
     }

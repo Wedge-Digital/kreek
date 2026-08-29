@@ -281,3 +281,85 @@
   font-size: var(--text-tiny); font-weight: 600; color: var(--dark-2);
   margin: var(--p1) 0 6px;
 }
+
+/* ─── Panneau « Visibilité » (carte 425) ───────────────────────────────────
+   Déclarations reprises telles quelles de `.choice-btn` (common.css) : même
+   aspect que l'étape 4 du magicien, mais posées sur un `<label>` qui enveloppe
+   un vrai `<input type="radio">`. L'état vit donc dans le formulaire, pas dans
+   une variable JS.
+
+   La classe `.selected` est rendue par le serveur — elle dit ce qui est
+   *enregistré*. `:has(:checked)` la double pour l'état *courant*, afin que le
+   clic se voie sans attendre la réponse du POST. Les deux sont nécessaires :
+   sans la classe, un navigateur sans `:has()` n'afficherait rien ; sans
+   `:has()`, cliquer ne changerait rien à l'écran jusqu'au retour serveur. */
+.competition-admin-settings .visibility-section + .visibility-section {
+  margin-top: var(--p3);
+}
+.competition-admin-settings .visibility-section-title {
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--dark-2);
+  margin-bottom: var(--p1);
+}
+.competition-admin-settings .visibility-choices {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.competition-admin-settings .visibility-choice {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 20px;
+  border: 2px solid var(--dark-5);
+  border-radius: 8px;
+  font-size: var(--text-small);
+  color: var(--dark-2);
+  cursor: pointer;
+  background: var(--white);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.competition-admin-settings .visibility-choice:hover {
+  border-color: var(--dark-4);
+  color: var(--dark-1);
+}
+.competition-admin-settings .visibility-choice.selected,
+.competition-admin-settings .visibility-choice:has(input:checked) {
+  border-color: var(--main-blue);
+  color: var(--main-blue);
+  background: rgba(0, 48, 73, 0.05);
+}
+/* Le radio reste dans le DOM — il porte la valeur envoyée — mais l'habillage
+   est le label. `display: none` le retirerait de la navigation clavier ; cette
+   forme le garde focusable. */
+.competition-admin-settings .visibility-choice input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.competition-admin-settings .visibility-choice:focus-within {
+  outline: 2px solid var(--main-blue);
+  outline-offset: 2px;
+}
+.competition-admin-settings .visibility-choice-label {
+  font-weight: 600;
+}
+.competition-admin-settings .visibility-choice-help {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+}
+.competition-admin-settings .visibility-preserved {
+  margin-top: var(--p1);
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+}
+
+@media (max-width: 768px) {
+  .competition-admin-settings .visibility-choice {
+    min-width: 100%;
+  }
+}

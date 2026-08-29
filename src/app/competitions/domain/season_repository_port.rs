@@ -132,6 +132,30 @@ pub trait ISeasonRepository: Send + Sync {
         invitations: &CompetitionInvitations,
         notifications: &CompetitionNotifications,
     ) -> Result<(), SeasonRepositoryError>;
+    /// Écrit **les seules invitations**, sans toucher au statut ni aux
+    /// notifications.
+    ///
+    /// # Pourquoi elle existe à côté de `save_invitations`
+    ///
+    /// `save_invitations` pose `status = 'invitations_configured'`, ce qui sert
+    /// l'étape 4 du magicien. Sur une saison en cours, ce serait la faire
+    /// régresser sous `ready` : `competition_rules_adapter` ne la dirait plus
+    /// prête, et la carte 407 interdit la création d'équipe sur une saison qui
+    /// ne l'est pas. Changer un mode d'accès aurait cassé l'inscription de la
+    /// compétition entière.
+    ///
+    /// # Pourquoi elle n'écrit pas les notifications
+    ///
+    /// `save_invitations` les écrit, donc tout appelant doit les relire sous
+    /// peine de les remettre à leur défaut — et **les rappels d'échéance
+    /// s'éteindraient sans que rien ne le dise**. Ne pas écrire la colonne rend
+    /// cette relecture inutile : le risque disparaît par construction plutôt
+    /// que par précaution.
+    async fn save_visibility(
+        &self,
+        season_id: &SeasonId,
+        invitations: &CompetitionInvitations,
+    ) -> Result<(), SeasonRepositoryError>;
     /// `None` quand la colonne est `NULL` — une saison qui n'a jamais été
     /// réglée. L'appelant y applique le défaut du domaine, qui vaut allumé.
     async fn find_notifications(

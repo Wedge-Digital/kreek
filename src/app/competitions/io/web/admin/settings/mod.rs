@@ -10,3 +10,4 @@ pub mod pools_panel;
 pub mod ranking_panel;
 pub mod settings_tab;
 pub mod tiers_panel;
+pub mod visibility_panel;
