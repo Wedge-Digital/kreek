@@ -1,3 +1,20 @@
+> **Carte annulée le 2026-08-29 — remplacée par les cartes 474 et 475.**
+>
+> Son constat était **à moitié périmé**. « Les onglets Équipes *et* Stats
+> servent de la donnée fictive » : c'est faux pour Équipes, branché depuis les
+> cartes du BC `teams` — `TeamsTabTemplate` ne porte plus que `app_routes`,
+> `space_id` et `season_id`. `mock_teams()` existe encore dans le fichier mais
+> **n'est appelé nulle part** : c'est du code mort qui gonflait le constat, et
+> la 474 le supprime.
+>
+> Son action 2 disait « vérifier si la donnée est modélisée ; sinon retourner
+> des collections vides et créer un ticket de modélisation ». **Vérifié : elle
+> l'est**, et dans la table du BC lui-même — `competition_match_display_proj`
+> porte les scores et les blessures par match depuis l'origine. Il n'y a donc
+> ni modélisation à faire, ni collections vides à servir en attendant.
+>
+> La conception vit dans `docs/specs/statistiques-de-competition/`.
+
 # 100% mock data dans `competition_detail.rs`
 
 **Priorité : moyenne**

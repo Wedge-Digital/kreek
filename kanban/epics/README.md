@@ -85,7 +85,7 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 | Carte | Note |
 |---|---|
 | `18-script-inline-htmx-fragments` | Sortie de l'épic E03 à sa clôture : un `<script>` d'init dans un fragment ne peint rien sans ses styles et ne déplace rien, donc le critère de l'épic ne la mesurait pas |
-| `13-mock-data-competition-detail` | Les onglets Équipes et Stats servent de la donnée fictive **en production**. C'est la seule dette visible par un utilisateur |
+| `474` et `475` — les statistiques de compétition | Le panneau des quatre tableaux Top/Flop sert de la donnée fictive **en production** — la seule dette visible par un utilisateur. La donnée existe dans `competition_match_display_proj`, table du BC lui-même : quatre tris d'une seule agrégation. Remplacent la carte 13, dont le constat sur l'onglet Équipes était périmé |
 | `60-jersey-numbers-at-submission` | Attribution des numéros de maillot à la soumission |
 | `362-le-bundle-css-est-gele-au-demarrage` | Une feuille éditée n'a aucun effet sur un serveur qui tourne, et rien ne le signale. A fait accuser à tort la carte 343 pendant une heure |
 | `462-donner-un-portrait-a-un-joueur` | Voisine de la 461, mais elle traverse toute la pile : un joueur n'a aujourd'hui aucune image, et ce que la fiche affiche est son numéro de maillot sur un dégradé |
