@@ -418,18 +418,41 @@ echo ""
 # comme l'axe 6 le fait déjà avec `arch:ok`. Une liste tenue dans ce script
 # aurait dérivé ; un marqueur adjacent à la fonction ne le peut pas, et il
 # oblige à écrire pourquoi.
+#
+# ── Deux défauts de la première mise en œuvre ───────────────────────────────
+#
+# Elle ne lisait que **la ligne précédant la signature**, et y cherchait le mot
+# `instrument`. Deux conséquences, opposées et toutes deux fausses :
+#
+# **Un attribut replié était refusé.** `cargo fmt` replie
+# `#[tracing::instrument(…)]` dès qu'il dépasse la largeur : la ligne précédente
+# devient `)]`, que le contrôle ne reconnaît pas. Une fonction correctement
+# instrumentée échouait donc — et le symptôme pousse à poser un
+# `arch:no-instrument` mensonger pour débloquer. Rencontré en carte 450.
+#
+# **N'importe quelle prose exemptait.** `precedente !~ /instrument/` est
+# satisfait par une ligne de documentation contenant le mot : « ce use case
+# n'est pas instrumenté » **taisait le contrôle**. Il se laissait donc réduire
+# au silence par le mot même qu'il cherchait.
+#
+# Le critère porte maintenant sur un **état**, remis à zéro par une ligne vide
+# ou une accolade en colonne 0 — les deux frontières d'un élément de premier
+# niveau —, et les motifs sont précis : `#[tracing::instrument` et non
+# `instrument`.
 echo -e "${BOLD}Axe 11 · Use cases async — instrumentés ou motivés${RESET}"
 axe11=$(
   for fichier in $(find src/app -path '*/use_cases/*' -name '*.rs' 2>/dev/null); do
     awk -v f="$fichier" '
       /^#\[cfg\(test\)\]/ { dans_test = 1 }
       dans_test { next }
+      /^\}/                     { annote = 0 }
+      /^[[:space:]]*$/          { annote = 0; next }
+      /#\[tracing::instrument/  { annote = 1 }
+      /arch:no-instrument/      { annote = 1 }
       /^pub async fn / {
-        if (precedente !~ /instrument/ && precedente !~ /arch:no-instrument/) {
-          print f ":" NR ": " $0
-        }
+        if (!annote) { print f ":" NR ": " $0 }
+        annote = 0
       }
-      { precedente = $0 }
     ' "$fichier"
   done
 )
