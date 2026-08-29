@@ -1,3 +1,22 @@
+> **Carte annulée le 2026-08-29 — remplacée par les cartes 476 à 478.**
+>
+> Ses deux prémisses étaient périmées. « **Dépend de :** BC `match_report` (non
+> encore créé) » — il existe. Et sa checklist demandait un « modèle de
+> persistance des matchs dans BC `match_report` » : **il n'y a rien à
+> modéliser.** `competition_match_display_proj` porte déjà, par match, les
+> identifiants et les noms dénormalisés des deux équipes, leurs rosters, leurs
+> coachs, leurs logos, le score, les blessures et l'URL du rapport.
+>
+> Elle se trompait donc aussi de BC : cette table appartient à `competitions`,
+> qui sert le fragment ; la fiche d'équipe le compose. C'est la même erreur que
+> la carte 13 sur les statistiques — demander un ticket de modélisation pour
+> une donnée présente depuis l'origine.
+>
+> Ses quatre questions ouvertes sont tranchées : saison courante seulement,
+> matchs à venir compris, une pastille V/N/D du point de vue de l'équipe, et le
+> lien de rapport pour le coach de l'équipe et les admins. La conception vit
+> dans `docs/specs/matchs-d-une-equipe/`.
+
 # BC `match_report` — Onglet Matchs de la fiche d'équipe
 
 **Priorité : moyenne**

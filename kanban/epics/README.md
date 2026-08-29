@@ -43,7 +43,7 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 | [E03 — Front : ni saut, ni clignotement](done/E03-front-ni-saut-ni-clignotement.md) | `done` | 4 |
 | [E04 — Les verrous architecturaux](to_be_refined/E04-verrous-architecturaux.md) | `to_be_refined` | 6 |
 | [E05 — Couverture e2e du déjà livré](to_be_refined/E05-couverture-e2e.md) | `to_be_refined` | 4 |
-| [E06 — La fiche d'équipe complétée](to_be_refined/E06-fiche-equipe-completee.md) | `to_be_refined` | 6 |
+| [E06 — La fiche d'équipe complétée](to_be_refined/E06-fiche-equipe-completee.md) | `to_be_refined` | 8 |
 | [E07 — Entrées utilisateur et identité](en_cours/E07-entrees-utilisateur-et-identite.md) | `en_cours` · 1/2 | 2 |
 | [E08 — Mode customisation : finir la livraison](done/E08-mode-customisation.md) | `done` · fusionnée dans la 398 | 2 |
 | [E09 — BC `news`](to_be_refined/E09-bc-news.md) | `to_be_refined` | 2 |

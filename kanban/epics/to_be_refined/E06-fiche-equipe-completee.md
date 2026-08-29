@@ -1,8 +1,9 @@
 # E06 — La fiche d'équipe complétée
 
-**État :** 6 cartes · 0 faite — la 48 a été **remplacée** par les quatre
-cartes issues du workflow feature (434 à 437), spécifiées dans
-`docs/specs/tresorerie-equipe/`.
+**État :** 8 cartes · 0 faite. Deux cartes d'intention ont été **remplacées**
+par des cartes conçues : la 48 par les quatre de la trésorerie (434 à 437,
+`docs/specs/tresorerie-equipe/`), et `match-02` par les trois de l'onglet Matchs
+(476 à 478, `docs/specs/matchs-d-une-equipe/`).
 
 ## La fonction
 
@@ -29,9 +30,12 @@ manquante du même écran.
 | **435** | Lire le grand livre d'une équipe | `ready_to_be_done` | le port et l'adapter sur `teams__treasury_ledger` |
 | **436** | Le relevé de trésorerie s'affiche | `ready_to_be_done` | l'onglet, ses lignes, son solde courant |
 | **437** | Les tests e2e de l'onglet Trésorerie | `ready_to_be_done` | le relevé sous Playwright |
-| match-02 | Onglet Matchs de la fiche d'équipe | `to_be_refined` | l'historique des matchs, fragment servi par `match_report` |
+| **476** | Le bloc de match devient un composant | `ready_to_be_done` | gabarit et feuille extraits, aucun écran ne change |
+| **477** | L'onglet Matchs d'une équipe | `ready_to_be_done` | la liste, servie par `competitions` |
+| **478** | Les tests e2e de l'onglet Matchs | `ready_to_be_done` | dont la non-régression de la page compétition |
 | match-01 | Widget V/N/D d'une équipe | `to_be_refined` | le bilan victoires / nuls / défaites |
-| ~~48~~ | ~~Onglet Trésorerie de la fiche d'équipe~~ | `cancelled` | **remplacée** par les quatre ci-dessus |
+| ~~48~~ | ~~Onglet Trésorerie~~ | `cancelled` | **remplacée** par 434 à 437 |
+| ~~match-02~~ | ~~Onglet Matchs~~ | `cancelled` | **remplacée** par 476 à 478 |
 
 ## Ce qui commande l'ordre
 
@@ -44,23 +48,29 @@ livre `teams__treasury_ledger` existe et est écrit depuis l'origine, il n'a
 simplement jamais été lu. Le chantier est donc une lecture, pas une projection
 — et c'est ce genre d'écart que le workflow feature sert à trouver.
 
-`match-01` et `match-02` sont à raffiner, et leurs deux fiches portent une
-dépendance **périmée** :
+`match-01` reste à raffiner, et sa fiche porte une dépendance **périmée** :
 
 > « Dépend de : BC `match_report` (non encore créé) »
 
-Le BC existe (`src/app/match_report/`). Le raffinage commence par là : ce qui
-reste à décider, c'est le **modèle de persistance des résultats** dans ce BC —
-agrégat event sourcé ou table de résultats — et si le bilan est global ou
-limité à la saison courante.
+Le BC existe. Et la question qu'elle posait — le **modèle de persistance des
+résultats** — est **sans objet** : la conception de l'onglet Matchs l'a
+établi, `competition_match_display_proj` porte déjà tout, et le bilan V/N/D
+n'est que cette même requête, comptée. Ce qui reste à décider pour `match-01`
+tient en une ligne : le bilan est-il global ou limité à la saison courante ?
 
 Une partie de `match-01` est déjà caduque : son second point d'intégration, la
 page « Mes équipes », est barré dans la carte — la page a été simplifiée et le
 V/N/D n'y apparaît plus.
 
-Les trois cartes traversent la frontière `teams` ↔ `match_report` : `teams`
-héberge, `match_report` sert les fragments. C'est le patron de composition par
-widgets HTMX déjà en place, pas une exception à négocier.
+Les cartes traversent la frontière `teams` ↔ **`competitions`**, et non
+`teams` ↔ `match_report` comme l'épic le croyait : c'est `competitions` qui
+possède `competition_match_display_proj`, donc c'est lui qui sert les
+fragments. `teams` héberge et compose — le patron déjà en place à la ligne 153
+de `teams-team-detail.html`, où la fiche charge le widget des joueurs.
+
+**Les 476 à 478 dépendent de la 434**, qui pose le mécanisme d'onglets : celui
+des Matchs est aujourd'hui un `<div class="tab">` sans `hx-get` ni handler, il
+n'a nulle part où se brancher avant elle.
 
 ## Ce que l'épic ne couvre pas
 
