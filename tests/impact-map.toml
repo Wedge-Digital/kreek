@@ -109,6 +109,11 @@
 # compétition. Une régression dans l'un ou l'autre BC doit le réveiller.
 "test_competition_admin_settings" = ["competitions", "spaces", "auth", "teams",
                                      "team_creation", "ranking", "references"]
+# `match_report` y figure parce que la fixture **joue un match** pour obtenir un
+# ordre connu : sans lui, les deux équipes seraient à zéro et le réordonnancement
+# ne prouverait rien.
+"test_manual_ranking_points" = ["ranking", "competitions", "match_report",
+                                "teams", "team_creation", "spaces", "auth"]
 # Le widget de réglage des notifications, monté dans l'onglet Synthèse.
 "test_notification_settings"   = ["competitions", "teams", "spaces", "references", "ranking"]
 
