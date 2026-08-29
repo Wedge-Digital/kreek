@@ -138,8 +138,59 @@ n'usent pas de la fonctionnalité s'ordonnent exactement comme avant.
 
 ## Checklist
 
-- [ ] `ranking/domain/manual_points.rs` et les cinq tests
-- [ ] `TeamStanding.manual_points` et `total_points()`
-- [ ] La ligne de `compare`, et les six tests d'ordre
-- [ ] `build_ordered_standings` prend la carte, les deux appelants passent vide
-- [ ] `make lint && make test && make check-arch`
+- [x] `ranking/domain/manual_points.rs` et les cinq tests — **six**, cf. ci-dessous
+- [x] `TeamStanding.manual_points` et `total_points()`
+- [x] La ligne de `compare`, et les six tests d'ordre
+- [x] `build_ordered_standings` prend la carte, les deux appelants passent vide
+- [x] `make lint && make test && make check-arch`
+
+## Trois tests que la carte ne prévoyait pas
+
+### La carte doit être **lue**, et rien ne le vérifiait
+
+Les deux appelants passent une carte vide jusqu'à la 451. `to_standing` pouvait
+donc ignorer son argument et poser zéro **sans qu'aucun test ne bronche** — et
+la carte 451 aurait cherché longtemps pourquoi ses points n'apparaissaient pas,
+avec un domaine correct et un service muet.
+
+`la_carte_des_points_manuels_atteint_le_classement` ferme ce trou, et
+`les_points_manuels_changent_les_rangs_attribues` vérifie que la lecture a lieu
+**avant** l'attribution des rangs — pas seulement que le champ est rempli.
+
+### Le sixième test de value object
+
+`reason_refuse_au_dela_de_deux_cents_caracteres` : la carte listait cinq tests et
+citait la borne sans la couvrir.
+
+### Une équipe absente vaut zéro, et c'est la règle
+
+`une_equipe_absente_de_la_carte_a_zero_point_manuel` : la carte ne porte que les
+équipes qui ont reçu des points, elle n'est donc **jamais complète**. Le
+`unwrap_or(0)` n'est pas un repli sur erreur mais le cas commun — c'est une
+distinction qui se perd vite à la relecture.
+
+## Falsification
+
+| Mutation | Constaté |
+|---|---|
+| `compare` revient aux seuls `ranking_points` — *l'addition déplacée après le tri* | 4 rouges ; **`sans_point_manuel_le_classement_est_inchange` reste vert** |
+| `to_standing` ignore la carte | 2 rouges, les deux tests de service ajoutés |
+| `total_points()` soustrait au lieu d'additionner | 6 rouges |
+| La borne ±100 retirée | 1 rouge, `manual_points_refuse_au_dela_de_cent` |
+
+La première ligne est la plus instructive : la non-régression **reste verte**
+sous la mutation qui casse la fonctionnalité. C'est ce qu'on attend d'elle — elle
+répond « les saisons sans points manuels s'ordonnent comme avant », pas « la
+fonctionnalité marche ». Les deux questions ont chacune leurs tests.
+
+## Ce qui reste volontairement mort
+
+`build_ordered_standings` prend un paramètre que ses deux appelants passent vide.
+C'est une couture assumée : la carte 451 ne changera que les appelants, sans
+retoucher `to_standing`. Signalé ici pour qui s'arrêterait dessus.
+
+## Vérification supplémentaire
+
+La carte n'expose rien et ne prescrit pas d'e2e. La suite complète a tout de
+même été passée : `compare` ordonne **tous** les classements de l'application, et
+un test unitaire de non-régression ne dit rien de ce que les pages affichent.

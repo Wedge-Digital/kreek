@@ -17,6 +17,27 @@ pub struct Rank(pub u32);
 pub struct TeamStanding {
     pub team_id: TeamId,
     pub totals: CumulativeTotals,
+    /// Points attribués hors match — forfait, sanction, rattrapage.
+    ///
+    /// **Volontairement en dehors de `totals`.** Celui-ci décrit fidèlement ce
+    /// qui est stocké dans `ranking_lines` ; y fondre les points manuels ferait
+    /// mentir un type sur sa source, et rendrait impossible la décomposition
+    /// dont la colonne du classement a besoin.
+    ///
+    /// **`i32` et non un value object.** Le total peut être négatif,
+    /// `RankingPoints` est un `u32`, et lui créer un frère signé ajouterait un
+    /// type **sans invariant à garder** : toute valeur signée est un total
+    /// valide. `ManualPoints` valide la *saisie* ; ici on porte une somme.
+    pub manual_points: i32,
+}
+
+impl TeamStanding {
+    /// Ce sur quoi le classement ordonne. Une équipe à 3 points plus 2 manuels
+    /// vaut exactement une équipe à 5 sans manuel — les départages tranchent
+    /// ensuite, comme entre deux équipes à 5.
+    pub fn total_points(&self) -> i32 {
+        self.totals.ranking_points.0 as i32 + self.manual_points
+    }
 }
 
 /// Critères de départage actifs, dans l'ordre de priorité choisi par le
@@ -49,18 +70,14 @@ impl TiebreakOrder {
 /// l'ordre jusqu'au premier qui départage. Règle 19 : `Equal` si tous sont
 /// égaux — l'ex æquo est assumé, il n'existe pas de départage ultime.
 pub fn compare(a: &TeamStanding, b: &TeamStanding, order: &TiebreakOrder) -> Ordering {
-    b.totals
-        .ranking_points
-        .0
-        .cmp(&a.totals.ranking_points.0)
-        .then_with(|| {
-            order
-                .criteria
-                .iter()
-                .map(|criterion| compare_on(*criterion, a, b))
-                .find(|ordering| ordering.is_ne())
-                .unwrap_or(Ordering::Equal)
-        })
+    b.total_points().cmp(&a.total_points()).then_with(|| {
+        order
+            .criteria
+            .iter()
+            .map(|criterion| compare_on(*criterion, a, b))
+            .find(|ordering| ordering.is_ne())
+            .unwrap_or(Ordering::Equal)
+    })
 }
 
 /// Compare deux équipes sur un seul critère, dans le sens qui lui est propre
@@ -190,11 +207,21 @@ mod tests {
 
     fn standing(points: u32) -> TeamStanding {
         TeamStanding {
+            manual_points: 0,
             team_id: TeamId::new(),
             totals: CumulativeTotals {
                 ranking_points: RankingPoints(points),
                 ..CumulativeTotals::ZERO
             },
+        }
+    }
+
+    /// `standing`, plus des points manuels. Le nom dit les deux nombres dans
+    /// l'ordre où on les lit : « 3 points, plus 2 manuels ».
+    fn standing_plus(points: u32, manual: i32) -> TeamStanding {
+        TeamStanding {
+            manual_points: manual,
+            ..standing(points)
         }
     }
 
@@ -487,6 +514,104 @@ mod tests {
         assert_eq!(
             outcomes(&ordered, &order),
             vec![DecidedBy(0), DecidedBy(0), DecidedBy(1), DecidedBy(1)]
+        );
+    }
+
+    // ── Points manuels (carte 449) ───────────────────────────────────────────
+
+    #[test]
+    fn un_point_manuel_entre_dans_le_total() {
+        assert_eq!(standing_plus(3, 2).total_points(), 5);
+        assert_eq!(standing_plus(3, -2).total_points(), 1);
+    }
+
+    /// **La règle, littéralement.**
+    ///
+    /// Ce test échoue si quelqu'un déplace un jour l'addition *après* le tri —
+    /// ce qui compilerait parfaitement, et ne se verrait qu'à l'affichage d'un
+    /// classement dont l'ordre contredit sa propre colonne de total.
+    #[test]
+    fn trois_plus_deux_manuels_egale_cinq_sans_manuel() {
+        let avec_manuels = standing_plus(3, 2);
+        let sans_manuel = standing(5);
+
+        assert_eq!(
+            compare(&avec_manuels, &sans_manuel, &TiebreakOrder::empty()),
+            Ordering::Equal
+        );
+    }
+
+    #[test]
+    fn l_egalite_ainsi_creee_est_tranchee_par_les_departages() {
+        // 3 + 2 contre 5 : égalité aux points, donc le `then_with` s'exécute et
+        // le premier critère actif tranche. Sans lui, l'ordre d'entrée
+        // subsisterait et le test ne prouverait rien.
+        let avec_manuels = standing_plus(3, 2);
+        let sans_manuel = TeamStanding {
+            manual_points: 0,
+            ..standing_with(5, |t| t.td_for = TdFor(10))
+        };
+
+        assert_eq!(
+            compare(&avec_manuels, &sans_manuel, &all_criteria()),
+            Ordering::Greater,
+            "l'équipe sans TD doit passer derrière"
+        );
+    }
+
+    #[test]
+    fn un_point_manuel_negatif_fait_descendre() {
+        let sanctionnee = standing_plus(7, -3);
+        let intacte = standing(5);
+
+        let mut classement = vec![sanctionnee, intacte];
+        order_standings(&mut classement, &TiebreakOrder::empty());
+
+        assert_eq!(
+            classement[0].total_points(),
+            5,
+            "l'équipe sanctionnée à 4 doit passer derrière celle à 5"
+        );
+    }
+
+    #[test]
+    fn un_total_negatif_est_classe_normalement() {
+        // Une équipe à 1 point sanctionnée de 3 vaut −2. Rien n'interdit un
+        // total négatif : c'est le dernier rang, pas une erreur.
+        let coulee = standing_plus(1, -3);
+        let derniere = standing(0);
+
+        assert_eq!(coulee.total_points(), -2);
+        assert_eq!(
+            compare(&coulee, &derniere, &TiebreakOrder::empty()),
+            Ordering::Greater
+        );
+    }
+
+    /// **La non-régression.**
+    ///
+    /// Les saisons qui n'usent pas de la fonctionnalité — c'est-à-dire toutes,
+    /// aujourd'hui — doivent s'ordonner exactement comme avant. `compare` est
+    /// appelée par `assign_ranks` et `tiebreak_outcomes` : une régression ici se
+    /// verrait sur chaque compétition de l'application.
+    #[test]
+    fn sans_point_manuel_le_classement_est_inchange() {
+        let mut classement = vec![
+            standing(3),
+            standing_with(7, |t| t.td_for = TdFor(1)),
+            standing(5),
+            standing_with(7, |t| t.td_for = TdFor(9)),
+        ];
+
+        order_standings(&mut classement, &all_criteria());
+
+        let totaux: Vec<i32> = classement.iter().map(|s| s.total_points()).collect();
+        assert_eq!(totaux, vec![7, 7, 5, 3]);
+        assert_eq!(ranks_of(&classement, &all_criteria()), vec![1, 2, 3, 4]);
+        assert_eq!(
+            classement[0].totals.td_for,
+            TdFor(9),
+            "à points égaux, le départage doit encore trancher"
         );
     }
 }

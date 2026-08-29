@@ -11,6 +11,7 @@ use crate::app::ranking::io::web::widgets::detailed_standings_widget::{
 use crate::app::ranking::ports::{EnrolledTeamInfo, RankingGroupInfo, RankingLineRow};
 use crate::app::ranking::use_cases::standings_service::build_ordered_standings;
 use crate::app::routes::AppRoutes;
+use std::collections::HashMap;
 use std::collections::HashSet;
 
 /// Une poule et les données qui la concernent — le **découpage seul**, sans rendu.
@@ -107,7 +108,9 @@ pub fn build_classement_groups(
 /// autonome dont les rangs repartent à 1. Ordonner avant de découper donnerait
 /// des rangs globaux — le leader de la poule 2 pourrait afficher un rang 3.
 fn build_group_vm(space_id: &str, slice: GroupSlice, order: &TiebreakOrder) -> ClassementGroupVm {
-    let ordered = build_ordered_standings(slice.lines, order);
+    // La carte est vide jusqu'à la carte 451, qui branchera la lecture des
+    // points manuels. Aucune saison n'en porte encore.
+    let ordered = build_ordered_standings(slice.lines, &HashMap::new(), order);
     ClassementGroupVm {
         title: slice.title,
         has_enrolled_teams: !slice.teams.is_empty(),
@@ -173,7 +176,9 @@ fn build_detailed_group_vm(
     slice: GroupSlice,
     order: &TiebreakOrder,
 ) -> DetailedGroupVm {
-    let ordered = build_ordered_standings(slice.lines, order);
+    // La carte est vide jusqu'à la carte 451, qui branchera la lecture des
+    // points manuels. Aucune saison n'en porte encore.
+    let ordered = build_ordered_standings(slice.lines, &HashMap::new(), order);
     DetailedGroupVm {
         title: slice.title,
         has_enrolled_teams: !slice.teams.is_empty(),
@@ -321,6 +326,7 @@ mod tests {
     fn ranked(team_id: &TeamId, points: u32, rank: u32) -> (TeamStanding, Rank) {
         let standing = TeamStanding {
             team_id: *team_id,
+            manual_points: 0,
             totals: CumulativeTotals {
                 matches_played: MatchesPlayed(1),
                 ranking_points: RankingPoints(points),

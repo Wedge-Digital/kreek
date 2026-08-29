@@ -15,6 +15,7 @@ use crate::app::ranking::domain::standings::{
 };
 use crate::app::ranking::domain::tiebreak::TiebreakCriterion;
 use crate::app::ranking::ports::{RankingLineRow, RankingRulesInfo, TiebreakSettingInfo};
+use std::collections::HashMap;
 
 /// Configuration du port → ordre de départage du domaine. Ne peut vivre ni dans
 /// le domaine (il ignore les types du port) ni dans le seul use case d'écriture
@@ -48,18 +49,27 @@ fn resolve_criterion(code: &str) -> Option<TiebreakCriterion> {
 /// repartent à 1.
 pub fn build_ordered_standings(
     lines: Vec<RankingLineRow>,
+    manual: &HashMap<String, i32>,
     order: &TiebreakOrder,
 ) -> Vec<(TeamStanding, Rank)> {
-    let mut standings: Vec<TeamStanding> = lines.into_iter().map(to_standing).collect();
+    let mut standings: Vec<TeamStanding> = lines
+        .into_iter()
+        .map(|row| to_standing(row, manual))
+        .collect();
     order_standings(&mut standings, order);
     let ranks = assign_ranks(&standings, order);
     standings.into_iter().zip(ranks).collect()
 }
 
-fn to_standing(row: RankingLineRow) -> TeamStanding {
+/// **Une équipe absente de la carte a zéro point manuel**, ce qui est le cas
+/// commun : la carte ne porte que les équipes qui en ont reçu. Elle n'est donc
+/// jamais complète, et `unwrap_or(0)` n'est pas un repli mais la règle.
+fn to_standing(row: RankingLineRow, manual: &HashMap<String, i32>) -> TeamStanding {
+    let manual_points = manual.get(&row.team_id.to_string()).copied().unwrap_or(0);
     TeamStanding {
         team_id: row.team_id,
         totals: to_totals(row),
+        manual_points,
     }
 }
 
@@ -184,7 +194,11 @@ mod tests {
         let (last, first, middle) = (row(3, 0), row(9, 0), row(6, 0));
         let expected_order = [first.team_id, middle.team_id, last.team_id];
 
-        let ordered = build_ordered_standings(vec![last, first, middle], &TiebreakOrder::empty());
+        let ordered = build_ordered_standings(
+            vec![last, first, middle],
+            &HashMap::new(),
+            &TiebreakOrder::empty(),
+        );
 
         let team_ids: Vec<TeamId> = ordered.iter().map(|(s, _)| s.team_id).collect();
         assert_eq!(team_ids, expected_order);
@@ -202,7 +216,7 @@ mod tests {
         let expected_first = prolific.team_id;
 
         let order = to_tiebreak_order(&[setting("nb_td", true)]);
-        let ordered = build_ordered_standings(vec![poor, prolific], &order);
+        let ordered = build_ordered_standings(vec![poor, prolific], &HashMap::new(), &order);
 
         assert_eq!(ordered[0].0.team_id, expected_first);
         assert_eq!(ordered[0].1 .0, 1);
@@ -214,7 +228,7 @@ mod tests {
     fn build_ordered_standings_gives_the_same_rank_to_tied_teams() {
         let lines = vec![row(9, 0), row(6, 5), row(6, 2), row(1, 0)];
 
-        let ordered = build_ordered_standings(lines, &TiebreakOrder::empty());
+        let ordered = build_ordered_standings(lines, &HashMap::new(), &TiebreakOrder::empty());
 
         assert_eq!(
             ordered.iter().map(|(_, r)| r.0).collect::<Vec<_>>(),
@@ -277,5 +291,60 @@ mod tests {
     #[test]
     fn tiebreak_order_of_none_is_empty() {
         assert_eq!(tiebreak_order_of(&None), TiebreakOrder::empty());
+    }
+
+    // ── Points manuels (carte 449) ───────────────────────────────────────────
+
+    /// **La carte est réellement lue.**
+    ///
+    /// Les deux appelants la passent vide jusqu'à la carte 451 : sans ce test,
+    /// `to_standing` pourrait ignorer son argument et poser zéro sans que rien
+    /// ne bronche. La 451 chercherait alors longtemps pourquoi ses points
+    /// n'apparaissent pas.
+    #[test]
+    fn la_carte_des_points_manuels_atteint_le_classement() {
+        let ligne = row(3, 0);
+        let equipe = ligne.team_id.to_string();
+        let manuels = HashMap::from([(equipe, 2)]);
+
+        let ordered = build_ordered_standings(vec![ligne], &manuels, &TiebreakOrder::empty());
+
+        assert_eq!(ordered[0].0.manual_points, 2);
+        assert_eq!(ordered[0].0.total_points(), 5);
+    }
+
+    /// Une équipe absente de la carte vaut zéro — ce n'est pas un repli, c'est
+    /// le cas commun : la carte ne porte que les équipes qui ont reçu des
+    /// points.
+    #[test]
+    fn une_equipe_absente_de_la_carte_a_zero_point_manuel() {
+        let ligne = row(4, 0);
+        let autre = HashMap::from([(TeamId::new().to_string(), 50)]);
+
+        let ordered = build_ordered_standings(vec![ligne], &autre, &TiebreakOrder::empty());
+
+        assert_eq!(ordered[0].0.manual_points, 0);
+        assert_eq!(ordered[0].0.total_points(), 4);
+    }
+
+    /// L'ordre tient compte des points manuels **avant** d'attribuer les rangs :
+    /// une équipe deuxième aux points passe première si sa bonification l'y met.
+    #[test]
+    fn les_points_manuels_changent_les_rangs_attribues() {
+        let devancee = row(5, 0);
+        let bonifiee = row(3, 0);
+        let bonifiee_id = bonifiee.team_id.to_string();
+        let manuels = HashMap::from([(bonifiee_id.clone(), 4)]);
+
+        let ordered =
+            build_ordered_standings(vec![devancee, bonifiee], &manuels, &TiebreakOrder::empty());
+
+        assert_eq!(
+            ordered[0].0.team_id.to_string(),
+            bonifiee_id,
+            "3 + 4 = 7 > 5"
+        );
+        assert_eq!(ordered[0].1 .0, 1);
+        assert_eq!(ordered[1].1 .0, 2);
     }
 }
