@@ -141,49 +141,33 @@
   </script>
   {% endif %}
 
-  <!-- Onglets -->
+  {# ── Onglets ────────────────────────────────────────────────────────────
+     **Un onglet ne devient cliquable que lorsque son contenu existe.** Une
+     route qui répond « rien » se lit comme une panne, et l'utilisateur clique
+     deux fois avant de conclure que l'application est cassée.
+
+     « Trésorerie » est câblé par la carte 436, « Matchs » par la 477. Celle-ci
+     pose le mécanisme et n'en câble qu'un. #}
   <div class="tabs team-tabs">
-    <div class="tab active">Joueurs & Staff</div>
+    <a class="tab{% if active_tab == "squad" %} active{% endif %}"
+       hx-get="{{ app_routes.teams.team_detail(space_id, vm.id) }}"
+       hx-target="#team-tab-content"
+       hx-swap="innerHTML"
+       hx-push-url="{{ app_routes.teams.team_detail(space_id, vm.id) }}">Joueurs & Staff</a>
     <div class="tab">Matchs</div>
-    <div class="tab">Trésorerie</div>
+    <div class="tab{% if active_tab == "treasury" %} active{% endif %}">Trésorerie</div>
   </div>
 
-  <!-- Widget joueurs — délégué au BC players -->
-  <div id="players-widget"
-       hx-get="{{ vm.players_widget_url }}"
-       hx-trigger="load"
-       hx-target="this"
-       hx-swap="outerHTML">
-    <div class="loading-placeholder team-players-loading">Chargement des joueurs…</div>
-  </div>
+  {# Le conteneur d'onglet. Son contenu est **rendu par le handler**, jamais
+     inclus en dur : sinon la page de chaque onglet montrerait « Joueurs &
+     Staff », quel que soit l'onglet actif. Constaté en vérifiant à l'écran —
+     `/tresorerie` rendait l'effectif sous un onglet Trésorerie actif.
 
-  <!-- Staff -->
-  <div class="staff-panel">
-    <div class="staff-panel-title">Staff</div>
-    <table class="player-table staff-table">
-      <thead>
-        <tr>
-          <th>Poste</th>
-          <th class="staff-col-num">Quantité</th>
-          <th class="staff-col-num">Prix (kPo)</th>
-          <th class="staff-col-num">Coût total (kPo)</th>
-        </tr>
-      </thead>
-      <tbody class="no-hover">
-        {% for line in vm.staff.lines %}
-        <tr>
-          <td><strong>{{ line.label }}</strong></td>
-          <td class="staff-num">{{ line.quantity }}</td>
-          <td class="staff-num">{{ line.unit_price }}</td>
-          <td class="staff-num">{{ line.total_price }}</td>
-        </tr>
-        {% endfor %}
-        <tr class="subtotal-row">
-          <td colspan="3" class="staff-subtotal-label">Sous-total staff</td>
-          <td class="staff-num">{{ vm.staff.grand_total }}</td>
-        </tr>
-      </tbody>
-    </table>
+     La même route sert les deux usages : sous `HX-Request` elle rend ce
+     fragment seul, sinon la page entière. Une seconde route doublerait la
+     surface pour la même réponse. #}
+  <div id="team-tab-content">
+    {{ content|safe }}
   </div>
 
 </div>

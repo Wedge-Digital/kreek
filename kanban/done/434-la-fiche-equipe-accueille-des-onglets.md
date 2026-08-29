@@ -125,8 +125,67 @@ Un `<a>` apporte son `cursor: pointer` de lui-même.
 
 ## Checklist
 
-- [ ] `#team-tab-content` et `teams-squad-tab.html` par copier-coller
-- [ ] `TEAM_TREASURY` + `.route(...)` + `team_page_treasury`
-- [ ] L'aiguillage `match active_tab`
-- [ ] « Joueurs & Staff » en `<a>` htmx ; « Trésorerie » et « Matchs » inchangés
-- [ ] `make lint && make test && make check-arch && make e2e`
+- [x] `#team-tab-content` et `teams-squad-tab.html` par copier-coller
+- [x] `TEAM_TREASURY` + `.route(...)` + `team_page_treasury`
+- [x] L'aiguillage `match active_tab`
+- [x] « Joueurs & Staff » en `<a>` htmx ; « Trésorerie » et « Matchs » inchangés
+- [x] `make lint && make test && make check-arch && make e2e`
+
+## Un défaut que seul l'écran a montré
+
+Le premier jet incluait le fragment **en dur** dans le gabarit de page :
+
+```html
+<div id="team-tab-content">
+  {% include "teams-squad-tab.html" %}
+</div>
+```
+
+Les tests passaient, la page se rendait, le markup était bien formé. Mais
+`/tresorerie` rendait **l'effectif sous un onglet Trésorerie actif** — un
+contenu cohérent qui n'était pas le sien, et que rien ne signalait.
+
+La carte prescrivait pourtant la bonne forme : un `content` calculé par le
+handler, comme `AdminPageTemplate`. Je l'avais lue et mal appliquée ; c'est la
+sonde des quatre réponses HTTP qui l'a fait voir.
+
+`la_page_d_un_onglet_ne_montre_pas_le_contenu_d_un_autre` garde désormais ce
+point, avec sa contre-épreuve — sans elle, un gabarit vide passerait.
+
+## Le fragment emprunte le VM
+
+`TeamSquadTabTemplate<'a> { vm: &'a TeamDetailVm }`. La page en a besoin ensuite
+pour son en-tête et son bandeau ; le lui faire posséder aurait imposé de dériver
+`Clone` sur cinq types — `TeamDetailVm`, `StaffVm`, `StaffLineVm`, `BannerVm`,
+`BannerCtaVm` — pour un seul clonage.
+
+## Falsification
+
+| Mutation | Constaté |
+|---|---|
+| Le gabarit réinclut le fragment en dur | `la_page_d_un_onglet_ne_montre_pas_le_contenu_d_un_autre` rouge |
+| Le fragment répète l'`id` de sa cible | `le_fragment_d_onglet_ne_repete_pas_l_id_de_sa_cible` rouge |
+
+## Vérification à l'écran
+
+Les quatre réponses de la même paire de routes :
+
+```
+page        200   9465 o   body ✓   onglets ✓   effectif ✓
+fragment    200   1787 o   body ✗   onglets ✗   effectif ✓
+trésorerie  200   7678 o   body ✓   onglets ✓   effectif ✗
+trés. frag  200      0 o   body ✗   onglets ✗   effectif ✗
+```
+
+Et la fiche, inchangée : trois onglets, « Joueurs & Staff » actif, le panneau
+staff et le conteneur présents une fois chacun, aucune erreur JS.
+
+## Ce qui reste inerte, et pourquoi
+
+« Trésorerie » et « Matchs » restent des `<div>`. La route `TEAM_TREASURY`
+existe — l'aiguillage devait être posé et testé d'un bloc — mais **l'onglet ne
+mène nulle part** tant que la carte 436 ne le remplit pas : une route qui répond
+« rien » se lit comme une panne, et l'utilisateur clique deux fois avant de
+conclure à un défaut.
+
+`TEAM_MATCHES` n'est pas posée : la carte 477 l'apportera avec son contenu.

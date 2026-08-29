@@ -1,0 +1,46 @@
+{# Le contenu de l'onglet « Joueurs & Staff » (carte 434).
+
+   Repris **tel quel** de `teams-team-detail.html`, où il suivait les onglets
+   sans que rien ne dise qu'il en était le contenu. Aucune ligne n'a été
+   réécrite : c'est le même markup, déplacé.
+
+   Il est le corps de `#team-tab-content`, jamais ce conteneur lui-même — le
+   `CLAUDE.md` proscrit le fragment qui répète l'`id` de sa cible, un `id`
+   dupliqué dans le DOM après injection. #}
+  <!-- Widget joueurs — délégué au BC players -->
+  <div id="players-widget"
+       hx-get="{{ vm.players_widget_url }}"
+       hx-trigger="load"
+       hx-target="this"
+       hx-swap="outerHTML">
+    <div class="loading-placeholder team-players-loading">Chargement des joueurs…</div>
+  </div>
+
+  <!-- Staff -->
+  <div class="staff-panel">
+    <div class="staff-panel-title">Staff</div>
+    <table class="player-table staff-table">
+      <thead>
+        <tr>
+          <th>Poste</th>
+          <th class="staff-col-num">Quantité</th>
+          <th class="staff-col-num">Prix (kPo)</th>
+          <th class="staff-col-num">Coût total (kPo)</th>
+        </tr>
+      </thead>
+      <tbody class="no-hover">
+        {% for line in vm.staff.lines %}
+        <tr>
+          <td><strong>{{ line.label }}</strong></td>
+          <td class="staff-num">{{ line.quantity }}</td>
+          <td class="staff-num">{{ line.unit_price }}</td>
+          <td class="staff-num">{{ line.total_price }}</td>
+        </tr>
+        {% endfor %}
+        <tr class="subtotal-row">
+          <td colspan="3" class="staff-subtotal-label">Sous-total staff</td>
+          <td class="staff-num">{{ vm.staff.grand_total }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>

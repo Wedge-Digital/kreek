@@ -1,5 +1,13 @@
 pub mod path {
     pub const TEAM_DETAIL: &str = "/app/{space_id}/teams/{team_id}";
+    /// L'onglet « Trésorerie » de la fiche équipe (carte 434).
+    ///
+    /// `space_scope` la couvre sans rien ajouter : elle porte `{team_id}`, dont
+    /// `teams` déclare déjà le résolveur.
+    ///
+    /// `TEAM_MATCHES` suivra le même moule, posée par la carte 477 — pas ici :
+    /// une route montée sans contenu répond « rien ».
+    pub const TEAM_TREASURY: &str = "/app/{space_id}/teams/{team_id}/tresorerie";
     pub const DISMISS_TEAM: &str = "/app/{space_id}/teams/{team_id}/dismiss";
     pub const PENDING_ENROLLMENT_WIDGET: &str = "/app/{space_id}/team/widgets/pending";
     pub const ENROLLED_TEAMS_WIDGET: &str = "/app/{space_id}/team/widgets/enrolled";
@@ -60,6 +68,12 @@ pub struct Routes;
 impl Routes {
     pub fn team_detail(&self, space_id: &str, team_id: &str) -> String {
         path::TEAM_DETAIL
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+
+    pub fn team_treasury(&self, space_id: &str, team_id: &str) -> String {
+        path::TEAM_TREASURY
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
     }

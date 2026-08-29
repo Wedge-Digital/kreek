@@ -6,6 +6,7 @@ use crate::app::teams::use_cases::roster_edit_access_service;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
+use axum::http::HeaderMap;
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use std::time::Duration;
@@ -310,6 +311,39 @@ pub struct TeamDetailTemplate {
     pub app_routes: AppRoutes,
     pub vm: TeamDetailVm,
     pub back_url: String,
+    /// L'espace, pour construire les URLs d'onglet. Le VM ne le porte pas : il
+    /// décrit l'équipe, pas le chemin par lequel on la regarde.
+    pub space_id: String,
+    /// « squad » ou « treasury ». Le gabarit s'en sert pour la classe `active`,
+    /// et **jamais pour décider quoi rendre** — c'est le handler qui aiguille.
+    pub active_tab: String,
+    /// Le contenu de l'onglet, **déjà rendu**. Même forme qu'`AdminPageTemplate` :
+    /// le gabarit de page ne connaît pas les onglets, il pose leur conteneur.
+    pub content: String,
+}
+
+/// Le fragment d'un onglet, sans le layout : ce que la route rend quand
+/// `HX-Request` est présent.
+///
+/// **Il emprunte le VM plutôt que de le posséder.** La page en a besoin ensuite
+/// pour son en-tête et son bandeau ; le posséder aurait imposé de dériver
+/// `Clone` sur cinq types pour un seul clonage.
+#[derive(Template)]
+#[template(path = "teams-squad-tab.html")]
+pub struct TeamSquadTabTemplate<'a> {
+    pub vm: &'a TeamDetailVm,
+}
+
+impl IntoResponse for TeamSquadTabTemplate<'_> {
+    fn into_response(self) -> Response {
+        match self.render() {
+            Ok(html) => Html(html).into_response(),
+            Err(e) => {
+                tracing::error!("teams squad tab render: {e}");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        }
+    }
 }
 
 impl IntoResponse for TeamDetailTemplate {
@@ -350,8 +384,53 @@ pub async fn team_detail(
     Path((space_id, team_id)): Path<(String, String)>,
     auth_session: AuthSession,
     State(state): State<AppState>,
+    headers: HeaderMap,
 ) -> impl IntoResponse {
-    let team = match find_team_with_retry(state.teams.team_repository.as_ref(), &team_id).await {
+    rendre_fiche(&space_id, &team_id, auth_session, &state, headers, "squad").await
+}
+
+/// L'onglet « Trésorerie ». Il ne montre rien : la carte 436 le remplit.
+///
+/// **La route existe avant son contenu** parce que l'aiguillage doit être posé
+/// et testé d'un bloc — mais l'onglet, lui, **reste inerte** dans le gabarit :
+/// une route qui répond « rien » se lit comme une panne.
+pub async fn team_page_treasury(
+    Path((space_id, team_id)): Path<(String, String)>,
+    auth_session: AuthSession,
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    rendre_fiche(
+        &space_id,
+        &team_id,
+        auth_session,
+        &state,
+        headers,
+        "treasury",
+    )
+    .await
+}
+
+/// La fiche, pour un onglet donné.
+///
+/// # Une seule route par onglet, deux usages
+///
+/// Sous `HX-Request`, elle rend le **fragment** ; sans lui, la page entière avec
+/// l'onglet actif. C'est le patron d'`admin-page.html`, et il évite une seconde
+/// route qui doublerait la surface pour la même réponse.
+///
+/// Conséquence à ne pas perdre de vue : **le fragment est le chemin de
+/// navigation**. Tout contrôle posé sur la page complète doit l'être ici aussi,
+/// sans quoi changer d'onglet contournerait ce que le chargement direct refuse.
+async fn rendre_fiche(
+    space_id: &str,
+    team_id: &str,
+    auth_session: AuthSession,
+    state: &AppState,
+    headers: HeaderMap,
+    active_tab: &str,
+) -> Response {
+    let team = match find_team_with_retry(state.teams.team_repository.as_ref(), team_id).await {
         Ok(Some(t)) => t,
         Ok(None) => {
             tracing::warn!("team_detail: team {team_id} introuvable après plusieurs tentatives");
@@ -378,13 +457,42 @@ pub async fn team_detail(
         None => false,
     };
 
-    let back_url = AppRoutes::default().team_creation.my_teams(&space_id);
+    let back_url = AppRoutes::default().team_creation.my_teams(space_id);
     let roster_catalog_port = state.teams.roster_catalog_port.as_ref();
+
+    let vm = TeamDetailVm::from(&team, space_id, roster_catalog_port, peut_editer);
+
+    // **L'aiguillage, calculé une fois.** Le `_` rend « Joueurs & Staff »
+    // plutôt que d'échouer : un `active_tab` inconnu vient d'une URL tapée à la
+    // main, et répondre 404 sur une page qui existe serait pire que d'afficher
+    // l'onglet par défaut.
+    let content = match active_tab {
+        // Vide jusqu'à la carte 436. L'onglet n'étant pas cliquable, on n'arrive
+        // ici qu'en tapant l'URL — mieux vaut un onglet vide qu'un contenu qui
+        // n'est pas le sien.
+        "treasury" => String::new(),
+        _ => match (TeamSquadTabTemplate { vm: &vm }).render() {
+            Ok(html) => html,
+            Err(e) => {
+                tracing::error!("teams squad tab render: {e}");
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        },
+    };
+
+    // Sous `HX-Request`, le contenu **seul** : c'est lui que le `hx-swap`
+    // injecte dans `#team-tab-content`.
+    if headers.contains_key("hx-request") {
+        return Html(content).into_response();
+    }
 
     TeamDetailTemplate {
         app_routes: Default::default(),
-        vm: TeamDetailVm::from(&team, &space_id, roster_catalog_port, peut_editer),
+        vm,
         back_url,
+        space_id: space_id.to_string(),
+        active_tab: active_tab.to_string(),
+        content,
     }
     .into_response()
 }
@@ -566,5 +674,167 @@ mod tests {
 
         assert!(team.is_none());
         assert_eq!(*repo.calls.lock().unwrap(), 3);
+    }
+
+    // ── Les onglets de la fiche (carte 434) ──────────────────────────────────
+
+    fn vm_minimal() -> TeamDetailVm {
+        TeamDetailVm {
+            id: "01ARZ3NDEKTSV4RRFFQ69G5FAV".into(),
+            name: "Les Granitiers".into(),
+            initials: "LG".into(),
+            logo_url: None,
+            roster_name: "Nains".into(),
+            roster_initials: "NA".into(),
+            roster_logo_url: None,
+            coach_name: "Bagouze".into(),
+            dedicated_fans: 5,
+            treasury_kpo: 100,
+            team_value_kpo: 1000,
+            competition_name: None,
+            season_name: None,
+            status_label: "Inscrite".into(),
+            status_css_class: "ready".into(),
+            players_widget_url: "/widget".into(),
+            staff: StaffVm {
+                lines: vec![],
+                grand_total: 0,
+            },
+            banner: None,
+        }
+    }
+
+    /// Rend la page **comme le handler la rend** : le contenu de l'onglet est
+    /// calculé d'abord, puis passé. Le construire autrement ici ferait tester
+    /// une page que personne ne sert.
+    fn page(active_tab: &str) -> String {
+        let vm = vm_minimal();
+        let content = match active_tab {
+            "treasury" => String::new(),
+            _ => TeamSquadTabTemplate { vm: &vm }.render().unwrap(),
+        };
+        TeamDetailTemplate {
+            app_routes: Default::default(),
+            vm,
+            back_url: "/retour".into(),
+            space_id: "01ARZ3NDEKTSV4RRFFQ69G5FAW".into(),
+            active_tab: active_tab.into(),
+            content,
+        }
+        .render()
+        .expect("la page doit se rendre")
+    }
+
+    /// **Le fragment porte le contenu, jamais son conteneur.**
+    ///
+    /// Le `CLAUDE.md` proscrit le fragment qui répète l'`id` de sa cible : après
+    /// injection, le DOM porterait deux `#team-tab-content`, et les composants
+    /// Alpine du contenu s'initialiseraient deux fois.
+    #[test]
+    fn le_fragment_d_onglet_ne_repete_pas_l_id_de_sa_cible() {
+        let vm = vm_minimal();
+        let fragment = TeamSquadTabTemplate { vm: &vm }
+            .render()
+            .expect("le fragment doit se rendre");
+
+        assert!(!fragment.contains("team-tab-content"), "{fragment}");
+        assert!(
+            fragment.contains("players-widget"),
+            "le widget joueurs doit y être"
+        );
+        assert!(
+            fragment.contains("staff-panel"),
+            "le panneau staff doit y être"
+        );
+    }
+
+    /// La page contient exactement ce que le fragment contient — c'est ce qui
+    /// rend le déplacement invisible à l'écran.
+    #[test]
+    fn la_page_porte_le_meme_contenu_que_le_fragment() {
+        let vm = vm_minimal();
+        let fragment = TeamSquadTabTemplate { vm: &vm }.render().unwrap();
+        let page = page("squad");
+
+        assert!(
+            page.contains("team-tab-content"),
+            "le conteneur est dans la page"
+        );
+        for marqueur in ["players-widget", "staff-panel", "Sous-total staff"] {
+            assert!(page.contains(marqueur), "« {marqueur} » manque à la page");
+            assert!(
+                fragment.contains(marqueur),
+                "« {marqueur} » manque au fragment"
+            );
+        }
+    }
+
+    /// L'onglet actif suit `active_tab`, et lui seul.
+    #[test]
+    fn l_onglet_actif_suit_le_parametre() {
+        let squad = page("squad");
+        let treasury = page("treasury");
+
+        // **Le `<a>` et non la chaîne seule** : « Trésorerie » porte la même
+        // classe quand il est actif, et une assertion sur la chaîne nue serait
+        // satisfaite par le mauvais onglet — elle passerait dans les deux sens.
+        assert!(
+            squad.contains(r#"<a class="tab active""#),
+            "squad : {squad}"
+        );
+        assert!(
+            !treasury.contains(r#"<a class="tab active""#),
+            "sur trésorerie, « Joueurs & Staff » ne doit plus être actif"
+        );
+        assert!(
+            treasury.contains(r#"<div class="tab active">Trésorerie</div>"#),
+            "{treasury}"
+        );
+    }
+
+    /// **La page d'un onglet montre le contenu de cet onglet.**
+    ///
+    /// Trouvé à l'écran : le gabarit incluait le fragment « Joueurs & Staff » en
+    /// dur, si bien que `/tresorerie` rendait l'effectif sous un onglet
+    /// Trésorerie actif. Le rendu était cohérent, la page bien formée, et le
+    /// contenu n'était pas le sien — rien n'aurait signalé l'erreur.
+    #[test]
+    fn la_page_d_un_onglet_ne_montre_pas_le_contenu_d_un_autre() {
+        let treasury = page("treasury");
+
+        assert!(
+            !treasury.contains("players-widget"),
+            "l'onglet Trésorerie ne doit pas rendre l'effectif : {treasury}"
+        );
+        assert!(!treasury.contains("staff-panel"));
+        // Contre-épreuve : la page reste une page, avec son en-tête et ses
+        // onglets. Sans elle, un gabarit vide passerait ce test.
+        assert!(treasury.contains("team-tabs"));
+        assert!(treasury.contains("Les Granitiers"));
+    }
+
+    /// **Un onglet ne devient cliquable que lorsque son contenu existe.**
+    ///
+    /// « Trésorerie » et « Matchs » restent des `<div>` inertes — les cartes 436
+    /// et 477 les câbleront. Une route qui répond « rien » se lit comme une
+    /// panne, et l'utilisateur clique deux fois avant de conclure à un défaut.
+    #[test]
+    fn seul_l_onglet_livre_est_cliquable() {
+        let rendu = page("squad");
+
+        let liens: Vec<&str> = rendu
+            .match_indices("<a class=\"tab")
+            .map(|(_, s)| s)
+            .collect();
+        assert_eq!(
+            liens.len(),
+            1,
+            "un seul onglet doit porter un lien : {rendu}"
+        );
+        assert!(rendu.contains(">Matchs</div>"), "« Matchs » reste inerte");
+        assert!(
+            rendu.contains(">Trésorerie</div>"),
+            "« Trésorerie » reste inerte"
+        );
     }
 }

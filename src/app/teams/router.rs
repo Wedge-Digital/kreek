@@ -1,7 +1,7 @@
 use crate::app::teams::io::web::dismiss_team::dismiss_team;
 use crate::app::teams::io::web::dismissals::dismissals_page;
 use crate::app::teams::io::web::recruitment::recruitment_page;
-use crate::app::teams::io::web::team_detail::team_detail;
+use crate::app::teams::io::web::team_detail::{team_detail, team_page_treasury};
 use crate::app::teams::io::web::validate_phase_actions::{
     post_validate_dismissals_phase, post_validate_improvement_phase,
     post_validate_recruitment_phase,
@@ -38,6 +38,7 @@ use axum::{
 pub fn router() -> Router<AppState> {
     Router::new()
         .route(path::TEAM_DETAIL, get(team_detail))
+        .route(path::TEAM_TREASURY, get(team_page_treasury))
         .route(path::DISMISS_TEAM, post(dismiss_team))
         .route(
             path::PENDING_ENROLLMENT_WIDGET,
