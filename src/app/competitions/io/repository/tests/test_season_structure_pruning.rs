@@ -12,8 +12,8 @@
 //! l'écran montrerait pourtant qu'il a eu lieu.
 
 use crate::app::competitions::domain::competition_structure::{
-    CompetitionStructure, DispatchType, PlayOffsPhase, RankingGroup, RankingGroupConfig,
-    RankingGroupName, ScheduleConfig, UseRankingGroups,
+    CompetitionStructure, DispatchType, RankingGroup, RankingGroupConfig, RankingGroupName,
+    ScheduleConfig, UseRankingGroups,
 };
 use crate::app::competitions::domain::season_repository_port::{
     ISeasonRepository, SeasonRepositoryError,
@@ -38,7 +38,6 @@ fn structure(groupes: Vec<RankingGroup>) -> CompetitionStructure {
             groupes,
         )
         .unwrap(),
-        play_offs_phase: playoffs(),
         schedule: calendrier(),
     }
 }
@@ -259,17 +258,6 @@ async fn une_saison_inconnue_est_refusee(pool: PgPool) {
 
 // ── Le reste de la structure, qui doit survivre ─────────────────────────────
 
-fn playoffs() -> PlayOffsPhase {
-    use crate::app::competitions::domain::competition_structure::{
-        FinalPhaseMatchForThirdPlace, QualifiedTeamPerPool, UsePlayoffsPhase,
-    };
-    PlayOffsPhase {
-        use_playoffs_phase: UsePlayoffsPhase(false),
-        qualified_team_per_pool: QualifiedTeamPerPool::try_new(2).unwrap(),
-        final_phase_match_for_third_place: FinalPhaseMatchForThirdPlace(false),
-    }
-}
-
 /// **Le calendrier fait partie de ce que le retrait des poules doit épargner.**
 /// Il porte une date de début distincte du défaut, précisément pour qu'un test
 /// qui le perdrait s'en aperçoive.
@@ -280,8 +268,6 @@ fn calendrier() -> ScheduleConfig {
         use_schedule: UseSchedule(true),
         schedule_type: ScheduleType::default(),
         schedule_start_date: DateString::try_new("2026-09-01".to_string()).unwrap(),
-        play_off_start_date: DateString::default(),
-        play_off_end_date: DateString::default(),
         schedule_end_date: DateString::default(),
         scheduled_dates: vec![],
     }

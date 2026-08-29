@@ -40,7 +40,6 @@ pub struct NewCompetitionPhase5Template {
     // Structure section
     pub has_structure: bool,
     pub groups_label: Option<String>,
-    pub playoffs_label: Option<String>,
     pub dates_label: Option<String>,
     // Invitations section
     pub has_invitations: bool,
@@ -162,22 +161,10 @@ pub async fn get_new_competition_phase_5(
         };
 
     // ── Structure ────────────────────────────────────────────────────────────
-    let (has_structure, groups_label, playoffs_label, dates_label) = if let Some(s) = &structure {
+    let (has_structure, groups_label, dates_label) = if let Some(s) = &structure {
         let groups: Option<String> = if s.ranking_group.use_ranking_groups() {
             let n = s.ranking_group.groups().len();
             Some(format!("{n} poule{}", if n > 1 { "s" } else { "" }))
-        } else {
-            None
-        };
-
-        let playoffs: Option<String> = if s.play_offs_phase.use_playoffs_phase.0 {
-            let q = s.play_offs_phase.qualified_team_per_pool;
-            let third = if s.play_offs_phase.final_phase_match_for_third_place.0 {
-                " · Match 3e place"
-            } else {
-                ""
-            };
-            Some(format!("Top {q} par poule{third}"))
         } else {
             None
         };
@@ -191,9 +178,9 @@ pub async fn get_new_competition_phase_5(
             None
         };
 
-        (true, groups, playoffs, dates)
+        (true, groups, dates)
     } else {
-        (false, None, None, None)
+        (false, None, None)
     };
 
     // ── Invitations ──────────────────────────────────────────────────────────
@@ -288,7 +275,6 @@ pub async fn get_new_competition_phase_5(
         rosters_extra,
         has_structure,
         groups_label,
-        playoffs_label,
         dates_label,
         has_invitations,
         access_mode_label,

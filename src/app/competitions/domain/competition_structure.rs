@@ -13,20 +13,20 @@ pub struct UseRankingGroups(pub bool);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct UsePlayoffsPhase(pub bool);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(transparent)]
-pub struct FinalPhaseMatchForThirdPlace(pub bool);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(transparent)]
 pub struct UseSchedule(pub bool);
 
+/// La phase finale a été retirée par la carte 412 : rien dans kreek ne s'en
+/// servait — aucun appariement n'était généré, aucun classement n'en tenait
+/// compte —, et il fallait pourtant la remplir pour créer une compétition.
+///
+/// Les structures déjà enregistrées portent encore `play_offs_phase` dans leur
+/// JSONB. Elles ne sont **pas migrées** : serde ignore les champs inconnus, et
+/// le projet ne pose `deny_unknown_fields` nulle part. Le champ résiduel est lu
+/// et jeté — ce que `retrait_phase_finale_tests` vérifie sur une structure
+/// copiée telle quelle depuis la base.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompetitionStructure {
     pub ranking_group: RankingGroupConfig,
-    pub play_offs_phase: PlayOffsPhase,
     pub schedule: ScheduleConfig,
 }
 
@@ -170,19 +170,6 @@ pub struct RankingGroup {
 )]
 pub struct RankingGroupName(String);
 
-#[nutype(
-    validate(less_or_equal = 100),
-    derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Display)
-)]
-pub struct QualifiedTeamPerPool(u32);
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlayOffsPhase {
-    pub use_playoffs_phase: UsePlayoffsPhase,
-    pub qualified_team_per_pool: QualifiedTeamPerPool,
-    pub final_phase_match_for_third_place: FinalPhaseMatchForThirdPlace,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum ScheduleType {
@@ -201,10 +188,6 @@ pub struct ScheduleConfig {
     pub schedule_type: ScheduleType,
     #[serde(default)]
     pub schedule_start_date: DateString,
-    #[serde(default)]
-    pub play_off_start_date: DateString,
-    #[serde(default)]
-    pub play_off_end_date: DateString,
     #[serde(default)]
     pub schedule_end_date: DateString,
     pub scheduled_dates: Vec<ScheduledDate>,
@@ -337,5 +320,107 @@ mod ranking_group_config_tests {
         let config = serde_json::from_str::<RankingGroupConfig>(json).expect("JSON historique");
 
         assert!(matches!(config.dispatch_type(), DispatchType::Automatic));
+    }
+}
+
+/// Les tests du retrait de la phase finale (carte 412) — à part, parce qu'ils
+/// portent sur `CompetitionStructure` entière et non sur la configuration des
+/// poules.
+#[cfg(test)]
+mod retrait_phase_finale_tests {
+    use super::*;
+
+    /// **Une structure telle qu'elle est en base aujourd'hui.**
+    ///
+    /// Copiée d'une saison réelle, `play_offs_phase` et les deux dates de
+    /// play-offs comprises. Les 3330 structures enregistrées portent toutes ces
+    /// clés, et aucune n'est migrée : elles doivent se lire sans erreur, le
+    /// champ étant simplement jeté.
+    ///
+    /// **Ce test tient tant que `deny_unknown_fields` n'apparaît pas.** Le jour
+    /// où quelqu'un l'ajouterait, ces 3330 lignes cesseraient de charger d'un
+    /// coup — et c'est ce test-là qui le dirait, avant la production.
+    const STRUCTURE_EN_BASE: &str = r#"{
+        "schedule": {
+            "use_schedule": true,
+            "schedule_type": "unknown",
+            "scheduled_dates": [
+                {"name": "J1", "type": "fixed_date", "multiplexe_date": "2026-01-01"}
+            ],
+            "play_off_end_date": "",
+            "schedule_end_date": "",
+            "play_off_start_date": "",
+            "schedule_start_date": ""
+        },
+        "ranking_group": {
+            "dispatch_type": "automatic",
+            "ranking_groups": [
+                {"id": "gmtefxwcsprpc", "name": "Poule 1"},
+                {"id": "gmtefxwcsdp2i", "name": "Poule 2"}
+            ],
+            "use_ranking_groups": true
+        },
+        "play_offs_phase": {
+            "use_playoffs_phase": true,
+            "qualified_team_per_pool": 2,
+            "final_phase_match_for_third_place": true
+        }
+    }"#;
+
+    #[test]
+    fn une_structure_deja_enregistree_se_lit_toujours() {
+        let s = serde_json::from_str::<CompetitionStructure>(STRUCTURE_EN_BASE)
+            .expect("les structures en base doivent rester lisibles");
+
+        assert_eq!(s.ranking_group.groups().len(), 2);
+        assert_eq!(s.schedule.scheduled_dates.len(), 1);
+    }
+
+    /// **Le piège de la carte 334, gardé.**
+    ///
+    /// Elle avait retiré deux champs de `ScheduleConfig` en laissant un
+    /// `#[serde(default)]` orphelin, qui s'est recollé au champ suivant —
+    /// `scheduled_dates`, obligatoire. Une structure sans journées se serait
+    /// alors désérialisée au lieu d'échouer, et personne ne l'aurait vu.
+    ///
+    /// La 412 retire deux champs de la même struct. Ce test est ce qui empêche
+    /// l'histoire de se répéter.
+    #[test]
+    fn une_structure_sans_journees_echoue_toujours() {
+        let json = r#"{
+            "schedule": {
+                "use_schedule": true,
+                "schedule_type": "unknown",
+                "schedule_end_date": "",
+                "schedule_start_date": ""
+            },
+            "ranking_group": {"use_ranking_groups": false, "ranking_groups": []}
+        }"#;
+
+        assert!(
+            serde_json::from_str::<CompetitionStructure>(json).is_err(),
+            "`scheduled_dates` est obligatoire : son absence doit échouer"
+        );
+    }
+
+    /// Ce qui sort ne porte plus aucune trace de phase finale — sans quoi le
+    /// retrait serait cosmétique, et le champ mort renaîtrait à chaque
+    /// enregistrement.
+    #[test]
+    fn la_serialisation_ne_porte_plus_de_phase_finale() {
+        let s = serde_json::from_str::<CompetitionStructure>(STRUCTURE_EN_BASE).unwrap();
+
+        let json = serde_json::to_string(&s).unwrap();
+
+        for cle in [
+            "play_offs_phase",
+            "use_playoffs_phase",
+            "qualified_team_per_pool",
+            "final_phase_match_for_third_place",
+            "play_off_start_date",
+            "play_off_end_date",
+        ] {
+            assert!(!json.contains(cle), "« {cle} » subsiste dans : {json}");
+        }
     }
 }

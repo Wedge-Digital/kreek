@@ -243,7 +243,6 @@ pub struct RulesViewModel {
 pub struct StructureViewModel {
     pub use_groups: bool,
     pub group_names: Vec<String>,
-    pub use_playoffs: bool,
     pub use_schedule: bool,
     pub start_date: String,
     pub end_date: String,
@@ -359,7 +358,6 @@ pub async fn get_competition_widget_detail(
             // est le prix — voulu — de ne plus laisser sortir l'agrégat.
             .map(|g| g.name.as_ref().to_string())
             .collect(),
-        use_playoffs: s.play_offs_phase.use_playoffs_phase.0,
         use_schedule: s.schedule.use_schedule.0,
         start_date: s.schedule.schedule_start_date.into_inner(),
         end_date: s.schedule.schedule_end_date.into_inner(),

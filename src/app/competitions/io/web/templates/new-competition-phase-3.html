@@ -7,7 +7,7 @@
     <div class="create-header-icon">🏗️</div>
     <div class="create-header-text">
       <div class="title">Structure de la compétition</div>
-      <div class="sub">Étape 3 sur 5 — Poules, play-offs &amp; calendrier</div>
+      <div class="sub">Étape 3 sur 5 — Poules &amp; calendrier</div>
     </div>
   </div>
 
@@ -71,44 +71,12 @@
     </div>
   </div>
 
-  <div class="separator"></div>
-
-  <!-- Section 2: Phase finale -->
-  <div class="section">
-    <div class="section-title">2 — Phase finale (play-offs)</div>
-    <div class="choice-group" id="playoff-mode-btns">
-      <div class="choice-btn selected" data-val="true" onclick="setPlayoffMode(true)">Avec phase finale</div>
-      <div class="choice-btn" data-val="false" onclick="setPlayoffMode(false)">Sans phase finale (classement direct)</div>
-    </div>
-
-    <div class="sub-section" id="playoff-config">
-      <div class="sub-section-title">Configuration de la phase finale</div>
-      <div class="two-col-grid">
-        <div class="form-group">
-          <label class="form-label">Équipes qualifiées par poule</label>
-          <select id="qualified-per-pool" class="picker" onchange="state.qualifiedTeamPerPool = +this.value">
-            <option value="1">1er uniquement</option>
-            <option value="2" selected>Top 2 (1er et 2e)</option>
-            <option value="3">Top 3</option>
-            <option value="4">Top 4</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Match pour la 3e place</label>
-        <div class="choice-group" id="third-place-btns">
-          <div class="choice-btn selected" data-val="true" onclick="setThirdPlace(true)">Oui</div>
-          <div class="choice-btn" data-val="false" onclick="setThirdPlace(false)">Non</div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <div class="separator"></div>
 
   <!-- Section 3: Calendrier -->
   <div class="section">
-    <div class="section-title">3 — Gestion du calendrier</div>
+    <div class="section-title">2 — Gestion du calendrier</div>
     <div class="sub-section" id="schedule-config">
       <div class="sub-section-title">Paramètres du calendrier</div>
       <div class="two-col-grid">
@@ -122,16 +90,6 @@
           <input type="date" id="schedule-end-date" class="form-input"
                  oninput="state.scheduleEndDate = this.value">
         </div>
-        <div class="form-group">
-          <label class="form-label">Début des play-offs</label>
-          <input type="date" id="playoff-start-date" class="form-input"
-                 oninput="state.playOffStartDate = this.value">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Fin des play-offs</label>
-          <input type="date" id="playoff-end-date" class="form-input"
-                 oninput="state.playOffEndDate = this.value">
-        </div>
       </div>
 
     </div>
@@ -141,7 +99,7 @@
 
   <!-- Section 4: Journées de match -->
   <div class="section">
-    <div class="section-title">4 — Journées de match</div>
+    <div class="section-title">3 — Journées de match</div>
     <div class="info-note">Définissez les journées de match de la saison. Chaque journée peut être une date fixe (multiplexe) ou une fenêtre temporelle pendant laquelle les coachs organisent leurs matchs librement.</div>
     <div class="sub-section">
       <div>
@@ -184,14 +142,9 @@
     useRankingGroups:     true,
     dispatchType:         'automatic',
     rankingGroups:        [],
-    usePlayoffs:          true,
-    qualifiedTeamPerPool: 2,
-    matchForThirdPlace:   true,
     useSchedule:          true,
     scheduleStartDate:    '',
     scheduleEndDate:      '',
-    playOffStartDate:     '',
-    playOffEndDate:       '',
     scheduledDates:       [],
   };
   window.state = state;
@@ -255,20 +208,7 @@
     document.getElementById('nb-groups').value = state.rankingGroups.length;
   }
 
-  // ── Section 2: Play-offs ────────────────────────────────────────────────────
-
-  window.setPlayoffMode = function (on) {
-    state.usePlayoffs = on;
-    activateBtn('playoff-mode-btns', on);
-    document.getElementById('playoff-config').style.display = on ? '' : 'none';
-  };
-
-  window.setThirdPlace = function (on) {
-    state.matchForThirdPlace = on;
-    activateBtn('third-place-btns', on);
-  };
-
-  // ── Section 3: Schedule ─────────────────────────────────────────────────────
+  // ── Section 2: Schedule ─────────────────────────────────────────────────────
 
   
   window.addDate = function (type) {
@@ -328,17 +268,10 @@
         dispatch_type:      state.dispatchType,
         ranking_groups: state.rankingGroups.map(function (g) { return { id: g.id, name: g.name }; }),
       },
-      play_offs_phase: {
-        use_playoffs_phase:                  state.usePlayoffs,
-        qualified_team_per_pool:             state.qualifiedTeamPerPool,
-        final_phase_match_for_third_place:   state.matchForThirdPlace,
-      },
       schedule: {
         use_schedule:          state.useSchedule,
         schedule_start_date:   state.scheduleStartDate,
         schedule_end_date:     state.scheduleEndDate,
-        play_off_start_date:   state.playOffStartDate,
-        play_off_end_date:     state.playOffEndDate,
         scheduled_dates: state.scheduledDates.map(function (d) {
           if (d.type === 'fixed_date') {
             return { name: d.name, type: 'fixed_date', multiplexe_date: d.multiplexe_date };
@@ -392,16 +325,8 @@
     activateBtn('dispatch-type-btns', state.dispatchType);
     renderGroups();
 
-    activateBtn('playoff-mode-btns', state.usePlayoffs);
-    document.getElementById('playoff-config').style.display = state.usePlayoffs ? '' : 'none';
-    const qpp = document.getElementById('qualified-per-pool');
-    if (qpp) qpp.value = String(state.qualifiedTeamPerPool);
-    activateBtn('third-place-btns', state.matchForThirdPlace);
-
     document.getElementById('schedule-start-date').value = state.scheduleStartDate;
     document.getElementById('schedule-end-date').value   = state.scheduleEndDate;
-    document.getElementById('playoff-start-date').value  = state.playOffStartDate;
-    document.getElementById('playoff-end-date').value    = state.playOffEndDate;
 
     renderDates();
   }
@@ -412,17 +337,10 @@
     state.dispatchType     = rg.dispatch_type;
     state.rankingGroups    = rg.ranking_groups.slice();
 
-    const po = s.play_offs_phase;
-    state.usePlayoffs            = po.use_playoffs_phase;
-    state.qualifiedTeamPerPool   = po.qualified_team_per_pool;
-    state.matchForThirdPlace     = po.final_phase_match_for_third_place;
-
     const sc = s.schedule;
     state.useSchedule          = sc.use_schedule;
     state.scheduleStartDate    = sc.schedule_start_date;
     state.scheduleEndDate      = sc.schedule_end_date;
-    state.playOffStartDate     = sc.play_off_start_date;
-    state.playOffEndDate       = sc.play_off_end_date;
     state.scheduledDates     = sc.scheduled_dates.map(function (d) {
       return Object.assign({ _id: nextId++ }, d);
     });

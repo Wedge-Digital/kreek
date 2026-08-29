@@ -57,16 +57,13 @@
         {% for g in s.group_names %}{{ g }}{% if !loop.last %} · {% endif %}{% endfor %}
       </div>
       {% endif %}
-      {% if s.use_playoffs %}
-      <div class="comp-flag comp-flag--on">Phase finale</div>
-      {% endif %}
       {% if s.use_schedule %}
       <div class="comp-flag comp-flag--on">
         Calendrier {{ s.start_date }}
         {% if !s.end_date.is_empty() %} → {{ s.end_date }}{% endif %}
       </div>
       {% endif %}
-      {% if !s.use_groups && !s.use_playoffs && !s.use_schedule %}
+      {% if !s.use_groups && !s.use_schedule %}
       <div class="comp-flag comp-flag--off">Structure non configurée</div>
       {% endif %}
     </div>

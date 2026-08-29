@@ -15,17 +15,10 @@
       }
     ]
   },
-  "play_offs_phase": {
-    "use_playoffs_phase": true,
-    "qualified_team_per_pool": 1,
-    "final_phase_match_for_third_place": true,
-  },
   "schedule": {
     "use_schedule": true,
     "schedule_type": "automatic",
     "schedule_start_date": "",
-    "play_off_start_date": "",
-    "play_off_end_date": "",
     "schedule_end_date": "",
     "scheduled_dates": [
       {

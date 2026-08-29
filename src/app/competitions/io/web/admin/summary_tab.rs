@@ -46,7 +46,6 @@ pub struct SummaryTabTemplate {
     pub tiers_inducements: Vec<TierInducementsVm>,
     pub has_structure: bool,
     pub groups_label: Option<String>,
-    pub playoffs_label: Option<String>,
     pub dates_label: Option<String>,
     pub has_invitations: bool,
     pub access_mode_label: String,
@@ -154,8 +153,7 @@ pub async fn build_summary_fragment(
         rosters_extra,
         tiers_inducements,
     ) = build_rules_labels(&rules, ref_port);
-    let (has_structure, groups_label, playoffs_label, dates_label) =
-        build_structure_labels(&structure);
+    let (has_structure, groups_label, dates_label) = build_structure_labels(&structure);
     let (
         has_invitations,
         access_mode_label,
@@ -190,7 +188,6 @@ pub async fn build_summary_fragment(
         tiers_inducements,
         has_structure,
         groups_label,
-        playoffs_label,
         dates_label,
         has_invitations,
         access_mode_label,
@@ -282,24 +279,13 @@ fn build_tiers_inducements(
 
 fn build_structure_labels(
     structure: &Option<CompetitionStructure>,
-) -> (bool, Option<String>, Option<String>, Option<String>) {
+) -> (bool, Option<String>, Option<String>) {
     let Some(s) = structure else {
-        return (false, None, None, None);
+        return (false, None, None);
     };
     let groups: Option<String> = if s.ranking_group.use_ranking_groups() {
         let n = s.ranking_group.groups().len();
         Some(format!("{n} poule{}", if n > 1 { "s" } else { "" }))
-    } else {
-        None
-    };
-    let playoffs: Option<String> = if s.play_offs_phase.use_playoffs_phase.0 {
-        let q = s.play_offs_phase.qualified_team_per_pool;
-        let third = if s.play_offs_phase.final_phase_match_for_third_place.0 {
-            " · Match 3e place"
-        } else {
-            ""
-        };
-        Some(format!("Top {q} par poule{third}"))
     } else {
         None
     };
@@ -311,7 +297,7 @@ fn build_structure_labels(
     } else {
         None
     };
-    (true, groups, playoffs, dates)
+    (true, groups, dates)
 }
 
 fn build_invitations_labels(

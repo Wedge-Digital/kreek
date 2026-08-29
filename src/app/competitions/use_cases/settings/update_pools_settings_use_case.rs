@@ -99,12 +99,14 @@ pub async fn execute<T: IdService>(
     )
     .map_err(UpdatePoolsSettingsError::InvalidPools)?;
 
-    // **`schedule` et `play_offs_phase` sont conservés.** `save_structure_*`
-    // écrit la structure entière : les reconstruire à vide effacerait le
-    // calendrier de la saison, sans erreur et sans trace.
+    // **Le `schedule` est conservé.** `save_structure_*` écrit la structure
+    // entière : le reconstruire à vide effacerait le calendrier de la saison,
+    // sans erreur et sans trace.
+    //
+    // `play_offs_phase` était conservé pour la même raison jusqu'à la carte 412,
+    // qui l'a retiré du modèle — il ne reste donc qu'un champ à préserver.
     let structure = CompetitionStructure {
         ranking_group: config,
-        play_offs_phase: courante.play_offs_phase,
         schedule: courante.schedule,
     };
 
@@ -139,8 +141,7 @@ mod tests {
     use crate::app::competitions::domain::competition_rules::CompetitionRules;
     use crate::app::competitions::domain::competition_season::CompetitionSeason;
     use crate::app::competitions::domain::competition_structure::{
-        FinalPhaseMatchForThirdPlace, PlayOffsPhase, QualifiedTeamPerPool, ScheduleConfig,
-        ScheduleType, UsePlayoffsPhase, UseSchedule,
+        ScheduleConfig, ScheduleType, UseSchedule,
     };
     use crate::app::competitions::domain::season_repository_port::{SeasonBaseInfo, SeasonFull};
     use crate::app::shared_kernel::bloodbowl::date_string::DateString;
@@ -282,17 +283,10 @@ mod tests {
                 groupes,
             )
             .unwrap(),
-            play_offs_phase: PlayOffsPhase {
-                use_playoffs_phase: UsePlayoffsPhase(true),
-                qualified_team_per_pool: QualifiedTeamPerPool::try_new(3).unwrap(),
-                final_phase_match_for_third_place: FinalPhaseMatchForThirdPlace(true),
-            },
             schedule: ScheduleConfig {
                 use_schedule: UseSchedule(true),
                 schedule_type: ScheduleType::default(),
                 schedule_start_date: DateString::try_new(DATE_DEBUT.to_string()).unwrap(),
-                play_off_start_date: DateString::default(),
-                play_off_end_date: DateString::default(),
                 schedule_end_date: DateString::default(),
                 scheduled_dates: vec![],
             },
@@ -349,12 +343,6 @@ mod tests {
             "le calendrier a été effacé"
         );
         assert!(ecrite.schedule.use_schedule.0);
-        assert_eq!(
-            ecrite.play_offs_phase.qualified_team_per_pool.into_inner(),
-            3,
-            "la phase finale a été effacée"
-        );
-        assert!(ecrite.play_offs_phase.final_phase_match_for_third_place.0);
         // Le mode de répartition n'est pas rouvert par ce panneau : il est repris.
         assert!(matches!(
             ecrite.ranking_group.dispatch_type(),

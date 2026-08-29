@@ -114,6 +114,10 @@
 # ne prouverait rien.
 "test_manual_ranking_points" = ["ranking", "competitions", "match_report",
                                 "teams", "team_creation", "spaces", "auth"]
+# L'étape 3 du magicien ne touche que `competitions` — mais la fixture construit
+# une compétition complète, d'où `teams` et `team_creation`.
+"test_competition_structure_step" = ["competitions", "teams", "team_creation",
+                                     "spaces", "auth"]
 # Le widget de réglage des notifications, monté dans l'onglet Synthèse.
 "test_notification_settings"   = ["competitions", "teams", "spaces", "references", "ranking"]
 
