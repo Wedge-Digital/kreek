@@ -103,6 +103,12 @@
 # la création d'équipe quand elle ne l'est pas (carte 407).
 "test_competition_settings_visibility" = ["competitions", "teams",
                                           "team_creation", "spaces", "auth"]
+# Le seul fichier de l'onglet qui dépende de `spaces` pour autre chose que le
+# décor : il sépare les deux chemins de `require_admin_access`, dont l'un lit le
+# profil d'espace (`SpaceProfile::SpaceAdmin`) et l'autre l'appartenance à la
+# compétition. Une régression dans l'un ou l'autre BC doit le réveiller.
+"test_competition_admin_settings" = ["competitions", "spaces", "auth", "teams",
+                                     "team_creation", "ranking", "references"]
 # Le widget de réglage des notifications, monté dans l'onglet Synthèse.
 "test_notification_settings"   = ["competitions", "teams", "spaces", "references", "ranking"]
 
