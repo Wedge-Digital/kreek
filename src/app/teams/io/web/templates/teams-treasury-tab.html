@@ -1,0 +1,102 @@
+{# Le relevé de trésorerie — carte 436, d'après `rawpages/html/app-team-treasury.html`.
+
+   Fragment nu : ni en-tête d'équipe ni onglets, ils vivent dans
+   `teams-team-detail.html` et ne sont pas re-rendus au changement d'onglet.
+   Le même gabarit sert les deux chemins — le clic htmx et l'URL collée.
+
+   Aucun JS, aucun Alpine, aucun `hx-disinherit` : rien n'est interactif ici, et
+   la fiche équipe ne pose aucun `hx-vals` dont il faudrait se protéger. #}
+<div class="team-treasury">
+
+  {# Le bandeau : l'équation qui explique le solde, lue de gauche à droite.
+     Il s'affiche dans les deux états — une équipe neuve a une dotation. #}
+  <div class="tr-summary">
+    <div class="tr-balance">
+      <div class="tr-balance-label">Solde</div>
+      <div class="tr-balance-value">{{ vm.summary.balance_kpo }}<span class="tr-balance-unit">kPo</span></div>
+    </div>
+    <div class="tr-equation">
+      <div class="tr-term">
+        <div class="tr-term-label">Dotation de départ</div>
+        <div class="tr-term-value">{{ vm.summary.opening_kpo }} kPo</div>
+      </div>
+      <div class="tr-op">+</div>
+      <div class="tr-term">
+        <div class="tr-term-label">Encaissé</div>
+        <div class="tr-term-value credit">{{ vm.summary.credited_kpo }} kPo</div>
+      </div>
+      <div class="tr-op">−</div>
+      <div class="tr-term">
+        <div class="tr-term-label">Dépensé</div>
+        <div class="tr-term-value debit">{{ vm.summary.debited_kpo }} kPo</div>
+      </div>
+      <div class="tr-op">=</div>
+      <div class="tr-term">
+        <div class="tr-term-label">Solde</div>
+        <div class="tr-term-value">{{ vm.summary.balance_kpo }} kPo</div>
+      </div>
+    </div>
+  </div>
+
+  {% if vm.is_opening_only %}
+  {# L'équipe vient d'être créée : elle a sa dotation et rien d'autre. Un
+     tableau d'une ligne dirait moins bien la même chose. #}
+  <div class="tr-empty">
+    <div class="tr-empty-icon">🏦</div>
+    <div class="tr-empty-title">Aucun mouvement pour l'instant</div>
+    <div class="tr-empty-text">
+      L'équipe n'a encore rien encaissé ni dépensé. Son premier match et ses
+      premiers recrutements apparaîtront ici, à la suite de la dotation de départ.
+    </div>
+  </div>
+  {% else %}
+
+  <div class="tr-statement-head">
+    <div class="tr-statement-title">Relevé des mouvements</div>
+    <div class="tr-statement-hint">Du plus ancien au plus récent — {{ vm.movement_count }} mouvements</div>
+  </div>
+
+  <div class="tr-table-wrap">
+    <table class="tr-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Mouvement</th>
+          <th class="num">Montant</th>
+          <th class="num">Solde après</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for group in vm.groups %}
+          {% match group.heading %}
+            {% when Some with (heading) %}
+        <tr class="tr-row--sep"><td colspan="4">{{ heading }}</td></tr>
+            {% when None %}
+          {% endmatch %}
+          {% for row in group.rows %}
+        <tr{% match row.kind %}{% when RowKind::Opening %} class="tr-row--origin"{% when RowKind::Correction %} class="tr-row--fix"{% when RowKind::Credit %}{% when RowKind::Debit %}{% endmatch %}>
+          <td class="tr-date">{{ row.date_label }}</td>
+          <td>
+            <div class="tr-movement">
+              <div class="tr-icon{% match row.kind %}{% when RowKind::Opening %}{% when RowKind::Correction %} tr-icon--fix{% when RowKind::Credit %} tr-icon--credit{% when RowKind::Debit %} tr-icon--debit{% endmatch %}">{{ row.icon }}</div>
+              <div>
+                <div class="tr-label">{{ row.label }}{% match row.kind %}{% when RowKind::Correction %}<span class="tr-badge-fix">Correction</span>{% when RowKind::Opening %}{% when RowKind::Credit %}{% when RowKind::Debit %}{% endmatch %}</div>
+                {% match row.detail %}
+                  {% when Some with (detail) %}
+                <div class="tr-detail">{{ detail }}</div>
+                  {% when None %}
+                {% endmatch %}
+              </div>
+            </div>
+          </td>
+          <td class="num"><span class="tr-amount {% if row.is_credit %}credit{% else %}debit{% endif %}">{{ row.amount_label }}</span></td>
+          <td class="num"><span class="tr-running">{{ row.balance_label }}</span></td>
+        </tr>
+          {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+</div>

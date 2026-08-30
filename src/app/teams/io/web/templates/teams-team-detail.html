@@ -141,33 +141,12 @@
   </script>
   {% endif %}
 
-  {# ── Onglets ────────────────────────────────────────────────────────────
-     **Un onglet ne devient cliquable que lorsque son contenu existe.** Une
-     route qui répond « rien » se lit comme une panne, et l'utilisateur clique
-     deux fois avant de conclure que l'application est cassée.
-
-     « Trésorerie » est câblé par la carte 436, « Matchs » par la 477. Celle-ci
-     pose le mécanisme et n'en câble qu'un. #}
-  <div class="tabs team-tabs">
-    <a class="tab{% if active_tab == "squad" %} active{% endif %}"
-       hx-get="{{ app_routes.teams.team_detail(space_id, vm.id) }}"
-       hx-target="#team-tab-content"
-       hx-swap="innerHTML"
-       hx-push-url="{{ app_routes.teams.team_detail(space_id, vm.id) }}">Joueurs & Staff</a>
-    <div class="tab">Matchs</div>
-    <div class="tab{% if active_tab == "treasury" %} active{% endif %}">Trésorerie</div>
-  </div>
-
-  {# Le conteneur d'onglet. Son contenu est **rendu par le handler**, jamais
-     inclus en dur : sinon la page de chaque onglet montrerait « Joueurs &
-     Staff », quel que soit l'onglet actif. Constaté en vérifiant à l'écran —
-     `/tresorerie` rendait l'effectif sous un onglet Trésorerie actif.
-
-     La même route sert les deux usages : sous `HX-Request` elle rend ce
-     fragment seul, sinon la page entière. Une seconde route doublerait la
-     surface pour la même réponse. #}
-  <div id="team-tab-content">
-    {{ content|safe }}
+  {# ── Onglets et contenu ─────────────────────────────────────────────────
+     Le bandeau d'onglets **fait partie** de la zone échangée : c'est ce qui
+     garde l'onglet actif d'accord avec le contenu affiché. Le détail est dans
+     `teams-team-tab-zone.html`. #}
+  <div id="team-tab-zone">
+    {{ tab_zone|safe }}
   </div>
 
 </div>

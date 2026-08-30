@@ -1,0 +1,32 @@
+{# Le bandeau d'onglets **et** le contenu de l'onglet actif — carte 436.
+
+   **Les deux ensemble, parce que l'onglet actif est un fait serveur.** Tant
+   qu'un seul onglet était cliquable, le bandeau pouvait rester hors de la cible
+   du swap : cliquer l'onglet déjà actif ne déplaçait rien. Dès que deux onglets
+   mènent quelque part, un bandeau non re-rendu affiche l'ancien onglet sous le
+   nouveau contenu — constaté à l'écran : l'effectif s'affichait sous un onglet
+   « Trésorerie » actif.
+
+   L'administration de compétition résout la même chose par un `onclick` qui
+   déplace la classe côté client. Ce n'est pas repris ici : il ment si l'on
+   clique un onglet inerte, il dérive au retour arrière du navigateur, et il
+   demande du JS là où la carte n'en veut pas. #}
+<div class="tabs team-tabs">
+  <a class="tab{% if active_tab == "squad" %} active{% endif %}"
+     hx-get="{{ app_routes.teams.team_detail(space_id, team_id) }}"
+     hx-target="#team-tab-zone"
+     hx-swap="innerHTML"
+     hx-push-url="{{ app_routes.teams.team_detail(space_id, team_id) }}">Joueurs & Staff</a>
+  {# « Matchs » est câblé par la carte 477 et **reste inerte** jusque-là : une
+     route qui répond « rien » se lit comme une panne. #}
+  <div class="tab">Matchs</div>
+  <a class="tab{% if active_tab == "treasury" %} active{% endif %}"
+     hx-get="{{ app_routes.teams.team_treasury(space_id, team_id) }}"
+     hx-target="#team-tab-zone"
+     hx-swap="innerHTML"
+     hx-push-url="{{ app_routes.teams.team_treasury(space_id, team_id) }}">Trésorerie</a>
+</div>
+
+<div id="team-tab-content">
+  {{ content|safe }}
+</div>

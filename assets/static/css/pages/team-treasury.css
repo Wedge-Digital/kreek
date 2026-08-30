@@ -1,0 +1,269 @@
+/* Le relevé de trésorerie — onglet de la fiche d'équipe (carte 436).
+ *
+ * Portée `.team-treasury`, du nom du fichier : l'axe 15 de `check-arch` le
+ * vérifie. La maquette nommait cette racine `.treasury` ; le nom du fichier
+ * fait foi, et `team-page.css` / `.team-page` posait déjà l'idiome.
+ *
+ * Elle ne reprend rien : l'en-tête d'équipe et les onglets vivent dans
+ * `team-page.css`, le relevé n'a aucun équivalent ailleurs. */
+
+.team-treasury {
+  background: var(--white);
+  border-radius: 0 0 10px 10px;
+  padding: var(--p2);
+}
+
+/* ─── Bandeau de synthèse — l'équation du solde, lue de gauche à droite ─── */
+
+.team-treasury .tr-summary {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: var(--p2);
+  padding-bottom: var(--p2);
+  border-bottom: 1px solid var(--dark-5);
+  margin-bottom: var(--p2);
+}
+
+.team-treasury .tr-balance {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: var(--p2);
+}
+
+.team-treasury .tr-balance-label {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.team-treasury .tr-balance-value {
+  font-family: var(--font-title);
+  font-size: 42px;
+  font-weight: 800;
+  color: var(--main-blue);
+  line-height: 1;
+}
+
+.team-treasury .tr-balance-unit {
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--dark-3);
+  margin-left: 4px;
+}
+
+.team-treasury .tr-equation {
+  display: flex;
+  align-items: center;
+  gap: var(--p1);
+  flex-wrap: wrap;
+}
+
+.team-treasury .tr-term {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 96px;
+}
+
+.team-treasury .tr-term-label { font-size: var(--text-tiny); color: var(--dark-3); }
+
+.team-treasury .tr-term-value {
+  font-size: var(--text-small);
+  font-weight: 700;
+  color: var(--dark-1);
+  white-space: nowrap;
+}
+
+.team-treasury .tr-term-value.credit { color: var(--green); }
+.team-treasury .tr-term-value.debit  { color: var(--dark-1); }
+
+.team-treasury .tr-op {
+  font-size: var(--text-medium);
+  color: var(--dark-4);
+  font-weight: 300;
+  line-height: 1;
+}
+
+/* ─── Le relevé ─────────────────────────────────────────────────────────── */
+
+.team-treasury .tr-statement-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--p1);
+  margin-bottom: var(--p1);
+  flex-wrap: wrap;
+}
+
+.team-treasury .tr-statement-title {
+  font-size: var(--text-small);
+  font-weight: 700;
+  color: var(--dark-2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.team-treasury .tr-statement-hint { font-size: var(--text-tiny); color: var(--dark-3); }
+
+.team-treasury .tr-table-wrap { overflow-x: auto; }
+
+.team-treasury .tr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-small);
+}
+
+.team-treasury .tr-table th {
+  text-align: left;
+  padding: 8px var(--p1);
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--dark-5);
+  white-space: nowrap;
+}
+
+.team-treasury .tr-table th.num,
+.team-treasury .tr-table td.num { text-align: right; }
+
+.team-treasury .tr-table td {
+  padding: 12px var(--p1);
+  border-bottom: 1px solid var(--dark-6);
+  vertical-align: top;
+}
+
+/* Le couple fond doux `--dark-6` / survol `--dark-5` est celui que la carte 448
+ * a établi : la maquette opposait `--dark-6` à `--dark-7`, deux gris que rien ne
+ * distinguait, et le survol y était invisible. `--dark-7` n'existe plus. */
+.team-treasury .tr-table tbody tr:hover td { background: var(--dark-5); }
+
+.team-treasury .tr-date {
+  color: var(--dark-3);
+  font-size: var(--text-tiny);
+  white-space: nowrap;
+}
+
+.team-treasury .tr-movement {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.team-treasury .tr-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  background: var(--dark-6);
+}
+
+.team-treasury .tr-icon--credit { background: rgba(98, 149, 132, 0.15); }
+.team-treasury .tr-icon--debit  { background: rgba(0, 48, 73, 0.07); }
+.team-treasury .tr-icon--fix    { background: rgba(255, 107, 53, 0.12); }
+
+.team-treasury .tr-label  { font-weight: 600; color: var(--dark-1); }
+
+.team-treasury .tr-detail {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  margin-top: 2px;
+}
+
+.team-treasury .tr-amount { font-weight: 700; white-space: nowrap; }
+.team-treasury .tr-amount.credit { color: var(--green); }
+.team-treasury .tr-amount.debit  { color: var(--dark-1); }
+
+.team-treasury .tr-running {
+  color: var(--dark-2);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Une correction n'est pas un mouvement ordinaire : elle défait le précédent. */
+.team-treasury .tr-row--fix td { background: rgba(255, 107, 53, 0.03); }
+
+.team-treasury .tr-badge-fix {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: rgba(255, 107, 53, 0.15);
+  color: #9A5000;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  vertical-align: 2px;
+}
+
+/* La dotation ouvre le relevé : c'est le point de départ, pas un mouvement. */
+.team-treasury .tr-row--origin td { background: var(--dark-6); }
+.team-treasury .tr-row--origin .tr-label { color: var(--main-blue); }
+
+/* **Sans cette règle, la pastille de la dotation disparaît.** Le fond par défaut
+ * d'une icône et celui de la ligne d'ouverture sont le même `--dark-6` : la
+ * maquette les opposait à `--dark-7`, que la carte 448 a supprimé pour cause
+ * d'indistinguabilité — le défaut y était déjà, invisible. Le blanc est le fond
+ * du tableau : la pastille se lit alors en relief sur le gris, comme les autres
+ * se lisent en teinte sur le blanc. */
+.team-treasury .tr-row--origin .tr-icon { background: var(--white); }
+
+/* Séparateur de période — la journée qui ouvre ce qui suit. */
+.team-treasury .tr-row--sep td {
+  padding: 6px var(--p1);
+  background: var(--white);
+  border-bottom: 1px solid var(--dark-5);
+  font-size: var(--text-tiny);
+  font-weight: 700;
+  color: var(--dark-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ─── État vide — une équipe qui vient d'être créée ─────────────────────── */
+
+.team-treasury .tr-empty {
+  padding: var(--p3) var(--p2);
+  text-align: center;
+}
+
+.team-treasury .tr-empty-icon { font-size: 40px; opacity: 0.35; }
+
+.team-treasury .tr-empty-title {
+  font-family: var(--font-title);
+  font-size: var(--h5);
+  font-weight: 700;
+  color: var(--dark-2);
+  margin-top: var(--p1);
+}
+
+.team-treasury .tr-empty-text {
+  font-size: var(--text-small);
+  color: var(--dark-3);
+  margin-top: 6px;
+  max-width: 460px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 768px) {
+  .team-treasury .tr-summary { flex-direction: column; gap: var(--p1); }
+  .team-treasury .tr-balance { padding-right: 0; }
+  .team-treasury .tr-balance-value { font-size: 34px; }
+
+  /* La colonne « Solde après » disparaît **avant** les montants : le solde
+   * courant reste lisible dans le bandeau, le montant d'un mouvement n'a aucun
+   * autre endroit où se lire. */
+  .team-treasury .tr-table th:nth-child(4),
+  .team-treasury .tr-table td:nth-child(4) { display: none; }
+}
