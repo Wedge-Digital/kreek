@@ -33,6 +33,13 @@ carte 46 non développée) ne permet d'atteindre ces phases. Une insertion SQL
 directe d'événement le permettrait mais casserait le principe de ce test
 (piloter via de vraies actions plutôt que fabriquer un état).
 
+**Tous les CTA de ce module passent par `cliquer_quand_cable_locator`** : ce
+sont des `hx-get`/`hx-post` qui arrivent par un échange htmx, donc visibles
+quelques dizaines de millisecondes avant d'être câblés. Un clic tombé dans
+cette fenêtre ne produit rien — ni requête, ni erreur — et l'assertion suivante
+expire sur une phase qui n'a pas avancé. Constaté sur la validation des
+renvois, qui échouait dans la suite complète et passait seule.
+
 Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true), base initialisée
 avec au moins 12 équipes inscrites et 7 journées pour la première
 compétition/saison du space (make init_db WITH_SEED=1 sur une base fraîche).
@@ -47,6 +54,7 @@ import requests
 from playwright.sync_api import Page, expect
 
 from db_helpers import query_db as _query_db
+from htmx_helpers import cliquer_quand_cable_locator
 
 BASE_URL = "http://localhost:3210"
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
@@ -163,7 +171,7 @@ def test_match_reporting_banner_resume_link_navigates(page: Page, space_id, matc
     expect(banner).to_be_visible()
     expect(banner).to_contain_text("Rapport de match en cours")
 
-    banner.locator(".state-banner-cta").click()
+    cliquer_quand_cable_locator(page, banner.locator(".state-banner-cta"))
     page.wait_for_url(re.compile(rf".*/match-report/{mr_id}.*"), timeout=10000)
 
 
@@ -192,7 +200,7 @@ def test_player_improvement_banner_validates_to_recruitment(page: Page, space_id
     banner = page.locator(".state-banner--phase")
     expect(banner).to_contain_text("Phase d'amélioration")
     with page.expect_navigation(wait_until="load"):
-        banner.locator(".state-banner-cta").click()
+        cliquer_quand_cable_locator(page, banner.locator(".state-banner-cta"))
 
     expect(page.locator(".team-status-badge")).to_contain_text("recrutement")
 
@@ -219,13 +227,13 @@ def test_recruitment_banner_leads_to_the_recruitment_page(page: Page, space_id, 
 
     # `<a hx-get hx-push-url>` : HTMX échange `#app-content`, il n'y a pas de
     # navigation du navigateur à attendre.
-    banner.locator(".state-banner-cta").click()
+    cliquer_quand_cable_locator(page, banner.locator(".state-banner-cta"))
     expect(page.locator(".rec-catalog")).to_be_visible(timeout=10000)
 
     # Panier vide : le CTA termine la phase sans rien acheter.
     cta = page.locator(".rec-cart .cta-primary")
     expect(cta).to_contain_text("Terminer les achats")
-    cta.click()
+    cliquer_quand_cable_locator(page, cta)
 
     expect(page.locator(".team-status-badge")).to_contain_text("renvois", timeout=15000)
 
@@ -250,13 +258,13 @@ def test_dismissals_banner_leads_to_the_dismissals_page(page: Page, space_id, ma
 
     # `<a hx-get hx-push-url>` : HTMX échange `#app-content`, il n'y a pas de
     # navigation du navigateur à attendre.
-    banner.locator(".state-banner-cta").click()
+    cliquer_quand_cable_locator(page, banner.locator(".state-banner-cta"))
     expect(page.locator(".dis-roster")).to_be_visible(timeout=10000)
 
     # Panier vide : le CTA clôt la phase sans renvoyer personne.
     cta = page.locator(".dis-cart .cta-primary")
     expect(cta).to_contain_text("Valider sans renvoyer personne")
-    cta.click()
+    cliquer_quand_cable_locator(page, cta)
 
     # **La phase des erreurs coûteuses s'intercale ici** (épic E13) : au-dessus
     # de 100 kPo, valider les renvois ne rend pas l'équipe prête à jouer, elle
@@ -268,7 +276,7 @@ def test_dismissals_banner_leads_to_the_dismissals_page(page: Page, space_id, ma
     )
     banner = page.locator(".state-banner--phase")
     expect(banner).to_contain_text("Erreurs coûteuses.")
-    banner.locator(".state-banner-cta").click()
+    cliquer_quand_cable_locator(page, banner.locator(".state-banner-cta"))
 
     expect(page.locator(".cm-table")).to_be_visible(timeout=10000)
     page.locator(".cm-btn-roll").click()

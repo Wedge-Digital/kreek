@@ -26,6 +26,7 @@ from playwright.sync_api import Page, expect
 
 from competition_lifecycle import BASE_URL
 from db_helpers import query_db
+from htmx_helpers import attendre_cablage
 
 ENTETE_MEMBRE_SIMPLE = {"X-Bypass-Auth-Profile": "simple"}
 MEMBRE_SIMPLE = "E2E Coach 01"
@@ -217,6 +218,13 @@ def test_creer_un_compte_et_ajouter_de_bout_en_bout(page: Page, espace_jetable: 
     page.locator(".space-admin-creation input[name='email']").fill(
         f"{pseudo.lower()}@bb.club"
     )
+    # **Le formulaire arrive deux fois différé.** Le panneau de création est
+    # chargé par `hx-get` au `load` de la page, puis htmx câble le `<form
+    # hx-post>` qu'il contient. Un clic tombé dans cette fenêtre ne produit
+    # rien — aucune requête, aucune erreur — et l'attente ci-dessous expire sur
+    # un journal qui n'a jamais reçu de ligne. Le test échouait ainsi dans la
+    # suite complète, où la machine est chargée, et passait seul.
+    attendre_cablage(page, ".space-admin-creation form")
     page.locator(".space-admin-creation button[type='submit']").click()
 
     # Le compte existe.
