@@ -189,8 +189,90 @@ l'historique. Repli sur le poste, qui vient de l'événement.
 
 ## Checklist
 
-- [ ] `ALL`, `parse` sur les deux énumérations, et les quatre tests d'aller-retour
-- [ ] `list_treasury_movements` + son `.sql` + `EXPLAIN` vérifié
-- [ ] `IMatchContextPort`, l'adapter, l'injection dans `main.rs`
-- [ ] `treasury_statement_service` et ses sept tests
-- [ ] `make lint && make test && make check-arch`
+- [x] `ALL`, `parse` sur les deux énumérations, et les quatre tests d'aller-retour
+- [x] `list_treasury_movements` + son `.sql` + `EXPLAIN` vérifié
+- [x] `IMatchContextPort`, l'adapter, l'injection dans `main.rs`
+- [x] `treasury_statement_service` et ses **huit** tests
+- [x] `make lint && make test && make check-arch`
+
+## La recette de match n'a pas d'identifiant de rapport
+
+**Écart de la carte, sur les données.** `PostMatchSequenceStarted` — la ligne la
+plus fréquente du grand livre — **ne porte pas de `match_report_id`**. Seuls
+`PostMatchSequenceReverted`, `InducementsPaid` et `InducementsRefunded` en
+portent un.
+
+La ligne de recette n'aura donc jamais de contexte de match. Ce n'est pas un
+manque d'implémentation : l'information n'existe pas dans l'événement, et la
+table de détail de la carte ne la demande pas — elle tire « Victoire / Défaite /
+Match nul » de `result`.
+
+`la_recette_de_match_n_a_pas_de_contexte_faute_d_identifiant` **fixe cette
+limite** plutôt que de la laisser découvrir par quelqu'un qui la prendrait pour
+un défaut. Il vérifie aussi qu'aucune lecture inutile n'est tentée.
+
+## Le tri n'était gardé par rien
+
+La carte défend `ORDER BY event_version` contre `occurred_at` avec sa
+justification la plus précise — deux mouvements d'un même traitement partagent
+l'horodatage à la milliseconde. **La mutation passait** : mes deux premiers
+tests d'intégration inséraient leurs lignes par des appels successifs, donc à
+des horodatages distincts, et les deux tris donnaient le même résultat.
+
+`l_ordre_vient_de_la_version_et_non_de_l_horodatage` construit le cas réel :
+deux lignes au **même** `occurred_at`, insérées à l'envers de leur version. Un
+tri sur l'horodatage ne peut alors pas les remettre dans l'ordre.
+
+## Le chiffre de la carte, remesuré
+
+Elle donnait 3 258 équipes portant une `InitialEndowment`, mesuré le 26 août.
+Au 30 août : **8 532 équipes, et les 8 532**. Le choix de ne pas faire d'`opening`
+un `Option` tient sur un corpus 2,6 fois plus grand ; le chiffre à jour est
+inscrit dans le code.
+
+## Le trou d'`ALL`, refermé autrement que prévu
+
+La carte dit franchement qu'ajouter une variante sans l'ajouter à `ALL` n'est pas
+attrapé par le compilateur, et confie ce rôle au test d'aller-retour. **Mon
+premier test ne le tenait pas** : il énumérait les huit motifs à la main, donc il
+serait passé en ignorant une neuvième variante.
+
+`garde_d_exhaustivite` referme la boucle — un `match` sans usage à l'exécution,
+dont le seul rôle est de casser la compilation dès qu'une variante apparaît.
+Vérifié en ajoutant un `Pillage` : `non-exhaustive patterns … not covered`, dans
+le test et non en production.
+
+La falsification a aussi montré que le sens inverse — **retirer** une entrée
+d'`ALL` — est déjà attrapé par le compilateur, le tableau étant déclaré de taille
+`; 8]`. La carte le supposait non couvert.
+
+## L'`EXPLAIN`, comme la carte l'exige
+
+```
+Index Scan using teams__treasury_ledger_source
+  Index Cond: (team_id = '…')
+```
+
+L'index d'unicité `(team_id, event_version)` sert le `WHERE` **et** l'`ORDER BY`,
+sans tri. 0,1 ms sur l'équipe la plus fournie. Rien à ajouter au schéma.
+
+## Falsification
+
+| Mutation | Constaté |
+|---|---|
+| Le solde devient une somme | `le_solde_est_celui_de_la_derniere_ligne` rouge |
+| La déduplication retirée | `deux_lignes_du_meme_match_ne_font_qu_une_lecture` rouge |
+| Le score n'est plus réordonné | `le_score_est_reordonne…` rouge |
+| Un motif inconnu ignoré au lieu d'arrêter | `un_motif_inconnu_arrete_le_releve` rouge |
+| `LEFT JOIN` devient `JOIN` | `une_ligne_sans_evenement_reste_dans_le_releve` rouge |
+| `ORDER BY occurred_at` | **passait**, puis rouge après le test ajouté |
+| Une entrée retirée d'`ALL` | erreur de compilation (taille du tableau) |
+| Une neuvième variante ajoutée | erreur de compilation, dans le test |
+
+## Un écart de style, assumé
+
+Le dépôt `teams` n'emploie ni les macros `sqlx::query!` ni `include_str!` : ses
+requêtes sont des chaînes en ligne, **sans vérification à la compilation**. La
+carte prescrit un `.sql` dédié, et le `CLAUDE.md` aussi : `sql/` est donc créé
+dans ce dépôt, qui n'en avait pas. C'est un pas vers la convention, pris « au fil
+de l'eau » plutôt que par un renommage massif.

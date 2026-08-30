@@ -9,7 +9,7 @@ use crate::app::teams::domain::team::{GamePhase, Team, TeamDomainEvent};
 use crate::app::teams::ports::{
     CatalogPositionDto, CrossLimitDto, IPhaseBasketRepository, IRosterCatalogPort, ISquadPort,
     ITeamRepository, MyTeamRow, PhaseBasketState, RepositoryError, RosterCatalogDto, SkillBadgeDto,
-    SquadMemberDto, StaffPriceDto, TeamCardRow, TeamEnrollmentRow,
+    SquadMemberDto, StaffPriceDto, TeamCardRow, TeamEnrollmentRow, TreasuryMovementRow,
 };
 use async_trait::async_trait;
 use std::sync::Mutex;
@@ -49,6 +49,13 @@ impl ITeamRepository for FakeTeamRepository {
     /// handler, sur une vraie base.
     async fn find_space_id(&self, _: &str) -> Result<Option<String>, RepositoryError> {
         Ok(None)
+    }
+
+    async fn list_treasury_movements(
+        &self,
+        _: &str,
+    ) -> Result<Vec<TreasuryMovementRow>, RepositoryError> {
+        Ok(Vec::new())
     }
 
     async fn append(

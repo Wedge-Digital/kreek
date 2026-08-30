@@ -8,8 +8,8 @@ use crate::app::teams::io::listeners::{phase_basket_purge_listener, team_value_l
 use crate::app::teams::io::repository::phase_basket_repository::PhaseBasketRepository;
 use crate::app::teams::io::repository::team_repository::TeamRepository;
 use crate::app::teams::ports::{
-    IDiceRoller, IJourneymanTypePort, IPhaseBasketRepository, IRosterCatalogPort, ISquadPort,
-    ITeamAccessPort, ITeamRepository,
+    IDiceRoller, IJourneymanTypePort, IMatchContextPort, IPhaseBasketRepository,
+    IRosterCatalogPort, ISquadPort, ITeamAccessPort, ITeamRepository,
 };
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
@@ -30,6 +30,9 @@ pub struct TeamsContext {
     pub basket_repository: Arc<dyn IPhaseBasketRepository>,
     /// Le hasard, derrière un port : c'est ce qui rend le jet forçable en test.
     pub dice: Arc<dyn IDiceRoller>,
+    /// Le contexte d'un match — journée, adversaire, score — pour le relevé de
+    /// trésorerie (carte 435).
+    pub match_context_port: Arc<dyn IMatchContextPort>,
 }
 
 pub fn init_listeners(
@@ -75,6 +78,7 @@ impl TeamsContext {
         squad_port: Arc<dyn ISquadPort>,
         access_port: Arc<dyn ITeamAccessPort>,
         dice: Arc<dyn IDiceRoller>,
+        match_context_port: Arc<dyn IMatchContextPort>,
     ) -> Self {
         Self {
             team_repository: Arc::new(TeamRepository::new(pool.clone(), event_bus)),
@@ -83,6 +87,7 @@ impl TeamsContext {
             squad_port,
             access_port,
             dice,
+            match_context_port,
             basket_repository: Arc::new(PhaseBasketRepository::new(pool.clone())),
         }
     }

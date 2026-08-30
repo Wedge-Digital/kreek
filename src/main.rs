@@ -517,6 +517,7 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                     Arc::new(crate::app::competitions::io::repository::competition_repository::CompetitionRepository::new(pool.clone())),
                 )),
                 Arc::new(crate::infrastructure::teams::dice_adapter::DiceAdapter),
+                Arc::new(crate::infrastructure::teams::match_context_adapter::MatchContextAdapter::new(pool.clone())),
             )
         },
         players: PlayersContext::new(

@@ -80,6 +80,31 @@ pub trait ISquadPort: Send + Sync {
     async fn find_squad(&self, team_id: &str) -> Vec<SquadMemberDto>;
 }
 
+// ── ACL vers le BC `competitions` (contexte d'un match) ───────────────────────
+
+/// Ce qu'un rapport de match doit à son affichage dans le relevé : la journée,
+/// les deux équipes, et le score s'il existe.
+///
+/// **Deux `Option` qui ne disent pas la même absence.** `find_match_context`
+/// rend `None` quand le match n'a **aucune ligne d'affichage** — un rapport créé
+/// à la main, tant que la carte 427 n'est pas livrée. Les scores, eux, valent
+/// `None` quand le match **est en cours**. Confondre les deux ferait perdre son
+/// en-tête de journée à un match qu'on connaît parfaitement.
+pub struct MatchContextDto {
+    pub round_name: String,
+    pub home_team_id: String,
+    pub home_team_name: String,
+    pub away_team_id: String,
+    pub away_team_name: String,
+    pub home_score: Option<u8>,
+    pub away_score: Option<u8>,
+}
+
+#[async_trait]
+pub trait IMatchContextPort: Send + Sync {
+    async fn find_match_context(&self, match_report_id: &str) -> Option<MatchContextDto>;
+}
+
 // ── ACL vers le BC `references` (roster, staff, journalier) ────────────────────
 
 /// La ligne de roster que le règlement désigne comme journalier, et son prix —
@@ -222,6 +247,24 @@ pub trait IPhaseBasketRepository: Send + Sync {
     async fn delete(&self, team_id: &str, phase: &GamePhase) -> Result<(), RepositoryError>;
 }
 
+/// Une ligne du grand livre, avec l'événement qui l'a produite.
+///
+/// DTO de lecture : primitifs acceptés (règle CQRS du `CLAUDE.md`). `direction`
+/// et `reason` sont les chaînes écrites par `as_str` — c'est le service qui les
+/// repasse par `parse`, et qui refuse le relevé si l'une est inconnue.
+///
+/// `payload` est `None` quand l'événement manque : le `LEFT JOIN` garde la
+/// ligne, le détail se replie sur le motif seul.
+pub struct TreasuryMovementRow {
+    pub event_version: i64,
+    pub direction: String,
+    pub amount_kpo: i32,
+    pub reason: String,
+    pub balance_after_kpo: i32,
+    pub occurred_at: time::OffsetDateTime,
+    pub payload: Option<serde_json::Value>,
+}
+
 #[derive(Debug)]
 pub enum RepositoryError {
     ConcurrentWrite,
@@ -296,6 +339,15 @@ pub trait ITeamRepository: Send + Sync {
         coach_id: &str,
         space_id: &str,
     ) -> Result<Vec<MyTeamRow>, RepositoryError>;
+    /// Le grand livre d'une équipe, dans l'ordre des versions.
+    ///
+    /// **Aucun code de production ne lisait cette table** avant la carte 435 :
+    /// elle est alimentée depuis l'origine, dans la transaction de l'append, et
+    /// seuls les tests du dépôt la relisaient.
+    async fn list_treasury_movements(
+        &self,
+        team_id: &str,
+    ) -> Result<Vec<TreasuryMovementRow>, RepositoryError>;
 }
 
 pub struct TeamEnrollmentRow {

@@ -12,6 +12,7 @@ pub mod roster_edit_access_service;
 pub mod team_value_service;
 #[cfg(test)]
 pub mod test_doubles;
+pub mod treasury_statement_service;
 pub mod validate_dismissals_phase_use_case;
 pub mod validate_improvement_phase_use_case;
 pub mod validate_recruitment_phase_use_case;

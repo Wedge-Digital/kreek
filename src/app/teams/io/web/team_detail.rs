@@ -1,7 +1,9 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
 use crate::app::teams::domain::team::{GamePhase, ParticipationStatus, Team};
-use crate::app::teams::ports::{IRosterCatalogPort, ITeamRepository, RepositoryError};
+use crate::app::teams::ports::{
+    IRosterCatalogPort, ITeamRepository, RepositoryError, TreasuryMovementRow,
+};
 use crate::app::teams::use_cases::roster_edit_access_service;
 use crate::state::AppState;
 use askama::Template;
@@ -596,6 +598,13 @@ mod tests {
         /// handler, sur une vraie base.
         async fn find_space_id(&self, _: &str) -> Result<Option<String>, RepositoryError> {
             Ok(None)
+        }
+
+        async fn list_treasury_movements(
+            &self,
+            _: &str,
+        ) -> Result<Vec<TreasuryMovementRow>, RepositoryError> {
+            Ok(Vec::new())
         }
 
         async fn append(

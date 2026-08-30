@@ -2,6 +2,7 @@ use crate::app::teams::domain::team::{Team, TeamDomainEvent};
 use crate::app::teams::domain::treasury::TreasuryMovement;
 use crate::app::teams::ports::{
     ITeamRepository, MyTeamRow, RepositoryError, TeamCardRow, TeamEnrollmentRow,
+    TreasuryMovementRow,
 };
 use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
@@ -561,6 +562,41 @@ impl ITeamRepository for TeamRepository {
                 logo_url: r.logo_url,
                 status: r.status,
                 game_phase: r.game_phase,
+            })
+            .collect())
+    }
+
+    async fn list_treasury_movements(
+        &self,
+        team_id: &str,
+    ) -> Result<Vec<TreasuryMovementRow>, RepositoryError> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            event_version: i64,
+            direction: String,
+            amount_kpo: i32,
+            reason: String,
+            balance_after_kpo: i32,
+            occurred_at: time::OffsetDateTime,
+            payload: Option<serde_json::Value>,
+        }
+
+        let rows = sqlx::query_as::<_, Row>(include_str!("sql/list_treasury_movements.sql"))
+            .bind(team_id)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(RepositoryError::Database)?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| TreasuryMovementRow {
+                event_version: r.event_version,
+                direction: r.direction,
+                amount_kpo: r.amount_kpo,
+                reason: r.reason,
+                balance_after_kpo: r.balance_after_kpo,
+                occurred_at: r.occurred_at,
+                payload: r.payload,
             })
             .collect())
     }
@@ -1198,5 +1234,129 @@ mod tests {
                 .await
                 .ok();
         }
+    }
+
+    // ── La lecture du grand livre (carte 435) ────────────────────────────────
+
+    /// **La jointure rend l'événement exact qui a produit le mouvement.**
+    ///
+    /// C'est elle qui donne son détail à chaque ligne — sans elle, le relevé
+    /// n'aurait qu'une suite de montants sans histoire.
+    #[tokio::test]
+    async fn list_treasury_movements_rend_l_evenement_joint() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = TeamRepository::new(pool, new_bus());
+        let team_id = ulid::Ulid::new().to_string();
+        repo.append(&team_id, &created_event(&team_id), 0)
+            .await
+            .unwrap();
+        let achat = TeamDomainEvent::StaffBought {
+            staff_type: StaffType::Apothecary,
+            quantity: StaffQuantity::try_new(1).unwrap(),
+            cost_kpo: Kpo(50),
+        };
+        repo.append(&team_id, &achat, 1).await.unwrap();
+
+        let lignes = repo.list_treasury_movements(&team_id).await.unwrap();
+
+        assert_eq!(lignes.len(), 2, "la dotation puis l'achat");
+        assert_eq!(lignes[0].reason, "InitialEndowment");
+        assert_eq!(lignes[1].reason, "StaffPurchase");
+        // L'ordre vient de `event_version`, pas de l'horodatage : les deux
+        // événements peuvent partager la milliseconde.
+        assert!(lignes[0].event_version < lignes[1].event_version);
+        let payload = lignes[1]
+            .payload
+            .as_ref()
+            .expect("l'événement doit être joint");
+        assert_eq!(
+            payload.get("staff_type").and_then(|v| v.as_str()),
+            Some("Apothecary"),
+            "le détail vient du payload joint : {payload}"
+        );
+    }
+
+    /// **Le `LEFT JOIN`, et pourquoi il n'est pas un `JOIN`.**
+    ///
+    /// Une ligne dont l'événement manquerait doit s'afficher **sans détail**
+    /// plutôt que de disparaître : un relevé à trou se lit comme une erreur de
+    /// calcul et se cherche du mauvais côté.
+    #[tokio::test]
+    async fn une_ligne_sans_evenement_reste_dans_le_releve() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = TeamRepository::new(pool.clone(), new_bus());
+        let team_id = ulid::Ulid::new().to_string();
+        repo.append(&team_id, &created_event(&team_id), 0)
+            .await
+            .unwrap();
+
+        // Une ligne de grand livre dont aucun événement ne porte la version :
+        // l'état qu'un `JOIN` ferait disparaître.
+        sqlx::query(
+            "INSERT INTO teams__treasury_ledger
+                 (team_id, event_version, direction, amount_kpo, reason, balance_after_kpo)
+             VALUES ($1, 999, 'Debit', 30, 'CostlyMistake', 970)",
+        )
+        .bind(&team_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let lignes = repo.list_treasury_movements(&team_id).await.unwrap();
+
+        assert_eq!(lignes.len(), 2, "la ligne orpheline doit rester");
+        let orpheline = lignes.iter().find(|l| l.event_version == 999).unwrap();
+        assert!(orpheline.payload.is_none(), "sans détail, mais présente");
+        assert_eq!(orpheline.reason, "CostlyMistake");
+    }
+
+    /// **L'ordre vient de la version, jamais de l'horodatage.**
+    ///
+    /// Deux mouvements d'un même traitement — l'achat de coups de pouce et son
+    /// remboursement, la recette et la bourde — partagent `occurred_at` à la
+    /// milliseconde. Trier dessus rendrait un ordre arbitraire, et les soldes
+    /// ne s'enchaîneraient plus : le relevé se lirait comme une erreur de calcul.
+    ///
+    /// Les deux lignes sont insérées **à l'envers** de leur version, avec le
+    /// même horodatage : un tri sur `occurred_at` ne peut alors pas les
+    /// remettre dans l'ordre, et c'est ce que ce test constate.
+    ///
+    /// Écrit après coup : la mutation `ORDER BY occurred_at` **passait**, la
+    /// justification la plus précise de la carte n'étant gardée par rien.
+    #[tokio::test]
+    async fn l_ordre_vient_de_la_version_et_non_de_l_horodatage() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = TeamRepository::new(pool.clone(), new_bus());
+        let team_id = ulid::Ulid::new().to_string();
+
+        for (version, montant) in [(20_i64, 200_i32), (10, 100)] {
+            sqlx::query(
+                "INSERT INTO teams__treasury_ledger
+                     (team_id, event_version, direction, amount_kpo, reason,
+                      balance_after_kpo, occurred_at)
+                 VALUES ($1, $2, 'Credit', $3, 'InitialEndowment', $3,
+                         TIMESTAMPTZ '2026-08-30 12:00:00+00')",
+            )
+            .bind(&team_id)
+            .bind(version)
+            .bind(montant)
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+
+        let lignes = repo.list_treasury_movements(&team_id).await.unwrap();
+
+        assert_eq!(
+            lignes.iter().map(|l| l.event_version).collect::<Vec<_>>(),
+            vec![10, 20],
+            "à horodatage égal, seule la version porte l'ordre"
+        );
     }
 }
