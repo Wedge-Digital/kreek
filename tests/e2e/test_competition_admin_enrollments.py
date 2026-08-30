@@ -13,6 +13,8 @@ import pytest
 import requests
 from playwright.sync_api import Page, expect
 
+from htmx_helpers import attendre_cablage
+
 FAKE_LOGO_URL = "https://res.cloudinary.com/demo/image/upload/v1/sample.jpg"
 
 
@@ -134,6 +136,12 @@ def test_un_nom_deja_pris_s_affiche_sous_le_champ(page: Page, competition_create
     page.goto(seconde + "/settings", wait_until="load")
     expect(page.locator("#settings-general-panel")).to_be_visible(timeout=10000)
     page.fill("#settings-general-panel input[name='name']", nom_pris)
+    # **Le formulaire est câblé par htmx, et le panneau devient visible avant de
+    # l'être.** Un clic tombé dans cette fenêtre ne produit rien : aucune
+    # requête, aucune erreur, et l'attente ci-dessous expire sur un formulaire
+    # qui n'a jamais été soumis. C'est ainsi que ce test échouait dans la suite
+    # complète — jamais seul, où la machine a le temps.
+    attendre_cablage(page, "#settings-general-panel form")
     page.click("#settings-general-panel button[type='submit']")
 
     erreur = page.locator("#settings-general-panel .form-row-error.shown")
