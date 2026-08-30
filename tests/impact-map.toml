@@ -275,6 +275,14 @@
 "test_team_treasury_tab" = ["teams", "match_report", "players", "spp_calculator",
                             "competitions", "references", "ranking",
                             "team_creation", "spaces"]
+# L'onglet Matchs. `competitions` y est vérifié et non traversé : c'est lui qui
+# sert le fragment et calcule l'autorisation. `auth` l'est aussi — le scénario du
+# visiteur repose sur la seconde identité de `bypass_auth`, sans laquelle le
+# refus serait inobservable. `match_report` est une dépendance dure : publier un
+# rapport est le seul chemin vers un match joué, donc vers un lien à cacher.
+"test_team_matches" = ["competitions", "teams", "match_report", "players",
+                       "spp_calculator", "references", "ranking",
+                       "team_creation", "spaces", "auth"]
 # `players` y est vérifié, pas seulement traversé : le scénario 8 contrôle que
 # le joueur acheté dans `teams` existe bien dans `players`, maillot compris.
 # `match_report` est une dépendance dure et non une fixture de confort — publier
