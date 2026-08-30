@@ -3,8 +3,20 @@ name: CI
 on:
   # `push:` sans valeur était accepté à l'enregistrement du workflow mais ne
   # déclenchait aucun run — les branches sont désormais explicites.
+  #
+  # `demo` y figure depuis la carte 480, et ce n'est pas un confort : l'axe 8 de
+  # `check-arch` a laissé passer cinq tests e2e sans entrée dans la carte
+  # d'impact parce qu'il ne tournait ni en local — un module de bibliothèque
+  # standard lui manquait — ni ici, faute d'être déclenché sur la branche où le
+  # travail se fait. Un verrou que la CI ne voit pas ne garde que la machine de
+  # celui qui l'a écrit.
+  #
+  # Le coût est assumé : le pipeline complet, `e2e` compris, à chaque poussée
+  # sur `demo`. Les quatre jobs sont autonomes — service Postgres, `.env.dev`
+  # généré, seed synthétique, serveur lancé — et tournent déjà tels quels à
+  # chaque pull request.
   push:
-    branches: [main]
+    branches: [main, demo]
   pull_request:
     branches: [main]
   # Permet de relancer le pipeline sans commit, depuis l'onglet Actions

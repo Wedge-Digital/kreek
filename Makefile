@@ -103,6 +103,10 @@ e2e:
 # Code 10 = une règle « run all » s'est déclenchée, on bascule sur make e2e.
 # Code 11 = des BCs touchés n'ont aucune couverture e2e : on le dit, on ne
 #           fait pas passer une sélection vide pour un succès.
+# Tout autre code non nul = le sélecteur n'a pas tourné. Il tombait auparavant
+# dans le `elif` final, où une sélection vide ne déclenchait rien et la cible
+# rendait zéro : `select_tests.py` a planté des jours sur un `import tomllib`
+# sans qu'aucun test ne s'exécute, et sans que rien ne rougisse (carte 480).
 test-impacted:
 	@tests=$$(./scripts/impact/changed_bcs.sh $(REF) | ./scripts/impact/select_tests.py); \
 	rc=$$?; \
@@ -111,6 +115,11 @@ test-impacted:
 	    $(MAKE) --no-print-directory e2e; \
 	elif [ $$rc -eq 11 ]; then \
 	    exit 1; \
+	elif [ $$rc -ne 0 ]; then \
+	    echo ""; \
+	    echo "  ✗ le sélecteur de tests n'a pas tourné (code $$rc) — voir ci-dessus"; \
+	    echo ""; \
+	    exit $$rc; \
 	elif [ -n "$$tests" ]; then \
 	    echo ""; \
 	    cd tests/e2e && uv run pytest -v $$tests; \

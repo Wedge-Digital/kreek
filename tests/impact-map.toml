@@ -45,6 +45,12 @@
 # spaces est la projection — le test la nettoie, donc en dépend.
 "test_auth_coach_name_casse" = ["auth", "spaces"]
 
+# Administration d'un espace : le panneau et l'ajout direct d'un membre. `auth`
+# n'y est pas une traversée de fixture — les deux tests créent des comptes par
+# l'inscription, dont `spaces` projette le cache utilisateur qu'ils affichent.
+"test_space_admin_membres" = ["spaces", "auth"]
+"test_space_admin_ajout_direct" = ["spaces", "auth"]
+
 # ── Journal de requêtes ──────────────────────────────────────────────────────
 # Transverse : la couche vit dans `src/web/middleware`, hors de tout BC, et
 # elle enveloppe toutes les requêtes de l'application. Un diff qui touche le
@@ -133,6 +139,11 @@
 "test_special_rule_selector"   = ["team_creation", "references", "competitions", "spaces", "ranking"]
 "test_build_and_finalize_team" = ["team_creation", "references", "teams", "players",
                                   "competitions", "spaces", "ranking"]
+# Le refus de créer une équipe sur une saison non finalisée. Pas de match, donc
+# pas de `match_report` : le test s'arrête à la création, et force l'état de la
+# saison en base plutôt que de le produire par un parcours.
+"test_saison_non_finalisee" = ["team_creation", "competitions", "teams",
+                               "references", "ranking", "spaces"]
 
 # ── Pipeline complet (le garde-fou de la fixture elle-même) ──────────────────
 # Ce test existe pour vérifier que create → build → enrol → schedule fonctionne.
@@ -244,6 +255,17 @@
 "test_team_detail_state_banner" = ["teams", "match_report", "players", "spp_calculator",
                                    "competitions", "references", "ranking",
                                    "team_creation", "spaces"]
+# « Lineman a vil prix » : les linemen ne comptent plus dans la valeur d'équipe.
+# Elle se lit dans l'en-tête de la fiche, que `teams` rend à partir de ce que
+# `players` lui projette — aucun match n'est joué.
+"test_lineman_a_vil_prix" = ["teams", "players", "competitions", "references",
+                             "team_creation", "ranking", "spaces"]
+# Les noms sortis de la liste blanche. Ce qui comptait est le **rendu** : un nom
+# à apostrophe traverse la création, l'enrôlement et l'affichage sans être
+# altéré. Il touche donc les mêmes BCs que la construction d'équipe, plus les
+# écrans qui réaffichent le nom.
+"test_noms_typographiques" = ["teams", "players", "competitions", "references",
+                              "team_creation", "ranking", "spaces"]
 # L'onglet Trésorerie. `teams` le rend, mais le relevé n'a d'histoire à raconter
 # qu'après un match publié et un recrutement validé : `match_report` et
 # `spp_calculator` sont des dépendances dures, pas des fixtures de confort.

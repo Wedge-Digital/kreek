@@ -24,7 +24,8 @@ une divergence est un bug de l'un des deux.
 """
 import pathlib
 import sys
-import tomllib
+
+from lire_carte import lire_carte
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 MAP = ROOT / "tests" / "impact-map.toml"
@@ -42,7 +43,7 @@ RUN_ALL_TOKENS = {
 
 
 def load_map():
-    data = tomllib.loads(MAP.read_text())
+    data = lire_carte(MAP.read_text())
     return data.get("tests", {}), data.get("deps", {})
 
 
