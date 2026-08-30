@@ -26,6 +26,30 @@ pub struct MatchResultatVm {
     pub home_cas: Option<u32>,
     pub away_cas: Option<u32>,
     pub report_url: Option<String>,
+    /// « Journée 3 », quand la liste n'a pas d'en-tête de groupe pour le dire.
+    ///
+    /// `None` sur l'onglet compétition, où l'en-tête de journée le porte déjà —
+    /// le répéter dans chacun des six blocs du groupe serait du bruit.
+    pub round_label: Option<String>,
+    /// Victoire, nul ou défaite, **du point de vue d'une équipe de référence**.
+    ///
+    /// `None` sur l'onglet compétition, où la question n'a pas de sens : il n'y
+    /// a pas d'équipe de référence. `None` aussi sur un match non joué.
+    ///
+    /// **Une `Option` et non un booléen ni une chaîne vide** : « pas d'équipe de
+    /// référence » et « match nul » sont deux choses, qu'un `String::new()`
+    /// confondrait.
+    pub outcome: Option<MatchOutcome>,
+}
+
+/// Ce que le match **est** pour l'équipe consultée, pas comment il s'affiche.
+/// Le gabarit en tire sa lettre et sa classe ; c'est lui qui décide de la
+/// couleur, pas le view model.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MatchOutcome {
+    Win,
+    Draw,
+    Loss,
 }
 
 pub struct JourneeResultatsVm {
@@ -228,5 +252,11 @@ fn to_resultat_vm(row: PairingDisplayDto, authz: &ResultAuthorization) -> MatchR
         home_cas: row.home_casualties.map(|v| v as u32),
         away_cas: row.away_casualties.map(|v| v as u32),
         report_url,
+        // Les deux sont `None` ici, et c'est pourquoi l'extraction du bloc en
+        // composant (carte 476) ne change rien à cet écran : l'en-tête de
+        // journée porte déjà le libellé, et une page de compétition n'a pas
+        // d'équipe de référence dont on puisse dire l'issue.
+        round_label: None,
+        outcome: None,
     }
 }

@@ -1,0 +1,77 @@
+{# Le bloc de match — composant partagé (carte 476).
+
+   **Copié tel quel** depuis `competition-tab-resultats.html`, où il vivait
+   inline. Aucune ligne n'a été réécrite : ce sont les mêmes `{% if let Some %}`
+   et les mêmes `unwrap_or(0)`, déplacés. Les retaper de mémoire aurait été le
+   seul moyen d'y introduire un défaut (règle 5 du `CLAUDE.md`).
+
+   Une **macro** et non un `include` : elle reçoit `m` explicitement, là où un
+   `include` compterait sur une variable de boucle présente par hasard dans la
+   portée de l'appelant. C'est l'idiome déjà employé par
+   `components/upload_widget.html`.
+
+   Deux champs neufs, tous deux `Option`, tous deux `None` sur l'onglet
+   compétition — d'où l'absence de changement visible sur cet écran :
+
+   - `round_label` : l'en-tête de groupe le dit déjà là-bas ;
+   - `outcome` : une page de compétition n'a pas d'équipe de référence.
+
+   La feuille est `components/match-widget.css`, portée par `.match-widget`. #}
+{% macro match_widget(m) %}
+    <div class="match-widget {% if m.is_in_progress %}match-widget--in-progress{% endif %} {% if m.report_url.is_some() %}match-widget--clickable{% endif %}">
+
+        {% if let Some(url) = m.report_url %}
+        <a href="{{ url }}" class="match-widget-link" aria-label="Voir le rapport de match"></a>
+        {% endif %}
+
+        <div class="match-side match-side--home">
+            {% if let Some(logo) = m.home_logo %}
+            <img src="{{ logo }}" class="match-team-logo-sm match-team-logo-sm--img" alt="{{ m.home_name }}">
+            {% else %}
+            <div class="match-team-logo-sm match-team-logo-sm--initials">{{ m.home_initials }}</div>
+            {% endif %}
+            <div class="match-team-info">
+                <div class="match-team-name">{{ m.home_name }}</div>
+                <div class="match-team-sub">{{ m.home_roster }} · {{ m.home_coach }}</div>
+            </div>
+        </div>
+
+        <div class="match-score-block">
+            {% if let Some(label) = m.round_label %}
+            <div class="match-round">{{ label }}</div>
+            {% endif %}
+            {% if m.is_completed %}
+            <div class="match-score-tds">
+                <span class="match-score-num">{{ m.home_score.unwrap_or(0) }}</span>
+                <span class="match-score-sep">–</span>
+                <span class="match-score-num">{{ m.away_score.unwrap_or(0) }}</span>
+            </div>
+            <div class="match-score-cas">
+                <span class="match-cas-num">{{ m.home_cas.unwrap_or(0) }}</span>
+                <span class="match-cas-sep">sor.</span>
+                <span class="match-cas-num">{{ m.away_cas.unwrap_or(0) }}</span>
+            </div>
+            {% else if m.is_in_progress %}
+            <div class="match-in-progress-block">
+                <div class="match-status-badge match-status-badge--in-progress">En cours de saisie</div>
+            </div>
+            {% endif %}
+            {% if let Some(outcome) = m.outcome %}
+            <div class="match-outcome{% match outcome %}{% when MatchOutcome::Win %} match-outcome--win{% when MatchOutcome::Draw %} match-outcome--draw{% when MatchOutcome::Loss %} match-outcome--loss{% endmatch %}">{% match outcome %}{% when MatchOutcome::Win %}V{% when MatchOutcome::Draw %}N{% when MatchOutcome::Loss %}D{% endmatch %}</div>
+            {% endif %}
+        </div>
+
+        <div class="match-side match-side--away">
+            <div class="match-team-info match-team-info--right">
+                <div class="match-team-name">{{ m.away_name }}</div>
+                <div class="match-team-sub">{{ m.away_coach }} · {{ m.away_roster }}</div>
+            </div>
+            {% if let Some(logo) = m.away_logo %}
+            <img src="{{ logo }}" class="match-team-logo-sm match-team-logo-sm--img" alt="{{ m.away_name }}">
+            {% else %}
+            <div class="match-team-logo-sm match-team-logo-sm--initials">{{ m.away_initials }}</div>
+            {% endif %}
+        </div>
+
+    </div>
+{% endmacro %}

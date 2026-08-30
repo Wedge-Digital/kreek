@@ -1,0 +1,179 @@
+/* Le bloc de match — composant partagé (carte 476).
+ *
+ * Ces 86 règles vivaient dans `pages/competition-detail.css`, **toutes
+ * préfixées `.competition-detail`** : sur une autre page elles ne
+ * s'appliquaient pas du tout, et le bloc s'y serait affiché nu.
+ *
+ * # Pourquoi elles restent scopées, alors qu'un composant est global
+ *
+ * La carte proposait de retirer simplement le préfixe. Deux choses l'en
+ * empêchent, toutes deux vérifiées :
+ *
+ * 1. `tests/e2e/visual/debordements.py` n'exempte que `common.css` et
+ *    `layout-app.css`, plus **les feuilles scopées par leur propre nom**. Les
+ *    autres composants ne passent que parce qu'ils figurent au relevé de
+ *    référence, qui dit ce que chaque page chargeait avant la fusion des
+ *    feuilles — un fichier neuf n'y a aucune entrée, et ses sélecteurs nus
+ *    seraient testés sur les 43 pages du relevé.
+ * 2. `pages/app-news-feed.css` définit déjà `.match-team-name`, avec une autre
+ *    graisse. Deux feuilles la poseraient.
+ *
+ * Scoper sous `.match-widget` — le nom du fichier, donc la portée attendue
+ * partout ailleurs — règle les deux d'un coup.
+ *
+ * # La forme `.match-widget.match-widget--…`
+ *
+ * `porte_le_scope` refuse `.match-widget--in-progress`, dont le caractère
+ * suivant la portée est un tiret. La racine porte de toute façon les deux
+ * classes, donc coller la portée au modifieur ne change pas ce qui est
+ * sélectionné — seulement sa spécificité, qui retrouve celle qu'avait le
+ * préfixe de page.
+ *
+ * Le **double** tiret est un modifieur porté par la racine ; un tiret simple
+ * ouvre un autre nom de classe, donc un descendant : `.match-widget-link` est
+ * l'ancre de recouvrement, pas une variante du bloc. */
+
+/* Match widget */
+.match-widget {
+  position: relative;
+  display: grid; grid-template-columns: 1fr 120px 1fr;
+  align-items: center; gap: 0;
+  padding: 12px var(--p2); border-bottom: 1px solid var(--dark-6);
+  transition: background 0.1s;
+}
+.match-widget:last-child { border-bottom: none; }
+.match-widget.match-widget--clickable { cursor: pointer; }
+.match-widget.match-widget--clickable:hover { background: var(--dark-6); }
+
+.match-widget .match-widget-link {
+  position: absolute; inset: 0;
+}
+
+.match-widget .match-side { display: flex; align-items: center; gap: 10px; }
+.match-widget .match-side--away { justify-content: flex-end; }
+
+.match-widget .match-team-logo-sm { width: 72px; height: 72px; border-radius: 10px; background: var(--dark-5); flex-shrink: 0; overflow: hidden; }
+.match-widget .match-team-logo-sm--img { object-fit: cover; display: block; }
+.match-widget .match-team-logo-sm--initials {
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-size: 18px; font-weight: 900; color: var(--white);
+  background: linear-gradient(135deg, var(--dark-2) 0%, var(--dark-3) 100%);
+}
+
+.match-widget .match-team-info { display: flex; flex-direction: column; gap: 2px; }
+.match-widget .match-team-info--right { text-align: right; }
+.match-widget .match-team-name { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+.match-widget .match-team-sub { font-size: var(--text-tiny); color: var(--dark-3); }
+
+.match-widget .match-score-block { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.match-widget .match-score-tds { display: flex; align-items: center; gap: 6px; }
+.match-widget .match-score-num { font-family: var(--font-title); font-size: var(--h5); font-weight: 900; color: var(--dark-0); min-width: 18px; text-align: center; }
+.match-widget .match-score-sep { color: var(--dark-3); font-weight: 400; }
+.match-widget .match-score-cas { display: flex; align-items: center; gap: 4px; }
+.match-widget .match-cas-num { font-size: var(--text-tiny); color: var(--dark-3); min-width: 14px; text-align: center; }
+.match-widget .match-cas-sep { font-size: var(--text-tiny); color: var(--dark-4); }
+
+/* Match statuts */
+.match-widget.match-widget--in-progress { background: rgba(0, 48, 73, 0.02); }
+
+.match-widget .match-status-badge {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  border-radius: 6px; padding: 3px 10px;
+}
+.match-widget .match-status-badge--upcoming {
+  color: var(--dark-3); background: var(--dark-6); border: 1px solid var(--dark-5);
+}
+.match-widget .match-status-badge--in-progress {
+  color: var(--white); background: var(--main-blue);
+  animation: match-pulse 2s ease-in-out infinite;
+}
+
+/* **Les images-clefs partent avec le composant.** Elles étaient restées dans la
+ * feuille de page : le bundle étant unique, l'animation marchait quand même —
+ * et le composant dépendait pourtant d'une feuille qui ne le concerne plus.
+ * Un nom d'animation est global, donc rien ne l'aurait signalé. */
+@keyframes match-pulse {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.match-widget .match-in-progress-block { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+
+/* ─── Responsive ──────────────────────────────────────────────────────────────
+   Un seul breakpoint : 768px, celui de référence du projet. Le chrome global
+   (barre latérale, menu, tabbar mobile) est géré par `layout-app.css` — cette
+   page n'a à s'occuper que de son propre contenu. */
+
+@media (max-width: 768px) {
+
+  /* Lignes de match — Résultats */
+  .match-widget { grid-template-columns: 1fr 80px 1fr; padding: 8px 10px; }
+  .match-widget .match-team-logo-sm { width: 36px; height: 36px; border-radius: 6px; }
+  .match-widget .match-team-logo-sm--initials { font-size: 11px; }
+  .match-widget .match-team-name { font-size: 13px; }
+  .match-widget .match-team-sub { display: none; }
+  .match-widget .match-side { gap: 6px; }
+  .match-widget .match-score-num { font-size: 15px; min-width: 14px; }
+  .match-widget .match-score-cas { display: none; }
+  .match-widget .match-status-badge { font-size: 9px; padding: 2px 7px; }
+
+  /* Match en cours de saisie : le badge et le lien font une bonne centaine de
+     pixels à eux deux et viendraient se coller au nom de l'équipe adverse. Ils
+     passent sur leur propre ligne, sous les deux équipes.
+     Sélecteur à deux classes : à spécificité égale, la règle `.match-widget`
+     ci-dessus l'emporterait sur l'ordre. */
+  .match-widget.match-widget--in-progress {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: "home away" "status status";
+    row-gap: 8px;
+  }
+  .match-widget.match-widget--in-progress .match-side { grid-area: home; }
+  .match-widget.match-widget--in-progress .match-side--away { grid-area: away; }
+  .match-widget.match-widget--in-progress .match-score-block { grid-area: status; }
+  .match-widget.match-widget--in-progress .match-in-progress-block {
+    flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px;
+  }
+}
+
+/* ─── Très petits écrans (≤ 400px) ─── */
+@media (max-width: 400px) {
+  .match-widget { grid-template-columns: 1fr 70px 1fr; }
+  .match-widget .match-team-logo-sm { display: none; }
+  .match-widget .match-team-name { font-size: 12px; }
+}
+
+/* ─── Ce que la carte 476 ajoute au bloc ──────────────────────────────────
+ *
+ * Deux éléments qui ne paraissent **pas** sur l'onglet compétition, où leurs
+ * champs valent `None` : le libellé de journée, que l'en-tête de groupe y dit
+ * déjà, et la pastille d'issue, qui n'a pas de sens sans équipe de référence.
+ * Ils servent la fiche d'équipe (carte 477), dont la liste est plate.
+ *
+ * Ils reprennent le vocabulaire du bloc — mêmes tokens, même pastille que
+ * `.match-status-badge` — plutôt que d'en inventer un. La 477 les verra à
+ * l'écran, sur la page qui les affiche. */
+
+.match-widget .match-round {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.match-widget .match-outcome {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-family: var(--font-title);
+  font-size: var(--text-tiny);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.match-widget .match-outcome--win  { background: rgba(98, 149, 132, 0.18); color: var(--green); }
+.match-widget .match-outcome--draw { background: var(--dark-6); color: var(--dark-2); }
+.match-widget .match-outcome--loss { background: rgba(255, 107, 53, 0.15); color: #9A5000; }

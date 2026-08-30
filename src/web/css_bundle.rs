@@ -74,6 +74,7 @@ const FEUILLES_APP: &[&str] = &[
     "components/create-card.css",
     "components/kreek-select.css",
     "components/league-selector.css",
+    "components/match-widget.css",
     "components/team-card.css",
     "components/team-selection.css",
     "components/tom-select.css",

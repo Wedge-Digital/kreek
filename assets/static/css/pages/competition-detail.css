@@ -94,95 +94,9 @@
 .competition-detail.matches-list        { background: var(--white); border-radius: 10px; overflow: hidden; margin-bottom: var(--p1); }
 .competition-detail .matches-list-header,
 .competition-detail.matches-list-header { padding: var(--p2); border-bottom: 2px solid var(--dark-5); display: flex; align-items: center; justify-content: space-between; }
-
-/* Match widget */
-.competition-detail .match-widget,
-.competition-detail.match-widget {
-  position: relative;
-  display: grid; grid-template-columns: 1fr 120px 1fr;
-  align-items: center; gap: 0;
-  padding: 12px var(--p2); border-bottom: 1px solid var(--dark-6);
-  transition: background 0.1s;
-}
-.competition-detail .match-widget:last-child,
-.competition-detail.match-widget:last-child { border-bottom: none; }
-.competition-detail .match-widget--clickable,
-.competition-detail.match-widget--clickable { cursor: pointer; }
-.competition-detail .match-widget--clickable:hover,
-.competition-detail.match-widget--clickable:hover { background: var(--dark-6); }
-
-.competition-detail .match-widget-link,
-.competition-detail.match-widget-link {
-  position: absolute; inset: 0;
-}
-
-.competition-detail .match-side,
-.competition-detail.match-side         { display: flex; align-items: center; gap: 10px; }
-.competition-detail .match-side--away,
-.competition-detail.match-side--away   { justify-content: flex-end; }
-
-.competition-detail .match-team-logo-sm,
-.competition-detail.match-team-logo-sm { width: 72px; height: 72px; border-radius: 10px; background: var(--dark-5); flex-shrink: 0; overflow: hidden; }
-.competition-detail .match-team-logo-sm--img,
-.competition-detail.match-team-logo-sm--img { object-fit: cover; display: block; }
-.competition-detail .match-team-logo-sm--initials,
-.competition-detail.match-team-logo-sm--initials {
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-title); font-size: 18px; font-weight: 900; color: var(--white);
-  background: linear-gradient(135deg, var(--dark-2) 0%, var(--dark-3) 100%);
-}
-
-.competition-detail .match-team-info,
-.competition-detail.match-team-info         { display: flex; flex-direction: column; gap: 2px; }
-.competition-detail .match-team-info--right,
-.competition-detail.match-team-info--right  { text-align: right; }
-.competition-detail .match-team-name,
-.competition-detail.match-team-name         { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
-.competition-detail .match-team-sub,
-.competition-detail.match-team-sub          { font-size: var(--text-tiny); color: var(--dark-3); }
-
-.competition-detail .match-score-block,
-.competition-detail.match-score-block { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.competition-detail .match-score-tds,
-.competition-detail.match-score-tds   { display: flex; align-items: center; gap: 6px; }
-.competition-detail .match-score-num,
-.competition-detail.match-score-num   { font-family: var(--font-title); font-size: var(--h5); font-weight: 900; color: var(--dark-0); min-width: 18px; text-align: center; }
-.competition-detail .match-score-sep,
-.competition-detail.match-score-sep   { color: var(--dark-3); font-weight: 400; }
-.competition-detail .match-score-cas,
-.competition-detail.match-score-cas   { display: flex; align-items: center; gap: 4px; }
-.competition-detail .match-cas-num,
-.competition-detail.match-cas-num     { font-size: var(--text-tiny); color: var(--dark-3); min-width: 14px; text-align: center; }
-.competition-detail .match-cas-sep,
-.competition-detail.match-cas-sep     { font-size: var(--text-tiny); color: var(--dark-4); }
 .competition-detail .match-date,
 .competition-detail.match-date        { font-size: var(--text-tiny); color: var(--dark-4); margin-top: 2px; }
 
-/* Match statuts */
-.competition-detail .match-widget--in-progress,
-.competition-detail.match-widget--in-progress { background: rgba(0, 48, 73, 0.02); }
-
-.competition-detail .match-status-badge,
-.competition-detail.match-status-badge {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
-  border-radius: 6px; padding: 3px 10px;
-}
-.competition-detail .match-status-badge--upcoming,
-.competition-detail.match-status-badge--upcoming {
-  color: var(--dark-3); background: var(--dark-6); border: 1px solid var(--dark-5);
-}
-.competition-detail .match-status-badge--in-progress,
-.competition-detail.match-status-badge--in-progress {
-  color: var(--white); background: var(--main-blue);
-  animation: match-pulse 2s ease-in-out infinite;
-}
-@keyframes match-pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.7; }
-}
-
-.competition-detail .match-in-progress-block,
-.competition-detail.match-in-progress-block { display: flex; flex-direction: column; align-items: center; gap: 5px; }
 
 /* Teams grid */
 .competition-detail .teams-grid,
@@ -332,55 +246,40 @@
   /* Le panneau de gauche passe au-dessus du contenu, en bandeau compact plutôt
      que masqué : sinon la bannière, le nom de la ligue et ses métadonnées
      deviennent inatteignables sur mobile. */
-  .competition-detail .detail-layout,
-.competition-detail.detail-layout { flex-direction: column; gap: var(--p1); height: auto; }
-  .competition-detail .detail-left,
-.competition-detail.detail-left   { flex: none; }
-  .competition-detail .detail-right,
-.competition-detail.detail-right  { flex: none; overflow-y: visible; }
+  .competition-detail .detail-layout,.competition-detail.detail-layout { flex-direction: column; gap: var(--p1); height: auto; }
+  .competition-detail .detail-left,.competition-detail.detail-left { flex: none; }
+  .competition-detail .detail-right,.competition-detail.detail-right { flex: none; overflow-y: visible; }
 
-  .competition-detail .left-panel,
-.competition-detail.left-panel {
+  .competition-detail .left-panel,.competition-detail.left-panel {
     position: static; flex-direction: row; flex-wrap: wrap;
     align-items: center; gap: 8px; padding: var(--p1);
   }
-  .competition-detail .league-banner,
-.competition-detail.league-banner        { height: 44px; width: 44px; flex-shrink: 0; font-size: 14px; }
-  .competition-detail .league-banner--logo,
-.competition-detail.league-banner--logo  { height: 44px; width: 44px; }
-  .competition-detail .league-meta,
-.competition-detail.league-meta          { width: 100%; gap: 4px; }
-  .competition-detail .league-meta-item,
-.competition-detail.league-meta-item     { justify-content: flex-start; gap: 6px; }
+  .competition-detail .league-banner,.competition-detail.league-banner { height: 44px; width: 44px; flex-shrink: 0; font-size: 14px; }
+  .competition-detail .league-banner--logo,.competition-detail.league-banner--logo { height: 44px; width: 44px; }
+  .competition-detail .league-meta,.competition-detail.league-meta { width: 100%; gap: 4px; }
+  .competition-detail .league-meta-item,.competition-detail.league-meta-item { justify-content: flex-start; gap: 6px; }
 
   /* Le titre de compétition prend deux lignes en `--h5` dès que le nom est un
      peu long : il redescend à la taille du corps de texte. */
-  .competition-detail .left-panel .h5-gras,
-.competition-detail.left-panel .h5-gras { font-size: var(--text-small); line-height: 1.3; }
+  .competition-detail .left-panel .h5-gras,.competition-detail.left-panel .h5-gras { font-size: var(--text-small); line-height: 1.3; }
 
   /* Le nom de saison sous le titre répète mot pour mot le contenu du sélecteur
      placé juste en dessous. */
-  .competition-detail .detail-season-name,
-.competition-detail.detail-season-name { display: none; }
+  .competition-detail .detail-season-name,.competition-detail.detail-season-name { display: none; }
 
   /* Le séparateur coûte 25px de haut avec ses marges, pour une frontière que le
      bandeau compact ne demande plus. */
-  .competition-detail .left-panel .separator,
-.competition-detail.left-panel .separator { display: none; }
+  .competition-detail .left-panel .separator,.competition-detail.left-panel .separator { display: none; }
 
   /* Intitulé et sélecteur de saison sur une seule ligne. */
-  .competition-detail .filter-section,
-.competition-detail.filter-section        { flex-direction: row; align-items: center; gap: 8px; width: 100%; }
-  .competition-detail .filter-section .filter-title,
-.competition-detail.filter-section .filter-title { flex-shrink: 0; font-size: var(--text-small); }
-  .competition-detail .filter-section .picker,
-.competition-detail.filter-section .picker       { flex: 1; min-width: 0; }
+  .competition-detail .filter-section,.competition-detail.filter-section { flex-direction: row; align-items: center; gap: 8px; width: 100%; }
+  .competition-detail .filter-section .filter-title,.competition-detail.filter-section .filter-title { flex-shrink: 0; font-size: var(--text-small); }
+  .competition-detail .filter-section .picker,.competition-detail.filter-section .picker { flex: 1; min-width: 0; }
 
   /* La saisie d'un match est une action de bureau : le parcours de rapport de
      match n'est pas pensé pour un écran de téléphone. Le bouton est retiré du
      bandeau replié plutôt que de l'encombrer. */
-  .competition-detail .left-panel-new-match,
-.competition-detail.left-panel-new-match { display: none; }
+  .competition-detail .left-panel-new-match,.competition-detail.left-panel-new-match { display: none; }
 
   /* Les six onglets ne tiennent pas sur une ligne : `Calendrier`, `Équipes` et
      `Statistiques` sortaient de l'écran, sans barre de défilement pour le
@@ -388,106 +287,39 @@
      la place au sélecteur, qui les montre tous d'un coup à l'ouverture.
      Les deux restent dans le DOM : les onglets portent les `hx-get`, le
      sélecteur ne fait que relayer le clic. */
-  .competition-detail .detail-right .tabs,
-.competition-detail.detail-right .tabs { display: none; }
-  .competition-detail .tab-select,
-.competition-detail.tab-select { display: block; margin-bottom: var(--p1); }
-
-  /* Lignes de match — Résultats */
-  .competition-detail .match-widget,
-.competition-detail.match-widget       { grid-template-columns: 1fr 80px 1fr; padding: 8px 10px; }
-  .competition-detail .match-team-logo-sm,
-.competition-detail.match-team-logo-sm { width: 36px; height: 36px; border-radius: 6px; }
-  .competition-detail .match-team-logo-sm--initials,
-.competition-detail.match-team-logo-sm--initials { font-size: 11px; }
-  .competition-detail .match-team-name,
-.competition-detail.match-team-name    { font-size: 13px; }
-  .competition-detail .match-team-sub,
-.competition-detail.match-team-sub     { display: none; }
-  .competition-detail .match-side,
-.competition-detail.match-side         { gap: 6px; }
-  .competition-detail .match-score-num,
-.competition-detail.match-score-num    { font-size: 15px; min-width: 14px; }
-  .competition-detail .match-score-cas,
-.competition-detail.match-score-cas    { display: none; }
-  .competition-detail .match-date,
-.competition-detail.match-date         { font-size: 10px; }
-  .competition-detail .match-status-badge,
-.competition-detail.match-status-badge { font-size: 9px; padding: 2px 7px; }
-
-  /* Match en cours de saisie : le badge et le lien font une bonne centaine de
-     pixels à eux deux et viendraient se coller au nom de l'équipe adverse. Ils
-     passent sur leur propre ligne, sous les deux équipes.
-     Sélecteur à deux classes : à spécificité égale, la règle `.match-widget`
-     ci-dessus l'emporterait sur l'ordre. */
-  .competition-detail .match-widget.match-widget--in-progress,
-.competition-detail.match-widget.match-widget--in-progress {
-    grid-template-columns: 1fr 1fr;
-    grid-template-areas: "home away" "status status";
-    row-gap: 8px;
-  }
-  .competition-detail .match-widget--in-progress .match-side,
-.competition-detail.match-widget--in-progress .match-side        { grid-area: home; }
-  .competition-detail .match-widget--in-progress .match-side--away,
-.competition-detail.match-widget--in-progress .match-side--away  { grid-area: away; }
-  .competition-detail .match-widget--in-progress .match-score-block,
-.competition-detail.match-widget--in-progress .match-score-block { grid-area: status; }
-  .competition-detail .match-widget--in-progress .match-in-progress-block,
-.competition-detail.match-widget--in-progress .match-in-progress-block {
-    flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px;
-  }
+  .competition-detail .detail-right .tabs,.competition-detail.detail-right .tabs { display: none; }
+  .competition-detail .tab-select,.competition-detail.tab-select { display: block; margin-bottom: var(--p1); }
+  .competition-detail .match-date,.competition-detail.match-date { font-size: 10px; }
 
   /* Lignes de match — Calendrier */
-  .competition-detail .cal-row,
-.competition-detail.cal-row            { grid-template-columns: 1fr 48px 1fr; padding: 8px 10px; }
-  .competition-detail .cal-logo,
-.competition-detail.cal-logo           { width: 28px; height: 28px; border-radius: 5px; }
-  .competition-detail .cal-logo--initials,
-.competition-detail.cal-logo--initials { font-size: 9px; }
-  .competition-detail .cal-team-name,
-.competition-detail.cal-team-name      { font-size: 13px; }
-  .competition-detail .cal-team,
-.competition-detail.cal-team           { gap: 6px; }
+  .competition-detail .cal-row,.competition-detail.cal-row { grid-template-columns: 1fr 48px 1fr; padding: 8px 10px; }
+  .competition-detail .cal-logo,.competition-detail.cal-logo { width: 28px; height: 28px; border-radius: 5px; }
+  .competition-detail .cal-logo--initials,.competition-detail.cal-logo--initials { font-size: 9px; }
+  .competition-detail .cal-team-name,.competition-detail.cal-team-name { font-size: 13px; }
+  .competition-detail .cal-team,.competition-detail.cal-team { gap: 6px; }
 
   /* En-têtes de journée et de liste */
-  .competition-detail .matches-list-header,
-.competition-detail.matches-list-header,
-.competition-detail .cal-journee-header,
-.competition-detail.cal-journee-header { padding: 10px var(--p1); }
-  .competition-detail .cal-journee-meta,
-.competition-detail.cal-journee-meta { gap: 8px; }
+  .competition-detail .matches-list-header,.competition-detail.matches-list-header,.competition-detail .cal-journee-header,.competition-detail.cal-journee-header { padding: 10px var(--p1); }
+  .competition-detail .cal-journee-meta,.competition-detail.cal-journee-meta { gap: 8px; }
 
   /* Équipes : des cartes plus étroites pour en garder deux par ligne. */
-  .competition-detail .teams-grid,
-.competition-detail.teams-grid     { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
-  .competition-detail .team-card,
-.competition-detail.team-card      { padding: var(--p1); }
-  .competition-detail .team-card-logo,
-.competition-detail.team-card-logo { width: 64px; height: 64px; }
+  .competition-detail .teams-grid,.competition-detail.teams-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+  .competition-detail .team-card,.competition-detail.team-card { padding: var(--p1); }
+  .competition-detail .team-card-logo,.competition-detail.team-card-logo { width: 64px; height: 64px; }
 
   /* Statistiques : les deux tableaux côte à côte ne tiennent pas, ils
      s'empilent. */
-  .competition-detail .stats-grid,
-.competition-detail.stats-grid         { grid-template-columns: 1fr; }
-  .competition-detail .stats-row,
-.competition-detail.stats-row          { grid-template-columns: 24px 1fr 1fr 40px; padding: 8px 10px; gap: 6px; }
-  .competition-detail .stats-table-header,
-.competition-detail.stats-table-header { padding: 10px var(--p1); }
+  .competition-detail .stats-grid,.competition-detail.stats-grid { grid-template-columns: 1fr; }
+  .competition-detail .stats-row,.competition-detail.stats-row { grid-template-columns: 24px 1fr 1fr 40px; padding: 8px 10px; gap: 6px; }
+  .competition-detail .stats-table-header,.competition-detail.stats-table-header { padding: 10px var(--p1); }
 
-  .competition-detail .comp-header,
-.competition-detail.comp-header { padding: var(--p1); gap: var(--p1); }
+  .competition-detail .comp-header,.competition-detail.comp-header { padding: var(--p1); gap: var(--p1); }
 }
+
 
 /* ─── Très petits écrans (≤ 400px) ─── */
 @media (max-width: 400px) {
-  .competition-detail .match-widget,
-.competition-detail.match-widget       { grid-template-columns: 1fr 70px 1fr; }
-  .competition-detail .match-team-logo-sm,
-.competition-detail.match-team-logo-sm { display: none; }
-  .competition-detail .match-team-name,
-.competition-detail.match-team-name    { font-size: 12px; }
-  .competition-detail .cal-team-name,
-.competition-detail.cal-team-name      { font-size: 12px; }
-  .competition-detail .teams-grid,
-.competition-detail.teams-grid         { grid-template-columns: 1fr 1fr; }
+  .competition-detail .cal-team-name,.competition-detail.cal-team-name { font-size: 12px; }
+  .competition-detail .teams-grid,.competition-detail.teams-grid { grid-template-columns: 1fr 1fr; }
 }
+
