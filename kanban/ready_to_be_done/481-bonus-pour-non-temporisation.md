@@ -113,6 +113,39 @@ Le contrôleur ne fait pas d'arithmétique de gains.
 connaître la règle du bonus** — il crédite ce qu'on lui dit. Le drapeau ne sort
 pas de `match_report`, où il sert à réafficher l'écran et à raconter le match.
 
+## Les matchs déjà joués n'ont pas de bonus — et rien à migrer
+
+`PostMatchRecorded` est **persisté en JSONB** dans `match_report_event_store`,
+et l'enum se relit par `#[derive(Deserialize)]`. Les charges utiles déjà en base
+ne portent évidemment pas les deux champs neufs.
+
+```rust
+PostMatchRecorded {
+    home_gain: MatchGain,
+    away_gain: MatchGain,
+    #[serde(default)]                       // ← indispensable
+    home_no_stalling_bonus: NoStallingBonus,
+    #[serde(default)]
+    away_no_stalling_bonus: NoStallingBonus,
+    …
+}
+```
+
+**Sans `#[serde(default)]`, tout rapport déjà enregistré devient illisible** —
+pas seulement « sans bonus » : la désérialisation échoue, et le rapport ne
+s'ouvre plus du tout.
+
+Avec, un ancien événement rend `false`, ce qui **est** la décision : aucun match
+déjà joué n'a pris le bonus. **Aucune migration, aucun rattrapage, aucun script**
+— le défaut du type porte la règle.
+
+C'est déjà la manière maison : `events.rs:26` (`pairing_id`) et `:40` / `:42`
+(`home_dedicated_fans`, `away_dedicated_fans`) ont ajouté des champs à des
+événements existants exactement ainsi.
+
+**D'où le `Default` sur le nutype** (`NoStallingBonus(bool)` dérive `Default`,
+donc `false`) : sans lui, `#[serde(default)]` ne compile pas.
+
 ## Le piège du formulaire — une case décochée n'envoie rien
 
 ```rust
@@ -172,15 +205,51 @@ et le total ne se voit qu'au récapitulatif. Recalculer le champ ferait
 exactement l'erreur que cette carte évite — un montant additionné qu'on relit
 comme une base.
 
-## Le récapitulatif
+## Le récapitulatif mentionne le bonus
 
 `recap.html:269` affiche `+{{ gains_fan.home_gain_kpo }} kPo`. Le VM porte déjà
-le total, donc **la ligne est juste sans y toucher**.
+le total, donc **le montant est juste sans y toucher**.
 
-Reste à décider si le récapitulatif **mentionne** le bonus. Je pose que oui,
-d'une ligne discrète sous le montant — sinon un coach qui compare le gain à la
-formule ne retrouve pas ses 10 kPo, et il n'a aucun moyen de savoir d'où ils
-viennent.
+**Mais il doit dire d'où viennent les 10 kPo.** Un coach qui recompose la
+formule — supporters, touchdowns — ne les retrouve pas, et rien à l'écran ne les
+explique. Un montant qu'on ne sait pas refaire est un montant qu'on vient
+contester.
+
+### La forme
+
+```rust
+pub struct GainsFanVm {
+    pub home_gain_kpo: u32,          // le total, inchangé
+    pub away_gain_kpo: u32,
+    pub home_no_stalling_bonus: bool,   // ← neuf
+    pub away_no_stalling_bonus: bool,   // ← neuf
+    pub home_fan_mod: i8,
+    pub away_fan_mod: i8,
+}
+```
+
+```html
+<div class="ms-stat-row">
+  <div class="ms-stat-team">…</div>
+  <span class="ms-stat-value ms-stat-value--gain">+{{ gains_fan.home_gain_kpo }} kPo</span>
+</div>
+{% if gains_fan.home_no_stalling_bonus %}
+<div class="ms-stat-note">dont 10 kPo de bonus pour non temporisation</div>
+{% endif %}
+```
+
+**Une ligne sous le montant, et seulement si le bonus a été pris.** Une mention
+permanente qui dirait « pas de bonus » ajouterait deux lignes à chaque
+récapitulatif pour l'information la moins utile de l'écran.
+
+**Le total n'est pas décomposé en deux nombres.** Afficher « 120 + 10 » ferait
+deux chiffres là où la trésorerie n'en crédite qu'un, et le lecteur devrait
+faire l'addition pour savoir ce qu'il touche. Le total reste le chiffre, la
+mention reste une note.
+
+**Deux booléens et non un montant de bonus.** Le VM n'a pas à porter deux fois
+le même 10 : la valeur vit dans `NoStallingBonus::AMOUNT_KPO`, et le libellé
+l'écrit une fois.
 
 ## Tests
 
@@ -194,6 +263,9 @@ viennent.
 | `les_deux_equipes_ont_des_bonus_independants` | pas de fuite d'un côté à l'autre |
 | `l_evenement_post_match_porte_les_deux_drapeaux` | la persistance |
 | `l_app_event_porte_le_total_et_non_la_base` | ce que `teams` crédite |
+| `le_recap_mentionne_le_bonus_quand_il_est_pris` | la note du récapitulatif |
+| `le_recap_ne_mentionne_rien_sans_bonus` | et son absence |
+| `un_evenement_sans_les_champs_se_relit_sans_bonus` | **les rapports déjà joués** |
 
 `le_gain_enregistre_reste_le_montant_saisi` est celui qui compte : il fixe la
 décision qui empêche le cumul à la correction.
@@ -223,11 +295,16 @@ sans rien toucher : le total doit être identique.
 - [ ] `NoStallingBonus` avec `AMOUNT_KPO` et `amount_kpo()`
 - [ ] `record_post_match` prend les deux drapeaux
 - [ ] `PostMatchRecorded`, `MatchReportReadyToPublish`, `MatchReportPublished` les portent
+- [ ] **`#[serde(default)]` sur les deux champs de l'événement** — sans quoi tout
+      rapport déjà enregistré devient illisible
+- [ ] Aucune migration : le défaut du type dit « pas de bonus » pour l'existant
 - [ ] `total_home_gain_kpo()` / `total_away_gain_kpo()` **dans le domaine**
 - [ ] L'app event `home_gain_kpo` / `away_gain_kpo` porte le **total**
 - [ ] `RecordPostMatchForm` avec `#[serde(default)]` sur les deux
 - [ ] `step5.html` : le bloc, la case, l'état `checked` au retour
 - [ ] `pages/match-report-step5.css` : les trois classes, pastille en CSS pur
+- [ ] `GainsFanVm` porte les deux drapeaux ; `recap.html` rend la note **si** pris
+- [ ] `.ms-stat-note` dans la feuille du récapitulatif, inscrite au bundle
 - [ ] **Aucun `step="10000"`, aucun `+10000`** — l'unité est le kPo
-- [ ] Les six tests unitaires, les trois d'aller-retour
+- [ ] Les neuf tests unitaires, les trois d'aller-retour
 - [ ] `make lint && make test && make check-arch && make e2e`
