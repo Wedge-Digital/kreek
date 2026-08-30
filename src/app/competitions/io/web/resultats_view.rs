@@ -158,6 +158,26 @@ pub async fn load_resultats(
         })
 }
 
+/// Les matchs d'une équipe, **à plat** et dans l'ordre que la requête a posé.
+///
+/// Pas de `build_journees` ici : une équipe joue un match par journée, et
+/// grouper donnerait quinze groupes d'un match, chacun titré « 1 match ». Le
+/// libellé de journée entre dans le bloc à la place, par le `round_label` de la
+/// carte 476.
+///
+/// L'ordre vient du `ORDER BY` et n'est pas retouché — le retrier ici en
+/// ferait une seconde vérité, qui divergerait de la requête le jour où l'une
+/// des deux changerait.
+pub fn build_team_matches(
+    rows: Vec<PairingDisplayDto>,
+    authz: &ResultAuthorization,
+    team_id: &str,
+) -> Vec<MatchResultatVm> {
+    rows.into_iter()
+        .map(|row| to_resultat_vm(row, authz, Some(team_id)))
+        .collect()
+}
+
 pub fn build_journees(
     rows: Vec<PairingDisplayDto>,
     max_rounds: usize,
@@ -168,7 +188,7 @@ pub fn build_journees(
         let entry = by_round
             .entry(row.round_position)
             .or_insert_with(|| (row.round_name.clone(), Vec::new()));
-        entry.1.push(to_resultat_vm(row, authz));
+        entry.1.push(to_resultat_vm(row, authz, None));
     }
 
     let mut journees: Vec<(i32, JourneeResultatsVm)> = by_round
@@ -216,6 +236,132 @@ mod tests {
         assert!(authz.allows("team-a", "team-b"));
     }
 
+    // ── La pastille V/N/D (carte 477) ────────────────────────────────────────
+
+    fn rencontre(
+        domicile: &str,
+        exterieur: &str,
+        score: Option<(i32, i32)>,
+        statut: &str,
+    ) -> PairingDisplayDto {
+        PairingDisplayDto {
+            pairing_id: "p1".into(),
+            round_id: "r1".into(),
+            round_name: "Journée 3".into(),
+            round_position: 3,
+            round_date_start: None,
+            round_date_end: None,
+            round_day_type: "fixed_date".into(),
+            home_team_id: domicile.into(),
+            home_team_name: "Domicile".into(),
+            home_roster_name: "Nains".into(),
+            home_coach_name: "Castor".into(),
+            home_logo_url: None,
+            home_initials: "DO".into(),
+            away_team_id: exterieur.into(),
+            away_team_name: "Extérieur".into(),
+            away_roster_name: "Elfes".into(),
+            away_coach_name: "Brume".into(),
+            away_logo_url: None,
+            away_initials: "EX".into(),
+            match_status: statut.into(),
+            home_score: score.map(|(h, _)| h),
+            away_score: score.map(|(_, a)| a),
+            home_casualties: Some(0),
+            away_casualties: Some(0),
+            match_report_url: None,
+        }
+    }
+
+    fn vm_pour(row: PairingDisplayDto, equipe: &str) -> MatchResultatVm {
+        to_resultat_vm(row, &ResultAuthorization::unrestricted(), Some(equipe))
+    }
+
+    #[test]
+    fn une_victoire_a_domicile_donne_la_pastille_v() {
+        let vm = vm_pour(rencontre("A", "B", Some((3, 1)), "completed"), "A");
+        assert_eq!(vm.outcome, Some(MatchOutcome::Win));
+    }
+
+    /// **Le test qui compte.**
+    ///
+    /// Une inversion de `is_home` donne une pastille fausse **une fois sur
+    /// deux** — la moitié où l'équipe se déplace. Le défaut ressemble alors à
+    /// une donnée corrompue et non à une erreur de code, et se cherche du
+    /// mauvais côté. C'est le seul test que le précédent ne couvre pas : un
+    /// `home_score` lu quel que soit le camp passerait l'autre.
+    #[test]
+    fn une_victoire_a_l_exterieur_donne_aussi_la_pastille_v() {
+        let vm = vm_pour(rencontre("B", "A", Some((1, 3)), "completed"), "A");
+        assert_eq!(vm.outcome, Some(MatchOutcome::Win));
+    }
+
+    #[test]
+    fn une_defaite_se_lit_des_deux_cotes() {
+        assert_eq!(
+            vm_pour(rencontre("A", "B", Some((1, 3)), "completed"), "A").outcome,
+            Some(MatchOutcome::Loss)
+        );
+        assert_eq!(
+            vm_pour(rencontre("B", "A", Some((3, 1)), "completed"), "A").outcome,
+            Some(MatchOutcome::Loss)
+        );
+    }
+
+    #[test]
+    fn un_score_egal_donne_la_pastille_n() {
+        let vm = vm_pour(rencontre("A", "B", Some((2, 2)), "completed"), "A");
+        assert_eq!(vm.outcome, Some(MatchOutcome::Draw));
+    }
+
+    /// `None`, et surtout **pas « N »** : un match qui n'a pas eu lieu n'est pas
+    /// un match nul.
+    #[test]
+    fn un_match_a_venir_n_a_pas_de_pastille() {
+        let vm = vm_pour(rencontre("A", "B", None, "upcoming"), "A");
+        assert_eq!(vm.outcome, None);
+        // Ni un match en cours, dont le score n'est pas encore acquis.
+        let vm = vm_pour(rencontre("A", "B", Some((1, 0)), "in_progress"), "A");
+        assert_eq!(vm.outcome, None);
+    }
+
+    /// Sans équipe de référence — l'onglet compétition — la question n'a pas de
+    /// sens, et le libellé de journée est déjà porté par l'en-tête de groupe.
+    #[test]
+    fn sans_equipe_de_reference_ni_pastille_ni_libelle_de_journee() {
+        let vm = to_resultat_vm(
+            rencontre("A", "B", Some((3, 1)), "completed"),
+            &ResultAuthorization::unrestricted(),
+            None,
+        );
+        assert_eq!(vm.outcome, None);
+        assert_eq!(vm.round_label, None);
+    }
+
+    #[test]
+    fn avec_une_equipe_de_reference_le_libelle_de_journee_entre_dans_le_bloc() {
+        let vm = vm_pour(rencontre("A", "B", Some((3, 1)), "completed"), "A");
+        assert_eq!(vm.round_label.as_deref(), Some("Journée 3"));
+    }
+
+    /// La liste plate garde l'ordre de la requête : le retrier ici créerait une
+    /// seconde vérité, qui divergerait le jour où l'une des deux changerait.
+    #[test]
+    fn la_liste_plate_garde_l_ordre_de_la_requete() {
+        let rows = vec![
+            rencontre("A", "B", Some((1, 0)), "in_progress"),
+            rencontre("C", "A", None, "upcoming"),
+            rencontre("A", "D", Some((2, 2)), "completed"),
+        ];
+        let vms = build_team_matches(rows, &ResultAuthorization::unrestricted(), "A");
+
+        assert_eq!(vms.len(), 3);
+        assert_eq!(
+            vms.iter().map(|v| v.outcome).collect::<Vec<_>>(),
+            vec![None, None, Some(MatchOutcome::Draw)]
+        );
+    }
+
     #[test]
     fn coach_of_neither_team_is_not_allowed() {
         let authz = ResultAuthorization {
@@ -226,9 +372,27 @@ mod tests {
     }
 }
 
-fn to_resultat_vm(row: PairingDisplayDto, authz: &ResultAuthorization) -> MatchResultatVm {
+/// Le view model d'un match.
+///
+/// `reference` est l'équipe dont on regarde la fiche, ou `None` sur une page de
+/// compétition. Elle décide des deux champs de la carte 476 : la pastille se
+/// dérive de son point de vue, et le libellé de journée entre dans le bloc
+/// parce qu'une liste d'équipe est plate.
+///
+/// **Un seul paramètre pour deux décisions**, alors qu'elles sont distinctes en
+/// principe — la pastille dépend d'une équipe de référence, le libellé du fait
+/// que la liste n'a pas d'en-tête de groupe. Les deux coïncident chez les deux
+/// seuls appelants ; les séparer inventerait un relevé d'équipe groupé par
+/// journée, que rien ne demande.
+fn to_resultat_vm(
+    row: PairingDisplayDto,
+    authz: &ResultAuthorization,
+    reference: Option<&str>,
+) -> MatchResultatVm {
     let is_completed = row.match_status == "completed";
     let is_in_progress = row.match_status == "in_progress";
+    let outcome = reference.and_then(|equipe| issue_pour(&row, equipe, is_completed));
+    let round_label = reference.map(|_| row.round_name.clone());
     let report_url = if authz.allows(&row.home_team_id, &row.away_team_id) {
         row.match_report_url
     } else {
@@ -252,11 +416,34 @@ fn to_resultat_vm(row: PairingDisplayDto, authz: &ResultAuthorization) -> MatchR
         home_cas: row.home_casualties.map(|v| v as u32),
         away_cas: row.away_casualties.map(|v| v as u32),
         report_url,
-        // Les deux sont `None` ici, et c'est pourquoi l'extraction du bloc en
-        // composant (carte 476) ne change rien à cet écran : l'en-tête de
-        // journée porte déjà le libellé, et une page de compétition n'a pas
-        // d'équipe de référence dont on puisse dire l'issue.
-        round_label: None,
-        outcome: None,
+        round_label,
+        outcome,
     }
+}
+
+/// Victoire, nul ou défaite **du point de vue de `equipe`**.
+///
+/// # Le sens de `is_home` est ce qui compte ici
+///
+/// L'inverser donne une pastille fausse une fois sur deux — la moitié où
+/// l'équipe reçoit. Le défaut ressemble alors à une donnée corrompue et non à
+/// une erreur de code, et se cherche du mauvais côté.
+///
+/// Un match non joué n'a pas d'issue : ni `None` par défaut ni « nul », mais
+/// l'absence — et c'est la même absence que celle d'une page de compétition,
+/// où la question n'a pas d'équipe pour se poser.
+fn issue_pour(row: &PairingDisplayDto, equipe: &str, is_completed: bool) -> Option<MatchOutcome> {
+    if !is_completed {
+        return None;
+    }
+    let recoit = row.home_team_id == equipe;
+    let (pour, contre) = match recoit {
+        true => (row.home_score?, row.away_score?),
+        false => (row.away_score?, row.home_score?),
+    };
+    Some(match pour.cmp(&contre) {
+        std::cmp::Ordering::Greater => MatchOutcome::Win,
+        std::cmp::Ordering::Equal => MatchOutcome::Draw,
+        std::cmp::Ordering::Less => MatchOutcome::Loss,
+    })
 }

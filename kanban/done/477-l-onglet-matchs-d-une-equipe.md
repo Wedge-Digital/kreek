@@ -206,13 +206,90 @@ qui ressemble à un défaut de données et non de code.
 
 ## Checklist
 
-- [ ] `sql/match_days/list_team_matches.sql`
-- [ ] `find_team_enrollment` sur `ITeamInfoPort` + son adapter
-- [ ] La route, le contrôleur, `team-matches-widget.html` incluant le composant
-- [ ] `compute_authorization` **réutilisée**, aucun contrôle d'accès neuf
-- [ ] Le `competition_id` résolu depuis le `team_id`, **jamais depuis l'URL**
-- [ ] `TEAM_MATCHES` côté `teams`, la coquille `teams-matches-tab.html`
-- [ ] L'onglet « Matchs » passe de `<div>` inerte à `<a>` htmx
-- [ ] `matches_widget_url` via `AppRoutes`, jamais un import direct
-- [ ] Les neuf tests
-- [ ] `make lint && make test && make check-arch`
+- [x] `sql/match_days/list_team_matches.sql`
+- [x] `find_team_enrollment` sur `ITeamInfoPort` + son adapter
+- [x] La route, le contrôleur, `team-matches-widget.html` appelant le composant
+- [x] `compute_authorization` **réutilisée**, aucun contrôle d'accès neuf
+- [x] Le `competition_id` résolu depuis le `team_id`, **jamais depuis l'URL**
+- [x] `TEAM_MATCHES` côté `teams`, la coquille `teams-matches-tab.html`
+- [x] L'onglet « Matchs » passe de `<div>` inerte à `<a>` htmx
+- [x] `matches_widget_url` via `AppRoutes`, jamais un import direct
+- [x] Les neuf tests, et six de plus
+- [x] `make lint && make test && make check-arch` — et `make e2e`
+
+---
+
+# Ce que la réalisation a appris
+
+## Deux choses que la carte prévoyait plus chères qu'elles ne le sont
+
+**`find_team_enrollment` ne demande aucun SQL.** L'agrégat `Team` porte déjà
+`competition_id` et `season_id`, remplis par `TeamEnrolled` ; l'adapter les lit
+depuis `find_by_id`. Une équipe sans inscription les a tous deux à `None`, et le
+cas du brouillon se traite par construction plutôt que par un `if`.
+
+**Le cloisonnement était déjà là.** Les résolveurs de `space_scope` sont indexés
+par **nom de paramètre**, globalement : une route de `competitions` portant
+`{team_id}` hérite de `TeamSpaceOwnership` sans rien déclarer — et en déclarer
+un second serait une panique au démarrage.
+
+## Le conteneur de la liste manquait, et l'écran seul pouvait le dire
+
+La carte 476 avait laissé `.matches-list` dans `pages/competition-detail.css`,
+au motif qu'il n'est pas dans le markup extrait. **Le motif était juste, la
+conséquence non** : la seconde page à rendre le bloc a aussi besoin de la carte
+blanche qui l'entoure. Sur la fiche d'équipe, les blocs s'affichaient à même le
+fond de page.
+
+Le conteneur ne peut pas rejoindre `components/match-widget.css`, et c'est
+structurel : cette feuille est scopée sous `.match-widget` — c'est ce qui la
+fait sauter par le contrôle de débordement — et **un conteneur est par
+définition un ancêtre du bloc**. Aucun sélecteur qui le désigne ne peut porter
+cette portée.
+
+D'où `widgets/team-matches.css`, scopée `.team-matches` du nom du fichier.
+L'onglet compétition garde le sien : il y groupe par journée, avec un en-tête
+dont cette liste-ci n'a pas l'usage.
+
+## La pastille de nul ne se lisait pas
+
+`--dark-6` sur le blanc de la carte donne un rapport de **1,07** — au-dessus du
+verrou de la carte 448, et pourtant à peine visible. Elle passe à `--dark-5`,
+le token que le dépôt emploie déjà pour se détacher du blanc.
+
+Deuxième fois de ce chantier qu'un fond de pastille se confond avec ce qui
+l'entoure, après la dotation de la carte 436. Le seuil de 1,05 dit ce qui est
+*indistinguable* ; il ne dit pas ce qui est *lisible*.
+
+## Un de mes tests ne prouvait rien
+
+`un_match_en_cours_passe_devant_les_a_venir` donnait à ses trois matchs des
+positions telles que le tri naïf `round_position DESC` produisait **exactement
+l'ordre attendu**. Le test passait donc sans le `CASE` sur le statut — la
+falsification l'a montré, en supprimant tout l'`ORDER BY` sans le faire rougir.
+
+Les positions contredisent maintenant l'ordre attendu, et c'est écrit dans le
+test pour que personne ne les « range ».
+
+## Le sens de `is_home`, vérifié sur de vraies données
+
+La carte le désigne comme le point qui compte : une inversion donne une pastille
+fausse une fois sur deux, ce qui ressemble à une donnée corrompue. Outre les
+deux tests unitaires, vérifié en production locale — une équipe battue 2–0 **à
+l'extérieur** affiche bien « D ».
+
+## Falsification
+
+| Mutation | Constaté |
+|---|---|
+| Le sens de `is_home` inversé | 3 rouges |
+| Le score lu toujours du côté domicile | 2 rouges — les deux tests à l'extérieur |
+| Un match non joué devient un nul | 2 rouges |
+| Égalité et victoire confondues | 2 rouges |
+| Le libellé de journée posé même sans référence | 1 rouge |
+| Le `OR` devient un seul camp | `un_match_a_domicile_et_un_a_l_exterieur…` rouge |
+| Le filtre de saison disparaît | `les_matchs_d_une_autre_saison…` rouge |
+| Le tri redevient celui de la compétition | 2 rouges *(1 seul avant correction du test)* |
+| Les matchs à venir se trient comme les joués | `le_prochain_match_est_en_tete` rouge |
+| L'état vide ne s'affiche jamais | `une_equipe_sans_inscription…` rouge |
+| La liste retrouve un en-tête par match | `la_liste_est_plate…` rouge |

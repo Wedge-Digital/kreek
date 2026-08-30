@@ -275,6 +275,12 @@ mod tests {
                 })
                 .collect())
         }
+        async fn find_team_enrollment(
+            &self,
+            _: &str,
+        ) -> Result<Option<crate::app::competitions::ports::TeamEnrollmentDto>, String> {
+            Ok(None)
+        }
     }
 
     #[derive(Default)]
@@ -345,6 +351,13 @@ mod tests {
             _: &str,
             _: Option<i32>,
             _: u32,
+        ) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> {
+            Ok(vec![])
+        }
+        async fn list_team_matches(
+            &self,
+            _: &str,
+            _: &str,
         ) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> {
             Ok(vec![])
         }

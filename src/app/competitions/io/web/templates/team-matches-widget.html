@@ -1,0 +1,24 @@
+{# Les matchs d'une équipe — fragment servi par `competitions`, composé par la
+   fiche d'équipe (carte 477).
+
+   **La liste est plate.** L'onglet compétition groupe par journée ; une équipe
+   joue un match par journée, et grouper donnerait quinze groupes d'un match,
+   chacun titré « 1 match ». Le libellé passe dans le bloc, par le `round_label`
+   de la carte 476.
+
+   Le bloc lui-même est le composant partagé : aucune ligne de markup de match
+   n'est écrite ici. #}
+{% import "match-widget.html" as widget %}
+<div class="team-matches">
+  {% if matches.is_empty() %}
+  <div class="tab-empty-state card-shadow">
+    Aucun match pour le moment.
+  </div>
+  {% else %}
+  <div class="matches-list card-shadow">
+    {% for m in matches %}
+    {% call widget::match_widget(m) %}
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>

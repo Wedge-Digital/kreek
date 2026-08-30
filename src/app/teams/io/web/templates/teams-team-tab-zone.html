@@ -10,16 +10,21 @@
    L'administration de compétition résout la même chose par un `onclick` qui
    déplace la classe côté client. Ce n'est pas repris ici : il ment si l'on
    clique un onglet inerte, il dérive au retour arrière du navigateur, et il
-   demande du JS là où la carte n'en veut pas. #}
+   demande du JS là où la carte n'en veut pas.
+
+   Les trois onglets sont câblés depuis la carte 477 ; il n'en reste aucun
+   inerte. #}
 <div class="tabs team-tabs">
   <a class="tab{% if active_tab == "squad" %} active{% endif %}"
      hx-get="{{ app_routes.teams.team_detail(space_id, team_id) }}"
      hx-target="#team-tab-zone"
      hx-swap="innerHTML"
      hx-push-url="{{ app_routes.teams.team_detail(space_id, team_id) }}">Joueurs & Staff</a>
-  {# « Matchs » est câblé par la carte 477 et **reste inerte** jusque-là : une
-     route qui répond « rien » se lit comme une panne. #}
-  <div class="tab">Matchs</div>
+  <a class="tab{% if active_tab == "matches" %} active{% endif %}"
+     hx-get="{{ app_routes.teams.team_matches(space_id, team_id) }}"
+     hx-target="#team-tab-zone"
+     hx-swap="innerHTML"
+     hx-push-url="{{ app_routes.teams.team_matches(space_id, team_id) }}">Matchs</a>
   <a class="tab{% if active_tab == "treasury" %} active{% endif %}"
      hx-get="{{ app_routes.teams.team_treasury(space_id, team_id) }}"
      hx-target="#team-tab-zone"

@@ -1,4 +1,4 @@
-use crate::app::competitions::ports::{ITeamInfoPort, TeamInfoDto};
+use crate::app::competitions::ports::{ITeamInfoPort, TeamEnrollmentDto, TeamInfoDto};
 use crate::app::teams::ports::ITeamRepository;
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -33,6 +33,30 @@ impl ITeamInfoPort for TeamInfoAdapter {
                 logo_url: r.logo_url,
             })
             .collect())
+    }
+
+    /// **Aucune requête neuve** : l'agrégat `Team` porte déjà sa compétition et
+    /// sa saison, remplies par `TeamEnrolled`. Les deux valent `None` sur un
+    /// brouillon non soumis, et l'appelant y lit une liste vide.
+    async fn find_team_enrollment(
+        &self,
+        team_id: &str,
+    ) -> Result<Option<TeamEnrollmentDto>, String> {
+        let Some(team) = self
+            .team_repo
+            .find_by_id(team_id)
+            .await
+            .map_err(|e| e.to_string())?
+        else {
+            return Ok(None);
+        };
+        Ok(match (team.competition_id, team.season_id) {
+            (Some(c), Some(s)) => Some(TeamEnrollmentDto {
+                competition_id: c.to_string(),
+                season_id: s.to_string(),
+            }),
+            _ => None,
+        })
     }
 
     async fn find_team_names(&self, team_ids: &[String]) -> Result<Vec<TeamInfoDto>, String> {

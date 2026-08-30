@@ -215,6 +215,9 @@ pub struct TeamDetailVm {
     pub status_label: String,
     pub status_css_class: String,
     pub players_widget_url: String,
+    /// L'URL du fragment des matchs, servi par `competitions` — via `AppRoutes`,
+    /// jamais par un import direct du module de routes de l'autre BC.
+    pub matches_widget_url: String,
     pub staff: StaffVm,
     pub banner: Option<BannerVm>,
 }
@@ -279,6 +282,9 @@ impl TeamDetailVm {
             players_widget_url: app_routes
                 .players
                 .players_by_team_widget(space_id, &team.id.to_string()),
+            matches_widget_url: app_routes
+                .competitions
+                .team_matches_widget(space_id, &team.id.to_string()),
             staff: StaffVm::from(team, reroll_price_kpo),
             banner,
         }
@@ -353,6 +359,14 @@ pub struct TeamSquadTabTemplate<'a> {
     pub vm: &'a TeamDetailVm,
 }
 
+/// La coquille de l'onglet « Matchs » : elle ne porte qu'un `hx-get` vers le
+/// fragment que `competitions` sert.
+#[derive(Template)]
+#[template(path = "teams-matches-tab.html")]
+pub struct TeamMatchesTabTemplate<'a> {
+    pub vm: &'a TeamDetailVm,
+}
+
 impl IntoResponse for TeamSquadTabTemplate<'_> {
     fn into_response(self) -> Response {
         match self.render() {
@@ -408,6 +422,24 @@ pub async fn team_detail(
     rendre_fiche(&space_id, &team_id, auth_session, &state, headers, "squad").await
 }
 
+/// L'onglet « Matchs » : les rencontres de la saison courante, à venir comprises.
+pub async fn team_page_matches(
+    Path((space_id, team_id)): Path<(String, String)>,
+    auth_session: AuthSession,
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    rendre_fiche(
+        &space_id,
+        &team_id,
+        auth_session,
+        &state,
+        headers,
+        "matches",
+    )
+    .await
+}
+
 /// L'onglet « Trésorerie » : le relevé du grand livre de l'équipe.
 pub async fn team_page_treasury(
     Path((space_id, team_id)): Path<(String, String)>,
@@ -449,6 +481,10 @@ async fn contenu_de_l_onglet(
 ) -> Result<String, StatusCode> {
     match active_tab {
         "treasury" => treasury_tab::rendre_onglet(team_id, state).await,
+        "matches" => TeamMatchesTabTemplate { vm }.render().map_err(|e| {
+            tracing::error!("teams matches tab render: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        }),
         _ => TeamSquadTabTemplate { vm }.render().map_err(|e| {
             tracing::error!("teams squad tab render: {e}");
             StatusCode::INTERNAL_SERVER_ERROR
@@ -740,6 +776,7 @@ mod tests {
             status_label: "Inscrite".into(),
             status_css_class: "ready".into(),
             players_widget_url: "/widget".into(),
+            matches_widget_url: "/widget-matchs".into(),
             staff: StaffVm {
                 lines: vec![],
                 grand_total: 0,
@@ -867,8 +904,8 @@ mod tests {
         );
         assert_eq!(
             z.matches(r##"hx-target="#team-tab-zone""##).count(),
-            2,
-            "les deux onglets cliquables visent la zone entière : {z}"
+            3,
+            "les trois onglets visent la zone entière : {z}"
         );
     }
 
@@ -914,21 +951,31 @@ mod tests {
         assert!(treasury.contains("Les Granitiers"));
     }
 
-    /// **Un onglet ne devient cliquable que lorsque son contenu existe.**
+    /// **Aucun onglet n'est un libellé sans contenu.**
     ///
-    /// « Matchs » reste un `<div>` inerte — la carte 477 le câblera. Une route
-    /// qui répond « rien » se lit comme une panne, et l'utilisateur clique deux
-    /// fois avant de conclure à un défaut.
+    /// C'était la règle inverse jusqu'à la carte 477 : un onglet ne devenait
+    /// cliquable que lorsque son contenu existait, et « Matchs » restait un
+    /// `<div>` inerte. Les trois mènent désormais quelque part — c'est la
+    /// première moitié du « Terminé quand » de l'épic E06.
     #[test]
-    fn seuls_les_onglets_livres_sont_cliquables() {
+    fn les_trois_onglets_sont_cliquables() {
         let rendu = page("squad");
 
         let liens = rendu.matches("<a class=\"tab").count();
-        assert_eq!(liens, 2, "deux onglets doivent porter un lien : {rendu}");
-        assert!(rendu.contains(">Matchs</div>"), "« Matchs » reste inerte");
-        assert!(
-            rendu.contains("/tresorerie\""),
-            "« Trésorerie » doit pointer vers sa route : {rendu}"
-        );
+        assert_eq!(liens, 3, "les trois onglets portent un lien : {rendu}");
+        // Les deux formes qu'un onglet inerte peut prendre. Le préfixe seul ne
+        // suffirait pas : la barre elle-même est un `<div class="tabs …">`.
+        for inerte in [r#"<div class="tab">"#, r#"<div class="tab active">"#] {
+            assert!(
+                !rendu.contains(inerte),
+                "aucun onglet ne doit rester inerte ({inerte}) : {rendu}"
+            );
+        }
+        for route in ["/tresorerie\"", "/matchs\""] {
+            assert!(
+                rendu.contains(route),
+                "« {route} » doit être la cible d'un onglet : {rendu}"
+            );
+        }
     }
 }

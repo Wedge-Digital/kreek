@@ -18,6 +18,28 @@ pub trait ITeamInfoPort: Send + Sync {
     /// statut d'enrôlement — utilisé pour nommer des équipes exclues d'un appariement
     /// dans un message d'avertissement admin. Les ids introuvables sont omis.
     async fn find_team_names(&self, team_ids: &[String]) -> Result<Vec<TeamInfoDto>, String>;
+
+    /// La compétition et la saison où une équipe est inscrite.
+    ///
+    /// **C'est la seule source du `competition_id` de l'onglet Matchs**, et
+    /// c'est délibéré : le prendre dans l'URL du widget — ce que la règle 4 des
+    /// widgets demanderait pour un paramètre contextuel — laisserait un admin
+    /// de la compétition X le forcer sur la fiche d'une équipe de Y, et
+    /// obtenir les liens vers les rapports de Y. `space_scope` ne l'attrape
+    /// pas : X et Y vivent dans le même espace, les deux résolvent.
+    ///
+    /// `None` pour une équipe sans inscription — un brouillon non soumis. Elle
+    /// n'a joué aucun match, ce qui est vrai : c'est une liste vide, pas une
+    /// erreur.
+    async fn find_team_enrollment(
+        &self,
+        team_id: &str,
+    ) -> Result<Option<TeamEnrollmentDto>, String>;
+}
+
+pub struct TeamEnrollmentDto {
+    pub competition_id: String,
+    pub season_id: String,
 }
 
 // ── ACL vers le BC `match_report` (garde-fou de suppression d'un pairing) ─────

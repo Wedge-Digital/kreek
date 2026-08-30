@@ -318,6 +318,27 @@ impl IMatchDayRepository for MatchDayRepository {
         .await
     }
 
+    /// **Pas `list_from_projection`** : celui-ci lie `(season_id, curseur)`, et
+    /// cette requête-ci lie `(season_id, team_id)`. Lui faire porter un
+    /// troisième cas l'aurait rendu paramétrable, donc moins lisible que les
+    /// six lignes qu'il économise.
+    async fn list_team_matches(
+        &self,
+        season_id: &str,
+        team_id: &str,
+    ) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> {
+        let rows = sqlx::query_as::<_, ProjectionRow>(include_str!(
+            "sql/match_days/list_team_matches.sql"
+        ))
+        .bind(season_id)
+        .bind(team_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(db_err)?;
+
+        Ok(rows.into_iter().map(Into::into).collect())
+    }
+
     async fn list_latest_completed_results(
         &self,
         space_id: &str,
@@ -570,6 +591,124 @@ mod tests {
         .execute(pool)
         .await
         .expect("insertion du résultat de test");
+    }
+
+    /// Un match de la projection, avec son camp, son statut et sa position.
+    /// Les champs d'affichage sont bouchés : ce que ces tests vérifient est le
+    /// `WHERE` et l'`ORDER BY`, pas le rendu.
+    #[allow(clippy::too_many_arguments)]
+    async fn insert_match(
+        pool: &PgPool,
+        pairing_id: &str,
+        season_id: &str,
+        home: &str,
+        away: &str,
+        statut: &str,
+        position: i32,
+    ) {
+        sqlx::query(
+            "INSERT INTO competition_match_display_proj (
+                pairing_id, season_id, round_id, round_name, round_position, round_day_type,
+                home_team_id, home_team_name, home_roster_name, home_coach_name, home_initials,
+                away_team_id, away_team_name, away_roster_name, away_coach_name, away_initials,
+                match_status
+            ) VALUES ($1, $2, $3, $4, $5, 'fixed_date',
+                $6, 'Home', 'Roster', 'Coach', 'HO',
+                $7, 'Away', 'Roster', 'Coach', 'AW',
+                $8)",
+        )
+        .bind(pairing_id)
+        .bind(season_id)
+        .bind(format!("r{position}"))
+        .bind(format!("Journée {position}"))
+        .bind(position)
+        .bind(home)
+        .bind(away)
+        .bind(statut)
+        .execute(pool)
+        .await
+        .expect("insertion du match de test");
+    }
+
+    /// **Une équipe peut jouer plusieurs saisons.** Sans ce filtre, « Journée 1 »
+    /// reviendrait à chaque saison en groupes homonymes et les positions se
+    /// répéteraient — c'est ce que la décision de saison courante évite.
+    #[sqlx::test]
+    async fn les_matchs_d_une_autre_saison_ne_remontent_pas(pool: PgPool) {
+        insert_competition(&pool, "comp-a", "space-1", "Ligue A").await;
+        insert_season(&pool, "saison-1", "comp-a").await;
+        insert_season(&pool, "saison-2", "comp-a").await;
+        insert_match(&pool, "p1", "saison-1", "A", "B", "completed", 1).await;
+        insert_match(&pool, "p2", "saison-2", "A", "C", "completed", 1).await;
+
+        let repo = MatchDayRepository::new(pool.clone());
+        let rows = repo.list_team_matches("saison-1", "A").await.unwrap();
+
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].pairing_id, "p1");
+    }
+
+    /// Le `OR` sur les deux camps : un `WHERE home_team_id = $2` seul perdrait
+    /// la moitié des matchs, et la moitié perdue serait celle des déplacements.
+    #[sqlx::test]
+    async fn un_match_a_domicile_et_un_a_l_exterieur_remontent(pool: PgPool) {
+        insert_competition(&pool, "comp-a", "space-1", "Ligue A").await;
+        insert_season(&pool, "saison-1", "comp-a").await;
+        insert_match(&pool, "dom", "saison-1", "A", "B", "completed", 1).await;
+        insert_match(&pool, "ext", "saison-1", "C", "A", "completed", 2).await;
+        insert_match(&pool, "sans", "saison-1", "B", "C", "completed", 3).await;
+
+        let repo = MatchDayRepository::new(pool.clone());
+        let rows = repo.list_team_matches("saison-1", "A").await.unwrap();
+
+        let ids: Vec<&str> = rows.iter().map(|r| r.pairing_id.as_str()).collect();
+        assert_eq!(ids.len(), 2, "les deux camps, et eux seuls : {ids:?}");
+        assert!(ids.contains(&"dom") && ids.contains(&"ext"));
+    }
+
+    /// **« Mon prochain match » est ce qu'un coach vient chercher.** Reprendre
+    /// le `round_position DESC` de l'onglet compétition en incluant les matchs
+    /// à venir mettrait le plus lointain en tête.
+    #[sqlx::test]
+    async fn le_prochain_match_est_en_tete(pool: PgPool) {
+        insert_competition(&pool, "comp-a", "space-1", "Ligue A").await;
+        insert_season(&pool, "saison-1", "comp-a").await;
+        insert_match(&pool, "joue-1", "saison-1", "A", "B", "completed", 1).await;
+        insert_match(&pool, "joue-2", "saison-1", "A", "C", "completed", 2).await;
+        insert_match(&pool, "prochain", "saison-1", "A", "D", "upcoming", 3).await;
+        insert_match(&pool, "lointain", "saison-1", "A", "E", "upcoming", 9).await;
+
+        let repo = MatchDayRepository::new(pool.clone());
+        let rows = repo.list_team_matches("saison-1", "A").await.unwrap();
+
+        let ids: Vec<&str> = rows.iter().map(|r| r.pairing_id.as_str()).collect();
+        assert_eq!(
+            ids,
+            vec!["prochain", "lointain", "joue-2", "joue-1"],
+            "à venir du plus proche au plus lointain, puis joués du plus récent"
+        );
+    }
+
+    /// La seconde moitié de l'ordre : un match en cours de saisie passe devant
+    /// tout le reste, quelle que soit sa position dans le calendrier.
+    #[sqlx::test]
+    async fn un_match_en_cours_passe_devant_les_a_venir(pool: PgPool) {
+        insert_competition(&pool, "comp-a", "space-1", "Ligue A").await;
+        insert_season(&pool, "saison-1", "comp-a").await;
+        // **Les positions contredisent l'ordre attendu**, et c'est délibéré :
+        // avec un `round_position DESC` nu, ces trois-là sortiraient exactement
+        // à l'envers. Une première rédaction leur avait donné des positions qui
+        // coïncidaient avec le bon ordre — le test passait alors même sans le
+        // `CASE` sur le statut, donc ne prouvait rien.
+        insert_match(&pool, "joue", "saison-1", "A", "D", "completed", 9).await;
+        insert_match(&pool, "a-venir", "saison-1", "A", "B", "upcoming", 5).await;
+        insert_match(&pool, "en-cours", "saison-1", "A", "C", "in_progress", 1).await;
+
+        let repo = MatchDayRepository::new(pool.clone());
+        let rows = repo.list_team_matches("saison-1", "A").await.unwrap();
+
+        let ids: Vec<&str> = rows.iter().map(|r| r.pairing_id.as_str()).collect();
+        assert_eq!(ids, vec!["en-cours", "a-venir", "joue"]);
     }
 
     #[sqlx::test]

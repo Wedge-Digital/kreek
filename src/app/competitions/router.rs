@@ -61,6 +61,7 @@ use crate::app::competitions::io::web::widgets::latest_results_widget::latest_re
 use crate::app::competitions::io::web::widgets::notification_settings_widget::{
     get_notification_settings_widget, post_notification_settings,
 };
+use crate::app::competitions::io::web::widgets::team_matches_widget::get_team_matches_widget;
 use crate::app::competitions::routes::path;
 use crate::state::AppState;
 use axum::routing::{delete, get, post, put};
@@ -108,6 +109,7 @@ pub fn router() -> Router<AppState> {
             path::COMPETITION_LATEST_RESULTS_WIDGET,
             get(latest_results_widget),
         )
+        .route(path::TEAM_MATCHES_WIDGET, get(get_team_matches_widget))
         .route(
             path::COMPETITION_WIDGET_JSON_COMPETITIONS,
             get(get_json_competitions),

@@ -143,6 +143,17 @@ pub trait IMatchDayRepository: Send + Sync {
         limit_rounds: u32,
     ) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError>;
 
+    /// Les matchs d'une équipe sur une saison, **les trois statuts confondus**.
+    ///
+    /// Ni curseur ni plafond de journées, contrairement aux deux ci-dessus :
+    /// une saison compte des centaines de matchs, une équipe en joue dix à
+    /// quinze. Le tri n'est pas non plus le leur — voir le `.sql`.
+    async fn list_team_matches(
+        &self,
+        season_id: &str,
+        team_id: &str,
+    ) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError>;
+
     /// Derniers matchs `completed` d'un espace, toutes compétitions/saisons
     /// confondues, triés par date réelle de publication décroissante.
     async fn list_latest_completed_results(

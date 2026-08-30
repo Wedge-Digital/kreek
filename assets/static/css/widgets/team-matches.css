@@ -1,0 +1,29 @@
+/* L'onglet Matchs d'une équipe — la coquille de la liste (carte 477).
+ *
+ * # Pourquoi cette feuille existe
+ *
+ * Le bloc de match est un composant depuis la carte 476, mais **son conteneur
+ * ne l'est pas** : `.matches-list` est resté dans `pages/competition-detail.css`,
+ * sous la portée de cette page. La 476 l'avait jugé hors du markup extrait — ce
+ * qui était vrai — sans voir que la seconde page à rendre le bloc aurait aussi
+ * besoin de la carte blanche qui l'entoure.
+ *
+ * Constaté à l'écran : les blocs s'affichaient à même le fond de page, et la
+ * pastille de match nul, en `--dark-6`, s'y perdait.
+ *
+ * # Pourquoi le conteneur ne rejoint pas le composant
+ *
+ * `components/match-widget.css` est scopée sous `.match-widget`, ce qui la fait
+ * sauter par le contrôle de débordement. Un conteneur est par définition un
+ * ancêtre du bloc : aucun sélecteur qui le désigne ne peut porter cette portée.
+ * Il vit donc ici, sous `.team-matches`, du nom de ce fichier.
+ *
+ * L'onglet compétition garde le sien : il y groupe par journée, avec un en-tête
+ * — « Journée 3 · 6 matchs » — dont cette liste-ci n'a pas l'usage. */
+
+.team-matches .matches-list,
+.team-matches.matches-list {
+  background: var(--white);
+  border-radius: 10px;
+  overflow: hidden;
+}

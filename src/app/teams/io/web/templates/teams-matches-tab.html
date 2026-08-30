@@ -1,0 +1,19 @@
+{# La coquille de l'onglet « Matchs » (carte 477).
+
+   **Elle ne rend aucun match.** La projection qui les porte appartient à
+   `competitions`, qui sert donc le fragment ; la fiche d'équipe le compose par
+   `hx-get`, exactement comme elle compose déjà le widget joueurs.
+
+   Le prix est un aller-retour de plus au premier clic sur l'onglet. C'est celui
+   de la souveraineté des données, et il est déjà payé pour les joueurs.
+
+   `hx-swap="outerHTML"` : le conteneur cède la place au fragment, il ne
+   l'enveloppe pas — un `id` de plus dans le DOM après injection n'apporterait
+   rien et le `CLAUDE.md` proscrit d'en répéter un. #}
+<div id="team-matches"
+     hx-get="{{ vm.matches_widget_url }}"
+     hx-trigger="load"
+     hx-target="this"
+     hx-swap="outerHTML">
+  <div class="loading-placeholder team-matches-loading">Chargement des matchs…</div>
+</div>

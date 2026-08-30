@@ -37,6 +37,10 @@ pub mod path {
     pub const COMPETITION_WIDGET_TESTER: &str = "/competitions/widget/tester";
     pub const COMPETITION_LATEST_RESULTS_WIDGET: &str =
         "/app/{space_id}/competitions/widget/latest-results";
+    /// Les matchs d'une équipe. **Le chemin ne porte que le `team_id`** : la
+    /// compétition s'y résout côté serveur, et l'y mettre laisserait un admin
+    /// d'une autre compétition la forcer (cf. `team_matches_widget.rs`).
+    pub const TEAM_MATCHES_WIDGET: &str = "/app/{space_id}/competitions/teams/{team_id}/matches";
     pub const COMPETITION_ADMIN: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin";
     pub const COMPETITION_ADMIN_ENROLLMENTS: &str =
@@ -192,6 +196,12 @@ impl Routes {
     pub fn competition_widget(&self, sid: &str) -> String {
         path::COMPETITION_WIDGET.replace("{space_id}", sid)
     }
+    pub fn team_matches_widget(&self, sid: &str, team_id: &str) -> String {
+        path::TEAM_MATCHES_WIDGET
+            .replace("{space_id}", sid)
+            .replace("{team_id}", team_id)
+    }
+
     pub fn latest_results_widget(&self, sid: &str) -> String {
         path::COMPETITION_LATEST_RESULTS_WIDGET.replace("{space_id}", sid)
     }

@@ -5,9 +5,15 @@ pub mod path {
     /// `space_scope` la couvre sans rien ajouter : elle porte `{team_id}`, dont
     /// `teams` déclare déjà le résolveur.
     ///
-    /// `TEAM_MATCHES` suivra le même moule, posée par la carte 477 — pas ici :
-    /// une route montée sans contenu répond « rien ».
     pub const TEAM_TREASURY: &str = "/app/{space_id}/teams/{team_id}/tresorerie";
+    /// L'onglet « Matchs » (carte 477), sur le même moule.
+    ///
+    /// **Elle n'est pas la route du fragment** : celui-ci appartient à
+    /// `competitions`, qui possède la projection. Pointer l'onglet directement
+    /// dessus mettrait une URL `/competitions/…` dans la barre d'adresse
+    /// pendant qu'on regarde une fiche d'équipe, et un rechargement livrerait
+    /// le fragment nu, sans la fiche autour.
+    pub const TEAM_MATCHES: &str = "/app/{space_id}/teams/{team_id}/matchs";
     pub const DISMISS_TEAM: &str = "/app/{space_id}/teams/{team_id}/dismiss";
     pub const PENDING_ENROLLMENT_WIDGET: &str = "/app/{space_id}/team/widgets/pending";
     pub const ENROLLED_TEAMS_WIDGET: &str = "/app/{space_id}/team/widgets/enrolled";
@@ -68,6 +74,12 @@ pub struct Routes;
 impl Routes {
     pub fn team_detail(&self, space_id: &str, team_id: &str) -> String {
         path::TEAM_DETAIL
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+
+    pub fn team_matches(&self, space_id: &str, team_id: &str) -> String {
+        path::TEAM_MATCHES
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
     }

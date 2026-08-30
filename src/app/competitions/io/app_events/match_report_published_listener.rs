@@ -254,6 +254,13 @@ mod tests {
         ) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> {
             Ok(vec![])
         }
+        async fn list_team_matches(
+            &self,
+            _: &str,
+            _: &str,
+        ) -> Result<Vec<PairingDisplayDto>, MatchDayRepositoryError> {
+            Ok(vec![])
+        }
         async fn list_latest_completed_results(
             &self,
             _: &str,
@@ -274,6 +281,12 @@ mod tests {
         }
         async fn find_team_names(&self, _: &[String]) -> Result<Vec<TeamInfoDto>, String> {
             Ok(vec![])
+        }
+        async fn find_team_enrollment(
+            &self,
+            _: &str,
+        ) -> Result<Option<crate::app::competitions::ports::TeamEnrollmentDto>, String> {
+            Ok(None)
         }
     }
 

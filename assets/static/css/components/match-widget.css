@@ -175,5 +175,8 @@
 }
 
 .match-widget .match-outcome--win  { background: rgba(98, 149, 132, 0.18); color: var(--green); }
-.match-widget .match-outcome--draw { background: var(--dark-6); color: var(--dark-2); }
+/* `--dark-5` et non `--dark-6` : sur le blanc de la carte, ce dernier donne un
+ * rapport de 1,07 — au-dessus du verrou de la carte 448, mais à peine visible.
+ * Constaté à l'écran, la pastille de nul ne se lisait pas. */
+.match-widget .match-outcome--draw { background: var(--dark-5); color: var(--dark-2); }
 .match-widget .match-outcome--loss { background: rgba(255, 107, 53, 0.15); color: #9A5000; }

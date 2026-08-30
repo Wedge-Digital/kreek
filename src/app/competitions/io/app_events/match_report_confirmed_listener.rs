@@ -162,6 +162,12 @@ mod tests {
         async fn find_team_names(&self, _: &[String]) -> Result<Vec<TeamInfoDto>, String> {
             Ok(vec![])
         }
+        async fn find_team_enrollment(
+            &self,
+            _: &str,
+        ) -> Result<Option<crate::app::competitions::ports::TeamEnrollmentDto>, String> {
+            Ok(None)
+        }
     }
 
     fn equipes() -> FakeTeamInfoPort {

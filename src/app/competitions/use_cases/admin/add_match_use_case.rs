@@ -259,6 +259,16 @@ mod tests {
         > {
             Ok(vec![])
         }
+        async fn list_team_matches(
+            &self,
+            _: &str,
+            _: &str,
+        ) -> Result<
+            Vec<crate::app::competitions::domain::match_day_repository_port::PairingDisplayDto>,
+            crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError,
+        > {
+            Ok(vec![])
+        }
         async fn list_latest_completed_results(
             &self,
             _: &str,
@@ -286,6 +296,12 @@ mod tests {
                 roster_name: String::new(),
                 logo_url: None,
             }])
+        }
+        async fn find_team_enrollment(
+            &self,
+            _: &str,
+        ) -> Result<Option<crate::app::competitions::ports::TeamEnrollmentDto>, String> {
+            Ok(None)
         }
     }
 

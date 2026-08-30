@@ -321,6 +321,12 @@ mod tests {
         async fn find_team_names(&self, _: &[String]) -> Result<Vec<TeamInfoDto>, String> {
             Ok(Vec::new())
         }
+        async fn find_team_enrollment(
+            &self,
+            _: &str,
+        ) -> Result<Option<crate::app::competitions::ports::TeamEnrollmentDto>, String> {
+            Ok(None)
+        }
     }
 
     const ESPACE: &str = "01KZVCJZ35JZWQB0KNTA9JJEPX";
