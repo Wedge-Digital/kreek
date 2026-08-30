@@ -61,6 +61,26 @@ pub enum AcquisitionMode {
     Customised,
 }
 
+impl AcquisitionMode {
+    /// Cette compétence compte-t-elle dans le niveau du joueur — donc dans le
+    /// prix de la **suivante** ?
+    ///
+    /// Seules les compétences qui ont coûté des SPP comptent. Une customisation
+    /// et une Haine sont gratuites : les compter renchérirait l'amélioration
+    /// d'après, ce qui revient à faire payer un cadeau (carte 482).
+    ///
+    /// **Un `match` exhaustif, sans joker.** Un cinquième mode d'acquisition
+    /// doit casser la compilation et forcer son auteur à trancher ; un `_ =>`
+    /// le rangerait d'office d'un côté, en silence. C'est l'idiome de
+    /// `Team::treasury_movement`, pour la même raison.
+    pub fn est_une_amelioration(self) -> bool {
+        match self {
+            Self::Chosen | Self::Random => true,
+            Self::Customised | Self::Injury => false,
+        }
+    }
+}
+
 // ── Augmentations de caractéristiques ───────────────────────────────────────────
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -891,8 +911,25 @@ impl Player {
 
     /// Niveau de la prochaine amélioration dans la matrice de coût — compteur
     /// unique partagé entre compétences et caractéristiques, plafonné à 6.
+    ///
+    /// **Seules les compétences payées en SPP comptent** (carte 482). Une
+    /// customisation et une Haine entrent pourtant dans `acquired_skills`, avec
+    /// un coût et une valeur nuls ; les compter faisait payer la compétence
+    /// suivante au tarif du niveau supérieur — 8 SPP au lieu de 6 après un seul
+    /// cadeau, 16 après trois.
+    ///
+    /// La même décision était déjà prise correctement pour les
+    /// caractéristiques, dont les customisations vivent dans une liste à part
+    /// (`stat_customisations`) que ce compteur n'a jamais lue. La différence ne
+    /// tenait qu'au choix de la liste où l'on pousse.
     pub fn next_improvement_level(&self) -> u8 {
-        ((self.acquired_skills.len() + self.stat_increases.len()) as u8 + 1).min(6)
+        let ameliorations = self
+            .acquired_skills
+            .iter()
+            .filter(|s| s.mode.est_une_amelioration())
+            .count()
+            + self.stat_increases.len();
+        (ameliorations as u8 + 1).min(6)
     }
 
     pub fn purchase_skill(
@@ -1288,7 +1325,7 @@ mod match_impact_tests {
 #[cfg(test)]
 mod improvement_tests {
     use super::*;
-    use crate::app::players::domain::match_impact::StatKind;
+    use crate::app::players::domain::match_impact::{MatchContext, RoundId, StatKind};
 
     fn sample_player_with_spp(spp: u32) -> Player {
         let created = PlayerDomainEvent::PlayerCreated {
@@ -1403,6 +1440,126 @@ mod improvement_tests {
         let result =
             player.increase_stat(StatKind::St, SppCost::try_new(14).unwrap(), ValueKpo(60));
         assert!(matches!(result, Err(DomainError::InsufficientSpp)));
+    }
+
+    // ── Le niveau ne compte que ce qui a coûté des SPP (carte 482) ───────────
+
+    fn customisation(id: &str) -> PlayerDomainEvent {
+        PlayerDomainEvent::PlayerSkillCustomised {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            customisation_id: CustomisationId::try_new(format!("c-{id}")).unwrap(),
+            skill_id: skill(id),
+            skill_name: name(id),
+            author: "Le commissaire".into(),
+        }
+    }
+
+    fn haine(id: &str) -> PlayerDomainEvent {
+        PlayerDomainEvent::PlayerHatredGained {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            context: MatchContext {
+                match_report_id: MatchReportId("mr1".into()),
+                round_id: RoundId("r1".into()),
+                round_label: "Journée 1".into(),
+                opponent_team_id: TeamId("t2".into()),
+                opponent_team_name: "Les Zéphyriens".into(),
+            },
+            skill_id: skill(id),
+            skill_name: name(id),
+        }
+    }
+
+    fn achat(joueur: &Player, id: &str) -> PlayerDomainEvent {
+        joueur
+            .purchase_skill(
+                skill(id),
+                name(id),
+                "type-general".into(),
+                AcquisitionMode::Chosen,
+                SppCost::try_new(1).unwrap(),
+                ValueKpo(0),
+            )
+            .unwrap()
+    }
+
+    /// **Une compétence donnée par un commissaire ne se paie pas — et ne fait
+    /// pas payer la suivante.**
+    ///
+    /// Elle entre pourtant dans `acquired_skills`, avec un coût et une valeur
+    /// nuls. Avant la carte 482, sa seule présence portait le niveau de 1 à 2,
+    /// et la compétence d'après coûtait 8 SPP au lieu de 6.
+    #[test]
+    fn une_competence_customisee_ne_fait_pas_monter_le_niveau() {
+        let mut joueur = sample_player_with_spp(1000);
+        for i in 0..3 {
+            joueur = Player::apply(Some(joueur), &customisation(&format!("c{i}"))).unwrap();
+        }
+
+        assert_eq!(joueur.acquired_skills.len(), 3, "elles sont bien acquises");
+        assert_eq!(
+            joueur.next_improvement_level(),
+            1,
+            "mais aucune n'est payée"
+        );
+    }
+
+    /// Le jumeau du précédent. Une Haine est gratuite comme une customisation ;
+    /// qu'elle vienne du jeu et non d'un commissaire ne change rien au fait
+    /// qu'elle n'a rien coûté.
+    #[test]
+    fn une_haine_ne_fait_pas_monter_le_niveau() {
+        let joueur = Player::apply(Some(sample_player_with_spp(1000)), &haine("h1")).unwrap();
+
+        assert_eq!(joueur.acquired_skills.len(), 1);
+        assert_eq!(joueur.next_improvement_level(), 1);
+    }
+
+    /// **La contre-épreuve, sans laquelle les deux précédents passeraient sur un
+    /// niveau figé à 1.**
+    #[test]
+    fn une_competence_achetee_fait_monter_le_niveau() {
+        let joueur = sample_player_with_spp(1000);
+        let evenement = achat(&joueur, "a1");
+        let joueur = Player::apply(Some(joueur), &evenement).unwrap();
+
+        assert_eq!(joueur.next_improvement_level(), 2);
+    }
+
+    /// Les quatre origines mélangées, dans un ordre qui ne les sépare pas :
+    /// deux achats et une augmentation comptent, les trois cadeaux non.
+    #[test]
+    fn le_niveau_melange_achats_et_caracteristiques_en_ignorant_les_gratuites() {
+        let mut joueur = sample_player_with_spp(1000);
+        joueur = Player::apply(Some(joueur), &customisation("c1")).unwrap();
+        let e = achat(&joueur, "a1");
+        joueur = Player::apply(Some(joueur), &e).unwrap();
+        joueur = Player::apply(Some(joueur), &haine("h1")).unwrap();
+        let e = joueur
+            .increase_stat(StatKind::Pa, SppCost::try_new(1).unwrap(), ValueKpo(0))
+            .unwrap();
+        joueur = Player::apply(Some(joueur), &e).unwrap();
+        joueur = Player::apply(Some(joueur), &customisation("c2")).unwrap();
+        let e = achat(&joueur, "a2");
+        joueur = Player::apply(Some(joueur), &e).unwrap();
+
+        assert_eq!(joueur.acquired_skills.len(), 5, "cinq compétences en tout");
+        assert_eq!(
+            joueur.next_improvement_level(),
+            4,
+            "deux achats et une caractéristique : la prochaine est la quatrième"
+        );
+    }
+
+    /// Le prédicat est exhaustif — un cinquième mode casserait la compilation
+    /// plutôt que d'être rangé d'office d'un côté.
+    #[test]
+    fn seuls_les_modes_payes_sont_des_ameliorations() {
+        assert!(AcquisitionMode::Chosen.est_une_amelioration());
+        assert!(AcquisitionMode::Random.est_une_amelioration());
+        assert!(!AcquisitionMode::Customised.est_une_amelioration());
+        assert!(!AcquisitionMode::Injury.est_une_amelioration());
     }
 
     #[test]

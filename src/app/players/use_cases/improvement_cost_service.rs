@@ -93,6 +93,58 @@ mod tests {
         SkillCatalogAdapter::new(Arc::new(InMemoryReferenceRepository::load_for_tests()))
     }
 
+    /// **Le prix affiché ignore les compétences gratuites** — de bout en bout,
+    /// du joueur au tarif (carte 482).
+    ///
+    /// Les deux moitiés sont testées séparément : le domaine sait ne pas
+    /// compter une customisation, le service sait facturer un niveau. Ce test
+    /// est le seul qui les relie, et c'est cette jonction que le coach voit à
+    /// l'écran — `spp_spending_widget` et `purchase_skill_use_case` la font
+    /// tous les deux.
+    #[test]
+    fn le_prix_affiche_ignore_les_competences_gratuites() {
+        use crate::app::players::domain::events::PlayerDomainEvent;
+        use crate::app::players::domain::player::{Player, PlayerId, Spp, TeamId};
+        use crate::app::players::domain::value_objects::{
+            CustomisationId, PositionNameVo, RosterLineId, SkillId, SkillName,
+        };
+        use crate::app::shared_kernel::identity::ids::SpaceId;
+
+        let cree = PlayerDomainEvent::PlayerCreated {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            space_id: SpaceId::new(),
+            position_name: PositionNameVo::try_new("Piétaille".to_string()).unwrap(),
+            roster_line_id: RosterLineId::try_new("DEMO_GRANIT__PIETAILLE".to_string()).unwrap(),
+            jersey: None,
+            base_skills: vec![],
+            starting_spp: Spp(100),
+            starting_value: ValueKpo(100),
+        };
+        let cadeau = PlayerDomainEvent::PlayerSkillCustomised {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            customisation_id: CustomisationId::try_new("c1".to_string()).unwrap(),
+            skill_id: SkillId::try_new("SECOND_SOUFFLE".to_string()).unwrap(),
+            skill_name: SkillName::try_new("Second souffle".to_string()).unwrap(),
+            author: "Le commissaire".into(),
+        };
+        let joueur = Player::from_events(&[cree, cadeau]).unwrap();
+
+        let (cout, _) = resolve_skill_cost(
+            &catalog(),
+            "DEMO_GRANIT__PIETAILLE",
+            "APPUI_FERME",
+            AcquisitionMode::Chosen,
+            joueur.next_improvement_level(),
+        )
+        .unwrap();
+
+        // 6 SPP, le tarif du niveau 1. Avant la correction, le cadeau portait le
+        // joueur au niveau 2 et la même compétence se facturait 8.
+        assert_eq!(cout.into_inner(), 6, "un cadeau ne renchérit pas la suite");
+    }
+
     #[test]
     fn resolve_skill_cost_primary_access_level_1() {
         let (cost, value) = resolve_skill_cost(

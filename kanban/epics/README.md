@@ -84,6 +84,7 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 
 | Carte | Note |
 |---|---|
+| `482-une-competence-gratuite-rencherit-la-suivante` | Une compétence donnée par un commissaire — ou une Haine — entrait dans la liste des compétences acquises, avec un coût nul, et faisait pourtant monter le niveau : la compétence suivante se facturait 8 SPP au lieu de 6, 16 après trois cadeaux. La même décision était déjà prise correctement pour les caractéristiques, dont les customisations vivent dans une liste à part |
 | `480-l-axe-8-de-check-arch-ne-verifie-rien` | Un verrou bloquant affichait vert sans rien lire : il importait `tomllib`, absent avant Python 3.11, et le `python3` du système est en 3.9. Cinq tests e2e sans entrée dans la carte d'impact, que ni le local ni la CI — non déclenchée sur `demo` — ne voyaient |
 | `18-script-inline-htmx-fragments` | Sortie de l'épic E03 à sa clôture : un `<script>` d'init dans un fragment ne peint rien sans ses styles et ne déplace rien, donc le critère de l'épic ne la mesurait pas |
 | `474` et `475` — les statistiques de compétition | Le panneau des quatre tableaux Top/Flop sert de la donnée fictive **en production** — la seule dette visible par un utilisateur. La donnée existe dans `competition_match_display_proj`, table du BC lui-même : quatre tris d'une seule agrégation. Remplacent la carte 13, dont le constat sur l'onglet Équipes était périmé |

@@ -278,6 +278,37 @@ mod tests {
         assert_eq!(vm.spp_remaining, 24);
     }
 
+    /// **Le jumeau du précédent, pour une compétence gratuite** (carte 482).
+    ///
+    /// Le niveau est baké dans l'URL du sélecteur : c'est lui qui tarife toutes
+    /// les lignes du picker. Une customisation le portait à 2, et le coach se
+    /// voyait proposer chaque compétence au tarif du niveau supérieur.
+    #[test]
+    fn une_competence_gratuite_ne_fait_pas_monter_le_niveau_du_selecteur() {
+        let mut player = sample_player();
+        for mode in [AcquisitionMode::Customised, AcquisitionMode::Injury] {
+            player.acquired_skills.push(AcquiredSkill {
+                skill_id: SkillId::try_new(format!("gratuite-{mode:?}")).unwrap(),
+                skill_name: SkillName::try_new("Cadeau").unwrap(),
+                mode,
+                spp_cost: SppCost::try_new(0).unwrap(),
+                value_delta: ValueKpo(0),
+                from_match: None,
+            });
+        }
+        let catalog = SkillCatalogAdapter::new(std::sync::Arc::new(
+            InMemoryReferenceRepository::load_for_tests(),
+        ));
+
+        let vm = build_vm(&player, &AppRoutes::default(), "space1", &catalog).unwrap();
+
+        assert!(
+            vm.skill_picker_url.contains("level=1"),
+            "deux cadeaux ne font pas un niveau : {}",
+            vm.skill_picker_url
+        );
+    }
+
     #[test]
     fn build_vm_returns_none_for_unknown_position() {
         let mut player = sample_player();
