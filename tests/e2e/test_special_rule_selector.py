@@ -21,7 +21,7 @@ import time
 
 from playwright.sync_api import Page, expect
 
-from competition_lifecycle import create_full_competition
+from competition_lifecycle import create_full_competition, recruter_joueurs
 from htmx_helpers import attendre_cablage, cliquer_quand_cable
 
 BASE_URL = "http://localhost:3210"
@@ -97,24 +97,14 @@ def _select_roster(page: Page, uid: str, name: str) -> None:
     )
 
 
-def _hire_players(page: Page, count: int) -> int:
+def _hire_players(page: Page, team_id: str, count: int) -> int:
+    """Délégué au helper partagé (carte 483) : il attend l'embauche
+    **enregistrée** au lieu de compter les clics, et n'emploie aucune durée
+    fixe. Le délai de 200 ms qui tenait lieu de synchronisation ici ne
+    protégeait de rien — il rendait seulement la course plus rare qu'à
+    150 ms."""
     page.wait_for_selector("#player-table-container .tbl-btn", timeout=10000)
-    hired = 0
-    attempts = 0
-    while hired < count and attempts < 40:
-        buttons = page.locator("#player-table-container .tbl-btn:not([disabled])").all()
-        clicked = False
-        for btn in buttons:
-            if btn.inner_text().strip() == "+":
-                btn.click()
-                page.wait_for_timeout(200)
-                hired += 1
-                clicked = True
-                break
-        if not clicked:
-            break
-        attempts += 1
-    return hired
+    return recruter_joueurs(page, team_id, count)
 
 
 def test_fixed_rules_display_as_chips(page: Page, space_id, competition_create_url):
@@ -169,7 +159,7 @@ def test_finalize_blocked_when_choice_roster_has_no_special_rule(
     page.goto(f"{BASE_URL}/app/{space_id}/team/{team_id}/build", wait_until="load")
 
     _select_roster(page, "DEMO_LANTERNE", "Lanterniers")
-    hired = _hire_players(page, 11)
+    hired = _hire_players(page, team_id, 11)
     assert hired >= 11, f"N'a pu recruter que {hired} joueurs (11 requis)"
 
     # Le bouton vient d'être injecté : visible avant d'être câblé, et un clic

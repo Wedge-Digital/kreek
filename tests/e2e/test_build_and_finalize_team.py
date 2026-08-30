@@ -21,7 +21,7 @@ from playwright.sync_api import Page, expect
 
 from htmx_helpers import attendre_cablage
 
-from competition_lifecycle import create_full_competition
+from competition_lifecycle import create_full_competition, recruter_joueurs
 
 BASE_URL = "http://localhost:3210"
 
@@ -78,25 +78,12 @@ def test_build_and_finalize_with_spp(page: Page, competition_create_url, space_i
     # Attendre que le player table se charge
     page.wait_for_selector("#player-table-container .tbl-btn", timeout=10000)
 
-    # Recruter 11 joueurs en cliquant sur les boutons +
-    hire_buttons = page.locator("#player-table-container .tbl-btn:not([disabled])")
-    hired = 0
-    max_attempts = 30
-    attempts = 0
-    while hired < 11 and attempts < max_attempts:
-        buttons = hire_buttons.all()
-        clicked = False
-        for btn in buttons:
-            text = btn.inner_text().strip()
-            if text == "+":
-                btn.click()
-                page.wait_for_timeout(300)
-                hired += 1
-                clicked = True
-                break
-        if not clicked:
-            break
-        attempts += 1
+    # Recruter 11 joueurs. Le helper attend l'embauche **enregistrée** après
+    # chaque clic, au lieu de compter les clics derrière une durée fixe : le
+    # délai de 300 ms qui tenait lieu de synchronisation ici ne protégeait de
+    # rien, il rendait seulement la course plus rare (carte 483).
+    team_id = re.search(r"/team/([0-9A-Za-z]+)/build", page.url).group(1)
+    hired = recruter_joueurs(page, team_id)
 
     assert hired >= 11, f"N'a pu recruter que {hired} joueurs (11 requis)"
 

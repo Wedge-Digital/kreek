@@ -84,6 +84,7 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 
 | Carte | Note |
 |---|---|
+| `483-le-montage-e2e-compte-les-clics-pas-les-embauches` | Trois copies d'une boucle de recrutement comptaient les clics derrière un délai fixe, pas les embauches enregistrées : l'assertion « 11 joueurs » passait sur dix, et `finalize_team` refusait vingt étapes plus loin. La CI de `demo` échouait une fois sur deux |
 | `482-une-competence-gratuite-rencherit-la-suivante` | Une compétence donnée par un commissaire — ou une Haine — entrait dans la liste des compétences acquises, avec un coût nul, et faisait pourtant monter le niveau : la compétence suivante se facturait 8 SPP au lieu de 6, 16 après trois cadeaux. La même décision était déjà prise correctement pour les caractéristiques, dont les customisations vivent dans une liste à part |
 | `480-l-axe-8-de-check-arch-ne-verifie-rien` | Un verrou bloquant affichait vert sans rien lire : il importait `tomllib`, absent avant Python 3.11, et le `python3` du système est en 3.9. Cinq tests e2e sans entrée dans la carte d'impact, que ni le local ni la CI — non déclenchée sur `demo` — ne voyaient |
 | `18-script-inline-htmx-fragments` | Sortie de l'épic E03 à sa clôture : un `<script>` d'init dans un fragment ne peint rien sans ses styles et ne déplace rien, donc le critère de l'épic ne la mesurait pas |

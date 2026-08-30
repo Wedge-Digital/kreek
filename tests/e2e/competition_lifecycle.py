@@ -174,6 +174,77 @@ def create_full_competition(
     return {"competition_id": competition_id, "season_id": season_id, "name": competition_name}
 
 
+def joueurs_recrutes(team_id: str) -> int:
+    """Ce que le serveur a **réellement** enregistré, pas ce qu'on a cliqué.
+
+    La base plutôt que le DOM : la quantité par ligne n'est qu'un `<td>` sans
+    classe, désignable seulement par son rang parmi treize colonnes. Et c'est
+    exactement cette donnée-là que `finalize_team` relit pour décider — mesurer
+    la même chose que le garde qu'on cherche à satisfaire supprime tout écart
+    possible entre les deux.
+    """
+    from db_helpers import query_db
+
+    lignes = query_db(
+        "SELECT jsonb_array_length(COALESCE(state->'hired_players', '[]'::jsonb)) "
+        f"FROM team_roster_selections WHERE id = '{team_id}'"
+    )
+    return int(lignes[0]) if lignes else 0
+
+
+def recruter_joueurs(page: Page, team_id: str, combien: int = 11) -> int:
+    """Clique les « + » jusqu'à ce que `combien` joueurs soient **enregistrés**.
+
+    # Le défaut que ceci remplace (carte 483)
+
+    Trois copies de la même boucle comptaient les **clics** :
+
+        btn.click()
+        page.wait_for_timeout(150)   # durée fixe
+        hired += 1                   # incrémenté quoi qu'il arrive
+
+    Sous charge, la requête htmx n'aboutit pas dans le délai — ou le bouton est
+    périmé, sa ligne ayant été réécrite par le swap précédent
+    (`hx-target="closest tr"`, `hx-swap="outerHTML"`). Le compteur avançait
+    quand même, l'assertion passait sur dix joueurs, et l'échec se manifestait
+    vingt étapes plus loin : `finalize_team` refusait sous onze joueurs et
+    rendait son erreur par `HX-Retarget`, si bien que `.submit-bar` n'existait
+    jamais et que le test expirait dessus.
+
+    # Ce qu'on attend à la place
+
+    La postcondition, jamais une durée — c'est la doctrine que
+    `_attendre_finalisation` applique déjà juste en dessous. Après chaque clic,
+    on attend que le compte enregistré monte ; s'il ne monte pas, on reclique.
+
+    Rend le nombre réellement recruté, et le nomme en cas d'échec.
+    """
+    deja = joueurs_recrutes(team_id)
+    tentatives = 0
+    while deja < combien and tentatives < combien * 4:
+        tentatives += 1
+        bouton = None
+        for candidat in page.locator("#player-table-container .tbl-btn:not([disabled])").all():
+            if candidat.inner_text().strip() == "+":
+                bouton = candidat
+                break
+        if bouton is None:
+            break
+        try:
+            bouton.click()
+        except Exception:
+            # Ligne réécrite entre la sélection et le clic : on rejoue le tour
+            # plutôt que d'abandonner — c'est précisément le cas que l'ancienne
+            # boucle comptait comme une embauche.
+            continue
+        vise = deja + 1
+        limite = time.time() + 5
+        while time.time() < limite and joueurs_recrutes(team_id) < vise:
+            time.sleep(0.05)
+        deja = joueurs_recrutes(team_id)
+    return deja
+
+
 def _attendre_finalisation(season_id: str, timeout_s: int = 15) -> None:
     """Attend que la saison atteigne `ready`, au lieu de parier sur une durée.
 
@@ -255,21 +326,7 @@ def build_and_submit_team(page: Page, space_id: str, competition_name: str, coac
     )
     page.wait_for_selector("#player-table-container .tbl-btn", timeout=10000)
 
-    hired = 0
-    attempts = 0
-    while hired < 11 and attempts < 40:
-        buttons = page.locator("#player-table-container .tbl-btn:not([disabled])").all()
-        clicked = False
-        for btn in buttons:
-            if btn.inner_text().strip() == "+":
-                btn.click()
-                page.wait_for_timeout(150)
-                hired += 1
-                clicked = True
-                break
-        if not clicked:
-            break
-        attempts += 1
+    hired = recruter_joueurs(page, team_id)
     assert hired >= 11, f"N'a pu recruter que {hired} joueurs pour {team_id}"
 
     page.click("text=Terminer la construction →")
