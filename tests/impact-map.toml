@@ -283,6 +283,14 @@
 "test_team_matches" = ["competitions", "teams", "match_report", "players",
                        "spp_calculator", "references", "ranking",
                        "team_creation", "spaces", "auth"]
+# Le tarif du sélecteur de compétences après une customisation (carte 482).
+# `players` y est vérifié — le niveau, son coût, la customisation ;
+# `references` aussi, la matrice de coût et le catalogue venant de lui.
+# `match_report` est une dépendance dure : publier un rapport est le seul chemin
+# vers des SPP à dépenser, donc vers un tarif à lire.
+"test_niveau_apres_customisation" = ["players", "references", "match_report",
+                                     "spp_calculator", "teams", "competitions",
+                                     "ranking", "team_creation", "spaces"]
 # `players` y est vérifié, pas seulement traversé : le scénario 8 contrôle que
 # le joueur acheté dans `teams` existe bien dans `players`, maillot compris.
 # `match_report` est une dépendance dure et non une fixture de confort — publier

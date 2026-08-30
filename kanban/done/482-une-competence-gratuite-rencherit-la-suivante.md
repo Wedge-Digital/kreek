@@ -133,7 +133,7 @@ n'était pinné dans aucun sens.
 
 - [x] `est_une_amelioration` sur `AcquisitionMode`, `match` sans joker
 - [x] `next_improvement_level` filtre par ce prédicat
-- [x] Six tests, chacun falsifié
+- [x] Six tests unitaires et trois e2e, chacun falsifié
 - [x] `make lint && make test && make check-arch` — et `make e2e`
 
 ---
@@ -166,18 +166,31 @@ de bout en bout.** C'est ce qui manquait : aucun test ne combinait une
 compétence gratuite et un achat, et c'est exactement dans ce trou que le défaut
 vivait.
 
-## Pas de test e2e, et pourquoi
+## Le test e2e, et pourquoi son assertion est différentielle
 
-Le `CLAUDE.md` impose un e2e pour toute fonctionnalité livrée. Ce n'en est pas
-une : c'est un filtre sur une valeur **dérivée**, dont les trois lecteurs sont
-désormais pinnés unitairement — jusqu'à l'URL du sélecteur, qui est la dernière
-chose que le gabarit reçoit.
+`tests/e2e/test_niveau_apres_customisation.py`, dans un fichier à lui — les deux
+fixtures candidates sont partagées à l'échelle du module, et y greffer un joueur
+customisé aurait demandé de la chirurgie sur un montage dont six autres tests
+dépendent.
 
-Ce qu'un e2e ajouterait est le rendu HTML d'un nombre qu'aucune logique ne
-touche. Ce qu'il coûterait est réel : les deux fixtures candidates sont
-partagées à l'échelle du module, et y greffer un joueur customisé demanderait
-de la chirurgie sur un montage dont six autres tests dépendent. La suite
-complète a été passée (330 verts) plutôt que d'ajouter un scénario fragile.
+Deux joueurs de la même équipe, tous deux crédités par le même match, tous deux
+sans achat : l'un a reçu une compétence d'un commissaire, l'autre non. **Leur
+tarif affiché doit être identique.**
+
+Comparer plutôt qu'affirmer « 6 SPP » met le test à l'abri du barème : si la
+matrice de coût change un jour, il continue de vérifier ce qu'il prétend — que
+le cadeau ne déplace rien — au lieu d'échouer sur un chiffre qui n'était pas son
+sujet. La valeur est vérifiée en second, pour que l'échec sache dire « le barème
+a changé » plutôt que « le cadeau compte ».
+
+Trois scénarios : l'égalité des tarifs, la contre-épreuve du montage — la
+compétence offerte est bien là et n'a rien coûté — et celle du barème, un achat
+réel devant faire monter le tarif. Sans la dernière, les deux premières
+passeraient sur un sélecteur figé au niveau 1 pour tout le monde.
+
+Falsifié : le défaut d'origine remis, le test rougit sur
+« le cadeau a déplacé le tarif : 8 SPP contre 6 SPP pour un joueur qui n'a rien
+reçu » — le symptôme exact que l'utilisateur avait décrit.
 
 ## Falsification
 
@@ -188,3 +201,4 @@ complète a été passée (330 verts) plutôt que d'ajouter un scénario fragile
 | La Haine redevient une amélioration | 3 rouges |
 | Un achat cesse de compter | 6 rouges, dont deux tests préexistants |
 | Une cinquième variante de mode ajoutée | erreur de compilation, `player.rs:78` |
+| Le filtre retiré, vu du navigateur | l'e2e rouge, en nommant le symptôme |
