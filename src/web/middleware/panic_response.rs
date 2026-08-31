@@ -75,52 +75,13 @@ fn reponse_500() -> Response<Body> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Arc, Mutex};
-    use tracing_subscriber::layer::SubscriberExt;
-    use tracing_subscriber::Layer;
-
-    /// Recueille cible et champs de chaque événement qui **franchit** le
-    /// filtre. Ce qui est filtré n'arrive jamais ici : c'est exactement ce
-    /// qu'on veut mesurer.
-    #[derive(Clone, Default)]
-    struct Capture(Arc<Mutex<Vec<String>>>);
-
-    impl Capture {
-        fn lignes(&self) -> Vec<String> {
-            self.0.lock().unwrap().clone()
-        }
-    }
-
-    impl<S: tracing::Subscriber> Layer<S> for Capture {
-        fn on_event(
-            &self,
-            event: &tracing::Event<'_>,
-            _ctx: tracing_subscriber::layer::Context<'_, S>,
-        ) {
-            let mut champs = Champs(String::new());
-            event.record(&mut champs);
-            self.0
-                .lock()
-                .unwrap()
-                .push(format!("{} {}", event.metadata().target(), champs.0));
-        }
-    }
-
-    struct Champs(String);
-
-    impl tracing::field::Visit for Champs {
-        fn record_debug(&mut self, champ: &tracing::field::Field, valeur: &dyn std::fmt::Debug) {
-            self.0.push_str(&format!("{}={:?} ", champ.name(), valeur));
-        }
-    }
+    use crate::common::services::observability::capture_journal::capture_sous_le_filtre_de_production;
 
     /// Le filtre réellement construit au démarrage, et non une chaîne recopiée :
     /// un test qui recopie le filtre continue de passer quand le vrai change.
     fn sous_le_filtre_de_production<T>(corps: impl FnOnce() -> T) -> (T, Vec<String>) {
-        let capture = Capture::default();
-        let (filtre, _) = crate::filtre_depuis_config("info");
-        let abonne = tracing_subscriber::registry().with(capture.clone().with_filter(filtre));
-        let resultat = tracing::subscriber::with_default(abonne, corps);
+        let (capture, _garde) = capture_sous_le_filtre_de_production();
+        let resultat = corps();
         (resultat, capture.lignes())
     }
 

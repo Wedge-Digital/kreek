@@ -84,6 +84,7 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 
 | Carte | Note |
 |---|---|
+| `486-un-refus-de-depublication-ne-se-distingue-pas-d-un-succes` | Un refus de dépublication et un succès rendent le même `200`, le même `hx-refresh` et le même corps vide — et rien n'était journalisé. Le test postait sans regarder, attendait trente secondes et accusait le délai ; la CI de `demo` a été rouge trois runs sur quatre sur ce message-là |
 | `485-modifier-une-competition-la-remet-en-construction` | Enregistrer un réglage depuis l'administration faisait redescendre la saison sous `ready` : la carte de la compétition renvoyait vers l'étape 2 du magicien et l'inscription se fermait, sans un mot — l'enregistrement, lui, réussissait. Le même piège avait déjà été corrigé deux fois, chaque fois pour le seul panneau où on l'avait vu ; l'axe 16 déduit désormais du SQL les méthodes qu'un panneau n'a pas le droit d'appeler |
 | `484-cliquer-une-equipe-ne-fait-rien` | Cliquer une équipe depuis « Mes équipes » ne changeait rien à l'écran : la route rendait un fragment sous `HX-Request`, un en-tête vrai d'une navigation htmx comme d'un échange d'onglet. Cinq points d'entrée cassés, deux jours en production sous une suite verte |
 | `483-le-montage-e2e-compte-les-clics-pas-les-embauches` | Trois copies d'une boucle de recrutement comptaient les clics derrière un délai fixe, pas les embauches enregistrées : l'assertion « 11 joueurs » passait sur dix, et `finalize_team` refusait vingt étapes plus loin. La CI de `demo` échouait une fois sur deux |

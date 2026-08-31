@@ -26,6 +26,8 @@ collisionnent avec aucun autre fichier de test.
 Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true) — cf. README.
 """
 
+import html
+import re
 import time
 
 import pytest
@@ -53,6 +55,93 @@ def _unpublish(space_id: str, mr_id: str) -> requests.Response:
     return requests.post(
         f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/recap/unpublish",
         allow_redirects=False,
+    )
+
+
+def _motif_de_blocage(space_id: str, mr_id: str) -> str | None:
+    """Le motif que le récapitulatif affiche, ou `None` si le rapport est corrigeable.
+
+    C'est la seule chose qui distingue un refus d'un succès. Mesuré : les deux
+    rendent `HTTP 200`, `hx-refresh: true` et un corps vide — `unpublish_response`
+    fait passer `Ok(())` et `Err(NotEligible(_))` par la même sortie `refresh()`.
+    Le code de retour ne dit donc rien, et c'est délibéré côté produit : la page
+    rechargée montre le motif recalculé. Il faut aller le lire là.
+    """
+    # `page` et non `html` : la variable masquerait le module du même nom, dont
+    # on a besoin deux lignes plus bas pour déséchapper le motif.
+    page = requests.get(
+        f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/recap",
+        headers={"HX-Request": "true"},
+        timeout=15,
+    ).text
+    bloc = re.search(r'ms-correct-blocked.*?</div>', page, re.S)
+    if not bloc:
+        return None
+    spans = re.findall(r"<span[^>]*>(.*?)</span>", bloc.group(0), re.S)
+    # Le premier `<span>` porte l'icône ⓘ ; le motif est le suivant.
+    # Askama échappe le rendu : sans ce décodage, le message de l'échec porte
+    # « d&#x27;amélioration » — lisible, mais pas par quelqu'un qui lit vite
+    # une sortie de CI.
+    motif = html.unescape(spans[-1]).strip() if spans else ""
+    return motif or "blocage sans motif affiché"
+
+
+def _attendre_ou_dire_le_motif(space_id, mr_id, condition, quoi, timeout_s=30):
+    """Attend, et si rien ne vient, **va lire pourquoi** au lieu d'accuser le délai."""
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        if condition():
+            return
+        time.sleep(0.2)
+    motif = _motif_de_blocage(space_id, mr_id)
+    raise AssertionError(
+        f"{quoi}, après {timeout_s} s. "
+        + (
+            f"Le récapitulatif dit : « {motif} »"
+            if motif
+            else "Le récapitulatif ne montre aucun blocage — la cause est ailleurs."
+        )
+    )
+
+
+def depublier(space_id: str, mr_id: str, quoi: str = "le rapport") -> None:
+    """Dépublie **et constate** — les deux comptent autant.
+
+    **Ce que ce helper remplace.** Les quatre sites d'appel postaient sans
+    regarder la réponse, puis attendaient trente secondes que la phase change,
+    et concluaient « non satisfait après 30s ». Un refus arrivé en six
+    millisecondes se lisait donc comme une lenteur, et la CI de `demo` a été
+    rouge trois runs sur quatre sur ce message-là.
+
+    **Pourquoi attendre d'abord.** L'entrée d'une équipe en `PlayerImprovement`
+    vient d'un app event **cross-BC**, asynchrone par construction. La phase du
+    rapport, elle, vit dans une projection intra-BC écrite dans la même
+    transaction que l'événement : elle dit « publié » *avant* que `teams` ait
+    réagi. Dans cette fenêtre, `is_team_in_player_improvement` rend `false` — non
+    parce que la phase est dépassée, mais parce qu'elle n'est pas encore
+    arrivée — et la dépublication est refusée. Mesuré localement : l'app event
+    gagne la course en moins de 40 ms, trois fois sur trois. En CI chargée, il
+    peut perdre.
+
+    Attendre que le rapport soit *corrigeable* plutôt qu'une phase d'équipe
+    couvre les trois bloqueurs d'un coup, et sans connaître les identifiants des
+    deux camps : c'est exactement la condition que le produit va évaluer.
+
+    **Les deux attentes citent le motif**, pas seulement la seconde. Un rapport
+    définitivement bloqué — un coach a validé ses améliorations — n'arrive jamais
+    à la dépublication, et le message rendrait alors le même « non satisfait
+    après 30 s » que celui qu'on remplace.
+    """
+    _attendre_ou_dire_le_motif(
+        space_id, mr_id,
+        lambda: _motif_de_blocage(space_id, mr_id) is None,
+        f"{quoi} — le rapport n'est jamais devenu corrigeable",
+    )
+    _unpublish(space_id, mr_id)
+    _attendre_ou_dire_le_motif(
+        space_id, mr_id,
+        lambda: _phase(mr_id) == "ReadyToPublish",
+        f"{quoi} — la dépublication n'a rien changé",
     )
 
 
@@ -176,8 +265,7 @@ def test_correction_ramene_le_rapport_en_etat_corrigeable(page: Page, space_id, 
     expect(bouton).to_be_visible()
     expect(bouton).to_be_enabled()
 
-    _unpublish(space_id, mr_id)
-    _wait(lambda: _phase(mr_id) == "ReadyToPublish", "le rapport doit redevenir corrigeable")
+    depublier(space_id, mr_id)
 
     page.goto(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/recap", wait_until="load")
     expect(page.locator(".ms-unpublished-banner")).to_be_visible()
@@ -253,9 +341,8 @@ def test_les_quatre_compensations_s_appliquent_puis_se_rejouent(space_id, correc
     _wait(lambda: _calendar_status(mr_id) == "completed", "le calendrier doit afficher terminé")
     tresorerie_apres_publication = _team_treasury(home_team)
 
-    _unpublish(space_id, mr_id)
+    depublier(space_id, mr_id, "match_report compensé")
 
-    _wait(lambda: _phase(mr_id) == "ReadyToPublish", "match_report compensé")
     _wait(lambda: _ranking_line_count(mr_id) == 0, "ranking compensé")
     _wait(lambda: _calendar_status(mr_id) == "in_progress", "competitions compensé")
     _wait(lambda: _team_phase(home_team) == "MatchReporting", "teams compensé")
@@ -276,8 +363,7 @@ def test_deux_corrections_successives_aboutissent(space_id, correction_ctx):
     mr_id = _play_and_publish(space_id, correction_ctx, correction_ctx["round_ids"][4], 8, 9)
 
     for tour in (1, 2):
-        _unpublish(space_id, mr_id)
-        _wait(lambda: _phase(mr_id) == "ReadyToPublish", f"correction {tour}")
+        depublier(space_id, mr_id, f"correction {tour}")
         publish(space_id, mr_id)
         _wait(lambda: _phase(mr_id) == "Published", f"re-publication {tour}")
 
@@ -291,8 +377,7 @@ def test_le_bandeau_survit_a_une_modification_d_action(page: Page, space_id, cor
     round_id = correction_ctx["round_ids"][5]
     mr_id = _play_and_publish(space_id, correction_ctx, round_id, 10, 11)
 
-    _unpublish(space_id, mr_id)
-    _wait(lambda: _phase(mr_id) == "ReadyToPublish", "le rapport doit redevenir corrigeable")
+    depublier(space_id, mr_id)
 
     # Une action ajoutée puis l'après-match resaisi : le parcours réel de
     # correction, qui repasse transitoirement par PreMatch côté use cases.

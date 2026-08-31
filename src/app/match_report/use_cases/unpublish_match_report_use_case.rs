@@ -45,7 +45,8 @@ pub async fn execute(
 
     let (rtp, event) = published
         .unpublish(cmd.unpublished_by, eligibility)
-        .map_err(to_error)?;
+        .map_err(to_error)
+        .map_err(|refus| journaliser_le_refus(&mr_id, refus))?;
 
     persist_and_announce(repo, bus, &mr_id, &event, rtp.version - 1).await
 }
@@ -99,6 +100,35 @@ async fn load_published(
     }
 }
 
+/// **Un refus d'éligibilité ne laissait aucune trace** (carte 486).
+///
+/// Le contrôleur fait passer `Ok(())` et `Err(NotEligible(_))` par la même
+/// sortie `refresh()` : mesuré, les deux rendent `200`, `hx-refresh: true` et
+/// un corps vide. C'est défendable à l'écran, où la page rechargée montre le
+/// motif recalculé — mais aucun appelant non humain ne peut distinguer les deux
+/// cas, et rien nulle part n'en gardait mémoire.
+///
+/// Une dépublication refusée en six millisecondes se lisait donc, côté test,
+/// comme une transition qui n'arrive pas : la CI de `demo` a été rouge trois
+/// runs sur quatre sur un message qui accusait le délai.
+///
+/// `info` et non `warn` : ce n'est pas une anomalie, c'est un garde-fou qui
+/// fait son travail. Mais il faut que ça franchisse le filtre — sous `debug`,
+/// la ligne n'existerait pas en production.
+fn journaliser_le_refus(
+    match_report_id: &str,
+    refus: UnpublishMatchReportError,
+) -> UnpublishMatchReportError {
+    if let UnpublishMatchReportError::NotEligible(blocker) = &refus {
+        tracing::info!(
+            match_report_id,
+            ?blocker,
+            "dépublication refusée : le rapport n'est plus corrigeable"
+        );
+    }
+    refus
+}
+
 fn to_error(e: DomainError) -> UnpublishMatchReportError {
     match e {
         DomainError::CorrectionNotAllowed(blocker) => {
@@ -111,6 +141,7 @@ fn to_error(e: DomainError) -> UnpublishMatchReportError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::services::observability::capture_journal::capture_sous_le_filtre_de_production;
 
     use crate::app::match_report::domain::match_report_repository_port::{
         MatchActionRow, RepositoryError,
@@ -383,6 +414,51 @@ mod tests {
                 }
             ))
         ));
+    }
+
+    /// **Le refus laisse une trace, et elle franchit le filtre** (carte 486).
+    ///
+    /// Le filtre est celui construit au démarrage, pas une chaîne recopiée : une
+    /// ligne émise sous `debug`, ou sur une cible hors `kreek::`, passerait ce
+    /// test sans jamais être écrite en production. C'est le piège que le
+    /// CLAUDE.md décrit en tête de sa section observabilité, rencontré trois
+    /// fois.
+    #[tokio::test]
+    async fn un_refus_d_eligibilite_est_journalise() {
+        let (capture, _garde) = capture_sous_le_filtre_de_production();
+
+        let (result, _) = run(Some(published_state()), false, false).await;
+
+        assert!(matches!(
+            result,
+            Err(UnpublishMatchReportError::NotEligible(_))
+        ));
+        let lignes = capture.lignes();
+        let refus: Vec<_> = lignes
+            .iter()
+            .filter(|l| l.contains("dépublication refusée"))
+            .collect();
+        assert_eq!(refus.len(), 1, "une ligne et une seule : {lignes:?}");
+        assert!(
+            refus[0].contains("PhaseAdvanced"),
+            "le motif doit être nommé, sinon la ligne ne sert à rien : {refus:?}"
+        );
+    }
+
+    /// Sans ce test, une ligne journalisée à tous les coups passerait le
+    /// précédent — et le journal cesserait de distinguer quoi que ce soit.
+    #[tokio::test]
+    async fn une_depublication_reussie_ne_journalise_pas_de_refus() {
+        let (capture, _garde) = capture_sous_le_filtre_de_production();
+
+        let (result, _) = run(Some(published_state()), true, false).await;
+
+        assert!(result.is_ok());
+        let lignes = capture.lignes();
+        assert!(
+            !lignes.iter().any(|l| l.contains("dépublication refusée")),
+            "un succès ne doit pas se journaliser comme un refus : {lignes:?}"
+        );
     }
 
     #[tokio::test]
