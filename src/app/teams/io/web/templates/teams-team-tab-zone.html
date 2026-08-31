@@ -7,7 +7,20 @@
    nouveau contenu — constaté à l'écran : l'effectif s'affichait sous un onglet
    « Trésorerie » actif.
 
-   L'administration de compétition résout la même chose par un `onclick` qui
+   **La route rend toujours la page entière, et c'est cette barre qui extrait ce
+   qu'elle veut** (`hx-select`, carte 484). L'inverse — un serveur qui rend un
+   fragment quand il voit `HX-Request` — a cassé le clic sur une équipe depuis
+   « Mes équipes » pendant deux jours : cet en-tête est vrai d'une navigation
+   htmx comme d'un échange d'onglet, et il ne les distingue donc pas. Le défaut
+   par défaut est désormais la page entière, ce qui fait marcher tout nouveau
+   point d'entrée sans qu'il ait à connaître la profondeur de la réponse.
+
+   **`outerHTML` et non `innerHTML`** : `hx-select` retient l'élément *avec* son
+   enveloppe, qu'un `innerHTML` imbriquerait dans lui-même — deux
+   `#team-tab-zone` dans le DOM, et le second échange ne trouverait plus sa
+   cible.
+
+   L'administration de compétition résout le soulignement par un `onclick` qui
    déplace la classe côté client. Ce n'est pas repris ici : il ment si l'on
    clique un onglet inerte, il dérive au retour arrière du navigateur, et il
    demande du JS là où la carte n'en veut pas.
@@ -18,17 +31,20 @@
   <a class="tab{% if active_tab == "squad" %} active{% endif %}"
      hx-get="{{ app_routes.teams.team_detail(space_id, team_id) }}"
      hx-target="#team-tab-zone"
-     hx-swap="innerHTML"
+     hx-select="#team-tab-zone"
+     hx-swap="outerHTML"
      hx-push-url="{{ app_routes.teams.team_detail(space_id, team_id) }}">Joueurs & Staff</a>
   <a class="tab{% if active_tab == "matches" %} active{% endif %}"
      hx-get="{{ app_routes.teams.team_matches(space_id, team_id) }}"
      hx-target="#team-tab-zone"
-     hx-swap="innerHTML"
+     hx-select="#team-tab-zone"
+     hx-swap="outerHTML"
      hx-push-url="{{ app_routes.teams.team_matches(space_id, team_id) }}">Matchs</a>
   <a class="tab{% if active_tab == "treasury" %} active{% endif %}"
      hx-get="{{ app_routes.teams.team_treasury(space_id, team_id) }}"
      hx-target="#team-tab-zone"
-     hx-swap="innerHTML"
+     hx-select="#team-tab-zone"
+     hx-swap="outerHTML"
      hx-push-url="{{ app_routes.teams.team_treasury(space_id, team_id) }}">Trésorerie</a>
 </div>
 

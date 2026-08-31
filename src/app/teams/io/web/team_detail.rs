@@ -9,7 +9,6 @@ use crate::app::teams::use_cases::roster_edit_access_service;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
-use axum::http::HeaderMap;
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use std::time::Duration;
@@ -417,9 +416,8 @@ pub async fn team_detail(
     Path((space_id, team_id)): Path<(String, String)>,
     auth_session: AuthSession,
     State(state): State<AppState>,
-    headers: HeaderMap,
 ) -> impl IntoResponse {
-    rendre_fiche(&space_id, &team_id, auth_session, &state, headers, "squad").await
+    rendre_fiche(&space_id, &team_id, auth_session, &state, "squad").await
 }
 
 /// L'onglet « Matchs » : les rencontres de la saison courante, à venir comprises.
@@ -427,17 +425,8 @@ pub async fn team_page_matches(
     Path((space_id, team_id)): Path<(String, String)>,
     auth_session: AuthSession,
     State(state): State<AppState>,
-    headers: HeaderMap,
 ) -> impl IntoResponse {
-    rendre_fiche(
-        &space_id,
-        &team_id,
-        auth_session,
-        &state,
-        headers,
-        "matches",
-    )
-    .await
+    rendre_fiche(&space_id, &team_id, auth_session, &state, "matches").await
 }
 
 /// L'onglet « Trésorerie » : le relevé du grand livre de l'équipe.
@@ -445,30 +434,28 @@ pub async fn team_page_treasury(
     Path((space_id, team_id)): Path<(String, String)>,
     auth_session: AuthSession,
     State(state): State<AppState>,
-    headers: HeaderMap,
 ) -> impl IntoResponse {
-    rendre_fiche(
-        &space_id,
-        &team_id,
-        auth_session,
-        &state,
-        headers,
-        "treasury",
-    )
-    .await
+    rendre_fiche(&space_id, &team_id, auth_session, &state, "treasury").await
 }
 
-/// La fiche, pour un onglet donné.
+/// La fiche, pour un onglet donné — **toujours la page entière** (carte 484).
 ///
-/// # Une seule route par onglet, deux usages
+/// # Pourquoi elle ne rend jamais de fragment
 ///
-/// Sous `HX-Request`, elle rend le **fragment** ; sans lui, la page entière avec
-/// l'onglet actif. C'est le patron d'`admin-page.html`, et il évite une seconde
-/// route qui doublerait la surface pour la même réponse.
+/// Elle en rendait un sous `HX-Request`, pour le clic d'onglet. Mais cet en-tête
+/// est vrai d'une **navigation** htmx comme d'un échange d'onglet, et il ne les
+/// distingue donc pas : cliquer une équipe depuis « Mes équipes » — un `hx-get`
+/// avec `hx-select="#app-content"` — recevait la zone d'onglets, qui ne porte
+/// pas cet identifiant. htmx n'échangeait rien, et la fiche n'apparaissait
+/// qu'au rafraîchissement. Deux jours en production, cinq points d'entrée.
 ///
-/// Conséquence à ne pas perdre de vue : **le fragment est le chemin de
-/// navigation**. Tout contrôle posé sur la page complète doit l'être ici aussi,
-/// sans quoi changer d'onglet contournerait ce que le chargement direct refuse.
+/// C'est donc la **barre d'onglets** qui extrait ce qu'elle veut, par
+/// `hx-select="#team-tab-zone"`. Le défaut par défaut redevient sûr : un nouveau
+/// point d'entrée fonctionne sans rien savoir de la profondeur de la réponse.
+///
+/// La page de compétition garde sa branche `HX-Request`, et c'est cohérent :
+/// son fragment est enraciné sur `#app-content`, que les appelants savent
+/// sélectionner. Le patron n'était pas fautif — la profondeur l'était.
 /// **L'aiguillage, calculé une fois.** Le `_` rend « Joueurs & Staff » plutôt
 /// que d'échouer : un `active_tab` inconnu vient d'une URL tapée à la main, et
 /// répondre 404 sur une page qui existe serait pire que d'afficher l'onglet par
@@ -497,7 +484,6 @@ async fn rendre_fiche(
     team_id: &str,
     auth_session: AuthSession,
     state: &AppState,
-    headers: HeaderMap,
     active_tab: &str,
 ) -> Response {
     let team = match find_team_with_retry(state.teams.team_repository.as_ref(), team_id).await {
@@ -552,12 +538,6 @@ async fn rendre_fiche(
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
-
-    // Sous `HX-Request`, la zone **seule** : c'est elle que le `hx-swap` injecte
-    // dans `#team-tab-zone`.
-    if headers.contains_key("hx-request") {
-        return Html(tab_zone).into_response();
-    }
 
     TeamDetailTemplate {
         app_routes: Default::default(),
@@ -863,6 +843,66 @@ mod tests {
             assert!(
                 fragment.contains(marqueur),
                 "« {marqueur} » manque au fragment"
+            );
+        }
+    }
+
+    /// **La zone extrait ce qu'elle veut, elle ne le réclame pas au serveur.**
+    ///
+    /// C'est l'invariant de la carte 484. La route rendait un fragment quand
+    /// elle voyait `HX-Request` — un en-tête vrai d'une **navigation** htmx
+    /// comme d'un échange d'onglet, donc incapable de les distinguer. Cliquer
+    /// une équipe depuis « Mes équipes », qui sélectionne `#app-content`,
+    /// recevait la zone d'onglets et n'échangeait rien : la fiche
+    /// n'apparaissait qu'au rafraîchissement.
+    ///
+    /// Le test porte sur les attributs du gabarit et non sur le handler : c'est
+    /// là que la décision vit désormais, et un `hx-select` retiré rendrait le
+    /// défaut sans rien casser d'autre.
+    #[test]
+    fn chaque_onglet_selectionne_la_zone_et_non_la_page() {
+        let z = zone("squad");
+
+        assert_eq!(
+            z.matches(r##"hx-select="#team-tab-zone""##).count(),
+            3,
+            "les trois onglets extraient la zone : {z}"
+        );
+        // La **paire** et non le total : le widget joueurs de l'onglet porte lui
+        // aussi un `outerHTML`, et le compter ferait passer ce test alors qu'un
+        // seul onglet l'aurait perdu.
+        //
+        // `outerHTML` parce que `hx-select` retient l'élément **avec** son
+        // enveloppe, qu'un `innerHTML` imbriquerait dans lui-même.
+        assert_eq!(
+            z.matches("hx-select=\"#team-tab-zone\"\n     hx-swap=\"outerHTML\"")
+                .count(),
+            3,
+            "l'enveloppe remplace la cible, elle ne s'y niche pas : {z}"
+        );
+        assert!(
+            !z.contains(r##"hx-select="#app-content""##),
+            "la zone n'a pas à connaître le conteneur de page : {z}"
+        );
+    }
+
+    /// La page porte bien le conteneur que les appelants sélectionnent.
+    ///
+    /// **Ce test ne garde pas le handler**, et il faut le dire : il construit le
+    /// gabarit directement, comme tous les tests de ce module. Remettre la
+    /// branche `HX-Request` dans `rendre_fiche` le laisse au vert — vérifié.
+    ///
+    /// Ce chemin-là n'est atteignable qu'au navigateur, et c'est
+    /// `test_cliquer_une_equipe_depuis_mes_equipes_l_affiche` qui le couvre.
+    /// C'est précisément parce qu'aucun test unitaire ne pouvait le voir que le
+    /// défaut a vécu deux jours sous une suite verte.
+    #[test]
+    fn la_page_porte_le_conteneur_que_les_appelants_selectionnent() {
+        for onglet in ["squad", "matches", "treasury"] {
+            let rendu = page(onglet);
+            assert!(
+                rendu.contains(r##"id="app-content""##),
+                "l'onglet « {onglet} » doit rendre une page sélectionnable : {rendu}"
             );
         }
     }

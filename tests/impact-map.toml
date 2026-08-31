@@ -291,6 +291,13 @@
 "test_niveau_apres_customisation" = ["players", "references", "match_report",
                                      "spp_calculator", "teams", "competitions",
                                      "ranking", "team_creation", "spaces"]
+# Entrer dans une fiche d'équipe par un clic (carte 484). `teams` la rend,
+# `team_creation` sert la page « Mes équipes » d'où part le clic, et `players`
+# porte le second point d'entrée — le lien de retour d'une fiche joueur. Ce sont
+# les trois BCs dont une modification peut casser à nouveau l'échange htmx.
+"test_ouvrir_une_fiche_equipe" = ["teams", "team_creation", "players",
+                                  "competitions", "references", "ranking",
+                                  "spp_calculator", "spaces"]
 # `players` y est vérifié, pas seulement traversé : le scénario 8 contrôle que
 # le joueur acheté dans `teams` existe bien dans `players`, maillot compris.
 # `match_report` est une dépendance dure et non une fixture de confort — publier
