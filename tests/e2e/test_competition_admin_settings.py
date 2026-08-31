@@ -223,3 +223,135 @@ def test_l_onglet_remplit_ses_cinq_panneaux(page: Page, onglet):
     # Un panneau qui aurait remplacé son conteneur au lieu de le remplir ferait
     # disparaître les autres : on vérifie que les cinq coexistent.
     expect(page.locator(".competition-admin-settings .settings-panel")).to_have_count(5)
+
+
+# ── 4. Aucun panneau ne fait régresser la saison ─────────────────────────────
+
+
+def _statut(season_id: str) -> str:
+    return query_db(f"SELECT status FROM competition_seasons WHERE id = '{season_id}'")[0]
+
+
+def _un(sql: str) -> str:
+    lignes = query_db(sql)
+    return lignes[0] if lignes else ""
+
+
+def _cas_ecrivant(season_id: str, competition_id: str) -> dict:
+    """Pour chaque panneau : un corps que **le domaine accepte**, et le témoin
+    qui prouve que l'écriture a bien eu lieu.
+
+    **Pourquoi pas `_corps_analysable`.** Son contrat est de passer les
+    extracteurs d'axum, pas le domaine — c'est ce qu'il fallait pour tester des
+    `403`. Réutilisé ici, il rendait le test creux sur deux panneaux : `tiers`
+    recevait `{"tiers": []}`, que le use case ignore, et `general` un
+    `logo_url` vide que le value object refuse avant même d'atteindre le use
+    case. Les deux répondaient `200` sans rien écrire, donc sans jamais toucher
+    au statut : le test était vert alors que le défaut était en place. Mesuré.
+
+    **Pourquoi des bascules et non des constantes.** Un témoin qui vaut déjà la
+    valeur attendue passe sans qu'aucune écriture ait eu lieu — au second
+    passage du test, ou sur une base déjà dans cet état. Chaque valeur est donc
+    calculée pour **différer de la courante**.
+    """
+    nom_compet = _un(f"SELECT name FROM competitions WHERE id = '{competition_id}'")
+    logo = _un(f"SELECT COALESCE(logo, '') FROM competitions WHERE id = '{competition_id}'")
+    lire = lambda col: _un(f"SELECT {col} FROM competition_seasons WHERE id = '{season_id}'")
+
+    # Le nom de la compétition est réémis tel quel : le use case ne contrôle
+    # l'unicité que si le nom change, et se heurterait sinon à elle-même.
+    saison = "Saison Témoin A" if lire("name") != "Saison Témoin A" else "Saison Témoin B"
+
+    regles = json.loads(lire("rules->'ranking_rules'"))
+    victoire = 3 if regles["win_points"] != 3 else 5
+    regles["win_points"] = victoire
+
+    poules = lire("structure->'ranking_group'->>'use_ranking_groups'") == "true"
+    corps_poules = [("use_pools", "false")] if poules else [
+        ("use_pools", "true"), ("pool_id", ""), ("pool_name", "Poule Témoin")
+    ]
+
+    # Les tiers n'ont pas de bascule symétrique : `name` et `budget` sont des
+    # champs figés que le domaine refuse de modifier, et seuls les coups de
+    # pouce sont ouverts. L'état de départ est donc posé en base — un `[]`
+    # posté sur des coups de pouce déjà vides ne prouverait rien.
+    tiers = json.loads(lire("rules->'tiers'"))
+    execute_db(
+        "UPDATE competition_seasons SET rules = jsonb_set(rules, "
+        f"'{{tiers,0,inducements}}', '[\"BABE\"]') WHERE id = '{season_id}'"
+    )
+    tiers[0]["inducements"] = []
+
+    ouverte = lire("invitations->>'access_mode'") == "open"
+    acces = "invitation" if ouverte else "open"
+
+    return {
+        "general": (
+            dict(data={"name": nom_compet, "season_name": saison, "logo_url": logo}),
+            f"SELECT name FROM competition_seasons WHERE id = '{season_id}'",
+            saison,
+        ),
+        "ranking": (
+            dict(json=regles),
+            f"SELECT rules->'ranking_rules'->>'win_points' FROM competition_seasons WHERE id = '{season_id}'",
+            str(victoire),
+        ),
+        "pools": (
+            dict(data=corps_poules),
+            f"SELECT structure->'ranking_group'->>'use_ranking_groups' FROM competition_seasons WHERE id = '{season_id}'",
+            "false" if poules else "true",
+        ),
+        "tiers": (
+            dict(json={"tiers": tiers}),
+            f"SELECT COALESCE(rules->'tiers'->0->>'inducements', 'absent') FROM competition_seasons WHERE id = '{season_id}'",
+            "[]",
+        ),
+        "visibility": (
+            dict(data={"access_mode": acces, "requires_validation": "manual"}),
+            f"SELECT invitations->>'access_mode' FROM competition_seasons WHERE id = '{season_id}'",
+            acces,
+        ),
+    }
+
+
+@pytest.mark.parametrize("panneau", PANNEAUX)
+def test_aucun_panneau_ne_fait_regresser_la_saison(onglet, panneau):
+    """**Le défaut de la carte 485, sur les cinq panneaux à la fois.**
+
+    Une saison monte une échelle : `draft` → `rules_selected` →
+    `structure_selected` → `invitations_configured` → `ready`. Les méthodes du
+    magicien *posent* le barreau qu'elles viennent de franchir. Appelées depuis
+    un panneau de réglages, elles font **redescendre** une saison en cours sous
+    `ready` — et la carte 407 interdit la création d'équipe sur une saison qui
+    ne l'est pas : modifier un réglage casse l'inscription de la compétition
+    entière. Rien ne le signale : l'enregistrement réussit, le panneau affiche
+    son succès, et le défaut ne se voit qu'à la carte de la compétition, qui
+    renvoie soudain vers une étape du magicien.
+
+    **Pourquoi ici et paramétré.** Structure l'a eu (carte 423), Visibilité l'a
+    eu (426), puis Général, Classement et Tiers l'ont eu ensemble (485). Chaque
+    correction avait posé son assertion dans le fichier de son panneau, et
+    aucune n'a empêché la suivante. C'est le fichier des choses transverses ;
+    la liste `PANNEAUX` fait qu'un sixième panneau hérite du garde-fou sans que
+    personne y pense. Le verrou statique correspondant est l'axe 16 de
+    `check-arch.sh`.
+    """
+    season_id = onglet["ctx"]["season_id"]
+    kwargs, sql_temoin, attendu = _cas_ecrivant(season_id, onglet["ctx"]["competition_id"])[panneau]
+    # Les cinq cas partagent la saison de la fixture : sans cette remise à zéro,
+    # le premier panneau fautif empoisonne les suivants, qui échouent sur la
+    # garde d'entrée. Le test accusait alors quatre panneaux pour trois défauts —
+    # dont deux innocents — et le rapport devenait illisible. Mesuré.
+    execute_db(f"UPDATE competition_seasons SET status = 'ready' WHERE id = '{season_id}'")
+
+    reponse = requests.post(f"{onglet['base']}/{panneau}", headers=HX, timeout=30, **kwargs)
+
+    assert reponse.status_code == 200, f"{panneau} : {reponse.status_code}"
+    assert _un(sql_temoin) == attendu, (
+        f"{panneau} : l'enregistrement n'a pas eu lieu — le test ne prouverait "
+        f"rien sur le statut"
+    )
+    assert _statut(season_id) == "ready", (
+        f"{panneau} : la saison a régressé en « {_statut(season_id)} » — "
+        f"plus aucune équipe ne peut s'inscrire"
+    )

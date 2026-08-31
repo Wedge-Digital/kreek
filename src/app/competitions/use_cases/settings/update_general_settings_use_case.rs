@@ -109,7 +109,7 @@ pub async fn execute(
         .await?
         .ok_or(UpdateGeneralSettingsError::SeasonNotFound)?;
     season_repo
-        .save_rules(&cmd.season_id, cmd.season_name.as_ref(), &regles)
+        .save_rules_keep_status(&cmd.season_id, cmd.season_name.as_ref(), &regles)
         .await?;
 
     Ok(())
@@ -259,7 +259,7 @@ mod tests {
         ) -> Result<Option<CompetitionRules>, SeasonRepositoryError> {
             Ok(self.regles.clone())
         }
-        async fn save_rules(
+        async fn save_rules_keep_status(
             &self,
             _: &SeasonId,
             name: &str,
@@ -267,6 +267,22 @@ mod tests {
         ) -> Result<(), SeasonRepositoryError> {
             *self.ecrit.lock().unwrap() = Some((name.to_string(), rules.clone()));
             Ok(())
+        }
+        /// **Le chemin interdit.** `save_rules` pose
+        /// `status = 'rules_selected'` et ferait régresser une saison en cours
+        /// sous `ready` (carte 485). Le faux refuse plutôt que d'enregistrer :
+        /// chaque test de ce use case devient ainsi un garde-fou, sans qu'aucun
+        /// n'ait à y penser.
+        async fn save_rules(
+            &self,
+            _: &SeasonId,
+            _: &str,
+            _: &CompetitionRules,
+        ) -> Result<(), SeasonRepositoryError> {
+            unreachable!(
+                "un panneau de réglages doit appeler save_rules_keep_status : \
+                 save_rules écrase le statut de la saison (carte 485)"
+            )
         }
         async fn find_structure(
             &self,
@@ -404,6 +420,31 @@ mod tests {
 
     /// **Sans cette relecture, un renommage viderait les administrateurs.**
     /// `update_base_info` les prend en argument, et le panneau ne les édite pas.
+    /// **Le chemin qui réécrit le statut n'est jamais emprunté** (carte 485).
+    ///
+    /// `save_rules` pose `status = 'rules_selected'`. L'emprunter ici ferait
+    /// régresser une saison en cours sous `ready` : la carte de la compétition
+    /// mènerait à l'étape 2 du magicien, et la création d'équipe serait
+    /// refusée. Le défaut serait invisible — l'enregistrement réussit.
+    ///
+    /// Le faux **refuse** cette méthode au lieu de la journaliser : chaque test
+    /// de ce use case garde donc l'invariant, sans qu'aucun n'ait à y penser.
+    /// Ce test-ci existe pour que l'intention porte un nom.
+    #[tokio::test]
+    async fn le_chemin_qui_reecrit_le_statut_n_est_jamais_emprunte() {
+        let admin = CoachId::new().to_string();
+        let (comp, saison) = depots("Ancien nom", vec![&admin]);
+
+        execute(commande("Nouveau nom"), &comp, &saison)
+            .await
+            .expect("le faux aurait paniqué sur save_rules");
+
+        assert!(
+            comp.ecrit.lock().unwrap().is_some(),
+            "l'écriture a bien eu lieu"
+        );
+    }
+
     #[tokio::test]
     async fn le_renommage_preserve_les_administrateurs() {
         let admin = CoachId::new().to_string();

@@ -65,7 +65,7 @@ pub async fn execute(
         .map_err(UpdateTiersSettingsError::Rejected)?;
 
     season_repo
-        .save_rules(&cmd.season_id, &nom, &nouvelles)
+        .save_rules_keep_status(&cmd.season_id, &nom, &nouvelles)
         .await?;
     Ok(())
 }
@@ -122,7 +122,7 @@ mod tests {
         ) -> Result<Option<CompetitionRules>, SeasonRepositoryError> {
             Ok(self.regles.clone())
         }
-        async fn save_rules(
+        async fn save_rules_keep_status(
             &self,
             _: &SeasonId,
             name: &str,
@@ -130,6 +130,22 @@ mod tests {
         ) -> Result<(), SeasonRepositoryError> {
             *self.ecrit.lock().unwrap() = Some((name.to_string(), rules.clone()));
             Ok(())
+        }
+        /// **Le chemin interdit.** `save_rules` pose
+        /// `status = 'rules_selected'` et ferait régresser une saison en cours
+        /// sous `ready` (carte 485). Le faux refuse plutôt que d'enregistrer :
+        /// chaque test de ce use case devient ainsi un garde-fou, sans qu'aucun
+        /// n'ait à y penser.
+        async fn save_rules(
+            &self,
+            _: &SeasonId,
+            _: &str,
+            _: &CompetitionRules,
+        ) -> Result<(), SeasonRepositoryError> {
+            unreachable!(
+                "un panneau de réglages doit appeler save_rules_keep_status : \
+                 save_rules écrase le statut de la saison (carte 485)"
+            )
         }
         async fn find_structure(
             &self,
@@ -264,6 +280,30 @@ mod tests {
     /// **Le barème est relu.** `save_rules` écrit `CompetitionRules` entier et ce
     /// panneau n'édite que les tiers : sans relecture, points, bonus et critères
     /// de départage disparaîtraient — silencieusement.
+    /// **Le chemin qui réécrit le statut n'est jamais emprunté** (carte 485).
+    ///
+    /// `save_rules` pose `status = 'rules_selected'`. L'emprunter ici ferait
+    /// régresser une saison en cours sous `ready` : la carte de la compétition
+    /// mènerait à l'étape 2 du magicien, et la création d'équipe serait
+    /// refusée. Le défaut serait invisible — l'enregistrement réussit.
+    ///
+    /// Le faux **refuse** cette méthode au lieu de la journaliser : chaque test
+    /// de ce use case garde donc l'invariant, sans qu'aucun n'ait à y penser.
+    /// Ce test-ci existe pour que l'intention porte un nom.
+    #[tokio::test]
+    async fn le_chemin_qui_reecrit_le_statut_n_est_jamais_emprunte() {
+        let depot = depot(vec![tier("Élite", &["BABE"], &[])]);
+
+        execute(commande(vec![tier("Élite", &["BABE"], &[])]), &depot)
+            .await
+            .expect("le faux aurait paniqué sur save_rules");
+
+        assert!(
+            depot.ecrit.lock().unwrap().is_some(),
+            "l'écriture a bien eu lieu"
+        );
+    }
+
     #[tokio::test]
     async fn changer_les_coups_de_pouce_preserve_le_bareme() {
         let depot = depot(vec![tier("Élite", &["BABE"], &[])]);

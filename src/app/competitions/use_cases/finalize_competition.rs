@@ -112,6 +112,14 @@ mod tests {
         ) -> Result<(), SeasonRepositoryError> {
             Ok(())
         }
+        async fn save_rules_keep_status(
+            &self,
+            _: &SeasonId,
+            _: &str,
+            _: &CompetitionRules,
+        ) -> Result<(), SeasonRepositoryError> {
+            Ok(())
+        }
         async fn find_structure(
             &self,
             _: &SeasonId,

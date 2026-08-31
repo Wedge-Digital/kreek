@@ -139,6 +139,33 @@ impl ISeasonRepository for SeasonRepository {
         Ok(())
     }
 
+    /// `update_rules_keep_status.sql` et non `update_rules.sql` : celui-ci pose
+    /// `status = 'rules_selected'`, ce qui ferait régresser une saison en cours
+    /// sous `ready` (carte 485).
+    async fn save_rules_keep_status(
+        &self,
+        season_id: &SeasonId,
+        name: &str,
+        rules: &CompetitionRules,
+    ) -> Result<(), SeasonRepositoryError> {
+        let json = serde_json::to_string(rules)
+            .map_err(|e| SeasonRepositoryError::Database(e.to_string()))?;
+
+        let found: Option<String> =
+            sqlx::query_scalar(include_str!("sql/seasons/update_rules_keep_status.sql"))
+                .bind(name)
+                .bind(json)
+                .bind(season_id.to_string())
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(db_err)?;
+
+        if found.is_none() {
+            return Err(SeasonRepositoryError::SeasonNotFound);
+        }
+        Ok(())
+    }
+
     async fn find_structure(
         &self,
         season_id: &SeasonId,

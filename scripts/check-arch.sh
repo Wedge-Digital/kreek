@@ -598,6 +598,48 @@ else
 fi
 echo ""
 
+# ── Axe 16 : les panneaux de réglages n'écrivent pas le statut ──────────────
+#
+# Une saison monte une échelle : draft → rules_selected → structure_selected →
+# invitations_configured → ready. Les méthodes du magicien **posent** le barreau
+# qu'elles viennent de franchir — c'est leur raison d'être. Appelées depuis un
+# panneau de réglages, elles font **redescendre** une saison en cours sous
+# `ready`, et la carte 407 interdit la création d'équipe sur une saison qui ne
+# l'est pas : modifier un réglage casse l'inscription de toute la compétition.
+#
+# Rien ne le signale. L'enregistrement réussit, le panneau affiche son succès,
+# et le défaut ne se voit qu'à la carte de la compétition — qui renvoie soudain
+# vers une étape du magicien — ou au premier coach qui tente de s'inscrire.
+#
+# Trois panneaux sur cinq ont vécu ce défaut (carte 485) : Général, Classement
+# et Tiers appelaient `save_rules`. Les deux autres avaient été corrigés un par
+# un — Structure à la carte 423, Visibilité à la 426 — chacun ayant posé son
+# `_keep_status` et son test. Cette correction ne s'est pas généralisée : le
+# troisième cas est arrivé quand même, six semaines plus tard.
+#
+# D'où cet axe plutôt qu'une assertion recopiée dans les tests de chaque
+# panneau : une assertion garde les panneaux d'aujourd'hui, un axe garde ceux de
+# demain. Et la liste des méthodes interdites est **déduite du SQL** au lieu
+# d'être écrite ici : une liste tenue à la main dérive, ce qui serait refaire à
+# l'échelle des méthodes l'erreur qu'on corrige à l'échelle des panneaux.
+#
+# Le motif vise les **appels** (`.save_rules(`) et non les déclarations
+# (`async fn save_rules(`) : les faux des tests doivent pouvoir implémenter la
+# méthode pour la refuser.
+echo -e "${BOLD}Axe 16 · Panneaux de réglages — aucune écriture du statut de saison${RESET}"
+axe16=$(
+  interdites=$(python3 scripts/arch/methodes_qui_ecrivent_le_statut.py) || {
+    echo "l'analyse des méthodes du dépôt a échoué — axe non vérifié"
+    exit 0
+  }
+  motif=$(printf '%s' "$interdites" | paste -sd'|' -)
+  grep -rnE "\.($motif)\s*\(" src/app/competitions/use_cases/settings/ 2>/dev/null \
+  | sed 's/$/  ← méthode du magicien : elle réécrit le statut de la saison/'
+)
+axe16="$(printf '%s' "$axe16" | sed '/^$/d')"
+if [ -n "$axe16" ]; then print_fail "$axe16"; else print_pass; fi
+echo ""
+
 if [ "$EXIT_CODE" -eq 0 ]; then
     echo -e "${GREEN}${BOLD}✓ Toutes les vérifications bloquantes passent${RESET}"
 else

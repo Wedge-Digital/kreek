@@ -81,7 +81,7 @@ pub async fn execute(
         tiers: courantes.tiers,
     };
     season_repo
-        .save_rules(&cmd.season_id, &nom, &nouvelles)
+        .save_rules_keep_status(&cmd.season_id, &nom, &nouvelles)
         .await?;
 
     let rapport = recompute
@@ -156,15 +156,31 @@ mod tests {
         ) -> Result<Option<CompetitionRules>, SeasonRepositoryError> {
             Ok(self.regles.clone())
         }
-        async fn save_rules(
+        async fn save_rules_keep_status(
             &self,
             _: &SeasonId,
             name: &str,
             rules: &CompetitionRules,
         ) -> Result<(), SeasonRepositoryError> {
-            self.journal.lock().unwrap().push("save_rules");
+            self.journal.lock().unwrap().push("save_rules_keep_status");
             *self.ecrit.lock().unwrap() = Some((name.to_string(), rules.clone()));
             Ok(())
+        }
+        /// **Le chemin interdit.** `save_rules` pose
+        /// `status = 'rules_selected'` et ferait régresser une saison en cours
+        /// sous `ready` (carte 485). Le faux refuse plutôt que d'enregistrer :
+        /// chaque test de ce use case devient ainsi un garde-fou, sans qu'aucun
+        /// n'ait à y penser.
+        async fn save_rules(
+            &self,
+            _: &SeasonId,
+            _: &str,
+            _: &CompetitionRules,
+        ) -> Result<(), SeasonRepositoryError> {
+            unreachable!(
+                "un panneau de réglages doit appeler save_rules_keep_status : \
+                 save_rules écrase le statut de la saison (carte 485)"
+            )
         }
         async fn find_structure(
             &self,
@@ -325,13 +341,42 @@ mod tests {
     /// propre port : lancé avant l'écriture, il rejouerait avec l'**ancien**
     /// barème et rendrait un rapport parfaitement crédible sur un travail
     /// inutile.
+    /// **Le chemin qui réécrit le statut n'est jamais emprunté** (carte 485).
+    ///
+    /// `save_rules` pose `status = 'rules_selected'`. L'emprunter ici ferait
+    /// régresser une saison en cours sous `ready` : la carte de la compétition
+    /// mènerait à l'étape 2 du magicien, et la création d'équipe serait
+    /// refusée. Le défaut serait invisible — l'enregistrement réussit.
+    ///
+    /// Le faux **refuse** cette méthode au lieu de la journaliser : chaque test
+    /// de ce use case garde donc l'invariant, sans qu'aucun n'ait à y penser.
+    /// Ce test-ci existe pour que l'intention porte un nom.
+    #[tokio::test]
+    async fn le_chemin_qui_reecrit_le_statut_n_est_jamais_emprunte() {
+        let (saison, rejeu, journal) = decor(false);
+
+        execute(commande(3), &saison, &rejeu)
+            .await
+            .expect("le faux aurait paniqué sur save_rules");
+
+        let appels = journal.lock().unwrap().clone();
+        assert!(
+            !appels.contains(&"save_rules"),
+            "le statut de la saison aurait été réécrit : {appels:?}"
+        );
+        assert!(appels.contains(&"save_rules_keep_status"), "{appels:?}");
+    }
+
     #[tokio::test]
     async fn le_bareme_est_enregistre_avant_d_etre_rejoue() {
         let (saison, rejeu, journal) = decor(false);
 
         let issue = execute(commande(3), &saison, &rejeu).await.expect("succès");
 
-        assert_eq!(*journal.lock().unwrap(), vec!["save_rules", "recompute"]);
+        assert_eq!(
+            *journal.lock().unwrap(),
+            vec!["save_rules_keep_status", "recompute"]
+        );
         assert_eq!(
             issue,
             RankingSettingsOutcome {
@@ -371,7 +416,10 @@ mod tests {
             matches!(issue, Err(UpdateRankingSettingsError::RecomputeFailed(_))),
             "attendu un échec de rejeu : {issue:?}"
         );
-        assert_eq!(*journal.lock().unwrap(), vec!["save_rules", "recompute"]);
+        assert_eq!(
+            *journal.lock().unwrap(),
+            vec!["save_rules_keep_status", "recompute"]
+        );
         let (_, ecrites) = saison.ecrit.lock().unwrap().clone().expect("écriture");
         assert_eq!(
             ecrites.ranking_rules.win_points.into_inner(),

@@ -75,6 +75,29 @@ pub trait ISeasonRepository: Send + Sync {
         name: &str,
         rules: &CompetitionRules,
     ) -> Result<(), SeasonRepositoryError>;
+
+    /// Écrit **le nom et les règles seuls**, sans toucher au statut.
+    ///
+    /// # Pourquoi elle existe à côté de `save_rules`
+    ///
+    /// `save_rules` pose `status = 'rules_selected'`, ce qui sert l'étape 2 du
+    /// magicien. Sur une saison en cours, ce serait la faire régresser sous
+    /// `ready` : la carte de la compétition mènerait à l'étape 2 du magicien au
+    /// lieu de la compétition, et la carte 407 interdirait la création
+    /// d'équipe. Un clic sur « Enregistrer » aurait mis la compétition hors
+    /// service, sans un mot (carte 485).
+    ///
+    /// C'est le troisième exemplaire du même couple, après
+    /// `save_structure_and_prune_groups` (carte 423) et `save_visibility`
+    /// (carte 426). **Les trois panneaux de réglages qui écrivent des règles
+    /// passent par ici**, et un axe de `check-arch` refuse qu'un use case de
+    /// `settings/` appelle la variante qui écrit le statut.
+    async fn save_rules_keep_status(
+        &self,
+        season_id: &SeasonId,
+        name: &str,
+        rules: &CompetitionRules,
+    ) -> Result<(), SeasonRepositoryError>;
     async fn find_structure(
         &self,
         season_id: &SeasonId,
