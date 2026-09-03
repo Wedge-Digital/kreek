@@ -326,8 +326,9 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
             references.repository.clone(),
         ),
     );
-    let teams_squad =
-        Arc::new(crate::infrastructure::teams::squad_adapter::SquadAdapter::new(pool.clone()));
+    let teams_squad = Arc::new(crate::infrastructure::teams::squad_adapter::SquadAdapter::new(
+        Arc::new(crate::app::players::io::repository::projection_repository::PgPlayerProjectionRepository::new(pool.clone())),
+    ));
     teams::context::init_listeners(
         &app_event_bus,
         &event_bus,

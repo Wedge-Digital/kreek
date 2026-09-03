@@ -1,14 +1,24 @@
+use crate::app::players::domain::player::TeamId;
+use crate::app::players::ports::{IPlayerProjectionRepository, PlayerProjection};
 use crate::app::teams::ports::{ISquadPort, SquadMemberDto};
 use async_trait::async_trait;
-use sqlx::PgPool;
+use std::sync::Arc;
 
+/// L'effectif vu par `teams`, obtenu du dépôt de projection de `players`.
+///
+/// Il tenait un `PgPool` et interrogeait `players_proj` lui-même. C'était le
+/// seul adapter du BC, sur vingt-neuf, à écrire du SQL sur la table d'un autre
+/// — et sa requête était un doublon strict de `find_by_team_id`, filtre
+/// d'appartenance compris. Deux lectures pour un même contrat, donc deux
+/// endroits à corriger à chaque évolution : la colonne `membership` avait déjà
+/// coûté sept chemins mis à jour à la main.
 pub struct SquadAdapter {
-    pool: PgPool,
+    players: Arc<dyn IPlayerProjectionRepository>,
 }
 
 impl SquadAdapter {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(players: Arc<dyn IPlayerProjectionRepository>) -> Self {
+        Self { players }
     }
 }
 
@@ -22,69 +32,54 @@ impl SquadAdapter {
 /// n'est plus de l'effectif, donc sa ligne n'existe pas. La conjonction
 /// l'aurait laissé occuper sa place dans les quotas de poste et le plafond de
 /// seize, et l'aurait affiché renvoyable une seconde fois.
+///
+/// Cette requête est désormais celle de `players` : c'est lui qui possède la
+/// colonne, et lui qui la filtre.
 fn is_available(participation_status: &str) -> bool {
     participation_status == "Available"
 }
 
-type LigneEffectif = (
-    String,
-    String,
-    Option<i16>,
-    String,
-    String,
-    i32,
-    i32,
-    String,
-);
+fn to_squad_member(p: PlayerProjection) -> SquadMemberDto {
+    SquadMemberDto {
+        player_id: p.player_id,
+        roster_line_id: p.roster_line_id,
+        // Un numéro hors bornes n'est pas un numéro : mieux vaut
+        // n'en afficher aucun que d'en inventer un.
+        jersey: p.jersey.filter(|j| (1..=99).contains(j)).map(|j| j as u8),
+        personal_name: p.personal_name,
+        position_name: p.position_name,
+        spp: p.spp.max(0) as u32,
+        value_kpo: p.value_kpo.max(0) as u32,
+        available_for_next_match: is_available(&p.participation_status),
+    }
+}
 
 #[async_trait]
 impl ISquadPort for SquadAdapter {
     async fn find_squad(&self, team_id: &str) -> Vec<SquadMemberDto> {
-        let rows: Vec<LigneEffectif> = sqlx::query_as(
-            "SELECT player_id, roster_line_id, jersey, personal_name, position_name,
-                    spp, value_kpo, participation_status
-             FROM players_proj
-             WHERE team_id = $1 AND membership = 'Active'
-             ORDER BY jersey NULLS LAST, player_id",
-        )
-        .bind(team_id)
-        .fetch_all(&self.pool)
-        .await
-        .unwrap_or_default();
-
-        rows.into_iter()
-            .map(
-                |(
-                    player_id,
-                    roster_line_id,
-                    jersey,
-                    personal_name,
-                    position_name,
-                    spp,
-                    value,
-                    statut,
-                )| {
-                    SquadMemberDto {
-                        player_id,
-                        roster_line_id,
-                        // Un numéro hors bornes n'est pas un numéro : mieux vaut
-                        // n'en afficher aucun que d'en inventer un.
-                        jersey: jersey.filter(|j| (1..=99).contains(j)).map(|j| j as u8),
-                        personal_name,
-                        position_name,
-                        spp: spp.max(0) as u32,
-                        value_kpo: value.max(0) as u32,
-                        available_for_next_match: is_available(&statut),
-                    }
-                },
-            )
-            .collect()
+        let joueurs = match self
+            .players
+            .find_by_team_id(&TeamId(team_id.to_string()))
+            .await
+        {
+            Ok(joueurs) => joueurs,
+            // Un effectif vide et un effectif illisible se ressemblent trop :
+            // le port ne rend pas de `Result`, donc sans cette ligne l'échec
+            // passerait pour une équipe sans joueurs — quotas grands ouverts.
+            Err(e) => {
+                tracing::error!("squad_adapter: find_by_team_id {team_id}: {e}");
+                return Vec::new();
+            }
+        };
+        joueurs.into_iter().map(to_squad_member).collect()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::players::io::repository::projection_repository::PgPlayerProjectionRepository;
+    use sqlx::PgPool;
 
     #[test]
     fn seul_available_rend_un_joueur_disponible() {
@@ -101,6 +96,13 @@ mod tests {
             .connect(&url)
             .await
             .ok()
+    }
+
+    /// L'adapter monté sur le vrai dépôt de `players`, comme en production.
+    /// Le doubler ici ne prouverait plus rien : ce qu'on éprouve désormais,
+    /// c'est justement que la lecture de l'autre BC rend ce qu'on attend.
+    fn adapter(pool: PgPool) -> SquadAdapter {
+        SquadAdapter::new(Arc::new(PgPlayerProjectionRepository::new(pool)))
     }
 
     async fn seed(pool: &PgPool, team_id: &str, player_id: &str, statut: &str) {
@@ -130,7 +132,7 @@ mod tests {
         let player_id = ulid::Ulid::new().to_string();
         seed(&pool, &team_id, &player_id, "Available").await;
 
-        let effectif = SquadAdapter::new(pool).find_squad(&team_id).await;
+        let effectif = adapter(pool).find_squad(&team_id).await;
 
         assert_eq!(effectif.len(), 1);
         let m = &effectif[0];
@@ -148,6 +150,9 @@ mod tests {
     /// d'un blessé. Sans cette exclusion il continuerait d'occuper sa place
     /// dans les quotas de poste, dans le plafond de seize, et dans la valeur
     /// d'équipe.
+    ///
+    /// Le filtre vit maintenant dans la requête de `players`. Ce test est donc
+    /// ce qui vérifie que la délégation n'a rien perdu en route.
     #[tokio::test]
     async fn un_renvoye_ne_fait_plus_partie_de_l_effectif() {
         let Some(pool) = test_pool().await else {
@@ -164,7 +169,7 @@ mod tests {
             .await
             .unwrap();
 
-        let effectif = SquadAdapter::new(pool).find_squad(&team_id).await;
+        let effectif = adapter(pool).find_squad(&team_id).await;
 
         assert_eq!(effectif.len(), 1, "un seul appartient encore à l'effectif");
         assert_ne!(effectif[0].player_id, renvoye);
@@ -189,7 +194,7 @@ mod tests {
         )
         .await;
 
-        let effectif = SquadAdapter::new(pool).find_squad(&team_id).await;
+        let effectif = adapter(pool).find_squad(&team_id).await;
 
         assert_eq!(effectif.len(), 2, "les deux sont dans l'effectif");
         assert_eq!(
