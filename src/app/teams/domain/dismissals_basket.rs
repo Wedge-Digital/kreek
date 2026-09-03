@@ -282,7 +282,7 @@ impl DismissalsBasket {
                 DismissalBasketLine::Player { player_id, .. } => self.squad.find(player_id),
                 DismissalBasketLine::Staff { .. } => None,
             })
-            .filter(|p| p.available_for_next_match)
+            .filter(|p| p.presence.alignable())
             .count()
     }
 
@@ -312,7 +312,7 @@ impl DismissalsBasket {
             .squad
             .find(player_id)
             .ok_or(DomainError::PlayerNotInSquad)?;
-        if !player.available_for_next_match {
+        if !player.presence.alignable() {
             return Ok(());
         }
         if self.eligible_after_basket() <= MIN_ELIGIBLE {
@@ -340,6 +340,7 @@ impl DismissalsBasket {
 mod tests {
     use super::*;
     use crate::app::teams::domain::basket::RosterLineId;
+    use crate::app::teams::domain::basket::SquadPresence;
 
     fn catalogue_vide() -> RosterCatalog {
         RosterCatalog {
@@ -361,6 +362,17 @@ mod tests {
     }
 
     fn joueur(n: u8, disponible: bool) -> Player {
+        joueur_present(
+            n,
+            if disponible {
+                SquadPresence::Alignable
+            } else {
+                SquadPresence::Empeche
+            },
+        )
+    }
+
+    fn joueur_present(n: u8, presence: SquadPresence) -> Player {
         Player {
             player_id: id_de(n),
             roster_line: RosterLineId("DEMO_GRANIT__PIETAILLE".into()),
@@ -369,7 +381,7 @@ mod tests {
             position_name: "Piétaille des Carrières".into(),
             spp: 0,
             value_kpo: Kpo(50),
-            available_for_next_match: disponible,
+            presence,
         }
     }
 
@@ -404,6 +416,35 @@ mod tests {
     }
 
     // ── Le plancher ───────────────────────────────────────────────────────
+
+    /// Le plancher des onze ne bouge pas d'un pouce : il compte les alignables,
+    /// et un mort ne l'a jamais été. Ce test existe pour que le passage à
+    /// `SquadPresence` ne le déplace pas par mégarde.
+    #[test]
+    fn un_mort_n_entame_pas_le_plancher_des_eligibles() {
+        let mut p = panier(11, 0);
+        p.squad
+            .members
+            .push(joueur_present(99, SquadPresence::Perdu));
+        assert_eq!(
+            p.mark_player(id_de(0)),
+            Err(DomainError::EligibleFloorReached),
+            "onze alignables plus un mort restent onze alignables"
+        );
+    }
+
+    /// Et il n'est plus proposé au renvoi : sa place est déjà libre, le
+    /// renvoyer ne rendrait rien.
+    #[test]
+    fn un_mort_ne_figure_pas_parmi_les_renvoyables() {
+        let mut p = panier(12, 0);
+        p.squad
+            .members
+            .push(joueur_present(99, SquadPresence::Perdu));
+        let renvoyables: Vec<_> = p.squad.occupants().map(|m| m.player_id.clone()).collect();
+        assert_eq!(renvoyables.len(), 12);
+        assert!(!renvoyables.contains(&id_de(99)));
+    }
 
     #[test]
     fn douze_eligibles_marquer_un_disponible_passe() {

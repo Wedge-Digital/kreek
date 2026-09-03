@@ -129,7 +129,7 @@ pub async fn build_player_rows(state: &AppState, team: &TeamId) -> Vec<PlayerRow
     let projections = state
         .players
         .projection_repository
-        .find_by_team_id(team)
+        .find_alive_by_team_id(team)
         .await
         .unwrap_or_default();
 

@@ -15,11 +15,18 @@ impl PgPlayerProjectionRepository {
     }
 }
 
-#[async_trait]
-impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
-    async fn find_by_team_id(
+impl PgPlayerProjectionRepository {
+    /// Les deux lectures d'effectif ne diffèrent que par un prédicat : mêmes
+    /// colonnes, même filtre d'appartenance, même ordre. Les écrire deux fois
+    /// aurait recréé exactement le doublon qu'on vient de retirer de
+    /// `SquadAdapter`.
+    ///
+    /// `$2` porte le prédicat plutôt que deux requêtes littérales : une colonne
+    /// ajoutée demain n'a qu'un endroit où être ajoutée.
+    async fn lire_effectif(
         &self,
         team_id: &TeamId,
+        sans_les_morts: bool,
     ) -> Result<Vec<PlayerProjection>, RepositoryError> {
         let rows = sqlx::query(
             "SELECT player_id, team_id, space_id, position_name, roster_line_id,
@@ -27,11 +34,13 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
                     participation_status, ma_delta, st_delta, ag_delta, pa_delta, av_delta
              FROM players_proj
              WHERE team_id = $1 AND membership = 'Active'
+               AND (NOT $2 OR participation_status <> 'Dead')
              -- L'ordre choisi par le coach prime ; un joueur jamais réordonné
              -- (`display_order` nul) retombe derrière, trié par maillot.
              ORDER BY display_order NULLS LAST, jersey NULLS LAST, player_id",
         )
         .bind(&team_id.0)
+        .bind(sans_les_morts)
         .fetch_all(&self.pool)
         .await
         .map_err(RepositoryError::Database)?;
@@ -66,6 +75,23 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
                 })
             })
             .collect()
+    }
+}
+
+#[async_trait]
+impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
+    async fn find_by_team_id(
+        &self,
+        team_id: &TeamId,
+    ) -> Result<Vec<PlayerProjection>, RepositoryError> {
+        self.lire_effectif(team_id, false).await
+    }
+
+    async fn find_alive_by_team_id(
+        &self,
+        team_id: &TeamId,
+    ) -> Result<Vec<PlayerProjection>, RepositoryError> {
+        self.lire_effectif(team_id, true).await
     }
 
     async fn find_space_id(&self, player_id: &str) -> Result<Option<String>, RepositoryError> {

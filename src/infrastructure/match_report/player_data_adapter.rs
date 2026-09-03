@@ -71,12 +71,15 @@ impl IPlayerDataPort for PlayerDataAdapter {
             .map_err(|e| e.to_string())
     }
 
+    /// Les postes **encore tenus**. Un mort n'en tient plus aucun : le compter
+    /// ferait croire l'effectif plus fourni qu'il ne l'est, au moment même où
+    /// le rapport de match décide des journaliers.
     async fn find_player_counts_by_position(&self, team_id: &str) -> Vec<PositionCountDto> {
         use crate::app::players::domain::player::TeamId;
         let tid = TeamId(team_id.to_string());
         let players = self
             .player_projection_repo
-            .find_by_team_id(&tid)
+            .find_alive_by_team_id(&tid)
             .await
             .unwrap_or_default();
         let mut counts: std::collections::HashMap<String, u8> = std::collections::HashMap::new();

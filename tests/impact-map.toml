@@ -227,6 +227,13 @@
 "test_player_availability_after_injury" = ["players", "match_report", "teams", "spp_calculator",
                                            "competitions", "references", "ranking",
                                            "team_creation", "spaces"]
+# Même pipeline que le test ci-dessus, mais sur la mort — terminale, là où la
+# blessure se relève. `teams` y est **vérifié** et pas seulement traversé : la
+# place rendue est une règle de son domaine (`Squad::size`, `count_at`), et
+# c'est son ACL qui traduit le statut de `players` en présence.
+"test_dead_player_leaves_the_squad" = ["players", "teams", "match_report", "spp_calculator",
+                                       "competitions", "references", "ranking",
+                                       "team_creation", "spaces"]
 
 # ── Équipes ──────────────────────────────────────────────────────────────────
 # `team_creation` et `teams` sont tous les deux vérifiés (pas seulement

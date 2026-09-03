@@ -27,7 +27,9 @@ pub async fn match_player_selector_widget(
     let players = match state
         .players
         .projection_repository
-        .find_by_team_id(&team_id)
+        // Un mort ne s'aligne pas : le proposer à la saisie d'un rapport
+        // laisserait enregistrer ses actions.
+        .find_alive_by_team_id(&team_id)
         .await
     {
         Ok(p) => p,

@@ -187,10 +187,12 @@ pub struct PlayerRowVm {
 
 impl PlayerRowVm {
     pub fn all_from_domain(basket: &DismissalsBasket) -> Vec<Self> {
+        // `occupants()` et non `members` : un joueur dont la place est déjà
+        // libre n'a plus rien à faire ici. Le renvoyer ne libérerait rien, et
+        // l'afficher laisserait croire qu'il faut le faire.
         basket
             .squad()
-            .members
-            .iter()
+            .occupants()
             .map(|p| Self::from_domain(p, basket))
             .collect()
     }
@@ -205,7 +207,7 @@ impl PlayerRowVm {
             position: player.position_name.clone(),
             spp: player.spp,
             value_kpo: player.value_kpo.0,
-            is_available: player.available_for_next_match,
+            is_available: player.presence.alignable(),
             is_marked: matches!(etat, DismissalActionState::Marked),
             action: action_vm(&etat, "Renvoyer", ligne),
         }
@@ -394,6 +396,7 @@ impl DismissalCartLineVm {
 mod tests {
     use super::*;
     use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+    use crate::app::teams::domain::basket::SquadPresence;
     use crate::app::teams::domain::basket::{
         BasketVersion, OwnedStaff, RosterCatalog, RosterLineId, Squad, StaffCatalogEntry,
     };
@@ -418,6 +421,17 @@ mod tests {
     }
 
     fn joueur(n: u8, disponible: bool) -> Player {
+        joueur_present(
+            n,
+            if disponible {
+                SquadPresence::Alignable
+            } else {
+                SquadPresence::Empeche
+            },
+        )
+    }
+
+    fn joueur_present(n: u8, presence: SquadPresence) -> Player {
         Player {
             player_id: id_de(n),
             roster_line: RosterLineId("DEMO_GRANIT__PIETAILLE".into()),
@@ -426,13 +440,26 @@ mod tests {
             position_name: "Piétaille".into(),
             spp: 3,
             value_kpo: Kpo(50),
-            available_for_next_match: disponible,
+            presence,
         }
     }
 
     fn panier(disponibles: u8, absents: u8, staff: OwnedStaff) -> DismissalsBasket {
+        panier_avec(disponibles, absents, staff, Vec::new())
+    }
+
+    /// Même panier, plus des membres dont on choisit la présence. Passe par
+    /// l'hydratation comme les autres : `squad` est privé, et c'est très bien —
+    /// un test qui force l'état interne n'éprouve pas le chemin réel.
+    fn panier_avec(
+        disponibles: u8,
+        absents: u8,
+        staff: OwnedStaff,
+        extras: Vec<Player>,
+    ) -> DismissalsBasket {
         let mut membres: Vec<Player> = (0..disponibles).map(|n| joueur(n, true)).collect();
         membres.extend((disponibles..disponibles + absents).map(|n| joueur(n, false)));
+        membres.extend(extras);
         DismissalsBasket::hydrate(
             "team".into(),
             BasketVersion(0),
@@ -441,6 +468,40 @@ mod tests {
             catalogue(),
             staff,
         )
+    }
+
+    /// La feuille des renvois ne propose que les occupants. Un mort n'y figure
+    /// plus : sa place est déjà libre, le renvoyer ne rendrait rien, et
+    /// l'afficher laisserait croire qu'il faut le faire.
+    #[test]
+    fn un_perdu_ne_figure_pas_dans_la_liste_des_renvois() {
+        let p = panier_avec(
+            3,
+            0,
+            OwnedStaff::default(),
+            vec![joueur_present(9, SquadPresence::Perdu)],
+        );
+
+        let lignes = PlayerRowVm::all_from_domain(&p);
+
+        assert_eq!(lignes.len(), 3, "le perdu n'est pas une ligne renvoyable");
+        assert!(!lignes.iter().any(|l| l.player_id == id_de(9).to_string()));
+    }
+
+    /// Le pendant : un absent reste proposé. Il occupe sa place, et le renvoyer
+    /// est justement le moyen de la libérer.
+    #[test]
+    fn un_empeche_figure_toujours_dans_la_liste_des_renvois() {
+        let p = panier(2, 1, OwnedStaff::default());
+
+        let lignes = PlayerRowVm::all_from_domain(&p);
+
+        assert_eq!(lignes.len(), 3);
+        assert_eq!(
+            lignes.iter().filter(|l| !l.is_available).count(),
+            1,
+            "l'absent est affiché, marqué comme tel"
+        );
     }
 
     #[test]

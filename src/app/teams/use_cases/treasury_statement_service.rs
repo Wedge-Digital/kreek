@@ -416,7 +416,7 @@ mod tests {
             position_name: m.position_name.clone(),
             spp: m.spp,
             value_kpo: m.value_kpo,
-            available_for_next_match: m.available_for_next_match,
+            presence: m.presence,
         }
     }
 

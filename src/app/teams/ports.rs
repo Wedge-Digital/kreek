@@ -1,4 +1,5 @@
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+use crate::app::teams::domain::basket::SquadPresence;
 use crate::app::teams::domain::team::{GamePhase, Team, TeamDomainEvent};
 use async_trait::async_trait;
 
@@ -6,10 +7,11 @@ use async_trait::async_trait;
 
 /// Un joueur de l'effectif, vu par `teams`.
 ///
-/// `available_for_next_match` est délibérément un booléen et non le statut de
-/// `players` : traduire le vocabulaire de l'autre BC est le rôle de l'adapter.
-/// Les règles qui s'en déduisent — « un indisponible vaut zéro et appelle un
-/// journalier » — sont, elles, des règles de `teams` et vivent dans son domaine.
+/// `presence` est délibérément le vocabulaire de `teams` et non le statut de
+/// `players` : traduire celui de l'autre BC est le rôle de l'adapter. Les
+/// règles qui s'en déduisent — « un indisponible vaut zéro et appelle un
+/// journalier », « un perdu ne garde pas sa place » — sont, elles, des règles
+/// de `teams` et vivent dans son domaine.
 pub struct SquadMemberDto {
     pub player_id: String,
     pub roster_line_id: String,
@@ -21,7 +23,7 @@ pub struct SquadMemberDto {
     pub position_name: String,
     pub spp: u32,
     pub value_kpo: u32,
-    pub available_for_next_match: bool,
+    pub presence: SquadPresence,
 }
 
 /// Les deux droits qu'un visiteur **ne tient pas de la propriété** de l'équipe.

@@ -5,6 +5,7 @@
 //! n'imitent que ce que les tests observent : la garde de version, le rejeu de
 //! l'event store, et la trace des appels.
 
+use crate::app::teams::domain::basket::SquadPresence;
 use crate::app::teams::domain::team::{GamePhase, Team, TeamDomainEvent};
 use crate::app::teams::ports::{
     CatalogPositionDto, CrossLimitDto, IPhaseBasketRepository, IRosterCatalogPort, ISquadPort,
@@ -256,7 +257,7 @@ impl ISquadPort for FakeSquadPort {
                 position_name: "Poste".into(),
                 spp: 0,
                 value_kpo: 50,
-                available_for_next_match: true,
+                presence: SquadPresence::Alignable,
             })
             .collect()
     }

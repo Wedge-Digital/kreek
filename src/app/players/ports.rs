@@ -75,6 +75,23 @@ pub trait IPlayerProjectionRepository: Send + Sync {
         team_id: &TeamId,
     ) -> Result<Vec<PlayerProjection>, RepositoryError>;
 
+    /// L'effectif **tel qu'on le montre** : les morts en sont retirés.
+    ///
+    /// Distincte de `find_by_team_id`, qui rend l'effectif entier et sert à
+    /// tout autre chose — deux listeners qui rejouent l'équipe joueur par
+    /// joueur, l'édition d'ordre et de maillots, l'ACL de `match_report`. Y
+    /// glisser le filtre les casserait : un mort doit continuer d'exister pour
+    /// l'histoire de son équipe, il ne doit simplement plus figurer là où on
+    /// choisit, aligne ou compte des joueurs.
+    ///
+    /// La mort est terminale (`Player::apply`, branche `InjurySustained` avec
+    /// `InjuryType::Mort`), contrairement à `MissingNextGame` que le listener
+    /// post-match relève. Un blessé, lui, reste dans cette liste : il revient.
+    async fn find_alive_by_team_id(
+        &self,
+        team_id: &TeamId,
+    ) -> Result<Vec<PlayerProjection>, RepositoryError>;
+
     async fn find_by_id(
         &self,
         player_id: &str,

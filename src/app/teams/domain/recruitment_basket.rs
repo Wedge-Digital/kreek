@@ -427,6 +427,7 @@ impl RecruitmentBasket {
 mod tests {
     use super::*;
     use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+    use crate::app::teams::domain::basket::SquadPresence;
     use crate::app::teams::domain::basket::{
         CatalogPosition, CrossLimit, Player, StaffCatalogEntry,
     };
@@ -518,7 +519,30 @@ mod tests {
                     position_name: String::new(),
                     spp: 0,
                     value_kpo: Kpo(0),
-                    available_for_next_match: true,
+                    presence: SquadPresence::Alignable,
+                });
+            }
+        }
+        Squad { members }
+    }
+
+    /// Même effectif, mais dont on choisit la présence de chaque membre.
+    /// Sert aux règles qui distinguent l'occupant du perdu — les autres tests
+    /// n'ont pas à connaître ce détail.
+    fn effectif_avec(lignes: &[(&str, SquadPresence, usize)]) -> Squad {
+        let mut members = Vec::new();
+        for (uid, presence, n) in lignes {
+            for _ in 0..*n {
+                let rang = members.len();
+                members.push(Player {
+                    player_id: identifiant(rang),
+                    roster_line: ligne(uid),
+                    jersey: Some(rang as u8 + 1),
+                    personal_name: String::new(),
+                    position_name: String::new(),
+                    spp: 0,
+                    value_kpo: Kpo(0),
+                    presence: *presence,
                 });
             }
         }
@@ -588,6 +612,78 @@ mod tests {
             Err(DomainError::PositionQuotaReached),
             "2 possédés + 2 en attente atteignent le quota de 4"
         );
+    }
+
+    // ── Présence : ce qu'un mort ne garde pas ─────────────────────────────
+
+    /// Le Colosse a un quota de 1. Mort, il ne l'occupe plus — sans quoi la
+    /// place resterait bloquée pour toujours, ce statut étant terminal.
+    #[test]
+    fn t03bis_un_mort_ne_bloque_pas_le_quota_de_son_poste() {
+        let mut p = panier(effectif_avec(&[(COLOSSE, SquadPresence::Perdu, 1)]), 10_000);
+        assert!(
+            p.add_player(ligne(COLOSSE)).is_ok(),
+            "le quota du Colosse est rendu par la mort de son titulaire"
+        );
+    }
+
+    /// La règle symétrique, et c'est elle qui interdit de filtrer sur
+    /// « alignable » : un blessé revient au match suivant (BR12), sa place lui
+    /// reste. La confondre avec le mort aurait fait recruter à sa place.
+    #[test]
+    fn t03ter_un_blesse_bloque_toujours_le_quota_de_son_poste() {
+        let mut p = panier(
+            effectif_avec(&[(COLOSSE, SquadPresence::Empeche, 1)]),
+            10_000,
+        );
+        assert_eq!(
+            p.add_player(ligne(COLOSSE)),
+            Err(DomainError::PositionQuotaReached)
+        );
+    }
+
+    #[test]
+    fn t01bis_un_mort_rend_sa_place_dans_le_plafond_de_seize() {
+        let mut p = panier(
+            effectif_avec(&[
+                (PIETAILLE, SquadPresence::Alignable, 15),
+                (PIETAILLE, SquadPresence::Perdu, 1),
+            ]),
+            10_000,
+        );
+        assert!(
+            p.add_player(ligne(PIETAILLE)).is_ok(),
+            "seize membres dont un mort n'en font que quinze au plafond"
+        );
+    }
+
+    #[test]
+    fn t01ter_un_blesse_occupe_toujours_sa_place_dans_le_plafond() {
+        let mut p = panier(
+            effectif_avec(&[
+                (PIETAILLE, SquadPresence::Alignable, 15),
+                (PIETAILLE, SquadPresence::Empeche, 1),
+            ]),
+            10_000,
+        );
+        assert_eq!(
+            p.add_player(ligne(PIETAILLE)),
+            Err(DomainError::MaxPlayersReached)
+        );
+    }
+
+    /// La limite croisée compte les occupants des deux postes, pas leurs
+    /// membres : un mort n'y pèse pas davantage qu'ailleurs.
+    #[test]
+    fn t05bis_un_mort_ne_pese_pas_dans_la_limite_croisee() {
+        let mut p = panier(
+            effectif_avec(&[
+                (PERCUTEUR, SquadPresence::Alignable, 1),
+                (COLOSSE, SquadPresence::Perdu, 1),
+            ]),
+            10_000,
+        );
+        assert!(p.add_player(ligne(PERCUTEUR)).is_ok());
     }
 
     // ── 5 & 6 : limites croisées, poste hors roster ───────────────────────

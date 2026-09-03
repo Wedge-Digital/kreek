@@ -542,6 +542,7 @@ fn explication_longue_ou_courte(cause: &DomainError) -> String {
 mod tests {
     use super::*;
     use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+    use crate::app::teams::domain::basket::SquadPresence;
     use crate::app::teams::domain::basket::{
         BasketLineId, BasketVersion, CatalogPosition, OwnedStaff, Player, RosterCatalog, Squad,
         StaffCatalogEntry,
@@ -606,7 +607,7 @@ mod tests {
                         position_name: String::new(),
                         spp: 0,
                         value_kpo: Kpo(0),
-                        available_for_next_match: true,
+                        presence: SquadPresence::Alignable,
                     })
                     .collect(),
             },

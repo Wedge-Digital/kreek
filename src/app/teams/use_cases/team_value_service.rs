@@ -45,7 +45,7 @@ async fn load_players(
             });
             ValuedPlayer {
                 value_kpo: Kpo(p.value_kpo),
-                available_for_next_match: p.available_for_next_match,
+                available_for_next_match: p.presence.alignable(),
                 is_lineman: poste.map(|x| x.is_journeyman).unwrap_or(false),
                 base_cost: Kpo(poste.map(|x| x.cost).unwrap_or(0)),
             }

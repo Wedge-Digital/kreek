@@ -501,6 +501,43 @@ async fn la_compensation_met_a_jour_spp_et_statut_dans_la_projection(pool: PgPoo
     );
 }
 
+/// Les deux lectures d'effectif ne disent pas la même chose, et c'est voulu :
+/// `find_by_team_id` rend l'équipe entière — deux listeners la rejouent joueur
+/// par joueur — quand `find_alive_by_team_id` rend celle qu'on montre, aligne
+/// et compte. Un mort figure dans la première, jamais dans la seconde.
+///
+/// Un blessé reste dans les deux : il revient au match suivant, et sa place
+/// dans les quotas ne se libère pas.
+#[sqlx::test]
+async fn find_alive_by_team_id_ecarte_les_morts_et_garde_les_blesses(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool);
+    let team_id = TeamId("t-morts".into());
+
+    let vivant = PlayerId("p-vivant".into());
+    seed_player(&repo, &vivant, &team_id).await;
+
+    let blesse = PlayerId("p-blesse".into());
+    let j = seed_player(&repo, &blesse, &team_id).await;
+    let injury = j.record_injury(sample_context(), InjuryType::BlessureSerieuse);
+    repo.append(&blesse, &team_id, &injury, 2).await.unwrap();
+
+    let mort = PlayerId("p-mort".into());
+    let m = seed_player(&repo, &mort, &team_id).await;
+    let deces = m.record_injury(sample_context(), InjuryType::Mort);
+    repo.append(&mort, &team_id, &deces, 2).await.unwrap();
+
+    let entier = proj.find_by_team_id(&team_id).await.unwrap();
+    let vivants = proj.find_alive_by_team_id(&team_id).await.unwrap();
+
+    assert_eq!(entier.len(), 3, "l'effectif entier compte les trois");
+    let ids: Vec<&str> = vivants.iter().map(|p| p.player_id.as_str()).collect();
+    assert_eq!(ids.len(), 2, "le mort est écarté");
+    assert!(ids.contains(&"p-vivant"));
+    assert!(ids.contains(&"p-blesse"), "un blessé n'est pas un mort");
+    assert!(!ids.contains(&"p-mort"));
+}
+
 /// Le comptage qui détermine le nombre de journaliers. Le confondre avec
 /// l'effectif total prive de renfort une équipe amoindrie : avec 13 joueurs
 /// dont 4 blessés, `11 - 13` donne zéro journalier alors qu'il en faut deux.

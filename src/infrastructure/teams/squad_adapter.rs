@@ -1,5 +1,6 @@
 use crate::app::players::domain::player::TeamId;
 use crate::app::players::ports::{IPlayerProjectionRepository, PlayerProjection};
+use crate::app::teams::domain::basket::SquadPresence;
 use crate::app::teams::ports::{ISquadPort, SquadMemberDto};
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -22,21 +23,33 @@ impl SquadAdapter {
     }
 }
 
-/// Seul `Available` rend un joueur alignable ; `MissingNextGame`, `Retired` et
-/// `Dead` ne le sont pas. C'est ici, et nulle part ailleurs, que le vocabulaire
-/// de `players` est traduit — `teams` ne connaît que le booléen.
+/// La seule traduction du vocabulaire de `players` vers celui de `teams`.
+///
+/// Trois indisponibilités, deux traitements opposés : un blessé et un retraité
+/// gardent leur place — l'un revient au match suivant (BR12), l'autre compte
+/// dans les quotas toute la saison (carte 39) — quand un mort ne garde rien.
+/// C'est pourquoi `teams` reçoit une présence et non un booléen : filtrer sur
+/// « alignable au prochain match » aurait libéré la place des trois.
+///
+/// **Le défaut est `Empeche`, pas `Alignable`.** Un statut inconnu — colonne
+/// non migrée, valeur écrite par une version future — doit priver l'équipe du
+/// joueur, jamais lui rendre une place à tort : un plafond trop généreux se
+/// solde par un effectif illégal que rien ne rattrape.
 ///
 /// La carte 259 attendait ici une conjonction avec « membre actif ». La carte
 /// 260 l'a résolue autrement, et mieux : l'appartenance filtre **la requête**,
 /// pas ce prédicat. Un renvoyé n'est pas un joueur indisponible de plus — il
 /// n'est plus de l'effectif, donc sa ligne n'existe pas. La conjonction
 /// l'aurait laissé occuper sa place dans les quotas de poste et le plafond de
-/// seize, et l'aurait affiché renvoyable une seconde fois.
-///
-/// Cette requête est désormais celle de `players` : c'est lui qui possède la
-/// colonne, et lui qui la filtre.
-fn is_available(participation_status: &str) -> bool {
-    participation_status == "Available"
+/// seize, et l'aurait affiché renvoyable une seconde fois. Cette requête est
+/// désormais celle de `players` : c'est lui qui possède la colonne, et lui qui
+/// la filtre.
+fn presence(participation_status: &str) -> SquadPresence {
+    match participation_status {
+        "Available" => SquadPresence::Alignable,
+        "Dead" => SquadPresence::Perdu,
+        _ => SquadPresence::Empeche,
+    }
 }
 
 fn to_squad_member(p: PlayerProjection) -> SquadMemberDto {
@@ -50,7 +63,7 @@ fn to_squad_member(p: PlayerProjection) -> SquadMemberDto {
         position_name: p.position_name,
         spp: p.spp.max(0) as u32,
         value_kpo: p.value_kpo.max(0) as u32,
-        available_for_next_match: is_available(&p.participation_status),
+        presence: presence(&p.participation_status),
     }
 }
 
@@ -82,11 +95,31 @@ mod tests {
     use sqlx::PgPool;
 
     #[test]
-    fn seul_available_rend_un_joueur_disponible() {
-        assert!(is_available("Available"));
+    fn seul_available_rend_un_joueur_alignable() {
+        assert!(presence("Available").alignable());
         for indisponible in ["MissingNextGame", "Retired", "Dead"] {
-            assert!(!is_available(indisponible), "{indisponible}");
+            assert!(!presence(indisponible).alignable(), "{indisponible}");
         }
+    }
+
+    /// Le partage qui compte : trois indisponibilités, deux traitements. Un
+    /// blessé et un retraité gardent leur place, un mort la rend.
+    #[test]
+    fn seul_le_mort_ne_garde_pas_sa_place() {
+        for occupant in ["Available", "MissingNextGame", "Retired"] {
+            assert!(presence(occupant).occupe_une_place(), "{occupant}");
+        }
+        assert!(!presence("Dead").occupe_une_place());
+    }
+
+    /// Un statut inconnu prive l'équipe du joueur plutôt que de lui rendre une
+    /// place. Le sens de la prudence n'est pas neutre : un plafond trop
+    /// généreux se solde par un effectif illégal que rien ne rattrape.
+    #[test]
+    fn un_statut_inconnu_occupe_sa_place_sans_etre_alignable() {
+        let inconnu = presence("StatutQueNulNeConnait");
+        assert!(inconnu.occupe_une_place());
+        assert!(!inconnu.alignable());
     }
 
     async fn test_pool() -> Option<PgPool> {
@@ -143,7 +176,7 @@ mod tests {
         assert_eq!(m.spp, 7);
         assert_eq!(m.value_kpo, 50);
         assert_eq!(m.jersey, Some(3));
-        assert!(m.available_for_next_match);
+        assert!(m.presence.alignable());
     }
 
     /// Un renvoyé, lui, n'y figure plus du tout — et c'est ce qui le distingue
@@ -198,10 +231,7 @@ mod tests {
 
         assert_eq!(effectif.len(), 2, "les deux sont dans l'effectif");
         assert_eq!(
-            effectif
-                .iter()
-                .filter(|m| m.available_for_next_match)
-                .count(),
+            effectif.iter().filter(|m| m.presence.alignable()).count(),
             1,
             "un seul est alignable"
         );

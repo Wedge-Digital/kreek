@@ -178,10 +178,10 @@ fn to_domain_catalog(dto: RosterCatalogDto) -> RosterCatalog {
     }
 }
 
-/// Tous les joueurs comptent pour les quotas, disponibles ou non : un blessé
-/// occupe toujours sa place dans l'effectif. `available_for_next_match` ne sert
-/// ni au recrutement ni au calcul de valeur d'équipe — c'est le plancher des
-/// renvois qui le lit.
+/// L'effectif est repris **tel quel**, présence comprise : c'est `Squad` qui
+/// distingue ensuite les occupants des perdus, et le domaine qui décide de ce
+/// que chacun vaut. Trancher ici priverait la valeur d'équipe du journalier
+/// qu'un absent appelle.
 ///
 /// L'effectif est rapporté **entier**. Un identifiant illisible fait échouer
 /// l'hydratation plutôt que de sauter le membre : un effectif amputé compterait
@@ -199,7 +199,7 @@ fn to_domain_squad(membres: Vec<SquadMemberDto>) -> Result<Squad, HydrationError
             position_name: m.position_name,
             spp: m.spp,
             value_kpo: Kpo(m.value_kpo),
-            available_for_next_match: m.available_for_next_match,
+            presence: m.presence,
         });
     }
     Ok(Squad { members })
