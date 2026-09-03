@@ -239,7 +239,6 @@ pub struct RejectedLine {
     pub cause: DomainError,
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -290,9 +289,11 @@ mod tests {
         let squad = effectif_mixte();
         let ids: Vec<String> = squad.occupants().map(|m| m.player_id.to_string()).collect();
         assert_eq!(ids.len(), 2);
-        assert!(!ids.contains(&joueur(2, PIETAILLE, SquadPresence::Perdu)
-            .player_id
-            .to_string()));
+        assert!(!ids.contains(
+            &joueur(2, PIETAILLE, SquadPresence::Perdu)
+                .player_id
+                .to_string()
+        ));
     }
 
     /// L'empêché garde sa place et c'est tout l'enjeu : filtrer sur
