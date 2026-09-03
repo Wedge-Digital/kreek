@@ -1,0 +1,920 @@
+<title>Règles mortes et boutons géants</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;700&family=Roboto:wght@400;500;700&family=Montserrat:wght@600&display=swap">
+
+<style>
+/* ─────────────────────────────────────────────────────────────────────────────
+   Palette : les tokens de kreek (assets/static/css/common.css), pas une
+   invention. Les spécimens doivent être fidèles au produit, donc ils sont
+   habillés avec les valeurs réelles.
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+  --k-white:      #FFFFFF;
+  --k-dark-0:     #1C1C29;
+  --k-dark-1:     #26263D;
+  --k-dark-2:     #555770;
+  --k-dark-3:     #8F90A6;
+  --k-dark-4:     #C7C9D9;
+  --k-dark-5:     #E5E6EF;
+  --k-dark-6:     #F0F2F4;
+  --k-main-blue:  #003049;
+  --k-red:        #E02020;
+  --k-green:      #629584;
+
+  /* Chrome de cette page — dérivé des mêmes neutres bleutés */
+  --ground:       #F0F2F4;
+  --surface:      #FFFFFF;
+  --surface-sunk: #E9ECF0;
+  --ink:          #1C1C29;
+  --ink-soft:     #555770;
+  --ink-faint:    #8F90A6;
+  --rule:         #DCE0E6;
+  --accent:       #003049;
+  --bad:          #B3181A;
+  --good:         #47705F;
+
+  --sp-1: 6px;  --sp-2: 12px; --sp-3: 20px;
+  --sp-4: 32px; --sp-5: 52px; --sp-6: 80px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:       #15151F;
+    --surface:      #1F1F2E;
+    --surface-sunk: #191924;
+    --ink:          #EDEEF2;
+    --ink-soft:     #A9ABBC;
+    --ink-faint:    #74768A;
+    --rule:         #2E2E42;
+    --accent:       #8FB8CE;
+    --bad:          #F1736F;
+    --good:         #8FC0AC;
+  }
+}
+:root[data-theme="dark"] {
+  --ground:       #15151F;
+  --surface:      #1F1F2E;
+  --surface-sunk: #191924;
+  --ink:          #EDEEF2;
+  --ink-soft:     #A9ABBC;
+  --ink-faint:    #74768A;
+  --rule:         #2E2E42;
+  --accent:       #8FB8CE;
+  --bad:          #F1736F;
+  --good:         #8FC0AC;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--sp-5) var(--sp-4) var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+
+/* ── En-tête ───────────────────────────────────────────────────────────────── */
+
+.masthead { display: flex; flex-direction: column; gap: var(--sp-3); }
+
+.eyebrow {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+h1 {
+  font-family: 'Roboto Slab', Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(30px, 4.4vw, 44px);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.lede {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 17px;
+  color: var(--ink-soft);
+}
+
+.lede b { color: var(--ink); font-weight: 500; }
+
+/* ── Sections ──────────────────────────────────────────────────────────────── */
+
+.case { display: flex; flex-direction: column; gap: var(--sp-3); }
+
+.case-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding-bottom: var(--sp-2);
+  border-bottom: 2px solid var(--ink);
+}
+
+.case-where {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+h2 {
+  font-family: 'Roboto Slab', Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(21px, 2.5vw, 27px);
+  line-height: 1.25;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.case-why { margin: 0; max-width: 68ch; color: var(--ink-soft); }
+.case-why code, .measure code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+  background: var(--surface-sunk);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* Mesures — ce qui distingue un constat d'une impression */
+.measure {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--ink-faint);
+  border-radius: 0 6px 6px 0;
+  font-size: 14px;
+}
+.measure div { display: flex; flex-direction: column; }
+.measure dt, .measure .m-key {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.measure .m-val { font-variant-numeric: tabular-nums; font-weight: 500; }
+
+/* ── Le diptyque avant / après ─────────────────────────────────────────────── */
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+}
+@media (max-width: 860px) { .pair { grid-template-columns: 1fr; } }
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.panel-tab {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: 9px var(--sp-3);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--k-white);
+}
+.panel--now  .panel-tab { background: var(--bad); }
+.panel--next .panel-tab { background: var(--good); }
+:root[data-theme="dark"] .panel-tab,
+:root:not([data-theme="light"]) .panel-tab { color: #12121A; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .panel-tab { color: var(--k-white); }
+}
+.panel-tab .tab-note {
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  opacity: 0.9;
+}
+
+/* Le plateau des spécimens garde le fond clair du produit : ce sont des
+   reproductions d'un écran clair, pas des éléments de cette page. */
+.stage {
+  flex: 1;
+  padding: var(--sp-3);
+  background: var(--k-dark-6);
+  overflow-x: auto;
+}
+
+.panel-say {
+  padding: var(--sp-2) var(--sp-3);
+  border-top: 1px solid var(--rule);
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+.panel-say b { color: var(--ink); font-weight: 500; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SPÉCIMENS — CSS repris de kreek, scopé sous .spec pour qu'aucune règle
+   d'ici ne fuie et qu'« avant » et « après » ne se contaminent pas.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.spec, .spec * { font-family: 'Roboto', sans-serif; }
+.spec { color: var(--k-dark-1); font-size: 16px; line-height: 1.5; }
+
+/* La carte de classement, décor commun aux deux colonnes du cas A */
+.spec-card {
+  background: var(--k-white);
+  border-radius: 10px;
+  padding: 14px 16px;
+  color: var(--k-dark-3);
+  font-size: 13px;
+  font-style: italic;
+  text-align: center;
+}
+
+/* — Cas A : le conteneur du bouton — */
+.spec-manage { margin-top: 12px; }
+
+/* AVANT : rien. Le lien tombe aux valeurs par défaut du navigateur,
+   exactement ce que mesure getComputedStyle : padding 0, aucune bordure,
+   fond transparent. */
+.spec--now .spec-manage-link {
+  color: var(--k-dark-1);
+  font-size: 16px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* APRÈS : les six règles de widgets/ranking-classement-widget.css,
+   telles qu'elles sont écrites aujourd'hui — elles ne trouvent simplement
+   aucun markup. */
+.spec--next .spec-manage { display: flex; justify-content: flex-end; }
+
+/* La barre d'en-tête du widget : le bouton passe en haut, à droite, au-dessus
+   de tous les groupes. Pas de titre ajouté — l'onglet « Classement » le porte
+   déjà, et le widget n'en a jamais eu. */
+.spec-wid-head {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.spec-group-title {
+  font-family: 'Roboto Slab', Georgia, serif;
+  font-weight: 500;
+  font-size: 17px;
+  color: var(--k-dark-1);
+  margin-bottom: 8px;
+}
+.spec--next .spec-manage-link {
+  font-size: 12px;
+  color: var(--k-main-blue);
+  cursor: pointer;
+  padding: 6px 12px;
+  border: 1px solid var(--k-dark-5);
+  border-radius: 8px;
+  background: var(--k-white);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.spec--next .spec-manage-link:hover { border-color: var(--k-main-blue); }
+
+/* — Cas B : le panneau de réglages — */
+.spec-panel { background: var(--k-white); border-radius: 10px; overflow: hidden; }
+.spec-panel-head {
+  padding: 12px 16px;
+  background: var(--k-dark-6);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--k-dark-1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.spec-panel-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.spec-row { display: flex; flex-direction: column; gap: 4px; }
+.spec-row-label { font-size: 12px; color: var(--k-dark-2); }
+.spec-input {
+  border: 1px solid var(--k-dark-4);
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 15px;
+  color: var(--k-dark-1);
+  background: var(--k-white);
+}
+.spec-foot { padding: 0 16px 16px; }
+
+/* AVANT : .btn + .btn-primary de common.css, mot pour mot. */
+.spec--now .spec-save {
+  font-family: 'Roboto', sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  padding: 24px 36px;      /* var(--p2) var(--p3) */
+  border: 2px solid transparent;
+  border-radius: 0;
+  cursor: pointer;
+  background: var(--k-dark-0);
+  color: var(--k-white);
+  width: 100%;             /* ← .btn-primary */
+}
+
+/* APRÈS : au contenu, en pied de panneau, à droite. */
+.spec--next .spec-foot { display: flex; justify-content: flex-end; }
+.spec--next .spec-save {
+  font-family: 'Roboto', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 10px 22px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--k-main-blue);
+  color: var(--k-white);
+  width: auto;
+}
+.spec--next .spec-save:hover { opacity: 0.9; }
+
+/* — Cas C : la rangée de champs — */
+.spec-form {
+  display: flex;
+  gap: 24px;
+  align-items: flex-end;   /* la règle réelle de .mp-form */
+  flex-wrap: wrap;
+  background: var(--k-white);
+  border-radius: 10px;
+  padding: 20px 16px;
+}
+.spec-field { display: flex; flex-direction: column; gap: 5px; }
+.spec-field--grow { flex: 1; min-width: 150px; }
+.spec-label {
+  min-height: 15px;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--k-dark-3);
+}
+.spec-mp-input {
+  border: 1px solid var(--k-dark-4);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 15px;
+  color: var(--k-dark-1);
+  background: var(--k-white);
+  height: 39px;
+}
+.spec-mp-input--pts { width: 70px; }
+.spec-hint { font-size: 11px; color: var(--k-dark-4); min-height: 14px; }
+
+/* Le faux kreek-select : 49 px avant, 39 px après */
+.spec-select {
+  border: 1px solid var(--k-dark-4);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 15px;
+  color: var(--k-dark-3);
+  background: var(--k-white);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.spec--now  .spec-select { height: 49px; }
+.spec--next .spec-select { height: 39px; }
+.spec-select .caret { color: var(--k-dark-3); font-size: 10px; }
+
+.spec-sign { display: flex; }
+.spec-sign button {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  height: 39px;
+  padding: 0 12px;
+  border: 1px solid var(--k-dark-4);
+  background: var(--k-white);
+  color: var(--k-dark-2);
+  cursor: pointer;
+}
+.spec-sign button:first-child { border-radius: 6px 0 0 6px; }
+.spec-sign button:last-child { border-radius: 0 6px 6px 0; border-left: none; }
+.spec-sign button.on { background: #E8F0EC; color: var(--k-green); border-color: var(--k-green); }
+
+.spec-attribuer {
+  font-family: 'Roboto', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  height: 39px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 6px;
+  background: var(--k-main-blue);
+  color: var(--k-white);
+  cursor: pointer;
+}
+
+/* `.spec-hint` porte déjà `min-height: 14px` plus haut : dans la colonne
+   « avant » un seul champ en contient un, dans « après » les quatre en ont un —
+   et c'est toute la différence. Aucune règle supplémentaire n'est nécessaire,
+   et en ajouter une ici ne ferait que brouiller la cascade. */
+
+/* Repère de ligne de base : rouge, il souligne le décrochage ; vert, il montre
+   que les cinq éléments finissent enfin au même endroit. */
+.baseline { position: relative; }
+.baseline::after {
+  content: "";
+  position: absolute;
+  left: 8px; right: 8px;
+  bottom: 39px;
+  border-top: 1px dashed var(--k-red);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.baseline--ok::after { border-top-color: var(--k-green); opacity: 0.75; }
+
+/* ── Le diff ───────────────────────────────────────────────────────────────── */
+
+.diff {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.diff-file {
+  padding: 8px var(--sp-3);
+  background: var(--surface-sunk);
+  border-bottom: 1px solid var(--rule);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+.diff pre {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.diff .del { color: var(--bad); }
+.diff .add { color: var(--good); }
+.diff .ctx { color: var(--ink-faint); }
+
+/* ── Question ouverte ──────────────────────────────────────────────────────── */
+
+.ask {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+}
+.ask h3 {
+  margin: 0;
+  font-family: 'Roboto Slab', Georgia, serif;
+  font-weight: 500;
+  font-size: 18px;
+}
+.ask p { margin: 0; color: var(--ink-soft); max-width: 68ch; }
+
+/* ── Pied ──────────────────────────────────────────────────────────────────── */
+
+footer {
+  border-top: 1px solid var(--rule);
+  padding-top: var(--sp-3);
+  font-size: 13.5px;
+  color: var(--ink-faint);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Maquette · avant validation · trois correctifs</div>
+    <h1>Règles mortes et boutons géants</h1>
+    <p class="lede">
+      Trois défauts d'affichage, constatés à l'écran et <b>mesurés dans le DOM</b> sur le
+      serveur de développement. Aucun n'est une affaire de goût : chacun a une cause
+      identifiée, et deux se corrigent avec du CSS qui existe déjà dans le dépôt.
+      Les blocs ci-dessous sont de vrais éléments habillés avec les tokens de
+      <code>common.css</code> — pas des images.
+    </p>
+  </header>
+
+  <!-- ══ CAS A ═══════════════════════════════════════════════════════════════ -->
+  <section class="case">
+    <div class="case-head">
+      <div class="case-where">Page de compétition · onglets Classement et Classement détaillé</div>
+      <h2>Le bouton « Gérer les points manuels » est un lien nu</h2>
+    </div>
+
+    <p class="case-why">
+      Son CSS existe : six règles dans <code>widgets/ranking-classement-widget.css</code>.
+      Elles sont scopées sous <code>.ranking-classement-widget</code>, et le bouton est
+      écrit <b>après la fermeture de cette racine</b> — ligne 74 ferme le widget, le
+      bouton commence ligne 82. Les règles ne trouvent donc aucun markup, et meurent
+      en silence. C'est le piège que le CLAUDE.md annonce à la règle 5 des widgets.
+    </p>
+
+    <div class="measure">
+      <div><span class="m-key">Dans la racine du widget</span><span class="m-val">false</span></div>
+      <div><span class="m-key">padding</span><span class="m-val">0px</span></div>
+      <div><span class="m-key">border</span><span class="m-val">none</span></div>
+      <div><span class="m-key">background</span><span class="m-val">transparent</span></div>
+      <div><span class="m-key">Widgets touchés</span><span class="m-val">2 sur 2</span></div>
+    </div>
+
+    <div class="pair">
+      <div class="panel panel--now">
+        <div class="panel-tab">Tel quel <span class="tab-note">mesuré</span></div>
+        <div class="stage">
+          <div class="spec spec--now">
+            <div class="spec-card">Aucun match n'a encore été joué.</div>
+            <div class="spec-manage">
+              <a class="spec-manage-link" href="#a">⚖️Gérer les points manuels</a>
+            </div>
+          </div>
+        </div>
+        <div class="panel-say">
+          Texte de corps à 16 px, aligné à gauche, hors de la carte. L'emoji touche
+          le mot suivant — <b>aucune règle ne s'applique</b>.
+        </div>
+      </div>
+
+      <div class="panel panel--next">
+        <div class="panel-tab">Proposition <span class="tab-note">en haut à droite, dans la racine</span></div>
+        <div class="stage">
+          <div class="spec spec--next">
+            <div class="spec-wid-head">
+              <a class="spec-manage-link" href="#a"><span>⚖️</span> Gérer les points manuels</a>
+            </div>
+            <div class="spec-group-title">Poule A</div>
+            <div class="spec-card">Aucun match n'a encore été joué.</div>
+          </div>
+        </div>
+        <div class="panel-say">
+          Rien d'inventé pour l'habillage : 12 px, bleu <code>--main-blue</code>,
+          bordure <code>--dark-5</code>, rayon 8 px. <b>Ce sont les six règles déjà
+          écrites</b> — il suffit que le bouton entre dans la racine du widget.
+        </div>
+      </div>
+    </div>
+
+    <div class="ask">
+      <h3>Il n'y a pas de « titre du classement » auquel accrocher le bouton</h3>
+      <p>
+        Le widget n'en a jamais porté : ses seuls titres sont ceux des poules
+        (<code>ranking-group-title</code>), et ils sont <b>optionnels</b> — une
+        compétition sans poule n'en affiche aucun. Le bouton passe donc dans une
+        barre d'en-tête propre au widget, au-dessus de <b>tous</b> les groupes, sans
+        titre ajouté : l'onglet « Classement » le porte déjà, et un second serait
+        redondant.
+      </p>
+      <p>
+        C'est aussi le bon niveau : les points manuels s'attribuent <b>par saison</b>,
+        pas par poule. Accrocher le bouton à côté de « Poule A » suggérerait qu'il ne
+        concerne que celle-là.
+      </p>
+    </div>
+
+    <div class="diff">
+      <div class="diff-file">src/app/ranking/io/web/templates/widgets/classement-widget.html</div>
+<pre><span class="ctx">  &lt;div class="ranking-classement-widget" hx-disinherit="*"&gt;</span>
+<span class="add">+   {% if vm.can_manage %}
++   &lt;div class="ranking-classement-widget-manage"&gt;
++     &lt;a class="ranking-classement-widget-manage-link" …&gt;⚖️ Gérer les points manuels&lt;/a&gt;
++   &lt;/div&gt;
++   {% endif %}</span>
+<span class="ctx">  {% if vm.rules_missing %}
+      …
+  {% endfor %}
+  {% endif %}
+  &lt;/div&gt;</span>
+<span class="del">- {% if vm.can_manage %}                      ← était ici, hors de la racine
+- &lt;div class="ranking-classement-widget-manage"&gt;
+-   &lt;a class="ranking-classement-widget-manage-link" …&gt;⚖️ Gérer les points manuels&lt;/a&gt;
+- &lt;/div&gt;
+- {% endif %}</span></pre>
+      <div class="diff-file" style="border-top: 1px solid var(--rule); border-bottom: none;">ranking-classement-widget.css — le seul changement de feuille</div>
+<pre><span class="ctx">  .ranking-classement-widget .ranking-classement-widget-manage {
+    display: flex; justify-content: flex-end;</span>
+<span class="del">-   margin-top: var(--p1);</span>
+<span class="add">+   margin-bottom: var(--p1);   /* le bouton est passé au-dessus du tableau */</span>
+<span class="ctx">  }</span></pre>
+    </div>
+  </section>
+
+  <!-- ══ CAS B ═══════════════════════════════════════════════════════════════ -->
+  <section class="case">
+    <div class="case-head">
+      <div class="case-where">Administration · onglet Paramètres · les cinq panneaux</div>
+      <h2>Les boutons « Enregistrer » font 71 pixels de haut</h2>
+    </div>
+
+    <p class="case-why">
+      Ils portent <code>.btn .btn-primary</code>. <code>.btn</code> pose
+      <code>padding: var(--p2) var(--p3)</code>, soit <b>24 px sur 36 px</b> ;
+      <code>.btn-primary</code> ajoute <code>width: 100%</code>. Les cinq boutons
+      s'étirent donc à la largeur de leur conteneur, et quatre d'entre eux vivent
+      dans l'<b>en-tête</b> du panneau plutôt qu'en pied de formulaire.
+    </p>
+
+    <div class="measure">
+      <div><span class="m-key">Hauteur</span><span class="m-val">71 px × 5</span></div>
+      <div><span class="m-key">Largeurs</span><span class="m-val">833 → 1012 px</span></div>
+      <div><span class="m-key">Panneau</span><span class="m-val">1060 px</span></div>
+      <div><span class="m-key">Dans l'en-tête</span><span class="m-val">4 sur 5</span></div>
+    </div>
+
+    <div class="pair">
+      <div class="panel panel--now">
+        <div class="panel-tab">Tel quel <span class="tab-note">mesuré</span></div>
+        <div class="stage">
+          <div class="spec spec--now">
+            <div class="spec-panel">
+              <div class="spec-panel-head">📝 Informations générales</div>
+              <div class="spec-panel-body">
+                <div class="spec-row">
+                  <span class="spec-row-label">Nom de la compétition</span>
+                  <input class="spec-input" value="Ligue du Chaos" readonly>
+                </div>
+              </div>
+              <div class="spec-foot">
+                <button class="spec-save" type="button">Enregistrer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel-say">
+          Le bouton pèse plus lourd que le champ qu'il valide, et sa largeur change
+          d'un panneau à l'autre selon ce qu'il y a à côté.
+        </div>
+      </div>
+
+      <div class="panel panel--next">
+        <div class="panel-tab">Proposition <span class="tab-note">largeur au contenu, en pied</span></div>
+        <div class="stage">
+          <div class="spec spec--next">
+            <div class="spec-panel">
+              <div class="spec-panel-head">📝 Informations générales</div>
+              <div class="spec-panel-body">
+                <div class="spec-row">
+                  <span class="spec-row-label">Nom de la compétition</span>
+                  <input class="spec-input" value="Ligue du Chaos" readonly>
+                </div>
+              </div>
+              <div class="spec-foot">
+                <button class="spec-save" type="button">Enregistrer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel-say">
+          10 px sur 22 px, rayon 8 px, <code>width: auto</code>, en pied de panneau
+          et à droite — la place où l'on cherche un bouton de validation.
+          <b>Identique dans les cinq panneaux.</b>
+        </div>
+      </div>
+    </div>
+
+    <div class="diff">
+      <div class="diff-file">assets/static/css/pages/… la feuille des panneaux, pas common.css</div>
+<pre><span class="add">+ .settings-panel .btn-primary {</span>
+<span class="add">+   width: auto;</span>
+<span class="add">+   padding: 10px 22px;</span>
+<span class="add">+   border-radius: 8px;</span>
+<span class="add">+   background: var(--main-blue);</span>
+<span class="add">+ }</span>
+<span class="add">+ .settings-panel-foot { display: flex; justify-content: flex-end; }</span></pre>
+    </div>
+
+    <div class="ask">
+      <h3>Pourquoi ne pas corriger <code>.btn-primary</code> directement</h3>
+      <p>
+        Cette classe vit dans <code>common.css</code> et sert <b>37 templates</b>,
+        dont les cinq pages d'authentification — où <code>width: 100%</code> est
+        exactement ce qu'on veut d'un bouton de connexion. Y toucher déplacerait le
+        défaut ailleurs. La correction doit rester locale aux panneaux de réglages.
+      </p>
+    </div>
+  </section>
+
+  <!-- ══ CAS C ═══════════════════════════════════════════════════════════════ -->
+  <section class="case">
+    <div class="case-head">
+      <div class="case-where">Page « Points de classement manuels » · rangée d'attribution</div>
+      <h2>Un champ sur quatre flotte 19 pixels trop haut</h2>
+    </div>
+
+    <p class="case-why">
+      <code>.mp-form</code> aligne ses champs par <code>align-items: flex-end</code> —
+      donc par le bas de chaque <b>conteneur</b>, pas de chaque champ. Or le conteneur
+      du motif est seul à contenir une ligne d'aide, qui mesure 14 px plus 5 px de
+      gouttière : <b>les 19 px constatés, exactement</b>. Et le
+      <code>kreek-select</code> impose 49 px là où les <code>input</code> font 39 px.
+    </p>
+
+    <div class="measure">
+      <div><span class="m-key">Équipe (kreek-select)</span><span class="m-val">49 px</span></div>
+      <div><span class="m-key">Points, Motif</span><span class="m-val">39 px</span></div>
+      <div><span class="m-key">Bas des champs</span><span class="m-val">395 px · sauf Motif : 376</span></div>
+      <div><span class="m-key">Écart</span><span class="m-val">19 px</span></div>
+    </div>
+
+    <div class="pair">
+      <div class="panel panel--now">
+        <div class="panel-tab">Tel quel <span class="tab-note">ligne rouge = bas commun</span></div>
+        <div class="stage">
+          <div class="spec spec--now baseline">
+            <div class="spec-form">
+              <div class="spec-field spec-field--grow">
+                <span class="spec-label">Équipe</span>
+                <div class="spec-select"><span>Choisir une équipe…</span><span class="caret">▾</span></div>
+              </div>
+              <div class="spec-field">
+                <span class="spec-label">Sens</span>
+                <div class="spec-sign">
+                  <button type="button" class="on">+ Bonus</button>
+                  <button type="button">− Pénalité</button>
+                </div>
+              </div>
+              <div class="spec-field">
+                <span class="spec-label">Points</span>
+                <input class="spec-mp-input spec-mp-input--pts" value="3" readonly>
+              </div>
+              <div class="spec-field spec-field--grow spec-field--motif">
+                <span class="spec-label">Motif</span>
+                <input class="spec-mp-input" value="Forfait au 3ᵉ tour" readonly>
+                <span class="spec-hint">Facultatif, mais il s'affiche dans le relevé.</span>
+              </div>
+              <button class="spec-attribuer" type="button">Attribuer</button>
+            </div>
+          </div>
+        </div>
+        <div class="panel-say">
+          Quatre hauteurs, trois lignes de base. Le champ le plus large de la rangée
+          est celui qui décroche.
+        </div>
+      </div>
+
+      <div class="panel panel--next">
+        <div class="panel-tab">Proposition <span class="tab-note">ligne verte = les cinq alignés</span></div>
+        <div class="stage">
+          <div class="spec spec--next baseline baseline--ok">
+            <div class="spec-form">
+              <div class="spec-field spec-field--grow">
+                <span class="spec-label">Équipe</span>
+                <div class="spec-select"><span>Choisir une équipe…</span><span class="caret">▾</span></div>
+                <span class="spec-hint"></span>
+              </div>
+              <div class="spec-field">
+                <span class="spec-label">Sens</span>
+                <div class="spec-sign">
+                  <button type="button" class="on">+ Bonus</button>
+                  <button type="button">− Pénalité</button>
+                </div>
+                <span class="spec-hint"></span>
+              </div>
+              <div class="spec-field">
+                <span class="spec-label">Points</span>
+                <input class="spec-mp-input spec-mp-input--pts" value="3" readonly>
+                <span class="spec-hint"></span>
+              </div>
+              <div class="spec-field spec-field--grow">
+                <span class="spec-label">Motif</span>
+                <input class="spec-mp-input" value="Forfait au 3ᵉ tour" readonly>
+                <span class="spec-hint">Facultatif, mais il s'affiche dans le relevé.</span>
+              </div>
+              <div class="spec-field">
+                <button class="spec-attribuer" type="button">Attribuer</button>
+                <span class="spec-hint"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel-say">
+          La place de l'aide est réservée dans <b>chaque</b> champ — le
+          <code>min-height: 14px</code> de <code>.mp-hint</code> est déjà là pour ça,
+          il ne servait qu'à un champ sur quatre. Le select passe à 39 px, et
+          <b>« Attribuer » entre dans un champ à son tour</b> : sans ça, lui seul
+          n'aurait pas d'aide à réserver et descendrait de 19 px sous la rangée.
+        </div>
+      </div>
+    </div>
+
+    <div class="diff">
+      <div class="diff-file">manual-points/form.html — une place d'aide dans chacun des quatre autres</div>
+<pre><span class="ctx">  &lt;div class="mp-field"&gt;
+    &lt;label class="mp-label" for="mp-points"&gt;Points&lt;/label&gt;
+    &lt;input id="mp-points" class="mp-input mp-input--pts" …&gt;</span>
+<span class="add">+   &lt;div class="mp-hint"&gt;&lt;/div&gt;   ← réserve les 14 px que .mp-hint garantit déjà</span>
+<span class="ctx">  &lt;/div&gt;</span>
+
+<span class="del">- &lt;button type="submit" class="mp-btn mp-btn--primary"&gt;Attribuer&lt;/button&gt;</span>
+<span class="add">+ &lt;div class="mp-field"&gt;              ← sinon lui seul n'a rien à réserver,
++   &lt;button type="submit" class="mp-btn mp-btn--primary"&gt;Attribuer&lt;/button&gt;
++   &lt;div class="mp-hint"&gt;&lt;/div&gt;        et il descend de 19 px sous la rangée
++ &lt;/div&gt;</span></pre>
+      <div class="diff-file" style="border-top: 1px solid var(--rule); border-bottom: none;">ranking-manual-points.css</div>
+<pre><span class="add">+ .ranking-manual-points kreek-select { height: 39px; }</span></pre>
+    </div>
+
+    <div class="ask">
+      <h3>Trois <code>&lt;div&gt;</code> vides plutôt qu'une astuce de sélecteur</h3>
+      <p>
+        Un <code>::after</code> sur <code>.mp-field</code> réserverait 14 px partout —
+        <b>y compris sous le motif</b>, qui porte déjà son aide, et qui décrocherait
+        alors dans l'autre sens. Un <code>:not(:has(.mp-hint))</code> le ferait
+        proprement, au prix d'un sélecteur que le prochain lecteur devra décoder.
+        Le <code>min-height: 14px</code> de <code>.mp-hint</code> existe déjà et
+        n'attend qu'un élément à habiller : trois lignes de gabarit sont plus lisibles
+        qu'une condition dans la feuille.
+      </p>
+    </div>
+  </section>
+
+  <!-- ══ EN MARGE ════════════════════════════════════════════════════════════ -->
+  <section class="case">
+    <div class="case-head">
+      <div class="case-where">En marge · deux points qui ne sont pas du style</div>
+      <h2>L'emplacement du bouton, et qui a le droit de s'en servir</h2>
+    </div>
+
+    <p class="case-why">
+      <b>Pourquoi il était en bas.</b> Le template s'en explique : au-dessus des
+      onglets, le bouton s'afficherait aussi sur Calendrier, Équipes et Statistiques,
+      où il n'a rien à faire — et ce commentaire mérite d'être conservé, parce qu'il
+      empêche exactement la mauvaise « factorisation ». Mais il exclut « au-dessus des
+      onglets », pas « en haut du widget ». Le bouton passe donc en tête de la racine,
+      à droite : il reste dans les deux onglets de classement, et nulle part ailleurs.
+    </p>
+
+    <p class="case-why">
+      <b>Les droits sont bons.</b> Vérifié en direct sur le serveur, pas seulement lu
+      dans le code : un membre simple reçoit <code>403</code> sur l'attribution comme
+      sur la suppression, un administrateur <code>200</code> et <code>204</code>. Le
+      formulaire ne lui est même pas servi — il reçoit
+      « Lecture seule — seuls les commissaires attribuent des points ». La règle est
+      <code>is_competition_admin || is_space_admin</code> : administrateur de ligue
+      <b>ou</b> d'espace. Les lectures sont ouvertes exprès, et le code le motive —
+      les points manuels s'affichent déjà dans le classement.
+    </p>
+  </section>
+
+  <footer>
+    <div>
+      Mesures relevées le 3 septembre 2026 sur le serveur de développement, via
+      <code>getBoundingClientRect</code> et <code>getComputedStyle</code>.
+      Les spécimens reprennent les tokens de <code>assets/static/css/common.css</code>.
+    </div>
+    <div>
+      Rien n'est encore modifié dans le dépôt : cette page est une proposition à valider.
+    </div>
+  </footer>
+
+</div>

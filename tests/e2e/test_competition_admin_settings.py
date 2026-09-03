@@ -355,3 +355,53 @@ def test_aucun_panneau_ne_fait_regresser_la_saison(onglet, panneau):
         f"{panneau} : la saison a régressé en « {_statut(season_id)} » — "
         f"plus aucune équipe ne peut s'inscrire"
     )
+
+
+# ── 5. Les boutons d'enregistrement (carte 487) ──────────────────────────────
+
+
+def test_les_boutons_d_enregistrement_ne_remplissent_pas_leur_panneau(page: Page, onglet):
+    """**Cinq boutons de 71 px de haut, larges de 833 à 1012 px.**
+
+    Ils portaient `.btn .btn-primary` de `common.css` : `padding: var(--p2)
+    var(--p3)` en fait 24 px sur 36, et `.btn-primary` ajoute `width: 100%`. Le
+    bouton pesait plus lourd que le champ qu'il valide, et sa largeur changeait
+    d'un panneau à l'autre selon ce qu'il y avait à côté.
+
+    Quatre des cinq vivaient en plus dans l'en-tête du panneau ; seul « Général »
+    était en pied. Ils y sont désormais tous.
+
+    L'assertion est **relative au panneau**, pas une valeur en dur : un bouton
+    dont la largeur suit son libellé est correct, un bouton qui remplit son
+    conteneur ne l'est pas.
+    """
+    page.set_viewport_size({"width": 1440, "height": 900})
+    page.goto(onglet["base"], wait_until="load")
+    expect(page.locator("#settings-general-panel")).to_be_visible(timeout=10000)
+    for panneau in PANNEAUX[1:]:
+        expect(page.locator(f"#settings-{panneau}-panel")).to_be_visible(timeout=10000)
+
+    mesures = page.evaluate(
+        """() => [...document.querySelectorAll('.settings-panel')].map(p => {
+             const b = p.querySelector('.btn-primary');
+             if (!b) return {panneau: p.id, absent: true};
+             const r = b.getBoundingClientRect(), pr = p.getBoundingClientRect();
+             return {panneau: p.id, largeur: Math.round(r.width),
+                     hauteur: Math.round(r.height),
+                     panneauLargeur: Math.round(pr.width),
+                     enPied: !!b.closest('.settings-panel-foot'),
+                     margeDroite: Math.round(pr.right - r.right)};
+           })"""
+    )
+
+    assert len(mesures) == len(PANNEAUX), f"{len(mesures)} panneaux rendus : {mesures}"
+    for m in mesures:
+        assert not m.get("absent"), f"{m['panneau']} : aucun bouton d'enregistrement"
+        assert m["enPied"], f"{m['panneau']} : le bouton n'est pas en pied de panneau"
+        assert m["hauteur"] < 56, f"{m['panneau']} : bouton de {m['hauteur']} px de haut"
+        assert m["largeur"] < m["panneauLargeur"] / 2, (
+            f"{m['panneau']} : le bouton occupe {m['largeur']} px "
+            f"sur {m['panneauLargeur']} — il remplit son panneau"
+        )
+    marges = {m["margeDroite"] for m in mesures}
+    assert len(marges) == 1, f"les cinq boutons ne s'alignent pas à droite : {marges}"

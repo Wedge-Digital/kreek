@@ -319,3 +319,94 @@ def test_un_non_admin_voit_la_page_sans_les_actions(saison_jouee):
         timeout=20,
     )
     assert ecriture.status_code == 403, f"écriture : {ecriture.status_code}"
+
+
+# ── Le CSS rencontre-t-il son markup ? (carte 487) ────────────────────────────
+
+
+@pytest.mark.parametrize("onglet", ("classement", "detaille"))
+def test_le_bouton_de_gestion_est_habille(page: Page, saison_jouee, onglet):
+    """**Six règles écrites, aucun markup pour les recevoir.**
+
+    Le bloc du bouton vivait sous le `</div>` de fermeture du widget, alors que
+    les règles de la feuille sont scopées sous la racine. Mesuré avant
+    correction : `padding: 0px`, `border: none`, fond transparent — un lien de
+    corps de texte, dans les deux onglets de classement.
+
+    L'assertion porte sur le **style calculé**, pas sur la présence du bloc : un
+    test qui vérifie que le bouton existe passait déjà quand il était nu.
+    """
+    ctx = saison_jouee
+    url = _onglet_classement(ctx) if onglet == "classement" else _onglet_detaille(ctx)
+    page.goto(url, wait_until="load")
+
+    lien = page.locator("[class$='-manage-link']").first
+    expect(lien).to_be_visible(timeout=10000)
+
+    style = lien.evaluate(
+        """e => { const c = getComputedStyle(e); return {
+             pad: c.paddingTop, bord: c.borderTopWidth, rayon: c.borderTopLeftRadius,
+             fond: c.backgroundColor, dansLaRacine: !!e.closest("[class^='ranking-']") };
+           }"""
+    )
+    assert style["dansLaRacine"], f"{onglet} : le bouton est hors de la racine du widget"
+    assert style["pad"] != "0px", f"{onglet} : aucun padding — les règles ne s'appliquent pas"
+    assert style["bord"] != "0px", f"{onglet} : aucune bordure"
+    assert style["rayon"] != "0px", f"{onglet} : aucun rayon"
+    assert "0, 0, 0, 0" not in style["fond"], f"{onglet} : fond transparent"
+
+
+@pytest.mark.parametrize("onglet", ("classement", "detaille"))
+def test_le_bouton_de_gestion_precede_le_classement(page: Page, saison_jouee, onglet):
+    """Il est en tête du widget, à droite — décision prise sur maquette.
+
+    Pas accroché à un titre : les seuls titres du widget sont ceux des poules,
+    et ils sont optionnels. Les points manuels s'attribuent par saison, pas par
+    poule.
+    """
+    ctx = saison_jouee
+    url = _onglet_classement(ctx) if onglet == "classement" else _onglet_detaille(ctx)
+    page.goto(url, wait_until="load")
+
+    lien = page.locator("[class$='-manage-link']").first
+    expect(lien).to_be_visible(timeout=10000)
+    boite = lien.bounding_box()
+    tableau = page.locator(".standings-table, .sd-scroll, .tab-empty-state").first
+    expect(tableau).to_be_visible(timeout=10000)
+    tb = tableau.bounding_box()
+
+    assert boite["y"] < tb["y"], f"{onglet} : le bouton devrait précéder le tableau"
+    racine = page.locator("[class^='ranking-'][hx-disinherit]").first.bounding_box()
+    ecart = racine["x"] + racine["width"] - (boite["x"] + boite["width"])
+    assert ecart < 4, f"{onglet} : le bouton n'est pas collé à droite ({ecart:.0f} px)"
+
+
+def test_la_rangee_d_attribution_partage_une_ligne_de_base(page: Page, saison_jouee):
+    """**Quatre champs, un bouton, un seul bas.**
+
+    `.mp-form` aligne par `align-items: flex-end`, donc par le bas du
+    *conteneur* et non du champ. Le motif était seul à porter une ligne d'aide —
+    14 px, plus 5 px de gouttière : les 19 px de décrochage mesurés.
+
+    Le bouton compte autant que les champs : sans place d'aide à réserver, lui
+    seul serait descendu sous la rangée, l'inverse exact du défaut corrigé.
+    """
+    # Une fenêtre large : `.mp-form` porte `flex-wrap: wrap`, et sous ~1100 px le
+    # bouton passe à la ligne — mesuré à 82 px plus bas, ce qui n'est pas un
+    # désalignement mais un enroulement voulu. Sous 768 px la rangée devient même
+    # une colonne, par media query.
+    page.set_viewport_size({"width": 1440, "height": 900})
+    page.goto(_page_gestion(saison_jouee), wait_until="load")
+    expect(page.locator("kreek-select")).to_be_visible(timeout=10000)
+
+    bas = page.evaluate(
+        """() => {
+             const b = s => { const e = document.querySelector(s);
+                              return e ? Math.round(e.getBoundingClientRect().bottom) : null; };
+             return { equipe: b('kreek-select'), sens: b('.mp-sign'),
+                      points: b('input[name=points]'), motif: b('input[name=reason]'),
+                      bouton: b('.mp-btn--primary') };
+           }"""
+    )
+    assert None not in bas.values(), f"un élément de la rangée est absent : {bas}"
+    assert len(set(bas.values())) == 1, f"la rangée n'a pas une seule ligne de base : {bas}"

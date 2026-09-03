@@ -16,7 +16,6 @@
     <div class="settings-panel-title">
       <span class="settings-panel-title-icon">🎲</span>Poules
     </div>
-    <button type="submit" form="pools-form" class="btn btn-primary">Enregistrer</button>
   </div>
   <form class="settings-panel-body" id="pools-form"
         hx-post="{{ post_url }}"
@@ -76,6 +75,14 @@
       </span>
     </div>
   </form>
+  {# Le bouton est passé de l'en-tête au pied (carte 487) : il mesurait
+     71 px de haut sur toute la largeur du panneau, `.btn-primary` posant
+     `width: 100%`. Il est désormais compact, et à la place où l'on cherche
+     une validation — comme celui du panneau Général, seul des cinq à l'avoir
+     toujours été. #}
+  <div class="settings-panel-foot">
+    <button type="submit" form="pools-form" class="btn btn-primary">Enregistrer</button>
+  </div>
 </div>
 <script>
 (function () {

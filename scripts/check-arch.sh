@@ -639,6 +639,28 @@ axe16=$(
 axe16="$(printf '%s' "$axe16" | sed '/^$/d')"
 if [ -n "$axe16" ]; then print_fail "$axe16"; else print_pass; fi
 echo ""
+# ── Axe 17 : du CSS qui ne rencontrera jamais son markup ────────────────────
+#
+# Deux constats que `check-css-collisions.sh` ne peut pas faire : il vérifie que
+# les règles **portent** leur scope, jamais qu'elles **trouvent** quelque chose.
+#
+#   A · une classe stylée sous une racine, qui vit hors de cette racine ;
+#   B · deux attributs `class` sur un même élément — le second est perdu.
+#
+# Le bouton « Gérer les points manuels » avait six règles écrites et un bloc posé
+# sous le `</div>` de fermeture du widget : un lien nu, mesuré à `padding: 0`,
+# sans bordure ni fond, dans les deux onglets de classement (carte 487).
+#
+# Le contrôle est **statique** : il lit les gabarits, jamais le DOM. La variante
+# au navigateur — « cette règle trouve-t-elle du markup quelque part ? » — a été
+# prototypée et mesurée : 2 442 sélecteurs sur 3 588 ne rencontrent rien sur les
+# 42 pages du harnais, soit 68 %. Le harnais ne visite pas assez d'états pour que
+# ce chiffre veuille dire quoi que ce soit, et un verrou à ce bruit ne serait
+# jamais lu. Le détail est en tête de `scripts/arch/css_sans_markup.py`.
+echo -e "${BOLD}Axe 17 · CSS sans markup — aucune règle hors de sa racine${RESET}"
+if axe17=$(python3 scripts/arch/css_sans_markup.py 2>&1); then print_pass; else print_fail "$axe17"; fi
+echo ""
+
 
 if [ "$EXIT_CODE" -eq 0 ]; then
     echo -e "${GREEN}${BOLD}✓ Toutes les vérifications bloquantes passent${RESET}"

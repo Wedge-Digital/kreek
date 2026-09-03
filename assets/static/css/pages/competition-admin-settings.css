@@ -363,3 +363,30 @@
     min-width: 100%;
   }
 }
+
+/* ── Le bouton d'enregistrement (carte 487) ──────────────────────────────────
+   Il portait `.btn .btn-primary` de `common.css` et rien d'autre : `padding:
+   var(--p2) var(--p3)` en fait 24 px sur 36 px, `width: 100%` l'étire sur tout
+   le panneau. Mesuré sur les cinq : 71 px de haut, de 833 à 1012 px de large
+   dans un panneau de 1060.
+
+   La correction est **ici et non dans `common.css`** : `.btn-primary` sert
+   37 gabarits, dont les cinq pages d'authentification où la pleine largeur est
+   exactement ce qu'on veut d'un bouton de connexion. Le défaut est dans
+   l'emploi, pas dans la classe. */
+.competition-admin-settings .settings-panel-foot,
+.competition-admin-settings.settings-panel-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 var(--p2) var(--p2);
+}
+.competition-admin-settings .settings-panel-foot .btn-primary,
+.competition-admin-settings.settings-panel-foot .btn-primary {
+  width: auto;
+  padding: 10px 22px;
+  border-radius: 8px;
+  background: var(--main-blue);
+  font-weight: 700;
+}
+.competition-admin-settings .settings-panel-foot .btn-primary:hover:not(:disabled),
+.competition-admin-settings.settings-panel-foot .btn-primary:hover:not(:disabled) { opacity: 0.9; }

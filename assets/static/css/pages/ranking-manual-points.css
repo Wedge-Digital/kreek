@@ -219,3 +219,7 @@
   /* « Attribué par » se replie sous le motif ; la colonne disparaît. */
   .ranking-manual-points .mp-table th:nth-child(4), .ranking-manual-points .mp-table td:nth-child(4) { display: none; }
 }
+
+/* Le `kreek-select` imposait 49 px là où les `input` de la rangée en font 39
+   (carte 487) — il dépassait donc ses voisins d'une dizaine de pixels. */
+.ranking-manual-points kreek-select { height: 39px; }

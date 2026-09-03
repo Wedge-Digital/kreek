@@ -1,4 +1,29 @@
 <div class="ranking-detailed-standings-widget" hx-disinherit="*">
+{# ── Le bouton est dupliqué dans les deux onglets de classement, exprès ──────
+   La page de compétition compte six onglets, et au-dessus d'eux ce bouton
+   s'afficherait sur Calendrier, Équipes et Statistiques, où il n'a rien à
+   faire. La duplication est donc **le choix correct** : ne la « factorisez »
+   pas au-dessus des onglets.
+
+   ── En tête de la racine, et non après elle (carte 487) ─────────────────────
+   Le bloc vivait sous le `</div>` de fermeture. Les six règles de la feuille,
+   scopées sous la racine, ne rencontraient donc aucun markup : le bouton était
+   un lien nu, mesuré à `padding: 0`, sans bordure ni fond.
+
+   Il n'y a pas de « titre du classement » auquel l'accrocher — les seuls titres
+   sont ceux des poules, et ils sont optionnels. Le bouton est donc en tête du
+   widget, au-dessus de **tous** les groupes : les points manuels s'attribuent
+   par saison, pas par poule. #}
+{% if vm.can_manage %}
+<div class="ranking-detailed-standings-widget-manage">
+  <a class="ranking-detailed-standings-widget-manage-link"
+     hx-get="{{ vm.manual_points_url }}"
+     hx-target="#app-content"
+     hx-select="#app-content"
+     hx-swap="outerHTML"
+     hx-push-url="true">⚖️ Gérer les points manuels</a>
+</div>
+{% endif %}
 {% if vm.rules_missing %}
     <div class="table-error-zone">
         <p class="table-error">Impossible d'afficher le classement détaillé : les règles de classement ne sont pas configurées pour cette saison.</p>
@@ -94,19 +119,3 @@
     {% endfor %}
 {% endif %}
 </div>
-
-{# ── Le bouton est dupliqué dans les deux onglets de classement, exprès ──────
-   La page de compétition compte six onglets, et au-dessus d'eux ce bouton
-   s'afficherait sur Calendrier, Équipes et Statistiques, où il n'a rien à
-   faire. La duplication est donc **le choix correct** : ne la « factorisez »
-   pas au-dessus des onglets. #}
-{% if vm.can_manage %}
-<div class="ranking-detailed-standings-widget-manage">
-  <a class="ranking-detailed-standings-widget-manage-link"
-     hx-get="{{ vm.manual_points_url }}"
-     hx-target="#app-content"
-     hx-select="#app-content"
-     hx-swap="outerHTML"
-     hx-push-url="true">⚖️ Gérer les points manuels</a>
-</div>
-{% endif %}

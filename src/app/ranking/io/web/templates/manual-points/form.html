@@ -41,6 +41,10 @@
                          jamais s'afficher, et le commissaire la re-choisissait a chaque
                          attribution. C'est precisement ce que ce report evite. #}
                       {% if let Some(t) = vm.selected_team_id %}selected-value="{{ t }}"{% endif %}></kreek-select>
+        {# Place réservée pour une ligne d'aide (carte 487) : `.mp-form` aligne
+           par le bas du **conteneur**, et le seul champ qui en portait une
+           décrochait toute la rangée de 19 px. #}
+        <div class="mp-hint"></div>
       </div>
 
       <div class="mp-field">
@@ -59,12 +63,20 @@
                   :aria-pressed="direction === 'penalty'">− Pénalité</button>
         </div>
         <input type="hidden" name="direction" :value="direction">
+        {# Place réservée pour une ligne d'aide (carte 487) : `.mp-form` aligne
+           par le bas du **conteneur**, et le seul champ qui en portait une
+           décrochait toute la rangée de 19 px. #}
+        <div class="mp-hint"></div>
       </div>
 
       <div class="mp-field">
         <label class="mp-label" for="mp-points">Points</label>
         <input id="mp-points" class="mp-input mp-input--pts" type="number" name="points"
                min="1" max="100" step="1" required x-model="points" placeholder="3">
+        {# Place réservée pour une ligne d'aide (carte 487) : `.mp-form` aligne
+           par le bas du **conteneur**, et le seul champ qui en portait une
+           décrochait toute la rangée de 19 px. #}
+        <div class="mp-hint"></div>
       </div>
 
       <div class="mp-field mp-field--grow">
@@ -74,7 +86,13 @@
         <div class="mp-hint">Facultatif, mais il s'affiche dans le relevé.</div>
       </div>
 
-      <button type="submit" class="mp-btn mp-btn--primary">Attribuer</button>
+      {# Le bouton entre dans un `.mp-field` lui aussi : sans place d'aide à
+         réserver, lui seul descendrait de 19 px sous la rangée — l'inverse
+         exact du défaut qu'on corrige. #}
+      <div class="mp-field">
+        <button type="submit" class="mp-btn mp-btn--primary">Attribuer</button>
+        <div class="mp-hint"></div>
+      </div>
     </form>
 
     {% if let Some(err) = vm.error %}

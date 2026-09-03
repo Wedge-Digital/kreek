@@ -92,7 +92,7 @@
 .ranking-classement-widget.standings-manual-link:hover { border-bottom-style: solid; }
 
 .ranking-classement-widget .ranking-classement-widget-manage,
-.ranking-classement-widget.ranking-classement-widget-manage { display: flex; justify-content: flex-end; margin-top: var(--p1); }
+.ranking-classement-widget.ranking-classement-widget-manage { display: flex; justify-content: flex-end; margin-bottom: var(--p1); }
 .ranking-classement-widget .ranking-classement-widget-manage-link,
 .ranking-classement-widget.ranking-classement-widget-manage-link {
   font-size: var(--text-tiny); color: var(--main-blue); cursor: pointer;

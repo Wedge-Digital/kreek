@@ -116,7 +116,7 @@
 .ranking-detailed-standings-widget.sd-manual-link:hover { border-bottom-style: solid; }
 
 .ranking-detailed-standings-widget .ranking-detailed-standings-widget-manage,
-.ranking-detailed-standings-widget.ranking-detailed-standings-widget-manage { display: flex; justify-content: flex-end; margin-top: var(--p1); }
+.ranking-detailed-standings-widget.ranking-detailed-standings-widget-manage { display: flex; justify-content: flex-end; margin-bottom: var(--p1); }
 .ranking-detailed-standings-widget .ranking-detailed-standings-widget-manage-link,
 .ranking-detailed-standings-widget.ranking-detailed-standings-widget-manage-link {
   font-size: var(--text-tiny); color: var(--main-blue); cursor: pointer;

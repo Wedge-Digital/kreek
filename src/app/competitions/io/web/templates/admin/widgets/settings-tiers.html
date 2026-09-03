@@ -19,7 +19,6 @@
     <div class="settings-panel-title">
       <span class="settings-panel-title-icon">🏅</span>Tiers &amp; coups de pouce
     </div>
-    <button type="button" class="btn btn-primary" data-role="save">Enregistrer</button>
   </div>
   <div class="settings-panel-body" data-role="tiers">
 
@@ -67,6 +66,14 @@
       </span>
       <span class="consequence-active"></span>
     </div>
+  </div>
+  {# Le bouton est passé de l'en-tête au pied (carte 487) : il mesurait
+     71 px de haut sur toute la largeur du panneau, `.btn-primary` posant
+     `width: 100%`. Il est désormais compact, et à la place où l'on cherche
+     une validation — comme celui du panneau Général, seul des cinq à l'avoir
+     toujours été. #}
+  <div class="settings-panel-foot">
+    <button type="button" class="btn btn-primary" data-role="save">Enregistrer</button>
   </div>
 </div>
 <script>
