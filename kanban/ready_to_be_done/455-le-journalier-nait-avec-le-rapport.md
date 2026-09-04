@@ -1,5 +1,6 @@
 # Le journalier naît avec le rapport
 
+**Épic :** E15 — Recruter un journalier
 **Ordre :** 2 · **Dépend de :** 454
 **Conception :** `docs/specs/embaucher-un-journalier/00-conception.md`
 

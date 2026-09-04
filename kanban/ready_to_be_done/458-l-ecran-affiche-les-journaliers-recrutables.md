@@ -1,5 +1,6 @@
 # L'écran affiche les journaliers recrutables
 
+**Épic :** E15 — Recruter un journalier
 **Ordre :** 4 · **Dépend de :** 456, 457
 **Conception :** `docs/specs/embaucher-un-journalier/ecran-de-recrutement/`
 (`02-front.md`, `04-dtos.md`) · **Maquette :**

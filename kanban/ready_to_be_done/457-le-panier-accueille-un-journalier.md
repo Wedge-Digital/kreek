@@ -1,5 +1,6 @@
 # Le panier accueille un journalier
 
+**Épic :** E15 — Recruter un journalier
 **Ordre :** 2 · **Dépend de :** 454
 **Conception :** `docs/specs/embaucher-un-journalier/ecran-de-recrutement/`
 (`05-use-cases.md`, `06-domaine.md`)

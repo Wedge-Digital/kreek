@@ -1,5 +1,6 @@
 # Les tests E2E du recrutement de journalier
 
+**Épic :** E15 — Recruter un journalier
 **Ordre :** 5 · **Dépend de :** 458
 **Conception :** `docs/specs/embaucher-un-journalier/ecran-de-recrutement/07-integration.md`
 

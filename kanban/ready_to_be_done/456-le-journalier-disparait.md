@@ -1,5 +1,6 @@
 # Le journalier disparaît
 
+**Épic :** E15 — Recruter un journalier
 **Ordre :** 3 · **Dépend de :** 455
 **Conception :** `docs/specs/embaucher-un-journalier/` (`00-conception.md`
 décisions 13 et 15, `ecran-de-recrutement/07-integration.md`)

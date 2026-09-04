@@ -1,5 +1,6 @@
 # Un journalier est un joueur
 
+**Épic :** E15 — Recruter un journalier
 **Ordre :** 1 · **Dépend de :** rien
 **Conception :** `docs/specs/embaucher-un-journalier/` (`00-conception.md`,
 `ecran-de-recrutement/03-back.md`)
