@@ -51,6 +51,14 @@ use tower::ServiceExt;
 pub struct Harnais {
     routeur: Router,
     cookie: String,
+    /// L'en-tête `Set-Cookie` **entier**, attributs compris.
+    ///
+    /// `cookie` n'en garde que `nom=valeur`, ce qu'il faut pour rejouer la
+    /// session. Les attributs — `Max-Age`, `SameSite`, `Secure` — sont
+    /// précisément ce que la carte 490 devait pouvoir vérifier : sans eux, un
+    /// test ne distingue pas un cookie de session d'un cookie qui dure trente
+    /// jours.
+    set_cookie_brut: String,
 }
 
 impl Harnais {
@@ -66,6 +74,7 @@ impl Harnais {
         let mut harnais = Self {
             routeur: crate::build_router(state),
             cookie: String::new(),
+            set_cookie_brut: String::new(),
         };
         harnais.connecter(coach_name).await;
         harnais
@@ -79,6 +88,7 @@ impl Harnais {
         let reponse = self
             .post_htmx(crate::app::auth::routes::path::LOGIN, &corps)
             .await;
+        self.set_cookie_brut = reponse.entete("set-cookie").unwrap_or_default().to_string();
         self.cookie = reponse
             .entete("set-cookie")
             .map(|c| c.split(';').next().unwrap_or_default().to_string())
@@ -88,6 +98,11 @@ impl Harnais {
                     reponse.corps
                 )
             });
+    }
+
+    /// L'en-tête `Set-Cookie` de la connexion, attributs compris.
+    pub fn set_cookie_brut(&self) -> &str {
+        &self.set_cookie_brut
     }
 
     pub async fn get(&self, uri: &str) -> Reponse {

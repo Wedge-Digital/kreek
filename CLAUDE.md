@@ -1280,8 +1280,42 @@ déployée.
 
 ## Sessions
 
-Phase 1 : `MemoryStore` (implémenté dans `main.rs`).  
-Phase 2 : migration vers `RedisStore` — le changement est localisé à `main.rs` uniquement.
+**Il n'y aura pas de Redis.** Ce fichier a longtemps annoncé une « phase 2 :
+migration vers `RedisStore` ». La décision est prise, et c'est non : Postgres est
+déjà là, déjà sauvegardé, déjà surveillé, et Redis ajouterait une infrastructure,
+un point de panne et une sauvegarde de plus pour stocker quelques centaines de
+sessions de ligue amateur — un volume où la différence de performance ne se
+mesure pas. Le magasin persistant sera `tower-sessions-sqlx-store`.
+
+Aujourd'hui : **`DashMapStore`, en mémoire** (`common/session_store.rs`), donc
+volatile. Chaque redéploiement déconnecte tout le monde en même temps ; c'est le
+défaut connu, et il reste à corriger.
+
+Le cookie, lui, est configuré (carte 490) :
+
+```rust
+SessionManagerLayer::new(DashMapStore::new())
+    .with_expiry(Expiry::OnInactivity(time::Duration::days(30)))
+    .with_same_site(SameSite::Lax)
+```
+
+**Les deux lignes comptent, et leur absence ne se voit nulle part.**
+
+Sans `with_expiry`, `tower-sessions` laisse `expiry: None` et le cookie n'a **ni
+`Max-Age` ni `Expires`** : le navigateur le jette à sa fermeture, alors que le
+serveur garde la session **deux semaines** (`DEFAULT_DURATION`). Le coach fermait
+son navigateur le soir et se retrouvait déconnecté d'une session dont le serveur
+se souvenait encore. `OnInactivity` fait glisser la fenêtre à chaque requête —
+une date fixe déconnecterait tout le monde le même jour.
+
+`SameSite::Strict`, l'autre défaut de la crate, **n'envoie pas le cookie** quand
+on arrive depuis un lien extérieur : le coach qui suit un lien partagé atterrit
+déconnecté sans avoir rien fait. `Lax` l'envoie sur une navigation de premier
+niveau et le retient sur les requêtes inter-sites ; la garde qui compte contre le
+CSRF reste le middleware maison, qui exige `HX-Request: true` sur toute mutation.
+
+`src/web/tests/test_cookie_de_session.rs` lit l'en-tête **réellement émis** par
+le routeur de production — pas la configuration censée le produire.
 
 ---
 

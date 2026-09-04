@@ -48,7 +48,8 @@ use std::sync::Arc;
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::services::ServeDir;
 use tower_livereload::LiveReloadLayer;
-use tower_sessions::SessionManagerLayer;
+use tower_sessions::cookie::SameSite;
+use tower_sessions::{Expiry, SessionManagerLayer};
 
 #[derive(Parser)]
 #[command(name = "kreek", about = "kreek — Blood Bowl league manager")]
@@ -606,7 +607,30 @@ pub fn build_router(state: AppState) -> Router {
     // démarrage qui échoue qu'un résolveur silencieusement ignoré.
     crate::web::middleware::space_scope::verifier_unicite_des_parametres(&state.space_ownership);
 
-    let session_layer = SessionManagerLayer::new(DashMapStore::new());
+    // ── La durée de la session, et son transport (carte 490) ─────────────────
+    //
+    // **Sans `with_expiry`, le cookie n'a ni `Max-Age` ni `Expires`.** C'est le
+    // défaut de `tower-sessions` — `service.rs:118` : `Some(OnSessionEnd) | None
+    // => cookie_builder`, sans rien poser. Le navigateur le traite donc comme un
+    // cookie de session et le jette à sa fermeture, alors que le serveur, lui,
+    // gardait la session **deux semaines** (`DEFAULT_DURATION`). Le coach fermait
+    // son navigateur le soir et se retrouvait déconnecté d'une session dont le
+    // serveur se souvenait encore.
+    //
+    // `OnInactivity` et non `AtDateTime` : la fenêtre glisse à chaque requête,
+    // donc un coach qui vient toutes les semaines n'est jamais déconnecté, tandis
+    // qu'un compte inactif trente jours l'est. Une date fixe déconnecterait tout
+    // le monde le même jour.
+    //
+    // **`Lax` et non `Strict`.** Un cookie `Strict` n'est pas envoyé quand on
+    // arrive depuis un lien extérieur — un e-mail, un message, un lien partagé :
+    // le coach atterrit déconnecté sans avoir rien fait. `Lax` l'envoie sur une
+    // navigation de premier niveau et le retient sur les requêtes inter-sites ;
+    // le middleware CSRF maison, qui exige `HX-Request: true` sur toute mutation,
+    // reste la garde qui compte ici.
+    let session_layer = SessionManagerLayer::new(DashMapStore::new())
+        .with_expiry(Expiry::OnInactivity(time::Duration::days(30)))
+        .with_same_site(SameSite::Lax);
     let auth_layer = AuthManagerLayerBuilder::new(
         AuthBackend::new(state.auth.user_repository.clone()),
         session_layer,

@@ -1,5 +1,6 @@
 mod test_actions_membres;
 mod test_candidats_ajout_direct;
+mod test_cookie_de_session;
 mod test_menu_administration;
 mod test_statistiques_espace;
 mod test_widget_creation_compte;
