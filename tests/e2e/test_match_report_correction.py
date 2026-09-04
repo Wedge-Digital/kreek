@@ -235,6 +235,23 @@ def _play_and_publish(
     post_step5(space_id, mr_id)
     publish(space_id, mr_id)
     _wait(lambda: _phase(mr_id) == "Published", "le rapport doit être publié")
+    # **Le rapport publié ne suffit pas.** L'entrée d'une équipe en
+    # `PlayerImprovement` est le fait d'un listener cross-BC, dans une autre
+    # tâche : la publication est enregistrée avant que les équipes aient bougé.
+    #
+    # Or la correction n'est permise que si les deux camps y sont encore
+    # (`CorrectionBlocker::PhaseAdvanced`), et le domaine échoue **fermé** —
+    # à raison. Interroger le récapitulatif trop tôt rend donc un bouton
+    # désactivé, et le test accuse la règle pour un défaut d'attente.
+    #
+    # **Les deux camps**, pas seulement le domicile : le blocage vient de l'un
+    # ou de l'autre, et n'attendre qu'un seul laisserait la moitié de la course
+    # ouverte.
+    for team_id in (home_team_id, away_team_id):
+        _wait(
+            lambda t=team_id: _team_phase(t) == "PlayerImprovement",
+            f"l'équipe {team_id} doit passer en amélioration",
+        )
     return mr_id
 
 
