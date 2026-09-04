@@ -1,4 +1,7 @@
 EXEC_PROFILE ?= dev
+SOURCE_PROFILE ?= remote.prod
+TARGET_PROFILE ?= dev
+YES ?= 0
 
 # Retire les guillemets encadrants d'une valeur lue dans un .env. Ils y sont
 # nécessaires dès que le mot de passe contient &, ! ou ^ — sans eux, le
@@ -53,6 +56,7 @@ help:
 	@echo "  init_db       reset_db + import des données legacy + seed comptes dev (WITH_SEED=1 pour aussi affecter les coachs aux spaces)"
 	@echo "  init_remote_demo_db  Idem sur la base de démo distante ($(DEMO_ENV_FILE)) — DROP+CREATE...OWNER via un accès admin séparé, double confirmation exigée"
 	@echo "  init_remote_prod_db  Première mise en service de la production ($(PROD_ENV_FILE)) — DROP+CREATE...OWNER, refuse une base déjà peuplée, sans seed de comptes, triple confirmation"
+	@echo "  import_prod_db  Recopie la production dans une base locale — détruit la cible, refuse toute cible distante (TARGET_PROFILE=test, YES=1)"
 	@echo "  seed_accounts Seed les comptes dev (scripts/seed_accounts.json)"
 	@echo "  seed_e2e      Seed synthétique requis par la suite e2e (space + 12 coachs, idempotent)"
 	@echo ""
@@ -189,6 +193,17 @@ prepare_db:
 reset_db:
 	$(call refuser_si_distant,$(DATABASE_URL))
 	DATABASE_URL="$(DATABASE_URL)" sqlx database reset -y -f
+
+# Recopie la production dans une base locale. Le script porte ses trois gardes
+# et la question ; voir son en-tête pour ce qu'il détruit et ce qu'il ne touche
+# jamais.
+#
+#   make import_prod_db                       # prod → dev
+#   make import_prod_db TARGET_PROFILE=test   # prod → test
+#   YES=1 make import_prod_db                 # sans la question
+import_prod_db:
+	@SOURCE_PROFILE="$(SOURCE_PROFILE)" TARGET_PROFILE="$(TARGET_PROFILE)" YES="$(YES)" \
+	 bash scripts/import_prod_db.sh
 
 reset_test_db:
 	$(call refuser_si_distant,$(TEST_DB_URL))

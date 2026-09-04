@@ -151,6 +151,41 @@ Directives de travail pour Claude Code sur ce projet.
     **critère observable** et jamais un décompte de cartes : « toutes les cartes
     sont dans `done/` » n'est pas une preuve que la fonction marche.
 
+16. **Aucun secret ne part dans un commit.** Les identifiants de connexion aux
+    bases distantes vivent dans `.env.remote.prod` et `.env.remote.demo`, les
+    clés d'API dans les autres `.env`. Le `.gitignore` ignore **tout `.env*`** et
+    ne reprend que `.env.example`, qui est un modèle : ses valeurs sont vides.
+
+    Cette précaution n'est pas théorique — `.env.remote.prod` a déjà échappé à
+    la règle une fois, en portant le mot de passe de production, et c'est ce qui
+    a fait inverser le `.gitignore` : tout est refusé par défaut, et l'on reprend
+    ce qu'on veut. Un nouveau profil est donc couvert sans que personne y pense.
+
+    **Ce qui reste à la charge de celui qui écrit :**
+
+    - **Ne jamais écrire un identifiant dans le code**, un script, un test, une
+      carte kanban ou un message de commit. Un script qui a besoin d'une base
+      distante lit le `.env` du profil — il ne porte pas l'URL.
+    - **Masquer les identifiants dans toute sortie** : messages, journaux,
+      comptes rendus. `sed -E 's#://[^@]*@#://***@#'` suffit pour une URL
+      Postgres, et `scripts/import_prod_db.sh` s'en sert à chaque affichage.
+    - **Un dump de production est un secret**, même sans mot de passe dedans :
+      il porte les adresses électroniques des coachs et les empreintes de leurs
+      mots de passe. `dumps/` est ignoré par git, mais le fichier reste en clair
+      sur le disque — on l'efface quand on a fini.
+    - **Relire `git diff --cached` avant de commiter** (cf. règle 12) en
+      cherchant aussi ce qui n'a rien à y faire. Un `git add -A` ramasse tout ce
+      qui traîne, y compris ce qu'une autre session vient d'écrire.
+
+    ```bash
+    git ls-files | grep -E '^\.env' | grep -v '^\.env\.example$'   # doit être vide
+    git log --oneline --all -- .env.remote.prod                    # doit être vide
+    ```
+
+    Les deux commandes ci-dessus répondent en une seconde et disent si la règle
+    tient — la première pour maintenant, la seconde pour tout l'historique.
+
+
 ---
 
 ## Vérifications à l'installation — une fois par clone
