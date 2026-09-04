@@ -26,7 +26,7 @@ import re
 import pytest
 import requests
 
-from db_helpers import query_db
+from db_helpers import attendre_que, query_db
 
 BASE_URL = "http://localhost:3210"
 
@@ -155,6 +155,19 @@ def _competences_de_blessure(team_id):
     return int(lignes[0])
 
 
+def _version_de_l_effectif(team_id):
+    """Somme des versions de la projection — un marqueur de progression.
+
+    Chaque événement appliqué à un joueur incrémente sa version. Attendre que
+    cette somme bouge prouve que le pipeline d'app events a tourné, ce qu'une
+    assertion négative ne peut pas déduire de son propre résultat.
+    """
+    lignes = query_db(
+        f"SELECT coalesce(sum(version), 0) FROM players_proj WHERE team_id = '{team_id}'"
+    )
+    return int(lignes[0])
+
+
 def test_la_haine_d_un_journalier_n_atteint_aucun_joueur(space_id, contexte):
     domicile, exterieur = contexte["team_ids"][0], contexte["team_ids"][1]
     journees = contexte["round_ids"]
@@ -166,9 +179,18 @@ def test_la_haine_d_un_journalier_n_atteint_aucun_joueur(space_id, contexte):
         space_id, mr1, "home", _un_joueur(domicile), turn=1,
         action_type="BLESSE", injury_type="BLESSURE_SERIEUSE",
     )
+    version_avant_mr1 = _version_de_l_effectif(domicile)
     _publier(space_id, mr1)
+    # La blessure doit être **projetée** avant qu'on demande le second rapport :
+    # tant qu'elle ne l'est pas, l'équipe est encore à onze et aucun journalier
+    # n'est adjoint — le test échouerait en accusant la règle des journaliers.
+    attendre_que(
+        lambda: _version_de_l_effectif(domicile) > version_avant_mr1,
+        quoi="la projection de la blessure du premier match",
+    )
 
     avant = _competences_de_blessure(domicile)
+    version_avant_mr2 = _version_de_l_effectif(domicile)
 
     # ── Match 2 : l'équipe est à dix, le serveur lui adjoint un journalier ───
     mr2 = _creer_rapport(space_id, contexte, journees[1], domicile, exterieur)
@@ -194,6 +216,16 @@ def test_la_haine_d_un_journalier_n_atteint_aucun_joueur(space_id, contexte):
     )
     assert resp.status_code == 200, f"action du journalier : {resp.status_code}\n{resp.text[:300]}"
     _publier(space_id, mr2)
+
+    # **Sans ce marqueur, l'assertion ci-dessous est creuse.** « Rien n'a
+    # changé » est vrai aussi quand rien n'est jamais arrivé : le test passerait
+    # sur une chaîne entièrement cassée. On attend donc la preuve que le
+    # pipeline a tourné — la version de l'effectif bouge — avant de vérifier
+    # qu'il n'a rien écrit dans les compétences.
+    attendre_que(
+        lambda: _version_de_l_effectif(domicile) > version_avant_mr2,
+        quoi="la projection du second match",
+    )
 
     apres = _competences_de_blessure(domicile)
     assert apres == avant, (
@@ -223,8 +255,12 @@ def test_la_haine_d_un_joueur_permanent_atteint_l_effectif(page, space_id, conte
     )
     _publier(space_id, mr)
 
-    assert _competences_de_blessure(domicile) == avant + 1, (
-        "la Haine d'un joueur permanent doit rejoindre ses compétences acquises"
+    # La condition **est** l'assertion : la Haine transite par le bus d'app
+    # events, elle n'est pas projetée au retour de la publication. L'échec au
+    # bout du délai porte le bon message — il accuse la chaîne, pas la règle.
+    attendre_que(
+        lambda: _competences_de_blessure(domicile) == avant + 1,
+        quoi="la Haine d'un joueur permanent rejoignant ses compétences acquises",
     )
 
     page.goto(f"{BASE_URL}/app/{space_id}/teams/{domicile}", wait_until="load")

@@ -51,3 +51,36 @@ def query_db(sql: str) -> list[str]:
     )
     assert result.returncode == 0, f"psql error: {result.stderr}"
     return [l.strip() for l in result.stdout.strip().splitlines() if l.strip()]
+
+
+def attendre_que(condition, timeout_s: float = 20.0, quoi: str = "la condition"):
+    """Rend la main dès que `condition()` est vraie, ou échoue en le disant.
+
+    **Pourquoi c'est nécessaire.** Publier un rapport de match déclenche des app
+    events traités dans une tâche séparée : la projection n'est pas à jour au
+    retour de la requête. Lire `players_proj` dans la foulée mesure la vitesse
+    de la machine, pas le comportement du produit — et le message d'échec accuse
+    alors le produit pour un défaut de test.
+
+    **Pourquoi pas un `sleep`.** Une durée fixe n'a aucune marge sur une machine
+    chargée, et c'est précisément là que la course s'ouvre : le même test passe
+    en 6 minutes de suite et tombe en 8. Elle coûterait en plus son délai à
+    chaque appel, y compris quand tout est déjà prêt. La boucle ci-dessous rend
+    la main dès que c'est vrai.
+
+    **Ce qu'elle ne remplace pas.** Pour une assertion *négative* — « rien ne
+    doit arriver » — attendre ne prouve rien : la condition serait vraie aussi
+    si le pipeline ne tournait jamais. Il faut d'abord attendre un marqueur de
+    progression, puis vérifier l'absence.
+    """
+    import time
+
+    limite = time.time() + timeout_s
+    while time.time() < limite:
+        if condition():
+            return
+        time.sleep(0.2)
+    raise AssertionError(
+        f"{quoi} n'est toujours pas vraie après {timeout_s:g} s — "
+        "le bus d'app events n'a rien projeté, ou la chaîne est cassée"
+    )
