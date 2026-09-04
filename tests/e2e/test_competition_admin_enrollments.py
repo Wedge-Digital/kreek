@@ -116,7 +116,17 @@ def test_renommer_une_competition_depuis_les_parametres(page: Page, competition_
     # avait pas été généralisée (hors carte 489, qui ne fait que débloquer
     # `make e2e`).
     attendre_cablage(page, "#settings-general-panel form")
-    page.click("#settings-general-panel button[type='submit']")
+    # **Attendre la réponse, et pas seulement le clic.** L'assertion qui suit est
+    # creuse par nature : si rien ne part, l'`input` contient encore ce que `fill`
+    # y a mis, et elle passe. C'est le rechargement, plus bas, qui découvrait que
+    # rien n'avait été enregistré — et son message accusait alors le produit.
+    #
+    # Le test passait seul et échouait dans la suite complète, où la machine est
+    # chargée : le `goto` partait avant que le POST ait abouti.
+    with page.expect_response(
+        lambda r: "admin/settings/general" in r.url and r.request.method == "POST"
+    ):
+        page.click("#settings-general-panel button[type='submit']")
 
     # Le widget est réécrit avec ce que porte la base.
     expect(page.locator("#settings-general-panel input[name='name']")).to_have_value(

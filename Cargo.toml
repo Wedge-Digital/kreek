@@ -11,6 +11,9 @@ serde = { version = "1.0.217", features = ["derive"] }
 axum = "0.8.1"
 tokio = { version = "1.43.0", features = ["full"] }
 tracing = "0.1"
+# `rebuild_interest_cache`, dont `tracing` ne réexporte pas le chemin : il
+# sert au harnais de capture des tests de journalisation (carte 490).
+tracing-core = "0.1"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 tower = "0.5.2"
 futures-util = "0.3"

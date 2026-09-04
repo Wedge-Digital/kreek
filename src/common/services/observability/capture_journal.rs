@@ -26,6 +26,10 @@ impl Capture {
     pub fn lignes(&self) -> Vec<String> {
         self.0.lock().unwrap().clone()
     }
+
+    fn vider(&self) {
+        self.0.lock().unwrap().clear();
+    }
 }
 
 impl<S: tracing::Subscriber> Layer<S> for Capture {
@@ -61,5 +65,39 @@ pub fn capture_sous_le_filtre_de_production() -> (Capture, tracing::subscriber::
     let capture = Capture::default();
     let (filtre, _) = crate::filtre_depuis_config("info");
     let abonne = tracing_subscriber::registry().with(capture.clone().with_filter(filtre));
-    (capture.clone(), tracing::subscriber::set_default(abonne))
+    let garde = tracing::subscriber::set_default(abonne);
+
+    // **`tracing` met en cache l'intérêt de chaque point d'émission.** Ce cache
+    // est *global*, alors que `set_default` ne pose qu'un abonné *de thread* :
+    // un point d'émission évalué la première fois depuis un thread sans abonné
+    // peut y rester marqué comme sans intérêt, et la capture ne reçoit alors
+    // rien — sans que rien ne le signale.
+    //
+    // C'est la seule explication trouvée à un échec de CI qui n'a jamais été
+    // reproduit en local : quinze exécutions de la suite complète, de deux à
+    // dix-huit fils, toutes vertes ici, et rouge sur un runner à quatre cœurs
+    // dix fois plus lent. **Ce n'est donc pas une cause démontrée**, seulement
+    // celle qui explique le symptôme et que `tracing` documente comme le remède.
+    //
+    // La reconstruction est peu coûteuse et n'a lieu que dans les tests.
+    tracing_core::callsite::rebuild_interest_cache();
+
+    // **Une ligne témoin, pour que l'échec accuse le bon coupable.**
+    //
+    // Si la capture ne reçoit rien, un test de journalisation échoue sur « aucune
+    // ligne » — et se lit comme « le produit ne journalise pas », alors que c'est
+    // l'instrument qui est muet. C'est exactement ce qui s'est produit en CI :
+    // le message accusait le use case, qui n'y était pour rien.
+    //
+    // Le témoin est émis sous une cible `kreek::` — sans quoi il ne franchirait
+    // pas le filtre de production, et prouverait le contraire de ce qu'on veut.
+    tracing::info!(target: "kreek::capture_journal", "témoin");
+    assert!(
+        !capture.lignes().is_empty(),
+        "la capture de journal ne reçoit rien : ce n'est pas le produit qui est \
+         muet, c'est l'instrument. Voir le cache d'intérêt de `tracing` ci-dessus."
+    );
+    capture.vider();
+
+    (capture, garde)
 }
