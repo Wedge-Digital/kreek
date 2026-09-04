@@ -1075,6 +1075,79 @@ let rows = build_hired_rows(&roster_team, &roster_def);
 let positions = build_player_positions(&roster_def);
 ```
 
+### Un view model transpose, il ne dérive pas — règle obligatoire
+
+Toute valeur qui répond à une **question du domaine** vient d'une méthode du
+domaine. Jamais d'un recalcul à partir de primitives dans la couche de
+présentation, jamais d'une lecture de projection choisie parce qu'elle était
+plus à portée.
+
+Le test pour trancher : **si cette valeur s'avérait fausse, corrigerait-on la
+vue ou le domaine ?** Si c'est le domaine, elle n'a rien à faire dans le VM. Et
+si le domaine ne sait pas encore la dire, on l'y ajoute — on ne la déduit pas à
+l'affichage.
+
+```rust
+// INTERDIT — la vue recompte ce que le domaine sait compter
+let joueurs = squad_port.find_squad(&team_id).await.len();
+
+// OBLIGATOIRE — le prédicat vient du domaine
+let joueurs = membres.iter().filter(|m| m.presence.alignable()).count();
+```
+
+**Quatre défauts en trois cartes, tous de cette forme.** Le calcul était juste,
+l'écran mentait :
+
+| | ce que la vue faisait |
+|---|---|
+| 492 | affichait `players_proj.spp`, le cumul des gains, là où `spp_remaining()` donne le solde |
+| 494 | inventait un jet de dé que le contrôleur ne lui avait pas passé |
+| 495 | comptait `find_squad(...).len()` là où la règle des journaliers ne retient que les alignables |
+
+Les trois se lisent pareil : **une donnée juste dans le domaine, fausse à
+l'écran**. Aucun test unitaire de domaine ne les voyait — ils passaient tous.
+
+Corollaire : **un gabarit n'invente aucune valeur.** Pas de `value="2"` en dur,
+pas de repli silencieux sur une constante. Ce qu'il n'a pas reçu, il ne l'affiche
+pas — un tiret, un champ vide, mais pas un chiffre plausible. Une valeur inventée
+ne se distingue pas d'une valeur saisie, et c'est ce qui rend le défaut invisible
+à la relecture.
+
+### Le formatage rend la valeur, il ne la reconstruit pas — règle obligatoire
+
+Découper un nombre pour le recomposer est une occasion de le perdre.
+
+```js
+// INTERDIT — recompose depuis les milliers et les centaines
+const maj = Math.floor(v / 1000);
+const min = Math.floor((v % 1000) / 100);
+return min > 0 ? maj + ' ' + min + '00 kPo' : maj + ' 000 kPo';
+```
+
+Le chiffre des dizaines n'apparaît dans aucune des deux branches : **2075
+s'affichait « 2 000 kPo »**, et la différence de valeur d'équipe avec. Perdu par
+construction, pas par accident de calcul.
+
+Cette fonction n'existait que dans un fichier, posée par le commit qui créait la
+page. Les vingt-six autres affichages de kPo de l'application impriment la valeur
+brute. **Une mise en forme inventée pour un seul écran est une divergence, pas un
+raffinement** — et c'est le seul écran qui se trompait.
+
+Le défaut est resté invisible parce qu'aucune équipe de la base locale
+n'atteint 1 000 kPo, le seuil où il commence. Un test d'affichage lisant la
+valeur à l'écran aurait passé ; celui qui l'attrape éprouve la fonction sur
+**2075**, une valeur à dizaines non nulles.
+
+### Ce que ces deux règles ne verrouillent pas
+
+Aucun `grep` ne distingue « recomposer un nombre » de « le mettre en forme », ni
+un recalcul fautif d'une projection légitime. Ce sont des **règles de revue**, au
+même titre que les conventions de nommage de fichiers — appliquées au fil de
+l'eau, sans axe de `check-arch` derrière elles.
+
+Elles se rattrapent donc à la lecture, et à une question posée à chaque VM
+écrit : *d'où vient ce chiffre, et qui le corrigerait s'il était faux ?*
+
 ### Selects — kreek-select obligatoire
 
 Tout sélecteur dans l'application doit être un **`<kreek-select>`** (Web Component custom). Les `<select>` natifs et TomSelect sont **interdits** dans les templates finaux.
