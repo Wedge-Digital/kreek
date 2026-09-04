@@ -457,3 +457,37 @@ def test_le_menu_du_selecteur_deborde_du_panneau(page: Page, saison_jouee):
         f"le bas du menu est coupé par le panneau : on y touche "
         f"« {verdict['touche']} » au lieu d'une option"
     )
+
+
+def test_le_retour_au_classement_affiche_la_competition(page: Page, saison_jouee):
+    """**Le lien de retour rendait une page vide.**
+
+    `/standings` répond deux choses selon l'appelant : le fragment de l'onglet
+    quand la barre l'échange, la page entière quand on y arrive d'ailleurs. Le
+    seul en-tête consulté était `HX-Request` — vrai dans les deux cas. Le lien
+    recevait donc 286 octets sans `#app-content`, et son `hx-select` ne trouvait
+    rien : le contenu était remplacé par du vide.
+
+    C'est le constat de la carte 484, sur un autre écran. `HX-Target` porte
+    l'information qui manquait.
+
+    Le test regarde ce que le coach voit, pas un en-tête : un titre de
+    compétition et un classement.
+    """
+    ctx = saison_jouee
+    page.set_viewport_size({"width": 1440, "height": 900})
+    page.goto(_page_gestion(ctx), wait_until="load")
+    page.locator(".mp-back").wait_for(state="visible", timeout=10000)
+
+    page.click(".mp-back")
+    page.wait_for_url(lambda u: "standings" in u, timeout=10000)
+
+    # Le classement est chargé par un widget htmx : c'est lui qu'on attend, pas
+    # la seule URL — laquelle change avant que le contenu n'arrive.
+    expect(page.locator("#app-content")).to_be_visible(timeout=10000)
+    expect(page.locator(".ranking-classement-widget")).to_be_visible(timeout=10000)
+
+    vide = page.evaluate(
+        "() => document.querySelector('#app-content').textContent.trim().length"
+    )
+    assert vide > 200, f"le contenu ne fait que {vide} caractères — la page est vide"

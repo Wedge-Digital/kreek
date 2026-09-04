@@ -67,7 +67,7 @@ pub async fn get_resultats_tab(
         compute_authorization(&state, &user, &space_id_vo, &competition_id_vo, &season_id).await;
 
     let (journees, next_cursor) = build_journees(rows, 3, &authz);
-    let is_htmx = headers.contains_key("hx-request");
+    let is_htmx = !crate::web::htmx::veut_la_page_entiere(&headers);
 
     if is_htmx {
         return ResultatsTabTemplate {

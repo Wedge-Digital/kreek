@@ -2,6 +2,7 @@ pub mod app_layout;
 pub mod app_menu;
 pub mod app_shell;
 pub mod css_bundle;
+pub mod htmx;
 pub mod kreek_select_tester;
 pub mod middleware;
 pub mod router;

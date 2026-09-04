@@ -494,7 +494,7 @@ pub async fn get_tab_standings(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    if headers.contains_key("hx-request") {
+    if !crate::web::htmx::veut_la_page_entiere(&headers) {
         return StandingsTabTemplate {
             app_routes: AppRoutes::default(),
             space_id,
@@ -534,7 +534,7 @@ pub async fn get_tab_detailed_standings(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    if headers.contains_key("hx-request") {
+    if !crate::web::htmx::veut_la_page_entiere(&headers) {
         return DetailedStandingsTabTemplate {
             app_routes: AppRoutes::default(),
             space_id,
@@ -574,7 +574,7 @@ pub async fn get_tab_teams(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    if headers.contains_key("hx-request") {
+    if !crate::web::htmx::veut_la_page_entiere(&headers) {
         return TeamsTabTemplate {
             app_routes: AppRoutes::default(),
             space_id,
@@ -613,7 +613,7 @@ pub async fn get_tab_stats(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    if headers.contains_key("hx-request") {
+    if !crate::web::htmx::veut_la_page_entiere(&headers) {
         return StatsTabTemplate {
             top_tds: mock_top_tds(),
             top_casualties: mock_top_casualties(),

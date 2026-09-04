@@ -85,7 +85,7 @@ pub async fn get_calendrier_tab(
 
     let (journees, next_cursor) = build_journees(rows, 3, &space_id, &authz);
 
-    if headers.contains_key("hx-request") {
+    if !crate::web::htmx::veut_la_page_entiere(&headers) {
         let is_initial = query.cursor.is_none();
         return fragment(
             space_id,

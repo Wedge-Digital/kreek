@@ -63,7 +63,7 @@ pub async fn settings_tab(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    if headers.contains_key("hx-request") {
+    if !crate::web::htmx::veut_la_page_entiere(&headers) {
         if let Err(resp) = require_admin_access(
             &auth_session,
             &space_id,
