@@ -76,7 +76,16 @@ pub struct PlayerRowVm {
     pub position_name: String,
     pub base_skills: Vec<SkillTagVm>,
     pub acquired_skills: Vec<AcquiredSkillProjection>,
-    pub spp: i32,
+    /// SPP **encore disponibles**, pas le cumul gagné (carte 492).
+    ///
+    /// La projection porte le cumul : `PlayerSkillPurchased` et
+    /// `PlayerStatIncreased` n'en retirent rien, seuls les chemins d'annulation
+    /// le font. La réserve est dérivée par le domaine et n'est jamais stockée —
+    /// c'est l'agrégat qui la donne.
+    ///
+    /// `None` quand l'agrégat manque : la cellule rend alors un tiret. Retomber
+    /// sur le cumul afficherait sans le dire le chiffre qu'on corrige.
+    pub spp: Option<u32>,
     pub value_kpo: i32,
     /// Caractéristiques résolues — base du poste, moins les malus de séquelles,
     /// plus les augmentations achetées en SPP. `None` si le poste est introuvable
@@ -185,14 +194,14 @@ pub async fn build_player_rows(state: &AppState, team: &TeamId) -> Vec<PlayerRow
         .unwrap_or_default();
 
     let catalog = state.players.skill_catalog.as_ref();
-    let stats = resolve_team_stats(state, team, catalog).await;
+    let derives = resolve_team_derived(state, team, catalog).await;
 
     projections
         .into_iter()
         .map(|p| {
             let base_skills = build_base_skills(&p, catalog);
             let keywords = mots_clefs_du_poste(&p.roster_line_id, catalog);
-            let resolved = stats.get(&p.player_id).copied();
+            let derive = derives.get(&p.player_id);
             PlayerRowVm {
                 player_id: p.player_id,
                 jersey: p.jersey,
@@ -200,9 +209,9 @@ pub async fn build_player_rows(state: &AppState, team: &TeamId) -> Vec<PlayerRow
                 position_name: p.position_name,
                 base_skills,
                 acquired_skills: p.acquired_skills,
-                spp: p.spp,
+                spp: derive.map(|d| d.spp_remaining),
                 value_kpo: p.value_kpo,
-                stats: resolved,
+                stats: derive.and_then(|d| d.stats),
                 absence: Absence::depuis_le_statut(&p.participation_status),
                 keywords,
             }
@@ -210,18 +219,31 @@ pub async fn build_player_rows(state: &AppState, team: &TeamId) -> Vec<PlayerRow
         .collect()
 }
 
-/// Caractéristiques résolues de tout l'effectif, indexées par joueur.
+/// Ce que seuls les agrégats savent, indexé par joueur.
 ///
-/// La projection ne porte ni les malus de séquelles ni les augmentations
-/// achetées : elle n'enregistre de `PlayerStatIncreased` que son coût en valeur
-/// d'équipe. Les caractéristiques sont donc résolues depuis les agrégats — une
-/// seule requête pour toute l'équipe, `find_by_team_id` lisant les événements
-/// d'un coup et hydratant en mémoire.
-async fn resolve_team_stats(
+/// **Les caractéristiques** : la projection ne porte ni les malus de séquelles
+/// ni les augmentations achetées — elle n'enregistre de `PlayerStatIncreased`
+/// que son coût en valeur d'équipe. `None` quand le poste est introuvable au
+/// catalogue ; la table affiche alors des tirets.
+///
+/// **La réserve de SPP** : elle est dérivée et jamais stockée, et `players_proj`
+/// ne porte que le cumul des gains (carte 492).
+///
+/// Les deux vivent dans la **même** carte parce qu'ils viennent de la même
+/// requête. Mais la réserve n'est pas dans le `Option` : elle ne dépend pas du
+/// catalogue, et un poste illisible ne doit pas coûter ses SPP à un joueur.
+pub struct PlayerDerived {
+    pub stats: Option<ResolvedPlayerStats>,
+    pub spp_remaining: u32,
+}
+
+/// Une seule requête pour toute l'équipe : `find_by_team_id` lit les événements
+/// d'un coup et hydrate en mémoire.
+async fn resolve_team_derived(
     state: &AppState,
     team: &TeamId,
     catalog: &dyn ISkillCatalogPort,
-) -> HashMap<String, ResolvedPlayerStats> {
+) -> HashMap<String, PlayerDerived> {
     state
         .players
         .repository
@@ -229,9 +251,12 @@ async fn resolve_team_stats(
         .await
         .unwrap_or_default()
         .iter()
-        .filter_map(|player| {
-            player_stats_service::resolve_stats(player, catalog)
-                .map(|stats| (player.id.0.clone(), stats))
+        .map(|player| {
+            let derive = PlayerDerived {
+                stats: player_stats_service::resolve_stats(player, catalog),
+                spp_remaining: player.spp_remaining(),
+            };
+            (player.id.0.clone(), derive)
         })
         .collect()
 }

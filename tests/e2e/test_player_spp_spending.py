@@ -163,13 +163,14 @@ def spp_ctx(browser, space_id):
 
     home_team_id = ctx["teams"][home_idx]
     players = _team_player_ids(home_team_id)
-    assert len(players) >= 5, f"au moins 5 joueurs attendus pour {home_team_id}"
-    rich_player, poor_player, value_player, stat_player, elite_player = (
+    assert len(players) >= 6, f"au moins 6 joueurs attendus pour {home_team_id}"
+    rich_player, poor_player, value_player, stat_player, elite_player, sheet_player = (
         players[0],
         players[1],
         players[2],
         players[3],
         players[4],
+        players[5],
     )
 
     _record_action_api(space_id, mr_id, "home", rich_player, turn=1, action_type="TOUCHDOWN")
@@ -198,6 +199,13 @@ def spp_ctx(browser, space_id):
     # contre 6 pour une Standard ; quatre essais à 2 SPP en donnent 8.
     for turn in range(1, 5):
         _record_action_api(space_id, mr_id, "home", elite_player, turn=turn, action_type="TOUCHDOWN")
+    # Joueur dédié à la colonne SPP de la feuille d'équipe (carte 492) — même
+    # raison que les quatre précédents : la réserve n'est pas partagée, et un
+    # joueur sur lequel un autre test a déjà dépensé rendrait l'achat impossible
+    # ou le solde imprévisible. Quatre essais à 2 SPP en donnent 8, de quoi
+    # payer une Standard primaire de niveau 1 (6).
+    for turn in range(1, 5):
+        _record_action_api(space_id, mr_id, "home", sheet_player, turn=turn, action_type="TOUCHDOWN")
 
     resp = _post_step5(space_id, mr_id, summary_title="Match E2E dépense SPP", summary_body="Généré par les tests.")
     assert resp.status_code in (302, 303), f"step5: {resp.status_code}\n{resp.text[:200]}"
@@ -210,9 +218,9 @@ def spp_ctx(browser, space_id):
     _wait_for(team_in_improvement)
 
     def players_credited():
-        ids = "', '".join([rich_player, value_player, stat_player, elite_player])
+        ids = "', '".join([rich_player, value_player, stat_player, elite_player, sheet_player])
         rows = _query_db(f"SELECT spp FROM players_proj WHERE player_id IN ('{ids}');")
-        return len(rows) == 4 and all(int(r) > 0 for r in rows)
+        return len(rows) == 5 and all(int(r) > 0 for r in rows)
 
     _wait_for(players_credited)
 
@@ -224,6 +232,7 @@ def spp_ctx(browser, space_id):
         "value_player_id": value_player,
         "stat_player_id": stat_player,
         "elite_player_id": elite_player,
+        "sheet_player_id": sheet_player,
     }
 
 
@@ -383,3 +392,60 @@ def test_une_competence_elite_ajoute_dix_kpo_de_plus_qu_une_standard(page: Page,
         "le barème du corpus n'a pas traversé toute la chaîne"
     )
 
+
+# ── La colonne SPP de la feuille d'équipe (carte 492) ─────────────────────────
+
+
+def _colonne_spp_de_la_feuille(page: Page, space_id: str, team_id: str, player_id: str) -> str:
+    """Ce que la feuille d'équipe affiche dans la colonne SPP de ce joueur.
+
+    Rendue en texte et non en nombre : c'est aussi ce qui permet de distinguer
+    un solde de zéro d'un tiret, quand l'agrégat manque.
+    """
+    page.goto(f"{BASE_URL}/app/{space_id}/teams/{team_id}", wait_until="load")
+    ligne = page.locator(f'tr.player-table-row[data-player-detail*="{player_id}"]')
+    ligne.first.wait_for(state="attached", timeout=15000)
+    return ligne.first.locator("td.player-spp").inner_text().strip()
+
+
+def test_la_colonne_spp_de_la_liste_est_le_solde_pas_le_cumul(page: Page, space_id, spp_ctx):
+    """**Deux écrans, un seul chiffre.**
+
+    `players_proj.spp` cumule les gains : `PlayerSkillPurchased` n'en retire
+    rien, seuls les chemins d'annulation le font. La liste affichait donc le
+    cumul quand la fiche du joueur affichait la réserve — un joueur ayant tout
+    dépensé s'y lisait encore riche.
+
+    Le test achète une compétence et vérifie les deux moitiés : la colonne
+    **baisse**, et elle **égale** la réserve de la fiche. La seconde est la plus
+    forte — une baisse seule passerait encore si les deux écrans divergeaient
+    d'une constante.
+    """
+    player_id = spp_ctx["sheet_player_id"]
+    team_id = spp_ctx["home_team_id"]
+
+    avant = _colonne_spp_de_la_feuille(page, space_id, team_id, player_id)
+
+    page.goto(f"{BASE_URL}/app/{space_id}/players/{player_id}/detail", wait_until="load")
+    _activate_spp_spending(page)
+    reserve_avant = page.locator(".spend-panel-remaining-val").inner_text().strip()
+    assert avant == reserve_avant, (
+        f"les deux écrans divergent avant tout achat : liste {avant}, fiche {reserve_avant}"
+    )
+
+    page.wait_for_selector(".skill-list-table", timeout=10000)
+    choisir = page.locator(".btn-add-skill:visible", has_text="Choisir")
+    expect(choisir.first).to_be_visible(timeout=10000)
+    with page.expect_navigation(wait_until="load"):
+        choisir.first.click()
+
+    reserve_apres = page.locator(".spend-panel-remaining-val").inner_text().strip()
+    apres = _colonne_spp_de_la_feuille(page, space_id, team_id, player_id)
+
+    assert int(apres) < int(avant), (
+        f"la colonne n'a pas baissé après l'achat : {avant} puis {apres} — "
+        "c'est le cumul des gains qui s'affiche, pas le solde"
+    )
+    assert apres == reserve_apres, (
+        f"liste {apres} et fiche {reserve_apres} ne disent pas la même chose"
+    )
