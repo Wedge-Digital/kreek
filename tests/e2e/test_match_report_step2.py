@@ -208,3 +208,64 @@ def test_step2_team_data_loaded(page: Page, space_id, pre_match_mr_id):
     for v in tv_values:
         text = v.inner_text().strip()
         assert text and text != "…", f"Valeur TV non chargée : {text!r}"
+
+
+def test_step2_reaffiche_les_jets_deja_enregistres(page: Page, space_id, pre_match_mr_id):
+    """**Le rapport rouvert doit dire ce qu'il porte** (carte 494).
+
+    Les deux champs valaient 2 en dur — dans l'`x-data` et dans l'attribut
+    `value` — et le contrôleur ne lisait les deux `Option<D3Roll>` du domaine
+    que pour en tirer un booléen. Un rapport déjà saisi affichait donc 2, sous
+    un bandeau « déjà enregistré » qui disait le contraire.
+
+    Le test est indépendant de l'ordre d'exécution : il enregistre ses propres
+    jets avant de rouvrir la page, quoi qu'un autre test ait laissé.
+
+    1 et 3 : deux valeurs distinctes, et aucune n'est l'ancien défaut. Avec 2
+    d'un côté, le test passerait sur le bug.
+    """
+    url = f"{BASE_URL}/app/{space_id}/match-report/{pre_match_mr_id}/step2"
+    page.goto(url, wait_until="load")
+    page.fill("input[name='home_fan_roll']", "1")
+    page.fill("input[name='away_fan_roll']", "3")
+    with page.expect_navigation(wait_until="load"):
+        page.click("button[type='submit']")
+
+    page.goto(url, wait_until="load")
+
+    expect(page.locator(".mr-fan-recorded")).to_be_visible()
+    expect(page.locator("input[name='home_fan_roll']")).to_have_value("1")
+    expect(page.locator("input[name='away_fan_roll']")).to_have_value("3")
+
+
+def test_step2_formate_les_montants_sans_manger_les_dizaines(page: Page, space_id, pre_match_mr_id):
+    """`formatKpo` recomposait le nombre depuis les milliers et les centaines.
+
+    Le chiffre des dizaines n'apparaissait dans aucune de ses deux branches :
+    2075 s'affichait « 2 000 kPo », et la différence de TV affichée était fausse
+    de la même façon.
+
+    La fonction est éprouvée **dans le navigateur**, sur la valeur qui compte :
+    aucune équipe de la base locale n'atteint 1 000 kPo, seuil où le défaut
+    commence — un test qui se contenterait de lire la TV à l'écran passerait
+    donc sur le bug.
+    """
+    page.goto(f"{BASE_URL}/app/{space_id}/match-report/{pre_match_mr_id}/step2",
+              wait_until="load")
+    page.wait_for_selector(".match-report-pre-match", timeout=10000)
+
+    rendus = page.evaluate(
+        """() => {
+             const el = document.querySelector('.match-report-pre-match');
+             const d = window.Alpine.$data(el);
+             return [2075, 1250, 1000, 990, 0].map(v => d.formatKpo(v))
+                    .concat([d.formatKpo(null)]);
+           }"""
+    )
+
+    assert rendus[0] == "2075 kPo", f"2075 rendu « {rendus[0]} »"
+    assert rendus[1] == "1250 kPo", f"1250 rendu « {rendus[1]} »"
+    assert rendus[2] == "1000 kPo", f"1000 rendu « {rendus[2]} »"
+    assert rendus[3] == "990 kPo", f"990 rendu « {rendus[3]} »"
+    assert rendus[4] == "0 kPo", f"0 rendu « {rendus[4]} »"
+    assert rendus[5] == "…", "une valeur absente reste des points de suspension"

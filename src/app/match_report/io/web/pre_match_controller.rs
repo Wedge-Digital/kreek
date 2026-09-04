@@ -36,6 +36,14 @@ pub struct PreMatchTemplate {
     pub away_team_context_url: String,
     pub form_action: String,
     pub fan_factor_already_recorded: bool,
+    /// Les jets enregistrés, s'il y en a (carte 494).
+    ///
+    /// Le gabarit en fait la valeur initiale des deux champs — vides sinon.
+    /// Ils valaient 2 en dur, si bien qu'un rapport vierge proposait un jet
+    /// qu'on n'avait pas fait, et qu'un rapport déjà saisi affichait 2 au lieu
+    /// du sien, sous un bandeau « déjà enregistré » qui disait le contraire.
+    pub home_fan_roll: Option<u8>,
+    pub away_fan_roll: Option<u8>,
 }
 
 impl IntoResponse for PreMatchTemplate {
@@ -80,20 +88,28 @@ pub async fn get_pre_match(
         }
     };
 
-    let (home_id, away_id, fan_factor_already_recorded) = match mr_state {
+    // Les trois états portent les jets. `ReadyToPublish` et `Published` rendaient
+    // `true` en dur : c'est vrai de l'enregistrement, mais ça ne dit pas ce qui
+    // a été enregistré — et le gabarit en a besoin.
+    let (home_id, away_id, home_fan_roll, away_fan_roll) = match mr_state {
         MatchReportState::PreMatch(pm) => (
             pm.home_team_id.to_string(),
             pm.away_team_id.to_string(),
-            pm.home_fan_roll.is_some() && pm.away_fan_roll.is_some(),
+            pm.home_fan_roll,
+            pm.away_fan_roll,
         ),
         MatchReportState::ReadyToPublish(rtp) => (
             rtp.home_team_id.to_string(),
             rtp.away_team_id.to_string(),
-            true,
+            rtp.home_fan_roll,
+            rtp.away_fan_roll,
         ),
-        MatchReportState::Published(p) => {
-            (p.home_team_id.to_string(), p.away_team_id.to_string(), true)
-        }
+        MatchReportState::Published(p) => (
+            p.home_team_id.to_string(),
+            p.away_team_id.to_string(),
+            p.home_fan_roll,
+            p.away_fan_roll,
+        ),
         MatchReportState::Draft(_) => {
             let url = AppRoutes::default()
                 .match_report
@@ -102,6 +118,7 @@ pub async fn get_pre_match(
         }
         MatchReportState::Cancelled(_) => return StatusCode::GONE.into_response(),
     };
+    let fan_factor_already_recorded = home_fan_roll.is_some() && away_fan_roll.is_some();
 
     let (home_info, away_info) = tokio::join!(
         state.match_report.team_data.find_team_info(&home_id),
@@ -139,6 +156,8 @@ pub async fn get_pre_match(
         away_team_context_url,
         form_action,
         fan_factor_already_recorded,
+        home_fan_roll: home_fan_roll.map(|r| r.value()),
+        away_fan_roll: away_fan_roll.map(|r| r.value()),
     }
     .into_response()
 }
@@ -218,5 +237,83 @@ pub async fn post_pre_match(
             tracing::error!("post_pre_match: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Un gabarit minimal : seuls les deux jets varient d'un cas à l'autre.
+    fn gabarit(home: Option<u8>, away: Option<u8>) -> PreMatchTemplate {
+        PreMatchTemplate {
+            app_routes: AppRoutes::default(),
+            space_id: "s".into(),
+            match_report_id: "m".into(),
+            home_team_id: "t-home".into(),
+            away_team_id: "t-away".into(),
+            home_team_name: "Domicile".into(),
+            away_team_name: "Visiteur".into(),
+            home_initials: "DO".into(),
+            away_initials: "VI".into(),
+            home_coach_name: "A".into(),
+            away_coach_name: "B".into(),
+            home_roster_name: "R".into(),
+            away_roster_name: "R".into(),
+            home_logo_url: None,
+            away_logo_url: None,
+            home_team_context_url: "/ctx/home".into(),
+            away_team_context_url: "/ctx/away".into(),
+            form_action: "/post".into(),
+            fan_factor_already_recorded: home.is_some() && away.is_some(),
+            home_fan_roll: home,
+            away_fan_roll: away,
+        }
+    }
+
+    /// **Le défaut d'origine.** Les deux champs portaient `value="2"` et
+    /// l'`x-data` initialisait ses jets à 2 : un rapport neuf proposait un jet
+    /// qu'on n'avait pas fait, et rien ne distinguait cette valeur d'une saisie.
+    #[test]
+    fn un_rapport_vierge_ne_propose_aucun_jet() {
+        let html = gabarit(None, None).render().unwrap();
+        assert!(
+            !html.contains(r#"value="2""#),
+            "aucun jet ne doit être proposé par défaut"
+        );
+        assert!(html.contains("homeRoll: ''"), "le jet domicile part vide");
+        assert!(html.contains("awayRoll: ''"), "le jet visiteur part vide");
+    }
+
+    /// L'autre moitié : ce qui a été enregistré revient à l'écran. Les deux
+    /// valeurs diffèrent à dessein — égales, le test passerait en confondant
+    /// les deux champs.
+    #[test]
+    fn un_rapport_saisi_reaffiche_ses_jets() {
+        let html = gabarit(Some(1), Some(3)).render().unwrap();
+        assert!(html.contains("homeRoll: 1"), "le jet domicile enregistré");
+        assert!(html.contains("awayRoll: 3"), "le jet visiteur enregistré");
+        assert!(
+            html.contains("déjà enregistré"),
+            "le bandeau accompagne les jets"
+        );
+    }
+
+    /// **`formatKpo` recomposait le nombre** depuis les milliers et les
+    /// centaines, et le chiffre des dizaines n'apparaissait dans aucune de ses
+    /// deux branches : 2075 s'affichait « 2 000 kPo ». Le gabarit ne doit plus
+    /// porter cette arithmétique.
+    #[test]
+    fn le_gabarit_ne_recompose_plus_les_montants() {
+        let html = gabarit(None, None).render().unwrap();
+        assert!(
+            !html.contains("Math.floor(v / 1000)"),
+            "le montant s'imprime, il ne se recompose pas"
+        );
+        assert!(!html.contains("'00 kPo'"), "plus de centaines recollées");
+        assert!(
+            html.contains("return v + ' kPo';"),
+            "la valeur, telle quelle"
+        );
     }
 }

@@ -5,9 +5,15 @@
 <div class="mr-container match-report-step1 match-report-pre-match"
      x-data="{
        home: null, away: null,
-       homeRoll: 2, awayRoll: 2,
-       get homeTotal() { return this.home ? this.home.dedicated_fans + parseInt(this.homeRoll) : '-'; },
-       get awayTotal() { return this.away ? this.away.dedicated_fans + parseInt(this.awayRoll) : '-'; },
+       // Vides tant que rien n'est enregistré ; sinon les jets du rapport. Ils
+       // valaient 2 en dur, si bien qu'un rapport vierge proposait un jet qu'on
+       // n'avait pas fait, et qu'un rapport saisi affichait 2 au lieu du sien.
+       homeRoll: {% if let Some(r) = home_fan_roll %}{{ r }}{% else %}''{% endif %},
+       awayRoll: {% if let Some(r) = away_fan_roll %}{{ r }}{% else %}''{% endif %},
+       // `parseInt('')` rend NaN : sans la garde, un champ vide affichait
+       // « NaN » à la place du total.
+       get homeTotal() { return this.home && this.homeRoll !== '' ? this.home.dedicated_fans + parseInt(this.homeRoll) : '-'; },
+       get awayTotal() { return this.away && this.awayRoll !== '' ? this.away.dedicated_fans + parseInt(this.awayRoll) : '-'; },
        get tvDiff() {
          if (!this.home || !this.away) return 0;
          return Math.abs(this.home.ctv - this.away.ctv);
@@ -24,13 +30,17 @@
          if (!this.home || !this.away) return null;
          return this.home.ctv >= this.away.ctv ? this.home : this.away;
        },
+       // La valeur, telle quelle. La version d'origine voulait une espace de
+       // milliers et **recomposait** le nombre depuis les milliers et les
+       // centaines — le chiffre des dizaines n'apparaissait dans aucune de ses
+       // deux branches, et 2075 s'affichait « 2 000 kPo ». Les vingt-six autres
+       // affichages de kPo de l'application impriment la valeur brute ; cet
+       // écran était le seul à formater, et le seul à se tromper.
+       //
+       // Le repli sur '…' reste : ces appels s'exécutent avant que les deux
+       // `fetch` aient répondu, et rendraient « null kPo » sans lui.
        formatKpo(v) {
-         if (!v && v !== 0) return '…';
-         if (v >= 1000) {
-           const maj = Math.floor(v / 1000);
-           const min = Math.floor((v % 1000) / 100);
-           return min > 0 ? maj + ' ' + min + '00 kPo' : maj + ' 000 kPo';
-         }
+         if (v === null || v === undefined) return '…';
          return v + ' kPo';
        },
        journeymenCount(team) {
@@ -112,7 +122,7 @@
           <span class="mr-fan-plus">+</span>
           <div class="mr-fan-dice">
             <input type="number" class="mr-fan-dice-input"
-                   name="home_fan_roll" min="1" max="3" value="2"
+                   name="home_fan_roll" min="1" max="3"
                    x-model="homeRoll" required>
             <span class="mr-fan-dice-label">D3</span>
           </div>
@@ -128,7 +138,7 @@
           <span class="mr-fan-plus">+</span>
           <div class="mr-fan-dice">
             <input type="number" class="mr-fan-dice-input"
-                   name="away_fan_roll" min="1" max="3" value="2"
+                   name="away_fan_roll" min="1" max="3"
                    x-model="awayRoll" required>
             <span class="mr-fan-dice-label">D3</span>
           </div>
