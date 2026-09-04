@@ -472,6 +472,7 @@ mod tests {
         player.spp = Spp(spp_earned);
         for (i, cost) in skill_costs.iter().enumerate() {
             player.acquired_skills.push(AcquiredSkill {
+                sur_budget_initial: false,
                 skill_id: SkillId::try_new(format!("s{i}")).unwrap(),
                 skill_name: SkillName::try_new(format!("Skill{i}")).unwrap(),
                 mode: AcquisitionMode::Chosen,

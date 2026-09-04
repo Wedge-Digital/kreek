@@ -259,6 +259,7 @@ mod tests {
     fn build_vm_reflects_level_advance_after_a_purchase() {
         let mut player = sample_player();
         player.acquired_skills.push(AcquiredSkill {
+            sur_budget_initial: false,
             skill_id: SkillId::try_new("block").unwrap(),
             skill_name: SkillName::try_new("Bloc").unwrap(),
             mode: AcquisitionMode::Chosen,
@@ -288,6 +289,7 @@ mod tests {
         let mut player = sample_player();
         for mode in [AcquisitionMode::Customised, AcquisitionMode::Injury] {
             player.acquired_skills.push(AcquiredSkill {
+                sur_budget_initial: false,
                 skill_id: SkillId::try_new(format!("gratuite-{mode:?}")).unwrap(),
                 skill_name: SkillName::try_new("Cadeau").unwrap(),
                 mode,

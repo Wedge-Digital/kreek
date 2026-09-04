@@ -35,6 +35,28 @@ pub struct AcquiredSkill {
     pub mode: AcquisitionMode,
     pub spp_cost: SppCost,
     pub value_delta: ValueKpo,
+    /// Payée sur le **budget bonus de début de ligue**, et non sur les SPP du
+    /// joueur.
+    ///
+    /// Ces points-là appartiennent à l'équipe — `spp_pool`, partagé entre ses
+    /// joueurs — et le joueur naît à zéro SPP. Compter leur dépense dans son
+    /// solde le débitait de ce qu'il n'a jamais eu : une compétence à 6 laissait
+    /// 2 sur 8 gagnés au match suivant, au lieu de 8.
+    ///
+    /// **Le marqueur est nécessaire parce que rien d'autre ne distingue.** Une
+    /// fois dans l'agrégat, la compétence bonus a le même `mode` qu'un achat
+    /// (Chosen ou Random) et le même `from_match` (`None`) ; seul l'événement
+    /// qui l'a produite les sépare, et il n'est pas conservé.
+    ///
+    /// `serde(default)` : les lignes de projection déjà écrites ne le portent
+    /// pas. Elles se liront « pas un bonus » — faux, mais sans conséquence, la
+    /// projection ne servant qu'aux pastilles. Le solde vient de l'agrégat,
+    /// rejoué depuis les événements, où l'information est intacte.
+    ///
+    /// Il ne touche **pas** le niveau : `est_une_amelioration()` se fonde sur le
+    /// mode, et une compétence bonus continue de renchérir la suivante.
+    #[serde(default)]
+    pub sur_budget_initial: bool,
     /// Le match qui l'a produite — `None` pour un achat ou une customisation.
     ///
     /// C'est ce qui rend la dépublication **exacte**. Compter « combien ce match
@@ -318,6 +340,8 @@ impl Player {
             } => {
                 let mut player = current?;
                 player.acquired_skills.push(AcquiredSkill {
+                    // la seule payée sur le budget d'équipe
+                    sur_budget_initial: true,
                     skill_id: skill_id.clone(),
                     skill_name: skill_name.clone(),
                     mode: *mode,
@@ -340,6 +364,8 @@ impl Player {
             } => {
                 let mut player = current?;
                 player.acquired_skills.push(AcquiredSkill {
+                    // achat sur les SPP du joueur
+                    sur_budget_initial: false,
                     skill_id: skill_id.clone(),
                     skill_name: skill_name.clone(),
                     mode: *mode,
@@ -567,6 +593,8 @@ impl Player {
             } => {
                 let mut player = current?;
                 player.acquired_skills.push(AcquiredSkill {
+                    // gratuite — une Haine ne coûte rien
+                    sur_budget_initial: false,
                     skill_id: skill_id.clone(),
                     skill_name: skill_name.clone(),
                     mode: AcquisitionMode::Injury,
@@ -584,6 +612,8 @@ impl Player {
             } => {
                 let mut player = current?;
                 player.acquired_skills.push(AcquiredSkill {
+                    // donnée par un commissaire, hors budget
+                    sur_budget_initial: false,
                     skill_id: skill_id.clone(),
                     skill_name: skill_name.clone(),
                     mode: AcquisitionMode::Customised,
@@ -895,10 +925,16 @@ impl Player {
     // ci-dessus qui ne font qu'enregistrer des faits déjà validés par match_report.
 
     /// SPP encore disponibles — dérivé, jamais stocké (cohérent avec l'event sourcing).
+    ///
+    /// **Les compétences prises sur le budget initial en sont exclues.** Ces
+    /// SPP-là appartenaient à l'équipe, pas au joueur : les soustraire de son
+    /// solde revenait à lui facturer un cadeau, et à lui interdire de dépenser
+    /// ce qu'il avait réellement gagné.
     pub fn spp_remaining(&self) -> u32 {
         let spent: u32 = self
             .acquired_skills
             .iter()
+            .filter(|s| !s.sur_budget_initial)
             .map(|s| s.spp_cost.into_inner() as u32)
             .sum::<u32>()
             + self
@@ -1666,6 +1702,101 @@ mod revert_match_impact_tests {
         let mut tous = vec![created()];
         tous.extend(events);
         Player::from_events(&tous).expect("le joueur doit se reconstituer")
+    }
+
+    // ── Budget bonus de début de ligue (carte 498) ───────────────────────────
+
+    fn competence_initiale(cout: u8) -> PlayerDomainEvent {
+        PlayerDomainEvent::InitialSkillEarned {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            skill_id: SkillId::try_new("BLOCK".to_string()).unwrap(),
+            skill_name: SkillName::try_new("Blocage".to_string()).unwrap(),
+            category_css: "type-general".into(),
+            mode: AcquisitionMode::Chosen,
+            spp_cost: SppCost::try_new(cout).unwrap(),
+            is_primary: true,
+            is_elite: false,
+            value_delta: ValueKpo(20),
+        }
+    }
+
+    fn achat_normal(cout: u8) -> PlayerDomainEvent {
+        PlayerDomainEvent::PlayerSkillPurchased {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            skill_id: SkillId::try_new("DODGE".to_string()).unwrap(),
+            skill_name: SkillName::try_new("Esquive".to_string()).unwrap(),
+            category_css: "type-agility".into(),
+            mode: AcquisitionMode::Chosen,
+            spp_cost: SppCost::try_new(cout).unwrap(),
+            value_delta: ValueKpo(20),
+        }
+    }
+
+    /// **Le scénario signalé.** Les SPP bonus appartiennent à l'équipe —
+    /// `spp_pool`, partagé — et le joueur naît à zéro. Compter leur dépense dans
+    /// son solde le débitait de ce qu'il n'a jamais eu : 8 gagnés au match
+    /// suivant n'en laissaient que 2.
+    #[test]
+    fn une_competence_prise_sur_le_budget_initial_ne_debite_pas_le_joueur() {
+        let p = joueur(vec![
+            competence_initiale(6),
+            PlayerDomainEvent::MatchMvpNamed {
+                player_id: PlayerId("p1".into()),
+                team_id: TeamId("t1".into()),
+                context: context("mr1"),
+                spp_earned: spp(8),
+            },
+        ]);
+        assert_eq!(p.spp.0, 8, "les 8 SPP du match sont bien crédités");
+        assert_eq!(p.spp_remaining(), 8, "et aucun n'est mangé par le bonus");
+    }
+
+    /// **Le contrôle, et il n'est pas décoratif.** Sans lui, la correction
+    /// passerait aussi bien si elle cessait de compter *toutes* les dépenses.
+    #[test]
+    fn un_achat_normal_debite_toujours_le_joueur() {
+        let p = joueur(vec![
+            PlayerDomainEvent::MatchMvpNamed {
+                player_id: PlayerId("p1".into()),
+                team_id: TeamId("t1".into()),
+                context: context("mr1"),
+                spp_earned: spp(8),
+            },
+            achat_normal(6),
+        ]);
+        assert_eq!(p.spp_remaining(), 2, "un achat sur ses propres SPP débite");
+    }
+
+    /// Les deux sur le même joueur : seul le second compte.
+    #[test]
+    fn seul_l_achat_sur_ses_propres_spp_est_soustrait() {
+        let p = joueur(vec![
+            competence_initiale(6),
+            PlayerDomainEvent::MatchMvpNamed {
+                player_id: PlayerId("p1".into()),
+                team_id: TeamId("t1".into()),
+                context: context("mr1"),
+                spp_earned: spp(20),
+            },
+            achat_normal(6),
+        ]);
+        assert_eq!(p.acquired_skills.len(), 2, "les deux compétences sont là");
+        assert_eq!(p.spp_remaining(), 14, "20 gagnés moins le seul achat payé");
+    }
+
+    /// La compétence bonus **compte dans le niveau** — décision du PO, cohérente
+    /// avec la carte 482 : elle a coûté des SPP, même bonus. Le marqueur ne
+    /// touche que le solde.
+    #[test]
+    fn la_competence_bonus_compte_toujours_dans_le_niveau() {
+        let sans = joueur(vec![]).next_improvement_level();
+        let avec = joueur(vec![competence_initiale(6)]).next_improvement_level();
+        assert!(
+            avec > sans,
+            "le bonus fait monter le niveau : {sans} → {avec}"
+        );
     }
 
     #[test]
