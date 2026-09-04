@@ -1,0 +1,541 @@
+<title>Le joueur qui manque le prochain match</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;700&family=Roboto:wght@400;500;600;700&family=Montserrat:wght@600&display=swap">
+
+<style>
+/* Tokens de kreek (assets/static/css/common.css) : les spécimens doivent être
+   fidèles au produit, pas approchants. */
+:root {
+  --k-white: #FFFFFF;
+  --k-dark-0: #1C1C29; --k-dark-1: #26263D; --k-dark-2: #555770;
+  --k-dark-3: #8F90A6; --k-dark-4: #C7C9D9; --k-dark-5: #E5E6EF; --k-dark-6: #F0F2F4;
+  --k-main-blue: #003049; --k-red: #E02020; --k-green: #629584; --k-gold: #FFD700;
+  --k-orange: #FF6B35;
+
+  --ground: #F0F2F4;  --surface: #FFFFFF;  --surface-sunk: #E9ECF0;
+  --ink: #1C1C29;     --ink-soft: #555770; --ink-faint: #8F90A6;
+  --rule: #DCE0E6;    --accent: #003049;
+  --bad: #B3181A;     --good: #47705F;     --warn: #A8552A;
+
+  --sp-1: 6px; --sp-2: 12px; --sp-3: 20px; --sp-4: 32px; --sp-5: 52px; --sp-6: 76px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #15151F; --surface: #1F1F2E; --surface-sunk: #191924;
+    --ink: #EDEEF2;    --ink-soft: #A9ABBC; --ink-faint: #74768A;
+    --rule: #2E2E42;   --accent: #8FB8CE;
+    --bad: #F1736F;    --good: #8FC0AC;     --warn: #E0A06E;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #15151F; --surface: #1F1F2E; --surface-sunk: #191924;
+  --ink: #EDEEF2;    --ink-soft: #A9ABBC; --ink-faint: #74768A;
+  --rule: #2E2E42;   --accent: #8FB8CE;
+  --bad: #F1736F;    --good: #8FC0AC;     --warn: #E0A06E;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: var(--sp-5) var(--sp-4) var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+
+.eyebrow {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600; font-size: 12px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+h1 {
+  font-family: 'Roboto Slab', Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(29px, 4.2vw, 42px);
+  line-height: 1.14; letter-spacing: -0.01em;
+  margin: 0; text-wrap: balance;
+}
+
+.masthead { display: flex; flex-direction: column; gap: var(--sp-3); }
+.lede { margin: 0; max-width: 64ch; font-size: 17px; color: var(--ink-soft); }
+.lede b { color: var(--ink); font-weight: 500; }
+
+section { display: flex; flex-direction: column; gap: var(--sp-3); }
+
+.sec-head {
+  display: flex; flex-direction: column; gap: var(--sp-1);
+  padding-bottom: var(--sp-2);
+  border-bottom: 2px solid var(--ink);
+}
+.sec-kicker {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600; font-size: 11px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent);
+}
+h2 {
+  font-family: 'Roboto Slab', Georgia, serif;
+  font-weight: 500; font-size: clamp(20px, 2.4vw, 26px);
+  line-height: 1.25; margin: 0; text-wrap: balance;
+}
+p.note { margin: 0; max-width: 70ch; color: var(--ink-soft); }
+p.note b { color: var(--ink); font-weight: 500; }
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em; background: var(--surface-sunk);
+  padding: 1px 5px; border-radius: 4px;
+}
+
+.facts {
+  display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--rule); border-left: 3px solid var(--ink-faint);
+  border-radius: 0 6px 6px 0; font-size: 14px;
+}
+.facts div { display: flex; flex-direction: column; }
+.facts .k {
+  font-family: 'Montserrat', sans-serif; font-weight: 600;
+  font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint);
+}
+.facts .v { font-variant-numeric: tabular-nums; font-weight: 500; }
+
+/* ── Le plateau : fond clair du produit, comme une capture ─────────────────── */
+.stage {
+  background: var(--k-dark-6);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: var(--sp-3);
+  overflow-x: auto;
+}
+.stage-tab {
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2);
+  padding: 9px var(--sp-3);
+  background: var(--ink); color: var(--ground);
+  border-radius: 8px 8px 0 0;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+}
+.stage-tab + .stage { border-radius: 0 0 8px 8px; border-top: none; }
+.stage-tab .sub { font-weight: 600; font-size: 10px; letter-spacing: 0.05em; text-transform: none; opacity: 0.85; }
+.stage-tab--good { background: var(--good); }
+.stage-tab--ask  { background: var(--warn); }
+
+/* ══ SPÉCIMEN : la table de joueurs, reprise de widgets/players-widget.css ══ */
+
+.pw { color: var(--k-dark-1); font-family: 'Roboto', sans-serif; }
+.pw table { width: 100%; border-collapse: collapse; min-width: 900px; }
+.pw th {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--k-dark-3); text-align: left;
+  padding: 8px 12px; border-bottom: 1px solid var(--k-dark-4); white-space: nowrap;
+}
+.pw td { padding: 12px; font-size: 16px; vertical-align: middle; }
+.pw tbody tr:nth-child(odd) td  { background: var(--k-white); }
+.pw tbody tr:nth-child(even) td { background: var(--k-dark-6); }
+.pw .handle { color: var(--k-dark-4); cursor: grab; width: 1%; }
+.pw .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pw .nom strong { font-weight: 700; }
+.pw .poste { color: var(--k-dark-1); }
+.pw .mots {
+  display: block; font-size: 12px; color: var(--k-dark-3); margin-top: 2px;
+}
+.pw .stat { font-variant-numeric: tabular-nums; text-align: center; }
+.pw .tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.pw .tag {
+  display: inline-block; font-size: 12px; font-weight: 600;
+  padding: 3px 10px; border-radius: 20px;
+  background: var(--k-dark-5); color: var(--k-dark-1);
+}
+.pw .tag--chosen { background: rgba(0,48,73,0.08);   color: var(--k-main-blue); }
+.pw .tag--random { background: rgba(255,215,0,0.18); color: #9A7800; }
+.pw .rien { color: var(--k-dark-3); }
+
+/* ── L'état proposé : la ligne barrée ─────────────────────────────────────── */
+
+.pw tr.absent td { color: var(--k-dark-3); }
+.pw tr.absent .nom strong,
+.pw tr.absent .poste,
+.pw tr.absent .mots,
+.pw tr.absent .num,
+.pw tr.absent .stat,
+.pw tr.absent .jersey { text-decoration: line-through; }
+
+/* Variante A : les pastilles sont barrées elles aussi */
+.pw tr.absent--tags .tag { text-decoration: line-through; }
+/* Variante B (proposée) : les pastilles perdent leur couleur, sans barre */
+.pw tr.absent--pales .tag { background: var(--k-dark-5); color: var(--k-dark-3); opacity: 0.75; }
+
+/* Le repère qui dit *pourquoi* */
+.pw .marque {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-left: 8px; padding: 2px 8px;
+  border-radius: 20px; background: rgba(255,107,53,0.13); color: #A8552A;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
+  text-decoration: none; white-space: nowrap; vertical-align: middle;
+}
+.pw .marque--retire { background: rgba(85,87,112,0.13); color: var(--k-dark-2); }
+
+/* Le mode édition : des champs, jamais de barré */
+.pw .champ {
+  font-family: 'Roboto', sans-serif; font-size: 15px;
+  border: 1px solid var(--k-dark-4); border-radius: 6px;
+  padding: 6px 9px; width: 100%; max-width: 190px;
+  background: var(--k-white); color: var(--k-dark-1);
+  text-decoration: none;
+}
+.pw .champ--num { max-width: 62px; text-align: center; }
+
+/* ── Diptyque ─────────────────────────────────────────────────────────────── */
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+@media (max-width: 900px) { .pair { grid-template-columns: 1fr; } }
+.pair .stage { min-height: 0; }
+.pair .pw table { min-width: 0; }
+
+.say {
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--rule); border-top: none;
+  border-radius: 0 0 8px 8px;
+  font-size: 13.5px; color: var(--ink-soft);
+}
+.say b { color: var(--ink); font-weight: 500; }
+.block { display: flex; flex-direction: column; }
+.block .stage { border-radius: 0; }
+
+.ask {
+  display: flex; flex-direction: column; gap: var(--sp-2);
+  padding: var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--accent); border-radius: 8px;
+}
+.ask h3 {
+  margin: 0; font-family: 'Roboto Slab', Georgia, serif;
+  font-weight: 500; font-size: 18px;
+}
+.ask p { margin: 0; color: var(--ink-soft); max-width: 70ch; }
+.ask p b { color: var(--ink); font-weight: 500; }
+
+.diff { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.diff-file {
+  padding: 8px var(--sp-3); background: var(--surface-sunk);
+  border-bottom: 1px solid var(--rule);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px; color: var(--ink-soft);
+}
+.diff pre {
+  margin: 0; padding: var(--sp-2) var(--sp-3); overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px; line-height: 1.65;
+}
+.diff .add { color: var(--good); }
+.diff .ctx { color: var(--ink-faint); }
+
+footer {
+  border-top: 1px solid var(--rule); padding-top: var(--sp-3);
+  font-size: 13.5px; color: var(--ink-faint);
+  display: flex; flex-direction: column; gap: var(--sp-1);
+}
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Maquette · feuille d'équipe · liste des joueurs</div>
+    <h1>Le joueur qui manque le prochain match</h1>
+    <p class="lede">
+      Toute la ligne en barré, comme demandé. La donnée existe déjà :
+      <code>participation_status</code> vit dans la projection des joueurs et le
+      dépôt la lit ; elle ne remonte simplement pas jusqu'au gabarit. <b>Trois
+      décisions</b> restent à prendre, et chacune est montrée plus bas plutôt que
+      décrite.
+    </p>
+  </header>
+
+  <div class="facts">
+    <div><span class="k">Statuts possibles</span><span class="v">Available · MissingNextGame · Retired</span></div>
+    <div><span class="k">En base aujourd'hui</span><span class="v">3 joueurs MissingNextGame</span></div>
+    <div><span class="k">Morts</span><span class="v">déjà exclus de la liste</span></div>
+    <div><span class="k">Donnée à ajouter</span><span class="v">aucune</span></div>
+  </div>
+
+  <!-- ══ LA PROPOSITION ═══════════════════════════════════════════════════════ -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-kicker">Ce que ça donne</div>
+      <h2>La ligne entière est barrée, et elle dit pourquoi</h2>
+    </div>
+
+    <p class="note">
+      Grimjaw Fendcrâne est blessé et manque la prochaine rencontre. Le barré
+      couvre le maillot, le nom, le poste, les cinq caractéristiques, les SPP et
+      la valeur — tout ce qui se lit comme du texte. Le gris qui l'accompagne
+      fait reculer la ligne sans la rendre illisible.
+    </p>
+
+    <div class="block">
+      <div class="stage-tab stage-tab--good">Proposition <span class="sub">MissingNextGame · pastilles pâlies, repère à droite du nom</span></div>
+      <div class="stage">
+        <div class="pw">
+          <table>
+            <thead>
+              <tr>
+                <th></th><th>#</th><th>Nom</th><th>Poste</th>
+                <th>MV</th><th>FO</th><th>AG</th><th>PA</th><th>AR</th>
+                <th>Compétences de base</th><th>Compétences acquises</th>
+                <th>SPP</th><th>Valeur</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="handle">⠿</td>
+                <td class="num jersey">1</td>
+                <td class="nom"><strong>Ulrik Barbe-de-Fer</strong></td>
+                <td class="poste">Blitzer<span class="mots">Nain, Blitzer</span></td>
+                <td class="stat">5</td><td class="stat">3</td><td class="stat">4+</td><td class="stat">5+</td><td class="stat">9+</td>
+                <td><div class="tags"><span class="tag">Blocage</span><span class="tag">Poigne de fer</span></div></td>
+                <td><div class="tags"><span class="tag tag--chosen">Tacle</span></div></td>
+                <td class="num">12</td>
+                <td class="num">90 kPo</td>
+              </tr>
+              <tr class="absent absent--pales">
+                <td class="handle">⠿</td>
+                <td class="num jersey">4</td>
+                <td class="nom">
+                  <strong>Grimjaw Fendcrâne</strong>
+                  <span class="marque">🩹 Manque le prochain match</span>
+                </td>
+                <td class="poste">Troll Slayer<span class="mots">Nain, Slayer</span></td>
+                <td class="stat">5</td><td class="stat">3</td><td class="stat">4+</td><td class="stat">6+</td><td class="stat">8+</td>
+                <td><div class="tags"><span class="tag">Frénésie</span><span class="tag">Sans peur</span></div></td>
+                <td><div class="tags"><span class="tag tag--random">Esquive</span></div></td>
+                <td class="num">7</td>
+                <td class="num">95 kPo</td>
+              </tr>
+              <tr>
+                <td class="handle">⠿</td>
+                <td class="num jersey">7</td>
+                <td class="nom"><strong>Borin Marteau-Lourd</strong></td>
+                <td class="poste">Long Beard<span class="mots">Nain, Long Beard</span></td>
+                <td class="stat">4</td><td class="stat">3</td><td class="stat">4+</td><td class="stat">5+</td><td class="stat">9+</td>
+                <td><div class="tags"><span class="tag">Blocage</span><span class="tag">Prise sûre</span></div></td>
+                <td><span class="rien">—</span></td>
+                <td class="num">3</td>
+                <td class="num">70 kPo</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="say">
+        Le barré seul ne dit pas <b>pourquoi</b> la ligne est barrée — un coach qui
+        ouvre la feuille sans contexte n'a aucun moyen de savoir s'il s'agit d'une
+        blessure, d'une suspension ou d'une erreur. Le repère à droite du nom est
+        le seul ajout au-delà de ce que vous avez demandé ; il se retire si vous
+        le jugez bavard.
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ DÉCISION 1 ═══════════════════════════════════════════════════════════ -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-kicker">Décision 1</div>
+      <h2>Les pastilles de compétences : barrées, ou seulement pâlies ?</h2>
+    </div>
+
+    <p class="note">
+      Ce ne sont pas du texte courant mais des étiquettes colorées, à fond arrondi.
+      Une barre les traverse de bout en bout et se confond avec leur bordure.
+    </p>
+
+    <div class="pair">
+      <div class="block">
+        <div class="stage-tab stage-tab--ask">A · barrées comme le reste</div>
+        <div class="stage">
+          <div class="pw">
+            <table>
+              <tbody>
+                <tr class="absent absent--tags">
+                  <td class="num jersey">4</td>
+                  <td class="nom"><strong>Grimjaw Fendcrâne</strong></td>
+                  <td><div class="tags"><span class="tag">Frénésie</span><span class="tag">Sans peur</span></div></td>
+                  <td><div class="tags"><span class="tag tag--random">Esquive</span></div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="say">Littéral — « tout le texte de la ligne ». Mais la barre coupe une forme déjà close, et l'étiquette devient difficile à lire.</div>
+      </div>
+
+      <div class="block">
+        <div class="stage-tab stage-tab--good">B · pâlies, sans barre <span class="sub">proposé</span></div>
+        <div class="stage">
+          <div class="pw">
+            <table>
+              <tbody>
+                <tr class="absent absent--pales">
+                  <td class="num jersey">4</td>
+                  <td class="nom"><strong>Grimjaw Fendcrâne</strong></td>
+                  <td><div class="tags"><span class="tag">Frénésie</span><span class="tag">Sans peur</span></div></td>
+                  <td><div class="tags"><span class="tag tag--random">Esquive</span></div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="say">Les pastilles perdent leur couleur de catégorie et reculent avec la ligne. Le message passe, l'étiquette reste lisible.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ DÉCISION 2 ═══════════════════════════════════════════════════════════ -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-kicker">Décision 2</div>
+      <h2>Et le joueur qui a pris sa retraite ?</h2>
+    </div>
+
+    <p class="note">
+      Le domaine connaît quatre statuts : <code>Available</code>,
+      <code>MissingNextGame</code>, <code>Retired</code> et <code>Dead</code>.
+      Les morts sont <b>déjà exclus</b> de la liste — le dépôt appelle
+      <code>find_alive_by_team_id</code>. Restent les retraités, qui manquent le
+      prochain match comme tous les suivants.
+    </p>
+
+    <div class="block">
+      <div class="stage-tab stage-tab--ask">Deux absences, deux durées</div>
+      <div class="stage">
+        <div class="pw">
+          <table>
+            <tbody>
+              <tr class="absent absent--pales">
+                <td class="handle">⠿</td>
+                <td class="num jersey">4</td>
+                <td class="nom"><strong>Grimjaw Fendcrâne</strong><span class="marque">🩹 Manque le prochain match</span></td>
+                <td class="poste">Troll Slayer</td>
+                <td class="num">7</td>
+                <td class="num">95 kPo</td>
+              </tr>
+              <tr class="absent absent--pales">
+                <td class="handle">⠿</td>
+                <td class="num jersey">11</td>
+                <td class="nom"><strong>Thorgrim Vieille-Barbe</strong><span class="marque marque--retire">⚑ A pris sa retraite</span></td>
+                <td class="poste">Long Beard</td>
+                <td class="num">31</td>
+                <td class="num">70 kPo</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="say">
+        Même barré, repère différent. <b>L'alternative</b> serait de réserver le
+        barré à l'absence d'un match et de traiter la retraite autrement — mais
+        les deux joueurs sont indisponibles au prochain match, et c'est ce que la
+        liste doit dire d'un coup d'œil.
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ DÉCISION 3 ═══════════════════════════════════════════════════════════ -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-kicker">Décision 3</div>
+      <h2>En mode édition, le barré s'efface</h2>
+    </div>
+
+    <p class="note">
+      La table bascule en saisie : le maillot et le nom deviennent des champs. Un
+      <code>&lt;input&gt;</code> barré se lit mal et suggère que la valeur est
+      condamnée, alors qu'on est en train de la modifier. Le barré ne porte donc
+      que sur les cellules en lecture — le repère, lui, reste.
+    </p>
+
+    <div class="block">
+      <div class="stage-tab stage-tab--good">Mode édition</div>
+      <div class="stage">
+        <div class="pw">
+          <table>
+            <tbody>
+              <tr class="absent absent--pales">
+                <td class="handle">⠿</td>
+                <td><input class="champ champ--num" value="4"></td>
+                <td><input class="champ" value="Grimjaw Fendcrâne"></td>
+                <td class="poste">Troll Slayer<span class="mots">Nain, Slayer</span></td>
+                <td class="num">7</td>
+                <td class="num">95 kPo</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="say">
+        Les champs sont nets, le poste et les chiffres restent barrés. Sans cette
+        règle, le coach corrigerait un nom rayé.
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ CE QUE ÇA COÛTE ══════════════════════════════════════════════════════ -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-kicker">Ce que ça coûte</div>
+      <h2>Un champ dans le view model, une classe sur la ligne</h2>
+    </div>
+
+    <div class="diff">
+      <div class="diff-file">src/app/players/io/web/widgets/player_table_widget.rs</div>
+<pre><span class="ctx">  pub struct PlayerRowVm {
+      …
+      pub keywords: String,</span>
+<span class="add">+     /// L'absence au prochain match, telle que la projection la porte déjà —
++     /// `participation_status` est lu par le dépôt et s'arrêtait au VM.
++     pub absence: Option&lt;Absence&gt;,</span>
+<span class="ctx">  }</span>
+
+<span class="add">+ pub enum Absence { ProchainMatch, Retraite }</span></pre>
+      <div class="diff-file" style="border-top: 1px solid var(--rule); border-bottom: none;">player-table-fragment.html</div>
+<pre><span class="ctx">  &lt;tr class="player-table-row</span><span class="add">{% if p.absence.is_some() %} player-absent{% endif %}</span><span class="ctx">"</span></pre>
+    </div>
+
+    <div class="ask">
+      <h3>Un <code>enum</code> et non un booléen</h3>
+      <p>
+        <b>Le gabarit n'a pas à connaître les quatre statuts du domaine</b>, ni à
+        décider lesquels comptent comme une absence — c'est une règle métier. Mais
+        un simple <code>bool</code> ne permettrait pas de distinguer le repère
+        « manque le prochain match » de « a pris sa retraite ». L'énumération dit
+        exactement ce que la vue doit savoir, et rien de plus.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    <div>
+      Statuts et effectifs relevés le 3 septembre 2026 dans la base de
+      développement. Les spécimens reprennent <code>widgets/players-widget.css</code>
+      et les tokens de <code>common.css</code>.
+    </div>
+    <div>Rien n'est modifié dans le dépôt : cette page est une proposition à valider.</div>
+  </footer>
+
+</div>

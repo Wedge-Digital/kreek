@@ -50,7 +50,7 @@
           {# Pas de `display_order` soumis : l'ordre est celui des lignes, que le
              glisser-déposer réordonne dans le DOM, et le use case assigne
              `display_order = index`. #}
-          <tr class="player-table-row" data-player-detail="{{ app_routes.players.player_detail(space_id, p.player_id) }}">
+          <tr class="player-table-row{% if p.absence.is_some() %} player-absent{% endif %}" data-player-detail="{{ app_routes.players.player_detail(space_id, p.player_id) }}">
             <td class="drag-handle-cell">⠿</td>
             <td class="player-jersey cell-jersey">
               <span class="display-value">{% if let Some(j) = p.jersey %}{{ j }}{% else %}—{% endif %}</span>
@@ -62,6 +62,13 @@
               <span class="display-value">
                 <strong>{% if p.personal_name.is_empty() %}{{ p.position_name }}{% else %}{{ p.personal_name }}{% endif %}</strong>
               </span>
+              {# Le repère dit **pourquoi** la ligne est barrée (carte 489) : un
+                 barré nu ne distingue pas une blessure d'un défaut d'affichage.
+                 Le libellé est masqué sous 768 px, où douze colonnes défilent
+                 déjà — l'icône et son `title` restent. #}
+              {% if let Some(a) = p.absence %}
+              <span class="player-absence" title="{{ a.libelle() }}"><span class="player-absence-icone">{{ a.icone() }}</span><span class="player-absence-mot">{{ a.libelle() }}</span></span>
+              {% endif %}
               {# `placeholder` = nom de poste : c'est ce que la lecture affiche
                  quand le coach n'a pas donné de nom, un champ vide n'est donc
                  pas une case oubliée. #}

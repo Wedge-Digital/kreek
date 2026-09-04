@@ -105,6 +105,17 @@ def test_renommer_une_competition_depuis_les_parametres(page: Page, competition_
     # Le conteneur se remplit par htmx : c'est le panneau qu'on attend, pas la page.
     expect(page.locator("#settings-general-panel")).to_be_visible(timeout=10000)
     page.fill("#settings-general-panel input[name='name']", nouveau)
+    # **Le panneau devient visible avant d'être câblé par htmx.** Un clic tombé
+    # dans cette fenêtre ne produit rien : aucune requête, aucune erreur, et
+    # l'assertion ci-dessous passe quand même — l'input contient encore ce que
+    # `fill` y a mis. C'est le rechargement, plus bas, qui découvre que rien n'a
+    # été enregistré, et son message accuse alors la mauvaise chose.
+    #
+    # Le test voisin `test_un_nom_deja_pris_est_refuse` posait déjà cette attente
+    # sur le **même sélecteur**, trente-six lignes plus bas ; la correction n'y
+    # avait pas été généralisée (hors carte 489, qui ne fait que débloquer
+    # `make e2e`).
+    attendre_cablage(page, "#settings-general-panel form")
     page.click("#settings-general-panel button[type='submit']")
 
     # Le widget est réécrit avec ce que porte la base.

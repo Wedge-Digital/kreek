@@ -23,6 +23,52 @@ impl std::fmt::Display for SkillTagVm {
     }
 }
 
+/// Pourquoi un joueur ne jouera pas le prochain match (carte 489).
+///
+/// **Un `enum` et non un booléen.** Le gabarit n'a pas à connaître les quatre
+/// statuts du domaine ni à décider lesquels comptent comme une absence — c'est
+/// une règle métier. Mais un `bool` ne distinguerait pas les deux repères
+/// affichés. L'énumération dit à la vue exactement ce qu'elle doit savoir.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Absence {
+    ProchainMatch,
+    Retraite,
+}
+
+impl Absence {
+    /// Le libellé du repère posé à droite du nom. Un barré nu n'explique rien :
+    /// un coach qui ouvre la feuille sans contexte ne sait pas s'il s'agit d'une
+    /// blessure, d'une suspension ou d'un défaut d'affichage.
+    pub fn libelle(self) -> &'static str {
+        match self {
+            Self::ProchainMatch => "Manque le prochain match",
+            Self::Retraite => "A pris sa retraite",
+        }
+    }
+
+    pub fn icone(self) -> &'static str {
+        match self {
+            Self::ProchainMatch => "\u{1FA79}",
+            Self::Retraite => "\u{2691}",
+        }
+    }
+
+    /// Depuis le statut porté par la projection.
+    ///
+    /// `Dead` n'apparaît pas : le tableau lit `find_alive_by_team_id`, et la
+    /// carte 488 a sorti les morts de l'effectif visible. `Retired` n'est posé
+    /// par aucun code du domaine aujourd'hui — mais `squad_adapter.rs` le range
+    /// déjà parmi les indisponibles, et l'écran ne doit pas dire l'inverse de ce
+    /// que `teams` calcule.
+    fn depuis_le_statut(statut: &str) -> Option<Self> {
+        match statut {
+            "MissingNextGame" => Some(Self::ProchainMatch),
+            "Retired" => Some(Self::Retraite),
+            _ => None,
+        }
+    }
+}
+
 pub struct PlayerRowVm {
     pub player_id: String,
     pub jersey: Option<i16>,
@@ -36,6 +82,11 @@ pub struct PlayerRowVm {
     /// plus les augmentations achetées en SPP. `None` si le poste est introuvable
     /// au catalogue : la table affiche alors un tiret plutôt qu'une valeur fausse.
     pub stats: Option<ResolvedPlayerStats>,
+    /// L'absence au prochain match, quand il y en a une (carte 489).
+    ///
+    /// La donnée existait déjà : `participation_status` vit dans la projection
+    /// et le dépôt le lit — il s'arrêtait ici.
+    pub absence: Option<Absence>,
     /// « Elfe, Blitzer » — les mots-clefs du poste, déjà joints.
     ///
     /// Vide quand le poste n'en porte pas : le template n'affiche alors rien du
@@ -152,6 +203,7 @@ pub async fn build_player_rows(state: &AppState, team: &TeamId) -> Vec<PlayerRow
                 spp: p.spp,
                 value_kpo: p.value_kpo,
                 stats: resolved,
+                absence: Absence::depuis_le_statut(&p.participation_status),
                 keywords,
             }
         })
@@ -182,4 +234,56 @@ async fn resolve_team_stats(
                 .map(|stats| (player.id.0.clone(), stats))
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// **Les quatre statuts, et ce que la vue en fait** (carte 489).
+    ///
+    /// `Dead` rend `None` sans que ce soit une décision d'affichage : le tableau
+    /// lit `find_alive_by_team_id`, et un mort n'atteint jamais cette fonction.
+    /// La correspondance le dit quand même, pour qu'un futur appelant qui
+    /// oublierait le filtre n'obtienne pas un joueur barré « à la retraite ».
+    #[test]
+    fn chaque_statut_donne_son_absence() {
+        assert_eq!(Absence::depuis_le_statut("Available"), None);
+        assert_eq!(
+            Absence::depuis_le_statut("MissingNextGame"),
+            Some(Absence::ProchainMatch)
+        );
+        assert_eq!(
+            Absence::depuis_le_statut("Retired"),
+            Some(Absence::Retraite)
+        );
+        assert_eq!(Absence::depuis_le_statut("Dead"), None);
+    }
+
+    /// Un statut inconnu ne barre pas la ligne.
+    ///
+    /// **Échouer ouvert, ici, est le bon sens** : un statut que la vue ne
+    /// connaît pas viendrait d'un domaine qui a évolué sans elle. Barrer par
+    /// défaut ferait disparaître visuellement un effectif entier sur une valeur
+    /// mal orthographiée ; ne rien barrer laisse la liste lisible et le défaut
+    /// se voit au premier joueur blessé qui cesse d'être signalé.
+    #[test]
+    fn un_statut_inconnu_ne_barre_rien() {
+        assert_eq!(Absence::depuis_le_statut(""), None);
+        assert_eq!(Absence::depuis_le_statut("missingnextgame"), None);
+        assert_eq!(Absence::depuis_le_statut("Suspendu"), None);
+    }
+
+    /// Les deux repères disent des choses différentes — c'est la raison d'être
+    /// de l'`enum` plutôt que d'un booléen.
+    #[test]
+    fn les_deux_absences_ne_se_disent_pas_pareil() {
+        assert_ne!(
+            Absence::ProchainMatch.libelle(),
+            Absence::Retraite.libelle()
+        );
+        assert_ne!(Absence::ProchainMatch.icone(), Absence::Retraite.icone());
+        assert!(Absence::ProchainMatch.libelle().contains("prochain match"));
+        assert!(Absence::Retraite.libelle().contains("retraite"));
+    }
 }

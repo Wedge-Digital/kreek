@@ -151,3 +151,52 @@
   background: rgba(224, 32, 32, 0.06);
   color: var(--red); font-size: var(--text-xs); font-weight: 600;
 }
+
+/* ── Un joueur qui ne jouera pas le prochain match (carte 489) ───────────────
+   Toute la ligne est barrée et grisée : maillot, nom, poste, mots-clefs, les
+   cinq caractéristiques, SPP et valeur. La donnée existait déjà — le statut vit
+   dans la projection depuis toujours, il s'arrêtait au view model. */
+.players-widget .player-table tbody tr.player-absent td,
+.players-widget.player-table tbody tr.player-absent td { color: var(--dark-3); }
+.players-widget tr.player-absent .display-value,
+.players-widget tr.player-absent .player-position,
+.players-widget tr.player-absent .player-keywords,
+.players-widget tr.player-absent .player-stat,
+.players-widget tr.player-absent .player-none { text-decoration: line-through; }
+
+/* **Les pastilles pâlissent au lieu d'être barrées.** Ce ne sont pas du texte
+   courant mais des étiquettes à fond arrondi : une barre les traverse de bout en
+   bout et se confond avec leur forme. Elles perdent leur couleur de catégorie et
+   reculent avec la ligne, sans cesser d'être lisibles. */
+.players-widget tr.player-absent .skill-tag {
+  background: var(--dark-5);
+  color: var(--dark-3);
+  opacity: 0.75;
+  text-decoration: none;
+}
+
+/* Le repère, à droite du nom. */
+.players-widget .player-absence,
+.players-widget.player-absence {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-left: 8px; padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(255, 107, 53, 0.13); color: #A8552A;
+  font-size: 11px; font-weight: 700;
+  white-space: nowrap; vertical-align: middle;
+  /* Le repère n'est pas barré : c'est lui qui explique la barre. */
+  text-decoration: none;
+}
+
+/* **Le mode édition n'est jamais barré.** Maillot et nom deviennent des champs ;
+   un `<input>` rayé se lit mal et suggère que la valeur est condamnée, alors
+   qu'on est justement en train de la modifier. */
+.players-widget tr.player-absent .edit-value { text-decoration: none; color: var(--dark-1); }
+
+@media (max-width: 768px) {
+  /* Douze colonnes défilent déjà horizontalement : le libellé du repère
+     élargirait la colonne du nom d'autant. L'icône seule suffit — le sens reste
+     accessible par le `title` de l'élément. */
+  .players-widget .player-absence-mot { display: none; }
+  .players-widget .player-absence { margin-left: 5px; padding: 2px 5px; }
+}
