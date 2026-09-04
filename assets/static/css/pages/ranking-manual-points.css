@@ -25,8 +25,20 @@
 
 /* ── Panneaux — deux poids, la leçon de l'éditeur de roster ───────── */
 .ranking-manual-points .mp-panel { background: var(--white); border-radius: 10px; overflow: hidden; }
+
+/* **Le panneau du formulaire ne rogne pas ce qui en sort.**
+   `overflow: hidden` sert aux coins arrondis : sans lui, le fond gris de
+   l'en-tête déborde de la courbe. Mais il coupe aussi le menu du
+   `kreek-select`, qui est un `position: absolute` posé sous le champ — le
+   commissaire ne voyait qu'une tranche de la liste des équipes.
+   Les coins sont donc découpés là où ils se voient, sur l'en-tête lui-même. */
+.ranking-manual-points .mp-panel--form { overflow: visible; }
 .ranking-manual-points .mp-panel--form { background: var(--white); border: 1px solid var(--dark-5); }
-.ranking-manual-points .mp-panel--form .mp-panel-head { background: var(--dark-6); padding: 10px var(--p2); }
+.ranking-manual-points .mp-panel--form .mp-panel-head {
+  background: var(--dark-6);
+  padding: 10px var(--p2);
+  border-radius: 9px 9px 0 0;   /* 9 et non 10 : la bordure d'un pixel du panneau */
+}
 .ranking-manual-points .mp-panel--form .mp-panel-title { font-size: var(--text-small); color: var(--dark-2); }
 .ranking-manual-points .mp-panel--list { box-shadow: 0 2px 14px rgba(0,48,73,0.07); border-top: 3px solid var(--main-blue); }
 .ranking-manual-points .mp-panel--list .mp-panel-title { font-size: var(--h4); font-weight: 600; color: var(--dark-0); }

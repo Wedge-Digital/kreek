@@ -147,11 +147,18 @@ def match_report_in_progress(space_id, banner_ctx):
 # ── Scénario : en attente d'inscription (dynamique, skip si absent) ───────────
 
 def test_pending_enrollment_banner_is_informational(page: Page, space_id):
+    # **Filtrer par espace.** La requête prenait n'importe quelle équipe de la
+    # base, puis l'ouvrait sous `space_id` : tant que la base ne contenait que
+    # l'espace e2e, les deux coïncidaient. Une base chargée depuis la production
+    # — ce que `make import_prod_db` permet désormais — rend une équipe d'un
+    # autre espace, la page ne la trouve pas, et le test échoue en accusant le
+    # bandeau.
     rows = _query_db(
-        f"SELECT team_id FROM team_proj WHERE status = 'PendingEnrollment' LIMIT 1;"
+        "SELECT team_id FROM team_proj "
+        f"WHERE status = 'PendingEnrollment' AND space_id = '{space_id}' LIMIT 1;"
     )
     if not rows:
-        pytest.skip("Aucune équipe en attente d'inscription dans la base seedée")
+        pytest.skip("Aucune équipe en attente d'inscription dans cet espace")
     team_id = rows[0]
     page.goto(f"{BASE_URL}/app/{space_id}/teams/{team_id}", wait_until="load")
     banner = page.locator(".state-banner--pending")

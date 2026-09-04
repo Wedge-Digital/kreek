@@ -410,3 +410,50 @@ def test_la_rangee_d_attribution_partage_une_ligne_de_base(page: Page, saison_jo
     )
     assert None not in bas.values(), f"un élément de la rangée est absent : {bas}"
     assert len(set(bas.values())) == 1, f"la rangée n'a pas une seule ligne de base : {bas}"
+
+
+def test_le_menu_du_selecteur_deborde_du_panneau(page: Page, saison_jouee):
+    """**Le menu d'équipes était rogné par le panneau qui l'entoure.**
+
+    `.mp-panel` porte `overflow: hidden`, qui sert à ses coins arrondis — sans
+    lui, le fond gris de l'en-tête déborde de la courbe. Mais un `overflow`
+    coupe aussi les enfants en `position: absolute`, et le menu du
+    `kreek-select` en est un : le commissaire n'en voyait qu'une tranche.
+
+    **`getBoundingClientRect` ne voit pas ce défaut** : le rectangle du menu est
+    le même, coupé ou non. Seul `elementFromPoint` dit ce qui est réellement
+    peint à un endroit donné — c'est pourquoi ce test tâte un point du menu
+    situé sous la limite du panneau, plutôt que de comparer des coordonnées.
+    """
+    page.set_viewport_size({"width": 1440, "height": 900})
+    page.goto(_page_gestion(saison_jouee), wait_until="load")
+    page.locator("kreek-select").first.wait_for(state="attached", timeout=15000)
+
+    # Pas de `cliquer_quand_cable` ici : le sélecteur est un Web Component, pas
+    # un élément câblé par htmx. Il charge ses options par `fetch` ; c'est leur
+    # apparition qu'on attend, pas un câblage.
+    page.click("kreek-select .ks-control")
+    page.locator(".ks-dropdown .ks-option").first.wait_for(state="visible", timeout=10000)
+
+    verdict = page.evaluate(
+        """() => {
+             const menu = document.querySelector('.ks-dropdown');
+             const panneau = document.querySelector('.mp-panel--form');
+             const m = menu.getBoundingClientRect();
+             const p = panneau.getBoundingClientRect();
+             const y = m.bottom - 6;
+             const touche = document.elementFromPoint(m.left + m.width / 2, y);
+             return { depasse: Math.round(m.bottom - p.bottom),
+                      visible: !!(touche && menu.contains(touche)),
+                      touche: touche ? (touche.className || touche.tagName) : 'rien' };
+           }"""
+    )
+
+    assert verdict["depasse"] > 0, (
+        "le menu ne dépasse pas du panneau : le test ne prouve rien — "
+        "la fixture doit avoir assez d'équipes pour une liste plus haute"
+    )
+    assert verdict["visible"], (
+        f"le bas du menu est coupé par le panneau : on y touche "
+        f"« {verdict['touche']} » au lieu d'une option"
+    )

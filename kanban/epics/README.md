@@ -84,6 +84,7 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 
 | Carte | Note |
 |---|---|
+| `497-le-menu-du-selecteur-etait-rogne-par-son-panneau` | Le menu du `kreek-select` était coupé par l'`overflow: hidden` du panneau, posé pour ses coins arrondis — un `z-index` ne franchit pas un `overflow`. Et `getBoundingClientRect` ne voit pas ce défaut : le rectangle est le même, coupé ou non ; seul `elementFromPoint` dit ce qui est peint |
 | `490-les-coachs-sont-deconnectes-trop-souvent` | Le cookie de session n'avait ni `Max-Age` ni `Expires` — le navigateur le jetait à sa fermeture, alors que le serveur gardait la session deux semaines. Et `SameSite: Strict` ne l'envoyait pas quand on arrivait par un lien externe. Deux lignes, plus la décision d'écarter Redis pour de bon |
 | `491-les-sessions-ne-survivent-pas-a-un-redeploiement` | Le magasin est un `DashMap` que son propre en-tête réserve au dev : chaque redéploiement déconnecte tout le monde. En attente de mesure — on regarde d'abord ce que la 490 a réglé |
 | `489-un-joueur-indisponible-se-voit-dans-la-liste` | Un joueur qui manquera le prochain match se lisait comme un joueur disponible : le statut vivait dans la projection depuis toujours et s'arrêtait au view model. Ligne barrée, pastilles pâlies, repère qui dit pourquoi — et la mesure mobile a montré que la cellule du nom débordait déjà de 88 px, sans rapport avec cette carte |
