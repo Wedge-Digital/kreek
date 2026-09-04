@@ -45,7 +45,7 @@
        },
        journeymenCount(team) {
          if (!team) return 0;
-         return team.player_count >= 11 ? 0 : 11 - team.player_count;
+         return team.available_player_count >= 11 ? 0 : 11 - team.available_player_count;
        },
        async init() {
          const [h, a] = await Promise.all([
@@ -159,7 +159,7 @@
               <span class="mr-info-icon">&#9989;</span>
               <span>
                 <strong x-text="home.team_name"></strong>&#32;—&#32;
-                <span x-text="home.player_count"></span> joueurs, aucun journalier nécessaire.
+                <span x-text="home.available_player_count"></span> joueurs, aucun journalier nécessaire.
               </span>
             </div>
           </template>
@@ -168,7 +168,7 @@
               <span class="mr-info-icon">&#43;</span>
               <span>
                 <strong x-text="home.team_name"></strong>&#32;—&#32;
-                <span x-text="home.player_count"></span> joueurs,
+                <span x-text="home.available_player_count"></span> joueurs,
                 <strong x-text="journeymenCount(home)"></strong> journalier(s) ajouté(s)
                 (<span x-text="home.journeyman_type"></span>).
               </span>
@@ -184,7 +184,7 @@
               <span class="mr-info-icon">&#9989;</span>
               <span>
                 <strong x-text="away.team_name"></strong>&#32;—&#32;
-                <span x-text="away.player_count"></span> joueurs, aucun journalier nécessaire.
+                <span x-text="away.available_player_count"></span> joueurs, aucun journalier nécessaire.
               </span>
             </div>
           </template>
@@ -193,7 +193,7 @@
               <span class="mr-info-icon">&#43;</span>
               <span>
                 <strong x-text="away.team_name"></strong>&#32;—&#32;
-                <span x-text="away.player_count"></span> joueurs,
+                <span x-text="away.available_player_count"></span> joueurs,
                 <strong x-text="journeymenCount(away)"></strong> journalier(s) ajouté(s)
                 (<span x-text="away.journeyman_type"></span>).
               </span>
