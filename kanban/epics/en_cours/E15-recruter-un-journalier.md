@@ -42,7 +42,7 @@ explique l'ordre des cartes, et pourquoi la première ne montre aucun écran.
 ## Ce qui commande l'ordre
 
 **La 454 est seule en tête, et c'est la plus risquée.** Elle ouvre un troisième
-`membership` et fait cesser **quatre lectures d'exclure les journaliers** — sans
+`membership` et fait cesser **cinq lectures d'exclure les journaliers** — sans
 un écran ni un événement. Une carte qui ne montre rien et touche à ce que tout le
 monde lit : c'est là que le socle se casse ou tient.
 
