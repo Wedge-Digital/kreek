@@ -441,6 +441,7 @@ mod tests {
             spp: 3,
             value_kpo: Kpo(50),
             presence,
+            engagement: crate::app::teams::domain::basket::SquadEngagement::Permanent,
         }
     }
 

@@ -7,9 +7,10 @@
 //! hydrate, puis tout est **pur et synchrone** — aucun `async`, aucun port,
 //! aucune dépendance framework.
 
+use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
 use crate::app::teams::domain::basket::{
-    staff_uid, BasketLineId, BasketVersion, OwnedStaff, RejectedLine, RosterCatalog, RosterLineId,
-    Squad,
+    staff_uid, BasketLineId, BasketVersion, OwnedStaff, Player, RejectedLine, RosterCatalog,
+    RosterLineId, Squad,
 };
 use crate::app::teams::domain::error::DomainError;
 use crate::app::teams::domain::value_objects::{Kpo, StaffType};
@@ -39,20 +40,50 @@ pub enum BasketLine {
         staff_type: StaffType,
         price: Kpo,
     },
+    /// Un journalier que le coach garde.
+    ///
+    /// Il porte le `player_id` et non une ligne de roster : le joueur existe
+    /// déjà, on désigne **un homme**, pas un poste à pourvoir.
+    Journeyman {
+        id: BasketLineId,
+        player_id: PlayerId,
+        price: Kpo,
+    },
 }
 
 impl BasketLine {
     pub fn id(&self) -> &BasketLineId {
         match self {
-            Self::Player { id, .. } | Self::Staff { id, .. } => id,
+            Self::Player { id, .. } | Self::Staff { id, .. } | Self::Journeyman { id, .. } => id,
         }
     }
 
     fn price(&self) -> Kpo {
         match self {
-            Self::Player { price, .. } | Self::Staff { price, .. } => *price,
+            Self::Player { price, .. }
+            | Self::Staff { price, .. }
+            | Self::Journeyman { price, .. } => *price,
         }
     }
+}
+
+/// Le prix d'un journalier tel que le panier vient de l'inscrire.
+///
+/// Lu sur la ligne que `add_journeyman` a poussée, et non recalculé : les deux
+/// doivent dire la même chose, et une seconde source les laisserait diverger.
+fn prix_du_journalier(basket: &RecruitmentBasket, player_id: &PlayerId) -> Kpo {
+    basket
+        .lines
+        .iter()
+        .find_map(|l| match l {
+            BasketLine::Journeyman {
+                player_id: p,
+                price,
+                ..
+            } if p == player_id => Some(*price),
+            _ => None,
+        })
+        .unwrap_or(Kpo(0))
 }
 
 /// Ce qu'une ligne validée demande d'appliquer. Le panier ne construit pas
@@ -66,6 +97,13 @@ pub enum AppliedLine {
     },
     Staff {
         staff_type: StaffType,
+        cost: Kpo,
+    },
+    /// **Pas de `base_value`**, contrairement à `Player` : pour un journalier le
+    /// prix **est** sa valeur courante. Un second champ qui la duplique
+    /// inviterait à les faire diverger.
+    Journeyman {
+        player_id: PlayerId,
         cost: Kpo,
     },
 }
@@ -93,6 +131,17 @@ pub struct RecruitmentBasket {
     squad: Squad,
     owned_staff: OwnedStaff,
     treasury: Kpo,
+}
+
+/// Un journalier que le coach peut garder, et son prix.
+///
+/// **Juste ce qu'il faut pour valider.** Le nom, les SPP et l'amélioration
+/// gagnée sont de l'affichage, et l'écran les lira ailleurs : les faire entrer
+/// dans le domaine lui donnerait des champs dont aucune règle ne dépend.
+#[derive(Debug, Clone, PartialEq)]
+pub struct HireableJourneyman {
+    pub player_id: PlayerId,
+    pub price: Kpo,
 }
 
 impl RecruitmentBasket {
@@ -179,6 +228,39 @@ impl RecruitmentBasket {
     /// garantit qu'elle applique exactement les mêmes gardes que l'ajout — et
     /// notamment que la trésorerie est vérifiée **en cumul**, pas ligne par
     /// ligne.
+    /// Garde un journalier de l'effectif.
+    ///
+    /// **Trois gardes, dans cet ordre.** Le doublon d'abord : c'est la règle
+    /// propre au journalier, et la moins coûteuse à vérifier. Puis la
+    /// disponibilité, puis le plafond et la trésorerie, communes aux achats.
+    ///
+    /// **Un journalier ne s'ajoute pas deux fois**, et c'est une règle que les
+    /// postes n'ont pas : un poste est un **type** — deux Trois-quarts sont
+    /// deux joueurs — un journalier est **un homme**, et il n'y en a qu'un.
+    ///
+    /// Le garde-fou reste **pur** : le panier compare son contenu à l'effectif
+    /// qu'on lui a donné à l'hydratation, il n'interroge rien.
+    pub fn add_journeyman(&mut self, player_id: PlayerId) -> Result<BasketLineId, DomainError> {
+        if self.journeyman_in_basket(&player_id) {
+            return Err(DomainError::JourneymanAlreadyInBasket);
+        }
+        let Some(journalier) = self.squad.journeymen().find(|j| j.player_id == player_id) else {
+            return Err(DomainError::JourneymanNoLongerAvailable);
+        };
+        let price = journalier.value_kpo;
+
+        self.check_squad_max()?;
+        self.check_treasury(price)?;
+
+        let id = BasketLineId(ulid::Ulid::new().to_string());
+        self.lines.push(BasketLine::Journeyman {
+            id: id.clone(),
+            player_id,
+            price,
+        });
+        Ok(id)
+    }
+
     pub fn validate_all(&self) -> Result<Vec<AppliedLine>, Vec<RejectedLine>> {
         let mut rejouee = self.clone();
         rejouee.lines = Vec::new();
@@ -201,6 +283,15 @@ impl RecruitmentBasket {
                         cost: rejouee.price_for(*staff_type),
                     })
                 }
+                // Le prix est **relu sur l'effectif du jour**, pas repris de la
+                // ligne : c'est ce qui fait tomber le journalier dont la valeur
+                // a bougé depuis l'ajout au même endroit que les autres refus.
+                BasketLine::Journeyman { player_id, .. } => rejouee
+                    .add_journeyman(player_id.clone())
+                    .map(|_| AppliedLine::Journeyman {
+                        player_id: player_id.clone(),
+                        cost: prix_du_journalier(&rejouee, player_id),
+                    }),
             };
             match issue {
                 Ok(a) => applied.push(a),
@@ -258,8 +349,43 @@ impl RecruitmentBasket {
         ActionState::Allowed
     }
 
+    /// L'effectif **permanent** projeté — celui qui décide du plafond de seize.
+    ///
+    /// Les journaliers de l'effectif n'y sont pas : ils vont partir. Ceux du
+    /// panier, si : les y mettre est justement ce que le coach est en train de
+    /// faire.
+    ///
+    /// **Sans cette distinction, un coach à seize dont trois journaliers ne
+    /// pourrait recruter personne** — alors que les recruter est exactement ce
+    /// qui le libérerait. `seize_dont_trois_journaliers_autorisent_le_recrutement`
+    /// échoue si quelqu'un « simplifie » cette méthode en `squad.size()`.
     pub fn projected_squad_size(&self) -> usize {
-        self.squad.size() + self.pending_players()
+        self.squad.permanent_size() + self.pending_players()
+    }
+
+    /// Les journaliers que le coach peut encore garder : ceux de l'effectif qui
+    /// ne sont pas déjà dans son panier.
+    pub fn hireable_journeymen(&self) -> Vec<&Player> {
+        self.squad
+            .journeymen()
+            .filter(|j| !self.journeyman_in_basket(&j.player_id))
+            .collect()
+    }
+
+    /// Les journaliers **déjà dans le panier** — ceux que `hireable_journeymen`
+    /// écarte. La vue a besoin des deux : l'un pour proposer, l'autre pour
+    /// nommer les lignes déjà posées.
+    pub fn journeymen_in_basket(&self) -> Vec<&Player> {
+        self.squad
+            .journeymen()
+            .filter(|j| self.journeyman_in_basket(&j.player_id))
+            .collect()
+    }
+
+    fn journeyman_in_basket(&self, player_id: &PlayerId) -> bool {
+        self.lines
+            .iter()
+            .any(|l| matches!(l, BasketLine::Journeyman { player_id: p, .. } if p == player_id))
     }
 
     pub fn remaining_treasury(&self) -> Kpo {
@@ -316,10 +442,12 @@ impl RecruitmentBasket {
 
     // ── Comptages : possédés **plus** en attente ───────────────────────────
 
+    /// Les lignes du panier qui deviendront des **joueurs permanents** : un
+    /// poste acheté, ou un journalier gardé. Le staff n'en est pas.
     fn pending_players(&self) -> usize {
         self.lines
             .iter()
-            .filter(|l| matches!(l, BasketLine::Player { .. }))
+            .filter(|l| matches!(l, BasketLine::Player { .. } | BasketLine::Journeyman { .. }))
             .count()
     }
 
@@ -427,10 +555,10 @@ impl RecruitmentBasket {
 mod tests {
     use super::*;
     use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
-    use crate::app::teams::domain::basket::SquadPresence;
     use crate::app::teams::domain::basket::{
         CatalogPosition, CrossLimit, Player, StaffCatalogEntry,
     };
+    use crate::app::teams::domain::basket::{SquadEngagement, SquadPresence};
 
     const PIETAILLE: &str = "DEMO_GRANIT__PIETAILLE";
     const PERCUTEUR: &str = "DEMO_GRANIT__PERCUTEUR";
@@ -520,6 +648,7 @@ mod tests {
                     spp: 0,
                     value_kpo: Kpo(0),
                     presence: SquadPresence::Alignable,
+                    engagement: crate::app::teams::domain::basket::SquadEngagement::Permanent,
                 });
             }
         }
@@ -543,6 +672,7 @@ mod tests {
                     spp: 0,
                     value_kpo: Kpo(0),
                     presence: *presence,
+                    engagement: crate::app::teams::domain::basket::SquadEngagement::Permanent,
                 });
             }
         }
@@ -563,6 +693,175 @@ mod tests {
             OwnedStaff::default(),
             Kpo(treasury),
         )
+    }
+
+    // ── Journaliers (carte 457) ───────────────────────────────────────────
+
+    /// Un effectif mêlant permanents et journaliers, tous alignables.
+    fn effectif_mele(permanents: usize, journaliers: usize) -> Squad {
+        let mut members = Vec::new();
+        for i in 0..(permanents + journaliers) {
+            members.push(Player {
+                player_id: identifiant(i),
+                roster_line: ligne(PIETAILLE),
+                jersey: Some(i as u8 + 1),
+                personal_name: String::new(),
+                position_name: String::new(),
+                spp: 0,
+                value_kpo: Kpo(50),
+                presence: SquadPresence::Alignable,
+                engagement: match i < permanents {
+                    true => SquadEngagement::Permanent,
+                    false => SquadEngagement::Journalier,
+                },
+            });
+        }
+        Squad { members }
+    }
+
+    #[test]
+    fn le_meme_journalier_ne_s_ajoute_pas_deux_fois() {
+        let mut p = panier(effectif_mele(5, 1), 1000);
+        let journalier = identifiant(5);
+
+        assert!(p.add_journeyman(journalier.clone()).is_ok());
+        assert_eq!(
+            p.add_journeyman(journalier),
+            Err(DomainError::JourneymanAlreadyInBasket)
+        );
+    }
+
+    /// C'est la règle qu'un poste n'a pas : deux Trois-quarts sont deux
+    /// joueurs, un journalier est un homme.
+    #[test]
+    fn deux_journaliers_differents_s_ajoutent() {
+        let mut p = panier(effectif_mele(5, 2), 1000);
+
+        assert!(p.add_journeyman(identifiant(5)).is_ok());
+        assert!(p.add_journeyman(identifiant(6)).is_ok());
+        assert_eq!(p.lines().len(), 2);
+    }
+
+    #[test]
+    fn un_journalier_absent_des_recrutables_est_refuse() {
+        let mut p = panier(effectif_mele(5, 1), 1000);
+
+        // Un permanent n'est pas un journalier : on ne le « garde » pas.
+        assert_eq!(
+            p.add_journeyman(identifiant(0)),
+            Err(DomainError::JourneymanNoLongerAvailable)
+        );
+        // Un inconnu non plus.
+        assert_eq!(
+            p.add_journeyman(identifiant(99)),
+            Err(DomainError::JourneymanNoLongerAvailable)
+        );
+    }
+
+    #[test]
+    fn seize_permanents_bloquent_le_recrutement() {
+        let mut p = panier(effectif_mele(16, 1), 1000);
+
+        assert_eq!(
+            p.add_journeyman(identifiant(16)),
+            Err(DomainError::MaxPlayersReached)
+        );
+    }
+
+    /// **Le test qui donne son sens au plafond.**
+    ///
+    /// Seize membres dont trois journaliers : treize places acquises, donc de
+    /// la marge. Sans la distinction, ce coach ne pourrait recruter personne —
+    /// alors que recruter ses journaliers est exactement ce qui le libérerait.
+    ///
+    /// Il échoue si quelqu'un « simplifie » `projected_squad_size` en
+    /// `squad.size()`, ce qui compilerait et paraîtrait juste.
+    #[test]
+    fn seize_dont_trois_journaliers_autorisent_le_recrutement() {
+        let mut p = panier(effectif_mele(13, 3), 1000);
+
+        assert_eq!(p.projected_squad_size(), 13, "seuls les acquis comptent");
+        assert!(p.add_journeyman(identifiant(13)).is_ok());
+        assert!(p.add_journeyman(identifiant(14)).is_ok());
+        assert!(p.add_journeyman(identifiant(15)).is_ok());
+    }
+
+    /// Un journalier du panier **devient** permanent : il entre au plafond dès
+    /// qu'il y est posé, sans quoi le coach en garderait plus de seize.
+    #[test]
+    fn un_journalier_du_panier_compte_dans_le_plafond() {
+        let mut p = panier(effectif_mele(15, 2), 1000);
+        assert_eq!(p.projected_squad_size(), 15);
+
+        p.add_journeyman(identifiant(15)).unwrap();
+        assert_eq!(p.projected_squad_size(), 16, "il a pris une place acquise");
+
+        assert_eq!(
+            p.add_journeyman(identifiant(16)),
+            Err(DomainError::MaxPlayersReached)
+        );
+    }
+
+    #[test]
+    fn un_journalier_trop_cher_est_refuse() {
+        let mut p = panier(effectif_mele(5, 1), 10);
+
+        assert_eq!(
+            p.add_journeyman(identifiant(5)),
+            Err(DomainError::InsufficientTreasury)
+        );
+    }
+
+    /// Le rejeu de validation retrouve le journalier et rend sa ligne appliquée.
+    #[test]
+    fn validate_all_applique_un_journalier() {
+        let mut p = panier(effectif_mele(5, 1), 1000);
+        p.add_journeyman(identifiant(5)).unwrap();
+
+        let applied = p.validate_all().expect("le panier est valide");
+        assert_eq!(
+            applied,
+            vec![AppliedLine::Journeyman {
+                player_id: identifiant(5),
+                cost: Kpo(50),
+            }]
+        );
+    }
+
+    /// Le garde-fou à la validation : le journalier a disparu de l'effectif
+    /// entre l'ajout et la clôture — un autre chemin l'a fait partir.
+    #[test]
+    fn validate_all_rejette_un_journalier_disparu() {
+        let mut p = panier(effectif_mele(5, 1), 1000);
+        p.add_journeyman(identifiant(5)).unwrap();
+
+        // L'effectif est rechargé sans lui, les lignes du panier restent.
+        let lignes = p.lines().to_vec();
+        let sans_lui = RecruitmentBasket::hydrate(
+            "t1".into(),
+            BasketVersion(1),
+            lignes,
+            catalogue(),
+            effectif_mele(5, 0),
+            OwnedStaff::default(),
+            Kpo(1000),
+        );
+
+        let rejets = sans_lui.validate_all().expect_err("il n'est plus là");
+        assert_eq!(rejets.len(), 1);
+        assert_eq!(rejets[0].cause, DomainError::JourneymanNoLongerAvailable);
+    }
+
+    /// Les recrutables sont ceux de l'effectif **moins** ceux déjà au panier :
+    /// l'écran ne propose pas deux fois le même homme.
+    #[test]
+    fn les_recrutables_excluent_ceux_du_panier() {
+        let mut p = panier(effectif_mele(5, 2), 1000);
+        assert_eq!(p.hireable_journeymen().len(), 2);
+
+        p.add_journeyman(identifiant(5)).unwrap();
+        assert_eq!(p.hireable_journeymen().len(), 1);
+        assert_eq!(p.journeymen_in_basket().len(), 1);
     }
 
     // ── 1 & 2 : plafond d'effectif, possédés puis mélange ─────────────────

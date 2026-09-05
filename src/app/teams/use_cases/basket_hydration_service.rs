@@ -1,7 +1,7 @@
 use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
 use crate::app::teams::domain::basket::{
     BasketVersion, CatalogPosition, CrossLimit, OwnedStaff, Player, RosterCatalog, RosterLineId,
-    SkillBadge, Squad, StaffCatalogEntry,
+    SkillBadge, Squad, SquadEngagement, StaffCatalogEntry,
 };
 use crate::app::teams::domain::dismissals_basket::{DismissalBasketLine, DismissalsBasket};
 use crate::app::teams::domain::recruitment_basket::{BasketLine, RecruitmentBasket};
@@ -200,6 +200,13 @@ fn to_domain_squad(membres: Vec<SquadMemberDto>) -> Result<Squad, HydrationError
             spp: m.spp,
             value_kpo: Kpo(m.value_kpo),
             presence: m.presence,
+            // La traduction du vocabulaire de `players` vers celui de `teams` :
+            // `is_temporary` dit « il n'est pas embauché », `engagement` dit ce
+            // que ça change ici — il ne tient pas une place acquise.
+            engagement: match m.is_temporary {
+                true => SquadEngagement::Journalier,
+                false => SquadEngagement::Permanent,
+            },
         });
     }
     Ok(Squad { members })

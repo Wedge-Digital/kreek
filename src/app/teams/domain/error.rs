@@ -37,6 +37,16 @@ pub enum DomainError {
     StaffQuotaReached,
     /// Le renvoi ferait passer l'effectif sous les onze joueurs éligibles.
     EligibleFloorReached,
+    /// Ce journalier ne fait plus partie des recrutables — un autre coach a
+    /// pu clore la phase, ou l'effectif a changé depuis l'affichage.
+    ///
+    /// **Distincte de `JourneymanAlreadyInBasket`** : les deux causes se
+    /// corrigent différemment. Celle-ci demande de recharger la page, l'autre
+    /// de regarder son panier. Une variante unique enverrait chercher.
+    JourneymanNoLongerAvailable,
+    /// Ce journalier est déjà dans le panier. Un poste s'ajoute deux fois — un
+    /// poste est un type —, un journalier est un homme, et il n'y en a qu'un.
+    JourneymanAlreadyInBasket,
     /// La ligne visée n'existe pas dans le panier.
     BasketLineNotFound,
     /// Le joueur visé n'appartient pas à l'effectif de cette équipe.
@@ -83,6 +93,12 @@ impl fmt::Display for DomainError {
                 f,
                 "l'effectif ne peut pas descendre sous onze joueurs éligibles"
             ),
+            Self::JourneymanNoLongerAvailable => {
+                write!(f, "ce journalier n'est plus recrutable")
+            }
+            Self::JourneymanAlreadyInBasket => {
+                write!(f, "ce journalier est déjà dans le panier")
+            }
             Self::BasketLineNotFound => write!(f, "ligne introuvable dans le panier"),
             Self::PlayerNotInSquad => write!(f, "ce joueur n'appartient pas à l'effectif"),
             Self::PlayerAlreadyMarked => write!(f, "ce joueur est déjà marqué pour renvoi"),

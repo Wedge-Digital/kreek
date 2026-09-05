@@ -459,6 +459,19 @@ impl CartLineVm {
                     is_staff: false,
                     is_last: i == dernier,
                 },
+                // Le nom du journalier n'est pas dans le panier — il vit dans
+                // l'effectif. La ligne l'y retrouve par son identifiant.
+                BasketLine::Journeyman {
+                    id,
+                    player_id,
+                    price,
+                } => Self {
+                    line_id: id.0.clone(),
+                    label: nom_du_journalier(basket, player_id),
+                    price_kpo: price.0,
+                    is_staff: false,
+                    is_last: i == dernier,
+                },
                 BasketLine::Staff {
                     id,
                     staff_type,
@@ -484,6 +497,27 @@ fn nom_du_poste(basket: &RecruitmentBasket, line: &RosterLineId) -> String {
         .position(line)
         .map(|p| p.position_name.clone())
         .unwrap_or_else(|| line.0.clone())
+}
+
+/// Le nom d'un journalier du panier, retrouvé dans l'effectif.
+///
+/// Le nom personnel s'il en a un, son poste sinon — un journalier fraîchement
+/// aligné n'a pas été nommé par le coach. Le repli sur l'identifiant ne devrait
+/// jamais servir : le panier n'accepte que des journaliers de l'effectif.
+fn nom_du_journalier(
+    basket: &RecruitmentBasket,
+    player_id: &crate::app::shared_kernel::bloodbowl::ids::PlayerId,
+) -> String {
+    basket
+        .hireable_journeymen()
+        .into_iter()
+        .chain(basket.journeymen_in_basket())
+        .find(|j| &j.player_id == player_id)
+        .map(|j| match j.personal_name.is_empty() {
+            true => j.position_name.clone(),
+            false => j.personal_name.clone(),
+        })
+        .unwrap_or_else(|| player_id.to_string())
 }
 
 // ── Erreur ────────────────────────────────────────────────────────────────────
@@ -608,6 +642,7 @@ mod tests {
                         spp: 0,
                         value_kpo: Kpo(0),
                         presence: SquadPresence::Alignable,
+                        engagement: crate::app::teams::domain::basket::SquadEngagement::Permanent,
                     })
                     .collect(),
             },

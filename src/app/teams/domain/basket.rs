@@ -111,6 +111,39 @@ pub struct Player {
     /// deux questions qu'il pose n'ont pas la même réponse, et un booléen les
     /// confondait.
     pub presence: SquadPresence,
+    /// Sa place est-elle acquise ? Voir `SquadEngagement`.
+    ///
+    /// **Un axe distinct de `presence`**, et les quatre combinaisons existent :
+    /// un journalier alignable, un journalier blessé, un permanent alignable,
+    /// un permanent mort.
+    pub engagement: SquadEngagement,
+}
+
+/// Sa place dans l'effectif est-elle acquise ?
+///
+/// Un permanent tient la sienne ; un journalier tient une place qu'il va
+/// rendre — au bout de la phase de recrutement, il est embauché ou il part.
+///
+/// **Un second axe, et non un booléen sur `Player`.** C'est la leçon que
+/// `SquadPresence` a déjà coûtée : un drapeau répond à une question qu'on
+/// croit unique, et se retrouve à en trancher deux. Ici la question est
+/// indépendante de la présence, et `players` la modélise déjà de son côté sous
+/// le nom d'appartenance — « un axe distinct de la participation ».
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SquadEngagement {
+    Permanent,
+    Journalier,
+}
+
+impl SquadEngagement {
+    /// Compte-t-il dans le plafond de seize ?
+    ///
+    /// Le journalier n'y compte pas, et c'est ce qui lève l'impasse : un coach
+    /// à seize dont trois journaliers pourrait sinon ne recruter personne —
+    /// alors que les recruter est exactement ce qui le libérerait.
+    pub fn occupe_une_place_acquise(&self) -> bool {
+        matches!(self, Self::Permanent)
+    }
 }
 
 /// Ce qu'un membre de l'effectif est encore pour l'équipe.
@@ -175,6 +208,24 @@ impl Squad {
     /// place que personne n'occupe.
     pub fn size(&self) -> usize {
         self.occupants().count()
+    }
+
+    /// Ce qui compte pour le **plafond de seize**, depuis l'épic E15.
+    ///
+    /// Distinct de `size()`, qui reste la bonne réponse partout où l'on demande
+    /// « qui fait encore partie de l'équipe » — l'écran de renvois, notamment.
+    /// Ici la question est plus étroite : qui **occupe une place acquise**.
+    pub fn permanent_size(&self) -> usize {
+        self.occupants()
+            .filter(|m| m.engagement.occupe_une_place_acquise())
+            .count()
+    }
+
+    /// Les journaliers de l'effectif — ceux que la phase de recrutement propose
+    /// de garder, et que sa clôture fera partir.
+    pub fn journeymen(&self) -> impl Iterator<Item = &Player> {
+        self.occupants()
+            .filter(|m| !m.engagement.occupe_une_place_acquise())
     }
 
     pub fn count_at(&self, line: &RosterLineId) -> usize {
@@ -257,6 +308,7 @@ mod tests {
             spp: 0,
             value_kpo: Kpo(50),
             presence,
+            engagement: crate::app::teams::domain::basket::SquadEngagement::Permanent,
         }
     }
 

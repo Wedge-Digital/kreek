@@ -25,8 +25,8 @@ use crate::app::teams::use_cases::basket_hydration_service::{
     hydrate_dismissals_basket, hydrate_recruitment_basket, HydrationError,
 };
 use crate::app::teams::use_cases::commands::{
-    AddBasketPlayerCommand, AddBasketStaffCommand, MarkPlayerForDismissalCommand,
-    MarkStaffForDismissalCommand, RemoveBasketLineCommand,
+    AddBasketJourneymanCommand, AddBasketPlayerCommand, AddBasketStaffCommand,
+    MarkPlayerForDismissalCommand, MarkStaffForDismissalCommand, RemoveBasketLineCommand,
 };
 
 #[derive(Debug)]
@@ -137,6 +137,37 @@ pub async fn add_player(
 
     basket
         .add_player(RosterLineId(cmd.roster_line_id))
+        .map_err(BasketMutationError::Domain)?;
+
+    persister(
+        &team_id,
+        basket.lines(),
+        space_id,
+        GamePhase::Recruitment,
+        basket_repo,
+        cmd.expected_version,
+    )
+    .await
+}
+
+/// Signature identique à `add_player`, à la commande près : `expected_version`
+/// porte déjà la concurrence, et le refus en bloc de la validation reste le
+/// filet en cas d'effectif changé entre-temps.
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
+pub async fn add_journeyman(
+    cmd: AddBasketJourneymanCommand,
+    space_id: &str,
+    team_repo: &dyn ITeamRepository,
+    basket_repo: &dyn IPhaseBasketRepository,
+    catalog: &dyn IRosterCatalogPort,
+    squad: &dyn ISquadPort,
+) -> Result<(), BasketMutationError> {
+    let team_id = cmd.team_id.to_string();
+    let mut basket =
+        ouvrir_panier_recrutement(&team_id, team_repo, basket_repo, catalog, squad).await?;
+
+    basket
+        .add_journeyman(cmd.player_id)
         .map_err(BasketMutationError::Domain)?;
 
     persister(

@@ -136,6 +136,17 @@ pub enum TeamDomainEvent {
         base_value_kpo: Kpo,
         cost_kpo: Kpo,
     },
+    /// Le coach garde ce journalier : il devient un joueur permanent.
+    ///
+    /// **Ni `roster_line` ni `base_value_kpo`**, contrairement à
+    /// `PlayerRecruited` : le joueur existe déjà, et `players` sait tout de
+    /// lui. `teams` ne transporte que ce qu'il décide — la cible et le prix.
+    /// C'est le principe déjà écrit sur `PlayerDismissed` : « `players` possède
+    /// le joueur, il sait tout de lui ; ce qu'il ignorait, c'est la décision. »
+    JourneymanRecruited {
+        player_id: PlayerId,
+        cost_kpo: Kpo,
+    },
     /// Un journalier a été aligné dans un rapport de match.
     ///
     /// **Aucun `cost_kpo`, et c'est le fond de l'affaire.** Un journalier est
@@ -251,6 +262,7 @@ impl TeamDomainEvent {
             Self::InducementsRefunded { .. } => "InducementsRefunded",
             Self::PlayerImprovementPhaseValidated => "PlayerImprovementPhaseValidated",
             Self::PlayerRecruited { .. } => "PlayerRecruited",
+            Self::JourneymanRecruited { .. } => "JourneymanRecruited",
             Self::JourneymanFielded { .. } => "JourneymanFielded",
             Self::JourneymanWithdrawn { .. } => "JourneymanWithdrawn",
             Self::StaffBought { .. } => "StaffBought",
@@ -427,6 +439,15 @@ impl Team {
             //
             // C'est ce `match` exhaustif qui a posé la question au moment
             // d'ajouter les deux événements. Il la posera de même au suivant.
+            // **Le même motif que `PlayerRecruited`, et non un neuvième.** Le
+            // grand livre raconte « un joueur a été recruté », ce qui est vrai.
+            // Un motif distinct obligerait le relevé de trésorerie à en
+            // connaître un de plus pour dire la même chose.
+            TeamDomainEvent::JourneymanRecruited { cost_kpo, .. } => Some(TreasuryMovement::debit(
+                solde,
+                *cost_kpo,
+                MovementReason::PlayerRecruitment,
+            )),
             TeamDomainEvent::JourneymanFielded { .. }
             | TeamDomainEvent::JourneymanWithdrawn { .. } => None,
             TeamDomainEvent::StaffBought { cost_kpo, .. } => Some(TreasuryMovement::debit(
@@ -636,7 +657,8 @@ impl Team {
             // Ces deux faits ne changent donc rien à l'agrégat — ils existent
             // pour être publiés, et pour que l'event store raconte l'histoire
             // complète de l'effectif.
-            TeamDomainEvent::JourneymanFielded { .. }
+            TeamDomainEvent::JourneymanRecruited { .. }
+            | TeamDomainEvent::JourneymanFielded { .. }
             | TeamDomainEvent::JourneymanWithdrawn { .. } => {}
             TeamDomainEvent::StaffBought {
                 staff_type,
@@ -912,6 +934,31 @@ impl Team {
             player_id,
             roster_line,
             base_value_kpo,
+            cost_kpo,
+        })
+    }
+
+    /// Garde un journalier qui a joué : il devient permanent.
+    ///
+    /// **Mêmes gardes que `recruit_player`** — la phase et la trésorerie —,
+    /// pour la même raison : le contrôle de trésorerie fait doublon avec celui
+    /// du panier, qui raisonne en total, mais il protège l'invariant propre à
+    /// l'agrégat, dont la trésorerie ne devient jamais négative.
+    ///
+    /// **Aucune garde de plafond ici** : les seize se comptent sur l'effectif
+    /// entier, que l'agrégat `Team` ne connaît pas. C'est le panier qui la
+    /// tient, et lui seul en a les éléments.
+    pub fn recruit_journeyman(
+        &self,
+        player_id: PlayerId,
+        cost_kpo: Kpo,
+    ) -> Result<TeamDomainEvent, DomainError> {
+        self.expect_phase(GamePhase::Recruitment)?;
+        if self.treasury.0 < cost_kpo.0 {
+            return Err(DomainError::InsufficientTreasury);
+        }
+        Ok(TeamDomainEvent::JourneymanRecruited {
+            player_id,
             cost_kpo,
         })
     }
@@ -2209,6 +2256,75 @@ mod tests {
         let m = team.treasury_movement(&event).expect("un achat débite");
         assert_eq!(m.amount, Kpo(60));
         assert_eq!(m.balance_after, Kpo(team.treasury.0 - 60));
+    }
+
+    // ── Recrutement d'un journalier (carte 457) ──────────────────────────
+
+    #[test]
+    fn recruter_un_journalier_hors_phase_echoue() {
+        let team = dismissals_phase_team();
+        assert!(team
+            .recruit_journeyman(
+                PlayerId::try_new("00000000000000000000000007").unwrap(),
+                Kpo(50)
+            )
+            .is_err());
+    }
+
+    #[test]
+    fn recruter_un_journalier_sans_tresorerie_echoue() {
+        let team = recruitment_phase_team();
+        let trop_cher = Kpo(team.treasury.0 + 1);
+        assert!(matches!(
+            team.recruit_journeyman(
+                PlayerId::try_new("00000000000000000000000007").unwrap(),
+                trop_cher
+            ),
+            Err(DomainError::InsufficientTreasury)
+        ));
+    }
+
+    /// **La forme de l'événement est la règle.** `teams` ne transporte que ce
+    /// qu'il décide : la cible et le prix. Le poste et la valeur de base sont
+    /// à `players`, qui possède le joueur — et qui l'a déjà.
+    #[test]
+    fn l_evenement_ne_porte_ni_roster_line_ni_base_value() {
+        let team = recruitment_phase_team();
+        let event = team
+            .recruit_journeyman(
+                PlayerId::try_new("00000000000000000000000007").unwrap(),
+                Kpo(50),
+            )
+            .unwrap();
+
+        let TeamDomainEvent::JourneymanRecruited {
+            player_id,
+            cost_kpo,
+        } = event
+        else {
+            panic!("un recrutement de journalier");
+        };
+        assert_eq!(player_id.to_string(), "00000000000000000000000007");
+        assert_eq!(cost_kpo, Kpo(50));
+    }
+
+    /// Le grand livre raconte « un joueur a été recruté », ce qui est vrai —
+    /// et n'a donc pas besoin d'un neuvième motif pour le dire.
+    #[test]
+    fn le_debit_du_journalier_porte_le_motif_player_recruitment() {
+        let team = recruitment_phase_team();
+        let event = team
+            .recruit_journeyman(
+                PlayerId::try_new("00000000000000000000000007").unwrap(),
+                Kpo(50),
+            )
+            .unwrap();
+
+        let m = team
+            .treasury_movement(&event)
+            .expect("un recrutement débite");
+        assert_eq!(m.amount, Kpo(50));
+        assert_eq!(m.reason, MovementReason::PlayerRecruitment);
     }
 
     /// Carte 455 — **aligner n'est pas acheter.**

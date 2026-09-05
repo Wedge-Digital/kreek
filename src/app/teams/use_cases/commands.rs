@@ -1,3 +1,4 @@
+use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::{SpaceId, UserId};
 
@@ -34,6 +35,15 @@ pub struct ValidateDismissalsPhaseCommand {
 pub struct AddBasketPlayerCommand {
     pub team_id: TeamId,
     pub roster_line_id: String,
+    pub expected_version: u32,
+}
+
+/// Garder un journalier. **Un `player_id`, pas une ligne de roster** : on
+/// désigne un homme qui existe déjà, pas un poste à pourvoir.
+#[derive(Debug)]
+pub struct AddBasketJourneymanCommand {
+    pub team_id: TeamId,
+    pub player_id: PlayerId,
     pub expected_version: u32,
 }
 

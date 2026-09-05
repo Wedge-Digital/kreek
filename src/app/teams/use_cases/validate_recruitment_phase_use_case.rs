@@ -98,6 +98,10 @@ fn build_events(
                 StaffQuantity::try_new(1).expect("une ligne de panier vaut une unité"),
                 cost,
             ),
+            // **Aucun identifiant frappé ici** : le joueur existe déjà, il a
+            // été créé à l'ouverture du rapport de match. On ne fait que
+            // basculer son appartenance.
+            AppliedLine::Journeyman { player_id, cost } => team.recruit_journeyman(player_id, cost),
         };
         events.push(event.map_err(ValidateRecruitmentPhaseError::Domain)?);
     }

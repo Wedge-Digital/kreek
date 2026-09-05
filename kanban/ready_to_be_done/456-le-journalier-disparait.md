@@ -1,7 +1,7 @@
 # Le journalier disparaît
 
 **Épic :** E15 — Recruter un journalier
-**Ordre :** 3 · **Dépend de :** 455
+**Ordre :** 4 · **Dépend de :** 455, **et 457** (voir « Tests »)
 **Conception :** `docs/specs/embaucher-un-journalier/` (`00-conception.md`
 décisions 13 et 15, `ecran-de-recrutement/07-integration.md`)
 
@@ -61,14 +61,25 @@ ils raconteraient une décision qui n'a jamais été prise.
 Le `membership` devient `Dismissed` dans les deux cas ; c'est l'**événement**
 qui diffère, donc l'histoire.
 
-### 3. L'annulation supprime, elle ne marque pas
+### 3. L'annulation réutilise `JourneymanWithdrawn`
 
 ```rust
 // players/io/app_events/match_report_cancelled_listener.rs
 ```
 
-Un journalier d'un rapport annulé **n'a jamais joué**. Le garder en `Dismissed`
-polluerait l'effectif d'une trace de rien.
+Un journalier d'un rapport annulé **n'a jamais joué**.
+
+**La carte disait « supprime, elle ne marque pas ». C'est écarté.** `players`
+n'a aucun chemin de suppression de joueur — le seul `DELETE` du BC porte sur
+les paniers de customisation —, et effacer un joueur dans un BC event-sourcé
+demanderait de retirer sa projection *et* ses événements, ou de laisser des
+événements orphelins. Un mécanisme nouveau et dangereux, pour un besoin que la
+crainte de « polluer l'effectif » ne justifie pas : un `Dismissed` est déjà
+exclu de **toutes** les lectures d'effectif.
+
+La carte 455 a livré `JourneymanWithdrawn`, qui raconte exactement le bon
+fait — *désaligné avant le match, jamais embauché*. Un rapport annulé est le
+même cas avec une autre cause, et l'événement est réutilisé tel quel.
 
 **L'événement porte les `player_id`**, plutôt que de laisser `players` retrouver
 les `Journeyman` de l'équipe : la seconde voie supprimerait aussi ceux d'un
@@ -106,10 +117,18 @@ avec sa valeur recalculée : la correction a simplement changé ce qu'il vaut.
 échoue si quelqu'un déplace un jour le ménage **avant** le lot de validation, ce
 qui compilerait parfaitement et perdrait un joueur qu'on vient de payer.
 
+**Il exige que la carte `457` soit faite d'abord**, et c'est pourquoi l'ordre
+des deux a été inversé : rien ne recrute encore de journalier, donc le lot de
+validation ne contient aucun basculement en `Active` à protéger. L'épic les
+donnait déjà comme parallèles. Faire la 457 d'abord évite une troisième dette
+de test d'affilée — et celle-ci porterait sur le test le plus important de la
+carte.
+
 ## Checklist
 
 - [ ] `TeamsAppEvent::RecruitmentPhaseValidated` et son bras de publisher
 - [ ] Le listener de perte, `PlayerJourneymanLost`
 - [ ] `MatchReportCancelled` porte les `player_id`, et `players` l'écoute
+- [ ] L'annulation réutilise `JourneymanWithdrawn` — **pas de suppression**
 - [ ] Les six tests
 - [ ] `make lint && make test && make check-arch`
