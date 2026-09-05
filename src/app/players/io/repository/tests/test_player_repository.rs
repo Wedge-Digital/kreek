@@ -35,6 +35,7 @@ async fn seed_player(repo: &PgPlayerRepository, player_id: &PlayerId, team_id: &
         base_skills: vec![],
         starting_spp: Spp(0),
         starting_value: ValueKpo(100),
+        starting_membership: crate::app::players::domain::player::RosterMembership::Active,
     };
     repo.append(player_id, team_id, &created, 1).await.unwrap();
     Player::from_events(&[created]).unwrap()
@@ -56,6 +57,7 @@ async fn seed_player_with_jersey(
         base_skills: vec![],
         starting_spp: Spp(0),
         starting_value: ValueKpo(100),
+        starting_membership: crate::app::players::domain::player::RosterMembership::Active,
     };
     repo.append(player_id, team_id, &created, 1).await.unwrap();
 }
@@ -138,6 +140,134 @@ async fn le_maillot_d_un_renvoye_redevient_attribuable(pool: PgPool) {
     let mut apres = proj.jerseys_by_team_id(&team_id).await.unwrap();
     apres.sort_unstable();
     assert_eq!(apres, vec![1, 2], "le 3 est libéré");
+}
+
+/// Sème un journalier — par l'événement, non par un `UPDATE`.
+///
+/// C'est ce que fait la chaîne réelle depuis la carte 455 : `PlayerCreated`
+/// porte l'appartenance de naissance.
+async fn seed_journalier(
+    repo: &PgPlayerRepository,
+    player_id: &PlayerId,
+    team_id: &TeamId,
+    jersey: Option<u16>,
+) {
+    let created = PlayerDomainEvent::PlayerCreated {
+        player_id: player_id.clone(),
+        team_id: team_id.clone(),
+        space_id: SpaceId::new(),
+        position_name: PositionNameVo::try_new("Piétaille".to_string()).unwrap(),
+        roster_line_id: RosterLineId::try_new("LINEMAN".to_string()).unwrap(),
+        jersey: jersey.map(|j| JerseyVo::try_new(j).unwrap()),
+        base_skills: vec![],
+        starting_spp: Spp(0),
+        starting_value: ValueKpo(50),
+        starting_membership: crate::app::players::domain::player::RosterMembership::Journeyman,
+    };
+    repo.append(player_id, team_id, &created, 1).await.unwrap();
+}
+
+/// Carte 455 — la dette que la 454 avait laissée.
+///
+/// Elle n'avait pas pu écrire ce test : aucun événement ne produisait alors de
+/// journalier, donc aucun agrégat ne pouvait en être un. C'est **la lecture
+/// événementielle** — celle dont dépendent la fin de match, la dépublication
+/// et les caractéristiques du tableau d'effectif.
+#[sqlx::test]
+async fn l_effectif_evenementiel_inclut_les_journaliers(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let team_id = TeamId("t-effectif-evt".into());
+    let embauche = PlayerId("embauche-evt".into());
+    let journalier = PlayerId("journalier-evt".into());
+
+    seed_player(&repo, &embauche, &team_id).await;
+    seed_journalier(&repo, &journalier, &team_id, None).await;
+
+    let ids: Vec<String> = repo
+        .find_by_team_id(&team_id)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|p| p.id.0)
+        .collect();
+
+    assert!(ids.contains(&"journalier-evt".to_string()));
+    assert!(ids.contains(&"embauche-evt".to_string()));
+}
+
+/// Le journalier naît **journalier**, pas actif — sur les deux lectures.
+#[sqlx::test]
+async fn il_nait_en_membership_journeyman(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool);
+    let team_id = TeamId("t-naissance".into());
+    let journalier = PlayerId("ne-journalier".into());
+
+    seed_journalier(&repo, &journalier, &team_id, None).await;
+
+    let agregat = repo.find_by_id(&journalier).await.unwrap().unwrap();
+    assert!(!agregat.membership.is_active());
+    assert!(agregat.membership.fait_partie_de_l_effectif());
+
+    let ligne = proj.find_by_id(&journalier.0).await.unwrap().unwrap();
+    assert_eq!(ligne.membership, "Journeyman");
+}
+
+/// Deux journaliers ne peuvent pas porter le même numéro.
+///
+/// `premier_libre` lit `jerseys_by_team_id`, la requête que la carte 454 a
+/// élargie : sans elle, le second journalier reprendrait le numéro du premier.
+#[sqlx::test]
+async fn deux_journaliers_recoivent_deux_maillots(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool);
+    let team_id = TeamId("t-deux-journaliers".into());
+
+    seed_player_with_jersey(&repo, &PlayerId("titulaire".into()), &team_id, 1).await;
+    seed_journalier(&repo, &PlayerId("j1".into()), &team_id, Some(2)).await;
+    seed_journalier(&repo, &PlayerId("j2".into()), &team_id, Some(3)).await;
+
+    let mut pris = proj.jerseys_by_team_id(&team_id).await.unwrap();
+    pris.sort_unstable();
+
+    assert_eq!(pris, vec![1, 2, 3], "les trois numéros sont pris");
+}
+
+/// La refrappe ne laisse pas de journalier orphelin.
+///
+/// Le coach repasse sur l'écran des coups de pouce : les journaliers sont
+/// refrappés avec de nouveaux identifiants. Sans le retrait, les premiers
+/// resteraient dans l'effectif, occupant leur maillot pour un match où plus
+/// personne ne les aligne.
+#[sqlx::test]
+async fn une_refrappe_ne_laisse_pas_de_journalier_orphelin(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool);
+    let team_id = TeamId("t-refrappe".into());
+    let premier = PlayerId("j-premier".into());
+
+    seed_journalier(&repo, &premier, &team_id, Some(2)).await;
+    assert_eq!(proj.find_by_team_id(&team_id).await.unwrap().len(), 1);
+
+    let retrait = PlayerDomainEvent::JourneymanWithdrawn {
+        player_id: premier.clone(),
+        team_id: team_id.clone(),
+    };
+    repo.append(&premier, &team_id, &retrait, 2).await.unwrap();
+
+    // La seconde fournée peut alors reprendre le numéro libéré.
+    let second = PlayerId("j-second".into());
+    seed_journalier(&repo, &second, &team_id, Some(2)).await;
+
+    let effectif = proj.find_by_team_id(&team_id).await.unwrap();
+    let ids: Vec<&str> = effectif.iter().map(|p| p.player_id.as_str()).collect();
+
+    assert_eq!(ids, vec!["j-second"], "le premier n'est plus de l'effectif");
+    assert_eq!(
+        proj.jerseys_by_team_id(&team_id).await.unwrap(),
+        vec![2],
+        "un seul porteur du 2"
+    );
 }
 
 /// Fait d'un joueur déjà semé un journalier.
@@ -464,6 +594,7 @@ async fn seed_player_with_spp(
         base_skills: vec![],
         starting_spp: Spp(20),
         starting_value: ValueKpo(100),
+        starting_membership: crate::app::players::domain::player::RosterMembership::Active,
     };
     repo.append(player_id, team_id, &created, 1).await.unwrap();
     Player::from_events(&[created]).unwrap()

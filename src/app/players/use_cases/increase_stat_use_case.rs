@@ -145,6 +145,7 @@ mod tests {
             base_skills: vec![],
             starting_spp: Spp(100),
             starting_value: ValueKpo(100),
+            starting_membership: crate::app::players::domain::player::RosterMembership::Active,
         }
     }
 

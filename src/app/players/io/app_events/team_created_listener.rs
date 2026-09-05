@@ -1,5 +1,7 @@
 use crate::app::players::domain::events::PlayerDomainEvent;
-use crate::app::players::domain::player::{AcquisitionMode, PlayerId, TeamId, ValueKpo};
+use crate::app::players::domain::player::{
+    AcquisitionMode, PlayerId, RosterMembership, TeamId, ValueKpo,
+};
 use crate::app::players::domain::value_objects::{SkillId, SkillName, SppCost};
 use crate::app::players::io::app_events::player_creation::{creer_joueur, ListenerError};
 use crate::app::players::io::repository::player_repository::{
@@ -86,6 +88,8 @@ async fn handle_player(
         &payload.roster_line_id,
         &payload.position_name,
         payload.jersey.map(|j| j as u16),
+        // Un effectif de départ n'a que des joueurs embauchés.
+        RosterMembership::Active,
         pool,
         catalog,
     )

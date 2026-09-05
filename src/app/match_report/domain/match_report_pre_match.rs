@@ -6,7 +6,7 @@ use crate::app::match_report::domain::value_objects::TurnNumber;
 use crate::app::match_report::domain::value_objects::{
     ActionId, ActionPlayer, AllowedInducementSpec, D3Roll, DedicatedFans, FanFactorMod,
     InducementMaxQty, InducementPurchase, InducementQty, MatchAction, MatchActionType, MatchGain,
-    MatchReportOrigin, TeamSide, TeamValue, TempPlayer,
+    MatchReportOrigin, TeamSide, TeamValue, TempPlayer, TempPlayerKind,
 };
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
@@ -237,9 +237,21 @@ impl MatchReportPreMatch {
         (updated, event)
     }
 
+    /// **L'événement nomme les journaliers retirés.** Ce sont les seuls
+    /// remplaçants à exister dans `players` : une vedette et un mercenaire
+    /// vivent le temps du rapport et n'y ont pas de joueur à effacer.
     pub fn reset_temp_players(&self, team_id: &TeamId) -> (Self, MatchReportDomainEvent) {
+        let side = match team_id == &self.home_team_id {
+            true => &self.home_temp_players,
+            false => &self.away_temp_players,
+        };
         let event = MatchReportDomainEvent::TempPlayersReset {
             team_id: team_id.clone(),
+            withdrawn: side
+                .iter()
+                .filter(|p| matches!(p.kind, TempPlayerKind::Journeyman { .. }))
+                .map(|p| p.id.clone())
+                .collect(),
         };
         let mut updated = self.clone();
         if team_id == &updated.home_team_id {
@@ -1013,6 +1025,26 @@ mod tests {
             MatchReportDomainEvent::TempPlayersInitialized { .. }
         ));
         assert_eq!(updated.version, pm.version + 1);
+    }
+
+    /// Carte 455 — le reset **nomme** les journaliers qu'il retire.
+    ///
+    /// Le publisher s'exécute après l'append : l'agrégat ne les porte déjà plus
+    /// quand il lit l'événement. Sans cette liste, un repassage sur l'écran des
+    /// coups de pouce laisserait derrière lui des journaliers orphelins.
+    #[test]
+    fn le_reset_nomme_les_journaliers_retires() {
+        let pm = make_pm(1000, 1000);
+        let journalier = make_journeyman(&pm);
+        let id = journalier.id.clone();
+        let (avec, _) = pm.init_temp_players(&pm.home_team_id.clone(), vec![journalier]);
+
+        let (_, event) = avec.reset_temp_players(&avec.home_team_id.clone());
+
+        let MatchReportDomainEvent::TempPlayersReset { withdrawn, .. } = event else {
+            panic!("un reset");
+        };
+        assert_eq!(withdrawn, vec![id]);
     }
 
     #[test]

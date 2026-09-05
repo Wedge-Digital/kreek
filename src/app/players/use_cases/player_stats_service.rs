@@ -155,6 +155,7 @@ mod tests {
             base_skills: vec![],
             starting_spp: Spp(0),
             starting_value: ValueKpo(90),
+            starting_membership: crate::app::players::domain::player::RosterMembership::Active,
         };
         Player::from_events(&[created]).unwrap()
     }
@@ -330,6 +331,7 @@ mod tests {
             base_skills: vec![],
             starting_spp: Spp(0),
             starting_value: ValueKpo(100),
+            starting_membership: crate::app::players::domain::player::RosterMembership::Active,
         };
         let mut joueur = Player::from_events(&[created]).unwrap();
         for stat in augmentations {

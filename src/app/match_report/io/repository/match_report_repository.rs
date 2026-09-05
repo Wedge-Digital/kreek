@@ -162,7 +162,7 @@ impl MatchReportRepository {
                 .await
                 .map_err(RepositoryError::Database)?;
             }
-            MatchReportDomainEvent::TempPlayersReset { team_id } => {
+            MatchReportDomainEvent::TempPlayersReset { team_id, .. } => {
                 let is_home = is_home_team(tx, match_report_id, &team_id.to_string()).await?;
                 let col = if is_home {
                     "home_temp_players"

@@ -6,6 +6,7 @@ use crate::app::match_report::domain::match_report_published::MatchReportPublish
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::value_objects::CorrectionEligibility;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 
 #[derive(Debug)]
 pub struct MatchReportCancelled {
@@ -20,6 +21,23 @@ pub enum MatchReportState {
     ReadyToPublish(MatchReportReadyToPublish),
     Published(MatchReportPublished),
     Cancelled(MatchReportCancelled),
+}
+
+impl MatchReportState {
+    /// L'espace du rapport, quel que soit son état.
+    ///
+    /// `None` pour un rapport annulé : cet état ne garde que son identifiant et
+    /// son motif. Les appelants d'aujourd'hui — la publication d'app events sur
+    /// des faits d'avant-match — ne l'atteignent pas.
+    pub fn space_id(&self) -> Option<&SpaceId> {
+        match self {
+            Self::Draft(d) => Some(&d.space_id),
+            Self::PreMatch(pm) => Some(&pm.space_id),
+            Self::ReadyToPublish(rtp) => Some(&rtp.space_id),
+            Self::Published(p) => Some(&p.space_id),
+            Self::Cancelled(_) => None,
+        }
+    }
 }
 
 pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState, DomainError> {
@@ -127,7 +145,7 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             }
             (
                 Some(MatchReportState::PreMatch(pm)),
-                MatchReportDomainEvent::TempPlayersReset { team_id },
+                MatchReportDomainEvent::TempPlayersReset { team_id, .. },
             ) => {
                 let mut updated = pm;
                 if team_id == &updated.home_team_id {
@@ -291,7 +309,7 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             }
             (
                 Some(MatchReportState::ReadyToPublish(rtp)),
-                MatchReportDomainEvent::TempPlayersReset { team_id },
+                MatchReportDomainEvent::TempPlayersReset { team_id, .. },
             ) => {
                 let mut updated = rtp;
                 if team_id == &updated.home_team_id {

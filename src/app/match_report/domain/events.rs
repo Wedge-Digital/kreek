@@ -1,7 +1,7 @@
 use crate::app::match_report::domain::value_objects::TurnNumber;
 use crate::app::match_report::domain::value_objects::{
     ActionId, ActionPlayer, D3Roll, DedicatedFans, FanFactorMod, InducementPurchase,
-    MatchActionType, MatchGain, MatchReportOrigin, TeamSide, TeamValue, TempPlayer,
+    MatchActionType, MatchGain, MatchReportOrigin, TeamSide, TeamValue, TempPlayer, TempPlayerId,
 };
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
@@ -92,6 +92,20 @@ pub enum MatchReportDomainEvent {
     },
     TempPlayersReset {
         team_id: TeamId,
+        /// Les journaliers que ce reset retire, pour que `players` sache
+        /// lesquels effacer.
+        ///
+        /// **L'événement doit dire ce qu'il a retiré** : le publisher s'exécute
+        /// après l'append, donc l'agrégat ne les porte déjà plus. Sans cette
+        /// liste, un repassage sur l'écran des coups de pouce laisserait
+        /// derrière lui des journaliers orphelins, occupant leur maillot pour
+        /// un match où plus personne ne les aligne.
+        ///
+        /// `serde(default)` : l'événement est persisté, et les resets déjà
+        /// écrits n'ont pas ce champ. Ils n'avaient d'ailleurs rien créé dans
+        /// `players`, donc n'ont rien à y retirer — la liste vide est juste.
+        #[serde(default)]
+        withdrawn: Vec<TempPlayerId>,
     },
     ActionRecorded {
         action_id: ActionId,

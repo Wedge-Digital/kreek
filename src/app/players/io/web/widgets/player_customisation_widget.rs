@@ -688,6 +688,7 @@ mod tests {
             base_skills: vec![],
             starting_spp: Spp(30),
             starting_value: ValueKpo(50),
+            starting_membership: crate::app::players::domain::player::RosterMembership::Active,
         };
         Player::from_events(&[created]).unwrap()
     }
@@ -1105,6 +1106,7 @@ mod tests {
                 base_skills: vec![],
                 starting_spp: Spp(30),
                 starting_value: ValueKpo(50),
+                starting_membership: crate::app::players::domain::player::RosterMembership::Active,
             },
             flux[0].clone(),
             flux[1].clone(),

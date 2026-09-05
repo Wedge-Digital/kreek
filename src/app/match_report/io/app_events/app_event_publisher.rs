@@ -5,11 +5,11 @@ use crate::app::match_report::domain::match_report_repository_port::IMatchReport
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{
     ActionPlayer, InducementSpending, InjuryType, MatchAction, MatchActionType, SequelStat,
-    TempPlayer, TempPlayerKind,
+    TempPlayer, TempPlayerId, TempPlayerKind,
 };
 use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
 use crate::app::shared_kernel::app_events::match_report_app_events::{
-    ActionTypePayload, MatchActionPublishedPayload, MatchReportAppEvent,
+    ActionTypePayload, FieldedJourneyman, MatchActionPublishedPayload, MatchReportAppEvent,
     MatchReportPublishedPayload, MatchReportUnpublishedPayload, PlayerRefPayload,
     TempPlayerPayload,
 };
@@ -124,8 +124,104 @@ async fn aiguiller(
             pairing_id.clone(),
             app_event_bus,
         ),
+        MatchReportDomainEvent::TempPlayersInitialized { team_id, players } => {
+            handle_journeymen_fielded(match_report_id, team_id, players, app_event_bus, repo).await
+        }
+        MatchReportDomainEvent::TempPlayersReset { team_id, withdrawn } => {
+            handle_journeymen_withdrawn(match_report_id, team_id, withdrawn, app_event_bus, repo)
+                .await
+        }
         _ => {}
     }
+}
+
+/// L'espace, que l'app event porte et que l'événement domaine ne connaît pas.
+///
+/// Lu sur l'agrégat plutôt qu'ajouté aux deux événements domaine : le rapport
+/// le porte déjà, et l'y dupliquer imposerait un `serde(default)` de plus pour
+/// les événements déjà écrits.
+async fn space_du_rapport(
+    repo: &dyn IMatchReportRepository,
+    match_report_id: &str,
+) -> Option<String> {
+    match repo.find_by_id(match_report_id).await {
+        Ok(Some(state)) => state.space_id().map(|s| s.to_string()),
+        _ => {
+            tracing::error!(
+                "app_event_publisher: espace introuvable pour le rapport {match_report_id}"
+            );
+            None
+        }
+    }
+}
+
+/// Seuls les journaliers franchissent la frontière.
+///
+/// Une vedette et un mercenaire vivent le temps du rapport : ils n'ont pas de
+/// joueur à créer dans `players`, et n'en auront jamais — ils ne se recrutent
+/// pas.
+async fn handle_journeymen_fielded(
+    match_report_id: &str,
+    team_id: TeamId,
+    players: Vec<TempPlayer>,
+    app_event_bus: &EventBus,
+    repo: &dyn IMatchReportRepository,
+) {
+    let journaliers: Vec<FieldedJourneyman> = players
+        .iter()
+        .filter_map(|p| match &p.kind {
+            TempPlayerKind::Journeyman { position_uid } => Some(FieldedJourneyman {
+                player_id: p.id.0.clone(),
+                roster_line_id: position_uid.clone(),
+            }),
+            _ => None,
+        })
+        .collect();
+    if journaliers.is_empty() {
+        return;
+    }
+    let Some(space_id) = space_du_rapport(repo, match_report_id).await else {
+        return;
+    };
+
+    publier(
+        app_event_bus,
+        MatchReportAppEvent::JourneymenFielded {
+            event_id: EventId::new(),
+            match_report_id: match_report_id.to_string(),
+            team_id: team_id.to_string(),
+            space_id,
+            players: journaliers,
+        }
+        .to_enveloppe(),
+    );
+}
+
+async fn handle_journeymen_withdrawn(
+    match_report_id: &str,
+    team_id: TeamId,
+    withdrawn: Vec<TempPlayerId>,
+    app_event_bus: &EventBus,
+    repo: &dyn IMatchReportRepository,
+) {
+    if withdrawn.is_empty() {
+        return;
+    }
+    let Some(space_id) = space_du_rapport(repo, match_report_id).await else {
+        return;
+    };
+
+    publier(
+        app_event_bus,
+        MatchReportAppEvent::JourneymenWithdrawn {
+            event_id: EventId::new(),
+            match_report_id: match_report_id.to_string(),
+            team_id: team_id.to_string(),
+            space_id,
+            player_ids: withdrawn.into_iter().map(|id| id.0).collect(),
+        }
+        .to_enveloppe(),
+    );
 }
 
 /// Contrairement aux deux autres, cet app event se construit depuis

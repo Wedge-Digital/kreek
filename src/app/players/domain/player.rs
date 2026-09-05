@@ -138,8 +138,12 @@ pub struct StatCustomisation {
 /// `Journeyman` est un journalier : il joue le match, porte un maillot, gagne
 /// des SPP et compte dans la valeur d'équipe — mais il n'est pas embauché. À
 /// la phase de recrutement suivante, il devient `Active` ou il disparaît.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum RosterMembership {
+    /// Le défaut, et c'est ce qui rend `serde(default)` sûr sur
+    /// `PlayerCreated` : tout événement écrit avant l'épic E15 décrit un
+    /// joueur embauché.
+    #[default]
     Active,
     Journeyman,
     Dismissed,
@@ -324,6 +328,7 @@ impl Player {
                 base_skills,
                 starting_spp,
                 starting_value,
+                starting_membership,
             } => {
                 if current.is_some() {
                     return current;
@@ -331,7 +336,7 @@ impl Player {
                 Some(Self {
                     id: player_id.clone(),
                     team_id: team_id.clone(),
-                    membership: RosterMembership::Active,
+                    membership: *starting_membership,
                     space_id: space_id.clone(),
                     position_name: position_name.clone(),
                     roster_line_id: roster_line_id.clone(),
@@ -575,6 +580,15 @@ impl Player {
             // son historique. Seule son appartenance change, et c'est elle que
             // les lectures d'effectif regardent.
             PlayerDomainEvent::PlayerDismissed { .. } => {
+                let mut player = current?;
+                player.membership = RosterMembership::Dismissed;
+                player.version += 1;
+                Some(player)
+            }
+            // Même état d'appartenance que le renvoi, et pour la même raison :
+            // les lectures d'effectif filtrent sur `Dismissed`. Ce qui diffère
+            // est le fait raconté, pas son effet.
+            PlayerDomainEvent::JourneymanWithdrawn { .. } => {
                 let mut player = current?;
                 player.membership = RosterMembership::Dismissed;
                 player.version += 1;
@@ -1221,6 +1235,21 @@ impl Player {
 mod appartenance_tests {
     use super::*;
 
+    fn creation(membership: RosterMembership) -> PlayerDomainEvent {
+        PlayerDomainEvent::PlayerCreated {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            space_id: SpaceId::new(),
+            position_name: PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
+            roster_line_id: RosterLineId::try_new("BLITZER".to_string()).unwrap(),
+            jersey: None,
+            base_skills: vec![],
+            starting_spp: Spp(0),
+            starting_value: ValueKpo(100),
+            starting_membership: membership,
+        }
+    }
+
     fn joueur(membership: RosterMembership) -> Player {
         let created = PlayerDomainEvent::PlayerCreated {
             player_id: PlayerId("p1".into()),
@@ -1232,6 +1261,7 @@ mod appartenance_tests {
             base_skills: vec![],
             starting_spp: Spp(0),
             starting_value: ValueKpo(100),
+            starting_membership: RosterMembership::Active,
         };
         let mut joueur = Player::from_events(&[created]).unwrap();
         // Posée directement : aucun événement ne produit encore `Journeyman`,
@@ -1294,6 +1324,74 @@ mod appartenance_tests {
         assert!(!RosterMembership::Dismissed.is_active());
     }
 
+    /// Carte 455 — un `PlayerCreated` d'avant l'épic se rejoue en `Active`.
+    ///
+    /// **Le test le plus important de la carte**, et le seul dont l'échec ne se
+    /// verrait qu'en production : sans le `serde(default)`, les joueurs déjà en
+    /// base cessent tous de se rejouer. Le JSON ci-dessous est la forme exacte
+    /// que l'event store porte aujourd'hui — sans `starting_membership`.
+    #[test]
+    fn un_joueur_d_avant_la_migration_se_rejoue_en_active() {
+        let ancien = serde_json::json!({
+            "PlayerCreated": {
+                "player_id": "p1",
+                "team_id": "t1",
+                "space_id": "01KZ1J5JER8K1EPZ3444X2H45S",
+                "position_name": "Frappeur",
+                "roster_line_id": "BLITZER",
+                "jersey": null,
+                "base_skills": [],
+                "starting_spp": 0,
+                "starting_value": 100
+            }
+        });
+
+        let event: PlayerDomainEvent =
+            serde_json::from_value(ancien).expect("un événement sans le champ doit se relire");
+        let joueur = Player::from_events(&[event]).expect("et s'hydrater");
+
+        assert_eq!(joueur.membership, RosterMembership::Active);
+    }
+
+    /// L'autre moitié : un journalier écrit aujourd'hui se relit journalier.
+    /// Sans elle, un `starting_membership` ignoré à la lecture passerait aussi.
+    #[test]
+    fn un_journalier_ecrit_se_relit_journalier() {
+        let created = PlayerDomainEvent::PlayerCreated {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            space_id: SpaceId::new(),
+            position_name: PositionNameVo::try_new("Piétaille".to_string()).unwrap(),
+            roster_line_id: RosterLineId::try_new("LINEMAN".to_string()).unwrap(),
+            jersey: None,
+            base_skills: vec![],
+            starting_spp: Spp(0),
+            starting_value: ValueKpo(50),
+            starting_membership: RosterMembership::Journeyman,
+        };
+        let json = serde_json::to_value(&created).unwrap();
+        let relu: PlayerDomainEvent = serde_json::from_value(json).unwrap();
+        let joueur = Player::from_events(&[relu]).unwrap();
+
+        assert_eq!(joueur.membership, RosterMembership::Journeyman);
+        assert!(joueur.membership.fait_partie_de_l_effectif());
+    }
+
+    /// Le désalignement le sort de l'effectif sans rien lui prendre d'autre.
+    #[test]
+    fn un_journalier_desaligne_quitte_l_effectif() {
+        let j = joueur(RosterMembership::Journeyman);
+        let retrait = PlayerDomainEvent::JourneymanWithdrawn {
+            player_id: j.id.clone(),
+            team_id: j.team_id.clone(),
+        };
+        let apres = Player::from_events(&[creation(RosterMembership::Journeyman), retrait])
+            .expect("le retrait s'applique");
+
+        assert!(!apres.membership.fait_partie_de_l_effectif());
+        assert_eq!(apres.value, ValueKpo(100), "il garde sa valeur");
+    }
+
     /// Renommer, renuméroter et réordonner sont réservés aux joueurs embauchés.
     ///
     /// Un journalier ne reste pas : au recrutement suivant il devient permanent
@@ -1327,6 +1425,7 @@ mod match_impact_tests {
             base_skills: vec![],
             starting_spp: Spp(0),
             starting_value: ValueKpo(100),
+            starting_membership: RosterMembership::Active,
         };
         Player::from_events(&[created]).unwrap()
     }
@@ -1506,6 +1605,7 @@ mod improvement_tests {
             base_skills: vec![SkillId::try_new("existing-base").unwrap()],
             starting_spp: Spp(spp),
             starting_value: ValueKpo(100),
+            starting_membership: RosterMembership::Active,
         };
         Player::from_events(&[created]).unwrap()
     }
@@ -1811,6 +1911,7 @@ mod revert_match_impact_tests {
             base_skills: vec![],
             starting_spp: Spp(0),
             starting_value: ValueKpo(100),
+            starting_membership: RosterMembership::Active,
         }
     }
 
@@ -2278,6 +2379,7 @@ mod roster_edition_tests {
             base_skills: vec![],
             starting_spp: Spp(0),
             starting_value: ValueKpo(100),
+            starting_membership: RosterMembership::Active,
         };
         Player::from_events(&[created]).unwrap()
     }
@@ -2422,6 +2524,7 @@ mod customisation_tests {
             base_skills: vec![],
             starting_spp: Spp(4),
             starting_value: ValueKpo(100),
+            starting_membership: RosterMembership::Active,
         };
         Player::from_events(&[created]).unwrap()
     }
@@ -2620,6 +2723,7 @@ mod revert_customisation_tests {
             base_skills: vec![],
             starting_spp: Spp(spp),
             starting_value: ValueKpo(valeur),
+            starting_membership: RosterMembership::Active,
         }
     }
 

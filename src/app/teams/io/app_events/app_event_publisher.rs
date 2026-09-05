@@ -78,6 +78,24 @@ async fn to_app_event(
             roster_line_id: roster_line.0.clone(),
             base_value_kpo: base_value_kpo.0,
         }),
+        TeamDomainEvent::JourneymanFielded {
+            player_id,
+            roster_line,
+        } => Some(TeamsAppEvent::JourneymanFielded {
+            event_id: EventId::new(),
+            team_id: TeamId::try_new(team_id).ok()?,
+            space_id: space_id_de(team_id, pool).await?,
+            player_id: PlayerId::try_new(&player_id.to_string()).ok()?,
+            roster_line_id: roster_line.0.clone(),
+        }),
+        TeamDomainEvent::JourneymanWithdrawn { player_id } => {
+            Some(TeamsAppEvent::JourneymanWithdrawn {
+                event_id: EventId::new(),
+                team_id: TeamId::try_new(team_id).ok()?,
+                space_id: space_id_de(team_id, pool).await?,
+                player_id: PlayerId::try_new(&player_id.to_string()).ok()?,
+            })
+        }
         TeamDomainEvent::PlayerDismissed { player_id, .. } => {
             Some(TeamsAppEvent::PlayerDismissed {
                 event_id: EventId::new(),

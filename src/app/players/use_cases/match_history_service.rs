@@ -81,8 +81,10 @@ pub fn build_match_history(events: &[PlayerDomainEvent]) -> Vec<MatchHistoryEntr
 
 fn event_match_report_id(event: &PlayerDomainEvent) -> Option<String> {
     match event {
-        // Fait d'équipe, hors de tout historique de match.
-        PlayerDomainEvent::InitialRosterCompleted { .. } => None,
+        // Faits hors de tout historique de match : l'un est un fait d'équipe,
+        // l'autre un désalignement d'avant le coup d'envoi.
+        PlayerDomainEvent::InitialRosterCompleted { .. }
+        | PlayerDomainEvent::JourneymanWithdrawn { .. } => None,
         PlayerDomainEvent::PlayerHatredGained { context, .. }
         | PlayerDomainEvent::TouchdownScored { context, .. }
         | PlayerDomainEvent::PassCompleted { context, .. }
@@ -120,7 +122,8 @@ fn event_match_report_id(event: &PlayerDomainEvent) -> Option<String> {
 
 fn apply_event(entry: &mut MatchHistoryEntry, event: &PlayerDomainEvent) {
     match event {
-        PlayerDomainEvent::InitialRosterCompleted { .. } => {}
+        PlayerDomainEvent::InitialRosterCompleted { .. }
+        | PlayerDomainEvent::JourneymanWithdrawn { .. } => {}
         // La Haine appartient au récit du match, mais l'entrée d'historique
         // n'en porte pas de colonne : rien à cumuler ici.
         PlayerDomainEvent::PlayerHatredGained { .. } => {}

@@ -41,6 +41,34 @@ pub enum MatchReportAppEvent {
         #[serde(default)]
         pairing_id: Option<String>,
     },
+    /// Des journaliers ont été alignés pour cette équipe.
+    ///
+    /// **Un fait de match, pas une décision d'effectif.** `match_report`
+    /// constate qu'on a aligné des journaliers ; il ne crée pas de joueurs, ce
+    /// n'est pas son rôle. `teams` en tire la conséquence, et lui seul fait
+    /// naître un joueur.
+    ///
+    /// `FieldedJourneyman` ne porte pas de maillot : `players` l'attribue à la
+    /// création, par `premier_libre`, qui seul connaît les numéros pris.
+    JourneymenFielded {
+        event_id: EventId,
+        match_report_id: String,
+        team_id: String,
+        space_id: String,
+        players: Vec<FieldedJourneyman>,
+    },
+    /// La composition a été refaite : ces journaliers ne sont plus alignés.
+    ///
+    /// Le pendant exact du précédent. Sans lui, un repassage sur l'écran des
+    /// coups de pouce laisserait derrière lui des journaliers orphelins,
+    /// occupant leur maillot pour un match où plus personne ne les aligne.
+    JourneymenWithdrawn {
+        event_id: EventId,
+        match_report_id: String,
+        team_id: String,
+        space_id: String,
+        player_ids: Vec<String>,
+    },
     MatchReportPublished(MatchReportPublishedPayload),
     /// Le rapport repasse en état corrigeable : les BCs qui en avaient tiré des
     /// conséquences doivent les défaire.
@@ -127,6 +155,17 @@ pub enum ActionTypePayload {
     Blesse { injury: String },
 }
 
+/// Un journalier aligné, tel que `players` doit le créer.
+///
+/// `player_id` est **frappé par `match_report`** : l'émetteur frappe, donc
+/// rejouer le flux redonne les mêmes joueurs, et un app event reçu deux fois
+/// est rejeté par la contrainte d'unicité au lieu de créer un doublon.
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct FieldedJourneyman {
+    pub player_id: String,
+    pub roster_line_id: String,
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct TempPlayerPayload {
     pub id: String,
@@ -139,6 +178,8 @@ impl MatchReportAppEvent {
     pub const MATCH_REPORT_CANCELLED: &'static str = "MatchReportCancelled";
     pub const MATCH_REPORT_PUBLISHED: &'static str = "MatchReportPublished";
     pub const MATCH_REPORT_UNPUBLISHED: &'static str = "MatchReportUnpublished";
+    pub const JOURNEYMEN_FIELDED: &'static str = "MatchReportJourneymenFielded";
+    pub const JOURNEYMEN_WITHDRAWN: &'static str = "MatchReportJourneymenWithdrawn";
 
     pub fn event_type(&self) -> &'static str {
         match self {
@@ -146,6 +187,8 @@ impl MatchReportAppEvent {
             Self::MatchReportCancelled { .. } => Self::MATCH_REPORT_CANCELLED,
             Self::MatchReportPublished(_) => Self::MATCH_REPORT_PUBLISHED,
             Self::MatchReportUnpublished(_) => Self::MATCH_REPORT_UNPUBLISHED,
+            Self::JourneymenFielded { .. } => Self::JOURNEYMEN_FIELDED,
+            Self::JourneymenWithdrawn { .. } => Self::JOURNEYMEN_WITHDRAWN,
         }
     }
 
@@ -159,6 +202,12 @@ impl MatchReportAppEvent {
             } => match_report_id.clone(),
             Self::MatchReportPublished(payload) => payload.match_report_id.clone(),
             Self::MatchReportUnpublished(payload) => payload.match_report_id.clone(),
+            Self::JourneymenFielded {
+                match_report_id, ..
+            }
+            | Self::JourneymenWithdrawn {
+                match_report_id, ..
+            } => match_report_id.clone(),
         };
         EventEnvelope {
             event_id: EventId::new().to_string(),

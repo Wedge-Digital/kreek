@@ -120,6 +120,7 @@ mod tests {
             base_skills: vec![],
             starting_spp: Spp(100),
             starting_value: ValueKpo(100),
+            starting_membership: crate::app::players::domain::player::RosterMembership::Active,
         };
         let cadeau = PlayerDomainEvent::PlayerSkillCustomised {
             player_id: PlayerId("p1".into()),

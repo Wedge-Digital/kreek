@@ -8,7 +8,7 @@
 //! Le code vient de `team_created_listener`, déplacé ici sans réécriture.
 
 use crate::app::players::domain::events::PlayerDomainEvent;
-use crate::app::players::domain::player::{PlayerId, Spp, TeamId, ValueKpo};
+use crate::app::players::domain::player::{PlayerId, RosterMembership, Spp, TeamId, ValueKpo};
 use crate::app::players::domain::value_objects::{JerseyVo, PositionNameVo, RosterLineId, SkillId};
 use crate::app::players::io::repository::player_repository::{
     insert_player_event, upsert_player_projection,
@@ -81,6 +81,12 @@ pub fn nom_de_poste(roster_line_id: &str, catalog: &dyn ISkillCatalogPort) -> St
 /// d'unicité `(player_id, version)` : c'est ce qui rend l'opération idempotente,
 /// et c'est la raison pour laquelle l'identifiant est frappé en amont plutôt
 /// qu'ici.
+/// `membership` distingue les deux naissances : `Active` pour un joueur que le
+/// coach a recruté, `Journeyman` pour un journalier aligné le temps d'un match.
+/// Il est **explicite au lieu d'être déduit** — un défaut à `Active` ferait
+/// naître un journalier permanent le jour où un appelant l'oublie, et rien ne
+/// le signalerait.
+#[allow(clippy::too_many_arguments)]
 pub async fn creer_joueur(
     team_id: &str,
     space_id: &str,
@@ -88,6 +94,7 @@ pub async fn creer_joueur(
     roster_line_id: &str,
     position_name: &str,
     jersey: Option<u16>,
+    membership: RosterMembership,
     pool: &PgPool,
     catalog: &dyn ISkillCatalogPort,
 ) -> Result<(), ListenerError> {
@@ -103,6 +110,7 @@ pub async fn creer_joueur(
         base_skills: resolve_base_skills(roster_line_id, catalog),
         starting_spp: Spp(0),
         starting_value: ValueKpo(base_position_kpo(roster_line_id, catalog)),
+        starting_membership: membership,
     };
 
     let mut tx = pool.begin().await.map_err(ListenerError::Database)?;

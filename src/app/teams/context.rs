@@ -1,6 +1,6 @@
 use crate::app::teams::io::app_events::app_event_publisher::teams_app_event_publisher;
 use crate::app::teams::io::app_events::{
-    match_report_cancelled_listener, match_report_confirmed_listener,
+    journeymen_fielded_listener, match_report_cancelled_listener, match_report_confirmed_listener,
     match_report_published_listener, match_report_unpublished_listener, team_created_listener,
 };
 use crate::app::teams::io::listeners::team_value_listener::TeamValueDeps;
@@ -66,6 +66,7 @@ pub fn init_listeners(
     match_report_confirmed_listener::init(app_event_bus, repo.clone());
     match_report_cancelled_listener::init(app_event_bus, repo.clone());
     match_report_published_listener::init(app_event_bus, repo.clone());
+    journeymen_fielded_listener::init(app_event_bus, repo.clone());
     match_report_unpublished_listener::init(app_event_bus, repo);
 }
 

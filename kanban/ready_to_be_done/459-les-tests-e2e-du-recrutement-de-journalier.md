@@ -16,12 +16,25 @@ Fichier : `tests/e2e/test_journeyman_recruitment.py`.
 | Test | Ce qu'il prouve |
 |---|---|
 | `test_le_panneau_est_absent_sans_journalier` | le cas le plus fréquent |
-| `test_un_journalier_apparait_apres_un_match` | `match_report → teams → players` |
+| `test_un_journalier_apparait_apres_un_match` | `match_report → teams → players` — **il porte la dette de la 455** |
 | **`test_le_journalier_recrute_reste_dans_l_effectif`** | **le test qui compte** |
 | `test_le_journalier_non_recrute_disparait` | la décision 13, bout en bout |
 | `test_le_prix_se_decompose_avec_une_amelioration` | « 65 + 20 » à l'écran |
 | `test_le_meme_journalier_ne_s_ajoute_pas_deux_fois` | la règle propre |
 | `test_seize_dont_journaliers_autorise_le_recrutement` | le cas qui donne son sens au plafond |
+
+## La dette héritée de la carte 455
+
+Deux tests que la 455 n'a pas pu écrire lui reviennent :
+`un_journalier_aligne_devient_un_joueur` et
+`les_actions_du_rapport_pointent_le_joueur_reel`. Une carte de socle ne peut
+pas prouver ce qu'elle rend seulement possible — la chaîne traverse trois BCs
+et deux bus, et n'est observable qu'en navigateur.
+
+`test_un_journalier_apparait_apres_un_match` couvre le premier. Le second
+demande une assertion de plus : que l'action enregistrée dans le rapport porte
+**le même identifiant** que le joueur créé dans `players`. C'est ce qui prouve
+que les deux mondes désignent la même entité, et non deux copies.
 
 ## Celui qui vaut le prix de la suite
 

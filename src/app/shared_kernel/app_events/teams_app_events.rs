@@ -28,6 +28,26 @@ pub enum TeamsAppEvent {
         roster_line_id: String,
         base_value_kpo: u32,
     },
+    /// Un journalier a été aligné : `players` le crée, en `Journeyman`.
+    ///
+    /// **Distinct de `PlayerRecruited`** : aligner n'est pas acheter. Aucun
+    /// coût n'est transporté parce qu'aucun n'est payé, et l'événement domaine
+    /// dont il vient ne produit aucun mouvement de trésorerie.
+    JourneymanFielded {
+        event_id: EventId,
+        team_id: TeamId,
+        space_id: SpaceId,
+        player_id: PlayerId,
+        roster_line_id: String,
+    },
+    /// La composition a été refaite : ce journalier n'est plus aligné, et
+    /// `players` le sort de l'effectif. Il n'y avait jamais été embauché.
+    JourneymanWithdrawn {
+        event_id: EventId,
+        team_id: TeamId,
+        space_id: SpaceId,
+        player_id: PlayerId,
+    },
     /// Le coach a renvoyé ce joueur. `players` le sort de son effectif.
     ///
     /// Rien d'autre à transporter : ni valeur ni motif. `players` possède le
@@ -43,10 +63,14 @@ pub enum TeamsAppEvent {
 impl TeamsAppEvent {
     pub const PLAYER_RECRUITED: &'static str = "TeamsPlayerRecruited";
     pub const PLAYER_DISMISSED: &'static str = "TeamsPlayerDismissed";
+    pub const JOURNEYMAN_FIELDED: &'static str = "TeamsJourneymanFielded";
+    pub const JOURNEYMAN_WITHDRAWN: &'static str = "TeamsJourneymanWithdrawn";
 
     pub fn event_type(&self) -> &'static str {
         match self {
             Self::PlayerRecruited { .. } => Self::PLAYER_RECRUITED,
+            Self::JourneymanFielded { .. } => Self::JOURNEYMAN_FIELDED,
+            Self::JourneymanWithdrawn { .. } => Self::JOURNEYMAN_WITHDRAWN,
             Self::PlayerDismissed { .. } => Self::PLAYER_DISMISSED,
         }
     }
@@ -55,9 +79,10 @@ impl TeamsAppEvent {
     /// c'est par elle que le listener retrouve le contexte.
     pub fn to_enveloppe(&self) -> EventEnvelope {
         let emitter = match self {
-            Self::PlayerRecruited { team_id, .. } | Self::PlayerDismissed { team_id, .. } => {
-                team_id.to_string()
-            }
+            Self::PlayerRecruited { team_id, .. }
+            | Self::PlayerDismissed { team_id, .. }
+            | Self::JourneymanFielded { team_id, .. }
+            | Self::JourneymanWithdrawn { team_id, .. } => team_id.to_string(),
         };
         EventEnvelope {
             event_id: EventId::new().to_string(),

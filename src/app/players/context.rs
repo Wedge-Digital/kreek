@@ -67,7 +67,13 @@ pub fn init_listeners(
         pool.clone(),
         skill_catalog.clone(),
     );
-    player_recruited_listener::init(app_event_bus, pool, projections, skill_catalog.clone());
+    player_recruited_listener::init(
+        app_event_bus,
+        pool,
+        projections,
+        skill_catalog.clone(),
+        player_repo.clone(),
+    );
     player_dismissed_listener::init(app_event_bus, event_bus.clone(), player_repo.clone());
     player_match_impact_listener::init(app_event_bus, player_repo, skill_catalog);
 }

@@ -128,6 +128,9 @@ fn player_and_team_id(event: &PlayerDomainEvent) -> (&str, &str) {
         PlayerDomainEvent::PlayerDismissed {
             player_id, team_id, ..
         } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::JourneymanWithdrawn {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
     }
 }
 
@@ -181,6 +184,7 @@ pub async fn upsert_player_projection(
             base_skills,
             starting_spp,
             starting_value,
+            starting_membership,
         } => {
             let skill_ids: Vec<&str> = base_skills.iter().map(|s| s.as_ref()).collect();
             let base_json =
@@ -189,8 +193,9 @@ pub async fn upsert_player_projection(
             sqlx::query(
                 "INSERT INTO players_proj
                      (player_id, team_id, space_id, position_name, roster_line_id,
-                      personal_name, jersey, base_skills, acquired_skills, spp, value_kpo, version)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, '[]'::jsonb, $9, $10, 1)
+                      personal_name, jersey, base_skills, acquired_skills, spp, value_kpo,
+                      version, membership)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, '[]'::jsonb, $9, $10, 1, $11)
                  ON CONFLICT (player_id) DO NOTHING",
             )
             .bind(&player_id.0)
@@ -203,6 +208,7 @@ pub async fn upsert_player_projection(
             .bind(&base_json)
             .bind(starting_spp.0 as i32)
             .bind(starting_value.0 as i32)
+            .bind(starting_membership.as_str())
             .execute(&mut **tx)
             .await
             .map_err(RepositoryError::Database)?;
@@ -422,7 +428,10 @@ pub async fn upsert_player_projection(
         // Le joueur sort de l'effectif sans rien perdre : SPP, compétences et
         // historique restent en place. Seule l'appartenance change, et c'est
         // elle que toutes les lectures d'effectif filtrent désormais.
-        PlayerDomainEvent::PlayerDismissed { player_id, .. } => {
+        // Le désalignement d'un journalier aboutit au même état : les lectures
+        // d'effectif filtrent sur `Dismissed`, et il n'en est plus.
+        PlayerDomainEvent::PlayerDismissed { player_id, .. }
+        | PlayerDomainEvent::JourneymanWithdrawn { player_id, .. } => {
             sqlx::query(
                 "UPDATE players_proj
                  SET membership = 'Dismissed', version = version + 1

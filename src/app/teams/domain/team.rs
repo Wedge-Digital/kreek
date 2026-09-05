@@ -136,6 +136,23 @@ pub enum TeamDomainEvent {
         base_value_kpo: Kpo,
         cost_kpo: Kpo,
     },
+    /// Un journalier a été aligné dans un rapport de match.
+    ///
+    /// **Aucun `cost_kpo`, et c'est le fond de l'affaire.** Un journalier est
+    /// aligné, pas acheté : il ne coûte rien et ne doit produire aucun
+    /// mouvement de trésorerie. Réutiliser `PlayerRecruited` avec un coût nul
+    /// aurait écrit au grand livre une ligne « Recrutement de joueur — 0 kPo »
+    /// par journalier et par match, sur un écran livré (onglet Trésorerie) —
+    /// sans rien casser, donc sans que personne ne le voie.
+    JourneymanFielded {
+        player_id: PlayerId,
+        roster_line: RosterLineId,
+    },
+    /// Le journalier a été désaligné avant le match — la composition a été
+    /// refaite. Il quitte l'effectif sans jamais y avoir été embauché.
+    JourneymanWithdrawn {
+        player_id: PlayerId,
+    },
     StaffBought {
         staff_type: StaffType,
         quantity: StaffQuantity,
@@ -234,6 +251,8 @@ impl TeamDomainEvent {
             Self::InducementsRefunded { .. } => "InducementsRefunded",
             Self::PlayerImprovementPhaseValidated => "PlayerImprovementPhaseValidated",
             Self::PlayerRecruited { .. } => "PlayerRecruited",
+            Self::JourneymanFielded { .. } => "JourneymanFielded",
+            Self::JourneymanWithdrawn { .. } => "JourneymanWithdrawn",
             Self::StaffBought { .. } => "StaffBought",
             Self::StaffDismissed { .. } => "StaffDismissed",
             Self::RecruitmentPhaseValidated => "RecruitmentPhaseValidated",
@@ -401,6 +420,15 @@ impl Team {
                 *cost_kpo,
                 MovementReason::PlayerRecruitment,
             )),
+            // **`None`, et pas un débit de zéro.** Un journalier est aligné,
+            // pas acheté. Un mouvement nul serait passé pour inoffensif — rien
+            // n'est prélevé — mais rien ne filtre les mouvements à zéro : le
+            // grand livre aurait gagné une ligne par journalier et par match.
+            //
+            // C'est ce `match` exhaustif qui a posé la question au moment
+            // d'ajouter les deux événements. Il la posera de même au suivant.
+            TeamDomainEvent::JourneymanFielded { .. }
+            | TeamDomainEvent::JourneymanWithdrawn { .. } => None,
             TeamDomainEvent::StaffBought { cost_kpo, .. } => Some(TreasuryMovement::debit(
                 solde,
                 *cost_kpo,
@@ -604,6 +632,12 @@ impl Team {
                 self.game_phase = Some(GamePhase::ReadyToPlay);
             }
             TeamDomainEvent::PlayerRecruited { .. } => {}
+            // L'effectif vit dans `players` : `teams` n'en tient pas la liste.
+            // Ces deux faits ne changent donc rien à l'agrégat — ils existent
+            // pour être publiés, et pour que l'event store raconte l'histoire
+            // complète de l'effectif.
+            TeamDomainEvent::JourneymanFielded { .. }
+            | TeamDomainEvent::JourneymanWithdrawn { .. } => {}
             TeamDomainEvent::StaffBought {
                 staff_type,
                 quantity,
@@ -2175,6 +2209,43 @@ mod tests {
         let m = team.treasury_movement(&event).expect("un achat débite");
         assert_eq!(m.amount, Kpo(60));
         assert_eq!(m.balance_after, Kpo(team.treasury.0 - 60));
+    }
+
+    /// Carte 455 — **aligner n'est pas acheter.**
+    ///
+    /// Le défaut que ce test empêche ne casse rien : il salit. Réutiliser
+    /// `PlayerRecruited` avec un coût nul aurait écrit au grand livre une ligne
+    /// « Recrutement de joueur — 0 kPo » par journalier et par match, sur
+    /// l'onglet Trésorerie livré par les cartes 434-436. Rien n'aurait échoué,
+    /// et personne ne l'aurait vu à la relecture.
+    #[test]
+    fn aligner_un_journalier_ne_touche_pas_la_tresorerie() {
+        let team = recruitment_phase_team();
+        let aligne = TeamDomainEvent::JourneymanFielded {
+            player_id: PlayerId::try_new("00000000000000000000000007").unwrap(),
+            roster_line: RosterLineId("DEMO_GRANIT__PIETAILLE".into()),
+        };
+        let retire = TeamDomainEvent::JourneymanWithdrawn {
+            player_id: PlayerId::try_new("00000000000000000000000007").unwrap(),
+        };
+
+        assert!(team.treasury_movement(&aligne).is_none());
+        assert!(team.treasury_movement(&retire).is_none());
+
+        // Contre-épreuve : le vrai recrutement, lui, débite. Sans elle, le test
+        // passerait aussi bien si `treasury_movement` rendait toujours `None`.
+        let achat = TeamDomainEvent::PlayerRecruited {
+            player_id: PlayerId::try_new("00000000000000000000000008").unwrap(),
+            roster_line: RosterLineId("DEMO_GRANIT__PIETAILLE".into()),
+            base_value_kpo: Kpo(50),
+            cost_kpo: Kpo(50),
+        };
+        assert_eq!(
+            team.treasury_movement(&achat)
+                .expect("un achat débite")
+                .amount,
+            Kpo(50)
+        );
     }
 
     #[test]

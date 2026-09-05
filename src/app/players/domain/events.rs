@@ -1,7 +1,9 @@
 use crate::app::players::domain::match_impact::{
     InjuryType, MatchContext, MatchReportId, SppEarned, StatKind,
 };
-use crate::app::players::domain::player::{AcquisitionMode, PlayerId, Spp, TeamId, ValueKpo};
+use crate::app::players::domain::player::{
+    AcquisitionMode, PlayerId, RosterMembership, Spp, TeamId, ValueKpo,
+};
 use crate::app::players::domain::value_objects::{
     CustomisationId, DisplayOrder, JerseyVo, KpoDelta, PersonalName, PositionNameVo, RosterLineId,
     SkillId, SkillName, SppAmount, SppCost,
@@ -44,6 +46,17 @@ pub enum PlayerDomainEvent {
         base_skills: Vec<SkillId>,
         starting_spp: Spp,
         starting_value: ValueKpo,
+        /// L'appartenance à la naissance : `Active` pour un joueur recruté,
+        /// `Journeyman` pour un journalier aligné le temps d'un match.
+        ///
+        /// **`serde(default)` est obligatoire, pas prudentiel** : cet
+        /// événement est persisté, et les joueurs déjà en base ont été écrits
+        /// sans ce champ. Sans le défaut, plus aucun ne se rejoue. Le défaut
+        /// vaut `Active` et c'est juste par construction — tous les événements
+        /// antérieurs décrivent des joueurs embauchés, le journalier n'existait
+        /// pas encore.
+        #[serde(default)]
+        starting_membership: RosterMembership,
     },
     InitialSkillEarned {
         player_id: PlayerId,
@@ -170,6 +183,17 @@ pub enum PlayerDomainEvent {
     /// Homonyme de l'événement domaine de `teams` et de l'app event qui les
     /// relie : nommer le même fait pareil des deux côtés n'est pas nommer un
     /// événement d'après son origine externe, que le CLAUDE.md interdit.
+    /// Le journalier a été désaligné avant le match : il quitte l'effectif.
+    ///
+    /// **Distinct de `PlayerDismissed`**, qui est une décision de coach sur un
+    /// joueur embauché. Ici rien n'a été décidé et rien n'a été embauché — la
+    /// composition a simplement été refaite, et ce journalier n'en est plus.
+    /// Les deux aboutissent au même état d'appartenance ; ils ne racontent pas
+    /// le même fait, et l'event store doit les distinguer.
+    JourneymanWithdrawn {
+        player_id: PlayerId,
+        team_id: TeamId,
+    },
     PlayerDismissed {
         player_id: PlayerId,
         team_id: TeamId,
@@ -325,6 +349,7 @@ impl PlayerDomainEvent {
             Self::PlayerAvailabilityRestored { .. } => "PlayerAvailabilityRestored",
             Self::MatchConcluded { .. } => "MatchConcluded",
             Self::MatchImpactReverted { .. } => "MatchImpactReverted",
+            Self::JourneymanWithdrawn { .. } => "JourneymanWithdrawn",
             Self::PlayerDismissed { .. } => "PlayerDismissed",
             Self::InitialRosterCompleted { .. } => "InitialRosterCompleted",
             Self::PlayerRenamed { .. } => "PlayerRenamed",
