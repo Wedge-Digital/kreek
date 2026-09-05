@@ -33,6 +33,12 @@ carte 46 non développée) ne permet d'atteindre ces phases. Une insertion SQL
 directe d'événement le permettrait mais casserait le principe de ce test
 (piloter via de vraies actions plutôt que fabriquer un état).
 
+**Chaque phase vérifie aussi qu'un membre simple n'y voit aucune action**
+(carte 500) : le bandeau, son texte et son bouton d'impression lui restent,
+les boutons qui agissent disparaissent. La vérification est posée dans les
+tests de phase plutôt que dans un module à part, parce que la séquence est
+pilotée par de vraies actions et qu'aucune phase ne se fabrique isolément.
+
 **Tous les CTA de ce module passent par `cliquer_quand_cable_locator`** : ce
 sont des `hx-get`/`hx-post` qui arrivent par un échange htmx, donc visibles
 quelques dizaines de millisecondes avant d'être câblés. Un clic tombé dans
@@ -118,6 +124,41 @@ def _wait_for(check, attempts=30, delay_s=0.2):
     pytest.fail("condition jamais satisfaite (listener app event pas propagé à temps)")
 
 
+# ── Carte 500 : le bandeau n'offre que ce qu'on a le droit de faire ───────────
+
+ENTETE_MEMBRE_SIMPLE = {"X-Bypass-Auth-Profile": "simple"}
+
+
+def _aucune_action_pour_un_tiers(browser, space_id, team_id, texte_attendu):
+    """Un membre simple voit le bandeau de la phase, sans aucun bouton d'action.
+
+    La carte 389 n'avait gardé que « ✎ Modifier l'effectif » ; « Recruter → »,
+    « Gérer les renvois → », « Évolutions terminées » et « Lancer le dé → »
+    s'affichaient pour n'importe quel visiteur. La vérification est donc posée
+    **dans chaque test de phase**, au moment où cette phase est réellement
+    vivante : la fabriquer à part demanderait de rejouer toute la séquence.
+
+    Un contexte de navigateur à part, et non la fixture `page` : l'en-tête de
+    profil se pose à la création du contexte, et le partager connecterait tous
+    les autres tests en membre simple.
+
+    `:not([onclick])` écarte « Imprimer en PDF », seul CTA sans URL ni action
+    serveur — il n'agit sur rien et reste pour tout le monde. C'est ce qui
+    distingue « retirer un raccourci » de « cacher la page », et sans cette
+    moitié-là un correctif qui viderait le bandeau entier passerait le test.
+    """
+    contexte = browser.new_context(extra_http_headers=ENTETE_MEMBRE_SIMPLE)
+    try:
+        vue = contexte.new_page()
+        vue.goto(f"{BASE_URL}/app/{space_id}/teams/{team_id}", wait_until="load")
+        bandeau = vue.locator(".state-banner")
+        expect(bandeau).to_be_visible(timeout=10000)
+        expect(bandeau).to_contain_text(texte_attendu)
+        expect(bandeau.locator(".state-banner-cta:not([onclick])")).to_have_count(0)
+    finally:
+        contexte.close()
+
+
 # ── Fixture : équipe suivie du rapport de match jusqu'à sa publication ─────────
 
 @pytest.fixture(scope="module")
@@ -169,7 +210,7 @@ def test_pending_enrollment_banner_is_informational(page: Page, space_id):
 
 # ── Scénario : rapport en cours → reprise ─────────────────────────────────────
 
-def test_match_reporting_banner_resume_link_navigates(page: Page, space_id, match_report_in_progress):
+def test_match_reporting_banner_resume_link_navigates(browser, page: Page, space_id, match_report_in_progress):
     team_id = match_report_in_progress["home_team_id"]
     mr_id = match_report_in_progress["mr_id"]
 
@@ -177,6 +218,7 @@ def test_match_reporting_banner_resume_link_navigates(page: Page, space_id, matc
     banner = page.locator(".state-banner--phase")
     expect(banner).to_be_visible()
     expect(banner).to_contain_text("Rapport de match en cours")
+    _aucune_action_pour_un_tiers(browser, space_id, team_id, "Rapport de match en cours")
 
     cliquer_quand_cable_locator(page, banner.locator(".state-banner-cta"))
     page.wait_for_url(re.compile(rf".*/match-report/{mr_id}.*"), timeout=10000)
@@ -184,7 +226,7 @@ def test_match_reporting_banner_resume_link_navigates(page: Page, space_id, matc
 
 # ── Scénario : phase d'amélioration → recrutement ─────────────────────────────
 
-def test_player_improvement_banner_validates_to_recruitment(page: Page, space_id, match_report_in_progress):
+def test_player_improvement_banner_validates_to_recruitment(browser, page: Page, space_id, match_report_in_progress):
     team_id = match_report_in_progress["home_team_id"]
     mr_id = match_report_in_progress["mr_id"]
 
@@ -206,6 +248,7 @@ def test_player_improvement_banner_validates_to_recruitment(page: Page, space_id
 
     banner = page.locator(".state-banner--phase")
     expect(banner).to_contain_text("Phase d'amélioration")
+    _aucune_action_pour_un_tiers(browser, space_id, team_id, "Phase d'amélioration")
     with page.expect_navigation(wait_until="load"):
         cliquer_quand_cable_locator(page, banner.locator(".state-banner-cta"))
 
@@ -214,7 +257,7 @@ def test_player_improvement_banner_validates_to_recruitment(page: Page, space_id
 
 # ── Scénario : phase de recrutement → renvois ─────────────────────────────────
 
-def test_recruitment_banner_leads_to_the_recruitment_page(page: Page, space_id, match_report_in_progress):
+def test_recruitment_banner_leads_to_the_recruitment_page(browser, page: Page, space_id, match_report_in_progress):
     """Depuis la carte 264, cette bannière **navigue** au lieu de valider.
 
     Les trois autres phases se closent depuis leur bandeau ; celle-ci fait
@@ -231,6 +274,7 @@ def test_recruitment_banner_leads_to_the_recruitment_page(page: Page, space_id, 
 
     banner = page.locator(".state-banner--phase")
     expect(banner).to_contain_text("Phase de recrutement")
+    _aucune_action_pour_un_tiers(browser, space_id, team_id, "Phase de recrutement")
 
     # `<a hx-get hx-push-url>` : HTMX échange `#app-content`, il n'y a pas de
     # navigation du navigateur à attendre.
@@ -247,7 +291,7 @@ def test_recruitment_banner_leads_to_the_recruitment_page(page: Page, space_id, 
 
 # ── Scénario : phase de renvois → prête à jouer ───────────────────────────────
 
-def test_dismissals_banner_leads_to_the_dismissals_page(page: Page, space_id, match_report_in_progress):
+def test_dismissals_banner_leads_to_the_dismissals_page(browser, page: Page, space_id, match_report_in_progress):
     """Depuis la carte 269, cette bannière **navigue** au lieu de valider.
 
     Comme le recrutement avant elle : valider depuis la fiche d'équipe
@@ -262,6 +306,7 @@ def test_dismissals_banner_leads_to_the_dismissals_page(page: Page, space_id, ma
 
     banner = page.locator(".state-banner--phase")
     expect(banner).to_contain_text("Phase de renvois")
+    _aucune_action_pour_un_tiers(browser, space_id, team_id, "Phase de renvois")
 
     # `<a hx-get hx-push-url>` : HTMX échange `#app-content`, il n'y a pas de
     # navigation du navigateur à attendre.
@@ -283,6 +328,7 @@ def test_dismissals_banner_leads_to_the_dismissals_page(page: Page, space_id, ma
     )
     banner = page.locator(".state-banner--phase")
     expect(banner).to_contain_text("Erreurs coûteuses.")
+    _aucune_action_pour_un_tiers(browser, space_id, team_id, "Erreurs coûteuses.")
     cliquer_quand_cable_locator(page, banner.locator(".state-banner-cta"))
 
     expect(page.locator(".cm-table")).to_be_visible(timeout=10000)

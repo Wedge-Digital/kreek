@@ -87,16 +87,32 @@ pub struct BannerVm {
 }
 
 impl BannerVm {
-    /// `peut_editer` ne conditionne **que** le déclencheur d'édition. Le
-    /// bandeau, son texte et le bouton d'impression restent identiques pour
-    /// tout visiteur : on retire un raccourci qu'il n'a pas le droit
+    /// Le bandeau, son texte et son bouton d'impression sont les mêmes pour
+    /// tout visiteur : on retire les raccourcis qu'il n'a pas le droit
     /// d'emprunter, on ne lui cache pas la page.
+    ///
+    /// **Le filtre est en sortie, pas dans les branches.** Chaque état de jeu
+    /// liste ses CTA sans se demander qui regarde, et le tri se fait ici, une
+    /// seule fois. Une condition par branche aurait réglé les six états du jour
+    /// et laissé le septième naître ouvert — c'est exactement par cet oubli-là
+    /// que la carte 389 n'a gardé qu'un CTA sur cinq.
     fn from_domain(
         team: &Team,
         space_id: &str,
         app_routes: &AppRoutes,
         peut_editer: bool,
     ) -> Option<Self> {
+        let mut banner = Self::pour_etat(team, space_id, app_routes)?;
+        if !peut_editer {
+            // Seule l'impression survit : elle n'agit sur rien.
+            banner.ctas.retain(|cta| matches!(cta, BannerCtaVm::Print));
+        }
+        Some(banner)
+    }
+
+    /// Le bandeau de l'état courant, **avec tous ses CTA** — le droit du
+    /// visiteur ne se pose pas ici.
+    fn pour_etat(team: &Team, space_id: &str, app_routes: &AppRoutes) -> Option<Self> {
         use GamePhase::*;
         use ParticipationStatus::*;
 
@@ -115,10 +131,7 @@ impl BannerVm {
                 icon: "✅".into(),
                 title: "Équipe prête à jouer.".into(),
                 detail: "Aucune action requise avant le prochain match.".into(),
-                ctas: match peut_editer {
-                    true => vec![BannerCtaVm::RosterEdit, BannerCtaVm::Print],
-                    false => vec![BannerCtaVm::Print],
-                },
+                ctas: vec![BannerCtaVm::RosterEdit, BannerCtaVm::Print],
             }),
             (Enrolled, Some(MatchReporting)) => {
                 let href = team
@@ -611,6 +624,96 @@ mod tests {
             );
             assert_eq!(banniere.title, avec.title, "le texte ne change pas");
         }
+    }
+
+    /// Une équipe inscrite, amenée à la phase voulue.
+    ///
+    /// La phase est posée directement, comme le font déjà les tests du domaine
+    /// (`team.rs:1139`) : rejouer la séquence d'événements qui y mène ferait
+    /// dépendre un test de vue des règles de transition, qui ont leurs propres
+    /// tests.
+    fn equipe_en_phase(phase: GamePhase) -> Team {
+        let mut team = Team::hydrate(&[
+            created_event(),
+            TeamDomainEvent::TeamEnrolled {
+                competition_id: CompetitionId::try_new("00000000000000000000000003").unwrap(),
+                competition_name: "Ligue de Condate".to_string(),
+                season_id: SeasonId::try_new("00000000000000000000000004").unwrap(),
+                season_name: "Saison 2025".to_string(),
+            },
+        ])
+        .unwrap();
+        team.game_phase = Some(phase);
+        team
+    }
+
+    /// Tout CTA qui n'est pas l'impression : celle-ci n'agit sur rien, et reste
+    /// donc pour tout le monde.
+    fn actions(banniere: &BannerVm) -> usize {
+        banniere
+            .ctas
+            .iter()
+            .filter(|c| !matches!(c, BannerCtaVm::Print))
+            .count()
+    }
+
+    /// Carte 500 — **aucun** bouton d'action, quelle que soit la phase.
+    ///
+    /// La carte 389 n'avait gardé que `RosterEdit` : « Recruter → », « Gérer
+    /// les renvois → », « Évolutions terminées », « Lancer le dé → » et
+    /// « Reprendre le rapport → » s'affichaient pour n'importe quel visiteur.
+    /// Le test parcourt les six états qui portent un bandeau, pour qu'aucun ne
+    /// puisse être oublié un par un.
+    #[test]
+    fn aucune_phase_n_offre_d_action_a_un_tiers() {
+        use GamePhase::*;
+        let routes = AppRoutes::default();
+
+        for phase in [
+            ReadyToPlay,
+            MatchReporting,
+            PlayerImprovement,
+            Recruitment,
+            Dismissals,
+            CostlyMistakes,
+        ] {
+            let team = equipe_en_phase(phase.clone());
+            let avec = BannerVm::from_domain(&team, "space", &routes, true).unwrap();
+            let sans = BannerVm::from_domain(&team, "space", &routes, false).unwrap();
+
+            // Contre-épreuve : sans elle, le test passerait aussi bien si le
+            // bandeau avait perdu ses boutons pour tout le monde.
+            assert!(
+                actions(&avec) > 0,
+                "{phase:?} : le propriétaire garde son action"
+            );
+            assert_eq!(
+                actions(&sans),
+                0,
+                "{phase:?} : un tiers ne se voit offrir aucune action"
+            );
+
+            // On retire un raccourci, on ne cache pas la page.
+            assert_eq!(sans.title, avec.title, "{phase:?} : le texte ne change pas");
+            assert_eq!(sans.detail, avec.detail, "{phase:?} : le détail non plus");
+            assert_eq!(sans.icon, avec.icon, "{phase:?} : ni l'icône");
+            assert_eq!(
+                sans.css_variant, avec.css_variant,
+                "{phase:?} : ni la variante"
+            );
+        }
+    }
+
+    /// Le bandeau d'attente d'inscription n'a jamais eu de CTA — et le filtre
+    /// ne doit pas en faire disparaître le texte pour autant.
+    #[test]
+    fn le_bandeau_d_attente_reste_entier_pour_un_tiers() {
+        let team = Team::hydrate(&[created_event()]).unwrap();
+        let routes = AppRoutes::default();
+
+        let sans = BannerVm::from_domain(&team, "space", &routes, false).unwrap();
+        assert_eq!(sans.ctas.len(), 0);
+        assert!(sans.title.contains("attente d'inscription"));
     }
 
     fn created_event() -> TeamDomainEvent {
