@@ -1,4 +1,3 @@
-use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::teams::domain::costly_mistakes::tranches_affichables;
@@ -8,7 +7,6 @@ use crate::app::teams::use_cases::apply_costly_mistakes_use_case::CostlyMistakes
 use crate::app::teams::use_cases::apply_costly_mistakes_use_case::{
     self, ApplyCostlyMistakesCommand, ApplyCostlyMistakesError,
 };
-use crate::app::teams::use_cases::roster_edit_access_service;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -41,18 +39,18 @@ pub struct CostlyMistakesResultTemplate {
 
 /// L'écran du jet.
 ///
+/// **Le droit d'agir est vérifié en amont**, par `garde_action_equipe` :
+/// cette route appartient au groupe gardé du routeur, et un visiteur sans
+/// droit ne l'atteint pas.
+///
 /// **Hors phase, 422** — comme le fait déjà `dismissals.rs:70`. Cette famille
 /// d'écrans n'a pas de sens hors de sa phase, et la conséquence est assumée :
 /// un coach qui recharge après le jet ne reverra pas son résultat. Le montant
 /// figure au grand livre avec le motif `CostlyMistake`.
 pub async fn get_costly_mistakes_page(
-    auth_session: AuthSession,
     Path((space_id, team_id)): Path<(String, String)>,
     State(state): State<AppState>,
 ) -> Response {
-    if auth_session.user.is_none() {
-        return StatusCode::UNAUTHORIZED.into_response();
-    }
     let team = match state.teams.team_repository.find_by_id(&team_id).await {
         Ok(Some(t)) => t,
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
@@ -95,38 +93,18 @@ pub async fn get_costly_mistakes_page(
 /// **Aucun extracteur de corps** : l'équipe est dans le chemin, le coach dans la
 /// session. Rien n'entre, donc rien n'est à valider — et le client ne peut pas
 /// proposer de jet.
+///
+/// Le droit garde bien le **POST** et pas seulement l'affichage — l'URL est
+/// devinable, et un jet a un effet financier —, mais il le garde désormais
+/// depuis `garde_action_equipe`, qui couvre les dix-huit routes d'action de la
+/// même façon. La garde qui vivait ici était la seule de sa famille.
 pub async fn post_costly_mistakes_roll(
-    auth_session: AuthSession,
-    Path((space_id, team_id)): Path<(String, String)>,
+    Path((_space_id, team_id)): Path<(String, String)>,
     State(state): State<AppState>,
 ) -> Response {
-    let Some(user) = auth_session.user else {
-        return StatusCode::UNAUTHORIZED.into_response();
-    };
     let Ok(team_id_vo) = TeamId::try_new(&team_id) else {
         return StatusCode::BAD_REQUEST.into_response();
     };
-
-    // Le droit garde le **POST**, pas seulement l'affichage : l'URL est
-    // devinable, et un jet a un effet financier.
-    let Ok(Some(team)) = state.teams.team_repository.find_by_id(&team_id).await else {
-        return StatusCode::NOT_FOUND.into_response();
-    };
-    let autorise = roster_edit_access_service::peut_modifier_effectif(
-        &team,
-        &user.id,
-        &user.coach_name.clone().into_inner(),
-        state.teams.access_port.as_ref(),
-    )
-    .await;
-    if !autorise {
-        tracing::warn!(
-            team_id = %team_id,
-            user_id = %user.id,
-            "jet refusé : ni propriétaire de l'équipe, ni administrateur"
-        );
-        return StatusCode::FORBIDDEN.into_response();
-    }
 
     let cmd = ApplyCostlyMistakesCommand {
         team_id: team_id_vo,

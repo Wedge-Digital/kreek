@@ -643,7 +643,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(app::team_creation::router::router())
         .merge(app::players::router::router())
         .merge(app::ranking::router::router())
-        .merge(app::teams::router::router())
+        .merge(app::teams::router::router(state.clone()))
         .merge(app::match_report::router::router())
         .merge(app::competitions::router::router())
         .merge(app::spaces::router::router())
