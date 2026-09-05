@@ -135,9 +135,13 @@ pub struct StatCustomisation {
 ///
 /// Les mêler reviendrait à faire d'un renvoyé un blessé de plus, qui
 /// continuerait d'occuper sa place dans les quotas et le plafond de seize.
+/// `Journeyman` est un journalier : il joue le match, porte un maillot, gagne
+/// des SPP et compte dans la valeur d'équipe — mais il n'est pas embauché. À
+/// la phase de recrutement suivante, il devient `Active` ou il disparaît.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RosterMembership {
     Active,
+    Journeyman,
     Dismissed,
 }
 
@@ -145,21 +149,46 @@ impl RosterMembership {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Active => "Active",
+            Self::Journeyman => "Journeyman",
             Self::Dismissed => "Dismissed",
         }
     }
 
-    /// Tout ce qui n'est pas explicitement un renvoi est une appartenance :
-    /// c'est le défaut de la colonne, et celui d'un agrégat rejoué.
+    /// **Le bras `Journeyman` n'est pas décoratif.** Le défaut permissif
+    /// ci-dessous — « tout ce qui n'est pas explicitement un renvoi est une
+    /// appartenance » — était juste tant qu'il n'existait que deux variantes.
+    /// Sans ce bras, une ligne `'Journeyman'` se rejouerait en `Active` : le
+    /// journalier deviendrait permanent au premier rechargement de son
+    /// agrégat, en silence, et aucune des lectures d'effectif ne le
+    /// rattraperait — elles le verraient de l'effectif, ce qu'il est.
     pub fn from_str(valeur: &str) -> Self {
         match valeur {
             "Dismissed" => Self::Dismissed,
+            "Journeyman" => Self::Journeyman,
             _ => Self::Active,
         }
     }
 
+    /// Est-il des nôtres, définitivement ? Un journalier ne l'est pas.
+    ///
+    /// À ne pas confondre avec [`Self::fait_partie_de_l_effectif`] : les deux
+    /// questions ont coïncidé tant qu'il n'y avait que deux variantes, et
+    /// c'est ce qui rendait ce prédicat ambigu. Il ne sert plus qu'aux gestes
+    /// réservés aux joueurs embauchés — réordonner l'effectif, renvoyer.
     pub fn is_active(&self) -> bool {
         matches!(self, Self::Active)
+    }
+
+    /// Est-il encore de l'effectif ? Un journalier l'est : il joue, il porte
+    /// un maillot, il compte dans la valeur d'équipe. Seul le renvoyé ne l'est
+    /// plus.
+    ///
+    /// **Formulé en négatif** — `!Dismissed` plutôt que `Active | Journeyman`
+    /// — pour la même raison que le SQL des lectures d'effectif : une liste de
+    /// variantes admises devrait être tenue à jour à chaque ajout, alors que
+    /// la question posée est bien « fait-il encore partie de l'effectif ? ».
+    pub fn fait_partie_de_l_effectif(&self) -> bool {
+        !matches!(self, Self::Dismissed)
     }
 }
 
@@ -1016,10 +1045,13 @@ impl Player {
     }
 
     // ── Édition de l'effectif par le coach ─────────────────────────────────────
-    // Un joueur renvoyé n'est plus modifiable : il a quitté l'effectif, et son
-    // maillot doit pouvoir être réattribué sans qu'il le dispute. C'est la seule
-    // règle des trois — l'unicité du numéro et de l'ordre porte sur l'effectif
-    // entier, qu'un agrégat isolé ne connaît pas ; elle revient au use case.
+    // Seul un joueur embauché est modifiable. Un renvoyé a quitté l'effectif, et
+    // son maillot doit pouvoir être réattribué sans qu'il le dispute ; un
+    // journalier n'a jamais été embauché — on ne le renomme pas, on ne le
+    // renumérote pas, on ne le réordonne pas : au recrutement suivant, il
+    // devient permanent ou il disparaît. C'est la seule règle des trois —
+    // l'unicité du numéro et de l'ordre porte sur l'effectif entier, qu'un
+    // agrégat isolé ne connaît pas ; elle revient au use case.
 
     pub fn rename(
         &self,
@@ -1054,10 +1086,16 @@ impl Player {
         })
     }
 
+    /// **Le `match` exhaustif est le garde-fou**, pas une préférence de style.
+    /// C'est lui qui a forcé la question au moment d'ouvrir `Journeyman` —
+    /// un `is_active()` l'aurait tranchée en silence, et dans le bon sens par
+    /// chance. Une quatrième variante devra passer par ici.
     fn guard_active(&self) -> Result<(), DomainError> {
         match self.membership {
             RosterMembership::Active => Ok(()),
-            RosterMembership::Dismissed => Err(DomainError::PlayerNotActive),
+            RosterMembership::Journeyman | RosterMembership::Dismissed => {
+                Err(DomainError::PlayerNotActive)
+            }
         }
     }
 
@@ -1176,6 +1214,100 @@ impl Player {
             undo,
             author,
         })
+    }
+}
+
+#[cfg(test)]
+mod appartenance_tests {
+    use super::*;
+
+    fn joueur(membership: RosterMembership) -> Player {
+        let created = PlayerDomainEvent::PlayerCreated {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            space_id: SpaceId::new(),
+            position_name: PositionNameVo::try_new("Frappeur".to_string()).unwrap(),
+            roster_line_id: RosterLineId::try_new("BLITZER".to_string()).unwrap(),
+            jersey: None,
+            base_skills: vec![],
+            starting_spp: Spp(0),
+            starting_value: ValueKpo(100),
+        };
+        let mut joueur = Player::from_events(&[created]).unwrap();
+        // Posée directement : aucun événement ne produit encore `Journeyman`,
+        // c'est le sujet de la carte 455. Ce test éprouve les prédicats, pas
+        // la transition qui y mène.
+        joueur.membership = membership;
+        joueur
+    }
+
+    /// Le piège que la carte 454 a levé.
+    ///
+    /// `from_str` retombe sur `Active` pour tout ce qu'il ne reconnaît pas —
+    /// défaut juste tant qu'il n'existait que deux variantes. Sans bras
+    /// explicite, un journalier redeviendrait permanent au premier rejeu de
+    /// son agrégat, en silence : aucune lecture d'effectif ne le verrait, elles
+    /// le rendraient toutes, ce qui est justement ce qu'on attend de lui.
+    #[test]
+    fn from_str_ne_replie_pas_journeyman_sur_active() {
+        assert_eq!(
+            RosterMembership::from_str("Journeyman"),
+            RosterMembership::Journeyman
+        );
+        assert_eq!(
+            RosterMembership::from_str("Dismissed"),
+            RosterMembership::Dismissed
+        );
+        // Le défaut permissif reste, et c'est voulu : une colonne vide ou une
+        // valeur d'avant la migration est une appartenance.
+        assert_eq!(RosterMembership::from_str(""), RosterMembership::Active);
+    }
+
+    /// L'aller-retour, qui est ce que fait la projection à chaque lecture.
+    #[test]
+    fn as_str_et_from_str_se_repondent() {
+        for variante in [
+            RosterMembership::Active,
+            RosterMembership::Journeyman,
+            RosterMembership::Dismissed,
+        ] {
+            assert_eq!(RosterMembership::from_str(variante.as_str()), variante);
+        }
+    }
+
+    /// Les deux prédicats ne posent pas la même question, et le journalier est
+    /// le seul endroit où ils divergent — c'est tout l'intérêt de les avoir
+    /// scindés plutôt que d'élargir `is_active`.
+    #[test]
+    fn le_journalier_est_de_l_effectif_sans_etre_actif() {
+        let j = RosterMembership::Journeyman;
+        assert!(
+            j.fait_partie_de_l_effectif(),
+            "il joue, il compte dans la TV"
+        );
+        assert!(!j.is_active(), "il n'est pas embauché pour autant");
+
+        assert!(RosterMembership::Active.fait_partie_de_l_effectif());
+        assert!(RosterMembership::Active.is_active());
+
+        assert!(!RosterMembership::Dismissed.fait_partie_de_l_effectif());
+        assert!(!RosterMembership::Dismissed.is_active());
+    }
+
+    /// Renommer, renuméroter et réordonner sont réservés aux joueurs embauchés.
+    ///
+    /// Un journalier ne reste pas : au recrutement suivant il devient permanent
+    /// ou il disparaît. Le `match` exhaustif de `guard_active` est ce qui a
+    /// forcé la question quand la variante s'est ouverte.
+    #[test]
+    fn un_journalier_ne_s_edite_pas() {
+        let j = joueur(RosterMembership::Journeyman);
+        assert!(j.rename(None).is_err());
+        assert!(j.change_jersey(None).is_err());
+        assert!(j.reorder(DisplayOrder::new(1)).is_err());
+
+        let actif = joueur(RosterMembership::Active);
+        assert!(actif.rename(None).is_ok(), "l'embauché, lui, s'édite");
     }
 }
 

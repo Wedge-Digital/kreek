@@ -59,6 +59,12 @@ async fn load_active_roster(
         .find_by_team_id(team_id)
         .await
         .map_err(UpdateRosterError::Repository)?;
+    // **`Active` strictement**, alors que `find_by_team_id` rend désormais les
+    // journaliers : réordonner, renommer et renuméroter sont des gestes
+    // réservés aux joueurs embauchés. Un journalier ne reste pas — au
+    // recrutement suivant il devient permanent ou il disparaît —, et son
+    // agrégat refuse ces trois commandes de toute façon (`guard_active`).
+    // Le filtrer ici évite que l'édition d'effectif ne bute dessus.
     Ok(players
         .into_iter()
         .filter(|p| p.membership == RosterMembership::Active)

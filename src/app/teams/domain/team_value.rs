@@ -92,6 +92,25 @@ fn available_count(players: &[ValuedPlayer]) -> u32 {
 /// Les journaliers sont des linemen : sous la règle, ils ne coûtent rien non
 /// plus. Les facturer alors que les vrais linemen sont gratuits reviendrait à
 /// pénaliser un effectif incomplet plus qu'un effectif complet.
+///
+/// # Cette fonction a deux comportements justes — ne la supprimez pas
+///
+/// Depuis la carte 454, un journalier est un vrai joueur : il porte un
+/// `membership: Journeyman` et les lectures d'effectif le rendent. Donc :
+///
+/// - **pendant un match**, les journaliers existent, `available_count` les
+///   compte, `missing` tombe à zéro et **cette fonction rend zéro**. Le
+///   résultat reste juste parce que `players_value` les a déjà comptés ;
+/// - **hors match**, ils n'existent pas encore, et cette déduction est la
+///   **seule** source de leur valeur.
+///
+/// Le premier cas donne à la fonction l'air d'être morte. Elle ne l'est pas :
+/// la supprimer casserait la valeur d'équipe de **toutes** les équipes hors
+/// match. Le LRB l'exige — les journaliers comptent toujours dans la Valeur
+/// d'Équipe, qu'ils soient déjà là ou seulement appelés.
+///
+/// Les tests `journeymen_value_rend_zero_quand_ils_existent` et
+/// `journeymen_value_deduit_hors_match` tiennent les deux moitiés.
 fn journeymen_value(players: &[ValuedPlayer], journeyman_price: Kpo, free_linemen: bool) -> u32 {
     if free_linemen {
         return 0;
@@ -162,6 +181,34 @@ mod tests {
 
     fn squad(n: u32, value: u32) -> Vec<ValuedPlayer> {
         (0..n).map(|_| player(value, true)).collect()
+    }
+
+    /// Carte 454 — la fonction rend **zéro** quand les journaliers existent.
+    ///
+    /// C'est ce qui lui donne l'air d'être morte, et ce test est là pour que
+    /// personne ne la supprime sur cette impression. Onze disponibles dont
+    /// deux journaliers déjà présents : `missing` vaut zéro, la déduction ne
+    /// s'applique pas, et la valeur est bien celle des onze — les journaliers
+    /// comptés par `players_value` comme les autres.
+    #[test]
+    fn journeymen_value_rend_zero_quand_ils_existent() {
+        let effectif = squad(11, 50);
+
+        assert_eq!(journeymen_value(&effectif, Kpo(50), false), 0);
+        assert_eq!(compute_team_value(&inputs(effectif)), Kpo(550));
+    }
+
+    /// L'autre moitié, celle qu'on casserait en supprimant la fonction.
+    ///
+    /// Hors match, les journaliers n'existent pas encore : cette déduction est
+    /// la **seule** source de leur valeur, et le LRB veut qu'ils comptent
+    /// toujours. Neuf joueurs appellent deux journaliers.
+    #[test]
+    fn journeymen_value_deduit_hors_match() {
+        let effectif = squad(9, 50);
+
+        assert_eq!(journeymen_value(&effectif, Kpo(50), false), 100);
+        assert_eq!(compute_team_value(&inputs(effectif)), Kpo(550));
     }
 
     #[test]

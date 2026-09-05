@@ -51,6 +51,11 @@ async fn sortir_de_l_effectif(
         .map_err(DismissalError::Repository)?
         .ok_or(DismissalError::Introuvable)?;
 
+    // **`is_active` et non `fait_partie_de_l_effectif`** : ce garde reste
+    // strict là où les lectures d'effectif s'ouvrent aux journaliers, et c'est
+    // délibéré. Un journalier qu'on ne recrute pas n'a jamais été embauché — il
+    // ne se renvoie pas, il disparaît, et c'est un autre chemin. Le refuser ici
+    // n'est donc pas un manque : il n'y a pas de renvoi de journalier à servir.
     if !joueur.membership.is_active() {
         return Err(DismissalError::DejaSorti);
     }

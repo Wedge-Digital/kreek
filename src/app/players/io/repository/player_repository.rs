@@ -992,7 +992,15 @@ impl IPlayerRepository for PgPlayerRepository {
             // pas de variante « avec les renvoyés » : aucun appelant n'a de
             // filtre à écrire, donc aucun ne peut l'oublier. `find_by_id` reste
             // ouvert : un renvoyé n'est pas effacé.
-            .filter(|p| p.membership.is_active())
+            //
+            // **`fait_partie_de_l_effectif` et non `is_active`** : le
+            // journalier doit être ici. Les trois appelants de cette méthode
+            // le prouvent chacun à leur façon — la fin de match lui pose son
+            // `MatchConcluded`, la dépublication annule ses SPP, et le tableau
+            // d'effectif y prend ses caractéristiques. Avec `is_active`, il
+            // s'afficherait sans stats et à zéro SPP, sans qu'aucune erreur ne
+            // le signale.
+            .filter(|p| p.membership.fait_partie_de_l_effectif())
             .collect();
 
         Ok(players)

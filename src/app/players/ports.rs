@@ -49,6 +49,16 @@ pub struct PlayerProjection {
     pub value_kpo: i32,
     pub participation_status: String,
 
+    /// L'appartenance à l'effectif, telle qu'elle est stockée — « Active »,
+    /// « Journeyman », « Dismissed ».
+    ///
+    /// Une chaîne et non `RosterMembership` : c'est un DTO de lecture, et le
+    /// convention du projet y admet les primitives. Les consommateurs qui ont
+    /// une décision à prendre passent par `RosterMembership::from_str`, dont
+    /// le bras `Journeyman` est ce qui les protège du repli silencieux sur
+    /// `Active`.
+    pub membership: String,
+
     /// Cumul des ajustements de caractéristiques, toutes sources confondues —
     /// séquelles, augmentations SPP, customisations. Ce sont des **deltas** :
     /// la base du poste vit dans `references`, et c'est ce qui permet à la

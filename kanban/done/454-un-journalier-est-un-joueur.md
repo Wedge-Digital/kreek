@@ -232,15 +232,74 @@ pas, faute d'avoir vu le filtre Rust et le défaut de `from_str`.
 
 ## Checklist
 
-- [ ] La variante `Journeyman`, avec son bras dans `as_str` **et dans `from_str`**
-- [ ] `fait_partie_de_l_effectif()` à côté d'`is_active()`, chacun documenté
-- [ ] Les **trois requêtes SQL** → `membership <> 'Dismissed'`
-- [ ] `player_repository:995` → `fait_partie_de_l_effectif()`
-- [ ] Les deux autres sites Rust **laissés stricts**, avec le motif écrit
-- [ ] Les **deux `grep`** de contrôle
-- [ ] `membership` ajouté à `PlayerProjection` et au `SELECT` de `lire_effectif`
-- [ ] `is_temporary` et `improvement_label` sur `SquadMemberDto`, et le
+- [x] La variante `Journeyman`, avec son bras dans `as_str` **et dans `from_str`**
+- [x] `fait_partie_de_l_effectif()` à côté d'`is_active()`, chacun documenté
+- [x] Les **trois requêtes SQL** → `membership <> 'Dismissed'`
+- [x] `player_repository:995` → `fait_partie_de_l_effectif()`
+- [x] Les deux autres sites Rust **laissés stricts**, avec le motif écrit
+- [x] `guard_active` — **un quatrième site, que la carte n'avait pas vu**
+- [x] Les **deux `grep`** de contrôle
+- [x] `membership` ajouté à `PlayerProjection`, au `SELECT` de `lire_effectif`
+      **et à celui de `find_by_id`**
+- [x] `is_temporary` et `improvement_label` sur `SquadMemberDto`, et le
       commentaire qui les distingue de `presence`
-- [ ] Le commentaire de `journeymen_value`, disant ses deux cas
-- [ ] Les onze tests
-- [ ] `make lint && make test && make check-arch`
+- [x] Le commentaire de `journeymen_value`, disant ses deux cas
+- [x] Seize tests — onze prévus, cinq de plus (voir ci-dessous)
+- [x] `make lint && make test && make check-arch` — 1668 tests
+
+## Ce qui a été fait
+
+**Les tests d'intégration ont été vus échouer.** Le filtre SQL remis à
+`membership = 'Active'`, quatre tombent — un par requête, plus la lecture de
+l'appartenance. C'est ce qui distingue un filtre ouvert d'un test qui passait
+déjà.
+
+### Un quatrième site, révélé par le compilateur
+
+`guard_active` (`player.rs`) protège `rename`, `change_jersey` et `reorder`
+par un `match` exhaustif sur l'appartenance. Ouvrir la variante l'a cassé, et
+c'est la bonne nouvelle : **le `match` a forcé la question là où un
+`is_active()` l'aurait tranchée en silence**, dans le bon sens par chance.
+
+La réponse est celle des deux autres sites stricts : un journalier ne se
+renomme pas, ne se renumérote pas, ne se réordonne pas — au recrutement
+suivant il devient permanent ou il disparaît. Le commentaire de la section,
+qui disait « un joueur **renvoyé** n'est plus modifiable », dit maintenant
+« seul un joueur **embauché** est modifiable ».
+
+Les deux `grep` de contrôle ne l'auraient pas vu non plus : il ne s'écrit ni
+`membership = 'Active'` ni `is_active()`. C'est le compilateur qui a tenu ce
+verrou-là, et c'est un argument pour préférer un `match` exhaustif à un
+prédicat partout où une décision se prend sur l'appartenance.
+
+### `find_by_id` demandait le même ajout
+
+`membership` a dû être ajouté à **deux** `SELECT`, pas un : `lire_effectif` et
+`find_by_id`. Le compilateur l'a signalé, le champ n'étant pas optionnel.
+
+### Le test que je n'ai pas pu écrire
+
+`l_effectif_evenementiel_inclut_les_journaliers`, celui qui prouverait
+`player_repository:995` de bout en bout, **n'est pas écrit** : aucun événement
+ne produit encore `RosterMembership::Journeyman`. L'agrégat naît `Active`
+(`player.rs:334`) et ne devient `Dismissed` que sur `PlayerDismissed`
+(`player.rs:579`). Il n'existe donc aucun moyen de faire exister un journalier
+dans l'event store avant la carte `455`.
+
+Ce qui le remplace en attendant :
+
+- `le_journalier_est_de_l_effectif_sans_etre_actif` éprouve le prédicat que le
+  filtre utilise désormais ;
+- `from_str_ne_replie_pas_journeyman_sur_active` ferme le seul chemin par
+  lequel un journalier pouvait devenir `Active` en silence.
+
+**La carte `455` doit écrire ce test** dès que la naissance d'un journalier
+existe : c'est elle qui rendra vérifiable ce que celle-ci a seulement ouvert.
+
+### Cinq tests de plus que prévu
+
+`as_str_et_from_str_se_repondent` (l'aller-retour que fait la projection à
+chaque lecture), `un_journalier_ne_s_edite_pas` (le quatrième site),
+`sans_gain_il_n_y_a_pas_de_libelle`, `seul_le_journalier_est_temporaire`, et
+`la_projection_rend_l_appartenance` — sans lequel `is_temporary` serait
+toujours faux sans que rien ne le signale.

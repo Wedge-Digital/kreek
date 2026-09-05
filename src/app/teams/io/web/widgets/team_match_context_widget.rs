@@ -100,6 +100,8 @@ mod tests {
             spp: 0,
             value_kpo: 50,
             presence,
+            is_temporary: false,
+            improvement_label: None,
         }
     }
 

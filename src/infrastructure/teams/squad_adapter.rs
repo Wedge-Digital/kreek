@@ -1,4 +1,4 @@
-use crate::app::players::domain::player::TeamId;
+use crate::app::players::domain::player::{RosterMembership, TeamId};
 use crate::app::players::ports::{IPlayerProjectionRepository, PlayerProjection};
 use crate::app::teams::domain::basket::SquadPresence;
 use crate::app::teams::ports::{ISquadPort, SquadMemberDto};
@@ -52,8 +52,37 @@ fn presence(participation_status: &str) -> SquadPresence {
     }
 }
 
+/// Ce que le joueur a gagné, en un libellé déjà composé.
+///
+/// **La compétence l'emporte** quand les deux existent, parce qu'elle se
+/// nomme : « Blocage » dit plus que « +1 ST ». Le cas est aujourd'hui
+/// impossible — un match ne donne pas assez de SPP pour les deux — mais la
+/// règle doit être tranchée avant de le devenir, pas après.
+///
+/// L'ordre des deltas est celui de la feuille de match, pour qu'un joueur à
+/// deux améliorations affiche toujours la même.
+fn improvement_label(p: &PlayerProjection) -> Option<String> {
+    if let Some(skill) = p.acquired_skills.first() {
+        return Some(skill.skill_name.clone());
+    }
+    [
+        ("MA", p.ma_delta),
+        ("ST", p.st_delta),
+        ("AG", p.ag_delta),
+        ("PA", p.pa_delta),
+        ("AV", p.av_delta),
+    ]
+    .into_iter()
+    .find(|(_, delta)| *delta != 0)
+    .map(|(nom, delta)| format!("{delta:+} {nom}"))
+}
+
 fn to_squad_member(p: PlayerProjection) -> SquadMemberDto {
+    let is_temporary = RosterMembership::from_str(&p.membership) == RosterMembership::Journeyman;
+    let improvement_label = improvement_label(&p);
     SquadMemberDto {
+        is_temporary,
+        improvement_label,
         player_id: p.player_id,
         roster_line_id: p.roster_line_id,
         // Un numéro hors bornes n'est pas un numéro : mieux vaut
@@ -92,6 +121,7 @@ impl ISquadPort for SquadAdapter {
 mod tests {
     use super::*;
     use crate::app::players::io::repository::projection_repository::PgPlayerProjectionRepository;
+    use crate::app::players::ports::AcquiredSkillProjection;
     use sqlx::PgPool;
 
     #[test]
@@ -120,6 +150,83 @@ mod tests {
         let inconnu = presence("StatutQueNulNeConnait");
         assert!(inconnu.occupe_une_place());
         assert!(!inconnu.alignable());
+    }
+
+    fn projection(acquises: Vec<&str>, deltas: [i16; 5], membership: &str) -> PlayerProjection {
+        PlayerProjection {
+            player_id: "p".into(),
+            team_id: "t".into(),
+            space_id: "s".into(),
+            position_name: "Piétaille".into(),
+            roster_line_id: "L".into(),
+            personal_name: "Grumpf".into(),
+            jersey: Some(3),
+            base_skills: vec![],
+            acquired_skills: acquises
+                .into_iter()
+                .map(|nom| AcquiredSkillProjection {
+                    skill_id: nom.to_lowercase(),
+                    skill_name: nom.to_string(),
+                    category_css: String::new(),
+                    mode: "Normal".into(),
+                    spp_cost: 6,
+                })
+                .collect(),
+            spp: 7,
+            value_kpo: 50,
+            participation_status: "Available".into(),
+            membership: membership.into(),
+            ma_delta: deltas[0],
+            st_delta: deltas[1],
+            ag_delta: deltas[2],
+            pa_delta: deltas[3],
+            av_delta: deltas[4],
+        }
+    }
+
+    #[test]
+    fn improvement_label_rend_le_nom_de_la_competence() {
+        let p = projection(vec!["Blocage"], [0; 5], "Journeyman");
+        assert_eq!(improvement_label(&p).as_deref(), Some("Blocage"));
+    }
+
+    #[test]
+    fn improvement_label_rend_le_delta_a_defaut() {
+        let p = projection(vec![], [0, 1, 0, 0, 0], "Journeyman");
+        assert_eq!(improvement_label(&p).as_deref(), Some("+1 ST"));
+
+        // Un delta négatif se lit aussi — une séquelle en est un.
+        let sequelle = projection(vec![], [-1, 0, 0, 0, 0], "Journeyman");
+        assert_eq!(improvement_label(&sequelle).as_deref(), Some("-1 MA"));
+    }
+
+    /// La règle tranchée : la compétence se nomme, le delta non. Le cas est
+    /// aujourd'hui impossible — un match ne donne pas assez de SPP pour les
+    /// deux — et c'est justement pourquoi il fallait le trancher avant qu'il
+    /// n'arrive.
+    #[test]
+    fn improvement_label_prefere_la_competence() {
+        let p = projection(vec!["Blocage"], [0, 1, 0, 0, 0], "Journeyman");
+        assert_eq!(improvement_label(&p).as_deref(), Some("Blocage"));
+    }
+
+    #[test]
+    fn sans_gain_il_n_y_a_pas_de_libelle() {
+        let p = projection(vec![], [0; 5], "Active");
+        assert_eq!(improvement_label(&p), None);
+    }
+
+    /// `is_temporary` distingue le journalier de l'embauché, et `presence` ne
+    /// s'en mêle pas : le journalier est alignable, comme n'importe quel
+    /// joueur disponible.
+    #[test]
+    fn seul_le_journalier_est_temporaire() {
+        let journalier = to_squad_member(projection(vec![], [0; 5], "Journeyman"));
+        assert!(journalier.is_temporary);
+        assert!(journalier.presence.alignable(), "il joue le match");
+
+        let embauche = to_squad_member(projection(vec![], [0; 5], "Active"));
+        assert!(!embauche.is_temporary);
     }
 
     async fn test_pool() -> Option<PgPool> {

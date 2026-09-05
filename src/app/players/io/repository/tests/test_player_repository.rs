@@ -140,6 +140,143 @@ async fn le_maillot_d_un_renvoye_redevient_attribuable(pool: PgPool) {
     assert_eq!(apres, vec![1, 2], "le 3 est libéré");
 }
 
+/// Fait d'un joueur déjà semé un journalier.
+///
+/// Par un `UPDATE` de la projection, et non par un événement : aucun n'en
+/// produit encore — c'est le sujet de la carte 455. Ces tests éprouvent les
+/// **lectures**, qui sont ce que la carte 454 ouvre.
+async fn faire_journalier(pool: &PgPool, player_id: &PlayerId) {
+    sqlx::query("UPDATE players_proj SET membership = 'Journeyman' WHERE player_id = $1")
+        .bind(&player_id.0)
+        .execute(pool)
+        .await
+        .unwrap();
+}
+
+/// Carte 454 — le journalier est de l'effectif, le renvoyé n'y est plus.
+///
+/// Les deux moitiés dans le même test : sans la seconde, un filtre devenu
+/// permissif au point de tout laisser passer serait vert.
+#[sqlx::test]
+async fn l_effectif_inclut_les_journaliers_et_exclut_les_renvoyes(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool.clone());
+    let team_id = TeamId("t-journaliers".into());
+
+    let embauche = PlayerId("embauche".into());
+    let journalier = PlayerId("journalier".into());
+    let renvoye = PlayerId("renvoye".into());
+    for id in [&embauche, &journalier, &renvoye] {
+        seed_player(&repo, id, &team_id).await;
+    }
+    faire_journalier(&pool, &journalier).await;
+    let renvoi = PlayerDomainEvent::PlayerDismissed {
+        player_id: renvoye.clone(),
+        team_id: team_id.clone(),
+    };
+    repo.append(&renvoye, &team_id, &renvoi, 2).await.unwrap();
+
+    let ids: Vec<String> = proj
+        .find_by_team_id(&team_id)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|p| p.player_id)
+        .collect();
+
+    assert!(
+        ids.contains(&"journalier".to_string()),
+        "le journalier joue"
+    );
+    assert!(ids.contains(&"embauche".to_string()));
+    assert!(
+        !ids.contains(&"renvoye".to_string()),
+        "le renvoyé est parti"
+    );
+    assert_eq!(ids.len(), 2);
+}
+
+/// Sinon on recrée des journaliers pour combler des journaliers.
+///
+/// C'est ce compte qui décide combien il en manque à l'étape 2 du rapport de
+/// match, via `player_data_adapter::count_available_players`.
+#[sqlx::test]
+async fn le_compte_des_disponibles_inclut_les_journaliers(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool.clone());
+    let team_id = TeamId("t-compte-journaliers".into());
+
+    for i in 0..11 {
+        let id = PlayerId(format!("p{i}"));
+        seed_player(&repo, &id, &team_id).await;
+        if i >= 9 {
+            faire_journalier(&pool, &id).await;
+        }
+    }
+
+    let disponibles = proj.count_available_by_team_id(&team_id).await.unwrap();
+
+    assert_eq!(disponibles, 11, "neuf embauchés et deux journaliers");
+    assert_eq!(
+        11usize.saturating_sub(disponibles),
+        0,
+        "l'équipe est complète : aucun journalier de plus à créer"
+    );
+}
+
+/// Sinon deux joueurs portent le même numéro.
+///
+/// Le pendant exact de `le_maillot_d_un_renvoye_redevient_attribuable` : un
+/// renvoyé libère son numéro parce qu'il quitte l'effectif, un journalier le
+/// retient parce qu'il y est.
+#[sqlx::test]
+async fn les_maillots_pris_incluent_ceux_des_journaliers(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool.clone());
+    let team_id = TeamId("t-maillots-journaliers".into());
+    let journalier = PlayerId("porteur-du-2".into());
+
+    seed_player_with_jersey(&repo, &PlayerId("un".into()), &team_id, 1).await;
+    seed_player_with_jersey(&repo, &journalier, &team_id, 2).await;
+    faire_journalier(&pool, &journalier).await;
+
+    let mut pris = proj.jerseys_by_team_id(&team_id).await.unwrap();
+    pris.sort_unstable();
+
+    assert_eq!(pris, vec![1, 2], "le 2 du journalier reste pris");
+}
+
+/// La projection rend l'appartenance, faute de quoi `squad_adapter` ne pourrait
+/// pas distinguer un journalier d'un embauché — et `is_temporary` serait
+/// toujours faux, sans que rien ne le signale.
+#[sqlx::test]
+async fn la_projection_rend_l_appartenance(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool.clone());
+    let team_id = TeamId("t-appartenance".into());
+    let journalier = PlayerId("j".into());
+
+    seed_player(&repo, &PlayerId("a".into()), &team_id).await;
+    seed_player(&repo, &journalier, &team_id).await;
+    faire_journalier(&pool, &journalier).await;
+
+    let effectif = proj.find_by_team_id(&team_id).await.unwrap();
+    let lu = |id: &str| {
+        effectif
+            .iter()
+            .find(|p| p.player_id == id)
+            .unwrap()
+            .membership
+            .clone()
+    };
+
+    assert_eq!(lu("j"), "Journeyman");
+    assert_eq!(lu("a"), "Active");
+    // Et par `find_by_id`, que la fiche joueur emprunte.
+    let fiche = proj.find_by_id(&journalier.0).await.unwrap().unwrap();
+    assert_eq!(fiche.membership, "Journeyman");
+}
+
 #[sqlx::test]
 async fn append_touchdown_scored_credits_spp_in_projection(pool: PgPool) {
     let repo = PgPlayerRepository::new(pool.clone());

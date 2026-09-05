@@ -24,6 +24,29 @@ pub struct SquadMemberDto {
     pub spp: u32,
     pub value_kpo: u32,
     pub presence: SquadPresence,
+
+    /// Un journalier : il joue le match et compte dans la valeur d'équipe,
+    /// mais il n'est pas embauché.
+    ///
+    /// **Il ne recouvre pas `presence`, et les deux doivent coexister.**
+    /// `presence` répond « peut-il tenir une place au prochain match ? »,
+    /// `is_temporary` répond « est-il des nôtres ? ». Un journalier est
+    /// `Alignable` et temporaire ; un blessé permanent est `Empeche` et non
+    /// temporaire. Les fondre priverait l'écran de recrutement de l'un ou de
+    /// l'autre.
+    ///
+    /// **`is_temporary` et non `is_journeyman`** : ce dernier existe déjà sur
+    /// `RosterPositionDto`, où il signifie « ce poste est la ligne journalière
+    /// du roster ». Deux homonymes contradictoires dans le même BC seraient
+    /// une confusion assurée.
+    pub is_temporary: bool,
+
+    /// Ce que le joueur a gagné, en un libellé déjà composé — « Blocage »,
+    /// « +1 ST », ou rien.
+    ///
+    /// Un libellé et non une structure : l'écran de recrutement n'a qu'à
+    /// l'afficher, et la composition appartient à qui possède les données.
+    pub improvement_label: Option<String>,
 }
 
 /// Les deux droits qu'un visiteur **ne tient pas de la propriété** de l'équipe.

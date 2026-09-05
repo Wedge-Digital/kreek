@@ -417,6 +417,8 @@ mod tests {
             spp: m.spp,
             value_kpo: m.value_kpo,
             presence: m.presence,
+            is_temporary: m.is_temporary,
+            improvement_label: m.improvement_label.clone(),
         }
     }
 

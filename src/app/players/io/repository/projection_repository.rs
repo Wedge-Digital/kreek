@@ -31,9 +31,9 @@ impl PgPlayerProjectionRepository {
         let rows = sqlx::query(
             "SELECT player_id, team_id, space_id, position_name, roster_line_id,
                     personal_name, jersey, base_skills, acquired_skills, spp, value_kpo,
-                    participation_status, ma_delta, st_delta, ag_delta, pa_delta, av_delta
+                    participation_status, membership, ma_delta, st_delta, ag_delta, pa_delta, av_delta
              FROM players_proj
-             WHERE team_id = $1 AND membership = 'Active'
+             WHERE team_id = $1 AND membership <> 'Dismissed'
                AND (NOT $2 OR participation_status <> 'Dead')
              -- L'ordre choisi par le coach prime ; un joueur jamais réordonné
              -- (`display_order` nul) retombe derrière, trié par maillot.
@@ -72,6 +72,7 @@ impl PgPlayerProjectionRepository {
                     spp: r.get("spp"),
                     value_kpo: r.get("value_kpo"),
                     participation_status: r.get("participation_status"),
+                    membership: r.get("membership"),
                 })
             })
             .collect()
@@ -111,7 +112,7 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
         let row = sqlx::query(
             "SELECT player_id, team_id, space_id, position_name, roster_line_id,
                     personal_name, jersey, base_skills, acquired_skills, spp, value_kpo,
-                    participation_status, ma_delta, st_delta, ag_delta, pa_delta, av_delta
+                    participation_status, membership, ma_delta, st_delta, ag_delta, pa_delta, av_delta
              FROM players_proj WHERE player_id = $1",
         )
         .bind(player_id)
@@ -144,6 +145,7 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
                 spp: r.get("spp"),
                 value_kpo: r.get("value_kpo"),
                 participation_status: r.get("participation_status"),
+                membership: r.get("membership"),
             })
         })
         .transpose()
@@ -153,7 +155,7 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
     /// pas de quoi charger tout l'effectif pour le filtrer ensuite.
     async fn jerseys_by_team_id(&self, team_id: &TeamId) -> Result<Vec<u16>, RepositoryError> {
         let lignes: Vec<(Option<i16>,)> = sqlx::query_as(
-            "SELECT jersey FROM players_proj WHERE team_id = $1 AND membership = 'Active'",
+            "SELECT jersey FROM players_proj WHERE team_id = $1 AND membership <> 'Dismissed'",
         )
         .bind(&team_id.0)
         .fetch_all(&self.pool)
@@ -171,7 +173,7 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
     async fn count_available_by_team_id(&self, team_id: &TeamId) -> Result<usize, RepositoryError> {
         let row: (i64,) = sqlx::query_as(
             "SELECT COUNT(*) FROM players_proj \
-             WHERE team_id = $1 AND membership = 'Active' \
+             WHERE team_id = $1 AND membership <> 'Dismissed' \
                AND participation_status = 'Available'",
         )
         .bind(&team_id.0)
