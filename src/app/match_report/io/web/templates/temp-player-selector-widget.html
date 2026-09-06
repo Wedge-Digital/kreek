@@ -1,15 +1,20 @@
-{% if !journeymen.is_empty() || !stars.is_empty() %}
+{# Les remplaçants qui n'existent que le temps du rapport.
+
+   **Le journalier n'en est plus** : depuis l'épic E15 il est un joueur de
+   l'effectif, et le sélecteur des joueurs réguliers le propose. L'afficher ici
+   aussi le montrait deux fois pour un seul homme. #}
+{% if !mercenaries.is_empty() || !stars.is_empty() %}
 <div class="mr-temp-players" hx-disinherit="*">
-    {% if !journeymen.is_empty() %}
+    {% if !mercenaries.is_empty() %}
     <div class="mr-player-section">
-        <div class="mr-player-section-label mr-player-section-label--journeyman">Journaliers</div>
+        <div class="mr-player-section-label mr-player-section-label--journeyman">Mercenaires</div>
         <div class="mr-player-chip-list">
-            {% for player in journeymen %}
+            {% for player in mercenaries %}
             <button class="mr-player-chip mr-player-chip--journeyman"
                     type="button"
                     data-player-id="{{ player.temp_player_id }}"
                     data-player-type="temp">
-                <div class="mr-player-chip-jersey">J</div>
+                <div class="mr-player-chip-jersey">M</div>
                 <div class="mr-player-chip-info">
                     <div class="mr-player-chip-name">{{ player.label }}</div>
                 </div>

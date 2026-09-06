@@ -263,12 +263,21 @@ def test_le_panneau_montre_le_journalier(page: Page, en_recrutement):
     ctx = en_recrutement
     _ouvrir_recrutement(page, ctx["space_id"], ctx["equipe"])
 
-    panneau = page.locator(".rec-journeymen")
+    panneau = page.locator(".panel--jm")
     expect(panneau).to_be_visible(timeout=10000)
-    expect(panneau.locator(".rec-journeyman-row")).to_have_count(1)
+    expect(panneau.locator("tbody tr")).to_have_count(1)
     # L'avertissement doit être là : c'est la seule différence de nature entre
     # ce panneau et le catalogue.
     expect(panneau).to_contain_text("perdu")
+
+    # **Carte 503 — il porte les classes de la maison, pas les siennes.**
+    # Vérifié ici et non dans un test à part : c'est le même écran au même
+    # moment, et un second parcours de deux matchs pour l'observer coûterait
+    # plus que ce qu'il prouve.
+    expect(panneau.locator("table.buy-table")).to_have_count(1)
+    expect(panneau.locator(".act-btn")).to_have_count(1)
+    expect(panneau.locator(".price")).to_have_count(1)
+    expect(page.locator("[class*='rec-journeyman']")).to_have_count(0)
 
 
 def test_le_panneau_est_absent_sans_journalier(page: Page, en_recrutement):
@@ -281,7 +290,7 @@ def test_le_panneau_est_absent_sans_journalier(page: Page, en_recrutement):
     ctx = en_recrutement
     _ouvrir_recrutement(page, ctx["space_id"], ctx["equipe_complete"])
     expect(page.locator(".rec-catalog")).to_be_visible()
-    expect(page.locator(".rec-journeymen")).to_have_count(0)
+    expect(page.locator(".panel--jm")).to_have_count(0)
 
 
 def test_le_prix_du_journalier_est_affiche(page: Page, en_recrutement):
@@ -295,9 +304,9 @@ def test_le_prix_du_journalier_est_affiche(page: Page, en_recrutement):
     ctx = en_recrutement
     _ouvrir_recrutement(page, ctx["space_id"], ctx["equipe"])
 
-    ligne = page.locator(".rec-journeyman-row").first
-    expect(ligne.locator(".rec-journeyman-prix-total")).to_contain_text("kPo")
-    expect(ligne.locator(".rec-journeyman-amelioration")).to_contain_text("aucune")
+    ligne = page.locator(".panel--jm tbody tr").first
+    expect(ligne.locator(".price")).to_contain_text("kPo")
+    expect(ligne).to_contain_text("aucune")
 
 
 def test_le_journalier_recrute_reste_dans_l_effectif(page: Page, en_recrutement):
@@ -317,9 +326,9 @@ def test_le_journalier_recrute_reste_dans_l_effectif(page: Page, en_recrutement)
     journalier = ctx["journaliers"][0]
     _ouvrir_recrutement(page, ctx["space_id"], equipe)
 
-    cliquer_quand_cable_locator(page, page.locator(".rec-journeyman-btn").first)
+    cliquer_quand_cable_locator(page, page.locator(".panel--jm .act-btn").first)
     # Le panneau se recharge avec le catalogue : le journalier en sort.
-    expect(page.locator(".rec-journeyman-row")).to_have_count(0, timeout=10000)
+    expect(page.locator(".panel--jm")).to_have_count(0, timeout=10000)
 
     cliquer_quand_cable_locator(page, page.locator(".rec-cart .cta-primary"))
     _attendre(
@@ -484,3 +493,58 @@ def test_le_journalier_nait_avec_solitaire_et_un_nom(journalier_neuf):
 
     assert "LONER_4" in competences, f"Solitaire (4+) manquant : {competences}"
     assert nom == f"Journalier #{maillot}", f"nommage attendu, obtenu {nom!r}"
+
+
+# ── L'affichage (carte 503) ──────────────────────────────────────────────────
+
+
+@pytest.fixture(scope="module")
+def saisie_en_cours(browser, space_id):
+    """Un rapport **non publié**, arrêté juste après la naissance du journalier.
+
+    Les deux sélecteurs de l'écran de saisie n'existent qu'en avant-match : sur
+    un rapport publié, la page ne les rend pas. Le fixture s'arrête donc aux
+    coups de pouce — le moment exact où le journalier vient de naître.
+    """
+    full = build_full_competition(browser, space_id, num_teams=4)
+    ctx = {
+        "competition_id": full["competition_id"],
+        "season_id": full["season_id"],
+        "round_ids": full["round_ids"],
+        "teams": full["team_ids"],
+    }
+    equipe = ctx["teams"][0]
+    victime = _un_joueur_de(equipe)
+    _jouer(space_id, ctx, ctx["round_ids"][0], 0, 1, blesser=victime)
+
+    # Le second match, laissé en avant-match.
+    mr = create_draft(space_id, ctx, ctx["round_ids"][1], equipe, ctx["teams"][1])
+    ensure_pre_match(space_id, mr, ctx, ctx["round_ids"][1], equipe, ctx["teams"][1])
+    ensure_inducements(space_id, mr)
+
+    journaliers = _attendre(lambda: _journaliers_de(equipe), "un journalier créé")
+    return {"space_id": space_id, "mr": mr, "journalier": journaliers[0]}
+
+
+def test_le_journalier_n_apparait_qu_une_fois_a_la_saisie(page: Page, saisie_en_cours):
+    """Il est dans les joueurs réguliers ; il ne doit plus être aussi dans les
+    remplaçants.
+
+    Le sélecteur régulier lit l'effectif, que la carte 454 a ouvert aux
+    journaliers. La section temporaire venait du rapport. Le coach voyait deux
+    entrées pour un seul homme.
+    """
+    ctx = saisie_en_cours
+    page.goto(
+        f"{BASE_URL}/app/{ctx['space_id']}/match-report/{ctx['mr']}/step3",
+        wait_until="load",
+    )
+    puce = page.locator(f'.mr-player-chip[data-player-id="{ctx["journalier"]}"]')
+    expect(puce).to_have_count(1, timeout=10000)
+
+    # Et la section des remplaçants ne le nomme plus.
+    section = page.locator(".mr-temp-players")
+    if section.count() > 0:
+        expect(section).not_to_contain_text("Journalier #")
+
+

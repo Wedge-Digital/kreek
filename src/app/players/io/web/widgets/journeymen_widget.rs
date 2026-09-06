@@ -308,7 +308,56 @@ mod tests {
         let rendu = (JourneymenTemplate { journeymen: vec![] })
             .render()
             .unwrap();
-        assert!(!rendu.contains("rec-journeymen"));
+        assert!(!rendu.contains("panel--jm"));
+    }
+
+    /// Carte 503 — le panneau reprend **les classes de la maison**.
+    ///
+    /// La première implémentation avait inventé quinze classes à elle, alors
+    /// que la maquette prescrivait `.buy-table` et `.act-btn` — les mêmes que
+    /// les postes. Ce test vise les classes et non l'apparence : il ne juge pas
+    /// un style, il constate qu'on a repris celui qui existe.
+    #[test]
+    fn le_panneau_reprend_le_style_des_achats() {
+        let rendu = (JourneymenTemplate {
+            journeymen: vec![ligne_vm(projection(vec!["Blocage"], [0; 5], 85), 65, "j1")],
+        })
+        .render()
+        .unwrap();
+
+        for classe in [
+            "panel",
+            "panel--jm",
+            "buy-table",
+            "act-btn",
+            "price",
+            "price-note",
+        ] {
+            assert!(
+                rendu.contains(classe),
+                "classe « {classe} » absente du panneau"
+            );
+        }
+        // Et plus une seule des quinze qu'il s'était inventées.
+        assert!(
+            !rendu.contains("rec-journeyman"),
+            "un style maison subsiste"
+        );
+    }
+
+    /// Un journalier bloqué garde son bouton, désactivé et portant son motif —
+    /// exactement comme une ligne de poste dont le quota est atteint.
+    #[test]
+    fn un_journalier_bloque_porte_son_motif_sur_le_bouton() {
+        let rendu = (JourneymenTemplate {
+            journeymen: vec![ligne_vm(projection(vec![], [0; 5], 65), 65, "autre")],
+        })
+        .render()
+        .unwrap();
+
+        assert!(rendu.contains("is-blocked"));
+        assert!(rendu.contains(r#"act-btn" disabled"#));
+        assert!(rendu.contains("effectif complet"));
     }
 
     #[test]
