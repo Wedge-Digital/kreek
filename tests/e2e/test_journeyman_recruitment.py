@@ -296,17 +296,20 @@ def test_le_panneau_est_absent_sans_journalier(page: Page, en_recrutement):
 def test_le_prix_du_journalier_est_affiche(page: Page, en_recrutement):
     """Le prix est celui du joueur, décomposé s'il a progressé.
 
-    Le journalier de ce parcours n'a rien gagné — le rapport ne lui donne
-    aucune action —, donc le prix est nu et l'amélioration dit « aucune ».
-    C'est le cas majoritaire, et le seul que ce parcours produit sans forcer
-    une action de match sur un joueur qui n'existait pas encore côté rapport.
+    Le journalier de ce parcours n'a gagné aucune action au match, donc son
+    prix est nu — il vaut le tarif de son poste.
+
+    **Sa colonne « Amélioration » affiche Solitaire (4+)**, et c'est l'attendu :
+    le règlement le lui donne en naissant, et le coach doit voir ce qu'il porte
+    avant de décider. Ce n'est pas un gain de match, mais c'est une compétence
+    qu'il a.
     """
     ctx = en_recrutement
     _ouvrir_recrutement(page, ctx["space_id"], ctx["equipe"])
 
     ligne = page.locator(".panel--jm tbody tr").first
     expect(ligne.locator(".price")).to_contain_text("kPo")
-    expect(ligne).to_contain_text("aucune")
+    expect(ligne).to_contain_text("Solitaire")
 
 
 def test_le_journalier_recrute_reste_dans_l_effectif(page: Page, en_recrutement):
@@ -485,14 +488,37 @@ def test_le_journalier_nait_avec_solitaire_et_un_nom(journalier_neuf):
     """
     journalier = journalier_neuf
     ligne = query_db(
-        f"SELECT personal_name, base_skills, jersey FROM players_proj "
+        f"SELECT personal_name, acquired_skills, jersey FROM players_proj "
         f"WHERE player_id = '{journalier}'"
     )[0]
     nom, competences, maillot = ligne.split("|", 2)
     maillot = maillot.strip()
 
+    # **Une compétence acquise, pas de base** : le tableau d'effectif affiche
+    # les compétences du poste, et un trait rangé dans `base_skills` n'aurait
+    # eu aucun écran pour le lire (carte 504).
     assert "LONER_4" in competences, f"Solitaire (4+) manquant : {competences}"
     assert nom == f"Journalier #{maillot}", f"nommage attendu, obtenu {nom!r}"
+
+
+def test_solitaire_s_affiche_sur_la_ligne_du_journalier(page: Page, journalier_neuf, space_id):
+    """**Le test qui manquait à la carte 502.**
+
+    Le sien vérifiait la présence du trait **en base**, jamais **à l'écran** —
+    et il passait alors que personne ne le voyait, parce que le tableau
+    d'effectif affiche les compétences du poste et non celles du joueur.
+
+    C'est la même erreur que la carte 458 avait faite avec le style : vérifier
+    ce qu'on a écrit plutôt que ce que le coach lit.
+    """
+    equipe = query_db(
+        f"SELECT team_id FROM players_proj WHERE player_id = '{journalier_neuf}'"
+    )[0]
+    page.goto(f"{BASE_URL}/app/{space_id}/teams/{equipe}", wait_until="load")
+
+    ligne = page.locator(f'.player-table-row[data-player-detail*="{journalier_neuf}"]')
+    ligne.wait_for(timeout=10000)
+    expect(ligne).to_contain_text("Solitaire")
 
 
 # ── L'affichage (carte 503) ──────────────────────────────────────────────────

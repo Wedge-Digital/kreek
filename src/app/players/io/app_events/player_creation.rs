@@ -9,11 +9,12 @@
 
 use crate::app::players::domain::events::PlayerDomainEvent;
 use crate::app::players::domain::player::{
-    PlayerId, RosterMembership, Spp, TeamId, ValueKpo, SOLITAIRE_DU_JOURNALIER,
+    AcquisitionMode, PlayerId, RosterMembership, Spp, TeamId, ValueKpo, SOLITAIRE_DU_JOURNALIER,
 };
 use crate::app::players::domain::value_objects::{
-    JerseyVo, PersonalName, PositionNameVo, RosterLineId, SkillId,
+    JerseyVo, PersonalName, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
 };
+use crate::app::players::io::app_events::team_created_listener::skill_category_css;
 use crate::app::players::io::repository::player_repository::{
     insert_player_event, upsert_player_projection,
 };
@@ -111,7 +112,7 @@ pub async fn creer_joueur(
         roster_line_id: RosterLineId::try_new(roster_line_id.to_string())
             .unwrap_or_else(|_| RosterLineId::try_new("unknown".to_string()).unwrap()),
         jersey: jersey.and_then(|j| JerseyVo::try_new(j).ok()),
-        base_skills: competences_de_naissance(roster_line_id, membership, catalog),
+        base_skills: resolve_base_skills(roster_line_id, catalog),
         starting_spp: Spp(0),
         starting_value: ValueKpo(base_position_kpo(roster_line_id, catalog)),
         starting_membership: membership,
@@ -125,27 +126,58 @@ pub async fn creer_joueur(
     insert_player_event(&mut tx, &created, 1).await?;
     upsert_player_projection(&mut tx, &created).await?;
     tx.commit().await.map_err(ListenerError::Database)?;
+
+    // Version 2 — le trait du journalier, dans sa propre transaction comme le
+    // fait `team_created_listener` pour les compétences offertes.
+    if membership == RosterMembership::Journeyman {
+        if let Some(trait_) = solitaire_du_journalier(player_id, team_id, catalog) {
+            let mut tx = pool.begin().await.map_err(ListenerError::Database)?;
+            insert_player_event(&mut tx, &trait_, 2).await?;
+            upsert_player_projection(&mut tx, &trait_).await?;
+            tx.commit().await.map_err(ListenerError::Database)?;
+        }
+    }
     Ok(())
 }
 
-/// Les compétences qu'un joueur porte en naissant.
+/// Solitaire (4+), en **compétence initiale bonus**.
 ///
-/// Celles de son poste, plus **Solitaire (4+) pour un journalier** : le LRB le
-/// lui donne d'office, et le lui retire quand il est embauché. C'est la seule
-/// compétence de base de l'application qui puisse disparaître — voir
-/// `PlayerDomainEvent::JourneymanHired`.
-fn competences_de_naissance(
-    roster_line_id: &str,
-    membership: RosterMembership,
+/// La carte 502 l'avait posé dans `base_skills`, et personne ne l'a jamais vu :
+/// le tableau d'effectif affiche les compétences **du poste**, pas celles du
+/// joueur. Rangé là, le trait n'avait aucun écran pour le lire.
+///
+/// `InitialSkillEarned` est aussi le modèle **plus juste** : Solitaire n'est pas
+/// une compétence de poste — un Trois-quart embauché ne l'a pas. C'est une
+/// compétence de ce joueur-là, qu'il perd en devenant permanent.
+///
+/// **`value_delta` et `spp_cost` valent zéro.** Une compétence offerte augmente
+/// la valeur du joueur ; celle-ci est un trait, pas un gain. Le prix d'un
+/// journalier **est** sa valeur courante : la renchérir ferait afficher
+/// « 65 + 20 d'amélioration » pour quelque chose qu'il n'a pas gagné au match.
+fn solitaire_du_journalier(
+    player_id: &str,
+    team_id: &str,
     catalog: &dyn ISkillCatalogPort,
-) -> Vec<SkillId> {
-    let mut skills = resolve_base_skills(roster_line_id, catalog);
-    if membership == RosterMembership::Journeyman {
-        if let Ok(solitaire) = SkillId::try_new(SOLITAIRE_DU_JOURNALIER.to_string()) {
-            skills.push(solitaire);
-        }
-    }
-    skills
+) -> Option<PlayerDomainEvent> {
+    let nom = catalog
+        .find_skill(SOLITAIRE_DU_JOURNALIER)
+        .map(|s| s.name)
+        .unwrap_or_else(|| "Solitaire (4+)".to_string());
+    Some(PlayerDomainEvent::InitialSkillEarned {
+        player_id: PlayerId(player_id.to_string()),
+        team_id: TeamId(team_id.to_string()),
+        skill_id: SkillId::try_new(SOLITAIRE_DU_JOURNALIER.to_string()).ok()?,
+        skill_name: SkillName::try_new(nom).ok()?,
+        category_css: skill_category_css("TRAITS").to_string(),
+        // Ni choisie ni tirée : le règlement la donne. `Chosen` est le mode le
+        // moins faux des quatre — elle n'est ni une séquelle, ni le geste d'un
+        // commissaire, et le journal la libelle « Compétence initiale bonus ».
+        mode: AcquisitionMode::Chosen,
+        spp_cost: SppCost::try_new(0).ok()?,
+        is_primary: false,
+        is_elite: false,
+        value_delta: ValueKpo(0),
+    })
 }
 
 /// Le nom d'un journalier, qui n'en a pas reçu de son coach.

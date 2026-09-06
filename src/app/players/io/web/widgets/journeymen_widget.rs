@@ -166,10 +166,14 @@ fn ligne(
 /// impossible — un match ne donne pas assez de SPP pour les deux — mais la
 /// règle doit être tranchée avant de le devenir.
 ///
-/// La première compétence acquise **est** celle du match : un journalier naît à
-/// l'ouverture du rapport et n'a pas de passé. Ce raccourci ne vaut que pour
-/// lui, et c'est pourquoi cette fonction vit dans son widget plutôt que dans un
-/// service partagé.
+/// **Solitaire (4+) y figure, et c'est voulu** : le règlement le donne à tout
+/// journalier en naissant, et c'est une compétence qu'il porte — le coach doit
+/// la voir avant de décider.
+///
+/// Ce qu'il acquiert ensuite vient du match : un journalier naît à l'ouverture
+/// du rapport et n'a pas d'autre passé. Ce raccourci ne vaut que pour lui, et
+/// c'est pourquoi cette fonction vit dans son widget plutôt que dans un service
+/// partagé.
 fn amelioration(p: &PlayerProjection) -> Option<String> {
     if let Some(skill) = p.acquired_skills.first() {
         return Some(skill.skill_name.clone());

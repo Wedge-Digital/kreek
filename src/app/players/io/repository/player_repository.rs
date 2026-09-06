@@ -439,25 +439,25 @@ pub async fn upsert_player_projection(
 
         // L'embauche : le journalier devient permanent. Il garde son maillot,
         // ses SPP et ce qu'il a gagné au match — **il perd Solitaire**, et rien
-        // d'autre.
-        //
-        // C'est le seul endroit de l'application où une compétence de base est
-        // retirée, et le LRB l'exige : « un Journalier embauché perd le Trait
+        // d'autre. Le LRB l'exige : « un Journalier embauché perd le Trait
         // Solitaire (X+) et conserve les PSP gagnés pendant le match ».
+        //
+        // Le trait est une compétence **acquise** : rangé dans `base_skills`,
+        // il n'aurait eu aucun écran pour le lire — le tableau d'effectif
+        // affiche les compétences du poste, pas celles du joueur (carte 504).
         PlayerDomainEvent::JourneymanHired { player_id, .. } => {
             sqlx::query(
                 "UPDATE players_proj
                  SET membership = 'Active',
-                     base_skills = COALESCE(
-                         (SELECT jsonb_agg(s) FROM jsonb_array_elements(base_skills) s
-                          WHERE s <> to_jsonb($2::text)),
+                     acquired_skills = COALESCE(
+                         (SELECT jsonb_agg(s) FROM jsonb_array_elements(acquired_skills) s
+                          WHERE s->>'skill_id' <> $2),
                          '[]'::jsonb),
                      version = version + 1
                  WHERE player_id = $1",
             )
             .bind(&player_id.0)
             .bind(crate::app::players::domain::player::SOLITAIRE_DU_JOURNALIER)
-            .bind(&player_id.0)
             .execute(&mut **tx)
             .await
             .map_err(RepositoryError::Database)?;

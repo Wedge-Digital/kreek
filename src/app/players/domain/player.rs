@@ -607,17 +607,19 @@ impl Player {
             // appartenance devient celle d'un permanent, et le ménage de fin
             // de phase ne le voit plus.
             //
-            // **Elle lui retire aussi Solitaire (4+)**, et c'est le seul endroit
-            // de l'application où une compétence de base disparaît. Le LRB
-            // l'exige : « un Journalier embauché perd le Trait Solitaire (X+) et
-            // conserve les PSP gagnés pendant le match ». Ce n'est donc pas une
-            // incohérence à « simplifier » — c'est la règle.
+            // **Elle lui retire aussi Solitaire (4+)**, que le règlement lui
+            // donne en naissant : « un Journalier embauché perd le Trait
+            // Solitaire (X+) et conserve les PSP gagnés pendant le match ».
+            //
+            // C'est une compétence **acquise** et non de base — le tableau
+            // d'effectif affiche les compétences du poste, et un trait rangé
+            // dans `base_skills` n'aurait eu aucun écran pour le lire.
             PlayerDomainEvent::JourneymanHired { .. } => {
                 let mut player = current?;
                 player.membership = RosterMembership::Active;
                 player
-                    .base_skills
-                    .retain(|s| s.as_ref() != SOLITAIRE_DU_JOURNALIER);
+                    .acquired_skills
+                    .retain(|s| s.skill_id.as_ref() != SOLITAIRE_DU_JOURNALIER);
                 player.version += 1;
                 Some(player)
             }
@@ -1429,21 +1431,45 @@ mod appartenance_tests {
         assert_eq!(apres.value, ValueKpo(100), "il garde sa valeur");
     }
 
-    /// Carte 502 — le journalier naît avec Solitaire (4+), et le perd embauché.
+    /// Une compétence acquise quelconque, pour éprouver « et lui seul ».
+    fn competence_acquise(uid: &str, nom: &str) -> PlayerDomainEvent {
+        PlayerDomainEvent::InitialSkillEarned {
+            player_id: PlayerId("p1".into()),
+            team_id: TeamId("t1".into()),
+            skill_id: SkillId::try_new(uid.to_string()).unwrap(),
+            skill_name: SkillName::try_new(nom.to_string()).unwrap(),
+            category_css: "type-general".into(),
+            mode: AcquisitionMode::Chosen,
+            spp_cost: SppCost::try_new(0).unwrap(),
+            is_primary: false,
+            is_elite: false,
+            value_delta: ValueKpo(0),
+        }
+    }
+
+    fn porte(p: &Player, uid: &str) -> bool {
+        p.acquired_skills.iter().any(|s| s.skill_id.as_ref() == uid)
+    }
+
+    /// Cartes 502 puis 504 — le journalier naît avec Solitaire (4+) **en
+    /// compétence acquise**, et le perd à l'embauche.
+    ///
+    /// La 502 l'avait posé dans `base_skills`, où aucun écran ne le lit : le
+    /// tableau d'effectif affiche les compétences du poste. C'est un trait de
+    /// ce joueur-là, pas de son poste.
     ///
     /// Les deux moitiés dans le même test : la seconde seule passerait aussi
     /// bien si le trait n'était jamais posé.
     #[test]
     fn l_embauche_retire_solitaire_et_lui_seul() {
-        let bloc = SkillId::try_new("BLOCK".to_string()).unwrap();
-        let solitaire = SkillId::try_new(SOLITAIRE_DU_JOURNALIER.to_string()).unwrap();
-        let mut naissance = creation(RosterMembership::Journeyman);
-        if let PlayerDomainEvent::PlayerCreated { base_skills, .. } = &mut naissance {
-            *base_skills = vec![bloc.clone(), solitaire.clone()];
-        }
-        let journalier = Player::from_events(&[naissance.clone()]).unwrap();
+        let naissance = creation(RosterMembership::Journeyman);
+        let solitaire = competence_acquise(SOLITAIRE_DU_JOURNALIER, "Solitaire (4+)");
+        let bloc = competence_acquise("BLOCK", "Blocage");
+
+        let journalier =
+            Player::from_events(&[naissance.clone(), solitaire.clone(), bloc.clone()]).unwrap();
         assert!(
-            journalier.base_skills.contains(&solitaire),
+            porte(&journalier, SOLITAIRE_DU_JOURNALIER),
             "il naît Solitaire"
         );
 
@@ -1451,17 +1477,37 @@ mod appartenance_tests {
             player_id: journalier.id.clone(),
             team_id: journalier.team_id.clone(),
         };
-        let apres = Player::from_events(&[naissance, embauche]).unwrap();
+        let apres = Player::from_events(&[naissance, solitaire, bloc, embauche]).unwrap();
 
         assert!(
-            !apres.base_skills.contains(&solitaire),
+            !porte(&apres, SOLITAIRE_DU_JOURNALIER),
             "un journalier embauché perd Solitaire (LRB)"
         );
         assert!(
-            apres.base_skills.contains(&bloc),
-            "et lui seul — les compétences de son poste restent"
+            porte(&apres, "BLOCK"),
+            "et lui seul — ce qu'il a gagné au match reste"
         );
         assert!(apres.membership.is_active());
+    }
+
+    /// **Solitaire ne vaut rien**, et c'est ce qui protège le prix.
+    ///
+    /// Une compétence offerte augmente la valeur du joueur. Celle-ci est un
+    /// trait : le prix d'un journalier **est** sa valeur courante, et la
+    /// renchérir ferait afficher « 65 + 20 d'amélioration » pour quelque chose
+    /// qu'il n'a pas gagné au match.
+    #[test]
+    fn solitaire_ne_change_pas_la_valeur_du_journalier() {
+        let naissance = creation(RosterMembership::Journeyman);
+        let avant = Player::from_events(&[naissance.clone()]).unwrap().value;
+        let apres = Player::from_events(&[
+            naissance,
+            competence_acquise(SOLITAIRE_DU_JOURNALIER, "Solitaire (4+)"),
+        ])
+        .unwrap()
+        .value;
+
+        assert_eq!(avant, apres, "un trait ne renchérit pas le journalier");
     }
 
     /// Renommer, renuméroter et réordonner sont réservés aux joueurs embauchés.
