@@ -135,7 +135,15 @@ impl CompetitionsDomainEvent {
                 event_id: EventId::new(),
                 pairing_id: pairing_id.clone(),
             }),
-            _ => None,
+            // **Ceux qui ne sortent pas du BC**, nommés un par un.
+            //
+            // Ils remplacent un `_ => None` dont le commentaire disait lui-même qu'il
+            // « avale silencieusement tout événement domaine qu'on oublierait de faire
+            // sortir ». C'est arrivé : la carte 457 y a perdu un journalier payé.
+            //
+            // Sans joker, ajouter un variant casse la compilation ici — et son auteur
+            // tranche : il sort, ou il rejoint cette liste (carte 506).
+            Self::CompetitionCreated { .. } => None,
         }
     }
 

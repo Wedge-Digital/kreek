@@ -19,19 +19,28 @@ pub enum AuthDomainEvent {
         event_id: EventId,
         user_id: CoachId,
     },
+    // arch:pas-emis — la réinitialisation **fonctionne** (`reset_password.rs`,
+    // `send_reset_password_email.rs`) : l'e-mail part, le coach change son mot
+    // de passe. Mais aucun de ces deux use cases n'émet quoi que ce soit, et
+    // l'event store d'`auth` ne garde donc aucune trace des réinitialisations.
+    // L'intention est déclarée ici, jamais câblée (carte 506).
     UserPasswordResetRequested {
         event_id: EventId,
         user_id: CoachId,
     },
+    // arch:pas-emis — même chose : le fait existe, il n'est pas enregistré.
     UserPasswordReset {
         event_id: EventId,
         user_id: CoachId,
         new_password: String,
     },
+    // arch:pas-emis — aucune vérification d'adresse n'existe dans
+    // l'application. L'événement précède sa fonctionnalité.
     UserEmailVerified {
         event_id: EventId,
         user_id: CoachId,
     },
+    // arch:pas-emis — idem : la vérification d'adresse n'existe pas.
     UserEmailVerificationFailed {
         event_id: EventId,
         user_id: CoachId,
@@ -59,7 +68,19 @@ impl AuthDomainEvent {
                 user_name: user_name.clone(),
                 email: email.clone(),
             }),
-            _ => None,
+            // **Ceux qui ne sortent pas du BC**, nommés un par un.
+            //
+            // Ils remplacent un `_ => None` dont le commentaire disait lui-même qu'il
+            // « avale silencieusement tout événement domaine qu'on oublierait de faire
+            // sortir ». C'est arrivé : la carte 457 y a perdu un journalier payé.
+            //
+            // Sans joker, ajouter un variant casse la compilation ici — et son auteur
+            // tranche : il sort, ou il rejoint cette liste (carte 506).
+            Self::UserLoggedIn { .. }
+            | Self::UserPasswordResetRequested { .. }
+            | Self::UserPasswordReset { .. }
+            | Self::UserEmailVerified { .. }
+            | Self::UserEmailVerificationFailed { .. } => None,
         }
     }
 

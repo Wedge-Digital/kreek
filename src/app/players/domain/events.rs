@@ -451,9 +451,47 @@ impl PlayerDomainEvent {
                 team_id: team_id.0.clone(),
                 player_id: player_id.0.clone(),
             }),
-            // Joker : le compilateur ne signalera pas un événement qu'on
-            // oublierait de faire sortir du BC. Ajouter un bras est délibéré.
-            _ => None,
+            // Les **trois autres formes de retrait** restent dans le BC, comme
+            // leurs customisations d'origine. Le commentaire ci-dessus le
+            // disait déjà ; le joker le laissait implicite. Écrit ici, un
+            // cinquième `UndoEffect` casse la compilation — et c'est le but.
+            Self::PlayerCustomisationReverted {
+                undo: UndoEffect::Skill { .. } | UndoEffect::Stat { .. } | UndoEffect::Spp { .. },
+                ..
+            } => None,
+            // **Ceux qui ne sortent pas du BC**, nommés un par un.
+            //
+            // Ils remplacent un `_ => None` dont le commentaire disait lui-même qu'il
+            // « avale silencieusement tout événement domaine qu'on oublierait de faire
+            // sortir ». C'est arrivé : la carte 457 y a perdu un journalier payé.
+            //
+            // Sans joker, ajouter un variant casse la compilation ici — et son auteur
+            // tranche : il sort, ou il rejoint cette liste (carte 506).
+            Self::PlayerCreated { .. }
+            | Self::InitialSkillEarned { .. }
+            | Self::PlayerSkillPurchased { .. }
+            | Self::PlayerStatIncreased { .. }
+            | Self::TouchdownScored { .. }
+            | Self::PassCompleted { .. }
+            | Self::InterceptionMade { .. }
+            | Self::CasualtyInflicted { .. }
+            | Self::MatchMvpNamed { .. }
+            | Self::FoulCommitted { .. }
+            | Self::InjurySustained { .. }
+            | Self::PlayerHatredGained { .. }
+            | Self::PlayerAvailabilityRestored { .. }
+            | Self::MatchConcluded { .. }
+            | Self::MatchImpactReverted { .. }
+            | Self::JourneymanHired { .. }
+            | Self::JourneymanLost { .. }
+            | Self::JourneymanWithdrawn { .. }
+            | Self::PlayerRenamed { .. }
+            | Self::PlayerJerseyChanged { .. }
+            | Self::PlayerReordered { .. }
+            | Self::PlayerSkillCustomised { .. }
+            | Self::PlayerStatCustomised { .. }
+            | Self::PlayerValueRecalibrated { .. }
+            | Self::PlayerSppCustomised { .. } => None,
         }
     }
 

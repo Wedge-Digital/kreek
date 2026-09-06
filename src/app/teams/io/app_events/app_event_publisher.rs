@@ -126,11 +126,44 @@ async fn to_app_event(
                 space_id: space_id_de(team_id, pool).await?,
             })
         }
-        // Le seul `match` de la série où le compilateur ne protège de rien : ce
-        // joker avale silencieusement tout événement domaine qu'on oublierait de
-        // faire sortir du BC. Y ajouter un bras est un geste délibéré, jamais
-        // une correction d'erreur de compilation.
-        _ => None,
+        // C'était « le seul `match` de la série où le compilateur ne protège
+        // de rien ». Il protège maintenant.
+        //
+        // **Ceux qui ne sortent pas du BC**, nommés un par un.
+        //
+        // Ils remplacent un `_ => None` dont le commentaire disait lui-même qu'il
+        // « avale silencieusement tout événement domaine qu'on oublierait de faire
+        // sortir ». C'est arrivé : la carte 457 y a perdu un journalier payé.
+        //
+        // Sans joker, ajouter un variant casse la compilation ici — et son auteur
+        // tranche : il sort, ou il rejoint cette liste (carte 506).
+        TeamDomainEvent::TeamCreated { .. }
+        | TeamDomainEvent::TeamEnrolled { .. }
+        | TeamDomainEvent::TeamDismissed
+        | TeamDomainEvent::TeamEnrollmentRejected { .. }
+        | TeamDomainEvent::MatchReportingStarted { .. }
+        | TeamDomainEvent::MatchReportingCancelled { .. }
+        | TeamDomainEvent::PostMatchSequenceStarted { .. }
+        | TeamDomainEvent::PostMatchSequenceReverted { .. }
+        | TeamDomainEvent::InducementsPaid { .. }
+        | TeamDomainEvent::InducementsRefunded { .. }
+        | TeamDomainEvent::PlayerImprovementPhaseValidated
+        | TeamDomainEvent::StaffBought { .. }
+        | TeamDomainEvent::StaffDismissed { .. }
+        | TeamDomainEvent::DismissalsPhaseValidated
+        | TeamDomainEvent::PlayerRetiredTemporarily { .. }
+        | TeamDomainEvent::RetirementPhaseValidated
+        | TeamDomainEvent::CostlyMistakesPhaseStarted
+        | TeamDomainEvent::CostlyMistakesApplied { .. }
+        | TeamDomainEvent::OffSeasonStarted { .. }
+        | TeamDomainEvent::PlayerReEngaged { .. }
+        | TeamDomainEvent::PlayerNotReEngaged { .. }
+        | TeamDomainEvent::OffSeasonCompleted
+        | TeamDomainEvent::TeamValueRecomputed { .. }
+        | TeamDomainEvent::GamePhaseOverridden { .. }
+        | TeamDomainEvent::TeamRenamed { .. }
+        | TeamDomainEvent::InitialsChanged { .. }
+        | TeamDomainEvent::LogoChanged { .. } => None,
     }
 }
 

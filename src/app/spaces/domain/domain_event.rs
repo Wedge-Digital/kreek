@@ -16,6 +16,9 @@ pub enum SpacesDomainEvent {
         space_logo: CloudinaryImage,
         space_id: SpaceId,
     },
+    // arch:pas-emis — aucune invitation n'existe. C'est ce que dit déjà le
+    // commentaire de `USER_INVITED_IN_SPACE`, et c'est ce qui a laissé deux
+    // événements partager la même chaîne de type sans que rien ne casse.
     UserInvitedInSpace {
         event_id: EventId,
         user_id: CoachId,
@@ -67,6 +70,7 @@ pub enum SpacesDomainEvent {
         user_id: CoachId,
         space_id: SpaceId,
     },
+    // arch:pas-emis — aucun code n'archive un espace.
     SpaceArchived {
         event_id: EventId,
         space_id: SpaceId,
@@ -156,7 +160,18 @@ impl SpacesDomainEvent {
             // Promotion et rétrogradation ne franchissent pas : le rôle d'espace
             // est relu en direct par `SpacePermissions` à chaque requête, aucun
             // BC n'en cache de copie.
-            _ => None,
+            // **Ceux qui ne sortent pas du BC**, nommés un par un.
+            //
+            // Ils remplacent un `_ => None` dont le commentaire disait lui-même qu'il
+            // « avale silencieusement tout événement domaine qu'on oublierait de faire
+            // sortir ». C'est arrivé : la carte 457 y a perdu un journalier payé.
+            //
+            // Sans joker, ajouter un variant casse la compilation ici — et son auteur
+            // tranche : il sort, ou il rejoint cette liste (carte 506).
+            Self::UserInvitedInSpace { .. }
+            | Self::UserPromotedToSpaceAdmin { .. }
+            | Self::UserDemotedToSpaceUser { .. }
+            | Self::SpaceArchived { .. } => None,
         }
     }
 

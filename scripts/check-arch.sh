@@ -661,6 +661,29 @@ echo -e "${BOLD}Axe 17 · CSS sans markup — aucune règle hors de sa racine${R
 if axe17=$(python3 scripts/arch/css_sans_markup.py 2>&1); then print_pass; else print_fail "$axe17"; fi
 echo ""
 
+# ── Axe 18 : événements jamais émis ─────────────────────────────────────────
+#
+# L'axe 12 vérifie **le geste** d'émission : tout `.send(` passe par `emettre()`
+# ou `publier()`. Il ne dit rien de deux formes voisines, qui ont chacune coûté
+# une carte à l'épic E15 pendant qu'il était vert :
+#
+#   A · un événement **défini et jamais émis** — le bras du publisher est mort,
+#       la chaîne n'a jamais rien transporté (carte 455 : aucun journalier
+#       n'était créé) ;
+#   B · un événement **émis sans bras** — le joker `_ => None` l'avalait
+#       (carte 457 : le coach payait son journalier et le perdait).
+#
+# **B n'a pas d'axe, et c'est mieux** : les cinq jokers ont été supprimés au
+# profit de bras groupés nommant chaque variant qui ne sort pas. Le compilateur
+# tient cette moitié — il ne se contourne pas et parle à l'écriture.
+#
+# A lui échappe en revanche : les variants d'un enum public n'entrent pas dans
+# `dead_code`, et rien ne signale qu'un événement n'est construit nulle part.
+# D'où cet axe, qui a trouvé six fantômes à son premier passage.
+echo -e "${BOLD}Axe 18 · Événements domaine — aucun déclaré sans être émis${RESET}"
+if axe18=$(python3 scripts/arch/evenements_fantomes.py 2>&1); then print_pass; else print_fail "$axe18"; fi
+echo ""
+
 
 if [ "$EXIT_CODE" -eq 0 ]; then
     echo -e "${GREEN}${BOLD}✓ Toutes les vérifications bloquantes passent${RESET}"

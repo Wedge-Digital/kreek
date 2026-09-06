@@ -397,7 +397,7 @@ commit suivant.
 | Commande | Contenu | Job CI |
 |---|---|---|
 | `make lint` | `cargo fmt --check`, `cargo clippy` | `qualite` |
-| `make check-arch` | axes 2 à 15 (cf. `scripts/check-arch.sh`) | `qualite` |
+| `make check-arch` | axes 2 à 18 (cf. `scripts/check-arch.sh`) | `qualite` |
 | `make audit` | `cargo audit --deny warnings` | `audit` |
 | `make test` | tests unitaires et d'intégration | `unit` |
 | `make e2e` | suite Playwright complète | `e2e` |
@@ -733,6 +733,49 @@ let _ = state.app_event_bus.send(CompetitionsAppEvent::PairingDeleted { ... }.to
 // OBLIGATOIRE — émission d'un domain event, le publisher fait la conversion
 let _ = bus.send(CompetitionsDomainEvent::PairingCreated { ... }.to_enveloppe());
 ```
+
+### Les deux bouts de la chaîne, et ce qui les tient
+
+L'axe 12 vérifie **le geste** d'émission : tout `.send(` passe par `emettre()`
+ou `publier()`. Une chaîne peut passer cet axe et ne rien transporter, par l'un
+ou l'autre bout. Les deux formes ont chacune coûté une carte à l'épic E15,
+pendant que l'axe était vert.
+
+| | La forme | Ce qu'elle a produit |
+|---|---|---|
+| **A** | événement **défini, jamais émis** — le bras du publisher est mort | carte 455 : aucun journalier n'était créé |
+| **B** | événement **émis, sans bras** — le joker `_ => None` l'avalait | carte 457 : le coach payait son journalier et le perdait |
+
+**Un `to_app_event` n'a pas de joker.** Les variants qui ne sortent pas du BC
+sont nommés un par un, dans un bras groupé. Ajouter un événement casse alors la
+compilation à cet endroit, et son auteur tranche : il sort, ou il rejoint la
+liste.
+
+```rust
+// INTERDIT — avale en silence tout événement qu'on oublierait de faire sortir
+_ => None,
+
+// OBLIGATOIRE — nommés, donc le compilateur exige une décision
+| TeamDomainEvent::TeamRenamed { .. }
+| TeamDomainEvent::InitialsChanged { .. }
+| TeamDomainEvent::LogoChanged { .. } => None,
+```
+
+Le verrou est le compilateur, pas un `grep` : il ne se contourne pas, ne connaît
+pas de faux positif, et parle au moment où l'on écrit. **Sa limite** reste celle
+que la carte 505 a payée : un `match` exhaustif verrouille l'**ajout** d'un cas,
+jamais le **mauvais choix** parmi les cas existants.
+
+La forme A lui échappe — les variants d'un enum public n'entrent pas dans
+`dead_code`, et rien ne signale qu'un événement n'est construit nulle part.
+C'est l'**axe 18**, qui a trouvé six fantômes à son premier passage. Un
+événement légitimement jamais émis — celui dont le code émetteur a été retiré,
+et qui doit rester pour rejouer l'historique — se déclare par
+`// arch:pas-emis <motif>`, motif obligatoire.
+
+**Un fantôme ne masque pas qu'un manque, il masque les défauts qu'on porte sur
+lui** : deux événements de `spaces` ont partagé la *même chaîne de type*
+persistée sans que rien ne casse, parce que l'un des deux n'était jamais émis.
 
 ---
 
