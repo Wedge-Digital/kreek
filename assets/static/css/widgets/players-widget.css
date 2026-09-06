@@ -47,6 +47,32 @@
 
 .players-widget .players-widget-empty { padding: var(--p2); color: var(--dark-3); font-style: italic; }
 
+/* ── Pied du tableau — sous-total des disponibles (carte 460) ─────────────── */
+
+/* Il reprend le fond de l'en-tête et son filet, pour se lire comme une clôture
+   du tableau plutôt que comme une quatorzième ligne de joueur. Le survol et le
+   zébrage du `tbody` ne l'atteignent pas : il n'ouvre aucune fiche. */
+.players-widget .player-table-foot td {
+    background: var(--dark-6);
+    border-top: 2px solid var(--dark-5);
+    font-size: var(--text-small);
+    font-weight: 700;
+}
+.players-widget .player-foot-label { color: var(--dark-2); font-weight: 600; }
+/* L'absent hors du compte est une précision, pas une alerte : il se lit après
+   le compte, sans le concurrencer. */
+.players-widget .player-foot-note {
+    margin-left: var(--p1);
+    color: var(--dark-3);
+    font-weight: 400;
+    font-style: italic;
+}
+/* Les deux cellules portent aussi `player-spp` et `player-value`, les classes
+   des colonnes qu'elles totalisent : l'alignement vient de là, et un
+   changement de colonne emmène le pied avec lui. */
+.players-widget .player-foot-dash  { color: var(--dark-3); font-weight: 400; }
+.players-widget .player-foot-total { white-space: nowrap; }
+
 /* Douze colonnes avec les caractéristiques : le tableau défile dans son propre
    conteneur plutôt que de pousser la page en débordement horizontal. */
 .players-widget .player-table-scroll { overflow-x: auto; }

@@ -1,3 +1,4 @@
+use crate::app::players::domain::match_impact::PlayerParticipationStatus;
 use crate::app::players::domain::player::TeamId;
 use crate::app::players::io::app_events::team_created_listener::skill_category_css;
 use crate::app::players::ports::{AcquiredSkillProjection, ISkillCatalogPort, PlayerProjection};
@@ -91,6 +92,13 @@ pub struct PlayerRowVm {
     /// plus les augmentations achetées en SPP. `None` si le poste est introuvable
     /// au catalogue : la table affiche alors un tiret plutôt qu'une valeur fausse.
     pub stats: Option<ResolvedPlayerStats>,
+    /// Le statut de participation, **tel que le domaine le dit**.
+    ///
+    /// Il sert au sous-total des disponibles (carte 460) — le gabarit n'y
+    /// touche pas. Un booléen aurait fait de la vue le lieu où l'on décide qui
+    /// compte ; ici elle transporte la donnée et pose la question à
+    /// `disponible()`.
+    pub participation: PlayerParticipationStatus,
     /// L'absence au prochain match, quand il y en a une (carte 489).
     ///
     /// La donnée existait déjà : `participation_status` vit dans la projection
@@ -149,6 +157,38 @@ pub struct PlayerTableTemplate {
     /// **déjà en mode édition** : le coach revient à sa saisie pour la corriger,
     /// au lieu de la perdre et de tout recommencer.
     pub save_error: Option<String>,
+    /// Les trois nombres du pied (carte 460). Trois nombres et non une
+    /// structure : le gabarit les affiche, il ne les manipule pas.
+    pub available_count: usize,
+    /// Sert à la mention « n absent, hors du compte », qui n'apparaît que s'il
+    /// y en a — sinon la phrase serait un bruit permanent pour un cas rare.
+    pub unavailable_count: usize,
+    pub available_value_kpo: i32,
+}
+
+impl PlayerTableTemplate {
+    /// **Le sous-total se calcule ici, une fois**, et non aux trois sites qui
+    /// rendent ce tableau : deux d'entre eux servent l'édition de l'effectif,
+    /// où un compte divergent serait invisible à la relecture.
+    pub fn new(
+        space_id: String,
+        team_id: String,
+        players: Vec<PlayerRowVm>,
+        save_error: Option<String>,
+    ) -> Self {
+        let disponibles = || players.iter().filter(|p| p.participation.disponible());
+        let available_count = disponibles().count();
+        Self {
+            app_routes: AppRoutes::default(),
+            space_id,
+            team_id,
+            available_count,
+            unavailable_count: players.len() - available_count,
+            available_value_kpo: disponibles().map(|p| p.value_kpo).sum(),
+            save_error,
+            players,
+        }
+    }
 }
 
 impl IntoResponse for PlayerTableTemplate {
@@ -172,14 +212,7 @@ pub async fn player_table_widget(
     let team = TeamId(team_id);
     let players = build_player_rows(&state, &team).await;
 
-    PlayerTableTemplate {
-        app_routes: AppRoutes::default(),
-        space_id,
-        team_id: team.0,
-        players,
-        save_error: None,
-    }
-    .into_response()
+    PlayerTableTemplate::new(space_id, team.0, players, None).into_response()
 }
 
 /// Lignes de l'effectif actif, prêtes à rendre. Extrait du handler pour que
@@ -212,6 +245,7 @@ pub async fn build_player_rows(state: &AppState, team: &TeamId) -> Vec<PlayerRow
                 spp: derive.map(|d| d.spp_remaining),
                 value_kpo: p.value_kpo,
                 stats: derive.and_then(|d| d.stats),
+                participation: PlayerParticipationStatus::from_str(&p.participation_status),
                 absence: Absence::depuis_le_statut(&p.participation_status),
                 keywords,
             }
@@ -259,6 +293,119 @@ async fn resolve_team_derived(
             (player.id.0.clone(), derive)
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests_sous_total {
+    use super::*;
+
+    fn joueur(valeur: i32, statut: PlayerParticipationStatus) -> PlayerRowVm {
+        PlayerRowVm {
+            player_id: "p".to_string(),
+            jersey: None,
+            personal_name: String::new(),
+            position_name: String::new(),
+            base_skills: vec![],
+            acquired_skills: vec![],
+            spp: None,
+            value_kpo: valeur,
+            stats: None,
+            participation: statut,
+            absence: Absence::depuis_le_statut(match statut {
+                PlayerParticipationStatus::Available => "Available",
+                PlayerParticipationStatus::MissingNextGame => "MissingNextGame",
+                PlayerParticipationStatus::Retired => "Retired",
+                PlayerParticipationStatus::Dead => "Dead",
+            }),
+            keywords: String::new(),
+        }
+    }
+
+    fn pied(joueurs: Vec<PlayerRowVm>) -> PlayerTableTemplate {
+        PlayerTableTemplate::new("s".to_string(), "t".to_string(), joueurs, None)
+    }
+
+    /// Le cœur de la carte : un absent est dans la liste, hors du compte.
+    #[test]
+    fn le_sous_total_exclut_les_indisponibles() {
+        use PlayerParticipationStatus::*;
+        let t = pied(vec![
+            joueur(100, Available),
+            joueur(50, MissingNextGame),
+            joueur(80, Available),
+            joueur(70, Retired),
+        ]);
+        assert_eq!(t.available_count, 2);
+        assert_eq!(t.unavailable_count, 2);
+        assert_eq!(t.available_value_kpo, 180, "50 et 70 ne comptent pas");
+    }
+
+    /// Le cas le plus fréquent — la mention d'absence ne doit pas s'afficher.
+    #[test]
+    fn sans_indisponible_la_mention_n_apparait_pas() {
+        let t = pied(vec![
+            joueur(100, PlayerParticipationStatus::Available),
+            joueur(60, PlayerParticipationStatus::Available),
+        ]);
+        assert_eq!(t.unavailable_count, 0);
+        assert_eq!(t.available_value_kpo, 160);
+    }
+
+    /// **Un journalier disponible compte** (épic E15). Il est un joueur de
+    /// l'effectif, il apparaît dans la liste, et la valeur d'équipe le compte
+    /// aussi — l'exclure ici ferait diverger le sous-total de ce qu'il vérifie.
+    #[test]
+    fn un_journalier_disponible_entre_dans_le_compte() {
+        let t = pied(vec![
+            joueur(100, PlayerParticipationStatus::Available),
+            joueur(50, PlayerParticipationStatus::Available), // le journalier
+        ]);
+        assert_eq!((t.available_count, t.available_value_kpo), (2, 150));
+    }
+
+    /// Un effectif vide ne rend pas de pied — le gabarit rend
+    /// `players-widget-empty` à la place du tableau. Les compteurs restent
+    /// cohérents pour autant : zéro partout, jamais une soustraction négative.
+    #[test]
+    fn un_effectif_vide_ne_compte_rien() {
+        let t = pied(vec![]);
+        assert_eq!(
+            (
+                t.available_count,
+                t.unavailable_count,
+                t.available_value_kpo
+            ),
+            (0, 0, 0)
+        );
+    }
+
+    /// **Deux défauts opposés, tous deux justes.**
+    ///
+    /// La vue échoue *ouvert* : un statut inconnu ne barre pas la ligne, parce
+    /// que barrer ferait disparaître un effectif entier sur une faute de
+    /// frappe (cf. `un_statut_inconnu_ne_barre_rien`).
+    ///
+    /// Le compte échoue *fermé* : le même statut inconnu ne compte pas, parce
+    /// qu'un total gonflé passerait pour juste alors qu'on le regarde
+    /// précisément pour en vérifier un autre.
+    ///
+    /// Un joueur peut donc être affiché sans repère et hors du compte. C'est le
+    /// moindre mal des deux côtés, et ce test tient l'asymétrie pour qu'elle ne
+    /// soit pas « corrigée » par mégarde.
+    #[test]
+    fn un_statut_inconnu_est_affiche_sans_repere_mais_hors_du_compte() {
+        let inconnu = PlayerParticipationStatus::from_str("Suspendu");
+        let mut p = joueur(90, inconnu);
+        p.absence = Absence::depuis_le_statut("Suspendu");
+
+        assert_eq!(p.absence, None, "la ligne n'est pas barrée");
+        let t = pied(vec![p]);
+        assert_eq!(
+            (t.available_count, t.available_value_kpo),
+            (0, 0),
+            "mais il ne gonfle pas le total"
+        );
+    }
 }
 
 #[cfg(test)]

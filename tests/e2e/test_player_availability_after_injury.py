@@ -21,6 +21,7 @@ passerait inaperçue si on interrogeait l'event store.
 Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true) — cf. README.
 """
 
+import re
 import time
 
 import pytest
@@ -221,6 +222,66 @@ def test_les_autres_joueurs_ne_sont_pas_barres(page, space_id, equipe_avec_un_bl
         "tr => getComputedStyle(tr.querySelector('.display-value')).textDecorationLine"
     )
     assert decoration == "none", "un joueur disponible ne doit pas être barré"
+
+
+def test_le_pied_totalise_les_seuls_disponibles(page, space_id, equipe_avec_un_blesse):
+    """**Le sous-total et la ligne barrée sont une seule fonctionnalité** (carte 460).
+
+    Un total qui exclut une ligne sans dire laquelle paraîtrait faux à qui
+    additionne de l'œil : c'est le marquage qui rend le total vérifiable, et le
+    total qui donne au marquage sa conséquence. Ce test lit donc les deux
+    ensemble — le compte annoncé, la mention de l'absent, et la somme recoupée
+    sur les lignes affichées.
+
+    Il vit dans ce fichier plutôt que dans le sien parce que son fixture produit
+    exactement l'état voulu : une équipe dont un joueur, et un seul, manque le
+    prochain match.
+    """
+    page.set_viewport_size({"width": 1440, "height": 900})
+    page.goto(_feuille(space_id, equipe_avec_un_blesse["team_id"]), wait_until="load")
+
+    pied = page.locator("tfoot.player-table-foot")
+    pied.wait_for(state="attached", timeout=15000)
+
+    total_lignes = page.locator("tr.player-table-row").count()
+    barrees = page.locator("tr.player-absent").count()
+    disponibles = total_lignes - barrees
+
+    libelle = pied.locator(".player-foot-label").inner_text()
+    assert f"{disponibles} joueurs disponibles" in libelle, libelle
+    assert f"{barrees} absent" in libelle, f"l'absent n'est pas mentionné : {libelle}"
+
+    # La somme annoncée doit être celle des lignes **non barrées**, et d'elles
+    # seules : c'est la vérification que le coach fait de l'œil.
+    valeurs = page.locator(
+        "tr.player-table-row:not(.player-absent) td.player-value"
+    ).all_inner_texts()
+    attendue = sum(int(re.sub(r"[^0-9]", "", v) or 0) for v in valeurs)
+    affichee = int(re.sub(r"[^0-9]", "", pied.locator(".player-foot-total").inner_text()))
+    assert affichee == attendue, f"pied {affichee}, somme des lignes visibles {attendue}"
+
+    # Les SPP ne s'additionnent pas entre joueurs : la colonne porte un tiret.
+    assert pied.locator(".player-foot-dash").inner_text().strip() == "—"
+
+    # **L'alignement se mesure, il ne se déduit pas du `colspan`.**
+    #
+    # La première version comptait treize colonnes et le total tombait une
+    # colonne trop à droite, hors du tableau : `drag-handle-cell` est
+    # `display: none` hors mode édition, donc la grille en a douze en lecture
+    # et treize en édition. Les compteurs et la somme étaient justes — seule
+    # une mesure de position pouvait le dire.
+    positions = page.evaluate(
+        """() => {
+             const t = document.querySelector('.player-table');
+             const x = s => { const e = t.querySelector(s);
+                              return e ? Math.round(e.getBoundingClientRect().x) : null; };
+             return { spp: x('thead th:nth-child(12)'), valeur: x('thead th:nth-child(13)'),
+                      dash: x('tfoot .player-foot-dash'),
+                      total: x('tfoot .player-foot-total') };
+           }"""
+    )
+    assert positions["dash"] == positions["spp"], f"tiret décalé : {positions}"
+    assert positions["total"] == positions["valeur"], f"total décalé : {positions}"
 
 
 def test_le_repere_se_reduit_a_son_icone_en_mobile(page, space_id, equipe_avec_un_blesse):

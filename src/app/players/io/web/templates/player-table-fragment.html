@@ -116,6 +116,37 @@
           </tr>
           {% endfor %}
         </tbody>
+        {# **Un `<tfoot>`, pas une dernière `<tr>` du `<tbody>`** : le pied reste
+           attaché au tableau si la liste défile un jour, et il ne prend ni le
+           zébrage des lignes paires ni leur survol — il n'ouvre aucune fiche.
+
+           **Le pied commence par une cellule de poignée, comme les lignes du
+           corps.** Elle est vide, mais `drag-handle-cell` est `display: none`
+           hors mode édition et `table-cell` dedans : le tableau a douze
+           colonnes visibles en lecture et treize en édition. Un `colspan` fixe
+           ne pouvait donc pas convenir aux deux — écrit à onze sans cette
+           cellule, le total tombait une colonne trop à droite, hors du tableau.
+
+           Dix colonnes pour le libellé, puis SPP et Valeur, qui restent sous
+           les leurs. **La colonne SPP porte un tiret** : les SPP ne
+           s'additionnent pas entre joueurs — chacun dépense les siens — et une
+           somme y serait un nombre sans signification.
+
+           Le total ne vaut pas la valeur d'équipe de l'en-tête, et ne le
+           prétend pas : celle-ci compte aussi le staff, les relances et les
+           journaliers manquants, et retranche le prix des linemen sous
+           « Lineman a vil prix ». D'où le libellé, qui dit ce qu'on somme. #}
+        <tfoot class="player-table-foot">
+          <tr>
+            <td class="drag-handle-cell"></td>
+            <td colspan="10" class="player-foot-label">
+              {{ available_count }} joueur{% if available_count > 1 %}s{% endif %} disponible{% if available_count > 1 %}s{% endif %}
+              {%- if unavailable_count > 0 %}<span class="player-foot-note">{{ unavailable_count }} absent{% if unavailable_count > 1 %}s{% endif %}, hors du compte</span>{% endif %}
+            </td>
+            <td class="player-spp player-foot-dash">—</td>
+            <td class="player-value player-foot-total">{{ available_value_kpo }} kPo</td>
+          </tr>
+        </tfoot>
       </table>
     </div>
     {# Le dégradé de bord ne s'affiche que s'il reste réellement du contenu hors

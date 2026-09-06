@@ -37,6 +37,91 @@ pub enum PlayerParticipationStatus {
     Dead,
 }
 
+impl PlayerParticipationStatus {
+    /// **Le défaut est prudent, et c'est délibéré.**
+    ///
+    /// `RosterMembership::from_str` retombe sur `Active`, et c'est juste chez
+    /// lui : le doute y porte sur une appartenance, que rien n'exagère.
+    ///
+    /// Ici le doute porte sur un **compte affiché**. Un `_ => Available`
+    /// ferait entrer dans le sous-total des joueurs disponibles tout statut
+    /// que le code ne reconnaît pas — donc **gonflerait** un chiffre que le
+    /// coach regarde précisément pour en vérifier un autre. Se tromper vers
+    /// « indisponible » minore et se voit ; se tromper vers « disponible »
+    /// majore et passe pour juste.
+    ///
+    /// C'est déjà le parti de `infrastructure/teams/squad_adapter.rs`, qui ne
+    /// reconnaît que `"Available"` et range tout le reste en empêché.
+    pub fn from_str(valeur: &str) -> Self {
+        match valeur {
+            "Available" => Self::Available,
+            "Retired" => Self::Retired,
+            "Dead" => Self::Dead,
+            _ => Self::MissingNextGame,
+        }
+    }
+
+    /// Jouera-t-il le prochain match ?
+    ///
+    /// **La même question que celle de la valeur d'équipe**, qui ne retient que
+    /// les alignables (`players_value`, via `SquadPresence::alignable()`). Le
+    /// sous-total de l'effectif existe pour rendre ce chiffre vérifiable : s'il
+    /// comptait un joueur de plus ou de moins, il ne le vérifierait pas, il le
+    /// contredirait.
+    pub fn disponible(&self) -> bool {
+        matches!(self, Self::Available)
+    }
+}
+
+#[cfg(test)]
+mod tests_participation {
+    use super::PlayerParticipationStatus as Statut;
+
+    #[test]
+    fn seul_available_est_disponible() {
+        assert!(Statut::Available.disponible());
+        assert!(!Statut::MissingNextGame.disponible());
+        assert!(!Statut::Retired.disponible());
+        assert!(!Statut::Dead.disponible());
+    }
+
+    #[test]
+    fn les_quatre_statuts_font_l_aller_retour() {
+        for (texte, attendu) in [
+            ("Available", Statut::Available),
+            ("MissingNextGame", Statut::MissingNextGame),
+            ("Retired", Statut::Retired),
+            ("Dead", Statut::Dead),
+        ] {
+            assert_eq!(Statut::from_str(texte), attendu, "{texte}");
+        }
+    }
+
+    /// Le sens du défaut : un statut que le code ne connaît pas ne doit pas
+    /// grossir le compte des disponibles.
+    #[test]
+    fn un_statut_inconnu_ne_compte_pas_comme_disponible() {
+        assert!(!Statut::from_str("Suspendu").disponible());
+        assert!(!Statut::from_str("").disponible());
+    }
+
+    /// La valeur d'équipe traduit `"Available"` en `Alignable` et **tout le
+    /// reste** en empêché ou perdu (`squad_adapter.rs`). Ce test tient les deux
+    /// définitions ensemble : si l'une s'ouvrait à un statut de plus sans
+    /// l'autre, le sous-total cesserait de vérifier la valeur d'équipe.
+    #[test]
+    fn le_predicat_dit_la_meme_chose_que_la_valeur_d_equipe() {
+        for texte in ["Available", "MissingNextGame", "Retired", "Dead", "Inconnu"] {
+            let alignable_pour_la_ve = texte == "Available";
+            assert_eq!(
+                Statut::from_str(texte).disponible(),
+                alignable_pour_la_ve,
+                "{texte}"
+            );
+        }
+    }
+}
+
 // ── Blessures ─────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

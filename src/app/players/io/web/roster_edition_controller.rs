@@ -8,7 +8,6 @@ use crate::app::players::io::web::widgets::player_table_widget::{
 use crate::app::players::ports::RepositoryError;
 use crate::app::players::use_cases::commands::{RosterRowCommand, UpdateRosterCommand};
 use crate::app::players::use_cases::update_roster_use_case::{self, UpdateRosterError};
-use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use axum::extract::{Path, State};
@@ -152,13 +151,12 @@ async fn rendu_apres_echec(
     let mut players = build_player_rows(state, &TeamId(team_id.to_string())).await;
     reafficher_saisie(&mut players, form);
 
-    let mut response = PlayerTableTemplate {
-        app_routes: AppRoutes::default(),
-        space_id: space_id.to_string(),
-        team_id: team_id.to_string(),
+    let mut response = PlayerTableTemplate::new(
+        space_id.to_string(),
+        team_id.to_string(),
         players,
-        save_error: Some(message.to_string()),
-    }
+        Some(message.to_string()),
+    )
     .into_response();
     response
         .headers_mut()
@@ -193,12 +191,6 @@ fn reafficher_saisie(players: &mut Vec<PlayerRowVm>, form: &RosterUpdateForm) {
 
 async fn rendu_apres_succes_fragment(state: &AppState, space_id: &str, team_id: &str) -> Response {
     let players = build_player_rows(state, &TeamId(team_id.to_string())).await;
-    PlayerTableTemplate {
-        app_routes: AppRoutes::default(),
-        space_id: space_id.to_string(),
-        team_id: team_id.to_string(),
-        players,
-        save_error: None,
-    }
-    .into_response()
+    PlayerTableTemplate::new(space_id.to_string(), team_id.to_string(), players, None)
+        .into_response()
 }
