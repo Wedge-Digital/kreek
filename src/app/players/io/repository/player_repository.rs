@@ -134,6 +134,9 @@ fn player_and_team_id(event: &PlayerDomainEvent) -> (&str, &str) {
         PlayerDomainEvent::JourneymanLost {
             player_id, team_id, ..
         } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::JourneymanHired {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
     }
 }
 
@@ -431,6 +434,20 @@ pub async fn upsert_player_projection(
         // Le joueur sort de l'effectif sans rien perdre : SPP, compétences et
         // historique restent en place. Seule l'appartenance change, et c'est
         // elle que toutes les lectures d'effectif filtrent désormais.
+        // L'embauche : le journalier devient permanent, et rien d'autre ne
+        // change — il garde son maillot, ses SPP et ce qu'il a gagné au match.
+        PlayerDomainEvent::JourneymanHired { player_id, .. } => {
+            sqlx::query(
+                "UPDATE players_proj
+                 SET membership = 'Active', version = version + 1
+                 WHERE player_id = $1",
+            )
+            .bind(&player_id.0)
+            .execute(&mut **tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+        }
+
         // Le désalignement d'un journalier aboutit au même état : les lectures
         // d'effectif filtrent sur `Dismissed`, et il n'en est plus.
         PlayerDomainEvent::PlayerDismissed { player_id, .. }

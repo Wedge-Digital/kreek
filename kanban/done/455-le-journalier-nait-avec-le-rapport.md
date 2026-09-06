@@ -231,3 +231,25 @@ voit d'un bout à l'autre. Ils sont donc écrits par la carte `459`, dont
 C'est la même mécanique que la dette que la 454 avait laissée à celle-ci, et
 qui est réglée ici : une carte de socle ne peut pas prouver ce qu'elle rend
 seulement possible.
+
+
+## Corrigée par la carte 459 — la chaîne n'était pas branchée
+
+**Aucun journalier n'a jamais été créé par cette carte.**
+
+`init_temp_players_use_case` appendait `TempPlayersInitialized` à l'event store
+**sans l'émettre sur le bus interne**. Le publisher, lui, s'y abonnait : le bras
+existait, n'était jamais atteint, et la chaîne s'arrêtait au premier maillon.
+
+Le dépôt de `match_report` ne publie rien de lui-même — ses trois use cases
+sortants appellent `emettre()` eux-mêmes. Celui-ci ne l'avait jamais fait,
+faute d'événement franchissant la frontière avant cette carte. **Le bras de
+publisher a été ajouté sans vérifier ce qui alimentait le bus.**
+
+Rien ne pouvait le dire : ni le compilateur, ni les tests unitaires, qui
+éprouvent chaque maillon isolément. C'est le parcours de bout en bout de la
+carte `459` qui l'a trouvé, au premier scénario.
+
+Le correctif — `execute` prend un `&EventBus` et émet ses deux événements — est
+tenu par `l_initialisation_emet_son_evenement_sur_le_bus`, qui affirme
+qu'**appender ne suffit pas**.

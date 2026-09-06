@@ -202,8 +202,8 @@ async fn un_journalier_recrute_survit_a_la_sortie_de_phase(pool: PgPool) {
     seed_journalier(&repo, &garde, &team_id, Some(1)).await;
     seed_journalier(&repo, &perdu, &team_id, Some(2)).await;
 
-    // Le recrutement bascule son appartenance — ce que fera le listener de la
-    // carte 458 en réaction à `JourneymanRecruited`.
+    // Le recrutement bascule son appartenance — ce que fait le listener en
+    // réaction à `JourneymanRecruited`.
     devenir_permanent(&pool, &garde).await;
 
     // Puis le ménage : il ne trouve que ceux qui sont restés journaliers.
@@ -374,6 +374,41 @@ async fn la_depublication_ne_change_pas_le_membership(pool: PgPool) {
         crate::app::players::domain::player::RosterMembership::Journeyman,
         "il reste recrutable"
     );
+}
+
+/// L'embauche, par l'événement — le maillon qui manquait.
+///
+/// `Team::recruit_journeyman` émettait son événement et débitait la trésorerie,
+/// mais rien ne le faisait sortir du BC : le coach payait et perdait son joueur
+/// à la clôture de phase. Ce test tient les deux moitiés — il devient permanent,
+/// et il garde tout ce qu'il avait.
+#[sqlx::test]
+async fn un_journalier_embauche_devient_permanent(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool.clone());
+    let team_id = TeamId("t-embauche".into());
+    let journalier = PlayerId("embauche-moi".into());
+
+    seed_journalier(&repo, &journalier, &team_id, Some(4)).await;
+
+    let embauche = PlayerDomainEvent::JourneymanHired {
+        player_id: journalier.clone(),
+        team_id: team_id.clone(),
+    };
+    repo.append(&journalier, &team_id, &embauche, 2)
+        .await
+        .unwrap();
+
+    let agregat = repo.find_by_id(&journalier).await.unwrap().unwrap();
+    assert!(
+        agregat.membership.is_active(),
+        "il est des nôtres, désormais"
+    );
+
+    let ligne = proj.find_by_id(&journalier.0).await.unwrap().unwrap();
+    assert_eq!(ligne.membership, "Active");
+    assert_eq!(ligne.jersey, Some(4), "il garde son maillot");
+    assert_eq!(ligne.value_kpo, 50, "et sa valeur");
 }
 
 /// Bascule un journalier en permanent, comme le fera le recrutement.

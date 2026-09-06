@@ -6,6 +6,8 @@ use crate::app::match_report::domain::value_objects::{
 use crate::app::match_report::ports::{IPlayerDataPort, ITeamDataPort};
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::common::services::event_bus::domain_event_publication::emettre;
+use crate::common::services::event_bus::event_bus::EventBus;
 
 #[derive(Debug)]
 pub struct InitTempPlayersCommand {
@@ -22,17 +24,32 @@ pub enum InitTempPlayersError {
     Repository(String),
 }
 
+/// **Les deux événements sont émis sur le bus interne**, et pas seulement
+/// appendus au store.
+///
+/// Le dépôt de `match_report` ne publie rien de lui-même : ses trois use cases
+/// sortants — publication, dépublication, annulation — appellent `emettre()`
+/// eux-mêmes. Celui-ci ne le faisait pas, parce qu'aucun de ses événements ne
+/// franchissait la frontière du BC avant la carte 455.
+///
+/// La 455 a branché le publisher sur `TempPlayersInitialized` **sans que rien
+/// n'alimente le bus** : le bras existait, il n'était jamais atteint, et aucun
+/// journalier n'a jamais été créé. Ni le compilateur ni les tests unitaires ne
+/// pouvaient le dire — chaque maillon était juste, c'est leur raccord qui
+/// manquait. L'axe 12 de `check-arch` vérifie qu'une émission passe par
+/// `emettre()`, jamais qu'un événement destiné à sortir est bien émis.
 #[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: InitTempPlayersCommand,
     repo: &dyn IMatchReportRepository,
     team_data: &dyn ITeamDataPort,
     player_data: &dyn IPlayerDataPort,
+    bus: &EventBus,
 ) -> Result<(), InitTempPlayersError> {
     let mr_id = cmd.match_report_id.to_string();
     let pm = load_pm(repo, &mr_id).await?;
 
-    let pm = reset_if_needed(pm, &cmd.team_id, repo, &mr_id).await?;
+    let pm = reset_if_needed(pm, &cmd.team_id, repo, &mr_id, bus).await?;
 
     let stars = collect_stars(&pm, &cmd.team_id);
     let mercs = collect_mercs(&pm, &cmd.team_id);
@@ -44,8 +61,9 @@ pub async fn execute(
     let version = pm.version;
     repo.append(&mr_id, &event, version)
         .await
-        .map(|_| ())
-        .map_err(|e| InitTempPlayersError::Repository(e.to_string()))
+        .map_err(|e| InitTempPlayersError::Repository(e.to_string()))?;
+    emettre(bus, event.to_enveloppe(&mr_id));
+    Ok(())
 }
 
 async fn load_pm(
@@ -72,6 +90,7 @@ async fn reset_if_needed(
     team_id: &TeamId,
     repo: &dyn IMatchReportRepository,
     mr_id: &str,
+    bus: &EventBus,
 ) -> Result<
     crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch,
     InitTempPlayersError,
@@ -89,6 +108,10 @@ async fn reset_if_needed(
     repo.append(mr_id, &reset_event, version)
         .await
         .map_err(|e| InitTempPlayersError::Repository(e.to_string()))?;
+    // Le retrait franchit la frontière comme la naissance : sans lui, un
+    // repassage sur l'écran des coups de pouce laisserait des journaliers
+    // orphelins dans l'effectif.
+    emettre(bus, reset_event.to_enveloppe(mr_id));
     Ok(updated)
 }
 
@@ -145,6 +168,172 @@ mod tests {
     use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
     use crate::app::shared_kernel::bloodbowl::team::TeamId;
     use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+
+    use crate::app::match_report::domain::match_report_repository_port::RepositoryError;
+    use crate::app::match_report::domain::match_report_state::MatchReportState;
+    use crate::app::match_report::ports::{
+        JourneymanPositionDto, PositionCountDto, RosterPositionDto, TeamInfoDto,
+    };
+    use crate::common::services::event_bus::event_bus::new_bus;
+    use std::sync::Mutex;
+
+    struct DepotSimule {
+        state: Mutex<Option<MatchReportState>>,
+    }
+
+    #[async_trait::async_trait]
+    impl IMatchReportRepository for DepotSimule {
+        async fn append(
+            &self,
+            _: &str,
+            _: &crate::app::match_report::domain::events::MatchReportDomainEvent,
+            _: u64,
+        ) -> Result<u64, RepositoryError> {
+            Ok(1)
+        }
+        async fn find_space_id(&self, _: &str) -> Result<Option<String>, RepositoryError> {
+            Ok(None)
+        }
+        async fn find_by_id(&self, _: &str) -> Result<Option<MatchReportState>, RepositoryError> {
+            Ok(self.state.lock().unwrap().take())
+        }
+        async fn find_team_ids(
+            &self,
+            _: &str,
+        ) -> Result<Option<(String, String)>, RepositoryError> {
+            Ok(None)
+        }
+        async fn append_many(
+            &self,
+            _: &str,
+            _: Vec<crate::app::match_report::domain::events::MatchReportDomainEvent>,
+            _: u64,
+        ) -> Result<u64, RepositoryError> {
+            Ok(1)
+        }
+        async fn find_id_by_pairing(&self, _: &str) -> Result<Option<String>, RepositoryError> {
+            Ok(None)
+        }
+        async fn find_phases_by_pairings(
+            &self,
+            _: &[String],
+        ) -> Result<Vec<(String, String)>, RepositoryError> {
+            Ok(vec![])
+        }
+        async fn find_id_by_round_and_teams(
+            &self,
+            _: &str,
+            _: &str,
+            _: &str,
+        ) -> Result<Option<String>, RepositoryError> {
+            Ok(None)
+        }
+        async fn find_actions_by_match_and_side(
+            &self,
+            _: &str,
+            _: TeamSide,
+        ) -> Result<
+            Vec<crate::app::match_report::domain::match_report_repository_port::MatchActionRow>,
+            RepositoryError,
+        > {
+            Ok(vec![])
+        }
+    }
+
+    struct EquipeSimulee;
+
+    #[async_trait::async_trait]
+    impl ITeamDataPort for EquipeSimulee {
+        async fn is_team_ready_to_play(&self, _: &str) -> Result<bool, String> {
+            Ok(true)
+        }
+        async fn is_team_in_player_improvement(&self, _: &str) -> Result<bool, String> {
+            Ok(false)
+        }
+        async fn is_coach_of_team(&self, _: &str, _: &str) -> Result<bool, String> {
+            Ok(true)
+        }
+        async fn find_team_info(&self, _: &str) -> Option<TeamInfoDto> {
+            None
+        }
+        async fn find_team_value(&self, _: &str) -> Option<u32> {
+            Some(1000)
+        }
+        async fn find_team_treasury(&self, _: &str) -> Option<u32> {
+            Some(1000)
+        }
+        async fn find_journeyman_position(&self, _: &str) -> Option<JourneymanPositionDto> {
+            Some(JourneymanPositionDto {
+                position_uid: "DEMO_GRANIT__PIETAILLE".into(),
+                position_name: "Piétaille".into(),
+            })
+        }
+        async fn find_roster_positions(&self, _: &str) -> Vec<RosterPositionDto> {
+            vec![]
+        }
+    }
+
+    /// Dix alignables sur onze : il manque un journalier.
+    struct JoueursSimules;
+
+    #[async_trait::async_trait]
+    impl IPlayerDataPort for JoueursSimules {
+        async fn count_available_players(&self, _: &str) -> Result<usize, String> {
+            Ok(10)
+        }
+        async fn find_player_display(&self, _: &str) -> Option<String> {
+            None
+        }
+        async fn find_player_position(&self, _: &str) -> Option<String> {
+            None
+        }
+        async fn find_player_counts_by_position(&self, _: &str) -> Vec<PositionCountDto> {
+            vec![]
+        }
+        async fn has_spent_spp_since_match(&self, _: &str, _: &str) -> Result<bool, String> {
+            Ok(false)
+        }
+    }
+
+    /// **Le test qui manquait**, et qui aurait épargné une carte entière.
+    ///
+    /// La carte 455 a branché le publisher sur `TempPlayersInitialized` sans que
+    /// rien n'alimente le bus interne : le bras existait, n'était jamais
+    /// atteint, et aucun journalier n'a jamais été créé. Ni le compilateur ni
+    /// les tests unitaires ne pouvaient le dire — chaque maillon était juste,
+    /// c'est leur raccord qui manquait, et il n'est visible que d'ici.
+    ///
+    /// **Appender ne suffit pas** : c'est ce que ce test affirme. L'axe 12 de
+    /// `check-arch` vérifie qu'une émission passe par `emettre()`, jamais qu'un
+    /// événement destiné à sortir du BC est bien émis.
+    #[tokio::test]
+    async fn l_initialisation_emet_son_evenement_sur_le_bus() {
+        let pm = make_pm();
+        let team_id = pm.home_team_id.clone();
+        let depot = DepotSimule {
+            state: Mutex::new(Some(MatchReportState::PreMatch(pm))),
+        };
+        let bus = new_bus();
+        let mut abonne = bus.subscribe();
+
+        execute(
+            InitTempPlayersCommand {
+                match_report_id: MatchReportId::new(),
+                team_id,
+            },
+            &depot,
+            &EquipeSimulee,
+            &JoueursSimules,
+            &bus,
+        )
+        .await
+        .expect("l'initialisation aboutit");
+
+        let enveloppe = abonne
+            .try_recv()
+            .expect("l'événement doit atteindre le bus, pas seulement l'event store");
+        assert_eq!(enveloppe.event_type, "TempPlayersInitialized");
+    }
 
     fn make_pm() -> MatchReportPreMatch {
         MatchReportPreMatch {

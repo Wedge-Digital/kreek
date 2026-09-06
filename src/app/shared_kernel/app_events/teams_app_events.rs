@@ -48,6 +48,22 @@ pub enum TeamsAppEvent {
         space_id: SpaceId,
         player_id: PlayerId,
     },
+    /// Le coach a gardé ce journalier : `players` le bascule en permanent.
+    ///
+    /// **Le maillon qui manquait.** `Team::recruit_journeyman` émettait son
+    /// événement domaine et débitait la trésorerie, mais rien ne le faisait
+    /// sortir du BC : le joker du publisher l'avalait en silence. Le coach
+    /// payait, `players` n'apprenait rien, et le ménage de fin de phase perdait
+    /// le joueur qu'on venait d'acheter.
+    ///
+    /// Aucun prix ne voyage : `players` possède le joueur, ce qu'il ignorait
+    /// c'est la décision. Le débit reste l'affaire de `teams`.
+    JourneymanRecruited {
+        event_id: EventId,
+        team_id: TeamId,
+        space_id: SpaceId,
+        player_id: PlayerId,
+    },
     /// La phase de recrutement est close.
     ///
     /// **Un fait de phase, pas une décision sur un joueur** — et c'est pourquoi
@@ -77,6 +93,7 @@ impl TeamsAppEvent {
     pub const JOURNEYMAN_FIELDED: &'static str = "TeamsJourneymanFielded";
     pub const JOURNEYMAN_WITHDRAWN: &'static str = "TeamsJourneymanWithdrawn";
     pub const RECRUITMENT_PHASE_VALIDATED: &'static str = "TeamsRecruitmentPhaseValidated";
+    pub const JOURNEYMAN_RECRUITED: &'static str = "TeamsJourneymanRecruited";
 
     pub fn event_type(&self) -> &'static str {
         match self {
@@ -84,6 +101,7 @@ impl TeamsAppEvent {
             Self::JourneymanFielded { .. } => Self::JOURNEYMAN_FIELDED,
             Self::JourneymanWithdrawn { .. } => Self::JOURNEYMAN_WITHDRAWN,
             Self::RecruitmentPhaseValidated { .. } => Self::RECRUITMENT_PHASE_VALIDATED,
+            Self::JourneymanRecruited { .. } => Self::JOURNEYMAN_RECRUITED,
             Self::PlayerDismissed { .. } => Self::PLAYER_DISMISSED,
         }
     }
@@ -96,7 +114,8 @@ impl TeamsAppEvent {
             | Self::PlayerDismissed { team_id, .. }
             | Self::JourneymanFielded { team_id, .. }
             | Self::JourneymanWithdrawn { team_id, .. }
-            | Self::RecruitmentPhaseValidated { team_id, .. } => team_id.to_string(),
+            | Self::RecruitmentPhaseValidated { team_id, .. }
+            | Self::JourneymanRecruited { team_id, .. } => team_id.to_string(),
         };
         EventEnvelope {
             event_id: EventId::new().to_string(),

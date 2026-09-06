@@ -183,6 +183,18 @@ pub enum PlayerDomainEvent {
     /// Homonyme de l'événement domaine de `teams` et de l'app event qui les
     /// relie : nommer le même fait pareil des deux côtés n'est pas nommer un
     /// événement d'après son origine externe, que le CLAUDE.md interdit.
+    /// Le coach a gardé ce journalier : il devient un joueur permanent.
+    ///
+    /// **Le pendant exact de `JourneymanLost`**, et le seul chemin qui le
+    /// sauve. Sans lui, le coach paie — `teams` débite sa trésorerie — et le
+    /// ménage de fin de phase le perd quand même, parce qu'il est resté
+    /// journalier. C'est le défaut que le parcours de bout en bout a trouvé :
+    /// deux commentaires affirmaient que ce maillon existait, il n'avait
+    /// jamais été posé.
+    JourneymanHired {
+        player_id: PlayerId,
+        team_id: TeamId,
+    },
     /// Le journalier a joué, et le coach ne l'a pas retenu : il quitte
     /// l'effectif à la clôture de la phase de recrutement.
     ///
@@ -362,6 +374,7 @@ impl PlayerDomainEvent {
             Self::PlayerAvailabilityRestored { .. } => "PlayerAvailabilityRestored",
             Self::MatchConcluded { .. } => "MatchConcluded",
             Self::MatchImpactReverted { .. } => "MatchImpactReverted",
+            Self::JourneymanHired { .. } => "JourneymanHired",
             Self::JourneymanLost { .. } => "JourneymanLost",
             Self::JourneymanWithdrawn { .. } => "JourneymanWithdrawn",
             Self::PlayerDismissed { .. } => "PlayerDismissed",

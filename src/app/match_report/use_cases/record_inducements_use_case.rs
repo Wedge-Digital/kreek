@@ -16,6 +16,7 @@ use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::CoachId;
+use crate::common::services::event_bus::event_bus::EventBus;
 use std::collections::HashMap;
 
 // ── Commande ──────────────────────────────────────────────────────────────────
@@ -102,6 +103,7 @@ pub async fn execute(
     team_data: &dyn ITeamDataPort,
     competition_data: &dyn ICompetitionDataPort,
     player_data: &dyn IPlayerDataPort,
+    bus: &EventBus,
 ) -> Result<RecordInducementsOutcome, RecordInducementsError> {
     let mr_id = cmd.match_report_id.to_string();
     let mut pm = load_pre_match(repo, &mr_id).await?;
@@ -151,6 +153,7 @@ pub async fn execute(
         repo,
         team_data,
         player_data,
+        bus,
     )
     .await?;
     Ok(route_outcome(&updated_pm, &cmd.team_id))
@@ -387,6 +390,7 @@ async fn persist_and_init(
     repo: &dyn IMatchReportRepository,
     team_data: &dyn ITeamDataPort,
     player_data: &dyn IPlayerDataPort,
+    bus: &EventBus,
 ) -> Result<(), RecordInducementsError> {
     let version_before = version_after - events.len() as u64;
     repo.append_many(mr_id, events, version_before)
@@ -400,6 +404,7 @@ async fn persist_and_init(
         repo,
         team_data,
         player_data,
+        bus,
     )
     .await
     .map_err(|e| RecordInducementsError::Repository(format!("{e:?}")))

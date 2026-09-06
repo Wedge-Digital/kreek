@@ -247,3 +247,32 @@ l'effectif, et la ligne l'y retrouve par son identifiant.
 ligne. C'est ce qui fait tomber le journalier dont la valeur a bougé depuis
 l'ajout au même endroit que tous les autres refus — au refus en bloc, avec sa
 ligne nommée.
+
+
+## Corrigée par la carte 459 — le coach payait et perdait son joueur
+
+`Team::recruit_journeyman` émettait `JourneymanRecruited` et la trésorerie était
+débitée. Mais **rien ne le faisait sortir du BC** : le `to_app_event` de `teams`
+n'avait pas de bras pour lui, et son joker `_ => None` l'avalait en silence.
+
+`players` n'apprenait donc jamais qu'il fallait basculer l'appartenance en
+`Active`. Quelques instants plus tard, `RecruitmentPhaseValidated` arrivait, le
+listener de la carte `456` trouvait un joueur encore journalier, et le perdait —
+après paiement.
+
+C'est exactement ce contre quoi le commentaire du joker met en garde : *« ce
+joker avale silencieusement tout événement domaine qu'on oublierait de faire
+sortir du BC »*.
+
+### Une case vide entre trois cartes
+
+L'épic dit *« le recrutement ne fait que basculer son `membership` en
+`Active` »*, mais aucune carte ne portait cette bascule : la `456` fait
+disparaître, celle-ci tient le domaine de `teams`, la `458` l'écran. Elle est
+tombée entre les trois.
+
+Le correctif est rattaché ici parce que cette carte possède
+`JourneymanRecruited` et aurait dû le faire sortir : `TeamsAppEvent`, son bras
+de publisher, et `PlayerDomainEvent::JourneymanHired` côté `players`. Tenu par
+`un_journalier_embauche_devient_permanent` et, de bout en bout, par
+`test_le_journalier_recrute_reste_dans_l_effectif`.

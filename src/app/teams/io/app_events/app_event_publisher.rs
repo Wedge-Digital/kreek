@@ -104,6 +104,18 @@ async fn to_app_event(
                 player_id: PlayerId::try_new(&player_id.to_string()).ok()?,
             })
         }
+        // **Bras ajouté délibérément** (carte 457, corrigée) : sans lui, le
+        // coach paie son journalier et le perd. L'événement domaine existait,
+        // la trésorerie était débitée, et le joker ci-dessous avalait le tout —
+        // c'est exactement ce contre quoi son commentaire met en garde.
+        TeamDomainEvent::JourneymanRecruited { player_id, .. } => {
+            Some(TeamsAppEvent::JourneymanRecruited {
+                event_id: EventId::new(),
+                team_id: TeamId::try_new(team_id).ok()?,
+                space_id: space_id_de(team_id, pool).await?,
+                player_id: PlayerId::try_new(&player_id.to_string()).ok()?,
+            })
+        }
         // **Bras ajouté délibérément** (carte 456), au sens du commentaire
         // ci-dessous : `players` doit savoir que la phase se clôt, pour y
         // perdre les journaliers que le coach n'a pas retenus.

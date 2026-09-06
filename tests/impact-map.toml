@@ -309,6 +309,18 @@
 # le joueur acheté dans `teams` existe bien dans `players`, maillot compris.
 # `match_report` est une dépendance dure et non une fixture de confort — publier
 # un rapport est le seul chemin applicatif vers la phase de recrutement.
+# Le parcours du journalier — de sa naissance à l'ouverture du rapport jusqu'à
+# son embauche ou sa perte. **Le seul test qui voit la chaîne entière** : trois
+# BCs et deux bus d'événements, dont aucun test unitaire ne couvre le raccord.
+# Il a trouvé deux maillons manquants que tout le reste laissait passer — un
+# événement jamais émis sur le bus interne, et un autre jamais publié hors du BC.
+#
+# `match_report` est une dépendance triplement dure : le seul chemin vers la
+# phase de recrutement, le seul moyen de blesser un joueur — donc de rendre
+# l'effectif incomplet —, et le lieu de naissance du journalier lui-même.
+"test_journeyman_recruitment" = ["teams", "players", "match_report", "references",
+                                 "competitions", "team_creation", "spaces",
+                                 "spp_calculator", "ranking"]
 "test_recruitment_phase" = ["teams", "players", "match_report", "spp_calculator",
                             "competitions", "references", "ranking",
                             "team_creation", "spaces"]

@@ -1,7 +1,6 @@
 # E15 — Recruter un journalier
 
-**État :** `ready_to_be_done` — six cartes, **aucune faite**. Spécifiée par le
-workflow feature le 2026-08-28.
+**État :** `done` — six cartes sur six, closes le 2026-09-06.
 **Conception :** `docs/specs/embaucher-un-journalier/` — quinze décisions issues
 du grilling, à lire avant les cartes.
 **Maquette :** `assets/rawpages/html/app-team-recruitment.html`
@@ -68,6 +67,49 @@ carte `495`. Cette épic ne les remplace pas — elle leur donne une suite.
 **La valeur d'équipe pendant le match** : ce qu'un journalier y pèse est tranché
 ailleurs (`basket_hydration_service.rs` porte déjà le commentaire qui l'annonce).
 
+## Ce que l'épic a appris
+
+### Le compilateur a tenu trois verrous que les `grep` ne voyaient pas
+
+`guard_active` (454), `treasury_movement` (455) et les sept `match` ouverts par
+`SquadEngagement` (457) ont chacun **posé une question de conception au moment
+d'ajouter une variante**. Aucun des deux `grep` de contrôle de la 454 ne les
+aurait attrapés : ils ne s'écrivent ni `membership = 'Active'` ni
+`is_active()`.
+
+C'est un argument pratique, éprouvé trois fois : partout où une décision se
+prend sur une appartenance ou un événement, un `match` exhaustif vaut mieux
+qu'un prédicat.
+
+### Une carte de socle ne peut pas prouver ce qu'elle rend possible
+
+Trois fois d'affilée, un test a dû être légué à la carte suivante — la `454` à
+la `455`, la `455` à la `459`, la `456` à la `457` par inversion d'ordre. Ce
+n'est pas un défaut d'exécution mais une propriété du découpage : une carte qui
+ouvre un statut sans rien qui le produise ne peut pas l'observer.
+
+**Ce qui compte est que la dette soit nommée et rattachée**, pas qu'elle
+n'existe pas.
+
+### Deux maillons n'ont jamais été branchés, et rien ne le disait
+
+La carte `459` a trouvé qu'`init_temp_players_use_case` n'émettait pas sur le
+bus (`455`), et que `JourneymanRecruited` ne sortait pas du BC (`457`). Dans les
+deux cas le code compilait, tous les tests unitaires passaient, et la
+fonctionnalité ne marchait pas du tout.
+
+**L'axe 12 de `check-arch` ne voit ni l'un ni l'autre** : il vérifie qu'une
+émission passe par `emettre()` ou `publier()`, jamais qu'un événement destiné à
+sortir est bien émis, ni qu'un bras de publisher est atteignable. C'est le
+piège que l'épic E11 a documenté trois fois — du code qui a l'air branché et ne
+l'est pas — et il mérite sa propre carte.
+
+### Le découpage avait une case vide
+
+Personne ne portait la bascule du journalier en `Active` : la `456` fait
+disparaître, la `457` tient le domaine, la `458` l'écran. L'épic l'énonçait en
+une phrase que trois cartes ont lue sans se l'attribuer.
+
 ## Terminé quand
 
 Un coach dont l'équipe a joué avec un journalier ouvre sa phase de recrutement,
@@ -75,3 +117,14 @@ Un coach dont l'équipe a joué avec un journalier ouvre sa phase de recrutement
 retrouve dans son effectif au match suivant — avec son expérience.
 
 Et celui qu'il n'a pas recruté n'apparaît plus nulle part.
+
+
+## Constaté le 2026-09-06
+
+`test_journeyman_recruitment.py`, sept scénarios verts. Un coach dont l'équipe
+a joué avec un journalier ouvre sa phase de recrutement, le voit dans un
+panneau rendu par `players`, le recrute, et le retrouve dans son effectif —
+avec son maillot et sa valeur. Celui qu'il ne recrute pas n'apparaît plus nulle
+part.
+
+Suite complète : 1703 tests Rust, 363 e2e.

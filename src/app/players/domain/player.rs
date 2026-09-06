@@ -588,6 +588,15 @@ impl Player {
             // Même état d'appartenance que le renvoi, et pour la même raison :
             // les lectures d'effectif filtrent sur `Dismissed`. Ce qui diffère
             // est le fait raconté, pas son effet.
+            // L'embauche est la seule sortie qui **garde** le joueur : son
+            // appartenance devient celle d'un permanent, et le ménage de fin
+            // de phase ne le voit plus.
+            PlayerDomainEvent::JourneymanHired { .. } => {
+                let mut player = current?;
+                player.membership = RosterMembership::Active;
+                player.version += 1;
+                Some(player)
+            }
             PlayerDomainEvent::JourneymanLost { .. }
             | PlayerDomainEvent::JourneymanWithdrawn { .. } => {
                 let mut player = current?;

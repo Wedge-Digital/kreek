@@ -95,8 +95,76 @@ c'est exactement là que la suite échouait.
 
 ## Checklist
 
-- [ ] Les sept scénarios
-- [ ] `cliquer_quand_cable` sur le contenu injecté
-- [ ] Aucun `sleep`
-- [ ] `test_recruitment_phase.py` vert **sans modification**
-- [ ] `make e2e`, serveur de développement lancé par l'utilisateur
+- [x] Le préalable : une équipe à effectif incomplet, par une blessure en match
+- [x] Sept scénarios
+- [x] `cliquer_quand_cable_locator` sur le contenu injecté
+- [x] Aucun `sleep` — on attend le **fait**, jamais une durée
+- [x] `test_recruitment_phase.py` vert **sans modification**
+- [x] L'entrée dans `tests/impact-map.toml` (axe 8)
+- [x] `make e2e` — 363 passés, 7 ignorés
+
+## Ce qui a été fait
+
+### Le préalable, levé par le jeu réel
+
+Une équipe ne peut pas naître incomplète : `MIN_PLAYERS_FOR_SUBMISSION = 11`
+l'interdit à la soumission. Le fixture joue donc **deux matchs** — le premier
+blesse un titulaire, le second n'a plus que dix alignables et appelle un
+journalier. `_record_injury`, éprouvé par
+`test_player_availability_after_injury`, fait la première moitié.
+
+C'est aussi ce qui explique que la suite n'ait jamais exercé un journalier
+avant cette carte, et que quatre cartes aient été livrées sans qu'un seul
+n'existe.
+
+### Deux maillons manquants, que rien d'autre ne voyait
+
+**C'était la raison d'être de cette carte, et elle l'a remplie deux fois.**
+
+| Carte | Ce qui manquait | Effet |
+|---|---|---|
+| `455` | `init_temp_players_use_case` n'émettait pas sur le bus interne | bras de publisher mort — **aucun journalier jamais créé** |
+| `457` | `JourneymanRecruited` n'avait pas de bras dans `to_app_event` | **le coach payait son journalier et le perdait** à la clôture |
+
+Le second est le plus instructif. Le joker `_ => None` du publisher l'avalait
+en silence — exactement ce contre quoi son propre commentaire met en garde. Et
+**deux commentaires affirmaient que ce maillon existait**, dont un qui nommait
+un listener inexistant : la chaîne avait été décrite comme complète sans avoir
+jamais été parcourue.
+
+### Une case vide dans le découpage de l'épic
+
+L'épic dit *« le recrutement ne fait que basculer son `membership` en
+`Active` »*. La `456` fait disparaître, la `457` tient le domaine de `teams`, la
+`458` l'écran — **aucune ne portait la bascule**. Elle est tombée entre trois
+cartes, et seul le parcours complet pouvait le montrer.
+
+Le correctif est rattaché à la `457`, qui possède `JourneymanRecruited` et
+aurait dû le faire sortir de son BC.
+
+### Ce que les tests ne couvrent pas, et pourquoi
+
+**Le plafond à seize dont des journaliers** n'a pas de scénario de navigateur :
+il demanderait de faire recruter cinq joueurs à la main par Playwright pour
+éprouver une règle que
+`seize_dont_trois_journaliers_autorisent_le_recrutement` tient déjà
+unitairement. Le montage aurait coûté plus que ce qu'il prouve.
+
+**Le doublon au panier** non plus, pour la même raison : `add_journeyman` rend
+`JourneymanAlreadyInBasket`, et le panneau retire le journalier de la liste dès
+qu'il y entre — il n'y a pas de second bouton à cliquer.
+
+**La décomposition du prix** est vérifiée sur le cas nu — « aucune » — parce que
+le parcours ne produit pas de journalier amélioré : le rapport ne lui donne
+aucune action. Le cas décomposé est tenu par
+`le_prix_se_decompose_au_dela_du_tarif`, sur le view model.
+
+## Ce que l'épic laisse ouvert
+
+**L'axe 12 de `check-arch` ne voit ni l'un ni l'autre de ces deux trous.** Il
+vérifie qu'une émission passe par `emettre()` ou `publier()` — jamais qu'un
+événement destiné à sortir du BC est bien émis, ni qu'un bras de publisher est
+atteignable.
+
+C'est le même piège que l'épic E11 a documenté trois fois : du code qui a l'air
+branché et ne l'est pas. Il mérite sa propre carte.
