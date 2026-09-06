@@ -295,6 +295,98 @@
           ]
         }
       ]
+    },
+    {
+      "uid": "HALFLING",
+      "name": "Semi-hommes",
+      "rerollCost": 60,
+      "tier": "Tier 3",
+      "specialRules": [],
+      "allowedStaff": [
+        "APOTHECARY",
+        "CHEERLEADERS",
+        "COACH_ASSISTANTS"
+      ],
+      "leagues": [
+        "LIGUE_DES_CIMES"
+      ],
+      "availablePlayers": [
+        {
+          "uid": "HALFLING__TOURTE_PIED",
+          "positionName": "Tourte-Pied",
+          "cost": 30,
+          "MA": 5,
+          "ST": 2,
+          "AG": 3,
+          "PA": 4,
+          "AV": 7,
+          "skills": [
+            "PAS_DE_COTE"
+          ],
+          "primaryAccess": [
+            "AGILITY"
+          ],
+          "secondaryAccess": [
+            "GENERAL"
+          ],
+          "max_quantity": 16,
+          "is_journeyman": true,
+          "keywords": [
+            "LINEMAN",
+            "HALFLING"
+          ]
+        },
+        {
+          "uid": "HALFLING__ATTRAPEUR",
+          "positionName": "Attrapeur des Prés",
+          "cost": 55,
+          "MA": 6,
+          "ST": 2,
+          "AG": 2,
+          "PA": 4,
+          "AV": 7,
+          "skills": [
+            "RECEPTION_SURE"
+          ],
+          "primaryAccess": [
+            "AGILITY"
+          ],
+          "secondaryAccess": [
+            "GENERAL"
+          ],
+          "max_quantity": 2,
+          "is_journeyman": false,
+          "keywords": [
+            "CATCHER",
+            "HALFLING"
+          ]
+        },
+        {
+          "uid": "HALFLING__BATTEUR",
+          "positionName": "Batteur de Pâte",
+          "cost": 70,
+          "MA": 5,
+          "ST": 3,
+          "AG": 3,
+          "PA": 5,
+          "AV": 8,
+          "skills": [
+            "APPUI_FERME"
+          ],
+          "primaryAccess": [
+            "GENERAL"
+          ],
+          "secondaryAccess": [
+            "STRENGTH"
+          ],
+          "max_quantity": 2,
+          "is_journeyman": false,
+          "keywords": [
+            "BLITZER",
+            "HALFLING"
+          ]
+        }
+      ]
     }
   ]
 }

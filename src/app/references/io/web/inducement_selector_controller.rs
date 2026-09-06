@@ -1,3 +1,4 @@
+use crate::app::references::domain::inducement_pricing::cout_pour_roster;
 use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::routes::AppRoutes;
 use crate::state::AppState;
@@ -142,7 +143,10 @@ fn build_inducement_items(
             uid: ind.uid.clone(),
             name: ind.name.clone(),
             description: ind.description.clone(),
-            unit_cost: ind.cost,
+            // Le **même calcul** que celui du prix débité, et pour cette
+            // raison-là : afficher `ind.cost` ici ferait lire 100 au coach —
+            // ou 300 — et lui prélèverait l'autre (carte 507).
+            unit_cost: cout_pour_roster(ind, &params.roster_id),
             max_qty: ind.max_quantity as u8,
             is_common: is_common_category(&ind.category),
             initial_qty: *initial_qtys.get(&ind.uid).unwrap_or(&0),

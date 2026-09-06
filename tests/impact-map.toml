@@ -205,6 +205,13 @@
                               "competitions", "ranking", "team_creation", "spaces",
                               "spp_calculator"]
 
+# Le prix du cuistot halfling : la règle vit dans `references`, mais elle est
+# appliquée par l'adapter de `match_report` (le prix débité) autant que par le
+# sélecteur (le prix affiché). Toucher l'un des deux sans l'autre est
+# précisément le défaut que la carte 507 corrigeait.
+"test_cuistot_halfling" = ["references", "match_report", "teams", "competitions",
+                           "team_creation", "spaces"]
+
 # Barème SPP : le seul test qui vérifie que la règle spéciale du roster change
 # les SPP crédités. `references` y est vérifié — c'est lui qui résout le barème —
 # et `players` aussi, puisque c'est là que les SPP atterrissent.

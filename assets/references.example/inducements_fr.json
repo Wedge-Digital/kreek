@@ -51,6 +51,16 @@
       "category": "INFAMOUS_STAFF",
       "restrictedTo": ["DEMO_GRANIT"],
       "description": "Remet sur pied un joueur sonné, avec des résultats variables."
+    },
+    {
+      "uid": "HALFLING_MASTER_CHEF",
+      "name": "Maitre cuisinier halfling",
+      "cost": 300,
+      "reducedCost": 100,
+      "maxQuantity": 1,
+      "category": "SPECIALIZED",
+      "restrictedTo": [],
+      "description": "Au debut de chaque mi-temps, lancez 3D6. Pour chaque 4+, gagnez +1 relance d'equipe et l'equipe adverse perd 1 relance d'equipe (minimum 0)."
     }
   ]
 }
