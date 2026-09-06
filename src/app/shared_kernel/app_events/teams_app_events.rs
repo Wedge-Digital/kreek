@@ -48,6 +48,17 @@ pub enum TeamsAppEvent {
         space_id: SpaceId,
         player_id: PlayerId,
     },
+    /// La phase de recrutement est close.
+    ///
+    /// **Un fait de phase, pas une décision sur un joueur** — et c'est pourquoi
+    /// il ne porte aucun identifiant : chaque BC en tire la conséquence qui le
+    /// regarde. `players` y perd les journaliers que le coach n'a pas retenus ;
+    /// un autre BC qui voudra réagir à la fin d'un recrutement l'aura déjà.
+    RecruitmentPhaseValidated {
+        event_id: EventId,
+        team_id: TeamId,
+        space_id: SpaceId,
+    },
     /// Le coach a renvoyé ce joueur. `players` le sort de son effectif.
     ///
     /// Rien d'autre à transporter : ni valeur ni motif. `players` possède le
@@ -65,12 +76,14 @@ impl TeamsAppEvent {
     pub const PLAYER_DISMISSED: &'static str = "TeamsPlayerDismissed";
     pub const JOURNEYMAN_FIELDED: &'static str = "TeamsJourneymanFielded";
     pub const JOURNEYMAN_WITHDRAWN: &'static str = "TeamsJourneymanWithdrawn";
+    pub const RECRUITMENT_PHASE_VALIDATED: &'static str = "TeamsRecruitmentPhaseValidated";
 
     pub fn event_type(&self) -> &'static str {
         match self {
             Self::PlayerRecruited { .. } => Self::PLAYER_RECRUITED,
             Self::JourneymanFielded { .. } => Self::JOURNEYMAN_FIELDED,
             Self::JourneymanWithdrawn { .. } => Self::JOURNEYMAN_WITHDRAWN,
+            Self::RecruitmentPhaseValidated { .. } => Self::RECRUITMENT_PHASE_VALIDATED,
             Self::PlayerDismissed { .. } => Self::PLAYER_DISMISSED,
         }
     }
@@ -82,7 +95,8 @@ impl TeamsAppEvent {
             Self::PlayerRecruited { team_id, .. }
             | Self::PlayerDismissed { team_id, .. }
             | Self::JourneymanFielded { team_id, .. }
-            | Self::JourneymanWithdrawn { team_id, .. } => team_id.to_string(),
+            | Self::JourneymanWithdrawn { team_id, .. }
+            | Self::RecruitmentPhaseValidated { team_id, .. } => team_id.to_string(),
         };
         EventEnvelope {
             event_id: EventId::new().to_string(),

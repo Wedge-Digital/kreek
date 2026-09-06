@@ -227,6 +227,7 @@ mod tests {
             match_report_id: MR.to_string(),
             home_team_id: TeamId::new().to_string(),
             away_team_id: TeamId::new().to_string(),
+            journeymen: vec![],
             pairing_id,
         }
     }

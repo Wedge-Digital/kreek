@@ -639,6 +639,7 @@ mod tests {
 
         let cancelled = MatchReportDomainEvent::MatchReportCancelled {
             reason: "Pairing supprimé".to_string(),
+            journeymen: vec![],
             home_team_id: Some(TeamId::new()),
             away_team_id: Some(TeamId::new()),
             pairing_id: None,

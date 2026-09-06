@@ -1,7 +1,7 @@
 use crate::app::players::io::app_events::app_event_publisher::players_app_event_publisher;
 use crate::app::players::io::app_events::{
-    player_dismissed_listener, player_match_impact_listener, player_recruited_listener,
-    team_created_listener,
+    journeyman_departure_listener, player_dismissed_listener, player_match_impact_listener,
+    player_recruited_listener, team_created_listener,
 };
 use crate::app::players::io::repository::customisation_basket_repository::PgCustomisationBasketRepository;
 use crate::app::players::io::repository::player_repository::PgPlayerRepository;
@@ -67,6 +67,7 @@ pub fn init_listeners(
         pool.clone(),
         skill_catalog.clone(),
     );
+    journeyman_departure_listener::init(app_event_bus, pool.clone(), player_repo.clone());
     player_recruited_listener::init(
         app_event_bus,
         pool,

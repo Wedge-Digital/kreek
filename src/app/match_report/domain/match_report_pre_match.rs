@@ -50,8 +50,18 @@ impl MatchReportPreMatch {
     /// équipes sont verrouillées en saisie, le listener `teams` les libère à
     /// partir des ids portés par l'événement.
     pub fn cancel(self, reason: String) -> MatchReportDomainEvent {
+        // Les journaliers des **deux** équipes : le rapport n'aura pas lieu,
+        // aucun d'eux n'a de raison de rester dans un effectif.
+        let journeymen = self
+            .home_temp_players
+            .iter()
+            .chain(self.away_temp_players.iter())
+            .filter(|p| matches!(p.kind, TempPlayerKind::Journeyman { .. }))
+            .map(|p| p.id.clone())
+            .collect();
         MatchReportDomainEvent::MatchReportCancelled {
             reason,
+            journeymen,
             home_team_id: Some(self.home_team_id),
             away_team_id: Some(self.away_team_id),
             pairing_id: self.pairing_id,

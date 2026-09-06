@@ -104,6 +104,16 @@ async fn to_app_event(
                 player_id: PlayerId::try_new(&player_id.to_string()).ok()?,
             })
         }
+        // **Bras ajouté délibérément** (carte 456), au sens du commentaire
+        // ci-dessous : `players` doit savoir que la phase se clôt, pour y
+        // perdre les journaliers que le coach n'a pas retenus.
+        TeamDomainEvent::RecruitmentPhaseValidated => {
+            Some(TeamsAppEvent::RecruitmentPhaseValidated {
+                event_id: EventId::new(),
+                team_id: TeamId::try_new(team_id).ok()?,
+                space_id: space_id_de(team_id, pool).await?,
+            })
+        }
         // Le seul `match` de la série où le compilateur ne protège de rien : ce
         // joker avale silencieusement tout événement domaine qu'on oublierait de
         // faire sortir du BC. Y ajouter un bras est un geste délibéré, jamais

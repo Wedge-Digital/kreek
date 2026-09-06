@@ -131,6 +131,9 @@ fn player_and_team_id(event: &PlayerDomainEvent) -> (&str, &str) {
         PlayerDomainEvent::JourneymanWithdrawn {
             player_id, team_id, ..
         } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::JourneymanLost {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
     }
 }
 
@@ -431,6 +434,7 @@ pub async fn upsert_player_projection(
         // Le désalignement d'un journalier aboutit au même état : les lectures
         // d'effectif filtrent sur `Dismissed`, et il n'en est plus.
         PlayerDomainEvent::PlayerDismissed { player_id, .. }
+        | PlayerDomainEvent::JourneymanLost { player_id, .. }
         | PlayerDomainEvent::JourneymanWithdrawn { player_id, .. } => {
             sqlx::query(
                 "UPDATE players_proj

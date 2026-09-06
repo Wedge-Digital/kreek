@@ -142,6 +142,258 @@ async fn le_maillot_d_un_renvoye_redevient_attribuable(pool: PgPool) {
     assert_eq!(apres, vec![1, 2], "le 3 est libéré");
 }
 
+/// Carte 456 — les journaliers restants sont perdus à la clôture de la phase.
+///
+/// Éprouvé sur le dépôt plutôt que sur le listener : ce qui compte est que
+/// l'événement de perte sorte bien le joueur des **deux** lectures, celle de
+/// la projection et celle de l'event store.
+#[sqlx::test]
+async fn les_journaliers_restants_sont_perdus_a_la_sortie_de_phase(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool.clone());
+    let team_id = TeamId("t-perte".into());
+    let embauche = PlayerId("embauche-perte".into());
+    let perdu = PlayerId("perdu".into());
+
+    seed_player(&repo, &embauche, &team_id).await;
+    seed_journalier(&repo, &perdu, &team_id, Some(2)).await;
+
+    let perte = PlayerDomainEvent::JourneymanLost {
+        player_id: perdu.clone(),
+        team_id: team_id.clone(),
+    };
+    repo.append(&perdu, &team_id, &perte, 2).await.unwrap();
+
+    let ids: Vec<String> = proj
+        .find_by_team_id(&team_id)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|p| p.player_id)
+        .collect();
+    assert_eq!(ids, vec!["embauche-perte".to_string()]);
+
+    let evt: Vec<String> = repo
+        .find_by_team_id(&team_id)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|p| p.id.0)
+        .collect();
+    assert_eq!(evt, vec!["embauche-perte".to_string()], "des deux côtés");
+}
+
+/// **Le test qui compte.**
+///
+/// Un journalier recruté est passé `Active` par le lot de validation, *avant*
+/// `RecruitmentPhaseValidated`. Quand le ménage s'exécute, il ne le voit plus
+/// comme journalier et ne le touche pas.
+///
+/// Il échoue si quelqu'un déplace un jour le ménage avant le lot — ce qui
+/// compilerait parfaitement, et perdrait un joueur qu'on vient de payer.
+#[sqlx::test]
+async fn un_journalier_recrute_survit_a_la_sortie_de_phase(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool.clone());
+    let team_id = TeamId("t-survit".into());
+    let garde = PlayerId("garde".into());
+    let perdu = PlayerId("non-garde".into());
+
+    seed_journalier(&repo, &garde, &team_id, Some(1)).await;
+    seed_journalier(&repo, &perdu, &team_id, Some(2)).await;
+
+    // Le recrutement bascule son appartenance — ce que fera le listener de la
+    // carte 458 en réaction à `JourneymanRecruited`.
+    devenir_permanent(&pool, &garde).await;
+
+    // Puis le ménage : il ne trouve que ceux qui sont restés journaliers.
+    let restants: Vec<PlayerId> = repo
+        .find_by_team_id(&team_id)
+        .await
+        .unwrap()
+        .into_iter()
+        .filter(|p| !p.membership.is_active())
+        .map(|p| p.id)
+        .collect();
+    assert_eq!(restants, vec![perdu.clone()], "le recruté n'est plus visé");
+
+    let perte = PlayerDomainEvent::JourneymanLost {
+        player_id: perdu.clone(),
+        team_id: team_id.clone(),
+    };
+    repo.append(&perdu, &team_id, &perte, 2).await.unwrap();
+
+    let ids: Vec<String> = proj
+        .find_by_team_id(&team_id)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|p| p.player_id)
+        .collect();
+    assert_eq!(ids, vec!["garde".to_string()], "le payé est toujours là");
+}
+
+/// Perdre n'est pas renvoyer, et l'event store le dit.
+///
+/// Les deux posent le même état d'appartenance — c'est voulu, les lectures
+/// filtrent dessus. Ce qui doit différer est le **fait**, sans quoi ces joueurs
+/// figureraient dans l'historique des renvois pour une décision jamais prise.
+#[sqlx::test]
+async fn un_journalier_perdu_n_est_pas_un_renvoye(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let team_id = TeamId("t-pas-renvoi".into());
+    let perdu = PlayerId("perdu-histoire".into());
+
+    seed_journalier(&repo, &perdu, &team_id, None).await;
+    let perte = PlayerDomainEvent::JourneymanLost {
+        player_id: perdu.clone(),
+        team_id: team_id.clone(),
+    };
+    repo.append(&perdu, &team_id, &perte, 2).await.unwrap();
+
+    let types: Vec<String> = repo
+        .find_events_by_id(&perdu)
+        .await
+        .unwrap()
+        .iter()
+        .map(|e| e.type_name().to_string())
+        .collect();
+
+    assert!(types.contains(&"JourneymanLost".to_string()));
+    assert!(
+        !types.contains(&"PlayerDismissed".to_string()),
+        "aucune décision de renvoi n'a été prise"
+    );
+}
+
+/// L'annulation d'un rapport retire les journaliers qu'elle nomme.
+#[sqlx::test]
+async fn l_annulation_retire_les_journaliers_nommes(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool.clone());
+    let team_id = TeamId("t-annulation".into());
+    let journalier = PlayerId("annule".into());
+    let embauche = PlayerId("reste-annule".into());
+
+    seed_player(&repo, &embauche, &team_id).await;
+    seed_journalier(&repo, &journalier, &team_id, Some(2)).await;
+
+    let retrait = PlayerDomainEvent::JourneymanWithdrawn {
+        player_id: journalier.clone(),
+        team_id: team_id.clone(),
+    };
+    repo.append(&journalier, &team_id, &retrait, 2)
+        .await
+        .unwrap();
+
+    let ids: Vec<String> = proj
+        .find_by_team_id(&team_id)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|p| p.player_id)
+        .collect();
+    assert_eq!(ids, vec!["reste-annule".to_string()]);
+}
+
+/// Pourquoi l'événement d'annulation **nomme** ses journaliers.
+///
+/// Retrouver « tous les journaliers de l'équipe » retirerait aussi ceux d'un
+/// rapport antérieur non encore traité — cas rare, mais destructeur. Ce test
+/// pose deux journaliers et n'en nomme qu'un.
+#[sqlx::test]
+async fn l_annulation_ne_touche_pas_ceux_d_un_autre_rapport(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool.clone());
+    let team_id = TeamId("t-deux-rapports".into());
+    let du_rapport_annule = PlayerId("annule-lui".into());
+    let d_un_autre = PlayerId("autre-rapport".into());
+
+    seed_journalier(&repo, &du_rapport_annule, &team_id, Some(1)).await;
+    seed_journalier(&repo, &d_un_autre, &team_id, Some(2)).await;
+
+    // Seul le premier est nommé par l'annulation.
+    let retrait = PlayerDomainEvent::JourneymanWithdrawn {
+        player_id: du_rapport_annule.clone(),
+        team_id: team_id.clone(),
+    };
+    repo.append(&du_rapport_annule, &team_id, &retrait, 2)
+        .await
+        .unwrap();
+
+    let ids: Vec<String> = proj
+        .find_by_team_id(&team_id)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|p| p.player_id)
+        .collect();
+    assert_eq!(
+        ids,
+        vec!["autre-rapport".to_string()],
+        "le journalier d'un autre rapport reste"
+    );
+}
+
+/// La dépublication ne change pas l'appartenance — **c'est une non-action**.
+///
+/// Ce qui se défait, ce sont les SPP et les blessures, que
+/// `MatchImpactReverted` gère déjà et qui s'appliquent au journalier comme aux
+/// autres, puisqu'il est un joueur ordinaire. Un journalier non encore recruté
+/// reste recrutable, avec sa valeur recalculée : la correction a simplement
+/// changé ce qu'il vaut.
+#[sqlx::test]
+async fn la_depublication_ne_change_pas_le_membership(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let team_id = TeamId("t-depublication".into());
+    let journalier = PlayerId("journalier-deputs".into());
+
+    seed_journalier(&repo, &journalier, &team_id, None).await;
+    let touchdown = PlayerDomainEvent::TouchdownScored {
+        player_id: journalier.clone(),
+        team_id: team_id.clone(),
+        context: sample_context(),
+        spp_earned: SppEarned::try_new(3).unwrap(),
+    };
+    repo.append(&journalier, &team_id, &touchdown, 2)
+        .await
+        .unwrap();
+
+    let annulation = PlayerDomainEvent::MatchImpactReverted {
+        player_id: journalier.clone(),
+        team_id: team_id.clone(),
+        match_report_id: sample_context().match_report_id,
+    };
+    repo.append(&journalier, &team_id, &annulation, 3)
+        .await
+        .unwrap();
+
+    let apres = repo.find_by_id(&journalier).await.unwrap().unwrap();
+    assert_eq!(
+        apres.membership,
+        crate::app::players::domain::player::RosterMembership::Journeyman,
+        "il reste recrutable"
+    );
+}
+
+/// Bascule un journalier en permanent, comme le fera le recrutement.
+async fn devenir_permanent(pool: &PgPool, player_id: &PlayerId) {
+    sqlx::query("UPDATE players_proj SET membership = 'Active' WHERE player_id = $1")
+        .bind(&player_id.0)
+        .execute(pool)
+        .await
+        .unwrap();
+    sqlx::query(
+        "UPDATE players_events SET payload = jsonb_set(
+             payload, '{PlayerCreated,starting_membership}', '\"Active\"'::jsonb)
+         WHERE player_id = $1 AND event_type = 'PlayerCreated'",
+    )
+    .bind(&player_id.0)
+    .execute(pool)
+    .await
+    .unwrap();
+}
+
 /// Sème un journalier — par l'événement, non par un `UPDATE`.
 ///
 /// C'est ce que fait la chaîne réelle depuis la carte 455 : `PlayerCreated`

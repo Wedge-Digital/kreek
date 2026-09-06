@@ -71,9 +71,13 @@ impl MatchReportDraft {
         Ok((updated, event))
     }
 
+    /// **Aucun journalier à retirer** : ils naissent à l'initialisation des
+    /// joueurs temporaires, qui n'a lieu qu'en phase d'avant-match. Un
+    /// brouillon n'en a jamais fait exister.
     pub fn cancel(self, reason: String) -> MatchReportDomainEvent {
         MatchReportDomainEvent::MatchReportCancelled {
             reason,
+            journeymen: vec![],
             home_team_id: Some(self.home_team_id),
             away_team_id: Some(self.away_team_id),
             pairing_id: self.pairing_id,

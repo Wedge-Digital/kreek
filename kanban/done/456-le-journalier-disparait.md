@@ -126,9 +126,50 @@ carte.
 
 ## Checklist
 
-- [ ] `TeamsAppEvent::RecruitmentPhaseValidated` et son bras de publisher
-- [ ] Le listener de perte, `PlayerJourneymanLost`
-- [ ] `MatchReportCancelled` porte les `player_id`, et `players` l'écoute
-- [ ] L'annulation réutilise `JourneymanWithdrawn` — **pas de suppression**
-- [ ] Les six tests
-- [ ] `make lint && make test && make check-arch`
+- [x] `TeamsAppEvent::RecruitmentPhaseValidated` et son bras de publisher
+- [x] Le listener de perte, `JourneymanLost`
+- [x] `MatchReportCancelled` porte les `player_id`, et `players` l'écoute
+- [x] L'annulation réutilise `JourneymanWithdrawn` — **pas de suppression**
+- [x] Les six tests
+- [x] `make lint`, `make check-arch`, `make test` — 1697 tests
+
+## Ce qui a été fait
+
+**Le test qui compte a été vu échouer.** Le recrutement retiré de la séquence —
+c'est-à-dire le ménage joué avant le lot de validation —,
+`un_journalier_recrute_survit_a_la_sortie_de_phase` tombe. C'était sa raison
+d'être.
+
+### Trois chemins d'annulation, pas un
+
+`cancel` existe sur **trois** états du rapport, et la carte n'en voyait qu'un.
+Le brouillon n'a jamais fait naître de journalier — l'initialisation des
+joueurs temporaires n'a lieu qu'en avant-match —, donc sa liste est vide et
+c'est écrit sur place.
+
+Le troisième a demandé une correction de fond. `MatchReportReadyToPublish::cancel`
+portait ce commentaire : *« rien n'est encore sorti du BC (classement, joueurs,
+trésorerie) »*. **C'était vrai avant la carte 455 et ça ne l'est plus** : les
+journaliers naissent joueurs à l'ouverture du rapport, sans attendre la
+publication. Le commentaire a été corrigé et l'événement nomme désormais ses
+journaliers.
+
+### Le bras du publisher est un geste délibéré
+
+Le `to_app_event` de `teams` finit par `_ => None`, et son commentaire prévient :
+*« ce joker avale silencieusement tout événement domaine qu'on oublierait de
+faire sortir du BC. Y ajouter un bras est un geste délibéré, jamais une
+correction d'erreur de compilation. »* Celui-ci en est un, et il est le seul de
+la série que le compilateur n'a pas réclamé.
+
+### Ce que les e2e ont appris — et qui bloque la 459
+
+**La suite n'exerce aucun journalier.** Zéro ligne `Journeyman` en base après
+une exécution complète : `collect_journeymen` n'en crée que si l'équipe a moins
+de onze joueurs disponibles, et toutes les équipes de `build_full_competition`
+ont un effectif complet.
+
+Trois cartes de l'épic sont livrées sans qu'un journalier ait jamais traversé
+la chaîne dans un navigateur. **La carte 459 ne pourra pas écrire ses sept
+scénarios tant que le jeu de données e2e n'aura pas une équipe à effectif
+incomplet** — condition qu'elle ne mentionne pas.

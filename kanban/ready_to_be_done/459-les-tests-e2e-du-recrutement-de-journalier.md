@@ -23,6 +23,20 @@ Fichier : `tests/e2e/test_journeyman_recruitment.py`.
 | `test_le_meme_journalier_ne_s_ajoute_pas_deux_fois` | la règle propre |
 | `test_seize_dont_journaliers_autorise_le_recrutement` | le cas qui donne son sens au plafond |
 
+## Le préalable : un effectif incomplet
+
+**La suite e2e n'exerce aujourd'hui aucun journalier**, et ne le peut pas :
+`collect_journeymen` n'en crée que si l'équipe a moins de onze joueurs
+disponibles, or toutes les équipes de `build_full_competition` ont un effectif
+complet. Vérifié après une exécution complète — zéro ligne `Journeyman` en base.
+
+Aucun des sept scénarios ci-dessous n'existe sans ce préalable. Il faut donc
+d'abord une équipe à effectif incomplet dans le jeu de données : soit une
+fixture qui renvoie des joueurs avant le match, soit une équipe construite avec
+moins de onze.
+
+C'est le premier travail de cette carte, avant tout scénario.
+
 ## La dette héritée de la carte 455
 
 Deux tests que la 455 n'a pas pu écrire lui reviennent :

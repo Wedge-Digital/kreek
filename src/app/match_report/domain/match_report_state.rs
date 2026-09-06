@@ -1089,6 +1089,7 @@ mod tests {
     fn cancelled_event(home_id: TeamId, away_id: TeamId) -> MatchReportDomainEvent {
         MatchReportDomainEvent::MatchReportCancelled {
             reason: "Pairing supprimé".to_string(),
+            journeymen: vec![],
             home_team_id: Some(home_id),
             away_team_id: Some(away_id),
             pairing_id: None,

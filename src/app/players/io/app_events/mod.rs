@@ -1,4 +1,5 @@
 pub mod app_event_publisher;
+pub mod journeyman_departure_listener;
 pub mod player_creation;
 pub mod player_dismissed_listener;
 pub mod player_match_impact_listener;

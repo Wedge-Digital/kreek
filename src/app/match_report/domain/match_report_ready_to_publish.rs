@@ -3,7 +3,7 @@ use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatc
 use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::value_objects::{
     D3Roll, DedicatedFans, FanFactorMod, InducementPurchase, InducementSpending, MatchAction,
-    MatchGain, MatchReportOrigin, TempPlayer,
+    MatchGain, MatchReportOrigin, TempPlayer, TempPlayerKind,
 };
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
@@ -57,12 +57,27 @@ pub struct MatchReportReadyToPublish {
 }
 
 impl MatchReportReadyToPublish {
-    /// Annule un rapport intégralement saisi mais non publié : rien n'est
-    /// encore sorti du BC (classement, joueurs, trésorerie), seul le verrou de
-    /// saisie des deux équipes est à défaire.
+    /// Annule un rapport intégralement saisi mais non publié : ni classement ni
+    /// trésorerie n'en sont sortis, et le verrou de saisie des deux équipes est
+    /// à défaire.
+    ///
+    /// **Les journaliers, eux, sont bien sortis du BC** — depuis la carte 455,
+    /// ils naissent joueurs à l'ouverture du rapport, sans attendre la
+    /// publication. Le commentaire disait ici que « rien n'est encore sorti » ;
+    /// ce n'est plus vrai, et l'événement doit donc les nommer pour que
+    /// `players` les retire d'un effectif où ils étaient entrés pour un match
+    /// qui n'aura pas lieu.
     pub fn cancel(self, reason: String) -> MatchReportDomainEvent {
+        let journeymen = self
+            .home_temp_players
+            .iter()
+            .chain(self.away_temp_players.iter())
+            .filter(|p| matches!(p.kind, TempPlayerKind::Journeyman { .. }))
+            .map(|p| p.id.clone())
+            .collect();
         MatchReportDomainEvent::MatchReportCancelled {
             reason,
+            journeymen,
             home_team_id: Some(self.home_team_id),
             away_team_id: Some(self.away_team_id),
             pairing_id: self.pairing_id,

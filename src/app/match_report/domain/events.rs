@@ -53,6 +53,21 @@ pub enum MatchReportDomainEvent {
         /// `None` sur les événements persistés avant l'ajout de ces champs :
         /// seuls des brouillons étaient annulables à l'époque, sans verrou à
         /// défaire.
+        /// Les journaliers alignés pour ce rapport, qui n'auront finalement
+        /// pas joué. `players` les sort de l'effectif : ils y étaient entrés
+        /// pour un match qui n'aura pas lieu.
+        ///
+        /// **L'événement doit les nommer**, pour la raison qui vaut déjà pour
+        /// `TempPlayersReset` : l'état `Cancelled` ne retient qu'un
+        /// identifiant et une raison, donc l'information ne serait plus
+        /// lisible après coup. `cancel` consomme l'agrégat — au moment
+        /// d'émettre, il les a encore en main.
+        ///
+        /// `serde(default)` : événement persisté, et les annulations déjà
+        /// écrites n'ont pas ce champ. Elles n'avaient rien créé dans
+        /// `players`, la liste vide est juste.
+        #[serde(default)]
+        journeymen: Vec<TempPlayerId>,
         #[serde(default)]
         home_team_id: Option<TeamId>,
         #[serde(default)]

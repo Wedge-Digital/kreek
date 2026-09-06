@@ -588,7 +588,8 @@ impl Player {
             // Même état d'appartenance que le renvoi, et pour la même raison :
             // les lectures d'effectif filtrent sur `Dismissed`. Ce qui diffère
             // est le fait raconté, pas son effet.
-            PlayerDomainEvent::JourneymanWithdrawn { .. } => {
+            PlayerDomainEvent::JourneymanLost { .. }
+            | PlayerDomainEvent::JourneymanWithdrawn { .. } => {
                 let mut player = current?;
                 player.membership = RosterMembership::Dismissed;
                 player.version += 1;

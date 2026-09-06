@@ -40,6 +40,11 @@ pub enum MatchReportAppEvent {
         /// calendrier ou s'il supprime un appariement né pour ce seul rapport.
         #[serde(default)]
         pairing_id: Option<String>,
+        /// Les journaliers alignés pour ce match, que `players` doit retirer :
+        /// ils étaient entrés dans un effectif pour un match qui n'aura pas
+        /// lieu. Vide pour un brouillon, qui n'en avait pas fait naître.
+        #[serde(default)]
+        journeymen: Vec<String>,
     },
     /// Des journaliers ont été alignés pour cette équipe.
     ///

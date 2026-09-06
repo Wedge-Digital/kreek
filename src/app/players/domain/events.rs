@@ -183,6 +183,19 @@ pub enum PlayerDomainEvent {
     /// Homonyme de l'événement domaine de `teams` et de l'app event qui les
     /// relie : nommer le même fait pareil des deux côtés n'est pas nommer un
     /// événement d'après son origine externe, que le CLAUDE.md interdit.
+    /// Le journalier a joué, et le coach ne l'a pas retenu : il quitte
+    /// l'effectif à la clôture de la phase de recrutement.
+    ///
+    /// **Ni un renvoi, ni un désalignement.** `PlayerDismissed` est une
+    /// décision de coach sur un joueur embauché ; confondre les deux ferait
+    /// figurer ce joueur dans l'historique des renvois pour une décision qui
+    /// n'a jamais été prise. `JourneymanWithdrawn` est l'autre bout : celui-là
+    /// n'avait pas joué. Les trois posent le même état d'appartenance ; c'est
+    /// l'histoire qui diffère, et l'event store la garde.
+    JourneymanLost {
+        player_id: PlayerId,
+        team_id: TeamId,
+    },
     /// Le journalier a été désaligné avant le match : il quitte l'effectif.
     ///
     /// **Distinct de `PlayerDismissed`**, qui est une décision de coach sur un
@@ -349,6 +362,7 @@ impl PlayerDomainEvent {
             Self::PlayerAvailabilityRestored { .. } => "PlayerAvailabilityRestored",
             Self::MatchConcluded { .. } => "MatchConcluded",
             Self::MatchImpactReverted { .. } => "MatchImpactReverted",
+            Self::JourneymanLost { .. } => "JourneymanLost",
             Self::JourneymanWithdrawn { .. } => "JourneymanWithdrawn",
             Self::PlayerDismissed { .. } => "PlayerDismissed",
             Self::InitialRosterCompleted { .. } => "InitialRosterCompleted",
