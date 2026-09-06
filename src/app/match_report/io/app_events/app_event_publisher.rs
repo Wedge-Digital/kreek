@@ -354,9 +354,13 @@ async fn publish_player_impact_events(
         opponent_team_name: home_team_name,
     };
 
-    for event in build_player_impact_events(&p.home_actions, &home_ctx_base)
+    for event in build_player_impact_events(&p.home_actions, &home_ctx_base, &p.home_temp_players)
         .into_iter()
-        .chain(build_player_impact_events(&p.away_actions, &away_ctx_base))
+        .chain(build_player_impact_events(
+            &p.away_actions,
+            &away_ctx_base,
+            &p.away_temp_players,
+        ))
     {
         publier(app_event_bus, event.to_enveloppe());
     }
@@ -417,20 +421,54 @@ impl ContextBase {
     }
 }
 
+/// Les actions qui atteignent `players`, et celles qui restent au rapport.
+///
+/// **La règle a changé avec l'épic E15.** Elle excluait les trois sortes de
+/// remplaçants — vedettes, mercenaires, journaliers — parce qu'aucun n'existait
+/// dans `players`. Depuis la carte 455, **le journalier existe** : il naît à
+/// l'ouverture du rapport, et son `TempPlayerId` **est** son `player_id`.
+///
+/// Le LRB l'exige (p. 3851) : un journalier gagne des SPP, et c'est ce qui rend
+/// son embauche intéressante. Le laisser hors des impacts lui faisait marquer
+/// deux touchdowns pour rien.
+///
+/// **Vedettes et mercenaires restent dehors** — eux n'existent nulle part
+/// ailleurs que dans ce rapport, et n'y existeront jamais.
 fn build_player_impact_events(
     actions: &[MatchAction],
     ctx_base: &ContextBase,
+    temp_players: &[TempPlayer],
 ) -> Vec<PlayerMatchImpactAppEvent> {
     actions
         .iter()
         .filter_map(|a| {
-            let ActionPlayer::Regular(player_id) = &a.player else {
-                return None; // BR1 — stars/mercenaires/journaliers exclus
-            };
-            let context = ctx_base.for_player(&player_id.to_string());
+            let player_id = joueur_reel(&a.player, temp_players)?;
+            let context = ctx_base.for_player(&player_id);
             map_action_to_impact_event(&a.action, context)
         })
         .collect()
+}
+
+/// L'identifiant du joueur que cette action touche **dans `players`**, s'il y en
+/// a un.
+///
+/// Un journalier est résolu par sa nature, pas par son identifiant : c'est
+/// `TempPlayerKind` qui dit lequel des trois remplaçants on regarde. Un
+/// journalier absent de la liste est ignoré — il ne peut venir que d'un rapport
+/// dont la composition a été refaite, et son joueur a été retiré avec elle.
+fn joueur_reel(player: &ActionPlayer, temp_players: &[TempPlayer]) -> Option<String> {
+    match player {
+        ActionPlayer::Regular(player_id) => Some(player_id.to_string()),
+        ActionPlayer::Temp(temp_id) => {
+            temp_players
+                .iter()
+                .find(|t| &t.id == temp_id)
+                .and_then(|t| match t.kind {
+                    TempPlayerKind::Journeyman { .. } => Some(t.id.0.clone()),
+                    TempPlayerKind::StarPlayer { .. } | TempPlayerKind::Mercenary { .. } => None,
+                })
+        }
+    }
 }
 
 fn map_action_to_impact_event(
@@ -784,6 +822,31 @@ mod player_impact_tests {
         }
     }
 
+    /// Les deux remplaçants que `temp_action` peut désigner — même identifiant,
+    /// natures opposées. C'est `TempPlayerKind` qui décide, pas l'identifiant.
+    fn vedette() -> TempPlayer {
+        TempPlayer {
+            id: TempPlayerId("star1".into()),
+            team_id: crate::app::shared_kernel::bloodbowl::team::TeamId::new(),
+            kind: TempPlayerKind::StarPlayer {
+                ref_uid: "GRIFF".into(),
+                position_uid: "STAR".into(),
+            },
+            display_name: Some("Griff Oberwald".into()),
+        }
+    }
+
+    fn journalier() -> TempPlayer {
+        TempPlayer {
+            id: TempPlayerId("star1".into()),
+            team_id: crate::app::shared_kernel::bloodbowl::team::TeamId::new(),
+            kind: TempPlayerKind::Journeyman {
+                position_uid: "LINEMAN".into(),
+            },
+            display_name: None,
+        }
+    }
+
     fn temp_action(action: MatchActionType) -> MatchAction {
         MatchAction {
             id: ActionId("a2".into()),
@@ -797,8 +860,11 @@ mod player_impact_tests {
 
     #[test]
     fn regular_touchdown_maps_to_player_performed_touchdown() {
-        let events =
-            build_player_impact_events(&[regular_action(MatchActionType::Touchdown)], &ctx_base());
+        let events = build_player_impact_events(
+            &[regular_action(MatchActionType::Touchdown)],
+            &ctx_base(),
+            &[],
+        );
         assert_eq!(events.len(), 1);
         assert!(matches!(
             events[0],
@@ -814,6 +880,7 @@ mod player_impact_tests {
                 regular_action(MatchActionType::Lancer),
             ],
             &ctx_base(),
+            &[],
         );
         assert_eq!(events.len(), 2);
         assert!(events
@@ -823,8 +890,11 @@ mod player_impact_tests {
 
     #[test]
     fn agression_maps_to_foul_without_spp_bearing_variant() {
-        let events =
-            build_player_impact_events(&[regular_action(MatchActionType::Agression)], &ctx_base());
+        let events = build_player_impact_events(
+            &[regular_action(MatchActionType::Agression)],
+            &ctx_base(),
+            &[],
+        );
         assert!(matches!(
             events[0],
             PlayerMatchImpactAppEvent::PlayerPerformedFoul(_)
@@ -849,7 +919,7 @@ mod player_impact_tests {
     #[test]
     fn le_publisher_recopie_l_uid_de_la_competence() {
         let events =
-            build_player_impact_events(&[regular_action(blessure_avec_haine())], &ctx_base());
+            build_player_impact_events(&[regular_action(blessure_avec_haine())], &ctx_base(), &[]);
         match &events[..] {
             [PlayerMatchImpactAppEvent::PlayerInjured {
                 hatred_skill_uid, ..
@@ -858,16 +928,68 @@ mod player_impact_tests {
         }
     }
 
-    /// La Haine d'un journalier reste dans le rapport de match et n'atteint
-    /// jamais `players` — par le filtre `ActionPlayer::Regular` qui existait
-    /// déjà. Ce test est là pour qu'on ne le défasse pas sans s'en apercevoir.
+    /// La vedette, elle, reste dans le rapport : elle n'existe pas dans
+    /// `players` et n'y existera jamais.
+    ///
+    /// **Ce test disait l'inverse jusqu'à la carte 502**, journalier compris —
+    /// « ce test est là pour qu'on ne le défasse pas sans s'en apercevoir ».
+    /// Il était juste tant qu'aucun remplaçant n'existait dans `players` ;
+    /// l'épic E15 a fait du journalier un joueur, et cette assertion est
+    /// devenue le bug : ses touchdowns ne lui rapportaient rien.
+    ///
+    /// Il est **retourné, pas supprimé** : la distinction vedette/journalier
+    /// est ce qui compte désormais, et c'est lui qui la garde.
     #[test]
-    fn la_haine_d_un_journalier_ne_produit_aucun_app_event() {
-        let events = build_player_impact_events(&[temp_action(blessure_avec_haine())], &ctx_base());
+    fn la_haine_d_une_vedette_ne_produit_aucun_app_event() {
+        let events = build_player_impact_events(
+            &[temp_action(blessure_avec_haine())],
+            &ctx_base(),
+            &[vedette()],
+        );
         assert!(
             events.is_empty(),
-            "un joueur temporaire ne doit produire aucun impact : {events:?}"
+            "une vedette ne doit produire aucun impact : {events:?}"
         );
+    }
+
+    /// Le journalier, lui, gagne ses SPP — le LRB l'exige (p. 3851), et c'est
+    /// ce qui rend son embauche intéressante.
+    #[test]
+    fn une_action_de_journalier_produit_un_impact() {
+        let events = build_player_impact_events(
+            &[temp_action(MatchActionType::Touchdown)],
+            &ctx_base(),
+            &[journalier()],
+        );
+        assert_eq!(events.len(), 1, "son touchdown doit l'atteindre");
+        assert!(matches!(
+            events[0],
+            PlayerMatchImpactAppEvent::PlayerPerformedTouchdown(_)
+        ));
+    }
+
+    /// Sa Haine l'atteint aussi : il est un joueur comme un autre.
+    #[test]
+    fn la_haine_d_un_journalier_atteint_players() {
+        let events = build_player_impact_events(
+            &[temp_action(blessure_avec_haine())],
+            &ctx_base(),
+            &[journalier()],
+        );
+        assert_eq!(events.len(), 1);
+    }
+
+    /// Un journalier absent de la liste des remplaçants est ignoré : il ne peut
+    /// venir que d'un rapport dont la composition a été refaite, et son joueur
+    /// a été retiré avec elle.
+    #[test]
+    fn un_remplacant_inconnu_ne_produit_aucun_impact() {
+        let events = build_player_impact_events(
+            &[temp_action(MatchActionType::Touchdown)],
+            &ctx_base(),
+            &[],
+        );
+        assert!(events.is_empty());
     }
 
     /// Une blessure sans Haine se comporte exactement comme avant la carte.
@@ -878,7 +1000,7 @@ mod player_impact_tests {
             hatred: None,
             hatred_skill_uid: None,
         };
-        let events = build_player_impact_events(&[regular_action(action)], &ctx_base());
+        let events = build_player_impact_events(&[regular_action(action)], &ctx_base(), &[]);
         match &events[..] {
             [PlayerMatchImpactAppEvent::PlayerInjured {
                 hatred_skill_uid, ..
@@ -898,6 +1020,7 @@ mod player_impact_tests {
                 hatred_skill_uid: None,
             })],
             &ctx_base(),
+            &[],
         );
         match &events[0] {
             PlayerMatchImpactAppEvent::PlayerInjured { injury_type, .. } => {
@@ -907,10 +1030,19 @@ mod player_impact_tests {
         }
     }
 
+    /// Vedettes et mercenaires restent exclus — ils n'existent nulle part
+    /// ailleurs que dans ce rapport.
+    ///
+    /// **Le journalier ne l'est plus** depuis la carte 502 : il est un joueur,
+    /// et ses actions lui reviennent. C'est `une_action_de_journalier_produit_un_impact`
+    /// qui tient l'autre moitié de la règle.
     #[test]
-    fn temp_player_actions_are_excluded() {
-        let events =
-            build_player_impact_events(&[temp_action(MatchActionType::Touchdown)], &ctx_base());
+    fn les_actions_d_une_vedette_sont_exclues() {
+        let events = build_player_impact_events(
+            &[temp_action(MatchActionType::Touchdown)],
+            &ctx_base(),
+            &[vedette()],
+        );
         assert!(events.is_empty());
     }
 }

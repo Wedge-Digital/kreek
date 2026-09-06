@@ -57,6 +57,21 @@ pub enum PlayerDomainEvent {
         /// pas encore.
         #[serde(default)]
         starting_membership: RosterMembership,
+        /// Le nom que le joueur porte en naissant. `None` pour un joueur
+        /// recruté, que son coach nommera s'il le veut.
+        ///
+        /// **Un journalier naît nommé** — « Journalier #13 » —, sans quoi deux
+        /// journaliers d'un même poste sont indiscernables : le nom retombe
+        /// alors sur celui du poste.
+        ///
+        /// Il entre ici plutôt que par un `PlayerRenamed` qui suivrait, pour
+        /// deux raisons : ce n'est pas une édition du coach mais une propriété
+        /// de naissance, et `rename` refuse un journalier depuis la carte 454.
+        ///
+        /// `serde(default)` pour la même raison que le champ précédent :
+        /// l'événement est persisté, et aucun de ceux déjà écrits ne le porte.
+        #[serde(default)]
+        starting_personal_name: Option<PersonalName>,
     },
     InitialSkillEarned {
         player_id: PlayerId,

@@ -135,6 +135,20 @@ pub struct StatCustomisation {
 ///
 /// Les mêler reviendrait à faire d'un renvoyé un blessé de plus, qui
 /// continuerait d'occuper sa place dans les quotas et le plafond de seize.
+/// Le trait que le règlement donne à tout journalier, et à lui seul.
+///
+/// « Chaque fois que ce joueur souhaite utiliser une Relance d'Équipe, il doit
+/// lancer un D6. Sur 4+, il peut l'utiliser normalement. » Il le **perd à
+/// l'embauche** — voir `PlayerDomainEvent::JourneymanHired`.
+///
+/// **`LONER_4` et non `LONER_3`** : le 3+ est celui des vedettes. Deux traits de
+/// même nom et de seuils différents ; les confondre rendrait le journalier
+/// meilleur qu'il ne doit être.
+///
+/// Il vit dans le domaine et non dans la couche qui crée les joueurs : c'est une
+/// règle du jeu, pas un détail de câblage.
+pub const SOLITAIRE_DU_JOURNALIER: &str = "LONER_4";
+
 /// `Journeyman` est un journalier : il joue le match, porte un maillot, gagne
 /// des SPP et compte dans la valeur d'équipe — mais il n'est pas embauché. À
 /// la phase de recrutement suivante, il devient `Active` ou il disparaît.
@@ -329,6 +343,7 @@ impl Player {
                 starting_spp,
                 starting_value,
                 starting_membership,
+                starting_personal_name,
             } => {
                 if current.is_some() {
                     return current;
@@ -340,7 +355,7 @@ impl Player {
                     space_id: space_id.clone(),
                     position_name: position_name.clone(),
                     roster_line_id: roster_line_id.clone(),
-                    personal_name: None,
+                    personal_name: starting_personal_name.clone(),
                     jersey: *jersey,
                     display_order: None,
                     base_skills: base_skills.clone(),
@@ -591,9 +606,18 @@ impl Player {
             // L'embauche est la seule sortie qui **garde** le joueur : son
             // appartenance devient celle d'un permanent, et le ménage de fin
             // de phase ne le voit plus.
+            //
+            // **Elle lui retire aussi Solitaire (4+)**, et c'est le seul endroit
+            // de l'application où une compétence de base disparaît. Le LRB
+            // l'exige : « un Journalier embauché perd le Trait Solitaire (X+) et
+            // conserve les PSP gagnés pendant le match ». Ce n'est donc pas une
+            // incohérence à « simplifier » — c'est la règle.
             PlayerDomainEvent::JourneymanHired { .. } => {
                 let mut player = current?;
                 player.membership = RosterMembership::Active;
+                player
+                    .base_skills
+                    .retain(|s| s.as_ref() != SOLITAIRE_DU_JOURNALIER);
                 player.version += 1;
                 Some(player)
             }
@@ -1257,6 +1281,7 @@ mod appartenance_tests {
             starting_spp: Spp(0),
             starting_value: ValueKpo(100),
             starting_membership: membership,
+            starting_personal_name: None,
         }
     }
 
@@ -1272,6 +1297,7 @@ mod appartenance_tests {
             starting_spp: Spp(0),
             starting_value: ValueKpo(100),
             starting_membership: RosterMembership::Active,
+            starting_personal_name: None,
         };
         let mut joueur = Player::from_events(&[created]).unwrap();
         // Posée directement : aucun événement ne produit encore `Journeyman`,
@@ -1378,6 +1404,7 @@ mod appartenance_tests {
             starting_spp: Spp(0),
             starting_value: ValueKpo(50),
             starting_membership: RosterMembership::Journeyman,
+            starting_personal_name: None,
         };
         let json = serde_json::to_value(&created).unwrap();
         let relu: PlayerDomainEvent = serde_json::from_value(json).unwrap();
@@ -1400,6 +1427,41 @@ mod appartenance_tests {
 
         assert!(!apres.membership.fait_partie_de_l_effectif());
         assert_eq!(apres.value, ValueKpo(100), "il garde sa valeur");
+    }
+
+    /// Carte 502 — le journalier naît avec Solitaire (4+), et le perd embauché.
+    ///
+    /// Les deux moitiés dans le même test : la seconde seule passerait aussi
+    /// bien si le trait n'était jamais posé.
+    #[test]
+    fn l_embauche_retire_solitaire_et_lui_seul() {
+        let bloc = SkillId::try_new("BLOCK".to_string()).unwrap();
+        let solitaire = SkillId::try_new(SOLITAIRE_DU_JOURNALIER.to_string()).unwrap();
+        let mut naissance = creation(RosterMembership::Journeyman);
+        if let PlayerDomainEvent::PlayerCreated { base_skills, .. } = &mut naissance {
+            *base_skills = vec![bloc.clone(), solitaire.clone()];
+        }
+        let journalier = Player::from_events(&[naissance.clone()]).unwrap();
+        assert!(
+            journalier.base_skills.contains(&solitaire),
+            "il naît Solitaire"
+        );
+
+        let embauche = PlayerDomainEvent::JourneymanHired {
+            player_id: journalier.id.clone(),
+            team_id: journalier.team_id.clone(),
+        };
+        let apres = Player::from_events(&[naissance, embauche]).unwrap();
+
+        assert!(
+            !apres.base_skills.contains(&solitaire),
+            "un journalier embauché perd Solitaire (LRB)"
+        );
+        assert!(
+            apres.base_skills.contains(&bloc),
+            "et lui seul — les compétences de son poste restent"
+        );
+        assert!(apres.membership.is_active());
     }
 
     /// Renommer, renuméroter et réordonner sont réservés aux joueurs embauchés.
@@ -1436,6 +1498,7 @@ mod match_impact_tests {
             starting_spp: Spp(0),
             starting_value: ValueKpo(100),
             starting_membership: RosterMembership::Active,
+            starting_personal_name: None,
         };
         Player::from_events(&[created]).unwrap()
     }
@@ -1616,6 +1679,7 @@ mod improvement_tests {
             starting_spp: Spp(spp),
             starting_value: ValueKpo(100),
             starting_membership: RosterMembership::Active,
+            starting_personal_name: None,
         };
         Player::from_events(&[created]).unwrap()
     }
@@ -1922,6 +1986,7 @@ mod revert_match_impact_tests {
             starting_spp: Spp(0),
             starting_value: ValueKpo(100),
             starting_membership: RosterMembership::Active,
+            starting_personal_name: None,
         }
     }
 
@@ -2390,6 +2455,7 @@ mod roster_edition_tests {
             starting_spp: Spp(0),
             starting_value: ValueKpo(100),
             starting_membership: RosterMembership::Active,
+            starting_personal_name: None,
         };
         Player::from_events(&[created]).unwrap()
     }
@@ -2535,6 +2601,7 @@ mod customisation_tests {
             starting_spp: Spp(4),
             starting_value: ValueKpo(100),
             starting_membership: RosterMembership::Active,
+            starting_personal_name: None,
         };
         Player::from_events(&[created]).unwrap()
     }
@@ -2734,6 +2801,7 @@ mod revert_customisation_tests {
             starting_spp: Spp(spp),
             starting_value: ValueKpo(valeur),
             starting_membership: RosterMembership::Active,
+            starting_personal_name: None,
         }
     }
 

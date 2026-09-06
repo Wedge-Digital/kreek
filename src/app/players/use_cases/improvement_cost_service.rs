@@ -121,6 +121,7 @@ mod tests {
             starting_spp: Spp(100),
             starting_value: ValueKpo(100),
             starting_membership: crate::app::players::domain::player::RosterMembership::Active,
+            starting_personal_name: None,
         };
         let cadeau = PlayerDomainEvent::PlayerSkillCustomised {
             player_id: PlayerId("p1".into()),

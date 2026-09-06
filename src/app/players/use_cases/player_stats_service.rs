@@ -156,6 +156,7 @@ mod tests {
             starting_spp: Spp(0),
             starting_value: ValueKpo(90),
             starting_membership: crate::app::players::domain::player::RosterMembership::Active,
+            starting_personal_name: None,
         };
         Player::from_events(&[created]).unwrap()
     }
@@ -332,6 +333,7 @@ mod tests {
             starting_spp: Spp(0),
             starting_value: ValueKpo(100),
             starting_membership: crate::app::players::domain::player::RosterMembership::Active,
+            starting_personal_name: None,
         };
         let mut joueur = Player::from_events(&[created]).unwrap();
         for stat in augmentations {

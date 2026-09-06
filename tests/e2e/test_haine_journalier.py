@@ -1,12 +1,19 @@
-"""La Haine d'un journalier ne rejoint aucun agrégat joueur (carte 404, R9).
+"""La Haine d'un journalier rejoint son agrégat joueur (cartes 404 puis 502).
 
-C'est le seul scénario de la Haine qui vérifie une **absence d'écriture
-ailleurs** : le journalier n'existe que le temps du match, sa Haine reste dans
-le rapport — visible au récapitulatif — et n'atteint jamais `players`.
+**Ce module affirmait l'inverse jusqu'à la carte 502.** Le journalier n'existait
+alors que le temps du match : sa Haine restait dans le rapport et n'atteignait
+jamais `players`, par le filtre `ActionPlayer::Regular` (BR1) qui écartait les
+trois sortes de remplaçants.
 
-Le filtre qui l'assure existait avant la fonctionnalité (`ActionPlayer::Regular`,
-BR1) et un test unitaire le couvre déjà. Celui-ci vérifie la chaîne entière,
-publication comprise.
+L'épic E15 a fait du journalier un joueur à part entière — il naît à l'ouverture
+du rapport, gagne des SPP, peut être embauché. L'exclusion est devenue le bug :
+un journalier marquait deux touchdowns pour rien. Le filtre distingue désormais
+le journalier, qui existe dans `players`, de la vedette et du mercenaire, qui
+n'y existeront jamais.
+
+Le test est donc **retourné, pas supprimé** : il vérifie la même chaîne, dans
+l'autre sens. La distinction qui reste — celle de la vedette — est tenue
+unitairement par `la_haine_d_une_vedette_ne_produit_aucun_app_event`.
 
 **Obtenir un journalier demande deux matchs.** Il n'en apparaît que si l'équipe
 compte moins de onze joueurs disponibles : le premier match inflige une Blessure
@@ -168,7 +175,7 @@ def _version_de_l_effectif(team_id):
     return int(lignes[0])
 
 
-def test_la_haine_d_un_journalier_n_atteint_aucun_joueur(space_id, contexte):
+def test_la_haine_d_un_journalier_atteint_son_joueur(space_id, contexte):
     domicile, exterieur = contexte["team_ids"][0], contexte["team_ids"][1]
     journees = contexte["round_ids"]
 
@@ -217,20 +224,28 @@ def test_la_haine_d_un_journalier_n_atteint_aucun_joueur(space_id, contexte):
     assert resp.status_code == 200, f"action du journalier : {resp.status_code}\n{resp.text[:300]}"
     _publier(space_id, mr2)
 
-    # **Sans ce marqueur, l'assertion ci-dessous est creuse.** « Rien n'a
-    # changé » est vrai aussi quand rien n'est jamais arrivé : le test passerait
-    # sur une chaîne entièrement cassée. On attend donc la preuve que le
-    # pipeline a tourné — la version de l'effectif bouge — avant de vérifier
-    # qu'il n'a rien écrit dans les compétences.
+    # Le marqueur de progression reste utile : il borne l'attente sur un fait
+    # du pipeline plutôt que sur une durée.
     attendre_que(
         lambda: _version_de_l_effectif(domicile) > version_avant_mr2,
         quoi="la projection du second match",
     )
 
-    apres = _competences_de_blessure(domicile)
-    assert apres == avant, (
-        f"la Haine d'un journalier a atteint l'effectif : {avant} → {apres} "
-        "compétences en mode Injury"
+    attendre_que(
+        lambda: _competences_de_blessure(domicile) == avant + 1,
+        quoi="la Haine du journalier écrite dans son agrégat",
+    )
+
+    # Et elle est bien **sur lui**, pas sur un coéquipier : c'est ce qui
+    # distingue « la chaîne a écrit quelque chose » de « elle a écrit au bon
+    # endroit ».
+    sur_lui = query_db(
+        "SELECT count(*) FROM players_proj p, "
+        "jsonb_array_elements(coalesce(p.acquired_skills, '[]'::jsonb)) s "
+        f"WHERE p.player_id = '{journalier}' AND s->>'mode' = 'Injury'"
+    )
+    assert int(sur_lui[0]) == 1, (
+        "la Haine doit atteindre le journalier lui-même, pas l'effectif en vrac"
     )
 
 

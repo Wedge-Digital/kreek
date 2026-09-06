@@ -65,7 +65,28 @@ def _blesser(space_id: str, mr_id: str, victime: str) -> None:
     assert resp.status_code == 200, f"blessure : {resp.status_code}\n{resp.text[:200]}"
 
 
-def _jouer(space_id, ctx, round_id, home_idx, away_idx, *, blesser=None) -> str:
+def _marquer(space_id: str, mr_id: str, player_id: str, *, temporaire: bool) -> None:
+    """Un touchdown, sur un joueur régulier ou sur un remplaçant.
+
+    `player_type` décide de la nature — et c'est lui qui, pour un journalier,
+    fait la différence entre des SPP gagnés et des SPP perdus jusqu'à la
+    carte 502.
+    """
+    resp = requests.post(
+        f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step3/actions",
+        data={
+            "turn": "2",
+            "player_id": player_id,
+            "player_type": "temp" if temporaire else "regular",
+            "action_type": "TOUCHDOWN",
+        },
+    )
+    assert resp.status_code == 200, f"touchdown : {resp.status_code}\n{resp.text[:200]}"
+
+
+def _jouer(
+    space_id, ctx, round_id, home_idx, away_idx, *, blesser=None, td_du_journalier=False
+) -> str:
     home = ctx["teams"][home_idx]
     away = ctx["teams"][away_idx]
     mr_id = create_draft(space_id, ctx, round_id, home, away)
@@ -73,6 +94,14 @@ def _jouer(space_id, ctx, round_id, home_idx, away_idx, *, blesser=None) -> str:
     ensure_inducements(space_id, mr_id)
     if blesser:
         _blesser(space_id, mr_id, blesser)
+    if td_du_journalier:
+        # Les journaliers sont nés à l'enregistrement des coups de pouce : on
+        # les retrouve dans l'effectif, et leur identifiant temporaire **est**
+        # leur identifiant de joueur.
+        journaliers = _attendre(
+            lambda: _journaliers_de(home), "un journalier avant la saisie des actions"
+        )
+        _marquer(space_id, mr_id, journaliers[0], temporaire=True)
     post_step5(space_id, mr_id)
     publish(space_id, mr_id)
     return mr_id
@@ -358,3 +387,100 @@ def test_le_journalier_non_recrute_disparait(browser, space_id):
         f"AND membership <> 'Dismissed'"
     )
     assert journaliers[0] not in restants
+
+
+# ── Le journalier gagne ses SPP (carte 502) ──────────────────────────────────
+
+
+@pytest.fixture(scope="module")
+def journalier_neuf(browser, space_id):
+    """Un journalier que personne n'a encore embauché.
+
+    Les scénarios de recrutement consomment celui de `journalier_ctx` — et
+    l'embauche retire Solitaire, ce qui est précisément ce qu'on veut observer
+    avant qu'elle n'ait lieu.
+    """
+    full = build_full_competition(browser, space_id, num_teams=4)
+    ctx = {
+        "competition_id": full["competition_id"],
+        "season_id": full["season_id"],
+        "round_ids": full["round_ids"],
+        "teams": full["team_ids"],
+    }
+    equipe = ctx["teams"][0]
+    victime = _un_joueur_de(equipe)
+    _jouer(space_id, ctx, ctx["round_ids"][0], 0, 1, blesser=victime)
+    _jouer(space_id, ctx, ctx["round_ids"][1], 0, 1)
+    return _attendre(lambda: _journaliers_de(equipe), "un journalier neuf")[0]
+
+
+def test_le_journalier_marque_et_gagne_des_spp(browser, space_id):
+    """**La dette de la carte 455, enfin payée.**
+
+    Elle promettait que « les actions du rapport pointent le joueur réel ».
+    C'était faux : le publisher écartait tout remplaçant, journaliers compris,
+    par une règle antérieure qu'un test protégeait. Un journalier marquait deux
+    touchdowns pour rien.
+
+    Le test a été légué de la 455 à la 459, puis déclaré couvert par un scénario
+    qui ne vérifiait que l'existence du joueur. Le voici.
+    """
+    full = build_full_competition(browser, space_id, num_teams=4)
+    ctx = {
+        "competition_id": full["competition_id"],
+        "season_id": full["season_id"],
+        "round_ids": full["round_ids"],
+        "teams": full["team_ids"],
+    }
+    equipe = ctx["teams"][0]
+
+    victime = _un_joueur_de(equipe)
+    _jouer(space_id, ctx, ctx["round_ids"][0], 0, 1, blesser=victime)
+    _jouer(space_id, ctx, ctx["round_ids"][1], 0, 1, td_du_journalier=True)
+
+    journaliers = _attendre(lambda: _journaliers_de(equipe), "un journalier créé")
+
+    # **Le barème n'est pas codé en dur** : il appartient à la compétition, et
+    # varie de 2 à 6 SPP par touchdown selon celui qu'elle a choisi. Ce que ce
+    # test prouve, c'est que le touchdown **atteint le joueur** — pas combien il
+    # vaut, que les tests du barème couvrent ailleurs.
+    spp = _attendre(
+        lambda: int(
+            (query_db(f"SELECT spp FROM players_proj WHERE player_id = '{journaliers[0]}'") or ["0"])[0]
+        )
+        or None,
+        "les SPP du journalier après son touchdown",
+    )
+    assert spp > 0, "son touchdown doit lui rapporter des SPP"
+
+    # Et l'événement porte son nom : c'est lui qui a marqué, pas un remplaçant
+    # anonyme dont l'action serait restée dans le rapport.
+    evenements = query_db(
+        f"SELECT event_type FROM players_events WHERE player_id = '{journaliers[0]}' "
+        f"ORDER BY version"
+    )
+    assert "TouchdownScored" in evenements, f"obtenu {evenements}"
+
+
+def test_le_journalier_nait_avec_solitaire_et_un_nom(journalier_neuf):
+    """Deux choses qu'un journalier doit porter dès sa naissance.
+
+    **Solitaire (4+)** parce que le LRB le lui donne — et son absence est ce qui
+    a fait douter du bon fonctionnement. **Un nom** parce que sans lui, deux
+    journaliers d'un même poste sont indiscernables : l'affichage retombe sur
+    le nom du poste.
+
+    **Un journalier à part**, et non celui de `journalier_ctx` : les scénarios
+    de recrutement l'embauchent, et l'embauche lui retire justement Solitaire.
+    Le test aurait lu l'état d'après.
+    """
+    journalier = journalier_neuf
+    ligne = query_db(
+        f"SELECT personal_name, base_skills, jersey FROM players_proj "
+        f"WHERE player_id = '{journalier}'"
+    )[0]
+    nom, competences, maillot = ligne.split("|", 2)
+    maillot = maillot.strip()
+
+    assert "LONER_4" in competences, f"Solitaire (4+) manquant : {competences}"
+    assert nom == f"Journalier #{maillot}", f"nommage attendu, obtenu {nom!r}"

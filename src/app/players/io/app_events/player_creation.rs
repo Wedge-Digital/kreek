@@ -8,8 +8,12 @@
 //! Le code vient de `team_created_listener`, déplacé ici sans réécriture.
 
 use crate::app::players::domain::events::PlayerDomainEvent;
-use crate::app::players::domain::player::{PlayerId, RosterMembership, Spp, TeamId, ValueKpo};
-use crate::app::players::domain::value_objects::{JerseyVo, PositionNameVo, RosterLineId, SkillId};
+use crate::app::players::domain::player::{
+    PlayerId, RosterMembership, Spp, TeamId, ValueKpo, SOLITAIRE_DU_JOURNALIER,
+};
+use crate::app::players::domain::value_objects::{
+    JerseyVo, PersonalName, PositionNameVo, RosterLineId, SkillId,
+};
 use crate::app::players::io::repository::player_repository::{
     insert_player_event, upsert_player_projection,
 };
@@ -107,10 +111,14 @@ pub async fn creer_joueur(
         roster_line_id: RosterLineId::try_new(roster_line_id.to_string())
             .unwrap_or_else(|_| RosterLineId::try_new("unknown".to_string()).unwrap()),
         jersey: jersey.and_then(|j| JerseyVo::try_new(j).ok()),
-        base_skills: resolve_base_skills(roster_line_id, catalog),
+        base_skills: competences_de_naissance(roster_line_id, membership, catalog),
         starting_spp: Spp(0),
         starting_value: ValueKpo(base_position_kpo(roster_line_id, catalog)),
         starting_membership: membership,
+        starting_personal_name: match membership {
+            RosterMembership::Journeyman => PersonalName::try_new(nom_de_journalier(jersey)).ok(),
+            _ => None,
+        },
     };
 
     let mut tx = pool.begin().await.map_err(ListenerError::Database)?;
@@ -118,6 +126,44 @@ pub async fn creer_joueur(
     upsert_player_projection(&mut tx, &created).await?;
     tx.commit().await.map_err(ListenerError::Database)?;
     Ok(())
+}
+
+/// Les compétences qu'un joueur porte en naissant.
+///
+/// Celles de son poste, plus **Solitaire (4+) pour un journalier** : le LRB le
+/// lui donne d'office, et le lui retire quand il est embauché. C'est la seule
+/// compétence de base de l'application qui puisse disparaître — voir
+/// `PlayerDomainEvent::JourneymanHired`.
+fn competences_de_naissance(
+    roster_line_id: &str,
+    membership: RosterMembership,
+    catalog: &dyn ISkillCatalogPort,
+) -> Vec<SkillId> {
+    let mut skills = resolve_base_skills(roster_line_id, catalog);
+    if membership == RosterMembership::Journeyman {
+        if let Ok(solitaire) = SkillId::try_new(SOLITAIRE_DU_JOURNALIER.to_string()) {
+            skills.push(solitaire);
+        }
+    }
+    skills
+}
+
+/// Le nom d'un journalier, qui n'en a pas reçu de son coach.
+///
+/// **Sans lui, deux journaliers d'un même poste sont indiscernables** : le
+/// nom retombe sur celui du poste, et l'écran de recrutement affiche deux
+/// « Trois-quart » qu'on ne peut pas distinguer.
+///
+/// Il **survit à l'embauche**, et c'est voulu : le coach reconnaît celui qu'il a
+/// gardé, et peut le renommer comme n'importe quel joueur. Le remettre à vide
+/// lui retirerait son seul repère.
+pub fn nom_de_journalier(jersey: Option<u16>) -> String {
+    match jersey {
+        Some(n) => format!("Journalier #{n}"),
+        // Un journalier sans maillot ne devrait pas exister — les seize numéros
+        // ne peuvent pas tous être pris, puisqu'il vient combler un trou.
+        None => "Journalier".to_string(),
+    }
 }
 
 // ── Maillots ─────────────────────────────────────────────────────────────────
@@ -191,5 +237,26 @@ mod tests {
     #[test]
     fn un_numero_hors_bornes_ne_perturbe_pas_l_attribution() {
         assert_eq!(premier_libre(&[1, 2, 99]), Some(3));
+    }
+}
+
+#[cfg(test)]
+mod tests_journalier {
+    use super::*;
+
+    /// Sans nom, deux journaliers d'un même poste sont indiscernables : le nom
+    /// retombe sur celui du poste, et l'écran affiche deux « Trois-quart ».
+    #[test]
+    fn un_journalier_est_nomme_avec_son_maillot() {
+        assert_eq!(nom_de_journalier(Some(13)), "Journalier #13");
+        assert_eq!(nom_de_journalier(Some(1)), "Journalier #1");
+    }
+
+    /// Un journalier sans maillot ne devrait pas exister — les seize numéros ne
+    /// peuvent pas tous être pris, puisqu'il vient combler un trou. Le repli
+    /// existe pour ne pas afficher « Journalier # » tout court.
+    #[test]
+    fn sans_maillot_il_garde_un_nom_lisible() {
+        assert_eq!(nom_de_journalier(None), "Journalier");
     }
 }

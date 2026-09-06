@@ -37,6 +37,7 @@ async fn creer_joueur(pool: &sqlx::PgPool, space_id: &SpaceId, team_id: &str) ->
         starting_spp: Spp(0),
         starting_value: ValueKpo(50),
         starting_membership: crate::app::players::domain::player::RosterMembership::Active,
+        starting_personal_name: None,
     };
     let repo = PgPlayerRepository::new(pool.clone());
     repo.append(&player_id, &TeamId(team_id.to_string()), &event, 1)

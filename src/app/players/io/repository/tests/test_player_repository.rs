@@ -36,6 +36,7 @@ async fn seed_player(repo: &PgPlayerRepository, player_id: &PlayerId, team_id: &
         starting_spp: Spp(0),
         starting_value: ValueKpo(100),
         starting_membership: crate::app::players::domain::player::RosterMembership::Active,
+        starting_personal_name: None,
     };
     repo.append(player_id, team_id, &created, 1).await.unwrap();
     Player::from_events(&[created]).unwrap()
@@ -58,6 +59,7 @@ async fn seed_player_with_jersey(
         starting_spp: Spp(0),
         starting_value: ValueKpo(100),
         starting_membership: crate::app::players::domain::player::RosterMembership::Active,
+        starting_personal_name: None,
     };
     repo.append(player_id, team_id, &created, 1).await.unwrap();
 }
@@ -450,6 +452,7 @@ async fn seed_journalier(
         starting_spp: Spp(0),
         starting_value: ValueKpo(50),
         starting_membership: crate::app::players::domain::player::RosterMembership::Journeyman,
+        starting_personal_name: None,
     };
     repo.append(player_id, team_id, &created, 1).await.unwrap();
 }
@@ -882,6 +885,7 @@ async fn seed_player_with_spp(
         starting_spp: Spp(20),
         starting_value: ValueKpo(100),
         starting_membership: crate::app::players::domain::player::RosterMembership::Active,
+        starting_personal_name: None,
     };
     repo.append(player_id, team_id, &created, 1).await.unwrap();
     Player::from_events(&[created]).unwrap()

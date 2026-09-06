@@ -223,6 +223,7 @@ mod tests {
             starting_spp: Spp(30),
             starting_value: ValueKpo(50),
             starting_membership: crate::app::players::domain::player::RosterMembership::Active,
+            starting_personal_name: None,
         };
         Player::from_events(&[created]).unwrap()
     }

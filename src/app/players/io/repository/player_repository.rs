@@ -191,6 +191,7 @@ pub async fn upsert_player_projection(
             starting_spp,
             starting_value,
             starting_membership,
+            starting_personal_name,
         } => {
             let skill_ids: Vec<&str> = base_skills.iter().map(|s| s.as_ref()).collect();
             let base_json =
@@ -209,7 +210,12 @@ pub async fn upsert_player_projection(
             .bind(space_id.to_string())
             .bind(position_name.as_ref())
             .bind(roster_line_id.as_ref())
-            .bind("")
+            .bind(
+                starting_personal_name
+                    .as_ref()
+                    .map(|n| n.as_ref().to_string())
+                    .unwrap_or_default(),
+            )
             .bind(jersey.map(|j| j.into_inner() as i16))
             .bind(&base_json)
             .bind(starting_spp.0 as i32)
@@ -431,17 +437,26 @@ pub async fn upsert_player_projection(
             .map_err(RepositoryError::Database)?;
         }
 
-        // Le joueur sort de l'effectif sans rien perdre : SPP, compétences et
-        // historique restent en place. Seule l'appartenance change, et c'est
-        // elle que toutes les lectures d'effectif filtrent désormais.
-        // L'embauche : le journalier devient permanent, et rien d'autre ne
-        // change — il garde son maillot, ses SPP et ce qu'il a gagné au match.
+        // L'embauche : le journalier devient permanent. Il garde son maillot,
+        // ses SPP et ce qu'il a gagné au match — **il perd Solitaire**, et rien
+        // d'autre.
+        //
+        // C'est le seul endroit de l'application où une compétence de base est
+        // retirée, et le LRB l'exige : « un Journalier embauché perd le Trait
+        // Solitaire (X+) et conserve les PSP gagnés pendant le match ».
         PlayerDomainEvent::JourneymanHired { player_id, .. } => {
             sqlx::query(
                 "UPDATE players_proj
-                 SET membership = 'Active', version = version + 1
+                 SET membership = 'Active',
+                     base_skills = COALESCE(
+                         (SELECT jsonb_agg(s) FROM jsonb_array_elements(base_skills) s
+                          WHERE s <> to_jsonb($2::text)),
+                         '[]'::jsonb),
+                     version = version + 1
                  WHERE player_id = $1",
             )
+            .bind(&player_id.0)
+            .bind(crate::app::players::domain::player::SOLITAIRE_DU_JOURNALIER)
             .bind(&player_id.0)
             .execute(&mut **tx)
             .await
@@ -450,6 +465,10 @@ pub async fn upsert_player_projection(
 
         // Le désalignement d'un journalier aboutit au même état : les lectures
         // d'effectif filtrent sur `Dismissed`, et il n'en est plus.
+        // Le joueur sort de l'effectif sans rien perdre : SPP, compétences et
+        // historique restent en place. Seule l'appartenance change, et c'est
+        // elle que toutes les lectures d'effectif filtrent. Le désalignement
+        // d'un journalier y aboutit de même — il n'en est plus.
         PlayerDomainEvent::PlayerDismissed { player_id, .. }
         | PlayerDomainEvent::JourneymanLost { player_id, .. }
         | PlayerDomainEvent::JourneymanWithdrawn { player_id, .. } => {
