@@ -49,11 +49,25 @@ LIBELLES_ATTENDUS = {
 
 
 def test_le_tableau_d_equipe_affiche_les_mots_clefs(page: Page, joueur_de_demo):
+    """La ligne **de ce joueur** porte ses mots-clefs.
+
+    Le test visait `.player-keywords` **`.first`**, c'est-à-dire la première
+    ligne du tableau — en affirmant qu'elle portait les mots-clefs du joueur que
+    le fixture avait tiré. Deux ordres indépendants, supposés coïncider : celui
+    des lignes en base, que le `LIMIT 1` sans `ORDER BY` du fixture suit, et
+    celui de l'affichage, qui trie par `display_order` puis par maillot. Rien ne
+    les lie, et n'importe quelle carte écrivant dans `players_proj` faisait
+    basculer le premier.
+
+    Il passait seul et tombait en suite. La ligne porte son identifiant, on la
+    vise donc directement — le tirage du fixture peut rester variable, il
+    devient inoffensif, et fait même tourner le test sur des postes différents.
+    """
     j = joueur_de_demo
     page.goto(f"{BASE_URL}/app/{j['space_id']}/teams/{j['team_id']}", wait_until="load")
-    mots = page.locator(".player-keywords").first
-    mots.wait_for(timeout=10000)
-    expect(mots).to_have_text(LIBELLES_ATTENDUS[j["poste"]])
+    ligne = page.locator(f'.player-table-row[data-player-detail*="{j["player_id"]}"]')
+    ligne.wait_for(timeout=10000)
+    expect(ligne.locator(".player-keywords")).to_have_text(LIBELLES_ATTENDUS[j["poste"]])
 
 
 def test_la_fiche_joueur_affiche_les_mots_clefs(page: Page, joueur_de_demo):
