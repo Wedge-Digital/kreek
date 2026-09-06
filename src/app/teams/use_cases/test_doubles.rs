@@ -259,7 +259,6 @@ impl ISquadPort for FakeSquadPort {
                 value_kpo: 50,
                 presence: SquadPresence::Alignable,
                 is_temporary: false,
-                improvement_label: None,
             })
             .collect()
     }

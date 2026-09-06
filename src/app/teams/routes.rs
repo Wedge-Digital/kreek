@@ -47,6 +47,13 @@ pub mod path {
     pub const RECRUITMENT_REMOVE_PLAYER: &str =
         "/app/{space_id}/teams/{team_id}/recruitment/players/remove";
     pub const RECRUITMENT_ADD_STAFF: &str = "/app/{space_id}/teams/{team_id}/recruitment/staff/add";
+    /// Garder un journalier. **`{player_id}` dans le chemin**, jamais dans le
+    /// corps — la leçon de la carte 416. Il n'est pas résolu par `space_scope`,
+    /// et n'a pas besoin de l'être : le panier ne le trouve que dans les
+    /// recrutables **de cette équipe**, et un identifiant étranger rend
+    /// `JourneymanNoLongerAvailable`. La portée est tenue par la donnée.
+    pub const RECRUITMENT_ADD_JOURNEYMAN: &str =
+        "/app/{space_id}/teams/{team_id}/recruitment/journeyman/{player_id}";
     pub const RECRUITMENT_REMOVE_STAFF: &str =
         "/app/{space_id}/teams/{team_id}/recruitment/staff/remove";
 
@@ -190,6 +197,13 @@ impl Routes {
     }
     pub fn recruitment_add_staff(&self, space_id: &str, team_id: &str) -> String {
         pour(path::RECRUITMENT_ADD_STAFF, space_id, team_id)
+    }
+
+    /// L'URL du POST **avec `{player_id}` laissé en place** : c'est le gabarit
+    /// que l'hôte injecte au widget de `players`, qui y substitue chaque
+    /// identifiant. Lui passer une URL par ligne ferait une liste à tenir.
+    pub fn recruitment_add_journeyman_template(&self, space_id: &str, team_id: &str) -> String {
+        pour(path::RECRUITMENT_ADD_JOURNEYMAN, space_id, team_id)
     }
     pub fn dismissals_page(&self, space_id: &str, team_id: &str) -> String {
         pour(path::DISMISSALS_PAGE, space_id, team_id)

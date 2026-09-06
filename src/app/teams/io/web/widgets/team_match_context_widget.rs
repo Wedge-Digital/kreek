@@ -101,7 +101,6 @@ mod tests {
             value_kpo: 50,
             presence,
             is_temporary: false,
-            improvement_label: None,
         }
     }
 

@@ -40,13 +40,6 @@ pub struct SquadMemberDto {
     /// du roster ». Deux homonymes contradictoires dans le même BC seraient
     /// une confusion assurée.
     pub is_temporary: bool,
-
-    /// Ce que le joueur a gagné, en un libellé déjà composé — « Blocage »,
-    /// « +1 ST », ou rien.
-    ///
-    /// Un libellé et non une structure : l'écran de recrutement n'a qu'à
-    /// l'afficher, et la composition appartient à qui possède les données.
-    pub improvement_label: Option<String>,
 }
 
 /// Les deux droits qu'un visiteur **ne tient pas de la propriété** de l'équipe.

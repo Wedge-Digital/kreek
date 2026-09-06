@@ -1,0 +1,72 @@
+{# Le panneau des journaliers recrutables.
+
+   **Il disparaît quand la liste est vide**, et ce n'est pas de l'économie de
+   pixels : la plupart des matchs se jouent sans journalier, et un panneau vide
+   poserait la question « qu'est-ce que j'ai raté ? » à chaque phase de
+   recrutement.
+
+   `hx-disinherit="*"` : la page de recrutement porte ses propres attributs
+   htmx, qui s'injecteraient sinon dans les requêtes de ce panneau. #}
+{% if !journeymen.is_empty() %}
+<section class="rec-journeymen" hx-disinherit="*">
+  <header class="rec-journeymen-entete">
+    <h2 class="rec-journeymen-titre">Journaliers du dernier match</h2>
+    {# L'avertissement doit **se voir sans être lu** : c'est la seule
+       différence de nature entre ce panneau et le catalogue — un poste sera
+       encore là au prochain match, un journalier non recruté est perdu. #}
+    <p class="rec-journeymen-alerte">
+      Ils partent à la fin de cette phase. Un journalier qui n'est pas recruté
+      maintenant est perdu — avec son expérience.
+    </p>
+  </header>
+
+  <table class="rec-journeymen-table">
+    <thead>
+      <tr>
+        <th>Journalier</th>
+        <th>Expérience</th>
+        <th>Amélioration</th>
+        <th>Prix</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for j in journeymen %}
+      <tr class="rec-journeyman-row" data-player-id="{{ j.player_id }}">
+        <td class="rec-journeyman-identite">
+          <span class="rec-journeyman-nom">{{ j.name }}</span>
+          <span class="rec-journeyman-poste">{{ j.position_name }}</span>
+        </td>
+        {# Grisé à zéro : « 0 PSP » reste une information, mais ce n'est pas
+           celle qu'on cherche en parcourant la colonne. #}
+        <td class="rec-journeyman-spp{% if j.spp == 0 %} rec-journeyman-spp-nul{% endif %}">
+          {{ j.spp }} PSP
+        </td>
+        <td class="rec-journeyman-amelioration">
+          {% if let Some(a) = j.improvement %}{{ a }}{% else %}<span class="rec-journeyman-aucune">aucune</span>{% endif %}
+        </td>
+        {# La décomposition n'est pas un ornement : sans elle, un coach qui voit
+           85 pour un poste à 65 croit à une erreur. #}
+        <td class="rec-journeyman-prix">
+          {% if j.prix_decompose() %}
+          <span class="rec-journeyman-prix-total">{{ j.price_kpo }} kPo</span>
+          <span class="rec-journeyman-prix-detail">{{ j.base_price_kpo }} + {{ j.supplement() }} d'amélioration</span>
+          {% else %}
+          <span class="rec-journeyman-prix-total">{{ j.price_kpo }} kPo</span>
+          {% endif %}
+        </td>
+        <td class="rec-journeyman-action">
+          {% if let Some(motif) = j.blocage %}
+          <span class="rec-journeyman-bloque" title="{{ motif }}">{{ motif }}</span>
+          {% else %}
+          <button type="button" class="rec-journeyman-btn"
+                  hx-post="{{ j.action_url }}"
+                  hx-swap="none">Garder</button>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}

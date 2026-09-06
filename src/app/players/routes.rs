@@ -1,6 +1,11 @@
 pub mod path {
     pub const PLAYERS_BY_TEAM_WIDGET: &str = "/app/{space_id}/players/by-team/{team_id}/widget";
     pub const PLAYERS_ROSTER_UPDATE: &str = "/app/{space_id}/players/by-team/{team_id}/roster";
+    /// Le panneau des journaliers recrutables, composé par la page de
+    /// recrutement de `teams`. Son état — qui est recrutable, et pourquoi les
+    /// autres ne le sont pas — lui est injecté en paramètres de requête :
+    /// `players` rend, `teams` décide.
+    pub const JOURNEYMEN_WIDGET: &str = "/app/{space_id}/players/by-team/{team_id}/journeymen";
     pub const MATCH_PLAYER_SELECTOR: &str =
         "/app/{space_id}/players/teams/{team_id}/match-selector";
     pub const PLAYER_DEBUG: &str = "/app/{space_id}/players/{player_id}/debug";
@@ -43,6 +48,30 @@ pub mod path {
 pub struct Routes;
 
 impl Routes {
+    /// L'URL du panneau **avec son état**, que l'hôte lui injecte.
+    ///
+    /// `action_url` porte le gabarit du POST : `players` ne connaît ainsi
+    /// aucune route de `teams`. Les identifiants recrutables et le motif
+    /// unique des autres viennent du panier, qui seul les décide.
+    pub fn journeymen_widget(
+        &self,
+        space_id: &str,
+        team_id: &str,
+        action_url: &str,
+        recrutables: &[String],
+        motif: &str,
+    ) -> String {
+        let base = path::JOURNEYMEN_WIDGET
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id);
+        format!(
+            "{base}?action_url={}&recrutables={}&motif={}",
+            urlencoding::encode(action_url),
+            recrutables.join(","),
+            urlencoding::encode(motif),
+        )
+    }
+
     pub fn players_by_team_widget(&self, space_id: &str, team_id: &str) -> String {
         path::PLAYERS_BY_TEAM_WIDGET
             .replace("{space_id}", space_id)

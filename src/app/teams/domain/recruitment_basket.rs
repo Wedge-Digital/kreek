@@ -311,6 +311,36 @@ impl RecruitmentBasket {
 
     // ── Lecture, pour les view models ─────────────────────────────────────
 
+    /// L'état du bouton pour un journalier — le pendant de
+    /// `action_for_position`, et pour la même raison : l'écran doit dire
+    /// **avant le clic** pourquoi il ne peut pas.
+    ///
+    /// Rejoue les gardes d'`add_journeyman` sans muter. L'ordre est le sien :
+    /// un journalier absent des recrutables est `Forbidden` — il ne le
+    /// redeviendra pas —, alors qu'un plafond ou une trésorerie se libèrent,
+    /// donc `Blocked`.
+    pub fn action_for_journeyman(&self, player_id: &PlayerId) -> ActionState {
+        let Some(journalier) = self.squad.journeymen().find(|j| &j.player_id == player_id) else {
+            return ActionState::Forbidden {
+                cause: DomainError::JourneymanNoLongerAvailable,
+            };
+        };
+        if self.journeyman_in_basket(player_id) {
+            return ActionState::Blocked {
+                cause: DomainError::JourneymanAlreadyInBasket,
+            };
+        }
+        for garde in [
+            self.check_squad_max(),
+            self.check_treasury(journalier.value_kpo),
+        ] {
+            if let Err(cause) = garde {
+                return ActionState::Blocked { cause };
+            }
+        }
+        ActionState::Allowed
+    }
+
     pub fn action_for_position(&self, line: &RosterLineId) -> ActionState {
         if let Err(cause) = self.check_position_in_roster(line) {
             return ActionState::Forbidden { cause };
@@ -717,6 +747,53 @@ mod tests {
             });
         }
         Squad { members }
+    }
+
+    /// Le pendant de `t17` : chaque refus rend **sa** cause, parce que c'est
+    /// elle que l'écran affiche.
+    #[test]
+    fn action_for_journeyman_rend_la_cause_exacte() {
+        // Recrutable.
+        let mut p = panier(effectif_mele(5, 1), 1000);
+        assert_eq!(
+            p.action_for_journeyman(&identifiant(5)),
+            ActionState::Allowed
+        );
+
+        // Inconnu : il ne le redeviendra pas.
+        assert!(matches!(
+            p.action_for_journeyman(&identifiant(99)),
+            ActionState::Forbidden {
+                cause: DomainError::JourneymanNoLongerAvailable
+            }
+        ));
+
+        // Déjà au panier : le coach n'a qu'à regarder son panier.
+        p.add_journeyman(identifiant(5)).unwrap();
+        assert!(matches!(
+            p.action_for_journeyman(&identifiant(5)),
+            ActionState::Blocked {
+                cause: DomainError::JourneymanAlreadyInBasket
+            }
+        ));
+
+        // Plafond : une place peut se libérer, donc bloqué et non interdit.
+        let plein = panier(effectif_mele(16, 1), 1000);
+        assert!(matches!(
+            plein.action_for_journeyman(&identifiant(16)),
+            ActionState::Blocked {
+                cause: DomainError::MaxPlayersReached
+            }
+        ));
+
+        // Trésorerie.
+        let pauvre = panier(effectif_mele(5, 1), 10);
+        assert!(matches!(
+            pauvre.action_for_journeyman(&identifiant(5)),
+            ActionState::Blocked {
+                cause: DomainError::InsufficientTreasury
+            }
+        ));
     }
 
     #[test]

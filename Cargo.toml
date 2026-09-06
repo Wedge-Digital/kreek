@@ -22,6 +22,11 @@ sqlx = { version = "0.8.3", features = ["postgres", "runtime-tokio-native-tls", 
 time = { version = "0.3", features = ["serde"] }
 serde_json = "1.0.140"
 dotenvy = { version = "0.15.7", default-features = false }
+# Encode les paramètres qu'un hôte injecte dans l'URL d'un widget (carte 458) :
+# les motifs de refus sont du texte français — espaces, accents, deux-points.
+# Déjà dans l'arbre par `axum-login` ; la déclarer en direct est ce qui autorise
+# à l'utiliser.
+urlencoding = "2.1"
 config = "0.15.22"
 nutype = { version = "0.7.0", features = ["regex", "serde"] }
 askama = "0.12"

@@ -1524,6 +1524,7 @@ dependencies = [
  "tracing-core",
  "tracing-subscriber",
  "ulid",
+ "urlencoding",
 ]
 
 [[package]]

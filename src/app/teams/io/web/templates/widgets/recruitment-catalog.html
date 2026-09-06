@@ -7,6 +7,18 @@
   {# Emplacement des erreurs de mutation, vidé à chaque rendu réussi. #}
   <div id="rec-catalog-error"></div>
 
+  {# Le panneau des journaliers, **rendu par `players`** : le journalier vit
+     là-bas, avec son nom, ses SPP et ce qu'il a gagné au match.
+
+     Le conteneur est ici et non dans la page : ce widget se recharge sur
+     `basketChanged`, donc l'URL — qui porte l'état décidé par le panier — est
+     refaite à chaque rendu. Posée par la page, elle garderait celui du
+     chargement initial.
+
+     L'URL vient du view model, construite par `AppRoutes` : aucun import
+     direct des routes de l'autre BC. #}
+  <div hx-get="{{ vm.journeymen_widget_url }}" hx-trigger="load" hx-target="this"></div>
+
   {% if vm.concurrent_notice %}
   <div class="alert alert--warn">
     <span>⚠️</span>

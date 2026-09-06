@@ -22,7 +22,7 @@ use crate::app::teams::io::web::widgets::recruitment_cart_widget::{
     recruitment_cart, remove_player, remove_staff,
 };
 use crate::app::teams::io::web::widgets::recruitment_catalog_widget::{
-    add_player, add_staff, recruitment_catalog,
+    add_journeyman, add_player, add_staff, recruitment_catalog,
 };
 use crate::app::teams::io::web::widgets::team_match_context_widget::get_team_match_context_json;
 use crate::app::teams::io::web::widgets::team_selection_tester::get_team_selection_tester;
@@ -114,6 +114,7 @@ fn routes_d_action() -> Router<AppState> {
         .route(path::RECRUITMENT_ADD_PLAYER, post(add_player))
         .route(path::RECRUITMENT_REMOVE_PLAYER, post(remove_player))
         .route(path::RECRUITMENT_ADD_STAFF, post(add_staff))
+        .route(path::RECRUITMENT_ADD_JOURNEYMAN, post(add_journeyman))
         .route(path::RECRUITMENT_REMOVE_STAFF, post(remove_staff))
         .route(path::DISMISSALS_PAGE, get(dismissals_page))
         .route(path::DISMISSALS_ROSTER_WIDGET, get(dismissals_roster))

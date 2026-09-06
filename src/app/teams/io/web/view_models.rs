@@ -8,6 +8,7 @@
 //! contente de le formuler. C'est ce qui permet de n'écrire chaque règle
 //! qu'une fois.
 
+use crate::app::routes::AppRoutes;
 use crate::app::teams::domain::basket::{RosterLineId, SkillBadge};
 use crate::app::teams::domain::error::DomainError;
 use crate::app::teams::domain::recruitment_basket::{ActionState, BasketLine, RecruitmentBasket};
@@ -114,6 +115,16 @@ pub struct RecruitmentCatalogVm {
     pub positions: Vec<PositionRowVm>,
     pub staff: Vec<StaffRowVm>,
     pub composition: Vec<CompositionRowVm>,
+    /// L'URL du panneau des journaliers, **avec l'état que `teams` a décidé**.
+    ///
+    /// Construite ici et non par la page : le catalogue se recharge sur
+    /// `basketChanged`, donc l'URL est refaite à chaque rendu, avec le budget
+    /// et le plafond du moment. Posée par la page, elle garderait l'état du
+    /// chargement initial.
+    ///
+    /// Par `AppRoutes`, jamais par un import direct des routes de `players` —
+    /// comme `TeamDetailVm` le fait déjà pour le tableau d'effectif.
+    pub journeymen_widget_url: String,
     pub squad_is_full: bool,
     /// Cuite dans les `hx-vals` de chaque bouton : le geste vaut pour l'état
     /// que le coach a sous les yeux, pas pour un autre.
@@ -130,6 +141,11 @@ impl RecruitmentCatalogVm {
             positions: PositionRowVm::all_from_domain(basket),
             staff: StaffRowVm::all_from_domain(basket),
             composition: CompositionRowVm::all_from_domain(basket),
+            journeymen_widget_url: url_du_panneau_journaliers(
+                basket,
+                space_id,
+                &team.id.to_string(),
+            ),
             squad_is_full: basket.projected_squad_size() >= SQUAD_MAX as usize,
             version: basket.version().0,
             concurrent_notice: false,
@@ -491,6 +507,35 @@ impl CartLineVm {
 /// Un poste disparu du catalogue depuis la constitution du panier reste
 /// affiché sous son identifiant plutôt que d'escamoter la ligne : le coach doit
 /// pouvoir la retirer.
+/// L'URL du panneau des journaliers, état compris.
+///
+/// **Un seul motif pour tous les bloqués, et ce n'est pas une approximation** :
+/// le plafond frappe tout le monde ou personne ; s'il ne frappe pas, les seuls
+/// bloqués sont les trop chers, et leur cause est la même. Les deux règles ne
+/// produisent jamais deux motifs différents en même temps.
+fn url_du_panneau_journaliers(basket: &RecruitmentBasket, space_id: &str, team_id: &str) -> String {
+    let routes = AppRoutes::default();
+    let mut recrutables = Vec::new();
+    let mut motif = String::new();
+    for journalier in basket.hireable_journeymen() {
+        match basket.action_for_journeyman(&journalier.player_id) {
+            ActionState::Allowed => recrutables.push(journalier.player_id.to_string()),
+            ActionState::Blocked { cause } | ActionState::Forbidden { cause } => {
+                motif = cause.to_string()
+            }
+        }
+    }
+    routes.players.journeymen_widget(
+        space_id,
+        team_id,
+        &routes
+            .teams
+            .recruitment_add_journeyman_template(space_id, team_id),
+        &recrutables,
+        &motif,
+    )
+}
+
 fn nom_du_poste(basket: &RecruitmentBasket, line: &RosterLineId) -> String {
     basket
         .catalog()

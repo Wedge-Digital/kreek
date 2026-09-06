@@ -22,6 +22,10 @@ use axum::{
 pub fn router() -> Router<AppState> {
     Router::new()
         .route(path::PLAYERS_BY_TEAM_WIDGET, get(player_table_widget))
+        .route(
+            path::JOURNEYMEN_WIDGET,
+            get(crate::app::players::io::web::widgets::journeymen_widget::journeymen_widget),
+        )
         .route(path::PLAYERS_ROSTER_UPDATE, post(post_update_roster))
         .route(
             path::MATCH_PLAYER_SELECTOR,

@@ -5,13 +5,16 @@
 //! ligne — la trésorerie épuisée ou l'effectif plein désactivent **toutes** les
 //! autres. Un swap ligne par ligne serait donc faux.
 
+use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::teams::io::web::recruitment::{
     charger, fragment, suite_de, SuiteMutation, CIBLE_ERREUR_CATALOGUE,
 };
 use crate::app::teams::io::web::view_models::{staff_type_from_form, RecruitmentCatalogVm};
 use crate::app::teams::use_cases::basket_mutation;
-use crate::app::teams::use_cases::commands::{AddBasketPlayerCommand, AddBasketStaffCommand};
+use crate::app::teams::use_cases::commands::{
+    AddBasketJourneymanCommand, AddBasketPlayerCommand, AddBasketStaffCommand,
+};
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -90,6 +93,39 @@ pub async fn add_staff(
     };
 
     let issue = basket_mutation::add_staff(
+        cmd,
+        &space_id,
+        state.teams.team_repository.as_ref(),
+        state.teams.basket_repository.as_ref(),
+        state.teams.roster_catalog_port.as_ref(),
+        state.teams.squad_port.as_ref(),
+    )
+    .await;
+
+    apres_mutation(&state, &space_id, &team_id, issue.err()).await
+}
+
+/// Garde un journalier du dernier match.
+///
+/// **Aucun extracteur de corps** : il n'y a rien à choisir, ce journalier-là ou
+/// aucun. L'identifiant est dans le chemin.
+pub async fn add_journeyman(
+    Path((space_id, team_id, player_id)): Path<(String, String, String)>,
+    State(state): State<AppState>,
+) -> Response {
+    let (Ok(id), Ok(joueur)) = (TeamId::try_new(&team_id), PlayerId::try_new(&player_id)) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    let cmd = AddBasketJourneymanCommand {
+        team_id: id,
+        player_id: joueur,
+        // Le panier n'est pas versionné par ce geste : la liste des recrutables
+        // vient de l'effectif, pas des lignes, et le refus en bloc de la
+        // validation reste le filet si l'effectif a bougé.
+        expected_version: 0,
+    };
+
+    let issue = basket_mutation::add_journeyman(
         cmd,
         &space_id,
         state.teams.team_repository.as_ref(),
