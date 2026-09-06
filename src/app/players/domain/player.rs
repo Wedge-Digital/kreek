@@ -77,9 +77,17 @@ pub enum AcquisitionMode {
     /// moins automatique de l'écran. Les trois autres modes nomment la façon
     /// d'obtenir ; celui-ci est « à la suite d'une blessure ».
     Injury,
-    /// Donnée par un commissaire, hors des règles du jeu. C'est ce mode qui
-    /// permet au journal des évolutions d'afficher sa pastille de customisation
-    /// sans interroger l'event store.
+    /// Ce que le joueur porte **sans l'avoir payé de ses SPP** : le geste d'un
+    /// commissaire, ou le trait que le règlement donne d'office — Solitaire
+    /// (4+) à un journalier.
+    ///
+    /// Le nom vient du premier cas, qui fut le seul pendant longtemps. Ce que
+    /// les deux partagent est ce qui compte ici, et c'est exactement ce que
+    /// `est_une_amelioration` distingue : ni l'un ni l'autre n'entre dans le
+    /// niveau du joueur, donc dans le prix de sa compétence suivante.
+    ///
+    /// C'est aussi ce mode qui permet au journal des évolutions d'afficher sa
+    /// pastille de customisation sans interroger l'event store.
     Customised,
 }
 
@@ -1488,6 +1496,72 @@ mod appartenance_tests {
             "et lui seul — ce qu'il a gagné au match reste"
         );
         assert!(apres.membership.is_active());
+    }
+
+    /// **Le test qui compte** — et que ni la 502 ni la 504 n'avaient écrit.
+    ///
+    /// Le mode d'acquisition ne décide pas que d'un libellé : `next_improvement_level`
+    /// compte les améliorations pour fixer le prix de la compétence
+    /// **suivante**. En `Chosen`, Solitaire y comptait, et le journalier
+    /// recruté payait sa première vraie compétence un niveau plus cher — pour
+    /// un trait que le règlement lui a donné.
+    ///
+    /// C'est le défaut que la carte 482 avait corrigé ailleurs : « les compter
+    /// renchérirait l'amélioration d'après, ce qui revient à faire payer un
+    /// cadeau ».
+    #[test]
+    fn solitaire_ne_reencherit_pas_la_competence_suivante() {
+        let naissance = creation(RosterMembership::Journeyman);
+        let neuf = Player::from_events(&[naissance.clone()]).unwrap();
+        assert_eq!(neuf.next_improvement_level(), 1);
+
+        let avec_trait =
+            Player::from_events(&[naissance.clone(), solitaire_de_naissance()]).unwrap();
+        assert_eq!(
+            avec_trait.next_improvement_level(),
+            1,
+            "le trait du règlement ne fait pas monter le joueur d'un niveau"
+        );
+
+        // Contre-épreuve : une vraie amélioration, elle, compte.
+        let avec_gain = Player::from_events(&[
+            naissance,
+            solitaire_de_naissance(),
+            competence_acquise("BLOCK", "Blocage"),
+        ])
+        .unwrap();
+        assert_eq!(avec_gain.next_improvement_level(), 2);
+    }
+
+    /// Solitaire tel que la naissance le pose — en customisation.
+    fn solitaire_de_naissance() -> PlayerDomainEvent {
+        let PlayerDomainEvent::InitialSkillEarned {
+            player_id,
+            team_id,
+            skill_id,
+            skill_name,
+            category_css,
+            spp_cost,
+            is_primary,
+            is_elite,
+            value_delta,
+            ..
+        } = competence_acquise(SOLITAIRE_DU_JOURNALIER, "Solitaire (4+)")
+        else {
+            unreachable!()
+        };
+        PlayerDomainEvent::InitialSkillEarned {
+            player_id,
+            team_id,
+            skill_id,
+            skill_name,
+            category_css,
+            mode: AcquisitionMode::Customised,
+            spp_cost,
+            is_primary,
+            is_elite,
+            value_delta,
+        }
     }
 
     /// **Solitaire ne vaut rien**, et c'est ce qui protège le prix.

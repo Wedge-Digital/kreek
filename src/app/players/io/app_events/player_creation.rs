@@ -169,10 +169,16 @@ fn solitaire_du_journalier(
         skill_id: SkillId::try_new(SOLITAIRE_DU_JOURNALIER.to_string()).ok()?,
         skill_name: SkillName::try_new(nom).ok()?,
         category_css: skill_category_css("TRAITS").to_string(),
-        // Ni choisie ni tirée : le règlement la donne. `Chosen` est le mode le
-        // moins faux des quatre — elle n'est ni une séquelle, ni le geste d'un
-        // commissaire, et le journal la libelle « Compétence initiale bonus ».
-        mode: AcquisitionMode::Chosen,
+        // **`Customised`, et le mode décide de plus qu'un libellé.**
+        //
+        // `est_une_amelioration()` s'en sert pour compter le niveau du joueur,
+        // donc le prix de sa compétence **suivante**. En `Chosen`, Solitaire y
+        // comptait : le journalier recruté payait sa première vraie compétence
+        // un niveau plus cher, pour un trait que le règlement lui a donné —
+        // « faire payer un cadeau », le défaut exact de la carte 482.
+        //
+        // `Customised` dit ici « porté sans l'avoir payé », ce qu'il est.
+        mode: AcquisitionMode::Customised,
         spp_cost: SppCost::try_new(0).ok()?,
         is_primary: false,
         is_elite: false,
@@ -275,6 +281,11 @@ mod tests {
 #[cfg(test)]
 mod tests_journalier {
     use super::*;
+    use crate::app::players::domain::match_impact::StatKind;
+    use crate::app::players::ports::{
+        PositionAccessDto, PositionCatalogEntryDto, SkillCatalogEntryDto, SkillCostLevelDto,
+        SppScaleDto,
+    };
 
     /// Sans nom, deux journaliers d'un même poste sont indiscernables : le nom
     /// retombe sur celui du poste, et l'écran affiche deux « Trois-quart ».
@@ -290,5 +301,72 @@ mod tests_journalier {
     #[test]
     fn sans_maillot_il_garde_un_nom_lisible() {
         assert_eq!(nom_de_journalier(None), "Journalier");
+    }
+
+    /// **Le mode décide du prix de la compétence suivante**, pas seulement du
+    /// libellé de la pastille — c'est pourquoi ce test vise le mode et non
+    /// l'affichage. `est_une_amelioration()` compte les niveaux, et la 504
+    /// avait posé `Chosen` : le journalier payait un cadeau.
+    ///
+    /// Le catalogue est muet à dessein — le libellé retombe alors sur le repli,
+    /// et rien dans le test ne dépend du référentiel.
+    #[test]
+    fn solitaire_est_pose_en_customisation() {
+        let Some(PlayerDomainEvent::InitialSkillEarned {
+            mode,
+            spp_cost,
+            value_delta,
+            skill_id,
+            skill_name,
+            ..
+        }) = solitaire_du_journalier("p1", "t1", &CatalogueMuet)
+        else {
+            panic!("le trait doit être posé");
+        };
+
+        assert_eq!(mode, AcquisitionMode::Customised, "il ne l'a pas payé");
+        assert!(
+            !mode.est_une_amelioration(),
+            "il ne doit pas faire monter le joueur d'un niveau"
+        );
+        assert_eq!(spp_cost.into_inner(), 0);
+        assert_eq!(value_delta, ValueKpo(0));
+        assert_eq!(skill_id.as_ref(), SOLITAIRE_DU_JOURNALIER);
+        assert_eq!(skill_name.as_ref(), "Solitaire (4+)");
+    }
+
+    /// Muet : le trait ne dépend que de sa constante, pas du référentiel.
+    struct CatalogueMuet;
+    impl ISkillCatalogPort for CatalogueMuet {
+        fn find_skill(&self, _: &str) -> Option<SkillCatalogEntryDto> {
+            None
+        }
+        fn list_all_skills(&self) -> Vec<SkillCatalogEntryDto> {
+            vec![]
+        }
+        fn find_position(&self, _: &str) -> Option<PositionCatalogEntryDto> {
+            None
+        }
+        fn position_access(&self, _: &str) -> Option<PositionAccessDto> {
+            None
+        }
+        fn cost_for_level(&self, _: u8, _: bool) -> Option<SkillCostLevelDto> {
+            None
+        }
+        fn skill_value_delta(&self, _: bool, _: bool) -> u32 {
+            0
+        }
+        fn stat_value_delta(&self, _: StatKind) -> u32 {
+            0
+        }
+        fn spp_scale_for_roster_line(&self, _: &str) -> SppScaleDto {
+            SppScaleDto {
+                touchdown: 3,
+                pass: 1,
+                interception: 2,
+                casualty: 2,
+                mvp: 4,
+            }
+        }
     }
 }

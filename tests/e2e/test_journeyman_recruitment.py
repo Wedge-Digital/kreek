@@ -521,6 +521,30 @@ def test_solitaire_s_affiche_sur_la_ligne_du_journalier(page: Page, journalier_n
     expect(ligne).to_contain_text("Solitaire")
 
 
+def test_solitaire_porte_la_pastille_de_customisation(
+    page: Page, journalier_neuf, space_id
+):
+    """**Le mode n'est pas qu'un libellé** — c'est le prix de la suivante.
+
+    La carte 504 avait posé Solitaire en `Chosen`, et `est_une_amelioration()`
+    s'en sert pour compter le niveau du joueur : le journalier recruté payait
+    sa première vraie compétence un niveau plus cher, pour un trait que le
+    règlement lui a donné (carte 505).
+
+    La pastille est la seule trace **visible** de ce mode. Le test unitaire
+    couvre le prix ; celui-ci couvre ce que le coach lit — et les deux se
+    trompent ensemble si le mode redevient `Chosen`.
+    """
+    page.goto(
+        f"{BASE_URL}/app/{space_id}/players/{journalier_neuf}/detail",
+        wait_until="load",
+    )
+
+    ligne = page.locator(".spp-summary-table tbody tr", has_text="Solitaire")
+    ligne.wait_for(timeout=10000)
+    expect(ligne.locator(".mode-chip")).to_have_text("Customisation")
+
+
 # ── L'affichage (carte 503) ──────────────────────────────────────────────────
 
 
